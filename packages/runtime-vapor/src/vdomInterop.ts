@@ -429,8 +429,14 @@ const vaporInteropImpl = {
         // align with VDOM: vnode beforeMount runs before directive created/beforeMount.
         invokeInteropVNodeHook(instance, beforeMountHook, vnode)
         if (!vnodeHookState.vnode.dirs) return
-        const el = mountInteropDirs(instance, vnodeHookState, instance)
+        const [owner, el] = resolveInteropDirsRoot(
+          instance,
+          vnodeHookState,
+          instance,
+          getInteropDirsOwner(vnodeHookState, instance, vnode),
+        )
         if (el) {
+          mountInteropDirsRoot(instance, owner, el)
           vnode.el = el
         } else if (__DEV__) {
           warnNonElementRootDirs()
@@ -3155,29 +3161,26 @@ interface InteropDirsOwner {
   // replaced mid-update still unmounts with the bindings it was mounted with
   el: Element | null
   carried: VNode
-  // the re-render that owes this root its `updated`
+  // the re-render that owes this root its `updated`, and the root this
+  // component's own re-render is patching
   updating: VaporComponentInstance | null
+  patching: InteropDirsOwner | null
   // the bindings a reactivated root still carries; its activation patch has
   // not run `updated` yet
   pending: VNode | null
 }
 
-interface InteropDirsRoot {
-  el: Element
-  vnode: VNode
-}
-
 function invokeInteropDirsHook(
   instance: VaporComponentInstance,
-  root: InteropDirsRoot,
+  el: Element,
+  vnode: VNode,
   name: Parameters<typeof invokeDirectiveHook>[3],
-  vnode: VNode = root.vnode,
   prevVNode: VNode | null = null,
 ): void {
   if (!vnode.dirs) return
   invokeDirectiveHook(
     // hooks are handed `vnode.el`, which moves on with the root
-    vnode.el === root.el ? vnode : extend({}, vnode, { el: root.el }),
+    vnode.el === el ? vnode : extend({}, vnode, { el }),
     prevVNode,
     instance.parent as ComponentInternalInstance | null,
     name,
@@ -3199,6 +3202,7 @@ function warnNonElementRootDirs(): void {
   )
 }
 
+// The record of `comp`, handed `vnode` as the bindings it receives.
 function getInteropDirsOwner(
   state: VNodeHookState,
   comp: VaporComponentInstance,
@@ -3206,7 +3210,9 @@ function getInteropDirsOwner(
 ): InteropDirsOwner {
   const owners = (state.dirsOwners ||= new Map())
   let owner = owners.get(comp)
-  if (!owner) {
+  if (owner) {
+    owner.vnode = vnode
+  } else {
     owners.set(
       comp,
       (owner = {
@@ -3215,6 +3221,7 @@ function getInteropDirsOwner(
         el: null,
         carried: vnode,
         updating: null,
+        patching: null,
         pending: null,
       }),
     )
@@ -3237,11 +3244,10 @@ function resolveInteropDirsRoot(
     // land on
     excludeSlotOutlets: true,
     onDynamicFragment: frag =>
-      registerInteropDirsFragment(instance, state, frag, owner.comp),
+      registerInteropDirsFragment(instance, state, frag, owner),
     onComponent: comp => {
       registerInteropDirsComponent(instance, state, comp)
       owner = getInteropDirsOwner(state, comp, inherit.vnode)
-      owner.vnode = inherit.vnode
     },
   })
   return [owner, el]
@@ -3288,30 +3294,18 @@ function settleInteropDirsReceived(
   })
 }
 
-// vdom mount of the inherited root vnode found from `block`; returns the root
-// element
-function mountInteropDirs(
-  instance: VaporComponentInstance,
-  state: VNodeHookState,
-  block: Block,
-  inherit: InteropDirsOwner = getInteropDirsOwner(state, instance, state.vnode),
-): Element | undefined {
-  const [owner, el] = resolveInteropDirsRoot(instance, state, block, inherit)
-  if (el) mountInteropDirsRoot(instance, owner, el)
-  return el
-}
-
+// vdom mount of the inherited root vnode
 function mountInteropDirsRoot(
   instance: VaporComponentInstance,
   owner: InteropDirsOwner,
   el: Element,
 ): void {
-  const root: InteropDirsRoot = { el, vnode: (owner.carried = owner.vnode) }
+  const vnode = (owner.carried = owner.vnode)
   owner.el = el
-  invokeInteropDirsHook(instance, root, 'created')
-  invokeInteropDirsHook(instance, root, 'beforeMount')
+  invokeInteropDirsHook(instance, el, vnode, 'created')
+  invokeInteropDirsHook(instance, el, vnode, 'beforeMount')
   queueInteropDirsJob(instance, () =>
-    invokeInteropDirsHook(instance, root, 'mounted'),
+    invokeInteropDirsHook(instance, el, vnode, 'mounted'),
   )
 }
 
@@ -3340,13 +3334,14 @@ function unmountInteropDirsRoot(
   owner: InteropDirsOwner,
   suspense?: SuspenseBoundary | null,
 ): void {
-  const root: InteropDirsRoot = { el: owner.el!, vnode: owner.carried }
+  const el = owner.el!
+  const vnode = owner.carried
   owner.el = null
   owner.updating = owner.pending = null
-  invokeInteropDirsHook(instance, root, 'beforeUnmount')
+  invokeInteropDirsHook(instance, el, vnode, 'beforeUnmount')
   queueInteropDirsJob(
     instance,
-    () => invokeInteropDirsHook(instance, root, 'unmounted'),
+    () => invokeInteropDirsHook(instance, el, vnode, 'unmounted'),
     suspense,
   )
 }
@@ -3360,21 +3355,15 @@ function updateInteropDirs(
 ): void {
   if (!state.dirsOwners) return
   settleInteropDirsReceived(instance, state)
-  const received: [InteropDirsOwner, VNode][] = (state.dirsReceived = [])
   const owner = innerInteropDirsOwner(state, instance, owner => {
-    received.push([owner, owner.vnode])
+    // only a component below the instance can leave its root chain
+    if (owner.comp !== instance) {
+      ;(state.dirsReceived ||= []).push([owner, owner.vnode])
+    }
     owner.vnode = vnode
   })
   const el = owner && owner.el
-  if (el) {
-    invokeInteropDirsHook(
-      instance,
-      { el, vnode },
-      'beforeUpdate',
-      vnode,
-      prevVNode,
-    )
-  }
+  if (el) invokeInteropDirsHook(instance, el, vnode, 'beforeUpdate', prevVNode)
   queueInteropDirsJob(instance, () => {
     settleInteropDirsReceived(instance, state)
     // a root the update replaced was mounted, not patched; one it
@@ -3387,7 +3376,7 @@ function updateInteropDirs(
       return
     }
     owner!.carried = vnode
-    invokeInteropDirsHook(instance, { el, vnode }, 'updated', vnode, prevVNode)
+    invokeInteropDirsHook(instance, el, vnode, 'updated', prevVNode)
   })
 }
 
@@ -3410,8 +3399,8 @@ function beforeInteropDirsSelfUpdate(
   source: VaporComponentInstance,
 ): void {
   const owners = state.dirsOwners
-  let owner = owners && owners.get(source)
-  if (!owner) return
+  const self = owners && owners.get(source)
+  if (!self) return
   // the renderer-driven update in flight already patched the active chain
   if (
     state.pendingVNodeUpdate &&
@@ -3419,14 +3408,15 @@ function beforeInteropDirsSelfUpdate(
   ) {
     return
   }
-  if (!owner.el) owner = innerInteropDirsOwner(state, source)
+  const owner = self.el ? self : innerInteropDirsOwner(state, source)
   if (!owner || !owner.el || isInteropDirsUpdating(state, owner)) return
   owner.updating = source
+  self.patching = owner
   invokeInteropDirsHook(
     instance,
-    { el: owner.el, vnode: owner.vnode },
-    'beforeUpdate',
+    owner.el,
     owner.vnode,
+    'beforeUpdate',
     owner.pending || owner.carried,
   )
 }
@@ -3437,24 +3427,19 @@ function afterInteropDirsSelfUpdate(
   source: VaporComponentInstance,
 ): void {
   const owners = state.dirsOwners
-  if (!owners) return
-  owners.forEach(owner => {
-    if (owner.updating !== source) return
-    owner.updating = null
-    // a root the re-render replaced or deactivated was not patched
-    if (owner.el && innerInteropDirsOwner(state, source) === owner) {
-      const prevVNode = owner.pending || owner.carried
-      owner.pending = null
-      owner.carried = owner.vnode
-      invokeInteropDirsHook(
-        instance,
-        { el: owner.el, vnode: owner.vnode },
-        'updated',
-        owner.vnode,
-        prevVNode,
-      )
-    }
-  })
+  const self = owners && owners.get(source)
+  const owner = self && self.patching
+  if (!owner) return
+  self.patching = null
+  // another re-render took the root over, or replaced or deactivated it
+  if (owner.updating !== source) return
+  owner.updating = null
+  if (owner.el && innerInteropDirsOwner(state, source) === owner) {
+    const prevVNode = owner.pending || owner.carried
+    owner.pending = null
+    owner.carried = owner.vnode
+    invokeInteropDirsHook(instance, owner.el, owner.vnode, 'updated', prevVNode)
+  }
 }
 
 function invokeInteropVNodeHook(
@@ -4017,30 +4002,25 @@ const interopDirsProducers = new WeakSet<
 // root directly in the old branch is released while still in the DOM (`bu`),
 // the new one is mounted before it is inserted (`bm`). A root rendered by a
 // nested component goes with that component instead, which keeps it across a
-// KeepAlive deactivation. `comp` is the component the fragment renders in.
+// KeepAlive deactivation. `inherit` is the record of the component the
+// fragment renders in; the fragment dies with that component.
 function registerInteropDirsFragment(
   instance: VaporComponentInstance,
   state: VNodeHookState,
   frag: DynamicFragment,
-  comp: VaporComponentInstance,
+  inherit: InteropDirsOwner,
 ): void {
   registerInteropRootSync(instance, frag)
   if (interopDirsProducers.has(frag)) return
   interopDirsProducers.add(frag)
   let reactivated: InteropDirsOwner | null = null
   ;(frag.bu ||= []).push(() => {
-    const owners = state.dirsOwners
-    const owner = owners && owners.get(comp)
-    if (owner && owner.el && owner.el === getRootElement(frag.nodes)) {
-      unmountInteropDirsRoot(instance, owner)
+    if (inherit.el && inherit.el === getRootElement(frag.nodes)) {
+      unmountInteropDirsRoot(instance, inherit)
     }
   })
   ;(frag.bm ||= []).push(nodes => {
-    const owners = state.dirsOwners
-    const inherit = owners && owners.get(comp)
-    if (!inherit || !inherit.vnode.dirs || !isOnInteropRootChain(comp, frag)) {
-      return
-    }
+    if (!inherit.vnode.dirs || !isOnInteropRootChain(inherit.comp, frag)) return
     const [owner, el] = resolveInteropDirsRoot(instance, state, nodes, inherit)
     if (!el) return
     if (owner.el === el) {
@@ -4067,11 +4047,12 @@ function registerInteropDirsFragment(
     // the activation patch is owed to the component's own re-render when it
     // has one (new props), and runs on its own otherwise
     owner.updating = owner.comp
+    owner.patching = owner
     invokeInteropDirsHook(
       instance,
-      { el: owner.el, vnode: owner.vnode },
-      'beforeUpdate',
+      owner.el,
       owner.vnode,
+      'beforeUpdate',
       owner.pending,
     )
     queueInteropDirsJob(instance, () =>
