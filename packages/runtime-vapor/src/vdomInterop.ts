@@ -433,7 +433,8 @@ const vaporInteropImpl = {
           instance,
           vnodeHookState,
           instance,
-          getInteropDirsOwner(vnodeHookState, instance, vnode),
+          // the latest input: setup may have been pending across updates
+          getInteropDirsOwner(vnodeHookState, instance, vnodeHookState.vnode),
         )
         if (el) {
           mountInteropDirsRoot(instance, owner, el)

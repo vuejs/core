@@ -1517,26 +1517,37 @@ describe('vdomInterop', () => {
           )
           const calls: string[] = []
           const dir = trace(calls)
-          const { done } = mountInBody(() =>
+          const visible = ref(false)
+          const value = ref('v')
+          const { root, done } = mountInBody(() =>
             h(Suspense, null, {
-              default: () => withDirectives(h(Child), [[dir, 'v']]),
+              default: () =>
+                withDirectives(h(Child), [
+                  [vShow, visible.value],
+                  [dir, value.value],
+                ]),
               fallback: () => h('span', 'loading'),
             }),
           )
           expect(calls).toEqual([])
+          // the bindings change while setup is pending
+          visible.value = true
+          value.value = 'w'
+          await nextTick()
           resolve()
           await new Promise(r => setTimeout(r))
           await nextTick()
+          expect(root.querySelector('div')!.style.display).toBe('')
           done()
           return calls
         }
 
         await expectParity(run, [
-          'created DIV[m] (detached) v',
-          'beforeMount DIV[m] (detached) v',
-          'mounted DIV[m] v',
-          'beforeUnmount DIV[m] v',
-          'unmounted DIV[m] (detached) v',
+          'created DIV[m] (detached) w',
+          'beforeMount DIV[m] (detached) w',
+          'mounted DIV[m] w',
+          'beforeUnmount DIV[m] w',
+          'unmounted DIV[m] (detached) w',
         ])
       })
 
