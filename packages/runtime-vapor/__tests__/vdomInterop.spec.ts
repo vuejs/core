@@ -1511,10 +1511,13 @@ describe('vdomInterop', () => {
           const data = ref<any>({ p: new Promise<void>(r => (resolve = r)) })
           const Child = compile(
             `<script setup>
-            import { onMounted } from 'vue'
+            import { onBeforeMount, onMounted, onBeforeUnmount } from 'vue'
             const data = _data
             onMounted(() => data.value.log('child mounted'))
             await data.value.p
+            // registered after the await, once the interop already looked
+            onBeforeMount(() => data.value.log('child beforeMount'))
+            onBeforeUnmount(() => data.value.log('child beforeUnmount'))
             </script><template><div>m</div></template>`,
             data,
             {},
@@ -1554,12 +1557,14 @@ describe('vdomInterop', () => {
         }
 
         await expectParity(run, [
+          'child beforeMount',
           'created DIV[m] (detached) w',
           'beforeMount DIV[m] (detached) w',
           // vnode mounted follows the mount the resolved setup completes
           'mounted DIV[m] w',
           'child mounted',
           'vnode mounted',
+          'child beforeUnmount',
           'beforeUnmount DIV[m] w',
           'unmounted DIV[m] (detached) w',
         ])
@@ -2416,10 +2421,19 @@ describe('vdomInterop', () => {
       test('directives mount on a nested root once its async setup resolves', async () => {
         const run = async (vapor: boolean) => {
           let resolve!: () => void
-          const data = ref({ p: new Promise<void>(r => (resolve = r)) })
+          const calls: string[] = []
+          const data = ref({
+            p: new Promise<void>(r => (resolve = r)),
+            log: (hook: string) => calls.push(hook),
+          })
           const Inner = compile(
-            `<script setup>const data = _data; await data.value.p</script>` +
-              `<template><div>i</div></template>`,
+            `<script setup>
+            import { onBeforeMount, onBeforeUnmount } from 'vue'
+            const data = _data
+            await data.value.p
+            onBeforeMount(() => data.value.log('inner beforeMount'))
+            onBeforeUnmount(() => data.value.log('inner beforeUnmount'))
+            </script><template><div>i</div></template>`,
             data,
             {},
             { vapor },
@@ -2432,7 +2446,6 @@ describe('vdomInterop', () => {
             { Inner },
             { vapor },
           )
-          const calls: string[] = []
           const dir = trace(calls)
           const value = ref('v')
           const { root, done } = mountInBody(() =>
@@ -2446,24 +2459,45 @@ describe('vdomInterop', () => {
             }),
           )
           expect(calls).toEqual([])
+          // received while the root is pending
+          value.value = 'w'
+          await nextTick()
           resolve()
           await new Promise(r => setTimeout(r))
           await nextTick()
           expect(root.querySelector('div')!.style.display).toBe('none')
-          value.value = 'w'
+          value.value = 'x'
           await nextTick()
           done()
           return calls
         }
 
-        await expectParity(run, [
+        // vdom mounts the nested root with the bindings it was created with
+        // and replays the patch it received while pending right after
+        expect(await run(false)).toEqual([
+          'inner beforeMount',
           'created DIV[i] (detached) v',
           'beforeMount DIV[i] (detached) v',
-          'mounted DIV[i] v',
           'beforeUpdate DIV[i] v>w',
+          'mounted DIV[i] v',
           'updated DIV[i] v>w',
-          'beforeUnmount DIV[i] w',
-          'unmounted DIV[i] (detached) w',
+          'beforeUpdate DIV[i] w>x',
+          'updated DIV[i] w>x',
+          'inner beforeUnmount',
+          'beforeUnmount DIV[i] x',
+          'unmounted DIV[i] (detached) x',
+        ])
+        // vapor mounts it with the bindings it last received
+        expect(await run(true)).toEqual([
+          'inner beforeMount',
+          'created DIV[i] (detached) w',
+          'beforeMount DIV[i] (detached) w',
+          'mounted DIV[i] w',
+          'beforeUpdate DIV[i] w>x',
+          'updated DIV[i] w>x',
+          'inner beforeUnmount',
+          'beforeUnmount DIV[i] x',
+          'unmounted DIV[i] (detached) x',
         ])
       })
 
@@ -2499,24 +2533,27 @@ describe('vdomInterop', () => {
             ]),
           )
           expect(calls).toEqual([])
+          // received while the root is loading
+          value.value = 'w'
+          await nextTick()
           load(Inner)
           await new Promise(r => setTimeout(r))
           await nextTick()
           expect(root.querySelector('div')!.style.display).toBe('none')
-          value.value = 'w'
+          value.value = 'x'
           await nextTick()
           done()
           return calls
         }
 
         await expectParity(run, [
-          'created DIV[i] (detached) v',
-          'beforeMount DIV[i] (detached) v',
-          'mounted DIV[i] v',
-          'beforeUpdate DIV[i] v>w',
-          'updated DIV[i] v>w',
-          'beforeUnmount DIV[i] w',
-          'unmounted DIV[i] (detached) w',
+          'created DIV[i] (detached) w',
+          'beforeMount DIV[i] (detached) w',
+          'mounted DIV[i] w',
+          'beforeUpdate DIV[i] w>x',
+          'updated DIV[i] w>x',
+          'beforeUnmount DIV[i] x',
+          'unmounted DIV[i] (detached) x',
         ])
       })
 
