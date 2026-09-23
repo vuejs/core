@@ -898,15 +898,8 @@ export const isTemplateNode = (node: Node): node is HTMLTemplateElement => {
   )
 }
 
-// attributes whose assignment triggers a (re)fetch or (re)load of a resource
-const resourceProps = /*@__PURE__*/ new Set([
-  'src',
-  'srcset',
-  'href',
-  'poster',
-  'srcdoc',
-  'data',
-])
+// attributes whose assignment triggers a (re)fetch of a resource
+const resourceProps = /*@__PURE__*/ new Set(['src', 'srcset', 'href', 'poster'])
 
 export function isUnchangedResourceProp(
   el: Element,

@@ -4186,41 +4186,34 @@ describe('SSR hydration', () => {
       }
     })
 
-    test.each([
-      ['img', 'src', '/foo.png'],
-      ['iframe', 'srcdoc', '<p>hi</p>'],
-      ['object', 'data', '/a.pdf'],
-    ])(
-      'does not re-write an unchanged resource prop when hydrating: <%s %s>',
-      (tag, key, value) => {
-        __DEV__ = false
-        try {
-          const container = document.createElement('div')
-          container.innerHTML = `<${tag} ${key}="${value}"></${tag}>`
-          const el = container.firstChild as HTMLElement
-          const setter = vi.fn()
-          Object.defineProperty(el, key, {
-            configurable: true,
-            get: () => el.getAttribute(key),
-            set: setter,
-          })
-          createSSRApp({
-            render: () =>
-              createElementVNode(
-                tag,
-                { [key]: value },
-                null,
-                PatchFlags.PROPS,
-                [key],
-              ),
-          }).mount(container)
-          expect(setter).not.toHaveBeenCalled()
-          expect(el.getAttribute(key)).toBe(value)
-        } finally {
-          __DEV__ = true
-        }
-      },
-    )
+    test('does not re-write unchanged resource props when hydrating', () => {
+      __DEV__ = false
+      try {
+        const container = document.createElement('div')
+        container.innerHTML = `<img src="/foo.png">`
+        const el = container.firstChild as HTMLImageElement
+        const setSrc = vi.fn()
+        Object.defineProperty(el, 'src', {
+          configurable: true,
+          get: () => el.getAttribute('src'),
+          set: setSrc,
+        })
+        createSSRApp({
+          render: () =>
+            createElementVNode(
+              'img',
+              { src: '/foo.png' },
+              null,
+              PatchFlags.PROPS,
+              ['src'],
+            ),
+        }).mount(container)
+        expect(setSrc).not.toHaveBeenCalled()
+        expect(el.getAttribute('src')).toBe('/foo.png')
+      } finally {
+        __DEV__ = true
+      }
+    })
 
     test('still patches resource props when server and client values differ', () => {
       __DEV__ = false

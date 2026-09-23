@@ -748,26 +748,24 @@ describe('Vapor Mode hydration', () => {
       expect(`Hydration node mismatch`).not.toHaveBeenWarned()
     })
 
-    test('unchanged resource urls are not re-assigned', async () => {
-      const data = reactive({ src: '/a.png', doc: '<p>hi</p>', file: '/a.pdf' })
-      const setters = [
-        vi.spyOn(HTMLImageElement.prototype, 'src', 'set'),
-        vi.spyOn(HTMLIFrameElement.prototype, 'srcdoc', 'set'),
-        vi.spyOn(HTMLObjectElement.prototype, 'data', 'set'),
-      ]
+    test('unchanged resource url is not re-assigned', async () => {
+      const data = reactive({ src: '/a.png' })
+      const setSrc = vi.spyOn(HTMLImageElement.prototype, 'src', 'set')
       const { container } = await testHydration(
-        `<template><div><img :src="data.src"><iframe :srcdoc="data.doc"></iframe><object :data="data.file"></object></div></template>`,
+        `<template><img :src="data.src"></template>`,
         {},
         data,
       )
 
-      for (const setter of setters) expect(setter).not.toHaveBeenCalled()
+      expect(setSrc).not.toHaveBeenCalled()
 
       data.src = '/b.png'
       await nextTick()
-      expect(setters[0]).toHaveBeenCalledTimes(1)
-      expect(container.querySelector('img')!.getAttribute('src')).toBe('/b.png')
-      for (const setter of setters) setter.mockRestore()
+      expect(setSrc).toHaveBeenCalledTimes(1)
+      expect((container.firstChild as Element).getAttribute('src')).toBe(
+        '/b.png',
+      )
+      setSrc.mockRestore()
       expect(`Hydration node mismatch`).not.toHaveBeenWarned()
     })
 
