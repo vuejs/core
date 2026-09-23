@@ -422,12 +422,25 @@ const vaporInteropImpl = {
     }
     const vnodeHooks = isAsyncWrapper(vnode) ? null : vnode.props
     const beforeMountHook = vnodeHooks && vnodeHooks.onVnodeBeforeMount
-    if (beforeMountHook || vnode.dirs) {
+    const mountedHook = vnodeHooks && vnodeHooks.onVnodeMounted
+    // a pending async setup mounts once it settles; vnode mounted follows
+    // that mount, after the component's own mounted hooks, as in VDOM
+    const pendingSetup =
+      __FEATURE_SUSPENSE__ &&
+      isSuspenseEnabled &&
+      !!instance.asyncDep &&
+      !instance.asyncResolved
+    if (beforeMountHook || vnode.dirs || (mountedHook && pendingSetup)) {
       // `bm` runs after the component's own beforeMount hooks, once the block
       // exists (a pending async setup included) and before it is inserted
       ;(instance.bm ||= []).push(() => {
         // align with VDOM: vnode beforeMount runs before directive created/beforeMount.
         invokeInteropVNodeHook(instance, beforeMountHook, vnode)
+        if (mountedHook && pendingSetup) {
+          ;(instance.m ||= []).push(() =>
+            invokeInteropVNodeHook(instance, mountedHook, vnode),
+          )
+        }
         if (!vnodeHookState.vnode.dirs) return
         const [owner, el] = resolveInteropDirsRoot(
           instance,
@@ -451,12 +464,9 @@ const vaporInteropImpl = {
     }
 
     mountComponent(instance, container, selfAnchor)
-    queueInteropVNodeHook(
-      instance,
-      vnodeHooks && vnodeHooks.onVnodeMounted,
-      vnode,
-      parentSuspense,
-    )
+    if (!pendingSetup) {
+      queueInteropVNodeHook(instance, mountedHook, vnode, parentSuspense)
+    }
 
     simpleSetCurrentInstance(prev)
     return instance

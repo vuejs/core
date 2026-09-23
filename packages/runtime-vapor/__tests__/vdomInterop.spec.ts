@@ -1507,25 +1507,35 @@ describe('vdomInterop', () => {
       test('directives mount before insertion once an async setup resolves', async () => {
         const run = async (vapor: boolean) => {
           let resolve!: () => void
-          const data = ref({ p: new Promise<void>(r => (resolve = r)) })
+          const data = ref<any>({ p: new Promise<void>(r => (resolve = r)) })
           const Child = compile(
-            `<script setup>const data = _data; await data.value.p</script>` +
-              `<template><div>m</div></template>`,
+            `<script setup>
+            import { onMounted } from 'vue'
+            const data = _data
+            onMounted(() => data.value.log('child mounted'))
+            await data.value.p
+            </script><template><div>m</div></template>`,
             data,
             {},
             { vapor },
           )
           const calls: string[] = []
+          data.value.log = (hook: string) => calls.push(hook)
           const dir = trace(calls)
           const visible = ref(false)
           const value = ref('v')
           const { root, done } = mountInBody(() =>
             h(Suspense, null, {
               default: () =>
-                withDirectives(h(Child), [
-                  [vShow, visible.value],
-                  [dir, value.value],
-                ]),
+                withDirectives(
+                  h(Child, {
+                    onVnodeMounted: () => calls.push('vnode mounted'),
+                  }),
+                  [
+                    [vShow, visible.value],
+                    [dir, value.value],
+                  ],
+                ),
               fallback: () => h('span', 'loading'),
             }),
           )
@@ -1545,7 +1555,10 @@ describe('vdomInterop', () => {
         await expectParity(run, [
           'created DIV[m] (detached) w',
           'beforeMount DIV[m] (detached) w',
+          // vnode mounted follows the mount the resolved setup completes
           'mounted DIV[m] w',
+          'child mounted',
+          'vnode mounted',
           'beforeUnmount DIV[m] w',
           'unmounted DIV[m] (detached) w',
         ])
