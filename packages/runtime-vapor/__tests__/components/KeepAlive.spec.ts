@@ -5026,35 +5026,64 @@ describe('VaporKeepAlive', () => {
     expect(el.classList).toHaveLength(3)
   })
 
-  // a slot outlet is a fragment boundary: vdom cannot inherit fallthrough
-  // attrs across it and warns instead. the fallback transform rewrites the
-  // outlet into a `<template>`, which the single-root lookup treats as
-  // transparent, so the fallback used to be compiled as the component root.
+  test('should inherit fallthrough attrs through a KeepAlive root with a dynamic component', async () => {
+    const out: Record<string, string[]> = {}
+    await renderParity(
+      {
+        A: `<template><div id="a">A</div></template>`,
+        B: `<template><p id="b">B</p></template>`,
+        Child: `<template><KeepAlive><component :is="data.view === 'A' ? components.A : components.B" /></KeepAlive></template>`,
+        App: `<template><components.Child class="outer" :title="data.title" /></template>`,
+      },
+      () => ref({ view: 'A', title: 'one' }),
+      async (data, root, mode) => {
+        const snap = () => root.querySelector('#a, #b')!.outerHTML
+        const seen = [snap()]
+        data.value.view = 'B'
+        await nextTick()
+        seen.push(snap())
+        data.value.title = 'two'
+        await nextTick()
+        seen.push(snap())
+        // A comes back from the cache with the attrs updated meanwhile
+        data.value.view = 'A'
+        await nextTick()
+        seen.push(snap())
+        out[mode] = seen
+      },
+    )
+    expect(out.vdom).toEqual([
+      '<div id="a" class="outer" title="one">A</div>',
+      '<p id="b" class="outer" title="one">B</p>',
+      '<p id="b" class="outer" title="two">B</p>',
+      '<div id="a" class="outer" title="two">A</div>',
+    ])
+    expect(out.vapor).toEqual(out.vdom)
+  })
+
+  test('should pass the attrs of the KeepAlive itself to its child', async () => {
+    const out: Record<string, string> = {}
+    await renderParity(
+      {
+        A: `<template><div id="a">A</div></template>`,
+        Child: `<template><KeepAlive class="ka" data-x="1"><components.A /></KeepAlive></template>`,
+        App: `<template><components.Child /></template>`,
+      },
+      () => ref(null),
+      (_data, root, mode) => {
+        out[mode] = root.querySelector('#a')!.outerHTML
+      },
+    )
+    expect(out.vdom).toBe('<div id="a" class="ka" data-x="1">A</div>')
+    expect(out.vapor).toBe(out.vdom)
+  })
+
   test('should not pass fallthrough attrs to the fallback of a KeepAlive slot', async () => {
     const cls: Record<string, string> = {}
     const { vdom, vapor } = await renderParity(
       {
         A: `<template><div id="a">A</div></template>`,
         Child: `<template><KeepAlive><slot><components.A /></slot></KeepAlive></template>`,
-        App: `<template><components.Child class="outer" /></template>`,
-      },
-      () => ref(null),
-      (_data, root, mode) => {
-        cls[mode] = root.querySelector('#a')!.className
-      },
-    )
-    expect(cls.vdom).toBe('')
-    expect(cls.vapor).toBe(cls.vdom)
-    expect(vapor.text).toBe(vdom.text)
-    expect('Extraneous non-props attributes (class)').toHaveBeenWarned()
-  })
-
-  test('should not pass fallthrough attrs to the fallback of a slot outlet root', async () => {
-    const cls: Record<string, string> = {}
-    const { vdom, vapor } = await renderParity(
-      {
-        A: `<template><div id="a">A</div></template>`,
-        Child: `<template><slot><components.A /></slot></template>`,
         App: `<template><components.Child class="outer" /></template>`,
       },
       () => ref(null),

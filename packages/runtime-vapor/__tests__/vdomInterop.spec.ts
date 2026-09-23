@@ -2561,6 +2561,8 @@ describe('vdomInterop', () => {
 
       expect(observedSlots).toHaveLength(2)
       expect(observedSlots[1]).toBe(observedSlots[0])
+      // `tick` is an attr and the root is a slot outlet: vdom warns too
+      expect('Extraneous non-props attributes (tick)').toHaveBeenWarned()
     })
 
     test('applies v-once to VDOM slot content passed to Vapor', async () => {
@@ -10540,12 +10542,8 @@ describe('vdomInterop', () => {
       })
     }
   })
-  // #15583 regression #2: a KeepAlive root is a transparent root, so the
-  // child inside it is the component root and receives the fallthrough
-  // attrs through its own props. A vdom child owns the element those props
-  // land on, so the vapor side must not write them onto that element too:
-  // a reactivated branch hands the fallthrough hook its cached, already
-  // mounted nodes, which used to stack one extra native listener per cycle.
+  // a vdom child under a KeepAlive root takes the attrs as props; the vapor
+  // descent must not re-apply them onto its cached nodes on reactivation
   describe('KeepAlive root fallthrough into a vdom child', () => {
     test('installs a listener once, across reactivations', async () => {
       const calls: string[] = []
@@ -10760,5 +10758,46 @@ describe('vdomInterop', () => {
       host.querySelector('button')!.click()
       expect(calls).toEqual(['c', 'c'])
     })
+  })
+
+  // a vapor slot outlet fed by a vdom parent is a fragment root: vdom warns
+  // and never inherits the attrs, whether the slot renders content or fallback
+  describe('fallthrough attrs on a vdom-fed slot outlet root', () => {
+    const shapes = {
+      content: {
+        Child: `<template><slot /></template>`,
+        App: `<template><Child class="outer"><div id="x">c</div></Child></template>`,
+      },
+      fallback: {
+        Child: `<template><slot><div id="x">f</div></slot></template>`,
+        App: `<template><Child class="outer" /></template>`,
+      },
+      'KeepAlive content': {
+        Child: `<template><KeepAlive><slot /></KeepAlive></template>`,
+        App: `<template><Child class="outer"><div id="x">c</div></Child></template>`,
+      },
+    }
+    for (const [name, { Child: childSrc, App: appSrc }] of Object.entries(
+      shapes,
+    )) {
+      test(name, () => {
+        const data = ref(null)
+        const Child = compile(childSrc, data)
+        const App = compile(
+          `<script setup>
+            const Child = _components.Child
+          </script>
+          ${appSrc}`,
+          data,
+          { Child },
+          { vapor: false },
+        )
+        const { host } = define(App).render()
+        expect(host.querySelector('#x')!.className).toBe('')
+        expect('Extraneous non-props attributes (class)').toHaveBeenWarnedTimes(
+          1,
+        )
+      })
+    }
   })
 })

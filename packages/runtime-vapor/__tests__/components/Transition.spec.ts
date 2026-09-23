@@ -1727,6 +1727,8 @@ describe('Transition', () => {
     expect(host.querySelector('#content')).toBeNull()
     expect(onEnter).not.toHaveBeenCalled()
     expect(onLeave).not.toHaveBeenCalled()
+    // `visible` is an attr on a slot outlet root: vdom warns too
+    expect('Extraneous non-props attributes (visible)').toHaveBeenWarned()
   })
 
   test('preserves multi-element vdom slot content nested under transition root', () => {

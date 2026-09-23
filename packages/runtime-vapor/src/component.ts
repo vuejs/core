@@ -1866,7 +1866,7 @@ function applyFallthroughAttrs(
 ): void {
   const state = new FallthroughResolveState(scope)
   const root = resolveFallthroughRoot(block, state)
-  const { fragments, innermost, hasSlotOutlet, hasVDOMRoot } = state
+  const { fragments, innermost, hasSlotOutlet } = state
 
   if (fragments) {
     for (const frag of fragments) {
@@ -1894,7 +1894,7 @@ function applyFallthroughAttrs(
       )
     // ensure the render effect is cleaned up when the branch scope is stopped
     ownerScope ? ownerScope.run(applyEffect) : applyEffect()
-  } else if (__DEV__ && !hasVDOMRoot) {
+  } else if (__DEV__) {
     const accessedAttrs = instance.accessedAttrs
     const fallthroughAttrs = resolveFallthroughAttrs(instance)
     if (
@@ -1923,8 +1923,6 @@ class FallthroughResolveState implements RootChainVisitor {
   // dev only: the innermost fragment's current branch is multi-root; fragments
   // stay registered for future branches while the current render warns
   hasNonSingleRoot?: boolean
-  // a vdom child holds the effective root and consumed the attrs itself
-  hasVDOMRoot?: boolean
   // attrs fold at a component's own creation boundary
   readonly stopAtComponent = true
 
@@ -1948,18 +1946,13 @@ class FallthroughResolveState implements RootChainVisitor {
     this.innermost = frag
   }
 
-  // A vdom child is a fold boundary like a vapor component: it receives
-  // the attrs as props at creation (single root) and the vdom renderer
-  // owns the element they land on. Descending into its DOM would install
-  // them a second time on every re-application — once per KeepAlive
-  // reactivation, since a reactivated branch hands the hook the cached,
-  // already-mounted nodes. A fragment with no vnode is vapor fallback
-  // content, which the descent still owns.
-  onInteropFragment(frag: InteropFragment): boolean | void {
-    if (frag.vnode) {
-      this.hasVDOMRoot = true
-      return true
-    }
+  // A vnode-backed child folds like a vapor component: it took the attrs as
+  // props at creation, and the vdom renderer owns the element they land on
+  // (a KeepAlive reactivation would otherwise re-apply onto cached nodes).
+  // A vdom-fed slot outlet is a fragment boundary like a vapor one.
+  onInteropFragment(frag: InteropFragment): boolean {
+    if (isSlotOutletFragment(frag)) return (this.hasSlotOutlet = true)
+    return !!frag.vnode
   }
 }
 
