@@ -18,7 +18,7 @@ import {
   stringifyStyle,
   toDisplayString,
 } from '@vue/shared'
-import { onBinding } from './event'
+import { onBinding, onRootBinding } from './event'
 import {
   type GenericComponentInstance,
   MismatchTypes,
@@ -614,11 +614,12 @@ export function setDynamicProp(
   } else if (key === 'style') {
     setStyle(el, value)
   } else if (isOn(key)) {
-    if (shouldSkipFallthroughKey(el, key)) {
-      return
+    if (el.$root || isApplyingFallthroughProps) {
+      onRootBinding(el, key, value, isApplyingFallthroughProps)
+    } else {
+      const [event, options] = parseEventName(key)
+      onBinding(el, event, value, options)
     }
-    const [event, options] = parseEventName(key)
-    onBinding(el, event, value, options)
   } else if (
     // force hydrate v-bind with .prop modifiers
     key[0] === '.'
