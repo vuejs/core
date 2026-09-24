@@ -925,4 +925,28 @@ describe('useVaporCssVars', () => {
     app.unmount()
     root.remove()
   })
+
+  test('vars survive a style binding going nullish', async () => {
+    const data = ref({ color: 'red', active: true })
+    const App = compile(
+      `<template>
+        <div :style="data.active ? { fontWeight: 'bold' } : undefined" />
+      </template>
+      <style>div { color: v-bind('data.color') }</style>`,
+      data,
+    )
+    const { host } = define(App).render()
+    const el = () => host.firstElementChild as HTMLElement
+    expect(cssVar(el())).toBe('red')
+
+    data.value.active = false
+    await nextTick()
+    expect(el().style.fontWeight).toBe('')
+    expect(cssVar(el())).toBe('red')
+
+    data.value.active = true
+    await nextTick()
+    expect(el().style.fontWeight).toBe('bold')
+    expect(cssVar(el())).toBe('red')
+  })
 })
