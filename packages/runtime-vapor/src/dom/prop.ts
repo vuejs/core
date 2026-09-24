@@ -4,6 +4,7 @@ import {
   type NormalizedStyle,
   camelize,
   canSetValueDirectly,
+  extend,
   getEscapedCssVarName,
   includeBooleanAttr,
   isArray,
@@ -70,10 +71,12 @@ type TargetElement = Element & {
   $html?: string
   $cls?: string
   $clsFlags?: number
-  // the root's own class binding and the fallthrough class, two layers on
-  // one element: a token stays while either layer (or the template) holds it
+  // a root's own class / style and the fallthrough one are two layers on
+  // one element; `$sty` is the style merge last written
   $clsi?: string
   $clsi$?: string
+  $styi?: NormalizedStyle
+  $styi$?: NormalizedStyle
   $sty?: NormalizedStyle | string | undefined
   value?: string
   _value?: any
@@ -304,8 +307,7 @@ function setClassIncremental(
   value: any,
   isNormalized: boolean = false,
 ): void {
-  const isFallthrough = isApplyingFallthroughProps
-  const cacheKey = isFallthrough ? '$clsi$' : '$clsi'
+  const cacheKey = isApplyingFallthroughProps ? '$clsi$' : '$clsi'
   const normalizedValue = isNormalized ? value : normalizeClass(value)
 
   if (isHydrating && !isRecreatedNode(el)) {
@@ -326,7 +328,7 @@ function setClassIncremental(
       for (const cls of prev.split(/\s+/)) {
         if (
           !nextList.includes(cls) &&
-          !(kept ||= keptClasses(el, isFallthrough)).includes(cls)
+          !(kept ||= keptClasses(el)).includes(cls)
         ) {
           el.classList.remove(cls)
         }
@@ -335,14 +337,11 @@ function setClassIncremental(
   }
 }
 
-// The tokens the other layer of a root still holds: the root's own binding
-// (which stands in for its template class) under a fallthrough write, the
-// fallthrough class under the root's own write.
-function keptClasses(el: any, isFallthrough: boolean): string[] {
-  const other = isFallthrough ? el.$clsi : el.$clsi$
-  return other !== undefined
-    ? other.split(/\s+/)
-    : (isFallthrough && el.$root.cls) || EMPTY_ARR
+// tokens the other layer still holds; a root's own binding replaces its
+// template class
+function keptClasses(el: any): string[] {
+  const other = isApplyingFallthroughProps ? el.$clsi : el.$clsi$
+  return other !== undefined ? other.split(/\s+/) : el.$root.cls || EMPTY_ARR
 }
 
 // Defer css-var style mismatch checks until instance.block is set, so root
@@ -409,22 +408,34 @@ export function setStyle(el: TargetElement, value: any): void {
   }
 }
 
-function setStyleIncremental(el: any, value: any): NormalizedStyle | undefined {
-  const cacheKey = `$styi${isApplyingFallthroughProps ? '$' : ''}`
+function setStyleIncremental(el: any, value: any): void {
   const normalizedValue = isString(value)
     ? parseStringStyle(value)
     : (normalizeStyle(value) as NormalizedStyle | undefined)
+  el[isApplyingFallthroughProps ? '$styi$' : '$styi'] = normalizedValue
+
+  // the merge (fallthrough wins), kept an object so a removed layer never
+  // drops the attribute and its css vars
+  let next: NormalizedStyle | undefined = normalizedValue
+  if ('$styi$' in el) {
+    const base = el.$styi !== undefined ? el.$styi : el.$root.sty
+    next = base ? extend({}, base, el.$styi$) : el.$styi$ || {}
+  }
 
   if (isHydrating && !isRecreatedNode(el)) {
-    if (__DEV__ || __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__) {
-      checkHydrationStyleMismatch(el, value, normalizedValue, true)
+    if (
+      (__DEV__ || __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__) &&
+      // only the merge matches the server; the fallthrough write checks it
+      !shouldSkipFallthroughKey(el, 'style')
+    ) {
+      checkHydrationStyleMismatch(el, next, next, true)
     }
-    el[cacheKey] = normalizedValue
-    hydrateVShowDisplay(el, normalizedValue)
+    el.$sty = next
+    hydrateVShowDisplay(el, next)
     return
   }
 
-  patchStyle(el, el[cacheKey], (el[cacheKey] = normalizedValue))
+  patchStyle(el, el.$sty, (el.$sty = next))
 }
 
 // Hydration skips the style patch, so mirror patchStyle's v-show bookkeeping:
@@ -439,7 +450,8 @@ function hydrateVShowDisplay(
       : style && style.display
     if (isArray(display)) display = display[display.length - 1]
     ;(el as VShowElement)[vShowOriginalDisplay] =
-      display == null ? '' : String(display)
+      // patchStyle reads it back from the element, without the priority
+      display == null ? '' : String(display).replace(/\s*!important$/, '')
   }
 }
 

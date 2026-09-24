@@ -20,6 +20,19 @@ export function createElement(tagName: string, ns?: Namespace): HTMLElement {
     : document.createElement(tagName)
 }
 
+let t: HTMLTemplateElement
+
+export function parseTemplate(html: string, ns?: Namespace): Node {
+  t = t || document.createElement('template')
+  if (ns) {
+    const tag = ns === Namespaces.SVG ? 'svg' : 'math'
+    t.innerHTML = `<${tag}>${html}</${tag}>`
+    return _child(_child(t.content) as ParentNode)
+  }
+  t.innerHTML = html
+  return _child(t.content)
+}
+
 /*@__NO_SIDE_EFFECTS__*/
 export function createTextNode(value = ''): Text {
   return document.createTextNode(value)

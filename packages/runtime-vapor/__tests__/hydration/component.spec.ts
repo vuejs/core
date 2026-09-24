@@ -663,8 +663,7 @@ describe('Vapor Mode hydration', () => {
         data,
       )
 
-      // the hydrated root carries the SSR fallthrough attrs; a later client
-      // instance must not inherit them
+      // a later client instance must not inherit the SSR fallthrough attrs
       data.value.more = true
       await nextTick()
       const second = container.children[1] as HTMLElement
@@ -701,6 +700,83 @@ describe('Vapor Mode hydration', () => {
       data.value.cls = ''
       await nextTick()
       expect(el.className).toBe('o s')
+    })
+
+    test('restores the template style when an overlapping fallthrough style is removed after hydration', async () => {
+      const data = ref({ sty: 'color: blue; background-color: lightblue' })
+      const { container } = await testHydration(
+        `<template><components.Child :style="data.sty" /></template>`,
+        {
+          Child: `<template><div style="color: red; font-weight: bold">x</div></template>`,
+        },
+        data,
+      )
+      const el = container.firstElementChild as HTMLElement
+      expect(el.getAttribute('style')).toBe(
+        'color:blue;font-weight:bold;background-color:lightblue;',
+      )
+
+      data.value.sty = ''
+      await nextTick()
+      expect(el.getAttribute('style')).toBe('color: red; font-weight: bold;')
+    })
+
+    test('lets the fallthrough style win over the root binding after hydration without a mismatch', async () => {
+      const data = ref({ obj: { style: { color: 'red' } }, sty: 'color: blue' })
+      const { container } = await testHydration(
+        `<template><components.Child :style="data.sty" /></template>`,
+        { Child: `<template><div v-bind="data.obj">x</div></template>` },
+        data,
+      )
+      const el = container.firstElementChild as HTMLElement
+      expect(el.getAttribute('style')).toBe('color:blue;')
+
+      data.value.obj = { style: { color: 'green' } }
+      await nextTick()
+      expect(el.style.color).toBe('blue')
+
+      data.value.sty = ''
+      await nextTick()
+      expect(el.style.color).toBe('green')
+    })
+
+    // coverage guard: the first client patch must not diff against the
+    // hydrated style, which holds the server-rendered css vars
+    test('keeps the root css vars across a fallthrough style change after hydration', async () => {
+      const data = ref({ sty: 'color: blue', color: 'red' })
+      const { container } = await testHydration(
+        `<template><components.Child :style="data.sty" /></template>`,
+        {
+          Child: `<script vapor>const data = _data</script>
+            <template><div>x</div></template>
+            <style>div { color: v-bind('data.color') }</style>`,
+        },
+        data,
+      )
+      const el = container.firstElementChild as HTMLElement
+      expect(el.getAttribute('style')).toBe('color:blue;--v51566ce1:red;')
+
+      data.value.sty = 'color: green'
+      await nextTick()
+      expect(el.getAttribute('style')).toBe('color: green; --v51566ce1: red;')
+    })
+
+    test('restores an important fallthrough display through v-show after hydration', async () => {
+      const data = ref({ show: true, sty: 'display: flex !important' })
+      const { container } = await testHydration(
+        `<template><components.Child :style="data.sty" /></template>`,
+        { Child: `<template><div v-show="data.show">x</div></template>` },
+        data,
+      )
+      const el = container.firstElementChild as HTMLElement
+
+      data.value.show = false
+      await nextTick()
+      expect(el.style.display).toBe('none')
+
+      data.value.show = true
+      await nextTick()
+      expect(el.style.display).toBe('flex')
     })
   })
 
