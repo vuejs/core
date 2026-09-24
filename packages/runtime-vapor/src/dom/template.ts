@@ -21,6 +21,24 @@ import { cloneStampedTemplate } from './scopeIdStamp'
 
 let t: HTMLTemplateElement
 
+/**
+ * What a root element's template contributes to a class the fallthrough
+ * attrs also write (see the incremental setter in prop.ts). Shared by every
+ * instance of the template; `true` when it contributes nothing.
+ */
+export type RootMeta = true | { cls?: string[] }
+
+function parseTemplate(html: string, ns?: Namespace): Node {
+  t = t || document.createElement('template')
+  if (ns) {
+    const tag = ns === Namespaces.SVG ? 'svg' : 'math'
+    t.innerHTML = `<${tag}>${html}</${tag}>`
+    return _child(_child(t.content) as ParentNode)
+  }
+  t.innerHTML = html
+  return _child(t.content)
+}
+
 function cloneTemplate(n: Node): Node {
   const scopeIds = currentRenderContext.slotScopeIds
   return scopeIds ? cloneStampedTemplate(n, scopeIds) : n.cloneNode(true)
@@ -34,7 +52,18 @@ export function template(html: string, flags: number = 0, ns?: Namespace) {
   // parsed once on first hydration adoption; every later instance of this
   // template compares against the cached form instead of re-scanning `html`
   let adoptTarget: AdoptTarget | undefined
-  return (): Node & { $root?: true } => {
+  // resolved once, from the parsed html: a hydrated node's class already
+  // includes the SSR fallthrough class
+  let rootMeta: RootMeta | undefined
+  const resolveRootMeta = (): RootMeta => {
+    if (html.includes(' class=')) {
+      // the DOM tokenizes on ASCII whitespace only, unlike `\s`
+      const cls = ((node ||= parseTemplate(html, ns)) as Element).classList
+      if (cls.length) return { cls: Array.from(cls) }
+    }
+    return true
+  }
+  return (): Node & { $root?: RootMeta } => {
     // a template child of a createElement-backed element carries insertion
     // state: its server output sits inside that element, not in the cursor
     let hydrationCursor: HydrationCursor | null = null
@@ -88,32 +117,17 @@ export function template(html: string, flags: number = 0, ns?: Namespace) {
           (adoptTarget ||= parseAdoptTarget(html)),
         )!
       }
-      if (root) (adopted as any).$root = true
+      if (root) (adopted as any).$root = rootMeta ||= resolveRootMeta()
       exitHydrationCursor(hydrationCursor)
       return adopted
     }
 
-    if (node) {
-      const ret = cloneTemplate(node)
-      if (root) (ret as any).$root = true
-      return ret
-    }
-
     // fast path for text nodes
-    if (html[0] !== '<') {
+    if (!node && html[0] !== '<') {
       return createTextNode(html)
     }
-    t = t || document.createElement('template')
-    if (ns) {
-      const tag = ns === Namespaces.SVG ? 'svg' : 'math'
-      t.innerHTML = `<${tag}>${html}</${tag}>`
-      node = _child(_child(t.content) as ParentNode)
-    } else {
-      t.innerHTML = html
-      node = _child(t.content)
-    }
-    const ret = cloneTemplate(node)
-    if (root) (ret as any).$root = true
+    const ret = cloneTemplate(node || (node = parseTemplate(html, ns)))
+    if (root) (ret as any).$root = rootMeta ||= resolveRootMeta()
     return ret
   }
 }

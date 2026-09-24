@@ -2369,4 +2369,188 @@ describe('attribute fallthrough', () => {
     expect(vdom.after).toBe('<div>x</div><p></p>')
     expect(vapor.after).toBe(vdom.after)
   })
+
+  // #15625: the class a root gets from its template or its own binding and
+  // the class it gets from fallthrough attrs are two layers on one element.
+  // Each step compares the root's class set with vdom.
+  async function classParity(
+    srcs: Record<string, string>,
+    makeData: () => Ref<any>,
+    steps: ((data: Ref<any>) => void)[],
+  ): Promise<string[]> {
+    const seen: Record<string, string[]> = { vdom: [], vapor: [] }
+    await renderParity(srcs, makeData, async (data, root, mode) => {
+      const classes = () =>
+        Array.from(root.firstElementChild!.classList).sort().join(' ')
+      seen[mode].push(classes())
+      for (const step of steps) {
+        step(data)
+        await nextTick()
+        seen[mode].push(classes())
+      }
+    })
+    expect(seen.vapor).toEqual(seen.vdom)
+    return seen.vdom
+  }
+
+  test('keeps the template class when an overlapping fallthrough class changes', async () => {
+    const seen = await classParity(
+      {
+        Child: `<template><div class="shared">x</div></template>`,
+        App: `<template><components.Child :class="data.cls" /></template>`,
+      },
+      () => ref({ cls: 'shared extra' }),
+      [
+        data => (data.value.cls = ''),
+        data => (data.value.cls = 'other'),
+        data => (data.value.cls = null),
+      ],
+    )
+    expect(seen).toEqual(['extra shared', 'shared', 'other shared', 'shared'])
+  })
+
+  test('keeps a class held by both the root binding and the fallthrough until both drop it', async () => {
+    const seen = await classParity(
+      {
+        Child: `<template><div :class="data.child">x</div></template>`,
+        App: `<template><components.Child :class="data.parent" /></template>`,
+      },
+      () => ref({ child: 'shared', parent: 'shared' }),
+      [
+        data => (data.value.child = ''),
+        data => (data.value.parent = ''),
+        data => (data.value.child = 'shared'),
+      ],
+    )
+    expect(seen).toEqual(['shared', 'shared', '', 'shared'])
+  })
+
+  test('keeps the fallthrough class when the root binding moves away from it', async () => {
+    const seen = await classParity(
+      {
+        Child: `<template><div :class="data.child">x</div></template>`,
+        App: `<template><components.Child :class="data.parent" /></template>`,
+      },
+      () => ref({ child: 'a', parent: 'a' }),
+      [data => (data.value.child = 'b'), data => (data.value.parent = 'c')],
+    )
+    expect(seen).toEqual(['a', 'a b', 'b c'])
+  })
+
+  test('keeps a static class folded into the root binding across fallthrough changes', async () => {
+    const seen = await classParity(
+      {
+        Child: `<template><div class="shared" :class="data.child">x</div></template>`,
+        App: `<template><components.Child :class="data.parent" /></template>`,
+      },
+      () => ref({ child: 'own', parent: 'shared own extra' }),
+      [data => (data.value.parent = ''), data => (data.value.child = '')],
+    )
+    expect(seen).toEqual(['extra own shared', 'own shared', 'shared'])
+  })
+
+  test('keeps a root v-bind class across fallthrough changes', async () => {
+    const seen = await classParity(
+      {
+        Child: `<template><div class="s" v-bind="data.obj">x</div></template>`,
+        App: `<template><components.Child :class="data.parent" /></template>`,
+      },
+      () => ref({ obj: { class: 'o' }, parent: 's o p' }),
+      [
+        data => (data.value.parent = ''),
+        data => (data.value.obj = { class: '' }),
+      ],
+    )
+    expect(seen).toEqual(['o p s', 'o s', 's'])
+  })
+
+  test('keeps a setClassName root class across fallthrough changes', async () => {
+    const seen = await classParity(
+      {
+        Child: `<template><div class="a" :class="{ b: data.ok }">x</div></template>`,
+        App: `<template><components.Child :class="data.parent" /></template>`,
+      },
+      () => ref({ ok: true, parent: 'a b' }),
+      [
+        data => (data.value.parent = ''),
+        data => (data.value.ok = false),
+        data => (data.value.parent = 'b'),
+      ],
+    )
+    expect(seen).toEqual(['a b', 'a b', 'a', 'a b'])
+  })
+
+  test('keeps the template class when fallthrough class sources are removed one by one', async () => {
+    const seen = await classParity(
+      {
+        Child: `<template><div class="c">x</div></template>`,
+        App: `<template><components.Child :class="data.x" v-bind="data.attrs" /></template>`,
+      },
+      () => ref({ x: 'x c', attrs: { class: 'y c' } }),
+      [
+        data => (data.value.x = ''),
+        data => (data.value.attrs = {}),
+        data => (data.value.x = 'x'),
+      ],
+    )
+    expect(seen).toEqual(['c x y', 'c y', 'c', 'c x'])
+  })
+
+  test('keeps a dynamic element root class across fallthrough changes', async () => {
+    const seen = await classParity(
+      {
+        Child: `<template><component :is="'div'" v-bind="data.obj" class="c">x</component></template>`,
+        App: `<template><components.Child :class="data.parent" /></template>`,
+      },
+      () => ref({ obj: { class: 'o' }, parent: 'c o p' }),
+      [data => (data.value.parent = ''), data => (data.value.obj = {})],
+    )
+    expect(seen).toEqual(['c o p', 'c o', 'c'])
+  })
+
+  test('keeps the template class through a nested fallthrough chain', async () => {
+    const seen = await classParity(
+      {
+        Child: `<template><div class="c">x</div></template>`,
+        Parent: `<template><components.Child :class="data.p" /></template>`,
+        App: `<template><components.Parent :class="data.gp" /></template>`,
+      },
+      () => ref({ gp: 'g c', p: 'p c' }),
+      [
+        data => (data.value.gp = ''),
+        data => (data.value.p = ''),
+        data => (data.value.gp = 'g'),
+      ],
+    )
+    expect(seen).toEqual(['c g p', 'c p', 'c', 'c g'])
+  })
+
+  test('keeps the template class when the fallthrough class arrives after mount', async () => {
+    const seen = await classParity(
+      {
+        Child: `<template><div class="s">x</div></template>`,
+        App: `<template><components.Child v-bind="data.attrs" /></template>`,
+      },
+      () => ref({ attrs: {} }),
+      [
+        data => (data.value.attrs = { class: 's a' }),
+        data => (data.value.attrs = {}),
+      ],
+    )
+    expect(seen).toEqual(['s', 'a s', 's'])
+  })
+
+  // coverage guard: the template class is tokenized by the DOM, where a
+  // non-ASCII space is part of a token
+  test('does not split a template class token on a non-breaking space', async () => {
+    const seen = await classParity(
+      {
+        Child: `<template><div class="a&#160;b">x</div></template>`,
+        App: `<template><components.Child :class="data.parent" /></template>`,
+      },
+      () => ref({ parent: 'a' }),
+      [data => (data.value.parent = '')],
+    )
+    expect(seen).toEqual(['a a b', 'a b'])
+  })
 })

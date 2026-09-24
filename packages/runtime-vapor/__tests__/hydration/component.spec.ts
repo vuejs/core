@@ -671,6 +671,37 @@ describe('Vapor Mode hydration', () => {
       expect(second.className).toBe('shared')
       expect(second.hasAttribute('id')).toBe(false)
     })
+
+    // #15625
+    test('keeps the template class when an overlapping fallthrough class is removed after hydration', async () => {
+      const data = ref({ cls: 'shared extra' })
+      const { container } = await testHydration(
+        `<template><components.Child :class="data.cls" /></template>`,
+        { Child: `<template><div class="shared">x</div></template>` },
+        data,
+      )
+      const el = container.firstElementChild!
+      expect(el.className).toBe('shared shared extra')
+
+      data.value.cls = ''
+      await nextTick()
+      expect(el.className).toBe('shared')
+    })
+
+    test('keeps a root v-bind class when an overlapping fallthrough class is removed after hydration', async () => {
+      const data = ref({ obj: { class: 'o s' }, cls: 's p' })
+      const { container } = await testHydration(
+        `<template><components.Child :class="data.cls" /></template>`,
+        { Child: `<template><div v-bind="data.obj">x</div></template>` },
+        data,
+      )
+      const el = container.firstElementChild!
+      expect(el.className).toBe('o s s p')
+
+      data.value.cls = ''
+      await nextTick()
+      expect(el.className).toBe('o s')
+    })
   })
 
   describe('dynamic component', () => {
