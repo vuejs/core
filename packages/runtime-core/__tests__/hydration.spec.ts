@@ -4147,4 +4147,72 @@ describe('SSR hydration', () => {
       expect(el.getAttribute('value')).toBe('server')
     })
   })
+
+  // the server renders nothing for an empty text root, so the node the cursor is
+  // on belongs to the next sibling
+  describe('component with an empty text root', () => {
+    const Other = { template: `<p>other</p>` }
+    const Empty = { props: ['txt'], template: `{{ txt }}` }
+    const Literal = { props: ['txt'], template: `{{ '' }}` }
+    const Rendered = { props: ['txt'], render: () => createTextVNode('') }
+    const Nested = {
+      props: ['txt'],
+      components: { Empty },
+      template: `<Empty :txt="txt" />`,
+    }
+    const Kept = {
+      props: ['txt'],
+      components: { Empty },
+      template: `<KeepAlive><Empty :txt="txt" /></KeepAlive>`,
+    }
+
+    async function hydrateTemplate(template: string, txt = ref('')) {
+      const App = {
+        components: { Empty, Literal, Rendered, Nested, Kept, Other },
+        setup: () => ({ txt, list: [1, 2] }),
+        template,
+      }
+      const html = await renderToString(h(App))
+      const container = document.createElement('div')
+      container.innerHTML = html
+      const vm = createSSRApp(App).mount(container)
+      expect(container.innerHTML).toBe(html)
+      return { container, html, vm }
+    }
+
+    test.each([
+      ['first, element after', `<div><C :txt="txt" /><span>after</span></div>`],
+      ['middle', `<div><b>b</b><C :txt="txt" /><span>after</span></div>`],
+      ['comment after', `<div><C :txt="txt" /><i v-if="false" /></div>`],
+      ['component after', `<div><C :txt="txt" /><Other /></div>`],
+      [
+        'v-for after',
+        `<div><C :txt="txt" /><p v-for="i in list">{{ i }}</p></div>`,
+      ],
+      [
+        'two in a row',
+        `<div><C :txt="txt" /><C :txt="txt" /><span>after</span></div>`,
+      ],
+      ['fragment root', `<C :txt="txt" /><span>after</span>`],
+    ])('%s', async (_, template) => {
+      for (const C of ['Empty', 'Literal', 'Rendered', 'Nested', 'Kept']) {
+        await hydrateTemplate(template.replace(/\bC\b/g, C))
+      }
+      expect(`Hydration`).not.toHaveBeenWarned()
+    })
+
+    test('updates in place and exposes the text node as $el', async () => {
+      const txt = ref('')
+      const { container, vm } = await hydrateTemplate(
+        `<div><Nested ref="n" :txt="txt" /><span>after</span></div>`,
+        txt,
+      )
+      const div = container.firstChild!
+      expect((vm.$refs.n as any).$el).toBe(div.firstChild)
+      expect(div.firstChild!.nodeType).toBe(3)
+      txt.value = 'x'
+      await nextTick()
+      expect(container.innerHTML).toBe(`<div>x<span>after</span></div>`)
+    })
+  })
 })

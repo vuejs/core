@@ -339,6 +339,14 @@ export function createHydrationFunctions(
             }
             subTree.el = node
             vnode.component!.subTree = subTree
+          } else if (vnode.component!.subTree) {
+            // an empty text root has no server-rendered node: hydration
+            // inserted one before `node`, which is left for the next sibling
+            const el = vnode.component!.subTree.el as Node | null
+            if (el && el !== node && nextSibling(el) === node) {
+              vnode.el = el
+              nextNode = node
+            }
           }
         } else if (shapeFlag & ShapeFlags.TELEPORT) {
           if (domType !== DOMNodeTypes.COMMENT) {
