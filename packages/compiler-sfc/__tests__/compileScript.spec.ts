@@ -982,6 +982,98 @@ describe('SFC compile <script setup>', () => {
         })
       })
     })
+
+    describe('vapor css modules used in template', () => {
+      const theCompile = (
+        template: string,
+        style: string,
+        setup = '/* ... */',
+      ) =>
+        compile(
+          `<script setup vapor>${setup}</script>\n` +
+            `<template>${template}</template>\n${style}`,
+          { vapor: true, inlineTemplate: true },
+        )
+
+      test('should declare the default $style module', () => {
+        const { content } = theCompile(
+          `<div :class="$style.red"></div>`,
+          `<style module>.red { color: red }</style>`,
+        )
+        expect(content).toMatch(`const $style = _useCssModule("$style")`)
+        expect(content).toMatch(`_setClass(n0, $style.red)`)
+        assertCode(content)
+      })
+
+      test('should declare a named module', () => {
+        const { content } = theCompile(
+          `<div>{{ classes.red }}</div>`,
+          `<style module="classes">.red { color: red }</style>`,
+        )
+        expect(content).toMatch(`const classes = _useCssModule("classes")`)
+        assertCode(content)
+      })
+
+      test('should only declare modules used in the template', () => {
+        const { content } = theCompile(
+          `<div :class="$style.red"></div>`,
+          `<style module>.red { color: red }</style>\n` +
+            `<style module="unused">.blue { color: blue }</style>`,
+        )
+        expect(content).toMatch(`const $style = _useCssModule("$style")`)
+        expect(content).not.toMatch(`_useCssModule("unused")`)
+        assertCode(content)
+      })
+
+      test('should not declare a module shadowed by a user binding', () => {
+        const { content } = theCompile(
+          `<div :class="$style.red"></div>`,
+          `<style module>.red { color: red }</style>`,
+          `const $style = { red: 'local' }`,
+        )
+        expect(content).not.toMatch(`_useCssModule`)
+        assertCode(content)
+      })
+
+      test('should not declare modules in vdom mode', () => {
+        const { content } = compile(
+          `<script setup>/* ... */</script>\n` +
+            `<template><div :class="$style.red"></div></template>\n` +
+            `<style module>.red { color: red }</style>`,
+          { inlineTemplate: true },
+        )
+        expect(content).not.toMatch(`_useCssModule`)
+        expect(content).toMatch(`_ctx.$style.red`)
+        assertCode(content)
+      })
+    })
+  })
+
+  describe('vapor css modules in non-inline mode', () => {
+    test('should return the module from setup()', () => {
+      const { content, bindings } = compile(
+        `<script setup vapor>const msg = 'hi'</script>\n` +
+          `<template><div :class="$style.red">{{ msg }}</div></template>\n` +
+          `<style module>.red { color: red }</style>`,
+        { inlineTemplate: false },
+      )
+      expect(content).toMatch(`const $style = _useCssModule("$style")`)
+      expect(content).toMatch(`{ msg, $style }`)
+      expect(bindings!.$style).toBe(BindingTypes.SETUP_CONST)
+      assertCode(content)
+    })
+
+    test('should not return modules unused in the template', () => {
+      const { content, bindings } = compile(
+        `<script setup vapor>const msg = 'hi'</script>\n` +
+          `<template><div>{{ msg }}</div></template>\n` +
+          `<style module>.red { color: red }</style>`,
+        { inlineTemplate: false },
+      )
+      expect(content).not.toMatch(`_useCssModule`)
+      expect(bindings!.$style).toBeUndefined()
+      assertCode(content)
+    })
   })
 
   describe('with TypeScript', () => {

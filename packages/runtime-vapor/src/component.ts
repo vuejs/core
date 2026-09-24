@@ -693,7 +693,9 @@ export function setupComponent(
         instance.props,
         instance,
       ]) || EMPTY_OBJ
-    : EMPTY_OBJ
+    : // a template-only component reads `<style module>` names off its
+      // render context, like the vdom render proxy does
+      (component as VaporComponentOptions).__cssModules || EMPTY_OBJ
 
   const isAsyncSetup = isPromise(setupResult)
 

@@ -1444,6 +1444,102 @@ return (_ctx, _cache) => {
 }"
 `;
 
+exports[`SFC compile <script setup> > inlineTemplate mode > vapor css modules used in template > should declare a named module 1`] = `
+"import { useCssModule as _useCssModule } from 'vue'
+import { txt as _txt, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, template as _template } from 'vue';
+const t0 = _template("<div> ", 1)
+
+export default {
+  __vapor: true,
+  setup(__props) {
+  const classes = _useCssModule("classes")
+/* ... */
+
+  const n0 = t0()
+  const x0 = _txt(n0)
+  _renderEffect(() => _setText(x0, _toDisplayString(classes.red)))
+  return n0
+
+}
+
+}"
+`;
+
+exports[`SFC compile <script setup> > inlineTemplate mode > vapor css modules used in template > should declare the default $style module 1`] = `
+"import { useCssModule as _useCssModule } from 'vue'
+import { setClass as _setClass, renderEffect as _renderEffect, template as _template } from 'vue';
+const t0 = _template("<div>", 1)
+
+export default {
+  __vapor: true,
+  setup(__props) {
+  const $style = _useCssModule("$style")
+/* ... */
+
+  const n0 = t0()
+  _renderEffect(() => _setClass(n0, $style.red))
+  return n0
+
+}
+
+}"
+`;
+
+exports[`SFC compile <script setup> > inlineTemplate mode > vapor css modules used in template > should not declare a module shadowed by a user binding 1`] = `
+"import { setClass as _setClass, renderEffect as _renderEffect, template as _template } from 'vue';
+const t0 = _template("<div>", 1)
+
+export default {
+  __vapor: true,
+  setup(__props) {
+const $style = { red: 'local' }
+
+  const n0 = t0()
+  _renderEffect(() => _setClass(n0, $style.red))
+  return n0
+
+}
+
+}"
+`;
+
+exports[`SFC compile <script setup> > inlineTemplate mode > vapor css modules used in template > should not declare modules in vdom mode 1`] = `
+"import { normalizeClass as _normalizeClass, openBlock as _openBlock, createElementBlock as _createElementBlock } from "vue"
+
+
+export default {
+  setup(__props) {
+/* ... */
+return (_ctx, _cache) => {
+  return (_openBlock(), _createElementBlock("div", {
+    class: _normalizeClass(_ctx.$style.red)
+  }, null, 2 /* CLASS */))
+}
+}
+
+}"
+`;
+
+exports[`SFC compile <script setup> > inlineTemplate mode > vapor css modules used in template > should only declare modules used in the template 1`] = `
+"import { useCssModule as _useCssModule } from 'vue'
+import { setClass as _setClass, renderEffect as _renderEffect, template as _template } from 'vue';
+const t0 = _template("<div>", 1)
+
+export default {
+  __vapor: true,
+  setup(__props) {
+  const $style = _useCssModule("$style")
+/* ... */
+
+  const n0 = t0()
+  _renderEffect(() => _setClass(n0, $style.red))
+  return n0
+
+}
+
+}"
+`;
+
 exports[`SFC compile <script setup> > inlineTemplate mode > with defineExpose() 1`] = `
 "
 export default {
@@ -1493,6 +1589,34 @@ export default {
       class d {}
       
 return { get aa() { return aa }, set aa(v) { aa = v }, bb, cc, dd, get a() { return a }, set a(v) { a = v }, b, c, d, get xx() { return xx }, get x() { return x } }
+}
+
+}"
+`;
+
+exports[`SFC compile <script setup> > vapor css modules in non-inline mode > should not return modules unused in the template 1`] = `
+"const msg = 'hi'
+export default {
+  __vapor: true,
+  setup(__props, { expose: __expose }) {
+  __expose();
+
+{ msg }
+}
+
+}"
+`;
+
+exports[`SFC compile <script setup> > vapor css modules in non-inline mode > should return the module from setup() 1`] = `
+"import { useCssModule as _useCssModule } from 'vue'
+const msg = 'hi'
+export default {
+  __vapor: true,
+  setup(__props, { expose: __expose }) {
+  const $style = _useCssModule("$style")
+  __expose();
+
+{ msg, $style }
 }
 
 }"
