@@ -477,4 +477,24 @@ describe('DOM prop initialization order', () => {
       },
     )
   })
+
+  test.each([
+    `<input type="number" value="3" :valueAsNumber="5">`,
+    `<input type="number" value="3" :valueAsNumber="data">`,
+    `<input type="number" :value.prop="'4'" :valueAsNumber="5">`,
+  ])('sets value after valueAsNumber: %s', async tpl => {
+    const values: Record<string, string[]> = { vdom: [], vapor: [] }
+    await renderParity(
+      { App: `<template>${tpl}</template>` },
+      () => ref(5),
+      async (data, root, mode) => {
+        const input = root.querySelector('input')!
+        values[mode].push(input.value)
+        data.value = 9
+        await nextTick()
+        values[mode].push(input.value)
+      },
+    )
+    expect(values.vapor).toEqual(values.vdom)
+  })
 })

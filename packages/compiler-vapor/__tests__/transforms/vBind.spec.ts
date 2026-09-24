@@ -1384,4 +1384,15 @@ describe('compiler v-bind', () => {
 
     expect(code.match(/_renderEffect\(/g)).toHaveLength(1)
   })
+
+  test('sets value after valueAsNumber', () => {
+    const { code } = compileWithVBind(
+      `<input type="number" value="3" :valueAsNumber="5" />`,
+    )
+
+    expect(code).toContain(`_template("<input type=number>"`)
+    expect(code).toContain(
+      `_setProp(n0, "valueAsNumber", "5")\n  _setValue(n0, "3")`,
+    )
+  })
 })

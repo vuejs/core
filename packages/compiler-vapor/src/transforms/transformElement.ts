@@ -544,8 +544,23 @@ function transformNativeElement(
         ({ key, modifier }) =>
           key.content === 'valueAsNumber' && modifier !== '^',
       )
+    // vdom sets `value` after every other prop on mount. A runtime valueAsNumber
+    // setter would override a static `value`, so it is kept out of the template
+    // and set last here as well. As in vdom, `.prop` / `.attr` bindings keep
+    // their position.
+    const isValueProp = ({ key, modifier, values }: IRProp) =>
+      needsOrderedProps &&
+      key.content === 'value' &&
+      !modifier &&
+      values.every(value => value.isStatic)
+    const props = needsOrderedProps
+      ? [
+          ...propsResult[1].filter(prop => !isValueProp(prop)),
+          ...propsResult[1].filter(isValueProp),
+        ]
+      : propsResult[1]
     let hasEffect = false
-    for (const prop of propsResult[1]) {
+    for (const prop of props) {
       const { key, values } = prop
       const canStringifyAttrName =
         key.isStatic && !UNSAFE_ATTR_NAME_RE.test(key.content)
@@ -569,6 +584,7 @@ function transformNativeElement(
         values.length === 1 &&
         (values[0].isStatic || values[0].content === "''") &&
         !dynamicKeys.includes(key.content) &&
+        !isValueProp(prop) &&
         !isRuntimeOnlyProp(node, key.content)
       ) {
         const value = values[0].content === "''" ? '' : values[0].content
