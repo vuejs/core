@@ -1078,5 +1078,38 @@ describe('Vapor Mode hydration', () => {
         `"<div><span>foo</span><!----></div><!--dynamic-component-->"`,
       )
     })
+
+    // #15625
+    test('root class and style survive removal of overlapping fallthrough after hydration', async () => {
+      const data = ref({
+        cls: 'shared extra',
+        style: 'color: blue; background-color: lightblue',
+      })
+      const { container } = await testHydration(
+        '<template><components.ClassChild :class="data.cls" /><components.StyleChild :style="data.style" /></template>',
+        {
+          ClassChild:
+            '<template><div class="shared">class child</div></template>',
+          StyleChild:
+            '<template><div style="color: red; font-weight: bold">style child</div></template>',
+        },
+        data,
+      )
+
+      const [classRoot, styleRoot] = Array.from(
+        container.children,
+      ) as HTMLElement[]
+      expect(classRoot.classList.contains('shared')).toBe(true)
+      expect(classRoot.classList.contains('extra')).toBe(true)
+      expect(styleRoot.style.color).toBe('blue')
+
+      data.value.cls = ''
+      data.value.style = ''
+      await nextTick()
+      expect(classRoot.className).toBe('shared')
+      expect(styleRoot.style.color).toBe('red')
+      expect(styleRoot.style.fontWeight).toBe('bold')
+      expect(styleRoot.style.backgroundColor).toBe('')
+    })
   })
 })

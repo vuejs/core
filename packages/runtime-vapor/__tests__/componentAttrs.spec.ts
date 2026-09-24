@@ -2342,4 +2342,79 @@ describe('attribute fallthrough', () => {
     expect(vapor.text).toBe(vdom.text)
     expect('Extraneous non-props attributes (class)').toHaveBeenWarned()
   })
+
+  // #15625
+  it('preserves root class and style when overlapping fallthrough values are removed', async () => {
+    const data = ref({
+      cls: 'shared extra',
+      style: 'color: blue; background-color: lightblue',
+    })
+    const ClassChild = compile(
+      '<template><div class="shared">class child</div></template>',
+      data,
+    )
+    const StyleChild = compile(
+      '<template><div style="color: red; font-weight: bold">style child</div></template>',
+      data,
+    )
+    const Parent = compile(
+      '<template><components.ClassChild :class="data.cls" /><components.StyleChild :style="data.style" /></template>',
+      data,
+      { ClassChild, StyleChild },
+    )
+
+    const { host } = define(Parent).render()
+    const [classRoot, styleRoot] = Array.from(host.children) as HTMLElement[]
+    expect(classRoot.className).toBe('shared extra')
+    expect(styleRoot.style.color).toBe('blue')
+    expect(styleRoot.style.fontWeight).toBe('bold')
+
+    data.value.cls = ''
+    data.value.style = ''
+    await nextTick()
+
+    expect(classRoot.className).toBe('shared')
+    expect(styleRoot.style.color).toBe('red')
+    expect(styleRoot.style.fontWeight).toBe('bold')
+    expect(styleRoot.style.backgroundColor).toBe('')
+  })
+
+  it('keeps fallthrough values when a root binding changes first', async () => {
+    const data = ref({
+      childClass: 'shared',
+      parentClass: 'shared',
+      childStyle: 'color: red',
+      parentStyle: 'color: blue',
+    })
+    const ClassChild = compile(
+      '<template><div :class="data.childClass" /></template>',
+      data,
+    )
+    const StyleChild = compile(
+      '<template><div :style="data.childStyle" /></template>',
+      data,
+    )
+    const Parent = compile(
+      '<template><components.ClassChild :class="data.parentClass" /><components.StyleChild :style="data.parentStyle" /></template>',
+      data,
+      { ClassChild, StyleChild },
+    )
+
+    const { host } = define(Parent).render()
+    const [classRoot, styleRoot] = Array.from(host.children) as HTMLElement[]
+    expect(classRoot.className).toBe('shared')
+    expect(styleRoot.style.color).toBe('blue')
+
+    data.value.childClass = ''
+    data.value.childStyle = 'color: green'
+    await nextTick()
+    expect(classRoot.className).toBe('shared')
+    expect(styleRoot.style.color).toBe('blue')
+
+    data.value.parentClass = ''
+    data.value.parentStyle = ''
+    await nextTick()
+    expect(classRoot.className).toBe('')
+    expect(styleRoot.style.color).toBe('green')
+  })
 })

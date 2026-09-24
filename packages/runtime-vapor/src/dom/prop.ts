@@ -301,6 +301,9 @@ function setClassIncremental(
     return
   }
 
+  if (el.$clsiStatic === undefined) {
+    el.$clsiStatic = el.getAttribute('class') || ''
+  }
   const prev = el[cacheKey]
   if ((value = el[cacheKey] = normalizedValue) !== prev) {
     const nextList = value.split(/\s+/)
@@ -308,8 +311,14 @@ function setClassIncremental(
       el.classList.add(...nextList)
     }
     if (prev) {
+      const retained =
+        `${el.$clsiStatic} ${el[cacheKey === '$clsi' ? '$clsi$' : '$clsi'] || ''}`.split(
+          /\s+/,
+        )
       for (const cls of prev.split(/\s+/)) {
-        if (!nextList.includes(cls)) el.classList.remove(cls)
+        if (!nextList.includes(cls) && !retained.includes(cls)) {
+          el.classList.remove(cls)
+        }
       }
     }
   }
@@ -389,12 +398,23 @@ function setStyleIncremental(el: any, value: any): NormalizedStyle | undefined {
     if (__DEV__ || __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__) {
       checkHydrationStyleMismatch(el, value, normalizedValue, true)
     }
+    if (el.$styiMerged === undefined) {
+      el.$styiMerged = parseStringStyle(el.getAttribute('style') || '')
+    }
     el[cacheKey] = normalizedValue
     hydrateVShowDisplay(el, normalizedValue)
     return
   }
 
-  patchStyle(el, el[cacheKey], (el[cacheKey] = normalizedValue))
+  if (el.$styiStatic === undefined) {
+    el.$styiStatic = parseStringStyle(el.getAttribute('style') || '')
+  }
+  el[cacheKey] = normalizedValue
+  // The parent wins on overlap, while the root's value remains available
+  // when a fallthrough style is removed.
+  const merged = Object.assign({}, el.$styiStatic, el.$styi, el.$styi$)
+  patchStyle(el, el.$styiMerged, merged)
+  el.$styiMerged = merged
 }
 
 // Hydration skips the style patch, so mirror patchStyle's v-show bookkeeping:

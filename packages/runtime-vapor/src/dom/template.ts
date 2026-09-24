@@ -14,7 +14,13 @@ import {
   validateHydrationTarget,
 } from './hydration'
 import { insertionParent, resetInsertionState } from '../insertionState'
-import { type Namespace, Namespaces, TemplateFlags } from '@vue/shared'
+import {
+  type Namespace,
+  Namespaces,
+  type NormalizedStyle,
+  TemplateFlags,
+  parseStringStyle,
+} from '@vue/shared'
 import { _child, createTextNode } from './node'
 import { currentRenderContext } from '../renderContext'
 import { cloneStampedTemplate } from './scopeIdStamp'
@@ -31,6 +37,8 @@ export function template(html: string, flags: number = 0, ns?: Namespace) {
   const root = !!(flags & TemplateFlags.ROOT)
   const isStatic = !!(flags & TemplateFlags.STATIC)
   let node: Node
+  let rootStaticClass: string | undefined
+  let rootStaticStyle: NormalizedStyle | undefined
   // parsed once on first hydration adoption; every later instance of this
   // template compares against the cached form instead of re-scanning `html`
   let adoptTarget: AdoptTarget | undefined
@@ -86,7 +94,34 @@ export function template(html: string, flags: number = 0, ns?: Namespace) {
           (adoptTarget ||= parseAdoptTarget(html)),
         )!
       }
-      if (root) (adopted as any).$root = true
+      if (root) {
+        ;(adopted as any).$root = true
+        // The adopted node already includes SSR fallthrough values. Read the
+        // root's own class and style from the template instead.
+        if (rootStaticClass === undefined) {
+          rootStaticClass = ''
+          rootStaticStyle = {}
+          if (html[0] === '<' && /\b(?:class|style)\s*=/.test(html)) {
+            t = t || document.createElement('template')
+            let staticNode: Node
+            if (ns) {
+              const tag = ns === Namespaces.SVG ? 'svg' : 'math'
+              t.innerHTML = `<${tag}>${html}</${tag}>`
+              staticNode = _child(_child(t.content) as ParentNode)
+            } else {
+              t.innerHTML = html
+              staticNode = _child(t.content)
+            }
+            rootStaticClass =
+              (staticNode as Element).getAttribute('class') || ''
+            rootStaticStyle = parseStringStyle(
+              (staticNode as Element).getAttribute('style') || '',
+            )
+          }
+        }
+        ;(adopted as any).$clsiStatic = rootStaticClass
+        ;(adopted as any).$styiStatic = rootStaticStyle
+      }
       exitHydrationCursor(hydrationCursor)
       return adopted
     }
