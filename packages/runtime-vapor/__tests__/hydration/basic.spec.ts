@@ -1146,4 +1146,19 @@ describe('Vapor Mode hydration', () => {
       expect(container.innerHTML).toBe('<div><div></div></div>')
     })
   })
+
+  test('update after hydration removes the server checked attribute', async () => {
+    const { container, data } = await testHydration(
+      `<template><div><input type="checkbox" :checked="data"></div></template>`,
+      undefined,
+      ref(true),
+    )
+    expect(container.innerHTML).toBe(
+      '<div><input type="checkbox" checked=""></div>',
+    )
+
+    data.value = false
+    await nextTick()
+    expect(container.innerHTML).toBe('<div><input type="checkbox"></div>')
+  })
 })

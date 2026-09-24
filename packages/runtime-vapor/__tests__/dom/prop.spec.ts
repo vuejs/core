@@ -990,4 +990,54 @@ describe('patchProp', () => {
       ).toEqual({ attr: 'foo' })
     })
   })
+
+  // #6007 checked / selected are mirrored to attributes like vdom, so
+  // <input type="reset">, [checked] selectors and outerHTML see them
+  describe('checked / selected attributes', () => {
+    // records the attribute across true -> false -> true, then the state
+    // form.reset() restores from it
+    async function parity(src: string, attr: string) {
+      const seen: Record<string, boolean[]> = { vdom: [], vapor: [] }
+      await renderParity(
+        { App: `<template><form>${src}</form></template>` },
+        () => ref(true),
+        async (data, root, mode) => {
+          const el = root.querySelector('.target') as any
+          seen[mode].push(el.hasAttribute(attr))
+          data.value = false
+          await nextTick()
+          seen[mode].push(el.hasAttribute(attr))
+          data.value = true
+          await nextTick()
+          seen[mode].push(el.hasAttribute(attr))
+          root.querySelector('form')!.reset()
+          seen[mode].push(el[attr])
+        },
+      )
+      expect(seen.vapor).toEqual(seen.vdom)
+      return seen.vdom
+    }
+
+    test.each([
+      `:checked="data"`,
+      `:checked.prop="data"`,
+      `v-bind="{ checked: data }"`,
+    ])('checked via %s', async binding => {
+      expect(
+        await parity(
+          `<input class="target" type="checkbox" ${binding}>`,
+          'checked',
+        ),
+      ).toEqual([true, false, true, true])
+    })
+
+    test('selected on option', async () => {
+      expect(
+        await parity(
+          `<select><option value="a">a</option><option class="target" value="b" :selected="data">b</option></select>`,
+          'selected',
+        ),
+      ).toEqual([true, false, true, true])
+    })
+  })
 })
