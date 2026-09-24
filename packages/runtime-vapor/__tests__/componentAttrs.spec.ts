@@ -2287,6 +2287,117 @@ describe('attribute fallthrough', () => {
     },
   )
 
+  // #15635
+  describe('root listeners merged with fallthrough listeners', () => {
+    function setup(childTpl: string, parentTpl = '@click="data.parent"') {
+      const calls: string[] = []
+      const log = (name: string) => (_e: Event) => {
+        calls.push(name)
+      }
+      const root = ref(log('root'))
+      const parent = ref(log('parent'))
+      const data = ref({ root, parent, log })
+      const Child = compile(`<template>${childTpl}</template>`, data)
+      const Parent = compile(
+        `<template><components.Child ${parentTpl} /></template>`,
+        data,
+        { Child },
+      )
+      const { host } = define(Parent).render()
+      const button = host.querySelector('button')!
+      const click = () => {
+        calls.length = 0
+        button.click()
+        return calls
+      }
+      return { root, parent, log, click }
+    }
+
+    it.each([
+      `<component :is="'button'" @click="data.root">child</component>`,
+      `<button v-bind="{ onClick: data.root }">child</button>`,
+    ])('keeps root handlers first across updates (%s)', async childTpl => {
+      const { root, parent, log, click } = setup(childTpl)
+      expect(click()).toEqual(['root', 'parent'])
+
+      root.value = log('newRoot')
+      await nextTick()
+      expect(click()).toEqual(['newRoot', 'parent'])
+
+      parent.value = log('newParent')
+      await nextTick()
+      expect(click()).toEqual(['newRoot', 'newParent'])
+    })
+
+    it('binds handlers from multiple parent sources once via $attrs', () => {
+      const { click } = setup(
+        `<button v-bind="$attrs">child</button>`,
+        `@click="data.root" v-on="{ click: data.parent }"`,
+      )
+      expect(click()).toEqual(['root', 'parent'])
+    })
+
+    it('keeps the root handler when it also binds the parent handler', () => {
+      const { click } = setup(
+        `<button v-bind="{ onClick: [data.root, data.parent] }">child</button>`,
+      )
+      expect(click()).toEqual(['root', 'parent'])
+    })
+
+    it('respects stopImmediatePropagation in a root handler', async () => {
+      const { root, click } = setup(
+        `<button v-bind="{ onClick: data.root }">child</button>`,
+      )
+      root.value = e => e.stopImmediatePropagation()
+      await nextTick()
+      expect(click()).toEqual([])
+    })
+
+    it('handles a once root listener next to a fallthrough listener', async () => {
+      const { root, log, click } = setup(
+        `<component :is="'button'" @click.once="data.root">child</component>`,
+      )
+      expect(click()).toEqual(['root', 'parent'])
+      expect(click()).toEqual(['parent'])
+
+      root.value = log('newRoot')
+      await nextTick()
+      expect(click()).toEqual(['parent'])
+    })
+
+    it('fires a once listener shared by root and parent once', async () => {
+      const { root, log, click } = setup(
+        `<component :is="'button'" @click.once="data.root">child</component>`,
+        '@click.once="data.parent"',
+      )
+      expect(click()).toEqual(['root', 'parent'])
+      expect(click()).toEqual([])
+
+      root.value = log('newRoot')
+      await nextTick()
+      expect(click()).toEqual([])
+    })
+  })
+
+  // #15635
+  it('should not duplicate a root listener that is bound back from $attrs', () => {
+    const click = vi.fn()
+    const data = ref({ onClick: click })
+    const Child = compile(
+      `<template><button v-bind="$attrs">child</button></template>`,
+      data,
+    )
+    const Parent = compile(
+      `<template><components.Child @click="data.onClick" /></template>`,
+      data,
+      { Child },
+    )
+
+    const { host } = define(Parent).render()
+    host.querySelector('button')!.click()
+    expect(click).toHaveBeenCalledTimes(1)
+  })
+
   it('should not fallthrough reserved props from v-bind object', () => {
     const data = ref({
       attrs: { key: 'a', ref_for: true, ref_key: 'r', id: 'foo' },
