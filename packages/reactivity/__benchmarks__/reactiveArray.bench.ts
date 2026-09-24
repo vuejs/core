@@ -1,9 +1,7 @@
-import { bench } from 'vite-plus/test'
-import {
-  effect,
-  reactive,
-  shallowReadArray,
-} from '../dist/reactivity.esm-browser.prod'
+import { test } from '../../../scripts/bench'
+import * as reactivity from '../dist/reactivity.esm-browser.prod'
+
+const { effect, reactive, shallowReadArray } = reactivity
 
 for (let amount = 1e1; amount < 1e4; amount *= 10) {
   {
@@ -13,12 +11,15 @@ for (let amount = 1e1; amount < 1e4; amount *= 10) {
     }
     const arr = reactive(rawArray)
 
-    bench(`track for loop, ${amount} elements`, () => {
-      let sum = 0
-      effect(() => {
-        for (let i = 0; i < arr.length; i++) {
-          sum += arr[i]
-        }
+    const name = `track for loop, ${amount} elements`
+    test(name, async ({ benchmark }) => {
+      await benchmark(() => {
+        let sum = 0
+        effect(() => {
+          for (let i = 0; i < arr.length; i++) {
+            sum += arr[i]
+          }
+        })
       })
     })
   }
@@ -30,13 +31,16 @@ for (let amount = 1e1; amount < 1e4; amount *= 10) {
     }
     const arr = reactive(rawArray)
 
-    bench(`track manual reactiveReadArray, ${amount} elements`, () => {
-      let sum = 0
-      effect(() => {
-        const raw = shallowReadArray(arr)
-        for (let i = 0; i < raw.length; i++) {
-          sum += raw[i]
-        }
+    const name = `track manual reactiveReadArray, ${amount} elements`
+    test(name, async ({ benchmark }) => {
+      await benchmark(() => {
+        let sum = 0
+        effect(() => {
+          const raw = shallowReadArray(arr)
+          for (let i = 0; i < raw.length; i++) {
+            sum += raw[i]
+          }
+        })
       })
     })
   }
@@ -48,12 +52,15 @@ for (let amount = 1e1; amount < 1e4; amount *= 10) {
     }
     const arr = reactive(rawArray)
 
-    bench(`track iteration, ${amount} elements`, () => {
-      let sum = 0
-      effect(() => {
-        for (let x of arr) {
-          sum += x
-        }
+    const name = `track iteration, ${amount} elements`
+    test(name, async ({ benchmark }) => {
+      await benchmark(() => {
+        let sum = 0
+        effect(() => {
+          for (let x of arr) {
+            sum += x
+          }
+        })
       })
     })
   }
@@ -65,10 +72,13 @@ for (let amount = 1e1; amount < 1e4; amount *= 10) {
     }
     const arr = reactive(rawArray)
 
-    bench(`track forEach, ${amount} elements`, () => {
-      let sum = 0
-      effect(() => {
-        arr.forEach(x => (sum += x))
+    const name = `track forEach, ${amount} elements`
+    test(name, async ({ benchmark }) => {
+      await benchmark(() => {
+        let sum = 0
+        effect(() => {
+          arr.forEach(x => (sum += x))
+        })
       })
     })
   }
@@ -80,10 +90,13 @@ for (let amount = 1e1; amount < 1e4; amount *= 10) {
     }
     const arr = reactive(rawArray)
 
-    bench(`track reduce, ${amount} elements`, () => {
-      let sum = 0
-      effect(() => {
-        sum = arr.reduce((v, a) => a + v, 0)
+    const name = `track reduce, ${amount} elements`
+    test(name, async ({ benchmark }) => {
+      await benchmark(() => {
+        let sum = 0
+        effect(() => {
+          sum = arr.reduce((v, a) => a + v, 0)
+        })
       })
     })
   }
@@ -96,8 +109,11 @@ for (let amount = 1e1; amount < 1e4; amount *= 10) {
     const r = reactive(rawArray)
     effect(() => r.reduce((v, a) => a + v, 0))
 
-    bench(`trigger index mutation (1st only), tracked with reduce, ${amount} elements`, () => {
-      r[0]++
+    const name = `trigger index mutation (1st only), tracked with reduce, ${amount} elements`
+    test(name, async ({ benchmark }) => {
+      await benchmark(() => {
+        r[0]++
+      })
     })
   }
 
@@ -109,10 +125,13 @@ for (let amount = 1e1; amount < 1e4; amount *= 10) {
     const r = reactive(rawArray)
     effect(() => r.reduce((v, a) => a + v, 0))
 
-    bench(`trigger index mutation (all), tracked with reduce, ${amount} elements`, () => {
-      for (let i = 0, n = r.length; i < n; i++) {
-        r[i]++
-      }
+    const name = `trigger index mutation (all), tracked with reduce, ${amount} elements`
+    test(name, async ({ benchmark }) => {
+      await benchmark(() => {
+        for (let i = 0, n = r.length; i < n; i++) {
+          r[i]++
+        }
+      })
     })
   }
 
@@ -129,8 +148,11 @@ for (let amount = 1e1; amount < 1e4; amount *= 10) {
       }
     })
 
-    bench(`push() trigger, tracked via iteration, ${amount} elements`, () => {
-      arr.push(1)
+    const name = `push() trigger, tracked via iteration, ${amount} elements`
+    test(name, async ({ benchmark }) => {
+      await benchmark(() => {
+        arr.push(1)
+      })
     })
   }
 
@@ -145,8 +167,11 @@ for (let amount = 1e1; amount < 1e4; amount *= 10) {
       arr.forEach(x => (sum += x))
     })
 
-    bench(`push() trigger, tracked via forEach, ${amount} elements`, () => {
-      arr.push(1)
+    const name = `push() trigger, tracked via forEach, ${amount} elements`
+    test(name, async ({ benchmark }) => {
+      await benchmark(() => {
+        arr.push(1)
+      })
     })
   }
 }

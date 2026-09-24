@@ -308,7 +308,7 @@ describe('vapor transition', () => {
         await css(btnChangeNameSelector).click()
         await expect
           .element(css(btnChangeNameSelector))
-          .toHaveTextContent('changed')
+          .toMatchTextContent('changed')
 
         click(btnSelector)
         await nextTick()

@@ -1,27 +1,34 @@
-import { bench, describe } from 'vite-plus/test'
+import { describe } from 'vite-plus/test'
+import { test } from '../../../scripts/bench'
 import type { Ref } from '../src'
-import { effect, ref } from '../dist/reactivity.esm-browser.prod'
+import * as reactivity from '../dist/reactivity.esm-browser.prod'
+
+const { effect, ref } = reactivity
 
 describe('effect', () => {
   {
     let i = 0
     const n = ref(0)
     effect(() => n.value)
-    bench('single ref invoke', () => {
-      n.value = i++
+    test('single ref invoke', async ({ benchmark }) => {
+      await benchmark(() => {
+        n.value = i++
+      })
     })
   }
 
   function benchEffectCreate(size: number) {
-    bench(`create an effect that tracks ${size} refs`, () => {
-      const refs: Ref[] = []
-      for (let i = 0; i < size; i++) {
-        refs.push(ref(i))
-      }
-      effect(() => {
+    test(`create an effect that tracks ${size} refs`, async ({ benchmark }) => {
+      await benchmark(() => {
+        const refs: Ref[] = []
         for (let i = 0; i < size; i++) {
-          refs[i].value
+          refs.push(ref(i))
         }
+        effect(() => {
+          for (let i = 0; i < size; i++) {
+            refs[i].value
+          }
+        })
       })
     })
   }
@@ -32,17 +39,21 @@ describe('effect', () => {
   benchEffectCreate(1000)
 
   function benchEffectCreateAndStop(size: number) {
-    bench(`create and stop an effect that tracks ${size} refs`, () => {
-      const refs: Ref[] = []
-      for (let i = 0; i < size; i++) {
-        refs.push(ref(i))
-      }
-      const e = effect(() => {
+    test(`create and stop an effect that tracks ${size} refs`, async ({
+      benchmark,
+    }) => {
+      await benchmark(() => {
+        const refs: Ref[] = []
         for (let i = 0; i < size; i++) {
-          refs[i].value
+          refs.push(ref(i))
         }
+        const e = effect(() => {
+          for (let i = 0; i < size; i++) {
+            refs[i].value
+          }
+        })
+        e.effect.stop()
       })
-      e.effect.stop()
     })
   }
 
@@ -62,10 +73,12 @@ describe('effect', () => {
         refs[i].value
       }
     })
-    bench(`1 effect, mutate ${size} refs`, () => {
-      for (let i = 0; i < size; i++) {
-        refs[i].value = i + j++
-      }
+    test(`1 effect, mutate ${size} refs`, async ({ benchmark }) => {
+      await benchmark(() => {
+        for (let i = 0; i < size; i++) {
+          refs[i].value = i + j++
+        }
+      })
     })
   }
 
@@ -86,8 +99,10 @@ describe('effect', () => {
         }
       }
     })
-    bench(`${size} refs branch toggle`, () => {
-      toggle.value = !toggle.value
+    test(`${size} refs branch toggle`, async ({ benchmark }) => {
+      await benchmark(() => {
+        toggle.value = !toggle.value
+      })
     })
   }
 
@@ -101,8 +116,10 @@ describe('effect', () => {
     for (let i = 0; i < size; i++) {
       effect(() => n.value)
     }
-    bench(`1 ref invoking ${size} effects`, () => {
-      n.value = i++
+    test(`1 ref invoking ${size} effects`, async ({ benchmark }) => {
+      await benchmark(() => {
+        n.value = i++
+      })
     })
   }
 

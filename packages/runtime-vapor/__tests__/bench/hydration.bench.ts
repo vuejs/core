@@ -1,4 +1,4 @@
-import { bench, describe } from 'vite-plus/test'
+import { test } from 'vite-plus/test'
 import { createVaporApp, createVaporSSRApp } from '../../src'
 import { type HydrationFixture, fixtures } from './hydration.fixtures'
 
@@ -20,7 +20,7 @@ import { type HydrationFixture, fixtures } from './hydration.fixtures'
  * into mismatch recovery) live in `hydration.fixtures.ts`.
  *
  * Run prod-like (mismatch checks and dev anchor labels compiled out) with:
- *   MODE=benchmark npx vp test bench --project=bench-browser --run
+ *   MODE=benchmark npx vp test bench --project='bench-browser*' --run
  *
  * Each iteration builds and tears down a whole app, so the tail is GC-bound;
  * at vitest's default 500ms two runs of identical code differed by up to 18%.
@@ -46,31 +46,24 @@ for (const fixture of fixtures) {
     return container
   }
 
-  describe(fixture.name, () => {
-    bench(
-      'hydrate',
-      () => {
+  test(fixture.name, async ({ bench }) => {
+    await bench.compare(
+      bench('hydrate', () => {
         const container = prepare()
         const app = createVaporSSRApp(fixture.comp)
         app.mount(container)
         app.unmount()
         container.remove()
-      },
-      OPTIONS,
-    )
-
-    bench('clone only', () => prepare().remove(), OPTIONS)
-
-    bench(
-      'client render',
-      () => {
+      }),
+      bench('clone only', () => prepare().remove()),
+      bench('client render', () => {
         const container = document.createElement('div')
         document.body.appendChild(container)
         const app = createVaporApp(fixture.comp)
         app.mount(container)
         app.unmount()
         container.remove()
-      },
+      }),
       OPTIONS,
     )
   })

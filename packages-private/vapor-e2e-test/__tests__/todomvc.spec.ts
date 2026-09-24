@@ -16,14 +16,14 @@ describe('e2e: todomvc', () => {
     expect(css('.main')).not.toBeVisible()
     expect(css('.footer')).not.toBeVisible()
     expect(css('.filters .selected')).toHaveLength(1)
-    expect(css('.filters .selected')).toHaveTextContent('All')
+    expect(css('.filters .selected')).toMatchTextContent('All')
     expect(css('.todo')).toHaveLength(0)
 
     await enterValue(css('.new-todo'), 'test')
     expect(css('.todo')).toHaveLength(1)
     expect(css('.todo .edit')).not.toBeVisible()
-    expect(css('.todo label')).toHaveTextContent('test')
-    expect(css('.todo-count strong')).toHaveTextContent('1')
+    expect(css('.todo label')).toMatchTextContent('test')
+    expect(css('.todo-count strong')).toMatchTextContent('1')
     expect(css('.todo .toggle')).not.toBeChecked()
     expect(css('.main')).toBeVisible()
     expect(css('.footer')).toBeVisible()
@@ -32,48 +32,48 @@ describe('e2e: todomvc', () => {
 
     await enterValue(css('.new-todo'), 'test2')
     expect(css('.todo')).toHaveLength(2)
-    expect(css('.todo:nth-child(2) label')).toHaveTextContent('test2')
-    expect(css('.todo-count strong')).toHaveTextContent('2')
+    expect(css('.todo:nth-child(2) label')).toMatchTextContent('test2')
+    expect(css('.todo-count strong')).toMatchTextContent('2')
 
     // toggle
     await css('.todo .toggle').first().click()
     expect(css('.todo.completed')).toHaveLength(1)
     expect(css('.todo:nth-child(1)')).toHaveClass('completed')
-    expect(css('.todo-count strong')).toHaveTextContent('1')
+    expect(css('.todo-count strong')).toMatchTextContent('1')
     expect(css('.clear-completed')).toBeVisible()
 
     await enterValue(css('.new-todo'), 'test3')
     expect(css('.todo')).toHaveLength(3)
-    expect(css('.todo:nth-child(3) label')).toHaveTextContent('test3')
-    expect(css('.todo-count strong')).toHaveTextContent('2')
+    expect(css('.todo:nth-child(3) label')).toMatchTextContent('test3')
+    expect(css('.todo-count strong')).toMatchTextContent('2')
 
     await enterValue(css('.new-todo'), 'test4')
     await enterValue(css('.new-todo'), 'test5')
     expect(css('.todo')).toHaveLength(5)
-    expect(css('.todo-count strong')).toHaveTextContent('4')
+    expect(css('.todo-count strong')).toMatchTextContent('4')
 
     // toggle more
     await css('.todo:nth-child(4) .toggle').click()
     await css('.todo:nth-child(5) .toggle').click()
     expect(css('.todo.completed')).toHaveLength(3)
-    expect(css('.todo-count strong')).toHaveTextContent('2')
+    expect(css('.todo-count strong')).toMatchTextContent('2')
 
     // remove
     await removeItemAt(1)
     expect(css('.todo')).toHaveLength(4)
     expect(css('.todo.completed')).toHaveLength(2)
-    expect(css('.todo-count strong')).toHaveTextContent('2')
+    expect(css('.todo-count strong')).toMatchTextContent('2')
     await removeItemAt(2)
     expect(css('.todo')).toHaveLength(3)
     expect(css('.todo.completed')).toHaveLength(2)
-    expect(css('.todo-count strong')).toHaveTextContent('1')
+    expect(css('.todo-count strong')).toMatchTextContent('1')
 
     // remove all
     await css('.clear-completed').click()
     expect(css('.todo')).toHaveLength(1)
-    expect(css('.todo label')).toHaveTextContent('test2')
+    expect(css('.todo label')).toMatchTextContent('test2')
     expect(css('.todo.completed')).toHaveLength(0)
-    expect(css('.todo-count strong')).toHaveTextContent('1')
+    expect(css('.todo-count strong')).toMatchTextContent('1')
     expect(css('.clear-completed')).not.toBeVisible()
 
     // prepare to test filters
@@ -102,7 +102,7 @@ describe('e2e: todomvc', () => {
 
     await expect.element(css('.todo.completed')).toHaveLength(0)
     await expect.element(css('.todo')).toHaveLength(2)
-    expect(css('.todo-count strong')).toHaveTextContent('2')
+    expect(css('.todo-count strong')).toMatchTextContent('2')
 
     // completed on page load
     location.hash = '#completed'
@@ -113,7 +113,7 @@ describe('e2e: todomvc', () => {
     await expect.element(css('.todo')).toHaveLength(2)
 
     expect(css('.todo.completed')).toHaveLength(2)
-    expect(css('.todo-count strong')).toHaveTextContent('2')
+    expect(css('.todo-count strong')).toMatchTextContent('2')
 
     // toggling with filter active
     await css('.todo .toggle').first().click()
@@ -137,7 +137,7 @@ describe('e2e: todomvc', () => {
     await css('.new-todo').click() // blur
 
     expect(css('.todo.editing')).toHaveLength(0)
-    expect(css('.todo:nth-child(1) label')).toHaveTextContent('edited!')
+    expect(css('.todo:nth-child(1) label')).toMatchTextContent('edited!')
 
     // editing triggered by enter
     await css('.todo label').first().dblClick()
@@ -145,7 +145,7 @@ describe('e2e: todomvc', () => {
     await expect.element(css('.todo.editing')).toHaveLength(0)
     await expect
       .element(css('.todo:nth-child(1) label'))
-      .toHaveTextContent('edited again!')
+      .toMatchTextContent('edited again!')
 
     // cancel
     await css('.todo label').first().dblClick()
@@ -155,7 +155,7 @@ describe('e2e: todomvc', () => {
     await expect.element(css('.todo.editing')).toHaveLength(0)
     await expect
       .element(css('.todo:nth-child(1) label'))
-      .toHaveTextContent('edited again!')
+      .toMatchTextContent('edited again!')
 
     // empty value should remove
     await css('.todo label').first().dblClick()

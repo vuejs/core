@@ -27,7 +27,9 @@ export default defineConfig({
   test: {
     globals: true,
     pool: 'threads',
-    setupFiles: 'scripts/setup-vitest.ts',
+    benchmark: {
+      include: [],
+    },
     sequence: {
       hooks: 'list',
     },
@@ -54,6 +56,7 @@ export default defineConfig({
         extends: true,
         test: {
           name: 'unit-gc',
+          setupFiles: 'scripts/setup-vitest.ts',
           pool: 'forks',
           execArgv: ['--expose-gc'],
           include: [
@@ -67,6 +70,7 @@ export default defineConfig({
         extends: true,
         test: {
           name: 'unit',
+          setupFiles: 'scripts/setup-vitest.ts',
           exclude: [
             ...configDefaults.exclude,
             'packages/reactivity/__tests__/gc.spec.ts',
@@ -82,6 +86,7 @@ export default defineConfig({
         extends: true,
         test: {
           name: 'unit-jsdom',
+          setupFiles: 'scripts/setup-vitest.ts',
           environment: 'jsdom',
           include: [
             'packages/{vue,vue-compat,runtime-dom,runtime-vapor}/**/*.spec.ts',
@@ -91,6 +96,22 @@ export default defineConfig({
       },
       {
         extends: true,
+        test: {
+          name: 'bench-node',
+          include: [],
+          benchmark: {
+            include: [
+              'packages/{reactivity,runtime-core,server-renderer}/**/*.bench.ts',
+            ],
+          },
+        },
+      },
+      {
+        extends: true,
+        optimizeDeps: {
+          // Native ESM: avoid late optimization reloading benchmark iframes.
+          exclude: ['entities/decode'],
+        },
         test: {
           name: 'bench-browser',
           include: [],
@@ -116,6 +137,7 @@ export default defineConfig({
         extends: true,
         test: {
           name: 'e2e',
+          setupFiles: 'scripts/setup-vitest.ts',
           environment: 'jsdom',
           isolate: true,
           include: ['packages/vue/__tests__/e2e/*.spec.ts'],
@@ -132,6 +154,7 @@ export default defineConfig({
         },
         test: {
           name: 'e2e-browser',
+          setupFiles: 'scripts/setup-vitest.ts',
           include: [
             'packages/vue/__tests__/e2e/Transition.spec.ts',
             'packages/vue/__tests__/e2e/TransitionGroup.spec.ts',

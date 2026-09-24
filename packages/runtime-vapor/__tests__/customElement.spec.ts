@@ -2890,4 +2890,9 @@ describe('defineVaporCustomElement', () => {
     expect(container.textContent).toBe('number/true')
     app.unmount()
   })
+
+  afterAll(async () => {
+    document.body.innerHTML = ''
+    await nextTick()
+  })
 })
