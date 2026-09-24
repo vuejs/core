@@ -1,4 +1,5 @@
 import {
+  EMPTY_ARR,
   EMPTY_OBJ,
   type NormalizedStyle,
   camelize,
@@ -61,13 +62,18 @@ import {
 } from './hydration'
 import { type Block, normalizeBlock } from '../block'
 import type { VaporElement } from '../apiDefineCustomElement'
+import type { RootMeta } from './template'
 import { isTransitionEnabled } from '../transition'
 
 type TargetElement = Element & {
-  $root?: true
+  $root?: boolean | RootMeta
   $html?: string
   $cls?: string
   $clsFlags?: number
+  // the root's own class binding and the fallthrough class, two layers on
+  // one element: a token stays while either layer (or the template) holds it
+  $clsi?: string
+  $clsi$?: string
   $sty?: NormalizedStyle | string | undefined
   value?: string
   _value?: any
@@ -298,7 +304,8 @@ function setClassIncremental(
   value: any,
   isNormalized: boolean = false,
 ): void {
-  const cacheKey = `$clsi${isApplyingFallthroughProps ? '$' : ''}`
+  const isFallthrough = isApplyingFallthroughProps
+  const cacheKey = isFallthrough ? '$clsi$' : '$clsi'
   const normalizedValue = isNormalized ? value : normalizeClass(value)
 
   if (isHydrating && !isRecreatedNode(el)) {
@@ -315,11 +322,27 @@ function setClassIncremental(
       el.classList.add(...nextList)
     }
     if (prev) {
+      let kept: string[] | undefined
       for (const cls of prev.split(/\s+/)) {
-        if (!nextList.includes(cls)) el.classList.remove(cls)
+        if (
+          !nextList.includes(cls) &&
+          !(kept ||= keptClasses(el, isFallthrough)).includes(cls)
+        ) {
+          el.classList.remove(cls)
+        }
       }
     }
   }
+}
+
+// The tokens the other layer of a root still holds: the root's own binding
+// (which stands in for its template class) under a fallthrough write, the
+// fallthrough class under the root's own write.
+function keptClasses(el: any, isFallthrough: boolean): string[] {
+  const other = isFallthrough ? el.$clsi : el.$clsi$
+  return other !== undefined
+    ? other.split(/\s+/)
+    : (isFallthrough && el.$root.cls) || EMPTY_ARR
 }
 
 // Defer css-var style mismatch checks until instance.block is set, so root
