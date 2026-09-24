@@ -11,7 +11,7 @@ import {
   type SFCScriptBlock,
 } from './parse'
 import type { ParserPlugin } from '@babel/parser'
-import { genPropsAccessExp, generateCodeFrame } from '@vue/shared'
+import { generateCodeFrame } from '@vue/shared'
 import type {
   ArrayPattern,
   CallExpression,
@@ -62,7 +62,6 @@ import {
   isJS,
   isLiteralNode,
   isTS,
-  resolveObjectKey,
 } from './script/utils'
 import { analyzeScriptBindings } from './script/analyzeScriptBindings'
 import {
@@ -291,32 +290,6 @@ export function compileScript(
             `setup() function. If your component options require initialization ` +
             `in the module scope, use a separate normal <script> to export ` +
             `the options instead.`,
-          id,
-        )
-      }
-    })
-  }
-
-  function checkInvalidDestructuredPropsReference(
-    node: Node | undefined,
-    method: string,
-  ) {
-    if (!node) return
-    const isDefault =
-      (node.type === 'ObjectProperty' || node.type === 'ObjectMethod') &&
-      resolveObjectKey(node.key, node.computed) === 'default'
-    walkIdentifiers(node, id => {
-      const key = propsLocalToPublicMap[id.name]
-      if (key) {
-        ctx.error(
-          `\`${method}()\` prop options cannot reference destructured props ` +
-            `because they are hoisted outside of the setup() function.` +
-            (isDefault
-              ? ` Use the props argument of the default factory instead, ` +
-                `e.g. default: props => props${genPropsAccessExp(key).slice(
-                  `__props`.length,
-                )}`
-              : ``),
           id,
         )
       }
@@ -746,14 +719,9 @@ export function compileScript(
   checkInvalidScopeReference(ctx.propsDestructureDecl, DEFINE_PROPS)
   checkInvalidScopeReference(ctx.emitsRuntimeDecl, DEFINE_EMITS)
   checkInvalidScopeReference(ctx.optionsRuntimeDecl, DEFINE_OPTIONS)
-  const propsLocalToPublicMap: Record<string, string> = Object.create(null)
-  for (const key in ctx.propsDestructuredBindings) {
-    propsLocalToPublicMap[ctx.propsDestructuredBindings[key].local] = key
-  }
   for (const { runtimeOptionNodes } of Object.values(ctx.modelDecls)) {
     for (const node of runtimeOptionNodes) {
       checkInvalidScopeReference(node, DEFINE_MODEL)
-      checkInvalidDestructuredPropsReference(node, DEFINE_MODEL)
     }
   }
 

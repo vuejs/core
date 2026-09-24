@@ -23,6 +23,7 @@ import { genPropsAccessExp } from '@vue/shared'
 import { isCallOf, resolveObjectKey } from './utils'
 import type { ScriptCompileContext } from './context'
 import { DEFINE_PROPS } from './defineProps'
+import { DEFINE_MODEL } from './defineModel'
 
 export function processPropsDestructure(
   ctx: ScriptCompileContext,
@@ -110,11 +111,19 @@ export function transformDestructuredProps(
   const excludedIds = new WeakSet<Identifier>()
   const parentStack: Node[] = []
   const propsLocalToPublicMap: Record<string, string> = Object.create(null)
+  const modelOptionNodes = new Set<Node>()
+  let currentModelOption: Node | null = null
 
   for (const key in ctx.propsDestructuredBindings) {
     const { local } = ctx.propsDestructuredBindings[key]
     rootScope[local] = true
     propsLocalToPublicMap[local] = key
+  }
+
+  for (const { runtimeOptionNodes } of Object.values(ctx.modelDecls)) {
+    for (const node of runtimeOptionNodes) {
+      modelOptionNodes.add(node)
+    }
   }
 
   function pushScope(isFunctionScope = false) {
@@ -226,6 +235,27 @@ export function transformDestructuredProps(
   }
 
   function rewriteId(id: Identifier, parent: Node, parentStack: Node[]) {
+    if (currentModelOption) {
+      const isDefault =
+        (currentModelOption.type === 'ObjectProperty' ||
+          currentModelOption.type === 'ObjectMethod') &&
+        resolveObjectKey(
+          currentModelOption.key,
+          currentModelOption.computed,
+        ) === 'default'
+      ctx.error(
+        `\`${DEFINE_MODEL}()\` prop options cannot reference destructured props ` +
+          `because they are hoisted outside of the setup() function.` +
+          (isDefault
+            ? ` Use the props argument of the default factory instead, ` +
+              `e.g. default: props => props${genPropsAccessExp(
+                propsLocalToPublicMap[id.name],
+              ).slice(`__props`.length)}`
+            : ``),
+        id,
+      )
+    }
+
     if (
       (parent.type === 'AssignmentExpression' && id === parent.left) ||
       parent.type === 'UpdateExpression'
@@ -284,6 +314,10 @@ export function transformDestructuredProps(
         !TS_NODE_TYPES.includes(parent.type)
       ) {
         return this.skip()
+      }
+
+      if (modelOptionNodes.has(node)) {
+        currentModelOption = node
       }
 
       checkUsage(node, 'watch', vueImportAliases.watch)
@@ -347,6 +381,9 @@ export function transformDestructuredProps(
     },
     leave(node: Node, parent: Node | null) {
       parent && parentStack.pop()
+      if (node === currentModelOption) {
+        currentModelOption = null
+      }
       if (isFunctionType(node)) {
         popScope(true)
       } else if (node.type === 'BlockStatement' && !isFunctionType(parent!)) {
