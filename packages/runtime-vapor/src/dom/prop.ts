@@ -210,6 +210,13 @@ export function setDOMProp(
     }
   }
   needRemove && el.removeAttribute(attrName || key)
+  // #6007 also set form state as attributes so they work with
+  // <input type="reset"> or libs / extensions that expect attributes
+  if ((key === 'checked' || key === 'selected') && !el.tagName.includes('-')) {
+    includeBooleanAttr(value)
+      ? el.setAttribute(key, '')
+      : el.removeAttribute(key)
+  }
 }
 
 export function setClass(
