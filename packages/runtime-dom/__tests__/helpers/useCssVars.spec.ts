@@ -518,4 +518,39 @@ describe('useCssVars', () => {
     el = root.children[0] as HTMLElement
     expect(el.style.getPropertyValue(`--color`)).toBe('green')
   })
+
+  test('vars survive a child style binding going nullish', async () => {
+    const state = reactive({ color: 'red' })
+    const active = ref(true)
+    const root = document.createElement('div')
+
+    // the vars are owned by the parent, so only the child re-renders here
+    const Child = {
+      setup() {
+        return () =>
+          h('div', { style: active.value ? { fontWeight: 'bold' } : undefined })
+      },
+    }
+    const App = {
+      setup() {
+        useCssVars(() => state)
+        return () => h(Child)
+      },
+    }
+
+    render(h(App), root)
+    await nextTick()
+    const el = () => root.children[0] as HTMLElement
+    expect(el().style.getPropertyValue(`--color`)).toBe('red')
+
+    active.value = false
+    await nextTick()
+    expect(el().style.fontWeight).toBe('')
+    expect(el().style.getPropertyValue(`--color`)).toBe('red')
+
+    active.value = true
+    await nextTick()
+    expect(el().style.fontWeight).toBe('bold')
+    expect(el().style.getPropertyValue(`--color`)).toBe('red')
+  })
 })

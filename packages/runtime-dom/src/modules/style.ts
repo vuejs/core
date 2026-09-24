@@ -64,7 +64,14 @@ export function patchStyle(el: Element, prev: Style, next: Style): void {
         hasControlledDisplay = displayRE.test(next)
       }
     } else if (prev) {
-      el.removeAttribute('style')
+      // keep the css vars injected by `useCssVars` instead of dropping the
+      // whole attribute
+      const cssVarText = (style as any)[CSS_VAR_TEXT]
+      if (cssVarText) {
+        style.cssText = cssVarText
+      } else {
+        el.removeAttribute('style')
+      }
     }
   }
   // indicates the element also has `v-show`.
