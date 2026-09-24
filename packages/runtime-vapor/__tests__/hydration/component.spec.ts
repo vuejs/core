@@ -1111,5 +1111,32 @@ describe('Vapor Mode hydration', () => {
       expect(styleRoot.style.fontWeight).toBe('bold')
       expect(styleRoot.style.backgroundColor).toBe('')
     })
+
+    test('dynamic element root restores its own class and style after hydration', async () => {
+      const data = ref({
+        parentClass: 'parent',
+        parentStyle: 'color: blue',
+        childStyle: 'color: blue',
+      })
+      const { container } = await testHydration(
+        '<template><components.Child :class="data.parentClass" :style="data.parentStyle" /></template>',
+        {
+          Child:
+            '<template><component :is="\'div\'" class="child" :style="data.childStyle">child</component></template>',
+        },
+        data,
+      )
+
+      const root = container.querySelector('div')!
+      data.value.childStyle = 'color: red'
+      await nextTick()
+      expect(root.style.color).toBe('blue')
+
+      data.value.parentClass = ''
+      data.value.parentStyle = ''
+      await nextTick()
+      expect(root.className).toBe('child')
+      expect(root.style.color).toBe('red')
+    })
   })
 })

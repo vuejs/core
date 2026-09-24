@@ -1267,6 +1267,12 @@ export function createPlainElement(
 
   // mark single root
   ;(el as any).$root = isSingleRoot
+  if (isHydrating && isSingleRoot) {
+    // A plain element has no template-owned class or style. Its bindings are
+    // recorded separately during hydration, before fallthrough is applied.
+    ;(el as any).$clsiStatic = ''
+    ;(el as any).$styiStatic = {}
+  }
 
   // Adopted elements already carry SSR scope attrs; mismatch-recreated ones
   // were client-built and stamp like a client render.
