@@ -4138,6 +4138,15 @@ function registerInteropDirsComponent(
   if (comp === instance || interopDirsProducers.has(comp)) return
   interopDirsProducers.add(comp)
   const pending = isPendingInteropSetup(comp)
+  if (pending) {
+    // torn down before its setup settles: the record it got at resolve time
+    // goes, and no root ever mounted
+    ;(comp.bum ||= []).push(() => {
+      const owners = state.dirsOwners
+      const owner = owners && owners.get(comp)
+      if (owner && !owner.el) owners.delete(comp)
+    })
+  }
   registerAfterInteropSetup(comp, pending, () => {
     ;(comp.bu ||= []).push(() =>
       beforeInteropDirsSelfUpdate(instance, state, comp),

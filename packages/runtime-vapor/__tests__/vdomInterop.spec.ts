@@ -2557,6 +2557,57 @@ describe('vdomInterop', () => {
         ])
       })
 
+      test('a nested root torn down before its async setup settles mounts nothing', async () => {
+        const run = async (vapor: boolean) => {
+          let resolve!: () => void
+          const data = ref({
+            show: true,
+            p: new Promise<void>(r => (resolve = r)),
+          })
+          const Inner = compile(
+            `<script setup>const data = _data; await data.value.p</script>` +
+              `<template><div>i</div></template>`,
+            data,
+            {},
+            { vapor },
+          )
+          const Wrapper = compile(
+            `<script setup>const data = _data\n` +
+              `const components = _components</script>` +
+              `<template><components.Inner v-if="data.show"/></template>`,
+            data,
+            { Inner },
+            { vapor },
+          )
+          const calls: string[] = []
+          const dir = trace(calls)
+          const { done } = mountInBody(() =>
+            h(Suspense, null, {
+              default: () => withDirectives(h(Wrapper), [[dir, 'v']]),
+              fallback: () => h('span', 'loading'),
+            }),
+          )
+          data.value.show = false
+          await nextTick()
+          resolve()
+          await new Promise(r => setTimeout(r))
+          await nextTick()
+          done()
+          return calls
+        }
+
+        // vdom still renders the torn-down instance when its setup settles,
+        // and tears that render down again
+        expect(await run(false)).toEqual([
+          'created DIV[i] (detached) v',
+          'beforeMount DIV[i] (detached) v',
+          'beforeUnmount DIV[i] v',
+          'mounted DIV[i] (detached) v',
+          'unmounted DIV[i] (detached) v',
+        ])
+        expect(await run(true)).toEqual([])
+      })
+
       // vapor only: a vdom Transition renders a placeholder root while the
       // leave is pending, so the vdom child has no comparable sequence
       test('an out-in leave releases the old root once', async () => {
