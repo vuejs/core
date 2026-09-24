@@ -287,6 +287,76 @@ describe('defineModel()', () => {
     expect(content).toMatch(`set: (v) => { return v + __props.x }`)
   })
 
+  // #15602
+  test('w/ props destructure, prop option referencing a destructured prop', () => {
+    expect(() =>
+      compile(
+        `
+      <script setup lang="ts">
+      const { x } = defineProps<{ x?: number }>()
+      const modelValue = defineModel({
+        default: () => x
+      })
+      </script>
+      `,
+        { propsDestructure: true },
+      ),
+    ).toThrow(`prop options cannot reference destructured props`)
+  })
+
+  test('w/ props destructure, default factory using the props argument', () => {
+    const { content } = compile(
+      `
+      <script setup lang="ts">
+      const { x } = defineProps<{ x?: number }>()
+      const modelValue = defineModel({
+        default: props => props.x
+      })
+      </script>
+      `,
+      { propsDestructure: true },
+    )
+    assertCode(content)
+    expect(content).toMatch(`default: props => props.x`)
+  })
+
+  test('w/ props destructure, local shadowing a destructured prop', () => {
+    const { content } = compile(
+      `
+      <script setup lang="ts">
+      const { x } = defineProps<{ x?: number }>()
+      const modelValue = defineModel({
+        default: () => { const x = 1; return x }
+      })
+      </script>
+      `,
+      { propsDestructure: true },
+    )
+    assertCode(content)
+    expect(content).toMatch(`default: () => { const x = 1; return x }`)
+  })
+
+  test('w/ props destructure, nested var shadowing a destructured prop', () => {
+    const { content } = compile(
+      `
+      <script setup lang="ts">
+      const { x } = defineProps<{ x?: number }>()
+      const modelValue = defineModel({
+        default: () => {
+          if (true) {
+            var x = 1
+          }
+          return x
+        }
+      })
+      </script>
+      `,
+      { propsDestructure: true },
+    )
+    assertCode(content)
+    expect(content).toMatch(`return x`)
+  })
+
   test('w/ Boolean And Function types, production mode', () => {
     const { content, bindings } = compile(
       `
