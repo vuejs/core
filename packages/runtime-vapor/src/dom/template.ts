@@ -36,8 +36,7 @@ export function template(html: string, flags: number = 0, ns?: Namespace) {
   let adoptTarget: AdoptTarget | undefined
   return (): Node & { $root?: true } => {
     // a template child of a createElement-backed element carries insertion
-    // state of its own, because its server output sits inside that element
-    // instead of the enclosing template
+    // state: its server output sits inside that element, not in the cursor
     let hydrationCursor: HydrationCursor | null = null
     if (insertionParent) {
       if (isHydrating) {

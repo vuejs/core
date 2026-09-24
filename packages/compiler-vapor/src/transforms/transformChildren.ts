@@ -141,15 +141,15 @@ function processDynamicChildren(
         anchor = child.anchor = context.increaseId()
       }
       if (child.template != null) {
-        // template node due to invalid nesting - generate actual insertion,
-        // appended when no anchor was assigned
+        // template node due to invalid nesting or a createElement-backed
+        // parent (which never anchors) - generate actual insertion, appended
+        // when no anchor was assigned, with the unit index for hydration
         child.operation = {
           type: IRNodeTypes.INSERT_NODE,
           elements: [child.id!],
           parent: context.reference(),
           anchor,
-          appendIndex:
-            useCreateElement && anchor === undefined ? unitIndex : undefined,
+          appendIndex: useCreateElement ? unitIndex : undefined,
         }
       } else if (child.operation && isBlockOperation(child.operation)) {
         child.operation.parent = context.reference()

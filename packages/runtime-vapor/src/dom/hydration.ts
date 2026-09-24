@@ -21,8 +21,8 @@ import {
   createTextNode,
   locateChildByLogicalIndex,
   parentNode,
-  setLastLocatedLogicalChild,
   releaseLocatorCache,
+  setLastLocatedLogicalChild,
   updateLastLocatedLogicalChild,
 } from './node'
 import { currentRenderContext } from '../renderContext'
@@ -410,10 +410,8 @@ function locateHydrationNodeImpl(claim?: FragmentClaim, isBlankText?: boolean) {
     // also stamps $llc/$lli so mismatch recovery keeps the cache coherent.
     node = locateChildByLogicalIndex(insertionParent, insertionIndex || 0)
     if (!node && isBlankText) {
-      // SSR omits an empty text node entirely, so the logical walk above
-      // finds nothing at this append position. Seed it here instead of
-      // asserting a hydration node was found, and stamp the cache the same
-      // way a located node would.
+      // SSR omits an empty text node, so the walk finds nothing at its
+      // append position. Seed it there and cache it like a located node.
       node = resolveBlankTextTarget(null, insertionParent)
       setLastLocatedLogicalChild(insertionParent, node, insertionIndex || 0)
     }
