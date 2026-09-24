@@ -2370,28 +2370,37 @@ describe('attribute fallthrough', () => {
     expect(vapor.after).toBe(vdom.after)
   })
 
-  // #15625: the class a root gets from its template or its own binding and
-  // the class it gets from fallthrough attrs are two layers on one element.
-  // Each step compares the root's class set with vdom.
-  async function classParity(
+  // #15625: a root's own class / style and the fallthrough one are two
+  // layers; each step compares what the root shows with vdom
+  async function layerParity(
+    read: (el: Element) => string,
     srcs: Record<string, string>,
     makeData: () => Ref<any>,
     steps: ((data: Ref<any>) => void)[],
   ): Promise<string[]> {
     const seen: Record<string, string[]> = { vdom: [], vapor: [] }
     await renderParity(srcs, makeData, async (data, root, mode) => {
-      const classes = () =>
-        Array.from(root.firstElementChild!.classList).sort().join(' ')
-      seen[mode].push(classes())
+      seen[mode].push(read(root.firstElementChild!))
       for (const step of steps) {
         step(data)
         await nextTick()
-        seen[mode].push(classes())
+        seen[mode].push(read(root.firstElementChild!))
       }
     })
     expect(seen.vapor).toEqual(seen.vdom)
     return seen.vdom
   }
+  const classParity = layerParity.bind(null, el =>
+    Array.from(el.classList).sort().join(' '),
+  )
+  const styleParity = layerParity.bind(null, el =>
+    (el.getAttribute('style') || '')
+      .split(';')
+      .map(s => s.trim())
+      .filter(Boolean)
+      .sort()
+      .join('; '),
+  )
 
   test('keeps the template class when an overlapping fallthrough class changes', async () => {
     const seen = await classParity(
@@ -2540,8 +2549,7 @@ describe('attribute fallthrough', () => {
     expect(seen).toEqual(['s', 'a s', 's'])
   })
 
-  // coverage guard: the template class is tokenized by the DOM, where a
-  // non-ASCII space is part of a token
+  // coverage guard: the DOM does not split a class token on a non-ASCII space
   test('does not split a template class token on a non-breaking space', async () => {
     const seen = await classParity(
       {
@@ -2552,5 +2560,243 @@ describe('attribute fallthrough', () => {
       [data => (data.value.parent = '')],
     )
     expect(seen).toEqual(['a a b', 'a b'])
+  })
+
+  test('restores the template style when an overlapping fallthrough style changes', async () => {
+    const seen = await styleParity(
+      {
+        Child: `<template><div style="color: red; font-weight: bold">x</div></template>`,
+        App: `<template><components.Child :style="data.sty" /></template>`,
+      },
+      () => ref({ sty: 'color: blue; background-color: lightblue' }),
+      [
+        data => (data.value.sty = ''),
+        data => (data.value.sty = { color: 'green' }),
+        data => (data.value.sty = null),
+      ],
+    )
+    expect(seen).toEqual([
+      'background-color: lightblue; color: blue; font-weight: bold',
+      'color: red; font-weight: bold',
+      'color: green; font-weight: bold',
+      'color: red; font-weight: bold',
+    ])
+  })
+
+  test('lets the fallthrough style win while the root binding changes, then restores the binding', async () => {
+    const seen = await styleParity(
+      {
+        Child: `<template><div :style="data.child">x</div></template>`,
+        App: `<template><components.Child :style="data.parent" /></template>`,
+      },
+      () => ref({ child: 'color: red', parent: 'color: blue' }),
+      [
+        data => (data.value.child = 'color: green'),
+        data => (data.value.parent = ''),
+        data => (data.value.child = 'color: red'),
+      ],
+    )
+    expect(seen).toEqual([
+      'color: blue',
+      'color: blue',
+      'color: green',
+      'color: red',
+    ])
+  })
+
+  test('restores a static style folded into the root binding when the fallthrough drops that property', async () => {
+    const seen = await styleParity(
+      {
+        Child: `<template><div style="color: red" :style="data.child">x</div></template>`,
+        App: `<template><components.Child :style="data.parent" /></template>`,
+      },
+      () =>
+        ref({
+          child: { fontWeight: 'bold' },
+          parent: { color: 'blue', margin: '1px' },
+        }),
+      [
+        data => (data.value.parent = { margin: '2px' }),
+        data => (data.value.parent = {}),
+      ],
+    )
+    expect(seen).toEqual([
+      'color: blue; font-weight: bold; margin: 1px',
+      'color: red; font-weight: bold; margin: 2px',
+      'color: red; font-weight: bold',
+    ])
+  })
+
+  test('merges the root binding and the fallthrough style when both change in one tick', async () => {
+    const seen = await styleParity(
+      {
+        Child: `<template><div :style="data.child">x</div></template>`,
+        App: `<template><components.Child :style="data.parent" /></template>`,
+      },
+      () => ref({ child: 'color: red', parent: 'color: blue' }),
+      [
+        data => {
+          data.value.child = 'color: green'
+          data.value.parent = ''
+        },
+        data => {
+          data.value.child = 'color: red'
+          data.value.parent = 'color: blue'
+        },
+      ],
+    )
+    expect(seen).toEqual(['color: blue', 'color: green', 'color: blue'])
+  })
+
+  test('restores the template style of a root inside a branch', async () => {
+    const seen = await styleParity(
+      {
+        Child: `<template><div v-if="data.ok" style="color: red">x</div><span v-else style="color: red">y</span></template>`,
+        App: `<template><components.Child :style="data.parent" /></template>`,
+      },
+      () => ref({ ok: true, parent: 'color: blue' }),
+      [
+        data => (data.value.parent = ''),
+        data => (data.value.ok = false),
+        data => (data.value.parent = 'color: blue'),
+        data => (data.value.parent = ''),
+      ],
+    )
+    expect(seen).toEqual([
+      'color: blue',
+      'color: red',
+      'color: red',
+      'color: blue',
+      'color: red',
+    ])
+  })
+
+  test('restores a root v-bind style when the fallthrough spread drops it', async () => {
+    const seen = await styleParity(
+      {
+        Child: `<template><div v-bind="data.obj">x</div></template>`,
+        App: `<template><components.Child v-bind="data.attrs" /></template>`,
+      },
+      () =>
+        ref({
+          obj: { style: { color: 'red' } },
+          attrs: { style: { color: 'blue' }, id: 'a' },
+        }),
+      [
+        data => (data.value.attrs = { id: 'a' }),
+        data => (data.value.attrs = { style: { color: 'blue' } }),
+        data => (data.value.attrs = {}),
+      ],
+    )
+    expect(seen).toEqual([
+      'color: blue',
+      'color: red',
+      'color: blue',
+      'color: red',
+    ])
+  })
+
+  test('merges a mixed root binding and a fallthrough spread through their changes', async () => {
+    const seen = await styleParity(
+      {
+        Child: `<template><div :class="data.a" v-bind="data.obj" :style="data.s">x</div></template>`,
+        App: `<template><components.Child v-bind="data.attrs" /></template>`,
+      },
+      () =>
+        ref({
+          a: 'a',
+          obj: { class: 'o', style: { color: 'red', margin: '1px' } },
+          s: { padding: '1px' },
+          attrs: { class: 'a o', style: { color: 'blue' } },
+        }),
+      [
+        data => (data.value.attrs = {}),
+        data => (data.value.attrs = { class: 'a', style: { margin: '3px' } }),
+        data => (data.value.obj = {}),
+        data => (data.value.attrs = {}),
+      ],
+    )
+    expect(seen).toEqual([
+      'color: blue; margin: 1px; padding: 1px',
+      'color: red; margin: 1px; padding: 1px',
+      'color: red; margin: 3px; padding: 1px',
+      'margin: 3px; padding: 1px',
+      'padding: 1px',
+    ])
+  })
+
+  test('keeps the root css vars when the fallthrough style arrives late, changes and goes', async () => {
+    const seen = await styleParity(
+      {
+        Child: `<script setup>const data = _data</script>
+          <template><div>x</div></template>
+          <style>div { color: v-bind('data.color') }</style>`,
+        App: `<template><components.Child v-bind="data.attrs" /></template>`,
+      },
+      () => ref({ attrs: {}, color: 'red' }),
+      [
+        data => (data.value.attrs = { style: 'color: blue' }),
+        data => (data.value.color = 'purple'),
+        data => (data.value.attrs = { style: 'color: green' }),
+        data => (data.value.attrs = {}),
+      ],
+    )
+    expect(seen).toEqual([
+      '--v51566ce1: red',
+      '--v51566ce1: red; color: blue',
+      '--v51566ce1: purple; color: blue',
+      '--v51566ce1: purple; color: green',
+      '--v51566ce1: purple',
+    ])
+  })
+
+  test('keeps the root css vars when the root binding is removed after the fallthrough style', async () => {
+    const seen = await styleParity(
+      {
+        Child: `<script setup>const data = _data</script>
+          <template><div :style="data.own">x</div></template>
+          <style>div { color: v-bind('data.color') }</style>`,
+        App: `<template><components.Child v-bind="data.attrs" /></template>`,
+      },
+      () =>
+        ref({
+          own: { width: '1px' },
+          attrs: { style: { color: 'blue' } },
+          color: 'red',
+        }),
+      [
+        data => (data.value.color = 'purple'),
+        data => (data.value.attrs = {}),
+        data => (data.value.own = null),
+      ],
+    )
+    expect(seen).toEqual([
+      '--v51566ce1: red; color: blue; width: 1px',
+      '--v51566ce1: purple; color: blue; width: 1px',
+      '--v51566ce1: purple; width: 1px',
+      '--v51566ce1: purple',
+    ])
+  })
+
+  // coverage guard: v-show keeps owning display across the merge
+  test('keeps v-show in charge of display across fallthrough style changes', async () => {
+    const seen = await styleParity(
+      {
+        Child: `<template><div v-show="data.show" style="color: red">x</div></template>`,
+        App: `<template><components.Child :style="data.parent" /></template>`,
+      },
+      () => ref({ show: true, parent: 'display: flex' }),
+      [
+        data => (data.value.show = false),
+        data => (data.value.parent = ''),
+        data => (data.value.show = true),
+      ],
+    )
+    expect(seen).toEqual([
+      'color: red; display: flex',
+      'color: red; display: none',
+      'color: red; display: none',
+      'color: red',
+    ])
   })
 })

@@ -14,30 +14,19 @@ import {
   validateHydrationTarget,
 } from './hydration'
 import { insertionParent, resetInsertionState } from '../insertionState'
-import { type Namespace, Namespaces, TemplateFlags } from '@vue/shared'
-import { _child, createTextNode } from './node'
+import {
+  type Namespace,
+  type NormalizedStyle,
+  TemplateFlags,
+  parseStringStyle,
+} from '@vue/shared'
+import { createTextNode, parseTemplate } from './node'
 import { currentRenderContext } from '../renderContext'
 import { cloneStampedTemplate } from './scopeIdStamp'
 
-let t: HTMLTemplateElement
-
-/**
- * What a root element's template contributes to a class the fallthrough
- * attrs also write (see the incremental setter in prop.ts). Shared by every
- * instance of the template; `true` when it contributes nothing.
- */
-export type RootMeta = true | { cls?: string[] }
-
-function parseTemplate(html: string, ns?: Namespace): Node {
-  t = t || document.createElement('template')
-  if (ns) {
-    const tag = ns === Namespaces.SVG ? 'svg' : 'math'
-    t.innerHTML = `<${tag}>${html}</${tag}>`
-    return _child(_child(t.content) as ParentNode)
-  }
-  t.innerHTML = html
-  return _child(t.content)
-}
+// the class and style a root's template contributes, shared by all its
+// instances (see the incremental setters in prop.ts)
+export type RootMeta = { cls?: string[]; sty?: NormalizedStyle }
 
 function cloneTemplate(n: Node): Node {
   const scopeIds = currentRenderContext.slotScopeIds
@@ -52,16 +41,18 @@ export function template(html: string, flags: number = 0, ns?: Namespace) {
   // parsed once on first hydration adoption; every later instance of this
   // template compares against the cached form instead of re-scanning `html`
   let adoptTarget: AdoptTarget | undefined
-  // resolved once, from the parsed html: a hydrated node's class already
-  // includes the SSR fallthrough class
+  // from the parsed html: a hydrated node already carries the SSR fallthrough
   let rootMeta: RootMeta | undefined
   const resolveRootMeta = (): RootMeta => {
-    if (html.includes(' class=')) {
+    const meta: RootMeta = {}
+    if (html.includes(' class=') || html.includes(' style=')) {
+      const el = (node ||= parseTemplate(html, ns)) as Element
       // the DOM tokenizes on ASCII whitespace only, unlike `\s`
-      const cls = ((node ||= parseTemplate(html, ns)) as Element).classList
-      if (cls.length) return { cls: Array.from(cls) }
+      if (el.classList.length) meta.cls = Array.from(el.classList)
+      const sty = el.getAttribute('style')
+      if (sty) meta.sty = parseStringStyle(sty)
     }
-    return true
+    return meta
   }
   return (): Node & { $root?: RootMeta } => {
     // a template child of a createElement-backed element carries insertion
@@ -102,9 +93,9 @@ export function template(html: string, flags: number = 0, ns?: Namespace) {
             validateHydrationTarget(adopted, html)
           }
         }
-        // cache once for post-hydration CSR clones. A root's hydrated node
-        // carries the SSR fallthrough attrs, so a root template parses its
-        // html instead, unless that html was stripped.
+        // cache once for post-hydration CSR clones; a root's hydrated node
+        // carries the SSR fallthrough attrs, so it parses its html instead
+        // unless that was stripped
         if (!node && (!root || !html)) node = adopted.cloneNode(true)
         advanceHydrationNode(adopted)
       } else {
@@ -126,7 +117,7 @@ export function template(html: string, flags: number = 0, ns?: Namespace) {
     if (!node && html[0] !== '<') {
       return createTextNode(html)
     }
-    const ret = cloneTemplate(node || (node = parseTemplate(html, ns)))
+    const ret = cloneTemplate((node ||= parseTemplate(html, ns)))
     if (root) (ret as any).$root = rootMeta ||= resolveRootMeta()
     return ret
   }

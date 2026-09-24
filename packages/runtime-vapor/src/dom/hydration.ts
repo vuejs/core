@@ -6,7 +6,7 @@ import {
   logMismatchError,
   warn,
 } from '@vue/runtime-dom'
-import { type Namespace, Namespaces } from '@vue/shared'
+import type { Namespace } from '@vue/shared'
 import {
   insertionAnchor,
   insertionIndex,
@@ -17,10 +17,10 @@ import {
 import {
   _child,
   _next,
-  createElement,
   createTextNode,
   locateChildByLogicalIndex,
   parentNode,
+  parseTemplate,
   releaseLocatorCache,
   setLastLocatedLogicalChild,
   updateLastLocatedLogicalChild,
@@ -521,16 +521,7 @@ function handleMismatch(
   }
 
   // element node
-  const t = createElement('template') as HTMLTemplateElement
-  let newNode: Element
-  if (ns) {
-    const tag = ns === Namespaces.SVG ? 'svg' : 'math'
-    t.innerHTML = `<${tag}>${template}</${tag}>`
-    newNode = _child(_child(t.content) as ParentNode).cloneNode(true) as Element
-  } else {
-    t.innerHTML = template
-    newNode = _child(t.content).cloneNode(true) as Element
-  }
+  const newNode = parseTemplate(template, ns).cloneNode(true) as Element
   markRecreatedNode(newNode)
   if (newNode.nodeType === 1) {
     // Mark template-born descendants before adopting server children below,

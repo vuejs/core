@@ -1200,14 +1200,14 @@ describe('mismatch handling', () => {
       hydrateNode(container.firstChild!, () => {
         hydrated = t1() as HTMLElement
         expect(hydrated).toBe(container.firstChild)
-        expect((hydrated as any).$root).toBe(true)
+        expect((hydrated as any).$root).toBeTruthy()
       })
 
       hydrated!.textContent = 'mutated'
 
       const cloned = t1() as HTMLElement
       expect(cloned).not.toBe(hydrated!)
-      expect((cloned as any).$root).toBe(true)
+      expect((cloned as any).$root).toBeTruthy()
       expect(cloned.outerHTML).toBe(`<div>claimed</div>`)
     })
   })
