@@ -2,7 +2,9 @@ import {
   type ComponentInternalInstance,
   type GenericAppContext,
   NULL_DYNAMIC_COMPONENT,
+  type VNode,
   currentInstance,
+  hmrDirtyComponents,
   isVNode,
   resolveDynamicComponent,
   setCurrentRenderingInstance,
@@ -34,7 +36,11 @@ import {
   isHydrating,
   locateHydrationNode,
 } from './dom/hydration'
-import { DynamicFragment, finishBlockCreation } from './fragment'
+import {
+  DynamicFragment,
+  type VaporFragment,
+  finishBlockCreation,
+} from './fragment'
 import { isInteropEnabled } from './vdomInteropState'
 
 export function createDynamicComponent(
@@ -71,7 +77,11 @@ export function createDynamicComponent(
     // vnodes handed down from vdom slots (`h(VaporComp)`) mount through the
     // interop, which owns their KeepAlive lookup, fallthrough and hydration
     if (isInteropEnabled && appContext.vdom && isVNode(value)) {
-      return appContext.vdom.mountVNode(value, currentInstance, isSingleRoot)
+      return (vnodeFrag = appContext.vdom.mountVNode(
+        value,
+        currentInstance,
+        isSingleRoot,
+      ))
     }
 
     return createComponentWithFallback(
@@ -140,6 +150,11 @@ export function createDynamicComponent(
   let lastKey: any
   let lastResolved: any
   let branchToken: object | undefined
+  // A vnode branch identifies by (type, key), the way a vdom diff matches
+  // one, so a fresh vnode of the same type patches instead of remounting.
+  let lastVNode: VNode | undefined
+  let vnodeToken: object | undefined
+  let vnodeFrag: VaporFragment | undefined
 
   renderEffect(() => {
     const value = getter()
@@ -157,17 +172,49 @@ export function createDynamicComponent(
       return
     }
     let branchKey: any = resolved
+    const vnodeBranch = isInteropEnabled && isVNode(resolved)
+    if (vnodeBranch) {
+      if (
+        !lastVNode ||
+        lastVNode.type !== resolved.type ||
+        lastVNode.key !== resolved.key ||
+        // HMR reload: remount the updated definition, as isSameVNodeType
+        // does for a vdom parent
+        (__DEV__ && hmrDirtyComponents.has(resolved.type as any))
+      ) {
+        vnodeToken = {}
+      }
+      lastVNode = resolved
+      branchKey = vnodeToken
+    }
     if (key) {
-      if (userKey !== lastKey || resolved !== lastResolved) {
+      if (userKey !== lastKey || branchKey !== lastResolved) {
         lastKey = userKey
-        lastResolved = resolved
+        lastResolved = branchKey
         branchToken = {}
       }
       branchKey = branchToken
     }
     // update() returns early on an unchanged key; skip building the branch
     // closure for it. Hydration still goes through update for its anchor.
-    if (branchKey === frag.current && !isHydrating) return
+    if (branchKey === frag.current && !isHydrating) {
+      if (vnodeBranch) {
+        const transition = frag.$transition
+        if (transition && transition.state.isLeaving) {
+          // out-in: this branch has not mounted yet, the previous one is
+          // still leaving; mount the latest vnode once the leave finishes.
+          frag.pending = {
+            render: () => render(value, resolved, appContext),
+            key: branchKey,
+            noScope: false,
+            branchKey: userKey,
+          }
+        } else if (vnodeFrag && vnodeFrag.patchVNode) {
+          vnodeFrag.patchVNode(resolved)
+        }
+      }
+      return
+    }
     frag.update(
       () => render(value, resolved, appContext),
       branchKey,

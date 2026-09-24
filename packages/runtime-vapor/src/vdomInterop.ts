@@ -1144,7 +1144,10 @@ function mountDynamicVNode(
     const cached = (
       parentComponent as KeepAliveInstance
     ).ctx.getCachedComponent(vnode.type, vnode.key) as VaporFragment
-    if (cached) return cached
+    if (cached) {
+      if (cached.patchVNode) cached.patchVNode(vnode)
+      return cached
+    }
   }
   // A vnode standing in as the parent's effective root inherits fallthrough
   // attrs merged into its props (see mountVNode).
@@ -1195,7 +1198,7 @@ function mountVNode(
   // attrs the same way VDOM does it — merged into the vnode's props
   // (`cloneVNode` -> `mergeProps`), so mount and patch apply them natively
   // instead of writing the DOM behind the renderer's back.
-  const baseVNode = vnode
+  let baseVNode = vnode
   if (getFallthroughAttrs) {
     vnode = cloneVNode(baseVNode, getFallthroughAttrs())
   }
@@ -1255,6 +1258,13 @@ function mountVNode(
     if (!isHydrating) return
     hydrateVNode(vnode, parentComponent as any, frag.slotScopeIds)
     isMounted = true
+    // a hydrated vnode never goes through place(), so record what a later
+    // patch needs from the claimed SSR nodes
+    const anchorNode = (vnode.anchor || vnode.el) as Node | null
+    if (anchorNode && anchorNode.parentNode) {
+      mountedParentNode = anchorNode.parentNode
+      namespace = getContainerType(mountedParentNode as Element)
+    }
     syncNodes()
   }
 
@@ -1334,6 +1344,40 @@ function mountVNode(
     transition,
   ) => place(parentNode, anchor, parentSuspense, transition, moveType)
 
+  const patchInto = (next: VNode) => {
+    if (!isMounted || !mountedParentNode) return
+    const previous = vnode
+    vnode = next
+    trackFragmentVNodeUpdates(frag, vnode, syncNodes)
+    frag.vnode = vnode
+    frag.$key = vnodeKeyOf(vnode)
+    const prevInstance = currentInstance
+    simpleSetCurrentInstance(parentComponent)
+    internals.p(
+      previous,
+      vnode,
+      mountedParentNode,
+      mountedAnchor,
+      parentComponent as any,
+      suspense,
+      namespace,
+      frag.slotScopeIds,
+    )
+    simpleSetCurrentInstance(prevInstance)
+    syncNodes()
+  }
+  // `<component :is="vnode">` handing down a fresh vnode of the same
+  // (type, key): patch it into the mounted one, the way VDOM diffs it. A
+  // KeepAlive hit can be another type (an async wrapper of the cached
+  // component); that one is reused as is.
+  frag.patchVNode = next => {
+    if (next.type !== baseVNode.type || next.key !== baseVNode.key) return
+    baseVNode = next
+    patchInto(
+      getFallthroughAttrs ? cloneVNode(next, getFallthroughAttrs()) : next,
+    )
+  }
+
   if (getFallthroughAttrs) {
     // Re-clone and let VDOM patch the change through, mirroring how a VDOM
     // parent re-renders its root with fresh fallthrough attrs. The first run
@@ -1349,26 +1393,7 @@ function mountVNode(
         applied = true
         return
       }
-      if (!isMounted || !mountedParentNode) return
-      const previous = vnode
-      vnode = next
-      trackFragmentVNodeUpdates(frag, vnode, syncNodes)
-      frag.vnode = vnode
-      frag.$key = vnodeKeyOf(vnode)
-      const prevInstance = currentInstance
-      simpleSetCurrentInstance(parentComponent)
-      internals.p(
-        previous,
-        vnode,
-        mountedParentNode,
-        mountedAnchor,
-        parentComponent as any,
-        suspense,
-        namespace,
-        frag.slotScopeIds,
-      )
-      simpleSetCurrentInstance(prevInstance)
-      syncNodes()
+      patchInto(next)
     })
   }
 

@@ -11138,4 +11138,218 @@ describe('vdomInterop', () => {
     expect(root.textContent).toBe('Foo')
     expect(setups).toEqual(['Foo', 'Bar'])
   })
+
+  // `<RouterView v-slot="{ Component }"><component :is="Component" /></RouterView>`:
+  // a vdom slot hands down a fresh vnode each render, which vdom patches
+  // when it keeps (type, key)
+  describe('dynamic component fed a fresh vnode from a vdom slot', () => {
+    let hmrUid = 0
+    function mountRouterView(
+      parentVapor: boolean,
+      vdomPages: boolean,
+      inner: string,
+    ) {
+      const log: string[] = []
+      const dones: (() => void)[] = []
+      // pages log their hooks and keep a click count, which tells a patch
+      // from a remount
+      const setupPage = (name: string) => {
+        onMounted(() => log.push(`m${name}`))
+        onActivated(() => log.push(`a${name}`))
+        onDeactivated(() => log.push(`d${name}`))
+        onUnmounted(() => log.push(`u${name}`))
+        return ref(0)
+      }
+      const data = ref({
+        setupPage,
+        onLeave: (_el: Element, done: () => void) => dones.push(done),
+      })
+      const makePage = (name: string): any =>
+        vdomPages
+          ? defineComponent({
+              name,
+              props: ['id'],
+              setup(props) {
+                const n = setupPage(name)
+                return () =>
+                  h('button', { onClick: () => n.value++ }, [
+                    `${name}:${props.id}:${n.value}`,
+                  ])
+              },
+            })
+          : compile(
+              `<script setup vapor>
+                defineProps(['id'])
+                const n = _data.value.setupPage('${name}')
+              </script>
+              <template><button @click="n++">${name}:{{ id }}:{{ n }}</button></template>`,
+              data,
+            )
+      const PageA = makePage('A')
+      const PageB = makePage('B')
+      const hmrId = (PageA.__hmrId = `router-view-${hmrUid++}`)
+      ;(globalThis as any).__VUE_HMR_RUNTIME__.createRecord(hmrId, PageA)
+      const route = shallowRef<any>({ page: PageA, id: 1 })
+      const RouterView = defineComponent({
+        setup(_, { slots }) {
+          return () => {
+            const { page, id, key } = route.value
+            return slots.default!({ Component: h(page, { id, key }) })
+          }
+        },
+      })
+      const App = compile(
+        `<script setup${parentVapor ? ' vapor' : ''}>
+          const RouterView = _components.RouterView
+          const data = _data
+        </script>
+        <template><RouterView v-slot="{ Component }">${inner}</RouterView></template>`,
+        data,
+        { RouterView },
+        { vapor: parentVapor },
+      )
+      const root = document.createElement('div')
+      const app = (parentVapor ? createVaporApp(App) : createApp(App)).use(
+        vaporInteropPlugin,
+      )
+      app.mount(root)
+      // each step records the rendered text and the hooks fired since the
+      // last one
+      const steps: string[] = []
+      const snap = () => steps.push(`${root.textContent} [${log.splice(0)}]`)
+      return {
+        PageA,
+        PageB,
+        root,
+        steps,
+        snap,
+        go: async (page: any, id: number, key?: string) => {
+          route.value = { page, id, key }
+          await nextTick()
+          snap()
+        },
+        click: () => root.querySelector('button')!.click(),
+        leave: async () => {
+          dones.splice(0).forEach(done => done())
+          await nextTick()
+          snap()
+        },
+        reload: async (name: string) => {
+          const next = makePage(name)
+          next.__hmrId = hmrId
+          ;(globalThis as any).__VUE_HMR_RUNTIME__.reload(hmrId, next)
+          await nextTick()
+          snap()
+        },
+        unmount: () => {
+          app.unmount()
+          expect(root.innerHTML).toBe('')
+        },
+      }
+    }
+
+    // runs `script` under a vdom and a vapor parent and checks that both
+    // produce the same result
+    async function compare(
+      vdomPages: boolean,
+      inner: string,
+      script: (r: ReturnType<typeof mountRouterView>) => Promise<string[]>,
+    ) {
+      const runs: string[][] = []
+      for (const parentVapor of [false, true]) {
+        runs.push(await script(mountRouterView(parentVapor, vdomPages, inner)))
+      }
+      expect(runs[1]).toEqual(runs[0])
+      return runs[0]
+    }
+
+    const dynamic = `<component :is="Component" />`
+    const kept = `<KeepAlive>${dynamic}</KeepAlive>`
+    const cases = [false, true].flatMap(ka => [
+      [ka, false],
+      [ka, true],
+    ])
+
+    test.each(cases)(
+      'patches same-type pages like vdom (KeepAlive: %s, vdom pages: %s)',
+      async (keepAlive, vdomPages) => {
+        const inner = keepAlive ? kept : dynamic
+        const steps = await compare(vdomPages, inner, async r => {
+          r.click()
+          await r.go(r.PageA, 2)
+          // a keyed vapor page in a vapor KeepAlive throws (pre-existing)
+          if (!keepAlive || vdomPages) await r.go(r.PageA, 3, 'k')
+          await r.go(r.PageB, 4)
+          await r.go(r.PageA, 5)
+          await r.go(r.PageA, 6)
+          r.unmount()
+          r.snap()
+          return r.steps
+        })
+        expect(steps[0]).toMatch(/^A:2:1 /)
+      },
+    )
+
+    test.each(cases)(
+      'out-in: a page updated while the previous one leaves (KeepAlive: %s, vdom pages: %s)',
+      async (keepAlive, vdomPages) => {
+        const inner = `<Transition mode="out-in" :css="false" @leave="data.onLeave">${
+          keepAlive ? kept : dynamic
+        }</Transition>`
+        const steps = await compare(vdomPages, inner, async r => {
+          await r.go(r.PageB, 2)
+          await r.go(r.PageB, 3)
+          await r.leave()
+          // same type, new key, then a same-key successor while leaving
+          if (!keepAlive) {
+            await r.go(r.PageB, 4, 'x')
+            await r.go(r.PageB, 5, 'x')
+            await r.leave()
+          }
+          // not snapped: a vdom page misses `unmounted` here (pre-existing)
+          r.unmount()
+          return r.steps
+        })
+        expect(steps[2]).toMatch(/^B:3:0 /)
+      },
+    )
+
+    // vdom mounts the async wrapper as its own cache entry; vapor reuses the
+    // cached resolved component, which must not be patched with the wrapper.
+    // Only texts are compared, the last one cut to the page name: the vapor
+    // cache hit keeps id 1 where vdom shows 4 (pre-existing).
+    test('KeepAlive: an async wrapper of a cached page does not patch it', async () => {
+      const inner = `<KeepAlive include="A">${dynamic}</KeepAlive>`
+      const texts = await compare(true, inner, async r => {
+        const AsyncA = defineAsyncComponent(() => Promise.resolve(r.PageA))
+        const texts: string[] = []
+        const text = () => texts.push(r.root.textContent!)
+        await r.go(AsyncA, 2)
+        await new Promise(r => setTimeout(r))
+        text()
+        await r.go(r.PageB, 3)
+        text()
+        await r.go(AsyncA, 4)
+        await new Promise(r => setTimeout(r))
+        texts.push(r.root.textContent!.slice(0, 2))
+        r.unmount()
+        return texts
+      })
+      expect(texts).toEqual(['A:2:0', 'B:3:0', 'A:'])
+    })
+
+    test.each([false, true])(
+      'HMR reload remounts the current page (vdom pages: %s)',
+      async vdomPages => {
+        const steps = await compare(vdomPages, dynamic, async r => {
+          r.click()
+          await r.reload('A2')
+          await r.go(r.PageA, 2)
+          r.unmount()
+          return r.steps
+        })
+        expect(steps[0]).toMatch(/^A2:1:0 /)
+      },
+    )
+  })
 })
