@@ -364,6 +364,17 @@ function checkHydrationStyleMismatch(
 export function setStyle(el: TargetElement, value: any): void {
   if (el.$root) {
     setStyleIncremental(el, value)
+    // patchStyle only sees the root style layer being patched. When the other
+    // layer decides the display (fallthrough wins, as in vdom), v-show must
+    // restore that one instead
+    const fallthrough = (el as any).$styi$
+    const fallthroughHasDisplay = !!fallthrough && fallthrough.display != null
+    if (isApplyingFallthroughProps !== fallthroughHasDisplay) {
+      hydrateVShowDisplay(
+        el,
+        fallthroughHasDisplay ? fallthrough : (el as any).$styi,
+      )
+    }
   } else {
     const normalizedValue = normalizeStyle(value)
     if (isHydrating && !isRecreatedNode(el)) {
@@ -397,8 +408,8 @@ function setStyleIncremental(el: any, value: any): NormalizedStyle | undefined {
   patchStyle(el, el[cacheKey], (el[cacheKey] = normalizedValue))
 }
 
-// Hydration skips the style patch, so mirror patchStyle's v-show bookkeeping:
-// the client style's display is what v-show restores when shown.
+// Mirror patchStyle's v-show bookkeeping when it is skipped (hydration) or
+// only saw one root style layer: this display is what v-show restores.
 function hydrateVShowDisplay(
   el: Element,
   style: NormalizedStyle | string | undefined,
@@ -409,7 +420,7 @@ function hydrateVShowDisplay(
       : style && style.display
     if (isArray(display)) display = display[display.length - 1]
     ;(el as VShowElement)[vShowOriginalDisplay] =
-      display == null ? '' : String(display)
+      display == null ? '' : String(display).replace(/\s*!important$/, '')
   }
 }
 

@@ -300,4 +300,65 @@ describe('directive: v-show', () => {
       'v-show used on component with non-single-element root node',
     ).toHaveBeenWarned()
   })
+
+  test('restores display from either root style layer', async () => {
+    const shown: Record<string, string[]> = { vdom: [], vapor: [] }
+    await renderParity(
+      {
+        Child: `<template><div :style="data.own" v-show="data.show">c</div></template>`,
+        App: `<template><components.Child :style="data.par" /></template>`,
+      },
+      () =>
+        ref({ own: { width: '1px' }, par: { display: 'flex' }, show: false }),
+      async (data, root, mode) => {
+        const el = root.firstElementChild as HTMLElement
+        // patch the own layer while fallthrough holds display
+        data.value.own = { width: '2px' }
+        await nextTick()
+        data.value.show = true
+        await nextTick()
+        shown[mode].push(el.style.display)
+        // patch the fallthrough layer while own holds display
+        data.value.show = false
+        data.value.own = { display: 'grid' }
+        data.value.par = { color: 'blue' }
+        await nextTick()
+        data.value.par = { color: 'red' }
+        await nextTick()
+        data.value.show = true
+        await nextTick()
+        shown[mode].push(el.style.display)
+      },
+    )
+    expect(shown.vdom).toEqual(['flex', 'grid'])
+    expect(shown.vapor).toEqual(shown.vdom)
+  })
+
+  test('restores an important display from the fallthrough style layer', async () => {
+    const shown: Record<string, string[]> = { vdom: [], vapor: [] }
+    await renderParity(
+      {
+        Child: `<template><div :style="data.own" v-show="data.show">c</div></template>`,
+        App: `<template><components.Child :style="data.par" /></template>`,
+      },
+      () =>
+        ref({
+          own: { width: '1px' },
+          par: { display: 'flex !important' },
+          show: true,
+        }),
+      async (data, root, mode) => {
+        const el = root.firstElementChild as HTMLElement
+        data.value.own = { width: '2px' }
+        await nextTick()
+        data.value.show = false
+        await nextTick()
+        data.value.show = true
+        await nextTick()
+        shown[mode].push(el.getAttribute('style')!)
+      },
+    )
+    expect(shown.vdom).toEqual(['width: 2px; display: flex !important;'])
+    expect(shown.vapor).toEqual(shown.vdom)
+  })
 })
