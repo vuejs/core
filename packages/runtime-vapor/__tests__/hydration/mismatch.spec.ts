@@ -1056,7 +1056,7 @@ describe('mismatch handling', () => {
       expect(container.innerHTML).toBe(`<!--foo--><span>updated</span>`)
     })
 
-    test('repeated adoptions clone the CSR cache only once', async () => {
+    test('repeated adoptions do not clone; CSR clones come from the html', async () => {
       const container = document.createElement('div')
       container.innerHTML = `<span>s</span><span>s</span><span>after</span>`
       // factory created outside so it can be invoked again after hydration
@@ -1076,10 +1076,11 @@ describe('mismatch handling', () => {
         expect(n1).toBe(container.childNodes[1])
         renderEffect(() => setText(x2, msg.value))
       })
-      expect(cloneSpy).toHaveBeenCalledTimes(1)
+      // the hydrated nodes carry instance state and are not the prototype
+      expect(cloneSpy).toHaveBeenCalledTimes(0)
       cloneSpy.mockRestore()
 
-      // post-hydration CSR mount comes from the cached clone and is detached
+      // post-hydration CSR mount is parsed from the html and is detached
       const csr = t0() as HTMLElement
       expect(csr.outerHTML).toBe('<span>s</span>')
       expect(csr).not.toBe(container.childNodes[0])

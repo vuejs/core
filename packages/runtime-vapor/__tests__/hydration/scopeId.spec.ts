@@ -21,7 +21,11 @@ import {
   runtimeVapor,
 } from '../_utils'
 import { isHydrating } from '../../src/dom/hydration'
-import { compileVaporComponent, setupHydrationTest } from './_helpers'
+import {
+  compileVaporComponent,
+  setupHydrationTest,
+  testHydration,
+} from './_helpers'
 
 setupHydrationTest()
 
@@ -477,5 +481,29 @@ describe('scopeId hydration writes', () => {
     expect(b.hasAttribute('outer-s')).toBe(true)
     app.unmount()
     container.remove()
+  })
+
+  test('a static template hydrated in a scoped slot does not carry the slotted id into later clones', async () => {
+    const data = ref({ scoped: true })
+    const { container } = await testHydration(
+      `<template><component :is="data.scoped ? components.Scoped : components.Plain"><span>s</span></component></template>`,
+      {
+        Scoped: `<script vapor>const data = _data</script>
+          <template><div><slot /></div></template>
+          <style scoped>span { color: red }</style>`,
+        Plain: `<template><p><slot /></p></template>`,
+      },
+      data,
+    )
+    expect(container.querySelector('span')!.hasAttribute('data-v-x-s')).toBe(
+      true,
+    )
+
+    // the slot content is re-created under an owner without scoped styles
+    data.value.scoped = false
+    await nextTick()
+    const span = container.querySelector('span')!
+    expect(span.textContent).toBe('s')
+    expect(span.hasAttribute('data-v-x-s')).toBe(false)
   })
 })
