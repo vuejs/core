@@ -18,6 +18,7 @@ import { ErrorCodes, handleError } from './errorHandling'
 import {
   PatchFlags,
   ShapeFlags,
+  hasOwn,
   isModelListener,
   isObject,
   isOn,
@@ -450,8 +451,9 @@ function hasPropsChanged(
   for (let i = 0; i < nextKeys.length; i++) {
     const key = nextKeys[i]
     if (
-      hasPropValueChanged(nextProps, prevProps, key) &&
-      !isEmitListener(emitsOptions, key)
+      !hasOwn(prevProps, key) ||
+      (hasPropValueChanged(nextProps, prevProps, key) &&
+        !isEmitListener(emitsOptions, key))
     ) {
       return true
     }
