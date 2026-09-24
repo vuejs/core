@@ -394,7 +394,14 @@ function setStyleIncremental(el: any, value: any): NormalizedStyle | undefined {
     return
   }
 
-  patchStyle(el, el[cacheKey], (el[cacheKey] = normalizedValue))
+  // root style is shared by the own binding and fallthrough, so while the
+  // other layer has a value a nullish one only clears this layer's keys
+  patchStyle(
+    el,
+    el[cacheKey],
+    (el[cacheKey] = normalizedValue) ||
+      (el[isApplyingFallthroughProps ? '$styi' : '$styi$'] && EMPTY_OBJ),
+  )
 }
 
 // Hydration skips the style patch, so mirror patchStyle's v-show bookkeeping:

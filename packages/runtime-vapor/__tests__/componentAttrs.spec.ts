@@ -2342,4 +2342,52 @@ describe('attribute fallthrough', () => {
     expect(vapor.text).toBe(vdom.text)
     expect('Extraneous non-props attributes (class)').toHaveBeenWarned()
   })
+
+  test('should keep fallthrough style when root style becomes nullish', async () => {
+    const styles: Record<string, (string | null)[]> = {}
+    await renderParity(
+      {
+        Child: `<template><div :style="data.own">child</div></template>`,
+        App: `<template><components.Child style="color: blue" /></template>`,
+      },
+      () => ref<any>({ own: { width: '1px' } }),
+      async (data, root, mode) => {
+        const el = root.querySelector('div')!
+        const log = (styles[mode] = [el.getAttribute('style')])
+        data.value.own = null
+        await nextTick()
+        log.push(el.getAttribute('style'))
+        data.value.own = 'width: 2px'
+        await nextTick()
+        log.push(el.getAttribute('style'))
+      },
+    )
+    expect(styles.vdom).toEqual([
+      'width: 1px; color: blue;',
+      'color: blue;',
+      'color: blue; width: 2px;',
+    ])
+    expect(styles.vapor).toEqual(styles.vdom)
+  })
+
+  test('should keep root style when fallthrough style is removed', async () => {
+    const styles: Record<string, (string | null)[]> = {}
+    await renderParity(
+      {
+        Child: `<template><div :style="data.own">child</div></template>`,
+        App: `<template><components.Child v-bind="data.attrs" /></template>`,
+      },
+      () =>
+        ref<any>({ own: { width: '1px' }, attrs: { style: 'color: blue' } }),
+      async (data, root, mode) => {
+        const el = root.querySelector('div')!
+        const log = (styles[mode] = [el.getAttribute('style')])
+        data.value.attrs = {}
+        await nextTick()
+        log.push(el.getAttribute('style'))
+      },
+    )
+    expect(styles.vdom).toEqual(['width: 1px; color: blue;', 'width: 1px;'])
+    expect(styles.vapor).toEqual(styles.vdom)
+  })
 })
