@@ -55,6 +55,11 @@ describe('ssr: renderAttrs', () => {
     ).toBe(` checked disabled`) // boolean attr w/ false should be ignored
   })
 
+  test('playsinline boolean attr', () => {
+    expect(ssrRenderAttrs({ playsinline: true })).toBe(` playsinline`)
+    expect(ssrRenderAttrs({ playsinline: false })).toBe(``)
+  })
+
   test('hidden enumerated attribute', () => {
     expect(ssrRenderAttrs({ hidden: true })).toBe(` hidden`)
     expect(ssrRenderAttrs({ disabled: true, hidden: false })).toBe(` disabled`)
