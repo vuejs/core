@@ -211,14 +211,6 @@ function genDynamicComponentFlags(
   return genFlags(flags, names)
 }
 
-function getUniqueHandlerName(context: CodegenContext, name: string): string {
-  const { seenInlineHandlerNames } = context
-  name = genVarName(name)
-  const count = seenInlineHandlerNames[name] || 0
-  seenInlineHandlerNames[name] = count + 1
-  return count === 0 ? name : `${name}${count}`
-}
-
 type InlineHandler = {
   name: string
   value: SimpleExpressionNode
@@ -239,9 +231,8 @@ function processInlineHandlers(
         const isMemberExp = isMemberExpression(value, context.options)
         // cache inline handlers (fn expression or inline statement)
         if (!isMemberExp) {
-          const name = getUniqueHandlerName(
-            context,
-            `_on_${prop.key.content.replace(/-/g, '_')}`,
+          const name = context.getUniqueLocalName(
+            genVarName(`_on_${prop.key.content.replace(/-/g, '_')}`),
           )
           handlers.push({ name, value })
           ids[name] = null

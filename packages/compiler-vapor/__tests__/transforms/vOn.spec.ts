@@ -973,4 +973,29 @@ describe('v-on', () => {
     expect(code).not.contains('withKeys')
     expect(code).contains('onClick: () => _ctx.handleClick')
   })
+
+  test('component inline handler names should not collide', () => {
+    const { code } = compileWithVOn(
+      `<Foo @a="() => {}" /><Foo @a="() => {}" @a1="() => {}" />`,
+    )
+
+    expect(code).contains('const _on_a = () => {}')
+    expect(code).contains('const _on_a1 = () => {}')
+    expect(code).contains('const _on_a11 = () => {}')
+    expect(code).contains('onA: () => _on_a1')
+    expect(code).contains('onA1: () => _on_a11')
+  })
+
+  test('component inline handler names should not collide with setup bindings', () => {
+    const { code } = compileWithVOn(`<Foo @click="() => {}" />`, {
+      inline: true,
+      bindingMetadata: {
+        _on_click: BindingTypes.SETUP_CONST,
+      },
+    })
+
+    expect(code).not.contains('const _on_click =')
+    expect(code).contains('const _on_click1 = () => {}')
+    expect(code).contains('onClick: () => _on_click1')
+  })
 })
