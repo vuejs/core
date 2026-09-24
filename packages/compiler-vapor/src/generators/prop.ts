@@ -445,6 +445,7 @@ export function genPropKey(
     runtimeCamelize,
     handler,
     handlerModifiers,
+    model,
   } = prop
   const { helper } = context
 
@@ -468,6 +469,9 @@ export function genPropKey(
     key = genCall(helper('camelize'), key)
   } else if (modifier) {
     key = ['(', ...key, ' || ""', ')']
+  } else if (!handler && !model) {
+    // match vdom: a nullish dynamic arg becomes `""`, which is skipped at runtime
+    key = node.ast === null ? [...key, ' || ""'] : ['(', ...key, ') || ""']
   }
   if (handler) {
     key = genCall(helper('toHandlerKey'), key)

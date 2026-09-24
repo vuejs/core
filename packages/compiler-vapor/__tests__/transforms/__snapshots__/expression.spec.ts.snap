@@ -64,7 +64,7 @@ export function render(_ctx) {
   const n0 = t0()
   _renderEffect(() => {
     const _key = _ctx.key
-    _setDynamicProps(n0, [{ [_key+1]: _ctx.foo[_key+1]() }])
+    _setDynamicProps(n0, [{ [(_key+1) || ""]: _ctx.foo[_key+1]() }])
   })
   return n0
 }"

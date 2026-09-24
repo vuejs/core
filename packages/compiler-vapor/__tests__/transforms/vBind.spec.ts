@@ -171,7 +171,7 @@ describe('compiler v-bind', () => {
       ],
     })
     expect(code).contains(
-      '_setDynamicProps(n0, [{ [_id]: _id, [_title]: _title }])',
+      '_setDynamicProps(n0, [{ [_id || ""]: _id, [_title || ""]: _title }])',
     )
   })
 
@@ -224,7 +224,7 @@ describe('compiler v-bind', () => {
       ],
     })
     expect(code).contains(
-      '_setDynamicProps(n0, [{ [_id]: _id, foo: "bar", checked: "" }])',
+      '_setDynamicProps(n0, [{ [_id || ""]: _id, foo: "bar", checked: "" }])',
     )
   })
 
@@ -1120,7 +1120,7 @@ describe('compiler v-bind', () => {
   })
 
   test.each([
-    [':[key]="0"', '[_ctx.key]: 0'],
+    [':[key]="0"', '[_ctx.key || ""]: 0'],
     ['v-bind="props" :count="0"', '{ count: 0 }'],
     ['v-bind="{ count: 0 }"', '{ count: 0 }'],
   ])('custom element number literals with %s', (binding, expected) => {
@@ -1175,7 +1175,7 @@ describe('compiler v-bind', () => {
     // `.prop` goes through the same `setValue`
     [`<input :value.prop="1">`, `_setValue(n0, 1)`],
     // a dynamic key is applied at runtime, so it never reaches the template
-    [`<div :[key]="0"></div>`, `[_ctx.key]: 0`],
+    [`<div :[key]="0"></div>`, `[_ctx.key || ""]: 0`],
     // boolean attributes are folded from the value's own type
     [`<input :disabled="0">`, `_setProp(n0, "disabled", 0)`],
     [`<div :hidden="0"></div>`, `_template("<div>"`],
@@ -1273,7 +1273,7 @@ describe('compiler v-bind', () => {
     [
       `<div :[key]="id" v-bind="obj"/>`,
       ``,
-      `[{ [_ctx.key]: _ctx.id }, _ctx.obj])`,
+      `[{ [_ctx.key || ""]: _ctx.id }, _ctx.obj])`,
     ],
   ])('static keys merged with a spread: %s', (template, hoisted, expected) => {
     const { code } = compileWithVBind(template, {
@@ -1383,5 +1383,16 @@ describe('compiler v-bind', () => {
     const { code } = compileWithVBind(template)
 
     expect(code.match(/_renderEffect\(/g)).toHaveLength(1)
+  })
+
+  test('dynamic arg falls back to an empty key when nullish', () => {
+    const { code } = compileWithVBind(
+      `<div :[name]="a" :[foo?bar:baz]="b" /><Comp :[name]="a" />`,
+    )
+
+    expect(code).contains(
+      '_setDynamicProps(n0, [{ [_ctx.name || ""]: _ctx.a, [(_ctx.foo?_ctx.bar:_ctx.baz) || ""]: _ctx.b }])',
+    )
+    expect(code).contains('() => ({ [_ctx.name || ""]: _ctx.a })')
   })
 })

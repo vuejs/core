@@ -417,13 +417,13 @@ describe('compiler: element transform', () => {
 
       expect(code).toMatchSnapshot()
       expect(code).contains(`$: [
-    () => ({ [_ctx.name]: _ctx.value }),
+    () => ({ [_ctx.name || ""]: _ctx.value }),
     { foo: () => (_ctx.bar) }
   ]`)
       expect(beforeCode).toMatchSnapshot()
       expect(beforeCode).contains(`foo: () => (_ctx.bar),
     $: [
-      () => ({ [_ctx.name]: _ctx.value })
+      () => ({ [_ctx.name || ""]: _ctx.value })
     ]`)
     })
 
@@ -1186,7 +1186,7 @@ describe('compiler: element transform', () => {
 
     expect(code).toMatchSnapshot()
     expect(code).contains(
-      `_setDynamicProps(n0, [{ id: _ctx.foo }, { [_ctx.name]: _ctx.bar }])`,
+      `_setDynamicProps(n0, [{ id: _ctx.foo }, { [_ctx.name || ""]: _ctx.bar }])`,
     )
     expect(ir.block.effect).toMatchObject([
       {

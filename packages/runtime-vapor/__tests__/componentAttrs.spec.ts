@@ -2342,4 +2342,31 @@ describe('attribute fallthrough', () => {
     expect(vapor.text).toBe(vdom.text)
     expect('Extraneous non-props attributes (class)').toHaveBeenWarned()
   })
+
+  test('should drop a dynamic attr whose name is nullish', async () => {
+    const initial: Record<string, string> = {}
+    const zero: Record<string, string> = {}
+    const { vdom, vapor } = await renderParity(
+      {
+        Child: `<template><p>{{ Object.keys($attrs).join() }}</p></template>`,
+        App: `<template><div :[data.name]="data.v">x</div><components.Child :[data.name]="data.v" /></template>`,
+      },
+      () => ref<any>({ name: null, v: 'v' }),
+      async (data, root, mode) => {
+        initial[mode] = root.innerHTML
+        data.value.name = 'foo'
+        await nextTick()
+        data.value.name = 0
+        await nextTick()
+        zero[mode] = root.innerHTML
+        data.value.name = undefined
+      },
+    )
+    expect(initial.vdom).toBe('<div>x</div><p></p>')
+    expect(initial.vapor).toBe(initial.vdom)
+    expect(zero.vdom).toBe('<div>x</div><p></p>')
+    expect(zero.vapor).toBe(zero.vdom)
+    expect(vdom.after).toBe('<div>x</div><p></p>')
+    expect(vapor.after).toBe(vdom.after)
+  })
 })
