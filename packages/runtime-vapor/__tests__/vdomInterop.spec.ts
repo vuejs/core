@@ -11077,4 +11077,37 @@ describe('vdomInterop', () => {
       })
     }
   })
+
+  test('vdom template ref to an exposing vapor child only exposes its own keys', () => {
+    const data = ref<any>(null)
+    const Child = compile(
+      `<script setup vapor>
+        import { ref } from 'vue'
+        const foo = ref('foo')
+        defineExpose({ foo })
+      </script>
+      <template><div>{{ foo }}</div></template>`,
+      data,
+    )
+    const App = compile(
+      `<script setup>
+        import { ref } from 'vue'
+        const Child = _components.Child
+        const child = ref()
+        _data.value = () => child.value
+      </script>
+      <template><Child ref="child" /></template>`,
+      data,
+      { Child },
+      { vapor: false },
+    )
+    define(App).render()
+
+    const child = data.value()
+    expect(child.foo).toBe('foo')
+    for (const key of ['$el', '$forceUpdate', '$attrs', '$parent', '$']) {
+      expect(child[key]).toBeUndefined()
+      expect(key in child).toBe(false)
+    }
+  })
 })
