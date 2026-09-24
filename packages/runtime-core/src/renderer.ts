@@ -1265,7 +1265,12 @@ function baseCreateRenderer(
     // before proceeding
     if (__FEATURE_SUSPENSE__ && instance.asyncDep) {
       parentSuspense &&
-        parentSuspense.registerDep(instance, setupRenderEffect, optimized)
+        parentSuspense.registerDep(
+          instance,
+          setupRenderEffect,
+          optimized,
+          namespace,
+        )
 
       // Give it a placeholder if this is not hydration
       // TODO handle self-defined fallback
