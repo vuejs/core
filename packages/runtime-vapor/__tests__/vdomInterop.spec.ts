@@ -1144,6 +1144,13 @@ describe('vdomInterop', () => {
           ]),
         )
 
+      // lets a settled async setup mount and flush
+      const settle = async (resolve?: () => void) => {
+        resolve && resolve()
+        await new Promise(r => setTimeout(r))
+        await nextTick()
+      }
+
       const mountInBody = (render: () => any) => {
         const App = defineComponent({ setup: () => render })
         const root = document.createElement('div')
@@ -1548,9 +1555,7 @@ describe('vdomInterop', () => {
           visible.value = true
           value.value = 'w'
           await nextTick()
-          resolve()
-          await new Promise(r => setTimeout(r))
-          await nextTick()
+          await settle(resolve)
           expect(root.querySelector('div')!.style.display).toBe('')
           done()
           return calls
@@ -1588,12 +1593,10 @@ describe('vdomInterop', () => {
           })
           const { root, done } = mountInBody(() =>
             h(Suspense, null, {
-              // no directives: the root element is the hooks' only concern
               default: () => h(Child, hooks.value),
               fallback: () => h('span', 'loading'),
             }),
           )
-          // the parent swaps the hooks while setup is pending
           hooks.value = {
             onVnodeBeforeMount: () => calls.push('beforeMount (latest)'),
             onVnodeMounted: (vnode: VNode) =>
@@ -1602,9 +1605,7 @@ describe('vdomInterop', () => {
               ),
           }
           await nextTick()
-          resolve()
-          await new Promise(r => setTimeout(r))
-          await nextTick()
+          await settle(resolve)
           done()
           return calls
         }
@@ -1636,9 +1637,7 @@ describe('vdomInterop', () => {
           )
           hooks.value = { onVnodeMounted: () => calls.push('mounted') }
           await nextTick()
-          resolve()
-          await new Promise(r => setTimeout(r))
-          await nextTick()
+          await settle(resolve)
           done()
           return calls
         }
@@ -2459,12 +2458,9 @@ describe('vdomInterop', () => {
             }),
           )
           expect(calls).toEqual([])
-          // received while the root is pending
           value.value = 'w'
           await nextTick()
-          resolve()
-          await new Promise(r => setTimeout(r))
-          await nextTick()
+          await settle(resolve)
           expect(root.querySelector('div')!.style.display).toBe('none')
           value.value = 'x'
           await nextTick()
@@ -2533,12 +2529,10 @@ describe('vdomInterop', () => {
             ]),
           )
           expect(calls).toEqual([])
-          // received while the root is loading
           value.value = 'w'
           await nextTick()
           load(Inner)
-          await new Promise(r => setTimeout(r))
-          await nextTick()
+          await settle()
           expect(root.querySelector('div')!.style.display).toBe('none')
           value.value = 'x'
           await nextTick()
@@ -2589,9 +2583,7 @@ describe('vdomInterop', () => {
           )
           data.value.show = false
           await nextTick()
-          resolve()
-          await new Promise(r => setTimeout(r))
-          await nextTick()
+          await settle(resolve)
           done()
           return calls
         }

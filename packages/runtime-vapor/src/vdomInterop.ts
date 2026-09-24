@@ -417,15 +417,15 @@ const vaporInteropImpl = {
 
     setRenderContext(prevCtx)
 
-    const rootEl = resolveInteropRootEl(instance)
+    // a pending async setup mounts once it settles, with whatever the parent
+    // handed it meanwhile
+    const pendingSetup = isPendingInteropSetup(instance)
+    const rootEl = !pendingSetup && resolveInteropRootEl(instance)
     if (rootEl) {
       vnode.el = rootEl
     }
-    const vnodeHooks = isAsyncWrapper(vnode) ? null : vnode.props
-    // a pending async setup mounts once it settles, with whatever the parent
-    // handed it meanwhile; vnode mounted then follows that mount, after the
-    // component's own mounted hooks, as in VDOM
-    const pendingSetup = isPendingInteropSetup(instance)
+    const asyncWrapper = isAsyncWrapper(vnode)
+    const vnodeHooks = asyncWrapper ? null : vnode.props
     if (
       pendingSetup ||
       vnode.dirs ||
@@ -437,10 +437,11 @@ const vaporInteropImpl = {
         ;(instance.bm ||= []).push(() => {
           // the input the component mounts with
           const mountVNode = vnodeHookState.vnode
-          const hooks = isAsyncWrapper(mountVNode) ? null : mountVNode.props
+          const hooks = asyncWrapper ? null : mountVNode.props
           if (pendingSetup) {
             const rootEl = resolveInteropRootEl(instance)
             if (rootEl) mountVNode.el = rootEl
+            // after the component's own mounted hooks, as in VDOM
             const mountedHook = hooks && hooks.onVnodeMounted
             if (mountedHook) {
               ;(instance.m ||= []).push(() =>
@@ -455,7 +456,7 @@ const vaporInteropImpl = {
             mountVNode,
           )
           if (!mountVNode.dirs) return
-          const [owner, el, pending] = resolveInteropDirsRoot(
+          const [owner, el] = resolveInteropDirsRoot(
             instance,
             vnodeHookState,
             instance,
@@ -464,11 +465,11 @@ const vaporInteropImpl = {
           if (el) {
             mountInteropDirsRoot(instance, owner, el)
             mountVNode.el = el
-          } else if (__DEV__ && !pending) {
+          } else if (__DEV__ && !isPendingInteropDirsRoot(owner.comp)) {
             warnNonElementRootDirs()
           }
         })
-        if (vnode.dirs) {
+        if (vnodeHookState.vnode.dirs) {
           ;(instance.bum ||= []).push(() =>
             unmountInteropDirs(instance, vnodeHookState, instance),
           )
@@ -3237,7 +3238,7 @@ function getInteropDirsOwner(
   comp: VaporComponentInstance,
   vnode: VNode,
 ): InteropDirsOwner {
-  const owners = (state.dirsOwners ||= new Map())
+  const owners = (state.dirsOwners ||= new WeakMap())
   let owner = owners.get(comp)
   if (owner) {
     owner.vnode = vnode
@@ -3266,9 +3267,8 @@ function resolveInteropDirsRoot(
   state: VNodeHookState,
   block: Block,
   inherit: InteropDirsOwner,
-): [InteropDirsOwner, Element | undefined, pending: boolean] {
+): [InteropDirsOwner, Element | undefined] {
   let owner = inherit
-  let pending = false
   const el = getRootElement(block, {
     // a slot outlet is a fragment root in vdom: nothing for directives to
     // land on
@@ -3278,13 +3278,9 @@ function resolveInteropDirsRoot(
     onComponent: comp => {
       registerInteropDirsComponent(instance, state, comp)
       owner = getInteropDirsOwner(state, comp, inherit.vnode)
-      // the chain ends in a root that does not exist yet, not a non-element
-      // root: an async setup mounts once it settles, an async component
-      // renders its branch once it loads
-      if (__DEV__ && isPendingInteropDirsRoot(comp)) pending = true
     },
   })
-  return [owner, el, pending]
+  return [owner, el]
 }
 
 function isPendingInteropSetup(comp: VaporComponentInstance): boolean {
@@ -3311,6 +3307,9 @@ function registerAfterInteropSetup(
   }
 }
 
+// The chain ends in a root that does not exist yet, not in a non-element
+// root: an async setup mounts once it settles, an async component renders its
+// branch once it loads.
 function isPendingInteropDirsRoot(comp: VaporComponentInstance): boolean {
   if (isPendingInteropSetup(comp)) return true
   const block = comp.block
@@ -3602,7 +3601,7 @@ interface VNodeHookState {
   // in update()/activate() clears only its own token — identity, not timing,
   // decides — covering ref writes that scheduled no render effect.
   pendingVNodeUpdate: VNode | null
-  dirsOwners: Map<VaporComponentInstance, InteropDirsOwner> | null
+  dirsOwners: WeakMap<VaporComponentInstance, InteropDirsOwner> | null
   // bindings a renderer-driven update handed down, with what each component
   // had, until the chain settles
   dirsReceived: [InteropDirsOwner, VNode][] | null
@@ -4138,15 +4137,6 @@ function registerInteropDirsComponent(
   if (comp === instance || interopDirsProducers.has(comp)) return
   interopDirsProducers.add(comp)
   const pending = isPendingInteropSetup(comp)
-  if (pending) {
-    // torn down before its setup settles: the record it got at resolve time
-    // goes, and no root ever mounted
-    ;(comp.bum ||= []).push(() => {
-      const owners = state.dirsOwners
-      const owner = owners && owners.get(comp)
-      if (owner && !owner.el) owners.delete(comp)
-    })
-  }
   registerAfterInteropSetup(comp, pending, () => {
     ;(comp.bu ||= []).push(() =>
       beforeInteropDirsSelfUpdate(instance, state, comp),
