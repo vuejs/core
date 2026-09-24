@@ -421,37 +421,51 @@ const vaporInteropImpl = {
       vnode.el = rootEl
     }
     const vnodeHooks = isAsyncWrapper(vnode) ? null : vnode.props
-    const beforeMountHook = vnodeHooks && vnodeHooks.onVnodeBeforeMount
-    const mountedHook = vnodeHooks && vnodeHooks.onVnodeMounted
-    // a pending async setup mounts once it settles; vnode mounted follows
-    // that mount, after the component's own mounted hooks, as in VDOM
+    // a pending async setup mounts once it settles, with whatever the parent
+    // handed it meanwhile; vnode mounted then follows that mount, after the
+    // component's own mounted hooks, as in VDOM
     const pendingSetup =
       __FEATURE_SUSPENSE__ &&
       isSuspenseEnabled &&
       !!instance.asyncDep &&
       !instance.asyncResolved
-    if (beforeMountHook || vnode.dirs || (mountedHook && pendingSetup)) {
+    if (
+      pendingSetup ||
+      vnode.dirs ||
+      (vnodeHooks && vnodeHooks.onVnodeBeforeMount)
+    ) {
       // `bm` runs after the component's own beforeMount hooks, once the block
-      // exists (a pending async setup included) and before it is inserted
+      // exists and before it is inserted
       ;(instance.bm ||= []).push(() => {
-        // align with VDOM: vnode beforeMount runs before directive created/beforeMount.
-        invokeInteropVNodeHook(instance, beforeMountHook, vnode)
-        if (mountedHook && pendingSetup) {
-          ;(instance.m ||= []).push(() =>
-            invokeInteropVNodeHook(instance, mountedHook, vnode),
-          )
+        // the input the component mounts with
+        const mountVNode = vnodeHookState.vnode
+        const hooks = isAsyncWrapper(mountVNode) ? null : mountVNode.props
+        if (pendingSetup) {
+          const rootEl = resolveInteropRootEl(instance)
+          if (rootEl) mountVNode.el = rootEl
+          const mountedHook = hooks && hooks.onVnodeMounted
+          if (mountedHook) {
+            ;(instance.m ||= []).push(() =>
+              invokeInteropVNodeHook(instance, mountedHook, mountVNode),
+            )
+          }
         }
-        if (!vnodeHookState.vnode.dirs) return
+        // align with VDOM: vnode beforeMount runs before directive created/beforeMount.
+        invokeInteropVNodeHook(
+          instance,
+          hooks && hooks.onVnodeBeforeMount,
+          mountVNode,
+        )
+        if (!mountVNode.dirs) return
         const [owner, el] = resolveInteropDirsRoot(
           instance,
           vnodeHookState,
           instance,
-          // the latest input: setup may have been pending across updates
-          getInteropDirsOwner(vnodeHookState, instance, vnodeHookState.vnode),
+          getInteropDirsOwner(vnodeHookState, instance, mountVNode),
         )
         if (el) {
           mountInteropDirsRoot(instance, owner, el)
-          vnode.el = el
+          mountVNode.el = el
         } else if (__DEV__) {
           warnNonElementRootDirs()
         }
@@ -465,7 +479,12 @@ const vaporInteropImpl = {
 
     mountComponent(instance, container, selfAnchor)
     if (!pendingSetup) {
-      queueInteropVNodeHook(instance, mountedHook, vnode, parentSuspense)
+      queueInteropVNodeHook(
+        instance,
+        vnodeHooks && vnodeHooks.onVnodeMounted,
+        vnode,
+        parentSuspense,
+      )
     }
 
     simpleSetCurrentInstance(prev)
