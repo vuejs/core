@@ -119,6 +119,15 @@ describe('normalizeStyle', () => {
     ).toEqual({ '--label': value, color: 'red' })
   })
 
+  test.each([`';'`, `"a;b"`, `')'`, `":)"`, String.raw`\;`])(
+    'does not split declarations inside style values: %s',
+    value => {
+      expect(
+        normalizeStyle([`color: red; --label: ${value}; margin: 0`]),
+      ).toEqual({ color: 'red', '--label': value, margin: '0' })
+    },
+  )
+
   test('removes comments containing quotes and declarations', () => {
     expect(
       normalizeStyle([
