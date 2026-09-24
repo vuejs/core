@@ -2,6 +2,7 @@ import type { Mock } from 'vitest'
 import Vue from '@vue/compat'
 import type { Slots } from '../../runtime-core/src/componentSlots'
 import { Text } from '../../runtime-core/src/vnode'
+import { ref } from '@vue/reactivity'
 import {
   DeprecationTypes,
   deprecationData,
@@ -358,16 +359,21 @@ test('$options mutation', () => {
 
 // #11164
 test('_setupProxy', () => {
+  const count = ref(1)
   const vm = new Vue({
     compatConfig: { RENDER_FUNCTION: 'suppress-warning' },
     setup() {
-      return { msg: 'hi' }
+      return { msg: 'hi', $count: count }
     },
     render(this: any) {
-      return this._c('div', this._self._setupProxy.msg)
+      const _setup = this._self._setupProxy
+      return this._c('div', `${_setup.msg} ${_setup.$count}`)
     },
-  }).$mount()
-  expect(vm.$el.outerHTML).toBe('<div>hi</div>')
+  }).$mount() as any
+  expect(vm.$el.outerHTML).toBe('<div>hi 1</div>')
+  vm._setupProxy.$count++
+  expect(count.value).toBe(2)
+  expect('reserved prefixes').toHaveBeenWarned()
 })
 
 test('other private APIs', () => {

@@ -162,7 +162,7 @@ export function installCompatInstanceProperties(
 
     // some private properties that are likely accessed...
     _self: i => i.proxy,
-    _setupProxy: i => i.proxy,
+    _setupProxy: i => i.setupState,
     _uid: i => i.uid,
     _data: i => i.data,
     _isMounted: i => i.isMounted,
