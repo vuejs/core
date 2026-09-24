@@ -555,4 +555,30 @@ describe('renderer: component', () => {
     await nextTick()
     expect(serializeInner(root)).toBe(`<div>undefined-bar</div>`)
   })
+
+  test('should update child component when a prop is replaced by an emit listener', async () => {
+    const props = ref<Record<string, any>>({ foo: 'foo' })
+
+    const Comp = {
+      props: ['foo'],
+      emits: ['click'],
+      render(this: any) {
+        return h('div', `${this.foo}`)
+      },
+    }
+
+    const App = {
+      render() {
+        return h(Comp, props.value)
+      },
+    }
+
+    const root = nodeOps.createElement('div')
+    render(h(App), root)
+    expect(serializeInner(root)).toBe(`<div>foo</div>`)
+
+    props.value = { onClick: () => {} }
+    await nextTick()
+    expect(serializeInner(root)).toBe(`<div>undefined</div>`)
+  })
 })
