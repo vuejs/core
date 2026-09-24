@@ -651,6 +651,26 @@ describe('Vapor Mode hydration', () => {
       `,
       )
     })
+
+    test('a static root template clones from its html, not from the hydrated node', async () => {
+      const data = ref({ cls: 'shared extra', more: false })
+      const { container } = await testHydration(
+        `<template>
+          <components.Child :class="data.cls" id="first" />
+          <components.Child v-if="data.more" />
+        </template>`,
+        { Child: '<template><div class="shared">x</div></template>' },
+        data,
+      )
+
+      // the hydrated root carries the SSR fallthrough attrs; a later client
+      // instance must not inherit them
+      data.value.more = true
+      await nextTick()
+      const second = container.children[1] as HTMLElement
+      expect(second.className).toBe('shared')
+      expect(second.hasAttribute('id')).toBe(false)
+    })
   })
 
   describe('dynamic component', () => {
