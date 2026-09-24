@@ -585,7 +585,7 @@ export {
 /**
  * @internal
  */
-export { registerHMR, unregisterHMR } from './hmr'
+export { registerHMR, unregisterHMR, hmrDirtyComponents } from './hmr'
 /**
  * @internal
  */

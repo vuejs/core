@@ -123,6 +123,8 @@ export class VaporFragment<
   ): void
   remove?(parent?: ParentNode, transitionHooks?: TransitionHooks): void
   hydrate?(...args: any[]): void
+  /** @internal interop: patch this mounted vnode with a same-type successor */
+  patchVNode?: (next: VNode) => void
   scope?: EffectScope
   /**
    * @internal the KeepAlive-owned scope that commits this fragment's raw input
