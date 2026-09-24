@@ -284,6 +284,209 @@ describe('Vapor Mode hydration', () => {
       )
     })
 
+    test('custom element with children', async () => {
+      const { container, data } = await testHydration(
+        `<template><div><my-el><span>{{ data }}</span></my-el></div></template>`,
+        undefined,
+        undefined,
+        {
+          compilerOptions: { isCustomElement: tag => tag.startsWith('my-') },
+        },
+      )
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `"<div><my-el><span>foo</span></my-el></div>"`,
+      )
+      expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+
+      data.value = 'bar'
+      await nextTick()
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `"<div><my-el><span>bar</span></my-el></div>"`,
+      )
+    })
+
+    test('custom element with multiple children and a following sibling', async () => {
+      const { container, data } = await testHydration(
+        `<template><div><my-el><span>{{ data }}</span><i>{{ data }}</i></my-el><b>{{ data }}</b></div></template>`,
+        undefined,
+        undefined,
+        {
+          compilerOptions: { isCustomElement: tag => tag.startsWith('my-') },
+        },
+      )
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `"<div><my-el><span>foo</span><i>foo</i></my-el><b>foo</b></div>"`,
+      )
+      expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+
+      data.value = 'bar'
+      await nextTick()
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `"<div><my-el><span>bar</span><i>bar</i></my-el><b>bar</b></div>"`,
+      )
+    })
+
+    test('custom element with an initially empty text child', async () => {
+      const data = ref('')
+      const { container } = await testHydration(
+        `<template><my-el>{{ data }}</my-el></template>`,
+        undefined,
+        data,
+        {
+          compilerOptions: { isCustomElement: tag => tag.startsWith('my-') },
+        },
+      )
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `"<my-el></my-el>"`,
+      )
+      expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+
+      data.value = 'foo'
+      await nextTick()
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `"<my-el>foo</my-el>"`,
+      )
+    })
+
+    test('custom element with an initially empty text child after another child', async () => {
+      const data = ref('')
+      const { container } = await testHydration(
+        `<template><my-el><b>head</b>{{ data }}</my-el></template>`,
+        undefined,
+        data,
+        {
+          compilerOptions: { isCustomElement: tag => tag.startsWith('my-') },
+        },
+      )
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `"<my-el><b>head</b></my-el>"`,
+      )
+      expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+
+      data.value = 'foo'
+      await nextTick()
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `"<my-el><b>head</b>foo</my-el>"`,
+      )
+    })
+
+    test('custom element rendered by v-for', async () => {
+      const { container, data } = await testHydration(
+        `<template><div><my-el v-for="i in 2"><span>{{ data }}</span></my-el></div></template>`,
+        undefined,
+        undefined,
+        {
+          compilerOptions: { isCustomElement: tag => tag.startsWith('my-') },
+        },
+      )
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
+        "<div>
+        <!--[--><my-el><span>foo</span></my-el><my-el><span>foo</span></my-el><!--]-->
+        </div>"
+      `)
+      expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+
+      data.value = 'bar'
+      await nextTick()
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
+        "<div>
+        <!--[--><my-el><span>bar</span></my-el><my-el><span>bar</span></my-el><!--]-->
+        </div>"
+      `)
+    })
+
+    test('custom element with a block child before a template child', async () => {
+      const { container, data } = await testHydration(
+        `<template><my-el><components.Child/><span>{{ data }}</span></my-el></template>`,
+        { Child: `<template><b>child</b></template>` },
+        undefined,
+        {
+          compilerOptions: { isCustomElement: tag => tag.startsWith('my-') },
+        },
+      )
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `"<my-el><b>child</b><span>foo</span></my-el>"`,
+      )
+      expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+
+      data.value = 'bar'
+      await nextTick()
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `"<my-el><b>child</b><span>bar</span></my-el>"`,
+      )
+    })
+
+    test('custom element followed by a root sibling', async () => {
+      const { container, data } = await testHydration(
+        `<template><my-el><span>{{ data }}</span></my-el><div>{{ data }}</div></template>`,
+        undefined,
+        undefined,
+        {
+          compilerOptions: { isCustomElement: tag => tag.startsWith('my-') },
+        },
+      )
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
+        "
+        <!--[--><my-el><span>foo</span></my-el><div>foo</div><!--]-->
+        "
+      `)
+      expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+
+      data.value = 'bar'
+      await nextTick()
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
+        "
+        <!--[--><my-el><span>bar</span></my-el><div>bar</div><!--]-->
+        "
+      `)
+    })
+
+    test('custom element with an initially empty text child before another child', async () => {
+      const { container, data } = await testHydration(
+        `<template><my-el>{{ data }}<b>tail</b></my-el></template>`,
+        undefined,
+        ref(''),
+        {
+          compilerOptions: { isCustomElement: tag => tag.startsWith('my-') },
+        },
+      )
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `"<my-el><b>tail</b></my-el>"`,
+      )
+      expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+
+      data.value = 'bar'
+      await nextTick()
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `"<my-el>bar<b>tail</b></my-el>"`,
+      )
+    })
+
+    test('custom element with a v-for child before an initially empty text child', async () => {
+      const { container, data } = await testHydration(
+        `<template><my-el><span v-for="i in 2">{{ i }}</span>{{ data }}</my-el></template>`,
+        undefined,
+        ref(''),
+        {
+          compilerOptions: { isCustomElement: tag => tag.startsWith('my-') },
+        },
+      )
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
+        "<my-el>
+        <!--[--><span>1</span><span>2</span><!--]-->
+        </my-el>"
+      `)
+      expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+
+      data.value = 'bar'
+      await nextTick()
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
+        "<my-el>
+        <!--[--><span>1</span><span>2</span><!--]-->
+        bar</my-el>"
+      `)
+    })
+
     test('element with ref', async () => {
       const { data, container } = await testHydration(
         `<template>

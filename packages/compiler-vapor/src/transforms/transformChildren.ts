@@ -99,11 +99,17 @@ export const transformChildren: NodeTransform = (node, context) => {
   }
 
   if (!isFragment) {
-    processDynamicChildren(context as TransformContext<ElementNode>)
+    processDynamicChildren(
+      context as TransformContext<ElementNode>,
+      useCreateElement,
+    )
   }
 }
 
-function processDynamicChildren(context: TransformContext<ElementNode>) {
+function processDynamicChildren(
+  context: TransformContext<ElementNode>,
+  useCreateElement: boolean,
+) {
   const children = context.dynamic.children
 
   // The index of the last child that materializes in the parent template.
@@ -135,13 +141,15 @@ function processDynamicChildren(context: TransformContext<ElementNode>) {
         anchor = child.anchor = context.increaseId()
       }
       if (child.template != null) {
-        // template node due to invalid nesting - generate actual insertion,
-        // appended when no anchor was assigned
+        // template node due to invalid nesting or a createElement-backed
+        // parent (which never anchors) - generate actual insertion, appended
+        // when no anchor was assigned, with the unit index for hydration
         child.operation = {
           type: IRNodeTypes.INSERT_NODE,
           elements: [child.id!],
           parent: context.reference(),
           anchor,
+          appendIndex: useCreateElement ? unitIndex : undefined,
         }
       } else if (child.operation && isBlockOperation(child.operation)) {
         child.operation.parent = context.reference()

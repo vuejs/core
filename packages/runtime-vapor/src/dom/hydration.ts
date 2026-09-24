@@ -22,6 +22,7 @@ import {
   locateChildByLogicalIndex,
   parentNode,
   releaseLocatorCache,
+  setLastLocatedLogicalChild,
   updateLastLocatedLogicalChild,
 } from './node'
 import { currentRenderContext } from '../renderContext'
@@ -183,7 +184,10 @@ export let adoptTemplate: (
   ns?: Namespace,
   target?: AdoptTarget,
 ) => Node | null
-export let locateHydrationNode: (claim?: FragmentClaim) => void
+export let locateHydrationNode: (
+  claim?: FragmentClaim,
+  isBlankText?: boolean,
+) => void
 export let parseAdoptTarget: (template: string) => AdoptTarget
 
 const enum AnchorFlags {
@@ -303,9 +307,12 @@ export type HydrationCursor = {
   exited?: boolean
 }
 
-export function enterHydrationCursor(claim?: FragmentClaim): HydrationCursor {
+export function enterHydrationCursor(
+  claim?: FragmentClaim,
+  isBlankText?: boolean,
+): HydrationCursor {
   const cursor = captureHydrationCursor()
-  locateHydrationNode(claim)
+  locateHydrationNode(claim, isBlankText)
   cursor.start = currentHydrationNode
   return cursor
 }
@@ -391,7 +398,7 @@ export function skipUntrackedAnchors(node: Node | null): Node | null {
   return node
 }
 
-function locateHydrationNodeImpl(claim?: FragmentClaim) {
+function locateHydrationNodeImpl(claim?: FragmentClaim, isBlankText?: boolean) {
   let node: Node | null
 
   if (insertionAnchor) {
@@ -402,6 +409,12 @@ function locateHydrationNodeImpl(claim?: FragmentClaim) {
     // appends and withHydration entry). Locating through the logical walk
     // also stamps $llc/$lli so mismatch recovery keeps the cache coherent.
     node = locateChildByLogicalIndex(insertionParent, insertionIndex || 0)
+    if (!node && isBlankText) {
+      // SSR omits an empty text node, so the walk finds nothing at its
+      // append position. Seed it there and cache it like a located node.
+      node = resolveBlankTextTarget(null, insertionParent)
+      setLastLocatedLogicalChild(insertionParent, node, insertionIndex || 0)
+    }
   } else {
     node = currentHydrationNode
   }
