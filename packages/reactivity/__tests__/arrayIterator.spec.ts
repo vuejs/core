@@ -10,9 +10,10 @@ describe('reactivity/reactive/Array iterator', () => {
     const isProtectorIntact = new Function(
       'return %ArrayIteratorProtector()',
     ) as () => boolean
-    // the protector is isolate-wide and can only ever be invalidated, so
-    // compare against its state on entry instead of asserting `true`
-    const intactBefore = isProtectorIntact()
+    // the protector is isolate-wide and can only ever be invalidated, so it
+    // has to be intact on entry for the check below to mean anything; each
+    // test file runs in its own worker, so nothing else can have tripped it
+    expect(isProtectorIntact()).toBe(true)
 
     const seen: unknown[] = []
     const deep = reactive([{ val: 1 }])
@@ -23,7 +24,7 @@ describe('reactivity/reactive/Array iterator', () => {
     expect(seen.length).toBe(4)
     expect(seen.every(isProxy)).toBe(true)
 
-    expect(isProtectorIntact()).toBe(intactBefore)
+    expect(isProtectorIntact()).toBe(true)
   })
 
   test('should keep native array iterator behavior', () => {
