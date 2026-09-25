@@ -11167,7 +11167,12 @@ describe('vdomInterop', () => {
       const data = ref({
         setupPage,
         onLeave: (_el: Element, done: () => void) => dones.push(done),
+        onEnter: (el: Element, done: () => void) => {
+          log.push(`enter:${el.textContent}`)
+          done()
+        },
         cls: 'c1',
+        fixedKey: 'fixed',
       })
       const makePage = (name: string): any =>
         vdomPages
@@ -11425,6 +11430,70 @@ describe('vdomInterop', () => {
         expect(steps[3]).toMatch(keepAlive ? /^A:4:1 / : /^A:4:0 /)
       },
     )
+
+    test.each([
+      ['key="fixed"', false],
+      ['key="fixed"', true],
+      [':key="data.fixedKey"', false],
+      [':key="data.fixedKey"', true],
+    ])(
+      "%s wins over the vnode's own key (vdom pages: %s)",
+      async (keyAttr, vdomPages) => {
+        const inner = `<component :is="Component" ${keyAttr} />`
+        const steps = await compare(vdomPages, inner, async r => {
+          r.click()
+          await r.go(r.PageA, 2, 'k1')
+          await r.go(r.PageA, 3, 'k2')
+          r.unmount()
+          return r.steps
+        })
+        expect(steps.slice(0, 2)).toEqual(['A:2:1 [mA]', 'A:3:1 []'])
+      },
+    )
+
+    test('Transition: a page switching its own root enters the new one', async () => {
+      const Page = defineComponent({
+        props: ['id'],
+        setup() {
+          const n = ref(1)
+          return () =>
+            h(
+              'div',
+              { key: n.value, onClick: () => n.value++ },
+              String(n.value),
+            )
+        },
+      })
+      const inner = `<Transition :css="false" @enter="data.onEnter" @leave="data.onLeave">${dynamic}</Transition>`
+      const steps = await compare(true, inner, async r => {
+        await r.go(Page, 1)
+        await r.leave()
+        ;(r.root.querySelector('div') as HTMLElement).click()
+        await nextTick()
+        r.snap()
+        await r.leave()
+        r.unmount()
+        return r.steps
+      })
+      expect(steps[2]).toBe('2 [enter:2]')
+    })
+
+    test('Transition: a patched page enters its new root', async () => {
+      const Page = defineComponent({
+        props: ['id'],
+        setup: props => () => h('div', { key: props.id }, String(props.id)),
+      })
+      const inner = `<Transition :css="false" @enter="data.onEnter" @leave="data.onLeave">${dynamic}</Transition>`
+      const steps = await compare(true, inner, async r => {
+        await r.go(Page, 1)
+        await r.leave()
+        await r.go(Page, 2)
+        await r.leave()
+        r.unmount()
+        return r.steps
+      })
+      expect(steps[2]).toBe('2 [enter:2]')
+    })
 
     test.each(['B', 'null'])(
       'KeepAlive: a page re-entered via %s still gets fallthrough attrs',
