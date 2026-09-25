@@ -621,4 +621,26 @@ describe('api: createDynamicComponent', () => {
 
     expect(html()).toBe('<a>router link</a><!--dynamic-component-->')
   })
+
+  test('a constant key keys the branch, as TransitionGroup requires', () => {
+    const App = compile(
+      `<template><TransitionGroup>
+        <component :is="'A'" key="a" /><component :is="'B'" key="b" />
+      </TransitionGroup></template>`,
+      ref(null),
+    )
+    const { app, html, mount } = define(App).create()
+    app.component(
+      'A',
+      defineVaporComponent(() => template('<i>a</i>')()),
+    )
+    app.component(
+      'B',
+      defineVaporComponent(() => template('<b>b</b>')()),
+    )
+    mount()
+    expect(html()).toBe(
+      '<i>a</i><!--dynamic-component--><b>b</b><!--dynamic-component-->',
+    )
+  })
 })
