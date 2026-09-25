@@ -487,4 +487,26 @@ describe('compiler: vModel transform', () => {
     expect(reactive).toMatchSnapshot()
     expect(constant).toMatchSnapshot()
   })
+
+  test('generates listeners on the same element after v-model', () => {
+    const { code } = compileVapor(
+      '<select v-model="model" @change="onChange"></select>' +
+        '<input @input="onInput" v-model="text" @[event]="onEvent" v-on="handlers" />',
+      { prefixIdentifiers: true },
+    )
+
+    expect(code).toMatchSnapshot()
+    expect(code.indexOf('_applySelectModel(n0')).toBeLessThan(
+      code.indexOf('_on(n0, "change"'),
+    )
+    expect(code.indexOf('_applyTextModel(n1')).toBeLessThan(
+      code.indexOf('_on(n1, "input"'),
+    )
+    expect(code.indexOf('_applyTextModel(n1')).toBeLessThan(
+      code.indexOf('_onBinding(n1'),
+    )
+    expect(code.indexOf('_applyTextModel(n1')).toBeLessThan(
+      code.indexOf('_setDynamicEvents(n1'),
+    )
+  })
 })
