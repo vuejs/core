@@ -1279,7 +1279,7 @@ export function getComponentPublicInstance(
         get(target, key: string) {
           if (key in target) {
             return target[key]
-          } else {
+          } else if (!instance.vapor) {
             const publicPropertiesMap = getPublicPropertiesMap()
             if (key in publicPropertiesMap) {
               return publicPropertiesMap[key](
@@ -1289,8 +1289,10 @@ export function getComponentPublicInstance(
           }
         },
         has(target, key: string) {
-          const publicPropertiesMap = getPublicPropertiesMap()
-          return key in target || key in publicPropertiesMap
+          return (
+            key in target ||
+            (!instance.vapor && key in getPublicPropertiesMap())
+          )
         },
       }))
     )
