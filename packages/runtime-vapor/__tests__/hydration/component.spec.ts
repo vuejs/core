@@ -4,6 +4,7 @@ import {
   defineVaporComponent,
 } from '../../src'
 import { nextTick, reactive, ref } from '@vue/runtime-dom'
+import { vi } from 'vite-plus/test'
 import { BindingTypes } from '@vue/compiler-dom'
 import {
   VueServerRenderer,
@@ -759,6 +760,28 @@ describe('Vapor Mode hydration', () => {
       data.value.sty = 'color: green'
       await nextTick()
       expect(el.getAttribute('style')).toBe('color: green; --v51566ce1: red;')
+    })
+
+    // coverage guard: the template's own class / style is only parsed when a
+    // fallthrough write needs it, never just to hydrate
+    test('does not parse a root template while hydrating it', async () => {
+      const data = ref({ cls: 'x' })
+      const parse = vi.spyOn(HTMLTemplateElement.prototype, 'innerHTML', 'set')
+      const { container } = await testHydration(
+        `<template><components.Child :class="data.cls" /></template>`,
+        {
+          Child: `<template><div class="own"><span class="label">x</span></div></template>`,
+        },
+        data,
+      )
+      expect(parse).not.toHaveBeenCalled()
+
+      // removing the overlapping fallthrough class is what needs the template
+      data.value.cls = ''
+      await nextTick()
+      expect(parse).toHaveBeenCalledTimes(1)
+      expect(container.firstElementChild!.className).toBe('own')
+      parse.mockRestore()
     })
 
     test('restores an important fallthrough display through v-show after hydration', async () => {
