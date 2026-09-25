@@ -11478,6 +11478,48 @@ describe('vdomInterop', () => {
       expect(steps[2]).toBe('2 [enter:2]')
     })
 
+    test('a patched page gives its new root the inherited root scope ids', async () => {
+      const data = ref({ id: 1 })
+      let mounts = 0
+      const Page = defineComponent({
+        props: ['id'],
+        setup(props) {
+          onMounted(() => mounts++)
+          return () =>
+            h('div', { key: props.id, class: 'page' }, String(props.id))
+        },
+      })
+      const Wrapper = compile(
+        `<script setup vapor>defineProps(['node'])</script>
+        <template><component :is="node" /></template>`,
+        data,
+      )
+      const Parent = compile(
+        `<script setup vapor>
+          import { computed, h } from 'vue'
+          const data = _data
+          const { Page, Wrapper } = _components
+          const node = computed(() => h(Page, { id: data.value.id }))
+        </script>
+        <template><Wrapper :node="node" /></template>
+        <style scoped>.page {}</style>`,
+        data,
+        { Page, Wrapper },
+        { id: 'parent' },
+      )
+      Parent.__scopeId = 'data-v-parent'
+      const root = document.createElement('div')
+      createVaporApp(Parent).use(vaporInteropPlugin).mount(root)
+      const page = () => root.querySelector('.page')!
+      expect(page().textContent).toBe('1')
+      expect(page().hasAttribute('data-v-parent')).toBe(true)
+      data.value.id = 2
+      await nextTick()
+      expect(page().textContent).toBe('2')
+      expect(page().hasAttribute('data-v-parent')).toBe(true)
+      expect(mounts).toBe(1)
+    })
+
     test('Transition: a patched page enters its new root', async () => {
       const Page = defineComponent({
         props: ['id'],

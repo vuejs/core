@@ -1354,10 +1354,13 @@ function mountVNode(
       ? cloneVNode(baseVNode, getFallthroughAttrs())
       : baseVNode
     if (!isMounted || !mountedParentNode) return
-    // like a vdom Transition re-rendering its child, the fresh vnode carries
-    // the hooks its root inherits
-    if (frag.$transition) setVNodeTransitionHooks(next, frag.$transition)
     const previous = vnode
+    // the fresh vnode carries what its root inherits at its own mount, like a
+    // vdom parent re-rendering it: Transition hooks and root-only scope ids
+    if (frag.$transition) setVNodeTransitionHooks(next, frag.$transition)
+    if (previous.vaporScopeIds) {
+      setVNodeVaporScopeIds(next, previous.vaporScopeIds)
+    }
     vnode = next
     trackFragmentVNodeUpdates(frag, vnode, syncNodes)
     const prevInstance = currentInstance
