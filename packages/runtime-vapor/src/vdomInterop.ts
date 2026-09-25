@@ -71,7 +71,7 @@ import {
   warn,
   withCtx,
 } from '@vue/runtime-dom'
-import { effectScope } from '@vue/reactivity'
+import { effectScope, setActiveSub } from '@vue/reactivity'
 import {
   type LooseRawProps,
   type VaporComponent,
@@ -1344,7 +1344,11 @@ function mountVNode(
     transition,
   ) => place(parentNode, anchor, parentSuspense, transition, moveType)
 
-  const patchInto = (next: VNode) => {
+  const patchInto = (base: VNode) => {
+    // merging the attrs reads them, which the attrs effect below tracks
+    const next = getFallthroughAttrs
+      ? cloneVNode(base, getFallthroughAttrs())
+      : base
     if (!isMounted || !mountedParentNode) return
     const previous = vnode
     vnode = next
@@ -1366,35 +1370,27 @@ function mountVNode(
     simpleSetCurrentInstance(prevInstance)
     syncNodes()
   }
-  // `<component :is="vnode">` handing down a fresh vnode of the same
-  // (type, key): patch it into the mounted one, the way VDOM diffs it. A
-  // KeepAlive hit can be another type (an async wrapper of the cached
-  // component); that one is reused as is.
+  // `<component :is="vnode">` handing down a fresh vnode of its branch:
+  // patch it into the mounted one, the way VDOM diffs it. A KeepAlive hit can
+  // be another type (an async wrapper of the cached component); that one is
+  // reused as is.
   frag.patchVNode = next => {
-    if (next.type !== baseVNode.type || next.key !== baseVNode.key) return
+    if (next.type !== baseVNode.type) return
     baseVNode = next
-    patchInto(
-      getFallthroughAttrs ? cloneVNode(next, getFallthroughAttrs()) : next,
-    )
+    // the caller's effect tracks only its vnode; attrs have their own effect
+    const prevSub = setActiveSub()
+    try {
+      patchInto(next)
+    } finally {
+      setActiveSub(prevSub)
+    }
   }
 
   if (getFallthroughAttrs) {
     // Re-clone and let VDOM patch the change through, mirroring how a VDOM
     // parent re-renders its root with fresh fallthrough attrs. The first run
-    // only establishes the dependency — the initial clone above already
-    // carries those attrs into the mount.
-    let applied = false
-    renderEffect(() => {
-      // clone on every run: merging the attrs is what reads them, and that
-      // read is the dependency this effect tracks
-      const next = cloneVNode(baseVNode, getFallthroughAttrs())
-      if (!applied) {
-        // the eager clone above already carries these attrs into the mount
-        applied = true
-        return
-      }
-      patchInto(next)
-    })
+    // happens before the mount and only establishes the dependency.
+    renderEffect(() => patchInto(baseVNode))
   }
 
   frag.remove = unmount
