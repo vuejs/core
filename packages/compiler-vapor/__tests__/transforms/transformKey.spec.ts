@@ -154,7 +154,8 @@ describe('compiler: key', () => {
     test('component + key', () => {
       const { code } = compileWithKey(`<Foo key="1" />`)
       expect(code).toMatchSnapshot()
-      expect(code).contains('_setBlockKey(')
+      expect(code).contains('key: "1"')
+      expect(code).not.contains('_setBlockKey(')
       expect(code).not.contains('_createKeyedFragment(')
     })
 
@@ -184,14 +185,18 @@ describe('compiler: key', () => {
     test('<component is/> + key', () => {
       const { code } = compileWithKey(`<component :is="view" key="1" />`)
       expect(code).toMatchSnapshot()
-      expect(code).contains('_setBlockKey(')
+      expect(code).contains('() => ("1"))')
+      expect(code).not.contains('key: "1"')
+      expect(code).not.contains('_setBlockKey(')
       expect(code).not.contains('_createKeyedFragment(')
     })
 
     test('<component is literal/> + key', () => {
       const { code } = compileWithKey(`<component :is="'div'" key="1" />`)
       expect(code).toMatchSnapshot()
-      expect(code).contains('_setBlockKey(')
+      expect(code).contains('() => ("1"))')
+      expect(code).not.contains('key: "1"')
+      expect(code).not.contains('_setBlockKey(')
       expect(code).not.contains('_createKeyedFragment(')
     })
 
@@ -248,7 +253,8 @@ describe('compiler: key', () => {
     test('v-once + component key', () => {
       const { code } = compileWithKey(`<Foo v-once key="bar" />`)
       expect(code).toMatchSnapshot()
-      expect(code).contains('_setBlockKey(')
+      expect(code).contains('key: "bar"')
+      expect(code).not.contains('_setBlockKey(')
       expect(code).not.contains('_createKeyedFragment(')
     })
   })

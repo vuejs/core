@@ -195,11 +195,14 @@ export const transformElement: NodeTransform = (node, context) => {
       node.tagType === ElementTypes.COMPONENT || useCreateElement
 
     const isDynamicComponent = isComponentTag(node.tag)
-    const staticKey = resolveStaticKey(
-      node,
-      context as TransformContext<ElementNode>,
-      isComponent,
-    )
+    // a runtime dynamic component takes its key as an argument instead
+    const staticKey = dynamicComponentKeys.has(node)
+      ? undefined
+      : resolveStaticKey(
+          node,
+          context as TransformContext<ElementNode>,
+          isComponent,
+        )
 
     const propsResult = buildProps(
       node,
@@ -408,7 +411,8 @@ function transformComponentElement(
 
   const props = propsResult[0] ? propsResult[1] : [propsResult[1]]
   if (staticKey && !useCreateElement) {
-    // KeepAlive needs the explicit key before the component is created.
+    // the component takes its key from its props, where KeepAlive can read it
+    // before creating it
     const keyProp: IRProp = {
       key: createSimpleExpression('key', true),
       values: [staticKey],
@@ -434,7 +438,9 @@ function transformComponentElement(
     ns: node.ns || undefined,
     key: dynamicComponentKeys.get(node),
   }
-  if (staticKey) {
+  // what createComponent does not take: an element has no props key, and a
+  // dynamic component's fragment is keyed apart from the component it creates
+  if (staticKey && (useCreateElement || dynamicComponent)) {
     context.registerOperation(createSetBlockKey(id, staticKey))
   }
   context.slots = []

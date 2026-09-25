@@ -370,6 +370,14 @@ export function createComponent(
       }
     }
 
+    // a static key arrives as a prop, where KeepAlive reads it before the
+    // component exists (a dynamic key keys a fragment around it instead); only
+    // KeepAlive and transitions read it
+    const key =
+      (isKeepAliveEnabled || isTransitionEnabled) && rawProps
+        ? resolveSource(rawProps.key)
+        : undefined
+
     let keepAliveCtx: VaporKeepAliveContext | null = null
     // keep-alive
     if (
@@ -380,10 +388,7 @@ export function createComponent(
     ) {
       const ctx = (currentInstance as KeepAliveInstance).ctx
       keepAliveCtx = ctx
-      const cached = ctx.getCachedComponent(
-        component,
-        rawProps && resolveSource(rawProps.key),
-      )
+      const cached = ctx.getCachedComponent(component, key)
       if (cached) {
         // a nested branch teardown stops the branch scope that unmounts the
         // cached component, so the scope re-entering it takes over
@@ -423,6 +428,7 @@ export function createComponent(
         normalizeRawSlots(rawSlots),
         _insertionAnchor,
       )
+      if (key !== undefined) frag.$key = key
       if (_insertionParent) {
         // Teleports mounted via insertion state are not part of the returned
         // block tree, so scope disposal must tear down their target-side state.
@@ -518,6 +524,7 @@ export function createComponent(
       once,
       ce,
     )
+    if (key !== undefined) instance.$key = key
     if (inputScope) {
       instance.inputScope = inputScope
     }
@@ -1267,6 +1274,10 @@ export function createPlainElement(
 
   // mark single root
   ;(el as any).$root = isSingleRoot
+  if ((isKeepAliveEnabled || isTransitionEnabled) && rawProps) {
+    const key = resolveSource(rawProps.key)
+    if (key !== undefined) (el as any).$key = key
+  }
 
   // Adopted elements already carry SSR scope attrs; mismatch-recreated ones
   // were client-built and stamp like a client render.
