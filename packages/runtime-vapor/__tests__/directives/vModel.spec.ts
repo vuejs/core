@@ -13,9 +13,10 @@ import {
   setProp,
   setValue,
   template,
+  vaporInteropPlugin,
 } from '../../src'
-import { makeRender, renderParity } from '../_utils'
-import { nextTick } from '@vue/runtime-dom'
+import { compile, makeRender, renderParity } from '../_utils'
+import { createApp, nextTick } from '@vue/runtime-dom'
 
 const define = makeRender()
 
@@ -1417,6 +1418,295 @@ describe('directive: v-model', () => {
 
       expect(vdom).toEqual({ disabled: true, attribute: '0' })
       expect(vapor).toEqual(vdom)
+    })
+  })
+
+  describe('select re-syncs when its options change', () => {
+    const selected = (root: HTMLElement) => {
+      const select = root.querySelector('select')!
+      return select.multiple
+        ? Array.from(select.options, o => o.selected)
+        : select.selectedIndex
+    }
+
+    const optionsParity = async (
+      srcs: Record<string, string>,
+      makeInitial: () => any,
+      act: (data: any, root: HTMLElement) => void | Promise<void>,
+    ) => {
+      const probed = {} as Record<'vdom' | 'vapor', any[]>
+      await renderParity(
+        srcs,
+        () => ref(makeInitial()),
+        async (data, root, mode) => {
+          await act(data.value, root)
+          await nextTick()
+          probed[mode] = [selected(root), JSON.stringify(data.value.v)]
+        },
+      )
+      return probed
+    }
+
+    test('options rendered after the model is set', async () => {
+      const { vdom, vapor } = await optionsParity(
+        {
+          App: `<template><select v-model="data.v"><option v-for="o in data.opts" :value="o">{{ o }}</option></select></template>`,
+        },
+        () => ({ v: 'b', opts: [] }),
+        data => {
+          data.opts = ['a', 'b', 'c']
+        },
+      )
+      expect(vdom).toEqual([1, '"b"'])
+      expect(vapor).toEqual(vdom)
+    })
+
+    test('option added by v-if', async () => {
+      const { vdom, vapor } = await optionsParity(
+        {
+          App: `<template><select v-model="data.v"><option value="a">a</option><option v-if="data.show" value="b">b</option></select></template>`,
+        },
+        () => ({ v: 'b', show: false }),
+        data => {
+          data.show = true
+        },
+      )
+      expect(vdom).toEqual([1, '"b"'])
+      expect(vapor).toEqual(vdom)
+    })
+
+    test('option value changed to match the model', async () => {
+      const { vdom, vapor } = await optionsParity(
+        {
+          App: `<template><select v-model="data.v"><option :value="data.a">a</option><option :value="{ id: 9 }">z</option></select></template>`,
+        },
+        () => ({ v: { id: 1 }, a: { id: 0 } }),
+        data => {
+          data.a = { id: 1 }
+        },
+      )
+      expect(vdom).toEqual([0, '{"id":1}'])
+      expect(vapor).toEqual(vdom)
+    })
+
+    test('optgroups rendered inside v-if', async () => {
+      const { vdom, vapor } = await optionsParity(
+        {
+          App: `<template><select v-model="data.v"><option value="">-</option><template v-if="data.groups.length"><optgroup v-for="g in data.groups" :label="g.label"><option v-for="o in g.opts" :value="o">{{ o }}</option></optgroup></template></select></template>`,
+        },
+        () => ({ v: 'y', groups: [] }),
+        data => {
+          data.groups = [
+            { label: 'A', opts: ['w', 'x'] },
+            { label: 'B', opts: ['y', 'z'] },
+          ]
+        },
+      )
+      expect(vdom).toEqual([3, '"y"'])
+      expect(vapor).toEqual(vdom)
+    })
+
+    test('options passed through a slot', async () => {
+      const { vdom, vapor } = await optionsParity(
+        {
+          Child: `<template><select v-model="data.v"><slot /></select></template>`,
+          App: `<template><components.Child><option v-for="o in data.opts" :value="o">{{ o }}</option></components.Child></template>`,
+        },
+        () => ({ v: 'b', opts: [] }),
+        data => {
+          data.opts = ['a', 'b', 'c']
+        },
+      )
+      expect(vdom).toEqual([1, '"b"'])
+      expect(vapor).toEqual(vdom)
+    })
+
+    test('multiple select keeps an object value when options load later', async () => {
+      const { vdom, vapor } = await optionsParity(
+        {
+          App: `<template><select multiple v-model="data.v"><option v-for="o in data.opts" :key="o.id" :value="o">{{ o.id }}</option></select></template>`,
+        },
+        () => ({ v: [{ id: 2 }], opts: [] }),
+        async (data, root) => {
+          data.opts = [{ id: 1 }, { id: 2 }, { id: 3 }]
+          await nextTick()
+          const select = root.querySelector('select')!
+          select.options[0].selected = true
+          triggerEvent('change', select)
+        },
+      )
+      expect(vdom).toEqual([[true, true, false], '[{"id":1},{"id":2}]'])
+      expect(vapor).toEqual(vdom)
+    })
+
+    test('multiple select with a Set model', async () => {
+      const { vdom, vapor } = await optionsParity(
+        {
+          App: `<template><select multiple v-model="data.v"><option v-for="o in data.opts" :value="o">{{ o }}</option></select></template>`,
+        },
+        () => ({ v: new Set(['b', 'c']), opts: [] }),
+        data => {
+          data.opts = ['a', 'b', 'c']
+        },
+      )
+      expect(vdom).toEqual([[false, true, true], '{}'])
+      expect(vapor).toEqual(vdom)
+    })
+
+    test('unrelated owner update keeps the picked option', async () => {
+      const { vdom, vapor } = await optionsParity(
+        {
+          App: `<template><p>{{ data.n }}</p><select v-model="data.v"><option value="a">a</option><option value="b">b</option></select></template>`,
+        },
+        () => ({ v: 'a', n: 0 }),
+        async (data, root) => {
+          const select = root.querySelector('select')!
+          select.selectedIndex = 1
+          triggerEvent('change', select)
+          await nextTick()
+          data.n++
+        },
+      )
+      expect(vdom).toEqual([1, '"b"'])
+      expect(vapor).toEqual(vdom)
+    })
+
+    test('v-once select is not re-synced by owner updates', async () => {
+      const { vdom, vapor } = await optionsParity(
+        {
+          App: `<template><p>{{ data.n }}</p><div v-once><select v-model="data.v"><option value="a">a</option><option value="b">b</option></select></div></template>`,
+        },
+        () => ({ v: 'a', n: 0 }),
+        data => {
+          data.v = 'b'
+          data.n++
+        },
+      )
+      expect(vdom).toEqual([0, '"b"'])
+      expect(vapor).toEqual(vdom)
+    })
+
+    test('removed selects stop re-syncing', async () => {
+      let reads = 0
+      const counts = {} as Record<'vdom' | 'vapor', number[]>
+      await renderParity(
+        {
+          App: `<template><p>{{ data.n }}</p><select v-if="data.show" v-model="data.v"><option value="a">a</option></select><div v-for="r in data.rows" :key="r"><select v-model="data.v"><option value="a">a</option></select></div></template>`,
+        },
+        () =>
+          ref({
+            _v: 'a',
+            get v() {
+              reads++
+              return this._v
+            },
+            set v(v) {
+              this._v = v
+            },
+            n: 0,
+            show: true,
+            rows: [1, 2, 3],
+          }),
+        async (data, _root, mode) => {
+          const update = async () => {
+            reads = 0
+            data.value.n++
+            await nextTick()
+            return reads
+          }
+          const result = [await update()]
+          for (let i = 0; i < 3; i++) {
+            data.value.show = !data.value.show
+            await nextTick()
+          }
+          data.value.rows = [4]
+          await nextTick()
+          result.push(await update())
+          counts[mode] = result
+        },
+      )
+      // one read per mounted select
+      expect(counts.vdom).toEqual([4, 1])
+      expect(counts.vapor).toEqual(counts.vdom)
+    })
+
+    test('re-syncs before the owner updated hooks run', async () => {
+      const seen = { vdom: [] as number[], vapor: [] as number[] }
+      let log: number[] = []
+      await renderParity(
+        {
+          App: `<script setup>
+            import { onUpdated, useTemplateRef } from 'vue'
+            const data = _data
+            const components = _components
+            const select = useTemplateRef('select')
+            onUpdated(() => components.log().push(select.value.selectedIndex))
+          </script>
+          <template><select ref="select" v-model="data.v"><option v-for="o in data.opts" :value="o">{{ o }}</option></select></template>`,
+        },
+        () => ref({ v: 'b', opts: [] }),
+        async (data, _root, mode) => {
+          log = seen[mode]
+          data.value.opts = ['a', 'b']
+          await nextTick()
+        },
+        { log: () => log },
+      )
+      expect(seen.vdom).toEqual([1])
+      expect(seen.vapor).toEqual(seen.vdom)
+    })
+
+    test('select removed before a suspended owner mounts stops syncing', async () => {
+      let reads = 0
+      let resolve!: () => void
+      const data = ref({
+        _v: 'a',
+        get v() {
+          reads++
+          return this._v
+        },
+        set v(v) {
+          this._v = v
+        },
+        show: true,
+      })
+      const components: Record<string, any> = {
+        pending: new Promise<void>(r => (resolve = r)),
+      }
+      components.Async = compile(
+        `<script setup>await _components.pending</script><template><i /></template>`,
+        data,
+        components,
+        { vapor: false },
+      )
+      components.Sel = compile(
+        `<template><select v-if="data.show" v-model="data.v"><option value="a">a</option></select></template>`,
+        data,
+        components,
+      )
+      const App = compile(
+        `<script setup>const data = _data; const components = _components</script>` +
+          `<template><Suspense><div><components.Async /><components.Sel /></div></Suspense></template>`,
+        data,
+        components,
+        { vapor: false },
+      )
+      const root = document.createElement('div')
+      const app = createApp(App).use(vaporInteropPlugin)
+      app.mount(root)
+      data.value.show = false
+      await nextTick()
+      resolve()
+      await new Promise(r => setTimeout(r))
+      await nextTick()
+      expect(root.querySelector('select')).toBe(null)
+
+      app.unmount()
+      data.value.v = 'b'
+      // the reactive setter itself reads the old value
+      reads = 0
+      await nextTick()
+      expect(reads).toBe(0)
     })
   })
 })
