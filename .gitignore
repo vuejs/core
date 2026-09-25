@@ -14,3 +14,4 @@ dts-build/packages
 packages-private/benchmark/reference
 **/__tests__/**/__screenshots__/**/*
 /.vite-hooks/
+.vitest/

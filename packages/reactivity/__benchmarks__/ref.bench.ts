@@ -1,32 +1,43 @@
-import { bench, describe } from 'vite-plus/test'
-import { ref } from '../dist/reactivity.esm-browser.prod'
+import { describe } from 'vite-plus/test'
+import { test } from '../../../scripts/bench'
+import * as reactivity from '../dist/reactivity.esm-browser.prod'
+
+const { ref } = reactivity
 
 describe('ref', () => {
-  bench('create ref', () => {
-    ref(100)
+  test('create ref', async ({ benchmark }) => {
+    await benchmark(() => {
+      ref(100)
+    })
   })
 
   {
     let i = 0
     const v = ref(100)
-    bench('write ref', () => {
-      v.value = i++
+    test('write ref', async ({ benchmark }) => {
+      await benchmark(() => {
+        v.value = i++
+      })
     })
   }
 
   {
     const v = ref(100)
-    bench('read ref', () => {
-      v.value
+    test('read ref', async ({ benchmark }) => {
+      await benchmark(() => {
+        v.value
+      })
     })
   }
 
   {
     let i = 0
     const v = ref(100)
-    bench('write/read ref', () => {
-      v.value = i++
-      v.value
+    test('write/read ref', async ({ benchmark }) => {
+      await benchmark(() => {
+        v.value = i++
+        v.value
+      })
     })
   }
 })

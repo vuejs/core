@@ -119,6 +119,7 @@ The `run-s` and `run-p` commands found in some scripts are from [npm-run-all](ht
 - [`nr dev-compiler`](#nr-dev-compiler)
 - [`nr test`](#nr-test)
 - [`nr test-dts`](#nr-test-dts)
+- [`nr bench`](#nr-bench)
 
 ### `nr build`
 
@@ -233,6 +234,14 @@ Tests that test against source code are grouped under `nr test-unit`, while test
 ### `nr test-dts`
 
 Runs `nr build-dts` first, then verify the type tests in `packages-private/dts-test` are working correctly against the actual built type declarations.
+
+### `nr bench`
+
+Run Node benchmarks with `pnpm bench --run`. Each benchmark saves its result under `temp/bench`. After changing the code, run `pnpm bench-compare --run` to compare against those saved results without overwriting them. Both commands accept file filters and `-t` to select benchmarks. Generate a new baseline when benchmark names or measured workloads change; Vitest 4 benchmark reports cannot be reused.
+
+Node benchmark files import `test` from `scripts/bench.ts` and use its `benchmark` fixture. Cache imported functions in local variables before measurement to avoid [Vite module runner overhead](https://vitest.dev/guide/benchmarking#module-runner-overhead).
+
+Browser benchmarks compare implementations within each scenario using Vitest's `bench.compare()`; run them with `MODE=benchmark pnpm test bench --project='bench-browser*' --run --reporter=default`.
 
 ## Project Structure
 

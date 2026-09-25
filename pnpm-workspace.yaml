@@ -7,15 +7,15 @@ catalog:
   '@babel/types': ^7.29.8
   'entities': '^7.0.1'
   'estree-walker': ^2.0.2
-  'vite': npm:@voidzero-dev/vite-plus-core@0.3.0
+  'vite': npm:@voidzero-dev/vite-plus-core@1.0.0-rc.0
   '@vitejs/plugin-vue': ^6.0.9
   'magic-string': ^0.30.21
   'source-map-js': ^1.2.1
-  vitest: 4.1.11
-  vite-plus: 0.3.0
-  '@vitest/browser-playwright': 4.1.11
-  '@vitest/coverage-v8': 4.1.11
-  '@vitest/ui': 4.1.11
+  vitest: 5.0.1
+  vite-plus: 1.0.0-rc.0
+  '@vitest/browser-playwright': 5.0.1
+  '@vitest/coverage-v8': 5.0.1
+  '@vitest/ui': 5.0.1
 
 allowBuilds:
   '@parcel/watcher': true
@@ -45,8 +45,6 @@ minimumReleaseAge: 1440
 minimumReleaseAgeExclude:
   # Renovate security update: postcss@8.5.23
   - postcss@8.5.23
-  # Renovate security update: vitest@4.1.11
-  - vitest@4.1.11
 overrides:
   vite@*: 'catalog:'
   vitest@*: 'catalog:'
