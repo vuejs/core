@@ -1520,4 +1520,59 @@ describe('VDOM interop', () => {
       target.remove()
     }
   })
+
+  const page = (vapor: boolean) => ({
+    code: `<script setup>
+      import { ref } from 'vue'
+      defineProps(['id'])
+      const n = ref(0)
+    </script>
+    <template><button @click="n++">{{ id }}:{{ n }}</button></template>`,
+    vapor,
+  })
+
+  test.each([false, true])(
+    'hydrated VNode dynamic component patches a same-type VNode (vapor page: %s)',
+    async vaporPage => {
+      const data = ref({ id: 1 })
+      const { container } = await testWithVaporApp(
+        `<script setup>
+          import { computed, h } from 'vue'
+          const data = _data
+          const vnode = computed(() => h(_components.Page, { id: data.value.id }))
+        </script>
+        <template><component :is="vnode" /></template>`,
+        { Page: page(vaporPage) },
+        data,
+      )
+      triggerEvent('click', container.querySelector('button')!)
+      await nextTick()
+      data.value.id = 2
+      await nextTick()
+      expect(container.textContent).toBe('2:1')
+    },
+  )
+
+  test('hydrated VNode dynamic component root gets fallthrough attr updates', async () => {
+    const data = ref({ cls: 'a' })
+    const { container } = await testWithVaporApp(
+      `<script setup>
+        import { h } from 'vue'
+        const data = _data
+        const Wrap = _components.Wrap
+        const vnode = h(_components.Page, { id: 1 })
+      </script>
+      <template><Wrap :comp="vnode" :class="data.cls" /></template>`,
+      {
+        Page: page(false),
+        Wrap: `<script setup>defineProps(['comp'])</script>
+          <template><component :is="comp" /></template>`,
+      },
+      data,
+    )
+    expect(container.querySelector('button')!.className).toBe('a')
+    data.value.cls = 'b'
+    await nextTick()
+    expect(container.querySelector('button')!.className).toBe('b')
+  })
 })

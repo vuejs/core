@@ -1,5 +1,6 @@
 import {
   type FunctionalComponent,
+  type HMRRuntime,
   KeepAlive,
   type Ref,
   type ShallowRef,
@@ -73,6 +74,8 @@ import {
   vaporInteropPlugin,
   withVaporDirectives,
 } from '../src'
+
+declare var __VUE_HMR_RUNTIME__: HMRRuntime
 
 const define = makeInteropRender()
 
@@ -11148,6 +11151,7 @@ describe('vdomInterop', () => {
       parentVapor: boolean,
       vdomPages: boolean,
       inner: string,
+      wrap?: string,
     ) {
       const log: string[] = []
       const dones: (() => void)[] = []
@@ -11163,6 +11167,7 @@ describe('vdomInterop', () => {
       const data = ref({
         setupPage,
         onLeave: (_el: Element, done: () => void) => dones.push(done),
+        cls: 'c1',
       })
       const makePage = (name: string): any =>
         vdomPages
@@ -11188,24 +11193,35 @@ describe('vdomInterop', () => {
       const PageA = makePage('A')
       const PageB = makePage('B')
       const hmrId = (PageA.__hmrId = `router-view-${hmrUid++}`)
-      ;(globalThis as any).__VUE_HMR_RUNTIME__.createRecord(hmrId, PageA)
       const route = shallowRef<any>({ page: PageA, id: 1 })
       const RouterView = defineComponent({
         setup(_, { slots }) {
           return () => {
             const { page, id, key } = route.value
-            return slots.default!({ Component: h(page, { id, key }) })
+            return slots.default!({
+              Component: page && h(page, { id, key }),
+              route: route.value,
+            })
           }
         },
       })
+      const Wrap =
+        wrap &&
+        compile(
+          `<script setup${parentVapor ? ' vapor' : ''}>defineProps(['comp'])</script>
+          <template>${wrap}</template>`,
+          data,
+          {},
+          { vapor: parentVapor },
+        )
       const App = compile(
         `<script setup${parentVapor ? ' vapor' : ''}>
-          const RouterView = _components.RouterView
+          const { RouterView, Wrap } = _components
           const data = _data
         </script>
-        <template><RouterView v-slot="{ Component }">${inner}</RouterView></template>`,
+        <template><RouterView v-slot="{ Component, route }">${inner}</RouterView></template>`,
         data,
-        { RouterView },
+        { RouterView, Wrap },
         { vapor: parentVapor },
       )
       const root = document.createElement('div')
@@ -11221,6 +11237,7 @@ describe('vdomInterop', () => {
         PageA,
         PageB,
         root,
+        data,
         steps,
         snap,
         go: async (page: any, id: number, key?: string) => {
@@ -11237,7 +11254,7 @@ describe('vdomInterop', () => {
         reload: async (name: string) => {
           const next = makePage(name)
           next.__hmrId = hmrId
-          ;(globalThis as any).__VUE_HMR_RUNTIME__.reload(hmrId, next)
+          __VUE_HMR_RUNTIME__.reload(hmrId, next)
           await nextTick()
           snap()
         },
@@ -11254,10 +11271,13 @@ describe('vdomInterop', () => {
       vdomPages: boolean,
       inner: string,
       script: (r: ReturnType<typeof mountRouterView>) => Promise<string[]>,
+      wrap?: string,
     ) {
       const runs: string[][] = []
       for (const parentVapor of [false, true]) {
-        runs.push(await script(mountRouterView(parentVapor, vdomPages, inner)))
+        runs.push(
+          await script(mountRouterView(parentVapor, vdomPages, inner, wrap)),
+        )
       }
       expect(runs[1]).toEqual(runs[0])
       return runs[0]
@@ -11265,10 +11285,14 @@ describe('vdomInterop', () => {
 
     const dynamic = `<component :is="Component" />`
     const kept = `<KeepAlive>${dynamic}</KeepAlive>`
-    const cases = [false, true].flatMap(ka => [
-      [ka, false],
-      [ka, true],
-    ])
+    const transition = (mode: string, content: string) =>
+      `<Transition mode="${mode}" :css="false" @leave="data.onLeave">${content}</Transition>`
+    const cases = [
+      [false, false],
+      [false, true],
+      [true, false],
+      [true, true],
+    ]
 
     test.each(cases)(
       'patches same-type pages like vdom (KeepAlive: %s, vdom pages: %s)',
@@ -11293,9 +11317,7 @@ describe('vdomInterop', () => {
     test.each(cases)(
       'out-in: a page updated while the previous one leaves (KeepAlive: %s, vdom pages: %s)',
       async (keepAlive, vdomPages) => {
-        const inner = `<Transition mode="out-in" :css="false" @leave="data.onLeave">${
-          keepAlive ? kept : dynamic
-        }</Transition>`
+        const inner = transition('out-in', keepAlive ? kept : dynamic)
         const steps = await compare(vdomPages, inner, async r => {
           await r.go(r.PageB, 2)
           await r.go(r.PageB, 3)
@@ -11349,6 +11371,81 @@ describe('vdomInterop', () => {
           return r.steps
         })
         expect(steps[0]).toMatch(/^A2:1:0 /)
+      },
+    )
+
+    test.each([false, true])(
+      'a `:key` from the slot keeps or replaces the page (vdom pages: %s)',
+      async vdomPages => {
+        const inner = `<component :is="Component" :key="route.key" />`
+        const steps = await compare(vdomPages, inner, async r => {
+          r.click()
+          await r.go(r.PageA, 2)
+          await r.go(r.PageA, 3, 'k')
+          await r.go(r.PageA, 4, 'k')
+          r.unmount()
+          return r.steps
+        })
+        expect(steps.slice(0, 3)).toEqual([
+          'A:2:1 [mA]',
+          'A:3:0 [uA,mA]',
+          'A:4:0 []',
+        ])
+      },
+    )
+
+    test.each([false, true])(
+      'in-out: the entered page is patched while the previous one leaves (vdom pages: %s)',
+      async vdomPages => {
+        const inner = transition('in-out', dynamic)
+        const steps = await compare(vdomPages, inner, async r => {
+          await r.go(r.PageB, 2)
+          await r.go(r.PageB, 3)
+          await r.leave()
+          r.unmount()
+          return r.steps
+        })
+        expect(steps[1]).toBe('A:1:0B:3:0 []')
+      },
+    )
+
+    test.each(cases)(
+      'out-in: going back to the leaving page (KeepAlive: %s, vdom pages: %s)',
+      async (keepAlive, vdomPages) => {
+        const inner = transition('out-in', keepAlive ? kept : dynamic)
+        const steps = await compare(vdomPages, inner, async r => {
+          r.click()
+          await r.go(r.PageB, 2)
+          await r.go(r.PageA, 3)
+          await r.leave()
+          await r.go(r.PageA, 4)
+          r.unmount()
+          return r.steps
+        })
+        expect(steps[3]).toMatch(keepAlive ? /^A:4:1 / : /^A:4:0 /)
+      },
+    )
+
+    test.each(['B', 'null'])(
+      'KeepAlive: a page re-entered via %s still gets fallthrough attrs',
+      async via => {
+        const inner = `<Wrap :comp="Component" :class="data.cls" />`
+        const wrap = `<KeepAlive><component :is="comp" /></KeepAlive>`
+        const classes = await compare(
+          false,
+          inner,
+          async r => {
+            await r.go(via === 'B' ? r.PageB : null, 2)
+            await r.go(r.PageA, 3)
+            r.data.value.cls = 'c2'
+            await nextTick()
+            const cls = r.root.querySelector('button')!.className
+            r.unmount()
+            return [cls]
+          },
+          wrap,
+        )
+        expect(classes).toEqual(['c2'])
       },
     )
   })
