@@ -2,8 +2,10 @@ import type {
   BlockIRNode,
   CoreHelper,
   CreateComponentIRNode,
+  DirectiveIRNode,
   ForIRNode,
   IRDynamicInfo,
+  IREffect,
   IRSlots,
   IfIRNode,
   OperationNode,
@@ -61,6 +63,26 @@ export function genBlockContent(
   // especially important for inputs with a dynamic type, since the runtime
   // selects the text, checkbox, or radio implementation from the DOM property.
   const modelOperations = operation.filter(isVModelOperation)
+  // Listeners on the same element are added after v-model's own, so that a
+  // handler for the same event already sees the updated value, as in vdom.
+  const modelElements = new Set(modelOperations.map(oper => oper.element))
+  const isModelListener = (oper: OperationNode) =>
+    (oper.type === IRNodeTypes.SET_EVENT ||
+      oper.type === IRNodeTypes.SET_DYNAMIC_EVENTS) &&
+    modelElements.has(oper.element)
+  const isDeferred = (oper: OperationNode) =>
+    isVModelOperation(oper) || isModelListener(oper)
+  const modelListenerEffects: IREffect[] = []
+  if (modelElements.size) {
+    for (let i = 0; i < effect.length; i++) {
+      if (
+        !(skippedEffectIndexes && skippedEffectIndexes.has(i)) &&
+        effect[i].operations.every(isModelListener)
+      ) {
+        modelListenerEffects.push(effect[i])
+      }
+    }
+  }
   const resetBlock = context.enterBlock(block)
   const singleUseAssetComponentNames = root
     ? collectSingleUseAssetComponents(block)
@@ -105,7 +127,7 @@ export function genBlockContent(
   ) => {
     while (operationIndex < operationEnd) {
       const oper = operation[operationIndex]
-      if (!isVModelOperation(oper)) {
+      if (!isDeferred(oper)) {
         push(...genOperationWithInsertionState(oper, context))
       }
       operationIndex++
@@ -156,9 +178,7 @@ export function genBlockContent(
   if (operationIndex < operation.length) {
     push(
       ...genOperations(
-        operation
-          .slice(operationIndex)
-          .filter(oper => !isVModelOperation(oper)),
+        operation.slice(operationIndex).filter(oper => !isDeferred(oper)),
         context,
       ),
     )
@@ -170,6 +190,10 @@ export function genBlockContent(
   }
   if (modelOperations.length) {
     push(...genOperations(modelOperations, context))
+    push(...genOperations(operation.filter(isModelListener), context))
+    if (modelListenerEffects.length) {
+      push(...genEffects(modelListenerEffects, context))
+    }
   }
   push(...genCustomDirectives(operation, context))
 
@@ -191,13 +215,16 @@ export function genBlockContent(
     end: number,
     genExtraFrag?: () => CodeFragment[],
   ): CodeFragment[] {
-    if (!skippedEffectIndexes) {
+    if (!skippedEffectIndexes && !modelListenerEffects.length) {
       return genEffects(effect.slice(start, end), context, genExtraFrag)
     }
 
     const effects: typeof effect = []
     for (let i = start; i < end; i++) {
-      if (!skippedEffectIndexes.has(i)) {
+      if (
+        !(skippedEffectIndexes && skippedEffectIndexes.has(i)) &&
+        !modelListenerEffects.includes(effect[i])
+      ) {
         effects.push(effect[i])
       }
     }
@@ -222,7 +249,7 @@ export function genBlockContent(
   }
 }
 
-function isVModelOperation(oper: OperationNode): boolean {
+function isVModelOperation(oper: OperationNode): oper is DirectiveIRNode {
   return (
     oper.type === IRNodeTypes.DIRECTIVE &&
     oper.builtin === true &&

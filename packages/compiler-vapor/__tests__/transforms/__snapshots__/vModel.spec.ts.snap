@@ -180,6 +180,26 @@ exports[`compiler: vModel transform > generates dynamic model after dynamic type
 "
 `;
 
+exports[`compiler: vModel transform > generates listeners on the same element after v-model 1`] = `
+"import { applySelectModel as _applySelectModel, applyTextModel as _applyTextModel, on as _on, setDynamicEvents as _setDynamicEvents, onBinding as _onBinding, renderEffect as _renderEffect, template as _template } from 'vue';
+const t0 = _template("<select>")
+const t1 = _template("<input>")
+
+export function render(_ctx) {
+  const n0 = t0()
+  const n1 = t1()
+  _applySelectModel(n0, () => (_ctx.model), _value => (_ctx.model = _value))
+  _applyTextModel(n1, () => (_ctx.text), _value => (_ctx.text = _value))
+  _on(n0, "change", e => _ctx.onChange(e))
+  _on(n1, "input", e => _ctx.onInput(e))
+  _renderEffect(() => {
+    _setDynamicEvents(n1, _ctx.handlers)
+    _onBinding(n1, _ctx.event, e => _ctx.onEvent(e))
+  })
+  return [n0, n1]
+}"
+`;
+
 exports[`compiler: vModel transform > modifiers > .lazy 1`] = `
 "import { applyTextModel as _applyTextModel, template as _template } from 'vue';
 const t0 = _template("<input>", 1)

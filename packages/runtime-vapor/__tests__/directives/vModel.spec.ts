@@ -1419,4 +1419,209 @@ describe('directive: v-model', () => {
       expect(vapor).toEqual(vdom)
     })
   })
+
+  describe('listeners on the same element', () => {
+    const typeText = (root: HTMLElement, value: string, type = 'input') => {
+      const el = root.querySelector('input, textarea') as HTMLInputElement
+      el.value = value
+      triggerEvent(type, el)
+    }
+
+    const check = (root: HTMLElement, index: number) => {
+      const input = root.querySelectorAll('input')[index]
+      input.checked = true
+      triggerEvent('change', input)
+    }
+
+    const pickOption = (root: HTMLElement, index: number) => {
+      const select = root.querySelector('select')!
+      if (select.multiple) {
+        for (let i = 0; i <= index; i++) select.options[i].selected = true
+      } else {
+        select.selectedIndex = index
+      }
+      triggerEvent('change', select)
+    }
+
+    // records what a handler on the same element sees when it runs
+    const seenParity = async (
+      template: string,
+      makeInitial: () => any,
+      act: (root: HTMLElement) => void,
+      evt = 'input',
+    ) => {
+      const seen = {} as { vdom: any[]; vapor: any[] }
+      let current: any[] = []
+      await renderParity(
+        {
+          App:
+            `<script setup>const data = _data; const log = _components.log; ` +
+            `const type = _components.type; const evt = _components.evt; ` +
+            `const vFoo = _components.vFoo</script>` +
+            `<template>${template}</template>`,
+        },
+        () => ref(makeInitial()),
+        async (_, root, mode) => {
+          // vdom skips a listener attached in the same ms as the event fired
+          await new Promise(r => setTimeout(r, 5))
+          seen[mode] = current = []
+          act(root)
+        },
+        {
+          log: (v: any) => current.push(Array.isArray(v) ? [...v] : v),
+          type: 'checkbox',
+          evt,
+          // a function directive: vdom runs it on mount, after the props
+          vFoo: (el: any) => {
+            if (!el._foo) {
+              el._foo = true
+              el.addEventListener('input', () => current.push('dir'))
+            }
+          },
+        },
+      )
+      return seen
+    }
+
+    const selectTemplate = (attrs: string) =>
+      `<select ${attrs}><option value="us">us</option><option value="de">de</option></select>`
+
+    test.each([
+      [
+        'text',
+        `<input v-model="data" @input="log(data)">`,
+        () => '',
+        (root: HTMLElement) => typeText(root, 'vue'),
+        ['vue'],
+      ],
+      [
+        'text with the listener first',
+        `<input @input="log(data)" v-model="data">`,
+        () => '',
+        (root: HTMLElement) => typeText(root, 'vue'),
+        ['vue'],
+      ],
+      [
+        'textarea',
+        `<textarea v-model="data" @input="log(data)"></textarea>`,
+        () => '',
+        (root: HTMLElement) => typeText(root, 'vue'),
+        ['vue'],
+      ],
+      [
+        '.trim',
+        `<input v-model.trim="data" @input="log(data)">`,
+        () => '',
+        (root: HTMLElement) => typeText(root, '  vue  '),
+        ['vue'],
+      ],
+      [
+        '.number',
+        `<input v-model.number="data" @input="log(data)">`,
+        () => 0,
+        (root: HTMLElement) => typeText(root, '42'),
+        [42],
+      ],
+      [
+        '.lazy',
+        `<input v-model.lazy="data" @change="log(data)">`,
+        () => '',
+        (root: HTMLElement) => typeText(root, 'vue', 'change'),
+        ['vue'],
+      ],
+      [
+        'checkbox',
+        `<input type="checkbox" v-model="data" @change="log(data)">`,
+        () => false,
+        (root: HTMLElement) => check(root, 0),
+        [true],
+      ],
+      [
+        'checkbox array',
+        `<input type="checkbox" value="a" v-model="data" @change="log(data)">`,
+        () => [],
+        (root: HTMLElement) => check(root, 0),
+        [['a']],
+      ],
+      [
+        'radio',
+        `<input type="radio" value="a" v-model="data" @change="log(data)">` +
+          `<input type="radio" value="b" v-model="data" @change="log(data)">`,
+        () => 'a',
+        (root: HTMLElement) => check(root, 1),
+        ['b'],
+      ],
+      [
+        'select',
+        selectTemplate(`v-model="data" @change="log(data)"`),
+        () => 'us',
+        (root: HTMLElement) => pickOption(root, 1),
+        ['de'],
+      ],
+      [
+        'select multiple',
+        selectTemplate(`multiple v-model="data" @change="log(data)"`),
+        () => [],
+        (root: HTMLElement) => pickOption(root, 1),
+        [['us', 'de']],
+      ],
+      [
+        'dynamic type',
+        `<input :type="type" v-model="data" @change="log(data)">`,
+        () => false,
+        (root: HTMLElement) => check(root, 0),
+        [true],
+      ],
+      [
+        'several listeners and modifiers',
+        `<input v-model="data" @input="log('a:' + data)" @input.once="log('b:' + data)" @keyup.enter="log('c:' + data)">`,
+        () => '',
+        (root: HTMLElement) => typeText(root, 'vue'),
+        ['a:vue', 'b:vue'],
+      ],
+      [
+        'dynamic event name',
+        `<input v-model="data" @[evt]="log(data)">`,
+        () => '',
+        (root: HTMLElement) => typeText(root, 'vue'),
+        ['vue'],
+      ],
+      [
+        'v-on object',
+        `<input v-model="data" v-on="{ input: () => log(data) }">`,
+        () => '',
+        (root: HTMLElement) => typeText(root, 'vue'),
+        ['vue'],
+      ],
+    ])(
+      'a same-event handler sees the updated model: %s',
+      async (_, template, makeInitial, act, expected) => {
+        const { vdom, vapor } = await seenParity(template, makeInitial, act)
+        expect(vdom).toEqual(expected)
+        expect(vapor).toEqual(vdom)
+      },
+    )
+
+    test('listeners stay before a custom directive on the same element', async () => {
+      const { vdom, vapor } = await seenParity(
+        `<input v-foo @input="log(data)" v-model="data">`,
+        () => '',
+        root => typeText(root, 'vue'),
+      )
+      expect(vdom).toEqual(['vue', 'dir'])
+      expect(vapor).toEqual(vdom)
+    })
+
+    // capture listeners on the target run before non-capture ones, so this
+    // handler runs before v-model's own and still sees the old value
+    test('capture listener on the same element runs before v-model', async () => {
+      const { vdom, vapor } = await seenParity(
+        `<input v-model="data" @input.capture="log(data)">`,
+        () => '',
+        root => typeText(root, 'vue'),
+      )
+      expect(vdom).toEqual([''])
+      expect(vapor).toEqual(vdom)
+    })
+  })
 })
