@@ -11110,4 +11110,32 @@ describe('vdomInterop', () => {
       expect(key in child).toBe(false)
     }
   })
+
+  test('KeepAlive caches a vdom child by its explicit key over a spread one', async () => {
+    const setups: string[] = []
+    const child = (name: string) =>
+      defineComponent({
+        setup() {
+          setups.push(name)
+          return () => h('i', name)
+        },
+      })
+    const data = ref({ show: true, bindings: { key: 'spread-key' } })
+    const App = compile(
+      `<template><KeepAlive>
+        <components.Foo v-if="data.show" v-bind="data.bindings" key="foo" />
+        <components.Bar v-else key="bar" />
+      </KeepAlive></template>`,
+      data,
+      { Foo: child('Foo'), Bar: child('Bar') },
+    )
+    const root = document.createElement('div')
+    createVaporApp(App).use(vaporInteropPlugin).mount(root)
+    data.value.show = false
+    await nextTick()
+    data.value.show = true
+    await nextTick()
+    expect(root.textContent).toBe('Foo')
+    expect(setups).toEqual(['Foo', 'Bar'])
+  })
 })

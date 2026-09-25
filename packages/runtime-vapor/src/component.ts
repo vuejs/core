@@ -500,6 +500,11 @@ export function createComponent(
         once,
       )
       if (inputScope) frag.inputScope = inputScope
+      // the explicit key wins over one merged in from a spread object
+      if (key !== undefined) {
+        frag.$key = key
+        frag.setKey!(key)
+      }
       if (_insertionParent) registerNestedVDOMCleanup(frag)
       if (!isHydrating) {
         if (_insertionParent) {
