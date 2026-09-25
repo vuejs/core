@@ -1119,6 +1119,25 @@ describe('resolveType', () => {
       expect(deps && [...deps]).toStrictEqual(Object.keys(files))
     })
 
+    test('relative (chained, export imported type under another name)', () => {
+      // e.g. bundled .d.ts: `import { X } from './chunk'; export { X as Y }`
+      const files = {
+        '/foo.ts': `import type { P } from './bar'\nexport { P as PP }`,
+        '/bar.ts': 'export type P = { bar: string }',
+      }
+      const { props, deps } = resolve(
+        `
+        import type { PP } from './foo'
+        defineProps<PP>()
+      `,
+        files,
+      )
+      expect(props).toStrictEqual({
+        bar: ['String'],
+      })
+      expect(deps && [...deps]).toStrictEqual(Object.keys(files))
+    })
+
     test('relative (chained, export *)', () => {
       const files = {
         '/foo.ts': `export * from './bar'`,

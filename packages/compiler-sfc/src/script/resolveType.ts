@@ -1488,6 +1488,16 @@ function recordTypes(
               } else if (types[local]) {
                 // exporting local defined type
                 exportedTypes[exported] = types[local]
+              } else if (imports[local]) {
+                // exporting an imported type, possibly under another name
+                exportedTypes[exported] = {
+                  type: 'TSTypeReference',
+                  typeName: {
+                    type: 'Identifier',
+                    name: local,
+                  },
+                  _ownerScope: scope,
+                }
               }
             }
           }
