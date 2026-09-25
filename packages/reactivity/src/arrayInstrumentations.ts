@@ -10,7 +10,7 @@ import {
   toReadonly,
 } from './reactive'
 import { ARRAY_ITERATE_KEY, track } from './dep'
-import { isArray } from '@vue/shared'
+import { extend, isArray } from '@vue/shared'
 
 /**
  * Track array iteration and return:
@@ -254,18 +254,25 @@ function iterator(
   // given that JS iterator can only be read once, this doesn't seem like
   // a plausible use-case, so this tracking simplification seems ok.
   const arr = shallowReadArray(self)
-  const iter = (arr[method] as any)() as IterableIterator<unknown> & {
-    _next: IterableIterator<unknown>['next']
-  }
+  const iter = (arr[method] as any)() as IterableIterator<unknown>
   if (arr !== self && !isShallow(self)) {
-    iter._next = iter.next
-    iter.next = () => {
-      const result = iter._next()
-      if (!result.done) {
-        result.value = wrapValue(result.value)
-      }
-      return result
-    }
+    // return a wrapper instead of adding an own `next` to the native array
+    // iterator: V8 treats that as a change to array iteration and permanently
+    // invalidates its array iterator protector, which disables the fast paths
+    // of spread, Array.from and typed array construction for the whole isolate.
+    return extend(
+      // inheriting all iterator properties
+      Object.create(iter),
+      {
+        next() {
+          const result = iter.next()
+          if (!result.done) {
+            result.value = wrapValue(result.value)
+          }
+          return result
+        },
+      },
+    ) as IterableIterator<unknown>
   }
   return iter
 }
