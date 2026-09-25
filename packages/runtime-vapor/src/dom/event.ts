@@ -63,6 +63,88 @@ export function onBinding(
   onEffectCleanup(cleanup)
 }
 
+interface RootListener {
+  own?: MaybeEventHandlerValue
+  attrs?: MaybeEventHandlerValue
+  handlers: EventHandler[]
+  remove?: () => void
+  fired?: boolean
+}
+
+/**
+ * A single root element receives `on*` props from both its own dynamic props
+ * and the component's fallthrough attrs. Both sources share one native
+ * listener per key so that own handlers always run first regardless of which
+ * source re-binds, and a handler present in both runs once (same as
+ * mergeProps: existing handlers are kept, incoming ones are appended unless
+ * already present).
+ */
+export function onRootBinding(
+  el: Element & { $rootEvts?: Record<string, RootListener> },
+  key: string,
+  handler: MaybeEventHandlerValue,
+  isFallthrough: boolean,
+): void {
+  const listeners = el.$rootEvts || (el.$rootEvts = Object.create(null))
+  const listener = listeners[key] || (listeners[key] = { handlers: [] })
+  const source = isFallthrough ? 'attrs' : 'own'
+  listener[source] = handler
+  syncRootListener(el, key, listener)
+  onEffectCleanup(() => {
+    listener[source] = null
+    syncRootListener(el, key, listener)
+  })
+}
+
+function syncRootListener(el: Element, key: string, listener: RootListener) {
+  const handlers: EventHandler[] = (listener.handlers = [])
+  const add = (value: MaybeEventHandlerValue, dedupe: boolean) => {
+    if (isArray(value)) {
+      value.forEach(fn => add(fn, dedupe))
+    } else if (value && !(dedupe && handlers.includes(value))) {
+      handlers.push(value)
+    }
+  }
+  add(listener.own, false)
+  add(listener.attrs, true)
+
+  if (!handlers.length) {
+    if (listener.remove) {
+      listener.remove()
+      listener.remove = undefined
+    }
+  } else if (!listener.remove && !listener.fired) {
+    const [event, options] = parseEventName(key)
+    const once = options && (options as AddEventListenerOptions).once
+    const i = currentInstance
+    listener.remove = addEventListener(
+      el,
+      event,
+      (e: Event) => {
+        if (once) listener.fired = true
+        const handlers = listener.handlers.slice()
+        if (handlers.length > 1) {
+          const originalStop = e.stopImmediatePropagation
+          e.stopImmediatePropagation = () => {
+            originalStop.call(e)
+            ;(e as any)._stopped = true
+          }
+        }
+        for (const handler of handlers) {
+          if ((e as any)._stopped) break
+          callWithAsyncErrorHandling(
+            handler,
+            i,
+            ErrorCodes.NATIVE_EVENT_HANDLER,
+            [e],
+          )
+        }
+      },
+      options,
+    )
+  }
+}
+
 export function delegate(el: any, event: string, handler: EventHandler): void {
   const key = `$evt${event}`
   const existing = el[key]
