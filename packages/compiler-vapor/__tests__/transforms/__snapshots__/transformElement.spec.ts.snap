@@ -173,7 +173,7 @@ exports[`compiler: element transform > component > object literal v-bind preserv
 
 export function render(_ctx) {
   const n0 = _createAssetComponent("Foo", { $: [
-    () => ({ [_ctx.name]: _ctx.value }),
+    () => ({ [_ctx.name || ""]: _ctx.value }),
     { foo: () => (_ctx.bar) }
   ] }, null, true)
   return n0
@@ -187,7 +187,7 @@ export function render(_ctx) {
   const n0 = _createAssetComponent("Foo", {
     foo: () => (_ctx.bar),
     $: [
-      () => ({ [_ctx.name]: _ctx.value })
+      () => ({ [_ctx.name || ""]: _ctx.value })
     ]
   }, null, true)
   return n0
@@ -751,8 +751,8 @@ exports[`compiler: element transform > component with dynamic prop arguments 1`]
 
 export function render(_ctx) {
   const n0 = _createAssetComponent("Foo", { $: [
-    () => ({ [_ctx.foo-_ctx.bar]: _ctx.bar }),
-    () => ({ [_ctx.baz]: _ctx.qux })
+    () => ({ [(_ctx.foo-_ctx.bar) || ""]: _ctx.bar }),
+    () => ({ [_ctx.baz || ""]: _ctx.qux })
   ] }, null, true)
   return n0
 }"
@@ -997,7 +997,7 @@ const t0 = _template("<div>", 1)
 
 export function render(_ctx) {
   const n0 = t0()
-  _renderEffect(() => _setDynamicProps(n0, [{ id: _ctx.foo }, { [_ctx.name]: _ctx.bar }]))
+  _renderEffect(() => _setDynamicProps(n0, [{ id: _ctx.foo }, { [_ctx.name || ""]: _ctx.bar }]))
   return n0
 }"
 `;

@@ -267,7 +267,7 @@ describe('compiler: expression', () => {
       `)
       expect(code).matchSnapshot()
       expect(code).contains('const _key = _ctx.key')
-      expect(code).contains('[{ [_key+1]: _ctx.foo[_key+1]() }]')
+      expect(code).contains('[{ [(_key+1) || ""]: _ctx.foo[_key+1]() }]')
     })
 
     test('object property chain access', () => {

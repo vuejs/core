@@ -556,7 +556,7 @@ export function render(_ctx) {
   _renderEffect(() => {
     const _id = _ctx.id
     const _title = _ctx.title
-    _setDynamicProps(n0, [{ [_id]: _id, [_title]: _title }])
+    _setDynamicProps(n0, [{ [_id || ""]: _id, [_title || ""]: _title }])
   })
   return n0
 }"
@@ -570,7 +570,7 @@ export function render(_ctx) {
   const n0 = t0()
   _renderEffect(() => {
     const _id = _ctx.id
-    _setDynamicProps(n0, [{ [_id]: _id, foo: "bar", checked: "" }])
+    _setDynamicProps(n0, [{ [_id || ""]: _id, foo: "bar", checked: "" }])
   })
   return n0
 }"
