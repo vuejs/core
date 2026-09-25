@@ -11,8 +11,9 @@ import {
 } from '@vue/runtime-dom'
 import { renderEffect } from '../renderEffect'
 import { inOnce, withOnce } from '../once'
-import { looseEqual } from '@vue/shared'
-import { traverse } from '@vue/reactivity'
+import { looseEqual, remove } from '@vue/shared'
+import { onScopeDispose, traverse } from '@vue/reactivity'
+import type { VaporComponentInstance } from '../component'
 
 type VaporModelDirective<
   T extends HTMLElement =
@@ -90,6 +91,15 @@ export const applySelectModel: VaporModelDirective<
   'number'
 > = (el, get, set, modifiers) => {
   vModelSelectInit(el, get(), modifiers && modifiers.number, set)
+  if (!inOnce) {
+    // <select> relies on its <option>s, which the owner may re-render
+    // without touching the model. Runs before the owner's own updated hooks,
+    // like the vdom directive hook.
+    const instance = currentInstance as VaporComponentInstance
+    const update = () => vModelSetSelected(el, get())
+    ;(instance.u || (instance.u = [])).unshift(update)
+    onScopeDispose(() => remove(instance.u!, update))
+  }
   ensureMounted(() => {
     renderEffect(() => vModelSetSelected(el, traverse(get())))
   })
