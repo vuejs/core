@@ -322,7 +322,11 @@ function getInteropTransitionElement(
     return block && getTransitionElement(block)
   }
   if (component) {
-    return getInteropTransitionElement(component.subTree)
+    // a component vnode keeps its old root in `el` while it is patched to a
+    // new one, which a Transition's early leave removal relies on (as in vdom)
+    return vnode.el instanceof Element
+      ? vnode.el
+      : getInteropTransitionElement(component.subTree)
   }
   if (vnode.el instanceof Element) {
     return vnode.el
@@ -1344,17 +1348,18 @@ function mountVNode(
     transition,
   ) => place(parentNode, anchor, parentSuspense, transition, moveType)
 
-  const patchInto = (base: VNode) => {
+  const update = () => {
     // merging the attrs reads them, which the attrs effect below tracks
     const next = getFallthroughAttrs
-      ? cloneVNode(base, getFallthroughAttrs())
-      : base
+      ? cloneVNode(baseVNode, getFallthroughAttrs())
+      : baseVNode
     if (!isMounted || !mountedParentNode) return
+    // like a vdom Transition re-rendering its child, the fresh vnode carries
+    // the hooks its root inherits
+    if (frag.$transition) setVNodeTransitionHooks(next, frag.$transition)
     const previous = vnode
     vnode = next
     trackFragmentVNodeUpdates(frag, vnode, syncNodes)
-    frag.vnode = vnode
-    frag.$key = vnodeKeyOf(vnode)
     const prevInstance = currentInstance
     simpleSetCurrentInstance(parentComponent)
     internals.p(
@@ -1368,6 +1373,10 @@ function mountVNode(
       frag.slotScopeIds,
     )
     simpleSetCurrentInstance(prevInstance)
+    // only now: a leave cut short by the new root's enter reads the old root
+    // from the previous vnode during the patch
+    frag.vnode = vnode
+    frag.$key = vnodeKeyOf(vnode)
     syncNodes()
   }
   // `<component :is="vnode">` handing down a fresh vnode of its branch:
@@ -1380,7 +1389,7 @@ function mountVNode(
     // the caller's effect tracks only its vnode; attrs have their own effect
     const prevSub = setActiveSub()
     try {
-      patchInto(next)
+      update()
     } finally {
       setActiveSub(prevSub)
     }
@@ -1390,7 +1399,7 @@ function mountVNode(
     // Re-clone and let VDOM patch the change through, mirroring how a VDOM
     // parent re-renders its root with fresh fallthrough attrs. The first run
     // happens before the mount and only establishes the dependency.
-    renderEffect(() => patchInto(baseVNode))
+    renderEffect(update)
   }
 
   frag.remove = unmount

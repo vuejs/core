@@ -3,6 +3,7 @@ import {
   type GenericAppContext,
   NULL_DYNAMIC_COMPONENT,
   type VNode,
+  cloneVNode,
   currentInstance,
   isVNode,
   resolveDynamicComponent,
@@ -60,6 +61,8 @@ export function createDynamicComponent(
 
   const normalizedRawSlots = normalizeRawSlots(rawSlots)
   const scopeOwner = getScopeOwner()
+  // a constant `key` arrives as a prop (and as the block key)
+  const constKey = isInteropEnabled && rawProps ? rawProps.key : undefined
   // The latest vnode, which a render deferred by an out-in leave mounts, and
   // the patcher of the rendered vnode branch; both cleared on a branch switch.
   let latestVNode: VNode | undefined
@@ -77,7 +80,7 @@ export function createDynamicComponent(
     // interop, which owns their KeepAlive lookup, fallthrough and hydration
     if (isInteropEnabled && appContext.vdom && isVNode(value)) {
       const vnodeFrag = appContext.vdom.mountVNode(
-        latestVNode || value,
+        latestVNode || resolved,
         currentInstance,
         isSingleRoot,
       )
@@ -164,7 +167,7 @@ export function createDynamicComponent(
     // instead would put a build-dependent node (dev comment / prod text) into
     // the semantic content tree — prod hydration then mistakes the detached
     // text for valid content and crashes deriving an anchor from it.
-    const resolved = resolveValue(value, appContext, scopeOwner)
+    let resolved = resolveValue(value, appContext, scopeOwner)
     if (resolved === NULL_DYNAMIC_COMPONENT) {
       if (isInteropEnabled) latestVNode = patchVNode = undefined
       frag.update(undefined, resolved)
@@ -172,9 +175,18 @@ export function createDynamicComponent(
     }
     let branchKey: any = resolved
     if (isInteropEnabled && isVNode(resolved)) {
+      if (key || constKey !== undefined) {
+        if (!key) userKey = constKey
+        // the renderer and KeepAlive see the `:key` too, as in vdom's
+        // `createVNode(vnode, { key })`
+        if (resolved.key !== (userKey == null ? null : userKey)) {
+          resolved = cloneVNode(resolved, { key: userKey })
+        }
+      } else if (resolved.key != null) {
+        userKey = resolved.key
+      }
       latestVNode = resolved
       branchKey = resolved.type
-      if (!key && resolved.key != null) userKey = resolved.key
     }
     if (key || (isInteropEnabled && userKey !== undefined)) {
       if (userKey !== lastKey || branchKey !== lastResolved) {
