@@ -15,7 +15,7 @@ exec('vp', [
   'reactivity',
   'shared',
   '-f',
-  'global-runtime+esm-bundler-runtime+esm-bundler',
+  'global-runtime+esm-runtime+esm',
 ]).then(async () => {
   const errors = []
 
@@ -56,7 +56,7 @@ exec('vp', [
   }
 
   // Bundle CSR entry points without the SSR APIs.
-  const vuePath = path.resolve('packages/vue/dist/vue.runtime.esm-bundler.js')
+  const vuePath = path.resolve('packages/vue/dist/vue.runtime.js')
   const presets = [
     {
       name: 'Vapor CSR',

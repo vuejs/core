@@ -21,7 +21,7 @@ const {
 })
 
 const sizeDir = path.resolve('temp/size')
-const vuePath = path.resolve('./packages/vue/dist/vue.runtime.esm-bundler.js')
+const vuePath = path.resolve('./packages/vue/dist/vue.runtime.js')
 
 /**
  * @typedef {Object} Preset

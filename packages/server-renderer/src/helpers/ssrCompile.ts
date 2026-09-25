@@ -23,10 +23,9 @@ export function ssrCompile(
   template: string,
   instance: ComponentInternalInstance,
 ): SSRRenderFunction {
-  // TODO: this branch should now work in ESM builds, enable it in a minor
-  if (!__CJS__) {
+  if (__ESM_BROWSER__) {
     throw new Error(
-      `On-the-fly template compilation is not supported in the ESM build of ` +
+      `On-the-fly template compilation is not supported in the browser build of ` +
         `@vue/server-renderer. All templates must be pre-compiled into ` +
         `render functions.`,
     )

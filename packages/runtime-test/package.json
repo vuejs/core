@@ -3,13 +3,15 @@
   "private": true,
   "version": "0.0.0",
   "description": "@vue/runtime-test",
-  "main": "index.js",
-  "module": "dist/runtime-test.esm-bundler.js",
-  "types": "dist/runtime-test.d.ts",
+  "type": "module",
+  "types": "./dist/runtime-test.d.ts",
   "files": [
-    "index.js",
     "dist"
   ],
+  "exports": {
+    ".": "./dist/runtime-test.js",
+    "./*": "./*"
+  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/vuejs/core.git",

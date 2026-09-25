@@ -17,7 +17,6 @@ const entries = {
   vue: resolveEntryForPkg('vue'),
   'vue/compiler-sfc': resolveEntryForPkg('compiler-sfc'),
   'vue/server-renderer': resolveEntryForPkg('server-renderer'),
-  '@vue/compat': resolveEntryForPkg('vue-compat'),
 }
 
 const nonSrcPackages = ['sfc-playground', 'template-explorer', 'dts-test']

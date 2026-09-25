@@ -694,24 +694,6 @@ importers:
         specifier: 'catalog:'
         version: 5.0.1(@types/node@24.13.5)(@vitest/browser-playwright@5.0.1)(@vitest/browser-preview@5.0.1)(@vitest/coverage-v8@5.0.1)(@vitest/ui@5.0.1)(@voidzero-dev/vite-plus-core@1.0.0-rc.0)(jsdom@30.0.1)
 
-  packages/vue-compat:
-    dependencies:
-      '@babel/parser':
-        specifier: 'catalog:'
-        version: 7.29.8
-      entities:
-        specifier: 'catalog:'
-        version: 7.0.1
-      estree-walker:
-        specifier: 'catalog:'
-        version: 2.0.2
-      source-map-js:
-        specifier: 'catalog:'
-        version: 1.2.1
-      vue:
-        specifier: workspace:*
-        version: link:../vue
-
 packages:
 
   '@antfu/utils@0.7.10':
