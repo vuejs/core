@@ -26,7 +26,10 @@ import { cloneStampedTemplate } from './scopeIdStamp'
 
 // the class and style a root's template contributes, shared by all its
 // instances (see the incremental setters in prop.ts)
-export type RootMeta = { cls?: string[]; sty?: NormalizedStyle }
+export type RootMeta = {
+  readonly cls?: string[]
+  readonly sty?: NormalizedStyle
+}
 
 function cloneTemplate(n: Node): Node {
   const scopeIds = currentRenderContext.slotScopeIds
@@ -41,18 +44,33 @@ export function template(html: string, flags: number = 0, ns?: Namespace) {
   // parsed once on first hydration adoption; every later instance of this
   // template compares against the cached form instead of re-scanning `html`
   let adoptTarget: AdoptTarget | undefined
-  // from the parsed html: a hydrated node already carries the SSR fallthrough
+  // parsed from the html on first use, never from a hydrated node (it
+  // already carries the SSR fallthrough values); most roots never need it
   let rootMeta: RootMeta | undefined
-  const resolveRootMeta = (): RootMeta => {
-    const meta: RootMeta = {}
-    if (html.includes(' class=') || html.includes(' style=')) {
-      const el = (node ||= parseTemplate(html, ns)) as Element
-      // the DOM tokenizes on ASCII whitespace only, unlike `\s`
-      if (el.classList.length) meta.cls = Array.from(el.classList)
-      const sty = el.getAttribute('style')
-      if (sty) meta.sty = parseStringStyle(sty)
+  const createRootMeta = (): RootMeta => {
+    let cls: string[] | undefined
+    let sty: NormalizedStyle | undefined
+    let resolved = false
+    const resolve = () => {
+      resolved = true
+      if (html.includes(' class=') || html.includes(' style=')) {
+        const el = (node ||= parseTemplate(html, ns)) as Element
+        // the DOM tokenizes on ASCII whitespace only, unlike `\s`
+        if (el.classList.length) cls = Array.from(el.classList)
+        const style = el.getAttribute('style')
+        if (style) sty = parseStringStyle(style)
+      }
     }
-    return meta
+    return {
+      get cls() {
+        resolved || resolve()
+        return cls
+      },
+      get sty() {
+        resolved || resolve()
+        return sty
+      },
+    }
   }
   return (): Node & { $root?: RootMeta } => {
     // a template child of a createElement-backed element carries insertion
@@ -108,7 +126,7 @@ export function template(html: string, flags: number = 0, ns?: Namespace) {
           (adoptTarget ||= parseAdoptTarget(html)),
         )!
       }
-      if (root) (adopted as any).$root = rootMeta ||= resolveRootMeta()
+      if (root) (adopted as any).$root = rootMeta ||= createRootMeta()
       exitHydrationCursor(hydrationCursor)
       return adopted
     }
@@ -118,7 +136,7 @@ export function template(html: string, flags: number = 0, ns?: Namespace) {
       return createTextNode(html)
     }
     const ret = cloneTemplate((node ||= parseTemplate(html, ns)))
-    if (root) (ret as any).$root = rootMeta ||= resolveRootMeta()
+    if (root) (ret as any).$root = rootMeta ||= createRootMeta()
     return ret
   }
 }
