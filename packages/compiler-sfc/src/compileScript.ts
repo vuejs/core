@@ -2,6 +2,7 @@ import {
   BindingTypes,
   UNREF,
   isFunctionType,
+  isSimpleIdentifier,
   isStaticNode,
   unwrapTSNode,
   walkIdentifiers,
@@ -334,6 +335,37 @@ export function compileScript(
       if (isUsedInTemplate(name, sfc) && !ctx.bindingMetadata[name]) {
         config.setup()
         ctx.bindingMetadata[name] = config.bindingType
+      }
+    }
+  }
+
+  /**
+   * vapor resolves template expressions against setup scope instead of a
+   * `_ctx` render proxy, so `<style module>` names used in the template have
+   * to be declared as setup bindings.
+   */
+  function declareTemplateCssModules() {
+    if (!sfc.template || !sfc.template.ast) return
+
+    for (const style of sfc.styles) {
+      if (!style.module) continue
+      // `<style module>` without a value defaults to `$style`
+      const name = style.module === true ? `$style` : style.module
+      if (
+        !isSimpleIdentifier(name) ||
+        ctx.bindingMetadata[name] ||
+        !isUsedInTemplate(name, sfc)
+      ) {
+        continue
+      }
+      setupPreambleLines.push(
+        `const ${name} = ${ctx.helper('useCssModule')}(${JSON.stringify(name)})`,
+      )
+      ctx.bindingMetadata[name] = BindingTypes.SETUP_CONST
+      if (!inlineMode) {
+        // in non-inline mode the template reads bindings off the object
+        // returned from setup()
+        setupBindings[name] = BindingTypes.SETUP_CONST
       }
     }
   }
@@ -932,6 +964,10 @@ export function compileScript(
   // destructure built-in properties (e.g. $emit, $attrs, $slots)
   if (inlineMode) {
     buildDestructureElements()
+  }
+
+  if (vapor && !ssr) {
+    declareTemplateCssModules()
   }
 
   if (destructureElements.length) {
