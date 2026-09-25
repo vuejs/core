@@ -15,6 +15,7 @@ import {
   currentInstance,
   defineAsyncComponent,
   defineComponent,
+  getCurrentInstance,
   getCurrentScope,
   h,
   inject,
@@ -11250,6 +11251,7 @@ describe('vdomInterop', () => {
           await nextTick()
           snap()
         },
+        set: (page: any, id: number) => (route.value = { page, id }),
         click: () => root.querySelector('button')!.click(),
         leave: async () => {
           dones.splice(0).forEach(done => done())
@@ -11292,6 +11294,7 @@ describe('vdomInterop', () => {
     const kept = `<KeepAlive>${dynamic}</KeepAlive>`
     const transition = (mode: string, content: string) =>
       `<Transition mode="${mode}" :css="false" @leave="data.onLeave">${content}</Transition>`
+    const entering = `<Transition :css="false" @enter="data.onEnter" @leave="data.onLeave">${dynamic}</Transition>`
     const cases = [
       [false, false],
       [false, true],
@@ -11464,8 +11467,7 @@ describe('vdomInterop', () => {
             )
         },
       })
-      const inner = `<Transition :css="false" @enter="data.onEnter" @leave="data.onLeave">${dynamic}</Transition>`
-      const steps = await compare(true, inner, async r => {
+      const steps = await compare(true, entering, async r => {
         await r.go(Page, 1)
         await r.leave()
         ;(r.root.querySelector('div') as HTMLElement).click()
@@ -11476,6 +11478,55 @@ describe('vdomInterop', () => {
         return r.steps
       })
       expect(steps[2]).toBe('2 [enter:2]')
+    })
+
+    test('KeepAlive: a page patched and left in the same flush stays cached', async () => {
+      const steps = await compare(true, kept, async r => {
+        const Page = defineComponent({
+          props: ['id'],
+          setup(props) {
+            r.data.value.setupPage('P')
+            watch(
+              () => props.id,
+              id => id === 2 && r.set(r.PageB, 3),
+            )
+            return () => h('i', String(props.id))
+          },
+        })
+        await r.go(Page, 1)
+        await r.go(Page, 2)
+        await r.go(Page, 4)
+        r.unmount()
+        r.snap()
+        return r.steps
+      })
+      expect(steps[1]).toBe('B:3:0 [dP,mB,aB]')
+    })
+
+    test.each([
+      'key="fixed"',
+      `:key="'fix' + 'ed'"`,
+      ':key="data.fixedKey"',
+      'key="fixed" data-nested',
+    ])('the page vnode is keyed by %s', async attr => {
+      const Page = defineComponent({
+        props: ['id'],
+        setup(props) {
+          const i = getCurrentInstance()!
+          return () => h('i', `${String(i.vnode.key)}:${props.id}`)
+        },
+      })
+      const component = `<component :is="Component" ${attr.replace(' data-nested', '')} />`
+      const inner = attr.endsWith('data-nested')
+        ? `<div>${component}</div>`
+        : component
+      const steps = await compare(true, inner, async r => {
+        await r.go(Page, 1, 'own1')
+        await r.go(Page, 2, 'own2')
+        r.unmount()
+        return r.steps
+      })
+      expect(steps.slice(0, 2)).toEqual(['fixed:1 [mA,uA]', 'fixed:2 []'])
     })
 
     test('a patched page gives its new root the inherited root scope ids', async () => {
@@ -11501,11 +11552,9 @@ describe('vdomInterop', () => {
           const { Page, Wrapper } = _components
           const node = computed(() => h(Page, { id: data.value.id }))
         </script>
-        <template><Wrapper :node="node" /></template>
-        <style scoped>.page {}</style>`,
+        <template><Wrapper :node="node" /></template>`,
         data,
         { Page, Wrapper },
-        { id: 'parent' },
       )
       Parent.__scopeId = 'data-v-parent'
       const root = document.createElement('div')
@@ -11525,8 +11574,7 @@ describe('vdomInterop', () => {
         props: ['id'],
         setup: props => () => h('div', { key: props.id }, String(props.id)),
       })
-      const inner = `<Transition :css="false" @enter="data.onEnter" @leave="data.onLeave">${dynamic}</Transition>`
-      const steps = await compare(true, inner, async r => {
+      const steps = await compare(true, entering, async r => {
         await r.go(Page, 1)
         await r.leave()
         await r.go(Page, 2)
