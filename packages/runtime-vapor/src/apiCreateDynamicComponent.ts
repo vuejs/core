@@ -61,8 +61,6 @@ export function createDynamicComponent(
 
   const normalizedRawSlots = normalizeRawSlots(rawSlots)
   const scopeOwner = getScopeOwner()
-  // a constant `key` arrives as a prop (and as the block key)
-  const constKey = isInteropEnabled && rawProps ? rawProps.key : undefined
   // The latest vnode, which a render deferred by an out-in leave mounts, and
   // the patcher of the rendered vnode branch; both cleared on a branch switch.
   let latestVNode: VNode | undefined
@@ -151,10 +149,10 @@ export function createDynamicComponent(
   // A `:key` joins the resolved component in the branch identity, the way a
   // vnode is matched by type and key. The pair is memoized as one token so
   // unchanged inputs compare equal by reference. A vnode value joins with its
-  // type and own key (a `:key` replaces it), so a fresh vnode of the rendered
-  // one's type is patched into it.
+  // type and own key (a key on the component replaces it), so a fresh vnode of
+  // the rendered one's type is patched into it.
   let lastKey: any
-  let lastResolved: any
+  let lastBranch: any
   let branchToken: object | undefined
 
   renderEffect(() => {
@@ -175,9 +173,8 @@ export function createDynamicComponent(
     }
     let branchKey: any = resolved
     if (isInteropEnabled && isVNode(resolved)) {
-      if (key || constKey !== undefined) {
-        if (!key) userKey = constKey
-        // the renderer and KeepAlive see the `:key` too, as in vdom's
+      if (key) {
+        // the renderer and KeepAlive see the key too, as in vdom's
         // `createVNode(vnode, { key })`
         if (resolved.key !== (userKey == null ? null : userKey)) {
           resolved = cloneVNode(resolved, { key: userKey })
@@ -189,9 +186,9 @@ export function createDynamicComponent(
       branchKey = resolved.type
     }
     if (key || (isInteropEnabled && userKey !== undefined)) {
-      if (userKey !== lastKey || branchKey !== lastResolved) {
+      if (userKey !== lastKey || branchKey !== lastBranch) {
         lastKey = userKey
-        lastResolved = branchKey
+        lastBranch = branchKey
         branchToken = {}
       }
       branchKey = branchToken

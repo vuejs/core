@@ -321,15 +321,13 @@ function getInteropTransitionElement(
     const block = component.block && findTransitionBlock(component.block)
     return block && getTransitionElement(block)
   }
-  if (component) {
-    // a component vnode keeps its old root in `el` while it is patched to a
-    // new one, which a Transition's early leave removal relies on (as in vdom)
-    return vnode.el instanceof Element
-      ? vnode.el
-      : getInteropTransitionElement(component.subTree)
-  }
+  // a component vnode keeps its old root in `el` while it is patched to a new
+  // one, which a Transition's early leave removal relies on (as in vdom)
   if (vnode.el instanceof Element) {
     return vnode.el
+  }
+  if (component) {
+    return getInteropTransitionElement(component.subTree)
   }
   if (vnode.type === Fragment) {
     const child = getRawTransitionChild(vnode)
@@ -1353,16 +1351,21 @@ function mountVNode(
     const next = getFallthroughAttrs
       ? cloneVNode(baseVNode, getFallthroughAttrs())
       : baseVNode
-    if (!isMounted || !mountedParentNode) return
+    if (!mountedParentNode) return
     const previous = vnode
-    // the fresh vnode carries what its root inherits at its own mount, like a
-    // vdom parent re-rendering it: Transition hooks and root-only scope ids
+    // Like a vdom parent re-rendering it, the fresh vnode gets what vapor set
+    // on the mounted one after creation; every such writer belongs here.
     if (frag.$transition) setVNodeTransitionHooks(next, frag.$transition)
     if (previous.vaporScopeIds) {
       setVNodeVaporScopeIds(next, previous.vaporScopeIds)
     }
+    next.shapeFlag |=
+      previous.shapeFlag &
+      (ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE | ShapeFlags.COMPONENT_KEPT_ALIVE)
     vnode = next
     trackFragmentVNodeUpdates(frag, vnode, syncNodes)
+    frag.vnode = vnode
+    frag.$key = vnodeKeyOf(vnode)
     const prevInstance = currentInstance
     simpleSetCurrentInstance(parentComponent)
     internals.p(
@@ -1376,10 +1379,6 @@ function mountVNode(
       frag.slotScopeIds,
     )
     simpleSetCurrentInstance(prevInstance)
-    // only now: a leave cut short by the new root's enter reads the old root
-    // from the previous vnode during the patch
-    frag.vnode = vnode
-    frag.$key = vnodeKeyOf(vnode)
     syncNodes()
   }
   // `<component :is="vnode">` handing down a fresh vnode of its branch:
