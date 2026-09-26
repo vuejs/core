@@ -545,6 +545,16 @@ describe('patchProp', () => {
       setProp(el, 'indeterminate', '')
       expect(el.indeterminate).toBe(true)
     })
+
+    test('should sync element props after change', () => {
+      const input = document.createElement('input')
+
+      setProp(input, 'value', 'foo')
+      input.value = 'bar'
+      setProp(input, 'value', 'foo')
+
+      expect(input.value).toBe('foo')
+    })
   })
 
   describe('setDynamicProp', () => {

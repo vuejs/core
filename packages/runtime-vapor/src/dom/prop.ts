@@ -182,7 +182,7 @@ export function setDOMProp(
 
   // DOM properties may normalize values differently from reflected attributes,
   // so compare against the previous binding and always perform the initial set.
-  if (value === el[cacheKey] && cacheKey in el) {
+  if (value === el[cacheKey] && el[key] === value && cacheKey in el) {
     return
   }
   el[cacheKey] = value
