@@ -1449,6 +1449,61 @@ describe('attribute fallthrough', () => {
     )
   })
 
+  it('should merge fallthrough listeners with a dynamic component root listener', () => {
+    const calls: string[] = []
+    const data = ref({ calls })
+    const Child = compile(
+      `<script setup vapor>
+        const data = _data
+      </script>
+      <template><component :is="'button'" @click="data.calls.push('root')">click</component></template>`,
+      data,
+    )
+    const Parent = compile(
+      `<script setup vapor>
+        const data = _data
+        const components = _components
+      </script>
+      <template><components.Child @click="data.calls.push('parent')" /></template>`,
+      data,
+      { Child },
+    )
+
+    const { host } = define(Parent).render()
+    host.querySelector('button')!.click()
+
+    expect(calls).toEqual(['root', 'parent'])
+  })
+
+  it('should merge fallthrough listeners with a root v-bind listener', () => {
+    const calls: string[] = []
+    const data = ref({
+      calls,
+      listeners: { onClick: () => calls.push('root') },
+    })
+    const Child = compile(
+      `<script setup vapor>
+        const data = _data
+      </script>
+      <template><button v-bind="data.listeners">click</button></template>`,
+      data,
+    )
+    const Parent = compile(
+      `<script setup vapor>
+        const data = _data
+        const components = _components
+      </script>
+      <template><components.Child @click="data.calls.push('parent')" /></template>`,
+      data,
+      { Child },
+    )
+
+    const { host } = define(Parent).render()
+    host.querySelector('button')!.click()
+
+    expect(calls).toEqual(['root', 'parent'])
+  })
+
   it('parent value should take priority', async () => {
     const parentVal = ref('parent')
     const childVal = ref('child')
