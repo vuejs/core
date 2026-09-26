@@ -288,3 +288,54 @@ test('inline/block ancestor relationships', () => {
     '<div><span><div><span><div>text</div></span></div></span><p>after</p></div>',
   )
 })
+
+test('foreign scope boundary elements', () => {
+  // the end tag of a foreign parent does not close a child in another namespace
+  checkAbbr(
+    '<svg><foreignObject><div>text</div></foreignObject><rect/></svg>',
+    '<svg><foreignObject><div>text</div></foreignObject><rect>',
+    '<svg><foreignObject><div>text</div></foreignObject><rect></rect></svg>',
+  )
+  checkAbbr(
+    '<svg><g><foreignObject><div><p>text</p></div></foreignObject></g><rect/></svg>',
+    '<svg><g><foreignObject><div><p>text</div></foreignObject></g><rect>',
+    '<svg><g><foreignObject><div><p>text</p></div></foreignObject></g><rect></rect></svg>',
+  )
+  checkAbbr(
+    '<math><mi><span>x</span></mi><mo>+</mo></math>',
+    '<math><mi><span>x</span></mi><mo>+',
+    '<math><mi><span>x</span></mi><mo>+</mo></math>',
+  )
+  checkAbbr(
+    '<svg><g><desc><div>text</div></desc></g><rect/></svg>',
+    '<svg><g><desc><div>text</div></desc></g><rect>',
+    '<svg><g><desc><div>text</div></desc></g><rect></rect></svg>',
+  )
+  checkAbbr(
+    '<svg><foreignObject><math><mi>x</mi></math></foreignObject><rect/></svg>',
+    '<svg><foreignObject><math><mi>x</mi></math></foreignObject><rect>',
+    '<svg><foreignObject><math><mi>x</mi></math></foreignObject><rect></rect></svg>',
+  )
+  // an ancestor's end tag does not close a foreign scope boundary element
+  checkAbbr(
+    '<div><p><math><mi>x</mi></math></p><p>next</p></div>',
+    '<div><p><math><mi>x</mi></p><p>next',
+    '<div><p><math><mi>x</mi></math></p><p>next</p></div>',
+  )
+  checkAbbr(
+    '<div><div><svg><foreignObject>text</foreignObject></svg></div><p>next</p></div>',
+    '<div><div><svg><foreignObject>text</foreignObject></div><p>next',
+    '<div><div><svg><foreignObject>text</foreignObject></svg></div><p>next</p></div>',
+  )
+  // rightmost path can still omit
+  checkAbbr(
+    '<svg><foreignObject><div>text</div></foreignObject></svg>',
+    '<svg><foreignObject><div>text',
+    '<svg><foreignObject><div>text</div></foreignObject></svg>',
+  )
+  checkAbbr(
+    '<p><math><mi>x</mi></math></p>',
+    '<p><math><mi>x',
+    '<p><math><mi>x</mi></math></p>',
+  )
+})
