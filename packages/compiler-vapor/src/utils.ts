@@ -159,7 +159,7 @@ export function isTransitionGroupTag(tag: string): boolean {
 }
 
 export function isKeepAliveTag(tag: string): boolean {
-  tag = tag.toLowerCase()
+  tag = tag.toLowerCase().replace(/-/g, '')
   return tag === 'keepalive' || tag === 'vaporkeepalive'
 }
 

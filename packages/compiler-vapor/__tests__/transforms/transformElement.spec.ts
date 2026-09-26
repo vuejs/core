@@ -1996,4 +1996,16 @@ describe('compiler: element transform', () => {
       expect([...ir.template.keys()]).toMatchObject([template])
     })
   })
+
+  test.each(['KeepAlive', 'keep-alive'])(
+    '<%s> resolves to the built-in VaporKeepAlive',
+    tag => {
+      const { code, helpers } = compileWithElementAndSlotTransform(
+        `<${tag}><Foo /></${tag}>`,
+      )
+      expect(code).toContain('_createComponent(_VaporKeepAlive,')
+      expect(code).not.toContain(`_createAssetComponent("${tag}"`)
+      expect(helpers).toContain('VaporKeepAlive')
+    },
+  )
 })
