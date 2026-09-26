@@ -931,6 +931,31 @@ describe('Vapor Mode hydration', () => {
     expect(`Hydration node mismatch`).not.toHaveBeenWarned()
   })
 
+  // #11372
+  test('object style value tracking in prod', async () => {
+    __DEV__ = false
+    try {
+      const data = reactive({ sty: { color: 'red' } })
+      // both the template root and a nested element
+      const { container } = await testHydration(
+        `<template><div :style="data.sty"><span :style="data.sty"></span></div></template>`,
+        {},
+        data,
+      )
+      expect(container.innerHTML).toBe(
+        '<div style="color:red;"><span style="color:red;"></span></div>',
+      )
+
+      data.sty.color = 'green'
+      await nextTick()
+      expect(container.innerHTML).toBe(
+        '<div style="color: green;"><span style="color: green;"></span></div>',
+      )
+    } finally {
+      __DEV__ = true
+    }
+  })
+
   // vdom writes every static-key binding during hydration (`dynamicProps`),
   // whether the compiler routes it to a property setter, to `setProp`, or
   // merges it with a spread; keys that only come from a spread stay untouched

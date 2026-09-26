@@ -20,6 +20,7 @@ import {
   stringifyStyle,
   toDisplayString,
 } from '@vue/shared'
+import { isReactive } from '@vue/reactivity'
 import { onBinding } from './event'
 import {
   type GenericComponentInstance,
@@ -391,6 +392,10 @@ function checkHydrationStyleMismatch(
 }
 
 export function setStyle(el: TargetElement, value: any): void {
+  // #11372: object style values are iterated during patch instead of
+  // normalization, but the patch is skipped during hydration, so iterate
+  // the reactive object here to track its keys
+  if (isHydrating && isReactive(value)) for (const key in value) value[key]
   if (el.$root) {
     setStyleIncremental(el, value)
   } else {
