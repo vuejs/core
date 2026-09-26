@@ -125,6 +125,13 @@ export class TypeScope {
   resolvedImportSources: Record<string, string> = Object.create(null)
   exportedTypes: Record<string, ScopeTypeNode> = Object.create(null)
   exportedDeclares: Record<string, ScopeTypeNode> = Object.create(null)
+  /**
+   * imported bindings that are exported without a source, e.g.
+   * `import { X } from './x'; export { X as Y }`: exported name -> the local
+   * import name and the scope that owns the import
+   */
+  exportedImports: Record<string, { local: string; scope: TypeScope }> =
+    Object.create(null)
 }
 
 export interface MaybeWithScope {
@@ -807,6 +814,12 @@ function innerResolveTypeReference(
             : scope.types
       if (lookupSource[name]) {
         return lookupSource[name]
+      } else if (onlyExported && scope.exportedImports[name]) {
+        // imported binding exported from the module (possibly under another
+        // name), resolve it from the original import in its owner scope
+        const { local, scope: importScope } = scope.exportedImports[name]
+        recordScopeDep(ctx, importScope)
+        return resolveTypeFromImport(ctx, node, local, importScope)
       } else {
         // fallback to global
         const globalScopes = resolveGlobalScope(ctx)
@@ -1400,7 +1413,14 @@ function recordTypes(
   scope: TypeScope,
   asGlobal = false,
 ) {
-  const { types, declares, exportedTypes, exportedDeclares, imports } = scope
+  const {
+    types,
+    declares,
+    exportedTypes,
+    exportedDeclares,
+    exportedImports,
+    imports,
+  } = scope
   const isAmbient = asGlobal
     ? !body.some(s => importExportRE.test(s.type))
     : false
@@ -1488,6 +1508,9 @@ function recordTypes(
               } else if (types[local]) {
                 // exporting local defined type
                 exportedTypes[exported] = types[local]
+              } else if (imports[local]) {
+                // exporting an imported type, possibly under another name
+                exportedImports[exported] = { local, scope }
               }
             }
           }
@@ -1500,6 +1523,7 @@ function recordTypes(
           stmt.source.value,
         )
         Object.assign(scope.exportedTypes, sourceScope.exportedTypes)
+        Object.assign(scope.exportedImports, sourceScope.exportedImports)
       } else if (stmt.type === 'ExportDefaultDeclaration' && stmt.declaration) {
         if (stmt.declaration.type !== 'Identifier') {
           recordType(stmt.declaration, types, declares, 'default')
