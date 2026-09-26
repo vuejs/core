@@ -5120,4 +5120,47 @@ describe('VaporKeepAlive', () => {
     expect(vapor.text).toBe(vdom.text)
     expect('Extraneous non-props attributes (class)').toHaveBeenWarned()
   })
+
+  test('should cache components under a kebab-case <keep-alive> tag', async () => {
+    const hooks = { activated: vi.fn(), deactivated: vi.fn() }
+    const Counter = compile(
+      `<script setup vapor>
+        import { ref, onActivated, onDeactivated } from 'vue'
+        const count = ref(0)
+        onActivated(_data.activated)
+        onDeactivated(_data.deactivated)
+      </script>
+      <template><button @click="count++">{{ count }}</button></template>`,
+      hooks as any,
+    )
+    const Other = compile(`<template><p>other</p></template>`, ref(null))
+    const state = reactive({ view: Counter as any })
+    const App = compile(
+      `<script setup vapor>
+        const state = _data
+      </script>
+      <template>
+        <keep-alive><component :is="state.view" /></keep-alive>
+      </template>`,
+      state as any,
+    )
+    const { host } = define(App).render()
+
+    expect(host.querySelector('button')!.textContent).toBe('0')
+    expect(hooks.activated).toHaveBeenCalledTimes(1)
+    host.querySelector('button')!.click()
+    await nextTick()
+    expect(host.querySelector('button')!.textContent).toBe('1')
+
+    state.view = Other
+    await nextTick()
+    expect(host.querySelector('p')!.textContent).toBe('other')
+    expect(hooks.deactivated).toHaveBeenCalledTimes(1)
+
+    state.view = Counter
+    await nextTick()
+    expect(host.querySelector('button')!.textContent).toBe('1')
+    expect(hooks.activated).toHaveBeenCalledTimes(2)
+    expect('Failed to resolve component').not.toHaveBeenWarned()
+  })
 })
