@@ -300,6 +300,7 @@ export interface VdomInVaporInterface {
     vnode: VNode,
     parentComponent: any, // VaporComponentInstance
     isSingleRoot?: boolean,
+    rawProps?: any,
   ) => any
 }
 

@@ -1122,7 +1122,7 @@ function createVNodeFragment(vnode: VNode): {
   frag.$key = vnodeKeyOf(vnode)
   const content = new InteropContentState()
   // reads `frag.vnode` rather than the captured argument so it follows a
-  // fallthrough re-clone (see mountVNode)
+  // re-clone with extra props (see mountVNode)
   const syncNodes = () => {
     frag.nodes = resolveVNodeNodes(frag.vnode!)
     content.resolved = true
@@ -1143,6 +1143,7 @@ function mountDynamicVNode(
   vnode: VNode,
   parentComponent: VaporComponentInstance | null,
   isSingleRoot?: boolean,
+  rawProps?: RawProps | null,
 ): VaporFragment {
   if (parentComponent && isKeepAlive(parentComponent)) {
     const cached = (
@@ -1153,14 +1154,23 @@ function mountDynamicVNode(
       return cached
     }
   }
-  // A vnode standing in as the parent's effective root inherits fallthrough
-  // attrs merged into its props (see mountVNode).
+  // Props on the component merge into the vnode like vdom's
+  // `createVNode(vnode, props)`; a vnode standing in as the parent's effective
+  // root also inherits fallthrough attrs, as an extra source (see
+  // createComponent).
   const owner = resolveFallthroughOwner(isSingleRoot)
+  if (owner) {
+    const source = () => resolveFallthroughAttrs(owner)
+    const sources = rawProps && rawProps.$
+    rawProps = extend({}, rawProps, {
+      $: sources ? sources.concat(source) : [source],
+    }) as RawProps
+  }
   const frag = mountVNode(
     internals,
     vnode,
     parentComponent,
-    owner && (() => resolveFallthroughAttrs(owner)),
+    rawProps ? new Proxy(rawProps, rawPropsProxyHandlers) : undefined,
   )
   if (isHydrating) {
     locateHydrationNode(
@@ -1193,18 +1203,18 @@ function mountVNode(
   internals: RendererInternals,
   vnode: VNode,
   parentComponent: VaporComponentInstance | null,
-  getFallthroughAttrs?: () => Record<string, any>,
+  extraProps?: Record<string, any>,
 ): VaporFragment {
   let suspense =
     currentRenderContext.suspense ||
     (parentComponent && parentComponent.suspense)
-  // A vnode standing in as a component's effective root inherits fallthrough
-  // attrs the same way VDOM does it — merged into the vnode's props
-  // (`cloneVNode` -> `mergeProps`), so mount and patch apply them natively
-  // instead of writing the DOM behind the renderer's back.
+  // Extra props (the component's own props and inherited fallthrough attrs)
+  // merge into the vnode's props the same way VDOM does it (`cloneVNode` ->
+  // `mergeProps`), so mount and patch apply them natively instead of writing
+  // the DOM behind the renderer's back.
   let baseVNode = vnode
-  if (getFallthroughAttrs) {
-    vnode = cloneVNode(baseVNode, getFallthroughAttrs())
+  if (extraProps) {
+    vnode = cloneVNode(baseVNode, extraProps, true)
   }
   const { frag, syncNodes } = createVNodeFragment(vnode)
 
@@ -1349,9 +1359,9 @@ function mountVNode(
   ) => place(parentNode, anchor, parentSuspense, transition, moveType)
 
   const update = () => {
-    // merging the attrs reads them, which the attrs effect below tracks
-    const next = getFallthroughAttrs
-      ? cloneVNode(baseVNode, getFallthroughAttrs())
+    // merging the extra props reads them, which the effect below tracks
+    const next = extraProps
+      ? cloneVNode(baseVNode, extraProps, true)
       : baseVNode
     if (!mountedParentNode) return
     const previous = vnode
@@ -1390,7 +1400,7 @@ function mountVNode(
   frag.patchVNode = next => {
     if (next.type !== baseVNode.type) return
     baseVNode = next
-    // the caller's effect tracks only its vnode; attrs have their own effect
+    // the caller's effect tracks only its vnode; extra props track their own
     const prevSub = setActiveSub()
     try {
       update()
@@ -1399,9 +1409,9 @@ function mountVNode(
     }
   }
 
-  if (getFallthroughAttrs) {
+  if (extraProps) {
     // Re-clone and let VDOM patch the change through, mirroring how a VDOM
-    // parent re-renders its root with fresh fallthrough attrs. The first run
+    // parent re-renders with fresh props and fallthrough attrs. The first run
     // happens before the mount and only establishes the dependency.
     renderEffect(update)
   }
