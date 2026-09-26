@@ -48,7 +48,8 @@ const FORMATTING_TAGS = 'a,b,big,code,em,font,i,nobr,s,small,strike,strong,tt,u'
 // - Scope boundary elements
 const ALWAYS_CLOSE_TAGS =
   'title,style,script,noscript,template,' + // raw text / special parsing
-  'object,table,button,textarea,select,iframe,fieldset' // scope boundary / form elements
+  'object,table,button,textarea,select,iframe,fieldset,' + // scope boundary / form elements
+  'foreignObject,desc,mi,mo,mn,ms,mtext,annotation-xml' // foreign scope boundary
 
 // Inline elements
 const INLINE_TAGS =

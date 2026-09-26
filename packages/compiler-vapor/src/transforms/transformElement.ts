@@ -279,9 +279,13 @@ function canOmitEndTag(
   // unless on the rightmost path of the tree:
   // - Formatting tags: https://html.spec.whatwg.org/multipage/parsing.html#reconstruct-the-active-formatting-elements
   // - Same-name tags: parent's close tag would incorrectly close the child
+  // - Children of a foreign parent in another namespace (e.g. HTML inside
+  //   `<foreignObject>`): parent's close tag would not close the child
   if (
     isFormattingTag(node.tag) ||
-    (parent.node.type === NodeTypes.ELEMENT && node.tag === parent.node.tag)
+    (parent.node.type === NodeTypes.ELEMENT &&
+      (node.tag === parent.node.tag ||
+        (parent.node.ns !== Namespaces.HTML && node.ns !== parent.node.ns)))
   ) {
     return context.isOnRightmostPath
   }
