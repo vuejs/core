@@ -72,20 +72,31 @@ type TargetElement = Element & {
   _value?: any
 }
 
-const shouldSkipFallthroughKey = (el: TargetElement, key: string) => {
+const shouldSkipFallthroughKey = (
+  el: TargetElement,
+  key: string,
+  value?: unknown,
+) => {
   const instance = currentInstance! as VaporComponentInstance
-  return (
+  if (
     !isApplyingFallthroughProps &&
     el.$root &&
     instance.hasFallthrough &&
     instance.type.inheritAttrs !== false &&
     key in instance.attrs &&
-    // skip only keys fallthrough will actually write: v-model listeners
-    // with a declared prop are filtered out of the fallthrough set
     !isDeclaredModelListener(instance, key) &&
     (!shouldUseFunctionalFallthrough(instance.type) ||
       isFunctionalFallthroughKey(key))
-  )
+  ) {
+    if (isOn(key)) {
+      const localHandlers = isArray(value) ? value : [value]
+      const inherited = instance.attrs[key]
+      const inheritedHandlers = isArray(inherited) ? inherited : [inherited]
+      return localHandlers.every(handler => inheritedHandlers.includes(handler))
+    }
+    return true
+  }
+  return false
 }
 
 export function setProp(el: any, key: string, value: any): void {
@@ -582,7 +593,7 @@ export function setDynamicProp(
   } else if (key === 'style') {
     setStyle(el, value)
   } else if (isOn(key)) {
-    if (shouldSkipFallthroughKey(el, key)) {
+    if (shouldSkipFallthroughKey(el, key, value)) {
       return
     }
     const [event, options] = parseEventName(key)
