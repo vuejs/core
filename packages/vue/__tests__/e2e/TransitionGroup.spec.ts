@@ -886,6 +886,77 @@ describe('e2e: TransitionGroup', () => {
     E2E_TIMEOUT,
   )
 
+  // #5385, #1531
+  test(
+    'nested groups do not repeat the outer move on inner items',
+    async () => {
+      await page().evaluate(duration => {
+        const { createApp, ref, onMounted } = (window as any).Vue
+        createApp({
+          template: `
+            <div id="container">
+              <transition-group name="outer">
+                <div v-for="group in groups" :key="group.id" :id="group.id" class="outer-item">
+                  <transition-group name="inner" tag="div">
+                    <div v-for="item in group.items" :key="item" :id="item" class="inner-item">{{ item }}</div>
+                  </transition-group>
+                </div>
+              </transition-group>
+            </div>
+            <button id="toggleBtn" @click="click">button</button>
+          `,
+          setup: () => {
+            const groups = ref([
+              { id: 'a', items: ['a1', 'a2'] },
+              { id: 'b', items: ['b1', 'b2'] },
+            ])
+            const click = () => {
+              const [a, b] = groups.value
+              a.items.reverse()
+              groups.value = [b, a]
+            }
+
+            onMounted(() => {
+              const styleNode = document.createElement('style')
+              styleNode.textContent = `
+                .outer-move,
+                .inner-move {
+                  transition: transform ${duration}ms ease;
+                }
+              `
+              document.head.appendChild(styleNode)
+            })
+
+            return { groups, click }
+          },
+        }).mount('#app')
+      }, duration)
+
+      const duringTransition = await page().evaluate(() => {
+        ;(document.querySelector('#toggleBtn') as any)!.click()
+        return Promise.resolve().then(() =>
+          Array.from(document.querySelectorAll('.outer-item, .inner-item')).map(
+            node => ({ id: node.id, classes: Array.from(node.classList) }),
+          ),
+        )
+      })
+
+      expect(duringTransition).toStrictEqual([
+        { id: 'b', classes: ['outer-item', 'outer-move'] },
+        // only moved together with their outer item
+        { id: 'b1', classes: ['inner-item'] },
+        { id: 'b2', classes: ['inner-item'] },
+        { id: 'a', classes: ['outer-item', 'outer-move'] },
+        // moved within their outer item
+        { id: 'a2', classes: ['inner-item', 'inner-move'] },
+        { id: 'a1', classes: ['inner-item', 'inner-move'] },
+      ])
+
+      await transitionFinish()
+    },
+    E2E_TIMEOUT,
+  )
+
   test(
     'not leaking after children unmounted',
     async () => {
