@@ -28,7 +28,6 @@ import {
   canSetValueDirectly,
   capitalize,
   extend,
-  isSVGTag,
   normalizeClass,
   shouldSetAsAttr,
   toHandlerKey,
@@ -71,8 +70,9 @@ export function genSetProp(
   const {
     prop: { key, values, modifier },
     tag,
+    isSVG,
   } = oper
-  const resolvedHelper = getRuntimeHelper(tag, key.content, modifier)
+  const resolvedHelper = getRuntimeHelper(tag, isSVG, key.content, modifier)
   if (
     key.content === 'class' &&
     !resolvedHelper.isSVG &&
@@ -338,7 +338,6 @@ export function genDynamicProps(
   context: CodegenContext,
 ): CodeFragment[] {
   const { helper } = context
-  const isSVG = isSVGTag(oper.tag)
   const values = oper.props.map(props =>
     Array.isArray(props)
       ? genLiteralObjectProps(props, context) // static and dynamic arg props
@@ -353,7 +352,7 @@ export function genDynamicProps(
       `n${oper.element}`,
       genMulti(DELIMITERS_ARRAY, ...values),
       genDynamicPropNames(oper, context),
-      isSVG && 'true',
+      oper.isSVG && 'true',
     ),
   ]
 }
@@ -502,11 +501,11 @@ export function genPropValue(
 
 function getRuntimeHelper(
   tag: string,
+  isSVG: boolean,
   key: string,
   modifier: '.' | '^' | undefined,
 ): HelperConfig {
   const tagName = tag.toUpperCase()
-  const isSVG = isSVGTag(tag)
 
   if (modifier) {
     if (modifier === '.') {
