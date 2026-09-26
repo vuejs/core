@@ -85,6 +85,7 @@ export function hmrReload(
       instance.isSingleRoot,
       undefined,
       instance.appContext,
+      true,
     )
   } finally {
     restoreCurrentInstance(prev)

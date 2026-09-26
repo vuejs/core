@@ -8,6 +8,7 @@ import {
   type Ref,
   inject,
   nextTick,
+  onBeforeMount,
   onMounted,
   provide,
   ref,
@@ -26,6 +27,7 @@ import {
   defineVaporAsyncComponent,
   defineVaporComponent,
   defineVaporCustomElement,
+  defineVaporSSRCustomElement,
   delegateEvents,
   next,
   on,
@@ -3001,6 +3003,27 @@ describe('defineVaporCustomElement', () => {
     app.mount(container)
     expect(container.textContent).toBe('number/true')
     app.unmount()
+  })
+
+  test('hydrating an SSR custom element mounts it once', async () => {
+    const beforeMount = vi.fn()
+    // jsdom has no declarative shadow DOM: attach the pre-rendered shadow
+    // root before the element is upgraded
+    const el = document.createElement('my-ssr-mount-once')
+    el.attachShadow({ mode: 'open' }).innerHTML = '<div>ssr</div>'
+    customElements.define(
+      'my-ssr-mount-once',
+      defineVaporSSRCustomElement({
+        setup() {
+          onBeforeMount(beforeMount)
+          return template('<div>ssr</div>', 1)()
+        },
+      }),
+    )
+    container.appendChild(el)
+    await nextTick()
+    expect(el.shadowRoot!.innerHTML).toBe('<div>ssr</div>')
+    expect(beforeMount).toHaveBeenCalledTimes(1)
   })
 
   afterAll(async () => {

@@ -269,7 +269,7 @@ export class VaporElement extends VueElementBase<
       undefined,
       undefined,
       this._app!._context,
-      false,
+      true,
       ce,
     )
   }
