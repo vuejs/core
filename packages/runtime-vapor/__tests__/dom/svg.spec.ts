@@ -1,4 +1,4 @@
-import { makeRender } from '../_utils'
+import { makeRender, renderParity } from '../_utils'
 import { template } from '../../src/dom/template'
 import { child } from '../../src/dom/node'
 import { setAttr, setClass } from '../../src/dom/prop'
@@ -6,6 +6,7 @@ import { renderEffect } from '../../src'
 import { nextTick, ref } from '@vue/runtime-dom'
 
 const define = makeRender()
+const xlinkNS = 'http://www.w3.org/1999/xlink'
 
 describe('SVG support', () => {
   afterEach(() => {
@@ -69,5 +70,35 @@ describe('SVG support', () => {
     await nextTick()
     expect(f1.getAttribute('class')).toBe('bar')
     expect(f2.className).toBe('bar')
+  })
+
+  test('should patch svg elements that share a tag name with html', async () => {
+    const attrs: Record<string, any[]> = {}
+    const { vdom, vapor } = await renderParity(
+      {
+        App: `<template><svg>
+          <a :href="data.url" :xlink:href="data.url" :class="data.cls"><text>t</text></a>
+          <a v-bind="data.attrs"><text>t</text></a>
+        </svg></template>`,
+      },
+      () => ref({ url: '/x', cls: 'link', attrs: { class: 'c', href: '/y' } }),
+      async (data, root, mode) => {
+        const [a1, a2] = root.querySelectorAll('a')
+        const collect = () =>
+          (attrs[mode] = [
+            a1.getAttribute('href'),
+            a1.getAttributeNS(xlinkNS, 'href'),
+            a1.getAttribute('class'),
+            a2.getAttribute('href'),
+            a2.getAttribute('class'),
+          ])
+        data.value = { url: '/z', cls: 'on', attrs: { class: 'd', href: '/w' } }
+        await nextTick()
+        collect()
+      },
+    )
+    expect(vapor.after).toBe(vdom.after)
+    expect(attrs.vdom).toEqual(['/z', '/z', 'on', '/w', 'd'])
+    expect(attrs.vapor).toEqual(attrs.vdom)
   })
 })

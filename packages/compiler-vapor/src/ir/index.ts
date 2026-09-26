@@ -148,6 +148,7 @@ export interface SetPropIRNode extends BaseIRNode {
   element: number
   prop: IRProp
   tag: string
+  isSVG: boolean
   /** Whether it's in effect; only a listener key (`onXxx`) needs to know */
   effect?: boolean
 }
@@ -156,7 +157,7 @@ export interface SetDynamicPropsIRNode extends BaseIRNode {
   type: IRNodeTypes.SET_DYNAMIC_PROPS
   element: number
   props: IRProps[]
-  tag: string
+  isSVG: boolean
 }
 
 export interface SetDynamicEventsIRNode extends BaseIRNode {

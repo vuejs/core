@@ -1428,4 +1428,20 @@ describe('compiler v-bind', () => {
       `_setDynamicProps(n5, [_ctx.obj, { onClick: _ctx.fn4 }], k0)`,
     )
   })
+
+  test('svg namespace elements that share a tag name with html', () => {
+    let { code } = compileWithVBind(`<svg><a :href="url" :class="cls"/></svg>`)
+    expect(code).contains('_setAttr(n0, "href", _ctx.url, true)')
+    expect(code).contains('_setClass(n0, _ctx.cls, true)')
+
+    code = compileWithVBind(`<svg><a v-bind="obj"/></svg>`).code
+    expect(code).contains('_setDynamicProps(n0, [_ctx.obj], null, true)')
+
+    // back to html inside <foreignObject>
+    code = compileWithVBind(
+      `<svg><foreignObject><a :href="url" :class="cls"/></foreignObject></svg>`,
+    ).code
+    expect(code).contains('_setProp(n0, "href", _ctx.url)')
+    expect(code).contains('_setClass(n0, _ctx.cls)')
+  })
 })

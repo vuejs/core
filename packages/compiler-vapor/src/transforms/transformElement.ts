@@ -524,6 +524,7 @@ function transformNativeElement(
 ) {
   const { tag } = node
   const { scopeId } = context.options
+  const isSVG = node.ns === Namespaces.SVG
 
   let template = ''
 
@@ -538,7 +539,7 @@ function transformNativeElement(
         type: IRNodeTypes.SET_DYNAMIC_PROPS,
         element: context.reference(),
         props: dynamicArgs,
-        tag,
+        isSVG,
       },
       getEffectIndex,
     )
@@ -575,6 +576,7 @@ function transformNativeElement(
             element: context.reference(),
             prop,
             tag,
+            isSVG,
           }
           hasEffect = context.registerEffect(
             values,
@@ -640,6 +642,7 @@ function transformNativeElement(
             element: context.reference(),
             prop,
             tag,
+            isSVG,
           },
           getEffectIndex,
           needsOrderedProps && hasEffect,
