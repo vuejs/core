@@ -11,6 +11,7 @@ import {
 } from './Transition'
 import { type VShowElement, vShowHidden } from '../directives/vShow'
 import {
+  type ComponentInternalInstance,
   type ComponentOptions,
   DeprecationTypes,
   Fragment,
@@ -72,6 +73,10 @@ const TransitionGroupImpl: ComponentOptions = /*@__PURE__*/ decorate({
     const state = useTransitionState()
     let prevChildren: VNode[]
     let children: VNode[]
+    let parentGroup = instance.parent
+    while (parentGroup && parentGroup.type !== TransitionGroupImpl) {
+      parentGroup = parentGroup.parent
+    }
 
     onUpdated(() => {
       // children is guaranteed to exist after initial render
@@ -94,7 +99,8 @@ const TransitionGroupImpl: ComponentOptions = /*@__PURE__*/ decorate({
       // we divide the work into three loops to avoid mixing DOM reads and writes
       // in each iteration - which helps prevent layout thrashing.
       prevChildren.forEach(callPendingCbs)
-      prevChildren.forEach(recordPosition)
+      const origin = getOrigin(instance, parentGroup)
+      prevChildren.forEach(c => recordPosition(c, origin))
       const movedChildren = prevChildren.filter(applyTranslation)
 
       // force reflow to put everything in position
@@ -138,6 +144,7 @@ const TransitionGroupImpl: ComponentOptions = /*@__PURE__*/ decorate({
 
       prevChildren = []
       if (children) {
+        const origin = getOrigin(instance, parentGroup)
         for (let i = 0; i < children.length; i++) {
           const child = children[i]
           if (
@@ -156,7 +163,7 @@ const TransitionGroupImpl: ComponentOptions = /*@__PURE__*/ decorate({
                 instance,
               ),
             )
-            positionMap.set(child, getPosition(child.el as HTMLElement))
+            positionMap.set(child, getPosition(child.el as HTMLElement, origin))
           }
         }
       }
@@ -196,8 +203,8 @@ function callPendingCbs(c: VNode) {
   }
 }
 
-function recordPosition(c: VNode) {
-  newPositionMap.set(c, getPosition(c.el as HTMLElement))
+function recordPosition(c: VNode, origin?: Position) {
+  newPositionMap.set(c, getPosition(c.el as HTMLElement, origin))
 }
 
 function applyTranslation(c: VNode): VNode | undefined {
@@ -226,11 +233,35 @@ function applyTranslation(c: VNode): VNode | undefined {
   }
 }
 
-function getPosition(el: HTMLElement): Position {
+function getPosition(el: HTMLElement, origin?: Position): Position {
   const rect = el.getBoundingClientRect()
   return {
-    left: rect.left,
-    top: rect.top,
+    left: rect.left - (origin ? origin.left : 0),
+    top: rect.top - (origin ? origin.top : 0),
+  }
+}
+
+/**
+ * When this group is nested inside an item of another <TransitionGroup>, the
+ * outer group already animates that item along with everything inside it.
+ * Positions are then measured relative to that item, so this group only
+ * animates movement within the item instead of repeating the outer one.
+ */
+function getOrigin(
+  instance: ComponentInternalInstance,
+  parentGroup: ComponentInternalInstance | null,
+): Position | undefined {
+  const parentRoot = parentGroup && (parentGroup.vnode.el as Node | null)
+  if (!parentRoot) return
+  // a group without `tag` renders a fragment, its items share the parent node
+  const container =
+    parentRoot.nodeType === 1 ? parentRoot : parentRoot.parentNode
+  let item = instance.vnode.el as Node | null
+  while (item && item.parentNode !== container) {
+    item = item.parentNode
+  }
+  if (item && item.nodeType === 1) {
+    return getPosition(item as HTMLElement)
   }
 }
 
