@@ -1138,6 +1138,85 @@ describe('resolveType', () => {
       expect(deps && [...deps]).toStrictEqual(Object.keys(files))
     })
 
+    test('relative (chained, export imported generic type under another name)', () => {
+      const files = {
+        '/foo.ts': `import type { P, Q } from './bar'\nexport type { P as PP, Q as QQ }`,
+        '/bar.ts': `export type P<T> = { enabled: T }\nexport type Q = { bar: string }`,
+      }
+      const { props, deps } = resolve(
+        `
+        import type { PP, QQ } from './foo'
+        defineProps<PP<boolean> & QQ>()
+      `,
+        files,
+      )
+      expect(props).toStrictEqual({
+        enabled: ['Boolean'],
+        bar: ['String'],
+      })
+      expect(deps && [...deps]).toStrictEqual(Object.keys(files))
+    })
+
+    test('relative (chained, export imported keys under another name in Pick)', () => {
+      const files = {
+        '/foo.ts': `import type { K } from './bar'\nexport type { K as Keys }`,
+        '/bar.ts': `export type K = 'a' | 'b'`,
+      }
+      const { props, deps } = resolve(
+        `
+        import type { Keys } from './foo'
+        type K = 'b'
+        type Props = { a: string; b: number; c: boolean }
+        defineProps<Pick<Props, Keys>>()
+      `,
+        files,
+      )
+      expect(props).toStrictEqual({
+        a: ['String'],
+        b: ['Number'],
+      })
+      expect(deps && [...deps]).toStrictEqual(Object.keys(files))
+    })
+
+    test('relative (chained, export imported keys under another name in Omit)', () => {
+      const files = {
+        '/foo.ts': `import type { K } from './bar'\nexport type { K as Keys }`,
+        '/bar.ts': `export type K = 'a' | 'b'`,
+      }
+      const { props, deps } = resolve(
+        `
+        import type { Keys } from './foo'
+        type K = 'b'
+        type Props = { a: string; b: number; c: boolean }
+        defineProps<Omit<Props, Keys>>()
+      `,
+        files,
+      )
+      expect(props).toStrictEqual({
+        c: ['Boolean'],
+      })
+      expect(deps && [...deps]).toStrictEqual(Object.keys(files))
+    })
+
+    test('relative (chained, export * of imported type exported under another name)', () => {
+      const files = {
+        '/index.ts': `export * from './foo'`,
+        '/foo.ts': `import type { P } from './bar'\nexport type { P as PP }`,
+        '/bar.ts': 'export type P<T> = { enabled: T }',
+      }
+      const { props, deps } = resolve(
+        `
+        import type { PP } from './index'
+        defineProps<PP<boolean>>()
+      `,
+        files,
+      )
+      expect(props).toStrictEqual({
+        enabled: ['Boolean'],
+      })
+      expect(deps && [...deps].sort()).toStrictEqual(Object.keys(files).sort())
+    })
+
     test('relative (chained, export *)', () => {
       const files = {
         '/foo.ts': `export * from './bar'`,
