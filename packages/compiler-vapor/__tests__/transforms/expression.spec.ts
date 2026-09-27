@@ -369,6 +369,48 @@ describe('compiler: expression', () => {
       expect(code).not.contains('_obj_foo')
     })
 
+    test('repeated member expression in a conditional branch', () => {
+      const { code } = compileWithExpression(
+        `<div :id="x === undefined ? '' : x.y" :title="x === undefined ? '' : x.y"></div>`,
+      )
+      expect(code).contains('const _x = _ctx.x')
+      expect(code).not.contains('const _x_y')
+      expect(code).contains(`_setProp(n0, "id", _x === undefined ? '' : _x.y)`)
+      expect(code).contains(
+        `_setProp(n0, "title", _x === undefined ? '' : _x.y)`,
+      )
+    })
+
+    test('repeated member expression on the right of a logical operator', () => {
+      const { code } = compileWithExpression(
+        `<div :id="x && x.y" :title="x ? x.y : ''"></div>`,
+      )
+      expect(code).contains('const _x = _ctx.x')
+      expect(code).not.contains('const _x_y')
+      expect(code).contains('_setProp(n0, "id", _x && _x.y)')
+      expect(code).contains(`_setProp(n0, "title", _x ? _x.y : '')`)
+    })
+
+    test('repeated member expression guarded within one expression', () => {
+      const { code } = compileWithExpression(
+        `<div :id="x === undefined || x.y === '' ? '' : x.y"></div>`,
+      )
+      expect(code).contains('const _x = _ctx.x')
+      expect(code).not.contains('const _x_y')
+      expect(code).contains(
+        `_setProp(n0, "id", _x === undefined || _x.y === '' ? '' : _x.y)`,
+      )
+    })
+
+    test('repeated unguarded member expression is still cached', () => {
+      const { code } = compileWithExpression(
+        `<div :id="x.y" :title="x.y"></div>`,
+      )
+      expect(code).contains('const _x_y = _ctx.x.y')
+      expect(code).contains('_setProp(n0, "id", _x_y)')
+      expect(code).contains('_setProp(n0, "title", _x_y)')
+    })
+
     test('repeated optional chaining', () => {
       const { code } = compileWithExpression(
         `<div :id="obj?.foo" :title="obj?.foo"></div>`,

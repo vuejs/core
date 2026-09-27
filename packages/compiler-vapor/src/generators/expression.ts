@@ -498,6 +498,11 @@ function analyzeExpressions(
         // e.g. obj[Math.random()] - the call may have side effects
         if (hasGlobalIdentifier) return
 
+        // skip a member expression that only runs when a guard passes, since
+        // the cached variable is evaluated ahead of that guard and may throw
+        // e.g. obj && obj.foo - `const _obj_foo = obj.foo` then `obj && _obj_foo`
+        if (isInShortCircuitBranch(parent, parentStack)) return
+
         registerVariable(
           memberExp,
           exp,
@@ -1112,6 +1117,25 @@ function extractMemberExpression(
     default:
       return
   }
+}
+
+/**
+ * Whether `node` sits in a position that is only evaluated conditionally:
+ * a branch of `a ? b : c`, or the right side of `&&`, `||` and `??`.
+ */
+function isInShortCircuitBranch(node: Node, parentStack: Node[]): boolean {
+  let child = node
+  for (let i = parentStack.length - 2; i >= 0; i--) {
+    const parent = parentStack[i]
+    if (
+      (parent.type === 'ConditionalExpression' && parent.test !== child) ||
+      (parent.type === 'LogicalExpression' && parent.right === child)
+    ) {
+      return true
+    }
+    child = parent
+  }
+  return false
 }
 
 const isCallExpression = (node: Node) => {
