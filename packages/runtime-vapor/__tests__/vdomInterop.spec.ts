@@ -11608,4 +11608,115 @@ describe('vdomInterop', () => {
       },
     )
   })
+
+  describe('functional child of a vdom component mounted by vapor', () => {
+    // `inject` in a functional component falls back to the rendering instance
+    // only while no setup instance is current, as in a VDOM render
+    const data = ref(0)
+    const F = (props: { n: number }) =>
+      h('i', `${inject('k', 'none')}:${props.n}`)
+    const G = compile(
+      `<script setup>
+        import { provide } from 'vue'
+        defineProps(['n'])
+        provide('k', 'G')
+        const components = _components
+      </script>
+      <template><components.F :n="n" /></template>`,
+      data,
+      { F },
+      { vapor: false },
+    )
+    const vdomSfc = (template: string, components: Record<string, any>) =>
+      compile(
+        `<script setup>const components = _components; const data = _data</script>` +
+          template,
+        data,
+        components,
+        { vapor: false },
+      )
+
+    async function expectInjected(App: any, value = 'G') {
+      data.value = 0
+      const { html } = define(App).render()
+      expect(html()).toContain(`<i>${value}:0</i>`)
+      data.value++
+      await nextTick()
+      expect(html()).toContain(`<i>${value}:1</i>`)
+    }
+
+    test('rendered by a vapor provider', async () => {
+      const App = compile(
+        `<script setup vapor>
+          import { provide } from 'vue'
+          provide('k', 'A')
+          const components = _components
+          const data = _data
+        </script>
+        <template><components.F :n="data" /></template>`,
+        data,
+        { F },
+      )
+      await expectInjected(App, 'A')
+    })
+
+    test('rendered by a vapor parent', async () => {
+      await expectInjected(
+        compile(`<template><components.G :n="data" /></template>`, data, { G }),
+      )
+    })
+
+    test('passed as a vnode to a vapor dynamic component', async () => {
+      const RouterView = defineComponent({
+        setup(_, { slots }) {
+          return () => slots.default!({ Component: h(G, { n: data.value }) })
+        },
+      })
+      const App = compile(
+        `<template><components.RouterView v-slot="{ Component }"><component :is="Component" /></components.RouterView></template>`,
+        data,
+        { RouterView },
+      )
+      await expectInjected(App)
+    })
+
+    test('rendered in a vdom slot of a vapor child', async () => {
+      const VaporChild = compile(
+        `<template><div><slot /></div></template>`,
+        data,
+      )
+      await expectInjected(
+        vdomSfc(
+          `<template><components.VaporChild><components.G :n="data" /></components.VaporChild></template>`,
+          { VaporChild, G },
+        ),
+      )
+    })
+
+    test('rendered as a vdom outlet fallback of a forwarded vapor slot', async () => {
+      const Outer = vdomSfc(
+        `<template><slot name="foo"><components.G v-if="data !== 1" :n="data" /></slot></template>`,
+        { G },
+      )
+      const Inner = vdomSfc(
+        `<template><components.Outer><template #foo><slot name="bar" /></template></components.Outer></template>`,
+        { Outer },
+      )
+      const Bridge = compile(
+        `<template><components.Inner><template #bar><slot name="bar" /></template></components.Inner></template>`,
+        data,
+        { Inner },
+      )
+      data.value = 0
+      const { html } = define(Bridge).render()
+      expect(html()).toContain('<i>G:0</i>')
+      // the fallback becomes invalid, then valid again
+      data.value = 1
+      await nextTick()
+      expect(html()).not.toContain('<i>')
+      data.value = 2
+      await nextTick()
+      expect(html()).toContain('<i>G:2</i>')
+    })
+  })
 })
