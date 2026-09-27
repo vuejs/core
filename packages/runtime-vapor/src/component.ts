@@ -1337,7 +1337,16 @@ export function createPlainElement(
     } else {
       const slot = getSlot(rawSlots as RawSlots, 'default')
       if (slot) {
+        // SSR renders nothing for an empty trailing text, so the slot can run out
+        // of server nodes; an end anchor keeps the cursor inside `el`. It is a
+        // comment so that a blank text never adopts it.
+        let end: Node | undefined
+        if (isHydrating) {
+          end = el.appendChild(claimAnchor(createComment('')))
+          if (!currentHydrationNode) setCurrentHydrationNode(end)
+        }
         const block = slot()
+        if (end) el.removeChild(end)
         if (!isHydrating) insert(block, el)
         registerNestedVDOMCleanup(block)
       }

@@ -1228,5 +1228,41 @@ describe('Vapor Mode hydration', () => {
         `"<div><span>foo</span><!----></div><!--dynamic-component-->"`,
       )
     })
+
+    test('dynamic component fallback with empty text children', async () => {
+      const data = ref('')
+      const { container } = await testHydration(
+        `<template><component :is="'p'">{{ data }}</component></template>`,
+        {},
+        data,
+      )
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `"<p></p><!--dynamic-component-->"`,
+      )
+
+      data.value = 'foo'
+      await nextTick()
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `"<p>foo</p><!--dynamic-component-->"`,
+      )
+    })
+
+    test('dynamic component fallback with trailing empty text children', async () => {
+      const data = ref('')
+      const { container } = await testHydration(
+        `<template><div><component :is="'button'"><i/>{{ data }}</component><b/></div></template>`,
+        {},
+        data,
+      )
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `"<div><button><i></i></button><!--dynamic-component--><b></b></div>"`,
+      )
+
+      data.value = 'foo'
+      await nextTick()
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `"<div><button><i></i>foo</button><!--dynamic-component--><b></b></div>"`,
+      )
+    })
   })
 })
