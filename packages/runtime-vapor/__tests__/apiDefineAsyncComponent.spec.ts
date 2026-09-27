@@ -1284,6 +1284,52 @@ describe('api: defineAsyncComponent', () => {
     expect(html.vdom).toBe('<div>b c</div>')
     expect(html.vapor).toBe(`${html.vdom}<!--async component-->`)
   })
+
+  test('template ref on a dynamic component rendering a pending async component', async () => {
+    let resolve: (comp: VaporComponent) => void
+    const data = ref<any>({
+      show: false,
+      Async: defineVaporAsyncComponent(
+        () =>
+          new Promise(r => {
+            resolve = r as any
+          }),
+      ),
+    })
+    const Comp = compile(
+      `<script setup vapor>defineExpose({ id: 'comp' })</script><template><div>comp</div></template>`,
+      data,
+    )
+    const App = compile(
+      `<script setup vapor>
+        import { ref } from 'vue'
+        const data = _data
+        const components = _components
+        const inst = ref(null)
+        data.value.get = () => inst.value && inst.value.id
+      </script>
+      <template><component :is="data.show ? data.Async : components.Comp" ref="inst" /></template>`,
+      data,
+      { Comp },
+    )
+    const root = document.createElement('div')
+    createVaporApp(App).mount(root)
+    expect(data.value.get()).toBe('comp')
+
+    data.value.show = true
+    await nextTick()
+    resolve!(
+      compile(
+        `<script setup vapor>defineExpose({ id: 'async' })</script><template><div>async</div></template>`,
+        data,
+      ),
+    )
+    await timeout()
+    expect(root.innerHTML).toBe(
+      '<div>async</div><!--async component--><!--dynamic-component-->',
+    )
+    expect(data.value.get()).toBe('async')
+  })
 })
 
 function mountAsyncError(
