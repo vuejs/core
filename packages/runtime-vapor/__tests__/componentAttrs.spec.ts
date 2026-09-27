@@ -2799,4 +2799,173 @@ describe('attribute fallthrough', () => {
       'color: red',
     ])
   })
+
+  // #15635: the root's own listeners and the fallthrough ones are two layers
+  // as well, but vdom merges them into a single handler list (own listener
+  // first) instead of letting either replace the other, so record what one
+  // click actually calls in each mode
+  const listenerCalls: string[] = []
+  const on = (label: string) => () => listenerCalls.push(label)
+  const clickParity = layerParity.bind(null, (el: Element) => {
+    listenerCalls.length = 0
+    ;(el as HTMLElement).click()
+    return listenerCalls.join(' ')
+  })
+
+  test('calls the root listener and the fallthrough listener, root first', async () => {
+    const seen = await clickParity(
+      {
+        Child: `<template><div @click="data.onRoot">x</div></template>`,
+        App: `<template><components.Child @click="data.onParent" /></template>`,
+      },
+      () => ref({ onRoot: on('root'), onParent: on('parent') }),
+      [],
+    )
+    expect(seen).toEqual(['root parent'])
+  })
+
+  test('calls the root listener and the fallthrough listener when they are the same handler', async () => {
+    const seen = await clickParity(
+      {
+        Child: `<template><div v-bind="data.rootProps">x</div></template>`,
+        App: `<template><components.Child v-bind="data.parentProps" /></template>`,
+      },
+      () => {
+        const shared = on('shared')
+        return ref({
+          rootProps: { onClick: shared } as Record<string, any>,
+          parentProps: { onClick: shared } as Record<string, any>,
+        })
+      },
+      [],
+    )
+    expect(seen).toEqual(['shared'])
+  })
+
+  test('keeps both listeners across root binding and fallthrough replacements', async () => {
+    const seen = await clickParity(
+      {
+        Child: `<template><div v-bind="data.rootProps">x</div></template>`,
+        App: `<template><components.Child v-bind="data.parentProps" /></template>`,
+      },
+      () =>
+        ref({
+          rootProps: { onClick: on('root') } as Record<string, any>,
+          parentProps: { onClick: on('parent') } as Record<string, any>,
+        }),
+      [
+        data => (data.value.rootProps = { onClick: on('root2') }),
+        data => (data.value.parentProps = { onClick: on('parent2') }),
+        data => {
+          data.value.rootProps = { onClick: on('root3') }
+          data.value.parentProps = { onClick: on('parent3') }
+        },
+      ],
+    )
+    expect(seen).toEqual([
+      'root parent',
+      'root2 parent',
+      'root2 parent2',
+      'root3 parent3',
+    ])
+  })
+
+  test('keeps a dynamic component root listener alongside the fallthrough one', async () => {
+    const seen = await clickParity(
+      {
+        Child: `<template><component :is="data.tag" v-bind="data.rootProps">x</component></template>`,
+        App: `<template><components.Child v-bind="data.parentProps" /></template>`,
+      },
+      () =>
+        ref({
+          tag: 'div',
+          rootProps: { onClick: on('root') } as Record<string, any>,
+          parentProps: { onClick: on('parent') } as Record<string, any>,
+        }),
+      [
+        data => (data.value.rootProps = { onClick: on('root2') }),
+        data => (data.value.parentProps = { onClick: on('parent2') }),
+      ],
+    )
+    expect(seen).toEqual(['root parent', 'root2 parent', 'root2 parent2'])
+  })
+
+  test('picks up a fallthrough listener bound after mount', async () => {
+    const seen = await clickParity(
+      {
+        Child: `<template><div v-bind="data.rootProps">x</div></template>`,
+        App: `<template><components.Child v-bind="data.parentProps" /></template>`,
+      },
+      () =>
+        ref({
+          rootProps: { onClick: on('root') } as Record<string, any>,
+          parentProps: {} as Record<string, any>,
+        }),
+      [
+        data => (data.value.parentProps = { onClick: on('parent') }),
+        data => (data.value.parentProps = { onClick: on('parent2') }),
+        data => (data.value.parentProps = {}),
+      ],
+    )
+    expect(seen).toEqual(['root', 'root parent', 'root parent2', 'root'])
+  })
+
+  test('keeps the fallthrough listener when the root binding drops its own', async () => {
+    const seen = await clickParity(
+      {
+        Child: `<template><div v-bind="data.rootProps">x</div></template>`,
+        App: `<template><components.Child v-bind="data.parentProps" /></template>`,
+      },
+      () =>
+        ref({
+          rootProps: { onClick: on('root') } as Record<string, any>,
+          parentProps: { onClick: on('parent') } as Record<string, any>,
+        }),
+      [
+        data => (data.value.rootProps = {}),
+        data => (data.value.rootProps = { id: 'a' }),
+        data => (data.value.parentProps = { onClick: on('parent2') }),
+        data => (data.value.rootProps = { onClick: on('root2') }),
+      ],
+    )
+    expect(seen).toEqual([
+      'root parent',
+      'parent',
+      'parent',
+      'parent2',
+      'root2 parent2',
+    ])
+  })
+
+  // the two cases below already hold on the unmodified revision: merging the
+  // layers must not forward a listener twice, and must not drop the root's
+  // handlers while deduping
+  test('forwards each listener once when the root binding is $attrs', async () => {
+    const seen = await clickParity(
+      {
+        Child: `<template><button v-bind="$attrs">x</button></template>`,
+        App: `<template><components.Child @click="data.onA" v-on="{ click: data.onB }" /></template>`,
+      },
+      () => ref({ onA: on('a'), onB: on('b') }),
+      [],
+    )
+    expect(seen).toEqual(['a b'])
+  })
+
+  test('keeps the root handlers when the root list holds the fallthrough one', async () => {
+    const parent = on('parent')
+    const seen = await clickParity(
+      {
+        Child: `<template><div v-bind="data.rootProps">x</div></template>`,
+        App: `<template><components.Child v-bind="data.parentProps" /></template>`,
+      },
+      () =>
+        ref({
+          rootProps: { onClick: [on('root'), parent] } as Record<string, any>,
+          parentProps: { onClick: parent } as Record<string, any>,
+        }),
+      [],
+    )
+    expect(seen).toEqual(['root parent'])
+  })
 })

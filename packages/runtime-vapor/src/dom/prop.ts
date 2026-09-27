@@ -78,6 +78,9 @@ type TargetElement = Element & {
   $styi?: NormalizedStyle
   $styi$?: NormalizedStyle
   $sty?: NormalizedStyle | string | undefined
+  // event keys the root's own layer binds on behalf of the fallthrough layer
+  // as well, so that the latter skips them (see `setDynamicProp`)
+  $fevt?: Record<string, true>
   value?: string
   _value?: any
 }
@@ -96,6 +99,25 @@ const shouldSkipFallthroughKey = (el: TargetElement, key: string) => {
     (!shouldUseFunctionalFallthrough(instance.type) ||
       isFunctionalFallthroughKey(key))
   )
+}
+
+// A root's own listeners followed by the fallthrough ones, each handler
+// registered once, the way `mergeProps` composes them. The fallthrough value
+// can be a list of handlers, and the `$attrs` it is read from rebuilds that
+// list on every read, so compare the handlers themselves instead of the values.
+function mergeOwnEvents(own: unknown, fallthrough: unknown): unknown {
+  const incoming = isArray(fallthrough) ? fallthrough : [fallthrough]
+  let merged: unknown = own
+  for (let i = 0; i < incoming.length; i++) {
+    const handler = incoming[i]
+    if (!handler) continue
+    const existing: unknown[] =
+      merged == null ? [] : isArray(merged) ? merged : [merged]
+    if (!existing.includes(handler)) {
+      merged = merged == null ? handler : existing.concat(handler)
+    }
+  }
+  return merged
 }
 
 export function setProp(el: any, key: string, value: any): void {
@@ -604,6 +626,13 @@ export function patchDynamicProps(
   const cacheKey = `$dprops${isApplyingFallthroughProps ? '$' : ''}`
   const prevProps = el[cacheKey] as Record<string, any> | undefined
   const nextProps: Record<string, any> = Object.create(null)
+  // event keys the own layer claimed on behalf of the fallthrough layer in the
+  // previous run; the claim is rebuilt in the loops below, and the ones whose
+  // owner changed are carried over at the end
+  const prevOwnedEvents = !isApplyingFallthroughProps
+    ? (el.$fevt as Record<string, true> | undefined)
+    : undefined
+  if (prevOwnedEvents) el.$fevt = Object.create(null)
 
   if (prevProps) {
     for (const key in prevProps) {
@@ -639,6 +668,27 @@ export function patchDynamicProps(
   }
 
   el[cacheKey] = nextProps
+
+  if (prevOwnedEvents) {
+    const instance = currentInstance as VaporComponentInstance | null
+    const owned = el.$fevt as Record<string, true>
+    for (const key in prevOwnedEvents) {
+      if (
+        !owned[key] &&
+        !(key in nextProps) &&
+        shouldSkipFallthroughKey(el, key)
+      ) {
+        // The root dropped its own listener for this key while the fallthrough
+        // one is still there. The fallthrough layer skipped the key when this
+        // layer claimed it and will not re-run for an own-props change, so
+        // keep binding (and claiming) it here until the fallthrough layer can
+        // take it back on its own, e.g. once the attrs lose the key.
+        owned[key] = true
+        const [event, options] = parseEventName(key)
+        onBinding(el, event, instance!.attrs[key], options)
+      }
+    }
+  }
 }
 
 /**
@@ -657,6 +707,19 @@ export function setDynamicProp(
     setStyle(el, value)
   } else if (isOn(key)) {
     if (shouldSkipFallthroughKey(el, key)) {
+      // Both layers apply to this key. VDOM's mergeProps() composes a root's
+      // own listener and the fallthrough one into a single handler list (own
+      // first) rather than letting either replace the other, so compose them
+      // here: the own layer resolves before the fallthrough effect and reading
+      // the attr keeps the composition reactive, so an own handler update
+      // re-registers without waiting for the attrs to change. Claiming the key
+      // in `$fevt` makes the fallthrough layer skip it instead of registering
+      // a second listener whose call order would depend on which effect re-ran
+      // last. #15635
+      const instance = currentInstance as VaporComponentInstance
+      ;(el.$fevt || (el.$fevt = Object.create(null)))[key] = true
+      value = mergeOwnEvents(value, instance.attrs[key])
+    } else if (isApplyingFallthroughProps && el.$fevt && el.$fevt[key]) {
       return
     }
     const [event, options] = parseEventName(key)
