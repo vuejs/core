@@ -449,7 +449,8 @@ export class DynamicFragment extends RenderContextFragment {
 
       this.renderBranch(
         render,
-        transition,
+        // in-out leave may have swapped in the hooks for the incoming branch
+        transition && this.$transition,
         parent,
         key,
         noScope,
