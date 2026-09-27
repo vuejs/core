@@ -2842,6 +2842,25 @@ test('preserves the index position when the key alias is omitted', async () => {
   expect(vapor.text).toBe(vdom.text)
 })
 
+test('keys items by the :key same-name shorthand', async () => {
+  const moved: Record<string, boolean> = {}
+  const { vdom, vapor } = await renderParity(
+    {
+      App: `<template><input v-for="(value, key) in data" :key :value="value"></template>`,
+    },
+    () => ref<Record<string, number>>({ a: 1, b: 2, c: 3 }),
+    async (data, root, mode) => {
+      const first = root.querySelector('input')!
+      data.value = { c: 3, b: 2, a: 1 }
+      await nextTick()
+      moved[mode] = root.querySelectorAll('input')[2] === first
+    },
+  )
+  expect(moved.vdom).toBe(true)
+  expect(moved.vapor).toBe(moved.vdom)
+  expect(vapor.text).toBe(vdom.text)
+})
+
 function getEffectsCount(scope: { deps: any }) {
   let count = 0
   for (let dep = scope.deps; dep !== undefined; dep = dep.nextDep) {

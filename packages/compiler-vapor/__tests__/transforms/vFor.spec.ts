@@ -769,4 +769,17 @@ describe('compiler: v-for', () => {
     expect(code).toContain('(_for_item0, _, _for_index0) => {')
     expect(code).toContain('_toDisplayString(_for_index0.value)')
   })
+
+  test.each([
+    `<div v-for="(value, key) in obj" :key />`,
+    `<div v-for="(value, key) in obj" v-bind:key />`,
+    `<template v-for="(value, key) in obj" :key><div /><div /></template>`,
+    `<Comp v-for="(value, key) in obj" :key />`,
+    `<template v-for="({ id }, key) in obj" :key><div v-if="id" /><p v-else /></template>`,
+  ])('resolves :key shorthand in %s', template => {
+    const { code, ir } = compileWithVFor(template)
+    expect(code).toContain(', key) => (key)')
+    const op = ir.block.dynamic.children[0].operation as ForIRNode
+    expect(op.keyProp).toMatchObject({ content: 'key', isStatic: false })
+  })
 })
