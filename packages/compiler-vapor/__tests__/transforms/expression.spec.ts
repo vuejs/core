@@ -515,6 +515,57 @@ describe('compiler: expression', () => {
       expect(code).contains('Math.random()')
     })
 
+    test('should not hoist a repeated member expression out of a conditional branch', () => {
+      const { code } = compileWithExpression(
+        `
+        <div :id="x === undefined ? '—' : x.y"></div>
+        <div :title="x === undefined ? '—' : x.y"></div>
+      `,
+        { bindingMetadata: { x: BindingTypes.SETUP_REF } },
+      )
+      // hoisting `x.y` would read it on every render, even when the guard
+      // is not passed - it has to stay inline, like in vdom
+      expect(code).not.contains('const _x_y')
+      expect(code).contains(`_setProp(n0, "id", _x === undefined ? '—' : _x.y)`)
+      expect(code).contains(
+        `_setProp(n1, "title", _x === undefined ? '—' : _x.y)`,
+      )
+    })
+
+    test('should not hoist a repeated member expression out of a callback body', () => {
+      const { code } = compileWithExpression(
+        `
+        <div :id="items.map(() => x.y)"></div>
+        <div :title="items.map(() => x.y).length + Math.random()"></div>
+      `,
+        {
+          bindingMetadata: {
+            items: BindingTypes.SETUP_REF,
+            x: BindingTypes.SETUP_REF,
+          },
+        },
+      )
+      // the callback may never be called, so `x.y` must not be read eagerly
+      expect(code).not.contains('const _x_y')
+      expect(code).contains('_setProp(n0, "id", _items.map(() => _x.y))')
+      expect(code).contains(
+        '_setProp(n1, "title", _items.map(() => _x.y).length + Math.random())',
+      )
+    })
+
+    test('should still hoist a repeated member expression that is always evaluated', () => {
+      const { code } = compileWithExpression(
+        `
+        <div :id="x.y"></div>
+        <div :title="x.y"></div>
+      `,
+        { bindingMetadata: { x: BindingTypes.SETUP_REF } },
+      )
+      expect(code).contains('const _x_y = _ctx.x.y')
+      expect(code).contains('_setProp(n0, "id", _x_y)')
+      expect(code).contains('_setProp(n1, "title", _x_y)')
+    })
+
     test('repeated optional chain does not replace a prefix of a longer chain', () => {
       const { code } = compileWithExpression(`
         <input

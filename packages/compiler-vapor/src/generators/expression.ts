@@ -327,6 +327,7 @@ type SourceRange = {
 type VariableUse = {
   name: string
   loc?: SourceRange
+  lazy?: boolean
 }
 type ExpressionRecord = {
   variables: VariableUse[]
@@ -426,6 +427,7 @@ function analyzeExpressions(
     isIdentifier: boolean,
     loc?: SourceRange,
     parentStack: Node[] = [],
+    lazy = false,
   ) => {
     if (isIdentifier) seenIdentifier.add(name)
     seenVariable[name] = (seenVariable[name] || 0) + 1
@@ -434,7 +436,7 @@ function analyzeExpressions(
       (variableToExpMap.get(name) || new Set()).add(exp),
     )
 
-    getRecord(exp).variables.push({ name, loc })
+    getRecord(exp).variables.push({ name, loc, lazy })
 
     if (
       parentStack.some(
@@ -504,6 +506,7 @@ function analyzeExpressions(
           false,
           { start: parent.start!, end: parent.end! },
           parentStack,
+          isLazilyEvaluated(parentStack),
         )
       } else if (!parentStack.some(isMemberExpression)) {
         registerVariable(
@@ -548,6 +551,65 @@ function setExpressionReplacement(
   )
 }
 
+/**
+ * Whether a node is only evaluated lazily, given its ancestor chain - i.e. it
+ * may be skipped entirely when a preceding condition is not met.
+ */
+const isLazilyEvaluated = (parentStack: Node[]): boolean => {
+  for (let i = parentStack.length - 1; i > 0; i--) {
+    const child = parentStack[i]
+    const parent = parentStack[i - 1]
+    switch (parent.type) {
+      // `ok ? a : b` - the branches are only evaluated once a branch is taken
+      case 'ConditionalExpression':
+        if (parent.test !== child) return true
+        break
+      // `ok && a` / `ok || a` - the right hand side may not be evaluated
+      case 'LogicalExpression':
+        if (parent.right === child) return true
+        break
+      // a function body is only evaluated once the function is called
+      case 'ArrowFunctionExpression':
+      case 'FunctionExpression':
+      case 'FunctionDeclaration':
+        return true
+      // `a?.(b)` / `a?.[b]` - skipped entirely when `a` is nullish
+      case 'OptionalCallExpression':
+        if ((parent.arguments as Node[]).includes(child)) return true
+        break
+      case 'OptionalMemberExpression':
+        if (parent.computed && (parent.property as Node) === child) return true
+        break
+    }
+  }
+  return false
+}
+
+/**
+ * Whether every usage of a variable is only evaluated lazily. Such a variable
+ * must not be hoisted out of its position: the hoisted read would be evaluated
+ * on every render, which may throw or trigger a side effect where the original
+ * expression would have skipped it.
+ * e.g. `x === undefined ? '—' : x.y` - `x.y` stays inline, since hoisting it
+ * would read `x.y` even when `x` is undefined
+ */
+const isOnlyLazilyEvaluated = (
+  name: string,
+  exps: Set<SimpleExpressionNode>,
+  expressionRecords: Map<SimpleExpressionNode, ExpressionRecord>,
+): boolean => {
+  let found = false
+  for (const exp of exps) {
+    for (const variable of getExpressionVariables(expressionRecords, exp)) {
+      if (variable.name === name) {
+        if (!variable.lazy) return false
+        found = true
+      }
+    }
+  }
+  return found
+}
+
 function processRepeatedVariables(
   context: CodegenContext,
   seenVariable: Record<string, number>,
@@ -569,6 +631,14 @@ function processRepeatedVariables(
     if (isGloballyAllowed(name)) continue
     if (seenVariable[name] > 1 && exps.size > 0) {
       const isIdentifier = seenIdentifier.has(name)
+      // keep a member expression that is only read lazily inline, e.g.
+      // `x === undefined ? '—' : x.y` must not hoist `x.y` ahead of the guard
+      if (
+        !isIdentifier &&
+        isOnlyLazilyEvaluated(name, exps, expressionRecords)
+      ) {
+        continue
+      }
       const varName = isIdentifier
         ? name
         : getUniqueDeclarationName(genVarName(name), reservedNames)
