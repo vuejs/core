@@ -2550,4 +2550,119 @@ describe('Transition', () => {
     expect(host.innerHTML).not.toContain('class="b"')
     expect(host.innerHTML).toContain('fallback')
   })
+
+  test('in-out: each entering child hands off its own leave on rapid key changes', async () => {
+    const enters: Record<string, () => void> = {}
+    const left: string[] = []
+    const data = ref<any>({
+      k: 1,
+      onEnter: (el: Element, done: () => void) => (enters[el.id] = done),
+      onLeave: (el: Element, done: () => void) => {
+        left.push(el.id)
+        done()
+      },
+    })
+    const App = compile(
+      `<script setup vapor>
+        const data = _data
+      </script>
+      <template>
+        <Transition mode="in-out" :css="false" @enter="data.onEnter" @leave="data.onLeave">
+          <div :key="data.k" :id="'k' + data.k" />
+        </Transition>
+      </template>`,
+      data,
+    )
+    const { host } = define(App).render()
+
+    data.value.k = 2
+    await nextTick()
+    data.value.k = 3
+    await nextTick()
+    expect(left).toEqual([])
+
+    enters.k2()
+    expect(left).toEqual(['k1'])
+    enters.k3()
+    expect(left).toEqual(['k1', 'k2'])
+    await nextTick()
+    expect(host.innerHTML).toBe('<div id="k3"></div><!--keyed-->')
+  })
+
+  test('in-out: toggling back before the enter finishes leaves once', async () => {
+    const enters: Record<string, () => void> = {}
+    const left: string[] = []
+    const data = ref<any>({
+      show: true,
+      onEnter: (el: Element, done: () => void) => (enters[el.id] = done),
+      onLeave: (el: Element, done: () => void) => {
+        left.push(el.id)
+        done()
+      },
+    })
+    const App = compile(
+      `<script setup vapor>
+        const data = _data
+      </script>
+      <template>
+        <Transition mode="in-out" :css="false" @enter="data.onEnter" @leave="data.onLeave">
+          <div v-if="data.show" id="a" />
+          <div v-else id="b" />
+        </Transition>
+      </template>`,
+      data,
+    )
+    const { host } = define(App).render()
+
+    data.value.show = false
+    await nextTick()
+    data.value.show = true
+    await nextTick()
+
+    // the first a was early-removed, so b's enter hands off nothing
+    enters.b()
+    expect(left).toEqual([])
+    enters.a()
+    expect(left).toEqual(['b'])
+    await nextTick()
+    expect(host.innerHTML).toBe('<div id="a"></div><!--if-->')
+  })
+
+  test('in-out: a branch that renders its content later still hands off the leave', async () => {
+    const left: string[] = []
+    const data = ref<any>({
+      view: 'A',
+      ready: false,
+      onLeave: (el: Element, done: () => void) => {
+        left.push(el.id)
+        done()
+      },
+    })
+    const A = compile(`<template><div id="a">a</div></template>`, data)
+    const B = compile(
+      `<template><div v-if="data.ready" id="b">b</div></template>`,
+      data,
+    )
+    const App = compile(
+      `<script setup vapor>
+        const data = _data
+        const views = _components
+      </script>
+      <template>
+        <Transition mode="in-out" :css="false" @leave="data.onLeave">
+          <component :is="views[data.view]" />
+        </Transition>
+      </template>`,
+      data,
+      { A, B },
+    )
+    const { host } = define(App).render()
+
+    data.value.view = 'B'
+    await nextTick()
+    data.value.ready = true
+    await nextTick()
+    expect(left).toEqual(['a'])
+    expect(host.innerHTML).not.toContain('id="a"')
+  })
 })

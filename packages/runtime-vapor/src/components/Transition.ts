@@ -45,7 +45,7 @@ import {
 } from '../component'
 import { getAsyncWrapperInner } from '../apiDefineAsyncComponent'
 import { isAsyncComponentEnabled } from '../asyncComponentState'
-import { isArray } from '@vue/shared'
+import { extend, isArray } from '@vue/shared'
 import { renderEffect } from '../renderEffect'
 import {
   DynamicFragment,
@@ -468,17 +468,18 @@ export function applyTransitionLeaveHooksImpl(
       const leavingNodes = getLeavingNodesForType(state, leavingBlock)
       const leavingKey = String(getTransitionKey(leavingBlock))
       leavingNodes[leavingKey] = leavingBlock
-      // Bind cleanup to this specific handoff so an older leave callback
-      // cannot clear a newer delayedLeave during rapid toggles.
+      // The handoff is copied onto the incoming child's hooks, so settle it
+      // here: it runs at most once and never after an early removal.
+      let settled = false
       const delayedLeaveCb = () => {
+        if (settled) return
+        settled = true
         delayedLeave()
         leavingBlock.$transition = undefined
-        if (enterHooks.delayedLeave === delayedLeaveCb) {
-          delete enterHooks.delayedLeave
-        }
       }
       // early removal callback
       block[leaveCbKey] = () => {
+        settled = true
         earlyRemove()
         block[leaveCbKey] = undefined
         leavingBlock.$transition = undefined
@@ -486,9 +487,6 @@ export function applyTransitionLeaveHooksImpl(
         // Clear the cache entry so the next enter isn't skipped as "still leaving".
         if (leavingNodes[leavingKey] === leavingBlock) {
           delete leavingNodes[leavingKey]
-        }
-        if (enterHooks.delayedLeave === delayedLeaveCb) {
-          delete enterHooks.delayedLeave
         }
       }
       enterHooks.delayedLeave = delayedLeaveCb
@@ -541,7 +539,13 @@ function removeBranchWithLeaveImpl(
     (mode !== 'out-in' || isValidBlock(frag.nodes))
   ) {
     const instance = currentInstance
-    applyTransitionLeaveHooksImpl(frag.nodes, transition, () => {
+    let enterHooks = transition
+    if (mode === 'in-out') {
+      // The current child's hooks may still hold the handoff its own pending
+      // enter will run. Hand this leave to the incoming branch through a copy.
+      enterHooks = frag.$transition = extend({}, transition)
+    }
+    applyTransitionLeaveHooksImpl(frag.nodes, enterHooks, () => {
       // Unmounting cuts the leave short and runs afterLeave synchronously;
       // the pending branch must not be rendered into the torn-down tree.
       if (transition.state.isUnmounting) return
