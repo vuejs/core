@@ -101,4 +101,67 @@ describe('SVG support', () => {
     expect(attrs.vdom).toEqual(['/z', '/z', 'on', '/w', 'd'])
     expect(attrs.vapor).toEqual(attrs.vdom)
   })
+
+  test('should patch native event function bindings on svg elements', async () => {
+    await renderParity(
+      {
+        App: `<template><svg><a :onclick="data.handler"><text>link</text></a></svg></template>`,
+      },
+      () => ref({ handler: vi.fn() }),
+      async (data, root) => {
+        const a = root.querySelector('a')!
+        const initialHandler = data.value.handler
+        expect(a.onclick).toBe(initialHandler)
+        a.dispatchEvent(new MouseEvent('click'))
+        expect(initialHandler).toHaveBeenCalledTimes(1)
+
+        data.value.handler = vi.fn()
+        await nextTick()
+        expect(a.onclick).toBe(data.value.handler)
+        a.dispatchEvent(new MouseEvent('click'))
+        expect(data.value.handler).toHaveBeenCalledTimes(1)
+        expect(initialHandler).toHaveBeenCalledTimes(1)
+      },
+    )
+  })
+
+  test('should patch native event string bindings as svg attributes', async () => {
+    await renderParity(
+      {
+        App: `<template><svg><a :onclick="data.handler" /></svg></template>`,
+      },
+      () => ref({ handler: 'return false' }),
+      async (data, root) => {
+        const a = root.querySelector('a')!
+        expect(a.getAttribute('onclick')).toBe(data.value.handler)
+
+        data.value.handler = 'return true'
+        await nextTick()
+        expect(a.getAttribute('onclick')).toBe(data.value.handler)
+      },
+    )
+  })
+
+  test('should preserve other native svg events when one binding updates', async () => {
+    await renderParity(
+      {
+        App: `<template><svg><a :onclick="data.click" :onfocus="data.focus" /></svg></template>`,
+      },
+      () => ref({ click: vi.fn(), focus: vi.fn() }),
+      async (data, root) => {
+        const a = root.querySelector('a')!
+        expect(a.onclick).toBe(data.value.click)
+        expect(a.onfocus).toBe(data.value.focus)
+
+        data.value.click = vi.fn()
+        await nextTick()
+        expect(a.onclick).toBe(data.value.click)
+        expect(a.onfocus).toBe(data.value.focus)
+        a.dispatchEvent(new MouseEvent('click'))
+        a.dispatchEvent(new FocusEvent('focus'))
+        expect(data.value.click).toHaveBeenCalledTimes(1)
+        expect(data.value.focus).toHaveBeenCalledTimes(1)
+      },
+    )
+  })
 })

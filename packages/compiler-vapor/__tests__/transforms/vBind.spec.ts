@@ -1444,4 +1444,26 @@ describe('compiler v-bind', () => {
     expect(code).contains('_setProp(n0, "href", _ctx.url)')
     expect(code).contains('_setClass(n0, _ctx.cls)')
   })
+
+  test('uses the svg class helper for object class bindings on svg anchors', () => {
+    const { code } = compileWithVBind(
+      `<svg><a :class="{ active: flag }"/></svg>`,
+    )
+
+    expect(code).toContain('_setClass(n0, { active: _ctx.flag }, true)')
+    expect(code).not.toContain('_setClassName')
+  })
+
+  test('groups native svg event bindings without changing other prop helpers', () => {
+    const { code } = compileWithVBind(
+      `<svg><a :onclick="click" :onfocus="focus" :href="url" :class="cls"/></svg>`,
+    )
+
+    expect(code).toContain('const k0 = ["onclick","onfocus"]')
+    expect(code).toContain(
+      '_setDynamicProps(n0, [{ onclick: _ctx.click, onfocus: _ctx.focus }], k0, true)',
+    )
+    expect(code).toContain('_setAttr(n0, "href", _ctx.url, true)')
+    expect(code).toContain('_setClass(n0, _ctx.cls, true)')
+  })
 })
