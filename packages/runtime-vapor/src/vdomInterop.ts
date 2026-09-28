@@ -1570,7 +1570,7 @@ function createVDOMComponent(
     }
     isUnmounted = true
     isMounted = false
-    if (isKeepAliveEnabled && frag.inputScope) frag.inputScope.stop()
+    if (frag.inputScope) frag.inputScope.stop()
     internals.um(vnode, parentComponent as any, parentSuspense, !!parentNode)
     // VDOM transitions own their leaving DOM until the leave finishes.
     if (!transition) removeDom(parentNode)

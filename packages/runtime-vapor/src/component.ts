@@ -90,6 +90,7 @@ import {
   getPropsProxyHandlers,
   getStaticBindingKeys,
   hasFallthroughAttrs,
+  isolatePropSources,
   normalizePropsOptions,
   resolveDynamicProps,
   resolveSource,
@@ -163,6 +164,7 @@ import {
   DynamicFragment,
   type InteropFragment,
   type VaporFragment,
+  currentBranchFragment,
   finishBlockCreation,
   isDynamicFragment,
   isFragment,
@@ -456,6 +458,24 @@ export function createComponent(
     }
 
     let inputScope: EffectScope | undefined
+    // A component created inside a dynamic branch is disposed by that branch's
+    // queued update job, but a synchronous consumer of its props is notified
+    // before that job runs: the dirty check would re-read a prop source the
+    // branch is about to dispose (#15673). Commit the sources through a
+    // detached scope the branch teardown stops, so reads stay on the last
+    // committed value until the next commit; only props - slots keep their
+    // closure semantics and belong to KeepAlive.
+    if (!keepAliveCtx && !once && currentBranchFragment && rawProps) {
+      const scope = new EffectScope(true)
+      scope.run(() => {
+        const next = isolatePropSources(rawProps as RawProps)
+        if (next !== rawProps) {
+          rawProps = next
+          inputScope = scope
+        }
+      })
+    }
+
     if (
       keepAliveCtx &&
       !once &&
@@ -1616,10 +1636,8 @@ export function unmountComponent(
       }
     }
 
-    if (isKeepAliveEnabled) {
-      const inputScope = instance.inputScope
-      if (inputScope) inputScope.stop()
-    }
+    const inputScope = instance.inputScope
+    if (inputScope) inputScope.stop()
     instance.scope.stop()
 
     if (hasLifecycle && instance.um) {

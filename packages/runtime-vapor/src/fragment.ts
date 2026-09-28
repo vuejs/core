@@ -296,6 +296,15 @@ export class ForBlock extends VaporFragment {
   }
 }
 
+/**
+ * The DynamicFragment whose branch is currently rendering, if any. A component
+ * created inside a dynamic branch is disposed by that branch's queued update
+ * job, which runs after synchronous consumers of its props were notified, so
+ * it commits its prop sources through a scope the branch teardown stops
+ * (see `isolatePropSources` and #15673).
+ */
+export let currentBranchFragment: DynamicFragment | undefined
+
 export class DynamicFragment extends RenderContextFragment {
   // @ts-expect-error - assigned in the constructor or hydrateDynamicFragmentAnchor()
   anchor: Node
@@ -531,6 +540,8 @@ export class DynamicFragment extends RenderContextFragment {
     parent: ParentNode | null,
     transition: VaporTransitionHooks | undefined,
   ): void {
+    const prevBranchFragment = currentBranchFragment
+    currentBranchFragment = this
     try {
       this.nodes = this.runWithRenderCtx(() => {
         const nodes =
@@ -549,6 +560,7 @@ export class DynamicFragment extends RenderContextFragment {
         return nodes
       })
     } finally {
+      currentBranchFragment = prevBranchFragment
       if (isTransitionEnabled && transition) {
         this.$transition = applyTransitionHooks(this.nodes, transition, this)
       }

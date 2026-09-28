@@ -1346,4 +1346,74 @@ describe('component: props', () => {
       },
     )
   })
+
+  // #15673
+  test('sync watcher does not re-read a source disposed by a v-if branch', async () => {
+    const seen: Record<string, string[]> = {}
+    const { vdom, vapor } = await renderParity(
+      {
+        Child: `<script setup>
+          import { watch } from 'vue'
+          const data = _data
+          const props = defineProps({ y: String })
+          watch(() => props.y, v => data.value.seen.push(v), { flush: 'sync' })
+        </script><template><p>child: {{ props.y }}</p></template>`,
+        App: `<template>
+          <components.Child v-if="data.x !== undefined" :y="data.x.y" />
+          <p v-else>x is gone</p>
+        </template>`,
+      },
+      () => ref<any>({ x: { y: 'a' }, seen: [] }),
+      (data, root, mode) => {
+        expect(root.textContent).toBe('child: a')
+
+        // the guard turns false and disposes the branch in one flush, but a
+        // synchronous consumer is notified before that teardown runs: it must
+        // read the last committed prop instead of the disposed source
+        data.value.x = undefined
+        seen[mode] = data.value.seen
+      },
+    )
+    expect(seen.vdom).toEqual([])
+    expect(seen.vapor).toEqual(seen.vdom)
+    expect(vapor.text).toBe('x is gone')
+    expect(vdom.text).toBe(vapor.text)
+  })
+
+  // #15673
+  test('sync watcher of a v-if child still sees committed prop updates', async () => {
+    const seen: Record<string, string[]> = {}
+    const { vdom, vapor } = await renderParity(
+      {
+        Child: `<script setup>
+          import { watch } from 'vue'
+          const data = _data
+          const props = defineProps({ y: String })
+          watch(() => props.y, v => data.value.seen.push(v), { flush: 'sync' })
+        </script><template><p>child: {{ props.y }}</p></template>`,
+        App: `<template>
+          <components.Child v-if="data.on" :y="data.x.y" />
+          <p v-else>x is gone</p>
+        </template>`,
+      },
+      () => ref<any>({ on: true, x: { y: 'a' }, seen: [] }),
+      async (data, root, mode) => {
+        expect(root.textContent).toBe('child: a')
+
+        data.value.x.y = 'b'
+        // the source only reaches the child when the commit runs, so a
+        // synchronous consumer must not observe it before the flush
+        seen[`${mode}:sync`] = [...data.value.seen]
+        await nextTick()
+        expect(root.textContent).toBe('child: b')
+        seen[mode] = data.value.seen
+      },
+    )
+    expect(seen['vdom:sync']).toEqual([])
+    expect(seen['vapor:sync']).toEqual(seen['vdom:sync'])
+    expect(seen.vdom).toEqual(['b'])
+    expect(seen.vapor).toEqual(seen.vdom)
+    expect(vapor.text).toBe('child: b')
+    expect(vdom.text).toBe(vapor.text)
+  })
 })
