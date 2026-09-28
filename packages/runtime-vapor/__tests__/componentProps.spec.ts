@@ -1147,6 +1147,7 @@ describe('component: props', () => {
 
   test.each([
     ':style="[data.styles]"',
+    ':style="data.styles"',
     'v-bind="data.input"',
     'v-bind="{}" :style="[data.styles]"',
     ':[data.key]="[data.styles]"',

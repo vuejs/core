@@ -276,7 +276,8 @@ function readSource<T>(source: T | (() => T)): T {
 
 function freezeValue(key: string, value: unknown): unknown {
   if (key === 'class' && value && !isString(value)) return normalizeClass(value)
-  if (key === 'style' && isArray(value)) return normalizeStyle(value)
+  // wrapped so a lone (possibly reactive) style object is copied too
+  if (key === 'style' && isObject(value)) return normalizeStyle([value])
   return isFunction(value) ? () => value : value
 }
 

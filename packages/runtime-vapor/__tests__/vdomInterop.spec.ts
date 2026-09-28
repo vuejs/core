@@ -11232,6 +11232,7 @@ describe('vdomInterop', () => {
         cls: 'c1',
         fixedKey: 'fixed',
         bindings: { key: 'a' },
+        ownStyle: { color: 'red' },
       })
       const makePage = (name: string): any =>
         vdomPages
@@ -11272,7 +11273,7 @@ describe('vdomInterop', () => {
       const Wrap =
         wrap &&
         compile(
-          `<script setup${parentVapor ? ' vapor' : ''}>defineProps(['comp'])</script>
+          `<script setup${parentVapor ? ' vapor' : ''}>defineProps(['comp', 'ownStyle'])</script>
           <template>${wrap}</template>`,
           data,
           {},
@@ -11827,12 +11828,13 @@ describe('vdomInterop', () => {
     test.each([false, true])(
       'v-once on a root component keeps its fallthrough attrs live (vdom pages: %s)',
       async vdomPages => {
-        const inner = `<Wrap :comp="Component" :class="data.cls" />`
-        const wrap = `<component :is="comp" v-once id="fixed" />`
+        const inner = `<Wrap :comp="Component" :own-style="data.ownStyle" :class="data.cls" />`
+        const wrap = `<component :is="comp" v-once id="fixed" :style="ownStyle" />`
         const steps = await compare(
           vdomPages,
           inner,
           async r => {
+            r.data.value.ownStyle.color = 'blue'
             r.data.value.cls = 'c2'
             await nextTick()
             r.steps.push(r.root.innerHTML.replace(/<!--[^>]*-->/g, ''))
@@ -11841,7 +11843,9 @@ describe('vdomInterop', () => {
           },
           wrap,
         )
-        expect(steps[0]).toBe('<button class="c2">A:fixed:0</button>')
+        expect(steps[0]).toBe(
+          '<button style="color: red;" class="c2">A:fixed:0</button>',
+        )
       },
     )
   })
