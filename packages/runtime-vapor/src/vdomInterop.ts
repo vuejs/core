@@ -84,6 +84,7 @@ import {
   resolveFallthroughOwner,
   unmountComponent,
 } from './component'
+import { normalizeEmitsOptions } from './componentEmits'
 import {
   collectRootScopeIds,
   getCurrentScopeId,
@@ -395,6 +396,8 @@ const vaporInteropImpl = {
     ))
     instance.rawPropsRef = propsRef
     instance.rawSlotsRef = slotsRef
+    // read by vdom's shouldUpdateComponent to skip listener-only prop changes
+    instance.emitsOptions = normalizeEmitsOptions(instance.type)
     const vnodeHookState = ensureVNodeHookState(instance, vnode)
     setInteropComponentScopeIds(instance, vnode)
 

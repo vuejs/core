@@ -10579,6 +10579,58 @@ describe('vdomInterop', () => {
     expect(childBeforeUpdate).not.toHaveBeenCalled()
   })
 
+  test('should skip updating the child for listener-only changes in production', async () => {
+    const childBeforeUpdate = vi.fn()
+    const data = ref({ todos: ['a', 'b'], text: '' })
+    const TodoItem = compile(
+      `<script setup vapor>
+        import { onBeforeUpdate } from 'vue'
+        defineProps(['title'])
+        const emit = defineEmits(['remove'])
+        onBeforeUpdate(_components.childBeforeUpdate)
+      </script>
+      <template><li @click="emit('remove')">{{ title }}</li></template>`,
+      data,
+      { childBeforeUpdate },
+    )
+    const App = compile(
+      `<script setup>
+        const data = _data
+        const TodoItem = _components.TodoItem
+      </script>
+      <template>
+        <p>{{ data.text }}</p>
+        <TodoItem
+          v-for="(todo, index) in data.todos"
+          :key="todo"
+          :title="todo"
+          @remove="data.todos.splice(index, 1)"
+        />
+      </template>`,
+      data,
+      { TodoItem },
+      { vapor: false },
+    )
+    __DEV__ = false
+    try {
+      const { host } = define(App).render()
+      data.value.text = 'x'
+      await nextTick()
+      expect(host.innerHTML).toBe('<p>x</p><li>a</li><li>b</li>')
+      expect(childBeforeUpdate).not.toHaveBeenCalled()
+
+      // the skipped child must still call the listener from the latest render
+      host.querySelector('li')!.click()
+      await nextTick()
+      host.querySelector('li')!.click()
+      await nextTick()
+      expect(data.value.todos).toEqual([])
+      expect(childBeforeUpdate).not.toHaveBeenCalled()
+    } finally {
+      __DEV__ = true
+    }
+  })
+
   test('should refresh emit listeners on KeepAlive reactivation', async () => {
     const calls: string[] = []
     const data = ref({
