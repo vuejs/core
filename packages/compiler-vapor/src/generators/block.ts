@@ -249,7 +249,9 @@ export function genBlockContent(
   }
 }
 
-function isVModelOperation(oper: OperationNode): oper is DirectiveIRNode {
+export function isVModelOperation(
+  oper: OperationNode,
+): oper is DirectiveIRNode {
   return (
     oper.type === IRNodeTypes.DIRECTIVE &&
     oper.builtin === true &&

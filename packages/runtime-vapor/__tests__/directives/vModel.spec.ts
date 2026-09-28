@@ -1858,6 +1858,23 @@ describe('directive: v-model', () => {
         ['vue'],
       ],
       [
+        'key-only event name in keyed v-for',
+        `<input v-for="field in data" :key="field.event" v-model="field.value" @[field.event]="log(field.value)">`,
+        () => [{ event: 'input', value: '' }],
+        (root: HTMLElement) => typeText(root, 'vue'),
+        ['vue'],
+      ],
+      // Keep the selector handler local; the nested event reads the model
+      // without adding another binding to the selector expression.
+      [
+        'selector listeners with dynamic type in keyed v-for',
+        `<input v-for="field in data" :key="field.event" :type="field.event === evt ? 'checkbox' : 'text'" v-model="field.value" ` +
+          `v-on="field.event === evt ? { change: e => e.target.dispatchEvent(new e.constructor('read')) } : {}" @read="log(field.value)">`,
+        () => [{ event: 'input', value: false }],
+        (root: HTMLElement) => check(root, 0),
+        [true],
+      ],
+      [
         'v-on object',
         `<input v-model="data" v-on="{ input: () => log(data) }">`,
         () => '',

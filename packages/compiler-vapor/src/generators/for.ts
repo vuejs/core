@@ -3,7 +3,7 @@ import {
   createSimpleExpression,
   walkIdentifiers,
 } from '@vue/compiler-dom'
-import { genBlockContent } from './block'
+import { genBlockContent, isVModelOperation } from './block'
 import { genExpression } from './expression'
 import type { CodegenContext } from '../generate'
 import {
@@ -462,6 +462,9 @@ function matchPatterns(
     }
   }
 
+  const modelElements = new Set(
+    render.operation.filter(isVModelOperation).map(oper => oper.element),
+  )
   const lastOrderedProp = new Map<number, number>()
   for (let i = 0; i < render.effect.length; i++) {
     const effect = render.effect[i]
@@ -476,13 +479,17 @@ function matchPatterns(
 
   for (let index = 0; index < render.effect.length; index++) {
     const effect = render.effect[index]
-    // Lifted bindings run at the end of the block, after ordered prop setters.
+    // Lifted bindings run after ordered prop setters but before v-model, so
+    // same-element listeners must stay in the deferred effect path.
     if (
       effect.once ||
       effect.operations.some(
         operation =>
-          operation.type === IRNodeTypes.SET_PROP &&
-          index < (lastOrderedProp.get(operation.element) ?? -1),
+          ((operation.type === IRNodeTypes.SET_EVENT ||
+            operation.type === IRNodeTypes.SET_DYNAMIC_EVENTS) &&
+            modelElements.has(operation.element)) ||
+          (operation.type === IRNodeTypes.SET_PROP &&
+            index < (lastOrderedProp.get(operation.element) ?? -1)),
       )
     ) {
       continue

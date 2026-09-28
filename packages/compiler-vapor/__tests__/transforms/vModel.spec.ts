@@ -509,4 +509,32 @@ describe('compiler: vModel transform', () => {
       code.indexOf('_setDynamicEvents(n1'),
     )
   })
+
+  test.each([
+    ['key-only', '@[field.event]="onInput(field.value)"', '_onBinding('],
+    [
+      'selector',
+      'v-on="field.event === event ? { input() {} } : {}"',
+      '_setDynamicEvents(',
+    ],
+  ])(
+    'generates %s listeners after v-model in keyed v-for',
+    (_, listener, helper) => {
+      const { code } = compileVapor(
+        `<input v-for="field in fields" :key="field.event"
+        :type="field.event === event ? 'text' : 'checkbox'"
+        v-model="field.value" ${listener} />`,
+        { prefixIdentifiers: true },
+      )
+
+      const model = code.indexOf('_applyDynamicModel(')
+      const type = code.indexOf(', "type",')
+      expect(model).toBeGreaterThan(-1)
+      expect(type).toBeGreaterThan(-1)
+      expect(type).toBeLessThan(model)
+      expect(code.indexOf(helper)).toBeGreaterThan(model)
+      expect(code).toContain('_createSelector(')
+      expect(code).toMatchSnapshot()
+    },
+  )
 })
