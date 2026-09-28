@@ -473,7 +473,13 @@ function createBaseVNode(
     targetAnchor: null,
     staticCount: 0,
     shapeFlag,
-    patchFlag,
+    // #3569 patch flags are compiler hints that only hold when a vnode is
+    // diffed against the vnode rendered at the same position of the same
+    // template. Vnodes created while block tracking is disabled (e.g. by
+    // manually invoking a compiled slot) can be moved around by the caller, so
+    // their hints can't be trusted and they must be fully diffed.
+    patchFlag:
+      patchFlag > 0 && isBlockTreeEnabled <= 0 ? PatchFlags.BAIL : patchFlag,
     dynamicProps,
     dynamicChildren: null,
     appContext: null,

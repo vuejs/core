@@ -1568,6 +1568,10 @@ function baseCreateRenderer(
           parentSuspense,
           namespace,
         )
+        // slots replaced by this update have been fully diffed (see
+        // `updateSlots`), including where they were forwarded to child
+        // components, which are updated during the patch above
+        instance.slotsBail = false
         if (__DEV__) {
           endMeasure(instance, `patch`)
         }

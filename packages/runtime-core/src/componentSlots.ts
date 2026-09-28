@@ -182,6 +182,31 @@ const assignSlots = (
   }
 }
 
+/**
+ * #3569 compiled slot content can only be diffed with compiler hints against
+ * content rendered by a slot from the same template location. An optimized
+ * parent guarantees that, but when the slots are passed in some other way
+ * (e.g. on a component vnode picked from a manually invoked compiled slot),
+ * a changed compiled slot may come from a different location.
+ */
+const hasChangedCompiledSlot = (
+  slots: InternalSlots,
+  children: RawSlots,
+): boolean => {
+  for (const key in children) {
+    const slot = children[key]
+    if (
+      !isInternalKey(key) &&
+      slot !== slots[key] &&
+      isFunction(slot) &&
+      (slot as ContextualRenderFn)._c
+    ) {
+      return true
+    }
+  }
+  return false
+}
+
 export const initSlots = (
   instance: ComponentInternalInstance,
   children: VNodeNormalizedChildren,
@@ -226,11 +251,17 @@ export const updateSlots = (
         // no need to update, and skip stale slots removal.
         needDeletionCheck = false
       } else {
+        if (!optimized && hasChangedCompiledSlot(slots, children as RawSlots)) {
+          instance.slotsBail = true
+        }
         // compiled but dynamic (v-if/v-for on slots) - update slots, but skip
         // normalization.
         assignSlots(slots, children as Slots, optimized)
       }
     } else {
+      if (hasChangedCompiledSlot(slots, children as RawSlots)) {
+        instance.slotsBail = true
+      }
       needDeletionCheck = !(children as RawSlots).$stable
       normalizeObjectSlots(children as RawSlots, slots, instance)
     }

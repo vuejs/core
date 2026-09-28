@@ -1,7 +1,7 @@
 import { BindingTypes, type CompilerOptions } from '@vue/compiler-core'
 import { compile } from '@vue/compiler-dom'
 import { EMPTY_ARR } from '@vue/shared'
-import { type VNode, createApp, nextTick, reactive, ref } from '../src'
+import { type VNode, createApp, h, nextTick, reactive, ref } from '../src'
 import * as Vue from '../src'
 import type { InternalRenderFunction } from '../../runtime-core/src/component'
 
@@ -653,4 +653,211 @@ describe('compiler + runtime integration', () => {
       }).toEqual({ once: 1, live: 1 })
     },
   )
+
+  describe('vnodes picked from a manually invoked compiled slot (#3569)', () => {
+    // renders the vnode at `index` of its default slot
+    const Picker = {
+      props: ['index'],
+      setup(props: any, { slots }: any) {
+        return () => h('div', slots.default()[props.index])
+      },
+    }
+
+    function mountPicker(template: string, components = {}, state = {}) {
+      const index = ref(0)
+      const container = document.createElement('div')
+      createApp({
+        components: { Picker, ...components },
+        setup: () => ({ index, ...state }),
+        template: `<Picker :index="index">${template}</Picker>`,
+      }).mount(container)
+      return { index, container }
+    }
+
+    test('elements with different static props', async () => {
+      const { index, container } = mountPicker(
+        `<p class="a" :id="id">A</p><p class="b" :id="id">B</p>`,
+        {},
+        { id: 'x' },
+      )
+      expect(container.innerHTML).toBe(`<div><p class="a" id="x">A</p></div>`)
+      index.value = 1
+      await nextTick()
+      expect(container.innerHTML).toBe(`<div><p class="b" id="x">B</p></div>`)
+      index.value = 0
+      await nextTick()
+      expect(container.innerHTML).toBe(`<div><p class="a" id="x">A</p></div>`)
+    })
+
+    test('components rendering the slot via <slot>', async () => {
+      const Bar = { template: `<slot/>` }
+      const { index, container } = mountPicker(
+        `<Bar><p v-if="true">1</p></Bar>` +
+          `<Bar><p v-if="true">2</p></Bar>` +
+          `<Bar><p>3</p></Bar>`,
+        { Bar },
+      )
+      expect(container.innerHTML).toBe(`<div><p>1</p></div>`)
+      for (const expected of ['2', '3', '1', '2']) {
+        index.value = (index.value + 1) % 3
+        await nextTick()
+        expect(container.innerHTML).toBe(`<div><p>${expected}</p></div>`)
+      }
+    })
+
+    test('slot content keeps updating after being swapped', async () => {
+      const msg = ref('a')
+      const Bar = { template: `<slot/><hr><slot/>` }
+      const { index, container } = mountPicker(
+        `<Bar><p v-if="true" class="a"><i>A</i>{{ msg }}</p></Bar>` +
+          `<Bar><p v-if="true" class="b"><b>B</b>{{ msg }}</p></Bar>`,
+        { Bar },
+        { msg },
+      )
+      const render = (html: string) => `<div>${html}<hr>${html}</div>`
+
+      index.value = 1
+      await nextTick()
+      expect(container.innerHTML).toBe(render(`<p class="b"><b>B</b>a</p>`))
+      msg.value = 'b'
+      await nextTick()
+      expect(container.innerHTML).toBe(render(`<p class="b"><b>B</b>b</p>`))
+      index.value = 0
+      await nextTick()
+      expect(container.innerHTML).toBe(render(`<p class="a"><i>A</i>b</p>`))
+      msg.value = 'c'
+      await nextTick()
+      expect(container.innerHTML).toBe(render(`<p class="a"><i>A</i>c</p>`))
+    })
+
+    test('slot forwarded through nested components', async () => {
+      const msg = ref('a')
+      const Card = { template: `<section><slot/></section>` }
+      const Bar = { components: { Card }, template: `<Card><slot/></Card>` }
+      const { index, container } = mountPicker(
+        `<Bar><Card><p v-if="true" class="a"><i>A</i>{{ msg }}</p></Card></Bar>` +
+          `<Bar><Card><p v-if="true" class="b"><b>B</b>{{ msg }}</p></Card></Bar>`,
+        { Bar, Card },
+        { msg },
+      )
+
+      index.value = 1
+      await nextTick()
+      expect(container.innerHTML).toBe(
+        `<div><section><section><p class="b"><b>B</b>a</p></section></section></div>`,
+      )
+      msg.value = 'b'
+      await nextTick()
+      expect(container.innerHTML).toBe(
+        `<div><section><section><p class="b"><b>B</b>b</p></section></section></div>`,
+      )
+      index.value = 0
+      await nextTick()
+      expect(container.innerHTML).toBe(
+        `<div><section><section><p class="a"><i>A</i>b</p></section></section></div>`,
+      )
+    })
+
+    test('keyed v-for with overlapping keys', async () => {
+      const Bar = { template: `<ul><slot/></ul>` }
+      const { index, container } = mountPicker(
+        `<Bar><li v-for="i in 2" :key="i" class="a"><i>{{ i }}</i></li></Bar>` +
+          `<Bar><li v-for="i in 3" :key="i" class="b"><b>{{ i }}</b></li></Bar>`,
+        { Bar },
+      )
+      index.value = 1
+      await nextTick()
+      expect(container.innerHTML).toBe(
+        `<div><ul>` +
+          `<li class="b"><b>1</b></li><li class="b"><b>2</b></li><li class="b"><b>3</b></li>` +
+          `</ul></div>`,
+      )
+      index.value = 0
+      await nextTick()
+      expect(container.innerHTML).toBe(
+        `<div><ul><li class="a"><i>1</i></li><li class="a"><i>2</i></li></ul></div>`,
+      )
+    })
+
+    test('<component :is> in a template', async () => {
+      const index = ref(0)
+      const Foo = {
+        setup: () => ({ index }),
+        template: `<div><component :is="$slots.default()[index]" /></div>`,
+      }
+      const Bar = { template: `<slot/>` }
+      const container = document.createElement('div')
+      createApp({
+        components: { Foo, Bar },
+        template:
+          `<Foo><Bar><p v-if="true" class="a">1</p></Bar>` +
+          `<Bar><p v-if="true" class="b">2</p></Bar></Foo>`,
+      }).mount(container)
+
+      index.value = 1
+      await nextTick()
+      expect(container.innerHTML).toBe(`<div><p class="b">2</p></div>`)
+      index.value = 0
+      await nextTick()
+      expect(container.innerHTML).toBe(`<div><p class="a">1</p></div>`)
+    })
+  })
+
+  // #3569
+  test('compiled slots swapped by a render function', async () => {
+    const swapped = ref(false)
+    const Bar = { template: `<header><slot name="header"/></header><slot/>` }
+    const Foo = {
+      setup(_: any, { slots }: any) {
+        return () =>
+          h(Bar, null, {
+            header: swapped.value ? slots.b : slots.a,
+            default: swapped.value ? slots.a : slots.b,
+          })
+      },
+    }
+    const container = document.createElement('div')
+    createApp({
+      components: { Foo },
+      template:
+        `<Foo><template #a><p v-if="true" class="a">A</p></template>` +
+        `<template #b><p v-if="true" class="b"><i>B</i></p></template></Foo>`,
+    }).mount(container)
+
+    const a = `<p class="a">A</p>`
+    const b = `<p class="b"><i>B</i></p>`
+    expect(container.innerHTML).toBe(`<header>${a}</header>${b}`)
+    swapped.value = true
+    await nextTick()
+    expect(container.innerHTML).toBe(`<header>${b}</header>${a}`)
+    swapped.value = false
+    await nextTick()
+    expect(container.innerHTML).toBe(`<header>${a}</header>${b}`)
+  })
+
+  // #3569
+  test('compiled slots forwarded unchanged by a render function stay optimized', async () => {
+    const count = ref(0)
+    const Bar = { props: ['count'], template: `<slot/>{{ count }}` }
+    const Foo = {
+      setup(_: any, { slots }: any) {
+        return () => h(Bar, { count: count.value }, { default: slots.default })
+      },
+    }
+    const container = document.createElement('div')
+    const vm = createApp({
+      components: { Foo },
+      template: `<Foo><p v-if="true">{{ 'p' }}</p></Foo>`,
+    }).mount(container)
+    const bar = (vm.$.subTree.component!.subTree as VNode).component!
+
+    count.value++
+    await nextTick()
+    expect(container.innerHTML).toBe(`<p>p</p>1`)
+    // Bar was updated by its parent with the same compiled slot, so the slot
+    // content is still rendered as a block
+    const slotFragment = (bar.subTree.children as VNode[])[0]
+    const p = (slotFragment.children as VNode[])[0]
+    expect(p.dynamicChildren).not.toBe(null)
+  })
 })
