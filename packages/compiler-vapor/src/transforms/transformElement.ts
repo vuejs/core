@@ -31,6 +31,7 @@ import {
   isBuiltInDirective,
   isFormattingTag,
   isInlineTag,
+  isModelListener,
   isOn,
   isVoidTag,
   makeMap,
@@ -54,6 +55,7 @@ import {
   type IRPropsStatic,
   type IRSlots,
   type SetBlockKeyIRNode,
+  type SetPropIRNode,
   type VaporDirectiveNode,
 } from '../ir'
 import { EMPTY_EXPRESSION } from './utils'
@@ -556,8 +558,26 @@ function transformNativeElement(
       const canStringifyAttrName =
         key.isStatic && !UNSAFE_ATTR_NAME_RE.test(key.content)
       let foldedValue: string | boolean | undefined
-      // handling asset imports
-      if (
+      if (!prop.modifier && isOn(key.content)) {
+        // a listener whose handler is the bound value, like vdom's patchProp,
+        // which also ignores v-model listeners on elements
+        if (!isModelListener(key.content)) {
+          const operation: SetPropIRNode = {
+            type: IRNodeTypes.SET_PROP,
+            element: context.reference(),
+            prop,
+            tag,
+          }
+          hasEffect = context.registerEffect(
+            values,
+            operation,
+            getEffectIndex,
+            needsOrderedProps && hasEffect,
+          )
+          operation.effect = hasEffect
+        }
+      } else if (
+        // handling asset imports
         canStringifyAttrName &&
         context.imports.some(imported =>
           values[0].content.includes(imported.exp.content),

@@ -5,11 +5,12 @@ import {
   transformChildren,
   transformElement,
   transformVBind,
+  transformVOnce,
 } from '../../src'
 import { makeCompile } from './_utils'
 
 const compileWithVBind = makeCompile({
-  nodeTransforms: [transformElement, transformChildren],
+  nodeTransforms: [transformVOnce, transformElement, transformChildren],
   directiveTransforms: {
     bind: transformVBind,
   },
@@ -1394,5 +1395,38 @@ describe('compiler v-bind', () => {
       '_setDynamicProps(n0, [{ [_ctx.name || ""]: _ctx.a, [(_ctx.foo?_ctx.bar:_ctx.baz) || ""]: _ctx.b }])',
     )
     expect(code).contains('() => ({ [_ctx.name || ""]: _ctx.a })')
+  })
+
+  test('binds on* keys of native elements as listeners like vdom', () => {
+    const { code } = compileWithVBind(
+      `<div :onClick="save" :onKeyupOnceCapture="save" :onMyEvent="cond ? a : b" :on:MyEvent="fn" :on-click.camel="save" :onUpdate:modelValue="fn" :onFoo /><svg :onClick="save"/><a :onClick.prop="fn1" /><b :onClick.attr="fn2" /><i :on-click="fn3" /><p v-bind="obj" :onClick="fn4" /><s v-once :onClick="fn5" />`,
+      { bindingMetadata: { save: BindingTypes.SETUP_CONST } },
+    )
+
+    expect(code).toMatchSnapshot()
+    // the handler value is re-bound by the effect, like vdom patches the
+    // listener on render; only v-once attaches it once
+    expect(code).toContain(`_onBinding(n0, "click", _save)`)
+    expect(code).toContain(
+      `_onBinding(n0, "keyup", _save, { capture: true, once: true })`,
+    )
+    expect(code).toContain(`_onBinding(n1, "click", _save)`)
+    expect(code).toContain(`_on(n6, "click", _ctx.fn5)`)
+    expect(code).toContain(
+      `_onBinding(n0, "my-event", _ctx.cond ? _ctx.a : _ctx.b)`,
+    )
+    expect(code).toContain(`_onBinding(n0, "MyEvent", _ctx.fn)`)
+    expect(code).toContain(`_onBinding(n0, "foo", _ctx.onFoo)`)
+    // vdom's patchProp ignores v-model listeners on elements
+    expect(code).not.toContain('modelValue')
+    // not listeners in vdom either
+    expect(code).toContain(`_setDOMProp(n2, "onClick", _ctx.fn1)`)
+    expect(code).toContain(`_setAttr(n3, "onClick", _ctx.fn2)`)
+    // vdom's parseEventName turns this into a "-click" listener too
+    expect(code).toContain(`_onBinding(n4, "-click", _ctx.fn3)`)
+    // with a spread the listener stays in the props merge
+    expect(code).toContain(
+      `_setDynamicProps(n5, [_ctx.obj, { onClick: _ctx.fn4 }], k0)`,
+    )
   })
 })
