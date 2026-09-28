@@ -11228,8 +11228,11 @@ describe('vdomInterop', () => {
           log.push(`enter:${el.textContent}`)
           done()
         },
+        onClick: () => log.push('click'),
         cls: 'c1',
         fixedKey: 'fixed',
+        bindings: { key: 'a' },
+        ownStyle: { color: 'red' },
       })
       const makePage = (name: string): any =>
         vdomPages
@@ -11270,7 +11273,7 @@ describe('vdomInterop', () => {
       const Wrap =
         wrap &&
         compile(
-          `<script setup${parentVapor ? ' vapor' : ''}>defineProps(['comp'])</script>
+          `<script setup${parentVapor ? ' vapor' : ''}>defineProps(['comp', 'ownStyle'])</script>
           <template>${wrap}</template>`,
           data,
           {},
@@ -11729,6 +11732,120 @@ describe('vdomInterop', () => {
           'A:5:1',
           '',
         ])
+      },
+    )
+
+    test.each(cases)(
+      'attrs, props and listeners on the component reach the page (KeepAlive: %s, vdom pages: %s)',
+      async (keepAlive, vdomPages) => {
+        const component = `<component :is="Component" :class="data.cls" data-x="1" :id="data.cls" @click="data.onClick" />`
+        const inner = keepAlive
+          ? `<KeepAlive>${component}</KeepAlive>`
+          : component
+        const steps = await compare(vdomPages, inner, async r => {
+          const html = () =>
+            r.steps.push(r.root.innerHTML.replace(/<!--[^>]*-->/g, ''))
+          html()
+          r.click()
+          await nextTick()
+          r.snap()
+          r.data.value.cls = 'c2'
+          await nextTick()
+          html()
+          await r.go(r.PageA, 2)
+          await r.go(r.PageB, 3)
+          html()
+          await r.go(r.PageA, 4)
+          r.data.value.cls = 'c3'
+          await nextTick()
+          html()
+          r.unmount()
+          return r.steps
+        })
+        expect(steps[0]).toBe('<button class="c1" data-x="1">A:c1:0</button>')
+        expect(steps[1]).toMatch(/^A:c1:1 \[.*click\]$/)
+        expect(steps[2]).toBe('<button class="c2" data-x="1">A:c2:1</button>')
+        expect(steps[5]).toBe('<button class="c2" data-x="1">B:c2:0</button>')
+        expect(steps[7]).toBe(
+          `<button class="c3" data-x="1">A:c3:${keepAlive ? 1 : 0}</button>`,
+        )
+      },
+    )
+
+    test.each([false, true])(
+      'a key in spread props does not override `:key` (vdom pages: %s)',
+      async vdomPages => {
+        const inner = `<component :is="Component" v-bind="data.bindings" :key="data.fixedKey" />`
+        const steps = await compare(vdomPages, inner, async r => {
+          r.click()
+          r.data.value.bindings = { key: 'b' }
+          await nextTick()
+          r.snap()
+          r.unmount()
+          return r.steps
+        })
+        expect(steps[0]).toBe('A:1:1 [mA]')
+      },
+    )
+
+    test.each([false, true])(
+      'v-once freezes the props on the component (vdom pages: %s)',
+      async vdomPages => {
+        const inner = `<component :is="Component" v-once :id="data.cls" />`
+        const steps = await compare(vdomPages, inner, async r => {
+          r.click()
+          r.data.value.cls = 'c2'
+          await nextTick()
+          r.snap()
+          r.unmount()
+          return r.steps
+        })
+        expect(steps[0]).toBe('A:c1:1 [mA]')
+      },
+    )
+
+    test.each([false, true])(
+      'a key in spread props does not re-key an async page (vdom pages: %s)',
+      async vdomPages => {
+        const inner = `<component :is="Component" v-bind="data.bindings" :key="data.fixedKey" />`
+        const steps = await compare(vdomPages, inner, async r => {
+          await r.go(
+            defineAsyncComponent(() => Promise.resolve(r.PageA)),
+            2,
+          )
+          await new Promise(r => setTimeout(r))
+          r.click()
+          r.data.value.bindings = { key: 'b' }
+          await nextTick()
+          r.snap()
+          r.unmount()
+          return r.steps
+        })
+        expect(steps[1]).toBe('A:2:1 [mA]')
+      },
+    )
+
+    test.each([false, true])(
+      'v-once on a root component keeps its fallthrough attrs live (vdom pages: %s)',
+      async vdomPages => {
+        const inner = `<Wrap :comp="Component" :own-style="data.ownStyle" :class="data.cls" />`
+        const wrap = `<component :is="comp" v-once id="fixed" :style="ownStyle" />`
+        const steps = await compare(
+          vdomPages,
+          inner,
+          async r => {
+            r.data.value.ownStyle.color = 'blue'
+            r.data.value.cls = 'c2'
+            await nextTick()
+            r.steps.push(r.root.innerHTML.replace(/<!--[^>]*-->/g, ''))
+            r.unmount()
+            return r.steps
+          },
+          wrap,
+        )
+        expect(steps[0]).toBe(
+          '<button style="color: red;" class="c2">A:fixed:0</button>',
+        )
       },
     )
   })
