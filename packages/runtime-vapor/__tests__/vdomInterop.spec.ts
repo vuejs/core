@@ -11719,4 +11719,29 @@ describe('vdomInterop', () => {
       expect(html()).toContain('<i>G:2</i>')
     })
   })
+
+  test('VDOM prop defaults can inject from a Vapor parent', () => {
+    const Child = defineComponent({
+      props: {
+        value: {
+          default: () => inject('k', 'missing'),
+        },
+      },
+      setup: props => () => h('i', props.value),
+    })
+
+    const App = compile(
+      `<script setup vapor>
+        import { provide } from 'vue'
+        const components = _components
+        provide('k', 'parent')
+      </script>
+      <template><components.Child /></template>`,
+      ref(0),
+      { Child },
+    )
+
+    const { html } = define(App).render()
+    expect(html()).toContain('<i>parent</i>')
+  })
 })

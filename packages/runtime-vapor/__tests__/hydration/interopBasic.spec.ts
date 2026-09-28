@@ -914,4 +914,33 @@ describe('VDOM interop', () => {
     await nextTick()
     expect(formatHtml(container.innerHTML)).toBe('<div><i>G:1</i></div>')
   })
+
+  test('hydrate VDOM prop defaults injecting from a Vapor parent', async () => {
+    const { container, html } = await testWithVaporApp(
+      `<script setup vapor>
+        import { provide } from 'vue'
+        const components = _components
+        provide('k', 'parent')
+      </script>
+      <template><components.Child /></template>`,
+      {
+        Child: {
+          code: `<script setup>
+            import { inject } from 'vue'
+            defineProps({
+              value: {
+                default: () => inject('k', 'missing'),
+              },
+            })
+          </script>
+          <template><i>{{ value }}</i></template>`,
+          vapor: false,
+        },
+      },
+    )
+
+    expect(html).toBe('<i>parent</i>')
+    expect(container.innerHTML).toBe(html)
+    expect('Hydration text content mismatch').not.toHaveBeenWarned()
+  })
 })

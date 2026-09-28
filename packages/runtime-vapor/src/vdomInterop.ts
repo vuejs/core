@@ -1468,6 +1468,10 @@ function createVDOMComponent(
 
   // overwrite how the vdom instance handles props
   vnode.vi = (instance: ComponentInternalInstance) => {
+    // The props wrapper must inherit from the Vapor parent while VDOM renders
+    // without a current instance.
+    const prev = currentInstance
+    simpleSetCurrentInstance(parentComponent)
     // Reuse VDOM's normalized options so Options API merging stays in VDOM.
     const wrapper = new VaporComponentInstance<Record<string, unknown>>(
       useBridge
@@ -1481,6 +1485,7 @@ function createVDOMComponent(
       parentComponent ? parentComponent.appContext : undefined,
       once,
     )
+    simpleSetCurrentInstance(prev)
 
     const attrs = createInternalObject()
     const isFilteredAttr = (key: string | symbol): boolean =>
