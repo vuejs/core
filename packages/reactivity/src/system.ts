@@ -278,6 +278,12 @@ export function flush(): void {
           hasError = true
           error = e
         }
+        // the effect has already been removed from the buffer, so it must not
+        // stay `Pending` either: `propagate()` skips any subscriber that is
+        // still pending, so it would never be notified again, even after the
+        // value recovers. The next write re-queues it, which matches how a
+        // throwing job behaves in 3.5.
+        effect.flags &= ~ReactiveFlags.Pending
       }
     }
   } finally {

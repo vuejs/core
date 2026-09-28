@@ -97,6 +97,68 @@ describe('reactivity: errors during flush', () => {
     expect(runs).toEqual(['first', 'second'])
   })
 
+  test('keeps notifying a subscriber whose notification threw', () => {
+    const a = ref(0)
+    const c = computed(() => {
+      if (a.value === 2) {
+        throw new Error('boom')
+      }
+      return a.value
+    })
+    const seen: number[] = []
+    watch(c, v => seen.push(v), { flush: 'sync' })
+
+    expect(() => {
+      a.value = 2
+    }).toThrow('boom')
+
+    // the failed subscriber is re-notified by later writes instead of being
+    // left pending forever, which is what a throwing job does in 3.5 (#15674)
+    seen.length = 0
+    a.value = 3
+    expect(seen).toEqual([3])
+    a.value = 4
+    expect(seen).toEqual([3, 4])
+  })
+
+  test('keeps notifying a subscriber that threw alongside other subscribers', () => {
+    const a = ref(0)
+    const runs: string[] = []
+    let effectThrows = false
+    effect(() => {
+      a.value
+      runs.push('first')
+      if (effectThrows) {
+        throw new Error('boom')
+      }
+    })
+
+    const seen: number[] = []
+    const c = computed(() => {
+      if (a.value === 5) {
+        throw new Error('computed boom')
+      }
+      return a.value
+    })
+    watch(c, v => seen.push(v), { flush: 'sync' })
+
+    runs.length = 0
+    seen.length = 0
+    effectThrows = true
+
+    expect(() => {
+      a.value = 5
+    }).toThrow('boom')
+
+    // both the effect whose body threw and the subscriber whose notification
+    // threw keep working
+    runs.length = 0
+    seen.length = 0
+    effectThrows = false
+    a.value = 6
+    expect({ runs, seen }).toEqual({ runs: ['first'], seen: [6] })
+  })
+
   test('updates the component when a sync watcher throws while notifying', async () => {
     const x = ref<{ y: string } | undefined>({ y: 'a' })
     const y = computed(() => x.value!.y)
