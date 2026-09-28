@@ -1,5 +1,25 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
+exports[`compiler: element transform > :onXxx merges with the handlers of the same event 1`] = `
+"import { setDynamicProps as _setDynamicProps, toHandlers as _toHandlers, renderEffect as _renderEffect, createAssetComponent as _createAssetComponent, template as _template } from 'vue';
+const t0 = _template("<div>")
+const k0 = ["onClick"]
+
+export function render(_ctx) {
+  const n0 = t0()
+  const n1 = t0()
+  _renderEffect(() => {
+    _setDynamicProps(n0, [_ctx.bind, { onClick: [e => _ctx.a(e), _ctx.b] }], k0)
+    _setDynamicProps(n1, [{ onClick: _ctx.c }, _toHandlers(_ctx.obj, true)], k0)
+  })
+  const n2 = _createAssetComponent("Comp", { onClick: () => [
+    _ctx.a,
+    (_ctx.b)
+  ] })
+  return [n0, n1, n2]
+}"
+`;
+
 exports[`compiler: element transform > MathML 1`] = `
 "import { template as _template } from 'vue';
 const t0 = _template("<math><mrow><mi>x", 3, 2)
@@ -7,6 +27,65 @@ const t0 = _template("<math><mrow><mi>x", 3, 2)
 export function render(_ctx) {
   const n0 = t0()
   return n0
+}"
+`;
+
+exports[`compiler: element transform > a constant dynamic v-bind key keeps the static listener path 1`] = `
+"import { on as _on, template as _template } from 'vue';
+const t0 = _template("<div id=btn>", 1)
+
+export function render(_ctx) {
+  const n0 = t0()
+  _on(n0, "click", e => _ctx.a(e))
+  return n0
+}"
+`;
+
+exports[`compiler: element transform > a delegated listener stays out of the merge 1`] = `
+"import { createInvoker as _createInvoker, setDynamicEvents as _setDynamicEvents, renderEffect as _renderEffect, delegateEvents as _delegateEvents, template as _template } from 'vue';
+const t0 = _template("<div>", 1)
+_delegateEvents("click")
+
+export function render(_ctx) {
+  const n0 = t0()
+  n0.$evtclick = _createInvoker(e => _ctx.a(e))
+  _renderEffect(() => _setDynamicEvents(n0, _ctx.obj))
+  return n0
+}"
+`;
+
+exports[`compiler: element transform > a listener bound twice in one merge arg keeps both handlers 1`] = `
+"import { withModifiers as _withModifiers, setDynamicProps as _setDynamicProps, renderEffect as _renderEffect, template as _template } from 'vue';
+const t0 = _template("<div>", 1)
+
+export function render(_ctx) {
+  const n0 = t0()
+  _renderEffect(() => _setDynamicProps(n0, [_ctx.bind, { onClick: [_withModifiers(e => _ctx.a(e), ["stop"]), $event => (_ctx.b($event))] }]))
+  return n0
+}"
+`;
+
+exports[`compiler: element transform > a merged camelCase listener keeps its case and its option modifier 1`] = `
+"import { setDynamicProps as _setDynamicProps, renderEffect as _renderEffect, template as _template } from 'vue';
+const t0 = _template("<div>", 1)
+
+export function render(_ctx) {
+  const n0 = t0()
+  _renderEffect(() => _setDynamicProps(n0, [_ctx.bind, { "on:myEventCaptureOnce": e => _ctx.a(e), onClick: e => _ctx.b(e) }]))
+  return n0
+}"
+`;
+
+exports[`compiler: element transform > an expanded v-bind object literal keeps the static listener paths 1`] = `
+"import { on as _on, setDynamicEvents as _setDynamicEvents, renderEffect as _renderEffect, template as _template } from 'vue';
+const t0 = _template("<div id=btn>")
+
+export function render(_ctx) {
+  const n0 = t0()
+  const n1 = t0()
+  _on(n0, "click", e => _ctx.a(e))
+  _renderEffect(() => _setDynamicEvents(n1, _ctx.obj))
+  return [n0, n1]
 }"
 `;
 
@@ -1152,6 +1231,17 @@ export function render(_ctx) {
 }"
 `;
 
+exports[`compiler: element transform > static listeners join the dynamic props of a native element 1`] = `
+"import { toHandlers as _toHandlers, withModifiers as _withModifiers, withKeys as _withKeys, setDynamicProps as _setDynamicProps, renderEffect as _renderEffect, template as _template } from 'vue';
+const t0 = _template("<div>", 1)
+
+export function render(_ctx) {
+  const n0 = t0()
+  _renderEffect(() => _setDynamicProps(n0, [{ onClick: e => _ctx.a(e) }, _toHandlers(_ctx.obj, true), _ctx.bind, { onClick: _withModifiers(e => _ctx.b(e), ["stop"]), onKeyupOnce: _withKeys(e => _ctx.c(e), ["enter"]), "on:myEvent": e => _ctx.d(e) }]))
+  return n0
+}"
+`;
+
 exports[`compiler: element transform > static props quoting > escapes double quotes in value 1`] = `
 "import { template as _template } from 'vue';
 const t0 = _template("<div title=\\"say &quot;hello&quot;\\">", 3)
@@ -1346,6 +1436,17 @@ const t0 = _template("<div>", 1)
 export function render(_ctx) {
   const n0 = t0()
   _renderEffect(() => _setDynamicEvents(n0, _ctx.obj))
+  return n0
+}"
+`;
+
+exports[`compiler: element transform > v-on="obj" merges into the dynamic props of a native element 1`] = `
+"import { toHandlers as _toHandlers, setDynamicProps as _setDynamicProps, renderEffect as _renderEffect, template as _template } from 'vue';
+const t0 = _template("<div>", 1)
+
+export function render(_ctx) {
+  const n0 = t0()
+  _renderEffect(() => _setDynamicProps(n0, [{ id: "a" }, _toHandlers(_ctx.obj, true), _ctx.bind]))
   return n0
 }"
 `;

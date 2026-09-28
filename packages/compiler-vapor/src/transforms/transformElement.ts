@@ -1005,24 +1005,24 @@ export function buildProps(
       } else if (prop.name === 'on') {
         // v-on="obj"
         if (prop.exp) {
-          if (isComponent) {
-            const objectLiteralProps = resolveComponentObjectLiteralOnProps(
-              prop.exp,
-              context,
-              props,
-              prop,
-            )
-            if (objectLiteralProps) {
-              pushStaticObjectLiteralProps(objectLiteralProps)
-            } else {
-              dynamicExpr.push(prop.exp)
-              pushMergeArg()
-              dynamicArgs.push({
-                kind: IRDynamicPropsKind.EXPRESSION,
-                value: prop.exp,
-                handler: true,
-              })
-            }
+          const objectLiteralProps = isComponent
+            ? resolveComponentObjectLiteralOnProps(
+                prop.exp,
+                context,
+                props,
+                prop,
+              )
+            : undefined
+          if (objectLiteralProps) {
+            pushStaticObjectLiteralProps(objectLiteralProps)
+          } else if (isComponent || mergesListeners(node, context)) {
+            dynamicExpr.push(prop.exp)
+            pushMergeArg()
+            dynamicArgs.push({
+              kind: IRDynamicPropsKind.EXPRESSION,
+              value: prop.exp,
+              handler: true,
+            })
           } else {
             context.registerEffect(
               [prop.exp],
@@ -1142,6 +1142,64 @@ function resolveComponentObjectLiteralBindProps(
     return
   }
   return props
+}
+
+const listenerMerge = new WeakMap<ElementNode, boolean>()
+
+export function mergesListeners(
+  node: ElementNode,
+  context: TransformContext<ElementNode>,
+): boolean {
+  let merges = listenerMerge.get(node)
+  if (merges === undefined) {
+    listenerMerge.set(node, (merges = resolveListenerMerge(node, context)))
+  }
+  return merges
+}
+
+// like vdom, an element merges its listeners at runtime in template order
+// once their keys can collide: a v-bind spread that is not expanded into
+// static props or carries a dynamic key may hold any `on*` key, and a v-on
+// object may hold the key of a static listener (`@evt` or `:onXxx`)
+function resolveListenerMerge(
+  node: ElementNode,
+  context: TransformContext<ElementNode>,
+): boolean {
+  const props = node.props as (VaporDirectiveNode | AttributeNode)[]
+  let hasVOnObject = false
+  let hasStaticListener = false
+  for (const p of props) {
+    if (p.type !== NodeTypes.DIRECTIVE) continue
+    const arg = p.arg && resolveExpression(p.arg)
+    if (p.name === 'bind') {
+      if (!arg) {
+        if (
+          p.exp &&
+          !resolveNativeObjectLiteralBindProps(p.exp, context, props, p)
+        ) {
+          return true
+        }
+      } else if (!arg.isStatic) {
+        return true
+      } else if (
+        isOn(arg.content) &&
+        !isModelListener(arg.content) &&
+        !p.modifiers.some(m => m.content === 'prop' || m.content === 'attr')
+      ) {
+        hasStaticListener = true
+      }
+    } else if (p.name === 'on') {
+      if (!arg) {
+        hasVOnObject = true
+      } else if (
+        arg.isStatic &&
+        !p.modifiers.some(m => m.content === 'delegate')
+      ) {
+        hasStaticListener = true
+      }
+    }
+  }
+  return hasVOnObject && hasStaticListener
 }
 
 function resolveNativeObjectLiteralBindProps(

@@ -1404,26 +1404,25 @@ describe('compiler v-bind', () => {
     )
 
     expect(code).toMatchSnapshot()
-    // the handler value is re-bound by the effect, like vdom patches the
-    // listener on render; only v-once attaches it once
-    expect(code).toContain(`_onBinding(n0, "click", _save)`)
-    expect(code).toContain(
-      `_onBinding(n0, "keyup", _save, { capture: true, once: true })`,
-    )
-    expect(code).toContain(`_onBinding(n1, "click", _save)`)
+    // the handler value is re-bound by the effect through the element's
+    // invoker, like vdom patches the listener on render; only v-once attaches
+    // it once
+    expect(code).toContain(`_setListener(n0, "onClick", _save)`)
+    expect(code).toContain(`_setListener(n0, "onKeyupOnceCapture", _save)`)
+    expect(code).toContain(`_setListener(n1, "onClick", _save)`)
     expect(code).toContain(`_on(n6, "click", _ctx.fn5)`)
     expect(code).toContain(
-      `_onBinding(n0, "my-event", _ctx.cond ? _ctx.a : _ctx.b)`,
+      `_setListener(n0, "onMyEvent", _ctx.cond ? _ctx.a : _ctx.b)`,
     )
-    expect(code).toContain(`_onBinding(n0, "MyEvent", _ctx.fn)`)
-    expect(code).toContain(`_onBinding(n0, "foo", _ctx.onFoo)`)
+    expect(code).toContain(`_setListener(n0, "on:MyEvent", _ctx.fn)`)
+    expect(code).toContain(`_setListener(n0, "onFoo", _ctx.onFoo)`)
     // vdom's patchProp ignores v-model listeners on elements
     expect(code).not.toContain('modelValue')
     // not listeners in vdom either
     expect(code).toContain(`_setDOMProp(n2, "onClick", _ctx.fn1)`)
     expect(code).toContain(`_setAttr(n3, "onClick", _ctx.fn2)`)
-    // vdom's parseEventName turns this into a "-click" listener too
-    expect(code).toContain(`_onBinding(n4, "-click", _ctx.fn3)`)
+    // the runtime's parseEventName turns this into a "-click" listener like vdom
+    expect(code).toContain(`_setListener(n4, "on-click", _ctx.fn3)`)
     // with a spread the listener stays in the props merge
     expect(code).toContain(
       `_setDynamicProps(n5, [_ctx.obj, { onClick: _ctx.fn4 }], k0)`,
