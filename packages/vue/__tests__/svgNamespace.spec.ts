@@ -6,7 +6,14 @@
 // - compiler-core/src/transforms/transformElement.ts
 
 import { vtcKey } from '../../runtime-dom/src/components/Transition'
-import { h, nextTick, ref, render } from '../src'
+import {
+  Suspense,
+  defineAsyncComponent,
+  h,
+  nextTick,
+  ref,
+  render,
+} from '../src'
 
 describe('SVG support', () => {
   afterEach(() => {
@@ -68,5 +75,87 @@ describe('SVG support', () => {
     await nextTick()
     expect(f1.getAttribute('class')).toBe('bar')
     expect(f2.className).toBe('bar baz')
+  })
+
+  // #15639
+  describe('async components resolved by <Suspense>', () => {
+    // a fresh wrapper per mount: defineAsyncComponent caches its resolved
+    // component, and an already-resolved wrapper would not defer to Suspense
+    const asyncPath = () =>
+      defineAsyncComponent(() =>
+        Promise.resolve({ render: () => h('path', { id: 'p' }) }),
+      )
+
+    const settle = async () => {
+      for (let i = 0; i < 3; i++) {
+        await Promise.resolve()
+        await nextTick()
+      }
+    }
+
+    const ns = (id: string) => document.getElementById(id)!.namespaceURI
+
+    test('uses the namespace at the mount position, not the boundary', async () => {
+      const root = document.createElement('div')
+      document.body.appendChild(root)
+      const Async = asyncPath()
+      render(
+        h('div', null, [
+          h(Suspense, null, {
+            default: () => h('svg', null, [h(Async, { id: 'p' })]),
+          }),
+        ]),
+        root,
+      )
+      await settle()
+      expect(ns('p')).toMatch('svg')
+    })
+
+    test('template usage', async () => {
+      const root = document.createElement('div')
+      document.body.appendChild(root)
+      const Async = asyncPath()
+      const App = {
+        components: { Async },
+        template: `<Suspense><svg><Async id="p" /></svg></Suspense>`,
+      }
+      render(h(App), root)
+      await settle()
+      expect(ns('p')).toMatch('svg')
+    })
+
+    test('a boundary inside <foreignObject> switches back to the html namespace', async () => {
+      const root = document.createElement('div')
+      document.body.appendChild(root)
+      const Async = asyncPath()
+      render(
+        h('svg', null, [
+          h('foreignObject', null, [
+            h(Suspense, null, {
+              default: () => h('div', null, [h(Async, { id: 'p' })]),
+            }),
+          ]),
+        ]),
+        root,
+      )
+      await settle()
+      expect(ns('p')).toMatch('html')
+    })
+
+    test('a boundary inside <svg> still resolves to the svg namespace', async () => {
+      const root = document.createElement('div')
+      document.body.appendChild(root)
+      const Async = asyncPath()
+      render(
+        h('svg', null, [
+          h(Suspense, null, {
+            default: () => h('g', null, [h(Async, { id: 'p' })]),
+          }),
+        ]),
+        root,
+      )
+      await settle()
+      expect(ns('p')).toMatch('svg')
+    })
   })
 })
