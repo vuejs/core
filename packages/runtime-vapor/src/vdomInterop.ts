@@ -1144,6 +1144,7 @@ function mountDynamicVNode(
   parentComponent: VaporComponentInstance | null,
   isSingleRoot?: boolean,
   rawProps?: RawProps | null,
+  once?: boolean,
 ): VaporFragment {
   if (parentComponent && isKeepAlive(parentComponent)) {
     const cached = (
@@ -1171,6 +1172,7 @@ function mountDynamicVNode(
     vnode,
     parentComponent,
     rawProps ? new Proxy(rawProps, rawPropsProxyHandlers) : undefined,
+    once,
   )
   if (isHydrating) {
     locateHydrationNode(
@@ -1204,6 +1206,7 @@ function mountVNode(
   vnode: VNode,
   parentComponent: VaporComponentInstance | null,
   extraProps?: Record<string, any>,
+  once?: boolean,
 ): VaporFragment {
   let suspense =
     currentRenderContext.suspense ||
@@ -1213,9 +1216,14 @@ function mountVNode(
   // `mergeProps`), so mount and patch apply them natively instead of writing
   // the DOM behind the renderer's back.
   let baseVNode = vnode
-  if (extraProps) {
-    vnode = cloneVNode(baseVNode, extraProps, true)
+  const withExtraProps = (base: VNode): VNode => {
+    const cloned = cloneVNode(base, extraProps, true)
+    // the dynamic component's key decided the branch and the KeepAlive
+    // lookup; a spread `key` must not re-key the vnode behind them
+    cloned.key = base.key
+    return cloned
   }
+  if (extraProps) vnode = withExtraProps(baseVNode)
   const { frag, syncNodes } = createVNodeFragment(vnode)
 
   let isMounted = false
@@ -1360,9 +1368,7 @@ function mountVNode(
 
   const update = () => {
     // merging the extra props reads them, which the effect below tracks
-    const next = extraProps
-      ? cloneVNode(baseVNode, extraProps, true)
-      : baseVNode
+    const next = extraProps ? withExtraProps(baseVNode) : baseVNode
     if (!mountedParentNode) return
     const previous = vnode
     // Like a vdom parent re-rendering it, the fresh vnode gets what vapor set
@@ -1409,7 +1415,7 @@ function mountVNode(
     }
   }
 
-  if (extraProps) {
+  if (extraProps && !once) {
     // Re-clone and let VDOM patch the change through, mirroring how a VDOM
     // parent re-renders with fresh props and fallthrough attrs. The first run
     // happens before the mount and only establishes the dependency.

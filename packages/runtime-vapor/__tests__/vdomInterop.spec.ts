@@ -11231,6 +11231,7 @@ describe('vdomInterop', () => {
         onClick: () => log.push('click'),
         cls: 'c1',
         fixedKey: 'fixed',
+        bindings: { key: 'a' },
       })
       const makePage = (name: string): any =>
         vdomPages
@@ -11767,6 +11768,38 @@ describe('vdomInterop', () => {
         expect(steps[7]).toBe(
           `<button class="c3" data-x="1">A:c3:${keepAlive ? 1 : 0}</button>`,
         )
+      },
+    )
+
+    test.each([false, true])(
+      'a key in spread props does not override `:key` (vdom pages: %s)',
+      async vdomPages => {
+        const inner = `<component :is="Component" v-bind="data.bindings" :key="data.fixedKey" />`
+        const steps = await compare(vdomPages, inner, async r => {
+          r.click()
+          r.data.value.bindings = { key: 'b' }
+          await nextTick()
+          r.snap()
+          r.unmount()
+          return r.steps
+        })
+        expect(steps[0]).toBe('A:1:1 [mA]')
+      },
+    )
+
+    test.each([false, true])(
+      'v-once freezes the props on the component (vdom pages: %s)',
+      async vdomPages => {
+        const inner = `<component :is="Component" v-once :id="data.cls" />`
+        const steps = await compare(vdomPages, inner, async r => {
+          r.click()
+          r.data.value.cls = 'c2'
+          await nextTick()
+          r.snap()
+          r.unmount()
+          return r.steps
+        })
+        expect(steps[0]).toBe('A:c1:1 [mA]')
       },
     )
   })

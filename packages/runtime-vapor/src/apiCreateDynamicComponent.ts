@@ -82,6 +82,7 @@ export function createDynamicComponent(
         currentInstance,
         isSingleRoot,
         rawProps,
+        once,
       )
       patchVNode = vnodeFrag.patchVNode
       return vnodeFrag
