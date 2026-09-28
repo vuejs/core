@@ -23,6 +23,9 @@ import {
 } from './renderContext'
 
 export function hmrRerender(instance: VaporComponentInstance): void {
+  // an ancestor recreated for an earlier instance of the same HMR record
+  // already replaced this one
+  if (instance.isUnmounted) return
   // A component without a separate render function (built-ins like
   // KeepAlive, reached via reload delegation) cannot re-run its template
   // alone - degrade to reload semantics through the nearest vapor ancestor,

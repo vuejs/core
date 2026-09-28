@@ -11159,6 +11159,7 @@ describe('vdomInterop', () => {
       // pages log their hooks and keep a click count, which tells a patch
       // from a remount
       const setupPage = (name: string) => {
+        if (data.value.logUpdates) log.push(`s${name}`)
         onMounted(() => log.push(`m${name}`))
         onActivated(() => log.push(`a${name}`))
         onDeactivated(() => log.push(`d${name}`))
@@ -11398,10 +11399,36 @@ describe('vdomInterop', () => {
         // deactivates the page before unmounting it, as under a vapor parent;
         // vdom re-renders the KeepAlive: [uA,mA2,aA2]
         expect(r.steps).toEqual([
-          'A2:1:0 [mA,aA,dA,uA,mA2,aA2]',
+          'A2:1:0 [mA,aA,sA2,dA,uA,mA2,aA2]',
           'A2:2:0 [buA2,upA2]',
           ' [dA2,uA2]',
         ])
+      },
+    )
+
+    test.each([false, true])(
+      'HMR reload under two KeepAlives recreates their vapor ancestor once (vdom pages: %s)',
+      async vdomPages => {
+        const page = `<KeepAlive><component :is="route.page" :id="route.id" /></KeepAlive>`
+        const r = mountRouterView(true, vdomPages, page + page)
+        r.data.value.logUpdates = true
+        await r.reload('A2')
+        await r.go(r.PageA, 2)
+        r.unmount()
+        r.snap()
+        expect(r.steps).toEqual(
+          vdomPages
+            ? [
+                'A2:1:0A2:1:0 [mA,aA,mA,aA,sA2,sA2,dA,dA,uA,uA,mA2,aA2,mA2,aA2]',
+                'A2:2:0A2:2:0 [buA2,buA2,upA2,upA2]',
+                ' [dA2,dA2,uA2,uA2]',
+              ]
+            : [
+                'A2:1:0A2:1:0 [mA,aA,mA,aA,sA2,sA2,dA,uA,dA,uA,mA2,aA2,mA2,aA2]',
+                'A2:2:0A2:2:0 [buA2,buA2,upA2,upA2]',
+                ' [dA2,uA2,dA2,uA2]',
+              ],
+        )
       },
     )
 
