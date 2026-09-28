@@ -1419,4 +1419,275 @@ describe('directive: v-model', () => {
       expect(vapor).toEqual(vdom)
     })
   })
+
+  describe('select re-syncs when its options change', () => {
+    // selection state and serialized model after `act`, checked for parity
+    async function selectionAfter(
+      srcs: Record<string, string>,
+      initial: () => any,
+      act: (data: any, root: HTMLElement) => void | Promise<void>,
+    ) {
+      const seen = {} as Record<'vdom' | 'vapor', [number | boolean[], string]>
+      await renderParity(
+        srcs,
+        () => ref(initial()),
+        async (data, root, mode) => {
+          await act(data.value, root)
+          await nextTick()
+          const select = root.querySelector('select')!
+          seen[mode] = [
+            select.multiple
+              ? Array.from(select.options, o => o.selected)
+              : select.selectedIndex,
+            JSON.stringify(data.value.v),
+          ]
+        },
+      )
+      expect(seen.vapor).toEqual(seen.vdom)
+      return seen.vdom
+    }
+
+    test('options rendered after the model is set', async () => {
+      expect(
+        await selectionAfter(
+          {
+            App: `<template><select v-model="data.v"><option v-for="o in data.opts" :value="o">{{ o }}</option></select></template>`,
+          },
+          () => ({ v: 'b', opts: [] }),
+          data => {
+            data.opts = ['a', 'b', 'c']
+          },
+        ),
+      ).toEqual([1, '"b"'])
+    })
+
+    test('option added by v-if', async () => {
+      expect(
+        await selectionAfter(
+          {
+            App: `<template><select v-model="data.v"><option value="a">a</option><option v-if="data.show" value="b">b</option></select></template>`,
+          },
+          () => ({ v: 'b', show: false }),
+          data => {
+            data.show = true
+          },
+        ),
+      ).toEqual([1, '"b"'])
+    })
+
+    test('option value changed to match the model', async () => {
+      expect(
+        await selectionAfter(
+          {
+            App: `<template><select v-model="data.v"><option :value="data.a">a</option><option :value="{ id: 9 }">z</option></select></template>`,
+          },
+          () => ({ v: { id: 1 }, a: { id: 0 } }),
+          data => {
+            data.a = { id: 1 }
+          },
+        ),
+      ).toEqual([0, '{"id":1}'])
+    })
+
+    test('optgroups rendered inside v-if', async () => {
+      expect(
+        await selectionAfter(
+          {
+            App: `<template><select v-model="data.v"><option value="">-</option><template v-if="data.groups.length"><optgroup v-for="g in data.groups" :label="g.label"><option v-for="o in g.opts" :value="o">{{ o }}</option></optgroup></template></select></template>`,
+          },
+          () => ({ v: 'y', groups: [] }),
+          data => {
+            data.groups = [
+              { label: 'A', opts: ['w', 'x'] },
+              { label: 'B', opts: ['y', 'z'] },
+            ]
+          },
+        ),
+      ).toEqual([3, '"y"'])
+    })
+
+    test('options passed through a slot', async () => {
+      expect(
+        await selectionAfter(
+          {
+            Child: `<template><select v-model="data.v"><slot /></select></template>`,
+            App: `<template><components.Child><option v-for="o in data.opts" :value="o">{{ o }}</option></components.Child></template>`,
+          },
+          () => ({ v: 'b', opts: [] }),
+          data => {
+            data.opts = ['a', 'b', 'c']
+          },
+        ),
+      ).toEqual([1, '"b"'])
+    })
+
+    test('multiple select keeps an object value when options load later', async () => {
+      expect(
+        await selectionAfter(
+          {
+            App: `<template><select multiple v-model="data.v"><option v-for="o in data.opts" :key="o.id" :value="o">{{ o.id }}</option></select></template>`,
+          },
+          () => ({ v: [{ id: 2 }], opts: [] }),
+          async (data, root) => {
+            data.opts = [{ id: 1 }, { id: 2 }, { id: 3 }]
+            await nextTick()
+            const select = root.querySelector('select')!
+            select.options[0].selected = true
+            triggerEvent('change', select)
+          },
+        ),
+      ).toEqual([[true, true, false], '[{"id":1},{"id":2}]'])
+    })
+
+    test('multiple select with a Set model', async () => {
+      expect(
+        await selectionAfter(
+          {
+            App: `<template><select multiple v-model="data.v"><option v-for="o in data.opts" :value="o">{{ o }}</option></select></template>`,
+          },
+          () => ({ v: new Set(['b', 'c']), opts: [] }),
+          data => {
+            data.opts = ['a', 'b', 'c']
+          },
+        ),
+      ).toEqual([[false, true, true], '{}'])
+    })
+
+    test('unrelated owner update keeps the picked option', async () => {
+      expect(
+        await selectionAfter(
+          {
+            App: `<template><p>{{ data.n }}</p><select v-model="data.v"><option value="a">a</option><option value="b">b</option></select></template>`,
+          },
+          () => ({ v: 'a', n: 0 }),
+          async (data, root) => {
+            const select = root.querySelector('select')!
+            select.selectedIndex = 1
+            triggerEvent('change', select)
+            await nextTick()
+            data.n++
+          },
+        ),
+      ).toEqual([1, '"b"'])
+    })
+
+    test('v-once select is not re-synced by owner updates', async () => {
+      expect(
+        await selectionAfter(
+          {
+            App: `<template><p>{{ data.n }}</p><div v-once><select v-model="data.v"><option value="a">a</option><option value="b">b</option></select></div></template>`,
+          },
+          () => ({ v: 'a', n: 0 }),
+          data => {
+            data.v = 'b'
+            data.n++
+          },
+        ),
+      ).toEqual([0, '"b"'])
+    })
+
+    test('removed selects stop re-syncing', async () => {
+      const reads = {} as Record<'vdom' | 'vapor', number[]>
+      let count = 0
+      await renderParity(
+        {
+          App: `<template><p>{{ data.n }}</p><select v-if="data.show" v-model="data.v"><option value="a">a</option></select><div v-for="r in data.rows" :key="r"><select v-model="data.v"><option value="a">a</option></select></div></template>`,
+        },
+        () =>
+          ref({
+            get v() {
+              count++
+              return 'a'
+            },
+            set v(_: string) {},
+            n: 0,
+            show: true,
+            rows: [1, 2, 3],
+          }),
+        async (data, _root, mode) => {
+          const readsPerUpdate = async () => {
+            count = 0
+            data.value.n++
+            await nextTick()
+            return count
+          }
+          const initial = await readsPerUpdate()
+          data.value.show = false
+          data.value.rows = [4]
+          await nextTick()
+          const afterRemoval = await readsPerUpdate()
+          data.value.show = true
+          await nextTick()
+          reads[mode] = [initial, afterRemoval, await readsPerUpdate()]
+        },
+      )
+      // one model read per mounted select
+      expect(reads.vdom).toEqual([4, 1, 2])
+      expect(reads.vapor).toEqual(reads.vdom)
+    })
+
+    test('re-syncs before the owner updated hooks run', async () => {
+      const seen = {} as Record<'vdom' | 'vapor', number[]>
+      let log: number[]
+      await renderParity(
+        {
+          App: `<script setup>
+            import { onUpdated, useTemplateRef } from 'vue'
+            const data = _data
+            const components = _components
+            const select = useTemplateRef('select')
+            onUpdated(() => components.log(select.value.selectedIndex))
+          </script>
+          <template><select ref="select" v-model="data.v"><option v-for="o in data.opts" :value="o">{{ o }}</option></select></template>`,
+        },
+        () => ref({ v: 'b', opts: [] }),
+        async (data, _root, mode) => {
+          log = seen[mode] = []
+          data.value.opts = ['a', 'b']
+          await nextTick()
+        },
+        { log: (i: number) => log.push(i) },
+      )
+      expect(seen.vdom).toEqual([1])
+      expect(seen.vapor).toEqual(seen.vdom)
+    })
+
+    // coverage guard: the re-sync must not undo the #10014 skip after a
+    // change event, which already left the dom in the model's state
+    test('a user change is not re-applied to a multiple select', async () => {
+      const writes = {} as Record<'vdom' | 'vapor', number>
+      await renderParity(
+        {
+          App: `<template><select multiple v-model="data.v"><option v-for="o in data.opts" :value="o">{{ o }}</option></select></template>`,
+        },
+        () => ref({ v: ['b'], opts: ['a', 'b', 'c', 'd'] }),
+        async (data, root, mode) => {
+          const select = root.querySelector('select')!
+          const selected = Object.getOwnPropertyDescriptor(
+            HTMLOptionElement.prototype,
+            'selected',
+          )!
+          let count = 0
+          for (const option of select.options) {
+            Object.defineProperty(option, 'selected', {
+              configurable: true,
+              get: selected.get,
+              set(value) {
+                count++
+                selected.set!.call(this, value)
+              },
+            })
+          }
+          select.options[0].selected = true
+          triggerEvent('change', select)
+          await nextTick()
+          expect(data.value.v).toEqual(['a', 'b'])
+          writes[mode] = count
+        },
+      )
+      // only the write made above: the model already matches the dom
+      expect(writes.vdom).toBe(1)
+      expect(writes.vapor).toBe(writes.vdom)
+    })
+  })
 })
