@@ -39,7 +39,6 @@ import {
   computed,
   getCurrentScope,
   onScopeDispose,
-  shallowReactive,
   shallowRef,
 } from '@vue/reactivity'
 import { normalizeEmitsOptions } from './componentEmits'
@@ -54,138 +53,6 @@ export type RawProps = Record<string, unknown> & {
 export type DynamicPropsSource =
   | (() => Record<string, unknown>)
   | Record<string, unknown>
-
-export function isolatePropSources(rawProps: RawProps): RawProps {
-  // Static values cannot change while cached and need no commit boundary.
-  let hasFunctionSource = false
-  for (const key in rawProps) {
-    if (key !== '$' && isFunction(rawProps[key])) hasFunctionSource = true
-  }
-  const dynamicSources = rawProps.$
-  if (dynamicSources && !hasFunctionSource) {
-    for (let i = 0; i < dynamicSources.length; i++) {
-      const source = dynamicSources[i]
-      if (isFunction(source)) {
-        hasFunctionSource = true
-        break
-      } else {
-        for (const key in source) {
-          if (isFunction(source[key])) {
-            hasFunctionSource = true
-            break
-          }
-        }
-        if (hasFunctionSource) break
-      }
-    }
-  }
-  if (!hasFunctionSource) return rawProps
-
-  const isolated: RawProps = Object.create(null)
-  let committed: Record<string, unknown> | undefined
-  for (const key in rawProps) {
-    if (key === '$') continue
-    const source = rawProps[key]
-    if (isFunction(source)) {
-      const target =
-        committed || (committed = shallowReactive<Record<string, unknown>>({}))
-      isolated[key] = () => target[key]
-    } else {
-      isolated[key] = source
-    }
-  }
-
-  let committedDynamicSources:
-    | (Record<string, unknown> | undefined)[]
-    | undefined
-  let previousDynamicSources: Record<string, unknown>[] | undefined
-  if (dynamicSources) {
-    const isolatedDynamicSources: DynamicPropsSource[] & {
-      [interopKey]?: boolean
-    } = []
-    committedDynamicSources = []
-    previousDynamicSources = []
-    for (let i = 0; i < dynamicSources.length; i++) {
-      const source = dynamicSources[i]
-      if (isFunction(source)) {
-        const target = (committedDynamicSources[i] = shallowReactive<
-          Record<string, unknown>
-        >({}))
-        previousDynamicSources[i] = {}
-        isolatedDynamicSources[i] = () => target
-      } else {
-        const isolatedSource: Record<string, unknown> = Object.create(null)
-        let target: Record<string, unknown> | undefined
-        for (const key in source) {
-          const value = source[key]
-          if (isFunction(value)) {
-            if (!target) {
-              target = committedDynamicSources[i] = shallowReactive<
-                Record<string, unknown>
-              >({})
-            }
-            const committedSource = target
-            isolatedSource[key] = () => committedSource[key]
-          } else {
-            isolatedSource[key] = value
-          }
-        }
-        isolatedDynamicSources[i] = target ? isolatedSource : source
-      }
-    }
-    const symbols = Object.getOwnPropertySymbols(dynamicSources)
-    for (let i = 0; i < symbols.length; i++) {
-      ;(isolatedDynamicSources as any)[symbols[i]] = (dynamicSources as any)[
-        symbols[i]
-      ]
-    }
-    isolated.$ = isolatedDynamicSources
-  }
-
-  // Each source keeps its original position and key spelling so prop/attr
-  // precedence is unchanged. The writer belongs to the cached component's
-  // KeepAlive input scope, so deactivation pauses parent updates without
-  // pausing the component.
-  // Source invalidations while this effect is paused still leave it dirty.
-  // Resuming the input scope therefore schedules one commit with the
-  // latest raw props, while an unchanged cache entry needs no work on activation.
-  renderEffect(() => {
-    if (committed) {
-      for (const key in rawProps) {
-        if (key !== '$' && isFunction(rawProps[key])) {
-          committed[key] = resolveSource(rawProps[key])
-        }
-      }
-    }
-    if (dynamicSources) {
-      for (let i = 0; i < dynamicSources.length; i++) {
-        const source = dynamicSources[i]
-        const target = committedDynamicSources![i]
-        if (!target) continue
-        if (isFunction(source)) {
-          const next = resolveFunctionSource(source) || EMPTY_OBJ
-          const previous = previousDynamicSources![i]
-          for (const key in previous) {
-            if (!hasOwn(next, key)) {
-              delete target[key]
-              delete previous[key]
-            }
-          }
-          for (const key in next) {
-            target[key] = previous[key] = next[key]
-          }
-        } else {
-          for (const key in source) {
-            if (isFunction(source[key])) {
-              target[key] = resolveSource(source[key])
-            }
-          }
-        }
-      }
-    }
-  }, true)
-  return isolated
-}
 
 export function resolveSource<T>(source: T | (() => T)): T {
   return isFunction(source) ? resolveFunctionSource(source as () => T) : source
@@ -237,12 +104,13 @@ export function resolveFunctionSource<T>(source: FunctionSource<T>): T {
 }
 
 /**
- * A prop getter is the parent's expression, and a `flush: 'sync'` consumer in
- * the child would evaluate it inline, ahead of the parent's queued structural
- * update whose guard may just have turned false (#15673). Once the component
- * has a sync watcher, publish its dynamic prop sources through effects instead:
- * they run as jobs after the parent's own effects, and `scope` (the
- * consumer's) stops them when the branch goes.
+ * A prop getter is the parent's expression. Reading it outside the parent's
+ * update order observes values the parent never committed: a `flush: 'sync'`
+ * consumer runs inline, ahead of the queued structural update whose guard may
+ * just have turned false (#15673), and a kept-alive component stays live while
+ * its branch is deactivated (#15228). Publish the dynamic prop sources through
+ * effects instead: they run as jobs after the parent's own effects, and
+ * `scope` pauses or stops them.
  */
 export function commitPropSources(
   rawProps: RawProps,
@@ -279,6 +147,8 @@ function commitSource(
   // rather than on the container (nested values keep their identity)
   isContainer = false,
 ): void {
+  // one committing owner per function identity: owners that overlap and pause
+  // independently must clone the source first (see isolatePropSources)
   if (!isFunction(source) || (source as FunctionSource<unknown>)._committed) {
     return
   }
@@ -309,6 +179,42 @@ function commitSource(
   // so a dirty check no longer descends into those
   const cache = fn._cache
   if (cache) (cache as unknown as ComputedRefImpl<unknown>).update()
+}
+
+/**
+ * KeepAlive: cached siblings created from one `<component :is>` (or an async
+ * wrapper's states) share the raw props object, but each needs its own commit
+ * for its input scope to pause, so commit clones of the function sources.
+ * Runs inside the input scope with the parent as the current instance.
+ */
+export function isolatePropSources(rawProps: RawProps): RawProps {
+  let cloned = false
+  const clone = (source: unknown): unknown => {
+    if (!isFunction(source)) return source
+    cloned = true
+    return () => source()
+  }
+  const isolated: RawProps = {}
+  for (const key in rawProps) {
+    if (key !== '$') isolated[key] = clone(rawProps[key])
+  }
+  const dynamicSources = rawProps.$
+  if (dynamicSources) {
+    const clones: DynamicPropsSource[] = (isolated.$ = [])
+    for (let i = 0; i < dynamicSources.length; i++) {
+      const source = dynamicSources[i]
+      if (isFunction(source)) {
+        clones[i] = clone(source) as () => Record<string, unknown>
+      } else {
+        const copy: Record<string, unknown> = {}
+        for (const key in source) copy[key] = clone(source[key])
+        clones[i] = copy
+      }
+    }
+  }
+  if (!cloned) return rawProps
+  commitPropSources(isolated, currentInstance!, getCurrentScope()!)
+  return isolated
 }
 
 export function snapshotRawProps(rawProps: RawProps): RawProps {

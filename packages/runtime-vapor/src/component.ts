@@ -460,9 +460,12 @@ export function createComponent(
     }
 
     let inputScope: EffectScope | undefined
+    // a managed caller (vdom interop, custom element) owns and commits its
+    // inputs itself
     if (
       keepAliveCtx &&
       !once &&
+      !managedMount &&
       (rawProps || (rawSlots && (rawSlots as RawSlots).$))
     ) {
       // The cached component keeps its detached scope active, so commit only
@@ -1142,10 +1145,7 @@ export class VaporComponentInstance<
   }
 
   ensureCommittedProps(): void {
-    // kept-alive inputs are isolated, which already commits them
-    if (this.parent && !this.inputScope) {
-      commitPropSources(this.rawProps, this.parent, this.scope)
-    }
+    if (this.parent) commitPropSources(this.rawProps, this.parent, this.scope)
   }
 
   /**
