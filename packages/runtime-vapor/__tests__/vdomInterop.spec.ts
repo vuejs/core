@@ -11802,5 +11802,47 @@ describe('vdomInterop', () => {
         expect(steps[0]).toBe('A:c1:1 [mA]')
       },
     )
+
+    test.each([false, true])(
+      'a key in spread props does not re-key an async page (vdom pages: %s)',
+      async vdomPages => {
+        const inner = `<component :is="Component" v-bind="data.bindings" :key="data.fixedKey" />`
+        const steps = await compare(vdomPages, inner, async r => {
+          await r.go(
+            defineAsyncComponent(() => Promise.resolve(r.PageA)),
+            2,
+          )
+          await new Promise(r => setTimeout(r))
+          r.click()
+          r.data.value.bindings = { key: 'b' }
+          await nextTick()
+          r.snap()
+          r.unmount()
+          return r.steps
+        })
+        expect(steps[1]).toBe('A:2:1 [mA]')
+      },
+    )
+
+    test.each([false, true])(
+      'v-once on a root component keeps its fallthrough attrs live (vdom pages: %s)',
+      async vdomPages => {
+        const inner = `<Wrap :comp="Component" :class="data.cls" />`
+        const wrap = `<component :is="comp" v-once id="fixed" />`
+        const steps = await compare(
+          vdomPages,
+          inner,
+          async r => {
+            r.data.value.cls = 'c2'
+            await nextTick()
+            r.steps.push(r.root.innerHTML.replace(/<!--[^>]*-->/g, ''))
+            r.unmount()
+            return r.steps
+          },
+          wrap,
+        )
+        expect(steps[0]).toBe('<button class="c2">A:fixed:0</button>')
+      },
+    )
   })
 })

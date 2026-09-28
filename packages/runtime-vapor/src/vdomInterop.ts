@@ -124,6 +124,7 @@ import {
   type RawProps,
   rawPropsProxyHandlers,
   setupPropsValidation,
+  snapshotRawProps,
 } from './componentProps'
 import type { RawSlots, VaporSlot } from './componentSlots'
 import { dynamicSlotsProxyHandlers, getSlot } from './componentSlots'
@@ -1159,6 +1160,8 @@ function mountDynamicVNode(
   // `createVNode(vnode, props)`; a vnode standing in as the parent's effective
   // root also inherits fallthrough attrs, as an extra source (see
   // createComponent).
+  // v-once freezes the component's own props; inherited attrs stay live
+  if (once && rawProps) rawProps = snapshotRawProps(rawProps)
   const owner = resolveFallthroughOwner(isSingleRoot)
   if (owner) {
     const source = () => resolveFallthroughAttrs(owner)
@@ -1172,7 +1175,7 @@ function mountDynamicVNode(
     vnode,
     parentComponent,
     rawProps ? new Proxy(rawProps, rawPropsProxyHandlers) : undefined,
-    once,
+    once && !owner,
   )
   if (isHydrating) {
     locateHydrationNode(
@@ -1206,7 +1209,7 @@ function mountVNode(
   vnode: VNode,
   parentComponent: VaporComponentInstance | null,
   extraProps?: Record<string, any>,
-  once?: boolean,
+  staticExtraProps?: boolean,
 ): VaporFragment {
   let suspense =
     currentRenderContext.suspense ||
@@ -1220,7 +1223,10 @@ function mountVNode(
     const cloned = cloneVNode(base, extraProps, true)
     // the dynamic component's key decided the branch and the KeepAlive
     // lookup; a spread `key` must not re-key the vnode behind them
-    cloned.key = base.key
+    if (cloned.key !== base.key) {
+      cloned.key = base.key
+      cloned.props!.key = base.key ?? undefined
+    }
     return cloned
   }
   if (extraProps) vnode = withExtraProps(baseVNode)
@@ -1415,7 +1421,7 @@ function mountVNode(
     }
   }
 
-  if (extraProps && !once) {
+  if (extraProps && !staticExtraProps) {
     // Re-clone and let VDOM patch the change through, mirroring how a VDOM
     // parent re-renders with fresh props and fallthrough attrs. The first run
     // happens before the mount and only establishes the dependency.
