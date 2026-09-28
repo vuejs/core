@@ -28,6 +28,8 @@ import {
   canSetValueDirectly,
   capitalize,
   extend,
+  hyphenate,
+  isOn,
   isSVGTag,
   normalizeClass,
   shouldSetAsAttr,
@@ -72,6 +74,9 @@ export function genSetProp(
     prop: { key, values, modifier },
     tag,
   } = oper
+  if (!modifier && isOn(key.content)) {
+    return genSetListener(oper, context)
+  }
   const resolvedHelper = getRuntimeHelper(tag, key.content, modifier)
   if (
     key.content === 'class' &&
@@ -90,6 +95,43 @@ export function genSetProp(
       resolvedHelper.needKey ? genExpression(key, context) : false,
       propValue,
       resolvedHelper.isSVG && 'true',
+    ),
+  ]
+}
+
+const optionsModifierRE = /(Once|Passive|Capture)$/
+const optionsModifierEventRE = /^on:?(?:Once|Passive|Capture)$/
+
+// `:onXxx` binds a listener whose handler is the bound value (a function, an
+// array of functions or nullish), like vdom's patchProp. The event name is
+// derived like the runtime's parseEventName.
+function genSetListener(
+  oper: SetPropIRNode,
+  context: CodegenContext,
+): CodeFragment[] {
+  const { helper } = context
+  const { element, effect } = oper
+  let name = oper.prop.key.content
+  const options: CodeFragment[][] = []
+  let m
+  while (
+    (m = name.match(optionsModifierRE)) &&
+    !optionsModifierEventRE.test(name)
+  ) {
+    name = name.slice(0, name.length - m[1].length)
+    options.push([`${m[1].toLowerCase()}: true`])
+  }
+  const event = name[2] === ':' ? name.slice(3) : hyphenate(name.slice(2))
+  return [
+    NEWLINE,
+    ...genCall(
+      // a constant handler is attached once, a dynamic one is re-bound by
+      // the effect
+      helper(effect ? 'onBinding' : 'on'),
+      `n${element}`,
+      JSON.stringify(event),
+      genPropValue(oper.prop.values, context),
+      options.length ? genMulti(DELIMITERS_OBJECT, ...options) : undefined,
     ),
   ]
 }

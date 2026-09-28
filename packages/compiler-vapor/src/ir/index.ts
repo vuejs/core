@@ -148,6 +148,8 @@ export interface SetPropIRNode extends BaseIRNode {
   element: number
   prop: IRProp
   tag: string
+  /** Whether it's in effect; only a listener key (`onXxx`) needs to know */
+  effect?: boolean
 }
 
 export interface SetDynamicPropsIRNode extends BaseIRNode {
