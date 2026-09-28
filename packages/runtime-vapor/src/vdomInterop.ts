@@ -122,6 +122,7 @@ import {
 } from '@vue/shared'
 import {
   type RawProps,
+  commitPropSources,
   rawPropsProxyHandlers,
   setupPropsValidation,
   snapshotRawProps,
@@ -1530,6 +1531,12 @@ function createVDOMComponent(
         }
       },
     })
+
+    // its props read the wrapper's raw sources like a vapor child would
+    if (parentComponent) {
+      instance.ensureCommittedProps = () =>
+        commitPropSources(wrapper.rawProps, parentComponent, instance.scope)
+    }
 
     // Match VDOM's optional props behavior for functional components.
     instance.props =

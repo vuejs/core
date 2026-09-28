@@ -240,6 +240,10 @@ function doWatch(
   }
 
   const instance = currentInstance
+  // a sync consumer must not read a vapor prop getter ahead of its parent
+  if (flush === 'sync' && instance && instance.ensureCommittedProps) {
+    instance.ensureCommittedProps()
+  }
   baseWatchOptions.call = (fn, type, args) =>
     callWithAsyncErrorHandling(fn, instance, type, args)
 

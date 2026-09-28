@@ -375,6 +375,12 @@ export type InternalRenderFunction = {
  */
 export interface GenericComponentInstance {
   vapor?: boolean
+  /**
+   * Vapor instances and vdom instances mounted by a vapor parent: switch the
+   * dynamic prop sources to commit-time delivery for a `flush: 'sync'` watcher.
+   * @internal
+   */
+  ensureCommittedProps?(): void
   uid: number
   type: GenericComponent
   root: GenericComponentInstance | null

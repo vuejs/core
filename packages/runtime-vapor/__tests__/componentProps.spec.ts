@@ -2,6 +2,7 @@
 
 import {
   // currentInstance,
+  createApp,
   inject,
   isShallow,
   nextTick,
@@ -12,9 +13,11 @@ import {
 } from '@vue/runtime-dom'
 import {
   createComponent,
+  createVaporApp,
   defineVaporComponent,
   renderEffect,
   template,
+  vaporInteropPlugin,
 } from '../src'
 import { resolveDynamicProps } from '../src/componentProps'
 import { compile, makeRender, renderParity } from './_utils'
@@ -1346,5 +1349,391 @@ describe('component: props', () => {
         expect(root.textContent).toBe('a c|{"color":"red","padding":"2px"}')
       },
     )
+  })
+
+  // #15673: a compiled prop getter belongs to the parent's template, so once
+  // the guard around it turns false the branch is going away; an inline
+  // consumer of the child (a `flush: 'sync'` watcher) must not surface the
+  // read that the guard made unreachable.
+  describe('prop source re-read after its guard flipped', () => {
+    const Child = `<script setup>
+      import { watch } from 'vue'
+      const data = _data
+      const props = defineProps({ y: String })
+      watch(() => props.y, v => data.value.seen.push(v), { flush: 'sync' })
+    </script><template><p>child: {{ props.y }}</p></template>`
+
+    // `x` goes away while Child (or a component around it) shows its `y`:
+    // neither mode may see the watcher fire or the read throw
+    async function expectGuardedRead(srcs: Record<string, string>) {
+      const seen: Record<string, string[]> = {}
+      const { vdom, vapor } = await renderParity(
+        { Child, ...srcs },
+        () => ref<any>({ x: { y: 'a' }, seen: [] }),
+        (data, root, mode) => {
+          expect(root.textContent).toBe('child: a')
+          data.value.x = undefined
+          seen[mode] = data.value.seen
+        },
+      )
+      expect(seen.vdom).toEqual([])
+      expect(seen.vapor).toEqual(seen.vdom)
+      expect(vapor.text).toBe('x is gone')
+      expect(vdom.text).toBe(vapor.text)
+    }
+
+    test('v-if child with a sync watcher', () =>
+      expectGuardedRead({
+        App: `<template>
+          <components.Child v-if="data.x !== undefined" :y="data.x.y" />
+          <p v-else>x is gone</p>
+        </template>`,
+      }))
+
+    test('v-for row created after the branch rendered', async () => {
+      const seen: Record<string, string[]> = {}
+      const { vdom, vapor } = await renderParity(
+        {
+          Child,
+          App: `<template>
+            <div v-if="data.x !== undefined">
+              <components.Child v-for="i in data.list" :key="i" :y="data.x.y" />
+            </div>
+            <p v-else>x is gone</p>
+          </template>`,
+        },
+        () => ref<any>({ x: { y: 'a' }, list: [1], seen: [] }),
+        async (data, root, mode) => {
+          data.value.list.push(2)
+          await nextTick()
+          expect(root.textContent!.replace(/\s/g, '')).toBe('child:achild:a')
+          data.value.x = undefined
+          seen[mode] = data.value.seen
+        },
+      )
+      expect(seen.vdom).toEqual([])
+      expect(seen.vapor).toEqual(seen.vdom)
+      expect(vapor.text).toBe('x is gone')
+      expect(vdom.text).toBe(vapor.text)
+    })
+
+    test('grandchild watching a forwarded prop', () =>
+      expectGuardedRead({
+        Mid: `<script setup>
+          const components = _components
+          defineProps({ y: String })
+        </script><template><components.Child :y="y" /></template>`,
+        App: `<template>
+          <components.Mid v-if="data.x !== undefined" :y="data.x.y" />
+          <p v-else>x is gone</p>
+        </template>`,
+      }))
+
+    test('source fixed again within the same tick', async () => {
+      const seen: Record<string, string[]> = {}
+      const { vdom, vapor } = await renderParity(
+        {
+          Child,
+          App: `<template>
+            <components.Child v-if="data.x !== undefined" :y="data.x.y" />
+            <p v-else>x is gone</p>
+          </template>`,
+        },
+        () => ref<any>({ x: { y: 'a' }, seen: [] }),
+        async (data, root, mode) => {
+          data.value.x = undefined
+          data.value.x = { y: 'b' }
+          await nextTick()
+          seen[mode] = data.value.seen
+        },
+      )
+      expect(seen.vdom).toEqual(['b'])
+      expect(seen.vapor).toEqual(seen.vdom)
+      expect(vapor.text).toBe('child: b')
+      expect(vdom.text).toBe(vapor.text)
+    })
+
+    test('guard flips without the source throwing', async () => {
+      const seen: Record<string, string[]> = {}
+      const { vdom, vapor } = await renderParity(
+        {
+          Child,
+          App: `<template>
+            <components.Child v-if="data.x.ok" :y="data.x.y" />
+            <p v-else>x is gone</p>
+          </template>`,
+        },
+        () => ref<any>({ x: { ok: true, y: 'a' }, seen: [] }),
+        (data, root, mode) => {
+          expect(root.textContent).toBe('child: a')
+          data.value.x = { ok: false, y: 'other' }
+          seen[mode] = data.value.seen
+        },
+      )
+      expect(seen.vdom).toEqual([])
+      expect(seen.vapor).toEqual(seen.vdom)
+      expect(vapor.text).toBe('x is gone')
+      expect(vdom.text).toBe(vapor.text)
+    })
+
+    test('computed over the prop read before the sync watcher exists', async () => {
+      const seen: Record<string, string[]> = {}
+      const { vdom, vapor } = await renderParity(
+        {
+          Child: `<script setup>
+            import { computed, watch } from 'vue'
+            const data = _data
+            const props = defineProps({ y: String })
+            const y = computed(() => props.y)
+            // a composable reads it before anything watches it
+            data.value.first = y.value
+            watch(y, v => data.value.seen.push(v), { flush: 'sync' })
+          </script><template><p>child: {{ y }}</p></template>`,
+          App: `<template>
+            <components.Child v-if="data.x !== undefined" :y="data.x.y" />
+            <p v-else>x is gone</p>
+          </template>`,
+        },
+        () => ref<any>({ x: { y: 'a' }, seen: [] }),
+        (data, root, mode) => {
+          expect(data.value.first).toBe('a')
+          data.value.x = undefined
+          seen[mode] = data.value.seen
+        },
+      )
+      expect(seen.vdom).toEqual([])
+      expect(seen.vapor).toEqual(seen.vdom)
+      expect(vapor.text).toBe('x is gone')
+      expect(vdom.text).toBe(vapor.text)
+    })
+
+    // Only the prop reads move to the parent's commit; the watcher itself
+    // stays synchronous for everything else it depends on.
+    test('sync watcher over local state and a prop', async () => {
+      const seen: Record<string, string[]> = {}
+      await renderParity(
+        {
+          Child: `<script setup>
+            import { watch } from 'vue'
+            const data = _data
+            const props = defineProps({ y: String })
+            watch(
+              [() => data.value.local, () => props.y],
+              ([l, y]) => data.value.seen.push(l + ':' + y),
+              { flush: 'sync' },
+            )
+          </script><template><p>child: {{ props.y }}</p></template>`,
+          App: `<template>
+            <components.Child v-if="data.x !== undefined" :y="data.x.y" />
+          </template>`,
+        },
+        () => ref<any>({ x: { y: 'a' }, local: 0, seen: [] }),
+        async (data, root, mode) => {
+          data.value.local = 1
+          seen[`${mode}:local`] = [...data.value.seen]
+          data.value.x.y = 'b'
+          seen[`${mode}:prop`] = [...data.value.seen]
+          await nextTick()
+          seen[`${mode}:flushed`] = [...data.value.seen]
+        },
+      )
+      expect(seen['vdom:local']).toEqual(['1:a'])
+      expect(seen['vapor:local']).toEqual(seen['vdom:local'])
+      expect(seen['vdom:prop']).toEqual(['1:a'])
+      expect(seen['vapor:prop']).toEqual(seen['vdom:prop'])
+      expect(seen['vdom:flushed']).toEqual(['1:a', '1:b'])
+      expect(seen['vapor:flushed']).toEqual(seen['vdom:flushed'])
+    })
+
+    test('v-bind object source', () =>
+      expectGuardedRead({
+        App: `<template>
+          <components.Child v-if="data.x !== undefined" v-bind="{ y: data.x.y }" />
+          <p v-else>x is gone</p>
+        </template>`,
+      }))
+
+    test('slot content guarded by the slot owner', () =>
+      expectGuardedRead({
+        Wrapper: `<template><div><slot /></div></template>`,
+        App: `<template>
+          <components.Wrapper v-if="data.x !== undefined">
+            <components.Child :y="data.x.y" />
+          </components.Wrapper>
+          <p v-else>x is gone</p>
+        </template>`,
+      }))
+
+    test('slot content guarded inside the slot host', () =>
+      expectGuardedRead({
+        Wrapper: `<template>
+          <slot v-if="data.x !== undefined" />
+          <p v-else>x is gone</p>
+        </template>`,
+        App: `<template>
+          <components.Wrapper><components.Child :y="data.x.y" /></components.Wrapper>
+        </template>`,
+      }))
+
+    // useModel watches the prop synchronously on the component's behalf
+    test('v-model child under the guard', async () => {
+      const { vdom, vapor } = await renderParity(
+        {
+          Child: `<script setup>
+            const model = defineModel()
+          </script><template><p>child: {{ model }}</p></template>`,
+          App: `<template>
+            <components.Child v-if="data.x !== undefined" v-model="data.x.y" />
+            <p v-else>x is gone</p>
+          </template>`,
+        },
+        () => ref<any>({ x: { y: 'a' } }),
+        (data, root) => {
+          expect(root.textContent).toBe('child: a')
+          data.value.x = undefined
+        },
+      )
+      expect(vapor.text).toBe('x is gone')
+      expect(vdom.text).toBe(vapor.text)
+    })
+
+    // the same raw props serve every component a dynamic component switches
+    // to; a commit must not outlive the component that asked for it
+    test('dynamic component switched away from the watching one', async () => {
+      const { vdom, vapor } = await renderParity(
+        {
+          A: Child,
+          B: `<script setup>
+            defineProps({ y: String })
+          </script><template><p>b: {{ y }}</p></template>`,
+          App: `<template>
+            <component :is="data.a ? components.A : components.B" :y="data.y" />
+          </template>`,
+        },
+        () => ref<any>({ a: true, y: 'a', seen: [] }),
+        async (data, root) => {
+          expect(root.textContent).toBe('child: a')
+          data.value.a = false
+          await nextTick()
+          expect(root.textContent).toBe('b: a')
+          data.value.y = 'b'
+          await nextTick()
+        },
+      )
+      expect(vapor.text).toBe('b: b')
+      expect(vdom.text).toBe(vapor.text)
+    })
+
+    // coverage guard: interop props are committed by the vdom parent's patch
+    // already, so a vapor child under a vdom v-if needs no commit of its own
+    test('vapor child with a sync watcher under a vdom v-if', async () => {
+      const data = ref<any>({ x: { y: 'a' }, seen: [] })
+      const components: Record<string, any> = {}
+      components.Child = compile(Child, data, components, { vapor: true })
+      const App = compile(
+        `<script setup>const data = _data; const components = _components;</script>
+        <template>
+          <components.Child v-if="data.x !== undefined" :y="data.x.y" />
+          <p v-else>x is gone</p>
+        </template>`,
+        data,
+        components,
+        { vapor: false },
+      )
+      const root = document.createElement('div')
+      const app = createApp(App)
+      app.use(vaporInteropPlugin).mount(root)
+      expect(root.textContent).toBe('child: a')
+      data.value.x = undefined
+      await nextTick()
+      expect(data.value.seen).toEqual([])
+      expect(root.textContent).toBe('x is gone')
+      app.unmount()
+    })
+
+    test('vdom child with a sync watcher under a vapor v-if', async () => {
+      const data = ref<any>({ x: { y: 'a' }, seen: [] })
+      const components: Record<string, any> = {}
+      components.Child = compile(Child, data, components, { vapor: false })
+      const App = compile(
+        `<template>
+          <components.Child v-if="data.x !== undefined" :y="data.x.y" />
+          <p v-else>x is gone</p>
+        </template>`,
+        data,
+        components,
+        { vapor: true },
+      )
+      const root = document.createElement('div')
+      const app = createVaporApp(App)
+      app.use(vaporInteropPlugin).mount(root)
+      expect(root.textContent).toBe('child: a')
+      data.value.x = undefined
+      await nextTick()
+      expect(data.value.seen).toEqual([])
+      expect(root.textContent).toBe('x is gone')
+      app.unmount()
+    })
+
+    // coverage guard: a kept-alive child already reads committed sources
+    // (#15228); the sync-watcher commit stacks on top of that boundary
+    test('kept-alive child with a sync watcher', async () => {
+      const seen: Record<string, string[]> = {}
+      const { vdom, vapor } = await renderParity(
+        {
+          Child,
+          App: `<template>
+            <KeepAlive>
+              <components.Child v-if="data.x !== undefined" :y="data.x.y" />
+              <p v-else>x is gone</p>
+            </KeepAlive>
+          </template>`,
+        },
+        () => ref<any>({ x: { y: 'a' }, seen: [] }),
+        async (data, root, mode) => {
+          expect(root.textContent).toBe('child: a')
+          data.value.x = undefined
+          await nextTick()
+          expect(root.textContent).toBe('x is gone')
+          data.value.x = { y: 'b' }
+          await nextTick()
+          seen[mode] = data.value.seen
+        },
+      )
+      expect(seen.vdom).toEqual(['b'])
+      expect(seen.vapor).toEqual(seen.vdom)
+      expect(vapor.text).toBe('child: b')
+      expect(vdom.text).toBe(vapor.text)
+    })
+
+    // Without a guard the read is the parent's own bug. vdom reports it from
+    // the parent render; vapor must report it the same way instead of
+    // throwing it at whoever assigned the ref.
+    test('unguarded source reports through the app error handler', async () => {
+      for (const vapor of [false, true]) {
+        const data = ref<any>({ x: { y: 'a' }, seen: [] })
+        const components: Record<string, any> = {}
+        components.Child = compile(Child, data, components, { vapor })
+        const App = compile(
+          `<script setup>const data = _data; const components = _components;</script>
+          <template><components.Child :y="data.x.y" /></template>`,
+          data,
+          components,
+          { vapor },
+        )
+        const root = document.createElement('div')
+        const app = vapor ? createVaporApp(App) : createApp(App)
+        const handler = (app.config.errorHandler = vi.fn())
+        app.use(vaporInteropPlugin).mount(root)
+        expect(root.textContent).toBe('child: a')
+
+        expect(() => (data.value.x = undefined)).not.toThrow()
+        await nextTick()
+        expect(handler).toHaveBeenCalledTimes(1)
+        expect(handler.mock.calls[0][0]).toBeInstanceOf(TypeError)
+        expect(data.value.seen).toEqual([])
+        app.unmount()
+      }
+    })
   })
 })

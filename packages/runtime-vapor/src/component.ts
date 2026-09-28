@@ -86,6 +86,7 @@ import {
 import {
   type DynamicPropsSource,
   type RawProps,
+  commitPropSources,
   getKeysFromRawProps,
   getPropsProxyHandlers,
   getStaticBindingKeys,
@@ -1137,6 +1138,13 @@ export class VaporComponentInstance<
           },
         })
       }
+    }
+  }
+
+  ensureCommittedProps(): void {
+    // kept-alive inputs are isolated, which already commits them
+    if (this.parent && !this.inputScope) {
+      commitPropSources(this.rawProps, this.parent, this.scope)
     }
   }
 
