@@ -1436,6 +1436,29 @@ describe('compiler: element transform', () => {
     ])
   })
 
+  test('v-on="obj" merges into the dynamic props of a native element', () => {
+    const { code, ir } = compileWithElementTransform(
+      `<div id="a" v-on="obj" v-bind="bind" />`,
+    )
+    expect(code).toMatchSnapshot()
+    expect(code).contains(
+      `_setDynamicProps(n0, [{ id: "a" }, _toHandlers(_ctx.obj, true), _ctx.bind])`,
+    )
+    expect(code).not.contains(`_setDynamicEvents`)
+    expect(ir.block.effect[0].operations[0]).toMatchObject({
+      type: IRNodeTypes.SET_DYNAMIC_PROPS,
+      props: [
+        [{ key: { content: 'id' } }],
+        {
+          kind: IRDynamicPropsKind.EXPRESSION,
+          value: { content: 'obj' },
+          handler: true,
+        },
+        { kind: IRDynamicPropsKind.EXPRESSION, value: { content: 'bind' } },
+      ],
+    })
+  })
+
   test('v-on="obj"', () => {
     const { code, ir } = compileWithElementTransform(`<div v-on="obj" />`)
     expect(code).toMatchSnapshot()

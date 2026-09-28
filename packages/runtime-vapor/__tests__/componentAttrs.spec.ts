@@ -3037,6 +3037,42 @@ describe('attribute fallthrough', () => {
     ])
   })
 
+  test('v-on object before v-bind on the same root keeps the template order', async () => {
+    const seen = await clickParity(
+      {
+        Child: `<template><button v-on="data.events" v-bind="data.rootProps">x</button></template>`,
+        App: `<template><components.Child @click="data.parent" /></template>`,
+      },
+      () =>
+        ref({
+          rootProps: { onClick: on('bind') } as any,
+          events: { click: on('object') } as any,
+          parent: on('parent'),
+        }),
+      [
+        data => (data.value.rootProps = { onClick: on('bind2') }),
+        data => (data.value.events = { click: on('object2') }),
+      ],
+    )
+    expect(seen).toEqual([
+      'object bind parent',
+      'object bind2 parent',
+      'object2 bind2 parent',
+    ])
+  })
+
+  test('a handler listed twice by the root runs twice', async () => {
+    const seen = await clickParity(
+      {
+        Child: `<template><button v-bind="{ onClick: [data.root, data.root] }">x</button></template>`,
+        App: `<template><components.Child @click="data.parent" /></template>`,
+      },
+      () => ref({ root: on('root'), parent: on('parent') }),
+      [],
+    )
+    expect(seen).toEqual(['root root parent'])
+  })
+
   test('root inside a v-if branch', async () => {
     const seen = await clickParity(
       {

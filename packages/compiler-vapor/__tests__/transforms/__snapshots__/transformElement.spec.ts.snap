@@ -1349,3 +1349,14 @@ export function render(_ctx) {
   return n0
 }"
 `;
+
+exports[`compiler: element transform > v-on="obj" merges into the dynamic props of a native element 1`] = `
+"import { toHandlers as _toHandlers, setDynamicProps as _setDynamicProps, renderEffect as _renderEffect, template as _template } from 'vue';
+const t0 = _template("<div>", 1)
+
+export function render(_ctx) {
+  const n0 = t0()
+  _renderEffect(() => _setDynamicProps(n0, [{ id: "a" }, _toHandlers(_ctx.obj, true), _ctx.bind]))
+  return n0
+}"
+`;

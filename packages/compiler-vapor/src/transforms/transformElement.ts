@@ -1019,6 +1019,16 @@ export function buildProps(
                 handler: true,
               })
             }
+          } else if (hasDynamicKeyVBind(node)) {
+            // joins the dynamic props merge at its template position, so the
+            // listeners it shares with the other sources keep vdom's order
+            dynamicExpr.push(prop.exp)
+            pushMergeArg()
+            dynamicArgs.push({
+              kind: IRDynamicPropsKind.EXPRESSION,
+              value: prop.exp,
+              handler: true,
+            })
           } else {
             context.registerEffect(
               [prop.exp],

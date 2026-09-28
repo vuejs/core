@@ -68,17 +68,11 @@ export function onBinding(
 }
 
 interface RootListener {
-  // the root's own props, its v-on object and the fallthrough attrs
-  layers: MaybeEventHandlerValue[]
+  own?: MaybeEventHandlerValue
+  attrs?: MaybeEventHandlerValue
   handlers: EventHandler[]
   remove?: () => void
   fired?: boolean
-}
-
-export const enum ListenerLayer {
-  OWN,
-  EVENTS,
-  ATTRS,
 }
 
 // a root's own `on*` binding and the fallthrough one are two layers on one
@@ -91,23 +85,23 @@ export function hasListenerLayers(el: Element & { $root?: any }): boolean {
 }
 
 /**
- * Like a vdom invoker, the layers share one native listener per key that runs
- * the own handlers first and then the fallthrough ones not already among them,
- * so re-binding either layer keeps that order. #15635
+ * Like a vdom invoker, the two layers share one native listener per key that
+ * runs the own handlers first and then the fallthrough ones not already among
+ * them, so re-binding either layer keeps that order. #15635
  */
 export function onRootListener(
   el: Element & { $revt?: Record<string, RootListener> },
   key: string,
   value: MaybeEventHandlerValue,
-  layer: ListenerLayer,
+  isFallthrough: boolean,
 ): void {
   const listeners = el.$revt || (el.$revt = Object.create(null))
-  const listener =
-    listeners[key] || (listeners[key] = { layers: [], handlers: [] })
-  listener.layers[layer] = value
+  const listener = listeners[key] || (listeners[key] = { handlers: [] })
+  const layer = isFallthrough ? 'attrs' : 'own'
+  listener[layer] = value
   syncRootListener(el, key, listener)
   onEffectCleanup(() => {
-    listener.layers[layer] = null
+    listener[layer] = null
     syncRootListener(el, key, listener)
   })
 }
@@ -117,13 +111,15 @@ function syncRootListener(
   key: string,
   listener: RootListener,
 ): void {
-  // `$attrs` rebuilds its merged array on every read, so the handlers are
-  // compared rather than the values
+  // `$attrs` rebuilds its merged array on every read, so the fallthrough
+  // handlers are compared rather than the values
+  const { own, attrs } = listener
   const handlers: EventHandler[] = (listener.handlers = [])
-  for (const value of listener.layers) {
-    for (const fn of isArray(value) ? value : [value]) {
-      if (fn && !handlers.includes(fn)) handlers.push(fn)
-    }
+  for (const fn of isArray(own) ? own : [own]) {
+    if (fn) handlers.push(fn)
+  }
+  for (const fn of isArray(attrs) ? attrs : [attrs]) {
+    if (fn && !handlers.includes(fn)) handlers.push(fn)
   }
 
   if (!handlers.length) {
@@ -243,12 +239,14 @@ export function setDynamicEvents(
   for (const name in events) {
     if (layered) {
       // the key vdom's toHandlers(obj, true) gives an element listener, so a
-      // fallthrough listener for the same event lands on the same entry
+      // fallthrough listener for the same event lands on the same entry; an
+      // element with other dynamic props merges its v-on object into them at
+      // compile time, so this is the root's only own source
       onRootListener(
         el,
         /[A-Z]/.test(name) ? `on:${name}` : toHandlerKey(name),
         events[name],
-        ListenerLayer.EVENTS,
+        false,
       )
     } else {
       const [event, options] = parseEventName(`on:${name}`)

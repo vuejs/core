@@ -386,7 +386,13 @@ export function genDynamicProps(
       ? genLiteralObjectProps(props, context) // static and dynamic arg props
       : props.kind === IRDynamicPropsKind.ATTRIBUTE
         ? genLiteralObjectProps([props], context) // dynamic arg props
-        : genExpression(props.value, context),
+        : props.handler
+          ? genCall(
+              helper('toHandlers'),
+              genExpression(props.value, context),
+              'true',
+            ) // v-on="obj"
+          : genExpression(props.value, context),
   ) // v-bind=""
   return [
     NEWLINE,
