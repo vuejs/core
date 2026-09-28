@@ -81,8 +81,11 @@ export function renderSlot(
   // a compiled slot disables block tracking by default to avoid manual
   // invocation interfering with template-based block tracking, but in
   // `renderSlot` we can be sure that it's template-based so we can force
-  // enable it.
-  if (slot && (slot as ContextualRenderFn)._c) {
+  // enable it. The exception is when the slots have just been replaced by
+  // ones that may come from a different template location (#3569): the new
+  // content must then be fully diffed against the previous one.
+  const bail = currentRenderingInstance!.slotsBail
+  if (slot && (slot as ContextualRenderFn)._c && !bail) {
     ;(slot as ContextualRenderFn)._d = false
   }
   const prevStackSize = blockStack.length
@@ -105,7 +108,7 @@ export function renderSlot(
           (!validSlotContent && fallback ? '_fb' : ''),
       },
       validSlotContent || (fallback ? fallback() : []),
-      validSlotContent && (slots as RawSlots)._ === SlotFlags.STABLE
+      validSlotContent && !bail && (slots as RawSlots)._ === SlotFlags.STABLE
         ? PatchFlags.STABLE_FRAGMENT
         : PatchFlags.BAIL,
     )

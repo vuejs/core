@@ -472,6 +472,15 @@ export interface ComponentInternalInstance {
   emit: EmitFn
 
   /**
+   * Set when a non-optimized parent update replaced compiled slot functions
+   * with ones that may have been compiled from a different template location
+   * (#3569). Until that update is patched, `renderSlot` renders the slots with
+   * block tracking disabled so they are fully diffed.
+   * @internal
+   */
+  slotsBail: boolean
+
+  /**
    * used for keeping track of .once event handlers on components
    * @internal
    */
@@ -669,6 +678,7 @@ export function createComponentInstance(
     props: EMPTY_OBJ,
     attrs: EMPTY_OBJ,
     slots: EMPTY_OBJ,
+    slotsBail: false,
     refs: EMPTY_OBJ,
     setupState: EMPTY_OBJ,
     setupContext: null,
