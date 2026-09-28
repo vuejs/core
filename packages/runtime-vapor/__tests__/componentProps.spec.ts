@@ -1,8 +1,8 @@
 // NOTE: This test is implemented based on the case of `runtime-core/__test__/componentProps.spec.ts`.
 
 import {
-  // currentInstance,
   createApp,
+  currentInstance,
   inject,
   isShallow,
   nextTick,
@@ -1704,6 +1704,106 @@ describe('component: props', () => {
       expect(seen.vapor).toEqual(seen.vdom)
       expect(vapor.text).toBe('child: b')
       expect(vdom.text).toBe(vapor.text)
+    })
+
+    // a v-bind source hands over the reactive object itself; the commit must
+    // snapshot its top level so the child stops depending on the container
+    test('v-bind of a reactive object', async () => {
+      const seen: Record<string, string[]> = {}
+      const { vdom, vapor } = await renderParity(
+        {
+          Child,
+          App: `<template>
+            <components.Child v-if="'y' in data.bag" v-bind="data.bag" />
+            <p v-else>x is gone</p>
+          </template>`,
+        },
+        () => ref<any>({ bag: { y: 'a' }, seen: [] }),
+        async (data, root, mode) => {
+          expect(root.textContent).toBe('child: a')
+          data.value.bag.y = 'b'
+          await nextTick()
+          expect(root.textContent).toBe('child: b')
+          delete data.value.bag.y
+          seen[mode] = data.value.seen
+        },
+      )
+      expect(seen.vdom).toEqual(['b'])
+      expect(seen.vapor).toEqual(seen.vdom)
+      expect(vapor.text).toBe('x is gone')
+      expect(vdom.text).toBe(vapor.text)
+    })
+
+    test('computed over a v-bind prop read before the sync watcher exists', async () => {
+      const seen: Record<string, string[]> = {}
+      const { vdom, vapor } = await renderParity(
+        {
+          Child: `<script setup>
+            import { computed, watch } from 'vue'
+            const data = _data
+            const props = defineProps({ y: String })
+            const y = computed(() => props.y)
+            data.value.first = y.value
+            watch(y, v => data.value.seen.push(v), { flush: 'sync' })
+          </script><template><p>child: {{ y }}</p></template>`,
+          App: `<template>
+            <components.Child v-if="'y' in data.bag" v-bind="data.bag" />
+            <p v-else>x is gone</p>
+          </template>`,
+        },
+        () => ref<any>({ bag: { y: 'a' }, seen: [] }),
+        (data, root, mode) => {
+          expect(data.value.first).toBe('a')
+          delete data.value.bag.y
+          seen[mode] = data.value.seen
+        },
+      )
+      expect(seen.vdom).toEqual([])
+      expect(seen.vapor).toEqual(seen.vdom)
+      expect(vapor.text).toBe('x is gone')
+      expect(vdom.text).toBe(vapor.text)
+    })
+
+    // an input nothing read yet has no source cache in production (dev-time
+    // validation creates one), and a watcher run from outside the component
+    // has no current instance: the plain read must still see the commit
+    test('input first read by a sync watcher outside the component', async () => {
+      const seen: Record<string, string[]> = {}
+      await renderParity(
+        {
+          Child: `<script setup>
+            import { useAttrs, watch } from 'vue'
+            defineOptions({ inheritAttrs: false })
+            const data = _data
+            data.value.instance = data.value.capture()
+            const attrs = useAttrs()
+            watch(
+              () => (data.value.enabled ? attrs.y : undefined),
+              v => data.value.seen.push(v),
+              { flush: 'sync' },
+            )
+          </script><template><span /></template>`,
+          App: `<template><components.Child :y="data.x.y" /></template>`,
+        },
+        () =>
+          ref<any>({
+            x: { y: 'a' },
+            enabled: false,
+            seen: [],
+            capture: () => currentInstance,
+          }),
+        (data, root, mode) => {
+          if (mode === 'vapor') {
+            // the state a production build is in
+            data.value.instance.rawProps.y._cache = undefined
+          }
+          data.value.x.y = 'b'
+          data.value.enabled = true
+          seen[mode] = [...data.value.seen]
+        },
+      )
+      expect(seen.vdom).toEqual(['a'])
+      expect(seen.vapor).toEqual(seen.vdom)
     })
 
     // Without a guard the read is the parent's own bug. vdom reports it from

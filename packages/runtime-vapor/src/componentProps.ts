@@ -230,8 +230,10 @@ export function resolveFunctionSource<T>(source: FunctionSource<T>): T {
     return source._cache.value
   }
 
-  // no parent, no cache - just call directly
-  return source()
+  // no parent, no cache - read the committed value if there is one, else
+  // call directly
+  const committed = source._committed
+  return committed ? committed.value : source()
 }
 
 /**
@@ -258,7 +260,7 @@ export function commitPropSources(
       for (let i = 0; i < dynamicSources.length; i++) {
         const source = dynamicSources[i]
         if (isFunction(source)) {
-          commitSource(source, parent)
+          commitSource(source, parent, true)
         } else {
           for (const key in source) commitSource(source[key], parent)
         }
@@ -269,7 +271,14 @@ export function commitPropSources(
   }
 }
 
-function commitSource(source: unknown, parent: GenericComponentInstance): void {
+function commitSource(
+  source: unknown,
+  parent: GenericComponentInstance,
+  // a v-bind source returns the props container itself, possibly a reactive
+  // object; commit a copy of its top level so consumers depend on the commit
+  // rather than on the container (nested values keep their identity)
+  isContainer = false,
+): void {
   if (!isFunction(source) || (source as FunctionSource<unknown>)._committed) {
     return
   }
@@ -280,7 +289,13 @@ function commitSource(source: unknown, parent: GenericComponentInstance): void {
     // the source is the parent's expression; evaluate it as the cache does
     const prevInner = setCurrentInstance(parent)
     try {
-      committed.value = value = stabilizeDynamicSourceValue(value, fn())
+      let next = fn()
+      if (isContainer && isObject(next)) {
+        const copy: Record<string, unknown> = {}
+        for (const key in next) copy[key] = next[key]
+        next = copy
+      }
+      committed.value = value = stabilizeDynamicSourceValue(value, next)
     } finally {
       restoreCurrentInstance(prevInner)
     }
