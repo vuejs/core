@@ -180,6 +180,26 @@ exports[`compiler: vModel transform > generates dynamic model after dynamic type
 "
 `;
 
+exports[`compiler: vModel transform > generates key-only bound listeners after v-model in keyed v-for 1`] = `
+"import { createSelector as _createSelector, setProp as _setProp, applyDynamicModel as _applyDynamicModel, setListener as _setListener, renderEffect as _renderEffect, createFor as _createFor, template as _template } from 'vue';
+const t0 = _template("<input>")
+
+export function render(_ctx) {
+  const _selector0 = _createSelector(() => _ctx.event)
+  const n0 = _createFor(() => (_ctx.fields), (_for_item0) => {
+    const n2 = t0()
+    _selector0(_for_item0.value.event, () => {
+      _setProp(n2, "type", _for_item0.value.event === _ctx.event ? 'text' : 'checkbox')
+    })
+    _applyDynamicModel(n2, () => (_for_item0.value.value), _value => (_for_item0.value.value = _value))
+    _renderEffect(() => _setListener(n2, "onInput", _for_item0.value.event && (() => {})))
+    return n2
+  }, (field) => (field.event), 8 /* IS_SINGLE_NODE */)
+  n0.onReset(_selector0.reset)
+  return n0
+}"
+`;
+
 exports[`compiler: vModel transform > generates key-only listeners after v-model in keyed v-for 1`] = `
 "import { createSelector as _createSelector, setProp as _setProp, applyDynamicModel as _applyDynamicModel, onBinding as _onBinding, renderEffect as _renderEffect, createFor as _createFor, template as _template } from 'vue';
 const t0 = _template("<input>")
@@ -216,6 +236,26 @@ export function render(_ctx) {
     _onBinding(n1, _ctx.event, e => _ctx.onEvent(e))
   })
   return [n0, n1]
+}"
+`;
+
+exports[`compiler: vModel transform > generates selector bound listeners after v-model in keyed v-for 1`] = `
+"import { createSelector as _createSelector, setProp as _setProp, applyDynamicModel as _applyDynamicModel, setListener as _setListener, renderEffect as _renderEffect, createFor as _createFor, template as _template } from 'vue';
+const t0 = _template("<input>")
+
+export function render(_ctx) {
+  const _selector0 = _createSelector(() => _ctx.event)
+  const n0 = _createFor(() => (_ctx.fields), (_for_item0) => {
+    const n2 = t0()
+    _selector0(_for_item0.value.event, () => {
+      _setProp(n2, "type", _for_item0.value.event === _ctx.event ? 'text' : 'checkbox')
+    })
+    _applyDynamicModel(n2, () => (_for_item0.value.value), _value => (_for_item0.value.value = _value))
+    _renderEffect(() => _setListener(n2, "onInput", _for_item0.value.event === _ctx.event ? () => {} : null))
+    return n2
+  }, (field) => (field.event), 8 /* IS_SINGLE_NODE */)
+  n0.onReset(_selector0.reset)
+  return n0
 }"
 `;
 

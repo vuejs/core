@@ -1911,6 +1911,64 @@ describe('directive: v-model', () => {
       },
     )
 
+    test.each([
+      ['onInput', false, false],
+      ['onChange', false, false],
+      ['onInput', true, false],
+      ['onChange', true, false],
+      ['onInput', false, true],
+      ['onChange', false, true],
+    ])(
+      'bound %s listener sees the updated model (reactive handler: %s, v-once: %s)',
+      async (listener, reactiveHandler, once) => {
+        const seen = {} as Record<'vdom' | 'vapor', string[]>
+        let log: string[]
+        const attrs = `v-model="data" :${listener}="handler"${once ? ' v-once' : ''}`
+        const template =
+          listener === 'onInput' ? `<input ${attrs}>` : selectTemplate(attrs)
+        await renderParity(
+          {
+            App: `<script setup>
+              import { ref } from 'vue'
+              const data = _data
+              const log = _components.log
+              ${
+                reactiveHandler
+                  ? `const handler = ref(() => log('initial:' + data.value))
+                     function replaceHandler() {
+                       handler.value = () => log('replacement:' + data.value)
+                     }`
+                  : `function handler() { log('initial:' + data.value) }`
+              }
+            </script>
+            <template>${template}${
+              reactiveHandler
+                ? '<button @click="replaceHandler">replace</button>'
+                : ''
+            }</template>`,
+          },
+          () => ref('us'),
+          async (_, root, mode) => {
+            log = seen[mode] = []
+            await new Promise(r => setTimeout(r, 5))
+            if (listener === 'onInput') typeText(root, 'de')
+            else pickOption(root, 1)
+            if (reactiveHandler) {
+              triggerEvent('click', root.querySelector('button')!)
+              await nextTick()
+              if (listener === 'onInput') typeText(root, 'us')
+              else pickOption(root, 0)
+            }
+          },
+          { log: (value: string) => log.push(value) },
+        )
+        expect(seen.vdom).toEqual(
+          reactiveHandler ? ['initial:de', 'replacement:us'] : ['initial:de'],
+        )
+        expect(seen.vapor).toEqual(seen.vdom)
+      },
+    )
+
     test('merged listeners stay registered when DOM props update', async () => {
       const seen = {} as Record<'vdom' | 'vapor', string[]>
       let log: string[]

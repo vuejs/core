@@ -3,7 +3,7 @@ import {
   createSimpleExpression,
   walkIdentifiers,
 } from '@vue/compiler-dom'
-import { genBlockContent, isVModelOperation } from './block'
+import { genBlockContent, isVModelListener, isVModelOperation } from './block'
 import { genExpression } from './expression'
 import type { CodegenContext } from '../generate'
 import {
@@ -485,11 +485,7 @@ function matchPatterns(
       effect.once ||
       effect.operations.some(
         operation =>
-          ((operation.type === IRNodeTypes.SET_EVENT ||
-            operation.type === IRNodeTypes.SET_DYNAMIC_EVENTS ||
-            (operation.type === IRNodeTypes.SET_DYNAMIC_PROPS &&
-              operation.listeners)) &&
-            modelElements.has(operation.element)) ||
+          isVModelListener(operation, modelElements) ||
           (operation.type === IRNodeTypes.SET_PROP &&
             index < (lastOrderedProp.get(operation.element) ?? -1)),
       )

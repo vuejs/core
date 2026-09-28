@@ -508,7 +508,48 @@ describe('compiler: vModel transform', () => {
   })
 
   test.each([
+    [BindingTypes.SETUP_CONST, false, '_setListener('],
+    [BindingTypes.SETUP_REF, false, '_setListener('],
+    [BindingTypes.SETUP_CONST, true, '_on('],
+  ])(
+    'generates bound %s listeners (once: %s) after v-model',
+    (binding, once, helper) => {
+      const { code } = compileVapor(
+        `<input ${once ? 'v-once' : ''} v-model="model" :onInput="handler" />`,
+        {
+          prefixIdentifiers: true,
+          inline: true,
+          bindingMetadata: { handler: binding },
+        },
+      )
+
+      const model = code.indexOf('_applyTextModel(')
+      expect(model).toBeGreaterThan(-1)
+      expect(code.indexOf(helper)).toBeGreaterThan(model)
+    },
+  )
+
+  test.each([
+    ['prop', '_setDOMProp('],
+    ['attr', '_setAttr('],
+  ])('keeps explicit :onInput.%s before v-model', (modifier, helper) => {
+    const { code } = compileVapor(
+      `<input v-model="model" :onInput.${modifier}="handler" />`,
+      { prefixIdentifiers: true },
+    )
+
+    expect(code.indexOf(helper)).toBeGreaterThan(-1)
+    expect(code.indexOf(helper)).toBeLessThan(code.indexOf('_applyTextModel('))
+  })
+
+  test.each([
     ['key-only', '@[field.event]="onInput(field.value)"', '_onBinding('],
+    ['key-only bound', ':onInput="field.event && (() => {})"', '_setListener('],
+    [
+      'selector bound',
+      ':onInput="field.event === event ? () => {} : null"',
+      '_setListener(',
+    ],
     [
       'selector',
       'v-on="field.event === event ? { input() {} } : {}"',

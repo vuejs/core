@@ -30,7 +30,7 @@ import {
 import { genChildren, genSelf } from './template'
 import { genCustomDirectives } from './directive'
 import { toValidAssetId } from '@vue/compiler-dom'
-import { VaporSlotFlags } from '@vue/shared'
+import { VaporSlotFlags, isOn } from '@vue/shared'
 
 export function genBlock(
   oper: BlockIRNode,
@@ -67,10 +67,7 @@ export function genBlockContent(
   // handler for the same event already sees the updated value, as in vdom.
   const modelElements = new Set(modelOperations.map(oper => oper.element))
   const isModelListener = (oper: OperationNode) =>
-    (oper.type === IRNodeTypes.SET_EVENT ||
-      oper.type === IRNodeTypes.SET_DYNAMIC_EVENTS ||
-      (oper.type === IRNodeTypes.SET_DYNAMIC_PROPS && oper.listeners)) &&
-    modelElements.has(oper.element)
+    isVModelListener(oper, modelElements)
   const isDeferred = (oper: OperationNode) =>
     isVModelOperation(oper) || isModelListener(oper)
   const modelListenerEffects: IREffect[] = []
@@ -257,6 +254,21 @@ export function isVModelOperation(
     oper.type === IRNodeTypes.DIRECTIVE &&
     oper.builtin === true &&
     oper.name === 'model'
+  )
+}
+
+export function isVModelListener(
+  oper: OperationNode,
+  modelElements: Set<number>,
+): boolean {
+  return (
+    (oper.type === IRNodeTypes.SET_EVENT ||
+      oper.type === IRNodeTypes.SET_DYNAMIC_EVENTS ||
+      (oper.type === IRNodeTypes.SET_DYNAMIC_PROPS && oper.listeners) ||
+      (oper.type === IRNodeTypes.SET_PROP &&
+        !oper.prop.modifier &&
+        isOn(oper.prop.key.content))) &&
+    modelElements.has(oper.element)
   )
 }
 
