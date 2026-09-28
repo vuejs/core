@@ -369,3 +369,25 @@ test('foreign scope boundary elements', () => {
     '<p><math><mi>x</mi></math></p>',
   )
 })
+
+test('nested list end tag', () => {
+  // `</li>` is ignored while a nested list is still open, so the next item
+  // would land in the nested list
+  checkAbbr(
+    '<ul><li>a<ul><li>b</li></ul></li><li>c</li></ul>',
+    '<ul><li>a<ul><li>b</li></ul></li><li>c',
+    '<ul><li>a<ul><li>b</li></ul></li><li>c</li></ul>',
+  )
+  checkAbbr(
+    '<ol><li><div>a<ol><li>b</li></ol></div></li><li>c</li></ol>',
+    '<ol><li><div>a<ol><li>b</li></ol></li><li>c',
+    '<ol><li><div>a<ol><li>b</li></ol></div></li><li>c</li></ol>',
+  )
+
+  // a list item on the rightmost path can still omit
+  checkAbbr(
+    '<ul><li>a</li><li>b<ul><li>c</li></ul></li></ul>',
+    '<ul><li>a</li><li>b<ul><li>c',
+    '<ul><li>a</li><li>b<ul><li>c</li></ul></li></ul>',
+  )
+})
