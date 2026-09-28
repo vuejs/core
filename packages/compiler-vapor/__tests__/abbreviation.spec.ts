@@ -288,3 +288,33 @@ test('inline/block ancestor relationships', () => {
     '<div><span><div><span><div>text</div></span></div></span><p>after</p></div>',
   )
 })
+
+test('form end tag', () => {
+  // `</form>` removes only the form element, so a descendant left open would
+  // swallow the form's next sibling
+  checkAbbr(
+    '<div><form><div>x</div></form><p>y</p></div>',
+    '<div><form><div>x</div></form><p>y',
+    '<div><form><div>x</div></form><p>y</p></div>',
+  )
+  checkAbbr(
+    '<div><form><div><b>x</b></div></form><p>y</p></div>',
+    '<div><form><div><b>x</b></div></form><p>y',
+    '<div><form><div><b>x</b></div></form><p>y</p></div>',
+  )
+
+  // a form closed by its parent's end tag leaves the form element pointer set,
+  // so the next `<form>` start tag is ignored
+  checkAbbr(
+    '<div><div><form><input></form></div><div><form><input></form></div></div>',
+    '<div><div><form><input></form></div><div><form><input>',
+    '<div><div><form><input></form></div><div><form><input></form></div></div>',
+  )
+
+  // a form on the rightmost path can still omit
+  checkAbbr(
+    '<div><p>y</p><form><div>x</div></form></div>',
+    '<div><p>y</p><form><div>x',
+    '<div><p>y</p><form><div>x</div></form></div>',
+  )
+})
