@@ -11309,8 +11309,7 @@ describe('vdomInterop', () => {
         const steps = await compare(vdomPages, inner, async r => {
           r.click()
           await r.go(r.PageA, 2)
-          // a keyed vapor page in a vapor KeepAlive throws (pre-existing)
-          if (!keepAlive || vdomPages) await r.go(r.PageA, 3, 'k')
+          await r.go(r.PageA, 3, 'k')
           await r.go(r.PageB, 4)
           await r.go(r.PageA, 5)
           await r.go(r.PageA, 6)
@@ -11605,6 +11604,29 @@ describe('vdomInterop', () => {
           wrap,
         )
         expect(classes).toEqual(['c2'])
+      },
+    )
+
+    test.each([false, true])(
+      'KeepAlive: keyed and unkeyed entries of one page stay apart (vdom pages: %s)',
+      async vdomPages => {
+        const steps = await compare(vdomPages, kept, async r => {
+          r.click()
+          await r.go(r.PageA, 2, 'k')
+          r.click()
+          r.click()
+          await r.go(r.PageB, 3)
+          await r.go(r.PageA, 4, 'k')
+          await r.go(r.PageA, 5)
+          r.unmount()
+          r.snap()
+          return r.steps
+        })
+        expect(steps.slice(2).map(s => s.split(' ')[0])).toEqual([
+          'A:4:2',
+          'A:5:1',
+          '',
+        ])
       },
     )
   })
