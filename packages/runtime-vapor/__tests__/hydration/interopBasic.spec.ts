@@ -888,4 +888,59 @@ describe('VDOM interop', () => {
       "
     `)
   })
+
+  test('hydrate a functional child injecting from a vdom parent under vapor', async () => {
+    const data = ref(0)
+    const { container } = await testWithVaporApp(
+      `<template><div><components.G :n="data" /></div></template>`,
+      {
+        G: {
+          code: `<script setup>
+            import { h, inject, provide } from 'vue'
+            defineProps(['n'])
+            provide('k', 'G')
+            const F = props => h('i', inject('k', 'none') + ':' + props.n)
+          </script>
+          <template><F :n="n" /></template>`,
+          vapor: false,
+        },
+      },
+      data,
+    )
+    expect(formatHtml(container.innerHTML)).toBe('<div><i>G:0</i></div>')
+    expect(`Hydration text content mismatch`).not.toHaveBeenWarned()
+
+    data.value++
+    await nextTick()
+    expect(formatHtml(container.innerHTML)).toBe('<div><i>G:1</i></div>')
+  })
+
+  test('hydrate VDOM prop defaults injecting from a Vapor parent', async () => {
+    const { container, html } = await testWithVaporApp(
+      `<script setup vapor>
+        import { provide } from 'vue'
+        const components = _components
+        provide('k', 'parent')
+      </script>
+      <template><components.Child /></template>`,
+      {
+        Child: {
+          code: `<script setup>
+            import { inject } from 'vue'
+            defineProps({
+              value: {
+                default: () => inject('k', 'missing'),
+              },
+            })
+          </script>
+          <template><i>{{ value }}</i></template>`,
+          vapor: false,
+        },
+      },
+    )
+
+    expect(html).toBe('<i>parent</i>')
+    expect(container.innerHTML).toBe(html)
+    expect('Hydration text content mismatch').not.toHaveBeenWarned()
+  })
 })

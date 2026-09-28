@@ -1325,7 +1325,9 @@ function mountVNode(
       return
     } else {
       const prev = currentInstance
-      simpleSetCurrentInstance(parentComponent)
+      // vdom renders with no current instance, so that `inject` in a
+      // functional child falls back to its rendering instance
+      simpleSetCurrentInstance(null)
       if (!isMounted) {
         if (transition) setVNodeTransitionHooks(vnode, transition)
         namespace = getContainerType(parentNode as Element)
@@ -1391,7 +1393,7 @@ function mountVNode(
     frag.vnode = vnode
     frag.$key = vnodeKeyOf(vnode)
     const prevInstance = currentInstance
-    simpleSetCurrentInstance(parentComponent)
+    simpleSetCurrentInstance(null)
     internals.p(
       previous,
       vnode,
@@ -1490,6 +1492,10 @@ function createVDOMComponent(
 
   // overwrite how the vdom instance handles props
   vnode.vi = (instance: ComponentInternalInstance) => {
+    // The props wrapper must inherit from the Vapor parent while VDOM renders
+    // without a current instance.
+    const prev = currentInstance
+    simpleSetCurrentInstance(parentComponent)
     // Reuse VDOM's normalized options so Options API merging stays in VDOM.
     const wrapper = new VaporComponentInstance<Record<string, unknown>>(
       useBridge
@@ -1503,6 +1509,7 @@ function createVDOMComponent(
       parentComponent ? parentComponent.appContext : undefined,
       once,
     )
+    simpleSetCurrentInstance(prev)
 
     const attrs = createInternalObject()
     const isFilteredAttr = (key: string | symbol): boolean =>
@@ -1636,7 +1643,7 @@ function createVDOMComponent(
       )
     } else {
       const prev = currentInstance
-      simpleSetCurrentInstance(parentComponent)
+      simpleSetCurrentInstance(null)
       if (!isMounted) {
         if (transition) setVNodeTransitionHooks(vnode, transition)
         internals.mt(
@@ -2193,6 +2200,8 @@ function renderVDOMSlot(
       }
     }
     trackSlotVNodeUpdatesWithRefresh(next, refreshSlotVNode, notifyBeforeUpdate)
+    const prev = currentInstance
+    simpleSetCurrentInstance(null)
     internals.p(
       previous,
       next,
@@ -2203,6 +2212,7 @@ function renderVDOMSlot(
       slotNamespace,
       concatInteropScopeIds(frag.slotScopeIds, slotScopeIds),
     )
+    simpleSetCurrentInstance(prev)
     setRendered(next, valid)
     finishContentUpdate()
   }
@@ -2649,6 +2659,8 @@ function hydrateVNode(
 ) {
   const node = currentHydrationNode!
   if (!vdomHydrateNode) vdomHydrateNode = ensureHydrationRenderer().hydrateNode!
+  const prev = currentInstance
+  simpleSetCurrentInstance(null)
   const nextNode = vdomHydrateNode(
     node,
     vnode,
@@ -2657,6 +2669,7 @@ function hydrateVNode(
     slotScopeIds,
     false,
   )
+  simpleSetCurrentInstance(prev)
   // no next node: the vnode ends its parent, move on from there
   if (nextNode) setCurrentHydrationNode(nextNode)
   else advanceHydrationNode(parentNode(node)!)
@@ -3818,6 +3831,8 @@ function createVNodeChildrenFragment(
               notifyBeforeUpdate,
             )
             if (nextChildren.length) {
+              const prevInstance = currentInstance
+              simpleSetCurrentInstance(null)
               internals.mc(
                 nextChildren,
                 currentParentNode!,
@@ -3828,6 +3843,7 @@ function createVNodeChildrenFragment(
                 frag.slotScopeIds,
                 false,
               )
+              simpleSetCurrentInstance(prevInstance)
             }
           } else {
             const nextVNode = createVNode(Fragment, null, nextChildren)
@@ -3838,6 +3854,8 @@ function createVNodeChildrenFragment(
               },
               notifyBeforeUpdate,
             )
+            const prevInstance = currentInstance
+            simpleSetCurrentInstance(null)
             internals.pc(
               currentVNode,
               nextVNode,
@@ -3849,6 +3867,7 @@ function createVNodeChildrenFragment(
               frag.slotScopeIds,
               false,
             )
+            simpleSetCurrentInstance(prevInstance)
             currentChildren = nextChildren
             currentVNode = nextVNode
           }
@@ -3903,6 +3922,8 @@ function createVNodeChildrenFragment(
         )
       }
       if (currentChildren.length) {
+        const prevInstance = currentInstance
+        simpleSetCurrentInstance(null)
         internals.mc(
           currentChildren,
           currentParentNode,
@@ -3913,6 +3934,7 @@ function createVNodeChildrenFragment(
           frag.slotScopeIds,
           false,
         )
+        simpleSetCurrentInstance(prevInstance)
       }
       syncResolvedNodes()
       isMounted = true
