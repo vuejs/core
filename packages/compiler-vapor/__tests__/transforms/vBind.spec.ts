@@ -1428,4 +1428,42 @@ describe('compiler v-bind', () => {
       `_setDynamicProps(n5, [_ctx.obj, { onClick: _ctx.fn4 }], k0)`,
     )
   })
+
+  test('svg namespace elements that share a tag name with html', () => {
+    let { code } = compileWithVBind(`<svg><a :href="url" :class="cls"/></svg>`)
+    expect(code).contains('_setAttr(n0, "href", _ctx.url, true)')
+    expect(code).contains('_setClass(n0, _ctx.cls, true)')
+
+    code = compileWithVBind(`<svg><a v-bind="obj"/></svg>`).code
+    expect(code).contains('_setDynamicProps(n0, [_ctx.obj], null, true)')
+
+    // back to html inside <foreignObject>
+    code = compileWithVBind(
+      `<svg><foreignObject><a :href="url" :class="cls"/></foreignObject></svg>`,
+    ).code
+    expect(code).contains('_setProp(n0, "href", _ctx.url)')
+    expect(code).contains('_setClass(n0, _ctx.cls)')
+  })
+
+  test('uses the svg class helper for object class bindings on svg anchors', () => {
+    const { code } = compileWithVBind(
+      `<svg><a :class="{ active: flag }"/></svg>`,
+    )
+
+    expect(code).toContain('_setClass(n0, { active: _ctx.flag }, true)')
+    expect(code).not.toContain('_setClassName')
+  })
+
+  test('groups native svg event bindings without changing other prop helpers', () => {
+    const { code } = compileWithVBind(
+      `<svg><a :onclick="click" :onfocus="focus" :href="url" :class="cls"/></svg>`,
+    )
+
+    expect(code).toContain('const k0 = ["onclick","onfocus"]')
+    expect(code).toContain(
+      '_setDynamicProps(n0, [{ onclick: _ctx.click, onfocus: _ctx.focus }], k0, true)',
+    )
+    expect(code).toContain('_setAttr(n0, "href", _ctx.url, true)')
+    expect(code).toContain('_setClass(n0, _ctx.cls, true)')
+  })
 })
