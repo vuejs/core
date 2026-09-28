@@ -25,6 +25,7 @@ import {
   propToExpression,
 } from '../utils'
 import { newBlock, wrapTemplate } from './utils'
+import { normalizeBindShorthand } from './vBind'
 
 export const transformVFor: NodeTransform = createStructuralDirectiveTransform(
   'for',
@@ -52,8 +53,12 @@ export function processFor(
 
   const { source, value, key, index } = parseResult
 
-  const keyProp = findProp(node, 'key')
-  const keyProperty = keyProp && propToExpression(keyProp)
+  const keyProp = findProp(node, 'key', false, true)
+  const keyProperty =
+    keyProp &&
+    (keyProp.type === NodeTypes.ATTRIBUTE
+      ? keyProp.value && propToExpression(keyProp)
+      : keyProp.exp || normalizeBindShorthand(keyProp.arg!, context))
   const isComponent =
     node.tagType === ElementTypes.COMPONENT ||
     // template v-for with a single component child
