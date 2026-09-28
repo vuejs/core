@@ -23,15 +23,21 @@ import {
 } from './renderContext'
 
 export function hmrRerender(instance: VaporComponentInstance): void {
+  // an ancestor recreated for an earlier instance of the same HMR record
+  // already replaced this one
+  if (instance.isUnmounted) return
   // A component without a separate render function (built-ins like
   // KeepAlive, reached via reload delegation) cannot re-run its template
-  // alone - degrade to reload semantics through the nearest vapor parent.
-  // Terminal cases (custom element root, vdom parent) fall through to an
-  // in-place setup re-run.
+  // alone - degrade to reload semantics through the nearest vapor ancestor,
+  // past the vdom component rendering its slot. Terminal cases (custom
+  // element root, no vapor ancestor) fall through to an in-place setup re-run.
   if (!instance.type.render) {
-    const parent = instance.parent
-    if (parent && parent.vapor) return parent.hmrRerender!()
-    if (!parent && !instance.ce) return instance.hmrReload!(instance.type)
+    let parent = instance.parent
+    while (parent && !parent.vapor) parent = parent.parent
+    if (parent) return parent.hmrRerender!()
+    if (!instance.parent && !instance.ce) {
+      return instance.hmrReload!(instance.type)
+    }
   }
   const { parentNode, nextNode: anchor } = findBlockBoundary(instance.block)
   const parent = parentNode as ParentNode

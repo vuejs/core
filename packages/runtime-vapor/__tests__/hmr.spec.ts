@@ -2080,4 +2080,46 @@ describe('hot module replacement', () => {
       expect(root.innerHTML).toBe('<div>bar</div>')
     })
   })
+
+  test('reload a child under two KeepAlives rerenders the parent once', async () => {
+    const root = document.createElement('div')
+    const childId = 'test-child-two-keep-alives'
+    const Child = defineVaporComponent({
+      __hmrId: childId,
+      setup() {
+        return {}
+      },
+      render: compileToFunction(`<div>0</div>`),
+    })
+    createRecord(childId, Child as any)
+
+    const Parent = defineVaporComponent({
+      __hmrId: 'parent-two-keep-alives',
+      components: { Child },
+      setup() {
+        return {}
+      },
+      render: compileToFunction(
+        `<KeepAlive><Child /></KeepAlive><KeepAlive><Child /></KeepAlive>`,
+      ),
+    })
+    define(Parent).create().mount(root)
+
+    const setupSpy = vi.fn()
+    const unmountSpy = vi.fn()
+    reload(childId, {
+      __hmrId: childId,
+      __vapor: true,
+      setup() {
+        setupSpy()
+        onUnmounted(unmountSpy)
+        return {}
+      },
+      render: compileToFunction(`<div>1</div>`),
+    })
+    await nextTick()
+    expect(root.innerHTML).toBe(`<div>1</div><div>1</div>`)
+    expect(setupSpy).toHaveBeenCalledTimes(2)
+    expect(unmountSpy).toHaveBeenCalledTimes(0)
+  })
 })
