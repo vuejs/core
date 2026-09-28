@@ -14,6 +14,7 @@ import {
   type VaporHelper,
 } from '../ir'
 import { genExpression } from './expression'
+import { genEventHandler } from './event'
 import {
   type CodeFragment,
   DELIMITERS_ARRAY,
@@ -449,14 +450,52 @@ function genLiteralObjectProps(
   props: IRProp[],
   context: CodegenContext,
 ): CodeFragment[] {
-  return genMulti(
-    DELIMITERS_OBJECT,
-    ...props.map(prop => [
-      ...genPropKey(prop, context),
+  const entries: CodeFragment[][] = []
+  // a listener bound several times, e.g. `@click.stop` and `@click`, carries
+  // every handler under its one key like mergeProps
+  const listeners = new Map<
+    string,
+    { index: number; handlers: CodeFragment[][] }
+  >()
+  for (const prop of props) {
+    if (!prop.handler) {
+      entries.push([
+        ...genPropKey(prop, context),
+        `: `,
+        ...genPropValue(prop.values, context),
+      ])
+      continue
+    }
+    const handler = genEventHandler(
+      context,
+      prop.values,
+      prop.handlerModifiers,
+      // the effect re-reads the handler, so a member expression needs no
+      // invocation wrapper
+      { asComponentProp: true },
+    )
+    // like vdom, an element keeps the case of its event name
+    const name = /[A-Z]/.test(prop.key.content)
+      ? `on:${prop.key.content}`
+      : getStaticPropKeyName(prop)
+    const listener = listeners.get(name)
+    if (listener) {
+      listener.handlers.push(handler)
+    } else {
+      listeners.set(name, { index: entries.length, handlers: [handler] })
+      entries.push([])
+    }
+  }
+  for (const [name, { index, handlers }] of listeners) {
+    entries[index] = [
+      isSimpleIdentifier(name) ? name : JSON.stringify(name),
       `: `,
-      ...genPropValue(prop.values, context),
-    ]),
-  )
+      ...(handlers.length > 1
+        ? genMulti(DELIMITERS_ARRAY, ...handlers)
+        : handlers[0]),
+    ]
+  }
+  return genMulti(DELIMITERS_OBJECT, ...entries)
 }
 
 // the key a static prop is emitted under, which is also the key it is merged

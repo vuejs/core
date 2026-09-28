@@ -3073,6 +3073,81 @@ describe('attribute fallthrough', () => {
     expect(seen).toEqual(['root root parent'])
   })
 
+  test('a handler listed twice by the parent runs twice', async () => {
+    const parent = on('parent')
+    const seen = await clickParity(
+      {
+        Child: `<template><button v-bind="{ onClick: data.root }">x</button></template>`,
+        App: `<template><components.Child v-bind="{ onClick: [data.parent, data.parent] }" /></template>`,
+      },
+      () => ref({ root: on('root'), parent }),
+      [],
+    )
+    expect(seen).toEqual(['root parent parent'])
+  })
+
+  // vdom caches a member-expression handler behind a wrapper, so binding the
+  // fallthrough listener back statically runs it twice there as well
+  test('static listener bound back from $attrs runs twice like vdom', async () => {
+    const seen = await clickParity(
+      {
+        Child: `<template><button @click="$attrs.onClick">x</button></template>`,
+        App: `<template><components.Child @click="data.parent" /></template>`,
+      },
+      () => ref({ parent: on('parent') }),
+      [],
+    )
+    expect(seen).toEqual(['parent parent'])
+  })
+
+  test('v-on object before a static listener keeps the template order', async () => {
+    const seen = await clickParity(
+      {
+        Child: `<template><button v-on="data.events" @click="data.root">x</button></template>`,
+        App: `<template><components.Child @click="data.parent" /></template>`,
+      },
+      () =>
+        ref({
+          events: { click: on('object') } as any,
+          root: on('root'),
+          parent: on('parent'),
+        }),
+      [
+        data => (data.value.root = on('root2')),
+        data => (data.value.events = { click: on('object2') }),
+      ],
+    )
+    expect(seen).toEqual([
+      'object root parent',
+      'object root2 parent',
+      'object2 root2 parent',
+    ])
+  })
+
+  test('v-bind before a static listener keeps the template order', async () => {
+    const seen = await clickParity(
+      {
+        Child: `<template><button v-bind="data.rootProps" @click="data.root">x</button></template>`,
+        App: `<template><components.Child @click="data.parent" /></template>`,
+      },
+      () =>
+        ref({
+          rootProps: { onClick: on('bind') } as any,
+          root: on('root'),
+          parent: on('parent'),
+        }),
+      [
+        data => (data.value.rootProps = { onClick: on('bind2') }),
+        data => (data.value.root = on('root2')),
+      ],
+    )
+    expect(seen).toEqual([
+      'bind root parent',
+      'bind2 root parent',
+      'bind2 root2 parent',
+    ])
+  })
+
   test('root inside a v-if branch', async () => {
     const seen = await clickParity(
       {

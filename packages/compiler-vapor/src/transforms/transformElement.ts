@@ -58,6 +58,7 @@ import {
   type SetPropIRNode,
   type VaporDirectiveNode,
 } from '../ir'
+import { hasMergedStaticListener } from './vOn'
 import { EMPTY_EXPRESSION } from './utils'
 import {
   findProp,
@@ -1019,7 +1020,10 @@ export function buildProps(
                 handler: true,
               })
             }
-          } else if (hasDynamicKeyVBind(node)) {
+          } else if (
+            hasDynamicKeyVBind(node) ||
+            hasMergedStaticListener(node)
+          ) {
             // joins the dynamic props merge at its template position, so the
             // listeners it shares with the other sources keep vdom's order
             dynamicExpr.push(prop.exp)

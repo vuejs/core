@@ -10,6 +10,30 @@ export function render(_ctx) {
 }"
 `;
 
+exports[`compiler: element transform > a delegated listener stays out of the merge 1`] = `
+"import { createInvoker as _createInvoker, setDynamicEvents as _setDynamicEvents, renderEffect as _renderEffect, delegateEvents as _delegateEvents, template as _template } from 'vue';
+const t0 = _template("<div>", 1)
+_delegateEvents("click")
+
+export function render(_ctx) {
+  const n0 = t0()
+  n0.$evtclick = _createInvoker(e => _ctx.a(e))
+  _renderEffect(() => _setDynamicEvents(n0, _ctx.obj))
+  return n0
+}"
+`;
+
+exports[`compiler: element transform > a listener bound twice in one merge arg keeps both handlers 1`] = `
+"import { withModifiers as _withModifiers, setDynamicProps as _setDynamicProps, renderEffect as _renderEffect, template as _template } from 'vue';
+const t0 = _template("<div>", 1)
+
+export function render(_ctx) {
+  const n0 = t0()
+  _renderEffect(() => _setDynamicProps(n0, [_ctx.bind, { onClick: [_withModifiers(_ctx.a, ["stop"]), $event => (_ctx.b($event))] }]))
+  return n0
+}"
+`;
+
 exports[`compiler: element transform > b in nested divs 1`] = `
 "import { template as _template } from 'vue';
 const t0 = _template("<div><div><b></b></div><div>", 3)
@@ -1148,6 +1172,17 @@ const t0 = _template("<div><div><span></div><div>", 3)
 
 export function render(_ctx) {
   const n0 = t0()
+  return n0
+}"
+`;
+
+exports[`compiler: element transform > static listeners join the dynamic props of a native element 1`] = `
+"import { toHandlers as _toHandlers, withModifiers as _withModifiers, withKeys as _withKeys, setDynamicProps as _setDynamicProps, renderEffect as _renderEffect, template as _template } from 'vue';
+const t0 = _template("<div>", 1)
+
+export function render(_ctx) {
+  const n0 = t0()
+  _renderEffect(() => _setDynamicProps(n0, [{ onClick: _ctx.a }, _toHandlers(_ctx.obj, true), _ctx.bind, { onClick: _withModifiers(_ctx.b, ["stop"]), onKeyupOnce: _withKeys(_ctx.c, ["enter"]), "on:myEvent": _ctx.d }]))
   return n0
 }"
 `;

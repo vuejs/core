@@ -111,15 +111,17 @@ function syncRootListener(
   key: string,
   listener: RootListener,
 ): void {
-  // `$attrs` rebuilds its merged array on every read, so the fallthrough
+  // like mergeProps, a fallthrough handler the root already binds is not
+  // appended again; `$attrs` rebuilds its merged array on every read, so the
   // handlers are compared rather than the values
   const { own, attrs } = listener
   const handlers: EventHandler[] = (listener.handlers = [])
   for (const fn of isArray(own) ? own : [own]) {
     if (fn) handlers.push(fn)
   }
+  const ownCount = handlers.length
   for (const fn of isArray(attrs) ? attrs : [attrs]) {
-    if (fn && !handlers.includes(fn)) handlers.push(fn)
+    if (fn && handlers.lastIndexOf(fn, ownCount - 1) < 0) handlers.push(fn)
   }
 
   if (!handlers.length) {

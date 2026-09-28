@@ -6,6 +6,7 @@ import {
   NodeTypes,
   type SimpleExpressionNode,
   createCompilerError,
+  hasDynamicKeyVBind,
   isKeyboardEvent,
   isStaticExp,
   resolveModifiers,
@@ -90,7 +91,17 @@ export const transformVOn: DirectiveTransform = (dir, node, context) => {
     keyModifiers.length = 0
   }
 
-  if (isComponent || isSlotOutlet) {
+  // like vdom, an element with a v-bind / v-on object merges its listeners at
+  // runtime in template order, so a static listener joins that merge instead
+  // of binding on its own; `.delegate` opts out
+  const joinsPropsMerge =
+    !isComponent &&
+    !isSlotOutlet &&
+    !delegateModifier &&
+    arg.isStatic &&
+    (hasDynamicKeyVBind(node) || hasVOnObject(node))
+
+  if (isComponent || isSlotOutlet || joinsPropsMerge) {
     if (delegateModifier) {
       warnDelegate(
         context,
@@ -159,6 +170,25 @@ export const transformVOn: DirectiveTransform = (dir, node, context) => {
   }
 
   context.registerEffect([arg], operation)
+}
+
+function hasVOnObject(node: ElementNode): boolean {
+  return node.props.some(
+    p => p.type === NodeTypes.DIRECTIVE && p.name === 'on' && !p.arg,
+  )
+}
+
+// a static `v-on:event` without `.delegate`, which joins the props merge of
+// an element that also has a v-on object (see transformVOn)
+export function hasMergedStaticListener(node: ElementNode): boolean {
+  return node.props.some(
+    p =>
+      p.type === NodeTypes.DIRECTIVE &&
+      p.name === 'on' &&
+      !!p.arg &&
+      isStaticExp(p.arg) &&
+      !p.modifiers.some(m => m.content === 'delegate'),
+  )
 }
 
 function normalizeStaticEventArg(

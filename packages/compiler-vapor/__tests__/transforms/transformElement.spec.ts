@@ -1436,6 +1436,38 @@ describe('compiler: element transform', () => {
     ])
   })
 
+  test('static listeners join the dynamic props of a native element', () => {
+    const { code } = compileWithElementTransform(
+      `<div @click="a" v-on="obj" v-bind="bind" @click.stop="b" @keyup.enter.once="c" @myEvent="d" />`,
+    )
+    expect(code).toMatchSnapshot()
+    expect(code).contains(
+      `_setDynamicProps(n0, [{ onClick: _ctx.a }, _toHandlers(_ctx.obj, true), _ctx.bind, { onClick: _withModifiers(_ctx.b, ["stop"]), onKeyupOnce: _withKeys(_ctx.c, ["enter"]), "on:myEvent": _ctx.d }])`,
+    )
+    expect(code).not.contains(`_on(`)
+    expect(code).not.contains(`_setDynamicEvents`)
+  })
+
+  test('a listener bound twice in one merge arg keeps both handlers', () => {
+    const { code } = compileWithElementTransform(
+      `<div v-bind="bind" @click.stop="a" @click="b($event)" />`,
+    )
+    expect(code).toMatchSnapshot()
+    expect(code).contains(
+      `{ onClick: [_withModifiers(_ctx.a, ["stop"]), $event => (_ctx.b($event))] }`,
+    )
+  })
+
+  test('a delegated listener stays out of the merge', () => {
+    const { code } = compileWithElementTransform(
+      `<div @click.delegate="a" v-on="obj" />`,
+    )
+    expect(code).toMatchSnapshot()
+    expect(code).contains(`n0.$evtclick = `)
+    expect(code).contains(`_setDynamicEvents(n0, _ctx.obj)`)
+    expect(code).not.contains(`_toHandlers`)
+  })
+
   test('v-on="obj" merges into the dynamic props of a native element', () => {
     const { code, ir } = compileWithElementTransform(
       `<div id="a" v-on="obj" v-bind="bind" />`,
