@@ -11,6 +11,7 @@ import {
   setCurrentInstance,
   useAsyncComponentState,
 } from '@vue/runtime-dom'
+import { extend } from '@vue/shared'
 import { defineVaporComponent } from './apiDefineComponent'
 import {
   type VaporComponent,
@@ -278,7 +279,9 @@ function createErrorComp(
   return createInnerComp(
     comp,
     parent,
-    { error: getError },
+    // the wrapper's props and attrs reach the error component the way the
+    // vdom wrapper's attrs fall through to its error vnode root
+    extend({ error: getError }, parent.rawProps),
     // Avoid wrapper slot fallthrough
     {},
   )
