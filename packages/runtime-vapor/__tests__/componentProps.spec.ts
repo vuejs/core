@@ -1835,6 +1835,30 @@ describe('component: props', () => {
       expect(same.vapor).toEqual(same.vdom)
     })
 
+    test('sync watcher callbacks do not become prop source dependencies', async () => {
+      await renderParity(
+        {
+          Child: `<script setup>
+            import { ref, watch } from 'vue'
+            const props = defineProps({ y: Array })
+            const count = ref(0)
+            watch(() => props.y, () => count.value++, { flush: 'sync' })
+          </script><template><p>{{ props.y[0] }}:{{ count }}</p></template>`,
+          App: `<template><components.Child :y="[data.x]" /></template>`,
+        },
+        () => ref({ x: 'a' }),
+        async (data, root) => {
+          expect(root.textContent).toBe('a:0')
+          data.value.x = 'b'
+          await nextTick()
+          expect(root.textContent).toBe('b:1')
+          data.value.x = 'c'
+          await nextTick()
+          expect(root.textContent).toBe('c:2')
+        },
+      )
+    })
+
     // Without a guard the read is the parent's own bug. vdom reports it from
     // the parent render; vapor must report it the same way instead of
     // throwing it at whoever assigned the ref.

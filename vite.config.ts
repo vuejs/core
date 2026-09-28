@@ -61,6 +61,7 @@ export default defineConfig({
           execArgv: ['--expose-gc'],
           include: [
             'packages/reactivity/__tests__/gc.spec.ts',
+            'packages/runtime-vapor/__tests__/gc.spec.ts',
             'packages/server-renderer/__tests__/ssrWatch.spec.ts',
             'packages/server-renderer/__tests__/ssrRender.spec.ts',
           ],
@@ -91,7 +92,11 @@ export default defineConfig({
           include: [
             'packages/{vue,vue-compat,runtime-dom,runtime-vapor}/**/*.spec.ts',
           ],
-          exclude: [...configDefaults.exclude, '**/e2e/**'],
+          exclude: [
+            ...configDefaults.exclude,
+            '**/e2e/**',
+            'packages/runtime-vapor/__tests__/gc.spec.ts',
+          ],
         },
       },
       {

@@ -178,15 +178,24 @@ function commitSource(
       if (seeding) {
         seeding = false
         next = seed
+        seed = undefined
       }
       if (isContainer && isObject(next)) {
         const copy: Record<string, unknown> = {}
         for (const key in next) copy[key] = next[key]
         next = copy
       }
-      committed.value = value = stabilizeDynamicSourceValue(value, next)
+      value = stabilizeDynamicSourceValue(value, next)
     } finally {
       restoreCurrentInstance(prevInner)
+    }
+    // Publishing can run sync watcher callbacks; they must not become
+    // dependencies of the prop source.
+    const prevSub = setActiveSub()
+    try {
+      committed.value = value
+    } finally {
+      setActiveSub(prevSub)
     }
   }, true)
   // one property order for every source keeps the `_cache` load polymorphic
