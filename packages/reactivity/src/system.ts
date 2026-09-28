@@ -263,13 +263,32 @@ export function endTracking(
 }
 
 export function flush(): void {
-  while (notifyIndex < notifyBufferLength) {
-    const effect = notifyBuffer[notifyIndex]!
-    notifyBuffer[notifyIndex++] = undefined
-    effect.notify()
+  let error: unknown
+  let hasError = false
+  try {
+    while (notifyIndex < notifyBufferLength) {
+      const effect = notifyBuffer[notifyIndex]!
+      notifyBuffer[notifyIndex++] = undefined
+      try {
+        effect.notify()
+      } catch (e) {
+        // an effect that throws must not prevent the remaining effects of the
+        // batch from being notified
+        if (!hasError) {
+          hasError = true
+          error = e
+        }
+      }
+    }
+  } finally {
+    // reset the buffer even if notifying threw, otherwise the batch would be
+    // delivered by an unrelated later write (#15674)
+    notifyIndex = 0
+    notifyBufferLength = 0
   }
-  notifyIndex = 0
-  notifyBufferLength = 0
+  if (hasError) {
+    throw error
+  }
 }
 
 export function checkDirty(link: Link, sub: ReactiveNode): boolean {
