@@ -320,12 +320,14 @@ export function createComponent(
   appContext: GenericAppContext = (currentInstance &&
     currentInstance.appContext) ||
     emptyContext,
+  // set by non-compiled callers (app, vdom interop, custom element, HMR): the
+  // caller mounts it and owns its inputs, so it neither self-mounts nor
+  // inherits an ambient v-once region
   managedMount = false,
   ce?: (instance: VaporComponentInstance) => void,
 ): VaporComponentInstance {
   // A component created while rendering a v-once region receives frozen
-  // parent inputs, but its own render effects stay live. A vdom-managed mount
-  // is a boundary of its own: the vdom render owns that component's inputs.
+  // parent inputs, but its own render effects stay live.
   const wasInOnce = inOnce
   if (wasInOnce && !managedMount) once = true
 

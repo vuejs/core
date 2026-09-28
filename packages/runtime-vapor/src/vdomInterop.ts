@@ -391,7 +391,6 @@ const vaporInteropImpl = {
       undefined,
       undefined,
       (parentComponent ? parentComponent.appContext : vnode.appContext) as any,
-      // VDOM interop owns the explicit mount below
       true,
     ))
     instance.rawPropsRef = propsRef
