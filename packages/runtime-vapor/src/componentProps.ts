@@ -39,6 +39,7 @@ import {
   computed,
   getCurrentScope,
   onScopeDispose,
+  setActiveSub,
   shallowRef,
 } from '@vue/reactivity'
 import { normalizeEmitsOptions } from './componentEmits'
@@ -153,13 +154,31 @@ function commitSource(
     return
   }
   const fn = source as FunctionSource<unknown>
+  const cache = fn._cache
   const committed = shallowRef<unknown>()
   let value: unknown
+  // consumers that already read the source hold the cache's value; the commit
+  // starts from it (not from a fresh evaluation, which may be a new object) so
+  // switching them over changes nothing they can observe
+  let seed: unknown
+  let seeding = !!cache
+  if (cache) {
+    const prevSub = setActiveSub()
+    try {
+      seed = cache.value
+    } finally {
+      setActiveSub(prevSub)
+    }
+  }
   renderEffect(() => {
     // the source is the parent's expression; evaluate it as the cache does
     const prevInner = setCurrentInstance(parent)
     try {
       let next = fn()
+      if (seeding) {
+        seeding = false
+        next = seed
+      }
       if (isContainer && isObject(next)) {
         const copy: Record<string, unknown> = {}
         for (const key in next) copy[key] = next[key]
@@ -174,10 +193,9 @@ function commitSource(
   if (!fn._cache) fn._cache = undefined
   fn._committed = committed
   onScopeDispose(() => (fn._committed = undefined))
-  // a cache created before this point still depends on the raw source (and
-  // on any computed the source read); re-track it onto the committed value
-  // so a dirty check no longer descends into those
-  const cache = fn._cache
+  // the cache still depends on the raw source (and on any computed the source
+  // read); re-track it onto the committed value so a dirty check no longer
+  // descends into those
   if (cache) (cache as unknown as ComputedRefImpl<unknown>).update()
 }
 

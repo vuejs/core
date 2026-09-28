@@ -1806,6 +1806,35 @@ describe('component: props', () => {
       expect(seen.vapor).toEqual(seen.vdom)
     })
 
+    // switching a source to its commit must not change what consumers that
+    // already read it hold: the commit starts from the cache's current value
+    test('object prop keeps its identity when the commit starts', async () => {
+      const same: Record<string, boolean[]> = {}
+      await renderParity(
+        {
+          Child: `<script setup>
+            import { computed, watch } from 'vue'
+            const data = _data
+            const props = defineProps({ y: Object, z: Array })
+            const y = computed(() => props.y)
+            const z = computed(() => props.z)
+            void y.value, z.value
+            watch([y, z], () => {}, { flush: 'sync' })
+            data.value.same = [y.value === props.y, z.value === props.z]
+          </script><template><p>{{ y.value }}</p></template>`,
+          App: `<template>
+            <components.Child :y="{ value: data.x }" :z="[data.x]" />
+          </template>`,
+        },
+        () => ref<any>({ x: 'a' }),
+        (data, root, mode) => {
+          same[mode] = data.value.same
+        },
+      )
+      expect(same.vdom).toEqual([true, true])
+      expect(same.vapor).toEqual(same.vdom)
+    })
+
     // Without a guard the read is the parent's own bug. vdom reports it from
     // the parent render; vapor must report it the same way instead of
     // throwing it at whoever assigned the ref.
