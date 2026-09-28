@@ -321,8 +321,9 @@ export function createComponent(
     currentInstance.appContext) ||
     emptyContext,
   // set by non-compiled callers (app, vdom interop, custom element, HMR): the
-  // caller mounts it and owns its inputs, so it neither self-mounts nor
-  // inherits an ambient v-once region
+  // caller mounts it and owns its inputs, so it neither self-mounts, inherits
+  // an ambient v-once region, nor takes a KeepAlive cache hit (vdom interop
+  // resolved it already; a lookup by type would return another entry)
   managedMount = false,
   ce?: (instance: VaporComponentInstance) => void,
 ): VaporComponentInstance {
@@ -390,7 +391,7 @@ export function createComponent(
     ) {
       const ctx = (currentInstance as KeepAliveInstance).ctx
       keepAliveCtx = ctx
-      const cached = ctx.getCachedComponent(component, key)
+      const cached = !managedMount && ctx.getCachedComponent(component, key)
       if (cached) {
         // a nested branch teardown stops the branch scope that unmounts the
         // cached component, so the scope re-entering it takes over
