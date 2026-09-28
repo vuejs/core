@@ -337,6 +337,7 @@ type ExpressionAnalysis = {
   expressionRecords: Map<SimpleExpressionNode, ExpressionRecord>
   seenIdentifier: Set<string>
   updatedVariable: Set<string>
+  eagerVariable: Set<string>
 }
 type SeenExpression = {
   count: number
@@ -365,6 +366,7 @@ export function processExpressions(
     expressionRecords,
     seenIdentifier,
     updatedVariable,
+    eagerVariable,
   } = analyzeExpressions(expressions)
   const reservedNames = new Set<string>(seenIdentifier)
 
@@ -377,6 +379,7 @@ export function processExpressions(
     expressionRecords,
     seenIdentifier,
     updatedVariable,
+    eagerVariable,
     reservedNames,
     expressionReplacements,
   )
@@ -411,6 +414,7 @@ function analyzeExpressions(
   const expressionRecords = new Map<SimpleExpressionNode, ExpressionRecord>()
   const seenIdentifier = new Set<string>()
   const updatedVariable = new Set<string>()
+  const eagerVariable = new Set<string>()
 
   const getRecord = (exp: SimpleExpressionNode): ExpressionRecord => {
     let record = expressionRecords.get(exp)
@@ -442,6 +446,12 @@ function analyzeExpressions(
       )
     ) {
       updatedVariable.add(name)
+    }
+    // a member expression is only hoisted when some usage evaluates it
+    // unconditionally, e.g. `x === undefined ? '—' : x.y` must not read
+    // `x.y` ahead of its guard
+    if (isIdentifier || !isLazilyEvaluated(parentStack)) {
+      eagerVariable.add(name)
     }
   }
 
@@ -523,6 +533,7 @@ function analyzeExpressions(
     variableToExpMap,
     expressionRecords,
     updatedVariable,
+    eagerVariable,
   }
 }
 
@@ -548,6 +559,38 @@ function setExpressionReplacement(
   )
 }
 
+/**
+ * Whether a node is only evaluated lazily, given its ancestor chain - i.e. it
+ * may be skipped entirely when a preceding condition is not met.
+ */
+const isLazilyEvaluated = (parentStack: Node[]): boolean => {
+  for (let i = parentStack.length - 1; i > 0; i--) {
+    const child = parentStack[i]
+    const parent = parentStack[i - 1]
+    switch (parent.type) {
+      // `ok ? a : b` - the branches are only evaluated once a branch is taken
+      case 'ConditionalExpression':
+        if (parent.test !== child) return true
+        break
+      // `ok && a` / `ok || a` - the right hand side may not be evaluated
+      case 'LogicalExpression':
+        if (parent.right === child) return true
+        break
+      // `a?.(b)` / `a?.[b]` - skipped entirely when `a` is nullish
+      case 'OptionalCallExpression':
+        if ((parent.arguments as Node[]).includes(child)) return true
+        break
+      case 'OptionalMemberExpression':
+        if (parent.computed && (parent.property as Node) === child) return true
+        break
+      default:
+        // a function body is only evaluated once the function is called
+        if (isFunctionType(parent)) return true
+    }
+  }
+  return false
+}
+
 function processRepeatedVariables(
   context: CodegenContext,
   seenVariable: Record<string, number>,
@@ -555,6 +598,7 @@ function processRepeatedVariables(
   expressionRecords: Map<SimpleExpressionNode, ExpressionRecord>,
   seenIdentifier: Set<string>,
   updatedVariable: Set<string>,
+  eagerVariable: Set<string>,
   reservedNames: Set<string>,
   expressionReplacements: Map<SimpleExpressionNode, SimpleExpressionNode>,
 ): DeclarationValue[] {
@@ -564,6 +608,8 @@ function processRepeatedVariables(
 
   for (const [name, exps] of variableToExpMap) {
     if (updatedVariable.has(name)) continue
+    // skip a member expression that is only read lazily, see `eagerVariable`
+    if (!eagerVariable.has(name)) continue
     // skip globally allowed identifiers - they are not reactive and
     // their method calls (e.g. Math.random()) may have side effects
     if (isGloballyAllowed(name)) continue
