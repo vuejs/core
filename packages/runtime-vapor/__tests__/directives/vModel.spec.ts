@@ -1875,6 +1875,27 @@ describe('directive: v-model', () => {
         [true],
       ],
       [
+        'static listener with an empty v-on object',
+        `<input v-model="data" @input="log(data)" v-on="{}">`,
+        () => '',
+        (root: HTMLElement) => typeText(root, 'vue'),
+        ['vue'],
+      ],
+      [
+        'merged static and object listeners',
+        `<input class="base" :class="data" :type="type" v-model="data" @change="log('a:' + data)" v-on="{ change: () => log('b:' + data) }">`,
+        () => false,
+        (root: HTMLElement) => check(root, 0),
+        ['a:true', 'b:true'],
+      ],
+      [
+        'merged object and static listeners',
+        `<input class="base" :class="data" :type="type" v-model="data" v-on="{ change: () => log('a:' + data) }" @change="log('b:' + data)">`,
+        () => false,
+        (root: HTMLElement) => check(root, 0),
+        ['a:true', 'b:true'],
+      ],
+      [
         'v-on object',
         `<input v-model="data" v-on="{ input: () => log(data) }">`,
         () => '',
@@ -1889,6 +1910,38 @@ describe('directive: v-model', () => {
         expect(vapor).toEqual(vdom)
       },
     )
+
+    test('merged listeners stay registered when DOM props update', async () => {
+      const seen = {} as Record<'vdom' | 'vapor', string[]>
+      let log: string[]
+      await renderParity(
+        {
+          App: `<script setup>
+            const data = _data
+            const log = _components.log
+          </script>
+          <template>
+            <input class="base" :class="data.class" v-model="data.value"
+              @input="log('a:' + data.value)"
+              v-on="{ input: () => log('b:' + data.value) }">
+          </template>`,
+        },
+        () => ref({ value: '', class: 'before' }),
+        async (data, root, mode) => {
+          log = seen[mode] = []
+          const input = root.querySelector('input')!
+          expect(input.className).toBe('base before')
+          data.value.class = 'after'
+          await nextTick()
+          expect(input.className).toBe('base after')
+          await new Promise(r => setTimeout(r, 5))
+          typeText(root, 'vue')
+        },
+        { log: (value: string) => log.push(value) },
+      )
+      expect(seen.vdom).toEqual(['a:vue', 'b:vue'])
+      expect(seen.vapor).toEqual(seen.vdom)
+    })
 
     test('listeners stay before a custom directive on the same element', async () => {
       const { vdom, vapor } = await seenParity(

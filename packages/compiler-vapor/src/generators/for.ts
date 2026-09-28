@@ -486,7 +486,9 @@ function matchPatterns(
       effect.operations.some(
         operation =>
           ((operation.type === IRNodeTypes.SET_EVENT ||
-            operation.type === IRNodeTypes.SET_DYNAMIC_EVENTS) &&
+            operation.type === IRNodeTypes.SET_DYNAMIC_EVENTS ||
+            (operation.type === IRNodeTypes.SET_DYNAMIC_PROPS &&
+              operation.listeners)) &&
             modelElements.has(operation.element)) ||
           (operation.type === IRNodeTypes.SET_PROP &&
             index < (lastOrderedProp.get(operation.element) ?? -1)),

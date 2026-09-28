@@ -10,6 +10,7 @@ import {
   advancePositionWithClone,
   createCompilerError,
   createSimpleExpression,
+  findDir,
   hasDynamicKeyVBind,
   isSimpleIdentifier,
   isStaticArgOf,
@@ -968,11 +969,24 @@ export function buildProps(
   const dynamicArgs: IRProps[] = []
   const dynamicExpr: SimpleExpressionNode[] = []
   let results: DirectiveTransformResult[] = []
+  // Keep merged listeners after v-model without delaying DOM props such as
+  // input type. Unknown v-bind keys still need one combined props payload.
+  const deferListeners =
+    !isComponent &&
+    !!findDir(node, 'model') &&
+    !hasDynamicKeyVBind(node) &&
+    mergesListeners(node, context)
+  let listenerResults: DirectiveTransformResult[] = []
 
-  function pushMergeArg() {
-    if (results.length) {
-      dynamicArgs.push(dedupeProperties(results))
-      results = []
+  function pushMergeArg(listeners = false) {
+    const props = listeners ? listenerResults : results
+    if (props.length) {
+      dynamicArgs.push(dedupeProperties(props))
+      if (listeners) {
+        listenerResults = []
+      } else {
+        results = []
+      }
     }
   }
 
@@ -1039,7 +1053,7 @@ export function buildProps(
             pushStaticObjectLiteralProps(objectLiteralProps)
           } else if (isComponent || mergesListeners(node, context)) {
             dynamicExpr.push(prop.exp)
-            pushMergeArg()
+            pushMergeArg(deferListeners)
             dynamicArgs.push({
               kind: IRDynamicPropsKind.EXPRESSION,
               value: prop.exp,
@@ -1078,8 +1092,20 @@ export function buildProps(
 
     const result = transformProp(prop, node, context)
     if (result) {
-      dynamicExpr.push(result.key, result.value)
-      if (isComponent && !result.key.isStatic) {
+      if (
+        deferListeners &&
+        !result.handler &&
+        (result.modifier || !isOn(result.key.content))
+      ) {
+        results.push(result)
+        continue
+      }
+      dynamicExpr.push(result.key)
+      // Handler bodies read the model when invoked, after its event updates it.
+      if (!deferListeners || !result.handler) dynamicExpr.push(result.value)
+      if (deferListeners) {
+        listenerResults.push(result)
+      } else if (isComponent && !result.key.isStatic) {
         // v-bind:[name]="value" or v-on:[name]="value"
         pushMergeArg()
         dynamicArgs.push(
@@ -1092,6 +1118,22 @@ export function buildProps(
         results.push(result)
       }
     }
+  }
+
+  if (deferListeners) {
+    pushMergeArg(true)
+    context.registerEffect(
+      dynamicExpr,
+      {
+        type: IRNodeTypes.SET_DYNAMIC_PROPS,
+        element: context.reference(),
+        props: dynamicArgs,
+        isSVG: node.ns === Namespaces.SVG,
+        listeners: true,
+      },
+      getEffectIndex,
+    )
+    return [false, dedupeProperties(results)]
   }
 
   // has dynamic key or v-bind="{}"

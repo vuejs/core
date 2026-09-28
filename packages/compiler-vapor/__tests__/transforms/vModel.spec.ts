@@ -500,13 +500,10 @@ describe('compiler: vModel transform', () => {
       code.indexOf('_on(n0, "change"'),
     )
     expect(code.indexOf('_applyTextModel(n1')).toBeLessThan(
-      code.indexOf('_on(n1, "input"'),
-    )
-    expect(code.indexOf('_applyTextModel(n1')).toBeLessThan(
       code.indexOf('_onBinding(n1'),
     )
     expect(code.indexOf('_applyTextModel(n1')).toBeLessThan(
-      code.indexOf('_setDynamicEvents(n1'),
+      code.indexOf('_setDynamicProps(n1'),
     )
   })
 

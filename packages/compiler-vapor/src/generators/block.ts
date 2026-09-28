@@ -68,7 +68,8 @@ export function genBlockContent(
   const modelElements = new Set(modelOperations.map(oper => oper.element))
   const isModelListener = (oper: OperationNode) =>
     (oper.type === IRNodeTypes.SET_EVENT ||
-      oper.type === IRNodeTypes.SET_DYNAMIC_EVENTS) &&
+      oper.type === IRNodeTypes.SET_DYNAMIC_EVENTS ||
+      (oper.type === IRNodeTypes.SET_DYNAMIC_PROPS && oper.listeners)) &&
     modelElements.has(oper.element)
   const isDeferred = (oper: OperationNode) =>
     isVModelOperation(oper) || isModelListener(oper)
