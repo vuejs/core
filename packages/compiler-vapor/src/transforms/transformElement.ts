@@ -1007,6 +1007,7 @@ export function buildProps(
             if (isComponent) {
               pushStaticObjectLiteralProps(objectLiteralProps)
             } else {
+              dynamicExpr.push(prop.exp)
               results.push(...objectLiteralProps.map(toDirectiveResult))
             }
           } else {
@@ -1181,7 +1182,8 @@ export function mergesListeners(
 // like vdom, an element merges its listeners at runtime in template order
 // once their keys can collide: a v-bind spread that is not expanded into
 // static props or carries a dynamic key may hold any `on*` key, and a v-on
-// object may hold the key of a static listener (`@evt` or `:onXxx`)
+// object may hold the key of a static listener (`@evt` or `:onXxx`).
+// Native SVG on* bindings also share the dynamic prop cache with v-on objects.
 function resolveListenerMerge(
   node: ElementNode,
   context: TransformContext<ElementNode>,
@@ -1194,16 +1196,26 @@ function resolveListenerMerge(
     const arg = p.arg && resolveExpression(p.arg)
     if (p.name === 'bind') {
       if (!arg) {
-        if (
-          p.exp &&
-          !resolveNativeObjectLiteralBindProps(p.exp, context, props, p)
-        ) {
-          return true
+        if (p.exp) {
+          const bindProps = resolveNativeObjectLiteralBindProps(
+            p.exp,
+            context,
+            props,
+            p,
+          )
+          if (!bindProps) return true
+          if (
+            node.ns === Namespaces.SVG &&
+            bindProps.some(({ key }) => isNativeOn(key.content))
+          ) {
+            hasStaticListener = true
+          }
         }
       } else if (!arg.isStatic) {
         return true
       } else if (
-        isOn(arg.content) &&
+        (isOn(arg.content) ||
+          (node.ns === Namespaces.SVG && isNativeOn(arg.content))) &&
         !isModelListener(arg.content) &&
         !p.modifiers.some(m => m.content === 'prop' || m.content === 'attr')
       ) {

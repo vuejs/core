@@ -164,4 +164,65 @@ describe('SVG support', () => {
       },
     )
   })
+
+  test.each([':onclick="data.click"', 'v-bind="{ onclick: data.click }"'])(
+    'should preserve native svg events with a v-on object: %s',
+    async binding => {
+      await renderParity(
+        {
+          App: `<template><svg><a ${binding} v-on="data.events"><text>link</text></a></svg></template>`,
+        },
+        () => ref({ click: vi.fn(), events: { mouseenter: vi.fn() } }),
+        async (data, root) => {
+          const a = root.querySelector('a')!
+          const initialClick = data.value.click
+          const initialMouseenter = data.value.events.mouseenter
+          const dispatch = () => {
+            a.dispatchEvent(new MouseEvent('click'))
+            a.dispatchEvent(new MouseEvent('mouseenter'))
+          }
+
+          expect(a.onclick).toBe(data.value.click)
+          dispatch()
+          expect(initialClick).toHaveBeenCalledTimes(1)
+          expect(initialMouseenter).toHaveBeenCalledTimes(1)
+
+          data.value.click = vi.fn()
+          await nextTick()
+          expect(a.onclick).toBe(data.value.click)
+          dispatch()
+          expect(initialClick).toHaveBeenCalledTimes(1)
+          expect(data.value.click).toHaveBeenCalledTimes(1)
+          expect(initialMouseenter).toHaveBeenCalledTimes(2)
+
+          data.value.events = { mouseenter: vi.fn() }
+          await nextTick()
+          expect(a.onclick).toBe(data.value.click)
+          dispatch()
+          expect(data.value.click).toHaveBeenCalledTimes(2)
+          expect(initialMouseenter).toHaveBeenCalledTimes(2)
+          expect(data.value.events.mouseenter).toHaveBeenCalledTimes(1)
+        },
+      )
+    },
+  )
+
+  test('should update expanded native svg bindings with a constant v-on object', async () => {
+    await renderParity(
+      {
+        App: `<template><svg><a v-bind="{ onclick: data.click }" v-on="{}" /></svg></template>`,
+      },
+      () => ref({ click: vi.fn() }),
+      async (data, root) => {
+        const a = root.querySelector('a')!
+        expect(a.onclick).toBe(data.value.click)
+
+        data.value.click = vi.fn()
+        await nextTick()
+        expect(a.onclick).toBe(data.value.click)
+        a.dispatchEvent(new MouseEvent('click'))
+        expect(data.value.click).toHaveBeenCalledTimes(1)
+      },
+    )
+  })
 })
