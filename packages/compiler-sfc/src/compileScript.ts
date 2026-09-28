@@ -12,7 +12,7 @@ import {
   type SFCDescriptor,
   type SFCScriptBlock,
 } from './parse'
-import type { ParserPlugin } from '@babel/parser'
+import { type ParserPlugin, parse as babelParse } from '@babel/parser'
 import { generateCodeFrame } from '@vue/shared'
 import type {
   ArrayPattern,
@@ -192,6 +192,8 @@ export function compileScript(
   const vapor = sfc.vapor || options.vapor
   const ssr = options.templateOptions?.ssr
   const setupPreambleLines = [] as string[]
+  const cssModuleBindings = [] as string[]
+  let cssModuleHelper = '_useCssModule'
   const isJSOrTS =
     isJS(scriptLang, scriptSetupLang) || isTS(scriptLang, scriptSetupLang)
 
@@ -341,11 +343,17 @@ export function compileScript(
 
   /**
    * vapor resolves template expressions against setup scope instead of a
-   * `_ctx` render proxy, so `<style module>` names used in the template have
-   * to be declared as setup bindings.
+   * `_ctx` render proxy, so `<style module>` names need explicit bindings.
    */
   function declareTemplateCssModules() {
-    if (!sfc.template || !sfc.template.ast) return
+    if (!sfc.template) return
+
+    while (
+      ctx.bindingMetadata[cssModuleHelper] ||
+      (inlineMode && sfc.styles.some(style => style.module === cssModuleHelper))
+    ) {
+      cssModuleHelper += '_'
+    }
 
     for (const style of sfc.styles) {
       if (!style.module) continue
@@ -354,19 +362,40 @@ export function compileScript(
       if (
         !isSimpleIdentifier(name) ||
         ctx.bindingMetadata[name] ||
-        !isUsedInTemplate(name, sfc)
+        // Non-inline bindings must remain available across template-only HMR.
+        // Only prune modules when the inline template can be analyzed as-is.
+        (inlineMode &&
+          sfc.template.ast &&
+          !sfc.template.lang &&
+          !options.templateOptions?.preprocessLang &&
+          !isUsedInTemplate(name, sfc, options.templateOptions))
       ) {
         continue
       }
-      setupPreambleLines.push(
-        `const ${name} = ${ctx.helper('useCssModule')}(${JSON.stringify(name)})`,
+      if (inlineMode) {
+        // These identifiers are also referenced by generated template code.
+        if (
+          name === '__props' ||
+          name === '_useCssModule' ||
+          (name[0] === '_' && ctx.helperImports.has(name.slice(1)))
+        ) {
+          continue
+        }
+        // CSS module names need not be valid JavaScript binding identifiers.
+        try {
+          babelParse(`const ${name} = null`, { sourceType: 'module' })
+        } catch {
+          continue
+        }
+      }
+      ctx.helperImports.add('useCssModule')
+      const value = `${cssModuleHelper}(${JSON.stringify(name)})`
+      cssModuleBindings.push(
+        inlineMode
+          ? `const ${name} = ${value}`
+          : `${JSON.stringify(name)}: ${value}`,
       )
       ctx.bindingMetadata[name] = BindingTypes.SETUP_CONST
-      if (!inlineMode) {
-        // in non-inline mode the template reads bindings off the object
-        // returned from setup()
-        setupBindings[name] = BindingTypes.SETUP_CONST
-      }
     }
   }
 
@@ -975,6 +1004,7 @@ export function compileScript(
   }
 
   let templateMap
+  let templateCode
   // 9. generate return statement
   let returned
   // ensure props bindings register before compile template in inline mode
@@ -1014,6 +1044,7 @@ export function compileScript(
         returned += `${key}, `
       }
     }
+    returned += cssModuleBindings.join(', ')
     returned = returned.replace(/, $/, '') + ` }`
   } else {
     // inline mode
@@ -1043,6 +1074,7 @@ export function compileScript(
         },
       })
       templateMap = map
+      templateCode = code
       if (tips.length) {
         tips.forEach(warnOnce)
       }
@@ -1082,6 +1114,10 @@ export function compileScript(
       // hydration state, so it must not render there. Return the template as
       // a render closure; the runtime invokes it once setup has settled.
       returned = vapor && !ssr && hasAwait ? `return () => {${code}}` : code
+      if (cssModuleBindings.length) {
+        // Keep implicit template bindings out of the user's script scope.
+        returned = `{\n${cssModuleBindings.join('\n')}\n${returned}\n}`
+      }
     } else {
       returned = `() => {}`
     }
@@ -1101,7 +1137,7 @@ export function compileScript(
     ctx.s.appendRight(
       endOffset,
       // vapor mode generates its own return when inlined
-      `\n${vapor && !ssr ? `` : `return `}${returned}\n}\n\n`,
+      `\n${vapor && !ssr && inlineMode ? `` : `return `}${returned}\n}\n\n`,
     )
   }
 
@@ -1209,7 +1245,7 @@ export function compileScript(
       : `'vue'`
     ctx.s.prepend(
       `import { ${[...ctx.helperImports]
-        .map(h => `${h} as _${h}`)
+        .map(h => `${h} as ${h === 'useCssModule' ? cssModuleHelper : `_${h}`}`)
         .join(', ')} } from ${importSrc}\n`,
     )
   }
@@ -1225,7 +1261,7 @@ export function compileScript(
       : undefined
   // merge source maps of the script setup and template in inline mode
   if (templateMap && map) {
-    const offset = content.indexOf(returned)
+    const offset = content.indexOf(templateCode!)
     const templateLineOffset =
       content.slice(0, offset).split(/\r?\n/).length - 1
     map = mergeSourceMaps(map, templateMap, templateLineOffset)

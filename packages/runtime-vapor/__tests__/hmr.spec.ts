@@ -19,7 +19,11 @@ import {
   warn,
   watchEffect,
 } from '@vue/runtime-dom'
-import { compileToVaporRender as compileToFunction, makeRender } from './_utils'
+import {
+  compileToVaporRender as compileToFunction,
+  makeRender,
+  runtimeDom,
+} from './_utils'
 import {
   createComponent,
   createSlot,
@@ -36,6 +40,7 @@ import {
   vaporInteropPlugin,
 } from '@vue/runtime-vapor'
 import { BindingTypes } from '@vue/compiler-core'
+import { compileScript, parse } from '@vue/compiler-sfc'
 import type { VaporComponent } from '../src/component'
 
 declare var __VUE_HMR_RUNTIME__: HMRRuntime
@@ -1933,6 +1938,58 @@ describe('hot module replacement', () => {
     await nextTick()
     expect(html()).toBe('<div>bar</div>')
     expect('provide() can only be used inside setup()').not.toHaveBeenWarned()
+  })
+
+  test('rerender introducing CSS modules preserves setup state', async () => {
+    const id = 'rerender-unused-css-modules'
+    const template = '<button @click="count++">{{ count }}</button>'
+    const { descriptor } = parse(`
+      <script setup vapor>
+      import { ref } from 'vue'
+      const count = ref(0)
+      </script>
+      <template>${template}</template>
+      <style module>.red { color: red }</style>
+      <style module="classes">.blue { color: blue }</style>
+    `)
+    const { content, bindings } = compileScript(descriptor, {
+      id,
+      genDefaultAs: '__sfc__',
+    })
+    const code = content
+      .replace(/\bimport {/g, 'const {')
+      .replace(/ as _/g, ': _')
+      .replace(/} from ['"]vue['"]/g, '} = Vue')
+    const Comp = new Function('Vue', `${code}\nreturn __sfc__`)(runtimeDom)
+    Comp.__hmrId = id
+    Comp.__cssModules = {
+      $style: { red: 'red' },
+      classes: { blue: 'blue' },
+    }
+    Comp.render = compileToFunction(template, { bindingMetadata: bindings })
+    const setup = vi.spyOn(Comp, 'setup')
+    createRecord(id, Comp)
+
+    const root = document.createElement('div')
+    document.body.appendChild(root)
+    define(Comp).create().mount(root)
+    triggerEvent('click', root.children[0])
+    await nextTick()
+    expect(root.innerHTML).toBe('<button>1</button>')
+
+    rerender(
+      id,
+      compileToFunction(
+        '<button :class="[$style.red, classes.blue]" @click="count++">{{ count }}</button>',
+        { bindingMetadata: bindings },
+      ),
+    )
+    expect(root.innerHTML).toBe('<button class="red blue">1</button>')
+    expect(setup).toHaveBeenCalledTimes(1)
+
+    triggerEvent('click', root.children[0])
+    await nextTick()
+    expect(root.innerHTML).toBe('<button class="red blue">2</button>')
   })
 
   describe('switch vapor/vdom modes', () => {

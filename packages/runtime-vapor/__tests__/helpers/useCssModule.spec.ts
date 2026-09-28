@@ -1,8 +1,14 @@
-import { ref, useCssModule } from '@vue/runtime-dom'
-import { compile, compileToVaporRender, makeRender } from '../_utils'
+import { Suspense, h, ref, useCssModule } from '@vue/runtime-dom'
+import {
+  compile,
+  compileToVaporRender,
+  makeInteropRender,
+  makeRender,
+} from '../_utils'
 import { defineVaporComponent, template } from '@vue/runtime-vapor'
 
 const define = makeRender<any>()
+const defineInterop = makeInteropRender()
 
 describe('useCssModule', () => {
   function mountWithModule(modules: any, name?: string) {
@@ -81,4 +87,25 @@ describe('useCssModule', () => {
     }).render()
     expect(html()).toBe(`<div class="red_hash">blue_hash</div>`)
   })
+
+  test.each([false, true])(
+    'CSS module names do not shadow globals used in setup (async: %s)',
+    async isAsync => {
+      const Comp = compile(
+        `<script setup>
+          ${isAsync ? 'await Promise.resolve()' : ''}
+          const value = Math.max(1, 2)
+        </script>` +
+          `<template><div :class="Math.red">{{ value }}</div></template>` +
+          `<style module="Math">.red { color: red }</style>`,
+        ref(),
+      )
+      Comp.__cssModules = { Math: { red: 'red_hash' } }
+      const { html } = defineInterop({
+        render: () => h(Suspense, null, { default: () => h(Comp) }),
+      }).render()
+      await new Promise(resolve => setTimeout(resolve))
+      expect(html()).toBe('<div class="red_hash">2</div>')
+    },
+  )
 })
