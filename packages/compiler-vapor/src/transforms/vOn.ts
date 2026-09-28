@@ -91,12 +91,11 @@ export const transformVOn: DirectiveTransform = (dir, node, context) => {
     keyModifiers.length = 0
   }
 
-  // a static listener of an element that merges its listeners joins the props
-  // merge instead of binding on its own; `.delegate` opts out
-  const joinsPropsMerge =
-    !delegateModifier && arg.isStatic && mergesListeners(node, context)
-
-  if (isComponent || isSlotOutlet || joinsPropsMerge) {
+  if (
+    isComponent ||
+    isSlotOutlet ||
+    (!delegateModifier && arg.isStatic && mergesListeners(node, context))
+  ) {
     if (delegateModifier) {
       warnDelegate(
         context,

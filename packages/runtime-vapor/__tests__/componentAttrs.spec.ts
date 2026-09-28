@@ -2902,21 +2902,6 @@ describe('attribute fallthrough', () => {
     expect(seen).toEqual(['root parent', 'parent', 'parent', 'root2 parent'])
   })
 
-  test('root listener bound after mount', async () => {
-    const seen = await clickParity(
-      {
-        Child: `<template><button v-bind="data.rootProps">x</button></template>`,
-        App: `<template><components.Child @click="data.parent" /></template>`,
-      },
-      () => ref({ rootProps: {} as any, parent: on('parent') }),
-      [
-        data => (data.value.rootProps = { onClick: on('root') }),
-        data => (data.value.parent = on('parent2')),
-      ],
-    )
-    expect(seen).toEqual(['parent', 'root parent', 'root parent2'])
-  })
-
   test('once root listener next to a plain fallthrough one', async () => {
     const seen: Record<string, string[]> = { vdom: [], vapor: [] }
     await renderParity(
@@ -3195,6 +3180,66 @@ describe('attribute fallthrough', () => {
       'bind2 root parent',
       'bind2 root2 parent',
     ])
+  })
+
+  test(':onClick root listener runs before the fallthrough one', async () => {
+    const seen = await clickParity(
+      {
+        Child: `<template><button :onClick="data.root">x</button></template>`,
+        App: `<template><components.Child @click="data.parent" /></template>`,
+      },
+      () => ref({ root: on('root'), parent: on('parent') }),
+      [
+        data => (data.value.root = on('root2')),
+        data => (data.value.parent = on('parent2')),
+      ],
+    )
+    expect(seen).toEqual(['root parent', 'root2 parent', 'root2 parent2'])
+  })
+
+  test(':onClick merges with a v-on object and a static listener in template order', async () => {
+    const seen = await clickParity(
+      {
+        Child: `<template><button :onClick="data.bound" v-on="data.events" @click="data.root">x</button></template>`,
+        App: `<template><components.Child @click="data.parent" /></template>`,
+      },
+      () =>
+        ref({
+          bound: on('bound'),
+          events: { click: on('object') } as any,
+          root: on('root'),
+          parent: on('parent'),
+        }),
+      [data => (data.value.bound = on('bound2'))],
+    )
+    expect(seen).toEqual([
+      'bound object root parent',
+      'bound2 object root parent',
+    ])
+  })
+
+  test('a merged static listener keeps the receiver of a member expression', async () => {
+    const seen = await clickParity(
+      {
+        Child: `<template><button v-bind="data.rest" @click="data.controller.handleClick">x</button></template>`,
+        App: `<template><components.Child @click="data.parent" /></template>`,
+      },
+      () => {
+        const controller = {
+          handleClick() {
+            // `this` is the reactive proxy of the controller
+            calls.push(
+              this && this.handleClick === controller.handleClick
+                ? 'this'
+                : 'lost',
+            )
+          },
+        }
+        return ref({ rest: { id: 'a' }, controller, parent: on('parent') })
+      },
+      [],
+    )
+    expect(seen).toEqual(['this parent'])
   })
 
   test('root inside a v-if branch', async () => {

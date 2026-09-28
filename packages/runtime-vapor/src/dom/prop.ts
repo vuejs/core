@@ -20,7 +20,7 @@ import {
   stringifyStyle,
   toDisplayString,
 } from '@vue/shared'
-import { setListener } from './event'
+import { type EventHandlerValue, setListener } from './event'
 import {
   type GenericComponentInstance,
   MismatchTypes,
@@ -41,6 +41,7 @@ import {
   shouldSetAsProp,
   shouldSetAsPropForVueCE,
   toClassSet,
+  toHandlers,
   toStyleMap,
   unsafeToTrustedHTML,
   vShowHidden,
@@ -52,7 +53,6 @@ import {
 import {
   type VaporComponentInstance,
   isApplyingFallthroughProps,
-  isDeclaredModelListener,
   shouldUseFunctionalFallthrough,
 } from '../component'
 import {
@@ -89,9 +89,6 @@ const shouldSkipFallthroughKey = (el: TargetElement, key: string) => {
     instance.hasFallthrough &&
     instance.type.inheritAttrs !== false &&
     key in instance.attrs &&
-    // skip only keys fallthrough will actually write: v-model listeners
-    // with a declared prop are filtered out of the fallthrough set
-    !isDeclaredModelListener(instance, key) &&
     (!shouldUseFunctionalFallthrough(instance.type) ||
       isFunctionalFallthroughKey(key))
   )
@@ -592,6 +589,13 @@ export function setDynamicProps(
     isSVG,
     staticKeys,
   )
+}
+
+export function setDynamicEvents(
+  el: HTMLElement,
+  events: Record<string, EventHandlerValue>,
+): void {
+  patchDynamicProps(el, toHandlers(events, true))
 }
 
 export function patchDynamicProps(

@@ -13,7 +13,6 @@ import {
   hasDynamicKeyVBind,
   isSimpleIdentifier,
   isStaticArgOf,
-  isStaticExp,
   isValidHTMLNesting,
   parserOptions,
   resolveModifiers,
@@ -1141,11 +1140,24 @@ function resolveComponentObjectLiteralBindProps(
   return props
 }
 
+const listenerMerge = new WeakMap<ElementNode, boolean>()
+
+export function mergesListeners(
+  node: ElementNode,
+  context: TransformContext<ElementNode>,
+): boolean {
+  let merges = listenerMerge.get(node)
+  if (merges === undefined) {
+    listenerMerge.set(node, (merges = resolveListenerMerge(node, context)))
+  }
+  return merges
+}
+
 // like vdom, an element merges its listeners at runtime in template order
 // once their keys can collide: a v-bind spread that is not expanded into
 // static props or carries a dynamic key may hold any `on*` key, and a v-on
-// object may hold the key of a static listener
-export function mergesListeners(
+// object may hold the key of a static listener (`@evt` or `:onXxx`)
+function resolveListenerMerge(
   node: ElementNode,
   context: TransformContext<ElementNode>,
 ): boolean {
@@ -1154,23 +1166,29 @@ export function mergesListeners(
   let hasStaticListener = false
   for (const p of props) {
     if (p.type !== NodeTypes.DIRECTIVE) continue
+    const arg = p.arg && resolveExpression(p.arg)
     if (p.name === 'bind') {
-      if (!p.arg) {
+      if (!arg) {
         if (
           p.exp &&
           !resolveNativeObjectLiteralBindProps(p.exp, context, props, p)
         ) {
           return true
         }
-      } else if (!isStaticExp(p.arg)) {
+      } else if (!arg.isStatic) {
         return true
+      } else if (
+        isOn(arg.content) &&
+        !isModelListener(arg.content) &&
+        !p.modifiers.some(m => m.content === 'prop' || m.content === 'attr')
+      ) {
+        hasStaticListener = true
       }
     } else if (p.name === 'on') {
-      if (!p.arg) {
+      if (!arg) {
         hasVOnObject = true
       } else if (
-        p.arg.type === NodeTypes.SIMPLE_EXPRESSION &&
-        resolveExpression(p.arg).isStatic &&
+        arg.isStatic &&
         !p.modifiers.some(m => m.content === 'delegate')
       ) {
         hasStaticListener = true

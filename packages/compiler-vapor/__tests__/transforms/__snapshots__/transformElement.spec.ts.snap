@@ -1,11 +1,42 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
+exports[`compiler: element transform > :onXxx merges with the handlers of the same event 1`] = `
+"import { setDynamicProps as _setDynamicProps, toHandlers as _toHandlers, renderEffect as _renderEffect, createAssetComponent as _createAssetComponent, template as _template } from 'vue';
+const t0 = _template("<div>")
+const k0 = ["onClick"]
+
+export function render(_ctx) {
+  const n0 = t0()
+  const n1 = t0()
+  _renderEffect(() => {
+    _setDynamicProps(n0, [_ctx.bind, { onClick: [e => _ctx.a(e), _ctx.b] }], k0)
+    _setDynamicProps(n1, [{ onClick: _ctx.c }, _toHandlers(_ctx.obj, true)], k0)
+  })
+  const n2 = _createAssetComponent("Comp", { onClick: () => [
+    _ctx.a,
+    (_ctx.b)
+  ] })
+  return [n0, n1, n2]
+}"
+`;
+
 exports[`compiler: element transform > MathML 1`] = `
 "import { template as _template } from 'vue';
 const t0 = _template("<math><mrow><mi>x", 3, 2)
 
 export function render(_ctx) {
   const n0 = t0()
+  return n0
+}"
+`;
+
+exports[`compiler: element transform > a constant dynamic v-bind key keeps the static listener path 1`] = `
+"import { on as _on, template as _template } from 'vue';
+const t0 = _template("<div id=btn>", 1)
+
+export function render(_ctx) {
+  const n0 = t0()
+  _on(n0, "click", e => _ctx.a(e))
   return n0
 }"
 `;
@@ -29,7 +60,7 @@ const t0 = _template("<div>", 1)
 
 export function render(_ctx) {
   const n0 = t0()
-  _renderEffect(() => _setDynamicProps(n0, [_ctx.bind, { onClick: [_withModifiers(_ctx.a, ["stop"]), $event => (_ctx.b($event))] }]))
+  _renderEffect(() => _setDynamicProps(n0, [_ctx.bind, { onClick: [_withModifiers(e => _ctx.a(e), ["stop"]), $event => (_ctx.b($event))] }]))
   return n0
 }"
 `;
@@ -40,7 +71,7 @@ const t0 = _template("<div>", 1)
 
 export function render(_ctx) {
   const n0 = t0()
-  _renderEffect(() => _setDynamicProps(n0, [_ctx.bind, { "on:myEventCaptureOnce": _ctx.a, onClick: _ctx.b }]))
+  _renderEffect(() => _setDynamicProps(n0, [_ctx.bind, { "on:myEventCaptureOnce": e => _ctx.a(e), onClick: e => _ctx.b(e) }]))
   return n0
 }"
 `;
@@ -1206,7 +1237,7 @@ const t0 = _template("<div>", 1)
 
 export function render(_ctx) {
   const n0 = t0()
-  _renderEffect(() => _setDynamicProps(n0, [{ onClick: _ctx.a }, _toHandlers(_ctx.obj, true), _ctx.bind, { onClick: _withModifiers(_ctx.b, ["stop"]), onKeyupOnce: _withKeys(_ctx.c, ["enter"]), "on:myEvent": _ctx.d }]))
+  _renderEffect(() => _setDynamicProps(n0, [{ onClick: e => _ctx.a(e) }, _toHandlers(_ctx.obj, true), _ctx.bind, { onClick: _withModifiers(e => _ctx.b(e), ["stop"]), onKeyupOnce: _withKeys(e => _ctx.c(e), ["enter"]), "on:myEvent": e => _ctx.d(e) }]))
   return n0
 }"
 `;

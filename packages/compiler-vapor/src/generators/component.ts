@@ -42,6 +42,7 @@ import {
   genPropKey,
   genPropValue,
   getStaticPropKeyName,
+  isListenerProp,
 } from './prop'
 import {
   type SimpleExpressionNode,
@@ -293,19 +294,30 @@ function genStaticProps(
 ): CodeFragment[] {
   const args: CodeFragment[][] = []
 
-  const handlerGroups = createHandlerGroups(args, '() => ')
-  const addHandler = handlerGroups.add
+  const handlerGroups = createHandlerGroups(
+    args,
+    '() => ',
+    DELIMITERS_ARRAY_NEWLINE,
+  )
 
   for (const prop of props) {
-    if (prop.handler) {
-      const keyName = prop.key.isStatic ? getStaticPropKeyName(prop) : undefined
-      if (!keyName) {
+    if (isListenerProp(prop)) {
+      if (!prop.key.isStatic) {
         // dynamic key handlers are emitted as-is
         args.push(genProp(prop, context, true))
         continue
       }
-
+      const keyName = getStaticPropKeyName(prop)
       const keyFrag = genPropKey(prop, context)
+      if (!prop.handler) {
+        // `:onXxx` merges with the `@xxx` handlers like mergeProps
+        handlerGroups.add(keyName, keyFrag, [
+          '(',
+          ...genPropValue(prop.values, context),
+          ')',
+        ])
+        continue
+      }
       const hasModifiers =
         !!prop.handlerModifiers &&
         (prop.handlerModifiers.keys.length > 0 ||
@@ -318,7 +330,7 @@ function genStaticProps(
           prop.handlerModifiers,
           { asComponentProp: true },
         )
-        addHandler(keyName, keyFrag, handlerExp)
+        handlerGroups.add(keyName, keyFrag, handlerExp)
       } else {
         // no modifiers: flatten multiple handler values
         for (const value of prop.values) {
@@ -328,7 +340,7 @@ function genStaticProps(
             prop.handlerModifiers,
             { asComponentProp: true },
           )
-          addHandler(keyName, keyFrag, handlerExp)
+          handlerGroups.add(keyName, keyFrag, handlerExp)
         }
       }
       continue
@@ -352,7 +364,11 @@ function genStaticProps(
       if (prop.key.isStatic) {
         const keyName = `onUpdate:${camelize(prop.key.content)}`
         const keyFrag: CodeFragment[] = [JSON.stringify(keyName)]
-        addHandler(keyName, keyFrag, genModelHandler(prop.values[0], context))
+        handlerGroups.add(
+          keyName,
+          keyFrag,
+          genModelHandler(prop.values[0], context),
+        )
       } else {
         const keyFrag: CodeFragment[] = [
           '["onUpdate:" + ',
@@ -383,7 +399,7 @@ function genStaticProps(
     }
   }
 
-  handlerGroups.fill(DELIMITERS_ARRAY_NEWLINE)
+  handlerGroups.fill()
 
   if (dynamicProps) {
     args.push([`$: `, ...dynamicProps])

@@ -104,15 +104,29 @@ const optionsModifierRE = /(Once|Passive|Capture)$/
 const optionsModifierEventRE = /^on:?(?:Once|Passive|Capture)$/
 
 // `:onXxx` binds a listener whose handler is the bound value (a function, an
-// array of functions or nullish), like vdom's patchProp. The event name is
-// derived like the runtime's parseEventName.
+// array of functions or nullish), like vdom's patchProp
 function genSetListener(
   oper: SetPropIRNode,
   context: CodegenContext,
 ): CodeFragment[] {
   const { helper } = context
-  const { element, effect } = oper
-  let name = oper.prop.key.content
+  const { element, effect, prop } = oper
+  const value = genPropValue(prop.values, context)
+  if (effect) {
+    // re-bound by the effect through the element's invoker for the key
+    return [
+      NEWLINE,
+      ...genCall(
+        helper('setListener'),
+        `n${element}`,
+        JSON.stringify(prop.key.content),
+        value,
+      ),
+    ]
+  }
+  // a constant handler is attached once; the event name is derived like the
+  // runtime's parseEventName
+  let name = prop.key.content
   const options: CodeFragment[][] = []
   let m
   while (
@@ -126,12 +140,10 @@ function genSetListener(
   return [
     NEWLINE,
     ...genCall(
-      // a constant handler is attached once, a dynamic one is re-bound by
-      // the effect
-      helper(effect ? 'onBinding' : 'on'),
+      helper('on'),
       `n${element}`,
       JSON.stringify(event),
-      genPropValue(oper.prop.values, context),
+      value,
       options.length ? genMulti(DELIMITERS_OBJECT, ...options) : undefined,
     ),
   ]
@@ -450,15 +462,13 @@ function genLiteralObjectProps(
   const entries: CodeFragment[][] = []
   const listeners = createHandlerGroups(entries)
   for (const prop of props) {
-    if (prop.handler) {
+    if (isListenerProp(prop)) {
       listeners.add(
         getStaticPropKeyName(prop, true),
         genPropKey(prop, context, true),
-        // the effect re-reads a member expression, so it needs no invocation
-        // wrapper
-        genEventHandler(context, prop.values, prop.handlerModifiers, {
-          asComponentProp: true,
-        }),
+        prop.handler
+          ? genEventHandler(context, prop.values, prop.handlerModifiers)
+          : genPropValue(prop.values, context),
       )
     } else {
       entries.push([
@@ -472,15 +482,27 @@ function genLiteralObjectProps(
   return genMulti(DELIMITERS_OBJECT, ...entries)
 }
 
-// handler props sharing a key, e.g. `@click.stop` and `@click`, take one entry
-// listing every handler like mergeProps: `add` reserves it at the first
+// a `v-on:evt` handler or a `:onXxx` value; both merge under the listener key
+export function isListenerProp(prop: IRProp): boolean {
+  return (
+    prop.handler ||
+    (!prop.modifier &&
+      !prop.model &&
+      prop.key.isStatic &&
+      isOn(prop.key.content))
+  )
+}
+
+// props sharing a listener key, e.g. `@click.stop` and `@click`, take one
+// entry listing every handler like mergeProps: `add` reserves it at the first
 // occurrence, `fill` writes it
 export function createHandlerGroups(
   entries: CodeFragment[][],
   prefix: string = '',
+  delimiters: typeof DELIMITERS_ARRAY = DELIMITERS_ARRAY,
 ): {
   add: (name: string, keyFrag: CodeFragment[], handler: CodeFragment[]) => void
-  fill: (delimiters?: typeof DELIMITERS_ARRAY) => void
+  fill: () => void
 } {
   const groups = new Map<
     string,
@@ -498,7 +520,7 @@ export function createHandlerGroups(
       }
       group.handlers.push(handler)
     },
-    fill(delimiters = DELIMITERS_ARRAY) {
+    fill() {
       for (const { keyFrag, handlers, index } of groups.values()) {
         entries[index] = [
           ...keyFrag,

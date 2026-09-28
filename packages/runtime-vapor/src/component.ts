@@ -788,15 +788,6 @@ export function resolveFallthroughAttrs(
   return attrs
 }
 
-export function isDeclaredModelListener(
-  instance: VaporComponentInstance,
-  key: string,
-): boolean {
-  if (!isModelListener(key)) return false
-  const propsOptions = normalizePropsOptions(instance.type)[0]
-  return !!propsOptions && key.slice(9) in propsOptions
-}
-
 export function applyFallthroughProps(
   el: Element,
   attrs: Record<string, any>,
