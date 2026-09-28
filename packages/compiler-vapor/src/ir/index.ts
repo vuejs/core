@@ -158,6 +158,8 @@ export interface SetDynamicPropsIRNode extends BaseIRNode {
   element: number
   props: IRProps[]
   isSVG: boolean
+  /** Merged listeners deferred until after same-element v-model. */
+  listeners?: boolean
 }
 
 export interface SetDynamicEventsIRNode extends BaseIRNode {
