@@ -2799,4 +2799,260 @@ describe('attribute fallthrough', () => {
       'color: red',
     ])
   })
+
+  // #15635: a root's own listeners and the fallthrough ones are two layers
+  // too; vdom composes them into one handler list, own first, instead of
+  // letting either replace the other
+  const calls: string[] = []
+  const on = (label: string) => () => calls.push(label)
+  const clickParity = layerParity.bind(null, (el: Element) => {
+    calls.length = 0
+    ;(el as HTMLElement).click()
+    return calls.join(' ')
+  })
+
+  test('dynamic component root listener runs before the fallthrough one', async () => {
+    const seen = await clickParity(
+      {
+        Child: `<template><component :is="'button'" @click="data.root">x</component></template>`,
+        App: `<template><components.Child @click="data.parent" /></template>`,
+      },
+      () => ref({ root: on('root'), parent: on('parent') }),
+      [
+        data => (data.value.root = on('root2')),
+        data => (data.value.parent = on('parent2')),
+      ],
+    )
+    expect(seen).toEqual(['root parent', 'root2 parent', 'root2 parent2'])
+  })
+
+  test('v-bind root listener runs before the fallthrough one', async () => {
+    const seen = await clickParity(
+      {
+        Child: `<template><button v-bind="{ onClick: data.root }">x</button></template>`,
+        App: `<template><components.Child @click="data.parent" /></template>`,
+      },
+      () => ref({ root: on('root'), parent: on('parent') }),
+      [
+        data => (data.value.root = on('root2')),
+        data => (data.value.parent = on('parent2')),
+      ],
+    )
+    expect(seen).toEqual(['root parent', 'root2 parent', 'root2 parent2'])
+  })
+
+  test('$attrs bound back on the root registers each handler once', async () => {
+    const seen = await clickParity(
+      {
+        Child: `<template><button v-bind="$attrs">x</button></template>`,
+        App: `<template><components.Child @click="data.a" v-on="{ click: data.b }" /></template>`,
+      },
+      () => ref({ a: on('a'), b: on('b') }),
+      [data => (data.value.a = on('a2'))],
+    )
+    expect(seen).toEqual(['a b', 'a2 b'])
+  })
+
+  test('root list holding the fallthrough handler keeps its own', async () => {
+    const parent = on('parent')
+    const seen = await clickParity(
+      {
+        Child: `<template><button v-bind="{ onClick: [data.root, data.parent] }">x</button></template>`,
+        App: `<template><components.Child @click="data.parent" /></template>`,
+      },
+      () => ref({ root: on('root'), parent }),
+      [],
+    )
+    expect(seen).toEqual(['root parent'])
+  })
+
+  test('fallthrough listener bound after mount', async () => {
+    const seen = await clickParity(
+      {
+        Child: `<template><button v-bind="{ onClick: data.root }">x</button></template>`,
+        App: `<template><components.Child v-bind="data.parentProps" /></template>`,
+      },
+      () => ref({ root: on('root'), parentProps: {} as any }),
+      [
+        data => (data.value.parentProps = { onClick: on('parent') }),
+        data => (data.value.parentProps = { onClick: on('parent2') }),
+        data => (data.value.parentProps = {}),
+      ],
+    )
+    expect(seen).toEqual(['root', 'root parent', 'root parent2', 'root'])
+  })
+
+  test('root drops its own listener and binds it again', async () => {
+    const seen = await clickParity(
+      {
+        Child: `<template><button v-bind="data.rootProps">x</button></template>`,
+        App: `<template><components.Child @click="data.parent" /></template>`,
+      },
+      () =>
+        ref({
+          rootProps: { onClick: on('root') } as any,
+          parent: on('parent'),
+        }),
+      [
+        data => (data.value.rootProps = {}),
+        data => (data.value.rootProps = { id: 'a' }),
+        data => (data.value.rootProps = { onClick: on('root2') }),
+      ],
+    )
+    expect(seen).toEqual(['root parent', 'parent', 'parent', 'root2 parent'])
+  })
+
+  test('root listener bound after mount', async () => {
+    const seen = await clickParity(
+      {
+        Child: `<template><button v-bind="data.rootProps">x</button></template>`,
+        App: `<template><components.Child @click="data.parent" /></template>`,
+      },
+      () => ref({ rootProps: {} as any, parent: on('parent') }),
+      [
+        data => (data.value.rootProps = { onClick: on('root') }),
+        data => (data.value.parent = on('parent2')),
+      ],
+    )
+    expect(seen).toEqual(['parent', 'root parent', 'root parent2'])
+  })
+
+  test('once root listener next to a plain fallthrough one', async () => {
+    const seen: Record<string, string[]> = { vdom: [], vapor: [] }
+    await renderParity(
+      {
+        Child: `<template><button v-bind="{ onClickOnce: data.root }">x</button></template>`,
+        App: `<template><components.Child @click="data.parent" /></template>`,
+      },
+      () => ref({ root: on('root'), parent: on('parent') }),
+      async (data, root, mode) => {
+        const click = () => {
+          calls.length = 0
+          ;(root.firstElementChild as HTMLElement).click()
+          return calls.join(' ')
+        }
+        // a vdom invoker ignores events fired in the tick it was attached in
+        await new Promise(r => setTimeout(r, 2))
+        seen[mode].push(click(), click())
+        data.value.root = on('root2')
+        await nextTick()
+        seen[mode].push(click())
+      },
+    )
+    expect(seen.vapor).toEqual(seen.vdom)
+    expect(seen.vdom).toEqual(['root parent', 'parent', 'parent'])
+  })
+
+  test('stopImmediatePropagation in the root listener stops the fallthrough one', async () => {
+    const seen = await clickParity(
+      {
+        Child: `<template><button v-bind="{ onClick: data.root }">x</button></template>`,
+        App: `<template><components.Child @click="data.parent" /></template>`,
+      },
+      () =>
+        ref({
+          root: (e: Event) => {
+            calls.push('root')
+            e.stopImmediatePropagation()
+          },
+          parent: on('parent'),
+        }),
+      [],
+    )
+    expect(seen).toEqual(['root'])
+  })
+
+  test('static root listener runs before the fallthrough one', async () => {
+    const seen = await clickParity(
+      {
+        Child: `<template><button @click="data.root">x</button></template>`,
+        App: `<template><components.Child @click="data.parent" /></template>`,
+      },
+      () => ref({ root: on('root'), parent: on('parent') }),
+      [data => (data.value.parent = on('parent2'))],
+    )
+    expect(seen).toEqual(['root parent', 'root parent2'])
+  })
+
+  test('v-on object root listener runs before the fallthrough one', async () => {
+    const seen = await clickParity(
+      {
+        Child: `<template><button v-on="{ click: data.root }">x</button></template>`,
+        App: `<template><components.Child @click="data.parent" /></template>`,
+      },
+      () => ref({ root: on('root'), parent: on('parent') }),
+      [
+        data => (data.value.root = on('root2')),
+        data => (data.value.parent = on('parent2')),
+      ],
+    )
+    expect(seen).toEqual(['root parent', 'root2 parent', 'root2 parent2'])
+  })
+
+  test('v-on object root listener keeps a camelCase event name', async () => {
+    const seen: Record<string, string[]> = { vdom: [], vapor: [] }
+    await renderParity(
+      {
+        Child: `<template><div v-on="{ myEvent: data.root }">x</div></template>`,
+        App: `<template><components.Child @my-event="data.parent" /></template>`,
+      },
+      () => ref({ root: on('root'), parent: on('parent') }),
+      (_data, root, mode) => {
+        for (const name of ['myEvent', 'my-event']) {
+          calls.length = 0
+          root.firstElementChild!.dispatchEvent(new CustomEvent(name))
+          seen[mode].push(calls.join(' '))
+        }
+      },
+    )
+    expect(seen.vapor).toEqual(seen.vdom)
+    expect(seen.vdom).toEqual(['root', 'parent'])
+  })
+
+  test('root inside a v-if branch', async () => {
+    const seen = await clickParity(
+      {
+        Child: `<template><button v-if="data.show" v-bind="{ onClick: data.root }">x</button><span v-else>y</span></template>`,
+        App: `<template><components.Child @click="data.parent" /></template>`,
+      },
+      () => ref({ show: true, root: on('root'), parent: on('parent') }),
+      [
+        data => (data.value.root = on('root2')),
+        data => (data.value.show = false),
+        data => (data.value.show = true),
+      ],
+    )
+    expect(seen).toEqual([
+      'root parent',
+      'root2 parent',
+      'parent',
+      'root2 parent',
+    ])
+  })
+
+  test('the same handler in both layers runs once', async () => {
+    const shared = on('shared')
+    const seen = await clickParity(
+      {
+        Child: `<template><button v-bind="{ onClick: data.shared }">x</button></template>`,
+        App: `<template><components.Child @click="data.shared" /></template>`,
+      },
+      () => ref({ shared }),
+      [],
+    )
+    expect(seen).toEqual(['shared'])
+  })
+
+  test('listeners forwarded through a component root', async () => {
+    const seen = await clickParity(
+      {
+        Inner: `<template><button v-bind="{ onClick: data.root }">x</button></template>`,
+        Child: `<template><components.Inner @click="data.mid" /></template>`,
+        App: `<template><components.Child @click="data.parent" /></template>`,
+      },
+      () => ref({ root: on('root'), mid: on('mid'), parent: on('parent') }),
+      [data => (data.value.mid = on('mid2'))],
+    )
+    expect(seen).toEqual(['root mid parent', 'root mid2 parent'])
+  })
 })

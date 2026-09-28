@@ -1,5 +1,5 @@
 import { onEffectCleanup } from '@vue/reactivity'
-import { isArray } from '@vue/shared'
+import { isArray, toHandlerKey } from '@vue/shared'
 import {
   ErrorCodes,
   callWithAsyncErrorHandling,
@@ -8,6 +8,10 @@ import {
   withKeys as withDomKeys,
   withModifiers as withDomModifiers,
 } from '@vue/runtime-dom'
+import {
+  type VaporComponentInstance,
+  isApplyingFallthroughProps,
+} from '../component'
 
 type EventHandler = (...args: any[]) => any
 type EventHandlerValue = EventHandler | EventHandler[]
@@ -61,6 +65,98 @@ export function onBinding(
   }
   const cleanup = addEventListener(el, event, createInvoker(handler), options)
   onEffectCleanup(cleanup)
+}
+
+interface RootListener {
+  own?: MaybeEventHandlerValue
+  attrs?: MaybeEventHandlerValue
+  remove?: () => void
+  fired?: boolean
+}
+
+// a root's own `on*` binding and the fallthrough one are two layers on one
+// element; both go through onRootListener
+export function hasListenerLayers(el: Element & { $root?: any }): boolean {
+  return (
+    isApplyingFallthroughProps ||
+    (!!el.$root && (currentInstance as VaporComponentInstance).hasFallthrough)
+  )
+}
+
+/**
+ * Like a vdom invoker, the two layers share one native listener per key that
+ * runs the own handlers first and then the fallthrough ones not already among
+ * them, so re-binding either layer keeps that order. #15635
+ */
+export function onRootListener(
+  el: Element & { $revt?: Record<string, RootListener> },
+  key: string,
+  value: MaybeEventHandlerValue,
+  isFallthrough: boolean,
+): void {
+  const listeners = el.$revt || (el.$revt = Object.create(null))
+  const listener = listeners[key] || (listeners[key] = {})
+  const layer = isFallthrough ? 'attrs' : 'own'
+  listener[layer] = value
+  syncRootListener(el, key, listener)
+  onEffectCleanup(() => {
+    listener[layer] = null
+    syncRootListener(el, key, listener)
+  })
+}
+
+function syncRootListener(
+  el: Element,
+  key: string,
+  listener: RootListener,
+): void {
+  if (!listener.own && !listener.attrs) {
+    if (listener.remove) {
+      listener.remove()
+      listener.remove = undefined
+    }
+  } else if (!listener.remove && !listener.fired) {
+    const [event, options] = parseEventName(key)
+    const i = currentInstance
+    listener.remove = addEventListener(
+      el,
+      event,
+      (e: Event) => {
+        // #15378 the browser drops a once listener after this call
+        if (options && (options as AddEventListenerOptions).once) {
+          listener.fired = true
+        }
+        // the own handlers first, then the fallthrough ones not already among
+        // them; `$attrs` rebuilds its merged array on every read, so the
+        // handlers are compared rather than the values
+        const { own, attrs } = listener
+        const handlers: EventHandler[] = []
+        for (const fn of isArray(own) ? own : [own]) {
+          if (fn) handlers.push(fn)
+        }
+        for (const fn of isArray(attrs) ? attrs : [attrs]) {
+          if (fn && !handlers.includes(fn)) handlers.push(fn)
+        }
+        if (handlers.length > 1) {
+          const originalStop = e.stopImmediatePropagation
+          e.stopImmediatePropagation = () => {
+            originalStop.call(e)
+            ;(e as any)._stopped = true
+          }
+        }
+        for (const handler of handlers) {
+          if ((e as any)._stopped) break
+          callWithAsyncErrorHandling(
+            handler,
+            i,
+            ErrorCodes.NATIVE_EVENT_HANDLER,
+            [e],
+          )
+        }
+      },
+      options,
+    )
+  }
 }
 
 export function delegate(el: any, event: string, handler: EventHandler): void {
@@ -136,9 +232,21 @@ export function setDynamicEvents(
   el: HTMLElement,
   events: Record<string, EventHandlerValue>,
 ): void {
+  const layered = hasListenerLayers(el)
   for (const name in events) {
-    const [event, options] = parseEventName(`on:${name}`)
-    onBinding(el, event, events[name], options)
+    if (layered) {
+      // the key vdom's toHandlers(obj, true) gives an element listener, so a
+      // fallthrough listener for the same event lands on the same entry
+      onRootListener(
+        el,
+        /[A-Z]/.test(name) ? `on:${name}` : toHandlerKey(name),
+        events[name],
+        false,
+      )
+    } else {
+      const [event, options] = parseEventName(`on:${name}`)
+      onBinding(el, event, events[name], options)
+    }
   }
 }
 
