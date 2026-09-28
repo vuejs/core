@@ -262,6 +262,10 @@ function canOmitEndTag(
   if (
     (context.templateCloseTags &&
       (context.templateCloseTags.has(node.tag) ||
+        // `</form>` goes through the form element pointer and removes only the
+        // form element itself, so an element inside a form whose end tag is
+        // emitted has to close itself or it swallows the form's next sibling
+        context.templateCloseTags.has('form') ||
         isAlwaysCloseTag(node.tag) ||
         isFormattingTag(node.tag))) ||
     (context.templateCloseBlocks && isBlockTag(node.tag))

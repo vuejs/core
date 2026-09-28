@@ -92,6 +92,44 @@ describe('createElement-backed children', () => {
   })
 })
 
+describe('form children', () => {
+  const define = makeRender()
+
+  // the parser removes only the form element on `</form>`, so an abbreviated
+  // child of the form would stay open and adopt the `<p>` that follows it,
+  // leaving `next(form)` null
+  test('next sibling of a form stays a sibling', async () => {
+    const data = ref({ msg: 'hi' })
+    const { host } = define(
+      compile(
+        `<template><section><form><div>x</div></form><p>{{ data.msg }}</p></section></template>`,
+        data,
+      ),
+    ).render()
+    expect(host.innerHTML).toBe(
+      '<section><form><div>x</div></form><p>hi</p></section>',
+    )
+
+    data.value.msg = 'bye'
+    await nextTick()
+    expect(host.querySelector('p')!.textContent).toBe('bye')
+  })
+
+  test('a second form is not dropped', () => {
+    const { host } = define(
+      compile(
+        `<template><section><div><form><input name="a"></form></div><div><form><input name="b"></form></div></section></template>`,
+        ref({}),
+      ),
+    ).render()
+    expect(host.querySelectorAll('form')).toHaveLength(2)
+    expect(host.innerHTML).toBe(
+      '<section><div><form><input name="a"></form></div>' +
+        '<div><form><input name="b"></form></div></section>',
+    )
+  })
+})
+
 describe('leading newline in <pre> and <textarea>', () => {
   // The compiler already drops the first newline after these start tags.
   // Vapor must preserve the remaining newlines when parsing its template again.
