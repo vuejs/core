@@ -6,7 +6,6 @@ import {
   NodeTypes,
   type SimpleExpressionNode,
   createCompilerError,
-  hasDynamicKeyVBind,
   isKeyboardEvent,
   isStaticExp,
   resolveModifiers,
@@ -15,6 +14,7 @@ import type { DirectiveTransform, TransformContext } from '../transform'
 import { IRNodeTypes, type KeyOverride, type SetEventIRNode } from '../ir'
 import { extend, makeMap } from '@vue/shared'
 import { resolveExpression } from '../utils'
+import { mergesListeners } from './transformElement'
 import { EMPTY_EXPRESSION } from './utils'
 
 const delegatedEvents = /*#__PURE__*/ makeMap(
@@ -91,15 +91,10 @@ export const transformVOn: DirectiveTransform = (dir, node, context) => {
     keyModifiers.length = 0
   }
 
-  // like vdom, an element with a v-bind / v-on object merges its listeners at
-  // runtime in template order, so a static listener joins that merge instead
-  // of binding on its own; `.delegate` opts out
+  // a static listener of an element that merges its listeners joins the props
+  // merge instead of binding on its own; `.delegate` opts out
   const joinsPropsMerge =
-    !isComponent &&
-    !isSlotOutlet &&
-    !delegateModifier &&
-    arg.isStatic &&
-    (hasDynamicKeyVBind(node) || hasVOnObject(node))
+    !delegateModifier && arg.isStatic && mergesListeners(node, context)
 
   if (isComponent || isSlotOutlet || joinsPropsMerge) {
     if (delegateModifier) {
@@ -170,25 +165,6 @@ export const transformVOn: DirectiveTransform = (dir, node, context) => {
   }
 
   context.registerEffect([arg], operation)
-}
-
-function hasVOnObject(node: ElementNode): boolean {
-  return node.props.some(
-    p => p.type === NodeTypes.DIRECTIVE && p.name === 'on' && !p.arg,
-  )
-}
-
-// a static `v-on:event` without `.delegate`, which joins the props merge of
-// an element that also has a v-on object (see transformVOn)
-export function hasMergedStaticListener(node: ElementNode): boolean {
-  return node.props.some(
-    p =>
-      p.type === NodeTypes.DIRECTIVE &&
-      p.name === 'on' &&
-      !!p.arg &&
-      isStaticExp(p.arg) &&
-      !p.modifiers.some(m => m.content === 'delegate'),
-  )
 }
 
 function normalizeStaticEventArg(

@@ -1448,6 +1448,27 @@ describe('compiler: element transform', () => {
     expect(code).not.contains(`_setDynamicEvents`)
   })
 
+  test('an expanded v-bind object literal keeps the static listener paths', () => {
+    const { code } = compileWithElementTransform(
+      `<div v-bind="{ id: 'btn' }" @click="a" /><div v-bind="{ id: 'btn' }" v-on="obj" />`,
+    )
+    expect(code).toMatchSnapshot()
+    expect(code).contains(`_template("<div id=btn>")`)
+    expect(code).contains(`_on(n0, "click", `)
+    expect(code).contains(`_setDynamicEvents(n1, _ctx.obj)`)
+    expect(code).not.contains(`_setDynamicProps`)
+  })
+
+  test('a merged camelCase listener keeps its case and its option modifier', () => {
+    const { code } = compileWithElementTransform(
+      `<div v-bind="bind" @myEvent.capture.once="a" @['click']="b" />`,
+    )
+    expect(code).toMatchSnapshot()
+    expect(code).contains(
+      `{ "on:myEventCaptureOnce": _ctx.a, onClick: _ctx.b }`,
+    )
+  })
+
   test('a listener bound twice in one merge arg keeps both handlers', () => {
     const { code } = compileWithElementTransform(
       `<div v-bind="bind" @click.stop="a" @click="b($event)" />`,

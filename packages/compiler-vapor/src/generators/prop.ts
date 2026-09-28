@@ -382,19 +382,16 @@ export function genDynamicProps(
 ): CodeFragment[] {
   const { helper } = context
   const isSVG = isSVGTag(oper.tag)
-  const values = oper.props.map(props =>
-    Array.isArray(props)
-      ? genLiteralObjectProps(props, context) // static and dynamic arg props
-      : props.kind === IRDynamicPropsKind.ATTRIBUTE
-        ? genLiteralObjectProps([props], context) // dynamic arg props
-        : props.handler
-          ? genCall(
-              helper('toHandlers'),
-              genExpression(props.value, context),
-              'true',
-            ) // v-on="obj"
-          : genExpression(props.value, context),
-  ) // v-bind=""
+  const values = oper.props.map(props => {
+    if (Array.isArray(props)) {
+      return genLiteralObjectProps(props, context) // static and dynamic arg props
+    }
+    if (props.kind === IRDynamicPropsKind.ATTRIBUTE) {
+      return genLiteralObjectProps([props], context) // dynamic arg props
+    }
+    const value = genExpression(props.value, context) // v-bind="" / v-on=""
+    return props.handler ? genCall(helper('toHandlers'), value, 'true') : value
+  })
   return [
     NEWLINE,
     ...genCall(
@@ -431,7 +428,7 @@ function genDynamicPropNames(
                 v => !v.isStatic && !isConstantBinding(v, bindingMetadata),
               ),
           )
-          .map(getStaticPropKeyName)
+          .map(prop => getStaticPropKeyName(prop))
       : [],
   )
   if (!names.length) return false
@@ -451,64 +448,83 @@ function genLiteralObjectProps(
   context: CodegenContext,
 ): CodeFragment[] {
   const entries: CodeFragment[][] = []
-  // a listener bound several times, e.g. `@click.stop` and `@click`, carries
-  // every handler under its one key like mergeProps
-  const listeners = new Map<
-    string,
-    { index: number; handlers: CodeFragment[][] }
-  >()
+  const listeners = createHandlerGroups(entries)
   for (const prop of props) {
-    if (!prop.handler) {
+    if (prop.handler) {
+      listeners.add(
+        getStaticPropKeyName(prop, true),
+        genPropKey(prop, context, true),
+        // the effect re-reads a member expression, so it needs no invocation
+        // wrapper
+        genEventHandler(context, prop.values, prop.handlerModifiers, {
+          asComponentProp: true,
+        }),
+      )
+    } else {
       entries.push([
         ...genPropKey(prop, context),
         `: `,
         ...genPropValue(prop.values, context),
       ])
-      continue
-    }
-    const handler = genEventHandler(
-      context,
-      prop.values,
-      prop.handlerModifiers,
-      // the effect re-reads the handler, so a member expression needs no
-      // invocation wrapper
-      { asComponentProp: true },
-    )
-    // like vdom, an element keeps the case of its event name
-    const name = /[A-Z]/.test(prop.key.content)
-      ? `on:${prop.key.content}`
-      : getStaticPropKeyName(prop)
-    const listener = listeners.get(name)
-    if (listener) {
-      listener.handlers.push(handler)
-    } else {
-      listeners.set(name, { index: entries.length, handlers: [handler] })
-      entries.push([])
     }
   }
-  for (const [name, { index, handlers }] of listeners) {
-    entries[index] = [
-      isSimpleIdentifier(name) ? name : JSON.stringify(name),
-      `: `,
-      ...(handlers.length > 1
-        ? genMulti(DELIMITERS_ARRAY, ...handlers)
-        : handlers[0]),
-    ]
-  }
+  listeners.fill()
   return genMulti(DELIMITERS_OBJECT, ...entries)
+}
+
+// handler props sharing a key, e.g. `@click.stop` and `@click`, take one entry
+// listing every handler like mergeProps: `add` reserves it at the first
+// occurrence, `fill` writes it
+export function createHandlerGroups(
+  entries: CodeFragment[][],
+  prefix: string = '',
+): {
+  add: (name: string, keyFrag: CodeFragment[], handler: CodeFragment[]) => void
+  fill: (delimiters?: typeof DELIMITERS_ARRAY) => void
+} {
+  const groups = new Map<
+    string,
+    { keyFrag: CodeFragment[]; handlers: CodeFragment[][]; index: number }
+  >()
+  return {
+    add(name, keyFrag, handler) {
+      let group = groups.get(name)
+      if (!group) {
+        groups.set(
+          name,
+          (group = { keyFrag, handlers: [], index: entries.length }),
+        )
+        entries.push([])
+      }
+      group.handlers.push(handler)
+    },
+    fill(delimiters = DELIMITERS_ARRAY) {
+      for (const { keyFrag, handlers, index } of groups.values()) {
+        entries[index] = [
+          ...keyFrag,
+          ': ',
+          prefix,
+          ...(handlers.length > 1
+            ? genMulti(delimiters, ...handlers)
+            : handlers[0]),
+        ]
+      }
+    },
+  }
 }
 
 // the key a static prop is emitted under, which is also the key it is merged
 // under
-export function getStaticPropKeyName({
-  key,
-  modifier,
-  handler,
-  handlerModifiers,
-}: IRProp): string {
+export function getStaticPropKeyName(
+  { key, modifier, handler, handlerModifiers }: IRProp,
+  // like vdom, an element keeps the case of its event name
+  preserveCase: boolean = false,
+): string {
   return (
     (handler
-      ? toHandlerKey(camelize(key.content))
+      ? preserveCase && /[A-Z]/.test(key.content)
+        ? `on:${key.content}`
+        : toHandlerKey(camelize(key.content))
       : (modifier || '') + key.content) +
     getHandlerModifierPostfix(handlerModifiers)
   )
@@ -525,6 +541,7 @@ function getHandlerModifierPostfix(
 export function genPropKey(
   prop: IRProp,
   context: CodegenContext,
+  preserveCase: boolean = false,
 ): CodeFragment[] {
   const {
     key: node,
@@ -540,7 +557,7 @@ export function genPropKey(
   // static arg was transformed by v-bind transformer
   if (node.isStatic) {
     // only quote keys if necessary
-    const keyName = getStaticPropKeyName(prop)
+    const keyName = getStaticPropKeyName(prop, preserveCase)
     return [
       [
         isSimpleIdentifier(keyName) ? keyName : JSON.stringify(keyName),

@@ -7,7 +7,6 @@ import {
   extend,
   getModifierPropName,
   isArray,
-  toHandlerKey,
 } from '@vue/shared'
 import type { CodegenContext } from '../generate'
 import {
@@ -38,7 +37,12 @@ import {
   genMulti,
 } from './utils'
 import { genExpression, genVarName } from './expression'
-import { genPropKey, genPropValue } from './prop'
+import {
+  createHandlerGroups,
+  genPropKey,
+  genPropValue,
+  getStaticPropKeyName,
+} from './prop'
 import {
   type SimpleExpressionNode,
   createSimpleExpression,
@@ -289,54 +293,12 @@ function genStaticProps(
 ): CodeFragment[] {
   const args: CodeFragment[][] = []
 
-  type HandlerGroup = {
-    keyFrag: CodeFragment[]
-    handlers: CodeFragment[][]
-    index: number
-  }
-  const handlerGroups = new Map<string, HandlerGroup>()
-
-  const ensureHandlerGroup = (
-    keyName: string,
-    keyFrag: CodeFragment[],
-  ): HandlerGroup => {
-    let group = handlerGroups.get(keyName)
-    if (!group) {
-      const index = args.length
-      // placeholder, filled later
-      args.push([])
-      group = { keyFrag, handlers: [], index }
-      handlerGroups.set(keyName, group)
-    }
-    return group
-  }
-
-  const addHandler = (
-    keyName: string,
-    keyFrag: CodeFragment[],
-    handlerExp: CodeFragment[],
-  ) => {
-    ensureHandlerGroup(keyName, keyFrag).handlers.push(handlerExp)
-  }
-
-  const getStaticPropKeyName = (prop: IRProp): string | undefined => {
-    if (!prop.key.isStatic) return
-    const handlerModifierPostfix =
-      prop.handlerModifiers && prop.handlerModifiers.options
-        ? prop.handlerModifiers.options
-            .map(m => m.charAt(0).toUpperCase() + m.slice(1))
-            .join('')
-        : ''
-    const keyName =
-      (prop.handler
-        ? toHandlerKey(camelize(prop.key.content))
-        : prop.key.content) + handlerModifierPostfix
-    return keyName
-  }
+  const handlerGroups = createHandlerGroups(args, '() => ')
+  const addHandler = handlerGroups.add
 
   for (const prop of props) {
     if (prop.handler) {
-      const keyName = getStaticPropKeyName(prop)
+      const keyName = prop.key.isStatic ? getStaticPropKeyName(prop) : undefined
       if (!keyName) {
         // dynamic key handlers are emitted as-is
         args.push(genProp(prop, context, true))
@@ -421,14 +383,7 @@ function genStaticProps(
     }
   }
 
-  // fill handler placeholders
-  for (const group of handlerGroups.values()) {
-    const handlerValue =
-      group.handlers.length > 1
-        ? genMulti(DELIMITERS_ARRAY_NEWLINE, ...group.handlers)
-        : group.handlers[0]
-    args[group.index] = [...group.keyFrag, ': () => ', ...handlerValue]
-  }
+  handlerGroups.fill(DELIMITERS_ARRAY_NEWLINE)
 
   if (dynamicProps) {
     args.push([`$: `, ...dynamicProps])

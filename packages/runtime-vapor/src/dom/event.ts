@@ -1,17 +1,15 @@
 import { onEffectCleanup } from '@vue/reactivity'
-import { isArray, toHandlerKey } from '@vue/shared'
+import { isArray } from '@vue/shared'
 import {
   ErrorCodes,
   callWithAsyncErrorHandling,
   currentInstance,
   parseEventName,
+  toHandlers,
   withKeys as withDomKeys,
   withModifiers as withDomModifiers,
 } from '@vue/runtime-dom'
-import {
-  type VaporComponentInstance,
-  isApplyingFallthroughProps,
-} from '../component'
+import { isApplyingFallthroughProps } from '../component'
 
 type EventHandler = (...args: any[]) => any
 type EventHandlerValue = EventHandler | EventHandler[]
@@ -67,81 +65,87 @@ export function onBinding(
   onEffectCleanup(cleanup)
 }
 
-interface RootListener {
-  own?: MaybeEventHandlerValue
-  attrs?: MaybeEventHandlerValue
+interface Invoker {
+  own: MaybeEventHandlerValue
+  attrs: MaybeEventHandlerValue
   handlers: EventHandler[]
-  remove?: () => void
-  fired?: boolean
-}
-
-// a root's own `on*` binding and the fallthrough one are two layers on one
-// element; both go through onRootListener
-export function hasListenerLayers(el: Element & { $root?: any }): boolean {
-  return (
-    isApplyingFallthroughProps ||
-    (!!el.$root && (currentInstance as VaporComponentInstance).hasFallthrough)
-  )
+  remove: (() => void) | undefined
+  fired: boolean
 }
 
 /**
- * Like a vdom invoker, the two layers share one native listener per key that
- * runs the own handlers first and then the fallthrough ones not already among
- * them, so re-binding either layer keeps that order. #15635
+ * A dynamic listener keeps one native listener per key across effect re-runs,
+ * like a vdom invoker. A root's own `on*` binding and the fallthrough one are
+ * two layers of it: the own handlers run first, then the fallthrough ones not
+ * already among them, so re-binding either layer keeps that order. #15635
  */
-export function onRootListener(
-  el: Element & { $revt?: Record<string, RootListener> },
+export function setListener(
+  el: Element & { $vei?: Record<string, Invoker> },
   key: string,
   value: MaybeEventHandlerValue,
-  isFallthrough: boolean,
 ): void {
-  const listeners = el.$revt || (el.$revt = Object.create(null))
-  const listener = listeners[key] || (listeners[key] = { handlers: [] })
-  const layer = isFallthrough ? 'attrs' : 'own'
-  listener[layer] = value
-  syncRootListener(el, key, listener)
+  const invokers = el.$vei || (el.$vei = Object.create(null))
+  const invoker =
+    invokers[key] ||
+    (invokers[key] = {
+      own: null,
+      attrs: null,
+      handlers: [],
+      remove: undefined,
+      fired: false,
+    })
+  const layer = isApplyingFallthroughProps ? 'attrs' : 'own'
+  invoker[layer] = value
+  syncInvoker(el, key, invoker, true)
+  // a re-run sets the layer again right away, so the native listener stays
   onEffectCleanup(() => {
-    listener[layer] = null
-    syncRootListener(el, key, listener)
+    invoker[layer] = null
+    syncInvoker(el, key, invoker, false)
   })
 }
 
-function syncRootListener(
+function syncInvoker(
   el: Element,
   key: string,
-  listener: RootListener,
+  invoker: Invoker,
+  detach: boolean,
 ): void {
-  // like mergeProps, a fallthrough handler the root already binds is not
-  // appended again; `$attrs` rebuilds its merged array on every read, so the
-  // handlers are compared rather than the values
-  const { own, attrs } = listener
-  const handlers: EventHandler[] = (listener.handlers = [])
-  for (const fn of isArray(own) ? own : [own]) {
-    if (fn) handlers.push(fn)
+  const { own, attrs } = invoker
+  const handlers: EventHandler[] = (invoker.handlers = [])
+  if (isArray(own)) {
+    for (const fn of own) if (fn) handlers.push(fn)
+  } else if (own) {
+    handlers.push(own)
   }
+  // `$attrs` rebuilds its merged array on every read, so the fallthrough
+  // handlers are compared one by one against the own ones; mergeProps
+  // compares values instead, so own `[a]` with attrs `[a, b]` runs `a` once
+  // here and twice in vdom
   const ownCount = handlers.length
   for (const fn of isArray(attrs) ? attrs : [attrs]) {
-    if (fn && handlers.lastIndexOf(fn, ownCount - 1) < 0) handlers.push(fn)
+    if (fn) {
+      const at = handlers.indexOf(fn)
+      if (at < 0 || at >= ownCount) handlers.push(fn)
+    }
   }
 
   if (!handlers.length) {
-    if (listener.remove) {
-      listener.remove()
-      listener.remove = undefined
+    if (detach && invoker.remove) {
+      invoker.remove()
+      invoker.remove = undefined
     }
-  } else if (!listener.remove && !listener.fired) {
+  } else if (!invoker.remove && !invoker.fired) {
     const [event, options] = parseEventName(key)
+    const once = !!options && (options as AddEventListenerOptions).once
     const i = currentInstance
-    listener.remove = addEventListener(
+    invoker.remove = addEventListener(
       el,
       event,
       (e: Event) => {
         // #15378 the browser drops a once listener after this call
-        if (options && (options as AddEventListenerOptions).once) {
-          listener.fired = true
-        }
+        if (once) invoker.fired = true
         // a sync replaces the array, so this is a snapshot of the call
-        const handlers = listener.handlers
+        const handlers = invoker.handlers
         if (handlers.length > 1) {
           const originalStop = e.stopImmediatePropagation
           e.stopImmediatePropagation = () => {
@@ -149,13 +153,14 @@ function syncRootListener(
             ;(e as any)._stopped = true
           }
         }
+        const args = [e]
         for (const handler of handlers) {
           if ((e as any)._stopped) break
           callWithAsyncErrorHandling(
             handler,
             i,
             ErrorCodes.NATIVE_EVENT_HANDLER,
-            [e],
+            args,
           )
         }
       },
@@ -234,27 +239,20 @@ const delegatedEventHandler = (e: Event) => {
 }
 
 export function setDynamicEvents(
-  el: HTMLElement,
+  el: HTMLElement & { $devts?: Record<string, EventHandlerValue> },
   events: Record<string, EventHandlerValue>,
 ): void {
-  const layered = hasListenerLayers(el)
-  for (const name in events) {
-    if (layered) {
-      // the key vdom's toHandlers(obj, true) gives an element listener, so a
-      // fallthrough listener for the same event lands on the same entry; an
-      // element with other dynamic props merges its v-on object into them at
-      // compile time, so this is the root's only own source
-      onRootListener(
-        el,
-        /[A-Z]/.test(name) ? `on:${name}` : toHandlerKey(name),
-        events[name],
-        false,
-      )
-    } else {
-      const [event, options] = parseEventName(`on:${name}`)
-      onBinding(el, event, events[name], options)
+  const handlers = toHandlers(events, true)
+  const prev = el.$devts
+  if (prev) {
+    for (const key in prev) {
+      if (!(key in handlers)) setListener(el, key, null)
     }
   }
+  for (const key in handlers) {
+    setListener(el, key, handlers[key])
+  }
+  el.$devts = handlers
 }
 
 export function withVaporModifiers<

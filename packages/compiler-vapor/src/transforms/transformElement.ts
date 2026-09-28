@@ -13,6 +13,7 @@ import {
   hasDynamicKeyVBind,
   isSimpleIdentifier,
   isStaticArgOf,
+  isStaticExp,
   isValidHTMLNesting,
   parserOptions,
   resolveModifiers,
@@ -58,7 +59,6 @@ import {
   type SetPropIRNode,
   type VaporDirectiveNode,
 } from '../ir'
-import { hasMergedStaticListener } from './vOn'
 import { EMPTY_EXPRESSION } from './utils'
 import {
   findProp,
@@ -1002,30 +1002,17 @@ export function buildProps(
       } else if (prop.name === 'on') {
         // v-on="obj"
         if (prop.exp) {
-          if (isComponent) {
-            const objectLiteralProps = resolveComponentObjectLiteralOnProps(
-              prop.exp,
-              context,
-              props,
-              prop,
-            )
-            if (objectLiteralProps) {
-              pushStaticObjectLiteralProps(objectLiteralProps)
-            } else {
-              dynamicExpr.push(prop.exp)
-              pushMergeArg()
-              dynamicArgs.push({
-                kind: IRDynamicPropsKind.EXPRESSION,
-                value: prop.exp,
-                handler: true,
-              })
-            }
-          } else if (
-            hasDynamicKeyVBind(node) ||
-            hasMergedStaticListener(node)
-          ) {
-            // joins the dynamic props merge at its template position, so the
-            // listeners it shares with the other sources keep vdom's order
+          const objectLiteralProps = isComponent
+            ? resolveComponentObjectLiteralOnProps(
+                prop.exp,
+                context,
+                props,
+                prop,
+              )
+            : undefined
+          if (objectLiteralProps) {
+            pushStaticObjectLiteralProps(objectLiteralProps)
+          } else if (isComponent || mergesListeners(node, context)) {
             dynamicExpr.push(prop.exp)
             pushMergeArg()
             dynamicArgs.push({
@@ -1152,6 +1139,45 @@ function resolveComponentObjectLiteralBindProps(
     return
   }
   return props
+}
+
+// like vdom, an element merges its listeners at runtime in template order
+// once their keys can collide: a v-bind spread that is not expanded into
+// static props or carries a dynamic key may hold any `on*` key, and a v-on
+// object may hold the key of a static listener
+export function mergesListeners(
+  node: ElementNode,
+  context: TransformContext<ElementNode>,
+): boolean {
+  const props = node.props as (VaporDirectiveNode | AttributeNode)[]
+  let hasVOnObject = false
+  let hasStaticListener = false
+  for (const p of props) {
+    if (p.type !== NodeTypes.DIRECTIVE) continue
+    if (p.name === 'bind') {
+      if (!p.arg) {
+        if (
+          p.exp &&
+          !resolveNativeObjectLiteralBindProps(p.exp, context, props, p)
+        ) {
+          return true
+        }
+      } else if (!isStaticExp(p.arg)) {
+        return true
+      }
+    } else if (p.name === 'on') {
+      if (!p.arg) {
+        hasVOnObject = true
+      } else if (
+        p.arg.type === NodeTypes.SIMPLE_EXPRESSION &&
+        resolveExpression(p.arg).isStatic &&
+        !p.modifiers.some(m => m.content === 'delegate')
+      ) {
+        hasStaticListener = true
+      }
+    }
+  }
+  return hasVOnObject && hasStaticListener
 }
 
 function resolveNativeObjectLiteralBindProps(

@@ -20,7 +20,7 @@ import {
   stringifyStyle,
   toDisplayString,
 } from '@vue/shared'
-import { hasListenerLayers, onBinding, onRootListener } from './event'
+import { setListener } from './event'
 import {
   type GenericComponentInstance,
   MismatchTypes,
@@ -35,7 +35,6 @@ import {
   isValidHtmlOrSvgAttribute,
   logMismatchError,
   mergeProps,
-  parseEventName,
   patchClass,
   patchStyle,
   queuePostFlushCb,
@@ -656,12 +655,7 @@ export function setDynamicProp(
   } else if (key === 'style') {
     setStyle(el, value)
   } else if (isOn(key)) {
-    if (hasListenerLayers(el)) {
-      onRootListener(el, key, value, isApplyingFallthroughProps)
-    } else {
-      const [event, options] = parseEventName(key)
-      onBinding(el, event, value, options)
-    }
+    setListener(el, key, value)
   } else if (
     // force hydrate v-bind with .prop modifiers
     key[0] === '.'
@@ -707,7 +701,7 @@ export function optimizePropertyLookup(): void {
   proto.$transition = undefined
   proto.$key = undefined
   proto.$evtclick = undefined
-  proto.$revt = undefined
+  proto.$vei = undefined
   proto.$root = false
   proto.$clsFlags = undefined
   proto.$cls = proto.$sty = ''

@@ -2990,23 +2990,72 @@ describe('attribute fallthrough', () => {
   })
 
   test('v-on object root listener keeps a camelCase event name', async () => {
-    const seen: Record<string, string[]> = { vdom: [], vapor: [] }
-    await renderParity(
+    const seen = await layerParity(
+      el =>
+        ['myEvent', 'my-event']
+          .map(name => {
+            calls.length = 0
+            el.dispatchEvent(new CustomEvent(name))
+            return calls.join(' ')
+          })
+          .join(','),
       {
         Child: `<template><div v-on="{ myEvent: data.root }">x</div></template>`,
         App: `<template><components.Child @my-event="data.parent" /></template>`,
       },
       () => ref({ root: on('root'), parent: on('parent') }),
-      (_data, root, mode) => {
-        for (const name of ['myEvent', 'my-event']) {
-          calls.length = 0
-          root.firstElementChild!.dispatchEvent(new CustomEvent(name))
-          seen[mode].push(calls.join(' '))
-        }
-      },
+      [],
     )
-    expect(seen.vapor).toEqual(seen.vdom)
-    expect(seen.vdom).toEqual(['root', 'parent'])
+    expect(seen).toEqual(['root,parent'])
+  })
+
+  test('a handler listed twice by the parent runs twice on a root without its own', async () => {
+    const parent = on('parent')
+    const seen = await clickParity(
+      {
+        Child: `<template><button>x</button></template>`,
+        App: `<template><components.Child v-bind="{ onClick: [data.parent, data.parent] }" /></template>`,
+      },
+      () => ref({ parent }),
+      [],
+    )
+    expect(seen).toEqual(['parent parent'])
+  })
+
+  // `el.click()` would call a listener mistakenly written as the `click`
+  // property, so a real event is dispatched
+  test('a static listener next to an expanded v-bind literal stays bound', async () => {
+    const seen = await layerParity(
+      el => {
+        calls.length = 0
+        el.dispatchEvent(new MouseEvent('click'))
+        return `${el.id} ${calls.join(' ')}`
+      },
+      {
+        Child: `<template><button v-bind="{ id: 'btn' }" @click="data.root">x</button></template>`,
+        App: `<template><components.Child @click="data.parent" /></template>`,
+      },
+      () => ref({ root: on('root'), parent: on('parent') }),
+      [data => (data.value.parent = on('parent2'))],
+    )
+    expect(seen).toEqual(['btn root parent', 'btn root parent2'])
+  })
+
+  test('a static listener with a constant dynamic name joins the merge', async () => {
+    const seen = await clickParity(
+      {
+        Child: `<template><button v-on="data.events" @['click']="data.root">x</button></template>`,
+        App: `<template><components.Child @click="data.parent" /></template>`,
+      },
+      () =>
+        ref({
+          events: { click: on('object') } as any,
+          root: on('root'),
+          parent: on('parent'),
+        }),
+      [data => (data.value.root = on('root2'))],
+    )
+    expect(seen).toEqual(['object root parent', 'object root2 parent'])
   })
 
   test('v-bind and v-on object listeners on the same root both stay', async () => {
