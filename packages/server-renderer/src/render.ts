@@ -243,7 +243,7 @@ function renderComponentSubTree(
   const comp = instance.type as Component
   const { getBuffer, push } = createBuffer()
   if (isFunction(comp)) {
-    let root = renderComponentRoot(instance)
+    let root = instance.scope.run(() => renderComponentRoot(instance))!
     // #5817 scope ID attrs not falling through if functional component doesn't
     // have props
     if (!(comp as FunctionalComponent).props) {
@@ -302,16 +302,18 @@ function renderComponentSubTree(
       // set current rendering instance for asset resolution
       const prev = setCurrentRenderingInstance(instance)
       try {
-        ssrRender(
-          instance.proxy,
-          push,
-          instance,
-          attrs,
-          // compiler-optimized bindings
-          instance.props,
-          instance.setupState,
-          instance.data,
-          instance.ctx,
+        instance.scope.run(() =>
+          ssrRender(
+            instance.proxy,
+            push,
+            instance,
+            attrs,
+            // compiler-optimized bindings
+            instance.props,
+            instance.setupState,
+            instance.data,
+            instance.ctx,
+          ),
         )
       } catch (err) {
         handleError(err, instance, ErrorCodes.RENDER_FUNCTION)
@@ -321,7 +323,9 @@ function renderComponentSubTree(
     } else if (instance.render && instance.render !== NOOP) {
       renderVNode(
         push,
-        (instance.subTree = renderComponentRoot(instance)),
+        (instance.subTree = instance.scope.run(() =>
+          renderComponentRoot(instance),
+        )!),
         instance,
         slotScopeId,
       )

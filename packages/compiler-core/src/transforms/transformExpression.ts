@@ -308,10 +308,6 @@ export function processExpression(
       if (isStaticPropertyKey(node, parent!)) {
         return
       }
-      // v2 wrapped filter call
-      if (__COMPAT__ && node.name.startsWith('_filter_')) {
-        return
-      }
 
       const needPrefix = isReferenced && canPrefix(node)
       if (needPrefix && !isLocal) {

@@ -1062,23 +1062,19 @@ describe('renderer: optimized mode', () => {
           Parent,
           { n: force.value },
           {
-            default: withCtx(
-              () => [
-                createVNode('ul', null, [
-                  (openBlock(),
-                  createBlock(
-                    Fragment,
-                    null,
-                    renderList(1, item => {
-                      return createVNode('li', null, [createVNode(Dummy)])
-                    }),
-                    64 /* STABLE_FRAGMENT */,
-                  )),
-                ]),
-              ],
-              undefined,
-              true,
-            ),
+            default: withCtx(() => [
+              createVNode('ul', null, [
+                (openBlock(),
+                createBlock(
+                  Fragment,
+                  null,
+                  renderList(1, item => {
+                    return createVNode('li', null, [createVNode(Dummy)])
+                  }),
+                  64 /* STABLE_FRAGMENT */,
+                )),
+              ]),
+            ]),
             _: 1 /* STABLE */,
           },
         )

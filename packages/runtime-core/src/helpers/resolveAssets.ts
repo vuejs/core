@@ -13,9 +13,8 @@ import type { VNodeTypes } from '../vnode'
 
 export const COMPONENTS = 'components'
 export const DIRECTIVES = 'directives'
-export const FILTERS = 'filters'
 
-export type AssetTypes = typeof COMPONENTS | typeof DIRECTIVES | typeof FILTERS
+export type AssetTypes = typeof COMPONENTS | typeof DIRECTIVES
 
 /**
  * @private
@@ -49,14 +48,6 @@ export function resolveDirective(name: string): Directive | undefined {
 }
 
 /**
- * v2 compat only
- * @internal
- */
-export function resolveFilter(name: string): Function | undefined {
-  return resolveAsset(FILTERS, name)
-}
-
-/**
  * @private
  * overload 1: components
  */
@@ -71,9 +62,6 @@ function resolveAsset(
   type: typeof DIRECTIVES,
   name: string,
 ): Directive | undefined
-// implementation
-// overload 3: filters (compat only)
-function resolveAsset(type: typeof FILTERS, name: string): Function | undefined
 // implementation
 function resolveAsset(
   type: AssetTypes,
@@ -110,7 +98,6 @@ function resolveAsset(
         name,
       ) ||
       // global registration
-      // @ts-expect-error filters only exist in compat mode
       resolve(instance.appContext[type], name)
 
     if (!res && maybeSelfReference) {

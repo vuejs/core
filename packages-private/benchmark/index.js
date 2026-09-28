@@ -122,7 +122,7 @@ async function buildLib() {
     ),
     exec(
       'pnpm',
-      `run --silent build shared reactivity runtime-core runtime-dom runtime-vapor vue -f esm-bundler+esm-bundler-runtime`.split(
+      `run --silent build shared reactivity runtime-core runtime-dom runtime-vapor vue -f esm+esm-runtime`.split(
         ' ',
       ),
       options,
@@ -144,11 +144,11 @@ async function buildApp(isVapor) {
   process.env.NODE_ENV = 'production'
 
   const CompilerSFC =
-    await import('../../packages/compiler-sfc/dist/compiler-sfc.cjs.js')
+    await import('../../packages/compiler-sfc/dist/compiler-sfc.js')
 
   const runtimePath = path.resolve(
     import.meta.dirname,
-    '../../packages/vue/dist/vue.runtime.esm-bundler.js',
+    '../../packages/vue/dist/vue.runtime.js',
   )
 
   const mode = isVapor ? 'vapor' : 'vdom'

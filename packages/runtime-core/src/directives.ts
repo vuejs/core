@@ -22,7 +22,6 @@ import {
 import { currentRenderingInstance } from './componentRenderContext'
 import { ErrorCodes, callWithAsyncErrorHandling } from './errorHandling'
 import type { ComponentPublicInstance } from './componentPublicInstance'
-import { mapCompatDirectiveHook } from './compat/customDirective'
 import { setActiveSub, traverse } from '@vue/reactivity'
 
 export interface DirectiveBinding<
@@ -180,10 +179,10 @@ export function invokeDirectiveHook(
     if (oldBindings) {
       binding.oldValue = oldBindings[i].value
     }
-    let hook = binding.dir[name] as DirectiveHook | DirectiveHook[] | undefined
-    if (__COMPAT__ && !hook) {
-      hook = mapCompatDirectiveHook(name, binding.dir, instance)
-    }
+    const hook = binding.dir[name] as
+      | DirectiveHook
+      | DirectiveHook[]
+      | undefined
     if (hook) {
       // disable tracking inside all lifecycle hooks
       // since they can potentially be called inside effects.

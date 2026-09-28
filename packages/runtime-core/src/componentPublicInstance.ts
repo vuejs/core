@@ -23,7 +23,6 @@ import {
   type UnionToIntersection,
   extend,
   hasOwn,
-  isFunction,
   isGloballyAllowed,
   isString,
 } from '@vue/shared'
@@ -56,7 +55,6 @@ import type { SlotsType, UnwrapSlotsType } from './componentSlots'
 import { filterSingleRoot, markAttrsAccessed } from './componentRenderUtils'
 import { currentRenderingInstance } from './componentRenderContext'
 import { warn } from './warning'
-import { installCompatInstanceProperties } from './compat/instance'
 import type { Directive } from './directives'
 import type { VNode, VNodeArrayChildren } from './vnode'
 
@@ -436,10 +434,6 @@ export const getPublicPropertiesMap = (): PublicPropertiesMap => {
   return publicPropertiesMap
 }
 
-if (__COMPAT__) {
-  installCompatInstanceProperties(getPublicPropertiesMap())
-}
-
 enum AccessTypes {
   OTHER,
   SETUP,
@@ -541,17 +535,7 @@ export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
       ((globalProperties = appContext.config.globalProperties),
       hasOwn(globalProperties, key))
     ) {
-      if (__COMPAT__) {
-        const desc = Object.getOwnPropertyDescriptor(globalProperties, key)!
-        if (desc.get) {
-          return desc.get.call(instance.proxy)
-        } else {
-          const val = globalProperties[key]
-          return isFunction(val) ? extend(val.bind(instance.proxy), val) : val
-        }
-      } else {
-        return globalProperties[key]
-      }
+      return globalProperties[key]
     } else if (
       __DEV__ &&
       currentRenderingInstance &&

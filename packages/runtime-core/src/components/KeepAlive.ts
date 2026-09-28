@@ -351,16 +351,9 @@ const KeepAliveImpl: ComponentOptions = {
   },
 }
 
-const decorate = (t: typeof KeepAliveImpl) => {
-  t.__isBuiltIn = true
-  return t
-}
-
 // export the public type for h/tsx inference
 // also to avoid inline import() in generated d.ts files
-export const KeepAlive = (__COMPAT__
-  ? /*@__PURE__*/ decorate(KeepAliveImpl)
-  : KeepAliveImpl) as any as {
+export const KeepAlive = KeepAliveImpl as any as {
   __isKeepAlive: true
   new (): {
     $props: VNodeProps & KeepAliveProps

@@ -11,14 +11,11 @@ import {
 } from './Transition'
 import { type VShowElement, vShowHidden } from '../directives/vShow'
 import {
-  type ComponentInternalInstance,
   type ComponentOptions,
-  DeprecationTypes,
   Fragment,
   type SetupContext,
   Text,
   type VNode,
-  compatUtils,
   createVNode,
   getCurrentInstance,
   getTransitionRawChildren,
@@ -54,9 +51,6 @@ const decorate = (t: typeof TransitionGroupImpl) => {
   // TransitionGroup does not support "mode" so we need to remove it from the
   // props declarations, but direct delete operation is considered a side effect
   delete t.props.mode
-  if (__COMPAT__) {
-    t.__isBuiltIn = true
-  }
   return t
 }
 
@@ -111,18 +105,7 @@ const TransitionGroupImpl: ComponentOptions = /*@__PURE__*/ decorate({
     return () => {
       const rawProps = toRaw(props)
       const cssTransitionProps = resolveTransitionProps(rawProps)
-      let tag = rawProps.tag || Fragment
-
-      if (
-        __COMPAT__ &&
-        !rawProps.tag &&
-        compatUtils.checkCompatEnabled(
-          DeprecationTypes.TRANSITION_GROUP_ROOT,
-          instance.parent as ComponentInternalInstance,
-        )
-      ) {
-        tag = 'span'
-      }
+      const tag = rawProps.tag || Fragment
 
       prevChildren = []
       if (children) {

@@ -1,12 +1,11 @@
-import {
-  type AsyncComponentInternalOptions,
-  type Component,
-  type ComponentInternalInstance,
-  type ComponentInternalOptions,
-  type Data,
-  type InternalRenderFunction,
-  type SetupContext,
-  getCurrentInstance,
+import type {
+  AsyncComponentInternalOptions,
+  Component,
+  ComponentInternalInstance,
+  ComponentInternalOptions,
+  Data,
+  InternalRenderFunction,
+  SetupContext,
 } from './component'
 import {
   type LooseRequired,
@@ -19,7 +18,7 @@ import {
   isPromise,
   isString,
 } from '@vue/shared'
-import { type Ref, getCurrentScope, isRef, traverse } from '@vue/reactivity'
+import { type Ref, isRef } from '@vue/reactivity'
 import { computed } from './apiComputed'
 import {
   type WatchCallback,
@@ -71,13 +70,6 @@ import {
 import { warn } from './warning'
 import type { VNodeChild } from './vnode'
 import { callWithAsyncErrorHandling } from './errorHandling'
-import { deepMergeData } from './compat/data'
-import { DeprecationTypes, checkCompatEnabled } from './compat/compatConfig'
-import {
-  type CompatConfig,
-  isCompatEnabled,
-  softAssertCompatEnabled,
-} from './compat/compatConfig'
 import type { OptionMergeFunction } from './apiCreateApp'
 import { LifecycleHooks } from './enums'
 import type { SlotsType } from './componentSlots'
@@ -377,8 +369,6 @@ interface LegacyOptions<
   II extends string,
   Provide extends ComponentProvideOptions = ComponentProvideOptions,
 > {
-  compatConfig?: CompatConfig
-
   // allow any custom options
   [key: string]: any
 
@@ -412,9 +402,6 @@ interface LegacyOptions<
   provide?: Provide
   inject?: I | II[]
 
-  // assets
-  filters?: Record<string, Function>
-
   // composition
   mixins?: Mixin[]
   extends?: Extends
@@ -428,11 +415,7 @@ interface LegacyOptions<
   updated?(): any
   activated?(): any
   deactivated?(): any
-  /** @deprecated use `beforeUnmount` instead */
-  beforeDestroy?(): any
   beforeUnmount?(): any
-  /** @deprecated use `unmounted` instead */
-  destroyed?(): any
   unmounted?(): any
   renderTracked?: DebuggerHook
   renderTriggered?: DebuggerHook
@@ -469,11 +452,7 @@ export type MergedComponentOptionsOverride = {
   updated?: MergedHook
   activated?: MergedHook
   deactivated?: MergedHook
-  /** @deprecated use `beforeUnmount` instead */
-  beforeDestroy?: MergedHook
   beforeUnmount?: MergedHook
-  /** @deprecated use `unmounted` instead */
-  destroyed?: MergedHook
   unmounted?: MergedHook
   renderTracked?: MergedHook<DebuggerHook>
   renderTriggered?: MergedHook<DebuggerHook>
@@ -549,9 +528,7 @@ export function applyOptions(instance: ComponentInternalInstance): void {
     updated,
     activated,
     deactivated,
-    beforeDestroy,
     beforeUnmount,
-    destroyed,
     unmounted,
     render,
     renderTracked,
@@ -564,7 +541,6 @@ export function applyOptions(instance: ComponentInternalInstance): void {
     // assets
     components,
     directives,
-    filters,
   } = options
 
   const checkDuplicateProperties = __DEV__ ? createDuplicateChecker() : null
@@ -738,21 +714,6 @@ export function applyOptions(instance: ComponentInternalInstance): void {
   registerLifecycleHook(onUnmounted, unmounted)
   registerLifecycleHook(onServerPrefetch, serverPrefetch)
 
-  if (__COMPAT__) {
-    if (
-      beforeDestroy &&
-      softAssertCompatEnabled(DeprecationTypes.OPTIONS_BEFORE_DESTROY, instance)
-    ) {
-      registerLifecycleHook(onBeforeUnmount, beforeDestroy)
-    }
-    if (
-      destroyed &&
-      softAssertCompatEnabled(DeprecationTypes.OPTIONS_DESTROYED, instance)
-    ) {
-      registerLifecycleHook(onUnmounted, destroyed)
-    }
-  }
-
   if (isArray(expose)) {
     if (expose.length) {
       const exposed = instance.exposed || (instance.exposed = {})
@@ -780,13 +741,6 @@ export function applyOptions(instance: ComponentInternalInstance): void {
   // asset options.
   if (components) instance.components = components as any
   if (directives) instance.directives = directives
-  if (
-    __COMPAT__ &&
-    filters &&
-    isCompatEnabled(DeprecationTypes.FILTERS, instance)
-  ) {
-    instance.filters = filters
-  }
 
   if (__SSR__ && serverPrefetch) {
     markAsyncBoundary(instance)
@@ -854,53 +808,19 @@ export function createWatcher(
   publicThis: ComponentPublicInstance,
   key: string,
 ): void {
-  let getter = key.includes('.')
+  const getter = key.includes('.')
     ? createPathGetter(publicThis, key)
     : () => publicThis[key as keyof typeof publicThis]
-
-  const options: WatchOptions = {}
-  if (__COMPAT__) {
-    const cur = getCurrentInstance()
-    const instance = cur && getCurrentScope() === cur.scope ? cur : null
-
-    const newValue = getter()
-    if (
-      isArray(newValue) &&
-      isCompatEnabled(DeprecationTypes.WATCH_ARRAY, instance)
-    ) {
-      options.deep = true
-    }
-
-    const baseGetter = getter
-    getter = () => {
-      const val = baseGetter()
-      if (
-        isArray(val) &&
-        checkCompatEnabled(DeprecationTypes.WATCH_ARRAY, instance)
-      ) {
-        traverse(val)
-      }
-      return val
-    }
-  }
 
   if (isString(raw)) {
     const handler = ctx[raw]
     if (isFunction(handler)) {
-      if (__COMPAT__) {
-        watch(getter, handler as WatchCallback, options)
-      } else {
-        watch(getter, handler as WatchCallback)
-      }
+      watch(getter, handler as WatchCallback)
     } else if (__DEV__) {
       warn(`Invalid watch handler specified by key "${raw}"`, handler)
     }
   } else if (isFunction(raw)) {
-    if (__COMPAT__) {
-      watch(getter, raw.bind(publicThis), options)
-    } else {
-      watch(getter, raw.bind(publicThis))
-    }
+    watch(getter, raw.bind(publicThis))
   } else if (isObject(raw)) {
     if (isArray(raw)) {
       raw.forEach(r => createWatcher(r, ctx, publicThis, key))
@@ -909,7 +829,7 @@ export function createWatcher(
         ? raw.handler.bind(publicThis)
         : (ctx[raw.handler] as WatchCallback)
       if (isFunction(handler)) {
-        watch(getter, handler, __COMPAT__ ? extend(raw, options) : raw)
+        watch(getter, handler, raw)
       } else if (__DEV__) {
         warn(`Invalid watch handler specified by key "${raw.handler}"`, handler)
       }
@@ -941,16 +861,7 @@ export function resolveMergedOptions(
   if (cached) {
     resolved = cached
   } else if (!globalMixins.length && !mixins && !extendsOptions) {
-    if (
-      __COMPAT__ &&
-      isCompatEnabled(DeprecationTypes.PRIVATE_APIS, instance)
-    ) {
-      resolved = extend({}, base) as MergedComponentOptions
-      resolved.parent = instance.parent && instance.parent.proxy
-      resolved.propsData = instance.vnode.props
-    } else {
-      resolved = base as MergedComponentOptions
-    }
+    resolved = base as MergedComponentOptions
   } else {
     resolved = {}
     if (globalMixins.length) {
@@ -972,10 +883,6 @@ export function mergeOptions(
   strats: Record<string, OptionMergeFunction>,
   asMixin = false,
 ): any {
-  if (__COMPAT__ && isFunction(from)) {
-    from = from.options
-  }
-
   const { mixins, extends: extendsOptions } = from
 
   if (extendsOptions) {
@@ -1016,9 +923,7 @@ export const internalOptionMergeStrats: Record<string, Function> = {
   mounted: mergeAsArray,
   beforeUpdate: mergeAsArray,
   updated: mergeAsArray,
-  beforeDestroy: mergeAsArray,
   beforeUnmount: mergeAsArray,
-  destroyed: mergeAsArray,
   unmounted: mergeAsArray,
   activated: mergeAsArray,
   deactivated: mergeAsArray,
@@ -1034,10 +939,6 @@ export const internalOptionMergeStrats: Record<string, Function> = {
   inject: mergeInject,
 }
 
-if (__COMPAT__) {
-  internalOptionMergeStrats.filters = mergeObjectOptions
-}
-
 function mergeDataFn(to: any, from: any) {
   if (!from) {
     return to
@@ -1046,11 +947,7 @@ function mergeDataFn(to: any, from: any) {
     return from
   }
   return function mergedDataFn(this: ComponentPublicInstance) {
-    return (
-      __COMPAT__ && isCompatEnabled(DeprecationTypes.OPTIONS_DATA_MERGE, null)
-        ? deepMergeData
-        : extend
-    )(
+    return extend(
       isFunction(to) ? to.call(this, this) : to,
       isFunction(from) ? from.call(this, this) : from,
     )

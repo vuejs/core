@@ -32,9 +32,6 @@ export const RESOLVE_DYNAMIC_COMPONENT: unique symbol = Symbol(
 export const RESOLVE_DIRECTIVE: unique symbol = Symbol(
   __DEV__ ? `resolveDirective` : ``,
 )
-export const RESOLVE_FILTER: unique symbol = Symbol(
-  __DEV__ ? `resolveFilter` : ``,
-)
 export const WITH_DIRECTIVES: unique symbol = Symbol(
   __DEV__ ? `withDirectives` : ``,
 )
@@ -100,7 +97,6 @@ export const helperNameMap: Record<symbol, string> = {
   [RESOLVE_COMPONENT]: `resolveComponent`,
   [RESOLVE_DYNAMIC_COMPONENT]: `resolveDynamicComponent`,
   [RESOLVE_DIRECTIVE]: `resolveDirective`,
-  [RESOLVE_FILTER]: `resolveFilter`,
   [WITH_DIRECTIVES]: `withDirectives`,
   [RENDER_LIST]: `renderList`,
   [RENDER_SLOT]: `renderSlot`,

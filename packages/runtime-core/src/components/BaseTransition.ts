@@ -197,10 +197,6 @@ const BaseTransitionImpl: ComponentOptions = {
   },
 }
 
-if (__COMPAT__) {
-  BaseTransitionImpl.__isBuiltIn = true
-}
-
 function findNonCommentChild(children: VNode[]): VNode {
   let child: VNode = children[0]
   if (children.length > 1) {

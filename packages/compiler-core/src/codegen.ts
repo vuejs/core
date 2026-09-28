@@ -51,7 +51,6 @@ import {
   OPEN_BLOCK,
   RESOLVE_COMPONENT,
   RESOLVE_DIRECTIVE,
-  RESOLVE_FILTER,
   SET_BLOCK_TRACKING,
   TO_DISPLAY_STRING,
   WITH_CTX,
@@ -371,12 +370,6 @@ export function generate(
       newline()
     }
   }
-  if (__COMPAT__ && ast.filters && ast.filters.length) {
-    newline()
-    genAssets(ast.filters, 'filter', context)
-    newline()
-  }
-
   if (ast.temps > 0) {
     push(`let `)
     for (let i = 0; i < ast.temps; i++) {
@@ -546,15 +539,11 @@ function genModulePreamble(
 
 function genAssets(
   assets: string[],
-  type: 'component' | 'directive' | 'filter',
+  type: 'component' | 'directive',
   { helper, push, newline, isTS }: CodegenContext,
 ) {
   const resolver = helper(
-    __COMPAT__ && type === 'filter'
-      ? RESOLVE_FILTER
-      : type === 'component'
-        ? RESOLVE_COMPONENT
-        : RESOLVE_DIRECTIVE,
+    type === 'component' ? RESOLVE_COMPONENT : RESOLVE_DIRECTIVE,
   )
   for (let i = 0; i < assets.length; i++) {
     let id = assets[i]
@@ -979,9 +968,6 @@ function genFunctionExpression(
     push(`}`)
   }
   if (isSlot) {
-    if (__COMPAT__ && node.isNonScopedSlot) {
-      push(`, undefined, true`)
-    }
     push(`)`)
   }
 }

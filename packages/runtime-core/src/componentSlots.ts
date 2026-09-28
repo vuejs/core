@@ -23,7 +23,6 @@ import {
   withCtx,
 } from './componentRenderContext'
 import { isHmrUpdating } from './hmr'
-import { DeprecationTypes, isCompatEnabled } from './compat/compatConfig'
 import { TriggerOpTypes, trigger } from '@vue/reactivity'
 import { createInternalObject } from './internalObject'
 
@@ -131,13 +130,7 @@ const normalizeObjectSlots = (
     if (isFunction(value)) {
       slots[key] = normalizeSlot(key, value, ctx)
     } else if (value != null) {
-      if (
-        __DEV__ &&
-        !(
-          __COMPAT__ &&
-          isCompatEnabled(DeprecationTypes.RENDER_FUNCTION, instance)
-        )
-      ) {
+      if (__DEV__) {
         warn(
           `Non-function value encountered for slot "${key}". ` +
             `Prefer function slots for better performance.`,
@@ -153,11 +146,7 @@ const normalizeVNodeSlots = (
   instance: ComponentInternalInstance,
   children: VNodeNormalizedChildren,
 ) => {
-  if (
-    __DEV__ &&
-    !isKeepAlive(instance.vnode) &&
-    !(__COMPAT__ && isCompatEnabled(DeprecationTypes.RENDER_FUNCTION, instance))
-  ) {
+  if (__DEV__ && !isKeepAlive(instance.vnode)) {
     warn(
       `Non-function value encountered for default slot. ` +
         `Prefer function slots for better performance.`,

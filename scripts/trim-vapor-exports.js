@@ -2,9 +2,9 @@
 
 /**
  * runtime-core exports a number of internal helpers that are only used by
- * runtime-vapor, which should be only preserved in vapor / esm-bundler builds.
+ * runtime-vapor, which should be only preserved in vapor / bundler esm builds.
  * This plugin should be included as the first plugin for all other formats
- * other than vapor / esm-bundler.
+ * other than vapor / bundler esm.
  *
  * @param {string} format
  * @param {string} pkgName
@@ -13,7 +13,8 @@
 export function trimVaporExportsPlugin(format, pkgName) {
   if (
     format.includes('vapor') ||
-    format.startsWith('esm-bundler') ||
+    format === 'esm' ||
+    format === 'esm-runtime' ||
     pkgName === '@vue/runtime-vapor'
   ) {
     return []

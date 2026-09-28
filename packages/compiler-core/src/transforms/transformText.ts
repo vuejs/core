@@ -73,11 +73,7 @@ export const transformText: NodeTransform = (node, context) => {
                 p =>
                   p.type === NodeTypes.DIRECTIVE &&
                   !context.directiveTransforms[p.name],
-              ) &&
-              // in compat mode, <template> tags with no special directives
-              // will be rendered as a fragment so its children must be
-              // converted into vnodes.
-              !(__COMPAT__ && node.tag === 'template'))))
+              ))))
       ) {
         return
       }

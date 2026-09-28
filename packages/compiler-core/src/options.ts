@@ -6,7 +6,6 @@ import type {
   NodeTransform,
   TransformContext,
 } from './transform'
-import type { CompilerCompatOptions } from './compat/compatConfig'
 import type { ParserPlugin } from '@babel/parser'
 
 export interface ErrorHandlingOptions {
@@ -14,8 +13,7 @@ export interface ErrorHandlingOptions {
   onError?: (error: CompilerError) => void
 }
 
-export interface ParserOptions
-  extends ErrorHandlingOptions, CompilerCompatOptions {
+export interface ParserOptions extends ErrorHandlingOptions {
   /**
    * Base mode is platform agnostic and only parses HTML-like template syntax,
    * treating all tags the same way. Specific tag parsing behavior can be
@@ -217,10 +215,7 @@ interface SharedTransformCodegenOptions {
 }
 
 export interface TransformOptions
-  extends
-    SharedTransformCodegenOptions,
-    ErrorHandlingOptions,
-    CompilerCompatOptions {
+  extends SharedTransformCodegenOptions, ErrorHandlingOptions {
   /**
    * An array of node transforms to be applied to every AST node.
    */

@@ -2,10 +2,8 @@ import {
   BaseTransition,
   type BaseTransitionProps,
   BaseTransitionPropsValidators,
-  DeprecationTypes,
   type FunctionalComponent,
   assertNumber,
-  compatUtils,
   h,
 } from '@vue/runtime-core'
 import { extend, isArray, isObject, toNumber } from '@vue/shared'
@@ -74,9 +72,6 @@ export const TransitionPropsValidators: any = /*@__PURE__*/ extend(
 const decorate = (t: typeof Transition) => {
   t.displayName = 'Transition'
   t.props = TransitionPropsValidators
-  if (__COMPAT__) {
-    t.__isBuiltIn = true
-  }
   return t
 }
 
@@ -147,26 +142,6 @@ export function resolveTransitionProps(
     leaveToClass = `${name}-leave-to`,
   } = rawProps
 
-  // legacy transition class compat
-  const legacyClassEnabled =
-    __COMPAT__ &&
-    compatUtils.isCompatEnabled(DeprecationTypes.TRANSITION_CLASSES, null)
-  let legacyEnterFromClass: string
-  let legacyAppearFromClass: string
-  let legacyLeaveFromClass: string
-  if (__COMPAT__ && legacyClassEnabled) {
-    const toLegacyClass = (cls: string) => cls.replace(/-from$/, '')
-    if (!rawProps.enterFromClass) {
-      legacyEnterFromClass = toLegacyClass(enterFromClass)
-    }
-    if (!rawProps.appearFromClass) {
-      legacyAppearFromClass = toLegacyClass(appearFromClass)
-    }
-    if (!rawProps.leaveFromClass) {
-      legacyLeaveFromClass = toLegacyClass(leaveFromClass)
-    }
-  }
-
   const durations = normalizeDuration(duration)
   const enterDuration = durations && durations[0]
   const leaveDuration = durations && durations[1]
@@ -211,14 +186,6 @@ export function resolveTransitionProps(
       callHook(hook, [el, resolve])
       nextFrame(() => {
         removeTransitionClass(el, isAppear ? appearFromClass : enterFromClass)
-        if (__COMPAT__ && legacyClassEnabled) {
-          const legacyClass = isAppear
-            ? legacyAppearFromClass
-            : legacyEnterFromClass
-          if (legacyClass) {
-            removeTransitionClass(el, legacyClass)
-          }
-        }
         addTransitionClass(el, isAppear ? appearToClass : enterToClass)
         if (!hasExplicitCallback(hook)) {
           whenTransitionEnds(el, type, enterDuration, resolve)
@@ -231,17 +198,11 @@ export function resolveTransitionProps(
     onBeforeEnter(el) {
       callHook(onBeforeEnter, [el])
       addTransitionClass(el, enterFromClass)
-      if (__COMPAT__ && legacyClassEnabled && legacyEnterFromClass) {
-        addTransitionClass(el, legacyEnterFromClass)
-      }
       addTransitionClass(el, enterActiveClass)
     },
     onBeforeAppear(el) {
       callHook(onBeforeAppear, [el])
       addTransitionClass(el, appearFromClass)
-      if (__COMPAT__ && legacyClassEnabled && legacyAppearFromClass) {
-        addTransitionClass(el, legacyAppearFromClass)
-      }
       addTransitionClass(el, appearActiveClass)
     },
     onEnter: makeEnterHook(false),
@@ -253,9 +214,6 @@ export function resolveTransitionProps(
       el._isLeaving = true
       const resolve = () => finishLeave(el, done)
       addTransitionClass(el, leaveFromClass)
-      if (__COMPAT__ && legacyClassEnabled && legacyLeaveFromClass) {
-        addTransitionClass(el, legacyLeaveFromClass)
-      }
       // add *-leave-active class before reflow so in the case of a cancelled enter transition
       // the css will not get the final state (#10677)
       if (!el._enterCancelled) {
@@ -272,9 +230,6 @@ export function resolveTransitionProps(
           return
         }
         removeTransitionClass(el, leaveFromClass)
-        if (__COMPAT__ && legacyClassEnabled && legacyLeaveFromClass) {
-          removeTransitionClass(el, legacyLeaveFromClass)
-        }
         addTransitionClass(el, leaveToClass)
         if (!hasExplicitCallback(onLeave)) {
           whenTransitionEnds(el, type, leaveDuration, resolve)

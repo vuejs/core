@@ -21,7 +21,6 @@
     "types": ["vitest/globals", "puppeteer", "node"],
     "rootDir": ".",
     "paths": {
-      "@vue/compat": ["./packages/vue-compat/src"],
       "@vue/*": ["./packages/*/src"],
       "vue": ["./packages/vue/src/runtime-with-vapor.ts"],
       "*": ["./*"]
