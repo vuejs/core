@@ -68,10 +68,17 @@ export function onBinding(
 }
 
 interface RootListener {
-  own?: MaybeEventHandlerValue
-  attrs?: MaybeEventHandlerValue
+  // the root's own props, its v-on object and the fallthrough attrs
+  layers: MaybeEventHandlerValue[]
+  handlers: EventHandler[]
   remove?: () => void
   fired?: boolean
+}
+
+export const enum ListenerLayer {
+  OWN,
+  EVENTS,
+  ATTRS,
 }
 
 // a root's own `on*` binding and the fallthrough one are two layers on one
@@ -84,23 +91,23 @@ export function hasListenerLayers(el: Element & { $root?: any }): boolean {
 }
 
 /**
- * Like a vdom invoker, the two layers share one native listener per key that
- * runs the own handlers first and then the fallthrough ones not already among
- * them, so re-binding either layer keeps that order. #15635
+ * Like a vdom invoker, the layers share one native listener per key that runs
+ * the own handlers first and then the fallthrough ones not already among them,
+ * so re-binding either layer keeps that order. #15635
  */
 export function onRootListener(
   el: Element & { $revt?: Record<string, RootListener> },
   key: string,
   value: MaybeEventHandlerValue,
-  isFallthrough: boolean,
+  layer: ListenerLayer,
 ): void {
   const listeners = el.$revt || (el.$revt = Object.create(null))
-  const listener = listeners[key] || (listeners[key] = {})
-  const layer = isFallthrough ? 'attrs' : 'own'
-  listener[layer] = value
+  const listener =
+    listeners[key] || (listeners[key] = { layers: [], handlers: [] })
+  listener.layers[layer] = value
   syncRootListener(el, key, listener)
   onEffectCleanup(() => {
-    listener[layer] = null
+    listener.layers[layer] = null
     syncRootListener(el, key, listener)
   })
 }
@@ -110,7 +117,16 @@ function syncRootListener(
   key: string,
   listener: RootListener,
 ): void {
-  if (!listener.own && !listener.attrs) {
+  // `$attrs` rebuilds its merged array on every read, so the handlers are
+  // compared rather than the values
+  const handlers: EventHandler[] = (listener.handlers = [])
+  for (const value of listener.layers) {
+    for (const fn of isArray(value) ? value : [value]) {
+      if (fn && !handlers.includes(fn)) handlers.push(fn)
+    }
+  }
+
+  if (!handlers.length) {
     if (listener.remove) {
       listener.remove()
       listener.remove = undefined
@@ -126,17 +142,8 @@ function syncRootListener(
         if (options && (options as AddEventListenerOptions).once) {
           listener.fired = true
         }
-        // the own handlers first, then the fallthrough ones not already among
-        // them; `$attrs` rebuilds its merged array on every read, so the
-        // handlers are compared rather than the values
-        const { own, attrs } = listener
-        const handlers: EventHandler[] = []
-        for (const fn of isArray(own) ? own : [own]) {
-          if (fn) handlers.push(fn)
-        }
-        for (const fn of isArray(attrs) ? attrs : [attrs]) {
-          if (fn && !handlers.includes(fn)) handlers.push(fn)
-        }
+        // a sync replaces the array, so this is a snapshot of the call
+        const handlers = listener.handlers
         if (handlers.length > 1) {
           const originalStop = e.stopImmediatePropagation
           e.stopImmediatePropagation = () => {
@@ -241,7 +248,7 @@ export function setDynamicEvents(
         el,
         /[A-Z]/.test(name) ? `on:${name}` : toHandlerKey(name),
         events[name],
-        false,
+        ListenerLayer.EVENTS,
       )
     } else {
       const [event, options] = parseEventName(`on:${name}`)

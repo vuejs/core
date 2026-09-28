@@ -20,7 +20,12 @@ import {
   stringifyStyle,
   toDisplayString,
 } from '@vue/shared'
-import { hasListenerLayers, onBinding, onRootListener } from './event'
+import {
+  ListenerLayer,
+  hasListenerLayers,
+  onBinding,
+  onRootListener,
+} from './event'
 import {
   type GenericComponentInstance,
   MismatchTypes,
@@ -657,7 +662,12 @@ export function setDynamicProp(
     setStyle(el, value)
   } else if (isOn(key)) {
     if (hasListenerLayers(el)) {
-      onRootListener(el, key, value, isApplyingFallthroughProps)
+      onRootListener(
+        el,
+        key,
+        value,
+        isApplyingFallthroughProps ? ListenerLayer.ATTRS : ListenerLayer.OWN,
+      )
     } else {
       const [event, options] = parseEventName(key)
       onBinding(el, event, value, options)

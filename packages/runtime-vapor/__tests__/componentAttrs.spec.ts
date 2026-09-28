@@ -3009,6 +3009,34 @@ describe('attribute fallthrough', () => {
     expect(seen.vdom).toEqual(['root', 'parent'])
   })
 
+  test('v-bind and v-on object listeners on the same root both stay', async () => {
+    const seen = await clickParity(
+      {
+        Child: `<template><button v-bind="data.rootProps" v-on="data.events">x</button></template>`,
+        App: `<template><components.Child @click="data.parent" /></template>`,
+      },
+      () =>
+        ref({
+          rootProps: { onClick: on('bind') } as any,
+          events: { click: on('object') } as any,
+          parent: on('parent'),
+        }),
+      [
+        data => (data.value.events = {}),
+        data => (data.value.events = { click: on('object2') }),
+        data => (data.value.rootProps = {}),
+        data => (data.value.rootProps = { onClick: on('bind2') }),
+      ],
+    )
+    expect(seen).toEqual([
+      'bind object parent',
+      'bind parent',
+      'bind object2 parent',
+      'object2 parent',
+      'bind2 object2 parent',
+    ])
+  })
+
   test('root inside a v-if branch', async () => {
     const seen = await clickParity(
       {
