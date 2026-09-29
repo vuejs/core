@@ -80,7 +80,7 @@ export function render(_ctx) {
       _setText(x2, _toDisplayString(_child1.label))
     })
     _selector0(_child1.key, () => {
-      _setClassName(n3, (_child1.key === _ctx.selected ? 1 : 0), "selected")
+      _setClassName(n3, ((_child1.key === _ctx.selected) ? 1 : 0), "selected")
     })
     return n3
   }, (child) => (child.key), 9 /* FAST_REMOVE, IS_SINGLE_NODE */)
@@ -147,7 +147,7 @@ export function render(_ctx) {
   const n0 = _createFor(() => (_ctx.rows), (_for_item0) => {
     const n2 = t0()
     _selector0(_for_item0.value.id, () => {
-      _setClassName(n2, (_for_item0.value.id === _ctx.state.selected ? 1 : 0), "danger")
+      _setClassName(n2, ((_for_item0.value.id === _ctx.state.selected) ? 1 : 0), "danger")
     })
     return n2
   }, (row) => (row.id), 8 /* IS_SINGLE_NODE */)
@@ -165,7 +165,7 @@ export function render(_ctx) {
     const n2 = t0()
     _renderEffect(() => {
       const _todo = _for_item0.value
-      _setClassName(n2, (_todo.completed ? 1 : 0) | (_todo === _ctx.editedTodo ? 2 : 0), [" completed", " editing"])
+      _setClassName(n2, ((_todo.completed) ? 1 : 0) | ((_todo === _ctx.editedTodo) ? 2 : 0), [" completed", " editing"])
     })
     return n2
   }, (todo) => (todo.id), 8 /* IS_SINGLE_NODE */)
@@ -200,7 +200,7 @@ export function render(_ctx) {
   const n0 = _createFor(() => (_ctx.rows), (_for_item0) => {
     const n2 = t0()
     _selector0_0(_for_item0.value.id, () => {
-      _setClassName(n2, (_ctx.selected === _for_item0.value.id ? 1 : 0), "a")
+      _setClassName(n2, ((_ctx.selected === _for_item0.value.id) ? 1 : 0), "a")
     })
     _selector0_1(_for_item0.value.id, () => {
       _setProp(n2, "title", _ctx.active === _for_item0.value.id ? 'b' : '')
@@ -322,7 +322,7 @@ export function render(_ctx) {
   const n0 = _createFor(() => (_ctx.rows), (_for_item0) => {
     const n2 = t0()
     _selector0(_for_item0.value.id, () => {
-      _setClassName(n2, (_ctx.selected === _for_item0.value.id ? 1 : 0), "danger")
+      _setClassName(n2, ((_ctx.selected === _for_item0.value.id) ? 1 : 0), "danger")
     })
     return n2
   }, (row) => (row.id), 8 /* IS_SINGLE_NODE */)
@@ -340,7 +340,7 @@ export function render(_ctx) {
     const n2 = t0()
     _renderEffect(() => {
       const _row = _for_item0.value
-      _setClassName(n2, (_row.label === _row.id ? 1 : 0), "danger")
+      _setClassName(n2, ((_row.label === _row.id) ? 1 : 0), "danger")
     })
     return n2
   }, (row) => (row.id), 8 /* IS_SINGLE_NODE */)
@@ -357,7 +357,7 @@ export function render(_ctx) {
   const n0 = _createFor(() => (_ctx.rows), (_for_item0) => {
     const n2 = t0()
     _selector0(_for_item0.value.id, () => {
-      _setClassName(n2, (_for_item0.value.id === _ctx.selected ? 1 : 0), "danger")
+      _setClassName(n2, ((_for_item0.value.id === _ctx.selected) ? 1 : 0), "danger")
     })
     return n2
   }, (row) => (row.id), 8 /* IS_SINGLE_NODE */)

@@ -320,9 +320,12 @@ function genClassFlags(
       return
     }
 
+    // the condition becomes the test of `cond ? bit : 0` and may bind looser
+    // than it, e.g. `{ a: b ? c : d }`, so it gets its own parens
     values.push(
-      '(',
+      '((',
       ...genExpression(entry.condition!, context),
+      ')',
       entry.negate ? ` ? 0 : ${bit}` : ` ? ${bit} : 0`,
       ')',
     )
