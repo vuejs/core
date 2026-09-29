@@ -1338,11 +1338,13 @@ export function createPlainElement(
       const slot = getSlot(rawSlots as RawSlots, 'default')
       if (slot) {
         // SSR renders nothing for an empty trailing text, so the slot can run out
-        // of server nodes; an end anchor keeps the cursor inside `el`. It is a
-        // comment so that a blank text never adopts it.
+        // of server nodes; an end anchor keeps the cursor inside `el`. A comment
+        // cannot be adopted as blank text, and a non-empty label (also in prod)
+        // prevents nested fragments from treating it as a reusable SSR anchor.
         let end: Node | undefined
         if (isHydrating) {
-          end = el.appendChild(claimAnchor(createComment('')))
+          // nce = native-children-end
+          end = el.appendChild(claimAnchor(createComment('nce')))
           if (!currentHydrationNode) setCurrentHydrationNode(end)
         }
         const block = slot()

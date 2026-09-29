@@ -1264,5 +1264,41 @@ describe('Vapor Mode hydration', () => {
         `"<div><button><i></i>foo</button><!--dynamic-component--><b></b></div>"`,
       )
     })
+
+    test.each([true, false])(
+      'dynamic native element removes stale SSR v-if children (dev: %s)',
+      async dev => {
+        const prevDev = __DEV__
+        __DEV__ = dev
+        try {
+          const data = ref(false)
+          const { container } = await testHydration(
+            `<template>
+              <component :is="'div'">
+                <span v-if="data">stale</span>
+              </component>
+            </template>`,
+            {},
+            data,
+            { serverData: ref(true) },
+          )
+
+          expect(container.querySelector('span')).toBeNull()
+          if (__DEV__) {
+            expect(`Hydration children mismatch`).toHaveBeenWarned()
+          }
+
+          data.value = true
+          await nextTick()
+          expect(container.querySelectorAll('span')).toHaveLength(1)
+
+          data.value = false
+          await nextTick()
+          expect(container.querySelector('span')).toBeNull()
+        } finally {
+          __DEV__ = prevDev
+        }
+      },
+    )
   })
 })
