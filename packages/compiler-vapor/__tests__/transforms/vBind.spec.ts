@@ -952,6 +952,19 @@ describe('compiler v-bind', () => {
     expect(code).not.contains('{ active:')
   })
 
+  test('className helper wraps conditions looser than a ternary', () => {
+    const { code } = compileWithVBind(`
+      <div :class="{ active: ok, foo: bar ? true : false, baz: a = b }"/>
+      <div :class="(x, y) ? '' : 'danger'"/>
+    `)
+    expect(code).contains(
+      '_setClassName(n0, (_ctx.ok ? 1 : 0) | ((_ctx.bar ? true : false) ? 2 : 0) | ((_ctx.a = _ctx.b) ? 4 : 0)',
+    )
+    expect(code).contains(
+      '_setClassName(n1, ((_ctx.x, _ctx.y) ? 0 : 1), "danger")',
+    )
+  })
+
   test('static class with multiple object className helper', () => {
     const { code } = compileWithVBind(`
       <div class="foo" :class="{ danger: selected === row.id, 'is-active': active }"/>

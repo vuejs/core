@@ -320,9 +320,19 @@ function genClassFlags(
       return
     }
 
+    // the condition becomes the test of `cond ? bit : 0`, so one that binds
+    // looser than that test needs its own parens, e.g. `{ a: b ? c : d }`
+    const ast = entry.condition!.ast
+    const needsParens =
+      !!ast &&
+      (ast.type === 'ConditionalExpression' ||
+        ast.type === 'SequenceExpression' ||
+        ast.type === 'AssignmentExpression' ||
+        ast.type === 'ArrowFunctionExpression')
     values.push(
-      '(',
+      needsParens ? '((' : '(',
       ...genExpression(entry.condition!, context),
+      needsParens ? ')' : '',
       entry.negate ? ` ? 0 : ${bit}` : ` ? ${bit} : 0`,
       ')',
     )
