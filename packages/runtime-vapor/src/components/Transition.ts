@@ -45,7 +45,7 @@ import {
 } from '../component'
 import { getAsyncWrapperInner } from '../apiDefineAsyncComponent'
 import { isAsyncComponentEnabled } from '../asyncComponentState'
-import { isArray } from '@vue/shared'
+import { extend, isArray } from '@vue/shared'
 import { renderEffect } from '../renderEffect'
 import {
   DynamicFragment,
@@ -193,6 +193,8 @@ export const VaporTransition: FunctionalVaporComponent<TransitionProps> =
           frag.$transition = applyTransitionHooksImpl(
             frag.nodes,
             frag.$transition,
+            undefined,
+            true,
           )
         }
         if (!isMounted && shouldPerformAppear) performAppear(frag.$transition!)
@@ -204,7 +206,7 @@ export const VaporTransition: FunctionalVaporComponent<TransitionProps> =
     const children = ((slots.default && slots.default()) || []) as any as Block
     state.root = children
 
-    let appliedHooks = {
+    const hooks = {
       __vapor: true,
       state,
       // use proxy to keep props reference stable
@@ -217,10 +219,15 @@ export const VaporTransition: FunctionalVaporComponent<TransitionProps> =
     // props eagerly, so propsProxy alone can't keep an already-applied hooks
     // closure live; re-applying rebinds the root element's (and any inner
     // fragment's) $transition to fresh closures, mirroring VDOM's per-render
-    // re-resolve. Reusing appliedHooks preserves runtime state (delayedLeave)
-    // across re-resolves.
+    // re-resolve. Read runtime state (delayedLeave) from the current branch
+    // without retaining an earlier branch's hooks in this effect.
     renderEffect(() => {
-      appliedHooks = applyTransitionHooksImpl(children, appliedHooks)
+      const appliedHooks = applyTransitionHooksImpl(
+        children,
+        hooks,
+        undefined,
+        isMounted,
+      )
       if (!isMounted) {
         isMounted = true
         if (shouldPerformAppear) performAppear(appliedHooks)
@@ -355,6 +362,7 @@ export function applyTransitionHooksImpl(
   block: Block,
   hooks: VaporTransitionHooks,
   owner?: VaporFragment,
+  refresh = false,
 ): VaporTransitionHooks {
   // filter out comment nodes
   if (isArray(block)) {
@@ -382,9 +390,15 @@ export function applyTransitionHooksImpl(
   const fragments: VaporFragment[] = []
   const child = resolveTransitionBlock(
     block,
-    fragment => fragments.push(fragment),
+    fragment => {
+      fragments.push(fragment)
+      // Inner branches can replace their hooks without updating outer roots.
+      // Keep the current handoff even when the branch has no element yet.
+      if (refresh && fragment.$transition) hooks = fragment.$transition
+    },
     owner,
   )
+  if (refresh && child && child.$transition) hooks = child.$transition
   if (!child) {
     // set transition hooks on fragments for later use
     fragments.forEach(f => (f.$transition = hooks))
@@ -468,17 +482,10 @@ export function applyTransitionLeaveHooksImpl(
       const leavingNodes = getLeavingNodesForType(state, leavingBlock)
       const leavingKey = String(getTransitionKey(leavingBlock))
       leavingNodes[leavingKey] = leavingBlock
-      // Bind cleanup to this specific handoff so an older leave callback
-      // cannot clear a newer delayedLeave during rapid toggles.
-      const delayedLeaveCb = () => {
-        delayedLeave()
-        leavingBlock.$transition = undefined
-        if (enterHooks.delayedLeave === delayedLeaveCb) {
-          delete enterHooks.delayedLeave
-        }
-      }
+      const delayedLeaveCb = createDelayedLeave(leavingBlock, delayedLeave)
       // early removal callback
       block[leaveCbKey] = () => {
+        delayedLeaveCb(true)
         earlyRemove()
         block[leaveCbKey] = undefined
         leavingBlock.$transition = undefined
@@ -487,14 +494,30 @@ export function applyTransitionLeaveHooksImpl(
         if (leavingNodes[leavingKey] === leavingBlock) {
           delete leavingNodes[leavingKey]
         }
-        if (enterHooks.delayedLeave === delayedLeaveCb) {
-          delete enterHooks.delayedLeave
-        }
       }
       enterHooks.delayedLeave = delayedLeaveCb
     }
   }
   return true
+}
+
+// Hooks copies share this callback. Keep its captures separate from the
+// branch's hooks and release them when the handoff completes or is cancelled.
+function createDelayedLeave(
+  block: ResolvedTransitionBlock | undefined,
+  leave: (() => void) | undefined,
+): (cancelled?: boolean) => void {
+  return cancelled => {
+    if (!leave) return
+    const cb = leave
+    const leavingBlock = block!
+    // Settle before invoking hooks, which can synchronously trigger another leave.
+    leave = block = undefined
+    if (!cancelled) {
+      cb()
+      leavingBlock.$transition = undefined
+    }
+  }
 }
 
 function deferBranchUpdateDuringLeaveImpl(
@@ -541,7 +564,13 @@ function removeBranchWithLeaveImpl(
     (mode !== 'out-in' || isValidBlock(frag.nodes))
   ) {
     const instance = currentInstance
-    applyTransitionLeaveHooksImpl(frag.nodes, transition, () => {
+    let enterHooks = transition
+    if (mode === 'in-out') {
+      // The current child's hooks may still hold the handoff its own pending
+      // enter will run. Hand this leave to the incoming branch through a copy.
+      enterHooks = frag.$transition = extend({}, transition)
+    }
+    applyTransitionLeaveHooksImpl(frag.nodes, enterHooks, () => {
       // Unmounting cuts the leave short and runs afterLeave synchronously;
       // the pending branch must not be rendered into the torn-down tree.
       if (transition.state.isUnmounting) return

@@ -10,6 +10,7 @@ import {
   advancePositionWithClone,
   createCompilerError,
   createSimpleExpression,
+  findDir,
   hasDynamicKeyVBind,
   isSimpleIdentifier,
   isStaticArgOf,
@@ -31,6 +32,8 @@ import {
   isBuiltInDirective,
   isFormattingTag,
   isInlineTag,
+  isModelListener,
+  isNativeOn,
   isOn,
   isVoidTag,
   makeMap,
@@ -54,6 +57,7 @@ import {
   type IRPropsStatic,
   type IRSlots,
   type SetBlockKeyIRNode,
+  type SetPropIRNode,
   type VaporDirectiveNode,
 } from '../ir'
 import { EMPTY_EXPRESSION } from './utils'
@@ -262,6 +266,14 @@ function canOmitEndTag(
   if (
     (context.templateCloseTags &&
       (context.templateCloseTags.has(node.tag) ||
+        // `</form>` goes through the form element pointer and removes only the
+        // form element itself, so an element inside a form whose end tag is
+        // emitted has to close itself or it swallows the form's next sibling
+        context.templateCloseTags.has('form') ||
+        // `</li>` is ignored while a nested `<ul>` or `<ol>` is still open
+        // (list item scope), so the next `<li>` would land in the nested list
+        (context.templateCloseTags.has('li') &&
+          (node.tag === 'ul' || node.tag === 'ol')) ||
         isAlwaysCloseTag(node.tag) ||
         isFormattingTag(node.tag))) ||
     (context.templateCloseBlocks && isBlockTag(node.tag))
@@ -279,9 +291,13 @@ function canOmitEndTag(
   // unless on the rightmost path of the tree:
   // - Formatting tags: https://html.spec.whatwg.org/multipage/parsing.html#reconstruct-the-active-formatting-elements
   // - Same-name tags: parent's close tag would incorrectly close the child
+  // - Children of a foreign parent in another namespace (e.g. HTML inside
+  //   `<foreignObject>`): parent's close tag would not close the child
   if (
     isFormattingTag(node.tag) ||
-    (parent.node.type === NodeTypes.ELEMENT && node.tag === parent.node.tag)
+    (parent.node.type === NodeTypes.ELEMENT &&
+      (node.tag === parent.node.tag ||
+        (parent.node.ns !== Namespaces.HTML && node.ns !== parent.node.ns)))
   ) {
     return context.isOnRightmostPath
   }
@@ -514,6 +530,7 @@ function transformNativeElement(
 ) {
   const { tag } = node
   const { scopeId } = context.options
+  const isSVG = node.ns === Namespaces.SVG
 
   let template = ''
 
@@ -528,7 +545,7 @@ function transformNativeElement(
         type: IRNodeTypes.SET_DYNAMIC_PROPS,
         element: context.reference(),
         props: dynamicArgs,
-        tag,
+        isSVG,
       },
       getEffectIndex,
     )
@@ -550,14 +567,34 @@ function transformNativeElement(
         ({ key, modifier }) =>
           key.content === 'valueAsNumber' && modifier !== '^',
       )
+    const nativeOnProps: IRProp[] = []
     let hasEffect = false
     for (const prop of propsResult[1]) {
       const { key, values } = prop
       const canStringifyAttrName =
         key.isStatic && !UNSAFE_ATTR_NAME_RE.test(key.content)
       let foldedValue: string | boolean | undefined
-      // handling asset imports
-      if (
+      if (!prop.modifier && isOn(key.content)) {
+        // a listener whose handler is the bound value, like vdom's patchProp,
+        // which also ignores v-model listeners on elements
+        if (!isModelListener(key.content)) {
+          const operation: SetPropIRNode = {
+            type: IRNodeTypes.SET_PROP,
+            element: context.reference(),
+            prop,
+            tag,
+            isSVG,
+          }
+          hasEffect = context.registerEffect(
+            values,
+            operation,
+            getEffectIndex,
+            needsOrderedProps && hasEffect,
+          )
+          operation.effect = hasEffect
+        }
+      } else if (
+        // handling asset imports
         canStringifyAttrName &&
         context.imports.some(imported =>
           values[0].content.includes(imported.exp.content),
@@ -602,6 +639,9 @@ function transformNativeElement(
         if (foldedValue) {
           appendTemplateProp(key.content, foldedValue)
         }
+      } else if (isSVG && !prop.modifier && isNativeOn(key.content)) {
+        // Native event bindings need the runtime value to choose prop vs attr.
+        nativeOnProps.push(prop)
       } else {
         // Constant setters can depend on preceding dynamic props, e.g.
         // valueAsNumber needs type and max to be initialized first.
@@ -612,11 +652,25 @@ function transformNativeElement(
             element: context.reference(),
             prop,
             tag,
+            isSVG,
           },
           getEffectIndex,
           needsOrderedProps && hasEffect,
         )
       }
+    }
+    if (nativeOnProps.length) {
+      // One call per element keeps the dynamic prop cache shared by these keys.
+      context.registerEffect(
+        nativeOnProps.flatMap(({ values }) => values),
+        {
+          type: IRNodeTypes.SET_DYNAMIC_PROPS,
+          element: context.reference(),
+          props: [nativeOnProps],
+          isSVG,
+        },
+        getEffectIndex,
+      )
     }
   }
 
@@ -919,11 +973,24 @@ export function buildProps(
   const dynamicArgs: IRProps[] = []
   const dynamicExpr: SimpleExpressionNode[] = []
   let results: DirectiveTransformResult[] = []
+  // Keep merged listeners after v-model without delaying DOM props such as
+  // input type. Unknown v-bind keys still need one combined props payload.
+  const deferListeners =
+    !isComponent &&
+    !!findDir(node, 'model') &&
+    !hasDynamicKeyVBind(node) &&
+    mergesListeners(node, context)
+  let listenerResults: DirectiveTransformResult[] = []
 
-  function pushMergeArg() {
-    if (results.length) {
-      dynamicArgs.push(dedupeProperties(results))
-      results = []
+  function pushMergeArg(listeners = false) {
+    const props = listeners ? listenerResults : results
+    if (props.length) {
+      dynamicArgs.push(dedupeProperties(props))
+      if (listeners) {
+        listenerResults = []
+      } else {
+        results = []
+      }
     }
   }
 
@@ -958,6 +1025,7 @@ export function buildProps(
             if (isComponent) {
               pushStaticObjectLiteralProps(objectLiteralProps)
             } else {
+              dynamicExpr.push(prop.exp)
               results.push(...objectLiteralProps.map(toDirectiveResult))
             }
           } else {
@@ -977,24 +1045,24 @@ export function buildProps(
       } else if (prop.name === 'on') {
         // v-on="obj"
         if (prop.exp) {
-          if (isComponent) {
-            const objectLiteralProps = resolveComponentObjectLiteralOnProps(
-              prop.exp,
-              context,
-              props,
-              prop,
-            )
-            if (objectLiteralProps) {
-              pushStaticObjectLiteralProps(objectLiteralProps)
-            } else {
-              dynamicExpr.push(prop.exp)
-              pushMergeArg()
-              dynamicArgs.push({
-                kind: IRDynamicPropsKind.EXPRESSION,
-                value: prop.exp,
-                handler: true,
-              })
-            }
+          const objectLiteralProps = isComponent
+            ? resolveComponentObjectLiteralOnProps(
+                prop.exp,
+                context,
+                props,
+                prop,
+              )
+            : undefined
+          if (objectLiteralProps) {
+            pushStaticObjectLiteralProps(objectLiteralProps)
+          } else if (isComponent || mergesListeners(node, context)) {
+            dynamicExpr.push(prop.exp)
+            pushMergeArg(deferListeners)
+            dynamicArgs.push({
+              kind: IRDynamicPropsKind.EXPRESSION,
+              value: prop.exp,
+              handler: true,
+            })
           } else {
             context.registerEffect(
               [prop.exp],
@@ -1028,8 +1096,20 @@ export function buildProps(
 
     const result = transformProp(prop, node, context)
     if (result) {
-      dynamicExpr.push(result.key, result.value)
-      if (isComponent && !result.key.isStatic) {
+      if (
+        deferListeners &&
+        !result.handler &&
+        (result.modifier || !isOn(result.key.content))
+      ) {
+        results.push(result)
+        continue
+      }
+      dynamicExpr.push(result.key)
+      // Handler bodies read the model when invoked, after its event updates it.
+      if (!deferListeners || !result.handler) dynamicExpr.push(result.value)
+      if (deferListeners) {
+        listenerResults.push(result)
+      } else if (isComponent && !result.key.isStatic) {
         // v-bind:[name]="value" or v-on:[name]="value"
         pushMergeArg()
         dynamicArgs.push(
@@ -1042,6 +1122,22 @@ export function buildProps(
         results.push(result)
       }
     }
+  }
+
+  if (deferListeners) {
+    pushMergeArg(true)
+    context.registerEffect(
+      dynamicExpr,
+      {
+        type: IRNodeTypes.SET_DYNAMIC_PROPS,
+        element: context.reference(),
+        props: dynamicArgs,
+        isSVG: node.ns === Namespaces.SVG,
+        listeners: true,
+      },
+      getEffectIndex,
+    )
+    return [false, dedupeProperties(results)]
   }
 
   // has dynamic key or v-bind="{}"
@@ -1114,6 +1210,75 @@ function resolveComponentObjectLiteralBindProps(
     return
   }
   return props
+}
+
+const listenerMerge = new WeakMap<ElementNode, boolean>()
+
+export function mergesListeners(
+  node: ElementNode,
+  context: TransformContext<ElementNode>,
+): boolean {
+  let merges = listenerMerge.get(node)
+  if (merges === undefined) {
+    listenerMerge.set(node, (merges = resolveListenerMerge(node, context)))
+  }
+  return merges
+}
+
+// like vdom, an element merges its listeners at runtime in template order
+// once their keys can collide: a v-bind spread that is not expanded into
+// static props or carries a dynamic key may hold any `on*` key, and a v-on
+// object may hold the key of a static listener (`@evt` or `:onXxx`).
+// Native SVG on* bindings also share the dynamic prop cache with v-on objects.
+function resolveListenerMerge(
+  node: ElementNode,
+  context: TransformContext<ElementNode>,
+): boolean {
+  const props = node.props as (VaporDirectiveNode | AttributeNode)[]
+  let hasVOnObject = false
+  let hasStaticListener = false
+  for (const p of props) {
+    if (p.type !== NodeTypes.DIRECTIVE) continue
+    const arg = p.arg && resolveExpression(p.arg)
+    if (p.name === 'bind') {
+      if (!arg) {
+        if (p.exp) {
+          const bindProps = resolveNativeObjectLiteralBindProps(
+            p.exp,
+            context,
+            props,
+            p,
+          )
+          if (!bindProps) return true
+          if (
+            node.ns === Namespaces.SVG &&
+            bindProps.some(({ key }) => isNativeOn(key.content))
+          ) {
+            hasStaticListener = true
+          }
+        }
+      } else if (!arg.isStatic) {
+        return true
+      } else if (
+        (isOn(arg.content) ||
+          (node.ns === Namespaces.SVG && isNativeOn(arg.content))) &&
+        !isModelListener(arg.content) &&
+        !p.modifiers.some(m => m.content === 'prop' || m.content === 'attr')
+      ) {
+        hasStaticListener = true
+      }
+    } else if (p.name === 'on') {
+      if (!arg) {
+        hasVOnObject = true
+      } else if (
+        arg.isStatic &&
+        !p.modifiers.some(m => m.content === 'delegate')
+      ) {
+        hasStaticListener = true
+      }
+    }
+  }
+  return hasVOnObject && hasStaticListener
 }
 
 function resolveNativeObjectLiteralBindProps(

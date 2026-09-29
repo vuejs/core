@@ -445,6 +445,43 @@ export function render(_ctx) {
 }"
 `;
 
+exports[`compiler v-bind > binds on* keys of native elements as listeners like vdom 1`] = `
+"import { on as _on, setListener as _setListener, setDOMProp as _setDOMProp, setAttr as _setAttr, setDynamicProps as _setDynamicProps, renderEffect as _renderEffect, template as _template } from 'vue';
+const t0 = _template("<div>")
+const t1 = _template("<svg>", 0, 1)
+const t2 = _template("<a>")
+const t3 = _template("<b>")
+const t4 = _template("<i>")
+const t5 = _template("<p>")
+const t6 = _template("<s>")
+const k0 = ["onClick"]
+
+export function render(_ctx, $props, $emit, $attrs, $slots) {
+  const n0 = t0()
+  const n1 = t1()
+  const n2 = t2()
+  const n3 = t3()
+  const n4 = t4()
+  const n5 = t5()
+  const n6 = t6()
+  _on(n6, "click", _ctx.fn5)
+  _renderEffect(() => {
+    const _save = _ctx.save
+    _setListener(n0, "onClick", _save)
+    _setListener(n0, "onKeyupOnceCapture", _save)
+    _setListener(n0, "onMyEvent", _ctx.cond ? _ctx.a : _ctx.b)
+    _setListener(n0, "on:MyEvent", _ctx.fn)
+    _setListener(n0, "onFoo", _ctx.onFoo)
+    _setListener(n1, "onClick", _save)
+    _setDOMProp(n2, "onClick", _ctx.fn1)
+    _setAttr(n3, "onClick", _ctx.fn2)
+    _setListener(n4, "on-click", _ctx.fn3)
+    _setDynamicProps(n5, [_ctx.obj, { onClick: _ctx.fn4 }], k0)
+  })
+  return [n0, n1, n2, n3, n4, n5, n6]
+}"
+`;
+
 exports[`compiler v-bind > class with v-bind object falls back to dynamic props 1`] = `
 "import { setDynamicProps as _setDynamicProps, renderEffect as _renderEffect, template as _template } from 'vue';
 const t0 = _template("<div>", 1)

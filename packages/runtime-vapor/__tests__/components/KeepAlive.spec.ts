@@ -1,6 +1,7 @@
 import {
   defineAsyncComponent,
   h,
+  markRaw,
   nextTick,
   onActivated,
   onBeforeMount,
@@ -5119,5 +5120,97 @@ describe('VaporKeepAlive', () => {
     expect(cls.vapor).toBe(cls.vdom)
     expect(vapor.text).toBe(vdom.text)
     expect('Extraneous non-props attributes (class)').toHaveBeenWarned()
+  })
+
+  describe('v-else-if chain branch re-entry', () => {
+    // a tab logging its lifecycle and keeping a click counter in its id
+    const tab = (id: string) =>
+      `<script setup>` +
+      `import { ref, onActivated, onDeactivated } from 'vue'\n` +
+      `const n = ref(0)\n` +
+      `const log = _data.value.box.log\n` +
+      `log.push('setup:${id}')\n` +
+      `onActivated(() => log.push('act:${id}'))\n` +
+      `onDeactivated(() => log.push('deact:${id}'))\n` +
+      `</script>` +
+      `<template><section :id="'${id}' + n" @click="n++" /></template>`
+    const srcs = {
+      S: tab('s'),
+      A: tab('a'),
+      D: tab('d'),
+      O: tab('o'),
+      App: `<template><KeepAlive>
+        <components.S v-if="data.is('s')" />
+        <components.A v-else-if="data.is('a')" />
+        <components.D v-else-if="data.is('d')" />
+        <components.O v-else />
+      </KeepAlive></template>`,
+    }
+
+    // steps: a tab to switch to, or 'click' to bump the shown tab's counter;
+    // returns the final html, the lifecycle log and how often the chain
+    // conditions were evaluated
+    async function run(steps: string[]) {
+      const out = {} as Record<'vdom' | 'vapor', string[]>
+      await renderParity(
+        srcs,
+        () => {
+          const box = markRaw({ log: [] as string[], checks: 0 })
+          const data = ref<any>({ tab: 'a', box })
+          data.value.is = (id: string) => {
+            box.checks++
+            return data.value.tab === id
+          }
+          return data
+        },
+        async (data, root, mode) => {
+          for (const step of steps) {
+            if (step === 'click') root.querySelector('section')!.click()
+            else data.value.tab = step
+            await nextTick()
+          }
+          const { log, checks } = data.value.box
+          out[mode] = [
+            root.innerHTML.replace(/<!--[^>]*-->/g, ''),
+            log.join(),
+            String(checks),
+          ]
+        },
+      )
+      return out
+    }
+
+    test('sets up a branch component once', async () => {
+      const out = await run(['s', 'a', 's', 'a', 'o'])
+      expect(out.vdom).toEqual([
+        '<section id="o0"></section>',
+        'setup:a,act:a,setup:s,deact:a,act:s,deact:s,act:a,deact:a,act:s,' +
+          'deact:s,act:a,setup:o,deact:a,act:o',
+        '11',
+      ])
+      expect(out.vapor).toEqual(out.vdom)
+    })
+
+    test('does not keep the previous render of the branch alive', async () => {
+      const out = await run(['s', 'd', 's', 'd', 's', 'd'])
+      expect(out.vdom).toEqual([
+        '<section id="d0"></section>',
+        'setup:a,act:a,setup:s,deact:a,act:s,setup:d,deact:s,act:d,' +
+          'deact:d,act:s,deact:s,act:d,deact:d,act:s,deact:s,act:d',
+        '14',
+      ])
+      expect(out.vapor).toEqual(out.vdom)
+    })
+
+    test('keeps the state of a nested branch', async () => {
+      const out = await run(['d', 'o', 'click', 's', 'o'])
+      expect(out.vdom).toEqual([
+        '<section id="o1"></section>',
+        'setup:a,act:a,setup:d,deact:a,act:d,setup:o,deact:d,act:o,' +
+          'setup:s,deact:o,act:s,deact:s,act:o',
+        '12',
+      ])
+      expect(out.vapor).toEqual(out.vdom)
+    })
   })
 })

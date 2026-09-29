@@ -11,7 +11,7 @@ import {
   setDynamicEvents,
   template,
 } from '../../src'
-import { compileToVaporRender, makeRender } from '../_utils'
+import { compileToVaporRender, makeRender, renderParity } from '../_utils'
 
 const define = makeRender<any>()
 
@@ -467,5 +467,161 @@ describe('dom event', () => {
     button.click()
 
     expect(hits.value).toBe(1)
+  })
+
+  describe('on* bindings of native elements', () => {
+    const fire = (root: HTMLElement, id: string, type = 'click') =>
+      root.querySelector(`#${id}`)!.dispatchEvent(new Event(type))
+
+    test('binds listeners like vdom', async () => {
+      const logs: Record<string, string[]> = {}
+      const { vdom, vapor } = await renderParity(
+        {
+          App: `<template>
+            <button id="a" :onClick="data.fn"></button>
+            <button id="b" :onClickOnce="data.fn"></button>
+            <svg id="c" :onClick="data.fn"></svg>
+            <div id="d" :onMyEvent="data.fn"></div>
+            <div id="e" :onUpdate:modelValue="data.fn"></div>
+            <button id="f" v-once :onClick="data.fn"></button>
+          </template>`,
+        },
+        () => {
+          const log: string[] = []
+          return ref({
+            log,
+            fn: (e: Event) => log.push(`fn:${e.type}`),
+            swapped: () => log.push('swapped'),
+          })
+        },
+        async (data, root, mode) => {
+          fire(root, 'a')
+          fire(root, 'b')
+          fire(root, 'b')
+          fire(root, 'c')
+          fire(root, 'd', 'my-event')
+          fire(root, 'f')
+          data.value.fn = data.value.swapped
+          await nextTick()
+          fire(root, 'a')
+          fire(root, 'f')
+          logs[mode] = data.value.log
+        },
+      )
+      expect(logs.vdom).toEqual([
+        'fn:click',
+        'fn:click',
+        'fn:click',
+        'fn:my-event',
+        'fn:click',
+        'swapped',
+        'fn:click',
+      ])
+      expect(logs.vapor).toEqual(logs.vdom)
+      expect(vapor.after).toBe(vdom.after)
+    })
+
+    test('uses the bound value as the handler like vdom', async () => {
+      const logs: Record<string, string[]> = {}
+      const errors: Record<string, string[]> = {}
+      const { vdom, vapor } = await renderParity(
+        {
+          App: `<template>
+            <button id="a" :onClick="data.enabled ? data.save : data.cancel"></button>
+            <button id="b" :onClick="[data.save, data.cancel]"></button>
+            <button id="c" :onClick="data.pair"></button>
+            <button id="d" :onClick="data.create('created')"></button>
+            <button id="e" :onClick="data.maybe"></button>
+          </template>`,
+        },
+        () => {
+          const log: string[] = []
+          const save = () => log.push('save')
+          const cancel = () => log.push('cancel')
+          return ref({
+            log,
+            enabled: true,
+            save,
+            cancel,
+            pair: [save, cancel],
+            create: (msg: string) => () => log.push(msg),
+            maybe: null as null | (() => void),
+          })
+        },
+        async (data, root, mode) => {
+          // jsdom reports a throwing listener on window instead of at dispatch
+          errors[mode] = []
+          const onError = (e: ErrorEvent) => {
+            errors[mode].push(e.message)
+            e.preventDefault()
+          }
+          window.addEventListener('error', onError)
+          for (const id of ['a', 'b', 'c', 'd', 'e']) fire(root, id)
+          data.value.enabled = false
+          data.value.maybe = () => data.value.log.push('maybe')
+          await nextTick()
+          fire(root, 'a')
+          fire(root, 'e')
+          data.value.maybe = null
+          await nextTick()
+          fire(root, 'e')
+          window.removeEventListener('error', onError)
+          logs[mode] = data.value.log
+        },
+      )
+      expect(logs.vdom).toEqual([
+        'save',
+        'save',
+        'cancel',
+        'save',
+        'cancel',
+        'created',
+        'cancel',
+        'maybe',
+      ])
+      expect(errors.vdom).toEqual([])
+      expect(logs.vapor).toEqual(logs.vdom)
+      expect(errors.vapor).toEqual([])
+      expect(vapor.after).toBe(vdom.after)
+    })
+
+    test('merges with spread and fallthrough listeners like vdom', async () => {
+      const logs: Record<string, string[]> = {}
+      const { vdom, vapor } = await renderParity(
+        {
+          Child: `<template><button :onClick="data.own"></button></template>`,
+          App: `<template>
+            <button id="a" v-bind="{ onClick: data.save }" :onClick="data.save"></button>
+            <button id="b" v-bind="{ onClick: data.save }" :onClick="data.own"></button>
+            <button id="c" :onClick="data.own" v-bind="{ onClick: data.save }"></button>
+            <components.Child id="d" @click="data.save" />
+          </template>`,
+        },
+        () => {
+          const log: string[] = []
+          return ref({
+            log,
+            save: () => log.push('save'),
+            own: () => log.push('own'),
+          })
+        },
+        (data, root, mode) => {
+          for (const id of ['a', 'b', 'c', 'd']) fire(root, id)
+          logs[mode] = data.value.log
+        },
+      )
+      // the same function bound twice runs once
+      expect(logs.vdom).toEqual([
+        'save',
+        'save',
+        'own',
+        'own',
+        'save',
+        'own',
+        'save',
+      ])
+      expect(logs.vapor).toEqual(logs.vdom)
+      expect(vapor.after).toBe(vdom.after)
+    })
   })
 })

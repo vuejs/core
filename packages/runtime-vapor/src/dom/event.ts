@@ -8,9 +8,10 @@ import {
   withKeys as withDomKeys,
   withModifiers as withDomModifiers,
 } from '@vue/runtime-dom'
+import { isApplyingFallthroughProps } from '../component'
 
 type EventHandler = (...args: any[]) => any
-type EventHandlerValue = EventHandler | EventHandler[]
+export type EventHandlerValue = EventHandler | EventHandler[]
 type MaybeEventHandlerValue = EventHandlerValue | null | undefined
 
 export function addEventListener(
@@ -61,6 +62,108 @@ export function onBinding(
   }
   const cleanup = addEventListener(el, event, createInvoker(handler), options)
   onEffectCleanup(cleanup)
+}
+
+interface Invoker {
+  own: MaybeEventHandlerValue
+  attrs: MaybeEventHandlerValue
+  handlers: EventHandler[] | null
+  remove: (() => void) | undefined
+  fired: boolean
+}
+
+/**
+ * A dynamic listener keeps one native listener per key across effect re-runs,
+ * like a vdom invoker. A root's own `on*` binding and the fallthrough one are
+ * two layers of it: the own handlers run first, then the fallthrough ones not
+ * already among them, so re-binding either layer keeps that order. #15635
+ */
+export function setListener(
+  el: Element & { $vei?: Record<string, Invoker> },
+  key: string,
+  value: MaybeEventHandlerValue,
+): void {
+  const invokers = el.$vei || (el.$vei = {})
+  const invoker =
+    invokers[key] ||
+    (invokers[key] = {
+      own: null,
+      attrs: null,
+      handlers: null,
+      remove: undefined,
+      fired: false,
+    })
+  const layer = isApplyingFallthroughProps ? 'attrs' : 'own'
+  invoker[layer] = value
+  if (composeHandlers(invoker).length) {
+    if (!invoker.remove && !invoker.fired) attachInvoker(el, key, invoker)
+  } else if (invoker.remove) {
+    invoker.remove()
+    invoker.remove = undefined
+  }
+  // a re-run sets the layer again right away, so the native listener stays
+  onEffectCleanup(() => {
+    invoker[layer] = null
+    invoker.handlers = null
+  })
+}
+
+function composeHandlers(invoker: Invoker): EventHandler[] {
+  const { own, attrs } = invoker
+  const handlers: EventHandler[] = (invoker.handlers = [])
+  if (isArray(own)) {
+    for (const fn of own) if (fn) handlers.push(fn)
+  } else if (own) {
+    handlers.push(own)
+  }
+  if (attrs) {
+    // `$attrs` rebuilds its merged array on every read, so the fallthrough
+    // handlers are compared one by one against the own ones; mergeProps
+    // compares values instead, so own `[a]` with attrs `[a, b]` runs `a` once
+    // here and twice in vdom
+    const ownCount = handlers.length
+    for (const fn of isArray(attrs) ? attrs : [attrs]) {
+      if (fn) {
+        const at = handlers.indexOf(fn)
+        if (at < 0 || at >= ownCount) handlers.push(fn)
+      }
+    }
+  }
+  return handlers
+}
+
+function attachInvoker(el: Element, key: string, invoker: Invoker): void {
+  const [event, options] = parseEventName(key)
+  const once = !!options && (options as AddEventListenerOptions).once
+  const i = currentInstance
+  invoker.remove = addEventListener(
+    el,
+    event,
+    (e: Event) => {
+      // #15378 the browser drops a once listener after this call
+      if (once) invoker.fired = true
+      // a sync replaces the array, so this is a snapshot of the call
+      const handlers = invoker.handlers || composeHandlers(invoker)
+      if (handlers.length > 1) {
+        const originalStop = e.stopImmediatePropagation
+        e.stopImmediatePropagation = () => {
+          originalStop.call(e)
+          ;(e as any)._stopped = true
+        }
+      }
+      const args = [e]
+      for (const handler of handlers) {
+        if ((e as any)._stopped) break
+        callWithAsyncErrorHandling(
+          handler,
+          i,
+          ErrorCodes.NATIVE_EVENT_HANDLER,
+          args,
+        )
+      }
+    },
+    options,
+  )
 }
 
 export function delegate(el: any, event: string, handler: EventHandler): void {
@@ -129,16 +232,6 @@ const delegatedEventHandler = (e: Event) => {
       node.host && node.host !== node && node.host instanceof Node
         ? node.host
         : node.parentNode
-  }
-}
-
-export function setDynamicEvents(
-  el: HTMLElement,
-  events: Record<string, EventHandlerValue>,
-): void {
-  for (const name in events) {
-    const [event, options] = parseEventName(`on:${name}`)
-    onBinding(el, event, events[name], options)
   }
 }
 

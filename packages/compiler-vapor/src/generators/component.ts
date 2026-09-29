@@ -7,7 +7,6 @@ import {
   extend,
   getModifierPropName,
   isArray,
-  toHandlerKey,
 } from '@vue/shared'
 import type { CodegenContext } from '../generate'
 import {
@@ -38,7 +37,13 @@ import {
   genMulti,
 } from './utils'
 import { genExpression, genVarName } from './expression'
-import { genPropKey, genPropValue } from './prop'
+import {
+  createHandlerGroups,
+  genPropKey,
+  genPropValue,
+  getStaticPropKeyName,
+  isListenerProp,
+} from './prop'
 import {
   type SimpleExpressionNode,
   createSimpleExpression,
@@ -289,61 +294,30 @@ function genStaticProps(
 ): CodeFragment[] {
   const args: CodeFragment[][] = []
 
-  type HandlerGroup = {
-    keyFrag: CodeFragment[]
-    handlers: CodeFragment[][]
-    index: number
-  }
-  const handlerGroups = new Map<string, HandlerGroup>()
-
-  const ensureHandlerGroup = (
-    keyName: string,
-    keyFrag: CodeFragment[],
-  ): HandlerGroup => {
-    let group = handlerGroups.get(keyName)
-    if (!group) {
-      const index = args.length
-      // placeholder, filled later
-      args.push([])
-      group = { keyFrag, handlers: [], index }
-      handlerGroups.set(keyName, group)
-    }
-    return group
-  }
-
-  const addHandler = (
-    keyName: string,
-    keyFrag: CodeFragment[],
-    handlerExp: CodeFragment[],
-  ) => {
-    ensureHandlerGroup(keyName, keyFrag).handlers.push(handlerExp)
-  }
-
-  const getStaticPropKeyName = (prop: IRProp): string | undefined => {
-    if (!prop.key.isStatic) return
-    const handlerModifierPostfix =
-      prop.handlerModifiers && prop.handlerModifiers.options
-        ? prop.handlerModifiers.options
-            .map(m => m.charAt(0).toUpperCase() + m.slice(1))
-            .join('')
-        : ''
-    const keyName =
-      (prop.handler
-        ? toHandlerKey(camelize(prop.key.content))
-        : prop.key.content) + handlerModifierPostfix
-    return keyName
-  }
+  const handlerGroups = createHandlerGroups(
+    args,
+    '() => ',
+    DELIMITERS_ARRAY_NEWLINE,
+  )
 
   for (const prop of props) {
-    if (prop.handler) {
-      const keyName = getStaticPropKeyName(prop)
-      if (!keyName) {
+    if (isListenerProp(prop)) {
+      if (!prop.key.isStatic) {
         // dynamic key handlers are emitted as-is
         args.push(genProp(prop, context, true))
         continue
       }
-
+      const keyName = getStaticPropKeyName(prop)
       const keyFrag = genPropKey(prop, context)
+      if (!prop.handler) {
+        // `:onXxx` merges with the `@xxx` handlers like mergeProps
+        handlerGroups.add(keyName, keyFrag, [
+          '(',
+          ...genPropValue(prop.values, context),
+          ')',
+        ])
+        continue
+      }
       const hasModifiers =
         !!prop.handlerModifiers &&
         (prop.handlerModifiers.keys.length > 0 ||
@@ -356,7 +330,7 @@ function genStaticProps(
           prop.handlerModifiers,
           { asComponentProp: true },
         )
-        addHandler(keyName, keyFrag, handlerExp)
+        handlerGroups.add(keyName, keyFrag, handlerExp)
       } else {
         // no modifiers: flatten multiple handler values
         for (const value of prop.values) {
@@ -366,7 +340,7 @@ function genStaticProps(
             prop.handlerModifiers,
             { asComponentProp: true },
           )
-          addHandler(keyName, keyFrag, handlerExp)
+          handlerGroups.add(keyName, keyFrag, handlerExp)
         }
       }
       continue
@@ -390,7 +364,11 @@ function genStaticProps(
       if (prop.key.isStatic) {
         const keyName = `onUpdate:${camelize(prop.key.content)}`
         const keyFrag: CodeFragment[] = [JSON.stringify(keyName)]
-        addHandler(keyName, keyFrag, genModelHandler(prop.values[0], context))
+        handlerGroups.add(
+          keyName,
+          keyFrag,
+          genModelHandler(prop.values[0], context),
+        )
       } else {
         const keyFrag: CodeFragment[] = [
           '["onUpdate:" + ',
@@ -421,14 +399,7 @@ function genStaticProps(
     }
   }
 
-  // fill handler placeholders
-  for (const group of handlerGroups.values()) {
-    const handlerValue =
-      group.handlers.length > 1
-        ? genMulti(DELIMITERS_ARRAY_NEWLINE, ...group.handlers)
-        : group.handlers[0]
-    args[group.index] = [...group.keyFrag, ': () => ', ...handlerValue]
-  }
+  handlerGroups.fill()
 
   if (dynamicProps) {
     args.push([`$: `, ...dynamicProps])

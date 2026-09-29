@@ -20,7 +20,8 @@ import {
   stringifyStyle,
   toDisplayString,
 } from '@vue/shared'
-import { onBinding } from './event'
+import { isReactive } from '@vue/reactivity'
+import { type EventHandlerValue, setListener } from './event'
 import {
   type GenericComponentInstance,
   MismatchTypes,
@@ -35,13 +36,13 @@ import {
   isValidHtmlOrSvgAttribute,
   logMismatchError,
   mergeProps,
-  parseEventName,
   patchClass,
   patchStyle,
   queuePostFlushCb,
   shouldSetAsProp,
   shouldSetAsPropForVueCE,
   toClassSet,
+  toHandlers,
   toStyleMap,
   unsafeToTrustedHTML,
   vShowHidden,
@@ -53,7 +54,6 @@ import {
 import {
   type VaporComponentInstance,
   isApplyingFallthroughProps,
-  isDeclaredModelListener,
   shouldUseFunctionalFallthrough,
 } from '../component'
 import {
@@ -90,9 +90,6 @@ const shouldSkipFallthroughKey = (el: TargetElement, key: string) => {
     instance.hasFallthrough &&
     instance.type.inheritAttrs !== false &&
     key in instance.attrs &&
-    // skip only keys fallthrough will actually write: v-model listeners
-    // with a declared prop are filtered out of the fallthrough set
-    !isDeclaredModelListener(instance, key) &&
     (!shouldUseFunctionalFallthrough(instance.type) ||
       isFunctionalFallthroughKey(key))
   )
@@ -391,6 +388,10 @@ function checkHydrationStyleMismatch(
 }
 
 export function setStyle(el: TargetElement, value: any): void {
+  // #11372: object style values are iterated during patch instead of
+  // normalization, but the patch is skipped during hydration, so iterate
+  // the reactive object here to track its keys
+  if (isHydrating && isReactive(value)) for (const key in value) value[key]
   if (el.$root) {
     setStyleIncremental(el, value)
   } else {
@@ -595,6 +596,13 @@ export function setDynamicProps(
   )
 }
 
+export function setDynamicEvents(
+  el: HTMLElement,
+  events: Record<string, EventHandlerValue>,
+): void {
+  patchDynamicProps(el, toHandlers(events, true))
+}
+
 export function patchDynamicProps(
   el: any,
   props: Record<string, any>,
@@ -656,11 +664,7 @@ export function setDynamicProp(
   } else if (key === 'style') {
     setStyle(el, value)
   } else if (isOn(key)) {
-    if (shouldSkipFallthroughKey(el, key)) {
-      return
-    }
-    const [event, options] = parseEventName(key)
-    onBinding(el, event, value, options)
+    setListener(el, key, value)
   } else if (
     // force hydrate v-bind with .prop modifiers
     key[0] === '.'
@@ -706,6 +710,7 @@ export function optimizePropertyLookup(): void {
   proto.$transition = undefined
   proto.$key = undefined
   proto.$evtclick = undefined
+  proto.$vei = undefined
   proto.$root = false
   proto.$clsFlags = undefined
   proto.$cls = proto.$sty = ''

@@ -1436,6 +1436,103 @@ describe('compiler: element transform', () => {
     ])
   })
 
+  test('static listeners join the dynamic props of a native element', () => {
+    const { code } = compileWithElementTransform(
+      `<div @click="a" v-on="obj" v-bind="bind" @click.stop="b" @keyup.enter.once="c" @myEvent="d" />`,
+    )
+    expect(code).toMatchSnapshot()
+    expect(code).contains(
+      `_setDynamicProps(n0, [{ onClick: e => _ctx.a(e) }, _toHandlers(_ctx.obj, true), _ctx.bind, { onClick: _withModifiers(e => _ctx.b(e), ["stop"]), onKeyupOnce: _withKeys(e => _ctx.c(e), ["enter"]), "on:myEvent": e => _ctx.d(e) }])`,
+    )
+    expect(code).not.contains(`_on(`)
+    expect(code).not.contains(`_setDynamicEvents`)
+  })
+
+  test('a constant dynamic v-bind key keeps the static listener path', () => {
+    const { code } = compileWithElementTransform(
+      `<div :['id']="'btn'" @click="a" />`,
+    )
+    expect(code).toMatchSnapshot()
+    expect(code).contains(`_on(n0, "click", `)
+    expect(code).not.contains(`_setProp`)
+  })
+
+  test(':onXxx merges with the handlers of the same event', () => {
+    const { code } = compileWithElementTransform(
+      `<div v-bind="bind" @click="a" :onClick="b" /><div :onClick="c" v-on="obj" /><Comp @click="a" :onClick="b" />`,
+    )
+    expect(code).toMatchSnapshot()
+    expect(code).contains(`{ onClick: [e => _ctx.a(e), _ctx.b] }`)
+    expect(code).contains(
+      `_setDynamicProps(n1, [{ onClick: _ctx.c }, _toHandlers(_ctx.obj, true)], k0)`,
+    )
+    expect(code).contains(`onClick: () => [`)
+  })
+
+  test('an expanded v-bind object literal keeps the static listener paths', () => {
+    const { code } = compileWithElementTransform(
+      `<div v-bind="{ id: 'btn' }" @click="a" /><div v-bind="{ id: 'btn' }" v-on="obj" />`,
+    )
+    expect(code).toMatchSnapshot()
+    expect(code).contains(`_template("<div id=btn>")`)
+    expect(code).contains(`_on(n0, "click", `)
+    expect(code).contains(`_setDynamicEvents(n1, _ctx.obj)`)
+    expect(code).not.contains(`_setDynamicProps`)
+  })
+
+  test('a merged camelCase listener keeps its case and its option modifier', () => {
+    const { code } = compileWithElementTransform(
+      `<div v-bind="bind" @myEvent.capture.once="a" @['click']="b" />`,
+    )
+    expect(code).toMatchSnapshot()
+    expect(code).contains(
+      `{ "on:myEventCaptureOnce": e => _ctx.a(e), onClick: e => _ctx.b(e) }`,
+    )
+  })
+
+  test('a listener bound twice in one merge arg keeps both handlers', () => {
+    const { code } = compileWithElementTransform(
+      `<div v-bind="bind" @click.stop="a" @click="b($event)" />`,
+    )
+    expect(code).toMatchSnapshot()
+    expect(code).contains(
+      `{ onClick: [_withModifiers(e => _ctx.a(e), ["stop"]), $event => (_ctx.b($event))] }`,
+    )
+  })
+
+  test('a delegated listener stays out of the merge', () => {
+    const { code } = compileWithElementTransform(
+      `<div @click.delegate="a" v-on="obj" />`,
+    )
+    expect(code).toMatchSnapshot()
+    expect(code).contains(`n0.$evtclick = `)
+    expect(code).contains(`_setDynamicEvents(n0, _ctx.obj)`)
+    expect(code).not.contains(`_toHandlers`)
+  })
+
+  test('v-on="obj" merges into the dynamic props of a native element', () => {
+    const { code, ir } = compileWithElementTransform(
+      `<div id="a" v-on="obj" v-bind="bind" />`,
+    )
+    expect(code).toMatchSnapshot()
+    expect(code).contains(
+      `_setDynamicProps(n0, [{ id: "a" }, _toHandlers(_ctx.obj, true), _ctx.bind])`,
+    )
+    expect(code).not.contains(`_setDynamicEvents`)
+    expect(ir.block.effect[0].operations[0]).toMatchObject({
+      type: IRNodeTypes.SET_DYNAMIC_PROPS,
+      props: [
+        [{ key: { content: 'id' } }],
+        {
+          kind: IRDynamicPropsKind.EXPRESSION,
+          value: { content: 'obj' },
+          handler: true,
+        },
+        { kind: IRDynamicPropsKind.EXPRESSION, value: { content: 'bind' } },
+      ],
+    })
+  })
+
   test('v-on="obj"', () => {
     const { code, ir } = compileWithElementTransform(`<div v-on="obj" />`)
     expect(code).toMatchSnapshot()
@@ -1996,4 +2093,16 @@ describe('compiler: element transform', () => {
       expect([...ir.template.keys()]).toMatchObject([template])
     })
   })
+
+  test.each(['KeepAlive', 'keep-alive'])(
+    '<%s> resolves to the built-in VaporKeepAlive',
+    tag => {
+      const { code, helpers } = compileWithElementAndSlotTransform(
+        `<${tag}><Foo /></${tag}>`,
+      )
+      expect(code).toContain('_createComponent(_VaporKeepAlive,')
+      expect(code).not.toContain(`_createAssetComponent("${tag}"`)
+      expect(helpers).toContain('VaporKeepAlive')
+    },
+  )
 })

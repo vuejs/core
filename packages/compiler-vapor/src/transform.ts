@@ -294,7 +294,11 @@ export class TransformContext<T extends AllNode = AllNode> {
     const once = expressions.every(e =>
       isConstantBinding(e, this.root.options.bindingMetadata),
     )
-    if (this.inVOnce || (once && !preserveOrder)) {
+    // Merged listeners use effect cleanup even when their props are constant.
+    const needsEffect = operations.some(
+      op => op.type === IRNodeTypes.SET_DYNAMIC_PROPS && op.listeners,
+    )
+    if (this.inVOnce || (once && !preserveOrder && !needsEffect)) {
       this.registerOperation(...operations)
       return false
     }
@@ -303,7 +307,7 @@ export class TransformContext<T extends AllNode = AllNode> {
     this.block.effect.splice(index, 0, {
       expressions,
       operations,
-      ...(once ? { once: true } : {}),
+      ...(once && !needsEffect ? { once: true } : {}),
     })
     if (getIndex) {
       this.shiftEffectBoundaries(index)

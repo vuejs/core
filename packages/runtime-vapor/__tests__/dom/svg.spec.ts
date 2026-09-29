@@ -1,4 +1,4 @@
-import { makeRender } from '../_utils'
+import { makeRender, renderParity } from '../_utils'
 import { template } from '../../src/dom/template'
 import { child } from '../../src/dom/node'
 import { setAttr, setClass } from '../../src/dom/prop'
@@ -6,6 +6,7 @@ import { renderEffect } from '../../src'
 import { nextTick, ref } from '@vue/runtime-dom'
 
 const define = makeRender()
+const xlinkNS = 'http://www.w3.org/1999/xlink'
 
 describe('SVG support', () => {
   afterEach(() => {
@@ -69,5 +70,159 @@ describe('SVG support', () => {
     await nextTick()
     expect(f1.getAttribute('class')).toBe('bar')
     expect(f2.className).toBe('bar')
+  })
+
+  test('should patch svg elements that share a tag name with html', async () => {
+    const attrs: Record<string, any[]> = {}
+    const { vdom, vapor } = await renderParity(
+      {
+        App: `<template><svg>
+          <a :href="data.url" :xlink:href="data.url" :class="data.cls"><text>t</text></a>
+          <a v-bind="data.attrs"><text>t</text></a>
+        </svg></template>`,
+      },
+      () => ref({ url: '/x', cls: 'link', attrs: { class: 'c', href: '/y' } }),
+      async (data, root, mode) => {
+        const [a1, a2] = root.querySelectorAll('a')
+        const collect = () =>
+          (attrs[mode] = [
+            a1.getAttribute('href'),
+            a1.getAttributeNS(xlinkNS, 'href'),
+            a1.getAttribute('class'),
+            a2.getAttribute('href'),
+            a2.getAttribute('class'),
+          ])
+        data.value = { url: '/z', cls: 'on', attrs: { class: 'd', href: '/w' } }
+        await nextTick()
+        collect()
+      },
+    )
+    expect(vapor.after).toBe(vdom.after)
+    expect(attrs.vdom).toEqual(['/z', '/z', 'on', '/w', 'd'])
+    expect(attrs.vapor).toEqual(attrs.vdom)
+  })
+
+  test('should patch native event function bindings on svg elements', async () => {
+    await renderParity(
+      {
+        App: `<template><svg><a :onclick="data.handler"><text>link</text></a></svg></template>`,
+      },
+      () => ref({ handler: vi.fn() }),
+      async (data, root) => {
+        const a = root.querySelector('a')!
+        const initialHandler = data.value.handler
+        expect(a.onclick).toBe(initialHandler)
+        a.dispatchEvent(new MouseEvent('click'))
+        expect(initialHandler).toHaveBeenCalledTimes(1)
+
+        data.value.handler = vi.fn()
+        await nextTick()
+        expect(a.onclick).toBe(data.value.handler)
+        a.dispatchEvent(new MouseEvent('click'))
+        expect(data.value.handler).toHaveBeenCalledTimes(1)
+        expect(initialHandler).toHaveBeenCalledTimes(1)
+      },
+    )
+  })
+
+  test('should patch native event string bindings as svg attributes', async () => {
+    await renderParity(
+      {
+        App: `<template><svg><a :onclick="data.handler" /></svg></template>`,
+      },
+      () => ref({ handler: 'return false' }),
+      async (data, root) => {
+        const a = root.querySelector('a')!
+        expect(a.getAttribute('onclick')).toBe(data.value.handler)
+
+        data.value.handler = 'return true'
+        await nextTick()
+        expect(a.getAttribute('onclick')).toBe(data.value.handler)
+      },
+    )
+  })
+
+  test('should preserve other native svg events when one binding updates', async () => {
+    await renderParity(
+      {
+        App: `<template><svg><a :onclick="data.click" :onfocus="data.focus" /></svg></template>`,
+      },
+      () => ref({ click: vi.fn(), focus: vi.fn() }),
+      async (data, root) => {
+        const a = root.querySelector('a')!
+        expect(a.onclick).toBe(data.value.click)
+        expect(a.onfocus).toBe(data.value.focus)
+
+        data.value.click = vi.fn()
+        await nextTick()
+        expect(a.onclick).toBe(data.value.click)
+        expect(a.onfocus).toBe(data.value.focus)
+        a.dispatchEvent(new MouseEvent('click'))
+        a.dispatchEvent(new FocusEvent('focus'))
+        expect(data.value.click).toHaveBeenCalledTimes(1)
+        expect(data.value.focus).toHaveBeenCalledTimes(1)
+      },
+    )
+  })
+
+  test.each([':onclick="data.click"', 'v-bind="{ onclick: data.click }"'])(
+    'should preserve native svg events with a v-on object: %s',
+    async binding => {
+      await renderParity(
+        {
+          App: `<template><svg><a ${binding} v-on="data.events"><text>link</text></a></svg></template>`,
+        },
+        () => ref({ click: vi.fn(), events: { mouseenter: vi.fn() } }),
+        async (data, root) => {
+          const a = root.querySelector('a')!
+          const initialClick = data.value.click
+          const initialMouseenter = data.value.events.mouseenter
+          const dispatch = () => {
+            a.dispatchEvent(new MouseEvent('click'))
+            a.dispatchEvent(new MouseEvent('mouseenter'))
+          }
+
+          expect(a.onclick).toBe(data.value.click)
+          dispatch()
+          expect(initialClick).toHaveBeenCalledTimes(1)
+          expect(initialMouseenter).toHaveBeenCalledTimes(1)
+
+          data.value.click = vi.fn()
+          await nextTick()
+          expect(a.onclick).toBe(data.value.click)
+          dispatch()
+          expect(initialClick).toHaveBeenCalledTimes(1)
+          expect(data.value.click).toHaveBeenCalledTimes(1)
+          expect(initialMouseenter).toHaveBeenCalledTimes(2)
+
+          data.value.events = { mouseenter: vi.fn() }
+          await nextTick()
+          expect(a.onclick).toBe(data.value.click)
+          dispatch()
+          expect(data.value.click).toHaveBeenCalledTimes(2)
+          expect(initialMouseenter).toHaveBeenCalledTimes(2)
+          expect(data.value.events.mouseenter).toHaveBeenCalledTimes(1)
+        },
+      )
+    },
+  )
+
+  test('should update expanded native svg bindings with a constant v-on object', async () => {
+    await renderParity(
+      {
+        App: `<template><svg><a v-bind="{ onclick: data.click }" v-on="{}" /></svg></template>`,
+      },
+      () => ref({ click: vi.fn() }),
+      async (data, root) => {
+        const a = root.querySelector('a')!
+        expect(a.onclick).toBe(data.value.click)
+
+        data.value.click = vi.fn()
+        await nextTick()
+        expect(a.onclick).toBe(data.value.click)
+        a.dispatchEvent(new MouseEvent('click'))
+        expect(data.value.click).toHaveBeenCalledTimes(1)
+      },
+    )
   })
 })
