@@ -1565,7 +1565,7 @@ function createVDOMComponent(
     }
   }
 
-  let rawRef: VNodeNormalizedRef | null = null
+  let rawRef: VNodeNormalizedRef | null | undefined
   let isMounted = false
   let isUnmounted = false
   let isDomRemoved = false
@@ -1581,11 +1581,11 @@ function createVDOMComponent(
       if (!transition) removeDom(parentNode)
       return
     }
-    // unset ref
-    if (rawRef) vdomSetRef(rawRef, null, null, vnode, true)
     if (transition) setVNodeTransitionHooks(vnode, transition)
     const parentSuspense = resolveUnmountSuspense(suspense)
     if (vnode.shapeFlag & ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE) {
+      // unset ref (`um` unsets `vnode.ref` otherwise)
+      if (rawRef) vdomSetRef(rawRef, null, null, vnode, true)
       // A deactivated child is no longer patched by its parent in VDOM, so
       // pause the commit of the raw sources it reads from this Vapor parent.
       if (frag.inputScope) frag.inputScope.pause()
@@ -1706,12 +1706,28 @@ function createVDOMComponent(
       },
       instance as any,
     )
+    // as in VDOM: `um` unsets it, async wrappers forward it to the inner comp
+    vnode.ref = rawRef
 
     if (isMounted) {
+      // The first synchronous mount may have already created a loading
+      // component. Later pending updates (including KeepAlive reuse) leave
+      // ref forwarding to the async wrapper, which may also render an error.
+      let target = vnode
+      if (
+        ((component as any).__asyncResolved ||
+          (oldRawRef === undefined &&
+            isAsyncWrapper(vnode) &&
+            !(vnode.shapeFlag & ShapeFlags.COMPONENT_KEPT_ALIVE))) &&
+        vnode.component!.subTree.component
+      ) {
+        target = vnode.component!.subTree
+        target.ref = rawRef
+      }
       if (rawRef) {
-        vdomSetRef(rawRef, oldRawRef, suspense, vnode)
+        vdomSetRef(rawRef, oldRawRef || null, suspense, target)
       } else if (oldRawRef) {
-        vdomSetRef(oldRawRef, null, null, vnode, true)
+        vdomSetRef(oldRawRef, null, null, target, true)
       }
     }
   }
