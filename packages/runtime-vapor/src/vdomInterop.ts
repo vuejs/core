@@ -1,5 +1,6 @@
 import {
   type App,
+  BaseTransition,
   type ComponentInternalInstance,
   type ConcreteComponent,
   type ElementNamespace,
@@ -65,6 +66,7 @@ import {
   shallowRef,
   shouldUpdateComponent,
   simpleSetCurrentInstance,
+  useTransitionState,
   activate as vdomActivate,
   deactivate as vdomDeactivate,
   setRef as vdomSetRef,
@@ -103,6 +105,7 @@ import {
   type BlockFn,
   EMPTY_BLOCK,
   type VaporTransitionHooks,
+  type VaporTransitionState,
   insert,
   isValidBlock,
   isValidSlot,
@@ -201,6 +204,7 @@ import {
 } from './dom/hydrateFragment'
 import type { NodeRef } from './apiTemplateRef'
 import {
+  applyTransitionHooksImpl,
   ensureTransitionHooksRegistered,
   findTransitionBlock,
   getTransitionElement,
@@ -689,6 +693,12 @@ const vaporInteropImpl = {
         ;(vs2.ref = vs1.ref)!.value = n2.props
         vs2.scope = vs1.scope
         syncInteropVaporSlotState(n1, n2)
+        // BaseTransition re-rendered: rebind to its current props, as vdom
+        // re-resolves the child's hooks on every render
+        const hooks = n2.transition && n2.vb!.$transition
+        if (isVaporTransitionHooks(hooks) && !hooks.state.isLeaving) {
+          applyTransitionHooksImpl(n2.vb!, hooks)
+        }
       }
     }
   },
@@ -3273,6 +3283,31 @@ function renderVaporSlot(
         currentParentNode = currentAnchor.parentNode as ParentNode | null
       }
 
+      // A vdom Transition's child slot switches its branches inside vapor,
+      // which BaseTransition never sees: drive them like VaporTransition.
+      if (
+        vnode.transition &&
+        parentComponent &&
+        parentComponent.type === (BaseTransition as any)
+      ) {
+        ensureTransitionHooksRegistered()
+        // one state per BaseTransition, shared by the slots it renders
+        let state = vdomTransitionStates.get(parentComponent)
+        if (!state) {
+          // registered on BaseTransition, the current instance
+          state = useTransitionState()
+          state.isMounted = parentComponent.isMounted
+          vdomTransitionStates.set(parentComponent, state)
+        }
+        state.root = frag
+        applyTransitionHooksImpl(frag, {
+          __vapor: true,
+          state,
+          props: parentComponent.props,
+          instance: parentComponent,
+        } as any)
+      }
+
       return frag
     } catch (e) {
       dispose(currentParentNode || undefined)
@@ -3284,6 +3319,11 @@ function renderVaporSlot(
     simpleSetCurrentInstance(prev)
   }
 }
+
+const vdomTransitionStates = new WeakMap<
+  ComponentInternalInstance,
+  VaporTransitionState
+>()
 
 function stopVaporSlotScope(vnode: VNode): void {
   if (vnode.vs && vnode.vs.scope) {

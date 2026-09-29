@@ -12517,4 +12517,107 @@ describe('vdomInterop', () => {
       },
     )
   })
+
+  describe('vapor slot content in a vdom Transition', () => {
+    // a vdom library wrapper forwarding its default slot, like vuetify's
+    // createCssTransition or element-plus ElCollapseTransition
+    const Wrap = defineComponent({
+      props: { onEnter: null, onLeave: null, open: { default: true } },
+      setup(props, { slots }) {
+        return () =>
+          h(
+            Transition,
+            { css: false, onEnter: props.onEnter, onLeave: props.onLeave },
+            () => (props.open ? slots.default!() : null),
+          )
+      },
+    })
+
+    test.each(['v-if', 'v-show'])(
+      'runs enter and leave hooks for %s content',
+      async dir => {
+        let finishLeave: (() => void) | undefined
+        const onEnter = vi.fn((_el: Element, done: () => void) => done())
+        const onLeave = vi.fn((_el: Element, done: () => void) => {
+          finishLeave = done
+        })
+        const data = ref({ show: false, onEnter, onLeave })
+        const App = compile(
+          `<template><div><components.Wrap :on-enter="data.onEnter" :on-leave="data.onLeave">` +
+            `<b ${dir}="data.show">x</b>` +
+            `</components.Wrap></div></template>`,
+          data,
+          { Wrap },
+        )
+        const { host, html } = define(App).render()
+        document.body.appendChild(host)
+
+        data.value.show = true
+        await nextTick()
+        expect(onEnter).toHaveBeenCalledTimes(1)
+        expect(html()).toContain('<b')
+
+        data.value.show = false
+        await nextTick()
+        expect(onLeave).toHaveBeenCalledTimes(1)
+        // still in the DOM while leaving
+        expect(html()).not.toContain('display: none')
+        expect(html()).toContain('<b')
+
+        finishLeave!()
+        await nextTick()
+        expect(html()).toBe(
+          dir === 'v-if'
+            ? '<div><!--if--></div>'
+            : '<div><b style="display: none;">x</b></div>',
+        )
+      },
+    )
+
+    test('keeps one Transition state across slot remounts', async () => {
+      const onEnter = vi.fn((_el: Element, done: () => void) => done())
+      // never calls done: the leave stays pending
+      const onLeave = vi.fn((_el: Element, _done: () => void) => {})
+      const data = ref({ open: true, onEnter, onLeave })
+      const App = compile(
+        `<template><div><components.Wrap :open="data.open" :on-enter="data.onEnter" :on-leave="data.onLeave">` +
+          `<b>x</b></components.Wrap></div></template>`,
+        data,
+        { Wrap },
+      )
+      const { host, html } = define(App).render()
+      document.body.appendChild(host)
+      await nextTick()
+      expect(onEnter).not.toHaveBeenCalled()
+
+      data.value.open = false
+      await nextTick()
+      expect(onLeave).toHaveBeenCalledTimes(1)
+      data.value.open = true
+      await nextTick()
+      expect(onEnter).toHaveBeenCalledTimes(1)
+      // the leaving copy is removed early
+      expect(html()).toBe('<div><b>x</b></div>')
+    })
+
+    test('uses the hooks of the updated Transition props', async () => {
+      const onLeave = vi.fn()
+      const onLeave2 = vi.fn()
+      const data = ref({ show: true, onLeave })
+      const App = compile(
+        `<template><div><components.Wrap :on-leave="data.onLeave">` +
+          `<b v-show="data.show">x</b></components.Wrap></div></template>`,
+        data,
+        { Wrap },
+      )
+      const { host } = define(App).render()
+      document.body.appendChild(host)
+      data.value.onLeave = onLeave2
+      await nextTick()
+      data.value.show = false
+      await nextTick()
+      expect(onLeave).not.toHaveBeenCalled()
+      expect(onLeave2).toHaveBeenCalledTimes(1)
+    })
+  })
 })
