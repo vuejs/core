@@ -223,6 +223,7 @@ const KeepAliveImpl: ComponentOptions = {
         // current active instance should no longer be kept-alive.
         // we can't unmount it now but it might be later, so reset its flag now.
         resetShapeFlag(current)
+        if (cached) resetShapeFlag(cached)
       }
       cache.delete(key)
       keys.delete(key)
