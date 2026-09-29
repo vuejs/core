@@ -13,7 +13,7 @@ import {
   isConstantNode,
   isLiteralWhitelisted,
 } from '@vue/compiler-dom'
-import type { BlockIRNode, VaporDirectiveNode } from './ir'
+import { type BlockIRNode, IRNodeTypes, type VaporDirectiveNode } from './ir'
 import { EMPTY_EXPRESSION } from './transforms/utils'
 import type { TransformContext } from './transform'
 
@@ -188,8 +188,13 @@ export function isBuiltInComponent(tag: string): string | undefined {
 }
 
 export function getBlockShape(block: BlockIRNode): VaporBlockShape {
-  if (block.returns.length === 0) return VaporBlockShape.EMPTY
-  if (block.returns.length > 1) return VaporBlockShape.MULTI_ROOT
+  // SSR renders a branch as a fragment unless its only child is an element,
+  // so an empty `<template>` branch or a lone nested `v-if` owns a range too
+  if (block.returns.length !== 1) return VaporBlockShape.MULTI_ROOT
+  const root = block.dynamic.children.find(c => c.id === block.returns[0])
+  if (root && root.operation && root.operation.type === IRNodeTypes.IF) {
+    return VaporBlockShape.MULTI_ROOT
+  }
   return block.node.type === NodeTypes.ELEMENT &&
     block.node.children.every(
       child =>

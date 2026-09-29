@@ -1356,8 +1356,8 @@ describe('VDOM interop', () => {
     expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
       "<div>
       <!--(-->
-      <!--[--><span>foo</span><!--if--><!--if--><!--if--><!--]-->
-      <!--slot--><!--)-->
+      <!--[--><span>foo</span><!--if--><!--]-->
+      <!--if--><!--slot--><!--)-->
       </div>"
     `)
   })
