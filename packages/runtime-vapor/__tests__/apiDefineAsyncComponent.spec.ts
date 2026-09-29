@@ -1330,6 +1330,191 @@ describe('api: defineAsyncComponent', () => {
     )
     expect(data.value.get()).toBe('async')
   })
+
+  test('template ref on an initially pending dynamic async component', async () => {
+    let resolve: (comp: VaporComponent) => void
+    const onRef = vi.fn()
+    const data = ref({ onRef })
+    const Async = defineVaporAsyncComponent(
+      () =>
+        new Promise(r => {
+          resolve = r as any
+        }),
+    )
+    const App = compile(
+      `<script setup vapor>
+        const data = _data
+        const components = _components
+      </script>
+      <template><component :is="components.Async" :ref="data.onRef" /></template>`,
+      data,
+      { Async },
+    )
+    const root = document.createElement('div')
+    const app = createVaporApp(App)
+    app.mount(root)
+    expect(onRef).toHaveBeenCalledTimes(1)
+    expect(onRef.mock.calls[0][0]).toBe(null)
+
+    resolve!(
+      compile(
+        `<script setup vapor>defineExpose({ id: 'async' })</script><template><div>async</div></template>`,
+        data,
+      ),
+    )
+    await timeout()
+    expect(root.innerHTML).toBe(
+      '<div>async</div><!--async component--><!--dynamic-component-->',
+    )
+    expect(onRef.mock.lastCall![0].id).toBe('async')
+    expect(onRef.mock.calls.filter(([value]) => value !== null)).toHaveLength(1)
+    app.unmount()
+  })
+
+  test('dynamic async template ref follows the active KeepAlive branch', async () => {
+    let resolve: (comp: VaporComponent) => void
+    const onRef = vi.fn()
+    const data = ref({ useAsync: true, onRef })
+    const Async = defineVaporAsyncComponent(
+      () =>
+        new Promise(r => {
+          resolve = r as any
+        }),
+    )
+    const Comp = compile(
+      `<script setup vapor>defineExpose({ id: 'comp' })</script><template><div>comp</div></template>`,
+      data,
+    )
+    const App = compile(
+      `<script setup vapor>
+        const data = _data
+        const components = _components
+      </script>
+      <template><KeepAlive>
+        <component :is="data.useAsync ? components.Async : components.Comp" :ref="data.onRef" />
+      </KeepAlive></template>`,
+      data,
+      { Async, Comp },
+    )
+    const root = document.createElement('div')
+    const app = createVaporApp(App)
+    app.mount(root)
+
+    data.value.useAsync = false
+    await nextTick()
+    expect(onRef.mock.lastCall![0].id).toBe('comp')
+    data.value.useAsync = true
+    await nextTick()
+    expect(onRef.mock.lastCall![0]).toBe(null)
+    data.value.useAsync = false
+    await nextTick()
+    expect(onRef.mock.lastCall![0].id).toBe('comp')
+    onRef.mockClear()
+
+    resolve!(
+      compile(
+        `<script setup vapor>defineExpose({ id: 'async' })</script><template><div>async</div></template>`,
+        data,
+      ),
+    )
+    await timeout()
+    expect(root.innerHTML).toBe('<div>comp</div><!--dynamic-component-->')
+    expect(onRef).not.toHaveBeenCalled()
+
+    data.value.useAsync = true
+    await nextTick()
+    expect(root.innerHTML).toBe(
+      '<div>async</div><!--async component--><!--dynamic-component-->',
+    )
+    expect(onRef.mock.lastCall![0].id).toBe('async')
+    expect(onRef.mock.calls.filter(([value]) => value !== null)).toHaveLength(1)
+    app.unmount()
+  })
+
+  test.each([true, false])(
+    'dynamic async template ref is disposed with its KeepAlive binding (resolve while hidden: %s)',
+    async resolveWhileHidden => {
+      let resolve: (comp: VaporComponent) => void
+      let current: any = null
+      const onRef = vi.fn(value => {
+        current = value
+      })
+      const data = ref({ show: true, useAsync: false, onRef })
+      const Async = defineVaporAsyncComponent(
+        () =>
+          new Promise(r => {
+            resolve = r as any
+          }),
+      )
+      const Comp = compile(
+        `<script setup vapor>defineExpose({ id: 'comp' })</script><template><div>comp</div></template>`,
+        data,
+      )
+      const App = compile(
+        `<script setup vapor>
+        const data = _data
+        const components = _components
+      </script>
+      <template><KeepAlive>
+        <component v-if="data.show" :is="data.useAsync ? components.Async : components.Comp" :ref="data.onRef" />
+      </KeepAlive></template>`,
+        data,
+        { Async, Comp },
+      )
+      const root = document.createElement('div')
+      const app = createVaporApp(App)
+      app.mount(root)
+      expect(current.id).toBe('comp')
+
+      data.value.useAsync = true
+      await nextTick()
+      expect(current).toBe(null)
+      data.value.show = false
+      await nextTick()
+      expect(current).toBe(null)
+      if (!resolveWhileHidden) {
+        data.value.show = true
+        await nextTick()
+        expect(current).toBe(null)
+      }
+      onRef.mockClear()
+
+      resolve!(
+        compile(
+          `<script setup vapor>defineExpose({ id: 'async' })</script><template><div>async</div></template>`,
+          data,
+        ),
+      )
+      await timeout()
+      if (resolveWhileHidden) {
+        expect(root.innerHTML).toBe('<!--if-->')
+        expect(current).toBe(null)
+        expect(onRef).not.toHaveBeenCalled()
+
+        data.value.show = true
+        await nextTick()
+      }
+      expect(root.innerHTML).toBe(
+        '<div>async</div><!--async component--><!--dynamic-component--><!--if-->',
+      )
+      expect(current.id).toBe('async')
+      expect(onRef.mock.calls.filter(([value]) => value !== null)).toHaveLength(
+        1,
+      )
+
+      data.value.show = false
+      await nextTick()
+      expect(current).toBe(null)
+      onRef.mockClear()
+      data.value.show = true
+      await nextTick()
+      expect(current.id).toBe('async')
+      expect(onRef.mock.calls.filter(([value]) => value !== null)).toHaveLength(
+        1,
+      )
+      app.unmount()
+    },
+  )
 })
 
 function mountAsyncError(
