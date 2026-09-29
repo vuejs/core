@@ -1581,11 +1581,11 @@ function createVDOMComponent(
       if (!transition) removeDom(parentNode)
       return
     }
-    // unset ref
-    if (rawRef) vdomSetRef(rawRef, null, null, vnode, true)
     if (transition) setVNodeTransitionHooks(vnode, transition)
     const parentSuspense = resolveUnmountSuspense(suspense)
     if (vnode.shapeFlag & ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE) {
+      // unset ref (`um` unsets `vnode.ref` otherwise)
+      if (rawRef) vdomSetRef(rawRef, null, null, vnode, true)
       // A deactivated child is no longer patched by its parent in VDOM, so
       // pause the commit of the raw sources it reads from this Vapor parent.
       if (frag.inputScope) frag.inputScope.pause()
@@ -1706,12 +1706,23 @@ function createVDOMComponent(
       },
       instance as any,
     )
+    // as in VDOM: `um` unsets it, async wrappers forward it to the inner comp
+    vnode.ref = rawRef
 
     if (isMounted) {
+      // a resolved async wrapper has already created its inner component
+      let target = vnode
+      if (
+        (component as any).__asyncResolved &&
+        vnode.component!.subTree.component
+      ) {
+        target = vnode.component!.subTree
+        target.ref = rawRef
+      }
       if (rawRef) {
-        vdomSetRef(rawRef, oldRawRef, suspense, vnode)
+        vdomSetRef(rawRef, oldRawRef, suspense, target)
       } else if (oldRawRef) {
-        vdomSetRef(oldRawRef, null, null, vnode, true)
+        vdomSetRef(oldRawRef, null, null, target, true)
       }
     }
   }

@@ -11985,4 +11985,87 @@ describe('vdomInterop', () => {
     const { html } = define(App).render()
     expect(html()).toContain('<i>parent</i>')
   })
+
+  describe('template ref on a vdom async component', () => {
+    const Inner = defineComponent({
+      setup(_, { expose }) {
+        expose({ tag: 'inner' })
+        return () => h('div', 'inner')
+      },
+    })
+    const Other = defineComponent({ render: () => h('div', 'other') })
+    // a getter, so that each mode loads its own async component
+    const components = {
+      get Async() {
+        return defineAsyncComponent(() => Promise.resolve(Inner))
+      },
+      Other,
+    }
+    const flush = async () => {
+      await new Promise(r => setTimeout(r))
+      await nextTick()
+    }
+    const withRef = (template: string) => `<script setup>
+      import { useTemplateRef } from 'vue'
+      const data = _data
+      const components = _components
+      const c = useTemplateRef('c')
+    </script>
+    <template>${template}<p>{{ String(c && c.tag) }}</p></template>`
+
+    test('points to the inner component once it loads', async () => {
+      const { vdom, vapor } = await renderParity(
+        { App: withRef('<components.Async ref="c" />') },
+        () => ref({}),
+        flush,
+        components,
+      )
+      expect(vapor.text).toBe(vdom.text)
+      expect(vdom.text).toBe('innerinner')
+    })
+
+    test('points to a loaded inner component rendered again by :is', async () => {
+      const { vdom, vapor } = await renderParity(
+        {
+          App: withRef(
+            '<component :is="data.show ? components.Async : components.Other" ref="c" />',
+          ),
+        },
+        () => ref({ show: true }),
+        async data => {
+          await flush()
+          data.value.show = false
+          await nextTick()
+          data.value.show = true
+        },
+        components,
+      )
+      expect(vapor.text).toBe(vdom.text)
+      expect(vdom.text).toBe('innerinner')
+    })
+
+    test('calls a function ref like a vdom parent', async () => {
+      const calls: Record<string, string[]> = {}
+      await renderParity(
+        {
+          App: `<template>
+            <components.Async
+              v-if="data.show"
+              :ref="el => data.calls.push(el ? el.tag : 'null')"
+            />
+          </template>`,
+        },
+        () => ref({ show: true, calls: [] as string[] }),
+        async (data, _root, mode) => {
+          await flush()
+          data.value.show = false
+          await nextTick()
+          calls[mode] = data.value.calls
+        },
+        components,
+      )
+      expect(calls.vapor).toEqual(calls.vdom)
+      expect(calls.vdom).toEqual(['inner', 'null', 'null'])
+    })
+  })
 })
