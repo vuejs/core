@@ -79,6 +79,7 @@ import {
   endBatch,
   setActiveSub,
   startBatch,
+  toRaw,
 } from '@vue/reactivity'
 import {
   type LooseRawProps,
@@ -3188,6 +3189,35 @@ function renderVaporSlot(
       currentAnchor = null
     }
 
+    const applyTransition = (block: Block): Block => {
+      // A vdom Transition's child slot switches its branches inside vapor,
+      // which BaseTransition never sees: drive them like VaporTransition.
+      if (
+        vnode.transition &&
+        parentComponent &&
+        parentComponent.type === (BaseTransition as any)
+      ) {
+        ensureTransitionHooksRegistered()
+        // one state per BaseTransition, shared by the slots it renders
+        let state = vdomTransitionStates.get(parentComponent)
+        if (!state) {
+          // registered on BaseTransition, the current instance
+          state = useTransitionState()
+          state.isMounted = parentComponent.isMounted
+          vdomTransitionStates.set(parentComponent, state)
+        }
+        state.root = block
+        applyTransitionHooksImpl(block, {
+          __vapor: true,
+          state,
+          props: toRaw(parentComponent.props),
+          instance: parentComponent,
+        } as any)
+      }
+
+      return block
+    }
+
     try {
       const hasInteropFallback = slotState.outlets.length > 0
       slotResolutionState.pendingRecheck = false
@@ -3232,7 +3262,7 @@ function renderVaporSlot(
           markInteropSlotResolutionDirty(),
         )
         dispose()
-        return resolvedContent
+        return applyTransition(resolvedContent)
       }
 
       slotResolutionState.pendingRecheck = false
@@ -3283,32 +3313,7 @@ function renderVaporSlot(
         currentParentNode = currentAnchor.parentNode as ParentNode | null
       }
 
-      // A vdom Transition's child slot switches its branches inside vapor,
-      // which BaseTransition never sees: drive them like VaporTransition.
-      if (
-        vnode.transition &&
-        parentComponent &&
-        parentComponent.type === (BaseTransition as any)
-      ) {
-        ensureTransitionHooksRegistered()
-        // one state per BaseTransition, shared by the slots it renders
-        let state = vdomTransitionStates.get(parentComponent)
-        if (!state) {
-          // registered on BaseTransition, the current instance
-          state = useTransitionState()
-          state.isMounted = parentComponent.isMounted
-          vdomTransitionStates.set(parentComponent, state)
-        }
-        state.root = frag
-        applyTransitionHooksImpl(frag, {
-          __vapor: true,
-          state,
-          props: parentComponent.props,
-          instance: parentComponent,
-        } as any)
-      }
-
-      return frag
+      return applyTransition(frag)
     } catch (e) {
       dispose(currentParentNode || undefined)
       stopVaporSlotScope(vnode)

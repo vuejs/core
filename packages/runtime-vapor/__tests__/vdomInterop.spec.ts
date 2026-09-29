@@ -12619,5 +12619,58 @@ describe('vdomInterop', () => {
       expect(onLeave).not.toHaveBeenCalled()
       expect(onLeave2).toHaveBeenCalledTimes(1)
     })
+
+    test.each(['v-if', 'v-show'])(
+      'runs hooks for forwarded %s content with an outlet fallback',
+      async dir => {
+        let finishLeave: (() => void) | undefined
+        const onEnter = vi.fn((_el: Element, done: () => void) => done())
+        const onLeave = vi.fn((_el: Element, done: () => void) => {
+          finishLeave = done
+        })
+        const data = ref({ show: true, onEnter, onLeave })
+        const FallbackWrap = compile(
+          `<script setup>const data = _data</script>
+          <template>
+            <Transition :css="false" @enter="data.onEnter" @leave="data.onLeave">
+              <slot><i>fallback</i></slot>
+            </Transition>
+          </template>`,
+          data,
+          {},
+          { vapor: false },
+        )
+        const Bridge = compile(
+          `<template><components.FallbackWrap><slot /></components.FallbackWrap></template>`,
+          data,
+          { FallbackWrap },
+        )
+        const App = compile(
+          `<template><components.Bridge><b ${dir}="data.show">x</b></components.Bridge></template>`,
+          data,
+          { Bridge },
+        )
+        const { host, html } = define(App).render()
+        document.body.appendChild(host)
+        expect(host.textContent).toBe('x')
+
+        data.value.show = false
+        await nextTick()
+        expect(onLeave).toHaveBeenCalledTimes(1)
+        expect(html()).toContain('<b')
+        expect(html()).not.toContain('display: none')
+
+        finishLeave!()
+        await nextTick()
+        expect(host.textContent).toBe(dir === 'v-if' ? 'fallback' : 'x')
+        if (dir === 'v-show') expect(html()).toContain('display: none')
+
+        data.value.show = true
+        await nextTick()
+        expect(onEnter).toHaveBeenCalledTimes(1)
+        expect(host.textContent).toBe('x')
+        expect(html()).not.toContain('display: none')
+      },
+    )
   })
 })
