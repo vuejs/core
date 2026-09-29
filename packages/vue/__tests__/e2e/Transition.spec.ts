@@ -3877,6 +3877,100 @@ describe('e2e: Transition', () => {
     E2E_TIMEOUT,
   )
 
+  // #6080
+  test(
+    'out-in mode with dev root fragment',
+    async () => {
+      await page().evaluate(() => {
+        const { createApp, ref } = (window as any).Vue
+        createApp({
+          components: {
+            One: {
+              template: `
+                <!-- Start One -->
+                <div class="test one">One</div>
+                <!-- End One -->
+              `,
+            },
+            Two: {
+              template: `<div class="test two">Two</div>`,
+            },
+          },
+          template: `
+            <div id="container">
+              <transition mode="out-in">
+                <One v-if="toggle" />
+                <Two v-else />
+              </transition>
+            </div>
+            <button id="toggleBtn" @click="click">button</button>
+          `,
+          setup: () => {
+            const toggle = ref(true)
+            const click = () => (toggle.value = !toggle.value)
+            return { toggle, click }
+          },
+        }).mount('#app')
+      })
+      expect(await html('#container')).toBe(
+        '<!-- Start One --><div class="test one">One</div><!-- End One -->',
+      )
+
+      // one -> two
+      expect(await classWhenTransitionStart()).toStrictEqual([
+        'test',
+        'one',
+        'v-leave-from',
+        'v-leave-active',
+      ])
+      await nextFrame()
+      expect(await classList('.one')).toStrictEqual([
+        'test',
+        'one',
+        'v-leave-active',
+        'v-leave-to',
+      ])
+      await transitionFinish()
+      await nextFrame()
+      expect(await classList('.two')).toStrictEqual([
+        'test',
+        'two',
+        'v-enter-active',
+        'v-enter-to',
+      ])
+      await transitionFinish()
+      expect(await html('#container')).toBe('<div class="test two">Two</div>')
+
+      // two -> one
+      expect(await classWhenTransitionStart()).toStrictEqual([
+        'test',
+        'two',
+        'v-leave-from',
+        'v-leave-active',
+      ])
+      await nextFrame()
+      expect(await classList('.two')).toStrictEqual([
+        'test',
+        'two',
+        'v-leave-active',
+        'v-leave-to',
+      ])
+      await transitionFinish()
+      await nextFrame()
+      expect(await classList('.one')).toStrictEqual([
+        'test',
+        'one',
+        'v-enter-active',
+        'v-enter-to',
+      ])
+      await transitionFinish()
+      expect(await html('#container')).toBe(
+        '<!-- Start One --><div class="test one">One</div><!-- End One -->',
+      )
+    },
+    E2E_TIMEOUT,
+  )
+
   // #12091
   test(
     'prevent enter when leaving',
