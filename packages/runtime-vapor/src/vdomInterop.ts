@@ -1565,7 +1565,7 @@ function createVDOMComponent(
     }
   }
 
-  let rawRef: VNodeNormalizedRef | null = null
+  let rawRef: VNodeNormalizedRef | null | undefined
   let isMounted = false
   let isUnmounted = false
   let isDomRemoved = false
@@ -1710,17 +1710,22 @@ function createVDOMComponent(
     vnode.ref = rawRef
 
     if (isMounted) {
-      // a resolved async wrapper has already created its inner component
+      // The first synchronous mount may have already created a loading
+      // component. Later pending updates (including KeepAlive reuse) leave
+      // ref forwarding to the async wrapper, which may also render an error.
       let target = vnode
       if (
-        (component as any).__asyncResolved &&
+        ((component as any).__asyncResolved ||
+          (oldRawRef === undefined &&
+            isAsyncWrapper(vnode) &&
+            !(vnode.shapeFlag & ShapeFlags.COMPONENT_KEPT_ALIVE))) &&
         vnode.component!.subTree.component
       ) {
         target = vnode.component!.subTree
         target.ref = rawRef
       }
       if (rawRef) {
-        vdomSetRef(rawRef, oldRawRef, suspense, target)
+        vdomSetRef(rawRef, oldRawRef || null, suspense, target)
       } else if (oldRawRef) {
         vdomSetRef(oldRawRef, null, null, target, true)
       }

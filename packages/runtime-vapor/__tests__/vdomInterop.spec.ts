@@ -11993,6 +11993,12 @@ describe('vdomInterop', () => {
         return () => h('div', 'inner')
       },
     })
+    const Loading = defineComponent({
+      setup(_, { expose }) {
+        expose({ tag: 'loading' })
+        return () => h('div', 'loading')
+      },
+    })
     const Other = defineComponent({ render: () => h('div', 'other') })
     // a getter, so that each mode loads its own async component
     const components = {
@@ -12042,6 +12048,180 @@ describe('vdomInterop', () => {
       )
       expect(vapor.text).toBe(vdom.text)
       expect(vdom.text).toBe('innerinner')
+    })
+
+    test.each([
+      [false, 0],
+      [true, 0],
+      [false, 1],
+      [true, 1],
+    ] as const)(
+      'points to the loading component (nested: %s, delay: %s)',
+      async (nested, delay) => {
+        let resolve: (component: typeof Inner) => void
+        const loading: Record<string, string> = {}
+        const template = '<components.Async ref="c" />'
+        const { vdom, vapor } = await renderParity(
+          { App: withRef(nested ? `<div>${template}</div>` : template) },
+          () => ref({}),
+          async (_data, root, mode) => {
+            if (delay) await new Promise(r => setTimeout(r, delay))
+            await nextTick()
+            loading[mode] = root.textContent!
+            resolve(Inner)
+            await flush()
+          },
+          {
+            get Async() {
+              return defineAsyncComponent({
+                loader: () => new Promise<typeof Inner>(r => (resolve = r)),
+                loadingComponent: Loading,
+                delay,
+              })
+            },
+          },
+        )
+        expect(loading.vdom).toBe('loadingloading')
+        expect(loading.vapor).toBe(loading.vdom)
+        expect(vapor.text).toBe(vdom.text)
+        expect(vdom.text).toBe('innerinner')
+      },
+    )
+
+    test.each(['c', null])(
+      'updates a dynamic ref from %s while the loading component is mounted',
+      async name => {
+        let resolve: (component: typeof Inner) => void
+        const loading: Record<string, string> = {}
+        const { vdom, vapor } = await renderParity(
+          {
+            App: `<script setup>
+              import { useTemplateRef } from 'vue'
+              const data = _data
+              const components = _components
+              const c = useTemplateRef('c')
+              const d = useTemplateRef('d')
+            </script>
+            <template>
+              <div><components.Async :ref="data.name" /></div>
+              <p>{{ String(c && c.tag) }}|{{ String(d && d.tag) }}</p>
+            </template>`,
+          },
+          () => ref({ name }),
+          async (data, root, mode) => {
+            await nextTick()
+            data.value.name = 'd'
+            await nextTick()
+            loading[mode] = root.textContent!
+            resolve(Inner)
+            await flush()
+          },
+          {
+            get Async() {
+              return defineAsyncComponent({
+                loader: () => new Promise<typeof Inner>(r => (resolve = r)),
+                loadingComponent: Loading,
+                delay: 0,
+              })
+            },
+          },
+        )
+        // VDOM forwards the changed ref when the async component resolves.
+        expect(loading.vdom).toBe(`loading${name ? 'loading' : 'null'}|null`)
+        expect(loading.vapor).toBe(loading.vdom)
+        expect(vapor.text).toBe(vdom.text)
+        expect(vdom.text).toBe('innernull|inner')
+      },
+    )
+
+    test.each([false, true])(
+      'does not forward a ref to the error component (cached: %s)',
+      async cached => {
+        let reject: (error: Error) => void
+        const template = cached
+          ? `<KeepAlive>
+              <components.Async v-if="data.step === 0" :key="data.keyA" />
+              <components.Other v-else-if="data.step === 1" />
+              <components.Async v-else :key="data.keyB" ref="c" />
+            </KeepAlive>`
+          : '<div><components.Async :ref="data.name" /></div>'
+        const { vdom, vapor } = await renderParity(
+          {
+            App: `<script setup>
+              import { onErrorCaptured, useTemplateRef } from 'vue'
+              const data = _data
+              const components = _components
+              const c = useTemplateRef('c')
+              onErrorCaptured(() => false)
+            </script>
+            <template>${template}<p>{{ String(c && c.tag) }}</p></template>`,
+          },
+          () => ref({ name: null, step: 0, keyA: 'async', keyB: 'async' }),
+          async data => {
+            reject(new Error('failed to load'))
+            await flush()
+            if (cached) {
+              data.value.step = 1
+              await nextTick()
+              data.value.step = 2
+            } else {
+              data.value.name = 'c'
+            }
+          },
+          {
+            Other,
+            get Async() {
+              return defineAsyncComponent({
+                loader: () =>
+                  new Promise<typeof Inner>((_resolve, r) => (reject = r)),
+                errorComponent: {
+                  setup(_, { expose }) {
+                    expose({ tag: 'error' })
+                    return () => h('div', 'error')
+                  },
+                },
+              })
+            },
+          },
+        )
+        expect(vapor.text).toBe(vdom.text)
+        expect(vdom.text).toBe('errornull')
+      },
+    )
+
+    test('unsets a loading component function ref like a vdom parent', async () => {
+      let resolve: (component: typeof Inner) => void
+      const calls: Record<string, string[]> = {}
+      await renderParity(
+        {
+          App: `<template><div>
+            <components.Async
+              v-if="data.show"
+              :ref="el => data.calls.push(el ? el.tag : 'null')"
+            />
+          </div></template>`,
+        },
+        () => ref({ show: true, calls: [] as string[] }),
+        async (data, _root, mode) => {
+          await nextTick()
+          data.value.show = false
+          await nextTick()
+          calls[mode] = data.value.calls
+          resolve(Inner)
+          await flush()
+        },
+        {
+          get Async() {
+            return defineAsyncComponent({
+              loader: () => new Promise<typeof Inner>(r => (resolve = r)),
+              loadingComponent: Loading,
+              delay: 0,
+            })
+          },
+        },
+      )
+      expect(calls.vdom).toEqual(['loading', 'null', 'null'])
+      expect(calls.vapor).toEqual(calls.vdom)
     })
 
     test('calls a function ref like a vdom parent', async () => {
