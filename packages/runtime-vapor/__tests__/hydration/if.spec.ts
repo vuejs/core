@@ -754,6 +754,59 @@ describe('Vapor Mode hydration', () => {
       )
     })
 
+    test('empty template branch keeps the following sibling', async () => {
+      const data = reactive({ price: 0 })
+      const { container, html } = await testHydration(
+        `<template>
+          <div>
+            <template v-if="data.price > 0">{{ data.price }}</template>
+            <template v-else />
+            <span>after</span>
+          </div>
+        </template>`,
+        undefined,
+        data,
+      )
+      expect(container.innerHTML).toBe(html)
+
+      data.price = 5
+      await nextTick()
+      expect(container.textContent).toBe('5after')
+
+      data.price = 0
+      await nextTick()
+      expect(container.textContent).toBe('after')
+    })
+
+    test('template branch with a lone nested v-if', async () => {
+      const data = reactive({ outer: true, inner: true })
+      const { container } = await testHydration(
+        `<template>
+          <div>
+            <template v-if="data.outer">
+              <components.Child v-if="data.inner" />
+            </template>
+            <span>after</span>
+          </div>
+        </template>`,
+        { Child: `<template><i>a</i><i>b</i></template>` },
+        data,
+      )
+      expect(container.textContent).toBe('abafter')
+
+      data.inner = false
+      await nextTick()
+      expect(container.textContent).toBe('after')
+
+      data.inner = true
+      await nextTick()
+      expect(container.textContent).toBe('abafter')
+
+      data.outer = false
+      await nextTick()
+      expect(container.textContent).toBe('after')
+    })
+
     test.each([false, true])(
       'empty v-else text branch keeps a following component (v-once: %s)',
       async once => {
