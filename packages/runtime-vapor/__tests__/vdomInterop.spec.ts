@@ -7469,6 +7469,48 @@ describe('vdomInterop', () => {
         targetB.remove()
       }
     })
+
+    test('patches a vdom child in a vapor teleport instead of remounting it', async () => {
+      const target = document.createElement('div')
+      target.id = 'interop-teleport-patch-target'
+      document.body.appendChild(target)
+      const data = ref({ flag: true })
+      const mounted = vi.fn()
+      const unmounted = vi.fn()
+      const VDomChild = defineComponent({
+        props: { flag: Boolean },
+        setup(props) {
+          onMounted(mounted)
+          onUnmounted(unmounted)
+          return () => h('p', String(props.flag))
+        },
+      })
+      const App = compile(
+        `<template>
+          <Teleport to="#interop-teleport-patch-target">
+            <components.VDomChild :flag="data.flag" />
+          </Teleport>
+        </template>`,
+        data,
+        { VDomChild },
+      )
+      const app = createVaporApp(App)
+      app.use(vaporInteropPlugin)
+      try {
+        app.mount(document.createElement('div'))
+        await nextTick()
+        expect(target.innerHTML).toBe('<p>true</p>')
+
+        data.value.flag = false
+        await nextTick()
+        expect(target.innerHTML).toBe('<p>false</p>')
+        expect(mounted).toHaveBeenCalledTimes(1)
+        expect(unmounted).not.toHaveBeenCalled()
+      } finally {
+        app.unmount()
+        target.remove()
+      }
+    })
   })
 
   describe('Suspense', () => {
