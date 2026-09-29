@@ -1453,11 +1453,15 @@ function createVDOMComponent(
   // the props update through the wrapper instance, so resolving the initial
   // ones must not track in the caller's effect (e.g. a teleport's children)
   const prevSub = setActiveSub()
-  const vnode = createVNode(
-    comp,
-    rawProps && extend({}, new Proxy(rawProps, rawPropsProxyHandlers)),
-  )
-  setActiveSub(prevSub)
+  let vnode: VNode
+  try {
+    vnode = createVNode(
+      comp,
+      rawProps && extend({}, new Proxy(rawProps, rawPropsProxyHandlers)),
+    )
+  } finally {
+    setActiveSub(prevSub)
+  }
   const { frag, syncNodes } = createVNodeFragment(vnode)
   const keepAliveCtx = isKeepAliveEnabled
     ? (getKeepAliveContext(parentComponent) as KeepAliveInstance['ctx'] | null)
