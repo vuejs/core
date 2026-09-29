@@ -345,6 +345,12 @@ function planRestartFromRuntimeComment(
 function planFromBlockBoundary(frag: DynamicFragment): AnchorPlan {
   // Covers: dynamic component, async component, keyed fragment, and any
   // fragment whose SSR range was stripped.
+  const end = currentSlotEndAnchor
+  if (!isValidBlock(frag.nodes) && end && currentHydrationNode === end) {
+    // a branch rendering nothing, e.g. `<template v-else />`, as the whole
+    // slot content the server dropped: it goes before the slot's close
+    return { kind: 'create', parent: end.parentNode!, next: end }
+  }
   const node = findBlockBoundary(frag.nodes)
   return { kind: 'create', parent: node.parentNode!, next: node.nextNode }
 }
