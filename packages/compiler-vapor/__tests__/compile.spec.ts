@@ -293,7 +293,7 @@ describe('compile', () => {
       )
 
       expect(code).contains(`const _arr_0 = _ctx.arr[0]`)
-      expect(code).contains(`_setClassName(n0, (_arr_0.active ? 1 : 0)`)
+      expect(code).contains(`_setClassName(n0, ((_arr_0.active) ? 1 : 0)`)
       expect(code).contains(`_setText(x1, _toDisplayString(_arr_0.label))`)
       expect(code).not.contains(`_ctx.arr[0].active`)
     })

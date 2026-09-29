@@ -213,7 +213,7 @@ describe('compiler: v-for', () => {
     expect(code).matchSnapshot()
     expect(code).contains(`const _todo = _for_item0.value`)
     expect(code).contains(
-      `_setClassName(n2, (_todo.completed ? 1 : 0) | (_todo === _ctx.editedTodo ? 2 : 0), [" completed", " editing"])`,
+      `_setClassName(n2, ((_todo.completed) ? 1 : 0) | ((_todo === _ctx.editedTodo) ? 2 : 0), [" completed", " editing"])`,
     )
   })
 
