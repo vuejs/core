@@ -270,6 +270,10 @@ function canOmitEndTag(
         // form element itself, so an element inside a form whose end tag is
         // emitted has to close itself or it swallows the form's next sibling
         context.templateCloseTags.has('form') ||
+        // `</li>` is ignored while a nested `<ul>` or `<ol>` is still open
+        // (list item scope), so the next `<li>` would land in the nested list
+        (context.templateCloseTags.has('li') &&
+          (node.tag === 'ul' || node.tag === 'ol')) ||
         isAlwaysCloseTag(node.tag) ||
         isFormattingTag(node.tag))) ||
     (context.templateCloseBlocks && isBlockTag(node.tag))
