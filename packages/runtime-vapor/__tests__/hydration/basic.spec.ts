@@ -1186,4 +1186,23 @@ describe('Vapor Mode hydration', () => {
     await nextTick()
     expect(container.innerHTML).toBe('<div><input type="checkbox"></div>')
   })
+
+  test.each([true, false])(
+    'select v-model re-syncs when options change after hydration (vapor app: %s)',
+    async isVaporApp => {
+      const { container, data } = await testHydration(
+        `<script setup>const data = _data</script>` +
+          `<template><div><select v-model="data.v"><option v-for="o in data.opts" :value="o">{{ o }}</option></select></div></template>`,
+        undefined,
+        reactive({ v: 'c', opts: ['a', 'b'] }),
+        { isVaporApp },
+      )
+      const select = container.querySelector('select')!
+      expect(select.selectedIndex).toBe(-1)
+
+      data.opts.push('c')
+      await nextTick()
+      expect(select.selectedIndex).toBe(2)
+    },
+  )
 })

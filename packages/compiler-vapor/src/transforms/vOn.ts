@@ -14,6 +14,7 @@ import type { DirectiveTransform, TransformContext } from '../transform'
 import { IRNodeTypes, type KeyOverride, type SetEventIRNode } from '../ir'
 import { extend, makeMap } from '@vue/shared'
 import { resolveExpression } from '../utils'
+import { mergesListeners } from './transformElement'
 import { EMPTY_EXPRESSION } from './utils'
 
 const delegatedEvents = /*#__PURE__*/ makeMap(
@@ -90,7 +91,11 @@ export const transformVOn: DirectiveTransform = (dir, node, context) => {
     keyModifiers.length = 0
   }
 
-  if (isComponent || isSlotOutlet) {
+  if (
+    isComponent ||
+    isSlotOutlet ||
+    (!delegateModifier && arg.isStatic && mergesListeners(node, context))
+  ) {
     if (delegateModifier) {
       warnDelegate(
         context,

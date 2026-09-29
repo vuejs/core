@@ -93,16 +93,82 @@ function registerFragmentRefUpdate(
 ): DynamicFragment | undefined {
   const frag = getTemplateRefUpdateFragment(el)
   if (frag && registeredFrag !== frag) {
-    ;(frag.u ||= []).push(() => {
-      // KeepAlive clears refs on deactivation but keeps this fragment update
-      // callback alive. Skip re-applying refs for async/offscreen updates
-      // until the component is activated again.
-      if (isVaporComponent(el) && el.isDeactivated) return
-      reapply()
-    })
+    if (isDynamicFragment(el)) {
+      let nestedFrag: DynamicFragment | undefined
+
+      const onAsyncUpdate = () => {
+        const inner = frag.nodes
+        if (
+          isVaporComponent(inner) &&
+          inner.block === nestedFrag &&
+          !inner.isDeactivated &&
+          !inner.isUnmounted
+        ) {
+          reapply()
+        }
+      }
+
+      const onUpdate = () => {
+        // Replace the old subscription before invoking a function ref,
+        // which may synchronously tear down this binding.
+        nestedFrag = syncNestedAsyncRefUpdate(frag, nestedFrag, onAsyncUpdate)
+        reapply()
+      }
+
+      ;(frag.u ||= []).push(onUpdate)
+
+      // Register cleanup in the ref declaration's scope, not in a later
+      // async update's scope.
+      onScopeDispose(() => {
+        remove(frag.u!, onUpdate)
+        if (nestedFrag) {
+          remove(nestedFrag.u!, onAsyncUpdate)
+          nestedFrag = undefined
+        }
+      })
+
+      // Initial ref application is handled by the caller.
+      nestedFrag = syncNestedAsyncRefUpdate(frag, undefined, onAsyncUpdate)
+    } else {
+      ;(frag.u ||= []).push(() => {
+        // KeepAlive clears refs on deactivation but keeps this fragment update
+        // callback alive. Skip re-applying refs for async/offscreen updates
+        // until the component is activated again.
+        if (isVaporComponent(el) && el.isDeactivated) return
+        reapply()
+      })
+    }
     return frag
   }
   return registeredFrag
+}
+
+// A dynamic component can render a pending async wrapper, which settles its
+// own fragment later without updating the outer one.
+function syncNestedAsyncRefUpdate(
+  frag: DynamicFragment,
+  registeredFrag: DynamicFragment | undefined,
+  onUpdate: () => void,
+): DynamicFragment | undefined {
+  const inner = frag.nodes
+  const next =
+    isAsyncComponentEnabled &&
+    isVaporComponent(inner) &&
+    isAsyncWrapper(inner) &&
+    isDynamicFragment(inner.block)
+      ? inner.block
+      : undefined
+
+  if (next !== registeredFrag) {
+    if (registeredFrag) {
+      remove(registeredFrag.u!, onUpdate)
+    }
+    if (next) {
+      ;(next.u ||= []).push(onUpdate)
+    }
+  }
+
+  return next
 }
 
 function ensureCleanup(el: RefEl): RefCleanupState {

@@ -397,6 +397,13 @@ const VaporKeepAliveImpl = defineVaporComponent({
           scope.stop()
           return false
         }
+        if (isDynamicFragment(frag.nodes)) {
+          // The rest of a v-else-if chain: re-entering the branch renders a
+          // new nested fragment, so the old one's effects must not resume.
+          // The cached component is kept alive by its shape flag.
+          scope.stop()
+          return true
+        }
         // Component and KeepAlive input scopes are detached from this
         // DynamicFragment scope, so this only pauses branch-owned effects.
         scope.pause()

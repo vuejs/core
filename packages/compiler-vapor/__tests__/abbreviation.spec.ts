@@ -288,3 +288,106 @@ test('inline/block ancestor relationships', () => {
     '<div><span><div><span><div>text</div></span></div></span><p>after</p></div>',
   )
 })
+
+test('form end tag', () => {
+  // `</form>` removes only the form element, so a descendant left open would
+  // swallow the form's next sibling
+  checkAbbr(
+    '<div><form><div>x</div></form><p>y</p></div>',
+    '<div><form><div>x</div></form><p>y',
+    '<div><form><div>x</div></form><p>y</p></div>',
+  )
+  checkAbbr(
+    '<div><form><div><b>x</b></div></form><p>y</p></div>',
+    '<div><form><div><b>x</b></div></form><p>y',
+    '<div><form><div><b>x</b></div></form><p>y</p></div>',
+  )
+
+  // a form closed by its parent's end tag leaves the form element pointer set,
+  // so the next `<form>` start tag is ignored
+  checkAbbr(
+    '<div><div><form><input></form></div><div><form><input></form></div></div>',
+    '<div><div><form><input></form></div><div><form><input>',
+    '<div><div><form><input></form></div><div><form><input></form></div></div>',
+  )
+
+  // a form on the rightmost path can still omit
+  checkAbbr(
+    '<div><p>y</p><form><div>x</div></form></div>',
+    '<div><p>y</p><form><div>x',
+    '<div><p>y</p><form><div>x</div></form></div>',
+  )
+})
+
+test('foreign scope boundary elements', () => {
+  // the end tag of a foreign parent does not close a child in another namespace
+  checkAbbr(
+    '<svg><foreignObject><div>text</div></foreignObject><rect/></svg>',
+    '<svg><foreignObject><div>text</div></foreignObject><rect>',
+    '<svg><foreignObject><div>text</div></foreignObject><rect></rect></svg>',
+  )
+  checkAbbr(
+    '<svg><g><foreignObject><div><p>text</p></div></foreignObject></g><rect/></svg>',
+    '<svg><g><foreignObject><div><p>text</div></foreignObject></g><rect>',
+    '<svg><g><foreignObject><div><p>text</p></div></foreignObject></g><rect></rect></svg>',
+  )
+  checkAbbr(
+    '<math><mi><span>x</span></mi><mo>+</mo></math>',
+    '<math><mi><span>x</span></mi><mo>+',
+    '<math><mi><span>x</span></mi><mo>+</mo></math>',
+  )
+  checkAbbr(
+    '<svg><g><desc><div>text</div></desc></g><rect/></svg>',
+    '<svg><g><desc><div>text</div></desc></g><rect>',
+    '<svg><g><desc><div>text</div></desc></g><rect></rect></svg>',
+  )
+  checkAbbr(
+    '<svg><foreignObject><math><mi>x</mi></math></foreignObject><rect/></svg>',
+    '<svg><foreignObject><math><mi>x</mi></math></foreignObject><rect>',
+    '<svg><foreignObject><math><mi>x</mi></math></foreignObject><rect></rect></svg>',
+  )
+  // an ancestor's end tag does not close a foreign scope boundary element
+  checkAbbr(
+    '<div><p><math><mi>x</mi></math></p><p>next</p></div>',
+    '<div><p><math><mi>x</mi></p><p>next',
+    '<div><p><math><mi>x</mi></math></p><p>next</p></div>',
+  )
+  checkAbbr(
+    '<div><div><svg><foreignObject>text</foreignObject></svg></div><p>next</p></div>',
+    '<div><div><svg><foreignObject>text</foreignObject></div><p>next',
+    '<div><div><svg><foreignObject>text</foreignObject></svg></div><p>next</p></div>',
+  )
+  // rightmost path can still omit
+  checkAbbr(
+    '<svg><foreignObject><div>text</div></foreignObject></svg>',
+    '<svg><foreignObject><div>text',
+    '<svg><foreignObject><div>text</div></foreignObject></svg>',
+  )
+  checkAbbr(
+    '<p><math><mi>x</mi></math></p>',
+    '<p><math><mi>x',
+    '<p><math><mi>x</mi></math></p>',
+  )
+})
+
+test('nested list end tag', () => {
+  // `</li>` is ignored while a nested list is still open, so the next item
+  // would land in the nested list
+  checkAbbr(
+    '<ul><li>a<ul><li>b</li></ul></li><li>c</li></ul>',
+    '<ul><li>a<ul><li>b</li></ul></li><li>c',
+    '<ul><li>a<ul><li>b</li></ul></li><li>c</li></ul>',
+  )
+  checkAbbr(
+    '<ol><li><div>a<ol><li>b</li></ol></div></li><li>c</li></ol>',
+    '<ol><li><div>a<ol><li>b</li></ol></li><li>c',
+    '<ol><li><div>a<ol><li>b</li></ol></div></li><li>c</li></ol>',
+  )
+
+  // a list item on the rightmost path can still omit
+  checkAbbr(
+    '<ul><li>a</li><li>b<ul><li>c</li></ul></li></ul>',
+    '<ul><li>a</li><li>b<ul><li>c',
+    '<ul><li>a</li><li>b<ul><li>c</li></ul></li></ul>',
+  )
+})

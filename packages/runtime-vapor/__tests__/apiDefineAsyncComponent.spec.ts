@@ -1,20 +1,30 @@
-import { nextTick, onActivated, onMounted, ref, useId } from '@vue/runtime-dom'
+import {
+  createApp,
+  defineAsyncComponent,
+  nextTick,
+  onActivated,
+  onMounted,
+  ref,
+  useId,
+} from '@vue/runtime-dom'
 import {
   type VaporComponent,
   type VaporComponentInstance,
   createComponent,
 } from '../src/component'
 import { defineVaporAsyncComponent } from '../src/apiDefineAsyncComponent'
-import { makeRender } from './_utils'
+import { compile, makeRender } from './_utils'
 import {
   VaporKeepAlive,
   createIf,
   createSlot,
   createTemplateRefSetter,
+  createVaporApp,
   defineVaporComponent,
   insert,
   renderEffect,
   template,
+  vaporInteropPlugin,
 } from '@vue/runtime-vapor'
 import { setElementText } from '../src/dom/prop'
 
@@ -1231,4 +1241,308 @@ describe('api: defineAsyncComponent', () => {
     expect(html()).toBe('Foo<!--async component-->')
     expect(spy).toBeCalledTimes(1)
   })
+
+  test('error component receives the wrapper props and attrs', async () => {
+    const ErrorComp = `<script setup>defineProps(['item', 'error'])</script>
+      <template><div class="err">{{ item.name }}: {{ error.message }}</div></template>`
+    const App = `<components.Comp :item="{ name: data.name }" :class="data.cls"
+      id="c" @click="data.clicks++" />`
+    const html: Record<string, string> = {}
+    for (const mode of ['vdom', 'vapor'] as const) {
+      const { root, data, reject } = mountAsyncError(mode, ErrorComp, App)
+      reject(new Error('failed'))
+      await timeout()
+      root.querySelector('div')!.click()
+      expect(data.value.clicks).toBe(1)
+      data.value.name = 'b'
+      data.value.cls = 'y'
+      await nextTick()
+      html[mode] = root.innerHTML
+    }
+    expect(html.vdom).toBe('<div class="err y" id="c">b: failed</div>')
+    expect(html.vapor).toBe(`${html.vdom}<!--async component-->`)
+  })
+
+  test('error component receives the wrapper props under Suspense', async () => {
+    const ErrorComp = `<script setup>
+      defineOptions({ inheritAttrs: false })
+      defineProps(['item', 'error'])
+      </script>
+      <template><div>{{ item.name }} {{ $attrs.id }}</div></template>`
+    const App = `<Suspense>
+      <components.Comp :item="{ name: data.name }" id="c" />
+      </Suspense>`
+    const html: Record<string, string> = {}
+    for (const mode of ['vdom', 'vapor'] as const) {
+      const { root, data, reject } = mountAsyncError(mode, ErrorComp, App)
+      reject(new Error('failed'))
+      await timeout()
+      data.value.name = 'b'
+      await nextTick()
+      html[mode] = root.innerHTML
+    }
+    expect(html.vdom).toBe('<div>b c</div>')
+    expect(html.vapor).toBe(`${html.vdom}<!--async component-->`)
+  })
+
+  test('template ref on a dynamic component rendering a pending async component', async () => {
+    let resolve: (comp: VaporComponent) => void
+    const data = ref<any>({
+      show: false,
+      Async: defineVaporAsyncComponent(
+        () =>
+          new Promise(r => {
+            resolve = r as any
+          }),
+      ),
+    })
+    const Comp = compile(
+      `<script setup vapor>defineExpose({ id: 'comp' })</script><template><div>comp</div></template>`,
+      data,
+    )
+    const App = compile(
+      `<script setup vapor>
+        import { ref } from 'vue'
+        const data = _data
+        const components = _components
+        const inst = ref(null)
+        data.value.get = () => inst.value && inst.value.id
+      </script>
+      <template><component :is="data.show ? data.Async : components.Comp" ref="inst" /></template>`,
+      data,
+      { Comp },
+    )
+    const root = document.createElement('div')
+    createVaporApp(App).mount(root)
+    expect(data.value.get()).toBe('comp')
+
+    data.value.show = true
+    await nextTick()
+    resolve!(
+      compile(
+        `<script setup vapor>defineExpose({ id: 'async' })</script><template><div>async</div></template>`,
+        data,
+      ),
+    )
+    await timeout()
+    expect(root.innerHTML).toBe(
+      '<div>async</div><!--async component--><!--dynamic-component-->',
+    )
+    expect(data.value.get()).toBe('async')
+  })
+
+  test('template ref on an initially pending dynamic async component', async () => {
+    let resolve: (comp: VaporComponent) => void
+    const onRef = vi.fn()
+    const data = ref({ onRef })
+    const Async = defineVaporAsyncComponent(
+      () =>
+        new Promise(r => {
+          resolve = r as any
+        }),
+    )
+    const App = compile(
+      `<script setup vapor>
+        const data = _data
+        const components = _components
+      </script>
+      <template><component :is="components.Async" :ref="data.onRef" /></template>`,
+      data,
+      { Async },
+    )
+    const root = document.createElement('div')
+    const app = createVaporApp(App)
+    app.mount(root)
+    expect(onRef).toHaveBeenCalledTimes(1)
+    expect(onRef.mock.calls[0][0]).toBe(null)
+
+    resolve!(
+      compile(
+        `<script setup vapor>defineExpose({ id: 'async' })</script><template><div>async</div></template>`,
+        data,
+      ),
+    )
+    await timeout()
+    expect(root.innerHTML).toBe(
+      '<div>async</div><!--async component--><!--dynamic-component-->',
+    )
+    expect(onRef.mock.lastCall![0].id).toBe('async')
+    expect(onRef.mock.calls.filter(([value]) => value !== null)).toHaveLength(1)
+    app.unmount()
+  })
+
+  test('dynamic async template ref follows the active KeepAlive branch', async () => {
+    let resolve: (comp: VaporComponent) => void
+    const onRef = vi.fn()
+    const data = ref({ useAsync: true, onRef })
+    const Async = defineVaporAsyncComponent(
+      () =>
+        new Promise(r => {
+          resolve = r as any
+        }),
+    )
+    const Comp = compile(
+      `<script setup vapor>defineExpose({ id: 'comp' })</script><template><div>comp</div></template>`,
+      data,
+    )
+    const App = compile(
+      `<script setup vapor>
+        const data = _data
+        const components = _components
+      </script>
+      <template><KeepAlive>
+        <component :is="data.useAsync ? components.Async : components.Comp" :ref="data.onRef" />
+      </KeepAlive></template>`,
+      data,
+      { Async, Comp },
+    )
+    const root = document.createElement('div')
+    const app = createVaporApp(App)
+    app.mount(root)
+
+    data.value.useAsync = false
+    await nextTick()
+    expect(onRef.mock.lastCall![0].id).toBe('comp')
+    data.value.useAsync = true
+    await nextTick()
+    expect(onRef.mock.lastCall![0]).toBe(null)
+    data.value.useAsync = false
+    await nextTick()
+    expect(onRef.mock.lastCall![0].id).toBe('comp')
+    onRef.mockClear()
+
+    resolve!(
+      compile(
+        `<script setup vapor>defineExpose({ id: 'async' })</script><template><div>async</div></template>`,
+        data,
+      ),
+    )
+    await timeout()
+    expect(root.innerHTML).toBe('<div>comp</div><!--dynamic-component-->')
+    expect(onRef).not.toHaveBeenCalled()
+
+    data.value.useAsync = true
+    await nextTick()
+    expect(root.innerHTML).toBe(
+      '<div>async</div><!--async component--><!--dynamic-component-->',
+    )
+    expect(onRef.mock.lastCall![0].id).toBe('async')
+    expect(onRef.mock.calls.filter(([value]) => value !== null)).toHaveLength(1)
+    app.unmount()
+  })
+
+  test.each([true, false])(
+    'dynamic async template ref is disposed with its KeepAlive binding (resolve while hidden: %s)',
+    async resolveWhileHidden => {
+      let resolve: (comp: VaporComponent) => void
+      let current: any = null
+      const onRef = vi.fn(value => {
+        current = value
+      })
+      const data = ref({ show: true, useAsync: false, onRef })
+      const Async = defineVaporAsyncComponent(
+        () =>
+          new Promise(r => {
+            resolve = r as any
+          }),
+      )
+      const Comp = compile(
+        `<script setup vapor>defineExpose({ id: 'comp' })</script><template><div>comp</div></template>`,
+        data,
+      )
+      const App = compile(
+        `<script setup vapor>
+        const data = _data
+        const components = _components
+      </script>
+      <template><KeepAlive>
+        <component v-if="data.show" :is="data.useAsync ? components.Async : components.Comp" :ref="data.onRef" />
+      </KeepAlive></template>`,
+        data,
+        { Async, Comp },
+      )
+      const root = document.createElement('div')
+      const app = createVaporApp(App)
+      app.mount(root)
+      expect(current.id).toBe('comp')
+
+      data.value.useAsync = true
+      await nextTick()
+      expect(current).toBe(null)
+      data.value.show = false
+      await nextTick()
+      expect(current).toBe(null)
+      if (!resolveWhileHidden) {
+        data.value.show = true
+        await nextTick()
+        expect(current).toBe(null)
+      }
+      onRef.mockClear()
+
+      resolve!(
+        compile(
+          `<script setup vapor>defineExpose({ id: 'async' })</script><template><div>async</div></template>`,
+          data,
+        ),
+      )
+      await timeout()
+      if (resolveWhileHidden) {
+        expect(root.innerHTML).toBe('<!--if-->')
+        expect(current).toBe(null)
+        expect(onRef).not.toHaveBeenCalled()
+
+        data.value.show = true
+        await nextTick()
+      }
+      expect(root.innerHTML).toBe(
+        '<div>async</div><!--async component--><!--dynamic-component--><!--if-->',
+      )
+      expect(current.id).toBe('async')
+      expect(onRef.mock.calls.filter(([value]) => value !== null)).toHaveLength(
+        1,
+      )
+
+      data.value.show = false
+      await nextTick()
+      expect(current).toBe(null)
+      onRef.mockClear()
+      data.value.show = true
+      await nextTick()
+      expect(current.id).toBe('async')
+      expect(onRef.mock.calls.filter(([value]) => value !== null)).toHaveLength(
+        1,
+      )
+      app.unmount()
+    },
+  )
 })
+
+function mountAsyncError(
+  mode: 'vdom' | 'vapor',
+  errorComponent: string,
+  appTemplate: string,
+) {
+  const vapor = mode === 'vapor'
+  const data = ref({ name: 'a', cls: 'x', clicks: 0 })
+  const components: Record<string, any> = {}
+  let reject: (err: Error) => void
+  const define = (
+    vapor ? defineVaporAsyncComponent : defineAsyncComponent
+  ) as typeof defineAsyncComponent
+  components.Comp = define({
+    loader: () => new Promise((_, r) => (reject = r)),
+    errorComponent: compile(errorComponent, data, components, { vapor }),
+  })
+  const App = compile(
+    `<script setup>const data = _data; const components = _components;</script>` +
+      `<template>${appTemplate}</template>`,
+    data,
+    components,
+    { vapor },
+  )
+  const root = document.createElement('div')
+  const app = vapor ? createVaporApp(App) : createApp(App)
+  app.config.errorHandler = () => {}
+  app.use(vaporInteropPlugin).mount(root)
+  return { root, data, reject: (err: Error) => reject(err) }
+}

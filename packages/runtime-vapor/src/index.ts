@@ -48,14 +48,15 @@ export {
   setProp,
   setDOMProp,
   setDynamicProps,
+  setDynamicEvents,
   setElementText,
 } from './dom/prop'
 export {
   on,
   onBinding,
+  setListener,
   delegate,
   delegateEvents,
-  setDynamicEvents,
   createInvoker,
   withVaporModifiers,
   withVaporKeys,
