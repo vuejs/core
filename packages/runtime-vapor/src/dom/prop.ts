@@ -21,7 +21,7 @@ import {
   toDisplayString,
 } from '@vue/shared'
 import { isReactive } from '@vue/reactivity'
-import { type EventHandlerValue, onBinding, setListener } from './event'
+import { type EventHandlerValue, setListener } from './event'
 import {
   type GenericComponentInstance,
   MismatchTypes,
