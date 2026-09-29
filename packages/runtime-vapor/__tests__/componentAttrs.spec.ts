@@ -1,8 +1,13 @@
 import {
   type Ref,
+  isReactive,
+  isShallow,
   nextTick,
   onUpdated,
   ref,
+  shallowRef,
+  toRaw,
+  watchSyncEffect,
   withModifiers,
 } from '@vue/runtime-dom'
 import {
@@ -3287,5 +3292,89 @@ describe('attribute fallthrough', () => {
       [data => (data.value.mid = on('mid2'))],
     )
     expect(seen).toEqual(['root mid parent', 'root mid2 parent'])
+  })
+
+  test('tracks missing attrs across undefined additions, value changes, and deletion', async () => {
+    const data = shallowRef<{ stable: string; extra?: unknown }>({
+      stable: 'fixed',
+    })
+    const reads: unknown[] = []
+    const presence: boolean[] = []
+    const keys: (string | symbol)[][] = []
+    const stableReads: unknown[] = []
+    const Child = defineVaporComponent({
+      inheritAttrs: false,
+      setup(_, { attrs }) {
+        watchSyncEffect(() => reads.push(attrs.extra))
+        watchSyncEffect(() => presence.push('extra' in attrs))
+        watchSyncEffect(() => keys.push(Reflect.ownKeys(attrs)))
+        watchSyncEffect(() => stableReads.push(attrs.stable))
+        return []
+      },
+    })
+    const { app } = define(
+      compile(`<template><components.Child v-bind="data" /></template>`, data, {
+        Child,
+      }),
+    ).render()
+
+    data.value = { stable: 'fixed', extra: undefined }
+    await nextTick()
+    expect(reads).toEqual([undefined, undefined])
+    expect(presence).toEqual([false, true])
+    expect(keys).toEqual([['stable'], ['stable', 'extra']])
+
+    data.value = { stable: 'fixed', extra: 'added' }
+    await nextTick()
+    expect(reads).toEqual([undefined, undefined, 'added'])
+    expect(presence).toEqual([false, true, true])
+    expect(keys).toEqual([['stable'], ['stable', 'extra']])
+
+    data.value = { stable: 'fixed' }
+    await nextTick()
+    expect(reads).toEqual([undefined, undefined, 'added', undefined])
+    expect(presence).toEqual([false, true, true, false])
+    expect(keys).toEqual([['stable'], ['stable', 'extra'], ['stable']])
+    expect(stableReads).toEqual(['fixed'])
+    app.unmount()
+  })
+
+  test('exposes only attr keys without private reactive flags or inherited members', () => {
+    let attrs: any
+    let props: any
+    const Child = defineVaporComponent({
+      props: ['value'],
+      setup(received, context) {
+        props = received
+        attrs = context.attrs
+        return []
+      },
+    })
+    const { app } = define(
+      compile(
+        '<template><components.Child value="1" title="initial" /></template>',
+        ref({}),
+        { Child },
+      ),
+    ).render()
+    expect(isReactive(props)).toBe(true)
+    expect(isShallow(props)).toBe(true)
+    expect(isReactive(attrs)).toBe(false)
+    expect(isShallow(attrs)).toBe(false)
+    expect(toRaw(attrs)).toBe(attrs)
+    for (const key of [
+      '__v_raw',
+      '__v_isReactive',
+      '__v_isShallow',
+      'toString',
+      'constructor',
+      'value',
+    ]) {
+      expect(attrs[key]).toBeUndefined()
+      expect(key in attrs).toBe(false)
+    }
+    expect(Object.keys(attrs)).toEqual(['title'])
+    expect(attrs.title).toBe('initial')
+    app.unmount()
   })
 })

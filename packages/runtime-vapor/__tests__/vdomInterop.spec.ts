@@ -15,6 +15,7 @@ import {
   currentInstance,
   defineAsyncComponent,
   defineComponent,
+  effectScope,
   getCurrentInstance,
   getCurrentScope,
   h,
@@ -12311,5 +12312,168 @@ describe('vdomInterop', () => {
     )
     expect(vdom.after).toBe('<div><i>img</i></div>')
     expect(vapor.after).toBe(vdom.after)
+  })
+
+  describe('VDOM child input delivery', () => {
+    test('delivers listener changes before notifying child watchers', async () => {
+      const first = vi.fn()
+      const second = vi.fn()
+      const data = ref({ count: 0, onPing: first })
+      const Child = defineComponent({
+        props: ['count'],
+        emits: ['ping'],
+        setup(props, { emit }) {
+          watch(
+            () => props.count,
+            value => emit('ping', value),
+            { flush: 'sync' },
+          )
+          return () =>
+            h(
+              'button',
+              { onClick: () => emit('ping', props.count) },
+              props.count,
+            )
+        },
+      })
+      const App = compile(
+        '<template><components.Child v-bind="data" /></template>',
+        data,
+        { Child },
+      )
+      const { app, host } = define(App).render()
+      try {
+        const button = host.querySelector('button')!
+        button.click()
+        expect(first).toHaveBeenCalledExactlyOnceWith(0)
+
+        data.value.onPing = second
+        button.click()
+        expect(first).toHaveBeenCalledTimes(2)
+        expect(second).not.toHaveBeenCalled()
+        await nextTick()
+        button.click()
+        expect(second).toHaveBeenCalledExactlyOnceWith(0)
+
+        data.value.count = 1
+        data.value.onPing = first
+        await nextTick()
+        expect(host.textContent).toBe('1')
+        expect(first.mock.calls).toEqual([[0], [0], [1]])
+        expect(second).toHaveBeenCalledTimes(1)
+      } finally {
+        app.unmount()
+      }
+    })
+
+    test.each(['direct', 'spread'])(
+      'evaluates %s inputs once per delivery',
+      async binding => {
+        const value = ref('first')
+        const read = vi.fn(() =>
+          binding === 'spread' ? { value: value.value } : value.value,
+        )
+        const data = ref({ read })
+        const Child = defineComponent({
+          props: ['value'],
+          setup: props => () => h('span', props.value),
+        })
+        const Parent = compile(
+          `<template><components.Child ${
+            binding === 'spread'
+              ? 'v-bind="data.read()"'
+              : ':value="data.read()"'
+          } /></template>`,
+          data,
+          { Child },
+        )
+        const App = compile(
+          '<template><components.Parent /></template>',
+          data,
+          { Parent },
+        )
+        const { app, host } = define(App).render()
+        try {
+          expect(host.textContent).toBe('first')
+          expect(read).toHaveBeenCalledTimes(1)
+          value.value = 'second'
+          await nextTick()
+          expect(host.textContent).toBe('second')
+          expect(read).toHaveBeenCalledTimes(2)
+        } finally {
+          app.unmount()
+        }
+        value.value = 'after unmount'
+        await nextTick()
+        expect(read).toHaveBeenCalledTimes(2)
+      },
+    )
+
+    test('evaluates v-once spread inputs only once', async () => {
+      const value = ref('first')
+      const read = vi.fn(() => ({ value: value.value }))
+      const Child = defineComponent({
+        props: ['value'],
+        setup: props => () => h('span', props.value),
+      })
+      const App = compile(
+        '<template><components.Child v-once v-bind="data.read()" /></template>',
+        ref({ read }),
+        { Child },
+      )
+      const { app, host } = define(App).render()
+      try {
+        expect(host.textContent).toBe('first')
+        expect(read).toHaveBeenCalledTimes(1)
+        value.value = 'second'
+        await nextTick()
+        expect(host.textContent).toBe('first')
+        expect(read).toHaveBeenCalledTimes(1)
+      } finally {
+        app.unmount()
+      }
+    })
+
+    test.each(['collect', 'normalize'])(
+      'stops input collection when initial %s fails',
+      async phase => {
+        const value = ref(0)
+        const error = new Error('input initialization failed')
+        const read = vi.fn(() => {
+          const current = value.value
+          if (phase === 'collect') throw error
+          return current
+        })
+        const Child = {
+          props: {
+            count: Number,
+            other: {
+              default: () => {
+                throw error
+              },
+            },
+          },
+          render: () => null,
+        }
+        const app = createApp({ render: () => null }).use(vaporInteropPlugin)
+        const owner = effectScope()
+        try {
+          owner.run(() => {
+            expect(() => {
+              const frag = app._context.vdom!.mount(Child, null, {
+                count: read,
+              })
+              frag.insert(document.createElement('div'), null)
+            }).toThrow(error)
+            expect(getCurrentScope()).toBe(owner)
+          })
+          value.value++
+          await nextTick()
+          expect(read).toHaveBeenCalledTimes(1)
+        } finally {
+          owner.stop()
+        }
+      },
+    )
   })
 })

@@ -264,6 +264,8 @@ describe('component', () => {
       },
     }).render()
 
+    expect(host.innerHTML).toBe('<div>0</div>')
+    await nextTick()
     expect(host.innerHTML).toBe('<div>1</div>')
   })
 

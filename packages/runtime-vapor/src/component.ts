@@ -64,6 +64,7 @@ import {
   onScopeDispose,
   proxyRefs,
   setActiveSub,
+  shallowRef,
   toRaw,
   unref,
 } from '@vue/reactivity'
@@ -86,17 +87,16 @@ import {
 import {
   type DynamicPropsSource,
   type RawProps,
-  getKeysFromRawProps,
   getPropsProxyHandlers,
   getStaticBindingKeys,
   hasFallthroughAttrs,
+  initProps,
   normalizePropsOptions,
   resolveDynamicProps,
   resolveSource,
-  setupPropsValidation,
   snapshotRawProps,
 } from './componentProps'
-import { renderEffect } from './renderEffect'
+import { type RenderEffect, renderEffect } from './renderEffect'
 import { emit, normalizeEmitsOptions } from './componentEmits'
 import { patchDynamicProps } from './dom/prop'
 import {
@@ -393,6 +393,11 @@ export function createComponent(
       keepAliveCtx = ctx
       const cached = !managedMount && ctx.getCachedComponent(component, key)
       if (cached) {
+        // Rebind cache-owned inputs to the current call site's getters.
+        if (isVaporComponent(cached) && cached.inputScope) {
+          cached.rawProps = (rawProps || EMPTY_OBJ) as RawProps
+          initProps(cached)
+        }
         // a nested branch teardown stops the branch scope that unmounts the
         // cached component, so the scope re-entering it takes over
         const scope = getCurrentScope()
@@ -459,41 +464,17 @@ export function createComponent(
     }
 
     let inputScope: EffectScope | undefined
-    if (
-      keepAliveCtx &&
-      !once &&
-      (rawProps || (rawSlots && (rawSlots as RawSlots).$))
-    ) {
-      // The cached component keeps its detached scope active, so commit only
-      // its direct inputs through a cache-owned scope. Descendants read from
-      // the same committed inputs and need no additional isolation.
-      // v-once snapshots raw props and the slot set in the instance
-      // constructor, so it does not need a live commit effect after creation.
-      const scope = new EffectScope(true)
-      let isolated = false
-      scope.run(() => {
-        if (rawProps) {
-          const next = keepAliveCtx!.isolatePropSources(rawProps as RawProps)
-          isolated = next !== rawProps
-          rawProps = next
-        }
-
-        // Static slots are fixed function entries. Only `$` contains live slot
-        // descriptor sources that useSlots() can re-resolve while cached; slot
-        // function execution retains its existing closure semantics.
-        if (rawSlots && (rawSlots as RawSlots).$) {
-          const next = keepAliveCtx!.isolateSlotSources(rawSlots as RawSlots)
-          isolated = isolated || next !== rawSlots
-          rawSlots = next
-        }
-      })
-      if (isolated) {
-        inputScope = scope
+    if (keepAliveCtx && !once && !managedMount) {
+      inputScope = new EffectScope(true)
+      // Dynamic slot descriptors share the input lifetime; local effects do not.
+      if (rawSlots && (rawSlots as RawSlots).$) {
+        inputScope.run(() => {
+          rawSlots = keepAliveCtx!.isolateSlotSources(rawSlots as RawSlots)
+        })
       }
     }
 
-    // A VDOM child reads the same raw sources through its interop fragment, so
-    // it is mounted with the isolated inputs and owns the commit scope too.
+    // The VDOM bridge delivers inputs through the same cache-owned scope.
     if (isInteropEnabled && useVdomInterop(component, appContext)) {
       const frag = appContext.vdom!.mount(
         component as any,
@@ -501,8 +482,8 @@ export function createComponent(
         rawProps,
         normalizeRawSlots(rawSlots),
         once,
+        inputScope,
       )
-      if (inputScope) frag.inputScope = inputScope
       // the explicit key wins over one merged in from a spread object
       if (key !== undefined) {
         frag.$key = key
@@ -535,6 +516,8 @@ export function createComponent(
     if (key !== undefined) instance.$key = key
     if (inputScope) {
       instance.inputScope = inputScope
+      // A later cache hit can add attrs absent from the first call site.
+      instance.hasFallthrough = true
     }
     if (asyncBoundary) markAsyncBoundary(instance)
 
@@ -580,6 +563,8 @@ export function createComponent(
         instance.propsOptions = normalizePropsOptions(component)
         instance.emitsOptions = normalizeEmitsOptions(component)
       }
+
+      initProps(instance, once)
 
       // hydrating async component
       if (
@@ -697,10 +682,6 @@ export function setupComponent(
 ): void {
   const prevInstance = setCurrentInstance(instance)
   const prevSub = setActiveSub()
-
-  if (__DEV__) {
-    setupPropsValidation(instance)
-  }
 
   const setupFn = isFunction(component) ? component : component.setup
   const setupResult = setupFn
@@ -900,6 +881,9 @@ export class VaporComponentInstance<
   TypeRefs extends Record<string, any> = Record<string, any>,
 > implements GenericComponentInstance {
   vapor: true
+  propsValues: Record<string, any>
+  rawValues: ShallowRef<Record<string, any>>
+  propsEffect?: RenderEffect
   uid: number
   type: VaporComponent
   root: GenericComponentInstance | null
@@ -1074,7 +1058,10 @@ export class VaporComponentInstance<
       this.isDeactivated =
         false
 
-    // init props
+    // Track through the public proxies to avoid pulling generic reactive
+    // handlers into pure Vapor bundles.
+    this.propsValues = Object.create(null)
+    this.rawValues = shallowRef(EMPTY_OBJ)
     // Snapshot raw parent inputs before creating proxies so delayed reads from
     // v-once children cannot observe later parent updates.
     this.rawProps =
@@ -1082,19 +1069,15 @@ export class VaporComponentInstance<
     // a custom element host mutates its props object after creation, so its
     // attrs key set is never static
     this.hasFallthrough = !!ce || hasFallthroughAttrs(comp, this.rawProps)
-    if (rawProps || comp.props) {
-      const [propsHandlers, attrsHandlers] = getPropsProxyHandlers(comp)
-      this.attrs = new Proxy(this, attrsHandlers)
-      this.props = (
-        comp.props
-          ? new Proxy(this, propsHandlers!)
-          : isFunction(comp)
-            ? this.attrs
-            : EMPTY_OBJ
-      ) as Props
-    } else {
-      this.props = this.attrs = EMPTY_OBJ as Props
-    }
+    const [propsHandlers, attrsHandlers] = getPropsProxyHandlers(comp)
+    this.attrs = new Proxy(this, attrsHandlers)
+    this.props = (
+      comp.props
+        ? new Proxy(this, propsHandlers!)
+        : isFunction(comp)
+          ? this.attrs
+          : EMPTY_OBJ
+    ) as Props
 
     // init slots
     let normalizedRawSlots = normalizeRawSlots(rawSlots)
@@ -1133,15 +1116,10 @@ export class VaporComponentInstance<
     }
   }
 
-  /**
-   * Expose `getKeysFromRawProps` on the instance so it can be used in code
-   * paths where it's needed, e.g. `useModel`
-   */
+  // Parent-provided keys are needed by APIs such as useModel.
   rawKeys(): string[] {
     const vnode = isInteropEnabled && this.interopVNode
-    return vnode
-      ? Object.keys(vnode.props || EMPTY_OBJ)
-      : getKeysFromRawProps(this.rawProps)
+    return Object.keys(vnode ? vnode.props || EMPTY_OBJ : this.rawValues.value)
   }
 }
 

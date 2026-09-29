@@ -1,12 +1,12 @@
 import { createComponent, defineVaporComponent, template } from '../src'
-import { ref, useAttrs, useSlots } from '@vue/runtime-dom'
+import { nextTick, ref, useAttrs, useSlots } from '@vue/runtime-dom'
 import { makeRender } from './_utils'
 import type { VaporComponentInstance } from '../src/component'
 
 const define = makeRender<any>()
 
 describe('SFC <script setup> helpers', () => {
-  test('useSlots / useAttrs (no args)', () => {
+  test('useSlots / useAttrs (no args)', async () => {
     let slots: VaporComponentInstance['slots'] | undefined
     let attrs: VaporComponentInstance['attrs'] | undefined
 
@@ -35,6 +35,8 @@ describe('SFC <script setup> helpers', () => {
     expect(attrs).toMatchObject({ id: 0 })
 
     count.value++
+    expect(attrs).toMatchObject({ id: 0 })
+    await nextTick()
     expect(attrs).toMatchObject({ id: 1 })
   })
 

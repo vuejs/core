@@ -127,8 +127,7 @@ export class VaporFragment<
   patchVNode?: (next: VNode) => void
   scope?: EffectScope
   /**
-   * @internal the KeepAlive-owned scope that commits this fragment's raw input
-   * sources, paused while the fragment is cached (see `isolatePropSources`)
+   * @internal the KeepAlive-owned input scope, paused while cached
    */
   inputScope?: EffectScope
   setRef?: (

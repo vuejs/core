@@ -1,3 +1,4 @@
+import type { EffectScope } from '@vue/reactivity'
 import {
   type Component,
   type ComponentInternalInstance,
@@ -288,6 +289,7 @@ export interface VdomInVaporInterface {
     props?: any,
     slots?: any,
     once?: boolean,
+    inputScope?: EffectScope,
   ) => any
   slot: (
     slots: any,

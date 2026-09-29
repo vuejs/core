@@ -28,7 +28,7 @@ import {
   isVaporComponent,
 } from '../component'
 import { isAsyncComponentEnabled } from '../asyncComponentState'
-import { isolatePropSources, resolveFunctionSource } from '../componentProps'
+import { resolveFunctionSource } from '../componentProps'
 import type { DynamicSlotFn, RawSlots } from '../componentSlots'
 import {
   type DefineVaporComponent,
@@ -357,7 +357,6 @@ const VaporKeepAliveImpl = defineVaporComponent({
     })
 
     const keepAliveCtx: KeepAliveInstance['ctx'] = {
-      isolatePropSources,
       isolateSlotSources,
       getStorageContainer: () => storageContainer,
       getCachedComponent: (comp, key) => {

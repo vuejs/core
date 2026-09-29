@@ -11,13 +11,13 @@ import {
   setCurrentInstance,
   useAsyncComponentState,
 } from '@vue/runtime-dom'
-import { extend } from '@vue/shared'
 import { defineVaporComponent } from './apiDefineComponent'
 import {
   type VaporComponent,
   type VaporComponentInstance,
   createComponent,
 } from './component'
+import type { RawProps } from './componentProps'
 import { enableAsyncComponent } from './asyncComponentState'
 import { renderEffect } from './renderEffect'
 import { DynamicFragment, isDynamicFragment } from './fragment'
@@ -279,9 +279,8 @@ function createErrorComp(
   return createInnerComp(
     comp,
     parent,
-    // the wrapper's props and attrs reach the error component the way the
-    // vdom wrapper's attrs fall through to its error vnode root
-    extend({ error: getError }, parent.rawProps),
+    // Forward the wrapper's delivered props and attrs to the error component.
+    { error: getError, $: [() => parent.rawValues.value] },
     // Avoid wrapper slot fallthrough
     {},
   )
@@ -290,7 +289,7 @@ function createErrorComp(
 function createInnerComp(
   comp: VaporComponent,
   parent: VaporComponentInstance & TransitionOptions,
-  rawProps = parent.rawProps,
+  rawProps: RawProps = { $: [() => parent.rawValues.value] },
   rawSlots = parent.rawSlots,
 ): VaporComponentInstance {
   const prevInstance = setCurrentInstance(parent)
@@ -299,10 +298,10 @@ function createInnerComp(
       comp,
       rawProps,
       rawSlots,
-      // rawProps is shared and already contains fallthrough attrs.
-      // so isSingleRoot should be undefined
+      // The wrapper already delivered parent inputs and fallthrough attrs.
+      // Forward that frame without re-evaluating the original sources.
       undefined,
-      // The wrapper already snapshotted rawProps when it is v-once.
+      // A v-once wrapper never publishes another input frame.
       undefined,
       parent.appContext,
     )

@@ -9,6 +9,7 @@ import {
   onBeforeUnmount,
   ref,
   toHandlers,
+  watch,
 } from '@vue/runtime-dom'
 import {
   createComponent,
@@ -635,5 +636,72 @@ describe('component: emit', () => {
     button.click()
     expect(onStatic).toHaveBeenCalledTimes(1)
     expect(onObject).toHaveBeenCalledTimes(1)
+  })
+
+  test('emit sees the new raw listener before its declared prop is published', async () => {
+    const oldListener = vi.fn()
+    const newListener = vi.fn()
+    const data = ref({ count: 0, listener: oldListener })
+    const propListeners: unknown[] = []
+    let props: any
+    const Child = defineVaporComponent({
+      props: ['count', 'onChange'],
+      emits: ['change'],
+      setup(received, { emit }) {
+        props = received
+        watch(
+          () => received.count,
+          count => {
+            propListeners.push(received.onChange)
+            emit('change', count)
+          },
+          { flush: 'sync' },
+        )
+        return []
+      },
+    })
+    // A bound function prop avoids a compiler-generated @change forwarding
+    // closure that could mask which listener identity emit actually selected.
+    const { app } = define(
+      compile(
+        `<template><components.Child :count="data.count" :onChange="data.listener" /></template>`,
+        data,
+        { Child },
+      ),
+    ).render()
+
+    data.value.count = 1
+    data.value.listener = newListener
+    await nextTick()
+
+    expect(propListeners).toEqual([oldListener])
+    expect(props.onChange).toBe(newListener)
+    expect(oldListener).not.toHaveBeenCalled()
+    expect(newListener).toHaveBeenCalledExactlyOnceWith(1)
+    app.unmount()
+  })
+
+  test('delivers a setup emit mutation after the initial mount', async () => {
+    const data = ref({ count: 0 })
+    const Child = compile(
+      `<script setup>
+        const props = defineProps(['count'])
+        const emit = defineEmits()
+        emit('update', props.count + 1)
+      </script><template><div>{{ props.count }}</div></template>`,
+      data,
+    )
+    const { app, host } = define(
+      compile(
+        '<template><components.Child v-bind="{ count: data.count }" @update="data.count = $event" /></template>',
+        data,
+        { Child },
+      ),
+    ).render()
+    expect(data.value.count).toBe(1)
+    expect(host.innerHTML).toBe('<div>0</div>')
+    await nextTick()
+    expect(host.innerHTML).toBe('<div>1</div>')
+    app.unmount()
   })
 })

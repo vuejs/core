@@ -62,6 +62,7 @@ export default defineConfig({
           include: [
             'packages/reactivity/__tests__/gc.spec.ts',
             'packages/runtime-vapor/__tests__/components/Transition.gc.spec.ts',
+            'packages/runtime-vapor/__tests__/gc.spec.ts',
             'packages/server-renderer/__tests__/ssrWatch.spec.ts',
             'packages/server-renderer/__tests__/ssrRender.spec.ts',
           ],
@@ -96,6 +97,7 @@ export default defineConfig({
             ...configDefaults.exclude,
             '**/e2e/**',
             'packages/runtime-vapor/__tests__/components/Transition.gc.spec.ts',
+            'packages/runtime-vapor/__tests__/gc.spec.ts',
           ],
         },
       },
