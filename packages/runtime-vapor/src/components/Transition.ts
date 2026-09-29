@@ -193,6 +193,8 @@ export const VaporTransition: FunctionalVaporComponent<TransitionProps> =
           frag.$transition = applyTransitionHooksImpl(
             frag.nodes,
             frag.$transition,
+            undefined,
+            true,
           )
         }
         if (!isMounted && shouldPerformAppear) performAppear(frag.$transition!)
@@ -217,10 +219,15 @@ export const VaporTransition: FunctionalVaporComponent<TransitionProps> =
     // props eagerly, so propsProxy alone can't keep an already-applied hooks
     // closure live; re-applying rebinds the root element's (and any inner
     // fragment's) $transition to fresh closures, mirroring VDOM's per-render
-    // re-resolve. Reusing appliedHooks preserves runtime state (delayedLeave)
-    // across re-resolves.
+    // re-resolve. Read runtime state (delayedLeave) from the current branch,
+    // since it may have replaced appliedHooks during an in-out switch.
     renderEffect(() => {
-      appliedHooks = applyTransitionHooksImpl(children, appliedHooks)
+      appliedHooks = applyTransitionHooksImpl(
+        children,
+        appliedHooks,
+        undefined,
+        isMounted,
+      )
       if (!isMounted) {
         isMounted = true
         if (shouldPerformAppear) performAppear(appliedHooks)
@@ -355,6 +362,7 @@ export function applyTransitionHooksImpl(
   block: Block,
   hooks: VaporTransitionHooks,
   owner?: VaporFragment,
+  refresh = false,
 ): VaporTransitionHooks {
   // filter out comment nodes
   if (isArray(block)) {
@@ -382,9 +390,15 @@ export function applyTransitionHooksImpl(
   const fragments: VaporFragment[] = []
   const child = resolveTransitionBlock(
     block,
-    fragment => fragments.push(fragment),
+    fragment => {
+      fragments.push(fragment)
+      // Inner branches can replace their hooks without updating outer roots.
+      // Keep the current handoff even when the branch has no element yet.
+      if (refresh && fragment.$transition) hooks = fragment.$transition
+    },
     owner,
   )
+  if (refresh && child && child.$transition) hooks = child.$transition
   if (!child) {
     // set transition hooks on fragments for later use
     fragments.forEach(f => (f.$transition = hooks))
