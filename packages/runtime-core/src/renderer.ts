@@ -2288,24 +2288,9 @@ function baseCreateRenderer(
 
   const remove: RemoveFn = vnode => {
     const { type, el, anchor, transition } = vnode
-    if (type === Fragment) {
-      if (
-        __DEV__ &&
-        vnode.patchFlag > 0 &&
-        vnode.patchFlag & PatchFlags.DEV_ROOT_FRAGMENT &&
-        transition &&
-        !transition.persisted
-      ) {
-        ;(vnode.children as VNode[]).forEach(child => {
-          if (child.type === Comment) {
-            hostRemove(child.el!)
-          } else {
-            remove(child)
-          }
-        })
-      } else {
-        removeFragment(el!, anchor!)
-      }
+    const isFragment = type === Fragment
+    if (isFragment && !transition) {
+      removeFragment(el!, anchor!)
       return
     }
 
@@ -2319,22 +2304,35 @@ function baseCreateRenderer(
       return
     }
 
+    // #6080 a component root fragment carries the component's transition
+    // hooks, e.g. an element with comments around it (kept in dev or with
+    // `comments: true`). Leave on its element, then remove the fragment.
+    const leavingNode = isFragment
+      ? (vnode.children as VNode[]).find(c => c.shapeFlag & ShapeFlags.ELEMENT)
+      : vnode
+
     const performRemove = () => {
-      hostRemove(el!)
+      if (isFragment) {
+        removeFragment(el!, anchor!)
+      } else {
+        hostRemove(el!)
+      }
       if (transition && !transition.persisted && transition.afterLeave) {
         transition.afterLeave()
       }
     }
 
     if (
-      vnode.shapeFlag & ShapeFlags.ELEMENT &&
+      leavingNode &&
+      leavingNode.shapeFlag & ShapeFlags.ELEMENT &&
       transition &&
       !transition.persisted
     ) {
       const { leave, delayLeave } = transition
-      const performLeave = () => leave(el!, performRemove)
+      const leavingEl = leavingNode.el!
+      const performLeave = () => leave(leavingEl, performRemove)
       if (delayLeave) {
-        delayLeave(vnode.el!, performRemove, performLeave)
+        delayLeave(leavingEl, performRemove, performLeave)
       } else {
         performLeave()
       }

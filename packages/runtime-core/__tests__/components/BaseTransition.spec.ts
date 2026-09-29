@@ -1,10 +1,13 @@
 import {
   BaseTransition,
   type BaseTransitionProps,
+  Fragment,
   KeepAlive,
   Teleport,
   type TestElement,
   type VNodeProps,
+  createCommentVNode,
+  createVNode,
   h,
   nextTick,
   nodeOps,
@@ -13,6 +16,7 @@ import {
   serialize,
   serializeInner,
 } from '@vue/runtime-test'
+import { PatchFlags } from '@vue/shared'
 
 function mount(
   props: BaseTransitionProps<TestElement>,
@@ -98,6 +102,8 @@ interface ToggleOptions {
   falseBranch: () => any
   trueSerialized: string
   falseSerialized: string
+  // the animated element, when it differs from the rendered root
+  trueElSerialized?: string
 }
 
 type TestFn = (o: ToggleOptions, withKeepAlive?: boolean) => void
@@ -721,6 +727,7 @@ describe('BaseTransition', () => {
         falseBranch,
         trueSerialized,
         falseSerialized,
+        trueElSerialized = trueSerialized,
       }: ToggleOptions,
       withKeepAlive = false,
     ) {
@@ -738,18 +745,18 @@ describe('BaseTransition', () => {
       // a placeholder is injected until the leave finishes
       expect(serializeInner(root)).toBe(`${trueSerialized}<!---->`)
       expect(props.onBeforeLeave).toHaveBeenCalledTimes(1)
-      assertCalledWithEl(props.onBeforeLeave, trueSerialized)
+      assertCalledWithEl(props.onBeforeLeave, trueElSerialized)
       expect(props.onLeave).toHaveBeenCalledTimes(1)
-      assertCalledWithEl(props.onLeave, trueSerialized)
+      assertCalledWithEl(props.onLeave, trueElSerialized)
       expect(props.onAfterLeave).not.toHaveBeenCalled()
       // enter should not have started
       expect(props.onBeforeEnter).not.toHaveBeenCalled()
       expect(props.onEnter).not.toHaveBeenCalled()
       expect(props.onAfterEnter).not.toHaveBeenCalled()
 
-      cbs.doneLeave[trueSerialized]()
+      cbs.doneLeave[trueElSerialized]()
       expect(props.onAfterLeave).toHaveBeenCalledTimes(1)
-      assertCalledWithEl(props.onAfterLeave, trueSerialized)
+      assertCalledWithEl(props.onAfterLeave, trueElSerialized)
       // have to wait for a tick because this triggers an update
       await nextTick()
       expect(serializeInner(root)).toBe(falseSerialized)
@@ -785,14 +792,14 @@ describe('BaseTransition', () => {
       expect(serializeInner(root)).toBe(trueSerialized)
       // enter should start
       expect(props.onBeforeEnter).toHaveBeenCalledTimes(2)
-      assertCalledWithEl(props.onBeforeEnter, trueSerialized, 1)
+      assertCalledWithEl(props.onBeforeEnter, trueElSerialized, 1)
       expect(props.onEnter).toHaveBeenCalledTimes(2)
-      assertCalledWithEl(props.onEnter, trueSerialized, 1)
+      assertCalledWithEl(props.onEnter, trueElSerialized, 1)
       expect(props.onAfterEnter).toHaveBeenCalledTimes(1)
       // finish enter
-      cbs.doneEnter[trueSerialized]()
+      cbs.doneEnter[trueElSerialized]()
       expect(props.onAfterEnter).toHaveBeenCalledTimes(2)
-      assertCalledWithEl(props.onAfterEnter, trueSerialized, 1)
+      assertCalledWithEl(props.onAfterEnter, trueElSerialized, 1)
 
       assertCalls(props, {
         onBeforeEnter: 2,
@@ -816,6 +823,25 @@ describe('BaseTransition', () => {
 
     test('w/ KeepAlive', async () => {
       await runTestWithKeepAlive(testOutIn)
+    })
+
+    // #6080
+    test('w/ component with comments around its root element', async () => {
+      const CompA = () =>
+        createVNode(
+          Fragment,
+          null,
+          [createCommentVNode('a'), h('div'), createCommentVNode('b')],
+          PatchFlags.DEV_ROOT_FRAGMENT,
+        )
+      const CompB = () => h('span')
+      await testOutIn({
+        trueBranch: () => h(CompA),
+        falseBranch: () => h(CompB),
+        trueSerialized: `<!--a--><div></div><!--b-->`,
+        falseSerialized: `<span></span>`,
+        trueElSerialized: `<div></div>`,
+      })
     })
   })
 
@@ -1293,6 +1319,77 @@ describe('BaseTransition', () => {
     }
     await runTestWithKeepAlive(testOutIn)
     __DEV__ = true
+  })
+
+  // #6080 with `compilerOptions.comments: true` in production, the root
+  // comments are kept but the fragment is not flagged as DEV_ROOT_FRAGMENT
+  test('mode: "out-in" w/ comments around component root element (prod mode)', async () => {
+    __DEV__ = false
+    try {
+      const toggle = ref(true)
+      const { props, cbs } = mockProps({ mode: 'out-in' })
+      const CompA = () =>
+        createVNode(Fragment, null, [
+          createCommentVNode('a'),
+          h('div'),
+          createCommentVNode('b'),
+        ])
+      const CompB = () => h('span')
+      const { root } = mount(props, () => (toggle.value ? h(CompA) : h(CompB)))
+      expect(serializeInner(root)).toBe(`<!--a--><div></div><!--b-->`)
+
+      toggle.value = false
+      await nextTick()
+      // the whole fragment stays until the leave finishes
+      expect(serializeInner(root)).toBe(`<!--a--><div></div><!--b--><!---->`)
+      expect(props.onBeforeLeave).toHaveBeenCalledTimes(1)
+      assertCalledWithEl(props.onBeforeLeave, `<div></div>`)
+      expect(props.onLeave).toHaveBeenCalledTimes(1)
+      assertCalledWithEl(props.onLeave, `<div></div>`)
+      expect(props.onAfterLeave).not.toHaveBeenCalled()
+      expect(props.onEnter).not.toHaveBeenCalled()
+
+      cbs.doneLeave[`<div></div>`]()
+      expect(props.onAfterLeave).toHaveBeenCalledTimes(1)
+      await nextTick()
+      expect(serializeInner(root)).toBe(`<span></span>`)
+      expect(props.onEnter).toHaveBeenCalledTimes(1)
+      assertCalledWithEl(props.onEnter, `<span></span>`)
+    } finally {
+      __DEV__ = true
+    }
+  })
+
+  // #5500
+  test('should update leave hooks for component with comments around its root element', async () => {
+    const root = nodeOps.createElement('div')
+    const toggle = ref(true)
+    const firstLeave = vi.fn((_el, done) => done())
+    const nextLeave = vi.fn((_el, done) => done())
+    const onLeave = ref(firstLeave)
+    const CompA = () =>
+      createVNode(
+        Fragment,
+        null,
+        [createCommentVNode('a'), h('div'), createCommentVNode('b')],
+        PatchFlags.DEV_ROOT_FRAGMENT,
+      )
+    const CompB = () => h('span')
+    const App = () =>
+      h(BaseTransition, { onLeave: onLeave.value }, () =>
+        toggle.value ? h(CompA) : h(CompB),
+      )
+
+    render(h(App), root)
+
+    onLeave.value = nextLeave
+    toggle.value = false
+    await nextTick()
+
+    expect(firstLeave).not.toHaveBeenCalled()
+    expect(nextLeave).toHaveBeenCalledTimes(1)
+    assertCalledWithEl(nextLeave, `<div></div>`)
+    expect(serializeInner(root)).toBe(`<span></span>`)
   })
 
   test('should preserve transition for component with KeepAlive root', async () => {
