@@ -258,16 +258,31 @@ function iterator(
     _next: IterableIterator<unknown>['next']
   }
   if (arr !== self && !isShallow(self)) {
-    iter._next = iter.next
-    iter.next = () => {
-      const result = iter._next()
-      if (!result.done) {
-        result.value = wrapValue(result.value)
-      }
-      return result
+    // #15643 an own `next` on a native array iterator permanently disables
+    // V8's array iteration fast paths (spread, Array.from, etc.) for the whole
+    // isolate, so it is wrapped instead. Checked on the iterator itself as
+    // user-extended or cross-realm arrays can return native iterators too.
+    if ((iter as any)[Symbol.toStringTag] === 'Array Iterator') {
+      const wrapped = Object.create(Object.getPrototypeOf(iter))
+      wrapped.next = () => wrapResult(iter.next(), wrapValue)
+      // only present if a user-extended array added it
+      if (iter.return) wrapped.return = iter.return.bind(iter)
+      return wrapped
     }
+    iter._next = iter.next
+    iter.next = () => wrapResult(iter._next(), wrapValue)
   }
   return iter
+}
+
+function wrapResult(
+  result: IteratorResult<unknown>,
+  wrapValue: (value: any) => unknown,
+) {
+  if (!result.done) {
+    result.value = wrapValue(result.value)
+  }
+  return result
 }
 
 // in the codebase we enforce es2016, but user code may run in environments
