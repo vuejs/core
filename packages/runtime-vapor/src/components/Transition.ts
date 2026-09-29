@@ -206,7 +206,7 @@ export const VaporTransition: FunctionalVaporComponent<TransitionProps> =
     const children = ((slots.default && slots.default()) || []) as any as Block
     state.root = children
 
-    let appliedHooks = {
+    const hooks = {
       __vapor: true,
       state,
       // use proxy to keep props reference stable
@@ -219,12 +219,12 @@ export const VaporTransition: FunctionalVaporComponent<TransitionProps> =
     // props eagerly, so propsProxy alone can't keep an already-applied hooks
     // closure live; re-applying rebinds the root element's (and any inner
     // fragment's) $transition to fresh closures, mirroring VDOM's per-render
-    // re-resolve. Read runtime state (delayedLeave) from the current branch,
-    // since it may have replaced appliedHooks during an in-out switch.
+    // re-resolve. Read runtime state (delayedLeave) from the current branch
+    // without retaining an earlier branch's hooks in this effect.
     renderEffect(() => {
-      appliedHooks = applyTransitionHooksImpl(
+      const appliedHooks = applyTransitionHooksImpl(
         children,
-        appliedHooks,
+        hooks,
         undefined,
         isMounted,
       )
@@ -482,18 +482,10 @@ export function applyTransitionLeaveHooksImpl(
       const leavingNodes = getLeavingNodesForType(state, leavingBlock)
       const leavingKey = String(getTransitionKey(leavingBlock))
       leavingNodes[leavingKey] = leavingBlock
-      // The handoff is copied onto the incoming child's hooks, so settle it
-      // here: it runs at most once and never after an early removal.
-      let settled = false
-      const delayedLeaveCb = () => {
-        if (settled) return
-        settled = true
-        delayedLeave()
-        leavingBlock.$transition = undefined
-      }
+      const delayedLeaveCb = createDelayedLeave(leavingBlock, delayedLeave)
       // early removal callback
       block[leaveCbKey] = () => {
-        settled = true
+        delayedLeaveCb(true)
         earlyRemove()
         block[leaveCbKey] = undefined
         leavingBlock.$transition = undefined
@@ -507,6 +499,25 @@ export function applyTransitionLeaveHooksImpl(
     }
   }
   return true
+}
+
+// Hooks copies share this callback. Keep its captures separate from the
+// branch's hooks and release them when the handoff completes or is cancelled.
+function createDelayedLeave(
+  block: ResolvedTransitionBlock | undefined,
+  leave: (() => void) | undefined,
+): (cancelled?: boolean) => void {
+  return cancelled => {
+    if (!leave) return
+    const cb = leave
+    const leavingBlock = block!
+    // Settle before invoking hooks, which can synchronously trigger another leave.
+    leave = block = undefined
+    if (!cancelled) {
+      cb()
+      leavingBlock.$transition = undefined
+    }
+  }
 }
 
 function deferBranchUpdateDuringLeaveImpl(
