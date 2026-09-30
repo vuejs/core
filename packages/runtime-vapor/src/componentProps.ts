@@ -529,18 +529,22 @@ function trackPropsValue(
   key: string | symbol,
 ): void {
   if (!instance.hasDynamicProps || activeSub === undefined) return
-  const deps = instance.propsDeps || (instance.propsDeps = Object.create(null))
-  trackDep(deps[key] || (deps[key] = new Dep()))
+  const deps = instance.propsDeps || (instance.propsDeps = new Map())
+  let dep = deps.get(key)
+  if (!dep) deps.set(key, (dep = new Dep(deps, key)))
+  trackDep(dep, instance.propsValues, key)
 }
 
 function triggerPropsValue(
   instance: VaporComponentInstance,
   key: string | symbol,
+  newValue?: unknown,
+  oldValue?: unknown,
 ): void {
   const deps = instance.propsDeps
   if (deps) {
-    const dep = deps[key]
-    if (dep) triggerDep(dep)
+    const dep = deps.get(key)
+    if (dep) triggerDep(dep, instance.propsValues, key, newValue, oldValue)
   }
 }
 
@@ -575,15 +579,7 @@ export function initProps(
     const hasGetters = hasDynamicPropsSource(rawProps)
     if (once || (!cells && (isInterop || (!canRebind && !hasGetters)))) {
       instance.hasDynamicProps = !once && isInterop
-      const prevSub = setActiveSub()
-      let rawValues: Record<string, any>
-      try {
-        rawValues = collectProps(rawProps)
-        if (cells) collectSlotSources(cells)
-      } finally {
-        setActiveSub(prevSub)
-      }
-      deliverInputs(instance, rawValues, undefined, cells)
+      deliverInputs(instance, collectInputs(rawProps, cells), cells)
       return
     }
     instance.hasDynamicProps = canRebind || hasGetters
@@ -618,12 +614,7 @@ export function initProps(
       if (effect.active) {
         // a delivery that throws half-way is redone in full
         hasDelivered = false
-        deliverInputs(
-          instance,
-          rawValues || (propsToUpdate && prevRawValues),
-          propsToUpdate,
-          cells,
-        )
+        deliverInputs(instance, rawValues, cells, propsToUpdate)
         hasDelivered = true
       }
     }, true)
@@ -644,19 +635,37 @@ export function initProps(
   }
 }
 
+// Evaluates every input once, untracked.
+export function collectInputs(
+  rawProps: RawProps,
+  cells: SlotSourceCell[] | undefined,
+): Record<string, any> {
+  const prevSub = setActiveSub()
+  try {
+    const rawValues = collectProps(rawProps)
+    if (cells) collectSlotSources(cells)
+    return rawValues
+  } finally {
+    setActiveSub(prevSub)
+  }
+}
+
 // One delivery: sync watchers run once the props and the descriptors are all
 // written, and outside the input effect, which their callbacks must not
 // subscribe.
 export function deliverInputs(
   instance: VaporComponentInstance | undefined,
   rawValues: Record<string, any> | undefined,
-  propsToUpdate?: unknown[],
   cells?: SlotSourceCell[],
+  propsToUpdate?: unknown[],
 ): void {
   const prevSub = setActiveSub()
   startBatch()
   try {
-    if (instance && rawValues) updateProps(instance, rawValues, propsToUpdate)
+    if (instance && (rawValues || propsToUpdate)) {
+      // the fast path patches the delivered frame in place
+      updateProps(instance, rawValues || instance.rawValues, propsToUpdate)
+    }
     if (cells) commitSlotSources(cells)
   } finally {
     try {
@@ -679,6 +688,7 @@ function commitSlotSources(cells: SlotSourceCell[]): void {
   for (let i = 0; i < cells.length; i++) {
     const cell = cells[i]
     const next = stabilizeDynamicSourceValue(cell.committed, cell.next!)
+    cell.next = undefined
     if (hasChanged(next, cell.committed)) {
       cell.committed = next
       triggerDep(cell)
@@ -686,7 +696,7 @@ function commitSlotSources(cells: SlotSourceCell[]): void {
   }
 }
 
-function hasDynamicPropsSource(rawProps: RawProps): boolean {
+export function hasDynamicPropsSource(rawProps: RawProps): boolean {
   if (rawProps.$) return true
   for (const key in rawProps) {
     if (isFunction(rawProps[key])) return true
@@ -775,7 +785,7 @@ function collectPropsToUpdate(
 function updateProps(
   instance: VaporComponentInstance,
   rawValues: Record<string, any>,
-  // the entries to set on the delivered `rawValues`, as [key, value, …]
+  // the entries to set on `rawValues`, the delivered frame, as [key, value, …]
   propsToUpdate?: unknown[],
 ): void {
   const propsValues = instance.propsValues
@@ -867,8 +877,9 @@ function updateProps(
     if (present) {
       for (const key in propsValues) {
         if (!present[key]) {
+          const oldValue = propsValues[key]
           delete propsValues[key]
-          triggerPropsValue(instance, key)
+          triggerPropsValue(instance, key, undefined, oldValue)
           triggerPropsValue(instance, ATTR_KEYS)
         }
       }
@@ -899,9 +910,9 @@ function setPropValue(
   const oldValue = propsValues[key]
   propsValues[key] = value
   if (!hadKey) {
-    triggerPropsValue(instance, key)
+    triggerPropsValue(instance, key, value)
     triggerPropsValue(instance, ATTR_KEYS)
   } else if (hasChanged(value, oldValue)) {
-    triggerPropsValue(instance, key)
+    triggerPropsValue(instance, key, value, oldValue)
   }
 }

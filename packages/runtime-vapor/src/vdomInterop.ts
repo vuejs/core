@@ -122,9 +122,11 @@ import {
 } from '@vue/shared'
 import {
   type RawProps,
+  collectInputs,
   collectProps,
   collectSlotSources,
   deliverInputs,
+  hasDynamicPropsSource,
   rawPropsProxyHandlers,
   snapshotRawProps,
 } from './componentProps'
@@ -1460,30 +1462,24 @@ function createVDOMComponent(
   let propsInstance: VaporComponentInstance | undefined
   let rawValues: Record<string, any> = EMPTY_OBJ
   let isMounted = false
-  // a cache hit can rebind a kept-alive component to other inputs
-  const canRebind = !!inputScope
-  let isStatic = once
-  if (!once) inputScope ||= effectScope(true)
+  let cells: SlotSourceCell[] | undefined
+  const isolated = rawSlots && isolateSlotSources(rawSlots as RawSlots)
+  if (isolated) {
+    rawSlots = isolated[0]
+    cells = isolated[1]
+  }
+  // inputs that can never change are delivered once, as in initProps; a
+  // kept-alive vdom child is not rebound on a cache hit
+  let hasDynamicProps =
+    !once &&
+    (!!cells || hasDynamicPropsSource((rawProps || EMPTY_OBJ) as RawProps))
+  if (hasDynamicProps) inputScope ||= effectScope(true)
   const prevInstance = setCurrentInstance(parentComponent, inputScope)
   let vnode: VNode
   try {
-    let cells: SlotSourceCell[] | undefined
-    if (rawSlots && (rawSlots as RawSlots).$) {
-      const isolated = isolateSlotSources(rawSlots as RawSlots)
-      if (isolated) {
-        rawSlots = isolated[0]
-        cells = isolated[1]
-      }
-    }
-    if (once) {
-      const prevSub = setActiveSub()
-      try {
-        rawValues = collectProps((rawProps || EMPTY_OBJ) as RawProps)
-        if (cells) collectSlotSources(cells)
-      } finally {
-        setActiveSub(prevSub)
-      }
-      if (cells) deliverInputs(undefined, undefined, undefined, cells)
+    if (!hasDynamicProps) {
+      rawValues = collectInputs((rawProps || EMPTY_OBJ) as RawProps, cells)
+      if (cells) deliverInputs(undefined, undefined, cells)
     } else {
       const effect = new RenderEffect(() => {
         const prevInner = setCurrentInstance(parentComponent, inputScope)
@@ -1496,15 +1492,15 @@ function createVDOMComponent(
         } finally {
           restoreCurrentInstance(prevInner)
         }
-        if (effect.active) {
-          deliverInputs(propsInstance, rawValues, undefined, cells)
+        if (effect.active && (propsInstance || cells)) {
+          deliverInputs(propsInstance, rawValues, cells)
         }
       }, true)
       effect.run()
       // every getter and descriptor turned out to be constant
-      if (!effect.deps && !canRebind) {
+      if (!effect.deps) {
         effect.stop()
-        isStatic = true
+        hasDynamicProps = false
       }
     }
     vnode = createVNode(comp, rawValues)
@@ -1577,7 +1573,7 @@ function createVDOMComponent(
     ))
     simpleSetCurrentInstance(prev)
     wrapper.interopVNode = vnode
-    wrapper.hasDynamicProps = !isStatic
+    wrapper.hasDynamicProps = hasDynamicProps
     // The detached input scope follows the rendered component's lifetime.
     instance.scope.run(() => {
       onScopeDispose(() => {

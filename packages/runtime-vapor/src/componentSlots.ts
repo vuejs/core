@@ -134,7 +134,8 @@ export class SlotSourceCell extends Dep {
 export function isolateSlotSources(
   rawSlots: RawSlots,
 ): [RawSlots, SlotSourceCell[]] | undefined {
-  const dynamicSources = rawSlots.$!
+  const dynamicSources = rawSlots.$
+  if (!dynamicSources) return
   let count = 0
   for (let i = 0; i < dynamicSources.length; i++) {
     if (isFunction(dynamicSources[i])) count++
@@ -163,9 +164,7 @@ function isolateSlotSource(cell: SlotSourceCell): DynamicSlotFn {
 }
 
 export function initSlots(instance: VaporComponentInstance): void {
-  const rawSlots = instance.rawSlots
-  if (!rawSlots.$) return
-  const isolated = isolateSlotSources(rawSlots)
+  const isolated = isolateSlotSources(instance.rawSlots)
   if (isolated) {
     instance.rawSlots = isolated[0]
     instance.slotSources = isolated[1]

@@ -890,7 +890,7 @@ export class VaporComponentInstance<
   /**
    * @internal
    */
-  propsDeps: Record<string | symbol, Dep> | undefined
+  propsDeps: Map<string | symbol, Dep> | undefined
   /**
    * @internal
    */

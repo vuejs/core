@@ -2460,11 +2460,11 @@ describe('component: props', () => {
       const Child = compile(
         `<script setup>
           import { useAttrs, watchEffect } from 'vue'
-          const data = _data
           defineOptions({ inheritAttrs: false })
           const attrs = useAttrs()
           watchEffect(() => {
-            data.value.seen = [attrs.toString, attrs.constructor]
+            attrs.toString
+            attrs.constructor
           })
         </script><template><i /></template>`,
         data,
