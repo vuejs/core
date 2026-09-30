@@ -128,28 +128,30 @@ export class SlotSourceCell extends Dep {
 /**
  * A dynamic slot descriptor is the parent's expression, like a prop getter:
  * replace each function source with a reader of the cell the input effect
- * commits it to. `cells` is parallel to the sources; a static source leaves
- * a hole. Slot functions keep their closure semantics.
+ * commits it to. Slot functions keep their closure semantics. Returns the
+ * isolated slots with their cells, or nothing when no source is a function.
  */
 export function isolateSlotSources(
   rawSlots: RawSlots,
-  cells: SlotSourceCell[],
-): RawSlots {
+): [RawSlots, SlotSourceCell[]] | undefined {
   const dynamicSources = rawSlots.$!
-  let isolatedSources: DynamicSlotSource[] | undefined
+  let count = 0
   for (let i = 0; i < dynamicSources.length; i++) {
+    if (isFunction(dynamicSources[i])) count++
+  }
+  if (!count) return
+  const cells: SlotSourceCell[] = new Array(count)
+  const isolatedSources = dynamicSources.slice()
+  for (let i = 0, n = 0; i < dynamicSources.length; i++) {
     const source = dynamicSources[i]
     if (isFunction(source)) {
-      if (!isolatedSources) isolatedSources = dynamicSources.slice()
-      const cell = (cells[i] = new SlotSourceCell(source))
+      const cell = (cells[n++] = new SlotSourceCell(source))
       isolatedSources[i] = isolateSlotSource(cell)
     }
   }
-  if (!isolatedSources) return rawSlots
-
   const isolated = extend({}, rawSlots, { $: isolatedSources }) as RawSlots
   rawSlotsOwnerMap.set(isolated, rawSlotsOwnerMap.get(rawSlots) || null)
-  return isolated
+  return [isolated, cells]
 }
 
 function isolateSlotSource(cell: SlotSourceCell): DynamicSlotFn {
@@ -162,14 +164,12 @@ function isolateSlotSource(cell: SlotSourceCell): DynamicSlotFn {
 
 export function initSlots(instance: VaporComponentInstance): void {
   const rawSlots = instance.rawSlots
-  const dynamicSources = rawSlots.$
-  if (!dynamicSources) return
-  const cells: SlotSourceCell[] = new Array(dynamicSources.length)
-  const isolated = isolateSlotSources(rawSlots, cells)
-  if (isolated !== rawSlots) {
-    instance.slotSources = cells
-    instance.rawSlots = isolated
-    instance.slots = new Proxy(isolated, dynamicSlotsProxyHandlers)
+  if (!rawSlots.$) return
+  const isolated = isolateSlotSources(rawSlots)
+  if (isolated) {
+    instance.rawSlots = isolated[0]
+    instance.slotSources = isolated[1]
+    instance.slots = new Proxy(isolated[0], dynamicSlotsProxyHandlers)
   }
 }
 

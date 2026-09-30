@@ -127,7 +127,6 @@ import {
   deliverInputs,
   rawPropsProxyHandlers,
   snapshotRawProps,
-  updateProps,
 } from './componentProps'
 import type { RawSlots, SlotSourceCell, VaporSlot } from './componentSlots'
 import {
@@ -1461,6 +1460,9 @@ function createVDOMComponent(
   let propsInstance: VaporComponentInstance | undefined
   let rawValues: Record<string, any> = EMPTY_OBJ
   let isMounted = false
+  // a cache hit can rebind a kept-alive component to other inputs
+  const canRebind = !!inputScope
+  let isStatic = once
   if (!once) inputScope ||= effectScope(true)
   const prevInstance = setCurrentInstance(parentComponent, inputScope)
   let vnode: VNode
@@ -1473,11 +1475,13 @@ function createVDOMComponent(
         setActiveSub(prevSub)
       }
     } else {
-      const dynamicSlotSources = rawSlots && (rawSlots as RawSlots).$
       let cells: SlotSourceCell[] | undefined
-      if (dynamicSlotSources) {
-        cells = new Array(dynamicSlotSources.length)
-        rawSlots = isolateSlotSources(rawSlots as RawSlots, cells)
+      if (rawSlots && (rawSlots as RawSlots).$) {
+        const isolated = isolateSlotSources(rawSlots as RawSlots)
+        if (isolated) {
+          rawSlots = isolated[0]
+          cells = isolated[1]
+        }
       }
       const effect = new RenderEffect(() => {
         const prevInner = setCurrentInstance(parentComponent, inputScope)
@@ -1495,6 +1499,11 @@ function createVDOMComponent(
         }
       }, true)
       effect.run()
+      // every getter and descriptor turned out to be constant
+      if (!effect.deps && !canRebind) {
+        effect.stop()
+        isStatic = true
+      }
     }
     vnode = createVNode(comp, rawValues)
   } catch (error) {
@@ -1567,6 +1576,7 @@ function createVDOMComponent(
     ))
     simpleSetCurrentInstance(prev)
     wrapper.interopVNode = vnode
+    wrapper.hasDynamicProps = !isStatic
     // The detached input scope follows the rendered component's lifetime.
     instance.scope.run(() => {
       onScopeDispose(() => {
@@ -1575,7 +1585,7 @@ function createVDOMComponent(
       })
     })
     try {
-      updateProps(wrapper, rawValues)
+      deliverInputs(wrapper, rawValues)
     } catch (error) {
       if (inputScope) inputScope.stop()
       wrapper.scope.stop()
@@ -3721,7 +3731,7 @@ function updateInteropVNode(
 ): void {
   state.pendingVNodeUpdate = vnode
   instance.rawPropsRef!.value = filterReservedProps(vnode.props)
-  updateProps(instance, vnode.props || EMPTY_OBJ)
+  deliverInputs(instance, vnode.props || EMPTY_OBJ)
   instance.rawSlotsRef!.value = normalizeInteropSlots(vnode.children)
   // align with VDOM: vnode beforeUpdate runs before directive beforeUpdate.
   invokeInteropVNodeBeforeUpdate(instance, vnode, prevVNode)

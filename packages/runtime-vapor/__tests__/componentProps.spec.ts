@@ -2453,6 +2453,34 @@ describe('component: props', () => {
       app.unmount()
     })
 
+    // reading `attrs.toString` goes through the proxy: such a key must not
+    // resolve to an inherited member of the dep table
+    test('an inherited key is not a dep', () => {
+      const data = ref<any>({ n: 0 })
+      const Child = compile(
+        `<script setup>
+          import { useAttrs, watchEffect } from 'vue'
+          const data = _data
+          defineOptions({ inheritAttrs: false })
+          const attrs = useAttrs()
+          watchEffect(() => {
+            data.value.seen = [attrs.toString, attrs.constructor]
+          })
+        </script><template><i /></template>`,
+        data,
+      )
+      const { app } = define(
+        compile(
+          `<template><components.Child :title="data.n" /></template>`,
+          data,
+          { Child },
+        ),
+      ).render()
+      expect(Object.prototype.toString).not.toHaveProperty('subs')
+      expect(Object).not.toHaveProperty('subs')
+      app.unmount()
+    })
+
     // the host's update job unmounts the child before its inputs can run
     test('inputs run after the vdom host that guards them', async () => {
       const data = ref<any>({ user: { name: 'n' } })
