@@ -612,6 +612,36 @@ export function render(_ctx) {
 }"
 `;
 
+exports[`compiler: expression > cache expressions > should keep a handler lazy when a binding repeats its expression 1`] = `
+"import { setDynamicProps as _setDynamicProps, renderEffect as _renderEffect, template as _template } from 'vue';
+const t0 = _template("<div>", 1)
+const k0 = ["title","id"]
+
+export function render(_ctx) {
+  const n0 = t0()
+  _renderEffect(() => {
+    const _hit = _ctx.hit
+    const _hit_click = _hit('click')
+    _setDynamicProps(n0, [_ctx.attrs, { title: _hit_click, id: _hit_click, onClick: () => (_hit('click')) }], k0)
+  })
+  return n0
+}"
+`;
+
+exports[`compiler: expression > cache expressions > should keep repeated inline handlers lazy with dynamic props 1`] = `
+"import { setDynamicProps as _setDynamicProps, renderEffect as _renderEffect, template as _template } from 'vue';
+const t0 = _template("<div>", 1)
+
+export function render(_ctx) {
+  const n0 = t0()
+  _renderEffect(() => {
+    const _hit = _ctx.hit
+    _setDynamicProps(n0, [_ctx.attrs, { onClick: () => (_hit('click')), onFocus: () => (_hit('click')) }])
+  })
+  return n0
+}"
+`;
+
 exports[`compiler: expression > cache expressions > should not cache Date.now() call expressions 1`] = `
 "import { setProp as _setProp, renderEffect as _renderEffect, template as _template } from 'vue';
 const t0 = _template("<div>")
@@ -720,6 +750,34 @@ export function render(_ctx) {
     _setText(x1, _toDisplayString(String(_foo.id++)) + " " + _toDisplayString(_foo) + " " + _toDisplayString(_ctx.bar))
   })
   return n1
+}"
+`;
+
+exports[`compiler: expression > cache expressions > should not read $event outside a repeated inline handler 1`] = `
+"import { setDynamicProps as _setDynamicProps, renderEffect as _renderEffect, template as _template } from 'vue';
+const t0 = _template("<div>", 1)
+
+export function render(_ctx) {
+  const n0 = t0()
+  _renderEffect(() => _setDynamicProps(n0, [_ctx.attrs, { onClick: $event => (_ctx.hit($event)), onFocus: $event => (_ctx.hit($event)) }]))
+  return n0
+}"
+`;
+
+exports[`compiler: expression > cache expressions > should read a hoisted argument in a handler that only contains a repeated binding 1`] = `
+"import { setDynamicProps as _setDynamicProps, renderEffect as _renderEffect, template as _template } from 'vue';
+const t0 = _template("<div>", 1)
+const k0 = ["title","id"]
+
+export function render(_ctx) {
+  const n0 = t0()
+  _renderEffect(() => {
+    const _label = _ctx.label
+    const _key = _ctx.key
+    const _label_key = _label(_key)
+    _setDynamicProps(n0, [_ctx.attrs, { title: _label_key, id: _label_key, onClick: () => (_ctx.go(_label_key)) }], k0)
+  })
+  return n0
 }"
 `;
 

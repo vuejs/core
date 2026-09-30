@@ -354,6 +354,7 @@ export function processExpressions(
   context: CodegenContext,
   expressions: SimpleExpressionNode[],
   shouldDeclare: boolean,
+  handlerExpressions?: Set<SimpleExpressionNode>,
 ): ProcessedExpressionResult {
   const expressionReplacements = new Map<
     SimpleExpressionNode,
@@ -394,6 +395,7 @@ export function processExpressions(
     expressionRecords,
     reservedNames,
     expressionReplacements,
+    handlerExpressions,
   )
 
   return {
@@ -770,11 +772,15 @@ function processRepeatedExpressions(
   expressionRecords: Map<SimpleExpressionNode, ExpressionRecord>,
   reservedNames: Set<string>,
   expressionReplacements: Map<SimpleExpressionNode, SimpleExpressionNode>,
+  handlerExpressions?: Set<SimpleExpressionNode>,
 ): DeclarationValue[] {
   const declarations: DeclarationValue[] = []
   const seenExp = new Map<string, SeenExpression>()
 
   for (const exp of expressions) {
+    // a handler body runs on the event, not on render, so it is never cached
+    // as a whole; repeated bindings inside it are still replaced below
+    if (handlerExpressions && handlerExpressions.has(exp)) continue
     const vars = expressionRecords.get(exp)?.variables
     if (!vars) continue
 
@@ -847,6 +853,7 @@ function processRepeatedExpressions(
         const processed = getProcessedExpression(exp, expressionReplacements)
         // foo + baz -> foo_baz
         if (processed.content === content) {
+          if (handlerExpressions && handlerExpressions.has(exp)) continue
           setExpressionReplacement(expressionReplacements, exp, varName, null)
         }
         // (foo + baz) * qux -> (foo_baz) * qux

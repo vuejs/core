@@ -4,12 +4,18 @@ import {
   transformElement,
   transformText,
   transformVBind,
+  transformVOn,
 } from '../../src'
 import { makeCompile } from './_utils'
 
 const compileWithExpression = makeCompile({
   nodeTransforms: [transformElement, transformChildren, transformText],
   directiveTransforms: { bind: transformVBind },
+})
+
+const compileWithListeners = makeCompile({
+  nodeTransforms: [transformElement, transformChildren, transformText],
+  directiveTransforms: { bind: transformVBind, on: transformVOn },
 })
 
 describe('compiler: expression', () => {
@@ -811,6 +817,44 @@ describe('compiler: expression', () => {
       expect(code).contains('const _x_y = _x.y')
       expect(code).contains('_setProp(n0, "id", _x_y)')
       expect(code).contains('_setProp(n1, "title", _ctx.ok ? _x_y : 0)')
+    })
+
+    test('should keep repeated inline handlers lazy with dynamic props', () => {
+      const { code } = compileWithListeners(
+        `<div v-bind="attrs" @click="hit('click')" @focus="hit('click')"></div>`,
+      )
+      expect(code).matchSnapshot()
+      expect(code).not.contains('const _hit_click')
+      expect(code).contains("onClick: () => (_hit('click'))")
+      expect(code).contains("onFocus: () => (_hit('click'))")
+    })
+
+    test('should not read $event outside a repeated inline handler', () => {
+      const { code } = compileWithListeners(
+        `<div v-bind="attrs" @click="hit($event)" @focus="hit($event)"></div>`,
+      )
+      expect(code).matchSnapshot()
+      expect(code).not.contains('const _hit_event')
+      expect(code).contains('onClick: $event => (_ctx.hit($event))')
+    })
+
+    test('should keep a handler lazy when a binding repeats its expression', () => {
+      const { code } = compileWithListeners(
+        `<div v-bind="attrs" :title="hit('click')" :id="hit('click')" @click="hit('click')"></div>`,
+      )
+      expect(code).matchSnapshot()
+      expect(code).contains("const _hit_click = _hit('click')")
+      expect(code).contains('title: _hit_click, id: _hit_click')
+      expect(code).contains("onClick: () => (_hit('click'))")
+    })
+
+    test('should read a hoisted argument in a handler that only contains a repeated binding', () => {
+      const { code } = compileWithListeners(
+        `<div v-bind="attrs" :title="label(key)" :id="label(key)" @click="go(label(key))"></div>`,
+      )
+      expect(code).matchSnapshot()
+      expect(code).contains('const _label_key = _label(_key)')
+      expect(code).contains('onClick: () => (_ctx.go(_label_key))')
     })
   })
 })

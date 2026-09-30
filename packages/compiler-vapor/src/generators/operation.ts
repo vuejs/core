@@ -5,6 +5,7 @@ import {
   type OperationNode,
   isBlockOperation,
 } from '../ir'
+import type { SimpleExpressionNode } from '@vue/compiler-dom'
 import type { CodegenContext } from '../generate'
 import { genInsertNode } from './dom'
 import { genSetDynamicEvents, genSetEvent } from './event'
@@ -115,6 +116,27 @@ export function genEffects(
   return frag
 }
 
+// listener values of dynamic props: they are evaluated when the event fires
+function collectHandlerExpressions(
+  effects: IREffect[],
+): Set<SimpleExpressionNode> {
+  const handlers = new Set<SimpleExpressionNode>()
+  for (const { operations } of effects) {
+    for (const op of operations) {
+      if (op.type !== IRNodeTypes.SET_DYNAMIC_PROPS) continue
+      for (const props of op.props) {
+        const list = Array.isArray(props) ? props : [props]
+        for (const prop of list) {
+          if ('values' in prop && prop.handler) {
+            for (const value of prop.values) handlers.add(value)
+          }
+        }
+      }
+    }
+  }
+  return handlers
+}
+
 function genReactiveEffects(
   effects: IREffect[],
   context: CodegenContext,
@@ -130,7 +152,12 @@ function genReactiveEffects(
     frag: declarationFrags,
     varNames,
     expressionReplacements,
-  } = processExpressions(context, expressions, shouldDeclare)
+  } = processExpressions(
+    context,
+    expressions,
+    shouldDeclare,
+    collectHandlerExpressions(effects),
+  )
   if (shouldDeclare && !declarationFrags.length && !varNames.length) {
     const effect = effects.length === 1 ? effects[0] : undefined
     const operation =
