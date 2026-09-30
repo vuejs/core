@@ -75,6 +75,16 @@ describe('compiler: v-memo transform', () => {
     ).toMatchSnapshot()
   })
 
+  test('on v-for w/ conditional key expression', () => {
+    const code = compile(
+      `<div v-for="{ x, y } in list" :key="x ? x : y" v-memo="[x, y === z]">
+        <span>foobar</span>
+      </div>`,
+    )
+
+    expect(code).toContain(`_cached.key === (x ? x : y)`)
+  })
+
   test('on template v-for', () => {
     expect(
       compile(
