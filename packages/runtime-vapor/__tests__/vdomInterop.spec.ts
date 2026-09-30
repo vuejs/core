@@ -688,6 +688,47 @@ describe('vdomInterop', () => {
       expect(html()).toBe('<h1>bar</h1><input>')
     })
 
+    test('unbound model should keep its local value when the vdom parent re-renders', async () => {
+      let setFromChild: () => void
+      const VaporChild = defineVaporComponent({
+        props: {
+          text: { default: '' },
+          textModifiers: {},
+          n: {},
+        },
+        emits: ['update:text'],
+        setup(__props) {
+          const text = useModel(__props, 'text')
+          setFromChild = () => (text.value = 'set by child')
+
+          const n0 = template('<h1> </h1>')() as any
+          const x0 = child(n0) as any
+          renderEffect(() =>
+            setText(x0, toDisplayString(text.value) + '|' + __props.n),
+          )
+          return n0
+        },
+      })
+
+      const n = ref(0)
+      const { html } = define({
+        setup() {
+          // the parent never binds `v-model:text`, it only passes `n`
+          return () => h(VaporChild as any, { n: n.value })
+        },
+      }).render()
+
+      expect(html()).toBe('<h1>|0</h1>')
+
+      setFromChild!()
+      await nextTick()
+      expect(html()).toBe('<h1>set by child|0</h1>')
+
+      n.value++
+      await nextTick()
+      expect(html()).toBe('<h1>set by child|1</h1>')
+    })
+
     test('slot v-model should persist when switching vapor/vdom child', async () => {
       const VaporComp1 = defineVaporComponent({
         name: 'VaporComp1',

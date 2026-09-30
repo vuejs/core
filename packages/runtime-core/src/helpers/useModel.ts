@@ -49,14 +49,22 @@ export function useModel(
 
   const res = customRef((track, trigger) => {
     let localValue: any
+    let prevPropValue: any = EMPTY_OBJ
     let prevSetValue: any = EMPTY_OBJ
     let prevEmittedValue: any
 
     watchSyncEffect(() => {
       const propValue = props[camelizedName]
-      if (hasChanged(localValue, propValue)) {
-        localValue = propValue
-        trigger()
+      // #15670: vapor resolves dynamic prop sources (`v-bind="obj"`, vdom
+      // interop) as a whole, so this effect can re-run when an unrelated prop
+      // changes. Only resync from the prop when the prop itself changed, or an
+      // uncontrolled model would be reset to its default on parent updates.
+      if (hasChanged(prevPropValue, propValue)) {
+        prevPropValue = propValue
+        if (hasChanged(localValue, propValue)) {
+          localValue = propValue
+          trigger()
+        }
       }
     })
 
