@@ -225,7 +225,7 @@ export const transformFor: NodeTransform = createStructuralDirectiveTransform(
             createCompoundExpression([`const _memo = (`, memo.exp!, `)`]),
             createCompoundExpression([
               `if (_cached && _cached.el`,
-              ...(keyExp ? [` && _cached.key === `, keyExp] : []),
+              ...(keyExp ? [` && _cached.key === (`, keyExp, `)`] : []),
               ` && ${context.helperString(
                 IS_MEMO_SAME,
               )}(_cached, _memo)) return _cached`,
