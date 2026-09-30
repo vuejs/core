@@ -1802,6 +1802,46 @@ describe('Vapor Mode hydration', () => {
       }
     })
 
+    test('slot content with an empty template branch', async () => {
+      const data = reactive({ serie: '', count: 0 })
+      const { container, html } = await testHydration(
+        `<template>
+          <div>
+            <components.Child>
+              <template #subtitle>
+                <template v-if="data.serie">{{ data.serie }}</template>
+                <template v-else-if="data.count">{{ data.count }} books</template>
+                <template v-else />
+              </template>
+            </components.Child>
+            <span>after</span>
+          </div>
+        </template>`,
+        {
+          Child: `<template><p><slot name="subtitle" /></p><i>i</i></template>`,
+        },
+        data,
+      )
+      expect(html).toContain('<p><!--[--><!--]--></p>')
+      expect(container.textContent).toBe('iafter')
+
+      data.count = 2
+      await nextTick()
+      expect(container.textContent).toBe('2 booksiafter')
+
+      data.count = 0
+      await nextTick()
+      expect(container.textContent).toBe('iafter')
+
+      data.serie = 'series'
+      await nextTick()
+      expect(container.textContent).toBe('seriesiafter')
+
+      data.serie = ''
+      await nextTick()
+      expect(container.textContent).toBe('iafter')
+    })
+
     // `<!--(-->`…`<!--)-->` wraps a slot fallback the server rendered: the
     // markup is written by hand.
     describe('slot fallback range', () => {
