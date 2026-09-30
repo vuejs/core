@@ -346,7 +346,7 @@ function planFromBlockBoundary(frag: DynamicFragment): AnchorPlan {
   // Covers: dynamic component, async component, keyed fragment, and any
   // fragment whose SSR range was stripped.
   const end = currentSlotEndAnchor
-  if (!isValidBlock(frag.nodes) && end && currentHydrationNode === end) {
+  if (end && currentHydrationNode === end && !isValidBlock(frag.nodes)) {
     // a branch rendering nothing, e.g. `<template v-else />`, as the whole
     // slot content the server dropped: it goes before the slot's close
     return { kind: 'create', parent: end.parentNode!, next: end }

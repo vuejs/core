@@ -1804,7 +1804,7 @@ describe('Vapor Mode hydration', () => {
 
     test('slot content with an empty template branch', async () => {
       const data = reactive({ serie: '', count: 0 })
-      const { container } = await testHydration(
+      const { container, html } = await testHydration(
         `<template>
           <div>
             <components.Child>
@@ -1822,6 +1822,7 @@ describe('Vapor Mode hydration', () => {
         },
         data,
       )
+      expect(html).toContain('<p><!--[--><!--]--></p>')
       expect(container.textContent).toBe('iafter')
 
       data.count = 2
@@ -1829,6 +1830,14 @@ describe('Vapor Mode hydration', () => {
       expect(container.textContent).toBe('2 booksiafter')
 
       data.count = 0
+      await nextTick()
+      expect(container.textContent).toBe('iafter')
+
+      data.serie = 'series'
+      await nextTick()
+      expect(container.textContent).toBe('seriesiafter')
+
+      data.serie = ''
       await nextTick()
       expect(container.textContent).toBe('iafter')
     })
