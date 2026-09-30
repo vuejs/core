@@ -3736,8 +3736,11 @@ function updateInteropVNode(
     deliverInputs(instance, rawProps)
     instance.rawSlotsRef!.value = normalizeInteropSlots(vnode.children)
   } finally {
-    endBatch()
-    setActiveSub(prevSub)
+    try {
+      endBatch()
+    } finally {
+      setActiveSub(prevSub)
+    }
   }
   // align with VDOM: vnode beforeUpdate runs before directive beforeUpdate.
   invokeInteropVNodeBeforeUpdate(instance, vnode, prevVNode)

@@ -8192,6 +8192,47 @@ describe('component: slots', () => {
       app.unmount()
     })
 
+    // the delivery runs inside the vdom parent's update: a throwing sync
+    // watcher must not leave the tracking context unrestored
+    test('a throwing sync watcher in a vapor child of a vdom parent', async () => {
+      const data = ref<any>({ n: 0 })
+      const components: Record<string, any> = {}
+      components.Child = compile(
+        `<script setup>
+          import { watch } from 'vue'
+          const props = defineProps({ n: Number })
+          watch(
+            () => props.n,
+            () => {
+              throw new Error('boom')
+            },
+            { flush: 'sync' },
+          )
+        </script><template><i>{{ n }}</i></template>`,
+        data,
+        components,
+      )
+      const App = compile(
+        `<script setup>const data = _data; const components = _components;</script>
+        <template><components.Child :n="data.n" /></template>`,
+        data,
+        components,
+        { vapor: false },
+      )
+      const root = document.createElement('div')
+      const app = createApp(App)
+      app.use(vaporInteropPlugin).mount(root)
+      data.value.n = 1
+      await expect(nextTick()).rejects.toThrow('boom')
+      expect(
+        'Unhandled error during execution of watcher callback',
+      ).toHaveBeenWarned()
+      expect(
+        'Unhandled error during execution of component update',
+      ).toHaveBeenWarned()
+      app.unmount()
+    })
+
     // props are evaluated before the descriptors, as in vdom: one read, and
     // none after the creation was aborted
     test.each([
