@@ -13,6 +13,7 @@ import {
   formatHtml,
   formatNodeList,
   setupHydrationTest,
+  testHydration,
   testWithVDOMApp,
   testWithVaporApp,
 } from './_helpers'
@@ -942,5 +943,57 @@ describe('VDOM interop', () => {
     expect(html).toBe('<i>parent</i>')
     expect(container.innerHTML).toBe(html)
     expect('Hydration text content mismatch').not.toHaveBeenWarned()
+  })
+
+  test('hydrate vapor component root with css variables in style', async () => {
+    const data = ref('red')
+    const { container } = await testWithVDOMApp(
+      `<script setup>const data = _data; const components = _components;</script>
+      <template>
+        <components.VaporChild :style="{ '--color': data }" />
+      </template>`,
+      {
+        VaporChild: {
+          code: `<template><div :style="{ '--size': '1px' }">child</div></template>`,
+          vapor: true,
+        },
+      },
+      data,
+    )
+    await nextTick()
+    const el = container.firstElementChild as HTMLElement
+    expect(el.style.getPropertyValue('--size')).toBe('1px')
+    expect(el.style.getPropertyValue('--color')).toBe('red')
+
+    data.value = 'blue'
+    await nextTick()
+    expect(el.style.getPropertyValue('--color')).toBe('blue')
+  })
+
+  test('hydrate vapor component root with css vars of vdom parent', async () => {
+    const code = `<script setup>const data = _data; const components = _components;</script>
+      <template><components.VaporChild /></template>
+      <style>.a { color: v-bind(data) }</style>`
+    const components = {
+      VaporChild: {
+        code: `<script setup>import { ref } from 'vue'; const p = ref('4px')</script>
+          <template><div :style="{ padding: p }">child</div></template>`,
+        vapor: true,
+      },
+    }
+    const { container } = await testHydration(code, components, ref('red'), {
+      isVaporApp: false,
+      interop: true,
+    })
+    expect(container.innerHTML).toContain(':red;')
+    expect(`Hydration style mismatch`).not.toHaveBeenWarned()
+
+    // the vdom parent's css var differs between server and client
+    await testHydration(code, components, ref('red'), {
+      isVaporApp: false,
+      interop: true,
+      serverData: ref('blue'),
+    })
+    expect(`Hydration style mismatch`).toHaveBeenWarned()
   })
 })

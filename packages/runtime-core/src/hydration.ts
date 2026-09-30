@@ -1106,11 +1106,11 @@ export function isMapEqual(
   return true
 }
 
-function resolveCssVars(
+export function resolveCssVars(
   instance: ComponentInternalInstance,
   vnode: VNode,
   expectedMap: Map<string, string>,
-) {
+): void {
   const root = instance.subTree
   if (
     instance.getCssVars &&
