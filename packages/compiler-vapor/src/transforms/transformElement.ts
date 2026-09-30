@@ -568,8 +568,16 @@ function transformNativeElement(
           key.content === 'valueAsNumber' && modifier !== '^',
       )
     const nativeOnProps: IRProp[] = []
+    // like vdom, set value after the other props since it can depend on
+    // them, e.g. min/max of a range input (#2325, #4024)
+    let props = propsResult[1]
+    const valueProp = props.find(
+      ({ key, modifier }) =>
+        key.isStatic && key.content === 'value' && !modifier,
+    )
+    if (valueProp) props = [...props.filter(p => p !== valueProp), valueProp]
     let hasEffect = false
-    for (const prop of propsResult[1]) {
+    for (const prop of props) {
       const { key, values } = prop
       const canStringifyAttrName =
         key.isStatic && !UNSAFE_ATTR_NAME_RE.test(key.content)
@@ -655,7 +663,8 @@ function transformNativeElement(
             isSVG,
           },
           getEffectIndex,
-          needsOrderedProps && hasEffect,
+          (needsOrderedProps || (tag === 'input' && prop === valueProp)) &&
+            hasEffect,
         )
       }
     }

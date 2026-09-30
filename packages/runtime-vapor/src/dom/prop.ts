@@ -626,7 +626,12 @@ export function patchDynamicProps(
   }
 
   const hydratedKeys = isHydrating ? staticKeys : undefined
-  for (const key of Object.keys(props)) {
+  const keys = Object.keys(props)
+  // like vdom, set value after the other props since it can depend on them,
+  // e.g. min/max of a range input (#2325, #4024)
+  const valueIndex = keys.indexOf('value')
+  if (valueIndex > -1) keys.push(keys.splice(valueIndex, 1)[0])
+  for (const key of keys) {
     if (isReservedProp(key)) continue
     const value = props[key]
     nextProps[key] = value

@@ -515,4 +515,22 @@ describe('DOM prop initialization order', () => {
       },
     )
   })
+
+  test.each([
+    `<input type="range" :value="data.value" :max="data.max">`,
+    `<input type="range" :max="data.max" :value="500">`,
+    `<input type="range" v-bind="data">`,
+    `<components.Child :value="data.value" :max="data.max"/>`,
+  ])('sets value after max: %s', async tpl => {
+    await renderParity(
+      {
+        App: `<template>${tpl}</template>`,
+        Child: `<template><input type="range"></template>`,
+      },
+      () => ref({ value: 500, max: 1000 }),
+      (_data, root) => {
+        expect(root.querySelector('input')!.value).toBe('500')
+      },
+    )
+  })
 })
