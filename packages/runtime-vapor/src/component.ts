@@ -95,7 +95,6 @@ import {
   normalizePropsOptions,
   resolveDynamicProps,
   resolveSource,
-  snapshotRawProps,
 } from './componentProps'
 import { type RenderEffect, renderEffect } from './renderEffect'
 import { emit, normalizeEmitsOptions } from './componentEmits'
@@ -109,7 +108,6 @@ import {
   getSlot,
   initSlots,
   normalizeRawSlots,
-  snapshotRawSlots,
 } from './componentSlots'
 import {
   currentRenderContext,
@@ -507,7 +505,6 @@ export function createComponent(
       rawProps as RawProps,
       rawSlots,
       appContext,
-      once,
       ce,
     )
     if (key !== undefined) instance.$key = key
@@ -1030,7 +1027,6 @@ export class VaporComponentInstance<
     rawProps?: RawProps | null,
     rawSlots?: LooseRawSlots | null,
     appContext?: GenericAppContext,
-    once?: boolean,
     ce?: (instance: VaporComponentInstance) => void,
   ) {
     this.vapor = true
@@ -1080,10 +1076,7 @@ export class VaporComponentInstance<
     this.rawValues = INITIAL_RAW_VALUES
     this.propsDeps = undefined
     this.hasDynamicProps = true
-    // Snapshot raw parent inputs before creating proxies so delayed reads from
-    // v-once children cannot observe later parent updates.
-    this.rawProps =
-      once && rawProps ? snapshotRawProps(rawProps) : rawProps || EMPTY_OBJ
+    this.rawProps = rawProps || EMPTY_OBJ
     // a custom element host mutates its props object after creation, so its
     // attrs key set is never static
     this.hasFallthrough = !!ce || hasFallthroughAttrs(comp, this.rawProps)
@@ -1098,10 +1091,7 @@ export class VaporComponentInstance<
     ) as Props
 
     // init slots
-    let normalizedRawSlots = normalizeRawSlots(rawSlots)
-    if (once && normalizedRawSlots) {
-      normalizedRawSlots = snapshotRawSlots(normalizedRawSlots)
-    }
+    const normalizedRawSlots = normalizeRawSlots(rawSlots)
     this.rawSlots = normalizedRawSlots || EMPTY_OBJ
     this.slots = (
       normalizedRawSlots

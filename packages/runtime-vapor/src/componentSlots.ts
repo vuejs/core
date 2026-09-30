@@ -173,37 +173,6 @@ export function initSlots(instance: VaporComponentInstance): void {
   }
 }
 
-/**
- * Freeze the slot set of a v-once component: dynamic sources resolve once,
- * in `resolveSlot` precedence, into plain entries. The slot functions stay
- * live; the child re-runs them on its own updates.
- */
-export function snapshotRawSlots(rawSlots: RawSlots): RawSlots {
-  const dynamicSources = rawSlots.$
-  if (!dynamicSources) return rawSlots
-  const snapshot: RawSlots = {}
-  for (const key in rawSlots) {
-    if (key !== '$') snapshot[key] = rawSlots[key]
-  }
-  for (const source of dynamicSources) {
-    if (isFunction(source)) {
-      const slot = withSlotOwner(rawSlots, () => source())
-      if (isArray(slot)) {
-        for (const s of slot) snapshot[String(s.name)] = s.fn
-      } else if (slot) {
-        snapshot[String(slot.name)] = slot.fn
-      }
-    } else {
-      for (const key in source) snapshot[key] = source[key]
-    }
-  }
-  for (const symbol of Object.getOwnPropertySymbols(rawSlots)) {
-    ;(snapshot as any)[symbol] = (rawSlots as any)[symbol]
-  }
-  rawSlotsOwnerMap.set(snapshot, rawSlotsOwnerMap.get(rawSlots) || null)
-  return snapshot
-}
-
 function withSlotOwner<T>(slots: RawSlots, fn: () => T): T {
   const owner = rawSlotsOwnerMap.get(slots)
   if (owner === undefined) {

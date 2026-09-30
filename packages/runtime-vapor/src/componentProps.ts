@@ -579,10 +579,11 @@ export function initProps(
       let rawValues: Record<string, any>
       try {
         rawValues = collectProps(rawProps)
+        if (cells) collectSlotSources(cells)
       } finally {
         setActiveSub(prevSub)
       }
-      deliverInputs(instance, rawValues)
+      deliverInputs(instance, rawValues, undefined, cells)
       return
     }
     instance.hasDynamicProps = canRebind || hasGetters

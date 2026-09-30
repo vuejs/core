@@ -1467,22 +1467,24 @@ function createVDOMComponent(
   const prevInstance = setCurrentInstance(parentComponent, inputScope)
   let vnode: VNode
   try {
+    let cells: SlotSourceCell[] | undefined
+    if (rawSlots && (rawSlots as RawSlots).$) {
+      const isolated = isolateSlotSources(rawSlots as RawSlots)
+      if (isolated) {
+        rawSlots = isolated[0]
+        cells = isolated[1]
+      }
+    }
     if (once) {
       const prevSub = setActiveSub()
       try {
         rawValues = collectProps((rawProps || EMPTY_OBJ) as RawProps)
+        if (cells) collectSlotSources(cells)
       } finally {
         setActiveSub(prevSub)
       }
+      if (cells) deliverInputs(undefined, undefined, undefined, cells)
     } else {
-      let cells: SlotSourceCell[] | undefined
-      if (rawSlots && (rawSlots as RawSlots).$) {
-        const isolated = isolateSlotSources(rawSlots as RawSlots)
-        if (isolated) {
-          rawSlots = isolated[0]
-          cells = isolated[1]
-        }
-      }
       const effect = new RenderEffect(() => {
         const prevInner = setCurrentInstance(parentComponent, inputScope)
         try {
@@ -1572,7 +1574,6 @@ function createVDOMComponent(
       undefined,
       rawSlots as RawSlots,
       parentComponent ? parentComponent.appContext : undefined,
-      once,
     ))
     simpleSetCurrentInstance(prev)
     wrapper.interopVNode = vnode
