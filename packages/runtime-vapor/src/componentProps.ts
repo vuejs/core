@@ -32,19 +32,17 @@ import {
   warn,
 } from '@vue/runtime-dom'
 import {
+  Dep,
   EffectFlags,
-  ITERATE_KEY,
   ReactiveFlags,
-  TrackOpTypes,
-  TriggerOpTypes,
   computed,
   endBatch,
   getCurrentScope,
   onScopeDispose,
   setActiveSub,
   startBatch,
-  track,
-  trigger,
+  trackDep,
+  triggerDep,
 } from '@vue/reactivity'
 import { normalizeEmitsOptions } from './componentEmits'
 import { RenderEffect } from './renderEffect'
@@ -235,7 +233,7 @@ export function getPropsProxyHandlers(
     if (key === ReactiveFlags.IS_REACTIVE || key === ReactiveFlags.IS_SHALLOW)
       return true
     if (isProp(key)) {
-      trackPropsValue(instance, TrackOpTypes.GET, key)
+      trackPropsValue(instance, key)
       return instance.propsValues[key]
     }
   }
@@ -266,20 +264,20 @@ export function getPropsProxyHandlers(
 
   const getAttr = (instance: VaporComponentInstance, key: string | symbol) => {
     if (isAttr(key)) {
-      trackPropsValue(instance, TrackOpTypes.GET, key)
+      trackPropsValue(instance, key)
       return instance.propsValues[key]
     }
   }
   const hasAttr = (instance: VaporComponentInstance, key: string | symbol) => {
     if (!isAttr(key)) return false
-    trackPropsValue(instance, TrackOpTypes.HAS, key)
+    trackPropsValue(instance, key)
     return hasOwn(instance.propsValues, key)
   }
   const attrsHandlers = {
     get: getAttr,
     has: hasAttr,
     ownKeys(target) {
-      trackPropsValue(target, TrackOpTypes.ITERATE, ITERATE_KEY)
+      trackPropsValue(target, ATTR_KEYS)
       return Object.keys(target.propsValues).filter(isAttr)
     },
     getOwnPropertyDescriptor(target, key: string | symbol) {
@@ -518,16 +516,31 @@ export const rawPropsProxyHandlers: ProxyHandler<RawProps> = {
 }
 
 const RAW_VALUES_KEY: unique symbol = Symbol(__DEV__ ? 'Raw values' : '')
+const ATTR_KEYS: unique symbol = Symbol(__DEV__ ? 'Attr keys' : '')
 
 // `rawValues` before the first delivery
 export const INITIAL_RAW_VALUES: Record<string, any> = {}
 
+// One dep per key, on the instance rather than in `targetMap`. A plain
+// object stays in fast mode; only `__proto__` could not be a key of it.
 function trackPropsValue(
   instance: VaporComponentInstance,
-  type: TrackOpTypes,
-  key: unknown,
+  key: string | symbol,
 ): void {
-  if (instance.hasDynamicProps) track(instance.propsValues, type, key)
+  if (!instance.hasDynamicProps || key === '__proto__') return
+  const deps = instance.propsDeps || (instance.propsDeps = {})
+  trackDep(deps[key] || (deps[key] = new Dep()))
+}
+
+function triggerPropsValue(
+  instance: VaporComponentInstance,
+  key: string | symbol,
+): void {
+  const deps = instance.propsDeps
+  if (deps) {
+    const dep = deps[key]
+    if (dep) triggerDep(dep)
+  }
 }
 
 // Subscribes to every delivered input. `rawValues` itself is read untracked:
@@ -535,7 +548,7 @@ function trackPropsValue(
 export function trackRawValues(
   instance: VaporComponentInstance,
 ): Record<string, any> {
-  trackPropsValue(instance, TrackOpTypes.GET, RAW_VALUES_KEY)
+  trackPropsValue(instance, RAW_VALUES_KEY)
   return instance.rawValues
 }
 
@@ -656,19 +669,15 @@ export function collectSlotSources(cells: SlotSourceCell[]): void {
 
 // an unchanged descriptor keeps the identity its readers already saw
 export function commitSlotSources(cells: SlotSourceCell[]): void {
-  const prevSub = setActiveSub()
-  try {
-    for (let i = 0; i < cells.length; i++) {
-      const cell = cells[i]
-      if (cell) {
-        cell.committed.value = stabilizeDynamicSourceValue(
-          cell.committed.value,
-          cell.next!,
-        )
+  for (let i = 0; i < cells.length; i++) {
+    const cell = cells[i]
+    if (cell) {
+      const next = stabilizeDynamicSourceValue(cell.committed, cell.next!)
+      if (hasChanged(next, cell.committed)) {
+        cell.committed = next
+        triggerDep(cell)
       }
     }
-  } finally {
-    setActiveSub(prevSub)
   }
 }
 
@@ -782,7 +791,7 @@ export function updateProps(
     // Raw listeners become current before normalized keys notify watchers.
     instance.rawValues = rawValues
     if (propsToUpdate || (!isInitial && rawValues !== prevRawValues)) {
-      trigger(propsValues, TriggerOpTypes.SET, RAW_VALUES_KEY)
+      triggerPropsValue(instance, RAW_VALUES_KEY)
     }
     const vnode = isInteropEnabled && instance.interopVNode
     if (vnode && vnode.vi) vnode.props = rawValues
@@ -809,7 +818,7 @@ export function updateProps(
         continue
       }
       if (present) present[key] = true
-      setPropValue(propsValues, key, value, isInitial)
+      setPropValue(instance, key, value, isInitial)
     }
     // after the ordinary props: a default factory may read them
     if (needCastKeys && (rawCastValues || !propsToUpdate)) {
@@ -818,7 +827,7 @@ export function updateProps(
         const isAbsent = !rawCastValues || !hasOwn(rawCastValues, key)
         if (isAbsent && propsToUpdate) continue
         setPropValue(
-          propsValues,
+          instance,
           key,
           resolvePropValue(
             options!,
@@ -837,7 +846,7 @@ export function updateProps(
       for (const key in options) {
         if (present ? !present[key] : !hasOwn(propsValues, key)) {
           setPropValue(
-            propsValues,
+            instance,
             key,
             resolvePropValue(
               options,
@@ -855,15 +864,9 @@ export function updateProps(
       if (present) {
         for (const key in propsValues) {
           if (!present[key]) {
-            const oldValue = propsValues[key]
             delete propsValues[key]
-            trigger(
-              propsValues,
-              TriggerOpTypes.DELETE,
-              key,
-              undefined,
-              oldValue,
-            )
+            triggerPropsValue(instance, key)
+            triggerPropsValue(instance, ATTR_KEYS)
           }
         }
       }
@@ -883,11 +886,12 @@ export function updateProps(
 }
 
 function setPropValue(
-  propsValues: Record<string, any>,
+  instance: VaporComponentInstance,
   key: string,
   value: unknown,
   isInitial: boolean,
 ) {
+  const propsValues = instance.propsValues
   if (isInitial) {
     propsValues[key] = value
     return
@@ -896,8 +900,9 @@ function setPropValue(
   const oldValue = propsValues[key]
   propsValues[key] = value
   if (!hadKey) {
-    trigger(propsValues, TriggerOpTypes.ADD, key, value)
+    triggerPropsValue(instance, key)
+    triggerPropsValue(instance, ATTR_KEYS)
   } else if (hasChanged(value, oldValue)) {
-    trigger(propsValues, TriggerOpTypes.SET, key, value, oldValue)
+    triggerPropsValue(instance, key)
   }
 }

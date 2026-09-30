@@ -13,14 +13,15 @@ import {
   startBatch,
 } from './system'
 
-class Dep implements ReactiveNode {
+export class Dep implements ReactiveNode {
   _subs: Link | undefined = undefined
   subsTail: Link | undefined = undefined
   flags: ReactiveFlags = ReactiveFlags.None
 
+  // a standalone dep has no map to leave once nothing subscribes it
   constructor(
-    private map: KeyToDepMap,
-    private key: unknown,
+    private map?: KeyToDepMap | undefined,
+    private key?: unknown,
   ) {}
 
   get subs(): Link | undefined {
@@ -29,9 +30,32 @@ class Dep implements ReactiveNode {
 
   set subs(value: Link | undefined) {
     this._subs = value
-    if (value === undefined) {
+    if (value === undefined && this.map) {
       this.map.delete(this.key)
     }
+  }
+}
+
+/**
+ * Tracks a dep its owner keys on its own, outside `targetMap`.
+ * @internal
+ */
+export function trackDep(dep: Dep): void {
+  if (activeSub !== undefined) {
+    link(dep, activeSub)
+  }
+}
+
+/**
+ * @internal
+ */
+export function triggerDep(dep: Dep): void {
+  const subs = dep.subs
+  if (subs !== undefined) {
+    startBatch()
+    propagate(subs)
+    shallowPropagate(subs)
+    endBatch()
   }
 }
 

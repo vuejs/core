@@ -57,6 +57,7 @@ import {
   remove,
 } from './block'
 import {
+  type Dep,
   type ShallowRef,
   getCurrentScope,
   isRef,
@@ -889,6 +890,13 @@ export class VaporComponentInstance<
   propsValues: Record<string, any>
   rawValues: Record<string, any>
   propsEffect?: RenderEffect
+  /**
+   * @internal
+   */
+  propsDeps: Record<string | symbol, Dep> | undefined
+  /**
+   * @internal
+   */
   slotSources?: SlotSourceCell[]
   // false when the inputs can never change: reading them subscribes to nothing
   hasDynamicProps: boolean
@@ -1070,6 +1078,7 @@ export class VaporComponentInstance<
     // handlers into pure Vapor bundles.
     this.propsValues = Object.create(null)
     this.rawValues = INITIAL_RAW_VALUES
+    this.propsDeps = undefined
     this.hasDynamicProps = true
     // Snapshot raw parent inputs before creating proxies so delayed reads from
     // v-once children cannot observe later parent updates.

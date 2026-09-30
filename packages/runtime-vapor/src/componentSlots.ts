@@ -27,7 +27,7 @@ import {
   currentInstance,
   isAsyncWrapper,
 } from '@vue/runtime-dom'
-import { type ShallowRef, shallowRef } from '@vue/reactivity'
+import { Dep, trackDep } from '@vue/reactivity'
 import type { LooseRawProps, VaporComponentInstance } from './component'
 import { renderEffect } from './renderEffect'
 import {
@@ -110,11 +110,19 @@ export function normalizeRawSlots(
 }
 
 // A dynamic slot descriptor's committed value: the input effect writes it in
-// the parent's update order, the isolated source reads it.
-export interface SlotSourceCell {
-  source: DynamicSlotFn
-  committed: ShallowRef<ReturnType<DynamicSlotFn>>
-  next?: ReturnType<DynamicSlotFn>
+// the parent's update order, the isolated source reads it as its `_cache`.
+export class SlotSourceCell extends Dep {
+  committed: ReturnType<DynamicSlotFn> | undefined = undefined
+  next: ReturnType<DynamicSlotFn> | undefined = undefined
+
+  constructor(public source: DynamicSlotFn) {
+    super()
+  }
+
+  get value(): ReturnType<DynamicSlotFn> | undefined {
+    trackDep(this)
+    return this.committed
+  }
 }
 
 /**
@@ -133,9 +141,8 @@ export function isolateSlotSources(
     const source = dynamicSources[i]
     if (isFunction(source)) {
       if (!isolatedSources) isolatedSources = dynamicSources.slice()
-      const committed = shallowRef() as ShallowRef<ReturnType<DynamicSlotFn>>
-      cells[i] = { source, committed }
-      isolatedSources[i] = isolateSlotSource(committed)
+      const cell = (cells[i] = new SlotSourceCell(source))
+      isolatedSources[i] = isolateSlotSource(cell)
     }
   }
   if (!isolatedSources) return rawSlots
@@ -145,14 +152,12 @@ export function isolateSlotSources(
   return isolated
 }
 
-function isolateSlotSource(
-  committed: ShallowRef<ReturnType<DynamicSlotFn>>,
-): DynamicSlotFn {
-  const isolated: FunctionSource<ReturnType<DynamicSlotFn>> = () =>
-    committed.value
+function isolateSlotSource(cell: SlotSourceCell): DynamicSlotFn {
+  const isolated: FunctionSource<ReturnType<DynamicSlotFn> | undefined> = () =>
+    cell.value
   // readers resolve through the cell instead of a computed of their own
-  isolated._cache = committed
-  return isolated
+  isolated._cache = cell
+  return isolated as DynamicSlotFn
 }
 
 export function initSlots(instance: VaporComponentInstance): void {

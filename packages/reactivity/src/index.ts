@@ -72,6 +72,10 @@ export {
   ARRAY_ITERATE_KEY,
   MAP_KEY_ITERATE_KEY,
 } from './dep'
+/**
+ * @internal
+ */
+export { Dep, trackDep, triggerDep } from './dep'
 export {
   effectScope,
   EffectScope,
