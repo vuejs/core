@@ -263,13 +263,27 @@ export function endTracking(
 }
 
 export function flush(): void {
+  // a throwing subscriber must not abort the batch: keep notifying the rest,
+  // reset the queue, then rethrow the first error once the batch is drained.
+  let hasError = false
+  let error: unknown
   while (notifyIndex < notifyBufferLength) {
     const effect = notifyBuffer[notifyIndex]!
     notifyBuffer[notifyIndex++] = undefined
-    effect.notify()
+    try {
+      effect.notify()
+    } catch (err) {
+      if (!hasError) {
+        hasError = true
+        error = err
+      }
+    }
   }
   notifyIndex = 0
   notifyBufferLength = 0
+  if (hasError) {
+    throw error
+  }
 }
 
 export function checkDirty(link: Link, sub: ReactiveNode): boolean {
