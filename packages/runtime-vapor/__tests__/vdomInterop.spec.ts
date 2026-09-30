@@ -12290,4 +12290,26 @@ describe('vdomInterop', () => {
       expect(calls.vdom).toEqual(['inner', 'null', 'null'])
     })
   })
+
+  test('vdom component passing its empty slots on to a child', async () => {
+    const Img = defineComponent({
+      setup(_, { slots }) {
+        return () => h('i', slots.default ? slots.default() : 'img')
+      },
+    })
+    const Item = defineComponent({
+      setup(_, { slots }) {
+        return () => h('div', [createVNode(Img, null, slots)])
+      },
+    })
+
+    const { vdom, vapor } = await renderParity(
+      { App: '<template><components.Item /></template>' },
+      () => ref({}),
+      () => {},
+      { Item },
+    )
+    expect(vdom.after).toBe('<div><i>img</i></div>')
+    expect(vapor.after).toBe(vdom.after)
+  })
 })
