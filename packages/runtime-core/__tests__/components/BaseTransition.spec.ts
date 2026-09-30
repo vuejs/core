@@ -819,6 +819,83 @@ describe('BaseTransition', () => {
     })
   })
 
+  // #15727
+  describe('mode: "out-in" w/ synchronous leave', () => {
+    async function testOutInSyncLeave({
+      trueBranch,
+      falseBranch,
+      trueSerialized,
+      falseSerialized,
+    }: ToggleOptions) {
+      const toggle = ref(true)
+      const { props } = mockProps({
+        mode: 'out-in',
+        onLeave: vi.fn((el, done) => done()),
+        onEnter: vi.fn((el, done) => done()),
+      })
+      const { root } = mount(props, () =>
+        toggle.value ? trueBranch() : falseBranch(),
+      )
+
+      // trigger toggle
+      toggle.value = false
+      await nextTick()
+      // the leave finished while the placeholder was still being patched in,
+      // so the new branch must have replaced it by the end of the tick
+      expect(serializeInner(root)).toBe(falseSerialized)
+      expect(props.onAfterLeave).toHaveBeenCalledTimes(1)
+      assertCalledWithEl(props.onAfterLeave, trueSerialized)
+      expect(props.onBeforeEnter).toHaveBeenCalledTimes(1)
+      assertCalledWithEl(props.onBeforeEnter, falseSerialized)
+      expect(props.onEnter).toHaveBeenCalledTimes(1)
+      expect(props.onAfterEnter).toHaveBeenCalledTimes(1)
+      assertCalledWithEl(props.onAfterEnter, falseSerialized)
+
+      // toggle back
+      toggle.value = true
+      await nextTick()
+      expect(serializeInner(root)).toBe(trueSerialized)
+      expect(props.onAfterLeave).toHaveBeenCalledTimes(2)
+      assertCalledWithEl(props.onAfterLeave, falseSerialized, 1)
+      assertCalledWithEl(props.onAfterEnter, trueSerialized, 1)
+
+      assertCalls(props, {
+        onBeforeEnter: 2,
+        onEnter: 2,
+        onAfterEnter: 2,
+        onEnterCancelled: 0,
+        onBeforeLeave: 2,
+        onLeave: 2,
+        onAfterLeave: 2,
+        onLeaveCancelled: 0,
+      })
+    }
+
+    test('w/ elements', async () => {
+      await runTestWithElements(testOutInSyncLeave)
+    })
+
+    test('w/ components', async () => {
+      await runTestWithComponents(testOutInSyncLeave)
+    })
+
+    // no onLeave hook means done() is invoked synchronously by the hook itself
+    test('w/o leave hook', async () => {
+      const toggle = ref(true)
+      const { root } = mount({ mode: 'out-in' }, () =>
+        toggle.value ? h('div') : h('span'),
+      )
+
+      toggle.value = false
+      await nextTick()
+      expect(serializeInner(root)).toBe(`<span></span>`)
+
+      toggle.value = true
+      await nextTick()
+      expect(serializeInner(root)).toBe(`<div></div>`)
+    })
+  })
+
   // #6835
   describe('mode: "out-in" toggle again after unmounted', () => {
     async function testOutIn(

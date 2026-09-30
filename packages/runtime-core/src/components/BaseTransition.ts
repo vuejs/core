@@ -15,13 +15,13 @@ import {
 } from '../vnode'
 import { warn } from '../warning'
 import { isKeepAlive } from './KeepAlive'
-import { toRaw } from '@vue/reactivity'
+import { EffectFlags, toRaw } from '@vue/reactivity'
 import { ErrorCodes, callWithAsyncErrorHandling } from '../errorHandling'
 import { PatchFlags, ShapeFlags, isArray, isFunction } from '@vue/shared'
 import { onBeforeUnmount, onMounted } from '../apiLifecycle'
 import { isTeleport } from './Teleport'
 import type { RendererElement } from '../renderer'
-import { SchedulerJobFlags } from '../scheduler'
+import { SchedulerJobFlags, queuePostFlushCb } from '../scheduler'
 import { isHmrUpdating } from '../hmr'
 
 type Hook<T = () => void> = T | T[]
@@ -233,7 +233,18 @@ const BaseTransitionImpl: ComponentOptions = {
             // #6835
             // it also needs to be updated when active is undefined
             if (!(instance.job.flags! & SchedulerJobFlags.DISPOSED)) {
-              instance.update()
+              if (instance.effect.flags & EffectFlags.RUNNING) {
+                // #15727 the leave finished synchronously while this component
+                // is still rendering the placeholder, which has no el yet -
+                // defer the update until the current patch is done
+                queuePostFlushCb(() => {
+                  if (!(instance.job.flags! & SchedulerJobFlags.DISPOSED)) {
+                    instance.update()
+                  }
+                })
+              } else {
+                instance.update()
+              }
             }
             delete leavingHooks.afterLeave
             oldInnerChild = undefined
