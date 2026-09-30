@@ -601,20 +601,12 @@ export function initProps(
       if (effect.active) {
         // a delivery that throws half-way is redone in full
         hasDelivered = false
-        // sync watchers run once the props and the descriptors are all
-        // written, and outside this effect: their callbacks must not
-        // subscribe it
-        const prevSub = setActiveSub()
-        startBatch()
-        try {
-          if (rawValues || propsToUpdate) {
-            updateProps(instance, rawValues || prevRawValues, propsToUpdate)
-          }
-          if (cells) commitSlotSources(cells)
-        } finally {
-          endBatch()
-          setActiveSub(prevSub)
-        }
+        deliverInputs(
+          instance,
+          rawValues || (propsToUpdate && prevRawValues),
+          propsToUpdate,
+          cells,
+        )
         hasDelivered = true
       }
     }, true)
@@ -632,6 +624,26 @@ export function initProps(
     }
   } finally {
     restoreCurrentInstance(prev)
+  }
+}
+
+// One delivery: sync watchers run once the props and the descriptors are all
+// written, and outside the input effect, which their callbacks must not
+// subscribe.
+export function deliverInputs(
+  instance: VaporComponentInstance | undefined,
+  rawValues: Record<string, any> | undefined,
+  propsToUpdate: unknown[] | undefined,
+  cells: SlotSourceCell[] | undefined,
+): void {
+  const prevSub = setActiveSub()
+  startBatch()
+  try {
+    if (instance && rawValues) updateProps(instance, rawValues, propsToUpdate)
+    if (cells) commitSlotSources(cells)
+  } finally {
+    endBatch()
+    setActiveSub(prevSub)
   }
 }
 

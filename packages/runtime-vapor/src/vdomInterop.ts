@@ -124,7 +124,7 @@ import {
   type RawProps,
   collectProps,
   collectSlotSources,
-  commitSlotSources,
+  deliverInputs,
   rawPropsProxyHandlers,
   snapshotRawProps,
   updateProps,
@@ -1491,8 +1491,7 @@ function createVDOMComponent(
           restoreCurrentInstance(prevInner)
         }
         if (effect.active) {
-          if (propsInstance) updateProps(propsInstance, rawValues)
-          if (cells) commitSlotSources(cells)
+          deliverInputs(propsInstance, rawValues, undefined, cells)
         }
       }, true)
       effect.run()
