@@ -91,7 +91,7 @@ import {
   getPropsProxyHandlers,
   getStaticBindingKeys,
   hasFallthroughAttrs,
-  initProps,
+  initInputs,
   normalizePropsOptions,
   resolveDynamicProps,
   resolveSource,
@@ -397,7 +397,7 @@ export function createComponent(
         // Rebind cache-owned inputs to the current call site's getters.
         if (isVaporComponent(cached) && cached.inputScope) {
           cached.rawProps = (rawProps || EMPTY_OBJ) as RawProps
-          initProps(cached)
+          initInputs(cached)
         }
         // a nested branch teardown stops the branch scope that unmounts the
         // cached component, so the scope re-entering it takes over
@@ -560,7 +560,7 @@ export function createComponent(
 
       try {
         initSlots(instance)
-        initProps(instance, once)
+        initInputs(instance, once)
       } catch (error) {
         // Inputs can fail before the teardown below is registered.
         if (__DEV__) unregisterHMR(instance)
@@ -886,7 +886,7 @@ export class VaporComponentInstance<
   vapor: true
   propsValues: Record<string, any>
   rawValues: Record<string, any>
-  propsEffect?: RenderEffect
+  inputEffect?: RenderEffect
   /**
    * @internal
    */
@@ -931,7 +931,6 @@ export class VaporComponentInstance<
   interopVNode?: VNode
 
   // to hold vnode props / slots in vdom interop mode
-  rawPropsRef?: ShallowRef<any>
   rawSlotsRef?: ShallowRef<any>
 
   emit: EmitFn<Emits>

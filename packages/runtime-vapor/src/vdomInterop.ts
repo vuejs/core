@@ -377,7 +377,8 @@ const vaporInteropImpl = {
     const prev = currentInstance
     simpleSetCurrentInstance(parentComponent)
 
-    const propsRef = shallowRef(filterReservedProps(vnode.props))
+    const rawProps = filterReservedProps(vnode.props) as RawProps
+    rawProps[interopKey] = true
     const slotsRef = shallowRef(normalizeInteropSlots(vnode.children))
     const rawSlots = createInteropRawSlots(slotsRef)
 
@@ -386,24 +387,16 @@ const vaporInteropImpl = {
       setRenderContext(deriveSuspense(prevCtx, parentSuspense))
     }
 
-    const dynamicPropSource: (() => any)[] & { [interopKey]?: boolean } = [
-      () => propsRef.value,
-    ]
-    // mark as interop props
-    dynamicPropSource[interopKey] = true
     // @ts-expect-error
     const instance = (vnode.component = createComponent(
       vnode.type as any as VaporComponent,
-      {
-        $: dynamicPropSource,
-      } as RawProps,
+      rawProps,
       rawSlots,
       undefined,
       undefined,
       (parentComponent ? parentComponent.appContext : vnode.appContext) as any,
       true,
     ))
-    instance.rawPropsRef = propsRef
     instance.rawSlotsRef = slotsRef
     // read by vdom's shouldUpdateComponent to skip listener-only prop changes
     instance.emitsOptions = normalizeEmitsOptions(instance.type)
@@ -1468,7 +1461,7 @@ function createVDOMComponent(
     rawSlots = isolated[0]
     cells = isolated[1]
   }
-  // inputs that can never change are delivered once, as in initProps; a
+  // inputs that can never change are delivered once, as in initInputs; a
   // kept-alive vdom child is not rebound on a cache hit
   let hasDynamicProps =
     !once &&
@@ -3727,7 +3720,6 @@ function updateInteropVNode(
   prevVNode: VNode,
 ): void {
   state.pendingVNodeUpdate = vnode
-  instance.rawPropsRef!.value = filterReservedProps(vnode.props)
   deliverInputs(instance, vnode.props || EMPTY_OBJ)
   instance.rawSlotsRef!.value = normalizeInteropSlots(vnode.children)
   // align with VDOM: vnode beforeUpdate runs before directive beforeUpdate.
