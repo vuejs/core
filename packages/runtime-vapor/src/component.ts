@@ -64,7 +64,6 @@ import {
   onScopeDispose,
   proxyRefs,
   setActiveSub,
-  shallowRef,
   toRaw,
   unref,
 } from '@vue/reactivity'
@@ -86,6 +85,7 @@ import {
 } from '@vue/shared'
 import {
   type DynamicPropsSource,
+  INITIAL_RAW_VALUES,
   type RawProps,
   getPropsProxyHandlers,
   getStaticBindingKeys,
@@ -102,9 +102,11 @@ import { patchDynamicProps } from './dom/prop'
 import {
   type LooseRawSlots,
   type RawSlots,
+  type SlotSourceCell,
   type StaticSlots,
   dynamicSlotsProxyHandlers,
   getSlot,
+  initSlots,
   normalizeRawSlots,
   snapshotRawSlots,
 } from './componentSlots'
@@ -466,12 +468,6 @@ export function createComponent(
     let inputScope: EffectScope | undefined
     if (keepAliveCtx && !once && !managedMount) {
       inputScope = new EffectScope(true)
-      // Dynamic slot descriptors share the input lifetime; local effects do not.
-      if (rawSlots && (rawSlots as RawSlots).$) {
-        inputScope.run(() => {
-          rawSlots = keepAliveCtx!.isolateSlotSources(rawSlots as RawSlots)
-        })
-      }
     }
 
     // The VDOM bridge delivers inputs through the same cache-owned scope.
@@ -564,7 +560,16 @@ export function createComponent(
         instance.emitsOptions = normalizeEmitsOptions(component)
       }
 
-      initProps(instance, once)
+      try {
+        initSlots(instance)
+        initProps(instance, once)
+      } catch (error) {
+        // Inputs can fail before the teardown below is registered.
+        if (__DEV__) unregisterHMR(instance)
+        instance.scope.stop()
+        if (inputScope) inputScope.stop()
+        throw error
+      }
 
       // hydrating async component
       if (
@@ -882,8 +887,11 @@ export class VaporComponentInstance<
 > implements GenericComponentInstance {
   vapor: true
   propsValues: Record<string, any>
-  rawValues: ShallowRef<Record<string, any>>
+  rawValues: Record<string, any>
   propsEffect?: RenderEffect
+  slotSources?: SlotSourceCell[]
+  // false when the inputs can never change: reading them subscribes to nothing
+  hasDynamicProps: boolean
   uid: number
   type: VaporComponent
   root: GenericComponentInstance | null
@@ -1061,7 +1069,8 @@ export class VaporComponentInstance<
     // Track through the public proxies to avoid pulling generic reactive
     // handlers into pure Vapor bundles.
     this.propsValues = Object.create(null)
-    this.rawValues = shallowRef(EMPTY_OBJ)
+    this.rawValues = INITIAL_RAW_VALUES
+    this.hasDynamicProps = true
     // Snapshot raw parent inputs before creating proxies so delayed reads from
     // v-once children cannot observe later parent updates.
     this.rawProps =
@@ -1119,7 +1128,7 @@ export class VaporComponentInstance<
   // Parent-provided keys are needed by APIs such as useModel.
   rawKeys(): string[] {
     const vnode = isInteropEnabled && this.interopVNode
-    return Object.keys(vnode ? vnode.props || EMPTY_OBJ : this.rawValues.value)
+    return Object.keys(vnode ? vnode.props || EMPTY_OBJ : this.rawValues)
   }
 }
 

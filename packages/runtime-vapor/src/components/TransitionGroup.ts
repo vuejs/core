@@ -22,7 +22,7 @@ import {
   vShowHidden,
   warn,
 } from '@vue/runtime-dom'
-import { extend, isArray, isFunction } from '@vue/shared'
+import { extend, isArray } from '@vue/shared'
 import {
   type Block,
   type BlockFn,
@@ -52,7 +52,7 @@ import {
   type VaporComponentOptions,
   isVaporComponent,
 } from '../component'
-import type { RawProps } from '../componentProps'
+import { trackRawValues } from '../componentProps'
 import { createElement } from '../dom/node'
 import {
   DynamicFragment,
@@ -548,8 +548,8 @@ function trackTransitionGroupUpdate(
     return
   }
 
-  // Fully static raw props can never notify - skip the tracking effect.
-  if (!hasDynamicPropsSource(owner.rawProps)) return
+  // Inputs that cannot change never notify - skip the tracking effect.
+  if (!owner.hasDynamicProps) return
   trackedTransitionGroupOwners.add(owner)
 
   // A component child can update from parent-driven props without re-running
@@ -562,19 +562,11 @@ function trackTransitionGroupUpdate(
   const prevGroup = setCurrentInstance(instance, owner.scope)
   try {
     renderEffect(() => {
-      owner.rawValues.value
+      trackRawValues(owner)
     })
   } finally {
     restoreCurrentInstance(prevGroup)
   }
-}
-
-function hasDynamicPropsSource(props: RawProps): boolean {
-  if (props.$) return true
-  for (const key in props) {
-    if (key !== '$' && isFunction(props[key])) return true
-  }
-  return false
 }
 
 function recordPosition(c: ResolvedTransitionBlock) {

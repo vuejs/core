@@ -38,7 +38,7 @@ export function emit(
   const vnode = isInteropEnabled && instance.interopVNode
   baseEmit(
     instance,
-    vnode ? vnode.props || EMPTY_OBJ : instance.rawValues.value,
+    vnode ? vnode.props || EMPTY_OBJ : instance.rawValues,
     defaultPropGetter,
     event,
     ...rawArgs,

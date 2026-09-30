@@ -123,12 +123,18 @@ import {
 import {
   type RawProps,
   collectProps,
+  collectSlotSources,
+  commitSlotSources,
   rawPropsProxyHandlers,
   snapshotRawProps,
   updateProps,
 } from './componentProps'
-import type { RawSlots, VaporSlot } from './componentSlots'
-import { dynamicSlotsProxyHandlers, getSlot } from './componentSlots'
+import type { RawSlots, SlotSourceCell, VaporSlot } from './componentSlots'
+import {
+  dynamicSlotsProxyHandlers,
+  getSlot,
+  isolateSlotSources,
+} from './componentSlots'
 import { inOnce, withOnce } from './once'
 import { RenderEffect, renderEffect } from './renderEffect'
 import { createTextNode, parentNode } from './dom/node'
@@ -1453,39 +1459,50 @@ function createVDOMComponent(
   const useBridge = shouldUseRendererBridge(component)
   const comp = useBridge ? ensureRendererBridge(component) : component
   let propsInstance: VaporComponentInstance | undefined
-  let currentRaw: Record<string, any> = EMPTY_OBJ
+  let rawValues: Record<string, any> = EMPTY_OBJ
   let isMounted = false
   if (!once) inputScope ||= effectScope(true)
-  const previous = setCurrentInstance(parentComponent, inputScope)
+  const prevInstance = setCurrentInstance(parentComponent, inputScope)
   let vnode: VNode
   try {
     if (once) {
-      const subscriber = setActiveSub()
+      const prevSub = setActiveSub()
       try {
-        currentRaw = collectProps((rawProps || EMPTY_OBJ) as RawProps)
+        rawValues = collectProps((rawProps || EMPTY_OBJ) as RawProps)
       } finally {
-        setActiveSub(subscriber)
+        setActiveSub(prevSub)
       }
     } else {
-      const input = new RenderEffect(() => {
-        const context = setCurrentInstance(parentComponent, inputScope)
+      const dynamicSlotSources = rawSlots && (rawSlots as RawSlots).$
+      let cells: SlotSourceCell[] | undefined
+      if (dynamicSlotSources) {
+        cells = new Array(dynamicSlotSources.length)
+        rawSlots = isolateSlotSources(rawSlots as RawSlots, cells)
+      }
+      const effect = new RenderEffect(() => {
+        const prevInner = setCurrentInstance(parentComponent, inputScope)
         try {
-          currentRaw = collectProps((rawProps || EMPTY_OBJ) as RawProps)
+          rawValues = collectProps(
+            (rawProps || EMPTY_OBJ) as RawProps,
+            rawValues.style,
+          )
+          if (cells) collectSlotSources(cells)
         } finally {
-          restoreCurrentInstance(context)
+          restoreCurrentInstance(prevInner)
         }
-        if (propsInstance && input.active) {
-          updateProps(propsInstance, currentRaw)
+        if (effect.active) {
+          if (propsInstance) updateProps(propsInstance, rawValues)
+          if (cells) commitSlotSources(cells)
         }
       }, true)
-      input.run()
+      effect.run()
     }
-    vnode = createVNode(comp, currentRaw)
+    vnode = createVNode(comp, rawValues)
   } catch (error) {
     if (inputScope) inputScope.stop()
     throw error
   } finally {
-    restoreCurrentInstance(previous)
+    restoreCurrentInstance(prevInstance)
   }
   const { frag, syncNodes } = createVNodeFragment(vnode)
   frag.inputScope = inputScope
@@ -1559,7 +1576,7 @@ function createVDOMComponent(
       })
     })
     try {
-      updateProps(wrapper, currentRaw)
+      updateProps(wrapper, rawValues)
     } catch (error) {
       if (inputScope) inputScope.stop()
       wrapper.scope.stop()

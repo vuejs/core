@@ -17,6 +17,7 @@ import {
   normalizeStyle,
 } from '@vue/shared'
 import type { VaporComponent, VaporComponentInstance } from './component'
+import type { SlotSourceCell } from './componentSlots'
 import {
   type NormalizedPropsOptions,
   baseNormalizePropsOptions,
@@ -31,16 +32,17 @@ import {
   warn,
 } from '@vue/runtime-dom'
 import {
-  type ComputedRef,
   EffectFlags,
   ITERATE_KEY,
   ReactiveFlags,
   TrackOpTypes,
   TriggerOpTypes,
   computed,
+  endBatch,
   getCurrentScope,
   onScopeDispose,
   setActiveSub,
+  startBatch,
   track,
   trigger,
 } from '@vue/reactivity'
@@ -61,8 +63,8 @@ export function resolveSource<T>(source: T | (() => T)): T {
   return isFunction(source) ? resolveFunctionSource(source as () => T) : source
 }
 
-type FunctionSource<T> = (() => T) & {
-  _cache?: ComputedRef<T>
+export type FunctionSource<T> = (() => T) & {
+  _cache?: { readonly value: T }
 }
 
 export function resolveFunctionSource<T>(source: FunctionSource<T>): T {
@@ -150,13 +152,30 @@ function readSource<T>(source: T | (() => T)): T {
 }
 
 function freezeValue(key: string, value: unknown): unknown {
-  if (key === 'class' && value && !isString(value)) return normalizeClass(value)
-  // wrapped so a lone (possibly reactive) style object is copied too
-  if (key === 'style' && isObject(value)) return normalizeStyle([value])
+  value = normalizePropValue(key, value)
   return isFunction(value) ? () => value : value
 }
 
-function stabilizeDynamicSourceValue<T>(oldValue: T | undefined, value: T): T {
+// class and style are delivered normalized, as mergeProps would
+function normalizePropValue(
+  key: string,
+  value: unknown,
+  prevValue?: unknown,
+): unknown {
+  if (key === 'class') {
+    return value && !isString(value) ? normalizeClass(value) : value
+  }
+  // wrapped so a lone (possibly reactive) style object is copied too; the
+  // copy is a new object, so an equal style is the one already delivered
+  return key === 'style' && isObject(value)
+    ? stabilizeDynamicSourceValue(prevValue, normalizeStyle([value]))
+    : value
+}
+
+export function stabilizeDynamicSourceValue<T>(
+  oldValue: T | undefined,
+  value: T,
+): T {
   if (!isPlainObject(oldValue) || !isPlainObject(value)) {
     return value
   }
@@ -216,7 +235,7 @@ export function getPropsProxyHandlers(
     if (key === ReactiveFlags.IS_REACTIVE || key === ReactiveFlags.IS_SHALLOW)
       return true
     if (isProp(key)) {
-      track(instance.propsValues, TrackOpTypes.GET, key)
+      trackPropsValue(instance, TrackOpTypes.GET, key)
       return instance.propsValues[key]
     }
   }
@@ -247,20 +266,20 @@ export function getPropsProxyHandlers(
 
   const getAttr = (instance: VaporComponentInstance, key: string | symbol) => {
     if (isAttr(key)) {
-      track(instance.propsValues, TrackOpTypes.GET, key)
+      trackPropsValue(instance, TrackOpTypes.GET, key)
       return instance.propsValues[key]
     }
   }
   const hasAttr = (instance: VaporComponentInstance, key: string | symbol) => {
     if (!isAttr(key)) return false
-    track(instance.propsValues, TrackOpTypes.HAS, key)
+    trackPropsValue(instance, TrackOpTypes.HAS, key)
     return hasOwn(instance.propsValues, key)
   }
   const attrsHandlers = {
     get: getAttr,
     has: hasAttr,
     ownKeys(target) {
-      track(target.propsValues, TrackOpTypes.ITERATE, ITERATE_KEY)
+      trackPropsValue(target, TrackOpTypes.ITERATE, ITERATE_KEY)
       return Object.keys(target.propsValues).filter(isAttr)
     },
     getOwnPropertyDescriptor(target, key: string | symbol) {
@@ -498,193 +517,375 @@ export const rawPropsProxyHandlers: ProxyHandler<RawProps> = {
   },
 }
 
+const RAW_VALUES_KEY: unique symbol = Symbol(__DEV__ ? 'Raw values' : '')
+
+// `rawValues` before the first delivery
+export const INITIAL_RAW_VALUES: Record<string, any> = {}
+
+function trackPropsValue(
+  instance: VaporComponentInstance,
+  type: TrackOpTypes,
+  key: unknown,
+): void {
+  if (instance.hasDynamicProps) track(instance.propsValues, type, key)
+}
+
+// Subscribes to every delivered input. `rawValues` itself is read untracked:
+// emit and rawKeys must not subscribe their caller, as a vnode would not.
+export function trackRawValues(
+  instance: VaporComponentInstance,
+): Record<string, any> {
+  trackPropsValue(instance, TrackOpTypes.GET, RAW_VALUES_KEY)
+  return instance.rawValues
+}
+
 // Inputs belong to the child scope, but run in the parent's update order.
 export function initProps(
   instance: VaporComponentInstance,
   once = false,
 ): void {
   const scope = instance.inputScope || instance.scope
-  const previousEffect = instance.propsEffect
-  if (previousEffect) previousEffect.stop()
-  const parent = instance.parent
-  const previous = setCurrentInstance(parent || instance, scope)
+  const prevEffect = instance.propsEffect
+  if (prevEffect) prevEffect.stop()
+  const parent = instance.parent || instance
+  const rawProps = instance.rawProps
+  const cells = instance.slotSources
+  const prev = setCurrentInstance(parent, scope)
   try {
-    const sources = instance.rawProps.$
+    const dynamicSources = rawProps.$
     // VDOM already evaluated these inputs and delivers subsequent patches.
-    if (once || (sources && sources[interopKey])) {
-      const subscriber = setActiveSub()
+    const isInterop =
+      isInteropEnabled && !!(dynamicSources && dynamicSources[interopKey])
+    // a cache hit can rebind a kept-alive instance to other inputs
+    const canRebind = !!instance.inputScope
+    const hasGetters = hasDynamicPropsSource(rawProps)
+    if (once || (!cells && (isInterop || (!canRebind && !hasGetters)))) {
+      instance.hasDynamicProps = !once && isInterop
+      const prevSub = setActiveSub()
       try {
-        updateProps(instance, collectProps(instance.rawProps))
+        updateProps(instance, collectProps(rawProps))
       } finally {
-        setActiveSub(subscriber)
+        setActiveSub(prevSub)
       }
       return
     }
-    const input = new RenderEffect(() => {
-      const context = setCurrentInstance(parent || instance, scope)
-      let raw: Record<string, any>
+    instance.hasDynamicProps = canRebind || hasGetters
+    // without dynamic sources the keys are static: after the first delivery
+    // only the getters can change
+    const hasStaticKeys = !dynamicSources
+    let hasDelivered = false
+    const effect = new RenderEffect(() => {
+      const prevRawValues = instance.rawValues
+      const prevInner = setCurrentInstance(parent, scope)
+      let rawValues: Record<string, any> | undefined
+      let propsToUpdate: unknown[] | undefined
       try {
-        raw = collectProps(instance.rawProps)
+        if (!hasDelivered || instance.hasDynamicProps) {
+          if (hasDelivered && hasStaticKeys) {
+            propsToUpdate = collectPropsToUpdate(rawProps, prevRawValues)
+          } else {
+            rawValues = collectProps(rawProps, prevRawValues.style)
+            if (
+              hasDelivered &&
+              stabilizeDynamicSourceValue(prevRawValues, rawValues) ===
+                prevRawValues
+            ) {
+              rawValues = undefined
+            }
+          }
+        }
+        if (cells) collectSlotSources(cells)
       } finally {
-        restoreCurrentInstance(context)
+        restoreCurrentInstance(prevInner)
       }
-      if (input.active) updateProps(instance, raw)
+      if (effect.active) {
+        // a delivery that throws half-way is redone in full
+        hasDelivered = false
+        // sync watchers run once the props and the descriptors are all
+        // written, and outside this effect: their callbacks must not
+        // subscribe it
+        const prevSub = setActiveSub()
+        startBatch()
+        try {
+          if (rawValues || propsToUpdate) {
+            updateProps(instance, rawValues || prevRawValues, propsToUpdate)
+          }
+          if (cells) commitSlotSources(cells)
+        } finally {
+          endBatch()
+          setActiveSub(prevSub)
+        }
+        hasDelivered = true
+      }
     }, true)
-    instance.propsEffect = input
-    if (!previousEffect) {
-      input.run()
+    if (canRebind) instance.propsEffect = effect
+    if (!prevEffect) {
+      effect.run()
+      // every getter and descriptor turned out to be constant
+      if (!effect.deps && !canRebind) {
+        effect.stop()
+        instance.hasDynamicProps = false
+      }
     } else {
-      if (scope.flags & EffectFlags.PAUSED) input.pause()
-      input.notify()
+      if (scope.flags & EffectFlags.PAUSED) effect.pause()
+      effect.notify()
     }
-  } catch (error) {
-    // Initialization can fail before createComponent registers its teardown.
-    if (instance.propsEffect) instance.propsEffect.stop()
-    instance.scope.stop()
-    if (instance.inputScope) instance.inputScope.stop()
-    throw error
   } finally {
-    restoreCurrentInstance(previous)
+    restoreCurrentInstance(prev)
   }
 }
 
-export function collectProps(sources: RawProps): Record<string, any> {
+export function collectSlotSources(cells: SlotSourceCell[]): void {
+  for (let i = 0; i < cells.length; i++) {
+    const cell = cells[i]
+    if (cell) cell.next = cell.source()
+  }
+}
+
+// an unchanged descriptor keeps the identity its readers already saw
+export function commitSlotSources(cells: SlotSourceCell[]): void {
+  const prevSub = setActiveSub()
+  try {
+    for (let i = 0; i < cells.length; i++) {
+      const cell = cells[i]
+      if (cell) {
+        cell.committed.value = stabilizeDynamicSourceValue(
+          cell.committed.value,
+          cell.next!,
+        )
+      }
+    }
+  } finally {
+    setActiveSub(prevSub)
+  }
+}
+
+function hasDynamicPropsSource(rawProps: RawProps): boolean {
+  if (rawProps.$) return true
+  for (const key in rawProps) {
+    if (isFunction(rawProps[key])) return true
+  }
+  return false
+}
+
+export function collectProps(
+  rawProps: RawProps,
+  prevStyle?: unknown,
+): Record<string, any> {
   // Raw attrs may contain prototype-named keys such as __proto__.
-  const raw: Record<string, any> = Object.create(null)
-  const dynamicSources = sources.$ || EMPTY_ARR
+  const rawValues: Record<string, any> = Object.create(null)
+  const dynamicSources = rawProps.$ || EMPTY_ARR
   for (let i = -1; i < dynamicSources.length; i++) {
-    const source = i < 0 ? sources : dynamicSources[i]
-    const dynamic = isFunction(source)
-    const resolved = dynamic ? source() : source
+    const source = i < 0 ? rawProps : dynamicSources[i]
+    const isDynamic = isFunction(source)
+    const resolved = isDynamic ? source() : source
     for (const key in resolved) {
       if (i < 0 && key === '$') continue
-      const value = dynamic ? resolved[key] : readSource(resolved[key])
+      const value = isDynamic ? resolved[key] : readSource(resolved[key])
       if (!dynamicSources.length) {
-        raw[key] = value
+        rawValues[key] = value
       } else if (key === 'class') {
-        if (raw.class !== value) raw.class = normalizeClass([raw.class, value])
+        if (rawValues.class !== value) {
+          rawValues.class = normalizeClass([rawValues.class, value])
+        }
       } else if (key === 'style') {
-        raw.style = normalizeStyle([raw.style, value])
+        rawValues.style = normalizeStyle([rawValues.style, value])
       } else if (isOn(key)) {
-        const existing = raw[key]
+        const existing = rawValues[key]
         if (
           value &&
           existing !== value &&
           !(isArray(existing) && existing.includes(value))
         ) {
-          raw[key] = existing ? ([] as any[]).concat(existing, value) : value
+          rawValues[key] = existing
+            ? ([] as any[]).concat(existing, value)
+            : value
         } else if (value == null && existing == null && !isModelListener(key)) {
-          raw[key] = value
+          rawValues[key] = value
         }
       } else if (key !== '') {
-        raw[key] = value
+        rawValues[key] = value
       }
     }
   }
-  if (raw.class && !isString(raw.class)) raw.class = normalizeClass(raw.class)
-  if (raw.style && isObject(raw.style)) raw.style = normalizeStyle([raw.style])
-  return raw
+  // merged sources are normalized above
+  if (dynamicSources.length) {
+    if (rawValues.style) {
+      rawValues.style = stabilizeDynamicSourceValue(prevStyle, rawValues.style)
+    }
+  } else {
+    if (rawValues.class) {
+      rawValues.class = normalizePropValue('class', rawValues.class)
+    }
+    if (rawValues.style) {
+      rawValues.style = normalizePropValue('style', rawValues.style, prevStyle)
+    }
+  }
+  return rawValues
+}
+
+// The getters that changed against delivered raw values whose keys are
+// static, as [key, value, …].
+function collectPropsToUpdate(
+  rawProps: RawProps,
+  prevRawValues: Record<string, any>,
+): unknown[] | undefined {
+  let propsToUpdate: unknown[] | undefined
+  for (const key in rawProps) {
+    const source = rawProps[key]
+    if (isFunction(source)) {
+      const prevValue = prevRawValues[key]
+      const value = normalizePropValue(key, source(), prevValue)
+      if (hasChanged(value, prevValue)) {
+        ;(propsToUpdate || (propsToUpdate = [])).push(key, value)
+      }
+    }
+  }
+  return propsToUpdate
 }
 
 export function updateProps(
   instance: VaporComponentInstance,
-  raw: Record<string, any>,
+  rawValues: Record<string, any>,
+  // the entries to set on the delivered `rawValues`, as [key, value, …]
+  propsToUpdate?: unknown[],
 ): void {
-  const values = instance.propsValues
-  const [options, castKeys] = normalizePropsOptions(instance.type)
-  const emits = normalizeEmitsOptions(instance.type)
-  const subscriber = setActiveSub()
+  const propsValues = instance.propsValues
+  const [options, needCastKeys] = normalizePropsOptions(instance.type)
+  const emitsOptions = normalizeEmitsOptions(instance.type)
+  const prevSub = setActiveSub()
+  // sync watchers run once every key is written
+  startBatch()
   try {
-    // Raw listeners become current before normalized keys notify watchers.
-    instance.rawValues.value = stabilizeDynamicSourceValue(
-      instance.rawValues.value,
-      raw,
-    )
-    raw = instance.rawValues.value
-    const vnode = isInteropEnabled && instance.interopVNode
-    if (vnode && vnode.vi) vnode.props = raw
-    const present: Record<string, true> = Object.create(null)
-    const casts: Record<string, unknown> = Object.create(null)
-    for (const key in raw) {
-      if (isReservedProp(key)) continue
-      const normalized = camelize(key)
-      if (options && hasOwn(options, normalized)) {
-        present[normalized] = true
-        if (castKeys && castKeys.includes(normalized)) {
-          casts[normalized] = raw[key]
-        } else {
-          setPropValue(values, normalized, raw[key])
-        }
-      } else if (!isEmitListener(emits, key)) {
-        present[key] = true
-        setPropValue(values, key, raw[key])
+    const prevRawValues = instance.rawValues
+    // nothing is subscribed or left over before the first delivery
+    const isInitial = prevRawValues === INITIAL_RAW_VALUES
+    if (propsToUpdate) {
+      for (let i = 0; i < propsToUpdate.length; i += 2) {
+        rawValues[propsToUpdate[i] as string] = propsToUpdate[i + 1]
       }
+    } else if (!isInitial) {
+      rawValues = stabilizeDynamicSourceValue(prevRawValues, rawValues)
     }
-    if (castKeys) {
-      for (const key of castKeys) {
+    // Raw listeners become current before normalized keys notify watchers.
+    instance.rawValues = rawValues
+    if (propsToUpdate || (!isInitial && rawValues !== prevRawValues)) {
+      trigger(propsValues, TriggerOpTypes.SET, RAW_VALUES_KEY)
+    }
+    const vnode = isInteropEnabled && instance.interopVNode
+    if (vnode && vnode.vi) vnode.props = rawValues
+
+    const present: Record<string, true> | undefined =
+      propsToUpdate || isInitial ? undefined : Object.create(null)
+    let rawCastValues: Record<string, unknown> | undefined
+    const keys = propsToUpdate || Object.keys(rawValues)
+    for (let i = 0; i < keys.length; i += propsToUpdate ? 2 : 1) {
+      let key = keys[i] as string
+      if (isReservedProp(key)) continue
+      const value = rawValues[key]
+      const camelKey = camelize(key)
+      if (options && hasOwn(options, camelKey)) {
+        key = camelKey
+        if (needCastKeys && needCastKeys.includes(key)) {
+          if (!rawCastValues) {
+            rawCastValues = Object.create(null) as Record<string, unknown>
+          }
+          rawCastValues[key] = value
+          continue
+        }
+      } else if (isEmitListener(emitsOptions, key)) {
+        continue
+      }
+      if (present) present[key] = true
+      setPropValue(propsValues, key, value, isInitial)
+    }
+    // after the ordinary props: a default factory may read them
+    if (needCastKeys && (rawCastValues || !propsToUpdate)) {
+      for (let i = 0; i < needCastKeys.length; i++) {
+        const key = needCastKeys[i]
+        const isAbsent = !rawCastValues || !hasOwn(rawCastValues, key)
+        if (isAbsent && propsToUpdate) continue
         setPropValue(
-          values,
+          propsValues,
           key,
           resolvePropValue(
             options!,
             key,
-            casts[key],
+            isAbsent ? undefined : rawCastValues![key],
             instance,
             resolveDefault,
-            !hasOwn(casts, key),
+            isAbsent,
           ),
+          isInitial,
         )
-        present[key] = true
+        if (present) present[key] = true
       }
     }
-    for (const key in options) {
-      if (!present[key]) {
-        setPropValue(
-          values,
-          key,
-          resolvePropValue(
-            options,
+    if (!propsToUpdate) {
+      for (const key in options) {
+        if (present ? !present[key] : !hasOwn(propsValues, key)) {
+          setPropValue(
+            propsValues,
             key,
-            undefined,
-            instance,
-            resolveDefault,
-            true,
-          ),
-        )
+            resolvePropValue(
+              options,
+              key,
+              undefined,
+              instance,
+              resolveDefault,
+              true,
+            ),
+            isInitial,
+          )
+          if (present) present[key] = true
+        }
       }
-      present[key] = true
-    }
-    for (const key in values) {
-      if (!present[key]) {
-        const oldValue = values[key]
-        delete values[key]
-        trigger(values, TriggerOpTypes.DELETE, key, undefined, oldValue)
+      if (present) {
+        for (const key in propsValues) {
+          if (!present[key]) {
+            const oldValue = propsValues[key]
+            delete propsValues[key]
+            trigger(
+              propsValues,
+              TriggerOpTypes.DELETE,
+              key,
+              undefined,
+              oldValue,
+            )
+          }
+        }
       }
     }
     if (__DEV__ && options) {
       pushWarningContext(instance)
       try {
-        validateProps(raw, instance.props, options)
+        validateProps(rawValues, instance.props, options)
       } finally {
         popWarningContext()
       }
     }
   } finally {
-    setActiveSub(subscriber)
+    endBatch()
+    setActiveSub(prevSub)
   }
 }
 
 function setPropValue(
-  values: Record<string, any>,
+  propsValues: Record<string, any>,
   key: string,
   value: unknown,
+  isInitial: boolean,
 ) {
-  const hadKey = hasOwn(values, key)
-  const oldValue = values[key]
-  values[key] = value
+  if (isInitial) {
+    propsValues[key] = value
+    return
+  }
+  const hadKey = hasOwn(propsValues, key)
+  const oldValue = propsValues[key]
+  propsValues[key] = value
   if (!hadKey) {
-    trigger(values, TriggerOpTypes.ADD, key, value)
+    trigger(propsValues, TriggerOpTypes.ADD, key, value)
   } else if (hasChanged(value, oldValue)) {
-    trigger(values, TriggerOpTypes.SET, key, value, oldValue)
+    trigger(propsValues, TriggerOpTypes.SET, key, value, oldValue)
   }
 }

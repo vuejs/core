@@ -3,6 +3,7 @@ import {
   NO,
   VaporSlotFlags,
   VaporSlotStability,
+  extend,
   hasOwn,
   isArray,
   isForwardedSlot,
@@ -15,6 +16,7 @@ import {
   registerNestedVDOMCleanup,
 } from './block'
 import {
+  type FunctionSource,
   type RawProps,
   rawPropsProxyHandlers,
   resolveFunctionSource,
@@ -25,6 +27,7 @@ import {
   currentInstance,
   isAsyncWrapper,
 } from '@vue/runtime-dom'
+import { type ShallowRef, shallowRef } from '@vue/reactivity'
 import type { LooseRawProps, VaporComponentInstance } from './component'
 import { renderEffect } from './renderEffect'
 import {
@@ -104,6 +107,65 @@ export function normalizeRawSlots(
     rawSlotsOwnerMap.set(normalized, getScopeOwner())
   }
   return normalized
+}
+
+// A dynamic slot descriptor's committed value: the input effect writes it in
+// the parent's update order, the isolated source reads it.
+export interface SlotSourceCell {
+  source: DynamicSlotFn
+  committed: ShallowRef<ReturnType<DynamicSlotFn>>
+  next?: ReturnType<DynamicSlotFn>
+}
+
+/**
+ * A dynamic slot descriptor is the parent's expression, like a prop getter:
+ * replace each function source with a reader of the cell the input effect
+ * commits it to. `cells` is parallel to the sources; a static source leaves
+ * a hole. Slot functions keep their closure semantics.
+ */
+export function isolateSlotSources(
+  rawSlots: RawSlots,
+  cells: SlotSourceCell[],
+): RawSlots {
+  const dynamicSources = rawSlots.$!
+  let isolatedSources: DynamicSlotSource[] | undefined
+  for (let i = 0; i < dynamicSources.length; i++) {
+    const source = dynamicSources[i]
+    if (isFunction(source)) {
+      if (!isolatedSources) isolatedSources = dynamicSources.slice()
+      const committed = shallowRef() as ShallowRef<ReturnType<DynamicSlotFn>>
+      cells[i] = { source, committed }
+      isolatedSources[i] = isolateSlotSource(committed)
+    }
+  }
+  if (!isolatedSources) return rawSlots
+
+  const isolated = extend({}, rawSlots, { $: isolatedSources }) as RawSlots
+  rawSlotsOwnerMap.set(isolated, rawSlotsOwnerMap.get(rawSlots) || null)
+  return isolated
+}
+
+function isolateSlotSource(
+  committed: ShallowRef<ReturnType<DynamicSlotFn>>,
+): DynamicSlotFn {
+  const isolated: FunctionSource<ReturnType<DynamicSlotFn>> = () =>
+    committed.value
+  // readers resolve through the cell instead of a computed of their own
+  isolated._cache = committed
+  return isolated
+}
+
+export function initSlots(instance: VaporComponentInstance): void {
+  const rawSlots = instance.rawSlots
+  const dynamicSources = rawSlots.$
+  if (!dynamicSources) return
+  const cells: SlotSourceCell[] = new Array(dynamicSources.length)
+  const isolated = isolateSlotSources(rawSlots, cells)
+  if (isolated !== rawSlots) {
+    instance.slotSources = cells
+    instance.rawSlots = isolated
+    instance.slots = new Proxy(isolated, dynamicSlotsProxyHandlers)
+  }
 }
 
 /**

@@ -2,8 +2,10 @@
 
 import {
   createApp,
+  currentInstance,
   inject,
   isShallow,
+  markRaw,
   nextTick,
   provide,
   ref,
@@ -2182,4 +2184,356 @@ describe('component: props', () => {
       )
     },
   )
+
+  describe('input evaluation', () => {
+    // the inputs of a child are evaluated together, so a literal is a new
+    // value whenever one of them changes
+    test('a literal input is a new value when another one changes', async () => {
+      const changed: Record<string, number> = {}
+      await renderParity(
+        {
+          Child: `<script setup>
+            import { watch } from 'vue'
+            const data = _data
+            const props = defineProps({ count: Number, items: Array })
+            watch(() => props.items, () => data.value.counter.changed++)
+          </script><template><i>{{ count }}</i></template>`,
+          App: `<template>
+            <components.Child :count="data.count" :items="[data.stable]" />
+          </template>`,
+        },
+        () =>
+          ref<any>({ count: 0, stable: 's', counter: markRaw({ changed: 0 }) }),
+        async (data, root, mode) => {
+          data.value.count++
+          await nextTick()
+          expect(root.textContent).toBe('1')
+          changed[mode] = data.value.counter.changed
+        },
+      )
+      expect(changed.vdom).toBe(1)
+      expect(changed.vapor).toBe(changed.vdom)
+    })
+
+    test('the inputs of a child are evaluated together', async () => {
+      const calls: Record<string, number[]> = {}
+      await renderParity(
+        {
+          Child: `<script setup>
+            defineProps({ heavy: Number, flag: Number })
+          </script><template><i>{{ flag }}</i></template>`,
+          App: `<script setup>
+            const data = _data
+            const components = _components
+            const heavy = () => (data.value.counter.calls++, data.value.own)
+          </script><template>
+            <components.Child :heavy="heavy()" :flag="data.flag" />
+          </template>`,
+        },
+        () => ref<any>({ flag: 0, own: 0, counter: markRaw({ calls: 0 }) }),
+        async (data, root, mode) => {
+          const seen = [data.value.counter.calls]
+          data.value.flag++
+          await nextTick()
+          data.value.flag++
+          await nextTick()
+          seen.push(data.value.counter.calls)
+          data.value.own++
+          await nextTick()
+          seen.push(data.value.counter.calls)
+          calls[mode] = seen
+        },
+      )
+      expect(calls.vdom).toEqual([1, 3, 4])
+      expect(calls.vapor).toEqual(calls.vdom)
+    })
+
+    // normalizing a style allocates; an untouched source must not look new.
+    // vdom notifies attrs as a whole, so its watcher runs again
+    test.each([
+      ['alone', ''],
+      ['next to a v-bind source', 'v-bind="data.bag"'],
+    ])(
+      'a style input %s keeps its value while another one changes',
+      async (_, bind) => {
+        const runs: Record<string, number> = {}
+        await renderParity(
+          {
+            Child: `<script setup>
+            import { useAttrs, watchEffect } from 'vue'
+            defineOptions({ inheritAttrs: false })
+            const data = _data
+            defineProps({ n: Number })
+            const attrs = useAttrs()
+            watchEffect(() => {
+              void attrs.style
+              data.value.counter.runs++
+            })
+          </script><template><i>{{ n }}</i></template>`,
+            App: `<template>
+            <components.Child ${bind} :style="{ color: data.c }" :n="data.n" />
+          </template>`,
+          },
+          () =>
+            ref<any>({
+              c: 'red',
+              n: 0,
+              bag: {},
+              counter: markRaw({ runs: 0 }),
+            }),
+          async (data, root, mode) => {
+            data.value.n++
+            await nextTick()
+            expect(root.textContent).toBe('1')
+            runs[mode] = data.value.counter.runs
+          },
+        )
+        expect(runs.vdom).toBe(2)
+        expect(runs.vapor).toBe(1)
+      },
+    )
+
+    test('each kind of input follows its own source', async () => {
+      const steps: Record<string, string[]> = {}
+      await renderParity(
+        {
+          Child: `<script setup>
+            import { useAttrs } from 'vue'
+            defineOptions({ inheritAttrs: false })
+            const data = _data
+            defineProps({
+              flag: Boolean,
+              size: { type: String, default: 'm' },
+              fooBar: Number,
+            })
+            const emit = defineEmits(['ping'])
+            const attrs = useAttrs()
+            data.value.ping = () => emit('ping')
+          </script><template>
+            <i>{{ flag }}|{{ size }}|{{ fooBar }}|{{ attrs.title }}|{{ attrs.class }}</i>
+          </template>`,
+          App: `<template>
+            <components.Child
+              :flag="data.flag"
+              :size="data.size"
+              :foo-bar="data.n"
+              :title="data.title"
+              :class="{ on: data.on }"
+              :onPing="data.handler"
+            />
+          </template>`,
+        },
+        () =>
+          ref<any>({
+            flag: false,
+            size: 's',
+            n: 0,
+            title: 't',
+            on: false,
+            pings: [],
+            handler: markRaw(function first(this: any) {}),
+          }),
+        async (data, root, mode) => {
+          const seen = [root.textContent!.trim()]
+          const step = async (change: () => void) => {
+            change()
+            await nextTick()
+            seen.push(root.textContent!.trim())
+          }
+          await step(() => (data.value.flag = ''))
+          await step(() => (data.value.size = undefined))
+          await step(() => (data.value.size = 'l'))
+          await step(() => data.value.n++)
+          await step(() => (data.value.title = 'x'))
+          await step(() => (data.value.on = true))
+          await step(() => {
+            data.value.handler = markRaw(() => data.value.pings.push('second'))
+          })
+          data.value.ping()
+          seen.push(data.value.pings.join())
+          steps[mode] = seen
+        },
+      )
+      expect(steps.vdom).toEqual([
+        'false|s|0|t|',
+        'true|s|0|t|',
+        'true|m|0|t|',
+        'true|l|0|t|',
+        'true|l|1|t|',
+        'true|l|1|x|',
+        'true|l|1|x|on',
+        'true|l|1|x|on',
+        'second',
+      ])
+      expect(steps.vapor).toEqual(steps.vdom)
+    })
+
+    // a delivery that throws half-way is redone in full on the next run.
+    // vdom resolves a default before the sibling props it reads, so the
+    // factory cannot fail there
+    test('a failed delivery is retried in full', async () => {
+      const data = ref<any>({
+        model: 'x',
+        options: [{ value: 'a' }],
+        disabled: false,
+      })
+      const Child = compile(
+        `<script setup>
+          defineProps({
+            modelValue: { type: String, default: p => p.options[0].value },
+            options: Array,
+            disabled: Boolean,
+          })
+        </script><template><i>{{ modelValue }}|{{ disabled }}</i></template>`,
+        data,
+      )
+      const App = compile(
+        `<template>
+          <components.Child
+            :modelValue="data.model"
+            :options="data.options"
+            :disabled="data.disabled"
+          />
+        </template>`,
+        data,
+        { Child },
+      )
+      const errors: unknown[] = []
+      const root = document.createElement('div')
+      const app = createVaporApp(App)
+      app.config.errorHandler = e => errors.push(e)
+      app.mount(root)
+      expect(root.textContent).toBe('x|false')
+      data.value.model = undefined
+      data.value.options = []
+      data.value.disabled = true
+      await nextTick()
+      expect(errors.length).toBe(1)
+      data.value.options = [{ value: 'b' }]
+      await nextTick()
+      expect(root.textContent).toBe('b|true')
+      app.unmount()
+    })
+
+    // a sync watcher sees a delivery as a whole, whichever prop is written
+    // first. vdom writes key by key, so the guarded-first order throws there
+    test.each([
+      ['the guard first', `:show="data.show" :item="data.item"`],
+      ['the guarded one first', `:item="data.item" :show="data.show"`],
+    ])('a delivery is atomic for a sync watcher, %s', async (_, attrs) => {
+      const data = ref<any>({ show: true, item: { name: 'a' }, seen: [] })
+      const Child = compile(
+        `<script setup>
+          import { watchSyncEffect } from 'vue'
+          const data = _data
+          const props = defineProps({ show: Boolean, item: Object })
+          watchSyncEffect(() => {
+            if (props.show) data.value.seen.push(props.item.name)
+          })
+        </script><template><i>{{ show }}</i></template>`,
+        data,
+      )
+      const App = compile(
+        `<template><components.Child ${attrs} /></template>`,
+        data,
+        { Child },
+      )
+      const root = document.createElement('div')
+      const app = createVaporApp(App)
+      app.mount(root)
+      expect(data.value.seen).toEqual(['a'])
+      data.value.show = false
+      data.value.item = null
+      await nextTick()
+      expect(data.value.seen).toEqual(['a'])
+      data.value.item = { name: 'b' }
+      data.value.show = true
+      await nextTick()
+      expect(data.value.seen).toEqual(['a', 'b'])
+      app.unmount()
+    })
+
+    // the host's update job unmounts the child before its inputs can run
+    test('inputs run after the vdom host that guards them', async () => {
+      const data = ref<any>({ user: { name: 'n' } })
+      const components: Record<string, any> = {}
+      components.Modal = compile(
+        `<script setup>
+          defineProps({ show: Boolean })
+        </script><template><div><slot v-if="show" /></div></template>`,
+        data,
+        components,
+        { vapor: false },
+      )
+      components.Child = compile(
+        `<script setup>
+          defineProps({ name: String })
+        </script><template><i>{{ name }}</i></template>`,
+        data,
+        components,
+      )
+      const App = compile(
+        `<template>
+          <components.Modal :show="data.user !== null">
+            <components.Child :name="data.user.name" />
+          </components.Modal>
+        </template>`,
+        data,
+        components,
+      )
+      const root = document.createElement('div')
+      const app = createVaporApp(App)
+      app.use(vaporInteropPlugin).mount(root)
+      expect(root.textContent).toBe('n')
+      data.value.user = null
+      await nextTick()
+      expect(root.textContent).toBe('')
+      app.unmount()
+    })
+
+    // observed on the instance: inputs that can never change are not tracked
+    test('inputs that cannot change are static', () => {
+      const instances: Record<string, any> = {}
+      const data = ref<any>({ c: 1 })
+      const Child = (name: string) =>
+        compile(
+          `<script setup>
+            const data = _data
+            defineProps({ a: String, b: Number, c: Number, opts: Object })
+            defineEmits(['ping'])
+            data.value.capture('${name}')
+          </script><template><i /></template>`,
+          data,
+        )
+      data.value.capture = (name: string) => (instances[name] = currentInstance)
+      const { app } = define(
+        compile(
+          `<script setup>
+            const data = _data
+            const components = _components
+            const OPTS = { x: 1 }
+            const onPing = () => {}
+          </script><template>
+            <components.None />
+            <components.Static a="x" :b="1" />
+            <components.Constant :opts="OPTS" @ping="onPing" />
+            <components.Live a="x" :c="data.c" />
+          </template>`,
+          data,
+          {
+            None: Child('none'),
+            Static: Child('static'),
+            Constant: Child('constant'),
+            Live: Child('live'),
+          },
+        ),
+      ).render()
+      expect(instances.none.hasDynamicProps).toBe(false)
+      expect(instances.static.hasDynamicProps).toBe(false)
+      expect(instances.constant.hasDynamicProps).toBe(false)
+      expect(instances.live.hasDynamicProps).toBe(true)
+      expect(instances.constant.props.opts).toEqual({ x: 1 })
+      app.unmount()
+    })
+  })
 })

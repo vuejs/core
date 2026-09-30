@@ -5,6 +5,7 @@
 
 import {
   isEmitListener,
+  markRaw,
   nextTick,
   onBeforeUnmount,
   ref,
@@ -17,7 +18,7 @@ import {
   defineVaporComponent,
   template,
 } from '../src'
-import { compile, makeRender } from './_utils'
+import { compile, makeRender, renderParity } from './_utils'
 
 const define = makeRender()
 
@@ -638,7 +639,7 @@ describe('component: emit', () => {
     expect(onObject).toHaveBeenCalledTimes(1)
   })
 
-  test('emit sees the new raw listener before its declared prop is published', async () => {
+  test('a sync watcher sees the new listener as a prop and through emit', async () => {
     const oldListener = vi.fn()
     const newListener = vi.fn()
     const data = ref({ count: 0, listener: oldListener })
@@ -674,7 +675,7 @@ describe('component: emit', () => {
     data.value.listener = newListener
     await nextTick()
 
-    expect(propListeners).toEqual([oldListener])
+    expect(propListeners).toEqual([newListener])
     expect(props.onChange).toBe(newListener)
     expect(oldListener).not.toHaveBeenCalled()
     expect(newListener).toHaveBeenCalledExactlyOnceWith(1)
@@ -703,5 +704,69 @@ describe('component: emit', () => {
     await nextTick()
     expect(host.innerHTML).toBe('<div>1</div>')
     app.unmount()
+  })
+
+  // vdom reads listeners off the vnode, which nothing can subscribe to
+  test('emitting inside an effect does not subscribe it to the inputs', async () => {
+    const pings: Record<string, number> = {}
+    await renderParity(
+      {
+        Child: `<script setup>
+          import { watchEffect } from 'vue'
+          const data = _data
+          const emit = defineEmits(['ping'])
+          defineProps({ other: String })
+          watchEffect(() => emit('ping', data.value.local))
+        </script><template><i /></template>`,
+        App: `<template>
+          <components.Child :other="data.other" @ping="data.pings.push($event)" />
+        </template>`,
+      },
+      () => ref<any>({ other: 'a', local: 1, pings: [] }),
+      async (data, root, mode) => {
+        data.value.other = 'b'
+        await nextTick()
+        pings[mode] = data.value.pings.length
+      },
+    )
+    expect(pings.vdom).toBe(1)
+    expect(pings.vapor).toBe(pings.vdom)
+  })
+
+  test('writing a model inside an effect does not subscribe it to the inputs', async () => {
+    const runs: Record<string, number> = {}
+    await renderParity(
+      {
+        Child: `<script setup>
+          import { watchEffect } from 'vue'
+          const data = _data
+          const model = defineModel()
+          defineProps({ other: Number })
+          watchEffect(() => {
+            data.value.counter.runs++
+            model.value = data.value.local
+          })
+        </script><template><i /></template>`,
+        App: `<template>
+          <components.Child v-model="data.m" :other="data.other" />
+        </template>`,
+      },
+      () =>
+        ref<any>({
+          m: 'a',
+          local: 'b',
+          other: 0,
+          counter: markRaw({ runs: 0 }),
+        }),
+      async (data, root, mode) => {
+        await nextTick()
+        const before = data.value.counter.runs
+        data.value.other++
+        await nextTick()
+        runs[mode] = data.value.counter.runs - before
+      },
+    )
+    expect(runs.vdom).toBe(0)
+    expect(runs.vapor).toBe(runs.vdom)
   })
 })

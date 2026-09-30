@@ -6,10 +6,8 @@ import {
 import type { EffectScope } from '@vue/reactivity'
 import type { Block } from './block'
 import type { DynamicFragment } from './fragment'
-import type { RawSlots } from './componentSlots'
 
 export interface VaporKeepAliveContext {
-  isolateSlotSources(rawSlots: RawSlots): RawSlots
   // caches or stops the outgoing branch scope and returns whether its DOM
   // removal must wait for the incoming cache decision. `prevKey` is the
   // outgoing branch key: `frag.current` already names the incoming one.

@@ -17,7 +17,7 @@ import {
   type VaporComponentInstance,
   createComponent,
 } from './component'
-import type { RawProps } from './componentProps'
+import { type RawProps, trackRawValues } from './componentProps'
 import { enableAsyncComponent } from './asyncComponentState'
 import { renderEffect } from './renderEffect'
 import { DynamicFragment, isDynamicFragment } from './fragment'
@@ -280,7 +280,7 @@ function createErrorComp(
     comp,
     parent,
     // Forward the wrapper's delivered props and attrs to the error component.
-    { error: getError, $: [() => parent.rawValues.value] },
+    { error: getError, $: [() => trackRawValues(parent)] },
     // Avoid wrapper slot fallthrough
     {},
   )
@@ -289,7 +289,7 @@ function createErrorComp(
 function createInnerComp(
   comp: VaporComponent,
   parent: VaporComponentInstance & TransitionOptions,
-  rawProps: RawProps = { $: [() => parent.rawValues.value] },
+  rawProps: RawProps = { $: [() => trackRawValues(parent)] },
   rawSlots = parent.rawSlots,
 ): VaporComponentInstance {
   const prevInstance = setCurrentInstance(parent)
