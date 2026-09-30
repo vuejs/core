@@ -1552,13 +1552,15 @@ function createVDOMComponent(
         ? instance.attrs
         : shallowReactive(wrapper.props)
 
+    // like VDOM, use an internal object so the slots can be passed on as
+    // children of another vnode
     instance.slots =
       wrapper.rawSlots === EMPTY_OBJ
-        ? EMPTY_OBJ
+        ? createInternalObject()
         : new Proxy(wrapper.rawSlots, vaporSlotsProxyHandler)
 
     // async wrappers create the inner component with `vnode.children`
-    if ((component as any).__asyncLoader && instance.slots !== EMPTY_OBJ) {
+    if ((component as any).__asyncLoader && wrapper.rawSlots !== EMPTY_OBJ) {
       vnode.children = instance.slots
       vnode.shapeFlag |= ShapeFlags.SLOTS_CHILDREN
     }
