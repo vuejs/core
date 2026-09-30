@@ -23,6 +23,7 @@ import {
 import { isReactive } from '@vue/reactivity'
 import { type EventHandlerValue, setListener } from './event'
 import {
+  type ComponentInternalInstance,
   type GenericComponentInstance,
   MismatchTypes,
   type VShowElement,
@@ -39,6 +40,7 @@ import {
   patchClass,
   patchStyle,
   queuePostFlushCb,
+  resolveCssVars as resolveVNodeCssVars,
   shouldSetAsProp,
   shouldSetAsPropForVueCE,
   toClassSet,
@@ -54,6 +56,7 @@ import {
 import {
   type VaporComponentInstance,
   isApplyingFallthroughProps,
+  isVaporComponent,
   shouldUseFunctionalFallthrough,
 } from '../component'
 import {
@@ -65,6 +68,7 @@ import { type Block, normalizeBlock } from '../block'
 import type { VaporElement } from '../apiDefineCustomElement'
 import type { RootMeta } from './template'
 import { isTransitionEnabled } from '../transition'
+import { isInteropEnabled } from '../vdomInteropState'
 
 type TargetElement = Element & {
   $root?: boolean | RootMeta
@@ -823,11 +827,16 @@ function resolveCssVars(
     normalizeBlock(block).every(b => rootBlocks.includes(b)) &&
     instance.parent
   ) {
-    resolveCssVars(
-      instance.parent as VaporComponentInstance,
-      instance.block,
-      expectedMap,
-    )
+    if (isVaporComponent(instance.parent)) {
+      resolveCssVars(instance.parent, instance.block, expectedMap)
+    } else if (isInteropEnabled && instance.interopVNode) {
+      // a vdom parent resolves its css vars from the vnode rendering this root
+      resolveVNodeCssVars(
+        instance.parent as ComponentInternalInstance,
+        instance.interopVNode,
+        expectedMap,
+      )
+    }
   }
 }
 

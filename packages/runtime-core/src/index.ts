@@ -691,6 +691,7 @@ export {
   isHydrating,
   isHydratingEnabled,
   logMismatchError,
+  resolveCssVars,
 } from './hydration'
 /**
  * @internal
