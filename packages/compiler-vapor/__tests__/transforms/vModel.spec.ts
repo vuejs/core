@@ -487,4 +487,92 @@ describe('compiler: vModel transform', () => {
     expect(reactive).toMatchSnapshot()
     expect(constant).toMatchSnapshot()
   })
+
+  test('generates listeners on the same element after v-model', () => {
+    const { code } = compileVapor(
+      '<select v-model="model" @change="onChange"></select>' +
+        '<input @input="onInput" v-model="text" @[event]="onEvent" v-on="handlers" />',
+      { prefixIdentifiers: true },
+    )
+
+    expect(code).toMatchSnapshot()
+    expect(code.indexOf('_applySelectModel(n0')).toBeLessThan(
+      code.indexOf('_on(n0, "change"'),
+    )
+    expect(code.indexOf('_applyTextModel(n1')).toBeLessThan(
+      code.indexOf('_onBinding(n1'),
+    )
+    expect(code.indexOf('_applyTextModel(n1')).toBeLessThan(
+      code.indexOf('_setDynamicProps(n1'),
+    )
+  })
+
+  test.each([
+    [BindingTypes.SETUP_CONST, false, '_setListener('],
+    [BindingTypes.SETUP_REF, false, '_setListener('],
+    [BindingTypes.SETUP_CONST, true, '_on('],
+  ])(
+    'generates bound %s listeners (once: %s) after v-model',
+    (binding, once, helper) => {
+      const { code } = compileVapor(
+        `<input ${once ? 'v-once' : ''} v-model="model" :onInput="handler" />`,
+        {
+          prefixIdentifiers: true,
+          inline: true,
+          bindingMetadata: { handler: binding },
+        },
+      )
+
+      const model = code.indexOf('_applyTextModel(')
+      expect(model).toBeGreaterThan(-1)
+      expect(code.indexOf(helper)).toBeGreaterThan(model)
+    },
+  )
+
+  test.each([
+    ['prop', '_setDOMProp('],
+    ['attr', '_setAttr('],
+  ])('keeps explicit :onInput.%s before v-model', (modifier, helper) => {
+    const { code } = compileVapor(
+      `<input v-model="model" :onInput.${modifier}="handler" />`,
+      { prefixIdentifiers: true },
+    )
+
+    expect(code.indexOf(helper)).toBeGreaterThan(-1)
+    expect(code.indexOf(helper)).toBeLessThan(code.indexOf('_applyTextModel('))
+  })
+
+  test.each([
+    ['key-only', '@[field.event]="onInput(field.value)"', '_onBinding('],
+    ['key-only bound', ':onInput="field.event && (() => {})"', '_setListener('],
+    [
+      'selector bound',
+      ':onInput="field.event === event ? () => {} : null"',
+      '_setListener(',
+    ],
+    [
+      'selector',
+      'v-on="field.event === event ? { input() {} } : {}"',
+      '_setDynamicEvents(',
+    ],
+  ])(
+    'generates %s listeners after v-model in keyed v-for',
+    (_, listener, helper) => {
+      const { code } = compileVapor(
+        `<input v-for="field in fields" :key="field.event"
+        :type="field.event === event ? 'text' : 'checkbox'"
+        v-model="field.value" ${listener} />`,
+        { prefixIdentifiers: true },
+      )
+
+      const model = code.indexOf('_applyDynamicModel(')
+      const type = code.indexOf(', "type",')
+      expect(model).toBeGreaterThan(-1)
+      expect(type).toBeGreaterThan(-1)
+      expect(type).toBeLessThan(model)
+      expect(code.indexOf(helper)).toBeGreaterThan(model)
+      expect(code).toContain('_createSelector(')
+      expect(code).toMatchSnapshot()
+    },
+  )
 })

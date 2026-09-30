@@ -1228,5 +1228,77 @@ describe('Vapor Mode hydration', () => {
         `"<div><span>foo</span><!----></div><!--dynamic-component-->"`,
       )
     })
+
+    test('dynamic component fallback with empty text children', async () => {
+      const data = ref('')
+      const { container } = await testHydration(
+        `<template><component :is="'p'">{{ data }}</component></template>`,
+        {},
+        data,
+      )
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `"<p></p><!--dynamic-component-->"`,
+      )
+
+      data.value = 'foo'
+      await nextTick()
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `"<p>foo</p><!--dynamic-component-->"`,
+      )
+    })
+
+    test('dynamic component fallback with trailing empty text children', async () => {
+      const data = ref('')
+      const { container } = await testHydration(
+        `<template><div><component :is="'button'"><i/>{{ data }}</component><b/></div></template>`,
+        {},
+        data,
+      )
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `"<div><button><i></i></button><!--dynamic-component--><b></b></div>"`,
+      )
+
+      data.value = 'foo'
+      await nextTick()
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `"<div><button><i></i>foo</button><!--dynamic-component--><b></b></div>"`,
+      )
+    })
+
+    test.each([true, false])(
+      'dynamic native element removes stale SSR v-if children (dev: %s)',
+      async dev => {
+        const prevDev = __DEV__
+        __DEV__ = dev
+        try {
+          const data = ref(false)
+          const { container } = await testHydration(
+            `<template>
+              <component :is="'div'">
+                <span v-if="data">stale</span>
+              </component>
+            </template>`,
+            {},
+            data,
+            { serverData: ref(true) },
+          )
+
+          expect(container.querySelector('span')).toBeNull()
+          if (__DEV__) {
+            expect(`Hydration children mismatch`).toHaveBeenWarned()
+          }
+
+          data.value = true
+          await nextTick()
+          expect(container.querySelectorAll('span')).toHaveLength(1)
+
+          data.value = false
+          await nextTick()
+          expect(container.querySelector('span')).toBeNull()
+        } finally {
+          __DEV__ = prevDev
+        }
+      },
+    )
   })
 })

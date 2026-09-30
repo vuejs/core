@@ -261,6 +261,38 @@ describe('component: slots', () => {
     expect(vapor.text).toBe(vdom.text)
   })
 
+  test('v-if / v-for slots override unconditional ones like vdom', async () => {
+    const texts: Record<string, string[]> = {}
+    await renderParity(
+      {
+        Child: `<template><div><slot name="a">fa</slot>|<slot name="b">fb</slot></div></template>`,
+        App: `<template><components.Child>
+          <template v-for="n in data.names" #[n]>forwarded {{ n }}</template>
+          <template #a>own a</template>
+          <template v-if="data.ok" #b>own b</template>
+          <template #[data.name]>computed</template>
+        </components.Child></template>`,
+      },
+      () => ref({ names: ['a'], ok: true, name: 'b' }),
+      async (data, root, mode) => {
+        const seen = [root.textContent!]
+        data.value.names = []
+        await nextTick()
+        seen.push(root.textContent!)
+        data.value.ok = false
+        await nextTick()
+        seen.push(root.textContent!)
+        texts[mode] = seen
+      },
+    )
+    expect(texts.vdom).toEqual([
+      'forwarded a|own b',
+      'own a|own b',
+      'own a|computed',
+    ])
+    expect(texts.vapor).toEqual(texts.vdom)
+  })
+
   describe('slot fallback boundary', () => {
     test('slot fragment insert uses active fallback output', () => {
       const container = document.createElement('div')

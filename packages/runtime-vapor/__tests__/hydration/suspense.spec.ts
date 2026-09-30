@@ -8,6 +8,7 @@ import {
   formatHtml,
   formatNodeList,
   setupHydrationTest,
+  testWithVaporApp,
 } from './_helpers'
 
 setupHydrationTest()
@@ -1361,6 +1362,65 @@ describe('Vapor Mode hydration', () => {
           expect(container.innerHTML).toBe(
             '<main><h1>world</h1><span></span></main>',
           )
+        })
+
+        test.each([
+          ['a component', `<Suspense><components.Child /></Suspense>`],
+          [
+            'a vnode',
+            `<components.RouterView v-slot="{ Component }">
+              <Suspense><component :is="Component" /></Suspense>
+            </components.RouterView>`,
+          ],
+          [
+            'a vdom slot fallback',
+            `<Suspense><div><components.Outlet>
+              <template v-if="data.no">x</template>
+            </components.Outlet></div></Suspense>`,
+          ],
+        ])('hydrate a VDOM async setup child as %s', async (_, code) => {
+          const data = ref({ msg: 'foo', mounted: 0, no: false })
+          const { container } = await testWithVaporApp(
+            `<script setup>const components = _components; const data = _data</script>
+            <template>${code}</template>`,
+            {
+              Child: {
+                code: `<script setup>
+                  import { onMounted } from 'vue'
+                  const data = _data
+                  onMounted(() => data.value.mounted++)
+                  await Promise.resolve()
+                </script>
+                <template><b>{{ data.msg }}</b></template>`,
+                vapor: false,
+              },
+              RouterView: {
+                code: `<script>
+                  import { h } from 'vue'
+                  export default {
+                    setup(_, { slots }) {
+                      return () => slots.default({ Component: h(_components.Child) })
+                    },
+                  }
+                </script>`,
+                vapor: false,
+              },
+              Outlet: {
+                code: `<script setup>const components = _components</script>
+                <template><slot><components.Child /></slot></template>`,
+                vapor: false,
+              },
+            },
+            data,
+          )
+          await new Promise(r => setTimeout(r))
+          await nextTick()
+          expect(data.value.mounted).toBe(1)
+          expect(`no <Suspense> boundary`).not.toHaveBeenWarned()
+
+          data.value.msg = 'bar'
+          await nextTick()
+          expect(container.innerHTML).toContain(`<b>bar</b>`)
         })
       })
 

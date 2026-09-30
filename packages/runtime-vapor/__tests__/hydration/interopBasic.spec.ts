@@ -13,6 +13,7 @@ import {
   formatHtml,
   formatNodeList,
   setupHydrationTest,
+  testHydration,
   testWithVDOMApp,
   testWithVaporApp,
 } from './_helpers'
@@ -887,5 +888,112 @@ describe('VDOM interop', () => {
       <div>first</div><div>second</div><!--dynamic-component--><span>tail-updated</span><!--]-->
       "
     `)
+  })
+
+  test('hydrate a functional child injecting from a vdom parent under vapor', async () => {
+    const data = ref(0)
+    const { container } = await testWithVaporApp(
+      `<template><div><components.G :n="data" /></div></template>`,
+      {
+        G: {
+          code: `<script setup>
+            import { h, inject, provide } from 'vue'
+            defineProps(['n'])
+            provide('k', 'G')
+            const F = props => h('i', inject('k', 'none') + ':' + props.n)
+          </script>
+          <template><F :n="n" /></template>`,
+          vapor: false,
+        },
+      },
+      data,
+    )
+    expect(formatHtml(container.innerHTML)).toBe('<div><i>G:0</i></div>')
+    expect(`Hydration text content mismatch`).not.toHaveBeenWarned()
+
+    data.value++
+    await nextTick()
+    expect(formatHtml(container.innerHTML)).toBe('<div><i>G:1</i></div>')
+  })
+
+  test('hydrate VDOM prop defaults injecting from a Vapor parent', async () => {
+    const { container, html } = await testWithVaporApp(
+      `<script setup vapor>
+        import { provide } from 'vue'
+        const components = _components
+        provide('k', 'parent')
+      </script>
+      <template><components.Child /></template>`,
+      {
+        Child: {
+          code: `<script setup>
+            import { inject } from 'vue'
+            defineProps({
+              value: {
+                default: () => inject('k', 'missing'),
+              },
+            })
+          </script>
+          <template><i>{{ value }}</i></template>`,
+          vapor: false,
+        },
+      },
+    )
+
+    expect(html).toBe('<i>parent</i>')
+    expect(container.innerHTML).toBe(html)
+    expect('Hydration text content mismatch').not.toHaveBeenWarned()
+  })
+
+  test('hydrate vapor component root with css variables in style', async () => {
+    const data = ref('red')
+    const { container } = await testWithVDOMApp(
+      `<script setup>const data = _data; const components = _components;</script>
+      <template>
+        <components.VaporChild :style="{ '--color': data }" />
+      </template>`,
+      {
+        VaporChild: {
+          code: `<template><div :style="{ '--size': '1px' }">child</div></template>`,
+          vapor: true,
+        },
+      },
+      data,
+    )
+    await nextTick()
+    const el = container.firstElementChild as HTMLElement
+    expect(el.style.getPropertyValue('--size')).toBe('1px')
+    expect(el.style.getPropertyValue('--color')).toBe('red')
+
+    data.value = 'blue'
+    await nextTick()
+    expect(el.style.getPropertyValue('--color')).toBe('blue')
+  })
+
+  test('hydrate vapor component root with css vars of vdom parent', async () => {
+    const code = `<script setup>const data = _data; const components = _components;</script>
+      <template><components.VaporChild /></template>
+      <style>.a { color: v-bind(data) }</style>`
+    const components = {
+      VaporChild: {
+        code: `<script setup>import { ref } from 'vue'; const p = ref('4px')</script>
+          <template><div :style="{ padding: p }">child</div></template>`,
+        vapor: true,
+      },
+    }
+    const { container } = await testHydration(code, components, ref('red'), {
+      isVaporApp: false,
+      interop: true,
+    })
+    expect(container.innerHTML).toContain(':red;')
+    expect(`Hydration style mismatch`).not.toHaveBeenWarned()
+
+    // the vdom parent's css var differs between server and client
+    await testHydration(code, components, ref('red'), {
+      isVaporApp: false,
+      interop: true,
+      serverData: ref('blue'),
+    })
+    expect(`Hydration style mismatch`).toHaveBeenWarned()
   })
 })

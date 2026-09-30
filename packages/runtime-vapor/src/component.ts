@@ -320,12 +320,15 @@ export function createComponent(
   appContext: GenericAppContext = (currentInstance &&
     currentInstance.appContext) ||
     emptyContext,
+  // set by non-compiled callers (app, vdom interop, custom element, HMR): the
+  // caller mounts it and owns its inputs, so it neither self-mounts, inherits
+  // an ambient v-once region, nor takes a KeepAlive cache hit (vdom interop
+  // resolved it already; a lookup by type would return another entry)
   managedMount = false,
   ce?: (instance: VaporComponentInstance) => void,
 ): VaporComponentInstance {
   // A component created while rendering a v-once region receives frozen
-  // parent inputs, but its own render effects stay live. A vdom-managed mount
-  // is a boundary of its own: the vdom render owns that component's inputs.
+  // parent inputs, but its own render effects stay live.
   const wasInOnce = inOnce
   if (wasInOnce && !managedMount) once = true
 
@@ -388,7 +391,7 @@ export function createComponent(
     ) {
       const ctx = (currentInstance as KeepAliveInstance).ctx
       keepAliveCtx = ctx
-      const cached = ctx.getCachedComponent(component, key)
+      const cached = !managedMount && ctx.getCachedComponent(component, key)
       if (cached) {
         // a nested branch teardown stops the branch scope that unmounts the
         // cached component, so the scope re-entering it takes over
@@ -705,7 +708,9 @@ export function setupComponent(
         instance.props,
         instance,
       ]) || EMPTY_OBJ
-    : EMPTY_OBJ
+    : // a template-only component reads `<style module>` names off its
+      // render context, like the vdom render proxy does
+      (component as VaporComponentOptions).__cssModules || EMPTY_OBJ
 
   const isAsyncSetup = isPromise(setupResult)
 
@@ -783,15 +788,6 @@ export function resolveFallthroughAttrs(
     }
   }
   return attrs
-}
-
-export function isDeclaredModelListener(
-  instance: VaporComponentInstance,
-  key: string,
-): boolean {
-  if (!isModelListener(key)) return false
-  const propsOptions = normalizePropsOptions(instance.type)[0]
-  return !!propsOptions && key.slice(9) in propsOptions
 }
 
 export function applyFallthroughProps(
@@ -1337,7 +1333,18 @@ export function createPlainElement(
     } else {
       const slot = getSlot(rawSlots as RawSlots, 'default')
       if (slot) {
+        // SSR renders nothing for an empty trailing text, so the slot can run out
+        // of server nodes; an end anchor keeps the cursor inside `el`. A comment
+        // cannot be adopted as blank text, and a non-empty label (also in prod)
+        // prevents nested fragments from treating it as a reusable SSR anchor.
+        let end: Node | undefined
+        if (isHydrating) {
+          // nce = native-children-end
+          end = el.appendChild(claimAnchor(createComment('nce')))
+          if (!currentHydrationNode) setCurrentHydrationNode(end)
+        }
         const block = slot()
+        if (end) el.removeChild(end)
         if (!isHydrating) insert(block, el)
         registerNestedVDOMCleanup(block)
       }

@@ -741,5 +741,76 @@ describe('compiler: expression', () => {
         expect(code).contains(`_setProp(n2, "title", ${expected})`)
       },
     )
+
+    // #15671 a member expression that every usage reads behind a guard must
+    // stay in place: the hoisted read runs on every render, ahead of the guard
+    test('should not hoist a member expression that is only read behind a guard', () => {
+      const { code } = compileWithExpression(
+        `
+        <div :id="x === undefined ? '—' : x.y"></div>
+        <div :title="x === undefined ? '—' : x.y"></div>
+      `,
+        { bindingMetadata: { x: BindingTypes.SETUP_REF } },
+      )
+      expect(code).not.contains('const _x_y')
+      expect(code).contains(`_setProp(n0, "id", _x === undefined ? '—' : _x.y)`)
+      expect(code).contains(
+        `_setProp(n1, "title", _x === undefined ? '—' : _x.y)`,
+      )
+    })
+
+    test('should not hoist a member expression read on the right of a logical operator', () => {
+      const { code } = compileWithExpression(
+        `
+        <div :id="ok && x.y"></div>
+        <div :title="ok ?? x.y"></div>
+      `,
+        { bindingMetadata: { x: BindingTypes.SETUP_REF } },
+      )
+      expect(code).not.contains('const _x_y')
+      expect(code).contains('_setProp(n0, "id", _ctx.ok && _ctx.x.y)')
+      expect(code).contains('_setProp(n1, "title", _ctx.ok ?? _ctx.x.y)')
+    })
+
+    test('should not hoist a member expression read inside an optional chain', () => {
+      const { code } = compileWithExpression(
+        `
+        <div :id="o?.[x.y]"></div>
+        <div :title="o?.b[x.y]"></div>
+      `,
+        { bindingMetadata: { x: BindingTypes.SETUP_REF } },
+      )
+      expect(code).not.contains('const _x_y')
+      expect(code).contains('_setProp(n0, "id", _o?.[_x.y])')
+      expect(code).contains('_setProp(n1, "title", _o?.b[_x.y])')
+    })
+
+    test('should not hoist a member expression read inside a function body', () => {
+      const { code } = compileWithExpression(
+        `
+        <div :id="items.map(() => x.y)"></div>
+        <div :title="({ v() { return x.y } }).v()"></div>
+      `,
+        { bindingMetadata: { x: BindingTypes.SETUP_REF } },
+      )
+      expect(code).not.contains('const _x_y')
+      expect(code).contains('_setProp(n0, "id", _ctx.items.map(() => _x.y))')
+      expect(code).contains(
+        '_setProp(n1, "title", ({ v() { return _x.y } }).v())',
+      )
+    })
+
+    test('should hoist a member expression that some usage reads unconditionally', () => {
+      const { code } = compileWithExpression(
+        `
+        <div :id="x.y"></div>
+        <div :title="ok ? x.y : 0"></div>
+      `,
+        { bindingMetadata: { x: BindingTypes.SETUP_REF } },
+      )
+      expect(code).contains('const _x_y = _x.y')
+      expect(code).contains('_setProp(n0, "id", _x_y)')
+      expect(code).contains('_setProp(n1, "title", _ctx.ok ? _x_y : 0)')
+    })
   })
 })

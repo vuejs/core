@@ -5,11 +5,12 @@ import {
   transformChildren,
   transformElement,
   transformVBind,
+  transformVOnce,
 } from '../../src'
 import { makeCompile } from './_utils'
 
 const compileWithVBind = makeCompile({
-  nodeTransforms: [transformElement, transformChildren],
+  nodeTransforms: [transformVOnce, transformElement, transformChildren],
   directiveTransforms: {
     bind: transformVBind,
   },
@@ -852,7 +853,7 @@ describe('compiler v-bind', () => {
       <div :class="{ active: isActive }"/>
     `)
     expect(code).matchSnapshot()
-    expect(code).contains('_setClassName(n0, (_ctx.isActive ? 1 : 0)')
+    expect(code).contains('_setClassName(n0, ((_ctx.isActive) ? 1 : 0)')
     expect(code).contains('"active"')
     expect(code).not.contains('{ active:')
   })
@@ -863,7 +864,7 @@ describe('compiler v-bind', () => {
     `)
     expect(code).matchSnapshot()
     expect(code).contains(
-      '_setClassName(n0, (_ctx.selected === _ctx.row.id ? 1 : 0), "danger")',
+      '_setClassName(n0, ((_ctx.selected === _ctx.row.id) ? 1 : 0), "danger")',
     )
   })
 
@@ -873,7 +874,7 @@ describe('compiler v-bind', () => {
     `)
     expect(code).matchSnapshot()
     expect(code).contains(
-      '_setClassName(n0, (_ctx.selected === _ctx.row.id ? 0 : 1), "danger")',
+      '_setClassName(n0, ((_ctx.selected === _ctx.row.id) ? 0 : 1), "danger")',
     )
   })
 
@@ -883,7 +884,7 @@ describe('compiler v-bind', () => {
     `)
     expect(code).matchSnapshot()
     expect(code).contains(
-      `_setClassName(n0, (_ctx.selected === _ctx.row.id ? 1 : 0), "danger", "", "foo")`,
+      `_setClassName(n0, ((_ctx.selected === _ctx.row.id) ? 1 : 0), "danger", "", "foo")`,
     )
   })
 
@@ -892,7 +893,7 @@ describe('compiler v-bind', () => {
       <div class="foo" :class="{ bar: isBar }"/>
     `)
     expect(code).matchSnapshot()
-    expect(code).contains('_setClassName(n0, (_ctx.isBar ? 1 : 0)')
+    expect(code).contains('_setClassName(n0, ((_ctx.isBar) ? 1 : 0)')
     expect(code).contains('" bar", "foo"')
     expect(code).not.contains('{ bar:')
   })
@@ -925,7 +926,7 @@ describe('compiler v-bind', () => {
     `)
     expect(code).matchSnapshot()
     expect(code).contains(
-      '_setClassName(n0, (_ctx.isBar ? 1 : 0), "bar", "", "foo")',
+      '_setClassName(n0, ((_ctx.isBar) ? 1 : 0), "bar", "", "foo")',
     )
   })
 
@@ -935,7 +936,7 @@ describe('compiler v-bind', () => {
     `)
     expect(code).matchSnapshot()
     expect(code).contains(
-      '_setClassName(n0, (_ctx.ok ? 1 : 0) | (_ctx.bar ? 2 : 0), [" active", " foo"], "", "tail")',
+      '_setClassName(n0, ((_ctx.ok) ? 1 : 0) | ((_ctx.bar) ? 2 : 0), [" active", " foo"], "", "tail")',
     )
   })
 
@@ -945,10 +946,20 @@ describe('compiler v-bind', () => {
     `)
     expect(code).matchSnapshot()
     expect(code).contains(
-      '_setClassName(n0, (_ctx.ok ? 1 : 0) | (_ctx.bar ? 2 : 0)',
+      '_setClassName(n0, ((_ctx.ok) ? 1 : 0) | ((_ctx.bar) ? 2 : 0)',
     )
     expect(code).contains('[" active", " foo"]')
     expect(code).not.contains('{ active:')
+  })
+
+  test('className helper parenthesizes its conditions', () => {
+    const { code } = compileWithVBind(
+      `<div :class="{ active: ok, foo: bar ? true : false, baz: n++ }"/>`,
+      { inline: true, bindingMetadata: { n: BindingTypes.SETUP_LET } },
+    )
+    expect(code).contains(
+      '_setClassName(n0, ((ok) ? 1 : 0) | ((bar ? true : false) ? 2 : 0) | ((_isRef(n) ? n.value++ : n++) ? 4 : 0)',
+    )
   })
 
   test('static class with multiple object className helper', () => {
@@ -957,7 +968,7 @@ describe('compiler v-bind', () => {
     `)
     expect(code).matchSnapshot()
     expect(code).contains(
-      '_setClassName(n0, (_ctx.selected === _ctx.row.id ? 1 : 0) | (_ctx.active ? 2 : 0), [" danger", " is-active"], "foo")',
+      '_setClassName(n0, ((_ctx.selected === _ctx.row.id) ? 1 : 0) | ((_ctx.active) ? 2 : 0), [" danger", " is-active"], "foo")',
     )
     expect(code).not.contains('{ danger:')
   })
@@ -967,7 +978,7 @@ describe('compiler v-bind', () => {
       <div :class="{ 'foo bar': isActive }"/>
     `)
     expect(code).matchSnapshot()
-    expect(code).contains('_setClassName(n0, (_ctx.isActive ? 1 : 0)')
+    expect(code).contains('_setClassName(n0, ((_ctx.isActive) ? 1 : 0)')
     expect(code).contains('"foo bar"')
     expect(code).not.contains("'foo bar':")
   })
@@ -977,7 +988,7 @@ describe('compiler v-bind', () => {
       <div class="bar" :class="{ bar: isBar }"/>
     `)
     expect(code).matchSnapshot()
-    expect(code).contains('_setClassName(n0, (_ctx.isBar ? 1 : 0)')
+    expect(code).contains('_setClassName(n0, ((_ctx.isBar) ? 1 : 0)')
     expect(code).contains('" bar", "bar"')
     expect(code).not.contains('{ bar:')
   })
@@ -987,7 +998,7 @@ describe('compiler v-bind', () => {
       <div class="foo" :class="{ 'foo bar': isActive }"/>
     `)
     expect(code).matchSnapshot()
-    expect(code).contains('_setClassName(n0, (_ctx.isActive ? 1 : 0)')
+    expect(code).contains('_setClassName(n0, ((_ctx.isActive) ? 1 : 0)')
     expect(code).contains('" foo bar", "foo"')
     expect(code).not.contains("'foo bar':")
   })
@@ -998,7 +1009,7 @@ describe('compiler v-bind', () => {
     `)
     expect(code).matchSnapshot()
     expect(code).contains(
-      '_setClassName(n0, (_ctx.ok ? 1 : 0), " baz", "foo bar")',
+      '_setClassName(n0, ((_ctx.ok) ? 1 : 0), " baz", "foo bar")',
     )
   })
 
@@ -1018,7 +1029,7 @@ describe('compiler v-bind', () => {
     )
     const { code } = compileWithVBind(`<div :class="{ ${entries} }"/>`)
     expect(code).contains('_setClassName')
-    expect(code).contains('(_ctx.a30 ? 1073741824 : 0)')
+    expect(code).contains('((_ctx.a30) ? 1073741824 : 0)')
     expect(code).not.contains('_setClass(n0, {')
   })
 
@@ -1394,5 +1405,75 @@ describe('compiler v-bind', () => {
       '_setDynamicProps(n0, [{ [_ctx.name || ""]: _ctx.a, [(_ctx.foo?_ctx.bar:_ctx.baz) || ""]: _ctx.b }])',
     )
     expect(code).contains('() => ({ [_ctx.name || ""]: _ctx.a })')
+  })
+
+  test('binds on* keys of native elements as listeners like vdom', () => {
+    const { code } = compileWithVBind(
+      `<div :onClick="save" :onKeyupOnceCapture="save" :onMyEvent="cond ? a : b" :on:MyEvent="fn" :on-click.camel="save" :onUpdate:modelValue="fn" :onFoo /><svg :onClick="save"/><a :onClick.prop="fn1" /><b :onClick.attr="fn2" /><i :on-click="fn3" /><p v-bind="obj" :onClick="fn4" /><s v-once :onClick="fn5" />`,
+      { bindingMetadata: { save: BindingTypes.SETUP_CONST } },
+    )
+
+    expect(code).toMatchSnapshot()
+    // the handler value is re-bound by the effect through the element's
+    // invoker, like vdom patches the listener on render; only v-once attaches
+    // it once
+    expect(code).toContain(`_setListener(n0, "onClick", _save)`)
+    expect(code).toContain(`_setListener(n0, "onKeyupOnceCapture", _save)`)
+    expect(code).toContain(`_setListener(n1, "onClick", _save)`)
+    expect(code).toContain(`_on(n6, "click", _ctx.fn5)`)
+    expect(code).toContain(
+      `_setListener(n0, "onMyEvent", _ctx.cond ? _ctx.a : _ctx.b)`,
+    )
+    expect(code).toContain(`_setListener(n0, "on:MyEvent", _ctx.fn)`)
+    expect(code).toContain(`_setListener(n0, "onFoo", _ctx.onFoo)`)
+    // vdom's patchProp ignores v-model listeners on elements
+    expect(code).not.toContain('modelValue')
+    // not listeners in vdom either
+    expect(code).toContain(`_setDOMProp(n2, "onClick", _ctx.fn1)`)
+    expect(code).toContain(`_setAttr(n3, "onClick", _ctx.fn2)`)
+    // the runtime's parseEventName turns this into a "-click" listener like vdom
+    expect(code).toContain(`_setListener(n4, "on-click", _ctx.fn3)`)
+    // with a spread the listener stays in the props merge
+    expect(code).toContain(
+      `_setDynamicProps(n5, [_ctx.obj, { onClick: _ctx.fn4 }], k0)`,
+    )
+  })
+
+  test('svg namespace elements that share a tag name with html', () => {
+    let { code } = compileWithVBind(`<svg><a :href="url" :class="cls"/></svg>`)
+    expect(code).contains('_setAttr(n0, "href", _ctx.url, true)')
+    expect(code).contains('_setClass(n0, _ctx.cls, true)')
+
+    code = compileWithVBind(`<svg><a v-bind="obj"/></svg>`).code
+    expect(code).contains('_setDynamicProps(n0, [_ctx.obj], null, true)')
+
+    // back to html inside <foreignObject>
+    code = compileWithVBind(
+      `<svg><foreignObject><a :href="url" :class="cls"/></foreignObject></svg>`,
+    ).code
+    expect(code).contains('_setProp(n0, "href", _ctx.url)')
+    expect(code).contains('_setClass(n0, _ctx.cls)')
+  })
+
+  test('uses the svg class helper for object class bindings on svg anchors', () => {
+    const { code } = compileWithVBind(
+      `<svg><a :class="{ active: flag }"/></svg>`,
+    )
+
+    expect(code).toContain('_setClass(n0, { active: _ctx.flag }, true)')
+    expect(code).not.toContain('_setClassName')
+  })
+
+  test('groups native svg event bindings without changing other prop helpers', () => {
+    const { code } = compileWithVBind(
+      `<svg><a :onclick="click" :onfocus="focus" :href="url" :class="cls"/></svg>`,
+    )
+
+    expect(code).toContain('const k0 = ["onclick","onfocus"]')
+    expect(code).toContain(
+      '_setDynamicProps(n0, [{ onclick: _ctx.click, onfocus: _ctx.focus }], k0, true)',
+    )
+    expect(code).toContain('_setAttr(n0, "href", _ctx.url, true)')
+    expect(code).toContain('_setClass(n0, _ctx.cls, true)')
   })
 })

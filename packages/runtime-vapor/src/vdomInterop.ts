@@ -84,6 +84,7 @@ import {
   resolveFallthroughOwner,
   unmountComponent,
 } from './component'
+import { normalizeEmitsOptions } from './componentEmits'
 import {
   collectRootScopeIds,
   getCurrentScopeId,
@@ -123,6 +124,7 @@ import {
   type RawProps,
   rawPropsProxyHandlers,
   setupPropsValidation,
+  snapshotRawProps,
 } from './componentProps'
 import type { RawSlots, VaporSlot } from './componentSlots'
 import { dynamicSlotsProxyHandlers, getSlot } from './componentSlots'
@@ -391,11 +393,12 @@ const vaporInteropImpl = {
       undefined,
       undefined,
       (parentComponent ? parentComponent.appContext : vnode.appContext) as any,
-      // VDOM interop owns the explicit mount below
       true,
     ))
     instance.rawPropsRef = propsRef
     instance.rawSlotsRef = slotsRef
+    // read by vdom's shouldUpdateComponent to skip listener-only prop changes
+    instance.emitsOptions = normalizeEmitsOptions(instance.type)
     const vnodeHookState = ensureVNodeHookState(instance, vnode)
     setInteropComponentScopeIds(instance, vnode)
 
@@ -1120,7 +1123,7 @@ function createVNodeFragment(vnode: VNode): {
   frag.$key = vnodeKeyOf(vnode)
   const content = new InteropContentState()
   // reads `frag.vnode` rather than the captured argument so it follows a
-  // fallthrough re-clone (see mountVNode)
+  // re-clone with extra props (see mountVNode)
   const syncNodes = () => {
     frag.nodes = resolveVNodeNodes(frag.vnode!)
     content.resolved = true
@@ -1141,6 +1144,8 @@ function mountDynamicVNode(
   vnode: VNode,
   parentComponent: VaporComponentInstance | null,
   isSingleRoot?: boolean,
+  rawProps?: RawProps | null,
+  once?: boolean,
 ): VaporFragment {
   if (parentComponent && isKeepAlive(parentComponent)) {
     const cached = (
@@ -1151,14 +1156,26 @@ function mountDynamicVNode(
       return cached
     }
   }
-  // A vnode standing in as the parent's effective root inherits fallthrough
-  // attrs merged into its props (see mountVNode).
+  // Props on the component merge into the vnode like vdom's
+  // `createVNode(vnode, props)`; a vnode standing in as the parent's effective
+  // root also inherits fallthrough attrs, as an extra source (see
+  // createComponent).
+  // v-once freezes the component's own props; inherited attrs stay live
+  if (once && rawProps) rawProps = snapshotRawProps(rawProps)
   const owner = resolveFallthroughOwner(isSingleRoot)
+  if (owner) {
+    const source = () => resolveFallthroughAttrs(owner)
+    const sources = rawProps && rawProps.$
+    rawProps = extend({}, rawProps, {
+      $: sources ? sources.concat(source) : [source],
+    }) as RawProps
+  }
   const frag = mountVNode(
     internals,
     vnode,
     parentComponent,
-    owner && (() => resolveFallthroughAttrs(owner)),
+    rawProps ? new Proxy(rawProps, rawPropsProxyHandlers) : undefined,
+    once && !owner,
   )
   if (isHydrating) {
     locateHydrationNode(
@@ -1191,19 +1208,28 @@ function mountVNode(
   internals: RendererInternals,
   vnode: VNode,
   parentComponent: VaporComponentInstance | null,
-  getFallthroughAttrs?: () => Record<string, any>,
+  extraProps?: Record<string, any>,
+  staticExtraProps?: boolean,
 ): VaporFragment {
   let suspense =
     currentRenderContext.suspense ||
     (parentComponent && parentComponent.suspense)
-  // A vnode standing in as a component's effective root inherits fallthrough
-  // attrs the same way VDOM does it — merged into the vnode's props
-  // (`cloneVNode` -> `mergeProps`), so mount and patch apply them natively
-  // instead of writing the DOM behind the renderer's back.
+  // Extra props (the component's own props and inherited fallthrough attrs)
+  // merge into the vnode's props the same way VDOM does it (`cloneVNode` ->
+  // `mergeProps`), so mount and patch apply them natively instead of writing
+  // the DOM behind the renderer's back.
   let baseVNode = vnode
-  if (getFallthroughAttrs) {
-    vnode = cloneVNode(baseVNode, getFallthroughAttrs())
+  const withExtraProps = (base: VNode): VNode => {
+    const cloned = cloneVNode(base, extraProps, true)
+    // the dynamic component's key decided the branch and the KeepAlive
+    // lookup; a spread `key` must not re-key the vnode behind them
+    if (cloned.key !== base.key) {
+      cloned.key = base.key
+      cloned.props!.key = base.key ?? undefined
+    }
+    return cloned
   }
+  if (extraProps) vnode = withExtraProps(baseVNode)
   const { frag, syncNodes } = createVNodeFragment(vnode)
 
   let isMounted = false
@@ -1258,7 +1284,7 @@ function mountVNode(
 
   frag.hydrate = () => {
     if (!isHydrating) return
-    hydrateVNode(vnode, parentComponent as any, frag.slotScopeIds)
+    hydrateVNode(vnode, parentComponent as any, frag.slotScopeIds, suspense)
     isMounted = true
     // a hydrated vnode never goes through place(), so record what a later
     // patch needs from the claimed SSR nodes
@@ -1299,7 +1325,9 @@ function mountVNode(
       return
     } else {
       const prev = currentInstance
-      simpleSetCurrentInstance(parentComponent)
+      // vdom renders with no current instance, so that `inject` in a
+      // functional child falls back to its rendering instance
+      simpleSetCurrentInstance(null)
       if (!isMounted) {
         if (transition) setVNodeTransitionHooks(vnode, transition)
         namespace = getContainerType(parentNode as Element)
@@ -1347,10 +1375,8 @@ function mountVNode(
   ) => place(parentNode, anchor, parentSuspense, transition, moveType)
 
   const update = () => {
-    // merging the attrs reads them, which the attrs effect below tracks
-    const next = getFallthroughAttrs
-      ? cloneVNode(baseVNode, getFallthroughAttrs())
-      : baseVNode
+    // merging the extra props reads them, which the effect below tracks
+    const next = extraProps ? withExtraProps(baseVNode) : baseVNode
     if (!mountedParentNode) return
     const previous = vnode
     // Like a vdom parent re-rendering it, the fresh vnode gets what vapor set
@@ -1367,7 +1393,7 @@ function mountVNode(
     frag.vnode = vnode
     frag.$key = vnodeKeyOf(vnode)
     const prevInstance = currentInstance
-    simpleSetCurrentInstance(parentComponent)
+    simpleSetCurrentInstance(null)
     internals.p(
       previous,
       vnode,
@@ -1388,7 +1414,7 @@ function mountVNode(
   frag.patchVNode = next => {
     if (next.type !== baseVNode.type) return
     baseVNode = next
-    // the caller's effect tracks only its vnode; attrs have their own effect
+    // the caller's effect tracks only its vnode; extra props track their own
     const prevSub = setActiveSub()
     try {
       update()
@@ -1397,9 +1423,9 @@ function mountVNode(
     }
   }
 
-  if (getFallthroughAttrs) {
+  if (extraProps && !staticExtraProps) {
     // Re-clone and let VDOM patch the change through, mirroring how a VDOM
-    // parent re-renders its root with fresh fallthrough attrs. The first run
+    // parent re-renders with fresh props and fallthrough attrs. The first run
     // happens before the mount and only establishes the dependency.
     renderEffect(update)
   }
@@ -1424,10 +1450,18 @@ function createVDOMComponent(
     (parentComponent && parentComponent.suspense)
   const useBridge = shouldUseRendererBridge(component)
   const comp = useBridge ? ensureRendererBridge(component) : component
-  const vnode = createVNode(
-    comp,
-    rawProps && extend({}, new Proxy(rawProps, rawPropsProxyHandlers)),
-  )
+  // the props update through the wrapper instance, so resolving the initial
+  // ones must not track in the caller's effect (e.g. a teleport's children)
+  const prevSub = setActiveSub()
+  let vnode: VNode
+  try {
+    vnode = createVNode(
+      comp,
+      rawProps && extend({}, new Proxy(rawProps, rawPropsProxyHandlers)),
+    )
+  } finally {
+    setActiveSub(prevSub)
+  }
   const { frag, syncNodes } = createVNodeFragment(vnode)
   const keepAliveCtx = isKeepAliveEnabled
     ? (getKeepAliveContext(parentComponent) as KeepAliveInstance['ctx'] | null)
@@ -1466,6 +1500,10 @@ function createVDOMComponent(
 
   // overwrite how the vdom instance handles props
   vnode.vi = (instance: ComponentInternalInstance) => {
+    // The props wrapper must inherit from the Vapor parent while VDOM renders
+    // without a current instance.
+    const prev = currentInstance
+    simpleSetCurrentInstance(parentComponent)
     // Reuse VDOM's normalized options so Options API merging stays in VDOM.
     const wrapper = new VaporComponentInstance<Record<string, unknown>>(
       useBridge
@@ -1479,6 +1517,7 @@ function createVDOMComponent(
       parentComponent ? parentComponent.appContext : undefined,
       once,
     )
+    simpleSetCurrentInstance(prev)
 
     const attrs = createInternalObject()
     const isFilteredAttr = (key: string | symbol): boolean =>
@@ -1513,13 +1552,15 @@ function createVDOMComponent(
         ? instance.attrs
         : shallowReactive(wrapper.props)
 
+    // like VDOM, use an internal object so the slots can be passed on as
+    // children of another vnode
     instance.slots =
       wrapper.rawSlots === EMPTY_OBJ
-        ? EMPTY_OBJ
+        ? createInternalObject()
         : new Proxy(wrapper.rawSlots, vaporSlotsProxyHandler)
 
     // async wrappers create the inner component with `vnode.children`
-    if ((component as any).__asyncLoader && instance.slots !== EMPTY_OBJ) {
+    if ((component as any).__asyncLoader && wrapper.rawSlots !== EMPTY_OBJ) {
       vnode.children = instance.slots
       vnode.shapeFlag |= ShapeFlags.SLOTS_CHILDREN
     }
@@ -1534,7 +1575,7 @@ function createVDOMComponent(
     }
   }
 
-  let rawRef: VNodeNormalizedRef | null = null
+  let rawRef: VNodeNormalizedRef | null | undefined
   let isMounted = false
   let isUnmounted = false
   let isDomRemoved = false
@@ -1550,11 +1591,11 @@ function createVDOMComponent(
       if (!transition) removeDom(parentNode)
       return
     }
-    // unset ref
-    if (rawRef) vdomSetRef(rawRef, null, null, vnode, true)
     if (transition) setVNodeTransitionHooks(vnode, transition)
     const parentSuspense = resolveUnmountSuspense(suspense)
     if (vnode.shapeFlag & ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE) {
+      // unset ref (`um` unsets `vnode.ref` otherwise)
+      if (rawRef) vdomSetRef(rawRef, null, null, vnode, true)
       // A deactivated child is no longer patched by its parent in VDOM, so
       // pause the commit of the raw sources it reads from this Vapor parent.
       if (frag.inputScope) frag.inputScope.pause()
@@ -1578,7 +1619,7 @@ function createVDOMComponent(
 
   frag.hydrate = () => {
     if (!isHydrating) return
-    hydrateVNode(vnode, parentComponent as any, frag.slotScopeIds)
+    hydrateVNode(vnode, parentComponent as any, frag.slotScopeIds, suspense)
     isMounted = true
     syncNodes()
   }
@@ -1612,7 +1653,7 @@ function createVDOMComponent(
       )
     } else {
       const prev = currentInstance
-      simpleSetCurrentInstance(parentComponent)
+      simpleSetCurrentInstance(null)
       if (!isMounted) {
         if (transition) setVNodeTransitionHooks(vnode, transition)
         internals.mt(
@@ -1675,12 +1716,28 @@ function createVDOMComponent(
       },
       instance as any,
     )
+    // as in VDOM: `um` unsets it, async wrappers forward it to the inner comp
+    vnode.ref = rawRef
 
     if (isMounted) {
+      // The first synchronous mount may have already created a loading
+      // component. Later pending updates (including KeepAlive reuse) leave
+      // ref forwarding to the async wrapper, which may also render an error.
+      let target = vnode
+      if (
+        ((component as any).__asyncResolved ||
+          (oldRawRef === undefined &&
+            isAsyncWrapper(vnode) &&
+            !(vnode.shapeFlag & ShapeFlags.COMPONENT_KEPT_ALIVE))) &&
+        vnode.component!.subTree.component
+      ) {
+        target = vnode.component!.subTree
+        target.ref = rawRef
+      }
       if (rawRef) {
-        vdomSetRef(rawRef, oldRawRef, suspense, vnode)
+        vdomSetRef(rawRef, oldRawRef || null, suspense, target)
       } else if (oldRawRef) {
-        vdomSetRef(oldRawRef, null, null, vnode, true)
+        vdomSetRef(oldRawRef, null, null, target, true)
       }
     }
   }
@@ -2169,6 +2226,8 @@ function renderVDOMSlot(
       }
     }
     trackSlotVNodeUpdatesWithRefresh(next, refreshSlotVNode, notifyBeforeUpdate)
+    const prev = currentInstance
+    simpleSetCurrentInstance(null)
     internals.p(
       previous,
       next,
@@ -2179,6 +2238,7 @@ function renderVDOMSlot(
       slotNamespace,
       concatInteropScopeIds(frag.slotScopeIds, slotScopeIds),
     )
+    simpleSetCurrentInstance(prev)
     setRendered(next, valid)
     finishContentUpdate()
   }
@@ -2559,6 +2619,7 @@ function renderVDOMSlot(
             ? null
             : hydratedContent.slotScopeIds,
         ),
+        suspense,
       )
       if (close) {
         frag.anchor = claimAnchor(close)
@@ -2622,17 +2683,21 @@ function hydrateVNode(
   vnode: VNode,
   parentComponent: ComponentInternalInstance | null,
   slotScopeIds: string[] | null = null,
+  parentSuspense: SuspenseBoundary | null = null,
 ) {
   const node = currentHydrationNode!
   if (!vdomHydrateNode) vdomHydrateNode = ensureHydrationRenderer().hydrateNode!
+  const prev = currentInstance
+  simpleSetCurrentInstance(null)
   const nextNode = vdomHydrateNode(
     node,
     vnode,
     parentComponent,
-    null,
+    parentSuspense,
     slotScopeIds,
     false,
   )
+  simpleSetCurrentInstance(prev)
   // no next node: the vnode ends its parent, move on from there
   if (nextNode) setCurrentHydrationNode(nextNode)
   else advanceHydrationNode(parentNode(node)!)
@@ -3767,7 +3832,7 @@ function createVNodeChildrenFragment(
           notifyBeforeUpdate()
           if (isHydrating) {
             nextChildren.forEach(vnode =>
-              hydrateVNode(vnode, parentComponent, frag.slotScopeIds),
+              hydrateVNode(vnode, parentComponent, frag.slotScopeIds, suspense),
             )
             currentChildren = nextChildren
             currentVNode = createVNode(Fragment, null, nextChildren)
@@ -3794,6 +3859,8 @@ function createVNodeChildrenFragment(
               notifyBeforeUpdate,
             )
             if (nextChildren.length) {
+              const prevInstance = currentInstance
+              simpleSetCurrentInstance(null)
               internals.mc(
                 nextChildren,
                 currentParentNode!,
@@ -3804,6 +3871,7 @@ function createVNodeChildrenFragment(
                 frag.slotScopeIds,
                 false,
               )
+              simpleSetCurrentInstance(prevInstance)
             }
           } else {
             const nextVNode = createVNode(Fragment, null, nextChildren)
@@ -3814,6 +3882,8 @@ function createVNodeChildrenFragment(
               },
               notifyBeforeUpdate,
             )
+            const prevInstance = currentInstance
+            simpleSetCurrentInstance(null)
             internals.pc(
               currentVNode,
               nextVNode,
@@ -3825,6 +3895,7 @@ function createVNodeChildrenFragment(
               frag.slotScopeIds,
               false,
             )
+            simpleSetCurrentInstance(prevInstance)
             currentChildren = nextChildren
             currentVNode = nextVNode
           }
@@ -3879,6 +3950,8 @@ function createVNodeChildrenFragment(
         )
       }
       if (currentChildren.length) {
+        const prevInstance = currentInstance
+        simpleSetCurrentInstance(null)
         internals.mc(
           currentChildren,
           currentParentNode,
@@ -3889,6 +3962,7 @@ function createVNodeChildrenFragment(
           frag.slotScopeIds,
           false,
         )
+        simpleSetCurrentInstance(prevInstance)
       }
       syncResolvedNodes()
       isMounted = true

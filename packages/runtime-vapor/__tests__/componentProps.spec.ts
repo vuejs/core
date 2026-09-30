@@ -8,6 +8,7 @@ import {
   provide,
   ref,
   toRefs,
+  useModel,
   watch,
 } from '@vue/runtime-dom'
 import {
@@ -1104,6 +1105,47 @@ describe('component: props', () => {
         title: 'baz',
       })
     })
+
+    test('unbound model keeps its local value when a source re-resolves', async () => {
+      let setFromChild: () => void
+      const Child = defineVaporComponent({
+        props: {
+          text: { default: '' },
+          textModifiers: {},
+          n: {},
+        },
+        emits: ['update:text'],
+        setup(props: any) {
+          const text = useModel(props, 'text')
+          setFromChild = () => (text.value = 'set by child')
+
+          const n0 = template('<div></div>')()
+          renderEffect(() => {
+            setElementText(n0, `${text.value}|${props.n}`)
+          })
+          return n0
+        },
+      })
+
+      const n = ref(0)
+      const { host } = define({
+        setup() {
+          // the parent never binds `v-model:text`, it only changes `n` - which
+          // still re-resolves the whole source
+          return createComponent(Child, { $: [() => ({ n: n.value })] })
+        },
+      }).render()
+
+      expect(host.innerHTML).toBe('<div>|0</div>')
+
+      setFromChild!()
+      await nextTick()
+      expect(host.innerHTML).toBe('<div>set by child|0</div>')
+
+      n.value++
+      await nextTick()
+      expect(host.innerHTML).toBe('<div>set by child|1</div>')
+    })
   })
 
   test.each([
@@ -1147,6 +1189,7 @@ describe('component: props', () => {
 
   test.each([
     ':style="[data.styles]"',
+    ':style="data.styles"',
     'v-bind="data.input"',
     'v-bind="{}" :style="[data.styles]"',
     ':[data.key]="[data.styles]"',
