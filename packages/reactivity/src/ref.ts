@@ -8,9 +8,9 @@ import {
   isSymbol,
 } from '@vue/shared'
 import type { ComputedRef, WritableComputedRef } from './computed'
-import { ReactiveFlags, TriggerOpTypes } from './constants'
-import { triggerEventInfos } from './debug'
-import { getDepFromReactive, trackDep, triggerDep } from './dep'
+import { ReactiveFlags, TrackOpTypes, TriggerOpTypes } from './constants'
+import { onTrack, triggerEventInfos } from './debug'
+import { getDepFromReactive } from './dep'
 import {
   type Builtin,
   type ShallowReactiveBrand,
@@ -26,8 +26,10 @@ import {
   type Link,
   type ReactiveNode,
   ReactiveFlags as _ReactiveFlags,
+  activeSub,
   batchDepth,
   flush,
+  link,
   propagate,
   shallowPropagate,
 } from './system'
@@ -231,10 +233,27 @@ class RefImpl<T = any> implements ReactiveNode {
 export function triggerRef(ref: Ref): void {
   // ref may be an instance of ObjectRefImpl
   const dep = (ref as unknown as RefImpl).dep
-  if (dep !== undefined) triggerDep(dep)
+  if (dep !== undefined && dep.subs !== undefined) {
+    propagate(dep.subs)
+    shallowPropagate(dep.subs)
+    if (!batchDepth) {
+      flush()
+    }
+  }
 }
 
-const trackRef = trackDep
+function trackRef(dep: ReactiveNode) {
+  if (activeSub !== undefined) {
+    if (__DEV__) {
+      onTrack(activeSub!, {
+        target: dep,
+        type: TrackOpTypes.GET,
+        key: 'value',
+      })
+    }
+    link(dep, activeSub!)
+  }
+}
 
 export type MaybeRef<T = any> =
   | T
