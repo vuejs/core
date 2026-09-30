@@ -1284,7 +1284,7 @@ function mountVNode(
 
   frag.hydrate = () => {
     if (!isHydrating) return
-    hydrateVNode(vnode, parentComponent as any, frag.slotScopeIds)
+    hydrateVNode(vnode, parentComponent as any, frag.slotScopeIds, suspense)
     isMounted = true
     // a hydrated vnode never goes through place(), so record what a later
     // patch needs from the claimed SSR nodes
@@ -1619,7 +1619,7 @@ function createVDOMComponent(
 
   frag.hydrate = () => {
     if (!isHydrating) return
-    hydrateVNode(vnode, parentComponent as any, frag.slotScopeIds)
+    hydrateVNode(vnode, parentComponent as any, frag.slotScopeIds, suspense)
     isMounted = true
     syncNodes()
   }
@@ -2619,6 +2619,7 @@ function renderVDOMSlot(
             ? null
             : hydratedContent.slotScopeIds,
         ),
+        suspense,
       )
       if (close) {
         frag.anchor = claimAnchor(close)
@@ -2682,6 +2683,7 @@ function hydrateVNode(
   vnode: VNode,
   parentComponent: ComponentInternalInstance | null,
   slotScopeIds: string[] | null = null,
+  parentSuspense: SuspenseBoundary | null = null,
 ) {
   const node = currentHydrationNode!
   if (!vdomHydrateNode) vdomHydrateNode = ensureHydrationRenderer().hydrateNode!
@@ -2691,7 +2693,7 @@ function hydrateVNode(
     node,
     vnode,
     parentComponent,
-    null,
+    parentSuspense,
     slotScopeIds,
     false,
   )
@@ -3830,7 +3832,7 @@ function createVNodeChildrenFragment(
           notifyBeforeUpdate()
           if (isHydrating) {
             nextChildren.forEach(vnode =>
-              hydrateVNode(vnode, parentComponent, frag.slotScopeIds),
+              hydrateVNode(vnode, parentComponent, frag.slotScopeIds, suspense),
             )
             currentChildren = nextChildren
             currentVNode = createVNode(Fragment, null, nextChildren)
