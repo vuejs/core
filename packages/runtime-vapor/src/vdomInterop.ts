@@ -71,7 +71,13 @@ import {
   warn,
   withCtx,
 } from '@vue/runtime-dom'
-import { effectScope, setActiveSub } from '@vue/reactivity'
+import {
+  type EffectScope,
+  effectScope,
+  endBatch,
+  setActiveSub,
+  startBatch,
+} from '@vue/reactivity'
 import {
   type LooseRawProps,
   type VaporComponent,
@@ -122,14 +128,22 @@ import {
 } from '@vue/shared'
 import {
   type RawProps,
+  collectInputs,
+  collectProps,
+  collectSlotSources,
+  deliverInputs,
+  hasDynamicPropsSource,
   rawPropsProxyHandlers,
-  setupPropsValidation,
   snapshotRawProps,
 } from './componentProps'
-import type { RawSlots, VaporSlot } from './componentSlots'
-import { dynamicSlotsProxyHandlers, getSlot } from './componentSlots'
+import type { RawSlots, SlotSourceCell, VaporSlot } from './componentSlots'
+import {
+  dynamicSlotsProxyHandlers,
+  getSlot,
+  isolateSlotSources,
+} from './componentSlots'
 import { inOnce, withOnce } from './once'
-import { renderEffect } from './renderEffect'
+import { RenderEffect, renderEffect } from './renderEffect'
 import { createTextNode, parentNode } from './dom/node'
 import { optimizePropertyLookup } from './dom/prop'
 import {
@@ -340,14 +354,16 @@ function getInteropTransitionElement(
   }
 }
 
-function filterReservedProps(props: VNode['props']): VNode['props'] {
-  const filtered: VNode['props'] = {}
+// The vnode's evaluated props as the child's raw props: marked for
+// initInputs, and replaced on every patch so no first frame is retained.
+function interopRawProps(vnode: VNode): RawProps {
+  const rawProps: RawProps = {}
+  const props = vnode.props
   for (const key in props) {
-    if (!isReservedProp(key)) {
-      filtered[key] = props[key]
-    }
+    if (!isReservedProp(key)) rawProps[key] = props[key]
   }
-  return filtered
+  rawProps[interopKey] = true
+  return rawProps
 }
 
 // mounting vapor components and slots in vdom
@@ -369,7 +385,7 @@ const vaporInteropImpl = {
     const prev = currentInstance
     simpleSetCurrentInstance(parentComponent)
 
-    const propsRef = shallowRef(filterReservedProps(vnode.props))
+    const rawProps = interopRawProps(vnode)
     const slotsRef = shallowRef(normalizeInteropSlots(vnode.children))
     const rawSlots = createInteropRawSlots(slotsRef)
 
@@ -378,24 +394,16 @@ const vaporInteropImpl = {
       setRenderContext(deriveSuspense(prevCtx, parentSuspense))
     }
 
-    const dynamicPropSource: (() => any)[] & { [interopKey]?: boolean } = [
-      () => propsRef.value,
-    ]
-    // mark as interop props
-    dynamicPropSource[interopKey] = true
     // @ts-expect-error
     const instance = (vnode.component = createComponent(
       vnode.type as any as VaporComponent,
-      {
-        $: dynamicPropSource,
-      } as RawProps,
+      rawProps,
       rawSlots,
       undefined,
       undefined,
       (parentComponent ? parentComponent.appContext : vnode.appContext) as any,
       true,
     ))
-    instance.rawPropsRef = propsRef
     instance.rawSlotsRef = slotsRef
     // read by vdom's shouldUpdateComponent to skip listener-only prop changes
     instance.emitsOptions = normalizeEmitsOptions(instance.type)
@@ -1444,25 +1452,70 @@ function createVDOMComponent(
   rawProps?: LooseRawProps | null,
   rawSlots?: LooseRawSlots | null,
   once?: boolean,
+  inputScope?: EffectScope,
 ): VaporFragment {
   let suspense =
     currentRenderContext.suspense ||
     (parentComponent && parentComponent.suspense)
   const useBridge = shouldUseRendererBridge(component)
   const comp = useBridge ? ensureRendererBridge(component) : component
-  // the props update through the wrapper instance, so resolving the initial
-  // ones must not track in the caller's effect (e.g. a teleport's children)
-  const prevSub = setActiveSub()
+  let propsInstance: VaporComponentInstance | undefined
+  let rawValues: Record<string, any> = EMPTY_OBJ
+  let isMounted = false
+  let cells: SlotSourceCell[] | undefined
+  const isolated = rawSlots && isolateSlotSources(rawSlots as RawSlots)
+  if (isolated) {
+    rawSlots = isolated[0]
+    cells = isolated[1]
+  }
+  // inputs that can never change are delivered once, as in initInputs; a
+  // kept-alive vdom child is not rebound on a cache hit
+  let hasDynamicProps =
+    !once &&
+    (!!cells || hasDynamicPropsSource((rawProps || EMPTY_OBJ) as RawProps))
+  if (hasDynamicProps) inputScope ||= effectScope(true)
+  const prevInstance = setCurrentInstance(parentComponent, inputScope)
   let vnode: VNode
   try {
-    vnode = createVNode(
-      comp,
-      rawProps && extend({}, new Proxy(rawProps, rawPropsProxyHandlers)),
-    )
+    if (!hasDynamicProps) {
+      rawValues = collectInputs((rawProps || EMPTY_OBJ) as RawProps, cells)
+      if (cells) deliverInputs(undefined, undefined, cells)
+    } else {
+      const effect = new RenderEffect(() => {
+        const prevInner = setCurrentInstance(parentComponent, inputScope)
+        try {
+          rawValues = collectProps(
+            (rawProps || EMPTY_OBJ) as RawProps,
+            rawValues.style,
+          )
+          if (cells) collectSlotSources(cells)
+        } finally {
+          restoreCurrentInstance(prevInner)
+        }
+        if (effect.active && (propsInstance || cells)) {
+          deliverInputs(propsInstance, rawValues, cells)
+        }
+      }, true)
+      effect.run()
+      // every getter and descriptor turned out to be constant
+      if (!effect.deps) {
+        effect.stop()
+        hasDynamicProps = false
+      }
+    }
+    vnode = createVNode(comp, rawValues)
+  } catch (error) {
+    if (inputScope) inputScope.stop()
+    throw error
   } finally {
-    setActiveSub(prevSub)
+    restoreCurrentInstance(prevInstance)
   }
   const { frag, syncNodes } = createVNodeFragment(vnode)
+  frag.inputScope = inputScope
+  // Before mounting there is no VDOM instance scope to own these inputs.
+  onScopeDispose(() => {
+    if (!isMounted && inputScope) inputScope.stop()
+  }, true)
   const keepAliveCtx = isKeepAliveEnabled
     ? (getKeepAliveContext(parentComponent) as KeepAliveInstance['ctx'] | null)
     : null
@@ -1505,19 +1558,36 @@ function createVDOMComponent(
     const prev = currentInstance
     simpleSetCurrentInstance(parentComponent)
     // Reuse VDOM's normalized options so Options API merging stays in VDOM.
-    const wrapper = new VaporComponentInstance<Record<string, unknown>>(
+    const wrapper = (propsInstance = new VaporComponentInstance<
+      Record<string, unknown>
+    >(
       useBridge
         ? (comp as any)
         : {
             props: instance.propsOptions[0],
             __propsOptions: instance.propsOptions,
           },
-      rawProps as RawProps,
+      undefined,
       rawSlots as RawSlots,
       parentComponent ? parentComponent.appContext : undefined,
-      once,
-    )
+    ))
     simpleSetCurrentInstance(prev)
+    wrapper.interopVNode = vnode
+    wrapper.hasDynamicProps = hasDynamicProps
+    // The detached input scope follows the rendered component's lifetime.
+    instance.scope.run(() => {
+      onScopeDispose(() => {
+        if (inputScope) inputScope.stop()
+        wrapper.scope.stop()
+      })
+    })
+    try {
+      deliverInputs(wrapper, rawValues)
+    } catch (error) {
+      if (inputScope) inputScope.stop()
+      wrapper.scope.stop()
+      throw error
+    }
 
     const attrs = createInternalObject()
     const isFilteredAttr = (key: string | symbol): boolean =>
@@ -1564,19 +1634,9 @@ function createVDOMComponent(
       vnode.children = instance.slots
       vnode.shapeFlag |= ShapeFlags.SLOTS_CHILDREN
     }
-
-    if (__DEV__) {
-      const prev = setCurrentInstance(wrapper, instance.scope)
-      try {
-        setupPropsValidation(wrapper, vnode)
-      } finally {
-        restoreCurrentInstance(prev)
-      }
-    }
   }
 
   let rawRef: VNodeNormalizedRef | null | undefined
-  let isMounted = false
   let isUnmounted = false
   let isDomRemoved = false
   const removeDom = (parentNode?: ParentNode): void => {
@@ -1611,7 +1671,7 @@ function createVDOMComponent(
     }
     isUnmounted = true
     isMounted = false
-    if (isKeepAliveEnabled && frag.inputScope) frag.inputScope.stop()
+    if (inputScope) inputScope.stop()
     internals.um(vnode, parentComponent as any, parentSuspense, !!parentNode)
     // VDOM transitions own their leaving DOM until the leave finishes.
     if (!transition) removeDom(parentNode)
@@ -3667,8 +3727,21 @@ function updateInteropVNode(
   prevVNode: VNode,
 ): void {
   state.pendingVNodeUpdate = vnode
-  instance.rawPropsRef!.value = filterReservedProps(vnode.props)
-  instance.rawSlotsRef!.value = normalizeInteropSlots(vnode.children)
+  const rawProps = (instance.rawProps = interopRawProps(vnode))
+  // props and slots reach sync watchers together, outside the renderer's
+  // update effect
+  const prevSub = setActiveSub()
+  startBatch()
+  try {
+    deliverInputs(instance, rawProps)
+    instance.rawSlotsRef!.value = normalizeInteropSlots(vnode.children)
+  } finally {
+    try {
+      endBatch()
+    } finally {
+      setActiveSub(prevSub)
+    }
+  }
   // align with VDOM: vnode beforeUpdate runs before directive beforeUpdate.
   invokeInteropVNodeBeforeUpdate(instance, vnode, prevVNode)
   updateInteropDirs(instance, state, vnode, prevVNode)

@@ -2179,4 +2179,30 @@ describe('hot module replacement', () => {
     expect(setupSpy).toHaveBeenCalledTimes(2)
     expect(unmountSpy).toHaveBeenCalledTimes(0)
   })
+
+  test('a creation that fails on its inputs leaves no instance behind', () => {
+    const root = document.createElement('div')
+    const childId = 'test-failed-inputs-child'
+    const Child = defineVaporComponent({
+      __hmrId: childId,
+      render: compileToFunction('<div><slot/></div>'),
+    })
+    createRecord(childId, Child as any)
+    const Parent = defineVaporComponent({
+      components: { Child },
+      setup() {
+        return { obj: undefined as any }
+      },
+      render: compileToFunction(
+        `<Child><template v-if="obj.x" #default>x</template></Child>`,
+      ),
+    })
+    const app = createVaporApp(Parent)
+    const errors: unknown[] = []
+    app.config.errorHandler = e => errors.push(e)
+    app.mount(root)
+    expect(errors.length).toBe(1)
+    rerender(childId, compileToFunction('<div>!<slot/></div>'))
+    app.unmount()
+  })
 })

@@ -305,6 +305,34 @@ describe('defineVaporCustomElement', () => {
       expect(e.getAttribute('baz-qux')).toBe('four')
     })
 
+    test('preserves function-valued properties without calling them during delivery', async () => {
+      const first = vi.fn(() => 'first')
+      const second = vi.fn(() => 'second')
+      let readCallback!: () => Function | undefined
+      const FunctionElement = defineVaporCustomElement({
+        props: { callback: Function },
+        setup(props) {
+          readCallback = () => props.callback
+          return template('<div>child</div>')()
+        },
+      })
+      customElements.define('my-el-function-property', FunctionElement)
+      const element = new FunctionElement({ callback: first })
+      container.appendChild(element)
+
+      expect(readCallback()).toBe(first)
+      expect(first).not.toHaveBeenCalled()
+
+      element.callback = second
+      expect(readCallback()).toBe(first)
+      await nextTick()
+      expect(readCallback()).toBe(second)
+      expect(first).not.toHaveBeenCalled()
+      expect(second).not.toHaveBeenCalled()
+      expect(readCallback()!()).toBe('second')
+      expect(second).toHaveBeenCalledTimes(1)
+    })
+
     test('props via attributes and properties changed together', async () => {
       const e = new E()
       e.foo = 'foo1'

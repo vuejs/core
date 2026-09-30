@@ -26,6 +26,7 @@ import {
   createSlots,
   currentInstance,
   h,
+  markRaw,
   nextTick,
   onScopeDispose,
   reactive,
@@ -7839,5 +7840,442 @@ describe('component: slots', () => {
         app.unmount()
       }
     })
+  })
+
+  // A dynamic slot descriptor is the parent's expression as much as a prop
+  // getter is: the child reads what the parent delivered, in its update order.
+  describe('dynamic slot descriptors are delivered', () => {
+    const Child = (read: string) => `<script setup>
+      import { useSlots, watchSyncEffect } from 'vue'
+      const data = _data
+      const slots = useSlots()
+      watchSyncEffect(() => data.value.seen.push(${read}))
+    </script><template><div><slot name="foo" /></div></template>`
+
+    async function expectGuarded(
+      srcs: Record<string, string>,
+      x: any,
+      first: unknown,
+    ) {
+      const seen: Record<string, unknown[]> = {}
+      const { vdom, vapor } = await renderParity(
+        srcs,
+        () => ref<any>({ x, seen: [] }),
+        (data, root, mode) => {
+          data.value.x = undefined
+          seen[mode] = [...data.value.seen]
+        },
+      )
+      expect(seen.vdom).toEqual([first])
+      expect(seen.vapor).toEqual(seen.vdom)
+      expect(vapor.text).toBe('gone')
+      expect(vdom.text).toBe(vapor.text)
+    }
+
+    test('conditional slot read by a sync watcher', () =>
+      expectGuarded(
+        {
+          Child: Child('!!slots.foo'),
+          App: `<template>
+            <components.Child v-if="data.x !== undefined">
+              <template #foo v-if="data.x.show">foo</template>
+            </components.Child>
+            <p v-else>gone</p>
+          </template>`,
+        },
+        { show: true },
+        true,
+      ))
+
+    test('dynamic slot name read by a sync watcher', () =>
+      expectGuarded(
+        {
+          Child: Child('Object.keys(slots).join()'),
+          App: `<template>
+            <components.Child v-if="data.x !== undefined">
+              <template #[data.x.name]>foo</template>
+            </components.Child>
+            <p v-else>gone</p>
+          </template>`,
+        },
+        { name: 'foo' },
+        'foo',
+      ))
+
+    test('v-for slots read by a sync watcher', () =>
+      expectGuarded(
+        {
+          Child: Child('Object.keys(slots).join()'),
+          App: `<template>
+            <components.Child v-if="data.x !== undefined">
+              <template v-for="name in data.x.names" #[name]>{{ name }}</template>
+            </components.Child>
+            <p v-else>gone</p>
+          </template>`,
+        },
+        { names: ['foo', 'bar'] },
+        'foo,bar',
+      ))
+
+    test('vdom child under a vapor parent', async () => {
+      const data = ref<any>({ x: { show: true }, seen: [] })
+      const components: Record<string, any> = {}
+      components.Child = compile(Child('!!slots.foo'), data, components, {
+        vapor: false,
+      })
+      const App = compile(
+        `<template>
+          <components.Child v-if="data.x !== undefined">
+            <template #foo v-if="data.x.show">foo</template>
+          </components.Child>
+          <p v-else>gone</p>
+        </template>`,
+        data,
+        components,
+        { vapor: true },
+      )
+      const root = document.createElement('div')
+      const app = createVaporApp(App)
+      app.use(vaporInteropPlugin).mount(root)
+      expect(root.textContent).toBe('foo')
+      data.value.x = undefined
+      expect(data.value.seen).toEqual([true])
+      await nextTick()
+      expect(root.textContent).toBe('gone')
+      app.unmount()
+    })
+
+    // vdom slots are not reactive, so only the timing is comparable: nothing
+    // reaches the child before the parent's update
+    test('a slot toggle reaches the child in the flush', async () => {
+      const seen: Record<string, unknown[]> = {}
+      const { vdom, vapor } = await renderParity(
+        {
+          Child: Child('!!slots.foo'),
+          App: `<template>
+            <components.Child>
+              <template #foo v-if="data.x.show">foo</template>
+            </components.Child>
+          </template>`,
+        },
+        () => ref<any>({ x: { show: true }, seen: [] }),
+        async (data, root, mode) => {
+          data.value.x.show = false
+          seen[mode] = [...data.value.seen]
+          await nextTick()
+        },
+      )
+      expect(seen.vdom).toEqual([true])
+      expect(seen.vapor).toEqual(seen.vdom)
+      expect(vapor.text).toBe('')
+      expect(vdom.text).toBe(vapor.text)
+    })
+
+    test('descriptors run after the vdom host that guards them', async () => {
+      const data = ref<any>({ x: { flag: true } })
+      const components: Record<string, any> = {}
+      components.Host = compile(
+        `<script setup>
+          defineProps({ show: Boolean })
+        </script><template><div v-if="show"><slot /></div></template>`,
+        data,
+        components,
+        { vapor: false },
+      )
+      components.Child = compile(
+        `<template><b><slot name="foo" /></b></template>`,
+        data,
+        components,
+      )
+      const App = compile(
+        `<template>
+          <components.Host :show="data.x !== undefined">
+            <components.Child>
+              <template #foo v-if="data.x.flag">F</template>
+            </components.Child>
+          </components.Host>
+        </template>`,
+        data,
+        components,
+      )
+      const root = document.createElement('div')
+      const app = createVaporApp(App)
+      app.use(vaporInteropPlugin).mount(root)
+      expect(root.textContent).toBe('F')
+      data.value.x = undefined
+      await nextTick()
+      expect(root.textContent).toBe('')
+      app.unmount()
+    })
+
+    // the inner component's props arrive one hop later than the wrapper's
+    test('an async inner component reads its props before the descriptors', async () => {
+      let resolve!: (comp: any) => void
+      const data = ref<any>({ item: undefined, seen: [] })
+      const components: Record<string, any> = {}
+      components.Inner = compile(
+        `<script setup>
+          import { useSlots, watchSyncEffect } from 'vue'
+          const data = _data
+          const props = defineProps({ item: Object })
+          const slots = useSlots()
+          watchSyncEffect(() => {
+            const item = props.item
+            if (slots.foo) data.value.seen.push(item.name)
+          })
+        </script><template><div><slot name="foo" /></div></template>`,
+        data,
+        components,
+      )
+      components.Async = defineVaporAsyncComponent(
+        () => new Promise(r => (resolve = r)),
+      )
+      const App = compile(
+        `<template>
+          <components.Async :item="data.item">
+            <template v-if="data.item" #foo>foo</template>
+          </components.Async>
+        </template>`,
+        data,
+        components,
+      )
+      const root = document.createElement('div')
+      const app = createVaporApp(App)
+      app.mount(root)
+      resolve(components.Inner)
+      await new Promise(r => setTimeout(r))
+      expect(root.innerHTML).toBe(
+        '<div><!--slot--></div><!--async component-->',
+      )
+      data.value.item = { name: 'n' }
+      await nextTick()
+      expect(data.value.seen).toEqual(['n'])
+      expect(root.textContent).toBe('foo')
+      app.unmount()
+    })
+
+    // a cache hit rebinds the props to the call site; the descriptors keep
+    // following them
+    test('descriptors follow the props again after a KeepAlive cache hit', async () => {
+      const data = ref<any>({ cur: 'A', item: undefined, seen: [] })
+      const components: Record<string, any> = {}
+      const KeptChild = (name: string) =>
+        compile(
+          `<script setup>
+            import { useSlots, watchSyncEffect } from 'vue'
+            const data = _data
+            const props = defineProps({ item: Object })
+            const slots = useSlots()
+            watchSyncEffect(() => {
+              const item = props.item
+              if (slots.foo) data.value.seen.push('${name}:' + item.name)
+            })
+          </script><template><div><slot name="foo" /></div></template>`,
+          data,
+          components,
+        )
+      components.A = KeptChild('A')
+      components.B = KeptChild('B')
+      const App = compile(
+        `<script setup vapor>
+          const data = _data
+          const components = _components
+        </script><template>
+          <KeepAlive>
+            <component :is="components[data.cur]" :item="data.item">
+              <template v-if="data.item" #foo>foo</template>
+            </component>
+          </KeepAlive>
+        </template>`,
+        data,
+        components,
+      )
+      const root = document.createElement('div')
+      const app = createVaporApp(App)
+      app.mount(root)
+      data.value.cur = 'B'
+      await nextTick()
+      data.value.cur = 'A'
+      await nextTick()
+      data.value.item = { name: 'n' }
+      await nextTick()
+      expect(data.value.seen).toEqual(['A:n'])
+      expect(root.textContent).toBe('foo')
+      app.unmount()
+    })
+
+    // props and descriptors reach a sync watcher together. vdom delivers the
+    // props first, so the watcher throws there
+    test.each([
+      ['vapor', true],
+      ['vdom', false],
+    ])(
+      'a delivery is atomic across props and descriptors for a %s child',
+      async (_, vapor) => {
+        const data = ref<any>({ x: { item: { name: 'a' } }, seen: [] })
+        const components: Record<string, any> = {}
+        components.Child = compile(
+          `<script setup>
+            import { useSlots, watchSyncEffect } from 'vue'
+            const data = _data
+            const props = defineProps({ item: Object })
+            const slots = useSlots()
+            watchSyncEffect(() => {
+              if (slots.foo) data.value.seen.push(props.item.name)
+            })
+          </script><template><div><slot name="foo" /></div></template>`,
+          data,
+          components,
+          { vapor },
+        )
+        const App = compile(
+          `<template>
+            <components.Child :item="data.x && data.x.item">
+              <template v-if="data.x" #foo>foo</template>
+            </components.Child>
+          </template>`,
+          data,
+          components,
+        )
+        const root = document.createElement('div')
+        const app = createVaporApp(App)
+        app.use(vaporInteropPlugin).mount(root)
+        expect(data.value.seen).toEqual(['a'])
+        data.value.x = null
+        await nextTick()
+        expect(data.value.seen).toEqual(['a'])
+        expect(root.textContent).toBe('')
+        data.value.x = { item: { name: 'b' } }
+        await nextTick()
+        expect(data.value.seen).toEqual(['a', 'b'])
+        app.unmount()
+      },
+    )
+
+    test('a vdom parent delivers props and slots to a vapor child together', async () => {
+      const data = ref<any>({ x: { item: { name: 'a' } }, seen: [] })
+      const components: Record<string, any> = {}
+      components.Child = compile(
+        `<script setup>
+          import { useSlots, watchSyncEffect } from 'vue'
+          const data = _data
+          const props = defineProps({ item: Object })
+          const slots = useSlots()
+          watchSyncEffect(() => {
+            if (slots.foo) data.value.seen.push(props.item.name)
+          })
+        </script><template><div><slot name="foo" /></div></template>`,
+        data,
+        components,
+      )
+      const App = compile(
+        `<script setup>const data = _data; const components = _components;</script>
+        <template>
+          <components.Child :item="data.x && data.x.item">
+            <template v-if="data.x" #foo>foo</template>
+          </components.Child>
+        </template>`,
+        data,
+        components,
+        { vapor: false },
+      )
+      const root = document.createElement('div')
+      const app = createApp(App)
+      app.use(vaporInteropPlugin).mount(root)
+      expect(data.value.seen).toEqual(['a'])
+      data.value.x = null
+      await nextTick()
+      expect(data.value.seen).toEqual(['a'])
+      data.value.x = { item: { name: 'b' } }
+      await nextTick()
+      expect(data.value.seen).toEqual(['a', 'b'])
+      app.unmount()
+    })
+
+    // the delivery runs inside the vdom parent's update: a throwing sync
+    // watcher must not leave the tracking context unrestored
+    test('a throwing sync watcher in a vapor child of a vdom parent', async () => {
+      const data = ref<any>({ n: 0 })
+      const components: Record<string, any> = {}
+      components.Child = compile(
+        `<script setup>
+          import { watch } from 'vue'
+          const props = defineProps({ n: Number })
+          watch(
+            () => props.n,
+            () => {
+              throw new Error('boom')
+            },
+            { flush: 'sync' },
+          )
+        </script><template><i>{{ n }}</i></template>`,
+        data,
+        components,
+      )
+      const App = compile(
+        `<script setup>const data = _data; const components = _components;</script>
+        <template><components.Child :n="data.n" /></template>`,
+        data,
+        components,
+        { vapor: false },
+      )
+      const root = document.createElement('div')
+      const app = createApp(App)
+      app.use(vaporInteropPlugin).mount(root)
+      data.value.n = 1
+      await expect(nextTick()).rejects.toThrow('boom')
+      expect(
+        'Unhandled error during execution of watcher callback',
+      ).toHaveBeenWarned()
+      expect(
+        'Unhandled error during execution of component update',
+      ).toHaveBeenWarned()
+      app.unmount()
+    })
+
+    // props are evaluated before the descriptors, as in vdom: one read, and
+    // none after the creation was aborted
+    test.each([
+      ['vapor', true],
+      ['vdom', false],
+    ])(
+      'a throwing descriptor leaves no input of a %s child behind',
+      async (_, vapor) => {
+        const data = ref<any>({ n: 0, counter: markRaw({ reads: 0 }) })
+        const components: Record<string, any> = {}
+        components.Child = compile(
+          `<script setup>
+            defineProps({ n: Number })
+          </script><template><div><slot name="foo" /></div></template>`,
+          data,
+          components,
+          { vapor },
+        )
+        const App = compile(
+          `<script setup>
+            const data = _data
+            const components = _components
+            const read = () => (data.value.counter.reads++, data.value.n)
+          </script><template>
+            <components.Child :n="read()">
+              <template #[data.slot.name]>foo</template>
+            </components.Child>
+          </template>`,
+          data,
+          components,
+          { vapor: true },
+        )
+        const app = createVaporApp(App)
+        app.use(vaporInteropPlugin)
+        expect(() => app.mount(document.createElement('div'))).toThrow()
+        expect(
+          'Unhandled error during execution of setup function',
+        ).toHaveBeenWarned()
+        expect(data.value.counter.reads).toBe(1)
+        data.value.n++
+        await nextTick()
+        expect(data.value.counter.reads).toBe(1)
+      },
+    )
   })
 })

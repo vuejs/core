@@ -5,10 +5,12 @@
 
 import {
   isEmitListener,
+  markRaw,
   nextTick,
   onBeforeUnmount,
   ref,
   toHandlers,
+  watch,
 } from '@vue/runtime-dom'
 import {
   createComponent,
@@ -16,7 +18,7 @@ import {
   defineVaporComponent,
   template,
 } from '../src'
-import { compile, makeRender } from './_utils'
+import { compile, makeRender, renderParity } from './_utils'
 
 const define = makeRender()
 
@@ -635,5 +637,136 @@ describe('component: emit', () => {
     button.click()
     expect(onStatic).toHaveBeenCalledTimes(1)
     expect(onObject).toHaveBeenCalledTimes(1)
+  })
+
+  test('a sync watcher sees the new listener as a prop and through emit', async () => {
+    const oldListener = vi.fn()
+    const newListener = vi.fn()
+    const data = ref({ count: 0, listener: oldListener })
+    const propListeners: unknown[] = []
+    let props: any
+    const Child = defineVaporComponent({
+      props: ['count', 'onChange'],
+      emits: ['change'],
+      setup(received, { emit }) {
+        props = received
+        watch(
+          () => received.count,
+          count => {
+            propListeners.push(received.onChange)
+            emit('change', count)
+          },
+          { flush: 'sync' },
+        )
+        return []
+      },
+    })
+    // A bound function prop avoids a compiler-generated @change forwarding
+    // closure that could mask which listener identity emit actually selected.
+    const { app } = define(
+      compile(
+        `<template><components.Child :count="data.count" :onChange="data.listener" /></template>`,
+        data,
+        { Child },
+      ),
+    ).render()
+
+    data.value.count = 1
+    data.value.listener = newListener
+    await nextTick()
+
+    expect(propListeners).toEqual([newListener])
+    expect(props.onChange).toBe(newListener)
+    expect(oldListener).not.toHaveBeenCalled()
+    expect(newListener).toHaveBeenCalledExactlyOnceWith(1)
+    app.unmount()
+  })
+
+  test('delivers a setup emit mutation after the initial mount', async () => {
+    const data = ref({ count: 0 })
+    const Child = compile(
+      `<script setup>
+        const props = defineProps(['count'])
+        const emit = defineEmits()
+        emit('update', props.count + 1)
+      </script><template><div>{{ props.count }}</div></template>`,
+      data,
+    )
+    const { app, host } = define(
+      compile(
+        '<template><components.Child v-bind="{ count: data.count }" @update="data.count = $event" /></template>',
+        data,
+        { Child },
+      ),
+    ).render()
+    expect(data.value.count).toBe(1)
+    expect(host.innerHTML).toBe('<div>0</div>')
+    await nextTick()
+    expect(host.innerHTML).toBe('<div>1</div>')
+    app.unmount()
+  })
+
+  // vdom reads listeners off the vnode, which nothing can subscribe to
+  test('emitting inside an effect does not subscribe it to the inputs', async () => {
+    const pings: Record<string, number> = {}
+    await renderParity(
+      {
+        Child: `<script setup>
+          import { watchEffect } from 'vue'
+          const data = _data
+          const emit = defineEmits(['ping'])
+          defineProps({ other: String })
+          watchEffect(() => emit('ping', data.value.local))
+        </script><template><i /></template>`,
+        App: `<template>
+          <components.Child :other="data.other" @ping="data.pings.push($event)" />
+        </template>`,
+      },
+      () => ref<any>({ other: 'a', local: 1, pings: [] }),
+      async (data, root, mode) => {
+        data.value.other = 'b'
+        await nextTick()
+        pings[mode] = data.value.pings.length
+      },
+    )
+    expect(pings.vdom).toBe(1)
+    expect(pings.vapor).toBe(pings.vdom)
+  })
+
+  test('writing a model inside an effect does not subscribe it to the inputs', async () => {
+    const runs: Record<string, number> = {}
+    await renderParity(
+      {
+        Child: `<script setup>
+          import { watchEffect } from 'vue'
+          const data = _data
+          const model = defineModel()
+          defineProps({ other: Number })
+          watchEffect(() => {
+            data.value.counter.runs++
+            model.value = data.value.local
+          })
+        </script><template><i /></template>`,
+        App: `<template>
+          <components.Child v-model="data.m" :other="data.other" />
+        </template>`,
+      },
+      () =>
+        ref<any>({
+          m: 'a',
+          local: 'b',
+          other: 0,
+          counter: markRaw({ runs: 0 }),
+        }),
+      async (data, root, mode) => {
+        await nextTick()
+        const before = data.value.counter.runs
+        data.value.other++
+        await nextTick()
+        runs[mode] = data.value.counter.runs - before
+      },
+    )
+    expect(runs.vdom).toBe(0)
+    expect(runs.vapor).toBe(runs.vdom)
   })
 })

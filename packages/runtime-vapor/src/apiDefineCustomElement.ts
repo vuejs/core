@@ -264,7 +264,8 @@ export class VaporElement extends VueElementBase<
 
     createComponent(
       this._def,
-      this._props,
+      // Host properties are values; a function property is not a prop getter.
+      { $: [() => this._props] },
       this.shadowRoot ? undefined : this._createSlots(),
       undefined,
       undefined,

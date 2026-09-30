@@ -20,6 +20,7 @@ import {
 import { inOnce } from './once'
 import { invokeArrayFns } from '@vue/shared'
 import { isSuspenseEnabled } from './suspense'
+import { isInteropEnabled } from './vdomInteropState'
 
 export class RenderEffect extends ReactiveEffect {
   i: VaporComponentInstance | null
@@ -37,6 +38,15 @@ export class RenderEffect extends ReactiveEffect {
     super(noLifecycle ? render : undefined)
     this.render = render
     const instance = currentInstance as VaporComponentInstance | null
+    // a vdom instance rendering vapor content owns the update job at order 0
+    if (
+      isInteropEnabled &&
+      instance &&
+      !instance.vapor &&
+      !instance.effectCount
+    ) {
+      instance.effectCount = 1
+    }
     this.order = instance ? instance.effectCount++ : 0
     if (__DEV__ && !__TEST__ && !this.subs && !isVaporComponent(instance)) {
       warn('renderEffect called without active EffectScope or Vapor instance.')

@@ -22,7 +22,7 @@ import {
   vShowHidden,
   warn,
 } from '@vue/runtime-dom'
-import { extend, isArray, isFunction } from '@vue/shared'
+import { extend, isArray } from '@vue/shared'
 import {
   type Block,
   type BlockFn,
@@ -52,7 +52,7 @@ import {
   type VaporComponentOptions,
   isVaporComponent,
 } from '../component'
-import { type RawProps, resolveDynamicProps } from '../componentProps'
+import { trackRawValues } from '../componentProps'
 import { createElement } from '../dom/node'
 import {
   DynamicFragment,
@@ -548,12 +548,12 @@ function trackTransitionGroupUpdate(
     return
   }
 
-  // Fully static raw props can never notify - skip the tracking effect.
-  if (!hasDynamicPropsSource(owner.rawProps)) return
+  // Inputs that cannot change never notify - skip the tracking effect.
+  if (!owner.hasDynamicProps) return
   trackedTransitionGroupOwners.add(owner)
 
   // A component child can update from parent-driven props without re-running
-  // the surrounding v-for fragment. Track raw props directly instead of
+  // the surrounding v-for fragment. Track delivered parent inputs instead of
   // using component updated hooks, because child-local state updates should
   // not trigger TransitionGroup move bookkeeping. This matches VDOM behavior.
   // The effect belongs to the group instance, so its runs report through the
@@ -562,26 +562,11 @@ function trackTransitionGroupUpdate(
   const prevGroup = setCurrentInstance(instance, owner.scope)
   try {
     renderEffect(() => {
-      // dynamic prop sources resolve as child props: run the getters as the
-      // child instance
-      const prev = setCurrentInstance(owner, owner.scope)
-      try {
-        resolveDynamicProps(owner.rawProps)
-      } finally {
-        restoreCurrentInstance(prev)
-      }
+      trackRawValues(owner)
     })
   } finally {
     restoreCurrentInstance(prevGroup)
   }
-}
-
-function hasDynamicPropsSource(props: RawProps): boolean {
-  if (props.$) return true
-  for (const key in props) {
-    if (key !== '$' && isFunction(props[key])) return true
-  }
-  return false
 }
 
 function recordPosition(c: ResolvedTransitionBlock) {

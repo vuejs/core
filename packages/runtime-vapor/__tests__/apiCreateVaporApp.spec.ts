@@ -58,6 +58,24 @@ describe('api: createVaporApp', () => {
     expect(`already been mounted`).toHaveBeenWarned()
   })
 
+  test('preserves root context while evaluating root props', () => {
+    const Comp = defineVaporComponent({
+      props: ['value'],
+      setup(props) {
+        return createTextNode(String(props.value))
+      },
+    })
+    const app = createVaporApp(Comp, { value: () => inject('token') })
+    app.provide('token', 'provided value')
+    const root = document.createElement('div')
+    try {
+      app.mount(root)
+      expect(root.textContent).toBe('provided value')
+    } finally {
+      app.unmount()
+    }
+  })
+
   test('mount should no-op when selector returns null', () => {
     const Comp = defineVaporComponent({
       setup() {

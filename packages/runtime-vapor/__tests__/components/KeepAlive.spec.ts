@@ -5213,4 +5213,210 @@ describe('VaporKeepAlive', () => {
       expect(out.vapor).toEqual(out.vdom)
     })
   })
+
+  describe('input delivery across cache hits', () => {
+    test('keeps inactive inputs while local effects run and stops sampling on unmount', async () => {
+      const selected = ref<{ name: string } | undefined>({ name: 'a' })
+      const local = ref(0)
+      const sample = vi.fn(() => selected.value!.name)
+      const activated: unknown[] = []
+      const disposed = vi.fn()
+      let read!: () => unknown
+      const setup = vi.fn((props: { value: string }) => {
+        read = () => props.value
+      })
+      const Child = compile(
+        `<script setup>
+          import { onActivated, onUnmounted } from 'vue'
+          const props = defineProps(['value'])
+          const local = _data.local
+          _data.setup(props)
+          onActivated(() => _data.activated.push(props.value))
+          onUnmounted(_data.disposed)
+        </script><template><div>{{ props.value }}:{{ local }}</div></template>`,
+        { local, setup, activated, disposed } as any,
+      )
+      const Parent = compile(
+        `<template><KeepAlive>
+          <components.Child v-if="data.selected.value" :value="data.sample()" />
+        </KeepAlive></template>`,
+        { selected, sample } as any,
+        { Child },
+      )
+      const { host, app } = define(Parent).render()
+      await nextTick()
+      const node = host.querySelector('div')!
+      expect(node.textContent).toBe('a:0')
+
+      for (const [previous, value] of [
+        ['a', 'b'],
+        ['b', 'c'],
+      ]) {
+        const samples = sample.mock.calls.length
+        selected.value = undefined
+        await nextTick()
+        expect(host.textContent).toBe('')
+        expect(read()).toBe(previous)
+        expect(sample).toHaveBeenCalledTimes(samples)
+
+        local.value++
+        await nextTick()
+        expect(node.textContent).toBe(`${previous}:${local.value}`)
+        expect(host.textContent).toBe('')
+        expect(sample).toHaveBeenCalledTimes(samples)
+
+        selected.value = { name: value }
+        await nextTick()
+        expect(host.querySelector('div')).toBe(node)
+        expect(node.textContent).toBe(`${value}:${local.value}`)
+        expect(activated[activated.length - 1]).toBe(value)
+      }
+      expect(activated).toEqual(['a', 'b', 'c'])
+      expect(setup).toHaveBeenCalledTimes(1)
+      expect(disposed).not.toHaveBeenCalled()
+
+      selected.value = undefined
+      await nextTick()
+      const samples = sample.mock.calls.length
+      app.unmount()
+      selected.value = { name: 'after-unmount' }
+      await nextTick()
+      expect(sample).toHaveBeenCalledTimes(samples)
+      expect(disposed).toHaveBeenCalledTimes(1)
+    })
+
+    test('rebinds a queued invalid input to another call site without retaining its old dependency', async () => {
+      const view = ref<'a' | 'b' | 'none'>('a')
+      const sourceA = ref<{ value: string } | undefined>({ value: 'a0' })
+      const sourceB = ref({ value: 'b0' })
+      const readA = vi.fn(() => sourceA.value!.value)
+      const readB = vi.fn(() => sourceB.value.value)
+      const activated: unknown[] = []
+      const setup = vi.fn()
+      let read!: () => unknown
+      const Child = defineVaporComponent({
+        props: ['value'],
+        setup(props) {
+          setup()
+          read = () => props.value
+          onActivated(() => activated.push(props.value))
+          const node = template('<div> </div>')() as HTMLDivElement
+          const text = child(node) as Text
+          renderEffect(() => setText(text, props.value))
+          return node
+        },
+      })
+      // Explicit call sites let the same cache entry receive different getters.
+      const Parent = defineVaporComponent(() =>
+        createComponent(VaporKeepAlive, null, {
+          default: () =>
+            createIf(
+              () => view.value === 'a',
+              () => createComponent(Child, { key: 'shared', value: readA }),
+              () =>
+                createIf(
+                  () => view.value === 'b',
+                  () => createComponent(Child, { key: 'shared', value: readB }),
+                ),
+              singleRootIfElse,
+            ),
+        }),
+      )
+      const { host, app } = define(Parent).render()
+      await nextTick()
+      const node = host.querySelector('div')!
+      const aCalls = readA.mock.calls.length
+      expect(host.textContent).toBe('a0')
+
+      // Queue the old getter before the structural update makes it unreachable.
+      sourceA.value = undefined
+      view.value = 'none'
+      await nextTick()
+      expect(readA).toHaveBeenCalledTimes(aCalls)
+      expect(host.textContent).toBe('')
+      expect(read()).toBe('a0')
+
+      view.value = 'b'
+      await nextTick()
+      expect(host.querySelector('div')).toBe(node)
+      expect(host.textContent).toBe('b0')
+      expect(setup).toHaveBeenCalledTimes(1)
+      expect(activated).toEqual(['a0', 'b0'])
+      expect(readA).toHaveBeenCalledTimes(aCalls)
+      const bCalls = readB.mock.calls.length
+
+      sourceA.value = { value: 'a-after-rebind' }
+      await nextTick()
+      expect(readA).toHaveBeenCalledTimes(aCalls)
+      expect(readB).toHaveBeenCalledTimes(bCalls)
+      expect(read()).toBe('b0')
+
+      sourceB.value.value = 'b1'
+      await nextTick()
+      expect(readB.mock.calls.length).toBeGreaterThan(bCalls)
+      expect(host.textContent).toBe('b1')
+      expect(read()).toBe('b1')
+      app.unmount()
+    })
+
+    test.each([undefined, {}])(
+      'adds attrs and fallthrough when an entry initially given %j is reused by another call site',
+      async initialRawProps => {
+        const page = ref(0)
+        const title = ref('from-new-call-site')
+        const setup = vi.fn()
+        let attrs!: Record<string, unknown>
+        const Child = defineVaporComponent({
+          setup(_props, context) {
+            // No initial key or inherited `$` may hide the empty-input case.
+            expect(
+              Object.keys((currentInstance as VaporComponentInstance).rawProps),
+            ).toEqual([])
+            setup()
+            attrs = context.attrs
+            return template('<div>child</div>')()
+          },
+        })
+        expect(Child.props).toBeUndefined()
+        const Other = defineVaporComponent(() => template('<p>other</p>')())
+        // Compiled branch keys or fallthrough sources could mask no rawProps.
+        const Parent = defineVaporComponent(() =>
+          createComponent(VaporKeepAlive, null, {
+            default: () =>
+              createIf(
+                () => page.value === 0,
+                () => createComponent(Child, initialRawProps),
+                () =>
+                  createIf(
+                    () => page.value === 1,
+                    () => createComponent(Other),
+                    () => createComponent(Child, { title: () => title.value }),
+                  ),
+              ),
+          }),
+        )
+        const { host, app } = define(Parent).render()
+        const node = host.querySelector('div')!
+        expect(Object.keys(attrs)).toEqual([])
+        expect(node.hasAttribute('title')).toBe(false)
+
+        page.value = 1
+        await nextTick()
+        expect(host.textContent).toBe('other')
+        page.value = 2
+        await nextTick()
+        expect(setup).toHaveBeenCalledTimes(1)
+        expect(host.querySelector('div')).toBe(node)
+        expect(attrs.title).toBe('from-new-call-site')
+        expect(Object.keys(attrs)).toEqual(['title'])
+        expect(node.getAttribute('title')).toBe('from-new-call-site')
+
+        title.value = 'updated'
+        await nextTick()
+        expect(attrs.title).toBe('updated')
+        expect(node.getAttribute('title')).toBe('updated')
+        app.unmount()
+      },
+    )
+  })
 })

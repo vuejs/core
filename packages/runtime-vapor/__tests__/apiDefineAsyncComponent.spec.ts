@@ -1515,6 +1515,115 @@ describe('api: defineAsyncComponent', () => {
       app.unmount()
     },
   )
+
+  test.each([false, true])(
+    'forwards delivered wrapper inputs without resampling them (v-once: %s)',
+    async once => {
+      const source = ref('a')
+      const sample = vi.fn(() => source.value)
+      const data = ref({ sample })
+      let resolve!: (component: VaporComponent) => void
+      let read!: () => unknown
+      const Child = defineVaporComponent({
+        props: ['value'],
+        setup(props) {
+          read = () => props.value
+          const node = template('<span></span>')()
+          renderEffect(() => setElementText(node, String(props.value)))
+          return node
+        },
+      })
+      const Async = defineVaporAsyncComponent(
+        () => new Promise<VaporComponent>(r => (resolve = r)),
+      )
+      const App = compile(
+        `<template><div><components.Async ${once ? 'v-once' : ''}
+          :value="data.sample()" /></div></template>`,
+        data,
+        { Async },
+      )
+      const { app, host } = define(App).render()
+      expect(sample).toHaveBeenCalledTimes(1)
+
+      source.value = 'b'
+      await nextTick()
+      expect(sample).toHaveBeenCalledTimes(once ? 1 : 2)
+      resolve(Child)
+      await timeout()
+
+      const delivered = once ? 'a' : 'b'
+      expect(host.textContent).toBe(delivered)
+      expect(read()).toBe(delivered)
+      expect(sample).toHaveBeenCalledTimes(once ? 1 : 2)
+
+      source.value = 'c'
+      expect(read()).toBe(delivered)
+      await nextTick()
+      expect(read()).toBe(once ? 'a' : 'c')
+      expect(host.textContent).toBe(once ? 'a' : 'c')
+      expect(sample).toHaveBeenCalledTimes(once ? 1 : 3)
+      app.unmount()
+    },
+  )
+
+  test('forwards delivered props and listeners to the error component without resampling sources', async () => {
+    const first = vi.fn()
+    const second = vi.fn()
+    const source = ref({ name: 'a', listener: first })
+    const sample = vi.fn(() => ({
+      item: { name: source.value.name },
+      title: source.value.name,
+      onClick: source.value.listener,
+    }))
+    const data = ref({ sample })
+    const failure = new Error('failed')
+    let reject!: (error: Error) => void
+    const ErrorComp = compile(
+      `<script setup>defineProps(['item', 'error'])</script>
+       <template><button>{{ item.name }}:{{ error.message }}</button></template>`,
+      data,
+    )
+    const Async = defineVaporAsyncComponent({
+      loader: () => new Promise<VaporComponent>((_, r) => (reject = r)),
+      errorComponent: ErrorComp,
+    })
+    const App = compile(
+      '<template><div><components.Async v-bind="data.sample()" /></div></template>',
+      data,
+      { Async },
+    )
+    const { app, host, mount } = define(App).create()
+    const errors: unknown[] = []
+    app.config.errorHandler = error => errors.push(error)
+    mount()
+    expect(sample).toHaveBeenCalledTimes(1)
+
+    reject(failure)
+    await timeout()
+    const button = host.querySelector('button')!
+    expect(button.textContent).toBe('a:failed')
+    expect(button.title).toBe('a')
+    expect(sample).toHaveBeenCalledTimes(1)
+    button.click()
+    expect(first).toHaveBeenCalledTimes(1)
+    expect(second).not.toHaveBeenCalled()
+
+    source.value = { name: 'b', listener: second }
+    button.click()
+    expect(first).toHaveBeenCalledTimes(2)
+    expect(second).not.toHaveBeenCalled()
+    await nextTick()
+
+    expect(host.querySelector('button')).toBe(button)
+    expect(button.textContent).toBe('b:failed')
+    expect(button.title).toBe('b')
+    expect(sample).toHaveBeenCalledTimes(2)
+    button.click()
+    expect(first).toHaveBeenCalledTimes(2)
+    expect(second).toHaveBeenCalledTimes(1)
+    expect(errors).toEqual([failure])
+    app.unmount()
+  })
 })
 
 function mountAsyncError(

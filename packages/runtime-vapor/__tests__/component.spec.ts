@@ -264,6 +264,8 @@ describe('component', () => {
       },
     }).render()
 
+    expect(host.innerHTML).toBe('<div>0</div>')
+    await nextTick()
     expect(host.innerHTML).toBe('<div>1</div>')
   })
 
@@ -415,8 +417,8 @@ describe('component', () => {
     }).render()
 
     const i = instance as VaporComponentInstance
-    // watchEffect + renderEffect + props validation effect
-    expect(getEffectsCount(i.scope)).toBe(3)
+    // watchEffect + renderEffect
+    expect(getEffectsCount(i.scope)).toBe(2)
     expect(host.innerHTML).toBe('<div>0</div>')
 
     app.unmount()

@@ -28,13 +28,11 @@ import {
   isVaporComponent,
 } from '../component'
 import { isAsyncComponentEnabled } from '../asyncComponentState'
-import { isolatePropSources, resolveFunctionSource } from '../componentProps'
-import type { DynamicSlotFn, RawSlots } from '../componentSlots'
 import {
   type DefineVaporComponent,
   defineVaporComponent,
 } from '../apiDefineComponent'
-import { ShapeFlags, invokeArrayFns, isArray, isFunction } from '@vue/shared'
+import { ShapeFlags, invokeArrayFns, isArray } from '@vue/shared'
 import { createElement } from '../dom/node'
 import { unsetRef } from '../refCleanup'
 import {
@@ -45,9 +43,8 @@ import {
   isFragment,
   isInteropFragment,
 } from '../fragment'
-import { EffectScope, shallowReactive } from '@vue/reactivity'
+import { EffectScope } from '@vue/reactivity'
 import { isInteropEnabled } from '../vdomInteropState'
-import { renderEffect } from '../renderEffect'
 import {
   type VaporKeepAliveContext,
   currentCacheKey,
@@ -357,8 +354,6 @@ const VaporKeepAliveImpl = defineVaporComponent({
     })
 
     const keepAliveCtx: KeepAliveInstance['ctx'] = {
-      isolatePropSources,
-      isolateSlotSources,
       getStorageContainer: () => storageContainer,
       getCachedComponent: (comp, key) => {
         if (isInteropEnabled && isVNode(comp)) {
@@ -670,37 +665,4 @@ export function deactivate(
   if (__DEV__ || __FEATURE_PROD_DEVTOOLS__) {
     devtoolsComponentAdded(instance)
   }
-}
-
-function isolateSlotSources(rawSlots: RawSlots): RawSlots {
-  const dynamicSources = rawSlots.$!
-
-  const isolatedSources = dynamicSources.slice()
-  const committedSources = shallowReactive<
-    Array<ReturnType<DynamicSlotFn> | undefined>
-  >([])
-  let hasFunctionSource = false
-  for (let i = 0; i < dynamicSources.length; i++) {
-    const source = dynamicSources[i]
-    if (isFunction(source)) {
-      hasFunctionSource = true
-      isolatedSources[i] = (() => committedSources[i]) as DynamicSlotFn
-    }
-  }
-  if (!hasFunctionSource) return rawSlots
-
-  const isolated = { ...rawSlots, $: isolatedSources } as RawSlots
-  // VDOM materializes dynamic slots before caching a child. Commit Vapor's
-  // live slot descriptors through the input scope so useSlots() observes
-  // the same last-patched slot table while deactivated. Slot functions
-  // themselves remain unchanged and retain their existing closure semantics.
-  renderEffect(() => {
-    for (let i = 0; i < dynamicSources.length; i++) {
-      const source = dynamicSources[i]
-      if (isFunction(source)) {
-        committedSources[i] = resolveFunctionSource(source as DynamicSlotFn)
-      }
-    }
-  }, true)
-  return isolated
 }

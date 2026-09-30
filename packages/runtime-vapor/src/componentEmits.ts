@@ -5,7 +5,6 @@ import {
 } from '@vue/runtime-dom'
 import type { VaporComponent, VaporComponentInstance } from './component'
 import { EMPTY_OBJ, isArray } from '@vue/shared'
-import { getAttrFromRawProps } from './componentProps'
 import { isInteropEnabled } from './vdomInteropState'
 
 /**
@@ -39,8 +38,8 @@ export function emit(
   const vnode = isInteropEnabled && instance.interopVNode
   baseEmit(
     instance,
-    vnode ? vnode.props || EMPTY_OBJ : instance.rawProps || EMPTY_OBJ,
-    vnode ? defaultPropGetter : getAttrFromRawProps,
+    vnode ? vnode.props || EMPTY_OBJ : instance.rawValues,
+    defaultPropGetter,
     event,
     ...rawArgs,
   )
