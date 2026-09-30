@@ -97,9 +97,12 @@ export function setListener(
   invoker[layer] = value
   if (composeHandlers(invoker).length) {
     if (!invoker.remove && !invoker.fired) attachInvoker(el, key, invoker)
-  } else if (invoker.remove) {
-    invoker.remove()
-    invoker.remove = undefined
+  } else {
+    if (invoker.remove) {
+      invoker.remove()
+      invoker.remove = undefined
+    }
+    invoker.fired = false
   }
   // a re-run sets the layer again right away, so the native listener stays
   onEffectCleanup(() => {

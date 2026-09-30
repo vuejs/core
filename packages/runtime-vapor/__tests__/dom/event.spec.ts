@@ -585,6 +585,37 @@ describe('dom event', () => {
       expect(vapor.after).toBe(vdom.after)
     })
 
+    test('re-adds a once listener after it was removed', async () => {
+      const logs: Record<string, string[]> = {}
+      await renderParity(
+        {
+          App: `<template><button v-bind="data.listeners">click</button></template>`,
+        },
+        () => {
+          const log: string[] = []
+          return ref({
+            log,
+            listeners: { onClickOnce: () => log.push('first') },
+          })
+        },
+        async (data, root, mode) => {
+          const button = root.querySelector('button')!
+          button.click()
+          data.value.listeners = {}
+          await nextTick()
+          data.value.listeners = {
+            onClickOnce: () => data.value.log.push('second'),
+          }
+          await nextTick()
+          button.click()
+          logs[mode] = data.value.log
+        },
+      )
+
+      expect(logs.vdom).toEqual(['first', 'second'])
+      expect(logs.vapor).toEqual(logs.vdom)
+    })
+
     test('merges with spread and fallthrough listeners like vdom', async () => {
       const logs: Record<string, string[]> = {}
       const { vdom, vapor } = await renderParity(
