@@ -71,7 +71,13 @@ import {
   warn,
   withCtx,
 } from '@vue/runtime-dom'
-import { type EffectScope, effectScope, setActiveSub } from '@vue/reactivity'
+import {
+  type EffectScope,
+  effectScope,
+  endBatch,
+  setActiveSub,
+  startBatch,
+} from '@vue/reactivity'
 import {
   type LooseRawProps,
   type VaporComponent,
@@ -348,14 +354,16 @@ function getInteropTransitionElement(
   }
 }
 
-function filterReservedProps(props: VNode['props']): VNode['props'] {
-  const filtered: VNode['props'] = {}
+// The vnode's evaluated props as the child's raw props: marked for
+// initInputs, and replaced on every patch so no first frame is retained.
+function interopRawProps(vnode: VNode): RawProps {
+  const rawProps: RawProps = {}
+  const props = vnode.props
   for (const key in props) {
-    if (!isReservedProp(key)) {
-      filtered[key] = props[key]
-    }
+    if (!isReservedProp(key)) rawProps[key] = props[key]
   }
-  return filtered
+  rawProps[interopKey] = true
+  return rawProps
 }
 
 // mounting vapor components and slots in vdom
@@ -377,8 +385,7 @@ const vaporInteropImpl = {
     const prev = currentInstance
     simpleSetCurrentInstance(parentComponent)
 
-    const rawProps = filterReservedProps(vnode.props) as RawProps
-    rawProps[interopKey] = true
+    const rawProps = interopRawProps(vnode)
     const slotsRef = shallowRef(normalizeInteropSlots(vnode.children))
     const rawSlots = createInteropRawSlots(slotsRef)
 
@@ -3720,8 +3727,18 @@ function updateInteropVNode(
   prevVNode: VNode,
 ): void {
   state.pendingVNodeUpdate = vnode
-  deliverInputs(instance, vnode.props || EMPTY_OBJ)
-  instance.rawSlotsRef!.value = normalizeInteropSlots(vnode.children)
+  const rawProps = (instance.rawProps = interopRawProps(vnode))
+  // props and slots reach sync watchers together, outside the renderer's
+  // update effect
+  const prevSub = setActiveSub()
+  startBatch()
+  try {
+    deliverInputs(instance, rawProps)
+    instance.rawSlotsRef!.value = normalizeInteropSlots(vnode.children)
+  } finally {
+    endBatch()
+    setActiveSub(prevSub)
+  }
   // align with VDOM: vnode beforeUpdate runs before directive beforeUpdate.
   invokeInteropVNodeBeforeUpdate(instance, vnode, prevVNode)
   updateInteropDirs(instance, state, vnode, prevVNode)

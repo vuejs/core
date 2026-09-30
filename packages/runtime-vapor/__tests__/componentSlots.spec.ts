@@ -8152,6 +8152,46 @@ describe('component: slots', () => {
       },
     )
 
+    test('a vdom parent delivers props and slots to a vapor child together', async () => {
+      const data = ref<any>({ x: { item: { name: 'a' } }, seen: [] })
+      const components: Record<string, any> = {}
+      components.Child = compile(
+        `<script setup>
+          import { useSlots, watchSyncEffect } from 'vue'
+          const data = _data
+          const props = defineProps({ item: Object })
+          const slots = useSlots()
+          watchSyncEffect(() => {
+            if (slots.foo) data.value.seen.push(props.item.name)
+          })
+        </script><template><div><slot name="foo" /></div></template>`,
+        data,
+        components,
+      )
+      const App = compile(
+        `<script setup>const data = _data; const components = _components;</script>
+        <template>
+          <components.Child :item="data.x && data.x.item">
+            <template v-if="data.x" #foo>foo</template>
+          </components.Child>
+        </template>`,
+        data,
+        components,
+        { vapor: false },
+      )
+      const root = document.createElement('div')
+      const app = createApp(App)
+      app.use(vaporInteropPlugin).mount(root)
+      expect(data.value.seen).toEqual(['a'])
+      data.value.x = null
+      await nextTick()
+      expect(data.value.seen).toEqual(['a'])
+      data.value.x = { item: { name: 'b' } }
+      await nextTick()
+      expect(data.value.seen).toEqual(['a', 'b'])
+      app.unmount()
+    })
+
     // props are evaluated before the descriptors, as in vdom: one read, and
     // none after the creation was aborted
     test.each([
