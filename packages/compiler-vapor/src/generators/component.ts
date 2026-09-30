@@ -600,6 +600,13 @@ function genRawSlots(
   slotDeclarations: string[],
 ) {
   if (!slots.length) return
+  // like vdom's `createSlots()`, v-if / v-for slots override unconditional
+  // ones whatever the source order, so they go last (dynamic slots resolve
+  // from the end)
+  slots = [
+    ...slots.filter(slot => !isConditionalOrLoopSlot(slot)),
+    ...slots.filter(isConditionalOrLoopSlot),
+  ]
   const staticSlots = slots[0]
   if (staticSlots.slotType === IRSlotType.STATIC) {
     const defaultSlot = getSingleDefaultSlot(staticSlots)
@@ -621,6 +628,13 @@ function genRawSlots(
       slots,
     )
   }
+}
+
+function isConditionalOrLoopSlot(slot: IRSlots): boolean {
+  return (
+    slot.slotType === IRSlotType.CONDITIONAL ||
+    slot.slotType === IRSlotType.LOOP
+  )
 }
 
 function getSingleDefaultSlot({ slots }: IRSlotsStatic) {
