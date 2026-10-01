@@ -231,8 +231,9 @@ export function render(_ctx) {
   _applySelectModel(n0, () => (_ctx.model), _value => (_ctx.model = _value))
   _applyTextModel(n1, () => (_ctx.text), _value => (_ctx.text = _value))
   _on(n0, "change", e => _ctx.onChange(e))
+  const _on_input = e => _ctx.onInput(e)
   _renderEffect(() => {
-    _setDynamicProps(n1, [{ onInput: e => _ctx.onInput(e) }, _toHandlers(_ctx.handlers, true)])
+    _setDynamicProps(n1, [{ onInput: _on_input }, _toHandlers(_ctx.handlers, true)])
     _onBinding(n1, _ctx.event, e => _ctx.onEvent(e))
   })
   return [n0, n1]

@@ -8,18 +8,21 @@ import {
 import type { CodegenContext } from '../generate'
 import {
   IRDynamicPropsKind,
+  type IREffect,
+  IRNodeTypes,
   type IRProp,
   type SetDynamicPropsIRNode,
   type SetPropIRNode,
   type VaporHelper,
 } from '../ir'
-import { genExpression } from './expression'
+import { genExpression, genVarName } from './expression'
 import { genEventHandler } from './event'
 import {
   type CodeFragment,
   DELIMITERS_ARRAY,
   DELIMITERS_OBJECT,
   NEWLINE,
+  buildCodeFragment,
   genCall,
   genMulti,
   getParserOptions,
@@ -30,6 +33,7 @@ import {
   capitalize,
   extend,
   hyphenate,
+  isArray,
   isOn,
   normalizeClass,
   shouldSetAsAttr,
@@ -457,6 +461,40 @@ function genDynamicPropNames(
   return id
 }
 
+const hoistedHandlers = new WeakMap<IRProp, string>()
+
+// a merged `@evt` handler runs on its event, not on render, so it is declared
+// ahead of the render effect, which would otherwise put the values it caches
+// into the handler body. #15725
+export function genHoistedHandlers(
+  effects: IREffect[],
+  context: CodegenContext,
+): CodeFragment[] {
+  const [frag, push] = buildCodeFragment()
+  for (const { operations } of effects) {
+    for (const oper of operations) {
+      if (oper.type !== IRNodeTypes.SET_DYNAMIC_PROPS) continue
+      for (const props of oper.props) {
+        if (!isArray(props)) continue
+        for (const prop of props) {
+          if (!prop.handler) continue
+          const name = getUniqueHandlerName(
+            context,
+            `_on_${prop.key.content.replace(/-/g, '_')}`,
+          )
+          hoistedHandlers.set(prop, name)
+          push(
+            NEWLINE,
+            `const ${name} = `,
+            ...genEventHandler(context, prop.values, prop.handlerModifiers),
+          )
+        }
+      }
+    }
+  }
+  return frag
+}
+
 function genLiteralObjectProps(
   props: IRProp[],
   context: CodegenContext,
@@ -469,7 +507,9 @@ function genLiteralObjectProps(
         getStaticPropKeyName(prop, true),
         genPropKey(prop, context, true),
         prop.handler
-          ? genEventHandler(context, prop.values, prop.handlerModifiers)
+          ? hoistedHandlers.has(prop)
+            ? [hoistedHandlers.get(prop)!]
+            : genEventHandler(context, prop.values, prop.handlerModifiers)
           : genPropValue(prop.values, context),
       )
     } else {
@@ -690,4 +730,15 @@ function getSpecialHelper(
   } else if (keyName === 'textContent') {
     return helpers.setElementText
   }
+}
+
+export function getUniqueHandlerName(
+  context: CodegenContext,
+  name: string,
+): string {
+  const { seenInlineHandlerNames } = context
+  name = genVarName(name)
+  const count = seenInlineHandlerNames[name] || 0
+  seenInlineHandlerNames[name] = count + 1
+  return count === 0 ? name : `${name}${count}`
 }

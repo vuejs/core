@@ -1442,7 +1442,7 @@ describe('compiler: element transform', () => {
     )
     expect(code).toMatchSnapshot()
     expect(code).contains(
-      `_setDynamicProps(n0, [{ onClick: e => _ctx.a(e) }, _toHandlers(_ctx.obj, true), _ctx.bind, { onClick: _withModifiers(e => _ctx.b(e), ["stop"]), onKeyupOnce: _withKeys(e => _ctx.c(e), ["enter"]), "on:myEvent": e => _ctx.d(e) }])`,
+      `_setDynamicProps(n0, [{ onClick: _on_click }, _toHandlers(_ctx.obj, true), _ctx.bind, { onClick: _on_click1, onKeyupOnce: _on_keyup, "on:myEvent": _on_myEvent }])`,
     )
     expect(code).not.contains(`_on(`)
     expect(code).not.contains(`_setDynamicEvents`)
@@ -1462,7 +1462,7 @@ describe('compiler: element transform', () => {
       `<div v-bind="bind" @click="a" :onClick="b" /><div :onClick="c" v-on="obj" /><Comp @click="a" :onClick="b" />`,
     )
     expect(code).toMatchSnapshot()
-    expect(code).contains(`{ onClick: [e => _ctx.a(e), _ctx.b] }`)
+    expect(code).contains(`{ onClick: [_on_click, _ctx.b] }`)
     expect(code).contains(
       `_setDynamicProps(n1, [{ onClick: _ctx.c }, _toHandlers(_ctx.obj, true)], k0)`,
     )
@@ -1486,7 +1486,7 @@ describe('compiler: element transform', () => {
     )
     expect(code).toMatchSnapshot()
     expect(code).contains(
-      `{ "on:myEventCaptureOnce": e => _ctx.a(e), onClick: e => _ctx.b(e) }`,
+      `{ "on:myEventCaptureOnce": _on_myEvent, onClick: _on_click }`,
     )
   })
 
@@ -1495,9 +1495,7 @@ describe('compiler: element transform', () => {
       `<div v-bind="bind" @click.stop="a" @click="b($event)" />`,
     )
     expect(code).toMatchSnapshot()
-    expect(code).contains(
-      `{ onClick: [_withModifiers(e => _ctx.a(e), ["stop"]), $event => (_ctx.b($event))] }`,
-    )
+    expect(code).contains(`{ onClick: [_on_click, _on_click1] }`)
   })
 
   test('a delegated listener stays out of the merge', () => {
@@ -2092,6 +2090,19 @@ describe('compiler: element transform', () => {
 
       expect([...ir.template.keys()]).toMatchObject([template])
     })
+  })
+
+  // #15725
+  test('merged listeners are declared ahead of the render effect', () => {
+    const { code } = compileWithElementTransform(
+      `<div v-bind="attrs" :title="n" :id="n" @click="hit(n)" @focus="hit(n)" @blur="n++" />`,
+    )
+    expect(code).toMatchSnapshot()
+    expect(code).contains(`const _on_click = () => (_ctx.hit(_ctx.n))`)
+    expect(code).contains(`const _on_blur = () => (_ctx.n++)`)
+    expect(code).contains(
+      `{ title: _n, id: _n, onClick: _on_click, onFocus: _on_focus, onBlur: _on_blur }`,
+    )
   })
 
   test.each(['KeepAlive', 'keep-alive'])(

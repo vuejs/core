@@ -11,7 +11,7 @@ import { genSetDynamicEvents, genSetEvent } from './event'
 import { genFor } from './for'
 import { genSetHtml } from './html'
 import { genIf } from './if'
-import { genDynamicProps, genSetProp } from './prop'
+import { genDynamicProps, genHoistedHandlers, genSetProp } from './prop'
 import { genSetTemplateRef, genSetTemplateRefBinding } from './templateRef'
 import { genGetTextChild, genSetText } from './text'
 import {
@@ -125,6 +125,7 @@ function genReactiveEffects(
   const [frag, push, unshift] = buildCodeFragment()
   const shouldDeclare = genExtraFrag === undefined
   let operationsCount = 0
+  const handlerFrags = genHoistedHandlers(effects, context)
   const {
     ids,
     frag: declarationFrags,
@@ -190,6 +191,7 @@ function genReactiveEffects(
       push(...context.withId(genExtraFrag, ids))
     }
 
+    unshift(...handlerFrags)
     return frag
   })
 }
