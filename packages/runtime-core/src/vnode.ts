@@ -295,6 +295,9 @@ export interface VNode<
     // vdom outlets whose fallback this slot resolves, innermost first. Never
     // written in place: clones share the list
     outlets?: readonly VdomSlotOutlet[]
+    // invoked as `slots.name()` rather than through an outlet: the server
+    // rendered no range of the slot's own around its content
+    bare?: boolean
     state?: unknown
     ref?: ShallowRef<any>
     scope?: EffectScope

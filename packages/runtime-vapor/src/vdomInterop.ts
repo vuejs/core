@@ -782,7 +782,10 @@ const vaporInteropImpl = {
     // the vdom fragment it ends. Either way the slot itself has nothing to
     // adopt, and an empty branch inside must not take that marker for its own
     // anchor: mount in place.
-    const isFallbackRange = isComment(node, '(')
+    // A bare slot has no range of its own: what is under the cursor is its
+    // content's, or past it.
+    const bare = vnode.vs!.bare
+    const isFallbackRange = !bare && isComment(node, '(')
     const close = isFallbackRange
       ? locateEndAnchor(node)!
       : isRangeEnd(node)
@@ -817,7 +820,7 @@ const vaporInteropImpl = {
       )
       const fragmentAnchor = isFragment(vnode.vb) && vnode.vb.anchor
       let anchor = fragmentAnchor || currentHydrationNode!
-      const wrapped = isRangeStart(node) && isRangeEnd(anchor)
+      const wrapped = !bare && isRangeStart(node) && isRangeEnd(anchor)
       // An unwrapped slot has no SSR-owned boundary. The hydration cursor is
       // only where VDOM should resume and may belong to the next sibling, so
       // create a dedicated self anchor matching the mount path.
@@ -829,7 +832,7 @@ const vaporInteropImpl = {
       }
       // VDOM SSR wraps slot output in fragment anchors. Keep that range on the
       // VaporSlot vnode so enabled Teleport removal can dispose both anchors.
-      if (isRangeStart(node) && isRangeEnd(anchor)) {
+      if (wrapped) {
         vnode.el = node
         vnode.anchor = anchor
       } else {
@@ -973,9 +976,11 @@ const vaporSlotsProxyHandler: ProxyHandler<any> = {
 
       // Create a wrapper that internally uses renderSlot for proper vapor slot handling
       // This ensures that calling slots.default() works the same as renderSlot(slots, 'default')
-      const wrapped = (props?: Record<string, any>) => [
-        renderSlot({ [key]: slot }, key as string, props),
-      ]
+      const wrapped = (props?: Record<string, any>) => {
+        const vnode = renderSlot({ [key]: slot }, key as string, props)
+        vnode.vs!.bare = true
+        return [vnode]
+      }
       ;(wrapped as any)[rawVaporSlotKey] = slot
       // already normalized, so VDOM slot normalization keeps it as is
       ;(wrapped as any)._n = true
@@ -3208,7 +3213,7 @@ function renderVaporSlot(
             fallbackRange.depth,
           )!).adoptFallback = fallbackRange.adopt
         }
-        if (isHydrating) {
+        if (isHydrating && !vnode.vs!.bare) {
           withHydratingSlotBoundary(renderContent)
         } else {
           renderContent()

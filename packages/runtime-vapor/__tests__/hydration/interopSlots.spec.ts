@@ -2061,4 +2061,49 @@ describe('VDOM interop', () => {
       expect(container.innerHTML).toBe('')
     },
   )
+
+  // vue-router's RouterView and Suspense call `slots.default()` themselves: the
+  // server renders no range of the slot's own around its content
+  test.each([
+    ['a multi-root page', `<h1>a</h1><p>{{ data.list[0] }}</p>`, true],
+    ['a multi-root vdom page', `<h1>a</h1><p>{{ data.list[0] }}</p>`, false],
+    [
+      'a page with a leading v-if branch',
+      `<template v-if="data.show"><i>a</i></template><p>{{ data.list[0] }}</p>`,
+      true,
+    ],
+    ['a slot fallback page', `<slot><p>{{ data.list[0] }}</p></slot>`, true],
+  ])('hydrate a vapor slot called directly with %s', async (_, page, vapor) => {
+    const data = reactive({ show: true, list: [1] })
+    const { container, html } = await testWithVaporApp(
+      `${setup}<template>
+        <components.RouterView v-slot="{ Component }">
+          <Suspense><component :is="Component" /></Suspense>
+        </components.RouterView>
+        <footer>f</footer>
+      </template>`,
+      {
+        Page: { code: `${setup}<template>${page}</template>`, vapor },
+        RouterView: {
+          code: `<script>
+            export default {
+              setup(_, { slots }) {
+                return () => slots.default({ Component: _components.Page })[0]
+              },
+            }
+          </script>`,
+          vapor: false,
+        },
+      },
+      data,
+    )
+    expect(visible(container)).toBe(html.replace(/<!--[^>]*-->/g, ''))
+    expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+    expect(`Hydration children mismatch`).not.toHaveBeenWarned()
+
+    data.show = false
+    data.list = [2]
+    await nextTick()
+    expect(visible(container)).toMatch(/<p>2<\/p><footer>f<\/footer>$/)
+  })
 })
