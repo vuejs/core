@@ -306,7 +306,14 @@ export class DynamicFragment extends RenderContextFragment {
   current?: any
   // Owned by the Transition module (deferBranchUpdateDuringLeave /
   // removeBranchWithLeave); the core update pipeline never touches it.
-  pending?: { render?: BlockFn; key: any; noScope: boolean; branchKey?: any }
+  pending?: {
+    render?: BlockFn
+    key: any
+    noScope: boolean
+    branchKey?: any
+    // key of the branch still rendered when the first update was deferred
+    prevKey: any
+  }
   // Debug text for the runtime anchor comment, dev builds only. Never a
   // category signal: everything hydration branches on lives in `__vf`.
   anchorLabel?: string
@@ -397,7 +404,14 @@ export class DynamicFragment extends RenderContextFragment {
       // the leave finishes.
       if (
         transition &&
-        deferBranchUpdateDuringLeave(this, render, key, noScope, branchKey)
+        deferBranchUpdateDuringLeave(
+          this,
+          render,
+          key,
+          noScope,
+          branchKey,
+          prevKey,
+        )
       ) {
         return
       }

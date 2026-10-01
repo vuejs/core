@@ -26,6 +26,7 @@ import { computed } from '@vue/reactivity'
 import {
   type Block,
   type BlockFn,
+  EMPTY_BLOCK,
   type TransitionBlock,
   type TransitionOptions,
   type VaporTransitionHooks,
@@ -55,6 +56,7 @@ import {
   isForFragment,
   isFragment,
   isVaporSlotOutlet,
+  runWithRenderCtx,
 } from '../fragment'
 import { isKeepAliveEnabled } from '../keepAlive'
 import { DYNAMIC, TELEPORT } from '../fragmentFlags'
@@ -526,6 +528,7 @@ function deferBranchUpdateDuringLeaveImpl(
   key: any,
   noScope: boolean,
   branchKey: any,
+  prevKey: any,
 ): boolean {
   const transition = frag.$transition!
   if (!transition.state.isLeaving) return false
@@ -536,7 +539,7 @@ function deferBranchUpdateDuringLeaveImpl(
     pending.noScope = noScope
     pending.branchKey = branchKey
   } else {
-    frag.pending = { render, key, noScope, branchKey }
+    frag.pending = { render, key, noScope, branchKey, prevKey }
   }
   return true
 }
@@ -574,6 +577,38 @@ function removeBranchWithLeaveImpl(
       // Unmounting cuts the leave short and runs afterLeave synchronously;
       // the pending branch must not be rendered into the torn-down tree.
       if (transition.state.isUnmounting) return
+      // An enclosing v-if / v-else-if branch that switched during this leave
+      // replaces the whole subtree, like vdom re-rendering Transition's
+      // latest child after the leave.
+      let outer: DynamicFragment | undefined
+      let reached = false
+      collectTransitionBlocks(
+        transition.state.root!,
+        f => {
+          if (f === frag) reached = true
+          if (reached || outer || !isDynamicFragment(f) || !f.pending) return
+          if (f.pending.key === f.pending.prevKey) f.pending = undefined
+          else outer = f
+        },
+        [],
+        undefined,
+      )
+      if (outer) {
+        const target = outer
+        const { render, key, noScope, branchKey, prevKey } = target.pending!
+        target.pending = undefined
+        // this branch has fully left; the outer teardown must not leave it again
+        frag.nodes = EMPTY_BLOCK
+        target.current = prevKey
+        // under the instance and scope of the outer fragment's owner
+        runWithRenderCtx(target, () =>
+          target.update(render, key, noScope, branchKey),
+        )
+        // a kept-alive branch outlives the switch: finish this update in
+        // the cache container, activation moves it back
+        parent = frag.anchor.parentNode
+        if (!parent) return
+      }
       // By the time this deferred out-in branch runs, the renderEffect
       // has finished and currentInstance may have changed, so restore
       // the captured instance.
