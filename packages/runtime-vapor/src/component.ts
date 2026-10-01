@@ -89,6 +89,7 @@ import {
   type DynamicPropsSource,
   INITIAL_RAW_VALUES,
   type RawProps,
+  fallthroughOnlyKey,
   getPropsProxyHandlers,
   getStaticBindingKeys,
   hasFallthroughAttrs,
@@ -370,11 +371,15 @@ export function createComponent(
       // must see exactly one fallthrough source
       if (rawProps && rawProps !== EMPTY_OBJ) {
         const sources = (rawProps as RawProps).$
-        rawProps = extend({}, rawProps, {
-          $: sources ? sources.concat(source) : [source],
-        }) as RawProps
+        rawProps = extend(
+          {},
+          rawProps,
+          sources
+            ? { $: sources.concat(source) }
+            : { $: [source], [fallthroughOnlyKey]: true },
+        ) as RawProps
       } else {
-        rawProps = { $: [source] } as RawProps
+        rawProps = { $: [source], [fallthroughOnlyKey]: true } as RawProps
       }
     }
 
