@@ -42,7 +42,6 @@ import {
   genPropKey,
   genPropValue,
   getStaticPropKeyName,
-  getUniqueHandlerName,
   isListenerProp,
 } from './prop'
 import {
@@ -52,7 +51,7 @@ import {
   isSimpleIdentifier,
   toValidAssetId,
 } from '@vue/compiler-dom'
-import { genEventHandler } from './event'
+import { genEventHandler, getUniqueHandlerName } from './event'
 import { genBlock, hasStableSlotRoot, markSlotRootOperations } from './block'
 import {
   type DestructureMap,

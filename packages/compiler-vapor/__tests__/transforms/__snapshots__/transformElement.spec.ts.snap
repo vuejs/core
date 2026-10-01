@@ -42,6 +42,22 @@ export function render(_ctx) {
 }"
 `;
 
+exports[`compiler: element transform > a declared handler avoids the names cached by the render effect 1`] = `
+"import { setDynamicProps as _setDynamicProps, renderEffect as _renderEffect, template as _template } from 'vue';
+const t0 = _template("<div>", 1)
+const k0 = ["title","id"]
+
+export function render(_ctx) {
+  const n0 = t0()
+  const _on_click1 = () => (_ctx.hit())
+  _renderEffect(() => {
+    const _on_click = _ctx.on_click
+    _setDynamicProps(n0, [_ctx.attrs, { title: _on_click, id: _on_click, onClick: _on_click1 }], k0)
+  })
+  return n0
+}"
+`;
+
 exports[`compiler: element transform > a delegated listener stays out of the merge 1`] = `
 "import { createInvoker as _createInvoker, setDynamicEvents as _setDynamicEvents, renderEffect as _renderEffect, delegateEvents as _delegateEvents, template as _template } from 'vue';
 const t0 = _template("<div>", 1)
@@ -51,6 +67,24 @@ export function render(_ctx) {
   const n0 = t0()
   n0.$evtclick = _createInvoker(e => _ctx.a(e))
   _renderEffect(() => _setDynamicEvents(n0, _ctx.obj))
+  return n0
+}"
+`;
+
+exports[`compiler: element transform > a dynamic event handler is declared ahead of the render effect 1`] = `
+"import { setDynamicProps as _setDynamicProps, onBinding as _onBinding, renderEffect as _renderEffect, template as _template } from 'vue';
+const t0 = _template("<div>", 1)
+const k0 = ["title","id"]
+
+export function render(_ctx) {
+  const n0 = t0()
+  const _on_click = () => (_ctx.n++)
+  const _on_event = () => (_ctx.n++)
+  _renderEffect(() => {
+    const _n = _ctx.n
+    _setDynamicProps(n0, [_ctx.attrs, { title: _n, id: _n, onClick: _on_click }], k0)
+    _onBinding(n0, _ctx.event, _on_event)
+  })
   return n0
 }"
 `;

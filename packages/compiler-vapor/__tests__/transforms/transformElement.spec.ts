@@ -2105,6 +2105,25 @@ describe('compiler: element transform', () => {
     )
   })
 
+  test('a dynamic event handler is declared ahead of the render effect', () => {
+    const { code } = compileWithElementTransform(
+      `<div v-bind="attrs" :title="n" :id="n" @click="n++" @[event]="n++" />`,
+    )
+    expect(code).toMatchSnapshot()
+    expect(code).contains(`const _on_event = () => (_ctx.n++)`)
+    expect(code).contains(`_onBinding(n0, _ctx.event, _on_event)`)
+  })
+
+  test('a declared handler avoids the names cached by the render effect', () => {
+    const { code } = compileWithElementTransform(
+      `<div v-bind="attrs" :title="on_click" :id="on_click" @click="hit()" />`,
+    )
+    expect(code).toMatchSnapshot()
+    expect(code).contains(`const _on_click = _ctx.on_click`)
+    expect(code).contains(`const _on_click1 = () => (_ctx.hit())`)
+    expect(code).contains(`onClick: _on_click1`)
+  })
+
   test.each(['KeepAlive', 'keep-alive'])(
     '<%s> resolves to the built-in VaporKeepAlive',
     tag => {

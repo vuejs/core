@@ -212,7 +212,8 @@ export function render(_ctx) {
       _setProp(n2, "type", _for_item0.value.event === _ctx.event ? 'text' : 'checkbox')
     })
     _applyDynamicModel(n2, () => (_for_item0.value.value), _value => (_for_item0.value.value = _value))
-    _renderEffect(() => _onBinding(n2, _for_item0.value.event, () => (_ctx.onInput(_for_item0.value.value))))
+    const _on_field_event = () => (_ctx.onInput(_for_item0.value.value))
+    _renderEffect(() => _onBinding(n2, _for_item0.value.event, _on_field_event))
     return n2
   }, (field) => (field.event), 8 /* IS_SINGLE_NODE */)
   n0.onReset(_selector0.reset)
@@ -232,9 +233,10 @@ export function render(_ctx) {
   _applyTextModel(n1, () => (_ctx.text), _value => (_ctx.text = _value))
   _on(n0, "change", e => _ctx.onChange(e))
   const _on_input = e => _ctx.onInput(e)
+  const _on_event = e => _ctx.onEvent(e)
   _renderEffect(() => {
     _setDynamicProps(n1, [{ onInput: _on_input }, _toHandlers(_ctx.handlers, true)])
-    _onBinding(n1, _ctx.event, e => _ctx.onEvent(e))
+    _onBinding(n1, _ctx.event, _on_event)
   })
   return [n0, n1]
 }"

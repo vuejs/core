@@ -7,19 +7,23 @@ import {
 } from '@vue/compiler-dom'
 import type { CodegenContext } from '../generate'
 import {
+  type IREffect,
   IRNodeTypes,
+  type IRProp,
   type OperationNode,
   type SetDynamicEventsIRNode,
   type SetEventIRNode,
 } from '../ir'
-import { genExpression } from './expression'
+import { genExpression, genVarName } from './expression'
 import {
   type CodeFragment,
   DELIMITERS_OBJECT_NEWLINE,
   NEWLINE,
+  buildCodeFragment,
   genCall,
   genMulti,
 } from './utils'
+import { isArray } from '@vue/shared'
 
 export function genSetEvent(
   oper: SetEventIRNode,
@@ -59,7 +63,9 @@ export function genSetEvent(
   ]
 
   function genHandler(): CodeFragment[] {
-    return (handler ||= genEventHandler(context, [value], modifiers))
+    return (handler ||= genEventHandler(context, [value], modifiers, {
+      hoisted: oper,
+    }))
   }
 
   function genInvoker(): CodeFragment[] {
@@ -124,6 +130,69 @@ export function genSetDynamicEvents(
   ]
 }
 
+const hoistedHandlers = new WeakMap<IRProp | SetEventIRNode, string>()
+
+// a handler bound inside a render effect (merged into its dynamic props, or
+// under a dynamic event name) runs on its event, not on render, so it is
+// declared ahead of the effect, which would otherwise put the values it caches
+// into the handler body. #15725
+export function genHoistedHandlers(
+  effects: IREffect[],
+  context: CodegenContext,
+  // declared inside the effect, so a handler of the same name would be shadowed
+  effectVarNames: string[],
+): CodeFragment[] {
+  const [frag, push] = buildCodeFragment()
+  const declare = (
+    node: IRProp | SetEventIRNode,
+    key: SimpleExpressionNode,
+    values: (SimpleExpressionNode | undefined)[],
+    modifiers: SetEventIRNode['modifiers'] | undefined,
+  ) => {
+    let name: string
+    do {
+      name = getUniqueHandlerName(
+        context,
+        `_on_${key.content.replace(/-/g, '_')}`,
+      )
+    } while (effectVarNames.includes(name))
+    hoistedHandlers.set(node, name)
+    push(
+      NEWLINE,
+      `const ${name} = `,
+      ...genEventHandler(context, values, modifiers),
+    )
+  }
+  for (const { operations } of effects) {
+    for (const oper of operations) {
+      if (oper.type === IRNodeTypes.SET_EVENT) {
+        declare(oper, oper.key, [oper.value], oper.modifiers)
+      } else if (oper.type === IRNodeTypes.SET_DYNAMIC_PROPS) {
+        for (const props of oper.props) {
+          if (!isArray(props)) continue
+          for (const prop of props) {
+            if (prop.handler) {
+              declare(prop, prop.key, prop.values, prop.handlerModifiers)
+            }
+          }
+        }
+      }
+    }
+  }
+  return frag
+}
+
+export function getUniqueHandlerName(
+  context: CodegenContext,
+  name: string,
+): string {
+  const { seenInlineHandlerNames } = context
+  name = genVarName(name)
+  const count = seenInlineHandlerNames[name] || 0
+  seenInlineHandlerNames[name] = count + 1
+  return count === 0 ? name : `${name}${count}`
+}
+
 interface GenEventHandlerOptions {
   // Generate handler expressions suitable for passing as component props
   // (avoid wrapping member expressions with invocation).
@@ -133,6 +202,8 @@ interface GenEventHandlerOptions {
   // Direct delegated assignments use Vapor guard helpers because the guard
   // helper owns the event invoker wrapper.
   modifierHelper?: 'runtime' | 'vapor'
+  // The prop or event whose handler may be declared by genHoistedHandlers.
+  hoisted?: IRProp | SetEventIRNode
 }
 
 export function genEventHandler(
@@ -148,7 +219,10 @@ export function genEventHandler(
     asComponentProp = false,
     extraWrap = false,
     modifierHelper = 'runtime',
+    hoisted,
   } = options
+  const hoistedName = hoisted && hoistedHandlers.get(hoisted)
+  if (hoistedName) return [hoistedName]
   const useVaporModifierHelper = modifierHelper === 'vapor'
   let handlerExp: CodeFragment[] = []
   if (values) {

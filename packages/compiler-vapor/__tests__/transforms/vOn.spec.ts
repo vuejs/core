@@ -107,7 +107,8 @@ describe('v-on', () => {
     })
 
     expect(code).matchSnapshot()
-    expect(code).contains(`_onBinding(n0, _ctx.event, e => _ctx.handler(e))`)
+    expect(code).contains(`const _on_event = e => _ctx.handler(e)`)
+    expect(code).contains(`_onBinding(n0, _ctx.event, _on_event)`)
   })
 
   test('dynamic arg with prefixing', () => {
@@ -128,7 +129,8 @@ describe('v-on', () => {
 
     expect(helpers).contains('onBinding')
     expect(code).matchSnapshot()
-    expect(code).contains(`_onBinding(n0, _ctx.event, e => _ctx.handler(e), {`)
+    expect(code).contains(`const _on_event = e => _ctx.handler(e)`)
+    expect(code).contains(`_onBinding(n0, _ctx.event, _on_event, {`)
     expect(code).contains('capture: true')
     expect(code).contains('once: true')
     expect(code).not.contains('effect: true')
@@ -825,7 +827,8 @@ describe('v-on', () => {
     )
     expect(onWarn.mock.calls[0][0].loc.source).toBe('delegate')
     expect(helpers).not.contains('delegateEvents')
-    expect(code).contains('_onBinding(n0, _ctx.event, e => _ctx.test(e))')
+    expect(code).contains('const _on_event = e => _ctx.test(e)')
+    expect(code).contains('_onBinding(n0, _ctx.event, _on_event)')
     expect(ir.block.effect[0].operations).toMatchObject([{ delegate: false }])
   })
 
@@ -891,8 +894,10 @@ describe('v-on', () => {
     expect(code).contains(
       'n0.$evtkeyup = _withKeys(e => _ctx.foo(e), ["enter"])',
     )
-    expect(code).contains('_onBinding(n1, _ctx.event, _withKeys1')
-    expect(code).contains('e => _ctx.bar(e), ["enter"]))')
+    expect(code).contains(
+      'const _on_event = _withKeys1(e => _ctx.bar(e), ["enter"])',
+    )
+    expect(code).contains('_onBinding(n1, _ctx.event, _on_event)')
   })
 
   test('should not delegate .stop when have multiple events of same name', () => {

@@ -131,4 +131,53 @@ describe('expression cache', () => {
     )
     expect(vapor.after).toBe(vdom.after)
   })
+  test('a dynamic event handler assigns a binding read on render', async () => {
+    const { vdom, vapor } = await renderParity(
+      {
+        App: `<script setup>
+          import { ref } from 'vue'
+          const attrs = { id: 'a' }
+          const n = ref(0)
+          const event = ref('focus')
+        </script>
+        <template>
+          <div v-bind="attrs" :title="n" :data-n="n" @click="n++" @[event]="n++">{{ n }}</div>
+        </template>`,
+      },
+      () => ref(null),
+      async (data, root) => {
+        const div = root.querySelector('div')!
+        div.dispatchEvent(new Event('focus'))
+        await nextTick()
+        expect(div.textContent).toBe('1')
+        div.click()
+        await nextTick()
+        expect(div.textContent).toBe('2')
+      },
+    )
+    expect(vapor.after).toBe(vdom.after)
+  })
+
+  test('a merged listener is not shadowed by a cached binding of the same name', async () => {
+    const { vdom, vapor } = await renderParity(
+      {
+        App: `<script setup>
+          import { ref } from 'vue'
+          const attrs = { id: 'a' }
+          const log = _data.value
+          const on_click = ref('x')
+          const hit = () => log.push('hit')
+        </script>
+        <template>
+          <div v-bind="attrs" :title="on_click" :data-x="on_click" @click="hit()"></div>
+        </template>`,
+      },
+      () => shallowRef<string[]>([]),
+      async (data, root) => {
+        root.querySelector('div')!.click()
+        expect(data.value).toEqual(['hit'])
+      },
+    )
+    expect(vapor.after).toBe(vdom.after)
+  })
 })
