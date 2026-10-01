@@ -96,6 +96,69 @@ describe('resolveType', () => {
     })
   })
 
+  // #15740
+  describe('runtime type from interface extends clause', () => {
+    test('built-in base type', () => {
+      expect(
+        resolve(`
+      interface BrandedSymbol<T> extends Symbol {}
+      interface D extends Date {}
+      interface Fn extends Function {}
+      interface Mixed extends Date { foo: string }
+      defineProps<{
+        sym: BrandedSymbol<void>
+        d: D
+        f: Fn
+        m: Mixed
+      }>()
+      `).props,
+      ).toStrictEqual({
+        sym: ['Symbol'],
+        d: ['Date'],
+        f: ['Function'],
+        m: ['Object', 'Date'],
+      })
+    })
+
+    test('imported base type', () => {
+      const files = {
+        '/foo.ts': 'export interface BrandedSymbol<T> extends Symbol {}',
+      }
+      const { props } = resolve(
+        `
+        import type { BrandedSymbol } from './foo'
+        defineProps<{ sym: BrandedSymbol<void> }>()
+      `,
+        files,
+      )
+      expect(props).toStrictEqual({
+        sym: ['Symbol'],
+      })
+    })
+
+    test('unresolvable base type does not discard inferred type', () => {
+      expect(
+        resolve(`
+      import type { Unresolvable } from 'unresolvable-pkg-xyz'
+      interface Props extends Unresolvable { foo: string }
+      defineProps<{ p: Props }>()
+      `).props,
+      ).toStrictEqual({
+        p: ['Object'],
+      })
+    })
+
+    test('Symbol type reference', () => {
+      expect(
+        resolve(`
+      defineProps<{ s: Symbol }>()
+      `).props,
+      ).toStrictEqual({
+        s: ['Symbol'],
+      })
+    })
+  })
+
   test('reference class', () => {
     expect(
       resolve(`
