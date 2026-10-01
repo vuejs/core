@@ -2023,4 +2023,78 @@ describe('directive: v-model', () => {
       expect(vapor).toEqual(vdom)
     })
   })
+
+  describe('checkbox with a re-rendered value', () => {
+    const checkedParity = async (
+      template: string,
+      makeInitial: () => any,
+      act: (data: Ref<any>, root: HTMLElement) => Promise<any>,
+    ) => {
+      const results = {} as Record<'vdom' | 'vapor', any>
+      await renderParity(
+        { App: `<template>${template}</template>` },
+        () => ref(makeInitial()),
+        async (data, root, mode) => {
+          results[mode] = await act(data, root)
+        },
+      )
+      return results
+    }
+
+    const checkedStates = (root: HTMLElement) =>
+      Array.from(root.querySelectorAll('input')).map(input => input.checked)
+
+    test('array model in a v-for keyed by index', async () => {
+      const { vdom, vapor } = await checkedParity(
+        `<input v-for="(item, index) in data.items" :key="index" type="checkbox" v-model="data.selected" :value="item">`,
+        () => ({ items: [1, 2], selected: [1] }),
+        async (data, root) => {
+          data.value.items = [3, 4]
+          await nextTick()
+          const checked = checkedStates(root)
+          const input = root.querySelector('input')!
+          input.checked = !input.checked
+          triggerEvent('change', input)
+          await nextTick()
+          return { checked, selected: data.value.selected }
+        },
+      )
+
+      expect(vdom).toEqual({ checked: [false, false], selected: [1, 3] })
+      expect(vapor).toEqual(vdom)
+    })
+
+    test('set model in a v-for keyed by index', async () => {
+      const { vdom, vapor } = await checkedParity(
+        `<input v-for="(item, index) in data.items" :key="index" type="checkbox" v-model="data.selected" :value="item">`,
+        () => ({ items: [1, 2], selected: new Set([1]) }),
+        async (data, root) => {
+          data.value.items = [3, 1]
+          await nextTick()
+          return checkedStates(root)
+        },
+      )
+
+      expect(vdom).toEqual([false, true])
+      expect(vapor).toEqual(vdom)
+    })
+
+    test('array model with a changing value binding', async () => {
+      const { vdom, vapor } = await checkedParity(
+        `<input type="checkbox" v-model="data.selected" :value="data.value">`,
+        () => ({ value: 1, selected: [1] }),
+        async (data, root) => {
+          data.value.value = 2
+          await nextTick()
+          const changed = checkedStates(root)
+          data.value.value = 1
+          await nextTick()
+          return [changed, checkedStates(root)]
+        },
+      )
+
+      expect(vdom).toEqual([[false], [true]])
+      expect(vapor).toEqual(vdom)
+    })
+  })
 })
