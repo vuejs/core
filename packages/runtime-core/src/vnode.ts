@@ -855,6 +855,7 @@ function cloneVaporSlotMeta(vnode: VNode): VNode['vs'] {
   const cloned: NonNullable<VNode['vs']> = {
     slot: vaporSlot.slot,
     outlets: vaporSlot.outlets,
+    bare: vaporSlot.bare,
   }
 
   if (vnode.el) {

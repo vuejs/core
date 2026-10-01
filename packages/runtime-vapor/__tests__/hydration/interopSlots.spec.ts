@@ -2106,4 +2106,40 @@ describe('VDOM interop', () => {
     await nextTick()
     expect(visible(container)).toMatch(/<p>2<\/p><footer>f<\/footer>$/)
   })
+
+  // Nuxt's NuxtPage passes the slot vnode on through `h(vnode)`, a clone
+  test.each([
+    ['a v-for page', `<p v-for="i in data.list" :key="i">{{ i }}</p>`],
+    ['a slot fallback page', `<slot><p>{{ data.list[0] }}</p></slot>`],
+  ])('hydrate a cloned vapor slot called directly with %s', async (_, page) => {
+    const data = reactive({ list: [1] })
+    const { container, html } = await testWithVaporApp(
+      `${setup}<template>
+        <components.RouterView v-slot="{ Component }">
+          <component :is="Component" />
+        </components.RouterView>
+      </template>`,
+      {
+        Page: `${setup}<template>${page}</template>`,
+        RouterView: {
+          code: `<script>
+            import { h } from 'vue'
+            export default {
+              setup(_, { slots }) {
+                return () => h(slots.default({ Component: _components.Page })[0])
+              },
+            }
+          </script>`,
+          vapor: false,
+        },
+      },
+      data,
+    )
+    expect(visible(container)).toBe(html.replace(/<!--[^>]*-->/g, ''))
+    expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+
+    data.list = [2]
+    await nextTick()
+    expect(visible(container)).toMatch(/<p>2<\/p>$/)
+  })
 })
