@@ -56,6 +56,7 @@ export function applyVShow(target: Block, source: () => any): void {
         return true
       }
       mark(instance)
+      if (__DEV__) register((instance.hmrRootHooks ||= []), apply)
     },
     onDynamicFragment(frag) {
       if (isSlotOutletFragment(frag)) return (slotRoot = true)

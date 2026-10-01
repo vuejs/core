@@ -4,18 +4,25 @@ import {
   restoreCurrentInstance,
   setCurrentInstance,
 } from '@vue/runtime-dom'
-import { findBlockBoundary, insert, remove } from './block'
+import {
+  type TransitionBlock,
+  findBlockBoundary,
+  insert,
+  remove,
+} from './block'
 import {
   type VaporComponent,
   type VaporComponentInstance,
   applyComponentFallthrough,
   createComponent,
+  getRootElement,
   mountComponent,
   runDevRender,
   unmountComponent,
 } from './component'
 import { applyComponentScopeIds } from './scopeId'
 import { applyComponentCssVars } from './helpers/useCssVars'
+import { applyTransitionHooks } from './transition'
 import {
   currentRenderContext,
   deriveSlotScopeIds,
@@ -44,6 +51,11 @@ export function hmrRerender(instance: VaporComponentInstance): void {
   if (instance.renderScope) {
     instance.renderScope.stop()
   }
+  // A parent's transition hooks move to the new root: the replaced root does
+  // not leave and the new one does not enter.
+  const prevRoot = getRootElement(instance.block) as TransitionBlock | undefined
+  const transition = prevRoot && prevRoot.$transition
+  if (transition) prevRoot!.$transition = undefined
   remove(instance.block, parent)
   const prev = setCurrentInstance(instance)
   pushWarningContext(instance)
@@ -61,6 +73,16 @@ export function hmrRerender(instance: VaporComponentInstance): void {
   applyComponentScopeIds(instance)
   applyComponentCssVars(instance)
   insert(instance.block, parent, anchor)
+  for (const hook of instance.hmrRootHooks || []) hook(instance.block)
+  if (transition) {
+    if (transition.__vapor) {
+      applyTransitionHooks(instance.block, transition)
+    } else {
+      // vdom hooks are resolved per vnode, not per element
+      const root = getRootElement(instance.block) as TransitionBlock | undefined
+      if (root) root.$transition = transition
+    }
+  }
 }
 
 export function hmrReload(

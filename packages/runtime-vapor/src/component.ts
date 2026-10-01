@@ -1006,6 +1006,8 @@ export class VaporComponentInstance<
   isSingleRoot?: boolean
   // for HMR rerender
   renderScope?: EffectScope
+  // parent directives landing on the root, re-applied after an HMR rerender
+  hmrRootHooks?: ((block: Block) => void)[]
 
   /**
    * dev only flag to track whether $attrs was used during render.

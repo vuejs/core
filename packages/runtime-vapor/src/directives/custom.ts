@@ -93,6 +93,10 @@ export function withVaporDirectives(
         }
         return true
       }
+      if (__DEV__) {
+        const hooks = (block.hmrRootHooks ||= [])
+        if (!hooks.includes(applyDirectives)) hooks.push(applyDirectives)
+      }
       // Async wrappers keep an empty fragment until a renderable branch is available
       if (isAsyncComponentEnabled && isAsyncWrapper(block)) {
         const inner = block.block
