@@ -533,4 +533,63 @@ describe('DOM prop initialization order', () => {
       },
     )
   })
+
+  test('sets a constant value after max past a constant setter', async () => {
+    await renderParity(
+      {
+        App:
+          `<script setup>const data = _data; const step = 1</script>` +
+          `<template><input type="range" :max="data" :step="step" :value="500"></template>`,
+      },
+      () => ref(1000),
+      (_data, root) => {
+        expect(root.querySelector('input')!.value).toBe('500')
+      },
+    )
+  })
+
+  test('reapplies an unchanged value after max changes', async () => {
+    // jsdom does not clamp the value when max changes, browsers do
+    const { set } = Object.getOwnPropertyDescriptor(
+      HTMLInputElement.prototype,
+      'max',
+    )!
+    const setter = vi
+      .spyOn(HTMLInputElement.prototype, 'max', 'set')
+      .mockImplementation(function (this: HTMLInputElement, max) {
+        set!.call(this, max)
+        this.value = this.value
+      })
+    try {
+      await renderParity(
+        { App: `<template><input type="range" v-bind="data"></template>` },
+        () => ref({ value: 500, max: 1000 }),
+        async (data, root) => {
+          const input = root.querySelector('input')!
+          expect(input.value).toBe('500')
+          data.value = { value: 500, max: 100 }
+          await nextTick()
+          expect(input.value).toBe('100')
+          data.value = { value: 500, max: 1000 }
+          await nextTick()
+          expect(input.value).toBe('500')
+        },
+      )
+    } finally {
+      setter.mockRestore()
+    }
+  })
+
+  test.each([
+    `<input type="range" :max="data" value="500">`,
+    `<input type="range" :max="data" :value="'500'">`,
+  ])('sets a static value after max: %s', async tpl => {
+    await renderParity(
+      { App: `<template>${tpl}</template>` },
+      () => ref(1000),
+      (_data, root) => {
+        expect(root.querySelector('input')!.value).toBe('500')
+      },
+    )
+  })
 })

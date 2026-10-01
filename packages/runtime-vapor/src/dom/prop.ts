@@ -626,15 +626,11 @@ export function patchDynamicProps(
   }
 
   const hydratedKeys = isHydrating ? staticKeys : undefined
-  const keys = Object.keys(props)
-  // like vdom, set value after the other props since it can depend on them,
-  // e.g. min/max of a range input (#2325, #4024)
-  const valueIndex = keys.indexOf('value')
-  if (valueIndex > -1) keys.push(keys.splice(valueIndex, 1)[0])
-  for (const key of keys) {
+  for (const key of Object.keys(props)) {
     if (isReservedProp(key)) continue
     const value = props[key]
     nextProps[key] = value
+    if (key === 'value') continue
     // Events and objects can have stable identity with mutable internals, so
     // only skip unchanged primitive values.
     if (
@@ -652,6 +648,17 @@ export function patchDynamicProps(
       value,
       isSVG,
       hydratedKeys && hydratedKeys.includes(key),
+    )
+  }
+  // like vdom, set value after the other props since it can depend on them,
+  // e.g. min/max of a range input (#2325, #4024), even if it is unchanged
+  if ('value' in nextProps) {
+    setDynamicProp(
+      el,
+      'value',
+      nextProps.value,
+      isSVG,
+      hydratedKeys && hydratedKeys.includes('value'),
     )
   }
 

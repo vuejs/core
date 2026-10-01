@@ -1476,4 +1476,37 @@ describe('compiler v-bind', () => {
     expect(code).toContain('_setAttr(n0, "href", _ctx.url, true)')
     expect(code).toContain('_setClass(n0, _ctx.cls, true)')
   })
+
+  test('sets a constant input value after a preceding effect past a constant setter', () => {
+    const { code } = compileWithVBind(
+      `<input type="range" :max="max" :step="step" :value="500" />`,
+      { bindingMetadata: { step: BindingTypes.LITERAL_CONST } },
+    )
+
+    expect(code).toContain(
+      `_renderEffect(() => _setProp(n0, "max", _ctx.max))\n` +
+        `  _setValue(n0, 500)`,
+    )
+  })
+
+  test.each([
+    `<input type="range" :max="max" value="500" />`,
+    `<input type="range" :max="max" :value="'500'" />`,
+  ])('does not fold an input value set after a runtime max: %s', template => {
+    const { code } = compileWithVBind(template)
+
+    expect(code).toContain(`_template("<input type=range>"`)
+    expect(code).toContain(`_setValue(n0, "500")`)
+  })
+
+  test.each([
+    `<input value="500" />`,
+    `<input type="range" max="1000" value="500" />`,
+    `<input :title="title" value="500" />`,
+    `<div :max="max" value="500" />`,
+  ])('folds a value that no runtime prop sanitizes: %s', template => {
+    const { code } = compileWithVBind(template)
+
+    expect(code).toContain(`value=500`)
+  })
 })

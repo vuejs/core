@@ -1370,6 +1370,22 @@ describe('mismatch handling', () => {
       `<!--[--><section><div><!--[--><a>child</a><!--]--></div><span>static</span></section><section>bar</section><!--]-->`,
     )
   })
+
+  test('static input value set after a dynamic max', async () => {
+    const { container } = await mountWithHydration(
+      `<input type="range" max="1000" value="500">`,
+      `<input type="range" :max="data" value="500">`,
+      ref(1000),
+    )
+    expect(container.querySelector('input')!.value).toBe('500')
+
+    await mountWithHydration(
+      `<input type="range" max="1000" value="400">`,
+      `<input type="range" :max="data" value="500">`,
+      ref(1000),
+    )
+    expect(`Hydration attribute mismatch`).toHaveBeenWarnedTimes(1)
+  })
 })
 
 describe('data-allow-mismatch', () => {
