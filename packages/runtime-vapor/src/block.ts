@@ -332,6 +332,12 @@ export function remove(block: Block, parent?: ParentNode): void {
         ? resolveUnmountSuspense(block.suspense)
         : block.suspense,
     )
+    // Without a parent an enclosing owner removes the DOM and unmountComponent
+    // leaves the block alone, so unmount the vdom components in it here. A
+    // kept-alive instance stays mounted.
+    if (isInteropEnabled && !parent && block.isUnmounted) {
+      unmountVDOM(block.block)
+    }
   } else if (isArray(block)) {
     for (let i = 0; i < block.length; i++) {
       remove(block[i], parent)
