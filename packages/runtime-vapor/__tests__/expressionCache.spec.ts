@@ -180,4 +180,26 @@ describe('expression cache', () => {
     )
     expect(vapor.after).toBe(vdom.after)
   })
+  test('a merged listener avoids the names of setup bindings', async () => {
+    const { vdom, vapor } = await renderParity(
+      {
+        App: `<script setup>
+          import { ref } from 'vue'
+          const attrs = { id: 'a' }
+          const _on_click = ref(0)
+        </script>
+        <template>
+          <div v-bind="attrs" @click="_on_click++">{{ _on_click }}</div>
+        </template>`,
+      },
+      () => ref(null),
+      async (data, root) => {
+        const div = root.querySelector('div')!
+        div.click()
+        await nextTick()
+        expect(div.textContent).toBe('1')
+      },
+    )
+    expect(vapor.after).toBe(vdom.after)
+  })
 })

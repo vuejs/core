@@ -49,10 +49,11 @@ const k0 = ["title","id"]
 
 export function render(_ctx) {
   const n0 = t0()
-  const _on_click1 = () => (_ctx.hit())
+  const _on_click1 = () => (_ctx.a())
+  const _on_click11 = () => (_ctx.b())
   _renderEffect(() => {
     const _on_click = _ctx.on_click
-    _setDynamicProps(n0, [_ctx.attrs, { title: _on_click, id: _on_click, onClick: _on_click1 }], k0)
+    _setDynamicProps(n0, [_ctx.attrs, { title: _on_click, id: _on_click, onClick: _on_click1, onClick1: _on_click11 }], k0)
   })
   return n0
 }"

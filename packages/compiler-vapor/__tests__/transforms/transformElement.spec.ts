@@ -2116,12 +2116,13 @@ describe('compiler: element transform', () => {
 
   test('a declared handler avoids the names cached by the render effect', () => {
     const { code } = compileWithElementTransform(
-      `<div v-bind="attrs" :title="on_click" :id="on_click" @click="hit()" />`,
+      `<div v-bind="attrs" :title="on_click" :id="on_click" @click="a()" @click1="b()" />`,
     )
     expect(code).toMatchSnapshot()
     expect(code).contains(`const _on_click = _ctx.on_click`)
-    expect(code).contains(`const _on_click1 = () => (_ctx.hit())`)
-    expect(code).contains(`onClick: _on_click1`)
+    expect(code).contains(`const _on_click1 = () => (_ctx.a())`)
+    expect(code).contains(`const _on_click11 = () => (_ctx.b())`)
+    expect(code).contains(`onClick: _on_click1, onClick1: _on_click11`)
   })
 
   test.each(['KeepAlive', 'keep-alive'])(

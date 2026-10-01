@@ -139,8 +139,6 @@ const hoistedHandlers = new WeakMap<IRProp | SetEventIRNode, string>()
 export function genHoistedHandlers(
   effects: IREffect[],
   context: CodegenContext,
-  // declared inside the effect, so a handler of the same name would be shadowed
-  effectVarNames: string[],
 ): CodeFragment[] {
   const [frag, push] = buildCodeFragment()
   const declare = (
@@ -149,13 +147,10 @@ export function genHoistedHandlers(
     values: (SimpleExpressionNode | undefined)[],
     modifiers: SetEventIRNode['modifiers'] | undefined,
   ) => {
-    let name: string
-    do {
-      name = getUniqueHandlerName(
-        context,
-        `_on_${key.content.replace(/-/g, '_')}`,
-      )
-    } while (effectVarNames.includes(name))
+    const name = getUniqueHandlerName(
+      context,
+      `_on_${key.content.replace(/-/g, '_')}`,
+    )
     hoistedHandlers.set(node, name)
     push(
       NEWLINE,
@@ -186,11 +181,7 @@ export function getUniqueHandlerName(
   context: CodegenContext,
   name: string,
 ): string {
-  const { seenInlineHandlerNames } = context
-  name = genVarName(name)
-  const count = seenInlineHandlerNames[name] || 0
-  seenInlineHandlerNames[name] = count + 1
-  return count === 0 ? name : `${name}${count}`
+  return context.getUniqueLocalName(genVarName(name))
 }
 
 interface GenEventHandlerOptions {

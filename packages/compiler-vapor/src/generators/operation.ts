@@ -151,7 +151,8 @@ function genReactiveEffects(
       )
     }
   }
-  const handlerFrags = genHoistedHandlers(effects, context, varNames)
+  // after processExpressions, so the handler names avoid the ones it declares
+  const handlerFrags = genHoistedHandlers(effects, context)
   return context.withExpressionReplacements(expressionReplacements, () => {
     push(...declarationFrags)
     for (let i = 0; i < effects.length; i++) {
