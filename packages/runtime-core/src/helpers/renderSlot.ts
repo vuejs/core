@@ -67,7 +67,7 @@ export function renderSlot(
     )
   }
 
-  let slot = slots[name]
+  let slot = slots[name] ?? slots[name.toLowerCase()]
 
   if (__DEV__ && slot && slot.length > 1) {
     warn(
