@@ -84,13 +84,15 @@ export type VNodeTypes =
   | typeof Suspense
   | typeof SuspenseImpl
 
-export type VNodeRef =
-  | string
-  | Ref
-  | ((
-      ref: Element | ComponentPublicInstance | null,
-      refs: Record<string, any>,
-    ) => void)
+type VNodeRefCallback = {
+  // Bivariance allows element-specific ref callbacks without losing validation.
+  bivarianceHack(
+    ref: Element | ComponentPublicInstance | null,
+    refs: Record<string, any>,
+  ): void
+}['bivarianceHack']
+
+export type VNodeRef = string | Ref | VNodeRefCallback
 
 export type VNodeNormalizedRefAtom = {
   /**
