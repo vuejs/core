@@ -1024,6 +1024,17 @@ function applyContentReplacements(
   replacements: ContentReplacement[],
 ): string {
   replacements
+    // a replacement nested in another one, e.g. `bar[0]` in `foo[bar[0].baz]`,
+    // is covered by the outer one
+    .filter(
+      r =>
+        !replacements.some(
+          o =>
+            o.start <= r.start &&
+            r.end <= o.end &&
+            o.end - o.start > r.end - r.start,
+        ),
+    )
     .sort((a, b) => b.start - a.start)
     .forEach(({ start, end, content: replacement }) => {
       content = content.slice(0, start) + replacement + content.slice(end)
