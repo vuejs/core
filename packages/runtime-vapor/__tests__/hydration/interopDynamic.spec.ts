@@ -1124,7 +1124,9 @@ describe('VDOM interop', () => {
     expect(`Hydration node mismatch`).not.toHaveBeenWarned()
     // the client's empty v-html replaces the server content, like vdom
     expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
-      "<div><p>before</p><div id="dmermaid"></div><span>tail</span></div>"
+      "<div><p>before</p>
+      <!--[--><div id="dmermaid"></div><!--]-->
+      <span>tail</span></div>"
     `)
 
     clientData.value.html = '<svg data-updated="true"></svg>'
@@ -1132,7 +1134,9 @@ describe('VDOM interop', () => {
     await nextTick()
 
     expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
-      "<div><p>before</p><div id="dmermaid"><svg data-updated="true"></svg></div><span>tail-updated</span></div>"
+      "<div><p>before</p>
+      <!--[--><div id="dmermaid"><svg data-updated="true"></svg></div><!--]-->
+      <span>tail-updated</span></div>"
     `)
   })
 
