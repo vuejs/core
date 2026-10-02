@@ -144,11 +144,18 @@ export function queuePostFlushCb(cb: SchedulerJobs): void {
   queueFlush()
 }
 
+export function isSchedulerFlushing(): boolean {
+  return flushIndex >= 0
+}
+
 export function flushPreFlushCbs(
   instance?: ComponentInternalInstance,
   seen?: CountMap,
   // skip the current job
   i: number = flushIndex + 1,
+  // also flush the jobs of components created after `instance`, i.e. the
+  // subtree of a root that was just mounted
+  includeSubtree = false,
 ): void {
   if (__DEV__) {
     seen = seen || new Map()
@@ -156,7 +163,10 @@ export function flushPreFlushCbs(
   for (; i < queue.length; i++) {
     const cb = queue[i]
     if (cb && cb.flags! & SchedulerJobFlags.PRE) {
-      if (instance && cb.id !== instance.uid) {
+      if (
+        instance &&
+        (includeSubtree ? !(cb.id! >= instance.uid) : cb.id !== instance.uid)
+      ) {
         continue
       }
       if (__DEV__ && checkRecursiveUpdates(seen!, cb)) {

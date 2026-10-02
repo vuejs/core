@@ -45,6 +45,7 @@ import {
   type SchedulerJobs,
   flushPostFlushCbs,
   flushPreFlushCbs,
+  isSchedulerFlushing,
   queueJob,
   queuePostFlushCb,
 } from './scheduler'
@@ -2468,7 +2469,16 @@ function baseCreateRenderer(
     container._vnode = vnode
     if (!isFlushing) {
       isFlushing = true
-      flushPreFlushCbs(instance)
+      if (!instance && isSchedulerFlushing()) {
+        // #6728 mounting inside a running job: only flush the pre jobs of the
+        // new tree and leave the rest to the scheduler so they still run in
+        // order after that job
+        if (vnode && vnode.component) {
+          flushPreFlushCbs(vnode.component, undefined, undefined, true)
+        }
+      } else {
+        flushPreFlushCbs(instance)
+      }
       flushPostFlushCbs()
       isFlushing = false
     }
