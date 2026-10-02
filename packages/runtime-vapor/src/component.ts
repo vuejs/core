@@ -178,7 +178,7 @@ import {
   resolveUnmountSuspense,
   runWithUnmountSuspense,
 } from './suspense'
-import { isInteropEnabled } from './vdomInteropState'
+import { interopKey, isInteropEnabled } from './vdomInteropState'
 import {
   applyComponentScopeIds,
   getCurrentScopeId,
@@ -355,7 +355,10 @@ export function createComponent(
       setRenderContext(deriveSuspense(prevCtx, currentInstance.suspense))
     }
 
-    const owner = resolveFallthroughOwner(isSingleRoot)
+    // props delivered by vdom are plain values, not fallthrough sources
+    const owner =
+      !(isInteropEnabled && rawProps && (rawProps as RawProps)[interopKey]) &&
+      resolveFallthroughOwner(isSingleRoot)
     if (owner) {
       // inject the parent attrs as a dynamic props source; the owner is
       // captured because sources resolve from read paths that do not
