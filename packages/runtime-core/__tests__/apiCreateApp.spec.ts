@@ -685,6 +685,52 @@ describe('api: createApp', () => {
     expect(compWatcherTriggerFn).toBeCalledTimes(0)
   })
 
+  // #6728
+  test('mount new app in a pre watcher should not run sibling watchers nested', async () => {
+    const order: string[] = []
+    const source = ref(0)
+
+    const NestedApp = defineComponent({
+      setup() {
+        const count = ref(0)
+        watch(count, () => {
+          order.push('nested watcher')
+        })
+        onMounted(() => {
+          order.push('nested mounted')
+        })
+        count.value++
+        return () => h('div')
+      },
+    })
+
+    const App = defineComponent({
+      setup() {
+        watch(source, () => {
+          order.push('watcher 1 start')
+          createApp(NestedApp).mount(nodeOps.createElement('div'))
+          order.push('watcher 1 end')
+        })
+        watch(source, () => {
+          order.push('watcher 2')
+        })
+        return () => h('div')
+      },
+    })
+
+    createApp(App).mount(nodeOps.createElement('div'))
+    source.value++
+    await nextTick()
+
+    expect(order).toEqual([
+      'watcher 1 start',
+      'nested watcher',
+      'nested mounted',
+      'watcher 1 end',
+      'watcher 2',
+    ])
+  })
+
   // config.compilerOptions is tested in packages/vue since it is only
   // supported in the full build.
 })
