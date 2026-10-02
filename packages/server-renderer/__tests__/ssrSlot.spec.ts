@@ -611,5 +611,23 @@ describe('ssr: slot', () => {
         `<div><h1>a</h1><p>b</p></div>`,
       )
     })
+
+    // slots a vapor component hands over with `h()` are vdom slots on the
+    // client: called directly, they render what they return
+    test('vnode slots created in a vapor component stay vdom slots', async () => {
+      const Child = {
+        setup(_: any, { slots }: any) {
+          return () => h('div', slots.default())
+        },
+      }
+      const App = {
+        __vapor: true,
+        setup: () => ({
+          view: () => h(Child, null, { default: () => h('p', 'a') }),
+        }),
+        template: `<component :is="view()" />`,
+      }
+      expect(await renderToString(createApp(App))).toBe(`<div><p>a</p></div>`)
+    })
   })
 })

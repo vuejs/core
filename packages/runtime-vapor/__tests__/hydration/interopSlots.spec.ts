@@ -2205,4 +2205,46 @@ describe('VDOM interop', () => {
       expect(visible(container)).toBe(`<h1>a</h1><p>2</p><footer>f</footer>`)
     })
   })
+
+  // slots a vapor component hands over with `h()` are vdom slots: the server
+  // leaves them as they are, called directly or not
+  test('hydrate vnode slots created in a vapor component', async () => {
+    const data = reactive({ list: [1] })
+    const { container, html } = await testWithVaporApp(
+      `<script setup>
+        import { h } from 'vue'
+        const data = _data; const components = _components
+        const view = () =>
+          h(components.Child, null, {
+            default: () => [h('h1', 'a'), h('p', data.list[0])],
+          })
+      </script>
+      <template><component :is="view()" /><footer>f</footer></template>`,
+      {
+        Child: {
+          code: `<script>
+            import { h } from 'vue'
+            export default {
+              setup(_, { slots }) {
+                return () => h('div', slots.default())
+              },
+            }
+          </script>`,
+          vapor: false,
+        },
+      },
+      data,
+    )
+    expect(html).toContain(`<div><h1>a</h1><p>1</p></div>`)
+    expect(visible(container)).toBe(
+      `<div><h1>a</h1><p>1</p></div><footer>f</footer>`,
+    )
+    expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+
+    data.list = [2]
+    await nextTick()
+    expect(visible(container)).toBe(
+      `<div><h1>a</h1><p>2</p></div><footer>f</footer>`,
+    )
+  })
 })

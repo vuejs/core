@@ -188,8 +188,14 @@ export function renderComponentVNode(
   // function calling one itself gets that vapor slot too, as it does from the
   // client's slots proxy: only an ssr outlet, passing `push`, renders the slot.
   const ctx = vnode.ctx
-  if (vnode.shapeFlag & ShapeFlags.SLOTS_CHILDREN && ctx && ctx.type.__vapor) {
-    const slots = vnode.children as Record<string, any>
+  const slots = vnode.children as Record<string, any>
+  if (
+    vnode.shapeFlag & ShapeFlags.SLOTS_CHILDREN &&
+    ctx &&
+    ctx.type.__vapor &&
+    // compiled: slots handed over with `h()` are vdom slots on the client too
+    slots._
+  ) {
     for (const name in slots) {
       const slot = slots[name]
       // a cloned vnode shares its slots: wrapped once
