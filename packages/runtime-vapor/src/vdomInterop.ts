@@ -4207,13 +4207,16 @@ const interopSlotsSourceHandlers: ProxyHandler<ShallowRef<Slots>> = {
       const owner = currentInstance as VaporComponentInstance | null
       const vdom = isVaporComponent(owner) && owner.appContext.vdom
       if (!vdom) return slot(props)
-      const cursor = isHydrating ? enterHydrationCursor() : null
-      const fragment = vdom.slot(target, key, props, owner!)
-      if (isHydrating) {
+      if (!isHydrating) return vdom.slot(target, key, props, owner!)
+
+      const cursor = enterHydrationCursor()
+      try {
+        const fragment = vdom.slot(target, key, props, owner!)
         fragment.hydrate()
+        return fragment
+      } finally {
         exitHydrationCursor(cursor)
       }
-      return fragment
     }
     wrappers[key] = [slot, wrapped]
     return wrapped
