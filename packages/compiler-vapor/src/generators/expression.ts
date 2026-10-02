@@ -1023,12 +1023,17 @@ function applyContentReplacements(
   content: string,
   replacements: ContentReplacement[],
 ): string {
-  replacements
-    .sort((a, b) => b.start - a.start)
-    .forEach(({ start, end, content: replacement }) => {
-      content = content.slice(0, start) + replacement + content.slice(end)
-    })
-  return content
+  // the outermost replacement goes first when starts are equal
+  replacements.sort((a, b) => a.start - b.start || b.end - a.end)
+  let result = ''
+  let offset = 0
+  for (const { start, end, content: replacement } of replacements) {
+    // covered by an applied replacement, e.g. `bar[0]` in `foo[bar[0].baz]`
+    if (start < offset) continue
+    result += content.slice(offset, start) + replacement
+    offset = end
+  }
+  return result + content.slice(offset)
 }
 
 function genDeclarations(
