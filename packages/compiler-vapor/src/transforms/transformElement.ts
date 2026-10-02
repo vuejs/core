@@ -7,6 +7,7 @@ import {
   NodeTypes,
   type PlainElementNode,
   type SimpleExpressionNode,
+  type TextNode,
   advancePositionWithClone,
   createCompilerError,
   createSimpleExpression,
@@ -39,6 +40,7 @@ import {
   makeMap,
   normalizeClass,
   normalizeStyle,
+  parseStringStyle,
   stringifyStyle,
   toHandlerKey,
 } from '@vue/shared'
@@ -1517,6 +1519,21 @@ function createObjectBindSubExpression(
   return expression
 }
 
+// Components receive a static style as an object, like the vdom compiler's
+// transformStyle: style="color: red" -> :style='{ "color": "red" }'
+function createStaticStyleExpression(
+  value: TextNode,
+  context: TransformContext<ElementNode>,
+): SimpleExpressionNode {
+  const content = JSON.stringify(parseStringStyle(value.content))
+  const expression = createSimpleExpression(content, false, value.loc)
+  expression.ast = parseExpression(
+    `(${content})`,
+    getParserOptions(context.options.expressionPlugins),
+  )
+  return expression
+}
+
 function transformProp(
   prop: VaporDirectiveNode | AttributeNode,
   node: ElementNode,
@@ -1529,7 +1546,9 @@ function transformProp(
     return {
       key: createSimpleExpression(prop.name, true, prop.nameLoc),
       value: prop.value
-        ? createSimpleExpression(prop.value.content, true, prop.value.loc)
+        ? name === 'style' && node.tagType === ElementTypes.COMPONENT
+          ? createStaticStyleExpression(prop.value, context)
+          : createSimpleExpression(prop.value.content, true, prop.value.loc)
         : EMPTY_EXPRESSION,
     }
   }
