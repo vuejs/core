@@ -4347,7 +4347,13 @@ function registerInteropDirsComponent(
         comp.block,
         owner,
       )
-      if (el) mountInteropDirsRoot(instance, inner, el)
+      if (el) {
+        // swapped in place: a vdom v-show must not enter the new root
+        const vnode = inner.vnode
+        inner.vnode = extend({}, vnode, { el, transition: null })
+        mountInteropDirsRoot(instance, inner, el)
+        inner.vnode = inner.carried = vnode
+      }
     })
     if (comp === instance) return
   }
