@@ -611,6 +611,14 @@ const emptyAppContext = createAppContext()
 
 let uid = 0
 
+/**
+ * uid the next created component instance will get
+ * @internal
+ */
+export function getNextUid(): number {
+  return uid
+}
+
 export function createComponentInstance(
   vnode: VNode,
   parent: ComponentInternalInstance | null,

@@ -153,9 +153,9 @@ export function flushPreFlushCbs(
   seen?: CountMap,
   // skip the current job
   i: number = flushIndex + 1,
-  // also flush the jobs of components created after `instance`, i.e. the
-  // subtree of a root that was just mounted
-  includeSubtree = false,
+  // only flush the jobs of components whose uid is at least this, i.e. the
+  // components created by a mount that is still in progress
+  minId?: number,
 ): void {
   if (__DEV__) {
     seen = seen || new Map()
@@ -164,8 +164,8 @@ export function flushPreFlushCbs(
     const cb = queue[i]
     if (cb && cb.flags! & SchedulerJobFlags.PRE) {
       if (
-        instance &&
-        (includeSubtree ? !(cb.id! >= instance.uid) : cb.id !== instance.uid)
+        (instance && cb.id !== instance.uid) ||
+        (minId !== undefined && !(cb.id! >= minId))
       ) {
         continue
       }

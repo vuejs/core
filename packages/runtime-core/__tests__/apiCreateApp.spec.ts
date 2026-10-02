@@ -1,4 +1,5 @@
 import {
+  Fragment,
   type Plugin,
   createApp,
   defineComponent,
@@ -10,6 +11,7 @@ import {
   onMounted,
   provide,
   ref,
+  render,
   resolveComponent,
   resolveDirective,
   serializeInner,
@@ -726,6 +728,55 @@ describe('api: createApp', () => {
       'watcher 1 start',
       'nested watcher',
       'nested mounted',
+      'watcher 1 end',
+      'watcher 2',
+    ])
+  })
+
+  // #6728
+  test('render a fragment root in a pre watcher should flush its child pre watchers before mounted', async () => {
+    const order: string[] = []
+    const source = ref(0)
+
+    const Child = defineComponent({
+      setup() {
+        const count = ref(0)
+        watch(count, () => {
+          order.push('child watcher')
+        })
+        onMounted(() => {
+          order.push('child mounted')
+        })
+        count.value++
+        return () => h('div')
+      },
+    })
+
+    const App = defineComponent({
+      setup() {
+        watch(source, () => {
+          order.push('watcher 1 start')
+          render(
+            h(Fragment, [h('div', [h(Child)])]),
+            nodeOps.createElement('div'),
+          )
+          order.push('watcher 1 end')
+        })
+        watch(source, () => {
+          order.push('watcher 2')
+        })
+        return () => h('div')
+      },
+    })
+
+    createApp(App).mount(nodeOps.createElement('div'))
+    source.value++
+    await nextTick()
+
+    expect(order).toEqual([
+      'watcher 1 start',
+      'child watcher',
+      'child mounted',
       'watcher 1 end',
       'watcher 2',
     ])

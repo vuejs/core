@@ -19,6 +19,7 @@ import {
   type Data,
   type LifecycleHook,
   createComponentInstance,
+  getNextUid,
   setupComponent,
 } from './component'
 import {
@@ -2450,6 +2451,7 @@ function baseCreateRenderer(
   let isFlushing = false
   const render: RootRenderFunction = (vnode, container, namespace) => {
     let instance
+    const firstUid = getNextUid()
     if (vnode == null) {
       if (container._vnode) {
         unmount(container._vnode, null, null, true)
@@ -2471,11 +2473,9 @@ function baseCreateRenderer(
       isFlushing = true
       if (!instance && isSchedulerFlushing()) {
         // #6728 mounting inside a running job: only flush the pre jobs of the
-        // new tree and leave the rest to the scheduler so they still run in
-        // order after that job
-        if (vnode && vnode.component) {
-          flushPreFlushCbs(vnode.component, undefined, undefined, true)
-        }
+        // components this render created and leave the rest to the scheduler
+        // so they still run in order after that job
+        flushPreFlushCbs(undefined, undefined, undefined, firstUid)
       } else {
         flushPreFlushCbs(instance)
       }
