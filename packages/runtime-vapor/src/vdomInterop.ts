@@ -152,6 +152,8 @@ import {
   claimUntrackedAnchor,
   createFragmentClaim,
   currentHydrationNode,
+  enterHydrationCursor,
+  exitHydrationCursor,
   isComment,
   isHydrating,
   isHydratingSlotFallback,
@@ -4204,7 +4206,14 @@ const interopSlotsSourceHandlers: ProxyHandler<ShallowRef<Slots>> = {
     const wrapped: VaporSlot = props => {
       const owner = currentInstance as VaporComponentInstance | null
       const vdom = isVaporComponent(owner) && owner.appContext.vdom
-      return vdom ? vdom.slot(target, key, props, owner!) : slot(props)
+      if (!vdom) return slot(props)
+      const cursor = isHydrating ? enterHydrationCursor() : null
+      const fragment = vdom.slot(target, key, props, owner!)
+      if (isHydrating) {
+        fragment.hydrate()
+        exitHydrationCursor(cursor)
+      }
+      return fragment
     }
     wrappers[key] = [slot, wrapped]
     return wrapped

@@ -2106,4 +2106,72 @@ describe('VDOM interop', () => {
     expect(container.textContent).toBe('outer')
     expect(`Hydration text content mismatch`).not.toHaveBeenWarned()
   })
+
+  test('hydrate VDOM slot called directly by a vapor relay', async () => {
+    const data = ref({ count: 0, tail: 'tail' })
+    const appCode = `<script setup>
+      const data = _data; const components = _components
+    </script><template><components.Bridge>
+      <button @click="data.count++">{{ data.count }}</button>
+    </components.Bridge></template>`
+    // The setup-only relay needs a matching slot outlet on the server.
+    const serverBridge = compile(
+      `<template><section><slot /><i>{{ data.tail }}</i></section></template>`,
+      data,
+      {},
+      { ssr: true },
+    )
+    const serverApp = compile(
+      appCode,
+      data,
+      { Bridge: serverBridge },
+      {
+        vapor: false,
+        ssr: true,
+      },
+    )
+    const html = await VueServerRenderer.renderToString(
+      runtimeDom.createSSRApp(serverApp),
+    )
+    const container = document.createElement('div')
+    container.innerHTML = html
+    document.body.appendChild(container)
+    const button = container.querySelector('button')!
+    const tail = container.querySelector('i')!
+
+    const Bridge = compile(
+      `<script setup vapor>
+        import { defineVaporComponent, useSlots } from 'vue'
+        const data = _data
+        const slots = useSlots()
+        const Relay = defineVaporComponent(() => slots.default())
+      </script>
+      <template><section><Relay /><i>{{ data.tail }}</i></section></template>`,
+      data,
+    )
+    const App = compile(appCode, data, { Bridge }, { vapor: false })
+    const app = runtimeDom
+      .createSSRApp(App)
+      .use(runtimeVapor.vaporInteropPlugin)
+    app.mount(container)
+
+    expect(container.querySelector('button')).toBe(button)
+    expect(container.querySelector('i')).toBe(tail)
+    expect(container.innerHTML).toBe(html)
+    button.click()
+    await nextTick()
+    expect(data.value.count).toBe(1)
+    expect(button.textContent).toBe('1')
+
+    data.value.count = 2
+    data.value.tail = 'updated'
+    await nextTick()
+    expect(button.textContent).toBe('2')
+    expect(tail.textContent).toBe('updated')
+    expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+    expect(`Hydration children mismatch`).not.toHaveBeenWarned()
+
+    app.unmount()
+    expect(container.innerHTML).toBe('')
+  })
 })

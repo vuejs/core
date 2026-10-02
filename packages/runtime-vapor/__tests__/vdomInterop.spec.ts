@@ -12674,4 +12674,94 @@ describe('vdomInterop', () => {
     expect(observedSlots).toHaveLength(2)
     expect(observedSlots[1]).not.toBe(observedSlots[0])
   })
+
+  test('direct vdom slot calls in a vapor relay track replacement and removal', async () => {
+    const data = ref(0)
+    const setup = vi.fn()
+    const Child = compile(
+      `<script setup vapor>
+        import { useSlots, defineVaporComponent } from 'vue'
+        const slots = useSlots()
+        const Relay = defineVaporComponent(() => {
+          _components.setup()
+          return slots.default()
+        })
+       </script>
+       <template><Relay /><em>end</em></template>`,
+      data,
+      { setup },
+    )
+    const a = () => h('span', 'a')
+    const b = () => h('b', 'b')
+    const { host, app } = define({
+      setup() {
+        return () =>
+          h(
+            Child,
+            null,
+            data.value === 2
+              ? {}
+              : {
+                  default: data.value === 0 ? a : b,
+                },
+          )
+      },
+    }).render()
+
+    expect(host.textContent).toBe('aend')
+    data.value = 1
+    await nextTick()
+    expect(host.textContent).toBe('bend')
+    expect(host.querySelector('span')).toBe(null)
+    data.value = 2
+    await nextTick()
+    expect(host.textContent).toBe('end')
+    data.value = 0
+    await nextTick()
+    expect(host.textContent).toBe('aend')
+    expect(setup).toHaveBeenCalledTimes(1)
+    app.unmount()
+    expect(host.innerHTML).toBe('')
+  })
+
+  test('vdom callers of slots read in vapor still receive vnodes', async () => {
+    const data = ref('a')
+    const results: VNode[][] = []
+    const Outlet = defineComponent({
+      props: ['renderSlot'],
+      setup(props) {
+        return () => {
+          const nodes = props.renderSlot()
+          results.push(nodes)
+          return h('section', nodes)
+        }
+      },
+    })
+    const Child = compile(
+      `<script setup vapor>
+        import { useSlots } from 'vue'
+        const slots = useSlots()
+        const components = _components
+       </script>
+       <template><components.Outlet :render-slot="slots.default" /></template>`,
+      data,
+      { Outlet },
+    )
+    const { html } = define({
+      setup() {
+        return () =>
+          h(Child, null, {
+            default: () => h('span', data.value),
+          })
+      },
+    }).render()
+
+    expect(html()).toBe('<section><span>a</span></section>')
+    expect(Array.isArray(results[0])).toBe(true)
+    expect(results[0][0].type).toBe('span')
+    data.value = 'b'
+    await nextTick()
+    expect(html()).toBe('<section><span>b</span></section>')
+    expect(results[results.length - 1][0].type).toBe('span')
+  })
 })
