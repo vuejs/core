@@ -15,6 +15,7 @@ import {
   type VdomSlotOutlet,
   handleError,
   mergeProps,
+  renderSlot,
   ssrContextKey,
   ssrUtils,
   warn,
@@ -183,12 +184,30 @@ export function renderComponentVNode(
   // Slots written in a vapor component are marked as the client marks them,
   // where they are created since they can be passed on as they are: an
   // outlet rendered as a vnode (`renderSlot`) then holds them as a vapor
-  // slot, valid however little they render, like the client does.
+  // slot, valid however little they render, like the client does. A render
+  // function calling one itself gets that vapor slot too, as it does from the
+  // client's slots proxy: only an ssr outlet, passing `push`, renders the slot.
   const ctx = vnode.ctx
   if (vnode.shapeFlag & ShapeFlags.SLOTS_CHILDREN && ctx && ctx.type.__vapor) {
     const slots = vnode.children as Record<string, any>
     for (const name in slots) {
-      if (isFunction(slots[name])) slots[name][rawVaporSlotKey] = slots[name]
+      const slot = slots[name]
+      // a cloned vnode shares its slots: wrapped once
+      if (isFunction(slot) && !slot[rawVaporSlotKey]) {
+        const wrapped: any = (
+          props: Props,
+          push: PushFn | undefined,
+          parent: ComponentInternalInstance | null,
+          scopeId: string | null,
+        ) =>
+          push
+            ? slot(props, push, parent, scopeId)
+            : [renderSlot({ [name]: slot }, name, props)]
+        slot[rawVaporSlotKey] = wrapped[rawVaporSlotKey] = slot
+        // already normalized, so slot normalization keeps it as is
+        wrapped._n = true
+        slots[name] = wrapped
+      }
     }
     if (!ctx.appContext.vapor) ctx.appContext.vapor = vaporInterface
   }
