@@ -1,5 +1,6 @@
 import {
   type HMRRuntime,
+  Transition,
   computed,
   createApp,
   currentInstance,
@@ -16,8 +17,10 @@ import {
   ref,
   setCurrentInstance,
   toDisplayString,
+  vShow,
   warn,
   watchEffect,
+  withDirectives,
 } from '@vue/runtime-dom'
 import {
   compileToVaporRender as compileToFunction,
@@ -2204,5 +2207,328 @@ describe('hot module replacement', () => {
     expect(errors.length).toBe(1)
     rerender(childId, compileToFunction('<div>!<slot/></div>'))
     app.unmount()
+  })
+
+  describe('rerender a component on a root chain', () => {
+    const showOpts = { bindingMetadata: { show: BindingTypes.SETUP_REF } }
+
+    test('child of Transition: the new root takes the hooks over', async () => {
+      const root = document.createElement('div')
+      document.body.appendChild(root)
+      const id = 'test-root-chain-transition'
+      const Child = defineVaporComponent({
+        __hmrId: id,
+        render: compileToFunction(`<div>a</div>`),
+      })
+      createRecord(id, Child as any)
+      const show = ref(true)
+      const Parent = defineVaporComponent({
+        components: { Child },
+        setup: () => ({ show }),
+        render: compileToFunction(
+          `<Transition><Child v-if="show" /></Transition>`,
+          showOpts,
+        ),
+      })
+      define(Parent).create().mount(root)
+
+      // swapped in place: the old root does not leave, the new one does not
+      // enter
+      rerender(id, compileToFunction(`<div>b</div>`))
+      await nextTick()
+      expect(root.innerHTML).toBe(`<div>b</div><!--if-->`)
+
+      show.value = false
+      await nextTick()
+      expect(root.innerHTML).toBe(
+        `<div class="v-leave-from v-leave-active">b</div><!--if-->`,
+      )
+    })
+
+    test('child of Transition with an empty v-if root', async () => {
+      const root = document.createElement('div')
+      document.body.appendChild(root)
+      const id = 'test-root-chain-transition-empty'
+      const ok = ref(false)
+      const opts = { bindingMetadata: { ok: BindingTypes.SETUP_REF } }
+      const Child = defineVaporComponent({
+        __hmrId: id,
+        setup: () => ({ ok }),
+        render: compileToFunction(`<div v-if="ok">a</div>`, opts),
+      })
+      createRecord(id, Child as any)
+      const Parent = defineVaporComponent({
+        components: { Child },
+        render: compileToFunction(`<Transition><Child /></Transition>`),
+      })
+      define(Parent).create().mount(root)
+
+      rerender(id, compileToFunction(`<div v-if="ok">b</div>`, opts))
+      await nextTick()
+      expect(root.innerHTML).toBe(`<!--if-->`)
+
+      ok.value = true
+      await nextTick()
+      expect(root.innerHTML).toBe(
+        `<div class="v-enter-from v-enter-active">b</div><!--if-->`,
+      )
+    })
+
+    test('slot content of a Transition child', async () => {
+      const root = document.createElement('div')
+      document.body.appendChild(root)
+      const id = 'test-root-chain-transition-slotted'
+      const wrapperId = 'test-root-chain-transition-wrapper'
+      const Child = defineVaporComponent({
+        __hmrId: id,
+        render: compileToFunction(`<div>a</div>`),
+      })
+      createRecord(id, Child as any)
+      const Wrapper = defineVaporComponent({
+        __hmrId: wrapperId,
+        render: compileToFunction(`<slot />`),
+      })
+      createRecord(wrapperId, Wrapper as any)
+      const show = ref(true)
+      const Parent = defineVaporComponent({
+        components: { Child, Wrapper },
+        setup: () => ({ show }),
+        render: compileToFunction(
+          `<Transition><Wrapper v-if="show"><Child /></Wrapper></Transition>`,
+          showOpts,
+        ),
+      })
+      define(Parent).create().mount(root)
+      const html = root.innerHTML
+
+      rerender(id, compileToFunction(`<div>a</div>`))
+      await nextTick()
+      expect(root.innerHTML).toBe(html)
+
+      rerender(wrapperId, compileToFunction(`<slot />`))
+      await nextTick()
+      expect(root.innerHTML).toBe(html)
+
+      show.value = false
+      await nextTick()
+      expect(root.innerHTML).toContain(
+        `<div class="v-leave-from v-leave-active">a</div>`,
+      )
+    })
+
+    test('child of TransitionGroup', async () => {
+      const root = document.createElement('div')
+      document.body.appendChild(root)
+      const id = 'test-root-chain-transition-group'
+      const Child = defineVaporComponent({
+        __hmrId: id,
+        render: compileToFunction(`<div>a</div>`),
+      })
+      createRecord(id, Child as any)
+      const list = ref([1, 2])
+      const Parent = defineVaporComponent({
+        components: { Child },
+        setup: () => ({ list }),
+        render: compileToFunction(
+          `<TransitionGroup><Child v-for="i in list" :key="i" /></TransitionGroup>`,
+          { bindingMetadata: { list: BindingTypes.SETUP_REF } },
+        ),
+      })
+      define(Parent).create().mount(root)
+
+      rerender(id, compileToFunction(`<div>b</div>`))
+      await nextTick()
+      expect(root.innerHTML).toBe(`<div>b</div><div>b</div><!--for-->`)
+
+      list.value = [1]
+      await nextTick()
+      expect(root.innerHTML).toBe(
+        `<div>b</div><div class="v-leave-from v-leave-active">b</div><!--for-->`,
+      )
+    })
+
+    test('vapor child of a vdom Transition', async () => {
+      const root = document.createElement('div')
+      document.body.appendChild(root)
+      const id = 'test-root-chain-vdom-transition'
+      const open = ref(true)
+      const opts = { bindingMetadata: { open: BindingTypes.SETUP_REF } }
+      const Child = defineVaporComponent({
+        __hmrId: id,
+        setup: () => ({ open }),
+        render: compileToFunction(`<div v-show="open">a</div>`, opts),
+      })
+      createRecord(id, Child as any)
+      const app = createApp({
+        render: () => h(Transition, null, () => h(Child as any)),
+      })
+      app.use(vaporInteropPlugin)
+      app.mount(root)
+
+      rerender(id, compileToFunction(`<div v-show="open">b</div>`, opts))
+      await nextTick()
+      expect(root.innerHTML).toBe(`<div>b</div>`)
+
+      open.value = false
+      await nextTick()
+      expect(root.innerHTML).toBe(
+        `<div class="v-leave-from v-leave-active">b</div>`,
+      )
+    })
+
+    test('vapor grandchild of a vdom Transition', async () => {
+      const root = document.createElement('div')
+      document.body.appendChild(root)
+      const id = 'test-root-chain-vdom-transition-nested'
+      const GrandChild = defineVaporComponent({
+        __hmrId: id,
+        render: compileToFunction(`<div>a</div>`),
+      })
+      createRecord(id, GrandChild as any)
+      const Child = defineVaporComponent({
+        components: { GrandChild },
+        render: compileToFunction(`<GrandChild />`),
+      })
+      const show = ref(true)
+      const app = createApp({
+        render: () =>
+          h(Transition, null, () => (show.value ? h(Child as any) : null)),
+      })
+      app.use(vaporInteropPlugin)
+      app.mount(root)
+
+      rerender(id, compileToFunction(`<div>b</div>`))
+      await nextTick()
+      expect(root.innerHTML).toBe(`<div>b</div>`)
+
+      show.value = false
+      await nextTick()
+      expect(root.innerHTML).toBe(
+        `<div class="v-leave-from v-leave-active">b</div><!---->`,
+      )
+    })
+
+    test('parent v-show and directives land on the new root', async () => {
+      const root = document.createElement('div')
+      const id = 'test-root-chain-directives'
+      const Child = defineVaporComponent({
+        __hmrId: id,
+        render: compileToFunction(`<div>a</div>`),
+      })
+      createRecord(id, Child as any)
+      const show = ref(false)
+      const msg = ref('x')
+      const cleanup = vi.fn()
+      const Parent = defineVaporComponent({
+        components: { Child },
+        directives: {
+          title: (el: Element, value: () => string) => {
+            renderEffect(() => el.setAttribute('title', value()))
+            return cleanup
+          },
+        },
+        setup: () => ({ show, msg }),
+        render: compileToFunction(`<Child v-show="show" v-title="msg" />`, {
+          bindingMetadata: {
+            show: BindingTypes.SETUP_REF,
+            msg: BindingTypes.SETUP_REF,
+          },
+        }),
+      })
+      define(Parent).create().mount(root)
+      const prevRoot = root.firstChild as Element
+      expect(root.innerHTML).toBe(
+        `<div style="display: none;" title="x">a</div>`,
+      )
+
+      rerender(id, compileToFunction(`<div>b</div>`))
+      await nextTick()
+      expect(root.innerHTML).toBe(
+        `<div style="display: none;" title="x">b</div>`,
+      )
+      expect(cleanup).toHaveBeenCalledTimes(1)
+
+      show.value = true
+      msg.value = 'y'
+      await nextTick()
+      expect(root.innerHTML).toBe(`<div style="" title="y">b</div>`)
+      expect(prevRoot.getAttribute('title')).toBe('x')
+    })
+
+    test('grandchild under a parent Transition, v-show and directive', async () => {
+      const root = document.createElement('div')
+      document.body.appendChild(root)
+      const id = 'test-root-chain-nested'
+      const GrandChild = defineVaporComponent({
+        __hmrId: id,
+        render: compileToFunction(`<div>a</div>`),
+      })
+      createRecord(id, GrandChild as any)
+      const Child = defineVaporComponent({
+        components: { GrandChild },
+        render: compileToFunction(`<GrandChild />`),
+      })
+      const show = ref(false)
+      const Parent = defineVaporComponent({
+        components: { Child },
+        directives: { mark: (el: Element) => el.setAttribute('data-mark', '') },
+        setup: () => ({ show }),
+        render: compileToFunction(
+          `<Transition><Child v-show="show" v-mark /></Transition>`,
+          showOpts,
+        ),
+      })
+      define(Parent).create().mount(root)
+
+      rerender(id, compileToFunction(`<div>b</div>`))
+      await nextTick()
+      expect(root.innerHTML).toBe(
+        `<div style="display: none;" data-mark="">b</div>`,
+      )
+
+      show.value = true
+      await nextTick()
+      expect(root.innerHTML).toBe(
+        `<div style="" data-mark="" class="v-enter-from v-enter-active">b</div>`,
+      )
+    })
+
+    test('vdom directives on a vapor child are mounted on the new root', async () => {
+      const root = document.createElement('div')
+      document.body.appendChild(root)
+      const id = 'test-root-chain-vdom-directives'
+      const Child = defineVaporComponent({
+        __hmrId: id,
+        render: compileToFunction(`<div>a</div>`),
+      })
+      createRecord(id, Child as any)
+      const show = ref(false)
+      const calls: string[] = []
+      const vMark = {
+        mounted: (el: Element) => {
+          el.setAttribute('data-mark', '')
+          calls.push(`mounted ${el.textContent}`)
+        },
+        unmounted: (el: Element) => calls.push(`unmounted ${el.textContent}`),
+      }
+      const app = createApp({
+        render: () =>
+          withDirectives(h(Child as any), [[vShow, show.value], [vMark]]),
+      })
+      app.use(vaporInteropPlugin)
+      app.mount(root)
+      expect(calls).toEqual(['mounted a'])
+
+      rerender(id, compileToFunction(`<div>b</div>`))
+      await nextTick()
+      expect(root.innerHTML).toBe(
+        `<div style="display: none;" data-mark="">b</div>`,
+      )
+      expect(calls).toEqual(['mounted a', 'unmounted a', 'mounted b'])
+
+      show.value = true
+      await nextTick()
+      expect(root.innerHTML).toBe(`<div style="" data-mark="">b</div>`)
+    })
   })
 })

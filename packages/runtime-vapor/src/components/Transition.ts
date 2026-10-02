@@ -163,6 +163,11 @@ export const VaporTransition: FunctionalVaporComponent<TransitionProps> =
       },
     })
 
+    if (__DEV__) {
+      state.refresh = hooks =>
+        applyTransitionHooksImpl(state.root!, hooks, undefined, true)
+    }
+
     const shouldPerformAppear = !!props.appear && !!performAppear
     // Dynamic slot sources can add/remove the default slot after setup, so
     // Transition needs a DynamicFragment to drive enter/leave on updates.

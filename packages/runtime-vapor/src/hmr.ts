@@ -4,18 +4,26 @@ import {
   restoreCurrentInstance,
   setCurrentInstance,
 } from '@vue/runtime-dom'
-import { findBlockBoundary, insert, remove } from './block'
+import {
+  type TransitionBlock,
+  type VaporTransitionHooks,
+  findBlockBoundary,
+  insert,
+  remove,
+} from './block'
 import {
   type VaporComponent,
   type VaporComponentInstance,
   applyComponentFallthrough,
   createComponent,
+  getRootElement,
   mountComponent,
   runDevRender,
   unmountComponent,
 } from './component'
 import { applyComponentScopeIds } from './scopeId'
 import { applyComponentCssVars } from './helpers/useCssVars'
+import { isTransitionEnabled } from './transition'
 import {
   currentRenderContext,
   deriveSlotScopeIds,
@@ -44,6 +52,24 @@ export function hmrRerender(instance: VaporComponentInstance): void {
   if (instance.renderScope) {
     instance.renderScope.stop()
   }
+  // The root is swapped in place, not transitioned. Take the hooks an
+  // enclosing Transition applied through this component off the old root
+  // chain so it is removed without a leave; the new root gets them back once
+  // it is inserted, past its enter.
+  let transition: VaporTransitionHooks | undefined
+  if (isTransitionEnabled) {
+    const take = (block: TransitionBlock) => {
+      if (block.$transition) {
+        transition = block.$transition
+        block.$transition = undefined
+      }
+    }
+    const root = getRootElement(instance.block, {
+      onDynamicFragment: take,
+      onInteropFragment: take,
+    })
+    if (root) take(root)
+  }
   remove(instance.block, parent)
   const prev = setCurrentInstance(instance)
   pushWarningContext(instance)
@@ -60,7 +86,21 @@ export function hmrRerender(instance: VaporComponentInstance): void {
   }
   applyComponentScopeIds(instance)
   applyComponentCssVars(instance)
+  const hooks = instance.hmrRootHooks
+  if (hooks) {
+    for (const hook of hooks) hook(instance.block)
+  }
   insert(instance.block, parent, anchor)
+  if (transition) {
+    if (!transition.__vapor) {
+      // vdom hooks belong to the vnode, not to the element they sit on
+      const root = getRootElement(instance.block) as TransitionBlock | undefined
+      if (root) root.$transition = transition
+    } else if (!transition.state.isUnmounting) {
+      // the owning Transition is still there: it resolves its content again
+      transition.state.refresh!(transition)
+    }
+  }
 }
 
 export function hmrReload(

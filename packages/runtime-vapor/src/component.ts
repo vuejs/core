@@ -1006,6 +1006,10 @@ export class VaporComponentInstance<
   isSingleRoot?: boolean
   // for HMR rerender
   renderScope?: EffectScope
+  // root-chain state ancestors apply through this component (v-show,
+  // directives): an HMR rerender replaces the root and re-applies it before
+  // the new one is inserted
+  hmrRootHooks?: ((block: Block) => void)[]
 
   /**
    * dev only flag to track whether $attrs was used during render.
