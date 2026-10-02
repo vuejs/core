@@ -2061,4 +2061,49 @@ describe('VDOM interop', () => {
       expect(container.innerHTML).toBe('')
     },
   )
+
+  test('hydrate VDOM slot content injecting from the component rendering the outlet', async () => {
+    const { container } = await testWithVDOMApp(
+      `<script setup>
+        const components = _components
+      </script>
+      <template>
+        <components.Wrapper name="outer">
+          <components.Consumer />
+        </components.Wrapper>
+      </template>`,
+      {
+        Consumer: {
+          code: `<script setup>
+            import { inject } from 'vue'
+            const k = inject('k', 'none')
+          </script>
+          <template><b>{{ k }}</b></template>`,
+          vapor: false,
+        },
+        Provider: {
+          code: `<script setup>
+            import { provide } from 'vue'
+            const props = defineProps(['name'])
+            provide('k', props.name)
+          </script>
+          <template><slot /></template>`,
+          vapor: true,
+        },
+        Wrapper: {
+          code: `<script setup>
+            const props = defineProps(['name'])
+            const components = _components
+          </script>
+          <template>
+            <components.Provider :name="props.name"><slot /></components.Provider>
+          </template>`,
+          vapor: true,
+        },
+      },
+    )
+
+    expect(container.textContent).toBe('outer')
+    expect(`Hydration text content mismatch`).not.toHaveBeenWarned()
+  })
 })

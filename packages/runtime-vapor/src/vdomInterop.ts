@@ -1969,6 +1969,8 @@ function renderVDOMSlot(
   const inheritFallback = slotInheritsFallback(flags)
   const notifiesBoundary = slotNotifiesBoundary(flags)
   let suspense = currentRenderContext.suspense || parentComponent.suspense
+  // content mounts under the component rendering the outlet, like renderSlot
+  const mountParent = currentInstance || parentComponent
   // frag.slotScopeIds is the outlet's id cell (the ambient createSlot
   // establishes around this call) — the base patch context for content
   // patches.
@@ -2087,7 +2089,7 @@ function renderVDOMSlot(
           parentNode,
           anchor,
           moveType === undefined ? MoveType.REORDER : moveType,
-          parentComponent as any,
+          mountParent as any,
           suspense,
         )
       } else if (rendered) {
@@ -2209,7 +2211,7 @@ function renderVDOMSlot(
       }
       internals.um(
         pending,
-        parentComponent as any,
+        mountParent as any,
         resolveUnmountSuspense(suspense),
         true,
       )
@@ -2293,7 +2295,7 @@ function renderVDOMSlot(
       next,
       currentParentNode!,
       currentAnchor,
-      parentComponent as any,
+      mountParent as any,
       suspense,
       slotNamespace,
       concatInteropScopeIds(frag.slotScopeIds, slotScopeIds),
@@ -2313,7 +2315,7 @@ function renderVDOMSlot(
     if (isVNode(renderedContent)) {
       internals.um(
         renderedContent,
-        parentComponent as any,
+        mountParent as any,
         resolveUnmountSuspense(suspense),
         !contentDetached && !!parentNode,
       )
@@ -2618,7 +2620,7 @@ function renderVDOMSlot(
       placeholder,
       currentParentNode!,
       currentAnchor,
-      parentComponent as any,
+      mountParent as any,
       suspense,
       slotNamespace,
       null,
@@ -2672,7 +2674,7 @@ function renderVDOMSlot(
       if (close) setCurrentHydrationNode(currentHydrationNode!.nextSibling)
       hydrateVNode(
         hydrationVNode,
-        parentComponent as any,
+        mountParent as any,
         concatInteropScopeIds(
           frag.slotScopeIds,
           hydrationVNode === hydratedContent
