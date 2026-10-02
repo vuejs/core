@@ -830,5 +830,31 @@ describe('compiler: expression', () => {
       expect(code).contains('_setProp(n2, "id", _x_y + _ls_rs_0_l?.c)')
       expect(code).contains('_setProp(n3, "title", _ls_rs_0_l?.b + _x_y)')
     })
+
+    test('nested member expression whose inner one is also used on its own', () => {
+      const { code } = compileWithExpression(`
+        <div :id="a[b[i].c].d"></div>
+        <div :title="a[b[i].c].e"></div>
+        <div :class="b[i].c"></div>
+      `)
+      expect(code).contains('const _a_b_i_c = _ctx.a[_b[_i].c]')
+      expect(code).contains('const _b_i = _b[_i]')
+      expect(code).contains('_setProp(n0, "id", _a_b_i_c.d)')
+      expect(code).contains('_setProp(n1, "title", _a_b_i_c.e)')
+      expect(code).contains('_setClass(n2, _b_i.c)')
+    })
+
+    test('repeated expression containing a nested member expression', () => {
+      const { code } = compileWithExpression(`
+        <div :id="a[b[i].c].d"></div>
+        <div :title="a[b[i].c].d"></div>
+        <div :class="a[b[i].c].d + 1"></div>
+      `)
+      expect(code).contains('const _a_b_i_c = _ctx.a[_b[_i].c]')
+      expect(code).contains('const _a_b_i_c_d = _a_b_i_c.d')
+      expect(code).contains('_setProp(n0, "id", _a_b_i_c_d)')
+      expect(code).contains('_setProp(n1, "title", _a_b_i_c_d)')
+      expect(code).contains('_setClass(n2, _a_b_i_c_d + 1)')
+    })
   })
 })
