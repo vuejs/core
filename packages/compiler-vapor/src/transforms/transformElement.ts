@@ -1107,8 +1107,8 @@ export function buildProps(
         continue
       }
       dynamicExpr.push(result.key)
-      // Handler bodies read the model when invoked, after its event updates it.
-      if (!deferListeners || !result.handler) dynamicExpr.push(result.value)
+      // a handler body runs on its event, not on render
+      if (!result.handler) dynamicExpr.push(result.value)
       if (deferListeners) {
         listenerResults.push(result)
       } else if (isComponent && !result.key.isStatic) {

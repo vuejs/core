@@ -81,8 +81,6 @@ export class CodegenContext {
     return node
   }
 
-  seenInlineHandlerNames: Record<string, number> = Object.create(null)
-
   block: BlockIRNode
   withId<T>(
     fn: () => T,
