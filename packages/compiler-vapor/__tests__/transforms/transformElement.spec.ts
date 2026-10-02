@@ -863,6 +863,14 @@ describe('compiler: element transform', () => {
         ],
       })
     })
+
+    test('static style is passed as an object', () => {
+      const { code } = compileWithElementTransform(
+        `<Foo style="width: 200px; color: red" />`,
+      )
+      expect(code).toMatchSnapshot()
+      expect(code).contains(`style: {"width":"200px","color":"red"}`)
+    })
   })
 
   describe('dynamic component', () => {
