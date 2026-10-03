@@ -960,4 +960,21 @@ describe('api: defineAsyncComponent', () => {
     expect(serializeInner(root)).toBe('Foo')
     expect(spy).toBeCalledTimes(1)
   })
+
+  // #2497
+  test('warns when using Vue 2 style async component (function returning Promise)', () => {
+    const Foo = () => Promise.resolve(() => 'foo')
+
+    const root = nodeOps.createElement('div')
+    createApp({
+      render: () => h(Foo),
+    }).mount(root)
+
+    expect(
+      `Component is a function that returns a Promise. ` +
+        `In Vue 3, async components must be explicitly defined via ` +
+        `defineAsyncComponent().\n` +
+        `See https://v3-migration.vuejs.org/breaking-changes/async-components.html`,
+    ).toHaveBeenWarned()
+  })
 })

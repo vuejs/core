@@ -21,6 +21,7 @@ import {
   isModelListener,
   isObject,
   isOn,
+  isPromise,
   looseEqual,
 } from '@vue/shared'
 import { warn } from './warning'
@@ -117,7 +118,7 @@ export function renderComponentRoot(
       if (__DEV__ && attrs === props) {
         markAttrsAccessed()
       }
-      result = normalizeVNode(
+      const rawResult =
         render.length > 1
           ? render(
               __DEV__ ? shallowReadonly(props) : props,
@@ -135,8 +136,17 @@ export function renderComponentRoot(
           : render(
               __DEV__ ? shallowReadonly(props) : props,
               null as any /* we know it doesn't need it */,
-            ),
-      )
+            )
+      // #2497
+      if (__DEV__ && isPromise(rawResult)) {
+        warn(
+          `Component is a function that returns a Promise. ` +
+            `In Vue 3, async components must be explicitly defined via ` +
+            `defineAsyncComponent().\n` +
+            `See https://v3-migration.vuejs.org/breaking-changes/async-components.html`,
+        )
+      }
+      result = normalizeVNode(rawResult)
       fallthroughAttrs = Component.props
         ? attrs
         : getFunctionalFallthrough(attrs)
