@@ -420,6 +420,24 @@ describe('vapor slot content inside a vdom Transition', () => {
     ])
   })
 
+  test('reopening the whole slot early-removes its leaving content', async () => {
+    const steps = await parity(
+      wrap(hooks, '<slot v-if="data.show"/>'),
+      `<b>x</b>`,
+      async r => {
+        await r.step('hide slot', () => (r.data.value.show = false))
+        await r.step('reopen slot', () => (r.data.value.show = true))
+        await r.step('enter done', () => r.done.enter())
+      },
+    )
+    expect(steps).toEqual([
+      'mount: <b>x</b> | ',
+      'hide slot: <b>x</b> | beforeLeave:x leave:x',
+      'reopen slot: <b>x</b> | afterLeave:x beforeEnter:x enter:x',
+      'enter done: <b>x</b> | afterEnter:x',
+    ])
+  })
+
   // the wrapper's outlet has a fallback: it is the Transition's child while
   // the slot content is invalid
   const withFallback = wrap(hooks, '<slot><span>fb</span></slot>')
@@ -445,6 +463,48 @@ describe('vapor slot content inside a vdom Transition', () => {
       'show: <span>fb</span><div>x</div> | beforeLeave:fb leave:fb beforeEnter:x enter:x',
       'leave done: <div>x</div> | afterLeave:fb',
       'enter done: <div>x</div> | afterEnter:x',
+    ])
+  })
+
+  test('out-in leaves an active fallback before entering a sibling', async () => {
+    const steps = await parity(
+      wrap(
+        `mode="out-in" ${hooks}`,
+        '<slot v-if="data.show"><span>fb</span></slot><p v-else>p</p>',
+      ),
+      `<div v-if="data.alt">x</div>`,
+      async r => {
+        await r.step('to sibling', () => (r.data.value.show = false))
+        await r.step('leave done', () => r.done.leave())
+        await r.step('enter done', () => r.done.enter())
+      },
+    )
+    expect(steps).toEqual([
+      'mount: <span>fb</span> | ',
+      'to sibling: <span>fb</span> | beforeLeave:fb leave:fb',
+      'leave done: <p>p</p> | beforeEnter:p afterLeave:fb enter:p',
+      'enter done: <p>p</p> | afterEnter:p',
+    ])
+  })
+
+  test('in-out delays the leave of an active fallback until the sibling entered', async () => {
+    const steps = await parity(
+      wrap(
+        `mode="in-out" ${hooks}`,
+        '<slot v-if="data.show"><span>fb</span></slot><p v-else>p</p>',
+      ),
+      `<div v-if="data.alt">x</div>`,
+      async r => {
+        await r.step('to sibling', () => (r.data.value.show = false))
+        await r.step('enter done', () => r.done.enter())
+        await r.step('leave done', () => r.done.leave())
+      },
+    )
+    expect(steps).toEqual([
+      'mount: <span>fb</span> | ',
+      'to sibling: <span>fb</span><p>p</p> | beforeEnter:p enter:p',
+      'enter done: <span>fb</span><p>p</p> | afterEnter:p beforeLeave:fb leave:fb',
+      'leave done: <p>p</p> | afterLeave:fb',
     ])
   })
 
