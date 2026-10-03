@@ -594,7 +594,13 @@ function getInnerBlock(
   if (isVaporComponent(block)) {
     return [block, false, branchKey]
   } else if (isInteropEnabled && isInteropFragment(block)) {
-    return [block, true, branchKey]
+    // as vdom: only a component (or Suspense) vnode is kept alive; a vdom
+    // slot's element content is not, and its type is no cache key
+    const vnode = block.vnode
+    return vnode &&
+      vnode.shapeFlag & (ShapeFlags.STATEFUL_COMPONENT | ShapeFlags.SUSPENSE)
+      ? [block, true, branchKey]
+      : [undefined, false, branchKey]
   } else if (isFragment(block)) {
     return getInnerBlock(block.nodes, getFragmentKey(block) ?? branchKey)
   }
