@@ -115,3 +115,26 @@ describe('vapor slot content inside a vdom Transition', () => {
     ])
   })
 })
+
+describe('vdom Transition inside a vapor app', () => {
+  beforeEach(() => {
+    setIsHydratingEnabled(false)
+  })
+
+  // the vdom hydrator replaces the <template> the server wraps an appearing
+  // Transition's content in: the next node is resolved from where it was
+  test('appear content ends its parent', async () => {
+    const { container } = await testWithVaporApp(
+      `<script setup vapor>const components = _components</script>` +
+        `<template><components.Wrapper /></template>`,
+      {
+        Wrapper: {
+          code: `<script setup>const data = _data</script><template><Transition appear :css="false"><div>x</div></Transition></template>`,
+          vapor: false,
+        },
+      },
+      reactive({}),
+    )
+    expect(container.innerHTML).toBe('<div>x</div>')
+  })
+})

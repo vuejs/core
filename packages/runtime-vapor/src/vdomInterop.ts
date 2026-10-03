@@ -2780,6 +2780,8 @@ function hydrateVNode(
   parentSuspense: SuspenseBoundary | null = null,
 ) {
   const node = currentHydrationNode!
+  // the vdom hydrator may replace `node` (an appearing Transition's <template>)
+  const parent = parentNode(node)!
   if (!vdomHydrateNode) vdomHydrateNode = ensureHydrationRenderer().hydrateNode!
   const prev = currentInstance
   simpleSetCurrentInstance(null)
@@ -2794,7 +2796,7 @@ function hydrateVNode(
   simpleSetCurrentInstance(prev)
   // no next node: the vnode ends its parent, move on from there
   if (nextNode) setCurrentHydrationNode(nextNode)
-  else advanceHydrationNode(parentNode(node)!)
+  else advanceHydrationNode(parent)
 }
 
 // The fallback block of the outlet at `depth` on the slot's chain (0 is the
