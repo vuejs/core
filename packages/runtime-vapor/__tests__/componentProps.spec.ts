@@ -3,6 +3,8 @@
 import {
   createApp,
   currentInstance,
+  defineComponent,
+  h,
   inject,
   isShallow,
   markRaw,
@@ -2605,5 +2607,39 @@ describe('component: props', () => {
       expect(instances.constant.props.opts).toEqual({ x: 1 })
       app.unmount()
     })
+  })
+
+  test('empty fallthrough attrs are not merged into the root props', async () => {
+    const child = `<script setup>
+      defineProps(['style'])
+    </script><template><i>{{ typeof $props.style }}</i></template>`
+    const VdomChild = defineComponent({
+      props: ['style'],
+      setup: props => () => h('i', typeof props.style),
+    })
+    const wrapper = (child: string, bind = '') => `<script setup>
+      const data = _data
+      const components = _components
+      defineEmits(['ready'])
+    </script><template><components.${child} :style="data.style" ${bind} /></template>`
+    const { vdom, vapor } = await renderParity(
+      {
+        Child: child,
+        A: wrapper('Child'),
+        B: wrapper('VdomChild'),
+        // an explicit v-bind still merges, like mergeProps
+        C: wrapper('Child', 'v-bind="data.rest"'),
+        App: `<template>
+          <components.A @ready="() => {}" />
+          <components.B @ready="() => {}" />
+          <components.C @ready="() => {}" />
+        </template>`,
+      },
+      () => ref({ style: undefined, rest: {} }),
+      () => {},
+      { VdomChild },
+    )
+    expect(vdom.after).toBe('<i>undefined</i><i>undefined</i><i>object</i>')
+    expect(vapor.after).toBe(vdom.after)
   })
 })
