@@ -10,7 +10,7 @@ import {
   nextTick,
   ref,
 } from '@vue/runtime-dom'
-import { VueServerRenderer, runtimeDom, runtimeVapor } from '../_utils'
+import { VueServerRenderer, compile, runtimeDom, runtimeVapor } from '../_utils'
 import {
   hydrateNode,
   setIsHydratingEnabled,
@@ -1125,6 +1125,55 @@ describe('Vapor Mode hydration', () => {
       data.value.msg = 'world'
       await nextTick()
       expect(container.textContent).toBe('worldworldworldworld')
+    })
+
+    test('update props of a deferred VDOM async component after hydration (interop)', async () => {
+      const data = ref({ msg: 'foo' })
+      const compCode = `<script setup>defineProps(['msg'])</script><template><b>{{ msg }}</b></template>`
+      const appCode = `<div><components.AsyncComp :msg="data.msg"/><components.LazyComp :msg="data.msg"/></div>`
+
+      const SSRComp = compile(compCode, data, {}, { vapor: false, ssr: true })
+      const SSRAsync = defineAsyncComponent(() => Promise.resolve(SSRComp))
+      const html = await VueServerRenderer.renderToString(
+        runtimeDom.createSSRApp(
+          compileVaporComponent(
+            appCode,
+            data,
+            { AsyncComp: SSRAsync, LazyComp: SSRAsync },
+            true,
+          ),
+        ),
+      )
+
+      const Comp = compile(compCode, data, {}, { vapor: false })
+      // no strategy: hydrates once the loader resolves
+      const AsyncComp = defineAsyncComponent(() => Promise.resolve(Comp))
+      let doHydrate: (() => void) | undefined
+      const LazyComp = defineAsyncComponent({
+        loader: () => Promise.resolve(Comp),
+        hydrate(hydrate) {
+          doHydrate = hydrate
+        },
+      })
+      const App = compileVaporComponent(appCode, data, { AsyncComp, LazyComp })
+      const container = document.createElement('div')
+      container.innerHTML = html
+      document.body.appendChild(container)
+      const app = createVaporSSRApp(App)
+      app.use(runtimeVapor.vaporInteropPlugin)
+      app.mount(container)
+      await new Promise(r => setTimeout(r))
+      doHydrate!()
+      await new Promise(r => setTimeout(r))
+      expect(container.innerHTML).toBe(`<div><b>foo</b><b>foo</b></div>`)
+
+      data.value.msg = 'bar'
+      await nextTick()
+      expect(container.innerHTML).toBe(`<div><b>bar</b><b>bar</b></div>`)
+
+      data.value.msg = 'baz'
+      await nextTick()
+      expect(container.innerHTML).toBe(`<div><b>baz</b><b>baz</b></div>`)
     })
   })
 })
