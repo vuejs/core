@@ -12587,4 +12587,39 @@ describe('vdomInterop', () => {
     const { html } = define({ setup: () => () => h(Comp) }).render()
     expect(html()).toBe('<s class="t">vc</s><!--dynamic-component-->')
   })
+
+  test('update props of a VDOM async component pending in Suspense', async () => {
+    let resolve!: (comp: any) => void
+    const AsyncChild = defineAsyncComponent(
+      () => new Promise(r => (resolve = r)),
+    )
+    const data = ref({ msg: 'foo' })
+    const App = compile(
+      `<template>
+        <components.Suspense>
+          <components.AsyncChild :msg="data.msg" />
+          <template #fallback>loading</template>
+        </components.Suspense>
+      </template>`,
+      data,
+      { AsyncChild, Suspense },
+    )
+
+    const { html } = define(App as any).render()
+    expect(html()).toBe('loading')
+
+    data.value.msg = 'bar'
+    await nextTick()
+    expect(html()).toBe('loading')
+
+    resolve(
+      defineComponent({
+        props: ['msg'],
+        setup: props => () => h('div', props.msg),
+      }),
+    )
+    await new Promise(r => setTimeout(r))
+    await nextTick()
+    expect(html()).toBe('<div>bar</div>')
+  })
 })
