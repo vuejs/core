@@ -448,6 +448,30 @@ describe('vapor slot content inside a vdom Transition', () => {
     ])
   })
 
+  test('a fallback switching its own root leaves and enters', async () => {
+    const steps = await parity(
+      wrap(
+        hooks,
+        '<slot><span v-if="!data.alt">fb</span><b v-else>fb2</b></slot>',
+      ),
+      `<div v-if="data.show">x</div>`,
+      async r => {
+        await r.step('hide', () => (r.data.value.show = false))
+        await r.step('leave done', () => r.done.leave())
+        await r.step('enter done', () => r.done.enter())
+        await r.step('switch', () => (r.data.value.alt = true))
+        await r.step('leave done', () => r.done.leave())
+        await r.step('enter done', () => r.done.enter())
+      },
+    )
+    expect(steps.slice(3)).toEqual([
+      'enter done: <span>fb</span> | afterEnter:fb',
+      'switch: <span>fb</span><b>fb2</b> | beforeLeave:fb leave:fb beforeEnter:fb2 enter:fb2',
+      'leave done: <b>fb2</b> | afterLeave:fb',
+      'enter done: <b>fb2</b> | afterEnter:fb2',
+    ])
+  })
+
   test('a fallback shown from the start leaves when the content appears', async () => {
     const steps = await parity(
       withFallback,

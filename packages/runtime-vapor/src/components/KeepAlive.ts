@@ -22,6 +22,7 @@ import {
   watch,
 } from '@vue/runtime-dom'
 import { type Block, findBlockBoundary, move, remove } from '../block'
+import { isVaporTransitionHooks } from '../transition'
 import {
   type VaporComponent,
   type VaporComponentInstance,
@@ -168,10 +169,9 @@ const VaporKeepAliveImpl = defineVaporComponent({
       if (isDynamicFragment(block)) {
         const transition = block.$transition
         if (
-          transition &&
+          // relayed vdom hooks sequence no branch of their own
+          isVaporTransitionHooks(transition) &&
           transition.mode === 'out-in' &&
-          // relayed vdom hooks carry no vapor state
-          transition.state &&
           transition.state.isLeaving
         ) {
           return
@@ -488,7 +488,8 @@ function registerDynamicFragmentHooks(
   if (!isDynamicFragment(block)) return
 
   ;(block.u ||= []).unshift(() => {
-    if (block.$transition && block.$transition.mode === 'out-in') {
+    const transition = block.$transition
+    if (isVaporTransitionHooks(transition) && transition.mode === 'out-in') {
       // For out-in transition, call cacheBlock after renderBranch completes
       // because KeepAlive's updated hook fires before the deferred rendering finishes.
       keepAliveCtx.cacheBlock(block)

@@ -35,6 +35,7 @@ import {
 import {
   displayName,
   isVaporTransition,
+  isVaporTransitionHooks,
   registerTransitionHooks,
 } from '../transition'
 import {
@@ -390,8 +391,8 @@ export function applyTransitionHooksImpl(
     return hooks
   }
 
-  // hooks relayed from a vdom Transition carry no state to resolve from
-  if (!hooks.state) {
+  // hooks relayed from a vdom Transition have nothing to resolve from
+  if (!isVaporTransitionHooks(hooks)) {
     relayTransitionHooks(block, hooks)
     return hooks
   }
@@ -552,7 +553,9 @@ function deferBranchUpdateDuringLeaveImpl(
 ): boolean {
   const transition = frag.$transition!
   // relayed vdom hooks: the vdom Transition sequences its own branches
-  if (!transition.state || !transition.state.isLeaving) return false
+  if (!isVaporTransitionHooks(transition) || !transition.state.isLeaving) {
+    return false
+  }
   const pending = frag.pending
   if (pending) {
     pending.render = render
@@ -578,7 +581,7 @@ function removeBranchWithLeaveImpl(
   if (
     mode &&
     // relayed vdom hooks: an inner root switch is a plain leave + enter
-    transition.state &&
+    isVaporTransitionHooks(transition) &&
     // persisted roots are toggled in place; mode only sequences structural
     // swaps, and a skipped persisted leave would never fire afterLeave.
     !transition.persisted &&
