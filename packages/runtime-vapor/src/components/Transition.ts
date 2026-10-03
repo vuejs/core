@@ -434,16 +434,11 @@ export function applyTransitionHooksImpl(
 // them, and an entering root early-removes the leaving one through the vnode.
 export function relayTransitionHooks(
   block: Block,
-  hooks: VaporTransitionHooks,
+  hooks: TransitionHooks,
 ): void {
-  const children: ResolvedTransitionBlock[] = []
-  collectTransitionBlocks(
-    block,
-    fragment => (fragment.$transition = hooks),
-    children,
-    undefined,
-  )
-  if (children.length) children[0].$transition = hooks
+  const relayed = hooks as VaporTransitionHooks
+  const child = findTransitionBlock(block, f => (f.$transition = relayed))
+  if (child) child.$transition = relayed
 }
 
 // Runtime equivalent of the compiler's persisted rule for roots the compiler
@@ -738,9 +733,10 @@ export function resolveTransitionBlock(
 /** Locate the transition child of `block` without touching its identity. */
 export function findTransitionBlock(
   block: Block,
+  onFragment?: (frag: VaporFragment) => void,
 ): ResolvedTransitionBlock | undefined {
   const children: ResolvedTransitionBlock[] = []
-  collectTransitionBlocks(block, undefined, children, undefined)
+  collectTransitionBlocks(block, onFragment, children, undefined)
   return children[0]
 }
 

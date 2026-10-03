@@ -9,12 +9,28 @@ type Run = {
   step: (label: string, fn?: () => void) => Promise<void>
 }
 
+// compiles `template` as a vapor or vdom SFC over `data`
+const sfc = (
+  vapor: boolean,
+  data: Ref<any>,
+  template: string,
+  components: Record<string, any> = {},
+) =>
+  compile(
+    `<script setup${vapor ? ' vapor' : ''}>` +
+      `const data = _data; const components = _components</script>` +
+      `<template>${template}</template>`,
+    data,
+    components,
+    { vapor },
+  )
+
 // Runs `act` against the App `makeApp` builds in vapor mode and in the
 // all-vdom control, and checks that both record the same steps. Each step
 // records the html without anchors and the transition hooks fired since the
 // previous step; `enter`/`leave`/`appear` hold their `done`.
 async function compareRuns(
-  makeApp: (vapor: boolean, data: Ref<any>, script: string) => any,
+  makeApp: (vapor: boolean, data: Ref<any>) => any,
   act: (r: Run) => Promise<void>,
 ) {
   const runs: string[][] = []
@@ -43,12 +59,7 @@ async function compareRuns(
       onAfterAppear: sync('afterAppear'),
       onAppearCancelled: sync('appearCancelled'),
     })
-    const App = makeApp(
-      vapor,
-      data,
-      `const data = _data; const components = _components`,
-    )
-    const { app, host, html } = define(App).render()
+    const { app, host, html } = define(makeApp(vapor, data)).render()
     // v-show only leaves a connected element
     document.body.appendChild(host)
     const steps: string[] = []
@@ -82,8 +93,8 @@ const hooks =
 const appearHooks =
   `appear @before-appear="data.onBeforeAppear" @appear="data.onAppear" ` +
   `@after-appear="data.onAfterAppear" @appear-cancelled="data.onAppearCancelled"`
-const wrap = (attrs: string, slot = '<slot/>') =>
-  `<Transition ${attrs}>${slot}</Transition>`
+const wrap = (attrs: string, child = '<slot/>') =>
+  `<Transition ${attrs}>${child}</Transition>`
 
 describe('vapor slot content inside a vdom Transition', () => {
   // A vapor App passes `content` to a vdom Wrapper whose template is
@@ -93,28 +104,19 @@ describe('vapor slot content inside a vdom Transition', () => {
     content: string,
     act: (r: Run) => Promise<void>,
   ) =>
-    compareRuns((vapor, data, script) => {
-      const Child = compile(
-        `<script setup${vapor ? ' vapor' : ''}>${script}</script>` +
-          `<template><div v-if="!data.alt">child</div></template>`,
-        data,
-        {},
-        { vapor },
-      )
-      const Wrapper = compile(
-        `<script setup>${script}</script><template>${transition}</template>`,
-        data,
-        {},
-        { vapor: false },
-      )
-      return compile(
-        `<script setup${vapor ? ' vapor' : ''}>${script}</script>` +
-          `<template><components.Wrapper>${content}</components.Wrapper></template>`,
-        data,
-        { Wrapper, Child },
-        { vapor },
-      )
-    }, act)
+    compareRuns(
+      (vapor, data) =>
+        sfc(
+          vapor,
+          data,
+          `<components.Wrapper>${content}</components.Wrapper>`,
+          {
+            Wrapper: sfc(false, data, transition),
+            Child: sfc(vapor, data, `<div v-if="!data.alt">child</div>`),
+          },
+        ),
+      act,
+    )
 
   test('v-if content leaves and enters', async () => {
     const steps = await parity(
@@ -420,12 +422,11 @@ describe('vapor slot content inside a vdom Transition', () => {
 
   // the wrapper's outlet has a fallback: it is the Transition's child while
   // the slot content is invalid
-  const withFallback = (attrs: string) =>
-    wrap(attrs, '<slot><span>fb</span></slot>')
+  const withFallback = wrap(hooks, '<slot><span>fb</span></slot>')
 
   test('fallback enters when the content leaves, and leaves when it returns', async () => {
     const steps = await parity(
-      withFallback(hooks),
+      withFallback,
       `<div v-if="data.show">x</div>`,
       async r => {
         await r.step('hide', () => (r.data.value.show = false))
@@ -449,7 +450,7 @@ describe('vapor slot content inside a vdom Transition', () => {
 
   test('a fallback shown from the start leaves when the content appears', async () => {
     const steps = await parity(
-      withFallback(hooks),
+      withFallback,
       `<div v-if="data.alt">x</div>`,
       async r => {
         await r.step('show', () => (r.data.value.alt = true))
@@ -482,34 +483,18 @@ describe('vapor component as the child of a vdom Transition', () => {
     // templates of components the Child renders
     nested: Record<string, string> = {},
   ) =>
-    compareRuns((vapor, data, script) => {
+    compareRuns((vapor, data) => {
       const components: Record<string, any> = {}
       for (const name in nested) {
-        components[name] = compile(
-          `<script setup${vapor ? ' vapor' : ''}>${script}</script>` +
-            `<template>${nested[name]}</template>`,
-          data,
-          {},
-          { vapor },
-        )
+        components[name] = sfc(vapor, data, nested[name])
       }
-      const Child = compile(
-        `<script setup${vapor ? ' vapor' : ''}>${script}</script>` +
-          `<template>${child}</template>`,
-        data,
-        components,
-        { vapor },
-      )
-      return compile(
-        `<script setup>${script}</script><template>${transition}</template>`,
-        data,
-        { Child },
-        { vapor: false },
-      )
+      return sfc(false, data, transition, {
+        Child: sfc(vapor, data, child, components),
+      })
     }, act)
 
   const around = (attrs: string, child = '<components.Child/>') =>
-    `<Transition ${attrs}>${child}</Transition>`
+    wrap(attrs, child)
 
   test('the root the child toggles itself leaves and enters', async () => {
     const steps = await parity(

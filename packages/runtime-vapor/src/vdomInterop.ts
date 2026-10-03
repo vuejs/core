@@ -322,7 +322,7 @@ function applyVaporSlotTransition(
   refresh?: boolean,
 ): VaporTransitionHooks | undefined {
   const hooks = vnode.transition as VaporTransitionHooks | null
-  if (hooks && hooks.state) {
+  if (hooks && hooks.state && !(refresh && hooks.state.isLeaving)) {
     ensureTransitionHooksRegistered()
     hooks.state.root = block
     return applyTransitionHooksImpl(block, hooks, undefined, refresh)
@@ -441,12 +441,7 @@ const vaporInteropImpl = {
       // hooks once the block exists, before it is inserted by mountComponent.
       ;(instance.bm ||= []).push(() => {
         const transition = vnodeHookState.vnode.transition
-        if (transition) {
-          relayTransitionHooks(
-            instance.block,
-            transition as VaporTransitionHooks,
-          )
-        }
+        if (transition) relayTransitionHooks(instance.block, transition)
       })
     }
 
@@ -541,10 +536,7 @@ const vaporInteropImpl = {
       }
       if (n2.transition && instance.block) {
         ensureTransitionHooksRegistered()
-        relayTransitionHooks(
-          instance.block,
-          n2.transition as VaporTransitionHooks,
-        )
+        relayTransitionHooks(instance.block, n2.transition)
       }
       updateInteropVNode(instance, vnodeHookState, n2, n1)
     }
@@ -922,10 +914,7 @@ const vaporInteropImpl = {
 
   setTransitionHooks(component, hooks) {
     ensureTransitionHooksRegistered()
-    relayTransitionHooks(
-      (component as any as VaporComponentInstance).block,
-      hooks as VaporTransitionHooks,
-    )
+    relayTransitionHooks((component as any).block, hooks)
   },
 
   activate(
@@ -3210,9 +3199,12 @@ function renderVaporSlot(
         }
       },
     })
-    // a fallback committed later transitions with the hooks the enclosing
-    // vdom Transition applied to the fragment
-    installInteropTransitionAccessor(slotResolutionState, frag)
+    // under a vdom Transition (the hooks are on the vnode before the slot
+    // renders), a fallback committed later transitions with the hooks the
+    // Transition applied to the fragment
+    if (vnode.transition) {
+      installInteropTransitionAccessor(slotResolutionState, frag)
+    }
     const takePendingRecheck = (): boolean => {
       const force = slotResolutionState.pendingRecheckForce
       slotResolutionState.pendingRecheck = false
@@ -3890,13 +3882,9 @@ function createVNodeChildrenFragment(
   // `isBlockValid` reports `content.valid` (VDOM-side `ensureValidVNode`), not
   // `isValidBlock(frag.nodes)`.
   frag.isBlockValid = () => (content.resolved ? content.valid : true)
-  let currentVNode: VNode | null = null
+  // the fragment's vnode: Transition resolves the fragment as one vdom block,
+  // with its own identity
   let currentChildren: VNode[] = EMPTY_VNODES
-  // exposed as the fragment's vnode: Transition resolves the fragment as one
-  // vdom block, with its own identity
-  const setVNode = (vnode: VNode | null) => {
-    currentVNode = frag.vnode = vnode
-  }
   let currentParentNode: ParentNode | null = null
   // Captured once from the real DOM container, mirroring how VDOM closes the
   // mount-time namespace over a component's render effect.
@@ -3933,7 +3921,7 @@ function createVNodeChildrenFragment(
     const validityChanged = syncResolvedNodes(children)
     if (!content.valid && frag.slotBoundary) {
       cleanupInvalidContent()
-      setVNode(null)
+      frag.vnode = null
       currentChildren = EMPTY_VNODES
     }
     return validityChanged
@@ -3966,23 +3954,26 @@ function createVNodeChildrenFragment(
               hydrateVNode(vnode, parentComponent, frag.slotScopeIds, suspense),
             )
             currentChildren = nextChildren
-            setVNode(createVNode(Fragment, null, nextChildren))
+            frag.vnode = createVNode(Fragment, null, nextChildren)
             currentParentNode = currentHydrationNode!.parentNode as ParentNode
             childrenNamespace = getContainerType(currentParentNode as Element)
             currentAnchor = currentHydrationNode
           } else if (!isMounted) {
             currentChildren = nextChildren
-            setVNode(createVNode(Fragment, null, nextChildren))
+            frag.vnode = createVNode(Fragment, null, nextChildren)
             const wasResolved = content.resolved
             const validityChanged = syncResolvedNodes(nextChildren)
             if (wasResolved) {
               notifyUpdated(validityChanged)
             }
             return
-          } else if (!currentVNode) {
+          } else if (!frag.vnode) {
             currentChildren = nextChildren
-            const vnode = createVNode(Fragment, null, nextChildren)
-            setVNode(vnode)
+            const vnode = (frag.vnode = createVNode(
+              Fragment,
+              null,
+              nextChildren,
+            ))
             trackSlotVNodeUpdatesWithRefresh(
               vnode,
               () => {
@@ -4017,7 +4008,7 @@ function createVNodeChildrenFragment(
             const prevInstance = currentInstance
             simpleSetCurrentInstance(null)
             internals.pc(
-              currentVNode,
+              frag.vnode,
               nextVNode,
               currentParentNode!,
               currentAnchor,
@@ -4029,7 +4020,7 @@ function createVNodeChildrenFragment(
             )
             simpleSetCurrentInstance(prevInstance)
             currentChildren = nextChildren
-            setVNode(nextVNode)
+            frag.vnode = nextVNode
           }
 
           const validityChanged = syncResolvedNodesAndCleanup()
@@ -4083,9 +4074,9 @@ function createVNodeChildrenFragment(
     if (!isMounted) {
       childrenNamespace = getContainerType(parentNode as Element)
       startRenderEffect()
-      if (currentVNode) {
+      if (frag.vnode) {
         trackSlotVNodeUpdatesWithRefresh(
-          currentVNode,
+          frag.vnode,
           () => {
             notifyUpdated(syncResolvedNodesAndCleanup(currentChildren))
           },

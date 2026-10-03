@@ -7,12 +7,11 @@ import {
 } from './_helpers'
 
 setupHydrationTest()
+beforeEach(() => {
+  setIsHydratingEnabled(false)
+})
 
 describe('vapor slot content inside a vdom Transition', () => {
-  beforeEach(() => {
-    setIsHydratingEnabled(false)
-  })
-
   type Run = {
     data: any
     step: (label: string, fn?: () => void) => Promise<void>
@@ -142,10 +141,6 @@ describe('vapor slot content inside a vdom Transition', () => {
 })
 
 describe('vdom Transition inside a vapor app', () => {
-  beforeEach(() => {
-    setIsHydratingEnabled(false)
-  })
-
   // the vdom hydrator replaces the <template> the server wraps an appearing
   // Transition's content in: the next node is resolved from where it was
   test('appear content ends its parent', async () => {

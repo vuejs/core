@@ -439,15 +439,11 @@ function recheckSlotResolutionNow(
     if (fallback) {
       const content = state.getContent()
       // content rendered behind the fallback from the start has no hooks yet
-      if (
-        isTransitionEnabled &&
-        state.$transition &&
-        isFragment(content) &&
-        !content.$transition
-      ) {
+      const transition = isTransitionEnabled ? state.$transition : undefined
+      if (transition && isFragment(content) && !content.$transition) {
         state.$transition = applyTransitionHooks(
           content,
-          state.$transition,
+          transition,
           ownerFragment(state),
         )
       }

@@ -313,9 +313,10 @@ export function resolveTransitionHooks(
 
   const hooks = baseResolveTransitionHooks(context, props, state, instance)
   // a vapor slot transitions the blocks it renders itself (see the interop
-  // `slot()`): hand it what vapor hooks are resolved from
+  // `slot()`): hand it what vapor hooks are resolved from, in the shape of a
+  // VaporTransition root's hooks
   if (vnode.type === VaporSlot) {
-    extend(hooks, { props, state, instance })
+    extend(hooks, { __vapor: true, props, state, instance })
   }
   return hooks
 }
