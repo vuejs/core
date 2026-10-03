@@ -107,7 +107,9 @@ describe('v-on', () => {
     })
 
     expect(code).matchSnapshot()
-    expect(code).contains(`_onBinding(n0, _ctx.event, e => _ctx.handler(e))`)
+    expect(code).contains(
+      `_onBinding(n0, _ctx.event, e => _ctx.handler && _ctx.handler(e))`,
+    )
   })
 
   test('dynamic arg with prefixing', () => {
@@ -128,7 +130,9 @@ describe('v-on', () => {
 
     expect(helpers).contains('onBinding')
     expect(code).matchSnapshot()
-    expect(code).contains(`_onBinding(n0, _ctx.event, e => _ctx.handler(e), {`)
+    expect(code).contains(
+      `_onBinding(n0, _ctx.event, e => _ctx.handler && _ctx.handler(e), {`,
+    )
     expect(code).contains('capture: true')
     expect(code).contains('once: true')
     expect(code).not.contains('effect: true')
@@ -390,7 +394,9 @@ describe('v-on', () => {
     ])
 
     expect(code).matchSnapshot()
-    expect(code).contains(`_on(n0, "click", e => _ctx.a['b' + _ctx.c](e))`)
+    expect(code).contains(
+      `_on(n0, "click", e => _ctx.a['b' + _ctx.c] && _ctx.a['b' + _ctx.c](e))`,
+    )
   })
 
   test('function expression w/ prefixIdentifiers: true', () => {
@@ -460,7 +466,7 @@ describe('v-on', () => {
       },
     ])
     expect(code).contains(
-      `_on(n0, "click", _withModifiers(e => _ctx.test(e), ["stop","prevent"]), {
+      `_on(n0, "click", _withModifiers(e => _ctx.test && _ctx.test(e), ["stop","prevent"]), {
     capture: true,
     once: true
   })`,
@@ -518,8 +524,8 @@ describe('v-on', () => {
 
     expect(code).matchSnapshot()
     expect(code).contains(
-      `_on(n0, "click", _withModifiers(e => _ctx.test(e), ["stop"]))
-  _on(n0, "keyup", _withKeys(e => _ctx.test(e), ["enter"]))`,
+      `_on(n0, "click", _withModifiers(e => _ctx.test && _ctx.test(e), ["stop"]))
+  _on(n0, "keyup", _withKeys(e => _ctx.test && _ctx.test(e), ["enter"]))`,
     )
   })
 
@@ -760,7 +766,9 @@ describe('v-on', () => {
     })
 
     expect(code).matchSnapshot()
-    expect(code).contains(`_on(n0, "click", e => _ctx.foo.bar(e))`)
+    expect(code).contains(
+      `_on(n0, "click", e => _ctx.foo.bar && _ctx.foo.bar(e))`,
+    )
   })
 
   test('should use direct event listener by default', () => {
@@ -768,7 +776,7 @@ describe('v-on', () => {
 
     expect(helpers).not.contains('delegate')
     expect(helpers).not.contains('delegateEvents')
-    expect(code).contains('_on(n0, "click", e => _ctx.test(e))')
+    expect(code).contains('_on(n0, "click", e => _ctx.test && _ctx.test(e))')
     expect(ir.block.operation).toMatchObject([
       {
         type: IRNodeTypes.SET_EVENT,
@@ -784,7 +792,9 @@ describe('v-on', () => {
 
     expect(helpers).contains('delegateEvents')
     expect(code).contains('_delegateEvents("keyup")')
-    expect(code).contains('n0.$evtkeyup = _createInvoker(e => _ctx.test(e))')
+    expect(code).contains(
+      'n0.$evtkeyup = _createInvoker(e => _ctx.test && _ctx.test(e))',
+    )
     expect(code).not.contains('withKeys')
     expect(ir.block.operation).toMatchObject([
       {
@@ -808,7 +818,7 @@ describe('v-on', () => {
     )
     expect(onWarn.mock.calls[0][0].loc.source).toBe('delegate')
     expect(helpers).not.contains('delegateEvents')
-    expect(code).contains('_on(n0, "scroll", e => _ctx.test(e))')
+    expect(code).contains('_on(n0, "scroll", e => _ctx.test && _ctx.test(e))')
     expect(ir.block.operation).toMatchObject([{ delegate: false }])
   })
 
@@ -825,7 +835,9 @@ describe('v-on', () => {
     )
     expect(onWarn.mock.calls[0][0].loc.source).toBe('delegate')
     expect(helpers).not.contains('delegateEvents')
-    expect(code).contains('_onBinding(n0, _ctx.event, e => _ctx.test(e))')
+    expect(code).contains(
+      '_onBinding(n0, _ctx.event, e => _ctx.test && _ctx.test(e))',
+    )
     expect(ir.block.effect[0].operations).toMatchObject([{ delegate: false }])
   })
 
@@ -835,10 +847,10 @@ describe('v-on', () => {
     )
 
     expect(helpers).not.contains('delegateEvents')
-    expect(code).contains('_on(n0, "click", e => _ctx.test(e), {')
+    expect(code).contains('_on(n0, "click", e => _ctx.test && _ctx.test(e), {')
     expect(code).contains('capture: true')
     expect(code).contains(
-      '_on(n1, "click", _withModifiers(e => _ctx.test(e), ["stop"]))',
+      '_on(n1, "click", _withModifiers(e => _ctx.test && _ctx.test(e), ["stop"]))',
     )
     expect(ir.block.operation).toMatchObject([
       { delegate: false },
@@ -855,10 +867,10 @@ describe('v-on', () => {
     )
 
     expect(code).contains(
-      '_on(n0, "click", _withModifiers(e => _ctx.test(e), ["stop"]))',
+      '_on(n0, "click", _withModifiers(e => _ctx.test && _ctx.test(e), ["stop"]))',
     )
-    expect(code).contains('_delegate(n1, "click", e => _ctx.a(e))')
-    expect(code).contains('_delegate(n1, "click", e => _ctx.b(e))')
+    expect(code).contains('_delegate(n1, "click", e => _ctx.a && _ctx.a(e))')
+    expect(code).contains('_delegate(n1, "click", e => _ctx.b && _ctx.b(e))')
     expect(code).not.contains('_createInvoker')
   })
 
@@ -871,7 +883,7 @@ describe('v-on', () => {
     )
 
     expect(code).contains(
-      'n0.$evtkeyup = _withKeys(_withModifiers(e => _ctx.test(e), ["self"]), ["enter"])',
+      'n0.$evtkeyup = _withKeys(_withModifiers(e => _ctx.test && _ctx.test(e), ["self"]), ["enter"])',
     )
     expect(code).not.contains('_createInvoker(_withKeys')
     expect(code).not.contains('_withKeys(_createInvoker')
@@ -889,10 +901,10 @@ describe('v-on', () => {
     expect(code).contains('withVaporKeys as _withKeys')
     expect(code).contains('withKeys as _withKeys1')
     expect(code).contains(
-      'n0.$evtkeyup = _withKeys(e => _ctx.foo(e), ["enter"])',
+      'n0.$evtkeyup = _withKeys(e => _ctx.foo && _ctx.foo(e), ["enter"])',
     )
     expect(code).contains('_onBinding(n1, _ctx.event, _withKeys1')
-    expect(code).contains('e => _ctx.bar(e), ["enter"]))')
+    expect(code).contains('e => _ctx.bar && _ctx.bar(e), ["enter"]))')
   })
 
   test('should not delegate .stop when have multiple events of same name', () => {
@@ -902,9 +914,9 @@ describe('v-on', () => {
     expect(helpers).not.contains('delegate')
     expect(helpers).not.contains('delegateEvents')
     expect(code).toMatchSnapshot()
-    expect(code).contains('_on(n0, "click", e => _ctx.test(e))')
+    expect(code).contains('_on(n0, "click", e => _ctx.test && _ctx.test(e))')
     expect(code).contains(
-      '_on(n0, "click", _withModifiers(e => _ctx.test(e), ["stop"]))',
+      '_on(n0, "click", _withModifiers(e => _ctx.test && _ctx.test(e), ["stop"]))',
     )
   })
 
@@ -917,10 +929,10 @@ describe('v-on', () => {
     expect(helpers).not.contains('delegateEvents')
     expect(code).toMatchSnapshot()
     expect(code).contains(
-      '_on(n0, "contextmenu", _withModifiers(e => _ctx.test(e), ["right"]))',
+      '_on(n0, "contextmenu", _withModifiers(e => _ctx.test && _ctx.test(e), ["right"]))',
     )
     expect(code).contains(
-      '_on(n0, "contextmenu", _withModifiers(e => _ctx.test(e), ["stop"]))',
+      '_on(n0, "contextmenu", _withModifiers(e => _ctx.test && _ctx.test(e), ["stop"]))',
     )
   })
 
@@ -935,7 +947,7 @@ describe('v-on', () => {
     )
     expect(code).matchSnapshot()
     expect(code).include(
-      '_on(n0, "click", e => (_ctx.foo[_ctx.handleClick] as any)(e))',
+      '_on(n0, "click", e => (_ctx.foo[_ctx.handleClick] as any) && (_ctx.foo[_ctx.handleClick] as any)(e))',
     )
   })
 

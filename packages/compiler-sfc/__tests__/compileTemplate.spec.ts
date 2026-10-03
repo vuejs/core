@@ -562,7 +562,9 @@ test('compiles vapor event delegation only when explicitly requested', () => {
     vapor: true,
   })
 
-  expect(result.code).toContain(`_on(n0, "click", e => _ctx.onClick(e))`)
+  expect(result.code).toContain(
+    `_on(n0, "click", e => _ctx.onClick && _ctx.onClick(e))`,
+  )
   expect(result.code).toContain(`_delegateEvents("keyup")`)
   expect(result.code).toContain(`n1.$evtkeyup`)
 })

@@ -623,5 +623,39 @@ describe('dom event', () => {
       expect(logs.vapor).toEqual(logs.vdom)
       expect(vapor.after).toBe(vdom.after)
     })
+
+    test('skips an absent member expression handler like vdom', async () => {
+      const errors: Record<string, string[]> = {}
+      const logs: Record<string, string[]> = {}
+      await renderParity(
+        {
+          App: `<template>
+            <button id="a" @click="data.handlers.onClick"></button>
+            <button id="b" @click.stop="data.handlers.onClick"></button>
+          </template>`,
+        },
+        () => ref({ log: [] as string[], handlers: {} as Record<string, any> }),
+        async (data, root, mode) => {
+          // jsdom reports a throwing listener on window instead of at dispatch
+          errors[mode] = []
+          const onError = (e: ErrorEvent) => {
+            errors[mode].push(e.message)
+            e.preventDefault()
+          }
+          window.addEventListener('error', onError)
+          fire(root, 'a')
+          fire(root, 'b')
+          data.value.handlers.onClick = () => data.value.log.push('click')
+          fire(root, 'a')
+          fire(root, 'b')
+          window.removeEventListener('error', onError)
+          logs[mode] = data.value.log
+        },
+      )
+      expect(errors.vdom).toEqual([])
+      expect(errors.vapor).toEqual([])
+      expect(logs.vapor).toEqual(['click', 'click'])
+      expect(logs.vapor).toEqual(logs.vdom)
+    })
   })
 })

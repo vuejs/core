@@ -161,17 +161,13 @@ export function genEventHandler(
           // e.g. @click="foo.bar"
           exp = genExpression(value, context)
           if (!isConstantBinding(value, context) && !asComponentProp) {
-            // non constant, wrap with invocation as `e => foo.bar(e)`
+            // non constant, wrap with invocation as `e => foo.bar && foo.bar(e)`
+            // so an absent handler is skipped like in vdom.
             // when passing as component handler, access is always dynamic so we
             // can skip this
             const isTSNode = value.ast && TS_NODE_TYPES.includes(value.ast.type)
-            exp = [
-              `e => `,
-              isTSNode ? '(' : '',
-              ...exp,
-              isTSNode ? ')' : '',
-              `(e)`,
-            ]
+            const handler = isTSNode ? ['(', ...exp, ')'] : exp
+            exp = [`e => `, ...handler, ` && `, ...handler, `(e)`]
           }
         } else if (isFnExpression(value, context.options)) {
           // Fn expression: @click="e => foo(e)"

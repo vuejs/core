@@ -72,7 +72,7 @@ const t0 = _template("<button>", 1)
 
 export function render(_ctx) {
   const n0 = t0()
-  _on(n0, "click", e => _ctx.foo(e))
+  _on(n0, "click", e => _ctx.foo && _ctx.foo(e))
   return n0
 }"
 `;

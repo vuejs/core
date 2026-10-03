@@ -9,7 +9,7 @@ export function render(_ctx) {
   const n0 = t0()
   const n1 = t0()
   _renderEffect(() => {
-    _setDynamicProps(n0, [_ctx.bind, { onClick: [e => _ctx.a(e), _ctx.b] }], k0)
+    _setDynamicProps(n0, [_ctx.bind, { onClick: [e => _ctx.a && _ctx.a(e), _ctx.b] }], k0)
     _setDynamicProps(n1, [{ onClick: _ctx.c }, _toHandlers(_ctx.obj, true)], k0)
   })
   const n2 = _createAssetComponent("Comp", { onClick: () => [
@@ -36,7 +36,7 @@ const t0 = _template("<div id=btn>", 1)
 
 export function render(_ctx) {
   const n0 = t0()
-  _on(n0, "click", e => _ctx.a(e))
+  _on(n0, "click", e => _ctx.a && _ctx.a(e))
   return n0
 }"
 `;
@@ -48,7 +48,7 @@ _delegateEvents("click")
 
 export function render(_ctx) {
   const n0 = t0()
-  n0.$evtclick = _createInvoker(e => _ctx.a(e))
+  n0.$evtclick = _createInvoker(e => _ctx.a && _ctx.a(e))
   _renderEffect(() => _setDynamicEvents(n0, _ctx.obj))
   return n0
 }"
@@ -60,7 +60,7 @@ const t0 = _template("<div>", 1)
 
 export function render(_ctx) {
   const n0 = t0()
-  _renderEffect(() => _setDynamicProps(n0, [_ctx.bind, { onClick: [_withModifiers(e => _ctx.a(e), ["stop"]), $event => (_ctx.b($event))] }]))
+  _renderEffect(() => _setDynamicProps(n0, [_ctx.bind, { onClick: [_withModifiers(e => _ctx.a && _ctx.a(e), ["stop"]), $event => (_ctx.b($event))] }]))
   return n0
 }"
 `;
@@ -71,7 +71,7 @@ const t0 = _template("<div>", 1)
 
 export function render(_ctx) {
   const n0 = t0()
-  _renderEffect(() => _setDynamicProps(n0, [_ctx.bind, { "on:myEventCaptureOnce": e => _ctx.a(e), onClick: e => _ctx.b(e) }]))
+  _renderEffect(() => _setDynamicProps(n0, [_ctx.bind, { "on:myEventCaptureOnce": e => _ctx.a && _ctx.a(e), onClick: e => _ctx.b && _ctx.b(e) }]))
   return n0
 }"
 `;
@@ -83,7 +83,7 @@ const t0 = _template("<div id=btn>")
 export function render(_ctx) {
   const n0 = t0()
   const n1 = t0()
-  _on(n0, "click", e => _ctx.a(e))
+  _on(n0, "click", e => _ctx.a && _ctx.a(e))
   _renderEffect(() => _setDynamicEvents(n1, _ctx.obj))
   return [n0, n1]
 }"
@@ -1204,8 +1204,8 @@ const t0 = _template("<div>", 1)
 
 export function render(_ctx) {
   const n0 = t0()
-  _on(n0, "click", e => _ctx.a(e))
-  _on(n0, "click", e => _ctx.b(e))
+  _on(n0, "click", e => _ctx.a && _ctx.a(e))
+  _on(n0, "click", e => _ctx.b && _ctx.b(e))
   return n0
 }"
 `;
@@ -1246,7 +1246,7 @@ const t0 = _template("<div>", 1)
 
 export function render(_ctx) {
   const n0 = t0()
-  _renderEffect(() => _setDynamicProps(n0, [{ onClick: e => _ctx.a(e) }, _toHandlers(_ctx.obj, true), _ctx.bind, { onClick: _withModifiers(e => _ctx.b(e), ["stop"]), onKeyupOnce: _withKeys(e => _ctx.c(e), ["enter"]), "on:myEvent": e => _ctx.d(e) }]))
+  _renderEffect(() => _setDynamicProps(n0, [{ onClick: e => _ctx.a && _ctx.a(e) }, _toHandlers(_ctx.obj, true), _ctx.bind, { onClick: _withModifiers(e => _ctx.b && _ctx.b(e), ["stop"]), onKeyupOnce: _withKeys(e => _ctx.c && _ctx.c(e), ["enter"]), "on:myEvent": e => _ctx.d && _ctx.d(e) }]))
   return n0
 }"
 `;

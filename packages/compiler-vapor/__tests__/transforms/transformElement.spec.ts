@@ -1450,7 +1450,7 @@ describe('compiler: element transform', () => {
     )
     expect(code).toMatchSnapshot()
     expect(code).contains(
-      `_setDynamicProps(n0, [{ onClick: e => _ctx.a(e) }, _toHandlers(_ctx.obj, true), _ctx.bind, { onClick: _withModifiers(e => _ctx.b(e), ["stop"]), onKeyupOnce: _withKeys(e => _ctx.c(e), ["enter"]), "on:myEvent": e => _ctx.d(e) }])`,
+      `_setDynamicProps(n0, [{ onClick: e => _ctx.a && _ctx.a(e) }, _toHandlers(_ctx.obj, true), _ctx.bind, { onClick: _withModifiers(e => _ctx.b && _ctx.b(e), ["stop"]), onKeyupOnce: _withKeys(e => _ctx.c && _ctx.c(e), ["enter"]), "on:myEvent": e => _ctx.d && _ctx.d(e) }])`,
     )
     expect(code).not.contains(`_on(`)
     expect(code).not.contains(`_setDynamicEvents`)
@@ -1470,7 +1470,7 @@ describe('compiler: element transform', () => {
       `<div v-bind="bind" @click="a" :onClick="b" /><div :onClick="c" v-on="obj" /><Comp @click="a" :onClick="b" />`,
     )
     expect(code).toMatchSnapshot()
-    expect(code).contains(`{ onClick: [e => _ctx.a(e), _ctx.b] }`)
+    expect(code).contains(`{ onClick: [e => _ctx.a && _ctx.a(e), _ctx.b] }`)
     expect(code).contains(
       `_setDynamicProps(n1, [{ onClick: _ctx.c }, _toHandlers(_ctx.obj, true)], k0)`,
     )
@@ -1494,7 +1494,7 @@ describe('compiler: element transform', () => {
     )
     expect(code).toMatchSnapshot()
     expect(code).contains(
-      `{ "on:myEventCaptureOnce": e => _ctx.a(e), onClick: e => _ctx.b(e) }`,
+      `{ "on:myEventCaptureOnce": e => _ctx.a && _ctx.a(e), onClick: e => _ctx.b && _ctx.b(e) }`,
     )
   })
 
@@ -1504,7 +1504,7 @@ describe('compiler: element transform', () => {
     )
     expect(code).toMatchSnapshot()
     expect(code).contains(
-      `{ onClick: [_withModifiers(e => _ctx.a(e), ["stop"]), $event => (_ctx.b($event))] }`,
+      `{ onClick: [_withModifiers(e => _ctx.a && _ctx.a(e), ["stop"]), $event => (_ctx.b($event))] }`,
     )
   })
 
