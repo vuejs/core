@@ -603,4 +603,26 @@ describe('vapor component as the child of a vdom Transition', () => {
       'swap: <p>b</p> | beforeLeave:a leave:a afterLeave:a beforeEnter:b enter:b',
     )
   })
+
+  test('out-in switch away from a child rendering no element', async () => {
+    const steps = await parity(
+      around(
+        `mode="out-in" ${hooks}`,
+        '<components.Child v-if="data.alt"/><p v-else>p</p>',
+      ),
+      `<div v-if="data.show">c</div>`,
+      async r => {
+        r.data.value.show = false
+        await r.step('to child', () => (r.data.value.alt = true))
+        await r.step('leave done', () => r.done.leave())
+        await r.step('to p', () => (r.data.value.alt = false))
+        await r.step('enter done', () => r.done.enter())
+      },
+    )
+    expect(steps.slice(2)).toEqual([
+      'leave done:  | afterLeave:p',
+      'to p: <p>p</p> | beforeEnter:p enter:p',
+      'enter done: <p>p</p> | afterEnter:p',
+    ])
+  })
 })

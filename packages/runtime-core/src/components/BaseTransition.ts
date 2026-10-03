@@ -153,11 +153,26 @@ export const BaseTransitionPropsValidators: Record<string, any> = {
   onAppearCancelled: TransitionHookValidator,
 }
 
-const recursiveGetSubtree = (instance: ComponentInternalInstance): VNode => {
-  const subTree = isVaporComponent(instance.type)
-    ? (instance as any).block
-    : instance.subTree
-  return subTree.component ? recursiveGetSubtree(subTree.component) : subTree
+// whether a mounted child renders nothing a Transition can leave: a comment
+// root, through components (a vapor one asks the vapor renderer)
+function isEmptyTransitionChild(
+  vnode: VNode,
+  instance: GenericComponentInstance,
+): boolean {
+  if (vnode.type === Comment) return true
+  if (
+    vnode.type === VaporSlot ||
+    isVaporComponent(vnode.type as ConcreteComponent)
+  ) {
+    return !getVaporInterface(
+      instance as ComponentInternalInstance,
+      vnode,
+    ).hasTransitionChild(vnode)
+  }
+  return (
+    !!vnode.component &&
+    isEmptyTransitionChild(vnode.component.subTree, instance)
+  )
 }
 
 const BaseTransitionImpl: ComponentOptions = {
@@ -574,10 +589,8 @@ export function prepareTransitionSwitch(
   if (
     previous &&
     previousInner &&
-    previousInner.type !== Comment &&
     !isSameVNodeType(previousInner, nextInner) &&
-    (!previous.component ||
-      recursiveGetSubtree(previous.component).type !== Comment)
+    !isEmptyTransitionChild(previousInner, instance)
   ) {
     const leavingHooks = prepareLeavingTransitionHooks(
       previousInner,
@@ -633,12 +646,7 @@ export function prepareTransitionLeave(
   resumeAfterLeave: () => void,
 ): boolean {
   const previousInner = getInnerChild(previous)
-  if (
-    !previousInner ||
-    previousInner.type === Comment ||
-    (previous.component &&
-      recursiveGetSubtree(previous.component).type === Comment)
-  ) {
+  if (!previousInner || isEmptyTransitionChild(previousInner, instance)) {
     return false
   }
 

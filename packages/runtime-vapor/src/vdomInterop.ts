@@ -611,12 +611,7 @@ const vaporInteropImpl = {
       const transition = vnode.transition
       if (transition) {
         const child = findTransitionBlock(vnode.vb)
-        if (child) {
-          child.$transition = transition as VaporTransitionHooks
-        } else if (transition.afterLeave) {
-          // nothing to leave; resumes the Transition after this patch
-          queuePostFlushCb(transition.afterLeave)
-        }
+        if (child) child.$transition = transition as VaporTransitionHooks
       }
       stopVaporSlotScope(vnode)
       remove(vnode.vb, blockContainer)
@@ -915,6 +910,10 @@ const vaporInteropImpl = {
   setTransitionHooks(component, hooks) {
     ensureTransitionHooksRegistered()
     relayTransitionHooks((component as any).block, hooks)
+  },
+
+  hasTransitionChild(vnode) {
+    return !!findTransitionBlock(vnode.vb || getVaporInstance(vnode).block)
   },
 
   activate(
