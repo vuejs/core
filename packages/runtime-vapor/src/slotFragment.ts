@@ -23,7 +23,7 @@ import {
   isTransitionEnabled,
 } from './transition'
 import { setBlockKey } from './helpers/setKey'
-import { type VaporFragment, isInteropFragment } from './fragment'
+import { type VaporFragment, isFragment, isInteropFragment } from './fragment'
 import { isInteropEnabled } from './vdomInteropState'
 
 // Slot resolution.
@@ -438,6 +438,19 @@ function recheckSlotResolutionNow(
     clearSlotFallback(state)
     if (fallback) {
       const content = state.getContent()
+      // content rendered behind the fallback from the start has no hooks yet
+      if (
+        isTransitionEnabled &&
+        state.$transition &&
+        isFragment(content) &&
+        !content.$transition
+      ) {
+        state.$transition = applyTransitionHooks(
+          content,
+          state.$transition,
+          ownerFragment(state),
+        )
+      }
       beforeExpose(state, content)
       if (!isHydrating) {
         const parentNode = state.getParentNode()

@@ -2684,4 +2684,43 @@ describe('Transition', () => {
       expect(host.innerHTML).not.toContain('id="a"')
     },
   )
+
+  test('slot content rendered behind a fallback enters and leaves', async () => {
+    const hooks: string[] = []
+    const data = ref<any>({
+      show: false,
+      onBeforeEnter: (el: Element) => hooks.push(`enter:${el.textContent}`),
+      onLeave: (el: Element, done: () => void) => {
+        hooks.push(`leave:${el.textContent}`)
+        done()
+      },
+    })
+    const Wrapper = compile(
+      `<template>
+        <Transition :css="false" @before-enter="data.onBeforeEnter" @leave="data.onLeave">
+          <slot><span>fb</span></slot>
+        </Transition>
+      </template>`,
+      data,
+    )
+    const App = compile(
+      `<template>
+        <components.Wrapper><div v-if="data.show">x</div></components.Wrapper>
+      </template>`,
+      data,
+      { Wrapper },
+    )
+    const { host } = define(App).render()
+    expect(host.textContent).toBe('fb')
+
+    data.value.show = true
+    await nextTick()
+    expect(host.textContent).toBe('x')
+    expect(hooks).toEqual(['leave:fb', 'enter:x'])
+
+    data.value.show = false
+    await nextTick()
+    expect(host.textContent).toBe('fb')
+    expect(hooks).toEqual(['leave:fb', 'enter:x', 'leave:x', 'enter:fb'])
+  })
 })

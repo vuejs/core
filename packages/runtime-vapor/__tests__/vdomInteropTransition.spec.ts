@@ -405,4 +405,57 @@ describe('vapor slot content inside a vdom Transition', () => {
       'enter done: <p>p</p> | afterEnter:p',
     ])
   })
+
+  // the wrapper's outlet has a fallback: it is the Transition's child while
+  // the slot content is invalid
+  const withFallback = (attrs: string) =>
+    wrap(attrs, '<slot><span>fb</span></slot>')
+
+  test('fallback enters when the content leaves, and leaves when it returns', async () => {
+    const steps = await parity(
+      withFallback(hooks),
+      `<div v-if="data.show">x</div>`,
+      async r => {
+        await r.step('hide', () => (r.data.value.show = false))
+        await r.step('leave done', () => r.done.leave())
+        await r.step('enter done', () => r.done.enter())
+        await r.step('show', () => (r.data.value.show = true))
+        await r.step('leave done', () => r.done.leave())
+        await r.step('enter done', () => r.done.enter())
+      },
+    )
+    expect(steps).toEqual([
+      'mount: <div>x</div> | ',
+      'hide: <div>x</div><span>fb</span> | beforeLeave:x leave:x beforeEnter:fb enter:fb',
+      'leave done: <span>fb</span> | afterLeave:x',
+      'enter done: <span>fb</span> | afterEnter:fb',
+      'show: <span>fb</span><div>x</div> | beforeLeave:fb leave:fb beforeEnter:x enter:x',
+      'leave done: <div>x</div> | afterLeave:fb',
+      'enter done: <div>x</div> | afterEnter:x',
+    ])
+  })
+
+  test('a fallback shown from the start leaves when the content appears', async () => {
+    const steps = await parity(
+      withFallback(hooks),
+      `<div v-if="data.alt">x</div>`,
+      async r => {
+        await r.step('show', () => (r.data.value.alt = true))
+        await r.step('leave done', () => r.done.leave())
+        await r.step('enter done', () => r.done.enter())
+        await r.step('hide', () => (r.data.value.alt = false))
+        await r.step('leave done', () => r.done.leave())
+        await r.step('enter done', () => r.done.enter())
+      },
+    )
+    expect(steps).toEqual([
+      'mount: <span>fb</span> | ',
+      'show: <span>fb</span><div>x</div> | beforeLeave:fb leave:fb beforeEnter:x enter:x',
+      'leave done: <div>x</div> | afterLeave:fb',
+      'enter done: <div>x</div> | afterEnter:x',
+      'hide: <div>x</div><span>fb</span> | beforeLeave:x leave:x beforeEnter:fb enter:fb',
+      'leave done: <span>fb</span> | afterLeave:x',
+      'enter done: <span>fb</span> | afterEnter:fb',
+    ])
+  })
 })
