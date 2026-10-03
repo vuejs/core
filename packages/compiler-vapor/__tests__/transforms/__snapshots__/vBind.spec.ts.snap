@@ -833,14 +833,14 @@ export function render(_ctx) {
 `;
 
 exports[`compiler v-bind > v-model value number literals 1`] = `
-"import { setValue as _setValue, setAttr as _setAttr, template as _template } from 'vue';
+"import { setAttr as _setAttr, setValue as _setValue, template as _template } from 'vue';
 const t0 = _template("<input type=checkbox>", 1)
 
 export function render(_ctx) {
   const n0 = t0()
-  _setValue(n0, 1)
   _setAttr(n0, "true-value", 1)
   _setAttr(n0, "false-value", 0)
+  _setValue(n0, 1)
   return n0
 }"
 `;
