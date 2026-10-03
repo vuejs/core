@@ -520,5 +520,39 @@ describe('compile', () => {
       expect(code).contains('const n0 = _child(p1)')
       expect(code).contains('const n1 = _child((p1 = _next(p1)))')
     })
+
+    test('should not shadow _ctx with cached identifier var', () => {
+      const code = compile(
+        `<div :id="ctx.a" :title="ctx.b" />
+        <div v-for="ctx in list" :id="ctx.a + foo" :title="ctx.b + foo" />`,
+        {
+          bindingMetadata: {
+            ctx: BindingTypes.SETUP_CONST,
+            list: BindingTypes.SETUP_REF,
+            foo: BindingTypes.SETUP_REF,
+          },
+        },
+      )
+
+      expect(code).not.contains('const _ctx =')
+      expect(code).contains('const _ctx1 = _ctx.ctx')
+      expect(code).contains('const _ctx1 = _for_item0.value')
+      expect(code).contains('const _foo = _ctx.foo')
+    })
+
+    test('should not shadow _setTemplateRef with cached identifier var', () => {
+      const code = compile(
+        `<div :ref="r" :id="setTemplateRef.a" :title="setTemplateRef.b" />`,
+        {
+          bindingMetadata: {
+            r: BindingTypes.SETUP_REF,
+            setTemplateRef: BindingTypes.SETUP_CONST,
+          },
+        },
+      )
+
+      expect(code).contains('const _setTemplateRef1 = _ctx.setTemplateRef')
+      expect(code).contains('_setTemplateRef(n0, _ctx.r)')
+    })
   })
 })
