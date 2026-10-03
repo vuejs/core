@@ -3321,9 +3321,15 @@ function invokeVaporSlot(vnode: VNode): Block {
 function resolveInteropRootEl(
   instance: VaporComponentInstance,
 ): Element | undefined {
-  return getRootElement(instance, {
-    onDynamicFragment: frag => registerInteropRootSync(instance, frag),
-  })
+  return getRootElement(
+    instance,
+    __DEV__
+      ? {
+          onDynamicFragment: frag => registerInteropRootSync(instance, frag),
+          onComponent: comp => registerInteropRootRerenderSync(instance, comp),
+        }
+      : { onDynamicFragment: frag => registerInteropRootSync(instance, frag) },
+  )
 }
 
 function syncVNodeEl(vnode: VNode, instance: VaporComponentInstance): void {
@@ -4227,8 +4233,8 @@ function createInteropRawSlots(slotsRef: ShallowRef<Slots>): RawSlots {
 
 // vnode.el of an interop-mounted vapor component must follow its dynamic
 // root across branch switches.
-const interopRootSyncFragmentMap = new WeakMap<
-  DynamicFragment,
+const interopRootSyncProducers = new WeakMap<
+  DynamicFragment | VaporComponentInstance,
   VaporComponentInstance
 >()
 
@@ -4236,9 +4242,19 @@ function registerInteropRootSync(
   instance: VaporComponentInstance,
   frag: DynamicFragment,
 ): void {
-  if (interopRootSyncFragmentMap.get(frag) === instance) return
-  interopRootSyncFragmentMap.set(frag, instance)
+  if (interopRootSyncProducers.get(frag) === instance) return
+  interopRootSyncProducers.set(frag, instance)
   ;(frag.u ||= []).push(() => syncInteropRoot(instance))
+}
+
+// dev only: and across the HMR rerender of a component on its root chain
+function registerInteropRootRerenderSync(
+  instance: VaporComponentInstance,
+  comp: VaporComponentInstance,
+): void {
+  if (interopRootSyncProducers.get(comp) === instance) return
+  interopRootSyncProducers.set(comp, instance)
+  ;(comp.hmrRootHooks ||= []).push(() => syncInteropRoot(instance))
 }
 
 // Registered on demand: only instances whose vnode carries directives
@@ -4315,8 +4331,34 @@ function registerInteropDirsComponent(
   state: VNodeHookState,
   comp: VaporComponentInstance,
 ): void {
-  if (comp === instance || interopDirsProducers.has(comp)) return
+  // the instance itself is a producer only through an HMR rerender
+  if ((!__DEV__ && comp === instance) || interopDirsProducers.has(comp)) return
   interopDirsProducers.add(comp)
+  if (__DEV__) {
+    // an HMR rerender is the vdom unmount + mount of the inherited root
+    // vnode; a root rendered by a nested component went with that component
+    ;(comp.hmrRootHooks ||= []).push(() => {
+      const owners = state.dirsOwners
+      const owner = owners && owners.get(comp)
+      if (!owner) return
+      if (owner.el) unmountInteropDirsRoot(instance, owner)
+      if (!owner.vnode.dirs) return
+      const [inner, el] = resolveInteropDirsRoot(
+        instance,
+        state,
+        comp.block,
+        owner,
+      )
+      if (el) {
+        // swapped in place: a vdom v-show must not enter the new root
+        const vnode = inner.vnode
+        inner.vnode = extend({}, vnode, { el, transition: null })
+        mountInteropDirsRoot(instance, inner, el)
+        inner.vnode = inner.carried = vnode
+      }
+    })
+    if (comp === instance) return
+  }
   const pending = isPendingInteropSetup(comp)
   registerAfterInteropSetup(comp, pending, () => {
     ;(comp.bu ||= []).push(() =>

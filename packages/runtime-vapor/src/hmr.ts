@@ -4,18 +4,31 @@ import {
   restoreCurrentInstance,
   setCurrentInstance,
 } from '@vue/runtime-dom'
-import { findBlockBoundary, insert, remove } from './block'
+import {
+  type Block,
+  type TransitionBlock,
+  type VaporTransitionHooks,
+  type VaporTransitionState,
+  findBlockBoundary,
+  insert,
+  remove,
+} from './block'
 import {
   type VaporComponent,
   type VaporComponentInstance,
   applyComponentFallthrough,
   createComponent,
+  getRootElement,
+  isVaporComponent,
   mountComponent,
   runDevRender,
   unmountComponent,
 } from './component'
 import { applyComponentScopeIds } from './scopeId'
 import { applyComponentCssVars } from './helpers/useCssVars'
+import { isTransitionEnabled } from './transition'
+import { isFragment } from './fragment'
+import { isArray } from '@vue/shared'
 import {
   currentRenderContext,
   deriveSlotScopeIds,
@@ -44,6 +57,14 @@ export function hmrRerender(instance: VaporComponentInstance): void {
   if (instance.renderScope) {
     instance.renderScope.stop()
   }
+  // The content is swapped in place, not transitioned. Take the hooks
+  // enclosing Transitions applied through this component off the old content
+  // so it is removed without a leave; the new content gets them back once it
+  // is inserted, past its enter.
+  const transitions: TakenTransitions | undefined = isTransitionEnabled
+    ? new Map()
+    : undefined
+  if (transitions) takeTransitionHooks(instance.block, transitions)
   remove(instance.block, parent)
   const prev = setCurrentInstance(instance)
   pushWarningContext(instance)
@@ -60,7 +81,48 @@ export function hmrRerender(instance: VaporComponentInstance): void {
   }
   applyComponentScopeIds(instance)
   applyComponentCssVars(instance)
+  const hooks = instance.hmrRootHooks
+  if (hooks) {
+    for (const hook of hooks) hook(instance.block)
+  }
   insert(instance.block, parent, anchor)
+  if (transitions) {
+    transitions.forEach((hooks, state) => {
+      if (!state) {
+        // vdom hooks belong to the vnode, not to the element they sit on
+        const root = getRootElement(instance.block) as
+          | TransitionBlock
+          | undefined
+        if (root) root.$transition = hooks
+      } else if (!state.isUnmounting) {
+        // the owning Transition is still there: it resolves its content again
+        state.refresh!(hooks)
+      }
+    })
+  }
+}
+
+// keyed by the state of the Transition that applied them; vdom hooks have none
+type TakenTransitions = Map<
+  VaporTransitionState | undefined,
+  VaporTransitionHooks
+>
+
+// The same descent as `remove`: every node it would run a leave on.
+function takeTransitionHooks(block: Block, taken: TakenTransitions): void {
+  if (isArray(block)) {
+    for (const b of block) takeTransitionHooks(b, taken)
+  } else if (isVaporComponent(block)) {
+    // a pending async setup has no block yet
+    if (block.block) takeTransitionHooks(block.block, taken)
+  } else {
+    const hooks = (block as TransitionBlock).$transition
+    if (hooks) {
+      ;(block as TransitionBlock).$transition = undefined
+      taken.set(hooks.state, hooks)
+    }
+    if (isFragment(block)) takeTransitionHooks(block.nodes, taken)
+  }
 }
 
 export function hmrReload(
