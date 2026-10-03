@@ -1205,4 +1205,23 @@ describe('Vapor Mode hydration', () => {
       expect(select.selectedIndex).toBe(2)
     },
   )
+
+  test.each([true, false])(
+    'checkbox array v-model re-syncs a re-rendered value after hydration (vapor app: %s)',
+    async isVaporApp => {
+      const { container, data } = await testHydration(
+        `<script setup>const data = _data</script>` +
+          `<template><div><input v-for="(item, index) in data.items" :key="index" type="checkbox" v-model="data.selected" :value="item"></div></template>`,
+        undefined,
+        reactive({ items: [1, 2], selected: [1] }),
+        { isVaporApp },
+      )
+      const inputs = () => Array.from(container.querySelectorAll('input'))
+      expect(inputs().map(input => input.checked)).toEqual([true, false])
+
+      data.items = [3, 1]
+      await nextTick()
+      expect(inputs().map(input => input.checked)).toEqual([false, true])
+    },
+  )
 })

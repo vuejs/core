@@ -56,6 +56,23 @@ export const applyCheckboxModel: VaporModelDirective<HTMLInputElement> = (
   set,
 ) => {
   vModelCheckboxInit(el, set)
+  if (!inOnce) {
+    // array/set models are matched against the element's own value, which
+    // the owner may re-render without touching the model, so the checked
+    // state is also re-synced from the owner's updated hooks like the vdom
+    // directive does, once that value has changed. Runs before the owner's
+    // own hooks.
+    const instance = currentInstance as VaporComponentInstance
+    let rawValue = vModelGetValue(el)
+    const update = () => {
+      if (rawValue !== (rawValue = vModelGetValue(el))) {
+        const value = get()
+        vModelCheckboxUpdate(el, value, value, rawValue)
+      }
+    }
+    ;(instance.u || (instance.u = [])).unshift(update)
+    onScopeDispose(() => remove(instance.u!, update))
+  }
   ensureMounted(() => {
     let value: any
     renderEffect(() => {
