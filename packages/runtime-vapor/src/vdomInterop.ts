@@ -201,6 +201,7 @@ import {
 } from './dom/hydrateFragment'
 import type { NodeRef } from './apiTemplateRef'
 import {
+  applyTransitionHooksImpl,
   ensureTransitionHooksRegistered,
   findTransitionBlock,
   getTransitionElement,
@@ -308,6 +309,23 @@ function prepareInteropSlotTransition(
       delayedLeaveSource || transition,
     ) || createCommentVNode()
   )
+}
+
+// A vapor slot under a vdom Transition is the Transition's child: its
+// blocks resolve their own hooks from the Transition's props/state/instance
+// carried by the vnode's hooks, like a VaporTransition root does. Re-applied
+// on patch (`refresh`) since the resolved hooks capture props eagerly.
+function applyVaporSlotTransition(
+  vnode: VNode,
+  block: Block,
+  refresh?: boolean,
+): void {
+  const hooks = vnode.transition as VaporTransitionHooks | null
+  if (hooks && hooks.state) {
+    ensureTransitionHooksRegistered()
+    hooks.state.root = block
+    applyTransitionHooksImpl(block, hooks, undefined, refresh)
+  }
 }
 
 function getInteropTransitionType(vnode: VNode): VNode['type'] | undefined {
@@ -635,7 +653,8 @@ const vaporInteropImpl = {
         (isFragment(slotBlock) ? slotBlock.anchor : undefined) ||
         createTextNode()
       insert((n2.el = n2.anchor = selfAnchor), container, anchor)
-      insert((n2.vb = slotBlock), container, selfAnchor, parentSuspense)
+      applyVaporSlotTransition(n2, (n2.vb = slotBlock))
+      insert(slotBlock, container, selfAnchor, parentSuspense)
     } else {
       // update
       // slot function changed (e.g. dynamic slots from _createForSlots),
@@ -679,7 +698,8 @@ const vaporInteropImpl = {
         }
         insert((n2.anchor = newAnchor), parent, insertAnchor)
         n2.el = rangeStartAnchor || newAnchor
-        insert((n2.vb = slotBlock), parent, newAnchor, parentSuspense)
+        applyVaporSlotTransition(n2, (n2.vb = slotBlock))
+        insert(slotBlock, parent, newAnchor, parentSuspense)
       } else {
         const vs1 = n1.vs!
         const vs2 = n2.vs!
@@ -689,6 +709,7 @@ const vaporInteropImpl = {
         ;(vs2.ref = vs1.ref)!.value = n2.props
         vs2.scope = vs1.scope
         syncInteropVaporSlotState(n1, n2)
+        applyVaporSlotTransition(n2, n2.vb, true)
       }
     }
   },

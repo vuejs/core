@@ -11,6 +11,7 @@ import {
   Fragment,
   type VNode,
   type VNodeArrayChildren,
+  VaporSlot,
   cloneVNode,
   createCommentVNode,
   isSameVNodeType,
@@ -19,7 +20,14 @@ import { warn } from '../warning'
 import { isKeepAlive } from './KeepAlive'
 import { toRaw } from '@vue/reactivity'
 import { ErrorCodes, callWithAsyncErrorHandling } from '../errorHandling'
-import { NOOP, PatchFlags, ShapeFlags, isArray, isFunction } from '@vue/shared'
+import {
+  NOOP,
+  PatchFlags,
+  ShapeFlags,
+  extend,
+  isArray,
+  isFunction,
+} from '@vue/shared'
 import { onBeforeUnmount, onMounted } from '../apiLifecycle'
 import { isTeleport } from './Teleport'
 import {
@@ -303,7 +311,13 @@ export function resolveTransitionHooks(
     },
   }
 
-  return baseResolveTransitionHooks(context, props, state, instance)
+  const hooks = baseResolveTransitionHooks(context, props, state, instance)
+  // a vapor slot transitions the blocks it renders itself (see the interop
+  // `slot()`): hand it what vapor hooks are resolved from
+  if (vnode.type === VaporSlot) {
+    extend(hooks, { props, state, instance })
+  }
+  return hooks
 }
 
 // shared between vdom and vapor
