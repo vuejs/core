@@ -640,6 +640,33 @@ describe('vdomInterop', () => {
         '<div>boolean:false:false</div><div>boolean:false:false</div>',
       )
     })
+
+    test('vnode props of a vdom component are a plain object', async () => {
+      // e.g. Vuetify's useProxiedModel checks `vm.vnode.props?.hasOwnProperty()`
+      const Field = defineComponent({
+        props: ['modelValue'],
+        setup(props) {
+          const vm = getCurrentInstance()!
+          return () =>
+            h(
+              'i',
+              `${props.modelValue}:${vm.vnode.props!.hasOwnProperty('modelValue')}`,
+            )
+        },
+      })
+      const { vdom, vapor } = await renderParity(
+        {
+          App: `<template><components.Field v-model="data.n" /></template>`,
+        },
+        () => ref({ n: 1 }),
+        async data => {
+          data.value.n++
+        },
+        { Field },
+      )
+      expect(vdom.after).toBe('<i>2:true</i>')
+      expect(vapor.after).toBe(vdom.after)
+    })
   })
 
   describe('v-model', () => {
