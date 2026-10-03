@@ -96,6 +96,19 @@ const appearHooks =
 const wrap = (attrs: string, child = '<slot/>') =>
   `<Transition ${attrs}>${child}</Transition>`
 
+// The entries left in the leaving-node cache of the Transition a vapor
+// element transitions under; a vdom element's hooks don't expose the state,
+// so the vdom control is not checked.
+const leavingEntries = (el: Element) => {
+  const hooks = (el as any).$transition
+  if (!hooks) return []
+  const entries: string[] = []
+  for (const bucket of hooks.state.leavingNodes.values()) {
+    entries.push(...Object.keys(bucket))
+  }
+  return entries
+}
+
 describe('vapor slot content inside a vdom Transition', () => {
   // A vapor App passes `content` to a vdom Wrapper whose template is
   // `transition` (a `<Transition>` around a `<slot/>`)
@@ -383,9 +396,12 @@ describe('vapor slot content inside a vdom Transition', () => {
         await r.step('to slot', () => (r.data.value.alt = true))
         await r.step('enter done', () => r.done.enter())
         await r.step('leave done', () => r.done.leave())
+        const x = document.body.querySelector('div > div')!
         await r.step('to p', () => (r.data.value.alt = false))
         await r.step('enter done', () => r.done.enter())
         await r.step('leave done', () => r.done.leave())
+        // a completed leave leaves no record behind
+        expect(leavingEntries(x)).toEqual([])
       },
     )
     expect(steps).toEqual([

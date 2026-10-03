@@ -330,23 +330,26 @@ function applyVaporSlotTransition(
 // identity (a re-entering copy early-removes the leaving one through it);
 // only the mode handoff (out-in `afterLeave`, in-out `delayLeave`) is the
 // vdom Transition's. Its `delayLeave` registers the leaving vnode for that
-// early removal, so `markLeaving` registers what the copy looks for.
+// early removal, so `markLeaving` registers what the copy looks for instead;
+// a fragment relays the handoff to the vnodes performing the leave.
 function forwardLeaveHandoff<T extends TransitionHooks>(
   hooks: T,
   from: TransitionHooks,
-  markLeaving: () => void,
+  markLeaving?: () => void,
 ): T {
   hooks.afterLeave = from.afterLeave
   const delayLeave = from.delayLeave
   hooks.delayLeave =
-    delayLeave &&
-    ((el, earlyRemove, delayedLeave) => {
-      delayLeave(el, earlyRemove, delayedLeave)
-      markLeaving()
-    })
+    delayLeave && markLeaving
+      ? (el, earlyRemove, delayedLeave) => {
+          delayLeave(el, earlyRemove, delayedLeave)
+          markLeaving()
+        }
+      : delayLeave
   return hooks
 }
 
+// as a vdom in-out `delayLeave` registers its vnode: by type and key
 function markLeavingVNode(vnode: VNode, state: TransitionState): void {
   const { leavingNodes } = state
   let nodes = leavingNodes.get(vnode.type)
@@ -640,12 +643,23 @@ const vaporInteropImpl = {
       const child = transition && findTransitionBlock(vnode.vb)
       const hooks = child && child.$transition
       if (hooks) {
-        forwardLeaveHandoff(hooks, transition, () =>
-          markLeavingBlock(child, hooks.state),
+        forwardLeaveHandoff(
+          hooks,
+          transition,
+          child instanceof Element
+            ? () => markLeavingBlock(child, hooks.state)
+            : undefined,
         )
       }
       stopVaporSlotScope(vnode)
       remove(vnode.vb, blockContainer)
+      // the record vdom's in-out `delayLeave` kept for this vnode: nothing
+      // early-removes through it, the leaver registered itself
+      if (hooks && isVaporTransitionHooks(transition)) {
+        const record = transition.state.leavingNodes.get(vnode.type)
+        const key = String(vnode.key)
+        if (record && record[key] === vnode) delete record[key]
+      }
     }
     if (doRemove) {
       if (slotStartAnchor) {
