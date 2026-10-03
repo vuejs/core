@@ -152,6 +152,8 @@ import {
   claimUntrackedAnchor,
   createFragmentClaim,
   currentHydrationNode,
+  enterHydrationCursor,
+  exitHydrationCursor,
   isComment,
   isHydrating,
   isHydratingSlotFallback,
@@ -4186,10 +4188,38 @@ function normalizeInteropSlotValue(value: unknown): VNode[] {
 const isInternalSlotKey = (key: string): boolean =>
   key === '_' || key === '_ctx' || key === '$stable' || key === '$'
 
+// a vdom slot called from vapor code renders like a `<slot>` outlet (a block)
+const interopVaporSlotsCache = new WeakMap<
+  ShallowRef<Slots>,
+  Record<string, [Slot, VaporSlot]>
+>()
+
 const interopSlotsSourceHandlers: ProxyHandler<ShallowRef<Slots>> = {
   get(target, key: any) {
     const slots = target.value
-    return slots && slots[key]
+    const slot = slots && slots[key]
+    if (!isFunction(slot)) return slot
+    let wrappers = interopVaporSlotsCache.get(target)
+    if (!wrappers) interopVaporSlotsCache.set(target, (wrappers = {}))
+    const cached = wrappers[key]
+    if (cached && cached[0] === slot) return cached[1]
+    const wrapped: VaporSlot = props => {
+      const owner = currentInstance as VaporComponentInstance | null
+      const vdom = isVaporComponent(owner) && owner.appContext.vdom
+      if (!vdom) return slot(props)
+      if (!isHydrating) return vdom.slot(target, key, props, owner!)
+
+      const cursor = enterHydrationCursor()
+      try {
+        const fragment = vdom.slot(target, key, props, owner!)
+        fragment.hydrate()
+        return fragment
+      } finally {
+        exitHydrationCursor(cursor)
+      }
+    }
+    wrappers[key] = [slot, wrapped]
+    return wrapped
   },
   has(target, key: any) {
     const slots = target.value
