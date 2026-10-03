@@ -17,6 +17,7 @@ import {
   type SuspenseBoundary,
   type TransitionElement,
   type TransitionHooks,
+  type TransitionState,
   type VNode,
   type VNodeArrayChildren,
   Comment as VNodeComment,
@@ -207,6 +208,7 @@ import {
   findTransitionBlock,
   getTransitionElement,
   hydrateTransitionImpl,
+  markLeavingBlock,
   relayTransitionHooks,
 } from './components/Transition'
 import { isVaporTransition, isVaporTransitionHooks } from './transition'
@@ -327,15 +329,32 @@ function applyVaporSlotTransition(
 // The hooks performing a leave the vdom Transition drives keep their own
 // identity (a re-entering copy early-removes the leaving one through it);
 // only the mode handoff (out-in `afterLeave`, in-out `delayLeave`) is the
-// vdom Transition's.
+// vdom Transition's. Its `delayLeave` registers the leaving vnode for that
+// early removal, so `markLeaving` registers what the copy looks for.
 function forwardLeaveHandoff<T extends TransitionHooks>(
-  hooks: T | null | undefined,
+  hooks: T,
   from: TransitionHooks,
+  markLeaving: () => void,
 ): T {
-  if (!hooks) return from as T
   hooks.afterLeave = from.afterLeave
-  hooks.delayLeave = from.delayLeave
+  const delayLeave = from.delayLeave
+  hooks.delayLeave =
+    delayLeave &&
+    ((el, earlyRemove, delayedLeave) => {
+      delayLeave(el, earlyRemove, delayedLeave)
+      markLeaving()
+    })
   return hooks
+}
+
+function markLeavingVNode(vnode: VNode, state: TransitionState): void {
+  const { leavingNodes } = state
+  let nodes = leavingNodes.get(vnode.type)
+  if (!nodes) {
+    nodes = Object.create(null)
+    leavingNodes.set(vnode.type, nodes!)
+  }
+  nodes![String(vnode.key)] = vnode
 }
 
 function getInteropTransitionType(vnode: VNode): VNode['type'] | undefined {
@@ -618,11 +637,12 @@ const vaporInteropImpl = {
       // a leave driven by the vdom Transition: the vnode's hooks carry its
       // mode handoff
       const transition = vnode.transition
-      if (transition) {
-        const child = findTransitionBlock(vnode.vb)
-        if (child) {
-          child.$transition = forwardLeaveHandoff(child.$transition, transition)
-        }
+      const child = transition && findTransitionBlock(vnode.vb)
+      const hooks = child && child.$transition
+      if (hooks) {
+        forwardLeaveHandoff(hooks, transition, () =>
+          markLeavingBlock(child, hooks.state),
+        )
       }
       stopVaporSlotScope(vnode)
       remove(vnode.vb, blockContainer)
@@ -3943,12 +3963,12 @@ function createVNodeChildrenFragment(
     const transition = frag.$transition
     if (isVaporTransitionHooks(transition)) {
       const { props, state, instance } = transition
-      currentChildren.forEach(vnode =>
-        setVNodeTransitionHooks(
-          vnode,
-          resolveVNodeTransitionHooks(vnode, props, state, instance),
-        ),
-      )
+      currentChildren.forEach(vnode => {
+        const hooks = resolveVNodeTransitionHooks(vnode, props, state, instance)
+        // an in-out handoff the fragment's hooks received on entering
+        hooks.delayedLeave = transition.delayedLeave
+        setVNodeTransitionHooks(vnode, hooks)
+      })
     }
   }
 
@@ -4145,8 +4165,12 @@ function createVNodeChildrenFragment(
     scope.stop()
     const parentSuspense = resolveUnmountSuspense(suspense)
     currentChildren.forEach(vnode => {
-      if (transition) {
-        vnode.transition = forwardLeaveHandoff(vnode.transition, transition)
+      // the mode handoff of a leave the slot's removal drives
+      const hooks = vnode.transition
+      if (hooks && isVaporTransitionHooks(transition)) {
+        forwardLeaveHandoff(hooks, transition, () =>
+          markLeavingVNode(vnode, transition.state),
+        )
       }
       internals.um(vnode, parentComponent, parentSuspense, !!parentNode)
     })

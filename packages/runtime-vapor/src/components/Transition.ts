@@ -274,6 +274,15 @@ function getLeavingNodesForType(
   return nodes
 }
 
+// Registers `block` as leaving before its leave runs, as a vdom in-out
+// `delayLeave` does for its vnode: a re-entering copy early-removes it.
+export function markLeavingBlock(
+  block: ResolvedTransitionBlock,
+  state: TransitionState,
+): void {
+  getLeavingNodesForType(state, block)[String(getTransitionKey(block))] = block
+}
+
 function getLeaveElement(
   block: ResolvedTransitionBlock,
 ): TransitionElement | undefined {

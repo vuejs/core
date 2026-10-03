@@ -438,6 +438,24 @@ describe('vapor slot content inside a vdom Transition', () => {
     ])
   })
 
+  test('in-out reopens the slot before the sibling finished entering', async () => {
+    const steps = await parity(
+      wrap(`mode="in-out" ${hooks}`, '<slot v-if="data.show"/><p v-else>p</p>'),
+      `<b>x</b>`,
+      async r => {
+        await r.step('to sibling', () => (r.data.value.show = false))
+        await r.step('back to slot', () => (r.data.value.show = true))
+        await r.step('enter done', () => r.done.enter())
+      },
+    )
+    expect(steps).toEqual([
+      'mount: <b>x</b> | ',
+      'to sibling: <b>x</b><p>p</p> | beforeEnter:p enter:p',
+      'back to slot: <p>p</p><b>x</b> | beforeEnter:x enter:x',
+      'enter done: <p>p</p><b>x</b> | afterEnter:x enterCancelled:p beforeLeave:p leave:p',
+    ])
+  })
+
   // the wrapper's outlet has a fallback: it is the Transition's child while
   // the slot content is invalid
   const withFallback = wrap(hooks, '<slot><span>fb</span></slot>')
@@ -505,6 +523,27 @@ describe('vapor slot content inside a vdom Transition', () => {
       'to sibling: <span>fb</span><p>p</p> | beforeEnter:p enter:p',
       'enter done: <span>fb</span><p>p</p> | afterEnter:p beforeLeave:fb leave:fb',
       'leave done: <p>p</p> | afterLeave:fb',
+    ])
+  })
+
+  test('in-out reopens the slot showing a fallback before the sibling finished entering', async () => {
+    const steps = await parity(
+      wrap(
+        `mode="in-out" ${hooks}`,
+        '<slot v-if="data.show"><span>fb</span></slot><p v-else>p</p>',
+      ),
+      `<div v-if="data.alt">x</div>`,
+      async r => {
+        await r.step('to sibling', () => (r.data.value.show = false))
+        await r.step('back to slot', () => (r.data.value.show = true))
+        await r.step('enter done', () => r.done.enter())
+      },
+    )
+    expect(steps).toEqual([
+      'mount: <span>fb</span> | ',
+      'to sibling: <span>fb</span><p>p</p> | beforeEnter:p enter:p',
+      'back to slot: <p>p</p><span>fb</span> | beforeEnter:fb enter:fb',
+      'enter done: <p>p</p><span>fb</span> | afterEnter:fb enterCancelled:p beforeLeave:p leave:p',
     ])
   })
 
