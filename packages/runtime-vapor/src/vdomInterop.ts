@@ -206,7 +206,7 @@ import {
   findTransitionBlock,
   getTransitionElement,
   hydrateTransitionImpl,
-  setTransitionHooks as setVaporTransitionHooks,
+  relayTransitionHooks,
 } from './components/Transition'
 import { isVaporTransition } from './transition'
 import {
@@ -442,7 +442,10 @@ const vaporInteropImpl = {
       ;(instance.bm ||= []).push(() => {
         const transition = vnodeHookState.vnode.transition
         if (transition) {
-          setVaporTransitionHooks(instance, transition as VaporTransitionHooks)
+          relayTransitionHooks(
+            instance.block,
+            transition as VaporTransitionHooks,
+          )
         }
       })
     }
@@ -538,7 +541,10 @@ const vaporInteropImpl = {
       }
       if (n2.transition && instance.block) {
         ensureTransitionHooksRegistered()
-        setVaporTransitionHooks(instance, n2.transition as VaporTransitionHooks)
+        relayTransitionHooks(
+          instance.block,
+          n2.transition as VaporTransitionHooks,
+        )
       }
       updateInteropVNode(instance, vnodeHookState, n2, n1)
     }
@@ -916,7 +922,10 @@ const vaporInteropImpl = {
 
   setTransitionHooks(component, hooks) {
     ensureTransitionHooksRegistered()
-    setVaporTransitionHooks(component as any, hooks as VaporTransitionHooks)
+    relayTransitionHooks(
+      (component as any as VaporComponentInstance).block,
+      hooks as VaporTransitionHooks,
+    )
   },
 
   activate(

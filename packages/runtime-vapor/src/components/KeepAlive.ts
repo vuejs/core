@@ -170,6 +170,8 @@ const VaporKeepAliveImpl = defineVaporComponent({
         if (
           transition &&
           transition.mode === 'out-in' &&
+          // relayed vdom hooks carry no vapor state
+          transition.state &&
           transition.state.isLeaving
         ) {
           return

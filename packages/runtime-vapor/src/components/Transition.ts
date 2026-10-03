@@ -26,7 +26,6 @@ import { computed } from '@vue/reactivity'
 import {
   type Block,
   type BlockFn,
-  type TransitionBlock,
   type TransitionOptions,
   type VaporTransitionHooks,
   type VaporTransitionState,
@@ -391,6 +390,12 @@ export function applyTransitionHooksImpl(
     return hooks
   }
 
+  // hooks relayed from a vdom Transition carry no state to resolve from
+  if (!hooks.state) {
+    relayTransitionHooks(block, hooks)
+    return hooks
+  }
+
   const fragments: VaporFragment[] = []
   const child = resolveTransitionBlock(
     block,
@@ -420,6 +425,25 @@ export function applyTransitionHooksImpl(
   child.$transition = resolvedHooks
   fragments.forEach(f => (f.$transition = resolvedHooks))
   return resolvedHooks
+}
+
+// Hooks a vnode-level Transition resolved for a vapor component vnode (a vdom
+// Transition's child, or a vnode child of a vapor one) are keyed by that
+// vnode and carry its handoffs (`afterLeave`, `delayedLeave`): every root the
+// component renders relays them as they are, as a vdom child's roots inherit
+// them, and an entering root early-removes the leaving one through the vnode.
+export function relayTransitionHooks(
+  block: Block,
+  hooks: VaporTransitionHooks,
+): void {
+  const children: ResolvedTransitionBlock[] = []
+  collectTransitionBlocks(
+    block,
+    fragment => (fragment.$transition = hooks),
+    children,
+    undefined,
+  )
+  if (children.length) children[0].$transition = hooks
 }
 
 // Runtime equivalent of the compiler's persisted rule for roots the compiler
@@ -532,7 +556,8 @@ function deferBranchUpdateDuringLeaveImpl(
   branchKey: any,
 ): boolean {
   const transition = frag.$transition!
-  if (!transition.state.isLeaving) return false
+  // relayed vdom hooks: the vdom Transition sequences its own branches
+  if (!transition.state || !transition.state.isLeaving) return false
   const pending = frag.pending
   if (pending) {
     pending.render = render
@@ -557,6 +582,8 @@ function removeBranchWithLeaveImpl(
   const mode = transition.mode
   if (
     mode &&
+    // relayed vdom hooks: an inner root switch is a plain leave + enter
+    transition.state &&
     // persisted roots are toggled in place; mode only sequences structural
     // swaps, and a skipped persisted leave would never fire afterLeave.
     !transition.persisted &&
@@ -825,17 +852,6 @@ function collectFragmentTransitionBlocks(
     children,
     ctx && enterFragmentKeyContext(block, ctx),
   )
-}
-
-export function setTransitionHooks(
-  block: TransitionBlock,
-  hooks: VaporTransitionHooks,
-): void {
-  if (isVaporComponent(block)) {
-    block = findTransitionBlock(block.block) as TransitionBlock
-    if (!block) return
-  }
-  block.$transition = hooks
 }
 
 export function isValidTransitionBlock(

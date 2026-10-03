@@ -3,106 +3,118 @@ import { compile, makeInteropRender } from './_utils'
 
 const define = makeInteropRender()
 
-describe('vapor slot content inside a vdom Transition', () => {
-  type Run = {
-    data: Ref<any>
-    done: Record<string, () => void>
-    step: (label: string, fn?: () => void) => Promise<void>
-  }
+type Run = {
+  data: Ref<any>
+  done: Record<string, () => void>
+  step: (label: string, fn?: () => void) => Promise<void>
+}
 
+// Runs `act` against the App `makeApp` builds in vapor mode and in the
+// all-vdom control, and checks that both record the same steps. Each step
+// records the html without anchors and the transition hooks fired since the
+// previous step; `enter`/`leave`/`appear` hold their `done`.
+async function compareRuns(
+  makeApp: (vapor: boolean, data: Ref<any>, script: string) => any,
+  act: (r: Run) => Promise<void>,
+) {
+  const runs: string[][] = []
+  for (const vapor of [false, true]) {
+    const log: string[] = []
+    const done: Record<string, () => void> = {}
+    const sync = (name: string) => (el: Element) =>
+      log.push(`${name}:${el.textContent}`)
+    const held = (name: string) => (el: Element, d: () => void) => {
+      log.push(`${name}:${el.textContent}`)
+      done[name] = d
+    }
+    const data = ref<any>({
+      show: true,
+      alt: false,
+      onBeforeEnter: sync('beforeEnter'),
+      onEnter: held('enter'),
+      onAfterEnter: sync('afterEnter'),
+      onEnterCancelled: sync('enterCancelled'),
+      onBeforeLeave: sync('beforeLeave'),
+      onLeave: held('leave'),
+      onAfterLeave: sync('afterLeave'),
+      onLeaveCancelled: sync('leaveCancelled'),
+      onBeforeAppear: sync('beforeAppear'),
+      onAppear: held('appear'),
+      onAfterAppear: sync('afterAppear'),
+      onAppearCancelled: sync('appearCancelled'),
+    })
+    const App = makeApp(
+      vapor,
+      data,
+      `const data = _data; const components = _components`,
+    )
+    const { app, host, html } = define(App).render()
+    // v-show only leaves a connected element
+    document.body.appendChild(host)
+    const steps: string[] = []
+    const step = async (label: string, fn?: () => void) => {
+      if (fn) fn()
+      await nextTick()
+      steps.push(
+        `${label}: ${html().replace(/<!--[^]*?-->/g, '')} | ${log.splice(0).join(' ')}`,
+      )
+    }
+    await step('mount')
+    try {
+      await act({ data, done, step })
+    } catch (e: any) {
+      e.message += `\n${vapor ? 'vapor' : 'vdom'} steps so far:\n${steps.join('\n')}`
+      throw e
+    }
+    app.unmount()
+    host.remove()
+    runs.push(steps)
+  }
+  expect(runs[1]).toEqual(runs[0])
+  return runs[0]
+}
+
+const hooks =
+  `:css="false" @before-enter="data.onBeforeEnter" @enter="data.onEnter" ` +
+  `@after-enter="data.onAfterEnter" @enter-cancelled="data.onEnterCancelled" ` +
+  `@before-leave="data.onBeforeLeave" @leave="data.onLeave" ` +
+  `@after-leave="data.onAfterLeave" @leave-cancelled="data.onLeaveCancelled"`
+const appearHooks =
+  `appear @before-appear="data.onBeforeAppear" @appear="data.onAppear" ` +
+  `@after-appear="data.onAfterAppear" @appear-cancelled="data.onAppearCancelled"`
+const wrap = (attrs: string, slot = '<slot/>') =>
+  `<Transition ${attrs}>${slot}</Transition>`
+
+describe('vapor slot content inside a vdom Transition', () => {
   // A vapor App passes `content` to a vdom Wrapper whose template is
-  // `transition` (a `<Transition>` around a `<slot/>`); the all-vdom chain is
-  // the control. Each step records the html without anchors and the hooks
-  // fired since the previous step; `enter`/`leave`/`appear` hold their `done`.
-  async function parity(
+  // `transition` (a `<Transition>` around a `<slot/>`)
+  const parity = (
     transition: string,
     content: string,
     act: (r: Run) => Promise<void>,
-  ) {
-    const runs: string[][] = []
-    for (const vaporApp of [false, true]) {
-      const log: string[] = []
-      const done: Record<string, () => void> = {}
-      const sync = (name: string) => (el: Element) =>
-        log.push(`${name}:${el.textContent}`)
-      const held = (name: string) => (el: Element, d: () => void) => {
-        log.push(`${name}:${el.textContent}`)
-        done[name] = d
-      }
-      const data = ref<any>({
-        show: true,
-        alt: false,
-        onBeforeEnter: sync('beforeEnter'),
-        onEnter: held('enter'),
-        onAfterEnter: sync('afterEnter'),
-        onEnterCancelled: sync('enterCancelled'),
-        onBeforeLeave: sync('beforeLeave'),
-        onLeave: held('leave'),
-        onAfterLeave: sync('afterLeave'),
-        onLeaveCancelled: sync('leaveCancelled'),
-        onBeforeAppear: sync('beforeAppear'),
-        onAppear: held('appear'),
-        onAfterAppear: sync('afterAppear'),
-        onAppearCancelled: sync('appearCancelled'),
-      })
-      const script = `const data = _data; const components = _components`
+  ) =>
+    compareRuns((vapor, data, script) => {
       const Child = compile(
-        `<script setup${vaporApp ? ' vapor' : ''}>${script}</script>` +
+        `<script setup${vapor ? ' vapor' : ''}>${script}</script>` +
           `<template><div v-if="!data.alt">child</div></template>`,
         data,
         {},
-        { vapor: vaporApp },
+        { vapor },
       )
       const Wrapper = compile(
-        `<script setup>${script}</script>` +
-          `<template>${transition}</template>`,
+        `<script setup>${script}</script><template>${transition}</template>`,
         data,
         {},
         { vapor: false },
       )
-      const App = compile(
-        `<script setup${vaporApp ? ' vapor' : ''}>${script}</script>` +
+      return compile(
+        `<script setup${vapor ? ' vapor' : ''}>${script}</script>` +
           `<template><components.Wrapper>${content}</components.Wrapper></template>`,
         data,
         { Wrapper, Child },
-        { vapor: vaporApp },
+        { vapor },
       )
-      const { app, host, html } = define(App).render()
-      // v-show only leaves a connected element
-      document.body.appendChild(host)
-      const steps: string[] = []
-      const step = async (label: string, fn?: () => void) => {
-        if (fn) fn()
-        await nextTick()
-        steps.push(
-          `${label}: ${html().replace(/<!--[^]*?-->/g, '')} | ${log.splice(0).join(' ')}`,
-        )
-      }
-      await step('mount')
-      try {
-        await act({ data, done, step })
-      } catch (e: any) {
-        e.message += `\n${vaporApp ? 'vapor' : 'vdom'} steps so far:\n${steps.join('\n')}`
-        throw e
-      }
-      app.unmount()
-      host.remove()
-      runs.push(steps)
-    }
-    expect(runs[1]).toEqual(runs[0])
-    return runs[0]
-  }
-
-  const hooks =
-    `:css="false" @before-enter="data.onBeforeEnter" @enter="data.onEnter" ` +
-    `@after-enter="data.onAfterEnter" @enter-cancelled="data.onEnterCancelled" ` +
-    `@before-leave="data.onBeforeLeave" @leave="data.onLeave" ` +
-    `@after-leave="data.onAfterLeave" @leave-cancelled="data.onLeaveCancelled"`
-  const appearHooks =
-    `appear @before-appear="data.onBeforeAppear" @appear="data.onAppear" ` +
-    `@after-appear="data.onAfterAppear" @appear-cancelled="data.onAppearCancelled"`
-  const wrap = (attrs: string, slot = '<slot/>') =>
-    `<Transition ${attrs}>${slot}</Transition>`
+    }, act)
 
   test('v-if content leaves and enters', async () => {
     const steps = await parity(
@@ -457,5 +469,153 @@ describe('vapor slot content inside a vdom Transition', () => {
       'leave done: <span>fb</span> | afterLeave:x',
       'enter done: <span>fb</span> | afterEnter:fb',
     ])
+  })
+})
+
+describe('vapor component as the child of a vdom Transition', () => {
+  // A vdom App renders `transition` (a `<Transition>` around
+  // `<components.Child/>`) with `child` as the Child's template
+  const parity = (
+    transition: string,
+    child: string,
+    act: (r: Run) => Promise<void>,
+    // templates of components the Child renders
+    nested: Record<string, string> = {},
+  ) =>
+    compareRuns((vapor, data, script) => {
+      const components: Record<string, any> = {}
+      for (const name in nested) {
+        components[name] = compile(
+          `<script setup${vapor ? ' vapor' : ''}>${script}</script>` +
+            `<template>${nested[name]}</template>`,
+          data,
+          {},
+          { vapor },
+        )
+      }
+      const Child = compile(
+        `<script setup${vapor ? ' vapor' : ''}>${script}</script>` +
+          `<template>${child}</template>`,
+        data,
+        components,
+        { vapor },
+      )
+      return compile(
+        `<script setup>${script}</script><template>${transition}</template>`,
+        data,
+        { Child },
+        { vapor: false },
+      )
+    }, act)
+
+  const around = (attrs: string, child = '<components.Child/>') =>
+    `<Transition ${attrs}>${child}</Transition>`
+
+  test('the root the child toggles itself leaves and enters', async () => {
+    const steps = await parity(
+      around(hooks),
+      `<div v-if="data.show">c</div>`,
+      async r => {
+        await r.step('hide', () => (r.data.value.show = false))
+        await r.step('leave done', () => r.done.leave())
+        await r.step('show', () => (r.data.value.show = true))
+        await r.step('enter done', () => r.done.enter())
+        await r.step('hide again', () => (r.data.value.show = false))
+      },
+    )
+    expect(steps).toEqual([
+      'mount: <div>c</div> | ',
+      'hide: <div>c</div> | beforeLeave:c leave:c',
+      'leave done:  | afterLeave:c',
+      'show: <div>c</div> | beforeEnter:c enter:c',
+      'enter done: <div>c</div> | afterEnter:c',
+      'hide again: <div>c</div> | beforeLeave:c leave:c',
+    ])
+  })
+
+  test('a root hidden from the start enters', async () => {
+    const steps = await parity(
+      around(hooks),
+      `<div v-if="data.alt">c</div>`,
+      async r => {
+        await r.step('show', () => (r.data.value.alt = true))
+        await r.step('enter done', () => r.done.enter())
+      },
+    )
+    expect(steps).toEqual([
+      'mount:  | ',
+      'show: <div>c</div> | beforeEnter:c enter:c',
+      'enter done: <div>c</div> | afterEnter:c',
+    ])
+  })
+
+  test.each(['default', 'out-in'])(
+    'a root switched by the child early-removes the previous one under mode %s',
+    async mode => {
+      const steps = await parity(
+        around(`mode="${mode}" ${hooks}`),
+        `<div v-if="data.show">a</div><p v-else>b</p>`,
+        async r => {
+          await r.step('swap', () => (r.data.value.show = false))
+          await r.step('enter done', () => r.done.enter())
+        },
+      )
+      expect(steps).toEqual([
+        'mount: <div>a</div> | ',
+        'swap: <p>b</p> | beforeLeave:a leave:a afterLeave:a beforeEnter:b enter:b',
+        'enter done: <p>b</p> | afterEnter:b',
+      ])
+    },
+  )
+
+  test('re-showing the child while it leaves early-removes the leaving root', async () => {
+    const steps = await parity(
+      around(hooks, '<components.Child v-if="data.show"/>'),
+      `<div>c</div>`,
+      async r => {
+        await r.step('hide', () => (r.data.value.show = false))
+        await r.step('show while leaving', () => (r.data.value.show = true))
+        await r.step('enter done', () => r.done.enter())
+      },
+    )
+    expect(steps).toEqual([
+      'mount: <div>c</div> | ',
+      'hide: <div>c</div> | beforeLeave:c leave:c',
+      'show while leaving: <div>c</div> | afterLeave:c beforeEnter:c enter:c',
+      'enter done: <div>c</div> | afterEnter:c',
+    ])
+  })
+
+  test('a v-show root toggles in place', async () => {
+    const steps = await parity(
+      around(hooks),
+      `<div v-show="data.show">c</div>`,
+      async r => {
+        await r.step('hide', () => (r.data.value.show = false))
+        await r.step('leave done', () => r.done.leave())
+        await r.step('show', () => (r.data.value.show = true))
+      },
+    )
+    expect(steps).toEqual([
+      'mount: <div>c</div> | ',
+      'hide: <div>c</div> | beforeLeave:c leave:c',
+      'leave done: <div style="display: none;">c</div> | afterLeave:c',
+      'show: <div style="">c</div> | beforeEnter:c enter:c',
+    ])
+  })
+
+  test('a KeepAlive root switched by the child under out-in', async () => {
+    const steps = await parity(
+      around(`mode="out-in" ${hooks}`),
+      `<KeepAlive><component :is="data.show ? components.A : components.B"/></KeepAlive>`,
+      async r => {
+        await r.step('swap', () => (r.data.value.show = false))
+        await r.step('enter done', () => r.done.enter())
+      },
+      { A: '<div>a</div>', B: '<p>b</p>' },
+    )
+    expect(steps[1]).toBe(
+      'swap: <p>b</p> | beforeLeave:a leave:a afterLeave:a beforeEnter:b enter:b',
+    )
   })
 })
