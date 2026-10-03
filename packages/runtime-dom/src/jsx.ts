@@ -1492,7 +1492,7 @@ type EventHandlers<E> = {
     : (payload: E[K]) => void
 }
 
-import type { VNodeRef } from '@vue/runtime-core'
+import type { VNodeElementRef, VNodeRef } from '@vue/runtime-core'
 
 export interface ReservedProps {
   key?: PropertyKey | undefined
@@ -1501,7 +1501,21 @@ export interface ReservedProps {
   ref_key?: string | undefined
 }
 
+type NativeElement<K extends keyof IntrinsicElementAttributes> =
+  K extends keyof HTMLElementTagNameMap
+    ? HTMLElementTagNameMap[K]
+    : K extends keyof SVGElementTagNameMap
+      ? SVGElementTagNameMap[K]
+      : Element
+
+type NativeElementProps<K extends keyof IntrinsicElementAttributes> = Omit<
+  ReservedProps,
+  'ref'
+> & {
+  ref?: VNodeElementRef<NativeElement<K>> | undefined
+}
+
 export type NativeElements = {
   [K in keyof IntrinsicElementAttributes]: IntrinsicElementAttributes[K] &
-    ReservedProps
+    NativeElementProps<K>
 }

@@ -92,6 +92,9 @@ expectType<JSX.Element>(<div style={false} />)
 // allow key/ref on arbitrary element
 expectType<JSX.Element>(<div key="foo" />)
 expectType<JSX.Element>(<div ref="bar" />)
+expectType<JSX.Element>(<form ref={(_el: HTMLFormElement | null) => {}} />)
+// @ts-expect-error
+;<form ref={(_el: string) => {}} />
 
 expectType<JSX.Element>(
   <input

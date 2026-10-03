@@ -4,6 +4,7 @@ import {
   type Text,
   type VNode,
   type VNodeArrayChildren,
+  type VNodeElementRef,
   type VNodeProps,
   createVNode,
   isVNode,
@@ -53,12 +54,19 @@ h(Component, {}, {}) // named slots
 h(Component, null, {})
 **/
 
-type RawProps = VNodeProps & {
+type RawPropsExtensions = {
   // used to differ from a single VNode object as children
   __v_isVNode?: never
   // used to differ from Array children
   [Symbol.iterator]?: never
 } & Record<string, any>
+
+type RawProps = VNodeProps & RawPropsExtensions
+
+type RawElementProps<T extends Element = Element> = Omit<VNodeProps, 'ref'> &
+  RawPropsExtensions & {
+    ref?: VNodeElementRef<T>
+  }
 
 type RawChildren =
   string | number | boolean | VNode | VNodeArrayChildren | (() => any)
@@ -87,7 +95,9 @@ export function h<K extends keyof HTMLElementTagNameMap>(
 ): VNode
 export function h<K extends keyof HTMLElementTagNameMap>(
   type: K,
-  props?: (RawProps & HTMLElementEventHandler) | null,
+  props?:
+    | (RawElementProps<HTMLElementTagNameMap[K]> & HTMLElementEventHandler)
+    | null,
   children?: RawChildren | RawSlots,
 ): VNode
 
@@ -95,7 +105,7 @@ export function h<K extends keyof HTMLElementTagNameMap>(
 export function h(type: string, children?: RawChildren): VNode
 export function h(
   type: string,
-  props?: RawProps | null,
+  props?: RawElementProps | null,
   children?: RawChildren | RawSlots,
 ): VNode
 

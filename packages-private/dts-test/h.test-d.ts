@@ -25,6 +25,12 @@ describe('h inference w/ element', () => {
   h('div', { ref: 'foo' })
   h('div', { ref: ref(null) })
   h('div', { ref: _el => {} })
+  h('form', { ref: (_el: HTMLFormElement | null) => {} })
+  // @ts-expect-error
+  h('form', { ref: (_el: string) => {} })
+  const ComponentWithRef = defineComponent({})
+  // @ts-expect-error element-only callbacks are invalid for component refs
+  h(ComponentWithRef, { ref: (_el: HTMLFormElement | null) => {} })
   //  @ts-expect-error
   h('div', { ref: [] })
   //  @ts-expect-error
