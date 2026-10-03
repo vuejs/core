@@ -20,6 +20,7 @@ import {
   defineComponent,
   h,
   nextTick,
+  onUnmounted,
   ref,
 } from 'vue'
 import { compile, makeInteropRender, makeRender } from '../_utils'
@@ -2684,4 +2685,120 @@ describe('Transition', () => {
       expect(host.innerHTML).not.toContain('id="a"')
     },
   )
+
+  test('out-in renders an outer v-if branch that switched during an inner v-else-if leave', async () => {
+    const { leaves: dones, onLeave } = collectLeaves()
+    const data = ref<any>({ error: false, loading: false, onLeave })
+    const App = compile(
+      `<template>
+        <Transition mode="out-in" :css="false" @leave="data.onLeave">
+          <p v-if="data.error">error</p>
+          <span v-else-if="data.loading">loading</span>
+          <div v-else>list</div>
+        </Transition>
+      </template>`,
+      data,
+    )
+    const { host } = define(App as any).render()
+
+    // the list leaves for the loading branch
+    data.value.loading = true
+    await nextTick()
+    // the request fails before that leave is over
+    data.value.error = true
+    await nextTick()
+    dones.shift()!()
+    await nextTick()
+    expect(host.innerHTML).toBe('<p>error</p><!--if-->')
+
+    data.value.error = false
+    await nextTick()
+    dones.shift()!()
+    await nextTick()
+    expect(host.innerHTML).toBe('<span>loading</span><!--if--><!--if-->')
+    expect(dones.length).toBe(0)
+  })
+
+  test('out-in keeps a kept-alive branch current when an outer switch cuts in on its leave', async () => {
+    const { leaves: dones, onLeave } = collectLeaves()
+    const data = ref<any>({ other: false, loading: true, onLeave })
+    const Page = compile(
+      `<template><p v-if="data.loading">loading</p><div v-else>list</div></template>`,
+      data,
+    )
+    const Other = compile(`<template><span>other</span></template>`, data)
+    const App = compile(
+      `<template>
+        <Transition mode="out-in" :css="false" @leave="data.onLeave">
+          <KeepAlive>
+            <component
+              class="page"
+              :is="data.other ? components.Other : components.Page"
+            />
+          </KeepAlive>
+        </Transition>
+      </template>`,
+      data,
+      { Page, Other },
+    )
+    const { host } = define(App as any).render()
+
+    // the page loads and its skeleton leaves
+    data.value.loading = false
+    await nextTick()
+    // navigating away before that leave is over
+    data.value.other = true
+    await nextTick()
+    dones.shift()!()
+    await nextTick()
+    expect(host.textContent).toBe('other')
+
+    data.value.other = false
+    await nextTick()
+    dones.shift()!()
+    await nextTick()
+    expect(host.innerHTML).toContain('<div class="page">list</div>')
+    expect(dones.length).toBe(0)
+  })
+
+  test('out-in ties an outer branch rendered after an inner leave to its owner', async () => {
+    const { leaves: dones, onLeave } = collectLeaves()
+    const unmounted = vi.fn()
+    const data = ref<any>({ show: true, error: false, loading: false, onLeave })
+    const Failed = defineVaporComponent({
+      setup() {
+        onUnmounted(unmounted)
+        return template('<p>error</p>')()
+      },
+    })
+    const List = compile(
+      `<template><span v-if="data.loading">loading</span><div v-else>list</div></template>`,
+      data,
+    )
+    const App = compile(
+      `<template>
+        <section v-if="data.show">
+          <Transition mode="out-in" :css="false" @leave="data.onLeave">
+            <components.Failed v-if="data.error" />
+            <components.List v-else />
+          </Transition>
+        </section>
+      </template>`,
+      data,
+      { Failed, List },
+    )
+    const { host } = define(App as any).render()
+
+    data.value.loading = true
+    await nextTick()
+    data.value.error = true
+    await nextTick()
+    dones.shift()!()
+    await nextTick()
+    expect(host.textContent).toBe('error')
+
+    data.value.show = false
+    await nextTick()
+    expect(unmounted).toHaveBeenCalledTimes(1)
+  })
 })
