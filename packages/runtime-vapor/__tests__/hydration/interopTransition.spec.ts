@@ -21,7 +21,8 @@ describe('vapor slot content inside a vdom Transition', () => {
   // A vapor App passes `content` to a vdom Wrapper rendering
   // `<Transition><slot/></Transition>`, server-rendered and hydrated; the
   // all-vdom chain is the control. Each step records the html without
-  // anchors and the hooks fired since the previous step.
+  // anchors (and without the empty `style` vapor's appear hydration leaves,
+  // as VaporTransition's does) and the hooks fired since the previous step.
   async function parity(
     transition: string,
     content: string,
@@ -43,6 +44,9 @@ describe('vapor slot content inside a vdom Transition', () => {
         onBeforeLeave: hook('beforeLeave'),
         onLeave: hook('leave'),
         onAfterLeave: hook('afterLeave'),
+        onBeforeAppear: hook('beforeAppear'),
+        onAppear: hook('appear'),
+        onAfterAppear: hook('afterAppear'),
       })
       const script = `const data = _data; const components = _components`
       const test = vaporApp ? testWithVaporApp : testWithVDOMApp
@@ -64,7 +68,7 @@ describe('vapor slot content inside a vdom Transition', () => {
         if (fn) fn()
         await nextTick()
         steps.push(
-          `${label}: ${container.innerHTML.replace(/<!--[^]*?-->/g, '')} | ${log.splice(0).join(' ')}`,
+          `${label}: ${container.innerHTML.replace(/<!--[^]*?-->| style=""/g, '')} | ${log.splice(0).join(' ')}`,
         )
       }
       await step('hydrated')
@@ -80,6 +84,9 @@ describe('vapor slot content inside a vdom Transition', () => {
     `:css="false" @before-enter="data.onBeforeEnter" @enter="data.onEnter" ` +
     `@after-enter="data.onAfterEnter" @before-leave="data.onBeforeLeave" ` +
     `@leave="data.onLeave" @after-leave="data.onAfterLeave"`
+  const appearHooks =
+    `appear @before-appear="data.onBeforeAppear" @appear="data.onAppear" ` +
+    `@after-appear="data.onAfterAppear"`
 
   test('hydrated v-if content leaves and enters', async () => {
     const steps = await parity(
@@ -112,6 +119,24 @@ describe('vapor slot content inside a vdom Transition', () => {
       'hydrated:  | ',
       'show: <div>x</div> | beforeEnter:x enter:x afterEnter:x',
       'hide:  | beforeLeave:x leave:x afterLeave:x',
+    ])
+  })
+
+  // the server wraps the content of an appearing Transition in a <template>
+  test('appear runs on the hydrated content', async () => {
+    const steps = await parity(
+      `${appearHooks} ${hooks}`,
+      `<div v-if="data.show">x</div>`,
+      { show: true },
+      async r => {
+        await r.step('hide', () => (r.data.show = false))
+        await r.step('show', () => (r.data.show = true))
+      },
+    )
+    expect(steps).toEqual([
+      'hydrated: <div>x</div> | beforeAppear:x appear:x afterAppear:x',
+      'hide:  | beforeLeave:x leave:x afterLeave:x',
+      'show: <div>x</div> | beforeEnter:x enter:x afterEnter:x',
     ])
   })
 })

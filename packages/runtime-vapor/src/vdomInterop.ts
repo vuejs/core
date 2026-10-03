@@ -205,6 +205,7 @@ import {
   ensureTransitionHooksRegistered,
   findTransitionBlock,
   getTransitionElement,
+  hydrateTransitionImpl,
   setTransitionHooks as setVaporTransitionHooks,
 } from './components/Transition'
 import { isVaporTransition } from './transition'
@@ -319,12 +320,12 @@ function applyVaporSlotTransition(
   vnode: VNode,
   block: Block,
   refresh?: boolean,
-): void {
+): VaporTransitionHooks | undefined {
   const hooks = vnode.transition as VaporTransitionHooks | null
   if (hooks && hooks.state) {
     ensureTransitionHooksRegistered()
     hooks.state.root = block
-    applyTransitionHooksImpl(block, hooks, undefined, refresh)
+    return applyTransitionHooksImpl(block, hooks, undefined, refresh)
   }
 }
 
@@ -842,13 +843,17 @@ const vaporInteropImpl = {
     let createdAnchor = false
     let resumeNode: Node | null = null
     vaporHydrateNode(node, () => {
+      const performAppear = vnode.transition
+        ? hydrateTransitionImpl(parentSuspense)
+        : undefined
       vnode.vb = renderVaporSlot(
         vnode,
         parentComponent,
         parentSuspense,
         slotScopeIds,
       )
-      applyVaporSlotTransition(vnode, vnode.vb)
+      const hooks = applyVaporSlotTransition(vnode, vnode.vb)
+      if (performAppear && hooks) performAppear(hooks)
       const fragmentAnchor = isFragment(vnode.vb) && vnode.vb.anchor
       let anchor = fragmentAnchor || currentHydrationNode!
       const wrapped = isRangeStart(node) && isRangeEnd(anchor)

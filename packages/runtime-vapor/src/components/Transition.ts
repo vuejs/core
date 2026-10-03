@@ -87,7 +87,11 @@ export const ensureTransitionHooksRegistered = (): void => {
   }
 }
 
-const hydrateTransitionImpl = (suspense: SuspenseBoundary | null) => {
+// Adopts the <template> the server wraps an appearing Transition's content in;
+// returns the appear to perform once the content's hooks are applied.
+export const hydrateTransitionImpl = (
+  suspense: SuspenseBoundary | null,
+): ((hooks: TransitionHooks) => void) | undefined => {
   if (!currentHydrationNode || !isTemplateNode(currentHydrationNode)) return
   // replace <template> node with inner child
   const templateNode = currentHydrationNode
