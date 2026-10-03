@@ -607,6 +607,18 @@ const vaporInteropImpl = {
         (needsHostParentForRemove(vnode.vb)
           ? ((anchor && anchor.parentNode) as ParentNode)
           : undefined)
+      // a leave driven by the vdom Transition: the vnode's hooks carry its
+      // mode handoff (out-in `afterLeave`, in-out `delayLeave`)
+      const transition = vnode.transition
+      if (transition) {
+        const child = findTransitionBlock(vnode.vb)
+        if (child) {
+          child.$transition = transition as VaporTransitionHooks
+        } else if (transition.afterLeave) {
+          // nothing to leave; resumes the Transition after this patch
+          queuePostFlushCb(transition.afterLeave)
+        }
+      }
       stopVaporSlotScope(vnode)
       remove(vnode.vb, blockContainer)
     }

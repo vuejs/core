@@ -332,4 +332,77 @@ describe('vapor slot content inside a vdom Transition', () => {
       'inner show: <div>child</div> | beforeEnter:child enter:child',
     ])
   })
+  // the wrapper switches between the slot and a vdom sibling: the vdom
+  // Transition drives the leave, with its mode handoff on the vnode's hooks
+  const sibling = (mode: string) =>
+    wrap(`mode="${mode}" ${hooks}`, '<slot v-if="data.alt"/><p v-else>p</p>')
+
+  test('out-in switch between the slot and a vdom sibling', async () => {
+    const steps = await parity(
+      sibling('out-in'),
+      `<div v-if="data.show">x</div>`,
+      async r => {
+        await r.step('to slot', () => (r.data.value.alt = true))
+        await r.step('leave done', () => r.done.leave())
+        await r.step('enter done', () => r.done.enter())
+        await r.step('to p', () => (r.data.value.alt = false))
+        await r.step('leave done', () => r.done.leave())
+        await r.step('enter done', () => r.done.enter())
+      },
+    )
+    expect(steps).toEqual([
+      'mount: <p>p</p> | ',
+      'to slot: <p>p</p> | beforeLeave:p leave:p',
+      'leave done: <div>x</div> | beforeEnter:x afterLeave:p enter:x',
+      'enter done: <div>x</div> | afterEnter:x',
+      'to p: <div>x</div> | beforeLeave:x leave:x',
+      'leave done: <p>p</p> | beforeEnter:p afterLeave:x enter:p',
+      'enter done: <p>p</p> | afterEnter:p',
+    ])
+  })
+
+  test('in-out switch between the slot and a vdom sibling', async () => {
+    const steps = await parity(
+      sibling('in-out'),
+      `<div v-if="data.show">x</div>`,
+      async r => {
+        await r.step('to slot', () => (r.data.value.alt = true))
+        await r.step('enter done', () => r.done.enter())
+        await r.step('leave done', () => r.done.leave())
+        await r.step('to p', () => (r.data.value.alt = false))
+        await r.step('enter done', () => r.done.enter())
+        await r.step('leave done', () => r.done.leave())
+      },
+    )
+    expect(steps).toEqual([
+      'mount: <p>p</p> | ',
+      'to slot: <p>p</p><div>x</div> | beforeEnter:x enter:x',
+      'enter done: <p>p</p><div>x</div> | afterEnter:x beforeLeave:p leave:p',
+      'leave done: <div>x</div> | afterLeave:p',
+      'to p: <div>x</div><p>p</p> | beforeEnter:p enter:p',
+      'enter done: <div>x</div><p>p</p> | afterEnter:p beforeLeave:x leave:x',
+      'leave done: <p>p</p> | afterLeave:x',
+    ])
+  })
+
+  test('out-in switch away from a slot with nothing to leave', async () => {
+    const steps = await parity(
+      sibling('out-in'),
+      `<div v-if="data.show">x</div>`,
+      async r => {
+        r.data.value.show = false
+        await r.step('to slot', () => (r.data.value.alt = true))
+        await r.step('leave done', () => r.done.leave())
+        await r.step('to p', () => (r.data.value.alt = false))
+        await r.step('enter done', () => r.done.enter())
+      },
+    )
+    expect(steps).toEqual([
+      'mount: <p>p</p> | ',
+      'to slot: <p>p</p> | beforeLeave:p leave:p',
+      'leave done:  | afterLeave:p',
+      'to p: <p>p</p> | beforeEnter:p enter:p',
+      'enter done: <p>p</p> | afterEnter:p',
+    ])
+  })
 })
