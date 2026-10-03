@@ -4894,6 +4894,65 @@ describe('vdomInterop', () => {
       }
       expect(unmounted).toHaveBeenCalledOnce()
     })
+
+    test('vdom roots of nested vapor components when vdom owns the removal', async () => {
+      const { data, unmounted, watched, VDomChild } = createVDomChild()
+      const VaporButton = compile(
+        `<template><components.VDomChild v-bind="$attrs" /></template>`,
+        data,
+        { VDomChild },
+      )
+      const VaporButtons = compile(
+        `<template>
+          <components.VaporButton id="a" />
+          <components.VaporButton id="b" />
+        </template>`,
+        data,
+        { VaporButton },
+      )
+      const VDomLayout = defineComponent({
+        setup(_, { slots }) {
+          return () => h('div', slots.default!())
+        },
+      })
+      const VDomPage = compile(
+        `<script setup>const data = _data; const components = _components</script>
+        <template><form v-if="data.show"><components.VaporButtons /></form></template>`,
+        data,
+        { VaporButtons },
+        { vapor: false },
+      )
+      const App = compile(
+        `<template>
+          <components.VDomLayout v-if="data.show">
+            <components.VaporButton id="c" />
+          </components.VDomLayout>
+          <components.VDomPage />
+        </template>`,
+        data,
+        { VDomLayout, VaporButton, VDomPage },
+      )
+      const { html } = define(App).render()
+      expect(html()).toBe(
+        '<div><p>c</p></div><!--if--><form><p>a</p><p>b</p></form>',
+      )
+
+      data.value.show = false
+      await nextTick()
+      expect(html()).toBe('<!--if--><!--v-if-->')
+      expect(unmounted.sort()).toEqual([
+        'bum a',
+        'bum b',
+        'bum c',
+        'um a',
+        'um b',
+        'um c',
+      ])
+
+      data.value.count++
+      await nextTick()
+      expect(watched).not.toHaveBeenCalled()
+    })
   })
 
   describe('template ref', () => {
