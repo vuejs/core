@@ -575,4 +575,32 @@ describe('compiler: vModel transform', () => {
       expect(code).toMatchSnapshot()
     },
   )
+
+  test.each([false, true])(
+    'member expression w/ TS expressions (inline: %s)',
+    inline => {
+      const { code } = compileVapor(
+        `<input v-model="form.a as string" />
+        <Comp v-model="form.b satisfies string" />
+        <input v-model="form!.c" />
+        <input v-model="state!.d" />`,
+        {
+          prefixIdentifiers: true,
+          isTS: true,
+          expressionPlugins: ['typescript'],
+          inline,
+          bindingMetadata: {
+            form: BindingTypes.SETUP_REACTIVE_CONST,
+            state: BindingTypes.SETUP_REF,
+          },
+        },
+      )
+      const form = inline ? 'form' : '_ctx.form'
+      const state = inline ? 'state.value' : '_ctx.state'
+      expect(code).toContain(`((${form}.a as string) = _value)`)
+      expect(code).toContain(`((${form}.b satisfies string) = _value)`)
+      expect(code).toContain(`(${form}!.c = _value)`)
+      expect(code).toContain(`(${state}!.d = _value)`)
+    },
+  )
 })

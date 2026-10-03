@@ -115,10 +115,12 @@ export function genExpression(
         const leadingText = content.slice(lastEnd, start)
         if (leadingText.length) push([leadingText, NewlineType.Unknown])
 
-        hasMemberExpression ||=
-          parent &&
-          (parent.type === 'MemberExpression' ||
-            parent.type === 'OptionalMemberExpression')
+        // the object may be wrapped in a TS expression, e.g. `form!.a`
+        hasMemberExpression ||= parentStack.some(
+          p =>
+            p.type === 'MemberExpression' ||
+            p.type === 'OptionalMemberExpression',
+        )
 
         push(
           ...genIdentifier(
@@ -144,6 +146,11 @@ export function genExpression(
       push([content.slice(lastEnd), NewlineType.Unknown])
     }
     if (assignment && hasMemberExpression) {
+      // `a.b as T = v` is not valid TS, `(a.b as T) = v` is
+      if (TS_NODE_TYPES.includes(ast!.type)) {
+        frag.unshift('(')
+        push(')')
+      }
       push(` = ${assignment}`)
     }
     return frag
