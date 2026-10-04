@@ -216,10 +216,11 @@ export class WatcherEffect extends ReactiveEffect {
   cleanupCallback(): void {
     const cleanups = this.cbCleanups
     if (cleanups) {
+      // Cleanups may synchronously trigger the watcher again.
+      this.cbCleanups = undefined
       for (let i = 0, l = cleanups.length; i < l; i++) {
         cleanups[i]()
       }
-      this.cbCleanups = undefined
     }
   }
 

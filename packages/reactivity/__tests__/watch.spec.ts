@@ -336,4 +336,32 @@ describe('watch', () => {
     stop()
     expect(calls).toEqual(['watcher', 'effect', 'bound'])
   })
+
+  test('should preserve cleanups registered during synchronous cleanup reentry', () => {
+    const source = ref(0)
+    const cleaned: number[] = []
+    const active = new Set<number>()
+    const stop = watch(
+      source,
+      value => {
+        active.add(value)
+        onWatcherCleanup(() => {
+          cleaned.push(value)
+          active.delete(value)
+          if (value === 0 && source.value === 1) {
+            source.value = 2
+          }
+        })
+      },
+      { immediate: true },
+    )
+
+    source.value = 1
+    expect(cleaned).toEqual([0])
+    expect([...active]).toEqual([2, 1])
+
+    stop()
+    expect(cleaned).toEqual([0, 2, 1])
+    expect(active.size).toBe(0)
+  })
 })

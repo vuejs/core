@@ -2173,6 +2173,32 @@ describe('api: watch', () => {
       expect(calls).toHaveLength(6)
     },
   )
+
+  test('should preserve cleanups registered during synchronous cleanup reentry', () => {
+    const source = ref(0)
+    const cleaned: number[] = []
+    const live = new Set<number>()
+    const stop = watch(
+      source,
+      (value, _, onCleanup) => {
+        live.add(value)
+        onCleanup(() => {
+          cleaned.push(value)
+          live.delete(value)
+          if (source.value === 1) {
+            source.value = 2
+          }
+        })
+      },
+      { immediate: true, flush: 'sync' },
+    )
+
+    source.value = 1
+    stop()
+
+    expect.soft(cleaned).toEqual([0, 2, 1])
+    expect.soft([...live]).toEqual([])
+  })
 })
 
 function getEffectsCount(scope: EffectScope): number {
