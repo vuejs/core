@@ -7,8 +7,10 @@ import {
   defineComponent,
   getCurrentInstance,
   h,
+  nextTick,
   nodeOps,
   onMounted,
+  ref,
   render,
   serializeInner,
   shallowReactive,
@@ -27,6 +29,16 @@ import {
 } from '../src/apiSetupHelpers'
 import type { ComputedRefImpl } from '../../reactivity/src/computed'
 import { EffectFlags, type ReactiveEffectRunner, effect } from '@vue/reactivity'
+import { compile } from '@vue/compiler-dom'
+import * as runtimeTest from '@vue/runtime-test'
+
+function compileToRender(template: string) {
+  const { code } = compile(template, {
+    hoistStatic: true,
+    prefixIdentifiers: true,
+  })
+  return new Function('Vue', code)(runtimeTest)
+}
 
 describe('SFC <script setup> helpers', () => {
   test('should warn runtime usage', () => {
@@ -79,6 +91,212 @@ describe('SFC <script setup> helpers', () => {
     render(h(Comp), nodeOps.createElement('div'))
     expect(slots).toBe(ctx!.slots)
     expect(attrs).toBe(ctx!.attrs)
+  })
+
+  // #12228: the scheduler's dirty check (instance.job -> effect.runIfDirty
+  // -> isDirty -> refreshComputed) can re-evaluate setup-created computeds
+  // without an active instance. getContext() used to dereference the null
+  // instance after warning, crashing the whole update with "TypeError:
+  // Cannot read properties of null (reading 'setupContext')".
+  //
+  // IMPORTANT: the fix is a crash mitigation, NOT a complete fix. The
+  // degraded empty context is cached by refreshComputed() and tracks no
+  // dependency on the real attrs/slots, so data read through
+  // useAttrs()/useSlots() is not preserved across the degraded evaluation.
+  // The tests below assert the actual degraded behavior so the limitation
+  // is documented and cannot be mistaken for a complete fix; if a future
+  // fix restores correct data (e.g. by re-associating the evaluation with
+  // the owning instance's context, as 3.6 does), update them accordingly.
+  test('useAttrs() inside a computed should not throw when re-evaluated during a component update', async () => {
+    const CFragment = { name: 'CFragment', render: compileToRender(`<slot/>`) }
+
+    const label = ref(0)
+    const Button: any = {
+      name: 'Button',
+      props: { label: Number },
+      render: compileToRender(
+        `<component :is="wrapper"><button v-bind="componentProps">{{ label }}</button></component>`,
+      ),
+      setup(props: any) {
+        const wrapper = computed(() => CFragment)
+        const componentProps = computed(() => ({
+          'data-label': String(props.label),
+          ...useAttrs(),
+        }))
+        return { wrapper, componentProps }
+      },
+    }
+
+    const root = nodeOps.createElement('div')
+    const app = createApp(() => h(Button, { label: label.value }))
+    app.mount(root)
+    expect(serializeInner(root)).toBe(`<button data-label="0">0</button>`)
+
+    label.value++
+    await nextTick()
+    // no active instance during the dirty check: no crash (dev warning
+    // instead). No fallthrough attrs here, so the degraded context happens
+    // to produce the correct output; see the tests below for limitations.
+    expect(serializeInner(root)).toBe(`<button data-label="1">1</button>`)
+    expect(`useAttrs() called without active instance.`).toHaveBeenWarned()
+  })
+
+  // #12228 - limitation locked: with real fallthrough attrs the degraded
+  // update drops them and they never recover (workaround: capture
+  // useAttrs() at the top of setup).
+  test('useAttrs() inside a computed: real fallthrough attrs are lost after the degraded update (known limitation)', async () => {
+    const CFragment = { name: 'CFragment', render: compileToRender(`<slot/>`) }
+
+    const label = ref(0)
+    const title = ref('first')
+    const Button: any = {
+      name: 'Button',
+      inheritAttrs: false,
+      props: { label: Number },
+      render: compileToRender(
+        `<component :is="wrapper"><button v-bind="componentProps">{{ label }}</button></component>`,
+      ),
+      setup(props: any) {
+        const wrapper = computed(() => CFragment)
+        const componentProps = computed(() => ({
+          'data-label': String(props.label),
+          ...useAttrs(),
+        }))
+        return { wrapper, componentProps }
+      },
+    }
+
+    const root = nodeOps.createElement('div')
+    const app = createApp(() =>
+      h(Button, { label: label.value, title: title.value }),
+    )
+    app.mount(root)
+    // the first evaluation happens with an active instance, so the real
+    // fallthrough attr is passed through
+    expect(serializeInner(root)).toBe(
+      `<button data-label="0" title="first">0</button>`,
+    )
+
+    label.value++
+    await nextTick()
+    // the dirty check re-evaluates the computed without an active instance:
+    // no crash (what this patch guarantees), but the empty context is
+    // cached and the real attr is dropped
+    expect(`useAttrs() called without active instance.`).toHaveBeenWarned()
+    expect(serializeInner(root)).toBe(`<button data-label="1">1</button>`)
+
+    // attrs-only updates cannot recover the lost attr: the degraded
+    // evaluation re-established no dependency on instance.attrs
+    title.value = 'second'
+    await nextTick()
+    expect(serializeInner(root)).toBe(`<button data-label="1">1</button>`)
+  })
+
+  // #12228 - same limitation; multi-root components never auto-fallthrough
+  // attrs, so the v-bind spread in the computed is the only path.
+  test('multi-root component: attrs spread in a computed are lost after the degraded update (known limitation)', async () => {
+    const CFragment = { name: 'CFragment', render: compileToRender(`<slot/>`) }
+
+    const label = ref(0)
+    const title = ref('first')
+    const Button: any = {
+      name: 'Button',
+      inheritAttrs: false,
+      props: { label: Number },
+      render: compileToRender(
+        `<component :is="wrapper"><button v-bind="componentProps">{{ label }}</button><i>second</i></component>`,
+      ),
+      setup(props: any) {
+        const wrapper = computed(() => CFragment)
+        const componentProps = computed(() => ({
+          'data-label': String(props.label),
+          ...useAttrs(),
+        }))
+        return { wrapper, componentProps }
+      },
+    }
+
+    const root = nodeOps.createElement('div')
+    const app = createApp(() =>
+      h(Button, { label: label.value, title: title.value }),
+    )
+    app.mount(root)
+    expect(serializeInner(root)).toBe(
+      `<button data-label="0" title="first">0</button><i>second</i>`,
+    )
+
+    label.value++
+    await nextTick()
+    expect(`useAttrs() called without active instance.`).toHaveBeenWarned()
+    // the title attr is dropped from the multi-root output as well
+    expect(serializeInner(root)).toBe(
+      `<button data-label="1">1</button><i>second</i>`,
+    )
+
+    title.value = 'second'
+    await nextTick()
+    expect(serializeInner(root)).toBe(
+      `<button data-label="1">1</button><i>second</i>`,
+    )
+  })
+
+  // #12228 - useSlots(): the null-deref crash is gone, but with a non-empty
+  // default slot the update still fails (".default is not a function", DOM
+  // stays stale) — needs the upstream context-ownership fix.
+  test('useSlots().default() inside a computed still fails on update with a non-empty default slot (known limitation)', async () => {
+    const CFragment = { name: 'CFragment', render: compileToRender(`<slot/>`) }
+
+    const errors: string[] = []
+    const label = ref(0)
+    const Button: any = {
+      name: 'Button',
+      props: { label: Number },
+      render: compileToRender(
+        `<component :is="wrapper"><button>{{ componentProps }}</button></component>`,
+      ),
+      setup(props: any) {
+        const wrapper = computed(() => CFragment)
+        const componentProps = computed(
+          () =>
+            String(props.label) +
+            ':' +
+            useSlots().default!()
+              .map(v => v.children as string)
+              .join(''),
+        )
+        return { wrapper, componentProps }
+      },
+    }
+
+    const root = nodeOps.createElement('div')
+    const app = createApp(() =>
+      h(
+        Button,
+        { label: label.value },
+        { default: () => [h('span', 'slot-content')] },
+      ),
+    )
+    app.config.errorHandler = err => {
+      errors.push((err as Error).message)
+    }
+    app.mount(root)
+    // the first evaluation happens with an active instance, so the real
+    // default slot is available
+    expect(serializeInner(root)).toBe(`<button>0:slot-content</button>`)
+
+    label.value++
+    await nextTick()
+    // the update re-runs the computed without an active instance: the
+    // original "Cannot read properties of null (reading 'setupContext')"
+    // no longer occurs (what this patch guarantees), but the degraded empty
+    // slots make the same getter throw a different error and the DOM stays
+    // at the old value
+    expect(`useSlots() called without active instance.`).toHaveBeenWarned()
+    // the function name in the message depends on the module transform, so
+    // assert the stable part of the TypeError only
+    expect(errors).toHaveLength(1)
+    expect(errors[0]).toMatch(/\.default is not a function$/)
+    expect(serializeInner(root)).toBe(`<button>0:slot-content</button>`)
   })
 
   describe('mergeDefaults', () => {
