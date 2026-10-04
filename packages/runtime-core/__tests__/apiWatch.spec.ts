@@ -2116,6 +2116,63 @@ describe('api: watch', () => {
     createApp(App).mount(root)
     expect(onCleanup).toBeCalledTimes(0)
   })
+
+  // #15765
+  test.each(['pre', 'post', 'sync'] as const)(
+    'should preserve watcher cleanup when the getter value is unchanged (flush: %s)',
+    async flush => {
+      const count = ref(1)
+      const calls: string[] = []
+      const scope = effectScope()
+
+      scope.run(() => {
+        watch(
+          () => count.value > 0,
+          (value, _, onCleanup) => {
+            calls.push(`callback:${value}`)
+            onCleanup(() => calls.push(`onCleanup:${value}`))
+            onWatcherCleanup(() => calls.push(`onWatcherCleanup:${value}`))
+          },
+          { immediate: true, flush },
+        )
+      })
+      expect(calls).toEqual(['callback:true'])
+
+      count.value = 2
+      await nextTick()
+      expect(calls).toEqual(['callback:true'])
+
+      count.value = 0
+      await nextTick()
+      expect(calls).toEqual([
+        'callback:true',
+        'onCleanup:true',
+        'onWatcherCleanup:true',
+        'callback:false',
+      ])
+
+      count.value = -1
+      await nextTick()
+      expect(calls).toEqual([
+        'callback:true',
+        'onCleanup:true',
+        'onWatcherCleanup:true',
+        'callback:false',
+      ])
+
+      scope.stop()
+      expect(calls).toEqual([
+        'callback:true',
+        'onCleanup:true',
+        'onWatcherCleanup:true',
+        'callback:false',
+        'onCleanup:false',
+        'onWatcherCleanup:false',
+      ])
+      scope.stop()
+      expect(calls).toHaveLength(6)
+    },
+  )
 })
 
 function getEffectsCount(scope: EffectScope): number {
