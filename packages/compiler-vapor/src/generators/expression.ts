@@ -246,6 +246,7 @@ function genIdentifier(
         }
         break
       case BindingTypes.SETUP_REF:
+      case BindingTypes.SETUP_COMPUTED:
         name = raw = withAssignment(`${raw}.value`)
         break
       case BindingTypes.SETUP_MAYBE_REF:
