@@ -163,6 +163,22 @@ export type VNodeNormalizedChildren =
   | RawSlots
   | null
 
+/**
+ * A vdom outlet rendering a vapor slot, recorded on the slot's vnode: the
+ * outlet that produced the vnode first, then every enclosing outlet whose
+ * content is only that slot. Interop resolves their fallbacks in turn once
+ * the slot renders empty. Internal to vapor interop.
+ */
+export interface VdomSlotOutlet {
+  fallback: () => VNodeArrayChildren
+  // rendering instance the fallback renders under
+  owner: ComponentInternalInstance | null
+  // on an enclosing outlet: how many slotted ids the fragments between it and
+  // the slot add to the patch context the slot mounts under, none of which its
+  // fallback carries
+  innerIds?: number
+}
+
 export interface VNode<
   HostNode = RendererNode,
   HostElement = RendererElement,
@@ -195,6 +211,13 @@ export interface VNode<
    * @internal
    */
   slotScopeIds: string[] | null
+  /**
+   * Root-only scope ids published by the vapor interop onto vnodes serving
+   * as a vapor component's effective root; consumed by getInheritedScopeIds
+   * where the effective-root chain tops out (before insertion).
+   * @internal
+   */
+  vaporScopeIds?: string[]
   children: VNodeNormalizedChildren
   component: ComponentInternalInstance | null
   dirs: DirectiveBinding[] | null
@@ -269,8 +292,9 @@ export interface VNode<
    */
   vs?: {
     slot: (props: any) => any
-    fallback: (() => VNodeArrayChildren) | undefined
-    outletFallback?: (() => VNodeArrayChildren) | undefined
+    // vdom outlets whose fallback this slot resolves, innermost first. Never
+    // written in place: clones share the list
+    outlets?: readonly VdomSlotOutlet[]
     state?: unknown
     ref?: ShallowRef<any>
     scope?: EffectScope
@@ -279,6 +303,24 @@ export interface VNode<
    * @internal Vapor slot Block
    */
   vb?: any
+  /**
+   * @internal vapor interop only — the fragment of a vdom slot outlet whose
+   * fallback a forwarded vapor slot resolves
+   */
+  vo?: boolean
+  /**
+   * @internal vapor interop only — internal before-update notification, fired
+   * before this vnode is patched (alongside onVnodeBeforeUpdate). Single-owner:
+   * the interop layer assigns (never appends) so re-tracking replaces the
+   * previous callback.
+   */
+  ibu?: () => void
+  /**
+   * @internal vapor interop only — internal updated notification, fired after
+   * this vnode is patched (alongside onVnodeUpdated) so the interop layer can
+   * refresh its snapshot of the DOM range. Single-owner; see `ibu`.
+   */
+  iu?: () => void
 }
 
 // Since v-if and v-for are the two possible ways node structure can dynamically
@@ -535,6 +577,25 @@ function createBaseVNode(
     warn(`VNode created with invalid key (NaN). VNode type:`, vnode.type)
   }
 
+  // #5081 validate children that will be silently discarded by innerHTML /
+  // textContent. The template compiler already errors on `v-html` / `v-text`
+  // used with children, but render functions have no such check.
+  if (__DEV__ && props && vnode.shapeFlag & ShapeFlags.ELEMENT) {
+    const overwritingProp =
+      props.innerHTML != null
+        ? 'innerHTML'
+        : props.textContent != null
+          ? 'textContent'
+          : null
+    if (overwritingProp && hasContentChildren(vnode.children)) {
+      warn(
+        `The \`${overwritingProp}\` prop on <${vnode.type as string}> will ` +
+          `override its children. Remove either the \`${overwritingProp}\` ` +
+          `prop or the children.`,
+      )
+    }
+  }
+
   // track vnode for block tree
   if (
     isBlockTreeEnabled > 0 &&
@@ -563,6 +624,18 @@ function createBaseVNode(
 }
 
 export { createBaseVNode as createElementVNode }
+
+/**
+ * dev only
+ * Whether children would actually render something. Empty text and empty
+ * arrays are ignored, mirroring the compiler's `node.children.length` check
+ * for `v-html` / `v-text`.
+ */
+function hasContentChildren(children: VNode['children']): boolean {
+  if (isString(children)) return children !== ''
+  if (isArray(children)) return children.length > 0
+  return false
+}
 
 export const createVNode = (
   __DEV__ ? createVNodeWithArgsTransform : _createVNode
@@ -745,6 +818,12 @@ export function cloneVNode<T, U>(
     vi: vnode.vi,
     vs: cloneVaporSlotMeta(vnode as VNode),
     vb: vnode.vb,
+    // interop range tracking must survive renderer-internal clones of mounted
+    // vnodes (cloneIfMounted / normalizeVNode), or nested updates would stop
+    // notifying after the first re-render of cached children.
+    ibu: vnode.ibu,
+    iu: vnode.iu,
+    cacheIndex: vnode.cacheIndex,
   }
 
   // if the vnode will be replaced by the cloned one, it is necessary
@@ -772,8 +851,7 @@ function cloneVaporSlotMeta(vnode: VNode): VNode['vs'] {
 
   const cloned: NonNullable<VNode['vs']> = {
     slot: vaporSlot.slot,
-    fallback: vaporSlot.fallback,
-    outletFallback: vaporSlot.outletFallback,
+    outlets: vaporSlot.outlets,
   }
 
   if (vnode.el) {
@@ -901,6 +979,10 @@ export function normalizeChildren(vnode: VNode, children: unknown): void {
       }
     }
   } else if (isFunction(children)) {
+    if (shapeFlag & (ShapeFlags.ELEMENT | ShapeFlags.TELEPORT)) {
+      normalizeChildren(vnode, { default: children })
+      return
+    }
     children = { default: children, _ctx: currentRenderingInstance }
     type = ShapeFlags.SLOTS_CHILDREN
   } else {

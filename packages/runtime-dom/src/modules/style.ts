@@ -36,7 +36,21 @@ export function patchStyle(el: Element, prev: Style, next: Style): void {
       if (key === 'display') {
         hasControlledDisplay = true
       }
-      setStyle(style, key, next[key])
+      const value = next[key]
+      if (value != null) {
+        if (
+          !shouldPreserveTextareaResizeStyle(
+            el,
+            key,
+            !isString(prev) && prev ? prev[key] : undefined,
+            value,
+          )
+        ) {
+          setStyle(style, key, value)
+        }
+      } else {
+        setStyle(style, key, '')
+      }
     }
   } else {
     if (isCssString) {
@@ -50,7 +64,14 @@ export function patchStyle(el: Element, prev: Style, next: Style): void {
         hasControlledDisplay = displayRE.test(next)
       }
     } else if (prev) {
-      el.removeAttribute('style')
+      // keep the css vars injected by `useCssVars` instead of dropping the
+      // whole attribute
+      const cssVarText = (style as any)[CSS_VAR_TEXT]
+      if (cssVarText) {
+        style.cssText = cssVarText
+      } else {
+        el.removeAttribute('style')
+      }
     }
   }
   // indicates the element also has `v-show`.
@@ -81,7 +102,12 @@ function setStyle(style: CSSStyleDeclaration, name: string, rawVal: unknown) {
     }
     if (name.startsWith('--')) {
       // custom property definition
-      style.setProperty(name, val)
+      if (importantRE.test(val)) {
+        // !important
+        style.setProperty(name, val.replace(importantRE, ''), 'important')
+      } else {
+        style.setProperty(name, val)
+      }
     } else {
       const prefixed = autoPrefix(style, name)
       if (importantRE.test(val)) {
@@ -118,4 +144,23 @@ function autoPrefix(style: CSSStyleDeclaration, rawName: string): string {
     }
   }
   return rawName
+}
+
+/**
+ * Browsers update textarea width/height directly during native resize.
+ * Only special-case this common textarea path for now; other resize scenarios
+ * still follow normal vnode style patching.
+ */
+function shouldPreserveTextareaResizeStyle(
+  el: Element,
+  key: string,
+  prev: unknown,
+  next: unknown,
+): boolean {
+  return (
+    el.tagName === 'TEXTAREA' &&
+    (key === 'width' || key === 'height') &&
+    isString(next) &&
+    prev === next
+  )
 }

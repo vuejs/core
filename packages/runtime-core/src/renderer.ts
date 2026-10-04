@@ -103,7 +103,7 @@ import { initFeatureFlags } from './featureFlags'
 import { isAsyncWrapper } from './apiAsyncComponent'
 import { isCompatEnabled } from './compat/compatConfig'
 import { DeprecationTypes } from './compat/compatConfig'
-import type { VaporInteropInterface } from './apiCreateApp'
+import type { VaporInVdomInterface } from './apiCreateApp'
 import { type TransitionHooks, leaveCbKey } from './components/BaseTransition'
 import type { ComponentCustomElementInterface } from './component'
 
@@ -431,6 +431,19 @@ function baseCreateRenderer(
       n2.dynamicChildren = null
     }
 
+    // Cached v-once nodes skip block tracking on subsequent renders.
+    if (
+      n2.dynamicChildren &&
+      n1 &&
+      n1.dynamicChildren &&
+      n1.dynamicChildren.hasOnce
+    ) {
+      if (n2.dynamicChildren === (EMPTY_ARR as any)) {
+        n2.dynamicChildren = []
+      }
+      n2.dynamicChildren.hasOnce = true
+    }
+
     const { type, ref, shapeFlag } = n2
     switch (type) {
       case Text:
@@ -467,6 +480,7 @@ function baseCreateRenderer(
           anchor,
           parentComponent,
           parentSuspense,
+          slotScopeIds,
         )
         break
       default:
@@ -872,13 +886,21 @@ function baseCreateRenderer(
     if ((vnodeHook = newProps.onVnodeBeforeUpdate)) {
       invokeVNodeHook(vnodeHook, parentComponent, n2, n1)
     }
+    if (n2.ibu) n2.ibu()
     if (dirs) {
       invokeDirectiveHook(n2, n1, parentComponent, 'beforeUpdate')
     }
     parentComponent && toggleRecurse(parentComponent, true)
 
-    if (__DEV__ && isHmrUpdating) {
+    if (
       // HMR updated, force full diff
+      (__DEV__ && isHmrUpdating) ||
+      // #6385 the old vnode may be a user-wrapped non-isomorphic block
+      // Force full diff when block metadata is unstable.
+      (dynamicChildren &&
+        (!n1.dynamicChildren ||
+          n1.dynamicChildren.length !== dynamicChildren.length))
+    ) {
       patchFlag = 0
       optimized = false
       dynamicChildren = null
@@ -978,10 +1000,11 @@ function baseCreateRenderer(
       patchProps(el, oldProps, newProps, parentComponent, namespace)
     }
 
-    if ((vnodeHook = newProps.onVnodeUpdated) || dirs) {
+    if ((vnodeHook = newProps.onVnodeUpdated) || dirs || n2.iu) {
       queuePostRenderEffect(
         () => {
           vnodeHook && invokeVNodeHook(vnodeHook, parentComponent, n2, n1)
+          n2.iu && n2.iu()
           dirs && invokeDirectiveHook(n2, n1, parentComponent, 'updated')
         },
         undefined,
@@ -1202,78 +1225,23 @@ function baseCreateRenderer(
             container,
             anchor,
             parentComponent!,
+            parentSuspense,
           )
         } else {
-          const vnodeBeforeMountHook =
-            !isAsyncWrapper(n2) && n2.props && n2.props.onVnodeBeforeMount
           getVaporInterface(parentComponent, n2).mount(
             n2,
             container,
             anchor,
             parentComponent,
             parentSuspense,
-            () => {
-              if (n2.dirs) {
-                invokeDirectiveHook(n2, null, parentComponent, 'created')
-                invokeDirectiveHook(n2, null, parentComponent, 'beforeMount')
-              }
-            },
-            () => {
-              if (vnodeBeforeMountHook) {
-                invokeVNodeHook(vnodeBeforeMountHook, parentComponent, n2)
-              }
-            },
           )
-          if (n2.dirs) {
-            queuePostRenderEffect(
-              () => invokeDirectiveHook(n2, null, parentComponent, 'mounted'),
-              undefined,
-              parentSuspense,
-            )
-          }
-          const vnodeMountedHook =
-            !isAsyncWrapper(n2) && n2.props && n2.props.onVnodeMounted
-          if (vnodeMountedHook) {
-            const scopedVNode = n2
-            queuePostRenderEffect(
-              () =>
-                invokeVNodeHook(vnodeMountedHook, parentComponent, scopedVNode),
-              undefined,
-              parentSuspense,
-            )
-          }
         }
       } else {
-        const shouldUpdate = shouldUpdateComponent(n1, n2, optimized)
         getVaporInterface(parentComponent, n2).update(
           n1,
           n2,
-          shouldUpdate,
-          () => {
-            if (n2.dirs) {
-              invokeDirectiveHook(n2, n1, parentComponent, 'beforeUpdate')
-            }
-          },
-          () => {
-            const vnodeBeforeUpdateHook =
-              n2.props && n2.props.onVnodeBeforeUpdate
-            if (vnodeBeforeUpdateHook) {
-              invokeVNodeHook(vnodeBeforeUpdateHook, parentComponent, n2, n1)
-            }
-          },
+          shouldUpdateComponent(n1, n2, optimized),
         )
-        const vnodeUpdatedHook = n2.props && n2.props.onVnodeUpdated
-        if (shouldUpdate && (vnodeUpdatedHook || n2.dirs)) {
-          queuePostRenderEffect(
-            () => {
-              n2.dirs && invokeDirectiveHook(n2, n1, parentComponent, 'updated')
-              vnodeUpdatedHook &&
-                invokeVNodeHook(vnodeUpdatedHook, parentComponent, n2, n1)
-            },
-            undefined,
-            parentSuspense,
-          )
-        }
       }
     } else if (n1 == null) {
       if (n2.shapeFlag & ShapeFlags.COMPONENT_KEPT_ALIVE) {
@@ -1425,10 +1393,13 @@ function baseCreateRenderer(
         !instance.asyncResolved
       ) {
         // async & still pending - just update props and slots
-        // since the component's reactive effect for render isn't set-up yet
+        // since the component's reactive effect for render isn't set-up yet.
+        // carry over the el adopted during hydration: if hydration is
+        // interrupted, teardown of the claimed DOM depends on it
         if (__DEV__) {
           pushWarningContext(n2)
         }
+        n2.el = n1.el
         updateComponentPreRender(instance, n2, optimized)
         if (__DEV__) {
           popWarningContext()
@@ -1709,6 +1680,7 @@ function baseCreateRenderer(
         if ((vnodeHook = next.props && next.props.onVnodeBeforeUpdate)) {
           invokeVNodeHook(vnodeHook, parent, next, vnode)
         }
+        if (next.ibu) next.ibu()
         if (
           __COMPAT__ &&
           isCompatEnabled(DeprecationTypes.INSTANCE_EVENT_HOOKS, instance)
@@ -1757,9 +1729,12 @@ function baseCreateRenderer(
           queuePostRenderEffect(u, undefined, parentSuspense)
         }
         // onVnodeUpdated
-        if ((vnodeHook = next.props && next.props.onVnodeUpdated)) {
+        if ((vnodeHook = next.props && next.props.onVnodeUpdated) || next.iu) {
           queuePostRenderEffect(
-            () => invokeVNodeHook(vnodeHook!, parent, next!, vnode),
+            () => {
+              vnodeHook && invokeVNodeHook(vnodeHook, parent, next!, vnode)
+              next!.iu && next!.iu()
+            },
             undefined,
             parentSuspense,
           )
@@ -2261,6 +2236,7 @@ function baseCreateRenderer(
         container,
         anchor,
         moveType,
+        parentSuspense,
       )
       return
     }
@@ -2327,31 +2303,19 @@ function baseCreateRenderer(
           true,
         )
       } else {
-        const { leave, delayLeave, afterLeave } = transition!
-        const remove = () => {
-          if (vnode.ctx!.isUnmounted) {
-            hostRemove(el!)
-          } else {
-            hostInsert(el!, container, anchor)
-          }
-        }
-        const performLeave = () => {
-          // #13153 move kept-alive node before v-show transition leave finishes
-          // it needs to call the leaving callback to ensure element's `display`
-          // is `none`
-          if (el!._isLeaving) {
-            el![leaveCbKey](true /* cancelled */)
-          }
-          leave(el!, () => {
-            remove()
-            afterLeave && afterLeave()
-          })
-        }
-        if (delayLeave) {
-          delayLeave(el!, remove, performLeave)
-        } else {
-          performLeave()
-        }
+        performTransitionLeave(
+          el!,
+          transition!,
+          () => {
+            if (vnode.ctx!.isUnmounted) {
+              hostRemove(el!)
+            } else {
+              hostInsert(el!, container, anchor)
+            }
+          },
+          true,
+          true,
+        )
       }
     } else {
       hostInsert(el!, container, anchor)
@@ -2378,7 +2342,10 @@ function baseCreateRenderer(
       memo,
     } = vnode
 
-    if (patchFlag === PatchFlags.BAIL) {
+    if (
+      patchFlag === PatchFlags.BAIL ||
+      (dynamicChildren && dynamicChildren.hasOnce)
+    ) {
       optimized = false
     }
 
@@ -2390,7 +2357,8 @@ function baseCreateRenderer(
     }
 
     // #6593 should clean memo cache when unmount
-    if (cacheIndex != null) {
+    // Slot receivers must not invalidate caches owned by the slot author.
+    if (cacheIndex != null && (!vnode.ctx || vnode.ctx === parentComponent)) {
       parentComponent!.renderCache[cacheIndex] = undefined
     }
 
@@ -2399,10 +2367,24 @@ function baseCreateRenderer(
         getVaporInterface(parentComponent!, vnode).deactivate(
           vnode,
           (parentComponent!.ctx as KeepAliveContext).getStorageContainer(),
+          parentSuspense,
         )
       } else {
         ;(parentComponent!.ctx as KeepAliveContext).deactivate(vnode)
       }
+      return
+    }
+
+    // the vapor interop owns the vnode and directive hooks of its component
+    if (
+      shapeFlag & ShapeFlags.COMPONENT &&
+      isVaporComponent(type as ConcreteComponent)
+    ) {
+      getVaporInterface(parentComponent, vnode).unmount(
+        vnode,
+        doRemove,
+        parentSuspense,
+      )
       return
     }
 
@@ -2418,31 +2400,7 @@ function baseCreateRenderer(
     }
 
     if (shapeFlag & ShapeFlags.COMPONENT) {
-      if (isVaporComponent(type as ConcreteComponent)) {
-        // invoke directive hooks for vapor components
-        if (dirs) {
-          invokeDirectiveHook(vnode, null, parentComponent, 'beforeUnmount')
-        }
-        getVaporInterface(parentComponent, vnode).unmount(vnode, doRemove)
-        if (
-          (shouldInvokeVnodeHook &&
-            (vnodeHook = props && props.onVnodeUnmounted)) ||
-          dirs
-        ) {
-          queuePostRenderEffect(
-            () => {
-              dirs &&
-                invokeDirectiveHook(vnode, null, parentComponent, 'unmounted')
-              vnodeHook && invokeVNodeHook(vnodeHook, parentComponent, vnode)
-            },
-            undefined,
-            parentSuspense,
-          )
-        }
-        return
-      } else {
-        unmountComponent(vnode.component!, parentSuspense, doRemove)
-      }
+      unmountComponent(vnode.component!, parentSuspense, doRemove)
     } else {
       if (__FEATURE_SUSPENSE__ && shapeFlag & ShapeFlags.SUSPENSE) {
         vnode.suspense!.unmount(parentSuspense, doRemove)
@@ -2491,7 +2449,11 @@ function baseCreateRenderer(
       }
 
       if (type === VaporSlot) {
-        getVaporInterface(parentComponent, vnode).unmount(vnode, doRemove)
+        getVaporInterface(parentComponent, vnode).unmount(
+          vnode,
+          doRemove,
+          parentSuspense,
+        )
         return
       }
 
@@ -2551,6 +2513,11 @@ function baseCreateRenderer(
 
     if (type === Static) {
       removeStaticNode(vnode)
+      // An opaque hydration placeholder cannot animate, but its removal must
+      // still release an out-in transition waiting for the claimed DOM.
+      if (transition && !transition.persisted && transition.afterLeave) {
+        transition.afterLeave()
+      }
       return
     }
 
@@ -2611,6 +2578,12 @@ function baseCreateRenderer(
     if (effect) {
       // so that scheduler will no longer invoke it
       effect.stop()
+      unmount(subTree, instance, parentSuspense, doRemove)
+    } else if (instance.vnode.el && subTree) {
+      // hydration was interrupted before this component rendered (`vnode.el`
+      // is only set this early when hydrating) - unmount the placeholder
+      // covering the claimed DOM, carrying the root's transition hooks
+      subTree.transition = instance.vnode.transition
       unmount(subTree, instance, parentSuspense, doRemove)
     }
     // unmounted hook
@@ -2890,6 +2863,13 @@ export function performTransitionEnter(
   parentSuspense: SuspenseBoundary | null,
   force: boolean = false,
 ): void {
+  // #14031 if there is no pending v-show leave, the persisted transition
+  // lifecycle is directive-owned, so activating a kept-alive node only
+  // relocates it.
+  if (force && transition.persisted && !el[leaveCbKey]) {
+    insert()
+    return
+  }
   if (force || needTransition(parentSuspense, transition)) {
     transition.beforeEnter(el)
     insert()
@@ -2909,7 +2889,11 @@ export function performTransitionLeave(
 ): void {
   const performRemove = () => {
     remove()
-    if (transition && !transition.persisted && transition.afterLeave) {
+    if (
+      transition &&
+      (force || !transition.persisted) &&
+      transition.afterLeave
+    ) {
       transition.afterLeave()
     }
   }
@@ -2920,10 +2904,17 @@ export function performTransitionLeave(
       // #13153 move kept-alive node before v-show transition leave finishes
       // it needs to call the leaving callback to ensure element's `display`
       // is `none`
+      const wasLeaving = el!._isLeaving || !!el![leaveCbKey]
       if (el!._isLeaving && force) {
         el![leaveCbKey](true /* cancelled */)
       }
-      leave(el, performRemove)
+      // #14031 without a pending leave, persisted transitions should skip
+      // directive-owned leave hooks and just relocate.
+      if (force && transition.persisted && !wasLeaving) {
+        remove()
+      } else {
+        leave(el, performRemove)
+      }
     }
     if (delayLeave) {
       delayLeave(el, performRemove, performLeave)
@@ -2938,7 +2929,7 @@ export function performTransitionLeave(
 export function getVaporInterface(
   instance: ComponentInternalInstance | null,
   vnode: VNode,
-): VaporInteropInterface {
+): VaporInVdomInterface {
   const ctx = instance ? instance.appContext : vnode.appContext
   const res = ctx && ctx.vapor
   if (__DEV__ && !res) {
@@ -2966,6 +2957,7 @@ export function isVaporComponent(type: ConcreteComponent): boolean | undefined {
 export function getInheritedScopeIds(
   vnode: VNode,
   parentComponent: GenericComponentInstance | null,
+  includeVaporRootIds = true,
 ): string[] {
   const inheritedScopeIds: string[] = []
 
@@ -3006,6 +2998,13 @@ export function getInheritedScopeIds(
     } else {
       break
     }
+  }
+
+  // Where the chain tops out, append root-only ids published by the vapor
+  // interop so they land before insertion.
+  const vaporScopeIds = includeVaporRootIds && currentVNode.vaporScopeIds
+  if (vaporScopeIds) {
+    inheritedScopeIds.push(...vaporScopeIds)
   }
 
   return inheritedScopeIds

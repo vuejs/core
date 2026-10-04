@@ -23,6 +23,10 @@ import { buildNextIdMap, getNextId } from './transform'
 export type CodegenOptions = Omit<BaseCodegenOptions, 'optimizeImports'>
 
 const idWithTrailingDigitsRE = /^([A-Za-z_$][\w$]*)(\d+)$/
+const helperNameAliases: Record<string, string> = {
+  withVaporKeys: 'withKeys',
+  withVaporModifiers: 'withModifiers',
+}
 
 export class CodegenContext {
   options: Required<CodegenOptions>
@@ -31,28 +35,51 @@ export class CodegenContext {
 
   helpers: Map<string, string> = new Map()
 
+  needsTemplateRefSetter: boolean = false
+  inSlotBlock: boolean = false
+
   helper = (name: CoreHelper | VaporHelper): string => {
     if (this.helpers.has(name)) {
       return this.helpers.get(name)!
     }
 
-    const base = `_${name}`
-    if (this.bindingNames.size === 0 || !this.bindingNames.has(base)) {
-      this.helpers.set(name, base)
-      return base
-    }
-
-    const map = this.nextIdMap.get(base)
-    // start from 1 because "base" (no suffix) is already taken.
-    const alias = `${base}${getNextId(map, 1)}`
+    const base = `_${helperNameAliases[name] || name}`
+    const alias = this.findAvailableName(base, this.generatedLocalNames)
     this.helpers.set(name, alias)
     return alias
   }
 
   delegates: Set<string> = new Set<string>()
+  // hoisted static key lists of setDynamicProps, keyed by their JSON
+  dynamicPropNames: Map<string, string> = new Map()
+
+  singleUseAssetComponentNames?: Set<string>
 
   identifiers: Record<string, (string | SimpleExpressionNode)[]> =
     Object.create(null)
+
+  expressionReplacements: Map<SimpleExpressionNode, SimpleExpressionNode>[] = []
+
+  withExpressionReplacements<T>(
+    map: Map<SimpleExpressionNode, SimpleExpressionNode>,
+    fn: () => T,
+  ): T {
+    if (map.size === 0) return fn()
+    this.expressionReplacements.unshift(map)
+    try {
+      return fn()
+    } finally {
+      remove(this.expressionReplacements, map)
+    }
+  }
+
+  getExpressionReplacement(node: SimpleExpressionNode): SimpleExpressionNode {
+    for (const map of this.expressionReplacements) {
+      const replacement = map.get(node)
+      if (replacement) return replacement
+    }
+    return node
+  }
 
   seenInlineHandlerNames: Record<string, number> = Object.create(null)
 
@@ -81,6 +108,12 @@ export class CodegenContext {
     return (): BlockIRNode => (this.block = parent)
   }
 
+  enterSlotBlock() {
+    const parent = this.inSlotBlock
+    this.inSlotBlock = true
+    return (): boolean => (this.inSlotBlock = parent)
+  }
+
   scopeLevel: number = 0
   enterScope(): [level: number, exit: () => number] {
     return [this.scopeLevel++, () => this.scopeLevel--] as const
@@ -89,6 +122,42 @@ export class CodegenContext {
   private templateVars: Map<number, string> = new Map()
   private nextIdMap: Map<string, Map<number, number>> = new Map()
   private lastIdMap: Map<string, number> = new Map()
+  private generatedLocalNames: Set<string> = new Set()
+
+  getUniqueLocalName(
+    base: string,
+    scopeNames: Set<string> = this.generatedLocalNames,
+  ): string {
+    const name = this.findAvailableName(base, scopeNames)
+    scopeNames.add(name)
+    this.generatedLocalNames.add(name)
+    return name
+  }
+
+  private isNameAvailable(name: string, reservedNames: Set<string>): boolean {
+    // render function param and root-scoped template ref setter
+    if (name === '_ctx' || name === setTemplateRefIdent) return false
+    if (this.bindingNames.has(name) || reservedNames.has(name)) return false
+    if (this.identifiers[name]?.length) return false
+    for (const alias of this.helpers.values()) {
+      if (alias === name) return false
+    }
+    return true
+  }
+
+  private findAvailableName(base: string, reservedNames: Set<string>): string {
+    if (this.isNameAvailable(base, reservedNames)) return base
+
+    const map = this.nextIdMap.get(base)
+    let next = 1
+    while (true) {
+      const id = getNextId(map, next)
+      const name = `${base}${id}`
+      if (this.isNameAvailable(name, reservedNames)) return name
+      next = id + 1
+    }
+  }
+
   private lastTIndex: number = -1
   private initNextIdMap(): void {
     if (this.bindingNames.size === 0) return
@@ -129,10 +198,21 @@ export class CodegenContext {
   }
 
   pName(i: number): string {
-    const map = this.nextIdMap.get('p')
-    let lastId = this.lastIdMap.get('p') || -1
-    this.lastIdMap.set('p', (lastId = getNextId(map, Math.max(i, lastId + 1))))
-    return `p${lastId}`
+    return this.idName('p', i)
+  }
+
+  kName(i: number): string {
+    return this.idName('k', i)
+  }
+
+  private idName(prefix: string, i: number): string {
+    const map = this.nextIdMap.get(prefix)
+    let lastId = this.lastIdMap.get(prefix) || -1
+    this.lastIdMap.set(
+      prefix,
+      (lastId = getNextId(map, Math.max(i, lastId + 1))),
+    )
+    return `${prefix}${lastId}`
   }
 
   constructor(
@@ -195,13 +275,18 @@ export function generate(
   }
 
   push(INDENT_START)
-  if (ir.hasTemplateRef) {
-    push(
-      NEWLINE,
-      `const ${setTemplateRefIdent} = ${context.helper('createTemplateRefSetter')}()`,
-    )
+  // Pre-register to keep fallback template-ref helper ordering stable; remove it
+  // below when all refs lower to binding helpers.
+  const templateRefSetterHelper = ir.hasTemplateRef
+    ? context.helper('createTemplateRefSetter')
+    : undefined
+  const body = genBlockContent(ir.block, context, true)
+  if (context.needsTemplateRefSetter) {
+    push(NEWLINE, `const ${setTemplateRefIdent} = ${templateRefSetterHelper}()`)
+  } else if (templateRefSetterHelper) {
+    context.helpers.delete('createTemplateRefSetter')
   }
-  push(...genBlockContent(ir.block, context, true))
+  push(...body)
   push(INDENT_END, NEWLINE)
 
   if (!inline) {
@@ -211,7 +296,8 @@ export function generate(
   const delegates = genDelegates(context)
   const templates = genTemplates(ir.template.entries, context)
   const imports = genHelperImports(context) + genAssetImports(context)
-  const preamble = imports + templates + delegates
+  const preamble =
+    imports + templates + genDynamicPropNames(context) + delegates
 
   const newlineCount = [...preamble].filter(c => c === '\n').length
   if (newlineCount && !inline) {
@@ -230,6 +316,14 @@ export function generate(
     map: map && map.toJSON(),
     helpers: new Set<string>(Array.from(context.helpers.keys())),
   }
+}
+
+function genDynamicPropNames({ dynamicPropNames }: CodegenContext) {
+  let code = ''
+  for (const [json, id] of dynamicPropNames) {
+    code += `const ${id} = ${json}\n`
+  }
+  return code
 }
 
 function genDelegates({ delegates, helper }: CodegenContext) {

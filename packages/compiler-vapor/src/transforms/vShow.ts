@@ -33,5 +33,6 @@ export const transformVShow: DirectiveTransform = (dir, node, context) => {
     dir,
     name: 'show',
     builtin: true,
+    once: context.inVOnce,
   })
 }

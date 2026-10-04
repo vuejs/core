@@ -470,7 +470,7 @@ const tokenizer = new Tokenizer(stack, {
   },
 
   oncdata(start, end) {
-    if (stack[0].ns !== Namespaces.HTML) {
+    if ((stack[0] ? stack[0].ns : currentOptions.ns) !== Namespaces.HTML) {
       onText(getSlice(start, end), start, end)
     } else {
       emitError(ErrorCodes.CDATA_IN_HTML_CONTENT, start - 9)

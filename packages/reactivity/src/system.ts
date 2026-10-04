@@ -1,4 +1,5 @@
-// Ported from https://github.com/stackblitz/alien-signals/blob/v3.0.0/src/system.ts
+// Ported from alien-signals. Diff against upstream main:
+// https://github.com/stackblitz/alien-signals/compare/7e53655f40c3dd298168c278b3bf248a72f742d9...main
 import type { ComputedRefImpl as Computed } from './computed.js'
 import type { ReactiveEffect as Effect } from './effect.js'
 import type { EffectScope } from './effectScope.js'
@@ -41,6 +42,16 @@ const notifyBuffer: (Effect | undefined)[] = []
 
 export let batchDepth = 0
 export let activeSub: ReactiveNode | undefined = undefined
+
+let runDepth = 0
+
+export function incRunDepth(): void {
+  ++runDepth
+}
+
+export function decRunDepth(): void {
+  --runDepth
+}
 
 let globalVersion = 0
 let notifyIndex = 0
@@ -167,6 +178,9 @@ export function propagate(link: Link): void {
         )
       ) {
         sub.flags = flags | ReactiveFlags.Pending
+        if (runDepth) {
+          sub.flags |= ReactiveFlags.Recursed
+        }
       } else if (
         !(flags & (ReactiveFlags.RecursedCheck | ReactiveFlags.Recursed))
       ) {
@@ -249,13 +263,27 @@ export function endTracking(
 }
 
 export function flush(): void {
+  // a throwing subscriber must not abort the batch: keep notifying the rest,
+  // reset the queue, then rethrow the first error once the batch is drained.
+  let hasError = false
+  let error: unknown
   while (notifyIndex < notifyBufferLength) {
     const effect = notifyBuffer[notifyIndex]!
     notifyBuffer[notifyIndex++] = undefined
-    effect.notify()
+    try {
+      effect.notify()
+    } catch (err) {
+      if (!hasError) {
+        hasError = true
+        error = err
+      }
+    }
   }
   notifyIndex = 0
   notifyBufferLength = 0
+  if (hasError) {
+    throw error
+  }
 }
 
 export function checkDirty(link: Link, sub: ReactiveNode): boolean {
@@ -274,8 +302,8 @@ export function checkDirty(link: Link, sub: ReactiveNode): boolean {
       (depFlags & (ReactiveFlags.Mutable | ReactiveFlags.Dirty)) ===
       (ReactiveFlags.Mutable | ReactiveFlags.Dirty)
     ) {
+      const subs = dep.subs!
       if ((dep as Computed).update()) {
-        const subs = dep.subs!
         if (subs.nextSub !== undefined) {
           shallowPropagate(subs)
         }
@@ -285,9 +313,7 @@ export function checkDirty(link: Link, sub: ReactiveNode): boolean {
       (depFlags & (ReactiveFlags.Mutable | ReactiveFlags.Pending)) ===
       (ReactiveFlags.Mutable | ReactiveFlags.Pending)
     ) {
-      if (link.nextSub !== undefined || link.prevSub !== undefined) {
-        stack = { value: link, prev: stack }
-      }
+      stack = { value: link, prev: stack }
       link = dep.deps!
       sub = dep
       ++checkDepth
@@ -301,18 +327,13 @@ export function checkDirty(link: Link, sub: ReactiveNode): boolean {
 
     while (checkDepth) {
       --checkDepth
-      const firstSub = sub.subs!
-      const hasMultipleSubs = firstSub.nextSub !== undefined
-      if (hasMultipleSubs) {
-        link = stack!.value
-        stack = stack!.prev
-      } else {
-        link = firstSub
-      }
+      link = stack!.value
+      stack = stack!.prev
       if (dirty) {
+        const subs = sub.subs!
         if ((sub as Computed).update()) {
-          if (hasMultipleSubs) {
-            shallowPropagate(firstSub)
+          if (subs.nextSub !== undefined) {
+            shallowPropagate(subs)
           }
           sub = link.sub
           continue
@@ -328,7 +349,7 @@ export function checkDirty(link: Link, sub: ReactiveNode): boolean {
       dirty = false
     }
 
-    return dirty
+    return dirty && !!sub.flags
   } while (true)
 }
 

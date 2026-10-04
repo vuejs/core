@@ -2,6 +2,7 @@ import {
   type EffectScope,
   ReactiveEffect,
   type Ref,
+  type SuspenseBoundary,
   inject,
   nextTick,
   onBeforeMount,
@@ -15,6 +16,7 @@ import {
   watchEffect,
 } from '@vue/runtime-dom'
 import {
+  createAssetComponent,
   createComponent,
   createIf,
   createTextNode,
@@ -25,8 +27,15 @@ import {
   txt,
 } from '../src'
 import { compile, compileToVaporRender, makeRender } from './_utils'
-import type { VaporComponentInstance } from '../src/component'
+import { type VaporComponentInstance, currentInstance } from '../src/component'
 import { setElementText, setText } from '../src/dom/prop'
+import { enableSuspense } from '../src/suspense'
+import {
+  currentRenderContext,
+  deriveSlotOwner,
+  deriveSuspense,
+  setRenderContext,
+} from '../src/renderContext'
 
 const define = makeRender()
 
@@ -64,7 +73,7 @@ describe('component', () => {
   it('should create a component with props', () => {
     const { component: Comp } = define({
       setup() {
-        return template('<div>', true)()
+        return template('<div>', 1)()
       },
     })
 
@@ -77,13 +86,79 @@ describe('component', () => {
     expect(host.innerHTML).toBe('<div id="foo" class="bar"></div>')
   })
 
+  it('should create an asset component', () => {
+    const { component: Child } = define({
+      setup() {
+        return template('<span>child</span>')()
+      },
+    })
+
+    const { host } = define({
+      components: { Child },
+      setup() {
+        return createAssetComponent('Child')
+      },
+    }).render()
+
+    expect(host.innerHTML).toBe('<span>child</span>')
+  })
+
+  it('should fallback unresolved component to plain element', () => {
+    const { host } = define({
+      setup() {
+        return createAssetComponent('foo-bar', { id: 'foo' }, null, true)
+      },
+    }).render()
+
+    expect(host.innerHTML).toBe('<foo-bar id="foo"></foo-bar>')
+    expect(`Failed to resolve component: foo-bar`).toHaveBeenWarned()
+  })
+
+  it('renders a native tag with is="vue:" as the component', () => {
+    const Foo = defineVaporComponent({
+      setup() {
+        return template('<span>foo</span>')()
+      },
+    })
+    const App = compile(
+      `<template><button is="vue:Foo" /></template>`,
+      ref(null),
+    )
+    const { app, html, mount } = define(App).create()
+    app.component('Foo', Foo)
+    mount()
+    expect(html()).toBe('<span>foo</span>')
+  })
+
+  it('should pass maybeSelfReference when creating asset component', () => {
+    const { host } = define({
+      props: ['nested'],
+      setup(props: any) {
+        if (props.nested) {
+          return template('<span>self</span>')()
+        }
+        return createAssetComponent(
+          'ImplicitSelf',
+          { nested: true },
+          null,
+          true,
+          undefined,
+          true,
+        )
+      },
+    }).render()
+
+    expect(host.innerHTML).toBe('<span>self</span>')
+    expect(`Failed to resolve component: ImplicitSelf`).not.toHaveBeenWarned()
+  })
+
   it('should not update Component if only changed props are declared emit listeners', async () => {
     const updatedSyp = vi.fn()
     const { component: Comp } = define({
       emits: ['foo'],
       setup() {
         onUpdated(updatedSyp)
-        return template('<div>', true)()
+        return template('<div>', 1)()
       },
     })
 
@@ -189,6 +264,8 @@ describe('component', () => {
       },
     }).render()
 
+    expect(host.innerHTML).toBe('<div>0</div>')
+    await nextTick()
     expect(host.innerHTML).toBe('<div>1</div>')
   })
 
@@ -316,7 +393,7 @@ describe('component', () => {
 
     const { host } = define({
       setup() {
-        const n2 = template('<div></div>', true)()
+        const n2 = template('<div></div>', 1)()
         setInsertionState(n2 as any)
         createComponent(Comp)
         return n2
@@ -340,8 +417,8 @@ describe('component', () => {
     }).render()
 
     const i = instance as VaporComponentInstance
-    // watchEffect + renderEffect + props validation effect
-    expect(getEffectsCount(i.scope)).toBe(3)
+    // watchEffect + renderEffect
+    expect(getEffectsCount(i.scope)).toBe(2)
     expect(host.innerHTML).toBe('<div>0</div>')
 
     app.unmount()
@@ -491,7 +568,7 @@ describe('component', () => {
     try {
       const { component: Child } = define({
         render() {
-          return template('<div> HI </div>', true)()
+          return template('<div> HI </div>', 1)()
         },
       })
 
@@ -529,6 +606,47 @@ describe('component', () => {
     } finally {
       __DEV__ = true
     }
+  })
+
+  it('should treat function rawSlots as default slot', () => {
+    __DEV__ = false
+    try {
+      const { component: Child } = define({
+        render: compileToVaporRender(
+          `<span v-if="$slots.default"><slot /></span>`,
+          { bindingMetadata: {} },
+        ),
+      })
+
+      const { host } = define({
+        components: { Child },
+        setup() {
+          return createAssetComponent(
+            'Child',
+            null,
+            () => template('<button>slot</button>')(),
+            true,
+          )
+        },
+      }).render()
+
+      expect(host.innerHTML).toBe('<span><button>slot</button></span>')
+    } finally {
+      __DEV__ = true
+    }
+  })
+
+  it('should render function rawSlots when asset fallback creates plain element', () => {
+    const { host } = define({
+      setup() {
+        return createAssetComponent('foo-bar', null, () =>
+          template('<span>slot</span>')(),
+        )
+      },
+    }).render()
+
+    expect(host.innerHTML).toBe('<foo-bar><span>slot</span></foo-bar>')
+    expect(`Failed to resolve component: foo-bar`).toHaveBeenWarned()
   })
 
   it('warn if functional vapor component not return a block', () => {
@@ -685,6 +803,42 @@ describe('component', () => {
     expect(templateEl.textContent).toBe('<b>foo</b>')
   })
 
+  it('mounts native element literal v-text as text', () => {
+    const Comp = compile(
+      `<template><div v-text="'<b>foo</b>'" /></template>`,
+      ref('unused'),
+    )
+
+    const { host } = define(Comp).render()
+    const el = host.firstChild as HTMLDivElement
+    expect(el.firstChild!.nodeType).toBe(Node.TEXT_NODE)
+    expect(el.textContent).toBe('<b>foo</b>')
+  })
+
+  it('mounts raw text element literal v-text as text', () => {
+    const Comp = compile(
+      `<template><iframe v-text="'<b>foo</b>'" /></template>`,
+      ref('unused'),
+    )
+
+    const { host } = define(Comp).render()
+    const iframe = host.firstChild as HTMLIFrameElement
+    expect(iframe.textContent).toBe('<b>foo</b>')
+  })
+
+  it('does not parse closing tags in raw text element literal v-text', () => {
+    const value = '</iframe><div>injected</div>'
+    const Comp = compile(
+      `<template><iframe v-text="'${value}'" /></template>`,
+      ref('unused'),
+    )
+
+    const { host } = define(Comp).render()
+    const iframe = host.firstChild as HTMLIFrameElement
+    expect(iframe.textContent).toBe(value)
+    expect(host.childElementCount).toBe(1)
+  })
+
   it('mounts plain template elements with slot content', () => {
     const data = ref('unused')
     const Child = compile(
@@ -777,6 +931,111 @@ describe('component', () => {
     await nextTick()
 
     expect(mountedSpy).toHaveBeenCalledTimes(0)
+  })
+
+  it('should restore component context when child setup throws', () => {
+    enableSuspense()
+
+    const err = new Error('setup boom')
+    const owner = { type: {} } as VaporComponentInstance
+    const previousSuspense = { pendingId: 1 } as SuspenseBoundary
+    const activeSuspense = { pendingId: 2 } as SuspenseBoundary
+    let caught: unknown
+    let ownerAfterThrow: VaporComponentInstance | null = null
+    let suspenseAfterThrow: SuspenseBoundary | null = null
+
+    const { component: Child } = define({
+      setup() {
+        throw err
+      },
+    })
+
+    define({
+      setup() {
+        const instance = currentInstance as VaporComponentInstance
+        instance.suspense = activeSuspense
+
+        const prevCtx = setRenderContext(
+          deriveSuspense(
+            deriveSlotOwner(currentRenderContext, owner),
+            previousSuspense,
+          ),
+        )
+        try {
+          createComponent(Child)
+        } catch (e) {
+          caught = e
+        }
+        ownerAfterThrow = currentRenderContext.slotOwner
+        suspenseAfterThrow = currentRenderContext.suspense
+        setRenderContext(prevCtx)
+        return []
+      },
+    }).render()
+
+    expect(
+      `Unhandled error during execution of setup function`,
+    ).toHaveBeenWarned()
+    expect(caught).toBe(err)
+    expect(ownerAfterThrow).toBe(owner)
+    expect(suspenseAfterThrow).toBe(previousSuspense)
+  })
+
+  it('should write reflected prop when normalized value is unchanged', async () => {
+    const type = ref('invalid')
+    const Comp = compile(`<template><input :type="data" /></template>`, type)
+    const { host } = define(Comp).render()
+    const input = host.firstChild as HTMLInputElement
+
+    expect(input.type).toBe('text')
+    expect(input.getAttribute('type')).toBe('invalid')
+
+    type.value = 'text'
+    await nextTick()
+    expect(input.getAttribute('type')).toBe('text')
+  })
+
+  it('should dispose a component that was created but never mounted', () => {
+    // a render error after a root-chain child is created leaves that child
+    // owned by the parent scope without ever reaching mountComponent
+    const dispose = vi.fn()
+    const unmounted = vi.fn()
+    const Child = compile(
+      `<script vapor setup>
+      import { onScopeDispose, onUnmounted } from 'vue'
+      onScopeDispose(_components.dispose)
+      onUnmounted(_components.unmounted)
+      </script>
+      <template><div>child</div></template>`,
+      ref(null),
+      { dispose, unmounted },
+    )
+    const Parent = compile(
+      `<script vapor setup>
+      const Child = _components.Child
+      const boom = () => {
+        throw new Error('boom')
+      }
+      </script>
+      <template>
+        <Child />
+        <span>{{ boom() }}</span>
+      </template>`,
+      ref(null),
+      { Child },
+    )
+    const { app, mount } = define(Parent).create()
+    const handler = (app.config.errorHandler = vi.fn())
+    mount()
+    expect(handler).toHaveBeenCalledTimes(1)
+    expect(
+      `Vapor component setup() returned non-block value`,
+    ).toHaveBeenWarned()
+    expect(dispose).not.toHaveBeenCalled()
+
+    app.unmount()
+    expect(dispose).toHaveBeenCalledTimes(1)
+    expect(unmounted).not.toHaveBeenCalled()
   })
 })
 

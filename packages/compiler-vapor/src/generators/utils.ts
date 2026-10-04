@@ -9,6 +9,18 @@ import {
 } from '@vue/compiler-dom'
 import { isArray, isString } from '@vue/shared'
 import type { CodegenContext } from '../generate'
+import type { ParserOptions } from '@babel/parser'
+
+/**
+ * Run a helper call inside the once ambient: a helper that creates its own
+ * effects at a v-once site has them run once like compiled ones do.
+ */
+export function genOnce(
+  call: CodeFragment[],
+  context: CodegenContext,
+): CodeFragment[] {
+  return genCall(context.helper('withOnce'), ['() => ', ...call])
+}
 
 export const IMPORT_EXP_START = '__IMPORT_EXP_START__'
 export const IMPORT_EXP_END = '__IMPORT_EXP_END__'
@@ -103,6 +115,18 @@ export function genCall(
   const fnName = hasPlaceholder ? name[0] : name
   const placeholder = hasPlaceholder ? name[1] : 'null'
   return [fnName, ...genMulti(['(', ')', ', ', placeholder], ...frags)]
+}
+
+export function getParserOptions(
+  plugins: CodegenContext['options']['expressionPlugins'],
+): ParserOptions {
+  return {
+    plugins: plugins
+      ? plugins.some(plugin => plugin === 'typescript')
+        ? plugins
+        : [...plugins, 'typescript']
+      : ['typescript'],
+  }
 }
 
 export function codeFragmentToString(
@@ -208,4 +232,9 @@ export function codeFragmentToString(
       name,
     })
   }
+}
+
+/** Formats a numeric flags argument with its dev-only name annotation. */
+export function genFlags(flags: number, names: string[]): string {
+  return __DEV__ ? `${flags} /* ${names.join(', ')} */` : String(flags)
 }

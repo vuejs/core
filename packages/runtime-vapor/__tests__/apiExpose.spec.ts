@@ -1,4 +1,4 @@
-import { ref, shallowRef } from '@vue/reactivity'
+import { computed, ref, shallowRef } from '@vue/reactivity'
 import { type VaporComponentInstance, createComponent } from '../src/component'
 import { createTemplateRefSetter } from '../src/apiTemplateRef'
 import { makeRender } from './_utils'
@@ -33,6 +33,50 @@ describe('api: expose', () => {
     expect(childRef.value.foo).toBe(1)
     expect(childRef.value.bar).toBe(2)
     expect(childRef.value.baz).toBeUndefined()
+  })
+
+  test('writes through template ref update exposed refs', () => {
+    const count = ref(1)
+    const n = ref(1)
+    const double = computed({
+      get: () => n.value * 2,
+      set: v => (n.value = v / 2),
+    })
+    const readonlyDouble = computed(() => n.value * 2)
+    const obj = shallowRef({ n: 1 })
+    const Child = defineVaporComponent({
+      setup(_, { expose }) {
+        expose({ count, double, readonlyDouble, obj, plain: 1 })
+        return []
+      },
+    })
+    const childRef = ref()
+    define({
+      setup: () => {
+        const n0 = createComponent(Child)
+        const setRef = createTemplateRefSetter()
+        setRef(n0, childRef)
+        return n0
+      },
+    }).render()
+
+    childRef.value.count = 10
+    expect(count.value).toBe(10)
+    expect(childRef.value.count).toBe(10)
+
+    childRef.value.double = 40
+    expect(n.value).toBe(20)
+    expect(childRef.value.double).toBe(40)
+
+    childRef.value.obj = { n: 7 }
+    expect(obj.value).toEqual({ n: 7 })
+
+    childRef.value.plain = 2
+    expect(childRef.value.plain).toBe(2)
+
+    childRef.value.readonlyDouble = 1
+    expect('computed value is readonly').toHaveBeenWarned()
+    expect(childRef.value.readonlyDouble).toBe(40)
   })
 
   test('via setup context + template ref (expose empty)', () => {

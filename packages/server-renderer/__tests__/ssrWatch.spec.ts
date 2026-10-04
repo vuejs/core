@@ -3,12 +3,21 @@ import {
   defineComponent,
   h,
   nextTick,
+  onScopeDispose,
   ref,
   watch,
   watchEffect,
   withAsyncContext,
 } from 'vue'
 import { type SSRContext, renderToString } from '../src'
+
+const gc = () =>
+  new Promise<void>(resolve => {
+    setTimeout(() => {
+      global.gc!()
+      resolve()
+    })
+  })
 
 describe('ssr: watch', () => {
   // #6013
@@ -119,6 +128,35 @@ describe('ssr: watch', () => {
     expect(html).toMatch('start')
     await nextTick()
     expect(msg).toBe('start')
+  })
+
+  // #15113
+  test('options-api watchers should not be created for async setup components', async () => {
+    const open = ref(true)
+    const spy = vi.fn()
+
+    const App = defineComponent({
+      setup: () => Promise.resolve({}),
+      computed: {
+        isOpen() {
+          return open.value
+        },
+      },
+      watch: {
+        isOpen: spy,
+      },
+      render() {
+        return h('div', String(this.isOpen))
+      },
+    })
+
+    const html = await renderToString(createSSRApp(App))
+    expect(html).toBe('<div>true</div>')
+
+    // mutating the state after the request is done should not trigger the watcher
+    open.value = false
+    await nextTick()
+    expect(spy).not.toHaveBeenCalled()
   })
 
   test('should not run non-immediate watchers registered after async context restore', async () => {
@@ -282,5 +320,104 @@ describe('ssr: watchEffect', () => {
     expect(html).toMatch('unchanged')
     await nextTick()
     expect(msg).toBe('unchanged')
+  })
+})
+
+describe.skipIf(!global.gc)('ssr: watch gc', () => {
+  test('should not retain apps when a watcher stop handle is registered with onScopeDispose after async context restore', async () => {
+    const weakRefs: { deref(): unknown | undefined }[] = []
+
+    const ComponentA = defineComponent({
+      async setup() {
+        let __temp: any, __restore: any
+        ;[__temp, __restore] = withAsyncContext(() => Promise.resolve(false))
+        const enabled = await __temp
+        __restore()
+
+        const el = ref(null)
+        const stop = watch(
+          () => el.value,
+          () => {},
+          { immediate: true },
+        )
+        onScopeDispose(stop)
+
+        return () => h('div', { ref: el }, `Component A ${enabled}`)
+      },
+    })
+
+    const ComponentB = defineComponent({
+      async setup() {
+        let __temp: any, __restore: any
+        ;[__temp, __restore] = withAsyncContext(() => Promise.resolve(false))
+        const enabled = await __temp
+        __restore()
+
+        return () => h('div', `Component B ${enabled}`)
+      },
+    })
+
+    async function renderOnce() {
+      const app = createSSRApp({
+        render: () => h('div', [h(ComponentA), h(ComponentB)]),
+      })
+      // @ts-expect-error ES2021 API
+      weakRefs.push(new WeakRef(app))
+
+      const html = await renderToString(app)
+
+      expect(html).toContain('Component A false')
+      expect(html).toContain('Component B false')
+    }
+
+    for (let i = 0; i < 10; i++) {
+      await renderOnce()
+    }
+
+    for (let i = 0; i < 5; i++) {
+      await gc()
+    }
+
+    expect(weakRefs.filter(ref => ref.deref()).length).toBe(0)
+  })
+
+  // #15113
+  test('options-api should not retain apps with async setup + watcher on global state', async () => {
+    const weakRefs: { deref(): unknown | undefined }[] = []
+
+    const open = ref(true)
+
+    const App = defineComponent({
+      setup: () => Promise.resolve({}),
+      computed: {
+        isOpen() {
+          return open.value
+        },
+      },
+      watch: {
+        isOpen() {},
+      },
+      render() {
+        return h('div', String(this.isOpen))
+      },
+    })
+
+    async function renderOnce() {
+      const app = createSSRApp(App)
+      // @ts-expect-error ES2021 API
+      weakRefs.push(new WeakRef(app))
+      const html = await renderToString(app)
+      expect(html).toBe('<div>true</div>')
+    }
+
+    for (let i = 0; i < 10; i++) {
+      await renderOnce()
+    }
+
+    for (let i = 0; i < 5; i++) {
+      await gc()
+    }
+
+    expect(weakRefs.filter(ref => ref.deref()).length).toBe(0)
   })
 })

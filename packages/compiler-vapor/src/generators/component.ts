@@ -1,18 +1,17 @@
 import {
+  type Namespace,
+  Namespaces,
+  VaporDynamicComponentFlags,
+  VaporSlotStability,
   camelize,
   extend,
   getModifierPropName,
   isArray,
-  toHandlerKey,
 } from '@vue/shared'
 import type { CodegenContext } from '../generate'
 import {
-  type BlockIRNode,
   type CreateComponentIRNode,
-  type ForIRNode,
-  type IRDynamicInfo,
   IRDynamicPropsKind,
-  IRNodeTypes,
   type IRProp,
   type IRProps,
   type IRPropsStatic,
@@ -23,8 +22,6 @@ import {
   IRSlotType,
   type IRSlots,
   type IRSlotsStatic,
-  type IfIRNode,
-  type OperationNode,
   type SlotBlockIRNode,
 } from '../ir'
 import {
@@ -36,44 +33,81 @@ import {
   INDENT_START,
   NEWLINE,
   genCall,
+  genFlags,
   genMulti,
 } from './utils'
 import { genExpression, genVarName } from './expression'
-import { genPropKey, genPropValue } from './prop'
 import {
-  NodeTypes,
+  createHandlerGroups,
+  genPropKey,
+  genPropValue,
+  getStaticPropKeyName,
+  isListenerProp,
+} from './prop'
+import {
   type SimpleExpressionNode,
   createSimpleExpression,
   isMemberExpression,
+  isSimpleIdentifier,
   toValidAssetId,
 } from '@vue/compiler-dom'
 import { genEventHandler } from './event'
-import { genDirectiveModifiers, genDirectivesForElement } from './directive'
-import { genBlock } from './block'
+import { genBlock, hasStableSlotRoot, markSlotRootOperations } from './block'
 import {
   type DestructureMap,
   type DestructureMapValue,
   buildDestructureIdMap,
+  genAliasParams,
   parseValueDestructure,
 } from './for'
 import { genModelHandler } from './vModel'
+import { genDirectiveModifiers } from './modifier'
 import { isBuiltInComponent } from '../utils'
+import type { Expression } from '@babel/types'
+
+function genStaticModifierPropKey(name: string): CodeFragment[] {
+  const key = getModifierPropName(name)
+  return [isSimpleIdentifier(key) ? key : JSON.stringify(key)]
+}
 
 export function genCreateComponent(
   operation: CreateComponentIRNode,
   context: CodegenContext,
 ): CodeFragment[] {
   const { helper } = context
+  const singleUseAssetComponentNames = context.singleUseAssetComponentNames
+  const useAssetComponentHelper =
+    operation.asset &&
+    !operation.dynamic &&
+    context.block === context.ir.block &&
+    !!singleUseAssetComponentNames &&
+    singleUseAssetComponentNames.has(operation.tag)
+  const maybeSelfReference =
+    useAssetComponentHelper && operation.tag.endsWith('__self')
 
   const tag = genTag()
-  const { root, props, slots, once } = operation
-  const rawSlots = genRawSlots(slots, context)
+  const { root, props, slots, once, slotRoot } = operation
+  const isRuntimeDynamicComponent = !!(
+    operation.dynamic && !operation.dynamic.isStatic
+  )
+  const dynamicComponentFlags = isRuntimeDynamicComponent
+    ? genDynamicComponentFlags(root, once, slotRoot, operation.ns)
+    : false
+  // helpers that may fall back to a plain element take the namespace
+  const nsArg =
+    !isRuntimeDynamicComponent &&
+    (operation.useCreateElement || operation.asset || !!operation.dynamic) &&
+    operation.ns
+      ? String(operation.ns)
+      : false
+  const slotDeclarations: string[] = []
+  const rawSlots = genRawSlots(slots, context, slotDeclarations)
   const [ids, handlers] = processInlineHandlers(props, context)
-  const rawProps = context.withId(() => genRawProps(props, context), ids)
+  const rawProps = context.withId(() => genRawProps(props, context, true), ids)
 
   const inlineHandlers: CodeFragment[] = handlers.reduce<CodeFragment[]>(
     (acc, { name, value }: InlineHandler) => {
-      const handler = genEventHandler(context, [value], undefined, false, false)
+      const handler = genEventHandler(context, [value])
       return [...acc, `const ${name} = `, ...handler, NEWLINE]
     },
     [],
@@ -81,22 +115,34 @@ export function genCreateComponent(
   return [
     NEWLINE,
     ...inlineHandlers,
+    ...(slotDeclarations.length
+      ? genMulti(['let ', NEWLINE, ', '], ...slotDeclarations)
+      : []),
     `const n${operation.id} = `,
     ...genCall(
-      operation.dynamic && !operation.dynamic.isStatic
+      isRuntimeDynamicComponent
         ? helper('createDynamicComponent')
         : operation.useCreateElement
           ? helper('createPlainElement')
-          : operation.asset
-            ? helper('createComponentWithFallback')
-            : helper('createComponent'),
+          : useAssetComponentHelper
+            ? helper('createAssetComponent')
+            : operation.asset
+              ? helper('createComponentWithFallback')
+              : helper('createComponent'),
       tag,
       rawProps,
       rawSlots,
-      root ? 'true' : false,
-      once && 'true',
+      isRuntimeDynamicComponent ? dynamicComponentFlags : root ? 'true' : false,
+      isRuntimeDynamicComponent
+        ? operation.key && [
+            '() => (',
+            ...genExpression(operation.key, context),
+            ')',
+          ]
+        : once && 'true',
+      useAssetComponentHelper ? maybeSelfReference && 'true' : nsArg,
+      useAssetComponentHelper && nsArg,
     ),
-    ...genDirectivesForElement(operation.id, context),
   ]
 
   function genTag() {
@@ -111,6 +157,11 @@ export function genCreateComponent(
       } else {
         return ['() => (', ...genExpression(operation.dynamic, context), ')']
       }
+    } else if (useAssetComponentHelper) {
+      const name = maybeSelfReference
+        ? operation.tag.slice(0, -6)
+        : operation.tag
+      return JSON.stringify(name)
     } else if (operation.asset) {
       return toValidAssetId(operation.tag, 'component')
     } else {
@@ -127,6 +178,42 @@ export function genCreateComponent(
       )
     }
   }
+}
+
+function genDynamicComponentFlags(
+  root: boolean | undefined,
+  once: boolean | undefined,
+  slotRoot: boolean | undefined,
+  ns: Namespace | undefined,
+): string | false {
+  let flags = 0
+  const names: string[] = []
+
+  if (root) {
+    flags |= VaporDynamicComponentFlags.SINGLE_ROOT
+    names.push('SINGLE_ROOT')
+  }
+  if (once) {
+    flags |= VaporDynamicComponentFlags.ONCE
+    names.push('ONCE')
+  }
+  if (slotRoot) {
+    flags |= VaporDynamicComponentFlags.SLOT_ROOT
+    names.push('SLOT_ROOT')
+  }
+  if (ns === Namespaces.SVG) {
+    flags |= VaporDynamicComponentFlags.NS_SVG
+    names.push('NS_SVG')
+  } else if (ns === Namespaces.MATH_ML) {
+    flags |= VaporDynamicComponentFlags.NS_MATHML
+    names.push('NS_MATHML')
+  }
+
+  if (!flags) {
+    return false
+  }
+
+  return genFlags(flags, names)
 }
 
 function getUniqueHandlerName(context: CodegenContext, name: string): string {
@@ -175,6 +262,7 @@ function processInlineHandlers(
 export function genRawProps(
   props: IRProps[],
   context: CodegenContext,
+  directStaticLiteralProps = false,
 ): CodeFragment[] | undefined {
   const staticProps = props[0]
   if (isArray(staticProps)) {
@@ -184,11 +272,17 @@ export function genRawProps(
     return genStaticProps(
       staticProps,
       context,
-      genDynamicProps(props.slice(1), context),
+      genDynamicProps(props.slice(1), context, directStaticLiteralProps),
+      directStaticLiteralProps,
     )
   } else if (props.length) {
     // all dynamic
-    return genStaticProps([], context, genDynamicProps(props, context))
+    return genStaticProps(
+      [],
+      context,
+      genDynamicProps(props, context, directStaticLiteralProps),
+      directStaticLiteralProps,
+    )
   }
 }
 
@@ -196,64 +290,34 @@ function genStaticProps(
   props: IRPropsStatic,
   context: CodegenContext,
   dynamicProps?: CodeFragment[],
+  directStaticLiteralProps = false,
 ): CodeFragment[] {
   const args: CodeFragment[][] = []
 
-  type HandlerGroup = {
-    keyFrag: CodeFragment[]
-    handlers: CodeFragment[][]
-    index: number
-  }
-  const handlerGroups = new Map<string, HandlerGroup>()
-
-  const ensureHandlerGroup = (
-    keyName: string,
-    keyFrag: CodeFragment[],
-  ): HandlerGroup => {
-    let group = handlerGroups.get(keyName)
-    if (!group) {
-      const index = args.length
-      // placeholder, filled later
-      args.push([])
-      group = { keyFrag, handlers: [], index }
-      handlerGroups.set(keyName, group)
-    }
-    return group
-  }
-
-  const addHandler = (
-    keyName: string,
-    keyFrag: CodeFragment[],
-    handlerExp: CodeFragment[],
-  ) => {
-    ensureHandlerGroup(keyName, keyFrag).handlers.push(handlerExp)
-  }
-
-  const getStaticPropKeyName = (prop: IRProp): string | undefined => {
-    if (!prop.key.isStatic) return
-    const handlerModifierPostfix =
-      prop.handlerModifiers && prop.handlerModifiers.options
-        ? prop.handlerModifiers.options
-            .map(m => m.charAt(0).toUpperCase() + m.slice(1))
-            .join('')
-        : ''
-    const keyName =
-      (prop.handler
-        ? toHandlerKey(camelize(prop.key.content))
-        : prop.key.content) + handlerModifierPostfix
-    return keyName
-  }
+  const handlerGroups = createHandlerGroups(
+    args,
+    '() => ',
+    DELIMITERS_ARRAY_NEWLINE,
+  )
 
   for (const prop of props) {
-    if (prop.handler) {
-      const keyName = getStaticPropKeyName(prop)
-      if (!keyName) {
+    if (isListenerProp(prop)) {
+      if (!prop.key.isStatic) {
         // dynamic key handlers are emitted as-is
         args.push(genProp(prop, context, true))
         continue
       }
-
+      const keyName = getStaticPropKeyName(prop)
       const keyFrag = genPropKey(prop, context)
+      if (!prop.handler) {
+        // `:onXxx` merges with the `@xxx` handlers like mergeProps
+        handlerGroups.add(keyName, keyFrag, [
+          '(',
+          ...genPropValue(prop.values, context),
+          ')',
+        ])
+        continue
+      }
       const hasModifiers =
         !!prop.handlerModifiers &&
         (prop.handlerModifiers.keys.length > 0 ||
@@ -264,10 +328,9 @@ function genStaticProps(
           context,
           prop.values,
           prop.handlerModifiers,
-          true,
-          false,
+          { asComponentProp: true },
         )
-        addHandler(keyName, keyFrag, handlerExp)
+        handlerGroups.add(keyName, keyFrag, handlerExp)
       } else {
         // no modifiers: flatten multiple handler values
         for (const value of prop.values) {
@@ -275,17 +338,24 @@ function genStaticProps(
             context,
             [value],
             prop.handlerModifiers,
-            true,
-            false,
+            { asComponentProp: true },
           )
-          addHandler(keyName, keyFrag, handlerExp)
+          handlerGroups.add(keyName, keyFrag, handlerExp)
         }
       }
       continue
     }
 
     // normal (non-handler) props
-    args.push(genProp(prop, context, true))
+    args.push(
+      genProp(
+        prop,
+        context,
+        true,
+        true,
+        directStaticLiteralProps && isDirectStaticLiteralProp(prop, context),
+      ),
+    )
 
     // v-model on component: synthesize onUpdate:* and modifiers props, and
     // dedupe/merge with user provided @update:* handlers.
@@ -294,7 +364,11 @@ function genStaticProps(
       if (prop.key.isStatic) {
         const keyName = `onUpdate:${camelize(prop.key.content)}`
         const keyFrag: CodeFragment[] = [JSON.stringify(keyName)]
-        addHandler(keyName, keyFrag, genModelHandler(prop.values[0], context))
+        handlerGroups.add(
+          keyName,
+          keyFrag,
+          genModelHandler(prop.values[0], context),
+        )
       } else {
         const keyFrag: CodeFragment[] = [
           '["onUpdate:" + ',
@@ -312,22 +386,20 @@ function genStaticProps(
       const { key, modelModifiers } = prop
       if (modelModifiers && modelModifiers.length) {
         const modifiersKey = key.isStatic
-          ? [getModifierPropName(key.content)]
+          ? genStaticModifierPropKey(key.content)
           : ['[', ...genExpression(key, context), ' + "Modifiers"]']
         const modifiersVal = genDirectiveModifiers(modelModifiers)
-        args.push([...modifiersKey, `: () => ({ ${modifiersVal} })`])
+        args.push([
+          ...modifiersKey,
+          directStaticLiteralProps
+            ? `: { ${modifiersVal} }`
+            : `: () => ({ ${modifiersVal} })`,
+        ])
       }
     }
   }
 
-  // fill handler placeholders
-  for (const group of handlerGroups.values()) {
-    const handlerValue =
-      group.handlers.length > 1
-        ? genMulti(DELIMITERS_ARRAY_NEWLINE, ...group.handlers)
-        : group.handlers[0]
-    args[group.index] = [...group.keyFrag, ': () => ', ...handlerValue]
-  }
+  handlerGroups.fill()
 
   if (dynamicProps) {
     args.push([`$: `, ...dynamicProps])
@@ -341,6 +413,7 @@ function genStaticProps(
 function genDynamicProps(
   props: IRProps[],
   context: CodegenContext,
+  directStaticLiteralProps = false,
 ): CodeFragment[] | undefined {
   const { helper } = context
   const frags: CodeFragment[][] = []
@@ -348,7 +421,9 @@ function genDynamicProps(
     let expr: CodeFragment[]
     if (isArray(p)) {
       if (p.length) {
-        frags.push(genStaticProps(p, context))
+        frags.push(
+          genStaticProps(p, context, undefined, directStaticLiteralProps),
+        )
       }
       continue
     } else {
@@ -368,7 +443,7 @@ function genDynamicProps(
               ] as CodeFragment[])
           entries.push([
             ...updateKey,
-            ': () => ',
+            ': ',
             ...genModelHandler(p.values[0], context),
           ])
 
@@ -376,19 +451,22 @@ function genDynamicProps(
           const { modelModifiers } = p
           if (modelModifiers && modelModifiers.length) {
             const modifiersKey = p.key.isStatic
-              ? ([getModifierPropName(p.key.content)] as CodeFragment[])
+              ? genStaticModifierPropKey(p.key.content)
               : ([
                   '[',
                   ...genExpression(p.key, context),
                   ' + "Modifiers"]',
                 ] as CodeFragment[])
             const modifiersVal = genDirectiveModifiers(modelModifiers)
-            entries.push([...modifiersKey, `: () => ({ ${modifiersVal} })`])
+            entries.push([...modifiersKey, `: { ${modifiersVal} }`])
           }
 
           expr = genMulti(DELIMITERS_OBJECT_NEWLINE, ...entries)
         } else {
-          expr = genMulti(DELIMITERS_OBJECT, genProp(p, context))
+          expr = genMulti(
+            DELIMITERS_OBJECT,
+            genProp(p, context, false, false /* wrapHandler */),
+          )
         }
       } else {
         expr = genExpression(p.value, context)
@@ -402,47 +480,174 @@ function genDynamicProps(
   }
 }
 
-function genProp(prop: IRProp, context: CodegenContext, isStatic?: boolean) {
-  const values = genPropValue(prop.values, context)
+function genProp(
+  prop: IRProp,
+  context: CodegenContext,
+  isStatic?: boolean,
+  wrapHandler = true,
+  directStaticLiteral = false,
+) {
+  let values = genPropValue(prop.values, context)
+  if (prop.toDisplayString) {
+    values = genCall(context.helper('toDisplayString'), values)
+  }
   return [
     ...genPropKey(prop, context),
     ': ',
     ...(prop.handler
-      ? genEventHandler(
-          context,
-          prop.values,
-          prop.handlerModifiers,
-          true /* asComponentProp */,
-          true /* wrapInGetter */,
-        )
+      ? genEventHandler(context, prop.values, prop.handlerModifiers, {
+          asComponentProp: true,
+          extraWrap: wrapHandler,
+        })
       : isStatic
-        ? ['() => (', ...values, ')']
+        ? directStaticLiteral
+          ? values
+          : ['() => (', ...values, ')']
         : values),
   ]
 }
 
-function genRawSlots(slots: IRSlots[], context: CodegenContext) {
+/**
+ * Static literal values are safe to emit directly because reading them cannot
+ * touch reactive state. Keep handlers, v-model values, and dynamic expressions
+ * as getter sources to preserve lazy access and merge semantics.
+ */
+function isDirectStaticLiteralProp(
+  prop: IRProp,
+  context: CodegenContext,
+): boolean {
+  return (
+    prop.key.isStatic &&
+    prop.values.length === 1 &&
+    !prop.handler &&
+    !prop.model &&
+    isDirectConstantValue(prop.values[0], context)
+  )
+}
+
+function isDirectConstantValue(
+  value: SimpleExpressionNode,
+  context: CodegenContext,
+): boolean {
+  value = context.getExpressionReplacement(value)
+  if (value.isStatic) return true
+
+  const ast = value.ast
+  if (ast === null) {
+    return (
+      value.content === 'true' ||
+      value.content === 'false' ||
+      value.content === 'null' ||
+      value.content === 'undefined'
+    )
+  }
+  if (!ast) return false
+  return isDirectConstantAst(ast as Expression)
+}
+
+function isDirectConstantAst(node: Expression): boolean {
+  switch (node.type) {
+    case 'StringLiteral':
+    case 'NumericLiteral':
+    case 'BooleanLiteral':
+    case 'NullLiteral':
+    case 'BigIntLiteral':
+      return true
+    case 'Identifier':
+      return node.name === 'undefined'
+    case 'TemplateLiteral':
+      return node.expressions.every(expression =>
+        isDirectTemplateConstantAst(expression as Expression),
+      )
+    case 'ArrayExpression':
+      return node.elements.every(
+        element =>
+          element === null ||
+          (element.type !== 'SpreadElement' && isDirectConstantAst(element)),
+      )
+    case 'ObjectExpression':
+      return node.properties.every(
+        prop =>
+          prop.type === 'ObjectProperty' &&
+          !prop.computed &&
+          isDirectConstantAst(prop.value as Expression),
+      )
+  }
+  return false
+}
+
+function isDirectTemplateConstantAst(node: Expression): boolean {
+  switch (node.type) {
+    case 'StringLiteral':
+    case 'NumericLiteral':
+    case 'BooleanLiteral':
+    case 'NullLiteral':
+    case 'BigIntLiteral':
+      return true
+    case 'Identifier':
+      return node.name === 'undefined'
+    case 'TemplateLiteral':
+      return node.expressions.every(expression =>
+        isDirectTemplateConstantAst(expression as Expression),
+      )
+  }
+  return false
+}
+
+function genRawSlots(
+  slots: IRSlots[],
+  context: CodegenContext,
+  slotDeclarations: string[],
+) {
   if (!slots.length) return
+  // like vdom's `createSlots()`, v-if / v-for slots override unconditional
+  // ones whatever the source order, so they go last (dynamic slots resolve
+  // from the end)
+  slots = [
+    ...slots.filter(slot => !isConditionalOrLoopSlot(slot)),
+    ...slots.filter(isConditionalOrLoopSlot),
+  ]
   const staticSlots = slots[0]
   if (staticSlots.slotType === IRSlotType.STATIC) {
+    const defaultSlot = getSingleDefaultSlot(staticSlots)
+    if (defaultSlot && slots.length === 1) {
+      return genSlotBlockWithProps(defaultSlot, context)
+    }
     // single static slot
     return genStaticSlots(
       staticSlots,
       context,
+      slotDeclarations,
       slots.length > 1 ? slots.slice(1) : undefined,
     )
   } else {
     return genStaticSlots(
       { slotType: IRSlotType.STATIC, slots: {} },
       context,
+      slotDeclarations,
       slots,
     )
   }
 }
 
+function isConditionalOrLoopSlot(slot: IRSlots): boolean {
+  return (
+    slot.slotType === IRSlotType.CONDITIONAL ||
+    slot.slotType === IRSlotType.LOOP
+  )
+}
+
+function getSingleDefaultSlot({ slots }: IRSlotsStatic) {
+  const names = Object.keys(slots)
+  return names.length === 1 && names[0] === 'default'
+    ? slots.default
+    : undefined
+}
+
 function genStaticSlots(
   { slots }: IRSlotsStatic,
   context: CodegenContext,
+  slotDeclarations: string[],
   dynamicSlots?: IRSlots[],
 ) {
   const args = Object.keys(slots).map(name => [
@@ -450,7 +655,10 @@ function genStaticSlots(
     ...genSlotBlockWithProps(slots[name], context),
   ])
   if (dynamicSlots) {
-    args.push([`$: `, ...genDynamicSlots(dynamicSlots, context)])
+    args.push([
+      `$: `,
+      ...genDynamicSlots(dynamicSlots, context, slotDeclarations),
+    ])
   }
   return genMulti(DELIMITERS_OBJECT_NEWLINE, ...args)
 }
@@ -458,15 +666,21 @@ function genStaticSlots(
 function genDynamicSlots(
   slots: IRSlots[],
   context: CodegenContext,
+  slotDeclarations: string[],
 ): CodeFragment[] {
   return genMulti(
     DELIMITERS_ARRAY_NEWLINE,
     ...slots.map(slot =>
       slot.slotType === IRSlotType.STATIC
-        ? genStaticSlots(slot, context)
+        ? genStaticSlots(slot, context, slotDeclarations)
         : slot.slotType === IRSlotType.EXPRESSION
           ? slot.slots.content
-          : genDynamicSlot(slot, context, true),
+          : genDynamicSlot(
+              slot,
+              context,
+              slotDeclarations,
+              slot.slotType !== IRSlotType.LOOP,
+            ),
     ),
   )
 }
@@ -474,32 +688,43 @@ function genDynamicSlots(
 function genDynamicSlot(
   slot: IRSlotDynamic,
   context: CodegenContext,
+  slotDeclarations: string[],
   withFunction = false,
 ): CodeFragment[] {
   let frag: CodeFragment[]
   switch (slot.slotType) {
     case IRSlotType.DYNAMIC:
-      frag = genBasicDynamicSlot(slot, context)
+      frag = genBasicDynamicSlot(slot, context, slotDeclarations)
       break
     case IRSlotType.LOOP:
       frag = genLoopSlot(slot, context)
       break
     case IRSlotType.CONDITIONAL:
-      frag = genConditionalSlot(slot, context)
+      frag = genConditionalSlot(slot, context, slotDeclarations)
       break
   }
-  return withFunction ? ['() => (', ...frag, ')'] : frag
+  if (!withFunction) return frag
+
+  return ['() => (', ...frag, ')']
 }
 
 function genBasicDynamicSlot(
   slot: IRSlotDynamicBasic,
   context: CodegenContext,
+  slotDeclarations: string[],
 ): CodeFragment[] {
   const { name, fn } = slot
+  const slotName = context.getUniqueLocalName('s')
+  // Cache the function lazily in the component's scope.
+  slotDeclarations.push(slotName)
   return genMulti(
     DELIMITERS_OBJECT_NEWLINE,
     ['name: ', ...genExpression(name, context)],
-    ['fn: ', ...genSlotBlockWithProps(fn, context)],
+    [
+      `fn: ${slotName} || (${slotName} = `,
+      ...genSlotBlockWithProps(fn, context, false),
+      ')',
+    ],
   )
 }
 
@@ -507,39 +732,76 @@ function genLoopSlot(
   slot: IRSlotDynamicLoop,
   context: CodegenContext,
 ): CodeFragment[] {
-  const { name, fn, loop } = slot
+  const { name, fn, loop, keyProp } = slot
   const { value, key, index, source } = loop
-  const rawValue = value && value.content
-  const rawKey = key && key.content
-  const rawIndex = index && index.content
+  const plugins = context.options.expressionPlugins
+  const idToPathMap = parseValueDestructure(value, context)
+  const keyToPathMap = parseValueDestructure(key, context)
+  const indexToPathMap = parseValueDestructure(index, context)
+  const [depth, exitScope] = context.enterScope()
+  const itemVar = `_for_item${depth}`
+  const idMap = buildDestructureIdMap(idToPathMap, `${itemVar}.value`, plugins)
+  idMap[itemVar] = null
 
-  const idMap: Record<string, string> = {}
-  if (rawValue) idMap[rawValue] = rawValue
-  if (rawKey) idMap[rawKey] = rawKey
-  if (rawIndex) idMap[rawIndex] = rawIndex
-  const slotExpr = genMulti(
-    DELIMITERS_OBJECT_NEWLINE,
-    ['name: ', ...context.withId(() => genExpression(name, context), idMap)],
-    [
-      'fn: ',
-      ...context.withId(() => genSlotBlockWithProps(fn, context), idMap),
-    ],
+  const args = [itemVar]
+  if (key) {
+    const keyVar = `_for_key${depth}`
+    args.push(keyVar)
+    Object.assign(
+      idMap,
+      buildDestructureIdMap(keyToPathMap, `${keyVar}.value`, plugins),
+    )
+    idMap[keyVar] = null
+  } else if (index) {
+    args.push('_')
+  }
+  if (index) {
+    const indexVar = `_for_index${depth}`
+    args.push(indexVar)
+    Object.assign(
+      idMap,
+      buildDestructureIdMap(indexToPathMap, `${indexVar}.value`, plugins),
+    )
+    idMap[indexVar] = null
+  }
+
+  const renderSlot = [
+    ...genMulti(['(', ')', ', '], ...args),
+    ' => ',
+    ...context.withId(() => genSlotBlockWithProps(fn, context, false), idMap),
+  ]
+  exitScope()
+
+  const rawIdMap: Record<string, null> = {}
+  const collect = (map: DestructureMap) =>
+    map.forEach((_, id) => (rawIdMap[id] = null))
+  collect(idToPathMap)
+  collect(keyToPathMap)
+  collect(indexToPathMap)
+  const rawParams = context.withId(
+    () => genAliasParams(value, key, index, context),
+    rawIdMap,
   )
+  const getName = [
+    ...rawParams,
+    ' => (',
+    ...context.withId(() => genExpression(name, context), rawIdMap),
+    ')',
+  ]
+  const getKey = keyProp && [
+    ...rawParams,
+    ' => (',
+    ...context.withId(() => genExpression(keyProp, context), rawIdMap),
+    ')',
+  ]
+
   return [
     ...genCall(
       context.helper('createForSlots'),
-      genExpression(source, context),
-      [
-        ...genMulti(
-          ['(', ')', ', '],
-          rawValue ? rawValue : rawKey || rawIndex ? '_' : undefined,
-          rawKey ? rawKey : rawIndex ? '__' : undefined,
-          rawIndex,
-        ),
-        ' => (',
-        ...slotExpr,
-        ')',
-      ],
+      ['() => (', ...genExpression(source, context), ')'],
+      renderSlot,
+      getName,
+      getKey,
     ),
   ]
 }
@@ -547,6 +809,7 @@ function genLoopSlot(
 function genConditionalSlot(
   slot: IRSlotDynamicConditional,
   context: CodegenContext,
+  slotDeclarations: string[],
 ): CodeFragment[] {
   const { condition, positive, negative } = slot
   return [
@@ -554,19 +817,25 @@ function genConditionalSlot(
     INDENT_START,
     NEWLINE,
     '? ',
-    ...genDynamicSlot(positive, context),
+    ...genDynamicSlot(positive, context, slotDeclarations),
     NEWLINE,
     ': ',
-    ...(negative ? [...genDynamicSlot(negative, context)] : ['void 0']),
+    ...(negative
+      ? genDynamicSlot(negative, context, slotDeclarations)
+      : ['void 0']),
     INDENT_END,
   ]
 }
 
-function genSlotBlockWithProps(oper: SlotBlockIRNode, context: CodegenContext) {
+function genSlotBlockWithProps(
+  oper: SlotBlockIRNode,
+  context: CodegenContext,
+  emitNonStableFlag = true,
+) {
   let propsName: string | undefined
   let exitScope: (() => void) | undefined
   let depth: number | undefined
-  const { props, node } = oper
+  const { props } = oper
   const idToPathMap: DestructureMap = props
     ? parseValueDestructure(props, context)
     : new Map<string, DestructureMapValue | null>()
@@ -592,94 +861,27 @@ function genSlotBlockWithProps(oper: SlotBlockIRNode, context: CodegenContext) {
     idMap[propsName] = null
   }
 
+  const exitSlotBlock = context.enterSlotBlock()
+  const hasStableRoot = hasStableSlotRoot(oper, context)
+  if (!hasStableRoot) {
+    markSlotRootOperations(oper, context)
+  }
   let blockFn = context.withId(
     () => genBlock(oper, context, propsName ? [propsName] : []),
     idMap,
   )
+  // Dynamic slot sources keep rawSlots.$, so runtime stays conservative.
+  if (emitNonStableFlag && !hasStableRoot) {
+    blockFn = genCall(context.helper('extend'), blockFn, [
+      `{ _: ${
+        __DEV__
+          ? genFlags(VaporSlotStability.NON_STABLE, ['NON_STABLE'])
+          : VaporSlotStability.NON_STABLE
+      } }`,
+    ])
+  }
+  exitSlotBlock()
   exitScope && exitScope()
 
-  if (node.type === NodeTypes.ELEMENT) {
-    // wrap with withVaporCtx to track slot owner for:
-    // 1. createSlot to get correct rawSlots in forwarded slots
-    // 2. scopeId inheritance for components created inside slots
-    // Skip if slot content has no components or slot outlets
-    if (needsVaporCtx(oper)) {
-      blockFn = [`${context.helper('withVaporCtx')}(`, ...blockFn, `)`]
-    }
-  }
-
   return blockFn
-}
-
-/**
- * Check if a slot block needs withVaporCtx wrapper.
- * Returns true if the block contains:
- * - Component creation (needs scopeId inheritance)
- * - Slot outlet (needs rawSlots from slot owner)
- */
-function needsVaporCtx(block: BlockIRNode): boolean {
-  return hasComponentOrSlotInBlock(block)
-}
-
-function hasComponentOrSlotInBlock(block: BlockIRNode): boolean {
-  // Check operations array
-  if (hasComponentOrSlotInOperations(block.operation)) return true
-  // Check dynamic children (components are often stored here)
-  return hasComponentOrSlotInDynamic(block.dynamic)
-}
-
-function hasComponentOrSlotInDynamic(dynamic: IRDynamicInfo): boolean {
-  // Check operation in this dynamic node
-  if (dynamic.operation) {
-    const type = dynamic.operation.type
-    if (
-      type === IRNodeTypes.CREATE_COMPONENT_NODE ||
-      type === IRNodeTypes.SLOT_OUTLET_NODE
-    ) {
-      return true
-    }
-    if (type === IRNodeTypes.IF) {
-      if (hasComponentOrSlotInIf(dynamic.operation as IfIRNode)) return true
-    }
-    if (type === IRNodeTypes.FOR) {
-      if (hasComponentOrSlotInBlock((dynamic.operation as ForIRNode).render))
-        return true
-    }
-  }
-  // Recursively check children
-  for (const child of dynamic.children) {
-    if (hasComponentOrSlotInDynamic(child)) return true
-  }
-  return false
-}
-
-function hasComponentOrSlotInOperations(operations: OperationNode[]): boolean {
-  for (const op of operations) {
-    switch (op.type) {
-      case IRNodeTypes.CREATE_COMPONENT_NODE:
-      case IRNodeTypes.SLOT_OUTLET_NODE:
-        return true
-      case IRNodeTypes.IF:
-        if (hasComponentOrSlotInIf(op as IfIRNode)) return true
-        break
-      case IRNodeTypes.FOR:
-        if (hasComponentOrSlotInBlock((op as ForIRNode).render)) return true
-        break
-    }
-  }
-  return false
-}
-
-function hasComponentOrSlotInIf(node: IfIRNode): boolean {
-  if (hasComponentOrSlotInBlock(node.positive)) return true
-  if (node.negative) {
-    if ('positive' in node.negative) {
-      // nested IfIRNode
-      return hasComponentOrSlotInIf(node.negative as IfIRNode)
-    } else {
-      // BlockIRNode
-      return hasComponentOrSlotInBlock(node.negative as BlockIRNode)
-    }
-  }
-  return false
 }

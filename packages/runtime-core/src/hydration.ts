@@ -12,11 +12,7 @@ import {
   normalizeVNode,
 } from './vnode'
 import { flushPostFlushCbs } from './scheduler'
-import type {
-  ComponentInternalInstance,
-  ComponentOptions,
-  ConcreteComponent,
-} from './component'
+import type { ComponentInternalInstance, ConcreteComponent } from './component'
 import { invokeDirectiveHook } from './directives'
 import { warn } from './warning'
 import {
@@ -38,6 +34,7 @@ import {
   stringifyStyle,
 } from '@vue/shared'
 import {
+  type ElementNamespace,
   type RendererInternals,
   getVaporInterface,
   needTransition,
@@ -79,7 +76,7 @@ export enum DOMNodeTypes {
 }
 
 let hasLoggedMismatchError = false
-const logMismatchError = () => {
+export const logMismatchError = (): void => {
   if (__TEST__ || hasLoggedMismatchError) {
     return
   }
@@ -92,12 +89,24 @@ const isSVGContainer = (container: Element) =>
   container.namespaceURI!.includes('svg') &&
   container.tagName !== 'foreignObject'
 
-const isMathMLContainer = (container: Element) =>
-  container.namespaceURI!.includes('MathML')
+const isMathMLContainer = (container: Element) => {
+  if (!container.namespaceURI!.includes('MathML')) return false
+  // <annotation-xml encoding="...html"> switches its children back to HTML,
+  // mirroring `resolveChildrenNamespace` on the mount path.
+  if (container.tagName !== 'annotation-xml') return true
+  const encoding = container.getAttribute('encoding')
+  return !encoding || !encoding.includes('html')
+}
 
-const getContainerType = (
+/**
+ * Resolve the element namespace a container's children should be created in.
+ * The live DOM is the source of truth, so this also covers containers that are
+ * only known at runtime (interop boundaries, teleport targets).
+ * @internal
+ */
+export const getContainerType = (
   container: Element | ShadowRoot,
-): 'svg' | 'mathml' | undefined => {
+): ElementNamespace => {
   if (container.nodeType !== DOMNodeTypes.ELEMENT) return undefined
   if (isSVGContainer(container as Element)) return 'svg'
   if (isMathMLContainer(container as Element)) return 'mathml'
@@ -169,7 +178,9 @@ export function createHydrationFunctions(
     optimized = false,
   ): Node | null => {
     optimized = optimized || !!vnode.dynamicChildren
-    const isFragmentStart = isComment(node) && node.data === '['
+    // `(` opens a slot fallback: a range like a fragment's
+    const isFragmentStart =
+      isComment(node) && (node.data === '[' || node.data === '(')
     const onMismatch = () =>
       handleMismatch(
         node,
@@ -287,6 +298,7 @@ export function createHydrationFunctions(
           node,
           parentComponent,
           parentSuspense,
+          slotScopeIds,
         )
         break
       default:
@@ -331,53 +343,14 @@ export function createHydrationFunctions(
 
           // hydrate vapor component
           if ((vnode.type as ConcreteComponent).__vapor) {
-            const vnodeBeforeMountHook =
-              !isAsyncWrapper(vnode) &&
-              vnode.props &&
-              vnode.props.onVnodeBeforeMount
             getVaporInterface(parentComponent, vnode).hydrate(
               vnode,
               node,
               container,
-              null,
+              nextNode,
               parentComponent,
               parentSuspense,
-              () => {
-                if (vnode.dirs) {
-                  invokeDirectiveHook(vnode, null, parentComponent, 'created')
-                  invokeDirectiveHook(
-                    vnode,
-                    null,
-                    parentComponent,
-                    'beforeMount',
-                  )
-                }
-              },
-              () => {
-                if (vnodeBeforeMountHook) {
-                  invokeVNodeHook(vnodeBeforeMountHook, parentComponent, vnode)
-                }
-              },
             )
-            if (vnode.dirs) {
-              queueEffectWithSuspense(
-                () =>
-                  invokeDirectiveHook(vnode, null, parentComponent, 'mounted'),
-                undefined,
-                parentSuspense,
-              )
-            }
-            const vnodeMountedHook =
-              !isAsyncWrapper(vnode) &&
-              vnode.props &&
-              vnode.props.onVnodeMounted
-            if (vnodeMountedHook) {
-              queueEffectWithSuspense(
-                () => invokeVNodeHook(vnodeMountedHook, parentComponent, vnode),
-                undefined,
-                parentSuspense,
-              )
-            }
           } else {
             mountComponent(
               vnode,
@@ -388,28 +361,40 @@ export function createHydrationFunctions(
               getContainerType(container),
               optimized,
             )
-          }
 
-          // #3787
-          // if component is async, it may get moved / unmounted before its
-          // inner component is loaded, so we need to give it a placeholder
-          // vnode that matches its adopted DOM.
-          if (
-            isAsyncWrapper(vnode) &&
-            !(vnode.type as ComponentOptions).__asyncResolved
-          ) {
-            let subTree
-            if (isFragmentStart) {
-              subTree = createVNode(Fragment)
-              subTree.anchor = nextNode
-                ? nextNode.previousSibling
-                : container.lastChild
-            } else {
-              subTree =
-                node.nodeType === 3 ? createTextVNode('') : createVNode('div')
+            // #3787
+            // An async component may move or unmount before its render effect
+            // exists, so keep a placeholder vnode that matches its adopted DOM.
+            //
+            // This covers unresolved async wrappers, lazy hydration wrappers
+            // whose subtree was deferred, and plain async setup under Suspense.
+            const component = vnode.component!
+            if (
+              !component.subTree &&
+              (isAsyncWrapper(vnode) || component.asyncDep)
+            ) {
+              let subTree
+              if (isFragmentStart) {
+                subTree = createVNode(Static)
+                subTree.anchor = nextNode
+                  ? nextNode.previousSibling
+                  : container.lastChild
+              } else {
+                // Mirror the adopted node's type so the placeholder behaves
+                // like the rendered root would (transition hooks assume an
+                // element).
+                subTree =
+                  node.nodeType === DOMNodeTypes.TEXT
+                    ? createTextVNode('')
+                    : createVNode(
+                        node.nodeType === DOMNodeTypes.COMMENT
+                          ? VComment
+                          : 'div',
+                      )
+              }
+              subTree.el = node
+              component.subTree = subTree
             }
-            subTree.el = node
-            vnode.component!.subTree = subTree
           }
         } else if (shapeFlag & ShapeFlags.TELEPORT) {
           if (domType !== DOMNodeTypes.COMMENT) {
@@ -459,14 +444,30 @@ export function createHydrationFunctions(
     optimized: boolean,
   ) => {
     optimized = optimized || !!vnode.dynamicChildren
-    const { type, props, patchFlag, shapeFlag, dirs, transition } = vnode
+    const {
+      type,
+      dynamicProps,
+      props,
+      patchFlag,
+      shapeFlag,
+      dirs,
+      transition,
+    } = vnode
     // #4006 for form elements with non-string v-model value bindings
     // e.g. <option :value="obj">, <input type="checkbox" :true-value="1">
     // #7476 <input indeterminate>
     const forcePatch = type === 'input' || type === 'option'
+    // #9033 force hydrate dynamic props.
+    // Keep separate from forcePatch, which also patches value-like keys.
+    const hasDynamicProps = !!dynamicProps
     // skip props & children if this is hoisted static nodes
     // #5405 in dev, always hydrate children for HMR
-    if (__DEV__ || forcePatch || patchFlag !== PatchFlags.CACHED) {
+    if (
+      __DEV__ ||
+      forcePatch ||
+      hasDynamicProps ||
+      patchFlag !== PatchFlags.CACHED
+    ) {
       if (dirs) {
         invokeDirectiveHook(vnode, null, parentComponent, 'created')
       }
@@ -512,23 +513,16 @@ export function createHydrationFunctions(
           slotScopeIds,
           optimized,
         )
-        let hasWarned = false
+        if (next && !isMismatchAllowed(el, MismatchTypes.CHILDREN)) {
+          ;(__DEV__ || __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__) &&
+            warn(
+              `Hydration children mismatch on`,
+              el,
+              `\nServer rendered element contains more child nodes than client vdom.`,
+            )
+          logMismatchError()
+        }
         while (next) {
-          if (!isMismatchAllowed(el, MismatchTypes.CHILDREN)) {
-            if (
-              (__DEV__ || __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__) &&
-              !hasWarned
-            ) {
-              warn(
-                `Hydration children mismatch on`,
-                el,
-                `\nServer rendered element contains more child nodes than client vdom.`,
-              )
-              hasWarned = true
-            }
-            logMismatchError()
-          }
-
           // The SSRed DOM contains more nodes than it should. Remove them.
           const cur = next
           next = next.nextSibling
@@ -571,10 +565,16 @@ export function createHydrationFunctions(
           __DEV__ ||
           __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__ ||
           forcePatch ||
+          hasDynamicProps ||
           !optimized ||
           patchFlag & (PatchFlags.FULL_PROPS | PatchFlags.NEED_HYDRATION)
         ) {
           const isCustomElement = el.tagName.includes('-')
+          const namespace = el.namespaceURI!.includes('svg')
+            ? 'svg'
+            : el.namespaceURI!.includes('MathML')
+              ? 'mathml'
+              : undefined
           for (const key in props) {
             // check hydration mismatch
             if (
@@ -592,9 +592,13 @@ export function createHydrationFunctions(
               (isOn(key) && !isReservedProp(key)) ||
               // force hydrate v-bind with .prop modifiers
               key[0] === '.' ||
-              (isCustomElement && !isReservedProp(key))
+              (isCustomElement && !isReservedProp(key)) ||
+              (dynamicProps && dynamicProps.includes(key))
             ) {
-              patchProp(el, key, null, props[key], undefined, parentComponent)
+              if (isUnchangedResourceProp(el, key, props[key])) {
+                continue
+              }
+              patchProp(el, key, null, props[key], namespace, parentComponent)
             }
           }
         } else if (props.onClick) {
@@ -656,7 +660,7 @@ export function createHydrationFunctions(
     optimized = optimized || !!parentVNode.dynamicChildren
     const children = parentVNode.children as VNode[]
     const l = children.length
-    let hasWarned = false
+    let hasCheckedMismatch = false
     for (let i = 0; i < l; i++) {
       const vnode = optimized
         ? children[i]
@@ -694,19 +698,17 @@ export function createHydrationFunctions(
         // because server rendered HTML won't contain a text node
         insert((vnode.el = createText('')), container)
       } else {
-        if (!isMismatchAllowed(container, MismatchTypes.CHILDREN)) {
-          if (
-            (__DEV__ || __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__) &&
-            !hasWarned
-          ) {
-            warn(
-              `Hydration children mismatch on`,
-              container,
-              `\nServer rendered element contains fewer child nodes than client vdom.`,
-            )
-            hasWarned = true
+        if (!hasCheckedMismatch) {
+          hasCheckedMismatch = true
+          if (!isMismatchAllowed(container, MismatchTypes.CHILDREN)) {
+            ;(__DEV__ || __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__) &&
+              warn(
+                `Hydration children mismatch on`,
+                container,
+                `\nServer rendered element contains fewer child nodes than client vdom.`,
+              )
+            logMismatchError()
           }
-          logMismatchError()
         }
 
         // the SSRed DOM didn't contain enough nodes. Mount the missing ones.
@@ -741,16 +743,32 @@ export function createHydrationFunctions(
     }
 
     const container = parentNode(node)!
-    const next = hydrateChildren(
-      nextSibling(node)!,
-      vnode,
-      container,
-      parentComponent,
-      parentSuspense,
-      slotScopeIds,
-      optimized,
-    )
-    if (next && isComment(next) && next.data === ']') {
+    const first = nextSibling(node)!
+    // the client kept the forwarded vapor slot and what is around it, the
+    // server rendered the outlet's fallback in their place
+    const next =
+      vnode.vo && (node as Comment).data === '('
+        ? getVaporInterface(parentComponent, vnode).hydrateSlotOutlet(
+            vnode,
+            node,
+            parentComponent,
+            parentSuspense,
+            slotScopeIds,
+          )
+        : hydrateChildren(
+            first,
+            vnode,
+            container,
+            parentComponent,
+            parentSuspense,
+            slotScopeIds,
+            optimized,
+          )
+    if (
+      next &&
+      isComment(next) &&
+      next.data === ((node as Comment).data === '(' ? ')' : ']')
+    ) {
       return nextSibling((vnode.anchor = next))
     } else {
       // fragment didn't hydrate successfully, since we didn't get a end anchor
@@ -771,14 +789,14 @@ export function createHydrationFunctions(
     slotScopeIds: string[] | null,
     isFragment: boolean,
   ): Node | null => {
-    if (!isMismatchAllowed(node.parentElement!, MismatchTypes.CHILDREN)) {
+    if (!isNodeMismatchAllowed(node, vnode)) {
       ;(__DEV__ || __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__) &&
         warn(
           `Hydration node mismatch:\n- rendered on server:`,
           node,
           node.nodeType === DOMNodeTypes.TEXT
             ? `(text)`
-            : isComment(node) && node.data === '['
+            : isComment(node) && (node.data === '[' || node.data === '(')
               ? `(start of fragment)`
               : ``,
           `\n- expected on client:`,
@@ -817,7 +835,7 @@ export function createHydrationFunctions(
       slotScopeIds,
     )
     // the component vnode's el should be updated when a mismatch occurs.
-    if (parentComponent) {
+    if (parentComponent && parentComponent.vnode) {
       parentComponent.vnode.el = vnode.el
       updateHOCHostEl(parentComponent, vnode.el)
     }
@@ -827,8 +845,10 @@ export function createHydrationFunctions(
   // looks ahead for a start and closing comment node
   const locateClosingAnchor = (
     node: Node | null,
-    open = '[',
-    close = ']',
+    // the pair of the range `node` opens: a mismatch hands in a node inside a
+    // `[` range as well
+    open: string = node && isComment(node) && node.data === '(' ? '(' : '[',
+    close: string = open === '(' ? ')' : ']',
   ): Node | null => {
     let match = 0
     while (node) {
@@ -861,7 +881,7 @@ export function createHydrationFunctions(
     // update vnode
     let parent = parentComponent
     while (parent) {
-      if (parent.vnode.el === oldNode) {
+      if (parent.vnode && parent.vnode.el === oldNode) {
         parent.vnode.el = parent.subTree.el = newNode
       }
       parent = parent.parent as ComponentInternalInstance
@@ -875,6 +895,24 @@ export const isTemplateNode = (node: Node): node is HTMLTemplateElement => {
   return (
     node.nodeType === DOMNodeTypes.ELEMENT &&
     (node as Element).tagName === 'TEMPLATE'
+  )
+}
+
+// attributes whose assignment triggers a (re)fetch of a resource
+const resourceProps = /*@__PURE__*/ new Set(['src', 'srcset', 'href', 'poster'])
+
+export function isUnchangedResourceProp(
+  el: Element,
+  key: string,
+  clientValue: any,
+): boolean {
+  if (!resourceProps.has(key)) {
+    return false
+  }
+  // compare against the rendered attribute rather than the reflected DOM
+  // property, which normalizes URLs to absolute form.
+  return (
+    el.getAttribute(key) === (clientValue == null ? null : `${clientValue}`)
   )
 }
 
@@ -953,7 +991,10 @@ export function getAttributeMismatch(
 } {
   let actual: string | boolean | null | undefined
   let expected: string | boolean | null | undefined
-  if (isBooleanAttr(key)) {
+  if (key === 'hidden') {
+    actual = normalizeHiddenValue(el.getAttribute(key))
+    expected = normalizeHiddenValue(clientValue)
+  } else if (isBooleanAttr(key)) {
     actual = el.hasAttribute(key)
     expected = includeBooleanAttr(clientValue)
   } else if (clientValue == null) {
@@ -1009,6 +1050,18 @@ export function warnPropMismatch(
   return false
 }
 
+function normalizeHiddenValue(value: unknown): false | '' | 'until-found' {
+  if (!isRenderableAttrValue(value)) {
+    return false
+  }
+  if (isString(value)) {
+    // Attribute values from the DOM are strings, while numeric client values
+    // follow the `hidden` property setter, where 0 and NaN remove the attribute.
+    return value.toLowerCase() === 'until-found' ? 'until-found' : ''
+  }
+  return includeBooleanAttr(value) ? '' : false
+}
+
 export function toClassSet(str: string): Set<string> {
   return new Set(str.trim().split(/\s+/))
 }
@@ -1053,11 +1106,11 @@ export function isMapEqual(
   return true
 }
 
-function resolveCssVars(
+export function resolveCssVars(
   instance: ComponentInternalInstance,
   vnode: VNode,
   expectedMap: Map<string, string>,
-) {
+): void {
   const root = instance.subTree
   if (
     instance.getCssVars &&
@@ -1111,7 +1164,16 @@ export function isMismatchAllowed(
       el = el.parentElement
     }
   }
-  const allowedAttr = el && el.getAttribute(allowMismatchAttr)
+  return isMismatchAllowedByAttr(
+    el && el.getAttribute(allowMismatchAttr),
+    allowedType,
+  )
+}
+
+function isMismatchAllowedByAttr(
+  allowedAttr: string | null,
+  allowedType: MismatchTypes,
+): boolean {
   if (allowedAttr == null) {
     return false
   } else if (allowedAttr === '') {
@@ -1124,4 +1186,30 @@ export function isMismatchAllowed(
     }
     return list.includes(MismatchTypeString[allowedType])
   }
+}
+
+function isNodeMismatchAllowed(node: Node, vnode: VNode): boolean {
+  return (
+    isMismatchAllowed(node.parentElement, MismatchTypes.CHILDREN) ||
+    isMismatchAllowedByNode(node) ||
+    isMismatchAllowedByVNode(vnode)
+  )
+}
+
+function isMismatchAllowedByNode(node: Node): boolean {
+  return (
+    node.nodeType === DOMNodeTypes.ELEMENT &&
+    isMismatchAllowedByAttr(
+      (node as Element).getAttribute(allowMismatchAttr),
+      MismatchTypes.CHILDREN,
+    )
+  )
+}
+
+function isMismatchAllowedByVNode({ props }: VNode): boolean {
+  const allowedAttr = props && props[allowMismatchAttr]
+  return (
+    typeof allowedAttr === 'string' &&
+    isMismatchAllowedByAttr(allowedAttr, MismatchTypes.CHILDREN)
+  )
 }

@@ -6,10 +6,13 @@ import {
   createIf,
   createSlot,
   createTemplateRefSetter,
+  defineVaporAsyncComponent,
   defineVaporComponent,
   delegateEvents,
   insert,
   renderEffect,
+  setStaticTemplateRef,
+  setTemplateRefBinding,
   template,
 } from '../../src'
 import { compile, makeRender, runtimeDom, runtimeVapor } from '../_utils'
@@ -27,6 +30,7 @@ import { setElementText, setText } from '../../src/dom/prop'
 import type { VaporComponent } from '../../src/component'
 
 const define = makeRender()
+const timeout = (n: number = 0) => new Promise(r => setTimeout(r, n))
 
 describe('api: template ref', () => {
   test('string ref mount', () => {
@@ -41,6 +45,26 @@ describe('api: template ref', () => {
       render() {
         const n0 = t0()
         createTemplateRefSetter()(n0 as Element, 'refKey')
+        return n0
+      },
+    })
+
+    const { host } = render()
+    expect(el.value).toBe(host.children[0])
+  })
+
+  test('static string ref helper mount', () => {
+    const t0 = template('<div ref="refKey"></div>')
+    const el = ref(null)
+    const { render } = define({
+      setup() {
+        return {
+          refKey: el,
+        }
+      },
+      render() {
+        const n0 = t0()
+        setStaticTemplateRef(n0 as Element, 'refKey')
         return n0
       },
     })
@@ -81,6 +105,117 @@ describe('api: template ref', () => {
     expect(fooEl.value).toBe(null)
   })
 
+  it('string ref binding update', async () => {
+    const t0 = template('<div></div>')
+    const fooEl = ref(null)
+    const barEl = ref(null)
+    const refKey = ref('foo')
+
+    const { render } = define({
+      setup() {
+        return {
+          foo: fooEl,
+          bar: barEl,
+        }
+      },
+      render() {
+        const n0 = t0()
+        setTemplateRefBinding(n0 as Element, () => refKey.value)
+        return n0
+      },
+    })
+    const { host } = render()
+    expect(fooEl.value).toBe(host.children[0])
+    expect(barEl.value).toBe(null)
+
+    refKey.value = 'bar'
+    await nextTick()
+    expect(barEl.value).toBe(host.children[0])
+    expect(fooEl.value).toBe(null)
+  })
+
+  it('dynamic component ref binding keeps a stable update hook', async () => {
+    const Child = defineVaporComponent({
+      setup() {
+        return template('<div>child</div>')()
+      },
+    })
+    const fooEl = ref(null)
+    const barEl = ref(null)
+    const refKey = ref('foo')
+    let frag: any
+
+    const { render } = define({
+      setup() {
+        return {
+          foo: fooEl,
+          bar: barEl,
+        }
+      },
+      render() {
+        const n0 = createDynamicComponent(() => Child) as any
+        frag = n0
+        setTemplateRefBinding(n0, () => refKey.value)
+        return n0
+      },
+    })
+    render()
+    const updateHook = frag.u![0]
+
+    expect(frag.u).toHaveLength(1)
+
+    refKey.value = 'bar'
+    await nextTick()
+
+    expect(frag.u).toHaveLength(1)
+    expect(frag.u![0]).toBe(updateHook)
+    expect(fooEl.value).toBe(null)
+    expect(barEl.value).not.toBe(null)
+  })
+
+  it('dynamic component ref binding handles component and ref key switching together', async () => {
+    const One = defineVaporComponent({
+      setup(_, { expose }) {
+        expose({ name: 'one' })
+        return template('<div>one</div>')()
+      },
+    })
+    const Two = defineVaporComponent({
+      setup(_, { expose }) {
+        expose({ name: 'two' })
+        return template('<div>two</div>')()
+      },
+    })
+
+    const views = [One, Two]
+    const view = ref(0)
+    const refKey = ref<'foo' | 'bar'>('foo')
+    const foo = ref<any>(null)
+    const bar = ref<any>(null)
+
+    const { render } = define({
+      setup() {
+        return { foo, bar }
+      },
+      render() {
+        const n0 = createDynamicComponent(() => views[view.value]) as any
+        setTemplateRefBinding(n0, () => refKey.value)
+        return n0
+      },
+    })
+
+    render()
+    expect(foo.value).toMatchObject({ name: 'one' })
+    expect(bar.value).toBe(null)
+
+    view.value = 1
+    refKey.value = 'bar'
+    await nextTick()
+
+    expect(foo.value).toBe(null)
+    expect(bar.value).toMatchObject({ name: 'two' })
+  })
+
   it('dynamic ref can be null or undefined without warning', async () => {
     const t0 = template('<div></div>')
     const el = ref(null)
@@ -118,6 +253,39 @@ describe('api: template ref', () => {
     await nextTick()
     expect(el.value).toBe(null)
     expect('Invalid template ref type:').not.toHaveBeenWarned()
+  })
+
+  it('dynamic direct refs with ref_keys clear the old ref', async () => {
+    const t0 = template('<div></div>')
+    const refKey = ref<'foo' | 'bar'>('foo')
+    let tRefs!: Record<'foo' | 'bar', ShallowRef>
+
+    const { render } = define({
+      setup() {
+        tRefs = {
+          foo: useTemplateRef('foo'),
+          bar: useTemplateRef('bar'),
+        }
+      },
+      render() {
+        const n0 = t0()
+        const setRef = createTemplateRefSetter()
+        renderEffect(() => {
+          const key = refKey.value
+          setRef(n0 as Element, tRefs[key], false, key)
+        })
+        return n0
+      },
+    })
+    const { host } = render()
+    expect(tRefs.foo.value).toBe(host.children[0])
+    expect(tRefs.bar.value).toBe(null)
+
+    refKey.value = 'bar'
+    await nextTick()
+
+    expect(tRefs.foo.value).toBe(null)
+    expect(tRefs.bar.value).toBe(host.children[0])
   })
 
   it('string ref unmount', async () => {
@@ -180,6 +348,33 @@ describe('api: template ref', () => {
         renderEffect(() => {
           setRef(n0 as Element, fn.value)
         })
+        return n0
+      },
+    })
+
+    const { host } = render()
+
+    expect(fn1.mock.calls).toHaveLength(1)
+    expect(fn1.mock.calls[0][0]).toBe(host.children[0])
+    expect(fn2.mock.calls).toHaveLength(0)
+
+    fn.value = fn2
+    await nextTick()
+    expect(fn1.mock.calls).toHaveLength(1)
+    expect(fn2.mock.calls).toHaveLength(1)
+    expect(fn2.mock.calls[0][0]).toBe(host.children[0])
+  })
+
+  it('function ref binding update', async () => {
+    const fn1 = vi.fn()
+    const fn2 = vi.fn()
+    const fn = ref(fn1)
+
+    const t0 = template('<div></div>')
+    const { render } = define({
+      render() {
+        const n0 = t0()
+        setTemplateRefBinding(n0 as Element, () => fn.value)
         return n0
       },
     })
@@ -644,6 +839,44 @@ describe('api: template ref', () => {
     expect(r.value).toBe(n)
   })
 
+  test('dynamic string ref binding inside slots', () => {
+    let childInstance: any
+    const { component: Child } = define({
+      setup() {
+        childInstance = currentInstance
+        return createSlot('default')
+      },
+    })
+
+    const r = ref()
+    const refName = ref('foo')
+    let n
+
+    const { render } = define({
+      setup() {
+        return {
+          foo: r,
+        }
+      },
+      render() {
+        const n0 = createComponent(Child, null, {
+          default: () => {
+            n = document.createElement('div')
+            // no owner setter threaded in: the helper resolves the ref owner
+            // itself via getScopeOwner()
+            setTemplateRefBinding(n, () => refName.value)
+            return n
+          },
+        })
+        return n0
+      },
+    })
+
+    render()
+    expect(r.value).toBe(n)
+    expect(childInstance.refs.foo).toBeUndefined()
+  })
+
   test('inline ref inside slots', () => {
     const { component: Child } = define({
       setup() {
@@ -701,6 +934,48 @@ describe('api: template ref', () => {
     expect(r!.value).toBe(n)
   })
 
+  // Compiled counterparts of the hand-written slot cases above: these exercise
+  // the real codegen path, where the ref owner is resolved at runtime by
+  // getScopeOwner() rather than threaded in from the owner's render scope.
+  test('compiled static ref inside slots binds to the owner', () => {
+    const data = ref(0)
+    const Child = compile(`<template><slot /></template>`, data)
+    const Parent = compile(
+      `<template>
+        <components.Child><div ref="foo">slotted</div></components.Child>
+      </template>`,
+      data,
+      { Child },
+    )
+
+    const { instance, host } = define(Parent).render()
+    const el = host.querySelector('div')
+    expect(el).not.toBe(null)
+    expect((instance as any).refs.foo).toBe(el)
+  })
+
+  test('compiled dynamic ref inside slots binds to the owner', async () => {
+    const data = ref({ name: 'foo' })
+    const Child = compile(`<template><slot /></template>`, data)
+    const Parent = compile(
+      `<template>
+        <components.Child><div :ref="data.name">slotted</div></components.Child>
+      </template>`,
+      data,
+      { Child },
+    )
+
+    const { instance, host } = define(Parent).render()
+    const el = host.querySelector('div')
+    const refs = (instance as any).refs
+    expect(refs.foo).toBe(el)
+
+    data.value = { name: 'bar' }
+    await nextTick()
+    expect(refs.foo).toBe(null)
+    expect(refs.bar).toBe(el)
+  })
+
   test('work with dynamic component', async () => {
     const Child = defineVaporComponent({
       setup(_, { expose }) {
@@ -732,6 +1007,122 @@ describe('api: template ref', () => {
     refKey.value.setMsg('changed')
     await nextTick()
     expect(html()).toBe('<div>changed</div><!--dynamic-component-->')
+  })
+
+  test('component static ref updates after async resolve', async () => {
+    let resolve: (comp: VaporComponent) => void
+    const AsyncChild = defineVaporAsyncComponent(
+      () =>
+        new Promise<VaporComponent>(r => {
+          resolve = r
+        }),
+    )
+    const Child = defineVaporComponent({
+      setup(_, { expose }) {
+        expose({ name: 'async child' })
+        return template('<div>async child</div>')()
+      },
+    })
+    const foo = ref(null)
+
+    const { html } = define({
+      setup() {
+        return { foo }
+      },
+      render() {
+        const n0 = createComponent(AsyncChild)
+        setStaticTemplateRef(n0, 'foo')
+        return n0
+      },
+    }).render()
+
+    expect(foo.value).toBe(null)
+    expect(html()).toBe('<!--async component-->')
+
+    resolve!(Child)
+    await timeout()
+
+    expect(foo.value).toMatchObject({ name: 'async child' })
+    expect(html()).toBe('<div>async child</div><!--async component-->')
+  })
+
+  test('component static useTemplateRef updates after async resolve', async () => {
+    let resolve: (comp: VaporComponent) => void
+    const AsyncChild = defineVaporAsyncComponent(
+      () =>
+        new Promise<VaporComponent>(r => {
+          resolve = r
+        }),
+    )
+    const Child = defineVaporComponent({
+      setup(_, { expose }) {
+        expose({ name: 'async child' })
+        return template('<div>async child</div>')()
+      },
+    })
+    let foo: ShallowRef
+
+    const { html } = define({
+      setup() {
+        foo = useTemplateRef('foo')
+      },
+      render() {
+        const n0 = createComponent(AsyncChild)
+        setStaticTemplateRef(n0, foo!, false, 'foo')
+        return n0
+      },
+    }).render()
+
+    expect(foo!.value).toBe(null)
+    expect(html()).toBe('<!--async component-->')
+
+    resolve!(Child)
+    await timeout()
+
+    expect(foo!.value).toMatchObject({ name: 'async child' })
+    expect(html()).toBe('<div>async child</div><!--async component-->')
+  })
+
+  test('component static ref updates when switching dynamic components', async () => {
+    const One = defineVaporComponent({
+      setup(_, { expose }) {
+        expose({ name: 'one' })
+        return template('<div>one</div>')()
+      },
+    })
+    const Two = defineVaporComponent({
+      setup(_, { expose }) {
+        expose({ name: 'two' })
+        return template('<div>two</div>')()
+      },
+    })
+
+    const views: VaporComponent[] = [One, Two]
+    const view = ref(0)
+    const foo = ref<any>(null)
+
+    const { html } = define({
+      setup() {
+        return { foo }
+      },
+      render() {
+        const n0 = createDynamicComponent(() => views[view.value]) as any
+        setStaticTemplateRef(n0, 'foo')
+        return n0
+      },
+    }).render()
+
+    await nextTick()
+    const one = foo.value
+    expect(one).toMatchObject({ name: 'one' })
+    expect(html()).toBe('<div>one</div><!--dynamic-component-->')
+
+    view.value = 1
+    await nextTick()
+
+    expect(foo.value).toMatchObject({ name: 'two' })
+    expect(foo.value).not.toBe(one)
+    expect(html()).toBe('<div>two</div><!--dynamic-component-->')
   })
 
   test('components that change their dynamics', async () => {
@@ -832,7 +1223,7 @@ describe('api: template ref', () => {
     expect(refNames).toContain('two')
   })
 
-  test('dynamic component should not register duplicate onUpdated handlers for refs', async () => {
+  test('dynamic component should not register duplicate updated handlers for refs', async () => {
     const One = defineVaporComponent({
       setup() {
         return template('<div>one</div>')()
@@ -863,15 +1254,15 @@ describe('api: template ref', () => {
       },
     }).render()
 
-    expect(frag.onUpdated.length).toBe(1)
+    expect(frag.u.length).toBe(1)
 
     useA.value = false
     await nextTick()
-    expect(frag.onUpdated.length).toBe(1)
+    expect(frag.u.length).toBe(1)
 
     view.value = 1
     await nextTick()
-    expect(frag.onUpdated.length).toBe(1)
+    expect(frag.u.length).toBe(1)
   })
 
   test('dynamic component function ref should cleanup old branch with null', async () => {
@@ -1062,19 +1453,20 @@ describe('api: template ref', () => {
 
     expect(fn1).toHaveBeenCalledTimes(1)
     expect(fn2).toHaveBeenCalledTimes(0)
-    expect(app._instance!.scope.cleanups.length).toBe(1)
+    const { cleanups } = (app._instance as any).renderScope
+    expect(cleanups.length).toBe(1)
 
     toggle.value = false
     await nextTick()
     expect(fn1).toHaveBeenCalledTimes(1)
     expect(fn2).toHaveBeenCalledTimes(1)
-    expect(app._instance!.scope.cleanups.length).toBe(1)
+    expect(cleanups.length).toBe(1)
 
     toggle.value = true
     await nextTick()
     expect(fn1).toHaveBeenCalledTimes(2)
     expect(fn2).toHaveBeenCalledTimes(1)
-    expect(app._instance!.scope.cleanups.length).toBe(1)
+    expect(cleanups.length).toBe(1)
 
     app.unmount()
     await nextTick()
@@ -1105,13 +1497,14 @@ describe('api: template ref', () => {
 
     expect(el1.value).toBe(host.children[0])
     expect(el2.value).toBe(null)
-    expect(app._instance!.scope.cleanups.length).toBe(1)
+    const { cleanups } = (app._instance as any).renderScope
+    expect(cleanups.length).toBe(1)
 
     toggle.value = false
     await nextTick()
     expect(el1.value).toBe(null)
     expect(el2.value).toBe(host.children[0])
-    expect(app._instance!.scope.cleanups.length).toBe(1)
+    expect(cleanups.length).toBe(1)
 
     app.unmount()
     await nextTick()
@@ -1287,46 +1680,6 @@ describe('api: template ref', () => {
       __DEV__ = true
     }
   })
-
-  // TODO: can not reproduce in Vapor
-  // // #2078
-  // test('handling multiple merged refs', async () => {
-  //   const Foo = {
-  //     render: () => h('div', 'foo'),
-  //   }
-  //   const Bar = {
-  //     render: () => h('div', 'bar'),
-  //   }
-
-  //   const viewRef = shallowRef<any>(Foo)
-  //   const elRef1 = ref()
-  //   const elRef2 = ref()
-
-  //   const App = {
-  //     render() {
-  //       if (!viewRef.value) {
-  //         return null
-  //       }
-  //       const view = h(viewRef.value, { ref: elRef1 })
-  //       return h(view, { ref: elRef2 })
-  //     },
-  //   }
-  //   const root = nodeOps.createElement('div')
-  //   render(h(App), root)
-
-  //   expect(serializeInner(elRef1.value.$el)).toBe('foo')
-  //   expect(elRef1.value).toBe(elRef2.value)
-
-  //   viewRef.value = Bar
-  //   await nextTick()
-  //   expect(serializeInner(elRef1.value.$el)).toBe('bar')
-  //   expect(elRef1.value).toBe(elRef2.value)
-
-  //   viewRef.value = null
-  //   await nextTick()
-  //   expect(elRef1.value).toBeNull()
-  //   expect(elRef1.value).toBe(elRef2.value)
-  // })
 })
 
 describe('interop: template ref', () => {
@@ -1552,6 +1905,41 @@ describe('interop: template ref', () => {
     expect(container.innerHTML).toBe(
       `<div><button class="btn"></button><div>bar</div></div>`,
     )
+  })
+
+  // Slot content declared by a Vapor owner but rendered by a VDOM child: the
+  // ref must land on the owner, not on the component executing the slot.
+  test('vapor app: ref in slot passed to vdom child binds to the owner', async () => {
+    const { container } = await testTemplateRefInterop(
+      `<script setup>
+        import { useTemplateRef } from 'vue'
+        const components = _components;
+        const elRef = useTemplateRef('el')
+        function click() {
+          elRef.value.textContent = 'changed'
+        }
+      </script>
+      <template>
+        <button class="btn" @click="click"></button>
+        <components.VdomChild><div ref="el">slotted</div></components.VdomChild>
+      </template>`,
+      {
+        VdomChild: {
+          code: `
+          <template>
+            <slot/>
+          </template>`,
+          vapor: false,
+        },
+      },
+      {},
+      { vapor: true },
+    )
+
+    expect(container.innerHTML).contains('slotted')
+    triggerEvent('click', container.querySelector('.btn')!)
+    await nextTick()
+    expect(container.innerHTML).contains('changed')
   })
 
   test('vapor app: static ref with vdom child', async () => {

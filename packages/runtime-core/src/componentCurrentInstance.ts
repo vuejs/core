@@ -92,6 +92,19 @@ export const setCurrentInstance = (
   }
 }
 
+/**
+ * Restores a snapshot returned by {@link setCurrentInstance}. Unlike calling
+ * `setCurrentInstance(...prev)`, an `undefined` saved scope is restored
+ * verbatim instead of re-triggering the `instance.scope` default.
+ * @internal
+ */
+export const restoreCurrentInstance = (
+  prev: [GenericComponentInstance | null, EffectScope | undefined],
+): void => {
+  setCurrentScope(prev[1])
+  simpleSetCurrentInstance(prev[0])
+}
+
 const internalOptions = ['ce', 'type', 'uid'] as const
 
 /**

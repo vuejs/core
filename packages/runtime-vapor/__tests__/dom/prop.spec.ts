@@ -1,10 +1,10 @@
-import { NOOP, toDisplayString } from '@vue/shared'
+import { NOOP } from '@vue/shared'
 import {
   setDynamicProp as _setDynamicProp,
+  optimizePropertyLookup,
   setAttr,
-  setBlockHtml,
-  setBlockText,
   setClass,
+  setClassName,
   setDynamicProps,
   setElementText,
   setHtml,
@@ -16,28 +16,29 @@ import { setStyle } from '../../src/dom/prop'
 import {
   VaporComponentInstance,
   applyFallthroughProps,
-  createComponent,
+  isApplyingFallthroughProps,
 } from '../../src/component'
-import { ref, setCurrentInstance, svgNS, xlinkNS } from '@vue/runtime-dom'
-import { makeRender } from '../_utils'
 import {
-  createDynamicComponent,
-  defineVaporComponent,
-  renderEffect,
-  template,
-} from '../../src'
+  effectScope,
+  nextTick,
+  ref,
+  restoreCurrentInstance,
+  setCurrentInstance,
+  svgNS,
+  xlinkNS,
+} from '@vue/runtime-dom'
+import { renderEffect } from '../../src'
+import { renderParity } from '../_utils'
 
 let removeComponentInstance = NOOP
 beforeEach(() => {
   const instance = new VaporComponentInstance({}, {}, null)
   const prev = setCurrentInstance(instance)
-  removeComponentInstance = () => setCurrentInstance(...prev)
+  removeComponentInstance = () => restoreCurrentInstance(prev)
 })
 afterEach(() => {
   removeComponentInstance()
 })
-
-const define = makeRender()
 
 describe('patchProp', () => {
   describe('setClass', () => {
@@ -49,6 +50,80 @@ describe('patchProp', () => {
       expect(el.className).toBe('bar baz')
       setClass(el, { a: true, b: false })
       expect(el.className).toBe('a')
+    })
+
+    test('should set class with flags', () => {
+      const el = document.createElement('div')
+
+      setClassName(el, 1, ['danger'])
+      expect(el.className).toBe('danger')
+
+      setClassName(el, 0, ['danger'])
+      expect(el.className).toBe('')
+
+      const string = document.createElement('div')
+      setClassName(string, 1, 'danger')
+      expect(string.className).toBe('danger')
+
+      setClassName(el, 1, [' danger'])
+      expect(el.className).toBe('danger')
+
+      const multi = document.createElement('div')
+      setClassName(multi, 3, [' danger', ' active'])
+      expect(multi.className).toBe('danger active')
+
+      setClassName(el, 3, [' danger', ' active'], 'base')
+      expect(el.className).toBe('base danger active')
+
+      const stringWithBase = document.createElement('div')
+      setClassName(stringWithBase, 1, ' danger', 'base')
+      expect(stringWithBase.className).toBe('base danger')
+
+      setClassName(el, 1, ['danger'], '', 'tail')
+      expect(el.className).toBe('danger tail')
+
+      setClassName(el, 0, ['danger'], '', 'tail')
+      expect(el.className).toBe('tail')
+    })
+
+    test('should refresh after generic class writes', () => {
+      const el = document.createElement('div')
+      setClassName(el, 1, ['danger'])
+      expect(el.className).toBe('danger')
+
+      setClass(el, 'fallthrough')
+      expect(el.className).toBe('fallthrough')
+
+      setClassName(el, 1, ['danger'])
+      expect(el.className).toBe('danger')
+    })
+
+    test('should support the max className flag bit', () => {
+      const el = document.createElement('div')
+      const classes = Array.from({ length: 31 }, (_, i) => ` c${i}`)
+
+      setClassName(el, 0x7fffffff, classes, 'base')
+      expect(el.className).toBe(
+        `base ${Array.from({ length: 31 }, (_, i) => `c${i}`).join(' ')}`,
+      )
+    })
+
+    test('should set root class with flags incrementally', () => {
+      const el = document.createElement('div')
+      el.className = 'fallthrough'
+      ;(el as any).$root = true
+
+      setClassName(el, 1, [' danger'], 'base')
+      expect(el.className).toBe('fallthrough base danger')
+
+      setClassName(el, 0, [' danger'], 'base')
+      expect(el.className).toBe('fallthrough base')
+
+      setClassName(el, 1, ['danger'], '', 'tail')
+      expect(el.className).toBe('fallthrough danger tail')
+
+      setClassName(el, 0, ['danger'], '', 'tail')
+      expect(el.className).toBe('fallthrough tail')
     })
   })
 
@@ -307,6 +382,29 @@ describe('patchProp', () => {
       setAttr(el, 'disabled', false)
       expect(el.getAttribute('disabled')).toBe('false')
     })
+
+    test('should set special boolean attribute', () => {
+      const el = document.createElement('input')
+      setAttr(el, 'readonly', true)
+      expect(el.getAttribute('readonly')).toBe('')
+      setAttr(el, 'readonly', false)
+      expect(el.getAttribute('readonly')).toBe(null)
+      setAttr(el, 'readonly', '')
+      expect(el.getAttribute('readonly')).toBe('')
+      setAttr(el, 'readonly', 0)
+      expect(el.getAttribute('readonly')).toBe(null)
+      setAttr(el, 'readonly', '0')
+      expect(el.getAttribute('readonly')).toBe('')
+      setAttr(el, 'readonly', undefined)
+      expect(el.getAttribute('readonly')).toBe(null)
+    })
+
+    test('should set symbol attribute values', () => {
+      const el = document.createElement('div')
+      const symbol = Symbol('foo')
+      setAttr(el, 'data-foo', symbol)
+      expect(el.getAttribute('data-foo')).toBe(symbol.toString())
+    })
   })
 
   describe('setValue', () => {
@@ -322,6 +420,12 @@ describe('patchProp', () => {
       expect(el.value).toBe(obj.toString())
       expect((el as any)._value).toBe(obj)
 
+      const div = document.createElement('div')
+      const symbol = Symbol('foo')
+      setValue(div, symbol)
+      expect((div as any).value).toBe(symbol)
+      expect(div.getAttribute('value')).toBe(symbol.toString())
+
       const option = document.createElement('option')
       setElementText(option, 'foo')
       expect(option.value).toBe('foo')
@@ -331,6 +435,22 @@ describe('patchProp', () => {
       expect(option.textContent).toBe('foo')
       expect(option.value).toBe('bar')
       expect(option.getAttribute('value')).toBe('bar')
+    })
+
+    test('should set value as attribute so form reset works', () => {
+      const form = document.createElement('form')
+      const el = document.createElement('input')
+      el.type = 'range'
+      el.min = '0'
+      el.max = '100'
+      form.appendChild(el)
+
+      setValue(el, 30)
+      expect(el.getAttribute('value')).toBe('30')
+
+      el.value = '80'
+      form.reset()
+      expect(el.value).toBe('30')
     })
   })
 
@@ -367,21 +487,38 @@ describe('patchProp', () => {
       expect(el.hasAttribute('id')).toBe(false)
 
       setProp(el, 'id', '')
-      expect(el.hasAttribute('id')).toBe(false)
+      expect(el.hasAttribute('id')).toBe(true)
 
       const img = document.createElement('img')
       setProp(img, 'width', 0)
-      expect(img.hasAttribute('width')).toBe(false) // skipped
+      expect(img.getAttribute('width')).toBe('0')
 
       setProp(img, 'width', null)
       expect(img.hasAttribute('width')).toBe(false)
+      setProp(img, 'width', 0)
+      expect(img.getAttribute('width')).toBe('0')
       setProp(img, 'width', 1)
       expect(img.hasAttribute('width')).toBe(true)
 
       setProp(img, 'width', undefined)
       expect(img.hasAttribute('width')).toBe(false)
-      setProp(img, 'width', 1)
-      expect(img.hasAttribute('width')).toBe(true)
+      setProp(img, 'width', 0)
+      expect(img.getAttribute('width')).toBe('0')
+    })
+
+    // #15339
+    test('should set prop whose value matches the element default', () => {
+      const input = document.createElement('input')
+      setProp(input, 'type', 'text')
+      expect(input.getAttribute('type')).toBe('text')
+
+      const button = document.createElement('button')
+      setProp(button, 'type', 'submit')
+      expect(button.getAttribute('type')).toBe('submit')
+
+      const form = document.createElement('form')
+      setProp(form, 'method', 'get')
+      expect(form.getAttribute('method')).toBe('get')
     })
 
     test('should warn when set prop error', () => {
@@ -447,6 +584,12 @@ describe('patchProp', () => {
       let res = setDynamicProp('^foo', 'bar')
       expect(res.getAttribute('foo')).toBe('bar')
       expect((res as any)['foo']).toBeUndefined()
+    })
+
+    test('should be able to set ^attr to symbol values', () => {
+      const symbol = Symbol('foo')
+      const res = setDynamicProp('^foo', symbol)
+      expect(res.getAttribute('foo')).toBe(symbol.toString())
     })
 
     test('should be able to set boolean prop', () => {
@@ -519,6 +662,23 @@ describe('patchProp', () => {
       expect(el.getAttribute('foo')).toBe('newVal')
     })
 
+    test('should skip reserved props', () => {
+      const el = document.createElement('div')
+      setDynamicProps(el, [
+        {
+          '': 'empty',
+          key: 'k',
+          ref: 'r',
+          ref_for: true,
+          ref_key: 'rk',
+          onVnodeMounted: () => {},
+          foo: 'val',
+        },
+      ])
+      expect(el.attributes.length).toBe(1)
+      expect(el.getAttribute('foo')).toBe('val')
+    })
+
     test('should reset old props', () => {
       const el = document.createElement('div')
       setDynamicProps(el, [{ foo: 'val' }])
@@ -529,6 +689,25 @@ describe('patchProp', () => {
       expect(el.attributes.length).toBe(1)
       expect(el.getAttribute('bar')).toBe('val')
       expect(el.getAttribute('foo')).toBeNull()
+    })
+
+    test('should treat nullish dynamic props as empty props', () => {
+      const el = document.createElement('div')
+
+      setDynamicProps(el, [null])
+      setDynamicProps(el, [undefined])
+
+      setDynamicProps(el, [{ foo: 'val' }])
+      expect(el.getAttribute('foo')).toBe('val')
+
+      setDynamicProps(el, [null])
+      expect(el.getAttribute('foo')).toBeNull()
+
+      setDynamicProps(el, [{ bar: 'val' }])
+      expect(el.getAttribute('bar')).toBe('val')
+
+      setDynamicProps(el, [undefined])
+      expect(el.getAttribute('bar')).toBeNull()
     })
 
     test('should reset old modifier props', () => {
@@ -581,6 +760,84 @@ describe('patchProp', () => {
       applyFallthroughProps(el, { ['.bar']: 'next' })
       expect(fallthroughSetCount).toBe(2)
     })
+
+    test('should clean dynamic event props on effect update and stop', async () => {
+      const el = document.createElement('button')
+      const active = ref(true)
+      const handler = vi.fn()
+      const scope = effectScope()
+      scope.run(() => {
+        renderEffect(() => {
+          setDynamicProps(el, [active.value ? { onClick: handler } : {}])
+        })
+      })
+
+      el.click()
+      expect(handler).toHaveBeenCalledTimes(1)
+
+      active.value = false
+      await nextTick()
+      el.click()
+      expect(handler).toHaveBeenCalledTimes(1)
+
+      active.value = true
+      await nextTick()
+      el.click()
+      expect(handler).toHaveBeenCalledTimes(2)
+
+      scope.stop()
+      el.click()
+      expect(handler).toHaveBeenCalledTimes(2)
+    })
+
+    test('should parse dynamic event option modifiers like vdom', () => {
+      const el = document.createElement('button')
+      const handler = vi.fn()
+      const scope = effectScope()
+      scope.run(() => {
+        renderEffect(() => {
+          setDynamicProps(el, [{ onClickOnceCapture: handler }])
+        })
+      })
+
+      el.dispatchEvent(new Event('click'))
+      el.dispatchEvent(new Event('click'))
+
+      expect(handler).toHaveBeenCalledTimes(1)
+      scope.stop()
+    })
+
+    test('should parse dynamic event names like vdom', () => {
+      const el = document.createElement('button')
+      const handler = vi.fn()
+      const scope = effectScope()
+      scope.run(() => {
+        renderEffect(() => {
+          setDynamicProps(el, [{ onMyEventOnce: handler }])
+        })
+      })
+
+      el.dispatchEvent(new Event('my-event'))
+      el.dispatchEvent(new Event('my-event'))
+
+      expect(handler).toHaveBeenCalledTimes(1)
+      scope.stop()
+    })
+
+    test('should restore fallthrough state when dynamic props throw', () => {
+      const el = document.createElement('div')
+      const attrs: Record<string, any> = {}
+
+      Object.defineProperty(attrs, 'foo', {
+        enumerable: true,
+        get() {
+          throw new Error('fallthrough boom')
+        },
+      })
+
+      expect(() => applyFallthroughProps(el, attrs)).toThrow('fallthrough boom')
+      expect(isApplyingFallthroughProps).toBe(false)
+    })
   })
 
   describe('setText', () => {
@@ -605,6 +862,26 @@ describe('patchProp', () => {
       setElementText(el, ref('bar'))
       expect(el.textContent).toBe('bar')
     })
+
+    test('compiled textContent binding', async () => {
+      for (const App of [
+        `<template><p :textContent="data.msg"></p></template>`,
+        `<template><p .textContent="data.msg"></p></template>`,
+      ]) {
+        const initial: string[] = []
+        const { vdom, vapor } = await renderParity(
+          { App },
+          () => ref({ msg: 'foo' }),
+          async (data, root) => {
+            initial.push(root.innerHTML)
+            data.value.msg = 'bar'
+          },
+        )
+        expect(initial).toEqual(['<p>foo</p>', '<p>foo</p>'])
+        expect(vdom.after).toBe('<p>bar</p>')
+        expect(vapor.after).toBe(vdom.after)
+      }
+    })
   })
 
   describe('setHtml', () => {
@@ -617,189 +894,150 @@ describe('patchProp', () => {
       setHtml(el, '<p>bar</p>')
       expect(el.innerHTML).toBe('<p>bar</p>')
     })
-  })
 
-  describe('setBlockText', () => {
-    test('with dynamic component', async () => {
-      const Comp = defineVaporComponent({
-        setup() {
-          return template('<div>child</div>', true)()
-        },
-      })
-      const value = ref('foo')
-      const { html } = define({
-        setup() {
-          const n1 = createDynamicComponent(() => Comp, null, null, true)
-          renderEffect(() => setBlockText(n1, toDisplayString(value)))
-          return n1
-        },
-      }).render()
-
-      expect(html()).toBe('<div>foo</div><!--dynamic-component-->')
-    })
-
-    test('with dynamic component with fallback', async () => {
-      const value = ref('foo')
-      const { html } = define({
-        setup() {
-          const n1 = createDynamicComponent(() => 'button', null, null, true)
-          renderEffect(() => setBlockText(n1, toDisplayString(value)))
-          return n1
-        },
-      }).render()
-
-      expect(html()).toBe('<button>foo</button><!--dynamic-component-->')
-    })
-
-    test('with component', async () => {
-      const Comp = defineVaporComponent({
-        setup() {
-          return template('<div>child</div>', true)()
-        },
-      })
-      const value = ref('foo')
-      const { html } = define({
-        setup() {
-          const n1 = createComponent(Comp, null, null, true)
-          renderEffect(() => setBlockText(n1, toDisplayString(value)))
-          return n1
-        },
-      }).render()
-
-      expect(html()).toBe('<div>foo</div>')
-    })
-
-    test('with component renders multiple roots nodes', async () => {
-      const Comp = defineVaporComponent({
-        setup() {
-          return [
-            template('<div>child</div>')(),
-            template('<div>child</div>')(),
-          ]
-        },
-      })
-      const value = ref('foo')
-      const { html } = define({
-        setup() {
-          const n1 = createComponent(Comp, null, null, true)
-          renderEffect(() => setBlockText(n1, toDisplayString(value)))
-          return n1
-        },
-      }).render()
-
-      expect(html()).toBe('<div>child</div><div>child</div>')
-      expect('Extraneous non-props attributes (textContent)').toHaveBeenWarned()
-    })
-
-    test('with component renders text node', async () => {
-      const Comp = defineVaporComponent({
-        setup() {
-          return template('child')()
-        },
-      })
-      const value = ref('foo')
-      const { html } = define({
-        setup() {
-          const n1 = createComponent(Comp, null, null, true)
-          renderEffect(() => setBlockText(n1, toDisplayString(value)))
-          return n1
-        },
-      }).render()
-
-      expect(html()).toBe('child')
-      expect('Extraneous non-props attributes (textContent)').toHaveBeenWarned()
+    test('should set an empty innerHTML on a primed element', () => {
+      // `$html` has to start out undefined - an empty string makes the
+      // first write a no-op and leaves the original children in place
+      optimizePropertyLookup()
+      const el = document.createElement('div')
+      el.textContent = 'kid'
+      setHtml(el, '')
+      expect(el.innerHTML).toBe('')
     })
   })
 
-  describe('setBlockHtml', () => {
-    test('with dynamic component', async () => {
-      const Comp = defineVaporComponent({
-        setup() {
-          return template('<div>child</div>', true)()
+  describe('v-bind modifiers on a props object', () => {
+    // a `.prop` / `.attr` modifier is applied by the runtime from the `.` / `^`
+    // prefix of the key, so the prefix has to survive into the generated props
+    // object - component props and props merged with `v-bind="obj"` are only
+    // resolved at runtime.
+    async function parity(
+      srcs: Record<string, string>,
+      probe: (el: any) => Record<string, unknown>,
+    ) {
+      const seen: Record<string, unknown> = {}
+      const { vdom, vapor } = await renderParity(
+        srcs,
+        () => ref({ payload: { a: 1 }, text: 'foo', extra: { id: 'x' } }),
+        (_data, root, mode) => {
+          seen[mode] = probe(root.querySelector('.target'))
         },
-      })
-      const value = ref('<p>foo</p>')
-      const { html } = define({
-        setup() {
-          const n1 = createDynamicComponent(() => Comp, null, null, true)
-          renderEffect(() => setBlockHtml(n1, value.value))
-          return n1
-        },
-      }).render()
+      )
+      expect(vapor.after).toBe(vdom.after)
+      expect(seen.vapor).toEqual(seen.vdom)
+      return seen.vdom
+    }
 
-      expect(html()).toBe('<div><p>foo</p></div><!--dynamic-component-->')
+    test('.prop on a component is passed through as a dom prop', async () => {
+      expect(
+        await parity(
+          {
+            App: `<template><components.Child :payload.prop="data.payload" /></template>`,
+            Child: `<template><div class="target"></div></template>`,
+          },
+          el => ({ payload: el.payload }),
+        ),
+      ).toEqual({ payload: { a: 1 } })
     })
 
-    test('with dynamic component with fallback', async () => {
-      const value = ref('<p>foo</p>')
-      const { html } = define({
-        setup() {
-          const n1 = createDynamicComponent(() => 'button', null, null, true)
-          renderEffect(() => setBlockHtml(n1, value.value))
-          return n1
-        },
-      }).render()
-
-      expect(html()).toBe('<button><p>foo</p></button><!--dynamic-component-->')
+    test('.prop on a component does not resolve a declared prop', async () => {
+      expect(
+        await parity(
+          {
+            App: `<template><components.Child :text.prop="data.text" /></template>`,
+            Child: `<script setup>defineProps(['text'])</script><template><div class="target">{{ text }}</div></template>`,
+          },
+          el => ({ text: el.text, content: el.textContent }),
+        ),
+      ).toEqual({ text: 'foo', content: '' })
     })
 
-    test('with component', async () => {
-      const Comp = defineVaporComponent({
-        setup() {
-          return template('<div>child</div>', true)()
-        },
-      })
-      const value = ref('<p>foo</p>')
-      const { html } = define({
-        setup() {
-          const n1 = createComponent(Comp, null, null, true)
-          renderEffect(() => setBlockHtml(n1, value.value))
-          return n1
-        },
-      }).render()
-
-      expect(html()).toBe('<div><p>foo</p></div>')
+    test('.prop merged with v-bind="obj" is set as a dom prop', async () => {
+      expect(
+        await parity(
+          {
+            App: `<template><div class="target" :payload.prop="data.payload" v-bind="data.extra"></div></template>`,
+          },
+          el => ({ payload: el.payload }),
+        ),
+      ).toEqual({ payload: { a: 1 } })
     })
 
-    test('with component renders multiple roots', async () => {
-      const Comp = defineVaporComponent({
-        setup() {
-          return [
-            template('<div>child</div>')(),
-            template('<div>child</div>')(),
-          ]
-        },
-      })
-      const value = ref('<p>foo</p>')
-      const { html } = define({
-        setup() {
-          const n1 = createComponent(Comp, null, null, true)
-          renderEffect(() => setBlockHtml(n1, value.value))
-          return n1
-        },
-      }).render()
-
-      expect(html()).toBe('<div>child</div><div>child</div>')
-      expect('Extraneous non-props attributes (innerHTML)').toHaveBeenWarned()
+    test('.attr merged with v-bind="obj" is set as an attribute', async () => {
+      expect(
+        await parity(
+          {
+            App: `<template><div class="target" :textContent.attr="data.text" v-bind="data.extra"></div></template>`,
+          },
+          el => ({
+            attr: el.getAttribute('textContent'),
+            content: el.textContent,
+          }),
+        ),
+      ).toEqual({ attr: 'foo', content: '' })
     })
 
-    test('with component renders text node', async () => {
-      const Comp = defineVaporComponent({
-        setup() {
-          return template('child')()
-        },
-      })
-      const value = ref('<p>foo</p>')
-      const { html } = define({
-        setup() {
-          const n1 = createComponent(Comp, null, null, true)
-          renderEffect(() => setBlockHtml(n1, value.value))
-          return n1
-        },
-      }).render()
+    // a kebab-case key must reach the runtime verbatim - camelizing it while
+    // prefixing would silently rename the attribute.
+    test('.attr merged with v-bind="obj" keeps a kebab-case key', async () => {
+      expect(
+        await parity(
+          {
+            App: `<template><div class="target" :data-x.attr="data.text" v-bind="data.extra"></div></template>`,
+          },
+          el => ({ attr: el.getAttribute('data-x') }),
+        ),
+      ).toEqual({ attr: 'foo' })
+    })
+  })
 
-      expect(html()).toBe('child')
-      expect('Extraneous non-props attributes (innerHTML)').toHaveBeenWarned()
+  // #6007 checked / selected are mirrored to attributes like vdom, so
+  // <input type="reset">, [checked] selectors and outerHTML see them
+  describe('checked / selected attributes', () => {
+    // records the attribute across true -> false -> true, then the state
+    // form.reset() restores from it
+    async function parity(src: string, attr: string) {
+      const seen: Record<string, boolean[]> = { vdom: [], vapor: [] }
+      await renderParity(
+        { App: `<template><form>${src}</form></template>` },
+        () => ref(true),
+        async (data, root, mode) => {
+          const el = root.querySelector('.target') as any
+          seen[mode].push(el.hasAttribute(attr))
+          data.value = false
+          await nextTick()
+          seen[mode].push(el.hasAttribute(attr))
+          data.value = true
+          await nextTick()
+          seen[mode].push(el.hasAttribute(attr))
+          root.querySelector('form')!.reset()
+          seen[mode].push(el[attr])
+        },
+      )
+      expect(seen.vapor).toEqual(seen.vdom)
+      return seen.vdom
+    }
+
+    test.each([
+      `:checked="data"`,
+      `:checked.prop="data"`,
+      `v-bind="{ checked: data }"`,
+    ])('checked via %s', async binding => {
+      expect(
+        await parity(
+          `<input class="target" type="checkbox" ${binding}>`,
+          'checked',
+        ),
+      ).toEqual([true, false, true, true])
+    })
+
+    test('selected on option', async () => {
+      expect(
+        await parity(
+          `<select><option value="a">a</option><option class="target" value="b" :selected="data">b</option></select>`,
+          'selected',
+        ),
+      ).toEqual([true, false, true, true])
     })
   })
 })

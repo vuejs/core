@@ -1,6 +1,6 @@
 {
   "name": "vue",
-  "version": "3.6.0-beta.10",
+  "version": "3.6.0-rc.10",
   "description": "The progressive JavaScript framework for building modern web UI.",
   "main": "index.js",
   "module": "dist/vue.runtime.esm-bundler.js",
@@ -110,5 +110,8 @@
     "typescript": {
       "optional": true
     }
+  },
+  "devDependencies": {
+    "vitest": "catalog:"
   }
 }

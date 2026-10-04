@@ -3,6 +3,7 @@ import {
   type Component,
   type ComponentInternalInstance,
   type DirectiveBinding,
+  ErrorCodes,
   Fragment,
   type FunctionalComponent,
   Static,
@@ -10,16 +11,21 @@ import {
   type VNode,
   type VNodeArrayChildren,
   type VNodeProps,
+  type VaporInVdomInterface,
+  type VdomSlotOutlet,
+  handleError,
   mergeProps,
   ssrContextKey,
   ssrUtils,
   warn,
-} from 'vue'
+} from '@vue/runtime-dom'
 import {
   NOOP,
+  PatchFlags,
   ShapeFlags,
   escapeHtml,
   escapeHtmlComment,
+  hasOwn,
   isArray,
   isFunction,
   isPromise,
@@ -27,6 +33,7 @@ import {
   isVoidTag,
 } from '@vue/shared'
 import { ssrRenderAttrs } from './helpers/ssrRenderAttrs'
+import { type SSRSlot, ssrRenderSlot } from './helpers/ssrRenderSlot'
 import { ssrCompile } from './helpers/ssrCompile'
 import { ssrRenderTeleport } from './helpers/ssrRenderTeleport'
 
@@ -35,9 +42,13 @@ const {
   setCurrentRenderingInstance,
   setupComponent,
   renderComponentRoot,
+  isVNode,
   normalizeVNode,
   pushWarningContext,
   popWarningContext,
+  VaporSlot,
+  rawVaporSlotKey,
+  invokeSlotFallback,
 } = ssrUtils
 
 export type SSRBuffer = SSRBufferItem[] & { hasAsync?: boolean }
@@ -120,11 +131,67 @@ export function createBuffer() {
   }
 }
 
+// What `renderSlot` asks of the vapor interop for an outlet whose content is
+// a forwarded vapor slot: the outlet then renders as the slot's own would,
+// its fallback in place of content that renders nothing.
+const vaporOutlets: WeakMap<VNodeArrayChildren, VdomSlotOutlet> = new WeakMap()
+const vaporInterface = {
+  attachSlotOutlet(content, fallback, owner) {
+    const lone = isVaporSlotContent(content)
+    if (lone) vaporOutlets.set(content, { fallback, owner })
+    return lone
+  },
+} as VaporInVdomInterface
+
+// Whether the content is one vapor slot, past comments and the fragments of
+// outlets (empty ones too, not lists), as the interop's `findLoneSlot`.
+export function isVaporSlotContent(children: VNodeArrayChildren): boolean {
+  const lone = findVaporSlot(children)
+  vaporSlot = null
+  return lone
+}
+
+let vaporSlot: VNode | null = null
+function findVaporSlot(children: VNodeArrayChildren): boolean {
+  for (let i = 0; i < children.length; i++) {
+    const child = children[i]
+    if (!isVNode(child)) return false
+    if (child.type === VaporSlot) {
+      if (vaporSlot) return false
+      vaporSlot = child
+    } else if (child.type === Fragment) {
+      if (
+        (child.patchFlag > 0 &&
+          child.patchFlag &
+            (PatchFlags.KEYED_FRAGMENT | PatchFlags.UNKEYED_FRAGMENT)) ||
+        !findVaporSlot(child.children as VNodeArrayChildren)
+      ) {
+        return false
+      }
+    } else if (child.type !== Comment) {
+      return false
+    }
+  }
+  return true
+}
+
 export function renderComponentVNode(
   vnode: VNode,
   parentComponent: ComponentInternalInstance | null = null,
   slotScopeId?: string,
 ): SSRBuffer | Promise<SSRBuffer> {
+  // Slots written in a vapor component are marked as the client marks them,
+  // where they are created since they can be passed on as they are: an
+  // outlet rendered as a vnode (`renderSlot`) then holds them as a vapor
+  // slot, valid however little they render, like the client does.
+  const ctx = vnode.ctx
+  if (vnode.shapeFlag & ShapeFlags.SLOTS_CHILDREN && ctx && ctx.type.__vapor) {
+    const slots = vnode.children as Record<string, any>
+    for (const name in slots) {
+      if (isFunction(slots[name])) slots[name][rawVaporSlotKey] = slots[name]
+    }
+    if (!ctx.appContext.vapor) ctx.appContext.vapor = vaporInterface
+  }
   const instance = (vnode.component = createComponentInstance(
     vnode,
     parentComponent,
@@ -158,7 +225,13 @@ export function renderComponentVNode(
       .catch(NOOP)
     return p.then(() => renderComponentSubTree(instance, slotScopeId))
   } else {
-    return renderComponentSubTree(instance, slotScopeId)
+    try {
+      return renderComponentSubTree(instance, slotScopeId)
+    } catch (err) {
+      // let the SSR buffer propagate the error so parent render functions
+      // don't handle the same error again
+      return Promise.reject(err)
+    }
   }
 }
 
@@ -240,6 +313,8 @@ function renderComponentSubTree(
           instance.data,
           instance.ctx,
         )
+      } catch (err) {
+        handleError(err, instance, ErrorCodes.RENDER_FUNCTION)
       } finally {
         setCurrentRenderingInstance(prev)
       }
@@ -285,20 +360,60 @@ export function renderVNode(
     case Static:
       push(children as string)
       break
-    case Fragment:
+    case Fragment: {
       if (vnode.slotScopeIds) {
         slotScopeId =
           (slotScopeId ? slotScopeId + ' ' : '') + vnode.slotScopeIds.join(' ')
       }
-      push(`<!--[-->`) // open
+      const outlet =
+        vnode.vo && vaporOutlets.get(children as VNodeArrayChildren)
+      if (outlet) {
+        renderVaporOutlet(
+          push,
+          (_, push) =>
+            renderVNodeChildren(
+              push,
+              children as VNodeArrayChildren,
+              parentComponent,
+              slotScopeId,
+            ),
+          null,
+          outlet,
+          parentComponent,
+          slotScopeId,
+        )
+        break
+      }
+      // a slot fallback (`renderSlot`) is marked like `ssrRenderSlot` does
+      const isFallback = shapeFlag & ShapeFlags.SLOT_FALLBACK
+      push(isFallback ? `<!--(-->` : `<!--[-->`) // open
       renderVNodeChildren(
         push,
         children as VNodeArrayChildren,
         parentComponent,
         slotScopeId,
       )
-      push(`<!--]-->`) // close
+      push(isFallback ? `<!--)-->` : `<!--]-->`) // close
       break
+    }
+    case VaporSlot: {
+      // the vapor slot an outlet rendered as a vnode holds: rendered as the
+      // outlet itself would be, with the range and the fallback of that outlet
+      if (vnode.slotScopeIds) {
+        slotScopeId =
+          (slotScopeId ? slotScopeId + ' ' : '') + vnode.slotScopeIds.join(' ')
+      }
+      const { slot, outlets } = vnode.vs!
+      renderVaporOutlet(
+        push,
+        slot,
+        vnode.props,
+        outlets && outlets[0],
+        parentComponent,
+        slotScopeId,
+      )
+      break
+    }
     default:
       if (shapeFlag & ShapeFlags.ELEMENT) {
         renderElementVNode(push, vnode, parentComponent, slotScopeId)
@@ -316,6 +431,38 @@ export function renderVNode(
         )
       }
   }
+}
+
+// An outlet rendered as a vnode, as `ssrRenderSlot` renders one written in a
+// template: its range, the fallback when the slot renders nothing.
+function renderVaporOutlet(
+  push: PushFn,
+  slot: SSRSlot,
+  props: Props | null,
+  outlet: VdomSlotOutlet | undefined,
+  parentComponent: ComponentInternalInstance,
+  slotScopeId?: string,
+): void {
+  // the outlet is written in the component whose tree this is
+  const prev = setCurrentRenderingInstance(parentComponent)
+  ssrRenderSlot(
+    { default: slot },
+    'default',
+    props,
+    outlet
+      ? () =>
+          renderVNodeChildren(
+            push,
+            invokeSlotFallback(outlet.fallback, outlet.owner),
+            parentComponent,
+            slotScopeId,
+          )
+      : null,
+    push,
+    parentComponent,
+    slotScopeId,
+  )
+  setCurrentRenderingInstance(prev)
 }
 
 export function renderVNodeChildren(
@@ -343,8 +490,20 @@ function renderElementVNode(
     openTag += ssrRenderAttrs(props, tag)
   }
 
+  const renderedScopeIds: string[] = []
+  const appendScopeId = (id: string) => {
+    if (
+      id &&
+      (!props || !hasOwn(props, id)) &&
+      !renderedScopeIds.includes(id)
+    ) {
+      openTag += ` ${id}`
+      renderedScopeIds.push(id)
+    }
+  }
+
   if (scopeId) {
-    openTag += ` ${scopeId}`
+    appendScopeId(scopeId)
   }
   // inherit parent chain scope id if this is the root node
   let curParent: ComponentInternalInstance | null = parentComponent
@@ -352,12 +511,15 @@ function renderElementVNode(
   while (curParent && curVnode === curParent.subTree) {
     curVnode = curParent.vnode
     if (curVnode.scopeId) {
-      openTag += ` ${curVnode.scopeId}`
+      appendScopeId(curVnode.scopeId)
     }
     curParent = curParent.parent as ComponentInternalInstance
   }
   if (slotScopeId) {
-    openTag += ` ${slotScopeId}`
+    const slotScopeIdList = slotScopeId.trim().split(' ')
+    for (let i = 0; i < slotScopeIdList.length; i++) {
+      appendScopeId(slotScopeIdList[i])
+    }
   }
 
   push(openTag + `>`)

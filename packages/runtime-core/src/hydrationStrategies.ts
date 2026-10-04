@@ -124,8 +124,10 @@ export function forEachElement(
   node: Node,
   cb: (el: Element) => void | false,
 ): void {
-  // fragment
-  if (isComment(node) && node.data === '[') {
+  // fragment, or a slot fallback (`<!--(-->`)
+  if (isComment(node) && (node.data === '[' || node.data === '(')) {
+    const open = node.data
+    const close = open === '[' ? ']' : ')'
     let depth = 1
     let next = node.nextSibling
     while (next) {
@@ -135,9 +137,9 @@ export function forEachElement(
           break
         }
       } else if (isComment(next)) {
-        if (next.data === ']') {
+        if (next.data === close) {
           if (--depth === 0) break
-        } else if (next.data === '[') {
+        } else if (next.data === open) {
           depth++
         }
       }

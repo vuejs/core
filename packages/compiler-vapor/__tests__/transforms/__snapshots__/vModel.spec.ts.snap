@@ -2,8 +2,7 @@
 
 exports[`compiler: vModel transform > component > component v-model should merge with explicit @update:modelValue 1`] = `
 "
-  const _component_Comp = _resolveComponent("Comp")
-  const n0 = _createComponentWithFallback(_component_Comp, {
+  const n0 = _createAssetComponent("Comp", {
     modelValue: () => (counter.value),
     "onUpdate:modelValue": () => [
       _value => (counter.value = _value),
@@ -14,26 +13,70 @@ exports[`compiler: vModel transform > component > component v-model should merge
 "
 `;
 
-exports[`compiler: vModel transform > component > v-model for component should generate modelModifiers 1`] = `
-"import { resolveComponent as _resolveComponent, createComponentWithFallback as _createComponentWithFallback } from 'vue';
+exports[`compiler: vModel transform > component > object literal v-bind after v-model stays dynamic to preserve merge order 1`] = `
+"import { createAssetComponent as _createAssetComponent } from 'vue';
 
 export function render(_ctx) {
-  const _component_Comp = _resolveComponent("Comp")
-  const n0 = _createComponentWithFallback(_component_Comp, {
+  const n0 = _createAssetComponent("Comp", {
+    foo: () => (_ctx.foo),
+    "onUpdate:foo": () => _value => (_ctx.foo = _value),
+    $: [
+      () => ({ foo: _ctx.bar })
+    ]
+  }, null, true)
+  return n0
+}"
+`;
+
+exports[`compiler: vModel transform > component > v-model after dynamic bind keeps model getters 1`] = `
+"import { createAssetComponent as _createAssetComponent } from 'vue';
+
+export function render(_ctx) {
+  const n0 = _createAssetComponent("Comp", { $: [
+    () => (_ctx.obj),
+    {
+      modelValue: () => (_ctx.foo),
+      "onUpdate:modelValue": () => _value => (_ctx.foo = _value),
+      modelModifiers: { trim: true }
+    }
+  ] }, null, true)
+  return n0
+}"
+`;
+
+exports[`compiler: vModel transform > component > v-model after object literal v-bind keeps model generated props 1`] = `
+"import { createAssetComponent as _createAssetComponent } from 'vue';
+
+export function render(_ctx) {
+  const n0 = _createAssetComponent("Comp", { $: [
+    () => ({ foo: _ctx.bar }),
+    {
+      foo: () => (_ctx.foo),
+      "onUpdate:foo": () => _value => (_ctx.foo = _value)
+    }
+  ] }, null, true)
+  return n0
+}"
+`;
+
+exports[`compiler: vModel transform > component > v-model for component should generate modelModifiers 1`] = `
+"import { createAssetComponent as _createAssetComponent } from 'vue';
+
+export function render(_ctx) {
+  const n0 = _createAssetComponent("Comp", {
     modelValue: () => (_ctx.foo),
     "onUpdate:modelValue": () => _value => (_ctx.foo = _value),
-    modelModifiers: () => ({ trim: true, "bar-baz": true })
+    modelModifiers: { trim: true, "bar-baz": true }
   }, null, true)
   return n0
 }"
 `;
 
 exports[`compiler: vModel transform > component > v-model for component should work 1`] = `
-"import { resolveComponent as _resolveComponent, createComponentWithFallback as _createComponentWithFallback } from 'vue';
+"import { createAssetComponent as _createAssetComponent } from 'vue';
 
 export function render(_ctx) {
-  const _component_Comp = _resolveComponent("Comp")
-  const n0 = _createComponentWithFallback(_component_Comp, {
+  const n0 = _createAssetComponent("Comp", {
     modelValue: () => (_ctx.foo),
     "onUpdate:modelValue": () => _value => (_ctx.foo = _value)
   }, null, true)
@@ -42,28 +85,26 @@ export function render(_ctx) {
 `;
 
 exports[`compiler: vModel transform > component > v-model with arguments for component should generate modelModifiers 1`] = `
-"import { resolveComponent as _resolveComponent, createComponentWithFallback as _createComponentWithFallback } from 'vue';
+"import { createAssetComponent as _createAssetComponent } from 'vue';
 
 export function render(_ctx) {
-  const _component_Comp = _resolveComponent("Comp")
-  const n0 = _createComponentWithFallback(_component_Comp, {
+  const n0 = _createAssetComponent("Comp", {
     foo: () => (_ctx.foo),
     "onUpdate:foo": () => _value => (_ctx.foo = _value),
-    fooModifiers: () => ({ trim: true }),
+    fooModifiers: { trim: true },
     bar: () => (_ctx.bar),
     "onUpdate:bar": () => _value => (_ctx.bar = _value),
-    barModifiers: () => ({ number: true })
+    barModifiers: { number: true }
   }, null, true)
   return n0
 }"
 `;
 
 exports[`compiler: vModel transform > component > v-model with arguments for component should work 1`] = `
-"import { resolveComponent as _resolveComponent, createComponentWithFallback as _createComponentWithFallback } from 'vue';
+"import { createAssetComponent as _createAssetComponent } from 'vue';
 
 export function render(_ctx) {
-  const _component_Comp = _resolveComponent("Comp")
-  const n0 = _createComponentWithFallback(_component_Comp, {
+  const n0 = _createAssetComponent("Comp", {
     bar: () => (_ctx.foo),
     "onUpdate:bar": () => _value => (_ctx.foo = _value)
   }, null, true)
@@ -72,20 +113,19 @@ export function render(_ctx) {
 `;
 
 exports[`compiler: vModel transform > component > v-model with dynamic arguments for component should generate modelModifiers  1`] = `
-"import { resolveComponent as _resolveComponent, createComponentWithFallback as _createComponentWithFallback } from 'vue';
+"import { createAssetComponent as _createAssetComponent } from 'vue';
 
 export function render(_ctx) {
-  const _component_Comp = _resolveComponent("Comp")
-  const n0 = _createComponentWithFallback(_component_Comp, { $: [
+  const n0 = _createAssetComponent("Comp", { $: [
     () => ({
       [_ctx.foo]: _ctx.foo,
-      ["onUpdate:" + _ctx.foo]: () => _value => (_ctx.foo = _value),
-      [_ctx.foo + "Modifiers"]: () => ({ trim: true })
+      ["onUpdate:" + _ctx.foo]: _value => (_ctx.foo = _value),
+      [_ctx.foo + "Modifiers"]: { trim: true }
     }),
     () => ({
       [_ctx.bar]: _ctx.bar,
-      ["onUpdate:" + _ctx.bar]: () => _value => (_ctx.bar = _value),
-      [_ctx.bar + "Modifiers"]: () => ({ number: true })
+      ["onUpdate:" + _ctx.bar]: _value => (_ctx.bar = _value),
+      [_ctx.bar + "Modifiers"]: { number: true }
     })
   ] }, null, true)
   return n0
@@ -93,14 +133,13 @@ export function render(_ctx) {
 `;
 
 exports[`compiler: vModel transform > component > v-model with dynamic arguments for component should work 1`] = `
-"import { resolveComponent as _resolveComponent, createComponentWithFallback as _createComponentWithFallback } from 'vue';
+"import { createAssetComponent as _createAssetComponent } from 'vue';
 
 export function render(_ctx) {
-  const _component_Comp = _resolveComponent("Comp")
-  const n0 = _createComponentWithFallback(_component_Comp, { $: [
+  const n0 = _createAssetComponent("Comp", { $: [
     () => ({
       [_ctx.arg]: _ctx.foo,
-      ["onUpdate:" + _ctx.arg]: () => _value => (_ctx.foo = _value)
+      ["onUpdate:" + _ctx.arg]: _value => (_ctx.foo = _value)
     })
   ] }, null, true)
   return n0
@@ -108,22 +147,141 @@ export function render(_ctx) {
 `;
 
 exports[`compiler: vModel transform > component > v-model:model with arguments for component should generate modelModifiers$ 1`] = `
-"import { resolveComponent as _resolveComponent, createComponentWithFallback as _createComponentWithFallback } from 'vue';
+"import { createAssetComponent as _createAssetComponent } from 'vue';
 
 export function render(_ctx) {
-  const _component_Comp = _resolveComponent("Comp")
-  const n0 = _createComponentWithFallback(_component_Comp, {
+  const n0 = _createAssetComponent("Comp", {
     model: () => (_ctx.foo),
     "onUpdate:model": () => _value => (_ctx.foo = _value),
-    modelModifiers$: () => ({ trim: true })
+    modelModifiers$: { trim: true }
   }, null, true)
+  return n0
+}"
+`;
+
+exports[`compiler: vModel transform > generates dynamic model after dynamic type initialization 1`] = `
+"import { setProp as _setProp, renderEffect as _renderEffect, applyDynamicModel as _applyDynamicModel, template as _template } from 'vue';
+const t0 = _template("<input>", 1)
+
+export function render(_ctx) {
+  const n0 = t0()
+  _renderEffect(() => _setProp(n0, "type", _ctx.type))
+  _applyDynamicModel(n0, () => (_ctx.model), _value => (_ctx.model = _value))
+  return n0
+}"
+`;
+
+exports[`compiler: vModel transform > generates dynamic model after dynamic type initialization 2`] = `
+"
+  const n0 = t0()
+  _setProp(n0, "type", type)
+  _applyDynamicModel(n0, () => (model), _value => (model = _value))
+  return n0
+"
+`;
+
+exports[`compiler: vModel transform > generates key-only bound listeners after v-model in keyed v-for 1`] = `
+"import { createSelector as _createSelector, setProp as _setProp, applyDynamicModel as _applyDynamicModel, setListener as _setListener, renderEffect as _renderEffect, createFor as _createFor, template as _template } from 'vue';
+const t0 = _template("<input>")
+
+export function render(_ctx) {
+  const _selector0 = _createSelector(() => _ctx.event)
+  const n0 = _createFor(() => (_ctx.fields), (_for_item0) => {
+    const n2 = t0()
+    _selector0(_for_item0.value.event, () => {
+      _setProp(n2, "type", _for_item0.value.event === _ctx.event ? 'text' : 'checkbox')
+    })
+    _applyDynamicModel(n2, () => (_for_item0.value.value), _value => (_for_item0.value.value = _value))
+    _renderEffect(() => _setListener(n2, "onInput", _for_item0.value.event && (() => {})))
+    return n2
+  }, (field) => (field.event), 8 /* IS_SINGLE_NODE */)
+  n0.onReset(_selector0.reset)
+  return n0
+}"
+`;
+
+exports[`compiler: vModel transform > generates key-only listeners after v-model in keyed v-for 1`] = `
+"import { createSelector as _createSelector, setProp as _setProp, applyDynamicModel as _applyDynamicModel, onBinding as _onBinding, renderEffect as _renderEffect, createFor as _createFor, template as _template } from 'vue';
+const t0 = _template("<input>")
+
+export function render(_ctx) {
+  const _selector0 = _createSelector(() => _ctx.event)
+  const n0 = _createFor(() => (_ctx.fields), (_for_item0) => {
+    const n2 = t0()
+    _selector0(_for_item0.value.event, () => {
+      _setProp(n2, "type", _for_item0.value.event === _ctx.event ? 'text' : 'checkbox')
+    })
+    _applyDynamicModel(n2, () => (_for_item0.value.value), _value => (_for_item0.value.value = _value))
+    _renderEffect(() => _onBinding(n2, _for_item0.value.event, () => (_ctx.onInput(_for_item0.value.value))))
+    return n2
+  }, (field) => (field.event), 8 /* IS_SINGLE_NODE */)
+  n0.onReset(_selector0.reset)
+  return n0
+}"
+`;
+
+exports[`compiler: vModel transform > generates listeners on the same element after v-model 1`] = `
+"import { applySelectModel as _applySelectModel, applyTextModel as _applyTextModel, on as _on, toHandlers as _toHandlers, setDynamicProps as _setDynamicProps, onBinding as _onBinding, renderEffect as _renderEffect, template as _template } from 'vue';
+const t0 = _template("<select>")
+const t1 = _template("<input>")
+
+export function render(_ctx) {
+  const n0 = t0()
+  const n1 = t1()
+  _applySelectModel(n0, () => (_ctx.model), _value => (_ctx.model = _value))
+  _applyTextModel(n1, () => (_ctx.text), _value => (_ctx.text = _value))
+  _on(n0, "change", e => _ctx.onChange(e))
+  _renderEffect(() => {
+    _setDynamicProps(n1, [{ onInput: e => _ctx.onInput(e) }, _toHandlers(_ctx.handlers, true)])
+    _onBinding(n1, _ctx.event, e => _ctx.onEvent(e))
+  })
+  return [n0, n1]
+}"
+`;
+
+exports[`compiler: vModel transform > generates selector bound listeners after v-model in keyed v-for 1`] = `
+"import { createSelector as _createSelector, setProp as _setProp, applyDynamicModel as _applyDynamicModel, setListener as _setListener, renderEffect as _renderEffect, createFor as _createFor, template as _template } from 'vue';
+const t0 = _template("<input>")
+
+export function render(_ctx) {
+  const _selector0 = _createSelector(() => _ctx.event)
+  const n0 = _createFor(() => (_ctx.fields), (_for_item0) => {
+    const n2 = t0()
+    _selector0(_for_item0.value.event, () => {
+      _setProp(n2, "type", _for_item0.value.event === _ctx.event ? 'text' : 'checkbox')
+    })
+    _applyDynamicModel(n2, () => (_for_item0.value.value), _value => (_for_item0.value.value = _value))
+    _renderEffect(() => _setListener(n2, "onInput", _for_item0.value.event === _ctx.event ? () => {} : null))
+    return n2
+  }, (field) => (field.event), 8 /* IS_SINGLE_NODE */)
+  n0.onReset(_selector0.reset)
+  return n0
+}"
+`;
+
+exports[`compiler: vModel transform > generates selector listeners after v-model in keyed v-for 1`] = `
+"import { createSelector as _createSelector, setProp as _setProp, applyDynamicModel as _applyDynamicModel, setDynamicEvents as _setDynamicEvents, renderEffect as _renderEffect, createFor as _createFor, template as _template } from 'vue';
+const t0 = _template("<input>")
+
+export function render(_ctx) {
+  const _selector0 = _createSelector(() => _ctx.event)
+  const n0 = _createFor(() => (_ctx.fields), (_for_item0) => {
+    const n2 = t0()
+    _selector0(_for_item0.value.event, () => {
+      _setProp(n2, "type", _for_item0.value.event === _ctx.event ? 'text' : 'checkbox')
+    })
+    _applyDynamicModel(n2, () => (_for_item0.value.value), _value => (_for_item0.value.value = _value))
+    _renderEffect(() => _setDynamicEvents(n2, _for_item0.value.event === _ctx.event ? { input() {} } : {}))
+    return n2
+  }, (field) => (field.event), 8 /* IS_SINGLE_NODE */)
+  n0.onReset(_selector0.reset)
   return n0
 }"
 `;
 
 exports[`compiler: vModel transform > modifiers > .lazy 1`] = `
 "import { applyTextModel as _applyTextModel, template as _template } from 'vue';
-const t0 = _template("<input>", true)
+const t0 = _template("<input>", 1)
 
 export function render(_ctx) {
   const n0 = t0()
@@ -134,7 +292,7 @@ export function render(_ctx) {
 
 exports[`compiler: vModel transform > modifiers > .number 1`] = `
 "import { applyTextModel as _applyTextModel, template as _template } from 'vue';
-const t0 = _template("<input>", true)
+const t0 = _template("<input>", 1)
 
 export function render(_ctx) {
   const n0 = t0()
@@ -145,7 +303,7 @@ export function render(_ctx) {
 
 exports[`compiler: vModel transform > modifiers > .trim 1`] = `
 "import { applyTextModel as _applyTextModel, template as _template } from 'vue';
-const t0 = _template("<input>", true)
+const t0 = _template("<input>", 1)
 
 export function render(_ctx) {
   const n0 = t0()
@@ -156,7 +314,7 @@ export function render(_ctx) {
 
 exports[`compiler: vModel transform > should support input (checkbox) 1`] = `
 "import { applyCheckboxModel as _applyCheckboxModel, template as _template } from 'vue';
-const t0 = _template("<input type=checkbox>", true)
+const t0 = _template("<input type=checkbox>", 1)
 
 export function render(_ctx) {
   const n0 = t0()
@@ -167,7 +325,7 @@ export function render(_ctx) {
 
 exports[`compiler: vModel transform > should support input (dynamic type) 1`] = `
 "import { applyDynamicModel as _applyDynamicModel, template as _template } from 'vue';
-const t0 = _template("<input>", true)
+const t0 = _template("<input>", 1)
 
 export function render(_ctx) {
   const n0 = t0()
@@ -178,7 +336,7 @@ export function render(_ctx) {
 
 exports[`compiler: vModel transform > should support input (radio) 1`] = `
 "import { applyRadioModel as _applyRadioModel, template as _template } from 'vue';
-const t0 = _template("<input type=radio>", true)
+const t0 = _template("<input type=radio>", 1)
 
 export function render(_ctx) {
   const n0 = t0()
@@ -189,7 +347,7 @@ export function render(_ctx) {
 
 exports[`compiler: vModel transform > should support input (text) 1`] = `
 "import { applyTextModel as _applyTextModel, template as _template } from 'vue';
-const t0 = _template("<input type=text>", true)
+const t0 = _template("<input type=text>", 1)
 
 export function render(_ctx) {
   const n0 = t0()
@@ -227,7 +385,7 @@ exports[`compiler: vModel transform > should support member expression w/ inline
 
 exports[`compiler: vModel transform > should support select 1`] = `
 "import { applySelectModel as _applySelectModel, template as _template } from 'vue';
-const t0 = _template("<select>", true)
+const t0 = _template("<select>", 1)
 
 export function render(_ctx) {
   const n0 = t0()
@@ -238,7 +396,7 @@ export function render(_ctx) {
 
 exports[`compiler: vModel transform > should support simple expression 1`] = `
 "import { applyTextModel as _applyTextModel, template as _template } from 'vue';
-const t0 = _template("<input>", true)
+const t0 = _template("<input>", 1)
 
 export function render(_ctx) {
   const n0 = t0()
@@ -249,7 +407,7 @@ export function render(_ctx) {
 
 exports[`compiler: vModel transform > should support textarea 1`] = `
 "import { applyTextModel as _applyTextModel, template as _template } from 'vue';
-const t0 = _template("<textarea>", true)
+const t0 = _template("<textarea>", 1)
 
 export function render(_ctx) {
   const n0 = t0()
@@ -259,20 +417,20 @@ export function render(_ctx) {
 `;
 
 exports[`compiler: vModel transform > should support w/ dynamic v-bind 1`] = `
-"import { applyDynamicModel as _applyDynamicModel, setDynamicProps as _setDynamicProps, renderEffect as _renderEffect, template as _template } from 'vue';
-const t0 = _template("<input>", true)
+"import { setDynamicProps as _setDynamicProps, renderEffect as _renderEffect, applyDynamicModel as _applyDynamicModel, template as _template } from 'vue';
+const t0 = _template("<input>", 1)
 
 export function render(_ctx) {
   const n0 = t0()
-  _applyDynamicModel(n0, () => (_ctx.model), _value => (_ctx.model = _value))
   _renderEffect(() => _setDynamicProps(n0, [_ctx.obj]))
+  _applyDynamicModel(n0, () => (_ctx.model), _value => (_ctx.model = _value))
   return n0
 }"
 `;
 
 exports[`compiler: vModel transform > should support w/ dynamic v-bind 2`] = `
 "import { applyDynamicModel as _applyDynamicModel, template as _template } from 'vue';
-const t0 = _template("<input>", true)
+const t0 = _template("<input>", 1)
 
 export function render(_ctx) {
   const n0 = t0()

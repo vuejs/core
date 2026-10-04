@@ -1,10 +1,14 @@
-import { type Block, type BlockFn, insert } from './block'
-import { advanceHydrationNode, isHydrating } from './dom/hydration'
-import { DynamicFragment } from './fragment'
+import { type Block, type BlockFn, removeNode } from './block'
+import {
+  type HydrationCursor,
+  captureHydrationCursor,
+  isHydrating,
+  locateHydrationNode,
+} from './dom/hydration'
+import { DynamicFragment, finishBlockCreation } from './fragment'
 import {
   insertionAnchor,
   insertionParent,
-  isLastInsertion,
   resetInsertionState,
 } from './insertionState'
 import { renderEffect } from './renderEffect'
@@ -19,24 +23,41 @@ import { renderEffect } from './renderEffect'
  *   <h1 :key="count">{{ count }}</h1>
  * </VaporTransition>
  */
-export function createKeyedFragment(key: () => any, render: BlockFn): Block {
+export function createKeyedFragment(
+  key: () => any,
+  render: BlockFn,
+  trackSlotBoundary: boolean = false,
+): Block {
   const _insertionParent = insertionParent
   const _insertionAnchor = insertionAnchor
-  const _isLastInsertion = isLastInsertion
   if (!isHydrating) resetInsertionState()
+  const hydrationCursor: HydrationCursor | null = isHydrating
+    ? captureHydrationCursor()
+    : null
 
-  const frag = __DEV__
-    ? new DynamicFragment('keyed', true)
-    : new DynamicFragment(undefined, true)
+  const frag = new DynamicFragment(
+    0,
+    __DEV__ ? 'keyed' : undefined,
+    true,
+    trackSlotBoundary,
+    trackSlotBoundary
+      ? () => {
+          const parent = frag.anchor.parentNode
+          if (parent) removeNode(frag.anchor, parent)
+        }
+      : undefined,
+    _insertionAnchor,
+  )
+  if (isHydrating) locateHydrationNode()
 
   renderEffect(() => frag.update(render, key()))
 
-  if (!isHydrating) {
-    if (_insertionParent) insert(frag, _insertionParent, _insertionAnchor)
-  } else {
-    if (_isLastInsertion) {
-      advanceHydrationNode(_insertionParent!)
-    }
-  }
+  finishBlockCreation(
+    frag,
+    frag.anchor,
+    hydrationCursor,
+    _insertionParent,
+    _insertionAnchor,
+  )
   return frag
 }

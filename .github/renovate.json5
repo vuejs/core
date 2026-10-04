@@ -4,6 +4,7 @@
   labels: ['dependencies'],
   ignorePaths: ['**/__tests__/**'],
   rangeStrategy: 'bump',
+  minimumReleaseAge: '24 hours',
   packageRules: [
     {
       matchDepTypes: ['peerDependencies'],

@@ -49,14 +49,22 @@ export function useModel(
 
   const res = customRef((track, trigger) => {
     let localValue: any
+    let prevPropValue: any = EMPTY_OBJ
     let prevSetValue: any = EMPTY_OBJ
     let prevEmittedValue: any
 
     watchSyncEffect(() => {
       const propValue = props[camelizedName]
-      if (hasChanged(localValue, propValue)) {
-        localValue = propValue
-        trigger()
+      // #15670: vapor resolves dynamic prop sources (`v-bind="obj"`, vdom
+      // interop) as a whole, so this effect can re-run when an unrelated prop
+      // changes. Only resync from the prop when the prop itself changed, or an
+      // uncontrolled model would be reset to its default on parent updates.
+      if (hasChanged(prevPropValue, propValue)) {
+        prevPropValue = propValue
+        if (hasChanged(localValue, propValue)) {
+          localValue = propValue
+          trigger()
+        }
       }
     })
 
@@ -74,7 +82,6 @@ export function useModel(
         ) {
           return
         }
-
         let rawPropKeys
         let parentPassedModelValue = false
         let parentPassedModelUpdater = false
@@ -105,7 +112,8 @@ export function useModel(
           }
         }
 
-        if (!parentPassedModelValue || !parentPassedModelUpdater) {
+        const hasVModel = parentPassedModelValue && parentPassedModelUpdater
+        if (!hasVModel) {
           // no v-model, local update
           localValue = value
           trigger()
@@ -117,9 +125,18 @@ export function useModel(
         // updates and there will be no prop sync. However the local input state
         // may be out of sync, so we need to force an update here.
         if (
-          hasChanged(value, emittedValue) &&
           hasChanged(value, prevSetValue) &&
-          !hasChanged(emittedValue, prevEmittedValue)
+          ((hasChanged(value, emittedValue) &&
+            !hasChanged(emittedValue, prevEmittedValue)) ||
+            // #13524: browsers differ in when they flush microtasks between
+            // event listeners. If a v-model listener emits an intermediate value
+            // and a following listener restores the model to its previous prop
+            // value before parent updates are flushed, the parent render can be
+            // deduped as having no prop change. Force a local update so DOM state
+            // such as an input's value is synchronized back to the current model.
+            (hasVModel &&
+              prevSetValue !== EMPTY_OBJ &&
+              !hasChanged(emittedValue, localValue)))
         ) {
           trigger()
         }

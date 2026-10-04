@@ -1,8 +1,15 @@
 import type { CodegenContext } from '../generate'
 import type { SlotOutletIRNode } from '../ir'
-import { genBlock } from './block'
+import { VaporSlotFlags } from '@vue/shared'
+import { genBlock, markSlotRootOperations } from './block'
 import { genExpression } from './expression'
-import { type CodeFragment, NEWLINE, buildCodeFragment, genCall } from './utils'
+import {
+  type CodeFragment,
+  NEWLINE,
+  buildCodeFragment,
+  genCall,
+  genFlags,
+} from './utils'
 import { genRawProps } from './component'
 
 export function genSlotOutlet(
@@ -10,30 +17,64 @@ export function genSlotOutlet(
   context: CodegenContext,
 ): CodeFragment[] {
   const { helper } = context
-  const { id, name, fallback, noSlotted, once } = oper
+  const { id, name, fallback, flags } = oper
   const [frag, push] = buildCodeFragment()
-
-  const nameExpr = name.isStatic
-    ? genExpression(name, context)
-    : ['() => (', ...genExpression(name, context), ')']
 
   let fallbackArg: CodeFragment[] | undefined
   if (fallback) {
+    if (context.inSlotBlock) {
+      // Forwarded fallback validity affects the owning slot's exposed branch;
+      markSlotRootOperations(fallback, context)
+    }
     fallbackArg = genBlock(fallback, context)
   }
+  const createSlot = helper('createSlot')
+  const rawPropsArg = genRawProps(oper.props, context, true)
+  const omitDefaultName =
+    name.isStatic &&
+    name.content === 'default' &&
+    !rawPropsArg &&
+    !fallbackArg &&
+    !flags
+  const nameArg = omitDefaultName
+    ? undefined
+    : name.isStatic
+      ? genExpression(name, context)
+      : ['() => (', ...genExpression(name, context), ')']
 
   push(
     NEWLINE,
     `const n${id} = `,
     ...genCall(
-      helper('createSlot'),
-      nameExpr,
-      genRawProps(oper.props, context) || 'null',
+      createSlot,
+      nameArg,
+      rawPropsArg,
       fallbackArg,
-      noSlotted && 'true', // noSlotted
-      once && 'true', // v-once
+      genSlotFlags(flags),
     ),
   )
 
   return frag
+}
+
+function genSlotFlags(flags: number): string | undefined {
+  if (!flags) {
+    return undefined
+  }
+
+  const names: string[] = []
+  if (flags & VaporSlotFlags.NO_SLOTTED) {
+    names.push('NO_SLOTTED')
+  }
+  if (flags & VaporSlotFlags.ONCE) {
+    names.push('ONCE')
+  }
+  if (flags & VaporSlotFlags.FORWARDED) {
+    names.push('FORWARDED')
+  }
+  if (flags & VaporSlotFlags.SHARED_FALLBACK) {
+    names.push('SHARED_FALLBACK')
+  }
+
+  return genFlags(flags, names)
 }

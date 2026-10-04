@@ -12,6 +12,7 @@ import {
   resolveComponentType,
 } from '@vue/compiler-dom'
 import { SSR_RENDER_SLOT, SSR_RENDER_SLOT_INNER } from '../runtimeHelpers'
+import { rawOptionsMap } from './ssrTransformComponent'
 import {
   type SSRTransformContext,
   processChildrenAsStatement,
@@ -43,7 +44,8 @@ export const ssrTransformSlotOutlet: NodeTransform = (node, context) => {
     // transition/transition-group will unwrap the slot fragment into vnode(s)
     // at runtime, we need to avoid rendering the slot as a fragment.
     let parent = context.parent!
-    if (parent) {
+    // a vapor slot outlet always renders its own range
+    if (parent && !rawOptionsMap.get(context.root)!.vapor) {
       const children = parent.children
       // #10743 <slot v-if> in <Transition>
       if (parent.type === NodeTypes.IF_BRANCH) {

@@ -1,4 +1,4 @@
-import { BindingTypes, type RootNode } from '@vue/compiler-dom'
+import { BindingTypes, type RootNode, parse } from '@vue/compiler-dom'
 import { type CompilerOptions, compile as _compile } from '../src'
 
 function compile(template: string | RootNode, options: CompilerOptions = {}) {
@@ -44,6 +44,11 @@ describe('compile', () => {
   test('fragment', () => {
     const code = compile(`<p/><span/><div/>`)
     expect(code).matchSnapshot()
+  })
+
+  test('empty literal component slot as text', () => {
+    const code = compile(`<Comp>{{ '' }}</Comp>`)
+    expect(code).toMatchSnapshot()
   })
 
   test('bindings', () => {
@@ -114,6 +119,32 @@ describe('compile', () => {
           },
         })
         expect(code).matchSnapshot()
+      })
+
+      test('object literal binding value', () => {
+        const code = compile(
+          `<div v-example="{ value: msg, other: 1 }"></div>`,
+          {
+            bindingMetadata: {
+              msg: BindingTypes.SETUP_REF,
+              vExample: BindingTypes.SETUP_CONST,
+            },
+          },
+        )
+        expect(code).matchSnapshot()
+        expect(code).contains('() => ({ value: _ctx.msg, other: 1 })')
+      })
+
+      test('object literal binding value w/ inline mode', () => {
+        const code = compile(`<div v-example="{ value: msg }"></div>`, {
+          inline: true,
+          bindingMetadata: {
+            msg: BindingTypes.SETUP_REF,
+            vExample: BindingTypes.SETUP_CONST,
+          },
+        })
+        expect(code).matchSnapshot()
+        expect(code).contains('() => ({ value: msg.value })')
       })
 
       test('static parameters', () => {
@@ -191,7 +222,7 @@ describe('compile', () => {
       expect(code).contains('const _key = key.value')
       expect(code).contains('_key+1')
       expect(code).contains(
-        '_setDynamicProps(n0, [{ [_key+1]: _unref(foo)[_key+1]() }])',
+        '_setDynamicProps(n0, [{ [(_key+1) || ""]: _unref(foo)[_key+1]() }])',
       )
     })
 
@@ -214,6 +245,57 @@ describe('compile', () => {
         prefixIdentifiers: true,
       })
       expect(code).matchSnapshot()
+    })
+
+    test('keeps member selector source offsets after prefixing', () => {
+      const code = compile(
+        `<tr
+          v-for="row in rows"
+          :key="row.id"
+          :class="row.id === state.selected ? 'danger' : ''"
+        ></tr>`,
+      )
+      expect(code).matchSnapshot()
+      expect(code).contains(
+        `const _selector0 = _createSelector(() => _ctx.state.selected)`,
+      )
+    })
+
+    test('does not mutate cached member expressions on reused AST', () => {
+      const ast = parse(
+        `<button v-on="{ click: arr[0].click }">{{ arr[0].label }}</button>`,
+        { prefixIdentifiers: true },
+      )
+      const options = {
+        bindingMetadata: {
+          arr: BindingTypes.SETUP_CONST,
+        },
+      }
+
+      compile(ast, options)
+      expect(JSON.stringify(ast)).not.contains(`arr_0`)
+      const code = compile(ast, options)
+
+      expect(code).contains(`const _arr_0 = _ctx.arr[0]`)
+      expect(code).contains(`_setDynamicEvents(n0, { click: _arr_0.click })`)
+      expect(code).contains(`_setText(x0, _toDisplayString(_arr_0.label))`)
+      expect(code).not.contains(`_ctx.arr_0`)
+    })
+
+    test('applies cached member expressions to className specialization', () => {
+      const code = compile(
+        `<div :class="{ active: arr[0].active }"></div><span>{{ arr[0].label }}</span>`,
+        {
+          bindingMetadata: {
+            arr: BindingTypes.SETUP_CONST,
+          },
+        },
+      )
+
+      expect(code).contains(`const _arr_0 = _ctx.arr[0]`)
+      expect(code).contains(`_setClassName(n0, ((_arr_0.active) ? 1 : 0)`)
+      expect(code).contains(`_setText(x1, _toDisplayString(_arr_0.label))`)
+      expect(code).not.contains(`_ctx.arr[0].active`)
     })
   })
 
@@ -242,6 +324,66 @@ describe('compile', () => {
       expect(code).contains(
         `_setProp(n0, "id", _ctx.foo)
     _setText(x0, _toDisplayString(_ctx.bar))`,
+      )
+    })
+
+    test('applies custom directives after props, children and v-model', () => {
+      const code = compile(
+        `<div v-dir :id="foo">{{ bar }}<span v-if="ok" /><Comp /><input v-model="text" /></div>`,
+      )
+      expect(code).matchSnapshot()
+      expect(code).contains(
+        `_applyTextModel(n5, () => (_ctx.text), _value => (_ctx.text = _value))
+  _withVaporDirectives(n7, [[_directive_dir]])
+  return n7`,
+      )
+    })
+
+    test('flushes previous effects before creating child component', () => {
+      const code = compile(`<div>parent: {{ useId() }}</div><Child />`, {
+        bindingMetadata: {
+          useId: BindingTypes.SETUP_CONST,
+        },
+      })
+      expect(code).matchSnapshot()
+      expect(code).contains(
+        `_renderEffect(() => _setText(x0, "parent: " + _toDisplayString(_ctx.useId())))
+  const n1 = _createAssetComponent("Child")`,
+      )
+    })
+
+    test('flushes parent props before creating child component', () => {
+      const code = compile(`<div :id="useId()"><Child /></div>`, {
+        bindingMetadata: {
+          useId: BindingTypes.SETUP_CONST,
+        },
+      })
+      expect(code).contains(
+        `_renderEffect(() => _setProp(n1, "id", _ctx.useId()))
+  _setInsertionState(n1)
+  const n0 = _createAssetComponent("Child")`,
+      )
+      expect(code).matchSnapshot()
+    })
+
+    test('does not flush later v-for effects before child component', () => {
+      const code = compile(
+        `<div v-for="row of rows" :key="row.id">
+          <span>{{ selected === row.id ? 'danger' : '' }}</span>
+          <Child />
+          <span>{{ useId() }}</span>
+        </div>`,
+        {
+          bindingMetadata: {
+            useId: BindingTypes.SETUP_CONST,
+          },
+        },
+      )
+      expect(code).matchSnapshot()
+      expect(code).contains(
+        `const n3 = _createComponentWithFallback(_component_Child)
+    const x4 = _txt(n4)
+    _renderEffect(() => _setText(x4, _toDisplayString(_ctx.useId())))`,
       )
     })
 
@@ -350,14 +492,18 @@ describe('compile', () => {
       expect(code).matchSnapshot()
       expect(code).not.contains('const t0 =')
       expect(code).not.contains('const t2 =')
-      expect(code).contains('const t1 = _template("<div>", false, true)')
-      expect(code).contains('const t3 = _template("<span>", false, true)')
-      expect(code).contains('const t4 = _template("<p>", false, true)')
+      expect(code).contains('const t1 = _template("<div>", 2)')
+      expect(code).contains('const t3 = _template("<span>", 2)')
+      expect(code).contains('const t4 = _template("<p>", 2)')
     })
 
-    test('should bump placeholder var (p*) on conflict', () => {
+    test('should bump placeholder cursor var (p*) on conflict', () => {
       const code = compile(
-        `<div><div><div><span :id="foo" /></div></div></div>`,
+        `<div>
+          <div>x</div>
+          <div><span>{{ foo }}</span></div>
+          <div><span>{{ foo }}</span></div>
+        </div>`,
         {
           bindingMetadata: {
             p0: BindingTypes.SETUP_REF,
@@ -368,10 +514,45 @@ describe('compile', () => {
       )
 
       expect(code).matchSnapshot()
-      expect(code).not.contains('const p0 = ')
-      expect(code).not.contains('const p2 = ')
-      expect(code).contains('const p1 = ')
-      expect(code).contains('const p3 = ')
+      expect(code).not.contains('let p0 = ')
+      expect(code).not.contains('let p2 = ')
+      expect(code).contains('let p1 = _next(_child(n2))')
+      expect(code).contains('const n0 = _child(p1)')
+      expect(code).contains('const n1 = _child((p1 = _next(p1)))')
+    })
+
+    test('should not shadow _ctx with cached identifier var', () => {
+      const code = compile(
+        `<div :id="ctx.a" :title="ctx.b" />
+        <div v-for="ctx in list" :id="ctx.a + foo" :title="ctx.b + foo" />`,
+        {
+          bindingMetadata: {
+            ctx: BindingTypes.SETUP_CONST,
+            list: BindingTypes.SETUP_REF,
+            foo: BindingTypes.SETUP_REF,
+          },
+        },
+      )
+
+      expect(code).not.contains('const _ctx =')
+      expect(code).contains('const _ctx1 = _ctx.ctx')
+      expect(code).contains('const _ctx1 = _for_item0.value')
+      expect(code).contains('const _foo = _ctx.foo')
+    })
+
+    test('should not shadow _setTemplateRef with cached identifier var', () => {
+      const code = compile(
+        `<div :ref="r" :id="setTemplateRef.a" :title="setTemplateRef.b" />`,
+        {
+          bindingMetadata: {
+            r: BindingTypes.SETUP_REF,
+            setTemplateRef: BindingTypes.SETUP_CONST,
+          },
+        },
+      )
+
+      expect(code).contains('const _setTemplateRef1 = _ctx.setTemplateRef')
+      expect(code).contains('_setTemplateRef(n0, _ctx.r)')
     })
   })
 })

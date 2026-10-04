@@ -13,7 +13,7 @@ export function render(_ctx) {
 
 exports[`compiler: text transform > constant text 1`] = `
 "import { template as _template } from 'vue';
-const t0 = _template("<div>2 foo1 1 1 1", true)
+const t0 = _template("<div>2 foo1 1 1 1", 1)
 
 export function render(_ctx) {
   const n0 = t0()
@@ -21,44 +21,71 @@ export function render(_ctx) {
 }"
 `;
 
+exports[`compiler: text transform > empty literal next to an element in slot content 1`] = `
+"import { child as _child, setText as _setText, txt as _txt, toDisplayString as _toDisplayString, renderEffect as _renderEffect, createAssetComponent as _createAssetComponent, template as _template } from 'vue';
+const t0 = _template(" ")
+const t1 = _template("<b> ")
+
+export function render(_ctx) {
+  const n3 = _createAssetComponent("Comp", null, () => {
+    const n0 = t0()
+    const n2 = t1()
+    const n1 = _child(n2, true)
+    _setText(n0, '')
+    const x2 = _txt(n2)
+    _renderEffect(() => {
+      const _msg = _ctx.msg
+      _setText(n1, _toDisplayString(_msg))
+      _setText(x2, _toDisplayString(_msg))
+    })
+    return [n0, n2]
+  }, true)
+  return n3
+}"
+`;
+
 exports[`compiler: text transform > escapes raw static text for custom element createElement path 1`] = `
-"import { createPlainElement as _createPlainElement, setText as _setText, insert as _insert, template as _template } from 'vue';
+"import { createPlainElement as _createPlainElement, setInsertionState as _setInsertionState, insert as _insert, setText as _setText, template as _template } from 'vue';
 const t0 = _template("")
 
 export function render(_ctx) {
   const n1 = _createPlainElement("my-el", null, null, true)
+  _setInsertionState(n1)
   const n0 = t0()
-  _setText(n0, "<b>foo</b>")
   _insert(n0, n1)
+  _setText(n0, "<b>foo</b>")
   return n1
 }"
 `;
 
 exports[`compiler: text transform > escapes raw static text for plain template createElement path 1`] = `
-"import { createPlainElement as _createPlainElement, setText as _setText, insert as _insert, template as _template } from 'vue';
+"import { createPlainElement as _createPlainElement, setInsertionState as _setInsertionState, insert as _insert, setText as _setText, template as _template } from 'vue';
 const t0 = _template("")
 
 export function render(_ctx) {
   const n1 = _createPlainElement("template", null, null, true)
+  _setInsertionState(n1)
   const n0 = t0()
-  _setText(n0, "<b>foo</b>")
   _insert(n0, n1)
+  _setText(n0, "<b>foo</b>")
   return n1
 }"
 `;
 
 exports[`compiler: text transform > materializes literal interpolation text for mixed plain template children 1`] = `
-"import { createPlainElement as _createPlainElement, setText as _setText, insert as _insert, template as _template } from 'vue';
-const t0 = _template("<span></span>", false, true)
+"import { createPlainElement as _createPlainElement, setInsertionState as _setInsertionState, insert as _insert, setText as _setText, template as _template } from 'vue';
+const t0 = _template("<span></span>", 2)
 const t1 = _template("")
 
 export function render(_ctx) {
   const n2 = _createPlainElement("template", null, null, true)
+  _setInsertionState(n2)
   const n0 = t0()
+  _insert(n0, n2)
+  _setInsertionState(n2, 1)
   const n1 = t1()
+  _insert(n1, n2)
   _setText(n1, "<b>foo</b>")
-  _insert([n0, n1], n2)
-  _insert([n0, n1], n2)
   return n2
 }"
 `;
@@ -75,17 +102,34 @@ export function render(_ctx) {
 `;
 
 exports[`compiler: text transform > slot literal interpolation 1`] = `
-"import { resolveComponent as _resolveComponent, createComponentWithFallback as _createComponentWithFallback, template as _template } from 'vue';
+"import { createAssetComponent as _createAssetComponent, template as _template } from 'vue';
 const t0 = _template("Hello")
 
 export function render(_ctx) {
-  const _component_Comp = _resolveComponent("Comp")
-  const n1 = _createComponentWithFallback(_component_Comp, null, {
-    "default": () => {
-      const n0 = t0()
-      return n0
-    }
+  const n1 = _createAssetComponent("Comp", null, () => {
+    const n0 = t0()
+    return n0
   }, true)
   return n1
+}"
+`;
+
+exports[`compiler: text transform > text references among element children 1`] = `
+"import { child as _child, next as _next, nthChild as _nthChild, toDisplayString as _toDisplayString, setText as _setText, setProp as _setProp, renderEffect as _renderEffect, template as _template } from 'vue';
+const t0 = _template("<p> <br> <br> ", 1)
+
+export function render(_ctx) {
+  const n4 = t0()
+  const n0 = _child(n4, true)
+  const n1 = _next(n0)
+  const n2 = _next(n1, true)
+  const n3 = _nthChild(n4, 4, true)
+  _renderEffect(() => {
+    _setText(n0, _toDisplayString(_ctx.before))
+    _setProp(n1, "id", _ctx.id)
+    _setText(n2, _toDisplayString(_ctx.between))
+    _setText(n3, _toDisplayString(_ctx.after))
+  })
+  return n4
 }"
 `;

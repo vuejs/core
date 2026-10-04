@@ -2,10 +2,8 @@ import {
   type AttributeNode,
   type ElementNode,
   ElementTypes,
-  ErrorCodes,
   NodeTypes,
   type SimpleExpressionNode,
-  createCompilerError,
   createSimpleExpression,
   isStaticArgOf,
   isStaticExp,
@@ -13,13 +11,12 @@ import {
 import type { NodeTransform, TransformContext } from '../transform'
 import {
   type BlockIRNode,
-  type DirectiveIRNode,
   DynamicFlag,
   IRNodeTypes,
   type IRProps,
   type VaporDirectiveNode,
 } from '../ir'
-import { camelize, extend } from '@vue/shared'
+import { VaporSlotFlags, camelize, extend } from '@vue/shared'
 import { newBlock } from './utils'
 import { buildProps } from './transformElement'
 
@@ -83,31 +80,26 @@ export const transformSlotOutlet: NodeTransform = (node, context) => {
       true,
     )
     irProps = isDynamic ? props : [props]
-
-    const runtimeDirective = context.block.operation.find(
-      (oper): oper is DirectiveIRNode =>
-        oper.type === IRNodeTypes.DIRECTIVE && oper.element === id,
-    )
-    if (runtimeDirective) {
-      context.options.onError(
-        createCompilerError(
-          ErrorCodes.X_V_SLOT_UNEXPECTED_DIRECTIVE_ON_SLOT_OUTLET,
-          runtimeDirective.dir.loc,
-        ),
-      )
-    }
   }
 
   return () => {
     exitBlock && exitBlock()
+    let flags = 0
+    if (context.options.scopeId && !context.options.slotted) {
+      flags |= VaporSlotFlags.NO_SLOTTED
+    }
+    if (context.inVOnce) {
+      flags |= VaporSlotFlags.ONCE
+    }
+
     context.dynamic.operation = {
       type: IRNodeTypes.SLOT_OUTLET_NODE,
       id,
+      ...context.effectBoundary(),
       name: slotName,
       props: irProps,
       fallback,
-      noSlotted: !!(context.options.scopeId && !context.options.slotted),
-      once: context.inVOnce,
+      flags,
     }
   }
 }
@@ -119,6 +111,10 @@ function createFallback(
   if (!node.children.length) {
     return []
   }
+
+  // the outlet is a fragment boundary: the component root must not propagate
+  // into the fallback through the transparent `<template>` wrapper below
+  context.isSingleRoot = false
 
   context.node = node = extend({}, node, {
     type: NodeTypes.ELEMENT,

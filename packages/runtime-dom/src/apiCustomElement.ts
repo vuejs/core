@@ -265,12 +265,6 @@ export abstract class VueElementBase<
   protected abstract _mount(def: Def): void
   protected abstract _update(): void
   protected abstract _unmount(): void
-  // `usedFallback` preserves whether the outlet rendered native slotted
-  // content or its own fallback DOM so implementations can keep the right
-  // ownership model when syncing their block trees.
-  protected abstract _updateSlotNodes(
-    slot: Map<Node, { nodes: Node[]; usedFallback: boolean }>,
-  ): void
 
   constructor(
     /**
@@ -336,7 +330,9 @@ export abstract class VueElementBase<
         if (parent && parent._pendingResolve) {
           this._pendingResolve = parent._pendingResolve.then(() => {
             this._pendingResolve = undefined
-            this._resolveDef()
+            if (this.isConnected) {
+              return this._resolveDef()
+            }
           })
         } else {
           this._resolveDef()
@@ -395,7 +391,7 @@ export abstract class VueElementBase<
    */
   private _resolveDef() {
     if (this._pendingResolve) {
-      return
+      return this._pendingResolve
     }
 
     // set initial attrs
@@ -454,6 +450,7 @@ export abstract class VueElementBase<
         this._def = def
         resolve(def)
       })
+      return this._pendingResolve
     } else {
       resolve(this._def)
     }
@@ -532,8 +529,14 @@ export abstract class VueElementBase<
       }
     }
 
-    // defining getter/setters on prototype
+    // define getter/setters for declared props
     for (const key of declaredPropKeys.map(camelize)) {
+      if (__DEV__ && key in Object.getPrototypeOf(this)) {
+        warn(
+          `Custom element prop "${key}" conflicts with an existing property ` +
+            `on the element and will overwrite it.`,
+        )
+      }
       Object.defineProperty(this, key, {
         get(this: VueElement) {
           return this._getProp(key)
@@ -698,21 +701,11 @@ export abstract class VueElementBase<
   protected _renderSlots(): void {
     const outlets = this._getSlots()
     const scopeId = this._instance!.type.__scopeId
-    // Record both the final DOM nodes and whether they came from fallback.
-    // The nodes alone are not enough for runtimes that need to distinguish a
-    // plain DOM replacement from a live fallback owner.
-    const slotReplacements: Map<
-      Node,
-      { nodes: Node[]; usedFallback: boolean }
-    > = new Map()
-
     for (let i = 0; i < outlets.length; i++) {
       const o = outlets[i] as HTMLSlotElement
       const slotName = o.getAttribute('name') || 'default'
       const content = this._slots![slotName]
       const parent = o.parentNode!
-      const replacementNodes: Node[] = []
-
       if (content) {
         for (const n of content) {
           // for :slotted css
@@ -726,23 +719,12 @@ export abstract class VueElementBase<
             }
           }
           parent.insertBefore(n, o)
-          replacementNodes.push(n)
         }
       } else {
-        while (o.firstChild) {
-          const child = o.firstChild
-          parent.insertBefore(child, o)
-          replacementNodes.push(child)
-        }
+        while (o.firstChild) parent.insertBefore(o.firstChild, o)
       }
       parent.removeChild(o)
-      slotReplacements.set(o, {
-        nodes: replacementNodes,
-        usedFallback: !content,
-      })
     }
-
-    this._updateSlotNodes(slotReplacements)
   }
 
   /**
@@ -797,7 +779,10 @@ export abstract class VueElementBase<
    * @internal
    */
   _hasShadowRoot(): boolean {
-    return this._def.shadowRoot !== false
+    // `_def` is replaced by the resolved async component, which does not
+    // carry the host's shadowRoot option, so consult the root actually
+    // created for this host.
+    return this._root !== this
   }
 
   /**
@@ -875,15 +860,6 @@ export class VueElement extends VueElementBase<
       this._instance.ce = undefined
     }
     this._app = this._instance = null
-  }
-
-  /**
-   * Only called when shadowRoot is false
-   */
-  protected _updateSlotNodes(
-    replacements: Map<Node, { nodes: Node[]; usedFallback: boolean }>,
-  ): void {
-    // do nothing
   }
 
   private _createVNode(): VNode<any, any> {

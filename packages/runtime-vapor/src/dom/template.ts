@@ -1,64 +1,142 @@
 import {
+  type AdoptTarget,
+  type HydrationCursor,
   adoptTemplate,
   advanceHydrationNode,
   currentHydrationNode,
+  enterHydrationCursor,
+  exitHydrationCursor,
+  hydrateTextNode,
+  isComment,
   isHydrating,
+  parseAdoptTarget,
   resolveHydrationTarget,
+  validateHydrationTarget,
 } from './hydration'
-import { type Namespace, Namespaces } from '@vue/shared'
-import { _child, createTextNode } from './node'
+import { insertionParent, resetInsertionState } from '../insertionState'
+import {
+  type Namespace,
+  type NormalizedStyle,
+  TemplateFlags,
+  parseStringStyle,
+} from '@vue/shared'
+import { createTextNode, parseTemplate } from './node'
+import { currentRenderContext } from '../renderContext'
+import { cloneStampedTemplate } from './scopeIdStamp'
 
-let t: HTMLTemplateElement
+// the class and style a root's template contributes, shared by all its
+// instances (see the incremental setters in prop.ts)
+export type RootMeta = {
+  readonly cls?: string[]
+  readonly sty?: NormalizedStyle
+}
+
+function cloneTemplate(n: Node): Node {
+  const scopeIds = currentRenderContext.slotScopeIds
+  return scopeIds ? cloneStampedTemplate(n, scopeIds) : n.cloneNode(true)
+}
 
 /*@__NO_SIDE_EFFECTS__*/
-export function template(
-  html: string,
-  root?: boolean,
-  isStatic?: boolean,
-  ns?: Namespace,
-) {
+export function template(html: string, flags: number = 0, ns?: Namespace) {
+  const root = !!(flags & TemplateFlags.ROOT)
+  const isStatic = !!(flags & TemplateFlags.STATIC)
   let node: Node
-  return (): Node & { $root?: true } => {
+  // parsed once on first hydration adoption; every later instance of this
+  // template compares against the cached form instead of re-scanning `html`
+  let adoptTarget: AdoptTarget | undefined
+  // parsed from the html on first use, never from a hydrated node (it
+  // already carries the SSR fallthrough values); most roots never need it
+  let rootMeta: RootMeta | undefined
+  const createRootMeta = (): RootMeta => {
+    let cls: string[] | undefined
+    let sty: NormalizedStyle | undefined
+    let resolved = false
+    const resolve = () => {
+      resolved = true
+      if (html.includes(' class=') || html.includes(' style=')) {
+        const el = (node ||= parseTemplate(html, ns)) as Element
+        // the DOM tokenizes on ASCII whitespace only, unlike `\s`
+        if (el.classList.length) cls = Array.from(el.classList)
+        const style = el.getAttribute('style')
+        if (style) sty = parseStringStyle(style)
+      }
+    }
+    return {
+      get cls() {
+        resolved || resolve()
+        return cls
+      },
+      get sty() {
+        resolved || resolve()
+        return sty
+      },
+    }
+  }
+  return (): Node & { $root?: RootMeta } => {
+    // a template child of a createElement-backed element carries insertion
+    // state: its server output sits inside that element, not in the cursor
+    let hydrationCursor: HydrationCursor | null = null
+    if (insertionParent) {
+      if (isHydrating) {
+        hydrationCursor = enterHydrationCursor(
+          undefined,
+          (adoptTarget ||= parseAdoptTarget(html)).blank,
+        )
+      } else resetInsertionState()
+    }
     if (isHydrating) {
       let adopted: Node | null = null
       // static templates only need to skip fragment markers, teleport
       // markers, and hydration anchors before advancing the hydration
       // cursor, so they don't need to go through adoptTemplate. Vapor
       // never mutates their DOM afterwards.
-      if (isStatic) {
+      if (
+        isStatic &&
+        // SSR empty branches are empty comments. Let adoptTemplate() replace
+        // them when the client selected this static branch.
+        !isComment(currentHydrationNode!, '')
+      ) {
         adopted = resolveHydrationTarget(currentHydrationNode!)
-        node = adopted.cloneNode(true)
+        if (html !== '') {
+          if (html[0] !== '<') {
+            // Static text normally matches, but patch the rare mismatch to
+            // align with vdom text hydration.
+            if (
+              !hydrateTextNode(adopted, html) &&
+              (__DEV__ || __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__)
+            ) {
+              validateHydrationTarget(adopted, html)
+            }
+          } else if (__DEV__ || __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__) {
+            validateHydrationTarget(adopted, html)
+          }
+        }
+        // a hydrated node carries instance state (SSR fallthrough attrs, slot
+        // scope ids), so post-hydration CSR clones come from the parsed html
+        // unless that was stripped
+        if (!node && !html) node = adopted.cloneNode(true)
         advanceHydrationNode(adopted)
       } else {
-        // do not cache the adopted node in node because it contains child nodes
-        // this avoids duplicate rendering of children
-        adopted = adoptTemplate(currentHydrationNode!, html)!
+        // do not assign `adopted` to `node`, or CSR clones would duplicate children.
+        adopted = adoptTemplate(
+          currentHydrationNode!,
+          html,
+          false,
+          ns,
+          (adoptTarget ||= parseAdoptTarget(html)),
+        )!
       }
-      if (root) (adopted as any).$root = true
+      if (root) (adopted as any).$root = rootMeta ||= createRootMeta()
+      exitHydrationCursor(hydrationCursor)
       return adopted
     }
 
-    if (node) {
-      const ret = node.cloneNode(true)
-      if (root) (ret as any).$root = true
-      return ret
-    }
-
     // fast path for text nodes
-    if (html[0] !== '<') {
+    if (!node && html[0] !== '<') {
       return createTextNode(html)
     }
-    t = t || document.createElement('template')
-    if (ns) {
-      const tag = ns === Namespaces.SVG ? 'svg' : 'math'
-      t.innerHTML = `<${tag}>${html}</${tag}>`
-      node = _child(_child(t.content) as ParentNode)
-    } else {
-      t.innerHTML = html
-      node = _child(t.content)
-    }
-    const ret = node.cloneNode(true)
-    if (root) (ret as any).$root = true
+    const ret = cloneTemplate((node ||= parseTemplate(html, ns)))
+    if (root) (ret as any).$root = rootMeta ||= createRootMeta()
     return ret
   }
 }

@@ -13,3 +13,5 @@ dts-build/packages
 *.tgz
 packages-private/benchmark/reference
 **/__tests__/**/__screenshots__/**/*
+/.vite-hooks/
+.vitest/

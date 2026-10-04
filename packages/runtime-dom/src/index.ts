@@ -332,7 +332,15 @@ export { ensureRenderer, ensureHydrationRenderer, normalizeContainer }
 /**
  * @internal
  */
+export { patchClass } from './modules/class'
+/**
+ * @internal
+ */
 export { patchStyle } from './modules/style'
+/**
+ * @internal
+ */
+export { parseEventName } from './modules/events'
 /**
  * @internal
  */
@@ -340,7 +348,7 @@ export { shouldSetAsProp, shouldSetAsPropForVueCE } from './patchProp'
 /**
  * @internal
  */
-export { baseUseCssVars, setVarsOnNode } from './helpers/useCssVars'
+export { setVarsOnNode } from './helpers/useCssVars'
 /**
  * @internal
  */

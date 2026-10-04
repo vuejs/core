@@ -10,16 +10,11 @@ export function genSetText(
   context: CodegenContext,
 ): CodeFragment[] {
   const { helper } = context
-  const { element, values, generated, isComponent } = oper
+  const { element, values, generated } = oper
   const texts = combineValues(values, context)
   return [
     NEWLINE,
-    ...genCall(
-      // use setBlockText for component
-      isComponent ? helper('setBlockText') : helper('setText'),
-      `${generated && !isComponent ? 'x' : 'n'}${element}`,
-      texts,
-    ),
+    ...genCall(helper('setText'), `${generated ? 'x' : 'n'}${element}`, texts),
   ]
 }
 

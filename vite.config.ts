@@ -1,6 +1,5 @@
-import { configDefaults } from 'vitest/config'
-import { playwright } from 'vitest/browser-playwright'
-import { defineConfig } from 'vite-plus'
+import { configDefaults, defineConfig } from 'vite-plus'
+import { playwright } from 'vite-plus/test/browser-playwright'
 import { entries } from './scripts/aliases.js'
 
 export default defineConfig({
@@ -28,7 +27,9 @@ export default defineConfig({
   test: {
     globals: true,
     pool: 'threads',
-    setupFiles: 'scripts/setup-vitest.ts',
+    benchmark: {
+      include: [],
+    },
     sequence: {
       hooks: 'list',
     },
@@ -55,18 +56,28 @@ export default defineConfig({
         extends: true,
         test: {
           name: 'unit-gc',
+          setupFiles: 'scripts/setup-vitest.ts',
           pool: 'forks',
           execArgv: ['--expose-gc'],
-          include: ['packages/reactivity/__tests__/gc.spec.ts'],
+          include: [
+            'packages/reactivity/__tests__/gc.spec.ts',
+            'packages/runtime-vapor/__tests__/components/Transition.gc.spec.ts',
+            'packages/runtime-vapor/__tests__/gc.spec.ts',
+            'packages/server-renderer/__tests__/ssrWatch.spec.ts',
+            'packages/server-renderer/__tests__/ssrRender.spec.ts',
+          ],
         },
       },
       {
         extends: true,
         test: {
           name: 'unit',
+          setupFiles: 'scripts/setup-vitest.ts',
           exclude: [
             ...configDefaults.exclude,
             'packages/reactivity/__tests__/gc.spec.ts',
+            'packages/server-renderer/__tests__/ssrWatch.spec.ts',
+            'packages/server-renderer/__tests__/ssrRender.spec.ts',
             '**/e2e/**',
             '**/vapor-e2e-test/**',
             'packages/{vue,vue-compat,runtime-dom,runtime-vapor}/**',
@@ -77,20 +88,96 @@ export default defineConfig({
         extends: true,
         test: {
           name: 'unit-jsdom',
+          setupFiles: 'scripts/setup-vitest.ts',
           environment: 'jsdom',
           include: [
             'packages/{vue,vue-compat,runtime-dom,runtime-vapor}/**/*.spec.ts',
           ],
-          exclude: [...configDefaults.exclude, '**/e2e/**'],
+          exclude: [
+            ...configDefaults.exclude,
+            '**/e2e/**',
+            'packages/runtime-vapor/__tests__/components/Transition.gc.spec.ts',
+            'packages/runtime-vapor/__tests__/gc.spec.ts',
+          ],
+        },
+      },
+      {
+        extends: true,
+        test: {
+          name: 'bench-node',
+          include: [],
+          benchmark: {
+            include: [
+              'packages/{reactivity,runtime-core,server-renderer}/**/*.bench.ts',
+            ],
+          },
+        },
+      },
+      {
+        extends: true,
+        optimizeDeps: {
+          // Native ESM: avoid late optimization reloading benchmark iframes.
+          exclude: ['entities/decode'],
+        },
+        test: {
+          name: 'bench-browser',
+          include: [],
+          browser: {
+            enabled: true,
+            provider: playwright({
+              launchOptions: {
+                args: process.env.CI
+                  ? ['--no-sandbox', '--disable-setuid-sandbox']
+                  : [],
+              },
+            }),
+            headless: true,
+            screenshotFailures: false,
+            instances: [{ browser: 'chromium' }],
+          },
+          benchmark: {
+            include: ['packages/runtime-vapor/__tests__/bench/*.bench.ts'],
+          },
         },
       },
       {
         extends: true,
         test: {
           name: 'e2e',
+          setupFiles: 'scripts/setup-vitest.ts',
           environment: 'jsdom',
           isolate: true,
           include: ['packages/vue/__tests__/e2e/*.spec.ts'],
+          exclude: [
+            'packages/vue/__tests__/e2e/Transition.spec.ts',
+            'packages/vue/__tests__/e2e/TransitionGroup.spec.ts',
+          ],
+        },
+      },
+      {
+        extends: true,
+        define: {
+          __BROWSER__: true,
+        },
+        test: {
+          name: 'e2e-browser',
+          setupFiles: 'scripts/setup-vitest.ts',
+          include: [
+            'packages/vue/__tests__/e2e/Transition.spec.ts',
+            'packages/vue/__tests__/e2e/TransitionGroup.spec.ts',
+          ],
+          browser: {
+            enabled: true,
+            provider: playwright({
+              launchOptions: {
+                args: process.env.CI
+                  ? ['--no-sandbox', '--disable-setuid-sandbox']
+                  : [],
+              },
+            }),
+            headless: true,
+            instances: [{ browser: 'chromium' }],
+          },
         },
       },
       // @ts-expect-error - https://github.com/vuejs/core/actions/runs/23430103557/job/68154030981

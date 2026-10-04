@@ -2,4 +2,5 @@
 export * from './index'
 export * from '@vue/runtime-vapor'
 export type { VaporSlot } from '@vue/runtime-vapor'
-export { withAsyncContext } from '@vue/runtime-vapor'
+// Override the standard runtime alias so Vapor builds keep the Vapor wrapper.
+export { defineVaporAsyncComponent } from '@vue/runtime-vapor'

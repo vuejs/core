@@ -1,6 +1,8 @@
 import {
   NewlineType,
   type SimpleExpressionNode,
+  advancePositionWithClone,
+  createSimpleExpression,
   isSimpleIdentifier,
 } from '@vue/compiler-dom'
 import type { CodegenContext } from '../generate'
@@ -12,6 +14,7 @@ import {
   type VaporHelper,
 } from '../ir'
 import { genExpression } from './expression'
+import { genEventHandler } from './event'
 import {
   type CodeFragment,
   DELIMITERS_ARRAY,
@@ -19,16 +22,27 @@ import {
   NEWLINE,
   genCall,
   genMulti,
+  getParserOptions,
 } from './utils'
 import {
   camelize,
   canSetValueDirectly,
   capitalize,
   extend,
-  isSVGTag,
+  hyphenate,
+  isOn,
+  normalizeClass,
   shouldSetAsAttr,
   toHandlerKey,
 } from '@vue/shared'
+import { getLiteralExpressionValue, isConstantBinding } from '../utils'
+import { parseExpression } from '@babel/parser'
+import type {
+  ConditionalExpression,
+  Expression,
+  ObjectExpression,
+  ObjectProperty,
+} from '@babel/types'
 
 export type HelperConfig = {
   name: VaporHelper
@@ -39,9 +53,10 @@ export type HelperConfig = {
 
 // this should be kept in sync with runtime-vapor/src/dom/prop.ts
 const helpers = {
-  setText: { name: 'setText' },
+  setElementText: { name: 'setElementText' },
   setHtml: { name: 'setHtml' },
   setClass: { name: 'setClass' },
+  setClassName: { name: 'setClassName' },
   setStyle: { name: 'setStyle' },
   setValue: { name: 'setValue' },
   setAttr: { name: 'setAttr', needKey: true },
@@ -58,8 +73,20 @@ export function genSetProp(
   const {
     prop: { key, values, modifier },
     tag,
+    isSVG,
   } = oper
-  const resolvedHelper = getRuntimeHelper(tag, key.content, modifier)
+  if (!modifier && isOn(key.content)) {
+    return genSetListener(oper, context)
+  }
+  const resolvedHelper = getRuntimeHelper(tag, isSVG, key.content, modifier)
+  if (
+    key.content === 'class' &&
+    !resolvedHelper.isSVG &&
+    resolvedHelper.name === 'setClass'
+  ) {
+    const className = genSetClassName(oper, context)
+    if (className) return className
+  }
   const propValue = genPropValue(values, context)
   return [
     NEWLINE,
@@ -73,61 +100,488 @@ export function genSetProp(
   ]
 }
 
+const optionsModifierRE = /(Once|Passive|Capture)$/
+const optionsModifierEventRE = /^on:?(?:Once|Passive|Capture)$/
+
+// `:onXxx` binds a listener whose handler is the bound value (a function, an
+// array of functions or nullish), like vdom's patchProp
+function genSetListener(
+  oper: SetPropIRNode,
+  context: CodegenContext,
+): CodeFragment[] {
+  const { helper } = context
+  const { element, effect, prop } = oper
+  const value = genPropValue(prop.values, context)
+  if (effect) {
+    // re-bound by the effect through the element's invoker for the key
+    return [
+      NEWLINE,
+      ...genCall(
+        helper('setListener'),
+        `n${element}`,
+        JSON.stringify(prop.key.content),
+        value,
+      ),
+    ]
+  }
+  // a constant handler is attached once; the event name is derived like the
+  // runtime's parseEventName
+  let name = prop.key.content
+  const options: CodeFragment[][] = []
+  let m
+  while (
+    (m = name.match(optionsModifierRE)) &&
+    !optionsModifierEventRE.test(name)
+  ) {
+    name = name.slice(0, name.length - m[1].length)
+    options.push([`${m[1].toLowerCase()}: true`])
+  }
+  const event = name[2] === ':' ? name.slice(3) : hyphenate(name.slice(2))
+  return [
+    NEWLINE,
+    ...genCall(
+      helper('on'),
+      `n${element}`,
+      JSON.stringify(event),
+      value,
+      options.length ? genMulti(DELIMITERS_OBJECT, ...options) : undefined,
+    ),
+  ]
+}
+
+interface ClassNameEntry {
+  className: string
+  condition?: SimpleExpressionNode
+  negate?: boolean
+  value?: boolean
+}
+
+interface ClassNameInfo {
+  prefix: string
+  suffix: string
+  entries: ClassNameEntry[]
+}
+
+// Runtime uses signed bitwise shifts when iterating fragments, so 31 entries
+// is the largest safe flag set (1 << 30).
+const MAX_CLASS_NAME_ENTRIES = 31
+
+function genSetClassName(
+  oper: SetPropIRNode,
+  context: CodegenContext,
+): CodeFragment[] | undefined {
+  const info = resolveClassName(oper.prop.values, context)
+  if (!info) return
+
+  const { helper } = context
+  const flags = genClassFlags(info.entries, context)
+  const classFragments = info.entries.map(entry =>
+    JSON.stringify(
+      !info.prefix && info.entries.length === 1
+        ? entry.className
+        : ` ${entry.className}`,
+    ),
+  )
+  const fragments =
+    classFragments.length === 1
+      ? classFragments[0]
+      : genMulti(DELIMITERS_ARRAY, ...classFragments)
+
+  return [
+    NEWLINE,
+    ...genCall(
+      // Use an empty prefix placeholder so suffix can be emitted alone.
+      [helper('setClassName'), '""'],
+      `n${oper.element}`,
+      flags,
+      fragments,
+      info.prefix && JSON.stringify(info.prefix),
+      info.suffix && JSON.stringify(info.suffix),
+    ),
+  ]
+}
+
+function resolveClassName(
+  values: SimpleExpressionNode[],
+  context: CodegenContext,
+): ClassNameInfo | undefined {
+  let prefix = ''
+  let suffix = ''
+  const entries: ClassNameEntry[] = []
+  let sawDynamic = false
+  let sawSuffix = false
+
+  for (const rawValue of values) {
+    const value = context.getExpressionReplacement(rawValue)
+    const staticValue = getLiteralExpressionValue(value, true)
+    if (staticValue != null) {
+      const normalized = normalizeClass(staticValue)
+      if (normalized) {
+        if (sawSuffix) {
+          suffix = appendClass(suffix, normalized)
+        } else if (sawDynamic) {
+          sawSuffix = true
+          suffix = appendClass(suffix, normalized)
+        } else {
+          prefix = appendClass(prefix, normalized)
+        }
+      }
+      continue
+    }
+
+    const ast = value.ast
+    if (!ast || sawSuffix) return
+    sawDynamic = true
+
+    if (ast.type === 'ObjectExpression') {
+      if (!resolveObjectClassName(value, ast, entries, context)) return
+    } else if (ast.type === 'ConditionalExpression') {
+      if (!resolveConditionalClassName(value, ast, entries, context)) return
+    } else {
+      return
+    }
+  }
+
+  return entries.length && entries.length <= MAX_CLASS_NAME_ENTRIES
+    ? { prefix, suffix, entries }
+    : undefined
+}
+
+function resolveObjectClassName(
+  source: SimpleExpressionNode,
+  ast: ObjectExpression,
+  entries: ClassNameEntry[],
+  context: CodegenContext,
+): boolean {
+  for (const prop of ast.properties) {
+    if (prop.type !== 'ObjectProperty' || prop.computed) {
+      return false
+    }
+
+    const rawClassName = getObjectPropertyName(prop)
+    if (rawClassName == null) return false
+
+    const className = normalizeClass(rawClassName)
+    // Empty normalized keys contribute no class and no flag bit.
+    if (!className) continue
+
+    const value = getBooleanValue(prop.value)
+    entries.push({
+      className,
+      value,
+      condition:
+        value == null
+          ? createSubExpression(source, prop.value as Expression, context)
+          : undefined,
+    })
+  }
+  return true
+}
+
+function resolveConditionalClassName(
+  source: SimpleExpressionNode,
+  ast: ConditionalExpression,
+  entries: ClassNameEntry[],
+  context: CodegenContext,
+): boolean {
+  const consequent = getStringClassValue(ast.consequent)
+  const alternate = getStringClassValue(ast.alternate)
+
+  if (consequent && alternate === '') {
+    entries.push({
+      className: consequent,
+      condition: createSubExpression(source, ast.test, context),
+    })
+    return true
+  } else if (alternate && consequent === '') {
+    entries.push({
+      className: alternate,
+      condition: createSubExpression(source, ast.test, context),
+      negate: true,
+    })
+    return true
+  }
+
+  return false
+}
+
+function genClassFlags(
+  entries: ClassNameEntry[],
+  context: CodegenContext,
+): CodeFragment[] {
+  const values: CodeFragment[] = []
+
+  entries.forEach((entry, index) => {
+    if (index) values.push(' | ')
+
+    const bit = 1 << index
+    if (entry.value != null) {
+      values.push(entry.value ? String(bit) : '0')
+      return
+    }
+
+    // the condition becomes the test of `cond ? bit : 0` and may bind looser
+    // than it, e.g. `{ a: b ? c : d }`, so it gets its own parens
+    values.push(
+      '((',
+      ...genExpression(entry.condition!, context),
+      ')',
+      entry.negate ? ` ? 0 : ${bit}` : ` ? ${bit} : 0`,
+      ')',
+    )
+  })
+
+  return values
+}
+
+function appendClass(base: string, value: string): string {
+  return base ? (value ? `${base} ${value}` : base) : value
+}
+
+function getObjectPropertyName(prop: ObjectProperty): string | undefined {
+  const key = prop.key
+  if (key.type === 'Identifier') {
+    return key.name
+  } else if (key.type === 'StringLiteral') {
+    return key.value
+  } else if (key.type === 'NumericLiteral') {
+    return String(key.value)
+  }
+}
+
+function getStringClassValue(node: Expression): string | undefined {
+  if (node.type === 'StringLiteral') {
+    return normalizeClass(node.value)
+  } else if (node.type === 'TemplateLiteral' && node.expressions.length === 0) {
+    return normalizeClass(node.quasis[0].value.cooked || '')
+  } else if (
+    node.type === 'NullLiteral' ||
+    (node.type === 'BooleanLiteral' && !node.value)
+  ) {
+    return ''
+  }
+}
+
+function getBooleanValue(node: ObjectProperty['value']): boolean | undefined {
+  if (node.type === 'BooleanLiteral') {
+    return node.value
+  }
+}
+
+function createSubExpression(
+  source: SimpleExpressionNode,
+  node: Expression,
+  context: CodegenContext,
+): SimpleExpressionNode {
+  const start = node.start == null ? 0 : node.start - 1
+  const end = node.end == null ? source.content.length : node.end - 1
+  const content = source.content.slice(start, end)
+  const expression = createSimpleExpression(content, false, {
+    start: advancePositionWithClone(source.loc.start, source.content, start),
+    end: advancePositionWithClone(source.loc.start, source.content, end),
+    source: content,
+  })
+  expression.ast = isSimpleIdentifier(content)
+    ? null
+    : parseExpression(
+        `(${content})`,
+        getParserOptions(context.options.expressionPlugins),
+      )
+  return expression
+}
+
 // dynamic key props and v-bind="{}" will reach here
 export function genDynamicProps(
   oper: SetDynamicPropsIRNode,
   context: CodegenContext,
 ): CodeFragment[] {
   const { helper } = context
-  const isSVG = isSVGTag(oper.tag)
-  const values = oper.props.map(props =>
-    Array.isArray(props)
-      ? genLiteralObjectProps(props, context) // static and dynamic arg props
-      : props.kind === IRDynamicPropsKind.ATTRIBUTE
-        ? genLiteralObjectProps([props], context) // dynamic arg props
-        : genExpression(props.value, context),
-  ) // v-bind=""
+  const values = oper.props.map(props => {
+    if (Array.isArray(props)) {
+      return genLiteralObjectProps(props, context) // static and dynamic arg props
+    }
+    if (props.kind === IRDynamicPropsKind.ATTRIBUTE) {
+      return genLiteralObjectProps([props], context) // dynamic arg props
+    }
+    const value = genExpression(props.value, context) // v-bind="" / v-on=""
+    return props.handler ? genCall(helper('toHandlers'), value, 'true') : value
+  })
   return [
     NEWLINE,
     ...genCall(
       helper('setDynamicProps'),
       `n${oper.element}`,
       genMulti(DELIMITERS_ARRAY, ...values),
-      isSVG && 'true',
+      genDynamicPropNames(oper, context),
+      oper.isSVG && 'true',
     ),
   ]
+}
+
+// vdom writes every static key with a dynamic value during hydration
+// (`dynamicProps`); once such a key is merged with a spread the runtime can no
+// longer tell it apart, so the list is hoisted next to the templates
+function genDynamicPropNames(
+  oper: SetDynamicPropsIRNode,
+  context: CodegenContext,
+): string | false {
+  const { bindingMetadata } = context.options
+  const names = oper.props.flatMap(props =>
+    Array.isArray(props)
+      ? props
+          .filter(
+            ({ key, values, modifier, handler }) =>
+              key.isStatic &&
+              // only to keep the list short: the runtime ignores the flag for
+              // class / style / handlers and `.prop` forces itself
+              modifier !== '.' &&
+              !handler &&
+              key.content !== 'class' &&
+              key.content !== 'style' &&
+              values.some(
+                v => !v.isStatic && !isConstantBinding(v, bindingMetadata),
+              ),
+          )
+          .map(prop => getStaticPropKeyName(prop))
+      : [],
+  )
+  if (!names.length) return false
+  const json = JSON.stringify(names)
+  let id = context.dynamicPropNames.get(json)
+  if (!id) {
+    context.dynamicPropNames.set(
+      json,
+      (id = context.kName(context.dynamicPropNames.size)),
+    )
+  }
+  return id
 }
 
 function genLiteralObjectProps(
   props: IRProp[],
   context: CodegenContext,
 ): CodeFragment[] {
-  return genMulti(
-    DELIMITERS_OBJECT,
-    ...props.map(prop => [
-      ...genPropKey(prop, context),
-      `: `,
-      ...genPropValue(prop.values, context),
-    ]),
+  const entries: CodeFragment[][] = []
+  const listeners = createHandlerGroups(entries)
+  for (const prop of props) {
+    if (isListenerProp(prop)) {
+      listeners.add(
+        getStaticPropKeyName(prop, true),
+        genPropKey(prop, context, true),
+        prop.handler
+          ? genEventHandler(context, prop.values, prop.handlerModifiers)
+          : genPropValue(prop.values, context),
+      )
+    } else {
+      entries.push([
+        ...genPropKey(prop, context),
+        `: `,
+        ...genPropValue(prop.values, context),
+      ])
+    }
+  }
+  listeners.fill()
+  return genMulti(DELIMITERS_OBJECT, ...entries)
+}
+
+// a `v-on:evt` handler or a `:onXxx` value; both merge under the listener key
+export function isListenerProp(prop: IRProp): boolean {
+  return (
+    prop.handler ||
+    (!prop.modifier &&
+      !prop.model &&
+      prop.key.isStatic &&
+      isOn(prop.key.content))
   )
 }
 
+// props sharing a listener key, e.g. `@click.stop` and `@click`, take one
+// entry listing every handler like mergeProps: `add` reserves it at the first
+// occurrence, `fill` writes it
+export function createHandlerGroups(
+  entries: CodeFragment[][],
+  prefix: string = '',
+  delimiters: typeof DELIMITERS_ARRAY = DELIMITERS_ARRAY,
+): {
+  add: (name: string, keyFrag: CodeFragment[], handler: CodeFragment[]) => void
+  fill: () => void
+} {
+  const groups = new Map<
+    string,
+    { keyFrag: CodeFragment[]; handlers: CodeFragment[][]; index: number }
+  >()
+  return {
+    add(name, keyFrag, handler) {
+      let group = groups.get(name)
+      if (!group) {
+        groups.set(
+          name,
+          (group = { keyFrag, handlers: [], index: entries.length }),
+        )
+        entries.push([])
+      }
+      group.handlers.push(handler)
+    },
+    fill() {
+      for (const { keyFrag, handlers, index } of groups.values()) {
+        entries[index] = [
+          ...keyFrag,
+          ': ',
+          prefix,
+          ...(handlers.length > 1
+            ? genMulti(delimiters, ...handlers)
+            : handlers[0]),
+        ]
+      }
+    },
+  }
+}
+
+// the key a static prop is emitted under, which is also the key it is merged
+// under
+export function getStaticPropKeyName(
+  { key, modifier, handler, handlerModifiers }: IRProp,
+  // like vdom, an element keeps the case of its event name
+  preserveCase: boolean = false,
+): string {
+  return (
+    (handler
+      ? preserveCase && /[A-Z]/.test(key.content)
+        ? `on:${key.content}`
+        : toHandlerKey(camelize(key.content))
+      : (modifier || '') + key.content) +
+    getHandlerModifierPostfix(handlerModifiers)
+  )
+}
+
+function getHandlerModifierPostfix(
+  handlerModifiers: IRProp['handlerModifiers'],
+): string {
+  return handlerModifiers && handlerModifiers.options
+    ? handlerModifiers.options.map(capitalize).join('')
+    : ''
+}
+
 export function genPropKey(
-  { key: node, modifier, runtimeCamelize, handler, handlerModifiers }: IRProp,
+  prop: IRProp,
   context: CodegenContext,
+  preserveCase: boolean = false,
 ): CodeFragment[] {
+  const {
+    key: node,
+    modifier,
+    runtimeCamelize,
+    handler,
+    handlerModifiers,
+    model,
+  } = prop
   const { helper } = context
 
-  const handlerModifierPostfix =
-    handlerModifiers && handlerModifiers.options
-      ? handlerModifiers.options.map(capitalize).join('')
-      : ''
+  const handlerModifierPostfix = getHandlerModifierPostfix(handlerModifiers)
   // static arg was transformed by v-bind transformer
   if (node.isStatic) {
     // only quote keys if necessary
-    const keyName =
-      (handler ? toHandlerKey(camelize(node.content)) : node.content) +
-      handlerModifierPostfix
+    const keyName = getStaticPropKeyName(prop, preserveCase)
     return [
       [
         isSimpleIdentifier(keyName) ? keyName : JSON.stringify(keyName),
@@ -141,6 +595,11 @@ export function genPropKey(
   if (runtimeCamelize) {
     key.push(' || ""')
     key = genCall(helper('camelize'), key)
+  } else if (modifier) {
+    key = ['(', ...key, ' || ""', ')']
+  } else if (!handler && !model) {
+    // match vdom: a nullish dynamic arg becomes `""`, which is skipped at runtime
+    key = node.ast === null ? [...key, ' || ""'] : ['(', ...key, ') || ""']
   }
   if (handler) {
     key = genCall(helper('toHandlerKey'), key)
@@ -171,11 +630,11 @@ export function genPropValue(
 
 function getRuntimeHelper(
   tag: string,
+  isSVG: boolean,
   key: string,
   modifier: '.' | '^' | undefined,
 ): HelperConfig {
   const tagName = tag.toUpperCase()
-  const isSVG = isSVGTag(tag)
 
   if (modifier) {
     if (modifier === '.') {
@@ -229,6 +688,6 @@ function getSpecialHelper(
   } else if (keyName === 'innerHTML') {
     return helpers.setHtml
   } else if (keyName === 'textContent') {
-    return helpers.setText
+    return helpers.setElementText
   }
 }

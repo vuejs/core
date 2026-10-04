@@ -38,9 +38,14 @@ function onCompositionEnd(e: Event) {
 }
 
 const assignKey: unique symbol = Symbol('_assign')
+const initialValueKey: unique symbol = Symbol('_initialValue')
 
 type ModelDirective<T, Modifiers extends string = string> = ObjectDirective<
-  T & { [assignKey]: AssignerFn; _assigning?: boolean },
+  T & {
+    [assignKey]: AssignerFn
+    [initialValueKey]?: string
+    _pendingValue?: [multiple: boolean, value: any]
+  },
   any,
   Modifiers
 >
@@ -52,6 +57,16 @@ export const vModelText: ModelDirective<
   'trim' | 'number' | 'lazy'
 > = {
   created(el, { modifiers: { lazy, trim, number } }, vnode) {
+    // During hydration, created runs on an element already in the DOM.
+    if (el.parentNode) {
+      if (el.type === 'text') {
+        // Text inputs strip CR/LF from value, while defaultValue retains them.
+        el[initialValueKey] = el.defaultValue.replace(/[\r\n]/g, '')
+      } else if (el.type === 'textarea') {
+        // Textareas normalize CRLF/CR to LF in value.
+        el[initialValueKey] = el.defaultValue.replace(/\r\n?/g, '\n')
+      }
+    }
     el[assignKey] = getModelAssigner(vnode)
     vModelTextInit(
       el,
@@ -61,8 +76,19 @@ export const vModelText: ModelDirective<
     )
   },
   // set value on mounted so it's after min/max for type="range"
-  mounted(el, { value }) {
-    el.value = value == null ? '' : value
+  mounted(el, { value, modifiers: { trim, number } }) {
+    const newValue = value == null ? '' : value
+    const initialValue = el[initialValueKey]
+    delete el[initialValueKey]
+    if (
+      initialValue !== undefined &&
+      (el.type === 'text' || el.type === 'textarea') &&
+      el.value !== initialValue
+    ) {
+      el[assignKey](castValue(el.value, trim, number))
+    } else {
+      el.value = newValue
+    }
   },
   beforeUpdate(
     el,
@@ -273,7 +299,8 @@ export const vModelSelect: ModelDirective<HTMLSelectElement, 'number'> = {
   mounted(el, { value }) {
     vModelSetSelected(el, value)
   },
-  beforeUpdate(el, _binding, vnode) {
+  beforeUpdate(el, { value }, vnode) {
+    ;(el as any)._modelValue = value
     el[assignKey] = getModelAssigner(vnode)
   },
   updated(el, { value }) {
@@ -285,37 +312,87 @@ export const vModelSelect: ModelDirective<HTMLSelectElement, 'number'> = {
  * @internal
  */
 export const vModelSelectInit = (
-  el: HTMLSelectElement & { [assignKey]?: AssignerFn; _assigning?: boolean },
+  el: HTMLSelectElement & {
+    [assignKey]?: AssignerFn
+    _pendingValue?: [multiple: boolean, value: any]
+  },
   value: any,
   number: boolean | undefined,
   set?: (v: any) => void,
 ): void => {
-  const isSetModel = isSet(value)
+  ;(el as any)._modelValue = value
   addEventListener(el, 'change', () => {
     const selectedVal = Array.prototype.filter
       .call(el.options, (o: HTMLOptionElement) => o.selected)
       .map((o: HTMLOptionElement) =>
         number ? looseToNumber(getValue(o)) : getValue(o),
       )
-    ;(set || el[assignKey]!)(
-      el.multiple
-        ? isSetModel
-          ? new Set(selectedVal)
+    const multiple = el.multiple
+    const assignedValue = multiple
+      ? isSet((el as any)._modelValue)
+        ? new Set(selectedVal)
+        : selectedVal
+      : selectedVal[0]
+    const pending = (el._pendingValue = [
+      multiple,
+      multiple
+        ? isArray(assignedValue)
+          ? selectedVal.slice()
           : selectedVal
-        : selectedVal[0],
-    )
-    el._assigning = true
-    nextTick(() => {
-      el._assigning = false
-    })
+        : assignedValue,
+    ])
+    try {
+      ;(set || el[assignKey]!)(assignedValue)
+    } finally {
+      nextTick(() => {
+        if (el._pendingValue === pending) {
+          el._pendingValue = undefined
+        }
+      })
+    }
   })
+}
+
+function isSameSelectValue(
+  value: any,
+  assignedValue: any,
+  multiple: boolean,
+): boolean {
+  if (!multiple) return looseEqual(value, assignedValue)
+  if (isArray(value)) return looseEqual(value, assignedValue)
+  if (isSet(value)) {
+    if (value.size !== assignedValue.length) return false
+    for (const item of assignedValue) {
+      if (!value.has(item)) return false
+    }
+    return true
+  }
+  return false
 }
 
 /**
  * @internal
  */
-export const vModelSetSelected = (el: HTMLSelectElement, value: any): void => {
-  if ((el as any)._assigning) return
+export const vModelSetSelected = (
+  el: HTMLSelectElement & {
+    _pendingValue?: [multiple: boolean, value: any]
+  },
+  value: any,
+): void => {
+  ;(el as any)._modelValue = value
+  const pending = el._pendingValue
+  el._pendingValue = undefined
+  if (
+    pending &&
+    pending[0] === el.multiple &&
+    isSameSelectValue(value, pending[1], pending[0])
+  ) {
+    return
+  }
+  setSelected(el, value)
+}
+
+function setSelected(el: HTMLSelectElement, value: any) {
   const isMultiple = el.multiple
   const isArrayValue = isArray(value)
   if (isMultiple && !isArrayValue && !isSet(value)) {

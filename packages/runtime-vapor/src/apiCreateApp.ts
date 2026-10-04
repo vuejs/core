@@ -24,6 +24,7 @@ import { optimizePropertyLookup } from './dom/prop'
 import { setIsHydratingEnabled, withHydration } from './dom/hydration'
 
 let _createApp: CreateAppFunction<ParentNode, VaporComponent>
+const rootInstances = new WeakMap<App, VaporComponentInstance>()
 
 const mountApp: AppMountFn<ParentNode> = (app, container) => {
   optimizePropertyLookup()
@@ -45,9 +46,11 @@ const mountApp: AppMountFn<ParentNode> = (app, container) => {
       false,
       false,
       app._context,
+      true,
     )
   mountComponent(instance, container)
   flushOnAppMount()
+  rootInstances.set(app, instance)
 
   return instance!
 }
@@ -55,8 +58,16 @@ const mountApp: AppMountFn<ParentNode> = (app, container) => {
 let _hydrateApp: CreateAppFunction<ParentNode, VaporComponent>
 
 const hydrateApp: AppMountFn<ParentNode> = (app, container) => {
-  optimizePropertyLookup()
+  if (!container.hasChildNodes()) {
+    ;(__DEV__ || __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__) &&
+      warn(
+        `Attempting to hydrate existing markup but container is empty. ` +
+          `Performing full mount instead.`,
+      )
+    return mountApp(app, container)
+  }
 
+  optimizePropertyLookup()
   let instance: VaporComponentInstance
   withHydration(container, () => {
     instance =
@@ -71,14 +82,19 @@ const hydrateApp: AppMountFn<ParentNode> = (app, container) => {
         true,
       )
     mountComponent(instance, container)
-    flushOnAppMount()
   })
+  flushOnAppMount()
+  rootInstances.set(app, instance!)
 
   return instance!
 }
 
 const unmountApp: AppUnmountFn = app => {
-  unmountComponent(app._instance as VaporComponentInstance, app._container)
+  const instance = ((__DEV__ && app._instance) ||
+    rootInstances.get(app)!) as VaporComponentInstance
+  unmountComponent(instance, app._container)
+  flushOnAppMount(instance)
+  rootInstances.delete(app)
 }
 
 function prepareApp() {
@@ -97,8 +113,10 @@ function prepareApp() {
 function postPrepareApp(app: App) {
   app.vapor = true
   const mount = app.mount
-  app.mount = (container, ...args: any[]) => {
+  app.mount = (container, ...args: any[]): any => {
     container = normalizeContainer(container) as ParentNode
+    if (!container) return
+
     const proxy = mount(container, ...args)
     if (container instanceof Element) {
       container.removeAttribute('v-cloak')

@@ -12,6 +12,7 @@ import {
   watchSyncEffect,
 } from '@vue/runtime-dom'
 import { renderEffect, template } from '../src'
+import { RenderEffect } from '../src/renderEffect'
 import { onEffectCleanup } from '@vue/reactivity'
 import { makeRender } from './_utils'
 
@@ -34,6 +35,82 @@ const createDemo = (setupFn: () => any, renderFn: (ctx: any) => any) =>
   })
 
 describe('renderEffect', () => {
+  test('initializes noLifecycle effect with raw effect function', () => {
+    let calls = 0
+    const fn = () => {
+      calls++
+    }
+    const effect = new RenderEffect(fn, true)
+
+    expect(effect.fn).toBe(fn)
+    expect(effect.updateJob).toBe(undefined)
+
+    effect.run()
+    expect(calls).toBe(1)
+  })
+
+  test('creates update lifecycle job lazily', async () => {
+    const effect = new RenderEffect(() => {})
+    expect(effect.updateJob).toBe(undefined)
+
+    const effects: RenderEffect[] = []
+    const calls: string[] = []
+    const { instance } = createDemo(
+      () => {
+        const source = ref(0)
+        const update = () => source.value++
+        onUpdated(() => calls.push(`updated ${source.value}`))
+        return { source, update }
+      },
+      ctx => {
+        const effect = new RenderEffect(() => {
+          calls.push(`render ${ctx.source}`)
+        })
+        effects.push(effect)
+        effect.run()
+      },
+    ).render()
+
+    expect(effects[0].updateJob).toBe(undefined)
+    expect(calls).toEqual(['render 0'])
+
+    const { update } = instance?.setupState as any
+    update()
+    await nextTick()
+
+    expect(effects[0].updateJob).toEqual(expect.any(Function))
+    expect(calls).toEqual(['render 0', 'render 1', 'updated 1'])
+  })
+
+  test('creates update lifecycle job after hooks are registered late', async () => {
+    const effects: RenderEffect[] = []
+    const calls: string[] = []
+    const { instance } = createDemo(
+      () => {
+        const source = ref(0)
+        const update = () => source.value++
+        const effect = new RenderEffect(() => {
+          calls.push(`render ${source.value}`)
+        })
+        effects.push(effect)
+        effect.run()
+        onUpdated(() => calls.push(`updated ${source.value}`))
+        return { update }
+      },
+      () => {},
+    ).render()
+
+    expect(effects[0].updateJob).toBe(undefined)
+    expect(calls).toEqual(['render 0'])
+
+    const { update } = instance?.setupState as any
+    update()
+    await nextTick()
+
+    expect(effects[0].updateJob).toEqual(expect.any(Function))
+    expect(calls).toEqual(['render 0', 'render 1', 'updated 1'])
+  })
+
   test('basic', async () => {
     let dummy: any
     const source = ref(0)
@@ -185,6 +262,47 @@ describe('renderEffect', () => {
     expect(
       '[Vue warn]: Unhandled error during execution of component update',
     ).toHaveBeenWarned()
+  })
+
+  test('should restore update state when render throws during update', async () => {
+    const calls: string[] = []
+    const { instance } = createDemo(
+      // setup
+      () => {
+        const source = ref(0)
+        const update = () => source.value++
+        onBeforeUpdate(() => calls.push(`beforeUpdate ${source.value}`))
+        onUpdated(() => calls.push(`updated ${source.value}`))
+        return { source, update }
+      },
+      // render
+      ctx => {
+        renderEffect(() => {
+          calls.push(`render ${ctx.source}`)
+          if (ctx.source === 1) {
+            throw new Error('error in render')
+          }
+        })
+      },
+    ).render()
+
+    const { update } = instance?.setupState as any
+    expect(calls).toEqual(['render 0'])
+    calls.length = 0
+
+    update()
+    await expect(nextTick()).rejects.toThrow('error in render')
+    expect(
+      '[Vue warn]: Unhandled error during execution of component update',
+    ).toHaveBeenWarned()
+    expect(currentInstance).toBe(null)
+    expect((instance as any).isUpdating).toBe(false)
+
+    calls.length = 0
+    update()
+    await nextTick()
+    expect(calls).toEqual(['beforeUpdate 2', 'render 2', 'updated 2'])
+    expect((instance as any).isUpdating).toBe(false)
   })
 
   test('errors should include the execution location with updated hook', async () => {

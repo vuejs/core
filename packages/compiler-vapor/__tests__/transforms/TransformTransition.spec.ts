@@ -1,5 +1,6 @@
 import { makeCompile } from './_utils'
 import {
+  compile,
   transformChildren,
   transformElement,
   transformKey,
@@ -267,9 +268,45 @@ describe('compiler: transition', () => {
     ).toMatchSnapshot()
   })
 
+  test('does not inject persisted when v-if owns a v-show child', () => {
+    const { code } = compileWithElementTransform(
+      `<Transition><div v-if="show" v-show="true" /></Transition>`,
+    )
+
+    expect(code).toContain('_createIf')
+    expect(code).toContain('_applyVShow')
+    expect(code).not.toContain('persisted')
+  })
+
+  // #15372
+  test('should drop comment children to match vdom runtime and SSR behavior', () => {
+    // vdom runtime filters comment children of Transition/TransitionGroup and
+    // SSR omits them (#5351, #11961) - vapor drops them at compile time
+    const { code } = compile(
+      `<transition>
+        <!-- comment -->
+        <div>foo</div>
+      </transition>`,
+      { prefixIdentifiers: true },
+    )
+    expect(code).not.toContain('comment')
+    expect(code).toMatchSnapshot()
+
+    const { code: groupCode } = compile(
+      `<transition-group tag="ul">
+        <!-- comment -->
+        <li key="a">a</li>
+        <li key="b">b</li>
+      </transition-group>`,
+      { prefixIdentifiers: true },
+    )
+    expect(groupCode).not.toContain('comment')
+    expect(groupCode).toMatchSnapshot()
+  })
+
   test('the v-if/else-if/else branches in Transition should ignore comments', () => {
-    expect(
-      compileWithElementTransform(`
+    const { code } = compile(
+      `
     <transition>
       <div v-if="a">hey</div>
       <!-- this should be ignored -->
@@ -281,7 +318,11 @@ describe('compiler: transition', () => {
         <p v-else/>
       </div>
     </transition>
-    `).code,
-    ).toMatchSnapshot()
+    `,
+      { prefixIdentifiers: true },
+    )
+    expect(code).toMatchSnapshot()
+    expect(code).not.toContain('this should be ignored')
+    expect(code).toContain('this should not be ignored')
   })
 })

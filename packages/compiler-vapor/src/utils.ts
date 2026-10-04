@@ -5,6 +5,7 @@ import {
   BindingTypes,
   type ElementNode,
   NodeTypes,
+  type RootNode,
   type SimpleExpressionNode,
   findDir as _findDir,
   findProp as _findProp,
@@ -12,7 +13,7 @@ import {
   isConstantNode,
   isLiteralWhitelisted,
 } from '@vue/compiler-dom'
-import type { BlockIRNode, VaporDirectiveNode } from './ir'
+import { type BlockIRNode, IRNodeTypes, type VaporDirectiveNode } from './ir'
 import { EMPTY_EXPRESSION } from './transforms/utils'
 import type { TransformContext } from './transform'
 
@@ -46,6 +47,15 @@ export function isConstantExpression(exp: SimpleExpressionNode): boolean {
     isGloballyAllowed(exp.content) ||
     getLiteralExpressionValue(exp) !== null
   )
+}
+
+// vdom's "constant type": the binding gets no effect and is not listed in
+// dynamicProps
+export function isConstantBinding(
+  exp: SimpleExpressionNode,
+  bindings: BindingMetadata,
+): boolean {
+  return isConstantExpression(exp) || isStaticExpression(exp, bindings)
 }
 
 export function isStaticExpression(
@@ -126,6 +136,14 @@ export function isTransitionNode(node: ElementNode): boolean {
   return node.type === NodeTypes.ELEMENT && isTransitionTag(node.tag)
 }
 
+/** Transition or TransitionGroup: hosts whose children render specially. */
+export function isTransitionHostNode(node: RootNode | ElementNode): boolean {
+  return (
+    node.type === NodeTypes.ELEMENT &&
+    (isTransitionTag(node.tag) || isTransitionGroupTag(node.tag))
+  )
+}
+
 export function isTransitionGroupNode(node: ElementNode): boolean {
   return node.type === NodeTypes.ELEMENT && isTransitionGroupTag(node.tag)
 }
@@ -141,7 +159,7 @@ export function isTransitionGroupTag(tag: string): boolean {
 }
 
 export function isKeepAliveTag(tag: string): boolean {
-  tag = tag.toLowerCase()
+  tag = tag.toLowerCase().replace(/-/g, '')
   return tag === 'keepalive' || tag === 'vaporkeepalive'
 }
 
@@ -150,9 +168,16 @@ export function isTeleportTag(tag: string): boolean {
   return tag === 'teleport' || tag === 'vaporteleport'
 }
 
+export function isComponentTag(tag: string): boolean {
+  return tag === 'component' || tag === 'Component'
+}
+
 export function isBuiltInComponent(tag: string): string | undefined {
   if (isTeleportTag(tag)) {
     return 'VaporTeleport'
+  } else if (tag === 'Suspense' || tag === 'suspense') {
+    // TODO: replace with VaporSuspense once it's implemented
+    return 'Suspense'
   } else if (isKeepAliveTag(tag)) {
     return 'VaporKeepAlive'
   } else if (isTransitionTag(tag)) {
@@ -163,8 +188,18 @@ export function isBuiltInComponent(tag: string): string | undefined {
 }
 
 export function getBlockShape(block: BlockIRNode): VaporBlockShape {
-  if (block.returns.length === 0) return VaporBlockShape.EMPTY
-  return block.returns.length === 1
-    ? VaporBlockShape.SINGLE_ROOT
-    : VaporBlockShape.MULTI_ROOT
+  // SSR renders a branch as a fragment unless its only child is an element,
+  // so an empty `<template>` branch or a lone nested `v-if` owns a range too
+  if (block.returns.length !== 1) return VaporBlockShape.MULTI_ROOT
+  const root = block.dynamic.children.find(c => c.id === block.returns[0])
+  if (root && root.operation && root.operation.type === IRNodeTypes.IF) {
+    return VaporBlockShape.MULTI_ROOT
+  }
+  return block.node.type === NodeTypes.ELEMENT &&
+    block.node.children.every(
+      child =>
+        child.type === NodeTypes.TEXT || child.type === NodeTypes.INTERPOLATION,
+    )
+    ? VaporBlockShape.MULTI_ROOT
+    : VaporBlockShape.SINGLE_ROOT
 }

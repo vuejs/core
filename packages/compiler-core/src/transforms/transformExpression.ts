@@ -71,6 +71,7 @@ export const transformExpression: NodeTransform = (node, context) => {
           // key has been processed in transformFor(vMemo + vFor)
           !(
             memo &&
+            context.vForMemoKeyedNodes.has(node) &&
             arg &&
             arg.type === NodeTypes.SIMPLE_EXPRESSION &&
             arg.content === 'key'

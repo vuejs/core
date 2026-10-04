@@ -2,7 +2,7 @@
 
 exports[`compile > bindings 1`] = `
 "import { txt as _txt, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, template as _template } from 'vue';
-const t0 = _template("<div> ", true)
+const t0 = _template("<div> ", 1)
 
 export function render(_ctx, $props, $emit, $attrs, $slots) {
   const n0 = t0()
@@ -14,7 +14,7 @@ export function render(_ctx, $props, $emit, $attrs, $slots) {
 
 exports[`compile > custom directive > basic 1`] = `
 "import { resolveDirective as _resolveDirective, withVaporDirectives as _withVaporDirectives, template as _template } from 'vue';
-const t0 = _template("<div>", true)
+const t0 = _template("<div>", 1)
 
 export function render(_ctx) {
   const _directive_test = _resolveDirective("test")
@@ -26,26 +26,23 @@ export function render(_ctx) {
 `;
 
 exports[`compile > custom directive > component 1`] = `
-"import { resolveComponent as _resolveComponent, resolveDirective as _resolveDirective, setInsertionState as _setInsertionState, createComponentWithFallback as _createComponentWithFallback, withVaporDirectives as _withVaporDirectives, createIf as _createIf, withVaporCtx as _withVaporCtx, template as _template } from 'vue';
+"import { resolveComponent as _resolveComponent, resolveDirective as _resolveDirective, setInsertionState as _setInsertionState, createComponentWithFallback as _createComponentWithFallback, withVaporDirectives as _withVaporDirectives, createIf as _createIf, extend as _extend, createAssetComponent as _createAssetComponent, template as _template } from 'vue';
 const t0 = _template("<div>")
 
 export function render(_ctx) {
   const _component_Bar = _resolveComponent("Bar")
-  const _component_Comp = _resolveComponent("Comp")
   const _directive_hello = _resolveDirective("hello")
   const _directive_test = _resolveDirective("test")
-  const n4 = _createComponentWithFallback(_component_Comp, null, {
-    "default": _withVaporCtx(() => {
-      const n0 = _createIf(() => (true), () => {
-        const n3 = t0()
-        _setInsertionState(n3, null, 0, true)
-        const n2 = _createComponentWithFallback(_component_Bar)
-        _withVaporDirectives(n2, [[_directive_hello, void 0, void 0, { world: true }]])
-        return n3
-      }, null, 1, true)
-      return n0
-    })
-  }, true)
+  const n4 = _createAssetComponent("Comp", null, _extend(() => {
+    const n0 = _createIf(() => (true), () => {
+      const n3 = t0()
+      _setInsertionState(n3)
+      const n2 = _createComponentWithFallback(_component_Bar)
+      _withVaporDirectives(n2, [[_directive_hello, void 0, void 0, { world: true }]])
+      return n3
+    }, null, 17 /* TRUE_SINGLE_ROOT, ONCE */)
+    return n0
+  }, { _: 1 /* NON_STABLE */ }), true)
   _withVaporDirectives(n4, [[_directive_test]])
   return n4
 }"
@@ -53,7 +50,7 @@ export function render(_ctx) {
 
 exports[`compile > directives > custom directive > basic 1`] = `
 "import { withVaporDirectives as _withVaporDirectives, template as _template } from 'vue';
-const t0 = _template("<div>", true)
+const t0 = _template("<div>", 1)
 
 export function render(_ctx, $props, $emit, $attrs, $slots) {
   const n0 = t0()
@@ -64,40 +61,40 @@ export function render(_ctx, $props, $emit, $attrs, $slots) {
 
 exports[`compile > directives > custom directive > binding value 1`] = `
 "import { withVaporDirectives as _withVaporDirectives, template as _template } from 'vue';
-const t0 = _template("<div>", true)
+const t0 = _template("<div>", 1)
 
 export function render(_ctx, $props, $emit, $attrs, $slots) {
   const n0 = t0()
-  _withVaporDirectives(n0, [[_ctx.vExample, () => _ctx.msg]])
+  _withVaporDirectives(n0, [[_ctx.vExample, () => (_ctx.msg)]])
   return n0
 }"
 `;
 
 exports[`compile > directives > custom directive > dynamic parameters 1`] = `
 "import { withVaporDirectives as _withVaporDirectives, template as _template } from 'vue';
-const t0 = _template("<div>", true)
+const t0 = _template("<div>", 1)
 
 export function render(_ctx, $props, $emit, $attrs, $slots) {
   const n0 = t0()
-  _withVaporDirectives(n0, [[_ctx.vExample, () => _ctx.msg, _ctx.foo]])
+  _withVaporDirectives(n0, [[_ctx.vExample, () => (_ctx.msg), () => (_ctx.foo)]])
   return n0
 }"
 `;
 
 exports[`compile > directives > custom directive > modifiers 1`] = `
 "import { withVaporDirectives as _withVaporDirectives, template as _template } from 'vue';
-const t0 = _template("<div>", true)
+const t0 = _template("<div>", 1)
 
 export function render(_ctx, $props, $emit, $attrs, $slots) {
   const n0 = t0()
-  _withVaporDirectives(n0, [[_ctx.vExample, () => _ctx.msg, void 0, { bar: true }]])
+  _withVaporDirectives(n0, [[_ctx.vExample, () => (_ctx.msg), void 0, { bar: true }]])
   return n0
 }"
 `;
 
 exports[`compile > directives > custom directive > modifiers w/o binding 1`] = `
 "import { withVaporDirectives as _withVaporDirectives, template as _template } from 'vue';
-const t0 = _template("<div>", true)
+const t0 = _template("<div>", 1)
 
 export function render(_ctx, $props, $emit, $attrs, $slots) {
   const n0 = t0()
@@ -106,31 +103,50 @@ export function render(_ctx, $props, $emit, $attrs, $slots) {
 }"
 `;
 
-exports[`compile > directives > custom directive > static parameters 1`] = `
+exports[`compile > directives > custom directive > object literal binding value 1`] = `
 "import { withVaporDirectives as _withVaporDirectives, template as _template } from 'vue';
-const t0 = _template("<div>", true)
+const t0 = _template("<div>", 1)
 
 export function render(_ctx, $props, $emit, $attrs, $slots) {
   const n0 = t0()
-  _withVaporDirectives(n0, [[_ctx.vExample, () => _ctx.msg, "foo"]])
+  _withVaporDirectives(n0, [[_ctx.vExample, () => ({ value: _ctx.msg, other: 1 })]])
+  return n0
+}"
+`;
+
+exports[`compile > directives > custom directive > object literal binding value w/ inline mode 1`] = `
+"
+  const n0 = t0()
+  _withVaporDirectives(n0, [[vExample, () => ({ value: msg.value })]])
+  return n0
+"
+`;
+
+exports[`compile > directives > custom directive > static parameters 1`] = `
+"import { withVaporDirectives as _withVaporDirectives, template as _template } from 'vue';
+const t0 = _template("<div>", 1)
+
+export function render(_ctx, $props, $emit, $attrs, $slots) {
+  const n0 = t0()
+  _withVaporDirectives(n0, [[_ctx.vExample, () => (_ctx.msg), () => ("foo")]])
   return n0
 }"
 `;
 
 exports[`compile > directives > custom directive > static parameters and modifiers 1`] = `
 "import { withVaporDirectives as _withVaporDirectives, template as _template } from 'vue';
-const t0 = _template("<div>", true)
+const t0 = _template("<div>", 1)
 
 export function render(_ctx, $props, $emit, $attrs, $slots) {
   const n0 = t0()
-  _withVaporDirectives(n0, [[_ctx.vExample, () => _ctx.msg, "foo", { bar: true }]])
+  _withVaporDirectives(n0, [[_ctx.vExample, () => (_ctx.msg), () => ("foo"), { bar: true }]])
   return n0
 }"
 `;
 
 exports[`compile > directives > v-cloak > basic 1`] = `
 "import { template as _template } from 'vue';
-const t0 = _template("<div>test", true, true)
+const t0 = _template("<div>test", 3)
 
 export function render(_ctx) {
   const n0 = t0()
@@ -140,7 +156,7 @@ export function render(_ctx) {
 
 exports[`compile > directives > v-pre > basic 1`] = `
 "import { template as _template } from 'vue';
-const t0 = _template("<div :id=foo><Comp></Comp>{{ bar }}", true, true)
+const t0 = _template("<div :id=foo><Comp></Comp>{{ bar }}", 3)
 
 export function render(_ctx, $props, $emit, $attrs, $slots) {
   const n0 = t0()
@@ -149,22 +165,20 @@ export function render(_ctx, $props, $emit, $attrs, $slots) {
 `;
 
 exports[`compile > directives > v-pre > should not affect siblings after it 1`] = `
-"import { resolveComponent as _resolveComponent, setInsertionState as _setInsertionState, createComponentWithFallback as _createComponentWithFallback, child as _child, setProp as _setProp, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, template as _template } from 'vue';
-const t0 = _template("<div :id=foo><Comp></Comp>{{ bar }}", false, true)
-const t1 = _template("<div> ")
+"import { child as _child, setProp as _setProp, renderEffect as _renderEffect, setInsertionState as _setInsertionState, createAssetComponent as _createAssetComponent, next as _next, toDisplayString as _toDisplayString, setText as _setText, template as _template } from 'vue';
+const t0 = _template("<div :id=foo><Comp></Comp>{{ bar }}", 2)
+const t1 = _template("<div><!> ")
 
 export function render(_ctx, $props, $emit, $attrs, $slots) {
-  const _component_Comp = _resolveComponent("Comp")
   const n0 = t0()
-  const n3 = t1()
-  const n2 = _child(n3, 1)
-  _setInsertionState(n3, 0, 0, true)
-  const n1 = _createComponentWithFallback(_component_Comp)
-  _renderEffect(() => {
-    _setProp(n3, "id", _ctx.foo)
-    _setText(n2, _toDisplayString(_ctx.bar))
-  })
-  return [n0, n3]
+  const n4 = t1()
+  const n3 = _child(n4)
+  const n2 = _next(n3, true)
+  _renderEffect(() => _setProp(n4, "id", _ctx.foo))
+  _setInsertionState(n4, n3)
+  const n1 = _createAssetComponent("Comp")
+  _renderEffect(() => _setText(n2, _toDisplayString(_ctx.bar)))
+  return [n0, n4]
 }"
 `;
 
@@ -180,14 +194,13 @@ export function render(_ctx) {
 `;
 
 exports[`compile > dynamic root nodes and interpolation 1`] = `
-"import { txt as _txt, createInvoker as _createInvoker, setProp as _setProp, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, delegateEvents as _delegateEvents, template as _template } from 'vue';
-const t0 = _template("<button> ", true)
-_delegateEvents("click")
+"import { txt as _txt, on as _on, setProp as _setProp, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, template as _template } from 'vue';
+const t0 = _template("<button> ", 1)
 
 export function render(_ctx) {
   const n0 = t0()
   const x0 = _txt(n0)
-  n0.$evtclick = _createInvoker(e => _ctx.handleClick(e))
+  _on(n0, "click", e => _ctx.handleClick(e))
   _renderEffect(() => {
     const _count = _ctx.count
     _setProp(n0, "id", _count)
@@ -197,9 +210,52 @@ export function render(_ctx) {
 }"
 `;
 
+exports[`compile > empty literal component slot as text 1`] = `
+"import { setText as _setText, createAssetComponent as _createAssetComponent, template as _template } from 'vue';
+const t0 = _template(" ")
+
+export function render(_ctx) {
+  const n1 = _createAssetComponent("Comp", null, () => {
+    const n0 = t0()
+    _setText(n0, '')
+    return n0
+  }, true)
+  return n1
+}"
+`;
+
+exports[`compile > execution order > applies custom directives after props, children and v-model 1`] = `
+"import { resolveDirective as _resolveDirective, child as _child, next as _next, setProp as _setProp, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, setInsertionState as _setInsertionState, createIf as _createIf, createAssetComponent as _createAssetComponent, applyTextModel as _applyTextModel, withVaporDirectives as _withVaporDirectives, template as _template } from 'vue';
+const t0 = _template("<span>", 2)
+const t1 = _template("<div> <!><!><input>", 1)
+
+export function render(_ctx) {
+  const _directive_dir = _resolveDirective("dir")
+  const n7 = t1()
+  const n0 = _child(n7, true)
+  const n6 = _next(n0)
+  const n8 = _next(n6)
+  const n5 = _next(n8)
+  _renderEffect(() => {
+    _setProp(n7, "id", _ctx.foo)
+    _setText(n0, _toDisplayString(_ctx.bar))
+  })
+  _setInsertionState(n7, n6)
+  const n1 = _createIf(() => (_ctx.ok), () => {
+    const n3 = t0()
+    return n3
+  }, null, 33 /* TRUE_SINGLE_ROOT, TRUE_NO_SCOPE */)
+  _setInsertionState(n7, n8)
+  const n4 = _createAssetComponent("Comp")
+  _applyTextModel(n5, () => (_ctx.text), _value => (_ctx.text = _value))
+  _withVaporDirectives(n7, [[_directive_dir]])
+  return n7
+}"
+`;
+
 exports[`compile > execution order > basic 1`] = `
 "import { txt as _txt, setProp as _setProp, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, template as _template } from 'vue';
-const t0 = _template("<div> ", true)
+const t0 = _template("<div> ", 1)
 
 export function render(_ctx) {
   const n0 = t0()
@@ -212,55 +268,105 @@ export function render(_ctx) {
 }"
 `;
 
+exports[`compile > execution order > does not flush later v-for effects before child component 1`] = `
+"import { resolveComponent as _resolveComponent, createSelector as _createSelector, child as _child, next as _next, txt as _txt, setInsertionState as _setInsertionState, createComponentWithFallback as _createComponentWithFallback, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, createFor as _createFor, template as _template } from 'vue';
+const t0 = _template("<div><span> </span><!><span> ")
+
+export function render(_ctx, $props, $emit, $attrs, $slots) {
+  const _component_Child = _resolveComponent("Child")
+  const _selector0 = _createSelector(() => _ctx.selected)
+  const n0 = _createFor(() => (_ctx.rows), (_for_item0) => {
+    const n6 = t0()
+    const n2 = _child(n6)
+    const n5 = _next(n2)
+    const n4 = _next(n5)
+    const x2 = _txt(n2)
+    _setInsertionState(n6, n5)
+    const n3 = _createComponentWithFallback(_component_Child)
+    const x4 = _txt(n4)
+    _renderEffect(() => _setText(x4, _toDisplayString(_ctx.useId())))
+    _selector0(_for_item0.value.id, () => {
+      _setText(x2, _toDisplayString(_ctx.selected === _for_item0.value.id ? 'danger' : ''))
+    })
+    return n6
+  }, (row) => (row.id), 8 /* IS_SINGLE_NODE */)
+  n0.onReset(_selector0.reset)
+  return n0
+}"
+`;
+
+exports[`compile > execution order > flushes parent props before creating child component 1`] = `
+"import { setProp as _setProp, renderEffect as _renderEffect, setInsertionState as _setInsertionState, createAssetComponent as _createAssetComponent, template as _template } from 'vue';
+const t0 = _template("<div>", 1)
+
+export function render(_ctx, $props, $emit, $attrs, $slots) {
+  const n1 = t0()
+  _renderEffect(() => _setProp(n1, "id", _ctx.useId()))
+  _setInsertionState(n1)
+  const n0 = _createAssetComponent("Child")
+  return n1
+}"
+`;
+
+exports[`compile > execution order > flushes previous effects before creating child component 1`] = `
+"import { txt as _txt, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, createAssetComponent as _createAssetComponent, template as _template } from 'vue';
+const t0 = _template("<div> ")
+
+export function render(_ctx, $props, $emit, $attrs, $slots) {
+  const n0 = t0()
+  const x0 = _txt(n0)
+  _renderEffect(() => _setText(x0, "parent: " + _toDisplayString(_ctx.useId())))
+  const n1 = _createAssetComponent("Child")
+  return [n0, n1]
+}"
+`;
+
 exports[`compile > execution order > setInsertionState > next, child and nthChild should be above the setInsertionState 1`] = `
-"import { resolveComponent as _resolveComponent, child as _child, next as _next, setInsertionState as _setInsertionState, createComponentWithFallback as _createComponentWithFallback, nthChild as _nthChild, createIf as _createIf, setProp as _setProp, renderEffect as _renderEffect, template as _template } from 'vue';
-const t0 = _template("<div>", false, true)
-const t1 = _template("<div><div></div><!><div></div><!><div><button>", true)
+"import { child as _child, next as _next, setInsertionState as _setInsertionState, createAssetComponent as _createAssetComponent, nthChild as _nthChild, createIf as _createIf, setProp as _setProp, renderEffect as _renderEffect, template as _template } from 'vue';
+const t0 = _template("<div>", 2)
+const t1 = _template("<div><div></div><!><div></div><!><div><button>", 1)
 
 export function render(_ctx) {
-  const _component_Comp = _resolveComponent("Comp")
   const n6 = t1()
-  const n5 = _next(_child(n6), 1)
-  const n7 = _nthChild(n6, 3, 3)
-  const p0 = _next(n7, 4)
-  const n4 = _child(p0)
-  _setInsertionState(n6, n5, 1)
-  const n0 = _createComponentWithFallback(_component_Comp)
-  _setInsertionState(n6, n7, 3, true)
+  const n5 = _next(_child(n6))
+  const n7 = _nthChild(n6, 3)
+  const n4 = _child(_next(n7))
+  _setInsertionState(n6, n5)
+  const n0 = _createAssetComponent("Comp")
+  _setInsertionState(n6, n7)
   const n1 = _createIf(() => (true), () => {
     const n3 = t0()
     return n3
-  }, null, 1, true)
+  }, null, 49 /* TRUE_SINGLE_ROOT, TRUE_NO_SCOPE, ONCE */)
   _renderEffect(() => _setProp(n4, "disabled", _ctx.foo))
   return n6
 }"
 `;
 
 exports[`compile > execution order > with insertionState 1`] = `
-"import { resolveComponent as _resolveComponent, child as _child, setInsertionState as _setInsertionState, createSlot as _createSlot, createComponentWithFallback as _createComponentWithFallback, template as _template } from 'vue';
-const t0 = _template("<div><div>", true)
+"import { child as _child, setInsertionState as _setInsertionState, createSlot as _createSlot, createAssetComponent as _createAssetComponent, template as _template } from 'vue';
+const t0 = _template("<div><div>", 1)
 
 export function render(_ctx) {
-  const _component_Comp = _resolveComponent("Comp")
   const n3 = t0()
   const n1 = _child(n3)
-  _setInsertionState(n1, null, 0, true)
-  const n0 = _createSlot("default", null)
-  _setInsertionState(n3, null, 1, true)
-  const n2 = _createComponentWithFallback(_component_Comp)
+  _setInsertionState(n1)
+  const n0 = _createSlot()
+  _setInsertionState(n3, 1)
+  const n2 = _createAssetComponent("Comp")
   return n3
 }"
 `;
 
 exports[`compile > execution order > with v-once 1`] = `
 "import { child as _child, next as _next, nthChild as _nthChild, txt as _txt, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, template as _template } from 'vue';
-const t0 = _template("<div><span> </span> <br> ", true)
+const t0 = _template("<div><span> </span> <br> ", 1)
 
 export function render(_ctx) {
   const n3 = t0()
   const n0 = _child(n3)
-  const n1 = _next(n0, 1)
-  const n2 = _nthChild(n3, 3, 3)
+  const n1 = _next(n0, true)
+  const n2 = _nthChild(n3, 3, true)
   const x0 = _txt(n0)
   _setText(x0, _toDisplayString(_ctx.foo))
   _renderEffect(() => {
@@ -279,12 +385,30 @@ exports[`compile > expression parsing > interpolation 1`] = `
 "
 `;
 
+exports[`compile > expression parsing > keeps member selector source offsets after prefixing 1`] = `
+"import { createSelector as _createSelector, setClassName as _setClassName, createFor as _createFor, template as _template } from 'vue';
+const t0 = _template("<tr>")
+
+export function render(_ctx) {
+  const _selector0 = _createSelector(() => _ctx.state.selected)
+  const n0 = _createFor(() => (_ctx.rows), (_for_item0) => {
+    const n2 = t0()
+    _selector0(_for_item0.value.id, () => {
+      _setClassName(n2, ((_for_item0.value.id === _ctx.state.selected) ? 1 : 0), "danger")
+    })
+    return n2
+  }, (row) => (row.id), 8 /* IS_SINGLE_NODE */)
+  n0.onReset(_selector0.reset)
+  return n0
+}"
+`;
+
 exports[`compile > expression parsing > v-bind 1`] = `
 "
   const n0 = t0()
   _renderEffect(() => {
     const _key = key.value
-    _setDynamicProps(n0, [{ [_key+1]: _unref(foo)[_key+1]() }])
+    _setDynamicProps(n0, [{ [(_key+1) || ""]: _unref(foo)[_key+1]() }])
   })
   return n0
 "
@@ -298,30 +422,28 @@ export function render(_ctx) {
   const n0 = _createFor(() => (_ctx.a.b), (_for_item0, _for_key0, _for_index0) => {
     const n2 = t0()
     return n2
-  })
+  }, undefined, 8 /* IS_SINGLE_NODE */)
   return n0
 }"
 `;
 
 exports[`compile > expression parsing > v-on multi statements 1`] = `
-"import { createInvoker as _createInvoker, delegateEvents as _delegateEvents, template as _template } from 'vue';
-const t0 = _template("<div>", true)
-_delegateEvents("click")
+"import { on as _on, template as _template } from 'vue';
+const t0 = _template("<div>", 1)
 
 export function render(_ctx) {
   const n0 = t0()
-  n0.$evtclick = _createInvoker(() => {_ctx.a++;_ctx.b++})
+  _on(n0, "click", () => {_ctx.a++;_ctx.b++})
   return n0
 }"
 `;
 
 exports[`compile > expression parsing > v-slot 1`] = `
-"import { resolveComponent as _resolveComponent, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, createComponentWithFallback as _createComponentWithFallback, template as _template } from 'vue';
+"import { toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, createAssetComponent as _createAssetComponent, template as _template } from 'vue';
 const t0 = _template(" ")
 
 export function render(_ctx) {
-  const _component_Comp = _resolveComponent("Comp")
-  const n1 = _createComponentWithFallback(_component_Comp, null, {
+  const n1 = _createAssetComponent("Comp", null, {
     "foo": (_slotProps0) => {
       const n0 = t0()
       _renderEffect(() => _setText(n0, _toDisplayString(_slotProps0.a + _slotProps0.b)))
@@ -334,9 +456,9 @@ export function render(_ctx) {
 
 exports[`compile > fragment 1`] = `
 "import { template as _template } from 'vue';
-const t0 = _template("<p>", false, true)
-const t1 = _template("<span>", false, true)
-const t2 = _template("<div>", false, true)
+const t0 = _template("<p>", 2)
+const t1 = _template("<span>", 2)
+const t2 = _template("<div>", 2)
 
 export function render(_ctx) {
   const n0 = t0()
@@ -348,7 +470,7 @@ export function render(_ctx) {
 
 exports[`compile > gen unique helper alias > should avoid conflicts with existing variable names 1`] = `
 "import { txt as _txt2, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, template as _template } from 'vue';
-const t0 = _template("<div> ", true)
+const t0 = _template("<div> ", 1)
 
 export function render(_ctx, $props, $emit, $attrs, $slots) {
   const n0 = t0()
@@ -395,25 +517,31 @@ export function render(_ctx, $props, $emit, $attrs, $slots) {
 }"
 `;
 
-exports[`compile > gen unique node variables > should bump placeholder var (p*) on conflict 1`] = `
-"import { child as _child, setProp as _setProp, renderEffect as _renderEffect, template as _template } from 'vue';
-const t0 = _template("<div><div><div><span>", true)
+exports[`compile > gen unique node variables > should bump placeholder cursor var (p*) on conflict 1`] = `
+"import { child as _child, next as _next, txt as _txt, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, template as _template } from 'vue';
+const t0 = _template("<div><div>x</div><div><span> </div><div><span> ", 1)
 
 export function render(_ctx, $props, $emit, $attrs, $slots) {
-  const n1 = t0()
-  const p1 = _child(n1)
-  const p3 = _child(p1)
-  const n0 = _child(p3)
-  _renderEffect(() => _setProp(n0, "id", _ctx.foo))
-  return n1
+  const n2 = t0()
+  let p1 = _next(_child(n2))
+  const n0 = _child(p1)
+  const n1 = _child((p1 = _next(p1)))
+  const x0 = _txt(n0)
+  const x1 = _txt(n1)
+  _renderEffect(() => {
+    const _foo = _ctx.foo
+    _setText(x0, _toDisplayString(_foo))
+    _setText(x1, _toDisplayString(_foo))
+  })
+  return n2
 }"
 `;
 
 exports[`compile > gen unique node variables > should bump template var (t*) on conflict 1`] = `
 "import { template as _template } from 'vue';
-const t1 = _template("<div>", false, true)
-const t3 = _template("<span>", false, true)
-const t4 = _template("<p>", false, true)
+const t1 = _template("<div>", 2)
+const t3 = _template("<span>", 2)
+const t4 = _template("<p>", 2)
 
 export function render(_ctx, $props, $emit, $attrs, $slots) {
   const n0 = t1()
@@ -436,7 +564,7 @@ export function render(_ctx) {
 
 exports[`compile > static template 1`] = `
 "import { template as _template } from 'vue';
-const t0 = _template("<div><p>hello</p><input><span>", true, true)
+const t0 = _template("<div><p>hello</p><input><span>", 3)
 
 export function render(_ctx) {
   const n0 = t0()

@@ -5,10 +5,12 @@
 
 import {
   isEmitListener,
+  markRaw,
   nextTick,
   onBeforeUnmount,
   ref,
   toHandlers,
+  watch,
 } from '@vue/runtime-dom'
 import {
   createComponent,
@@ -16,7 +18,7 @@ import {
   defineVaporComponent,
   template,
 } from '../src'
-import { makeRender } from './_utils'
+import { compile, makeRender, renderParity } from './_utils'
 
 const define = makeRender()
 
@@ -65,6 +67,23 @@ describe('component: emit', () => {
     expect(onFoo).not.toHaveBeenCalled()
     expect(onBar).toHaveBeenCalled()
     expect(onBaz).toHaveBeenCalled()
+  })
+
+  test('should ignore nullish object v-bind sources when emitting', () => {
+    const Child = defineVaporComponent({
+      emits: ['ready'],
+      setup(_, { emit }) {
+        emit('ready')
+        return []
+      },
+    })
+    const Parent = compile(
+      `<template><components.Child v-bind="data.attrs" /></template>`,
+      ref({ attrs: null }),
+      { Child },
+    )
+
+    expect(() => define(Parent).render()).not.toThrow()
   })
 
   test('trigger camelCase handler', () => {
@@ -270,10 +289,10 @@ describe('component: emit', () => {
     const fn2 = vi.fn()
     render({
       modelValue: () => null,
-      modelModifiers: () => ({ number: true }),
+      modelModifiers: { number: true },
       ['onUpdate:modelValue']: () => fn1,
       foo: () => null,
-      fooModifiers: () => ({ number: true }),
+      fooModifiers: { number: true },
       ['onUpdate:foo']: () => fn2,
     })
     expect(fn1).toHaveBeenCalledTimes(1)
@@ -296,18 +315,14 @@ describe('component: emit', () => {
       modelValue() {
         return null
       },
-      modelModifiers() {
-        return { trim: true }
-      },
+      modelModifiers: { trim: true },
       ['onUpdate:modelValue']() {
         return fn1
       },
       foo() {
         return null
       },
-      fooModifiers() {
-        return { trim: true }
-      },
+      fooModifiers: { trim: true },
       'onUpdate:foo'() {
         return fn2
       },
@@ -332,18 +347,14 @@ describe('component: emit', () => {
       modelValue() {
         return null
       },
-      modelModifiers() {
-        return { trim: true, number: true }
-      },
+      modelModifiers: { trim: true, number: true },
       ['onUpdate:modelValue']() {
         return fn1
       },
       foo() {
         return null
       },
-      fooModifiers() {
-        return { trim: true, number: true }
-      },
+      fooModifiers: { trim: true, number: true },
       ['onUpdate:foo']() {
         return fn2
       },
@@ -366,9 +377,7 @@ describe('component: emit', () => {
       modelValue() {
         return null
       },
-      modelModifiers() {
-        return { trim: true }
-      },
+      modelModifiers: { trim: true },
       ['onUpdate:modelValue']() {
         return fn
       },
@@ -451,6 +460,122 @@ describe('component: emit', () => {
     expect(handler).toHaveBeenCalledTimes(1)
   })
 
+  test('v-once should not execute handlers during lookup', () => {
+    const Child = defineVaporComponent({
+      setup(_, { emit }) {
+        emit('click', 1)
+        return []
+      },
+    })
+    const staticHandler = vi.fn()
+    const objectSourceHandler = vi.fn()
+
+    define({
+      setup() {
+        return [
+          createComponent(
+            Child,
+            { onClick: () => staticHandler },
+            null,
+            true,
+            true,
+          ),
+          createComponent(
+            Child,
+            { $: [{ onClick: () => objectSourceHandler }] },
+            null,
+            true,
+            true,
+          ),
+        ]
+      },
+    }).render()
+
+    expect(staticHandler.mock.calls).toEqual([[1]])
+    expect(objectSourceHandler.mock.calls).toEqual([[1]])
+  })
+
+  test('should trigger once handler from dynamic source', () => {
+    const { render } = define({
+      setup(_, { emit }) {
+        emit('foo')
+        emit('foo')
+        return []
+      },
+    })
+
+    const handler = vi.fn()
+    render({
+      $: [
+        () => ({
+          onFooOnce: handler,
+        }),
+      ],
+    } as any)
+
+    expect(handler).toHaveBeenCalledTimes(1)
+  })
+
+  test('v-model modifiers should work from dynamic source', () => {
+    const { render } = define({
+      setup(_, { emit }) {
+        emit('update:modelValue', '1')
+        emit('update:foo', '  two  ')
+        return []
+      },
+    })
+
+    const fn1 = vi.fn()
+    const fn2 = vi.fn()
+    render({
+      $: [
+        () => ({
+          modelValue: null,
+          modelModifiers: { number: true },
+          ['onUpdate:modelValue']: fn1,
+          foo: null,
+          fooModifiers: { trim: true },
+          ['onUpdate:foo']: fn2,
+        }),
+      ],
+    } as any)
+
+    expect(fn1).toHaveBeenCalledTimes(1)
+    expect(fn1).toHaveBeenCalledWith(1)
+    expect(fn2).toHaveBeenCalledTimes(1)
+    expect(fn2).toHaveBeenCalledWith('two')
+  })
+
+  test('v-model modifiers should work from static object source', () => {
+    const { render } = define({
+      setup(_, { emit }) {
+        emit('update:modelValue', '1')
+        emit('update:foo', '  two  ')
+        return []
+      },
+    })
+
+    const fn1 = vi.fn()
+    const fn2 = vi.fn()
+    render({
+      $: [
+        {
+          modelValue: null,
+          modelModifiers: { number: true },
+          ['onUpdate:modelValue']: () => fn1,
+          foo: null,
+          fooModifiers: { trim: true },
+          ['onUpdate:foo']: () => fn2,
+        },
+      ],
+    } as any)
+
+    expect(fn1).toHaveBeenCalledTimes(1)
+    expect(fn1).toHaveBeenCalledWith(1)
+    expect(fn2).toHaveBeenCalledTimes(1)
+    expect(fn2).toHaveBeenCalledWith('two')
+  })
+
   test('should re-queue when child emit mutates parent state during update', async () => {
     const show = ref(false)
     const calls: string[] = []
@@ -484,5 +609,164 @@ describe('component: emit', () => {
 
     expect(calls).toEqual(['change:true'])
     expect(host.innerHTML).toBe('<!--if-->')
+  })
+
+  // #15442
+  test('should merge once listeners from v-on objects', () => {
+    const onStatic = vi.fn()
+    const onObject = vi.fn()
+    const Child = compile(
+      `<script setup vapor>defineEmits(['ready'])</script>
+        <template><button @click="$emit('ready', 1)">emit</button></template>`,
+      ref(null),
+    )
+    const Parent = compile(
+      `<template>
+          <components.Child @ready.once="data.onStatic" v-on="data.listeners" />
+        </template>`,
+      ref({ onStatic, listeners: { readyOnce: onObject } }),
+      { Child },
+    )
+
+    const { host } = define(Parent).render()
+    const button = host.querySelector('button')!
+    button.click()
+    expect(onStatic).toHaveBeenCalledExactlyOnceWith(1)
+    expect(onObject).toHaveBeenCalledExactlyOnceWith(1)
+
+    button.click()
+    expect(onStatic).toHaveBeenCalledTimes(1)
+    expect(onObject).toHaveBeenCalledTimes(1)
+  })
+
+  test('a sync watcher sees the new listener as a prop and through emit', async () => {
+    const oldListener = vi.fn()
+    const newListener = vi.fn()
+    const data = ref({ count: 0, listener: oldListener })
+    const propListeners: unknown[] = []
+    let props: any
+    const Child = defineVaporComponent({
+      props: ['count', 'onChange'],
+      emits: ['change'],
+      setup(received, { emit }) {
+        props = received
+        watch(
+          () => received.count,
+          count => {
+            propListeners.push(received.onChange)
+            emit('change', count)
+          },
+          { flush: 'sync' },
+        )
+        return []
+      },
+    })
+    // A bound function prop avoids a compiler-generated @change forwarding
+    // closure that could mask which listener identity emit actually selected.
+    const { app } = define(
+      compile(
+        `<template><components.Child :count="data.count" :onChange="data.listener" /></template>`,
+        data,
+        { Child },
+      ),
+    ).render()
+
+    data.value.count = 1
+    data.value.listener = newListener
+    await nextTick()
+
+    expect(propListeners).toEqual([newListener])
+    expect(props.onChange).toBe(newListener)
+    expect(oldListener).not.toHaveBeenCalled()
+    expect(newListener).toHaveBeenCalledExactlyOnceWith(1)
+    app.unmount()
+  })
+
+  test('delivers a setup emit mutation after the initial mount', async () => {
+    const data = ref({ count: 0 })
+    const Child = compile(
+      `<script setup>
+        const props = defineProps(['count'])
+        const emit = defineEmits()
+        emit('update', props.count + 1)
+      </script><template><div>{{ props.count }}</div></template>`,
+      data,
+    )
+    const { app, host } = define(
+      compile(
+        '<template><components.Child v-bind="{ count: data.count }" @update="data.count = $event" /></template>',
+        data,
+        { Child },
+      ),
+    ).render()
+    expect(data.value.count).toBe(1)
+    expect(host.innerHTML).toBe('<div>0</div>')
+    await nextTick()
+    expect(host.innerHTML).toBe('<div>1</div>')
+    app.unmount()
+  })
+
+  // vdom reads listeners off the vnode, which nothing can subscribe to
+  test('emitting inside an effect does not subscribe it to the inputs', async () => {
+    const pings: Record<string, number> = {}
+    await renderParity(
+      {
+        Child: `<script setup>
+          import { watchEffect } from 'vue'
+          const data = _data
+          const emit = defineEmits(['ping'])
+          defineProps({ other: String })
+          watchEffect(() => emit('ping', data.value.local))
+        </script><template><i /></template>`,
+        App: `<template>
+          <components.Child :other="data.other" @ping="data.pings.push($event)" />
+        </template>`,
+      },
+      () => ref<any>({ other: 'a', local: 1, pings: [] }),
+      async (data, root, mode) => {
+        data.value.other = 'b'
+        await nextTick()
+        pings[mode] = data.value.pings.length
+      },
+    )
+    expect(pings.vdom).toBe(1)
+    expect(pings.vapor).toBe(pings.vdom)
+  })
+
+  test('writing a model inside an effect does not subscribe it to the inputs', async () => {
+    const runs: Record<string, number> = {}
+    await renderParity(
+      {
+        Child: `<script setup>
+          import { watchEffect } from 'vue'
+          const data = _data
+          const model = defineModel()
+          defineProps({ other: Number })
+          watchEffect(() => {
+            data.value.counter.runs++
+            model.value = data.value.local
+          })
+        </script><template><i /></template>`,
+        App: `<template>
+          <components.Child v-model="data.m" :other="data.other" />
+        </template>`,
+      },
+      () =>
+        ref<any>({
+          m: 'a',
+          local: 'b',
+          other: 0,
+          counter: markRaw({ runs: 0 }),
+        }),
+      async (data, root, mode) => {
+        await nextTick()
+        const before = data.value.counter.runs
+        data.value.other++
+        await nextTick()
+        runs[mode] = data.value.counter.runs - before
+      },
+    )
+    expect(runs.vdom).toBe(0)
+    expect(runs.vapor).toBe(runs.vdom)
   })
 })

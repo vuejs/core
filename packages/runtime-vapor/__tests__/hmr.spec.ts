@@ -2,6 +2,7 @@ import {
   type HMRRuntime,
   computed,
   createApp,
+  currentInstance,
   h,
   inject,
   nextTick,
@@ -9,11 +10,20 @@ import {
   onDeactivated,
   onMounted,
   onUnmounted,
+  popWarningContext,
   provide,
+  reactive,
   ref,
+  setCurrentInstance,
   toDisplayString,
+  warn,
+  watchEffect,
 } from '@vue/runtime-dom'
-import { compileToVaporRender as compileToFunction, makeRender } from './_utils'
+import {
+  compileToVaporRender as compileToFunction,
+  makeRender,
+  runtimeDom,
+} from './_utils'
 import {
   createComponent,
   createSlot,
@@ -22,13 +32,15 @@ import {
   defineVaporAsyncComponent,
   defineVaporComponent,
   delegateEvents,
+  insert,
   renderEffect,
   setText,
   template,
+  useVaporCssVars,
   vaporInteropPlugin,
-  withVaporCtx,
 } from '@vue/runtime-vapor'
 import { BindingTypes } from '@vue/compiler-core'
+import { compileScript, parse } from '@vue/compiler-sfc'
 import type { VaporComponent } from '../src/component'
 
 declare var __VUE_HMR_RUNTIME__: HMRRuntime
@@ -180,6 +192,42 @@ describe('hot module replacement', () => {
     expect(mountSpy).toHaveBeenCalledTimes(1)
   })
 
+  test('reload child should preserve parent setup effects', async () => {
+    const root = document.createElement('div')
+    const childId = 'test-reload-child-preserve-parent-effects'
+    const parentCount = ref(0)
+    const spy = vi.fn()
+
+    const Child = defineVaporComponent({
+      __hmrId: childId,
+      render: () => template('<div>old</div>')(),
+    })
+    createRecord(childId, Child as any)
+
+    const Parent = defineVaporComponent({
+      setup() {
+        watchEffect(() => spy(parentCount.value))
+      },
+      render: () => createComponent(Child),
+    })
+
+    createVaporApp(Parent).mount(root)
+    expect(root.innerHTML).toBe(`<div>old</div>`)
+    expect(spy).toHaveBeenLastCalledWith(0)
+
+    reload(childId, {
+      __vapor: true,
+      __hmrId: childId,
+      render: () => template('<div>new</div>')(),
+    })
+    await nextTick()
+    expect(root.innerHTML).toBe(`<div>new</div>`)
+
+    parentCount.value++
+    await nextTick()
+    expect(spy).toHaveBeenLastCalledWith(1)
+  })
+
   test('reload root vapor component should preserve appContext provide/inject', async () => {
     const root = document.createElement('div')
     const appId = 'test-root-reload-app-context'
@@ -211,6 +259,396 @@ describe('hot module replacement', () => {
 
     await nextTick()
     expect(root.innerHTML).toBe(`<div>app-injected</div>`)
+  })
+
+  test('reload root vapor component should update app instance for unmount', async () => {
+    const root = document.createElement('div')
+    const appId = 'test-root-reload-app-unmount'
+    const oldUnmountSpy = vi.fn()
+    const newUnmountSpy = vi.fn()
+
+    const App = defineVaporComponent({
+      __hmrId: appId,
+      setup() {
+        onUnmounted(oldUnmountSpy)
+      },
+      render: () => template(`<div>old</div>`)(),
+    })
+    createRecord(appId, App as any)
+
+    const app = createVaporApp(App)
+    app.mount(root)
+    expect(root.innerHTML).toBe(`<div>old</div>`)
+
+    reload(appId, {
+      __vapor: true,
+      __hmrId: appId,
+      setup() {
+        onUnmounted(newUnmountSpy)
+      },
+      render: () => template(`<div>new</div>`)(),
+    })
+
+    await nextTick()
+    expect(root.innerHTML).toBe(`<div>new</div>`)
+    expect(oldUnmountSpy).toHaveBeenCalledTimes(1)
+
+    app.unmount()
+    await nextTick()
+    expect(root.innerHTML).toBe(``)
+    expect(newUnmountSpy).toHaveBeenCalledTimes(1)
+  })
+
+  test('failed rerender restores current instance and warning context', () => {
+    const root = document.createElement('div')
+    const id = 'test-rerender-restore-context'
+    const warnHandler = vi.fn()
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+
+    const Comp = defineVaporComponent({
+      __hmrId: id,
+      render: () => template('ok')(),
+    })
+    createRecord(id, Comp as any)
+
+    const app = createVaporApp(Comp)
+    app.config.warnHandler = warnHandler
+    app.mount(root)
+    expect(currentInstance).toBe(null)
+
+    rerender(id, () => {
+      throw new Error('hmr rerender error')
+    })
+    warnHandler.mockClear()
+
+    const leakedInstance = currentInstance
+    setCurrentInstance(null, undefined)
+    warn('after failed hmr')
+    popWarningContext()
+    errorSpy.mockRestore()
+
+    expect(
+      '[HMR] Something went wrong during Vue component hot-reload.',
+    ).toHaveBeenWarned()
+    expect('[Vue warn]: after failed hmr').toHaveBeenWarned()
+    expect(leakedInstance).toBe(null)
+    expect(warnHandler).not.toHaveBeenCalled()
+  })
+
+  test('failed reload restores current instance', () => {
+    const root = document.createElement('div')
+    const childId = 'test-reload-restore-context-child'
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+
+    const Child = defineVaporComponent({
+      __hmrId: childId,
+      render: () => template('old')(),
+    })
+    createRecord(childId, Child as any)
+
+    const Parent = defineVaporComponent({
+      render: () => createComponent(Child),
+    })
+
+    createVaporApp(Parent).mount(root)
+    expect(currentInstance).toBe(null)
+
+    reload(childId, {
+      __vapor: true,
+      __hmrId: childId,
+      setup() {
+        throw new Error('hmr reload error')
+      },
+      render: () => template('new')(),
+    })
+
+    const leakedInstance = currentInstance
+    setCurrentInstance(null, undefined)
+    errorSpy.mockRestore()
+
+    expect(
+      '[Vue warn]: Unhandled error during execution of setup function',
+    ).toHaveBeenWarned()
+    expect(
+      '[Vue warn]: Unhandled error during execution of render function',
+    ).toHaveBeenWarned()
+    expect(
+      '[HMR] Something went wrong during Vue component hot-reload.',
+    ).toHaveBeenWarned()
+    expect(leakedInstance).toBe(null)
+  })
+
+  test('rerender should preserve fallthrough attrs', () => {
+    const root = document.createElement('div')
+    const childId = 'test-rerender-fallthrough-child'
+
+    const Child = defineVaporComponent({
+      __hmrId: childId,
+      render: compileToFunction(`<div>child</div>`),
+    })
+    createRecord(childId, Child as any)
+
+    const Parent = defineVaporComponent({
+      components: { Child },
+      render: compileToFunction(`<Child class="test" />`),
+    })
+
+    define(Parent).create().mount(root)
+    expect(root.innerHTML).toBe(`<div class="test">child</div>`)
+
+    rerender(childId, compileToFunction(`<div>child2</div>`))
+    expect(root.innerHTML).toBe(`<div class="test">child2</div>`)
+  })
+
+  test('reload child under setup-only parent should preserve parent fallthrough attrs', async () => {
+    const root = document.createElement('div')
+    const childId = 'test-reload-setup-only-fallthrough-child'
+
+    const Child = defineVaporComponent({
+      __hmrId: childId,
+      render: compileToFunction(`<span>old</span>`),
+    })
+    createRecord(childId, Child as any)
+
+    const Parent = defineVaporComponent({
+      setup() {
+        const el = template('<b></b>')() as ParentNode
+        insert(createComponent(Child), el)
+        return el
+      },
+    })
+
+    const GrandParent = defineVaporComponent({
+      components: { Parent: Parent as any },
+      render: compileToFunction(`<Parent class="test" />`),
+    })
+
+    define(GrandParent).create().mount(root)
+    expect(root.innerHTML).toBe(`<b class="test"><span>old</span></b>`)
+
+    reload(childId, {
+      __vapor: true,
+      __hmrId: childId,
+      render: compileToFunction(`<span>new</span>`),
+    })
+    await nextTick()
+    expect(root.innerHTML).toBe(`<b class="test"><span>new</span></b>`)
+  })
+
+  test('rerender should tear down element-nested child components', async () => {
+    const root = document.createElement('div')
+    const parentId = 'test-rerender-nested-teardown-parent'
+    const external = ref(0)
+    const effectSpy = vi.fn()
+    const mountSpy = vi.fn()
+    const unmountSpy = vi.fn()
+
+    const Child = defineVaporComponent({
+      setup() {
+        watchEffect(() => effectSpy(external.value))
+        onMounted(mountSpy)
+        onUnmounted(unmountSpy)
+      },
+      render: () => template('<i>c</i>')(),
+    })
+
+    const Parent = defineVaporComponent({
+      __hmrId: parentId,
+      components: { Child },
+      // element-nested child: not part of the parent's logical block graph
+      render: compileToFunction(`<div>x<Child/></div>`),
+    })
+    createRecord(parentId, Parent as any)
+
+    const { app } = define(Parent).create().mount(root)
+    await nextTick()
+    expect(effectSpy).toHaveBeenCalledTimes(1)
+    expect(mountSpy).toHaveBeenCalledTimes(1)
+
+    rerender(parentId, compileToFunction(`<div>y<Child/></div>`))
+    await nextTick()
+    expect(root.innerHTML).toBe(`<div>y<i>c</i></div>`)
+    expect(unmountSpy).toHaveBeenCalledTimes(1)
+    expect(mountSpy).toHaveBeenCalledTimes(2)
+    expect(effectSpy).toHaveBeenCalledTimes(2)
+    external.value++
+    await nextTick()
+    expect(effectSpy).toHaveBeenCalledTimes(3)
+
+    app.unmount()
+    await nextTick()
+    expect(unmountSpy).toHaveBeenCalledTimes(2)
+  })
+
+  // coverage guard: the rerendered root must receive the owner's css vars
+  test('rerender re-applies css vars to the new root', async () => {
+    const root = document.createElement('div')
+    const id = 'test-rerender-css-vars'
+    const state = reactive({ color: 'red' })
+    const Comp = defineVaporComponent({
+      __hmrId: id,
+      setup() {
+        useVaporCssVars(() => state)
+      },
+      render: compileToFunction(`<div>x</div>`),
+    })
+    createRecord(id, Comp as any)
+
+    define(Comp).create().mount(root)
+    expect(root.innerHTML).toBe(`<div style="--color: red;">x</div>`)
+
+    rerender(id, compileToFunction(`<span>y</span>`))
+    await nextTick()
+    expect(root.innerHTML).toBe(`<span style="--color: red;">y</span>`)
+  })
+
+  test('rerender should unregister replaced child instances from hmr records', () => {
+    const root = document.createElement('div')
+    const parentId = 'test-rerender-unregister-parent'
+    const childId = 'test-rerender-unregister-child'
+    const renderSpy = vi.fn()
+
+    const Child = defineVaporComponent({
+      __hmrId: childId,
+      render: compileToFunction(`<span>v1</span>`),
+    })
+    createRecord(childId, Child as any)
+
+    const Parent = defineVaporComponent({
+      __hmrId: parentId,
+      components: { Child },
+      render: compileToFunction(`<div>x<Child/></div>`),
+    })
+    createRecord(parentId, Parent as any)
+
+    define(Parent).create().mount(root)
+    rerender(parentId, compileToFunction(`<div>y<Child/></div>`))
+    expect(root.innerHTML).toBe(`<div>y<span>v1</span></div>`)
+
+    // a leaked old instance would invoke the new render a second time
+    rerender(childId, () => {
+      renderSpy()
+      return template('<span>v2</span>')()
+    })
+    expect(root.innerHTML).toBe(`<div>y<span>v2</span></div>`)
+    expect(renderSpy).toHaveBeenCalledTimes(1)
+  })
+
+  // the vapor fast path rerenders parents synchronously; re-running a mounted
+  // parent's setup (e.g. its provide() calls) is only exempt from misuse
+  // warnings while the hmr updating flag is set
+  test('reload with vapor fast path should set hmr updating state', async () => {
+    const childId = 'test-fast-path-reload-hmr-flag'
+    const Child = defineVaporComponent({
+      __hmrId: childId,
+      render: compileToFunction(`<div>foo</div>`),
+    })
+    createRecord(childId, Child as any)
+
+    const Parent = defineVaporComponent({
+      setup() {
+        provide('foo', 'bar')
+        return createComponent(Child)
+      },
+    })
+
+    const { html } = define({
+      setup() {
+        return createComponent(Parent)
+      },
+    }).render()
+
+    expect(html()).toBe('<div>foo</div>')
+
+    // __vapor is present on real plugin payloads and selects the fast path
+    reload(childId, {
+      __vapor: true,
+      __hmrId: childId,
+      render: compileToFunction(`<div>bar</div>`),
+    })
+
+    await nextTick()
+    expect(html()).toBe('<div>bar</div>')
+    expect('provide() can only be used inside setup()').not.toHaveBeenWarned()
+  })
+
+  test('failed rerender should still reset hmr updating state', async () => {
+    const root = document.createElement('div')
+    const id = 'test-failed-rerender-hmr-flag'
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+
+    const Comp = defineVaporComponent({
+      __hmrId: id,
+      render: () => template('ok')(),
+    })
+    createRecord(id, Comp as any)
+
+    const app = createVaporApp(Comp)
+    app.mount(root)
+
+    rerender(id, () => {
+      throw new Error('hmr rerender error')
+    })
+    errorSpy.mockRestore()
+    expect(
+      'Unhandled error during execution of render function',
+    ).toHaveBeenWarned()
+    expect(
+      '[HMR] Something went wrong during Vue component hot-reload.',
+    ).toHaveBeenWarned()
+    await nextTick()
+
+    // the flag must not leak past the failed update: provide() misuse on a
+    // mounted instance is only exempt from the warning while it is set
+    setCurrentInstance((app as any)._instance)
+    provide('foo', 'bar')
+    setCurrentInstance(null, undefined)
+    expect('provide() can only be used inside setup()').toHaveBeenWarned()
+  })
+
+  test('failed queued reload should still reset hmr updating state', async () => {
+    const root = document.createElement('div')
+    const childId = 'test-failed-queued-reload-hmr-flag'
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+
+    const Child = defineVaporComponent({
+      __hmrId: childId,
+      render: () => template('old')(),
+    })
+    createRecord(childId, Child as any)
+
+    const Parent = defineVaporComponent({
+      render: () => createComponent(Child),
+    })
+
+    const app = createVaporApp(Parent)
+    app.mount(root)
+
+    // no __vapor on the payload -> fallback path -> queued parent update
+    reload(childId, {
+      __hmrId: childId,
+      setup() {
+        throw new Error('hmr reload error')
+      },
+      render: () => template('new')(),
+    })
+    // the queued parent rerender rethrows the setup error in tests
+    await nextTick().catch(() => {})
+    errorSpy.mockRestore()
+    expect(
+      'Unhandled error during execution of setup function',
+    ).toHaveBeenWarned()
+    expect(
+      'Unhandled error during execution of render function',
+    ).toHaveBeenWarned()
+    expect(
+      'Unhandled error during execution of scheduler flush',
+    ).toHaveBeenWarned()
+
+    setCurrentInstance((app as any)._instance)
+    provide('foo', 'bar')
+    setCurrentInstance(null, undefined)
+    expect('provide() can only be used inside setup()').toHaveBeenWarned()
   })
 
   test('reload KeepAlive slot', async () => {
@@ -443,19 +881,27 @@ describe('hot module replacement', () => {
     expect(activeSpy).toHaveBeenCalledTimes(1)
     expect(deactivatedSpy).toHaveBeenCalledTimes(0)
 
-    // should not unmount when toggling
+    // should not unmount when toggling; the recreated content keeps its
+    // transition hooks
     triggerEvent('click', root.children[0] as Element)
     await nextTick()
+    expect(root.innerHTML).toBe(
+      `<button></button><div class="v-leave-from v-leave-active">1</div><!--if-->`,
+    )
+    await timeout()
     expect(root.innerHTML).toBe(`<button></button><!--if-->`)
     expect(unmountSpy).toHaveBeenCalledTimes(1)
     expect(mountSpy).toHaveBeenCalledTimes(1)
     expect(activeSpy).toHaveBeenCalledTimes(1)
     expect(deactivatedSpy).toHaveBeenCalledTimes(1)
 
-    // should not mount when toggling
+    // should not mount when toggling; enter classes stay in place - jsdom
+    // never fires transitionend
     triggerEvent('click', root.children[0] as Element)
     await nextTick()
-    expect(root.innerHTML).toBe(`<button></button><div>1</div><!--if-->`)
+    expect(root.innerHTML).toBe(
+      `<button></button><div class="v-enter-from v-enter-active">1</div><!--if-->`,
+    )
     expect(unmountSpy).toHaveBeenCalledTimes(1)
     expect(mountSpy).toHaveBeenCalledTimes(1)
     expect(activeSpy).toHaveBeenCalledTimes(2)
@@ -535,19 +981,20 @@ describe('hot module replacement', () => {
     expect(activeSpy).toHaveBeenCalledTimes(1)
     expect(deactivatedSpy).toHaveBeenCalledTimes(1)
 
-    // should not mount when toggling
+    // should not mount when toggling; enter classes stay in place - jsdom
+    // never fires transitionend
     triggerEvent('click', root.children[0] as Element)
     await nextTick()
-    expect(root.innerHTML).toBe(`<button></button><div>1</div><!--if-->`)
+    expect(root.innerHTML).toBe(
+      `<button></button><div class="v-enter-from v-enter-active">1</div><!--if-->`,
+    )
     expect(unmountSpy).toHaveBeenCalledTimes(1)
     expect(mountSpy).toHaveBeenCalledTimes(1)
     expect(activeSpy).toHaveBeenCalledTimes(2)
     expect(deactivatedSpy).toHaveBeenCalledTimes(1)
   })
 
-  // TODO: renderEffect not re-run after child reload
-  // it requires parent rerender to align with vdom
-  test.todo('reload: avoid infinite recursion', async () => {
+  test('reload child through parent rerender', async () => {
     const root = document.createElement('div')
     document.body.appendChild(root)
     const childId = 'test-child-6930'
@@ -594,17 +1041,99 @@ describe('hot module replacement', () => {
     reload(childId, {
       __hmrId: childId,
       __vapor: true,
-      setup() {
+      setup(_, { expose }) {
         onMounted(mountSpy)
         const count = ref(1)
+        expose({
+          count,
+        })
         return { count }
       },
       render: compileToFunction(`<div @click="count++">{{ count }}</div>`),
     })
     await nextTick()
+    await nextTick()
     expect(root.innerHTML).toBe(`<div>1</div><div>1</div>1`)
     expect(unmountSpy).toHaveBeenCalledTimes(2)
     expect(mountSpy).toHaveBeenCalledTimes(2)
+  })
+
+  test('reload multiple children under same vapor parent should rerender parent once', async () => {
+    const root = document.createElement('div')
+    const childId = 'test-child-reload-same-vapor-parent'
+
+    const Child = defineVaporComponent({
+      __hmrId: childId,
+      render: () => template('<div>old</div>')(),
+    })
+    createRecord(childId, Child as any)
+
+    let parentRenderCount = 0
+    const Parent = defineVaporComponent({
+      render() {
+        parentRenderCount++
+        return [createComponent(Child), createComponent(Child)]
+      },
+    })
+
+    createVaporApp(Parent).mount(root)
+    expect(root.innerHTML).toBe(`<div>old</div><div>old</div>`)
+    expect(parentRenderCount).toBe(1)
+
+    reload(childId, {
+      __vapor: true,
+      __hmrId: childId,
+      render: () => template('<div>new</div>')(),
+    })
+    await nextTick()
+
+    expect(root.innerHTML).toBe(`<div>new</div><div>new</div>`)
+    expect(parentRenderCount).toBe(2)
+  })
+
+  test('reload vapor child under dirty ancestor should not rerender stale owner', async () => {
+    const root = document.createElement('div')
+    const id = 'test-child-reload-dirty-ancestor'
+
+    let Child: any
+    const Wrapper = defineVaporComponent({
+      render() {
+        return createComponent(Child, { nested: () => true })
+      },
+    })
+
+    Child = defineVaporComponent({
+      __hmrId: id,
+      props: ['nested'],
+      setup(props: any) {
+        return { nested: props.nested }
+      },
+      render: compileToFunction(
+        `<div>old {{ nested ? 'nested' : 'root' }}</div><Wrapper v-if="!nested" />`,
+      ),
+    })
+    Child.components = { Wrapper }
+    createRecord(id, Child)
+
+    createVaporApp(Child, { nested: () => false }).mount(root)
+    expect(root.textContent).toBe(`old rootold nested`)
+
+    const NewChild: any = {
+      __vapor: true,
+      __hmrId: id,
+      props: ['nested'],
+      setup(props: any) {
+        return { nested: props.nested }
+      },
+      render: compileToFunction(
+        `<div>new {{ nested ? 'nested' : 'root' }}</div><Wrapper v-if="!nested" />`,
+      ),
+    }
+    NewChild.components = { Wrapper }
+    reload(id, NewChild)
+    await nextTick()
+
+    expect(root.textContent).toBe(`new rootnew nested`)
   })
 
   test('static el reference', async () => {
@@ -916,9 +1445,7 @@ describe('hot module replacement', () => {
 
     await timeout()
 
-    expect(root.innerHTML).toBe(
-      `<div>1</div><!--async component--><div>1</div><!--async component-->`,
-    )
+    expect(root.innerHTML).toBe(`<div>1</div><div>1</div>`)
   })
 
   test.todo('reload async child wrapped in Suspense + KeepAlive', async () => {
@@ -1030,9 +1557,9 @@ describe('hot module replacement', () => {
           Foo,
           {},
           {
-            default: withVaporCtx(() => {
+            default: () => {
               return createSlot('default')
-            }),
+            },
           },
         )
       },
@@ -1047,7 +1574,7 @@ describe('hot module replacement', () => {
           Parent,
           {},
           {
-            default: withVaporCtx(() => {
+            default: () => {
               return createComponent(
                 Foo,
                 {},
@@ -1055,7 +1582,7 @@ describe('hot module replacement', () => {
                   default: () => template('foo')(),
                 },
               )
-            }),
+            },
           },
         ),
     }
@@ -1413,7 +1940,135 @@ describe('hot module replacement', () => {
     expect('provide() can only be used inside setup()').not.toHaveBeenWarned()
   })
 
+  test('rerender introducing CSS modules preserves setup state', async () => {
+    const id = 'rerender-unused-css-modules'
+    const template = '<button @click="count++">{{ count }}</button>'
+    const { descriptor } = parse(`
+      <script setup vapor>
+      import { ref } from 'vue'
+      const count = ref(0)
+      </script>
+      <template>${template}</template>
+      <style module>.red { color: red }</style>
+      <style module="classes">.blue { color: blue }</style>
+    `)
+    const { content, bindings } = compileScript(descriptor, {
+      id,
+      genDefaultAs: '__sfc__',
+    })
+    const code = content
+      .replace(/\bimport {/g, 'const {')
+      .replace(/ as _/g, ': _')
+      .replace(/} from ['"]vue['"]/g, '} = Vue')
+    const Comp = new Function('Vue', `${code}\nreturn __sfc__`)(runtimeDom)
+    Comp.__hmrId = id
+    Comp.__cssModules = {
+      $style: { red: 'red' },
+      classes: { blue: 'blue' },
+    }
+    Comp.render = compileToFunction(template, { bindingMetadata: bindings })
+    const setup = vi.spyOn(Comp, 'setup')
+    createRecord(id, Comp)
+
+    const root = document.createElement('div')
+    document.body.appendChild(root)
+    define(Comp).create().mount(root)
+    triggerEvent('click', root.children[0])
+    await nextTick()
+    expect(root.innerHTML).toBe('<button>1</button>')
+
+    rerender(
+      id,
+      compileToFunction(
+        '<button :class="[$style.red, classes.blue]" @click="count++">{{ count }}</button>',
+        { bindingMetadata: bindings },
+      ),
+    )
+    expect(root.innerHTML).toBe('<button class="red blue">1</button>')
+    expect(setup).toHaveBeenCalledTimes(1)
+
+    triggerEvent('click', root.children[0])
+    await nextTick()
+    expect(root.innerHTML).toBe('<button class="red blue">2</button>')
+  })
+
   describe('switch vapor/vdom modes', () => {
+    test('reload vapor child under vdom parent should rerender parent', async () => {
+      const id = 'vapor-child-under-vdom-parent'
+      const Child = {
+        __vapor: true,
+        __hmrId: id,
+        render() {
+          return template('<div>foo</div>')()
+        },
+      }
+      createRecord(id, Child)
+
+      let parentRenderCount = 0
+      const Parent = {
+        render() {
+          parentRenderCount++
+          return h(Child as any)
+        },
+      }
+      const root = document.createElement('div')
+      const app = createApp(Parent)
+      app.use(vaporInteropPlugin)
+      app.mount(root)
+      expect(root.innerHTML).toBe('<div>foo</div>')
+      expect(parentRenderCount).toBe(1)
+
+      reload(id, {
+        __vapor: true,
+        __hmrId: id,
+        render() {
+          return template('<div>bar</div>')()
+        },
+      })
+
+      await nextTick()
+      expect(root.innerHTML).toBe('<div>bar</div>')
+      expect(parentRenderCount).toBe(2)
+    })
+
+    test('reload multiple vapor children under same vdom parent should rerender parent once', async () => {
+      const id = 'multiple-vapor-children-under-vdom-parent'
+      const Child = {
+        __vapor: true,
+        __hmrId: id,
+        render() {
+          return template('<div>foo</div>')()
+        },
+      }
+      createRecord(id, Child)
+
+      let parentRenderCount = 0
+      const Parent = {
+        render() {
+          parentRenderCount++
+          return [h(Child as any), h(Child as any)]
+        },
+      }
+      const root = document.createElement('div')
+      const app = createApp(Parent)
+      app.use(vaporInteropPlugin)
+      app.mount(root)
+      expect(root.innerHTML).toBe('<div>foo</div><div>foo</div>')
+      expect(parentRenderCount).toBe(1)
+
+      reload(id, {
+        __vapor: true,
+        __hmrId: id,
+        render() {
+          return template('<div>bar</div>')()
+        },
+      })
+
+      await nextTick()
+      expect(root.innerHTML).toBe('<div>bar</div><div>bar</div>')
+      expect(parentRenderCount).toBe(2)
+    })
+
     test('vapor -> vdom', async () => {
       const id = 'vapor-to-vdom'
       const Comp = {
@@ -1481,5 +2136,73 @@ describe('hot module replacement', () => {
       await nextTick()
       expect(root.innerHTML).toBe('<div>bar</div>')
     })
+  })
+
+  test('reload a child under two KeepAlives rerenders the parent once', async () => {
+    const root = document.createElement('div')
+    const childId = 'test-child-two-keep-alives'
+    const Child = defineVaporComponent({
+      __hmrId: childId,
+      setup() {
+        return {}
+      },
+      render: compileToFunction(`<div>0</div>`),
+    })
+    createRecord(childId, Child as any)
+
+    const Parent = defineVaporComponent({
+      __hmrId: 'parent-two-keep-alives',
+      components: { Child },
+      setup() {
+        return {}
+      },
+      render: compileToFunction(
+        `<KeepAlive><Child /></KeepAlive><KeepAlive><Child /></KeepAlive>`,
+      ),
+    })
+    define(Parent).create().mount(root)
+
+    const setupSpy = vi.fn()
+    const unmountSpy = vi.fn()
+    reload(childId, {
+      __hmrId: childId,
+      __vapor: true,
+      setup() {
+        setupSpy()
+        onUnmounted(unmountSpy)
+        return {}
+      },
+      render: compileToFunction(`<div>1</div>`),
+    })
+    await nextTick()
+    expect(root.innerHTML).toBe(`<div>1</div><div>1</div>`)
+    expect(setupSpy).toHaveBeenCalledTimes(2)
+    expect(unmountSpy).toHaveBeenCalledTimes(0)
+  })
+
+  test('a creation that fails on its inputs leaves no instance behind', () => {
+    const root = document.createElement('div')
+    const childId = 'test-failed-inputs-child'
+    const Child = defineVaporComponent({
+      __hmrId: childId,
+      render: compileToFunction('<div><slot/></div>'),
+    })
+    createRecord(childId, Child as any)
+    const Parent = defineVaporComponent({
+      components: { Child },
+      setup() {
+        return { obj: undefined as any }
+      },
+      render: compileToFunction(
+        `<Child><template v-if="obj.x" #default>x</template></Child>`,
+      ),
+    })
+    const app = createVaporApp(Parent)
+    const errors: unknown[] = []
+    app.config.errorHandler = e => errors.push(e)
+    app.mount(root)
+    expect(errors.length).toBe(1)
+    rerender(childId, compileToFunction('<div>!<slot/></div>'))
+    app.unmount()
   })
 })

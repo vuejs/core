@@ -4,16 +4,23 @@ import {
   IRNodeTypes,
   transformChildren,
   transformElement,
+  transformKey,
+  transformSlotOutlet,
   transformText,
   transformVBind,
   transformVFor,
+  transformVIf,
   transformVOn,
 } from '../../src'
-import { NodeTypes } from '@vue/compiler-dom'
+import { BindingTypes, ErrorCodes, NodeTypes } from '@vue/compiler-dom'
+import { VaporVForFlags } from '@vue/shared'
 
 const compileWithVFor = makeCompile({
   nodeTransforms: [
+    transformVIf,
     transformVFor,
+    transformKey,
+    transformSlotOutlet,
     transformText,
     transformElement,
     transformChildren,
@@ -32,6 +39,9 @@ describe('compiler: v-for', () => {
 
     expect(code).matchSnapshot()
     expect(helpers).contains('createFor')
+    expect(code).toContain(
+      `}, (item) => (item.id), ${VaporVForFlags.IS_SINGLE_NODE} /* IS_SINGLE_NODE */)`,
+    )
     expect([...ir.template.keys()]).toEqual(['<div> '])
     expect(ir.block.dynamic.children[0].operation).toMatchObject({
       type: IRNodeTypes.FOR,
@@ -80,6 +90,20 @@ describe('compiler: v-for', () => {
       `,
       ).code,
     ).matchSnapshot()
+
+    const reverseMemberSelector = compileWithVFor(
+      `
+          <tr
+            v-for="row of rows"
+            :key="row.id"
+            :class="row.id === state.selected ? 'danger' : ''"
+          ></tr>
+      `,
+    ).code
+    expect(reverseMemberSelector).matchSnapshot()
+    expect(reverseMemberSelector).contains(
+      `const _selector0 = _createSelector(() => _ctx.state.selected)`,
+    )
   })
 
   test('selector pattern', () => {
@@ -134,11 +158,63 @@ describe('compiler: v-for', () => {
     ).matchSnapshot()
   })
 
+  test('multiple selector patterns on one v-for', () => {
+    const { code } = compileWithVFor(
+      `
+          <tr
+            v-for="row of rows"
+            :key="row.id"
+            :class="selected === row.id ? 'a' : ''"
+            :title="active === row.id ? 'b' : ''"
+          ></tr>
+      `,
+    )
+    expect(code).matchSnapshot()
+    // both selectors created at outer scope with sub-indexed names
+    expect(code).contains(
+      `const _selector0_0 = _createSelector(() => _ctx.selected)`,
+    )
+    expect(code).contains(
+      `const _selector0_1 = _createSelector(() => _ctx.active)`,
+    )
+    // both wired to the same fragment's onReset
+    expect(code).contains(`n0.onReset(_selector0_0.reset)`)
+    expect(code).contains(`n0.onReset(_selector0_1.reset)`)
+  })
+
+  test('selector pattern requires the key itself on one side', () => {
+    const compileClass = (key: string, cond: string) =>
+      compileWithVFor(
+        `<li v-for="(item, i) in items" :key="${key}" :class="{ active: ${cond} }"></li>`,
+      ).code
+
+    // the selector only re-runs rows whose key equals the old/new value
+    expect(compileClass('i', 'i + 1 === page')).not.contains('_createSelector')
+    expect(compileClass('i', 'page === i * 2')).not.contains('_createSelector')
+    expect(compileClass('item.id', 'item.id + 1 === page')).not.contains(
+      '_createSelector',
+    )
+    expect(compileClass('i', 'i === page - 1')).contains(
+      'const _selector0 = _createSelector(() => _ctx.page - 1)',
+    )
+  })
+
   test('multi effect', () => {
     const { code } = compileWithVFor(
       `<div v-for="(item, index) of items" :item="item" :index="index" />`,
     )
     expect(code).matchSnapshot()
+  })
+
+  test('multi className helper with repeated v-for value', () => {
+    const { code } = compileWithVFor(
+      `<div v-for="todo of todos" :key="todo.id" :class="{ completed: todo.completed, editing: todo === editedTodo }" />`,
+    )
+    expect(code).matchSnapshot()
+    expect(code).contains(`const _todo = _for_item0.value`)
+    expect(code).contains(
+      `_setClassName(n2, ((_todo.completed) ? 1 : 0) | ((_todo === _ctx.editedTodo) ? 2 : 0), [" completed", " editing"])`,
+    )
   })
 
   test('w/o value', () => {
@@ -342,9 +418,11 @@ describe('compiler: v-for', () => {
       </div>`,
     )
     expect(code).matchSnapshot()
-    expect(code).toContain(`_getDefaultValue(_for_item0.value.foo, _ctx.bar)`)
     expect(code).toContain(
-      `_getDefaultValue(_for_item0.value.baz[0], _ctx.quux)`,
+      `_getDefaultValue(_for_item0.value.foo, () => (_ctx.bar))`,
+    )
+    expect(code).toContain(
+      `_getDefaultValue(_for_item0.value.baz[0], () => (_ctx.quux))`,
     )
     expect(ir.block.dynamic.children[0].operation).toMatchObject({
       type: IRNodeTypes.FOR,
@@ -374,9 +452,68 @@ describe('compiler: v-for', () => {
       `<Comp v-for="item in list">{{item}}</Comp>`,
     )
     expect(code).matchSnapshot()
+    expect(code).toContain(
+      `}, undefined, ${VaporVForFlags.IS_COMPONENT} /* IS_COMPONENT */)`,
+    )
     expect(
       (ir.block.dynamic.children[0].operation as ForIRNode).component,
     ).toBe(true)
+  })
+
+  test('v-for on dynamic component marks fragment block', () => {
+    const { code, ir } = compileWithVFor(
+      `<component :is="view" v-for="item in list" :key="item.id" />`,
+    )
+    expect(code).matchSnapshot()
+    expect(code).toContain(
+      `}, (item) => (item.id), ${
+        VaporVForFlags.IS_COMPONENT | VaporVForFlags.IS_FRAGMENT
+      } /* IS_COMPONENT, IS_FRAGMENT */)`,
+    )
+    expect(
+      (ir.block.dynamic.children[0].operation as ForIRNode).component,
+    ).toBe(true)
+    expect(
+      (ir.block.dynamic.children[0].operation as ForIRNode).render.dynamic
+        .children[0].operation,
+    ).toMatchObject({
+      type: IRNodeTypes.CREATE_COMPONENT_NODE,
+      dynamic: { content: 'view' },
+    })
+  })
+
+  test('v-for on static dynamic component keeps component block', () => {
+    const { code } = compileWithVFor(
+      `<component is="view" v-for="item in list" :key="item.id" />`,
+    )
+    expect(code).matchSnapshot()
+    expect(code).toContain(
+      `}, (item) => (item.id), ${VaporVForFlags.IS_COMPONENT} /* IS_COMPONENT */)`,
+    )
+  })
+
+  test('v-for on slot outlet marks fragment block', () => {
+    const { code, ir } = compileWithVFor(
+      `<slot v-for="item in list" :name="item.name" :key="item.id" />`,
+    )
+    expect(code).matchSnapshot()
+    expect(code).toContain(
+      `}, (item) => (item.id), ${VaporVForFlags.IS_FRAGMENT} /* IS_FRAGMENT */)`,
+    )
+    expect(
+      (ir.block.dynamic.children[0].operation as ForIRNode).render.dynamic
+        .children[0].operation,
+    ).toMatchObject({
+      type: IRNodeTypes.SLOT_OUTLET_NODE,
+    })
+  })
+
+  test('v-for single node flag is not set for fragment item blocks', () => {
+    const { code } = compileWithVFor(
+      `<template v-for="item in list"><div>{{ item }}</div><span>{{ item }}</span></template>`,
+    )
+    expect(code).matchSnapshot()
+    expect(code).not.toContain('IS_SINGLE_NODE')
   })
 
   test('v-for on template with single component child', () => {
@@ -384,8 +521,265 @@ describe('compiler: v-for', () => {
       `<template v-for="item in list"><Comp>{{item}}</Comp></template>`,
     )
     expect(code).matchSnapshot()
+    expect(code).toContain(
+      `}, undefined, ${VaporVForFlags.IS_COMPONENT} /* IS_COMPONENT */)`,
+    )
     expect(
       (ir.block.dynamic.children[0].operation as ForIRNode).component,
     ).toBe(true)
+  })
+
+  test('v-for on template with element and component v-if branches', () => {
+    const { code, ir } = compileWithVFor(
+      `<template v-for="item in items">
+        <div v-if="item.id===1">hi</div>
+        <Comp v-else></Comp>
+      </template>`,
+    )
+    expect(code).matchSnapshot()
+    expect(code).toContain(
+      `}, undefined, ${VaporVForFlags.IS_FRAGMENT | VaporVForFlags.WRAPPED_ROWS} /* IS_FRAGMENT, WRAPPED_ROWS */)`,
+    )
+    expect(
+      (ir.block.dynamic.children[0].operation as ForIRNode).component,
+    ).toBe(false)
+    expect(
+      (ir.block.dynamic.children[0].operation as ForIRNode).render.dynamic
+        .children[0].operation,
+    ).toMatchObject({
+      type: IRNodeTypes.IF,
+    })
+  })
+
+  test('v-for on template with nested v-for child marks fragment block', () => {
+    const { code, ir } = compileWithVFor(
+      `<template v-for="row in rows"><div v-for="item in row">{{ item }}</div></template>`,
+    )
+    expect(code).matchSnapshot()
+    expect(code).toContain(
+      `}, undefined, ${VaporVForFlags.IS_FRAGMENT | VaporVForFlags.WRAPPED_ROWS} /* IS_FRAGMENT, WRAPPED_ROWS */)`,
+    )
+    expect(
+      (ir.block.dynamic.children[0].operation as ForIRNode).render.dynamic
+        .children[0].operation,
+    ).toMatchObject({
+      type: IRNodeTypes.FOR,
+    })
+  })
+
+  // mirrors compiler-ssr for a vapor component: only Transition still renders
+  // its children without nested fragment markers
+  test('v-for on template under a transition group has wrapped rows', () => {
+    const rows = `<template v-for="item in items"><li>{{ item }}</li><li>b</li></template>`
+    expect(
+      compileWithVFor(`<TransitionGroup tag="ul">${rows}</TransitionGroup>`)
+        .code,
+    ).toContain('WRAPPED_ROWS')
+    expect(
+      compileWithVFor(`<Transition>${rows}</Transition>`).code,
+    ).not.toContain('WRAPPED_ROWS')
+  })
+
+  test('v-for on template with keyed child marks fragment block', () => {
+    const { code, ir } = compileWithVFor(
+      `<template v-for="item in items"><div :key="item.id">{{ item.text }}</div></template>`,
+    )
+    expect(code).matchSnapshot()
+    expect(code).toContain(
+      `}, undefined, ${VaporVForFlags.IS_FRAGMENT} /* IS_FRAGMENT */)`,
+    )
+    expect(
+      (ir.block.dynamic.children[0].operation as ForIRNode).render.dynamic
+        .children[0].operation,
+    ).toMatchObject({
+      type: IRNodeTypes.KEY,
+    })
+  })
+
+  test('avoids cache variable collision with an existing runtime helper', () => {
+    const { code } = compileWithVFor(`
+      <div>
+        <button
+          v-for="child in items"
+          :key="child.key"
+          :disabled="child.disabled"
+          :class="{ selected: child.key === selected }"
+        >
+          <span>{{ child.label }}</span>
+        </button>
+      </div>
+    `)
+
+    expect(code).matchSnapshot()
+    expect(code).toContain('child as _child')
+    expect(code).toContain('const n2 = _child(n3)')
+    expect(code).toContain('let _child1')
+    expect(code).toContain('_child1 = _for_item0.value')
+    expect(code).toContain('_selector0(_child1.key')
+  })
+
+  // aliases are parsed as function params, so a type annotation is part of the
+  // alias source - the bound name has to come from the ast
+  test.each([
+    '(item, index: number)',
+    '(item: string, index: number)',
+    '(item:string,index:number)',
+    '( item : string , index : number )',
+    '(item: string | number, index: number)',
+    '(item: Array<string>, index: number)',
+    "(item: 'a' | 'b', index: number)",
+    '(item: (a: string) => void, index: number)',
+    '(item?: string, index?: number)',
+  ])('resolves an annotated key alias declared as %s', alias => {
+    const { code } = compileWithVFor(
+      `<div v-for="${alias} in items">{{ index }}</div>`,
+    )
+    expect(code).toContain('_toDisplayString(_for_key0.value)')
+    expect(code).not.toContain('_ctx.index')
+  })
+
+  // a default value is part of the alias source too, so this is broken without
+  // any typescript in the template
+  test.each(['(item, index = 0)', '(item: string, index: number = 0)'])(
+    'resolves a key alias with a default declared as %s',
+    alias => {
+      const { code } = compileWithVFor(
+        `<div v-for="${alias} in items">{{ index }}</div>`,
+      )
+      expect(code).toContain('_getDefaultValue(_for_key0.value, () => (0))')
+      expect(code).not.toContain('_ctx.index')
+    },
+  )
+
+  test('resolves annotated key and index aliases of an object source', () => {
+    const { code } = compileWithVFor(
+      `<div v-for="(value: string, key: string, index: number) in items">{{ value }}{{ key }}{{ index }}</div>`,
+    )
+    expect(code).toMatchSnapshot()
+    expect(code).toContain(
+      '_toDisplayString(_for_item0.value) + _toDisplayString(_for_key0.value) + _toDisplayString(_for_index0.value)',
+    )
+    expect(code).not.toContain('_ctx.key')
+    expect(code).not.toContain('_ctx.index')
+  })
+
+  test('applies a default value of the value and index aliases', () => {
+    const { code } = compileWithVFor(
+      `<div v-for="(item = 'x', key, index = 99) in items">{{ item }}{{ index }}</div>`,
+    )
+    expect(code).toMatchSnapshot()
+    expect(code).toContain(
+      "_toDisplayString(_getDefaultValue(_for_item0.value, () => ('x'))) + _toDisplayString(_getDefaultValue(_for_index0.value, () => (99)))",
+    )
+  })
+
+  test('annotated aliases are not emitted into the key function params', () => {
+    const { code } = compileWithVFor(
+      `<div v-for="(item: string, index: number) in items" :key="index">{{ item }}</div>`,
+    )
+    expect(code).toMatchSnapshot()
+    expect(code).toContain('}, (item, index) => (index)')
+  })
+
+  test('alias defaults are kept in the key function params', () => {
+    const { code } = compileWithVFor(
+      `<div v-for="(item, key, index: number = 99) in items" :key="index">{{ item }}</div>`,
+    )
+    expect(code).toContain('}, (item, key, index = 99) => (index)')
+  })
+
+  // printing the annotation of a destructured alias is deliberate vdom parity:
+  // a babel `Identifier` range swallows its `typeAnnotation`, so vdom's
+  // `processExpression(asParams)` drops it on a plain alias, while an
+  // `ObjectPattern` keeps it in the source slice. Only `index` changes here.
+  test('drops the annotation of a plain alias but keeps a pattern one', () => {
+    const { code } = compileWithVFor(
+      `<div v-for="({ id }: { id: number }, index: number) in items" :key="index">{{ id }}</div>`,
+    )
+    expect(code).toContain('}, ({ id }: { id: number }, index) => (index)')
+    expect(code).toContain('_toDisplayString(_for_item0.value.id)')
+  })
+
+  // #15205-style limitation, not introduced here: `forIteratorRE` in
+  // compiler-core splits the alias list on the last commas, so a comma inside a
+  // generic annotation mis-splits into `item: Record<string` / `number>` /
+  // `index: number`. vdom survives because it re-joins the pieces verbatim,
+  // vapor re-parses each one and reports an invalid expression. Fixing the
+  // regex belongs in compiler-core, where it affects vdom as well.
+  test('a comma inside a generic annotation is still not supported', () => {
+    const onError = vi.fn()
+    compileWithVFor(
+      `<div v-for="(item: Record<string, number>, index: number) in items">{{ index }}</div>`,
+      { onError },
+    )
+    expect(onError).toHaveBeenCalled()
+    expect(onError.mock.calls[0][0].code).toBe(ErrorCodes.X_INVALID_EXPRESSION)
+  })
+
+  test('avoids runtime helper collision with an existing cache variable', () => {
+    const { code } = compileWithVFor(
+      `<div v-for="setProp in items" :id="setProp.id" :title="setProp.title" />`,
+    )
+
+    expect(code).matchSnapshot()
+    expect(code).toContain('setProp as _setProp1')
+    expect(code).toContain('const _setProp = _for_item0.value')
+    expect(code).toContain('_setProp1(n2, "id", _setProp.id)')
+    expect(code).toContain('_setProp1(n2, "title", _setProp.title)')
+  })
+
+  test.each([
+    ['(item = fallback, i)', '(item = _ctx.fallback, i)'],
+    ['(item: string = fallback, i: number)', '(item = _ctx.fallback, i)'],
+    ['({ id = fallback }, i)', '({ id = _ctx.fallback }, i)'],
+  ])('processes key callback defaults in %s', (aliases, params) => {
+    const { code } = compileWithVFor(
+      `<div v-for="${aliases} in items" :key="i" />`,
+    )
+    expect(code).toContain(`}, ${params} => (i)`)
+  })
+
+  test('preserves callback locals while resolving defaults from an outer loop', () => {
+    const { code } = compileWithVFor(
+      `<div v-for="(row, item) in rows">
+        <span v-for="(item = row.fallback, key, index = item.id) in row.items" :key="index" />
+      </div>`,
+    )
+    expect(code).toContain(
+      '(item = _for_item0.value.fallback, key, index = item.id) => (index)',
+    )
+  })
+
+  test.each([
+    [BindingTypes.SETUP_REF, 'fallback.value'],
+    [BindingTypes.SETUP_MAYBE_REF, '_unref(fallback)'],
+    [BindingTypes.PROPS, '__props.fallback'],
+  ])('processes %s bindings in key callback defaults', (binding, fallback) => {
+    const { code } = compileWithVFor(
+      `<div v-for="(item = fallback, i) in items" :key="i" />`,
+      { inline: true, bindingMetadata: { fallback: binding } },
+    )
+    expect(code).toContain(`}, (item = ${fallback}, i) => (i)`)
+  })
+
+  test('preserves the index position when the key alias is omitted', () => {
+    const { code } = compileWithVFor(
+      `<div v-for="(value: string, , index: number) in obj">{{ value }}:{{ index }}</div>`,
+    )
+    expect(code).toContain('(_for_item0, _, _for_index0) => {')
+    expect(code).toContain('_toDisplayString(_for_index0.value)')
+  })
+
+  test.each([
+    `<div v-for="(value, key) in obj" :key />`,
+    `<div v-for="(value, key) in obj" v-bind:key />`,
+    `<template v-for="(value, key) in obj" :key><div /><div /></template>`,
+    `<Comp v-for="(value, key) in obj" :key />`,
+    `<template v-for="({ id }, key) in obj" :key><div v-if="id" /><p v-else /></template>`,
+  ])('resolves :key shorthand in %s', template => {
+    const { code, ir } = compileWithVFor(template)
+    expect(code).toContain(', key) => (key)')
+    const op = ir.block.dynamic.children[0].operation as ForIRNode
+    expect(op.keyProp).toMatchObject({ content: 'key', isStatic: false })
   })
 })

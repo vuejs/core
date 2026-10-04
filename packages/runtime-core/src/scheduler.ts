@@ -21,6 +21,11 @@ export enum SchedulerJobFlags {
    */
   ALLOW_RECURSE = 1 << 1,
   DISPOSED = 1 << 2,
+  /**
+   * Requeue a Suspense effect if its pending branch is discarded.
+   * @internal
+   */
+  REQUEUE_ON_SUSPENSE_DISCARD = 1 << 3,
 }
 
 export interface SchedulerJob extends Function {
@@ -95,11 +100,26 @@ function findInsertionIndex(
 /**
  * @internal for runtime-vapor only
  */
-export function queueJob(job: SchedulerJob, id?: number, isPre = false): void {
+export function queueJob(
+  job: SchedulerJob,
+  id?: number,
+  isPre = false,
+  order = 0,
+): void {
   if (
     queueJobWorker(
       job,
-      id === undefined ? (isPre ? -2 : Infinity) : isPre ? id * 2 : id * 2 + 1,
+      id === undefined
+        ? isPre
+          ? -2
+          : Infinity
+        : isPre
+          ? id * 2
+          : order
+            ? // `order / (order + 1)` is monotonic and always < 1, so it sorts
+              // same-component Vapor effects without changing component order.
+              id * 2 + 1 + order / (order + 1)
+            : id * 2 + 1,
       jobs,
       jobsLength,
       flushIndex,
@@ -140,6 +160,11 @@ const doFlushJobs = () => {
     flushJobs()
   } catch (e) {
     currentFlushPromise = null
+    // If a nested pre/post flush throws after queueing more work, defer the
+    // leftovers to a fresh microtask
+    if (jobsLength || postJobs.length) {
+      queueFlush()
+    }
     throw e
   }
 }
@@ -163,9 +188,12 @@ export function queuePostFlushCb(
   } else {
     // if cb is an array, it is a component lifecycle hook which can only be
     // triggered by a job, which is already deduped in the main queue, so
-    // we can skip duplicate check here to improve perf
-    for (const job of jobs) {
-      queueJobWorker(job, id, postJobs, postJobs.length, 0)
+    // we can skip duplicate check here to improve perf.
+    // use a loop instead of `push(...cb)`: the array can be arbitrarily large
+    // (e.g. effects buffered by a suspense boundary) and spreading it would
+    // overflow the call stack (#15142)
+    for (let i = 0; i < jobs.length; i++) {
+      queueJobWorker(jobs[i], id, postJobs, postJobs.length, 0)
     }
   }
   queueFlush()
@@ -195,9 +223,12 @@ export function flushPreFlushCbs(
     if (cb.flags! & SchedulerJobFlags.ALLOW_RECURSE) {
       cb.flags! &= ~SchedulerJobFlags.QUEUED
     }
-    cb()
-    if (!(cb.flags! & SchedulerJobFlags.ALLOW_RECURSE)) {
-      cb.flags! &= ~SchedulerJobFlags.QUEUED
+    try {
+      cb()
+    } finally {
+      if (!(cb.flags! & SchedulerJobFlags.ALLOW_RECURSE)) {
+        cb.flags! &= ~SchedulerJobFlags.QUEUED
+      }
     }
   }
 }
@@ -206,7 +237,9 @@ export function flushPostFlushCbs(seen?: CountMap): void {
   if (postJobs.length) {
     // #1947 already has active queue, nested flushPostFlushCbs call
     if (activePostJobs) {
-      activePostJobs.push(...postJobs)
+      for (let i = 0; i < postJobs.length; i++) {
+        activePostJobs.push(postJobs[i])
+      }
       postJobs.length = 0
       return
     }
@@ -218,25 +251,34 @@ export function flushPostFlushCbs(seen?: CountMap): void {
       seen = seen || new Map()
     }
 
-    while (postFlushIndex < activePostJobs.length) {
-      const cb = activePostJobs[postFlushIndex++]
-      if (__DEV__ && checkRecursiveUpdates(seen!, cb)) {
-        continue
-      }
-      if (cb.flags! & SchedulerJobFlags.ALLOW_RECURSE) {
-        cb.flags! &= ~SchedulerJobFlags.QUEUED
-      }
-      if (!(cb.flags! & SchedulerJobFlags.DISPOSED)) {
-        try {
-          cb()
-        } finally {
+    try {
+      while (postFlushIndex < activePostJobs.length) {
+        const cb = activePostJobs[postFlushIndex++]
+        if (__DEV__ && checkRecursiveUpdates(seen!, cb)) {
+          continue
+        }
+        if (cb.flags! & SchedulerJobFlags.ALLOW_RECURSE) {
           cb.flags! &= ~SchedulerJobFlags.QUEUED
         }
+        if (!(cb.flags! & SchedulerJobFlags.DISPOSED)) {
+          try {
+            cb()
+          } finally {
+            if (!(cb.flags! & SchedulerJobFlags.ALLOW_RECURSE)) {
+              cb.flags! &= ~SchedulerJobFlags.QUEUED
+            }
+          }
+        }
       }
-    }
+    } finally {
+      // If there was an error we still need to clear the QUEUED flags
+      while (postFlushIndex < activePostJobs.length) {
+        activePostJobs[postFlushIndex++].flags! &= ~SchedulerJobFlags.QUEUED
+      }
 
-    activePostJobs = null
-    postFlushIndex = 0
+      activePostJobs = null
+      postFlushIndex = 0
+    }
   }
 }
 
@@ -247,9 +289,12 @@ let isFlushing = false
 export function flushOnAppMount(instance?: GenericComponentInstance): void {
   if (!isFlushing) {
     isFlushing = true
-    flushPreFlushCbs(instance)
-    flushPostFlushCbs()
-    isFlushing = false
+    try {
+      flushPreFlushCbs(instance)
+      flushPostFlushCbs()
+    } finally {
+      isFlushing = false
+    }
   }
 }
 
@@ -294,13 +339,15 @@ function flushJobs(seen?: CountMap) {
 
     flushIndex = 0
     jobsLength = 0
+    jobs.length = 0
 
     flushPostFlushCbs(seen)
 
-    currentFlushPromise = null
     // If new jobs have been added to either queue, keep flushing
     if (jobsLength || postJobs.length) {
       flushJobs(seen)
+    } else {
+      currentFlushPromise = null
     }
   }
 }

@@ -1,79 +1,131 @@
-import { type Block, type BlockFn, insert } from './block'
+import { type Block, type BlockFn, removeNode } from './block'
 import {
+  type FragmentClaim,
+  type HydrationCursor,
   advanceHydrationNode,
+  claimUntrackedAnchor,
+  createFragmentClaim,
+  currentHydrationNode,
+  enterHydrationCursor,
+  isComment,
   isHydrating,
-  locateHydrationNode,
+  locateEndAnchor,
 } from './dom/hydration'
 import {
   insertionAnchor,
   insertionParent,
-  isLastInsertion,
   resetInsertionState,
 } from './insertionState'
 import { renderEffect } from './renderEffect'
-import { DynamicFragment } from './fragment'
+import { DynamicFragment, finishBlockCreation } from './fragment'
+import { IF } from './fragmentFlags'
 import { createComment, createTextNode } from './dom/node'
-import { VaporBlockShape } from '@vue/shared'
+import { VaporBlockShape, VaporIfFlags } from '@vue/shared'
 
 export function createIf(
   condition: () => any,
   b1: BlockFn,
   b2?: BlockFn,
-  blockShape?: number,
-  once?: boolean,
-  index?: number,
+  // Default flags encode true single-root + false empty, matching the compiler's
+  // only omitted-flags case.
+  flags: number = VaporBlockShape.SINGLE_ROOT,
 ): Block {
   const _insertionParent = insertionParent
   const _insertionAnchor = insertionAnchor
-  const _isLastInsertion = isLastInsertion
   if (!isHydrating) resetInsertionState()
+  let hydrationCursor: HydrationCursor | null = null
+  let branchShape: VaporBlockShape | undefined
+  // the fragment's own anchor, when it has one; the `v-if` once path has none
+  let anchor: Node | undefined
 
   let frag: Block
-  if (once) {
+  if (flags & VaporIfFlags.ONCE) {
     const ok = condition()
+    let claim: FragmentClaim | undefined
     if (isHydrating) {
-      locateHydrationNode(
-        decodeIfShape(blockShape!, ok) === VaporBlockShape.MULTI_ROOT,
-      )
+      branchShape = decodeIfShape(flags, ok)
+      claim =
+        branchShape === VaporBlockShape.MULTI_ROOT
+          ? createFragmentClaim()
+          : undefined
+      hydrationCursor = enterHydrationCursor(claim)
     }
     frag = ok
       ? b1()
       : b2
         ? b2()
-        : [__DEV__ ? createComment('if') : createTextNode()]
+        : [
+            claimUntrackedAnchor(
+              __DEV__ ? createComment('if') : createTextNode(),
+            ),
+          ]
+    if (isHydrating && claim && claim.start) {
+      // v-once has no DynamicFragment to consume the closing marker.
+      advanceHydrationNode(locateEndAnchor(claim.start)!)
+    }
   } else {
     // DynamicFragment should be keyed for correct transition behavior
-    const keyed = index != null
-    frag =
-      isHydrating || __DEV__
-        ? new DynamicFragment('if', keyed, false)
-        : new DynamicFragment(undefined, keyed, false)
+    // and KeepAlive cache identity. The encoded value is index + 1, so 0 is
+    // the unkeyed sentinel and source index 0 becomes encoded index 1.
+    const index = flags >> VaporIfFlags.INDEX_SHIFT
+    const keyed = index > 0
+    const keyBase = keyed ? (index - 1) * 2 : 0
+    const trackSlotBoundary = !!(flags & VaporIfFlags.SLOT_ROOT)
+    const dynamicFragment = new DynamicFragment(
+      IF,
+      __DEV__ ? 'if' : undefined,
+      keyed,
+      trackSlotBoundary,
+      trackSlotBoundary
+        ? () => {
+            const anchor = dynamicFragment.anchor
+            const parent = anchor.parentNode
+            if (parent) removeNode(anchor, parent)
+          }
+        : undefined,
+      _insertionAnchor,
+    )
+    anchor = dynamicFragment.anchor
+    frag = dynamicFragment
     renderEffect(() => {
       const ok = condition()
       if (isHydrating) {
-        locateHydrationNode(
-          decodeIfShape(blockShape!, ok) === VaporBlockShape.MULTI_ROOT,
-        )
+        branchShape = decodeIfShape(flags, ok)
+        dynamicFragment.hydrationClaim =
+          branchShape === VaporBlockShape.MULTI_ROOT
+            ? createFragmentClaim()
+            : undefined
+        hydrationCursor = enterHydrationCursor(dynamicFragment.hydrationClaim)
       }
-      ;(frag as DynamicFragment).update(
+      dynamicFragment.update(
         ok ? b1 : b2,
-        keyed ? `${index}${ok ? 0 : 1}` : undefined,
+        keyed ? keyBase + (ok ? 0 : 1) : undefined,
+        isNoScopeBranch(flags, ok),
       )
     })
   }
 
-  if (!isHydrating) {
-    if (_insertionParent) insert(frag, _insertionParent, _insertionAnchor)
-  } else {
-    if (_isLastInsertion) {
-      advanceHydrationNode(_insertionParent!)
+  // SSR empty branches render as <!---->, and no template adoption consumes
+  // that comment. Claim it before restoring the outer cursor.
+  if (isHydrating && branchShape === VaporBlockShape.EMPTY && hydrationCursor) {
+    const start = hydrationCursor.start
+    if (start && currentHydrationNode === start && isComment(start, '')) {
+      advanceHydrationNode(start)
     }
   }
+
+  finishBlockCreation(
+    frag,
+    anchor,
+    hydrationCursor,
+    _insertionParent,
+    _insertionAnchor,
+  )
 
   return frag
 }
 
-// The compiler packs the true/false branch shapes into one integer:
+// The compiler packs the true/false branch shapes into the low bits:
 //   packed = trueShape | (falseShape << 2)
 //
 // Each branch shape fits in 2 bits:
@@ -90,8 +142,14 @@ export function createIf(
 // - true branch:  shift by 0, then keep the low 2 bits -> 0b10
 // - false branch: shift by 2, then keep the low 2 bits -> 0b01
 //
-// `0b11` is the binary mask for the low 2 bits (decimal `3`).
-// `value & 0b11` clears everything except the active branch shape.
+// `0b11` clears everything except the active branch shape; no-scope and index
+// metadata live in higher bits and are decoded separately.
 function decodeIfShape(shape: number, ok: boolean): VaporBlockShape {
   return ((shape >> (ok ? 0 : 2)) & 0b11) as VaporBlockShape
+}
+
+function isNoScopeBranch(flags: number, ok: boolean): boolean {
+  return !!(
+    flags & (ok ? VaporIfFlags.TRUE_NO_SCOPE : VaporIfFlags.FALSE_NO_SCOPE)
+  )
 }

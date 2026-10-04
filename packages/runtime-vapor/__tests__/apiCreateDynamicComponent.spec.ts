@@ -1,10 +1,19 @@
 import { ref, shallowRef } from '@vue/reactivity'
-import { nextTick, resolveDynamicComponent } from '@vue/runtime-dom'
 import {
+  currentInstance,
+  nextTick,
+  onActivated,
+  onDeactivated,
+  resolveDynamicComponent,
+} from '@vue/runtime-dom'
+import { VaporDynamicComponentFlags } from '@vue/shared'
+import {
+  type VaporComponentInstance,
   createComponent,
   createComponentWithFallback,
   createDynamicComponent,
   createSlot,
+  createVaporApp,
   defineVaporComponent,
   insert,
   renderEffect,
@@ -12,9 +21,8 @@ import {
   setHtml,
   setInsertionState,
   template,
-  withVaporCtx,
 } from '../src'
-import { makeRender } from './_utils'
+import { compile, makeRender } from './_utils'
 
 const define = makeRender()
 
@@ -41,6 +49,284 @@ describe('api: createDynamicComponent', () => {
     val.value = 'foo'
     await nextTick()
     expect(html()).toBe('<foo></foo><!--dynamic-component-->')
+  })
+
+  test('null renders as an empty branch', async () => {
+    const val = shallowRef<any>(null)
+
+    const { html } = define({
+      setup() {
+        return createDynamicComponent(() => val.value)
+      },
+    }).render()
+
+    // no placeholder node — the fragment anchor is the only structural node
+    expect(html()).toBe('<!--dynamic-component-->')
+
+    val.value = A
+    await nextTick()
+    expect(html()).toBe('AAA<!--dynamic-component-->')
+
+    val.value = null
+    await nextTick()
+    expect(html()).toBe('<!--dynamic-component-->')
+  })
+
+  // Coverage guard: dev was already correct here (the old placeholder was a
+  // Comment, which isValidSlot treats as invalid). The bug this protects
+  // against was prod-only — an empty-Text placeholder counted as valid slot
+  // content and suppressed the fallback — and is now impossible because a
+  // null branch keeps nodes as EMPTY_BLOCK in both builds.
+  test('null as slot root shows fallback', async () => {
+    const data = ref({ view: null as any })
+    const comps: any = {}
+    comps.Child = compile(
+      `<template><slot>FALLBACK</slot></template>`,
+      data,
+      comps,
+    )
+    const App = compile(
+      `<template><components.Child><component :is="data.view" /></components.Child></template>`,
+      data,
+      comps,
+    )
+    const host = document.createElement('div')
+    document.body.appendChild(host)
+    createVaporApp(App).mount(host)
+
+    expect(host.textContent).toBe('FALLBACK')
+
+    data.value.view = 'b'
+    await nextTick()
+    expect(host.querySelector('b')).toBeTruthy()
+
+    data.value.view = null
+    await nextTick()
+    expect(host.textContent).toBe('FALLBACK')
+    host.remove()
+  })
+
+  test('keeps the branch when a name resolves to the current component', async () => {
+    let setups = 0
+    const Foo = defineVaporComponent({
+      setup() {
+        setups++
+        return template('<span>foo</span>')()
+      },
+    })
+    const data = shallowRef<any>('Foo')
+    const App = compile(`<template><component :is="data" /></template>`, data)
+    const host = document.createElement('div')
+    const app = createVaporApp(App)
+    app.component('Foo', Foo)
+    app.mount(host)
+    expect(host.innerHTML).toBe('<span>foo</span><!--dynamic-component-->')
+
+    data.value = Foo
+    await nextTick()
+    data.value = 'foo'
+    await nextTick()
+    expect(host.innerHTML).toBe('<span>foo</span><!--dynamic-component-->')
+    expect(setups).toBe(1)
+  })
+
+  test('element fallback inherits the template namespace', async () => {
+    const data = ref({ tag: 'circle' })
+    const App = compile(
+      `<template>
+        <svg><component :is="data.tag" class="shape" /></svg>
+        <math><component :is="'mi'" /></math>
+      </template>`,
+      data,
+    )
+    const { host } = define(App).render()
+    const svgNS = 'http://www.w3.org/2000/svg'
+    const circle = host.querySelector('circle')!
+    expect(circle.namespaceURI).toBe(svgNS)
+    expect(circle.getAttribute('class')).toBe('shape')
+    expect(host.querySelector('mi')!.namespaceURI).toBe(
+      'http://www.w3.org/1998/Math/MathML',
+    )
+
+    data.value.tag = 'rect'
+    await nextTick()
+    expect(host.querySelector('rect')!.namespaceURI).toBe(svgNS)
+  })
+
+  test('compiled :key switches the branch without a wrapping fragment', async () => {
+    let setups = 0
+    const Foo = defineVaporComponent({
+      setup() {
+        setups++
+        return template('<span>foo</span>')()
+      },
+    })
+    const Bar = defineVaporComponent({
+      setup() {
+        return template('<b>bar</b>')()
+      },
+    })
+    const data = ref({ view: 'Foo', k: 1 })
+    const App = compile(
+      `<template><component :is="data.view" :key="data.k" /></template>`,
+      data,
+    )
+    const { app, html, mount } = define(App).create()
+    app.component('Foo', Foo)
+    app.component('Bar', Bar)
+    mount()
+    expect(html()).toBe('<span>foo</span><!--dynamic-component-->')
+
+    // same key, same component: no remount
+    data.value = { view: 'Foo', k: 1 }
+    await nextTick()
+    expect(setups).toBe(1)
+
+    // key change remounts
+    data.value = { view: 'Foo', k: 2 }
+    await nextTick()
+    expect(setups).toBe(2)
+
+    // same key, different component: remount
+    data.value = { view: 'Bar', k: 2 }
+    await nextTick()
+    expect(html()).toBe('<b>bar</b><!--dynamic-component-->')
+    data.value = { view: 'Foo', k: 2 }
+    await nextTick()
+    expect(setups).toBe(3)
+    expect(html()).toBe('<span>foo</span><!--dynamic-component-->')
+  })
+
+  test('compiled :key is the KeepAlive cache key', async () => {
+    const calls: string[] = []
+    const Foo = defineVaporComponent({
+      name: 'Foo',
+      props: ['id'],
+      setup(props: any) {
+        calls.push(`setup:${props.id}`)
+        onActivated(() => calls.push(`activated:${props.id}`))
+        onDeactivated(() => calls.push(`deactivated:${props.id}`))
+        return template('<span>foo</span>')()
+      },
+    })
+    const data = ref({ k: 1 })
+    const App = compile(
+      `<template>
+        <KeepAlive>
+          <component :is="components.Foo" :key="data.k" :id="data.k" />
+        </KeepAlive>
+      </template>`,
+      data,
+      { Foo },
+    )
+    define(App).render()
+    expect(calls).toEqual(['setup:1', 'activated:1'])
+
+    // the incoming branch is set up before the outgoing one deactivates
+    data.value = { k: 2 }
+    await nextTick()
+    expect(calls).toEqual([
+      'setup:1',
+      'activated:1',
+      'setup:2',
+      'deactivated:1',
+      'activated:2',
+    ])
+
+    // re-entering key 1 reactivates its cached instance instead of setting up
+    data.value = { k: 1 }
+    await nextTick()
+    expect(calls).toEqual([
+      'setup:1',
+      'activated:1',
+      'setup:2',
+      'deactivated:1',
+      'activated:2',
+      'deactivated:2',
+      'activated:1',
+    ])
+  })
+
+  // Coverage guard: the wrapping keyed fragment used to drive this; the
+  // dynamic component's own branch key must keep Transition sequencing.
+  test('compiled :key change runs leave and enter under Transition', async () => {
+    const leaves: string[] = []
+    const enters: string[] = []
+    const data = ref({
+      k: 1,
+      onLeave: (el: Element, done: () => void) => {
+        leaves.push(el.textContent!)
+        done()
+      },
+      onEnter: (el: Element, done: () => void) => {
+        enters.push(el.textContent!)
+        done()
+      },
+    })
+    const App = compile(
+      `<template>
+        <Transition :css="false" @leave="data.onLeave" @enter="data.onEnter">
+          <component :is="'div'" :key="data.k">{{ data.k }}</component>
+        </Transition>
+      </template>`,
+      data,
+    )
+    const { html } = define(App).render()
+    expect(html()).toBe('<div>1</div><!--dynamic-component-->')
+    expect(enters).toEqual([])
+
+    data.value = { ...data.value, k: 2 }
+    await nextTick()
+    expect(html()).toBe('<div>2</div><!--dynamic-component-->')
+    expect(leaves).toEqual(['1'])
+    expect(enters).toEqual(['2'])
+  })
+
+  test('warns on an invalid is value and renders an empty branch', async () => {
+    const data = shallowRef<any>(true)
+    const App = compile(`<template><component :is="data" /></template>`, data)
+    const { html } = define(App).render()
+    expect(html()).toBe('<!--dynamic-component-->')
+    expect('Invalid dynamic component type: true (boolean)').toHaveBeenWarned()
+
+    data.value = 123
+    await nextTick()
+    expect(html()).toBe('<!--dynamic-component-->')
+    expect('Invalid dynamic component type: 123 (number)').toHaveBeenWarned()
+  })
+
+  test('renders an empty branch for an empty string is value', async () => {
+    const data = shallowRef('')
+    const App = compile(
+      `<template><p>a</p><component :is="data">x</component><p>b</p></template>`,
+      data,
+    )
+    const { html } = define(App).render()
+    expect(html()).toBe('<p>a</p><!--dynamic-component--><p>b</p>')
+    expect('Invalid dynamic component type:  (string)').toHaveBeenWarned()
+
+    data.value = 'i'
+    await nextTick()
+    expect(html()).toBe('<p>a</p><i>x</i><!--dynamic-component--><p>b</p>')
+
+    data.value = ''
+    await nextTick()
+    expect(html()).toBe('<p>a</p><!--dynamic-component--><p>b</p>')
+
+    data.value = 'i'
+    await nextTick()
+    expect(html()).toBe('<p>a</p><i>x</i><!--dynamic-component--><p>b</p>')
+  })
+
+  test('v-once with an empty string is value', () => {
+    const data = shallowRef('')
+    const App = compile(
+      `<template><p>a</p><component v-once :is="data">x</component><p>b</p></template>`,
+      data,
+    )
+    const { html } = define(App).render()
+    expect(html()).toBe('<p>a</p><!--ndc--><p>b</p>')
+    expect('Invalid dynamic component type:  (string)').toHaveBeenWarned()
   })
 
   test('global registration', async () => {
@@ -73,15 +359,42 @@ describe('api: createDynamicComponent', () => {
 
     const { html } = define({
       setup() {
-        return createDynamicComponent(() => val.value, null, null, true, true)
+        return createDynamicComponent(
+          () => val.value,
+          null,
+          null,
+          VaporDynamicComponentFlags.SINGLE_ROOT |
+            VaporDynamicComponentFlags.ONCE,
+        )
       },
     }).render()
 
-    expect(html()).toBe('AAA<!--dynamic-component-->')
+    // resolved once: no fragment, no anchor
+    expect(html()).toBe('AAA')
 
     val.value = B
     await nextTick()
-    expect(html()).toBe('AAA<!--dynamic-component-->') // still AAA
+    expect(html()).toBe('AAA') // still AAA
+  })
+
+  test('null with v-once', async () => {
+    const val = shallowRef<any>(null)
+    const { html } = define({
+      setup() {
+        return createDynamicComponent(
+          () => val.value,
+          null,
+          null,
+          VaporDynamicComponentFlags.ONCE,
+        )
+      },
+    }).render()
+
+    expect(html()).toBe('<!--ndc-->')
+
+    val.value = A
+    await nextTick()
+    expect(html()).toBe('<!--ndc-->')
   })
 
   test('fallback with v-once', async () => {
@@ -93,24 +406,24 @@ describe('api: createDynamicComponent', () => {
           () => val.value,
           { id: () => id.value },
           null,
-          true,
-          true,
+          VaporDynamicComponentFlags.SINGLE_ROOT |
+            VaporDynamicComponentFlags.ONCE,
         )
       },
     }).render()
 
-    expect(html()).toBe('<button id="0"></button><!--dynamic-component-->')
+    expect(html()).toBe('<button id="0"></button>')
 
     id.value++
     await nextTick()
-    expect(html()).toBe('<button id="0"></button><!--dynamic-component-->')
+    expect(html()).toBe('<button id="0"></button>')
   })
 
   test('render fallback with insertionState', async () => {
     const { html, mount } = define({
       setup() {
         const html = ref('hi')
-        const n1 = template('<div></div>', true)() as any
+        const n1 = template('<div></div>', 1)() as any
         setInsertionState(n1)
         const n0 = createComponentWithFallback(
           resolveDynamicComponent('button') as any,
@@ -185,11 +498,66 @@ describe('api: createDynamicComponent', () => {
     )
   })
 
+  test('fallback with function rawSlots as default slot', () => {
+    const { html } = define({
+      setup() {
+        return createDynamicComponent(
+          () => 'div',
+          null,
+          () => template('<span>hi</span>')(),
+        )
+      },
+    }).render()
+
+    expect(html()).toBe('<div><span>hi</span></div><!--dynamic-component-->')
+  })
+
+  test('reuses normalized function rawSlots on dynamic component updates', async () => {
+    const rawSlots: unknown[] = []
+    const CompA = defineVaporComponent({
+      setup() {
+        rawSlots.push((currentInstance as VaporComponentInstance).rawSlots)
+        return template('<div>A</div>')()
+      },
+    })
+    const CompB = defineVaporComponent({
+      setup() {
+        rawSlots.push((currentInstance as VaporComponentInstance).rawSlots)
+        return template('<div>B</div>')()
+      },
+    })
+
+    const current = shallowRef(CompA)
+    const { html } = define({
+      setup() {
+        return createDynamicComponent(
+          () => current.value,
+          null,
+          () => template('<span>slot</span>')(),
+        )
+      },
+    }).render()
+
+    expect(html()).toBe('<div>A</div><!--dynamic-component-->')
+
+    current.value = CompB
+    await nextTick()
+
+    expect(html()).toBe('<div>B</div><!--dynamic-component-->')
+    expect(rawSlots).toHaveLength(2)
+    expect(rawSlots[1]).toBe(rawSlots[0])
+  })
+
   test('compiled static key on dynamic component fallback', () => {
     const Comp = defineVaporComponent({
       setup() {
-        const n0 = createDynamicComponent(() => 'div', null, null, true)
-        setBlockKey(n0, 'foo')
+        const n0 = createDynamicComponent(
+          () => 'div',
+          null,
+          null,
+          VaporDynamicComponentFlags.SINGLE_ROOT,
+        )
+        setBlockKey(n0 as any, 'foo')
         return n0
       },
     })
@@ -199,7 +567,7 @@ describe('api: createDynamicComponent', () => {
 
     const block = instance!.block as any
     expect(block.$key).toBe('foo')
-    expect(block.nodes.$key).toBe('foo')
+    expect(block.nodes.$key).toBeUndefined()
   })
 
   test('resolves slot owner local components after dynamic updates', async () => {
@@ -221,9 +589,7 @@ describe('api: createDynamicComponent', () => {
       components: { Foo },
       setup() {
         return createComponent(Child, null, {
-          default: withVaporCtx(() =>
-            createDynamicComponent(() => current.value),
-          ),
+          default: () => createDynamicComponent(() => current.value),
         })
       },
     }).render()
@@ -254,5 +620,27 @@ describe('api: createDynamicComponent', () => {
     }).render()
 
     expect(html()).toBe('<a>router link</a><!--dynamic-component-->')
+  })
+
+  test('a constant key keys the branch, as TransitionGroup requires', () => {
+    const App = compile(
+      `<template><TransitionGroup>
+        <component :is="'A'" key="a" /><component :is="'B'" key="b" />
+      </TransitionGroup></template>`,
+      ref(null),
+    )
+    const { app, html, mount } = define(App).create()
+    app.component(
+      'A',
+      defineVaporComponent(() => template('<i>a</i>')()),
+    )
+    app.component(
+      'B',
+      defineVaporComponent(() => template('<b>b</b>')()),
+    )
+    mount()
+    expect(html()).toBe(
+      '<i>a</i><!--dynamic-component--><b>b</b><!--dynamic-component-->',
+    )
   })
 })

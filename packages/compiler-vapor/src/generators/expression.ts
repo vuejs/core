@@ -10,24 +10,41 @@ import {
   NewlineType,
   type SimpleExpressionNode,
   type SourceLocation,
+  TS_NODE_TYPES,
   advancePositionWithClone,
   createSimpleExpression,
+  isFunctionType,
   isInDestructureAssignment,
   isStaticProperty,
   walkIdentifiers,
 } from '@vue/compiler-dom'
-import type { Identifier, Node } from '@babel/types'
+import type {
+  AssignmentExpression,
+  Identifier,
+  Node,
+  UpdateExpression,
+} from '@babel/types'
 import type { CodegenContext } from '../generate'
 import { isConstantExpression } from '../utils'
-import { type CodeFragment, NEWLINE, buildCodeFragment } from './utils'
-import { type ParserOptions, parseExpression } from '@babel/parser'
+import {
+  type CodeFragment,
+  NEWLINE,
+  buildCodeFragment,
+  getParserOptions,
+} from './utils'
+import { parseExpression } from '@babel/parser'
+import { walk } from 'estree-walker'
 
 export function genExpression(
   node: SimpleExpressionNode,
   context: CodegenContext,
   assignment?: string,
+  asParams = false,
 ): CodeFragment[] {
+  node = context.getExpressionReplacement(node)
   const { content, ast, isStatic, loc } = node
+  const { options } = context
+  const { inline } = options
 
   if (isStatic) {
     return [[JSON.stringify(content), NewlineType.None, loc]]
@@ -52,30 +69,51 @@ export function genExpression(
   const parentStack: Node[] = []
   walkIdentifiers(
     ast!,
-    id => {
+    (id, _, __, isReference, isLocal) => {
+      if (isLocal) {
+        if (!id.typeAnnotation && !id.optional) return
+      } else if (!isReference) {
+        return
+      }
       ids.push(id)
       parentStackMap.set(id, parentStack.slice())
     },
-    false,
+    asParams,
     parentStack,
   )
 
   let hasMemberExpression = false
   if (ids.length) {
     const [frag, push] = buildCodeFragment()
+    let lastEnd = 0
     ids
       .sort((a, b) => a.start! - b.start!)
-      .forEach((id, i) => {
+      .forEach(id => {
         // range is offset by -1 due to the wrapping parens when parsed
-        const start = id.start! - 1
-        const end = id.end! - 1
-        const last = ids[i - 1]
-
-        const leadingText = content.slice(last ? last.end! - 1 : 0, start)
-        if (leadingText.length) push([leadingText, NewlineType.Unknown])
-        const source = content.slice(start, end)
+        const idStart = id.start! - 1
+        const idEnd = id.end! - 1
+        const source = content.slice(idStart, idEnd)
         const parentStack = parentStackMap.get(id)!
         const parent = parentStack[parentStack.length - 1]
+        let start = idStart
+        let end = idEnd
+
+        if (
+          inline &&
+          options.bindingMetadata &&
+          options.bindingMetadata[source] === BindingTypes.SETUP_LET &&
+          parent &&
+          parent.type === 'UpdateExpression' &&
+          parent.argument === id
+        ) {
+          start = parent.start! - 1
+          end = parent.end! - 1
+        }
+
+        if (start < lastEnd) return
+
+        const leadingText = content.slice(lastEnd, start)
+        if (leadingText.length) push([leadingText, NewlineType.Unknown])
 
         hasMemberExpression ||=
           parent &&
@@ -84,7 +122,7 @@ export function genExpression(
 
         push(
           ...genIdentifier(
-            source,
+            asParams ? id.name : source,
             context,
             {
               start: advancePositionWithClone(node.loc.start, source, start),
@@ -95,14 +133,16 @@ export function genExpression(
             id,
             parent,
             parentStack,
+            node,
           ),
         )
 
-        if (i === ids.length - 1 && end < content.length) {
-          push([content.slice(end), NewlineType.Unknown])
-        }
+        lastEnd = end
       })
 
+    if (lastEnd < content.length) {
+      push([content.slice(lastEnd), NewlineType.Unknown])
+    }
     if (assignment && hasMemberExpression) {
       push(` = ${assignment}`)
     }
@@ -120,6 +160,7 @@ function genIdentifier(
   id?: Identifier,
   parent?: Node,
   parentStack?: Node[],
+  sourceNode?: SimpleExpressionNode,
 ): CodeFragment[] {
   const { options, helper, identifiers } = context
   const { inline, bindingMetadata } = options
@@ -141,33 +182,73 @@ function genIdentifier(
   }
 
   let prefix: string | undefined
-  if (isStaticProperty(parent) && parent.shorthand) {
+  const type = bindingMetadata && bindingMetadata[raw]
+  // ({ x } = y)
+  const isDestructureAssignment =
+    parent && isInDestructureAssignment(parent, parentStack || [])
+  // x = y
+  const isAssignmentLVal =
+    parent && parent.type === 'AssignmentExpression' && parent.left === id
+  // x++
+  const isUpdateArg =
+    parent && parent.type === 'UpdateExpression' && parent.argument === id
+
+  if (
+    isStaticProperty(parent) &&
+    parent.shorthand &&
+    !(inline && type === BindingTypes.SETUP_LET && isDestructureAssignment)
+  ) {
     // property shorthand like { foo }, we need to add the key since
     // we rewrite the value
     prefix = `${raw}: `
   }
 
-  const type = bindingMetadata && bindingMetadata[raw]
   if (inline) {
     switch (type) {
       case BindingTypes.SETUP_LET:
-        name = raw = assignment
-          ? `_isRef(${raw}) ? (${raw}.value = ${assignment}) : (${raw} = ${assignment})`
-          : unref()
+        if (isAssignmentLVal) {
+          const { right, operator } = parent as AssignmentExpression
+          const source = sourceNode!
+          const sourceContent = source.content
+          const rightStart = right.start! - 1
+          const rightEnd = right.end! - 1
+          const rightContent = sourceContent.slice(rightStart, rightEnd)
+          const rightExp = createSimpleExpression(rightContent, false, {
+            start: advancePositionWithClone(
+              source.loc.start,
+              sourceContent,
+              rightStart,
+            ),
+            end: advancePositionWithClone(
+              source.loc.start,
+              sourceContent,
+              rightEnd,
+            ),
+            source: rightContent,
+          })
+          rightExp.ast = parseExp(context, rightContent)
+          return [
+            prefix,
+            `${helper('isRef')}(${raw}) ? ${raw}.value ${operator} `,
+            ...genExpression(rightExp, context),
+            ` : `,
+            [raw, NewlineType.None, loc, name],
+          ]
+        } else if (isUpdateArg) {
+          const { prefix: isPrefix, operator } = parent as UpdateExpression
+          const updatePrefix = isPrefix ? operator : ``
+          const updatePostfix = isPrefix ? `` : operator
+          raw = `${helper('isRef')}(${raw}) ? ${updatePrefix}${raw}.value${updatePostfix} : ${updatePrefix}${raw}${updatePostfix}`
+        } else if (!isDestructureAssignment) {
+          name = raw = assignment
+            ? `${helper('isRef')}(${raw}) ? (${raw}.value = ${assignment}) : (${raw} = ${assignment})`
+            : unref()
+        }
         break
       case BindingTypes.SETUP_REF:
         name = raw = withAssignment(`${raw}.value`)
         break
       case BindingTypes.SETUP_MAYBE_REF:
-        // ({ x } = y)
-        const isDestructureAssignment =
-          parent && isInDestructureAssignment(parent, parentStack || [])
-        // x = y
-        const isAssignmentLVal =
-          parent && parent.type === 'AssignmentExpression' && parent.left === id
-        // x++
-        const isUpdateArg =
-          parent && parent.type === 'UpdateExpression' && parent.argument === id
         // const binding that may or may not be ref
         // if it's not a ref, then assignments don't make sense -
         // so we ignore the non-ref assignment case and generate code
@@ -225,10 +306,11 @@ function canPrefix(name: string) {
   return true
 }
 
-type DeclarationResult = {
+type ProcessedExpressionResult = {
   ids: Record<string, string>
   frag: CodeFragment[]
   varNames: string[]
+  expressionReplacements: Map<SimpleExpressionNode, SimpleExpressionNode>
 }
 type DeclarationValue = {
   name: string
@@ -238,19 +320,53 @@ type DeclarationValue = {
   exps?: Set<SimpleExpressionNode>
   seenCount?: number
 }
+type SourceRange = {
+  start: number
+  end: number
+}
+type VariableUse = {
+  name: string
+  loc?: SourceRange
+}
+type ExpressionRecord = {
+  variables: VariableUse[]
+}
+type ExpressionAnalysis = {
+  seenVariable: Record<string, number>
+  variableToExpMap: Map<string, Set<SimpleExpressionNode>>
+  expressionRecords: Map<SimpleExpressionNode, ExpressionRecord>
+  seenIdentifier: Set<string>
+  updatedVariable: Set<string>
+  eagerVariable: Set<string>
+}
+type SeenExpression = {
+  count: number
+  first: SimpleExpressionNode
+}
+type ContentReplacement = {
+  start: number
+  end: number
+  content: string
+}
+type ReplacementPlan = Map<SimpleExpressionNode, ContentReplacement[]>
 
 export function processExpressions(
   context: CodegenContext,
   expressions: SimpleExpressionNode[],
   shouldDeclare: boolean,
-): DeclarationResult {
+): ProcessedExpressionResult {
+  const expressionReplacements = new Map<
+    SimpleExpressionNode,
+    SimpleExpressionNode
+  >()
   // analyze variables
   const {
     seenVariable,
     variableToExpMap,
-    expToVariableMap,
+    expressionRecords,
     seenIdentifier,
     updatedVariable,
+    eagerVariable,
   } = analyzeExpressions(expressions)
   const reservedNames = new Set<string>(seenIdentifier)
 
@@ -260,10 +376,12 @@ export function processExpressions(
     context,
     seenVariable,
     variableToExpMap,
-    expToVariableMap,
+    expressionRecords,
     seenIdentifier,
     updatedVariable,
+    eagerVariable,
     reservedNames,
+    expressionReplacements,
   )
 
   // process duplicate expressions after identifier and member expression handling.
@@ -273,35 +391,44 @@ export function processExpressions(
     expressions,
     varDeclarations,
     updatedVariable,
-    expToVariableMap,
+    expressionRecords,
     reservedNames,
+    expressionReplacements,
   )
 
-  return genDeclarations(
-    [...varDeclarations, ...expDeclarations],
-    context,
-    shouldDeclare,
-  )
+  return {
+    ...genDeclarations(
+      [...varDeclarations, ...expDeclarations],
+      context,
+      shouldDeclare,
+    ),
+    expressionReplacements,
+  }
 }
 
-function analyzeExpressions(expressions: SimpleExpressionNode[]) {
+function analyzeExpressions(
+  expressions: SimpleExpressionNode[],
+): ExpressionAnalysis {
   const seenVariable: Record<string, number> = Object.create(null)
   const variableToExpMap = new Map<string, Set<SimpleExpressionNode>>()
-  const expToVariableMap = new Map<
-    SimpleExpressionNode,
-    Array<{
-      name: string
-      loc?: { start: number; end: number }
-    }>
-  >()
+  const expressionRecords = new Map<SimpleExpressionNode, ExpressionRecord>()
   const seenIdentifier = new Set<string>()
   const updatedVariable = new Set<string>()
+  const eagerVariable = new Set<string>()
+
+  const getRecord = (exp: SimpleExpressionNode): ExpressionRecord => {
+    let record = expressionRecords.get(exp)
+    if (!record) {
+      expressionRecords.set(exp, (record = { variables: [] }))
+    }
+    return record
+  }
 
   const registerVariable = (
     name: string,
     exp: SimpleExpressionNode,
     isIdentifier: boolean,
-    loc?: { start: number; end: number },
+    loc?: SourceRange,
     parentStack: Node[] = [],
   ) => {
     if (isIdentifier) seenIdentifier.add(name)
@@ -311,9 +438,7 @@ function analyzeExpressions(expressions: SimpleExpressionNode[]) {
       (variableToExpMap.get(name) || new Set()).add(exp),
     )
 
-    const variables = expToVariableMap.get(exp) || []
-    variables.push({ name, loc })
-    expToVariableMap.set(exp, variables)
+    getRecord(exp).variables.push({ name, loc })
 
     if (
       parentStack.some(
@@ -321,6 +446,12 @@ function analyzeExpressions(expressions: SimpleExpressionNode[]) {
       )
     ) {
       updatedVariable.add(name)
+    }
+    // a member expression is only hoisted when some usage evaluates it
+    // unconditionally, e.g. `x === undefined ? '—' : x.y` must not read
+    // `x.y` ahead of its guard
+    if (isIdentifier || !isLazilyEvaluated(parentStack)) {
+      eagerVariable.add(name)
     }
   }
 
@@ -343,8 +474,33 @@ function analyzeExpressions(expressions: SimpleExpressionNode[]) {
           if (isGloballyAllowed(id.name)) hasGlobalIdentifier = true
         })
 
+        // skip a member expression that cannot be fully extracted,
+        // e.g. obj[foo ? 'a' : 'b'] - caching the incomplete source would
+        // generate invalid or incorrect code
+        if (memberExp === undefined) return
+
         const parentOfMemberExp = parentStack[parentStack.length - 2]
         if (parentOfMemberExp && isCallExpression(parentOfMemberExp)) {
+          return
+        }
+
+        // skip a member expression that an optional chain continues from
+        // without `?.`, since the cached variable is accessed outside of the
+        // chain and no longer short-circuits
+        // e.g. obj?.foo.bar - `const _obj_foo = obj?.foo` then `_obj_foo.bar`
+        let chainChild: Node = parent
+        let index = parentStack.length - 2
+        // a non-null assertion stays inside the chain, e.g. obj?.foo!.bar
+        while (parentStack[index]?.type === 'TSNonNullExpression') {
+          chainChild = parentStack[index--]
+        }
+        const chainParent = parentStack[index]
+        if (
+          chainParent &&
+          chainParent.type === 'OptionalMemberExpression' &&
+          !chainParent.optional &&
+          chainParent.object === chainChild
+        ) {
           return
         }
 
@@ -375,34 +531,85 @@ function analyzeExpressions(expressions: SimpleExpressionNode[]) {
     seenVariable,
     seenIdentifier,
     variableToExpMap,
-    expToVariableMap,
+    expressionRecords,
     updatedVariable,
+    eagerVariable,
   }
+}
+
+function getProcessedExpression(
+  exp: SimpleExpressionNode,
+  expressionReplacements: Map<SimpleExpressionNode, SimpleExpressionNode>,
+): SimpleExpressionNode {
+  return expressionReplacements.get(exp) || exp
+}
+
+function setExpressionReplacement(
+  expressionReplacements: Map<SimpleExpressionNode, SimpleExpressionNode>,
+  exp: SimpleExpressionNode,
+  content: string,
+  ast: Node | null,
+): void {
+  expressionReplacements.set(
+    exp,
+    extend(
+      { ast },
+      createSimpleExpression(content, exp.isStatic, exp.loc, exp.constType),
+    ),
+  )
+}
+
+/**
+ * Whether a node is only evaluated lazily, given its ancestor chain - i.e. it
+ * may be skipped entirely when a preceding condition is not met.
+ */
+const isLazilyEvaluated = (parentStack: Node[]): boolean => {
+  for (let i = parentStack.length - 1; i > 0; i--) {
+    const child = parentStack[i]
+    const parent = parentStack[i - 1]
+    switch (parent.type) {
+      // `ok ? a : b` - the branches are only evaluated once a branch is taken
+      case 'ConditionalExpression':
+        if (parent.test !== child) return true
+        break
+      // `ok && a` / `ok || a` - the right hand side may not be evaluated
+      case 'LogicalExpression':
+        if (parent.right === child) return true
+        break
+      // `a?.(b)` / `a?.[b]` - skipped entirely when `a` is nullish
+      case 'OptionalCallExpression':
+        if ((parent.arguments as Node[]).includes(child)) return true
+        break
+      case 'OptionalMemberExpression':
+        if (parent.computed && (parent.property as Node) === child) return true
+        break
+      default:
+        // a function body is only evaluated once the function is called
+        if (isFunctionType(parent)) return true
+    }
+  }
+  return false
 }
 
 function processRepeatedVariables(
   context: CodegenContext,
   seenVariable: Record<string, number>,
   variableToExpMap: Map<string, Set<SimpleExpressionNode>>,
-  expToVariableMap: Map<
-    SimpleExpressionNode,
-    Array<{ name: string; loc?: { start: number; end: number } }>
-  >,
+  expressionRecords: Map<SimpleExpressionNode, ExpressionRecord>,
   seenIdentifier: Set<string>,
   updatedVariable: Set<string>,
+  eagerVariable: Set<string>,
   reservedNames: Set<string>,
+  expressionReplacements: Map<SimpleExpressionNode, SimpleExpressionNode>,
 ): DeclarationValue[] {
   const declarations: DeclarationValue[] = []
-  const expToReplacementMap = new Map<
-    SimpleExpressionNode,
-    Array<{
-      name: string
-      locs: { start: number; end: number }[]
-    }>
-  >()
+  const declaredNames = new Set<string>()
+  const replacementPlan: ReplacementPlan = new Map()
 
   for (const [name, exps] of variableToExpMap) {
     if (updatedVariable.has(name)) continue
+    // skip a member expression that is only read lazily, see `eagerVariable`
+    if (!eagerVariable.has(name)) continue
     // skip globally allowed identifiers - they are not reactive and
     // their method calls (e.g. Math.random()) may have side effects
     if (isGloballyAllowed(name)) continue
@@ -419,25 +626,26 @@ function processRepeatedVariables(
       // replaced during context.withId(..., ids)
       exps.forEach(node => {
         if (node.ast && varName !== name) {
-          const replacements = expToReplacementMap.get(node) || []
-          replacements.push({
-            name: varName,
-            locs: expToVariableMap.get(node)!.reduce(
-              (locs, v) => {
-                if (v.name === name && v.loc) locs.push(v.loc)
-                return locs
-              },
-              [] as { start: number; end: number }[],
-            ),
-          })
-          expToReplacementMap.set(node, replacements)
+          for (const variable of getExpressionVariables(
+            expressionRecords,
+            node,
+          )) {
+            if (variable.name === name && variable.loc) {
+              queueContentReplacement(replacementPlan, node, {
+                start: variable.loc.start - 1,
+                end: variable.loc.end - 1,
+                content: varName,
+              })
+            }
+          }
         }
       })
 
       if (
-        !declarations.some(d => d.name === varName) &&
-        (!isIdentifier || shouldDeclareVariable(name, expToVariableMap, exps))
+        !declaredNames.has(varName) &&
+        (!isIdentifier || shouldDeclareVariable(name, expressionRecords, exps))
       ) {
+        declaredNames.add(varName)
         declarations.push({
           name: varName,
           isIdentifier,
@@ -453,74 +661,105 @@ function processRepeatedVariables(
     }
   }
 
-  for (const [exp, replacements] of expToReplacementMap) {
-    replacements
-      .flatMap(({ name, locs }) =>
-        locs.map(({ start, end }) => ({ start, end, name })),
-      )
-      .sort((a, b) => b.end - a.end)
-      .forEach(({ start, end, name }) => {
-        exp.content =
-          exp.content.slice(0, start - 1) + name + exp.content.slice(end - 1)
-      })
-
-    // re-parse the expression
-    exp.ast = parseExp(context, exp.content)
-  }
+  applyReplacementPlan(context, expressionReplacements, replacementPlan)
 
   return declarations
 }
 
 function shouldDeclareVariable(
   name: string,
-  expToVariableMap: Map<
-    SimpleExpressionNode,
-    Array<{ name: string; loc?: { start: number; end: number } }>
-  >,
+  expressionRecords: Map<SimpleExpressionNode, ExpressionRecord>,
   exps: Set<SimpleExpressionNode>,
 ): boolean {
-  const vars = Array.from(exps, exp =>
-    expToVariableMap.get(exp)!.map(v => v.name),
-  )
+  const variableUsages: VariableUse[][] = []
+  let allSingleVariable = true
+  let hasRepeatedName = false
+  let hasDifferentLength = false
+
+  outer: for (const exp of exps) {
+    const variables = getExpressionVariables(expressionRecords, exp)
+
+    if (allSingleVariable && variables.length !== 1) {
+      allSingleVariable = false
+    }
+
+    if (
+      !hasDifferentLength &&
+      variableUsages.length > 0 &&
+      variables.length !== variableUsages[0].length
+    ) {
+      hasDifferentLength = true
+    }
+
+    let nameCount = 0
+    for (const variable of variables) {
+      if (variable.name === name && ++nameCount > 1) {
+        hasRepeatedName = true
+        break outer
+      }
+    }
+
+    variableUsages.push(variables)
+  }
+
   // assume name equals to `foo`
   // if each expression only references `foo`, declaration is needed
   // to avoid reactivity tracking
   // e.g., [[foo],[foo]]
-  if (vars.every(v => v.length === 1)) {
+  if (allSingleVariable) {
     return true
   }
 
   // if `foo` appears multiple times in one array, declaration is needed
   // e.g., [[foo,foo]]
-  if (vars.some(v => v.filter(e => e === name).length > 1)) {
+  if (hasRepeatedName) {
     return true
   }
 
-  const first = vars[0]
+  const first = variableUsages[0]
   // if arrays have different lengths, declaration is needed
   // e.g., [[foo],[foo,bar]]
-  if (vars.some(v => v.length !== first.length)) {
+  if (hasDifferentLength) {
     // special case, no declaration needed if one array is a subset of the other
     // because they will be treated as repeated expressions
     // e.g., [[foo,bar],[foo,foo,bar]] -> const foo_bar = _ctx.foo + _ctx.bar
-    if (
-      vars.some(
-        v => v.length > first.length && v.every(e => first.includes(e)),
-      ) ||
-      vars.some(v => first.length > v.length && first.every(e => v.includes(e)))
-    ) {
-      return false
+    for (const variables of variableUsages) {
+      if (variables.length === first.length) {
+        continue
+      }
+
+      const longer = variables.length > first.length ? variables : first
+      const shorter = variables.length > first.length ? first : variables
+      const shorterNames = new Set<string>()
+      for (const variable of shorter) {
+        shorterNames.add(variable.name)
+      }
+
+      let isSubset = true
+      for (const variable of longer) {
+        if (!shorterNames.has(variable.name)) {
+          isSubset = false
+          break
+        }
+      }
+      if (isSubset) {
+        return false
+      }
     }
     return true
   }
   // if arrays are identical, no declaration needed
   // because they will be treated as repeated expressions
   // e.g., [[foo,bar],[foo,bar]] -> const foo_bar = _ctx.foo + _ctx.bar
-  if (vars.every(v => v.every((e, idx) => e === first[idx]))) {
-    return false
+  for (const variables of variableUsages) {
+    for (let i = 0; i < variables.length; i++) {
+      if (variables[i].name !== first[i].name) {
+        return true
+      }
+    }
   }
 
-  return true
+  return false
 }
 
 function processRepeatedExpressions(
@@ -528,37 +767,32 @@ function processRepeatedExpressions(
   expressions: SimpleExpressionNode[],
   varDeclarations: DeclarationValue[],
   updatedVariable: Set<string>,
-  expToVariableMap: Map<
-    SimpleExpressionNode,
-    Array<{ name: string; loc?: { start: number; end: number } }>
-  >,
+  expressionRecords: Map<SimpleExpressionNode, ExpressionRecord>,
   reservedNames: Set<string>,
+  expressionReplacements: Map<SimpleExpressionNode, SimpleExpressionNode>,
 ): DeclarationValue[] {
   const declarations: DeclarationValue[] = []
-  const seenExp = expressions.reduce(
-    (acc, exp) => {
-      const vars = expToVariableMap.get(exp)
-      if (!vars) return acc
+  const seenExp = new Map<string, SeenExpression>()
 
-      const variables = vars.map(v => v.name)
-      // only handle expressions that are not identifiers
-      if (
-        exp.ast &&
-        exp.ast.type !== 'Identifier' &&
-        !(variables && variables.some(v => updatedVariable.has(v))) &&
-        // skip expressions containing globally allowed identifiers
-        // (e.g. Math.random(), Date.now() + foo) - they are not reactive
-        // and may involve impure calls with side effects
-        !variables.some(v => isGloballyAllowed(v))
-      ) {
-        acc[exp.content] = (acc[exp.content] || 0) + 1
+  for (const exp of expressions) {
+    const vars = expressionRecords.get(exp)?.variables
+    if (!vars) continue
+
+    const processed = getProcessedExpression(exp, expressionReplacements)
+    if (canCacheExpression(processed, vars, updatedVariable)) {
+      const seen = seenExp.get(processed.content)
+      if (seen) {
+        seen.count++
+      } else {
+        seenExp.set(processed.content, { count: 1, first: exp })
       }
-      return acc
-    },
-    Object.create(null) as Record<string, number>,
-  )
+    }
+  }
 
-  Object.entries(seenExp).forEach(([content, count]) => {
+  const repeatedExpressions = [...seenExp].sort(
+    ([contentA], [contentB]) => contentB.length - contentA.length,
+  )
+  for (const [content, { count, first }] of repeatedExpressions) {
     if (count > 1) {
       // foo + baz -> foo_baz
       // if foo and baz have no other references, we don't need to declare separate variables
@@ -568,28 +802,37 @@ function processRepeatedExpressions(
       // const foo_baz = foo + baz
       // we can generate:
       // const foo_baz = _ctx.foo + _ctx.baz
-      const delVars: Record<string, string> = {}
+      const removedDeclarations: Array<{ name: string; rawName: string }> = []
       for (let i = varDeclarations.length - 1; i >= 0; i--) {
         const item = varDeclarations[i]
         if (!item.exps || !item.seenCount) continue
 
         const shouldRemove = [...item.exps].every(
-          node => node.content === content && item.seenCount === count,
+          node =>
+            getProcessedExpression(node, expressionReplacements).content ===
+              content && item.seenCount === count,
         )
         if (shouldRemove) {
-          delVars[item.name] = item.rawName!
+          removedDeclarations.push({
+            name: item.name,
+            rawName: item.rawName!,
+          })
           reservedNames.delete(item.name)
           varDeclarations.splice(i, 1)
         }
       }
       const value = extend(
         {},
-        expressions.find(exp => exp.content === content)!,
+        getProcessedExpression(first, expressionReplacements),
       )
-      Object.keys(delVars).forEach(name => {
-        value.content = value.content.replace(name, delVars[name])
+      const restorePlan: ContentReplacement[] = []
+      for (const { name, rawName } of removedDeclarations) {
+        restorePlan.push(...findIdentifierReplacements(value, name, rawName))
+      }
+      if (restorePlan.length) {
+        value.content = applyContentReplacements(value.content, restorePlan)
         if (value.ast) value.ast = parseExp(context, value.content)
-      })
+      }
       const varName = getUniqueDeclarationName(
         genVarName(content),
         reservedNames,
@@ -600,34 +843,204 @@ function processRepeatedExpressions(
       })
 
       // assume content equals to `foo + baz`
-      expressions.forEach(exp => {
+      for (const exp of expressions) {
+        const processed = getProcessedExpression(exp, expressionReplacements)
         // foo + baz -> foo_baz
-        if (exp.content === content) {
-          exp.content = varName
-          // ast is no longer needed since it becomes an identifier.
-          exp.ast = null
+        if (processed.content === content) {
+          setExpressionReplacement(expressionReplacements, exp, varName, null)
         }
-        // foo + foo + baz -> foo + foo_baz
-        else if (exp.content.includes(content)) {
-          exp.content = exp.content.replace(
-            new RegExp(escapeRegExp(content), 'g'),
+        // (foo + baz) * qux -> (foo_baz) * qux
+        // An optional chain may continue past the cached expression, so only
+        // replace exact matches to preserve short-circuiting.
+        else if (
+          !content.includes('?.') &&
+          processed.content.includes(content)
+        ) {
+          const replacements = findContentReplacements(
+            processed,
+            content,
             varName,
           )
-          // re-parse the expression
-          exp.ast = parseExp(context, exp.content)
+          if (replacements.length) {
+            const replacedContent = applyContentReplacements(
+              processed.content,
+              replacements,
+            )
+            setExpressionReplacement(
+              expressionReplacements,
+              exp,
+              replacedContent,
+              parseExp(context, replacedContent),
+            )
+          }
         }
-      })
+      }
     }
-  })
+  }
 
   return declarations
+}
+
+function canCacheExpression(
+  processed: SimpleExpressionNode,
+  vars: VariableUse[],
+  updatedVariable: Set<string>,
+): boolean {
+  if (!processed.ast || processed.ast.type === 'Identifier') {
+    return false
+  }
+
+  for (const { name } of vars) {
+    if (updatedVariable.has(name) || isGloballyAllowed(name)) {
+      return false
+    }
+  }
+
+  return true
+}
+
+function getExpressionVariables(
+  expressionRecords: Map<SimpleExpressionNode, ExpressionRecord>,
+  exp: SimpleExpressionNode,
+): VariableUse[] {
+  return expressionRecords.get(exp)?.variables || []
+}
+
+function queueContentReplacement(
+  replacementPlan: ReplacementPlan,
+  exp: SimpleExpressionNode,
+  replacement: ContentReplacement,
+): void {
+  const replacements = replacementPlan.get(exp)
+  if (replacements) {
+    replacements.push(replacement)
+  } else {
+    replacementPlan.set(exp, [replacement])
+  }
+}
+
+function applyReplacementPlan(
+  context: CodegenContext,
+  expressionReplacements: Map<SimpleExpressionNode, SimpleExpressionNode>,
+  replacementPlan: ReplacementPlan,
+): void {
+  for (const [exp, replacements] of replacementPlan) {
+    if (!replacements.length) continue
+
+    const content = applyContentReplacements(
+      getProcessedExpression(exp, expressionReplacements).content,
+      replacements,
+    )
+    setExpressionReplacement(
+      expressionReplacements,
+      exp,
+      content,
+      parseExp(context, content),
+    )
+  }
+}
+
+function findContentReplacements(
+  exp: SimpleExpressionNode,
+  content: string,
+  replacement: string,
+): ContentReplacement[] {
+  // a textual match is only interchangeable with the cached variable when it
+  // spans a whole node, otherwise it cuts across operator precedence or
+  // literal boundaries
+  const nodeRanges = getNodeRanges(exp)
+  if (!nodeRanges.size) return []
+
+  const replacements: ContentReplacement[] = []
+  let searchStart = 0
+  let start = exp.content.indexOf(content, searchStart)
+  while (start !== -1) {
+    const end = start + content.length
+    if (nodeRanges.has(`${start}:${end}`)) {
+      replacements.push({ start, end, content: replacement })
+      searchStart = end
+    } else {
+      searchStart = start + 1
+    }
+    start = exp.content.indexOf(content, searchStart)
+  }
+
+  return replacements
+}
+
+function findIdentifierReplacements(
+  exp: SimpleExpressionNode,
+  name: string,
+  replacement: string,
+): ContentReplacement[] {
+  const replacements: ContentReplacement[] = []
+  for (const { start, end } of getIdentifierRanges(exp)) {
+    if (exp.content.slice(start, end) === name) {
+      replacements.push({ start, end, content: replacement })
+    }
+  }
+  return replacements
+}
+
+function getNodeRanges(exp: SimpleExpressionNode): Set<string> {
+  const ranges = new Set<string>()
+  if (!exp.ast || typeof exp.ast !== 'object') return ranges
+
+  walk(exp.ast, {
+    enter(node: Node) {
+      // Skip nested scopes, template text, and type-only subtrees.
+      if (
+        isFunctionType(node) ||
+        node.type === 'TemplateElement' ||
+        (node.type.startsWith('TS') && !TS_NODE_TYPES.includes(node.type))
+      ) {
+        return this.skip()
+      }
+      // range is offset by -1 due to the wrapping parens when parsed
+      if (node.start != null && node.end != null) {
+        ranges.add(`${node.start - 1}:${node.end - 1}`)
+      }
+    },
+  })
+  return ranges
+}
+
+function getIdentifierRanges(exp: SimpleExpressionNode): SourceRange[] {
+  if (!exp.ast || typeof exp.ast !== 'object') return []
+
+  const identifiers: SourceRange[] = []
+  walkIdentifiers(
+    exp.ast,
+    id => {
+      identifiers.push({ start: id.start! - 1, end: id.end! - 1 })
+    },
+    false,
+  )
+  return identifiers
+}
+
+function applyContentReplacements(
+  content: string,
+  replacements: ContentReplacement[],
+): string {
+  // the outermost replacement goes first when starts are equal
+  replacements.sort((a, b) => a.start - b.start || b.end - a.end)
+  let result = ''
+  let offset = 0
+  for (const { start, end, content: replacement } of replacements) {
+    // covered by an applied replacement, e.g. `bar[0]` in `foo[bar[0].baz]`
+    if (start < offset) continue
+    result += content.slice(offset, start) + replacement
+    offset = end
+  }
+  return result + content.slice(offset)
 }
 
 function genDeclarations(
   declarations: DeclarationValue[],
   context: CodegenContext,
   shouldDeclare: boolean,
-): DeclarationResult {
+) {
   const [frag, push] = buildCodeFragment()
   const ids: Record<string, string> = Object.create(null)
   const varNames = new Set<string>()
@@ -635,8 +1048,10 @@ function genDeclarations(
   // process identifiers first as expressions may rely on them
   declarations.forEach(({ name, isIdentifier, value }) => {
     if (isIdentifier) {
-      const varName = (ids[name] = `_${name}`)
-      varNames.add(varName)
+      const varName = (ids[name] = context.getUniqueLocalName(
+        `_${name}`,
+        varNames,
+      ))
       if (shouldDeclare) {
         push(`const `)
       }
@@ -647,8 +1062,7 @@ function genDeclarations(
   // process expressions
   declarations.forEach(({ name, isIdentifier, value }) => {
     if (!isIdentifier) {
-      const varName = `_${name}`
-      varNames.add(varName)
+      const varName = context.getUniqueLocalName(`_${name}`, varNames)
       if (shouldDeclare) {
         push(`const `)
       }
@@ -664,16 +1078,11 @@ function genDeclarations(
   return { ids, frag, varNames: [...varNames] }
 }
 
-function escapeRegExp(string: string) {
-  return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-}
-
 function parseExp(context: CodegenContext, content: string): Node {
-  const plugins = context.options.expressionPlugins
-  const options: ParserOptions = {
-    plugins: plugins ? [...plugins, 'typescript'] : ['typescript'],
-  }
-  return parseExpression(`(${content})`, options)
+  return parseExpression(
+    `(${content})`,
+    getParserOptions(context.options.expressionPlugins),
+  )
 }
 
 export function genVarName(exp: string): string {
@@ -697,11 +1106,16 @@ function getUniqueDeclarationName(
   return name
 }
 
+/**
+ * Returns the source of a member expression, or `undefined` if it contains a
+ * node that cannot be extracted, e.g. `foo[bar ? 'a' : 'b']`. Such expressions
+ * must not be cached - the extracted source would be incomplete.
+ */
 function extractMemberExpression(
   exp: Node,
   onIdentifier: (id: Identifier) => void,
-): string {
-  if (!exp) return ''
+): string | undefined {
+  if (!exp) return
   switch (exp.type) {
     case 'Identifier': // foo[bar]
       onIdentifier(exp)
@@ -710,23 +1124,44 @@ function extractMemberExpression(
       return exp.extra ? (exp.extra.raw as string) : exp.value
     case 'NumericLiteral': // foo[0]
       return exp.value.toString()
-    case 'BinaryExpression': // foo[bar + 1]
-      return `${extractMemberExpression(exp.left, onIdentifier)} ${exp.operator} ${extractMemberExpression(exp.right, onIdentifier)}`
+    case 'BinaryExpression': {
+      // foo[bar + 1]
+      const left = extractMemberExpression(exp.left, onIdentifier)
+      const right = extractMemberExpression(exp.right, onIdentifier)
+      if (left === undefined || right === undefined) return
+      const expression = `${left} ${exp.operator} ${right}`
+      return exp.extra?.parenthesized ? `(${expression})` : expression
+    }
     case 'CallExpression': // foo[bar(baz)]
-      return `${extractMemberExpression(exp.callee, onIdentifier)}(${exp.arguments.map(arg => extractMemberExpression(arg, onIdentifier)).join(', ')})`
-    case 'OptionalCallExpression': // foo[bar?.(baz)]
-      return `${extractMemberExpression(exp.callee, onIdentifier)}?.(${exp.arguments.map(arg => extractMemberExpression(arg, onIdentifier)).join(', ')})`
+    case 'OptionalCallExpression': {
+      // foo[bar?.(baz)]
+      const callee = extractMemberExpression(exp.callee, onIdentifier)
+      const args = exp.arguments.map(arg =>
+        extractMemberExpression(arg, onIdentifier),
+      )
+      if (callee === undefined || args.some(arg => arg === undefined)) return
+      const optional = exp.type === 'OptionalCallExpression' ? '?.' : ''
+      return `${callee}${optional}(${args.join(', ')})`
+    }
     case 'MemberExpression': // foo[bar.baz]
-    case 'OptionalMemberExpression': // foo?.bar
+    case 'OptionalMemberExpression': {
+      // foo?.bar
       const object = extractMemberExpression(exp.object, onIdentifier)
+      const property = extractMemberExpression(
+        exp.property,
+        exp.computed ? onIdentifier : NOOP,
+      )
+      if (object === undefined || property === undefined) return
+      const optional = exp.type === 'OptionalMemberExpression' && exp.optional
       const prop = exp.computed
-        ? `[${extractMemberExpression(exp.property, onIdentifier)}]`
-        : `.${extractMemberExpression(exp.property, NOOP)}`
+        ? `${optional ? '?.' : ''}[${property}]`
+        : `${optional ? '?.' : '.'}${property}`
       return `${object}${prop}`
+    }
     case 'TSNonNullExpression': // foo!.bar
-      return `${extractMemberExpression(exp.expression, onIdentifier)}`
+      return extractMemberExpression(exp.expression, onIdentifier)
     default:
-      return ''
+      return
   }
 }
 

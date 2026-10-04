@@ -151,6 +151,41 @@ color: red
       ":where(.foo[data-v-test] .bar) { color: red;
       }"
     `)
+    expect(compileScoped(`:is(:deep(.foo)) .bar { color: red; }`))
+      .toMatchInlineSnapshot(`
+      ":is([data-v-test] .foo) .bar { color: red;
+      }"
+    `)
+    expect(compileScoped(`:where(:deep(.foo)) .bar { color: red; }`))
+      .toMatchInlineSnapshot(`
+      ":where([data-v-test] .foo) .bar { color: red;
+      }"
+    `)
+    expect(compileScoped(`:is(:deep(.foo), .bar) .baz { color: red; }`))
+      .toMatchInlineSnapshot(`
+      ":is([data-v-test] .foo) .baz, :is(.bar) .baz[data-v-test] { color: red;
+      }"
+    `)
+    expect(compileScoped(`:where(:deep(.foo), .bar) .baz { color: red; }`))
+      .toMatchInlineSnapshot(`
+      ":where([data-v-test] .foo) .baz, :where(.bar) .baz[data-v-test] { color: red;
+      }"
+    `)
+    expect(compileScoped(`:not(:deep(.foo)) .bar { color: red; }`))
+      .toMatchInlineSnapshot(`
+      ":not([data-v-test] .foo) .bar { color: red;
+      }"
+    `)
+    expect(compileScoped(`:has(:deep(.foo)) .bar { color: red; }`))
+      .toMatchInlineSnapshot(`
+      ":has([data-v-test] .foo) .bar { color: red;
+      }"
+    `)
+    expect(compileScoped(`:has(:deep(.foo), .bar) .baz { color: red; }`))
+      .toMatchInlineSnapshot(`
+      ":has([data-v-test] .foo) .baz, :has(.bar) .baz[data-v-test] { color: red;
+      }"
+    `)
     expect(compileScoped(`:deep(.foo) { color: red; .bar { color: red; } }`))
       .toMatchInlineSnapshot(`
       "[data-v-test] .foo { color: red;

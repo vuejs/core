@@ -22,6 +22,7 @@ import {
 import {
   Namespaces,
   escapeHtml,
+  includeBooleanAttr,
   isArray,
   isBooleanAttr,
   isKnownHtmlAttr,
@@ -347,7 +348,8 @@ function stringifyElement(
         }
         // #6568
         if (
-          isBooleanAttr((p.arg as SimpleExpressionNode).content) &&
+          (isBooleanAttr((p.arg as SimpleExpressionNode).content) ||
+            (p.arg as SimpleExpressionNode).content === 'hidden') &&
           exp.content === 'false'
         ) {
           continue
@@ -356,6 +358,13 @@ function stringifyElement(
         let evaluated = evaluateConstant(exp)
         if (evaluated != null) {
           const arg = p.arg && (p.arg as SimpleExpressionNode).content
+          if (
+            arg === 'hidden' &&
+            typeof evaluated === 'number' &&
+            !includeBooleanAttr(evaluated)
+          ) {
+            continue
+          }
           if (arg === 'class') {
             evaluated = normalizeClass(evaluated)
           } else if (arg === 'style') {

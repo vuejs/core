@@ -45,6 +45,12 @@ describe('compiler: children transform', () => {
     <div><span>{{ msg }}</span></div>
   </div>`,
     )
+    expect(code).toContain(`let p0 = _next(_child(n3))`)
+    expect(code).toContain(`const n0 = _child(p0)`)
+    expect(code).toContain(`const n1 = _child((p0 = _next(p0)))`)
+    expect(code).toContain(`const n2 = _child((p0 = _next(p0)))`)
+    expect(code).not.toMatch(/const p\d =/)
+    expect(code).not.toMatch(/let p[1-9]\d* =/)
     expect(code).toMatchSnapshot()
   })
 
@@ -56,7 +62,68 @@ describe('compiler: children transform', () => {
         <div>{{ msg }}</div>
       </div>`,
     )
-    expect(code).contains(`const n0 = _nthChild(n1, 2, 2)`)
+    expect(code).contains(`const n0 = _nthChild(n1, 2)`)
+    expect(code).toMatchSnapshot()
+  })
+
+  test('inline placeholder when branching access paths share one parent access', () => {
+    const { code } = compileWithElementTransform(
+      `<div>
+        <div>
+          <section><span>{{ first }}</span></section>
+          <section><span>{{ second }}</span></section>
+        </div>
+      </div>`,
+    )
+    expect(code).toMatch(/let p\d = _child\(_child\(n\d\)\)/)
+    expect(code).not.toMatch(/let p\d = _child\(n\d\)/)
+    expect(code).toMatch(/const n\d = _child\(p\d\)/)
+    expect(code).toMatch(/const n\d = _child\(\(p\d = _next\(p\d\)\)\)/)
+    expect(code).toMatchSnapshot()
+  })
+
+  test('reuse cursor assignment for non-adjacent following access path', () => {
+    const { code } = compileWithElementTransform(
+      `<div>
+        <div><span>{{ first }}</span></div>
+        <i></i>
+        <div><span>{{ second }}</span></div>
+      </div>`,
+    )
+    const pDecls = code.match(/let p\d =/g) || []
+    expect(pDecls).toHaveLength(1)
+    expect(code).toMatch(/let p\d = _child\(n\d\)/)
+    expect(code).toMatch(/const n\d = _child\(\(p\d = _nthChild\(n\d, 2\)\)\)/)
+    expect(code).toMatchSnapshot()
+  })
+
+  test('materialize placeholder when inline would duplicate parent access', () => {
+    const { code } = compileWithElementTransform(
+      `<div>
+        <section>
+          <div><span>{{ first }}</span></div>
+          <i></i>
+          <div><span>{{ second }}</span></div>
+        </section>
+      </div>`,
+    )
+    expect(code).toMatch(/let p\d = _child\(n\d\)/)
+    expect(code).toMatch(/_nthChild\(p\d, 2\)/)
+    expect(code).not.toMatch(/_nthChild\(_child\(n\d\), 2\)/)
+    expect(code).toMatchSnapshot()
+  })
+
+  test('keep nested operation parent as node variable before sibling lookup', () => {
+    const { code } = compileWithElementTransform(
+      `<div>
+        <section><Comp /></section>
+        <section><span>{{ msg }}</span></section>
+      </div>`,
+    )
+    expect(code).toContain('const n1 = _child(n3)')
+    expect(code).toContain('const n2 = _child(_next(n1))')
+    expect(code).toContain('_setInsertionState(n1)')
+    expect(code).not.toContain('p0 = _next')
     expect(code).toMatchSnapshot()
   })
 
@@ -69,8 +136,66 @@ describe('compiler: children transform', () => {
       </div>`,
     )
     // ensure the insertion anchor is generated before the insertion statement
-    expect(code).toMatch(`const n3 = _next(_child(n4), 1)`)
-    expect(code).toMatch(`_setInsertionState(n4, n3, 1, true)`)
+    expect(code).toMatch(`const n3 = _next(_child(n4))`)
+    expect(code).toMatch(`_setInsertionState(n4, n3)`)
     expect(code).toMatchSnapshot()
+  })
+
+  describe('children that render nothing', () => {
+    // the parser drops the leading newline of <pre> per the html spec but
+    // keeps the now empty text node in the ast; an empty literal among
+    // element children renders nothing either. Neither has a node in the
+    // template string, so siblings must not be located past them.
+    // (<textarea> gets the same newline treatment but is RCDATA, so it can
+    // only ever hold text and never has a sibling to locate.)
+    test.each([
+      ['<pre>\n<b>{{ msg }}</b></pre>', '<pre><b> ', `const n0 = _child(n1)`],
+      [
+        '<pre>\n<code>{{ msg }}</code>\n</pre>',
+        '<pre><code> </code>\n',
+        `const n0 = _child(n1)`,
+      ],
+      ['<pre>\r\n<b>{{ msg }}</b></pre>', '<pre><b> ', `const n0 = _child(n1)`],
+      [
+        '<pre>\n<b>x</b>{{ msg }}</pre>',
+        '<pre><b>x</b> ',
+        `const n0 = _next(_child(n1), true)`,
+      ],
+      [
+        `<div>{{ '' }}<b>{{ msg }}</b></div>`,
+        '<div><b> ',
+        `const n0 = _child(n1)`,
+      ],
+      // untouched: the remaining newline is a text node of its own
+      [
+        '<pre>\n\n<b>{{ msg }}</b></pre>',
+        '<pre>\n\n<b> ',
+        `const n0 = _next(_child(n1))`,
+      ],
+      ['<div>\n<b>{{ msg }}</b></div>', '<div><b> ', `const n0 = _child(n1)`],
+    ])(
+      '%j builds %j and locates children with %j',
+      (source, template, access) => {
+        const { code, ir } = compileWithElementTransform(source)
+
+        expect([...ir.template.keys()]).toMatchObject([template])
+        expect(code).toContain(access)
+      },
+    )
+
+    test('does not make the parent dynamic', () => {
+      const { code } = compileWithElementTransform(
+        `<div><pre>\n<b>s</b></pre><i>{{ msg }}</i></div>`,
+      )
+
+      expect(code).toContain(`const n0 = _next(_child(n1))`)
+      expect(code).not.toMatch(/let p\d/)
+    })
+
+    test('keeps a fully static template static', () => {
+      const { code } = compileWithElementTransform(`<pre>\n<b>s</b></pre>`)
+
+      expect(code).toContain(`_template("<pre><b>s", 3)`)
+    })
   })
 })

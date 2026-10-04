@@ -3,17 +3,50 @@ packages:
   - 'packages-private/*'
 
 catalog:
-  '@babel/parser': ^7.29.2
-  '@babel/types': ^7.29.0
+  '@babel/parser': ^7.29.8
+  '@babel/types': ^7.29.8
   'entities': '^7.0.1'
   'estree-walker': ^2.0.2
-  'vite': npm:@voidzero-dev/vite-plus-core@latest
-  '@vitejs/plugin-vue': ^6.0.5
+  'vite': npm:@voidzero-dev/vite-plus-core@1.0.0-rc.0
+  '@vitejs/plugin-vue': ^6.0.9
   'magic-string': ^0.30.21
   'source-map-js': ^1.2.1
+  vitest: 5.0.1
+  vite-plus: 1.0.0-rc.0
+  '@vitest/browser-playwright': 5.0.1
+  '@vitest/coverage-v8': 5.0.1
+  '@vitest/ui': 5.0.1
 
-onlyBuiltDependencies:
-  - '@swc/core'
-  - 'puppeteer'
-  - 'simple-git-hooks'
-  - 'unrs-resolver'
+allowBuilds:
+  '@parcel/watcher': true
+  '@swc/core': true
+  'esbuild': true
+  'puppeteer': true
+  'simple-git-hooks': true
+  'unrs-resolver': true
+  'vue-demi': true
+
+dedupePeers: true
+
+peerDependencyRules:
+  allowedVersions:
+    'typescript-eslint>eslint': '^9.0.0'
+    '@typescript-eslint/eslint-plugin>eslint': '^9.0.0'
+    '@typescript-eslint/parser>eslint': '^9.0.0'
+    '@typescript-eslint/type-utils>eslint': '^9.0.0'
+    '@typescript-eslint/utils>eslint': '^9.0.0'
+    vite: '*'
+    vitest: '*'
+  allowAny:
+    - vite
+    - vitest
+
+minimumReleaseAge: 1440
+minimumReleaseAgeExclude:
+  # Renovate security update: postcss@8.5.23
+  - postcss@8.5.23
+overrides:
+  vite@*: 'catalog:'
+  vitest@*: 'catalog:'
+
+trustPolicy: no-downgrade

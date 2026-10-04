@@ -3,7 +3,7 @@
     "noEmit": true,
     "strict": true,
     "module": "esnext",
-    "moduleResolution": "node",
+    "moduleResolution": "bundler",
     "jsx": "preserve",
     "lib": ["esnext", "dom"]
   },

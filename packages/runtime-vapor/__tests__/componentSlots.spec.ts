@@ -1,5 +1,3 @@
-// NOTE: This test is implemented based on the case of `runtime-core/__test__/componentSlots.spec.ts`.
-
 import {
   VaporTeleport,
   child,
@@ -9,53 +7,90 @@ import {
   createIf,
   createSlot,
   createVaporApp,
+  createVaporSSRApp,
+  defineVaporAsyncComponent,
   defineVaporComponent,
   insert,
-  prepend,
+  next,
   remove,
   renderEffect,
   setInsertionState,
   template,
   txt,
   vaporInteropPlugin,
-  withVaporCtx,
 } from '../src'
 import {
+  Comment,
   type Ref,
   createApp,
   createSlots,
   currentInstance,
   h,
+  markRaw,
   nextTick,
   onScopeDispose,
+  reactive,
   ref,
   renderSlot,
   shallowRef,
   toDisplayString,
+  useSlots,
 } from '@vue/runtime-dom'
-import { makeRender } from './_utils'
+import {
+  VaporBlockShape,
+  VaporIfFlags,
+  VaporSlotFlags,
+  VaporSlotStability,
+  VaporVForFlags,
+  extend,
+} from '@vue/shared'
+import { compile, makeRender, renderParity } from './_utils'
 import type { DynamicSlot } from '../src/componentSlots'
 import { setElementText, setText } from '../src/dom/prop'
-import { type Block, isValidBlock } from '../src/block'
-import { hydrateNode, setCurrentHydrationNode } from '../src/dom/hydration'
+import {
+  type Block,
+  type BlockFn,
+  isValidBlock,
+  isValidSlot,
+} from '../src/block'
+import {
+  claimUntrackedAnchor,
+  hydrateNode,
+  isClaimedAnchor,
+  setCurrentHydrationNode,
+  setIsHydratingEnabled,
+} from '../src/dom/hydration'
 import {
   DynamicFragment,
-  ForFragment,
-  type SlotBoundaryContext,
-  SlotFallbackController,
   SlotFragment,
-  VaporFragment,
-  getCurrentSlotBoundary,
-  getCurrentSlotEndAnchor,
-  isHydratingSlotFallbackActive,
-  trackSlotBoundaryDirtying,
-  withHydratingSlotBoundary,
-  withHydratingSlotFallbackActive,
-  withOwnedSlotBoundary,
-  withSlotFallbackBoundary,
+  isVaporSlotOutlet,
 } from '../src/fragment'
+import { IF } from '../src/fragmentFlags'
+import {
+  type SlotBoundaryContext,
+  trackSlotBoundaryDirtying,
+  withSlotBoundary,
+} from '../src/slotBoundary'
+import { currentRenderContext } from '../src/renderContext'
+import {
+  type SlotResolutionState,
+  markSlotResolutionDirty,
+  recheckSlotResolution,
+} from '../src/slotFragment'
+import {
+  hydrateDynamicFragmentAnchor,
+  withHydratingSlotBoundary,
+} from '../src/dom/hydrateFragment'
 
 const define = makeRender<any>()
+const keyedIfShape =
+  VaporBlockShape.SINGLE_ROOT | (1 << VaporIfFlags.INDEX_SHIFT)
+const slotRootIfShape = VaporBlockShape.SINGLE_ROOT | VaporIfFlags.SLOT_ROOT
+const keyedSlotRootIfShape = keyedIfShape | VaporIfFlags.SLOT_ROOT
+const slotRootForFlags = VaporVForFlags.SLOT_ROOT
+const nonStableSlot = { _: VaporSlotStability.NON_STABLE } as const
+const createInheritedSlotRoot = (name: string, fallback?: BlockFn) =>
+  createSlot(name, null, fallback, VaporSlotFlags.FORWARDED)
 
 function renderWithSlots(slots: any): any {
   let instance: any
@@ -76,6 +111,42 @@ function renderWithSlots(slots: any): any {
 
   render()
   return instance
+}
+
+function createTestSlotResolutionState(options: {
+  fallback?: BlockFn
+  content?: Block
+  parentNode?: ParentNode | null
+  anchor?: Node | null
+  isBusy?: () => boolean
+  isContentValid?: () => boolean
+  isDisposed?: () => boolean
+}): SlotResolutionState {
+  let state!: SlotResolutionState
+  const boundary: SlotBoundaryContext = {
+    getParent: () => null,
+    getFallback: () => options.fallback,
+    run: (fn, scope) => (scope ? scope.run(fn)! : fn()),
+    markDirty: force => markSlotResolutionDirty(state, force),
+  }
+  state = {
+    boundary,
+    activeFallback: null,
+    fallbackInserted: false,
+    pendingRecheck: false,
+    pendingRecheckForce: false,
+    isReconciling: false,
+    getContent: () => options.content || [],
+    getParentNode: () => options.parentNode || null,
+    getAnchor: () => options.anchor || null,
+    isBusy: options.isBusy || (() => false),
+    isDisposed: options.isDisposed || (() => false),
+    isContentValid:
+      options.isContentValid || (() => isValidSlot(options.content || [])),
+    syncNodes: () => {},
+    notifyExposedValidityChange: vi.fn(),
+  }
+  return state
 }
 
 describe('component: slots', () => {
@@ -155,6 +226,74 @@ describe('component: slots', () => {
     ).not.toHaveBeenWarned()
   })
 
+  test('should ignore key on <template v-slot> like vdom', async () => {
+    const reused: boolean[] = []
+    const { vdom, vapor } = await renderParity(
+      {
+        Child: `<template><div><slot>fallback</slot><slot name="foo" :x="1">fallback</slot></div></template>`,
+        App: `<template><components.Child>
+          <template #default :key="data.k"><input /></template>
+          <template #foo="{ x }" :key="data.k">foo{{ x }}</template>
+        </components.Child></template>`,
+      },
+      () => ref({ k: 1 }),
+      async (data, root) => {
+        const input = root.querySelector('input')
+        data.value.k = 2
+        await nextTick()
+        reused.push(!!input && root.querySelector('input') === input)
+      },
+    )
+    // the slot is rendered and patched in place, not remounted
+    expect(reused).toEqual([true, true])
+    expect(vapor.text).toBe(vdom.text)
+  })
+
+  test('should keep number literal slot props as numbers like vdom', async () => {
+    const { vdom, vapor } = await renderParity(
+      {
+        Child: `<template><slot :count="0" :level="1" :ratio="1.5"/></template>`,
+        App: `<template><components.Child v-slot="{ count, level, ratio }">{{ typeof count }}/{{ count + 1 }}/{{ count === 0 }}/{{ level === 1 }}/{{ ratio }}</components.Child></template>`,
+      },
+      () => ref(0),
+      () => {},
+    )
+    expect(vdom.text).toBe('number/1/true/true/1.5')
+    expect(vapor.text).toBe(vdom.text)
+  })
+
+  test('v-if / v-for slots override unconditional ones like vdom', async () => {
+    const texts: Record<string, string[]> = {}
+    await renderParity(
+      {
+        Child: `<template><div><slot name="a">fa</slot>|<slot name="b">fb</slot></div></template>`,
+        App: `<template><components.Child>
+          <template v-for="n in data.names" #[n]>forwarded {{ n }}</template>
+          <template #a>own a</template>
+          <template v-if="data.ok" #b>own b</template>
+          <template #[data.name]>computed</template>
+        </components.Child></template>`,
+      },
+      () => ref({ names: ['a'], ok: true, name: 'b' }),
+      async (data, root, mode) => {
+        const seen = [root.textContent!]
+        data.value.names = []
+        await nextTick()
+        seen.push(root.textContent!)
+        data.value.ok = false
+        await nextTick()
+        seen.push(root.textContent!)
+        texts[mode] = seen
+      },
+    )
+    expect(texts.vdom).toEqual([
+      'forwarded a|own b',
+      'own a|own b',
+      'own a|computed',
+    ])
+    expect(texts.vapor).toEqual(texts.vdom)
+  })
+
   describe('slot fallback boundary', () => {
     test('slot fragment insert uses active fallback output', () => {
       const container = document.createElement('div')
@@ -167,6 +306,17 @@ describe('component: slots', () => {
       expect(container.innerHTML).toBe('fallback<!--slot-->')
     })
 
+    test('claimed structural anchors are not valid blocks', () => {
+      // Prod anchors are text nodes; without the claim marker they read as
+      // renderable content and suppress slot fallback in prod only.
+      expect(
+        isValidBlock(claimUntrackedAnchor(document.createTextNode(''))),
+      ).toBe(false)
+      expect(
+        isValidSlot([[], claimUntrackedAnchor(document.createTextNode(''))]),
+      ).toBe(false)
+    })
+
     test('slot fragment validity uses active fallback output', () => {
       const frag = new SlotFragment()
 
@@ -175,12 +325,25 @@ describe('component: slots', () => {
       expect(isValidBlock(frag)).toBe(true)
     })
 
-    test('slot fragment validityPending takes precedence over effective output', () => {
-      const frag = new SlotFragment()
+    test('slot root does not notify parent while exposed validity stays valid', () => {
+      const markDirty = vi.fn()
+      const parentBoundary: SlotBoundaryContext = {
+        getParent: () => null,
+        getFallback: () => undefined,
+        run: fn => fn(),
+        markDirty,
+      }
+      const frag = withSlotBoundary(
+        parentBoundary,
+        () => new SlotFragment(VaporSlotFlags.FORWARDED),
+      )
+      const fallback = () => document.createTextNode('fallback')
 
-      frag.validityPending = true
+      frag.updateSlot(() => [], fallback)
+      markDirty.mockClear()
+      frag.updateSlot(() => document.createTextNode('content'), fallback)
 
-      expect(isValidBlock(frag)).toBe(true)
+      expect(markDirty).not.toHaveBeenCalled()
     })
 
     test('slot fragment remove cleans active fallback and fallback scope', () => {
@@ -205,92 +368,91 @@ describe('component: slots', () => {
       const inheritedFallback = vi.fn(() =>
         document.createTextNode('inherited fallback'),
       )
-      const frag = new SlotFragment()
-      frag.parentSlotBoundary = {
-        parent: null,
-        getLocalFallback: () => inheritedFallback,
+      const parentBoundary: SlotBoundaryContext = {
+        getParent: () => null,
+        getFallback: () => inheritedFallback,
+        run: fn => fn(),
         markDirty: vi.fn(),
       }
+      const frag = withSlotBoundary(
+        parentBoundary,
+        () => new SlotFragment(VaporSlotFlags.FORWARDED),
+      )
 
       frag.updateSlot(undefined, localFallback)
 
-      expect(frag.fallbackBlock).toBeInstanceOf(Text)
-      expect((frag.fallbackBlock as Text).textContent).toBe('local fallback')
+      expect(frag.activeFallback).toBeInstanceOf(Text)
+      expect((frag.activeFallback as Text).textContent).toBe('local fallback')
+      expect(localFallback).toHaveBeenCalled()
+      expect(inheritedFallback).not.toHaveBeenCalled()
+    })
+
+    test('shared fallback slot root leaves inherited fallback to parent', () => {
+      const localFallback = vi.fn(() => [])
+      const inheritedFallback = vi.fn(() =>
+        document.createTextNode('inherited fallback'),
+      )
+      const parentBoundary: SlotBoundaryContext = {
+        getParent: () => null,
+        getFallback: () => inheritedFallback,
+        run: fn => fn(),
+        markDirty: vi.fn(),
+      }
+      const frag = withSlotBoundary(
+        parentBoundary,
+        () =>
+          new SlotFragment(
+            VaporSlotFlags.FORWARDED | VaporSlotFlags.SHARED_FALLBACK,
+          ),
+      )
+
+      frag.updateSlot(undefined, localFallback)
+
+      expect(isValidBlock(frag)).toBe(false)
       expect(localFallback).toHaveBeenCalled()
       expect(inheritedFallback).not.toHaveBeenCalled()
     })
 
     test('slot fragment local fallback renders nested slots against the parent boundary', () => {
-      const parentBoundary = {
-        parent: null,
-        getLocalFallback: () => () => document.createTextNode('outer fallback'),
+      const parentBoundary: SlotBoundaryContext = {
+        getParent: () => null,
+        getFallback: () => () => document.createTextNode('outer fallback'),
+        run: (fn: () => any) => fn(),
         markDirty: vi.fn(),
       }
-      const frag = new SlotFragment()
-      frag.parentSlotBoundary = parentBoundary
+      const frag = withSlotBoundary(
+        parentBoundary,
+        () => new SlotFragment(VaporSlotFlags.FORWARDED),
+      )
       let fallbackBoundary: any
 
       frag.updateSlot(undefined, () => {
-        fallbackBoundary = getCurrentSlotBoundary()
+        fallbackBoundary = currentRenderContext.slotBoundary
         return []
       })
 
       // Fallback body renders under a redirected boundary whose `.parent` is
       // the owning boundary's parent — so nested slots inherit from the
       // grandparent, avoiding fallback -> <slot> -> same fallback recursion.
-      expect(fallbackBoundary).not.toBe(frag.slotFallbackBoundary)
-      expect(fallbackBoundary.parent).toBe(parentBoundary)
-    })
-
-    test('withSlotFallbackBoundary reuses the same redirected boundary', () => {
-      const parentBoundaryA = {
-        parent: null,
-        getLocalFallback: () => undefined,
-        markDirty: vi.fn(),
-      }
-      const parentBoundaryB = {
-        parent: null,
-        getLocalFallback: () => undefined,
-        markDirty: vi.fn(),
-      }
-      let activeParent = parentBoundaryA
-      const boundary: SlotBoundaryContext = {
-        get parent() {
-          return activeParent
-        },
-        getLocalFallback: () => () => document.createTextNode('fallback'),
-        markDirty: vi.fn(),
-      }
-      let firstBoundary!: SlotBoundaryContext | null
-      let secondBoundary!: SlotBoundaryContext | null
-
-      withSlotFallbackBoundary(boundary, () => {
-        firstBoundary = getCurrentSlotBoundary()
-      })
-
-      activeParent = parentBoundaryB
-
-      withSlotFallbackBoundary(boundary, () => {
-        secondBoundary = getCurrentSlotBoundary()
-      })
-
-      expect(firstBoundary).toBe(secondBoundary)
-      expect(firstBoundary!.parent).toBe(parentBoundaryB)
-      expect(firstBoundary!.getLocalFallback()).toBeUndefined()
+      expect(fallbackBoundary).not.toBe(frag.boundary)
+      expect(fallbackBoundary.getParent()).toBe(parentBoundary)
     })
 
     test('slot fragment local fallback keeps itself as owner for nested fragments', () => {
       const container = document.createElement('div')
-      const parentBoundary = {
-        parent: null,
-        getLocalFallback: () => () => document.createTextNode('outer fallback'),
+      const parentBoundary: SlotBoundaryContext = {
+        getParent: () => null,
+        getFallback: () => () => document.createTextNode('outer fallback'),
+        run: (fn: () => any) => fn(),
         markDirty: vi.fn(),
       }
-      const frag = new SlotFragment()
-      const child = new DynamicFragment('if', false, false)
+      const frag = withSlotBoundary(
+        parentBoundary,
+        () => new SlotFragment(VaporSlotFlags.FORWARDED),
+      )
+      const child = new DynamicFragment(IF, 'if', false, false)
       let initialized = false
 
-      frag.parentSlotBoundary = parentBoundary
       frag.updateSlot(undefined, () => {
         if (!initialized) {
           initialized = true
@@ -305,7 +467,7 @@ describe('component: slots', () => {
 
       child.update(() => [])
 
-      expect(container.innerHTML).toBe('outer fallback<!--if--><!--slot-->')
+      expect(container.innerHTML).toBe('outer fallback<!--slot-->')
     })
 
     test('slot fragment local fallback ignores unrelated ancestor fallback refs', async () => {
@@ -314,14 +476,13 @@ describe('component: slots', () => {
         document.createTextNode('local fallback'),
       )
       const container = document.createElement('div')
-      const frag = new SlotFragment()
-      const parentBoundary = {
-        parent: null,
-        getLocalFallback: () => () =>
-          document.createTextNode(ancestorText.value),
+      const parentBoundary: SlotBoundaryContext = {
+        getParent: () => null,
+        getFallback: () => () => document.createTextNode(ancestorText.value),
+        run: (fn: () => any) => fn(),
         markDirty: vi.fn(),
       }
-      frag.parentSlotBoundary = parentBoundary
+      const frag = withSlotBoundary(parentBoundary, () => new SlotFragment())
 
       frag.updateSlot(undefined, localFallback)
       insert(frag, container)
@@ -335,139 +496,817 @@ describe('component: slots', () => {
       expect(localFallback).toHaveBeenCalledTimes(1)
     })
 
-    test('slot fragment activates local fallback while preserving content carrier', () => {
-      const container = document.createElement('div')
-      const content = new DynamicFragment('if', false, false)
-      const frag = new SlotFragment()
-
-      frag.updateSlot(
-        () => content,
-        () => document.createTextNode('fallback'),
+    test('compiled root v-if slot content toggles fallback without keeping the inactive anchor in DOM', async () => {
+      const show = ref(false)
+      const Child = compile(`<template><slot>fallback</slot></template>`, show)
+      const App = compile(
+        `<template>
+          <components.Child>
+            <template v-if="data">content</template>
+          </components.Child>
+        </template>`,
+        show,
+        { Child },
       )
-      insert(frag, container)
+      const root = document.createElement('div')
+      const app = createVaporApp(App)
+      app.mount(root)
 
-      expect(container.innerHTML).toBe('fallback<!--if--><!--slot-->')
+      expect(root.innerHTML).toBe('fallback<!--slot-->')
+
+      show.value = true
+      await nextTick()
+
+      expect(root.innerHTML).toBe('content<!--if--><!--slot-->')
+
+      show.value = false
+      await nextTick()
+
+      expect(root.innerHTML).toBe('fallback<!--slot-->')
+
+      show.value = true
+      await nextTick()
+
+      expect(root.innerHTML).toBe('content<!--if--><!--slot-->')
+      app.unmount()
     })
 
-    test('slot fragment activates local fallback while preserving v-for carrier', () => {
-      const container = document.createElement('div')
-      const content = new ForFragment([[], document.createComment('for')])
-      const frag = new SlotFragment()
-
-      frag.updateSlot(
-        () => content,
-        () => document.createTextNode('fallback'),
+    test('compiled root v-for slot content switches local fallback without keeping the inactive anchor in DOM', async () => {
+      const items = ref<string[]>([])
+      const Child = compile(`<template><slot>fallback</slot></template>`, items)
+      const App = compile(
+        `<template>
+          <components.Child>
+            <template v-for="item in data">
+              {{ item }}
+            </template>
+          </components.Child>
+        </template>`,
+        items,
+        { Child },
       )
-      insert(frag, container)
+      const root = document.createElement('div')
+      const app = createVaporApp(App)
+      app.mount(root)
 
-      expect(container.innerHTML).toBe('fallback<!--for--><!--slot-->')
+      expect(root.innerHTML).toBe('fallback<!--slot-->')
+
+      items.value = ['content']
+      await nextTick()
+
+      expect(root.innerHTML).toBe('content<!--for--><!--slot-->')
+      app.unmount()
     })
 
-    test('slot fragment delays fallback activation until pending child validity resolves', () => {
-      const container = document.createElement('div')
-      const frag = new SlotFragment()
-      let child!: VaporFragment
+    test('compiled root dynamic component slot content switches to fallback', async () => {
+      const current = shallowRef<any>(() => document.createTextNode('content'))
+      const Child = compile(
+        `<template><slot>fallback</slot></template>`,
+        current,
+      )
+      const App = compile(
+        `<template>
+          <components.Child>
+            <component :is="data" />
+          </components.Child>
+        </template>`,
+        current,
+        { Child },
+      )
+      const root = document.createElement('div')
+      const app = createVaporApp(App)
+      app.mount(root)
 
-      frag.updateSlot(
-        () => {
-          child = new VaporFragment([])
-          child.validityPending = true
-          trackSlotBoundaryDirtying(child)
-          return child
+      expect(root.innerHTML).toBe('content<!--dynamic-component--><!--slot-->')
+
+      current.value = null
+      await nextTick()
+
+      expect(root.innerHTML).toBe('fallback<!--slot-->')
+
+      current.value = () => document.createTextNode('restored')
+      await nextTick()
+
+      expect(root.innerHTML).toBe('restored<!--dynamic-component--><!--slot-->')
+      app.unmount()
+    })
+
+    test('compiled root v-for slot content with invalid branch switches fallback', async () => {
+      const items = ref([{ text: 'bar', show: false }])
+      const Child = compile(`<template><slot>fallback</slot></template>`, items)
+      const App = compile(
+        `<template>
+          <components.Child>
+            <template v-for="item in data" :key="item.text">
+              <span v-if="item.show">{{ item.text }}</span>
+            </template>
+          </components.Child>
+        </template>`,
+        items,
+        { Child },
+      )
+      const root = document.createElement('div')
+      const app = createVaporApp(App)
+      app.mount(root)
+
+      expect(root.innerHTML).toBe('fallback<!--slot-->')
+
+      items.value[0].show = true
+      await nextTick()
+
+      expect(root.innerHTML).toBe(
+        '<span>bar</span><!--if--><!--for--><!--slot-->',
+      )
+
+      items.value[0].show = false
+      await nextTick()
+
+      expect(root.innerHTML).toBe('fallback<!--slot-->')
+      app.unmount()
+    })
+
+    test('compiled v-for slot content unregisters invalid callbacks for removed item roots', async () => {
+      let boundary: SlotBoundaryContext | null | undefined
+      const data = ref({
+        items: [
+          { id: 1, show: true },
+          { id: 2, show: true },
+        ],
+        capture: () => {
+          if (currentRenderContext.slotBoundary) {
+            boundary = currentRenderContext.slotBoundary
+          }
+          return true
         },
-        () => document.createTextNode('fallback'),
+      })
+      const Child = compile(`<template><slot>fallback</slot></template>`, data)
+      const Leaf = compile(`<template><span>item</span></template>`, data)
+      const App = compile(
+        `<template>
+          <components.Child>
+            <template v-for="item in data.items" :key="item.id">
+              <components.Leaf v-if="data.capture() && item.show" />
+            </template>
+          </components.Child>
+        </template>`,
+        data,
+        { Child, Leaf },
       )
-      insert(frag, container)
+      const root = document.createElement('div')
+      const app = createVaporApp(App)
+      app.mount(root)
 
-      expect(container.innerHTML).toBe('<!--slot-->')
+      const initialCallbacks = boundary!.onContentInvalid!.length
+      expect(initialCallbacks).toBeGreaterThan(1)
 
-      child.validityPending = false
-      child.nodes = []
-      child.onUpdated!.forEach(hook => hook())
+      data.value.items = [{ id: 2, show: true }]
+      await nextTick()
 
-      expect(container.innerHTML).toBe('fallback<!--slot-->')
+      expect(boundary!.onContentInvalid!.length).toBe(initialCallbacks - 1)
+      app.unmount()
     })
 
-    test('slot fallback controller ignores dirty notifications after dispose', () => {
-      let disposed = false
-      const controller = new SlotFallbackController({
-        getParentBoundary: () => null,
-        getLocalFallback: () => undefined,
+    test('compiled nested slot root v-if unregisters invalid callbacks for removed inner roots', async () => {
+      let boundary: SlotBoundaryContext | null | undefined
+      const data = ref({
+        outer: true,
+        inner: true,
+        capture: () => {
+          if (currentRenderContext.slotBoundary) {
+            boundary = currentRenderContext.slotBoundary
+          }
+          return true
+        },
+      })
+      const Child = compile(`<template><slot>fallback</slot></template>`, data)
+      const App = compile(
+        `<template>
+          <components.Child>
+            <template v-if="data.outer">
+              <span v-if="data.capture() && data.inner">item</span>
+            </template>
+          </components.Child>
+        </template>`,
+        data,
+        { Child },
+      )
+      const root = document.createElement('div')
+      const app = createVaporApp(App)
+      app.mount(root)
+
+      const initialCallbacks = boundary!.onContentInvalid!.length
+      expect(initialCallbacks).toBeGreaterThan(1)
+
+      data.value.outer = false
+      await nextTick()
+
+      expect(boundary!.onContentInvalid!.length).toBe(initialCallbacks - 1)
+      app.unmount()
+    })
+
+    test('compiled nested slot root v-if unregisters invalid callbacks while fallback is active', async () => {
+      let boundary: SlotBoundaryContext | null | undefined
+      const data = ref({
+        outer: true,
+        inner: false,
+        capture: () => {
+          if (currentRenderContext.slotBoundary) {
+            boundary = currentRenderContext.slotBoundary
+          }
+          return true
+        },
+      })
+      const Child = compile(`<template><slot>fallback</slot></template>`, data)
+      const App = compile(
+        `<template>
+          <components.Child>
+            <template v-if="data.outer">
+              <span v-if="data.capture() && data.inner">item</span>
+            </template>
+          </components.Child>
+        </template>`,
+        data,
+        { Child },
+      )
+      const root = document.createElement('div')
+      const app = createVaporApp(App)
+      app.mount(root)
+
+      expect(root.innerHTML).toBe('fallback<!--slot-->')
+      const initialCallbacks = boundary!.onContentInvalid!.length
+      expect(initialCallbacks).toBeGreaterThan(1)
+
+      data.value.outer = false
+      await nextTick()
+
+      expect(boundary!.onContentInvalid!.length).toBe(initialCallbacks - 1)
+      app.unmount()
+    })
+
+    test('compiled slot fallback falls through and restores local root v-if fallback without keeping inactive anchor in DOM', async () => {
+      const show = ref(false)
+      const Outer = compile(
+        `<template><slot>parent fallback</slot></template>`,
+        show,
+      )
+      const Child = compile(
+        `<template>
+          <components.Outer>
+            <slot>
+              <span v-if="data">local fallback</span>
+            </slot>
+          </components.Outer>
+        </template>`,
+        show,
+        { Outer },
+      )
+      const App = compile(
+        `<template>
+          <components.Child>
+            <span v-if="false">content</span>
+          </components.Child>
+        </template>`,
+        show,
+        { Child },
+      )
+      const root = document.createElement('div')
+      const app = createVaporApp(App)
+      app.mount(root)
+
+      expect(root.innerHTML).toBe('parent fallback<!--slot--><!--slot-->')
+
+      show.value = true
+      await nextTick()
+
+      expect(root.innerHTML).toBe(
+        '<span>local fallback</span><!--if--><!--slot--><!--slot-->',
+      )
+
+      show.value = false
+      await nextTick()
+
+      expect(root.innerHTML).toBe('parent fallback<!--slot--><!--slot-->')
+      app.unmount()
+    })
+
+    test('compiled slot keeps active fallback anchor when fallback becomes invalid without parent fallback', async () => {
+      const show = ref(true)
+      const Child = compile(
+        `<template>
+          <slot>
+            <span v-if="data">fallback</span>
+          </slot>
+        </template>`,
+        show,
+      )
+      const App = compile(
+        `<template>
+          <components.Child>
+            <span v-if="false">content</span>
+          </components.Child>
+        </template>`,
+        show,
+        { Child },
+      )
+      const root = document.createElement('div')
+      const app = createVaporApp(App)
+      app.mount(root)
+
+      expect(root.innerHTML).toBe('<span>fallback</span><!--if--><!--slot-->')
+
+      show.value = false
+      await nextTick()
+
+      expect(root.innerHTML).toBe('<!--if--><!--slot-->')
+
+      show.value = true
+      await nextTick()
+
+      expect(root.innerHTML).toBe('<span>fallback</span><!--if--><!--slot-->')
+      app.unmount()
+    })
+
+    test('compiled forwarded fallback preserves stable root when dynamic sibling becomes invalid', async () => {
+      const show = ref(true)
+      const Outer = compile(
+        `<template><slot>parent fallback</slot></template>`,
+        show,
+      )
+      const Child = compile(
+        `<template>
+          <components.Outer>
+            <slot>
+              <input value="stable">
+              <span v-if="data">dynamic</span>
+            </slot>
+          </components.Outer>
+        </template>`,
+        show,
+        { Outer },
+      )
+      const App = compile(
+        `<template>
+          <components.Child>
+            <span v-if="false">content</span>
+          </components.Child>
+        </template>`,
+        show,
+        { Child },
+      )
+      const root = document.createElement('div')
+      const app = createVaporApp(App)
+      app.mount(root)
+
+      expect(root.innerHTML).toBe(
+        '<input value="stable"><span>dynamic</span><!--if--><!--slot--><!--slot-->',
+      )
+      const input = root.querySelector('input')!
+      input.value = 'typed'
+
+      show.value = false
+      await nextTick()
+
+      expect(root.querySelector('input')).toBe(input)
+      expect(input.value).toBe('typed')
+      expect(root.innerHTML).toBe(
+        '<input value="stable"><!--if--><!--slot--><!--slot-->',
+      )
+
+      show.value = true
+      await nextTick()
+
+      expect(root.querySelector('input')).toBe(input)
+      expect(input.value).toBe('typed')
+      expect(root.innerHTML).toBe(
+        '<input value="stable"><span>dynamic</span><!--if--><!--slot--><!--slot-->',
+      )
+      app.unmount()
+    })
+
+    test('slot fallback falls through and restores local root v-if fallback without keeping inactive anchor in DOM', async () => {
+      const container = document.createElement('div')
+      const anchor = document.createComment('slot')
+      const showLocal = ref(false)
+      let state!: SlotResolutionState
+      const parentBoundary: SlotBoundaryContext = {
+        getParent: () => null,
+        getFallback: () => () => document.createTextNode('parent fallback'),
+        run: fn => fn(),
+        markDirty: vi.fn(),
+      }
+      const boundary: SlotBoundaryContext = {
+        getParent: () => parentBoundary,
+        getFallback: () => () =>
+          createIf(
+            () => showLocal.value,
+            () => document.createTextNode('local fallback'),
+            undefined,
+            keyedSlotRootIfShape,
+          ),
+        run: fn => fn(),
+        markDirty: force => markSlotResolutionDirty(state, force),
+      }
+      state = {
+        boundary,
+        activeFallback: null,
+        fallbackInserted: false,
+        pendingRecheck: false,
+        pendingRecheckForce: false,
+        isReconciling: false,
         getContent: () => [],
-        getParentNode: () => null,
-        getAnchor: () => null,
-        runWithRenderCtx: fn => fn(),
+        getParentNode: () => container,
+        getAnchor: () => anchor,
+        isBusy: () => false,
+        isDisposed: () => false,
+        isContentValid: () => false,
+        syncNodes: () => {},
+        notifyExposedValidityChange: vi.fn(),
+      }
+
+      container.append(anchor)
+      recheckSlotResolution(state)
+
+      expect(container.innerHTML).toBe('parent fallback<!--slot-->')
+
+      showLocal.value = true
+      await nextTick()
+
+      expect(container.innerHTML).toBe('local fallback<!--if--><!--slot-->')
+    })
+
+    test('slot fallback falls through when local fallback is removed', () => {
+      const container = document.createElement('div')
+      const anchor = document.createComment('slot')
+      let localFallback: BlockFn | undefined = () =>
+        document.createTextNode('local fallback')
+      let state!: SlotResolutionState
+      const parentBoundary: SlotBoundaryContext = {
+        getParent: () => null,
+        getFallback: () => () => document.createTextNode('parent fallback'),
+        run: fn => fn(),
+        markDirty: vi.fn(),
+      }
+      const boundary: SlotBoundaryContext = {
+        getParent: () => parentBoundary,
+        getFallback: () => localFallback,
+        run: fn => fn(),
+        markDirty: force => markSlotResolutionDirty(state, force),
+      }
+      state = {
+        boundary,
+        activeFallback: null,
+        fallbackInserted: false,
+        pendingRecheck: false,
+        pendingRecheckForce: false,
+        isReconciling: false,
+        getContent: () => [],
+        getParentNode: () => container,
+        getAnchor: () => anchor,
+        isBusy: () => false,
+        isDisposed: () => false,
+        isContentValid: () => false,
+        syncNodes: () => {},
+        notifyExposedValidityChange: vi.fn(),
+      }
+
+      container.append(anchor)
+      recheckSlotResolution(state)
+      expect(container.innerHTML).toBe('local fallback<!--slot-->')
+
+      localFallback = undefined
+      recheckSlotResolution(state, true)
+      expect(container.innerHTML).toBe('parent fallback<!--slot-->')
+    })
+
+    test('slot boundary dirtying ignores non-root v-if updates', async () => {
+      const markDirty = vi.fn()
+      const show = ref(true)
+      const boundary: SlotBoundaryContext = {
+        getParent: () => null,
+        getFallback: () => undefined,
+        run: fn => fn(),
+        markDirty,
+      }
+      const Child = defineVaporComponent(() =>
+        withSlotBoundary(boundary, () =>
+          createIf(
+            () => show.value,
+            () => document.createTextNode('content'),
+            undefined,
+            keyedIfShape,
+          ),
+        ),
+      )
+
+      define(() => createComponent(Child)).render()
+      show.value = false
+      await nextTick()
+
+      expect(markDirty).not.toHaveBeenCalled()
+    })
+
+    test('slot boundary dirtying ignores non-root v-for updates', async () => {
+      const markDirty = vi.fn()
+      const items = ref([1])
+      const boundary: SlotBoundaryContext = {
+        getParent: () => null,
+        getFallback: () => undefined,
+        run: fn => fn(),
+        markDirty,
+      }
+      const Child = defineVaporComponent(() =>
+        withSlotBoundary(boundary, () =>
+          createFor(
+            () => items.value,
+            item => document.createTextNode(String(item.value)),
+          ),
+        ),
+      )
+
+      define(() => createComponent(Child)).render()
+      items.value = []
+      await nextTick()
+
+      expect(markDirty).not.toHaveBeenCalled()
+    })
+
+    test('slot boundary dirtying tracks root v-if updates', async () => {
+      const markDirty = vi.fn()
+      const show = ref(true)
+      const boundary: SlotBoundaryContext = {
+        getParent: () => null,
+        getFallback: () => undefined,
+        run: fn => fn(),
+        markDirty,
+      }
+      const Child = defineVaporComponent(() =>
+        withSlotBoundary(boundary, () =>
+          createIf(
+            () => show.value,
+            () => document.createTextNode('content'),
+            undefined,
+            keyedSlotRootIfShape,
+          ),
+        ),
+      )
+
+      define(() => createComponent(Child)).render()
+      show.value = false
+      await nextTick()
+
+      expect(markDirty).toHaveBeenCalledTimes(1)
+
+      show.value = true
+      await nextTick()
+
+      expect(markDirty).toHaveBeenCalledTimes(2)
+    })
+
+    test('slot boundary dirtying ignores adopted v-if initial mount', async () => {
+      const markDirty = vi.fn()
+      const show = ref(true)
+      const boundary: SlotBoundaryContext = {
+        getParent: () => null,
+        getFallback: () => undefined,
+        run: fn => fn(),
+        markDirty,
+      }
+      const Child = defineVaporComponent(() => {
+        const n = template('<div><!></div>', 1)() as any
+        setInsertionState(n, child(n))
+        withSlotBoundary(boundary, () =>
+          createIf(
+            () => show.value,
+            () => document.createTextNode('content'),
+            undefined,
+            slotRootIfShape,
+          ),
+        )
+        return n
+      })
+
+      const { host } = define(() => createComponent(Child)).render()
+
+      expect(host.innerHTML).toBe('<div>content<!--if--></div>')
+      expect(markDirty).not.toHaveBeenCalled()
+
+      show.value = false
+      await nextTick()
+
+      expect(host.innerHTML).toBe('<div><!--if--></div>')
+      expect(markDirty).toHaveBeenCalledTimes(1)
+    })
+
+    test('slot boundary dirtying tracks root v-for updates', async () => {
+      const markDirty = vi.fn()
+      const items = ref([1])
+      const boundary: SlotBoundaryContext = {
+        getParent: () => null,
+        getFallback: () => undefined,
+        run: fn => fn(),
+        markDirty,
+      }
+      const Child = defineVaporComponent(() =>
+        withSlotBoundary(boundary, () =>
+          createFor(
+            () => items.value,
+            item => document.createTextNode(String(item.value)),
+            undefined,
+            slotRootForFlags,
+          ),
+        ),
+      )
+
+      define(() => createComponent(Child)).render()
+      items.value = []
+      await nextTick()
+
+      expect(markDirty).toHaveBeenCalledTimes(1)
+
+      items.value = [1]
+      await nextTick()
+
+      expect(markDirty).toHaveBeenCalledTimes(2)
+    })
+
+    test('root vapor slot validity change dirties parent boundary', async () => {
+      const markDirty = vi.fn()
+      const show = ref(true)
+      const boundary: SlotBoundaryContext = {
+        getParent: () => null,
+        getFallback: () => undefined,
+        run: fn => fn(),
+        markDirty,
+      }
+      const Child = defineVaporComponent(() =>
+        withSlotBoundary(boundary, () => createInheritedSlotRoot('default')),
+      )
+
+      define(() =>
+        createComponent(Child, null, {
+          $: [
+            () =>
+              show.value
+                ? {
+                    name: 'default',
+                    fn: () => document.createTextNode('content'),
+                  }
+                : {
+                    name: 'default',
+                    fn: () => [],
+                  },
+          ],
+        }),
+      ).render()
+      markDirty.mockClear()
+
+      show.value = false
+      await nextTick()
+
+      expect(markDirty).toHaveBeenCalledTimes(1)
+
+      show.value = true
+      await nextTick()
+
+      expect(markDirty).toHaveBeenCalledTimes(2)
+    })
+
+    test('slot resolution state ignores dirty notifications after dispose', () => {
+      let disposed = false
+      const state = createTestSlotResolutionState({
         isDisposed: () => disposed,
-        onValidityChange: vi.fn(),
       })
 
       disposed = true
-      controller.boundary.markDirty()
+      state.boundary.markDirty()
 
-      expect(controller.takePendingRecheck()).toBe(false)
+      expect(state.pendingRecheck).toBe(false)
     })
 
-    test('withHydratingSlotBoundary isolates fallback-active state between boundaries without local markers', () => {
+    test('removed slot fragment ignores queued resolution dirty notifications', () => {
+      const container = document.createElement('div')
+      const fallbackRuns = vi.fn()
+      const cleanup = vi.fn()
+      const frag = new SlotFragment()
+      frag.updateSlot(undefined, () => {
+        fallbackRuns()
+        onScopeDispose(cleanup)
+        return document.createTextNode('fallback')
+      })
+      insert(frag, container)
+      expect(container.innerHTML).toBe('fallback<!--slot-->')
+      expect(fallbackRuns).toHaveBeenCalledTimes(1)
+
+      remove(frag, container)
+      expect(container.innerHTML).toBe('')
+      expect(cleanup).toHaveBeenCalledTimes(1)
+
+      frag.boundary.markDirty()
+
+      expect(fallbackRuns).toHaveBeenCalledTimes(1)
+      expect(frag.activeFallback).toBe(null)
+      expect(cleanup).toHaveBeenCalledTimes(1)
+    })
+
+    test('empty slot hydration does not clean following sibling', async () => {
+      const start = document.createComment('[')
+      const end = document.createComment(']')
+      const footer = document.createElement('footer')
+      footer.textContent = 'footer'
+      const host = document.createElement('div')
+      host.append(start, end, footer)
+      let frag!: SlotFragment
+
+      setIsHydratingEnabled(true)
+      try {
+        hydrateNode(start, () => {
+          withHydratingSlotBoundary(() => {
+            frag = new SlotFragment()
+            setCurrentHydrationNode(footer)
+            hydrateDynamicFragmentAnchor(frag, true)
+          })
+        })
+      } finally {
+        setIsHydratingEnabled(false)
+      }
+      await nextTick()
+
+      expect(host.innerHTML).toBe('<!--[--><!--]--><footer>footer</footer>')
+      expect(frag.anchor).toBe(end)
+      expect(isClaimedAnchor(end)).toBe(true)
+      expect(`Hydration children mismatch`).not.toHaveBeenWarned()
+    })
+
+    test('empty slot hydration reuses its close anchor', () => {
       const start = document.createComment('[')
       const end = document.createComment(']')
       const host = document.createElement('div')
       host.append(start, end)
+      let frag!: SlotFragment
 
-      hydrateNode(start, () => {
-        withHydratingSlotBoundary(() => {
-          const outerEnd = getCurrentSlotEndAnchor()
-          expect(outerEnd).toBe(end)
-
-          setCurrentHydrationNode(end)
-
+      setIsHydratingEnabled(true)
+      try {
+        hydrateNode(start, () => {
           withHydratingSlotBoundary(() => {
-            expect(getCurrentSlotEndAnchor()).toBe(end)
-            expect(isHydratingSlotFallbackActive()).toBe(false)
-
-            withHydratingSlotFallbackActive(() => {
-              expect(isHydratingSlotFallbackActive()).toBe(true)
-
-              setCurrentHydrationNode(end)
-              withHydratingSlotBoundary(() => {
-                expect(getCurrentSlotEndAnchor()).toBe(end)
-                expect(isHydratingSlotFallbackActive()).toBe(false)
-              })
-            })
-
-            expect(getCurrentSlotEndAnchor()).toBe(end)
-            expect(isHydratingSlotFallbackActive()).toBe(false)
+            frag = new SlotFragment()
+            hydrateDynamicFragmentAnchor(frag, true)
           })
-
-          expect(getCurrentSlotEndAnchor()).toBe(end)
-          expect(isHydratingSlotFallbackActive()).toBe(false)
         })
-      })
+      } finally {
+        setIsHydratingEnabled(false)
+      }
+
+      expect(frag.anchor).toBe(end)
+      expect(isClaimedAnchor(end)).toBe(true)
     })
 
-    test('slot fallback controller stops fallback scope when fallback body throws', async () => {
+    test('non-forwarded empty slot hydration cleans stale content before close anchor', () => {
+      const start = document.createComment('[')
+      const stale = document.createElement('span')
+      stale.textContent = 'stale'
+      const end = document.createComment(']')
+      const footer = document.createElement('footer')
+      footer.textContent = 'footer'
+      const host = document.createElement('div')
+      host.append(start, stale, end, footer)
+      let frag!: SlotFragment
+
+      setIsHydratingEnabled(true)
+      try {
+        hydrateNode(start, () => {
+          withHydratingSlotBoundary(() => {
+            frag = new SlotFragment()
+            hydrateDynamicFragmentAnchor(frag, true)
+          })
+        })
+      } finally {
+        setIsHydratingEnabled(false)
+      }
+
+      expect(host.innerHTML).toBe('<!--[--><!--]--><footer>footer</footer>')
+      expect(frag.anchor).toBe(end)
+      expect(isClaimedAnchor(end)).toBe(true)
+      expect(`Hydration children mismatch`).toHaveBeenWarned()
+    })
+
+    test('slot resolution state stops fallback scope when fallback body throws', async () => {
       const source = ref(0)
       const effectRuns = vi.fn()
       const cleanup = vi.fn()
       const err = new Error('fallback boom')
 
-      const controller = new SlotFallbackController({
-        getParentBoundary: () => null,
-        getLocalFallback: () => () => {
+      const state = createTestSlotResolutionState({
+        fallback: () => {
           onScopeDispose(cleanup)
           renderEffect(() => {
             effectRuns(source.value)
           })
           throw err
         },
-        getContent: () => [],
-        getParentNode: () => null,
-        getAnchor: () => null,
-        runWithRenderCtx: fn => fn(),
-        onValidityChange: vi.fn(),
       })
 
-      expect(() => controller.recheck()).toThrow(err)
-      expect(controller.getActiveFallback()).toBe(null)
+      expect(() => recheckSlotResolution(state)).toThrow(err)
+      expect(state.activeFallback).toBe(null)
       expect(cleanup).toHaveBeenCalledTimes(1)
       expect(effectRuns).toHaveBeenCalledTimes(1)
 
@@ -477,129 +1316,36 @@ describe('component: slots', () => {
       expect(effectRuns).toHaveBeenCalledTimes(1)
     })
 
-    test('slot fallback controller does not accumulate order-sync hooks', async () => {
-      const fallback = new VaporFragment([
-        document.createTextNode('a'),
-        document.createTextNode('b'),
-      ])
-      const controller = new SlotFallbackController({
-        getParentBoundary: () => null,
-        getLocalFallback: () => () => fallback,
-        getContent: () => [],
-        getParentNode: () => null,
-        getAnchor: () => null,
-        runWithRenderCtx: fn => fn(),
-        onValidityChange: vi.fn(),
-      })
-
-      controller.recheck()
-      expect(fallback.onUpdated).toHaveLength(1)
-
-      controller.syncActiveFallback()
-      await nextTick()
-
-      expect(fallback.onUpdated).toHaveLength(1)
-    })
-
-    test('slot fallback controller re-syncs the whole carrier block order', async () => {
-      const container = document.createElement('div')
-      const carrierA = document.createTextNode('x')
-      const carrierB = document.createTextNode('y')
-      const marker = document.createTextNode('!')
-      const slotAnchor = document.createComment('slot')
-      const fallback = new VaporFragment([
-        document.createTextNode('a'),
-        document.createTextNode('b'),
-      ])
-      const controller = new SlotFallbackController({
-        getParentBoundary: () => null,
-        getLocalFallback: () => () => fallback,
-        getContent: () => [carrierA, carrierB],
-        getParentNode: () => container,
-        getAnchor: () => slotAnchor,
-        runWithRenderCtx: fn => fn(),
-        isContentValid: () => false,
-        onValidityChange: vi.fn(),
-      })
-
-      container.append(carrierA, marker, carrierB, slotAnchor)
-      controller.recheck()
-
-      expect(container.innerHTML).toBe('abx!y<!--slot-->')
-
-      controller.syncActiveFallback()
-      await nextTick()
-
-      expect(container.innerHTML).toBe('abxy!<!--slot-->')
-    })
-
-    test('slot fallback controller re-syncs carrier order when fallback ends with a fragment anchor', async () => {
-      const container = document.createElement('div')
-      const carrierA = document.createTextNode('x')
-      const carrierB = document.createTextNode('y')
-      const marker = document.createTextNode('!')
-      const slotAnchor = document.createComment('slot')
-      const trailingFragment = new DynamicFragment('if', false, false)
-      trailingFragment.update(() => document.createTextNode('b'))
-      const fallback = new VaporFragment<Block>([
-        document.createTextNode('a'),
-        trailingFragment,
-      ])
-      const controller = new SlotFallbackController({
-        getParentBoundary: () => null,
-        getLocalFallback: () => () => fallback,
-        getContent: () => [carrierA, carrierB],
-        getParentNode: () => container,
-        getAnchor: () => slotAnchor,
-        runWithRenderCtx: fn => fn(),
-        isContentValid: () => false,
-        onValidityChange: vi.fn(),
-      })
-
-      container.append(carrierA, marker, carrierB, slotAnchor)
-      controller.recheck()
-
-      expect(container.innerHTML).toBe('ab<!--if-->x!y<!--slot-->')
-
-      controller.syncActiveFallback()
-      await nextTick()
-
-      expect(container.innerHTML).toBe('ab<!--if-->xy!<!--slot-->')
-    })
-
-    test('slot fallback controller defaults to idle when isBusy is omitted', () => {
+    test('slot resolution state rechecks when idle', () => {
       const fallback = document.createTextNode('fallback')
-      const controller = new SlotFallbackController({
-        getParentBoundary: () => null,
-        getLocalFallback: () => () => fallback,
-        getContent: () => [],
-        getParentNode: () => null,
-        getAnchor: () => null,
-        runWithRenderCtx: fn => fn(),
-        onValidityChange: vi.fn(),
+      const state = createTestSlotResolutionState({
+        fallback: () => fallback,
       })
 
-      controller.boundary.markDirty()
+      state.boundary.markDirty()
 
-      expect(controller.getActiveFallback()).toBe(fallback)
+      expect(state.activeFallback).toBe(fallback)
     })
 
-    test('vdom slot dirties parent boundary once when content stays valid', async () => {
+    test('vdom slot does not dirty parent boundary when content stays valid', async () => {
       const text = ref('A')
       const boundary = {
-        parent: null,
-        getLocalFallback: () => undefined,
+        getParent: () => null,
+        getFallback: () => undefined,
+        run: (fn: () => any) => fn(),
         markDirty: vi.fn(),
       }
       const instance = renderWithSlots({})
       const app = createApp({ render: () => null })
       app.use(vaporInteropPlugin)
-      const vapor = (app._context as any).vapor
+      const vdom = (app._context as any).vdom
       const slotsRef = shallowRef({
         default: () => [h('div', text.value)],
       })
-      const frag = withOwnedSlotBoundary(boundary, () =>
-        vapor.vdomSlot(slotsRef, 'default', {}, instance),
+      const frag = withSlotBoundary(boundary, () =>
+        vdom.slot(slotsRef, 'default', {}, instance, {
+          flags: VaporSlotFlags.FORWARDED,
+        }),
       )
       const host = document.createElement('div')
 
@@ -610,27 +1356,59 @@ describe('component: slots', () => {
       await nextTick()
 
       expect(host.innerHTML).toContain('<div>B</div>')
-      expect(boundary.markDirty).toHaveBeenCalledTimes(1)
+      expect(boundary.markDirty).not.toHaveBeenCalled()
     })
 
-    test('vdom slot dirties parent boundary once when switching from valid content to local fallback', async () => {
-      const show = ref(true)
+    test('vdom slot ignores non-root updates inside slot boundary', async () => {
+      const text = ref('A')
       const boundary = {
-        parent: null,
-        getLocalFallback: () => undefined,
+        getParent: () => null,
+        getFallback: () => undefined,
+        run: (fn: () => any) => fn(),
         markDirty: vi.fn(),
       }
       const instance = renderWithSlots({})
       const app = createApp({ render: () => null })
       app.use(vaporInteropPlugin)
-      const vapor = (app._context as any).vapor
+      const vdom = (app._context as any).vdom
+      const slotsRef = shallowRef({
+        default: () => [h('div', text.value)],
+      })
+      const frag = withSlotBoundary(boundary, () =>
+        vdom.slot(slotsRef, 'default', {}, instance),
+      )
+      const host = document.createElement('div')
+
+      insert(frag, host)
+      boundary.markDirty.mockClear()
+
+      text.value = 'B'
+      await nextTick()
+
+      expect(host.innerHTML).toContain('<div>B</div>')
+      expect(boundary.markDirty).not.toHaveBeenCalled()
+    })
+
+    test('vdom slot does not dirty parent boundary when local fallback keeps output valid', async () => {
+      const show = ref(true)
+      const boundary = {
+        getParent: () => null,
+        getFallback: () => undefined,
+        run: (fn: () => any) => fn(),
+        markDirty: vi.fn(),
+      }
+      const instance = renderWithSlots({})
+      const app = createApp({ render: () => null })
+      app.use(vaporInteropPlugin)
+      const vdom = (app._context as any).vdom
       const slotsRef = shallowRef({
         default: () => (show.value ? [h('div', 'content')] : []),
       })
-      const frag = withOwnedSlotBoundary(boundary, () =>
-        vapor.vdomSlot(slotsRef, 'default', {}, instance, () =>
-          template('fallback')(),
-        ),
+      const frag = withSlotBoundary(boundary, () =>
+        vdom.slot(slotsRef, 'default', {}, instance, {
+          fallback: () => template('fallback')(),
+          flags: VaporSlotFlags.FORWARDED,
+        }),
       )
       const host = document.createElement('div')
 
@@ -641,27 +1419,1070 @@ describe('component: slots', () => {
       await nextTick()
 
       expect(host.innerHTML).toBe('fallback')
-      expect(boundary.markDirty).toHaveBeenCalledTimes(1)
+      expect(boundary.markDirty).not.toHaveBeenCalled()
     })
 
-    test('vdom slot still renders vapor fallback when slot content resolves empty', () => {
-      const Child = defineVaporComponent({
+    test('compiled vdom slot removes parked content while fallback is active', async () => {
+      const showContent = ref(true)
+      const showChild = ref(true)
+      const Child = compile(
+        `<template>
+          <slot>
+            <span>fallback</span>
+          </slot>
+        </template>`,
+        showContent,
+      )
+      const App = {
         setup() {
-          return createSlot('default', null, () => template('child fallback')())
+          return () =>
+            showChild.value
+              ? h(Child as any, null, {
+                  default: () => (showContent.value ? h('div', 'content') : []),
+                })
+              : null
+        },
+      }
+      const root = document.createElement('div')
+      const app = createApp(App).use(vaporInteropPlugin)
+      app.mount(root)
+
+      expect(root.innerHTML).toBe('<div>content</div>')
+
+      showContent.value = false
+      await nextTick()
+      expect(root.innerHTML).toBe('<span>fallback</span>')
+
+      showChild.value = false
+      await nextTick()
+      expect(root.innerHTML).toBe('<!---->')
+
+      app.unmount()
+    })
+
+    test('compiled vdom slot keeps fallback when slots source is removed', async () => {
+      const showContent = ref(true)
+      const passSlot = ref(true)
+      const Child = compile(
+        `<template>
+          <slot>
+            <span>fallback</span>
+          </slot>
+        </template>`,
+        showContent,
+      )
+      const App = {
+        setup() {
+          return () =>
+            h(
+              Child as any,
+              null,
+              passSlot.value
+                ? {
+                    default: () =>
+                      showContent.value ? h('div', 'content') : [],
+                  }
+                : undefined,
+            )
+        },
+      }
+      const root = document.createElement('div')
+      const app = createApp(App).use(vaporInteropPlugin)
+      app.mount(root)
+
+      expect(root.innerHTML).toBe('<div>content</div>')
+
+      showContent.value = false
+      await nextTick()
+      expect(root.innerHTML).toBe('<span>fallback</span>')
+
+      passSlot.value = false
+      await nextTick()
+      expect(root.innerHTML).toBe('<span>fallback</span>')
+
+      app.unmount()
+    })
+
+    test('vdom slot keeps invalid updates parked while fallback is active', async () => {
+      const data = ref('first')
+      const Child = compile(
+        `<template><slot><span>fallback</span></slot></template>`,
+        data,
+      )
+      const App = {
+        setup() {
+          return () =>
+            h(Child, null, {
+              default: () => [
+                data.value === 'first'
+                  ? h(Comment, 'first')
+                  : h(Comment, 'second'),
+              ],
+            })
+        },
+      }
+      const root = document.createElement('div')
+      const app = createApp(App).use(vaporInteropPlugin)
+      const childNodes = () =>
+        Array.from(root.childNodes).map(node =>
+          node.nodeType === 3
+            ? `text:${JSON.stringify(node.textContent)}`
+            : node.nodeType === 8
+              ? `comment:${(node as Comment).data}`
+              : (node as Element).outerHTML,
+        )
+      app.mount(root)
+
+      expect(root.innerHTML).toBe('<span>fallback</span>')
+      const fallbackNodes = [
+        '<span>fallback</span>',
+        'text:""', // VDOM slot host
+        'text:""', // receiver slot
+      ]
+      expect(childNodes()).toEqual(fallbackNodes)
+
+      data.value = 'second'
+      await nextTick()
+
+      expect(childNodes()).toEqual(fallbackNodes)
+      expect(root.innerHTML).toBe('<span>fallback</span>')
+      app.unmount()
+    })
+
+    test('compiled slot does not reinsert active fallback while content stays invalid', async () => {
+      const data = ref('first')
+      const Child = compile(
+        `<template><slot><span>fallback</span></slot></template>`,
+        data,
+      )
+      const Parent = compile(
+        `<script setup>
+          const data = _data
+          const components = _components
+        </script>
+        <template>
+          <components.Child>
+            <template v-if="data === 'first'" #default>
+              <div v-if="data === 'first-valid'">first</div>
+            </template>
+            <template v-else #default>
+              <p v-if="data === 'second-valid'">second</p>
+            </template>
+          </components.Child>
+        </template>`,
+        data,
+        { Child },
+      )
+      const root = document.createElement('div')
+      const app = createVaporApp(Parent)
+      app.mount(root)
+
+      const fallback = root.querySelector('span')!
+      const insertBefore = vi.spyOn(Node.prototype, 'insertBefore')
+
+      data.value = 'second'
+      await nextTick()
+
+      expect(root.innerHTML).toContain('<span>fallback</span>')
+      expect(insertBefore.mock.calls.some(([node]) => node === fallback)).toBe(
+        false,
+      )
+
+      insertBefore.mockRestore()
+      app.unmount()
+    })
+
+    test('compiled forwarded slot fallback validity re-resolves inherited fallback', async () => {
+      const data = ref(false)
+      const Child = compile(
+        `<template><slot><span>child fallback</span></slot></template>`,
+        data,
+      )
+      const Parent = compile(
+        `<template>
+          <components.Child>
+            <slot>
+              <span v-if="data">parent fallback</span>
+            </slot>
+          </components.Child>
+        </template>`,
+        data,
+        { Child },
+      )
+      const App = compile(
+        `<template>
+          <components.Parent>
+            <span v-if="data && false">content</span>
+          </components.Parent>
+        </template>`,
+        data,
+        { Parent },
+      )
+      const root = document.createElement('div')
+      const app = createVaporApp(App)
+      app.mount(root)
+
+      expect(root.innerHTML).toBe(
+        '<span>child fallback</span><!--slot--><!--slot-->',
+      )
+
+      data.value = true
+      await nextTick()
+
+      expect(root.innerHTML).toBe(
+        '<span>parent fallback</span><!--if--><!--slot--><!--slot-->',
+      )
+
+      app.unmount()
+    })
+
+    test('propagates root forwarded slot exposed validity', async () => {
+      const data = ref(true)
+      const Outer = compile(
+        `<template><slot><span>outer fallback</span></slot></template>`,
+        data,
+      )
+      const Parent = compile(
+        `<template>
+          <components.Outer>
+            <slot>
+              <span v-if="data">forwarded fallback</span>
+            </slot>
+          </components.Outer>
+        </template>`,
+        data,
+        { Outer },
+      )
+      const App = compile(
+        `<template>
+          <components.Parent>
+            <span v-if="false">content</span>
+          </components.Parent>
+        </template>`,
+        data,
+        { Parent },
+      )
+      const root = document.createElement('div')
+      const app = createVaporApp(App)
+      app.mount(root)
+
+      expect(root.innerHTML).toContain('<span>forwarded fallback</span>')
+      expect(root.innerHTML).not.toContain('outer fallback')
+
+      data.value = false
+      await nextTick()
+
+      expect(root.innerHTML).toContain('<span>outer fallback</span>')
+      expect(root.innerHTML).not.toContain('forwarded fallback')
+
+      app.unmount()
+    })
+
+    test('updates fallback body DOM without dirtying parent slot content', async () => {
+      const data = ref(false)
+      const Outer = compile(
+        `<template><slot><span>outer fallback</span></slot></template>`,
+        data,
+      )
+      const Child = compile(
+        `<template>
+          <slot>
+            <span>child fallback<i v-if="data"> detail</i></span>
+          </slot>
+        </template>`,
+        data,
+      )
+      const App = compile(
+        `<template>
+          <components.Outer>
+            <components.Child>
+              <span v-if="false">content</span>
+            </components.Child>
+          </components.Outer>
+        </template>`,
+        data,
+        { Outer, Child },
+      )
+      const root = document.createElement('div')
+      const app = createVaporApp(App)
+      app.mount(root)
+
+      expect(root.innerHTML).toContain('child fallback')
+      expect(root.innerHTML).not.toContain('outer fallback')
+      expect(root.innerHTML).not.toContain('<i>')
+
+      data.value = true
+      await nextTick()
+
+      expect(root.innerHTML).toContain('child fallback')
+      expect(root.innerHTML).toContain('<i> detail</i>')
+      expect(root.innerHTML).not.toContain('outer fallback')
+
+      app.unmount()
+    })
+
+    test('vdom slot dirties parent boundary when content validity changes', async () => {
+      const show = ref(true)
+      const boundary = {
+        getParent: () => null,
+        getFallback: () => undefined,
+        run: (fn: () => any) => fn(),
+        markDirty: vi.fn(),
+      }
+      const instance = renderWithSlots({})
+      const app = createApp({ render: () => null })
+      app.use(vaporInteropPlugin)
+      const vdom = (app._context as any).vdom
+      const slotsRef = shallowRef({
+        default: () => (show.value ? [h('div', 'content')] : []),
+      })
+      const frag = withSlotBoundary(boundary, () =>
+        vdom.slot(slotsRef, 'default', {}, instance, {
+          flags: VaporSlotFlags.FORWARDED,
+        }),
+      )
+      const host = document.createElement('div')
+
+      insert(frag, host)
+      boundary.markDirty.mockClear()
+
+      show.value = false
+      await nextTick()
+
+      expect(host.innerHTML).toBe('')
+      expect(boundary.markDirty).toHaveBeenCalledTimes(1)
+
+      show.value = true
+      await nextTick()
+
+      expect(host.innerHTML).toContain('<div>content</div>')
+      expect(boundary.markDirty).toHaveBeenCalledTimes(2)
+    })
+
+    test('vdom slot without flags or fallback renders content outside the boundary chain', () => {
+      // Mirror of the vapor fast path: an outlet that joins no fallback
+      // arbitration must not interpose its own dead-end boundary, so nested
+      // outlets classify identically under both hosts. Hand-written: needs
+      // to observe the ambient boundary from inside the slot function.
+      let observedBoundary: SlotBoundaryContext | null | undefined
+      const instance = renderWithSlots({})
+      const app = createApp({ render: () => null })
+      app.use(vaporInteropPlugin)
+      const vdom = (app._context as any).vdom
+      const slotsRef = shallowRef({
+        default: () => {
+          observedBoundary = currentRenderContext.slotBoundary
+          return [h('div', 'content')]
         },
       })
+      const frag = vdom.slot(slotsRef, 'default', {}, instance, {})
+      const host = document.createElement('div')
+      insert(frag, host)
+
+      expect(observedBoundary).toBe(null)
+      expect(host.innerHTML).toContain('<div>content</div>')
+
+      // An arbitrating outlet keeps its own boundary around content.
+      const fragWithFallback = vdom.slot(slotsRef, 'default', {}, instance, {
+        fallback: () => template('fallback')(),
+      })
+      insert(fragWithFallback, host)
+      expect(observedBoundary).not.toBe(null)
+    })
+
+    test('compiled vdom slot propagates nested fallback validity changes', async () => {
+      const show = ref(true)
+      const Receiver = compile(
+        `<template><slot><span>outer fallback</span></slot></template>`,
+        show,
+      )
+      const Bridge = compile(
+        `<template>
+          <components.Receiver>
+            <slot>
+              <span v-if="data">inner fallback</span>
+            </slot>
+          </components.Receiver>
+        </template>`,
+        show,
+        { Receiver },
+      )
+      const App = compile(
+        `<template>
+          <components.Bridge>
+            <span v-if="false">content</span>
+          </components.Bridge>
+        </template>`,
+        show,
+        { Bridge },
+        { vapor: false },
+      )
+      const root = document.createElement('div')
+      const app = createApp(App).use(vaporInteropPlugin)
+      app.mount(root)
+
+      expect(root.innerHTML).toBe(
+        '<span>inner fallback</span><!--if--><!--slot--><!--slot-->',
+      )
+
+      show.value = false
+      await nextTick()
+
+      expect(root.innerHTML).toBe(
+        '<span>outer fallback</span><!--slot--><!--slot-->',
+      )
+
+      show.value = true
+      await nextTick()
+
+      expect(root.innerHTML).toBe(
+        '<span>inner fallback</span><!--if--><!--slot--><!--slot-->',
+      )
+      app.unmount()
+    })
+
+    test('compiled vdom slot still renders vapor fallback when slot content resolves empty', () => {
+      const data = ref(false)
+      const Child = compile(
+        `<template><slot>child fallback</slot></template>`,
+        data,
+      )
+      const App = compile(
+        `<template>
+          <components.Child>
+            <span v-if="data">content</span>
+          </components.Child>
+        </template>`,
+        data,
+        { Child },
+        { vapor: false },
+      )
       const root = document.createElement('div')
 
-      createApp({
-        render: () =>
-          h(Child as any, null, {
-            default: () => [],
-          }),
-      })
-        .use(vaporInteropPlugin)
-        .mount(root)
+      createApp(App).use(vaporInteropPlugin).mount(root)
 
-      expect(root.innerHTML).toBe('child fallback')
+      expect(root.innerHTML).toBe('child fallback<!--slot-->')
+    })
+
+    test('multiple forwarded roots resolve receiver fallback once', async () => {
+      const data = ref({ showA: false, showB: false })
+      const components: Record<string, any> = {}
+      components.Receiver = compile(
+        `<template><slot><span>fallback</span></slot></template>`,
+        data,
+        components,
+      )
+      components.Carrier = compile(
+        `<script setup vapor>const components = _components</script>
+        <template>
+          <components.Receiver>
+            <slot name="a" />
+            <slot name="b" />
+          </components.Receiver>
+        </template>`,
+        data,
+        components,
+      )
+      const App = compile(
+        `<script setup vapor>
+        const components = _components
+        const data = _data
+        </script>
+        <template>
+          <components.Carrier>
+            <template #a><span v-if="data.showA">A</span></template>
+            <template #b><span v-if="data.showB">B</span></template>
+          </components.Carrier>
+        </template>`,
+        data,
+        components,
+      )
+
+      const { host } = define(App).render()
+
+      expect(host.textContent).toBe('fallback')
+      expect(host.innerHTML).toBe('<span>fallback</span><!--slot-->')
+
+      data.value.showA = true
+      await nextTick()
+      expect(host.textContent).toBe('A')
+
+      data.value.showA = false
+      data.value.showB = true
+      await nextTick()
+      expect(host.textContent).toBe('B')
+
+      data.value.showA = true
+      await nextTick()
+      expect(host.textContent).toBe('AB')
+
+      data.value.showA = false
+      data.value.showB = false
+      await nextTick()
+      expect(host.textContent).toBe('fallback')
+      expect(host.innerHTML).toBe('<span>fallback</span><!--slot-->')
+    })
+
+    test('slot fallback removes invalid static content before unmount', async () => {
+      const data = ref({ mount: true, show: true })
+      const components: Record<string, any> = {}
+      components.Receiver = compile(
+        `<template><slot><span>fallback</span></slot></template>`,
+        data,
+        components,
+      )
+      components.Carrier = compile(
+        `<script setup vapor>
+        const components = _components
+        const data = _data
+        </script>
+        <template>
+          <components.Receiver>
+            <!--sentinel--><span v-if="data.show">content</span>
+          </components.Receiver>
+        </template>`,
+        data,
+        components,
+      )
+      const App = compile(
+        `<script setup vapor>
+        const components = _components
+        const data = _data
+        </script>
+        <template><components.Carrier v-if="data.mount" /></template>`,
+        data,
+        components,
+      )
+      const root = document.createElement('div')
+      const app = createVaporApp(App)
+      app.mount(root)
+
+      expect(root.textContent).toBe('content')
+
+      data.value.show = false
+      await nextTick()
+      expect(root.textContent).toBe('fallback')
+      expect(root.innerHTML).not.toContain('sentinel')
+
+      data.value.mount = false
+      await nextTick()
+      expect(root.textContent).toBe('')
+      expect(root.childNodes).toHaveLength(1)
+      app.unmount()
+      expect(root.childNodes).toHaveLength(0)
+    })
+
+    test('nested fallbacks do not cross a shared fallback boundary', () => {
+      const data = ref({})
+      const components: Record<string, any> = {}
+      components.Receiver = compile(
+        `<template><slot><span>receiver fallback</span></slot></template>`,
+        data,
+        components,
+      )
+      components.Carrier = compile(
+        `<script setup vapor>const components = _components</script>
+        <template>
+          <components.Receiver>
+            <slot name="a"><slot name="x" /></slot>
+            <slot name="b"><slot name="y" /></slot>
+          </components.Receiver>
+        </template>`,
+        data,
+        components,
+      )
+      const App = compile(
+        `<script setup vapor>const components = _components</script>
+        <template><components.Carrier /></template>`,
+        data,
+        components,
+      )
+
+      const { host } = define(App).render()
+
+      expect(host.textContent).toBe('receiver fallback')
+    })
+
+    test('nested vdom fallbacks do not cross a shared fallback boundary', () => {
+      const data = ref({})
+      const components: Record<string, any> = {}
+      components.Receiver = compile(
+        `<template><slot><span>receiver fallback</span></slot></template>`,
+        data,
+        components,
+      )
+      components.Carrier = compile(
+        `<script setup vapor>const components = _components</script>
+        <template>
+          <components.Receiver>
+            <slot name="a"><slot name="x" /></slot>
+            <slot name="b"><slot name="y" /></slot>
+          </components.Receiver>
+        </template>`,
+        data,
+        components,
+      )
+      const App = compile(
+        `<script setup>const components = _components</script>
+        <template><components.Carrier /></template>`,
+        data,
+        components,
+        { vapor: false },
+      )
+      const root = document.createElement('div')
+      const app = createApp(App).use(vaporInteropPlugin)
+
+      app.mount(root)
+
+      expect(root.textContent).toBe('receiver fallback')
+      app.unmount()
+    })
+
+    test.each([
+      ['vapor', true],
+      ['vdom', false],
+    ])(
+      'shared local fallback preserves nested %s slot hosts',
+      async (_, vapor) => {
+        const data = ref({ showX: true, showY: false })
+        const components: Record<string, any> = {}
+        components.Receiver = compile(
+          `<template><slot><span>receiver fallback</span></slot></template>`,
+          data,
+          components,
+        )
+        components.Carrier = compile(
+          `<script setup vapor>const components = _components</script>
+        <template>
+          <components.Receiver>
+            <slot name="a"><slot name="x" /><slot name="y" /></slot>
+            <slot name="b" />
+          </components.Receiver>
+        </template>`,
+          data,
+          components,
+        )
+        const App = compile(
+          `<script setup>const components = _components; const data = _data</script>
+        <template>
+          <components.Carrier>
+            <template #x><span v-if="data.showX">X</span></template>
+            <template #y><span v-if="data.showY">Y</span></template>
+          </components.Carrier>
+        </template>`,
+          data,
+          components,
+          { vapor },
+        )
+        const root = document.createElement('div')
+        const app = vapor
+          ? createVaporApp(App)
+          : createApp(App).use(vaporInteropPlugin)
+
+        app.mount(root)
+        expect(root.textContent).toBe('X')
+
+        data.value.showX = false
+        await nextTick()
+        expect(root.textContent).toBe('receiver fallback')
+
+        data.value.showY = true
+        await nextTick()
+        expect(root.textContent).toBe('Y')
+
+        app.unmount()
+      },
+    )
+
+    test('forwarded root shares receiver fallback with a dynamic sibling', async () => {
+      const data = ref({ showSlot: false, showSibling: false })
+      const components: Record<string, any> = {}
+      components.Receiver = compile(
+        `<template><slot><span>fallback</span></slot></template>`,
+        data,
+        components,
+      )
+      components.Carrier = compile(
+        `<script setup vapor>
+        const components = _components
+        const data = _data
+        </script>
+        <template>
+          <components.Receiver>
+            <slot />
+            <span v-if="data.showSibling">sibling</span>
+          </components.Receiver>
+        </template>`,
+        data,
+        components,
+      )
+      const App = compile(
+        `<script setup vapor>
+        const components = _components
+        const data = _data
+        </script>
+        <template>
+          <components.Carrier>
+            <span v-if="data.showSlot">slot</span>
+          </components.Carrier>
+        </template>`,
+        data,
+        components,
+      )
+
+      const { host } = define(App).render()
+
+      expect(host.textContent).toBe('fallback')
+
+      data.value.showSibling = true
+      await nextTick()
+      expect(host.textContent).toBe('sibling')
+
+      data.value.showSlot = true
+      await nextTick()
+      expect(host.textContent).toBe('slotsibling')
+
+      data.value.showSlot = false
+      data.value.showSibling = false
+      await nextTick()
+      expect(host.textContent).toBe('fallback')
+    })
+
+    test('v-once forwarded root shares receiver fallback with a sibling', async () => {
+      const data = ref(false)
+      const components: Record<string, any> = {}
+      components.Receiver = compile(
+        `<template><slot><span>fallback</span></slot></template>`,
+        data,
+        components,
+      )
+      components.Carrier = compile(
+        `<script setup vapor>const components = _components</script>
+        <template>
+          <components.Receiver>
+            <slot v-once name="a" />
+            <slot name="b" />
+          </components.Receiver>
+        </template>`,
+        data,
+        components,
+      )
+      const appSource = `<script setup>
+        const components = _components
+        const data = _data
+        </script>
+        <template>
+          <components.Carrier>
+            <template #a><span v-if="false">A</span></template>
+            <template #b><span v-if="data">B</span></template>
+          </components.Carrier>
+        </template>`
+      const App = compile(appSource, data, components)
+
+      const { host } = define(App).render()
+
+      expect(host.textContent).toBe('fallback')
+
+      data.value = true
+      await nextTick()
+      expect(host.textContent).toBe('B')
+
+      data.value = false
+      const VDOMApp = compile(appSource, data, components, { vapor: false })
+      const root = document.createElement('div')
+      const app = createApp(VDOMApp).use(vaporInteropPlugin)
+      app.mount(root)
+
+      expect(root.textContent).toBe('fallback')
+
+      data.value = true
+      await nextTick()
+      expect(root.textContent).toBe('B')
+      app.unmount()
+    })
+
+    test('multiple forwarded roots from vdom resolve receiver fallback once', async () => {
+      const data = ref({ showA: false, showB: false })
+      const components: Record<string, any> = {}
+      components.Receiver = compile(
+        `<template><slot><span>fallback</span></slot></template>`,
+        data,
+        components,
+      )
+      components.Carrier = compile(
+        `<script setup vapor>const components = _components</script>
+        <template>
+          <components.Receiver>
+            <slot name="a" />
+            <slot name="b" />
+          </components.Receiver>
+        </template>`,
+        data,
+        components,
+      )
+      const App = compile(
+        `<script setup>
+        const components = _components
+        const data = _data
+        </script>
+        <template>
+          <components.Carrier>
+            <template #a><span v-if="data.showA">A</span></template>
+            <template #b><span v-if="data.showB">B</span></template>
+          </components.Carrier>
+        </template>`,
+        data,
+        components,
+        { vapor: false },
+      )
+      const root = document.createElement('div')
+      const app = createApp(App).use(vaporInteropPlugin)
+      app.mount(root)
+
+      expect(root.textContent).toBe('fallback')
+      expect(root.innerHTML).toBe('<span>fallback</span><!--slot-->')
+
+      data.value.showA = true
+      await nextTick()
+      expect(root.textContent).toBe('A')
+      expect(root.innerHTML).toBe('<span>A</span><!--slot-->')
+
+      data.value.showA = false
+      data.value.showB = true
+      await nextTick()
+      expect(root.textContent).toBe('B')
+      expect(root.innerHTML).toBe('<span>B</span><!--slot-->')
+
+      data.value.showA = true
+      await nextTick()
+      expect(root.textContent).toBe('AB')
+      expect(root.innerHTML).toBe('<span>A</span><span>B</span><!--slot-->')
+
+      data.value.showA = false
+      data.value.showB = false
+      await nextTick()
+      expect(root.textContent).toBe('fallback')
+      expect(root.innerHTML).toBe('<span>fallback</span><!--slot-->')
+      app.unmount()
+    })
+
+    test('vdom local fallback restores before a stable sibling', async () => {
+      const data = ref({ showA: false })
+      const components: Record<string, any> = {}
+      components.Receiver = compile(
+        `<template><slot><b>receiver fallback</b></slot></template>`,
+        data,
+        components,
+      )
+      components.Carrier = compile(
+        `<script setup vapor>
+        const components = _components
+        const data = _data
+        </script>
+        <template>
+          <components.Receiver>
+            <slot name="a"><span v-if="data.showA">A</span></slot>
+            <span>C</span>
+          </components.Receiver>
+        </template>`,
+        data,
+        components,
+      )
+      const App = compile(
+        `<script setup>const components = _components</script>
+        <template><components.Carrier /></template>`,
+        data,
+        components,
+        { vapor: false },
+      )
+      const root = document.createElement('div')
+      const app = createApp(App).use(vaporInteropPlugin)
+      app.mount(root)
+
+      expect(root.textContent).toBe('C')
+
+      data.value.showA = true
+      await nextTick()
+      expect(root.textContent).toBe('AC')
+
+      data.value.showA = false
+      await nextTick()
+      expect(root.textContent).toBe('C')
+
+      data.value.showA = true
+      await nextTick()
+      expect(root.textContent).toBe('AC')
+      app.unmount()
+    })
+
+    test('v-once forwarded root from vdom parks invalid content', async () => {
+      const show = ref(true)
+      const components: Record<string, any> = {}
+      components.Receiver = compile(
+        `<template><slot><span>fallback</span></slot></template>`,
+        show,
+        components,
+      )
+      components.Carrier = compile(
+        `<script setup vapor>const components = _components</script>
+        <template>
+          <components.Receiver>
+            <slot v-once name="a" />
+            <slot name="b" />
+          </components.Receiver>
+        </template>`,
+        show,
+        components,
+      )
+      const App = compile(
+        `<script setup>const components = _components; const data = _data</script>
+        <template>
+          <components.Carrier>
+            <template #a><span v-if="false">A</span></template>
+            <template #b><span v-if="data">B</span></template>
+          </components.Carrier>
+        </template>`,
+        show,
+        components,
+        { vapor: false },
+      )
+      const root = document.createElement('div')
+      const app = createApp(App).use(vaporInteropPlugin)
+      app.mount(root)
+
+      expect(root.textContent).toBe('B')
+      const contentNodeCount = root.childNodes.length
+      expect(contentNodeCount).toBeGreaterThan(2)
+
+      show.value = false
+      await nextTick()
+      expect(root.textContent).toBe('fallback')
+      expect(root.childNodes).toHaveLength(3)
+
+      show.value = true
+      await nextTick()
+      expect(root.textContent).toBe('B')
+      expect(root.childNodes).toHaveLength(contentNodeCount)
+
+      show.value = false
+      await nextTick()
+      app.unmount()
+      expect(root.childNodes).toHaveLength(0)
+    })
+
+    test('slot root detaches invalid static comment content', async () => {
+      const show = ref(true)
+      const components: Record<string, any> = {}
+      components.Receiver = compile(
+        `<template><slot><span>fallback</span></slot></template>`,
+        show,
+        components,
+      )
+      components.Carrier = compile(
+        `<script setup vapor>const components = _components</script>
+        <template>
+          <components.Receiver>
+            <slot name="a" />
+            <slot name="b" />
+          </components.Receiver>
+        </template>`,
+        show,
+        components,
+      )
+      const App = compile(
+        `<script setup vapor>
+        const components = _components
+        const data = _data
+        </script>
+        <template>
+          <components.Carrier>
+            <template #a><!--invalid static comment--></template>
+            <template #b><span v-if="data">B</span></template>
+          </components.Carrier>
+        </template>`,
+        show,
+        components,
+      )
+      const { host } = define(App).render()
+
+      expect(host.innerHTML).toContain('<!--invalid static comment-->')
+
+      show.value = false
+      await nextTick()
+      expect(host.textContent).toBe('fallback')
+      expect(host.innerHTML).not.toContain('<!--invalid static comment-->')
+    })
+
+    test('nested slot under a stable branch does not consume receiver fallback', async () => {
+      const ok = ref(true)
+      const components: Record<string, any> = {}
+      components.Receiver = compile(
+        `<template><slot><b>receiver fallback</b></slot></template>`,
+        ok,
+        components,
+      )
+      components.Carrier = compile(
+        `<script setup vapor>const components = _components; const data = _data</script>
+        <template>
+          <components.Receiver>
+            <template v-if="data"><div><slot /></div></template>
+          </components.Receiver>
+        </template>`,
+        ok,
+        components,
+      )
+      const App = compile(
+        `<script setup vapor>const components = _components</script>
+        <template><components.Carrier /></template>`,
+        ok,
+        components,
+      )
+
+      const { host } = define(App).render()
+
+      expect(host.textContent).toBe('')
+
+      ok.value = false
+      await nextTick()
+      expect(host.textContent).toBe('receiver fallback')
+    })
+
+    test('v-for restores slot boundary for newly created roots', async () => {
+      const data = ref({ items: [] as number[], show: false })
+      const components: Record<string, any> = {}
+      components.Receiver = compile(
+        `<template><slot><b>receiver fallback</b></slot></template>`,
+        data,
+        components,
+      )
+      components.Carrier = compile(
+        `<script setup vapor>const components = _components; const data = _data</script>
+        <template>
+          <components.Receiver>
+            <slot v-for="item in data.items" :key="item" />
+          </components.Receiver>
+        </template>`,
+        data,
+        components,
+      )
+      const App = compile(
+        `<script setup vapor>const components = _components; const data = _data</script>
+        <template>
+          <components.Carrier><span v-if="data.show">content</span></components.Carrier>
+        </template>`,
+        data,
+        components,
+      )
+
+      const { host } = define(App).render()
+
+      expect(host.textContent).toBe('receiver fallback')
+
+      data.value.items.push(1)
+      await nextTick()
+      data.value.show = true
+      await nextTick()
+      expect(host.textContent).toBe('content')
     })
   })
 
@@ -688,7 +2509,7 @@ describe('component: slots', () => {
       const Comp = defineVaporComponent(() => {
         const n0 = template('<div></div>')()
         insert(
-          createSlot('header', { title: () => src.value }),
+          createSlot('header', { prefix: 'static', title: () => src.value }),
           n0 as any as ParentNode,
         )
         return n0
@@ -699,18 +2520,22 @@ describe('component: slots', () => {
           header: props => {
             const el = template('<h1></h1>')()
             renderEffect(() => {
-              setElementText(el, props.title)
+              setElementText(el, `${props.prefix}:${props.title}`)
             })
             return el
           },
         })
       }).render()
 
-      expect(host.innerHTML).toBe('<div><h1>header</h1><!--slot--></div>')
+      expect(host.innerHTML).toBe(
+        '<div><h1>static:header</h1><!--slot--></div>',
+      )
 
       src.value = 'footer'
       await nextTick()
-      expect(host.innerHTML).toBe('<div><h1>footer</h1><!--slot--></div>')
+      expect(host.innerHTML).toBe(
+        '<div><h1>static:footer</h1><!--slot--></div>',
+      )
     })
 
     test('slot props should be isolated per fragment in v-for', async () => {
@@ -814,9 +2639,9 @@ describe('component: slots', () => {
 
       const Comp = defineVaporComponent(() => {
         const n0 = template('<div></div>')()
-        prepend(
-          n0 as any as ParentNode,
+        insert(
           createSlot('header', { title: () => val.value }),
+          n0 as any as ParentNode,
         )
         return n0
       })
@@ -851,11 +2676,11 @@ describe('component: slots', () => {
 
       const Comp = defineVaporComponent(() => {
         const n0 = template('<div></div>')()
-        prepend(
-          n0 as any as ParentNode,
+        insert(
           createSlot(
             () => val.value, // dynamic slot outlet name
           ),
+          n0 as any as ParentNode,
         )
         return n0
       })
@@ -872,6 +2697,47 @@ describe('component: slots', () => {
       val.value = 'footer'
       await nextTick()
       expect(host.innerHTML).toBe('<div>footer<!--slot--></div>')
+    })
+
+    test('dynamic slot source inside forwarded slot should preserve owner', async () => {
+      const msg = ref('late')
+      const Leaf = defineVaporComponent(() => createSlot('late', null))
+      const Carrier = defineVaporComponent(() => createSlot('default', null))
+      const Root = defineVaporComponent(() => {
+        const slots = useSlots()
+        return createComponent(Carrier, null, {
+          default: () =>
+            createComponent(Leaf, null, {
+              $: [
+                createForSlots(
+                  () => slots,
+                  (_slot, name) => () => createSlot(() => name!.value),
+                  (_slot, name) => name,
+                ),
+              ],
+            }),
+        })
+      })
+
+      const { host } = define(() =>
+        createComponent(Root, null, {
+          late: () => {
+            const n0 = template('<span></span>')()
+            renderEffect(() => setElementText(n0, msg.value))
+            return n0
+          },
+        }),
+      ).render()
+
+      expect(host.innerHTML).toBe(
+        '<span>late</span><!--slot--><!--slot--><!--slot-->',
+      )
+
+      msg.value = 'updated'
+      await nextTick()
+      expect(host.innerHTML).toBe(
+        '<span>updated</span><!--slot--><!--slot--><!--slot-->',
+      )
     })
 
     test('fallback should be render correctly', () => {
@@ -1009,14 +2875,16 @@ describe('component: slots', () => {
       const { html } = define({
         setup() {
           return createComponent(Child, null, {
-            default: () => {
+            default: extend(() => {
               return createIf(
                 () => toggle.value,
                 () => {
                   return document.createTextNode('content')
                 },
+                undefined,
+                keyedSlotRootIfShape,
               )
-            },
+            }, nonStableSlot),
           })
         },
       }).render()
@@ -1025,7 +2893,7 @@ describe('component: slots', () => {
 
       toggle.value = false
       await nextTick()
-      expect(html()).toBe('fallback<!--if--><!--slot-->')
+      expect(html()).toBe('fallback<!--slot-->')
 
       toggle.value = true
       await nextTick()
@@ -1046,19 +2914,21 @@ describe('component: slots', () => {
       const { html } = define({
         setup() {
           return createComponent(Child, null, {
-            default: () => {
+            default: extend(() => {
               return createIf(
                 () => toggle.value,
                 () => {
                   return document.createTextNode('content')
                 },
+                undefined,
+                keyedSlotRootIfShape,
               )
-            },
+            }, nonStableSlot),
           })
         },
       }).render()
 
-      expect(html()).toBe('fallback<!--if--><!--slot-->')
+      expect(html()).toBe('fallback<!--slot-->')
 
       toggle.value = true
       await nextTick()
@@ -1066,7 +2936,7 @@ describe('component: slots', () => {
 
       toggle.value = false
       await nextTick()
-      expect(html()).toBe('fallback<!--if--><!--slot-->')
+      expect(html()).toBe('fallback<!--slot-->')
     })
 
     test('dynamic slot work with v-if', async () => {
@@ -1075,7 +2945,7 @@ describe('component: slots', () => {
 
       const Comp = defineVaporComponent(() => {
         const n0 = template('<div></div>')()
-        prepend(n0 as any as ParentNode, createSlot('header', null))
+        insert(createSlot('header', null), n0 as any as ParentNode)
         return n0
       })
 
@@ -1111,7 +2981,7 @@ describe('component: slots', () => {
       const Comp = defineVaporComponent(() => {
         instance = currentInstance
         const n0 = template('<div></div>')()
-        prepend(n0 as any as ParentNode, createSlot('header', null))
+        insert(createSlot('header', null), n0 as any as ParentNode)
         return n0
       })
 
@@ -1155,9 +3025,9 @@ describe('component: slots', () => {
       const { html } = define({
         setup() {
           return createComponent(Child, null, {
-            default: () => {
+            default: extend(() => {
               return template('<!--comment-->')()
-            },
+            }, nonStableSlot),
           })
         },
       }).render()
@@ -1179,19 +3049,21 @@ describe('component: slots', () => {
       const { html } = define({
         setup() {
           return createComponent(Child, null, {
-            default: () => {
+            default: extend(() => {
               return createIf(
                 () => toggle.value,
                 () => {
                   return document.createTextNode('content')
                 },
+                undefined,
+                keyedSlotRootIfShape,
               )
-            },
+            }, nonStableSlot),
           })
         },
       }).render()
 
-      expect(html()).toBe('fallback<!--if--><!--slot-->')
+      expect(html()).toBe('fallback<!--slot-->')
 
       toggle.value = true
       await nextTick()
@@ -1199,7 +3071,7 @@ describe('component: slots', () => {
 
       toggle.value = false
       await nextTick()
-      expect(html()).toBe('fallback<!--if--><!--slot-->')
+      expect(html()).toBe('fallback<!--slot-->')
     })
 
     test('render fallback with nested v-if', async () => {
@@ -1217,7 +3089,7 @@ describe('component: slots', () => {
       const { html } = define({
         setup() {
           return createComponent(Child, null, {
-            default: () => {
+            default: extend(() => {
               return createIf(
                 () => outerShow.value,
                 () => {
@@ -1226,19 +3098,23 @@ describe('component: slots', () => {
                     () => {
                       return document.createTextNode('content')
                     },
+                    undefined,
+                    keyedSlotRootIfShape,
                   )
                 },
+                undefined,
+                keyedSlotRootIfShape,
               )
-            },
+            }, nonStableSlot),
           })
         },
       }).render()
 
-      expect(html()).toBe('fallback<!--if--><!--slot-->')
+      expect(html()).toBe('fallback<!--slot-->')
 
       outerShow.value = true
       await nextTick()
-      expect(html()).toBe('fallback<!--if--><!--if--><!--slot-->')
+      expect(html()).toBe('fallback<!--slot-->')
 
       innerShow.value = true
       await nextTick()
@@ -1246,15 +3122,15 @@ describe('component: slots', () => {
 
       innerShow.value = false
       await nextTick()
-      expect(html()).toBe('fallback<!--if--><!--if--><!--slot-->')
+      expect(html()).toBe('fallback<!--slot-->')
 
       outerShow.value = false
       await nextTick()
-      expect(html()).toBe('fallback<!--if--><!--slot-->')
+      expect(html()).toBe('fallback<!--slot-->')
 
       outerShow.value = true
       await nextTick()
-      expect(html()).toBe('fallback<!--if--><!--if--><!--slot-->')
+      expect(html()).toBe('fallback<!--slot-->')
 
       innerShow.value = true
       await nextTick()
@@ -1274,7 +3150,7 @@ describe('component: slots', () => {
       const { html } = define({
         setup() {
           return createComponent(Child, null, {
-            default: () => {
+            default: extend(() => {
               const n2 = createFor(
                 () => items.value,
                 for_item0 => {
@@ -1285,9 +3161,11 @@ describe('component: slots', () => {
                   )
                   return n4
                 },
+                undefined,
+                slotRootForFlags,
               )
               return n2
-            },
+            }, nonStableSlot),
           })
         },
       }).render()
@@ -1296,11 +3174,11 @@ describe('component: slots', () => {
 
       items.value.pop()
       await nextTick()
-      expect(html()).toBe('fallback<!--for--><!--slot-->')
+      expect(html()).toBe('fallback<!--slot-->')
 
       items.value.pop()
       await nextTick()
-      expect(html()).toBe('fallback<!--for--><!--slot-->')
+      expect(html()).toBe('fallback<!--slot-->')
 
       items.value.push(2)
       await nextTick()
@@ -1320,7 +3198,7 @@ describe('component: slots', () => {
       const { html } = define({
         setup() {
           return createComponent(Child, null, {
-            default: () => {
+            default: extend(() => {
               const n2 = createFor(
                 () => items.value,
                 for_item0 => {
@@ -1331,14 +3209,16 @@ describe('component: slots', () => {
                   )
                   return n4
                 },
+                undefined,
+                slotRootForFlags,
               )
               return n2
-            },
+            }, nonStableSlot),
           })
         },
       }).render()
 
-      expect(html()).toBe('fallback<!--for--><!--slot-->')
+      expect(html()).toBe('fallback<!--slot-->')
 
       items.value.push(1)
       await nextTick()
@@ -1346,11 +3226,11 @@ describe('component: slots', () => {
 
       items.value.pop()
       await nextTick()
-      expect(html()).toBe('fallback<!--for--><!--slot-->')
+      expect(html()).toBe('fallback<!--slot-->')
 
       items.value.pop()
       await nextTick()
-      expect(html()).toBe('fallback<!--for--><!--slot-->')
+      expect(html()).toBe('fallback<!--slot-->')
 
       items.value.push(2)
       await nextTick()
@@ -1367,14 +3247,16 @@ describe('component: slots', () => {
       }
 
       const items = ref([{ text: 'bar', show: false }])
+      let ifFrag!: DynamicFragment
+      let forFrag!: any
       const { html } = define({
         setup() {
           return createComponent(Child, null, {
-            default: () => {
-              return createFor(
+            default: extend(() => {
+              forFrag = createFor(
                 () => items.value,
                 for_item0 => {
-                  return createIf(
+                  ifFrag = createIf(
                     () => for_item0.value.show,
                     () => {
                       const n5 = template('<span> </span>')() as any
@@ -1384,16 +3266,23 @@ describe('component: slots', () => {
                       )
                       return n5
                     },
-                  )
+                    undefined,
+                    keyedSlotRootIfShape,
+                  ) as DynamicFragment
+                  return ifFrag
                 },
                 item => item.text,
+                slotRootForFlags,
               )
-            },
+              return forFrag
+            }, nonStableSlot),
           })
         },
       }).render()
 
-      expect(html()).toBe('fallback<!--if--><!--for--><!--slot-->')
+      expect(html()).toBe('fallback<!--slot-->')
+      expect(ifFrag.anchor.parentNode).toBeNull()
+      expect((forFrag.nodes[1] as Node).parentNode).toBeNull()
 
       items.value[0].show = true
       await nextTick()
@@ -1401,7 +3290,7 @@ describe('component: slots', () => {
 
       items.value[0].show = false
       await nextTick()
-      expect(html()).toBe('fallback<!--if--><!--for--><!--slot-->')
+      expect(html()).toBe('fallback<!--slot-->')
     })
 
     test('should not render fallback for a single empty item in v-for', async () => {
@@ -1434,9 +3323,12 @@ describe('component: slots', () => {
                       )
                       return n5
                     },
+                    undefined,
+                    keyedSlotRootIfShape,
                   )
                 },
                 item => item.text,
+                slotRootForFlags,
               )
             },
           })
@@ -1457,13 +3349,7 @@ describe('component: slots', () => {
     test('work with v-once', async () => {
       const Child = defineVaporComponent({
         setup() {
-          return createSlot(
-            'default',
-            null,
-            undefined,
-            undefined,
-            true /* once */,
-          )
+          return createSlot('default', null, undefined, VaporSlotFlags.ONCE)
         },
       })
 
@@ -1489,6 +3375,1069 @@ describe('component: slots', () => {
       await nextTick()
       expect(html()).toBe('<div>0</div><!--slot-->')
     })
+
+    test('applies v-once to fallback', async () => {
+      const count = ref(0)
+      const Child = defineVaporComponent({
+        setup() {
+          return createSlot(
+            'default',
+            null,
+            () => {
+              const n3 = template('<div> </div>')() as any
+              const x3 = txt(n3) as any
+              renderEffect(() => setText(x3, toDisplayString(count.value)))
+              return n3
+            },
+            VaporSlotFlags.ONCE,
+          )
+        },
+      })
+
+      let html!: () => string
+      __DEV__ = false
+      try {
+        ;({ html } = define({
+          setup() {
+            return createComponent(Child)
+          },
+        }).render())
+      } finally {
+        __DEV__ = true
+      }
+
+      expect(html()).toBe('<div>0</div>')
+
+      count.value++
+      await nextTick()
+      expect(html()).toBe('<div>0</div>')
+    })
+
+    test('preserves Vapor child updates inside v-once fallback', async () => {
+      let increment!: () => void
+      const normalLabel = ref('normal')
+      const label = ref('initial')
+      const GrandChild = defineVaporComponent({
+        props: ['label'],
+        setup(props: any) {
+          const count = ref(0)
+          increment = () => count.value++
+          const n0 = template('<span> </span>')() as any
+          const t0 = txt(n0) as any
+          renderEffect(() => setText(t0, `${props.label}:${count.value}`))
+          return n0
+        },
+      })
+      const Child = defineVaporComponent({
+        setup() {
+          return createSlot(
+            'default',
+            null,
+            () => createComponent(GrandChild, { label: () => label.value }),
+            VaporSlotFlags.ONCE,
+          )
+        },
+      })
+
+      const { html } = define({
+        setup() {
+          return [
+            createComponent(GrandChild, { label: () => normalLabel.value }),
+            createComponent(Child),
+          ]
+        },
+      }).render()
+
+      expect(html()).toBe(
+        '<span>normal:0</span><span>initial:0</span><!--slot-->',
+      )
+
+      normalLabel.value = 'normal updated'
+      label.value = 'updated'
+      increment()
+      await nextTick()
+      expect(html()).toBe(
+        '<span>normal updated:0</span><span>initial:1</span><!--slot-->',
+      )
+    })
+
+    test('preserves async Vapor child updates inside v-once fallback', async () => {
+      let resolve!: (comp: any) => void
+      let increment!: () => void
+      const label = ref('initial')
+      const AsyncGrandChild = defineVaporAsyncComponent(
+        () =>
+          new Promise(r => {
+            resolve = r
+          }),
+      )
+      const Child = defineVaporComponent({
+        setup() {
+          return createSlot(
+            'default',
+            null,
+            () =>
+              createComponent(AsyncGrandChild, { label: () => label.value }),
+            VaporSlotFlags.ONCE,
+          )
+        },
+      })
+
+      const { html } = define({
+        setup() {
+          return createComponent(Child)
+        },
+      }).render()
+
+      expect(html()).toBe('<!--async component--><!--slot-->')
+
+      resolve(
+        defineVaporComponent({
+          props: ['label'],
+          setup(props: any) {
+            const count = ref(0)
+            increment = () => count.value++
+            const n0 = template('<span> </span>')() as any
+            const t0 = txt(n0) as any
+            renderEffect(() => setText(t0, `${props.label}:${count.value}`))
+            return n0
+          },
+        }),
+      )
+      await new Promise(r => setTimeout(r))
+      expect(html()).toBe(
+        '<span>initial:0</span><!--async component--><!--slot-->',
+      )
+
+      label.value = 'updated'
+      increment()
+      await nextTick()
+      expect(html()).toBe(
+        '<span>initial:1</span><!--async component--><!--slot-->',
+      )
+    })
+
+    test('caches v-once fallback child props with prototype names', async () => {
+      const label = ref('initial')
+      const GrandChild = defineVaporComponent({
+        props: ['toString'],
+        setup(props: any) {
+          const n0 = template('<span> </span>')() as any
+          const t0 = txt(n0) as any
+          renderEffect(() => setText(t0, props.toString))
+          return n0
+        },
+      })
+      const Child = defineVaporComponent({
+        setup() {
+          return createSlot(
+            'default',
+            null,
+            () => createComponent(GrandChild, { toString: () => label.value }),
+            VaporSlotFlags.ONCE,
+          )
+        },
+      })
+
+      const { html } = define({
+        setup() {
+          return createComponent(Child)
+        },
+      }).render()
+
+      expect(html()).toBe('<span>initial</span><!--slot-->')
+
+      label.value = 'updated'
+      await nextTick()
+      expect(html()).toBe('<span>initial</span><!--slot-->')
+    })
+
+    test('freezes fallthrough attr keys on v-once fallback child', async () => {
+      const attrs = ref<Record<string, string>>({ id: 'initial' })
+      const GrandChild = defineVaporComponent({
+        setup() {
+          return template('<span>child</span>')()
+        },
+      })
+      const Child = defineVaporComponent({
+        setup() {
+          return createSlot(
+            'default',
+            null,
+            () => createComponent(GrandChild, { $: [() => attrs.value] }),
+            VaporSlotFlags.ONCE,
+          )
+        },
+      })
+
+      const { html } = define({
+        setup() {
+          return createComponent(Child)
+        },
+      }).render()
+
+      expect(html()).toBe('<span id="initial">child</span><!--slot-->')
+
+      attrs.value = { id: 'updated', class: 'new' }
+      await nextTick()
+      expect(html()).toBe('<span id="initial">child</span><!--slot-->')
+    })
+
+    test('snapshots reused dynamic props objects on delayed v-once fallback child reads', async () => {
+      let reveal!: () => void
+      const raw = { label: 'initial' }
+      const GrandChild = defineVaporComponent({
+        props: ['label'],
+        setup(props: any) {
+          const show = ref(false)
+          reveal = () => (show.value = true)
+          const n0 = template('<span> </span>')() as any
+          const t0 = txt(n0) as any
+          renderEffect(() => setText(t0, show.value ? props.label : 'hidden'))
+          return n0
+        },
+      })
+      const Child = defineVaporComponent({
+        setup() {
+          return createSlot(
+            'default',
+            null,
+            () => createComponent(GrandChild, { $: [() => raw] }),
+            VaporSlotFlags.ONCE,
+          )
+        },
+      })
+
+      let html!: () => string
+      __DEV__ = false
+      try {
+        ;({ html } = define({
+          setup() {
+            return createComponent(Child)
+          },
+        }).render())
+      } finally {
+        __DEV__ = true
+      }
+
+      expect(html()).toBe('<span>hidden</span>')
+
+      raw.label = 'updated'
+      reveal()
+      await nextTick()
+      expect(html()).toBe('<span>initial</span>')
+    })
+
+    test('preserves function-valued props from dynamic sources on v-once fallback child', () => {
+      let calls = 0
+      const cb = () => {
+        calls++
+        return 'called'
+      }
+      const raw = { cb }
+      const GrandChild = defineVaporComponent({
+        props: ['cb'],
+        setup(props: any) {
+          const n0 = template('<span> </span>')() as any
+          const t0 = txt(n0) as any
+          renderEffect(() =>
+            setText(t0, `${typeof props.cb}:${props.cb === cb}`),
+          )
+          return n0
+        },
+      })
+      const Child = defineVaporComponent({
+        setup() {
+          return createSlot(
+            'default',
+            null,
+            () => createComponent(GrandChild, { $: [() => raw] }),
+            VaporSlotFlags.ONCE,
+          )
+        },
+      })
+
+      const { html } = define({
+        setup() {
+          return createComponent(Child)
+        },
+      }).render()
+
+      expect(html()).toBe('<span>function:true</span><!--slot-->')
+      expect(calls).toBe(0)
+    })
+
+    test('snapshots delayed prop reads on v-once fallback child', async () => {
+      let reveal!: () => void
+      const label = ref('initial')
+      const GrandChild = defineVaporComponent({
+        props: ['label'],
+        setup(props: any) {
+          const show = ref(false)
+          reveal = () => (show.value = true)
+          const n0 = template('<span> </span>')() as any
+          const t0 = txt(n0) as any
+          renderEffect(() => setText(t0, show.value ? props.label : 'hidden'))
+          return n0
+        },
+      })
+      const Child = defineVaporComponent({
+        setup() {
+          return createSlot(
+            'default',
+            null,
+            () => createComponent(GrandChild, { label: () => label.value }),
+            VaporSlotFlags.ONCE,
+          )
+        },
+      })
+
+      let html!: () => string
+      __DEV__ = false
+      try {
+        ;({ html } = define({
+          setup() {
+            return createComponent(Child)
+          },
+        }).render())
+      } finally {
+        __DEV__ = true
+      }
+
+      expect(html()).toBe('<span>hidden</span>')
+
+      label.value = 'updated'
+      reveal()
+      await nextTick()
+      expect(html()).toBe('<span>initial</span>')
+    })
+
+    test('snapshots delayed attr reads on v-once fallback child', async () => {
+      let reveal!: () => void
+      const parentAttrs = ref<Record<string, string>>({ title: 'initial' })
+      const GrandChild = defineVaporComponent({
+        inheritAttrs: false,
+        setup(_: any, { attrs }: any) {
+          const show = ref(false)
+          reveal = () => (show.value = true)
+          const n0 = template('<span> </span>')() as any
+          const t0 = txt(n0) as any
+          renderEffect(() =>
+            setText(
+              t0,
+              show.value ? `${attrs.title}:${String(attrs.class)}` : 'hidden',
+            ),
+          )
+          return n0
+        },
+      })
+      const Child = defineVaporComponent({
+        setup() {
+          return createSlot(
+            'default',
+            null,
+            () => createComponent(GrandChild, { $: [() => parentAttrs.value] }),
+            VaporSlotFlags.ONCE,
+          )
+        },
+      })
+
+      const { html } = define({
+        setup() {
+          return createComponent(Child)
+        },
+      }).render()
+
+      expect(html()).toBe('<span>hidden</span><!--slot-->')
+
+      parentAttrs.value = { title: 'updated', class: 'new' }
+      reveal()
+      await nextTick()
+      expect(html()).toBe('<span>initial:undefined</span><!--slot-->')
+    })
+
+    test('caches prototype-named attrs on v-once fallback child', () => {
+      const raw = Object.create(null)
+      Object.defineProperty(raw, '__proto__', {
+        value: 'initial',
+        enumerable: true,
+      })
+      const GrandChild = defineVaporComponent({
+        inheritAttrs: false,
+        setup(_: any, { attrs }: any) {
+          const n0 = template('<span> </span>')() as any
+          const t0 = txt(n0) as any
+          renderEffect(() => setText(t0, String(attrs.__proto__)))
+          return n0
+        },
+      })
+      const Child = defineVaporComponent({
+        setup() {
+          return createSlot(
+            'default',
+            null,
+            () => createComponent(GrandChild, { $: [() => raw] }),
+            VaporSlotFlags.ONCE,
+          )
+        },
+      })
+
+      const { html } = define({
+        setup() {
+          return createComponent(Child)
+        },
+      }).render()
+
+      expect(html()).toBe('<span>initial</span><!--slot-->')
+    })
+
+    test('snapshots delayed slot prop reads in v-once slot content', async () => {
+      let increment!: () => void
+      const label = ref('initial')
+      const Child = defineVaporComponent({
+        setup() {
+          return createSlot(
+            'default',
+            { label: () => label.value },
+            undefined,
+            VaporSlotFlags.ONCE,
+          )
+        },
+      })
+
+      const { html } = define({
+        setup() {
+          return createComponent(Child, null, {
+            default: (slotProps: any) => {
+              const GrandChild = defineVaporComponent({
+                setup() {
+                  const count = ref(0)
+                  increment = () => count.value++
+                  const n0 = template('<span> </span>')() as any
+                  const t0 = txt(n0) as any
+                  renderEffect(() =>
+                    setText(t0, `${slotProps.label}:${count.value}`),
+                  )
+                  return n0
+                },
+              })
+              return createComponent(GrandChild)
+            },
+          })
+        },
+      }).render()
+
+      expect(html()).toBe('<span>initial:0</span><!--slot-->')
+
+      label.value = 'updated'
+      increment()
+      await nextTick()
+      expect(html()).toBe('<span>initial:1</span><!--slot-->')
+    })
+
+    describe('slot fast path', () => {
+      describe('runtime', () => {
+        test('plain slot without fallback', () => {
+          let slotBlock!: Block
+          let observedBoundary: SlotBoundaryContext | null | undefined
+          const Comp = defineVaporComponent(() => {
+            return (slotBlock = createInheritedSlotRoot('default'))
+          })
+
+          define(() =>
+            createComponent(Comp, null, {
+              default: () => {
+                observedBoundary = currentRenderContext.slotBoundary
+                return template('content')()
+              },
+            }),
+          ).render()
+
+          expect(slotBlock).toBeInstanceOf(DynamicFragment)
+          expect(slotBlock).not.toBeInstanceOf(SlotFragment)
+          expect(isVaporSlotOutlet(slotBlock)).toBe(true)
+          expect(observedBoundary).toBe(null)
+        })
+
+        test('unmarked outlet without fallback takes the fast path under an enclosing boundary', async () => {
+          let slotBlock!: Block
+          let observedBoundary: SlotBoundaryContext | null | undefined
+          const markDirty = vi.fn()
+          const boundary: SlotBoundaryContext = {
+            getParent: () => null,
+            getFallback: () => undefined,
+            run: fn => fn(),
+            markDirty,
+          }
+          const show = ref(true)
+          const Comp = defineVaporComponent(() => {
+            return (slotBlock = withSlotBoundary(boundary, () =>
+              createSlot('default'),
+            ))
+          })
+
+          const { host } = define(() =>
+            createComponent(Comp, null, {
+              default: () => {
+                observedBoundary = currentRenderContext.slotBoundary
+                return createIf(
+                  () => show.value,
+                  () => template('<span>content</span>')(),
+                  undefined,
+                  slotRootIfShape,
+                )
+              },
+            }),
+          ).render()
+
+          expect(slotBlock).toBeInstanceOf(DynamicFragment)
+          expect(slotBlock).not.toBeInstanceOf(SlotFragment)
+          // The fast-path fragment captures a null boundary, so content
+          // renders outside the enclosing resolution and its marked roots
+          // attach no dirty-tracking to it.
+          expect(observedBoundary).toBe(null)
+          expect(host.innerHTML).toBe(
+            '<span>content</span><!--if--><!--slot-->',
+          )
+
+          show.value = false
+          await nextTick()
+          expect(host.innerHTML).toBe('<!--if--><!--slot-->')
+
+          show.value = true
+          await nextTick()
+          expect(host.innerHTML).toBe(
+            '<span>content</span><!--if--><!--slot-->',
+          )
+          expect(markDirty).not.toHaveBeenCalled()
+        })
+
+        test('compiled component outlet inside slot content takes the fast path', async () => {
+          const data: any = reactive({ branch: true, show: true })
+          let cardBlock: Block | undefined
+          const Card = compile(`<template><slot /></template>`, data)
+          const CardSpy = extend({}, Card, {
+            setup(props: any, ctx: any) {
+              return (cardBlock = Card.setup(props, ctx))
+            },
+          })
+          const Receiver = compile(
+            `<template><slot><b>receiver fallback</b></slot></template>`,
+            data,
+          )
+          const App = compile(
+            `<template>
+              <components.Receiver>
+                <components.Card v-if="data.branch">
+                  <span v-if="data.show">content</span>
+                </components.Card>
+              </components.Receiver>
+            </template>`,
+            data,
+            { Receiver, Card: CardSpy },
+          )
+
+          const { host } = define(() => createComponent(App)).render()
+
+          // Card's own outlet is unmarked and has no fallback, so even under
+          // the receiver's boundary it takes the fast path.
+          expect(cardBlock).toBeInstanceOf(DynamicFragment)
+          expect(cardBlock).not.toBeInstanceOf(SlotFragment)
+          expect(host.textContent).toBe('content')
+
+          // The marked v-if at Card's consumer content root updates in place
+          // without disturbing the receiver's arbitration.
+          data.show = false
+          await nextTick()
+          expect(host.textContent).toBe('')
+
+          data.branch = false
+          await nextTick()
+          expect(host.textContent).toBe('receiver fallback')
+
+          data.branch = true
+          data.show = true
+          await nextTick()
+          expect(host.textContent).toBe('content')
+        })
+
+        test('compiled outlet with fallback and stable content takes the fast path under a boundary', async () => {
+          const data: any = reactive({ branch: true })
+          let cardBlock: Block | undefined
+          const Card = compile(
+            `<template><slot><b>card fallback</b></slot></template>`,
+            data,
+          )
+          const CardSpy = extend({}, Card, {
+            setup(props: any, ctx: any) {
+              return (cardBlock = Card.setup(props, ctx))
+            },
+          })
+          const Receiver = compile(
+            `<template><slot><i>receiver fallback</i></slot></template>`,
+            data,
+          )
+          const App = compile(
+            `<template>
+              <components.Receiver>
+                <components.Card v-if="data.branch">
+                  <span>content</span>
+                </components.Card>
+              </components.Receiver>
+            </template>`,
+            data,
+            { Receiver, Card: CardSpy },
+          )
+
+          const { host } = define(() => createComponent(App)).render()
+
+          // Provided stable content keeps Card's local fallback unreachable,
+          // so the enclosing boundary does not force the slot fragment.
+          expect(cardBlock).not.toBeInstanceOf(SlotFragment)
+          expect(host.textContent).toBe('content')
+
+          data.branch = false
+          await nextTick()
+          expect(host.textContent).toBe('receiver fallback')
+
+          data.branch = true
+          await nextTick()
+          expect(host.textContent).toBe('content')
+        })
+
+        // Coverage guard for the split matrix of shouldUseSlotFragment.
+        // The FORWARDED-on-own-template-outlet pairing is synthetic (the
+        // compiler only marks forwarded roots inside slot blocks); the split
+        // decision reads flags and fallback alone, which is what this pins.
+        test('outlets participating in fallback arbitration keep the slot fragment under a boundary', () => {
+          let forwardedBlock!: Block
+          let fallbackBlock!: Block
+          let nonStableFallbackBlock!: Block
+          let loneSharedBlock!: Block
+          const nonStableSlotFn = (() => template('d')()) as BlockFn
+          ;(nonStableSlotFn as any)._ = VaporSlotStability.NON_STABLE
+          const boundary: SlotBoundaryContext = {
+            getParent: () => null,
+            getFallback: () => undefined,
+            run: fn => fn(),
+            markDirty: vi.fn(),
+          }
+          const Comp = defineVaporComponent(() =>
+            withSlotBoundary(boundary, () => [
+              (forwardedBlock = createInheritedSlotRoot('a')),
+              (fallbackBlock = createSlot('b', null, () =>
+                template('fallback')(),
+              )),
+              (nonStableFallbackBlock = createSlot('d', null, () =>
+                template('fallback')(),
+              )),
+              // Hand-written flags may carry the lone SHARED_FALLBACK bit;
+              // isForwardedSlot normalizes it as forwarded.
+              (loneSharedBlock = createSlot(
+                'c',
+                null,
+                undefined,
+                VaporSlotFlags.SHARED_FALLBACK,
+              )),
+            ]),
+          )
+
+          define(() =>
+            createComponent(Comp, null, {
+              a: () => template('a')(),
+              b: () => template('b')(),
+              c: () => template('c')(),
+              d: nonStableSlotFn,
+            }),
+          ).render()
+
+          expect(forwardedBlock).toBeInstanceOf(SlotFragment)
+          // Local fallback reachability is boundary-independent: a provided
+          // stable slot keeps the fallback unreachable, so the fast path
+          // applies; a non-stable slot keeps SlotFragment arbitration.
+          expect(fallbackBlock).not.toBeInstanceOf(SlotFragment)
+          expect(nonStableFallbackBlock).toBeInstanceOf(SlotFragment)
+          expect(loneSharedBlock).toBeInstanceOf(SlotFragment)
+        })
+
+        test('slot with fallback and explicit empty slots', () => {
+          let slotBlock!: Block
+          const Comp = defineVaporComponent(() => {
+            return (slotBlock = createSlot('default', null, () =>
+              template('fallback')(),
+            ))
+          })
+
+          define(() => createComponent(Comp, null, {})).render()
+
+          expect(slotBlock).toBeInstanceOf(DynamicFragment)
+          expect(slotBlock).not.toBeInstanceOf(SlotFragment)
+        })
+
+        test('slot with fallback and no slots', () => {
+          let slotBlock!: Block
+          const Comp = defineVaporComponent(() => {
+            return (slotBlock = createSlot('default', null, () =>
+              template('fallback')(),
+            ))
+          })
+
+          const { host } = define(() => createComponent(Comp)).render()
+
+          expect(slotBlock).toBeInstanceOf(DynamicFragment)
+          expect(slotBlock).not.toBeInstanceOf(SlotFragment)
+          expect(host.innerHTML).toBe('fallback<!--slot-->')
+        })
+
+        test('stable slot with fallback', () => {
+          let slotBlock!: Block
+          const slot = (() => template('<p>A</p>')()) as BlockFn
+          const Comp = defineVaporComponent(() => {
+            return (slotBlock = createSlot('default', null, () =>
+              template('fallback')(),
+            ))
+          })
+
+          const { host } = define(() =>
+            createComponent(Comp, null, {
+              default: slot,
+            }),
+          ).render()
+
+          expect(slotBlock).toBeInstanceOf(DynamicFragment)
+          expect(slotBlock).not.toBeInstanceOf(SlotFragment)
+          expect(host.innerHTML).toBe('<p>A</p><!--slot-->')
+        })
+
+        test('non-stable slot with fallback uses slot fragment', () => {
+          let slotBlock!: Block
+          const slot = (() => template('<p>A</p>')()) as BlockFn
+          ;(slot as any)._ = VaporSlotStability.NON_STABLE
+          const Comp = defineVaporComponent(() => {
+            return (slotBlock = createSlot('default', null, () =>
+              template('fallback')(),
+            ))
+          })
+
+          define(() =>
+            createComponent(Comp, null, {
+              default: slot,
+            }),
+          ).render()
+
+          expect(slotBlock).toBeInstanceOf(SlotFragment)
+        })
+
+        test('stable component slot with fallback does not render fallback when component output is empty', () => {
+          let slotBlock!: Block
+          // Component slot content counts as provided even when it renders
+          // invalid output, matching VDOM slot fallback semantics.
+          const Empty = defineVaporComponent(() =>
+            document.createComment('empty'),
+          )
+          const slot = (() => createComponent(Empty)) as BlockFn
+          const Comp = defineVaporComponent(() => {
+            return (slotBlock = createSlot('default', null, () =>
+              template('fallback')(),
+            ))
+          })
+
+          const { host } = define(() =>
+            createComponent(Comp, null, {
+              default: slot,
+            }),
+          ).render()
+
+          expect(slotBlock).toBeInstanceOf(DynamicFragment)
+          expect(slotBlock).not.toBeInstanceOf(SlotFragment)
+          expect(host.innerHTML).not.toContain('fallback')
+        })
+
+        test('compiled stable sibling keeps fallback hidden when dynamic sibling becomes invalid', async () => {
+          const show = ref(true)
+          const Child = compile(
+            `<template><slot><span>fallback</span></slot></template>`,
+            show,
+          )
+          const Parent = compile(
+            `<template>
+              <components.Child>
+                <span>stable</span>
+                <div v-if="data">dynamic</div>
+              </components.Child>
+            </template>`,
+            show,
+            { Child },
+          )
+          const root = document.createElement('div')
+          const app = createVaporApp(Parent)
+          app.mount(root)
+
+          expect(root.innerHTML).toBe(
+            '<span>stable</span><div>dynamic</div><!--if--><!--slot-->',
+          )
+
+          show.value = false
+          await nextTick()
+
+          expect(root.innerHTML).toBe('<span>stable</span><!--if--><!--slot-->')
+        })
+
+        test('compiled component root keeps fallback hidden when component output becomes invalid', async () => {
+          const show = ref(true)
+          const Child = compile(
+            `<template><slot><span>fallback</span></slot></template>`,
+            show,
+          )
+          const Inner = compile(
+            `<script setup>
+              const props = defineProps(['show'])
+            </script>
+            <template>
+              <span v-if="props.show">inner</span>
+            </template>`,
+            show,
+          )
+          const Parent = compile(
+            `<template>
+              <components.Child>
+                <components.Inner :show="data" />
+              </components.Child>
+            </template>`,
+            show,
+            { Child, Inner },
+          )
+          const root = document.createElement('div')
+          const app = createVaporApp(Parent)
+          app.mount(root)
+
+          expect(root.innerHTML).toBe('<span>inner</span><!--if--><!--slot-->')
+
+          show.value = false
+          await nextTick()
+
+          expect(root.innerHTML).toBe('<!--if--><!--slot-->')
+        })
+
+        test('compiled root v-if component slot hides fallback when shown even if component output is empty', async () => {
+          const show = ref(false)
+          const Child = compile(
+            `<template><slot><span>fallback</span></slot></template>`,
+            show,
+          )
+          const Empty = compile(
+            `<template><span v-if="false">empty</span></template>`,
+            show,
+          )
+          const Parent = compile(
+            `<template>
+              <components.Child>
+                <components.Empty v-if="data" />
+              </components.Child>
+            </template>`,
+            show,
+            { Child, Empty },
+          )
+          const root = document.createElement('div')
+          const app = createVaporApp(Parent)
+          app.mount(root)
+
+          expect(root.innerHTML).toBe('<span>fallback</span><!--slot-->')
+
+          show.value = true
+          await nextTick()
+
+          expect(root.innerHTML).toBe('<!--if--><!--if--><!--slot-->')
+        })
+
+        test('recomputes validity for all-dynamic multi-root slot content', async () => {
+          const data = ref('both')
+          const Child = compile(
+            `<template><slot><span>fallback</span></slot></template>`,
+            data,
+          )
+          const Parent = compile(
+            `<template>
+              <components.Child>
+                <span v-if="data !== 'none' && data !== 'second'">first</span>
+                <div v-if="data !== 'none' && data !== 'first'">second</div>
+              </components.Child>
+            </template>`,
+            data,
+            { Child },
+          )
+          const root = document.createElement('div')
+          const app = createVaporApp(Parent)
+          app.mount(root)
+
+          expect(root.innerHTML).toContain('<span>first</span>')
+          expect(root.innerHTML).toContain('<div>second</div>')
+          expect(root.innerHTML).not.toContain('fallback')
+
+          data.value = 'first'
+          await nextTick()
+
+          expect(root.innerHTML).toContain('<span>first</span>')
+          expect(root.innerHTML).not.toContain('second')
+          expect(root.innerHTML).not.toContain('fallback')
+
+          data.value = 'none'
+          await nextTick()
+
+          expect(root.innerHTML).toBe('<span>fallback</span><!--slot-->')
+
+          data.value = 'second'
+          await nextTick()
+
+          expect(root.innerHTML).toContain('<div>second</div>')
+          expect(root.innerHTML).not.toContain('first')
+          expect(root.innerHTML).not.toContain('fallback')
+        })
+
+        test('recomputes validity for v-for and v-if slot roots', async () => {
+          const data = ref({ items: ['one'], show: true })
+          const Child = compile(
+            `<template><slot><span>fallback</span></slot></template>`,
+            data,
+          )
+          const Parent = compile(
+            `<template>
+              <components.Child>
+                <span v-for="item in data.items">{{ item }}</span>
+                <div v-if="data.show">tail</div>
+              </components.Child>
+            </template>`,
+            data,
+            { Child },
+          )
+          const root = document.createElement('div')
+          const app = createVaporApp(Parent)
+          app.mount(root)
+
+          expect(root.innerHTML).toContain('<span>one</span>')
+          expect(root.innerHTML).toContain('<div>tail</div>')
+          expect(root.innerHTML).not.toContain('fallback')
+
+          data.value = { items: [], show: true }
+          await nextTick()
+
+          expect(root.innerHTML).toContain('<div>tail</div>')
+          expect(root.innerHTML).not.toContain('fallback')
+
+          data.value = { items: [], show: false }
+          await nextTick()
+
+          expect(root.innerHTML).toBe('<span>fallback</span><!--slot-->')
+
+          data.value = { items: ['two'], show: false }
+          await nextTick()
+
+          expect(root.innerHTML).toContain('<span>two</span>')
+          expect(root.innerHTML).not.toContain('fallback')
+        })
+      })
+
+      describe('hydration', () => {
+        test('plain slot without fallback', () => {
+          let slotBlock!: Block
+          const container = document.createElement('div')
+          container.innerHTML = '<!--[-->content<!--]-->'
+          const Comp = defineVaporComponent(() => {
+            return (slotBlock = createSlot('default'))
+          })
+
+          createVaporSSRApp(
+            defineVaporComponent(() =>
+              createComponent(Comp, null, {
+                default: () => template('content')(),
+              }),
+            ),
+          ).mount(container)
+
+          expect(slotBlock).toBeInstanceOf(DynamicFragment)
+          expect(slotBlock).not.toBeInstanceOf(SlotFragment)
+          expect(container.innerHTML).toBe('<!--[-->content<!--]-->')
+        })
+
+        test('slot with fallback and no slots', () => {
+          let slotBlock!: Block
+          const container = document.createElement('div')
+          container.innerHTML = '<!--[-->fallback<!--]-->'
+          const Comp = defineVaporComponent(() => {
+            return (slotBlock = createSlot('default', null, () =>
+              template('fallback')(),
+            ))
+          })
+
+          createVaporSSRApp(
+            defineVaporComponent(() => createComponent(Comp)),
+          ).mount(container)
+
+          expect(slotBlock).toBeInstanceOf(DynamicFragment)
+          expect(slotBlock).not.toBeInstanceOf(SlotFragment)
+          expect(container.innerHTML).toBe('<!--[-->fallback<!--]-->')
+        })
+
+        test('stable slot with fallback', () => {
+          let slotBlock!: Block
+          const container = document.createElement('div')
+          container.innerHTML = '<!--[--><p>A</p><!--]-->'
+          const slot = (() => template('<p>A</p>')()) as BlockFn
+          const Comp = defineVaporComponent(() => {
+            return (slotBlock = createSlot('default', null, () =>
+              template('fallback')(),
+            ))
+          })
+
+          createVaporSSRApp(
+            defineVaporComponent(() =>
+              createComponent(Comp, null, {
+                default: slot,
+              }),
+            ),
+          ).mount(container)
+
+          expect(slotBlock).toBeInstanceOf(DynamicFragment)
+          expect(slotBlock).not.toBeInstanceOf(SlotFragment)
+          expect(container.innerHTML).toBe('<!--[--><p>A</p><!--]-->')
+        })
+
+        test('forwarded empty slot without consuming following sibling', () => {
+          let slotBlock!: Block
+          const Child = defineVaporComponent({
+            setup() {
+              return [
+                template('<main>content</main>')(),
+                (slotBlock = createSlot('footer')),
+                template('<p>after</p>')(),
+              ]
+            },
+          })
+          const Parent = defineVaporComponent({
+            setup() {
+              return createComponent(Child, null, {
+                footer: () => createSlot('footer'),
+              })
+            },
+          })
+          const container = document.createElement('div')
+          container.innerHTML =
+            '<!--[--><main>content</main><!--[--><!--]--><p>after</p><!--]-->'
+
+          createVaporSSRApp(
+            defineVaporComponent(() => createComponent(Parent)),
+          ).mount(container)
+
+          expect(slotBlock).toBeInstanceOf(DynamicFragment)
+          expect(slotBlock).not.toBeInstanceOf(SlotFragment)
+          expect(container.innerHTML).toBe(
+            '<!--[--><main>content</main><!--[--><!--]--><!--slot--><p>after</p><!--]-->',
+          )
+          expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+          expect(`Hydration children mismatch`).not.toHaveBeenWarned()
+        })
+      })
+    })
   })
 
   describe('forwarded slot', () => {
@@ -1504,9 +4453,9 @@ describe('component: slots', () => {
             Child,
             null,
             {
-              foo: withVaporCtx(() => {
+              foo: () => {
                 return createSlot('foo', null)
-              }),
+              },
             },
             true,
           )
@@ -1549,10 +4498,10 @@ describe('component: slots', () => {
       const Parent = defineVaporComponent({
         setup() {
           const n2 = createComponent(Child, null, {
-            foo: withVaporCtx(() => {
+            foo: () => {
               const n0 = createSlot('foo', null)
               return n0
-            }),
+            },
           })
           const n3 = createSlot('default', null)
           return [n2, n3]
@@ -1600,12 +4549,12 @@ describe('component: slots', () => {
       const Parent = defineVaporComponent({
         setup() {
           const n2 = createComponent(Child, null, {
-            default: withVaporCtx(() => {
-              const n0 = createSlot('default', null, () => {
-                return template('<!-- <div></div> -->')()
-              })
+            default: extend(() => {
+              const n0 = createInheritedSlotRoot('default', () =>
+                template('<!-- <div></div> -->')(),
+              )
               return n0
-            }),
+            }, nonStableSlot),
           })
           return n2
         },
@@ -1614,7 +4563,10 @@ describe('component: slots', () => {
       const { html } = define({
         setup() {
           return createComponent(Parent, null, {
-            default: () => template('<!-- <div>App</div> -->')(),
+            default: extend(
+              () => template('<!-- <div>App</div> -->')(),
+              nonStableSlot,
+            ),
           })
         },
       }).render()
@@ -1638,21 +4590,23 @@ describe('component: slots', () => {
             Child,
             null,
             {
-              default: withVaporCtx(() => {
+              default: () => {
                 const n0 = createIf(
                   () => props.show,
                   () => {
                     const n5 = template('<div></div>')() as any
-                    setInsertionState(n5, null, 0, true)
+                    setInsertionState(n5)
                     createSlot('header', null, () => {
                       const n4 = template('default header')()
                       return n4
                     })
                     return n5
                   },
+                  undefined,
+                  keyedSlotRootIfShape,
                 )
                 return n0
-              }),
+              },
             },
             true,
           )
@@ -1699,19 +4653,21 @@ describe('component: slots', () => {
       const Parent = defineVaporComponent({
         setup() {
           const n2 = createComponent(Child, null, {
-            default: withVaporCtx(() => {
-              const n0 = createSlot('default', null, () => {
+            default: extend(() => {
+              const n0 = createInheritedSlotRoot('default', () => {
                 const n2 = createIf(
                   () => show.value,
                   () => {
                     const n4 = template('<div>if content</div>')()
                     return n4
                   },
+                  undefined,
+                  keyedSlotRootIfShape,
                 )
                 return n2
               })
               return n0
-            }),
+            }, nonStableSlot),
           })
           return n2
         },
@@ -1720,12 +4676,15 @@ describe('component: slots', () => {
       const { html } = define({
         setup() {
           return createComponent(Parent, null, {
-            default: () => template('<!-- <div>App</div> -->')(),
+            default: extend(
+              () => template('<!-- <div>App</div> -->')(),
+              nonStableSlot,
+            ),
           })
         },
       }).render()
 
-      expect(html()).toBe('child fallback<!--if--><!--slot--><!--slot-->')
+      expect(html()).toBe('child fallback<!--slot--><!--slot-->')
 
       show.value = true
       await nextTick()
@@ -1745,8 +4704,8 @@ describe('component: slots', () => {
       const Parent = defineVaporComponent({
         setup() {
           const n2 = createComponent(Child, null, {
-            default: withVaporCtx(() => {
-              const n0 = createSlot('default', null, () => {
+            default: extend(() => {
+              const n0 = createInheritedSlotRoot('default', () => {
                 const n2 = createFor(
                   () => items.value,
                   for_item0 => {
@@ -1757,11 +4716,13 @@ describe('component: slots', () => {
                     )
                     return n4
                   },
+                  undefined,
+                  slotRootForFlags,
                 )
                 return n2
               })
               return n0
-            }),
+            }, nonStableSlot),
           })
           return n2
         },
@@ -1770,12 +4731,15 @@ describe('component: slots', () => {
       const { html } = define({
         setup() {
           return createComponent(Parent, null, {
-            default: () => template('<!-- <div>App</div> -->')(),
+            default: extend(
+              () => template('<!-- <div>App</div> -->')(),
+              nonStableSlot,
+            ),
           })
         },
       }).render()
 
-      expect(html()).toBe('child fallback<!--for--><!--slot--><!--slot-->')
+      expect(html()).toBe('child fallback<!--slot--><!--slot-->')
 
       items.value.push(1)
       await nextTick()
@@ -1783,16 +4747,19 @@ describe('component: slots', () => {
 
       items.value.pop()
       await nextTick()
-      expect(html()).toBe('child fallback<!--for--><!--slot--><!--slot-->')
+      await nextTick()
+      expect(html()).toBe('child fallback<!--slot--><!--slot-->')
     })
 
     test('consecutive slots with insertion state', async () => {
       const { component: Child } = define({
         setup() {
-          const n2 = template('<div><div>baz</div></div>', true)() as any
-          setInsertionState(n2, 0)
+          const n2 = template('<div><!><!><div>baz</div></div>', 1)() as any
+          const a0 = child(n2)
+          const a1 = next(a0)
+          setInsertionState(n2, a0)
           createSlot('default', null)
-          setInsertionState(n2, 0)
+          setInsertionState(n2, a1)
           createSlot('foo', null)
           return n2
         },
@@ -1817,6 +4784,29 @@ describe('component: slots', () => {
     })
 
     describe('vdom interop', () => {
+      test('appended outlet renders interop slot content', () => {
+        // regression: interop slot fragments have no client anchor and append
+        // outlets capture no insertion anchor — undefined === undefined must
+        // not read as adoption, which skipped the only insertion
+        const VaporChild = defineVaporComponent({
+          setup() {
+            const n = template('<div></div>', 1)() as any
+            setInsertionState(n)
+            createSlot('default', null)
+            return n
+          },
+        })
+        const root = document.createElement('div')
+        const app = createApp({
+          render: () =>
+            h(VaporChild as any, null, { default: () => h('span', 'hi') }),
+        })
+        app.use(vaporInteropPlugin)
+        app.mount(root)
+        expect(root.innerHTML).toContain('<span>hi</span>')
+        app.unmount()
+      })
+
       const createVaporSlot = (fallbackText = 'fallback') => {
         return defineVaporComponent({
           setup() {
@@ -1849,14 +4839,14 @@ describe('component: slots', () => {
               targetComponent,
               null,
               {
-                foo: withVaporCtx(() => {
+                foo: extend(() => {
                   return fallbackText
-                    ? createSlot('foo', null, () => {
+                    ? createInheritedSlotRoot('foo', () => {
                         const n2 = template(`<div>${fallbackText}</div>`)()
                         return n2
                       })
-                    : createSlot('foo', null)
-                }),
+                    : createInheritedSlotRoot('foo')
+                }, nonStableSlot),
               },
               true,
             )
@@ -2240,7 +5230,7 @@ describe('component: slots', () => {
               VdomSlotWithDynamicFallback,
               null,
               {
-                foo: withVaporCtx(() => createSlot('foo', null)),
+                foo: () => createInheritedSlotRoot('foo'),
               },
               true,
             )
@@ -2254,6 +5244,42 @@ describe('component: slots', () => {
         useAlt.value = true
         await nextTick()
         expect(root.innerHTML).toBe('<p>alt fallback</p><!--slot-->')
+      })
+
+      test('vdom fallback ownership ignores fast-path outlet fragments', async () => {
+        const text = ref('fallback')
+
+        const VdomSlotWithFallback = {
+          render(this: any) {
+            return renderSlot(this.$slots, 'foo', {}, () => [
+              h('div', text.value),
+            ])
+          },
+        }
+
+        const VaporParent = defineVaporComponent({
+          setup() {
+            return createComponent(
+              VdomSlotWithFallback,
+              null,
+              // Unmarked outlet without fallback: a fast-path DynamicFragment,
+              // which must not be mistaken for a SlotFragment that could own
+              // the vdom fallback decision. Hand-written on purpose: the
+              // compiler marks every root outlet FORWARDED, so this shape is
+              // only reachable through hand-written render functions.
+              { foo: () => createSlot('foo') },
+              true,
+            )
+          },
+        })
+
+        const root = document.createElement('div')
+        createVaporApp(VaporParent).use(vaporInteropPlugin).mount(root)
+        expect(root.textContent).toBe('fallback')
+
+        text.value = 'updated fallback'
+        await nextTick()
+        expect(root.textContent).toBe('updated fallback')
       })
 
       test('vdom fallback for renderVaporSlot is evaluated once on initial mount', async () => {
@@ -2272,7 +5298,7 @@ describe('component: slots', () => {
               VdomSlotWithCountingFallback,
               null,
               {
-                foo: withVaporCtx(() => createSlot('foo', null)),
+                foo: () => createInheritedSlotRoot('foo'),
               },
               true,
             )
@@ -2308,7 +5334,7 @@ describe('component: slots', () => {
               VdomSlotWithTextFallback,
               null,
               {
-                foo: withVaporCtx(() => createSlot('foo', null)),
+                foo: () => createInheritedSlotRoot('foo'),
               },
               true,
             )
@@ -2328,7 +5354,7 @@ describe('component: slots', () => {
         expect(fallbackSpy).toHaveBeenCalledTimes(2)
       })
 
-      test('moving active vdom fallback keeps slot carrier order after teleport move', async () => {
+      test('moving active vdom fallback keeps slot anchor order after teleport move', async () => {
         const targetA = document.createElement('div')
         targetA.id = 'component-slots-fallback-target-a'
         const targetB = document.createElement('div')
@@ -2355,16 +5381,15 @@ describe('component: slots', () => {
                   to: () => to.value,
                 },
                 {
-                  default: withVaporCtx(() =>
+                  default: () =>
                     createComponent(
                       VdomSlotWithReactiveFallback,
                       null,
                       {
-                        foo: withVaporCtx(() => createSlot('foo', null)),
+                        foo: () => createInheritedSlotRoot('foo'),
                       },
                       true,
                     ),
-                  ),
                 },
               )
             },
@@ -2417,7 +5442,7 @@ describe('component: slots', () => {
               VdomSlotWithOptionalFallback,
               null,
               {
-                foo: withVaporCtx(() => createSlot('foo', null)),
+                foo: () => createInheritedSlotRoot('foo'),
               },
               true,
             )
@@ -2450,7 +5475,7 @@ describe('component: slots', () => {
               VdomSlotWithReactiveFallback,
               null,
               {
-                foo: withVaporCtx(() => createSlot('foo', null)),
+                foo: () => createInheritedSlotRoot('foo'),
               },
               true,
             )
@@ -2472,6 +5497,7 @@ describe('component: slots', () => {
 
       test('vdom fallback removal clears active wrapper fallback for non-slot-fragment content', async () => {
         const useFallback = ref(true)
+        const show = ref(false)
 
         const VdomSlotWithOptionalFallback = {
           render(this: any) {
@@ -2490,12 +5516,11 @@ describe('component: slots', () => {
               VdomSlotWithOptionalFallback,
               null,
               {
-                foo: withVaporCtx(() =>
+                foo: () =>
                   createIf(
-                    () => false,
+                    () => show.value,
                     () => template('<span>content</span>')(),
                   ),
-                ),
               },
               true,
             )
@@ -2504,11 +5529,17 @@ describe('component: slots', () => {
 
         const root = document.createElement('div')
         createVaporApp(VaporForwardedSlot).use(vaporInteropPlugin).mount(root)
-        expect(root.innerHTML).toBe('<div>fallback</div><!--if-->')
+        expect(root.innerHTML).toBe('<div>fallback</div>')
 
+        // with no fallback left, the parked content returns to the DOM so
+        // its anchor is live for later updates
         useFallback.value = false
         await nextTick()
         expect(root.innerHTML).toBe('<!--if-->')
+
+        show.value = true
+        await nextTick()
+        expect(root.innerHTML).toBe('<span>content</span><!--if-->')
       })
 
       test('vdom fallback toggles between local and inherited fallback for non-slot-fragment content', async () => {
@@ -2539,12 +5570,11 @@ describe('component: slots', () => {
               VdomForwardedSlotWithOptionalFallback,
               null,
               {
-                foo: withVaporCtx(() =>
+                foo: () =>
                   createIf(
                     () => false,
                     () => template('<span>content</span>')(),
                   ),
-                ),
               },
               true,
             )
@@ -2553,15 +5583,15 @@ describe('component: slots', () => {
 
         const root = document.createElement('div')
         createVaporApp(VaporForwardedSlot).use(vaporInteropPlugin).mount(root)
-        expect(root.innerHTML).toBe('<div>local fallback</div><!--if-->')
+        expect(root.innerHTML).toBe('<div>local fallback</div>')
 
         useFallback.value = false
         await nextTick()
-        expect(root.innerHTML).toBe('<div>outer fallback</div><!--if-->')
+        expect(root.innerHTML).toBe('<div>outer fallback</div>')
 
         useFallback.value = true
         await nextTick()
-        expect(root.innerHTML).toBe('<div>local fallback</div><!--if-->')
+        expect(root.innerHTML).toBe('<div>local fallback</div>')
       })
 
       test('nested interop vapor slot fallback should satisfy enclosing vapor slot validity after content becomes invalid', async () => {
@@ -2582,12 +5612,13 @@ describe('component: slots', () => {
               VdomSlotWithLocalFallback,
               null,
               {
-                bar: withVaporCtx(() =>
+                bar: () =>
                   createIf(
                     () => showContent.value,
                     () => template('<span>content</span>')(),
+                    undefined,
+                    slotRootIfShape,
                   ),
-                ),
               },
               true,
             )
@@ -2600,9 +5631,7 @@ describe('component: slots', () => {
               OuterVaporSlot,
               null,
               {
-                foo: withVaporCtx(() =>
-                  createComponent(NestedInteropContainer, null, null),
-                ),
+                foo: () => createComponent(NestedInteropContainer, null, null),
               },
               true,
             )
@@ -2616,9 +5645,7 @@ describe('component: slots', () => {
 
         showContent.value = false
         await nextTick()
-        expect(root.innerHTML).toBe(
-          '<div>local fallback</div><!--if--><!--slot-->',
-        )
+        expect(root.innerHTML).toBe('<div>local fallback</div><!--slot-->')
       })
 
       test('vdom fallback addition activates inherited vapor fallback', async () => {
@@ -2641,7 +5668,7 @@ describe('component: slots', () => {
               VdomSlotWithOptionalFallback,
               null,
               {
-                foo: withVaporCtx(() => createSlot('foo', null)),
+                foo: () => createInheritedSlotRoot('foo'),
               },
               true,
             )
@@ -2654,7 +5681,7 @@ describe('component: slots', () => {
 
         useFallback.value = true
         await nextTick()
-        expect(root.innerHTML).toBe('<div>fallback</div><!--slot-->')
+        expect(root.innerHTML).toBe('<!--slot--><div>fallback</div>')
       })
 
       test('vdom fallback addition should not remount valid forwarded vapor content', async () => {
@@ -2685,7 +5712,7 @@ describe('component: slots', () => {
               VdomSlotWithOptionalFallback,
               null,
               {
-                foo: withVaporCtx(() => createComponent(Content, null, null)),
+                foo: () => createComponent(Content, null, null),
               },
               true,
             )
@@ -2704,7 +5731,7 @@ describe('component: slots', () => {
         expect(mountSpy).toHaveBeenCalledTimes(1)
       })
 
-      test('vdom fallback added over valid forwarded vapor content should activate later when content becomes invalid', async () => {
+      test('vdom fallback added over forwarded vapor component content stays hidden when component output becomes invalid', async () => {
         const useFallback = ref(false)
         const showContent = ref(true)
         const mountSpy = vi.fn()
@@ -2715,6 +5742,8 @@ describe('component: slots', () => {
             return createIf(
               () => showContent.value,
               () => template('<span>content</span>')(),
+              undefined,
+              keyedSlotRootIfShape,
             )
           },
         })
@@ -2736,7 +5765,7 @@ describe('component: slots', () => {
               VdomSlotWithOptionalFallback,
               null,
               {
-                foo: withVaporCtx(() => createComponent(Content, null, null)),
+                foo: () => createComponent(Content, null, null),
               },
               true,
             )
@@ -2755,7 +5784,7 @@ describe('component: slots', () => {
 
         showContent.value = false
         await nextTick()
-        expect(root.innerHTML).toBe('<div>fallback</div><!--if-->')
+        expect(root.innerHTML).toBe('<!--if-->')
         expect(mountSpy).toHaveBeenCalledTimes(1)
       })
 
@@ -2781,7 +5810,7 @@ describe('component: slots', () => {
               VdomSlotWithOptionalFallback,
               null,
               {
-                foo: withVaporCtx(() => createSlot('foo', null)),
+                foo: () => createInheritedSlotRoot('foo'),
               },
               true,
             )
@@ -2802,7 +5831,7 @@ describe('component: slots', () => {
         expect(root.innerHTML).toBe('<div>fallback</div>')
       })
 
-      test('vdom fallback added later should propagate to nested slot boundaries inside still-valid content', async () => {
+      test('vdom fallback added later does not propagate through stable slot content', async () => {
         const useFallback = ref(false)
         const showInner = ref(true)
 
@@ -2831,21 +5860,21 @@ describe('component: slots', () => {
               VdomSlotWithOptionalFallback,
               null,
               {
-                foo: withVaporCtx(() =>
+                foo: () =>
                   createComponent(
                     NestedSlotContainer,
                     null,
                     {
-                      bar: withVaporCtx(() =>
+                      bar: () =>
                         createIf(
                           () => showInner.value,
                           () => template('<i>inner</i>')(),
+                          undefined,
+                          slotRootIfShape,
                         ),
-                      ),
                     },
                     true,
                   ),
-                ),
               },
               true,
             )
@@ -2866,12 +5895,10 @@ describe('component: slots', () => {
 
         showInner.value = false
         await nextTick()
-        expect(root.innerHTML).toBe(
-          '<span>stable</span><div>outer fallback</div><!--if--><!--slot-->',
-        )
+        expect(root.innerHTML).toBe('<span>stable</span><!--if--><!--slot-->')
       })
 
-      test('vdom fallback toggles should wait for the next nested invalidation inside still-valid content', async () => {
+      test('vdom fallback toggles do not affect nested slots inside stable content', async () => {
         const useFallback = ref(false)
         const showInner = ref(false)
 
@@ -2900,21 +5927,21 @@ describe('component: slots', () => {
               VdomSlotWithOptionalFallback,
               null,
               {
-                foo: withVaporCtx(() =>
+                foo: () =>
                   createComponent(
                     NestedSlotContainer,
                     null,
                     {
-                      bar: withVaporCtx(() =>
+                      bar: () =>
                         createIf(
                           () => showInner.value,
                           () => template('<i>inner</i>')(),
+                          undefined,
+                          slotRootIfShape,
                         ),
-                      ),
                     },
                     true,
                   ),
-                ),
               },
               true,
             )
@@ -2937,12 +5964,10 @@ describe('component: slots', () => {
 
         showInner.value = false
         await nextTick()
-        expect(root.innerHTML).toBe(
-          '<span>stable</span><div>outer fallback</div><!--if--><!--slot-->',
-        )
+        expect(root.innerHTML).toBe('<span>stable</span><!--if--><!--slot-->')
       })
 
-      test('vdom local fallback should expose inherited fallback to nested slot boundaries', async () => {
+      test('vdom local fallback with stable content does not expose inherited fallback to nested slots', async () => {
         const VaporSlot = createVaporSlot('outer fallback')
 
         const NestedFallbackContainer = defineVaporComponent({
@@ -2971,12 +5996,10 @@ describe('component: slots', () => {
 
         const root = document.createElement('div')
         createApp(App).use(vaporInteropPlugin).mount(root)
-        expect(root.innerHTML).toBe(
-          '<span>local stable</span><div>outer fallback</div>',
-        )
+        expect(root.innerHTML).toBe('<span>local stable</span>')
       })
 
-      test('vdom local fallback should expose inherited fallback to nested interop vapor slot outlets', async () => {
+      test('vdom local fallback does not expose inherited fallback to nested component slots', async () => {
         const VaporSlot = createVaporSlot('outer fallback')
 
         const NestedInteropContainer = defineVaporComponent({
@@ -3006,7 +6029,7 @@ describe('component: slots', () => {
         const root = document.createElement('div')
         createApp(App).use(vaporInteropPlugin).mount(root)
         expect(localFallback).toHaveBeenCalledTimes(1)
-        expect(root.textContent).toBe('outer fallback')
+        expect(root.textContent).toBe('')
       })
 
       test('vdom local fallback should expose inherited fallback to nested interop vapor forwarded slots', async () => {
@@ -3024,7 +6047,7 @@ describe('component: slots', () => {
               NestedVdomSlot,
               null,
               {
-                bar: withVaporCtx(() => createSlot('bar', null)),
+                bar: () => createInheritedSlotRoot('bar'),
               },
               true,
             )
@@ -3051,7 +6074,7 @@ describe('component: slots', () => {
         expect(root.textContent).toBe('outer fallback')
       })
 
-      test('vdom local fallback should keep nested inherited vapor fallback reactive after mount', async () => {
+      test('vdom local fallback keeps nested component slots isolated from inherited fallback', async () => {
         const fallbackText = ref('outer fallback')
 
         const VaporSlot = defineVaporComponent({
@@ -3094,12 +6117,12 @@ describe('component: slots', () => {
         const root = document.createElement('div')
         createApp(App).use(vaporInteropPlugin).mount(root)
         expect(localFallback).toHaveBeenCalledTimes(1)
-        expect(root.textContent).toBe('outer fallback')
+        expect(root.textContent).toBe('')
 
         fallbackText.value = 'updated outer fallback'
         await nextTick()
 
-        expect(root.textContent).toBe('updated outer fallback')
+        expect(root.textContent).toBe('')
       })
 
       test('vdom forwarded inherited vapor fallback should clean up old fallback effects', async () => {
@@ -3201,7 +6224,7 @@ describe('component: slots', () => {
               InnerVdomSlot,
               null,
               {
-                bar: withVaporCtx(() => createSlot('bar', null)),
+                bar: () => createInheritedSlotRoot('bar'),
               },
               true,
             )
@@ -3214,7 +6237,7 @@ describe('component: slots', () => {
               OuterVdomSlot,
               null,
               {
-                foo: withVaporCtx(() => createSlot('foo', null)),
+                foo: () => createInheritedSlotRoot('foo'),
               },
               true,
             )
@@ -3289,7 +6312,7 @@ describe('component: slots', () => {
               InnerVdomSlot,
               null,
               {
-                bar: withVaporCtx(() => createSlot('bar', null)),
+                bar: () => createInheritedSlotRoot('bar'),
               },
               true,
             )
@@ -3302,7 +6325,7 @@ describe('component: slots', () => {
               OuterVdomSlot,
               null,
               {
-                foo: withVaporCtx(() => createSlot('foo', null)),
+                foo: () => createInheritedSlotRoot('foo'),
               },
               true,
             )
@@ -3367,16 +6390,17 @@ describe('component: slots', () => {
               null,
               {
                 $: [
-                  () =>
-                    createForSlots(values.value, value => ({
-                      name: 'default',
-                      fn: () => {
-                        if (value === 1) {
-                          throw new Error('slot boom')
-                        }
-                        return template('<span>ok</span>')()
-                      },
-                    })),
+                  createForSlots(
+                    () => values.value,
+                    value => () => {
+                      if (value.value === 1) {
+                        throw new Error('slot boom')
+                      }
+                      return template('<span>ok</span>')()
+                    },
+                    () => 'default',
+                    value => value,
+                  ),
                 ],
               },
               true,
@@ -3475,12 +6499,11 @@ describe('component: slots', () => {
               VdomSlot,
               null,
               {
-                foo: withVaporCtx(() =>
+                foo: () =>
                   createIf(
                     () => true,
                     () => template('<span>content</span>')(),
                   ),
-                ),
               },
               true,
             )
@@ -4054,11 +7077,11 @@ describe('component: slots', () => {
         setup() {
           return createComponent(Child, null, {
             $: [
-              () =>
-                createForSlots(loop.value, (item, i) => ({
-                  name: item,
-                  fn: () => template(item + i)(),
-                })),
+              createForSlots(
+                () => loop.value,
+                (item, i) => () => template(item.value + i!.value)(),
+                item => item,
+              ),
             ],
           })
         },
@@ -4074,6 +7097,43 @@ describe('component: slots', () => {
       loop.value.shift()
       await nextTick()
       expect(instance.slots).not.toHaveProperty('1')
+    })
+
+    test('should preserve result identity when slot resolution is unchanged', () => {
+      const items = ref([
+        { id: 1, name: 'a', label: 'A0' },
+        { id: 2, name: 'b', label: 'B0' },
+      ])
+      let renderedItem: any
+      const source = createForSlots(
+        () => items.value,
+        item => () => {
+          renderedItem = item.value
+          return template('content')()
+        },
+        item => item.name,
+        item => item.id,
+      )
+
+      const first = source()
+      const firstSlot = first[0]
+      items.value = [
+        { id: 1, name: 'a', label: 'A1' },
+        { id: 2, name: 'b', label: 'B1' },
+      ]
+      const second = source()
+
+      expect(second).toBe(first)
+      expect(second[0]).toBe(firstSlot)
+      second[0].fn()
+      expect(renderedItem).toBe(items.value[0])
+
+      items.value.reverse()
+      const reordered = source()
+      expect(reordered).not.toBe(second)
+
+      items.value[0].name = 'c'
+      expect(source()).not.toBe(reordered)
     })
 
     test('should cache dynamic slot source result', async () => {
@@ -4102,11 +7162,11 @@ describe('component: slots', () => {
         setup() {
           return createComponent(Child, null, {
             $: [
-              () =>
-                createForSlots(getItems(), (item, i) => ({
-                  name: 'slot' + item,
-                  fn: () => template(String(item))(),
-                })),
+              createForSlots(
+                getItems,
+                item => () => template(String(item.value))(),
+                item => 'slot' + item,
+              ),
             ],
           })
         },
@@ -4145,11 +7205,11 @@ describe('component: slots', () => {
         setup() {
           return createComponent(Child, null, {
             $: [
-              () =>
-                createForSlots(getItems(), (item, i) => ({
-                  name: 'slot' + item,
-                  fn: () => template(String(item))(),
-                })),
+              createForSlots(
+                getItems,
+                item => () => template(String(item.value))(),
+                item => 'slot' + item,
+              ),
             ],
           })
         },
@@ -4188,11 +7248,11 @@ describe('component: slots', () => {
         setup() {
           return createComponent(Child, null, {
             $: [
-              () =>
-                createForSlots(items.value, item => ({
-                  name: 'slot' + item,
-                  fn: () => template('content' + item)(),
-                })),
+              createForSlots(
+                () => items.value,
+                item => () => template('content' + item.value)(),
+                item => 'slot' + item,
+              ),
             ],
           })
         },
@@ -4233,11 +7293,15 @@ describe('component: slots', () => {
         setup() {
           return createComponent(Child, null, {
             $: [
-              () =>
-                createForSlots(list.value, item => ({
-                  name: 'default',
-                  fn: () => template(String(item))(),
-                })),
+              createForSlots(
+                () => list.value,
+                item => () => {
+                  const n = template(' ')() as Text
+                  renderEffect(() => setText(n, String(item.value)))
+                  return n
+                },
+                () => 'default',
+              ),
             ],
           })
         },
@@ -4275,11 +7339,11 @@ describe('component: slots', () => {
         setup() {
           return createComponent(Child, null, {
             $: [
-              () =>
-                createForSlots(loop.value as any, (item, i) => ({
-                  name: item,
-                  fn: () => template(item + i)(),
-                })),
+              createForSlots(
+                () => loop.value as any,
+                (item, i) => () => template(item.value + i!.value)(),
+                item => item,
+              ),
             ],
           })
         },
@@ -4294,5 +7358,924 @@ describe('component: slots', () => {
       await nextTick()
       expect(instance.slots).toEqual({})
     })
+
+    // #15276
+    test('should preserve keyed slot records across source updates', async () => {
+      const state = ref({
+        showA: false,
+        items: [
+          { id: 'a1', name: 'a', label: 'A0' },
+          { id: 'b1', name: 'b', label: 'B0' },
+        ],
+      })
+      const unmounted = vi.fn()
+      const Content = compile(
+        `<script setup vapor>
+        import { onUnmounted, ref } from 'vue'
+        const props = defineProps(['label'])
+        const count = ref(0)
+        onUnmounted(_components.unmounted)
+        </script>
+        <template>
+          <button @click="count++">{{ props.label }}:{{ count }}</button>
+        </template>`,
+        state,
+        { unmounted },
+      )
+      const Child = compile(
+        `<template>
+          <div id="b"><slot name="b" /></div>
+          <div v-if="data.showA" id="a"><slot name="a" /></div>
+        </template>`,
+        state,
+      )
+      const App = compile(
+        `<template>
+          <components.Child>
+            <template
+              v-for="item in data.items"
+              :key="item.id"
+              #[item.name]
+            >
+              <components.Content :label="item.label" />
+            </template>
+          </components.Child>
+        </template>`,
+        state,
+        { Child, Content },
+      )
+      const root = document.createElement('div')
+      const app = createVaporApp(App)
+
+      try {
+        app.mount(root)
+        state.value.items = [
+          { id: 'a1', name: 'a', label: 'A1' },
+          { id: 'b1', name: 'b', label: 'B1' },
+        ]
+        await nextTick()
+
+        state.value.showA = true
+        await nextTick()
+        const firstButton = root.querySelector<HTMLButtonElement>('#a button')!
+        expect(firstButton.textContent).toBe('A1:0')
+        firstButton.click()
+        firstButton.click()
+        await nextTick()
+
+        state.value.items = [
+          { id: 'a1', name: 'a', label: 'A2' },
+          { id: 'b1', name: 'b', label: 'B2' },
+        ]
+        await nextTick()
+
+        expect(root.querySelector('#a button')).toBe(firstButton)
+        expect(firstButton.textContent).toBe('A2:2')
+        expect(root.querySelector('#b')!.textContent).toBe('B2:0')
+        expect(unmounted).not.toHaveBeenCalled()
+
+        state.value.items = [
+          { id: 'a2', name: 'a', label: 'A3' },
+          { id: 'b1', name: 'b', label: 'B3' },
+        ]
+        await nextTick()
+
+        expect(root.querySelector('#a button')).not.toBe(firstButton)
+        expect(root.querySelector('#a')!.textContent).toBe('A3:0')
+        expect(unmounted).toHaveBeenCalledOnce()
+      } finally {
+        app.unmount()
+      }
+    })
+
+    test('should preserve unkeyed slot content by name when reordered', async () => {
+      const items = ref([
+        { name: 'a', label: 'A0' },
+        { name: 'b', label: 'B0' },
+      ])
+      const Content = compile(
+        `<script setup vapor>
+        import { ref } from 'vue'
+        const props = defineProps(['label'])
+        const count = ref(0)
+        </script>
+        <template>
+          <button @click="count++">{{ props.label }}:{{ count }}</button>
+        </template>`,
+        items,
+      )
+      const Child = compile(
+        `<template><slot name="a" /><slot name="b" /></template>`,
+        items,
+      )
+      const App = compile(
+        `<template>
+          <components.Child>
+            <template v-for="item in data" #[item.name]>
+              <components.Content :label="item.label" />
+            </template>
+          </components.Child>
+        </template>`,
+        items,
+        { Child, Content },
+      )
+      const root = document.createElement('div')
+      const app = createVaporApp(App)
+
+      try {
+        app.mount(root)
+        const [buttonA, buttonB] = root.querySelectorAll('button')
+        buttonA.click()
+        buttonB.click()
+        buttonB.click()
+        await nextTick()
+
+        items.value = [
+          { name: 'b', label: 'B1' },
+          { name: 'a', label: 'A1' },
+        ]
+        await nextTick()
+
+        const buttons = root.querySelectorAll('button')
+        expect(buttons[0]).toBe(buttonA)
+        expect(buttons[0].textContent).toBe('A1:1')
+        expect(buttons[1]).toBe(buttonB)
+        expect(buttons[1].textContent).toBe('B1:2')
+      } finally {
+        app.unmount()
+      }
+    })
+
+    test('should remove teleported content when a dynamic v-for slot is removed', async () => {
+      const cats = ref(['a', 'b'])
+      const unmounted = vi.fn()
+      const Modal = compile(
+        `<script setup vapor>
+        import { onUnmounted } from 'vue'
+        onUnmounted(_components.unmounted)
+        </script>
+        <template>
+          <Teleport to="body">
+            <div id="teleported">teleported</div>
+          </Teleport>
+        </template>`,
+        cats,
+        { unmounted },
+      )
+      const Host = compile(
+        `<template>
+          <div v-for="c in data" :key="c">
+            <slot :name="c" />
+          </div>
+        </template>`,
+        cats,
+      )
+      const App = compile(
+        `<template>
+          <components.Host>
+            <template v-for="c in data" :key="c" #[c]>
+              <components.Modal v-if="c === 'a'" />
+            </template>
+          </components.Host>
+        </template>`,
+        cats,
+        { Host, Modal },
+      )
+      const root = document.createElement('div')
+      const app = createVaporApp(App)
+
+      try {
+        app.mount(root)
+        expect(document.body.querySelectorAll('#teleported')).toHaveLength(1)
+
+        cats.value = ['b']
+        await nextTick()
+
+        expect(unmounted).toHaveBeenCalledOnce()
+        expect(document.body.querySelectorAll('#teleported')).toHaveLength(0)
+      } finally {
+        app.unmount()
+        document.querySelectorAll('#teleported').forEach(node => node.remove())
+      }
+    })
+
+    test('should leave disabled teleport content to its main-view owner', async () => {
+      const cats = ref(['a', 'b'])
+      let leaveDone: (() => void) | undefined
+      const onLeave = vi.fn((_el: Element, done: () => void) => {
+        leaveDone = done
+      })
+      const target = document.createElement('div')
+      const Modal = compile(
+        `<template>
+          <Teleport :to="components.target" disabled>
+            <span>teleported</span>
+          </Teleport>
+        </template>`,
+        cats,
+        { target },
+      )
+      const Host = compile(
+        `<template>
+          <TransitionGroup :css="false" @leave="components.onLeave">
+            <div v-for="c in data" :key="c">
+              <slot :name="c" />
+            </div>
+          </TransitionGroup>
+        </template>`,
+        cats,
+        { onLeave },
+      )
+      const App = compile(
+        `<template>
+          <components.Host>
+            <template v-for="c in data" :key="c" #[c]>
+              <components.Modal v-if="c === 'a'" />
+            </template>
+          </components.Host>
+        </template>`,
+        cats,
+        { Host, Modal },
+      )
+      const root = document.createElement('div')
+      const app = createVaporApp(App)
+
+      try {
+        app.mount(root)
+        cats.value = ['b']
+        await nextTick()
+
+        expect(onLeave).toHaveBeenCalledOnce()
+        expect(root.textContent).toContain('teleported')
+
+        leaveDone!()
+        await nextTick()
+
+        expect(root.textContent).not.toContain('teleported')
+      } finally {
+        leaveDone?.()
+        app.unmount()
+      }
+    })
+  })
+
+  describe('stable dynamic slot functions', () => {
+    describe.each([true, false])('vapor child: %s', vapor => {
+      test.each(['v-if="data.list.length" #default', '#[data.names[0]]'])(
+        'preserves state and updates slot props when %s recomputes',
+        async declaration => {
+          const data = ref({
+            list: [1],
+            names: ['default'],
+            text: 'a',
+            value: 1,
+          })
+          const Content = compile(
+            `<script setup vapor>
+              import { ref } from 'vue'
+              const props = defineProps(['label'])
+              const count = ref(0)
+            </script>
+            <template><button @click="count++">{{ props.label }}:{{ count }}</button></template>`,
+            data,
+          )
+          const Child = compile(
+            `<script setup>const data = _data</script>
+            <template><slot :value="data.value" /></template>`,
+            data,
+            {},
+            { vapor },
+          )
+          const App = compile(
+            `<template>
+              <components.Child>
+                <template ${declaration}="{ value }">
+                  <input :data-label="data.text + ':' + value" />
+                  <components.Content :label="data.text + ':' + value" />
+                </template>
+              </components.Child>
+            </template>`,
+            data,
+            { Child, Content },
+          )
+          const root = document.createElement('div')
+          document.body.appendChild(root)
+          const app = createVaporApp(App).use(vaporInteropPlugin)
+          try {
+            app.mount(root)
+            const input = root.querySelector('input')!
+            const button = root.querySelector('button')!
+            button.click()
+            input.value = 'typed'
+            input.focus()
+            await nextTick()
+            expect(button.textContent).toBe('a:1:1')
+
+            data.value.list.push(2)
+            data.value.names = ['default']
+            data.value.text = 'b'
+            data.value.value = 2
+            await nextTick()
+
+            expect(root.querySelector('input')).toBe(input)
+            expect(document.activeElement).toBe(input)
+            expect(input.value).toBe('typed')
+            expect(input.dataset.label).toBe('b:2')
+            expect(root.querySelector('button')!.textContent).toBe('b:2:1')
+
+            data.value.value = 3
+            await nextTick()
+            expect(input.dataset.label).toBe('b:3')
+            expect(root.querySelector('button')!.textContent).toBe('b:3:1')
+          } finally {
+            app.unmount()
+            root.remove()
+          }
+        },
+      )
+    })
+
+    test('replaces content only when switching conditional branches', async () => {
+      const data = ref(1)
+      const Child = compile(`<template><slot /></template>`, data)
+      const App = compile(
+        `<template>
+          <components.Child>
+            <template v-if="data < 10" #default><input id="a" /></template>
+            <template v-else-if="data < 20" #default><input id="b" /></template>
+            <template v-else #default><input id="c" /></template>
+          </components.Child>
+        </template>`,
+        data,
+        { Child },
+      )
+      const root = document.createElement('div')
+      const app = createVaporApp(App)
+      try {
+        app.mount(root)
+        let input = root.querySelector('input')!
+        for (const value of [2, 15, 16, 25, 26, 1]) {
+          data.value = value
+          await nextTick()
+          const next = root.querySelector('input')!
+          const id = value < 10 ? 'a' : value < 20 ? 'b' : 'c'
+          expect(next.id).toBe(id)
+          expect(next === input).toBe(input.id === id)
+          input = next
+        }
+      } finally {
+        app.unmount()
+      }
+    })
+
+    test('swaps content when dynamic slot declarations exchange names', async () => {
+      await renderParity(
+        {
+          Child: `<template><slot name="a" /></template>`,
+          App: `<template>
+            <components.Child>
+              <template #[data[0]]><input id="first" /></template>
+              <template #[data[1]]><input id="second" /></template>
+            </components.Child>
+          </template>`,
+        },
+        () => ref(['a', 'b']),
+        async (data, root) => {
+          expect(root.querySelector('input')!.id).toBe('first')
+          data.value = ['b', 'a']
+          await nextTick()
+          expect(root.querySelector('input')!.id).toBe('second')
+        },
+      )
+    })
+
+    test('replaces content when the dynamic slot and outlet are renamed together', async () => {
+      await renderParity(
+        {
+          Child: `<template><slot :name="data" /></template>`,
+          App: `<template>
+            <components.Child><template #[data]><input /></template></components.Child>
+          </template>`,
+        },
+        () => ref('p'),
+        async (data, root) => {
+          const input = root.querySelector('input')!
+          input.value = 'typed'
+          data.value = 'q'
+          await nextTick()
+          expect(root.querySelector('input')).not.toBe(input)
+          expect(root.querySelector('input')!.value).toBe('')
+        },
+      )
+    })
+
+    test('keeps functions inside the outer v-for scope', async () => {
+      const data = ref([
+        { id: 'a', label: 'A', list: [1] },
+        { id: 'b', label: 'B', list: [1] },
+      ])
+      const Child = compile(`<template><slot /></template>`, data)
+      const App = compile(
+        `<template>
+          <components.Child v-for="row in data" :key="row.id">
+            <template v-if="row.list.length" #default>
+              <input :data-label="row.label" />
+            </template>
+          </components.Child>
+        </template>`,
+        data,
+        { Child },
+      )
+      const root = document.createElement('div')
+      const app = createVaporApp(App)
+      try {
+        app.mount(root)
+        const [a, b] = root.querySelectorAll('input')
+        data.value = [
+          { id: 'b', label: 'B2', list: [1, 2] },
+          { id: 'a', label: 'A2', list: [1, 2] },
+        ]
+        await nextTick()
+        const inputs = root.querySelectorAll('input')
+        expect(inputs[0]).toBe(b)
+        expect(inputs[1]).toBe(a)
+        expect(a.dataset.label).toBe('A2')
+        expect(b.dataset.label).toBe('B2')
+      } finally {
+        app.unmount()
+      }
+    })
+
+    test('captures nested slot props without shadowing the outer slot binding', async () => {
+      const data = ref({ list: [1], label: 'A' })
+      const Outer = compile(`<template><slot :row="data" /></template>`, data)
+      const Child = compile(
+        `<template><slot :value="data.label" /></template>`,
+        data,
+      )
+      const App = compile(
+        `<template>
+          <components.Outer v-slot="s">
+            <components.Child>
+              <template v-if="s.row.list.length" #default="inner">
+                <input :data-label="s.row.label + ':' + inner.value" />
+              </template>
+            </components.Child>
+          </components.Outer>
+        </template>`,
+        data,
+        { Child, Outer },
+      )
+      const root = document.createElement('div')
+      const app = createVaporApp(App)
+      try {
+        app.mount(root)
+        const input = root.querySelector('input')!
+        expect(input.dataset.label).toBe('A:A')
+        data.value = { list: [1, 2], label: 'B' }
+        await nextTick()
+        expect(root.querySelector('input')).toBe(input)
+        expect(input.dataset.label).toBe('B:B')
+      } finally {
+        app.unmount()
+      }
+    })
+  })
+
+  // A dynamic slot descriptor is the parent's expression as much as a prop
+  // getter is: the child reads what the parent delivered, in its update order.
+  describe('dynamic slot descriptors are delivered', () => {
+    const Child = (read: string) => `<script setup>
+      import { useSlots, watchSyncEffect } from 'vue'
+      const data = _data
+      const slots = useSlots()
+      watchSyncEffect(() => data.value.seen.push(${read}))
+    </script><template><div><slot name="foo" /></div></template>`
+
+    async function expectGuarded(
+      srcs: Record<string, string>,
+      x: any,
+      first: unknown,
+    ) {
+      const seen: Record<string, unknown[]> = {}
+      const { vdom, vapor } = await renderParity(
+        srcs,
+        () => ref<any>({ x, seen: [] }),
+        (data, root, mode) => {
+          data.value.x = undefined
+          seen[mode] = [...data.value.seen]
+        },
+      )
+      expect(seen.vdom).toEqual([first])
+      expect(seen.vapor).toEqual(seen.vdom)
+      expect(vapor.text).toBe('gone')
+      expect(vdom.text).toBe(vapor.text)
+    }
+
+    test('conditional slot read by a sync watcher', () =>
+      expectGuarded(
+        {
+          Child: Child('!!slots.foo'),
+          App: `<template>
+            <components.Child v-if="data.x !== undefined">
+              <template #foo v-if="data.x.show">foo</template>
+            </components.Child>
+            <p v-else>gone</p>
+          </template>`,
+        },
+        { show: true },
+        true,
+      ))
+
+    test('dynamic slot name read by a sync watcher', () =>
+      expectGuarded(
+        {
+          Child: Child('Object.keys(slots).join()'),
+          App: `<template>
+            <components.Child v-if="data.x !== undefined">
+              <template #[data.x.name]>foo</template>
+            </components.Child>
+            <p v-else>gone</p>
+          </template>`,
+        },
+        { name: 'foo' },
+        'foo',
+      ))
+
+    test('v-for slots read by a sync watcher', () =>
+      expectGuarded(
+        {
+          Child: Child('Object.keys(slots).join()'),
+          App: `<template>
+            <components.Child v-if="data.x !== undefined">
+              <template v-for="name in data.x.names" #[name]>{{ name }}</template>
+            </components.Child>
+            <p v-else>gone</p>
+          </template>`,
+        },
+        { names: ['foo', 'bar'] },
+        'foo,bar',
+      ))
+
+    test('vdom child under a vapor parent', async () => {
+      const data = ref<any>({ x: { show: true }, seen: [] })
+      const components: Record<string, any> = {}
+      components.Child = compile(Child('!!slots.foo'), data, components, {
+        vapor: false,
+      })
+      const App = compile(
+        `<template>
+          <components.Child v-if="data.x !== undefined">
+            <template #foo v-if="data.x.show">foo</template>
+          </components.Child>
+          <p v-else>gone</p>
+        </template>`,
+        data,
+        components,
+        { vapor: true },
+      )
+      const root = document.createElement('div')
+      const app = createVaporApp(App)
+      app.use(vaporInteropPlugin).mount(root)
+      expect(root.textContent).toBe('foo')
+      data.value.x = undefined
+      expect(data.value.seen).toEqual([true])
+      await nextTick()
+      expect(root.textContent).toBe('gone')
+      app.unmount()
+    })
+
+    // vdom slots are not reactive, so only the timing is comparable: nothing
+    // reaches the child before the parent's update
+    test('a slot toggle reaches the child in the flush', async () => {
+      const seen: Record<string, unknown[]> = {}
+      const { vdom, vapor } = await renderParity(
+        {
+          Child: Child('!!slots.foo'),
+          App: `<template>
+            <components.Child>
+              <template #foo v-if="data.x.show">foo</template>
+            </components.Child>
+          </template>`,
+        },
+        () => ref<any>({ x: { show: true }, seen: [] }),
+        async (data, root, mode) => {
+          data.value.x.show = false
+          seen[mode] = [...data.value.seen]
+          await nextTick()
+        },
+      )
+      expect(seen.vdom).toEqual([true])
+      expect(seen.vapor).toEqual(seen.vdom)
+      expect(vapor.text).toBe('')
+      expect(vdom.text).toBe(vapor.text)
+    })
+
+    test('descriptors run after the vdom host that guards them', async () => {
+      const data = ref<any>({ x: { flag: true } })
+      const components: Record<string, any> = {}
+      components.Host = compile(
+        `<script setup>
+          defineProps({ show: Boolean })
+        </script><template><div v-if="show"><slot /></div></template>`,
+        data,
+        components,
+        { vapor: false },
+      )
+      components.Child = compile(
+        `<template><b><slot name="foo" /></b></template>`,
+        data,
+        components,
+      )
+      const App = compile(
+        `<template>
+          <components.Host :show="data.x !== undefined">
+            <components.Child>
+              <template #foo v-if="data.x.flag">F</template>
+            </components.Child>
+          </components.Host>
+        </template>`,
+        data,
+        components,
+      )
+      const root = document.createElement('div')
+      const app = createVaporApp(App)
+      app.use(vaporInteropPlugin).mount(root)
+      expect(root.textContent).toBe('F')
+      data.value.x = undefined
+      await nextTick()
+      expect(root.textContent).toBe('')
+      app.unmount()
+    })
+
+    // the inner component's props arrive one hop later than the wrapper's
+    test('an async inner component reads its props before the descriptors', async () => {
+      let resolve!: (comp: any) => void
+      const data = ref<any>({ item: undefined, seen: [] })
+      const components: Record<string, any> = {}
+      components.Inner = compile(
+        `<script setup>
+          import { useSlots, watchSyncEffect } from 'vue'
+          const data = _data
+          const props = defineProps({ item: Object })
+          const slots = useSlots()
+          watchSyncEffect(() => {
+            const item = props.item
+            if (slots.foo) data.value.seen.push(item.name)
+          })
+        </script><template><div><slot name="foo" /></div></template>`,
+        data,
+        components,
+      )
+      components.Async = defineVaporAsyncComponent(
+        () => new Promise(r => (resolve = r)),
+      )
+      const App = compile(
+        `<template>
+          <components.Async :item="data.item">
+            <template v-if="data.item" #foo>foo</template>
+          </components.Async>
+        </template>`,
+        data,
+        components,
+      )
+      const root = document.createElement('div')
+      const app = createVaporApp(App)
+      app.mount(root)
+      resolve(components.Inner)
+      await new Promise(r => setTimeout(r))
+      expect(root.innerHTML).toBe(
+        '<div><!--slot--></div><!--async component-->',
+      )
+      data.value.item = { name: 'n' }
+      await nextTick()
+      expect(data.value.seen).toEqual(['n'])
+      expect(root.textContent).toBe('foo')
+      app.unmount()
+    })
+
+    // a cache hit rebinds the props to the call site; the descriptors keep
+    // following them
+    test('descriptors follow the props again after a KeepAlive cache hit', async () => {
+      const data = ref<any>({ cur: 'A', item: undefined, seen: [] })
+      const components: Record<string, any> = {}
+      const KeptChild = (name: string) =>
+        compile(
+          `<script setup>
+            import { useSlots, watchSyncEffect } from 'vue'
+            const data = _data
+            const props = defineProps({ item: Object })
+            const slots = useSlots()
+            watchSyncEffect(() => {
+              const item = props.item
+              if (slots.foo) data.value.seen.push('${name}:' + item.name)
+            })
+          </script><template><div><slot name="foo" /></div></template>`,
+          data,
+          components,
+        )
+      components.A = KeptChild('A')
+      components.B = KeptChild('B')
+      const App = compile(
+        `<script setup vapor>
+          const data = _data
+          const components = _components
+        </script><template>
+          <KeepAlive>
+            <component :is="components[data.cur]" :item="data.item">
+              <template v-if="data.item" #foo>foo</template>
+            </component>
+          </KeepAlive>
+        </template>`,
+        data,
+        components,
+      )
+      const root = document.createElement('div')
+      const app = createVaporApp(App)
+      app.mount(root)
+      data.value.cur = 'B'
+      await nextTick()
+      data.value.cur = 'A'
+      await nextTick()
+      data.value.item = { name: 'n' }
+      await nextTick()
+      expect(data.value.seen).toEqual(['A:n'])
+      expect(root.textContent).toBe('foo')
+      app.unmount()
+    })
+
+    // props and descriptors reach a sync watcher together. vdom delivers the
+    // props first, so the watcher throws there
+    test.each([
+      ['vapor', true],
+      ['vdom', false],
+    ])(
+      'a delivery is atomic across props and descriptors for a %s child',
+      async (_, vapor) => {
+        const data = ref<any>({ x: { item: { name: 'a' } }, seen: [] })
+        const components: Record<string, any> = {}
+        components.Child = compile(
+          `<script setup>
+            import { useSlots, watchSyncEffect } from 'vue'
+            const data = _data
+            const props = defineProps({ item: Object })
+            const slots = useSlots()
+            watchSyncEffect(() => {
+              if (slots.foo) data.value.seen.push(props.item.name)
+            })
+          </script><template><div><slot name="foo" /></div></template>`,
+          data,
+          components,
+          { vapor },
+        )
+        const App = compile(
+          `<template>
+            <components.Child :item="data.x && data.x.item">
+              <template v-if="data.x" #foo>foo</template>
+            </components.Child>
+          </template>`,
+          data,
+          components,
+        )
+        const root = document.createElement('div')
+        const app = createVaporApp(App)
+        app.use(vaporInteropPlugin).mount(root)
+        expect(data.value.seen).toEqual(['a'])
+        data.value.x = null
+        await nextTick()
+        expect(data.value.seen).toEqual(['a'])
+        expect(root.textContent).toBe('')
+        data.value.x = { item: { name: 'b' } }
+        await nextTick()
+        expect(data.value.seen).toEqual(['a', 'b'])
+        app.unmount()
+      },
+    )
+
+    test('a vdom parent delivers props and slots to a vapor child together', async () => {
+      const data = ref<any>({ x: { item: { name: 'a' } }, seen: [] })
+      const components: Record<string, any> = {}
+      components.Child = compile(
+        `<script setup>
+          import { useSlots, watchSyncEffect } from 'vue'
+          const data = _data
+          const props = defineProps({ item: Object })
+          const slots = useSlots()
+          watchSyncEffect(() => {
+            if (slots.foo) data.value.seen.push(props.item.name)
+          })
+        </script><template><div><slot name="foo" /></div></template>`,
+        data,
+        components,
+      )
+      const App = compile(
+        `<script setup>const data = _data; const components = _components;</script>
+        <template>
+          <components.Child :item="data.x && data.x.item">
+            <template v-if="data.x" #foo>foo</template>
+          </components.Child>
+        </template>`,
+        data,
+        components,
+        { vapor: false },
+      )
+      const root = document.createElement('div')
+      const app = createApp(App)
+      app.use(vaporInteropPlugin).mount(root)
+      expect(data.value.seen).toEqual(['a'])
+      data.value.x = null
+      await nextTick()
+      expect(data.value.seen).toEqual(['a'])
+      data.value.x = { item: { name: 'b' } }
+      await nextTick()
+      expect(data.value.seen).toEqual(['a', 'b'])
+      app.unmount()
+    })
+
+    // the delivery runs inside the vdom parent's update: a throwing sync
+    // watcher must not leave the tracking context unrestored
+    test('a throwing sync watcher in a vapor child of a vdom parent', async () => {
+      const data = ref<any>({ n: 0 })
+      const components: Record<string, any> = {}
+      components.Child = compile(
+        `<script setup>
+          import { watch } from 'vue'
+          const props = defineProps({ n: Number })
+          watch(
+            () => props.n,
+            () => {
+              throw new Error('boom')
+            },
+            { flush: 'sync' },
+          )
+        </script><template><i>{{ n }}</i></template>`,
+        data,
+        components,
+      )
+      const App = compile(
+        `<script setup>const data = _data; const components = _components;</script>
+        <template><components.Child :n="data.n" /></template>`,
+        data,
+        components,
+        { vapor: false },
+      )
+      const root = document.createElement('div')
+      const app = createApp(App)
+      app.use(vaporInteropPlugin).mount(root)
+      data.value.n = 1
+      await expect(nextTick()).rejects.toThrow('boom')
+      expect(
+        'Unhandled error during execution of watcher callback',
+      ).toHaveBeenWarned()
+      expect(
+        'Unhandled error during execution of component update',
+      ).toHaveBeenWarned()
+      app.unmount()
+    })
+
+    // props are evaluated before the descriptors, as in vdom: one read, and
+    // none after the creation was aborted
+    test.each([
+      ['vapor', true],
+      ['vdom', false],
+    ])(
+      'a throwing descriptor leaves no input of a %s child behind',
+      async (_, vapor) => {
+        const data = ref<any>({ n: 0, counter: markRaw({ reads: 0 }) })
+        const components: Record<string, any> = {}
+        components.Child = compile(
+          `<script setup>
+            defineProps({ n: Number })
+          </script><template><div><slot name="foo" /></div></template>`,
+          data,
+          components,
+          { vapor },
+        )
+        const App = compile(
+          `<script setup>
+            const data = _data
+            const components = _components
+            const read = () => (data.value.counter.reads++, data.value.n)
+          </script><template>
+            <components.Child :n="read()">
+              <template #[data.slot.name]>foo</template>
+            </components.Child>
+          </template>`,
+          data,
+          components,
+          { vapor: true },
+        )
+        const app = createVaporApp(App)
+        app.use(vaporInteropPlugin)
+        expect(() => app.mount(document.createElement('div'))).toThrow()
+        expect(
+          'Unhandled error during execution of setup function',
+        ).toHaveBeenWarned()
+        expect(data.value.counter.reads).toBe(1)
+        data.value.n++
+        await nextTick()
+        expect(data.value.counter.reads).toBe(1)
+      },
+    )
   })
 })

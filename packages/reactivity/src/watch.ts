@@ -192,8 +192,9 @@ export class WatcherEffect extends ReactiveEffect {
     if (once && cb) {
       const _cb = cb
       cb = (...args) => {
-        _cb(...args)
+        const res = _cb(...args)
         this.stop()
+        return res
       }
     }
 
@@ -220,6 +221,7 @@ export class WatcherEffect extends ReactiveEffect {
       return
     }
     if (
+      initialRun ||
       deep ||
       this.forceTrigger ||
       (this.isMultiSource

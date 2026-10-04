@@ -4,6 +4,7 @@ import {
   type GenericComponentInstance,
   type KeepAliveProps,
   MoveType,
+  type SuspenseBoundary,
   type VNode,
   currentInstance,
   devtoolsComponentAdded,
@@ -15,17 +16,18 @@ import {
   onBeforeUnmount,
   onMounted,
   onUpdated,
-  queuePostFlushCb,
+  queuePostRenderEffect,
   resetShapeFlag,
   warn,
   watch,
 } from '@vue/runtime-dom'
-import { type Block, findBlockNode, move, remove } from '../block'
+import { type Block, findBlockBoundary, move, remove } from '../block'
 import {
   type VaporComponent,
   type VaporComponentInstance,
   isVaporComponent,
 } from '../component'
+import { isAsyncComponentEnabled } from '../asyncComponentState'
 import {
   type DefineVaporComponent,
   defineVaporComponent,
@@ -33,29 +35,40 @@ import {
 import { ShapeFlags, invokeArrayFns, isArray } from '@vue/shared'
 import { createElement } from '../dom/node'
 import { unsetRef } from '../refCleanup'
-import { type VaporFragment, isDynamicFragment, isFragment } from '../fragment'
-import type { EffectScope } from '@vue/reactivity'
+import {
+  type DynamicFragment,
+  type VaporFragment,
+  getFragmentKey,
+  isDynamicFragment,
+  isFragment,
+  isInteropFragment,
+} from '../fragment'
+import { EffectScope } from '@vue/reactivity'
 import { isInteropEnabled } from '../vdomInteropState'
 import {
   type VaporKeepAliveContext,
   currentCacheKey,
-  setCurrentKeepAliveCtx,
+  withCurrentCacheKey,
   withKeepAliveEnabled,
 } from '../keepAlive'
 
 export interface KeepAliveInstance extends VaporComponentInstance {
-  ctx: {
+  ctx: VaporKeepAliveContext & {
+    clearCurrent?: (block: VaporComponentInstance | VaporFragment) => void
     activate: (
       instance: VaporComponentInstance,
       parentNode: ParentNode,
-      anchor?: Node | null | 0,
+      anchor?: Node | null,
+      parentSuspense?: SuspenseBoundary | null,
     ) => void
-    deactivate: (instance: VaporComponentInstance) => void
+    deactivate: (
+      instance: VaporComponentInstance,
+      parentSuspense?: SuspenseBoundary | null,
+    ) => void
     getCachedComponent: (
       comp: VaporComponent | VNode['type'] | VNode,
       key?: any,
     ) => VaporComponentInstance | VaporFragment | undefined
-    getStorageContainer: () => ParentNode
   }
 }
 
@@ -94,15 +107,12 @@ const VaporKeepAliveImpl = defineVaporComponent({
     const resolveCacheKeyFromBlock = (
       block: VaporComponentInstance | VaporFragment,
       interop: boolean,
-      branchKey = currentCacheKey,
+      branchKey: any,
     ): CacheKey => {
       if (interop && isInteropEnabled) {
+        // vnode.key is null when absent
         const frag = block as VaporFragment
-        return (
-          (frag.$key !== undefined
-            ? frag.$key
-            : (frag.vnode!.key ?? branchKey)) ?? frag.vnode!.type
-        )
+        return frag.$key ?? frag.vnode!.key ?? branchKey ?? frag.vnode!.type
       }
 
       return (
@@ -113,45 +123,20 @@ const VaporKeepAliveImpl = defineVaporComponent({
     }
 
     let current: VaporComponentInstance | VaporFragment | undefined
+    let rootFragment: DynamicFragment | undefined
 
     if (__DEV__ || __FEATURE_PROD_DEVTOOLS__) {
       ;(keepAliveInstance as any).__v_cache = cache
       ;(keepAliveInstance as any).__v_keptAliveScopes = keptAliveScopes
     }
 
-    // Clear cache and shapeFlags before HMR rerender so cached components
-    // can be properly unmounted
-    if (__DEV__) {
-      const rerender = keepAliveInstance.hmrRerender
-      keepAliveInstance.hmrRerender = () => {
-        keepAliveInstance.exposed = null
-        cache.forEach(cached => unsetShapeFlag(cached))
-        cache.clear()
-        keys.clear()
-        keptAliveScopes.forEach(scope => scope.stop())
-        keptAliveScopes.clear()
-        storageContainer.innerHTML = ''
-        current = undefined
-        rerender!()
-      }
-    }
+    const addCacheKey = (key: CacheKey): void => {
+      const { max } = props
 
-    keepAliveInstance.ctx = {
-      getStorageContainer: () => storageContainer,
-      getCachedComponent: (comp, key) => {
-        if (isInteropEnabled && isVNode(comp)) {
-          return cache.get(comp.key ?? currentCacheKey ?? comp.type)
-        }
-        return cache.get(key ?? currentCacheKey ?? comp)
-      },
-      activate: (instance, parentNode, anchor) => {
-        current = instance
-        activate(instance, parentNode, anchor)
-      },
-      deactivate: instance => {
-        current = undefined
-        deactivate(instance, storageContainer)
-      },
+      keys.add(key)
+      if (max && keys.size > parseInt(max as string, 10)) {
+        pruneCacheEntry(keys.values().next().value!)
+      }
     }
 
     const innerCacheBlock = (
@@ -159,8 +144,6 @@ const VaporKeepAliveImpl = defineVaporComponent({
       block: VaporComponentInstance | VaporFragment,
       isCurrent: boolean,
     ) => {
-      const { max } = props
-
       if (cache.has(key)) {
         if (isCurrent) {
           // Only active branches should refresh their recency. Background
@@ -170,11 +153,7 @@ const VaporKeepAliveImpl = defineVaporComponent({
           keys.add(key)
         }
       } else {
-        keys.add(key)
-        // prune oldest entry
-        if (max && keys.size > parseInt(max as string, 10)) {
-          pruneCacheEntry(keys.values().next().value!)
-        }
+        addCacheKey(key)
       }
 
       cache.set(key, block)
@@ -185,7 +164,7 @@ const VaporKeepAliveImpl = defineVaporComponent({
       // TODO suspense
       // Skip caching during out-in transition leaving phase.
       // The correct component will be cached after renderBranch completes
-      // via the Fragment's onUpdated hook.
+      // via the Fragment's updated hook.
       if (isDynamicFragment(block)) {
         const transition = block.$transition
         if (
@@ -196,11 +175,9 @@ const VaporKeepAliveImpl = defineVaporComponent({
           return
         }
       }
-      const [innerBlock, interop] = getInnerBlock(block)
+      const [innerBlock, interop, branchKey] = getInnerBlock(block)
       if (!innerBlock) return
 
-      const branchKey =
-        isDynamicFragment(block) && block.keyed ? block.current : undefined
       const cacheKey = resolveCacheKeyFromBlock(innerBlock, interop, branchKey)
       // Align with VDOM KeepAlive behavior: async wrappers can enter the cache
       // before they resolve, and a later async update may resolve the same
@@ -220,11 +197,20 @@ const VaporKeepAliveImpl = defineVaporComponent({
       )
     }
 
-    const processShapeFlag = (block: Block): CacheKey | false => {
-      const [innerBlock, interop] = getInnerBlock(block)
-      if (!innerBlock || !shouldCache(innerBlock!, props, interop)) return false
+    const processShapeFlag = (
+      block: Block,
+      requireKeptAlive = false,
+    ): CacheKey | false => {
+      const [innerBlock, interop, branchKey] = getInnerBlock(block)
+      if (
+        !innerBlock ||
+        (requireKeptAlive && !isKeptAlive(innerBlock, interop)) ||
+        !shouldCache(innerBlock, props, interop)
+      ) {
+        return false
+      }
 
-      const cacheKey = resolveCacheKeyFromBlock(innerBlock, interop)
+      const cacheKey = resolveCacheKeyFromBlock(innerBlock, interop, branchKey)
       setShapeFlag(innerBlock, interop, cache.has(cacheKey))
       return cacheKey
     }
@@ -260,6 +246,25 @@ const VaporKeepAliveImpl = defineVaporComponent({
       return scope
     }
 
+    const cacheScope = (
+      cacheKey: CacheKey,
+      scopeLookupKey: any,
+      scope: EffectScope,
+    ): void => {
+      const prevScope = keptAliveScopes.get(cacheKey)
+      if (prevScope && prevScope !== scope) {
+        const staleScope = deleteScope(cacheKey)
+        if (staleScope) staleScope.stop()
+      }
+
+      keptAliveScopes.set(cacheKey, scope)
+      // Keep the branch key as a lookup alias until its block exists and the
+      // effective component cache key can be resolved.
+      if (scopeLookupKey !== cacheKey) {
+        keptAliveScopes.set(scopeLookupKey, scope)
+      }
+    }
+
     const pruneCacheEntry = (key: CacheKey) => {
       const cached = cache.get(key)!
 
@@ -267,7 +272,7 @@ const VaporKeepAliveImpl = defineVaporComponent({
       if (cached && (!current || cached !== current)) {
         unsetShapeFlag(cached)
         // A pruned branch may still be leaving and not yet be in storageContainer.
-        const parentNode = findBlockNode(cached).parentNode
+        const parentNode = findBlockBoundary(cached).parentNode
         if (parentNode) remove(cached, parentNode as ParentNode)
       } else if (current) {
         unsetShapeFlag(current)
@@ -284,6 +289,9 @@ const VaporKeepAliveImpl = defineVaporComponent({
       ([include, exclude]) => {
         include && pruneCache(name => matches(include, name))
         exclude && pruneCache(name => !matches(exclude, name))
+        // VDOM re-renders on prop change and caches the current branch, which
+        // may match now
+        cacheBlock()
       },
       // prune post-render after `current` has been updated
       { flush: 'post', deep: true },
@@ -294,11 +302,7 @@ const VaporKeepAliveImpl = defineVaporComponent({
 
     const getCurrentBlockState = () => {
       const block = keepAliveInstance.block!
-      const [currentBlock, interop] = getInnerBlock(block)
-      const branchKey =
-        isDynamicFragment(block) && block.keyed
-          ? block.current
-          : currentCacheKey
+      const [currentBlock, interop, branchKey] = getInnerBlock(block)
 
       return {
         currentBlock,
@@ -318,7 +322,7 @@ const VaporKeepAliveImpl = defineVaporComponent({
         const instance = getInstanceFromCache(cached)
         if (instance) {
           const da = instance.da
-          da && queuePostFlushCb(da)
+          da && queuePostRenderEffect(da, undefined, keepAliveInstance.suspense)
         }
       }
 
@@ -332,7 +336,9 @@ const VaporKeepAliveImpl = defineVaporComponent({
         }
 
         unsetShapeFlag(cached)
-        remove(cached, storageContainer)
+        // A cached branch may still be leaving in its live parent.
+        const parentNode = findBlockBoundary(cached).parentNode
+        remove(cached, (parentNode as ParentNode | null) || undefined)
       })
 
       // Same-tick branch switches can tear down KeepAlive after the next branch
@@ -347,38 +353,117 @@ const VaporKeepAliveImpl = defineVaporComponent({
       keptAliveScopes.clear()
     })
 
-    const keepAliveCtx: VaporKeepAliveContext = {
-      processShapeFlag,
-      cacheBlock,
-      cacheScope(cacheKey, scopeLookupKey, scope) {
-        // remove stale scope
-        const prevScope = keptAliveScopes.get(cacheKey)
-        if (prevScope && prevScope !== scope) {
-          const staleScope = deleteScope(cacheKey)
-          if (staleScope) {
-            staleScope.stop()
+    const keepAliveCtx: KeepAliveInstance['ctx'] = {
+      getStorageContainer: () => storageContainer,
+      getCachedComponent: (comp, key) => {
+        if (isInteropEnabled && isVNode(comp)) {
+          return cache.get(comp.key ?? currentCacheKey ?? comp.type)
+        }
+        const branchKey = key ?? currentCacheKey
+        return branchKey != null
+          ? cache.get(branchKey)
+          : cache.get(comp) ||
+              // An async component is cached as its wrapper when it entered
+              // pending, and as its resolved component when it was created resolved.
+              cache.get((comp as AsyncComponentInternalOptions).__asyncResolved)
+      },
+      activate: (instance, parentNode, anchor, parentSuspense) => {
+        current = instance
+        activate(instance, parentNode, anchor, parentSuspense)
+      },
+      deactivate: (instance, parentSuspense) => {
+        current = undefined
+        deactivate(instance, storageContainer, parentSuspense)
+      },
+      prepareBranchRemoval(frag, scope, prevKey) {
+        // Async-wrapper internals share this context but are not themselves
+        // KeepAlive cache roots.
+        if (frag !== rootFragment) {
+          scope.stop()
+          return false
+        }
+        const fragKey = getFragmentKey(frag)
+        // Like VDOM, a branch rendered while not matching include/exclude is
+        // not kept alive, even if it matches by the time it is removed.
+        const cacheKey = withCurrentCacheKey(fragKey, () =>
+          processShapeFlag(frag.nodes, true),
+        )
+        if (cacheKey === false) {
+          scope.stop()
+          return false
+        }
+        if (isDynamicFragment(frag.nodes)) {
+          // The rest of a v-else-if chain: re-entering the branch renders a
+          // new nested fragment, so the old one's effects must not resume.
+          // The cached component is kept alive by its shape flag.
+          scope.stop()
+          return true
+        }
+        // Component and KeepAlive input scopes are detached from this
+        // DynamicFragment scope, so this only pauses branch-owned effects.
+        scope.pause()
+        cacheScope(cacheKey, fragKey ?? prevKey, scope)
+        return true
+      },
+      runBranchRender(frag, fn, useScope, removePrevious) {
+        // a branch with a user key is cached and its scope aliased under that
+        // key, so re-entering the key finds them whatever the branch identity
+        const fragKey = getFragmentKey(frag)
+        const cachedScope = useScope
+          ? deleteScope(fragKey ?? frag.current)
+          : undefined
+        frag.scope = useScope ? cachedScope || new EffectScope() : undefined
+        if (cachedScope) cachedScope.resume()
+        let incomingCacheKey: CacheKey | false = false
+        const run = () => {
+          try {
+            fn()
+          } finally {
+            // mark shapeFlag before mounting.
+            // This must run before leaving the keyed cache-key context so
+            // creating components inside the branch can still resolve the
+            // same cache key during initial mount.
+            incomingCacheKey = processShapeFlag(frag.nodes)
           }
         }
-
-        // cacheKey is used for cleanup in pruneCacheEntry.
-        // scopeLookupKey is still needed for getScope() before a new block
-        // exists, but keyed branches may resolve to the same effective cacheKey.
-        keptAliveScopes.set(cacheKey, scope)
-        if (scopeLookupKey !== cacheKey) {
-          keptAliveScopes.set(scopeLookupKey, scope)
+        // Unlike VDOM, Vapor has no incoming VNode to identify the cache entry
+        // before rendering, so incoming setup runs before cache pruning decides
+        // whether the outgoing branch is deactivated or unmounted.
+        try {
+          withCurrentCacheKey(fragKey, run)
+          if (
+            removePrevious &&
+            incomingCacheKey !== false &&
+            !cache.has(incomingCacheKey)
+          ) {
+            // Apply the cache limit before removing the outgoing branch, but do
+            // not expose the incoming block through the cache before mount.
+            addCacheKey(incomingCacheKey)
+          }
+        } finally {
+          if (removePrevious) removePrevious()
         }
       },
-      getScope(key) {
-        return deleteScope(key)
-      },
+      processShapeFlag,
+      cacheBlock,
     }
 
-    const prevCtx = setCurrentKeepAliveCtx(keepAliveCtx)
+    if (isInteropEnabled) {
+      // Interop bypasses ctx.deactivate(), so clear current only for its block.
+      keepAliveCtx.clearCurrent = block => {
+        if (current === block) current = undefined
+      }
+    }
+
+    keepAliveInstance.ctx = keepAliveCtx
     let children = slots.default()
-    setCurrentKeepAliveCtx(prevCtx)
+    rootFragment = registerDynamicFragmentHooks(children, keepAliveCtx)
 
     if (isArray(children)) {
       children = children.filter(child => !(child instanceof Comment))
+      if (children.length === 1) {
+        rootFragment = registerDynamicFragmentHooks(children[0], keepAliveCtx)
+      }
       if (children.length > 1) {
         if (__DEV__) {
           warn(`KeepAlive should contain exactly one component child.`)
@@ -393,6 +478,22 @@ const VaporKeepAliveImpl = defineVaporComponent({
 
 export const VaporKeepAlive: DefineVaporComponent<{}, string, KeepAliveProps> =
   /*@__PURE__*/ withKeepAliveEnabled(VaporKeepAliveImpl)
+
+function registerDynamicFragmentHooks(
+  block: Block,
+  keepAliveCtx: VaporKeepAliveContext,
+): DynamicFragment | undefined {
+  if (!isDynamicFragment(block)) return
+
+  ;(block.u ||= []).unshift(() => {
+    if (block.$transition && block.$transition.mode === 'out-in') {
+      // For out-in transition, call cacheBlock after renderBranch completes
+      // because KeepAlive's updated hook fires before the deferred rendering finishes.
+      keepAliveCtx.cacheBlock(block)
+    }
+  })
+  return block
+}
 
 const shouldCache = (
   block: GenericComponentInstance | VaporFragment,
@@ -449,14 +550,19 @@ const unsetShapeFlag = (cached: VaporComponentInstance | VaporFragment) => {
     resetShapeFlag(cached)
     // for async components, also reset the inner resolved component's
     // shapeFlag.
-    if (isAsyncWrapper(cached)) {
+    if (isAsyncComponentEnabled && isAsyncWrapper(cached)) {
       const [inner] = getInnerBlock(cached.block)
       if (inner && isVaporComponent(inner)) {
         resetShapeFlag(inner)
       }
     }
   } else if (isInteropEnabled) {
-    resetShapeFlag(cached.vnode)
+    const vnode = cached.vnode!
+    resetShapeFlag(vnode)
+    if (isVaporComponent(vnode.component)) {
+      // Vapor VNodes copy their keep-alive flags to the inner instance.
+      unsetShapeFlag(vnode.component)
+    }
   }
 }
 
@@ -474,23 +580,25 @@ function isKeptAlive(
 }
 
 type InnerBlockResult =
-  | [VaporFragment, true]
-  | [VaporComponentInstance, false]
-  | [undefined, false]
+  | [VaporFragment, true, any]
+  | [VaporComponentInstance, false, any]
+  | [undefined, false, any]
 
-function getInnerBlock(block: Block): InnerBlockResult {
+// Also resolves the branch key the inner block sits in (innermost fragment
+// declaring one wins); the ambient key seeds a walk starting below the
+// fragment being rendered.
+function getInnerBlock(
+  block: Block,
+  branchKey: any = currentCacheKey,
+): InnerBlockResult {
   if (isVaporComponent(block)) {
-    return [block, false]
+    return [block, false, branchKey]
   } else if (isInteropEnabled && isInteropFragment(block)) {
-    return [block, true]
+    return [block, true, branchKey]
   } else if (isFragment(block)) {
-    return getInnerBlock(block.nodes)
+    return getInnerBlock(block.nodes, getFragmentKey(block) ?? branchKey)
   }
-  return [undefined, false]
-}
-
-function isInteropFragment(block: Block): block is VaporFragment {
-  return !!(isFragment(block) && block.vnode)
+  return [undefined, false, branchKey]
 }
 
 function getInstanceFromCache(
@@ -508,14 +616,21 @@ function getInstanceFromCache(
 export function activate(
   instance: VaporComponentInstance,
   parentNode: ParentNode,
-  anchor?: Node | null | 0,
+  anchor?: Node | null,
+  parentSuspense: SuspenseBoundary | null = instance.suspense,
 ): void {
-  move(instance.block, parentNode, anchor, MoveType.ENTER, instance)
+  const inputScope = instance.inputScope
+  if (inputScope) inputScope.resume()
+  move(instance, parentNode, anchor, MoveType.ENTER, instance, parentSuspense)
 
-  queuePostFlushCb(() => {
-    instance.isDeactivated = false
-    if (instance.a) invokeArrayFns(instance.a)
-  })
+  queuePostRenderEffect(
+    () => {
+      instance.isDeactivated = false
+      if (instance.a) invokeArrayFns(instance.a)
+    },
+    undefined,
+    parentSuspense,
+  )
 
   if (__DEV__ || __FEATURE_PROD_DEVTOOLS__) {
     devtoolsComponentAdded(instance)
@@ -525,7 +640,10 @@ export function activate(
 export function deactivate(
   instance: VaporComponentInstance,
   container: ParentNode,
+  parentSuspense: SuspenseBoundary | null = instance.suspense,
 ): void {
+  const inputScope = instance.inputScope
+  if (inputScope) inputScope.pause()
   // Clear refs before deactivation, matching VDOM core's unmount path
   // which calls setRef(null) before the deactivation check.
   unsetRef(instance)
@@ -533,12 +651,16 @@ export function deactivate(
   invalidateMount(instance.m)
   invalidateMount(instance.a)
 
-  move(instance.block, container, null, MoveType.LEAVE, instance)
+  move(instance, container, null, MoveType.LEAVE, instance, parentSuspense)
 
-  queuePostFlushCb(() => {
-    if (instance.da) invokeArrayFns(instance.da)
-    instance.isDeactivated = true
-  })
+  queuePostRenderEffect(
+    () => {
+      if (instance.da) invokeArrayFns(instance.da)
+      instance.isDeactivated = true
+    },
+    undefined,
+    parentSuspense,
+  )
 
   if (__DEV__ || __FEATURE_PROD_DEVTOOLS__) {
     devtoolsComponentAdded(instance)

@@ -1,35 +1,65 @@
 import {
-  isKeepAlive,
   popWarningContext,
   pushWarningContext,
+  restoreCurrentInstance,
   setCurrentInstance,
 } from '@vue/runtime-dom'
-import { type Block, insert, normalizeBlock, remove } from './block'
+import { findBlockBoundary, insert, remove } from './block'
 import {
   type VaporComponent,
   type VaporComponentInstance,
+  applyComponentFallthrough,
   createComponent,
-  devRender,
-  isVaporComponent,
   mountComponent,
+  runDevRender,
   unmountComponent,
 } from './component'
-import { isArray } from '@vue/shared'
-import { isFragment } from './fragment'
-import { isKeepAliveEnabled } from './keepAlive'
+import { applyComponentScopeIds } from './scopeId'
+import { applyComponentCssVars } from './helpers/useCssVars'
+import {
+  currentRenderContext,
+  deriveSlotScopeIds,
+  withRenderContext,
+} from './renderContext'
 
 export function hmrRerender(instance: VaporComponentInstance): void {
-  const normalized = normalizeBlock(instance.block)
-  const parent = normalized[0].parentNode!
-  const anchor = normalized[normalized.length - 1].nextSibling
-  // reset scope to avoid stale effects
-  instance.scope.reset()
+  // an ancestor recreated for an earlier instance of the same HMR record
+  // already replaced this one
+  if (instance.isUnmounted) return
+  // A component without a separate render function (built-ins like
+  // KeepAlive, reached via reload delegation) cannot re-run its template
+  // alone - degrade to reload semantics through the nearest vapor ancestor,
+  // past the vdom component rendering its slot. Terminal cases (custom
+  // element root, no vapor ancestor) fall through to an in-place setup re-run.
+  if (!instance.type.render) {
+    let parent = instance.parent
+    while (parent && !parent.vapor) parent = parent.parent
+    if (parent) return parent.hmrRerender!()
+    if (!instance.parent && !instance.ce) {
+      return instance.hmrReload!(instance.type)
+    }
+  }
+  const { parentNode, nextNode: anchor } = findBlockBoundary(instance.block)
+  const parent = parentNode as ParentNode
+  if (instance.renderScope) {
+    instance.renderScope.stop()
+  }
   remove(instance.block, parent)
   const prev = setCurrentInstance(instance)
   pushWarningContext(instance)
-  devRender(instance)
-  popWarningContext()
-  setCurrentInstance(...prev)
+  // The rerender recreates the component's own template window, where slot
+  // scope ids never apply; root-only ids are re-applied below.
+  try {
+    withRenderContext(deriveSlotScopeIds(currentRenderContext, null), () => {
+      runDevRender(instance)
+      applyComponentFallthrough(instance)
+    })
+  } finally {
+    popWarningContext()
+    restoreCurrentInstance(prev)
+  }
+  applyComponentScopeIds(instance)
+  applyComponentCssVars(instance)
   insert(instance.block, parent, anchor)
 }
 
@@ -37,94 +67,39 @@ export function hmrReload(
   instance: VaporComponentInstance,
   newComp: VaporComponent,
 ): void {
-  // If parent is KeepAlive, rerender it so new component goes through
-  // KeepAlive's slot rendering flow to receive activated hooks properly
-  if (isKeepAliveEnabled && instance.parent && isKeepAlive(instance.parent)) {
-    instance.parent.hmrRerender!()
+  const parentInstance = instance.parent
+
+  // Align child reloads with VDOM HMR: rerender the parent instead of
+  // surgically swapping the child instance. A local swap can leave parent
+  // block ownership, component refs, or exposed instances pointing at the old
+  // instance.
+  if (parentInstance) {
+    parentInstance.hmrRerender!()
     return
   }
-  const normalized = normalizeBlock(instance.block)
-  const parent = normalized[0].parentNode!
-  const anchor = normalized[normalized.length - 1].nextSibling
+
+  const { parentNode, nextNode: anchor } = findBlockBoundary(instance.block)
+  const parent = parentNode as ParentNode
   unmountComponent(instance, parent)
-  const parentInstance = instance.parent as VaporComponentInstance | null
   const prev = setCurrentInstance(parentInstance)
-  const newInstance = createComponent(
-    newComp,
-    instance.rawProps,
-    instance.rawSlots,
-    instance.isSingleRoot,
-    undefined,
-    instance.appContext,
-  )
-  setCurrentInstance(...prev)
+  let newInstance: VaporComponentInstance
+  try {
+    newInstance = createComponent(
+      newComp,
+      instance.rawProps,
+      instance.rawSlots,
+      instance.isSingleRoot,
+      undefined,
+      instance.appContext,
+      true,
+    )
+  } finally {
+    restoreCurrentInstance(prev)
+  }
   mountComponent(newInstance, parent, anchor)
 
-  updateParentBlockOnHmrReload(parentInstance, instance, newInstance)
-  updateParentTeleportOnHmrReload(instance, newInstance)
-}
-
-/**
- * dev only
- * update parentInstance.block to ensure that the correct parent and
- * anchor are found during parentInstance HMR rerender/reload, as
- * `normalizeBlock` relies on the current instance.block
- */
-function updateParentBlockOnHmrReload(
-  parentInstance: VaporComponentInstance | null,
-  instance: VaporComponentInstance,
-  newInstance: VaporComponentInstance,
-): void {
-  if (parentInstance) {
-    parentInstance.block = replaceBlockInstance(
-      parentInstance.block,
-      instance,
-      newInstance,
-    )
+  const app = instance.appContext.app
+  if (app && app._instance === instance) {
+    app._instance = newInstance
   }
-}
-
-/**
- * dev only
- * during root component HMR reload, since the old component will be unmounted
- * and a new one will be mounted, we need to update the teleport's nodes
- * to ensure that the correct parent and anchor are found during parentInstance
- * HMR rerender/reload, as `normalizeBlock` relies on the current instance.block
- */
-export function updateParentTeleportOnHmrReload(
-  instance: VaporComponentInstance,
-  newInstance: VaporComponentInstance,
-): void {
-  const teleport = instance.parentTeleport
-  if (teleport) {
-    newInstance.parentTeleport = teleport
-    teleport.nodes = replaceBlockInstance(teleport.nodes, instance, newInstance)
-  }
-}
-
-function replaceBlockInstance(
-  block: Block,
-  instance: VaporComponentInstance,
-  newInstance: VaporComponentInstance,
-): Block {
-  if (block === instance) return newInstance
-
-  if (isArray(block)) {
-    for (let i = 0; i < block.length; i++) {
-      block[i] = replaceBlockInstance(block[i], instance, newInstance)
-    }
-    return block
-  }
-
-  if (isVaporComponent(block)) {
-    block.block = replaceBlockInstance(block.block, instance, newInstance)
-    return block
-  }
-
-  if (isFragment(block)) {
-    block.nodes = replaceBlockInstance(block.nodes, instance, newInstance)
-    return block
-  }
-
-  return block
 }

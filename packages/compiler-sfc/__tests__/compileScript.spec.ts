@@ -1,4 +1,5 @@
-import { vi } from 'vitest'
+import { vi } from 'vite-plus/test'
+import { parse as babelParse } from '@babel/parser'
 import { BindingTypes } from '@vue/compiler-core'
 import {
   assertCode,
@@ -7,6 +8,8 @@ import {
   mockId,
 } from './utils'
 import { type RawSourceMap, SourceMapConsumer } from 'source-map-js'
+import { compileScript, compileTemplate, parse } from '../src'
+import { templateAnalysisCache } from '../src/script/importUsageCheck'
 
 vi.mock('../src/warn', () => ({
   warn: vi.fn(),
@@ -343,6 +346,43 @@ describe('SFC compile <script setup>', () => {
         `import { useCssVars as _useCssVars, unref as _unref } from 'vue'`,
       )
       expect(content).toMatch(`import { useCssVars, ref } from 'vue'`)
+    })
+
+    test('should re-analyze a transformed template after cache invalidation', () => {
+      const delimiters: [string, string] = ['[[', ']]']
+      const { descriptor } = parse(
+        `
+        <script setup lang="ts">
+        import { cachedMsg } from './cachedMsg'
+        </script>
+        <template><p>[[ cachedMsg ]]</p></template>
+        `,
+        { templateParseOptions: { delimiters } },
+      )
+
+      const templateOptions = { compilerOptions: { delimiters } }
+      compileScript(descriptor, { id: mockId, templateOptions })
+      expect(templateAnalysisCache.has(descriptor.template!.content)).toBe(true)
+
+      compileTemplate({
+        filename: 'example.vue',
+        id: mockId,
+        source: descriptor.template!.content,
+        ast: descriptor.template!.ast,
+        compilerOptions: { delimiters },
+      })
+      expect(descriptor.template!.ast!.transformed).toBe(true)
+
+      templateAnalysisCache.clear()
+      expect(templateAnalysisCache.has(descriptor.template!.content)).toBe(
+        false,
+      )
+
+      const { content } = compileScript(descriptor, {
+        id: mockId,
+        templateOptions,
+      })
+      expect(content).toMatch(`return { get cachedMsg() { return cachedMsg } }`)
     })
 
     test('import dedupe between <script> and <script setup>', () => {
@@ -943,6 +983,216 @@ describe('SFC compile <script setup>', () => {
         })
       })
     })
+
+    describe('vapor css modules used in template', () => {
+      const theCompile = (
+        template: string,
+        style: string,
+        setup = '/* ... */',
+      ) =>
+        compile(
+          `<script setup vapor>${setup}</script>\n` +
+            `<template>${template}</template>\n${style}`,
+          { vapor: true, inlineTemplate: true },
+        )
+
+      test('should declare the default $style module', () => {
+        const { content } = theCompile(
+          `<div :class="$style.red"></div>`,
+          `<style module>.red { color: red }</style>`,
+        )
+        expect(content).toMatch(`const $style = _useCssModule("$style")`)
+        expect(content).toMatch(`_setClass(n0, $style.red)`)
+        assertCode(content)
+      })
+
+      test('should declare a named module', () => {
+        const { content } = theCompile(
+          `<div>{{ classes.red }}</div>`,
+          `<style module="classes">.red { color: red }</style>`,
+        )
+        expect(content).toMatch(`const classes = _useCssModule("classes")`)
+        assertCode(content)
+      })
+
+      test('should only declare modules used in the template', () => {
+        const { content } = theCompile(
+          `<div :class="$style.red"></div>`,
+          `<style module>.red { color: red }</style>\n` +
+            `<style module="unused">.blue { color: blue }</style>`,
+        )
+        expect(content).toMatch(`const $style = _useCssModule("$style")`)
+        expect(content).not.toMatch(`_useCssModule("unused")`)
+        assertCode(content)
+      })
+
+      test('should not declare a module shadowed by a user binding', () => {
+        const { content } = theCompile(
+          `<div :class="$style.red"></div>`,
+          `<style module>.red { color: red }</style>`,
+          `const $style = { red: 'local' }`,
+        )
+        expect(content).not.toMatch(`_useCssModule`)
+        assertCode(content)
+      })
+
+      test.each(['', 'lang="pug"'])(
+        'should declare modules used in a preprocessed template (%s)',
+        attrs => {
+          const { content, bindings } = compile(
+            `<script setup vapor>const msg = 'hi'</script>\n` +
+              `<template ${attrs}>div(:class="[$style.red, classes.blue]") {{ msg }}</template>\n` +
+              `<style module>.red { color: red }</style>\n` +
+              `<style module="classes">.blue { color: blue }</style>`,
+            {
+              inlineTemplate: true,
+              templateOptions: { preprocessLang: 'pug' },
+            },
+          )
+          expect(content).toMatch(`const $style = _useCssModule("$style")`)
+          expect(content).toMatch(`const classes = _useCssModule("classes")`)
+          expect(content).toMatch(`_setClass(n0, [$style.red, classes.blue])`)
+          expect(bindings!.$style).toBe(BindingTypes.SETUP_CONST)
+          expect(bindings!.classes).toBe(BindingTypes.SETUP_CONST)
+          assertCode(content)
+        },
+      )
+
+      test('should preserve template source maps with css module bindings', () => {
+        const source = `<script setup vapor>/* ... */</script>
+          <template><div :class="$style.red" /></template>
+          <style module>.red { color: red }</style>`
+        const { content, map } = compile(source, { inlineTemplate: true })
+        const consumer = new SourceMapConsumer(map as RawSourceMap)
+        expect(
+          consumer.originalPositionFor(
+            getPositionInCode(content, '$style.red'),
+          ),
+        ).toMatchObject(getPositionInCode(source, '$style.red'))
+      })
+
+      test('should not declare modules in vdom mode', () => {
+        const { content } = compile(
+          `<script setup>/* ... */</script>\n` +
+            `<template><div :class="$style.red"></div></template>\n` +
+            `<style module>.red { color: red }</style>`,
+          { inlineTemplate: true },
+        )
+        expect(content).not.toMatch(`_useCssModule`)
+        expect(content).toMatch(`_ctx.$style.red`)
+        assertCode(content)
+      })
+    })
+  })
+
+  describe('vapor css modules in non-inline mode', () => {
+    test('should return the module from setup()', () => {
+      const { content, bindings } = compile(
+        `<script setup vapor>const msg = 'hi'</script>\n` +
+          `<template><div :class="$style.red">{{ msg }}</div></template>\n` +
+          `<style module>.red { color: red }</style>`,
+        { inlineTemplate: false },
+      )
+      expect(content).toMatch(`"$style": _useCssModule("$style")`)
+      expect(content).toMatch(
+        `return { msg, "$style": _useCssModule("$style") }`,
+      )
+      expect(bindings!.$style).toBe(BindingTypes.SETUP_CONST)
+      assertCode(content)
+    })
+
+    test('should return modules unused in the template for HMR', () => {
+      const { content, bindings } = compile(
+        `<script setup vapor>const msg = 'hi'</script>\n` +
+          `<template><div>{{ msg }}</div></template>\n` +
+          `<style module>.red { color: red }</style>\n` +
+          `<style module="classes">.blue { color: blue }</style>`,
+        { inlineTemplate: false },
+      )
+      expect(content).toMatch(`"$style": _useCssModule("$style")`)
+      expect(content).toMatch(`"classes": _useCssModule("classes")`)
+      expect(content).toMatch(
+        `return { msg, "$style": _useCssModule("$style"), "classes": _useCssModule("classes") }`,
+      )
+      expect(bindings!.$style).toBe(BindingTypes.SETUP_CONST)
+      expect(bindings!.classes).toBe(BindingTypes.SETUP_CONST)
+      assertCode(content)
+    })
+  })
+
+  test.each([
+    'class',
+    'arguments',
+    '__props',
+    '_useCssModule',
+    'Object',
+    'Math',
+  ])(
+    'should return css module %s without introducing a local binding',
+    name => {
+      const { content, bindings } = compile(
+        `<script setup vapor>
+          import { useCssModule } from 'vue'
+          const styles = useCssModule('${name}')
+        </script>
+        <template><div :class="styles.red" /></template>
+        <style module="${name}">.red { color: red }</style>`,
+        { inlineTemplate: false },
+      )
+      expect(content).not.toMatch(`const ${name} =`)
+      expect(bindings![name]).toBe(BindingTypes.SETUP_CONST)
+      expect(content).toMatch(`"${name}": _useCssModule("${name}")`)
+      expect(() => babelParse(content, { sourceType: 'module' })).not.toThrow()
+    },
+  )
+
+  test.each(['class', 'arguments', '__props', '_useCssModule', '_useModel'])(
+    'should not introduce invalid or conflicting inline css module binding %s',
+    name => {
+      const { content, bindings } = compile(
+        `<script setup vapor>
+          import { useCssModule } from 'vue'
+          const styles = useCssModule('${name}')
+          const model = defineModel()
+        </script>
+        <template lang="pug">div(:class="styles.red")</template>
+        <style module="${name}">.red { color: red }</style>`,
+        {
+          inlineTemplate: true,
+          templateOptions: { preprocessLang: 'pug' },
+        },
+      )
+      expect(content).not.toMatch(`const ${name} =`)
+      expect(bindings![name]).toBeUndefined()
+      expect(() => babelParse(content, { sourceType: 'module' })).not.toThrow()
+    },
+  )
+
+  test.each([
+    `import { useCssModule as _useCssModule } from 'vue'`,
+    `const _useCssModule = 1; const _useCssModule_ = 2`,
+  ])('should avoid css module helper import collisions (%s)', setup => {
+    const { content } = compile(
+      `<script setup vapor>${setup}</script>
+      <template><div /></template>
+      <style module>.red { color: red }</style>`,
+      { inlineTemplate: false },
+    )
+    expect(content).toMatch(`useCssModule as _useCssModule_`)
+    expect(() => babelParse(content, { sourceType: 'module' })).not.toThrow()
+  })
+
+  test('should return css modules for an external vapor template', () => {
+    const { content, bindings } = compile(
+      `<script setup vapor>const msg = 'hi'</script>\n` +
+        `<template src="./template.html"/>\n` +
+        `<style module>.red { color: red }</style>`,
+      { inlineTemplate: false },
+    )
+    expect(content).toMatch(`"$style": _useCssModule("$style")`)
+    expect(content).toMatch(`return { msg, "$style": _useCssModule("$style") }`)
+    expect(bindings!.$style).toBe(BindingTypes.SETUP_CONST)
+    assertCode(content)
   })
 
   describe('with TypeScript', () => {
@@ -1066,6 +1316,28 @@ describe('SFC compile <script setup>', () => {
       assertAwaitDetection(`if (ok) { await foo } else { await bar }`)
     })
 
+    // #15495
+    test('await in switch case', () => {
+      const code = assertAwaitDetection(`switch (a) {
+        case 1:
+          foo()
+          await bar()
+      }`)
+      expect(code).toMatch(/foo\(\)\s*;\(/)
+    })
+
+    // #15495
+    test('await in switch case nested in a block', () => {
+      const code = assertAwaitDetection(`if (a) {
+        switch (b) {
+          case 1:
+            qux()
+            await bar()
+        }
+      }`)
+      expect(code).toMatch(/qux\(\)\s*;\(/)
+    })
+
     test('multiple `if` nested statements', () => {
       assertAwaitDetection(`if (ok) {
         let a = 'foo'
@@ -1119,6 +1391,20 @@ describe('SFC compile <script setup>', () => {
       }`)
     })
 
+    test('vapor: returns the template as a render closure', () => {
+      const { content } = compile(
+        `<script setup vapor>
+        const msg = await Promise.resolve('hi')
+        </script>
+        <template><div>{{ msg }}</div></template>`,
+        { vapor: true, inlineTemplate: true },
+      )
+      expect(content).toMatch(`async setup(`)
+      expect(content).toMatch(`_withAsyncContext(`)
+      expect(content).toMatch(`return () => {`)
+      assertCode(content)
+    })
+
     test('should ignore await inside functions', () => {
       // function declaration
       assertAwaitDetection(`async function foo() { await bar }`, false)
@@ -1131,6 +1417,25 @@ describe('SFC compile <script setup>', () => {
         `const cls = class Foo { async method() { await bar }}`,
         false,
       )
+    })
+
+    // #15465
+    test('await statements after a nested block should be separated', async () => {
+      const { content } = compile(
+        `<script setup>
+        if (true) {
+          if (false) {}
+          await Promise.resolve(1)
+          await Promise.resolve(2)
+        }
+        </script>`,
+        { genDefaultAs: '_sfc_' },
+      )
+      const component = new Function(
+        '_withAsyncContext',
+        `${content.replace(/^import .*\n/, '')};return _sfc_`,
+      )((getAwaitable: () => unknown) => [getAwaitable(), () => {}])
+      await expect(component.setup({}, { expose() {} })).resolves.toEqual({})
     })
   })
 
@@ -1794,42 +2099,45 @@ describe('compileScript', () => {
     expect(lang).toBe('coffee')
     expect(scriptAst).not.toBeDefined()
   })
-})
 
-describe('vapor mode + ssr', () => {
-  test('rewrite defineVaporAsyncComponent import', () => {
-    const { content } = compile(
-      `
-        <script setup vapor>
-        import { defineVaporAsyncComponent } from 'vue'
-        </script>
-      `,
-      {
-        templateOptions: {
-          ssr: true,
-        },
-      },
-    )
-    expect(content).toContain(
-      `import { defineAsyncComponent as defineVaporAsyncComponent } from 'vue'`,
-    )
-  })
+  test('should not walk cached recursive type references', () => {
+    const files: Record<string, string> = {
+      '/issue-15174/types.ts': `
+        export type TreeNode = {
+          parent?: TreeNode
+        }
 
-  test('rewrite defineVaporAsyncComponent import with local name', () => {
-    const { content } = compile(
-      `
-        <script setup vapor>
-        import { defineVaporAsyncComponent as def } from 'vue'
-        </script>
+        export type ItemProps = {
+          node?: TreeNode
+        }
       `,
-      {
-        templateOptions: {
-          ssr: true,
-        },
+    }
+    const options = {
+      fs: {
+        fileExists: (file: string) => file in files,
+        readFile: (file: string) => files[file],
       },
-    )
-    expect(content).toContain(
-      `import { defineAsyncComponent as def } from 'vue'`,
-    )
+    }
+    const item = `
+      <script setup lang="ts">
+      import type { ItemProps } from './types'
+      defineProps<ItemProps>()
+      </script>
+    `
+
+    expect(() => {
+      compile(
+        `
+          <script setup lang="ts">
+          import type { TreeNode } from './types'
+          defineProps<{ parentNode?: TreeNode['parent'] }>()
+          </script>
+        `,
+        options,
+        { filename: '/issue-15174/App.vue' },
+      )
+      compile(item, options, { filename: '/issue-15174/Second.vue' })
+      compile(item, options, { filename: '/issue-15174/Third.vue' })
+    }).not.toThrow()
   })
 })

@@ -555,6 +555,18 @@ test('template-only vapor compile keeps built-in render args for $slots', () => 
   expect(result.code).toContain(`_createIf(() => ($slots.default)`)
 })
 
+test('compiles vapor event delegation only when explicitly requested', () => {
+  const result = compile({
+    filename: 'example.vue',
+    source: `<button @click="onClick" /><input @keyup.delegate="onKeyup" />`,
+    vapor: true,
+  })
+
+  expect(result.code).toContain(`_on(n0, "click", e => _ctx.onClick(e))`)
+  expect(result.code).toContain(`_delegateEvents("keyup")`)
+  expect(result.code).toContain(`n1.$evtkeyup`)
+})
+
 test('returns single-root metadata for root control flow when vapor is enabled', () => {
   const result = compile({
     filename: 'example.vue',
@@ -611,4 +623,17 @@ test('respects comments option when returning multiRoot metadata', () => {
   })
 
   expect(result.multiRoot).toBe(false)
+})
+
+test('tells the ssr compiler that the template is a vapor component', () => {
+  const ssrCode = (vapor: boolean) =>
+    compile({
+      filename: 'example.vue',
+      source: `<TransitionGroup tag="ul"><li v-for="i in list" :key="i" /></TransitionGroup>`,
+      ssr: true,
+      vapor,
+    }).code
+
+  expect(ssrCode(true)).toContain('<!--[-->')
+  expect(ssrCode(false)).not.toContain('<!--[-->')
 })

@@ -2,13 +2,14 @@ import {
   applyVShow,
   createComponent,
   createIf,
+  defineVaporAsyncComponent,
   defineVaporComponent,
   on,
   template,
 } from '../../src'
 import { type VShowElement, nextTick, ref } from 'vue'
-import { describe, expect, test } from 'vitest'
-import { makeRender } from '../_utils'
+import { describe, expect, test, vi } from 'vite-plus/test'
+import { compile, makeRender, renderParity } from '../_utils'
 
 const define = makeRender()
 
@@ -136,5 +137,229 @@ describe('directive: v-show', () => {
     visible.value = !visible.value
     await nextTick()
     expect(host.innerHTML).toBe('<span style="">child</span><!--if-->')
+  })
+
+  test('should not track v-show source in dynamic fragment effect', async () => {
+    const t0 = template('<div>child</div>')
+    const t1 = template('<span>child</span>')
+    const childIf = ref(true)
+    const visible = ref(true)
+    const condition = vi.fn(() => childIf.value)
+
+    const { component: Child } = define({
+      setup() {
+        return createIf(
+          condition,
+          () => t0(),
+          () => t1(),
+        )
+      },
+    })
+
+    define({
+      setup() {
+        const child = createComponent(Child, null, null, true)
+        applyVShow(child, () => visible.value)
+        return child
+      },
+    }).render()
+
+    childIf.value = false
+    await nextTick()
+    expect(condition).toHaveBeenCalledTimes(2)
+
+    visible.value = false
+    await nextTick()
+    expect(condition).toHaveBeenCalledTimes(2)
+  })
+
+  test('keeps a nested dynamic root hidden when the inner branch swaps', async () => {
+    const { vdom, vapor } = await renderParity(
+      {
+        Mid: `<template><div v-if="data.b">m</div><p v-else>p</p></template>`,
+        Inner: `<template><components.Mid v-if="data.a"/><span v-else>s</span></template>`,
+        App: `<template><components.Inner v-show="false"/></template>`,
+      },
+      () => ref({ a: true, b: true }),
+      async data => {
+        data.value.b = false
+        await nextTick()
+      },
+    )
+    expect(vdom.after).toBe('<p style="display: none;">p</p>')
+    expect(vapor.after).toBe(
+      '<p style="display: none;">p</p><!--if--><!--if-->',
+    )
+  })
+
+  test('keeps a nested dynamic root hidden after outer and inner branch swaps', async () => {
+    const { vdom, vapor } = await renderParity(
+      {
+        Mid: `<template><div v-if="data.b">m</div><p v-else>p</p></template>`,
+        Inner: `<template><span v-if="data.a">s</span><components.Mid v-else/></template>`,
+        App: `<template><components.Inner v-show="false"/></template>`,
+      },
+      () => ref({ a: true, b: true }),
+      async data => {
+        data.value.a = false
+        await nextTick()
+        data.value.b = false
+        await nextTick()
+      },
+    )
+    expect(vdom.after).toBe('<p style="display: none;">p</p>')
+    expect(vapor.after).toBe(
+      '<p style="display: none;">p</p><!--if--><!--if-->',
+    )
+  })
+
+  test('follows the root of a resolved async component across branch swaps', async () => {
+    const data = ref({ b: true, show: false })
+    const Inner = compile(
+      `<template><div v-if="data.b">m</div><p v-else>p</p></template>`,
+      data,
+    )
+    let resolve!: (comp: any) => void
+    const AsyncInner = defineVaporAsyncComponent(
+      () => new Promise<any>(r => (resolve = r)),
+    )
+    const App = compile(
+      `<template><components.AsyncInner v-show="data.show"/></template>`,
+      data,
+      { AsyncInner },
+    )
+    const { host } = define(App).render()
+
+    resolve(Inner)
+    await new Promise(r => setTimeout(r))
+    await nextTick()
+    expect(host.querySelector('div')!.style.display).toBe('none')
+
+    data.value.b = false
+    await nextTick()
+    expect(host.querySelector('p')!.style.display).toBe('none')
+
+    data.value.show = true
+    await nextTick()
+    expect(host.querySelector('p')!.style.display).toBe('')
+  })
+
+  test('v-once freezes the value used by later dynamic roots', async () => {
+    const { vdom, vapor } = await renderParity(
+      {
+        Inner: `<template><div v-if="data.b">m</div><p v-else>p</p></template>`,
+        App: `<template><components.Inner v-show="data.show" v-once/></template>`,
+      },
+      () => ref({ b: true, show: true }),
+      async data => {
+        data.value.show = false
+        await nextTick()
+        data.value.b = false
+        await nextTick()
+      },
+    )
+    expect(vdom.after).toBe('<p>p</p>')
+    expect(vapor.after).toBe('<p>p</p><!--if-->')
+  })
+
+  test('ignores a slot outlet root like vdom', async () => {
+    const { vdom, vapor } = await renderParity(
+      {
+        Child: `<template><slot/></template>`,
+        App: `<template><components.Child v-show="false"><div>x</div></components.Child></template>`,
+      },
+      () => ref({}),
+      async () => {},
+    )
+    expect(vdom.after).toBe('<div>x</div>')
+    expect(vapor.after).toBe('<div>x</div><!--slot-->')
+    expect(
+      'Runtime directive used on component with non-element root node',
+    ).toHaveBeenWarned()
+    expect(
+      'v-show used on component with non-single-element root node',
+    ).toHaveBeenWarned()
+  })
+
+  test('ignores a slot outlet reached through the root chain like vdom', async () => {
+    const { vdom, vapor } = await renderParity(
+      {
+        Child: `<template><slot/></template>`,
+        Outer: `<template><components.Child v-if="data.ok"><slot/></components.Child></template>`,
+        App: `<template><components.Outer v-show="false"><div>x</div></components.Outer></template>`,
+      },
+      () => ref({ ok: true }),
+      async () => {},
+    )
+    expect(vdom.after).toBe('<div>x</div>')
+    expect(vapor.after).toBe('<div>x</div><!--slot--><!--slot--><!--if-->')
+    expect(
+      'Runtime directive used on component with non-element root node',
+    ).toHaveBeenWarned()
+    expect(
+      'v-show used on component with non-single-element root node',
+    ).toHaveBeenWarned()
+  })
+
+  // #15625: v-show restores the display of the merged root style layers
+  test('restores display from either root style layer', async () => {
+    const shown: Record<string, string[]> = { vdom: [], vapor: [] }
+    await renderParity(
+      {
+        Child: `<template><div :style="data.own" v-show="data.show">c</div></template>`,
+        App: `<template><components.Child :style="data.par" /></template>`,
+      },
+      () =>
+        ref({ own: { width: '1px' }, par: { display: 'flex' }, show: false }),
+      async (data, root, mode) => {
+        const el = root.firstElementChild as HTMLElement
+        // patch the own layer while fallthrough holds display
+        data.value.own = { width: '2px' }
+        await nextTick()
+        data.value.show = true
+        await nextTick()
+        shown[mode].push(el.style.display)
+        // patch the fallthrough layer while own holds display
+        data.value.show = false
+        data.value.own = { display: 'grid' }
+        data.value.par = { color: 'blue' }
+        await nextTick()
+        data.value.par = { color: 'red' }
+        await nextTick()
+        data.value.show = true
+        await nextTick()
+        shown[mode].push(el.style.display)
+      },
+    )
+    expect(shown.vdom).toEqual(['flex', 'grid'])
+    expect(shown.vapor).toEqual(shown.vdom)
+  })
+
+  test('restores an important display from the fallthrough style layer', async () => {
+    const shown: Record<string, string[]> = { vdom: [], vapor: [] }
+    await renderParity(
+      {
+        Child: `<template><div :style="data.own" v-show="data.show">c</div></template>`,
+        App: `<template><components.Child :style="data.par" /></template>`,
+      },
+      () =>
+        ref({
+          own: { width: '1px' },
+          par: { display: 'flex !important' },
+          show: true,
+        }),
+      async (data, root, mode) => {
+        const el = root.firstElementChild as HTMLElement
+        data.value.own = { width: '2px' }
+        await nextTick()
+        data.value.show = false
+        await nextTick()
+        data.value.show = true
+        await nextTick()
+        shown[mode].push(el.getAttribute('style')!)
+      },
+    )
+    expect(shown.vdom).toEqual(['width: 2px; display: flex !important;'])
+    expect(shown.vapor).toEqual(shown.vdom)
   })
 })

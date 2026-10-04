@@ -1,65 +1,207 @@
-import { EMPTY_OBJ, NO, hasOwn, isArray, isFunction } from '@vue/shared'
-import { type Block, type BlockFn, insert } from './block'
-import { rawPropsProxyHandlers, resolveFunctionSource } from './componentProps'
+import {
+  EMPTY_OBJ,
+  NO,
+  VaporSlotFlags,
+  VaporSlotStability,
+  extend,
+  hasOwn,
+  isArray,
+  isForwardedSlot,
+  isFunction,
+} from '@vue/shared'
+import {
+  type Block,
+  type BlockFn,
+  insert,
+  registerNestedVDOMCleanup,
+} from './block'
+import {
+  type FunctionSource,
+  type RawProps,
+  rawPropsProxyHandlers,
+  resolveFunctionSource,
+  snapshotRawProps,
+} from './componentProps'
 import {
   type GenericComponentInstance,
   currentInstance,
   isAsyncWrapper,
-  isRef,
 } from '@vue/runtime-dom'
+import { Dep, trackDep } from '@vue/reactivity'
 import type { LooseRawProps, VaporComponentInstance } from './component'
 import { renderEffect } from './renderEffect'
 import {
   insertionAnchor,
   insertionParent,
-  isLastInsertion,
   resetInsertionState,
 } from './insertionState'
 import {
-  advanceHydrationNode,
+  type HydrationCursor,
+  captureHydrationCursor,
+  enterHydrationCursor,
   isHydrating,
-  locateHydrationNode,
 } from './dom/hydration'
 import {
-  type DynamicFragment,
+  DynamicFragment,
   SlotFragment,
   type VaporFragment,
-  withOwnedSlotBoundary,
+  finishBlockCreation,
+  isInteropFragment,
 } from './fragment'
+import { SLOT_FRAGMENT } from './fragmentFlags'
+import {
+  currentRenderContext,
+  deriveRenderContext,
+  deriveSlotOwner,
+  deriveSlotScopeIds,
+  withRenderContext,
+} from './renderContext'
 import { createElement } from './dom/node'
 import { setDynamicProps } from './dom/prop'
-import { isInteropEnabled } from './vdomInteropState'
-import { setScopeId } from './scopeId'
-
-/**
- * Flag to indicate if we are executing a once slot.
- * When true, renderEffect should skip creating reactive effect.
- */
-export let inOnceSlot = false
-
-/**
- * Current slot scopeIds for vdom interop
- */
-export let currentSlotScopeIds: string[] | null = null
-
-function setCurrentSlotScopeIds(scopeIds: string[] | null): string[] | null {
-  try {
-    return currentSlotScopeIds
-  } finally {
-    currentSlotScopeIds = scopeIds
-  }
-}
+import { interopSlotsKey, isInteropEnabled } from './vdomInteropState'
+import { isAsyncComponentEnabled } from './asyncComponentState'
+import { renderWithSlotScopeIds } from './scopeId'
+import { setElementScopeIds } from './dom/scopeIdStamp'
+import { withHydratingSlotBoundary } from './dom/hydrateFragment'
+import { withOnce } from './once'
 
 export type RawSlots = Record<string, VaporSlot> & {
   $?: DynamicSlotSource[]
 }
 
+export type LooseRawSlots =
+  | VaporSlot
+  | (Record<string, VaporSlot | DynamicSlotSource[]> & {
+      $?: DynamicSlotSource[]
+    })
+
 export type StaticSlots = Record<string, VaporSlot>
 
-export type VaporSlot = BlockFn
-export type DynamicSlot = { name: string; fn: VaporSlot }
+export type VaporSlot = BlockFn & {
+  _?: VaporSlotStability.NON_STABLE
+}
+export type DynamicSlot = { name: string; fn: VaporSlot; key?: unknown }
 export type DynamicSlotFn = () => DynamicSlot | DynamicSlot[]
 export type DynamicSlotSource = StaticSlots | DynamicSlotFn
+
+const rawSlotsOwnerMap = new WeakMap<RawSlots, VaporComponentInstance | null>()
+const rawSlotWrappersCache = new WeakMap<
+  RawSlots,
+  Map<
+    string,
+    {
+      slot: VaporSlot
+      wrapped: VaporSlot
+    }
+  >
+>()
+
+export function normalizeRawSlots(
+  rawSlots?: LooseRawSlots | null,
+): RawSlots | null | undefined {
+  if (!rawSlots) return rawSlots
+  const normalized = isFunction(rawSlots)
+    ? ({ default: rawSlots } as RawSlots)
+    : (rawSlots as RawSlots)
+  if (!rawSlotsOwnerMap.has(normalized)) {
+    rawSlotsOwnerMap.set(normalized, getScopeOwner())
+  }
+  return normalized
+}
+
+// A dynamic slot descriptor's committed value: the input effect writes it in
+// the parent's update order, the isolated source reads it as its `_cache`.
+export class SlotSourceCell extends Dep {
+  committed: ReturnType<DynamicSlotFn> | undefined = undefined
+  next: ReturnType<DynamicSlotFn> | undefined = undefined
+
+  constructor(public source: DynamicSlotFn) {
+    super()
+  }
+
+  get value(): ReturnType<DynamicSlotFn> | undefined {
+    trackDep(this)
+    return this.committed
+  }
+}
+
+/**
+ * A dynamic slot descriptor is the parent's expression, like a prop getter:
+ * replace each function source with a reader of the cell the input effect
+ * commits it to. Slot functions keep their closure semantics. Returns the
+ * isolated slots with their cells, or nothing when no source is a function.
+ */
+export function isolateSlotSources(
+  rawSlots: RawSlots,
+): [RawSlots, SlotSourceCell[]] | undefined {
+  const dynamicSources = rawSlots.$
+  if (!dynamicSources) return
+  let count = 0
+  for (let i = 0; i < dynamicSources.length; i++) {
+    if (isFunction(dynamicSources[i])) count++
+  }
+  if (!count) return
+  const cells: SlotSourceCell[] = new Array(count)
+  const isolatedSources = dynamicSources.slice()
+  for (let i = 0, n = 0; i < dynamicSources.length; i++) {
+    const source = dynamicSources[i]
+    if (isFunction(source)) {
+      const cell = (cells[n++] = new SlotSourceCell(source))
+      isolatedSources[i] = isolateSlotSource(cell)
+    }
+  }
+  const isolated = extend({}, rawSlots, { $: isolatedSources }) as RawSlots
+  rawSlotsOwnerMap.set(isolated, rawSlotsOwnerMap.get(rawSlots) || null)
+  return [isolated, cells]
+}
+
+function isolateSlotSource(cell: SlotSourceCell): DynamicSlotFn {
+  const isolated: FunctionSource<ReturnType<DynamicSlotFn> | undefined> = () =>
+    cell.value
+  // readers resolve through the cell instead of a computed of their own
+  isolated._cache = cell
+  return isolated as DynamicSlotFn
+}
+
+export function initSlots(instance: VaporComponentInstance): void {
+  const isolated = isolateSlotSources(instance.rawSlots)
+  if (isolated) {
+    instance.rawSlots = isolated[0]
+    instance.slotSources = isolated[1]
+    instance.slots = new Proxy(isolated[0], dynamicSlotsProxyHandlers)
+  }
+}
+
+function withSlotOwner<T>(slots: RawSlots, fn: () => T): T {
+  const owner = rawSlotsOwnerMap.get(slots)
+  if (owner === undefined) {
+    return fn()
+  }
+  return withRenderContext(deriveSlotOwner(currentRenderContext, owner), fn)
+}
+
+function getOwnedSlot(
+  slots: RawSlots,
+  key: string,
+  slot: VaporSlot,
+): VaporSlot {
+  if (!rawSlotsOwnerMap.has(slots)) {
+    return slot
+  }
+  let wrappers = rawSlotWrappersCache.get(slots)
+  if (!wrappers) {
+    rawSlotWrappersCache.set(slots, (wrappers = new Map()))
+  }
+  const cached = wrappers.get(key)
+  if (cached && cached.slot === slot) {
+    return cached.wrapped
+  }
+  const wrapped = ((...args: any[]) =>
+    withSlotOwner(slots, () => slot(...args))) as VaporSlot
+  wrapped._ = slot._
+  wrappers.set(key, { slot, wrapped })
+  return wrapped
+}
 
 export const dynamicSlotsProxyHandlers: ProxyHandler<RawSlots> = {
   get: getSlot,
@@ -75,53 +217,63 @@ export const dynamicSlotsProxyHandlers: ProxyHandler<RawSlots> = {
     }
   },
   ownKeys(target) {
-    let keys = Object.keys(target)
+    const keys = new Set(Object.keys(target).filter(k => k !== '$'))
     const dynamicSources = target.$
     if (dynamicSources) {
-      keys = keys.filter(k => k !== '$')
       for (const source of dynamicSources) {
         if (isFunction(source)) {
-          const slot = resolveFunctionSource(source)
+          const slot = withSlotOwner(target, () =>
+            resolveFunctionSource(source),
+          )
           if (slot) {
             if (isArray(slot)) {
-              for (const s of slot) keys.push(String(s.name))
+              for (const s of slot) keys.add(String(s.name))
             } else {
-              keys.push(String(slot.name))
+              keys.add(String(slot.name))
             }
           }
         } else {
-          keys.push(...Object.keys(source))
+          for (const key of Object.keys(source)) keys.add(key)
         }
       }
     }
-    return keys
+    return [...keys]
   },
   set: NO,
   deleteProperty: NO,
 }
 
-export function getSlot(
+export function getSlot(target: RawSlots, key: string): VaporSlot | undefined {
+  const slot = resolveSlot(target, key)
+  if (slot) {
+    return getOwnedSlot(target, key, isFunction(slot) ? slot : slot.fn)
+  }
+}
+
+function resolveSlot(
   target: RawSlots,
   key: string,
-):
-  | (VaporSlot & { _boundMap?: WeakMap<DynamicFragment, VaporSlot> })
-  | undefined {
+): VaporSlot | DynamicSlot | undefined {
   if (key === '$') return
   const dynamicSources = target.$
   if (dynamicSources) {
     let i = dynamicSources.length
-    let source
+    let source: DynamicSlotSource
     while (i--) {
       source = dynamicSources[i]
       if (isFunction(source)) {
-        const slot = resolveFunctionSource(source)
+        const slot = withSlotOwner(target, () =>
+          resolveFunctionSource(source as DynamicSlotFn),
+        )
         if (slot) {
           if (isArray(slot)) {
             for (let j = slot.length - 1; j >= 0; j--) {
-              if (String(slot[j].name) === key) return slot[j].fn
+              if (String(slot[j].name) === key) {
+                return slot[j]
+              }
             }
           } else if (String(slot.name) === key) {
-            return slot.fn
+            return slot
           }
         }
       } else if (hasOwn(source, key)) {
@@ -135,182 +287,267 @@ export function getSlot(
 }
 
 /**
- * Tracks the slot owner (the component that defines the slot content).
- * This is used for:
- * 1. Getting the correct rawSlots in forwarded slots (via createSlot)
- * 2. Inheriting the slot owner's scopeId
- */
-export let currentSlotOwner: VaporComponentInstance | null = null
-
-export function setCurrentSlotOwner(
-  owner: VaporComponentInstance | null,
-): VaporComponentInstance | null {
-  try {
-    return currentSlotOwner
-  } finally {
-    currentSlotOwner = owner
-  }
-}
-
-/**
  * Get the effective slot instance for accessing rawSlots and scopeId.
- * Prefers currentSlotOwner (if inside a slot), falls back to currentInstance.
+ * Prefers the slot owner (if inside a slot), falls back to currentInstance.
  */
 export function getScopeOwner(): VaporComponentInstance | null {
-  return (currentSlotOwner || currentInstance) as VaporComponentInstance | null
-}
-
-/**
- * Wrap a slot function to track the slot owner.
- *
- * This ensures:
- * 1. createSlot gets rawSlots from the correct instance (slot owner)
- * 2. elements inherit the slot owner's scopeId
- */
-export function withVaporCtx(fn: Function): BlockFn {
-  const owner = getScopeOwner()
-  return (...args: any[]) => {
-    const prevOwner = setCurrentSlotOwner(owner)
-    try {
-      return fn(...args)
-    } finally {
-      setCurrentSlotOwner(prevOwner)
-    }
-  }
+  return (currentRenderContext.slotOwner ||
+    currentInstance) as VaporComponentInstance | null
 }
 
 export function createSlot(
-  name: string | (() => string),
+  name: string | (() => string) = 'default',
   rawProps?: LooseRawProps | null,
   fallback?: VaporSlot,
-  noSlotted?: boolean,
-  once?: boolean,
+  flags: number = 0,
 ): Block {
   const _insertionParent = insertionParent
   const _insertionAnchor = insertionAnchor
-  const _isLastInsertion = isLastInsertion
   if (!isHydrating) resetInsertionState()
+  let hydrationCursor: HydrationCursor | null = null
 
   const instance = getScopeOwner()!
   const rawSlots = instance.rawSlots
+  const scopeId =
+    !(flags & VaporSlotFlags.NO_SLOTTED) && instance.type.__scopeId
+  // The outlet's id cell: its own `-s` id merged onto the outer slot context,
+  // so forwarded slot content accumulates every level's ids (VDOM
+  // processFragment concat semantics).
+  const outerSlotScopeIds = currentRenderContext.slotScopeIds
+  const slotScopeIds = scopeId
+    ? outerSlotScopeIds
+      ? [...outerSlotScopeIds, `${scopeId}-s`]
+      : [`${scopeId}-s`]
+    : outerSlotScopeIds
+  const once = !!(flags & VaporSlotFlags.ONCE)
   const slotProps = rawProps
-    ? new Proxy(rawProps, rawPropsProxyHandlers)
+    ? new Proxy(
+        once ? snapshotRawProps(rawProps as RawProps) : rawProps,
+        rawPropsProxyHandlers,
+      )
     : EMPTY_OBJ
-
   let fragment: VaporFragment
-  if (isRef(rawSlots._) && isInteropEnabled) {
-    if (isHydrating) locateHydrationNode()
-    fragment = instance.appContext.vapor!.vdomSlot(
-      rawSlots._,
-      name,
-      slotProps,
-      instance,
-      fallback,
+  let isCustomElementSlot = false
+  const interopSlotsSource =
+    isInteropEnabled && (rawSlots as any)[interopSlotsKey]
+  if (interopSlotsSource) {
+    if (isHydrating) hydrationCursor = enterHydrationCursor()
+    // Establish the outlet cell as the creation ambient; the interop slot
+    // captures it as the base patch context for the vdom-rendered content.
+    fragment = withRenderContext(
+      deriveSlotScopeIds(currentRenderContext, slotScopeIds),
+      () =>
+        instance.appContext.vdom!.slot(
+          interopSlotsSource,
+          name,
+          slotProps,
+          instance,
+          {
+            fallback,
+            flags,
+            adoptAnchor: _insertionAnchor,
+          },
+        ),
     )
   } else {
-    const slotFragment = (fragment = new SlotFragment())
-    // mark the slot as forwarded
-    slotFragment.forwarded =
-      currentSlotOwner != null && currentSlotOwner !== currentInstance
-    const isDynamicName = isFunction(name)
-
-    // Calculate slotScopeIds once (for vdom interop)
-    const slotScopeIds: string[] = []
-    if (!noSlotted) {
-      const scopeId = instance.type.__scopeId
-      if (scopeId) {
-        slotScopeIds.push(`${scopeId}-s`)
-      }
+    // renderVDOMSlot wraps its fallback from flags itself, so only the
+    // non-interop paths wrap here.
+    if (once && fallback) {
+      const originalFallback = fallback
+      fallback = (...args: any[]) => withOnce(() => originalFallback(...args))
+    }
+    if (isHydrating) hydrationCursor = captureHydrationCursor()
+    // A definition that resolves to another async wrapper mounts that wrapper
+    // with the custom element callback, so its inner reads `ce` from it.
+    const ce =
+      (instance as GenericComponentInstance).ce ||
+      (isAsyncComponentEnabled &&
+        instance.parent &&
+        isAsyncWrapper(instance.parent) &&
+        instance.parent.ce)
+    // Only shadow DOM needs a native <slot> for projection. Without a shadow
+    // root the host hands its light DOM children over as static slots, so the
+    // outlet resolves them like any other slot.
+    isCustomElementSlot = !!(ce && ce._hasShadowRoot())
+    // A native <slot> hands fallback to the browser, so there is nothing for
+    // a SlotFragment to arbitrate.
+    const needsSlotFragment =
+      !isCustomElementSlot &&
+      shouldUseSlotFragment(rawSlots, name, fallback, flags)
+    const slotFragment = needsSlotFragment
+      ? new SlotFragment(flags, _insertionAnchor)
+      : undefined
+    let dynamicFragment: DynamicFragment | undefined
+    if (slotFragment) {
+      // Late renders (fallbacks, branch switches) run under the outlet cell
+      // rather than the construction-time capture.
+      slotFragment.ctx = deriveSlotScopeIds(slotFragment.ctx, slotScopeIds)
+      fragment = slotFragment
+    } else {
+      // Fast path: DynamicFragment is enough, but hydration still enters the
+      // slot boundary so it can own the SSR close marker.
+      dynamicFragment = new DynamicFragment(
+        SLOT_FRAGMENT,
+        __DEV__ ? 'slot' : undefined,
+        false,
+        false,
+        undefined,
+        _insertionAnchor,
+      )
+      // A fast-path outlet joins no fallback arbitration, so its content must
+      // not render under (or attach dirty-tracking to) an enclosing boundary.
+      const ctx = dynamicFragment.ctx
+      dynamicFragment.ctx = deriveRenderContext(
+        ctx,
+        ctx.slotOwner,
+        null,
+        slotScopeIds,
+        ctx.suspense,
+      )
+      fragment = dynamicFragment
     }
 
-    const renderSlot = () => {
-      const slotName = isFunction(name) ? name() : name
+    const isDynamicName = isFunction(name)
 
-      // in custom element mode, render <slot/> as actual slot outlets
-      // because in shadowRoot: false mode the slot element gets
-      // replaced by injected content
-      if (
-        (instance as GenericComponentInstance).ce ||
-        (instance.parent &&
-          isAsyncWrapper(instance.parent) &&
-          instance.parent.ce)
-      ) {
+    const renderSlot = () => {
+      // in custom element mode, render <slot/> as an actual slot outlet so
+      // the shadow root projects light DOM content natively. The outlet is
+      // created once: a dynamic name is read inside the prop effect rather
+      // than re-running this function, which would pile up orphan outlets
+      // and fallbacks.
+      if (isCustomElementSlot) {
         const el = createElement('slot')
-        renderEffect(() => {
+        // the outlet is an element of the owner's own template, so it carries
+        // the owner's own scope id plus the ids of the enclosing slot context
+        // it renders under - the same pair vdom writes on the native `<slot>`
+        // vnode. Its own `-s` id scopes its content, not the outlet itself.
+        const ownScopeId = instance.type.__scopeId
+        if (ownScopeId) el.setAttribute(ownScopeId, '')
+        if (outerSlotScopeIds) setElementScopeIds(el, outerSlotScopeIds)
+        const setSlotProps = () => {
+          const slotName = isFunction(name) ? name() : name
           setDynamicProps(el, [
             slotProps,
             slotName !== 'default' ? { name: slotName } : {},
           ])
-        })
+        }
+        // Native slot outlets have no component boundary to snapshot props, so
+        // v-once applies here by skipping the reactive prop effect.
+        if (once) setSlotProps()
+        else renderEffect(setSlotProps)
         if (fallback) {
-          withOwnedSlotBoundary(slotFragment.parentSlotBoundary, () => {
-            const fallbackBlock = fallback()
-            // Keep the live fallback owner on the SlotFragment itself. The
-            // native slot outlet is temporary and gets removed by CE slot
-            // replacement, but the fragment remains Vapor's long-lived owner.
-            slotFragment.customElementFallback = fallbackBlock
-            insert(fallbackBlock, el)
+          const fallbackFn = fallback
+          // The fallback renders outside update(), so restore the outlet's
+          // context explicitly.
+          withRenderContext(dynamicFragment!.ctx, () => {
+            const block = fallbackFn()
+            insert(block, el)
+            registerNestedVDOMCleanup(block)
           })
         }
         fragment.nodes = el
         return
       }
 
-      const slot = getSlot(rawSlots, slotName)
-      if (slot) {
-        // Create and cache bound slot to keep it stable and avoid unnecessary
-        // updates when it resolves to the same slot. Cache per-fragment
-        // (v-for creates multiple fragments) so each fragment keeps its own
-        // slotProps without cross-talk.
-        const boundMap = slot._boundMap || (slot._boundMap = new WeakMap())
-        let bound = boundMap.get(slotFragment)
-        if (!bound) {
-          bound = () => {
-            const prevSlotScopeIds = setCurrentSlotScopeIds(
-              slotScopeIds.length > 0 ? slotScopeIds : null,
-            )
-            const prev = inOnceSlot
-            try {
-              if (once) inOnceSlot = true
-              return slot(slotProps)
-            } finally {
-              inOnceSlot = prev
-              setCurrentSlotScopeIds(prevSlotScopeIds)
-            }
-          }
-          boundMap.set(slotFragment, bound)
-        }
-        slotFragment.updateSlot(bound, fallback)
+      const slotName = isFunction(name) ? name() : name
+      const resolvedSlot = resolveSlot(rawSlots, slotName)
+      const slot = resolvedSlot
+        ? getOwnedSlot(
+            rawSlots,
+            slotName,
+            isFunction(resolvedSlot) ? resolvedSlot : resolvedSlot.fn,
+          )
+        : undefined
+      const render = slot ? getBoundSlot(slot) : undefined
+      const key =
+        resolvedSlot && !isFunction(resolvedSlot) && hasOwn(resolvedSlot, 'key')
+          ? resolvedSlot.key
+          : render || fallback
+      if (slotFragment) {
+        slotFragment.updateSlot(render, fallback, key)
       } else {
-        slotFragment.updateSlot(undefined, fallback)
+        // When no slot render exists, the fast path hands fallback to the
+        // DynamicFragment; during hydration it owns the slot SSR range, so
+        // empty dynamic roots get its close marker.
+        if (isHydrating) {
+          withHydratingSlotBoundary(() =>
+            dynamicFragment!.update(render || fallback, key),
+          )
+        } else {
+          dynamicFragment!.update(render || fallback, key)
+        }
       }
     }
 
+    let cachedSlot: VaporSlot | undefined
+    let cachedBoundSlot: VaporSlot | undefined
+    const getBoundSlot = (slot: VaporSlot): VaporSlot => {
+      if (slot !== cachedSlot) {
+        cachedSlot = slot
+        // Re-establishes the outlet cell (interop may invoke the slot outside
+        // the fragment's render seam) and catches up out-of-window content.
+        cachedBoundSlot = () =>
+          renderWithSlotScopeIds(slotScopeIds, () =>
+            once ? withOnce(() => slot(slotProps)) : slot(slotProps),
+          )
+      }
+      return cachedBoundSlot!
+    }
+
     // dynamic slot name or has dynamicSlots
-    if (!once && (isDynamicName || rawSlots.$)) {
+    if (!once && !isCustomElementSlot && (isDynamicName || rawSlots.$)) {
       renderEffect(renderSlot)
     } else {
       renderSlot()
     }
   }
 
-  if (!isHydrating) {
-    if (!noSlotted) {
-      const scopeId = instance.type.__scopeId
-      if (scopeId) {
-        setScopeId(fragment, [`${scopeId}-s`])
-      }
-    }
-
-    if (_insertionParent) insert(fragment, _insertionParent, _insertionAnchor)
-  } else {
-    if (fragment.insert) {
-      ;(fragment as VaporFragment).hydrate!()
-    }
-    if (_isLastInsertion) {
-      advanceHydrationNode(_insertionParent!)
-    }
+  if (isHydrating && isInteropEnabled && isInteropFragment(fragment)) {
+    fragment.hydrate!()
   }
 
+  // Custom-element outlets assign their native <slot> directly instead of
+  // rendering through update(), so they still need this initial insertion even
+  // after adopting the template anchor.
+  finishBlockCreation(
+    fragment,
+    fragment.anchor,
+    hydrationCursor,
+    _insertionParent,
+    _insertionAnchor,
+    isCustomElementSlot,
+  )
+
   return fragment
+}
+
+function shouldUseSlotFragment(
+  rawSlots: RawSlots,
+  name: string | (() => string),
+  fallback: VaporSlot | undefined,
+  flags: number,
+): boolean {
+  // Compiler-marked forwarded roots must preserve the enclosing boundary
+  // chain. Everything below is boundary-independent: a non-forwarded outlet
+  // never chains outward, so local fallback reachability follows the same
+  // static analysis with or without an enclosing boundary.
+  if (currentRenderContext.slotBoundary && isForwardedSlot(flags)) return true
+
+  // Without fallback, there is no fallback branch to track.
+  if (!fallback) return false
+
+  // No slots means fallback is the only possible branch.
+  if (rawSlots === EMPTY_OBJ) return false
+
+  // Dynamic names and dynamic slot sources still need runtime resolution.
+  if (isFunction(name) || rawSlots.$) return true
+
+  // Raw resolution only: the stability marker lives on the raw function, so
+  // the owner wrapper is left for renderSlot's single synchronous first run.
+  const slot = resolveSlot(rawSlots, name)
+  // No matching static slot means fallback is the only possible branch.
+  if (!slot) return false
+
+  // Non-stable slot content can become invalid, making fallback reachable.
+  return (isFunction(slot) ? slot : slot.fn)._ === VaporSlotStability.NON_STABLE
 }

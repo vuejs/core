@@ -308,7 +308,7 @@ describe('vapor transition', () => {
         await css(btnChangeNameSelector).click()
         await expect
           .element(css(btnChangeNameSelector))
-          .toHaveTextContent('changed')
+          .toMatchTextContent('changed')
 
         click(btnSelector)
         await nextTick()
@@ -1165,16 +1165,12 @@ describe('vapor transition', () => {
             `<h2>This is page1</h2>` +
             `<button id="changeShowBtn">false</button><!--dynamic-component-->`,
         )
-        await nextFrame()
-        expect(html(containerSelector)).toContain(
-          `<div class="test-leave-active test-leave-to"><h2>I shouldn't show </h2></div>` +
-            `<h2>This is page1</h2>` +
-            `<button id="changeShowBtn">false</button><!--dynamic-component-->`,
-        )
 
-        // switch to page2, before leave finishes
-        // expect v-show element's display to be none
-        await css(btnToggle).click()
+        // switch to page2 while the leave is still in flight (#13153): the
+        // pending leave is cancelled (display: none) and restarted for the
+        // move. Once a leave has finished, a persisted root only relocates
+        // (#14031), so switch right away instead of waiting another frame.
+        click(btnToggle)
         await nextTick()
         await expect
           .element(css(containerSelector))
@@ -1310,18 +1306,16 @@ describe('vapor transition', () => {
       await nextTick()
       await nextFrame()
       expect(html(containerSelector)).toContain(
-        '<div class="v-enter-from v-enter-active">vapor compA</div><!--async component--><!--if-->',
+        '<div class="v-enter-from v-enter-active">vapor compA</div><!--if-->',
       )
       await nextFrame()
       expect(html(containerSelector)).toContain(
-        '<div class="v-enter-active v-enter-to">vapor compA</div><!--async component--><!--if-->',
+        '<div class="v-enter-active v-enter-to">vapor compA</div><!--if-->',
       )
       await transitionFinish()
       await expect
         .element(css(containerSelector))
-        .toContainHTML(
-          '<div class="">vapor compA</div><!--async component--><!--if-->',
-        )
+        .toContainHTML('<div class="">vapor compA</div><!--if-->')
     })
 
     test('apply transition to pre-resolved async component', async () => {
@@ -1341,18 +1335,16 @@ describe('vapor transition', () => {
       await nextTick()
       await nextFrame()
       expect(html(containerSelector)).toContain(
-        '<div class="v-enter-from v-enter-active">vapor compA</div><!--async component--><!--if-->',
+        '<div class="v-enter-from v-enter-active">vapor compA</div><!--if-->',
       )
       await nextFrame()
       expect(html(containerSelector)).toContain(
-        '<div class="v-enter-active v-enter-to">vapor compA</div><!--async component--><!--if-->',
+        '<div class="v-enter-active v-enter-to">vapor compA</div><!--if-->',
       )
       await transitionFinish()
       await expect
         .element(css(containerSelector))
-        .toContainHTML(
-          '<div class="">vapor compA</div><!--async component--><!--if-->',
-        )
+        .toContainHTML('<div class="">vapor compA</div><!--if-->')
 
       // leave
       click(btnSelector)
@@ -1373,18 +1365,16 @@ describe('vapor transition', () => {
       await nextTick()
       await nextFrame()
       expect(html(containerSelector)).toContain(
-        '<div class="v-enter-from v-enter-active">vapor compA</div><!--async component--><!--if-->',
+        '<div class="v-enter-from v-enter-active">vapor compA</div><!--if-->',
       )
       await nextFrame()
       expect(html(containerSelector)).toContain(
-        '<div class="v-enter-active v-enter-to">vapor compA</div><!--async component--><!--if-->',
+        '<div class="v-enter-active v-enter-to">vapor compA</div><!--if-->',
       )
       await transitionFinish()
       await expect
         .element(css(containerSelector))
-        .toContainHTML(
-          '<div class="">vapor compA</div><!--async component--><!--if-->',
-        )
+        .toContainHTML('<div class="">vapor compA</div><!--if-->')
     })
 
     test(

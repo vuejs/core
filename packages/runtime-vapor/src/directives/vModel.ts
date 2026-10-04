@@ -10,9 +10,10 @@ import {
   vModelTextUpdate,
 } from '@vue/runtime-dom'
 import { renderEffect } from '../renderEffect'
-import { looseEqual } from '@vue/shared'
-import { addEventListener } from '../dom/event'
-import { traverse } from '@vue/reactivity'
+import { inOnce, withOnce } from '../once'
+import { looseEqual, remove } from '@vue/shared'
+import { onScopeDispose, traverse } from '@vue/reactivity'
+import type { VaporComponentInstance } from '../component'
 
 type VaporModelDirective<
   T extends HTMLElement =
@@ -31,7 +32,8 @@ function ensureMounted(cb: () => void) {
   if (currentInstance!.isMounted) {
     cb()
   } else {
-    onMounted(cb)
+    // Deferred work keeps the once ambient it was created under.
+    onMounted(inOnce ? () => withOnce(cb) : cb)
   }
 }
 
@@ -72,7 +74,8 @@ export const applyRadioModel: VaporModelDirective<HTMLInputElement> = (
   get,
   set,
 ) => {
-  addEventListener(el, 'change', () => set(vModelGetValue(el)))
+  // static listener: lives and dies with the element, no disposer needed
+  el.addEventListener('change', () => set(vModelGetValue(el)))
   ensureMounted(() => {
     let value: any
     renderEffect(() => {
@@ -88,8 +91,21 @@ export const applySelectModel: VaporModelDirective<
   'number'
 > = (el, get, set, modifiers) => {
   vModelSelectInit(el, get(), modifiers && modifiers.number, set)
+  if (inOnce) {
+    ensureMounted(() => vModelSetSelected(el, get()))
+    return
+  }
+  // <select> relies on its <option>s, which the owner may re-render without
+  // touching the model, so the selection is applied from the owner's updated
+  // hooks like the vdom directive does. Runs before the owner's own hooks.
+  const instance = currentInstance as VaporComponentInstance
+  const update = () => vModelSetSelected(el, get())
+  ;(instance.u || (instance.u = [])).unshift(update)
+  onScopeDispose(() => remove(instance.u!, update))
   ensureMounted(() => {
-    renderEffect(() => vModelSetSelected(el, traverse(get())))
+    update()
+    // only tracks the model: a change flows through the updated hook above
+    renderEffect(() => traverse(get()))
   })
 }
 

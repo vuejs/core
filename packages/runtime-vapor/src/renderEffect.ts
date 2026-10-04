@@ -3,63 +3,101 @@ import {
   type SchedulerJob,
   SchedulerJobFlags,
   currentInstance,
+  endMeasure,
   queueJob,
-  queuePostFlushCb,
+  queuePostRenderEffect,
+  restoreCurrentInstance,
   setCurrentInstance,
   startMeasure,
   warn,
 } from '@vue/runtime-dom'
-import { type VaporComponentInstance, isVaporComponent } from './component'
-import { inOnceSlot } from './componentSlots'
+import {
+  type VaporComponentInstance,
+  isDeferredKeepAliveStateLive,
+  isVaporComponent,
+  settleDeferredKeepAliveUpdates,
+} from './component'
+import { inOnce } from './once'
 import { invokeArrayFns } from '@vue/shared'
+import { isSuspenseEnabled } from './suspense'
+import { isInteropEnabled } from './vdomInteropState'
 
 export class RenderEffect extends ReactiveEffect {
   i: VaporComponentInstance | null
-  job: SchedulerJob
-  updateJob: SchedulerJob
+  // Created lazily on first notify: most render effects are never
+  // scheduled individually, so eagerly allocating the job closure at
+  // creation time is pure overhead in list-mount hot paths. The constructor
+  // still primes the field to keep every instance on one hidden class.
+  job?: SchedulerJob
+  updateJob?: SchedulerJob
+  render: () => void
+  // Creation order within the owning component.
+  order: number
 
-  constructor(public render: () => void) {
-    super()
+  constructor(render: () => void, noLifecycle = false) {
+    super(noLifecycle ? render : undefined)
+    this.render = render
     const instance = currentInstance as VaporComponentInstance | null
+    // a vdom instance rendering vapor content owns the update job at order 0
+    if (
+      isInteropEnabled &&
+      instance &&
+      !instance.vapor &&
+      !instance.effectCount
+    ) {
+      instance.effectCount = 1
+    }
+    this.order = instance ? instance.effectCount++ : 0
     if (__DEV__ && !__TEST__ && !this.subs && !isVaporComponent(instance)) {
       warn('renderEffect called without active EffectScope or Vapor instance.')
     }
 
-    const job: SchedulerJob = () => {
-      if (this.dirty) {
-        this.run()
-      }
-    }
-    this.updateJob = () => {
-      instance!.isUpdating = false
-      instance!.u && invokeArrayFns(instance!.u)
-    }
-
-    if (instance) {
-      if (__DEV__) {
-        this.onTrack = instance.rtc
-          ? e => invokeArrayFns(instance.rtc!, e)
-          : void 0
-        this.onTrigger = instance.rtg
-          ? e => invokeArrayFns(instance.rtg!, e)
-          : void 0
-      }
-
-      // register effect for vapor custom element update
-      if (instance.type.ce) {
-        ;(instance.renderEffects || (instance.renderEffects = [])).push(this)
-      }
-      job.i = instance
+    if (__DEV__ && instance && !noLifecycle) {
+      this.onTrack = instance.rtc
+        ? e => invokeArrayFns(instance.rtc!, e)
+        : void 0
+      this.onTrigger = instance.rtg
+        ? e => invokeArrayFns(instance.rtg!, e)
+        : void 0
     }
 
-    this.job = job
     this.i = instance
+    this.job = undefined
 
     // Allow self re-queue when render/hook logic mutates reactive state.
     // Safe in Vapor because updates are always async via queueJob(), and
     // isUpdating prevents duplicate bu/u hooks on re-entry.
     this.flags |= EffectFlags.ALLOW_RECURSE
-    this.job.flags! |= SchedulerJobFlags.ALLOW_RECURSE
+  }
+
+  createJob(): SchedulerJob {
+    const job: SchedulerJob = () => {
+      // The job may already be queued when its owning scope is paused.
+      if (!(this.flags & EffectFlags.PAUSED) && this.dirty) {
+        // A pending KeepAlive async root defers updates along its root chain.
+        const deferred =
+          __FEATURE_SUSPENSE__ &&
+          isSuspenseEnabled &&
+          this.i &&
+          this.i.deferredKeepAliveUpdates
+        if (deferred) {
+          if (isDeferredKeepAliveStateLive(deferred)) {
+            deferred.effects.push(job)
+            return
+          }
+          // The pending root can no longer resolve through this state
+          // (unmounted early or superseded suspense cycle) - drop the stale
+          // state and replay its buffered updates together with this job in
+          // scheduler order (this job re-enters with the state cleared).
+          settleDeferredKeepAliveUpdates(deferred, job)
+          return
+        }
+        this.run()
+      }
+    }
+    if (this.i) job.i = this.i
+    job.flags! |= SchedulerJobFlags.ALLOW_RECURSE
+    return (this.job = job)
   }
 
   fn(): void {
@@ -71,36 +109,52 @@ export class RenderEffect extends ReactiveEffect {
       startMeasure(instance, `renderEffect`)
     }
     const prev = setCurrentInstance(instance, scope)
-    if (hasUpdateHooks && instance.isMounted && !instance.isUpdating) {
-      // avoid recurse update until updateJob flushed
-      instance.isUpdating = true
-      instance.bu && invokeArrayFns(instance.bu)
-      this.render()
-      queuePostFlushCb(this.updateJob)
-    } else {
-      this.render()
-    }
-    setCurrentInstance(...prev)
-    if (__DEV__ && instance) {
-      startMeasure(instance, `renderEffect`)
+    try {
+      if (hasUpdateHooks && instance.isMounted && !instance.isUpdating) {
+        // avoid recurse update until updateJob flushed
+        instance.isUpdating = true
+        try {
+          instance.bu && invokeArrayFns(instance.bu)
+          this.render()
+        } catch (err) {
+          instance.isUpdating = false
+          throw err
+        }
+        let updateJob = this.updateJob
+        if (!updateJob) {
+          updateJob = this.updateJob = () => {
+            instance.isUpdating = false
+            instance.u && invokeArrayFns(instance.u)
+          }
+        }
+        queuePostRenderEffect(updateJob, undefined, instance.suspense)
+      } else {
+        this.render()
+      }
+    } finally {
+      restoreCurrentInstance(prev)
+      if (__DEV__ && instance) {
+        endMeasure(instance, `renderEffect`)
+      }
     }
   }
 
   notify(): void {
     const flags = this.flags
     if (!(flags & EffectFlags.PAUSED)) {
-      queueJob(this.job, this.i ? this.i.uid : undefined)
+      queueJob(
+        this.job || this.createJob(),
+        this.i ? this.i.uid : undefined,
+        false,
+        this.order,
+      )
     }
   }
 }
 
 export function renderEffect(fn: () => void, noLifecycle = false): void {
-  // in once slot, just run the function directly
-  if (inOnceSlot) return fn()
+  if (inOnce) return fn()
 
-  const effect = new RenderEffect(fn)
-  if (noLifecycle) {
-    effect.fn = fn
-  }
+  const effect = new RenderEffect(fn, noLifecycle)
   effect.run()
 }

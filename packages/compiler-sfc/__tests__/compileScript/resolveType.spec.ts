@@ -153,6 +153,30 @@ describe('resolveType', () => {
     })
   })
 
+  test('leading intersection type with ignore', () => {
+    expect(
+      resolve(`
+    type Foo = { foo: number }
+    type Bar = { bar: boolean }
+    defineProps</* @vue-ignore */ Foo & Bar>()
+    `).props,
+    ).toStrictEqual({
+      bar: ['Boolean'],
+    })
+  })
+
+  test('leading union type with ignore', () => {
+    expect(
+      resolve(`
+    type Foo = { foo: number }
+    type Bar = { bar: boolean }
+    defineProps</* @vue-ignore */ Foo | Bar>()
+    `).props,
+    ).toStrictEqual({
+      bar: ['Boolean'],
+    })
+  })
+
   test('TSPropertySignature with ignore', () => {
     expect(
       resolve(`
@@ -803,6 +827,61 @@ describe('resolveType', () => {
         foo: ['Boolean', 'Symbol', 'Number'],
       })
     })
+
+    // #14729 — original user repro shape
+    test('MaybeRef wrapped array type in interface inheritance chain', () => {
+      expect(
+        resolve(`
+        import type { MaybeRef } from 'unresolvable-pkg-xyz'
+        type OptionItem = { label: string; value: string | number }
+        type FormItemOptions<T = any, C = any> =
+          | MaybeRef<OptionItem[]>
+          | Promise<OptionItem[]>
+          | ((row: T, context: C) => OptionItem[] | Promise<OptionItem[]>)
+        interface ISelectable<T = any, C = any> {
+          options?: FormItemOptions<T, C>
+        }
+        interface XSelectProps<T = any, C = any> extends ISelectable<T, C> {
+          modelValue?: unknown
+        }
+        defineProps<XSelectProps>()
+      `).props,
+      ).toMatchObject({
+        // 'Array' must be present so that array values pass runtime type check
+        options: expect.arrayContaining(['Array', 'Promise', 'Function']),
+      })
+    })
+
+    // #14729
+    test('Vue ref wrapper types in union are inferred when source is unresolvable', () => {
+      expect(
+        resolve(`
+        import type {
+          MaybeRef,
+          Ref,
+          ShallowRef,
+          ComputedRef,
+          WritableComputedRef,
+          MaybeRefOrGetter,
+        } from 'unresolvable-pkg-xyz'
+        defineProps<{
+          a?: MaybeRef<string[]> | Promise<string[]> | (() => string[])
+          b?: Ref<number>
+          c?: ShallowRef<number>
+          d?: ComputedRef<number>
+          e?: WritableComputedRef<number>
+          f?: MaybeRefOrGetter<boolean>
+        }>()
+      `).props,
+      ).toStrictEqual({
+        a: ['Object', 'Array', 'Promise', 'Function'],
+        b: ['Object'],
+        c: ['Object'],
+        d: ['Object'],
+        e: ['Object'],
+        f: ['Object', 'Function', 'Boolean'],
+      })
+    })
   })
 
   describe('generics', () => {
@@ -1326,6 +1405,63 @@ describe('resolveType', () => {
       expect(deps && [...deps]).toStrictEqual(['/src/types.ts'])
     })
 
+    test('ts module resolve parses a shared extended config once', () => {
+      const base = '/tsconfig.base.json'
+      const files: Record<string, string> = {
+        '/tsconfig.json': JSON.stringify({
+          files: [],
+          references: [
+            { path: './tsconfig.a.json' },
+            { path: './tsconfig.b.json' },
+            { path: './tsconfig.c.json' },
+          ],
+        }),
+        [base]: JSON.stringify({
+          compilerOptions: {
+            composite: true,
+            paths: {
+              bar: ['./user.ts'],
+            },
+          },
+        }),
+        '/user.ts': 'export type User = { bar: string }',
+      }
+      for (const name of ['a', 'b', 'c']) {
+        files[`/tsconfig.${name}.json`] = JSON.stringify({
+          extends: base,
+          include: ['**/*.ts', '**/*.vue'],
+        })
+      }
+
+      // Counting reads of the shared base is what makes this test able to fail: the
+      // traversal reaches three configs that extend it, and without a shared
+      // `extendedConfigCache` each one re-reads and re-parses it.
+      let baseReads = 0
+      const { props } = resolve(
+        `
+        import { User } from 'bar'
+        defineProps<User>()
+        `,
+        files,
+        {
+          fs: {
+            fileExists(file) {
+              return !!(files[file] ?? files[normalize(file)])
+            },
+            readFile(file) {
+              if (normalize(file) === normalize(base)) baseReads++
+              return files[file] ?? files[normalize(file)]
+            },
+          },
+        },
+      )
+
+      expect(props).toStrictEqual({
+        bar: ['String'],
+      })
+      expect(baseReads).toBe(1)
+    })
+
     test('ts module resolve w/ project reference folder', () => {
       const files = {
         '/tsconfig.json': JSON.stringify({
@@ -1497,6 +1633,139 @@ describe('resolveType', () => {
       })
     })
 
+    test('global types with re-exports', () => {
+      const files = {
+        '/foo.ts': `export interface Foo { foo: number }`,
+        '/bar.ts': `export interface Bar { bar: boolean }`,
+        '/baz.ts': `export interface Baz { baz: string }`,
+        '/global.d.ts': `
+          declare global {
+            export type { Foo } from './foo'
+            export { Bar } from './bar'
+            export * from './baz'
+          }
+          export {}
+        `,
+      }
+
+      const globalTypeFiles = { globalTypeFiles: ['/global.d.ts'] }
+
+      const fooRes = resolve(`defineProps<Foo>()`, files, globalTypeFiles)
+      expect(fooRes.props).toStrictEqual({
+        foo: ['Number'],
+      })
+      expect(fooRes.deps && [...fooRes.deps]).toStrictEqual([
+        '/global.d.ts',
+        '/foo.ts',
+      ])
+
+      const barRes = resolve(`defineProps<Bar>()`, files, globalTypeFiles)
+      expect(barRes.props).toStrictEqual({
+        bar: ['Boolean'],
+      })
+      expect(barRes.deps && [...barRes.deps]).toStrictEqual([
+        '/global.d.ts',
+        '/bar.ts',
+      ])
+
+      const bazRes = resolve(`defineProps<Baz>()`, files, globalTypeFiles)
+      expect(bazRes.props).toStrictEqual({
+        baz: ['String'],
+      })
+      expect(bazRes.deps && [...bazRes.deps]).toStrictEqual([
+        '/global.d.ts',
+        '/baz.ts',
+      ])
+    })
+
+    test('global types with re-exports preserve source-module scope', () => {
+      const files = {
+        '/types.ts': `export type Name = string`,
+        '/foo.ts': `
+          import type { Name } from './types'
+          export interface Foo { name: Name }
+        `,
+        '/global.d.ts': `
+          declare global {
+            export type { Foo } from './foo'
+          }
+          export {}
+        `,
+      }
+
+      expect(
+        resolve(`defineProps<Foo>()`, files, {
+          globalTypeFiles: ['/global.d.ts'],
+        }).props,
+      ).toStrictEqual({
+        name: ['String'],
+      })
+    })
+
+    test('global types with re-exports from package directory', () => {
+      const files = {
+        '/node_modules/pkg/package.json': `{ "types": "dist/index.d.ts" }`,
+        '/node_modules/pkg/dist/index.d.ts': `
+          export interface PackageType { value: string }
+        `,
+        '/global.d.ts': `
+          declare global {
+            export type { PackageType } from './node_modules/pkg'
+          }
+          export {}
+        `,
+      }
+
+      const { props, deps } = resolve(`defineProps<PackageType>()`, files, {
+        globalTypeFiles: ['/global.d.ts'],
+      })
+
+      expect(props).toStrictEqual({
+        value: ['String'],
+      })
+      expect(deps && [...deps]).toStrictEqual([
+        '/global.d.ts',
+        '/node_modules/pkg/dist/index.d.ts',
+      ])
+    })
+
+    test('global types with re-exports track source deps after cache reuse', () => {
+      const files = {
+        '/base.ts': `export interface Base { age: number }`,
+        '/types.ts': `export type Name = string`,
+        '/foo.ts': `
+          import type { Base } from './base'
+          import type { Name } from './types'
+          export interface Foo extends Base { name: Name }
+        `,
+        '/global.d.ts': `
+          declare global {
+            export type { Foo } from './foo'
+          }
+          export {}
+        `,
+      }
+      const globalTypeFiles = { globalTypeFiles: ['/global.d.ts'] }
+      const expectedDeps = ['/global.d.ts', '/foo.ts', '/base.ts', '/types.ts']
+
+      const { deps: coldDeps } = resolve(
+        `defineProps<Foo>()`,
+        files,
+        globalTypeFiles,
+      )
+      expect(coldDeps && [...coldDeps]).toStrictEqual(expectedDeps)
+
+      const { deps } = resolve(
+        `defineProps<Foo>()`,
+        files,
+        globalTypeFiles,
+        '/Other.vue',
+        false,
+      )
+
+      expect(deps && [...deps]).toStrictEqual(expectedDeps)
+    })
+
     test('global types with ambient references', () => {
       const files = {
         // with references
@@ -1544,6 +1813,65 @@ describe('resolveType', () => {
         selected: ['Boolean'],
       })
     })
+
+    test('global type file with top-level exports is also importable', () => {
+      const files = {
+        '/globalTypes.d.ts': `export interface Foo { bar: string }`,
+      }
+      const { props, deps } = resolve(
+        `
+        import type { Foo } from './globalTypes'
+        defineProps<Foo>()
+        `,
+        files,
+        { globalTypeFiles: ['/globalTypes.d.ts'] },
+      )
+      expect(props).toStrictEqual({
+        bar: ['String'],
+      })
+      expect(deps && [...deps]).toContain('/globalTypes.d.ts')
+    })
+
+    test(
+      'global type file with top-level exports is importable ' +
+        'after global-scope load',
+      () => {
+        const files = {
+          '/globalTypes.d.ts': `export interface Foo { bar: string }`,
+        }
+        // Reference an unknown name in the first compilation so that
+        // resolution falls back to the global scope, which loads
+        // `/globalTypes.d.ts` with `asGlobal=true` and caches the result.
+        // This mirrors the dev-server order in which one SFC triggers
+        // global-scope loading before another SFC imports from the
+        // same file. The compile itself fails on the unknown reference,
+        // but the cache is populated as a side effect before that error
+        // is thrown.
+        try {
+          resolve(
+            `defineProps<UnknownGlobal>()`,
+            files,
+            { globalTypeFiles: ['/globalTypes.d.ts'] },
+            '/PrimeGlobal.vue',
+          )
+        } catch {}
+
+        const { props, deps } = resolve(
+          `
+          import type { Foo } from './globalTypes'
+          defineProps<Foo>()
+          `,
+          files,
+          { globalTypeFiles: ['/globalTypes.d.ts'] },
+          '/Importer.vue',
+          false /* do not invalidate cache */,
+        )
+        expect(props).toStrictEqual({
+          bar: ['String'],
+        })
+        expect(deps && [...deps]).toContain('/globalTypes.d.ts')
+      },
+    )
 
     // #9871
     test('shared generics with different args', () => {

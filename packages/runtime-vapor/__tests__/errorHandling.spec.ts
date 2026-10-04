@@ -5,15 +5,23 @@ import {
   ref,
   watch,
   watchEffect,
+  withModifiers,
 } from '@vue/runtime-dom'
 import {
   createComponent,
+  createIf,
   createInvoker,
   createSlot,
   createTemplateRefSetter,
   defineVaporComponent,
+  delegate,
   delegateEvents,
+  on,
+  renderEffect,
+  setDynamicEvents,
   template,
+  withVaporKeys,
+  withVaporModifiers,
 } from '../src'
 import { makeRender } from './_utils'
 import type { VaporComponent } from '../src/component'
@@ -419,7 +427,7 @@ describe('error handling', () => {
         function onClick() {
           throw err
         }
-        const n0 = template('<button>throw Error</button>', true)() as any
+        const n0 = template('<button>throw Error</button>', 1)() as any
         n0.$evtclick = createInvoker(onClick)
         return n0
       },
@@ -429,6 +437,298 @@ describe('error handling', () => {
     const btn = host.querySelector('button') as HTMLButtonElement
     btn.click()
     expect(fn).toHaveBeenCalledWith(err, 'native event handler')
+  })
+
+  test('in dom event handler registered with on', () => {
+    const err = new Error('foo')
+    const fn = vi.fn()
+
+    const Comp = {
+      setup() {
+        onErrorCaptured((err, instance, info) => {
+          fn(err, info)
+          return false
+        })
+        return createComponent(Child)
+      },
+    }
+
+    const Child = defineVaporComponent({
+      setup() {
+        function onClick() {
+          throw err
+        }
+        const n0 = template('<button>throw Error</button>', 1)() as any
+        on(n0, 'click', onClick)
+        return n0
+      },
+    })
+
+    const { host } = define(Comp).render()
+    const btn = host.querySelector('button') as HTMLButtonElement
+    btn.click()
+    expect(fn).toHaveBeenCalledWith(err, 'native event handler')
+  })
+
+  test('in dom event handler registered with delegate', () => {
+    const err = new Error('foo')
+    const fn = vi.fn()
+
+    const Comp = {
+      setup() {
+        onErrorCaptured((err, instance, info) => {
+          fn(err, info)
+          return false
+        })
+        return createComponent(Child)
+      },
+    }
+
+    delegateEvents('click')
+    const Child = defineVaporComponent({
+      setup() {
+        function onClick() {
+          throw err
+        }
+        const n0 = template('<button>throw Error</button>', 1)() as any
+        delegate(n0, 'click', onClick)
+        return n0
+      },
+    })
+
+    const { host } = define(Comp).render()
+    const btn = host.querySelector('button') as HTMLButtonElement
+    btn.click()
+    expect(fn).toHaveBeenCalledWith(err, 'native event handler')
+  })
+
+  test('in dom event handler registered with setDynamicEvents', () => {
+    const err = new Error('foo')
+    const fn = vi.fn()
+
+    const Comp = {
+      setup() {
+        onErrorCaptured((err, instance, info) => {
+          fn(err, info)
+          return false
+        })
+        return createComponent(Child)
+      },
+    }
+
+    const Child = defineVaporComponent({
+      setup() {
+        function onClick() {
+          throw err
+        }
+        const n0 = template('<button>throw Error</button>', 1)() as any
+        renderEffect(() => {
+          setDynamicEvents(n0, { click: onClick })
+        })
+        return n0
+      },
+    })
+
+    const { host } = define(Comp).render()
+    const btn = host.querySelector('button') as HTMLButtonElement
+    btn.click()
+    expect(fn).toHaveBeenCalledWith(err, 'native event handler')
+  })
+
+  test('in direct dom event handler registered with vapor modifier helpers', () => {
+    const err = new Error('foo')
+    const fn = vi.fn()
+
+    const Comp = {
+      setup() {
+        onErrorCaptured((err, instance, info) => {
+          fn(err, info)
+          return false
+        })
+        return createComponent(Child)
+      },
+    }
+
+    delegateEvents('click', 'keyup')
+    const Child = defineVaporComponent({
+      setup() {
+        const onClick = () => {
+          throw err
+        }
+        const onKeyup = () => {
+          throw err
+        }
+        const n0 = template('<button>throw Error</button>', 1)() as any
+        n0.$evtclick = withVaporModifiers(onClick, ['self'])
+        n0.$evtkeyup = withVaporKeys(withModifiers(onKeyup, ['self']), [
+          'enter',
+        ])
+        return n0
+      },
+    })
+
+    const { host } = define(Comp).render()
+    const btn = host.querySelector('button') as HTMLButtonElement
+    btn.click()
+    btn.dispatchEvent(
+      new KeyboardEvent('keyup', { key: 'Enter', bubbles: true }),
+    )
+    expect(fn).toHaveBeenCalledTimes(2)
+    expect(fn).toHaveBeenCalledWith(err, 'native event handler')
+  })
+
+  test('direct modifier invokers keep separate component boundaries', () => {
+    const err = new Error('foo')
+    const calls: string[] = []
+    const onClick = () => {
+      throw err
+    }
+
+    delegateEvents('click')
+    const Child = defineVaporComponent({
+      setup() {
+        const n0 = template('<button>throw Error</button>', 1)() as any
+        n0.$evtclick = withVaporModifiers(onClick, ['self'])
+        return n0
+      },
+    })
+
+    const createBoundary = (name: string) => ({
+      setup() {
+        onErrorCaptured((err, instance, info) => {
+          calls.push(`${name}:${info}`)
+          return false
+        })
+        return createComponent(Child)
+      },
+    })
+
+    const Comp = {
+      setup() {
+        return [
+          createComponent(createBoundary('one')),
+          createComponent(createBoundary('two')),
+        ]
+      },
+    }
+
+    const { host } = define(Comp).render()
+    const buttons = host.querySelectorAll('button')
+    ;(buttons[0] as HTMLButtonElement).click()
+    ;(buttons[1] as HTMLButtonElement).click()
+    expect(calls).toEqual([
+      'one:native event handler',
+      'two:native event handler',
+    ])
+  })
+
+  test('in dom event handler array registered with on (async)', async () => {
+    const err = new Error('foo')
+    const fn = vi.fn()
+
+    const Comp = {
+      setup() {
+        onErrorCaptured((err, instance, info) => {
+          fn(err, info)
+          return false
+        })
+        return createComponent(Child)
+      },
+    }
+
+    const Child = defineVaporComponent({
+      setup() {
+        const onClick = async () => {
+          throw err
+        }
+        const n0 = template('<button>throw Error</button>', 1)() as any
+        on(n0, 'click', [onClick, () => {}])
+        return n0
+      },
+    })
+
+    const { host } = define(Comp).render()
+    const btn = host.querySelector('button') as HTMLButtonElement
+    btn.click()
+    await nextTick()
+    expect(fn).toHaveBeenCalledWith(err, 'native event handler')
+  })
+
+  test('in dom event handler registered with delegate (async)', async () => {
+    const err = new Error('foo')
+    const fn = vi.fn()
+
+    const Comp = {
+      setup() {
+        onErrorCaptured((err, instance, info) => {
+          fn(err, info)
+          return false
+        })
+        return createComponent(Child)
+      },
+    }
+
+    delegateEvents('click')
+    const Child = defineVaporComponent({
+      setup() {
+        const onClick = async () => {
+          throw err
+        }
+        const n0 = template('<button>throw Error</button>', 1)() as any
+        delegate(n0, 'click', onClick)
+        return n0
+      },
+    })
+
+    const { host } = define(Comp).render()
+    const btn = host.querySelector('button') as HTMLButtonElement
+    btn.click()
+    await nextTick()
+    expect(fn).toHaveBeenCalledWith(err, 'native event handler')
+  })
+
+  test('dom event invokers keep separate component boundaries', () => {
+    const err = new Error('foo')
+    const calls: string[] = []
+    const onClick = () => {
+      throw err
+    }
+
+    const Child = defineVaporComponent({
+      setup() {
+        const n0 = template('<button>throw Error</button>', 1)() as any
+        on(n0, 'click', onClick)
+        return n0
+      },
+    })
+
+    const createBoundary = (name: string) => ({
+      setup() {
+        onErrorCaptured((err, instance, info) => {
+          calls.push(`${name}:${info}`)
+          return false
+        })
+        return createComponent(Child)
+      },
+    })
+
+    const Comp = {
+      setup() {
+        return [
+          createComponent(createBoundary('one')),
+          createComponent(createBoundary('two')),
+        ]
+      },
+    }
+
+    const { host } = define(Comp).render()
+    const buttons = host.querySelectorAll('button')
+    ;(buttons[0] as HTMLButtonElement).click()
+    ;(buttons[1] as HTMLButtonElement).click()
+    expect(calls).toEqual([
+      'one:native event handler',
+      'two:native event handler',
+    ])
   })
 
   test('in component event handler via emit', () => {
@@ -639,6 +939,46 @@ describe('error handling', () => {
     await nextTick()
     expect(handler).toHaveBeenCalledWith(error, {}, 'render function')
     expect(handler).toHaveBeenCalledTimes(1)
+  })
+
+  test('component can be updated and unmounted after setup error in production', async () => {
+    __DEV__ = false
+    try {
+      const err = new Error('foo')
+      const fn = vi.fn()
+      const toggle = ref(true)
+
+      const Child = defineVaporComponent({
+        setup() {
+          throw err
+        },
+      })
+
+      const Comp: VaporComponent = {
+        setup() {
+          onErrorCaptured(err => {
+            fn(err)
+            return false
+          })
+          return createIf(
+            () => toggle.value,
+            () => createComponent(Child),
+            () => template('<div>fallback</div>')(),
+          )
+        },
+      }
+
+      const { app, html } = define(Comp).render()
+      expect(fn).toHaveBeenCalledWith(err)
+
+      toggle.value = false
+      await nextTick()
+      expect(html()).toContain('fallback')
+
+      expect(() => app.unmount()).not.toThrow()
+    } finally {
+      __DEV__ = true
+    }
   })
 
   // native event handler handling should be tested in respective renderers

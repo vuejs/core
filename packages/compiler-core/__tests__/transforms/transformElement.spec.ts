@@ -74,6 +74,12 @@ function parseWithBind(template: string, options?: CompilerOptions) {
   })
 }
 
+function getVForChild(
+  node: ReturnType<typeof parseWithForTransform>['node'],
+): VNodeCall {
+  return node.codegenNode.children.arguments[1].returns as VNodeCall
+}
+
 describe('compiler: element transform', () => {
   test('import + resolve component', () => {
     const { root } = parseWithElementTransform(`<Foo/>`)
@@ -142,6 +148,121 @@ describe('compiler: element transform', () => {
     expect(node.tag).toBe(`Example`)
   })
 
+  test('resolve component from scoped slot bindings and shadows setup bindings', () => {
+    const { code } = baseCompile(
+      `<Example v-slot="{ Foo }"><Foo /></Example>`,
+      {
+        prefixIdentifiers: true,
+        bindingMetadata: {
+          Example: BindingTypes.SETUP_CONST,
+          Foo: BindingTypes.SETUP_MAYBE_REF,
+        },
+      },
+    )
+
+    expect(code).toContain(`_createVNode(Foo)`)
+    expect(code).not.toContain(`_component_Foo`)
+    expect(code).not.toContain(`_resolveComponent("Foo")`)
+    expect(code).not.toContain(`$setup["Foo"]`)
+  })
+
+  test('resolve kebab-cased component from scoped slot bindings', () => {
+    const { code } = baseCompile(
+      `<Example v-slot="{ fooBar }"><foo-bar /></Example>`,
+      {
+        prefixIdentifiers: true,
+        isNativeTag: tag => tag !== 'foo-bar',
+        bindingMetadata: {
+          Example: BindingTypes.SETUP_CONST,
+        },
+      },
+    )
+
+    expect(code).toContain(`_createVNode(fooBar)`)
+    expect(code).not.toContain(`_component_foo_bar`)
+    expect(code).not.toContain(`_resolveComponent("foo-bar")`)
+  })
+
+  test('does not resolve component from inactive scoped slot bindings', () => {
+    const { code } = baseCompile(
+      `<Example v-slot="{ Foo }"><Foo /></Example><Foo />`,
+      {
+        prefixIdentifiers: true,
+        bindingMetadata: {
+          Example: BindingTypes.SETUP_CONST,
+        },
+      },
+    )
+
+    expect(code).toContain(`_createVNode(Foo)`)
+    expect(code).toContain(`const _component_Foo = _resolveComponent("Foo")`)
+    expect(code).toContain(`_createVNode(_component_Foo)`)
+  })
+
+  test('does not resolve component from v-for bindings', () => {
+    const { code } = baseCompile(
+      `<template v-for="Foo in list"><Foo :value="Foo" /></template>`,
+      {
+        prefixIdentifiers: true,
+      },
+    )
+
+    expect(code).toContain(`const _component_Foo = _resolveComponent("Foo")`)
+    expect(code).toContain(`_createBlock(_component_Foo`)
+    expect(code).toContain(`value: Foo`)
+    expect(code).not.toContain(`_createVNode(Foo`)
+    expect(code).not.toContain(`_createBlock(Foo`)
+  })
+
+  test('does not resolve component from scoped slot bindings shadowed by v-for', () => {
+    const { code } = baseCompile(
+      `<Example v-slot="{ Foo }"><template v-for="Foo in list"><Foo /></template></Example>`,
+      {
+        prefixIdentifiers: true,
+        bindingMetadata: {
+          Example: BindingTypes.SETUP_CONST,
+        },
+      },
+    )
+
+    expect(code).toContain(`const _component_Foo = _resolveComponent("Foo")`)
+    expect(code).toContain(`_createBlock(_component_Foo)`)
+    expect(code).not.toContain(`_createVNode(Foo)`)
+    expect(code).not.toContain(`_createBlock(Foo)`)
+  })
+
+  test('resolve component from scoped slot bindings shadowing v-for', () => {
+    const { code } = baseCompile(
+      `<div v-for="Foo in list"><Example v-slot="{ Foo }"><Foo /></Example></div>`,
+      {
+        prefixIdentifiers: true,
+        bindingMetadata: {
+          Example: BindingTypes.SETUP_CONST,
+        },
+      },
+    )
+
+    expect(code).toContain(`_createVNode(Foo)`)
+    expect(code).not.toContain(`_component_Foo`)
+    expect(code).not.toContain(`_resolveComponent("Foo")`)
+  })
+
+  test('resolve component from template scoped slot bindings', () => {
+    const { code } = baseCompile(
+      `<Example><template #default="{ Foo }"><Foo /></template></Example>`,
+      {
+        prefixIdentifiers: true,
+        bindingMetadata: {
+          Example: BindingTypes.SETUP_CONST,
+        },
+      },
+    )
+
+    expect(code).toContain(`_createVNode(Foo)`)
+    expect(code).not.toContain(`_component_Foo`)
+    expect(code).not.toContain(`_resolveComponent("Foo")`)
+  })
+
   test('resolve namespaced component from setup bindings', () => {
     const { root, node } = parseWithElementTransform(`<Foo.Example/>`, {
       bindingMetadata: {
@@ -194,6 +315,23 @@ describe('compiler: element transform', () => {
     })
     expect(root.helpers).not.toContain(RESOLVE_COMPONENT)
     expect(node.tag).toBe('_unref($props["Foo"]).Example')
+  })
+
+  test('resolve namespaced component from scoped slot bindings', () => {
+    const { code } = baseCompile(
+      `<Example v-slot="slotProps"><slot-props.Foo /></Example>`,
+      {
+        prefixIdentifiers: true,
+        isNativeTag: tag => tag !== 'slot-props.Foo',
+        bindingMetadata: {
+          Example: BindingTypes.SETUP_CONST,
+        },
+      },
+    )
+
+    expect(code).toContain(`_createVNode(slotProps.Foo)`)
+    expect(code).not.toContain(`_component_slot_props`)
+    expect(code).not.toContain(`_resolveComponent("slot-props.Foo")`)
   })
 
   test('do not resolve component from non-script-setup bindings', () => {
@@ -1047,6 +1185,105 @@ describe('compiler: element transform', () => {
       }).ast
       const node = (root as any).children[0].codegenNode
       expect(node.patchFlag).toBe(PatchFlags.NEED_PATCH)
+    })
+
+    test('NEED_PATCH (stable v-for + static ref)', () => {
+      const { node } = parseWithForTransform(
+        `<div v-for="i in 3" :key="i" ref="foo" />`,
+        { prefixIdentifiers: true },
+      )
+      const child = getVForChild(node)
+      expect(child.isBlock).toBe(false)
+      expect(child.patchFlag).toBe(PatchFlags.NEED_PATCH)
+    })
+
+    test('NEED_PATCH (stable v-for + custom directives)', () => {
+      const { node } = parseWithForTransform(
+        `<div v-for="i in 3" :key="i" v-dir />`,
+        { prefixIdentifiers: true },
+      )
+      const child = getVForChild(node)
+      expect(child.isBlock).toBe(false)
+      expect(child.patchFlag).toBe(PatchFlags.NEED_PATCH)
+    })
+
+    test('NEED_PATCH (stable v-for + vnode hooks)', () => {
+      const { node } = parseWithForTransform(
+        `<div v-for="i in 3" :key="i" @vue:unmounted="foo" />`,
+        {
+          prefixIdentifiers: true,
+          cacheHandlers: true,
+          directiveTransforms: {
+            bind: transformBind,
+            on: transformOn,
+          },
+        },
+      )
+      const child = getVForChild(node)
+      expect(child.isBlock).toBe(false)
+      expect(child.patchFlag).toBe(PatchFlags.NEED_PATCH)
+    })
+
+    test('NEED_PATCH (stable v-for + setup-const function ref)', () => {
+      const { node } = parseWithForTransform(
+        `<div v-for="i in 3" :key="i" :ref="setRefFn" />`,
+        {
+          prefixIdentifiers: true,
+          bindingMetadata: {
+            setRefFn: BindingTypes.SETUP_CONST,
+          },
+        },
+      )
+      const child = getVForChild(node)
+      expect(child.isBlock).toBe(false)
+      expect(child.patchFlag).toBe(PatchFlags.NEED_PATCH)
+    })
+
+    test('preserve block for stable v-for + custom directive with children', () => {
+      const { node } = parseWithForTransform(
+        `<div v-for="i in 3" v-dir>{{ i }}</div>`,
+        { prefixIdentifiers: true },
+      )
+      const child = getVForChild(node)
+      expect(child.isBlock).toBe(true)
+      expect(child.patchFlag).toBe(PatchFlags.TEXT)
+    })
+
+    test.each(['before-update', 'beforeUpdate'])(
+      'preserve block for stable v-for + @vue:%s vnode hook',
+      hook => {
+        const { node } = parseWithForTransform(
+          `<div v-for="i in 3" @vue:${hook}="foo"><span /></div>`,
+          {
+            prefixIdentifiers: true,
+            cacheHandlers: true,
+            directiveTransforms: {
+              bind: transformBind,
+              on: transformOn,
+            },
+          },
+        )
+        const child = getVForChild(node)
+        expect(child.isBlock).toBe(true)
+        expect(child.patchFlag).toBeUndefined()
+      },
+    )
+
+    test('does not add NEED_PATCH when another patch flag tracks the vnode', () => {
+      const { node } = parseWithForTransform(
+        `<div v-for="i in 3" :key="i" @vue:unmounted="foo">{{ i }}</div>`,
+        {
+          prefixIdentifiers: true,
+          cacheHandlers: true,
+          directiveTransforms: {
+            bind: transformBind,
+            on: transformOn,
+          },
+        },
+      )
+      const child = getVForChild(node)
+      expect(child.isBlock).toBe(false)
+      expect(child.patchFlag).toBe(PatchFlags.TEXT)
     })
 
     test('script setup inline mode template ref (SETUP_COMPUTED binding)', () => {

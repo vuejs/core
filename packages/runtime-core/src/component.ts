@@ -94,6 +94,7 @@ import { markAsyncBoundary } from './helpers/useId'
 import { isAsyncWrapper } from './apiAsyncComponent'
 import type { RendererElement } from './renderer'
 import {
+  restoreCurrentInstance,
   setCurrentInstance,
   setInSSRSetupState,
 } from './componentCurrentInstance'
@@ -485,11 +486,6 @@ export interface GenericComponentInstance {
    * @internal
    */
   asyncResolved: boolean
-  /**
-   * restore renderer-specific async context after `withAsyncContext()`
-   * @internal
-   */
-  restoreAsyncContext?: () => void | (() => void)
   /**
    * `updateTeleportCssVars`
    * For updating css vars on contained teleports
@@ -954,7 +950,7 @@ function setupStatefulComponent(
     )
     const isAsyncSetup = isPromise(setupResult)
     setActiveSub(prevSub)
-    setCurrentInstance(...prev)
+    restoreCurrentInstance(prev)
 
     if ((isAsyncSetup || instance.sp) && !isAsyncWrapper(instance)) {
       // async setup / serverPrefetch, mark as async boundary for useId()
@@ -970,7 +966,12 @@ function setupStatefulComponent(
         // return the promise so server-renderer can wait on it
         return setupResult
           .then((resolvedResult: unknown) => {
-            handleSetupResult(instance, resolvedResult, isSSR)
+            setInSSRSetupState(true)
+            try {
+              handleSetupResult(instance, resolvedResult, isSSR)
+            } finally {
+              setInSSRSetupState(false)
+            }
           })
           .catch(e => {
             handleError(e, instance, ErrorCodes.SETUP_FUNCTION)
@@ -1143,7 +1144,7 @@ export function finishComponentSetup(
       applyOptions(instance)
     } finally {
       setActiveSub(prevSub)
-      setCurrentInstance(...prevInstance)
+      restoreCurrentInstance(prevInstance)
     }
   }
 
@@ -1278,7 +1279,7 @@ export function getComponentPublicInstance(
         get(target, key: string) {
           if (key in target) {
             return target[key]
-          } else {
+          } else if (!instance.vapor) {
             const publicPropertiesMap = getPublicPropertiesMap()
             if (key in publicPropertiesMap) {
               return publicPropertiesMap[key](
@@ -1288,8 +1289,10 @@ export function getComponentPublicInstance(
           }
         },
         has(target, key: string) {
-          const publicPropertiesMap = getPublicPropertiesMap()
-          return key in target || key in publicPropertiesMap
+          return (
+            key in target ||
+            (!instance.vapor && key in getPublicPropertiesMap())
+          )
         },
       }))
     )

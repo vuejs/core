@@ -353,6 +353,11 @@ function subTransform(
   // inherit parent scope analysis state
   childContext.scopes = { ...parentContext.scopes }
   childContext.identifiers = { ...parentContext.identifiers }
+  childContext.identifierScopes = Object.create(null)
+  for (const name in parentContext.identifierScopes) {
+    childContext.identifierScopes[name] =
+      parentContext.identifierScopes[name]!.slice()
+  }
   childContext.imports = parentContext.imports
   // traverse
   traverseNode(childRoot, childContext)

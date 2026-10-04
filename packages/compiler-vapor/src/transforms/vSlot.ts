@@ -23,7 +23,13 @@ import {
   type SlotBlockIRNode,
   type VaporDirectiveNode,
 } from '../ir'
-import { findDir, resolveExpression } from '../utils'
+import {
+  findDir,
+  findProp,
+  isTransitionHostNode,
+  propToExpression,
+  resolveExpression,
+} from '../utils'
 import { markNonTemplate } from './transformText'
 import { ignoreComment } from './transformComment'
 
@@ -69,6 +75,10 @@ function transformComponentSlot(
   const { children } = node
   const arg = dir && dir.arg
   const hasTemplateSlots = children.some(isSlotTemplateChild)
+  // Transition/TransitionGroup filter out comment children at runtime in
+  // vdom mode and SSR omits them (#5351, #11961), so drop them here to keep
+  // client render and hydration in sync with the server output (#15372)
+  const isTransitionHost = isTransitionHostNode(node)
 
   // whitespace: 'preserve'
   const emptyTextNodes: TemplateChildNode[] = []
@@ -76,7 +86,10 @@ function transformComponentSlot(
     if (isSlotTemplateChild(n)) {
       return false
     }
-    if (n.type === NodeTypes.COMMENT && hasTemplateSlots) {
+    if (
+      n.type === NodeTypes.COMMENT &&
+      (hasTemplateSlots || isTransitionHost)
+    ) {
       ignoreComment(n, context)
       return false
     }
@@ -166,8 +179,8 @@ function transformTemplateSlot(
       },
     })
   } else if (vElse) {
-    const vIfSlot = slots[slots.length - 1] as IRSlotDynamic
-    if (vIfSlot.slotType === IRSlotType.CONDITIONAL) {
+    const vIfSlot = slots[slots.length - 1]
+    if (vIfSlot && vIfSlot.slotType === IRSlotType.CONDITIONAL) {
       let ifNode = vIfSlot
       while (
         ifNode.negative &&
@@ -197,11 +210,13 @@ function transformTemplateSlot(
     }
   } else if (vFor) {
     if (vFor.forParseResult) {
+      const keyProp = findProp(node, 'key')
       registerDynamicSlot(slots, {
         slotType: IRSlotType.LOOP,
         name: arg!,
         fn: block,
         loop: vFor.forParseResult as IRFor,
+        keyProp: keyProp && propToExpression(keyProp),
       })
     } else {
       context.options.onError(

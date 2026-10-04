@@ -1,20 +1,52 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
 exports[`compiler: key > with dynamic key > <component is/> + key 1`] = `
-"import { createDynamicComponent as _createDynamicComponent, createKeyedFragment as _createKeyedFragment } from 'vue';
+"import { createDynamicComponent as _createDynamicComponent } from 'vue';
 
 export function render(_ctx) {
-  const n0 = _createKeyedFragment(() => (_ctx.id), () => {
-    const n1 = _createDynamicComponent(() => (_ctx.view), null, null, true)
-    return n1
-  })
+  const n0 = _createDynamicComponent(() => (_ctx.view), null, null, 1 /* SINGLE_ROOT */, () => (_ctx.id))
   return n0
+}"
+`;
+
+exports[`compiler: key > with dynamic key > <template v-if> + key 1`] = `
+"import { createIf as _createIf, template as _template } from 'vue';
+const t0 = _template("<div>", 3)
+
+export function render(_ctx) {
+  const n0 = _createIf(() => (_ctx.ok), () => {
+    const n2 = t0()
+    return n2
+  }, () => _createIf(() => (_ctx.foo), () => {
+    const n4 = t0()
+    return n4
+  }, () => {
+    const n7 = t0()
+    return n7
+  }, 613 /* TRUE_SINGLE_ROOT, FALSE_SINGLE_ROOT, TRUE_NO_SCOPE, FALSE_NO_SCOPE, KEYED_INDEX_1 */), 293 /* TRUE_SINGLE_ROOT, FALSE_SINGLE_ROOT, TRUE_NO_SCOPE, KEYED_INDEX_0 */)
+  return n0
+}"
+`;
+
+exports[`compiler: key > with dynamic key > <template v-slot> + key 1`] = `
+"import { toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, createAssetComponent as _createAssetComponent, template as _template } from 'vue';
+const t0 = _template(" ")
+
+export function render(_ctx) {
+  const n2 = _createAssetComponent("Comp", null, {
+    "foo": (_slotProps0) => {
+      const n0 = t0()
+      _renderEffect(() => _setText(n0, _toDisplayString(_slotProps0.x)))
+      return n0
+    }
+  }, true)
+  return n2
 }"
 `;
 
 exports[`compiler: key > with dynamic key > basic key 1`] = `
 "import { txt as _txt, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, createKeyedFragment as _createKeyedFragment, template as _template } from 'vue';
-const t0 = _template("<div> ", true)
+const t0 = _template("<div> ", 1)
 
 export function render(_ctx) {
   const n0 = _createKeyedFragment(() => (_ctx.ok), () => {
@@ -29,7 +61,7 @@ export function render(_ctx) {
 
 exports[`compiler: key > with dynamic key > complex key 1`] = `
 "import { createKeyedFragment as _createKeyedFragment, template as _template } from 'vue';
-const t0 = _template("<div>", true, true)
+const t0 = _template("<div>", 3)
 
 export function render(_ctx) {
   const n0 = _createKeyedFragment(() => (_ctx.a,_ctx.b), () => {
@@ -54,19 +86,16 @@ export function render(_ctx) {
 `;
 
 exports[`compiler: key > with dynamic key > component slot + key 1`] = `
-"import { resolveComponent as _resolveComponent, createKeyedFragment as _createKeyedFragment, createComponentWithFallback as _createComponentWithFallback, template as _template } from 'vue';
-const t0 = _template("<div>foo", false, true)
+"import { createKeyedFragment as _createKeyedFragment, createAssetComponent as _createAssetComponent, template as _template } from 'vue';
+const t0 = _template("<div>foo", 2)
 
 export function render(_ctx) {
-  const _component_Comp = _resolveComponent("Comp")
-  const n2 = _createComponentWithFallback(_component_Comp, null, {
-    "default": () => {
-      const n0 = _createKeyedFragment(() => (_ctx.id), () => {
-        const n1 = t0()
-        return n1
-      })
-      return n0
-    }
+  const n2 = _createAssetComponent("Comp", null, () => {
+    const n0 = _createKeyedFragment(() => (_ctx.id), () => {
+      const n1 = t0()
+      return n1
+    })
+    return n0
   }, true)
   return n2
 }"
@@ -74,7 +103,7 @@ export function render(_ctx) {
 
 exports[`compiler: key > with dynamic key > element + key 1`] = `
 "import { createKeyedFragment as _createKeyedFragment, template as _template } from 'vue';
-const t0 = _template("<div>", true, true)
+const t0 = _template("<div>", 3)
 
 export function render(_ctx) {
   const n0 = _createKeyedFragment(() => (_ctx.id), () => {
@@ -87,12 +116,12 @@ export function render(_ctx) {
 
 exports[`compiler: key > with dynamic key > nested elements + key 1`] = `
 "import { resolveComponent as _resolveComponent, setInsertionState as _setInsertionState, createComponentWithFallback as _createComponentWithFallback, createKeyedFragment as _createKeyedFragment, template as _template } from 'vue';
-const t0 = _template("<div>", true)
+const t0 = _template("<div>", 1)
 
 export function render(_ctx) {
   const _component_Foo = _resolveComponent("Foo")
   const n2 = t0()
-  _setInsertionState(n2, null, 0, true)
+  _setInsertionState(n2)
   const n0 = _createKeyedFragment(() => (_ctx.id), () => {
     const n1 = _createComponentWithFallback(_component_Foo)
     return n1
@@ -103,7 +132,7 @@ export function render(_ctx) {
 
 exports[`compiler: key > with dynamic key > shortbind key 1`] = `
 "import { createKeyedFragment as _createKeyedFragment, template as _template } from 'vue';
-const t0 = _template("<div>", true, true)
+const t0 = _template("<div>", 3)
 
 export function render(_ctx) {
   const n0 = _createKeyedFragment(() => (_ctx.key), () => {
@@ -116,7 +145,7 @@ export function render(_ctx) {
 
 exports[`compiler: key > with dynamic key > v-else-if + key 1`] = `
 "import { createKeyedFragment as _createKeyedFragment, createIf as _createIf, template as _template } from 'vue';
-const t0 = _template("<div>", true, true)
+const t0 = _template("<div>", 3)
 
 export function render(_ctx) {
   const n0 = _createIf(() => (_ctx.ok), () => {
@@ -128,7 +157,7 @@ export function render(_ctx) {
       return n5
     })
     return n4
-  }, null, 1), 5, null, 0)
+  }), 293 /* TRUE_SINGLE_ROOT, FALSE_SINGLE_ROOT, TRUE_NO_SCOPE, KEYED_INDEX_0 */)
   return n0
 }"
 `;
@@ -141,14 +170,14 @@ export function render(_ctx) {
   const n0 = _createFor(() => (_ctx.list), (_for_item0) => {
     const n2 = t0()
     return n2
-  }, (i) => (i))
+  }, (i) => (i), 8 /* IS_SINGLE_NODE */)
   return n0
 }"
 `;
 
 exports[`compiler: key > with dynamic key > v-if + key 1`] = `
 "import { createKeyedFragment as _createKeyedFragment, createIf as _createIf, template as _template } from 'vue';
-const t0 = _template("<div>", true, true)
+const t0 = _template("<div>", 3)
 
 export function render(_ctx) {
   const n0 = _createIf(() => (_ctx.ok), () => {
@@ -157,34 +186,32 @@ export function render(_ctx) {
       return n3
     })
     return n2
-  }, null, 1)
+  })
   return n0
 }"
 `;
 
 exports[`compiler: key > with static key > <component is literal/> + key 1`] = `
-"import { createDynamicComponent as _createDynamicComponent, setBlockKey as _setBlockKey } from 'vue';
+"import { createDynamicComponent as _createDynamicComponent } from 'vue';
 
 export function render(_ctx) {
-  const n0 = _createDynamicComponent(() => ('div'), null, null, true)
-  _setBlockKey(n0, "1")
+  const n0 = _createDynamicComponent(() => ('div'), null, null, 1 /* SINGLE_ROOT */, () => ("1"))
   return n0
 }"
 `;
 
 exports[`compiler: key > with static key > <component is/> + key 1`] = `
-"import { createDynamicComponent as _createDynamicComponent, setBlockKey as _setBlockKey } from 'vue';
+"import { createDynamicComponent as _createDynamicComponent } from 'vue';
 
 export function render(_ctx) {
-  const n0 = _createDynamicComponent(() => (_ctx.view), null, null, true)
-  _setBlockKey(n0, "1")
+  const n0 = _createDynamicComponent(() => (_ctx.view), null, null, 1 /* SINGLE_ROOT */, () => ("1"))
   return n0
 }"
 `;
 
 exports[`compiler: key > with static key > boolean static expression key 1`] = `
 "import { setBlockKey as _setBlockKey, template as _template } from 'vue';
-const t0 = _template("<div>", true)
+const t0 = _template("<div>", 1)
 
 export function render(_ctx) {
   const n0 = t0()
@@ -194,19 +221,31 @@ export function render(_ctx) {
 `;
 
 exports[`compiler: key > with static key > component + key 1`] = `
-"import { resolveComponent as _resolveComponent, createComponentWithFallback as _createComponentWithFallback, setBlockKey as _setBlockKey } from 'vue';
+"import { createAssetComponent as _createAssetComponent } from 'vue';
 
 export function render(_ctx) {
-  const _component_Foo = _resolveComponent("Foo")
-  const n0 = _createComponentWithFallback(_component_Foo, null, null, true)
-  _setBlockKey(n0, "1")
+  const n0 = _createAssetComponent("Foo", { key: "1" }, null, true)
+  return n0
+}"
+`;
+
+exports[`compiler: key > with static key > component + key with v-bind 1`] = `
+"import { createAssetComponent as _createAssetComponent } from 'vue';
+
+export function render(_ctx) {
+  const n0 = _createAssetComponent("Foo", {
+    key: "a",
+    $: [
+      () => (_ctx.props)
+    ]
+  }, null, true)
   return n0
 }"
 `;
 
 exports[`compiler: key > with static key > element + key 1`] = `
 "import { setBlockKey as _setBlockKey, template as _template } from 'vue';
-const t0 = _template("<div>", true)
+const t0 = _template("<div>", 1)
 
 export function render(_ctx) {
   const n0 = t0()
@@ -215,9 +254,19 @@ export function render(_ctx) {
 }"
 `;
 
+exports[`compiler: key > with static key > nested element + key is dropped 1`] = `
+"import { template as _template } from 'vue';
+const t0 = _template("<div><span>", 3)
+
+export function render(_ctx) {
+  const n0 = t0()
+  return n0
+}"
+`;
+
 exports[`compiler: key > with static key > null static expression key 1`] = `
 "import { setBlockKey as _setBlockKey, template as _template } from 'vue';
-const t0 = _template("<div>", true)
+const t0 = _template("<div>", 1)
 
 export function render(_ctx) {
   const n0 = t0()
@@ -226,9 +275,26 @@ export function render(_ctx) {
 }"
 `;
 
+exports[`compiler: key > with static key > slot roots + key 1`] = `
+"import { setBlockKey as _setBlockKey, createAssetComponent as _createAssetComponent, template as _template } from 'vue';
+const t0 = _template("<div></div>")
+const t1 = _template("<div>")
+
+export function render(_ctx) {
+  const n2 = _createAssetComponent("Foo", null, () => {
+    const n0 = t0()
+    const n1 = t1()
+    _setBlockKey(n0, "a")
+    _setBlockKey(n1, "b")
+    return [n0, n1]
+  }, true)
+  return n2
+}"
+`;
+
 exports[`compiler: key > with static key > static expression key 1`] = `
 "import { setBlockKey as _setBlockKey, template as _template } from 'vue';
-const t0 = _template("<div>", true)
+const t0 = _template("<div>", 1)
 
 export function render(_ctx) {
   const n0 = t0()
@@ -237,20 +303,32 @@ export function render(_ctx) {
 }"
 `;
 
-exports[`compiler: key > with static key > v-once + component key 1`] = `
-"import { resolveComponent as _resolveComponent, createComponentWithFallback as _createComponentWithFallback, setBlockKey as _setBlockKey } from 'vue';
+exports[`compiler: key > with static key > v-if branch root + key 1`] = `
+"import { setBlockKey as _setBlockKey, createIf as _createIf, template as _template } from 'vue';
+const t0 = _template("<div>", 1)
 
 export function render(_ctx) {
-  const _component_Foo = _resolveComponent("Foo")
-  const n0 = _createComponentWithFallback(_component_Foo, null, null, true, true)
-  _setBlockKey(n0, "bar")
+  const n0 = _createIf(() => (_ctx.ok), () => {
+    const n2 = t0()
+    _setBlockKey(n2, "a")
+    return n2
+  })
+  return n0
+}"
+`;
+
+exports[`compiler: key > with static key > v-once + component key 1`] = `
+"import { createAssetComponent as _createAssetComponent } from 'vue';
+
+export function render(_ctx) {
+  const n0 = _createAssetComponent("Foo", { key: "bar" }, null, true, true)
   return n0
 }"
 `;
 
 exports[`compiler: key > with static key > v-once + element key 1`] = `
 "import { setBlockKey as _setBlockKey, template as _template } from 'vue';
-const t0 = _template("<div>", true)
+const t0 = _template("<div>", 1)
 
 export function render(_ctx) {
   const n0 = t0()

@@ -25,7 +25,6 @@ export enum IRNodeTypes {
   SET_TEMPLATE_REF,
 
   INSERT_NODE,
-  PREPEND_NODE,
   CREATE_COMPONENT_NODE,
   SLOT_OUTLET_NODE,
 
@@ -40,6 +39,22 @@ export enum IRNodeTypes {
 
 export interface BaseIRNode {
   type: IRNodeTypes
+}
+
+export interface EffectBoundary {
+  operationIndex?: number
+  effectIndex?: number
+}
+
+/**
+ * Insertion state shared by block operations (if / for / key / component /
+ * slot outlet) and by node inserts. `anchor` references a template `<!>`
+ * placeholder id; `appendIndex` is the hydration start unit index for appends.
+ */
+export interface InsertionState {
+  parent?: number
+  anchor?: number
+  appendIndex?: number
 }
 
 export type CoreHelper = keyof typeof import('packages/runtime-dom/src')
@@ -82,7 +97,7 @@ export class TemplateRegistry {
   }
 }
 
-export interface IfIRNode extends BaseIRNode {
+export interface IfIRNode extends BaseIRNode, EffectBoundary, InsertionState {
   type: IRNodeTypes.IF
   id: number
   blockShape: number
@@ -90,12 +105,8 @@ export interface IfIRNode extends BaseIRNode {
   positive: BlockIRNode
   negative?: BlockIRNode | IfIRNode
   once?: boolean
+  slotRoot?: boolean
   index?: number
-  parent?: number
-  anchor?: number
-  logicalIndex?: number
-  append?: boolean
-  last?: boolean
 }
 
 export interface IRFor {
@@ -105,31 +116,25 @@ export interface IRFor {
   index?: SimpleExpressionNode
 }
 
-export interface ForIRNode extends BaseIRNode, IRFor {
+export interface ForIRNode
+  extends BaseIRNode, IRFor, EffectBoundary, InsertionState {
   type: IRNodeTypes.FOR
   id: number
   keyProp?: SimpleExpressionNode
   render: BlockIRNode
   once: boolean
+  slotRoot?: boolean
   component: boolean
   onlyChild: boolean
-  parent?: number
-  anchor?: number
-  logicalIndex?: number
-  append?: boolean
-  last?: boolean
+  wrappedRows: boolean
 }
 
-export interface KeyIRNode extends BaseIRNode {
+export interface KeyIRNode extends BaseIRNode, EffectBoundary, InsertionState {
   type: IRNodeTypes.KEY
   id: number
   value: SimpleExpressionNode
   block: BlockIRNode
-  parent?: number
-  anchor?: number
-  logicalIndex?: number
-  append?: boolean
-  last?: boolean
+  slotRoot?: boolean
 }
 
 export interface SetBlockKeyIRNode extends BaseIRNode {
@@ -143,13 +148,18 @@ export interface SetPropIRNode extends BaseIRNode {
   element: number
   prop: IRProp
   tag: string
+  isSVG: boolean
+  /** Whether it's in effect; only a listener key (`onXxx`) needs to know */
+  effect?: boolean
 }
 
 export interface SetDynamicPropsIRNode extends BaseIRNode {
   type: IRNodeTypes.SET_DYNAMIC_PROPS
   element: number
   props: IRProps[]
-  tag: string
+  isSVG: boolean
+  /** Merged listeners deferred until after same-element v-model. */
+  listeners?: boolean
 }
 
 export interface SetDynamicEventsIRNode extends BaseIRNode {
@@ -163,7 +173,6 @@ export interface SetTextIRNode extends BaseIRNode {
   element: number
   values: SimpleExpressionNode[]
   generated?: boolean // whether this is a generated empty text node by `processTextLikeContainer`
-  isComponent?: boolean
 }
 
 export type KeyOverride = [find: string, replacement: string]
@@ -190,7 +199,6 @@ export interface SetHtmlIRNode extends BaseIRNode {
   type: IRNodeTypes.SET_HTML
   element: number
   value: SimpleExpressionNode
-  isComponent?: boolean
 }
 
 export interface SetTemplateRefIRNode extends BaseIRNode {
@@ -201,15 +209,8 @@ export interface SetTemplateRefIRNode extends BaseIRNode {
   effect: boolean
 }
 
-export interface InsertNodeIRNode extends BaseIRNode {
+export interface InsertNodeIRNode extends BaseIRNode, InsertionState {
   type: IRNodeTypes.INSERT_NODE
-  elements: number[]
-  parent: number
-  anchor?: number
-}
-
-export interface PrependNodeIRNode extends BaseIRNode {
-  type: IRNodeTypes.PREPEND_NODE
   elements: number[]
   parent: number
 }
@@ -222,9 +223,13 @@ export interface DirectiveIRNode extends BaseIRNode {
   builtin?: boolean
   asset?: boolean
   modelType?: 'text' | 'dynamic' | 'radio' | 'checkbox' | 'select'
+  // The helper creates its own effects, so a v-once site runs it in the once
+  // ambient instead of eliding a compiler effect.
+  once?: boolean
 }
 
-export interface CreateComponentIRNode extends BaseIRNode {
+export interface CreateComponentIRNode
+  extends BaseIRNode, EffectBoundary, InsertionState {
   type: IRNodeTypes.CREATE_COMPONENT_NODE
   id: number
   tag: string
@@ -233,28 +238,21 @@ export interface CreateComponentIRNode extends BaseIRNode {
   asset: boolean
   root: boolean
   once: boolean
+  slotRoot?: boolean
   dynamic?: SimpleExpressionNode
   useCreateElement: boolean
-  parent?: number
-  anchor?: number
-  logicalIndex?: number
-  append?: boolean
-  last?: boolean
+  ns?: Namespace
+  key?: SimpleExpressionNode
 }
 
-export interface SlotOutletIRNode extends BaseIRNode {
+export interface SlotOutletIRNode
+  extends BaseIRNode, EffectBoundary, InsertionState {
   type: IRNodeTypes.SLOT_OUTLET_NODE
   id: number
   name: SimpleExpressionNode
   props: IRProps[]
   fallback?: BlockIRNode
-  noSlotted?: boolean
-  once?: boolean
-  parent?: number
-  anchor?: number
-  logicalIndex?: number
-  append?: boolean
-  last?: boolean
+  flags: number
 }
 
 export interface GetTextChildIRNode extends BaseIRNode {
@@ -273,7 +271,6 @@ export type OperationNode =
   | SetHtmlIRNode
   | SetTemplateRefIRNode
   | InsertNodeIRNode
-  | PrependNodeIRNode
   | DirectiveIRNode
   | IfIRNode
   | ForIRNode
@@ -302,18 +299,17 @@ export interface IRDynamicInfo {
   id?: number
   flags: DynamicFlag
   anchor?: number
-  // logical index of this node among siblings (including dynamic nodes)
-  // used during hydration to locate the correct DOM node
-  logicalIndex?: number
   children: IRDynamicInfo[]
   template?: number
   hasDynamicChild?: boolean
+  isText?: boolean
   operation?: OperationNode
 }
 
 export interface IREffect {
   expressions: SimpleExpressionNode[]
   operations: OperationNode[]
+  once?: boolean
 }
 
 type Overwrite<T, U> = Pick<T, Exclude<keyof T, keyof U>> &

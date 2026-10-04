@@ -90,9 +90,6 @@ export const transformText: NodeTransform = (node, context) => {
   } else if (node.type === NodeTypes.INTERPOLATION) {
     processInterpolation(context as TransformContext<InterpolationNode>)
   } else if (node.type === NodeTypes.TEXT) {
-    // Check if this is a root-level text node (parent is ROOT or fragment)
-    // Root-level text nodes go through createTextNode() which doesn't need escaping
-    // Element children go through innerHTML which needs escaping
     const parent = context.parent?.node
     const createElementParent =
       parent &&
@@ -101,13 +98,6 @@ export const transformText: NodeTransform = (node, context) => {
         parent,
         context.parent as TransformContext<ElementNode>,
       )
-    if (createElementParent && node.content[0] === '<') {
-      materializeLiteralTextNode(
-        createSimpleExpression(node.content, true, node.loc),
-        context as TransformContext<TextNode>,
-      )
-      return
-    }
     const isRootText =
       !parent ||
       parent.type === NodeTypes.ROOT ||
@@ -115,23 +105,32 @@ export const transformText: NodeTransform = (node, context) => {
         (parent.tagType === ElementTypes.TEMPLATE ||
           parent.tagType === ElementTypes.COMPONENT))
 
-    context.template += isRootText ? node.content : escapeHtml(node.content)
+    // Only text that ends up inside a template's html string is parsed again
+    // at runtime, so only that text is escaped. Root-level text and the
+    // children of a `createElement`-backed parent reach the dom through
+    // `createTextNode`, where escaping it would put the escape sequence
+    // itself into the dom - `&` showing up as `&amp;`.
+    const isRawText = createElementParent || isRootText
+
+    // Unescaped text becomes a template of its own, and the runtime only turns
+    // such a template into a text node when it does not start with "<" (see
+    // `template()` in runtime-vapor). Text that does start with "<" has to be
+    // materialized imperatively, or it would be parsed as html instead.
+    if (isRawText && node.content[0] === '<') {
+      materializeLiteralTextNode(
+        createSimpleExpression(node.content, true, node.loc),
+        context as TransformContext<TextNode>,
+      )
+      return
+    }
+
+    context.template += isRawText ? node.content : escapeHtml(node.content)
   }
 }
 
 function processInterpolation(context: TransformContext<InterpolationNode>) {
   const parentNode = context.parent!.node
-  const children = parentNode.children
-  const nexts = children.slice(context.index)
-  const idx = nexts.findIndex(n => !isTextLike(n))
-  const nodes = (idx > -1 ? nexts.slice(0, idx) : nexts) as Array<TextLike>
-
-  // merge leading text
-  const prev = children[context.index - 1]
-  if (prev && prev.type === NodeTypes.TEXT) {
-    nodes.unshift(prev)
-  }
-  const values = processTextLikeChildren(nodes, context)
+  const values = processTextLikeChildren(collectAdjacentText(context), context)
 
   if (values.length === 0 && parentNode.type !== NodeTypes.ROOT) {
     return
@@ -139,31 +138,39 @@ function processInterpolation(context: TransformContext<InterpolationNode>) {
 
   const literalValues = values.map(v => getLiteralExpressionValue(v))
   const allLiteral = literalValues.every(v => v != null)
-  if (allLiteral && parentNode.type !== NodeTypes.ROOT) {
-    const text = literalValues.join('')
-    if (
-      parentNode.type === NodeTypes.ELEMENT &&
-      shouldUseCreateElement(
-        parentNode,
-        context.parent as TransformContext<ElementNode>,
-      ) &&
-      text[0] === '<'
-    ) {
+  const text = allLiteral ? literalValues.join('') : null
+  const isElementChild =
+    parentNode.type === NodeTypes.ELEMENT &&
+    parentNode.tagType === ElementTypes.ELEMENT
+  if (
+    text !== null &&
+    parentNode.type !== NodeTypes.ROOT &&
+    (isElementChild || text !== '')
+  ) {
+    // same as for plain text: a literal is escaped only when it lands inside a
+    // template's html string, and one that is not escaped must not be left for
+    // the runtime to parse as html
+    const isRawText =
+      !isElementChild ||
+      (parentNode.type === NodeTypes.ELEMENT &&
+        shouldUseCreateElement(
+          parentNode,
+          context.parent as TransformContext<ElementNode>,
+        ))
+    if (isRawText && text[0] === '<') {
       materializeLiteralTextNode(
         createSimpleExpression(text, true, context.node.loc),
         context,
       )
       return
     }
-    const isElementChild =
-      parentNode.type === NodeTypes.ELEMENT &&
-      parentNode.tagType === ElementTypes.ELEMENT
-    context.template += isElementChild ? escapeHtml(text) : text
+    context.template += isRawText ? text : escapeHtml(text)
     return
   }
 
   context.template += ' '
   const id = context.reference()
+  context.dynamic.isText = isElementChild
 
   if (values.length === 0) {
     return
@@ -174,6 +181,25 @@ function processInterpolation(context: TransformContext<InterpolationNode>) {
     element: id,
     values,
   })
+}
+
+function collectAdjacentText(
+  context: TransformContext<InterpolationNode>,
+): TextLike[] {
+  const children = context.parent!.node.children
+  const nodes: TextLike[] = []
+  // Include leading text that belongs to the same text run.
+  const prev = children[context.index - 1]
+  let index =
+    prev && prev.type === NodeTypes.TEXT ? context.index - 1 : context.index
+
+  for (; index < children.length; index++) {
+    const child = children[index]
+    if (!isTextLike(child)) break
+    nodes.push(child)
+  }
+
+  return nodes
 }
 
 function processTextContainer(

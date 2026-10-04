@@ -9,5 +9,7 @@ export enum ShapeFlags {
   SUSPENSE = 1 << 7,
   COMPONENT_SHOULD_KEEP_ALIVE = 1 << 8,
   COMPONENT_KEPT_ALIVE = 1 << 9,
+  // the fragment of a slot outlet holds its fallback
+  SLOT_FALLBACK = 1 << 10,
   COMPONENT = ShapeFlags.STATEFUL_COMPONENT | ShapeFlags.FUNCTIONAL_COMPONENT,
 }

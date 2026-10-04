@@ -1,17 +1,21 @@
-import { pauseTracking, resetTracking } from '@vue/reactivity'
+import { EffectScope, getCurrentScope } from '@vue/reactivity'
 import {
   type GenericComponentInstance,
   MismatchTypes,
   MoveType,
   type SchedulerJob,
   SchedulerJobFlags,
+  type SuspenseBoundary,
   type TeleportProps,
   type TeleportTargetElement,
   isMismatchAllowed,
   isTeleportDeferred,
   isTeleportDisabled,
+  logMismatchError,
   queuePostFlushCb,
+  queuePostRenderEffect,
   resolveTeleportTarget,
+  restoreCurrentInstance,
   setCurrentInstance,
   warn,
 } from '@vue/runtime-dom'
@@ -22,31 +26,28 @@ import {
   parentNode,
   querySelector,
 } from '../dom/node'
-import {
-  type LooseRawProps,
-  type LooseRawSlots,
-  type VaporComponentInstance,
-  currentInstance,
-  isVaporComponent,
-} from '../component'
+import type { LooseRawProps, VaporComponentInstance } from '../component'
 import { rawPropsProxyHandlers } from '../componentProps'
 import { renderEffect } from '../renderEffect'
-import { extend, isArray } from '@vue/shared'
-import { VaporFragment, isFragment } from '../fragment'
+import { extend } from '@vue/shared'
+import { RenderContextFragment, resolveFragmentAnchor } from '../fragment'
+import { withRenderContext } from '../renderContext'
 import {
   advanceHydrationNode,
+  claimAnchor,
   currentHydrationNode,
   isComment,
   isHydrating,
-  logMismatchError,
-  markHydrationAnchor,
   runWithoutHydration,
   setCurrentHydrationNode,
 } from '../dom/hydration'
 import type { DefineVaporSetupFnComponent } from '../apiDefineComponent'
-import { getScopeOwner } from '../componentSlots'
+import type { RawSlots } from '../componentSlots'
 import { applyTransitionHooks, isTransitionEnabled } from '../transition'
 import { enableTeleport } from '../teleport'
+import { registerCssVarOutlet } from '../helpers/useCssVars'
+import { TELEPORT } from '../fragmentFlags'
+import { isSuspenseEnabled } from '../suspense'
 
 const VaporTeleportImpl = {
   name: 'VaporTeleport',
@@ -55,60 +56,75 @@ const VaporTeleportImpl = {
 
   process(
     props: LooseRawProps,
-    slots?: LooseRawSlots | null,
+    slots?: RawSlots | null,
+    adoptAnchor?: Node,
   ): TeleportFragment {
-    return new TeleportFragment(props, slots)
+    return new TeleportFragment(props, slots, adoptAnchor)
   },
 }
 
-export class TeleportFragment extends VaporFragment {
-  /**
-   * @internal marker for duck typing to avoid direct instanceof check
-   * which prevents tree-shaking of TeleportFragment
-   */
-  readonly __isTeleportFragment = true
+const enum TeleportMountLocation {
+  None,
+  Main,
+  Target,
+}
+
+type TeleportMountState =
+  | {
+      location: TeleportMountLocation.None
+    }
+  | {
+      location: TeleportMountLocation.Main | TeleportMountLocation.Target
+      container: ParentNode
+      anchor: Node | null
+    }
+
+export class TeleportFragment extends RenderContextFragment {
   anchor?: Node
-  private rawProps?: LooseRawProps
   private resolvedProps?: TeleportProps
-  private rawSlots?: LooseRawSlots | null
+  private rawSlots?: RawSlots | null
   isDisabled?: boolean
-  private isMounted = false
   private childrenInitialized = false
-  private readonly ownerInstance =
-    currentInstance as VaporComponentInstance | null
+  private readonly childrenScope = getCurrentScope()
+  // One scope per slot run, so a re-run can stop the previous run's effects
+  // (the DynamicFragment branch-scope discipline, and the same field name).
+  scope?: EffectScope
 
   target?: ParentNode | null
   targetAnchor?: Node | null
   targetStart?: Node | null
 
   placeholder?: Node
-  mountContainer?: ParentNode | null
-  mountAnchor?: Node | null
+  private mountState: TeleportMountState = {
+    location: TeleportMountLocation.None,
+  }
 
   private mountToTargetJob?: SchedulerJob
+  private parentSuspense?: SuspenseBoundary | null
 
-  constructor(props: LooseRawProps, slots?: LooseRawSlots | null) {
-    super([])
-    this.rawProps = props
+  constructor(
+    props: LooseRawProps,
+    slots?: RawSlots | null,
+    adoptAnchor?: Node,
+  ) {
+    super([], TELEPORT)
     this.rawSlots = slots
-    this.parentComponent = getScopeOwner()
+    // the main-view end anchor can adopt the template `<!>` placeholder the
+    // teleport was anchored to, saving a runtime node
     this.anchor = isHydrating
       ? undefined
-      : __DEV__
-        ? createComment('teleport end')
-        : createTextNode()
+      : resolveFragmentAnchor(adoptAnchor, 'teleport end')
+
+    const propsProxy = new Proxy(
+      props,
+      rawPropsProxyHandlers,
+    ) as any as TeleportProps
 
     renderEffect(() => {
       const prevTo = this.resolvedProps && this.resolvedProps.to
       const wasDisabled = this.isDisabled
       // access the props to trigger tracking
-      this.resolvedProps = extend(
-        {},
-        new Proxy(
-          this.rawProps!,
-          rawPropsProxyHandlers,
-        ) as any as TeleportProps,
-      )
+      this.resolvedProps = extend({}, propsProxy)
 
       this.isDisabled = isTeleportDisabled(this.resolvedProps!)
       if (
@@ -124,22 +140,46 @@ export class TeleportFragment extends VaporFragment {
     return this.anchor ? parentNode(this.anchor) : null
   }
 
+  get scopeOwner(): GenericComponentInstance | null {
+    return (this.ctx.slotOwner ||
+      this.renderInstance) as GenericComponentInstance | null
+  }
+
   private initChildren(): void {
-    const prevInstance = setCurrentInstance(this.ownerInstance)
+    const instance = this.renderInstance as VaporComponentInstance | null
+    const prevInstance = setCurrentInstance(instance, this.childrenScope)
+    // Deferred init can run after the owner mounted, but the first render of
+    // the children is still part of the mount and must not run update hooks.
+    const prevUpdating = instance ? instance.isUpdating : false
+    if (instance) instance.isUpdating = true
     try {
       this.childrenInitialized = true
+      // RenderEffect restores (renderInstance, childrenScope) on every run,
+      // so only the fragment context may need restoring here — on deferred
+      // init and slot re-runs, where new nodes capture the ambient context.
+      // The equality fast path keeps the synchronous first run free.
       renderEffect(() =>
-        this.runWithRenderCtx(() =>
+        withRenderContext(this.ctx, () => {
+          // Stop the previous run's effects before tearing down its nodes;
+          // components unmount here, handleChildrenUpdate detaches the DOM.
+          const prevScope = this.scope
+          if (prevScope) prevScope.stop()
+          const scope = (this.scope = new EffectScope())
           this.handleChildrenUpdate(
-            this.rawSlots && this.rawSlots.default
-              ? (this.rawSlots.default as BlockFn)()
-              : [],
-          ),
-        ),
+            scope.run(() =>
+              this.rawSlots && this.rawSlots.default
+                ? (this.rawSlots.default as BlockFn)()
+                : [],
+            ) || [],
+          )
+        }),
       )
+      const owner = this.scopeOwner as VaporComponentInstance | null
+      if (owner && owner.applyCssVars) registerCssVarOutlet(owner, this)
       this.bindChildren(this.nodes)
     } finally {
-      setCurrentInstance(...prevInstance)
+      if (instance) instance.isUpdating = prevUpdating
+      restoreCurrentInstance(prevInstance)
     }
   }
 
@@ -149,130 +189,128 @@ export class TeleportFragment extends VaporFragment {
     }
   }
 
-  private registerUpdateCssVars(block: Block) {
-    if (isFragment(block)) {
-      ;(block.onUpdated || (block.onUpdated = [])).push(() =>
-        updateCssVars(this),
-      )
-      this.registerUpdateCssVars(block.nodes)
-    } else if (isVaporComponent(block)) {
-      this.registerUpdateCssVars(block.block)
-    } else if (isArray(block)) {
-      block.forEach(node => this.registerUpdateCssVars(node))
-    }
-  }
-
   private bindChildren(block: Block): void {
-    // register updateCssVars to nested fragments's update hooks so that
-    // it will be called when root fragment changed
-    if (this.parentComponent && this.parentComponent.ut) {
-      this.registerUpdateCssVars(block)
-    }
-
-    if (__DEV__) {
-      if (isVaporComponent(block)) {
-        block.parentTeleport = this
-      } else if (isArray(block)) {
-        block.forEach(
-          node => isVaporComponent(node) && (node.parentTeleport = this),
-        )
-      }
-    }
+    const owner = this.scopeOwner as VaporComponentInstance | null
+    if (owner && owner.applyCssVars) owner.applyCssVars(block)
   }
 
   private handleChildrenUpdate(children: Block): void {
-    if (isHydrating || !this.parent || !this.mountContainer) {
+    const mountState = this.mountState
+    if (
+      isHydrating ||
+      !this.parent ||
+      mountState.location === TeleportMountLocation.None
+    ) {
       this.nodes = children
       return
     }
 
     // teardown previous nodes
-    remove(this.nodes, this.mountContainer!)
+    remove(this.nodes, mountState.container)
     // mount new nodes
-    insert((this.nodes = children), this.mountContainer!, this.mountAnchor!)
-    this.bindChildren(this.nodes)
-    updateCssVars(this)
+    this.nodes = children
+    this.bindChildren(children)
+    insert(children, mountState.container, mountState.anchor)
   }
 
-  private mount(parent: ParentNode, anchor: Node | null) {
+  private mount(
+    parent: ParentNode,
+    anchor: Node | null,
+    location: TeleportMountLocation.Main | TeleportMountLocation.Target,
+  ) {
     // don't apply transitions during move teleports
     // algin with Vue DOM teleport behavior
-    if (isTransitionEnabled && this.$transition && !this.isMounted) {
-      applyTransitionHooks(this.nodes, this.$transition)
+    if (
+      isTransitionEnabled &&
+      this.$transition &&
+      this.mountState.location === TeleportMountLocation.None
+    ) {
+      applyTransitionHooks(this.nodes, this.$transition, this)
     }
-    if (this.isMounted) {
-      move(
-        this.nodes,
-        (this.mountContainer = parent),
-        (this.mountAnchor = anchor),
-        MoveType.REORDER,
-      )
+    if (this.mountState.location !== TeleportMountLocation.None) {
+      move(this.nodes, parent, anchor, MoveType.REORDER)
     } else {
-      insert(
-        this.nodes,
-        (this.mountContainer = parent),
-        (this.mountAnchor = anchor),
-      )
-      this.isMounted = true
+      insert(this.nodes, parent, anchor)
     }
-    updateCssVars(this)
+    this.mountState = { location, container: parent, anchor }
   }
 
-  private mountToTarget(): void {
+  private prepareTargetAnchors(target: ParentNode): void {
+    if (
+      // initial mount into target
+      !this.targetAnchor ||
+      // target changed
+      parentNode(this.targetAnchor) !== target
+    ) {
+      // clean up old anchors from previous target when target changes
+      if (this.targetStart) {
+        remove(this.targetStart, parentNode(this.targetStart)!)
+      }
+      if (this.targetAnchor) {
+        remove(this.targetAnchor, parentNode(this.targetAnchor)!)
+      }
+      insert((this.targetStart = createTextNode('')), target)
+      insert((this.targetAnchor = createTextNode('')), target)
+    }
+  }
+
+  private prepareTarget(): ParentNode | null {
     const target = (this.target = resolveTeleportTarget(
       this.resolvedProps!,
       querySelector,
     ))
     if (target) {
-      if (
-        // initial mount into target
-        !this.targetAnchor ||
-        // target changed
-        parentNode(this.targetAnchor) !== target
-      ) {
-        // clean up old anchors from previous target when target changes
-        if (this.targetStart) {
-          remove(this.targetStart, parentNode(this.targetStart)!)
-        }
-        if (this.targetAnchor) {
-          remove(this.targetAnchor, parentNode(this.targetAnchor)!)
-        }
-        insert((this.targetStart = createTextNode('')), target)
-        insert((this.targetAnchor = createTextNode('')), target)
-      }
-
-      this.ensureChildrenInitialized()
-
-      // track CE teleport targets
-      if (this.parentComponent && this.parentComponent.isCE) {
-        ;(
-          this.parentComponent.ce!._teleportTargets ||
-          (this.parentComponent.ce!._teleportTargets = new Set())
-        ).add(target)
-      }
-
-      this.mount(target, this.targetAnchor!)
-    } else if (__DEV__) {
-      warn(
-        `Invalid Teleport target on ${this.targetAnchor ? 'update' : 'mount'}:`,
-        target,
-        `(${typeof target})`,
-      )
+      this.prepareTargetAnchors(target)
     }
+    return target
   }
 
-  private clearMainViewChildren(): void {
-    if (!this.placeholder || !this.anchor) return
-
-    let node = this.placeholder.nextSibling
-    while (node && node !== this.anchor) {
-      const next = node.nextSibling
-      remove(node, parentNode(node)!)
-      node = next
+  private queueTargetUpdate(): void {
+    // Reuse one queued mount job per Teleport instance so repeated
+    // updates in the same flush don't enqueue duplicate target mounts.
+    // If the previous job was disposed during unmount, recreate it.
+    if (
+      !this.mountToTargetJob ||
+      this.mountToTargetJob.flags! & SchedulerJobFlags.DISPOSED
+    ) {
+      this.mountToTargetJob = () => {
+        this.mountToTargetJob = undefined
+        // State may have changed before the post-flush job runs.
+        if (!this.anchor) return
+        if (this.isDisabled) {
+          if (!this.targetAnchor) {
+            this.prepareTarget()
+          }
+        } else {
+          this.mountToTarget()
+        }
+      }
     }
+    queuePostRenderEffect(
+      this.mountToTargetJob,
+      undefined,
+      this.parentSuspense !== undefined
+        ? this.parentSuspense
+        : (__FEATURE_SUSPENSE__ && isSuspenseEnabled && this.ctx.suspense) ||
+            null,
+    )
+  }
 
-    this.isMounted = false
-    this.mountContainer = null
+  private mountToTarget(): void {
+    const target = this.prepareTarget()
+    if (target) {
+      this.ensureChildrenInitialized()
+      this.mount(target, this.targetAnchor!, TeleportMountLocation.Target)
+      this.cancelMountToTarget()
+    } else {
+      if (__DEV__) {
+        warn(
+          `Invalid Teleport target on ${this.targetAnchor ? 'update' : 'mount'}:`,
+          target,
+          `(${typeof target})`,
+        )
+      }
+    }
   }
 
   private handlePropsUpdate(): void {
@@ -282,50 +320,44 @@ export class TeleportFragment extends VaporFragment {
     // mount into main container
     if (this.isDisabled) {
       this.ensureChildrenInitialized()
-      this.mount(this.parent, this.anchor!)
+      this.mount(this.parent, this.anchor!, TeleportMountLocation.Main)
+      if (!this.targetAnchor) {
+        if (
+          isTeleportDeferred(this.resolvedProps!) ||
+          !this.parent!.isConnected
+        ) {
+          this.queueTargetUpdate()
+        } else {
+          this.prepareTarget()
+        }
+      }
     }
     // mount into target container
     else {
-      // Align with initial enabled-null-target hydration: once Teleport leaves
-      // disabled mode, its children should no longer stay mounted inline in the
-      // main view if there is no valid target to move them into.
-      if (
-        this.placeholder &&
-        this.anchor &&
-        this.placeholder.nextSibling !== this.anchor
-      ) {
-        this.clearMainViewChildren()
-      }
-
       if (
         isTeleportDeferred(this.resolvedProps!) ||
         // force defer when the parent is not connected to the DOM,
         // typically due to an early insertion caused by setInsertionState.
         !this.parent!.isConnected
       ) {
-        // Reuse one queued mount job per Teleport instance so repeated
-        // updates in the same flush don't enqueue duplicate target mounts.
-        // If the previous job was disposed during unmount, recreate it.
-        if (
-          !this.mountToTargetJob ||
-          this.mountToTargetJob.flags! & SchedulerJobFlags.DISPOSED
-        ) {
-          this.mountToTargetJob = () => {
-            this.mountToTargetJob = undefined
-            // State may have changed before the post-flush job runs.
-            if (this.isDisabled || !this.anchor) return
-            this.mountToTarget()
-          }
-        }
-        queuePostFlushCb(this.mountToTargetJob)
+        this.queueTargetUpdate()
       } else {
         this.mountToTarget()
       }
     }
   }
 
-  insert = (container: ParentNode, anchor: Node | null): void => {
+  insert(
+    container: ParentNode,
+    anchor: Node | null,
+    parentSuspense?: SuspenseBoundary | null,
+  ): void {
     if (isHydrating) return
+
+    if (parentSuspense !== undefined) this.parentSuspense = parentSuspense
+
+    const wasMountedInTarget =
+      this.mountState.location === TeleportMountLocation.Target
 
     // Re-inserting an already-mounted teleport should move existing anchors
     // instead of creating a second placeholder in the main view.
@@ -335,24 +367,48 @@ export class TeleportFragment extends VaporFragment {
         : createTextNode()
     }
 
+    // Reorder still needs to move the main-view anchors. When enabled
+    // content is already in target, skip the props update so target children
+    // are not re-inserted.
     insert(this.placeholder, container, anchor)
+    // insertFragment/move may have already placed this.anchor and passed it
+    // back as the insertion anchor; insertNode skips the self-insert then.
     insert(this.anchor!, container, anchor)
-    this.handlePropsUpdate()
+    if (!wasMountedInTarget) {
+      this.handlePropsUpdate()
+    }
   }
 
-  dispose = (): void => {
+  move(
+    container: ParentNode,
+    anchor: Node | null,
+    _moveType: MoveType,
+    _parentComponent?: VaporComponentInstance,
+    parentSuspense?: SuspenseBoundary | null,
+  ): void {
+    this.insert(container, anchor, parentSuspense)
+  }
+
+  private cancelMountToTarget(): void {
     if (this.mountToTargetJob) {
       this.mountToTargetJob.flags! |= SchedulerJobFlags.DISPOSED
       this.mountToTargetJob = undefined
     }
+  }
 
-    // remove nodes
-    if (this.nodes && this.mountContainer) {
-      remove(this.nodes, this.mountContainer)
+  disposeTarget(): void {
+    this.cancelMountToTarget()
+
+    const mountState = this.mountState
+    if (this.nodes && mountState.location === TeleportMountLocation.Target) {
+      const targetParent =
+        (this.targetStart && parentNode(this.targetStart)) ||
+        (this.targetAnchor && parentNode(this.targetAnchor)) ||
+        undefined
+      remove(this.nodes, targetParent)
       this.nodes = []
+      this.mountState = { location: TeleportMountLocation.None }
     }
-
-    this.isMounted = false
 
     // remove anchors
     if (this.targetStart) {
@@ -365,11 +421,33 @@ export class TeleportFragment extends VaporFragment {
     }
 
     this.target = undefined
-    this.mountContainer = undefined
-    this.mountAnchor = undefined
   }
 
-  remove = (_parent?: ParentNode): void => {
+  scheduleTargetDispose(): void {
+    // A deferred target mount may already be ahead of the fallback in the
+    // post-flush queue, so cancel it synchronously with scope teardown.
+    this.cancelMountToTarget()
+    queuePostFlushCb(() => this.disposeTarget())
+  }
+
+  dispose = (): void => {
+    // Block removal may run without the owning scope stopping; the run scope
+    // must not outlive the children it rendered.
+    const scope = this.scope
+    if (scope) {
+      this.scope = undefined
+      scope.stop()
+    }
+    const mountState = this.mountState
+    if (this.nodes && mountState.location === TeleportMountLocation.Main) {
+      remove(this.nodes, mountState.container)
+      this.nodes = []
+    }
+    this.disposeTarget()
+    this.mountState = { location: TeleportMountLocation.None }
+  }
+
+  remove(): void {
     this.dispose()
 
     if (this.anchor) {
@@ -387,13 +465,14 @@ export class TeleportFragment extends VaporFragment {
     target: TeleportTargetElement,
     targetNode: Node | null,
   ): void {
+    if (!isHydrating) return
     let targetAnchor = targetNode
     while (targetAnchor) {
       if (targetAnchor.nodeType === 8) {
         if ((targetAnchor as Comment).data === 'teleport start anchor') {
           this.targetStart = targetAnchor
         } else if ((targetAnchor as Comment).data === 'teleport anchor') {
-          this.targetAnchor = markHydrationAnchor(targetAnchor)
+          this.targetAnchor = claimAnchor(targetAnchor)
           target._lpa = this.targetAnchor.nextSibling
           break
         }
@@ -409,10 +488,12 @@ export class TeleportFragment extends VaporFragment {
     if (!isHydrating) return
     let nextNode = this.placeholder!.nextSibling!
     setCurrentHydrationNode(nextNode)
-    this.mountAnchor = this.anchor = markHydrationAnchor(
-      locateTeleportEndAnchor(nextNode)!,
-    )
-    this.mountContainer = parentNode(this.anchor)
+    this.anchor = claimAnchor(locateTeleportEndAnchor(nextNode)!)
+    this.mountState = {
+      location: TeleportMountLocation.Main,
+      container: parentNode(this.anchor)!,
+      anchor: this.anchor,
+    }
     if (target) {
       this.hydrateTargetAnchors(target, targetNode)
     } else {
@@ -425,10 +506,12 @@ export class TeleportFragment extends VaporFragment {
   private mountChildren(target: Node): void {
     if (!isHydrating) return
     target.appendChild((this.targetStart = createTextNode('')))
-    target.appendChild(
-      (this.mountAnchor = this.targetAnchor =
-        markHydrationAnchor(createTextNode(''))),
-    )
+    target.appendChild((this.targetAnchor = claimAnchor(createTextNode(''))))
+    this.mountState = {
+      location: TeleportMountLocation.Target,
+      container: target as ParentNode,
+      anchor: this.targetAnchor,
+    }
 
     if (!isMismatchAllowed(target as Element, MismatchTypes.CHILDREN)) {
       if (__DEV__ || __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__) {
@@ -461,12 +544,15 @@ export class TeleportFragment extends VaporFragment {
           targetNode,
         )
       } else {
-        this.anchor = markHydrationAnchor(
+        this.anchor = claimAnchor(
           locateTeleportEndAnchor(currentHydrationNode!.nextSibling!)!,
         )
-        this.mountContainer = target
         this.hydrateTargetAnchors(target as TeleportTargetElement, targetNode)
-        this.mountAnchor = this.targetAnchor
+        this.mountState = {
+          location: TeleportMountLocation.Target,
+          container: target,
+          anchor: this.targetAnchor || null,
+        }
 
         if (targetNode) {
           setCurrentHydrationNode(targetNode.nextSibling)
@@ -489,14 +575,11 @@ export class TeleportFragment extends VaporFragment {
       // Align with VDOM Teleport hydration: keep main-view markers only and
       // avoid mounting children inline or eagerly initializing them when the
       // target is missing.
-      this.anchor = markHydrationAnchor(
+      this.anchor = claimAnchor(
         locateTeleportEndAnchor(currentHydrationNode!.nextSibling!)!,
       )
     }
 
-    if (target || disabled) {
-      updateCssVars(this)
-    }
     advanceHydrationNode(this.anchor!)
   }
 }
@@ -523,31 +606,4 @@ function locateTeleportEndAnchor(
     node = node.nextSibling as Node
   }
   return null
-}
-
-function updateCssVars(frag: TeleportFragment) {
-  const ctx = frag.parentComponent as GenericComponentInstance
-  if (ctx && ctx.ut) {
-    let node, anchor
-    if (frag.isDisabled) {
-      node = frag.placeholder
-      anchor = frag.anchor
-    } else {
-      node = frag.targetStart
-      anchor = frag.targetAnchor
-    }
-    while (node && node !== anchor) {
-      if (node.nodeType === 1)
-        (node as Element).setAttribute('data-v-owner', String(ctx.uid))
-      node = node.nextSibling
-    }
-    // Avoid collecting the owner's css vars dependencies into the active
-    // Teleport effect, or later css vars updates would re-run Teleport itself.
-    pauseTracking()
-    try {
-      ctx.ut()
-    } finally {
-      resetTracking()
-    }
-  }
 }

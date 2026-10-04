@@ -6,10 +6,15 @@ import {
   createCompilerError,
   createSimpleExpression,
 } from '@vue/compiler-dom'
-import { camelize, extend } from '@vue/shared'
+import { camelize, extend, isSpecialBooleanAttr } from '@vue/shared'
 import type { DirectiveTransform, TransformContext } from '../transform'
 import { resolveExpression } from '../utils'
-import { isReservedProp } from './transformElement'
+import {
+  isCheckboxValueProp,
+  isFoldableBooleanAttr,
+  isModelValueProp,
+  isReservedProp,
+} from './transformElement'
 
 // same-name shorthand - :arg is expanded to :arg="arg"
 export function normalizeBindShorthand(
@@ -47,9 +52,29 @@ export const transformVBind: DirectiveTransform = (dir, node, context) => {
     exp = createSimpleExpression('', true, loc)
   }
 
-  const isComponent = node.tagType === ElementTypes.COMPONENT
-  exp = resolveExpression(exp, isComponent)
   arg = resolveExpression(arg)
+
+  // A number literal loses its type as soon as it is stringified into the
+  // template, so hold it back wherever the value does not end up there as a
+  // string: component, slot outlet and custom element props are passed as raw
+  // values, a `.prop` binding sets a dom property from the raw value, a
+  // dynamic key is always applied at runtime, boolean attributes are folded
+  // from the type of the value itself, and v-model reads its value props back
+  // off the element. With `.attr`, `setAttr` still checks special boolean
+  // attributes and stores raw checkbox true/false values before calling
+  // `setAttribute`.
+  const excludeNumber =
+    node.tagType === ElementTypes.COMPONENT ||
+    node.tagType === ElementTypes.SLOT ||
+    !!context.options.isCustomElement(node.tag) ||
+    modifiersString.includes('prop') ||
+    !arg.isStatic ||
+    isSpecialBooleanAttr(arg.content) ||
+    isCheckboxValueProp(node, arg.content) ||
+    (!modifiersString.includes('attr') &&
+      (isFoldableBooleanAttr(arg.content) ||
+        isModelValueProp(node, arg.content)))
+  exp = resolveExpression(exp, excludeNumber)
 
   if (arg.isStatic && isReservedProp(arg.content)) return
 

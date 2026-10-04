@@ -105,6 +105,28 @@ describe('normalizeClass', () => {
 })
 
 describe('normalizeStyle', () => {
+  test.each([
+    `"a/*b*/c"`,
+    `'a/*b*/c'`,
+    String.raw`"a\"/*b*/c"`,
+    String.raw`'a\'/*b*/c'`,
+    String.raw`"a\\"`,
+    String.raw`\/*b*/`,
+    '"a\\\n/*b*/c"',
+  ])('preserves comment-like text in style values: %s', value => {
+    expect(
+      normalizeStyle([`--label: ${value}; /* 'ignored' */ color: red`]),
+    ).toEqual({ '--label': value, color: 'red' })
+  })
+
+  test('removes comments containing quotes and declarations', () => {
+    expect(
+      normalizeStyle([
+        `/* " */ color: /* ' */ red; /* --label: "ignored";\n */ margin: 0`,
+      ]),
+    ).toEqual({ color: 'red', margin: '0' })
+  })
+
   test('handles string correctly', () => {
     expect(normalizeStyle('foo')).toEqual('foo')
   })

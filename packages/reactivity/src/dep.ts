@@ -1,26 +1,29 @@
 import { isArray, isIntegerKey, isMap, isSymbol } from '@vue/shared'
-import { type TrackOpTypes, TriggerOpTypes } from './constants'
+import { TrackOpTypes, TriggerOpTypes } from './constants'
 import { onTrack, triggerEventInfos } from './debug'
 import {
   type Link,
   ReactiveFlags,
   type ReactiveNode,
   activeSub,
+  batchDepth,
   endBatch,
+  flush,
   link,
   propagate,
   shallowPropagate,
   startBatch,
 } from './system'
 
-class Dep implements ReactiveNode {
+export class Dep implements ReactiveNode {
   _subs: Link | undefined = undefined
   subsTail: Link | undefined = undefined
   flags: ReactiveFlags = ReactiveFlags.None
 
+  // a standalone dep has no map to leave once nothing subscribes it
   constructor(
-    private map: KeyToDepMap,
-    private key: unknown,
+    private map?: KeyToDepMap | undefined,
+    private key?: unknown,
   ) {}
 
   get subs(): Link | undefined {
@@ -29,8 +32,57 @@ class Dep implements ReactiveNode {
 
   set subs(value: Link | undefined) {
     this._subs = value
-    if (value === undefined) {
+    if (value === undefined && this.map) {
       this.map.delete(this.key)
+    }
+  }
+}
+
+/**
+ * Tracks a dep its owner keys on its own, outside `targetMap`.
+ * @internal
+ */
+export function trackDep(
+  dep: ReactiveNode,
+  target: object = dep,
+  key: unknown = 'value',
+): void {
+  if (activeSub !== undefined) {
+    if (__DEV__) {
+      onTrack(activeSub, { target, type: TrackOpTypes.GET, key })
+    }
+    link(dep, activeSub)
+  }
+}
+
+/**
+ * @internal
+ */
+export function triggerDep(
+  dep: ReactiveNode,
+  target: object = dep,
+  key: unknown = 'value',
+  newValue?: unknown,
+  oldValue?: unknown,
+): void {
+  const subs = dep.subs
+  if (subs !== undefined) {
+    if (__DEV__) {
+      triggerEventInfos.push({
+        target,
+        type: TriggerOpTypes.SET,
+        key,
+        newValue,
+        oldValue,
+      })
+    }
+    propagate(subs)
+    shallowPropagate(subs)
+    if (!batchDepth) {
+      flush()
+    }
+    if (__DEV__) {
+      triggerEventInfos.pop()
     }
   }
 }

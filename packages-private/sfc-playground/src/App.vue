@@ -3,9 +3,9 @@ import Header from './Header.vue'
 import {
   Repl,
   type SFCOptions,
+  type StoreState,
   useStore,
   useVueImportMap,
-  StoreState,
 } from '@vue/repl'
 import Monaco from '@vue/repl/monaco-editor'
 import { ref, watchEffect, onMounted, computed, watch } from 'vue'
@@ -19,6 +19,8 @@ window.addEventListener('resize', setVH)
 setVH()
 
 const useSSRMode = ref(false)
+
+const DEFAULT_TYPESCRIPT_VERSION = '6.0.3'
 
 const AUTO_SAVE_STORAGE_KEY = 'vue-sfc-playground-auto-save'
 const initAutoSave: boolean = JSON.parse(
@@ -59,33 +61,32 @@ if (hash.startsWith('__SSR__')) {
 const files: StoreState['files'] = ref(Object.create(null))
 
 // enable experimental features
-const sfcOptions = computed(
-  (): SFCOptions => ({
-    script: {
-      inlineTemplate: productionMode.value,
-      isProd: productionMode.value,
-      propsDestructure: true,
-      // vapor: useVaporMode.value,
+const sfcOptions = computed((): SFCOptions => ({
+  script: {
+    inlineTemplate: productionMode.value,
+    isProd: productionMode.value,
+    propsDestructure: true,
+    // vapor: useVaporMode.value,
+  },
+  style: {
+    isProd: productionMode.value,
+  },
+  template: {
+    // vapor: useVaporMode.value,
+    isProd: productionMode.value,
+    compilerOptions: {
+      isCustomElement: (tag: string) =>
+        tag === 'mjx-container' || tag.startsWith('custom-'),
     },
-    style: {
-      isProd: productionMode.value,
-    },
-    template: {
-      // vapor: useVaporMode.value,
-      isProd: productionMode.value,
-      compilerOptions: {
-        isCustomElement: (tag: string) =>
-          tag === 'mjx-container' || tag.startsWith('custom-'),
-      },
-    },
-  }),
-)
+  },
+}))
 
 const store = useStore(
   {
     files,
     vueVersion,
     builtinImportMap: importMap,
+    typescriptVersion: ref(DEFAULT_TYPESCRIPT_VERSION),
     sfcOptions,
   },
   hash,

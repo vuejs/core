@@ -1,8 +1,9 @@
 import type { CodegenContext } from '../generate'
 import type { DirectiveIRNode } from '../ir'
-import { type CodeFragment, NEWLINE, genCall } from './utils'
+import { type CodeFragment, genCall } from './utils'
 import { genExpression } from './expression'
 import type { SimpleExpressionNode } from '@vue/compiler-dom'
+import { genDirectiveModifiers } from './modifier'
 
 const helperMap = {
   text: 'applyTextModel',
@@ -23,21 +24,18 @@ export function genVModel(
     dir: { exp, modifiers },
   } = oper
 
-  return [
-    NEWLINE,
-    ...genCall(
-      context.helper(helperMap[modelType!]),
-      `n${element}`,
-      // getter
-      [`() => (`, ...genExpression(exp!, context), `)`],
-      // setter
-      genModelHandler(exp!, context),
-      // modifiers
-      modifiers.length
-        ? `{ ${modifiers.map(e => e.content + ': true').join(',')} }`
-        : undefined,
-    ),
-  ]
+  return genCall(
+    context.helper(helperMap[modelType!]),
+    `n${element}`,
+    // getter
+    [`() => (`, ...genExpression(exp!, context), `)`],
+    // setter
+    genModelHandler(exp!, context),
+    // modifiers
+    modifiers.length
+      ? `{ ${genDirectiveModifiers(modifiers.map(e => e.content))} }`
+      : undefined,
+  )
 }
 
 export function genModelHandler(

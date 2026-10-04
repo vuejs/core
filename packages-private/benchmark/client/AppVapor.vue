@@ -94,13 +94,13 @@ const globalThis = window
     id="control"
     style="display: flex; flex-direction: column; width: fit-content; gap: 6px"
   >
-    <button @click="bench">Benchmark mounting</button>
-    <button id="run" @click="run">Create 1,000 rows</button>
-    <button id="runlots" @click="runLots">Create 10,000 rows</button>
-    <button id="add" @click="add">Append 1,000 rows</button>
-    <button id="update" @click="update">Update every 10th row</button>
-    <button id="clear" @click="clear">Clear</button>
-    <button id="swaprows" @click="swapRows">Swap Rows</button>
+    <button @click.delegate="bench">Benchmark mounting</button>
+    <button id="run" @click.delegate="run">Create 1,000 rows</button>
+    <button id="runlots" @click.delegate="runLots">Create 10,000 rows</button>
+    <button id="add" @click.delegate="add">Append 1,000 rows</button>
+    <button id="update" @click.delegate="update">Update every 10th row</button>
+    <button id="clear" @click.delegate="clear">Clear</button>
+    <button id="swaprows" @click.delegate="swapRows">Swap Rows</button>
   </div>
   <div id="time"></div>
   <table class="table table-hover table-striped test-data">
@@ -112,10 +112,10 @@ const globalThis = window
       >
         <td class="col-md-1">{{ row.id }}</td>
         <td class="col-md-4">
-          <a @click="select(row.id)">{{ row.label.value }}</a>
+          <a @click.delegate="select(row.id)">{{ row.label.value }}</a>
         </td>
         <td class="col-md-1">
-          <a @click="remove(row.id)">
+          <a @click.delegate="remove(row.id)">
             <span class="glyphicon glyphicon-remove" aria-hidden="true">x</span>
           </a>
         </td>

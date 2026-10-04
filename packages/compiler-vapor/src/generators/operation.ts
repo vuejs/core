@@ -1,18 +1,18 @@
 import {
   type IREffect,
   IRNodeTypes,
-  type InsertionStateTypes,
+  type InsertionState,
   type OperationNode,
   isBlockOperation,
 } from '../ir'
 import type { CodegenContext } from '../generate'
-import { genInsertNode, genPrependNode } from './dom'
+import { genInsertNode } from './dom'
 import { genSetDynamicEvents, genSetEvent } from './event'
 import { genFor } from './for'
 import { genSetHtml } from './html'
 import { genIf } from './if'
 import { genDynamicProps, genSetProp } from './prop'
-import { genSetTemplateRef } from './templateRef'
+import { genSetTemplateRef, genSetTemplateRefBinding } from './templateRef'
 import { genGetTextChild, genSetText } from './text'
 import {
   type CodeFragment,
@@ -74,8 +74,6 @@ export function genOperation(
       return genSetTemplateRef(oper, context)
     case IRNodeTypes.INSERT_NODE:
       return genInsertNode(oper, context)
-    case IRNodeTypes.PREPEND_NODE:
-      return genPrependNode(oper, context)
     case IRNodeTypes.IF:
       return genIf(oper, context)
     case IRNodeTypes.FOR:
@@ -103,6 +101,25 @@ export function genEffects(
   context: CodegenContext,
   genExtraFrag?: () => CodeFragment[],
 ): CodeFragment[] {
+  const [frag, push] = buildCodeFragment()
+  let start = 0
+  for (let i = 0; i < effects.length; i++) {
+    const effect = effects[i]
+    if (effect.once) {
+      push(...genReactiveEffects(effects.slice(start, i), context))
+      push(...genOperations(effect.operations, context))
+      start = i + 1
+    }
+  }
+  push(...genReactiveEffects(effects.slice(start), context, genExtraFrag))
+  return frag
+}
+
+function genReactiveEffects(
+  effects: IREffect[],
+  context: CodegenContext,
+  genExtraFrag?: () => CodeFragment[],
+): CodeFragment[] {
   const { helper } = context
   const expressions = effects.flatMap(effect => effect.expressions)
   const [frag, push, unshift] = buildCodeFragment()
@@ -112,42 +129,69 @@ export function genEffects(
     ids,
     frag: declarationFrags,
     varNames,
+    expressionReplacements,
   } = processExpressions(context, expressions, shouldDeclare)
-  push(...declarationFrags)
-  for (let i = 0; i < effects.length; i++) {
-    const effect = effects[i]
-    operationsCount += effect.operations.length
-    const frags = context.withId(() => genEffect(effect, context), ids)
-    i > 0 && push(NEWLINE)
-    if (frag[frag.length - 1] === ')' && frags[0] === '(') {
-      push(';')
+  if (shouldDeclare && !declarationFrags.length && !varNames.length) {
+    const effect = effects.length === 1 ? effects[0] : undefined
+    const operation =
+      effect && effect.operations.length === 1
+        ? effect.operations[0]
+        : undefined
+    if (
+      operation &&
+      operation.type === IRNodeTypes.SET_TEMPLATE_REF &&
+      operation.effect &&
+      // Keep ref-for on the render-effect path so v-for branches reuse the
+      // root/slot-owner scoped _setTemplateRef instead of allocating a setter
+      // and its tracking WeakMaps for each item.
+      !operation.refFor
+    ) {
+      return context.withExpressionReplacements(expressionReplacements, () =>
+        context.withId(() => genSetTemplateRefBinding(operation, context), ids),
+      )
     }
-    push(...frags)
   }
-
-  const newLineCount = frag.filter(frag => frag === NEWLINE).length
-  if (newLineCount > 1 || operationsCount > 1 || declarationFrags.length > 0) {
-    unshift(`{`, INDENT_START, NEWLINE)
-    push(INDENT_END, NEWLINE, '}')
-    if (!effects.length) {
-      unshift(NEWLINE)
+  return context.withExpressionReplacements(expressionReplacements, () => {
+    push(...declarationFrags)
+    for (let i = 0; i < effects.length; i++) {
+      const effect = effects[i]
+      operationsCount += effect.operations.length
+      const frags = context.withId(() => genEffect(effect, context), ids)
+      i > 0 && push(NEWLINE)
+      if (frag[frag.length - 1] === ')' && frags[0] === '(') {
+        push(';')
+      }
+      push(...frags)
     }
-  }
 
-  if (effects.length) {
-    unshift(NEWLINE, `${helper('renderEffect')}(() => `)
-    push(`)`)
-  }
+    const newLineCount = frag.filter(frag => frag === NEWLINE).length
+    if (
+      newLineCount > 1 ||
+      operationsCount > 1 ||
+      declarationFrags.length > 0
+    ) {
+      unshift(`{`, INDENT_START, NEWLINE)
+      push(INDENT_END, NEWLINE, '}')
+      if (!effects.length) {
+        unshift(NEWLINE)
+      }
+    }
 
-  if (!shouldDeclare && varNames.length) {
-    unshift(NEWLINE, `let `, varNames.join(', '))
-  }
+    if (effects.length) {
+      unshift(NEWLINE, `${helper('renderEffect')}(() => `)
+      push(`)`)
+    }
 
-  if (genExtraFrag) {
-    push(...context.withId(genExtraFrag, ids))
-  }
+    if (!shouldDeclare && varNames.length) {
+      unshift(NEWLINE, `let `, varNames.join(', '))
+    }
 
-  return frag
+    if (genExtraFrag) {
+      push(...context.withId(genExtraFrag, ids))
+    }
+
+    return frag
+  })
 }
 
 export function genEffect(
@@ -167,26 +211,23 @@ export function genEffect(
   return frag
 }
 
-function genInsertionState(
-  operation: InsertionStateTypes,
+export function genInsertionState(
+  operation: InsertionState,
   context: CodegenContext,
 ): CodeFragment[] {
-  const { parent, anchor, logicalIndex, append, last } = operation
+  const { parent, anchor, appendIndex } = operation
   return [
     NEWLINE,
     ...genCall(
       context.helper('setInsertionState'),
       `n${parent}`,
-      anchor == null
-        ? undefined
-        : anchor === -1 // -1 indicates prepend
-          ? `0` // runtime anchor value for prepend
-          : append
-            ? // for append, always use null since we have logicalIndex
-              'null'
-            : `n${anchor}`,
-      logicalIndex !== undefined ? String(logicalIndex) : undefined,
-      last && 'true',
+      // see setInsertionState() in runtime-vapor for the anchor/index
+      // contract; the append index is omitted when 0
+      anchor != null
+        ? `n${anchor}`
+        : appendIndex
+          ? String(appendIndex)
+          : undefined,
     ),
   ]
 }

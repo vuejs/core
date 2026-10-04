@@ -1,8 +1,4 @@
-import {
-  createSimpleExpression,
-  isSimpleIdentifier,
-  toValidAssetId,
-} from '@vue/compiler-dom'
+import { createSimpleExpression, toValidAssetId } from '@vue/compiler-dom'
 import { extend } from '@vue/shared'
 import { genExpression } from './expression'
 import type { CodegenContext } from '../generate'
@@ -11,39 +7,58 @@ import {
   type CodeFragmentDelimiters,
   DELIMITERS_ARRAY,
   NEWLINE,
+  buildCodeFragment,
   genCall,
   genMulti,
+  genOnce,
 } from './utils'
 import { type DirectiveIRNode, IRNodeTypes, type OperationNode } from '../ir'
 import { genVShow } from './vShow'
 import { genVModel } from './vModel'
+import { genDirectiveModifiers } from './modifier'
 
 export function genBuiltinDirective(
   oper: DirectiveIRNode,
   context: CodegenContext,
 ): CodeFragment[] {
+  let call: CodeFragment[]
   switch (oper.name) {
     case 'show':
-      return genVShow(oper, context)
+      call = genVShow(oper, context)
+      break
     case 'model':
-      return genVModel(oper, context)
+      call = genVModel(oper, context)
+      break
     default:
       return []
   }
+  return [NEWLINE, ...(oper.once ? genOnce(call, context) : call)]
 }
 
 /**
- * user directives via `withVaporDirectives`
+ * user directives via `withVaporDirectives`, emitted at the end of the block
+ * so the element's props, children and v-model are in place first
  */
-export function genDirectivesForElement(
-  id: number,
+export function genCustomDirectives(
+  operations: OperationNode[],
   context: CodegenContext,
 ): CodeFragment[] {
-  const dirs = filterCustomDirectives(id, context.block.operation)
-  return dirs.length ? genCustomDirectives(dirs, context) : []
+  const byElement = new Map<number, DirectiveIRNode[]>()
+  for (const oper of operations) {
+    if (oper.type === IRNodeTypes.DIRECTIVE && !oper.builtin) {
+      const dirs = byElement.get(oper.element)
+      if (dirs) dirs.push(oper)
+      else byElement.set(oper.element, [oper])
+    }
+  }
+  const [frag, push] = buildCodeFragment()
+  for (const dirs of byElement.values()) {
+    push(...genElementDirectives(dirs, context))
+  }
+  return frag
 }
 
-function genCustomDirectives(
+function genElementDirectives(
   opers: DirectiveIRNode[],
   context: CodegenContext,
 ): CodeFragment[] {
@@ -53,10 +68,8 @@ function genCustomDirectives(
   const directiveItems = opers.map(genDirectiveItem)
   const directives = genMulti(DELIMITERS_ARRAY, ...directiveItems)
 
-  return [
-    NEWLINE,
-    ...genCall(helper('withVaporDirectives'), element, directives),
-  ]
+  const call = genCall(helper('withVaporDirectives'), element, directives)
+  return [NEWLINE, ...(opers[0].once ? genOnce(call, context) : call)]
 
   function genDirectiveItem({
     dir,
@@ -69,8 +82,16 @@ function genCustomDirectives(
           extend(createSimpleExpression(name, false), { ast: null }),
           context,
         )
-    const value = dir.exp && ['() => ', ...genExpression(dir.exp, context)]
-    const argument = dir.arg && genExpression(dir.arg, context)
+    const value = dir.exp && [
+      '() => (',
+      ...genExpression(dir.exp, context),
+      ')',
+    ]
+    const argument = dir.arg && [
+      '() => (',
+      ...genExpression(dir.arg, context),
+      ')',
+    ]
     const modifiers = !!dir.modifiers.length && [
       '{ ',
       genDirectiveModifiers(dir.modifiers.map(m => m.content)),
@@ -85,25 +106,4 @@ function genCustomDirectives(
       modifiers,
     )
   }
-}
-
-export function genDirectiveModifiers(modifiers: string[]): string {
-  return modifiers
-    .map(
-      value =>
-        `${isSimpleIdentifier(value) ? value : JSON.stringify(value)}: true`,
-    )
-    .join(', ')
-}
-
-function filterCustomDirectives(
-  id: number,
-  operations: OperationNode[],
-): DirectiveIRNode[] {
-  return operations.filter(
-    (oper): oper is DirectiveIRNode =>
-      oper.type === IRNodeTypes.DIRECTIVE &&
-      oper.element === id &&
-      !oper.builtin,
-  )
 }

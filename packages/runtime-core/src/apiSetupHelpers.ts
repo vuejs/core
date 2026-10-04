@@ -10,6 +10,7 @@ import {
 } from '@vue/shared'
 import {
   type ComponentInternalInstance,
+  type Data,
   type SetupContext,
   createSetupContext,
   getCurrentGenericInstance,
@@ -269,6 +270,11 @@ export type DefineModelOptions<T = any, G = T, S = T> = {
   set?: (v: S) => any
 }
 
+type DefineModelRuntimeOptions<T, G, S> = Omit<PropOptions<T>, 'default'> &
+  DefineModelOptions<T, G, S>
+
+type DefineModelDefault<T> = InferDefault<Data, T>
+
 /**
  * Vue `<script setup>` compiler macro for declaring a
  * two-way binding prop that can be consumed via `v-model` from the parent
@@ -303,25 +309,23 @@ export type DefineModelOptions<T = any, G = T, S = T> = {
  * ```
  */
 export function defineModel<T, M extends PropertyKey = string, G = T, S = T>(
-  options: ({ default: any } | { required: true }) &
-    PropOptions<T> &
-    DefineModelOptions<T, G, S>,
+  options: DefineModelRuntimeOptions<T, G, S> &
+    ({ default: DefineModelDefault<T> } | { required: true }),
 ): ModelRef<T, M, G, S>
 
 export function defineModel<T, M extends PropertyKey = string, G = T, S = T>(
-  options?: PropOptions<T> & DefineModelOptions<T, G, S>,
+  options?: DefineModelRuntimeOptions<T, G, S>,
 ): ModelRef<T | undefined, M, G | undefined, S | undefined>
 
 export function defineModel<T, M extends PropertyKey = string, G = T, S = T>(
   name: string,
-  options: ({ default: any } | { required: true }) &
-    PropOptions<T> &
-    DefineModelOptions<T, G, S>,
+  options: DefineModelRuntimeOptions<T, G, S> &
+    ({ default: DefineModelDefault<T> } | { required: true }),
 ): ModelRef<T, M, G, S>
 
 export function defineModel<T, M extends PropertyKey = string, G = T, S = T>(
   name: string,
-  options?: PropOptions<T> & DefineModelOptions<T, G, S>,
+  options?: DefineModelRuntimeOptions<T, G, S>,
 ): ModelRef<T | undefined, M, G | undefined, S | undefined>
 
 export function defineModel(): any {
@@ -358,9 +362,9 @@ type PropsWithDefaults<
   BKeys extends keyof T,
 > = T extends unknown
   ? Readonly<MappedOmit<T, keyof Defaults>> & {
-      readonly [K in keyof Defaults as K extends keyof T
-        ? K
-        : never]-?: K extends keyof T
+      readonly [
+        K in keyof Defaults as K extends keyof T ? K : never
+      ]-?: K extends keyof T
         ? Defaults[K] extends undefined
           ? IfAny<Defaults[K], NotUndefined<T[K]>, T[K]>
           : NotUndefined<T[K]>
@@ -531,10 +535,6 @@ export function createPropsRestProxy(
 export function withAsyncContext(getAwaitable: () => any): [any, () => void] {
   const ctx = getCurrentGenericInstance()!
   const inSSRSetup = isInSSRComponentSetup
-  const restoreAsyncContext =
-    ctx && ctx.restoreAsyncContext
-      ? ctx.restoreAsyncContext.bind(ctx)
-      : undefined
   if (__DEV__ && !ctx) {
     warn(
       `withAsyncContext called without active current instance. ` +
@@ -548,11 +548,12 @@ export function withAsyncContext(getAwaitable: () => any): [any, () => void] {
   }
 
   const restore = () => {
+    const stoppedScope = ctx && !ctx.scope.active ? ctx.scope : undefined
     setCurrentInstance(ctx)
     if (inSSRSetup) {
       setInSSRSetupState(true)
     }
-    return restoreAsyncContext && restoreAsyncContext()
+    return stoppedScope
   }
 
   // Never restore a captured "prev" instance here: in concurrent async setup
@@ -567,12 +568,12 @@ export function withAsyncContext(getAwaitable: () => any): [any, () => void] {
 
   if (isPromise(awaitable)) {
     awaitable = awaitable.catch(e => {
-      const reset = restore()
+      const stoppedScope = restore()
       // Defer cleanup so the async function's catch continuation
       // still runs with the restored instance.
       Promise.resolve().then(() =>
         Promise.resolve().then(() => {
-          if (reset) reset()
+          if (stoppedScope) stoppedScope.reset()
           cleanup()
         }),
       )
@@ -582,10 +583,10 @@ export function withAsyncContext(getAwaitable: () => any): [any, () => void] {
   return [
     awaitable,
     () => {
-      const reset = restore()
+      const stoppedScope = restore()
       // Keep instance for the current continuation, then cleanup.
       Promise.resolve().then(() => {
-        if (reset) reset()
+        if (stoppedScope) stoppedScope.reset()
         cleanup()
       })
     },

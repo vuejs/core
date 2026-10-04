@@ -1,5 +1,11 @@
 import type { NativeElements, ReservedProps, VaporRenderResult } from 'vue'
 
+declare module 'vue' {
+  interface RenderResultExtensions {
+    vapor: VaporRenderResult
+  }
+}
+
 declare global {
   namespace JSX {
     export type Element = VaporRenderResult

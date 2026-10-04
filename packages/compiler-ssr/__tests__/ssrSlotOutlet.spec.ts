@@ -159,4 +159,17 @@ describe('ssr: <slot>', () => {
       }"
     `)
   })
+
+  // a vapor slot outlet always renders its own range, which says whether it
+  // holds the content or the fallback
+  test.each([
+    `<transition><slot/></transition>`,
+    `<transition><slot v-if="ok"/></transition>`,
+    `<TransitionGroup tag="div"><slot/></TransitionGroup>`,
+  ])('inside a transition of a vapor component: %s', template => {
+    expect(compile(template, { vapor: true }).code).not.toContain(
+      'ssrRenderSlotInner',
+    )
+    expect(compile(template).code).toContain('ssrRenderSlotInner')
+  })
 })

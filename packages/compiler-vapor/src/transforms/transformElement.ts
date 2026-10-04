@@ -6,26 +6,43 @@ import {
   ErrorCodes,
   NodeTypes,
   type PlainElementNode,
-  type RootNode,
   type SimpleExpressionNode,
-  type TemplateChildNode,
+  type TextNode,
+  advancePositionWithClone,
   createCompilerError,
   createSimpleExpression,
-  hasSingleChild,
-  isSingleIfBlock,
+  findDir,
+  hasDynamicKeyVBind,
+  isSimpleIdentifier,
   isStaticArgOf,
   isValidHTMLNesting,
+  parserOptions,
+  resolveModifiers,
 } from '@vue/compiler-dom'
 import {
+  Namespaces,
   camelize,
   capitalize,
   extend,
+  getModifierPropName,
+  includeBooleanAttr,
   isAlwaysCloseTag,
+  isArray,
   isBlockTag,
+  isBooleanAttr,
   isBuiltInDirective,
   isFormattingTag,
+  isInlineTag,
+  isModelListener,
+  isNativeOn,
+  isOn,
   isVoidTag,
   makeMap,
+  normalizeClass,
+  normalizeStyle,
+  parseStringStyle,
+  stringifyStyle,
+  toHandlerKey,
 } from '@vue/shared'
 import type {
   DirectiveTransformResult,
@@ -42,26 +59,111 @@ import {
   type IRPropsStatic,
   type IRSlots,
   type SetBlockKeyIRNode,
+  type SetPropIRNode,
   type VaporDirectiveNode,
 } from '../ir'
 import { EMPTY_EXPRESSION } from './utils'
 import {
   findProp,
   isBuiltInComponent,
+  isComponentTag,
   isStaticExpression,
   resolveExpression,
 } from '../utils'
-import { IMPORT_EXP_END, IMPORT_EXP_START } from '../generators/utils'
+import { dynamicComponentKeys } from './transformKey'
+import {
+  IMPORT_EXP_END,
+  IMPORT_EXP_START,
+  getParserOptions,
+} from '../generators/utils'
 import { normalizeBindShorthand } from './vBind'
+import { ignoreVHtmlChildren } from './vHtml'
+import type { Expression, ObjectExpression, ObjectProperty } from '@babel/types'
+import { parseExpression } from '@babel/parser'
 
 export const isReservedProp: (key: string) => boolean = /*#__PURE__*/ makeMap(
   // the leading comma is intentional so empty string "" is also included
   ',key,ref,ref_for,ref_key,',
 )
 
+/**
+ * `true-value` / `false-value` are only read back by `v-model` on a checkbox,
+ * and they are dropped from the ssr output, so a checkbox that only carries
+ * them in the template has nothing left to read from after hydration. A
+ * dynamic `type` can still make the element a checkbox at runtime.
+ */
+export function isCheckboxValueProp(node: ElementNode, key: string): boolean {
+  if (node.tag !== 'input' || (key !== 'true-value' && key !== 'false-value')) {
+    return false
+  }
+  const type = findProp(node, 'type')
+  return type
+    ? type.type === NodeTypes.DIRECTIVE || type.value!.content === 'checkbox'
+    : hasDynamicKeyVBind(node)
+}
+
+/**
+ * Props the template string cannot carry, so they have to be applied by a
+ * runtime prop setter instead:
+ * - `innerHTML` / `textContent` are dom properties that set the element's
+ *   content; as a content attribute they would only sit on the element and
+ *   the content would never be written, so vdom always sets them as a dom
+ *   property too, see `shouldSetAsProp`
+ * - `<textarea>` / `<select>` ignore a `value` content attribute, the value
+ *   only takes effect as a dom property - which is where vdom sends it too,
+ *   see `shouldSetAsProp`
+ * - `true-value` / `false-value`, see `isCheckboxValueProp`
+ */
+function isRuntimeOnlyProp(node: ElementNode, key: string): boolean {
+  return (
+    key === 'innerHTML' ||
+    key === 'textContent' ||
+    (key === 'value' && (node.tag === 'textarea' || node.tag === 'select')) ||
+    isCheckboxValueProp(node, key)
+  )
+}
+
+/**
+ * Props `v-model` reads back off the element as raw values (`_value`,
+ * `_trueValue`, `_falseValue`), so a number literal bound to them has to keep
+ * its type - vdom bails on `<option :value="1">` in its own static
+ * stringification for the same reason.
+ *
+ * Deliberately wider than `isRuntimeOnlyProp`: a literal `<input value="1">`
+ * belongs in the template string, only the type of a *bound* number has to
+ * survive. So this one is consulted by `v-bind`, that one by
+ * `transformNativeElement`.
+ */
+export function isModelValueProp(node: ElementNode, key: string): boolean {
+  const { tag } = node
+  return (
+    (key === 'value' &&
+      (tag === 'input' ||
+        tag === 'option' ||
+        tag === 'textarea' ||
+        tag === 'select')) ||
+    isCheckboxValueProp(node, key)
+  )
+}
+
+/**
+ * Boolean attributes are folded into the template from the value itself, which
+ * needs the type it was written with: `:disabled="0"` is `false`, while the
+ * `"0"` a stringified template attribute would carry is `true`. `hidden` is
+ * not a boolean attribute - it also takes `until-found` - but a number means
+ * the same thing there.
+ */
+export function isFoldableBooleanAttr(key: string): boolean {
+  return isBooleanAttr(key) || key === 'hidden'
+}
+
 export const transformElement: NodeTransform = (node, context) => {
   let effectIndex = context.block.effect.length
   const getEffectIndex = () => effectIndex++
+
+  if (node.type === NodeTypes.ELEMENT && node.children.length) {
+    ignoreVHtmlChildren(node, context as TransformContext<ElementNode>, 'node')
+  }
 
   // If the element is a component, we need to isolate its slots context.
   // This ensures that slots defined for this component are not accidentally
@@ -99,11 +201,14 @@ export const transformElement: NodeTransform = (node, context) => {
       node.tagType === ElementTypes.COMPONENT || useCreateElement
 
     const isDynamicComponent = isComponentTag(node.tag)
-    const staticKey = resolveStaticKey(
-      node,
-      context as TransformContext<ElementNode>,
-      isComponent,
-    )
+    // a runtime dynamic component takes its key as an argument instead
+    const staticKey = dynamicComponentKeys.has(node)
+      ? undefined
+      : resolveStaticKey(
+          node,
+          context as TransformContext<ElementNode>,
+          isComponent,
+        )
 
     const propsResult = buildProps(
       node,
@@ -113,7 +218,7 @@ export const transformElement: NodeTransform = (node, context) => {
       getEffectIndex,
     )
 
-    const singleRoot = isSingleRoot(context)
+    const singleRoot = context.isSingleRoot
 
     if (isComponent) {
       transformComponentElement(
@@ -160,6 +265,24 @@ function canOmitEndTag(
     return true
   }
 
+  if (
+    (context.templateCloseTags &&
+      (context.templateCloseTags.has(node.tag) ||
+        // `</form>` goes through the form element pointer and removes only the
+        // form element itself, so an element inside a form whose end tag is
+        // emitted has to close itself or it swallows the form's next sibling
+        context.templateCloseTags.has('form') ||
+        // `</li>` is ignored while a nested `<ul>` or `<ol>` is still open
+        // (list item scope), so the next `<li>` would land in the nested list
+        (context.templateCloseTags.has('li') &&
+          (node.tag === 'ul' || node.tag === 'ol')) ||
+        isAlwaysCloseTag(node.tag) ||
+        isFormattingTag(node.tag))) ||
+    (context.templateCloseBlocks && isBlockTag(node.tag))
+  ) {
+    return false
+  }
+
   // Elements in the alwaysClose list cannot have their end tags omitted
   // unless they are on the rightmost path.
   if (isAlwaysCloseTag(node.tag) && !context.isOnRightmostPath) {
@@ -170,49 +293,82 @@ function canOmitEndTag(
   // unless on the rightmost path of the tree:
   // - Formatting tags: https://html.spec.whatwg.org/multipage/parsing.html#reconstruct-the-active-formatting-elements
   // - Same-name tags: parent's close tag would incorrectly close the child
+  // - Children of a foreign parent in another namespace (e.g. HTML inside
+  //   `<foreignObject>`): parent's close tag would not close the child
   if (
     isFormattingTag(node.tag) ||
-    (parent.node.type === NodeTypes.ELEMENT && node.tag === parent.node.tag)
+    (parent.node.type === NodeTypes.ELEMENT &&
+      (node.tag === parent.node.tag ||
+        (parent.node.ns !== Namespaces.HTML && node.ns !== parent.node.ns)))
   ) {
     return context.isOnRightmostPath
-  }
-
-  // For inline element containing block element, if the inline ancestor
-  // is not on rightmost path, the block must close to avoid parsing issues
-  if (isBlockTag(node.tag) && context.hasInlineAncestorNeedingClose) {
-    return false
   }
 
   return context.isLastEffectiveChild
 }
 
-function isSingleRoot(
-  context: TransformContext<RootNode | TemplateChildNode>,
-): boolean {
-  if (context.inVFor) {
-    return false
-  }
+interface TemplateCloseState {
+  tags: Set<string> | undefined
+  blocks: boolean
+}
 
-  let { parent } = context
+export function getChildTemplateCloseState(
+  context: TransformContext<ElementNode>,
+): TemplateCloseState | undefined {
+  const { node } = context
   if (
-    parent &&
-    !(hasSingleChild(parent.node) || isSingleIfBlock(parent.node))
+    node.type !== NodeTypes.ELEMENT ||
+    node.tagType !== ElementTypes.ELEMENT ||
+    shouldUseCreateElement(node, context)
+  ) {
+    return
+  }
+
+  const inSameTemplateAsParent = isInSameTemplateAsParent(context)
+  const inheritedTags = inSameTemplateAsParent
+    ? context.templateCloseTags
+    : undefined
+  const inheritedBlocks = inSameTemplateAsParent && context.templateCloseBlocks
+
+  const omitEndTag =
+    context.root === context.effectiveParent ||
+    canOmitEndTag(node as PlainElementNode, context)
+
+  if (omitEndTag || isVoidTag(node.tag)) {
+    return inheritedTags || inheritedBlocks
+      ? { tags: inheritedTags, blocks: inheritedBlocks }
+      : undefined
+  }
+
+  const tags = new Set(inheritedTags)
+  tags.add(node.tag)
+  return {
+    tags,
+    blocks: inheritedBlocks || isInlineTag(node.tag),
+  }
+}
+
+export function isInSameTemplateAsParent(
+  context: TransformContext<ElementNode>,
+): boolean {
+  const { parent, node, block } = context
+  if (!parent || block !== parent.block) {
+    return false
+  }
+  const parentNode = parent.node
+  if (
+    parentNode.type !== NodeTypes.ELEMENT ||
+    parentNode.tagType !== ElementTypes.ELEMENT
   ) {
     return false
   }
-  while (
-    parent &&
-    parent.parent &&
-    parent.node.type === NodeTypes.ELEMENT &&
-    parent.node.tagType === ElementTypes.TEMPLATE
-  ) {
-    parent = parent.parent
-    if (!(hasSingleChild(parent.node) || isSingleIfBlock(parent.node))) {
-      return false
-    }
-  }
 
-  return context.root === parent
+  return (
+    !shouldUseCreateElement(
+      parentNode,
+      parent as TransformContext<ElementNode>,
+    ) && isValidHTMLNesting(parentNode.tag, node.tag)
+  )
 }
 
 function transformComponentElement(
@@ -232,6 +388,12 @@ function transformComponentElement(
   let asset = true
 
   if (!dynamicComponent && !useCreateElement) {
+    // <button is="vue:xxx">: the parser marks it as a component and the
+    // prefixed value names the component
+    const isProp = findProp(node, 'is')
+    if (isProp && isProp.type === NodeTypes.ATTRIBUTE && isVueIsValue(isProp)) {
+      tag = isProp.value!.content.slice(4)
+    }
     const fromSetup = resolveSetupReference(tag, context)
     if (fromSetup) {
       tag = fromSetup
@@ -265,24 +427,45 @@ function transformComponentElement(
     }
   }
 
+  const props = propsResult[0] ? propsResult[1] : [propsResult[1]]
+  if (staticKey && !useCreateElement) {
+    // the component takes its key from its props, where KeepAlive can read it
+    // before creating it
+    const keyProp: IRProp = {
+      key: createSimpleExpression('key', true),
+      values: [staticKey],
+    }
+    if (isArray(props[0])) props[0].push(keyProp)
+    else props.unshift([keyProp])
+  }
+
   context.dynamic.flags |= DynamicFlag.NON_TEMPLATE | DynamicFlag.INSERT
   const id = context.reference()
   context.dynamic.operation = {
     type: IRNodeTypes.CREATE_COMPONENT_NODE,
     id,
+    ...context.effectBoundary(),
     tag,
-    props: propsResult[0] ? propsResult[1] : [propsResult[1]],
+    props,
     asset,
     root: singleRoot,
     slots: [...context.slots],
     once: context.inVOnce,
     dynamic: dynamicComponent,
     useCreateElement,
+    ns: node.ns || undefined,
+    key: dynamicComponentKeys.get(node),
   }
-  if (staticKey) {
+  // what createComponent does not take: an element has no props key, and a
+  // dynamic component's fragment is keyed apart from the component it creates
+  if (staticKey && (useCreateElement || dynamicComponent)) {
     context.registerOperation(createSetBlockKey(id, staticKey))
   }
   context.slots = []
+}
+
+function isVueIsValue(prop: AttributeNode): boolean {
+  return !!prop.value && prop.value.content.startsWith('vue:')
 }
 
 function resolveDynamicComponent(node: ComponentNode) {
@@ -320,12 +503,23 @@ function resolveSetupReference(name: string, context: TransformContext) {
 }
 
 // keys cannot be a part of the template and need to be set dynamically
-const dynamicKeys = ['indeterminate']
+const dynamicKeys = [
+  'indeterminate',
+  // media element playback state
+  'volume',
+  'playbackRate',
+  'defaultPlaybackRate',
+  'currentTime',
+  // typed value of an `<input>`
+  'valueAsNumber',
+]
 
 // The attribute value can remain unquoted if it doesn't contain ASCII whitespace
 // or any of " ' ` = < or >.
 // https://html.spec.whatwg.org/multipage/introduction.html#intro-early-example
 const NEEDS_QUOTES_RE = /[\s"'`=<>]/
+const LEADING_NEWLINE_RE = /^\r?\n/
+const UNSAFE_ATTR_NAME_RE = /[\u0000-\u0020"'<=/>]/
 
 function transformNativeElement(
   node: PlainElementNode,
@@ -338,13 +532,13 @@ function transformNativeElement(
 ) {
   const { tag } = node
   const { scopeId } = context.options
+  const isSVG = node.ns === Namespaces.SVG
 
   let template = ''
 
   template += `<${tag}`
   if (scopeId) template += ` ${scopeId}`
 
-  const dynamicProps: string[] = []
   if (propsResult[0] /* dynamic props */) {
     const [, dynamicArgs, expressions] = propsResult
     context.registerEffect(
@@ -353,61 +547,149 @@ function transformNativeElement(
         type: IRNodeTypes.SET_DYNAMIC_PROPS,
         element: context.reference(),
         props: dynamicArgs,
-        tag,
+        isSVG,
       },
       getEffectIndex,
     )
   } else {
-    // tracks if previous attribute was quoted, allowing space omission
-    // e.g. `class="foo"id="bar"` is valid, `class=foo id=bar` needs space
-    let prevWasQuoted = false
+    const appendTemplateProp = (key: string, value: string = '') => {
+      template += ` ${key}`
+
+      if (value) {
+        const escapedValue = escapeAttrValue(value)
+        template += NEEDS_QUOTES_RE.test(value)
+          ? `="${escapedValue}"`
+          : `=${escapedValue}`
+      }
+    }
+
+    const needsOrderedProps =
+      tag === 'input' &&
+      propsResult[1].some(
+        ({ key, modifier }) =>
+          key.content === 'valueAsNumber' && modifier !== '^',
+      )
+    const nativeOnProps: IRProp[] = []
+    let hasEffect = false
     for (const prop of propsResult[1]) {
       const { key, values } = prop
-      // handling asset imports
-      if (
+      const canStringifyAttrName =
+        key.isStatic && !UNSAFE_ATTR_NAME_RE.test(key.content)
+      let foldedValue: string | boolean | undefined
+      if (!prop.modifier && isOn(key.content)) {
+        // a listener whose handler is the bound value, like vdom's patchProp,
+        // which also ignores v-model listeners on elements
+        if (!isModelListener(key.content)) {
+          const operation: SetPropIRNode = {
+            type: IRNodeTypes.SET_PROP,
+            element: context.reference(),
+            prop,
+            tag,
+            isSVG,
+          }
+          hasEffect = context.registerEffect(
+            values,
+            operation,
+            getEffectIndex,
+            needsOrderedProps && hasEffect,
+          )
+          operation.effect = hasEffect
+        }
+      } else if (
+        // handling asset imports
+        canStringifyAttrName &&
         context.imports.some(imported =>
           values[0].content.includes(imported.exp.content),
         )
       ) {
-        if (!prevWasQuoted) template += ` `
         // add start and end markers to the import expression, so it can be replaced
         // with string concatenation in the generator, see genTemplates
-        template += `${key.content}="${IMPORT_EXP_START}${values[0].content}${IMPORT_EXP_END}"`
-        prevWasQuoted = true
+        template += ` ${key.content}="${IMPORT_EXP_START}${values[0].content}${IMPORT_EXP_END}"`
       } else if (
-        key.isStatic &&
+        canStringifyAttrName &&
+        // `.prop` forces a dom property, which a content attribute in the
+        // template string is not; `.attr` (`^`) does mean the attribute and
+        // can still be folded
+        prop.modifier !== '.' &&
         values.length === 1 &&
         (values[0].isStatic || values[0].content === "''") &&
-        !dynamicKeys.includes(key.content)
+        !dynamicKeys.includes(key.content) &&
+        !isRuntimeOnlyProp(node, key.content)
       ) {
-        if (!prevWasQuoted) template += ` `
         const value = values[0].content === "''" ? '' : values[0].content
-        template += key.content
-
-        if (value) {
-          template += (prevWasQuoted = NEEDS_QUOTES_RE.test(value))
-            ? `="${value.replace(/"/g, '&quot;')}"`
-            : `=${value}`
-        } else {
-          prevWasQuoted = false
+        appendTemplateProp(key.content, value)
+      } else if (
+        canStringifyAttrName &&
+        !prop.modifier &&
+        isFoldableBooleanAttr(key.content) &&
+        (foldedValue = foldBooleanAttrValue(key.content, values)) != null
+      ) {
+        if (foldedValue) {
+          appendTemplateProp(key.content)
         }
+      } else if (
+        canStringifyAttrName &&
+        !prop.modifier &&
+        hasBoundValue(values) &&
+        (foldedValue =
+          key.content === 'class'
+            ? foldClassValues(values)
+            : key.content === 'style'
+              ? foldStyleValues(values)
+              : undefined) != null
+      ) {
+        if (foldedValue) {
+          appendTemplateProp(key.content, foldedValue)
+        }
+      } else if (isSVG && !prop.modifier && isNativeOn(key.content)) {
+        // Native event bindings need the runtime value to choose prop vs attr.
+        nativeOnProps.push(prop)
       } else {
-        dynamicProps.push(key.content)
-        context.registerEffect(
+        // Constant setters can depend on preceding dynamic props, e.g.
+        // valueAsNumber needs type and max to be initialized first.
+        hasEffect = context.registerEffect(
           values,
           {
             type: IRNodeTypes.SET_PROP,
             element: context.reference(),
             prop,
             tag,
+            isSVG,
           },
           getEffectIndex,
+          needsOrderedProps && hasEffect,
         )
       }
     }
+    if (nativeOnProps.length) {
+      // One call per element keeps the dynamic prop cache shared by these keys.
+      context.registerEffect(
+        nativeOnProps.flatMap(({ values }) => values),
+        {
+          type: IRNodeTypes.SET_DYNAMIC_PROPS,
+          element: context.reference(),
+          props: [nativeOnProps],
+          isSVG,
+        },
+        getEffectIndex,
+      )
+    }
   }
 
-  template += `>` + context.childrenTemplate.join('')
+  let children = context.childrenTemplate.join('')
+  // The HTML parser drops the first newline after a `<pre>`/`<textarea>` start
+  // tag, and our own parser already applied that rule while building the AST.
+  // Templates are parsed as HTML again at runtime, so a newline that survived
+  // into `children` would be dropped a second time - double it to compensate.
+  if (
+    node.ns === Namespaces.HTML &&
+    parserOptions.isIgnoreNewlineTag!(tag) &&
+    LEADING_NEWLINE_RE.test(children)
+  ) {
+    children = `\n` + children
+  }
+
+  template += `>` + children
   if (!isVoidTag(tag) && !omitEndTag) {
     template += `</${tag}>`
   }
@@ -431,11 +713,225 @@ function transformNativeElement(
   }
 }
 
+interface ConstantValue {
+  value: unknown
+}
+
+/**
+ * Templates are parsed as html again at runtime, so a value written into one
+ * has to survive that round trip unchanged. The parser has already decoded the
+ * character references in a static value, and `&` would start a second round
+ * of decoding, turning `&amp;lt;` into `<` instead of `&lt;`. This is the same
+ * reason the vdom static stringifier escapes values before putting them into
+ * an html string (`escapeHtml` in `stringifyStatic`).
+ *
+ * Character references are all this fixes. `<`, `>`, `'` and whitespace need no
+ * escaping because `NEEDS_QUOTES_RE` already puts every value containing them
+ * inside double quotes, where they stand for themselves. A CR or a NUL in the
+ * value does still come out differently than in vdom, but that is a class of
+ * its own: the parser normalizes both away while preprocessing its input, and
+ * it does so for comment data and for text in `<pre>` and `<textarea>` just the
+ * same, where a NUL cannot be written back at all.
+ */
+function escapeAttrValue(value: string): string {
+  return value.replace(/&/g, '&amp;').replace(/"/g, '&quot;')
+}
+
+function foldBooleanAttrValue(
+  key: string,
+  values: SimpleExpressionNode[],
+): boolean | undefined {
+  if (values.length !== 1) return
+
+  const evaluated = evaluateConstantExpression(values[0])
+  if (!evaluated) return
+
+  const value = evaluated.value
+  if (key === 'hidden' && typeof value === 'number') {
+    return includeBooleanAttr(value)
+  }
+  if (value === true || value === false || value == null) {
+    return includeBooleanAttr(value)
+  }
+}
+
+function foldStyleValues(values: SimpleExpressionNode[]): string | undefined {
+  const evaluatedValues: unknown[] = []
+  for (const value of values) {
+    const evaluated = evaluateConstantExpression(value)
+    if (!evaluated || !isStaticStyleValue(evaluated.value)) {
+      return
+    }
+    evaluatedValues.push(evaluated.value)
+  }
+
+  const normalized = normalizeStyle(
+    evaluatedValues.length === 1 ? evaluatedValues[0] : evaluatedValues,
+  )
+  return stringifyStyle(normalized)
+}
+
+function isStaticStyleValue(value: unknown): boolean {
+  if (typeof value === 'string') {
+    return true
+  }
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    return false
+  }
+  for (const key in value as Record<string, unknown>) {
+    const propValue = (value as Record<string, unknown>)[key]
+    if (!isSafeStylePropertyName(key) || !isSafeStylePropertyValue(propValue)) {
+      return false
+    }
+  }
+  return true
+}
+
+function isSafeStylePropertyName(key: string): boolean {
+  return !!key && !/[;:]/.test(key)
+}
+
+function isSafeStylePropertyValue(value: unknown): boolean {
+  return (
+    typeof value === 'number' ||
+    (typeof value === 'string' && !value.includes(';'))
+  )
+}
+
+function hasBoundValue(values: SimpleExpressionNode[]): boolean {
+  return values.some(value => !value.isStatic && value.content !== "''")
+}
+
+function foldClassValues(values: SimpleExpressionNode[]): string | undefined {
+  let templateValue = ''
+  let changed = false
+
+  for (const value of values) {
+    const evaluated = evaluateConstantExpression(value)
+    if (evaluated) {
+      const normalized = normalizeClass(evaluated.value)
+      if (normalized) {
+        templateValue = appendClass(templateValue, normalized)
+      } else {
+        changed = true
+      }
+      continue
+    }
+
+    return
+  }
+
+  return changed || templateValue ? templateValue : undefined
+}
+
+function appendClass(base: string, value: string): string {
+  return base ? (value ? `${base} ${value}` : base) : value
+}
+
+function getObjectPropertyName(prop: ObjectProperty): string | undefined {
+  const key = prop.key
+  if (key.type === 'Identifier') {
+    return key.name
+  } else if (key.type === 'StringLiteral') {
+    return key.value
+  } else if (key.type === 'NumericLiteral') {
+    return String(key.value)
+  }
+}
+
+function evaluateConstantExpression(
+  node: SimpleExpressionNode,
+): ConstantValue | undefined {
+  if (node.isStatic) {
+    return { value: node.content }
+  }
+
+  const ast = node.ast
+  if (ast === null) {
+    if (node.content === 'true') {
+      return { value: true }
+    } else if (node.content === 'false') {
+      return { value: false }
+    } else if (node.content === 'null') {
+      return { value: null }
+    } else if (node.content === 'undefined') {
+      return { value: undefined }
+    }
+  }
+  if (!ast) return
+  return evaluateConstantAst(ast as Expression)
+}
+
+function evaluateConstantAst(node: Expression): ConstantValue | undefined {
+  switch (node.type) {
+    case 'StringLiteral':
+      return { value: node.value }
+    case 'NumericLiteral':
+      return { value: node.value }
+    case 'BooleanLiteral':
+      return { value: node.value }
+    case 'NullLiteral':
+      return { value: null }
+    case 'Identifier':
+      return node.name === 'undefined' ? { value: undefined } : undefined
+    case 'UnaryExpression':
+      if (node.operator === 'void') {
+        return { value: undefined }
+      } else if (node.operator === '-') {
+        const value = evaluateConstantAst(node.argument)
+        return value && typeof value.value === 'number'
+          ? { value: -value.value }
+          : undefined
+      }
+      return
+    case 'TemplateLiteral':
+      return evaluateTemplateLiteral(node)
+    case 'ObjectExpression':
+      return evaluateObjectExpression(node)
+  }
+}
+
+function evaluateTemplateLiteral(node: Expression): ConstantValue | undefined {
+  if (node.type !== 'TemplateLiteral') return
+
+  let value = ''
+  for (const [index, quasi] of node.quasis.entries()) {
+    value += quasi.value.cooked || ''
+    const expression = node.expressions[index]
+    if (expression) {
+      const evaluated = evaluateConstantAst(expression as Expression)
+      if (!evaluated) return
+      value += evaluated.value
+    }
+  }
+  return { value }
+}
+
+function evaluateObjectExpression(
+  node: ObjectExpression,
+): ConstantValue | undefined {
+  const value: Record<string, unknown> = {}
+  for (const prop of node.properties) {
+    if (prop.type !== 'ObjectProperty' || prop.computed) {
+      return
+    }
+    const key = getObjectPropertyName(prop)
+    if (key == null) return
+    const evaluated = evaluateConstantAst(prop.value as Expression)
+    if (!evaluated) return
+    value[key] = evaluated.value
+  }
+  return { value }
+}
+
 function resolveStaticKey(
   node: ElementNode,
   context: TransformContext<ElementNode>,
   isComponent: boolean,
 ): SimpleExpressionNode | undefined {
+  // a key is only read on block roots (Transition, TransitionGroup and
+  // KeepAlive resolve their child from a block)
+  if (context.parent!.node !== context.block.node) return
   const keyProp = findProp(node, 'key', false, true)
   if (!keyProp) return
 
@@ -479,11 +975,33 @@ export function buildProps(
   const dynamicArgs: IRProps[] = []
   const dynamicExpr: SimpleExpressionNode[] = []
   let results: DirectiveTransformResult[] = []
+  // Keep merged listeners after v-model without delaying DOM props such as
+  // input type. Unknown v-bind keys still need one combined props payload.
+  const deferListeners =
+    !isComponent &&
+    !!findDir(node, 'model') &&
+    !hasDynamicKeyVBind(node) &&
+    mergesListeners(node, context)
+  let listenerResults: DirectiveTransformResult[] = []
 
-  function pushMergeArg() {
-    if (results.length) {
-      dynamicArgs.push(dedupeProperties(results))
-      results = []
+  function pushMergeArg(listeners = false) {
+    const props = listeners ? listenerResults : results
+    if (props.length) {
+      dynamicArgs.push(dedupeProperties(props))
+      if (listeners) {
+        listenerResults = []
+      } else {
+        results = []
+      }
+    }
+  }
+
+  function pushStaticObjectLiteralProps(props: IRPropsStatic) {
+    if (dynamicArgs.length) {
+      pushMergeArg()
+      dynamicArgs.push(props)
+    } else {
+      results.push(...props.map(toDirectiveResult))
     }
   }
 
@@ -492,12 +1010,34 @@ export function buildProps(
       if (prop.name === 'bind') {
         // v-bind="obj"
         if (prop.exp) {
-          dynamicExpr.push(prop.exp)
-          pushMergeArg()
-          dynamicArgs.push({
-            kind: IRDynamicPropsKind.EXPRESSION,
-            value: prop.exp,
-          })
+          const objectLiteralProps = isComponent
+            ? resolveComponentObjectLiteralBindProps(
+                prop.exp,
+                context,
+                props,
+                prop,
+              )
+            : resolveNativeObjectLiteralBindProps(
+                prop.exp,
+                context,
+                props,
+                prop,
+              )
+          if (objectLiteralProps) {
+            if (isComponent) {
+              pushStaticObjectLiteralProps(objectLiteralProps)
+            } else {
+              dynamicExpr.push(prop.exp)
+              results.push(...objectLiteralProps.map(toDirectiveResult))
+            }
+          } else {
+            dynamicExpr.push(prop.exp)
+            pushMergeArg()
+            dynamicArgs.push({
+              kind: IRDynamicPropsKind.EXPRESSION,
+              value: prop.exp,
+            })
+          }
         } else {
           context.options.onError(
             createCompilerError(ErrorCodes.X_V_BIND_NO_EXPRESSION, prop.loc),
@@ -507,9 +1047,19 @@ export function buildProps(
       } else if (prop.name === 'on') {
         // v-on="obj"
         if (prop.exp) {
-          if (isComponent) {
+          const objectLiteralProps = isComponent
+            ? resolveComponentObjectLiteralOnProps(
+                prop.exp,
+                context,
+                props,
+                prop,
+              )
+            : undefined
+          if (objectLiteralProps) {
+            pushStaticObjectLiteralProps(objectLiteralProps)
+          } else if (isComponent || mergesListeners(node, context)) {
             dynamicExpr.push(prop.exp)
-            pushMergeArg()
+            pushMergeArg(deferListeners)
             dynamicArgs.push({
               kind: IRDynamicPropsKind.EXPRESSION,
               value: prop.exp,
@@ -535,21 +1085,33 @@ export function buildProps(
       }
     }
 
-    // exclude `is` prop only for <component>
+    // exclude `is` on <component>, and is="vue:xxx" on other tags
     if (
-      isDynamicComponent &&
-      ((prop.type === NodeTypes.ATTRIBUTE && prop.name === 'is') ||
-        (prop.type === NodeTypes.DIRECTIVE &&
+      prop.type === NodeTypes.ATTRIBUTE
+        ? prop.name === 'is' && (isDynamicComponent || isVueIsValue(prop))
+        : isDynamicComponent &&
           prop.name === 'bind' &&
-          isStaticArgOf(prop.arg, 'is')))
+          isStaticArgOf(prop.arg, 'is')
     ) {
       continue
     }
 
     const result = transformProp(prop, node, context)
     if (result) {
-      dynamicExpr.push(result.key, result.value)
-      if (isComponent && !result.key.isStatic) {
+      if (
+        deferListeners &&
+        !result.handler &&
+        (result.modifier || !isOn(result.key.content))
+      ) {
+        results.push(result)
+        continue
+      }
+      dynamicExpr.push(result.key)
+      // Handler bodies read the model when invoked, after its event updates it.
+      if (!deferListeners || !result.handler) dynamicExpr.push(result.value)
+      if (deferListeners) {
+        listenerResults.push(result)
+      } else if (isComponent && !result.key.isStatic) {
         // v-bind:[name]="value" or v-on:[name]="value"
         pushMergeArg()
         dynamicArgs.push(
@@ -564,6 +1126,22 @@ export function buildProps(
     }
   }
 
+  if (deferListeners) {
+    pushMergeArg(true)
+    context.registerEffect(
+      dynamicExpr,
+      {
+        type: IRNodeTypes.SET_DYNAMIC_PROPS,
+        element: context.reference(),
+        props: dynamicArgs,
+        isSVG: node.ns === Namespaces.SVG,
+        listeners: true,
+      },
+      getEffectIndex,
+    )
+    return [false, dedupeProperties(results)]
+  }
+
   // has dynamic key or v-bind="{}"
   if (dynamicArgs.length || results.some(({ key }) => !key.isStatic)) {
     // take rest of props as dynamic props
@@ -573,6 +1151,387 @@ export function buildProps(
 
   const irProps = dedupeProperties(results)
   return [false, irProps]
+}
+
+function resolveObjectLiteralProps(
+  exp: SimpleExpressionNode,
+  context: TransformContext<ElementNode>,
+  keyTransform?: (key: string) => string,
+  isValidKey?: (key: string) => boolean,
+): IRPropsStatic | undefined {
+  const ast = exp.ast
+  if (!ast || ast.type !== 'ObjectExpression') return
+
+  const props: IRPropsStatic = []
+  const knownKeys = new Set<string>()
+  for (const property of ast.properties) {
+    if (property.type !== 'ObjectProperty' || property.computed) {
+      return
+    }
+
+    let key = getObjectPropertyName(property)
+    if (key == null || key === '__proto__') return
+    if (isValidKey && !isValidKey(key)) return
+    if (keyTransform) key = keyTransform(key)
+    if (knownKeys.has(key)) return
+    knownKeys.add(key)
+
+    props.push({
+      key: createSimpleExpression(key, true),
+      values: [
+        resolveExpression(
+          createObjectBindSubExpression(
+            exp,
+            property.value as Expression,
+            context,
+          ),
+          true,
+        ),
+      ],
+    })
+  }
+  return props
+}
+
+function resolveComponentObjectLiteralBindProps(
+  exp: SimpleExpressionNode,
+  context: TransformContext<ElementNode>,
+  nodeProps: (VaporDirectiveNode | AttributeNode)[],
+  currentProp: VaporDirectiveNode,
+): IRPropsStatic | undefined {
+  const props = resolveObjectLiteralProps(
+    exp,
+    context,
+    undefined,
+    isSafeObjectLiteralBindKey,
+  )
+  if (
+    !props ||
+    hasComponentObjectLiteralBindConflict(nodeProps, currentProp, props)
+  ) {
+    return
+  }
+  return props
+}
+
+const listenerMerge = new WeakMap<ElementNode, boolean>()
+
+export function mergesListeners(
+  node: ElementNode,
+  context: TransformContext<ElementNode>,
+): boolean {
+  let merges = listenerMerge.get(node)
+  if (merges === undefined) {
+    listenerMerge.set(node, (merges = resolveListenerMerge(node, context)))
+  }
+  return merges
+}
+
+// like vdom, an element merges its listeners at runtime in template order
+// once their keys can collide: a v-bind spread that is not expanded into
+// static props or carries a dynamic key may hold any `on*` key, and a v-on
+// object may hold the key of a static listener (`@evt` or `:onXxx`).
+// Native SVG on* bindings also share the dynamic prop cache with v-on objects.
+function resolveListenerMerge(
+  node: ElementNode,
+  context: TransformContext<ElementNode>,
+): boolean {
+  const props = node.props as (VaporDirectiveNode | AttributeNode)[]
+  let hasVOnObject = false
+  let hasStaticListener = false
+  for (const p of props) {
+    if (p.type !== NodeTypes.DIRECTIVE) continue
+    const arg = p.arg && resolveExpression(p.arg)
+    if (p.name === 'bind') {
+      if (!arg) {
+        if (p.exp) {
+          const bindProps = resolveNativeObjectLiteralBindProps(
+            p.exp,
+            context,
+            props,
+            p,
+          )
+          if (!bindProps) return true
+          if (
+            node.ns === Namespaces.SVG &&
+            bindProps.some(({ key }) => isNativeOn(key.content))
+          ) {
+            hasStaticListener = true
+          }
+        }
+      } else if (!arg.isStatic) {
+        return true
+      } else if (
+        (isOn(arg.content) ||
+          (node.ns === Namespaces.SVG && isNativeOn(arg.content))) &&
+        !isModelListener(arg.content) &&
+        !p.modifiers.some(m => m.content === 'prop' || m.content === 'attr')
+      ) {
+        hasStaticListener = true
+      }
+    } else if (p.name === 'on') {
+      if (!arg) {
+        hasVOnObject = true
+      } else if (
+        arg.isStatic &&
+        !p.modifiers.some(m => m.content === 'delegate')
+      ) {
+        hasStaticListener = true
+      }
+    }
+  }
+  return hasVOnObject && hasStaticListener
+}
+
+function resolveNativeObjectLiteralBindProps(
+  exp: SimpleExpressionNode,
+  context: TransformContext<ElementNode>,
+  nodeProps: (VaporDirectiveNode | AttributeNode)[],
+  currentProp: VaporDirectiveNode,
+): IRPropsStatic | undefined {
+  const props = resolveObjectLiteralProps(
+    exp,
+    context,
+    undefined,
+    isSafeNativeObjectLiteralBindKey,
+  )
+  if (
+    !props ||
+    hasNativeObjectLiteralBindConflict(nodeProps, currentProp, props)
+  ) {
+    return
+  }
+  return props
+}
+
+function resolveComponentObjectLiteralOnProps(
+  exp: SimpleExpressionNode,
+  context: TransformContext<ElementNode>,
+  nodeProps: (VaporDirectiveNode | AttributeNode)[],
+  currentProp: VaporDirectiveNode,
+): IRPropsStatic | undefined {
+  const props = resolveObjectLiteralProps(exp, context, toHandlerKey)
+  if (
+    !props ||
+    hasComponentObjectLiteralBindConflict(nodeProps, currentProp, props)
+  ) {
+    return
+  }
+  return props
+}
+
+function isSafeNativeObjectLiteralBindKey(key: string): boolean {
+  return (
+    key !== '' &&
+    !UNSAFE_ATTR_NAME_RE.test(key) &&
+    isSafeObjectLiteralBindKey(key) &&
+    !isOn(key) &&
+    key.charCodeAt(0) !== 46 /* . */ &&
+    key.charCodeAt(0) !== 94 /* ^ */
+  )
+}
+
+function isSafeObjectLiteralBindKey(key: string): boolean {
+  return !isReservedProp(key)
+}
+
+function hasComponentObjectLiteralBindConflict(
+  props: (VaporDirectiveNode | AttributeNode)[],
+  currentProp: VaporDirectiveNode,
+  objectLiteralProps: IRPropsStatic,
+): boolean {
+  const keys = createComponentConflictKeySet(
+    objectLiteralProps.map(prop => prop.key.content),
+  )
+  for (const prop of props) {
+    if (prop === currentProp) continue
+
+    let key: string | undefined
+    if (prop.type === NodeTypes.ATTRIBUTE) {
+      key = prop.name
+    } else if (prop.name === 'bind') {
+      if (!prop.arg) {
+        const bindKeys = getObjectLiteralKeys(prop.exp)
+        if (bindKeys && hasComponentKeyOverlap(keys, bindKeys)) return true
+        continue
+      }
+      key = getStaticBindKey(prop)
+    } else if (prop.name === 'on') {
+      key = getStaticHandlerKey(prop)
+    } else if (prop.name === 'model') {
+      if (hasComponentModelKey(keys, prop)) {
+        return true
+      }
+    }
+
+    if (key && hasComponentKey(keys, key)) {
+      return true
+    }
+  }
+  return false
+}
+
+function hasComponentModelKey(
+  keys: Set<string>,
+  prop: VaporDirectiveNode,
+): boolean {
+  const { arg } = prop
+  if (arg && (arg.type !== NodeTypes.SIMPLE_EXPRESSION || !arg.isStatic)) {
+    return true
+  }
+
+  const key = arg ? arg.content : 'modelValue'
+  return (
+    hasComponentKey(keys, key) ||
+    hasComponentKey(keys, `onUpdate:${camelize(key)}`) ||
+    (prop.modifiers.length > 0 &&
+      hasComponentKey(keys, getModifierPropName(key)))
+  )
+}
+
+function hasNativeObjectLiteralBindConflict(
+  props: (VaporDirectiveNode | AttributeNode)[],
+  currentProp: VaporDirectiveNode,
+  objectLiteralProps: IRPropsStatic,
+): boolean {
+  const keys = new Set(objectLiteralProps.map(prop => prop.key.content))
+  for (const prop of props) {
+    if (prop === currentProp) continue
+
+    let key: string | undefined
+    if (prop.type === NodeTypes.ATTRIBUTE) {
+      key = prop.name
+    } else if (prop.name === 'bind') {
+      if (!prop.arg) return true
+      key = getStaticBindKey(prop)
+      if (!key) return true
+    }
+
+    if (key && keys.has(key)) {
+      return true
+    }
+  }
+  return false
+}
+
+function getStaticBindKey(prop: VaporDirectiveNode): string | undefined {
+  const { arg } = prop
+  if (!arg || arg.type !== NodeTypes.SIMPLE_EXPRESSION || !arg.isStatic) return
+
+  let key = arg.content
+  if (isReservedProp(key)) return
+  if (prop.modifiers.some(modifier => modifier.content === 'camel')) {
+    key = camelize(key)
+  }
+  return key
+}
+
+function getStaticHandlerKey(prop: VaporDirectiveNode): string | undefined {
+  const { arg } = prop
+  if (!arg || arg.type !== NodeTypes.SIMPLE_EXPRESSION || !arg.isStatic) return
+
+  let key = arg.content
+  if (key.startsWith('vue:')) {
+    key = `vnode-${key.slice(4)}`
+  }
+
+  const { nonKeyModifiers, eventOptionModifiers } = resolveModifiers(
+    `on${key}`,
+    prop.modifiers,
+    null,
+    prop.loc,
+  )
+  if (key.toLowerCase() === 'click') {
+    if (nonKeyModifiers.includes('middle')) {
+      key = 'mouseup'
+    }
+    if (nonKeyModifiers.includes('right')) {
+      key = 'contextmenu'
+    }
+  }
+
+  key = toHandlerKey(camelize(key))
+  const optionPostfix = eventOptionModifiers.map(capitalize).join('')
+  if (optionPostfix) key += optionPostfix
+  return key
+}
+
+function getObjectLiteralKeys(
+  exp: SimpleExpressionNode | undefined,
+): Set<string> | undefined {
+  const ast = exp && exp.ast
+  if (!ast || ast.type !== 'ObjectExpression') return
+
+  const keys = new Set<string>()
+  for (const property of ast.properties) {
+    if (property.type !== 'ObjectProperty' || property.computed) {
+      return
+    }
+    const key = getObjectPropertyName(property)
+    if (key == null) return
+    keys.add(key)
+  }
+  return keys
+}
+
+function createComponentConflictKeySet(keys: string[]): Set<string> {
+  const normalized = new Set<string>()
+  for (const key of keys) {
+    normalized.add(key)
+    normalized.add(camelize(key))
+  }
+  return normalized
+}
+
+function hasComponentKey(keys: Set<string>, key: string): boolean {
+  return keys.has(key) || keys.has(camelize(key))
+}
+
+function hasComponentKeyOverlap(
+  left: Set<string>,
+  right: Set<string>,
+): boolean {
+  for (const key of right) {
+    if (hasComponentKey(left, key)) return true
+  }
+  return false
+}
+
+function createObjectBindSubExpression(
+  source: SimpleExpressionNode,
+  node: Expression,
+  context: TransformContext<ElementNode>,
+): SimpleExpressionNode {
+  const start = node.start == null ? 0 : node.start - 1
+  const end = node.end == null ? source.content.length : node.end - 1
+  const content = source.content.slice(start, end)
+  const expression = createSimpleExpression(content, false, {
+    start: advancePositionWithClone(source.loc.start, source.content, start),
+    end: advancePositionWithClone(source.loc.start, source.content, end),
+    source: content,
+  })
+  expression.ast = isSimpleIdentifier(content)
+    ? null
+    : parseExpression(
+        `(${content})`,
+        getParserOptions(context.options.expressionPlugins),
+      )
+  return expression
+}
+
+// Components receive a static style as an object, like the vdom compiler's
+// transformStyle: style="color: red" -> :style='{ "color": "red" }'
+function createStaticStyleExpression(
+  value: TextNode,
+  context: TransformContext<ElementNode>,
+): SimpleExpressionNode {
+  const content = JSON.stringify(parseStringStyle(value.content))
+  const expression = createSimpleExpression(content, false, value.loc)
+  expression.ast = parseExpression(
+    `(${content})`,
+    getParserOptions(context.options.expressionPlugins),
+  )
+  return expression
 }
 
 function transformProp(
@@ -587,7 +1546,9 @@ function transformProp(
     return {
       key: createSimpleExpression(prop.name, true, prop.nameLoc),
       value: prop.value
-        ? createSimpleExpression(prop.value.content, true, prop.value.loc)
+        ? name === 'style' && node.tagType === ElementTypes.COMPONENT
+          ? createStaticStyleExpression(prop.value, context)
+          : createSimpleExpression(prop.value.content, true, prop.value.loc)
         : EMPTY_EXPRESSION,
     }
   }
@@ -598,6 +1559,15 @@ function transformProp(
   }
 
   if (!isBuiltInDirective(name)) {
+    if (node.tagType === ElementTypes.SLOT) {
+      context.options.onError(
+        createCompilerError(
+          ErrorCodes.X_V_SLOT_UNEXPECTED_DIRECTIVE_ON_SLOT_OUTLET,
+          prop.loc,
+        ),
+      )
+      return
+    }
     const fromSetup = resolveSetupReference(`v-${name}`, context)
     if (fromSetup) {
       name = fromSetup
@@ -611,6 +1581,7 @@ function transformProp(
       dir: prop,
       name,
       asset: !fromSetup,
+      once: context.inVOnce,
     })
   }
 }
@@ -635,7 +1606,10 @@ function dedupeProperties(results: DirectiveTransformResult[]): IRProp[] {
     // prop names and event handler names can be the same but serve different purposes
     // e.g. `:appear="true"` is a prop while `@appear="handler"` is an event handler
     if (existing && existing.handler === prop.handler) {
-      if (name === 'style' || name === 'class' || prop.handler) {
+      if (prop.handler) {
+        // keep modifiers associated with each handler; codegen merges matching keys
+        deduped.push(prop)
+      } else if (name === 'style' || name === 'class') {
         mergePropValues(existing, prop)
       }
       // unexpected duplicate, should have emitted error during parse
@@ -654,13 +1628,16 @@ function resolveDirectiveResult(prop: DirectiveTransformResult): IRProp {
   })
 }
 
+function toDirectiveResult(prop: IRProp): DirectiveTransformResult {
+  return extend({}, prop, {
+    values: undefined,
+    value: prop.values[0],
+  })
+}
+
 function mergePropValues(existing: IRProp, incoming: IRProp) {
   const newValues = incoming.values
   existing.values.push(...newValues)
-}
-
-function isComponentTag(tag: string) {
-  return tag === 'component' || tag === 'Component'
 }
 
 export function shouldUseCreateElement(

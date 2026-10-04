@@ -80,7 +80,6 @@ export const transformVModel: DirectiveTransform = (dir, node, context) => {
   const { tag } = node
   const isCustomElement = context.options.isCustomElement(tag)
   let modelType: DirectiveIRNode['modelType'] | undefined = 'text'
-  // TODO let runtimeDirective: VaporHelper | undefined = 'vModelText'
   if (
     tag === 'input' ||
     tag === 'textarea' ||
@@ -147,6 +146,7 @@ export const transformVModel: DirectiveTransform = (dir, node, context) => {
       name: 'model',
       modelType,
       builtin: true,
+      once: context.inVOnce,
     })
 
   function checkDuplicatedValue() {

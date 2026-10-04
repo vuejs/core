@@ -3,6 +3,7 @@ import {
   createComponent,
   createTextNode,
   createVaporApp,
+  createVaporSSRApp,
   defineVaporComponent,
   template,
   withVaporDirectives,
@@ -57,6 +58,44 @@ describe('api: createVaporApp', () => {
     expect(`already been mounted`).toHaveBeenWarned()
   })
 
+  test('preserves root context while evaluating root props', () => {
+    const Comp = defineVaporComponent({
+      props: ['value'],
+      setup(props) {
+        return createTextNode(String(props.value))
+      },
+    })
+    const app = createVaporApp(Comp, { value: () => inject('token') })
+    app.provide('token', 'provided value')
+    const root = document.createElement('div')
+    try {
+      app.mount(root)
+      expect(root.textContent).toBe('provided value')
+    } finally {
+      app.unmount()
+    }
+  })
+
+  test('mount should no-op when selector returns null', () => {
+    const Comp = defineVaporComponent({
+      setup() {
+        return createTextNode('hello')
+      },
+    })
+    const app = createVaporApp(Comp)
+    let proxy: any
+
+    expect(() => {
+      proxy = app.mount('#not-exist-id')
+    }).not.toThrow()
+
+    expect(proxy).toBeUndefined()
+    expect(
+      'Failed to mount app: mount target selector "#not-exist-id" returned null.',
+    ).toHaveBeenWarned()
+    expect(app._container).toBeNull()
+  })
+
   test('unmount', () => {
     const Comp = defineVaporComponent({
       props: {
@@ -78,6 +117,47 @@ describe('api: createVaporApp', () => {
 
     app.unmount()
     expect(root.innerHTML).toBe(``)
+  })
+
+  test('unmount in non-dev mode', () => {
+    __DEV__ = false
+    try {
+      const Comp = defineVaporComponent({
+        setup() {
+          return createTextNode('ok')
+        },
+      })
+
+      const root = document.createElement('div')
+      const app = createVaporApp(Comp)
+
+      app.mount(root)
+      expect(root.innerHTML).toBe(`ok`)
+      expect(app._instance).toBeNull()
+
+      expect(() => app.unmount()).not.toThrow()
+      expect(root.innerHTML).toBe(``)
+      expect(app._instance).toBeNull()
+    } finally {
+      __DEV__ = true
+    }
+  })
+
+  test('ssr mount should fall back to full mount when container is empty', () => {
+    const Comp = defineVaporComponent({
+      setup() {
+        return createTextNode('hello')
+      },
+    })
+
+    const root = document.createElement('div')
+    const app = createVaporSSRApp(Comp)
+
+    expect(() => app.mount(root)).not.toThrow()
+    expect(root.innerHTML).toBe(`hello`)
+    expect(
+      `Attempting to hydrate existing markup but container is empty. Performing full mount instead.`,
+    ).toHaveBeenWarned()
   })
 
   test('provide', () => {

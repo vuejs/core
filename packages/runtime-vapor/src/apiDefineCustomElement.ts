@@ -1,10 +1,6 @@
+import { shallowReactive } from '@vue/reactivity'
 import { extend, isPlainObject } from '@vue/shared'
-import {
-  createComponent,
-  createVaporApp,
-  createVaporSSRApp,
-  defineVaporComponent,
-} from '.'
+import { createVaporApp, createVaporSSRApp, defineVaporComponent } from '.'
 import {
   type ComponentObjectPropsOptions,
   type CreateAppFunction,
@@ -16,12 +12,12 @@ import {
   VueElementBase,
   warn,
 } from '@vue/runtime-dom'
-import type {
-  VaporComponent,
-  VaporComponentInstance,
-  VaporComponentOptions,
+import {
+  type VaporComponent,
+  type VaporComponentInstance,
+  type VaporComponentOptions,
+  createComponent,
 } from './component'
-import type { Block } from './block'
 import { withHydration } from './dom/hydration'
 import type {
   DefineVaporComponent,
@@ -29,7 +25,6 @@ import type {
   VaporRenderResult,
 } from './apiDefineComponent'
 import type { StaticSlots } from './componentSlots'
-import { SlotFragment, isFragment } from './fragment'
 
 export type VaporElementConstructor<P = {}> = {
   new (initialProps?: Record<string, any>): VaporElement & P
@@ -58,7 +53,7 @@ export function defineVaporCustomElement<Props, RawBindings = object>(
   ) => RawBindings | VaporRenderResult,
   options?: Pick<VaporComponentOptions, 'name' | 'inheritAttrs' | 'emits'> &
     CustomElementOptions & {
-      props?: (keyof Props)[]
+      props?: (keyof NoInfer<Props>)[]
     },
 ): VaporElementConstructor<Props>
 export function defineVaporCustomElement<Props, RawBindings = object>(
@@ -204,7 +199,7 @@ export class VaporElement extends VueElementBase<
     props: Record<string, any> | undefined = {},
     createAppFn: CreateAppFunction<ParentNode, VaporComponent> = createVaporApp,
   ) {
-    super(def, props, createAppFn)
+    super(def, shallowReactive(props), createAppFn)
   }
 
   protected _needsHydration(): boolean {
@@ -241,40 +236,19 @@ export class VaporElement extends VueElementBase<
     }
 
     this._app!.mount(this._root)
-
-    // Render slots immediately after mount for shadowRoot: false
-    // This ensures correct lifecycle order for nested custom elements
-    if (!this.shadowRoot) {
-      this._renderSlots()
-    }
   }
 
   protected _update(): void {
-    if (!this._app) return
-    // update component by re-running all its render effects
-    const renderEffects = (this._instance! as VaporComponentInstance)
-      .renderEffects
-    if (renderEffects) renderEffects.forEach(e => e.run())
+    // Unlike VDOM custom elements, Vapor does not synchronously patch the root
+    // component in _update(). CE props are reactive, so property writes update
+    // in the next scheduler flush. Attribute writes are delivered by
+    // MutationObserver first; compared with VDOM CE, which patches inside
+    // _update(), they become visible one tick later.
   }
 
   protected _unmount(): void {
-    if (__TEST__) {
-      try {
-        this._app!.unmount()
-      } catch (error) {
-        // In test environment, ignore errors caused by accessing Node
-        // after the test environment has been torn down
-        if (
-          error instanceof ReferenceError &&
-          error.message.includes('Node is not defined')
-        ) {
-          // Ignore this error in tests
-        } else {
-          throw error
-        }
-      }
-    } else {
-      this._app!.unmount()
+    if (this._app) {
+      this._app.unmount()
     }
     if (this._instance && this._instance.ce) {
       this._instance.ce = undefined
@@ -282,76 +256,54 @@ export class VaporElement extends VueElementBase<
     this._app = this._instance = null
   }
 
-  /**
-   * Only called when shadowRoot is false
-   */
-  protected _updateSlotNodes(
-    replacements: Map<Node, { nodes: Node[]; usedFallback: boolean }>,
-  ): void {
-    this._updateFragmentNodes(
-      (this._instance! as VaporComponentInstance).block,
-      replacements,
-    )
-  }
-
-  /**
-   * Replace slot nodes with their replace content
-   * @internal
-   */
-  private _updateFragmentNodes(
-    block: Block,
-    replacements: Map<Node, { nodes: Node[]; usedFallback: boolean }>,
-  ): void {
-    if (Array.isArray(block)) {
-      block.forEach(item => this._updateFragmentNodes(item, replacements))
-      return
-    }
-
-    if (!isFragment(block)) return
-    const { nodes } = block
-    if (nodes instanceof HTMLSlotElement) {
-      const replacement = replacements.get(nodes)
-      if (!replacement) return
-
-      // Slotted content can be represented as plain nodes, but fallback must
-      // stay as its live block so nested updates and unmounting keep using the
-      // current owner rather than a stale DOM snapshot.
-      if (
-        replacement.usedFallback &&
-        block instanceof SlotFragment &&
-        block.customElementFallback
-      ) {
-        this._updateFragmentNodes(block.customElementFallback, replacements)
-        block.nodes = block.customElementFallback
-      } else {
-        block.nodes = replacement.nodes
-      }
-    } else if (Array.isArray(nodes)) {
-      nodes.forEach(item => this._updateFragmentNodes(item, replacements))
-    } else {
-      this._updateFragmentNodes(nodes, replacements)
-    }
-  }
-
   private _createComponent() {
-    this._def.ce = instance => {
+    const ce = (instance: VaporComponentInstance) => {
       this._app!._ceComponent = this._instance = instance
-      // For shadowRoot: false, _renderSlots is called synchronously after mount
-      // in _mount() to ensure correct lifecycle order
-      if (!this.shadowRoot) {
-        // Still set updated hooks for subsequent updates
-        this._instance!.u = [this._renderSlots.bind(this)]
-      }
       this._processInstance()
     }
 
     createComponent(
       this._def,
-      this._props,
-      undefined,
+      // Host properties are values; a function property is not a prop getter.
+      { $: [() => this._props] },
+      this.shadowRoot ? undefined : this._createSlots(),
       undefined,
       undefined,
       this._app!._context,
+      true,
+      ce,
     )
+  }
+
+  /**
+   * Only called when shadowRoot is false. The light DOM children parsed on
+   * connect become static slots, so `<slot/>` outlets render them in place
+   * through the normal slot pipeline instead of a native outlet that has to
+   * be replaced after mount.
+   */
+  private _createSlots(): StaticSlots | undefined {
+    const parsed = this._slots
+    if (!parsed) return
+    const scopeId = this._def.__scopeId
+    let slots: StaticSlots | undefined
+    for (const name in parsed) {
+      const nodes = parsed[name]
+      // for :slotted css
+      if (scopeId) {
+        const id = scopeId + '-s'
+        for (const n of nodes) {
+          if (n.nodeType === 1) {
+            ;(n as Element).setAttribute(id, '')
+            const walker = document.createTreeWalker(n, 1)
+            let child
+            while ((child = walker.nextNode())) {
+              ;(child as Element).setAttribute(id, '')
+            }
+          }
+        }
+      }
+      ;(slots || (slots = {}))[name] = () => nodes
+    }
+    return slots
   }
 }

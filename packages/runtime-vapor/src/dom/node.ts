@@ -1,9 +1,36 @@
-import type { ChildItem, InsertionParent } from '../insertionState'
-import { isComment, isHydrating, locateEndAnchor } from './hydration'
+import { type Namespace, Namespaces } from '@vue/shared'
+import type { InsertionParent } from '../insertionState'
+import {
+  isHydrating,
+  nextLogicalSibling,
+  resolveBlankTextTarget,
+  skipUntrackedAnchors,
+} from './hydration'
+
+const SVG_NS = 'http://www.w3.org/2000/svg'
+const MATHML_NS = 'http://www.w3.org/1998/Math/MathML'
 
 /*@__NO_SIDE_EFFECTS__*/
-export function createElement(tagName: string): HTMLElement {
-  return document.createElement(tagName)
+export function createElement(tagName: string, ns?: Namespace): HTMLElement {
+  return ns
+    ? (document.createElementNS(
+        ns === Namespaces.SVG ? SVG_NS : MATHML_NS,
+        tagName,
+      ) as HTMLElement)
+    : document.createElement(tagName)
+}
+
+let t: HTMLTemplateElement
+
+export function parseTemplate(html: string, ns?: Namespace): Node {
+  t = t || document.createElement('template')
+  if (ns) {
+    const tag = ns === Namespaces.SVG ? 'svg' : 'math'
+    t.innerHTML = `<${tag}>${html}</${tag}>`
+    return _child(_child(t.content) as ParentNode)
+  }
+  t.innerHTML = html
+  return _child(t.content)
 }
 
 /*@__NO_SIDE_EFFECTS__*/
@@ -41,28 +68,37 @@ export function txt(node: ParentNode): Node {
 }
 
 /*@__NO_SIDE_EFFECTS__*/
-export function child(node: InsertionParent, logicalIndex?: number): Node {
+export function child(node: InsertionParent, isText?: boolean): Node {
   if (isHydrating) {
-    return locateChildByLogicalIndex(node, logicalIndex ?? 0)!
+    const n = locateChildByLogicalIndex(node, 0)
+    return isText ? resolveBlankTextTarget(n, node) : n!
   }
   return _child(node)
 }
 
 /*@__NO_SIDE_EFFECTS__*/
-export function nthChild(node: InsertionParent, i: number): Node {
+export function nthChild(
+  node: InsertionParent,
+  i: number,
+  isText?: boolean,
+): Node {
   if (isHydrating) {
-    return locateChildByLogicalIndex(node, i)!
+    const n = locateChildByLogicalIndex(node, i)
+    return isText ? resolveBlankTextTarget(n, node) : n!
   }
   return node.childNodes[i]
 }
 
 /*@__NO_SIDE_EFFECTS__*/
-export function next(node: Node, logicalIndex?: number): Node {
+export function next(node: Node, isText?: boolean): Node {
   if (isHydrating) {
-    return locateChildByLogicalIndex(
-      node.parentNode! as InsertionParent,
-      logicalIndex!,
-    )!
+    let result = nextLogicalSibling(node)
+    const parent = node.parentNode
+    if (isText) result = resolveBlankTextTarget(result, parent!)
+    // advance the $llc cache when `node` is the cached logical child; the
+    // helper keeps `$lli` in step for us
+    if (parent) updateLastLocatedLogicalChild(parent, node, result, 1)
+    return result!
   }
   return _next(node)
 }
@@ -77,36 +113,76 @@ export function _next(node: Node): Node {
   return node.nextSibling!
 }
 
+// Parents holding a `$llc` in the current hydration pass. The cache is only
+// meaningful while the pass walks the DOM: released when the outermost pass
+// ends, so no node keeps an unmounted subtree alive or feeds a later pass a
+// stale position.
+const cachedParents: InsertionParent[] = []
+
+export function setLastLocatedLogicalChild(
+  parent: InsertionParent,
+  child: Node,
+  logicalIndex: number,
+): void {
+  if (parent.$llc === undefined) cachedParents.push(parent)
+  parent.$llc = child
+  parent.$lli = logicalIndex
+}
+
+export function releaseLocatorCache(): void {
+  for (let i = 0; i < cachedParents.length; i++) {
+    cachedParents[i].$llc = undefined
+  }
+  cachedParents.length = 0
+}
+
 export function locateChildByLogicalIndex(
   parent: InsertionParent,
   logicalIndex: number,
 ): Node | null {
-  let child = (parent.$llc || parent.firstChild) as ChildItem
-  let fromIndex = child.$idx || 0
+  let child: Node | null
+  let fromIndex: number
+  if (parent.$llc) {
+    child = parent.$llc
+    fromIndex = parent.$lli!
+  } else {
+    child = skipUntrackedAnchors(parent.firstChild)
+    fromIndex = 0
+  }
 
   // if target index is less than cached index, start from the beginning.
   // this can happen when child/nthChild/next updates $llc to a later node
   // before an earlier dynamic node is hydrated
   if (logicalIndex < fromIndex) {
-    child = parent.firstChild as ChildItem
+    child = skipUntrackedAnchors(parent.firstChild)
     fromIndex = 0
   }
 
   while (child) {
     if (fromIndex === logicalIndex) {
-      child.$idx = logicalIndex
-      return (parent.$llc = child)
+      setLastLocatedLogicalChild(parent, child, logicalIndex)
+      return child
     }
 
-    child = (
-      isComment(child, '[')
-        ? // fragment start: jump to the node after the matching end anchor
-          locateEndAnchor(child)!.nextSibling
-        : child.nextSibling
-    ) as ChildItem
+    child = nextLogicalSibling(child)
 
     fromIndex++
   }
 
   return null
+}
+
+// Hydration mismatch recovery and other DOM mutations can replace or remove
+// the cached node. Transfer `$llc` only when it still points to that node.
+export function updateLastLocatedLogicalChild(
+  parent: ParentNode,
+  from: Node,
+  to: Node | null,
+  logicalIndexOffset = 0,
+): void {
+  const insertionParent = parent as InsertionParent
+  if (insertionParent.$llc === from) {
+    insertionParent.$llc = to
+    insertionParent.$lli! += logicalIndexOffset
+  }
 }

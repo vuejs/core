@@ -17,8 +17,15 @@ import {
   IRNodeTypes,
   type VaporDirectiveNode,
 } from '../ir'
-import { findProp, isStaticExpression, propToExpression } from '../utils'
+import {
+  findDir,
+  findProp,
+  isInTransition,
+  isStaticExpression,
+  propToExpression,
+} from '../utils'
 import { newBlock, wrapTemplate } from './utils'
+import { normalizeBindShorthand } from './vBind'
 
 export const transformVFor: NodeTransform = createStructuralDirectiveTransform(
   'for',
@@ -46,12 +53,26 @@ export function processFor(
 
   const { source, value, key, index } = parseResult
 
-  const keyProp = findProp(node, 'key')
-  const keyProperty = keyProp && propToExpression(keyProp)
+  const keyProp = findProp(node, 'key', false, true)
+  const keyProperty =
+    keyProp &&
+    (keyProp.type === NodeTypes.ATTRIBUTE
+      ? keyProp.value && propToExpression(keyProp)
+      : keyProp.exp || normalizeBindShorthand(keyProp.arg!, context))
   const isComponent =
     node.tagType === ElementTypes.COMPONENT ||
     // template v-for with a single component child
     isTemplateWithSingleComponent(node)
+  // mirrors compiler-ssr: a template row that is not a single element renders
+  // as a fragment, except under Transition, whose children render without
+  // nested fragment markers. A v-if or v-for on the child turns it into an
+  // if/for node by the time SSR decides, so it counts.
+  const wrappedRows =
+    node.tagType === ElementTypes.TEMPLATE &&
+    !isInTransition(context) &&
+    (node.children.length !== 1 ||
+      node.children[0].type !== NodeTypes.ELEMENT ||
+      !!findDir(node.children[0], ROW_FRAGMENT_DIR_RE))
   context.node = node = wrapTemplate(node, ['for', 'key'])
   context.dynamic.flags |= DynamicFlag.NON_TEMPLATE | DynamicFlag.INSERT
   const id = context.reference()
@@ -74,6 +95,7 @@ export function processFor(
     context.dynamic.operation = {
       type: IRNodeTypes.FOR,
       id,
+      ...context.effectBoundary(),
       source: source as SimpleExpressionNode,
       value: value as SimpleExpressionNode | undefined,
       key: key as SimpleExpressionNode | undefined,
@@ -88,9 +110,12 @@ export function processFor(
         ),
       component: isComponent,
       onlyChild: !!isOnlyChild,
+      wrappedRows,
     }
   }
 }
+
+const ROW_FRAGMENT_DIR_RE = /^(?:if|for)$/
 
 function isTemplateWithSingleComponent(node: ElementNode): boolean {
   if (node.tag !== 'template') return false

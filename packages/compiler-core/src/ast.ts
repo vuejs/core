@@ -332,6 +332,10 @@ export interface VNodeCall extends Node {
   patchFlag: PatchFlags | undefined
   dynamicProps: string | SimpleExpressionNode | undefined
   directives: DirectiveArguments | undefined
+  /** Whether this vnode must be patched if a later transform makes it non-block. */
+  needsPatch?: boolean
+  /** Whether a later transform must preserve this vnode as a block. */
+  isBlockRequired?: boolean
   isBlock: boolean
   disableTracking: boolean
   isComponent: boolean
@@ -485,7 +489,8 @@ export interface DirectiveArguments extends ArrayExpression {
 }
 
 export interface DirectiveArgumentNode extends ArrayExpression {
-  elements: // dir, exp, arg, modifiers
+  elements:
+    // dir, exp, arg, modifiers
     | [string]
     | [string, ExpressionNode]
     | [string, ExpressionNode, ExpressionNode]
@@ -495,14 +500,30 @@ export interface DirectiveArgumentNode extends ArrayExpression {
 // renderSlot(...)
 export interface RenderSlotCall extends CallExpression {
   callee: typeof RENDER_SLOT
-  arguments: // $slots, name, props, fallback
+  arguments:
+    // $slots, name, props, fallback, noSlotted, branchKey
     | [string, string | ExpressionNode]
-    | [string, string | ExpressionNode, PropsExpression]
+    | [string, string | ExpressionNode, PropsExpression | '{}']
     | [
         string,
         string | ExpressionNode,
         PropsExpression | '{}',
-        TemplateChildNode[],
+        FunctionExpression | string,
+      ]
+    | [
+        string,
+        string | ExpressionNode,
+        PropsExpression | '{}',
+        FunctionExpression | string,
+        string,
+      ]
+    | [
+        string,
+        string | ExpressionNode,
+        PropsExpression | '{}',
+        FunctionExpression | string,
+        string,
+        JSChildNode,
       ]
 }
 

@@ -299,8 +299,7 @@ describe('apiWatch', () => {
     }
     define(Comp).render()
     // should not record watcher in detached scope
-    // the 1 is the props validation effect
-    expect(getEffectsCount(instance!.scope)).toBe(1)
+    expect(getEffectsCount(instance!.scope)).toBe(0)
   })
 
   test('watchEffect should keep running if created in a detached scope', async () => {
