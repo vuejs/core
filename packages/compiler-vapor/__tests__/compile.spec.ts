@@ -1,5 +1,6 @@
 import { BindingTypes, type RootNode, parse } from '@vue/compiler-dom'
 import { type CompilerOptions, compile as _compile } from '../src'
+import { parse as babelParse } from '@babel/parser'
 
 function compile(template: string | RootNode, options: CompilerOptions = {}) {
   let { code } = _compile(template, {
@@ -554,5 +555,21 @@ describe('compile', () => {
       expect(code).contains('const _setTemplateRef1 = _ctx.setTemplateRef')
       expect(code).contains('_setTemplateRef(n0, _ctx.r)')
     })
+  })
+
+  test.each([
+    `<div v-show=""></div>`,
+    `<div v-example=""></div>`,
+    `<div v-example:foo=""></div>`,
+    `<component :is=""></component>`,
+    `<slot v-bind=""></slot>`,
+  ])('empty expression: %s', template => {
+    const code = compile(template, {
+      bindingMetadata: {
+        vExample: BindingTypes.SETUP_CONST,
+      },
+    })
+    expect(() => babelParse(code, { sourceType: 'module' })).not.toThrow()
+    expect(code).contains('() => (void 0)')
   })
 })
