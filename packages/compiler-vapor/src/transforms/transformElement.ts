@@ -172,7 +172,7 @@ export const transformElement: NodeTransform = (node, context) => {
   if (
     node.type === NodeTypes.ELEMENT &&
     (node.tagType === ElementTypes.COMPONENT ||
-      context.options.isCustomElement(node.tag))
+      shouldUseCreateElement(node, context as TransformContext<ElementNode>))
   ) {
     parentSlots = context.slots
     context.slots = []
