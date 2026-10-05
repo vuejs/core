@@ -10282,6 +10282,181 @@ describe('vdomInterop', () => {
       expect(secondLeave).toHaveBeenCalledTimes(1)
       expect(html()).toContain('second')
     })
+
+    test.each([true, false])(
+      'appear enters a v-show vdom child on mount (show: %s)',
+      async show => {
+        const data = ref({ show, log: [] as string[] })
+        const VDomChild = compile(
+          `<script setup>const text = 'child'</script><template><div>{{ text }}</div></template>`,
+          data,
+          {},
+          { vapor: false },
+        )
+        const App = compile(
+          `<template>
+            <Transition
+              appear
+              :css="false"
+              @before-enter="data.log.push('be')"
+              @enter="(el, done) => { data.log.push('en'); done() }"
+              @leave="(el, done) => { data.log.push('lv'); done() }"
+            >
+              <components.VDomChild v-show="data.show" />
+            </Transition>
+          </template>`,
+          data,
+          { VDomChild },
+        )
+        const { host } = define(App as any).render()
+        document.body.appendChild(host)
+        const el = host.querySelector('div')!
+        await nextTick()
+        expect(data.value.log).toEqual(show ? ['be', 'en'] : [])
+        expect(el.style.display).toBe(show ? '' : 'none')
+
+        data.value.show = !show
+        await nextTick()
+        data.value.show = show
+        await nextTick()
+        expect(data.value.log).toEqual(
+          show ? ['be', 'en', 'lv', 'be', 'en'] : ['be', 'en', 'lv'],
+        )
+        expect(el.style.display).toBe(show ? '' : 'none')
+      },
+    )
+
+    test('appear enters a v-show vdom vnode on mount', async () => {
+      const data = ref({ log: [] as string[] })
+      const VDomChild = compile(
+        `<script setup>const text = 'child'</script><template><div>{{ text }}</div></template>`,
+        data,
+        {},
+        { vapor: false },
+      )
+      const App = compile(
+        `<template>
+          <Transition
+            appear
+            :css="false"
+            @before-enter="data.log.push('be')"
+            @enter="(el, done) => { data.log.push('en'); done() }"
+          >
+            <component :is="components.vnode()" v-show="true" />
+          </Transition>
+        </template>`,
+        data,
+        { vnode: () => h(VDomChild) },
+      )
+      const { host } = define(App as any).render()
+      document.body.appendChild(host)
+      await nextTick()
+      expect(data.value.log).toEqual(['be', 'en'])
+    })
+
+    test('enters a replaced root of a v-show vdom child', async () => {
+      const data = ref({ a: true, n: 0, log: [] as string[] })
+      const VDomChild = compile(
+        `<script setup>const data = _data</script><template><div v-if="data.a">a</div><p v-else>{{ data.n }}</p></template>`,
+        data,
+        {},
+        { vapor: false },
+      )
+      const App = compile(
+        `<template>
+          <Transition
+            :css="false"
+            @before-enter="data.log.push('be')"
+            @enter="(el, done) => { data.log.push('en'); done() }"
+          >
+            <components.VDomChild v-show="true" />
+          </Transition>
+        </template>`,
+        data,
+        { VDomChild },
+      )
+      const { host } = define(App as any).render()
+      document.body.appendChild(host)
+      await nextTick()
+      expect(data.value.log).toEqual([])
+
+      data.value.a = false
+      await nextTick()
+      expect(host.querySelector('p')).not.toBeNull()
+      expect(data.value.log).toEqual(['be', 'en'])
+
+      data.value.n++
+      await nextTick()
+      expect(host.querySelector('p')!.textContent).toBe('1')
+      expect(data.value.log).toEqual(['be', 'en'])
+    })
+
+    test('does not re-enter a moved v-show vdom child', async () => {
+      const data = ref({ disabled: false, log: [] as string[] })
+      const VDomChild = compile(
+        `<script setup>const text = 'child'</script><template><div>{{ text }}</div></template>`,
+        data,
+        {},
+        { vapor: false },
+      )
+      const App = compile(
+        `<template>
+          <Teleport to="body" :disabled="data.disabled">
+            <Transition
+              appear
+              :css="false"
+              @before-enter="data.log.push('be')"
+              @enter="(el, done) => { data.log.push('en'); done() }"
+            >
+              <components.VDomChild v-show="true" />
+            </Transition>
+          </Teleport>
+        </template>`,
+        data,
+        { VDomChild },
+      )
+      const { host } = define(App as any).render()
+      document.body.appendChild(host)
+      await nextTick()
+      expect(data.value.log).toEqual(['be', 'en'])
+
+      data.value.disabled = true
+      await nextTick()
+      expect(host.textContent).toContain('child')
+      expect(data.value.log).toEqual(['be', 'en'])
+    })
+
+    test('appear enters a v-show vdom child resolved by Suspense', async () => {
+      const data = ref({ log: [] as string[] })
+      const VDomChild = compile(
+        `<script setup>await new Promise(r => setTimeout(r))</script><template><div>child</div></template>`,
+        data,
+        {},
+        { vapor: false },
+      )
+      const App = compile(
+        `<template>
+          <Suspense>
+            <Transition
+              appear
+              :css="false"
+              @before-enter="data.log.push('be')"
+              @enter="(el, done) => { data.log.push('en'); done() }"
+            >
+              <components.VDomChild v-show="true" />
+            </Transition>
+          </Suspense>
+        </template>`,
+        data,
+        { VDomChild },
+      )
+      const { host } = define(App as any).render()
+      document.body.appendChild(host)
+      await new Promise(r => setTimeout(r))
+      await nextTick()
+      expect(host.textContent).toContain('child')
+      expect(data.value.log).toEqual(['be', 'en'])
+    })
   })
 
   describe('css vars', () => {

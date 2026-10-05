@@ -104,6 +104,7 @@ import {
   EMPTY_BLOCK,
   type VaporTransitionHooks,
   insert,
+  isVShowMountEnter,
   isValidBlock,
   isValidSlot,
   move,
@@ -1095,10 +1096,29 @@ function trackFragmentVNodeUpdates(
     }
   }
   vnode.iu = () => {
+    const prevNodes = frag.nodes
     syncNodes()
     if (frag.u) {
       frag.u.forEach(hook => hook(frag.nodes))
     }
+    // a replaced root is mounted by vdom, as on first insert
+    if (frag.nodes !== prevNodes) enterVShowRoot(frag.nodes, frag.$transition)
+  }
+}
+
+// vdom skips a persisted root's enter, so run the v-show one `insert` would
+function enterVShowRoot(
+  el: Block,
+  transition: TransitionHooks | undefined,
+  suspense: SuspenseBoundary | null = null,
+): void {
+  if (
+    transition &&
+    el instanceof Element &&
+    isVShowMountEnter(el, transition as VaporTransitionHooks)
+  ) {
+    transition.beforeEnter(el)
+    queuePostRenderEffect(() => transition.enter(el), undefined, suspense)
   }
 }
 
@@ -1314,6 +1334,7 @@ function mountVNode(
     if (isHydrating) return
     if (parentSuspense !== undefined) suspense = parentSuspense
     const operationSuspense = suspense
+    const prevNodes = frag.nodes
     if (vnode.shapeFlag & ShapeFlags.COMPONENT_KEPT_ALIVE) {
       if ((vnode.type as any).__vapor) {
         activate(vnode.component as any, parentNode, anchor, operationSuspense)
@@ -1370,6 +1391,10 @@ function mountVNode(
     }
     syncNodes()
     if (isMounted && frag.u) frag.u.forEach(hook => hook(frag.nodes))
+    // a new root: first mount, or a pending async setup resolved by Suspense
+    if (frag.nodes !== prevNodes) {
+      enterVShowRoot(frag.nodes, transition, operationSuspense)
+    }
   }
   frag.insert = (parentNode, anchor, parentSuspense, transition) =>
     place(parentNode, anchor, parentSuspense, transition)
@@ -1697,6 +1722,7 @@ function createVDOMComponent(
     if (isHydrating) return
     if (parentSuspense !== undefined) suspense = parentSuspense
     const operationSuspense = suspense
+    const prevNodes = frag.nodes
     if (vnode.shapeFlag & ShapeFlags.COMPONENT_KEPT_ALIVE) {
       // An activated child re-enters with the inputs its parent holds now, so
       // catch the commit up with the sources before activating.
@@ -1747,6 +1773,10 @@ function createVDOMComponent(
 
     syncNodes()
     if (isMounted && frag.u) frag.u.forEach(hook => hook(frag.nodes))
+    // a new root: first mount, or a pending async setup resolved by Suspense
+    if (frag.nodes !== prevNodes) {
+      enterVShowRoot(frag.nodes, transition, operationSuspense)
+    }
   }
   frag.insert = (parentNode, anchor, parentSuspense, transition) =>
     place(parentNode, anchor, parentSuspense, transition)

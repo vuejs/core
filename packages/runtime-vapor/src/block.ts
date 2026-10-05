@@ -187,7 +187,7 @@ export function insertNode(
 // vapor's v-show can't (hooks attach after render), so the renderer does it.
 // Elements touched only by vdom's directive carry no `$vshow`, so foreign
 // hooks keep the persisted skip.
-function isVShowMountEnter(
+export function isVShowMountEnter(
   el: Element,
   transition: VaporTransitionHooks,
 ): boolean {
