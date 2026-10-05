@@ -54,14 +54,25 @@ export const hydrateOnVisible: HydrationStrategyFactory<
       break
     }
   }, opts)
-  forEach(el => {
-    if (!(el instanceof Element)) return
+  const observe = (el: Element): false | void => {
     if (elementIsVisibleInViewport(el)) {
       hydrate()
       ob.disconnect()
       return false
     }
+    // an element with `display: contents` has no box of its own, so it is
+    // never reported as visible - observe its children instead
+    if (getComputedStyle(el).display === 'contents') {
+      for (let i = 0; i < el.children.length; i++) {
+        if (observe(el.children[i]) === false) return false
+      }
+      return
+    }
     ob.observe(el)
+  }
+  forEach(el => {
+    if (!(el instanceof Element)) return
+    return observe(el)
   })
   return () => ob.disconnect()
 }

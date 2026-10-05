@@ -68,6 +68,16 @@ describe('async component hydration strategies', () => {
     await assertHydrationSuccess()
   })
 
+  test('visible (root with display: contents)', async () => {
+    await goToCase('visible', '?contents')
+    await page().waitForFunction(() => window.isRootMounted)
+    expect(await page().evaluate(() => window.isHydrated)).toBe(false)
+    // scroll down
+    await page().evaluate(() => window.scrollTo({ top: 1000 }))
+    await page().waitForFunction(() => window.isHydrated)
+    await assertHydrationSuccess()
+  })
+
   test('visible (root v-if) should not throw error', async () => {
     const spy = vi.fn()
     const currentPage = page()
