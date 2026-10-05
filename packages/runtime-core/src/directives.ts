@@ -191,7 +191,8 @@ export function invokeDirectiveHook(
     if (oldBindings) {
       const oldBinding = oldBindings[i]
       binding.oldValue = oldBinding.value
-      if (oldBinding._next === null) {
+      // only follow the same directive, the list may change between renders
+      if (oldBinding._next === null && oldBinding.dir === binding.dir) {
         oldBinding._next = vnode
         binding._next = null
       }

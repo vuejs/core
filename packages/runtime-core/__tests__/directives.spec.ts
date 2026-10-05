@@ -539,4 +539,44 @@ describe('directives', () => {
       'updated 1 0',
     ])
   })
+
+  // #15774
+  test('mounted should be called once per directive if the directives change before it runs', async () => {
+    const calls: string[] = []
+    const d1 = {
+      mounted: (_: any, { value }: DirectiveBinding) =>
+        calls.push(`d1 mounted ${value}`),
+    }
+    const d2 = {
+      mounted: (_: any, { value }: DirectiveBinding) =>
+        calls.push(`d2 mounted ${value}`),
+    }
+    const count = ref(0)
+    let resolve: () => void
+    const Async = defineComponent({
+      async setup() {
+        await new Promise<void>(r => (resolve = r))
+        return () => null
+      },
+    })
+    const App = defineComponent(
+      () => () =>
+        h(Suspense, null, {
+          default: () =>
+            h('div', [
+              withDirectives(h('div'), [
+                [count.value ? undefined : d1, count.value],
+                [d2, count.value],
+              ]),
+              h(Async),
+            ]),
+        }),
+    )
+    render(h(App), nodeOps.createElement('div'))
+    count.value = 1
+    await nextTick()
+    resolve!()
+    await new Promise(r => setTimeout(r))
+    expect(calls.sort()).toEqual(['d1 mounted 0', 'd2 mounted 0'])
+  })
 })
