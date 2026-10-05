@@ -350,13 +350,13 @@ function renderElementVNode(
   if (!isVoidTag(tag)) {
     let hasChildrenOverride = false
     if (props) {
-      if (props.innerHTML) {
+      if (props.innerHTML != null) {
         hasChildrenOverride = true
-        push(props.innerHTML)
-      } else if (props.textContent) {
+        push(String(props.innerHTML))
+      } else if (props.textContent != null) {
         hasChildrenOverride = true
         push(escapeHtml(props.textContent))
-      } else if (tag === 'textarea' && props.value) {
+      } else if (tag === 'textarea' && props.value != null) {
         hasChildrenOverride = true
         push(escapeHtml(props.value))
       }
