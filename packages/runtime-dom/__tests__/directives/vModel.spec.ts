@@ -7,6 +7,7 @@ import {
   render,
   vModelCheckbox,
   vModelDynamic,
+  watch,
   withDirectives,
 } from '@vue/runtime-dom'
 
@@ -1901,5 +1902,119 @@ describe('vModel', () => {
     render(h(component), root)
 
     expect(root.querySelector('select').selectedIndex).toBe(1)
+  })
+
+  // #15774
+  describe('value updated in the same flush as mount', () => {
+    // The element is mounted in a flush. A child created in the same render
+    // changes `source`, and a watcher outside of components copies it to the
+    // model, which updates the element before its queued `mounted` hook runs.
+    const mountThenUpdate = async (
+      initial: any,
+      updated: any,
+      renderElement: (model: any, assign: (v: any) => void) => VNode,
+    ) => {
+      const show = ref(false)
+      const source = ref(initial)
+      const model = ref(initial)
+      const stop = watch(source, value => {
+        model.value = value
+      })
+      const Child = defineComponent(() => {
+        source.value = updated
+        return () => null
+      })
+      const App = defineComponent(
+        () => () =>
+          show.value
+            ? [renderElement(model.value, v => (model.value = v)), h(Child)]
+            : null,
+      )
+      render(h(App), root)
+      show.value = true
+      await nextTick()
+      stop()
+      expect(model.value).toEqual(updated)
+    }
+
+    it('text input', async () => {
+      await mountThenUpdate(null, 'Hello', (model, assign) =>
+        withVModel(h('input', { 'onUpdate:modelValue': assign }), model),
+      )
+      expect(root.querySelector('input').value).toEqual('Hello')
+    })
+
+    it('textarea', async () => {
+      await mountThenUpdate('', 'Hello', (model, assign) =>
+        withVModel(h('textarea', { 'onUpdate:modelValue': assign }), model),
+      )
+      expect(root.querySelector('textarea').value).toEqual('Hello')
+    })
+
+    it('checkbox', async () => {
+      await mountThenUpdate(false, true, (model, assign) =>
+        withVModel(
+          h('input', { type: 'checkbox', 'onUpdate:modelValue': assign }),
+          model,
+        ),
+      )
+      expect(root.querySelector('input').checked).toEqual(true)
+    })
+
+    it('checkbox with array value', async () => {
+      await mountThenUpdate([], ['foo'], (model, assign) =>
+        withVModel(
+          h('input', {
+            type: 'checkbox',
+            value: 'foo',
+            'onUpdate:modelValue': assign,
+          }),
+          model,
+        ),
+      )
+      expect(root.querySelector('input').checked).toEqual(true)
+    })
+
+    it('checkbox with unchanged value', async () => {
+      const label = ref('a')
+      await mountThenUpdate('a', 'b', (_, assign) =>
+        withVModel(
+          h('input', {
+            type: 'checkbox',
+            title: label.value,
+            'onUpdate:modelValue': assign,
+          }),
+          true,
+        ),
+      )
+      expect(root.querySelector('input').checked).toEqual(true)
+    })
+
+    it('radio', async () => {
+      await mountThenUpdate(null, 'foo', (model, assign) =>
+        withVModel(
+          h('input', {
+            type: 'radio',
+            value: 'foo',
+            'onUpdate:modelValue': assign,
+          }),
+          model,
+        ),
+      )
+      expect(root.querySelector('input').checked).toEqual(true)
+    })
+
+    it('select', async () => {
+      await mountThenUpdate('a', 'b', (model, assign) =>
+        withVModel(
+          h('select', { 'onUpdate:modelValue': assign }, [
+            h('option', { value: 'a' }, 'A'),
+            h('option', { value: 'b' }, 'B'),
+          ]),
+          model,
+        ),
+      )
+      expect(root.querySelector('select').value).toEqual('b')
+    })
   })
 })

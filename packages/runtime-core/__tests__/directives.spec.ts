@@ -8,6 +8,7 @@ import {
   nodeOps,
   ref,
   render,
+  watch,
   withDirectives,
 } from '@vue/runtime-test'
 import {
@@ -440,5 +441,53 @@ describe('directives', () => {
     const root = nodeOps.createElement('div')
     render(h(App), root)
     expect(d1.mounted).toHaveBeenCalled()
+  })
+
+  // #15774
+  test('mounted should receive the latest binding if updated before it runs', async () => {
+    const calls: string[] = []
+    const dir = {
+      mounted(el: any, { value, oldValue }: DirectiveBinding, vnode: VNode) {
+        calls.push(`mounted ${value} ${oldValue} ${vnode.props!.id}`)
+      },
+      beforeUpdate(_: any, { value, oldValue }: DirectiveBinding) {
+        calls.push(`beforeUpdate ${value} ${oldValue}`)
+      },
+      updated(_: any, { value, oldValue }: DirectiveBinding) {
+        calls.push(`updated ${value} ${oldValue}`)
+      },
+    }
+    const show = ref(false)
+    const source = ref(0)
+    const count = ref(0)
+    // a watcher outside of components runs after the component jobs of the
+    // flush, but before the post-flush queue with the mounted hooks
+    const stop = watch(source, value => {
+      count.value = value
+    })
+    const Child = defineComponent(() => {
+      source.value = 1
+      return () => null
+    })
+    const App = defineComponent(
+      () => () =>
+        show.value
+          ? [
+              withDirectives(h('div', { id: count.value }), [
+                [dir, count.value],
+              ]),
+              h(Child),
+            ]
+          : null,
+    )
+    render(h(App), nodeOps.createElement('div'))
+    show.value = true
+    await nextTick()
+    stop()
+    expect(calls).toEqual([
+      'beforeUpdate 1 0',
+      'mounted 1 undefined 1',
+      'updated 1 0',
+    ])
   })
 })

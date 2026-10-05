@@ -167,18 +167,47 @@ export function withDirectives<T extends VNode>(
   return vnode
 }
 
+interface InternalDirectiveBinding extends DirectiveBinding {
+  /**
+   * null while the element's queued mounted hook has not run yet, then the
+   * vnode of an update that ran before it.
+   * @internal
+   */
+  _next?: VNode | null
+}
+
 export function invokeDirectiveHook(
   vnode: VNode,
   prevVNode: VNode | null,
   instance: ComponentInternalInstance | null,
   name: keyof ObjectDirective,
 ): void {
-  const bindings = vnode.dirs!
-  const oldBindings = prevVNode && prevVNode.dirs!
+  const bindings = vnode.dirs! as InternalDirectiveBinding[]
+  const oldBindings =
+    prevVNode && (prevVNode.dirs! as InternalDirectiveBinding[])
   for (let i = 0; i < bindings.length; i++) {
-    const binding = bindings[i]
+    let binding = bindings[i]
+    let hookVNode = vnode
     if (oldBindings) {
-      binding.oldValue = oldBindings[i].value
+      const oldBinding = oldBindings[i]
+      binding.oldValue = oldBinding.value
+      if (oldBinding._next === null) {
+        oldBinding._next = vnode
+        binding._next = null
+      }
+    } else if (name === 'beforeMount') {
+      binding._next = null
+    } else if (name === 'mounted') {
+      // Updates in the same flush run before the post-flush queue, so pass the
+      // latest binding instead of the one from mount time. #15774
+      let next
+      while ((next = binding._next)) {
+        binding._next = undefined
+        binding = next.dirs![i]
+        hookVNode = next
+      }
+      binding._next = undefined
+      if (hookVNode !== vnode) binding.oldValue = undefined
     }
     let hook = binding.dir[name] as DirectiveHook | DirectiveHook[] | undefined
     if (__COMPAT__ && !hook) {
@@ -191,7 +220,7 @@ export function invokeDirectiveHook(
       callWithAsyncErrorHandling(hook, instance, ErrorCodes.DIRECTIVE_HOOK, [
         vnode.el,
         binding,
-        vnode,
+        hookVNode,
         prevVNode,
       ])
       resetTracking()
