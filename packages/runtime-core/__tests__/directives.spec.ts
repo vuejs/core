@@ -1,6 +1,7 @@
 import {
   type DirectiveBinding,
   type DirectiveHook,
+  Suspense,
   type VNode,
   defineComponent,
   h,
@@ -484,6 +485,54 @@ describe('directives', () => {
     show.value = true
     await nextTick()
     stop()
+    expect(calls).toEqual([
+      'beforeUpdate 1 0',
+      'mounted 1 undefined 1',
+      'updated 1 0',
+    ])
+  })
+
+  // #15774
+  test('mounted should receive the latest binding if updated in a pending Suspense', async () => {
+    const calls: string[] = []
+    const dir = {
+      mounted(el: any, { value, oldValue }: DirectiveBinding, vnode: VNode) {
+        calls.push(`mounted ${value} ${oldValue} ${vnode.props!.id}`)
+      },
+      beforeUpdate(_: any, { value, oldValue }: DirectiveBinding) {
+        calls.push(`beforeUpdate ${value} ${oldValue}`)
+      },
+      updated(_: any, { value, oldValue }: DirectiveBinding) {
+        calls.push(`updated ${value} ${oldValue}`)
+      },
+    }
+    const count = ref(0)
+    let resolve: () => void
+    const Async = defineComponent({
+      async setup() {
+        await new Promise<void>(r => (resolve = r))
+        return () => null
+      },
+    })
+    const App = defineComponent(
+      () => () =>
+        h(Suspense, null, {
+          default: () =>
+            h('div', [
+              withDirectives(h('div', { id: count.value }), [
+                [dir, count.value],
+              ]),
+              h(Async),
+            ]),
+        }),
+    )
+    render(h(App), nodeOps.createElement('div'))
+    // the pending branch is patched while its mounted hooks are deferred
+    count.value = 1
+    await nextTick()
+    expect(calls).toEqual(['beforeUpdate 1 0'])
+    resolve!()
+    await new Promise(r => setTimeout(r))
     expect(calls).toEqual([
       'beforeUpdate 1 0',
       'mounted 1 undefined 1',
