@@ -362,4 +362,71 @@ describe('directive: v-show', () => {
     expect(shown.vdom).toEqual(['width: 2px; display: flex !important;'])
     expect(shown.vapor).toEqual(shown.vdom)
   })
+  test('applies through a Transition wrapping a slot like vdom', async () => {
+    const shown: Record<string, string[]> = { vdom: [], vapor: [] }
+    await renderParity(
+      {
+        Fade: `<template><Transition name="fade"><slot /></Transition></template>`,
+        App: `<template><components.Fade v-show="data.show"><p>x</p></components.Fade></template>`,
+      },
+      () => ref({ show: false }),
+      async (data, root, mode) => {
+        const p = root.querySelector('p')!
+        shown[mode].push(p.style.display)
+        data.value.show = true
+        await nextTick()
+        shown[mode].push(p.style.display)
+      },
+    )
+    expect(shown.vdom).toEqual(['none', ''])
+    expect(shown.vapor).toEqual(shown.vdom)
+  })
+  test('follows a Transition slot root across re-renders like vdom', async () => {
+    const seen: Record<string, unknown[]> = { vdom: [], vapor: [] }
+    await renderParity(
+      {
+        Fade: `<template><Transition name="fade"><slot v-if="data.on" /></Transition></template>`,
+        App: `<template><components.Fade v-show="data.show"><p v-if="data.a">a</p><span v-else>b</span></components.Fade></template>`,
+      },
+      () => ref({ on: false, a: true, show: true }),
+      async (data, root, mode) => {
+        const get = (sel: string) => root.querySelector(sel) as HTMLElement
+        data.value.on = true
+        await nextTick()
+        // v-show on the wrapper does not make the root persisted
+        seen[mode].push(get('p').classList.contains('fade-enter-active'))
+        data.value.a = false
+        await nextTick()
+        seen[mode].push(get('p').classList.contains('fade-leave-active'))
+        seen[mode].push(get('span').classList.contains('fade-enter-active'))
+        data.value.show = false
+        await nextTick()
+        for (let i = 0; i < 50 && get('span').style.display !== 'none'; i++) {
+          await new Promise(r => setTimeout(r, 10))
+        }
+        seen[mode].push(get('span').style.display)
+      },
+    )
+    expect(seen.vdom).toEqual([true, true, true, 'none'])
+    expect(seen.vapor).toEqual(seen.vdom)
+  })
+  test('keeps a slot root hidden by its own v-show under a Transition wrapper', async () => {
+    const shown: Record<string, string[]> = { vdom: [], vapor: [] }
+    await renderParity(
+      {
+        Collapse: `<template><Transition name="collapse"><slot /></Transition></template>`,
+        App: `<template><components.Collapse v-show="data.enabled"><section v-show="data.open">x</section></components.Collapse></template>`,
+      },
+      () => ref({ enabled: true, open: false }),
+      async (data, root, mode) => {
+        const el = root.querySelector('section')!
+        shown[mode].push(el.style.display)
+        data.value.open = true
+        await nextTick()
+        shown[mode].push(el.style.display)
+      },
+    )
+    expect(shown.vdom).toEqual(['none', ''])
+    expect(shown.vapor).toEqual(shown.vdom)
+  })
 })

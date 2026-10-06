@@ -19,7 +19,7 @@ import {
 import { isSlotOutletFragment } from '../fragment'
 import { isHydrating } from '../dom/hydration'
 import { isInteropEnabled } from '../vdomInteropState'
-import { isTransitionEnabled } from '../transition'
+import { isTransitionEnabled, isVaporTransition } from '../transition'
 import { isSuspenseEnabled } from '../suspense'
 
 /**
@@ -37,6 +37,8 @@ export function applyVShow(target: Block, source: () => any): void {
   let unresolved = false
   // a slot outlet is a fragment root in vdom: nothing for v-show to land on
   let slotRoot = false
+  // ...except directly under Transition, which renders its slot as its root
+  let inTransition = false
 
   const visitor: RootChainVisitor = {
     onComponent(instance) {
@@ -56,8 +58,14 @@ export function applyVShow(target: Block, source: () => any): void {
         return true
       }
       mark(instance)
+      inTransition = isTransitionEnabled && isVaporTransition(instance.type)
     },
     onDynamicFragment(frag) {
+      if (inTransition) {
+        // vdom flattens it into Transition's child, which stays unpersisted
+        register((frag.bm ||= []), applyInTransition)
+        return
+      }
       if (isSlotOutletFragment(frag)) return (slotRoot = true)
       mark(frag)
       register((frag.bm ||= []), apply)
@@ -74,9 +82,10 @@ export function applyVShow(target: Block, source: () => any): void {
     }
   }
 
-  const apply = (nodes: Block): void => {
+  const apply = (nodes: Block, transitionSlot = false): void => {
     transition = undefined
     unresolved = slotRoot = false
+    inTransition = transitionSlot
     const root = getRootElement(nodes, visitor)
     if (root) {
       setDisplay(root as VShowElement, value, transition)
@@ -87,6 +96,9 @@ export function applyVShow(target: Block, source: () => any): void {
       )
     }
   }
+
+  // a branch swapped under Transition re-enters with its context
+  const applyInTransition = (nodes: Block) => apply(nodes, true)
 
   renderEffect(() => {
     value = source()
@@ -121,6 +133,10 @@ function setDisplay(
   }
 
   if (el[vShowHidden] === hidden) return
+  // like vdom's beforeMount, a shown element is left to a Transition that
+  // has not mounted yet: one another v-show already hid stays hidden
+  const own = isTransitionEnabled && (el as TransitionBlock).$transition
+  if (own && value && !own.state.isMounted) return
   el[vShowHidden] = hidden
 
   const $transition = isTransitionEnabled
