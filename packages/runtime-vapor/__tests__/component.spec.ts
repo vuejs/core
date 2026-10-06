@@ -26,7 +26,12 @@ import {
   template,
   txt,
 } from '../src'
-import { compile, compileToVaporRender, makeRender } from './_utils'
+import {
+  compile,
+  compileToVaporRender,
+  makeRender,
+  renderParity,
+} from './_utils'
 import { type VaporComponentInstance, currentInstance } from '../src/component'
 import { setElementText, setText } from '../src/dom/prop'
 import { enableSuspense } from '../src/suspense'
@@ -1036,6 +1041,38 @@ describe('component', () => {
     app.unmount()
     expect(dispose).toHaveBeenCalledTimes(1)
     expect(unmounted).not.toHaveBeenCalled()
+  })
+
+  it('resolves setup component bindings in the same order as VDOM', async () => {
+    const result = await renderParity(
+      {
+        Chosen: '<template><span>chosen</span></template>',
+        Other: '<template><span>other</span></template>',
+        LetCollision: `<script setup>
+          const Foo = { ..._components.Chosen }
+          let foo = _components.Other
+          </script>
+          <template><foo /></template>`,
+        PropCollision: `<script setup>
+          const Foo = { ..._components.Chosen }
+          defineProps(['foo'])
+          </script>
+          <template><foo /></template>`,
+        App: `<script setup>
+          const LetCollision = _components.LetCollision
+          const PropCollision = _components.PropCollision
+          const Other = _components.Other
+          </script>
+          <template><div><LetCollision /><PropCollision :foo="Other" /></div></template>`,
+      },
+      () => ref(null),
+      () => {},
+    )
+
+    expect(result.vapor.after).toBe(result.vdom.after)
+    expect(result.vapor.after).toBe(
+      '<div><span>chosen</span><span>chosen</span></div>',
+    )
   })
 })
 

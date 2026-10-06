@@ -208,6 +208,11 @@ export function compileScript(
     if (!script) {
       throw new Error(`[@vue/compiler-sfc] SFC contains no <script> tags.`)
     }
+    if (vapor) {
+      throw new Error(
+        `[@vue/compiler-sfc] Vapor components with a normal <script> must also include <script setup>, <script vapor>, or <script setup vapor>.`,
+      )
+    }
 
     // normal <script> only
     if (script.lang && !isJSOrTS) {

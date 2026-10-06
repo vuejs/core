@@ -1,5 +1,6 @@
 import {
   type AttributeNode,
+  BindingTypes,
   type ComponentNode,
   type ElementNode,
   ElementTypes,
@@ -172,7 +173,7 @@ export const transformElement: NodeTransform = (node, context) => {
   if (
     node.type === NodeTypes.ELEMENT &&
     (node.tagType === ElementTypes.COMPONENT ||
-      context.options.isCustomElement(node.tag))
+      shouldUseCreateElement(node, context as TransformContext<ElementNode>))
   ) {
     parentSlots = context.slots
     context.slots = []
@@ -493,13 +494,27 @@ function resolveSetupReference(name: string, context: TransformContext) {
 
   const camelName = camelize(name)
   const PascalName = capitalize(camelName)
-  return bindings[name]
-    ? name
-    : bindings[camelName]
-      ? camelName
-      : bindings[PascalName]
-        ? PascalName
-        : undefined
+  const checkType = (type: BindingTypes) => {
+    if (bindings[name] === type) {
+      return name
+    }
+    if (bindings[camelName] === type) {
+      return camelName
+    }
+    if (bindings[PascalName] === type) {
+      return PascalName
+    }
+  }
+
+  return (
+    checkType(BindingTypes.SETUP_CONST) ||
+    checkType(BindingTypes.SETUP_REACTIVE_CONST) ||
+    checkType(BindingTypes.LITERAL_CONST) ||
+    checkType(BindingTypes.SETUP_LET) ||
+    checkType(BindingTypes.SETUP_REF) ||
+    checkType(BindingTypes.SETUP_MAYBE_REF) ||
+    checkType(BindingTypes.PROPS)
+  )
 }
 
 // keys cannot be a part of the template and need to be set dynamically

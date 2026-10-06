@@ -1294,4 +1294,19 @@ describe('compiler: transform slot', () => {
     expect(code).toContain('_toDisplayString(s)')
     expect(code).toContain('_toDisplayString(s1)')
   })
+
+  test('plain template after a named slot template', () => {
+    const { code } = compileWithSlots(
+      `<Comp><template #a>x</template><template>y</template></Comp>`,
+    )
+    expect(code).toContain('"a": () => {')
+    expect(code).toContain('"default": () => {')
+    expect(code).toContain('_createPlainElement("template")\n')
+
+    // a dynamic slot does not overflow but still leaked into the element
+    const { code: dynamic } = compileWithSlots(
+      `<Comp><template v-if="ok" #a>x</template><template>y</template></Comp>`,
+    )
+    expect(dynamic).toContain('_createPlainElement("template")\n')
+  })
 })
