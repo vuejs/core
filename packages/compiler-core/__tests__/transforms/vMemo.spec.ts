@@ -21,6 +21,27 @@ describe('compiler: v-memo transform', () => {
     expect(compile(`<div v-memo="[x]"></div>`)).toMatchSnapshot()
   })
 
+  test('on normal element with dynamic key', () => {
+    const code = compile(`<div v-memo="[updateKey]" :key="updateKey"></div>`)
+
+    expect(code).toContain(`_withMemo([_ctx.updateKey]`)
+    expect(code).toContain(`{ key: _ctx.updateKey }`)
+  })
+
+  test('on normal element with dynamic key nested in v-for', () => {
+    const code = compile(
+      `<div v-for="item in items">
+        <div
+          v-memo="[item.id, updateKey]"
+          :key="get(item, updateKey)"
+        >{{ item }}</div>
+      </div>`,
+    )
+
+    expect(code).toContain(`_withMemo([item.id, _ctx.updateKey]`)
+    expect(code).toContain(`key: _ctx.get(item, _ctx.updateKey)`)
+  })
+
   test('on component', () => {
     expect(compile(`<Comp v-memo="[x]"></Comp>`)).toMatchSnapshot()
   })

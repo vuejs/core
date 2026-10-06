@@ -161,6 +161,13 @@ describe(`runtime-dom: style patching`, () => {
     expect(el.style.getPropertyValue('--theme')).toBe('red')
   })
 
+  it('CSS custom properties with !important', () => {
+    const setProperty = vi.fn()
+    const el = { style: { setProperty } }
+    patchProp(el as any, 'style', {}, { '--theme': 'red !important' } as any)
+    expect(setProperty).toHaveBeenCalledWith('--theme', 'red', 'important')
+  })
+
   it('auto vendor prefixing', () => {
     const el = mockElementWithStyle()
     patchProp(el as any, 'style', {}, { transition: 'all 1s' })

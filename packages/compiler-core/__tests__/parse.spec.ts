@@ -2597,6 +2597,16 @@ describe('compiler: parse', () => {
           code: '<template><svg><![CDATA[cdata]]></svg></template>',
           errors: [],
         },
+        {
+          // invalid root-level CDATA should report a parser error
+          code: '<![CDATA[cdata]]>',
+          errors: [
+            {
+              type: ErrorCodes.CDATA_IN_HTML_CONTENT,
+              loc: { offset: 0, line: 1, column: 1 },
+            },
+          ],
+        },
       ],
       DUPLICATE_ATTRIBUTE: [
         {

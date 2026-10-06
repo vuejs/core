@@ -74,8 +74,7 @@ export const transformOn: DirectiveTransform = (
 
   // handler processing
   let exp: ExpressionNode | undefined = dir.exp as
-    | SimpleExpressionNode
-    | undefined
+    SimpleExpressionNode | undefined
   if (exp && !exp.content.trim()) {
     exp = undefined
   }

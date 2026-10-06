@@ -1,15 +1,94 @@
-import { isArray, isDate, isObject, isSymbol } from './general'
+import { isArray, isDate, isMap, isObject, isSet, isSymbol } from './general'
 
-function looseCompareArrays(a: any[], b: any[]) {
+type ComparisonState = [Map<any, any>, Map<any, any>]
+
+function looseCompareArrays(a: any[], b: any[], seen: ComparisonState) {
   if (a.length !== b.length) return false
   let equal = true
   for (let i = 0; equal && i < a.length; i++) {
-    equal = looseEqual(a[i], b[i])
+    equal = looseEqual(a[i], b[i], seen)
   }
   return equal
 }
 
-export function looseEqual(a: any, b: any): boolean {
+function looseCompareCollections(
+  a: Map<any, any> | Set<any>,
+  b: Map<any, any> | Set<any>,
+  seen: ComparisonState,
+) {
+  if (a.size !== b.size) return false
+  const candidates = Array.from(b)
+  const matched = new Uint8Array(candidates.length)
+  for (const item of a) {
+    let index = -1
+    for (let i = 0; i < candidates.length; i++) {
+      if (!matched[i] && looseEqual(item, candidates[i], seen)) {
+        index = i
+        break
+      }
+    }
+    if (index < 0) return false
+    matched[index] = 1
+  }
+  return true
+}
+
+function looseCompareObjects(a: any, b: any, seen: ComparisonState) {
+  let aValidType = isMap(a)
+  let bValidType = isMap(b)
+  if (aValidType || bValidType) {
+    return aValidType && bValidType
+      ? looseCompareCollections(a, b, seen)
+      : false
+  }
+  aValidType = isSet(a)
+  bValidType = isSet(b)
+  if (aValidType || bValidType) {
+    return aValidType && bValidType
+      ? looseCompareCollections(a, b, seen)
+      : false
+  }
+  const aKeysCount = Object.keys(a).length
+  const bKeysCount = Object.keys(b).length
+  if (aKeysCount !== bKeysCount) {
+    return false
+  }
+  for (const key in a) {
+    const aHasKey = a.hasOwnProperty(key)
+    const bHasKey = b.hasOwnProperty(key)
+    if (
+      (aHasKey && !bHasKey) ||
+      (!aHasKey && bHasKey) ||
+      !looseEqual(a[key], b[key], seen)
+    ) {
+      return false
+    }
+  }
+  return String(a) === String(b)
+}
+
+function looseCompareNested(
+  a: any,
+  b: any,
+  seen: ComparisonState | undefined,
+  compare: (a: any, b: any, seen: ComparisonState) => boolean,
+) {
+  if (!seen) {
+    seen = [new Map(), new Map()]
+  }
+  const [seenA, seenB] = seen
+  if (seenA.has(a) || seenB.has(b)) {
+    return seenA.get(a) === b && seenB.get(b) === a
+  }
+  seenA.set(a, b)
+  seenB.set(b, a)
+  const equal = compare(a, b, seen)
+  seenA.delete(a)
+  seenB.delete(b)
+  return equal
+}
+
+export function looseEqual(a: any, b: any, seen?: ComparisonState): boolean {
   if (a === b) return true
   let aValidType = isDate(a)
   let bValidType = isDate(b)
@@ -24,7 +103,9 @@ export function looseEqual(a: any, b: any): boolean {
   aValidType = isArray(a)
   bValidType = isArray(b)
   if (aValidType || bValidType) {
-    return aValidType && bValidType ? looseCompareArrays(a, b) : false
+    return aValidType && bValidType
+      ? looseCompareNested(a, b, seen, looseCompareArrays)
+      : false
   }
   aValidType = isObject(a)
   bValidType = isObject(b)
@@ -32,22 +113,7 @@ export function looseEqual(a: any, b: any): boolean {
     if (!aValidType || !bValidType) {
       return false
     }
-    const aKeysCount = Object.keys(a).length
-    const bKeysCount = Object.keys(b).length
-    if (aKeysCount !== bKeysCount) {
-      return false
-    }
-    for (const key in a) {
-      const aHasKey = a.hasOwnProperty(key)
-      const bHasKey = b.hasOwnProperty(key)
-      if (
-        (aHasKey && !bHasKey) ||
-        (!aHasKey && bHasKey) ||
-        !looseEqual(a[key], b[key])
-      ) {
-        return false
-      }
-    }
+    return looseCompareNested(a, b, seen, looseCompareObjects)
   }
   return String(a) === String(b)
 }

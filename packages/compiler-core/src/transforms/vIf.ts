@@ -290,8 +290,7 @@ function createChildrenCodegenNode(
     }
   } else {
     const ret = (firstChild as ElementNode).codegenNode as
-      | BlockCodegenNode
-      | MemoExpression
+      BlockCodegenNode | MemoExpression
     const vnodeCall = getMemoedVNodeCall(ret)
     // Change createVNode to createBlock.
     if (vnodeCall.type === NodeTypes.VNODE_CALL) {

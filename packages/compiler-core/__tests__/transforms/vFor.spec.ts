@@ -918,6 +918,34 @@ describe('compiler: v-for', () => {
       expect(generate(root).code).toMatchSnapshot()
     })
 
+    test('template v-for key injection with single slot child', () => {
+      const {
+        root,
+        node: { codegenNode },
+      } = parseWithForTransform(
+        '<template v-for="item in items" :key="item.id"><slot/></template>',
+      )
+      expect(
+        assertSharedCodegen(codegenNode, true, true /* custom return */),
+      ).toMatchObject({
+        source: { content: `items` },
+        params: [{ content: `item` }],
+        returns: {
+          type: NodeTypes.JS_CALL_EXPRESSION,
+          callee: RENDER_SLOT,
+          arguments: [
+            '$slots',
+            '"default"',
+            '{}',
+            'undefined',
+            'undefined',
+            { content: 'item.id' },
+          ],
+        },
+      })
+      expect(generate(root).code).toMatchSnapshot()
+    })
+
     // #1907
     test('template v-for key injection with single child', () => {
       const {

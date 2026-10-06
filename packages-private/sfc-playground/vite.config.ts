@@ -34,7 +34,11 @@ function copyVuePlugin(): Plugin {
     name: 'copy-vue',
     generateBundle() {
       const copyFile = (file: string) => {
-        const filePath = path.resolve(__dirname, '../../packages', file)
+        const filePath = path.resolve(
+          import.meta.dirname,
+          '../../packages',
+          file,
+        )
         const basename = path.basename(file)
         if (!fs.existsSync(filePath)) {
           throw new Error(

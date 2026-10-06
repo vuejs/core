@@ -206,10 +206,7 @@ export function triggerRef(ref: Ref): void {
 }
 
 export type MaybeRef<T = any> =
-  | T
-  | Ref<T>
-  | ShallowRef<T>
-  | WritableComputedRef<T>
+  T | Ref<T> | ShallowRef<T> | WritableComputedRef<T>
 
 export type MaybeRefOrGetter<T = any> = MaybeRef<T> | ComputedRef<T> | (() => T)
 

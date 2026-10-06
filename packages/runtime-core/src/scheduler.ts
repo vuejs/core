@@ -133,8 +133,13 @@ export function queuePostFlushCb(cb: SchedulerJobs): void {
   } else {
     // if cb is an array, it is a component lifecycle hook which can only be
     // triggered by a job, which is already deduped in the main queue, so
-    // we can skip duplicate check here to improve perf
-    pendingPostFlushCbs.push(...cb)
+    // we can skip duplicate check here to improve perf.
+    // use a loop instead of `push(...cb)`: the array can be arbitrarily large
+    // (e.g. effects buffered by a suspense boundary) and spreading it would
+    // overflow the call stack (#15142)
+    for (let i = 0; i < cb.length; i++) {
+      pendingPostFlushCbs.push(cb[i])
+    }
   }
   queueFlush()
 }
@@ -179,7 +184,9 @@ export function flushPostFlushCbs(seen?: CountMap): void {
 
     // #1947 already has active queue, nested flushPostFlushCbs call
     if (activePostFlushCbs) {
-      activePostFlushCbs.push(...deduped)
+      for (let i = 0; i < deduped.length; i++) {
+        activePostFlushCbs.push(deduped[i])
+      }
       return
     }
 

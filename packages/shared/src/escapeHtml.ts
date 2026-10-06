@@ -45,10 +45,15 @@ export function escapeHtml(string: unknown): string {
 }
 
 // https://www.w3.org/TR/html52/syntax.html#comments
-const commentStripRE = /^-?>|<!--|-->|--!>|<!-$/g
+const commentStripRE = /^(?:-?>)+|<!--|-->|--!>|<!-$/g
 
 export function escapeHtmlComment(src: string): string {
-  return src.replace(commentStripRE, '')
+  let prev: string
+  do {
+    prev = src
+    src = src.replace(commentStripRE, '')
+  } while (src !== prev)
+  return src
 }
 
 export const cssVarNameEscapeSymbolsRE: RegExp =

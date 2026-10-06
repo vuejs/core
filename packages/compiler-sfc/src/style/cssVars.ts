@@ -67,9 +67,7 @@ export function parseCssVars(sfc: SFCDescriptor): string[] {
   const vars: string[] = []
   sfc.styles.forEach(style => {
     let match
-    // ignore v-bind() in comments, eg /* ... */
-    // and // (Less, Sass and Stylus all support the use of // to comment)
-    const content = style.content.replace(/\/\*([\s\S]*?)\*\/|\/\/.*/g, '')
+    const content = stripComments(style.content)
     while ((match = vBindRE.exec(content))) {
       const start = match.index + match[0].length
       const end = lexBinding(content, start)
@@ -82,6 +80,145 @@ export function parseCssVars(sfc: SFCDescriptor): string[] {
     }
   })
   return vars
+}
+
+enum CharCodes {
+  Tab = 0x9,
+  NewLine = 0xa,
+  FormFeed = 0xc,
+  CarriageReturn = 0xd,
+  Space = 0x20,
+  DoubleQuote = 0x22,
+  SingleQuote = 0x27,
+  LeftParen = 0x28,
+  RightParen = 0x29,
+  Asterisk = 0x2a,
+  Dash = 0x2d,
+  Slash = 0x2f,
+  Zero = 0x30,
+  Nine = 0x39,
+  UpperA = 0x41,
+  UpperZ = 0x5a,
+  Backslash = 0x5c,
+  Underscore = 0x5f,
+  LowerA = 0x61,
+  LowerL = 0x6c,
+  LowerR = 0x72,
+  LowerU = 0x75,
+  LowerZ = 0x7a,
+}
+
+// chars that can start a comment, a string, an escape or close `url(`
+const cssSpecialRE = /[/"'\\(]/g
+
+// Removes block comments and `//` comments (Less, Sass and Stylus all support
+// `//`) so v-bind() inside them is ignored. Strings and unquoted url() are
+// kept verbatim since they may legitimately contain comment delimiters.
+function stripComments(content: string): string {
+  const len = content.length
+  let out = ''
+  let last = 0
+  let i = 0
+  cssSpecialRE.lastIndex = 0
+  while (cssSpecialRE.test(content)) {
+    i = cssSpecialRE.lastIndex - 1
+    const c = content.charCodeAt(i)
+    if (c === CharCodes.Slash) {
+      const next = content.charCodeAt(i + 1)
+      if (next === CharCodes.Asterisk) {
+        out += content.slice(last, i)
+        const end = content.indexOf('*/', i + 2)
+        i = last = end === -1 ? len : end + 2
+      } else if (next === CharCodes.Slash) {
+        out += content.slice(last, i)
+        i += 2
+        while (i < len && !isNewline(content.charCodeAt(i))) i++
+        last = i
+      } else {
+        i++
+      }
+    } else if (c === CharCodes.DoubleQuote || c === CharCodes.SingleQuote) {
+      i = skipString(content, i + 1, c)
+    } else if (c === CharCodes.Backslash) {
+      i += 2
+    } else if (isUrlFunction(content, i)) {
+      i = skipUrl(content, i + 1)
+    } else {
+      i++
+    }
+    cssSpecialRE.lastIndex = i
+  }
+  return last === 0 ? content : out + content.slice(last)
+}
+
+// an unterminated string ends at the newline, matching CSS bad-string;
+// an escaped newline (including CRLF) is a continuation
+function skipString(s: string, i: number, quote: number): number {
+  while (i < s.length) {
+    const c = s.charCodeAt(i)
+    if (c === quote) return i + 1
+    if (isNewline(c)) return i
+    if (c === CharCodes.Backslash) {
+      i +=
+        s.charCodeAt(i + 1) === CharCodes.CarriageReturn &&
+        s.charCodeAt(i + 2) === CharCodes.NewLine
+          ? 3
+          : 2
+    } else {
+      i++
+    }
+  }
+  return i
+}
+
+// i is at `(`; `url` must be a whole identifier so that e.g. `my-url(` and
+// `my\url(` are not mistaken for url()
+function isUrlFunction(s: string, i: number): boolean {
+  const prev = s.charCodeAt(i - 4)
+  return (
+    (s.charCodeAt(i - 3) | 0x20) === CharCodes.LowerU &&
+    (s.charCodeAt(i - 2) | 0x20) === CharCodes.LowerR &&
+    (s.charCodeAt(i - 1) | 0x20) === CharCodes.LowerL &&
+    prev !== CharCodes.Backslash &&
+    !isIdentChar(prev)
+  )
+}
+
+// i is right after `url(`; a quoted url is left to the string scanner
+function skipUrl(s: string, i: number): number {
+  while (isWhitespace(s.charCodeAt(i))) i++
+  const c = s.charCodeAt(i)
+  if (c === CharCodes.DoubleQuote || c === CharCodes.SingleQuote) return i
+  while (i < s.length) {
+    const c = s.charCodeAt(i)
+    if (c === CharCodes.RightParen) return i + 1
+    i += c === CharCodes.Backslash ? 2 : 1
+  }
+  return i
+}
+
+function isIdentChar(c: number): boolean {
+  return (
+    (c >= CharCodes.LowerA && c <= CharCodes.LowerZ) ||
+    (c >= CharCodes.UpperA && c <= CharCodes.UpperZ) ||
+    (c >= CharCodes.Zero && c <= CharCodes.Nine) ||
+    c === CharCodes.Dash ||
+    c === CharCodes.Underscore ||
+    c >= 0x80
+  )
+}
+
+function isNewline(c: number): boolean {
+  return c === CharCodes.NewLine || c === CharCodes.CarriageReturn
+}
+
+function isWhitespace(c: number): boolean {
+  return (
+    c === CharCodes.Space ||
+    c === CharCodes.Tab ||
+    c === CharCodes.FormFeed ||
+    isNewline(c)
+  )
 }
 
 enum LexerState {
@@ -202,12 +339,7 @@ export function genNormalScriptCssVarsCode(
 ): string {
   return (
     `\nimport { ${CSS_VARS_HELPER} as _${CSS_VARS_HELPER} } from 'vue'\n` +
-    `const __injectCSSVars__ = () => {\n${genCssVarsCode(
-      cssVars,
-      bindings,
-      id,
-      isProd,
-    )}}\n` +
+    `const __injectCSSVars__ = () => {\n${genCssVarsCode(cssVars, bindings, id, isProd)}}\n` +
     `const __setup__ = ${defaultVar}.setup\n` +
     `${defaultVar}.setup = __setup__\n` +
     `  ? (props, ctx) => { __injectCSSVars__();return __setup__(props, ctx) }\n` +

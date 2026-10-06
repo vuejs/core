@@ -403,6 +403,19 @@ function baseCreateRenderer(
       n2.dynamicChildren = null
     }
 
+    // Cached v-once nodes skip block tracking on subsequent renders.
+    if (
+      n2.dynamicChildren &&
+      n1 &&
+      n1.dynamicChildren &&
+      n1.dynamicChildren.hasOnce
+    ) {
+      if (n2.dynamicChildren === (EMPTY_ARR as any)) {
+        n2.dynamicChildren = []
+      }
+      n2.dynamicChildren.hasOnce = true
+    }
+
     const { type, ref, shapeFlag } = n2
     switch (type) {
       case Text:
@@ -855,8 +868,15 @@ function baseCreateRenderer(
     }
     parentComponent && toggleRecurse(parentComponent, true)
 
-    if (__DEV__ && isHmrUpdating) {
+    if (
       // HMR updated, force full diff
+      (__DEV__ && isHmrUpdating) ||
+      // #6385 the old vnode may be a user-wrapped non-isomorphic block
+      // Force full diff when block metadata is unstable.
+      (dynamicChildren &&
+        (!n1.dynamicChildren ||
+          n1.dynamicChildren.length !== dynamicChildren.length))
+    ) {
       patchFlag = 0
       optimized = false
       dynamicChildren = null
@@ -1281,10 +1301,13 @@ function baseCreateRenderer(
         !instance.asyncResolved
       ) {
         // async & still pending - just update props and slots
-        // since the component's reactive effect for render isn't set-up yet
+        // since the component's reactive effect for render isn't set-up yet.
+        // carry over the el adopted during hydration: if hydration is
+        // interrupted, teardown of the claimed DOM depends on it
         if (__DEV__) {
           pushWarningContext(n2)
         }
+        n2.el = n1.el
         updateComponentPreRender(instance, n2, optimized)
         if (__DEV__) {
           popWarningContext()
@@ -2151,7 +2174,10 @@ function baseCreateRenderer(
       memo,
     } = vnode
 
-    if (patchFlag === PatchFlags.BAIL) {
+    if (
+      patchFlag === PatchFlags.BAIL ||
+      (dynamicChildren && dynamicChildren.hasOnce)
+    ) {
       optimized = false
     }
 
@@ -2163,7 +2189,8 @@ function baseCreateRenderer(
     }
 
     // #6593 should clean memo cache when unmount
-    if (cacheIndex != null) {
+    // Slot receivers must not invalidate caches owned by the slot author.
+    if (cacheIndex != null && (!vnode.ctx || vnode.ctx === parentComponent)) {
       parentComponent!.renderCache[cacheIndex] = undefined
     }
 
@@ -2284,6 +2311,11 @@ function baseCreateRenderer(
 
     if (type === Static) {
       removeStaticNode(vnode)
+      // An opaque hydration placeholder cannot animate, but its removal must
+      // still release an out-in transition waiting for the claimed DOM.
+      if (transition && !transition.persisted && transition.afterLeave) {
+        transition.afterLeave()
+      }
       return
     }
 
@@ -2356,6 +2388,12 @@ function baseCreateRenderer(
     if (job) {
       // so that scheduler will no longer invoke it
       job.flags! |= SchedulerJobFlags.DISPOSED
+      unmount(subTree, instance, parentSuspense, doRemove)
+    } else if (instance.vnode.el && subTree) {
+      // hydration was interrupted before this component rendered (`vnode.el`
+      // is only set this early when hydrating) - unmount the placeholder
+      // covering the claimed DOM, carrying the root's transition hooks
+      subTree.transition = instance.vnode.transition
       unmount(subTree, instance, parentSuspense, doRemove)
     }
     // unmounted hook

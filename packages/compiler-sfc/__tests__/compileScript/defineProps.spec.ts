@@ -45,6 +45,21 @@ const bar = 1
   props: propsModel,`)
   })
 
+  // #12254
+  test('w/ leading intersection type ignore', () => {
+    const { content, bindings } = compile(`<script setup lang="ts">
+type Foo = { foo: number }
+type Bar = { bar: boolean }
+defineProps</* @vue-ignore */ Foo & Bar>()
+</script>`)
+
+    expect(content).not.toMatch(`foo: { type`)
+    expect(content).toMatch(`bar: { type: Boolean, required: true }`)
+    expect(bindings).toStrictEqual({
+      bar: BindingTypes.PROPS,
+    })
+  })
+
   // #4764
   test('w/ leading code', () => {
     const { content } = compile(`

@@ -34,7 +34,8 @@ import {
   warnDeprecation,
 } from './compat/compatConfig'
 import { shallowReadonly } from '@vue/reactivity'
-import { setTransitionHooks } from './components/BaseTransition'
+import { getInnerChild, setTransitionHooks } from './components/BaseTransition'
+import { isTeleport } from './components/Teleport'
 
 /**
  * dev only flag to track whether $attrs was used during render.
@@ -255,13 +256,14 @@ export function renderComponentRoot(
   }
   // inherit transition data
   if (vnode.transition) {
-    if (__DEV__ && !isElementRoot(root)) {
+    const child = isTeleport(root.type) ? getInnerChild(root) || root : root
+    if (__DEV__ && !isElementRoot(child)) {
       warn(
         `Component inside <Transition> renders non-element root node ` +
           `that cannot be animated.`,
       )
     }
-    setTransitionHooks(root, vnode.transition)
+    setTransitionHooks(child, vnode.transition)
   }
 
   if (__DEV__ && setRoot) {

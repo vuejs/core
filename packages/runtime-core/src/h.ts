@@ -61,12 +61,7 @@ type RawProps = VNodeProps & {
 } & Record<string, any>
 
 type RawChildren =
-  | string
-  | number
-  | boolean
-  | VNode
-  | VNodeArrayChildren
-  | (() => any)
+  string | number | boolean | VNode | VNodeArrayChildren | (() => any)
 
 // fake constructor type returned from `defineComponent`
 interface Constructor<P = any> {

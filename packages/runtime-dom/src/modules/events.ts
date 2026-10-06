@@ -67,17 +67,19 @@ export function patchEvent(
   }
 }
 
-const optionsModifierRE = /(?:Once|Passive|Capture)$/
+const optionsModifierRE = /(Once|Passive|Capture)$/
+const optionsModifierEventRE = /^on:?(?:Once|Passive|Capture)$/
 
 function parseName(name: string): [string, EventListenerOptions | undefined] {
   let options: EventListenerOptions | undefined
-  if (optionsModifierRE.test(name)) {
-    options = {}
-    let m
-    while ((m = name.match(optionsModifierRE))) {
-      name = name.slice(0, name.length - m[0].length)
-      ;(options as any)[m[0].toLowerCase()] = true
-    }
+  let m
+  while (
+    (m = name.match(optionsModifierRE)) &&
+    !optionsModifierEventRE.test(name)
+  ) {
+    if (!options) options = {}
+    name = name.slice(0, name.length - m[1].length)
+    ;(options as any)[m[1].toLowerCase()] = true
   }
   const event = name[2] === ':' ? name.slice(3) : hyphenate(name.slice(2))
   return [event, options]

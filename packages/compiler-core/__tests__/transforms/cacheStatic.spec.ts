@@ -167,9 +167,7 @@ describe('compiler: cacheStatic transform', () => {
             ],
           },
         },
-        {
-          /* _ slot flag */
-        },
+        {/* _ slot flag */},
       ],
     })
   })
@@ -194,9 +192,7 @@ describe('compiler: cacheStatic transform', () => {
             },
           },
         },
-        {
-          /* _ slot flag */
-        },
+        {/* _ slot flag */},
       ],
     })
   })
@@ -225,9 +221,7 @@ describe('compiler: cacheStatic transform', () => {
             ],
           },
         },
-        {
-          /* _ slot flag */
-        },
+        {/* _ slot flag */},
       ],
     })
   })
@@ -254,9 +248,7 @@ describe('compiler: cacheStatic transform', () => {
             },
           },
         },
-        {
-          /* _ slot flag */
-        },
+        {/* _ slot flag */},
       ],
     })
   })
@@ -283,9 +275,7 @@ describe('compiler: cacheStatic transform', () => {
             },
           },
         },
-        {
-          /* _ slot flag */
-        },
+        {/* _ slot flag */},
       ],
     })
   })
@@ -313,9 +303,7 @@ describe('compiler: cacheStatic transform', () => {
             },
           },
         },
-        {
-          /* _ slot flag */
-        },
+        {/* _ slot flag */},
       ],
     })
   })
