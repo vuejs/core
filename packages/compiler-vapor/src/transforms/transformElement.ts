@@ -11,7 +11,7 @@ import {
   advancePositionWithClone,
   createCompilerError,
   createSimpleExpression,
-  findDir,
+  extractIdentifiers,
   hasDynamicKeyVBind,
   isSimpleIdentifier,
   isStaticArgOf,
@@ -64,6 +64,7 @@ import {
 } from '../ir'
 import { EMPTY_EXPRESSION } from './utils'
 import {
+  findDir,
   findProp,
   isBuiltInComponent,
   isComponentTag,
@@ -78,7 +79,12 @@ import {
 } from '../generators/utils'
 import { normalizeBindShorthand } from './vBind'
 import { ignoreVHtmlChildren } from './vHtml'
-import type { Expression, ObjectExpression, ObjectProperty } from '@babel/types'
+import type {
+  ArrowFunctionExpression,
+  Expression,
+  ObjectExpression,
+  ObjectProperty,
+} from '@babel/types'
 import { parseExpression } from '@babel/parser'
 
 export const isReservedProp: (key: string) => boolean = /*#__PURE__*/ makeMap(
@@ -386,6 +392,7 @@ function transformComponentElement(
 
   let { tag } = node
   let asset = true
+  let slotScopeNamespace: string | undefined
 
   if (!dynamicComponent && !useCreateElement) {
     // <button is="vue:xxx">: the parser marks it as a component and the
@@ -394,9 +401,11 @@ function transformComponentElement(
     if (isProp && isProp.type === NodeTypes.ATTRIBUTE && isVueIsValue(isProp)) {
       tag = isProp.value!.content.slice(4)
     }
-    const fromSetup = resolveSetupReference(tag, context)
-    if (fromSetup) {
-      tag = fromSetup
+    const resolved =
+      resolveSlotScopeReference(tag, context) ||
+      resolveSetupReference(tag, context)
+    if (resolved) {
+      tag = resolved
       asset = false
     }
 
@@ -408,7 +417,13 @@ function transformComponentElement(
 
     const dotIndex = tag.indexOf('.')
     if (dotIndex > 0) {
-      const ns = resolveSetupReference(tag.slice(0, dotIndex), context)
+      slotScopeNamespace = resolveSlotScopeReference(
+        tag.slice(0, dotIndex),
+        context,
+      )
+      const ns =
+        slotScopeNamespace ||
+        resolveSetupReference(tag.slice(0, dotIndex), context)
       if (ns) {
         tag = ns + tag.slice(dotIndex)
         asset = false
@@ -446,6 +461,7 @@ function transformComponentElement(
     id,
     ...context.effectBoundary(),
     tag,
+    slotScopeNamespace,
     props,
     asset,
     root: singleRoot,
@@ -483,6 +499,44 @@ function resolveDynamicComponent(node: ComponentNode) {
       })
     )
   }
+}
+
+function resolveSlotScopeReference(name: string, context: TransformContext) {
+  const camelName = camelize(name)
+  for (const reference of [name, camelName, capitalize(camelName)]) {
+    let parent = context.parent
+    while (parent) {
+      const { node } = parent
+      if (node.type === NodeTypes.ELEMENT) {
+        const slot = findDir(node, 'slot')
+        if (slot && hasScopeBinding(reference, slot.exp)) {
+          return reference
+        }
+        const vFor = findDir(node, 'for')
+        const aliases = vFor && vFor.forParseResult
+        if (
+          aliases &&
+          [aliases.value, aliases.key, aliases.index].some(exp =>
+            hasScopeBinding(reference, exp as SimpleExpressionNode),
+          )
+        ) {
+          break
+        }
+      }
+      parent = parent.parent
+    }
+  }
+}
+
+function hasScopeBinding(name: string, exp: SimpleExpressionNode | undefined) {
+  return (
+    exp &&
+    (exp.ast
+      ? (exp.ast as ArrowFunctionExpression).params.some(param =>
+          extractIdentifiers(param).some(id => id.name === name),
+        )
+      : exp.content === name)
+  )
 }
 
 function resolveSetupReference(name: string, context: TransformContext) {

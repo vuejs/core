@@ -8279,3 +8279,29 @@ describe('component: slots', () => {
     )
   })
 })
+
+describe('slot-scope component tags', () => {
+  test.each([
+    '<components.Provider v-slot="{ Foo }"><Foo /></components.Provider>',
+    '<components.Provider v-slot="slotProps"><slot-props.Foo /></components.Provider>',
+    '<components.Provider v-slot="{ parts }"><parts.Foo /></components.Provider>',
+    '<components.Provider v-slot="{ Foo }"><Foo /><components.Other v-slot="{ Foo }"><Foo /></components.Other><Foo /></components.Provider>',
+  ])('renders components from slot props: %s', async template => {
+    const result = await renderParity(
+      {
+        Leaf: '<template><b>leaf</b></template>',
+        Nested: '<template><i>nested</i></template>',
+        Provider:
+          '<template><slot :Foo="components.Leaf" :parts="{ Foo: components.Leaf }" /></template>',
+        Other: '<template><slot :Foo="components.Nested" /></template>',
+        App: `<template>${template}</template>`,
+      },
+      () => ref(null),
+      () => {},
+    )
+    expect(result.vapor.text).toBe(result.vdom.text)
+    expect(result.vapor.text).toBe(
+      template.includes('Other') ? 'leafnestedleaf' : 'leaf',
+    )
+  })
+})

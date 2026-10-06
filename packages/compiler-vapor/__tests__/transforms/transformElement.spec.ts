@@ -2113,4 +2113,67 @@ describe('compiler: element transform', () => {
       expect(helpers).toContain('VaporKeepAlive')
     },
   )
+
+  describe('slot-scope component tags', () => {
+    test.each([
+      ['{ Foo }', 'Foo', '_slotProps0.Foo'],
+      ['{ fooBar }', 'foo-bar', '_slotProps0.fooBar'],
+      ['{ nested: { Foo: Alias } }', 'Alias', '_slotProps0.nested.Foo'],
+      ['slotProps', 'slot-props.Foo', 'slotProps.Foo'],
+      ['{ parts }', 'parts.Foo', '_slotProps0.parts.Foo'],
+    ])('resolves %s through <%s>', (props, tag, expression) => {
+      const { code } = compileWithElementAndSlotTransform(
+        `<Comp v-slot="${props}"><${tag} /></Comp>`,
+      )
+      expect(code).toContain(`_createComponent(${expression})`)
+      expect(code).not.toContain(`_resolveComponent("${tag}")`)
+    })
+
+    test('resolves template slot bindings before setup bindings', () => {
+      const { code } = compileWithElementAndSlotTransform(
+        `<Comp><template #default="{ Foo }"><foo /></template></Comp>`,
+        { bindingMetadata: { foo: BindingTypes.SETUP_CONST } },
+      )
+      expect(code).toContain('_createComponent(_slotProps0.Foo)')
+      expect(code).not.toContain('_createComponent(_ctx.foo)')
+    })
+
+    test('does not leak slot bindings to the component tag or siblings', () => {
+      const { code } = compileWithElementAndSlotTransform(
+        `<Foo v-slot="{ Foo }"><Foo /></Foo><Foo />`,
+      )
+      expect(code).toContain('_createComponent(_slotProps0.Foo)')
+      expect(code).toContain('const _component_Foo = _resolveComponent("Foo")')
+      expect(
+        code.match(/_createComponentWithFallback\(_component_Foo/g),
+      ).toHaveLength(2)
+    })
+
+    test('respects v-for shadowing and restores the outer slot binding', () => {
+      const { code } = compileWithElementAndSlotTransform(
+        `<Comp v-slot="{ Foo }"><template v-for="Foo in list"><Foo /></template><Foo /></Comp>`,
+      )
+      expect(code).toContain('_createComponent(_slotProps0.Foo)')
+      expect(code).toContain('_createComponentWithFallback(_component_Foo)')
+    })
+
+    test('resolves slot bindings shadowing v-for aliases', () => {
+      const { code } = compileWithElementAndSlotTransform(
+        `<div v-for="Foo in list"><Comp v-slot="{ Foo }"><Foo /></Comp></div>`,
+      )
+      expect(code).toMatch(/_createComponent\(_slotProps\d+\.Foo\)/)
+      expect(code).not.toContain('_resolveComponent("Foo")')
+    })
+
+    test.each([
+      '<div v-for="Foo in list"><Foo.Bar /></div>',
+      '<Comp v-slot="{ Foo }"><div v-for="Foo in list"><Foo.Bar /></div></Comp>',
+    ])('keeps setup namespace resolution under v-for: %s', source => {
+      const { code } = compileWithElementAndSlotTransform(source, {
+        bindingMetadata: { Foo: BindingTypes.SETUP_CONST },
+      })
+      expect(code).toContain('_createComponent(_ctx.Foo.Bar)')
+      expect(code).not.toMatch(/_createComponent\(_for_item\d+\.value\.Bar\)/)
+    })
+  })
 })
