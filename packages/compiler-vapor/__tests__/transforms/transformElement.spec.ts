@@ -2176,4 +2176,60 @@ describe('compiler: element transform', () => {
       expect(code).not.toMatch(/_createComponent\(_for_item\d+\.value\.Bar\)/)
     })
   })
+
+  describe.each([false, true])('setup lookup order (inline: %s)', inline => {
+    test.each([
+      [BindingTypes.SETUP_CONST, BindingTypes.SETUP_REACTIVE_CONST],
+      [BindingTypes.SETUP_REACTIVE_CONST, BindingTypes.LITERAL_CONST],
+      [BindingTypes.LITERAL_CONST, BindingTypes.SETUP_LET],
+      [BindingTypes.SETUP_LET, BindingTypes.SETUP_REF],
+      [BindingTypes.SETUP_REF, BindingTypes.SETUP_MAYBE_REF],
+      [BindingTypes.SETUP_MAYBE_REF, BindingTypes.PROPS],
+    ])('prefers %s over %s regardless of spelling', (preferred, other) => {
+      const { code, ir } = compileWithElementTransform('<foo-bar />', {
+        inline,
+        bindingMetadata: { fooBar: other, FooBar: preferred },
+      })
+
+      expect(ir.block.dynamic.children[0].operation).toMatchObject({
+        tag: 'FooBar',
+        asset: false,
+      })
+      expect(code).toContain('FooBar')
+      expect(code).not.toContain('fooBar')
+    })
+
+    test('prefers exact and camelized names within the same binding type', () => {
+      const { ir } = compileWithElementTransform('<fooBar /><foo-bar />', {
+        inline,
+        bindingMetadata: {
+          fooBar: BindingTypes.SETUP_CONST,
+          FooBar: BindingTypes.SETUP_CONST,
+        },
+      })
+
+      for (const child of ir.block.dynamic.children) {
+        expect(child.operation).toMatchObject({ tag: 'fooBar', asset: false })
+      }
+    })
+
+    test('uses binding priority for namespaced components and directives', () => {
+      const { code, ir } = compileWithElementTransform('<foo.Bar v-focus />', {
+        inline,
+        bindingMetadata: {
+          foo: BindingTypes.SETUP_LET,
+          Foo: BindingTypes.SETUP_CONST,
+          vFocus: BindingTypes.SETUP_LET,
+          VFocus: BindingTypes.SETUP_CONST,
+        },
+      })
+
+      expect(ir.block.dynamic.children[0].operation).toMatchObject({
+        tag: 'Foo.Bar',
+        asset: false,
+      })
+      expect(code).toContain('VFocus')
+      expect(code).not.toContain('vFocus')
+    })
+  })
 })

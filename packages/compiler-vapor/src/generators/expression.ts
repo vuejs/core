@@ -50,8 +50,12 @@ export function genExpression(
     return [[JSON.stringify(content), NewlineType.None, loc]]
   }
 
+  // an empty expression (e.g. `v-show=""`) evaluates to undefined, like vdom
+  if (!content.trim()) {
+    return [['void 0', NewlineType.None, loc]]
+  }
+
   if (
-    !node.content.trim() ||
     // there was a parsing error
     ast === false ||
     isConstantExpression(node)
