@@ -1083,6 +1083,22 @@ describe('SFC compile <script setup>', () => {
         assertCode(content)
       })
     })
+
+    test('vapor: should return bindings for render in normal <script> without template', () => {
+      const { content } = compile(
+        `<script>
+        export default {
+          render(ctx) {}
+        }
+        </script>
+        <script setup vapor>
+        const msg = 'hello'
+        </script>`,
+        { vapor: true, inlineTemplate: true },
+      )
+      expect(content).toMatch(`return { msg }`)
+      assertCode(content)
+    })
   })
 
   describe('vapor css modules in non-inline mode', () => {
