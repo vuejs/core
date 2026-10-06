@@ -306,4 +306,20 @@ describe('defineModel()', () => {
       modelValue: BindingTypes.SETUP_REF,
     })
   })
+
+  test('v-model on model prop name should hint at the returned ref', () => {
+    expect(() =>
+      compile(
+        `
+        <script setup lang="ts">
+        defineModel<boolean>('submitting')
+        </script>
+        <template>
+          <Comp v-model="submitting" />
+        </template>
+        `,
+        { inlineTemplate: true },
+      ),
+    ).toThrow('assign the returned ref to a variable')
+  })
 })
