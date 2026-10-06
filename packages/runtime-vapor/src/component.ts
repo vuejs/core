@@ -1,4 +1,5 @@
 import {
+  type AppConfig,
   type AsyncComponentInternalOptions,
   type ComponentCustomElementInterface,
   type ComponentInternalInstance,
@@ -794,7 +795,9 @@ export function applyFallthroughProps(
  */
 function createDevSetupStateProxy(
   setupState: Record<string, any>,
+  instance: VaporComponentInstance,
 ): Record<string, any> {
+  const config = instance.appContext.config as AppConfig
   return new Proxy(setupState, {
     get(target, key: string | symbol, receiver) {
       if (
@@ -803,8 +806,11 @@ function createDevSetupStateProxy(
         !hasOwn(toRaw(setupState), key)
       ) {
         warn(
-          `Property ${JSON.stringify(key)} was accessed during render ` +
-            `but is not defined on instance.`,
+          hasOwn(config.globalProperties, key)
+            ? `Property ${JSON.stringify(key)} is provided via app.config.globalProperties, ` +
+                `which is not supported in Vapor components.`
+            : `Property ${JSON.stringify(key)} was accessed during render ` +
+                `but is not defined on instance.`,
         )
       }
 
@@ -1831,7 +1837,10 @@ function handleSetupResult(
         instance.devtoolsRawSetupState = setupResult
       }
       if (__DEV__) {
-        instance.setupState = createDevSetupStateProxy(proxyRefs(setupResult))
+        instance.setupState = createDevSetupStateProxy(
+          proxyRefs(setupResult),
+          instance,
+        )
         runDevRender(instance)
       } else {
         // component has a render function but no setup function
