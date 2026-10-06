@@ -637,3 +637,22 @@ test('tells the ssr compiler that the template is a vapor component', () => {
   expect(ssrCode(true)).toContain('<!--[-->')
   expect(ssrCode(false)).not.toContain('<!--[-->')
 })
+
+test.each([false, true])(
+  'reports ignored v-memo in Vapor templates (isProd: %s)',
+  isProd => {
+    const result = compile({
+      filename: 'example.vue',
+      source: '<div v-memo="[foo]">{{ bar }}</div>',
+      vapor: true,
+      isProd,
+    })
+
+    expect(result.errors).toEqual([])
+    expect(result.tips).toHaveLength(1)
+    expect(result.tips[0]).toContain(
+      'v-memo is not supported in Vapor mode and will be ignored.',
+    )
+    expect(result.tips[0]).toContain('v-memo="[foo]"')
+  },
+)

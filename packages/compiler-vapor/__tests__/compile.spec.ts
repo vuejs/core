@@ -1,5 +1,9 @@
 import { BindingTypes, type RootNode, parse } from '@vue/compiler-dom'
-import { type CompilerOptions, compile as _compile } from '../src'
+import {
+  type CompilerOptions,
+  VaporErrorCodes,
+  compile as _compile,
+} from '../src'
 
 function compile(template: string | RootNode, options: CompilerOptions = {}) {
   let { code } = _compile(template, {
@@ -554,5 +558,39 @@ describe('compile', () => {
       expect(code).contains('const _setTemplateRef1 = _ctx.setTemplateRef')
       expect(code).contains('_setTemplateRef(n0, _ctx.r)')
     })
+  })
+
+  test.each([
+    '<div v-memo="[foo]">{{ bar }}</div>',
+    '<Comp v-memo="[foo]" :value="bar" />',
+    '<div v-if="ok" v-for="item in items" v-memo="[foo]">{{ item }}</div>',
+    '<template v-if="ok" v-memo="[foo]"><div>{{ bar }}</div></template>',
+    '<Comp><template #default v-memo="[foo]">{{ bar }}</template></Comp>',
+    '<slot v-memo="[foo]">fallback</slot>',
+  ])('warns and ignores v-memo: %s', source => {
+    const onWarn = vi.fn()
+    const code = compile(source, { onWarn })
+
+    expect(onWarn).toHaveBeenCalledOnce()
+    expect(onWarn.mock.calls[0][0]).toMatchObject({
+      code: VaporErrorCodes.X_V_MEMO_NOT_SUPPORTED,
+      message: 'v-memo is not supported in Vapor mode and will be ignored.',
+      loc: { source: 'v-memo="[foo]"' },
+    })
+    expect(code).toBe(compile(source.replace(' v-memo="[foo]"', '')))
+  })
+
+  test('warns about v-memo with the production compiler', () => {
+    __DEV__ = false
+    try {
+      const onWarn = vi.fn()
+      compile('<div v-memo="[]" />', { onWarn })
+      expect(onWarn).toHaveBeenCalledOnce()
+      expect(onWarn.mock.calls[0][0].message).toBe(
+        'v-memo is not supported in Vapor mode and will be ignored.',
+      )
+    } finally {
+      __DEV__ = true
+    }
   })
 })
