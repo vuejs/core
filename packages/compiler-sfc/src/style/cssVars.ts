@@ -61,21 +61,35 @@ function normalizeExpression(exp: string) {
   return exp
 }
 
-const vBindRE = /v-bind\s*\(/g
+function* lexBindings(content: string): Generator<[number, number, number]> {
+  const re = /v-bind\s*\(|["'\\]/g
+  let match: RegExpExecArray | null
+  while ((match = re.exec(content))) {
+    const index = match.index
+    const c = content.charCodeAt(index)
+    if (c === CharCodes.DoubleQuote || c === CharCodes.SingleQuote) {
+      re.lastIndex = skipString(content, index + 1, c)
+    } else if (c === CharCodes.Backslash) {
+      re.lastIndex = index + 2
+    } else {
+      const start = index + match[0].length
+      const end = lexBinding(content, start)
+      if (end !== null) {
+        re.lastIndex = end + 1
+        yield [index, start, end]
+      }
+    }
+  }
+}
 
 export function parseCssVars(sfc: SFCDescriptor): string[] {
   const vars: string[] = []
   sfc.styles.forEach(style => {
-    let match
     const content = stripComments(style.content)
-    while ((match = vBindRE.exec(content))) {
-      const start = match.index + match[0].length
-      const end = lexBinding(content, start)
-      if (end !== null) {
-        const variable = normalizeExpression(content.slice(start, end))
-        if (!vars.includes(variable)) {
-          vars.push(variable)
-        }
+    for (const [, start, end] of lexBindings(content)) {
+      const variable = normalizeExpression(content.slice(start, end))
+      if (!vars.includes(variable)) {
+        vars.push(variable)
       }
     }
   })
@@ -277,24 +291,16 @@ export const cssVarsPlugin: PluginCreator<CssVarsPluginOptions> = opts => {
     Declaration(decl) {
       // rewrite CSS variables
       const value = decl.value
-      if (vBindRE.test(value)) {
-        vBindRE.lastIndex = 0
-        let transformed = ''
-        let lastIndex = 0
-        let match
-        while ((match = vBindRE.exec(value))) {
-          const start = match.index + match[0].length
-          const end = lexBinding(value, start)
-          if (end !== null) {
-            const variable = normalizeExpression(value.slice(start, end))
-            transformed +=
-              value.slice(lastIndex, match.index) +
-              `var(--${genVarName(id, variable, isProd)})`
-            lastIndex = end + 1
-          }
-        }
-        decl.value = transformed + value.slice(lastIndex)
+      let transformed = ''
+      let lastIndex = 0
+      for (const [index, start, end] of lexBindings(value)) {
+        const variable = normalizeExpression(value.slice(start, end))
+        transformed +=
+          value.slice(lastIndex, index) +
+          `var(--${genVarName(id, variable, isProd)})`
+        lastIndex = end + 1
       }
+      decl.value = transformed + value.slice(lastIndex)
     },
   }
 }
