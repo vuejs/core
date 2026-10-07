@@ -102,9 +102,12 @@ export function h<K extends keyof HTMLElementTagNameMap>(
 ): VNode
 
 // custom element
-export function h(type: string, children?: RawChildren): VNode
-export function h(
-  type: string,
+export function h<T extends string>(
+  type: T extends keyof HTMLElementTagNameMap ? never : T,
+  children?: RawChildren,
+): VNode
+export function h<T extends string>(
+  type: T extends keyof HTMLElementTagNameMap ? never : T,
   props?: RawElementProps | null,
   children?: RawChildren | RawSlots,
 ): VNode

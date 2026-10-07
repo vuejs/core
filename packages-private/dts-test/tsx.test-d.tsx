@@ -93,6 +93,10 @@ expectType<JSX.Element>(<div style={false} />)
 expectType<JSX.Element>(<div key="foo" />)
 expectType<JSX.Element>(<div ref="bar" />)
 expectType<JSX.Element>(<form ref={(_el: HTMLFormElement | null) => {}} />)
+// @ts-expect-error a form ref cannot receive an input element
+;<form ref={(_el: HTMLInputElement | null) => {}} />
+// @ts-expect-error native element refs receive null during unmount
+;<form ref={(_el: HTMLFormElement) => {}} />
 // @ts-expect-error
 ;<form ref={(_el: string) => {}} />
 

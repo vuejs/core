@@ -90,12 +90,7 @@ type VNodeRefCallback = (
 ) => void
 
 export type VNodeElementRef<T extends Element = Element> =
-  | string
-  | Ref
-  | {
-      // Bivariance allows callbacks for the concrete native element type.
-      bivarianceHack(ref: T | null, refs: Record<string, any>): void
-    }['bivarianceHack']
+  string | Ref | ((ref: T | null, refs: Record<string, any>) => void)
 
 export type VNodeRef = string | Ref | VNodeRefCallback
 
