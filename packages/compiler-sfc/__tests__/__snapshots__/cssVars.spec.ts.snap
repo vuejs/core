@@ -126,6 +126,68 @@ return { color }
 }"
 `;
 
+exports[`CSS vars injection > generates matching CSS variables for multiline expressions ("\\n") 1`] = `
+"import { useCssVars as _useCssVars, unref as _unref } from 'vue'
+const color = 'red'
+export default {
+  setup(__props, { expose: __expose }) {
+  __expose();
+
+_useCssVars(_ctx => ({
+  "v27c4f9c6": (color ||
+'blue')
+}))
+
+return { color }
+}
+
+}"
+`;
+
+exports[`CSS vars injection > generates matching CSS variables for multiline expressions ("\\n") 2`] = `
+"import { mergeProps as _mergeProps } from "vue"
+import { ssrRenderAttrs as _ssrRenderAttrs } from "vue/server-renderer"
+
+export function ssrRender(_ctx, _push, _parent, _attrs) {
+  const _cssVars = { style: {
+  ":--v27c4f9c6": (_ctx.color ||
+'blue')
+}}
+  _push(\`<div\${_ssrRenderAttrs(_mergeProps(_attrs, _cssVars))}></div>\`)
+}"
+`;
+
+exports[`CSS vars injection > generates matching CSS variables for multiline expressions ("\\r\\n") 1`] = `
+"import { useCssVars as _useCssVars, unref as _unref } from 'vue'
+const color = 'red'
+export default {
+  setup(__props, { expose: __expose }) {
+  __expose();
+
+_useCssVars(_ctx => ({
+  "v6be30576": (color ||
+'blue')
+}))
+
+return { color }
+}
+
+}"
+`;
+
+exports[`CSS vars injection > generates matching CSS variables for multiline expressions ("\\r\\n") 2`] = `
+"import { mergeProps as _mergeProps } from "vue"
+import { ssrRenderAttrs as _ssrRenderAttrs } from "vue/server-renderer"
+
+export function ssrRender(_ctx, _push, _parent, _attrs) {
+  const _cssVars = { style: {
+  ":--v6be30576": (_ctx.color ||
+'blue')
+}}
+  _push(\`<div\${_ssrRenderAttrs(_mergeProps(_attrs, _cssVars))}></div>\`)
+}"
+`;
+
 exports[`CSS vars injection > generating correct code for nested paths 1`] = `
 "const a = 1
 const __default__ = {}
