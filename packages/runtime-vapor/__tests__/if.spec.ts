@@ -562,4 +562,18 @@ describe('createIf', () => {
     expect(reused).toEqual([true, true])
     expect(vapor.text).toBe(vdom.text)
   })
+
+  test('should not render whitespace between branches like vdom', async () => {
+    const { vdom, vapor } = await renderParity(
+      {
+        App: `<template><p><b v-if="data.ok">a</b> <i v-else>b</i>{{ data.n }}</p></template>`,
+      },
+      () => ref({ ok: false, n: 1 }),
+      async data => {
+        data.value.ok = true
+        data.value.n = 2
+      },
+    )
+    expect(vapor.text).toBe(vdom.text)
+  })
 })

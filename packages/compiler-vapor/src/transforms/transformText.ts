@@ -14,6 +14,7 @@ import { DynamicFlag, IRNodeTypes } from '../ir'
 import { getLiteralExpressionValue } from '../utils'
 import { escapeHtml } from '@vue/shared'
 import { shouldUseCreateElement } from './transformElement'
+import { getSiblingIf } from './transformComment'
 
 type TextLike = TextNode | InterpolationNode
 const seen = new WeakMap<
@@ -90,6 +91,15 @@ export const transformText: NodeTransform = (node, context) => {
   } else if (node.type === NodeTypes.INTERPOLATION) {
     processInterpolation(context as TransformContext<InterpolationNode>)
   } else if (node.type === NodeTypes.TEXT) {
+    // whitespace between v-if branches is not rendered, same as vdom
+    if (
+      !node.content.trim() &&
+      getSiblingIf(context as TransformContext<TextNode>)
+    ) {
+      context.dynamic.flags |= DynamicFlag.NON_TEMPLATE
+      return
+    }
+
     const parent = context.parent?.node
     const createElementParent =
       parent &&
