@@ -404,6 +404,51 @@ describe('compiler + runtime integration', () => {
     app.unmount()
   })
 
+  // #12709
+  test('switching manually invoked slots updates static class bindings', async () => {
+    const active = ref(1)
+    const container = document.createElement('div')
+    const app = createApp({
+      components: {
+        Child: {
+          props: ['active', 'index'],
+          setup(props, { slots }) {
+            return () => {
+              let content
+              if (props.active < props.index) content = slots.default?.()
+              else if (props.active === props.index) content = slots.a?.()
+              else content = slots.b?.()
+              return Vue.h('div', { class: 'child' }, content)
+            }
+          },
+        },
+      },
+      setup: () => ({ active }),
+      template: `
+        <Child :active="active" :index="0">
+          <div class="text grey">default</div>
+          <template #a><div class="text red">a {{ active }}</div></template>
+          <template #b><div class="text green">b {{ active }}</div></template>
+        </Child>
+      `,
+    })
+    app.mount(container)
+    // active > index → slot b
+    expect(container.querySelector('.child div')!.className).toBe('text green')
+    expect(container.textContent).toContain('b')
+
+    active.value = 0
+    await nextTick()
+    // active === index → slot a (class must update, not only text)
+    expect(container.querySelector('.child div')!.className).toBe('text red')
+    expect(container.textContent).toContain('a')
+
+    active.value = 1
+    await nextTick()
+    expect(container.querySelector('.child div')!.className).toBe('text green')
+    app.unmount()
+  })
+
   test('v-for + v-once', async () => {
     const list = reactive([1])
     const App = {
