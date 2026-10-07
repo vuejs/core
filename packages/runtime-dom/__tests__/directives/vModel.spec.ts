@@ -550,6 +550,29 @@ describe('vModel', () => {
     expect(data.value).toEqual(false)
   })
 
+  it('sets the initial checkbox state before insertion', () => {
+    const beforeMount = vi.fn((el: HTMLInputElement) => {
+      expect(el.checked).toBe(true)
+      expect(el.parentNode).toBeNull()
+    })
+    const component = defineComponent({
+      render() {
+        return withDirectives(
+          h('input', {
+            type: 'checkbox',
+            'true-value': 'yes',
+            'false-value': 'no',
+          }),
+          [[vModelCheckbox, 'yes'], [{ beforeMount }]],
+        )
+      },
+    })
+
+    render(h(component), root)
+
+    expect(beforeMount).toHaveBeenCalledOnce()
+  })
+
   it('should work with checkbox and true-value/false-value', async () => {
     const component = defineComponent({
       data() {
