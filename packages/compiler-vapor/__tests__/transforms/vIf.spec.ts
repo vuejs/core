@@ -759,4 +759,29 @@ describe('compiler: v-if', () => {
       ).toEqual([])
     })
   })
+
+  test('whitespace between branches', () => {
+    const { ir } = compileWithVIf(
+      `<div><span v-if="a">a</span> <span v-else-if="b">b</span> <span v-else>c</span>|</div>`,
+    )
+    expect([...ir.template.keys()]).toEqual([
+      '<span>a',
+      '<span>b',
+      '<span>c',
+      '<div><!>|',
+    ])
+
+    const { ir: preserved } = compileWithVIf(
+      `<div>
+        <span v-if="a">a</span>
+        <span v-else>b</span>
+      </div>`,
+      { whitespace: 'preserve' },
+    )
+    expect([...preserved.template.keys()]).toEqual([
+      '<span>a',
+      '<span>b',
+      '<div>',
+    ])
+  })
 })
