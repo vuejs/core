@@ -1243,6 +1243,11 @@ export function createPlainElement(
   once?: boolean,
   ns?: Namespace,
 ): HTMLElement {
+  if (comp === 'svg') {
+    ns = Namespaces.SVG
+  } else if (comp === 'math') {
+    ns = Namespaces.MATH_ML
+  }
   rawSlots = normalizeRawSlots(rawSlots)
   const _insertionParent = insertionParent
   const _insertionAnchor = insertionAnchor
