@@ -382,9 +382,17 @@ function moveTeleport(
   { o: { insert }, m: move }: RendererInternals,
   moveType: TeleportMoveTypes = TeleportMoveTypes.REORDER,
 ): void {
-  // move target anchor if this is a target change.
+  // move target anchors if this is a target change.
   if (moveType === TeleportMoveTypes.TARGET_CHANGE) {
+    // targetStart is only set by hydration when the start anchor is found
+    if (vnode.targetStart) {
+      insert(vnode.targetStart, container, parentAnchor)
+    }
     insert(vnode.targetAnchor!, container, parentAnchor)
+    // children have to stay between the two anchors, otherwise subsequently
+    // appended children are mounted before targetAnchor while the moved ones
+    // sit after it
+    parentAnchor = vnode.targetAnchor!
   }
   const { el, anchor, shapeFlag, children, props } = vnode
   const isReorder = moveType === TeleportMoveTypes.REORDER
