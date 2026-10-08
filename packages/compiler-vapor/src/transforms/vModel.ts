@@ -44,6 +44,17 @@ export const transformVModel: DirectiveTransform = (dir, node, context) => {
     return
   }
 
+  // const bindings are not writable.
+  if (
+    bindingType === BindingTypes.LITERAL_CONST ||
+    bindingType === BindingTypes.SETUP_CONST
+  ) {
+    context.options.onError(
+      createCompilerError(ErrorCodes.X_V_MODEL_ON_CONST, exp.loc),
+    )
+    return
+  }
+
   const expString = exp.content
   const maybeRef =
     context.options.inline &&
