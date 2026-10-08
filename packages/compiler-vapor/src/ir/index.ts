@@ -233,6 +233,7 @@ export interface CreateComponentIRNode
   type: IRNodeTypes.CREATE_COMPONENT_NODE
   id: number
   tag: string
+  slotScopeNamespace?: string
   props: IRProps[]
   slots: IRSlots[]
   asset: boolean

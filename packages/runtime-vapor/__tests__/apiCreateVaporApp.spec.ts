@@ -6,19 +6,22 @@ import {
   createVaporSSRApp,
   defineVaporComponent,
   template,
+  vaporInteropPlugin,
   withVaporDirectives,
 } from '../src'
 import {
   type GenericComponentInstance,
   type Plugin,
+  createApp,
   currentInstance,
   inject,
   provide,
+  ref,
   resolveComponent,
   resolveDirective,
   warn,
 } from '@vue/runtime-dom'
-import { makeRender } from './_utils'
+import { compile, compileToVaporRender, makeRender } from './_utils'
 import type { VaporComponent } from '../src/component'
 
 const define = makeRender()
@@ -399,17 +402,72 @@ describe('api: createVaporApp', () => {
     })
   })
 
-  test.todo('config.globalProperty', () => {
-    const { app } = define({
+  test('warns when a template reads app.config.globalProperties', () => {
+    const { app, mount, html } = define({
       setup() {
-        return []
+        return {}
       },
+      render: compileToVaporRender('<div>{{ $message }}</div>'),
     }).create()
-    try {
-      app.config.globalProperties.msg = 'hello world'
-    } catch (e) {}
+    app.config.globalProperties.$message = undefined
+    expect(console.warn).not.toHaveBeenCalled()
+    mount()
+    expect(html()).toBe('<div></div>')
     expect(
-      `app.config.globalProperties is not supported in vapor mode components`,
-    ).toHaveBeenWarned()
+      'Property "$message" is provided via app.config.globalProperties, which is not supported in Vapor components.',
+    ).toHaveBeenWarnedTimes(1)
+    expect('but is not defined on instance').not.toHaveBeenWarned()
+    app.unmount()
+  })
+
+  test.each([false, true])(
+    'only warns for Vapor template access in mixed apps (vapor root: %s)',
+    vapor => {
+      const Vdom = compile(
+        '<script setup>const unused = 0</script><template><span>{{ $message }}</span></template>',
+        ref(null),
+        {},
+        { vapor: false },
+      )
+      const Vapor = defineVaporComponent({
+        setup() {
+          return {}
+        },
+        render: compileToVaporRender('<span>{{ $message }}</span>'),
+      })
+      const Root = compile(
+        '<script setup>const { Vdom, Vapor } = _components</script><template><div><Vdom /><Vapor /></div></template>',
+        ref(null),
+        { Vdom, Vapor },
+        { vapor },
+      )
+      const host = document.createElement('div')
+      const app = (vapor ? createVaporApp(Root) : createApp(Root)).use(
+        vaporInteropPlugin,
+      )
+      app.config.globalProperties.$message = 'global'
+      app.mount(host)
+      expect(host.innerHTML).toBe('<div><span>global</span><span></span></div>')
+      expect(
+        'Property "$message" is provided via app.config.globalProperties, which is not supported in Vapor components.',
+      ).toHaveBeenWarnedTimes(1)
+      expect('but is not defined on instance').not.toHaveBeenWarned()
+      app.unmount()
+    },
+  )
+
+  test('does not warn for setup bindings shadowing global properties', () => {
+    const { app, mount, html } = define({
+      setup() {
+        return { $message: 'local' }
+      },
+      render: compileToVaporRender('<div>{{ $message }}</div>'),
+    }).create()
+    app.config.globalProperties.$message = 'global'
+    app.config.globalProperties.$unused = 'unused'
+    mount()
+    expect(html()).toBe('<div>local</div>')
+    expect(console.warn).not.toHaveBeenCalled()
+    app.unmount()
   })
 })

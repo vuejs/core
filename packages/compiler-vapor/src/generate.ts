@@ -133,6 +133,8 @@ export class CodegenContext {
   }
 
   private isNameAvailable(name: string, reservedNames: Set<string>): boolean {
+    // render function param and root-scoped template ref setter
+    if (name === '_ctx' || name === setTemplateRefIdent) return false
     if (this.bindingNames.has(name) || reservedNames.has(name)) return false
     if (this.identifiers[name]?.length) return false
     for (const alias of this.helpers.values()) {

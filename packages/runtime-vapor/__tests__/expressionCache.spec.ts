@@ -202,4 +202,31 @@ describe('expression cache', () => {
     )
     expect(vapor.after).toBe(vdom.after)
   })
+
+  test('a member expression nested in another one', async () => {
+    const { vdom, vapor } = await renderParity(
+      {
+        App: `<script setup>
+          import { ref } from 'vue'
+          const levels = { a: { color: 'red', label: 'A' }, b: { color: 'blue', label: 'B' } }
+          const rungs = [{ level: 'a' }, { level: 'b' }]
+          const i = ref(0)
+        </script>
+        <template>
+          <button @click="i++">next</button>
+          <p :title="levels[rungs[i].level].color">{{ levels[rungs[i].level].label }}</p>
+        </template>`,
+      },
+      () => ref(null),
+      async (data, root) => {
+        expect(root.querySelector('p')!.title).toBe('red')
+        expect(root.textContent).toBe('nextA')
+        root.querySelector('button')!.click()
+        await nextTick()
+        expect(root.querySelector('p')!.title).toBe('blue')
+        expect(root.textContent).toBe('nextB')
+      },
+    )
+    expect(vapor.after).toBe(vdom.after)
+  })
 })
