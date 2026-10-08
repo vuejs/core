@@ -672,4 +672,92 @@ await data.value.ready
     expect(shown.vdom).toEqual(['none', '', ''])
     expect(shown.vapor).toEqual(shown.vdom)
   })
+
+  test('keeps a Transition child hidden by its own v-show on mount like vdom', async () => {
+    const shown: Record<string, string[]> = { vdom: [], vapor: [] }
+    await renderParity(
+      {
+        Inner: `<template><section v-show="data.open">x</section></template>`,
+        App: `<template><Transition :css="false"><components.Inner v-show="data.enabled" /></Transition></template>`,
+      },
+      () => ref({ enabled: true, open: false }),
+      async (data, root, mode) => {
+        const el = root.querySelector('section')!
+        shown[mode].push(el.style.display)
+        data.value.open = true
+        await nextTick()
+        shown[mode].push(el.style.display)
+      },
+    )
+    expect(shown.vdom).toEqual(['none', ''])
+    expect(shown.vapor).toEqual(shown.vdom)
+  })
+
+  test('lets the outer v-show win on mount inside a Transition wrapper element like vdom', async () => {
+    const shown: Record<string, string[]> = { vdom: [], vapor: [] }
+    await renderParity(
+      {
+        Inner: `<template><section v-show="data.open">x</section></template>`,
+        App: `<template><Transition :css="false"><div><components.Inner v-show="data.enabled" /></div></Transition></template>`,
+      },
+      () => ref({ enabled: true, open: false }),
+      async (data, root, mode) => {
+        const el = root.querySelector('section')!
+        shown[mode].push(el.style.display)
+        data.value.enabled = false
+        await nextTick()
+        shown[mode].push(el.style.display)
+      },
+    )
+    expect(shown.vdom).toEqual(['', 'none'])
+    expect(shown.vapor).toEqual(shown.vdom)
+  })
+
+  test('keeps Transition slot content hidden by its own v-show on mount like vdom', async () => {
+    const shown: Record<string, string[]> = { vdom: [], vapor: [] }
+    await renderParity(
+      {
+        Inner: `<template><section v-show="data.open">x</section></template>`,
+        Fade: `<template><Transition :css="false"><slot /></Transition></template>`,
+        App: `<template><components.Fade><components.Inner v-show="data.enabled" /></components.Fade></template>`,
+      },
+      () => ref({ enabled: true, open: false }),
+      async (data, root, mode) => {
+        const el = root.querySelector('section')!
+        shown[mode].push(el.style.display)
+        data.value.open = true
+        await nextTick()
+        shown[mode].push(el.style.display)
+      },
+    )
+    expect(shown.vdom).toEqual(['none', ''])
+    expect(shown.vapor).toEqual(shown.vdom)
+  })
+
+  test('keeps a vapor child of a vdom Transition hidden by its own v-show on mount', async () => {
+    const data = ref({ enabled: true, open: false })
+    const Inner = compile(
+      `<template><section v-show="data.open">x</section></template>`,
+      data,
+    )
+    const Wrap = compile(
+      `<template><components.Inner v-show="data.enabled" /></template>`,
+      data,
+      { Inner },
+    )
+    const App = compile(
+      `<script setup>const data = _data; const components = _components;</script>
+      <template><Transition :css="false"><components.Wrap /></Transition></template>`,
+      data,
+      { Wrap },
+      { vapor: false },
+    )
+    const root = document.createElement('div')
+    createApp(App).use(vaporInteropPlugin).mount(root)
+    const el = root.querySelector('section')!
+    expect(el.style.display).toBe('none')
+    data.value.open = true
+    await nextTick()
+    expect(el.style.display).toBe('')
+  })
 })

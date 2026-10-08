@@ -168,34 +168,39 @@ function setDisplay(
   const $transition = isTransitionEnabled
     ? (el as TransitionBlock).$transition || transition
     : undefined
-  if (!$transition || !updating) {
+  if (!updating) {
     // Another v-show reaching the element before insertion (vdom's
     // beforeMount): a shown transition root stays as the first one left it,
     // the renderer enters it on insert; otherwise the display is written.
+    // Hooks a Transition above attaches later settle a show written now.
     if ($transition && value) return
-    el[vShowHidden] = hidden
-    writeDisplay(el, value)
-    return
+    if (value) (el as TransitionBlock).$vshow! |= VShowFlags.MOUNT_SHOWN
+  } else {
+    ;(el as TransitionBlock).$vshow! &= ~VShowFlags.MOUNT_SHOWN
+    if ($transition) {
+      el[vShowHidden] = hidden
+      const prevSub = setActiveSub()
+      try {
+        if (value) {
+          $transition.beforeEnter(el)
+          el.style.display = el[vShowOriginalDisplay]!
+          $transition.enter(el)
+        } else if (el.isConnected) {
+          $transition.leave(el, () => {
+            el.style.display = 'none'
+          })
+        } else {
+          // detached (e.g. deactivated): nothing to animate
+          el.style.display = 'none'
+        }
+      } finally {
+        setActiveSub(prevSub)
+      }
+      return
+    }
   }
   el[vShowHidden] = hidden
-
-  const prevSub = setActiveSub()
-  try {
-    if (value) {
-      $transition.beforeEnter(el)
-      el.style.display = el[vShowOriginalDisplay]!
-      $transition.enter(el)
-    } else if (el.isConnected) {
-      $transition.leave(el, () => {
-        el.style.display = 'none'
-      })
-    } else {
-      // detached (e.g. deactivated): nothing to animate
-      el.style.display = 'none'
-    }
-  } finally {
-    setActiveSub(prevSub)
-  }
+  writeDisplay(el, value)
 }
 
 function writeDisplay(el: VShowElement, value: unknown): void {
