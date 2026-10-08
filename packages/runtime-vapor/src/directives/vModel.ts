@@ -11,8 +11,8 @@ import {
 } from '@vue/runtime-dom'
 import { renderEffect } from '../renderEffect'
 import { inOnce, withOnce } from '../once'
-import { looseEqual, remove } from '@vue/shared'
-import { onScopeDispose, traverse } from '@vue/reactivity'
+import { isArray, isSet, looseEqual, remove } from '@vue/shared'
+import { Dep, onScopeDispose, trackDep, traverse } from '@vue/reactivity'
 import type { VaporComponentInstance } from '../component'
 
 type VaporModelDirective<
@@ -51,7 +51,7 @@ export const applyTextModel: VaporModelDirective<
 }
 
 export const applyCheckboxModel: VaporModelDirective<HTMLInputElement> = (
-  el,
+  el: HTMLInputElement & { _valueDep?: Dep },
   get,
   set,
 ) => {
@@ -59,12 +59,14 @@ export const applyCheckboxModel: VaporModelDirective<HTMLInputElement> = (
   ensureMounted(() => {
     let value: any
     renderEffect(() => {
-      vModelCheckboxUpdate(
-        el,
-        value,
-        // #4096 array checkboxes need to be deep traversed
-        traverse((value = get())),
-      )
+      const oldValue = value
+      // #4096 array checkboxes need to be deep traversed
+      value = traverse(get())
+      if (!inOnce && (isArray(value) || isSet(value))) {
+        // Track the effective value, including merged and fallthrough bindings.
+        trackDep(el._valueDep || (el._valueDep = new Dep()), el, '_value')
+      }
+      vModelCheckboxUpdate(el, oldValue, value)
     })
   })
 }

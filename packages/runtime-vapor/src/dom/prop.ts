@@ -6,6 +6,7 @@ import {
   canSetValueDirectly,
   extend,
   getEscapedCssVarName,
+  hasChanged,
   includeBooleanAttr,
   isArray,
   isOn,
@@ -20,7 +21,7 @@ import {
   stringifyStyle,
   toDisplayString,
 } from '@vue/shared'
-import { isReactive } from '@vue/reactivity'
+import { type Dep, isReactive, triggerDep } from '@vue/reactivity'
 import { type EventHandlerValue, setListener } from './event'
 import {
   type ComponentInternalInstance,
@@ -84,6 +85,10 @@ type TargetElement = Element & {
   $sty?: NormalizedStyle | string | undefined
   value?: string
   _value?: any
+  /**
+   * @internal
+   */
+  _valueDep?: Dep
 }
 
 const shouldSkipFallthroughKey = (el: TargetElement, key: string) => {
@@ -471,7 +476,12 @@ export function setValue(
 
   // store value as _value as well since
   // non-string values will be stringified.
+  const valueDep = el._valueDep
+  const oldRawValue = valueDep && ('_value' in el ? el._value : el.value)
   el._value = value
+  if (valueDep && hasChanged(value, oldRawValue)) {
+    triggerDep(valueDep, el, '_value', value, oldRawValue)
+  }
 
   if (isHydrating && !isRecreatedNode(el)) {
     ;(__DEV__ || __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__) &&
