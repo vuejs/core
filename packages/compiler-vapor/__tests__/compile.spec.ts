@@ -610,4 +610,33 @@ describe('compile', () => {
     expect(() => babelParse(code, { sourceType: 'module' })).not.toThrow()
     expect(code).contains('() => (void 0)')
   })
+
+  test.each([
+    '<div @vue:mounted="onMounted">{{ bar }}</div>',
+    '<input @vue:before-unmount="onMounted" v-model="foo" />',
+    '<svg v-for="item in items" @vue:updated="onMounted" />',
+  ])('warns and ignores @vue:* lifecycle events on elements: %s', source => {
+    const onWarn = vi.fn()
+    const code = compile(source, { onWarn })
+
+    expect(onWarn).toHaveBeenCalledOnce()
+    expect(onWarn.mock.calls[0][0]).toMatchObject({
+      code: VaporErrorCodes.X_VNODE_HOOKS_NOT_SUPPORTED,
+      message:
+        '@vue:xxx per-element lifecycle events are not supported in Vapor mode and will be ignored.',
+      loc: { source: source.match(/@vue:[\w-]+="onMounted"/)![0] },
+    })
+    expect(code).toBe(compile(source.replace(/ @vue:[\w-]+="onMounted"/, '')))
+  })
+
+  test.each([
+    '<Comp @vue:mounted="onMounted" />',
+    '<component :is="foo" @vue:mounted="onMounted" />',
+    '<slot @vue:mounted="onMounted" />',
+  ])('keeps @vue:* lifecycle events on non-elements: %s', source => {
+    const onWarn = vi.fn()
+    const code = compile(source, { onWarn })
+    expect(onWarn).not.toHaveBeenCalled()
+    expect(code).toContain('onVnodeMounted')
+  })
 })
