@@ -177,6 +177,31 @@ describe('compiler: vModel transform', () => {
         }),
       )
     })
+
+    test('used on scope variable', () => {
+      const onError = vi.fn()
+      for (const source of [
+        '<div v-for="item in items"><input v-model="item" /></div>',
+        '<div v-for="item in items"><input v-model=" item " /></div>',
+        '<input v-for="(item, i) in items" v-model="i" />',
+        '<Comp v-slot="{ value }"><input v-model="value" /></Comp>',
+      ]) {
+        compileVapor(source, { prefixIdentifiers: true, onError })
+      }
+      expect(onError).toHaveBeenCalledTimes(4)
+      expect(onError).toHaveBeenCalledWith(
+        expect.objectContaining({
+          code: ErrorCodes.X_V_MODEL_ON_SCOPE_VARIABLE,
+        }),
+      )
+
+      const onError2 = vi.fn()
+      compileVapor(
+        '<div v-for="item in items"><input v-model="item.name" /></div>',
+        { prefixIdentifiers: true, onError: onError2 },
+      )
+      expect(onError2).not.toHaveBeenCalled()
+    })
   })
 
   describe('modifiers', () => {

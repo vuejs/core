@@ -529,7 +529,10 @@ function resolveSlotScopeReference(name: string, context: TransformContext) {
   }
 }
 
-function hasScopeBinding(name: string, exp: SimpleExpressionNode | undefined) {
+export function hasScopeBinding(
+  name: string,
+  exp: SimpleExpressionNode | undefined,
+): boolean | undefined {
   return (
     exp &&
     (exp.ast
