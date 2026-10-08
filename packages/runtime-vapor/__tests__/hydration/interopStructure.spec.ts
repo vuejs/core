@@ -1627,4 +1627,218 @@ describe('VDOM interop', () => {
     expect(`Hydration node mismatch`).not.toHaveBeenWarned()
     app.unmount()
   })
+
+  test('hydrate vapor component inside vdom component before a vapor sibling', async () => {
+    const data = reactive({ page: true, text: 'child' })
+    const { container } = await testWithVaporApp(
+      `<script setup>const components = _components</script>
+      <template>
+        <div><components.VdomOutlet /><components.VaporChild /></div>
+      </template>`,
+      {
+        VdomOutlet: {
+          code: `<script setup>
+            const data = _data
+            const components = _components
+          </script>
+          <template><components.VaporPage v-if="data.page" /></template>`,
+          vapor: false,
+        },
+        VaporPage: {
+          code: `<script setup>const page = 'page'</script>
+          <template><main>{{ page }}</main></template>`,
+          vapor: true,
+        },
+        VaporChild: {
+          code: `<script setup>const data = _data</script>
+          <template><span>{{ data.text }}</span></template>`,
+          vapor: true,
+        },
+      },
+      data,
+    )
+
+    // the interop anchor must not shift the following vapor sibling
+    expect(container.innerHTML).toBe(
+      '<div><main>page</main><span>child</span></div>',
+    )
+    expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+
+    data.text = 'updated'
+    await nextTick()
+    expect(container.innerHTML).toBe(
+      '<div><main>page</main><span>updated</span></div>',
+    )
+
+    data.page = false
+    await nextTick()
+    expect(container.innerHTML).toBe(
+      '<div><!--v-if--><span>updated</span></div>',
+    )
+  })
+
+  test('keeps recovered anchors inside a hydrated vapor component inside vdom', async () => {
+    const data = reactive({ page: true, show: false, text: 'child' })
+    const { container } = await testWithVaporApp(
+      `<script setup>const components = _components</script>
+      <template>
+        <div><components.VdomOutlet /><components.VaporChild /></div>
+      </template>`,
+      {
+        VdomOutlet: {
+          code: `<script setup>
+            const data = _data
+            const components = _components
+          </script>
+          <template><components.VaporPage v-if="data.page" /></template>`,
+          vapor: false,
+        },
+        VaporPage: {
+          code: `<script setup>const data = _data</script>
+          <template><main v-if="data.show">page</main></template>`,
+          vapor: true,
+        },
+        VaporChild: {
+          code: `<script setup>const data = _data</script>
+          <template><span>{{ data.text }}</span></template>`,
+          vapor: true,
+        },
+      },
+      data,
+      reactive({ page: true, show: true, text: 'child' }),
+    )
+    expect(`Hydration children mismatch`).toHaveBeenWarned()
+    expect(container.innerHTML).toBe('<div><!--if--><span>child</span></div>')
+
+    data.text = 'updated'
+    await nextTick()
+    expect(container.innerHTML).toBe('<div><!--if--><span>updated</span></div>')
+
+    data.show = true
+    await nextTick()
+    expect(container.innerHTML).toBe(
+      '<div><main>page</main><!--if--><span>updated</span></div>',
+    )
+
+    data.page = false
+    await nextTick()
+    expect(container.innerHTML).toBe(
+      '<div><!--v-if--><span>updated</span></div>',
+    )
+  })
+
+  test('keeps a vapor sibling when a vdom-hosted vapor component mismatches', async () => {
+    const data = reactive({ page: true, text: 'child' })
+    const { container } = await testWithVaporApp(
+      `<script setup>const components = _components</script>
+      <template>
+        <div><components.VdomOutlet /><components.VaporChild /></div>
+      </template>`,
+      {
+        VdomOutlet: {
+          code: `<script setup>
+            const data = _data
+            const components = _components
+          </script>
+          <template><components.VaporPage v-if="data.page" /></template>`,
+          vapor: false,
+        },
+        VaporPage: {
+          code: `<script setup>const x = 'a'</script>
+          <template><main>{{ x }}</main><p>b</p></template>`,
+          vapor: true,
+        },
+        VaporChild: {
+          code: `<script setup>const data = _data</script>
+          <template><span>{{ data.text }}</span></template>`,
+          vapor: true,
+        },
+      },
+      data,
+      reactive({ page: false, text: 'child' }),
+    )
+    expect(`Hydration node mismatch`).toHaveBeenWarned()
+    expect(container.querySelectorAll('span').length).toBe(1)
+
+    data.text = 'updated'
+    await nextTick()
+    expect(container.querySelector('span')!.textContent).toBe('updated')
+
+    data.page = false
+    await nextTick()
+    expect(container.innerHTML).toBe(
+      '<div><!--v-if--><span>updated</span></div>',
+    )
+  })
+
+  test('hydrate lazy async vapor component inside vdom before a vapor sibling', async () => {
+    const data = ref({ page: true, text: 'child' })
+    const pageCode = `<script setup>const x = 'page'</script>
+      <template><main>{{ x }}</main></template>`
+    const outletCode = `<script setup>
+        const data = _data
+        const components = _components
+      </script>
+      <template><components.AsyncPage v-if="data.page" /></template>`
+    const childCode = `<script setup>const data = _data</script>
+      <template><span>{{ data.text }}</span></template>`
+    const appCode = `<script setup>const components = _components</script>
+      <template>
+        <div><components.VdomOutlet /><components.VaporChild /></div>
+      </template>`
+    const createApp = (ssr: boolean, AsyncPage: any): Record<string, any> => {
+      const components: Record<string, any> = { AsyncPage }
+      components.VdomOutlet = compile(outletCode, data, components, {
+        vapor: false,
+        ssr,
+      })
+      components.VaporChild = compile(childCode, data, {}, { vapor: true, ssr })
+      return compile(appCode, data, components, { vapor: true, ssr })
+    }
+
+    const ssrPage = compile(pageCode, data, {}, { vapor: true, ssr: true })
+    const html = await VueServerRenderer.renderToString(
+      runtimeDom.createSSRApp(
+        createApp(
+          true,
+          runtimeDom.defineAsyncComponent(() => Promise.resolve(ssrPage)),
+        ),
+      ),
+    )
+
+    let hydratePage!: () => void
+    const page = compile(pageCode, data, {}, { vapor: true, ssr: false })
+    const AsyncPage = runtimeVapor.defineVaporAsyncComponent({
+      loader: () => Promise.resolve(page),
+      hydrate(hydrate) {
+        hydratePage = hydrate
+      },
+    })
+    await (AsyncPage as any).__asyncLoader()
+
+    const container = document.createElement('div')
+    container.innerHTML = html
+    document.body.appendChild(container)
+    createVaporSSRApp(createApp(false, AsyncPage))
+      .use(runtimeVapor.vaporInteropPlugin)
+      .mount(container)
+    expect(container.innerHTML).toBe(
+      '<div><main>page</main><span>child</span></div>',
+    )
+
+    hydratePage()
+    await nextTick()
+    data.value.text = 'updated'
+    await nextTick()
+    expect(container.innerHTML).toBe(
+      '<div><main>page</main><!--async component--><span>updated</span></div>',
+    )
+    expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+
+    data.value.page = false
+    await nextTick()
+    expect(container.innerHTML).toBe(
+      '<div><!--v-if--><span>updated</span></div>',
+    )
+  })
 })

@@ -821,6 +821,8 @@ const vaporInteropImpl = {
         parentSuspense,
       ) as VaporComponentInstance
     })
+    // bounds the component's own hydration, then holds no SSR position
+    claimUntrackedAnchor(vnode.anchor as Node)
     if (instance && instance.asyncDep && !instance.asyncResolved) {
       // `block` stays null until async setup resolves. VDOM still needs
       // `vnode.el` as the host start node; `pendingBlock` owns the full range.
