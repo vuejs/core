@@ -8,6 +8,7 @@ import {
 } from '../../src'
 import { BindingTypes, DOMErrorCodes } from '@vue/compiler-dom'
 import { transformVOn } from '../../src/transforms/vOn'
+import { parse } from '@babel/parser'
 
 const compileWithVModel = makeCompile({
   nodeTransforms: [transformElement, transformChildren],
@@ -601,6 +602,49 @@ describe('compiler: vModel transform', () => {
       expect(code).toContain(`((${form}.b satisfies string) = _value)`)
       expect(code).toContain(`(${form}!.c = _value)`)
       expect(code).toContain(`(${state}!.d = _value)`)
+      expect(() =>
+        parse(code, {
+          sourceType: 'module',
+          plugins: ['typescript'],
+          allowReturnOutsideFunction: inline,
+        }),
+      ).not.toThrow()
+    },
+  )
+
+  test.each([BindingTypes.SETUP_LET, BindingTypes.SETUP_MAYBE_REF])(
+    'member expression w/ TS expressions and %s bindings',
+    binding => {
+      const { code } = compileVapor(
+        `<input v-model="form!.name" />
+        <Comp v-model="form![key] as string" />
+        <input v-model="form" />`,
+        {
+          prefixIdentifiers: true,
+          isTS: true,
+          expressionPlugins: ['typescript'],
+          inline: true,
+          bindingMetadata: {
+            form: binding,
+            key: BindingTypes.SETUP_REF,
+          },
+        },
+      )
+
+      expect(code).toContain(`(_unref(form)!.name = _value)`)
+      expect(code).toContain(`((_unref(form)![key.value] as string) = _value)`)
+      expect(code).toContain(
+        `_isRef(form) ? (form.value = _value) : ${
+          binding === BindingTypes.SETUP_LET ? '(form = _value)' : 'null'
+        }`,
+      )
+      expect(() =>
+        parse(code, {
+          sourceType: 'module',
+          plugins: ['typescript'],
+          allowReturnOutsideFunction: true,
+        }),
+      ).not.toThrow()
     },
   )
 })

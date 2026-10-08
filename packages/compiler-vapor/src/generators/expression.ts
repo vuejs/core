@@ -16,6 +16,7 @@ import {
   isFunctionType,
   isInDestructureAssignment,
   isStaticProperty,
+  unwrapTSNode,
   walkIdentifiers,
 } from '@vue/compiler-dom'
 import type {
@@ -64,6 +65,11 @@ export function genExpression(
     return genIdentifier(content, context, loc, assignment)
   }
 
+  const target = assignment ? unwrapTSNode(ast!) : undefined
+  const isMemberTarget =
+    target?.type === 'MemberExpression' ||
+    target?.type === 'OptionalMemberExpression'
+
   const ids: Identifier[] = []
   const parentStackMap = new Map<Identifier, Node[]>()
   const parentStack: Node[] = []
@@ -82,7 +88,6 @@ export function genExpression(
     parentStack,
   )
 
-  let hasMemberExpression = false
   if (ids.length) {
     const [frag, push] = buildCodeFragment()
     let lastEnd = 0
@@ -115,13 +120,6 @@ export function genExpression(
         const leadingText = content.slice(lastEnd, start)
         if (leadingText.length) push([leadingText, NewlineType.Unknown])
 
-        // the object may be wrapped in a TS expression, e.g. `form!.a`
-        hasMemberExpression ||= parentStack.some(
-          p =>
-            p.type === 'MemberExpression' ||
-            p.type === 'OptionalMemberExpression',
-        )
-
         push(
           ...genIdentifier(
             asParams ? id.name : source,
@@ -131,7 +129,7 @@ export function genExpression(
               end: advancePositionWithClone(node.loc.start, source, end),
               source,
             },
-            hasMemberExpression ? undefined : assignment,
+            isMemberTarget ? undefined : assignment,
             id,
             parent,
             parentStack,
@@ -145,7 +143,7 @@ export function genExpression(
     if (lastEnd < content.length) {
       push([content.slice(lastEnd), NewlineType.Unknown])
     }
-    if (assignment && hasMemberExpression) {
+    if (assignment && isMemberTarget) {
       // `a.b as T = v` is not valid TS, `(a.b as T) = v` is
       if (TS_NODE_TYPES.includes(ast!.type)) {
         frag.unshift('(')
