@@ -487,7 +487,7 @@ export const createFor = (
     // a fresh item is rendered but not inserted yet
     const bm = frag.bm
     if (bm) {
-      for (let i = 0; i < bm.length; i++) bm[i](block.nodes, frag)
+      for (let i = 0; i < bm.length; i++) bm[i](block.nodes)
     }
 
     if (parent) {

@@ -3,7 +3,6 @@ import { isArray } from '@vue/shared'
 import type { MoveType } from '@vue/runtime-dom'
 import {
   type Block,
-  type TransitionOptions,
   type VaporTransitionHooks,
   insert,
   isValidSlot,
@@ -157,13 +156,13 @@ export interface SlotResolutionState {
   // recheck its own fallback decision.
   notifyExposedValidityChange(): void
   // beforeMount hooks, handed every block about to be exposed
-  bm?: ((nodes: Block, producer: TransitionOptions) => void)[]
+  bm?: ((nodes: Block) => void)[]
 }
 
 function beforeExpose(state: SlotResolutionState, block: Block): void {
   const bm = state.bm
   if (bm) {
-    for (let i = 0; i < bm.length; i++) bm[i](block, state)
+    for (let i = 0; i < bm.length; i++) bm[i](block)
   }
 }
 
