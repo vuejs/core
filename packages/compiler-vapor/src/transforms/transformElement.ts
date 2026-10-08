@@ -1,5 +1,6 @@
 import {
   type AttributeNode,
+  BindingTypes,
   type ComponentNode,
   type ElementNode,
   ElementTypes,
@@ -7,10 +8,11 @@ import {
   NodeTypes,
   type PlainElementNode,
   type SimpleExpressionNode,
+  type TextNode,
   advancePositionWithClone,
   createCompilerError,
   createSimpleExpression,
-  findDir,
+  extractIdentifiers,
   hasDynamicKeyVBind,
   isSimpleIdentifier,
   isStaticArgOf,
@@ -39,6 +41,7 @@ import {
   makeMap,
   normalizeClass,
   normalizeStyle,
+  parseStringStyle,
   stringifyStyle,
   toHandlerKey,
 } from '@vue/shared'
@@ -62,6 +65,7 @@ import {
 } from '../ir'
 import { EMPTY_EXPRESSION } from './utils'
 import {
+  findDir,
   findProp,
   isBuiltInComponent,
   isComponentTag,
@@ -76,7 +80,12 @@ import {
 } from '../generators/utils'
 import { normalizeBindShorthand } from './vBind'
 import { ignoreVHtmlChildren } from './vHtml'
-import type { Expression, ObjectExpression, ObjectProperty } from '@babel/types'
+import type {
+  ArrowFunctionExpression,
+  Expression,
+  ObjectExpression,
+  ObjectProperty,
+} from '@babel/types'
 import { parseExpression } from '@babel/parser'
 
 export const isReservedProp: (key: string) => boolean = /*#__PURE__*/ makeMap(
@@ -170,7 +179,7 @@ export const transformElement: NodeTransform = (node, context) => {
   if (
     node.type === NodeTypes.ELEMENT &&
     (node.tagType === ElementTypes.COMPONENT ||
-      context.options.isCustomElement(node.tag))
+      shouldUseCreateElement(node, context as TransformContext<ElementNode>))
   ) {
     parentSlots = context.slots
     context.slots = []
@@ -384,6 +393,7 @@ function transformComponentElement(
 
   let { tag } = node
   let asset = true
+  let slotScopeNamespace: string | undefined
 
   if (!dynamicComponent && !useCreateElement) {
     // <button is="vue:xxx">: the parser marks it as a component and the
@@ -392,9 +402,11 @@ function transformComponentElement(
     if (isProp && isProp.type === NodeTypes.ATTRIBUTE && isVueIsValue(isProp)) {
       tag = isProp.value!.content.slice(4)
     }
-    const fromSetup = resolveSetupReference(tag, context)
-    if (fromSetup) {
-      tag = fromSetup
+    const resolved =
+      resolveSlotScopeReference(tag, context) ||
+      resolveSetupReference(tag, context)
+    if (resolved) {
+      tag = resolved
       asset = false
     }
 
@@ -406,7 +418,13 @@ function transformComponentElement(
 
     const dotIndex = tag.indexOf('.')
     if (dotIndex > 0) {
-      const ns = resolveSetupReference(tag.slice(0, dotIndex), context)
+      slotScopeNamespace = resolveSlotScopeReference(
+        tag.slice(0, dotIndex),
+        context,
+      )
+      const ns =
+        slotScopeNamespace ||
+        resolveSetupReference(tag.slice(0, dotIndex), context)
       if (ns) {
         tag = ns + tag.slice(dotIndex)
         asset = false
@@ -444,6 +462,7 @@ function transformComponentElement(
     id,
     ...context.effectBoundary(),
     tag,
+    slotScopeNamespace,
     props,
     asset,
     root: singleRoot,
@@ -483,6 +502,47 @@ function resolveDynamicComponent(node: ComponentNode) {
   }
 }
 
+function resolveSlotScopeReference(name: string, context: TransformContext) {
+  const camelName = camelize(name)
+  for (const reference of [name, camelName, capitalize(camelName)]) {
+    let parent = context.parent
+    while (parent) {
+      const { node } = parent
+      if (node.type === NodeTypes.ELEMENT) {
+        const slot = findDir(node, 'slot')
+        if (slot && hasScopeBinding(reference, slot.exp)) {
+          return reference
+        }
+        const vFor = findDir(node, 'for')
+        const aliases = vFor && vFor.forParseResult
+        if (
+          aliases &&
+          [aliases.value, aliases.key, aliases.index].some(exp =>
+            hasScopeBinding(reference, exp as SimpleExpressionNode),
+          )
+        ) {
+          break
+        }
+      }
+      parent = parent.parent
+    }
+  }
+}
+
+export function hasScopeBinding(
+  name: string,
+  exp: SimpleExpressionNode | undefined,
+): boolean | undefined {
+  return (
+    exp &&
+    (exp.ast
+      ? (exp.ast as ArrowFunctionExpression).params.some(param =>
+          extractIdentifiers(param).some(id => id.name === name),
+        )
+      : exp.content === name)
+  )
+}
+
 function resolveSetupReference(name: string, context: TransformContext) {
   const bindings = context.options.bindingMetadata
   if (!bindings || bindings.__isScriptSetup === false) {
@@ -491,13 +551,27 @@ function resolveSetupReference(name: string, context: TransformContext) {
 
   const camelName = camelize(name)
   const PascalName = capitalize(camelName)
-  return bindings[name]
-    ? name
-    : bindings[camelName]
-      ? camelName
-      : bindings[PascalName]
-        ? PascalName
-        : undefined
+  const checkType = (type: BindingTypes) => {
+    if (bindings[name] === type) {
+      return name
+    }
+    if (bindings[camelName] === type) {
+      return camelName
+    }
+    if (bindings[PascalName] === type) {
+      return PascalName
+    }
+  }
+
+  return (
+    checkType(BindingTypes.SETUP_CONST) ||
+    checkType(BindingTypes.SETUP_REACTIVE_CONST) ||
+    checkType(BindingTypes.LITERAL_CONST) ||
+    checkType(BindingTypes.SETUP_LET) ||
+    checkType(BindingTypes.SETUP_REF) ||
+    checkType(BindingTypes.SETUP_MAYBE_REF) ||
+    checkType(BindingTypes.PROPS)
+  )
 }
 
 // keys cannot be a part of the template and need to be set dynamically
@@ -511,6 +585,10 @@ const dynamicKeys = [
   // typed value of an `<input>`
   'valueAsNumber',
 ]
+
+// props an `<input>` value is sanitized against, e.g. a range value is
+// clamped by max
+const inputValueDepKeys = ['type', 'min', 'max', 'step']
 
 // The attribute value can remain unquoted if it doesn't contain ASCII whitespace
 // or any of " ' ` = < or >.
@@ -568,8 +646,17 @@ function transformNativeElement(
           key.content === 'valueAsNumber' && modifier !== '^',
       )
     const nativeOnProps: IRProp[] = []
+    // like vdom, set value after the other props since it can depend on
+    // them, e.g. min/max of a range input (#2325, #4024)
+    let props = propsResult[1]
+    const valueProp = props.find(
+      ({ key, modifier }) =>
+        key.isStatic && key.content === 'value' && !modifier,
+    )
+    if (valueProp) props = [...props.filter(p => p !== valueProp), valueProp]
     let hasEffect = false
-    for (const prop of propsResult[1]) {
+    let hasValueDep = false
+    for (const prop of props) {
       const { key, values } = prop
       const canStringifyAttrName =
         key.isStatic && !UNSAFE_ATTR_NAME_RE.test(key.content)
@@ -585,13 +672,13 @@ function transformNativeElement(
             tag,
             isSVG,
           }
-          hasEffect = context.registerEffect(
+          operation.effect = context.registerEffect(
             values,
             operation,
             getEffectIndex,
             needsOrderedProps && hasEffect,
           )
-          operation.effect = hasEffect
+          hasEffect = operation.effect || hasEffect
         }
       } else if (
         // handling asset imports
@@ -612,7 +699,8 @@ function transformNativeElement(
         values.length === 1 &&
         (values[0].isStatic || values[0].content === "''") &&
         !dynamicKeys.includes(key.content) &&
-        !isRuntimeOnlyProp(node, key.content)
+        !isRuntimeOnlyProp(node, key.content) &&
+        !(prop === valueProp && hasValueDep)
       ) {
         const value = values[0].content === "''" ? '' : values[0].content
         appendTemplateProp(key.content, value)
@@ -645,7 +733,7 @@ function transformNativeElement(
       } else {
         // Constant setters can depend on preceding dynamic props, e.g.
         // valueAsNumber needs type and max to be initialized first.
-        hasEffect = context.registerEffect(
+        const effect = context.registerEffect(
           values,
           {
             type: IRNodeTypes.SET_PROP,
@@ -655,8 +743,13 @@ function transformNativeElement(
             isSVG,
           },
           getEffectIndex,
-          needsOrderedProps && hasEffect,
+          (needsOrderedProps || (tag === 'input' && prop === valueProp)) &&
+            hasEffect,
         )
+        hasEffect = effect || hasEffect
+        if (tag === 'input' && inputValueDepKeys.includes(key.content)) {
+          hasValueDep = true
+        }
       }
     }
     if (nativeOnProps.length) {
@@ -1105,8 +1198,8 @@ export function buildProps(
         continue
       }
       dynamicExpr.push(result.key)
-      // Handler bodies read the model when invoked, after its event updates it.
-      if (!deferListeners || !result.handler) dynamicExpr.push(result.value)
+      // a handler body runs on its event, not on render
+      if (!result.handler) dynamicExpr.push(result.value)
       if (deferListeners) {
         listenerResults.push(result)
       } else if (isComponent && !result.key.isStatic) {
@@ -1517,6 +1610,21 @@ function createObjectBindSubExpression(
   return expression
 }
 
+// Components receive a static style as an object, like the vdom compiler's
+// transformStyle: style="color: red" -> :style='{ "color": "red" }'
+function createStaticStyleExpression(
+  value: TextNode,
+  context: TransformContext<ElementNode>,
+): SimpleExpressionNode {
+  const content = JSON.stringify(parseStringStyle(value.content))
+  const expression = createSimpleExpression(content, false, value.loc)
+  expression.ast = parseExpression(
+    `(${content})`,
+    getParserOptions(context.options.expressionPlugins),
+  )
+  return expression
+}
+
 function transformProp(
   prop: VaporDirectiveNode | AttributeNode,
   node: ElementNode,
@@ -1529,7 +1637,9 @@ function transformProp(
     return {
       key: createSimpleExpression(prop.name, true, prop.nameLoc),
       value: prop.value
-        ? createSimpleExpression(prop.value.content, true, prop.value.loc)
+        ? name === 'style' && node.tagType === ElementTypes.COMPONENT
+          ? createStaticStyleExpression(prop.value, context)
+          : createSimpleExpression(prop.value.content, true, prop.value.loc)
         : EMPTY_EXPRESSION,
     }
   }

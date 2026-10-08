@@ -82,8 +82,8 @@ const hydrateApp: AppMountFn<ParentNode> = (app, container) => {
         true,
       )
     mountComponent(instance, container)
-    flushOnAppMount()
   })
+  flushOnAppMount()
   rootInstances.set(app, instance!)
 
   return instance!

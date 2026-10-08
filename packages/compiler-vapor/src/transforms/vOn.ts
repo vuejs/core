@@ -16,6 +16,7 @@ import { extend, makeMap } from '@vue/shared'
 import { resolveExpression } from '../utils'
 import { mergesListeners } from './transformElement'
 import { EMPTY_EXPRESSION } from './utils'
+import { VaporErrorCodes, createVaporCompilerError } from '../errors'
 
 const delegatedEvents = /*#__PURE__*/ makeMap(
   'beforeinput,click,dblclick,contextmenu,focusin,focusout,input,keydown,' +
@@ -53,6 +54,15 @@ export const transformVOn: DirectiveTransform = (dir, node, context) => {
   arg = resolveExpression(arg!)
 
   if (arg.isStatic && arg.content.startsWith('vue:')) {
+    if (node.tagType === ElementTypes.ELEMENT) {
+      context.options.onWarn(
+        createVaporCompilerError(
+          VaporErrorCodes.X_VNODE_HOOKS_NOT_SUPPORTED,
+          loc,
+        ),
+      )
+      return
+    }
     arg = extend({}, arg, {
       content: `vnode-${arg.content.slice(4)}`,
     })
