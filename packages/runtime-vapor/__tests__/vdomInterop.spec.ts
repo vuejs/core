@@ -12587,4 +12587,181 @@ describe('vdomInterop', () => {
     const { html } = define({ setup: () => () => h(Comp) }).render()
     expect(html()).toBe('<s class="t">vc</s><!--dynamic-component-->')
   })
+
+  test('vdom slot called by a vapor relay renders like vapor', async () => {
+    // a recursive menu forwards its own #item slot to nested levels through a
+    // vapor relay, see https://github.com/vuejs/core/issues/15596
+    const Menu = `<script setup vapor>
+      import { useSlots, defineVaporComponent } from 'vue'
+      const props = defineProps(['items'])
+      const data = _data
+      const components = _components
+      const slots = useSlots()
+      const relay = defineVaporComponent(p => slots.item(p), { props: ['item'] })
+      </script>
+      <template><div v-for="it in props.items" :key="it.label">
+        <slot name="item" :item="it">{{ it.label }}</slot>
+        <components.Menu v-if="it.items && data.open" :items="it.items">
+          <template #item="{ item }"><component :is="relay" :item="item" /></template>
+        </components.Menu>
+      </div></template>`
+    const texts: Record<string, string[]> = {}
+    await renderParity(
+      {
+        Menu,
+        App: `<template><components.Menu :items="data.items"><template #item="{ item }">
+          <b>{{ data.prefix }}{{ item.label }}</b>
+        </template></components.Menu></template>`,
+      },
+      () =>
+        ref({
+          open: false,
+          prefix: 'a:',
+          items: [
+            { label: 'Cut' },
+            { label: 'Share', items: [{ label: 'Copy' }] },
+          ],
+        }),
+      async (data, root, mode) => {
+        const seen = (texts[mode] = [] as string[])
+        data.value.open = true
+        await nextTick()
+        seen.push(root.textContent!)
+        data.value.prefix = 'b:'
+        data.value.items[1].items![0].label = 'Link'
+        await nextTick()
+        seen.push(root.textContent!)
+        data.value.open = false
+        await nextTick()
+        seen.push(root.textContent!)
+      },
+    )
+    expect(texts.vdom).toEqual([
+      'a:Cuta:Sharea:Copy',
+      'b:Cutb:Shareb:Link',
+      'b:Cutb:Share',
+    ])
+    expect(texts.vapor).toEqual(texts.vdom)
+  })
+
+  test('vdom slot read by vapor code follows slot function changes', async () => {
+    const toggle = ref(true)
+    const a = () => h('span', 'a')
+    const b = () => h('span', 'b')
+    const observedSlots: unknown[] = []
+
+    const VaporChild = defineVaporComponent({
+      setup() {
+        const slots = useSlots()
+        renderEffect(() => {
+          observedSlots.push(slots.default)
+        })
+        return createSlot('default', null)
+      },
+    })
+
+    const { html } = define({
+      setup() {
+        return () =>
+          h(VaporChild as any, null, { default: toggle.value ? a : b })
+      },
+    }).render()
+
+    expect(html()).toBe('<span>a</span>')
+    toggle.value = false
+    await nextTick()
+    expect(html()).toBe('<span>b</span>')
+    expect(observedSlots).toHaveLength(2)
+    expect(observedSlots[1]).not.toBe(observedSlots[0])
+  })
+
+  test('direct vdom slot calls in a vapor relay track replacement and removal', async () => {
+    const data = ref(0)
+    const setup = vi.fn()
+    const Child = compile(
+      `<script setup vapor>
+        import { useSlots, defineVaporComponent } from 'vue'
+        const slots = useSlots()
+        const Relay = defineVaporComponent(() => {
+          _components.setup()
+          return slots.default()
+        })
+       </script>
+       <template><Relay /><em>end</em></template>`,
+      data,
+      { setup },
+    )
+    const a = () => h('span', 'a')
+    const b = () => h('b', 'b')
+    const { host, app } = define({
+      setup() {
+        return () =>
+          h(
+            Child,
+            null,
+            data.value === 2
+              ? {}
+              : {
+                  default: data.value === 0 ? a : b,
+                },
+          )
+      },
+    }).render()
+
+    expect(host.textContent).toBe('aend')
+    data.value = 1
+    await nextTick()
+    expect(host.textContent).toBe('bend')
+    expect(host.querySelector('span')).toBe(null)
+    data.value = 2
+    await nextTick()
+    expect(host.textContent).toBe('end')
+    data.value = 0
+    await nextTick()
+    expect(host.textContent).toBe('aend')
+    expect(setup).toHaveBeenCalledTimes(1)
+    app.unmount()
+    expect(host.innerHTML).toBe('')
+  })
+
+  test('vdom callers of slots read in vapor still receive vnodes', async () => {
+    const data = ref('a')
+    const results: VNode[][] = []
+    const Outlet = defineComponent({
+      props: ['renderSlot'],
+      setup(props) {
+        return () => {
+          const nodes = props.renderSlot()
+          results.push(nodes)
+          return h('section', nodes)
+        }
+      },
+    })
+    const Child = compile(
+      `<script setup vapor>
+        import { useSlots } from 'vue'
+        const slots = useSlots()
+        const components = _components
+       </script>
+       <template><components.Outlet :render-slot="slots.default" /></template>`,
+      data,
+      { Outlet },
+    )
+    const { html } = define({
+      setup() {
+        return () =>
+          h(Child, null, {
+            default: () => h('span', data.value),
+          })
+      },
+    }).render()
+
+    expect(html()).toBe('<section><span>a</span></section>')
+    expect(Array.isArray(results[0])).toBe(true)
+    expect(results[0][0].type).toBe('span')
+    data.value = 'b'
+    await nextTick()
+    expect(html()).toBe('<section><span>b</span></section>')
+    expect(results[results.length - 1][0].type).toBe('span')
+  })
 })
