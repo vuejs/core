@@ -3400,3 +3400,112 @@ describe('attribute fallthrough', () => {
     expect(vapor.after).toBe(vdom.after)
   })
 })
+
+describe('checkbox model value bindings', () => {
+  test.each([
+    [':value="data.own.value" v-bind="data.spread"', 'spread', 'own'],
+    ['v-bind="data.spread" :value="data.own.value"', 'own', 'spread'],
+  ])('tracks the winning value in %s', async (bindings, winner, loser) => {
+    await renderParity(
+      {
+        App: `<template><input type="checkbox" v-model="data.selected" ${bindings}></template>`,
+      },
+      () => ref({ selected: [1], own: { value: 1 }, spread: { value: 1 } }),
+      async (data, root) => {
+        const input = root.querySelector('input')!
+        expect(input.checked).toBe(true)
+        data.value[loser].value = 2
+        await nextTick()
+        expect(input.checked).toBe(true)
+        data.value[winner].value = 2
+        await nextTick()
+        expect(input.checked).toBe(false)
+        data.value[winner].value = 1
+        await nextTick()
+        expect(input.checked).toBe(true)
+      },
+    )
+  })
+
+  test('tracks value supplied by a dynamic argument', async () => {
+    await renderParity(
+      {
+        App: `<template><input type="checkbox" v-model="data.selected" :[data.key]="data.option"></template>`,
+      },
+      () => ref({ selected: [1], key: 'value', option: 1 }),
+      async (data, root) => {
+        const input = root.querySelector('input')!
+        expect(input.checked).toBe(true)
+        data.value.option = 2
+        await nextTick()
+        expect(input.checked).toBe(false)
+        data.value.key = 'title'
+        await nextTick()
+        expect(input.checked).toBe(false)
+        data.value.key = 'value'
+        data.value.option = 1
+        await nextTick()
+        expect(input.checked).toBe(true)
+      },
+    )
+  })
+
+  test('tracks value after the checkbox model becomes an array', async () => {
+    await renderParity(
+      {
+        App: `<template><input type="checkbox" v-model="data.selected" :value="data.option"></template>`,
+      },
+      () => ref({ selected: false as boolean | number[], option: 1 }),
+      async (data, root) => {
+        const input = root.querySelector('input')!
+        expect(input.checked).toBe(false)
+        data.value.option = 2
+        await nextTick()
+        expect(input.checked).toBe(false)
+        data.value.selected = [2]
+        await nextTick()
+        expect(input.checked).toBe(true)
+        data.value.option = 1
+        await nextTick()
+        expect(input.checked).toBe(false)
+      },
+    )
+  })
+
+  test('tracks the winning fallthrough value across component modes', async () => {
+    const child = `<script setup>defineProps(['data'])</script>
+      <template><input type="checkbox" v-model="data.selected" :value="data.own"></template>`
+    await renderParity(
+      {
+        Child: child,
+        App: `<template><div>
+          <components.Child :data="data" :value="data.parent" />
+          <components.VdomChild :data="data" :value="data.parent" />
+          <components.VaporChild :data="data" :value="data.parent" />
+        </div></template>`,
+      },
+      () => ref({ selected: [2], own: 1, parent: 2 }),
+      async (data, root) => {
+        const inputs = Array.from(root.querySelectorAll('input'))
+        expect(inputs.map(input => input.checked)).toEqual([true, true, true])
+        data.value.own = 3
+        await nextTick()
+        expect(inputs.map(input => input.checked)).toEqual([true, true, true])
+        data.value.parent = 3
+        await nextTick()
+        expect(inputs.map(input => input.checked)).toEqual([
+          false,
+          false,
+          false,
+        ])
+        data.value.parent = 2
+        await nextTick()
+        expect(inputs.map(input => input.checked)).toEqual([true, true, true])
+      },
+      {
+        VdomChild: compile(child, ref(null), {}, { vapor: false }),
+        VaporChild: compile(child, ref(null), {}, { vapor: true }),
+      },
+    )
+  })
+})

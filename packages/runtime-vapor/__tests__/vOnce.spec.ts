@@ -256,4 +256,22 @@ describe('v-once', () => {
       expect(calls).toEqual(['old', 'new'])
     })
   })
+
+  test('checkbox model and value remain frozen', async () => {
+    await renderParity(
+      {
+        App: `<template><div><input v-once type="checkbox" v-model="data.selected" :value="data.value">{{ data.value }}</div></template>`,
+      },
+      () => ref({ value: 1, selected: [1] }),
+      async (data, root) => {
+        const input = root.querySelector('input')!
+        expect(input.checked).toBe(true)
+        data.value.value = 2
+        data.value.selected = []
+        await nextTick()
+        expect(input.value).toBe('1')
+        expect(input.checked).toBe(true)
+      },
+    )
+  })
 })

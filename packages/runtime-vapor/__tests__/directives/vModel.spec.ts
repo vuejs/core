@@ -2023,4 +2023,115 @@ describe('directive: v-model', () => {
       expect(vapor).toEqual(vdom)
     })
   })
+
+  describe('checkbox with a changing value', () => {
+    test.each(['Array', 'Set'])('%s model', async modelType => {
+      const checked = {} as Record<'vdom' | 'vapor', boolean[]>
+      const selected = {} as Record<'vdom' | 'vapor', number[]>
+      await renderParity(
+        {
+          App: `<template><input type="checkbox" v-model="data.selected" :value="data.value"></template>`,
+        },
+        () =>
+          ref({
+            value: 1,
+            selected: modelType === 'Array' ? [1] : new Set([1]),
+          }),
+        async (data, root, mode) => {
+          const input = root.querySelector('input')!
+          const states = (checked[mode] = [input.checked])
+          data.value.value = 2
+          await nextTick()
+          states.push(input.checked)
+          await new Promise(r => setTimeout(r, 5))
+          input.checked = true
+          triggerEvent('change', input)
+          await nextTick()
+          states.push(input.checked)
+          selected[mode] = Array.from(data.value.selected)
+          data.value.value = 3
+          await nextTick()
+          states.push(input.checked)
+          data.value.value = 1
+          await nextTick()
+          states.push(input.checked)
+        },
+      )
+      expect(checked.vdom).toEqual([true, false, true, false, true])
+      expect(selected.vdom).toEqual([1, 2])
+      expect(checked.vapor).toEqual(checked.vdom)
+      expect(selected.vapor).toEqual(selected.vdom)
+    })
+
+    test('updates checked before post watchers', async () => {
+      const seen = {} as Record<'vdom' | 'vapor', boolean[]>
+      await renderParity(
+        {
+          App: `<script setup>
+            import { ref, watch } from 'vue'
+            const data = _data
+            const input = ref()
+            watch(
+              () => data.value.value,
+              () => data.value.observed.push(input.value.checked),
+              { flush: 'post' },
+            )
+          </script>
+          <template><input ref="input" type="checkbox" v-model="data.selected" :value="data.value"></template>`,
+        },
+        () => ref({ value: 1, selected: [1], observed: [] as boolean[] }),
+        async (data, _root, mode) => {
+          await nextTick()
+          data.value.value = 2
+          await nextTick()
+          seen[mode] = data.value.observed.slice()
+        },
+      )
+      expect(seen.vdom).toEqual([false])
+      expect(seen.vapor).toEqual(seen.vdom)
+    })
+
+    test('tracks fields of a replacement object value', async () => {
+      const checked = {} as Record<'vdom' | 'vapor', boolean[]>
+      await renderParity(
+        {
+          App: `<template><input type="checkbox" v-model="data.selected" :value="data.option" :title="data.option.id"></template>`,
+        },
+        () => ref({ option: { id: 0 }, selected: [{ id: 1 }] }),
+        async (data, root, mode) => {
+          const input = root.querySelector('input')!
+          const states = (checked[mode] = [input.checked])
+          data.value.option = { id: 1 }
+          await nextTick()
+          states.push(input.checked)
+          data.value.option.id = 2
+          await nextTick()
+          states.push(input.checked)
+        },
+      )
+      expect(checked.vdom).toEqual([false, true, false])
+      expect(checked.vapor).toEqual(checked.vdom)
+    })
+
+    test('matches Set values without DOM string coercion', async () => {
+      await renderParity(
+        {
+          App: `<template><input type="checkbox" v-model="data.selected" :value="data.option"></template>`,
+        },
+        () => ref({ selected: new Set([1]), option: 1 as number | string }),
+        async (data, root) => {
+          const input = root.querySelector('input')!
+          expect(input.checked).toBe(true)
+          data.value.option = '1'
+          await nextTick()
+          expect(input.value).toBe('1')
+          expect(input.checked).toBe(false)
+          data.value.option = 1
+          await nextTick()
+          expect(input.value).toBe('1')
+          expect(input.checked).toBe(true)
+        },
+      )
+    })
+  })
 })
