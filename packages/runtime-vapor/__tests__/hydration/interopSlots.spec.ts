@@ -2062,6 +2062,192 @@ describe('VDOM interop', () => {
     },
   )
 
+  // A vdom render function calling a vapor slot itself (vue-router's
+  // RouterView, Suspense) gets one vapor slot vnode on the server too, as from
+  // the client's slots proxy: the slot has its range however it is called
+  describe('hydrate a vapor slot called directly', () => {
+    const multiRoot = `<h1>a</h1><p>{{ data.list[0] }}</p>`
+    const mount = (slot: string, call: string, page = `<p/>`, vapor = true) => {
+      const data = reactive({
+        show: true,
+        no: false,
+        list: [1],
+        empty: [] as number[],
+      })
+      const update = () => {
+        data.show = false
+        data.no = true
+        data.list = [2]
+        data.empty = [3]
+        return nextTick()
+      }
+      return testWithVaporApp(
+        `${setup}<template>
+          <components.RouterView v-slot="{ Component }">${slot}</components.RouterView>
+          <footer>f</footer>
+        </template>`,
+        {
+          Page: { code: `${setup}<template>${page}</template>`, vapor },
+          RouterView: {
+            code: `<script>
+              import { h } from 'vue'
+              export default {
+                setup(_, { slots }) {
+                  return () => ${call}
+                },
+              }
+            </script>`,
+            vapor: false,
+          },
+        },
+        data,
+      ).then(({ container, html }) => ({
+        container,
+        ssr: html.replace(/<!--[^>]*-->/g, ''),
+        update,
+      }))
+    }
+    const page = `{ Component: _components.Page }`
+
+    test.each([
+      ['a multi-root page', multiRoot, true, `<h1>a</h1><p>2</p>`],
+      ['a multi-root vdom page', multiRoot, false, `<h1>a</h1><p>2</p>`],
+      [
+        'a page with a leading v-if branch',
+        `<template v-if="data.show"><i>a</i></template><p>{{ data.list[0] }}</p>`,
+        true,
+        `<p>2</p>`,
+      ],
+      [
+        'a slot fallback page',
+        `<slot><p>{{ data.list[0] }}</p></slot>`,
+        true,
+        `<p>2</p>`,
+      ],
+    ])('under Suspense with %s', async (_, code, vapor, updated) => {
+      const { container, ssr, update } = await mount(
+        `<Suspense><component :is="Component" /></Suspense>`,
+        `slots.default(${page})[0]`,
+        code,
+        vapor,
+      )
+      expect(visible(container)).toBe(ssr)
+      expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+      expect(`Hydration children mismatch`).not.toHaveBeenWarned()
+
+      await update()
+      expect(visible(container)).toBe(`${updated}<footer>f</footer>`)
+    })
+
+    // Nuxt's NuxtPage passes the slot vnode on through `h(vnode)`, a clone
+    test.each([
+      ['a multi-root vdom page', multiRoot, false, `<h1>a</h1><p>2</p>`],
+      [
+        'a slot fallback page',
+        `<slot><p>{{ data.list[0] }}</p></slot>`,
+        true,
+        `<p>2</p>`,
+      ],
+    ])('cloned with %s', async (_, code, vapor, updated) => {
+      const { container, ssr, update } = await mount(
+        `<component :is="Component" />`,
+        `h(slots.default(${page})[0])`,
+        code,
+        vapor,
+      )
+      expect(visible(container)).toBe(ssr)
+      expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+
+      await update()
+      expect(visible(container)).toBe(`${updated}<footer>f</footer>`)
+    })
+
+    test.each([
+      ['a multi-root page', multiRoot, `<h1>a</h1><p>2</p>`],
+      [
+        'a page rendering nothing',
+        `<p v-if="data.no">{{ data.list[0] }}</p>`,
+        `<p>2</p>`,
+      ],
+      [
+        'a page with a leading empty list',
+        `<p v-for="i in data.empty" :key="i">{{ i }}</p><b>{{ data.list[0] }}</b>`,
+        `<p>3</p><b>2</b>`,
+      ],
+    ])('among the children of an element with %s', async (_, code, updated) => {
+      const { container, ssr, update } = await mount(
+        `<component :is="Component" />`,
+        `h('div', [slots.default(${page}), h('span', 's')])`,
+        code,
+      )
+      expect(visible(container)).toBe(ssr)
+      expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+      expect(`Hydration children mismatch`).not.toHaveBeenWarned()
+
+      await update()
+      expect(visible(container)).toBe(
+        `<div>${updated}<span>s</span></div><footer>f</footer>`,
+      )
+    })
+
+    // the slot is one vnode whatever it renders, not the first of its roots
+    test('for its first vnode with several roots', async () => {
+      const { container, ssr, update } = await mount(
+        multiRoot,
+        `slots.default()[0]`,
+      )
+      expect(ssr).toBe(`<h1>a</h1><p>1</p><footer>f</footer>`)
+      expect(visible(container)).toBe(`<h1>a</h1><p>1</p><footer>f</footer>`)
+      expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+      expect(`Hydration children mismatch`).not.toHaveBeenWarned()
+
+      await update()
+      expect(visible(container)).toBe(`<h1>a</h1><p>2</p><footer>f</footer>`)
+    })
+  })
+
+  // slots a vapor component hands over with `h()` are vdom slots: the server
+  // leaves them as they are, called directly or not
+  test('hydrate vnode slots created in a vapor component', async () => {
+    const data = reactive({ list: [1] })
+    const { container, html } = await testWithVaporApp(
+      `<script setup>
+        import { h } from 'vue'
+        const data = _data; const components = _components
+        const view = () =>
+          h(components.Child, null, {
+            default: () => [h('h1', 'a'), h('p', data.list[0])],
+          })
+      </script>
+      <template><component :is="view()" /><footer>f</footer></template>`,
+      {
+        Child: {
+          code: `<script>
+            import { h } from 'vue'
+            export default {
+              setup(_, { slots }) {
+                return () => h('div', slots.default())
+              },
+            }
+          </script>`,
+          vapor: false,
+        },
+      },
+      data,
+    )
+    expect(html).toContain(`<div><h1>a</h1><p>1</p></div>`)
+    expect(visible(container)).toBe(
+      `<div><h1>a</h1><p>1</p></div><footer>f</footer>`,
+    )
+    expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+
+    data.list = [2]
+    await nextTick()
+    expect(visible(container)).toBe(
+      `<div><h1>a</h1><p>2</p></div><footer>f</footer>`,
+    )
+  })
+
   test('hydrate VDOM slot content injecting from the component rendering the outlet', async () => {
     const { container } = await testWithVDOMApp(
       `<script setup>

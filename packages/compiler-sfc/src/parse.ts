@@ -152,6 +152,7 @@ export function parse(
       errors.push(e)
     },
   })
+  let emptyScriptSetup: ElementNode | undefined
   ast.children.forEach(node => {
     if (node.type !== NodeTypes.ELEMENT) {
       return
@@ -165,6 +166,12 @@ export function parse(
       !hasAttr(node, 'src')
     ) {
       descriptor.vapor ||= hasAttr(node, 'vapor')
+      if (
+        node.tag === 'script' &&
+        (hasAttr(node, 'setup') || hasAttr(node, 'vapor'))
+      ) {
+        emptyScriptSetup = node
+      }
       return
     }
     switch (node.tag) {
@@ -229,6 +236,21 @@ export function parse(
         break
     }
   })
+  if (descriptor.vapor && descriptor.script && !descriptor.scriptSetup) {
+    if (emptyScriptSetup) {
+      descriptor.scriptSetup = createBlock(
+        emptyScriptSetup,
+        source,
+        pad,
+      ) as SFCScriptBlock
+    } else {
+      const err = new SyntaxError(
+        `Vapor components with a normal <script> must also include <script setup>, <script vapor>, or <script setup vapor>.`,
+      ) as CompilerError
+      err.loc = descriptor.script.loc
+      errors.push(err)
+    }
+  }
   if (!descriptor.template && !descriptor.script && !descriptor.scriptSetup) {
     errors.push(
       new SyntaxError(

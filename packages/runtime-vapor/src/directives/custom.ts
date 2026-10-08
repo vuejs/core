@@ -79,6 +79,10 @@ export function withVaporDirectives(
   const visitor: RootChainVisitor = {
     onDynamicFragment: track,
     onComponent(block) {
+      if (__DEV__) {
+        const hooks = (block.hmrRootHooks ||= [])
+        if (!hooks.includes(applyDirectives)) hooks.push(applyDirectives)
+      }
       if (
         __FEATURE_SUSPENSE__ &&
         isSuspenseEnabled &&

@@ -15,7 +15,9 @@ import {
   createSimpleExpression,
   isFunctionType,
   isInDestructureAssignment,
+  isSimpleIdentifier,
   isStaticProperty,
+  unwrapTSNode,
   walkIdentifiers,
 } from '@vue/compiler-dom'
 import type {
@@ -50,10 +52,16 @@ export function genExpression(
     return [[JSON.stringify(content), NewlineType.None, loc]]
   }
 
+  // an empty expression (e.g. `v-show=""`) evaluates to undefined, like vdom
+  if (!content.trim()) {
+    return [['void 0', NewlineType.None, loc]]
+  }
+
   if (
-    !node.content.trim() ||
     // there was a parsing error
     ast === false ||
+    // never parsed, e.g. asset url imports added by compiler-sfc
+    ast === undefined ||
     isConstantExpression(node)
   ) {
     return [[content, NewlineType.None, loc], assignment && ` = ${assignment}`]
@@ -63,6 +71,11 @@ export function genExpression(
   if (ast === null) {
     return genIdentifier(content, context, loc, assignment)
   }
+
+  const target = assignment ? unwrapTSNode(ast!) : undefined
+  const isMemberTarget =
+    target?.type === 'MemberExpression' ||
+    target?.type === 'OptionalMemberExpression'
 
   const ids: Identifier[] = []
   const parentStackMap = new Map<Identifier, Node[]>()
@@ -82,7 +95,6 @@ export function genExpression(
     parentStack,
   )
 
-  let hasMemberExpression = false
   if (ids.length) {
     const [frag, push] = buildCodeFragment()
     let lastEnd = 0
@@ -115,11 +127,6 @@ export function genExpression(
         const leadingText = content.slice(lastEnd, start)
         if (leadingText.length) push([leadingText, NewlineType.Unknown])
 
-        hasMemberExpression ||=
-          parent &&
-          (parent.type === 'MemberExpression' ||
-            parent.type === 'OptionalMemberExpression')
-
         push(
           ...genIdentifier(
             asParams ? id.name : source,
@@ -129,7 +136,7 @@ export function genExpression(
               end: advancePositionWithClone(node.loc.start, source, end),
               source,
             },
-            hasMemberExpression ? undefined : assignment,
+            isMemberTarget ? undefined : assignment,
             id,
             parent,
             parentStack,
@@ -143,7 +150,12 @@ export function genExpression(
     if (lastEnd < content.length) {
       push([content.slice(lastEnd), NewlineType.Unknown])
     }
-    if (assignment && hasMemberExpression) {
+    if (assignment && isMemberTarget) {
+      // `a.b as T = v` is not valid TS, `(a.b as T) = v` is
+      if (TS_NODE_TYPES.includes(ast!.type)) {
+        frag.unshift('(')
+        push(')')
+      }
       push(` = ${assignment}`)
     }
     return frag
@@ -226,7 +238,14 @@ function genIdentifier(
             ),
             source: rightContent,
           })
-          rightExp.ast = parseExp(context, rightContent)
+          // the right side is parsed out of its function, so it may contain
+          // `await` (#10754)
+          rightExp.ast = isSimpleIdentifier(rightContent)
+            ? null
+            : parseExpression(`(${rightContent})`, {
+                ...getParserOptions(context.options.expressionPlugins),
+                sourceType: 'module',
+              })
           return [
             prefix,
             `${helper('isRef')}(${raw}) ? ${raw}.value ${operator} `,

@@ -562,4 +562,77 @@ describe('createIf', () => {
     expect(reused).toEqual([true, true])
     expect(vapor.text).toBe(vdom.text)
   })
+
+  describe.each(['condense', 'preserve'] as const)(
+    'branch whitespace with whitespace: %s',
+    whitespace => {
+      test.each([
+        [
+          'elements',
+          '<p><b v-if="data.ok">a</b> <i v-else>b</i>{{ data.n }}</p>',
+          'b1',
+          'a2',
+        ],
+        [
+          'else-if',
+          '<p><b v-if="data.ok">a</b> <i v-else-if="data.n === 1">b</i> <u v-else>c</u>{{ data.n }}</p>',
+          'b1',
+          'a2',
+        ],
+        [
+          'templates',
+          '<p><template v-if="data.ok"><b>a</b></template> <template v-else><i>b</i></template>{{ data.n }}</p>',
+          'b1',
+          'a2',
+        ],
+        [
+          'comments',
+          '<p><b v-if="data.ok">a</b> <!-- branch --> <i v-else>b</i>{{ data.n }}</p>',
+          'b1',
+          'a2',
+        ],
+        [
+          'pre',
+          '<pre><b v-if="data.ok">a</b> <i v-else>b</i>{{ data.n }}</pre>',
+          'b1',
+          'a2',
+        ],
+        [
+          'whitespace after the chain',
+          '<p><b v-if="data.ok">a</b> <i v-else>b</i> <em>{{ data.n }}</em></p>',
+          'b 1',
+          'a 2',
+        ],
+        [
+          'components with v-slot',
+          '<p><components.Comp v-if="data.ok" v-slot>a</components.Comp> <components.Comp v-else v-slot>b</components.Comp>{{ data.n }}</p>',
+          'b1',
+          'a2',
+        ],
+      ])('matches vdom for %s', async (_, template, initial, updated) => {
+        const mounted: string[] = []
+        const { vdom, vapor } = await renderParity(
+          {
+            Comp: '<template><slot /></template>',
+            App: `<template>${template}</template>`,
+          },
+          () => ref({ ok: false, n: 1 }),
+          (data, root) => {
+            expect(root.textContent).toBe(initial)
+            mounted.push(root.innerHTML.replace(/<!--.*?-->/g, ''))
+            data.value.ok = true
+            data.value.n = 2
+          },
+          {},
+          { whitespace },
+        )
+        expect(mounted[1]).toBe(mounted[0])
+        expect(vapor.text).toBe(updated)
+        expect(vapor.text).toBe(vdom.text)
+        expect(vapor.after.replace(/<!--.*?-->/g, '')).toBe(
+          vdom.after.replace(/<!--.*?-->/g, ''),
+        )
+      })
+    },
+  )
 })

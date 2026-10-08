@@ -469,7 +469,9 @@ function genLiteralObjectProps(
         getStaticPropKeyName(prop, true),
         genPropKey(prop, context, true),
         prop.handler
-          ? genEventHandler(context, prop.values, prop.handlerModifiers)
+          ? genEventHandler(context, prop.values, prop.handlerModifiers, {
+              hoisted: prop,
+            })
           : genPropValue(prop.values, context),
       )
     } else {

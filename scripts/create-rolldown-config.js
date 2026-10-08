@@ -337,7 +337,14 @@ export function createConfigsForPackage({
       external: resolveExternal(),
       transform: {
         define: resolveDefine(),
-        target: isServerRenderer || isCJSBuild ? 'es2019' : 'es2016',
+        // compiler-sfc's cjs build inlines deps that use private class fields,
+        // which are much slower once lowered to WeakMaps.
+        target:
+          isCJSBuild && name === 'compiler-sfc'
+            ? 'es2022'
+            : isServerRenderer || isCJSBuild
+              ? 'es2019'
+              : 'es2016',
       },
       // IMPORTANT: the root tsconfig maps `vue` -> `runtime-with-vapor.ts` for TS usage.
       // For bundling we want `vue` to resolve to the normal entry to avoid pulling

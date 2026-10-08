@@ -1552,6 +1552,62 @@ describe('resolveType', () => {
       expect(deps && [...deps]).toStrictEqual(['/user.ts'])
     })
 
+    test('ts module resolve matches each file against its own referenced config', () => {
+      const files = {
+        '/tsconfig.json': JSON.stringify({
+          files: [],
+          references: [
+            { path: './tsconfig.a.json' },
+            { path: './tsconfig.b.json' },
+          ],
+        }),
+        '/tsconfig.a.json': JSON.stringify({
+          include: ['a/**/*'],
+          compilerOptions: {
+            composite: true,
+            paths: {
+              user: ['./a/user.ts'],
+            },
+          },
+        }),
+        '/tsconfig.b.json': JSON.stringify({
+          include: ['b/**/*'],
+          compilerOptions: {
+            composite: true,
+            paths: {
+              user: ['./b/user.ts'],
+            },
+          },
+        }),
+        '/a/user.ts': 'export type User = { a: string }',
+        '/b/user.ts': 'export type User = { b: number }',
+        '/b/relay.ts': `import type { User } from 'user'\nexport type BUser = User`,
+      }
+
+      // the same include patterns are tested against /a/Test.vue and
+      // /b/relay.ts with opposite results
+      const { props, deps } = resolve(
+        `
+        import { User } from 'user'
+        import { BUser } from '../b/relay'
+        defineProps<User & BUser>()
+        `,
+        files,
+        undefined,
+        '/a/Test.vue',
+      )
+
+      expect(props).toStrictEqual({
+        a: ['String'],
+        b: ['Number'],
+      })
+      expect(deps && [...deps]).toStrictEqual([
+        '/a/user.ts',
+        '/b/relay.ts',
+        '/b/user.ts',
+      ])
+    })
+
     test('ts module resolve w/ path aliased vue file', () => {
       const files = {
         '/tsconfig.json': JSON.stringify({
