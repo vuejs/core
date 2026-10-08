@@ -185,4 +185,32 @@ describe('v-text', () => {
       '{ textContent: () => (_toDisplayString(isNaN.value)) }',
     )
   })
+
+  test.each([true, false])(
+    'shadowed globals in compound component expressions (inline: %s)',
+    inline => {
+      for (const name of ['JSON', 'require']) {
+        const value = inline ? `${name}.value` : `_ctx.${name}`
+        for (const [expression, expected] of [
+          [`(${name})`, `(${value})`],
+          [`${name} || ''`, `${value} || ''`],
+        ]) {
+          const { code } = compileWithVText(`<Comp v-text="${expression}"/>`, {
+            bindingMetadata: { [name]: BindingTypes.SETUP_REF },
+            inline,
+          })
+          expect(code).contains(
+            `{ textContent: () => (_toDisplayString(${expected})) }`,
+          )
+        }
+      }
+    },
+  )
+
+  test('preserve unshadowed globals in compound component expressions', () => {
+    for (const expression of ['(JSON)', "JSON || ''", '(require)']) {
+      const { code } = compileWithVText(`<Comp v-text="${expression}"/>`)
+      expect(code).not.contains('toDisplayString')
+    }
+  })
 })

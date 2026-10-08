@@ -120,7 +120,9 @@ function isConstantVTextExpression(
         return
       }
       const needsPrefix =
-        isReferenced && !isGloballyAllowed(id.name) && id.name !== 'require'
+        isReferenced &&
+        (bindings[id.name] ||
+          (!isGloballyAllowed(id.name) && id.name !== 'require'))
       if (
         needsPrefix ||
         parent?.type === 'CallExpression' ||
