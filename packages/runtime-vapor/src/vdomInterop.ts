@@ -1725,7 +1725,17 @@ function createVDOMComponent(
           restoreCurrentInstance(prevInner)
         }
         if (effect.active && (propsInstance || cells)) {
-          deliverInputs(propsInstance, rawValues, cells)
+          const changed = deliverInputs(propsInstance, rawValues, cells)
+          // an async wrapper forwards props and slots only when it renders, and
+          // a deferred hydration renders untracked, so re-render it like VDOM
+          if (
+            changed &&
+            propsInstance &&
+            (component as any).__asyncLoader &&
+            vnode.component!.isMounted
+          ) {
+            vnode.component!.update()
+          }
         }
       }, true)
       effect.run()
@@ -1766,21 +1776,6 @@ function createVDOMComponent(
         })
         .catch(NOOP)
     }
-  }
-
-  if (
-    !once &&
-    (component as any).__asyncLoader &&
-    rawSlots &&
-    (rawSlots as RawSlots).$
-  ) {
-    // the async wrapper passes slots to its inner component only when it
-    // renders, so re-render it when dynamic slots change, like a VDOM parent
-    renderEffect(() => {
-      dynamicSlotsProxyHandlers.ownKeys!(rawSlots as RawSlots)
-      const instance = vnode.component
-      if (instance && instance.isMounted) instance.update()
-    }, true)
   }
 
   // overwrite how the vdom instance handles props
