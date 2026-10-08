@@ -760,4 +760,31 @@ await data.value.ready
     await nextTick()
     expect(el.style.display).toBe('')
   })
+
+  test('appears a Transition child hidden by its own v-show for the shown outer v-show like vdom', async () => {
+    const seen: Record<string, unknown[]> = { vdom: [], vapor: [] }
+    await renderParity(
+      {
+        Inner: `<template><section v-show="data.open">x</section></template>`,
+        App: `<template><Transition appear :css="false" @before-appear="data.onBeforeAppear" @appear="data.onAppear"><components.Inner v-show="data.enabled" /></Transition></template>`,
+      },
+      () =>
+        ref({
+          enabled: true,
+          open: false,
+          onBeforeAppear: vi.fn(),
+          onAppear: vi.fn((_el: Element, done: () => void) => done()),
+        }),
+      async (data, root, mode) => {
+        await nextTick()
+        seen[mode].push(
+          root.querySelector('section')!.style.display,
+          data.value.onBeforeAppear.mock.calls.length,
+          data.value.onAppear.mock.calls.length,
+        )
+      },
+    )
+    expect(seen.vdom).toEqual(['none', 1, 1])
+    expect(seen.vapor).toEqual(seen.vdom)
+  })
 })

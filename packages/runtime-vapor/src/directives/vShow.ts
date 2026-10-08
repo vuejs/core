@@ -182,10 +182,10 @@ function setDisplay(
   } else if (value) {
     // Another v-show reaching the element before insertion (vdom's
     // beforeMount): a shown transition root stays as the first one left it,
-    // the renderer enters it on insert. Shown with no hooks yet, the
-    // Transition that attaches them settles it.
-    if ($transition) return
+    // the renderer still enters it on insert. Shown with no hooks yet, the
+    // Transition that attaches them re-hides it.
     ;(el as TransitionBlock).$vshow! |= VShowFlags.MOUNT_SHOWN
+    if ($transition) return
   }
   writeDisplay(el, value)
 }
