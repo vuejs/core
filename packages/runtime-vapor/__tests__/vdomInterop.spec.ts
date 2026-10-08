@@ -12587,4 +12587,402 @@ describe('vdomInterop', () => {
     const { html } = define({ setup: () => () => h(Comp) }).render()
     expect(html()).toBe('<s class="t">vc</s><!--dynamic-component-->')
   })
+
+  describe('v-show mount lifecycle', () => {
+    function deferred() {
+      let resolve!: () => void
+      const promise = new Promise<void>(r => (resolve = r))
+      return { promise, resolve }
+    }
+
+    async function flushResolution(promise: Promise<unknown>) {
+      await promise
+      await Promise.resolve()
+      await nextTick()
+      await nextTick()
+    }
+
+    test.each([false, true])(
+      'enters before child lifecycle hooks and follows replacement roots (HOC: %s)',
+      async hoc => {
+        const calls: string[] = []
+        const data = ref({
+          alternate: false,
+          show: true,
+          beforeEnter: (el: Element) => calls.push(`before:${el.isConnected}`),
+          enter: (el: Element, done: () => void) => {
+            calls.push(`enter:${el.isConnected}`)
+            done()
+          },
+          mounted: () => calls.push('mounted'),
+          updated: () => calls.push('updated'),
+        })
+        const Inner = compile(
+          `<script setup>
+            import { onMounted, onUpdated } from 'vue'
+            const data = _data
+            onMounted(data.value.mounted)
+            onUpdated(data.value.updated)
+          </script>
+          <template><div v-if="!data.alternate">one</div><p v-else>two</p></template>`,
+          data,
+          {},
+          { vapor: false },
+        )
+        const Child = hoc
+          ? compile(
+              `<script setup>const components = _components</script>
+              <template><components.Inner /></template>`,
+              data,
+              { Inner },
+              { vapor: false },
+            )
+          : Inner
+        const App = compile(
+          `<template>
+            <Transition appear :css="false" @before-enter="data.beforeEnter" @enter="data.enter">
+              <components.Child v-show="data.show" />
+            </Transition>
+          </template>`,
+          data,
+          { Child },
+        )
+        const host = document.createElement('div')
+        document.body.appendChild(host)
+        const app = createVaporApp(App).use(vaporInteropPlugin)
+        try {
+          app.mount(host)
+          expect(calls).toEqual(['before:false', 'enter:true', 'mounted'])
+
+          calls.length = 0
+          data.value.alternate = true
+          await nextTick()
+          expect(host.firstElementChild!.tagName).toBe('P')
+          expect(calls).toEqual(['before:false', 'enter:true', 'updated'])
+
+          data.value.show = false
+          await nextTick()
+          expect((host.firstElementChild as HTMLElement).style.display).toBe(
+            'none',
+          )
+
+          calls.length = 0
+          data.value.show = true
+          await nextTick()
+          expect((host.firstElementChild as HTMLElement).style.display).toBe('')
+          expect(calls).toEqual(['before:true', 'enter:true'])
+        } finally {
+          app.unmount()
+          host.remove()
+        }
+      },
+    )
+
+    test('enters a Vapor root reached through a VDOM wrapper only once', () => {
+      const beforeEnter = vi.fn()
+      const enter = vi.fn((_el: Element, done: () => void) => done())
+      const data = ref({ show: true, beforeEnter, enter })
+      const Inner = compile(`<template><div>child</div></template>`, data)
+      const Child = compile(
+        `<script setup>const components = _components</script>
+        <template><components.Inner /></template>`,
+        data,
+        { Inner },
+        { vapor: false },
+      )
+      const App = compile(
+        `<template>
+          <Transition appear :css="false" @before-enter="data.beforeEnter" @enter="data.enter">
+            <components.Child v-show="data.show" />
+          </Transition>
+        </template>`,
+        data,
+        { Child },
+      )
+      const { app } = define(App).render()
+      try {
+        expect(beforeEnter).toHaveBeenCalledTimes(1)
+        expect(enter).toHaveBeenCalledTimes(1)
+        expect(
+          'v-show used on component with non-single-element root node',
+        ).toHaveBeenWarned()
+      } finally {
+        app.unmount()
+      }
+    })
+
+    test('preserves existing directives and mount hooks on fresh VNodes and extra prop clones', async () => {
+      const beforeMount = vi.fn()
+      const mounted = vi.fn()
+      const enter = vi.fn((_el: Element, done: () => void) => done())
+      const data = ref({ alternate: false, show: true, title: 'one', enter })
+      const Child = compile(
+        `<script setup>const props = defineProps(['alternate'])</script>
+        <template><div v-if="!props.alternate">one</div><p v-else>two</p></template>`,
+        data,
+        {},
+        { vapor: false },
+      )
+      const App = compile(
+        `<script setup vapor>
+          const props = defineProps(['node'])
+          const data = _data
+        </script>
+        <template>
+          <Transition appear :css="false" @enter="data.enter">
+            <component :is="props.node" :title="data.title" v-show="data.show" />
+          </Transition>
+        </template>`,
+        data,
+      )
+      const directive = { beforeMount, mounted }
+      const { host, app } = define({
+        setup: () => () =>
+          h(App, {
+            node: withDirectives(
+              h(Child, { alternate: data.value.alternate }),
+              [[directive]],
+            ),
+          }),
+      }).render()
+      try {
+        expect(host.firstElementChild!.getAttribute('title')).toBe('one')
+        expect(beforeMount).toHaveBeenCalledTimes(1)
+        expect(mounted).toHaveBeenCalledTimes(1)
+        expect(enter).toHaveBeenCalledTimes(1)
+
+        data.value.title = 'two'
+        await nextTick()
+        expect(host.firstElementChild!.getAttribute('title')).toBe('two')
+        expect(beforeMount).toHaveBeenCalledTimes(1)
+        expect(enter).toHaveBeenCalledTimes(1)
+
+        data.value.alternate = true
+        await nextTick()
+        expect(host.firstElementChild!.tagName).toBe('P')
+        expect(host.firstElementChild!.getAttribute('title')).toBe('two')
+        expect(beforeMount).toHaveBeenCalledTimes(2)
+        expect(mounted).toHaveBeenCalledTimes(2)
+        expect(enter).toHaveBeenCalledTimes(2)
+
+        data.value.alternate = false
+        await nextTick()
+        expect(host.firstElementChild!.tagName).toBe('DIV')
+        expect(beforeMount).toHaveBeenCalledTimes(3)
+        expect(mounted).toHaveBeenCalledTimes(3)
+        expect(enter).toHaveBeenCalledTimes(3)
+
+        data.value.show = false
+        await nextTick()
+        expect((host.firstElementChild as HTMLElement).style.display).toBe(
+          'none',
+        )
+      } finally {
+        app.unmount()
+      }
+    })
+
+    test('applies enter classes before inserting the VDOM root', () => {
+      const data = ref({ show: true })
+      const Child = compile(
+        `<script setup>const data = _data</script><template><div>child</div></template>`,
+        data,
+        {},
+        { vapor: false },
+      )
+      const App = compile(
+        `<template><Transition name="fade" appear><components.Child v-show="data.show" /></Transition></template>`,
+        data,
+        { Child },
+      )
+      const host = document.createElement('div')
+      document.body.appendChild(host)
+      const classes: string[][] = []
+      const insertBefore = host.insertBefore.bind(host)
+      const insert = vi
+        .spyOn(host, 'insertBefore')
+        .mockImplementation((node, anchor) => {
+          if (node instanceof HTMLElement) classes.push([...node.classList])
+          return insertBefore(node, anchor)
+        })
+      const app = createVaporApp(App).use(vaporInteropPlugin)
+      try {
+        app.mount(host)
+        expect(classes).toEqual([['fade-enter-from', 'fade-enter-active']])
+      } finally {
+        app.unmount()
+        insert.mockRestore()
+        host.remove()
+      }
+    })
+
+    test.each([false, true])(
+      'defers enter until the pending outer Suspense resolves (hide while pending: %s)',
+      async hideWhilePending => {
+        const fast = deferred()
+        const slow = deferred()
+        const calls: string[] = []
+        let fastRoot!: HTMLElement
+        const data = ref({
+          show: true,
+          fast: fast.promise,
+          slow: slow.promise,
+          beforeEnter: (el: Element) => {
+            fastRoot = el as HTMLElement
+            calls.push(`before:${el.isConnected}`)
+          },
+          enter: (el: Element, done: () => void) => {
+            calls.push(`enter:${el.isConnected}`)
+            done()
+          },
+        })
+        const Fast = compile(
+          `<script setup>const data = _data; await data.value.fast</script>
+        <template><div>fast</div></template>`,
+          data,
+          {},
+          { vapor: false },
+        )
+        const Slow = compile(
+          `<script setup>const data = _data; await data.value.slow</script>
+        <template><div>slow</div></template>`,
+          data,
+          {},
+          { vapor: false },
+        )
+        const App = compile(
+          `<template>
+          <Suspense>
+            <section>
+              <Suspense suspensible>
+                <Transition appear :css="false" @before-enter="data.beforeEnter" @enter="data.enter">
+                  <components.Fast v-show="data.show" />
+                </Transition>
+              </Suspense>
+              <components.Slow />
+            </section>
+            <template #fallback><p>outer pending</p></template>
+          </Suspense>
+        </template>`,
+          data,
+          { Fast, Slow },
+        )
+        const host = document.createElement('div')
+        document.body.appendChild(host)
+        const app = createVaporApp(App).use(vaporInteropPlugin)
+        try {
+          app.mount(host)
+          expect(host.textContent).toBe('outer pending')
+          expect(calls).toEqual([])
+
+          fast.resolve()
+          await flushResolution(fast.promise)
+          expect(host.textContent).toBe('outer pending')
+          expect(calls).toEqual(['before:false'])
+
+          if (hideWhilePending) {
+            data.value.show = false
+            await nextTick()
+            expect(fastRoot.style.display).toBe('none')
+            expect(calls).toEqual(['before:false'])
+          }
+
+          slow.resolve()
+          await flushResolution(slow.promise)
+          expect(host.textContent).toBe('fastslow')
+          expect(calls).toEqual(
+            hideWhilePending
+              ? ['before:false']
+              : ['before:false', 'enter:true'],
+          )
+        } finally {
+          fast.resolve()
+          slow.resolve()
+          app.unmount()
+          host.remove()
+        }
+      },
+    )
+
+    test.each([false, true])(
+      'initializes an async root under an element and follows later toggles (show: %s)',
+      async show => {
+        const pending = deferred()
+        const enter = vi.fn((_el: Element, done: () => void) => done())
+        const data = ref({ wait: pending.promise, show, enter })
+        const Child = compile(
+          `<script setup>const data = _data; await data.value.wait</script>
+          <template><div style="display: inline-block">child</div></template>`,
+          data,
+          {},
+          { vapor: false },
+        )
+        const App = compile(
+          `<template>
+            <Suspense>
+              <section>
+                <Transition appear :css="false" @enter="data.enter">
+                  <components.Child v-show="data.show" />
+                </Transition>
+              </section>
+              <template #fallback><p>pending</p></template>
+            </Suspense>
+          </template>`,
+          data,
+          { Child },
+        )
+        const { host, app } = define(App).render()
+        try {
+          expect(host.textContent).toBe('pending')
+          pending.resolve()
+          await flushResolution(pending.promise)
+          const root = host.querySelector('section > div') as HTMLElement
+          expect(root.style.display).toBe(show ? 'inline-block' : 'none')
+          expect(enter).toHaveBeenCalledTimes(show ? 1 : 0)
+
+          data.value.show = !show
+          await nextTick()
+          expect(root.style.display).toBe(show ? 'none' : 'inline-block')
+          expect(enter).toHaveBeenCalledTimes(1)
+        } finally {
+          pending.resolve()
+          app.unmount()
+        }
+      },
+    )
+
+    test('preserves directives on an eagerly mounted root with comments', async () => {
+      const updated = vi.fn()
+      const data = ref({ show: true, text: 'one' })
+      const Child = compile(
+        `<script setup>
+          const data = _data
+          const vCustom = _components.directive
+        </script>
+        <template><!-- root --><div v-custom>{{ data.text }}</div></template>`,
+        data,
+        { directive: { updated } },
+        { vapor: false, compilerOptions: { comments: true } },
+      )
+      const App = compile(
+        `<template><section><components.Child v-show="data.show" /></section></template>`,
+        data,
+        { Child },
+      )
+      const { host, app } = define(App).render()
+      try {
+        expect(host.textContent).toBe('one')
+        expect(
+          'v-show used on component with non-single-element root node',
+        ).toHaveBeenWarned()
+
+        data.value.text = 'two'
+        await nextTick()
+        expect(host.textContent).toBe('two')
+        expect(updated).toHaveBeenCalledTimes(1)
+      } finally {
+        app.unmount()
+      }
+    })
+  })
 })

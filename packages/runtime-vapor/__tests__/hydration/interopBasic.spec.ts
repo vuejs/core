@@ -996,4 +996,38 @@ describe('VDOM interop', () => {
     })
     expect(`Hydration style mismatch`).toHaveBeenWarned()
   })
+
+  test('updates a hydrated v-show VDOM root with an existing directive', async () => {
+    const updated = vi.fn()
+    const data = ref({ count: 0, show: true, updated })
+    const { container, app } = await testWithVaporApp(
+      `<template><components.Child v-show="data.show" /></template>`,
+      {
+        Child: {
+          code: `<script setup>
+            const data = _data
+            const vCustom = { updated: () => data.value.updated() }
+          </script>
+          <template><div v-custom>{{ data.count }}</div></template>`,
+          vapor: false,
+        },
+      },
+      data,
+    )
+    try {
+      expect(container.textContent).toBe('0')
+      data.value.count++
+      await nextTick()
+      expect(container.textContent).toBe('1')
+      expect(updated).toHaveBeenCalledTimes(1)
+
+      data.value.show = false
+      await nextTick()
+      expect((container.firstElementChild as HTMLElement).style.display).toBe(
+        'none',
+      )
+    } finally {
+      app.unmount()
+    }
+  })
 })

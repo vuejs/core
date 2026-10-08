@@ -8,6 +8,7 @@ import {
   type HydrationRenderer,
   type KeepAliveContext,
   MoveType,
+  type ObjectDirective,
   type Plugin,
   type RendererInternals,
   type ShallowRef,
@@ -22,6 +23,7 @@ import {
   Comment as VNodeComment,
   type VNodeHook,
   type VNodeNormalizedRef,
+  type VShowElement,
   type VaporInVdomInterface,
   VaporSlot as VaporSlotVNode,
   type VdomInVaporInterface,
@@ -35,6 +37,7 @@ import {
   ensureHydrationRenderer,
   ensureRenderer,
   ensureValidVNode,
+  filterSingleRoot,
   getContainerType,
   getInheritedScopeIds,
   getTransitionRawChildren,
@@ -65,6 +68,7 @@ import {
   shallowRef,
   shouldUpdateComponent,
   simpleSetCurrentInstance,
+  vShowHidden,
   activate as vdomActivate,
   deactivate as vdomDeactivate,
   setRef as vdomSetRef,
@@ -1085,6 +1089,15 @@ function trackFragmentVNodeUpdates(
   vnode: VNode,
   syncNodes: () => void,
 ): void {
+  const dirs = frag.vnode && frag.vnode.dirs
+  const vShow =
+    dirs &&
+    dirs.find(
+      binding => binding.dir === interopVShow && binding.value.frag === frag,
+    )
+  if (vShow && (!vnode.dirs || !vnode.dirs.includes(vShow))) {
+    vnode.dirs = vnode.dirs ? vnode.dirs.concat(vShow) : [vShow]
+  }
   // `ibu`/`iu` are the interop-internal notification channel the renderer
   // fires alongside the public vnode hooks. Assignment (never append) keeps
   // the channel single-owner: re-tracking replaces a stale callback instead
@@ -1099,6 +1112,75 @@ function trackFragmentVNodeUpdates(
     if (frag.u) {
       frag.u.forEach(hook => hook(frag.nodes))
     }
+  }
+}
+
+const interopVShow: ObjectDirective<
+  VShowElement,
+  { frag: VaporFragment; apply: (nodes: Block) => void }
+> = {
+  beforeMount(el, { value: { frag, apply } }, { shapeFlag, transition }) {
+    // Follow async and HOC roots before mounted is released by Suspense, so
+    // the Vapor effect can still toggle a root in a pending hidden tree.
+    frag.nodes = resolveVNodeNodes(frag.vnode!)
+    apply(el)
+    // A Vapor root reached through VDOM still owns enter in insertNode.
+    if (
+      shapeFlag & ShapeFlags.ELEMENT &&
+      transition &&
+      transition.persisted &&
+      !el[vShowHidden]
+    ) {
+      transition.beforeEnter(el)
+    }
+  },
+  mounted(el, _binding, { shapeFlag, transition }) {
+    if (
+      shapeFlag & ShapeFlags.ELEMENT &&
+      transition &&
+      transition.persisted &&
+      !el[vShowHidden]
+    ) {
+      transition.enter(el)
+    }
+  },
+}
+
+export function setInteropVShow(
+  frag: VaporFragment,
+  apply: (nodes: Block) => void,
+): void {
+  const vnode = frag.vnode!
+  const dirs = vnode.dirs
+  if (
+    dirs &&
+    dirs.some(
+      binding => binding.dir === interopVShow && binding.value.frag === frag,
+    )
+  ) {
+    return
+  }
+  const binding = {
+    dir: interopVShow,
+    instance: null,
+    value: { frag, apply },
+    oldValue: undefined,
+    modifiers: EMPTY_OBJ,
+  }
+  // Hydration and in-place creation can render the child before applyVShow.
+  // Keep its existing root chain's bindings aligned with future renders.
+  let current: VNode | null = vnode
+  while (current) {
+    if (
+      __DEV__ &&
+      current.patchFlag > 0 &&
+      current.patchFlag & PatchFlags.DEV_ROOT_FRAGMENT
+    ) {
+      current =
+        filterSingleRoot(current.children as VNodeArrayChildren) || current
+    }
+    current.dirs = current.dirs ? current.dirs.concat(binding) : [binding]
+    current = current.component && current.component.subTree
   }
 }
 

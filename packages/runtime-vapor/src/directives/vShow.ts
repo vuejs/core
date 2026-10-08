@@ -19,6 +19,7 @@ import {
 import { isSlotOutletFragment } from '../fragment'
 import { isHydrating } from '../dom/hydration'
 import { isInteropEnabled } from '../vdomInteropState'
+import { setInteropVShow } from '../vdomInterop'
 import { isTransitionEnabled } from '../transition'
 import { isSuspenseEnabled } from '../suspense'
 
@@ -67,6 +68,7 @@ export function applyVShow(target: Block, source: () => any): void {
     visitor.onInteropFragment = frag => {
       if (isSlotOutletFragment(frag)) return (slotRoot = true)
       mark(frag)
+      if (frag.vnode) setInteropVShow(frag, apply)
       if (isTransitionEnabled && frag.$transition) transition = frag.$transition
       // vdom patches the content first, then notifies through `u`
       register((frag.u ||= []), apply)
