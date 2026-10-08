@@ -19,7 +19,11 @@ import {
 import { isSlotOutletFragment } from '../fragment'
 import { isHydrating } from '../dom/hydration'
 import { isInteropEnabled } from '../vdomInteropState'
-import { isTransitionEnabled, isVaporTransition } from '../transition'
+import {
+  isTransitionEnabled,
+  isVaporTransition,
+  isVaporTransitionHooks,
+} from '../transition'
 import { isSuspenseEnabled } from '../suspense'
 
 /**
@@ -136,8 +140,9 @@ function setDisplay(
   if (el[vShowHidden] === hidden) return
   // like vdom's beforeMount, a shown element is left to a Transition that
   // has not mounted yet: one another v-show already hid stays hidden
-  const own = isTransitionEnabled && (el as TransitionBlock).$transition
-  if (own && value && !own.state.isMounted) return
+  // (hooks relayed from a vdom Transition carry no vapor state)
+  const own = isTransitionEnabled ? (el as TransitionBlock).$transition : null
+  if (isVaporTransitionHooks(own) && value && !own.state.isMounted) return
   el[vShowHidden] = hidden
 
   const $transition = isTransitionEnabled
