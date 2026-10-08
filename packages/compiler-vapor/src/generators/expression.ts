@@ -15,6 +15,7 @@ import {
   createSimpleExpression,
   isFunctionType,
   isInDestructureAssignment,
+  isSimpleIdentifier,
   isStaticProperty,
   unwrapTSNode,
   walkIdentifiers,
@@ -237,7 +238,14 @@ function genIdentifier(
             ),
             source: rightContent,
           })
-          rightExp.ast = parseExp(context, rightContent)
+          // the right side is parsed out of its function, so it may contain
+          // `await` (#10754)
+          rightExp.ast = isSimpleIdentifier(rightContent)
+            ? null
+            : parseExpression(`(${rightContent})`, {
+                ...getParserOptions(context.options.expressionPlugins),
+                sourceType: 'module',
+              })
           return [
             prefix,
             `${helper('isRef')}(${raw}) ? ${raw}.value ${operator} `,
