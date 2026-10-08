@@ -27,6 +27,7 @@ import {
   type Block,
   type BlockFn,
   type TransitionBlock,
+  type VaporTransitionState,
   insert,
   registerNestedVDOMCleanup,
 } from '../block'
@@ -123,7 +124,7 @@ const VaporTransitionGroupImpl = /*@__PURE__*/ defineVaporComponent({
     }
 
     const instance = currentInstance as VaporComponentInstance
-    const state = useTransitionState()
+    const state: VaporTransitionState = useTransitionState()
 
     // use proxy to keep props reference stable
     let cssTransitionProps!: BaseTransitionProps<Element>
@@ -238,6 +239,18 @@ const VaporTransitionGroupImpl = /*@__PURE__*/ defineVaporComponent({
       }
     }
     let isMounted = false
+
+    if (__DEV__) {
+      state.refresh = () => {
+        applyGroupTransitionHooks(
+          slottedBlock,
+          propsProxy,
+          state,
+          instance,
+          updateHooks,
+        )
+      }
+    }
 
     renderEffect(() => {
       cssTransitionProps = resolveTransitionProps(props)
