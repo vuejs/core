@@ -978,4 +978,21 @@ describe('v-on', () => {
     expect(code).not.contains('withKeys')
     expect(code).contains('onClick: () => _ctx.handleClick')
   })
+
+  // #10754
+  test('await in right side of setup let assignment (inline mode)', () => {
+    const { code } = compileWithVOn(
+      `<div @click="async () => { x = await bar() }"/>`,
+      {
+        inline: true,
+        bindingMetadata: {
+          x: BindingTypes.SETUP_LET,
+          bar: BindingTypes.SETUP_CONST,
+        },
+      },
+    )
+    expect(code).contains(
+      `async () => { _isRef(x) ? x.value = await bar() : x = await bar() }`,
+    )
+  })
 })
