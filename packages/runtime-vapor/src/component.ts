@@ -1,4 +1,5 @@
 import {
+  type AppConfig,
   type AsyncComponentInternalOptions,
   type ComponentCustomElementInterface,
   type ComponentInternalInstance,
@@ -178,7 +179,7 @@ import {
   resolveUnmountSuspense,
   runWithUnmountSuspense,
 } from './suspense'
-import { isInteropEnabled } from './vdomInteropState'
+import { interopKey, isInteropEnabled } from './vdomInteropState'
 import {
   applyComponentScopeIds,
   getCurrentScopeId,
@@ -355,7 +356,10 @@ export function createComponent(
       setRenderContext(deriveSuspense(prevCtx, currentInstance.suspense))
     }
 
-    const owner = resolveFallthroughOwner(isSingleRoot)
+    // props delivered by vdom are plain values, not fallthrough sources
+    const owner =
+      !(isInteropEnabled && rawProps && (rawProps as RawProps)[interopKey]) &&
+      resolveFallthroughOwner(isSingleRoot)
     if (owner) {
       // inject the parent attrs as a dynamic props source; the owner is
       // captured because sources resolve from read paths that do not
@@ -791,7 +795,9 @@ export function applyFallthroughProps(
  */
 function createDevSetupStateProxy(
   setupState: Record<string, any>,
+  instance: VaporComponentInstance,
 ): Record<string, any> {
+  const config = instance.appContext.config as AppConfig
   return new Proxy(setupState, {
     get(target, key: string | symbol, receiver) {
       if (
@@ -800,8 +806,11 @@ function createDevSetupStateProxy(
         !hasOwn(toRaw(setupState), key)
       ) {
         warn(
-          `Property ${JSON.stringify(key)} was accessed during render ` +
-            `but is not defined on instance.`,
+          hasOwn(config.globalProperties, key)
+            ? `Property ${JSON.stringify(key)} is provided via app.config.globalProperties, ` +
+                `which is not supported in Vapor components.`
+            : `Property ${JSON.stringify(key)} was accessed during render ` +
+                `but is not defined on instance.`,
         )
       }
 
@@ -1234,6 +1243,11 @@ export function createPlainElement(
   once?: boolean,
   ns?: Namespace,
 ): HTMLElement {
+  if (comp === 'svg') {
+    ns = Namespaces.SVG
+  } else if (comp === 'math') {
+    ns = Namespaces.MATH_ML
+  }
   rawSlots = normalizeRawSlots(rawSlots)
   const _insertionParent = insertionParent
   const _insertionAnchor = insertionAnchor
@@ -1828,7 +1842,10 @@ function handleSetupResult(
         instance.devtoolsRawSetupState = setupResult
       }
       if (__DEV__) {
-        instance.setupState = createDevSetupStateProxy(proxyRefs(setupResult))
+        instance.setupState = createDevSetupStateProxy(
+          proxyRefs(setupResult),
+          instance,
+        )
         runDevRender(instance)
       } else {
         // component has a render function but no setup function

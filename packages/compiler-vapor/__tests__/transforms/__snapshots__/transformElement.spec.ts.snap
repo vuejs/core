@@ -375,7 +375,7 @@ exports[`compiler: element transform > component > props merging: style 1`] = `
 "import { createAssetComponent as _createAssetComponent } from 'vue';
 
 export function render(_ctx) {
-  const n0 = _createAssetComponent("Foo", { style: () => (["color: green", { color: 'red' }]) }, null, true)
+  const n0 = _createAssetComponent("Foo", { style: () => ([{"color":"green"}, { color: 'red' }]) }, null, true)
   return n0
 }"
 `;
@@ -461,6 +461,15 @@ export function render(_ctx) {
     id: "foo",
     class: "bar"
   }, null, true)
+  return n0
+}"
+`;
+
+exports[`compiler: element transform > component > static style is passed as an object 1`] = `
+"import { createAssetComponent as _createAssetComponent } from 'vue';
+
+export function render(_ctx) {
+  const n0 = _createAssetComponent("Foo", { style: {"width":"200px","color":"red"} }, null, true)
   return n0
 }"
 `;

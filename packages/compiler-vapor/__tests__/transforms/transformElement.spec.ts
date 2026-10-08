@@ -863,6 +863,14 @@ describe('compiler: element transform', () => {
         ],
       })
     })
+
+    test('static style is passed as an object', () => {
+      const { code } = compileWithElementTransform(
+        `<Foo style="width: 200px; color: red" />`,
+      )
+      expect(code).toMatchSnapshot()
+      expect(code).contains(`style: {"width":"200px","color":"red"}`)
+    })
   })
 
   describe('dynamic component', () => {
@@ -2105,4 +2113,123 @@ describe('compiler: element transform', () => {
       expect(helpers).toContain('VaporKeepAlive')
     },
   )
+
+  describe('slot-scope component tags', () => {
+    test.each([
+      ['{ Foo }', 'Foo', '_slotProps0.Foo'],
+      ['{ fooBar }', 'foo-bar', '_slotProps0.fooBar'],
+      ['{ nested: { Foo: Alias } }', 'Alias', '_slotProps0.nested.Foo'],
+      ['slotProps', 'slot-props.Foo', 'slotProps.Foo'],
+      ['{ parts }', 'parts.Foo', '_slotProps0.parts.Foo'],
+    ])('resolves %s through <%s>', (props, tag, expression) => {
+      const { code } = compileWithElementAndSlotTransform(
+        `<Comp v-slot="${props}"><${tag} /></Comp>`,
+      )
+      expect(code).toContain(`_createComponent(${expression})`)
+      expect(code).not.toContain(`_resolveComponent("${tag}")`)
+    })
+
+    test('resolves template slot bindings before setup bindings', () => {
+      const { code } = compileWithElementAndSlotTransform(
+        `<Comp><template #default="{ Foo }"><foo /></template></Comp>`,
+        { bindingMetadata: { foo: BindingTypes.SETUP_CONST } },
+      )
+      expect(code).toContain('_createComponent(_slotProps0.Foo)')
+      expect(code).not.toContain('_createComponent(_ctx.foo)')
+    })
+
+    test('does not leak slot bindings to the component tag or siblings', () => {
+      const { code } = compileWithElementAndSlotTransform(
+        `<Foo v-slot="{ Foo }"><Foo /></Foo><Foo />`,
+      )
+      expect(code).toContain('_createComponent(_slotProps0.Foo)')
+      expect(code).toContain('const _component_Foo = _resolveComponent("Foo")')
+      expect(
+        code.match(/_createComponentWithFallback\(_component_Foo/g),
+      ).toHaveLength(2)
+    })
+
+    test('respects v-for shadowing and restores the outer slot binding', () => {
+      const { code } = compileWithElementAndSlotTransform(
+        `<Comp v-slot="{ Foo }"><template v-for="Foo in list"><Foo /></template><Foo /></Comp>`,
+      )
+      expect(code).toContain('_createComponent(_slotProps0.Foo)')
+      expect(code).toContain('_createComponentWithFallback(_component_Foo)')
+    })
+
+    test('resolves slot bindings shadowing v-for aliases', () => {
+      const { code } = compileWithElementAndSlotTransform(
+        `<div v-for="Foo in list"><Comp v-slot="{ Foo }"><Foo /></Comp></div>`,
+      )
+      expect(code).toMatch(/_createComponent\(_slotProps\d+\.Foo\)/)
+      expect(code).not.toContain('_resolveComponent("Foo")')
+    })
+
+    test.each([
+      '<div v-for="Foo in list"><Foo.Bar /></div>',
+      '<Comp v-slot="{ Foo }"><div v-for="Foo in list"><Foo.Bar /></div></Comp>',
+    ])('keeps setup namespace resolution under v-for: %s', source => {
+      const { code } = compileWithElementAndSlotTransform(source, {
+        bindingMetadata: { Foo: BindingTypes.SETUP_CONST },
+      })
+      expect(code).toContain('_createComponent(_ctx.Foo.Bar)')
+      expect(code).not.toMatch(/_createComponent\(_for_item\d+\.value\.Bar\)/)
+    })
+  })
+
+  describe.each([false, true])('setup lookup order (inline: %s)', inline => {
+    test.each([
+      [BindingTypes.SETUP_CONST, BindingTypes.SETUP_REACTIVE_CONST],
+      [BindingTypes.SETUP_REACTIVE_CONST, BindingTypes.LITERAL_CONST],
+      [BindingTypes.LITERAL_CONST, BindingTypes.SETUP_LET],
+      [BindingTypes.SETUP_LET, BindingTypes.SETUP_REF],
+      [BindingTypes.SETUP_REF, BindingTypes.SETUP_MAYBE_REF],
+      [BindingTypes.SETUP_MAYBE_REF, BindingTypes.PROPS],
+    ])('prefers %s over %s regardless of spelling', (preferred, other) => {
+      const { code, ir } = compileWithElementTransform('<foo-bar />', {
+        inline,
+        bindingMetadata: { fooBar: other, FooBar: preferred },
+      })
+
+      expect(ir.block.dynamic.children[0].operation).toMatchObject({
+        tag: 'FooBar',
+        asset: false,
+      })
+      expect(code).toContain('FooBar')
+      expect(code).not.toContain('fooBar')
+    })
+
+    test('prefers exact and camelized names within the same binding type', () => {
+      const { ir } = compileWithElementTransform('<fooBar /><foo-bar />', {
+        inline,
+        bindingMetadata: {
+          fooBar: BindingTypes.SETUP_CONST,
+          FooBar: BindingTypes.SETUP_CONST,
+        },
+      })
+
+      for (const child of ir.block.dynamic.children) {
+        expect(child.operation).toMatchObject({ tag: 'fooBar', asset: false })
+      }
+    })
+
+    test('uses binding priority for namespaced components and directives', () => {
+      const { code, ir } = compileWithElementTransform('<foo.Bar v-focus />', {
+        inline,
+        bindingMetadata: {
+          foo: BindingTypes.SETUP_LET,
+          Foo: BindingTypes.SETUP_CONST,
+          vFocus: BindingTypes.SETUP_LET,
+          VFocus: BindingTypes.SETUP_CONST,
+        },
+      })
+
+      expect(ir.block.dynamic.children[0].operation).toMatchObject({
+        tag: 'Foo.Bar',
+        asset: false,
+      })
+      expect(code).toContain('VFocus')
+      expect(code).not.toContain('vFocus')
+    })
+  })
 })

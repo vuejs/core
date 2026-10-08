@@ -1842,6 +1842,31 @@ describe('Vapor Mode hydration', () => {
       expect(container.textContent).toBe('iafter')
     })
 
+    test('preserves implicit default slot whitespace between conditional named slots', async () => {
+      const data = reactive({ ok: true })
+      const { container, html } = await testHydration(
+        `<template><components.Comp><b>A</b><template #named v-if="data.ok">X</template> <template #named v-else>Y</template><i>B</i></components.Comp></template>`,
+        {
+          Comp: `<template><p><slot /></p></template>`,
+        },
+        data,
+      )
+
+      expect(html).toBe('<p><!--[--><b>A</b> <i>B</i><!--]--></p>')
+      expect(container.innerHTML).toBe(html)
+      expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+      expect(`Hydration children mismatch`).not.toHaveBeenWarned()
+
+      const b = container.querySelector('b')
+      const i = container.querySelector('i')
+      data.ok = false
+      await nextTick()
+
+      expect(container.innerHTML).toBe(html)
+      expect(container.querySelector('b')).toBe(b)
+      expect(container.querySelector('i')).toBe(i)
+    })
+
     // `<!--(-->`…`<!--)-->` wraps a slot fallback the server rendered: the
     // markup is written by hand.
     describe('slot fallback range', () => {

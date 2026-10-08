@@ -180,4 +180,20 @@ describe('compiler sfc: transform asset url', () => {
     )
     expect(code).toContain(`import _imports_0 from './foo bar.png'`)
   })
+
+  test('transform assetUrls alongside v-bind object', () => {
+    const { code } = compileWithAssetUrls(
+      `<img v-bind="attrs" src="./logo.png"/>`,
+    )
+    expect(code).toContain(`import _imports_0 from './logo.png'`)
+    expect(code).toContain('{ src: _imports_0 }')
+  })
+
+  test('transform assetUrls on a component', () => {
+    const { code } = compileWithAssetUrls(`<VImg src="./logo.png"/>`, {
+      tags: { VImg: ['src'] },
+    })
+    expect(code).toContain(`import _imports_0 from './logo.png'`)
+    expect(code).toContain('src: () => (_imports_0)')
+  })
 })

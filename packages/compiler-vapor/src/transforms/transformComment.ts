@@ -1,10 +1,12 @@
 import {
   type CommentNode,
   type ElementNode,
+  ElementTypes,
   NodeTypes,
   type RootNode,
   type TemplateChildNode,
   isCommentOrWhitespace,
+  isVSlot,
 } from '@vue/compiler-dom'
 import type { NodeTransform, TransformContext } from '../transform'
 import { DynamicFlag } from '../ir'
@@ -65,6 +67,9 @@ export function getSiblingIf(
   if (
     sibling &&
     sibling.type === NodeTypes.ELEMENT &&
+    !(
+      sibling.tagType === ElementTypes.TEMPLATE && sibling.props.some(isVSlot)
+    ) &&
     sibling.props.some(
       ({ type, name }) =>
         type === NodeTypes.DIRECTIVE &&
