@@ -583,6 +583,10 @@ const dynamicKeys = [
   'valueAsNumber',
 ]
 
+// props an `<input>` value is sanitized against, e.g. a range value is
+// clamped by max
+const inputValueDepKeys = ['type', 'min', 'max', 'step']
+
 // The attribute value can remain unquoted if it doesn't contain ASCII whitespace
 // or any of " ' ` = < or >.
 // https://html.spec.whatwg.org/multipage/introduction.html#intro-early-example
@@ -639,8 +643,17 @@ function transformNativeElement(
           key.content === 'valueAsNumber' && modifier !== '^',
       )
     const nativeOnProps: IRProp[] = []
+    // like vdom, set value after the other props since it can depend on
+    // them, e.g. min/max of a range input (#2325, #4024)
+    let props = propsResult[1]
+    const valueProp = props.find(
+      ({ key, modifier }) =>
+        key.isStatic && key.content === 'value' && !modifier,
+    )
+    if (valueProp) props = [...props.filter(p => p !== valueProp), valueProp]
     let hasEffect = false
-    for (const prop of propsResult[1]) {
+    let hasValueDep = false
+    for (const prop of props) {
       const { key, values } = prop
       const canStringifyAttrName =
         key.isStatic && !UNSAFE_ATTR_NAME_RE.test(key.content)
@@ -656,13 +669,13 @@ function transformNativeElement(
             tag,
             isSVG,
           }
-          hasEffect = context.registerEffect(
+          operation.effect = context.registerEffect(
             values,
             operation,
             getEffectIndex,
             needsOrderedProps && hasEffect,
           )
-          operation.effect = hasEffect
+          hasEffect = operation.effect || hasEffect
         }
       } else if (
         // handling asset imports
@@ -683,7 +696,8 @@ function transformNativeElement(
         values.length === 1 &&
         (values[0].isStatic || values[0].content === "''") &&
         !dynamicKeys.includes(key.content) &&
-        !isRuntimeOnlyProp(node, key.content)
+        !isRuntimeOnlyProp(node, key.content) &&
+        !(prop === valueProp && hasValueDep)
       ) {
         const value = values[0].content === "''" ? '' : values[0].content
         appendTemplateProp(key.content, value)
@@ -716,7 +730,7 @@ function transformNativeElement(
       } else {
         // Constant setters can depend on preceding dynamic props, e.g.
         // valueAsNumber needs type and max to be initialized first.
-        hasEffect = context.registerEffect(
+        const effect = context.registerEffect(
           values,
           {
             type: IRNodeTypes.SET_PROP,
@@ -726,8 +740,13 @@ function transformNativeElement(
             isSVG,
           },
           getEffectIndex,
-          needsOrderedProps && hasEffect,
+          (needsOrderedProps || (tag === 'input' && prop === valueProp)) &&
+            hasEffect,
         )
+        hasEffect = effect || hasEffect
+        if (tag === 'input' && inputValueDepKeys.includes(key.content)) {
+          hasValueDep = true
+        }
       }
     }
     if (nativeOnProps.length) {
