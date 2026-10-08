@@ -58,6 +58,8 @@ export function genExpression(
   if (
     // there was a parsing error
     ast === false ||
+    // never parsed, e.g. asset url imports added by compiler-sfc
+    ast === undefined ||
     isConstantExpression(node)
   ) {
     return [[content, NewlineType.None, loc], assignment && ` = ${assignment}`]
