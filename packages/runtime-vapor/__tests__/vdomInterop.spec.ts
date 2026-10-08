@@ -1,4 +1,5 @@
 import {
+  type ComponentInternalInstance,
   type FunctionalComponent,
   type HMRRuntime,
   KeepAlive,
@@ -12587,4 +12588,130 @@ describe('vdomInterop', () => {
     const { html } = define({ setup: () => () => h(Comp) }).render()
     expect(html()).toBe('<s class="t">vc</s><!--dynamic-component-->')
   })
+
+  test('update props of a VDOM async component pending in Suspense', async () => {
+    let resolve!: (comp: any) => void
+    const AsyncChild = defineAsyncComponent(
+      () => new Promise(r => (resolve = r)),
+    )
+    const data = ref({ msg: 'foo' })
+    const App = compile(
+      `<template>
+        <components.Suspense>
+          <components.AsyncChild :msg="data.msg" />
+          <template #fallback>loading</template>
+        </components.Suspense>
+      </template>`,
+      data,
+      { AsyncChild, Suspense },
+    )
+
+    const { html } = define(App as any).render()
+    expect(html()).toBe('loading')
+
+    data.value.msg = 'bar'
+    await nextTick()
+    expect(html()).toBe('loading')
+
+    resolve(
+      defineComponent({
+        props: ['msg'],
+        setup: props => () => h('div', props.msg),
+      }),
+    )
+    await new Promise(r => setTimeout(r))
+    await nextTick()
+    expect(html()).toBe('<div>bar</div>')
+  })
+
+  test.each([false, true])(
+    'only updates a VDOM async component when inputs change (dynamic slots: %s)',
+    async dynamic => {
+      const data = ref({ count: 1, slotCount: 1 })
+      const childBeforeUpdate = vi.fn()
+      const childUpdated = vi.fn()
+      let child!: ComponentInternalInstance
+      const Child = compile(
+        `<script setup>
+          import { getCurrentInstance, onBeforeUpdate, onUpdated } from 'vue'
+          defineProps(['active'])
+          const instance = getCurrentInstance()
+          _components.capture(instance)
+          onBeforeUpdate(_components.childBeforeUpdate)
+          onUpdated(_components.childUpdated)
+        </script>
+        <template><div>{{ active }}:<slot>fallback</slot></div></template>`,
+        data,
+        {
+          capture: (instance: ComponentInternalInstance) => (child = instance),
+          childBeforeUpdate,
+          childUpdated,
+        },
+        { vapor: false },
+      )
+      const AsyncChild = defineAsyncComponent(() => Promise.resolve(Child))
+      const App = compile(
+        `<template>
+          <components.AsyncChild :active="data.count > 0">
+            <template ${dynamic ? 'v-if="data.slotCount > 0"' : ''} #default>slot</template>
+          </components.AsyncChild>
+        </template>`,
+        data,
+        { AsyncChild },
+      )
+      const { app, html } = define(App).render()
+      try {
+        await new Promise(r => setTimeout(r))
+        await nextTick()
+        expect(html()).toBe('<div>true:slot</div>')
+        const childRender = (child.render = vi.fn(child.render!))
+        const wrapper = child.parent as ComponentInternalInstance
+        const wrapperRender = (wrapper.render = vi.fn(wrapper.render!))
+        const updates = [
+          childRender,
+          childBeforeUpdate,
+          childUpdated,
+          wrapperRender,
+        ]
+
+        data.value.count = 2
+        await nextTick()
+        expect(html()).toBe('<div>true:slot</div>')
+        for (const hook of updates) {
+          expect(hook).not.toHaveBeenCalled()
+        }
+
+        if (dynamic) {
+          data.value.slotCount = 2
+          await nextTick()
+          expect(wrapperRender).not.toHaveBeenCalled()
+          expect(childRender).not.toHaveBeenCalled()
+        }
+
+        data.value.count = 0
+        await nextTick()
+        expect(html()).toBe('<div>false:slot</div>')
+        for (const hook of updates) {
+          expect(hook).toHaveBeenCalledTimes(1)
+        }
+
+        if (dynamic) {
+          data.value.slotCount = 0
+          await nextTick()
+          expect(html()).toBe('<div>false:fallback</div>')
+          expect(wrapperRender).toHaveBeenCalledTimes(2)
+          expect(childRender).toHaveBeenCalledTimes(2)
+
+          data.value.count = 1
+          data.value.slotCount = 1
+          await nextTick()
+          expect(html()).toBe('<div>true:slot</div>')
+          expect(wrapperRender).toHaveBeenCalledTimes(3)
+          expect(childRender).toHaveBeenCalledTimes(3)
+        }
+      } finally {
+        app.unmount()
+      }
+    },
+  )
 })
