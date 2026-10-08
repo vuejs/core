@@ -61,8 +61,11 @@ function normalizeExpression(exp: string) {
   return exp
 }
 
-function* lexBindings(content: string): Generator<[number, number, number]> {
-  const re = /v-bind\s*\(|["'\\]/g
+function* lexBindings(
+  content: string,
+  includeQuotedBindings = false,
+): Generator<[number, number, number]> {
+  const re = includeQuotedBindings ? /v-bind\s*\(/g : /v-bind\s*\(|["'\\]/g
   let match: RegExpExecArray | null
   while ((match = re.exec(content))) {
     const index = match.index
@@ -86,7 +89,9 @@ export function parseCssVars(sfc: SFCDescriptor): string[] {
   const vars: string[] = []
   sfc.styles.forEach(style => {
     const content = stripComments(style.content)
-    for (const [, start, end] of lexBindings(content)) {
+    // Preprocessors can turn quoted strings into bindings through interpolation.
+    const includeQuotedBindings = !!style.lang && style.lang !== 'css'
+    for (const [, start, end] of lexBindings(content, includeQuotedBindings)) {
       const variable = normalizeExpression(content.slice(start, end))
       if (!vars.includes(variable)) {
         vars.push(variable)

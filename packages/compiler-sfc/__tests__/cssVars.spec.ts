@@ -2,6 +2,44 @@ import { compileStyle, parse } from '../src'
 import { assertCode, compileSFCScript, mockId } from './utils'
 
 describe('CSS vars injection', () => {
+  test('collects bindings introduced by SCSS string interpolation', () => {
+    const style = `$binding: 'v-bind(color)'; .box { color: #{$binding}; }`
+    const source = `<script setup>const color = 'red'</script><style>.literal { content: "v-bind(unused)"; }</style><style lang="scss">${style}</style>`
+    const { descriptor, errors } = parse(source)
+    expect(errors).toEqual([])
+    const compiled = compileStyle({
+      source: style,
+      id: mockId,
+      filename: 'InterpolatedBinding.vue',
+      preprocessLang: 'scss',
+    })
+    expect(compiled.errors).toEqual([])
+    expect(compiled.code).toContain(`color: var(--${mockId}-color)`)
+    expect(descriptor.cssVars).toEqual(['color'])
+    const { content } = compileSFCScript(source)
+    expect(content).toContain('useCssVars')
+    expect(content).toContain(`"${mockId}-color": (color)`)
+    expect(content).not.toContain(`${mockId}-unused`)
+  })
+
+  test('preserves quoted literals in explicit CSS blocks', () => {
+    const source = `<script setup>const color = 'red'</script><style lang="css">.literal { content: "v-bind(color)"; }</style>`
+    expect(parse(source).descriptor.cssVars).toEqual([])
+    expect(compileSFCScript(source).content).not.toContain('useCssVars')
+  })
+
+  test('preserves quoted CSS output from SCSS', () => {
+    const compiled = compileStyle({
+      source: `.literal { content: "v-bind(color)"; }`,
+      id: mockId,
+      filename: 'LiteralScss.vue',
+      preprocessLang: 'scss',
+    })
+    expect(compiled.errors).toEqual([])
+    expect(compiled.code).toContain('content: "v-bind(color)"')
+    expect(compiled.code).not.toContain('var(--')
+  })
+
   test.each([
     'content: "v-bind(color)";',
     "content: 'v-bind(color)';",
