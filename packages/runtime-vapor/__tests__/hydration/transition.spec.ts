@@ -295,6 +295,77 @@ describe('Vapor Mode hydration', () => {
         '<div><p style="">updated</p><i>updated</i></div>',
       )
     })
+
+    test.each([
+      [
+        'inside a dynamic native element',
+        `<script setup vapor>const tag = 'button'</script>
+        <template>
+          <Transition :css="false">
+            <div v-if="true"><component :is="tag"><slot /></component></div>
+          </Transition>
+        </template>`,
+        'default',
+        'button',
+      ],
+      [
+        'forwarded through a component',
+        `<template>
+          <components.Dialog>
+            <template #footer><slot name="footer" /></template>
+          </components.Dialog>
+        </template>`,
+        'footer',
+        'footer',
+      ],
+    ])(
+      'hydrates every VDOM slot child below the transition root %s',
+      async (_, child, slot, selector) => {
+        const data = reactive({ first: 'first', last: 'last', hits: 0 })
+        const { container } = await testWithVDOMApp(
+          `<script setup>
+            const data = _data
+            const components = _components
+          </script>
+          <template>
+            <components.Child>
+              <template #${slot}>
+                <i>{{ data.first }}</i>
+                <b @click="data.hits++">{{ data.last }}</b>
+              </template>
+            </components.Child>
+          </template>`,
+          {
+            Dialog: `<template>
+              <Transition :css="false">
+                <div v-if="true"><footer><slot name="footer" /></footer></div>
+              </Transition>
+            </template>`,
+            Child: child,
+          },
+          data,
+        )
+        const outlet = container.querySelector(selector)!
+        const last = outlet.querySelector('b')!
+        expect(outlet.textContent).toBe('firstlast')
+
+        triggerEvent('click', last)
+        data.first = 'updated-first'
+        data.last = 'updated-last'
+        await nextTick()
+
+        expect({ text: outlet.textContent, hits: data.hits }).toEqual({
+          text: 'updated-firstupdated-last',
+          hits: 1,
+        })
+        expect(outlet.querySelector('b')).toBe(last)
+        expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+        expect(`Hydration children mismatch`).not.toHaveBeenWarned()
+        expect(
+          '<transition> can only be used on a single element or component',
+        ).not.toHaveBeenWarned()
+      },
+    )
   })
 
   describe('transition-group', () => {

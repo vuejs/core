@@ -2292,4 +2292,244 @@ describe('VDOM interop', () => {
     expect(container.textContent).toBe('outer')
     expect(`Hydration text content mismatch`).not.toHaveBeenWarned()
   })
+
+  test('hydrate VDOM Transition root preserves keyed out-in and fallback switches', async () => {
+    let leaveDone: () => void
+    const onLeave = vi.fn((_el: Element, done: () => void) => {
+      leaveDone = done
+    })
+    const onEnter = vi.fn()
+    const data = reactive({
+      show: true,
+      key: 1,
+      text: 'first',
+      onLeave,
+      onEnter,
+    })
+    const { container } = await testWithVDOMApp(
+      `<script setup>
+        const data = _data
+        const components = _components
+      </script>
+      <template>
+        <components.Child>
+          <template #default v-if="data.show">
+            <button :key="data.key">{{ data.text }}</button>
+          </template>
+        </components.Child>
+      </template>`,
+      {
+        Child: `<script setup vapor>const data = _data</script>
+        <template>
+          <Transition mode="out-in" :css="false" @leave="data.onLeave" @enter="data.onEnter">
+            <slot><p>fallback</p></slot>
+          </Transition>
+          <span>after</span>
+        </template>`,
+      },
+      data,
+    )
+    const first = container.querySelector('button')!
+    const after = container.querySelector('span')!
+    expect(container.textContent).toBe('firstafter')
+    expect(onEnter).not.toHaveBeenCalled()
+
+    data.text = 'updated'
+    await nextTick()
+    expect(container.querySelector('button')).toBe(first)
+    expect(first.textContent).toBe('updated')
+    expect(onLeave).not.toHaveBeenCalled()
+
+    data.key = 2
+    data.text = 'second'
+    await nextTick()
+    expect(onLeave).toHaveBeenCalledTimes(1)
+    expect(onLeave.mock.calls[0][0]).toBe(first)
+    expect(container.textContent).toBe('updatedafter')
+    expect(container.querySelector('button')).toBe(first)
+    expect(onEnter).not.toHaveBeenCalled()
+
+    leaveDone!()
+    await nextTick()
+    const second = container.querySelector('button')!
+    expect(second).not.toBe(first)
+    expect(first.isConnected).toBe(false)
+    expect(container.textContent).toBe('secondafter')
+    expect(onEnter).toHaveBeenCalledTimes(1)
+    expect(onEnter.mock.calls[0][0]).toBe(second)
+
+    data.show = false
+    await nextTick()
+    expect(onLeave).toHaveBeenCalledTimes(2)
+    expect(onLeave.mock.calls[1][0]).toBe(second)
+    expect(container.querySelector('p')).toBeNull()
+    expect(container.textContent).toBe('secondafter')
+
+    leaveDone!()
+    await nextTick()
+    const fallback = container.querySelector('p')!
+    expect(second.isConnected).toBe(false)
+    expect(container.textContent).toBe('fallbackafter')
+    expect(onEnter).toHaveBeenCalledTimes(2)
+    expect(onEnter.mock.calls[1][0]).toBe(fallback)
+
+    data.show = true
+    data.key = 3
+    data.text = 'third'
+    await nextTick()
+    expect(onLeave).toHaveBeenCalledTimes(3)
+    expect(onLeave.mock.calls[2][0]).toBe(fallback)
+    expect(container.querySelector('button')).toBeNull()
+    expect(container.textContent).toBe('fallbackafter')
+
+    leaveDone!()
+    await nextTick()
+    expect(fallback.isConnected).toBe(false)
+    expect(container.textContent).toBe('thirdafter')
+    expect(onEnter).toHaveBeenCalledTimes(3)
+    expect(onEnter.mock.calls[2][0]).toBe(container.querySelector('button'))
+    expect(container.querySelector('span')).toBe(after)
+    expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+    expect(`Hydration children mismatch`).not.toHaveBeenWarned()
+  })
+
+  test('hydrate VDOM Transition root delays its first in-out leave until enter completes', async () => {
+    let enterDone: () => void
+    let leaveDone: () => void
+    const onEnter = vi.fn((_el: Element, done: () => void) => {
+      enterDone = done
+    })
+    const onLeave = vi.fn((_el: Element, done: () => void) => {
+      leaveDone = done
+    })
+    const data = reactive({ key: 1, onEnter, onLeave })
+    const { container } = await testWithVDOMApp(
+      `<script setup>
+        const data = _data
+        const components = _components
+      </script>
+      <template>
+        <components.Child><button :key="data.key">{{ data.key }}</button></components.Child>
+      </template>`,
+      {
+        Child: `<script setup vapor>const data = _data</script>
+        <template>
+          <Transition mode="in-out" :css="false" @enter="data.onEnter" @leave="data.onLeave">
+            <slot />
+          </Transition>
+          <span>after</span>
+        </template>`,
+      },
+      data,
+    )
+    const first = container.querySelector('button')!
+    const after = container.querySelector('span')!
+    expect(container.textContent).toBe('1after')
+    expect(onEnter).not.toHaveBeenCalled()
+
+    data.key = 2
+    await nextTick()
+    const second = container.querySelectorAll('button')[1]
+    expect(container.textContent).toBe('12after')
+    expect(container.querySelector('button')).toBe(first)
+    expect(onEnter).toHaveBeenCalledOnce()
+    expect(onEnter.mock.calls[0][0]).toBe(second)
+    expect(onLeave).not.toHaveBeenCalled()
+
+    enterDone!()
+    expect(onLeave).toHaveBeenCalledOnce()
+    expect(onLeave.mock.calls[0][0]).toBe(first)
+    expect(first.isConnected).toBe(true)
+
+    leaveDone!()
+    await nextTick()
+    expect(first.isConnected).toBe(false)
+    expect(container.querySelector('button')).toBe(second)
+    expect(container.textContent).toBe('2after')
+    expect(container.querySelector('span')).toBe(after)
+    expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+    expect(`Hydration children mismatch`).not.toHaveBeenWarned()
+  })
+
+  test('hydrate an empty VDOM Transition slot before its default slot appears', async () => {
+    const data = reactive({ show: false })
+    const { container, app } = await testWithVDOMApp(
+      `<script setup>
+        const data = _data
+        const components = _components
+      </script>
+      <template>
+        <components.Child>
+          <template #default v-if="data.show"><button>content</button></template>
+        </components.Child>
+      </template>`,
+      {
+        Child: `<template>
+          <section>
+            <Transition :css="false"><slot /></Transition>
+            <i>after</i>
+          </section>
+        </template>`,
+      },
+      data,
+    )
+    const after = container.querySelector('i')!
+    data.show = true
+    await nextTick()
+    expect(container.querySelector('button')).not.toBeNull()
+    expect(container.querySelector('i')).toBe(after)
+    expect(container.textContent).toBe('contentafter')
+    app.unmount()
+    expect(container.innerHTML).toBe('')
+    expect('Hydration node mismatch').not.toHaveBeenWarned()
+    expect('Hydration children mismatch').not.toHaveBeenWarned()
+  })
+
+  test('hydrate nested keyed Transition slot wrappers with a local fallback', async () => {
+    const data = reactive({ items: [1], label: 'first', mounted: true })
+    const { container, app } = await testWithVDOMApp(
+      `<script setup>
+        const data = _data
+        const components = _components
+      </script>
+      <template>
+        <main>
+          <components.Child v-if="data.mounted">
+            <template v-for="item in data.items" :key="item">
+              <button>{{ data.label }}</button>
+            </template>
+          </components.Child>
+          <i>after</i>
+        </main>
+      </template>`,
+      {
+        Child: `<template>
+          <Transition :css="false"><slot><p>fallback</p></slot></Transition>
+        </template>`,
+      },
+      data,
+    )
+    const main = container.querySelector('main')!
+    const first = main.querySelector('button')!
+    const after = main.querySelector('i')!
+    data.label = 'updated'
+    await nextTick()
+    expect(main.querySelector('button')).toBe(first)
+    expect(main.textContent).toBe('updatedafter')
+    data.items = []
+    await nextTick()
+    expect(main.textContent).toBe('fallbackafter')
+    data.items = [2]
+    await nextTick()
+    expect(main.textContent).toBe('updatedafter')
+    expect(main.querySelector('button')).not.toBe(first)
+    data.mounted = false
+    await nextTick()
+    expect(main.childNodes.length).toBe(2)
+    expect(main.querySelector('i')).toBe(after)
+    app.unmount()
+    expect(container.innerHTML).toBe('')
+    expect('Hydration node mismatch').not.toHaveBeenWarned()
+    expect('Hydration children mismatch').not.toHaveBeenWarned()
+  })
 })

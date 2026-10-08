@@ -218,7 +218,7 @@ import {
   markLeavingBlock,
   relayTransitionHooks,
 } from './components/Transition'
-import { isVaporTransition, isVaporTransitionHooks } from './transition'
+import { isVaporTransitionHooks } from './transition'
 import {
   interopKey,
   interopSlotsKey,
@@ -268,13 +268,11 @@ function getVaporInstance(vnode: VNode): VaporComponentInstance {
 function prepareInteropSlotTransition(
   frag: RenderContextFragment,
   vnode: VNode,
-  hydratedForwarded: boolean,
   previous: VNode | undefined,
   resumeAfterLeave: () => void,
   delayedLeaveSource?: TransitionHooks,
 ): VNode | undefined {
   const transition = frag.$transition as TransitionHooks | undefined
-  const instance = frag.renderInstance
   // Hooks inherited from VDOM BaseTransition already belong to its state
   // machine. Only forward them through the Vapor slot boundary.
   if (transition && !isVaporTransitionHooks(transition)) {
@@ -285,22 +283,8 @@ function prepareInteropSlotTransition(
   // into the single branch expected by BaseTransition.
   if (transition && transition.applyGroup) return
 
-  // A forwarded slot root hydrates before VaporTransition propagates its hooks
-  // and keeps that branch shape; on the client no hooks means a nested outlet.
-  if (
-    !transition &&
-    !(
-      hydratedForwarded &&
-      instance &&
-      isVaporTransition(instance.type as VaporComponent)
-    )
-  ) {
-    return
-  }
+  if (!transition) return
   const branch = resolveTransitionChild([vnode], true)!
-  if (!transition) {
-    return branch
-  }
 
   return (
     prepareTransitionSwitch(
@@ -2193,7 +2177,6 @@ function renderVDOMSlot(
   const once = !!(flags & VaporSlotFlags.ONCE)
   const sharedFallback = !!(flags & VaporSlotFlags.SHARED_FALLBACK)
   const forwarded = isForwardedSlot(flags)
-  const hydratedForwarded = forwarded && isHydrating
   const inheritFallback = slotInheritsFallback(flags)
   const notifiesBoundary = slotNotifiesBoundary(flags)
   let suspense = currentRenderContext.suspense || parentComponent.suspense
@@ -2565,13 +2548,8 @@ function renderVDOMSlot(
       const pendingContent = pending.content
       if (isVNode(pendingContent)) {
         const nextVNode =
-          prepareInteropSlotTransition(
-            frag,
-            pendingContent,
-            hydratedForwarded,
-            undefined,
-            NOOP,
-          ) || pendingContent
+          prepareInteropSlotTransition(frag, pendingContent, undefined, NOOP) ||
+          pendingContent
         patchSlotVNode(
           pending.placeholder,
           nextVNode,
@@ -2664,8 +2642,43 @@ function renderVDOMSlot(
     slotContent: VNode,
     slotContentValid: boolean,
   ): void {
-    const prevRendered = rendered
     const transition = slotResolutionState.$transition
+    // Hydration precedes root hook propagation. Once this outlet is known to
+    // be the Transition root, adopt its hydrated branch without remounting it.
+    if (
+      transition &&
+      !transition.applyGroup &&
+      !slotResolutionState.activeFallback &&
+      isVNode(rendered) &&
+      rendered.type === Fragment
+    ) {
+      const wrapper = rendered
+      const branch = resolveTransitionChild([wrapper])
+      if (branch) {
+        currentAnchor =
+          frag.anchor || (frag.anchor = claimAnchor(wrapper.anchor as Node))
+        // The branch takes over the SSR nodes, but not its Fragment wrappers.
+        // Keep the outlet anchor and discard the wrappers around that branch.
+        let node = wrapper.el as Node
+        while (node !== branch.el) {
+          const next = node.nextSibling!
+          currentParentNode!.removeChild(node)
+          node = next
+        }
+        node = internals.n(branch) as Node
+        const end = (wrapper.anchor as Node).nextSibling
+        while (node !== end) {
+          const next = node.nextSibling!
+          if (node !== currentAnchor) currentParentNode!.removeChild(node)
+          node = next
+        }
+      } else {
+        removeRenderedContent(wrapper, currentParentNode!)
+      }
+      setVNode(branch || null)
+      setRendered(branch || null, content.valid)
+    }
+    const prevRendered = rendered
     const mode = transition && transition.props.mode
     let delayedLeaveSource: TransitionHooks | undefined
     if (slotResolutionState.activeFallback && !slotContentValid) {
@@ -2712,13 +2725,8 @@ function renderVDOMSlot(
     ) {
       if (mode === 'out-in') {
         const placeholder =
-          prepareInteropSlotTransition(
-            frag,
-            slotContent,
-            hydratedForwarded,
-            undefined,
-            NOOP,
-          ) || createCommentVNode()
+          prepareInteropSlotTransition(frag, slotContent, undefined, NOOP) ||
+          createCommentVNode()
         if (
           prepareTransitionLeave(
             prevVNode,
@@ -2743,7 +2751,6 @@ function renderVDOMSlot(
     const transitionChild = prepareInteropSlotTransition(
       frag,
       slotContent,
-      hydratedForwarded,
       prevVNode || undefined,
       resumeOutIn,
       delayedLeaveSource,
@@ -2880,7 +2887,6 @@ function renderVDOMSlot(
       const transitionChild = prepareInteropSlotTransition(
         frag,
         hydratedContent,
-        hydratedForwarded,
         undefined,
         NOOP,
       )
