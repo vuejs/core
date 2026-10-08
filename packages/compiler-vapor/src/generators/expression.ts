@@ -50,10 +50,16 @@ export function genExpression(
     return [[JSON.stringify(content), NewlineType.None, loc]]
   }
 
+  // an empty expression (e.g. `v-show=""`) evaluates to undefined, like vdom
+  if (!content.trim()) {
+    return [['void 0', NewlineType.None, loc]]
+  }
+
   if (
-    !node.content.trim() ||
     // there was a parsing error
     ast === false ||
+    // never parsed, e.g. asset url imports added by compiler-sfc
+    ast === undefined ||
     isConstantExpression(node)
   ) {
     return [[content, NewlineType.None, loc], assignment && ` = ${assignment}`]
@@ -1023,12 +1029,17 @@ function applyContentReplacements(
   content: string,
   replacements: ContentReplacement[],
 ): string {
-  replacements
-    .sort((a, b) => b.start - a.start)
-    .forEach(({ start, end, content: replacement }) => {
-      content = content.slice(0, start) + replacement + content.slice(end)
-    })
-  return content
+  // the outermost replacement goes first when starts are equal
+  replacements.sort((a, b) => a.start - b.start || b.end - a.end)
+  let result = ''
+  let offset = 0
+  for (const { start, end, content: replacement } of replacements) {
+    // covered by an applied replacement, e.g. `bar[0]` in `foo[bar[0].baz]`
+    if (start < offset) continue
+    result += content.slice(offset, start) + replacement
+    offset = end
+  }
+  return result + content.slice(offset)
 }
 
 function genDeclarations(

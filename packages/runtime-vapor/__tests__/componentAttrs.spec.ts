@@ -3377,4 +3377,26 @@ describe('attribute fallthrough', () => {
     expect(attrs.title).toBe('initial')
     app.unmount()
   })
+
+  test('static style reaches attrs as an object', async () => {
+    const child = `<template><div :style="{ ...$attrs.style, color: 'red' }">{{ typeof $attrs.style }}</div></template>`
+    const App = `<template><components.Child style="width: 200px" /><components.VdomChild style="width: 200px" /></template>`
+    const VdomChild = compile(
+      `<script setup>const data = _data</script>${child}`,
+      ref(null),
+      {},
+      { vapor: false },
+    )
+    expect(VdomChild.__vapor).toBeFalsy()
+    const { vdom, vapor } = await renderParity(
+      { Child: child, App },
+      () => ref(null),
+      () => {},
+      { VdomChild },
+    )
+    expect(vdom.after).toBe(
+      '<div style="width: 200px; color: red;">object</div>'.repeat(2),
+    )
+    expect(vapor.after).toBe(vdom.after)
+  })
 })

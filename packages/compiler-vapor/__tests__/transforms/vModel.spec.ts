@@ -6,7 +6,7 @@ import {
   transformElement,
   transformVModel,
 } from '../../src'
-import { BindingTypes, DOMErrorCodes } from '@vue/compiler-dom'
+import { BindingTypes, DOMErrorCodes, ErrorCodes } from '@vue/compiler-dom'
 import { transformVOn } from '../../src/transforms/vOn'
 
 const compileWithVModel = makeCompile({
@@ -158,6 +158,23 @@ describe('compiler: vModel transform', () => {
         onError,
       })
       expect(onError).not.toHaveBeenCalled()
+    })
+
+    test('used on const binding', () => {
+      const onError = vi.fn()
+      compileWithVModel('<input v-model="c" />', {
+        onError,
+        bindingMetadata: {
+          c: BindingTypes.LITERAL_CONST,
+        },
+      })
+
+      expect(onError).toHaveBeenCalledTimes(1)
+      expect(onError).toHaveBeenCalledWith(
+        expect.objectContaining({
+          code: ErrorCodes.X_V_MODEL_ON_CONST,
+        }),
+      )
     })
   })
 

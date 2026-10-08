@@ -643,4 +643,22 @@ describe('api: createDynamicComponent', () => {
       '<i>a</i><!--dynamic-component--><b>b</b><!--dynamic-component-->',
     )
   })
+
+  test('element fallback creates svg and math roots in their own namespace', () => {
+    const data = ref({ tag: 'svg' })
+    const App = compile(
+      `<template>
+        <div><component :is="data.tag" viewBox="0 0 1 1" /></div>
+        <component is="math" />
+      </template>`,
+      data,
+    )
+    const { host } = define(App).render()
+    const svg = host.querySelector('svg')!
+    expect(svg.namespaceURI).toBe('http://www.w3.org/2000/svg')
+    expect(svg.getAttribute('viewBox')).toBe('0 0 1 1')
+    expect(host.querySelector('math')!.namespaceURI).toBe(
+      'http://www.w3.org/1998/Math/MathML',
+    )
+  })
 })

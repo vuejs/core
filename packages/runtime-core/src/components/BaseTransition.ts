@@ -11,6 +11,7 @@ import {
   Fragment,
   type VNode,
   type VNodeArrayChildren,
+  VaporSlot,
   cloneVNode,
   createCommentVNode,
   isSameVNodeType,
@@ -19,7 +20,14 @@ import { warn } from '../warning'
 import { isKeepAlive } from './KeepAlive'
 import { toRaw } from '@vue/reactivity'
 import { ErrorCodes, callWithAsyncErrorHandling } from '../errorHandling'
-import { NOOP, PatchFlags, ShapeFlags, isArray, isFunction } from '@vue/shared'
+import {
+  NOOP,
+  PatchFlags,
+  ShapeFlags,
+  extend,
+  isArray,
+  isFunction,
+} from '@vue/shared'
 import { onBeforeUnmount, onMounted } from '../apiLifecycle'
 import { isTeleport } from './Teleport'
 import {
@@ -145,11 +153,26 @@ export const BaseTransitionPropsValidators: Record<string, any> = {
   onAppearCancelled: TransitionHookValidator,
 }
 
-const recursiveGetSubtree = (instance: ComponentInternalInstance): VNode => {
-  const subTree = isVaporComponent(instance.type)
-    ? (instance as any).block
-    : instance.subTree
-  return subTree.component ? recursiveGetSubtree(subTree.component) : subTree
+// whether a mounted child renders nothing a Transition can leave: a comment
+// root, through components (a vapor one asks the vapor renderer)
+function isEmptyTransitionChild(
+  vnode: VNode,
+  instance: GenericComponentInstance,
+): boolean {
+  if (vnode.type === Comment) return true
+  if (
+    vnode.type === VaporSlot ||
+    isVaporComponent(vnode.type as ConcreteComponent)
+  ) {
+    return !getVaporInterface(
+      instance as ComponentInternalInstance,
+      vnode,
+    ).hasTransitionChild(vnode)
+  }
+  return (
+    !!vnode.component &&
+    isEmptyTransitionChild(vnode.component.subTree, instance)
+  )
 }
 
 const BaseTransitionImpl: ComponentOptions = {
@@ -303,7 +326,14 @@ export function resolveTransitionHooks(
     },
   }
 
-  return baseResolveTransitionHooks(context, props, state, instance)
+  const hooks = baseResolveTransitionHooks(context, props, state, instance)
+  // a vapor slot transitions the blocks it renders itself (see the interop
+  // `slot()`): hand it what vapor hooks are resolved from, in the shape of a
+  // VaporTransition root's hooks
+  if (vnode.type === VaporSlot) {
+    extend(hooks, { __vapor: true, props, state, instance })
+  }
+  return hooks
 }
 
 // shared between vdom and vapor
@@ -559,10 +589,8 @@ export function prepareTransitionSwitch(
   if (
     previous &&
     previousInner &&
-    previousInner.type !== Comment &&
     !isSameVNodeType(previousInner, nextInner) &&
-    (!previous.component ||
-      recursiveGetSubtree(previous.component).type !== Comment)
+    !isEmptyTransitionChild(previousInner, instance)
   ) {
     const leavingHooks = prepareLeavingTransitionHooks(
       previousInner,
@@ -618,12 +646,7 @@ export function prepareTransitionLeave(
   resumeAfterLeave: () => void,
 ): boolean {
   const previousInner = getInnerChild(previous)
-  if (
-    !previousInner ||
-    previousInner.type === Comment ||
-    (previous.component &&
-      recursiveGetSubtree(previous.component).type === Comment)
-  ) {
+  if (!previousInner || isEmptyTransitionChild(previousInner, instance)) {
     return false
   }
 

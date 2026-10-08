@@ -12517,4 +12517,74 @@ describe('vdomInterop', () => {
       },
     )
   })
+
+  describe('inject in vdom slot content forwarded through a vapor outlet', () => {
+    test('resolves providers from the component rendering the outlet', async () => {
+      const Consumer = defineComponent({
+        setup() {
+          const k = inject('k', 'none')
+          return () => h('b', k)
+        },
+      })
+      const Provider = compile(
+        `<script setup vapor>
+        import { provide } from 'vue'
+        const props = defineProps(['name'])
+        provide('k', props.name)
+        </script>
+        <template><slot /></template>`,
+        ref(null),
+      )
+      const Wrapper = compile(
+        `<script setup vapor>
+        const props = defineProps(['name'])
+        const Provider = _components.Provider
+        </script>
+        <template><Provider :name="props.name"><slot /></Provider></template>`,
+        ref(null),
+        { Provider },
+      )
+      const data = ref({ show: false })
+      const App = compile(
+        `<script setup>
+        const data = _data
+        const Wrapper = _components.Wrapper
+        const Consumer = _components.Consumer
+        </script>
+        <template>
+          <Wrapper name="outer">
+            <Consumer />
+            <Wrapper name="inner"><Consumer v-if="data.show" /></Wrapper>
+          </Wrapper>
+        </template>`,
+        data,
+        { Wrapper, Consumer },
+        { vapor: false },
+      )
+      const { html } = define(App).render()
+      expect(html()).toBe('<b>outer</b><!--slot--><!--slot-->')
+
+      data.value.show = true
+      await nextTick()
+      expect(html()).toBe('<b>outer</b><b>inner</b><!--slot--><!--slot-->')
+    })
+  })
+
+  test('vapor Transition attrs fall through to a vnode of a vapor component', () => {
+    const Child = defineVaporComponent({
+      setup: () => template('<s>vc</s>')(),
+    })
+    const data = ref({ vn: h(Child as any) })
+    const Comp = compile(
+      `<script setup vapor>
+      const data = _data
+      </script>
+      <template>
+        <Transition class="t"><component :is="data.vn" /></Transition>
+      </template>`,
+      data,
+    )
+    const { html } = define({ setup: () => () => h(Comp) }).render()
+    expect(html()).toBe('<s class="t">vc</s><!--dynamic-component-->')
+  })
 })

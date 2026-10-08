@@ -40,6 +40,7 @@ export function applyVShow(target: Block, source: () => any): void {
 
   const visitor: RootChainVisitor = {
     onComponent(instance) {
+      if (__DEV__) register((instance.hmrRootHooks ||= []), apply)
       if (
         __FEATURE_SUSPENSE__ &&
         isSuspenseEnabled &&
