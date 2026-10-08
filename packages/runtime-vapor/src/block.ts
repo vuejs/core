@@ -58,8 +58,9 @@ export const enum VShowFlags {
   APPLIED = 1,
   // the block a v-show directive is written on
   TARGET = 1 << 1,
-  // shown before insertion over an earlier v-show's hide, with no transition
-  // hooks attached yet: the Transition that attaches them re-hides it
+  // a shown v-show reached the element before insertion while an earlier
+  // one keeps it hidden: the Transition attaching hooks keeps it hidden and
+  // the renderer still owes it the directive's mount enter
   MOUNT_SHOWN = 1 << 2,
 }
 
@@ -168,6 +169,7 @@ export function insertNode(
     if (transition) {
       const insert = () => parent.insertBefore(block, anchor)
       if (isVShowMountEnter(block as Element, transition)) {
+        ;(block as TransitionBlock).$vshow! &= ~VShowFlags.MOUNT_SHOWN
         transition.beforeEnter(block)
         insert()
         queuePostRenderEffect(
@@ -195,18 +197,19 @@ export function insertNode(
 }
 
 // A persisted root is v-show-owned: vdom's directive enters it on mount when
-// shown (not suspense-gated; the queued enter waits for the boundary), but
-// vapor's v-show can't (hooks attach after render), so the renderer does it.
-// Elements touched only by vdom's directive carry no `$vshow`, so foreign
-// hooks keep the persisted skip.
+// its binding is shown (not suspense-gated; the queued enter waits for the
+// boundary), but vapor's v-show can't (hooks attach after render), so the
+// renderer does it. Elements touched only by vdom's directive carry no
+// `$vshow`, so foreign hooks keep the persisted skip.
 function isVShowMountEnter(
   el: Element,
   transition: VaporTransitionHooks,
 ): boolean {
+  const flags = (el as TransitionBlock).$vshow!
   return (
     transition.persisted &&
-    !!((el as TransitionBlock).$vshow! & VShowFlags.APPLIED) &&
-    !(el as VShowElement)[vShowHidden]
+    !!(flags & VShowFlags.APPLIED) &&
+    (!(el as VShowElement)[vShowHidden] || !!(flags & VShowFlags.MOUNT_SHOWN))
   )
 }
 
@@ -215,7 +218,6 @@ function isVShowMountEnter(
 // they showed over a hide is re-hidden where the hooks attach.
 export function settleMountShown(block: TransitionBlock): void {
   if (block.$vshow! & VShowFlags.MOUNT_SHOWN) {
-    block.$vshow! &= ~VShowFlags.MOUNT_SHOWN
     ;(block as VShowElement)[vShowHidden] = true
     ;(block as VShowElement).style.display = 'none'
   }
