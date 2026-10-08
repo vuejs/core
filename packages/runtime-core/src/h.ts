@@ -101,13 +101,28 @@ export function h<K extends keyof HTMLElementTagNameMap>(
   children?: RawChildren | RawSlots,
 ): VNode
 
+// svg element
+export function h<K extends keyof SVGElementTagNameMap>(
+  type: K,
+  children?: RawChildren,
+): VNode
+export function h<K extends keyof SVGElementTagNameMap>(
+  type: K,
+  props?: RawElementProps<SVGElementTagNameMap[K]> | null,
+  children?: RawChildren | RawSlots,
+): VNode
+
 // custom element
 export function h<T extends string>(
-  type: T extends keyof HTMLElementTagNameMap ? never : T,
+  type: T extends keyof HTMLElementTagNameMap | keyof SVGElementTagNameMap
+    ? never
+    : T,
   children?: RawChildren,
 ): VNode
 export function h<T extends string>(
-  type: T extends keyof HTMLElementTagNameMap ? never : T,
+  type: T extends keyof HTMLElementTagNameMap | keyof SVGElementTagNameMap
+    ? never
+    : T,
   props?: RawElementProps | null,
   children?: RawChildren | RawSlots,
 ): VNode
