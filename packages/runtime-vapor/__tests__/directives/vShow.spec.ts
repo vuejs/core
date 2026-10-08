@@ -618,4 +618,58 @@ onBeforeMount(() => { visible.value = true })
     await nextTick()
     expect(el.style.display).toBe('')
   })
+
+  test('registers every inherited v-show on a pending async root like vdom', async () => {
+    const shown: Record<string, string[]> = { vdom: [], vapor: [] }
+    await renderParity(
+      {
+        Async: `<script setup>
+const data = _data
+await data.value.ready
+</script>
+<template><section>x</section></template>`,
+        Wrap: `<template><components.Async v-show="true" /></template>`,
+        App: `<template><Suspense><components.Wrap v-show="false" /></Suspense></template>`,
+      },
+      () => {
+        let resolve!: () => void
+        const ready = new Promise<void>(r => (resolve = r))
+        return ref({ ready, resolve })
+      },
+      async (data, root, mode) => {
+        data.value.resolve()
+        await new Promise(r => setTimeout(r))
+        await nextTick()
+        shown[mode].push(root.querySelector('section')!.style.display)
+      },
+    )
+    expect(shown.vdom).toEqual(['none'])
+    expect(shown.vapor).toEqual(shown.vdom)
+  })
+
+  test('updates a kept-alive root reactivated after the value changed like vdom', async () => {
+    const shown: Record<string, string[]> = { vdom: [], vapor: [] }
+    await renderParity(
+      {
+        A: `<template><section>a</section></template>`,
+        B: `<template><article>b</article></template>`,
+        Wrap: `<template><Transition :css="false"><KeepAlive><component :is="data.cur === 'a' ? components.A : components.B" /></KeepAlive></Transition></template>`,
+        App: `<template><components.Wrap v-show="data.shown" /></template>`,
+      },
+      () => ref({ cur: 'a', shown: false }),
+      async (data, root, mode) => {
+        shown[mode].push(root.querySelector('section')!.style.display)
+        data.value.cur = 'b'
+        await nextTick()
+        data.value.shown = true
+        await nextTick()
+        shown[mode].push(root.querySelector('article')!.style.display)
+        data.value.cur = 'a'
+        await nextTick()
+        shown[mode].push(root.querySelector('section')!.style.display)
+      },
+    )
+    expect(shown.vdom).toEqual(['none', '', ''])
+    expect(shown.vapor).toEqual(shown.vdom)
+  })
 })

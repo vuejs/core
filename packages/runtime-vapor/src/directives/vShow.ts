@@ -9,7 +9,11 @@ import {
 } from '@vue/runtime-dom'
 import { setActiveSub } from '@vue/reactivity'
 import { renderEffect } from '../renderEffect'
-import { type RootChainVisitor, getRootElement } from '../component'
+import {
+  type RootChainVisitor,
+  type VaporComponentInstance,
+  getRootElement,
+} from '../component'
 import {
   type Block,
   type TransitionBlock,
@@ -44,8 +48,13 @@ export function applyVShow(target: Block, source: () => any): void {
   // fragment into Transition's child. Any other component ends that chain.
   let inTransition = false
   // the binding has run once; later runs are updates, re-entries from a
-  // producer initialize the root it rendered
+  // producer initialize the root it rendered...
   let updating = false
+  // ...unless that root is a kept-alive component coming back from the cache
+  // with the state this binding left on it (vdom re-patches it: `updated`)
+  let reactivating = false
+  // pending async setups this binding already waits on
+  let pendingSetups: WeakSet<VaporComponentInstance> | undefined
 
   const visitor: RootChainVisitor = {
     onComponent(instance) {
@@ -57,15 +66,15 @@ export function applyVShow(target: Block, source: () => any): void {
         !instance.asyncResolved
       ) {
         // the block exists only after setup settles; its mount runs `bm`
-        // before insertion. The mark doubles as the registration guard.
-        if (!((instance as TransitionBlock).$vshow! & VShowFlags.APPLIED)) {
+        // before insertion
+        if (!(pendingSetups ||= new WeakSet()).has(instance)) {
+          pendingSetups.add(instance)
           ;(instance.bm ||= []).push(() => apply(instance.block))
         }
         unresolved = true
-        mark(instance)
         return true
       }
-      mark(instance)
+      if (instance.isDeactivated) reactivating = true
       inTransition = isTransitionEnabled && isVaporTransition(instance.type)
     },
     onDynamicFragment(frag) {
@@ -91,11 +100,16 @@ export function applyVShow(target: Block, source: () => any): void {
     producer?: TransitionOptions,
   ) => {
     transition = producer && producer.$transition
-    unresolved = slotRoot = false
+    unresolved = slotRoot = reactivating = false
     inTransition = !!transitionSlot
     const root = getRootElement(nodes, visitor)
     if (root) {
-      setDisplay(root as VShowElement, value, transition, !!update)
+      setDisplay(
+        root as VShowElement,
+        value,
+        transition,
+        !!update || reactivating,
+      )
     } else if (__DEV__ && (slotRoot || (!unresolved && isValidBlock(nodes)))) {
       warn(
         `v-show used on component with non-single-element root node ` +
@@ -119,10 +133,6 @@ export function applyVShow(target: Block, source: () => any): void {
   })
 }
 
-function mark(block: Block): void {
-  ;(block as TransitionBlock).$vshow! |= VShowFlags.APPLIED
-}
-
 function register<T>(hooks: T[], hook: T): void {
   if (!hooks.includes(hook)) hooks.push(hook)
 }
@@ -138,7 +148,7 @@ function setDisplay(
     // First touch, before insertion: only record the display state and
     // mark the element as v-show-owned. The renderer owns enter on insert
     // (vdom's directive beforeMount/mounted role), so no transition runs.
-    mark(el)
+    ;(el as TransitionBlock).$vshow! |= VShowFlags.APPLIED
     el[vShowOriginalDisplay] =
       el.style.display === 'none' ? '' : el.style.display
     el[vShowHidden] = hidden
