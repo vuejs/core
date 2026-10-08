@@ -19,7 +19,7 @@ import {
 import { isSlotOutletFragment } from '../fragment'
 import { isHydrating } from '../dom/hydration'
 import { isInteropEnabled } from '../vdomInteropState'
-import { setInteropVShow } from '../vdomInterop'
+import { isInteropVShowPending, setInteropVShow } from '../vdomInterop'
 import { isTransitionEnabled } from '../transition'
 import { isSuspenseEnabled } from '../suspense'
 
@@ -124,6 +124,12 @@ function setDisplay(
 
   if (el[vShowHidden] === hidden) return
   el[vShowHidden] = hidden
+
+  // The VDOM mounted hook owns enter until Suspense releases the root.
+  if (isInteropEnabled && isInteropVShowPending(el)) {
+    writeDisplay(el, value)
+    return
+  }
 
   const $transition = isTransitionEnabled
     ? (el as TransitionBlock).$transition || transition

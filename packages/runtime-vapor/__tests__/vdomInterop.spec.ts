@@ -12816,21 +12816,24 @@ describe('vdomInterop', () => {
       }
     })
 
-    test.each([false, true])(
-      'defers enter until the pending outer Suspense resolves (hide while pending: %s)',
-      async hideWhilePending => {
+    test.each([
+      { nested: true, states: [true] },
+      { nested: true, states: [true, false] },
+      { nested: false, states: [false, true] },
+      { nested: true, states: [false, true] },
+      { nested: false, states: [true, false, true] },
+      { nested: true, states: [true, false, true] },
+    ])(
+      'defers enter until Suspense resolves (nested: $nested, visibility: $states)',
+      async ({ nested, states }) => {
         const fast = deferred()
         const slow = deferred()
         const calls: string[] = []
-        let fastRoot!: HTMLElement
         const data = ref({
-          show: true,
+          show: states[0],
           fast: fast.promise,
           slow: slow.promise,
-          beforeEnter: (el: Element) => {
-            fastRoot = el as HTMLElement
-            calls.push(`before:${el.isConnected}`)
-          },
+          beforeEnter: (el: Element) => calls.push(`before:${el.isConnected}`),
           enter: (el: Element, done: () => void) => {
             calls.push(`enter:${el.isConnected}`)
             done()
@@ -12854,11 +12857,11 @@ describe('vdomInterop', () => {
           `<template>
           <Suspense>
             <section>
-              <Suspense suspensible>
+              ${nested ? '<Suspense suspensible>' : ''}
                 <Transition appear :css="false" @before-enter="data.beforeEnter" @enter="data.enter">
                   <components.Fast v-show="data.show" />
                 </Transition>
-              </Suspense>
+              ${nested ? '</Suspense>' : ''}
               <components.Slow />
             </section>
             <template #fallback><p>outer pending</p></template>
@@ -12878,22 +12881,26 @@ describe('vdomInterop', () => {
           fast.resolve()
           await flushResolution(fast.promise)
           expect(host.textContent).toBe('outer pending')
-          expect(calls).toEqual(['before:false'])
+          const pendingCalls = states[0] ? ['before:false'] : []
+          expect(calls).toEqual(pendingCalls)
 
-          if (hideWhilePending) {
-            data.value.show = false
+          for (const show of states.slice(1)) {
+            data.value.show = show
             await nextTick()
-            expect(fastRoot.style.display).toBe('none')
-            expect(calls).toEqual(['before:false'])
+            expect(host.textContent).toBe('outer pending')
+            expect(calls).toEqual(pendingCalls)
           }
 
           slow.resolve()
           await flushResolution(slow.promise)
           expect(host.textContent).toBe('fastslow')
+          expect(
+            (host.querySelector('section > div') as HTMLElement).style.display,
+          ).toBe(data.value.show ? '' : 'none')
           expect(calls).toEqual(
-            hideWhilePending
-              ? ['before:false']
-              : ['before:false', 'enter:true'],
+            data.value.show
+              ? [states[0] ? 'before:false' : 'before:true', 'enter:true']
+              : pendingCalls,
           )
         } finally {
           fast.resolve()
@@ -12950,6 +12957,105 @@ describe('vdomInterop', () => {
         }
       },
     )
+
+    test.each(['element', 'HOC', 'comment'])(
+      'preserves cached v-once roots when an eagerly mounted child updates (%s)',
+      async root => {
+        const data = ref({ msg: 'one', show: true })
+        const Inner = compile(
+          `<script setup>const props = defineProps(['msg'])</script>
+          <template>${root === 'comment' ? '<!-- root -->' : ''}<div v-once>{{ props.msg }}</div></template>`,
+          data,
+          {},
+          { vapor: false, compilerOptions: { comments: true } },
+        )
+        const Child =
+          root === 'HOC'
+            ? compile(
+                `<script setup>
+                const props = defineProps(['msg'])
+                const components = _components
+              </script>
+              <template><components.Inner :msg="props.msg" /></template>`,
+                data,
+                { Inner },
+                { vapor: false },
+              )
+            : Inner
+        const App = compile(
+          `<template><section><components.Child :msg="data.msg" v-show="data.show" /></section></template>`,
+          data,
+          { Child },
+        )
+        const { host, app } = define(App).render()
+        try {
+          expect(host.textContent).toBe('one')
+          if (__DEV__ && root === 'comment') {
+            expect(
+              'v-show used on component with non-single-element root node',
+            ).toHaveBeenWarned()
+          }
+          data.value.msg = 'two'
+          await nextTick()
+          expect(host.textContent).toBe('one')
+
+          if (root !== 'comment') {
+            data.value.show = false
+            await nextTick()
+            expect(
+              (host.querySelector('section > div') as HTMLElement).style
+                .display,
+            ).toBe('none')
+          }
+        } finally {
+          app.unmount()
+        }
+      },
+    )
+
+    test('does not accumulate mount bindings on a reused dynamic VNode', async () => {
+      const beforeEnter = vi.fn()
+      const enter = vi.fn((_el: Element, done: () => void) => done())
+      const data = ref({ present: true, show: true, beforeEnter, enter })
+      const Child = compile(
+        `<script setup>const data = _data</script><template><div>child</div></template>`,
+        data,
+        {},
+        { vapor: false },
+      )
+      const node = h(Child)
+      const App = compile(
+        `<template>
+          <section>
+            <Transition v-if="data.present" appear :css="false"
+              @before-enter="data.beforeEnter" @enter="data.enter">
+              <component :is="components.node" v-show="data.show" />
+            </Transition>
+          </section>
+        </template>`,
+        data,
+        { node },
+      )
+      const { host, app } = define(App).render()
+      try {
+        for (let count = 1; count <= 3; count++) {
+          expect(host.textContent).toBe('child')
+          expect(beforeEnter).toHaveBeenCalledTimes(count)
+          expect(enter).toHaveBeenCalledTimes(count)
+
+          data.value.present = false
+          await nextTick()
+          expect(host.textContent).toBe('')
+          if (count < 3) {
+            data.value.present = true
+            await nextTick()
+          }
+        }
+        expect(node.dirs === null).toBe(true)
+      } finally {
+        app.unmount()
+      }
+    })
 
     test('preserves directives on an eagerly mounted root with comments', async () => {
       const updated = vi.fn()

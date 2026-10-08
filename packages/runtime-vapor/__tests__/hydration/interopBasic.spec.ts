@@ -1030,4 +1030,33 @@ describe('VDOM interop', () => {
       app.unmount()
     }
   })
+
+  test('preserves hydrated v-once roots when an interop child updates', async () => {
+    const data = ref({ msg: 'one', show: true })
+    const { container, app } = await testWithVaporApp(
+      `<template><section><components.Child :msg="data.msg" v-show="data.show" /></section></template>`,
+      {
+        Child: {
+          code: `<script setup>const props = defineProps(['msg'])</script>
+          <template><div v-once>{{ props.msg }}</div></template>`,
+          vapor: false,
+        },
+      },
+      data,
+    )
+    try {
+      expect(container.textContent).toBe('one')
+      data.value.msg = 'two'
+      await nextTick()
+      expect(container.textContent).toBe('one')
+
+      data.value.show = false
+      await nextTick()
+      expect(
+        (container.querySelector('section > div') as HTMLElement).style.display,
+      ).toBe('none')
+    } finally {
+      app.unmount()
+    }
+  })
 })

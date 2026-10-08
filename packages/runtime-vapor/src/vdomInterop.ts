@@ -2,6 +2,7 @@ import {
   type App,
   type ComponentInternalInstance,
   type ConcreteComponent,
+  type DirectiveBinding,
   type ElementNamespace,
   Fragment,
   type FunctionalComponent,
@@ -1115,11 +1116,23 @@ function trackFragmentVNodeUpdates(
   }
 }
 
+const vShowMountPending: unique symbol = Symbol('vShowMountPending')
+
+type InteropVShowElement = VShowElement & {
+  // Present until mounted; true once beforeEnter has prepared the root.
+  [vShowMountPending]?: boolean
+}
+
+export function isInteropVShowPending(el: VShowElement): boolean {
+  return (el as InteropVShowElement)[vShowMountPending] !== undefined
+}
+
 const interopVShow: ObjectDirective<
-  VShowElement,
+  InteropVShowElement,
   { frag: VaporFragment; apply: (nodes: Block) => void }
 > = {
   beforeMount(el, { value: { frag, apply } }, { shapeFlag, transition }) {
+    if (shapeFlag & ShapeFlags.ELEMENT) el[vShowMountPending] = false
     // Follow async and HOC roots before mounted is released by Suspense, so
     // the Vapor effect can still toggle a root in a pending hidden tree.
     frag.nodes = resolveVNodeNodes(frag.vnode!)
@@ -1131,16 +1144,16 @@ const interopVShow: ObjectDirective<
       transition.persisted &&
       !el[vShowHidden]
     ) {
+      el[vShowMountPending] = true
       transition.beforeEnter(el)
     }
   },
   mounted(el, _binding, { shapeFlag, transition }) {
-    if (
-      shapeFlag & ShapeFlags.ELEMENT &&
-      transition &&
-      transition.persisted &&
-      !el[vShowHidden]
-    ) {
+    if (!(shapeFlag & ShapeFlags.ELEMENT)) return
+    const prepared = el[vShowMountPending]
+    delete el[vShowMountPending]
+    if (transition && transition.persisted && !el[vShowHidden]) {
+      if (!prepared) transition.beforeEnter(el)
       transition.enter(el)
     }
   },
@@ -1167,21 +1180,47 @@ export function setInteropVShow(
     oldValue: undefined,
     modifiers: EMPTY_OBJ,
   }
-  // Hydration and in-place creation can render the child before applyVShow.
-  // Keep its existing root chain's bindings aligned with future renders.
-  let current: VNode | null = vnode
-  while (current) {
-    if (
-      __DEV__ &&
-      current.patchFlag > 0 &&
-      current.patchFlag & PatchFlags.DEV_ROOT_FRAGMENT
-    ) {
-      current =
-        filterSingleRoot(current.children as VNodeArrayChildren) || current
-    }
-    current.dirs = current.dirs ? current.dirs.concat(binding) : [binding]
-    current = current.component && current.component.subTree
+  vnode.dirs = dirs ? dirs.concat(binding) : [binding]
+  // Eager creation and hydration already rendered the root. Update the
+  // renderer's copy without adding inherited bindings to render caches.
+  const instance = vnode.component
+  if (instance && !isVaporComponent(instance)) {
+    instance.subTree = cloneVShowRoot(instance.subTree, binding)
   }
+}
+
+function cloneVShowRoot(vnode: VNode, binding: DirectiveBinding): VNode {
+  const cloned = cloneVNode(vnode, null, false, true)
+  if (
+    __DEV__ &&
+    vnode.patchFlag > 0 &&
+    vnode.patchFlag & PatchFlags.DEV_ROOT_FRAGMENT
+  ) {
+    const children = vnode.children as VNodeArrayChildren
+    const root = filterSingleRoot(children, false)
+    if (root) {
+      const child = cloneVShowRoot(root, binding)
+      cloned.children = children.map(vnode => (vnode === root ? child : vnode))
+      if (vnode.dynamicChildren) {
+        cloned.dynamicChildren = vnode.dynamicChildren.map(vnode =>
+          vnode === root ? child : vnode,
+        )
+        cloned.dynamicChildren.hasOnce = vnode.dynamicChildren.hasOnce
+      }
+      return cloned
+    }
+  }
+  cloned.dirs = cloned.dirs ? cloned.dirs.concat(binding) : [binding]
+  const instance = cloned.component
+  if (instance) {
+    if (isVaporComponent(instance)) {
+      ensureVNodeHookState(instance, cloned)
+    } else {
+      instance.vnode = cloned
+      instance.subTree = cloneVShowRoot(instance.subTree, binding)
+    }
+  }
+  return cloned
 }
 
 /**
@@ -1319,7 +1358,8 @@ function mountVNode(
     }
     return cloned
   }
-  if (extraProps) vnode = withExtraProps(baseVNode)
+  // The caller can reuse this VNode; interop hooks belong to this mount only.
+  vnode = withExtraProps(baseVNode)
   const { frag, syncNodes } = createVNodeFragment(vnode)
 
   let isMounted = false
@@ -1466,7 +1506,7 @@ function mountVNode(
 
   const update = () => {
     // merging the extra props reads them, which the effect below tracks
-    const next = extraProps ? withExtraProps(baseVNode) : baseVNode
+    const next = withExtraProps(baseVNode)
     if (!mountedParentNode) return
     const previous = vnode
     // Like a vdom parent re-rendering it, the fresh vnode gets what vapor set
