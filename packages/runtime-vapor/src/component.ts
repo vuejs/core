@@ -365,12 +365,12 @@ export function createComponent(
       // inject the parent attrs as a dynamic props source; the owner is
       // captured because sources resolve from read paths that do not
       // restore it as currentInstance
-      const source = () => resolveFallthroughAttrs(owner)
+      const sources = rawProps && (rawProps as RawProps).$
+      const source = () => resolveFallthroughAttrs(owner, !sources)
       // copy, never mutate: the caller's rawProps outlives this creation
       // (dynamic component branches share one object), and every creation
       // must see exactly one fallthrough source
       if (rawProps && rawProps !== EMPTY_OBJ) {
-        const sources = (rawProps as RawProps).$
         rawProps = extend(
           {},
           rawProps,
@@ -768,10 +768,14 @@ export function shouldUseFunctionalFallthrough(
  */
 export function resolveFallthroughAttrs(
   instance: VaporComponentInstance,
+  forProps = false,
 ): Record<string, any> {
   const attrs = shouldUseFunctionalFallthrough(instance.type)
     ? getFunctionalFallthrough(instance.attrs) || EMPTY_OBJ
     : instance.attrs
+  // VDOM decides whether to merge props before filtering model listeners.
+  // EMPTY_OBJ skips merging; an empty filtered object still requires it.
+  if (forProps && !Object.keys(attrs).length) return EMPTY_OBJ
   const propsOptions = normalizePropsOptions(instance.type)[0]
   if (propsOptions) {
     for (const key in attrs) {
