@@ -13599,4 +13599,77 @@ describe('vdomInterop', () => {
       }
     })
   })
+
+  test.each(['implicit', 'explicit'])(
+    'merges %s bindings on a dynamic vnode root like vdom',
+    async binding => {
+      const Child = defineComponent({
+        props: ['style', 'id'],
+        setup: props => () =>
+          h('i', [typeof props.style, props.id, props.style?.color].join('|')),
+      })
+      const seen: Record<string, string[]> = {}
+      await renderParity(
+        {
+          Wrapper: `<script setup>
+            import { h } from 'vue'
+            const data = _data
+            const components = _components
+            defineEmits(['ready'])
+            const vnode = h(components.Child, { style: undefined })
+          </script><template><component :is="vnode" ${
+            binding === 'explicit' ? 'v-bind="data.rest"' : ''
+          } /></template>`,
+          App: `<template>
+            <components.Wrapper @ready="() => {}" v-bind="data.attrs" />
+          </template>`,
+        },
+        () => ref({ attrs: {}, rest: {} }),
+        async (data, root, mode) => {
+          seen[mode] = [root.textContent!]
+          for (const attrs of [
+            { id: 'root' },
+            { style: { color: 'red' } },
+            {},
+          ]) {
+            data.value.attrs = attrs
+            await nextTick()
+            seen[mode].push(root.textContent!)
+          }
+        },
+        { Child },
+      )
+      const emptyStyle = binding === 'explicit' ? 'object||' : 'undefined||'
+      expect(seen.vdom).toEqual([
+        emptyStyle,
+        'object|root|',
+        'object||red',
+        emptyStyle,
+      ])
+      expect(seen.vapor).toEqual(seen.vdom)
+    },
+  )
+
+  test('merges filtered model listeners on a dynamic vnode root like vdom', async () => {
+    const Child = defineComponent({
+      props: ['style'],
+      setup: props => () => h('i', typeof props.style),
+    })
+    const { vdom, vapor } = await renderParity(
+      {
+        Wrapper: `<script setup>
+          import { h } from 'vue'
+          const components = _components
+          defineProps(['modelValue'])
+          const vnode = h(components.Child, { style: undefined })
+        </script><template><component :is="vnode" /></template>`,
+        App: `<template><components.Wrapper v-model="data.value" /></template>`,
+      },
+      () => ref({ value: 0 }),
+      () => {},
+      { Child },
+    )
+    expect(vdom.text).toBe('object')
+    expect(vapor.text).toBe(vdom.text)
+  })
 })

@@ -2643,3 +2643,89 @@ describe('component: props', () => {
     expect(vapor.after).toBe(vdom.after)
   })
 })
+
+describe('component: fallthrough props parity', () => {
+  const child = `<script setup>
+    defineOptions({ inheritAttrs: false })
+    const props = defineProps(['style'])
+  </script><template><i>{{ typeof props.style }}:{{ JSON.stringify(props.style) }}</i></template>`
+
+  test.each([
+    ['Child', ''],
+    ['VdomChild', ''],
+    ['VaporChild', ''],
+    ['Child', 'v-bind="data.rest"'],
+    ['VdomChild', 'v-bind="data.rest"'],
+    ['VaporChild', 'v-bind="data.rest"'],
+  ])(
+    'style values and changing fallthrough attrs: %s %s',
+    async (target, bind) => {
+      const VdomChild = defineComponent({
+        inheritAttrs: false,
+        props: ['style'],
+        setup: props => () =>
+          h(
+            'i',
+            typeof props.style + ':' + (JSON.stringify(props.style) || ''),
+          ),
+      })
+      const snapshots = { vdom: [] as string[], vapor: [] as string[] }
+      await renderParity(
+        {
+          Child: child,
+          Wrapper: `<script setup>
+          const data = _data
+          const components = _components
+          defineEmits(['ready'])
+        </script><template><components.${target} :style="data.style" ${bind} /></template>`,
+          App: '<template><components.Wrapper v-bind="data.attrs" @ready="() => {}" /></template>',
+        },
+        () => ref({ style: undefined as any, attrs: {} as any, rest: {} }),
+        async (data, root, mode) => {
+          for (const style of [
+            undefined,
+            'color: red',
+            { color: 'red' },
+            [{ color: 'red' }, { background: 'blue' }],
+          ]) {
+            for (const attrs of [
+              {},
+              { id: 'inherited' },
+              {},
+              { style: 'background: blue' },
+              {},
+            ]) {
+              data.value.style = style
+              data.value.attrs = attrs
+              await nextTick()
+              snapshots[mode].push(root.textContent!)
+            }
+          }
+        },
+        { VdomChild, VaporChild: compile(child, ref({})) },
+      )
+      expect(snapshots.vapor).toEqual(snapshots.vdom)
+    },
+  )
+
+  test.each(['', 'v-bind="data.rest"'])(
+    'filtered model listener preserves VDOM merging semantics: %s',
+    async bind => {
+      const { vdom, vapor } = await renderParity(
+        {
+          Child: child,
+          Wrapper: `<script setup>
+            const data = _data
+            const components = _components
+            defineProps(['modelValue'])
+          </script><template><components.Child :style="undefined" ${bind} /></template>`,
+          App: '<template><components.Wrapper v-model="data.value" /></template>',
+        },
+        () => ref({ value: 'x', rest: {} }),
+        () => {},
+      )
+      expect(vdom.text).toBe('object:{}')
+      expect(vapor.text).toBe(vdom.text)
+    },
+  )
+})

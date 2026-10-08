@@ -1399,18 +1399,30 @@ function mountDynamicVNode(
   // v-once freezes the component's own props; inherited attrs stay live
   if (once && rawProps) rawProps = snapshotRawProps(rawProps)
   const owner = resolveFallthroughOwner(isSingleRoot)
+  let getExtraProps: (() => Record<string, any> | undefined) | undefined
   if (owner) {
-    const source = () => resolveFallthroughAttrs(owner)
-    const sources = rawProps && rawProps.$
-    rawProps = extend({}, rawProps, {
-      $: sources ? sources.concat(source) : [source],
-    }) as RawProps
+    if (rawProps) {
+      const source = () => resolveFallthroughAttrs(owner)
+      const sources = rawProps.$
+      rawProps = extend({}, rawProps, {
+        $: sources ? sources.concat(source) : [source],
+      }) as RawProps
+    } else {
+      getExtraProps = () => {
+        const attrs = resolveFallthroughAttrs(owner, true)
+        return attrs === EMPTY_OBJ ? undefined : attrs
+      }
+    }
+  }
+  if (rawProps) {
+    const props = new Proxy(rawProps, rawPropsProxyHandlers)
+    getExtraProps = () => props
   }
   const frag = mountVNode(
     internals,
     vnode,
     parentComponent,
-    rawProps ? new Proxy(rawProps, rawPropsProxyHandlers) : undefined,
+    getExtraProps,
     once && !owner,
   )
   if (isHydrating) {
@@ -1444,7 +1456,7 @@ function mountVNode(
   internals: RendererInternals,
   vnode: VNode,
   parentComponent: VaporComponentInstance | null,
-  extraProps?: Record<string, any>,
+  getExtraProps?: () => Record<string, any> | undefined,
   staticExtraProps?: boolean,
 ): VaporFragment {
   let suspense =
@@ -1456,7 +1468,7 @@ function mountVNode(
   // the DOM behind the renderer's back.
   let baseVNode = vnode
   const withExtraProps = (base: VNode): VNode => {
-    const cloned = cloneVNode(base, extraProps, true)
+    const cloned = cloneVNode(base, getExtraProps && getExtraProps(), true)
     // the dynamic component's key decided the branch and the KeepAlive
     // lookup; a spread `key` must not re-key the vnode behind them
     if (cloned.key !== base.key) {
@@ -1663,7 +1675,7 @@ function mountVNode(
     }
   }
 
-  if (extraProps && !staticExtraProps) {
+  if (getExtraProps && !staticExtraProps) {
     // Re-clone and let VDOM patch the change through, mirroring how a VDOM
     // parent re-renders with fresh props and fallthrough attrs. The first run
     // happens before the mount and only establishes the dependency.

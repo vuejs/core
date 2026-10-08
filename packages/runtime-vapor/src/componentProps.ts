@@ -734,9 +734,7 @@ export function collectProps(
   const attrs = rawProps[fallthroughOnlyKey]
     ? (dynamicSources[0] as () => Record<string, unknown>)()
     : undefined
-  const isMerging = attrs
-    ? Object.keys(attrs).length > 0
-    : dynamicSources.length > 0
+  const isMerging = attrs ? attrs !== EMPTY_OBJ : dynamicSources.length > 0
   for (let i = -1; i < dynamicSources.length; i++) {
     const source = i < 0 ? rawProps : dynamicSources[i]
     const isDynamic = isFunction(source)
