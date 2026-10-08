@@ -58,6 +58,9 @@ export const enum VShowFlags {
   APPLIED = 1,
   // the block a v-show directive is written on
   TARGET = 1 << 1,
+  // shown before insertion over an earlier v-show's hide, with no transition
+  // hooks attached yet: the Transition that attaches them re-hides it
+  MOUNT_SHOWN = 1 << 2,
 }
 
 export interface TransitionOptions {
