@@ -19,6 +19,7 @@ import {
   type Data,
   type LifecycleHook,
   createComponentInstance,
+  getNextUid,
   setupComponent,
 } from './component'
 import {
@@ -43,7 +44,7 @@ import {
   type SchedulerJob,
   SchedulerJobFlags,
   type SchedulerJobs,
-  flushPostFlushCbs,
+  flushOnAppMount,
   flushPreFlushCbs,
   queueJob,
   queuePostFlushCb,
@@ -2446,32 +2447,34 @@ function baseCreateRenderer(
     return teleportEnd ? hostNextSibling(teleportEnd) : el
   }
 
-  let isFlushing = false
   const render: RootRenderFunction = (vnode, container, namespace) => {
-    let instance
-    if (vnode == null) {
-      if (container._vnode) {
-        unmount(container._vnode, null, null, true)
-        instance = container._vnode.component
+    // a mount or unmount is only responsible for the components it creates
+    // (a compat root is created before its $mount); a root update is for the
+    // whole pending queue
+    const minUid =
+      vnode && container._vnode
+        ? undefined
+        : vnode && vnode.component
+          ? vnode.component.uid
+          : getNextUid()
+    flushOnAppMount(() => {
+      if (vnode == null) {
+        if (container._vnode) {
+          unmount(container._vnode, null, null, true)
+        }
+      } else {
+        patch(
+          container._vnode || null,
+          vnode,
+          container,
+          null,
+          null,
+          null,
+          namespace,
+        )
       }
-    } else {
-      patch(
-        container._vnode || null,
-        vnode,
-        container,
-        null,
-        null,
-        null,
-        namespace,
-      )
-    }
-    container._vnode = vnode
-    if (!isFlushing) {
-      isFlushing = true
-      flushPreFlushCbs(instance)
-      flushPostFlushCbs()
-      isFlushing = false
-    }
+      container._vnode = vnode
+    }, minUid)
   }
 
   const internals: RendererInternals = {

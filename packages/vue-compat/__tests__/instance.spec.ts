@@ -1,5 +1,6 @@
 import type { Mock } from 'vitest'
 import Vue from '@vue/compat'
+import { nextTick, watchPostEffect } from '@vue/runtime-core'
 import type { Slots } from '../../runtime-core/src/componentSlots'
 import { Text } from '../../runtime-core/src/vnode'
 import {
@@ -21,6 +22,91 @@ beforeEach(() => {
 afterEach(() => {
   toggleDeprecationWarning(false)
   Vue.configureCompat({ MODE: 3 })
+})
+
+describe('compat root: created-triggered pre watcher runs before mounted', () => {
+  const makeOptions = (order: string[]) => ({
+    data() {
+      return { count: 0 }
+    },
+    watch: {
+      count() {
+        order.push('watch')
+      },
+    },
+    created(this: any) {
+      this.count++
+    },
+    mounted() {
+      order.push('mounted')
+    },
+    template: '<div></div>',
+  })
+
+  test('direct $mount', () => {
+    const order: string[] = []
+    new Vue(makeOptions(order)).$mount(document.createElement('div'))
+    expect(order).toEqual(['watch', 'mounted'])
+  })
+
+  test('post watcher triggered in created runs before mounted', async () => {
+    const order: string[] = []
+    let prepared = 0
+    new Vue({
+      data() {
+        return { count: 0 }
+      },
+      watch: {
+        count: {
+          flush: 'post',
+          handler(value: number) {
+            prepared = value
+            order.push(`post:${value}`)
+          },
+        },
+      },
+      created(this: any) {
+        this.count++
+      },
+      mounted() {
+        order.push(`mounted:${prepared}`)
+      },
+      template: '<div></div>',
+    }).$mount(document.createElement('div'))
+    expect(order).toEqual(['post:1', 'mounted:1'])
+  })
+
+  test('watchPostEffect in setup runs before mounted', async () => {
+    const order: string[] = []
+    new Vue({
+      setup() {
+        watchPostEffect(() => order.push('effect'))
+      },
+      mounted() {
+        order.push('mounted')
+      },
+      template: '<div></div>',
+    }).$mount(document.createElement('div'))
+    expect(order).toEqual(['effect', 'mounted'])
+  })
+
+  test('$mount inside a pre watcher', async () => {
+    const order: string[] = []
+    const vm = new Vue({
+      data() {
+        return { source: 0 }
+      },
+      watch: {
+        source() {
+          new Vue(makeOptions(order)).$mount(document.createElement('div'))
+        },
+      },
+      template: '<div></div>',
+    }).$mount(document.createElement('div')) as any
+    vm.source++
+    await nextTick()
+    expect(order).toEqual(['watch', 'mounted'])
+  })
 })
 
 test('INSTANCE_SET', () => {
