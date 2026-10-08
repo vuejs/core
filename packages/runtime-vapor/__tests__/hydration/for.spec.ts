@@ -565,5 +565,29 @@ describe('Vapor Mode hydration', () => {
       `,
       )
     })
+
+    test('state change in onMounted updates v-for class bindings', async () => {
+      const data = ref({ items: ['a', 'b'], active: 'a' })
+      const { container } = await testHydration(
+        `<script setup vapor>
+          import { onMounted } from 'vue'
+          const data = _data
+          onMounted(() => {
+            data.value.active = 'b'
+          })
+        </script>
+        <template>
+          <span v-for="item in data.items" :key="item" :class="{ active: data.active === item }">{{ item }}</span>
+        </template>`,
+        undefined,
+        data,
+      )
+      await nextTick()
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
+        "
+        <!--[--><span class="">a</span><span class="active">b</span><!--]-->
+        "
+      `)
+    })
   })
 })

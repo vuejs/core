@@ -662,15 +662,20 @@ export function deliverInputs(
   rawValues: Record<string, any> | undefined,
   cells?: SlotSourceCell[],
   propsToUpdate?: unknown[],
-): void {
+): boolean {
+  let changed = false
   const prevSub = setActiveSub()
   startBatch()
   try {
     if (instance && (rawValues || propsToUpdate)) {
       // the fast path patches the delivered frame in place
-      updateProps(instance, rawValues || instance.rawValues, propsToUpdate)
+      changed = updateProps(
+        instance,
+        rawValues || instance.rawValues,
+        propsToUpdate,
+      )
     }
-    if (cells) commitSlotSources(cells)
+    if (cells) changed = commitSlotSources(cells) || changed
   } finally {
     try {
       endBatch()
@@ -678,6 +683,7 @@ export function deliverInputs(
       setActiveSub(prevSub)
     }
   }
+  return changed
 }
 
 export function collectSlotSources(cells: SlotSourceCell[]): void {
@@ -688,16 +694,19 @@ export function collectSlotSources(cells: SlotSourceCell[]): void {
 }
 
 // an unchanged descriptor keeps the identity its readers already saw
-function commitSlotSources(cells: SlotSourceCell[]): void {
+function commitSlotSources(cells: SlotSourceCell[]): boolean {
+  let changed = false
   for (let i = 0; i < cells.length; i++) {
     const cell = cells[i]
     const next = stabilizeDynamicSourceValue(cell.committed, cell.next!)
     cell.next = undefined
     if (hasChanged(next, cell.committed)) {
+      changed = true
       cell.committed = next
       triggerDep(cell)
     }
   }
+  return changed
 }
 
 export function hasDynamicPropsSource(rawProps: RawProps): boolean {
@@ -791,7 +800,7 @@ function updateProps(
   rawValues: Record<string, any>,
   // the entries to set on `rawValues`, the delivered frame, as [key, value, …]
   propsToUpdate?: unknown[],
-): void {
+): boolean {
   const propsValues = instance.propsValues
   const [options, needCastKeys] = normalizePropsOptions(instance.type)
   const emitsOptions = normalizeEmitsOptions(instance.type)
@@ -811,7 +820,8 @@ function updateProps(
     triggerPropsValue(instance, RAW_VALUES_KEY)
   }
   const vnode = isInteropEnabled && instance.interopVNode
-  if (vnode && vnode.vi) vnode.props = rawValues
+  // vdom code reads vnode props as a plain object (e.g. `props.hasOwnProperty`)
+  if (vnode && vnode.vi) vnode.props = { ...rawValues }
 
   const present: Record<string, true> | undefined =
     propsToUpdate || isInitial ? undefined : Object.create(null)
@@ -897,6 +907,7 @@ function updateProps(
       popWarningContext()
     }
   }
+  return !!propsToUpdate || rawValues !== prevRawValues
 }
 
 function setPropValue(

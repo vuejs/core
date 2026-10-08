@@ -41,7 +41,7 @@ import { parse } from '../parse'
 import { createCache } from '../cache'
 import type TS from 'typescript'
 import { dirname, extname, join } from 'path'
-import { minimatch as isMatch } from 'minimatch'
+import { Minimatch } from 'minimatch'
 import * as process from 'process'
 
 export type SimpleTypeResolveOptions = Partial<
@@ -1099,6 +1099,18 @@ const tsConfigRefMap = new Map<string, string>()
 // parsed parents instead.
 const extendedConfigCache = new Map<string, TS.ExtendedConfigCacheEntry>()
 
+// `minimatch()` re-parses the pattern on every call, while each import of a file is
+// tested against the include / exclude patterns of every referenced config.
+const matcherCache = new Map<string, Minimatch>()
+
+function isMatch(file: string, pattern: string): boolean {
+  let matcher = matcherCache.get(pattern)
+  if (!matcher) {
+    matcherCache.set(pattern, (matcher = new Minimatch(pattern)))
+  }
+  return matcher.match(file)
+}
+
 function resolveWithTS(
   containingFile: string,
   source: string,
@@ -1252,6 +1264,7 @@ export function invalidateTypeCache(filename: string): void {
   if (filename.endsWith('.json')) {
     extendedConfigCache.clear()
     tsConfigCache.clear()
+    matcherCache.clear()
   }
   const affectedConfig = tsConfigRefMap.get(filename)
   if (affectedConfig) tsConfigCache.delete(affectedConfig)

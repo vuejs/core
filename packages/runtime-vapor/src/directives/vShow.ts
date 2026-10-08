@@ -19,6 +19,7 @@ import {
 import { isSlotOutletFragment } from '../fragment'
 import { isHydrating } from '../dom/hydration'
 import { isInteropEnabled } from '../vdomInteropState'
+import { isInteropVShowPending, setInteropVShow } from '../vdomInterop'
 import { isTransitionEnabled } from '../transition'
 import { isSuspenseEnabled } from '../suspense'
 
@@ -40,6 +41,7 @@ export function applyVShow(target: Block, source: () => any): void {
 
   const visitor: RootChainVisitor = {
     onComponent(instance) {
+      if (__DEV__) register((instance.hmrRootHooks ||= []), apply)
       if (
         __FEATURE_SUSPENSE__ &&
         isSuspenseEnabled &&
@@ -67,6 +69,7 @@ export function applyVShow(target: Block, source: () => any): void {
     visitor.onInteropFragment = frag => {
       if (isSlotOutletFragment(frag)) return (slotRoot = true)
       mark(frag)
+      if (frag.vnode) setInteropVShow(frag, apply)
       if (isTransitionEnabled && frag.$transition) transition = frag.$transition
       // vdom patches the content first, then notifies through `u`
       register((frag.u ||= []), apply)
@@ -122,6 +125,12 @@ function setDisplay(
 
   if (el[vShowHidden] === hidden) return
   el[vShowHidden] = hidden
+
+  // The VDOM mounted hook owns enter until Suspense releases the root.
+  if (isInteropEnabled && isInteropVShowPending(el)) {
+    writeDisplay(el, value)
+    return
+  }
 
   const $transition = isTransitionEnabled
     ? (el as TransitionBlock).$transition || transition

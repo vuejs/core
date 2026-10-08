@@ -863,6 +863,14 @@ describe('compiler: element transform', () => {
         ],
       })
     })
+
+    test('static style is passed as an object', () => {
+      const { code } = compileWithElementTransform(
+        `<Foo style="width: 200px; color: red" />`,
+      )
+      expect(code).toMatchSnapshot()
+      expect(code).contains(`style: {"width":"200px","color":"red"}`)
+    })
   })
 
   describe('dynamic component', () => {
@@ -1442,7 +1450,7 @@ describe('compiler: element transform', () => {
     )
     expect(code).toMatchSnapshot()
     expect(code).contains(
-      `_setDynamicProps(n0, [{ onClick: e => _ctx.a(e) }, _toHandlers(_ctx.obj, true), _ctx.bind, { onClick: _withModifiers(e => _ctx.b(e), ["stop"]), onKeyupOnce: _withKeys(e => _ctx.c(e), ["enter"]), "on:myEvent": e => _ctx.d(e) }])`,
+      `_setDynamicProps(n0, [{ onClick: _on_click }, _toHandlers(_ctx.obj, true), _ctx.bind, { onClick: _on_click1, onKeyupOnce: _on_keyup, "on:myEvent": _on_myEvent }])`,
     )
     expect(code).not.contains(`_on(`)
     expect(code).not.contains(`_setDynamicEvents`)
@@ -1462,7 +1470,7 @@ describe('compiler: element transform', () => {
       `<div v-bind="bind" @click="a" :onClick="b" /><div :onClick="c" v-on="obj" /><Comp @click="a" :onClick="b" />`,
     )
     expect(code).toMatchSnapshot()
-    expect(code).contains(`{ onClick: [e => _ctx.a(e), _ctx.b] }`)
+    expect(code).contains(`{ onClick: [_on_click, _ctx.b] }`)
     expect(code).contains(
       `_setDynamicProps(n1, [{ onClick: _ctx.c }, _toHandlers(_ctx.obj, true)], k0)`,
     )
@@ -1486,7 +1494,7 @@ describe('compiler: element transform', () => {
     )
     expect(code).toMatchSnapshot()
     expect(code).contains(
-      `{ "on:myEventCaptureOnce": e => _ctx.a(e), onClick: e => _ctx.b(e) }`,
+      `{ "on:myEventCaptureOnce": _on_myEvent, onClick: _on_click }`,
     )
   })
 
@@ -1495,9 +1503,7 @@ describe('compiler: element transform', () => {
       `<div v-bind="bind" @click.stop="a" @click="b($event)" />`,
     )
     expect(code).toMatchSnapshot()
-    expect(code).contains(
-      `{ onClick: [_withModifiers(e => _ctx.a(e), ["stop"]), $event => (_ctx.b($event))] }`,
-    )
+    expect(code).contains(`{ onClick: [_on_click, _on_click1] }`)
   })
 
   test('a delegated listener stays out of the merge', () => {
@@ -2094,6 +2100,39 @@ describe('compiler: element transform', () => {
     })
   })
 
+  // #15725
+  test('merged listeners are declared ahead of the render effect', () => {
+    const { code } = compileWithElementTransform(
+      `<div v-bind="attrs" :title="n" :id="n" @click="hit(n)" @focus="hit(n)" @blur="n++" />`,
+    )
+    expect(code).toMatchSnapshot()
+    expect(code).contains(`const _on_click = () => (_ctx.hit(_ctx.n))`)
+    expect(code).contains(`const _on_blur = () => (_ctx.n++)`)
+    expect(code).contains(
+      `{ title: _n, id: _n, onClick: _on_click, onFocus: _on_focus, onBlur: _on_blur }`,
+    )
+  })
+
+  test('a dynamic event handler is declared ahead of the render effect', () => {
+    const { code } = compileWithElementTransform(
+      `<div v-bind="attrs" :title="n" :id="n" @click="n++" @[event]="n++" />`,
+    )
+    expect(code).toMatchSnapshot()
+    expect(code).contains(`const _on_event = () => (_ctx.n++)`)
+    expect(code).contains(`_onBinding(n0, _ctx.event, _on_event)`)
+  })
+
+  test('a declared handler avoids the names cached by the render effect', () => {
+    const { code } = compileWithElementTransform(
+      `<div v-bind="attrs" :title="on_click" :id="on_click" @click="a()" @click1="b()" />`,
+    )
+    expect(code).toMatchSnapshot()
+    expect(code).contains(`const _on_click = _ctx.on_click`)
+    expect(code).contains(`const _on_click1 = () => (_ctx.a())`)
+    expect(code).contains(`const _on_click11 = () => (_ctx.b())`)
+    expect(code).contains(`onClick: _on_click1, onClick1: _on_click11`)
+  })
+
   test.each(['KeepAlive', 'keep-alive'])(
     '<%s> resolves to the built-in VaporKeepAlive',
     tag => {
@@ -2105,4 +2144,123 @@ describe('compiler: element transform', () => {
       expect(helpers).toContain('VaporKeepAlive')
     },
   )
+
+  describe('slot-scope component tags', () => {
+    test.each([
+      ['{ Foo }', 'Foo', '_slotProps0.Foo'],
+      ['{ fooBar }', 'foo-bar', '_slotProps0.fooBar'],
+      ['{ nested: { Foo: Alias } }', 'Alias', '_slotProps0.nested.Foo'],
+      ['slotProps', 'slot-props.Foo', 'slotProps.Foo'],
+      ['{ parts }', 'parts.Foo', '_slotProps0.parts.Foo'],
+    ])('resolves %s through <%s>', (props, tag, expression) => {
+      const { code } = compileWithElementAndSlotTransform(
+        `<Comp v-slot="${props}"><${tag} /></Comp>`,
+      )
+      expect(code).toContain(`_createComponent(${expression})`)
+      expect(code).not.toContain(`_resolveComponent("${tag}")`)
+    })
+
+    test('resolves template slot bindings before setup bindings', () => {
+      const { code } = compileWithElementAndSlotTransform(
+        `<Comp><template #default="{ Foo }"><foo /></template></Comp>`,
+        { bindingMetadata: { foo: BindingTypes.SETUP_CONST } },
+      )
+      expect(code).toContain('_createComponent(_slotProps0.Foo)')
+      expect(code).not.toContain('_createComponent(_ctx.foo)')
+    })
+
+    test('does not leak slot bindings to the component tag or siblings', () => {
+      const { code } = compileWithElementAndSlotTransform(
+        `<Foo v-slot="{ Foo }"><Foo /></Foo><Foo />`,
+      )
+      expect(code).toContain('_createComponent(_slotProps0.Foo)')
+      expect(code).toContain('const _component_Foo = _resolveComponent("Foo")')
+      expect(
+        code.match(/_createComponentWithFallback\(_component_Foo/g),
+      ).toHaveLength(2)
+    })
+
+    test('respects v-for shadowing and restores the outer slot binding', () => {
+      const { code } = compileWithElementAndSlotTransform(
+        `<Comp v-slot="{ Foo }"><template v-for="Foo in list"><Foo /></template><Foo /></Comp>`,
+      )
+      expect(code).toContain('_createComponent(_slotProps0.Foo)')
+      expect(code).toContain('_createComponentWithFallback(_component_Foo)')
+    })
+
+    test('resolves slot bindings shadowing v-for aliases', () => {
+      const { code } = compileWithElementAndSlotTransform(
+        `<div v-for="Foo in list"><Comp v-slot="{ Foo }"><Foo /></Comp></div>`,
+      )
+      expect(code).toMatch(/_createComponent\(_slotProps\d+\.Foo\)/)
+      expect(code).not.toContain('_resolveComponent("Foo")')
+    })
+
+    test.each([
+      '<div v-for="Foo in list"><Foo.Bar /></div>',
+      '<Comp v-slot="{ Foo }"><div v-for="Foo in list"><Foo.Bar /></div></Comp>',
+    ])('keeps setup namespace resolution under v-for: %s', source => {
+      const { code } = compileWithElementAndSlotTransform(source, {
+        bindingMetadata: { Foo: BindingTypes.SETUP_CONST },
+      })
+      expect(code).toContain('_createComponent(_ctx.Foo.Bar)')
+      expect(code).not.toMatch(/_createComponent\(_for_item\d+\.value\.Bar\)/)
+    })
+  })
+
+  describe.each([false, true])('setup lookup order (inline: %s)', inline => {
+    test.each([
+      [BindingTypes.SETUP_CONST, BindingTypes.SETUP_REACTIVE_CONST],
+      [BindingTypes.SETUP_REACTIVE_CONST, BindingTypes.LITERAL_CONST],
+      [BindingTypes.LITERAL_CONST, BindingTypes.SETUP_LET],
+      [BindingTypes.SETUP_LET, BindingTypes.SETUP_REF],
+      [BindingTypes.SETUP_REF, BindingTypes.SETUP_MAYBE_REF],
+      [BindingTypes.SETUP_MAYBE_REF, BindingTypes.PROPS],
+    ])('prefers %s over %s regardless of spelling', (preferred, other) => {
+      const { code, ir } = compileWithElementTransform('<foo-bar />', {
+        inline,
+        bindingMetadata: { fooBar: other, FooBar: preferred },
+      })
+
+      expect(ir.block.dynamic.children[0].operation).toMatchObject({
+        tag: 'FooBar',
+        asset: false,
+      })
+      expect(code).toContain('FooBar')
+      expect(code).not.toContain('fooBar')
+    })
+
+    test('prefers exact and camelized names within the same binding type', () => {
+      const { ir } = compileWithElementTransform('<fooBar /><foo-bar />', {
+        inline,
+        bindingMetadata: {
+          fooBar: BindingTypes.SETUP_CONST,
+          FooBar: BindingTypes.SETUP_CONST,
+        },
+      })
+
+      for (const child of ir.block.dynamic.children) {
+        expect(child.operation).toMatchObject({ tag: 'fooBar', asset: false })
+      }
+    })
+
+    test('uses binding priority for namespaced components and directives', () => {
+      const { code, ir } = compileWithElementTransform('<foo.Bar v-focus />', {
+        inline,
+        bindingMetadata: {
+          foo: BindingTypes.SETUP_LET,
+          Foo: BindingTypes.SETUP_CONST,
+          vFocus: BindingTypes.SETUP_LET,
+          VFocus: BindingTypes.SETUP_CONST,
+        },
+      })
+
+      expect(ir.block.dynamic.children[0].operation).toMatchObject({
+        tag: 'Foo.Bar',
+        asset: false,
+      })
+      expect(code).toContain('VFocus')
+      expect(code).not.toContain('vFocus')
+    })
+  })
 })

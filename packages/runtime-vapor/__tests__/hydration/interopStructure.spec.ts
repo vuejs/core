@@ -1415,13 +1415,13 @@ describe('VDOM interop', () => {
     )
 
     expect(container.innerHTML).toMatchInlineSnapshot(
-      `"<div><a href="/about">foo</a></div>"`,
+      `"<div><a href="/about"><!--[-->foo<!--]--></a></div>"`,
     )
 
     data.value = 'bar'
     await nextTick()
     expect(container.innerHTML).toMatchInlineSnapshot(
-      `"<div><a href="/about">bar</a></div>"`,
+      `"<div><a href="/about"><!--[-->bar<!--]--></a></div>"`,
     )
   })
 
@@ -1445,13 +1445,13 @@ describe('VDOM interop', () => {
     )
 
     expect(container.innerHTML).toMatchInlineSnapshot(
-      `"<div><a><!--[-->foo<!--]--><span>after</span></a></div>"`,
+      `"<div><a><!--[--><!--[-->foo<!--]--><!--]--><span>after</span></a></div>"`,
     )
 
     data.value = 'bar'
     await nextTick()
     expect(container.innerHTML).toMatchInlineSnapshot(
-      `"<div><a><!--[-->bar<!--]--><span>after</span></a></div>"`,
+      `"<div><a><!--[--><!--[-->bar<!--]--><!--]--><span>after</span></a></div>"`,
     )
   })
 
@@ -1484,13 +1484,13 @@ describe('VDOM interop', () => {
     )
 
     expect(container.innerHTML).toMatchInlineSnapshot(
-      `"<div><div><a href="/about">foo</a></div></div>"`,
+      `"<div><div><a href="/about"><!--[-->foo<!--]--></a></div></div>"`,
     )
 
     data.value = 'bar'
     await nextTick()
     expect(container.innerHTML).toMatchInlineSnapshot(
-      `"<div><div><a href="/about">bar</a></div></div>"`,
+      `"<div><div><a href="/about"><!--[-->bar<!--]--></a></div></div>"`,
     )
   })
 
@@ -1519,11 +1519,15 @@ describe('VDOM interop', () => {
       data,
     )
 
-    expect(container.innerHTML).toBe('<div><a><span>1</span></a></div>')
+    expect(container.innerHTML).toBe(
+      '<div><a><!--[--><span>1</span><!--]--></a></div>',
+    )
 
     data.items.push(2)
     await nextTick()
-    expect(container.innerHTML).toBe('<div><a><span>2</span></a></div>')
+    expect(container.innerHTML).toBe(
+      '<div><a><!--[--><span>2</span><!--]--></a></div>',
+    )
   })
 
   test('hydrate flattened vapor slot before persistent vdom sibling', async () => {
@@ -1549,7 +1553,7 @@ describe('VDOM interop', () => {
     )
 
     expect(container.innerHTML).toBe(
-      '<div><a><b>slot</b><span>after</span></a></div>',
+      '<div><a><!--[--><b>slot</b><!--]--><span>after</span></a></div>',
     )
 
     show.value = false

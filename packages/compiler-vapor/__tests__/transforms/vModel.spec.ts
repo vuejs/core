@@ -6,8 +6,9 @@ import {
   transformElement,
   transformVModel,
 } from '../../src'
-import { BindingTypes, DOMErrorCodes } from '@vue/compiler-dom'
+import { BindingTypes, DOMErrorCodes, ErrorCodes } from '@vue/compiler-dom'
 import { transformVOn } from '../../src/transforms/vOn'
+import { parse } from '@babel/parser'
 
 const compileWithVModel = makeCompile({
   nodeTransforms: [transformElement, transformChildren],
@@ -158,6 +159,48 @@ describe('compiler: vModel transform', () => {
         onError,
       })
       expect(onError).not.toHaveBeenCalled()
+    })
+
+    test('used on const binding', () => {
+      const onError = vi.fn()
+      compileWithVModel('<input v-model="c" />', {
+        onError,
+        bindingMetadata: {
+          c: BindingTypes.LITERAL_CONST,
+        },
+      })
+
+      expect(onError).toHaveBeenCalledTimes(1)
+      expect(onError).toHaveBeenCalledWith(
+        expect.objectContaining({
+          code: ErrorCodes.X_V_MODEL_ON_CONST,
+        }),
+      )
+    })
+
+    test('used on scope variable', () => {
+      const onError = vi.fn()
+      for (const source of [
+        '<div v-for="item in items"><input v-model="item" /></div>',
+        '<div v-for="item in items"><input v-model=" item " /></div>',
+        '<input v-for="(item, i) in items" v-model="i" />',
+        '<Comp v-slot="{ value }"><input v-model="value" /></Comp>',
+      ]) {
+        compileVapor(source, { prefixIdentifiers: true, onError })
+      }
+      expect(onError).toHaveBeenCalledTimes(4)
+      expect(onError).toHaveBeenCalledWith(
+        expect.objectContaining({
+          code: ErrorCodes.X_V_MODEL_ON_SCOPE_VARIABLE,
+        }),
+      )
+
+      const onError2 = vi.fn()
+      compileVapor(
+        '<div v-for="item in items"><input v-model="item.name" /></div>',
+        { prefixIdentifiers: true, onError: onError2 },
+      )
+      expect(onError2).not.toHaveBeenCalled()
     })
   })
 
@@ -573,6 +616,77 @@ describe('compiler: vModel transform', () => {
       expect(code.indexOf(helper)).toBeGreaterThan(model)
       expect(code).toContain('_createSelector(')
       expect(code).toMatchSnapshot()
+    },
+  )
+
+  test.each([false, true])(
+    'member expression w/ TS expressions (inline: %s)',
+    inline => {
+      const { code } = compileVapor(
+        `<input v-model="form.a as string" />
+        <Comp v-model="form.b satisfies string" />
+        <input v-model="form!.c" />
+        <input v-model="state!.d" />`,
+        {
+          prefixIdentifiers: true,
+          isTS: true,
+          expressionPlugins: ['typescript'],
+          inline,
+          bindingMetadata: {
+            form: BindingTypes.SETUP_REACTIVE_CONST,
+            state: BindingTypes.SETUP_REF,
+          },
+        },
+      )
+      const form = inline ? 'form' : '_ctx.form'
+      const state = inline ? 'state.value' : '_ctx.state'
+      expect(code).toContain(`((${form}.a as string) = _value)`)
+      expect(code).toContain(`((${form}.b satisfies string) = _value)`)
+      expect(code).toContain(`(${form}!.c = _value)`)
+      expect(code).toContain(`(${state}!.d = _value)`)
+      expect(() =>
+        parse(code, {
+          sourceType: 'module',
+          plugins: ['typescript'],
+          allowReturnOutsideFunction: inline,
+        }),
+      ).not.toThrow()
+    },
+  )
+
+  test.each([BindingTypes.SETUP_LET, BindingTypes.SETUP_MAYBE_REF])(
+    'member expression w/ TS expressions and %s bindings',
+    binding => {
+      const { code } = compileVapor(
+        `<input v-model="form!.name" />
+        <Comp v-model="form![key] as string" />
+        <input v-model="form" />`,
+        {
+          prefixIdentifiers: true,
+          isTS: true,
+          expressionPlugins: ['typescript'],
+          inline: true,
+          bindingMetadata: {
+            form: binding,
+            key: BindingTypes.SETUP_REF,
+          },
+        },
+      )
+
+      expect(code).toContain(`(_unref(form)!.name = _value)`)
+      expect(code).toContain(`((_unref(form)![key.value] as string) = _value)`)
+      expect(code).toContain(
+        `_isRef(form) ? (form.value = _value) : ${
+          binding === BindingTypes.SETUP_LET ? '(form = _value)' : 'null'
+        }`,
+      )
+      expect(() =>
+        parse(code, {
+          sourceType: 'module',
+          plugins: ['typescript'],
+          allowReturnOutsideFunction: true,
+        }),
+      ).not.toThrow()
     },
   )
 })

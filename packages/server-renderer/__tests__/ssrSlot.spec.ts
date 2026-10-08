@@ -574,5 +574,60 @@ describe('ssr: slot', () => {
         )
       },
     )
+
+    // a render function calling the slot itself gets what the client's slots
+    // proxy hands out: one vapor slot vnode, an outlet
+    test('a vapor slot called directly renders as an outlet', async () => {
+      const Child = {
+        setup(_: any, { slots }: any) {
+          return () => h('div', slots.default({ msg: 'b' }))
+        },
+      }
+      const First = {
+        setup(_: any, { slots }: any) {
+          return () => slots.default({ msg: 'b' })[0]
+        },
+      }
+      const content = `<template #default="{ msg }"><h1>a</h1><p>{{ msg }}</p></template>`
+      const vapor = { __vapor: true }
+      const app = (components: any, template: string) =>
+        renderToString(createApp({ components, template, ...vapor }))
+      expect(await app({ Child }, `<Child>${content}</Child>`)).toBe(
+        `<div><!--[--><h1>a</h1><p>b</p><!--]--></div>`,
+      )
+      // one vnode whatever the slot renders
+      expect(await app({ First }, `<First>${content}</First>`)).toBe(
+        `<!--[--><h1>a</h1><p>b</p><!--]-->`,
+      )
+      expect(await app({ Child }, `<Child><span v-if="false"/></Child>`)).toBe(
+        `<div><!--[--><!--]--></div>`,
+      )
+      // an ssr outlet still renders the slot itself
+      expect(await app(components, `<one><h1>a</h1><p>b</p></one>`)).toBe(
+        `<div><!--[--><h1>a</h1><p>b</p><!--]--></div>`,
+      )
+      // a vdom slot: left alone
+      expect(await render(`<Child>${content}</Child>`, { Child })).toBe(
+        `<div><h1>a</h1><p>b</p></div>`,
+      )
+    })
+
+    // slots a vapor component hands over with `h()` are vdom slots on the
+    // client: called directly, they render what they return
+    test('vnode slots created in a vapor component stay vdom slots', async () => {
+      const Child = {
+        setup(_: any, { slots }: any) {
+          return () => h('div', slots.default())
+        },
+      }
+      const App = {
+        __vapor: true,
+        setup: () => ({
+          view: () => h(Child, null, { default: () => h('p', 'a') }),
+        }),
+        template: `<component :is="view()" />`,
+      }
+      expect(await renderToString(createApp(App))).toBe(`<div><p>a</p></div>`)
+    })
   })
 })

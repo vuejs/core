@@ -34,6 +34,9 @@ export interface VaporTransitionState extends TransitionState {
   // every apply, and hooks resolved afterwards fold the result in.
   root?: Block
   persisted?: boolean
+  // dev only: resolves the hooks again from the Transition's own content
+  // after an HMR rerender replaced a root they were applied to
+  refresh?: (hooks: VaporTransitionHooks) => void
 }
 
 export interface VaporTransitionHooks extends TransitionHooks {
