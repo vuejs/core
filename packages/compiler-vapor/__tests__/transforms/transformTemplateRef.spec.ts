@@ -307,4 +307,12 @@ describe('compiler: template ref transform', () => {
     )
     expect(code).not.contains('_setTemplateRefBinding')
   })
+
+  // #9482
+  test('known globals are shadowed by setup bindings', () => {
+    const { code } = compileWithTransformRef(`<div :ref="isNaN" />`, {
+      bindingMetadata: { isNaN: BindingTypes.SETUP_REF },
+    })
+    expect(code).contains('_setTemplateRefBinding(n0, () => _ctx.isNaN)')
+  })
 })

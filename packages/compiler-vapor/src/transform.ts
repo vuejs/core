@@ -290,7 +290,9 @@ export class TransformContext<T extends AllNode = AllNode> {
     preserveOrder = false,
   ): boolean {
     const operations = [operation].flat()
-    expressions = expressions.filter(exp => !isConstantExpression(exp))
+    expressions = expressions.filter(
+      exp => !isConstantExpression(exp, this.root.options.bindingMetadata),
+    )
     const once = expressions.every(e =>
       isConstantBinding(e, this.root.options.bindingMetadata),
     )

@@ -62,7 +62,7 @@ export function genExpression(
     ast === false ||
     // never parsed, e.g. asset url imports added by compiler-sfc
     ast === undefined ||
-    isConstantExpression(node)
+    isConstantExpression(node, options.bindingMetadata)
   ) {
     return [[content, NewlineType.None, loc], assignment && ` = ${assignment}`]
   }
@@ -289,7 +289,7 @@ function genIdentifier(
         raw = withAssignment(raw)
     }
   } else {
-    if (canPrefix(raw)) {
+    if (type || canPrefix(raw)) {
       if (type === BindingTypes.PROPS_ALIASED) {
         raw = `$props['${bindingMetadata.__propsAliases![raw]}']`
       } else {

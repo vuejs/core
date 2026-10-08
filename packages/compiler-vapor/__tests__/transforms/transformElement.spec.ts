@@ -2263,4 +2263,12 @@ describe('compiler: element transform', () => {
       expect(code).not.toContain('vFocus')
     })
   })
+
+  // #9482
+  test('resolve setup component named like a known global', () => {
+    const { code } = compileWithElementTransform(`<Number />`, {
+      bindingMetadata: { Number: BindingTypes.SETUP_MAYBE_REF },
+    })
+    expect(code).contains('_createComponent(_ctx.Number')
+  })
 })
