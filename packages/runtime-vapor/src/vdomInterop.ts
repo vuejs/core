@@ -12,6 +12,8 @@ import {
   type ObjectDirective,
   type Plugin,
   type RendererInternals,
+  type SchedulerJob,
+  SchedulerJobFlags,
   type ShallowRef,
   type Slot,
   type Slots,
@@ -1118,21 +1120,46 @@ function trackFragmentVNodeUpdates(
 
 const vShowMountPending: unique symbol = Symbol('vShowMountPending')
 
+const enum VShowMountState {
+  PENDING = 1,
+  PREPARED = 1 << 1,
+}
+
 type InteropVShowElement = VShowElement & {
-  // Present until mounted; true once beforeEnter has prepared the root.
-  [vShowMountPending]?: boolean
+  [vShowMountPending]?: VShowMountState
+}
+
+type InteropVShowFragment = VaporFragment & {
+  getMountSuspense?: () => SuspenseBoundary | null | undefined
 }
 
 export function isInteropVShowPending(el: VShowElement): boolean {
-  return (el as InteropVShowElement)[vShowMountPending] !== undefined
+  return !!(
+    (el as InteropVShowElement)[vShowMountPending]! & VShowMountState.PENDING
+  )
 }
 
 const interopVShow: ObjectDirective<
   InteropVShowElement,
-  { frag: VaporFragment; apply: (nodes: Block) => void }
+  { frag: InteropVShowFragment; apply: (nodes: Block) => void }
 > = {
   beforeMount(el, { value: { frag, apply } }, { shapeFlag, transition }) {
-    if (shapeFlag & ShapeFlags.ELEMENT) el[vShowMountPending] = false
+    if (shapeFlag & ShapeFlags.ELEMENT) {
+      el[vShowMountPending] = VShowMountState.PENDING
+      if (__FEATURE_SUSPENSE__) {
+        const instance = frag.vnode!.component
+        const suspense = instance ? instance.suspense : frag.getMountSuspense!()
+        if (suspense && suspense.pendingBranch) {
+          // The native mounted job may be discarded while this root stays active.
+          // Keep beforeEnter's preparation if that job does run after this one.
+          const release: SchedulerJob = () => {
+            el[vShowMountPending]! &= ~VShowMountState.PENDING
+          }
+          release.flags = SchedulerJobFlags.REQUEUE_ON_SUSPENSE_DISCARD
+          queuePostRenderEffect(release, undefined, suspense)
+        }
+      }
+    }
     // Follow async and HOC roots before mounted is released by Suspense, so
     // the Vapor effect can still toggle a root in a pending hidden tree.
     frag.nodes = resolveVNodeNodes(frag.vnode!)
@@ -1144,13 +1171,13 @@ const interopVShow: ObjectDirective<
       transition.persisted &&
       !el[vShowHidden]
     ) {
-      el[vShowMountPending] = true
+      el[vShowMountPending]! |= VShowMountState.PREPARED
       transition.beforeEnter(el)
     }
   },
   mounted(el, _binding, { shapeFlag, transition }) {
     if (!(shapeFlag & ShapeFlags.ELEMENT)) return
-    const prepared = el[vShowMountPending]
+    const prepared = el[vShowMountPending]! & VShowMountState.PREPARED
     delete el[vShowMountPending]
     if (transition && transition.persisted && !el[vShowHidden]) {
       if (!prepared) transition.beforeEnter(el)
@@ -1361,6 +1388,9 @@ function mountVNode(
   // The caller can reuse this VNode; interop hooks belong to this mount only.
   vnode = withExtraProps(baseVNode)
   const { frag, syncNodes } = createVNodeFragment(vnode)
+  if (__FEATURE_SUSPENSE__ && vnode.shapeFlag & ShapeFlags.ELEMENT) {
+    ;(frag as InteropVShowFragment).getMountSuspense = () => suspense
+  }
 
   let isMounted = false
   let mountedParentNode: ParentNode | undefined
