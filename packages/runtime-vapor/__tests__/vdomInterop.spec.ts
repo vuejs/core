@@ -13808,3 +13808,134 @@ describe('vdomInterop', () => {
     }
   })
 })
+
+describe('vdom select v-model fed options by a vapor slot', () => {
+  const SelectBox = (vapor: boolean) =>
+    compile(
+      `<script setup${vapor ? ' vapor' : ''}>defineProps(['data'])</script><template><select v-model="data.model" :title="data.tick"><slot /></select></template>`,
+      ref(),
+      {},
+      { vapor },
+    )
+  const App = `<template><components.SelectBox :data="data"><option v-for="o in data.opts" :key="o" :value="o">{{ o }}</option></components.SelectBox></template>`
+
+  async function selectionAfterOptionChanges(SelectBox: any) {
+    const seen = { vdom: [] as number[], vapor: [] as number[] }
+    await renderParity(
+      { App },
+      () => ref({ model: 'b', opts: ['a', 'b'], tick: 0 }),
+      async (data, root, mode) => {
+        const select = root.querySelector('select')!
+        const read = () => seen[mode].push(select.selectedIndex)
+        read()
+        // the selected option goes away
+        data.value.opts = ['a', 'c']
+        await nextTick()
+        read()
+        // it comes back
+        data.value.opts = ['b', 'c']
+        await nextTick()
+        read()
+        // an unrelated owner render
+        data.value.tick++
+        await nextTick()
+        read()
+      },
+      { SelectBox },
+    )
+    expect(seen.vdom).toEqual([1, -1, 0, 0])
+    return seen.vapor
+  }
+
+  test('re-syncs the selection when the slot re-renders the options', async () => {
+    expect(await selectionAfterOptionChanges(SelectBox(false))).toEqual([
+      1, -1, 0, 0,
+    ])
+  })
+
+  // coverage guard: the other direction already re-syncs through the vapor
+  // owner's updated hooks
+  test('vapor select host fed options by a vdom slot', async () => {
+    expect(await selectionAfterOptionChanges(SelectBox(true))).toEqual([
+      1, -1, 0, 0,
+    ])
+  })
+
+  test('the owner render caused by a pick keeps a duplicate-value option', async () => {
+    const seen = { vdom: [] as number[], vapor: [] as number[] }
+    await renderParity(
+      {
+        App: `<template><components.SelectBox :data="data"><option value="a">a</option><option value="b">b1</option><option value="b">b2</option></components.SelectBox></template>`,
+      },
+      () => ref({ model: 'a', tick: 0 }),
+      async (_data, root, mode) => {
+        const select = root.querySelector('select')!
+        select.selectedIndex = 2
+        select.dispatchEvent(new Event('change'))
+        await nextTick()
+        seen[mode].push(select.selectedIndex)
+      },
+      { SelectBox: SelectBox(false) },
+    )
+    expect(seen.vdom).toEqual([2])
+    expect(seen.vapor).toEqual(seen.vdom)
+  })
+
+  test('a v-once select is not re-synced by owner renders', async () => {
+    const seen = { vdom: [] as number[], vapor: [] as number[] }
+    await renderParity(
+      {
+        App: `<template><components.SelectBox :data="data"><option value="a">a</option><option value="b">b</option></components.SelectBox></template>`,
+      },
+      () => ref({ model: 'a', tick: 0 }),
+      async (data, root, mode) => {
+        const select = root.querySelector('select')!
+        data.value.model = 'b'
+        data.value.tick++
+        await nextTick()
+        seen[mode].push(select.selectedIndex)
+      },
+      {
+        SelectBox: compile(
+          `<script setup>defineProps(['data'])</script><template><p :title="data.tick"></p><div v-once><select v-model="data.model"><slot /></select></div></template>`,
+          ref(),
+          {},
+          { vapor: false },
+        ),
+      },
+    )
+    expect(seen.vdom).toEqual([0])
+    expect(seen.vapor).toEqual(seen.vdom)
+  })
+
+  test('a removed select stops re-syncing', async () => {
+    const hooks = { vdom: [] as number[], vapor: [] as number[] }
+    await renderParity(
+      {
+        App: `<template><components.SelectBox :data="data"><option value="a">a</option></components.SelectBox></template>`,
+      },
+      () => ref({ model: 'a', show: true, u: () => 0 }),
+      async (data, _root, mode) => {
+        hooks[mode].push(data.value.u())
+        data.value.show = false
+        await nextTick()
+        hooks[mode].push(data.value.u())
+      },
+      {
+        SelectBox: compile(
+          `<script setup>import { getCurrentInstance } from 'vue'
+          const p = defineProps(['data'])
+          const i = getCurrentInstance()
+          p.data.u = () => (i.u ? i.u.length : 0)
+          </script><template><select v-if="data.show" v-model="data.model"><slot /></select></template>`,
+          ref(),
+          {},
+          { vapor: false },
+        ),
+      },
+    )
+    // both apps install the interop plugin, so both register the hook
+    expect(hooks.vdom).toEqual([1, 0])
+    expect(hooks.vapor).toEqual(hooks.vdom)
+  })
+})
