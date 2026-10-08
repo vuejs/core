@@ -525,6 +525,8 @@ describe('type inference w/ empty prop object', () => {
   expectType<JSX.Element>(<MyComponent custom={1} />)
   // VNodeProps
   expectType<JSX.Element>(<MyComponent key="1" />)
+  // @ts-expect-error element-only callbacks are invalid for component refs
+  ;<MyComponent ref={(_el: HTMLFormElement | null) => {}} />
   // @ts-expect-error
   expectError(<MyComponent other="other" />)
 })
