@@ -163,6 +163,7 @@ import {
   currentHydrationNode,
   isComment,
   isHydrating,
+  isHydratingEnabled,
   isHydratingSlotFallback,
   isRangeEnd,
   isRangeStart,
@@ -2646,6 +2647,7 @@ function renderVDOMSlot(
     // Hydration precedes root hook propagation. Once this outlet is known to
     // be the Transition root, adopt its hydrated branch without remounting it.
     if (
+      (isHydratingEnabled || isVdomHydratingEnabled) &&
       transition &&
       !transition.applyGroup &&
       !slotResolutionState.activeFallback &&
