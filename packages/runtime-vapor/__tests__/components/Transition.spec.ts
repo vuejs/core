@@ -1772,6 +1772,53 @@ describe('Transition', () => {
     ).toEqual(['First', 'Last'])
   })
 
+  test('preserves multi-root vdom slot content forwarded below the transition root', () => {
+    const data = ref({})
+    const Dialog = compile(
+      `<template>
+        <Transition>
+          <div v-if="true"><footer><slot name="footer" /></footer></div>
+        </Transition>
+      </template>`,
+      data,
+    )
+    const Child = compile(
+      `<script setup vapor>
+        const Dialog = _components.Dialog
+        const tag = 'button'
+      </script>
+      <template>
+        <Transition>
+          <div v-if="true"><component :is="tag"><slot /></component></div>
+        </Transition>
+        <Dialog><template #footer><slot name="footer" /></template></Dialog>
+      </template>`,
+      data,
+      { Dialog },
+    )
+    const App = compile(
+      `<script setup>
+        const Child = _components.Child
+      </script>
+      <template>
+        <Child>
+          <i>first</i><b>last</b>
+          <template #footer><i>first</i><b>last</b></template>
+        </Child>
+      </template>`,
+      data,
+      { Child },
+      { vapor: false },
+    )
+    const { host } = defineInterop(App as any).render()
+
+    expect(
+      '<transition> can only be used on a single element or component',
+    ).not.toHaveBeenWarned()
+    expect(host.querySelector('button')!.textContent).toBe('firstlast')
+    expect(host.querySelector('footer')!.textContent).toBe('firstlast')
+  })
+
   test('vdom slot content should participate in transitions', async () => {
     let enterDone: (() => void) | undefined
     let leaveDone: (() => void) | undefined

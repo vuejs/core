@@ -268,7 +268,7 @@ function getVaporInstance(vnode: VNode): VaporComponentInstance {
 function prepareInteropSlotTransition(
   frag: RenderContextFragment,
   vnode: VNode,
-  forwarded: boolean,
+  hydratedForwarded: boolean,
   previous: VNode | undefined,
   resumeAfterLeave: () => void,
   delayedLeaveSource?: TransitionHooks,
@@ -285,13 +285,12 @@ function prepareInteropSlotTransition(
   // into the single branch expected by BaseTransition.
   if (transition && transition.applyGroup) return
 
-  // The slot can render before VaporTransition propagates its hooks, notably
-  // during hydration, but a forwarded slot root must already use
-  // BaseTransition's branch shape.
+  // A forwarded slot root hydrates before VaporTransition propagates its hooks
+  // and keeps that branch shape; on the client no hooks means a nested outlet.
   if (
     !transition &&
     !(
-      forwarded &&
+      hydratedForwarded &&
       instance &&
       isVaporTransition(instance.type as VaporComponent)
     )
@@ -2199,6 +2198,7 @@ function renderVDOMSlot(
   const once = !!(flags & VaporSlotFlags.ONCE)
   const sharedFallback = !!(flags & VaporSlotFlags.SHARED_FALLBACK)
   const forwarded = isForwardedSlot(flags)
+  const hydratedForwarded = forwarded && isHydrating
   const inheritFallback = slotInheritsFallback(flags)
   const notifiesBoundary = slotNotifiesBoundary(flags)
   let suspense = currentRenderContext.suspense || parentComponent.suspense
@@ -2573,7 +2573,7 @@ function renderVDOMSlot(
           prepareInteropSlotTransition(
             frag,
             pendingContent,
-            forwarded,
+            hydratedForwarded,
             undefined,
             NOOP,
           ) || pendingContent
@@ -2720,7 +2720,7 @@ function renderVDOMSlot(
           prepareInteropSlotTransition(
             frag,
             slotContent,
-            forwarded,
+            hydratedForwarded,
             undefined,
             NOOP,
           ) || createCommentVNode()
@@ -2748,7 +2748,7 @@ function renderVDOMSlot(
     const transitionChild = prepareInteropSlotTransition(
       frag,
       slotContent,
-      forwarded,
+      hydratedForwarded,
       prevVNode || undefined,
       resumeOutIn,
       delayedLeaveSource,
@@ -2885,7 +2885,7 @@ function renderVDOMSlot(
       const transitionChild = prepareInteropSlotTransition(
         frag,
         hydratedContent,
-        forwarded,
+        hydratedForwarded,
         undefined,
         NOOP,
       )
