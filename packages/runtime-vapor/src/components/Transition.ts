@@ -28,6 +28,7 @@ import {
   type BlockFn,
   EMPTY_BLOCK,
   type TransitionOptions,
+  VShowFlags,
   type VaporTransitionHooks,
   type VaporTransitionState,
   isValidBlock,
@@ -462,10 +463,12 @@ export function relayTransitionHooks(
 // can't see (slot content): the v-show target is reached from Transition's
 // root through components and slot outlets only; a v-if / v-for / dynamic
 // slot boundary before it makes the root structural. Walked from the root on
-// every apply so branch swaps can't latch a stale result.
+// every apply so branch swaps can't latch a stale result. Only a directive
+// target counts: a v-show inherited from above the Transition leaves the
+// root structural, as vdom's does.
 function isPersistedRoot(block: Block | undefined): boolean {
   while (block) {
-    if ((block as TransitionOptions).$vshow) return true
+    if ((block as TransitionOptions).$vshow! & VShowFlags.TARGET) return true
     if (isVaporComponent(block)) {
       if (isVaporTransition(block.type)) return false
       block =

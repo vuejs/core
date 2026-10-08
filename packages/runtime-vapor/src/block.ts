@@ -53,11 +53,18 @@ export interface VaporTransitionHooks extends TransitionHooks {
   ) => void
 }
 
+export const enum VShowFlags {
+  // v-show state reached this block along a root chain
+  APPLIED = 1,
+  // the block a v-show directive is written on
+  TARGET = 1 << 1,
+}
+
 export interface TransitionOptions {
   $key?: any
   $transition?: VaporTransitionHooks
-  // v-show is applied to this block (set by applyVShow along the root chain)
-  $vshow?: true
+  // VShowFlags, set by applyVShow
+  $vshow?: number
 }
 
 export type TransitionBlock = (

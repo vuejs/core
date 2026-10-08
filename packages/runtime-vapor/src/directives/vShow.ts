@@ -13,6 +13,8 @@ import { type RootChainVisitor, getRootElement } from '../component'
 import {
   type Block,
   type TransitionBlock,
+  type TransitionOptions,
+  VShowFlags,
   type VaporTransitionHooks,
   isValidBlock,
 } from '../block'
@@ -20,7 +22,7 @@ import { isSlotOutletFragment } from '../fragment'
 import { isHydrating } from '../dom/hydration'
 import { isInteropEnabled } from '../vdomInteropState'
 import { isInteropVShowPending, setInteropVShow } from '../vdomInterop'
-import { isTransitionEnabled } from '../transition'
+import { isTransitionEnabled, isVaporTransition } from '../transition'
 import { isSuspenseEnabled } from '../suspense'
 
 /**
@@ -38,6 +40,12 @@ export function applyVShow(target: Block, source: () => any): void {
   let unresolved = false
   // a slot outlet is a fragment root in vdom: nothing for v-show to land on
   let slotRoot = false
+  // ...except on Transition's own root chain: vdom flattens the slot
+  // fragment into Transition's child. Any other component ends that chain.
+  let inTransition = false
+  // the binding has run once; later runs are updates, re-entries from a
+  // producer initialize the root it rendered
+  let updating = false
 
   const visitor: RootChainVisitor = {
     onComponent(instance) {
@@ -50,7 +58,7 @@ export function applyVShow(target: Block, source: () => any): void {
       ) {
         // the block exists only after setup settles; its mount runs `bm`
         // before insertion. The mark doubles as the registration guard.
-        if (!(instance as TransitionBlock).$vshow) {
+        if (!((instance as TransitionBlock).$vshow! & VShowFlags.APPLIED)) {
           ;(instance.bm ||= []).push(() => apply(instance.block))
         }
         unresolved = true
@@ -58,17 +66,16 @@ export function applyVShow(target: Block, source: () => any): void {
         return true
       }
       mark(instance)
+      inTransition = isTransitionEnabled && isVaporTransition(instance.type)
     },
     onDynamicFragment(frag) {
-      if (isSlotOutletFragment(frag)) return (slotRoot = true)
-      mark(frag)
-      register((frag.bm ||= []), apply)
+      if (!inTransition && isSlotOutletFragment(frag)) return (slotRoot = true)
+      register((frag.bm ||= []), inTransition ? reenterInTransition : reenter)
     },
   }
   if (isInteropEnabled) {
     visitor.onInteropFragment = frag => {
       if (isSlotOutletFragment(frag)) return (slotRoot = true)
-      mark(frag)
       if (frag.vnode) setInteropVShow(frag, apply)
       if (isTransitionEnabled && frag.$transition) transition = frag.$transition
       // vdom patches the content first, then notifies through `u`
@@ -77,12 +84,18 @@ export function applyVShow(target: Block, source: () => any): void {
     }
   }
 
-  const apply = (nodes: Block): void => {
-    transition = undefined
+  const apply = (
+    nodes: Block,
+    update?: boolean,
+    transitionSlot?: boolean,
+    producer?: TransitionOptions,
+  ) => {
+    transition = producer && producer.$transition
     unresolved = slotRoot = false
+    inTransition = !!transitionSlot
     const root = getRootElement(nodes, visitor)
     if (root) {
-      setDisplay(root as VShowElement, value, transition)
+      setDisplay(root as VShowElement, value, transition, !!update)
     } else if (__DEV__ && (slotRoot || (!unresolved && isValidBlock(nodes)))) {
       warn(
         `v-show used on component with non-single-element root node ` +
@@ -91,17 +104,26 @@ export function applyVShow(target: Block, source: () => any): void {
     }
   }
 
+  // A fresh branch re-enters before its root carries the hooks its producer
+  // holds for it; one on Transition's root chain keeps that context too.
+  const reenter = (nodes: Block, producer: TransitionOptions) =>
+    apply(nodes, false, false, producer)
+  const reenterInTransition = (nodes: Block, producer: TransitionOptions) =>
+    apply(nodes, false, true, producer)
+
+  ;(target as TransitionBlock).$vshow! |= VShowFlags.TARGET
   renderEffect(() => {
     value = source()
-    apply(target)
+    apply(target, updating)
+    updating = true
   })
 }
 
 function mark(block: Block): void {
-  ;(block as TransitionBlock).$vshow = true
+  ;(block as TransitionBlock).$vshow! |= VShowFlags.APPLIED
 }
 
-function register(hooks: ((nodes: Block) => void)[], hook: (typeof hooks)[0]) {
+function register<T>(hooks: T[], hook: T): void {
   if (!hooks.includes(hook)) hooks.push(hook)
 }
 
@@ -109,6 +131,7 @@ function setDisplay(
   el: VShowElement,
   value: unknown,
   transition: VaporTransitionHooks | undefined,
+  updating: boolean,
 ): void {
   const hidden = !value
   if (!(vShowOriginalDisplay in el)) {
@@ -124,10 +147,10 @@ function setDisplay(
   }
 
   if (el[vShowHidden] === hidden) return
-  el[vShowHidden] = hidden
 
   // The VDOM mounted hook owns enter until Suspense releases the root.
   if (isInteropEnabled && isInteropVShowPending(el)) {
+    el[vShowHidden] = hidden
     writeDisplay(el, value)
     return
   }
@@ -135,26 +158,33 @@ function setDisplay(
   const $transition = isTransitionEnabled
     ? (el as TransitionBlock).$transition || transition
     : undefined
-  if ($transition) {
-    const prevSub = setActiveSub()
-    try {
-      if (value) {
-        $transition.beforeEnter(el)
-        el.style.display = el[vShowOriginalDisplay]!
-        $transition.enter(el)
-      } else if (el.isConnected) {
-        $transition.leave(el, () => {
-          el.style.display = 'none'
-        })
-      } else {
-        // detached (e.g. deactivated): nothing to animate
-        el.style.display = 'none'
-      }
-    } finally {
-      setActiveSub(prevSub)
-    }
-  } else {
+  if (!$transition || !updating) {
+    // Another v-show reaching the element before insertion (vdom's
+    // beforeMount): a shown transition root stays as the first one left it,
+    // the renderer enters it on insert; otherwise the display is written.
+    if ($transition && value) return
+    el[vShowHidden] = hidden
     writeDisplay(el, value)
+    return
+  }
+  el[vShowHidden] = hidden
+
+  const prevSub = setActiveSub()
+  try {
+    if (value) {
+      $transition.beforeEnter(el)
+      el.style.display = el[vShowOriginalDisplay]!
+      $transition.enter(el)
+    } else if (el.isConnected) {
+      $transition.leave(el, () => {
+        el.style.display = 'none'
+      })
+    } else {
+      // detached (e.g. deactivated): nothing to animate
+      el.style.display = 'none'
+    }
+  } finally {
+    setActiveSub(prevSub)
   }
 }
 
