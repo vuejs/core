@@ -41,10 +41,14 @@ export function propToExpression(
     : prop.exp
 }
 
-export function isConstantExpression(exp: SimpleExpressionNode): boolean {
+export function isConstantExpression(
+  exp: SimpleExpressionNode,
+  bindings?: BindingMetadata,
+): boolean {
   return (
     isLiteralWhitelisted(exp.content) ||
-    isGloballyAllowed(exp.content) ||
+    // a known global shadowed by a binding is not a constant
+    (isGloballyAllowed(exp.content) && !(bindings && bindings[exp.content])) ||
     getLiteralExpressionValue(exp) !== null
   )
 }
@@ -55,7 +59,9 @@ export function isConstantBinding(
   exp: SimpleExpressionNode,
   bindings: BindingMetadata,
 ): boolean {
-  return isConstantExpression(exp) || isStaticExpression(exp, bindings)
+  return (
+    isConstantExpression(exp, bindings) || isStaticExpression(exp, bindings)
+  )
 }
 
 export function isStaticExpression(

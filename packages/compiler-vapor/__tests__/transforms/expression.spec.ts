@@ -857,4 +857,19 @@ describe('compiler: expression', () => {
       expect(code).contains('_setClass(n2, _a_b_i_c_d + 1)')
     })
   })
+
+  // #9482
+  test('known globals are shadowed by setup bindings', () => {
+    const bindingMetadata = { isNaN: BindingTypes.SETUP_REF }
+    const { code: inline } = compileWithExpression(`{{ isNaN }}`, {
+      inline: true,
+      bindingMetadata,
+    })
+    expect(inline).contains(
+      '_renderEffect(() => _setText(n0, _toDisplayString(isNaN.value)))',
+    )
+
+    const { code } = compileWithExpression(`{{ isNaN }}`, { bindingMetadata })
+    expect(code).contains('_toDisplayString(_ctx.isNaN)')
+  })
 })

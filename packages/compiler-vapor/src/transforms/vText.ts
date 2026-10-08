@@ -99,7 +99,7 @@ function isConstantVTextExpression(
   exp: SimpleExpressionNode,
   bindings: BindingMetadata,
 ): boolean {
-  if (isConstantExpression(exp)) {
+  if (isConstantExpression(exp, bindings)) {
     return true
   }
   if (exp.ast === null) {

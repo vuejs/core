@@ -174,4 +174,15 @@ describe('v-text', () => {
       [{ code: DOMErrorCodes.X_V_TEXT_NO_EXPRESSION }],
     ])
   })
+
+  // #9482
+  test('known globals are shadowed by setup bindings', () => {
+    const { code } = compileWithVText(`<Comp v-text="isNaN"/>`, {
+      bindingMetadata: { isNaN: BindingTypes.SETUP_REF },
+      inline: true,
+    })
+    expect(code).contains(
+      '{ textContent: () => (_toDisplayString(isNaN.value)) }',
+    )
+  })
 })
