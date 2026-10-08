@@ -647,10 +647,14 @@ describe('vdomInterop', () => {
         props: ['modelValue'],
         setup(props) {
           const vm = getCurrentInstance()!
+          expect(vm.vnode.props!.hasOwnProperty('modelValue')).toBe(true)
+          expect(vm.vnode.props!.hasOwnProperty('onUpdate:modelValue')).toBe(
+            true,
+          )
           return () =>
             h(
               'i',
-              `${props.modelValue}:${vm.vnode.props!.hasOwnProperty('modelValue')}`,
+              `${props.modelValue}:${vm.vnode.props!.hasOwnProperty('modelValue')}:${vm.vnode.props!.hasOwnProperty('onUpdate:modelValue')}`,
             )
         },
       })
@@ -664,9 +668,46 @@ describe('vdomInterop', () => {
         },
         { Field },
       )
-      expect(vdom.after).toBe('<i>2:true</i>')
+      expect(vdom.after).toBe('<i>2:true:true</i>')
       expect(vapor.after).toBe(vdom.after)
     })
+
+    test.each([null, { inherited: true }, 'value'])(
+      'preserves an own __proto__ vnode prop with value %j',
+      async value => {
+        let vm: ReturnType<typeof getCurrentInstance>
+        const Child = defineComponent({
+          inheritAttrs: false,
+          setup() {
+            vm = getCurrentInstance()!
+            return () => null
+          },
+        })
+        await renderParity(
+          {
+            App: `<template><components.Child :[data.key]="data.value" /></template>`,
+          },
+          () => shallowRef({ key: '__proto__', value }),
+          async data => {
+            expect(Object.getPrototypeOf(vm!.vnode.props)).toBe(
+              Object.prototype,
+            )
+            expect(vm!.vnode.props!.hasOwnProperty('__proto__')).toBe(true)
+            expect(vm!.vnode.props!.__proto__).toBe(value)
+
+            data.value = { key: '__proto__', value: { updated: true } }
+            await nextTick()
+
+            expect(Object.getPrototypeOf(vm!.vnode.props)).toBe(
+              Object.prototype,
+            )
+            expect(vm!.vnode.props!.hasOwnProperty('__proto__')).toBe(true)
+            expect(vm!.vnode.props!.__proto__).toBe(data.value.value)
+          },
+          { Child },
+        )
+      },
+    )
   })
 
   describe('v-model', () => {
