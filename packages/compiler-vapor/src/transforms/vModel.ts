@@ -4,6 +4,7 @@ import {
   ElementTypes,
   ErrorCodes,
   NodeTypes,
+  type SimpleExpressionNode,
   createCompilerError,
   createDOMCompilerError,
   createSimpleExpression,
@@ -13,8 +14,9 @@ import {
   isMemberExpression,
   isStaticArgOf,
 } from '@vue/compiler-dom'
-import type { DirectiveTransform } from '../transform'
+import type { DirectiveTransform, TransformContext } from '../transform'
 import { type DirectiveIRNode, IRNodeTypes } from '../ir'
+import { hasScopeBinding } from './transformElement'
 
 export const transformVModel: DirectiveTransform = (dir, node, context) => {
   const { exp, arg } = dir
@@ -67,6 +69,13 @@ export const transformVModel: DirectiveTransform = (dir, node, context) => {
   ) {
     context.options.onError(
       createCompilerError(ErrorCodes.X_V_MODEL_MALFORMED_EXPRESSION, exp.loc),
+    )
+    return
+  }
+
+  if (isScopeVariable(expString.trim(), context)) {
+    context.options.onError(
+      createCompilerError(ErrorCodes.X_V_MODEL_ON_SCOPE_VARIABLE, exp.loc),
     )
     return
   }
@@ -171,4 +180,19 @@ export const transformVModel: DirectiveTransform = (dir, node, context) => {
       )
     }
   }
+}
+
+function isScopeVariable(name: string, context: TransformContext): boolean {
+  for (let parent = context.parent; parent; parent = parent.parent) {
+    const { node } = parent
+    if (node.type !== NodeTypes.ELEMENT) continue
+    const vFor = findDir(node, 'for')
+    const aliases = vFor && vFor.forParseResult
+    const scopes = aliases ? [aliases.value, aliases.key, aliases.index] : []
+    const slot = findDir(node, 'slot')
+    if (slot) scopes.push(slot.exp)
+    if (scopes.some(exp => hasScopeBinding(name, exp as SimpleExpressionNode)))
+      return true
+  }
+  return false
 }
