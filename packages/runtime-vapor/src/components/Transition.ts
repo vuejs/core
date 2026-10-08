@@ -26,6 +26,7 @@ import { computed } from '@vue/reactivity'
 import {
   type Block,
   type BlockFn,
+  EMPTY_BLOCK,
   type TransitionOptions,
   type VaporTransitionHooks,
   type VaporTransitionState,
@@ -55,6 +56,7 @@ import {
   isForFragment,
   isFragment,
   isVaporSlotOutlet,
+  runWithRenderCtx,
 } from '../fragment'
 import { isKeepAliveEnabled } from '../keepAlive'
 import { DYNAMIC, TELEPORT } from '../fragmentFlags'
@@ -558,16 +560,29 @@ function createDelayedLeave(
   }
 }
 
+// vdom applies `mode` where Transition itself re-renders, i.e. down to its
+// child component; a fragment inside that component only inherits the
+// enter / leave hooks.
+function ownsMode(frag: DynamicFragment): boolean {
+  const ctx = keyContexts.get(frag)
+  return !ctx || !ctx.type
+}
+
 function deferBranchUpdateDuringLeaveImpl(
   frag: DynamicFragment,
   render: BlockFn | undefined,
   key: any,
   noScope: boolean,
   branchKey: any,
+  prevKey: any,
 ): boolean {
   const transition = frag.$transition!
   // relayed vdom hooks: the vdom Transition sequences its own branches
-  if (!isVaporTransitionHooks(transition) || !transition.state.isLeaving) {
+  if (
+    !isVaporTransitionHooks(transition) ||
+    !transition.state.isLeaving ||
+    !ownsMode(frag)
+  ) {
     return false
   }
   const pending = frag.pending
@@ -577,7 +592,7 @@ function deferBranchUpdateDuringLeaveImpl(
     pending.noScope = noScope
     pending.branchKey = branchKey
   } else {
-    frag.pending = { render, key, noScope, branchKey }
+    frag.pending = { render, key, noScope, branchKey, prevKey }
   }
   return true
 }
@@ -594,6 +609,7 @@ function removeBranchWithLeaveImpl(
   const mode = transition.mode
   if (
     mode &&
+    ownsMode(frag) &&
     // relayed vdom hooks: an inner root switch is a plain leave + enter
     isVaporTransitionHooks(transition) &&
     // persisted roots are toggled in place; mode only sequences structural
@@ -617,6 +633,37 @@ function removeBranchWithLeaveImpl(
       // Unmounting cuts the leave short and runs afterLeave synchronously;
       // the pending branch must not be rendered into the torn-down tree.
       if (transition.state.isUnmounting) return
+      // The branch has left: an enclosing teardown must not leave it again.
+      frag.nodes = EMPTY_BLOCK
+      // Like vdom rendering Transition's latest child after the leave, the
+      // outermost fragment that switched meanwhile replaces this one.
+      let outer: DynamicFragment | undefined
+      collectTransitionBlocks(
+        transition.state.root!,
+        f => {
+          const pending = (f as DynamicFragment).pending
+          if (!pending || f === frag) return
+          if (outer || pending.key === pending.prevKey) {
+            // superseded by the outer switch, or switched back
+            ;(f as DynamicFragment).pending = undefined
+          } else {
+            outer = f as DynamicFragment
+          }
+        },
+        [],
+        undefined,
+      )
+      if (outer) {
+        const target = outer
+        const { render, key, noScope, branchKey, prevKey } = target.pending!
+        target.pending = frag.pending = undefined
+        // back on the mounted key, the deferred update runs as a regular one
+        target.current = prevKey
+        runWithRenderCtx(target, () =>
+          target.update(render, key, noScope, branchKey),
+        )
+        return
+      }
       // By the time this deferred out-in branch runs, the renderEffect
       // has finished and currentInstance may have changed, so restore
       // the captured instance.

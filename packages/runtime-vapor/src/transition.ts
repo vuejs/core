@@ -24,6 +24,7 @@ type DeferBranchUpdateDuringLeaveFn = (
   key: any,
   noScope: boolean,
   branchKey: any,
+  prevKey: any,
 ) => boolean
 type RemoveBranchWithLeaveFn = (
   frag: DynamicFragment,
