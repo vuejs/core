@@ -811,7 +811,8 @@ function updateProps(
     triggerPropsValue(instance, RAW_VALUES_KEY)
   }
   const vnode = isInteropEnabled && instance.interopVNode
-  if (vnode && vnode.vi) vnode.props = rawValues
+  // vdom code reads vnode props as a plain object (e.g. `props.hasOwnProperty`)
+  if (vnode && vnode.vi) vnode.props = { ...rawValues }
 
   const present: Record<string, true> | undefined =
     propsToUpdate || isInitial ? undefined : Object.create(null)
