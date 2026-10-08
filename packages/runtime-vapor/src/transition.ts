@@ -1,3 +1,4 @@
+import type { TransitionHooks } from '@vue/runtime-dom'
 import type { Block, BlockFn } from './block'
 import type { VaporTransitionHooks } from './block'
 import type { FunctionalVaporComponent, VaporComponent } from './component'
@@ -55,6 +56,15 @@ export function registerTransitionHooks(
   applyTransitionLeaveHooks = applyLeaveHooks
   deferBranchUpdateDuringLeave = deferBranchUpdate
   removeBranchWithLeave = removeBranch
+}
+
+// Hooks vapor resolves from (its own, or a vdom Transition's for a vapor slot,
+// shaped as a VaporTransition root's). A vdom Transition's hooks relayed to a
+// vapor component child are not: they belong to vdom's state machine.
+export function isVaporTransitionHooks(
+  hooks: TransitionHooks | null | undefined,
+): hooks is VaporTransitionHooks {
+  return !!hooks && (hooks as VaporTransitionHooks).__vapor === true
 }
 
 export const displayName = 'VaporTransition'

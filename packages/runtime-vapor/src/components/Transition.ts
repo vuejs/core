@@ -26,7 +26,6 @@ import { computed } from '@vue/reactivity'
 import {
   type Block,
   type BlockFn,
-  type TransitionBlock,
   type TransitionOptions,
   type VaporTransitionHooks,
   type VaporTransitionState,
@@ -36,6 +35,7 @@ import {
 import {
   displayName,
   isVaporTransition,
+  isVaporTransitionHooks,
   registerTransitionHooks,
 } from '../transition'
 import {
@@ -87,7 +87,11 @@ export const ensureTransitionHooksRegistered = (): void => {
   }
 }
 
-const hydrateTransitionImpl = (suspense: SuspenseBoundary | null) => {
+// Adopts the <template> the server wraps an appearing Transition's content in;
+// returns the appear to perform once the content's hooks are applied.
+export const hydrateTransitionImpl = (
+  suspense: SuspenseBoundary | null,
+): ((hooks: TransitionHooks) => void) | undefined => {
   if (!currentHydrationNode || !isTemplateNode(currentHydrationNode)) return
   // replace <template> node with inner child
   const templateNode = currentHydrationNode
@@ -275,6 +279,15 @@ function getLeavingNodesForType(
   return nodes
 }
 
+// Registers `block` as leaving before its leave runs, as a vdom in-out
+// `delayLeave` does for its vnode: a re-entering copy early-removes it.
+export function markLeavingBlock(
+  block: ResolvedTransitionBlock,
+  state: TransitionState,
+): void {
+  getLeavingNodesForType(state, block)[String(getTransitionKey(block))] = block
+}
+
 function getLeaveElement(
   block: ResolvedTransitionBlock,
 ): TransitionElement | undefined {
@@ -392,6 +405,12 @@ export function applyTransitionHooksImpl(
     return hooks
   }
 
+  // hooks relayed from a vdom Transition have nothing to resolve from
+  if (!isVaporTransitionHooks(hooks)) {
+    relayTransitionHooks(block, hooks)
+    return hooks
+  }
+
   const fragments: VaporFragment[] = []
   const child = resolveTransitionBlock(
     block,
@@ -421,6 +440,20 @@ export function applyTransitionHooksImpl(
   child.$transition = resolvedHooks
   fragments.forEach(f => (f.$transition = resolvedHooks))
   return resolvedHooks
+}
+
+// Hooks a vnode-level Transition resolved for a vapor component vnode (a vdom
+// Transition's child, or a vnode child of a vapor one) are keyed by that
+// vnode and carry its handoffs (`afterLeave`, `delayedLeave`): every root the
+// component renders relays them as they are, as a vdom child's roots inherit
+// them, and an entering root early-removes the leaving one through the vnode.
+export function relayTransitionHooks(
+  block: Block,
+  hooks: TransitionHooks,
+): void {
+  const relayed = hooks as VaporTransitionHooks
+  const child = findTransitionBlock(block, f => (f.$transition = relayed))
+  if (child) child.$transition = relayed
 }
 
 // Runtime equivalent of the compiler's persisted rule for roots the compiler
@@ -533,7 +566,10 @@ function deferBranchUpdateDuringLeaveImpl(
   branchKey: any,
 ): boolean {
   const transition = frag.$transition!
-  if (!transition.state.isLeaving) return false
+  // relayed vdom hooks: the vdom Transition sequences its own branches
+  if (!isVaporTransitionHooks(transition) || !transition.state.isLeaving) {
+    return false
+  }
   const pending = frag.pending
   if (pending) {
     pending.render = render
@@ -558,6 +594,8 @@ function removeBranchWithLeaveImpl(
   const mode = transition.mode
   if (
     mode &&
+    // relayed vdom hooks: an inner root switch is a plain leave + enter
+    isVaporTransitionHooks(transition) &&
     // persisted roots are toggled in place; mode only sequences structural
     // swaps, and a skipped persisted leave would never fire afterLeave.
     !transition.persisted &&
@@ -712,9 +750,10 @@ export function resolveTransitionBlock(
 /** Locate the transition child of `block` without touching its identity. */
 export function findTransitionBlock(
   block: Block,
+  onFragment?: (frag: VaporFragment) => void,
 ): ResolvedTransitionBlock | undefined {
   const children: ResolvedTransitionBlock[] = []
-  collectTransitionBlocks(block, undefined, children, undefined)
+  collectTransitionBlocks(block, onFragment, children, undefined)
   return children[0]
 }
 
@@ -826,17 +865,6 @@ function collectFragmentTransitionBlocks(
     children,
     ctx && enterFragmentKeyContext(block, ctx),
   )
-}
-
-export function setTransitionHooks(
-  block: TransitionBlock,
-  hooks: VaporTransitionHooks,
-): void {
-  if (isVaporComponent(block)) {
-    block = findTransitionBlock(block.block) as TransitionBlock
-    if (!block) return
-  }
-  block.$transition = hooks
 }
 
 export function isValidTransitionBlock(
