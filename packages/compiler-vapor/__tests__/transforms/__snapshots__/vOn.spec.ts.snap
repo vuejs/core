@@ -322,6 +322,14 @@ export function render(_ctx) {
 }"
 `;
 
+exports[`v-on > should not shadow a setup binding named e when wrapping a member expression handler w/ inline: true 1`] = `
+"
+  const n0 = t0()
+  _on(n0, "click", e1 => handlers[_unref(e)](e1))
+  return n0
+"
+`;
+
 exports[`v-on > should not wrap keys guard if no key modifier is present 1`] = `
 "import { on as _on, withModifiers as _withModifiers, template as _template } from 'vue';
 const t0 = _template("<div>", 1)

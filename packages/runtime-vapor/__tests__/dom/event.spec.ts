@@ -11,7 +11,12 @@ import {
   setDynamicEvents,
   template,
 } from '../../src'
-import { compileToVaporRender, makeRender, renderParity } from '../_utils'
+import {
+  compile,
+  compileToVaporRender,
+  makeRender,
+  renderParity,
+} from '../_utils'
 
 const define = makeRender<any>()
 
@@ -359,6 +364,19 @@ describe('dom event', () => {
       new KeyboardEvent('keyup', { key: 'Enter', bubbles: true }),
     )
     expect(onKeyup).toHaveBeenCalledTimes(1)
+  })
+
+  test('compiled member expression handler resolves a setup binding named e', async () => {
+    const data = ref({ hit: '' })
+    const Comp = compile(
+      `<script setup>const data = _data; const e = 'right'; const handlers = { right: () => (data.value.hit = 'right'), wrong: () => (data.value.hit = 'wrong') };</script>` +
+        `<template><button @click="handlers[e]"/></template>`,
+      data,
+    )
+    const { host } = define(Comp).render()
+    ;(host.querySelector('button') as HTMLButtonElement).click()
+    await nextTick()
+    expect(data.value.hit).toBe('right')
   })
 
   test('compiled delegated missing handlers do not throw during render', () => {

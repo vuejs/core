@@ -206,6 +206,19 @@ describe('v-on', () => {
     )
   })
 
+  test('should not shadow a setup binding named e when wrapping a member expression handler w/ inline: true', () => {
+    const { code } = compileWithVOn(`<div @click="handlers[e]"/>`, {
+      mode: 'module',
+      inline: true,
+      bindingMetadata: {
+        handlers: BindingTypes.SETUP_CONST,
+        e: BindingTypes.SETUP_MAYBE_REF,
+      },
+    })
+    expect(code).matchSnapshot()
+    expect(code).contains(`_on(n0, "click", e1 => handlers[_unref(e)](e1))`)
+  })
+
   test('should handle setup-let assignment w/ inline: true', () => {
     const { code, helpers } = compileWithVOn(
       `<div @click="x=y"/><div @click="x++"/><div @click="{ x } = y"/>`,

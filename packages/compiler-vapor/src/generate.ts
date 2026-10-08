@@ -134,6 +134,10 @@ export class CodegenContext {
     return name
   }
 
+  canUseLocalName(name: string): boolean {
+    return this.isNameAvailable(name, new Set())
+  }
+
   private isNameAvailable(name: string, reservedNames: Set<string>): boolean {
     // render function param and root-scoped template ref setter
     if (name === '_ctx' || name === setTemplateRefIdent) return false
