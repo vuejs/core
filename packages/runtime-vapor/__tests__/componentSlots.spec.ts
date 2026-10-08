@@ -8305,3 +8305,31 @@ describe('slot-scope component tags', () => {
     )
   })
 })
+
+describe('whitespace between conditional slots', () => {
+  test.each([
+    ['condense', 'v-else'],
+    ['preserve', 'v-else'],
+    ['condense', 'v-else-if="!data.ok"'],
+    ['preserve', 'v-else-if="!data.ok"'],
+  ] as const)(
+    'preserves implicit default slot whitespace with whitespace: %s and %s',
+    async (whitespace, branch) => {
+      const { vdom, vapor } = await renderParity(
+        {
+          Comp: '<template><p><slot /></p></template>',
+          App: `<template><components.Comp><b>A</b><template #named v-if="data.ok">X</template> <template #named ${branch}>Y</template><i>B</i></components.Comp></template>`,
+        },
+        () => ref({ ok: false }),
+        (data, root) => {
+          expect(root.textContent).toBe('A B')
+          data.value.ok = true
+        },
+        {},
+        { whitespace },
+      )
+      expect(vapor.text).toBe('A B')
+      expect(vapor.text).toBe(vdom.text)
+    },
+  )
+})
