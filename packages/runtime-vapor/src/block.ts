@@ -54,7 +54,7 @@ export interface VaporTransitionHooks extends TransitionHooks {
 }
 
 export const enum VShowFlags {
-  // v-show state reached this block along a root chain
+  // a vapor v-show wrote this element's display
   APPLIED = 1,
   // the block a v-show directive is written on
   TARGET = 1 << 1,
