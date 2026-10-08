@@ -2,6 +2,7 @@ import {
   isReactive,
   isShallow,
   reactive,
+  readonly,
   shallowReactive,
   shallowReadonly,
 } from '../src/reactive'
@@ -31,10 +32,17 @@ describe('shallowReactive', () => {
     expect(isReactive(reactiveProxy.foo)).toBe(true)
   })
 
-  test('isShallow', () => {
-    expect(isShallow(shallowReactive({}))).toBe(true)
-    expect(isShallow(shallowReadonly({}))).toBe(true)
-  })
+  test.each([{}, [], new Map(), new Set(), new WeakMap(), new WeakSet()])(
+    'isShallow (%o)',
+    value => {
+      expect(isShallow(shallowReactive(value))).toBe(true)
+      expect(isShallow(shallowReadonly(value))).toBe(true)
+      expect(isShallow(reactive(value))).toBe(false)
+      expect(isShallow(readonly(value))).toBe(false)
+      expect(isShallow(readonly(shallowReactive(value)))).toBe(false)
+      expect(isShallow(shallowReadonly(reactive(value)))).toBe(true)
+    },
+  )
 
   // #5271
   test('should respect shallow reactive nested inside reactive on reset', () => {
@@ -209,5 +217,22 @@ describe('shallowReactive', () => {
       expect(a).toMatchObject([])
       expect(onTrackFn).toHaveBeenCalled()
     })
+  })
+
+  test('should preserve shallow collections when assigned to reactive containers', () => {
+    const item = {}
+    const shallow = shallowReactive(new Map([['item', item]]))
+    const state = reactive({ map: new Map() })
+    const map = reactive(new Map())
+    const set = reactive(new Set())
+
+    state.map = shallow
+    map.set('shallow', shallow)
+    set.add(shallow)
+
+    expect(state.map).toBe(shallow)
+    expect(map.get('shallow')).toBe(shallow)
+    expect([...set][0]).toBe(shallow)
+    expect(state.map.get('item')).toBe(item)
   })
 })
