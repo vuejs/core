@@ -6,7 +6,9 @@ import {
   type WatchScheduler,
   computed,
   onWatcherCleanup,
+  reactive,
   ref,
+  shallowReactive,
   watch,
 } from '../src'
 
@@ -330,4 +332,31 @@ describe('watch', () => {
     value.value = true
     expect(value.value).toBe(false)
   })
+
+  test.each([new Map(), new Set()])(
+    'should respect shallow collection watch depth (%o)',
+    collection => {
+      const item = reactive({ count: 0 })
+      if (collection instanceof Map) {
+        collection.set('item', item)
+      } else {
+        collection.add(item)
+      }
+      const shallow = shallowReactive(collection)
+      const spy = vi.fn()
+      const deepSpy = vi.fn()
+      const stop = watch(shallow, spy)
+      const stopDeep = watch(shallow, deepSpy, { deep: true })
+
+      item.count++
+      expect(spy).not.toHaveBeenCalled()
+      expect(deepSpy).toHaveBeenCalledTimes(1)
+
+      shallow.clear()
+      expect(spy).toHaveBeenCalledTimes(1)
+      expect(deepSpy).toHaveBeenCalledTimes(2)
+      stop()
+      stopDeep()
+    },
+  )
 })

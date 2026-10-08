@@ -699,23 +699,25 @@ describe('reactivity/ref', () => {
     expect(spy2).toBeCalledTimes(1)
   })
 
-  test('ref should preserve value shallow/readonly-ness', () => {
-    const original = {}
-    const r = reactive(original)
-    const s = shallowReactive(original)
-    const rr = readonly(original)
-    const a = ref(original)
+  test.each([{}, new Map(), new Set(), new WeakMap(), new WeakSet()])(
+    'ref should preserve value shallow/readonly-ness (%o)',
+    original => {
+      const r = reactive(original)
+      const s = shallowReactive(original)
+      const rr = readonly(original)
+      const a = ref(original)
 
-    expect(a.value).toBe(r)
+      expect(a.value).toBe(r)
 
-    a.value = s
-    expect(a.value).toBe(s)
-    expect(a.value).not.toBe(r)
+      a.value = s
+      expect(a.value).toBe(s)
+      expect(a.value).not.toBe(r)
 
-    a.value = rr
-    expect(a.value).toBe(rr)
-    expect(a.value).not.toBe(r)
-  })
+      a.value = rr
+      expect(a.value).toBe(rr)
+      expect(a.value).not.toBe(r)
+    },
+  )
 
   test('should not trigger when setting the same raw object', () => {
     const obj = {}
