@@ -8,7 +8,6 @@ import {
   type TransitionProps,
   TransitionPropsValidators,
   type TransitionState,
-  type VShowElement,
   baseResolveTransitionHooks,
   checkTransitionMode,
   currentInstance,
@@ -21,7 +20,6 @@ import {
   restoreCurrentInstance,
   setCurrentInstance,
   useTransitionState,
-  vShowHidden,
   warn,
 } from '@vue/runtime-dom'
 import { computed } from '@vue/reactivity'
@@ -35,6 +33,7 @@ import {
   type VaporTransitionState,
   isValidBlock,
   remove,
+  settleMountShown,
 } from '../block'
 import {
   displayName,
@@ -462,20 +461,6 @@ export function relayTransitionHooks(
   if (child) {
     child.$transition = relayed
     settleMountShown(child)
-  }
-}
-
-// vdom's directive on mount leaves a shown transition root as an earlier
-// v-show hid it. Vapor's bindings ran before the hooks arrived, so the root
-// they showed over a hide is re-hidden here, where the hooks attach.
-function settleMountShown(child: ResolvedTransitionBlock): void {
-  if (
-    child instanceof Element &&
-    (child as TransitionOptions).$vshow! & VShowFlags.MOUNT_SHOWN
-  ) {
-    ;(child as TransitionOptions).$vshow! &= ~VShowFlags.MOUNT_SHOWN
-    ;(child as VShowElement)[vShowHidden] = true
-    ;(child as VShowElement).style.display = 'none'
   }
 }
 

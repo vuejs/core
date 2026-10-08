@@ -66,8 +66,7 @@ export const enum VShowFlags {
 export interface TransitionOptions {
   $key?: any
   $transition?: VaporTransitionHooks
-  // VShowFlags, set by applyVShow
-  $vshow?: number
+  $vshow?: VShowFlags
 }
 
 export type TransitionBlock = (
@@ -206,9 +205,20 @@ function isVShowMountEnter(
 ): boolean {
   return (
     transition.persisted &&
-    !!(el as TransitionBlock).$vshow &&
+    !!((el as TransitionBlock).$vshow! & VShowFlags.APPLIED) &&
     !(el as VShowElement)[vShowHidden]
   )
+}
+
+// vdom's directive on mount leaves a shown transition root as an earlier
+// v-show hid it. Vapor's bindings ran before the hooks arrived, so the root
+// they showed over a hide is re-hidden where the hooks attach.
+export function settleMountShown(block: TransitionBlock): void {
+  if (block.$vshow! & VShowFlags.MOUNT_SHOWN) {
+    block.$vshow! &= ~VShowFlags.MOUNT_SHOWN
+    ;(block as VShowElement)[vShowHidden] = true
+    ;(block as VShowElement).style.display = 'none'
+  }
 }
 
 export function insertFragment(

@@ -17,7 +17,6 @@ import {
 import {
   type Block,
   type TransitionBlock,
-  type TransitionOptions,
   VShowFlags,
   type VaporTransitionHooks,
   isValidBlock,
@@ -46,15 +45,16 @@ export function applyVShow(target: Block, source: () => any): void {
   let slotRoot = false
   // ...except on Transition's own root chain: vdom flattens the slot
   // fragment into Transition's child. Any other component ends that chain.
-  let inTransition = false
-  // the binding has run once; later runs are updates, re-entries from a
-  // producer initialize the root it rendered...
-  let updating = false
-  // ...unless that root is a kept-alive component coming back from the cache
-  // with the state this binding left on it (vdom re-patches it: `updated`)
-  let reactivating = false
+  let inTransition: boolean | undefined
+  // the binding has run once: later runs update the root, a producer's
+  // re-entry initializes the root it rendered
+  let ran = false
+  // ...unless that root is a kept-alive component back from the cache with
+  // the state this binding left on it (vdom re-patches it: `updated`)
+  let updating: boolean | undefined
   // pending async setups this binding already waits on
   let pendingSetups: WeakSet<VaporComponentInstance> | undefined
+  let applyInTransition: ((nodes: Block) => void) | undefined
 
   const visitor: RootChainVisitor = {
     onComponent(instance) {
@@ -74,12 +74,18 @@ export function applyVShow(target: Block, source: () => any): void {
         unresolved = true
         return true
       }
-      if (instance.isDeactivated) reactivating = true
+      if (instance.isDeactivated) updating = true
       inTransition = isTransitionEnabled && isVaporTransition(instance.type)
     },
     onDynamicFragment(frag) {
       if (!inTransition && isSlotOutletFragment(frag)) return (slotRoot = true)
-      register((frag.bm ||= []), inTransition ? reenterInTransition : reenter)
+      // a branch swapped on Transition's root chain re-enters with that context
+      register(
+        (frag.bm ||= []),
+        inTransition
+          ? (applyInTransition ||= nodes => apply(nodes, false, true))
+          : apply,
+      )
     },
   }
   if (isInteropEnabled) {
@@ -93,23 +99,14 @@ export function applyVShow(target: Block, source: () => any): void {
     }
   }
 
-  const apply = (
-    nodes: Block,
-    update?: boolean,
-    transitionSlot?: boolean,
-    producer?: TransitionOptions,
-  ) => {
-    transition = producer && producer.$transition
-    unresolved = slotRoot = reactivating = false
-    inTransition = !!transitionSlot
+  const apply = (nodes: Block, update?: boolean, transitionSlot?: boolean) => {
+    transition = undefined
+    unresolved = slotRoot = false
+    updating = update
+    inTransition = transitionSlot
     const root = getRootElement(nodes, visitor)
     if (root) {
-      setDisplay(
-        root as VShowElement,
-        value,
-        transition,
-        !!update || reactivating,
-      )
+      setDisplay(root as VShowElement, value, transition, updating)
     } else if (__DEV__ && (slotRoot || (!unresolved && isValidBlock(nodes)))) {
       warn(
         `v-show used on component with non-single-element root node ` +
@@ -118,18 +115,11 @@ export function applyVShow(target: Block, source: () => any): void {
     }
   }
 
-  // A fresh branch re-enters before its root carries the hooks its producer
-  // holds for it; one on Transition's root chain keeps that context too.
-  const reenter = (nodes: Block, producer: TransitionOptions) =>
-    apply(nodes, false, false, producer)
-  const reenterInTransition = (nodes: Block, producer: TransitionOptions) =>
-    apply(nodes, false, true, producer)
-
   ;(target as TransitionBlock).$vshow! |= VShowFlags.TARGET
   renderEffect(() => {
     value = source()
-    apply(target, updating)
-    updating = true
+    apply(target, ran)
+    ran = true
   })
 }
 
@@ -141,7 +131,7 @@ function setDisplay(
   el: VShowElement,
   value: unknown,
   transition: VaporTransitionHooks | undefined,
-  updating: boolean,
+  updating: boolean | undefined,
 ): void {
   const hidden = !value
   if (!(vShowOriginalDisplay in el)) {
@@ -151,7 +141,6 @@ function setDisplay(
     ;(el as TransitionBlock).$vshow! |= VShowFlags.APPLIED
     el[vShowOriginalDisplay] =
       el.style.display === 'none' ? '' : el.style.display
-    el[vShowHidden] = hidden
     writeDisplay(el, value)
     return
   }
@@ -160,7 +149,6 @@ function setDisplay(
 
   // The VDOM mounted hook owns enter until Suspense releases the root.
   if (isInteropEnabled && isInteropVShowPending(el)) {
-    el[vShowHidden] = hidden
     writeDisplay(el, value)
     return
   }
@@ -168,14 +156,7 @@ function setDisplay(
   const $transition = isTransitionEnabled
     ? (el as TransitionBlock).$transition || transition
     : undefined
-  if (!updating) {
-    // Another v-show reaching the element before insertion (vdom's
-    // beforeMount): a shown transition root stays as the first one left it,
-    // the renderer enters it on insert; otherwise the display is written.
-    // Hooks a Transition above attaches later settle a show written now.
-    if ($transition && value) return
-    if (value) (el as TransitionBlock).$vshow! |= VShowFlags.MOUNT_SHOWN
-  } else {
+  if (updating) {
     ;(el as TransitionBlock).$vshow! &= ~VShowFlags.MOUNT_SHOWN
     if ($transition) {
       el[vShowHidden] = hidden
@@ -198,12 +179,19 @@ function setDisplay(
       }
       return
     }
+  } else if (value) {
+    // Another v-show reaching the element before insertion (vdom's
+    // beforeMount): a shown transition root stays as the first one left it,
+    // the renderer enters it on insert. Shown with no hooks yet, the
+    // Transition that attaches them settles it.
+    if ($transition) return
+    ;(el as TransitionBlock).$vshow! |= VShowFlags.MOUNT_SHOWN
   }
-  el[vShowHidden] = hidden
   writeDisplay(el, value)
 }
 
 function writeDisplay(el: VShowElement, value: unknown): void {
+  el[vShowHidden] = !value
   if ((__DEV__ || __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__) && isHydrating) {
     // the SSR display state only counts as a mismatch when it disagrees
     // with the client value in either direction

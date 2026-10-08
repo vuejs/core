@@ -150,9 +150,9 @@ export class VaporFragment<
   /** @internal live transition element of the backing vnode's subtree */
   getTransitionElement?: (this: VaporFragment) => Element | undefined
 
-  /** beforeMount: a fresh branch is rendered but not inserted yet, handed
-   * the producer whose transition hooks the branch root takes afterwards */
-  bm?: ((nodes: Block, producer: TransitionOptions) => void)[]
+  /** beforeMount: a fresh branch carries its transition hooks but is not
+   * inserted yet */
+  bm?: ((nodes: Block) => void)[]
   /** beforeUnmount */
   bum?: (() => void)[]
   /** beforeUpdate */
@@ -555,18 +555,16 @@ export class DynamicFragment extends RenderContextFragment {
         // on purpose: the enclosing application traverses into them and
         // owns their first application.
         if (parent && this.fallthrough) this.fallthrough(nodes)
-        const bm = this.bm
-        if (bm) {
-          for (let i = 0; i < bm.length; i++) {
-            bm[i](nodes, this)
-          }
-        }
         return nodes
       })
     } finally {
       if (isTransitionEnabled && transition) {
         this.$transition = applyTransitionHooks(this.nodes, transition, this)
       }
+    }
+    const bm = this.bm
+    if (bm) {
+      for (let i = 0; i < bm.length; i++) bm[i](this.nodes)
     }
   }
 }
