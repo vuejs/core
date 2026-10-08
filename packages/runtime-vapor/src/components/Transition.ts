@@ -26,7 +26,7 @@ import { computed } from '@vue/reactivity'
 import {
   type Block,
   type BlockFn,
-  type TransitionBlock,
+  EMPTY_BLOCK,
   type TransitionOptions,
   type VaporTransitionHooks,
   type VaporTransitionState,
@@ -36,6 +36,7 @@ import {
 import {
   displayName,
   isVaporTransition,
+  isVaporTransitionHooks,
   registerTransitionHooks,
 } from '../transition'
 import {
@@ -55,6 +56,7 @@ import {
   isForFragment,
   isFragment,
   isVaporSlotOutlet,
+  runWithRenderCtx,
 } from '../fragment'
 import { isKeepAliveEnabled } from '../keepAlive'
 import { DYNAMIC, TELEPORT } from '../fragmentFlags'
@@ -87,7 +89,11 @@ export const ensureTransitionHooksRegistered = (): void => {
   }
 }
 
-const hydrateTransitionImpl = (suspense: SuspenseBoundary | null) => {
+// Adopts the <template> the server wraps an appearing Transition's content in;
+// returns the appear to perform once the content's hooks are applied.
+export const hydrateTransitionImpl = (
+  suspense: SuspenseBoundary | null,
+): ((hooks: TransitionHooks) => void) | undefined => {
   if (!currentHydrationNode || !isTemplateNode(currentHydrationNode)) return
   // replace <template> node with inner child
   const templateNode = currentHydrationNode
@@ -162,6 +168,11 @@ export const VaporTransition: FunctionalVaporComponent<TransitionProps> =
         return resolvedProps.value[key as keyof BaseTransitionProps<Element>]
       },
     })
+
+    if (__DEV__) {
+      state.refresh = hooks =>
+        applyTransitionHooksImpl(state.root!, hooks, undefined, true)
+    }
 
     const shouldPerformAppear = !!props.appear && !!performAppear
     // Dynamic slot sources can add/remove the default slot after setup, so
@@ -268,6 +279,15 @@ function getLeavingNodesForType(
     leavingNodes.set(type, nodes)
   }
   return nodes
+}
+
+// Registers `block` as leaving before its leave runs, as a vdom in-out
+// `delayLeave` does for its vnode: a re-entering copy early-removes it.
+export function markLeavingBlock(
+  block: ResolvedTransitionBlock,
+  state: TransitionState,
+): void {
+  getLeavingNodesForType(state, block)[String(getTransitionKey(block))] = block
 }
 
 function getLeaveElement(
@@ -387,6 +407,12 @@ export function applyTransitionHooksImpl(
     return hooks
   }
 
+  // hooks relayed from a vdom Transition have nothing to resolve from
+  if (!isVaporTransitionHooks(hooks)) {
+    relayTransitionHooks(block, hooks)
+    return hooks
+  }
+
   const fragments: VaporFragment[] = []
   const child = resolveTransitionBlock(
     block,
@@ -416,6 +442,20 @@ export function applyTransitionHooksImpl(
   child.$transition = resolvedHooks
   fragments.forEach(f => (f.$transition = resolvedHooks))
   return resolvedHooks
+}
+
+// Hooks a vnode-level Transition resolved for a vapor component vnode (a vdom
+// Transition's child, or a vnode child of a vapor one) are keyed by that
+// vnode and carry its handoffs (`afterLeave`, `delayedLeave`): every root the
+// component renders relays them as they are, as a vdom child's roots inherit
+// them, and an entering root early-removes the leaving one through the vnode.
+export function relayTransitionHooks(
+  block: Block,
+  hooks: TransitionHooks,
+): void {
+  const relayed = hooks as VaporTransitionHooks
+  const child = findTransitionBlock(block, f => (f.$transition = relayed))
+  if (child) child.$transition = relayed
 }
 
 // Runtime equivalent of the compiler's persisted rule for roots the compiler
@@ -520,15 +560,31 @@ function createDelayedLeave(
   }
 }
 
+// vdom applies `mode` where Transition itself re-renders, i.e. down to its
+// child component; a fragment inside that component only inherits the
+// enter / leave hooks.
+function ownsMode(frag: DynamicFragment): boolean {
+  const ctx = keyContexts.get(frag)
+  return !ctx || !ctx.type
+}
+
 function deferBranchUpdateDuringLeaveImpl(
   frag: DynamicFragment,
   render: BlockFn | undefined,
   key: any,
   noScope: boolean,
   branchKey: any,
+  prevKey: any,
 ): boolean {
   const transition = frag.$transition!
-  if (!transition.state.isLeaving) return false
+  // relayed vdom hooks: the vdom Transition sequences its own branches
+  if (
+    !isVaporTransitionHooks(transition) ||
+    !transition.state.isLeaving ||
+    !ownsMode(frag)
+  ) {
+    return false
+  }
   const pending = frag.pending
   if (pending) {
     pending.render = render
@@ -536,7 +592,7 @@ function deferBranchUpdateDuringLeaveImpl(
     pending.noScope = noScope
     pending.branchKey = branchKey
   } else {
-    frag.pending = { render, key, noScope, branchKey }
+    frag.pending = { render, key, noScope, branchKey, prevKey }
   }
   return true
 }
@@ -553,6 +609,9 @@ function removeBranchWithLeaveImpl(
   const mode = transition.mode
   if (
     mode &&
+    ownsMode(frag) &&
+    // relayed vdom hooks: an inner root switch is a plain leave + enter
+    isVaporTransitionHooks(transition) &&
     // persisted roots are toggled in place; mode only sequences structural
     // swaps, and a skipped persisted leave would never fire afterLeave.
     !transition.persisted &&
@@ -574,6 +633,37 @@ function removeBranchWithLeaveImpl(
       // Unmounting cuts the leave short and runs afterLeave synchronously;
       // the pending branch must not be rendered into the torn-down tree.
       if (transition.state.isUnmounting) return
+      // The branch has left: an enclosing teardown must not leave it again.
+      frag.nodes = EMPTY_BLOCK
+      // Like vdom rendering Transition's latest child after the leave, the
+      // outermost fragment that switched meanwhile replaces this one.
+      let outer: DynamicFragment | undefined
+      collectTransitionBlocks(
+        transition.state.root!,
+        f => {
+          const pending = (f as DynamicFragment).pending
+          if (!pending || f === frag) return
+          if (outer || pending.key === pending.prevKey) {
+            // superseded by the outer switch, or switched back
+            ;(f as DynamicFragment).pending = undefined
+          } else {
+            outer = f as DynamicFragment
+          }
+        },
+        [],
+        undefined,
+      )
+      if (outer) {
+        const target = outer
+        const { render, key, noScope, branchKey, prevKey } = target.pending!
+        target.pending = frag.pending = undefined
+        // back on the mounted key, the deferred update runs as a regular one
+        target.current = prevKey
+        runWithRenderCtx(target, () =>
+          target.update(render, key, noScope, branchKey),
+        )
+        return
+      }
       // By the time this deferred out-in branch runs, the renderEffect
       // has finished and currentInstance may have changed, so restore
       // the captured instance.
@@ -707,9 +797,10 @@ export function resolveTransitionBlock(
 /** Locate the transition child of `block` without touching its identity. */
 export function findTransitionBlock(
   block: Block,
+  onFragment?: (frag: VaporFragment) => void,
 ): ResolvedTransitionBlock | undefined {
   const children: ResolvedTransitionBlock[] = []
-  collectTransitionBlocks(block, undefined, children, undefined)
+  collectTransitionBlocks(block, onFragment, children, undefined)
   return children[0]
 }
 
@@ -821,17 +912,6 @@ function collectFragmentTransitionBlocks(
     children,
     ctx && enterFragmentKeyContext(block, ctx),
   )
-}
-
-export function setTransitionHooks(
-  block: TransitionBlock,
-  hooks: VaporTransitionHooks,
-): void {
-  if (isVaporComponent(block)) {
-    block = findTransitionBlock(block.block) as TransitionBlock
-    if (!block) return
-  }
-  block.$transition = hooks
 }
 
 export function isValidTransitionBlock(

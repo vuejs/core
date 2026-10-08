@@ -245,6 +245,11 @@ export interface VaporInVdomInterface {
     component: ComponentInternalInstance,
     transition: TransitionHooks,
   ): void
+  /**
+   * Whether a mounted vapor component or slot vnode renders an element a
+   * Transition can leave.
+   */
+  hasTransitionChild(vnode: VNode): boolean
   applyCssVars(vnode: VNode, vars: Record<string, string>): void
   /**
    * Hands the fallback of a vdom outlet over to the vapor slot its content

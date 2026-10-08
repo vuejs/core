@@ -22,7 +22,7 @@ import {
   nextTick,
   ref,
 } from 'vue'
-import { compile, makeInteropRender, makeRender } from '../_utils'
+import { compile, makeInteropRender, makeRender, renderParity } from '../_utils'
 
 const define = makeRender()
 const defineInterop = makeInteropRender()
@@ -2684,4 +2684,398 @@ describe('Transition', () => {
       expect(host.innerHTML).not.toContain('id="a"')
     },
   )
+
+  const outInTransition = (content: string) =>
+    `<Transition mode="out-in" :css="false" @leave="data.onLeave" @enter="data.onEnter">
+      ${content}
+    </Transition>`
+  const outInChain = `<template>${outInTransition(
+    `<p v-if="data.a">a</p>
+    <i v-else-if="data.b">b</i>
+    <span v-else-if="data.c">c</span>
+    <div v-else>d</div>`,
+  )}</template>`
+  const outInKeepAlive = {
+    Page: `<template><p v-if="data.loading">loading</p><div v-else>list</div></template>`,
+    Other: `<template><span>other</span></template>`,
+    App: `<template>${outInTransition(
+      `<KeepAlive>
+        <component :is="data.other ? components.Other : components.Page" />
+      </KeepAlive>`,
+    )}</template>`,
+  }
+
+  test.each<
+    [string, Record<string, string>, Record<string, any>, OutInPhase[]]
+  >([
+    [
+      'an outer branch switching',
+      { App: outInChain },
+      { a: false, b: false, c: false },
+      [
+        { set: { c: true, a: true }, text: 'a' },
+        { set: { a: false }, text: 'c' },
+      ],
+    ],
+    [
+      'an outer branch switching next to a retarget',
+      { App: outInChain },
+      { a: false, b: false, c: false },
+      [
+        { set: { c: true, a: true, c2: false }, text: 'a' },
+        { set: { a: false }, text: 'd' },
+      ],
+    ],
+    [
+      'two outer branches switching',
+      { App: outInChain },
+      { a: false, b: false, c: false },
+      [
+        { set: { c: true, b: true, a: true }, text: 'a' },
+        { set: { a: false }, text: 'b' },
+        { set: { b: false }, text: 'c' },
+      ],
+    ],
+    [
+      'the outermost switch being taken back',
+      { App: outInChain },
+      { a: false, b: false, c: false },
+      [
+        { set: { c: true, a: true, b: true, a2: false }, text: 'b' },
+        { set: { b: false }, text: 'c' },
+      ],
+    ],
+    // coverage guard: passes without the fix
+    [
+      'an outer switch being taken back',
+      { App: outInChain },
+      { a: false, b: false, c: false },
+      [
+        { set: { c: true, a: true, a2: false }, text: 'c' },
+        { set: { c: false }, text: 'd' },
+      ],
+    ],
+    [
+      'an outer KeepAlive branch switching',
+      {
+        A: `<template><p>a</p></template>`,
+        B: `<template><i>b</i></template>`,
+        C: `<template><div>c</div></template>`,
+        App: `<template>${outInTransition(
+          `<KeepAlive>
+              <components.A v-if="data.a" />
+              <components.B v-else-if="data.b" />
+              <components.C v-else />
+            </KeepAlive>`,
+        )}</template>`,
+      },
+      { a: false, b: false },
+      [
+        { set: { b: true, a: true }, text: 'a' },
+        { set: { a: false }, text: 'b' },
+        { set: { b: false }, text: 'c' },
+      ],
+    ],
+    [
+      'an outer slot source switching',
+      {
+        Child: `<template>${outInTransition(`<slot><p>fallback</p></slot>`)}</template>`,
+        App: `<template>
+            <components.Child>
+              <template v-if="data.a" #default>
+                <div v-if="data.c">c</div>
+                <i v-else>d</i>
+              </template>
+              <template v-else #default><span>b</span></template>
+            </components.Child>
+          </template>`,
+      },
+      { a: true, c: true },
+      [
+        { set: { c: false, a: false }, text: 'b' },
+        { set: { a: true }, text: 'd' },
+      ],
+    ],
+  ])(
+    'out-in renders the latest child after a leave with %s',
+    async (_, srcs, init, phases) => {
+      const { vdom, vapor } = await runOutInPhases(srcs, init, phases)
+      expect(vapor.trace).toEqual(vdom.trace)
+      expect(vapor.settled).toEqual(phases.map(p => p.text))
+    },
+  )
+
+  test.each<
+    [string, Record<string, string>, Record<string, any>, OutInPhase[]]
+  >([
+    [
+      'a v-if at the root of the child component',
+      {
+        Comp: outInKeepAlive.Page,
+        App: `<template>${outInTransition(`<components.Comp />`)}</template>`,
+      },
+      { loading: true },
+      [{ set: { loading: false }, text: 'list' }],
+    ],
+    [
+      'a switch away from a child component that is leaving inside',
+      {
+        Comp: outInKeepAlive.Page,
+        Failed: `<template><span>error</span></template>`,
+        App: `<template>${outInTransition(
+          `<components.Failed v-if="data.error" />
+            <components.Comp v-else />`,
+        )}</template>`,
+      },
+      { loading: true, error: false },
+      [{ set: { loading: false, error: true }, text: 'error' }],
+    ],
+    [
+      'a switch away from a kept-alive child that is leaving inside',
+      outInKeepAlive,
+      { loading: true, other: false },
+      [
+        { set: { loading: false, other: true }, text: 'other' },
+        { set: { other: false }, text: 'list' },
+      ],
+    ],
+  ])('mode does not sequence %s', async (_, srcs, init, phases) => {
+    const { vdom, vapor } = await runOutInPhases(srcs, init, phases)
+    expect(vapor.trace).toEqual(vdom.trace)
+    expect(vapor.settled).toEqual(phases.map(p => p.text))
+  })
+
+  test('out-in renders the latest dynamic default slot after a leave inside it', async () => {
+    const { leaves, onLeave } = collectLeaves()
+    const data = ref<any>({ error: false, loading: false, onLeave })
+    const App = compile(
+      `<template>
+        <Transition mode="out-in" :css="false" @leave="data.onLeave">
+          <template #default v-if="data.error"><p>error</p></template>
+          <template #default v-else>
+            <span v-if="data.loading">loading</span>
+            <div v-else>list</div>
+          </template>
+        </Transition>
+      </template>`,
+      data,
+    )
+    const { host } = define(App as any).render()
+
+    data.value.loading = true
+    await nextTick()
+    data.value.error = true
+    await nextTick()
+    leaves.shift()!()
+    await nextTick()
+    expect(host.textContent).toBe('error')
+
+    data.value.error = false
+    await nextTick()
+    leaves.shift()!()
+    await nextTick()
+    expect(host.textContent).toBe('loading')
+    expect(leaves.length).toBe(0)
+  })
+
+  test('out-in renders an outer branch deferred during a leave under its owner', async () => {
+    const { leaves, onLeave } = collectLeaves()
+    const unmounted = vi.fn()
+    const data = ref<any>({
+      show: true,
+      error: false,
+      loading: false,
+      onLeave,
+      unmounted,
+    })
+    const Failed = compile(
+      `<script setup vapor>
+        import { inject, onUnmounted } from 'vue'
+        const data = _data
+        const msg = inject('msg')
+        onUnmounted(() => data.value.unmounted())
+      </script>
+      <template><p>{{ msg }}</p></template>`,
+      data,
+    )
+    const App = compile(
+      `<script setup vapor>
+        import { provide } from 'vue'
+        const data = _data
+        const components = _components
+        provide('msg', 'error')
+      </script>
+      <template>
+        <section v-if="data.show">
+          <Transition mode="out-in" :css="false" @leave="data.onLeave">
+            <components.Failed v-if="data.error" />
+            <span v-else-if="data.loading">loading</span>
+            <div v-else>list</div>
+          </Transition>
+        </section>
+      </template>`,
+      data,
+      { Failed },
+    )
+    const { host } = define(App as any).render()
+
+    data.value.loading = true
+    await nextTick()
+    data.value.error = true
+    await nextTick()
+    leaves.shift()!()
+    await nextTick()
+    expect(host.textContent).toBe('error')
+
+    data.value.show = false
+    await nextTick()
+    expect(unmounted).toHaveBeenCalledTimes(1)
+  })
+
+  // vdom throws on this one, so there is no parity to assert
+  test('out-in keeps a kept-alive child that updates during its own leave current', async () => {
+    const { leaves, onLeave } = collectLeaves()
+    const data = ref<any>({ other: false, loading: true, onLeave })
+    const Page = compile(outInKeepAlive.Page, data)
+    const Other = compile(outInKeepAlive.Other, data)
+    const App = compile(outInKeepAlive.App, data, { Page, Other })
+    const { host } = define(App as any).render()
+
+    data.value.other = true
+    await nextTick()
+    data.value.loading = false
+    await nextTick()
+    while (leaves.length) leaves.shift()!()
+    await nextTick()
+    expect(host.textContent).toBe('other')
+
+    data.value.other = false
+    await nextTick()
+    while (leaves.length) leaves.shift()!()
+    await nextTick()
+    expect(host.textContent).toBe('list')
+  })
+
+  test('out-in is not held by a deactivated child that updates', async () => {
+    const { leaves, onLeave } = collectLeaves()
+    const data = ref<any>({ other: false, loading: true, onLeave })
+    const Page = compile(outInKeepAlive.Page, data)
+    const Other = compile(outInKeepAlive.Other, data)
+    const App = compile(outInKeepAlive.App, data, { Page, Other })
+    const { host } = define(App as any).render()
+
+    data.value.other = true
+    await nextTick()
+    leaves.shift()!()
+    await nextTick()
+    data.value.loading = false
+    await nextTick()
+    expect(leaves.length).toBe(0)
+
+    data.value.other = false
+    await nextTick()
+    leaves.shift()!()
+    await nextTick()
+    expect(host.textContent).toBe('list')
+  })
+
+  test('slot content rendered behind a fallback enters and leaves', async () => {
+    const hooks: string[] = []
+    const data = ref<any>({
+      show: false,
+      onBeforeEnter: (el: Element) => hooks.push(`enter:${el.textContent}`),
+      onLeave: (el: Element, done: () => void) => {
+        hooks.push(`leave:${el.textContent}`)
+        done()
+      },
+    })
+    const Wrapper = compile(
+      `<template>
+        <Transition :css="false" @before-enter="data.onBeforeEnter" @leave="data.onLeave">
+          <slot><span>fb</span></slot>
+        </Transition>
+      </template>`,
+      data,
+    )
+    const App = compile(
+      `<template>
+        <components.Wrapper><div v-if="data.show">x</div></components.Wrapper>
+      </template>`,
+      data,
+      { Wrapper },
+    )
+    const { host } = define(App).render()
+    expect(host.textContent).toBe('fb')
+
+    data.value.show = true
+    await nextTick()
+    expect(host.textContent).toBe('x')
+    expect(hooks).toEqual(['leave:fb', 'enter:x'])
+
+    data.value.show = false
+    await nextTick()
+    expect(host.textContent).toBe('fb')
+    expect(hooks).toEqual(['leave:fb', 'enter:x', 'leave:x', 'enter:fb'])
+  })
 })
+
+interface OutInPhase {
+  // applied one tick apart: the first change starts a leave, the rest land
+  // during it (a trailing digit repeats a key)
+  set: Record<string, any>
+  // rendered once the leaves are released
+  text: string
+}
+
+// Mounts `srcs` as a vdom and as a vapor app and runs the phases, holding
+// every leave until the phase's changes are in. `trace` is the text and the
+// hook calls before and after each release, `settled` the text after it.
+async function runOutInPhases(
+  srcs: Record<string, string>,
+  init: Record<string, any>,
+  phases: OutInPhase[],
+) {
+  const results = {
+    vdom: { trace: [] as string[], settled: [] as string[] },
+    vapor: { trace: [] as string[], settled: [] as string[] },
+  }
+  await renderParity(
+    srcs,
+    () => {
+      const calls: string[] = []
+      const { leaves, onLeave } = collectLeaves()
+      return ref<any>({
+        ...init,
+        calls,
+        leaves,
+        onLeave: (el: Element, done: () => void) => {
+          calls.push(`leave:${el.textContent}`)
+          onLeave(el, done)
+        },
+        onEnter: (el: Element, done: () => void) => {
+          calls.push(`enter:${el.textContent}`)
+          done()
+        },
+      })
+    },
+    async (data, root, mode) => {
+      const { trace, settled } = results[mode]
+      const { calls, leaves } = data.value
+      const text = () => root.textContent!.trim()
+      for (const { set } of phases) {
+        for (const key in set) {
+          data.value[key.replace(/\d$/, '')] = set[key]
+          await nextTick()
+        }
+        trace.push(`${text()} | ${calls}`)
+        while (leaves.length) {
+          leaves.shift()()
+          await nextTick()
+        }
+        trace.push(`${text()} | ${calls}`)
+        settled.push(text())
+      }
+    },
+  )
+  return results
+}

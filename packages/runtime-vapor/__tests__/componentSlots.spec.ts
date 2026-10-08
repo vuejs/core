@@ -8279,3 +8279,57 @@ describe('component: slots', () => {
     )
   })
 })
+
+describe('slot-scope component tags', () => {
+  test.each([
+    '<components.Provider v-slot="{ Foo }"><Foo /></components.Provider>',
+    '<components.Provider v-slot="slotProps"><slot-props.Foo /></components.Provider>',
+    '<components.Provider v-slot="{ parts }"><parts.Foo /></components.Provider>',
+    '<components.Provider v-slot="{ Foo }"><Foo /><components.Other v-slot="{ Foo }"><Foo /></components.Other><Foo /></components.Provider>',
+  ])('renders components from slot props: %s', async template => {
+    const result = await renderParity(
+      {
+        Leaf: '<template><b>leaf</b></template>',
+        Nested: '<template><i>nested</i></template>',
+        Provider:
+          '<template><slot :Foo="components.Leaf" :parts="{ Foo: components.Leaf }" /></template>',
+        Other: '<template><slot :Foo="components.Nested" /></template>',
+        App: `<template>${template}</template>`,
+      },
+      () => ref(null),
+      () => {},
+    )
+    expect(result.vapor.text).toBe(result.vdom.text)
+    expect(result.vapor.text).toBe(
+      template.includes('Other') ? 'leafnestedleaf' : 'leaf',
+    )
+  })
+})
+
+describe('whitespace between conditional slots', () => {
+  test.each([
+    ['condense', 'v-else'],
+    ['preserve', 'v-else'],
+    ['condense', 'v-else-if="!data.ok"'],
+    ['preserve', 'v-else-if="!data.ok"'],
+  ] as const)(
+    'preserves implicit default slot whitespace with whitespace: %s and %s',
+    async (whitespace, branch) => {
+      const { vdom, vapor } = await renderParity(
+        {
+          Comp: '<template><p><slot /></p></template>',
+          App: `<template><components.Comp><b>A</b><template #named v-if="data.ok">X</template> <template #named ${branch}>Y</template><i>B</i></components.Comp></template>`,
+        },
+        () => ref({ ok: false }),
+        (data, root) => {
+          expect(root.textContent).toBe('A B')
+          data.value.ok = true
+        },
+        {},
+        { whitespace },
+      )
+      expect(vapor.text).toBe('A B')
+      expect(vapor.text).toBe(vdom.text)
+    },
+  )
+})

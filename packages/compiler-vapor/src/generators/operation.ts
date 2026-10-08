@@ -7,7 +7,7 @@ import {
 } from '../ir'
 import type { CodegenContext } from '../generate'
 import { genInsertNode } from './dom'
-import { genSetDynamicEvents, genSetEvent } from './event'
+import { genHoistedHandlers, genSetDynamicEvents, genSetEvent } from './event'
 import { genFor } from './for'
 import { genSetHtml } from './html'
 import { genIf } from './if'
@@ -151,6 +151,8 @@ function genReactiveEffects(
       )
     }
   }
+  // after processExpressions, so the handler names avoid the ones it declares
+  const handlerFrags = genHoistedHandlers(effects, context)
   return context.withExpressionReplacements(expressionReplacements, () => {
     push(...declarationFrags)
     for (let i = 0; i < effects.length; i++) {
@@ -190,6 +192,7 @@ function genReactiveEffects(
       push(...context.withId(genExtraFrag, ids))
     }
 
+    unshift(...handlerFrags)
     return frag
   })
 }

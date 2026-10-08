@@ -569,7 +569,9 @@ describe('VDOM interop', () => {
     expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
       `
       "
+      <!--[-->
       <!--[--><div>foo</div><!--dynamic-component--><!--]-->
+      <!--]-->
       "
     `,
     )
@@ -579,10 +581,11 @@ describe('VDOM interop', () => {
     // the slot range rather than after it.
     expect(formatNodeList(container.childNodes)).toEqual([
       '<!--[-->',
+      '<!--[-->',
       '<div>foo</div>',
       'text("")',
       '<!--dynamic-component-->',
-      'text("")',
+      '<!--]-->',
       '<!--]-->',
     ])
 
@@ -593,7 +596,9 @@ describe('VDOM interop', () => {
     expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
       `
       "
+      <!--[-->
       <!--[--><div>bar</div><!--dynamic-component--><!--]-->
+      <!--]-->
       "
     `,
     )

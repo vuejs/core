@@ -24,7 +24,7 @@ exec('vp', [
     'utf-8',
   )
 
-  if (devBuild.includes('__spreadValues')) {
+  if (devBuild.includes('_objectSpread')) {
     errors.push(
       'dev build contains unexpected object spread helper.\n' +
         'This means { ...obj } syntax is used in runtime code. This should be ' +

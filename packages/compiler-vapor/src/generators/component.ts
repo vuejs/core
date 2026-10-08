@@ -36,7 +36,7 @@ import {
   genFlags,
   genMulti,
 } from './utils'
-import { genExpression, genVarName } from './expression'
+import { genExpression } from './expression'
 import {
   createHandlerGroups,
   genPropKey,
@@ -51,7 +51,7 @@ import {
   isSimpleIdentifier,
   toValidAssetId,
 } from '@vue/compiler-dom'
-import { genEventHandler } from './event'
+import { genEventHandler, getUniqueHandlerName } from './event'
 import { genBlock, hasStableSlotRoot, markSlotRootOperations } from './block'
 import {
   type DestructureMap,
@@ -165,17 +165,22 @@ export function genCreateComponent(
     } else if (operation.asset) {
       return toValidAssetId(operation.tag, 'component')
     } else {
-      const { tag } = operation
+      const { tag, slotScopeNamespace } = operation
       const builtInTag = isBuiltInComponent(tag)
       if (builtInTag) {
         // @ts-expect-error
         helper(builtInTag)
         return `_${builtInTag}`
       }
-      return genExpression(
-        extend(createSimpleExpression(tag, false), { ast: null }),
-        context,
-      )
+      return [
+        ...genExpression(
+          extend(createSimpleExpression(slotScopeNamespace || tag, false), {
+            ast: null,
+          }),
+          context,
+        ),
+        slotScopeNamespace && tag.slice(slotScopeNamespace.length),
+      ]
     }
   }
 }
@@ -214,14 +219,6 @@ function genDynamicComponentFlags(
   }
 
   return genFlags(flags, names)
-}
-
-function getUniqueHandlerName(context: CodegenContext, name: string): string {
-  const { seenInlineHandlerNames } = context
-  name = genVarName(name)
-  const count = seenInlineHandlerNames[name] || 0
-  seenInlineHandlerNames[name] = count + 1
-  return count === 0 ? name : `${name}${count}`
 }
 
 type InlineHandler = {

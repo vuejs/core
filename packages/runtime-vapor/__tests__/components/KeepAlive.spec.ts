@@ -1,4 +1,5 @@
 import {
+  createApp,
   defineAsyncComponent,
   h,
   markRaw,
@@ -5418,5 +5419,41 @@ describe('VaporKeepAlive', () => {
         app.unmount()
       },
     )
+  })
+
+  test('unmounts with a cached vdom slot branch behind a vapor KeepAlive', async () => {
+    const data = ref({ show: true })
+    const Wrapper = compile(
+      `<template><KeepAlive><slot/></KeepAlive></template>`,
+      data,
+    )
+    const App = compile(
+      `<script setup>const data = _data; const components = _components</script>
+      <template>
+        <components.Wrapper>
+          <div v-if="data.show">a</div><p v-else>b</p>
+        </components.Wrapper>
+      </template>`,
+      data,
+      { Wrapper },
+      { vapor: false },
+    )
+    const container = document.createElement('div')
+    const app = createApp(App).use(vaporInteropPlugin)
+    app.mount(container)
+    const first = container.querySelector('div')
+    expect(container.textContent).toBe('a')
+
+    data.value.show = false
+    await nextTick()
+    expect(container.textContent).toBe('b')
+    data.value.show = true
+    await nextTick()
+    expect(container.textContent).toBe('a')
+    // element content is not kept alive, as in vdom
+    expect(container.querySelector('div')).not.toBe(first)
+
+    app.unmount()
+    expect(container.innerHTML).toBe('')
   })
 })

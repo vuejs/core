@@ -8,8 +8,9 @@ const k0 = ["onClick"]
 export function render(_ctx) {
   const n0 = t0()
   const n1 = t0()
+  const _on_click = e => _ctx.a(e)
   _renderEffect(() => {
-    _setDynamicProps(n0, [_ctx.bind, { onClick: [e => _ctx.a(e), _ctx.b] }], k0)
+    _setDynamicProps(n0, [_ctx.bind, { onClick: [_on_click, _ctx.b] }], k0)
     _setDynamicProps(n1, [{ onClick: _ctx.c }, _toHandlers(_ctx.obj, true)], k0)
   })
   const n2 = _createAssetComponent("Comp", { onClick: () => [
@@ -41,6 +42,23 @@ export function render(_ctx) {
 }"
 `;
 
+exports[`compiler: element transform > a declared handler avoids the names cached by the render effect 1`] = `
+"import { setDynamicProps as _setDynamicProps, renderEffect as _renderEffect, template as _template } from 'vue';
+const t0 = _template("<div>", 1)
+const k0 = ["title","id"]
+
+export function render(_ctx) {
+  const n0 = t0()
+  const _on_click1 = () => (_ctx.a())
+  const _on_click11 = () => (_ctx.b())
+  _renderEffect(() => {
+    const _on_click = _ctx.on_click
+    _setDynamicProps(n0, [_ctx.attrs, { title: _on_click, id: _on_click, onClick: _on_click1, onClick1: _on_click11 }], k0)
+  })
+  return n0
+}"
+`;
+
 exports[`compiler: element transform > a delegated listener stays out of the merge 1`] = `
 "import { createInvoker as _createInvoker, setDynamicEvents as _setDynamicEvents, renderEffect as _renderEffect, delegateEvents as _delegateEvents, template as _template } from 'vue';
 const t0 = _template("<div>", 1)
@@ -54,13 +72,33 @@ export function render(_ctx) {
 }"
 `;
 
+exports[`compiler: element transform > a dynamic event handler is declared ahead of the render effect 1`] = `
+"import { setDynamicProps as _setDynamicProps, onBinding as _onBinding, renderEffect as _renderEffect, template as _template } from 'vue';
+const t0 = _template("<div>", 1)
+const k0 = ["title","id"]
+
+export function render(_ctx) {
+  const n0 = t0()
+  const _on_click = () => (_ctx.n++)
+  const _on_event = () => (_ctx.n++)
+  _renderEffect(() => {
+    const _n = _ctx.n
+    _setDynamicProps(n0, [_ctx.attrs, { title: _n, id: _n, onClick: _on_click }], k0)
+    _onBinding(n0, _ctx.event, _on_event)
+  })
+  return n0
+}"
+`;
+
 exports[`compiler: element transform > a listener bound twice in one merge arg keeps both handlers 1`] = `
 "import { withModifiers as _withModifiers, setDynamicProps as _setDynamicProps, renderEffect as _renderEffect, template as _template } from 'vue';
 const t0 = _template("<div>", 1)
 
 export function render(_ctx) {
   const n0 = t0()
-  _renderEffect(() => _setDynamicProps(n0, [_ctx.bind, { onClick: [_withModifiers(e => _ctx.a(e), ["stop"]), $event => (_ctx.b($event))] }]))
+  const _on_click = _withModifiers(e => _ctx.a(e), ["stop"])
+  const _on_click1 = $event => (_ctx.b($event))
+  _renderEffect(() => _setDynamicProps(n0, [_ctx.bind, { onClick: [_on_click, _on_click1] }]))
   return n0
 }"
 `;
@@ -71,7 +109,9 @@ const t0 = _template("<div>", 1)
 
 export function render(_ctx) {
   const n0 = t0()
-  _renderEffect(() => _setDynamicProps(n0, [_ctx.bind, { "on:myEventCaptureOnce": e => _ctx.a(e), onClick: e => _ctx.b(e) }]))
+  const _on_myEvent = e => _ctx.a(e)
+  const _on_click = e => _ctx.b(e)
+  _renderEffect(() => _setDynamicProps(n0, [_ctx.bind, { "on:myEventCaptureOnce": _on_myEvent, onClick: _on_click }]))
   return n0
 }"
 `;
@@ -1013,6 +1053,24 @@ export function render(_ctx) {
 }"
 `;
 
+exports[`compiler: element transform > merged listeners are declared ahead of the render effect 1`] = `
+"import { setDynamicProps as _setDynamicProps, renderEffect as _renderEffect, template as _template } from 'vue';
+const t0 = _template("<div>", 1)
+const k0 = ["title","id"]
+
+export function render(_ctx) {
+  const n0 = t0()
+  const _on_click = () => (_ctx.hit(_ctx.n))
+  const _on_focus = () => (_ctx.hit(_ctx.n))
+  const _on_blur = () => (_ctx.n++)
+  _renderEffect(() => {
+    const _n = _ctx.n
+    _setDynamicProps(n0, [_ctx.attrs, { title: _n, id: _n, onClick: _on_click, onFocus: _on_focus, onBlur: _on_blur }], k0)
+  })
+  return n0
+}"
+`;
+
 exports[`compiler: element transform > multiple roots 1`] = `
 "import { template as _template } from 'vue';
 const t0 = _template("<div><span>", 2)
@@ -1241,12 +1299,16 @@ export function render(_ctx) {
 `;
 
 exports[`compiler: element transform > static listeners join the dynamic props of a native element 1`] = `
-"import { toHandlers as _toHandlers, withModifiers as _withModifiers, withKeys as _withKeys, setDynamicProps as _setDynamicProps, renderEffect as _renderEffect, template as _template } from 'vue';
+"import { withModifiers as _withModifiers, withKeys as _withKeys, toHandlers as _toHandlers, setDynamicProps as _setDynamicProps, renderEffect as _renderEffect, template as _template } from 'vue';
 const t0 = _template("<div>", 1)
 
 export function render(_ctx) {
   const n0 = t0()
-  _renderEffect(() => _setDynamicProps(n0, [{ onClick: e => _ctx.a(e) }, _toHandlers(_ctx.obj, true), _ctx.bind, { onClick: _withModifiers(e => _ctx.b(e), ["stop"]), onKeyupOnce: _withKeys(e => _ctx.c(e), ["enter"]), "on:myEvent": e => _ctx.d(e) }]))
+  const _on_click = e => _ctx.a(e)
+  const _on_click1 = _withModifiers(e => _ctx.b(e), ["stop"])
+  const _on_keyup = _withKeys(e => _ctx.c(e), ["enter"])
+  const _on_myEvent = e => _ctx.d(e)
+  _renderEffect(() => _setDynamicProps(n0, [{ onClick: _on_click }, _toHandlers(_ctx.obj, true), _ctx.bind, { onClick: _on_click1, onKeyupOnce: _on_keyup, "on:myEvent": _on_myEvent }]))
   return n0
 }"
 `;

@@ -2137,4 +2137,71 @@ describe('compileScript', () => {
       compile(item, options, { filename: '/issue-15174/Third.vue' })
     }).not.toThrow()
   })
+
+  describe('vapor script validation', () => {
+    test.each([false, true])(
+      'rejects a normal script without script setup (isProd: %s)',
+      isProd => {
+        for (const marker of [false, true]) {
+          for (const lang of ['', ' lang="ts"']) {
+            const { descriptor } = parse(
+              `<script${lang}>export default { data: () => ({ msg: "hello" }) }</script>` +
+                `<template${marker ? ' vapor' : ''}>{{ msg }}</template>`,
+            )
+
+            expect(() =>
+              compileScript(descriptor, {
+                id: mockId,
+                isProd,
+                vapor: !marker,
+              }),
+            ).toThrow(
+              'Vapor components with a normal <script> must also include <script setup>, <script vapor>, or <script setup vapor>.',
+            )
+          }
+        }
+      },
+    )
+
+    test.each(['setup', 'vapor', 'setup vapor'])(
+      'compiles a normal script alongside <script %s>',
+      attrs => {
+        for (const setup of ['', 'const msg = "hello"']) {
+          const { content } = compile(
+            '<script>export default { name: "Comp" }</script>' +
+              `<script ${attrs}>${setup}</script>` +
+              `<template${attrs === 'setup' ? ' vapor' : ''}><div /></template>`,
+            { genDefaultAs: '_sfc_' },
+          )
+          const component = new Function(`${content}; return _sfc_`)()
+          expect(component.__vapor).toBe(true)
+          expect(component.name).toBe('Comp')
+          expect(component.setup).toBeTypeOf('function')
+        }
+      },
+    )
+
+    test('allows script setup with programmatic vapor opt-in', () => {
+      const { content } = compile(
+        '<script>export default { name: "Comp" }</script>' +
+          '<script setup>const msg = "hello"</script>',
+        { genDefaultAs: '_sfc_', vapor: true },
+      )
+      const component = new Function(`${content}; return _sfc_`)()
+      expect(component.__vapor).toBe(true)
+      expect(component.name).toBe('Comp')
+    })
+
+    test('allows preserved empty script setup with programmatic vapor opt-in', () => {
+      const { content } = compile(
+        '<script>export default { name: "Comp" }</script>' +
+          '<script setup></script>',
+        { genDefaultAs: '_sfc_', vapor: true },
+        { ignoreEmpty: false },
+      )
+      const component = new Function(`${content}; return _sfc_`)()
+      expect(component.__vapor).toBe(true)
+      expect(component.name).toBe('Comp')
+    })
+  })
 })
