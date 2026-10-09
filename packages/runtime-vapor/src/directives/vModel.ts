@@ -12,7 +12,13 @@ import {
 import { renderEffect } from '../renderEffect'
 import { inOnce, withOnce } from '../once'
 import { isArray, isSet, looseEqual, remove } from '@vue/shared'
-import { Dep, onScopeDispose, trackDep, traverse } from '@vue/reactivity'
+import {
+  Dep,
+  getCurrentScope,
+  onScopeDispose,
+  trackDep,
+  traverse,
+} from '@vue/reactivity'
 import type { VaporComponentInstance } from '../component'
 
 type VaporModelDirective<
@@ -32,8 +38,12 @@ function ensureMounted(cb: () => void) {
   if (currentInstance!.isMounted) {
     cb()
   } else {
-    // Deferred work keeps the once ambient it was created under.
-    onMounted(inOnce ? () => withOnce(cb) : cb)
+    // Deferred work keeps the branch scope and once ambient it was created under.
+    const scope = getCurrentScope()!
+    const run = inOnce ? () => withOnce(cb) : cb
+    onMounted(() => {
+      if (scope.active) scope.run(run)
+    })
   }
 }
 

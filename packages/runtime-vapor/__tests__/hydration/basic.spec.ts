@@ -1224,4 +1224,21 @@ describe('Vapor Mode hydration', () => {
       expect(inputs.map(input => input.checked)).toEqual([false, true])
     },
   )
+
+  test('stops model effects when a hydrated conditional branch is removed', async () => {
+    for (const isVaporApp of [false, true]) {
+      const { container, data, app } = await testHydration(
+        `<script setup>const data = _data</script><template><div><input v-if="data.form" type="checkbox" v-model="data.form.selected" :value="1"></div></template>`,
+        undefined,
+        reactive({ form: { selected: [1] } }),
+        { isVaporApp },
+      )
+      await nextTick()
+      expect(container.querySelector('input')!.checked).toBe(true)
+      data.form = null
+      await nextTick()
+      expect(container.querySelector('input')).toBe(null)
+      app.unmount()
+    }
+  })
 })
