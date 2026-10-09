@@ -487,30 +487,29 @@ export function setValue(
 
   if (el.tagName === 'SELECT' && !inOnce) {
     if (el.$valueBound === undefined) {
-      const instance = currentInstance!
+      const instance = currentInstance as VaporComponentInstance
       let active = true
       const update = () => {
-        const value = el._value == null ? '' : String(el._value)
         // v-model owns selection when both bindings are present.
-        if (
-          active &&
-          el.$valueBound &&
-          !('_modelValue' in el) &&
-          el.value !== value
-        ) {
-          el.value = value
+        if (active && el.$valueBound && !('_modelValue' in el)) {
+          const value = el._value == null ? '' : String(el._value)
+          if (el.value !== value) el.value = value
         }
       }
       // Options can change without triggering this value binding, and their
       // effects may have been created after it. Apply the cached value last.
-      ;(instance.u || (instance.u = [])).unshift(update)
+      const updates =
+        isInteropEnabled && !instance.vapor
+          ? instance.u || (instance.u = [])
+          : instance.selectUpdates || (instance.selectUpdates = [])
+      updates.unshift(update)
       onScopeDispose(() => {
         active = false
-        remove(instance.u!, update)
+        remove(updates, update)
       })
-      // The running effect may not have seen any update hooks before this call.
+      // The running effect may not have seen this selection update yet.
       if (instance.isMounted) {
-        queuePostRenderEffect(update, undefined, instance.suspense)
+        queuePostRenderEffect(update, instance.uid, instance.suspense)
       }
     }
     el.$valueBound = true

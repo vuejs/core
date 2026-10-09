@@ -92,6 +92,16 @@ export class RenderEffect extends ReactiveEffect {
           settleDeferredKeepAliveUpdates(deferred, job)
           return
         }
+        // Input effects also update the owner's options through child props,
+        // without invoking its public lifecycle hooks. Apply selection after
+        // DOM updates, ahead of public hooks (even ones left queued by mount).
+        if (this.i && this.i.selectUpdates) {
+          queuePostRenderEffect(
+            this.i.selectUpdates,
+            this.i.uid,
+            this.i.suspense,
+          )
+        }
         this.run()
       }
     }

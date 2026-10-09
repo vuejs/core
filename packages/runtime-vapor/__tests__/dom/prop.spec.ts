@@ -1412,5 +1412,77 @@ describe('patchProp', () => {
         app.unmount()
       },
     )
+
+    test.each([':value="data.value"', 'v-bind="data.attrs"'])(
+      'reapplies an unchanged value after child component options update (%s)',
+      async binding => {
+        const seen: Record<string, string[]> = { vdom: [], vapor: [] }
+        await renderParity(
+          {
+            App: `<template><select ${binding}><components.Options :options="data.options" /></select></template>`,
+            Options: `<script setup>defineProps(['options'])</script><template><option v-for="option in options" :value="option">{{ option }}</option></template>`,
+          },
+          () =>
+            ref({ value: 'b', attrs: { value: 'b' }, options: [] as string[] }),
+          async (data, root, mode) => {
+            await nextTick()
+            const select = root.querySelector('select')!
+            seen[mode].push(select.value)
+            for (const options of [
+              ['a', 'b'],
+              ['c', 'b'],
+            ]) {
+              data.value.options = options
+              await nextTick()
+              seen[mode].push(select.value)
+            }
+          },
+        )
+        expect(seen.vdom).toEqual(['', 'b', 'b'])
+        expect(seen.vapor).toEqual(seen.vdom)
+      },
+    )
+
+    test('preserves selection behavior for options changed only by children', async () => {
+      const seen: Record<string, string[][]> = { vdom: [], vapor: [] }
+      await renderParity(
+        {
+          App: `<template><select :value="data.value"><components.Options :options="data.options" /></select><select :value="data.value"><components.LocalOptions /></select></template>`,
+          Options: `<script setup>defineProps(['options'])</script><template><option v-for="option in options" :value="option">{{ option }}</option></template>`,
+          LocalOptions: `<template><option v-for="option in data.localOptions" :value="option">{{ option }}</option></template>`,
+        },
+        () =>
+          ref({
+            value: 'b',
+            options: [] as string[],
+            localOptions: [] as string[],
+          }),
+        async (data, root, mode) => {
+          await nextTick()
+          const record = () =>
+            seen[mode].push(
+              Array.from(
+                root.querySelectorAll('select'),
+                select => select.value,
+              ),
+            )
+          record()
+          data.value.options.push('a', 'b')
+          data.value.localOptions = ['a', 'b']
+          await nextTick()
+          record()
+          data.value.options[0] = 'c'
+          data.value.localOptions[0] = 'c'
+          await nextTick()
+          record()
+        },
+      )
+      expect(seen.vdom).toEqual([
+        ['', ''],
+        ['a', 'a'],
+        ['c', 'c'],
+      ])
+      expect(seen.vapor).toEqual(seen.vdom)
+    })
   })
 })

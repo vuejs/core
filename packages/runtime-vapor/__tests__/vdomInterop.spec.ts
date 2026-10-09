@@ -13672,4 +13672,45 @@ describe('vdomInterop', () => {
     expect(vdom.text).toBe('object')
     expect(vapor.text).toBe(vdom.text)
   })
+
+  test.each([':value="data.value"', 'v-model="data.value"'])(
+    'syncs a %s select in a vapor slot when its vdom host updates',
+    async binding => {
+      const data = ref({ value: 'b', options: [] as string[] })
+      const Host = compile(
+        `<script setup>const data = _data</script>
+        <template><div :data-options="data.options.length"><slot /></div></template>`,
+        data,
+        {},
+        { vapor: false },
+      )
+      const Options = compile(
+        `<script setup>const data = _data</script>
+        <template><option v-for="option in data.options" :value="option">{{ option }}</option></template>`,
+        data,
+        {},
+        { vapor: false },
+      )
+      const App = compile(
+        `<template><components.Host><select ${binding}><components.Options /></select></components.Host></template>`,
+        data,
+        { Host, Options },
+      )
+      const { host, app } = define(App).render()
+      try {
+        const select = host.querySelector('select')!
+        expect(select.value).toBe('')
+        for (const options of [
+          ['a', 'b'],
+          ['c', 'b'],
+        ]) {
+          data.value.options = options
+          await nextTick()
+          expect(select.value).toBe('b')
+        }
+      } finally {
+        app.unmount()
+      }
+    },
+  )
 })

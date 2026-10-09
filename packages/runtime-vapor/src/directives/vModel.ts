@@ -20,6 +20,7 @@ import {
   traverse,
 } from '@vue/reactivity'
 import type { VaporComponentInstance } from '../component'
+import { isInteropEnabled } from '../vdomInteropState'
 
 type VaporModelDirective<
   T extends HTMLElement =
@@ -109,16 +110,25 @@ export const applySelectModel: VaporModelDirective<
     ensureMounted(() => vModelSetSelected(el, get()))
     return
   }
-  // <select> relies on its <option>s, which the owner may re-render without
-  // touching the model, so the selection is applied from the owner's updated
-  // hooks like the vdom directive does. Runs before the owner's own hooks.
+  // The owner's effects can update options directly or through child inputs
+  // without touching the model. Apply selection after their DOM updates.
   const instance = currentInstance as VaporComponentInstance
-  const update = () => vModelSetSelected(el, get())
-  ;(instance.u || (instance.u = [])).unshift(update)
-  onScopeDispose(() => remove(instance.u!, update))
+  let active = true
+  const update = () => {
+    if (active) vModelSetSelected(el, get())
+  }
+  const updates =
+    isInteropEnabled && !instance.vapor
+      ? instance.u || (instance.u = [])
+      : instance.selectUpdates || (instance.selectUpdates = [])
+  updates.unshift(update)
+  onScopeDispose(() => {
+    active = false
+    remove(updates, update)
+  })
   ensureMounted(() => {
     update()
-    // only tracks the model: a change flows through the updated hook above
+    // Only tracks the model; the queued selection update applies it.
     renderEffect(() => traverse(get()))
   })
 }
