@@ -727,7 +727,7 @@ function transformNativeElement(
         if (foldedValue) {
           appendTemplateProp(key.content, foldedValue)
         }
-      } else if (isSVG && !prop.modifier && isNativeOn(key.content)) {
+      } else if (!prop.modifier && isNativeOn(key.content)) {
         // Native event bindings need the runtime value to choose prop vs attr.
         nativeOnProps.push(prop)
       } else {
@@ -1322,7 +1322,7 @@ export function mergesListeners(
 // once their keys can collide: a v-bind spread that is not expanded into
 // static props or carries a dynamic key may hold any `on*` key, and a v-on
 // object may hold the key of a static listener (`@evt` or `:onXxx`).
-// Native SVG on* bindings also share the dynamic prop cache with v-on objects.
+// Native on* bindings also share the dynamic prop cache with v-on objects.
 function resolveListenerMerge(
   node: ElementNode,
   context: TransformContext<ElementNode>,
@@ -1343,18 +1343,14 @@ function resolveListenerMerge(
             p,
           )
           if (!bindProps) return true
-          if (
-            node.ns === Namespaces.SVG &&
-            bindProps.some(({ key }) => isNativeOn(key.content))
-          ) {
+          if (bindProps.some(({ key }) => isNativeOn(key.content))) {
             hasStaticListener = true
           }
         }
       } else if (!arg.isStatic) {
         return true
       } else if (
-        (isOn(arg.content) ||
-          (node.ns === Namespaces.SVG && isNativeOn(arg.content))) &&
+        (isOn(arg.content) || isNativeOn(arg.content)) &&
         !isModelListener(arg.content) &&
         !p.modifiers.some(m => m.content === 'prop' || m.content === 'attr')
       ) {

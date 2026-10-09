@@ -623,5 +623,38 @@ describe('dom event', () => {
       expect(logs.vapor).toEqual(logs.vdom)
       expect(vapor.after).toBe(vdom.after)
     })
+
+    test('sets a string native on* binding as an attribute like vdom', async () => {
+      const { vdom, vapor } = await renderParity(
+        {
+          App: `<template>
+            <img :onerror="\`this.src='\${data.fallback}'\`" v-on="data.events">
+            <button v-bind="{ onclick: data.code }" v-on="data.events"></button>
+          </template>`,
+        },
+        () =>
+          ref({
+            fallback: 'a.png',
+            code: 'go()',
+            events: { mouseenter: vi.fn() },
+          }),
+        async (data, root) => {
+          const img = root.querySelector('img')!
+          const button = root.querySelector('button')!
+          expect(img.getAttribute('onerror')).toBe("this.src='a.png'")
+          expect(button.getAttribute('onclick')).toBe('go()')
+          data.value.fallback = 'b.png'
+          data.value.code = 'stop()'
+          await nextTick()
+          img.dispatchEvent(new MouseEvent('mouseenter'))
+          button.dispatchEvent(new MouseEvent('mouseenter'))
+          expect(data.value.events.mouseenter).toHaveBeenCalledTimes(2)
+        },
+      )
+      expect(vdom.after).toBe(
+        `<img onerror="this.src='b.png'"><button onclick="stop()"></button>`,
+      )
+      expect(vapor.after).toBe(vdom.after)
+    })
   })
 })
