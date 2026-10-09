@@ -15,6 +15,8 @@ const compileWithVBind = makeCompile({
   nodeTransforms: [transformVOnce, transformElement, transformChildren],
   directiveTransforms: {
     bind: transformVBind,
+    on: transformVOn,
+    model: transformVModel,
   },
 })
 
@@ -1517,6 +1519,14 @@ describe('compiler v-bind', () => {
     [`:value.prop="value"`, '_setValue(n1,'],
     [`v-bind="attrs"`, '_syncSelectValue(n1)'],
     [`:[key]="value"`, '_syncSelectValue(n1)'],
+    // constants keep updating with dynamic keys, like vdom's FULL_PROPS
+    [`v-bind="{ value: 'b' }"`, '_setValue(n1,'],
+    [`v-bind="{ ['value']: 'b' }"`, '_syncSelectValue(n1)'],
+    [`v-bind="{ title: 't' }" :value="'b'"`, '_setValue(n1,'],
+    [`:['value']="'b'"`, '_setValue(n1,'],
+    [`:value="'b'" v-on="{}"`, '_setValue(n1, "b")'],
+    [`:value="'b'" v-on="data.listeners"`, '_setValue(n1, "b")'],
+    [`:value="'b'" @[event]="handler"`, '_setValue(n1, "b")'],
   ])('sets a select value after its option effects: %s', (binding, setter) => {
     const { code } = compileWithVBind(
       `<select ${binding}><option :value="option" /></select>`,
@@ -1535,6 +1545,7 @@ describe('compiler v-bind', () => {
     [`:value="'b'"`, '_setValue(n1,'],
     [`:value.prop="'b'"`, '_setValue(n1,'],
     [`:value="value"`, '_setValue(n1,'],
+    [`:value="'b'" @change="handler"`, '_setValue(n1,'],
   ])(
     'sets a constant select value after its option effects: %s',
     (binding, setter) => {
@@ -1584,6 +1595,7 @@ describe('compiler v-bind', () => {
 
     expect(code).toContain(`_withOnce(() => ${setter}`)
     expect(code).not.toContain('_renderEffect')
+    expect(code).not.toContain('_syncSelectValue')
   })
 
   test.each([
@@ -1597,46 +1609,6 @@ describe('compiler v-bind', () => {
     const { code } = compileWithVBind(template)
 
     expect(code).not.toContain('_withOnce')
-  })
-
-  test.each([
-    [`v-bind="{ value: 'b' }"`, '_setValue(n1,'],
-    [`v-bind="{ ['value']: 'b' }"`, '_syncSelectValue(n1)'],
-    [`v-bind="{ title: 't' }" :value="'b'"`, '_setValue(n1,'],
-    [`:['value']="'b'"`, '_setValue(n1,'],
-  ])('keeps constant select spreads updating: %s', (binding, setter) => {
-    const { code } = compileWithVBind(
-      `<select ${binding}><option :value="option" /></select>`,
-    )
-
-    expect(code).toContain('_setValue(n0, _ctx.option)')
-    expect(code).toContain(setter)
-    expect(code.indexOf(setter)).toBeGreaterThan(
-      code.indexOf('_setValue(n0, _ctx.option)'),
-    )
-    expect(code).not.toContain('_withOnce')
-  })
-
-  test.each([`v-on="{}"`, `v-on="data.listeners"`, `@[event]="handler"`])(
-    'keeps constant select values updating with dynamic listeners: %s',
-    binding => {
-      const { code } = compileWithVBind(
-        `<select :value="'b'" ${binding}><option :value="option" /></select>`,
-        { directiveTransforms: { bind: transformVBind, on: transformVOn } },
-      )
-
-      expect(code).toContain('_setValue(n1, "b")')
-      expect(code).not.toContain('_withOnce')
-    },
-  )
-
-  test('keeps a constant select value one-time with a static listener key', () => {
-    const { code } = compileWithVBind(
-      `<select :value="'b'" @change="handler"><option :value="option" /></select>`,
-      { directiveTransforms: { bind: transformVBind, on: transformVOn } },
-    )
-
-    expect(code).toContain('_withOnce(() => _setValue(n1, "b"))')
   })
 
   test.each([`v-bind="attrs"`, `:[key]="multiple"`])(
@@ -1677,11 +1649,28 @@ describe('compiler v-bind', () => {
   test('syncs dynamic select props before applying v-model', () => {
     const { code } = compileWithVBind(
       `<select v-bind="attrs" v-model="value"><option :value="option" /></select>`,
-      { directiveTransforms: { bind: transformVBind, model: transformVModel } },
     )
 
     const value = code.indexOf('_syncSelectValue(n1)')
     expect(value).toBeGreaterThan(-1)
     expect(code.indexOf('_applySelectModel(n1,')).toBeGreaterThan(value)
   })
+
+  test.each([
+    [`v-bind="attrs"`, '_syncSelectValue(n1)'],
+    [`value="b"`, '_withOnce(() => _setValue(n1, "b"))'],
+    [`v-bind="{ value: 'b' }"`, '_setValue(n1, "b")'],
+  ])(
+    'keeps one render effect when effects follow a select: %s',
+    (binding, setter) => {
+      const { code } = compileWithVBind(
+        `<select ${binding}><option :value="option" /></select><p :title="title" />`,
+      )
+
+      expect(code.match(/_renderEffect\(/g)).toHaveLength(1)
+      expect(code.indexOf(setter)).toBeGreaterThan(
+        code.indexOf('_setProp(n2, "title", _ctx.title)'),
+      )
+    },
+  )
 })

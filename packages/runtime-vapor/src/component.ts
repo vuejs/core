@@ -944,7 +944,7 @@ export class VaporComponentInstance<
 
   applyCssVars?: (nodes: Block) => void
   cssVarOutlets?: VaporFragment[]
-  selectUpdates?: SchedulerJob[]
+  selectUpdates?: Set<() => void>
   selectUpdateJob?: SchedulerJob
 
   // Current VDOM input for event dispatch and raw-key checks.

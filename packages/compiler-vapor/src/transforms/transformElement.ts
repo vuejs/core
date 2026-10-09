@@ -640,7 +640,8 @@ function transformNativeElement(
       },
       getEffectIndex,
     )
-    if (isSelect) {
+    // v-once already sets these props after the children
+    if (isSelect && !context.inVOnce) {
       context.registerEffect(
         [],
         {

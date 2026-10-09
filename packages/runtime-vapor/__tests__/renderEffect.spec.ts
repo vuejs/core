@@ -361,41 +361,39 @@ describe('renderEffect', () => {
     expect(scopeSnap).toBe(scope)
   })
 
-  test.each([10, 100, 300])(
-    'scans %i select callbacks once when their row effects update',
-    async count => {
-      const data = ref({
-        rows: Array.from({ length: count }, (_, id) => ({
-          id,
-          value: 'b',
-          count: 0,
-        })),
-      })
-      const App = compile(
-        `<template><div v-for="row in data.rows" :key="row.id"><select :value="row.value"><option value="a">A</option><option value="b">B</option></select><span>{{ row.count }}</span></div></template>`,
-        data,
+  test('scans each select callback once when their row effects update', async () => {
+    const count = 100
+    const data = ref({
+      rows: Array.from({ length: count }, (_, id) => ({
+        id,
+        value: 'b',
+        count: 0,
+      })),
+    })
+    const App = compile(
+      `<template><div v-for="row in data.rows" :key="row.id"><select :value="row.value"><option value="a">A</option><option value="b">B</option></select><span>{{ row.count }}</span></div></template>`,
+      data,
+    )
+    const { instance, host, app } = define(App).render()
+    try {
+      await nextTick()
+      let calls = 0
+      instance!.selectUpdates = new Set(
+        Array.from(instance!.selectUpdates!, update => () => {
+          calls++
+          update()
+        }),
       )
-      const { instance, host, app } = define(App).render()
-      try {
-        await nextTick()
-        let reads = 0
-        instance!.selectUpdates = new Proxy(instance!.selectUpdates!, {
-          get(target, key, receiver) {
-            if (typeof key === 'string' && /^\d+$/.test(key)) reads++
-            return Reflect.get(target, key, receiver)
-          },
-        })
-        for (const row of data.value.rows) row.count++
-        await nextTick()
-        expect(reads).toBe(count)
-        expect(
-          Array.from(host.querySelectorAll('select'), select => select.value),
-        ).toEqual(Array(count).fill('b'))
-      } finally {
-        app.unmount()
-      }
-    },
-  )
+      for (const row of data.value.rows) row.count++
+      await nextTick()
+      expect(calls).toBe(count)
+      expect(
+        Array.from(host.querySelectorAll('select'), select => select.value),
+      ).toEqual(Array(count).fill('b'))
+    } finally {
+      app.unmount()
+    }
+  })
 
   test('syncs a value first registered during an update only once', async () => {
     const stringify = vi.fn(() => 'b')
@@ -414,8 +412,8 @@ describe('renderEffect', () => {
       data.value.show = true
       await nextTick()
       expect(host.querySelectorAll('select')[1].value).toBe('b')
-      // Initial DOM property + attribute writes, then one deferred sync.
-      expect(stringify).toHaveBeenCalledTimes(3)
+      // the initial write, then one deferred sync
+      expect(stringify).toHaveBeenCalledTimes(2)
       stringify.mockClear()
       data.value.show = false
       await nextTick()

@@ -13713,4 +13713,36 @@ describe('vdomInterop', () => {
       }
     },
   )
+
+  test('does not sync a select model removed while its vdom host updates', async () => {
+    const data = ref({
+      n: 0,
+      form: { model: 'b' } as { model: string } | null,
+      options: ['a', 'b'],
+    })
+    const Host = compile(
+      `<script setup>const data = _data</script>
+      <template><div :data-n="data.n"><slot /></div></template>`,
+      data,
+      {},
+      { vapor: false },
+    )
+    const App = compile(
+      `<template><components.Host><select v-if="data.form" v-model="data.form.model"><option v-for="o in data.options" :value="o">{{ o }}</option></select></components.Host></template>`,
+      data,
+      { Host },
+    )
+    const { host, app } = define(App).render()
+    try {
+      expect(host.querySelector('select')!.value).toBe('b')
+      // the host's own update queues its updated hooks before the select is
+      // removed in the same flush
+      data.value.n++
+      data.value.form = null
+      await nextTick()
+      expect(host.querySelector('select')).toBe(null)
+    } finally {
+      app.unmount()
+    }
+  })
 })

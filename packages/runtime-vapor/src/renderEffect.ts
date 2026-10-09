@@ -1,4 +1,9 @@
-import { EffectFlags, type EffectScope, ReactiveEffect } from '@vue/reactivity'
+import {
+  EffectFlags,
+  type EffectScope,
+  ReactiveEffect,
+  onScopeDispose,
+} from '@vue/reactivity'
 import {
   type SchedulerJob,
   SchedulerJobFlags,
@@ -18,7 +23,7 @@ import {
   settleDeferredKeepAliveUpdates,
 } from './component'
 import { inOnce } from './once'
-import { invokeArrayFns } from '@vue/shared'
+import { invokeArrayFns, remove } from '@vue/shared'
 import { isSuspenseEnabled } from './suspense'
 import { isInteropEnabled } from './vdomInteropState'
 
@@ -165,10 +170,42 @@ export function renderEffect(fn: () => void, noLifecycle = false): void {
   effect.run()
 }
 
+/**
+ * Re-applies a select's selection after the current owner's effects update
+ * its options. A vdom owner rendering vapor content runs it from its updated
+ * hooks instead.
+ */
+export function registerSelectUpdate(update: () => void): void {
+  const instance = currentInstance as VaporComponentInstance
+  if (isInteropEnabled && !instance.vapor) {
+    // vdom queues a copy of its updated hooks, which can outlive the select
+    let active = true
+    const hook = () => {
+      if (active) update()
+    }
+    const hooks = instance.u || (instance.u = [])
+    hooks.unshift(hook)
+    onScopeDispose(() => {
+      active = false
+      remove(hooks, hook)
+    })
+  } else {
+    const updates =
+      instance.selectUpdates || (instance.selectUpdates = new Set())
+    updates.add(update)
+    onScopeDispose(() => updates.delete(update))
+  }
+}
+
 export function queueSelectUpdates(instance: VaporComponentInstance): void {
-  if (!instance.selectUpdates || !instance.selectUpdates.length) return
-  const job =
-    instance.selectUpdateJob ||
-    (instance.selectUpdateJob = () => invokeArrayFns(instance.selectUpdates!))
-  queuePostRenderEffect(job, instance.uid, instance.suspense)
+  if (instance.selectUpdates!.size) {
+    queuePostRenderEffect(
+      instance.selectUpdateJob ||
+        (instance.selectUpdateJob = () => {
+          for (const update of instance.selectUpdates!) update()
+        }),
+      instance.uid,
+      instance.suspense,
+    )
+  }
 }

@@ -19,16 +19,10 @@ import {
   normalizeCssVarValue,
   normalizeStyle,
   parseStringStyle,
-  remove,
   stringifyStyle,
   toDisplayString,
 } from '@vue/shared'
-import {
-  type Dep,
-  isReactive,
-  onScopeDispose,
-  triggerDep,
-} from '@vue/reactivity'
+import { type Dep, isReactive, triggerDep } from '@vue/reactivity'
 import { type EventHandlerValue, setListener } from './event'
 import {
   type ComponentInternalInstance,
@@ -79,7 +73,7 @@ import type { RootMeta } from './template'
 import { isTransitionEnabled } from '../transition'
 import { isInteropEnabled } from '../vdomInteropState'
 import { inOnce } from '../once'
-import { queueSelectUpdates } from '../renderEffect'
+import { queueSelectUpdates, registerSelectUpdate } from '../renderEffect'
 
 type TargetElement = Element & {
   $root?: boolean | RootMeta
@@ -486,29 +480,19 @@ export function setValue(
     return
   }
 
-  if (el.tagName === 'SELECT' && !inOnce) {
+  const { tagName } = el
+  if (!inOnce && tagName === 'SELECT') {
     if (el.$valueBound === undefined) {
-      const instance = currentInstance as VaporComponentInstance
-      let active = true
       const update = () => {
         // v-model owns selection when both bindings are present.
-        if (active && el.$valueBound && !('_modelValue' in el)) {
+        if (el.$valueBound && !('_modelValue' in el)) {
           const value = el._value == null ? '' : String(el._value)
           if (el.value !== value) el.value = value
         }
       }
-      // Options can change without triggering this value binding, and their
-      // effects may have been created after it. Apply the cached value last.
-      const updates =
-        isInteropEnabled && !instance.vapor
-          ? instance.u || (instance.u = [])
-          : instance.selectUpdates || (instance.selectUpdates = [])
-      updates.unshift(update)
-      onScopeDispose(() => {
-        active = false
-        remove(updates, update)
-      })
+      registerSelectUpdate(update)
       // The running effect may not have seen this selection update yet.
+      const instance = currentInstance as VaporComponentInstance
       if (instance.isMounted) {
         if (isInteropEnabled && !instance.vapor) {
           queuePostRenderEffect(update, instance.uid, instance.suspense)
@@ -543,7 +527,7 @@ export function setValue(
 
   // #4956: <option> value will fallback to its text content so we need to
   // compare against its attribute value instead.
-  const oldValue = el.tagName === 'OPTION' ? el.getAttribute('value') : el.value
+  const oldValue = tagName === 'OPTION' ? el.getAttribute('value') : el.value
   const newValue = value == null ? '' : String(value)
   if (oldValue !== newValue) {
     el.value = newValue
@@ -677,7 +661,7 @@ export function syncSelectValue(
   ) {
     key = 'value'
   }
-  if (!key || shouldSkipFallthroughKey(el, 'value') || '_modelValue' in el) {
+  if (!key || shouldSkipFallthroughKey(el, 'value')) {
     return
   }
   const value = props[key] == null ? '' : String(props[key])
@@ -708,8 +692,8 @@ export function patchDynamicProps(
       if (!(key in props)) {
         setDynamicProp(el, key, null, isSVG)
         if (
-          el.tagName === 'SELECT' &&
           (key === 'value' || key === '.value') &&
+          el.tagName === 'SELECT' &&
           !shouldSkipFallthroughKey(el, 'value')
         ) {
           el.$valueBound = false

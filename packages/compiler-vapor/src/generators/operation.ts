@@ -104,17 +104,35 @@ export function genEffects(
   genExtraFrag?: () => CodeFragment[],
 ): CodeFragment[] {
   const [frag, push] = buildCodeFragment()
-  let start = 0
-  for (let i = 0; i < effects.length; i++) {
-    const effect = effects[i]
-    if (effect.once) {
-      push(...genReactiveEffects(effects.slice(start, i), context))
+  let reactive: IREffect[] = []
+  // A one-time select value only has to follow its options, so it waits for
+  // the remaining effects instead of splitting their render effect.
+  const selectValues: IREffect[] = []
+  for (const effect of effects) {
+    if (!effect.once) {
+      reactive.push(effect)
+    } else if (effect.operations.every(isSelectValueOperation)) {
+      selectValues.push(effect)
+    } else {
+      push(...genReactiveEffects(reactive, context))
       push(...genOperations(effect.operations, context))
-      start = i + 1
+      reactive = []
     }
   }
-  push(...genReactiveEffects(effects.slice(start), context, genExtraFrag))
+  push(...genReactiveEffects(reactive, context, genExtraFrag))
+  for (const effect of selectValues) {
+    push(...genOperations(effect.operations, context))
+  }
   return frag
+}
+
+function isSelectValueOperation(oper: OperationNode): boolean {
+  return (
+    oper.type === IRNodeTypes.SYNC_SELECT_VALUE ||
+    (oper.type === IRNodeTypes.SET_PROP &&
+      oper.tag === 'select' &&
+      oper.prop.key.content === 'value')
+  )
 }
 
 function genReactiveEffects(

@@ -1252,23 +1252,34 @@ describe('patchProp', () => {
       )
     })
 
-    test('reuses the accepted value without evaluating its getter again', async () => {
-      const get = vi.fn(() => 'b')
-      const data = ref({ options: [] as string[], get })
-      const App = compile(
-        `<template><select :value="data.get()"><option v-for="o in data.options" :value="o">{{ o }}</option></select></template>`,
-        data,
-      )
-      const app = createVaporApp(App)
-      const root = document.createElement('div')
-      app.mount(root)
-      expect(get).toHaveBeenCalledTimes(1)
-      data.value.options = ['a', 'b']
-      await nextTick()
-      expect(root.querySelector('select')!.value).toBe('b')
-      expect(get).toHaveBeenCalledTimes(1)
-      app.unmount()
-    })
+    test.each([
+      [':value="data.get()"', 'b'],
+      [':value.prop="data.get()"', 'b'],
+      ['v-bind="data.get()"', { value: 'b', multiple: true }],
+      ['v-bind="data.get()"', { '.value': 'b', multiple: true }],
+    ])(
+      'reapplies %s = %j after options update without evaluating it again',
+      async (binding, result) => {
+        const get = vi.fn(() => result)
+        const data = ref({ options: [] as string[], get })
+        const App = compile(
+          `<template><select ${binding}><option v-for="o in data.options" :value="o">{{ o }}</option></select></template>`,
+          data,
+        )
+        const app = createVaporApp(App)
+        const root = document.createElement('div')
+        app.mount(root)
+        try {
+          expect(get).toHaveBeenCalledTimes(1)
+          data.value.options = ['a', 'b']
+          await nextTick()
+          expect(root.querySelector('select')!.value).toBe('b')
+          expect(get).toHaveBeenCalledTimes(1)
+        } finally {
+          app.unmount()
+        }
+      },
+    )
 
     test.each([
       `v-bind="{ value: 'b' }"`,
@@ -1290,21 +1301,6 @@ describe('patchProp', () => {
           expect(root.querySelector('select')!.value).toBe('b')
         },
       )
-    })
-
-    test('reapplies a forced value property after options update', async () => {
-      const data = ref({ value: 'b', options: [] as string[] })
-      const App = compile(
-        `<template><select :value.prop="data.value"><option v-for="o in data.options" :value="o">{{ o }}</option></select></template>`,
-        data,
-      )
-      const app = createVaporApp(App)
-      const root = document.createElement('div')
-      app.mount(root)
-      data.value.options = ['a', 'b']
-      await nextTick()
-      expect(root.querySelector('select')!.value).toBe('b')
-      app.unmount()
     })
 
     test.each([
@@ -1391,27 +1387,6 @@ describe('patchProp', () => {
       expect(seen.vdom).toEqual(['b'])
       expect(seen.vapor).toEqual(seen.vdom)
     })
-
-    test.each(['value', '.value'])(
-      'reuses dynamic props without evaluating their getter again (%s)',
-      async key => {
-        const get = vi.fn(() => ({ [key]: 'b', multiple: true }))
-        const data = ref({ options: [] as string[], get })
-        const App = compile(
-          `<template><select v-bind="data.get()"><option v-for="o in data.options" :value="o">{{ o }}</option></select></template>`,
-          data,
-        )
-        const app = createVaporApp(App)
-        const root = document.createElement('div')
-        app.mount(root)
-        expect(get).toHaveBeenCalledTimes(1)
-        data.value.options = ['a', 'b']
-        await nextTick()
-        expect(root.querySelector('select')!.value).toBe('b')
-        expect(get).toHaveBeenCalledTimes(1)
-        app.unmount()
-      },
-    )
 
     test.each([':value="data.value"', 'v-bind="data.attrs"'])(
       'reapplies an unchanged value after child component options update (%s)',
