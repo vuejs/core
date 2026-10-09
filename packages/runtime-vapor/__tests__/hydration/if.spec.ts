@@ -837,5 +837,86 @@ describe('Vapor Mode hydration', () => {
         }
       },
     )
+
+    test.each(['constant', 'v-once'])(
+      'empty constant branch owns its hydrated anchor (%s)',
+      async condition => {
+        const { container, html, app } = await testHydration(
+          `<template>
+            <span v-if="${condition === 'constant' ? 'false' : 'data'}" ${condition === 'v-once' ? 'v-once' : ''}>content</span>
+          </template>`,
+          undefined,
+          ref(false),
+        )
+
+        expect(html).toBe('<!---->')
+        expect(container.innerHTML).toBe(html)
+        expect(container.childNodes).toHaveLength(1)
+        expect('Hydration node mismatch').not.toHaveBeenWarned()
+        expect('Hydration children mismatch').not.toHaveBeenWarned()
+
+        app.unmount()
+        expect(container.innerHTML).toBe('')
+      },
+    )
+
+    test.each([
+      ['single-root', '<span>server</span>'],
+      ['multi-root', '<span>server</span><b>branch</b>'],
+    ])(
+      'empty v-once branch replaces a server %s branch before a sibling',
+      async (_shape, content) => {
+        const { container, html, app } = await testHydration(
+          `<template>
+            <template v-if="data" v-once>${content}</template>
+            <i>after</i>
+          </template>`,
+          undefined,
+          ref(false),
+          { serverData: ref(true) },
+        )
+
+        expect(html).toContain(content)
+        expect(container.querySelector('span')).toBeNull()
+        expect(container.querySelector('b')).toBeNull()
+        expect(container.querySelectorAll('i')).toHaveLength(1)
+        expect(container.querySelector('i')!.outerHTML).toBe('<i>after</i>')
+        expect(container.textContent).toBe('after')
+        expect('Hydration node mismatch').not.toHaveBeenWarned()
+        if (__DEV__) {
+          expect('Hydration children mismatch').toHaveBeenWarned()
+        }
+
+        expect(() => app.unmount()).not.toThrow()
+        expect(container.children).toHaveLength(0)
+        expect(container.textContent).toBe('')
+      },
+    )
+
+    test('empty v-once branch clears its claimed range inside v-for', async () => {
+      const data = ref({ items: [1], show: false })
+      const { container, app } = await testHydration(
+        `<template>
+          <div>
+            <template v-for="id in data.items">
+              <template v-if="data.show" v-once><i>first</i><b>second</b></template>
+            </template>
+            <span>after</span>
+          </div>
+        </template>`,
+        undefined,
+        data,
+        { serverData: ref({ items: [1], show: true }) },
+      )
+      expect(container.textContent).toBe('after')
+      if (__DEV__) {
+        expect('Hydration children mismatch').toHaveBeenWarned()
+      }
+      data.value.items = []
+      await nextTick()
+      expect(container.textContent).toBe('after')
+      app.unmount()
+      expect(container.innerHTML).toBe('')
+    })
   })
 })

@@ -18,6 +18,7 @@ import {
 } from './insertionState'
 import { renderEffect } from './renderEffect'
 import { DynamicFragment, finishBlockCreation } from './fragment'
+import { hydrateDynamicFragmentAnchor } from './dom/hydrateFragment'
 import { IF } from './fragmentFlags'
 import { createComment, createTextNode } from './dom/node'
 import { VaporBlockShape, VaporIfFlags } from '@vue/shared'
@@ -50,17 +51,25 @@ export function createIf(
           : undefined
       hydrationCursor = enterHydrationCursor(claim)
     }
-    frag = ok
-      ? b1()
-      : b2
-        ? b2()
-        : [
-            claimUntrackedAnchor(
-              __DEV__ ? createComment('if') : createTextNode(),
-            ),
-          ]
+    if (isHydrating && !ok && !b2) {
+      // Resolve the empty branch's SSR anchor without installing an effect.
+      const placeholder = new DynamicFragment(IF, __DEV__ ? 'if' : undefined)
+      placeholder.hydrationClaim = claim
+      hydrateDynamicFragmentAnchor(placeholder, true)
+      frag = [placeholder.anchor]
+    } else {
+      frag = ok
+        ? b1()
+        : b2
+          ? b2()
+          : [
+              claimUntrackedAnchor(
+                __DEV__ ? createComment('if') : createTextNode(),
+              ),
+            ]
+    }
     if (isHydrating && claim && claim.start) {
-      // v-once has no DynamicFragment to consume the closing marker.
+      // Non-empty v-once branches have no DynamicFragment to consume the close.
       advanceHydrationNode(locateEndAnchor(claim.start)!)
     }
   } else {
