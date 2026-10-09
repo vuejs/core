@@ -1108,7 +1108,9 @@ export function genVarName(exp: string): string {
   return `${exp
     .replace(/[^a-zA-Z0-9]/g, '_')
     .replace(/_+/g, '_')
-    .replace(/_+$/, '')}`
+    .replace(/_+$/, '')
+    // the name is spliced into other expressions, keep it a valid identifier
+    .replace(/^\d/, '_$&')}`
 }
 
 function getUniqueDeclarationName(

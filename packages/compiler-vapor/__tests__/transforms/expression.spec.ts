@@ -856,6 +856,18 @@ describe('compiler: expression', () => {
       expect(code).contains('_setProp(n1, "title", _a_b_i_c_d)')
       expect(code).contains('_setClass(n2, _a_b_i_c_d + 1)')
     })
+
+    test('repeated expression starting with a number', () => {
+      const { code } = compileWithExpression(`
+        <div :id="2 * r"></div>
+        <div :title="2 * r"></div>
+        <div :class="y + 2 * r"></div>
+      `)
+      expect(code).contains('const __2_r = 2 * _r')
+      expect(code).contains('_setProp(n0, "id", __2_r)')
+      expect(code).contains('_setProp(n1, "title", __2_r)')
+      expect(code).contains('_setClass(n2, _ctx.y + __2_r)')
+    })
   })
 
   // #9482
