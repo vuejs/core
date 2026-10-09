@@ -16,6 +16,7 @@ import {
   type VaporComponent,
   type VaporComponentInstance,
   createComponent,
+  getInteropHydrationBoundary,
 } from './component'
 import { type RawProps, trackRawValues } from './componentProps'
 import { enableAsyncComponent } from './asyncComponentState'
@@ -123,8 +124,8 @@ export function defineVaporAsyncComponent<T extends VaporComponent>(
           hydrateNode(
             el,
             () => withDeferredHydrationBoundary(hydrate),
-            isInteropEnabled && instance.interopVNode
-              ? (instance.interopVNode.anchor as Node)
+            isInteropEnabled
+              ? getInteropHydrationBoundary(instance, el.parentNode)
               : null,
           ),
         getResolvedComp,

@@ -1462,8 +1462,8 @@ export function mountComponent(
                 exitComponentHydration(hydration, true)
               }
             },
-            isInteropEnabled && instance.interopVNode
-              ? (instance.interopVNode.anchor as Node)
+            isInteropEnabled
+              ? getInteropHydrationBoundary(instance, parentNode)
               : null,
           )
         } else {
@@ -2187,4 +2187,21 @@ function deferKeepAliveRenderEffects(
     }
   }
   return deferred
+}
+
+// A deferred child can share the boundary held by a synchronous Vapor root.
+export function getInteropHydrationBoundary(
+  instance: VaporComponentInstance,
+  parent: Node | null,
+): Node | null {
+  let owner: GenericComponentInstance | null = instance
+  while (owner && owner.vapor) {
+    const vnode = (owner as VaporComponentInstance).interopVNode
+    if (vnode) {
+      const anchor = vnode.anchor as Node
+      return anchor.parentNode === parent ? anchor : null
+    }
+    owner = owner.parent
+  }
+  return null
 }
