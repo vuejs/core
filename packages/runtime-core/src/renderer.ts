@@ -1078,8 +1078,14 @@ function baseCreateRenderer(
     slotScopeIds: string[] | null,
     optimized: boolean,
   ) => {
-    const fragmentStartAnchor = (n2.el = n1 ? n1.el : hostCreateText(''))!
-    const fragmentEndAnchor = (n2.anchor = n1 ? n1.anchor : hostCreateText(''))!
+    // #15468 use comment nodes as fragment anchors because empty text nodes
+    // are removed by Node.normalize(), which detaches the anchors while the
+    // vnodes still reference them. Comment nodes are left untouched by
+    // normalize() and are already used for hydration anchors.
+    const fragmentStartAnchor = (n2.el = n1 ? n1.el : hostCreateComment(''))!
+    const fragmentEndAnchor = (n2.anchor = n1
+      ? n1.anchor
+      : hostCreateComment(''))!
 
     let { patchFlag, dynamicChildren, slotScopeIds: fragmentSlotScopeIds } = n2
 
