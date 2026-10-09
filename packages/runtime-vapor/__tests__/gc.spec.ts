@@ -4,21 +4,21 @@ import {
   createApp,
   currentInstance,
   nextTick,
+  ref,
   shallowRef,
 } from '@vue/runtime-dom'
 import { createVaporApp, vaporInteropPlugin } from '../src'
 import { compile } from './_utils'
 
-describe.skipIf(!global.gc)('component props gc', () => {
-  const gc = () => {
-    return new Promise<void>(resolve => {
-      setTimeout(() => {
-        global.gc!()
-        resolve()
-      })
+const gc = () =>
+  new Promise<void>(resolve => {
+    setTimeout(() => {
+      global.gc!()
+      resolve()
     })
-  }
+  })
 
+describe.skipIf(!global.gc)('component props gc', () => {
   test('releases the initial cached prop value after an update', async () => {
     const data = shallowRef({ y: { value: 0 } })
     // @ts-expect-error ES2021 API
@@ -127,6 +127,45 @@ describe.skipIf(!global.gc)('component props gc', () => {
       expect(root.querySelector('input, p')).toBeNull()
       await gc()
       expect(child!.deref()).toBeUndefined()
+    } finally {
+      app.unmount()
+    }
+  })
+})
+
+describe.skipIf(!global.gc)('vdom host of vapor slot content gc', () => {
+  test('releases content a pre-render hook changes and the render removes', async () => {
+    const data = ref<any>({ n: 0, m: 0 })
+    const Host = compile(
+      `<script setup>
+        import { onBeforeUpdate, ref } from 'vue'
+        const props = defineProps(['data', 'n'])
+        const show = ref(true)
+        onBeforeUpdate(() => {
+          props.data.m++
+          show.value = false
+        })
+      </script><template><p v-if="show" :title="n"><slot /></p></template>`,
+      ref(),
+      {},
+      { vapor: false },
+    )
+    const App = compile(
+      `<template><components.Host :data="data" :n="data.n"><i>{{ data.m }}</i></components.Host></template>`,
+      data,
+      { Host },
+    )
+    const root = document.createElement('div')
+    const app = createVaporApp(App).use(vaporInteropPlugin)
+    app.mount(root)
+    try {
+      // @ts-expect-error ES2021 API
+      const content = new WeakRef(root.querySelector('i')!)
+      data.value.n++
+      await nextTick()
+      expect(root.querySelector('i')).toBeNull()
+      await gc()
+      expect(content.deref()).toBeUndefined()
     } finally {
       app.unmount()
     }

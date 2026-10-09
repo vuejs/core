@@ -14,7 +14,6 @@ import {
   looseEqual,
   looseIndexOf,
   looseToNumber,
-  remove,
 } from '@vue/shared'
 
 type AssignerFn = (value: any) => void
@@ -40,13 +39,11 @@ function onCompositionEnd(e: Event) {
 
 const assignKey: unique symbol = Symbol('_assign')
 const initialValueKey: unique symbol = Symbol('_initialValue')
-const resyncKey: unique symbol = Symbol('_resync')
 
 type ModelDirective<T, Modifiers extends string = string> = ObjectDirective<
   T & {
     [assignKey]: AssignerFn
     [initialValueKey]?: string
-    [resyncKey]?: () => void
     _pendingValue?: [multiple: boolean, value: any]
   },
   any,
@@ -299,25 +296,8 @@ export const vModelSelect: ModelDirective<HTMLSelectElement, 'number'> = {
   },
   // set value in mounted & updated because <select> relies on its children
   // <option>s.
-  mounted(el, { value }, vnode) {
+  mounted(el, { value }) {
     vModelSetSelected(el, value)
-    const ctx = vnode.ctx
-    if (ctx && ctx.appContext.vapor) {
-      // Vapor content rendered into the owner (e.g. the <option>s through a
-      // slot) updates in place and only replays the owner's updated hooks, so
-      // the selection is re-applied from there too. A replay right after the
-      // owner rendered is already covered by `updated`.
-      let subTree = ctx.subTree
-      ;(ctx.u || (ctx.u = [])).unshift(
-        (el[resyncKey] = () => {
-          if (ctx.subTree === subTree) {
-            vModelSetSelected(el, (el as any)._modelValue)
-          } else {
-            subTree = ctx.subTree
-          }
-        }),
-      )
-    }
   },
   beforeUpdate(el, { value }, vnode) {
     ;(el as any)._modelValue = value
@@ -325,12 +305,6 @@ export const vModelSelect: ModelDirective<HTMLSelectElement, 'number'> = {
   },
   updated(el, { value }) {
     vModelSetSelected(el, value)
-  },
-  beforeUnmount(el, _binding, vnode) {
-    const resync = el[resyncKey]
-    if (resync) {
-      remove(vnode.ctx!.u!, resync)
-    }
   },
 }
 
