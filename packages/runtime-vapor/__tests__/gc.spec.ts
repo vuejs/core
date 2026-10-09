@@ -1,6 +1,11 @@
 // @vitest-environment jsdom
 
-import { createApp, nextTick, shallowRef } from '@vue/runtime-dom'
+import {
+  createApp,
+  currentInstance,
+  nextTick,
+  shallowRef,
+} from '@vue/runtime-dom'
 import { createVaporApp, vaporInteropPlugin } from '../src'
 import { compile } from './_utils'
 
@@ -78,6 +83,50 @@ describe.skipIf(!global.gc)('component props gc', () => {
       expect(root.textContent).toBe('1')
       await gc()
       expect(initialValue.deref()).toBeUndefined()
+    } finally {
+      app.unmount()
+    }
+  })
+
+  test('releases children in a removed branch containing v-model', async () => {
+    let child: { deref(): unknown }
+    const data = shallowRef({
+      show: true,
+      value: 'hello',
+      capture: () => {
+        // @ts-expect-error ES2021 API
+        child = new WeakRef(currentInstance!)
+      },
+    })
+    const components = {
+      Child: compile(
+        `<script setup>
+          _data.value.capture()
+        </script><template><p>child</p></template>`,
+        data,
+      ),
+    }
+    const App = compile(
+      `<template><div>
+        <template v-if="data.show">
+          <input v-model="data.value" />
+          <components.Child />
+        </template>
+      </div></template>`,
+      data,
+      components,
+    )
+    const root = document.createElement('div')
+    const app = createVaporApp(App)
+    app.mount(root)
+    try {
+      await nextTick()
+      expect(root.textContent).toBe('child')
+      data.value = { ...data.value, show: false }
+      await nextTick()
+      expect(root.querySelector('input, p')).toBeNull()
+      await gc()
+      expect(child!.deref()).toBeUndefined()
     } finally {
       app.unmount()
     }

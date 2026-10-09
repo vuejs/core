@@ -39,10 +39,12 @@ function ensureMounted(cb: () => void) {
     cb()
   } else {
     // Deferred work keeps the branch scope and once ambient it was created under.
-    const scope = getCurrentScope()!
+    let scope = getCurrentScope()
     const run = inOnce ? () => withOnce(cb) : cb
     onMounted(() => {
-      if (scope.active) scope.run(run)
+      const currentScope = scope!
+      scope = undefined
+      if (currentScope.active) currentScope.run(run)
     })
   }
 }
