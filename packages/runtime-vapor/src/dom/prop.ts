@@ -95,6 +95,7 @@ type TargetElement = Element & {
   value?: string
   _value?: any
   $valueBound?: boolean
+  $dprops?: Record<string, any>
   /**
    * @internal
    */
@@ -489,7 +490,7 @@ export function setValue(
       const instance = currentInstance!
       let active = true
       const update = () => {
-        const value = el._value == null ? '' : el._value
+        const value = el._value == null ? '' : String(el._value)
         // v-model owns selection when both bindings are present.
         if (
           active &&
@@ -649,6 +650,36 @@ export function setDynamicProps(
     isSVG,
     staticKeys,
   )
+}
+
+export function syncSelectValue(
+  el: TargetElement,
+  staticKeys?: string[],
+): void {
+  const props = el.$dprops!
+  let key = '.value' in props ? '.value' : undefined
+  if (
+    'value' in props &&
+    !(
+      isHydrating &&
+      !isRecreatedNode(el) &&
+      skipHydratedWrite(
+        el,
+        'value',
+        props.value,
+        !!(staticKeys && staticKeys.includes('value')),
+      )
+    )
+  ) {
+    key = 'value'
+  }
+  if (!key || shouldSkipFallthroughKey(el, 'value') || '_modelValue' in el) {
+    return
+  }
+  const value = props[key] == null ? '' : String(props[key])
+  if (el.value !== value) {
+    el.value = value
+  }
 }
 
 export function setDynamicEvents(

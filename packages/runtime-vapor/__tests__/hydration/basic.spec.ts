@@ -1298,4 +1298,21 @@ describe('Vapor Mode hydration', () => {
       app.unmount()
     },
   )
+
+  test.each([
+    ['v-bind="data.attrs"', { value: 'b', '.value': 'c' }],
+    ['v-bind="data.attrs" :value.prop="data.forced"', { value: 'b' }],
+  ])(
+    'hydrates the forced select value after option values (%s)',
+    async (binding, attrs) => {
+      const { container } = await mountWithHydration(
+        '<select value="b"><!--[--><option value="a">X</option><option value="d">X</option><option value="e">X</option><!--]--></select>',
+        `<select ${binding}><option v-for="o in data.options" :value="o">X</option></select>`,
+        ref({ attrs, forced: 'c', options: ['a', 'b', 'c'] }),
+      )
+
+      expect('Hydration attribute mismatch').toHaveBeenWarned()
+      expect(container.querySelector('select')!.value).toBe('c')
+    },
+  )
 })

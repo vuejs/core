@@ -1306,5 +1306,111 @@ describe('patchProp', () => {
       expect(root.querySelector('select')!.value).toBe('b')
       app.unmount()
     })
+
+    test.each([
+      'v-bind="data.attrs"',
+      ':[data.key]="true"',
+      'multiple',
+      ':multiple="true"',
+    ])('initializes multiple before selected options (%s)', async binding => {
+      const seen: Record<string, boolean[]> = { vdom: [], vapor: [] }
+      await renderParity(
+        {
+          App: `<template><select ${binding}><option value="a" :selected="data.a">A</option><option value="b" :selected="data.b">B</option></select></template>`,
+        },
+        () =>
+          ref({ attrs: { multiple: true }, key: 'multiple', a: true, b: true }),
+        (_data, root, mode) => {
+          const select = root.querySelector('select')!
+          expect(select.multiple).toBe(true)
+          seen[mode] = Array.from(select.options, option => option.selected)
+        },
+      )
+      expect(seen.vdom).toEqual([true, true])
+      expect(seen.vapor).toEqual(seen.vdom)
+    })
+
+    test.each([
+      { type: 'number', value: 1 },
+      { type: 'string', value: '1' },
+      { type: 'object', value: { toString: () => '1' } },
+    ])(
+      'preserves a multiple selection on unrelated updates with a $type value',
+      async ({ value }) => {
+        const seen: Record<string, boolean[]> = { vdom: [], vapor: [] }
+        await renderParity(
+          {
+            App: `<template><select multiple :value="data.value"><option value="1">One</option><option value="2">Two</option></select><p v-if="data.show">{{ data.count }}</p></template>`,
+          },
+          () => ref({ value, show: true, count: 0 }),
+          async (data, root, mode) => {
+            const select = root.querySelector('select')!
+            expect(select.value).toBe('1')
+            select.options[1].selected = true
+            data.value.count++
+            await nextTick()
+            seen[mode] = Array.from(select.options, option => option.selected)
+          },
+        )
+        expect(seen.vdom).toEqual([true, true])
+        expect(seen.vapor).toEqual(seen.vdom)
+      },
+    )
+
+    test.each([
+      'v-bind="data.attrs"',
+      'v-bind="data.forced"',
+      ':[data.key]="data.value"',
+      ':value="data.value"',
+    ])('initializes value before function directives (%s)', async binding => {
+      const seen: Record<string, string[]> = { vdom: [], vapor: [] }
+      let values: string[] = []
+      await renderParity(
+        {
+          App: `<script setup>const data = _data; const vCheck = _components.check</script><template><select ${binding} v-check><option :value="data.options[0]">A</option><option :value="data.options[1]">B</option></select></template>`,
+        },
+        () => {
+          values = []
+          return ref({
+            attrs: { value: 'b' },
+            forced: { '.value': 'b' },
+            key: 'value',
+            value: 'b',
+            options: ['a', 'b'],
+          })
+        },
+        (_data, _root, mode) => {
+          seen[mode] = values
+        },
+        {
+          check: (el: HTMLSelectElement) => {
+            values.push(el.value)
+          },
+        },
+      )
+      expect(seen.vdom).toEqual(['b'])
+      expect(seen.vapor).toEqual(seen.vdom)
+    })
+
+    test.each(['value', '.value'])(
+      'reuses dynamic props without evaluating their getter again (%s)',
+      async key => {
+        const get = vi.fn(() => ({ [key]: 'b', multiple: true }))
+        const data = ref({ options: [] as string[], get })
+        const App = compile(
+          `<template><select v-bind="data.get()"><option v-for="o in data.options" :value="o">{{ o }}</option></select></template>`,
+          data,
+        )
+        const app = createVaporApp(App)
+        const root = document.createElement('div')
+        app.mount(root)
+        expect(get).toHaveBeenCalledTimes(1)
+        data.value.options = ['a', 'b']
+        await nextTick()
+        expect(root.querySelector('select')!.value).toBe('b')
+        expect(get).toHaveBeenCalledTimes(1)
+        app.unmount()
+      },
+    )
   })
 })

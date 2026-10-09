@@ -5,6 +5,7 @@ import {
   transformChildren,
   transformElement,
   transformVBind,
+  transformVModel,
   transformVOn,
   transformVOnce,
 } from '../../src'
@@ -1514,8 +1515,8 @@ describe('compiler v-bind', () => {
   test.each([
     [`:value="value"`, '_setValue(n1,'],
     [`:value.prop="value"`, '_setValue(n1,'],
-    [`v-bind="attrs"`, '_setDynamicProps(n1,'],
-    [`:[key]="value"`, '_setDynamicProps(n1,'],
+    [`v-bind="attrs"`, '_syncSelectValue(n1)'],
+    [`:[key]="value"`, '_syncSelectValue(n1)'],
   ])('sets a select value after its option effects: %s', (binding, setter) => {
     const { code } = compileWithVBind(
       `<select ${binding}><option :value="option" /></select>`,
@@ -1600,7 +1601,7 @@ describe('compiler v-bind', () => {
 
   test.each([
     [`v-bind="{ value: 'b' }"`, '_setValue(n1,'],
-    [`v-bind="{ ['value']: 'b' }"`, '_setDynamicProps(n1,'],
+    [`v-bind="{ ['value']: 'b' }"`, '_syncSelectValue(n1)'],
     [`v-bind="{ title: 't' }" :value="'b'"`, '_setValue(n1,'],
     [`:['value']="'b'"`, '_setValue(n1,'],
   ])('keeps constant select spreads updating: %s', (binding, setter) => {
@@ -1636,5 +1637,51 @@ describe('compiler v-bind', () => {
     )
 
     expect(code).toContain('_withOnce(() => _setValue(n1, "b"))')
+  })
+
+  test.each([`v-bind="attrs"`, `:[key]="multiple"`])(
+    'sets dynamic select props before option effects: %s',
+    binding => {
+      const { code, ir } = compileWithVBind(
+        `<select ${binding}><option :selected="selected" /></select>`,
+      )
+
+      const props = code.indexOf('_setDynamicProps(n1,')
+      const option = code.indexOf('_setProp(n0, "selected", _ctx.selected)')
+      const value = code.indexOf('_syncSelectValue(n1)')
+      expect(props).toBeGreaterThan(-1)
+      expect(option).toBeGreaterThan(props)
+      expect(value).toBeGreaterThan(option)
+      expect(ir.block.effect[2]).toMatchObject({
+        expressions: [],
+        once: true,
+        operations: [{ type: IRNodeTypes.SYNC_SELECT_VALUE }],
+      })
+      expect(code.match(/_renderEffect\(/g)).toHaveLength(1)
+      expect(code).toContain('})\n  _syncSelectValue(n1)')
+    },
+  )
+
+  test('preserves static value hydration provenance when syncing dynamic select props', () => {
+    const { code } = compileWithVBind(
+      `<select v-bind="attrs" :value="value"><option :value="option" /></select>`,
+    )
+
+    expect(code).toContain('const k0 = ["value"]')
+    expect(code).toContain(
+      '_setDynamicProps(n1, [_ctx.attrs, { value: _ctx.value }], k0)',
+    )
+    expect(code).toContain('_syncSelectValue(n1, k0)')
+  })
+
+  test('syncs dynamic select props before applying v-model', () => {
+    const { code } = compileWithVBind(
+      `<select v-bind="attrs" v-model="value"><option :value="option" /></select>`,
+      { directiveTransforms: { bind: transformVBind, model: transformVModel } },
+    )
+
+    const value = code.indexOf('_syncSelectValue(n1)')
+    expect(value).toBeGreaterThan(-1)
+    expect(code.indexOf('_applySelectModel(n1,')).toBeGreaterThan(value)
   })
 })

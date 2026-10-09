@@ -11,6 +11,7 @@ import {
   type IRProp,
   type SetDynamicPropsIRNode,
   type SetPropIRNode,
+  type SyncSelectValueIRNode,
   type VaporHelper,
 } from '../ir'
 import { genExpression } from './expression'
@@ -415,11 +416,25 @@ export function genDynamicProps(
   return [NEWLINE, ...(oper.once ? genOnce(call, context) : call)]
 }
 
+export function genSyncSelectValue(
+  oper: SyncSelectValueIRNode,
+  context: CodegenContext,
+): CodeFragment[] {
+  return [
+    NEWLINE,
+    ...genCall(
+      context.helper('syncSelectValue'),
+      `n${oper.element}`,
+      genDynamicPropNames(oper, context),
+    ),
+  ]
+}
+
 // vdom writes every static key with a dynamic value during hydration
 // (`dynamicProps`); once such a key is merged with a spread the runtime can no
 // longer tell it apart, so the list is hoisted next to the templates
 function genDynamicPropNames(
-  oper: SetDynamicPropsIRNode,
+  oper: SetDynamicPropsIRNode | SyncSelectValueIRNode,
   context: CodegenContext,
 ): string | false {
   const { bindingMetadata } = context.options

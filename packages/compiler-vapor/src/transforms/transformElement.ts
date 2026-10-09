@@ -638,9 +638,20 @@ function transformNativeElement(
         isSVG,
         once: isSelect && context.inVOnce,
       },
-      isSelect ? undefined : getEffectIndex,
-      isSelect,
+      getEffectIndex,
     )
+    if (isSelect) {
+      context.registerEffect(
+        [],
+        {
+          type: IRNodeTypes.SYNC_SELECT_VALUE,
+          element: context.reference(),
+          props: dynamicArgs,
+        },
+        undefined,
+        true,
+      )
+    }
   } else {
     const appendTemplateProp = (key: string, value: string = '') => {
       template += ` ${key}`
