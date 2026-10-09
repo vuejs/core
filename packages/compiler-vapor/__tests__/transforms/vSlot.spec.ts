@@ -1309,4 +1309,13 @@ describe('compiler: transform slot', () => {
     )
     expect(dynamic).toContain('_createPlainElement("template")\n')
   })
+
+  test('slot prop default that reads a sibling prop', () => {
+    const { code } = compileWithSlots(
+      `<Comp v-slot="{ label, title = label }">{{ title }}</Comp>`,
+    )
+    expect(code).toContain(
+      '_getDefaultValue(_slotProps0.title, () => (_slotProps0.label))',
+    )
+  })
 })
