@@ -1101,7 +1101,7 @@ describe('KeepAlive', () => {
 
     app.mount(root)
 
-    expect(serializeInner(root)).toBe(`A`)
+    expect(serializeInner(root)).toBe(`<!---->A<!---->`)
     expect(mountedA).toHaveBeenCalledTimes(1)
     expect(unmountedA).toHaveBeenCalledTimes(0)
     expect(activatedA).toHaveBeenCalledTimes(0)
@@ -1113,7 +1113,7 @@ describe('KeepAlive', () => {
     await nextTick()
     current.value = B // toggle to B
     await nextTick()
-    expect(serializeInner(root)).toBe(`B`)
+    expect(serializeInner(root)).toBe(`<!---->B<!---->`)
     expect(mountedA).toHaveBeenCalledTimes(1)
     expect(unmountedA).toHaveBeenCalledTimes(0)
     expect(activatedA).toHaveBeenCalledTimes(0)

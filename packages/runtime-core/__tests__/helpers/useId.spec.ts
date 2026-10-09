@@ -22,7 +22,9 @@ async function runOnClient(factory: TestCaseFactory) {
   app.mount(root)
   await Promise.all(deps)
   await promiseWithDelay(null, 0)
-  return root.innerHTML
+  // remove fragment anchors (comment nodes), mirroring the removal of
+  // `<!--[-->` / `<!--]-->` wrappers from the server output below
+  return root.innerHTML.replace(/<!---->/g, '')
 }
 
 async function runOnServer(factory: TestCaseFactory) {

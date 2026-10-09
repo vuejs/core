@@ -806,7 +806,7 @@ describe('api: defineAsyncComponent', () => {
         toggle.value ? [h(Foo, { ref: fooRef }), updater.value] : null,
     }).mount(root)
 
-    expect(serializeInner(root)).toBe('<!---->0')
+    expect(serializeInner(root)).toBe('<!----><!---->0<!---->')
     expect(fooRef.value).toBe(null)
 
     resolve!({
@@ -819,12 +819,12 @@ describe('api: defineAsyncComponent', () => {
     })
 
     await timeout()
-    expect(serializeInner(root)).toBe('resolved0')
+    expect(serializeInner(root)).toBe('<!---->resolved0<!---->')
     expect(fooRef.value.id).toBe('foo')
 
     updater.value++
     await nextTick()
-    expect(serializeInner(root)).toBe('resolved1')
+    expect(serializeInner(root)).toBe('<!---->resolved1<!---->')
     expect(fooRef.value.id).toBe('foo')
 
     toggle.value = false
@@ -859,7 +859,7 @@ describe('api: defineAsyncComponent', () => {
       render: () => (toggle.value ? [h(Foo, vnodeHooks), updater.value] : null),
     }).mount(root)
 
-    expect(serializeInner(root)).toBe('<!---->0')
+    expect(serializeInner(root)).toBe('<!----><!---->0<!---->')
 
     resolve!({
       data() {
@@ -871,13 +871,13 @@ describe('api: defineAsyncComponent', () => {
     })
 
     await timeout()
-    expect(serializeInner(root)).toBe('resolved0')
+    expect(serializeInner(root)).toBe('<!---->resolved0<!---->')
     expect(vnodeHooks.onVnodeBeforeMount).toHaveBeenCalledTimes(1)
     expect(vnodeHooks.onVnodeMounted).toHaveBeenCalledTimes(1)
 
     updater.value++
     await nextTick()
-    expect(serializeInner(root)).toBe('resolved1')
+    expect(serializeInner(root)).toBe('<!---->resolved1<!---->')
     expect(vnodeHooks.onVnodeBeforeUpdate).toHaveBeenCalledTimes(1)
     expect(vnodeHooks.onVnodeUpdated).toHaveBeenCalledTimes(1)
 

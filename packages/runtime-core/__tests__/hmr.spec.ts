@@ -68,13 +68,13 @@ describe('hot module replacement', () => {
     createRecord(parentId, Parent)
 
     render(h(Parent), root)
-    expect(serializeInner(root)).toBe(`<div>0<div>0</div></div>`)
+    expect(serializeInner(root)).toBe(`<div>0<div><!---->0<!----></div></div>`)
 
     // Perform some state change. This change should be preserved after the
     // re-render!
     triggerEvent(root.children[0] as TestElement, 'click')
     await nextTick()
-    expect(serializeInner(root)).toBe(`<div>1<div>1</div></div>`)
+    expect(serializeInner(root)).toBe(`<div>1<div><!---->1<!----></div></div>`)
 
     // // Update text while preserving state
     rerender(
@@ -83,7 +83,7 @@ describe('hot module replacement', () => {
         `<div @click="count++">{{ count }}!<Child>{{ count }}</Child></div>`,
       ),
     )
-    expect(serializeInner(root)).toBe(`<div>1!<div>1</div></div>`)
+    expect(serializeInner(root)).toBe(`<div>1!<div><!---->1<!----></div></div>`)
 
     // Should force child update on slot content change
     rerender(
@@ -92,7 +92,9 @@ describe('hot module replacement', () => {
         `<div @click="count++">{{ count }}!<Child>{{ count }}!</Child></div>`,
       ),
     )
-    expect(serializeInner(root)).toBe(`<div>1!<div>1!</div></div>`)
+    expect(serializeInner(root)).toBe(
+      `<div>1!<div><!---->1!<!----></div></div>`,
+    )
 
     // Should force update element children despite block optimization
     rerender(
@@ -103,7 +105,9 @@ describe('hot module replacement', () => {
       </div>`,
       ),
     )
-    expect(serializeInner(root)).toBe(`<div>1<span>1</span><div>1!</div></div>`)
+    expect(serializeInner(root)).toBe(
+      `<div>1<span>1</span><div><!---->1!<!----></div></div>`,
+    )
 
     // Should force update child slot elements
     rerender(
@@ -114,7 +118,9 @@ describe('hot module replacement', () => {
       </div>`,
       ),
     )
-    expect(serializeInner(root)).toBe(`<div><div><span>1</span></div></div>`)
+    expect(serializeInner(root)).toBe(
+      `<div><div><!----><span>1</span><!----></div></div>`,
+    )
   })
 
   test('reload', async () => {
@@ -185,7 +191,9 @@ describe('hot module replacement', () => {
     }
 
     render(h(Parent), root)
-    expect(serializeInner(root)).toBe(`<button></button><div>0</div>`)
+    expect(serializeInner(root)).toBe(
+      `<!----><button></button><div>0</div><!---->`,
+    )
 
     reload(childId, {
       __hmrId: childId,
@@ -199,7 +207,9 @@ describe('hot module replacement', () => {
       render: compileToFunction(`<div>{{ count }}</div>`),
     })
     await nextTick()
-    expect(serializeInner(root)).toBe(`<button></button><div>1</div>`)
+    expect(serializeInner(root)).toBe(
+      `<!----><button></button><div>1</div><!---->`,
+    )
     expect(unmountSpy).toHaveBeenCalledTimes(1)
     expect(mountSpy).toHaveBeenCalledTimes(1)
     expect(activeSpy).toHaveBeenCalledTimes(1)
@@ -255,7 +265,9 @@ describe('hot module replacement', () => {
     }
 
     render(h(Parent), root)
-    expect(serializeInner(root)).toBe(`<button></button><div>0</div>`)
+    expect(serializeInner(root)).toBe(
+      `<!----><button></button><div>0</div><!---->`,
+    )
 
     reload(childId, {
       __hmrId: childId,
@@ -269,7 +281,9 @@ describe('hot module replacement', () => {
       render: compileToFunction(`<div>{{ count }}</div>`),
     })
     await nextTick()
-    expect(serializeInner(root)).toBe(`<button></button><div>1</div>`)
+    expect(serializeInner(root)).toBe(
+      `<!----><button></button><div>1</div><!---->`,
+    )
     expect(unmountSpy).toHaveBeenCalledTimes(1)
     expect(mountSpy).toHaveBeenCalledTimes(1)
     expect(activeSpy).toHaveBeenCalledTimes(1)
@@ -278,7 +292,9 @@ describe('hot module replacement', () => {
     // should not unmount when toggling
     triggerEvent(root.children[1] as TestElement, 'click')
     await nextTick()
-    expect(serializeInner(root)).toBe(`<button></button><!--v-if-->`)
+    expect(serializeInner(root)).toBe(
+      `<!----><button></button><!--v-if--><!---->`,
+    )
     expect(unmountSpy).toHaveBeenCalledTimes(1)
     expect(mountSpy).toHaveBeenCalledTimes(1)
     expect(activeSpy).toHaveBeenCalledTimes(1)
@@ -287,7 +303,9 @@ describe('hot module replacement', () => {
     // should not mount when toggling
     triggerEvent(root.children[1] as TestElement, 'click')
     await nextTick()
-    expect(serializeInner(root)).toBe(`<button></button><div>1</div>`)
+    expect(serializeInner(root)).toBe(
+      `<!----><button></button><div>1</div><!---->`,
+    )
     expect(unmountSpy).toHaveBeenCalledTimes(1)
     expect(mountSpy).toHaveBeenCalledTimes(1)
     expect(activeSpy).toHaveBeenCalledTimes(2)
@@ -333,7 +351,9 @@ describe('hot module replacement', () => {
     }
 
     render(h(Parent), root)
-    expect(serializeInner(root)).toBe(`<button></button><div>0</div>`)
+    expect(serializeInner(root)).toBe(
+      `<!----><button></button><div>0</div><!---->`,
+    )
 
     reload(childId, {
       __hmrId: childId,
@@ -349,7 +369,9 @@ describe('hot module replacement', () => {
     })
     await nextTick()
     await new Promise(r => setTimeout(r, 0))
-    expect(serializeInner(root)).toBe(`<button></button><div>1</div>`)
+    expect(serializeInner(root)).toBe(
+      `<!----><button></button><div>1</div><!---->`,
+    )
     expect(unmountSpy).toHaveBeenCalledTimes(1)
     expect(mountSpy).toHaveBeenCalledTimes(1)
     expect(activeSpy).toHaveBeenCalledTimes(1)
@@ -359,7 +381,9 @@ describe('hot module replacement', () => {
     triggerEvent(root.children[1] as TestElement, 'click')
     await nextTick()
     await new Promise(r => setTimeout(r, 0))
-    expect(serializeInner(root)).toBe(`<button></button><!--v-if-->`)
+    expect(serializeInner(root)).toBe(
+      `<!----><button></button><!--v-if--><!---->`,
+    )
     expect(unmountSpy).toHaveBeenCalledTimes(1)
     expect(mountSpy).toHaveBeenCalledTimes(1)
     expect(activeSpy).toHaveBeenCalledTimes(1)
@@ -368,7 +392,9 @@ describe('hot module replacement', () => {
     // should not mount when toggling
     triggerEvent(root.children[1] as TestElement, 'click')
     await nextTick()
-    expect(serializeInner(root)).toBe(`<button></button><div>1</div>`)
+    expect(serializeInner(root)).toBe(
+      `<!----><button></button><div>1</div><!---->`,
+    )
     expect(unmountSpy).toHaveBeenCalledTimes(1)
     expect(mountSpy).toHaveBeenCalledTimes(1)
     expect(activeSpy).toHaveBeenCalledTimes(2)
@@ -454,7 +480,7 @@ describe('hot module replacement', () => {
 
     render(h(Parent), root)
     await nextTick()
-    expect(serializeInner(root)).toBe(`<div>0</div><div>0</div>0`)
+    expect(serializeInner(root)).toBe(`<!----><div>0</div><div>0</div>0<!---->`)
 
     reload(childId, {
       __hmrId: childId,
@@ -465,7 +491,7 @@ describe('hot module replacement', () => {
       render: compileToFunction(`<div @click="count++">{{ count }}</div>`),
     })
     await nextTick()
-    expect(serializeInner(root)).toBe(`<div>1</div><div>1</div>1`)
+    expect(serializeInner(root)).toBe(`<!----><div>1</div><div>1</div>1<!---->`)
     expect(unmountSpy).toHaveBeenCalledTimes(2)
     expect(mountSpy).toHaveBeenCalledTimes(2)
   })
@@ -652,7 +678,9 @@ describe('hot module replacement', () => {
     expect(serializeInner(root)).toBe(
       `<!--teleport start--><!--teleport end-->`,
     )
-    expect(serializeInner(target)).toBe(`<div style={}><div>1</div></div>`)
+    expect(serializeInner(target)).toBe(
+      `<div style={}><!----><div>1</div><!----></div>`,
+    )
 
     rerender(
       parentId,
@@ -669,7 +697,7 @@ describe('hot module replacement', () => {
       `<!--teleport start--><!--teleport end-->`,
     )
     expect(serializeInner(target)).toBe(
-      `<div style={}><div>1</div><div>2</div></div>`,
+      `<div style={}><!----><div>1</div><div>2</div><!----></div>`,
     )
   })
 
@@ -771,10 +799,10 @@ describe('hot module replacement', () => {
     createRecord(parentId, Parent)
 
     render(h(Parent), root)
-    expect(serializeInner(root)).toBe(`1`)
+    expect(serializeInner(root)).toBe(`<!---->1<!---->`)
 
     rerender(parentId, compileToFunction(`<Child>2</Child>`))
-    expect(serializeInner(root)).toBe(`2`)
+    expect(serializeInner(root)).toBe(`<!---->2<!---->`)
   })
 
   // #6978, #7138, #7114
@@ -795,7 +823,7 @@ describe('hot module replacement', () => {
 
     render(h(App), root)
     expect(serializeInner(root)).toBe(
-      `<div><div>1</div></div><div><div>1</div></div><p>2</p><p>3</p>`,
+      `<!----><!----><div><div>1</div></div><div><div>1</div></div><!----><p>2</p><p>3</p><!---->`,
     )
 
     // move the <p>3</p> into the <div>1</div>
@@ -809,7 +837,7 @@ describe('hot module replacement', () => {
       ),
     )
     expect(serializeInner(root)).toBe(
-      `<div><div>1<p>3</p></div></div><div><div>1<p>3</p></div></div><p>2</p>`,
+      `<!----><!----><div><div>1<p>3</p></div></div><div><div>1<p>3</p></div></div><!----><p>2</p><!---->`,
     )
   })
 
@@ -836,7 +864,7 @@ describe('hot module replacement', () => {
 
     await timeout()
 
-    expect(serializeInner(root)).toBe(`<div>0</div><div>0</div>`)
+    expect(serializeInner(root)).toBe(`<!----><div>0</div><div>0</div><!---->`)
 
     // change count to 1
     reload(childId, {
@@ -849,7 +877,7 @@ describe('hot module replacement', () => {
 
     await timeout()
 
-    expect(serializeInner(root)).toBe(`<div>1</div><div>1</div>`)
+    expect(serializeInner(root)).toBe(`<!----><div>1</div><div>1</div><!---->`)
   })
 
   test('reload async child wrapped in Suspense + KeepAlive', async () => {
@@ -984,7 +1012,7 @@ describe('hot module replacement', () => {
 
     const root = nodeOps.createElement('div')
     render(h(App), root)
-    expect(serializeInner(root)).toBe('foo')
+    expect(serializeInner(root)).toBe('<!----><!---->foo<!----><!---->')
 
     rerender(id, () => 'bar')
     expect(serializeInner(root)).toBe('bar')
@@ -1060,12 +1088,16 @@ describe('hot module replacement', () => {
     }
     createRecord(appId, App)
     render(h(App), root)
-    expect(serializeInner(root)).toBe(`0 <button>++</button> static text`)
+    expect(serializeInner(root)).toBe(
+      `<!---->0 <button>++</button> static text<!---->`,
+    )
 
     // trigger count update
     triggerEvent((root as any).children[2], 'click')
     await nextTick()
-    expect(serializeInner(root)).toBe(`1 <button>++</button> static text`)
+    expect(serializeInner(root)).toBe(
+      `<!---->1 <button>++</button> static text<!---->`,
+    )
 
     // trigger HMR update
     rerender(
@@ -1077,7 +1109,7 @@ describe('hot module replacement', () => {
       ),
     )
     expect(serializeInner(root)).toBe(
-      `1 <button>++</button> static text updated`,
+      `<!---->1 <button>++</button> static text updated<!---->`,
     )
 
     // trigger HMR update again
@@ -1090,7 +1122,7 @@ describe('hot module replacement', () => {
       ),
     )
     expect(serializeInner(root)).toBe(
-      `1 <button>++</button> static text updated2`,
+      `<!---->1 <button>++</button> static text updated2<!---->`,
     )
   })
 })
