@@ -742,7 +742,9 @@ function transformNativeElement(
             tag,
             isSVG,
           },
-          getEffectIndex,
+          // like vdom, set a select's value after its children, since it
+          // needs the options to be rendered (#1318)
+          tag === 'select' && prop === valueProp ? undefined : getEffectIndex,
           (needsOrderedProps || (tag === 'input' && prop === valueProp)) &&
             hasEffect,
         )

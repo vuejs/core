@@ -1040,4 +1040,31 @@ describe('patchProp', () => {
       ).toEqual([true, false, true, true])
     })
   })
+
+  describe('select value with rendered options', () => {
+    // the value can only be selected once the options are rendered
+    test.each([
+      `<select :value="data.value"><option v-for="o in data.options" :value="o">{{ o }}</option></select>`,
+      `<select :value="data.value"><option :value="data.options[1]">B</option><option :value="data.options[2]">C</option></select>`,
+      `<components.Select :value="data.value"><option v-for="o in data.options" :value="o">{{ o }}</option></components.Select>`,
+    ])('%s', async App => {
+      const seen: Record<string, string[]> = { vdom: [], vapor: [] }
+      await renderParity(
+        {
+          App: `<template>${App}</template>`,
+          Select: `<script setup>defineProps(['value'])</script><template><select :value="value"><slot /></select></template>`,
+        },
+        () => ref({ value: 'b', options: ['a', 'b', 'c'] }),
+        async (data, root, mode) => {
+          const select = root.querySelector('select')!
+          seen[mode].push(select.value)
+          data.value.value = 'c'
+          await nextTick()
+          seen[mode].push(select.value)
+        },
+      )
+      expect(seen.vdom).toEqual(['b', 'c'])
+      expect(seen.vapor).toEqual(seen.vdom)
+    })
+  })
 })
