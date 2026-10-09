@@ -159,13 +159,14 @@ export function hydrateNode<T>(
   fn: () => T,
   boundary?: Node | null,
 ): T {
+  const boundaryFlags = boundary ? (boundary as Anchor).$vha : undefined
   const setup = () => {
     // Deferred interop hydration must see its own boundary while recovering.
     if (boundary) claimAnchor(boundary)
     setCurrentHydrationNode(node)
   }
   const cleanup = () => {
-    if (boundary) claimUntrackedAnchor(boundary)
+    if (boundary) (boundary as Anchor).$vha = boundaryFlags
   }
   return performHydration(fn, setup, cleanup)
 }

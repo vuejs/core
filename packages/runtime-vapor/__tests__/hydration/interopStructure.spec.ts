@@ -1842,9 +1842,18 @@ describe('VDOM interop', () => {
     )
   })
 
-  test.each(['async setup', 'lazy hydration'])(
-    'keeps the parent fragment boundary after deferred interop %s',
-    async mode => {
+  test.each([
+    ['async setup', 'direct'],
+    ['async setup', 'sync wrapper'],
+    ['async setup', 'conditional wrapper'],
+    ['async setup', 'nested wrappers'],
+    ['lazy hydration', 'direct'],
+    ['lazy hydration', 'sync wrapper'],
+    ['lazy hydration', 'conditional wrapper'],
+    ['lazy hydration', 'nested wrappers'],
+  ])(
+    'keeps the parent fragment boundary after deferred interop %s (%s)',
+    async (mode, wrapper) => {
       let resolveChild!: () => void
       let hydrateChild!: () => void
       const wait = new Promise<void>(resolve => (resolveChild = resolve))
@@ -1852,9 +1861,16 @@ describe('VDOM interop', () => {
         items: [1],
         keep: true,
         show: true,
+        wrap: true,
         wait: Promise.resolve(),
       })
-      const data = ref({ items: [1], keep: true, show: false, wait })
+      const data = ref({
+        items: [1],
+        keep: true,
+        show: false,
+        wrap: true,
+        wait,
+      })
       const childCode = `<script setup>
           const data = _data
           ${mode === 'async setup' ? 'await data.value.wait' : ''}
@@ -1873,11 +1889,34 @@ describe('VDOM interop', () => {
             </div>
           </Suspense>
         </template>`
+      const wrapChild = (child: any, ssr: boolean) => {
+        let root = child
+        const depth =
+          wrapper === 'direct' ? 0 : wrapper === 'nested wrappers' ? 2 : 1
+        for (let i = 0; i < depth; i++) {
+          root = compileVaporComponent(
+            `<script setup>
+              const data = _data
+              const components = _components
+            </script>
+            <template>
+              <components.AsyncChild ${wrapper === 'conditional wrapper' ? 'v-if="data.wrap"' : ''} />
+            </template>`,
+            ssr ? serverData : data,
+            { AsyncChild: root },
+            ssr,
+          )
+        }
+        return root
+      }
       const ServerApp = compile(
         appCode,
         serverData,
         {
-          Child: compileVaporComponent(childCode, serverData, undefined, true),
+          Child: wrapChild(
+            compileVaporComponent(childCode, serverData, undefined, true),
+            true,
+          ),
         },
         { vapor: false, ssr: true },
       )
@@ -1897,7 +1936,7 @@ describe('VDOM interop', () => {
       const App = compile(
         appCode,
         data,
-        { Child: AsyncChild },
+        { Child: wrapChild(AsyncChild, false) },
         { vapor: false },
       )
       const container = document.createElement('div')
@@ -1918,8 +1957,13 @@ describe('VDOM interop', () => {
         hydrateChild()
         await nextTick()
       }
-      expect(`Hydration children mismatch`).toHaveBeenWarned()
+      if (__DEV__) {
+        expect(`Hydration children mismatch`).toHaveBeenWarned()
+      }
       expect(container.textContent).toBe('after')
+      expect(container.querySelector('span')).toBeNull()
+      expect(aside.previousSibling).toBe(listEnd)
+      expect(container.querySelector('aside')).toBe(aside)
 
       data.value.keep = false
       await nextTick()
@@ -1928,6 +1972,7 @@ describe('VDOM interop', () => {
       )
       expect(aside.previousSibling).toBe(listEnd)
       expect(container.querySelector('aside')).toBe(aside)
+      expect(container.querySelector('span')).toBeNull()
       app.unmount()
       expect(container.innerHTML).toBe('')
     },
