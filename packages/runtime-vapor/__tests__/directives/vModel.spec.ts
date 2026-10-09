@@ -2193,4 +2193,68 @@ describe('directive: v-model', () => {
       },
     )
   })
+
+  test.each([':value="data.bound"', 'v-bind="{ value: data.bound }"'])(
+    'select model takes precedence over %s after options update',
+    async binding => {
+      const selections = {} as Record<'vdom' | 'vapor', string[][]>
+      await renderParity(
+        {
+          App: `<template>
+            <p>{{ data.n }}</p>
+            <select ${binding} v-model="data.model">
+              <option v-for="option in data.options" :value="option">{{ option }}</option>
+            </select>
+            <select v-if="data.show" ${binding} v-model="data.model">
+              <option v-for="option in data.options" :value="option">{{ option }}</option>
+            </select>
+          </template>`,
+        },
+        () =>
+          ref({
+            bound: 'a',
+            model: 'b',
+            options: [] as string[],
+            show: false,
+            n: 0,
+          }),
+        async (data, root, mode) => {
+          const states: string[][] = (selections[mode] = [])
+          const record = () =>
+            states.push(
+              Array.from(root.querySelectorAll('select'), el => el.value),
+            )
+          record()
+          data.value.options = ['a', 'b']
+          await nextTick()
+          record()
+          data.value.options = ['c', 'd']
+          data.value.bound = 'c'
+          data.value.model = 'd'
+          await nextTick()
+          record()
+          data.value.show = true
+          await nextTick()
+          record()
+          data.value.options = ['e', 'f']
+          data.value.bound = 'e'
+          data.value.model = 'f'
+          await nextTick()
+          record()
+          data.value.n++
+          await nextTick()
+          record()
+        },
+      )
+      expect(selections.vdom).toEqual([
+        [''],
+        ['b'],
+        ['d'],
+        ['d', 'd'],
+        ['f', 'f'],
+        ['f', 'f'],
+      ])
+      expect(selections.vapor).toEqual(selections.vdom)
+    },
+  )
 })

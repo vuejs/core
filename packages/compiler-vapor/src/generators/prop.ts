@@ -22,6 +22,7 @@ import {
   NEWLINE,
   genCall,
   genMulti,
+  genOnce,
   getParserOptions,
 } from './utils'
 import {
@@ -88,16 +89,14 @@ export function genSetProp(
     if (className) return className
   }
   const propValue = genPropValue(values, context)
-  return [
-    NEWLINE,
-    ...genCall(
-      [helper(resolvedHelper.name), null],
-      `n${oper.element}`,
-      resolvedHelper.needKey ? genExpression(key, context) : false,
-      propValue,
-      resolvedHelper.isSVG && 'true',
-    ),
-  ]
+  const call = genCall(
+    [helper(resolvedHelper.name), null],
+    `n${oper.element}`,
+    resolvedHelper.needKey ? genExpression(key, context) : false,
+    propValue,
+    resolvedHelper.isSVG && 'true',
+  )
+  return [NEWLINE, ...(oper.once ? genOnce(call, context) : call)]
 }
 
 const optionsModifierRE = /(Once|Passive|Capture)$/
@@ -406,16 +405,14 @@ export function genDynamicProps(
     const value = genExpression(props.value, context) // v-bind="" / v-on=""
     return props.handler ? genCall(helper('toHandlers'), value, 'true') : value
   })
-  return [
-    NEWLINE,
-    ...genCall(
-      helper('setDynamicProps'),
-      `n${oper.element}`,
-      genMulti(DELIMITERS_ARRAY, ...values),
-      genDynamicPropNames(oper, context),
-      oper.isSVG && 'true',
-    ),
-  ]
+  const call = genCall(
+    helper('setDynamicProps'),
+    `n${oper.element}`,
+    genMulti(DELIMITERS_ARRAY, ...values),
+    genDynamicPropNames(oper, context),
+    oper.isSVG && 'true',
+  )
+  return [NEWLINE, ...(oper.once ? genOnce(call, context) : call)]
 }
 
 // vdom writes every static key with a dynamic value during hydration

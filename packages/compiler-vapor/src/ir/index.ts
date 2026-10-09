@@ -151,6 +151,7 @@ export interface SetPropIRNode extends BaseIRNode {
   isSVG: boolean
   /** Whether it's in effect; only a listener key (`onXxx`) needs to know */
   effect?: boolean
+  once?: boolean
 }
 
 export interface SetDynamicPropsIRNode extends BaseIRNode {
@@ -160,6 +161,7 @@ export interface SetDynamicPropsIRNode extends BaseIRNode {
   isSVG: boolean
   /** Merged listeners deferred until after same-element v-model. */
   listeners?: boolean
+  once?: boolean
 }
 
 export interface SetDynamicEventsIRNode extends BaseIRNode {

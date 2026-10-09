@@ -27,8 +27,8 @@ import {
   svgNS,
   xlinkNS,
 } from '@vue/runtime-dom'
-import { renderEffect } from '../../src'
-import { renderParity } from '../_utils'
+import { createVaporApp, renderEffect } from '../../src'
+import { compile, renderParity } from '../_utils'
 
 let removeComponentInstance = NOOP
 beforeEach(() => {
@@ -1038,6 +1038,273 @@ describe('patchProp', () => {
           'selected',
         ),
       ).toEqual([true, false, true, true])
+    })
+  })
+
+  describe('select value with rendered options', () => {
+    // the value can only be selected once the options are rendered
+    test.each([
+      `<select :value="data.value"><option v-for="o in data.options" :value="o">{{ o }}</option></select>`,
+      `<select :value="data.value"><option :value="data.options[1]">B</option><option :value="data.options[2]">C</option></select>`,
+      `<components.Select :value="data.value"><option v-for="o in data.options" :value="o">{{ o }}</option></components.Select>`,
+    ])('%s', async App => {
+      const seen: Record<string, string[]> = { vdom: [], vapor: [] }
+      await renderParity(
+        {
+          App: `<template>${App}</template>`,
+          Select: `<script setup>defineProps(['value'])</script><template><select :value="value"><slot /></select></template>`,
+        },
+        () => ref({ value: 'b', options: ['a', 'b', 'c'] }),
+        async (data, root, mode) => {
+          const select = root.querySelector('select')!
+          seen[mode].push(select.value)
+          data.value.value = 'c'
+          await nextTick()
+          seen[mode].push(select.value)
+        },
+      )
+      expect(seen.vdom).toEqual(['b', 'c'])
+      expect(seen.vapor).toEqual(seen.vdom)
+    })
+    test.each(['', ':key="o"', ':key="i"'])(
+      'reapplies an unchanged value after options update (%s)',
+      async key => {
+        const seen: Record<string, string[]> = { vdom: [], vapor: [] }
+        await renderParity(
+          {
+            App: `<template><select :value="data.value"><option v-for="(o, i) in data.options" ${key} :value="o">{{ o }}</option></select></template>`,
+          },
+          () => ref({ value: 'b', options: [] as string[] }),
+          async (data, root, mode) => {
+            const select = root.querySelector('select')!
+            seen[mode].push(select.value)
+            for (const options of [['a', 'b'], [], ['b', 'c']]) {
+              data.value.options = options
+              await nextTick()
+              seen[mode].push(select.value)
+            }
+          },
+        )
+        expect(seen.vdom).toEqual(['', 'b', '', 'b'])
+        expect(seen.vapor).toEqual(seen.vdom)
+      },
+    )
+
+    test.each(['', ':key="o"', ':key="i"'])(
+      'sets value after reused options on successive updates (%s)',
+      async key => {
+        const seen: Record<string, string[]> = { vdom: [], vapor: [] }
+        await renderParity(
+          {
+            App: `<template><select :value="data.value"><option v-for="(o, i) in data.options" ${key} :value="o">{{ o }}</option></select></template>`,
+          },
+          () => ref({ value: '', options: [] as string[] }),
+          async (data, root, mode) => {
+            const select = root.querySelector('select')!
+            for (const options of [
+              ['a', 'b'],
+              ['c', 'd'],
+            ]) {
+              data.value.options = options
+              data.value.value = options[1]
+              await nextTick()
+              seen[mode].push(select.value)
+            }
+          },
+        )
+        expect(seen.vdom).toEqual(['b', 'd'])
+        expect(seen.vapor).toEqual(seen.vdom)
+      },
+    )
+
+    test.each([
+      'v-bind="data.attrs" :value="data.value"',
+      'v-bind="data.props"',
+      ':value.prop="data.value"',
+      'value="b"',
+    ])('initializes select value after option bindings (%s)', async binding => {
+      const seen: Record<string, string[]> = { vdom: [], vapor: [] }
+      await renderParity(
+        {
+          App: `<template><select ${binding}><option :value="data.options[0]">A</option><option :value="data.options[1]">B</option></select></template>`,
+        },
+        () =>
+          ref({
+            attrs: { title: 'example' },
+            props: { value: 'b' },
+            value: 'b',
+            options: ['a', 'b'],
+          }),
+        (_data, root, mode) => {
+          seen[mode].push(root.querySelector('select')!.value)
+        },
+      )
+      expect(seen.vdom).toEqual(['b'])
+      expect(seen.vapor).toEqual(seen.vdom)
+    })
+
+    test.each(['value', '.value'])(
+      'adds, removes and restores a dynamic %s binding',
+      async key => {
+        const seen: Record<string, string[]> = { vdom: [], vapor: [] }
+        await renderParity(
+          {
+            App: `<template><select v-bind="data.attrs"><option v-for="o in data.options" :key="o" :value="o">{{ o }}</option></select></template>`,
+          },
+          () => ref({ attrs: {}, options: [] as string[] }),
+          async (data, root, mode) => {
+            const select = root.querySelector('select')!
+            data.value.options = ['a', 'b']
+            await nextTick()
+            data.value.attrs = { [key]: 'd' }
+            data.value.options = ['c', 'd']
+            await nextTick()
+            seen[mode].push(select.value)
+            data.value.attrs = {}
+            await nextTick()
+            seen[mode].push(select.value)
+            data.value.options = ['e', 'f']
+            await nextTick()
+            seen[mode].push(select.value)
+            if (key === 'value') {
+              data.value.attrs = { [key]: null }
+              await nextTick()
+              data.value.options = ['g', 'h']
+              await nextTick()
+              seen[mode].push(select.value)
+            }
+            data.value.attrs = { [key]: 'j' }
+            data.value.options = ['i', 'j']
+            await nextTick()
+            seen[mode].push(select.value)
+          },
+        )
+        expect(seen.vdom).toEqual(
+          key === 'value' ? ['d', '', 'f', '', 'j'] : ['d', '', 'f', 'j'],
+        )
+        expect(seen.vapor).toEqual(seen.vdom)
+      },
+    )
+
+    test.each(['value="b"', ':value="\'b\'"'])(
+      'only initializes a constant select value (%s)',
+      async binding => {
+        const seen: Record<string, string[]> = { vdom: [], vapor: [] }
+        await renderParity(
+          {
+            App: `<template><select ${binding}><option :value="data.a">A</option><option :value="data.b">B</option></select><p>{{ data.n }}</p></template>`,
+          },
+          () => ref({ a: 'a', b: 'b', n: 0 }),
+          async (data, root, mode) => {
+            const select = root.querySelector('select')!
+            seen[mode].push(select.value)
+            data.value.b = 'c'
+            await nextTick()
+            seen[mode].push(select.value)
+            data.value.n++
+            await nextTick()
+            seen[mode].push(select.value)
+          },
+        )
+        expect(seen.vdom).toEqual(['b', 'c', 'c'])
+        expect(seen.vapor).toEqual(seen.vdom)
+      },
+    )
+
+    test('disposes the value update with its conditional select', async () => {
+      await renderParity(
+        {
+          App: `<template><select v-if="data.show" :value="data.value"><option v-for="o in data.options" :value="o">{{ o }}</option></select><p>{{ data.n }}</p></template>`,
+        },
+        () => ref({ show: false, value: 'b', options: ['a', 'b'], n: 0 }),
+        async (data, root) => {
+          data.value.show = true
+          await nextTick()
+          const select = root.querySelector('select')!
+          expect(select.value).toBe('b')
+          data.value.show = false
+          await nextTick()
+          select.value = 'a'
+          data.value.n++
+          await nextTick()
+          expect(select.value).toBe('a')
+          data.value.show = true
+          await nextTick()
+          expect(root.querySelector('select')!.value).toBe('b')
+        },
+      )
+    })
+
+    test('defers a value binding first added during an update', async () => {
+      await renderParity(
+        {
+          App: `<template><select v-bind="data.attrs"><option v-for="o in data.options" :value="o">{{ o }}</option></select></template>`,
+        },
+        () => ref({ attrs: {}, options: [] as string[] }),
+        async (data, root) => {
+          data.value.options = ['a', 'b']
+          await nextTick()
+          data.value.attrs = { value: 'd' }
+          data.value.options = ['c', 'd']
+          await nextTick()
+          expect(root.querySelector('select')!.value).toBe('d')
+        },
+      )
+    })
+
+    test('reuses the accepted value without evaluating its getter again', async () => {
+      const get = vi.fn(() => 'b')
+      const data = ref({ options: [] as string[], get })
+      const App = compile(
+        `<template><select :value="data.get()"><option v-for="o in data.options" :value="o">{{ o }}</option></select></template>`,
+        data,
+      )
+      const app = createVaporApp(App)
+      const root = document.createElement('div')
+      app.mount(root)
+      expect(get).toHaveBeenCalledTimes(1)
+      data.value.options = ['a', 'b']
+      await nextTick()
+      expect(root.querySelector('select')!.value).toBe('b')
+      expect(get).toHaveBeenCalledTimes(1)
+      app.unmount()
+    })
+
+    test.each([
+      `v-bind="{ value: 'b' }"`,
+      `v-bind="{ ['value']: 'b' }"`,
+      `v-bind="{ title: 'example' }" :value="'b'"`,
+      `:['value']="'b'"`,
+      `v-on="{}" :value="'b'"`,
+      `@[data.event]="data.handler" value="b"`,
+    ])('reapplies a constant value from dynamic props (%s)', async binding => {
+      await renderParity(
+        {
+          App: `<template><select ${binding}><option v-for="o in data.options" :value="o">{{ o }}</option></select></template>`,
+        },
+        () => ref({ options: [] as string[], event: 'change', handler: NOOP }),
+        async (data, root) => {
+          expect(root.querySelector('select')!.value).toBe('')
+          data.value.options = ['a', 'b']
+          await nextTick()
+          expect(root.querySelector('select')!.value).toBe('b')
+        },
+      )
+    })
+
+    test('reapplies a forced value property after options update', async () => {
+      const data = ref({ value: 'b', options: [] as string[] })
+      const App = compile(
+        `<template><select :value.prop="data.value"><option v-for="o in data.options" :value="o">{{ o }}</option></select></template>`,
+        data,
+      )
+      const app = createVaporApp(App)
+      const root = document.createElement('div')
+      app.mount(root)
+      data.value.options = ['a', 'b']
+      await nextTick()
+      expect(root.querySelector('select')!.value).toBe('b')
+      app.unmount()
     })
   })
 })

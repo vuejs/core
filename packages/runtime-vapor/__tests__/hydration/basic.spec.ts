@@ -1277,4 +1277,25 @@ describe('Vapor Mode hydration', () => {
       }
     },
   )
+
+  test.each([':value="data.v"', 'v-bind="data.attrs"'])(
+    'reapplies select value after hydrated options update (%s)',
+    async binding => {
+      const { container, data, app } = await testHydration(
+        `<template><select ${binding}><option v-for="o in data.opts" :value="o">{{ o }}</option></select></template>`,
+        undefined,
+        reactive({ v: 'b', attrs: { value: 'b' }, opts: [] as string[] }),
+      )
+      const select = container.querySelector('select')!
+      expect(select.value).toBe('')
+      data.opts = ['a', 'b']
+      await nextTick()
+      expect(select.value).toBe('b')
+      data.v = data.attrs.value = 'd'
+      data.opts = ['c', 'd']
+      await nextTick()
+      expect(select.value).toBe('d')
+      app.unmount()
+    },
+  )
 })

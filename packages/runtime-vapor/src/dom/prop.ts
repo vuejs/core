@@ -19,10 +19,16 @@ import {
   normalizeCssVarValue,
   normalizeStyle,
   parseStringStyle,
+  remove,
   stringifyStyle,
   toDisplayString,
 } from '@vue/shared'
-import { type Dep, isReactive, triggerDep } from '@vue/reactivity'
+import {
+  type Dep,
+  isReactive,
+  onScopeDispose,
+  triggerDep,
+} from '@vue/reactivity'
 import { type EventHandlerValue, setListener } from './event'
 import {
   type ComponentInternalInstance,
@@ -42,6 +48,7 @@ import {
   patchClass,
   patchStyle,
   queuePostFlushCb,
+  queuePostRenderEffect,
   resolveCssVars as resolveVNodeCssVars,
   shouldSetAsProp,
   shouldSetAsPropForVueCE,
@@ -71,6 +78,7 @@ import type { VaporElement } from '../apiDefineCustomElement'
 import type { RootMeta } from './template'
 import { isTransitionEnabled } from '../transition'
 import { isInteropEnabled } from '../vdomInteropState'
+import { inOnce } from '../once'
 
 type TargetElement = Element & {
   $root?: boolean | RootMeta
@@ -86,6 +94,7 @@ type TargetElement = Element & {
   $sty?: NormalizedStyle | string | undefined
   value?: string
   _value?: any
+  $valueBound?: boolean
   /**
    * @internal
    */
@@ -475,6 +484,37 @@ export function setValue(
     return
   }
 
+  if (el.tagName === 'SELECT' && !inOnce) {
+    if (el.$valueBound === undefined) {
+      const instance = currentInstance!
+      let active = true
+      const update = () => {
+        const value = el._value == null ? '' : el._value
+        // v-model owns selection when both bindings are present.
+        if (
+          active &&
+          el.$valueBound &&
+          !('_modelValue' in el) &&
+          el.value !== value
+        ) {
+          el.value = value
+        }
+      }
+      // Options can change without triggering this value binding, and their
+      // effects may have been created after it. Apply the cached value last.
+      ;(instance.u || (instance.u = [])).unshift(update)
+      onScopeDispose(() => {
+        active = false
+        remove(instance.u!, update)
+      })
+      // The running effect may not have seen any update hooks before this call.
+      if (instance.isMounted) {
+        queuePostRenderEffect(update, undefined, instance.suspense)
+      }
+    }
+    el.$valueBound = true
+  }
+
   // store value as _value as well since
   // non-string values will be stringified.
   const valueDep = el._valueDep
@@ -632,6 +672,13 @@ export function patchDynamicProps(
     for (const key in prevProps) {
       if (!(key in props)) {
         setDynamicProp(el, key, null, isSVG)
+        if (
+          el.tagName === 'SELECT' &&
+          (key === 'value' || key === '.value') &&
+          !shouldSkipFallthroughKey(el, 'value')
+        ) {
+          el.$valueBound = false
+        }
       }
     }
   }
