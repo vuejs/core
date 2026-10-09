@@ -1841,4 +1841,95 @@ describe('VDOM interop', () => {
       '<div><!--v-if--><span>updated</span></div>',
     )
   })
+
+  test.each(['async setup', 'lazy hydration'])(
+    'keeps the parent fragment boundary after deferred interop %s',
+    async mode => {
+      let resolveChild!: () => void
+      let hydrateChild!: () => void
+      const wait = new Promise<void>(resolve => (resolveChild = resolve))
+      const serverData = ref({
+        items: [1],
+        keep: true,
+        show: true,
+        wait: Promise.resolve(),
+      })
+      const data = ref({ items: [1], keep: true, show: false, wait })
+      const childCode = `<script setup>
+          const data = _data
+          ${mode === 'async setup' ? 'await data.value.wait' : ''}
+        </script>
+        <template><span v-if="data.show">async</span></template>`
+      const appCode = `<script setup>
+          const data = _data
+          const components = _components
+        </script>
+        <template>
+          <Suspense>
+            <div>
+              <component v-for="id in data.items" :key="id"
+                :is="data.keep ? components.Child : 'p'">replacement</component>
+              <aside>after</aside>
+            </div>
+          </Suspense>
+        </template>`
+      const ServerApp = compile(
+        appCode,
+        serverData,
+        {
+          Child: compileVaporComponent(childCode, serverData, undefined, true),
+        },
+        { vapor: false, ssr: true },
+      )
+      const html = await VueServerRenderer.renderToString(
+        runtimeDom.createSSRApp(ServerApp),
+      )
+      const Child = compileVaporComponent(childCode, data)
+      const AsyncChild =
+        mode === 'async setup'
+          ? Child
+          : runtimeVapor.defineVaporAsyncComponent({
+              loader: () => wait.then(() => Child),
+              hydrate(hydrate) {
+                hydrateChild = hydrate
+              },
+            })
+      const App = compile(
+        appCode,
+        data,
+        { Child: AsyncChild },
+        { vapor: false },
+      )
+      const container = document.createElement('div')
+      container.innerHTML = html
+      document.body.appendChild(container)
+      const aside = container.querySelector('aside')!
+      const listEnd = aside.previousSibling!
+      const app = runtimeDom
+        .createSSRApp(App)
+        .use(runtimeVapor.vaporInteropPlugin)
+      app.mount(container)
+      expect(container.textContent).toBe('asyncafter')
+      expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+
+      resolveChild()
+      await new Promise(resolve => setTimeout(resolve))
+      if (mode === 'lazy hydration') {
+        hydrateChild()
+        await nextTick()
+      }
+      expect(`Hydration children mismatch`).toHaveBeenWarned()
+      expect(container.textContent).toBe('after')
+
+      data.value.keep = false
+      await nextTick()
+      expect(container.innerHTML).toBe(
+        '<div><!--[--><p>replacement</p><!--]--><aside>after</aside></div>',
+      )
+      expect(aside.previousSibling).toBe(listEnd)
+      expect(container.querySelector('aside')).toBe(aside)
+      app.unmount()
+      expect(container.innerHTML).toBe('')
+    },
+  )
 })

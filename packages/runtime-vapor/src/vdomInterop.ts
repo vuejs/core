@@ -1352,7 +1352,8 @@ function createVNodeFragment(vnode: VNode): {
     content.resolved = true
   }
   frag.isBlockValid = componentAsValid =>
-    content.resolved ? isValidBlock(frag.nodes, componentAsValid) : true
+    (componentAsValid && !!(frag.vnode!.shapeFlag & ShapeFlags.COMPONENT)) ||
+    (content.resolved ? isValidBlock(frag.nodes, componentAsValid) : true)
   trackFragmentVNodeUpdates(frag, vnode, syncNodes)
   return { frag, syncNodes }
 }

@@ -1452,14 +1452,20 @@ export function mountComponent(
           // Render in a pass of its own over the pending SSR range, the way
           // vdom hydrates an async subtree once its setup settles, so no
           // hydration state has to survive the setup's microtasks.
-          hydrateNode(getBlockFirstNode(pendingBlock)!, () => {
-            const hydration = enterComponentHydration(component)
-            try {
-              withDeferredHydrationBoundary(renderAndMount)
-            } finally {
-              exitComponentHydration(hydration, true)
-            }
-          })
+          hydrateNode(
+            getBlockFirstNode(pendingBlock)!,
+            () => {
+              const hydration = enterComponentHydration(component)
+              try {
+                withDeferredHydrationBoundary(renderAndMount)
+              } finally {
+                exitComponentHydration(hydration, true)
+              }
+            },
+            isInteropEnabled && instance.interopVNode
+              ? (instance.interopVNode.anchor as Node)
+              : null,
+          )
         } else {
           renderAndMount()
           remove(pendingBlock, parentNode as ParentNode)

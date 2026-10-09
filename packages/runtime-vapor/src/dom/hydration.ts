@@ -154,9 +154,19 @@ export function withHydration(container: ParentNode, fn: () => void): void {
   return performHydration(fn, setup, cleanup)
 }
 
-export function hydrateNode<T>(node: Node, fn: () => T): T {
-  const setup = () => setCurrentHydrationNode(node)
-  const cleanup = () => {}
+export function hydrateNode<T>(
+  node: Node,
+  fn: () => T,
+  boundary?: Node | null,
+): T {
+  const setup = () => {
+    // Deferred interop hydration must see its own boundary while recovering.
+    if (boundary) claimAnchor(boundary)
+    setCurrentHydrationNode(node)
+  }
+  const cleanup = () => {
+    if (boundary) claimUntrackedAnchor(boundary)
+  }
   return performHydration(fn, setup, cleanup)
 }
 
