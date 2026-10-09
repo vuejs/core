@@ -2532,4 +2532,53 @@ describe('VDOM interop', () => {
     expect('Hydration node mismatch').not.toHaveBeenWarned()
     expect('Hydration children mismatch').not.toHaveBeenWarned()
   })
+
+  test.each(['update', 'unmount'])(
+    'hydrate empty VDOM component slot content and %s it',
+    async action => {
+      const data = ref({ show: true })
+      const { container, html, app } = await testWithVaporApp(
+        `<script setup>
+          const data = _data
+          const components = _components
+        </script>
+        <template>
+          <components.Consumer>
+            <components.Relay v-if="data.show" />
+          </components.Consumer>
+        </template>`,
+        {
+          Empty: `<template><i v-if="false">empty</i></template>`,
+          Relay: {
+            code: `<script setup>const components = _components</script>
+              <template><components.Empty /></template>`,
+            vapor: false,
+          },
+          Consumer: `<template><slot><b>fallback</b></slot></template>`,
+        },
+        data,
+      )
+
+      expect(html).not.toContain('fallback')
+      expect(container.querySelector('b')).toBeNull()
+      expect(container.textContent).toBe('')
+
+      if (action === 'update') {
+        data.value.show = false
+        await nextTick()
+        expect(container.innerHTML).toContain('<b>fallback</b>')
+
+        data.value.show = true
+        await nextTick()
+        expect(container.querySelector('b')).toBeNull()
+        expect(container.textContent).toBe('')
+      }
+
+      expect(() => app.unmount()).not.toThrow()
+      expect(container.children).toHaveLength(0)
+      expect(container.textContent).toBe('')
+      expect('Hydration node mismatch').not.toHaveBeenWarned()
+      expect('Hydration children mismatch').not.toHaveBeenWarned()
+    },
+  )
 })
