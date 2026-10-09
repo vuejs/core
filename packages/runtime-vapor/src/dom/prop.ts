@@ -498,7 +498,7 @@ export function setValue(
   // #4956: <option> value will fallback to its text content so we need to
   // compare against its attribute value instead.
   const oldValue = el.tagName === 'OPTION' ? el.getAttribute('value') : el.value
-  const newValue = value == null ? '' : value
+  const newValue = value == null ? '' : String(value)
   if (oldValue !== newValue) {
     el.value = newValue
   }
@@ -507,7 +507,7 @@ export function setValue(
   if (value == null) {
     el.removeAttribute('value')
   } else {
-    el.setAttribute('value', isSymbol(newValue) ? String(newValue) : newValue)
+    el.setAttribute('value', newValue)
   }
 }
 

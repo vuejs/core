@@ -2173,4 +2173,24 @@ describe('directive: v-model', () => {
     expect(get).not.toHaveBeenCalled()
     expect(host.querySelector('input')!.value).toBe('')
   })
+
+  // #10598
+  test('checkbox array with symbol values', async () => {
+    const a = Symbol('a')
+    const b = Symbol('b')
+    await renderParity(
+      {
+        App: `<template><input v-for="v in data.values" type="checkbox" v-model="data.model" :value="v"></template>`,
+      },
+      () => ref({ values: [a, b], model: [] as symbol[] }),
+      async (data, root) => {
+        const input = root.querySelectorAll('input')[1]
+        expect(input.value).toBe(b.toString())
+        input.checked = true
+        triggerEvent('change', input)
+        await nextTick()
+        expect(data.value.model).toEqual([b])
+      },
+    )
+  })
 })

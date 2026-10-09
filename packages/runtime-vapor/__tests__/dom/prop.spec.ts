@@ -423,7 +423,7 @@ describe('patchProp', () => {
       const div = document.createElement('div')
       const symbol = Symbol('foo')
       setValue(div, symbol)
-      expect((div as any).value).toBe(symbol)
+      expect((div as any).value).toBe(symbol.toString())
       expect(div.getAttribute('value')).toBe(symbol.toString())
 
       const option = document.createElement('option')
