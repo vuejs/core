@@ -14,7 +14,7 @@ import {
 import { renderEffect, template } from '../src'
 import { RenderEffect } from '../src/renderEffect'
 import { onEffectCleanup } from '@vue/reactivity'
-import { makeRender } from './_utils'
+import { compile, makeRender } from './_utils'
 
 const define = makeRender<any>()
 const createDemo = (setupFn: () => any, renderFn: (ctx: any) => any) =>
@@ -359,5 +359,69 @@ describe('renderEffect', () => {
     await nextTick()
     expect(instanceSnap).toBe(instance)
     expect(scopeSnap).toBe(scope)
+  })
+
+  test.each([10, 100, 300])(
+    'scans %i select callbacks once when their row effects update',
+    async count => {
+      const data = ref({
+        rows: Array.from({ length: count }, (_, id) => ({
+          id,
+          value: 'b',
+          count: 0,
+        })),
+      })
+      const App = compile(
+        `<template><div v-for="row in data.rows" :key="row.id"><select :value="row.value"><option value="a">A</option><option value="b">B</option></select><span>{{ row.count }}</span></div></template>`,
+        data,
+      )
+      const { instance, host, app } = define(App).render()
+      try {
+        await nextTick()
+        let reads = 0
+        instance!.selectUpdates = new Proxy(instance!.selectUpdates!, {
+          get(target, key, receiver) {
+            if (typeof key === 'string' && /^\d+$/.test(key)) reads++
+            return Reflect.get(target, key, receiver)
+          },
+        })
+        for (const row of data.value.rows) row.count++
+        await nextTick()
+        expect(reads).toBe(count)
+        expect(
+          Array.from(host.querySelectorAll('select'), select => select.value),
+        ).toEqual(Array(count).fill('b'))
+      } finally {
+        app.unmount()
+      }
+    },
+  )
+
+  test('syncs a value first registered during an update only once', async () => {
+    const stringify = vi.fn(() => 'b')
+    const data = ref({
+      show: false,
+      value: { toString: stringify },
+      other: 'a',
+    })
+    const App = compile(
+      `<template><select :value="data.other"><option value="a">A</option></select><select v-if="data.show" :value="data.value"><option value="a">A</option><option value="b">B</option></select></template>`,
+      data,
+    )
+    const { host, app } = define(App).render()
+    try {
+      await nextTick()
+      data.value.show = true
+      await nextTick()
+      expect(host.querySelectorAll('select')[1].value).toBe('b')
+      // Initial DOM property + attribute writes, then one deferred sync.
+      expect(stringify).toHaveBeenCalledTimes(3)
+      stringify.mockClear()
+      data.value.show = false
+      await nextTick()
+      expect(stringify).not.toHaveBeenCalled()
+    } finally {
+      app.unmount()
+    }
   })
 })

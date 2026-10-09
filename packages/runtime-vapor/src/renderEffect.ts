@@ -93,14 +93,10 @@ export class RenderEffect extends ReactiveEffect {
           return
         }
         // Input effects also update the owner's options through child props,
-        // without invoking its public lifecycle hooks. Apply selection after
-        // DOM updates, ahead of public hooks (even ones left queued by mount).
+        // without invoking its public lifecycle hooks. In the normal post-flush
+        // queue, apply selection before public hooks, including pending ones.
         if (this.i && this.i.selectUpdates) {
-          queuePostRenderEffect(
-            this.i.selectUpdates,
-            this.i.uid,
-            this.i.suspense,
-          )
+          queueSelectUpdates(this.i)
         }
         this.run()
       }
@@ -167,4 +163,12 @@ export function renderEffect(fn: () => void, noLifecycle = false): void {
 
   const effect = new RenderEffect(fn, noLifecycle)
   effect.run()
+}
+
+export function queueSelectUpdates(instance: VaporComponentInstance): void {
+  if (!instance.selectUpdates || !instance.selectUpdates.length) return
+  const job =
+    instance.selectUpdateJob ||
+    (instance.selectUpdateJob = () => invokeArrayFns(instance.selectUpdates!))
+  queuePostRenderEffect(job, instance.uid, instance.suspense)
 }
