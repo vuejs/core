@@ -61,11 +61,21 @@ export function processDefineProps(
   ctx.propsRuntimeDecl = node.arguments[0]
 
   // register bindings
-  if (ctx.propsRuntimeDecl) {
-    for (const key of getObjectOrArrayExpressionKeys(ctx.propsRuntimeDecl)) {
+  const decl = ctx.propsRuntimeDecl
+  if (decl) {
+    const keys = getObjectOrArrayExpressionKeys(decl)
+    for (const key of keys) {
       if (!(key in ctx.bindingMetadata)) {
         ctx.bindingMetadata[key] = BindingTypes.PROPS
       }
+    }
+    // some keys are only known at runtime, e.g. `defineProps({ ...base })`
+    if (
+      decl.type === 'ObjectExpression'
+        ? keys.length < decl.properties.length
+        : decl.type !== 'ArrayExpression' || keys.length < decl.elements.length
+    ) {
+      ctx.bindingMetadata.__hasUnresolvedProps = true
     }
   }
 

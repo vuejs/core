@@ -194,7 +194,18 @@ function genIdentifier(
   }
 
   let prefix: string | undefined
-  const type = bindingMetadata && bindingMetadata[raw]
+  let type = bindingMetadata && bindingMetadata[raw]
+  if (
+    !type &&
+    bindingMetadata &&
+    bindingMetadata.__hasUnresolvedProps &&
+    raw[0] !== '$' &&
+    isSimpleIdentifier(raw) &&
+    canPrefix(raw)
+  ) {
+    // may be a prop declared in a runtime object the compiler can't see
+    type = BindingTypes.PROPS
+  }
   // ({ x } = y)
   const isDestructureAssignment =
     parent && isInDestructureAssignment(parent, parentStack || [])

@@ -2229,6 +2229,27 @@ describe('component: props', () => {
     },
   )
 
+  test('props declared through a spread or an identifier', async () => {
+    for (const decl of ['{ ...baseProps, other: String }', 'baseProps']) {
+      const { vdom, vapor } = await renderParity(
+        {
+          Leaf: `<template><b>{{ data.n }}</b></template>`,
+          Child: `<script>
+              const baseProps = { label: String, other: String }
+              const components = _components
+            </script>
+            <script setup>defineProps(${decl})</script>
+            <template><i :title="label">{{ label }} {{ other }}<components.Leaf /></i></template>`,
+          App: `<template><components.Child label="a" other="b" /></template>`,
+        },
+        () => ref({ n: 1 }),
+        () => {},
+      )
+      expect(vapor).toEqual(vdom)
+      expect(vapor.after).toBe('<i title="a">a b<b>1</b></i>')
+    }
+  })
+
   describe('input evaluation', () => {
     // the inputs of a child are evaluated together, so a literal is a new
     // value whenever one of them changes

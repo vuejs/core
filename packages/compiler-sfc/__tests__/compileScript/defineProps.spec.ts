@@ -1,5 +1,6 @@
 import { BindingTypes } from '@vue/compiler-core'
 import { assertCode, compileSFCScript as compile } from '../utils'
+import { compileTemplate } from '../../src'
 
 describe('defineProps', () => {
   test('basic usage', () => {
@@ -828,5 +829,39 @@ const props = defineProps({ foo: String })
     )
     expect(content).toMatch(`foo: { default: 5.5, type: Number }`)
     assertCode(content)
+  })
+
+  test('vapor: props of a declaration with keys unknown at compile time', () => {
+    const { content, bindings } = compile(
+      `<script setup vapor>
+      import { base } from './base'
+      defineProps({ ...base })
+      </script>
+      <template>{{ label }}</template>`,
+      { inlineTemplate: true },
+    )
+    expect(content).toMatch(`__props.label`)
+    const { code } = compileTemplate({
+      source: `{{ label }}{{ $t }}`,
+      filename: 'test.vue',
+      id: 'test',
+      vapor: true,
+      compilerOptions: { bindingMetadata: bindings },
+    })
+    expect(code).toMatch(`$props.label`)
+    expect(code).toMatch(`_ctx.$t`)
+
+    for (const decl of ['[...base]', '{ [key]: String }']) {
+      expect(
+        compile(
+          `<script setup vapor>
+          import { base, key } from './base'
+          defineProps(${decl})
+          </script>
+          <template>{{ label }}</template>`,
+          { inlineTemplate: true },
+        ).content,
+      ).toMatch(`__props.label`)
+    }
   })
 })

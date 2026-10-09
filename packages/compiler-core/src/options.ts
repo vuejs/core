@@ -156,6 +156,8 @@ export type BindingMetadata = {
 } & {
   __isScriptSetup?: boolean
   __propsAliases?: Record<string, string>
+  /** some props are only known at runtime, e.g. `defineProps({ ...base })` */
+  __hasUnresolvedProps?: boolean
 }
 
 interface SharedTransformCodegenOptions {
