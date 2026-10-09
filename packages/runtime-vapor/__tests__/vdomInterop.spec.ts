@@ -13745,4 +13745,66 @@ describe('vdomInterop', () => {
       app.unmount()
     }
   })
+
+  test('does not sync a new select removed with its vdom host in the same flush', async () => {
+    let writes = 0
+    let root: HTMLElement
+    const data = ref({
+      host: true,
+      show: false,
+      v: 'b',
+      options: [] as string[],
+      spy: () => {
+        // count writes to the select's value from now on
+        const el = root.querySelector('select')!
+        const { get, set } = Object.getOwnPropertyDescriptor(
+          HTMLSelectElement.prototype,
+          'value',
+        )!
+        Object.defineProperty(el, 'value', {
+          get,
+          set(value) {
+            writes++
+            set!.call(this, value)
+          },
+        })
+      },
+    })
+    const Host = compile(
+      `<script setup>const data = _data</script>
+      <template><div><slot /></div></template>`,
+      data,
+      {},
+      { vapor: false },
+    )
+    const Sibling = compile(
+      `<script setup>
+        import { watch } from 'vue'
+        const data = _data
+        watch(() => data.value.show, () => {
+          data.value.spy()
+          data.value.host = false
+        })
+      </script>
+      <template><p /></template>`,
+      data,
+      {},
+      { vapor: false },
+    )
+    const App = compile(
+      `<template><components.Host v-if="data.host"><select v-if="data.show" :value="data.v"><option v-for="o in data.options" :value="o">{{ o }}</option></select></components.Host><components.Sibling /></template>`,
+      data,
+      { Host, Sibling },
+    )
+    const { host, app } = define(App).render()
+    root = host
+    try {
+      data.value.show = true
+      await nextTick()
+      expect(host.querySelector('select')).toBe(null)
+      expect(writes).toBe(0)
+    } finally {
+      app.unmount()
+    }
+  })
 })

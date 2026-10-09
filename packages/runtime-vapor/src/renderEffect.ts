@@ -173,9 +173,9 @@ export function renderEffect(fn: () => void, noLifecycle = false): void {
 /**
  * Re-applies a select's selection after the current owner's effects update
  * its options. A vdom owner rendering vapor content runs it from its updated
- * hooks instead.
+ * hooks instead. Returns the registered callback.
  */
-export function registerSelectUpdate(update: () => void): void {
+export function registerSelectUpdate(update: () => void): () => void {
   const instance = currentInstance as VaporComponentInstance
   if (isInteropEnabled && !instance.vapor) {
     // vdom queues a copy of its updated hooks, which can outlive the select
@@ -189,11 +189,13 @@ export function registerSelectUpdate(update: () => void): void {
       active = false
       remove(hooks, hook)
     })
+    return hook
   } else {
     const updates =
       instance.selectUpdates || (instance.selectUpdates = new Set())
     updates.add(update)
     onScopeDispose(() => updates.delete(update))
+    return update
   }
 }
 

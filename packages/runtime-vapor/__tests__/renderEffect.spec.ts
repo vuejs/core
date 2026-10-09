@@ -361,7 +361,7 @@ describe('renderEffect', () => {
     expect(scopeSnap).toBe(scope)
   })
 
-  test('scans each select callback once when their row effects update', async () => {
+  test('scans the select callbacks once per flush when row effects update', async () => {
     const count = 100
     const data = ref({
       rows: Array.from({ length: count }, (_, id) => ({
@@ -375,24 +375,41 @@ describe('renderEffect', () => {
       data,
     )
     const { instance, host, app } = define(App).render()
+    const updates = instance!.selectUpdates!
+    let scans = 0
+    let visits = 0
+    Object.defineProperty(updates, Symbol.iterator, {
+      value() {
+        scans++
+        const values = Set.prototype.values.call(updates)
+        return {
+          next() {
+            const result = values.next()
+            if (!result.done) visits++
+            return result
+          },
+          [Symbol.iterator]() {
+            return this
+          },
+        }
+      },
+    })
     try {
-      await nextTick()
-      let calls = 0
-      instance!.selectUpdates = new Set(
-        Array.from(instance!.selectUpdates!, update => () => {
-          calls++
-          update()
-        }),
-      )
       for (const row of data.value.rows) row.count++
       await nextTick()
-      expect(calls).toBe(count)
+      expect([scans, visits]).toEqual([1, count])
+      // half of the rows leave in the same flush as the rest update
+      data.value.rows = data.value.rows.slice(0, count / 2)
+      for (const row of data.value.rows) row.count++
+      await nextTick()
+      expect([scans, visits]).toEqual([2, count + count / 2])
       expect(
         Array.from(host.querySelectorAll('select'), select => select.value),
-      ).toEqual(Array(count).fill('b'))
+      ).toEqual(Array(count / 2).fill('b'))
     } finally {
       app.unmount()
     }
+    expect(updates.size).toBe(0)
   })
 
   test('syncs a value first registered during an update only once', async () => {

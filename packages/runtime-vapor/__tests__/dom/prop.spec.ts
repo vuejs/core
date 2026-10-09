@@ -1459,5 +1459,54 @@ describe('patchProp', () => {
       ])
       expect(seen.vapor).toEqual(seen.vdom)
     })
+
+    test.each(['value="b"', `:value="'b'"`, 'v-bind="data.attrs"'])(
+      'sets a select value before a function ref reads it (%s)',
+      async binding => {
+        const seen: Record<string, string[]> = { vdom: [], vapor: [] }
+        await renderParity(
+          {
+            App: `<template><select ${binding} :ref="el => { if (el) data.captured.push(el.value) }"><option :value="data.a">A</option><option :value="data.b">B</option></select></template>`,
+          },
+          () =>
+            ref({
+              attrs: { value: 'b' },
+              a: 'a',
+              b: 'b',
+              captured: [] as string[],
+            }),
+          (data, root, mode) => {
+            seen[mode] = [
+              ...data.value.captured,
+              root.querySelector('select')!.value,
+            ]
+          },
+        )
+        expect(seen.vdom).toEqual(['b', 'b'])
+        expect(seen.vapor).toEqual(seen.vdom)
+      },
+    )
+
+    // the key-only option value is lifted to the end of the row
+    test.each(['', `:ref="el => { if (el) data.captured.push(el.value) }"`])(
+      'sets a select value in a keyed row after its key-only options (%s)',
+      async refBinding => {
+        const seen: Record<string, string[]> = { vdom: [], vapor: [] }
+        await renderParity(
+          {
+            App: `<template><div v-for="row in data.rows" :key="row.id"><select value="x" ${refBinding}><option :value="row.id">A</option></select></div></template>`,
+          },
+          () => ref({ rows: [{ id: 'x' }], captured: [] as string[] }),
+          (data, root, mode) => {
+            seen[mode] = [
+              ...data.value.captured,
+              root.querySelector('select')!.value,
+            ]
+          },
+        )
+        expect(seen.vdom).toEqual(refBinding ? ['x', 'x'] : ['x'])
+        expect(seen.vapor).toEqual(seen.vdom)
+      },
+    )
   })
 })

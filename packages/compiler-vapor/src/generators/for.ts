@@ -32,7 +32,11 @@ import type {
 } from '@babel/types'
 import { parseExpression } from '@babel/parser'
 import { walk } from 'estree-walker'
-import { genOperation } from './operation'
+import {
+  genOperation,
+  hasTemplateRefEffect,
+  isSelectValueEffect,
+} from './operation'
 import { VaporVForFlags, isGloballyAllowed } from '@vue/shared'
 
 export function genFor(
@@ -466,7 +470,13 @@ function matchPatterns(
   >[] = []
   let skippedEffectIndexes: Set<number> | undefined
 
-  if (keyProp === undefined) {
+  if (
+    keyProp === undefined ||
+    // a function ref keeps a one-time select value in place, so the option
+    // bindings it relies on must not be lifted after it
+    (render.effect.some(isSelectValueEffect) &&
+      hasTemplateRefEffect(render.effect))
+  ) {
     return {
       keyOnlyBindingPatterns,
       selectorPatterns,

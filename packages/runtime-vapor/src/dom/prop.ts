@@ -490,12 +490,12 @@ export function setValue(
           if (el.value !== value) el.value = value
         }
       }
-      registerSelectUpdate(update)
+      const registered = registerSelectUpdate(update)
       // The running effect may not have seen this selection update yet.
       const instance = currentInstance as VaporComponentInstance
       if (instance.isMounted) {
         if (isInteropEnabled && !instance.vapor) {
-          queuePostRenderEffect(update, instance.uid, instance.suspense)
+          queuePostRenderEffect(registered, instance.uid, instance.suspense)
         } else {
           queueSelectUpdates(instance)
         }

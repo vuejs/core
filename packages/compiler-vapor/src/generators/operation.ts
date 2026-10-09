@@ -106,12 +106,15 @@ export function genEffects(
   const [frag, push] = buildCodeFragment()
   let reactive: IREffect[] = []
   // A one-time select value only has to follow its options, so it waits for
-  // the remaining effects instead of splitting their render effect.
-  const selectValues: IREffect[] = []
+  // the remaining effects instead of splitting their render effect, unless a
+  // function ref among them can read the selection first.
+  const selectValues = hasTemplateRefEffect(effects)
+    ? undefined
+    : ([] as IREffect[])
   for (const effect of effects) {
     if (!effect.once) {
       reactive.push(effect)
-    } else if (effect.operations.every(isSelectValueOperation)) {
+    } else if (selectValues && isSelectValueEffect(effect)) {
       selectValues.push(effect)
     } else {
       push(...genReactiveEffects(reactive, context))
@@ -120,18 +123,30 @@ export function genEffects(
     }
   }
   push(...genReactiveEffects(reactive, context, genExtraFrag))
-  for (const effect of selectValues) {
-    push(...genOperations(effect.operations, context))
+  if (selectValues) {
+    for (const effect of selectValues) {
+      push(...genOperations(effect.operations, context))
+    }
   }
   return frag
 }
 
-function isSelectValueOperation(oper: OperationNode): boolean {
+export function isSelectValueEffect(effect: IREffect): boolean {
   return (
-    oper.type === IRNodeTypes.SYNC_SELECT_VALUE ||
-    (oper.type === IRNodeTypes.SET_PROP &&
-      oper.tag === 'select' &&
-      oper.prop.key.content === 'value')
+    !!effect.once &&
+    effect.operations.every(
+      oper =>
+        oper.type === IRNodeTypes.SYNC_SELECT_VALUE ||
+        (oper.type === IRNodeTypes.SET_PROP &&
+          oper.tag === 'select' &&
+          oper.prop.key.content === 'value'),
+    )
+  )
+}
+
+export function hasTemplateRefEffect(effects: IREffect[]): boolean {
+  return effects.some(effect =>
+    effect.operations.some(oper => oper.type === IRNodeTypes.SET_TEMPLATE_REF),
   )
 }
 
