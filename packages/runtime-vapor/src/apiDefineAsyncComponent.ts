@@ -34,6 +34,7 @@ import {
 import { type Block, EMPTY_BLOCK, type TransitionOptions } from './block'
 import { _next } from './dom/node'
 import { isKeepAliveEnabled } from './keepAlive'
+import { isInteropEnabled } from './vdomInteropState'
 
 const enum AsyncBranch {
   RESOLVED = 1,
@@ -118,7 +119,14 @@ export function defineVaporAsyncComponent<T extends VaporComponent>(
       performAsyncHydrate(
         el,
         instance,
-        () => hydrateNode(el, () => withDeferredHydrationBoundary(hydrate)),
+        () =>
+          hydrateNode(
+            el,
+            () => withDeferredHydrationBoundary(hydrate),
+            isInteropEnabled && instance.interopVNode
+              ? (instance.interopVNode.anchor as Node)
+              : null,
+          ),
         getResolvedComp,
         load,
         hydrateStrategy,
