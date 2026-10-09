@@ -1,4 +1,4 @@
-import { type Ref, reactive, ref } from '@vue/reactivity'
+import { type Ref, effectScope, reactive, ref } from '@vue/reactivity'
 import {
   applyCheckboxModel,
   applyDynamicModel,
@@ -2133,5 +2133,44 @@ describe('directive: v-model', () => {
         },
       )
     })
+  })
+
+  test.each(['text', 'checkbox', 'radio', 'select'])(
+    'stops %s model effects when their conditional branch is removed',
+    async type => {
+      const makeForm = () => ({ selected: type === 'checkbox' ? [1] : 1 })
+      const element =
+        type === 'select'
+          ? `<select v-if="data.form" v-model="data.form.selected"><option :value="1">one</option></select>`
+          : `<input v-if="data.form" type="${type}" v-model="data.form.selected"${type === 'text' ? '' : ' :value="1"'}>`
+      await renderParity(
+        { App: `<template><div>${element}</div></template>` },
+        () => ref({ form: makeForm() }),
+        async (data, root) => {
+          await nextTick()
+          for (let i = 0; i < 2; i++) {
+            expect(root.querySelector('input, select')).not.toBe(null)
+            data.value.form = null
+            await nextTick()
+            expect(root.querySelector('input, select')).toBe(null)
+            data.value.form = makeForm()
+            await nextTick()
+          }
+        },
+      )
+    },
+  )
+
+  test('skips model initialization when its scope is disposed before mount', () => {
+    const get = vi.fn(() => 'foo')
+    const { host } = define(() => {
+      const input = template('<input>')() as HTMLInputElement
+      const scope = effectScope()
+      scope.run(() => applyTextModel(input, get, () => {}))
+      scope.stop()
+      return input
+    }).render()
+    expect(get).not.toHaveBeenCalled()
+    expect(host.querySelector('input')!.value).toBe('')
   })
 })
