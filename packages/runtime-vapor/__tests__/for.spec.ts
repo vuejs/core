@@ -2861,6 +2861,31 @@ test('keys items by the :key same-name shorthand', async () => {
   expect(vapor.text).toBe(vdom.text)
 })
 
+test('resolves destructure defaults that reference a sibling alias', async () => {
+  const titles: Record<string, string> = {}
+  const { vdom, vapor } = await renderParity(
+    {
+      App: `<template><a v-for="({ label, href, title = label }, index) in data" :key="href" :href :title>{{ index }}:{{ title }}</a></template>`,
+    },
+    () =>
+      ref<{ label: string; href: string; title?: string }[]>([
+        { label: 'Docs', href: '/docs' },
+        { label: 'Repo', href: '/repo', title: 'Source' },
+      ]),
+    async (data, root, mode) => {
+      data.value[0].title = 'Guide'
+      data.value[1].title = undefined
+      data.value[1].label = 'Code'
+      await nextTick()
+      titles[mode] = Array.from(root.querySelectorAll('a'), a => a.title).join()
+    },
+  )
+  expect(vdom.text).toBe('0:Guide1:Code')
+  expect(vapor.text).toBe(vdom.text)
+  expect(titles.vdom).toBe('Guide,Code')
+  expect(titles.vapor).toBe(titles.vdom)
+})
+
 function getEffectsCount(scope: { deps: any }) {
   let count = 0
   for (let dep = scope.deps; dep !== undefined; dep = dep.nextDep) {

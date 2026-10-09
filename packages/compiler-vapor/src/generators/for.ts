@@ -1,6 +1,7 @@
 import {
   type SimpleExpressionNode,
   createSimpleExpression,
+  walkFunctionParams,
   walkIdentifiers,
 } from '@vue/compiler-dom'
 import { genBlockContent, isVModelListener, isVModelOperation } from './block'
@@ -23,7 +24,12 @@ import {
   genMulti,
   getParserOptions,
 } from './utils'
-import type { Expression, Identifier, Node } from '@babel/types'
+import type {
+  ArrowFunctionExpression,
+  Expression,
+  Identifier,
+  Node,
+} from '@babel/types'
 import { parseExpression } from '@babel/parser'
 import { walk } from 'estree-walker'
 import { genOperation } from './operation'
@@ -324,10 +330,16 @@ export function parseValueDestructure(
   if (value) {
     const rawValue = value.content
     if (value.ast) {
+      // only the identifiers the pattern declares, not reads of them inside it
+      // (default values, computed keys)
+      const bindings = new Set<Identifier>()
+      walkFunctionParams(value.ast as ArrowFunctionExpression, id =>
+        bindings.add(id),
+      )
       walkIdentifiers(
         value.ast,
-        (id, _, parentStack, ___, isLocal) => {
-          if (isLocal) {
+        (id, _, parentStack) => {
+          if (bindings.has(id)) {
             let path = ''
             let isDynamic = false
             let helper

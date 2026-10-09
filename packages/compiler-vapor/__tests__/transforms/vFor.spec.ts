@@ -782,4 +782,16 @@ describe('compiler: v-for', () => {
     const op = ir.block.dynamic.children[0].operation as ForIRNode
     expect(op.keyProp).toMatchObject({ content: 'key', isStatic: false })
   })
+
+  test('destructure reading a sibling alias', () => {
+    const { code } = compileWithVFor(
+      `<a v-for="({ label, title = label, [label]: extra }) in items" :title>{{ extra }}</a>`,
+    )
+    expect(code).toContain(
+      '_getDefaultValue(_for_item0.value.title, () => (_for_item0.value.label))',
+    )
+    expect(code).toContain(
+      '_toDisplayString(_for_item0.value[_for_item0.value.label])',
+    )
+  })
 })
