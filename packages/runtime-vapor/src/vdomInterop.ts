@@ -1696,6 +1696,9 @@ function createVDOMComponent(
   const comp = useBridge ? ensureRendererBridge(component) : component
   let propsInstance: VaporComponentInstance | undefined
   let rawValues: Record<string, any> = EMPTY_OBJ
+  let rawRef: VNodeNormalizedRef | null | undefined
+  let shouldRefreshRef = false
+  let refreshRefJob: SchedulerJob | undefined
   let isMounted = false
   let cells: SlotSourceCell[] | undefined
   const isolated = rawSlots && isolateSlotSources(rawSlots as RawSlots)
@@ -1729,6 +1732,19 @@ function createVDOMComponent(
         }
         if (effect.active && (propsInstance || cells)) {
           const changed = deliverInputs(propsInstance, rawValues, cells)
+          if (changed && rawRef) {
+            shouldRefreshRef = true
+            // Commit after child patches, but before ordinary post watchers.
+            queuePostFlushCb(
+              (refreshRefJob ||= () => {
+                if (shouldRefreshRef) {
+                  shouldRefreshRef = false
+                  if (rawRef) vdomSetRef(rawRef, rawRef, suspense, vnode)
+                }
+              }),
+              -1,
+            )
+          }
           // an async wrapper forwards props and slots only when it renders, and
           // a deferred hydration renders untracked, so re-render it like VDOM
           if (
@@ -1866,7 +1882,6 @@ function createVDOMComponent(
     }
   }
 
-  let rawRef: VNodeNormalizedRef | null | undefined
   let isUnmounted = false
   let isDomRemoved = false
   const removeDom = (parentNode?: ParentNode): void => {
@@ -1877,6 +1892,7 @@ function createVDOMComponent(
     isDomRemoved = true
   }
   const unmount = (parentNode?: ParentNode, transition?: TransitionHooks) => {
+    shouldRefreshRef = false
     if (isUnmounted) {
       if (!transition) removeDom(parentNode)
       return

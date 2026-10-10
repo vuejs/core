@@ -13964,3 +13964,151 @@ describe('vdom host re-renders for vapor slot content updates', () => {
     })
   })
 })
+
+describe('vdom component template refs', () => {
+  test.each(['function', 'object', 'string'])(
+    'refreshes a functional vdom component %s ref before post watchers',
+    async refType => {
+      const Child: FunctionalComponent<{ isLink: boolean }> = props =>
+        props.isLink
+          ? h('a', { href: '#docs' }, 'action')
+          : h('button', 'action')
+      Child.props = ['isLink']
+      const seen: Record<string, unknown[]> = {}
+
+      await renderParity(
+        {
+          App: `<script setup>
+            import { ref, useTemplateRef, watch } from 'vue'
+            const data = _data
+            const components = _components
+            let current
+            const action = ${
+              refType === 'function'
+                ? 'el => { current = el }'
+                : refType === 'object'
+                  ? '{ ref: ref(null) }'
+                  : "useTemplateRef('action')"
+            }
+            watch(() => data.value.isLink, () => {
+              const el = ${refType === 'function' ? 'current' : refType === 'object' ? 'action.ref.value' : 'action.value'}
+              data.value.seen.push([el?.tagName, el?.isConnected])
+            }, { flush: 'post' })
+          </script>
+          <template>
+            <button @click="data.isLink = !data.isLink">change</button>
+            <components.Child :is-link="data.isLink" ${refType === 'string' ? 'ref' : ':ref'}="${refType === 'object' ? 'action.ref' : 'action'}" />
+          </template>`,
+        },
+        () => ref({ isLink: false, seen: [] }),
+        async (data, root, mode) => {
+          document.body.appendChild(root)
+          try {
+            const button = root.querySelector('button')!
+            button.click()
+            await nextTick()
+            expect(root.querySelector('a')).not.toBeNull()
+            button.click()
+            await nextTick()
+            seen[mode] = data.value.seen
+          } finally {
+            root.remove()
+          }
+        },
+        { Child },
+      )
+
+      expect(seen.vdom).toEqual([
+        ['A', true],
+        ['BUTTON', true],
+      ])
+      expect(seen.vapor).toEqual(seen.vdom)
+    },
+  )
+
+  test.each([false, true])(
+    'cancels a pending ref refresh when removed (KeepAlive: %s)',
+    async keepAlive => {
+      const seen: Record<string, string[]> = {}
+      const components: Record<string, any> = {}
+      await renderParity(
+        {
+          App: `<template>
+            ${keepAlive ? '<KeepAlive>' : ''}
+            <components.Child v-if="data.show" :tick="data.tick" :ref="data.setRef" />
+            ${keepAlive ? '</KeepAlive>' : ''}
+          </template>`,
+        },
+        () => {
+          const calls: string[] = []
+          const data = ref({
+            show: true,
+            tick: 0,
+            calls,
+            setRef: (value: unknown) => calls.push(value ? 'set' : 'clear'),
+          })
+          components.Child = compile(
+            `<script setup>
+              import { watch } from 'vue'
+              const data = _data
+              const props = defineProps(['tick'])
+              watch(() => props.tick, () => { data.value.show = false })
+            </script><template><div>{{ tick }}</div></template>`,
+            data,
+            {},
+            { vapor: false },
+          )
+          return data
+        },
+        async (data, root, mode) => {
+          data.value.tick++
+          await nextTick()
+          expect(root.querySelector('div')).toBeNull()
+          const calls = data.value.calls
+          seen[mode] = calls.slice(calls.indexOf('clear'))
+        },
+        components,
+      )
+      expect(seen.vdom).toEqual(['clear'])
+      expect(seen.vapor).toEqual(seen.vdom)
+    },
+  )
+
+  test('refreshes refs for unused input changes without waiting for a child render', async () => {
+    const seen: Record<string, number[]> = {}
+    const components: Record<string, any> = {}
+    await renderParity(
+      {
+        App: `<template>
+          <components.Child :unused="data.unused" :ref="data.setRef" />
+        </template>`,
+      },
+      () => {
+        const data = ref({ unused: 0, own: 0, setRef: vi.fn() })
+        components.Child = compile(
+          `<script setup>
+            const data = _data
+            defineProps(['unused'])
+          </script><template><div>{{ data.own }}</div></template>`,
+          data,
+          {},
+          { vapor: false },
+        )
+        return data
+      },
+      async (data, root, mode) => {
+        seen[mode] = [data.value.setRef.mock.calls.length]
+        data.value.unused++
+        await nextTick()
+        seen[mode].push(data.value.setRef.mock.calls.length)
+        data.value.own++
+        await nextTick()
+        expect(root.textContent).toBe('1')
+        seen[mode].push(data.value.setRef.mock.calls.length)
+      },
+      components,
+    )
+    expect(seen.vdom).toEqual([1, 2, 2])
+    expect(seen.vapor).toEqual(seen.vdom)
+  })
+})
