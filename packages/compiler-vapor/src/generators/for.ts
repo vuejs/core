@@ -32,11 +32,7 @@ import type {
 } from '@babel/types'
 import { parseExpression } from '@babel/parser'
 import { walk } from 'estree-walker'
-import {
-  genOperation,
-  hasTemplateRefEffect,
-  isSelectValueEffect,
-} from './operation'
+import { genOperation } from './operation'
 import { VaporVForFlags, isGloballyAllowed } from '@vue/shared'
 
 export function genFor(
@@ -456,6 +452,19 @@ export function buildDestructureIdMap(
   return idMap
 }
 
+function isSelectValueEffect(effect: IREffect): boolean {
+  return (
+    !!effect.once &&
+    effect.operations.some(
+      oper =>
+        oper.type === IRNodeTypes.SYNC_SELECT_VALUE ||
+        (oper.type === IRNodeTypes.SET_PROP &&
+          oper.tag === 'select' &&
+          oper.prop.key.content === 'value'),
+    )
+  )
+}
+
 function matchPatterns(
   render: BlockIRNode,
   keyProp: SimpleExpressionNode | undefined,
@@ -472,10 +481,8 @@ function matchPatterns(
 
   if (
     keyProp === undefined ||
-    // a function ref keeps a one-time select value in place, so the option
-    // bindings it relies on must not be lifted after it
-    (render.effect.some(isSelectValueEffect) &&
-      hasTemplateRefEffect(render.effect))
+    // lifting would move the option bindings after a one-time select value
+    render.effect.some(isSelectValueEffect)
   ) {
     return {
       keyOnlyBindingPatterns,

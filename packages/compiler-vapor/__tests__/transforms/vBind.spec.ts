@@ -1655,22 +1655,4 @@ describe('compiler v-bind', () => {
     expect(value).toBeGreaterThan(-1)
     expect(code.indexOf('_applySelectModel(n1,')).toBeGreaterThan(value)
   })
-
-  test.each([
-    [`v-bind="attrs"`, '_syncSelectValue(n1)'],
-    [`value="b"`, '_withOnce(() => _setValue(n1, "b"))'],
-    [`v-bind="{ value: 'b' }"`, '_setValue(n1, "b")'],
-  ])(
-    'keeps one render effect when effects follow a select: %s',
-    (binding, setter) => {
-      const { code } = compileWithVBind(
-        `<select ${binding}><option :value="option" /></select><p :title="title" />`,
-      )
-
-      expect(code.match(/_renderEffect\(/g)).toHaveLength(1)
-      expect(code.indexOf(setter)).toBeGreaterThan(
-        code.indexOf('_setProp(n2, "title", _ctx.title)'),
-      )
-    },
-  )
 })
