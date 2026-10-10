@@ -814,6 +814,8 @@ function createDevSetupStateProxy(
         !key.startsWith('__v') &&
         !hasOwn(toRaw(setupState), key)
       ) {
+        // a prop the compiler couldn't see, e.g. `defineProps({ ...base })`
+        if (hasOwn(instance.props, key)) return instance.props[key]
         warn(
           hasOwn(config.globalProperties, key)
             ? `Property ${JSON.stringify(key)} is provided via app.config.globalProperties, ` +

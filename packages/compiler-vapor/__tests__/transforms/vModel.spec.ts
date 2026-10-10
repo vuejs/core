@@ -524,7 +524,10 @@ describe('compiler: vModel transform', () => {
     const constant = compileVapor(source, {
       prefixIdentifiers: true,
       inline: true,
-      bindingMetadata: { type: BindingTypes.LITERAL_CONST },
+      bindingMetadata: {
+        type: BindingTypes.LITERAL_CONST,
+        model: BindingTypes.SETUP_REF,
+      },
     }).code
 
     expect(reactive).toMatchSnapshot()

@@ -208,6 +208,7 @@ describe('compile', () => {
       const code = compile(`{{ a + b }}`, {
         inline: true,
         bindingMetadata: {
+          a: BindingTypes.SETUP_CONST,
           b: BindingTypes.SETUP_REF,
         },
       })
@@ -638,5 +639,16 @@ describe('compile', () => {
     const code = compile(source, { onWarn })
     expect(onWarn).not.toHaveBeenCalled()
     expect(code).toContain('onVnodeMounted')
+  })
+
+  test('inline: unknown identifiers are read from props', () => {
+    const code = compile(`<Foo.Bar :a="foo" :b="$foo" :c="Math.PI" />`, {
+      inline: true,
+      bindingMetadata: { Foo: BindingTypes.SETUP_CONST },
+    })
+    expect(code).contains('_createComponent(Foo.Bar, {')
+    expect(code).contains('a: () => (__props.foo)')
+    expect(code).contains('b: () => ($foo)')
+    expect(code).contains('c: () => (Math.PI)')
   })
 })

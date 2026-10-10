@@ -195,7 +195,19 @@ function genIdentifier(
   }
 
   let prefix: string | undefined
-  const type = bindingMetadata && bindingMetadata[raw]
+  let type = bindingMetadata && bindingMetadata[raw]
+  // without a render proxy, an unknown identifier can only be a prop the
+  // compiler couldn't see, e.g. `defineProps({ ...base })`
+  if (
+    inline &&
+    !type &&
+    raw[0] !== '$' &&
+    // not a dotted component tag, e.g. <foo.Bar>
+    isSimpleIdentifier(raw) &&
+    canPrefix(raw)
+  ) {
+    type = BindingTypes.PROPS
+  }
   // ({ x } = y)
   const isDestructureAssignment =
     parent && isInDestructureAssignment(parent, parentStack || [])
