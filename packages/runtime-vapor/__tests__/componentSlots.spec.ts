@@ -8333,3 +8333,23 @@ describe('whitespace between conditional slots', () => {
     },
   )
 })
+
+test('slots object supports hasOwnProperty like vdom', async () => {
+  const { vdom, vapor } = await renderParity(
+    {
+      Comp: `<script setup>
+        import { useSlots } from 'vue'
+        const slots = useSlots()
+      </script>
+      <template><p>{{ slots.hasOwnProperty('header') }}<b v-if="$slots.hasOwnProperty('footer')"><slot name="footer" /></b><i v-if="$slots.hasOwnProperty('extra')">extra</i></p></template>`,
+      App: `<template><components.Comp><template #header>H</template><template #footer v-if="data.ok">F</template></components.Comp></template>`,
+    },
+    () => ref({ ok: true }),
+    async (data, root) => {
+      expect(root.textContent).toBe('trueF')
+      data.value.ok = false
+    },
+  )
+  expect(vdom.text).toBe('true')
+  expect(vapor.text).toBe(vdom.text)
+})

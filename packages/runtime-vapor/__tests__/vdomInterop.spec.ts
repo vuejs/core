@@ -13807,6 +13807,47 @@ describe('vdomInterop', () => {
       app.unmount()
     }
   })
+
+  test.each([true, false])(
+    'slots object supports hasOwnProperty (parent vapor: %s)',
+    async vapor => {
+      const data = ref({ ok: true })
+      const Comp = compile(
+        `<script setup>
+          import { useSlots } from 'vue'
+          const slots = useSlots()
+        </script>
+        <template><p>{{ slots.hasOwnProperty('header') }}<b v-if="$slots.hasOwnProperty('footer')"><slot name="footer" /></b><i v-if="$slots.hasOwnProperty('extra')">extra</i></p></template>`,
+        data,
+        {},
+        { vapor: !vapor },
+      )
+      const App = compile(
+        `<script setup>
+          const data = _data
+          const components = _components
+        </script>
+        <template><components.Comp><template #header>H</template><template #footer v-if="data.ok">F</template></components.Comp></template>`,
+        data,
+        { Comp },
+        { vapor },
+      )
+      const { host, app } = define(App).render()
+      try {
+        expect(host.textContent).toBe('trueF')
+
+        data.value.ok = false
+        await nextTick()
+        expect(host.textContent).toBe('true')
+
+        data.value.ok = true
+        await nextTick()
+        expect(host.textContent).toBe('trueF')
+      } finally {
+        app.unmount()
+      }
+    },
+  )
 })
 
 describe('vdom host re-renders for vapor slot content updates', () => {
