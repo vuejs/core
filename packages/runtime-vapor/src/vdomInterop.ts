@@ -1693,6 +1693,8 @@ function createVDOMComponent(
   const comp = useBridge ? ensureRendererBridge(component) : component
   let propsInstance: VaporComponentInstance | undefined
   let rawValues: Record<string, any> = EMPTY_OBJ
+  let rawRef: VNodeNormalizedRef | null | undefined
+  let shouldRefreshRef = false
   let isMounted = false
   let cells: SlotSourceCell[] | undefined
   const isolated = rawSlots && isolateSlotSources(rawSlots as RawSlots)
@@ -1726,6 +1728,7 @@ function createVDOMComponent(
         }
         if (effect.active && (propsInstance || cells)) {
           const changed = deliverInputs(propsInstance, rawValues, cells)
+          if (changed && rawRef) shouldRefreshRef = true
           // an async wrapper forwards props and slots only when it renders, and
           // a deferred hydration renders untracked, so re-render it like VDOM
           if (
@@ -1753,6 +1756,14 @@ function createVDOMComponent(
     restoreCurrentInstance(prevInstance)
   }
   const { frag, syncNodes } = createVNodeFragment(vnode)
+  const updated = vnode.iu!
+  vnode.iu = () => {
+    updated()
+    if (shouldRefreshRef && rawRef) {
+      shouldRefreshRef = false
+      vdomSetRef(rawRef, rawRef, suspense, vnode)
+    }
+  }
   frag.inputScope = inputScope
   // Before mounting there is no VDOM instance scope to own these inputs.
   onScopeDispose(() => {
@@ -1863,7 +1874,6 @@ function createVDOMComponent(
     }
   }
 
-  let rawRef: VNodeNormalizedRef | null | undefined
   let isUnmounted = false
   let isDomRemoved = false
   const removeDom = (parentNode?: ParentNode): void => {

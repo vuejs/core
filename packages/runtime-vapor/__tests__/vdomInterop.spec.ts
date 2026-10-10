@@ -10631,6 +10631,45 @@ describe('vdomInterop', () => {
     },
   )
 
+  test('updates a function ref when a functional vdom component changes its root', async () => {
+    const refs: Record<'vdom' | 'vapor', string[]> = {
+      vdom: [],
+      vapor: [],
+    }
+    const VDomChild: FunctionalComponent<{ isLink: boolean }> = props =>
+      props.isLink
+        ? h('a', { href: '#docs' }, 'action')
+        : h('button', { type: 'button' }, 'action')
+    VDomChild.props = ['isLink']
+
+    await renderParity(
+      {
+        App: `<template>
+          <button @click="data.isLink = true">change</button>
+          <components.VDomChild :is-link="data.isLink" :ref="data.setRef" />
+        </template>`,
+      },
+      () => {
+        const recorded: string[] = []
+        return ref({
+          isLink: false,
+          setRef: (el: Element | null) =>
+            recorded.push(el ? el.tagName : 'null'),
+          recorded,
+        })
+      },
+      async (data, root, mode) => {
+        root.querySelector('button')!.click()
+        await nextTick()
+        refs[mode] = data.value.recorded
+      },
+      { VDomChild },
+    )
+
+    expect(refs.vapor).toEqual(refs.vdom)
+    expect(refs.vdom).toEqual(['BUTTON', 'A', 'null'])
+  })
+
   test('should exclude declared emit listeners from optional functional vdom props', () => {
     const onClick = vi.fn()
     const VDomChild: FunctionalComponent<any> = (props, { attrs, emit }) => {
