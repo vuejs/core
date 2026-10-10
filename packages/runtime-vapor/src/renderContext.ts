@@ -1,17 +1,12 @@
 import type { SuspenseBoundary } from '@vue/runtime-dom'
 import type { VaporComponentInstance } from './component'
 import type { SlotBoundaryContext } from './slotBoundary'
-import { isInteropEnabled } from './vdomInteropState'
-import type { VdomSlotContent } from './vdomSlotOwner'
 
 export interface RenderContext {
   readonly slotOwner: VaporComponentInstance | null
   readonly slotBoundary: SlotBoundaryContext | null
   readonly slotScopeIds: string[] | null
   readonly suspense: SuspenseBoundary | null
-  // vdom interop only: the vapor slot of a vdom component this content
-  // renders in
-  vdomSlot?: VdomSlotContent
 }
 
 export let currentRenderContext: RenderContext = {
@@ -45,17 +40,12 @@ export function deriveRenderContext(
   suspense: SuspenseBoundary | null,
 ): RenderContext {
   // returns `base` when nothing changes, so unchanged contexts allocate nothing
-  if (
-    slotOwner === base.slotOwner &&
+  return slotOwner === base.slotOwner &&
     slotBoundary === base.slotBoundary &&
     slotScopeIds === base.slotScopeIds &&
     suspense === base.suspense
-  ) {
-    return base
-  }
-  const ctx: RenderContext = { slotOwner, slotBoundary, slotScopeIds, suspense }
-  if (isInteropEnabled && base.vdomSlot) ctx.vdomSlot = base.vdomSlot
-  return ctx
+    ? base
+    : { slotOwner, slotBoundary, slotScopeIds, suspense }
 }
 
 export function deriveSlotOwner(

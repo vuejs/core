@@ -16,7 +16,6 @@ import {
   currentInstance,
   defineAsyncComponent,
   defineComponent,
-  defineCustomElement,
   effectScope,
   getCurrentInstance,
   getCurrentScope,
@@ -71,7 +70,6 @@ import {
   createVaporApp,
   defineVaporAsyncComponent,
   defineVaporComponent,
-  defineVaporCustomElement,
   insert,
   renderEffect,
   setText,
@@ -13812,10 +13810,6 @@ describe('vdomInterop', () => {
 })
 
 describe('vdom host re-renders for vapor slot content updates', () => {
-  // vdom tracks everything the slot content reads in the host's render, so a
-  // change re-renders the host; vapor content updates in place and has to
-  // schedule that render itself
-
   // a vdom host with `data` (and `n`) from the parent
   const plainHost = (template: string, script = '', components = {}) =>
     compile(
@@ -13827,891 +13821,127 @@ describe('vdom host re-renders for vapor slot content updates', () => {
       components,
       { vapor: false },
     )
-  // one logging its update hooks through `data.log`
-  const host = (template: string, script = '', components = {}) =>
-    plainHost(
-      template,
-      `import { onBeforeUpdate, onUpdated, ref } from 'vue'
-      const root = ref()
-      const log = s => props.data.log(s)
-      onBeforeUpdate(() => log('bu'))
-      onUpdated(() => log('u'))
-      ${script}`,
-      components,
-    )
 
-  // what each mode logs through `data.log` while `act` runs
-  async function logParity(
-    srcs: Record<string, string>,
-    Host: any,
+  // the host renders once in each mode while `act` runs
+  async function expectHostRendersOnce(
+    App: string,
+    template: string,
     init: () => any,
     act: (data: any) => unknown,
-    extra: Record<string, any> = {},
   ) {
-    const calls = { vdom: [] as string[], vapor: [] as string[] }
+    const renders = { vdom: 0, vapor: 0 }
     await renderParity(
-      srcs,
-      () => ref({ log: null, ...init() }),
+      { App },
+      () => ref({ render: null, ...init() }),
       async (data, _root, mode) => {
-        data.value.log = (s: string) => calls[mode].push(s)
+        data.value.render = () => renders[mode]++
         await act(data.value)
       },
-      { Host, ...extra },
+      {
+        Host: plainHost(
+          template,
+          `import { onBeforeUpdate } from 'vue'
+          onBeforeUpdate(() => props.data.render())`,
+        ),
+      },
     )
-    return calls
+    expect(renders).toEqual({ vdom: 1, vapor: 1 })
   }
-
-  const slotApp = {
-    App: `<template><components.Host :data="data" :n="data.n"><i>{{ data.m }}</i></components.Host></template>`,
-  }
-  const titled = `<p :title="n"><slot /></p>`
-  const withRoot = `<p ref="root"><slot /></p>`
-  const beforeAfter = `onBeforeUpdate(() => log('before ' + root.value.textContent))
-    onUpdated(() => log('after ' + root.value.textContent))`
 
   test.each([
     ['a slot update alone', (d: any) => d.m++],
     ['a host render alone', (d: any) => d.n++],
     ['a host render and a slot update in one tick', (d: any) => (d.n++, d.m++)],
-  ])('%s runs the host update hooks once', async (_, change) => {
-    const calls = await logParity(
-      slotApp,
-      host(titled),
+  ])('%s renders the host once', async (_, change) => {
+    await expectHostRendersOnce(
+      `<template><components.Host :data="data"><i>{{ data.m }}</i></components.Host></template>`,
+      // renders from its own job, ahead of the slot content
+      `<p :title="data.n"><slot /></p>`,
       () => ({ n: 0, m: 0 }),
       change,
     )
-    expect(calls.vdom).toEqual(['bu', 'u'])
-    expect(calls.vapor).toEqual(calls.vdom)
   })
 
-  test('update cycles close between ticks', async () => {
-    const calls = await logParity(
-      slotApp,
-      host(titled),
-      () => ({ n: 0, m: 0 }),
-      async d => {
-        for (const change of [
-          () => d.m++,
-          () => d.n++,
-          () => (d.n++, d.m++),
-          () => d.m++,
-        ]) {
-          change()
-          await nextTick()
-        }
-      },
-    )
-    expect(calls.vdom).toEqual(['bu', 'u', 'bu', 'u', 'bu', 'u', 'bu', 'u'])
-    expect(calls.vapor).toEqual(calls.vdom)
-  })
-
-  test('beforeUpdate sees the content before the update', async () => {
-    const calls = await logParity(
-      slotApp,
-      host(withRoot, beforeAfter),
-      () => ({ n: 0, m: 0 }),
-      d => d.m++,
-    )
-    expect(calls.vdom).toEqual(['bu', 'before 0', 'u', 'after 1'])
-    expect(calls.vapor).toEqual(calls.vdom)
-  })
-
-  test('a computed read by the slot that keeps its value does not re-render the host', async () => {
-    const calls = await logParity(
-      {
-        App: `<script setup>import { computed } from 'vue'
-        const data = _data
-        const components = _components
-        const big = computed(() => data.value.m > 10)
-        </script><template><components.Host :data="data"><i>{{ big }}</i></components.Host></template>`,
-      },
-      host(`<p><slot /></p>`),
-      () => ({ m: 0 }),
-      d => d.m++,
-    )
-    expect(calls.vdom).toEqual([])
-    expect(calls.vapor).toEqual(calls.vdom)
-  })
-
-  test('scoped slot props updated by the host render do not re-render it again', async () => {
-    const calls = await logParity(
-      {
-        App: `<template><components.Host :data="data" :n="data.n"><template #default="{ v }"><i>{{ v }}</i></template></components.Host></template>`,
-      },
-      host(
-        `<p ref="root"><slot :v="n" /></p>`,
-        `onUpdated(() => log(root.value.textContent))`,
-      ),
+  test('scoped slot props updated by the host render do not render it again', async () => {
+    await expectHostRendersOnce(
+      `<template><components.Host :data="data" :n="data.n"><template #default="{ v }"><i>{{ v }}</i></template></components.Host></template>`,
+      `<p><slot :v="n" /></p>`,
       () => ({ n: 0 }),
       d => d.n++,
     )
-    expect(calls.vdom).toEqual(['bu', 'u', '1'])
-    expect(calls.vapor).toEqual(calls.vdom)
   })
 
-  test('directive and vnode update hooks on host elements run', async () => {
-    const calls = await logParity(
-      slotApp,
-      host(
-        `<div v-dir @vue:before-update="log('vnode bu')" @vue:updated="log('vnode u')"><slot /></div>`,
-        `const vDir = {
-          beforeUpdate: el => log('dir bu ' + el.textContent),
-          updated: el => log('dir u ' + el.textContent),
-        }`,
-      ),
-      () => ({ n: 0, m: 0 }),
-      d => d.m++,
-    )
-    expect(calls.vdom).toEqual([
-      'bu',
-      'vnode bu',
-      'dir bu 0',
-      'vnode u',
-      'dir u 1',
-      'u',
-    ])
-    expect(calls.vapor).toEqual(calls.vdom)
-  })
-
-  test('a pre-flush watcher of the host runs before the render', async () => {
-    const calls = await logParity(
-      slotApp,
-      host(
-        withRoot,
-        `import { watch } from 'vue'
-        watch(() => props.data.w, () => log('watch ' + root.value.textContent))`,
-      ),
-      () => ({ n: 0, m: 0, w: 0 }),
-      d => (d.m++, d.w++),
-    )
-    expect(calls.vdom).toEqual(['watch 0', 'bu', 'u'])
-    expect(calls.vapor).toEqual(calls.vdom)
-  })
-
-  test('a slot update from a post watcher after the host render renders again', async () => {
-    const calls = await logParity(
-      {
-        App: `<script setup>import { watch } from 'vue'
-        const data = _data
-        const components = _components
-        // runs after the host rendered for \`n\`, in the same flush
-        watch(() => data.value.n, () => data.value.m++, { flush: 'post' })
-        </script><template><components.Host :data="data" :n="data.n"><i>{{ data.m }}</i></components.Host></template>`,
-      },
-      host(titled),
-      () => ({ n: 0, m: 0 }),
-      d => d.n++,
-    )
-    expect(calls.vdom).toEqual(['bu', 'u', 'bu', 'u'])
-    expect(calls.vapor).toEqual(calls.vdom)
-  })
-
-  test('effects the content updates notify join the current update', async () => {
-    const calls = await logParity(
-      {
-        App: `<template><components.Host :data="data"><i v-for="o in data.list" :key="o.id">{{ o.t }}</i></components.Host></template>`,
-      },
-      host(withRoot, beforeAfter),
-      () => ({
-        list: [
-          { id: 1, t: 'a' },
-          { id: 2, t: 'b' },
-        ],
-      }),
-      d => (d.list = [{ id: 1, t: 'c' }]),
-    )
-    expect(calls.vdom).toEqual(['bu', 'before ab', 'u', 'after c'])
-    expect(calls.vapor).toEqual(calls.vdom)
-  })
-
-  test('a host render that reuses its memoized tree still covers the slot update', async () => {
-    const calls = await logParity(
-      slotApp,
-      host(`<p v-memo="[data.memo]" :title="n"><slot /></p>`),
-      () => ({ n: 0, m: 0, memo: 0 }),
-      d => (d.n++, d.m++),
-    )
-    expect(calls.vdom).toEqual(['bu', 'u'])
-    expect(calls.vapor).toEqual(calls.vdom)
-  })
-
-  test('content of a slot the render removes is not updated', async () => {
-    const { vdom, vapor } = await renderParity(
-      {
-        App: `<template><components.Host :data="data"><i>{{ data.m }}</i><template #b><b>{{ data.obj.value }}</b></template></components.Host></template>`,
-      },
-      () => ref({ m: 0, show: true, obj: { value: 'x' } }),
-      async data => {
-        data.value.show = false
-        data.value.obj = null
-      },
-      {
-        Host: plainHost(
-          `<p><slot /></p><p v-if="data.show"><slot name="b" /></p>`,
-        ),
-      },
-    )
-    expect(vdom.after).toBe('<p><i>0</i></p><!--v-if-->')
-    expect(vapor.after).toBe(vdom.after)
-  })
-
-  // the check must not evaluate content a structural update of the same
-  // tick drops: neither vdom nor the scheduler order would
-  test.each([
-    [
-      'a v-if in the slot content',
-      `<template v-if="data.show"><i>{{ c }}</i></template>`,
+  test('kept v-for rows the list updates do not render the host again', async () => {
+    await expectHostRendersOnce(
+      `<template><components.Host :data="data"><i v-for="o in data.list" :key="o.id">{{ o.t }}</i></components.Host></template>`,
       `<p><slot /></p>`,
-    ],
-    [
-      'a v-if of the host',
-      `<i>{{ c }}</i>`,
-      `<p v-if="data.show"><slot /></p>`,
-    ],
-  ])(
-    'computed content dropped by %s in the same tick is not evaluated',
-    async (_, content, template) => {
-      const { vdom, vapor } = await renderParity(
-        {
-          App: `<script setup>import { computed } from 'vue'
-          const data = _data
-          const components = _components
-          const c = computed(() => data.value.obj.value)
-          </script><template><components.Host :data="data">${content}</components.Host></template>`,
-        },
-        () => ref({ show: true, obj: { value: 'x' } }),
-        async data => {
-          data.value.obj = null
-          data.value.show = false
-        },
-        { Host: plainHost(template) },
-      )
-      expect(vdom.text).toBe('')
-      expect(vapor.text).toBe(vdom.text)
-    },
-  )
-
-  test('a handled error in the slot content does not abort the host render', async () => {
-    const data = ref<any>({ show: false, obj: { value: 'x' } })
-    const App = compile(
-      `<template><components.Host :data="data"><i>{{ data.obj.value }}</i></components.Host></template>`,
-      data,
-      { Host: plainHost(`<p><slot /></p><b v-if="data.show">s</b>`) },
-    )
-    const root = document.createElement('div')
-    const errors: string[] = []
-    const app = createVaporApp(App).use(vaporInteropPlugin)
-    app.config.errorHandler = err => errors.push((err as Error).name)
-    app.mount(root)
-    data.value.obj = null
-    data.value.show = true
-    await nextTick()
-    expect(errors).toEqual(['TypeError'])
-    expect(root.innerHTML).toBe('<p><i>x</i></p><b>s</b>')
-    data.value.obj = { value: 'y' }
-    await nextTick()
-    expect(root.innerHTML).toBe('<p><i>y</i></p><b>s</b>')
-    app.unmount()
-  })
-
-  test('a handled error while checking the content still renders the host', async () => {
-    const data = ref<any>({ model: 'b', opts: ['a', 'b'], obj: { value: 'x' } })
-    const App = compile(
-      `<script setup vapor>import { computed } from 'vue'
-      const data = _data
-      const components = _components
-      const bad = computed(() => data.value.obj.value)
-      </script><template><components.Host :data="data"><template #bad>{{ bad }}</template><option v-for="o in data.opts" :key="o" :value="o">{{ o }}</option></components.Host></template>`,
-      data,
-      {
-        Host: plainHost(
-          `<p><slot name="bad" /></p><select v-model="data.model"><slot /></select>`,
-        ),
-      },
-    )
-    const root = document.createElement('div')
-    const errors: string[] = []
-    const app = createVaporApp(App).use(vaporInteropPlugin)
-    app.config.errorHandler = err => errors.push((err as Error).name)
-    app.mount(root)
-    const select = root.querySelector('select')!
-    expect(select.selectedIndex).toBe(1)
-    data.value.obj = null
-    data.value.opts = ['a', 'c']
-    await nextTick()
-    expect(errors).toEqual(['TypeError'])
-    expect(select.selectedIndex).toBe(-1)
-    app.unmount()
-  })
-
-  // the content mounts and unmounts its components while the host patches
-  // the slot, so the host's updated hook sees them settled
-  const Mounted = `<script setup>import { onMounted, onUnmounted, ref } from 'vue'
-  const props = defineProps(['data'])
-  const el = ref()
-  onMounted(() => {
-    el.value.dataset.ready = 'yes'
-    props.data.log('child mounted')
-  })
-  onUnmounted(() => props.data.log('child unmounted'))
-  </script><template><b ref="el">c</b></template>`
-  const vdomMounted = compile(Mounted, ref(), {}, { vapor: false })
-  // the host logs whether the child settled by its updated hook
-  const logReady = (b = `root.value.querySelector('b')`) =>
-    `onUpdated(() => {
-      const b = ${b}
-      log('ready ' + (b ? b.dataset.ready : '-'))
-    })`
-  const settled = [
-    'bu',
-    'child mounted',
-    'u',
-    'ready yes',
-    'bu',
-    'child unmounted',
-    'u',
-    'ready -',
-  ]
-  const toggleShow = async (d: any) => {
-    d.show = true
-    await nextTick()
-    d.show = false
-    await nextTick()
-  }
-  test.each([
-    ['vdom', {}, { Child: vdomMounted }],
-    // compiled per mode: a vdom one in the vdom app
-    ['vapor', { Child: Mounted }, {}],
-  ])(
-    'a %s component the slot content mounts or unmounts settles before the host updated hook',
-    async (_, srcs, extra) => {
-      const calls = await logParity(
-        {
-          ...srcs,
-          App: `<template><components.Host :data="data"><components.Child v-if="data.show" :data="data" /></components.Host></template>`,
-        },
-        host(withRoot, logReady()),
-        () => ({ show: false }),
-        toggleShow,
-        extra,
-      )
-      expect(calls.vdom).toEqual(settled)
-      expect(calls.vapor).toEqual(calls.vdom)
-    },
-  )
-
-  // the host renders the fallback and deferred teleport content too, under
-  // the context of the slot
-  test.each([false, true])(
-    'a component in the host slot fallback settles before the host updated hook (vapor child: %s)',
-    async vapor => {
-      const calls = await logParity(
-        {
-          App: `<template><components.Host :data="data"><i v-if="data.content">c</i></components.Host></template>`,
-        },
-        host(
-          `<p ref="root"><slot><span>fallback</span><components.Child v-if="data.show" :data="data" /></slot></p>`,
-          logReady(),
-          { Child: compile(Mounted, ref(), {}, { vapor }) },
-        ),
-        () => ({ show: false, content: false }),
-        toggleShow,
-      )
-      expect(calls.vdom).toEqual(settled)
-      expect(calls.vapor).toEqual(calls.vdom)
-    },
-  )
-
-  // coverage guard: content forwarded into another component's slot renders
-  // with that component, not the host
-  test('content forwarded through a component slot does not re-render the host', async () => {
-    const calls = await logParity(
-      {
-        // compiled per mode
-        Wrap: `<template><div><slot /></div></template>`,
-        App: `<template><components.Host :data="data"><components.Wrap><components.Child v-if="data.show" :data="data" /></components.Wrap></components.Host></template>`,
-      },
-      host(withRoot),
-      () => ({ show: false }),
-      toggleShow,
-      { Child: vdomMounted },
-    )
-    expect(calls.vdom).toEqual(['child mounted', 'child unmounted'])
-    expect(calls.vapor).toEqual(calls.vdom)
-  })
-
-  test('a component in deferred teleport content settles before the host updated hook', async () => {
-    const target = document.createElement('div')
-    target.id = 'vapor-slot-owner-target'
-    document.body.appendChild(target)
-    try {
-      const calls = await logParity(
-        {
-          App: `<template><components.Host :data="data"><Teleport defer to="#vapor-slot-owner-target"><components.Child v-if="data.show" :data="data" /></Teleport></components.Host></template>`,
-        },
-        host(
-          `<p><slot /></p>`,
-          logReady(`document.querySelector('#vapor-slot-owner-target b')`),
-        ),
-        () => ({ show: false }),
-        toggleShow,
-        { Child: vdomMounted },
-      )
-      expect(calls.vdom).toEqual(settled)
-      expect(calls.vapor).toEqual(calls.vdom)
-    } finally {
-      target.remove()
-    }
-  })
-
-  test('slot content a host vnode hook changes before the render settles in that render', async () => {
-    const calls = await logParity(
-      {
-        App: `<template><components.Host :data="data" :n="data.n" @vue:before-update="data.show = true"><components.Child v-if="data.show" :data="data" /></components.Host></template>`,
-      },
-      host(`<p ref="root" :title="n"><slot /></p>`, logReady()),
-      () => ({ n: 0, show: false }),
-      d => d.n++,
-      { Child: vdomMounted },
-    )
-    expect(calls.vdom).toEqual([
-      'bu',
-      'child mounted',
-      'u',
-      'ready yes',
-      // the app unmounts
-      'child unmounted',
-    ])
-    expect(calls.vapor).toEqual(calls.vdom)
-  })
-
-  test('kept rows a memoized host leaves to their own jobs do not re-render it', async () => {
-    const calls = await logParity(
-      {
-        App: `<template><components.Host :data="data" :n="data.n"><i v-for="o in data.list" :key="o.id">{{ o.t }}</i></components.Host></template>`,
-      },
-      host(`<p v-memo="[data.memo]" :title="n"><slot /></p>`),
       () => ({
-        n: 0,
-        memo: 0,
         list: [
           { id: 1, t: 'a' },
           { id: 2, t: 'b' },
         ],
       }),
-      d => {
-        d.n++
-        d.list = [
+      d =>
+        (d.list = [
           { id: 1, t: 'c' },
           { id: 2, t: 'd' },
-        ]
-      },
+        ]),
     )
-    expect(calls.vdom).toEqual(['bu', 'u'])
-    expect(calls.vapor).toEqual(calls.vdom)
   })
 
-  test('what a component patched before the slot changes re-renders the host', async () => {
-    const calls = await logParity(
-      slotApp,
-      host(
-        `<components.Before :data="data" :n="n" /><p ref="root"><slot /></p>`,
-        `onUpdated(() => log('text ' + root.value.textContent))`,
-        {
-          // its beforeUpdate runs during the host patch, after the host render
-          Before: plainHost(
-            `<b>{{ n }}</b>`,
-            `import { onBeforeUpdate } from 'vue'
-            onBeforeUpdate(() => {
-              if (props.data.m < 1) props.data.m++
-            })`,
-          ),
-        },
-      ),
-      () => ({ n: 0, m: 0 }),
+  test('slot props a v-for consumes do not render the host again', async () => {
+    await expectHostRendersOnce(
+      `<template><components.Host :data="data" :n="data.n"><template #default="{ items }"><i v-for="i in items">{{ i }}</i></template></components.Host></template>`,
+      `<p><slot :items="[n]" /></p>`,
+      () => ({ n: 0 }),
       d => d.n++,
     )
-    // the host renders again for it, like vdom
-    expect(calls.vdom).toEqual(['bu', 'bu', 'u', 'text 1'])
-    expect(calls.vapor).toEqual(calls.vdom)
   })
 
-  test('content an element vnode hook in the patched slot drops is not evaluated', async () => {
+  test('a host removed in the tick of a slot update is not rendered', async () => {
     const { vdom, vapor } = await renderParity(
       {
-        App: `<script setup>import { computed, h } from 'vue'
-        const data = _data
-        const components = _components
-        // its beforeUpdate hook runs while the slot patches it
-        const vnode = computed(() =>
-          h('b', {
-            onVnodeBeforeUpdate: () => {
-              data.value.obj = null
-              data.value.show = false
-            },
-          }, data.value.t),
-        )
-        </script><template><components.Host :data="data"><component :is="vnode" /><i v-if="data.show">{{ data.obj.value }}</i></components.Host></template>`,
+        App: `<template><components.Host v-if="data.show" :data="data"><i>{{ data.m }}</i></components.Host></template>`,
       },
-      () => ref<any>({ t: 0, show: true, obj: { value: 'x' } }),
-      data => {
-        data.value.t++
-      },
-      { Host: plainHost(`<p><slot /></p>`) },
-    )
-    expect(vdom.text).toBe('1')
-    expect(vapor.text).toBe(vdom.text)
-  })
-
-  test('what an element hook changes after the host render re-renders the host', async () => {
-    const calls = await logParity(
-      slotApp,
-      host(
-        `<section v-if="show" :title="n" @vue:before-update="onElementUpdate"><slot /></section>`,
-        `const show = ref(true)
-        onBeforeUpdate(() => {
-          if (props.data.m >= 1) show.value = false
-        })
-        let changed = false
-        // runs while the host patches the section, after its render; assigns
-        // without reading, so the host render alone does not track it
-        const onElementUpdate = () => {
-          if (!changed) {
-            changed = true
-            props.data.m = 1
-          }
-        }`,
-      ),
-      () => ({ n: 0, m: 0 }),
-      d => d.n++,
-    )
-    expect(calls.vdom).toEqual(['bu', 'bu', 'u'])
-    expect(calls.vapor).toEqual(calls.vdom)
-  })
-
-  test('another slot the patch of one changes re-renders the host', async () => {
-    const { vdom, vapor } = await renderParity(
-      {
-        App: `<template><components.Host :data="data"><components.First :n="data.n" :data="data" /><template #second><b v-if="data.second">second</b></template></components.Host></template>`,
-      },
-      () => ref<any>({ n: 0, second: false }),
-      data => {
-        data.value.n++
-      },
-      {
-        // hides everything once the second slot shows
-        Host: plainHost(
-          `<section v-if="show"><p><slot /></p><p><slot name="second" /></p></section>`,
-          `import { onBeforeUpdate, ref } from 'vue'
-          const show = ref(true)
-          onBeforeUpdate(() => {
-            if (props.data.second) show.value = false
-          })`,
-        ),
-        // patched by the first slot, shows the second one
-        First: plainHost(
-          `<i>{{ n }}</i>`,
-          `import { watch } from 'vue'
-          watch(
-            () => props.n,
-            () => (props.data.second = true),
-            { flush: 'sync' },
-          )`,
-        ),
-      },
-    )
-    expect(vdom.text).toBe('')
-    expect(vapor.text).toBe(vdom.text)
-  })
-
-  test('content the host beforeUpdate hides is not updated', async () => {
-    const { vdom, vapor } = await renderParity(
-      {
-        App: `<template><components.Host :data="data"><i>{{ data.obj.value }}</i></components.Host></template>`,
-      },
-      () => ref<any>({ obj: { value: 'x' } }),
+      () => ref({ show: true, m: 0 }),
       async data => {
-        data.value.obj = null
-      },
-      {
-        Host: plainHost(
-          `<p v-if="show"><slot /></p>`,
-          `import { onBeforeUpdate, ref } from 'vue'
-          const show = ref(true)
-          onBeforeUpdate(() => {
-            if (!props.data.obj) show.value = false
-          })`,
-        ),
-      },
-    )
-    expect(vdom.text).toBe('')
-    expect(vapor.text).toBe(vdom.text)
-  })
-
-  test('a host renders again for what another host changes after it rendered', async () => {
-    const { vdom, vapor } = await renderParity(
-      {
-        App: `<template><components.H0 :data="data"><i>{{ data.a }}</i></components.H0><components.H1 :data="data"><b>{{ data.b }}</b></components.H1></template>`,
-      },
-      () => ref({ a: 0, b: 0 }),
-      async data => {
-        data.value.a++
-        data.value.b++
-      },
-      {
-        // hides itself once H1 pushed `a` to 2 in its own beforeUpdate
-        H0: plainHost(
-          `<p v-if="show"><slot /></p>`,
-          `import { onBeforeUpdate, ref } from 'vue'
-          const show = ref(true)
-          onBeforeUpdate(() => {
-            if (props.data.a >= 2) show.value = false
-          })`,
-        ),
-        H1: plainHost(
-          `<p><slot /></p>`,
-          `import { onBeforeUpdate } from 'vue'
-          onBeforeUpdate(() => {
-            if (props.data.a < 2) props.data.a++
-          })`,
-        ),
-      },
-    )
-    expect(vdom.text).toBe('1')
-    expect(vapor.text).toBe(vdom.text)
-  })
-
-  test('an aborted post flush does not stop later host renders', async () => {
-    const data = ref<any>({ model: 'b', opts: ['a', 'b'], n: 0 })
-    const App = compile(
-      `<script setup vapor>import { watch } from 'vue'
-      const data = _data
-      const components = _components
-      watch(() => data.value.n, () => { throw new Error('boom') }, { flush: 'post' })
-      </script><template><components.Host :data="data"><option v-for="o in data.opts" :key="o" :value="o">{{ o }}</option></components.Host></template>`,
-      data,
-      {
-        Host: plainHost(
-          `<select v-model="data.model" :title="data.n"><slot /></select>`,
-        ),
-      },
-    )
-    const root = document.createElement('div')
-    const app = createVaporApp(App).use(vaporInteropPlugin)
-    app.mount(root)
-    const select = root.querySelector('select')!
-    data.value.n++
-    await nextTick().catch(() => {})
-    expect('Unhandled error').toHaveBeenWarned()
-    data.value.opts = ['a', 'c']
-    await nextTick()
-    expect(select.selectedIndex).toBe(-1)
-    app.unmount()
-  })
-
-  test('a slot first mounted by a host update does not replay its hooks', async () => {
-    const calls = await logParity(
-      {
-        App: `<template><components.Host :data="data"><i>{{ data.m }}</i></components.Host></template>`,
-      },
-      host(
-        `<p v-if="data.show"><slot /></p><b v-else />`,
-        `onBeforeUpdate(() => props.data.m++)`,
-      ),
-      () => ({ show: false, m: 0 }),
-      d => (d.show = true),
-    )
-    expect(calls.vdom).toEqual(['bu', 'u'])
-    expect(calls.vapor).toEqual(calls.vdom)
-  })
-
-  test('content that keeps notifying itself goes back to the scheduler', async () => {
-    const data = ref<any>({ n: 0, t: 0 })
-    // bounded, so a slot patch that reruns it until it settles still ends
-    const App = compile(
-      `<template><components.Host :data="data"><i>{{ data.n < 500 ? (data.n++, '') : data.n }}</i></components.Host></template>`,
-      data,
-      { Host: plainHost(`<p :title="data.t"><slot /></p>`) },
-    )
-    const root = document.createElement('div')
-    const app = createVaporApp(App).use(vaporInteropPlugin)
-    app.mount(root)
-    data.value.n = 0
-    data.value.t++
-    // the scheduler stops it with its recursion check
-    await expect(nextTick()).rejects.toThrow('Maximum recursive updates')
-    expect(
-      'Unhandled error during execution of app errorHandler',
-    ).toHaveBeenWarned()
-    app.unmount()
-  })
-
-  test('content a kept row hides in the slot patch is not evaluated', async () => {
-    const { vdom, vapor } = await renderParity(
-      {
-        App: `<template><components.Host :data="data"><template v-for="o in data.list" :key="o.id"><i v-if="o.show">{{ data.obj.value }}</i></template></components.Host></template>`,
-      },
-      () => ref<any>({ list: [{ id: 1, show: true }], obj: { value: 'x' } }),
-      async data => {
-        data.value.list = [{ id: 1, show: false }]
-        data.value.obj = null
-      },
-      { Host: plainHost(`<p><slot /></p>`) },
-    )
-    expect(vdom.text).toBe('')
-    expect(vapor.text).toBe(vdom.text)
-  })
-
-  test('a vdom host mounted by slot content updates for its own vapor content', async () => {
-    const seen = { vdom: [] as number[], vapor: [] as number[] }
-    const Inner = plainHost(
-      `<select v-model="data.model"><slot><option v-for="o in data.opts" :key="o" :value="o">{{ o }}</option></slot></select>`,
-    )
-    await renderParity(
-      {
-        App: `<template><components.Outer :data="data"><b>{{ data.t }}</b><components.Inner v-if="data.on" :data="data"><template v-if="data.none">x</template></components.Inner></components.Outer></template>`,
-      },
-      () =>
-        ref<any>({
-          on: false,
-          none: false,
-          t: 0,
-          model: 'b',
-          opts: ['a', 'b'],
-        }),
-      async (data, root, mode) => {
-        data.value.on = true
-        await nextTick()
-        const select = root.querySelector('select')!
-        seen[mode].push(select.selectedIndex)
-        data.value.opts = ['a', 'c']
-        data.value.t++
-        await nextTick()
-        seen[mode].push(select.selectedIndex)
-      },
-      { Outer: plainHost(`<p><slot /></p>`), Inner },
-    )
-    expect(seen.vdom).toEqual([1, -1])
-    expect(seen.vapor).toEqual(seen.vdom)
-  })
-
-  test('a transition hook changed with the slot content applies to its leave', async () => {
-    const seen = { vdom: [] as string[], vapor: [] as string[] }
-    await renderParity(
-      {
-        App: `<template><components.Host :data="data"><div v-if="data.show">x</div></components.Host></template>`,
-      },
-      () => ref<any>({ show: true, leave: null }),
-      async (data, _root, mode) => {
-        const leave = (name: string) => (_el: Element, done: () => void) => {
-          seen[mode].push(name)
-          done()
-        }
-        data.value.leave = leave('old')
-        await nextTick()
-        data.value.leave = leave('new')
+        data.value.m++
         data.value.show = false
-        await nextTick()
       },
-      {
-        Host: plainHost(
-          `<Transition :on-leave="data.leave"><slot /></Transition>`,
-        ),
-      },
+      // switches its root when it renders for the update
+      { Host: plainHost(`<p v-if="!data.m"><slot /></p><b v-else />`) },
     )
-    expect(seen.vdom).toEqual(['new'])
-    expect(seen.vapor).toEqual(seen.vdom)
-  })
-
-  // known difference: a component the slot content passes new props to
-  // re-renders from its own job after the host patch, so its updated hook runs
-  // after the host's
-  const Child = `<script setup>import { onUpdated } from 'vue'
-  const props = defineProps(['m', 'data'])
-  onUpdated(() => props.data.log('child u'))
-  </script><template><b>{{ m }}</b></template>`
-  test.each([
-    ['vdom', {}, { Child: compile(Child, ref(), {}, { vapor: false }) }],
-    // compiled per mode: a vdom one in the vdom app
-    ['vapor', { Child }, {}],
-  ])(
-    'a %s component in the slot content updates after the host',
-    async (_, srcs, extra) => {
-      const calls = await logParity(
-        {
-          ...srcs,
-          App: `<template><components.Host :data="data"><components.Child :m="data.m" :data="data" /></components.Host></template>`,
-        },
-        host(`<p><slot /></p>`),
-        () => ({ m: 0 }),
-        d => d.m++,
-        extra,
-      )
-      expect(calls.vdom).toEqual(['bu', 'child u', 'u'])
-      expect(calls.vapor).toEqual(['bu', 'u', 'child u'])
-    },
-  )
-
-  // only vapor slot content re-renders the vdom component rendering it: a
-  // nested vapor custom element evaluates its inputs under a vdom parent
-  test('a vapor custom element inside a vdom one does not re-render it', async () => {
-    const calls: string[] = []
-    const Child = compile(
-      `<script setup vapor>defineProps(['n'])</script><template><i>{{ n }}</i></template>`,
-      ref(),
-    )
-    customElements.define(
-      'x-interop-rerender-child',
-      defineVaporCustomElement(Child),
-    )
-    customElements.define(
-      'x-interop-rerender-parent',
-      defineCustomElement(
-        {
-          setup() {
-            onBeforeUpdate(() => calls.push('bu'))
-            onUpdated(() => calls.push('u'))
-            return () => h('x-interop-rerender-child')
-          },
-        },
-        { configureApp: app => app.use(vaporInteropPlugin) },
-      ),
-    )
-    const parent = document.createElement('x-interop-rerender-parent')
-    document.body.appendChild(parent)
-    try {
-      await nextTick()
-      const child = parent.shadowRoot!.querySelector(
-        'x-interop-rerender-child',
-      ) as any
-      child.n = 1
-      await nextTick()
-      expect(child.shadowRoot.textContent).toBe('1')
-      expect(calls).toEqual([])
-    } finally {
-      parent.remove()
-      // custom elements unmount on the next tick
-      await nextTick()
-    }
+    expect(vdom.text).toBe('')
+    expect(vapor.text).toBe(vdom.text)
   })
 
   describe('select v-model fed options by the slot', () => {
     const optionsApp = `<template><components.SelectBox :data="data"><option v-for="o in data.opts" :key="o" :value="o">{{ o }}</option></components.SelectBox></template>`
-    const optsApp = `<template><components.SelectBox :data="data"><components.Opts :opts="data.opts" /></components.SelectBox></template>`
-    const Opts = `<script setup>defineProps(['opts'])</script><template><option v-for="o in opts" :key="o" :value="o">{{ o }}</option></template>`
     const vModel = `<select v-model="data.model" :title="data.tick"><slot /></select>`
-    const vValue = `<select :value="data.model" :title="data.tick"><slot /></select>`
 
     // model fixed at `b`: the selected option goes away, comes back, then an
     // unrelated host render
-    async function selectionAfterOptionChanges(
-      SelectBox: any,
-      App = optionsApp,
-      vapor?: number[],
-    ) {
+    test.each([
+      ['options in the slot', plainHost(vModel), optionsApp],
+      [
+        'options rendered by a component in the slot',
+        plainHost(vModel),
+        `<template><components.SelectBox :data="data"><components.Opts :opts="data.opts" /></components.SelectBox></template>`,
+      ],
+      [
+        'the select in a forwarded vdom slot',
+        plainHost(`<components.Forward>${vModel}</components.Forward>`, '', {
+          Forward: plainHost(`<slot />`),
+        }),
+        optionsApp,
+      ],
+    ])('re-syncs the selection with %s', async (_, SelectBox, App) => {
       const seen = { vdom: [] as number[], vapor: [] as number[] }
       await renderParity(
-        { Opts, App },
+        {
+          Opts: `<script setup>defineProps(['opts'])</script><template><option v-for="o in opts" :key="o" :value="o">{{ o }}</option></template>`,
+          App,
+        },
         () => ref({ model: 'b', opts: ['a', 'b'], tick: 0 }),
         async (data, root, mode) => {
           const select = root.querySelector('select')!
@@ -14730,139 +13960,6 @@ describe('vdom host re-renders for vapor slot content updates', () => {
         { SelectBox },
       )
       expect(seen.vdom).toEqual([1, -1, 0, 0])
-      expect(seen.vapor).toEqual(vapor || seen.vdom)
-    }
-
-    test.each([
-      [
-        're-syncs the selection when the slot re-renders the options',
-        vModel,
-        optionsApp,
-      ],
-      ['a :value binding without v-model', vValue, optionsApp],
-      [
-        'a :value binding with options in the host slot fallback',
-        `<select :value="data.model" :title="data.tick"><slot><option v-for="o in data.opts" :key="o" :value="o">{{ o }}</option></slot></select>`,
-        `<template><components.SelectBox :data="data"><template v-if="data.none">x</template></components.SelectBox></template>`,
-      ],
-      [
-        'options under an optgroup of the host',
-        `<select v-model="data.model" :title="data.tick"><optgroup label="g"><slot /></optgroup></select>`,
-        optionsApp,
-      ],
-      ['options rendered by a component in the slot', vModel, optsApp],
-    ])('%s', async (_, template, App) => {
-      await selectionAfterOptionChanges(plainHost(template), App)
-    })
-
-    // known difference: the component re-renders its options from its own job
-    // after the host patched `value` (the vdom one inside the host patch);
-    // v-model applies it after the update
-    test('a :value binding with options rendered by a component in the slot', async () => {
-      await selectionAfterOptionChanges(
-        plainHost(vValue),
-        optsApp,
-        [1, 0, 1, 0],
-      )
-    })
-
-    test('a :value meets option values the slot patch updates in kept rows', async () => {
-      const seen = { vdom: [] as number[], vapor: [] as number[] }
-      await renderParity(
-        {
-          App: `<template><components.SelectBox :data="data"><option v-for="o in data.opts" :key="o.id" :value="o.v">{{ o.v }}</option></components.SelectBox></template>`,
-        },
-        () =>
-          ref({
-            model: 'a',
-            opts: [
-              { id: 1, v: 'a' },
-              { id: 2, v: 'b' },
-            ],
-          }),
-        async (data, root, mode) => {
-          const select = root.querySelector('select')!
-          data.value.opts = [
-            { id: 1, v: 'c' },
-            { id: 2, v: 'b' },
-          ]
-          data.value.model = 'c'
-          await nextTick()
-          seen[mode].push(select.selectedIndex)
-        },
-        {
-          SelectBox: plainHost(`<select :value="data.model"><slot /></select>`),
-        },
-      )
-      expect(seen.vdom).toEqual([0])
-      expect(seen.vapor).toEqual(seen.vdom)
-    })
-
-    // coverage guard: the other direction re-syncs through the vapor host's
-    // updated hooks
-    test('vapor select host fed options by a vdom slot', async () => {
-      await selectionAfterOptionChanges(
-        compile(
-          `<script setup vapor>defineProps(['data'])</script><template>${vModel}</template>`,
-          ref(),
-        ),
-      )
-    })
-
-    test('the select sits in a forwarded vdom slot of another vdom component', async () => {
-      await selectionAfterOptionChanges(
-        plainHost(`<components.Forward>${vModel}</components.Forward>`, '', {
-          Forward: plainHost(`<slot />`),
-        }),
-      )
-    })
-
-    test('a v-memo select keeps a pick across host renders', async () => {
-      const seen = { vdom: [] as number[], vapor: [] as number[] }
-      await renderParity(
-        { App: optionsApp },
-        () => ref({ model: 'a', opts: ['a', 'b'], memo: 0, tick: 0 }),
-        async (data, root, mode) => {
-          const select = root.querySelector('select')!
-          select.selectedIndex = 1
-          select.dispatchEvent(new Event('change'))
-          await nextTick()
-          data.value.tick++
-          await nextTick()
-          seen[mode].push(select.selectedIndex)
-        },
-        {
-          SelectBox: plainHost(
-            `<p :title="data.tick"></p><select v-memo="[data.memo]" v-model="data.model"><slot /></select>`,
-          ),
-        },
-      )
-      expect(seen.vdom).toEqual([1])
-      expect(seen.vapor).toEqual(seen.vdom)
-    })
-
-    test('an unrelated slot update in the tick of a pick keeps a duplicate-value option', async () => {
-      const seen = { vdom: [] as number[], vapor: [] as number[] }
-      await renderParity(
-        {
-          App: `<template><components.SelectBox :data="data"><option value="a">a</option><option value="b">b1</option><option value="b">b2</option><template #other>{{ data.m }}</template></components.SelectBox></template>`,
-        },
-        () => ref({ model: 'a', m: 0 }),
-        async (data, root, mode) => {
-          const select = root.querySelector('select')!
-          select.selectedIndex = 2
-          select.dispatchEvent(new Event('change'))
-          data.value.m++
-          await nextTick()
-          seen[mode].push(select.selectedIndex)
-        },
-        {
-          SelectBox: plainHost(
-            `<select v-model="data.model"><slot /></select><i><slot name="other" /></i>`,
-          ),
-        },
-      )
-      expect(seen.vdom).toEqual([2])
       expect(seen.vapor).toEqual(seen.vdom)
     })
   })

@@ -70,9 +70,8 @@ export class RenderEffect extends ReactiveEffect {
     // isUpdating prevents duplicate bu/u hooks on re-entry.
     this.flags |= EffectFlags.ALLOW_RECURSE
 
-    // a registered vdom owner (one that renders vapor slots) re-renders for
-    // the effects it owns; last, so their own fields extend the shared shape
-    if (vdomOwner) adoptVdomOwnedEffect(this, vdomOwner, noLifecycle)
+    // last, so the fields a vdom owner adds extend the shared shape
+    if (vdomOwner) adoptVdomOwnedEffect(this, vdomOwner)
   }
 
   createJob(): SchedulerJob {

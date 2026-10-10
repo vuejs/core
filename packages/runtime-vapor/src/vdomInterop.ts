@@ -153,7 +153,7 @@ import {
 } from './componentSlots'
 import { inOnce, withOnce } from './once'
 import { RenderEffect, renderEffect } from './renderEffect'
-import { deriveVdomSlot, initVdomOwner, patchVdomSlot } from './vdomSlotOwner'
+import { initVdomOwner, patchVdomSlot } from './vdomSlotOwner'
 import { createTextNode, parentNode } from './dom/node'
 import { optimizePropertyLookup } from './dom/prop'
 import {
@@ -750,16 +750,11 @@ const vaporInteropImpl = {
         n2.anchor = n1.anchor
         n2.vb = n1.vb
         vs2.scope = vs1.scope
-        // the content patched with it sees the new transition hooks
-        patchVdomSlot(
-          parentComponent,
-          (n2.vb as RenderContextFragment).ctx,
-          () => {
-            ;(vs2.ref = vs1.ref)!.value = n2.props
-            syncInteropVaporSlotState(n1, n2)
-            applyVaporSlotTransition(n2, n2.vb, true)
-          },
-        )
+        patchVdomSlot(parentComponent, () => {
+          ;(vs2.ref = vs1.ref)!.value = n2.props
+          syncInteropVaporSlotState(n1, n2)
+        })
+        applyVaporSlotTransition(n2, n2.vb, true)
       }
     }
   },
@@ -3304,12 +3299,7 @@ function renderVaporSlot(
   if (__FEATURE_SUSPENSE__ && isSuspenseEnabled && parentSuspense) {
     setRenderContext(deriveSuspense(prevCtx, parentSuspense))
   }
-  // everything this slot renders, now or later, updates where the vdom owner
-  // patches it
-  if (parentComponent && !parentComponent.vapor) {
-    initVdomOwner(parentComponent)
-    setRenderContext(deriveVdomSlot(currentRenderContext, parentComponent))
-  }
+  if (parentComponent && !parentComponent.vapor) initVdomOwner(parentComponent)
   try {
     if (!vnode.vs || !vnode.vs.slot) {
       return EMPTY_BLOCK
