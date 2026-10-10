@@ -48,6 +48,7 @@ import {
 import { normalizeEmitsOptions } from './componentEmits'
 import { RenderEffect } from './renderEffect'
 import { interopKey, isInteropEnabled } from './vdomInteropState'
+import { isKeepAliveEnabled } from './keepAlive'
 
 export const fallthroughOnlyKey: unique symbol = Symbol(
   __DEV__ ? 'fallthrough only' : '',
@@ -568,8 +569,8 @@ export function initInputs(
   instance: VaporComponentInstance,
   once = false,
 ): void {
-  const scope = instance.inputScope || instance.scope
-  const prevEffect = instance.inputEffect
+  const scope = (isKeepAliveEnabled && instance.inputScope) || instance.scope
+  const prevEffect = isKeepAliveEnabled && instance.inputEffect
   if (prevEffect) prevEffect.stop()
   const parent = instance.parent || instance
   const rawProps = instance.rawProps
@@ -580,7 +581,7 @@ export function initInputs(
     // VDOM already evaluated these inputs and delivers subsequent patches.
     const isInterop = isInteropEnabled && !!rawProps[interopKey]
     // a cache hit can rebind a kept-alive instance to other inputs
-    const canRebind = !!instance.inputScope
+    const canRebind = isKeepAliveEnabled && !!instance.inputScope
     const hasGetters = hasDynamicPropsSource(rawProps)
     if (once || (!cells && (isInterop || (!canRebind && !hasGetters)))) {
       instance.hasDynamicProps = !once && isInterop
