@@ -1056,7 +1056,7 @@ const vaporSlotsProxyHandler: ProxyHandler<any> = {
       wrappers.set(key, { slot, wrapped })
       return wrapped
     }
-    return slot
+    return slot || (Object.prototype as any)[key]
   },
   ownKeys(target) {
     return Array.from(dynamicSlotsProxyHandlers.ownKeys!(target)).filter(
