@@ -2007,8 +2007,11 @@ class FallthroughResolveState implements RootChainVisitor {
   // (a KeepAlive reactivation would otherwise re-apply onto cached nodes).
   // A vdom-fed slot outlet is a fragment boundary like a vapor one.
   onInteropFragment(frag: InteropFragment): boolean {
-    if (isSlotOutletFragment(frag)) return (this.hasSlotOutlet = true)
-    return !!frag.vnode
+    if (isInteropEnabled) {
+      if (isSlotOutletFragment(frag)) return (this.hasSlotOutlet = true)
+      return !!frag.vnode
+    }
+    return false
   }
 }
 
