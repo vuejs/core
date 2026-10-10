@@ -27,10 +27,15 @@ import { isHydrating } from '../dom/hydration'
  * (`bm` hooks; `u` for vdom-owned interop content), and teleports are written
  * directly as outlets since their content leaves the chain.
  */
-export function useVaporCssVars(getter: () => Record<string, string>): void {
+export function useVaporCssVars(
+  getter: (ctx: any) => Record<string, string>,
+): void {
   if (!__BROWSER__ && !__TEST__) return
   const instance = currentInstance as VaporComponentInstance
-  if (__DEV__) (instance as GenericComponentInstance).getCssVars = getter
+  // the compiled getter reads identifiers the compiler couldn't resolve from
+  // `_ctx`, which can only be props
+  const getVars = () => getter(instance.props)
+  if (__DEV__) (instance as GenericComponentInstance).getCssVars = getVars
 
   let vars: Record<string, string> = EMPTY_OBJ
   const apply = (instance.applyCssVars = (nodes: Block) => {
@@ -43,7 +48,7 @@ export function useVaporCssVars(getter: () => Record<string, string>): void {
     watch(
       () => {
         // the copy also tracks every key before any root element exists
-        vars = extend({}, getter())
+        vars = extend({}, getVars())
         if (instance.ce) {
           setVarsOnNode(instance.ce as any, vars)
         } else {

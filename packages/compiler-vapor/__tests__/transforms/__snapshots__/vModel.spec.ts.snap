@@ -175,7 +175,7 @@ exports[`compiler: vModel transform > generates dynamic model after dynamic type
 "
   const n0 = t0()
   _setProp(n0, "type", type)
-  _applyDynamicModel(n0, () => (model), _value => (model = _value))
+  _applyDynamicModel(n0, () => (model.value), _value => (model.value = _value))
   return n0
 "
 `;

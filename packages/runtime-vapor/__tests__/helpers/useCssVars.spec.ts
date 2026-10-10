@@ -16,7 +16,7 @@ import { nextTick, onMounted, reactive, ref } from '@vue/runtime-core'
 import { Suspense, createApp, defineComponent, h } from '@vue/runtime-dom'
 import { createVaporApp } from '../../src'
 import { VaporBlockShape } from '@vue/shared'
-import { compile, ifFlags, makeRender } from '../_utils'
+import { compile, ifFlags, makeRender, renderParity } from '../_utils'
 import type { VaporComponent } from '../../src/component'
 
 const define = makeRender()
@@ -948,5 +948,23 @@ describe('useVaporCssVars', () => {
     await nextTick()
     expect(el().style.fontWeight).toBe('bold')
     expect(cssVar(el())).toBe('red')
+  })
+
+  test('v-bind() reads props the compiler cannot see', async () => {
+    const { vdom, vapor } = await renderParity(
+      {
+        Child: `<script>const baseProps = { color: String }</script>
+          <script setup>defineProps(baseProps)</script>
+          <template><i /></template>
+          <style>i { color: v-bind(color) }</style>`,
+        App: `<template><components.Child :color="data.color" /></template>`,
+      },
+      () => ref({ color: 'red' }),
+      data => {
+        data.value.color = 'blue'
+      },
+    )
+    expect(vapor).toEqual(vdom)
+    expect(vapor.after).toMatch(/^<i style="--[\w-]+: blue;"><\/i>$/)
   })
 })

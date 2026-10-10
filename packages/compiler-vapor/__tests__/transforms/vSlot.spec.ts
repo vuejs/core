@@ -1281,6 +1281,8 @@ describe('compiler: transform slot', () => {
       {
         inline: true,
         bindingMetadata: {
+          ok: BindingTypes.SETUP_CONST,
+          name: BindingTypes.SETUP_CONST,
           s: BindingTypes.SETUP_CONST,
           s1: BindingTypes.SETUP_CONST,
         },

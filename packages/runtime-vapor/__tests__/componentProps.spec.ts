@@ -2642,6 +2642,56 @@ describe('component: props', () => {
     expect(vdom.after).toBe('<i>undefined</i><i>undefined</i><i>object</i>')
     expect(vapor.after).toBe(vdom.after)
   })
+
+  test.each([
+    ['', 'defineProps({ ...baseProps, other: String })'],
+    ['', 'defineProps(baseProps)'],
+    ['export default { props: baseProps }', ''],
+  ])('props the compiler cannot see: %s%s', async (script, setup) => {
+    const { vdom, vapor } = await renderParity(
+      {
+        Child: `<script>
+            const baseProps = { label: String, other: String }
+            ${script}
+          </script>
+          <script setup>const sep = '-'; ${setup}</script>
+          <template><i :title="label">{{ label }}{{ sep }}{{ other }}</i></template>`,
+        App: `<template><components.Child :label="data.label" other="b" /></template>`,
+      },
+      () => ref({ label: 'a' }),
+      data => {
+        data.value.label = 'c'
+      },
+    )
+    expect(vapor).toEqual(vdom)
+    expect(vapor.after).toBe('<i title="c">c-b</i>')
+  })
+
+  test('props the compiler cannot see in a dev build', async () => {
+    const data = ref({ label: 'a' })
+    const Child = compile(
+      `<script>const baseProps = { label: String }</script>
+      <script setup>defineProps(baseProps)</script>
+      <template><i>{{ label }}{{ missing }}</i></template>`,
+      data,
+      {},
+      { inlineTemplate: false },
+    )
+    const App = compile(
+      `<template><components.Child :label="data.label" /></template>`,
+      data,
+      { Child },
+    )
+    const { host } = define(App).render()
+    expect(host.innerHTML).toBe('<i>a</i>')
+    expect(
+      'Property "missing" was accessed during render but is not defined on instance.',
+    ).toHaveBeenWarned()
+
+    data.value.label = 'c'
+    await nextTick()
+    expect(host.innerHTML).toBe('<i>c</i>')
+  })
 })
 
 describe('component: fallthrough props parity', () => {

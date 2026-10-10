@@ -9,6 +9,7 @@ import type { RawProps } from '../src/componentProps'
 import {
   type SFCTemplateCompileOptions,
   compileScript,
+  compileTemplate,
   parse,
 } from '@vue/compiler-sfc'
 import * as runtimeVapor from '../src'
@@ -178,12 +179,15 @@ export function compile(
     ssr = false,
     id = 'x',
     compilerOptions,
+    inlineTemplate = true,
   }: {
     vapor?: boolean | undefined
     ssr?: boolean | undefined
     // scope id for `<style scoped>` sources; distinct ids tell components apart
     id?: string
     compilerOptions?: SFCTemplateCompileOptions['compilerOptions'] | undefined
+    // false compiles like a dev build: script bindings + a separate render
+    inlineTemplate?: boolean
   } = {},
 ): any {
   if (!sfc.includes(`<script`)) {
@@ -200,8 +204,8 @@ export function compile(
 
   const script = compileScript(descriptor, {
     id,
-    isProd: true,
-    inlineTemplate: true,
+    isProd: inlineTemplate,
+    inlineTemplate,
     genDefaultAs: '__sfc__',
     vapor,
     templateOptions: {
@@ -210,8 +214,24 @@ export function compile(
     },
   })
 
-  const code =
-    script.content
+  let code = script.content
+  if (!inlineTemplate) {
+    code +=
+      '\n' +
+      compileTemplate({
+        source: descriptor.template!.content,
+        filename: 'x.vue',
+        id,
+        vapor,
+        compilerOptions: {
+          ...compilerOptions,
+          bindingMetadata: script.bindings,
+        },
+      }).code.replace('export function render', 'function render') +
+      '\n__sfc__.render = render'
+  }
+  code =
+    code
       .replace(/\bimport {/g, 'const {')
       .replace(/ as _/g, ': _')
       .replace(/} from ['"]vue['"]/g, `} = Vue`)

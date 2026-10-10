@@ -959,7 +959,14 @@ describe('compiler v-bind', () => {
   test('className helper parenthesizes its conditions', () => {
     const { code } = compileWithVBind(
       `<div :class="{ active: ok, foo: bar ? true : false, baz: n++ }"/>`,
-      { inline: true, bindingMetadata: { n: BindingTypes.SETUP_LET } },
+      {
+        inline: true,
+        bindingMetadata: {
+          ok: BindingTypes.SETUP_CONST,
+          bar: BindingTypes.SETUP_CONST,
+          n: BindingTypes.SETUP_LET,
+        },
+      },
     )
     expect(code).contains(
       '_setClassName(n0, ((ok) ? 1 : 0) | ((bar ? true : false) ? 2 : 0) | ((_isRef(n) ? n.value++ : n++) ? 4 : 0)',
