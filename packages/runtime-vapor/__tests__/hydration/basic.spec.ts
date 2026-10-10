@@ -1241,4 +1241,40 @@ describe('Vapor Mode hydration', () => {
       app.unmount()
     }
   })
+
+  test.each(['null', 'undefined', 'function'])(
+    'restores a native %s handler after hydration like vdom',
+    async initialType => {
+      for (const isVaporApp of [false, true]) {
+        const initial =
+          initialType === 'function'
+            ? vi.fn()
+            : initialType === 'null'
+              ? null
+              : undefined
+        const { container, data, app } = await testHydration(
+          `<script setup>const data = _data</script><template><button :onclick="data"></button></template>`,
+          undefined,
+          ref(initial),
+          { isVaporApp },
+        )
+        const button = container.querySelector('button')!
+        expect(button.onclick).toBe(initial ?? null)
+
+        data.value = "this.setAttribute('fired', 'yes')"
+        await nextTick()
+        button.click()
+        expect(button.getAttribute('fired')).toBe('yes')
+        button.removeAttribute('fired')
+
+        data.value = initial
+        await nextTick()
+        expect(button.onclick).toBe(initial ?? null)
+        button.click()
+        expect(button.hasAttribute('fired')).toBe(false)
+        if (initial) expect(initial).toHaveBeenCalledTimes(1)
+        app.unmount()
+      }
+    },
+  )
 })
