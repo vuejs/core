@@ -884,4 +884,23 @@ describe('compiler: expression', () => {
     const { code } = compileWithExpression(`{{ isNaN }}`, { bindingMetadata })
     expect(code).contains('_toDisplayString(_ctx.isNaN)')
   })
+
+  // #6483
+  test('unref + new expression', () => {
+    const compileNew = (template: string, type: BindingTypes) =>
+      compileWithExpression(template, {
+        inline: true,
+        bindingMetadata: { Foo: type },
+      }).code
+
+    expect(
+      compileNew(`{{ new Foo() }}`, BindingTypes.SETUP_MAYBE_REF),
+    ).contains('new (_unref(Foo))()')
+    expect(
+      compileNew(`{{ new Foo.Bar() }}`, BindingTypes.SETUP_MAYBE_REF),
+    ).contains('new (_unref(Foo)).Bar()')
+    expect(compileNew(`{{ new Foo() }}`, BindingTypes.SETUP_LET)).contains(
+      'new (_unref(Foo))()',
+    )
+  })
 })

@@ -15,6 +15,7 @@ import {
   createSimpleExpression,
   isFunctionType,
   isInDestructureAssignment,
+  isInNewExpression,
   isSimpleIdentifier,
   isStaticProperty,
   unwrapTSNode,
@@ -304,7 +305,11 @@ function genIdentifier(
     return assignment ? `${s} = ${assignment}` : s
   }
   function unref() {
-    return `${helper('unref')}(${raw})`
+    const wrapped = `${helper('unref')}(${raw})`
+    // `new _unref(Foo)()` would construct `unref` itself
+    return parentStack && isInNewExpression(parentStack)
+      ? `(${wrapped})`
+      : wrapped
   }
 }
 
