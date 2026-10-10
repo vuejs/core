@@ -204,7 +204,9 @@ function getOwnedSlot(
 }
 
 export const dynamicSlotsProxyHandlers: ProxyHandler<RawSlots> = {
-  get: getSlot,
+  // fall back to Object.prototype so `slots.hasOwnProperty()` works like vdom
+  get: (target, key: string) =>
+    getSlot(target, key) || (Object.prototype as any)[key],
   has: (target, key: string) => !!getSlot(target, key),
   getOwnPropertyDescriptor(target, key: string) {
     const slot = getSlot(target, key)
