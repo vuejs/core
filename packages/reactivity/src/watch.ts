@@ -91,11 +91,13 @@ export function onWatcherCleanup(
 ): void {
   if (owner) {
     const { call } = owner.options
-    if (call) {
-      owner.cleanups[owner.cleanupsLength++] = () =>
-        call(cleanupFn, WatchErrorCodes.WATCH_CLEANUP)
+    const cleanup = call
+      ? () => call(cleanupFn, WatchErrorCodes.WATCH_CLEANUP)
+      : cleanupFn
+    if (owner.cb) {
+      ;(owner.cbCleanups || (owner.cbCleanups = [])).push(cleanup)
     } else {
-      owner.cleanups[owner.cleanupsLength++] = cleanupFn
+      owner.cleanups[owner.cleanupsLength++] = cleanup
     }
   } else if (__DEV__ && !failSilently) {
     warn(
@@ -109,6 +111,7 @@ export class WatcherEffect extends ReactiveEffect {
   forceTrigger: boolean
   isMultiSource: boolean
   oldValue: any
+  cbCleanups?: (() => void)[]
   boundCleanup: typeof onWatcherCleanup = fn =>
     onWatcherCleanup(fn, false, this)
 
@@ -210,6 +213,24 @@ export class WatcherEffect extends ReactiveEffect {
     }
   }
 
+  cleanupCallback(): void {
+    const cleanups = this.cbCleanups
+    if (cleanups) {
+      // Cleanups may synchronously trigger the watcher again.
+      this.cbCleanups = undefined
+      for (let i = 0, l = cleanups.length; i < l; i++) {
+        cleanups[i]()
+      }
+    }
+  }
+
+  stop(): void {
+    if (this.active) {
+      super.stop()
+      this.cleanupCallback()
+    }
+  }
+
   run(initialRun = false): void {
     const oldValue = this.oldValue
     const newValue = (this.oldValue = super.run())
@@ -229,7 +250,7 @@ export class WatcherEffect extends ReactiveEffect {
         : hasChanged(newValue, oldValue))
     ) {
       // cleanup before running cb again
-      cleanup(this)
+      this.cleanupCallback()
       const currentWatcher = activeWatcher
       activeWatcher = this
       try {

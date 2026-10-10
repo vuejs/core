@@ -4,6 +4,7 @@ import {
   WatchErrorCodes,
   type WatchOptions,
   computed,
+  onEffectCleanup,
   onWatcherCleanup,
   ref,
   watch,
@@ -253,5 +254,114 @@ describe('watch', () => {
     value.value = true
     value.value = true
     expect(value.value).toBe(false)
+  })
+
+  // #15765
+  test.each([false, true])(
+    'should preserve callback cleanups when getter values are unchanged (multiple sources: %s)',
+    multiple => {
+      const source = ref(1)
+      const onCleanup = vi.fn()
+      const onWatcherCleanupSpy = vi.fn()
+      const cb = vi.fn((_value, _oldValue, cleanup) => {
+        cleanup(onCleanup)
+        onWatcherCleanup(onWatcherCleanupSpy)
+      })
+      const getter = () => source.value > 0
+      const stop = watch(multiple ? [getter] : getter, cb, { immediate: true })
+
+      source.value++
+      expect(cb).toHaveBeenCalledTimes(1)
+      expect(onCleanup).not.toHaveBeenCalled()
+      expect(onWatcherCleanupSpy).not.toHaveBeenCalled()
+
+      stop()
+      expect(onCleanup).toHaveBeenCalledTimes(1)
+      expect(onWatcherCleanupSpy).toHaveBeenCalledTimes(1)
+    },
+  )
+
+  test('should clean up getter effects separately from watch callbacks', () => {
+    const source = ref(1)
+    const calls: string[] = []
+    const stop = watch(
+      () => {
+        calls.push('getter')
+        onEffectCleanup(() => calls.push('getter cleanup'))
+        return source.value > 0
+      },
+      (_value, _oldValue, onCleanup) => {
+        calls.push('callback')
+        onCleanup(() => calls.push('callback cleanup'))
+      },
+      { immediate: true },
+    )
+    expect(calls).toEqual(['getter', 'callback'])
+
+    calls.length = 0
+    source.value++
+    expect(calls).toEqual(['getter cleanup', 'getter'])
+
+    calls.length = 0
+    source.value = 0
+    expect(calls).toEqual([
+      'getter cleanup',
+      'getter',
+      'callback cleanup',
+      'callback',
+    ])
+
+    calls.length = 0
+    stop()
+    expect(calls).toEqual(['getter cleanup', 'callback cleanup'])
+  })
+
+  test('should preserve mixed cleanup registration order in watchEffect', () => {
+    const source = ref(0)
+    const calls: string[] = []
+    const stop = watch(onCleanup => {
+      source.value
+      onWatcherCleanup(() => calls.push('watcher'))
+      onEffectCleanup(() => calls.push('effect'))
+      onCleanup(() => calls.push('bound'))
+    })
+    expect(calls).toEqual([])
+
+    source.value++
+    expect(calls).toEqual(['watcher', 'effect', 'bound'])
+
+    calls.length = 0
+    stop()
+    expect(calls).toEqual(['watcher', 'effect', 'bound'])
+    stop()
+    expect(calls).toEqual(['watcher', 'effect', 'bound'])
+  })
+
+  test('should preserve cleanups registered during synchronous cleanup reentry', () => {
+    const source = ref(0)
+    const cleaned: number[] = []
+    const active = new Set<number>()
+    const stop = watch(
+      source,
+      value => {
+        active.add(value)
+        onWatcherCleanup(() => {
+          cleaned.push(value)
+          active.delete(value)
+          if (value === 0 && source.value === 1) {
+            source.value = 2
+          }
+        })
+      },
+      { immediate: true },
+    )
+
+    source.value = 1
+    expect(cleaned).toEqual([0])
+    expect([...active]).toEqual([2, 1])
+
+    stop()
+    expect(cleaned).toEqual([0, 2, 1])
+    expect(active.size).toBe(0)
   })
 })

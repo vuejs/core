@@ -2116,6 +2116,89 @@ describe('api: watch', () => {
     createApp(App).mount(root)
     expect(onCleanup).toBeCalledTimes(0)
   })
+
+  // #15765
+  test.each(['pre', 'post', 'sync'] as const)(
+    'should preserve watcher cleanup when the getter value is unchanged (flush: %s)',
+    async flush => {
+      const count = ref(1)
+      const calls: string[] = []
+      const scope = effectScope()
+
+      scope.run(() => {
+        watch(
+          () => count.value > 0,
+          (value, _, onCleanup) => {
+            calls.push(`callback:${value}`)
+            onCleanup(() => calls.push(`onCleanup:${value}`))
+            onWatcherCleanup(() => calls.push(`onWatcherCleanup:${value}`))
+          },
+          { immediate: true, flush },
+        )
+      })
+      expect(calls).toEqual(['callback:true'])
+
+      count.value = 2
+      await nextTick()
+      expect(calls).toEqual(['callback:true'])
+
+      count.value = 0
+      await nextTick()
+      expect(calls).toEqual([
+        'callback:true',
+        'onCleanup:true',
+        'onWatcherCleanup:true',
+        'callback:false',
+      ])
+
+      count.value = -1
+      await nextTick()
+      expect(calls).toEqual([
+        'callback:true',
+        'onCleanup:true',
+        'onWatcherCleanup:true',
+        'callback:false',
+      ])
+
+      scope.stop()
+      expect(calls).toEqual([
+        'callback:true',
+        'onCleanup:true',
+        'onWatcherCleanup:true',
+        'callback:false',
+        'onCleanup:false',
+        'onWatcherCleanup:false',
+      ])
+      scope.stop()
+      expect(calls).toHaveLength(6)
+    },
+  )
+
+  test('should preserve cleanups registered during synchronous cleanup reentry', () => {
+    const source = ref(0)
+    const cleaned: number[] = []
+    const live = new Set<number>()
+    const stop = watch(
+      source,
+      (value, _, onCleanup) => {
+        live.add(value)
+        onCleanup(() => {
+          cleaned.push(value)
+          live.delete(value)
+          if (source.value === 1) {
+            source.value = 2
+          }
+        })
+      },
+      { immediate: true, flush: 'sync' },
+    )
+
+    source.value = 1
+    stop()
+
+    expect.soft(cleaned).toEqual([0, 2, 1])
+    expect.soft([...live]).toEqual([])
+  })
 })
 
 function getEffectsCount(scope: EffectScope): number {
