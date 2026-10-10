@@ -80,6 +80,7 @@ function genRefValue(
     if (
       binding === BindingTypes.SETUP_LET ||
       binding === BindingTypes.SETUP_REF ||
+      binding === BindingTypes.SETUP_COMPUTED ||
       binding === BindingTypes.SETUP_MAYBE_REF
     ) {
       return [[value.content], JSON.stringify(value.content)]

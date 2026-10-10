@@ -62,6 +62,7 @@ export const transformVModel: DirectiveTransform = (dir, node, context) => {
     context.options.inline &&
     (bindingType === BindingTypes.SETUP_LET ||
       bindingType === BindingTypes.SETUP_REF ||
+      bindingType === BindingTypes.SETUP_COMPUTED ||
       bindingType === BindingTypes.SETUP_MAYBE_REF)
   if (
     !expString.trim() ||
