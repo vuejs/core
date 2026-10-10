@@ -7,15 +7,15 @@ catalog:
   '@babel/types': ^7.29.8
   'entities': '^7.0.1'
   'estree-walker': ^2.0.2
-  'vite': npm:@voidzero-dev/vite-plus-core@1.0.0-rc.0
+  'vite': npm:@voidzero-dev/vite-plus-core@1.1.0
   '@vitejs/plugin-vue': ^6.0.9
   'magic-string': ^0.30.21
   'source-map-js': ^1.2.1
-  vitest: 5.0.1
-  vite-plus: 1.0.0-rc.0
-  '@vitest/browser-playwright': 5.0.1
-  '@vitest/coverage-v8': 5.0.1
-  '@vitest/ui': 5.0.1
+  vitest: 5.0.3
+  vite-plus: 1.1.0
+  '@vitest/browser-playwright': 5.0.3
+  '@vitest/coverage-v8': 5.0.3
+  '@vitest/ui': 5.0.3
 
 allowBuilds:
   '@parcel/watcher': true
