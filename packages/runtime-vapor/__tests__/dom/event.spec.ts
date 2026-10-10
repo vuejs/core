@@ -656,5 +656,143 @@ describe('dom event', () => {
       )
       expect(vapor.after).toBe(vdom.after)
     })
+
+    test.each([':onclick="data.native"', 'v-bind="{ onclick: data.native }"'])(
+      'preserves %s with v-model and object listeners',
+      async binding => {
+        await renderParity(
+          {
+            App: `<template><input v-model="data.value" ${binding} v-on="data.events"></template>`,
+          },
+          () =>
+            ref({
+              value: '',
+              native: vi.fn(),
+              events: { mouseenter: vi.fn() },
+            }),
+          async (data, root) => {
+            const input = root.querySelector('input')!
+            for (let i = 1; i <= 2; i++) {
+              input.click()
+              input.dispatchEvent(new MouseEvent('mouseenter'))
+              expect(data.value.native).toHaveBeenCalledTimes(i)
+              expect(data.value.events.mouseenter).toHaveBeenCalledTimes(i)
+              data.value.value = 'updated'
+              await nextTick()
+            }
+          },
+        )
+      },
+    )
+
+    test.each([
+      'v-model="data.value" :oninput="data.native" v-on="data.events"',
+      ':oninput="data.native" v-on="data.events" v-model="data.value"',
+      'v-on="data.events" v-model="data.value" :oninput="data.native"',
+      'v-model="data.value" v-bind="{ oninput: data.native }" v-on="data.events"',
+      'v-bind="{ oninput: data.native }" v-on="data.events" v-model="data.value"',
+      'v-on="data.events" v-model="data.value" v-bind="{ oninput: data.native }"',
+    ])('updates v-model before native listeners: %s', async bindings => {
+      await renderParity(
+        { App: `<template><input ${bindings}></template>` },
+        () => {
+          const value = ref('')
+          return ref({
+            value,
+            native: vi.fn(() => value.value),
+            events: { input: vi.fn(() => value.value) },
+          })
+        },
+        async (data, root) => {
+          const input = root.querySelector('input')!
+          for (const value of ['first', 'second']) {
+            input.value = value
+            input.dispatchEvent(new Event('input'))
+            expect(data.value.events.input).toHaveLastReturnedWith(value)
+            expect(data.value.native).toHaveLastReturnedWith(value)
+            await nextTick()
+          }
+        },
+      )
+    })
+
+    test('initializes object-bound input type before v-model and native listeners', async () => {
+      await renderParity(
+        {
+          App: `<template><input v-model="data.value" v-bind="{ type: data.type, onchange: data.native }" v-on="data.events"></template>`,
+        },
+        () => {
+          const value = ref(false)
+          return ref({
+            value,
+            type: 'checkbox',
+            native: vi.fn(() => value.value),
+            events: { change: vi.fn(() => value.value) },
+          })
+        },
+        async (data, root) => {
+          const input = root.querySelector('input')!
+          expect(input.type).toBe('checkbox')
+          for (const value of [true, false]) {
+            input.checked = value
+            input.dispatchEvent(new Event('change'))
+            expect(data.value.value).toBe(value)
+            expect(data.value.events.change).toHaveLastReturnedWith(value)
+            expect(data.value.native).toHaveLastReturnedWith(value)
+            await nextTick()
+          }
+        },
+      )
+    })
+
+    describe.each([
+      ':onclick="data.handler"',
+      'v-bind="{ onclick: data.handler }"',
+    ])('native handler type changes with %s', binding => {
+      test.each(['null', 'undefined', 'function'])(
+        'restores %s after a string handler like vdom',
+        async initial => {
+          await renderParity(
+            {
+              App: `<template><button ${binding}></button><svg ${binding}></svg></template>`,
+            },
+            () =>
+              ref({
+                handler:
+                  initial === 'function'
+                    ? vi.fn()
+                    : initial === 'null'
+                      ? null
+                      : undefined,
+              }),
+            async (data, root) => {
+              const original = data.value.handler
+              const elements = root.querySelectorAll<HTMLElement | SVGElement>(
+                'button, svg',
+              )
+              for (let i = 0; i < 2; i++) {
+                data.value.handler = "this.setAttribute('fired', 'yes')"
+                await nextTick()
+                for (const el of elements) {
+                  el.dispatchEvent(new MouseEvent('click'))
+                  expect(el.getAttribute('fired')).toBe('yes')
+                  el.removeAttribute('fired')
+                }
+                data.value.handler = original
+                await nextTick()
+                for (const el of elements) {
+                  expect(el.onclick).toBe(original ?? null)
+                  el.dispatchEvent(new MouseEvent('click'))
+                  expect(el.hasAttribute('fired')).toBe(false)
+                }
+                if (original) {
+                  expect(original).toHaveBeenCalledTimes((i + 1) * 2)
+                }
+              }
+            },
+          )
+        },
+      )
+    })
   })
 })

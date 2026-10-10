@@ -1066,13 +1066,35 @@ export function buildProps(
   const dynamicArgs: IRProps[] = []
   const dynamicExpr: SimpleExpressionNode[] = []
   let results: DirectiveTransformResult[] = []
+  let resolvedBind: VaporDirectiveNode | undefined
+  let resolvedBindProps: IRPropsStatic | undefined
   // Keep merged listeners after v-model without delaying DOM props such as
   // input type. Unknown v-bind keys still need one combined props payload.
   const deferListeners =
     !isComponent &&
     !!findDir(node, 'model') &&
-    !hasDynamicKeyVBind(node) &&
-    mergesListeners(node, context)
+    props.some(
+      prop =>
+        prop.type === NodeTypes.DIRECTIVE && prop.name === 'on' && !prop.arg,
+    ) &&
+    mergesListeners(node, context) &&
+    props.every(prop => {
+      if (prop.type !== NodeTypes.DIRECTIVE || prop.name !== 'bind') return true
+      if (prop.arg) {
+        return (
+          prop.arg.type === NodeTypes.SIMPLE_EXPRESSION && prop.arg.isStatic
+        )
+      }
+      if (!prop.exp) return false
+      resolvedBind = prop
+      resolvedBindProps = resolveNativeObjectLiteralBindProps(
+        prop.exp,
+        context,
+        props,
+        prop,
+      )
+      return !!resolvedBindProps
+    })
   let listenerResults: DirectiveTransformResult[] = []
 
   function pushMergeArg(listeners = false) {
@@ -1108,18 +1130,27 @@ export function buildProps(
                 props,
                 prop,
               )
-            : resolveNativeObjectLiteralBindProps(
-                prop.exp,
-                context,
-                props,
-                prop,
-              )
+            : prop === resolvedBind
+              ? resolvedBindProps
+              : resolveNativeObjectLiteralBindProps(
+                  prop.exp,
+                  context,
+                  props,
+                  prop,
+                )
           if (objectLiteralProps) {
             if (isComponent) {
               pushStaticObjectLiteralProps(objectLiteralProps)
             } else {
               dynamicExpr.push(prop.exp)
-              results.push(...objectLiteralProps.map(toDirectiveResult))
+              for (const boundProp of objectLiteralProps) {
+                const result = toDirectiveResult(boundProp)
+                if (deferListeners && isNativeOn(boundProp.key.content)) {
+                  listenerResults.push(result)
+                } else {
+                  results.push(result)
+                }
+              }
             }
           } else {
             dynamicExpr.push(prop.exp)
@@ -1192,7 +1223,8 @@ export function buildProps(
       if (
         deferListeners &&
         !result.handler &&
-        (result.modifier || !isOn(result.key.content))
+        (result.modifier ||
+          (!isOn(result.key.content) && !isNativeOn(result.key.content)))
       ) {
         results.push(result)
         continue

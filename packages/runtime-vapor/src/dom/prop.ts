@@ -9,6 +9,7 @@ import {
   hasChanged,
   includeBooleanAttr,
   isArray,
+  isNativeOn,
   isOn,
   isReservedProp,
   isSpecialBooleanAttr,
@@ -685,6 +686,7 @@ export function setDynamicProp(
   isSVG: boolean = false,
   forceHydrate: boolean = false,
 ): void {
+  const rawKey = key
   if (key === 'class') {
     setClass(el, value, isSVG)
   } else if (key === 'style') {
@@ -706,6 +708,10 @@ export function setDynamicProp(
     } else if (key === 'value' && canSetValueDirectly(el.tagName)) {
       setValue(el, value, forceHydrate)
     } else {
+      // Native handlers share one DOM slot across the prop and attr setters.
+      if (isNativeOn(rawKey)) {
+        ;(el as any)[`$${key}`] = value
+      }
       setDOMProp(el, key, value, forceHydrate)
     }
   } else if (
@@ -719,6 +725,9 @@ export function setDynamicProp(
   ) {
     setDOMProp(el, camelize(key), value, forceHydrate, key)
   } else {
+    if (isNativeOn(rawKey)) {
+      ;(el as any)[`$p$${key}`] = value
+    }
     setAttr(el, key, value, isSVG, forceHydrate)
   }
   return value
