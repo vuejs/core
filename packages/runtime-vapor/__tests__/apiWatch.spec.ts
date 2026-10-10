@@ -27,33 +27,36 @@ const define = makeRender()
 // only need to port test cases related to in-component usage
 describe('apiWatch', () => {
   // #7030
-  it(// need if support
-  'should not fire on child component unmount w/ flush: pre', async () => {
-    const visible = ref(true)
-    const cb = vi.fn()
-    const Parent = defineVaporComponent({
-      props: ['visible'],
-      setup() {
-        return createIf(
-          () => visible.value,
-          () => createComponent(Comp),
-        )
-      },
-    })
-    const Comp = {
-      setup() {
-        watch(visible, cb, { flush: 'pre' })
-        return []
-      },
-    }
-    define(Parent).render({
-      visible: () => visible.value,
-    })
-    expect(cb).not.toHaveBeenCalled()
-    visible.value = false
-    await nextTick()
-    expect(cb).not.toHaveBeenCalled()
-  })
+  it(
+    // need if support
+    'should not fire on child component unmount w/ flush: pre',
+    async () => {
+      const visible = ref(true)
+      const cb = vi.fn()
+      const Parent = defineVaporComponent({
+        props: ['visible'],
+        setup() {
+          return createIf(
+            () => visible.value,
+            () => createComponent(Comp),
+          )
+        },
+      })
+      const Comp = {
+        setup() {
+          watch(visible, cb, { flush: 'pre' })
+          return []
+        },
+      }
+      define(Parent).render({
+        visible: () => visible.value,
+      })
+      expect(cb).not.toHaveBeenCalled()
+      visible.value = false
+      await nextTick()
+      expect(cb).not.toHaveBeenCalled()
+    },
+  )
 
   // #7030
   it('flush: pre watcher in child component should not fire before parent update', async () => {
