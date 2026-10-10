@@ -19,7 +19,6 @@ import {
   type FunctionSource,
   type RawProps,
   rawPropsProxyHandlers,
-  resolveFunctionSource,
   snapshotRawProps,
 } from './componentProps'
 import {
@@ -224,9 +223,7 @@ export const dynamicSlotsProxyHandlers: ProxyHandler<RawSlots> = {
     if (dynamicSources) {
       for (const source of dynamicSources) {
         if (isFunction(source)) {
-          const slot = withSlotOwner(target, () =>
-            resolveFunctionSource(source),
-          )
+          const slot = withSlotOwner(target, () => source())
           if (slot) {
             if (isArray(slot)) {
               for (const s of slot) keys.add(String(s.name))
@@ -245,8 +242,14 @@ export const dynamicSlotsProxyHandlers: ProxyHandler<RawSlots> = {
   deleteProperty: NO,
 }
 
-export function getSlot(target: RawSlots, key: string): VaporSlot | undefined {
-  const slot = resolveSlot(target, key)
+// Component slot sources read committed cells; native elements pass a resolver
+// to cache their raw dynamic sources.
+export function getSlot(
+  target: RawSlots,
+  key: string,
+  resolveDynamicSource?: (source: DynamicSlotFn) => ReturnType<DynamicSlotFn>,
+): VaporSlot | undefined {
+  const slot = resolveSlot(target, key, resolveDynamicSource)
   if (slot) {
     return getOwnedSlot(target, key, isFunction(slot) ? slot : slot.fn)
   }
@@ -255,6 +258,7 @@ export function getSlot(target: RawSlots, key: string): VaporSlot | undefined {
 function resolveSlot(
   target: RawSlots,
   key: string,
+  resolveDynamicSource?: (source: DynamicSlotFn) => ReturnType<DynamicSlotFn>,
 ): VaporSlot | DynamicSlot | undefined {
   if (key === '$') return
   const dynamicSources = target.$
@@ -265,7 +269,9 @@ function resolveSlot(
       source = dynamicSources[i]
       if (isFunction(source)) {
         const slot = withSlotOwner(target, () =>
-          resolveFunctionSource(source as DynamicSlotFn),
+          resolveDynamicSource
+            ? resolveDynamicSource(source as DynamicSlotFn)
+            : (source as DynamicSlotFn)(),
         )
         if (slot) {
           if (isArray(slot)) {

@@ -8353,3 +8353,34 @@ test('slots object supports hasOwnProperty like vdom', async () => {
   expect(vdom.text).toBe('true')
   expect(vapor.text).toBe(vdom.text)
 })
+
+test('caches native dynamic slot descriptors across reads', async () => {
+  const data = ref({ name: 'default' })
+  const read = vi.fn(() => data.value.name)
+  const Child = compile(
+    `<script setup vapor>const read = _components.read</script>
+     <template><component :is="'div'"><template #[read()]><span>content</span></template></component></template>`,
+    data,
+    { read },
+  )
+  const App = compile('<template><components.Child /></template>', data, {
+    Child,
+  })
+  const root = document.createElement('div')
+  const app = createVaporApp(App)
+  try {
+    app.mount(root)
+    expect(root.textContent).toBe('content')
+    expect(read).toHaveBeenCalledTimes(1)
+    data.value.name = 'other'
+    await nextTick()
+    expect(root.textContent).toBe('')
+    expect(read).toHaveBeenCalledTimes(2)
+    data.value.name = 'default'
+    await nextTick()
+    expect(root.textContent).toBe('content')
+    expect(read).toHaveBeenCalledTimes(3)
+  } finally {
+    app.unmount()
+  }
+})

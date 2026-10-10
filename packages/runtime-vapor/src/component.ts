@@ -96,6 +96,7 @@ import {
   initInputs,
   normalizePropsOptions,
   resolveDynamicProps,
+  resolveFunctionSource,
   resolveSource,
 } from './componentProps'
 import { type RenderEffect, renderEffect } from './renderEffect'
@@ -1273,7 +1274,8 @@ export function createPlainElement(
     resetInsertionState()
   }
 
-  const defaultSlot = rawSlots && getSlot(rawSlots as RawSlots, 'default')
+  const defaultSlot =
+    rawSlots && getSlot(rawSlots as RawSlots, 'default', resolveFunctionSource)
   const hasDynamicSlots = !!rawSlots && !!rawSlots.$
   const adoptHydrationChildren = !!defaultSlot
   const hydrationTemplate =
@@ -1341,11 +1343,19 @@ export function createPlainElement(
         __DEV__ ? (isHydrating ? '' : 'slot') : undefined,
       )
       if (isHydrating) locateHydrationNode()
-      renderEffect(() => frag.update(getSlot(rawSlots as RawSlots, 'default')))
+      renderEffect(() =>
+        frag.update(
+          getSlot(rawSlots as RawSlots, 'default', resolveFunctionSource),
+        ),
+      )
       if (!isHydrating) insert(frag, el)
       registerNestedVDOMCleanup(frag)
     } else {
-      const slot = getSlot(rawSlots as RawSlots, 'default')
+      const slot = getSlot(
+        rawSlots as RawSlots,
+        'default',
+        resolveFunctionSource,
+      )
       if (slot) {
         // SSR renders nothing for an empty trailing text, so the slot can run out
         // of server nodes; an end anchor keeps the cursor inside `el`. A comment
