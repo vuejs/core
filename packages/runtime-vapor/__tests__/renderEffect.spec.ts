@@ -14,7 +14,7 @@ import {
 import { renderEffect, template } from '../src'
 import { RenderEffect } from '../src/renderEffect'
 import { onEffectCleanup } from '@vue/reactivity'
-import { makeRender } from './_utils'
+import { compile, makeRender } from './_utils'
 
 const define = makeRender<any>()
 const createDemo = (setupFn: () => any, renderFn: (ctx: any) => any) =>
@@ -359,5 +359,84 @@ describe('renderEffect', () => {
     await nextTick()
     expect(instanceSnap).toBe(instance)
     expect(scopeSnap).toBe(scope)
+  })
+
+  test('scans the select callbacks once per flush when row effects update', async () => {
+    const count = 100
+    const data = ref({
+      rows: Array.from({ length: count }, (_, id) => ({
+        id,
+        value: 'b',
+        count: 0,
+      })),
+    })
+    const App = compile(
+      `<template><div v-for="row in data.rows" :key="row.id"><select :value="row.value"><option value="a">A</option><option value="b">B</option></select><span>{{ row.count }}</span></div></template>`,
+      data,
+    )
+    const { instance, host, app } = define(App).render()
+    const updates = instance!.selectUpdates!
+    let scans = 0
+    let visits = 0
+    Object.defineProperty(updates, Symbol.iterator, {
+      value() {
+        scans++
+        const values = Set.prototype.values.call(updates)
+        return {
+          next() {
+            const result = values.next()
+            if (!result.done) visits++
+            return result
+          },
+          [Symbol.iterator]() {
+            return this
+          },
+        }
+      },
+    })
+    try {
+      for (const row of data.value.rows) row.count++
+      await nextTick()
+      expect([scans, visits]).toEqual([1, count])
+      // half of the rows leave in the same flush as the rest update
+      data.value.rows = data.value.rows.slice(0, count / 2)
+      for (const row of data.value.rows) row.count++
+      await nextTick()
+      expect([scans, visits]).toEqual([2, count + count / 2])
+      expect(
+        Array.from(host.querySelectorAll('select'), select => select.value),
+      ).toEqual(Array(count / 2).fill('b'))
+    } finally {
+      app.unmount()
+    }
+    expect(updates.size).toBe(0)
+  })
+
+  test('syncs a value first registered during an update only once', async () => {
+    const stringify = vi.fn(() => 'b')
+    const data = ref({
+      show: false,
+      value: { toString: stringify },
+      other: 'a',
+    })
+    const App = compile(
+      `<template><select :value="data.other"><option value="a">A</option></select><select v-if="data.show" :value="data.value"><option value="a">A</option><option value="b">B</option></select></template>`,
+      data,
+    )
+    const { host, app } = define(App).render()
+    try {
+      await nextTick()
+      data.value.show = true
+      await nextTick()
+      expect(host.querySelectorAll('select')[1].value).toBe('b')
+      // the initial write, then one deferred sync
+      expect(stringify).toHaveBeenCalledTimes(2)
+      stringify.mockClear()
+      data.value.show = false
+      await nextTick()
+      expect(stringify).not.toHaveBeenCalled()
+    } finally {
+      app.unmount()
+    }
   })
 })

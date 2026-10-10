@@ -11,7 +11,7 @@ import { genHoistedHandlers, genSetDynamicEvents, genSetEvent } from './event'
 import { genFor } from './for'
 import { genSetHtml } from './html'
 import { genIf } from './if'
-import { genDynamicProps, genSetProp } from './prop'
+import { genDynamicProps, genSetProp, genSyncSelectValue } from './prop'
 import { genSetTemplateRef, genSetTemplateRefBinding } from './templateRef'
 import { genGetTextChild, genSetText } from './text'
 import {
@@ -62,6 +62,8 @@ export function genOperation(
       return genSetProp(oper, context)
     case IRNodeTypes.SET_DYNAMIC_PROPS:
       return genDynamicProps(oper, context)
+    case IRNodeTypes.SYNC_SELECT_VALUE:
+      return genSyncSelectValue(oper, context)
     case IRNodeTypes.SET_TEXT:
       return genSetText(oper, context)
     case IRNodeTypes.SET_EVENT:

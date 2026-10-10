@@ -1277,4 +1277,42 @@ describe('Vapor Mode hydration', () => {
       }
     },
   )
+
+  test.each([':value="data.v"', 'v-bind="data.attrs"'])(
+    'reapplies select value after hydrated options update (%s)',
+    async binding => {
+      const { container, data, app } = await testHydration(
+        `<template><select ${binding}><option v-for="o in data.opts" :value="o">{{ o }}</option></select></template>`,
+        undefined,
+        reactive({ v: 'b', attrs: { value: 'b' }, opts: [] as string[] }),
+      )
+      const select = container.querySelector('select')!
+      expect(select.value).toBe('')
+      data.opts = ['a', 'b']
+      await nextTick()
+      expect(select.value).toBe('b')
+      data.v = data.attrs.value = 'd'
+      data.opts = ['c', 'd']
+      await nextTick()
+      expect(select.value).toBe('d')
+      app.unmount()
+    },
+  )
+
+  test.each([
+    ['v-bind="data.attrs"', { value: 'b', '.value': 'c' }],
+    ['v-bind="data.attrs" :value.prop="data.forced"', { value: 'b' }],
+  ])(
+    'hydrates the forced select value after option values (%s)',
+    async (binding, attrs) => {
+      const { container } = await mountWithHydration(
+        '<select value="b"><!--[--><option value="a">X</option><option value="d">X</option><option value="e">X</option><!--]--></select>',
+        `<select ${binding}><option v-for="o in data.options" :value="o">X</option></select>`,
+        ref({ attrs, forced: 'c', options: ['a', 'b', 'c'] }),
+      )
+
+      expect('Hydration attribute mismatch').toHaveBeenWarned()
+      expect(container.querySelector('select')!.value).toBe('c')
+    },
+  )
 })

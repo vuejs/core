@@ -9,17 +9,10 @@ import {
   vModelTextInit,
   vModelTextUpdate,
 } from '@vue/runtime-dom'
-import { renderEffect } from '../renderEffect'
+import { registerSelectUpdate, renderEffect } from '../renderEffect'
 import { inOnce, withOnce } from '../once'
-import { isArray, isSet, looseEqual, remove } from '@vue/shared'
-import {
-  Dep,
-  getCurrentScope,
-  onScopeDispose,
-  trackDep,
-  traverse,
-} from '@vue/reactivity'
-import type { VaporComponentInstance } from '../component'
+import { isArray, isSet, looseEqual } from '@vue/shared'
+import { Dep, getCurrentScope, trackDep, traverse } from '@vue/reactivity'
 
 type VaporModelDirective<
   T extends HTMLElement =
@@ -109,16 +102,13 @@ export const applySelectModel: VaporModelDirective<
     ensureMounted(() => vModelSetSelected(el, get()))
     return
   }
-  // <select> relies on its <option>s, which the owner may re-render without
-  // touching the model, so the selection is applied from the owner's updated
-  // hooks like the vdom directive does. Runs before the owner's own hooks.
-  const instance = currentInstance as VaporComponentInstance
+  // The owner's effects can update options directly or through child inputs
+  // without touching the model. Apply selection after their DOM updates.
   const update = () => vModelSetSelected(el, get())
-  ;(instance.u || (instance.u = [])).unshift(update)
-  onScopeDispose(() => remove(instance.u!, update))
+  registerSelectUpdate(update)
   ensureMounted(() => {
     update()
-    // only tracks the model: a change flows through the updated hook above
+    // Only tracks the model; the queued selection update applies it.
     renderEffect(() => traverse(get()))
   })
 }

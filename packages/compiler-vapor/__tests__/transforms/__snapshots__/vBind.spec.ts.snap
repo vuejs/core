@@ -797,7 +797,7 @@ export function render(_ctx) {
 `;
 
 exports[`compiler v-bind > textarea and select value literals 1`] = `
-"import { setValue as _setValue, template as _template } from 'vue';
+"import { setValue as _setValue, withOnce as _withOnce, template as _template } from 'vue';
 const t0 = _template("<textarea>")
 const t1 = _template("<select><option value=b>")
 
@@ -805,7 +805,7 @@ export function render(_ctx) {
   const n0 = t0()
   const n1 = t1()
   _setValue(n0, "hello")
-  _setValue(n1, "b")
+  _withOnce(() => _setValue(n1, "b"))
   return [n0, n1]
 }"
 `;

@@ -11,6 +11,7 @@ import {
   type IRProp,
   type SetDynamicPropsIRNode,
   type SetPropIRNode,
+  type SyncSelectValueIRNode,
   type VaporHelper,
 } from '../ir'
 import { genExpression } from './expression'
@@ -22,6 +23,7 @@ import {
   NEWLINE,
   genCall,
   genMulti,
+  genOnce,
   getParserOptions,
 } from './utils'
 import {
@@ -88,16 +90,14 @@ export function genSetProp(
     if (className) return className
   }
   const propValue = genPropValue(values, context)
-  return [
-    NEWLINE,
-    ...genCall(
-      [helper(resolvedHelper.name), null],
-      `n${oper.element}`,
-      resolvedHelper.needKey ? genExpression(key, context) : false,
-      propValue,
-      resolvedHelper.isSVG && 'true',
-    ),
-  ]
+  const call = genCall(
+    [helper(resolvedHelper.name), null],
+    `n${oper.element}`,
+    resolvedHelper.needKey ? genExpression(key, context) : false,
+    propValue,
+    resolvedHelper.isSVG && 'true',
+  )
+  return [NEWLINE, ...(oper.once ? genOnce(call, context) : call)]
 }
 
 const optionsModifierRE = /(Once|Passive|Capture)$/
@@ -406,14 +406,26 @@ export function genDynamicProps(
     const value = genExpression(props.value, context) // v-bind="" / v-on=""
     return props.handler ? genCall(helper('toHandlers'), value, 'true') : value
   })
+  const call = genCall(
+    helper('setDynamicProps'),
+    `n${oper.element}`,
+    genMulti(DELIMITERS_ARRAY, ...values),
+    genDynamicPropNames(oper, context),
+    oper.isSVG && 'true',
+  )
+  return [NEWLINE, ...(oper.once ? genOnce(call, context) : call)]
+}
+
+export function genSyncSelectValue(
+  oper: SyncSelectValueIRNode,
+  context: CodegenContext,
+): CodeFragment[] {
   return [
     NEWLINE,
     ...genCall(
-      helper('setDynamicProps'),
+      context.helper('syncSelectValue'),
       `n${oper.element}`,
-      genMulti(DELIMITERS_ARRAY, ...values),
       genDynamicPropNames(oper, context),
-      oper.isSVG && 'true',
     ),
   ]
 }
@@ -422,7 +434,7 @@ export function genDynamicProps(
 // (`dynamicProps`); once such a key is merged with a spread the runtime can no
 // longer tell it apart, so the list is hoisted next to the templates
 function genDynamicPropNames(
-  oper: SetDynamicPropsIRNode,
+  oper: SetDynamicPropsIRNode | SyncSelectValueIRNode,
   context: CodegenContext,
 ): string | false {
   const { bindingMetadata } = context.options

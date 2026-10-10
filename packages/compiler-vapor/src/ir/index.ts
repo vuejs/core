@@ -18,6 +18,7 @@ export enum IRNodeTypes {
   SET_BLOCK_KEY,
   SET_PROP,
   SET_DYNAMIC_PROPS,
+  SYNC_SELECT_VALUE,
   SET_TEXT,
   SET_EVENT,
   SET_DYNAMIC_EVENTS,
@@ -151,6 +152,7 @@ export interface SetPropIRNode extends BaseIRNode {
   isSVG: boolean
   /** Whether it's in effect; only a listener key (`onXxx`) needs to know */
   effect?: boolean
+  once?: boolean
 }
 
 export interface SetDynamicPropsIRNode extends BaseIRNode {
@@ -160,6 +162,13 @@ export interface SetDynamicPropsIRNode extends BaseIRNode {
   isSVG: boolean
   /** Merged listeners deferred until after same-element v-model. */
   listeners?: boolean
+  once?: boolean
+}
+
+export interface SyncSelectValueIRNode extends BaseIRNode {
+  type: IRNodeTypes.SYNC_SELECT_VALUE
+  element: number
+  props: IRProps[]
 }
 
 export interface SetDynamicEventsIRNode extends BaseIRNode {
@@ -266,6 +275,7 @@ export type OperationNode =
   | SetBlockKeyIRNode
   | SetPropIRNode
   | SetDynamicPropsIRNode
+  | SyncSelectValueIRNode
   | SetTextIRNode
   | SetEventIRNode
   | SetDynamicEventsIRNode

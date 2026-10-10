@@ -16,6 +16,7 @@ import {
   hasDynamicKeyVBind,
   isSimpleIdentifier,
   isStaticArgOf,
+  isStaticExp,
   isValidHTMLNesting,
   parserOptions,
   resolveModifiers,
@@ -69,6 +70,7 @@ import {
   findProp,
   isBuiltInComponent,
   isComponentTag,
+  isConstantBinding,
   isStaticExpression,
   resolveExpression,
 } from '../utils'
@@ -609,6 +611,16 @@ function transformNativeElement(
   const { tag } = node
   const { scopeId } = context.options
   const isSVG = node.ns === Namespaces.SVG
+  const isSelect = tag === 'select'
+  // Match VDOM's FULL_PROPS updates even when a literal spread was expanded.
+  const hasDynamicKeys =
+    isSelect &&
+    node.props.some(
+      prop =>
+        prop.type === NodeTypes.DIRECTIVE &&
+        (prop.name === 'bind' || prop.name === 'on') &&
+        (!prop.arg || !isStaticExp(prop.arg)),
+    )
 
   let template = ''
 
@@ -624,9 +636,23 @@ function transformNativeElement(
         element: context.reference(),
         props: dynamicArgs,
         isSVG,
+        once: isSelect && context.inVOnce,
       },
       getEffectIndex,
     )
+    // v-once already sets these props after the children
+    if (isSelect && !context.inVOnce) {
+      context.registerEffect(
+        [],
+        {
+          type: IRNodeTypes.SYNC_SELECT_VALUE,
+          element: context.reference(),
+          props: dynamicArgs,
+        },
+        undefined,
+        true,
+      )
+    }
   } else {
     const appendTemplateProp = (key: string, value: string = '') => {
       template += ` ${key}`
@@ -651,7 +677,9 @@ function transformNativeElement(
     let props = propsResult[1]
     const valueProp = props.find(
       ({ key, modifier }) =>
-        key.isStatic && key.content === 'value' && !modifier,
+        key.isStatic &&
+        key.content === 'value' &&
+        (!modifier || (isSelect && modifier === '.')),
     )
     if (valueProp) props = [...props.filter(p => p !== valueProp), valueProp]
     let hasEffect = false
@@ -733,6 +761,7 @@ function transformNativeElement(
       } else {
         // Constant setters can depend on preceding dynamic props, e.g.
         // valueAsNumber needs type and max to be initialized first.
+        const isSelectValue = isSelect && prop === valueProp
         const effect = context.registerEffect(
           values,
           {
@@ -741,10 +770,20 @@ function transformNativeElement(
             prop,
             tag,
             isSVG,
+            once:
+              isSelectValue &&
+              (context.inVOnce ||
+                (!hasDynamicKeys &&
+                  values.every(exp =>
+                    isConstantBinding(exp, context.options.bindingMetadata),
+                  ))),
           },
-          getEffectIndex,
-          (needsOrderedProps || (tag === 'input' && prop === valueProp)) &&
-            hasEffect,
+          // like vdom, set a select's value after its children, since it
+          // needs the options to be rendered (#1318)
+          isSelectValue ? undefined : getEffectIndex,
+          isSelectValue ||
+            ((needsOrderedProps || (tag === 'input' && prop === valueProp)) &&
+              hasEffect),
         )
         hasEffect = effect || hasEffect
         if (tag === 'input' && inputValueDepKeys.includes(key.content)) {

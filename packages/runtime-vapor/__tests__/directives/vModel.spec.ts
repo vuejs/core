@@ -2193,4 +2193,159 @@ describe('directive: v-model', () => {
       },
     )
   })
+
+  test.each([':value="data.bound"', 'v-bind="{ value: data.bound }"'])(
+    'select model takes precedence over %s after options update',
+    async binding => {
+      const selections = {} as Record<'vdom' | 'vapor', string[][]>
+      await renderParity(
+        {
+          App: `<template>
+            <p>{{ data.n }}</p>
+            <select ${binding} v-model="data.model">
+              <option v-for="option in data.options" :value="option">{{ option }}</option>
+            </select>
+            <select v-if="data.show" ${binding} v-model="data.model">
+              <option v-for="option in data.options" :value="option">{{ option }}</option>
+            </select>
+          </template>`,
+        },
+        () =>
+          ref({
+            bound: 'a',
+            model: 'b',
+            options: [] as string[],
+            show: false,
+            n: 0,
+          }),
+        async (data, root, mode) => {
+          const states: string[][] = (selections[mode] = [])
+          const record = () =>
+            states.push(
+              Array.from(root.querySelectorAll('select'), el => el.value),
+            )
+          record()
+          data.value.options = ['a', 'b']
+          await nextTick()
+          record()
+          data.value.options = ['c', 'd']
+          data.value.bound = 'c'
+          data.value.model = 'd'
+          await nextTick()
+          record()
+          data.value.show = true
+          await nextTick()
+          record()
+          data.value.options = ['e', 'f']
+          data.value.bound = 'e'
+          data.value.model = 'f'
+          await nextTick()
+          record()
+          data.value.n++
+          await nextTick()
+          record()
+        },
+      )
+      expect(selections.vdom).toEqual([
+        [''],
+        ['b'],
+        ['d'],
+        ['d', 'd'],
+        ['f', 'f'],
+        ['f', 'f'],
+      ])
+      expect(selections.vapor).toEqual(selections.vdom)
+    },
+  )
+
+  test('reapplies an unchanged select model after child component options update', async () => {
+    const seen: Record<string, string[]> = { vdom: [], vapor: [] }
+    await renderParity(
+      {
+        App: `<template><select v-model="data.value"><components.Options :options="data.options" /></select></template>`,
+        Options: `<script setup>defineProps(['options'])</script><template><option v-for="option in options" :value="option">{{ option }}</option></template>`,
+      },
+      () => ref({ value: 'b', options: [] as string[] }),
+      async (data, root, mode) => {
+        await nextTick()
+        const select = root.querySelector('select')!
+        seen[mode].push(select.value)
+        for (const options of [
+          ['a', 'b'],
+          ['c', 'b'],
+        ]) {
+          data.value.options = options
+          await nextTick()
+          seen[mode].push(select.value)
+        }
+      },
+    )
+    expect(seen.vdom).toEqual(['', 'b', 'b'])
+    expect(seen.vapor).toEqual(seen.vdom)
+  })
+
+  test('updates selection once before hooks for owner and child input updates', async () => {
+    const get = vi.fn(() => 'b')
+    await renderParity(
+      {
+        App: `<script setup>
+          import { onUpdated, ref } from 'vue'
+          const data = _data
+          const components = _components
+          const select = ref()
+          onUpdated(() => data.value.observed.push(select.value.value))
+        </script><template><p>{{ data.count }}</p><select ref="select" v-model="data.model"><components.Options :options="data.options" /></select></template>`,
+        Options: `<script setup>defineProps(['options'])</script><template><option v-for="option in options" :value="option">{{ option }}</option></template>`,
+      },
+      () =>
+        ref({
+          get model() {
+            return get()
+          },
+          count: 0,
+          options: [] as string[],
+          observed: [] as string[],
+        }),
+      async (data, root) => {
+        await nextTick()
+        get.mockClear()
+        data.value.observed.length = 0
+        data.value.options = ['a', 'b']
+        data.value.count++
+        await nextTick()
+        expect(root.querySelector('select')!.value).toBe('b')
+        expect(data.value.observed).toEqual(['b'])
+        expect(get).toHaveBeenCalledTimes(1)
+      },
+    )
+  })
+
+  test('disposes queued selection updates before reading a removed model', async () => {
+    const get = vi.fn(() => 'b')
+    await renderParity(
+      {
+        App: `<template><select v-if="data.form" v-model="data.form.model"><components.Options :options="data.options" /></select></template>`,
+        Options: `<script setup>defineProps(['options'])</script><template><option v-for="option in options" :value="option">{{ option }}</option></template>`,
+      },
+      () =>
+        ref({
+          form: {
+            get model() {
+              return get()
+            },
+          },
+          options: ['a', 'b'],
+        }),
+      async (data, root) => {
+        await nextTick()
+        expect(root.querySelector('select')!.value).toBe('b')
+        get.mockClear()
+        data.value.options = ['c', 'b']
+        data.value.form = null
+        await nextTick()
+        expect(root.querySelector('select')).toBe(null)
+        expect(get).not.toHaveBeenCalled()
+      },
+    )
+  })
 })

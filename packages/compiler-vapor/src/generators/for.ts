@@ -452,6 +452,19 @@ export function buildDestructureIdMap(
   return idMap
 }
 
+function isSelectValueEffect(effect: IREffect): boolean {
+  return (
+    !!effect.once &&
+    effect.operations.some(
+      oper =>
+        oper.type === IRNodeTypes.SYNC_SELECT_VALUE ||
+        (oper.type === IRNodeTypes.SET_PROP &&
+          oper.tag === 'select' &&
+          oper.prop.key.content === 'value'),
+    )
+  )
+}
+
 function matchPatterns(
   render: BlockIRNode,
   keyProp: SimpleExpressionNode | undefined,
@@ -466,7 +479,11 @@ function matchPatterns(
   >[] = []
   let skippedEffectIndexes: Set<number> | undefined
 
-  if (keyProp === undefined) {
+  if (
+    keyProp === undefined ||
+    // lifting would move the option bindings after a one-time select value
+    render.effect.some(isSelectValueEffect)
+  ) {
     return {
       keyOnlyBindingPatterns,
       selectorPatterns,

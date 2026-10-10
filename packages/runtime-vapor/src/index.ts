@@ -48,6 +48,7 @@ export {
   setProp,
   setDOMProp,
   setDynamicProps,
+  syncSelectValue,
   setDynamicEvents,
   setElementText,
 } from './dom/prop'

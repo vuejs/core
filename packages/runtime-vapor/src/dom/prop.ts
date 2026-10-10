@@ -42,6 +42,7 @@ import {
   patchClass,
   patchStyle,
   queuePostFlushCb,
+  queuePostRenderEffect,
   resolveCssVars as resolveVNodeCssVars,
   shouldSetAsProp,
   shouldSetAsPropForVueCE,
@@ -71,6 +72,8 @@ import type { VaporElement } from '../apiDefineCustomElement'
 import type { RootMeta } from './template'
 import { isTransitionEnabled } from '../transition'
 import { isInteropEnabled } from '../vdomInteropState'
+import { inOnce } from '../once'
+import { queueSelectUpdates, registerSelectUpdate } from '../renderEffect'
 
 type TargetElement = Element & {
   $root?: boolean | RootMeta
@@ -86,6 +89,8 @@ type TargetElement = Element & {
   $sty?: NormalizedStyle | string | undefined
   value?: string
   _value?: any
+  $valueBound?: boolean
+  $dprops?: Record<string, any>
   /**
    * @internal
    */
@@ -475,6 +480,30 @@ export function setValue(
     return
   }
 
+  const { tagName } = el
+  if (!inOnce && tagName === 'SELECT') {
+    if (el.$valueBound === undefined) {
+      const update = () => {
+        // v-model owns selection when both bindings are present.
+        if (el.$valueBound && !('_modelValue' in el)) {
+          const value = el._value == null ? '' : String(el._value)
+          if (el.value !== value) el.value = value
+        }
+      }
+      const registered = registerSelectUpdate(update)
+      // The running effect may not have seen this selection update yet.
+      const instance = currentInstance as VaporComponentInstance
+      if (instance.isMounted) {
+        if (isInteropEnabled && !instance.vapor) {
+          queuePostRenderEffect(registered, instance.uid, instance.suspense)
+        } else {
+          queueSelectUpdates(instance)
+        }
+      }
+    }
+    el.$valueBound = true
+  }
+
   // store value as _value as well since
   // non-string values will be stringified.
   const valueDep = el._valueDep
@@ -498,7 +527,7 @@ export function setValue(
 
   // #4956: <option> value will fallback to its text content so we need to
   // compare against its attribute value instead.
-  const oldValue = el.tagName === 'OPTION' ? el.getAttribute('value') : el.value
+  const oldValue = tagName === 'OPTION' ? el.getAttribute('value') : el.value
   const newValue = value == null ? '' : String(value)
   if (oldValue !== newValue) {
     el.value = newValue
@@ -611,6 +640,36 @@ export function setDynamicProps(
   )
 }
 
+export function syncSelectValue(
+  el: TargetElement,
+  staticKeys?: string[],
+): void {
+  const props = el.$dprops!
+  let key = '.value' in props ? '.value' : undefined
+  if (
+    'value' in props &&
+    !(
+      isHydrating &&
+      !isRecreatedNode(el) &&
+      skipHydratedWrite(
+        el,
+        'value',
+        props.value,
+        !!(staticKeys && staticKeys.includes('value')),
+      )
+    )
+  ) {
+    key = 'value'
+  }
+  if (!key || shouldSkipFallthroughKey(el, 'value')) {
+    return
+  }
+  const value = props[key] == null ? '' : String(props[key])
+  if (el.value !== value) {
+    el.value = value
+  }
+}
+
 export function setDynamicEvents(
   el: HTMLElement,
   events: Record<string, EventHandlerValue>,
@@ -632,6 +691,13 @@ export function patchDynamicProps(
     for (const key in prevProps) {
       if (!(key in props)) {
         setDynamicProp(el, key, null, isSVG)
+        if (
+          (key === 'value' || key === '.value') &&
+          el.tagName === 'SELECT' &&
+          !shouldSkipFallthroughKey(el, 'value')
+        ) {
+          el.$valueBound = false
+        }
       }
     }
   }
