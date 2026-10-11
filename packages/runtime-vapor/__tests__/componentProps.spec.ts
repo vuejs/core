@@ -2779,3 +2779,19 @@ describe('component: fallthrough props parity', () => {
     },
   )
 })
+
+test('props object supports hasOwnProperty like vdom', async () => {
+  const { vdom, vapor } = await renderParity(
+    {
+      Comp: `<script setup>
+        const props = defineProps(['foo', 'bar'])
+      </script>
+      <template><p>{{ props.hasOwnProperty('foo') }}-{{ props.hasOwnProperty('bar') }}-{{ props.hasOwnProperty('baz') }}</p></template>`,
+      App: `<template><components.Comp foo="1" baz="2" /></template>`,
+    },
+    () => ref(null),
+    () => {},
+  )
+  expect(vdom.text).toBe('true-true-false')
+  expect(vapor.after).toBe(vdom.after)
+})

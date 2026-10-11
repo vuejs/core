@@ -3370,7 +3370,7 @@ describe('attribute fallthrough', () => {
       'constructor',
       'value',
     ]) {
-      expect(attrs[key]).toBeUndefined()
+      expect(attrs[key]).toBe((Object.prototype as any)[key])
       expect(key in attrs).toBe(false)
     }
     expect(Object.keys(attrs)).toEqual(['title'])
@@ -3508,4 +3508,24 @@ describe('checkbox model value bindings', () => {
       },
     )
   })
+})
+
+test('attrs object supports hasOwnProperty like vdom', async () => {
+  const { vdom, vapor } = await renderParity(
+    {
+      Comp: `<script setup>
+        import { useAttrs } from 'vue'
+        const attrs = useAttrs()
+      </script>
+      <template><p>{{ attrs.hasOwnProperty('id') }}-{{ $attrs.hasOwnProperty('title') }}-{{ attrs.hasOwnProperty('missing') }}</p></template>`,
+      App: `<template><components.Comp v-bind="data" /></template>`,
+    },
+    () => ref<any>({ id: 'a', title: 't' }),
+    async (data, root) => {
+      expect(root.textContent).toBe('true-true-false')
+      data.value = { id: 'a' }
+    },
+  )
+  expect(vdom.text).toBe('true-false-false')
+  expect(vapor.after).toBe(vdom.after)
 })
