@@ -91,25 +91,36 @@ describe('reactivity/reactive/Array iterator', () => {
   })
 
   test('should close native iterators returned by custom methods on early exit', () => {
+    let reads = 0
     let closed = false
     class Items extends Array {
       [Symbol.iterator]() {
         const iter = super[Symbol.iterator]()
-        iter.return = function () {
-          expect(this).toBe(iter)
-          closed = true
-          return { value: undefined, done: true }
-        }
+        Object.defineProperty(iter, 'return', {
+          get() {
+            expect(this).toBe(iter)
+            reads++
+            return function (this: unknown) {
+              expect(this).toBe(iter)
+              closed = true
+              return { value: undefined, done: true }
+            }
+          },
+        })
         return iter
       }
     }
 
     const items = new Items()
     items.push({})
-    for (const item of reactive(items)) {
+    const iter = reactive(items)[Symbol.iterator]()
+    expect(reads).toBe(0)
+    for (const item of iter) {
       expect(isReactive(item)).toBe(true)
+      expect(reads).toBe(0)
       break
     }
+    expect(reads).toBe(1)
     expect(closed).toBe(true)
   })
 
@@ -139,4 +150,40 @@ describe('reactivity/reactive/Array iterator', () => {
       expect([...mapped]).toEqual([1])
     }
   })
+
+  test.each(['return', 'throw'] as const)(
+    'should read the current native iterator %s method lazily',
+    method => {
+      const original = [{}].values()
+      const initial = vi.fn()
+      let closingMethod: unknown = initial
+      const getMethod = vi.fn(() => closingMethod)
+      Object.defineProperty(original, method, { get: getMethod })
+      class Items extends Array {
+        values() {
+          return original
+        }
+      }
+
+      const iter: IterableIterator<unknown> = reactive(new Items()).values()
+      expect(getMethod).not.toHaveBeenCalled()
+
+      const value = {}
+      const result = { value, done: true }
+      const close = vi.fn(() => result)
+      closingMethod = close
+      expect(iter[method]!(value)).toBe(result)
+      expect(initial).not.toHaveBeenCalled()
+      expect(close).toHaveBeenCalledExactlyOnceWith(value)
+      expect(close.mock.contexts[0]).toBe(original)
+      expect(getMethod).toHaveBeenCalledOnce()
+      expect(getMethod.mock.contexts[0]).toBe(original)
+
+      for (const replacement of [undefined, null, 1]) {
+        closingMethod = replacement
+        expect(iter[method]).toBe(replacement)
+      }
+      expect(getMethod).toHaveBeenCalledTimes(4)
+    },
+  )
 })

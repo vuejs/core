@@ -254,7 +254,8 @@ function iterator(
   // given that JS iterator can only be read once, this doesn't seem like
   // a plausible use-case, so this tracking simplification seems ok.
   const arr = shallowReadArray(self)
-  const iter = (arr[method] as any)() as IterableIterator<unknown> & {
+  const methodFn = arr[method] as any
+  const iter = methodFn.call(arr) as IterableIterator<unknown> & {
     _next: IterableIterator<unknown>['next']
   }
   if (arr !== self && !isShallow(self)) {
@@ -265,8 +266,22 @@ function iterator(
     if ((iter as any)[Symbol.toStringTag] === 'Array Iterator') {
       const wrapped = Object.create(Object.getPrototypeOf(iter))
       wrapped.next = () => wrapResult(iter.next(), wrapValue)
-      // only present if a user-extended array added it
-      if (iter.return) wrapped.return = iter.return.bind(iter)
+      if (methodFn !== arrayProto[method]) {
+        Object.defineProperties(wrapped, {
+          return: {
+            get() {
+              const fn = iter.return
+              return typeof fn === 'function' ? fn.bind(iter) : fn
+            },
+          },
+          throw: {
+            get() {
+              const fn = iter.throw
+              return typeof fn === 'function' ? fn.bind(iter) : fn
+            },
+          },
+        })
+      }
       return wrapped
     }
     iter._next = iter.next
