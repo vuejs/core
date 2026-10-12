@@ -244,6 +244,8 @@ export function getPropsProxyHandlers(
       trackPropsValue(instance, key)
       return instance.propsValues[key]
     }
+    // fall back to Object.prototype so `props.hasOwnProperty()` works like vdom
+    return (Object.prototype as any)[key]
   }
 
   const propsHandlers = propsOptions
@@ -273,8 +275,10 @@ export function getPropsProxyHandlers(
   const getAttr = (instance: VaporComponentInstance, key: string | symbol) => {
     if (isAttr(key)) {
       trackPropsValue(instance, key)
-      return instance.propsValues[key]
+      if (hasOwn(instance.propsValues, key)) return instance.propsValues[key]
     }
+    // fall back to Object.prototype so `attrs.hasOwnProperty()` works like vdom
+    return (Object.prototype as any)[key]
   }
   const hasAttr = (instance: VaporComponentInstance, key: string | symbol) => {
     if (!isAttr(key)) return false
@@ -347,6 +351,7 @@ export function getAttrFromRawProps(rawProps: RawProps, key: string): unknown {
     merged.reverse()
     return isEvent ? merged.reduce(mergeEventHandlers) : merged
   }
+  return (Object.prototype as any)[key]
 }
 
 function mergeEventHandlers(existing: unknown, incoming: unknown): unknown {

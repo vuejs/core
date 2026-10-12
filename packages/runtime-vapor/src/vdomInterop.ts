@@ -126,6 +126,7 @@ import {
   ShapeFlags,
   VaporSlotFlags,
   extend,
+  hasOwn,
   isArray,
   isForwardedSlot,
   isFunction,
@@ -1017,7 +1018,7 @@ const vaporSlotPropsProxyHandler: ProxyHandler<
     return Reflect.ownKeys(target.value)
   },
   getOwnPropertyDescriptor(target, key: any) {
-    if (key in target.value) {
+    if (hasOwn(target.value, key)) {
       return {
         enumerable: true,
         configurable: true,
