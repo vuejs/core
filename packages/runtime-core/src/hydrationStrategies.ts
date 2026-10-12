@@ -61,12 +61,11 @@ export const hydrateOnVisible: HydrationStrategyFactory<
       return false
     }
     // an element with `display: contents` has no box of its own, so it is
-    // never reported as visible - observe its children instead
+    // never reported as visible - also observe its children
     if (getComputedStyle(el).display === 'contents') {
       for (let i = 0; i < el.children.length; i++) {
         if (observe(el.children[i]) === false) return false
       }
-      return
     }
     ob.observe(el)
   }
