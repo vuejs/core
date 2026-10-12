@@ -1217,6 +1217,25 @@ describe('resolveType', () => {
       expect(deps && [...deps].sort()).toStrictEqual(Object.keys(files).sort())
     })
 
+    test('relative (chained, exported alias wins over a private import with the same name)', () => {
+      const files = {
+        '/index.ts': `import type { Public } from './private'\nexport * from './foo'`,
+        '/private.ts': 'export type Public = { secret: number }',
+        '/foo.ts': `import type { P } from './bar'\nexport type { P as Public }`,
+        '/bar.ts': 'export type P = { bar: string }',
+      }
+      const { props } = resolve(
+        `
+        import type { Public } from './index'
+        defineProps<Public>()
+      `,
+        files,
+      )
+      expect(props).toStrictEqual({
+        bar: ['String'],
+      })
+    })
+
     test('relative (chained, export *)', () => {
       const files = {
         '/foo.ts': `export * from './bar'`,
@@ -1728,6 +1747,34 @@ describe('resolveType', () => {
         resolve(`defineProps<ExportedType>()`, files, globalTypeFiles).props,
       ).toStrictEqual({
         bar: ['Boolean'],
+      })
+    })
+
+    test('global types with re-exported import aliases', () => {
+      const files = {
+        '/bar.ts': `export interface P { bar: boolean }\nexport interface Q { baz: string }`,
+        '/foo.ts': `import type { P } from './bar'\nexport type { P as PP }`,
+        '/qux.ts': `import type { Q } from './bar'\nexport type { Q as QQ }`,
+        '/global.d.ts': `
+          declare global {
+            export type { PP } from './foo'
+            export * from './qux'
+          }
+          export {}
+        `,
+      }
+
+      const globalTypeFiles = { globalTypeFiles: ['/global.d.ts'] }
+
+      expect(
+        resolve(`defineProps<PP>()`, files, globalTypeFiles).props,
+      ).toStrictEqual({
+        bar: ['Boolean'],
+      })
+      expect(
+        resolve(`defineProps<QQ>()`, files, globalTypeFiles).props,
+      ).toStrictEqual({
+        baz: ['String'],
       })
     })
 
