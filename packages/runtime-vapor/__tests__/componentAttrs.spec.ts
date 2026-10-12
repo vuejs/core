@@ -3529,3 +3529,27 @@ test('attrs object supports hasOwnProperty like vdom', async () => {
   expect(vdom.text).toBe('true-false-false')
   expect(vapor.after).toBe(vdom.after)
 })
+
+test('attrs with an undefined value shadow Object.prototype until removed', async () => {
+  const { vdom, vapor } = await renderParity(
+    {
+      Comp: `<script setup>
+        import { useAttrs } from 'vue'
+        defineOptions({ inheritAttrs: false })
+        const attrs = useAttrs()
+      </script>
+      <template><p>{{ attrs.toString === undefined }}-{{ attrs.toString === Object.prototype.toString }}</p></template>`,
+      App: `<template><components.Comp v-bind="data" /></template>`,
+    },
+    () => ref<any>({}),
+    async (data, root) => {
+      expect(root.textContent).toBe('false-true')
+      data.value = { toString: undefined }
+      await nextTick()
+      expect(root.textContent).toBe('true-false')
+      data.value = {}
+    },
+  )
+  expect(vdom.text).toBe('false-true')
+  expect(vapor.after).toBe(vdom.after)
+})

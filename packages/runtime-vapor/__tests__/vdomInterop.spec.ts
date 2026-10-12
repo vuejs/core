@@ -14153,3 +14153,74 @@ describe('vdom component template refs', () => {
     expect(seen.vapor).toEqual(seen.vdom)
   })
 })
+
+test.each([true, false])(
+  'props and attrs support hasOwnProperty (parent vapor: %s)',
+  async vapor => {
+    const data = ref<any>({ id: 'a' })
+    const Comp = compile(
+      `<script setup>
+        import { useAttrs } from 'vue'
+        defineOptions({ inheritAttrs: false })
+        const props = defineProps(['foo', 'bar'])
+        const attrs = useAttrs()
+      </script>
+      <template><p>{{ props.hasOwnProperty('foo') }}-{{ props.hasOwnProperty('bar') }}-{{ attrs.hasOwnProperty('id') }}-{{ attrs.hasOwnProperty('constructor') }}</p></template>`,
+      data,
+      {},
+      { vapor: !vapor },
+    )
+    const App = compile(
+      `<script setup>
+        const data = _data
+        const components = _components
+      </script>
+      <template><components.Comp foo="1" v-bind="data" /></template>`,
+      data,
+      { Comp },
+      { vapor },
+    )
+    const { host, app } = define(App).render()
+    try {
+      expect(host.textContent).toBe('true-true-true-false')
+      data.value = {}
+      await nextTick()
+      expect(host.textContent).toBe('true-true-false-false')
+    } finally {
+      app.unmount()
+    }
+  },
+)
+
+test.each([true, false])(
+  'scoped slot props support hasOwnProperty (parent vapor: %s)',
+  async vapor => {
+    const data = ref<any>({ id: 'a' })
+    const Comp = compile(
+      `<script setup>const data = _data</script>
+      <template><slot v-bind="data" /></template>`,
+      data,
+      {},
+      { vapor: !vapor },
+    )
+    const App = compile(
+      `<script setup>const components = _components</script>
+      <template><components.Comp v-slot="props"><p>{{ props.hasOwnProperty('id') }}-{{ props.hasOwnProperty('toString') }}-{{ props.toString === undefined }}</p></components.Comp></template>`,
+      data,
+      { Comp },
+      { vapor },
+    )
+    const { host, app } = define(App).render()
+    try {
+      expect(host.textContent).toBe('true-false-false')
+      data.value = { id: 'a', toString: undefined }
+      await nextTick()
+      expect(host.textContent).toBe('true-true-true')
+      data.value = {}
+      await nextTick()
+      expect(host.textContent).toBe('false-false-false')
+    } finally {
+      app.unmount()
+    }
+  },
+)

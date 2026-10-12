@@ -351,6 +351,7 @@ export function getAttrFromRawProps(rawProps: RawProps, key: string): unknown {
     merged.reverse()
     return isEvent ? merged.reduce(mergeEventHandlers) : merged
   }
+  return (Object.prototype as any)[key]
 }
 
 function mergeEventHandlers(existing: unknown, incoming: unknown): unknown {

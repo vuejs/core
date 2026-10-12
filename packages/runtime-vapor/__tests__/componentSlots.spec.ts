@@ -8384,3 +8384,35 @@ test('caches native dynamic slot descriptors across reads', async () => {
     app.unmount()
   }
 })
+
+test.each(['id="a"', 'v-bind="data"'])(
+  'scoped slot props support hasOwnProperty like vdom (%s)',
+  async binding => {
+    const { vdom, vapor } = await renderParity(
+      {
+        Comp: `<template><slot ${binding} /></template>`,
+        App: `<template><components.Comp v-slot="props"><p>{{ props.hasOwnProperty('id') }}-{{ props.hasOwnProperty('missing') }}-{{ props.hasOwnProperty('toString') }}-{{ Object.keys(props).join(',') }}</p></components.Comp></template>`,
+      },
+      () => ref({ id: 'a' }),
+      () => {},
+    )
+    expect(vdom.text).toBe('true-false-false-id')
+    expect(vapor.text).toBe(vdom.text)
+  },
+)
+
+test('scoped slot props with an undefined value shadow Object.prototype', async () => {
+  const { vdom, vapor } = await renderParity(
+    {
+      Comp: `<template><slot v-bind="data" /></template>`,
+      App: `<template><components.Comp v-slot="props"><p>{{ props.toString === undefined }}-{{ props.toString === Object.prototype.toString }}</p></components.Comp></template>`,
+    },
+    () => ref<any>({ toString: undefined }),
+    (data, root) => {
+      expect(root.textContent).toBe('true-false')
+      data.value = {}
+    },
+  )
+  expect(vdom.text).toBe('false-true')
+  expect(vapor.text).toBe(vdom.text)
+})
