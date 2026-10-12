@@ -3126,3 +3126,70 @@ async function runOutInPhases(
   )
   return results
 }
+
+describe('out-in leave during a v-for reorder', () => {
+  // vapor vs vdom: the DOM after every step. The leaving element stays where
+  // it is, like vdom's; rows anchor on the fragment, like vdom's placeholder.
+  async function parity(
+    srcs: Record<string, string>,
+    steps: ((data: any) => string)[],
+  ) {
+    const logs: Record<string, string[]> = {}
+    const dom = (root: HTMLElement) =>
+      root.innerHTML.replace(/<!--[^>]*-->/g, '')
+    await renderParity(
+      srcs,
+      () => {
+        const data: any = ref({
+          list: [1, 2, 3, 4].map(id => ({ id, on: true })),
+          dones: [] as (() => void)[],
+          l: (_el: Element, done: () => void) => data.value.dones.push(done),
+        })
+        return data
+      },
+      async (data, root, m) => {
+        const log: string[] = (logs[m] = [])
+        for (const s of steps) {
+          const name = s(data.value)
+          await nextTick()
+          log.push(name + ' ' + dom(root))
+        }
+      },
+    )
+    expect(logs.vapor).toEqual(logs.vdom)
+  }
+
+  const doneAll = (d: any) => {
+    while (d.dones.length) d.dones.shift()()
+    return 'doneAll'
+  }
+  const reorder =
+    (...order: number[]) =>
+    (d: any) => {
+      d.list = order.map(id => d.list.find((it: any) => it.id === id))
+      return 'list=' + order
+    }
+  const off = (id: number) => (d: any) => {
+    d.list.find((it: any) => it.id === id).on = false
+    return 'off' + id
+  }
+
+  const Row =
+    `<script setup>const data = _data; const components = _components; const props = defineProps(['it'])</script>` +
+    `<template><Transition mode="out-in" :css="false" @leave="data.l"><span v-if="props.it.on" :class="'a' + props.it.id" key="a">a{{ props.it.id }}</span><span v-else :class="'b' + props.it.id" key="b">b{{ props.it.id }}</span></Transition></template>`
+  const App = `<template><div><components.Row v-for="it in data.list" :key="it.id" :it="it" /></div></template>`
+
+  test('rows moved before a leaving tail row', () =>
+    parity({ Row, App }, [off(4), reorder(3, 4, 1, 2), doneAll]))
+
+  test('a row moved before a leaving row that stays', () =>
+    parity({ Row, App }, [off(1), reorder(3, 1, 2, 4), doneAll]))
+
+  test('template v-for rows starting with the Transition', () =>
+    parity(
+      {
+        App: `<template><div><template v-for="it in data.list" :key="it.id"><Transition mode="out-in" :css="false" @leave="data.l"><span v-if="it.on" :class="'a' + it.id" key="a">a{{ it.id }}</span><span v-else :class="'b' + it.id" key="b">b{{ it.id }}</span></Transition><i>{{ it.id }}</i></template></div></template>`,
+      },
+      [off(4), reorder(3, 4, 1, 2), doneAll],
+    ))
+})

@@ -638,6 +638,7 @@ function removeBranchWithLeaveImpl(
       enterHooks = frag.$transition = extend({}, transition)
     }
     applyTransitionLeaveHooksImpl(frag.nodes, enterHooks, () => {
+      frag.leaving = false
       // Unmounting cuts the leave short and runs afterLeave synchronously;
       // the pending branch must not be rendered into the torn-down tree.
       if (transition.state.isUnmounting) return
@@ -672,6 +673,9 @@ function removeBranchWithLeaveImpl(
         )
         return
       }
+      // where the fragment is now: a KeepAlive may have moved it meanwhile
+      const liveParent = parent && frag.anchor.parentNode
+      if (parent && !liveParent) return
       // By the time this deferred out-in branch runs, the renderEffect
       // has finished and currentInstance may have changed, so restore
       // the captured instance.
@@ -683,7 +687,7 @@ function removeBranchWithLeaveImpl(
           frag.renderBranch(
             pending.render,
             transition,
-            parent,
+            liveParent,
             pending.key,
             pending.noScope,
             true,
@@ -694,7 +698,7 @@ function removeBranchWithLeaveImpl(
           frag.renderBranch(
             render,
             transition,
-            parent,
+            liveParent,
             key,
             noScope,
             true,
@@ -709,6 +713,7 @@ function removeBranchWithLeaveImpl(
     if (mode === 'out-in') {
       // out-in owns the removal here so update() can return before
       // rendering; the next branch mounts from the afterLeave callback.
+      frag.leaving = true
       parent && remove(frag.nodes, parent)
       return true
     }
