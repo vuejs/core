@@ -315,6 +315,8 @@ export class DynamicFragment extends RenderContextFragment {
     // key mounted when the first update was deferred
     prevKey: any
   }
+  // out-in: the current branch is leaving and is removed once it has left
+  leaving?: boolean
   // Debug text for the runtime anchor comment, dev builds only. Never a
   // category signal: everything hydration branches on lives in `__vf`.
   anchorLabel?: string

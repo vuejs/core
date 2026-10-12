@@ -323,6 +323,8 @@ export function move(
       )
       anchor = block.anchor
     }
+    // a leaving branch is out of the tree: it finishes where it is
+    if (isTransitionEnabled && (block as DynamicFragment).leaving) return
     // fragment
     if (block.move) {
       block.move(
@@ -514,6 +516,10 @@ export function getBlockFirstNode(block: Block): Node | undefined {
       // hydrating and after removal, so fall through to the generic path.
       const marker = block.placeholder || block.anchor
       if (marker) return marker
+    }
+    // a leaving branch stays behind; the fragment is where its anchor is
+    if (isTransitionEnabled && (block as DynamicFragment).leaving) {
+      return block.anchor
     }
     const nodes = block.nodes
     if (isValidBlock(nodes)) return getBlockFirstNode(nodes)

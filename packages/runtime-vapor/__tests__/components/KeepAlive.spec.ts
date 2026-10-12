@@ -5457,3 +5457,106 @@ describe('VaporKeepAlive', () => {
     expect(container.innerHTML).toBe('')
   })
 })
+
+describe('out-in Transition inside a kept-alive component', () => {
+  // vapor vs vdom: hook order and the DOM after every step
+  const outIn = (inner: string) =>
+    `<template><Transition mode="out-in" :css="false" @before-enter="data.be" @enter="data.e" @after-enter="data.ae" @before-leave="data.bl" @leave="data.l" @after-leave="data.al">${inner}</Transition></template>`
+
+  async function parity(
+    srcs: Record<string, string>,
+    init: Record<string, any>,
+    steps: string[],
+  ) {
+    const logs: Record<string, string[]> = {}
+    const dom = (root: HTMLElement) =>
+      root.innerHTML.replace(/<!--[^>]*-->/g, '')
+    await renderParity(
+      srcs,
+      () => {
+        const data: any = ref({
+          ...init,
+          dones: [] as (() => void)[],
+          log: [] as string[],
+          be: (el: Element) => data.value.log.push('be:' + el.className),
+          e: (el: Element, done: () => void) => {
+            data.value.log.push('e:' + el.className)
+            data.value.dones.push(done)
+          },
+          ae: (el: Element) => data.value.log.push('ae:' + el.className),
+          bl: (el: Element) => data.value.log.push('bl:' + el.className),
+          l: (el: Element, done: () => void) => {
+            data.value.log.push('l:' + el.className)
+            data.value.dones.push(done)
+          },
+          al: (el: Element) => data.value.log.push('al:' + el.className),
+        })
+        return data
+      },
+      async (data, root, m) => {
+        const log: string[] = (logs[m] = data.value.log)
+        for (const s of steps) {
+          if (s === 'doneAll') {
+            let n = 0
+            while (data.value.dones.length && n++ < 10) {
+              data.value.dones.shift()!()
+              await nextTick()
+            }
+          } else {
+            const [k, v] = s.split('=')
+            data.value[k] = v === 'true' ? true : v === 'false' ? false : v
+          }
+          await nextTick()
+          log.push(s + ' ' + dom(root))
+        }
+      },
+    )
+    expect(logs.vapor).toEqual(logs.vdom)
+  }
+
+  const inside = {
+    A: outIn(
+      `<div v-if="data.x" class="x" key="x">x</div><div v-else class="y" key="y">y</div>`,
+    ),
+    B: `<template><p class="b">b</p></template>`,
+    App: `<template><div class="root"><KeepAlive><components.A v-if="data.which === 'a'" /><components.B v-else /></KeepAlive></div></template>`,
+  }
+
+  test('the pending branch renders where the fragment is after a deactivation', () =>
+    parity(inside, { x: true, which: 'a' }, [
+      'x=false',
+      'which=b',
+      'doneAll',
+      'which=a',
+      'doneAll',
+    ]))
+
+  test('deactivating during a leave is not a second leave, reactivating is not an enter', () =>
+    parity(inside, { x: true, which: 'a' }, [
+      'x=false',
+      'which=b',
+      'which=a',
+      'doneAll',
+      'doneAll',
+    ]))
+
+  const outside = {
+    PA: `<template><div class="pa">A</div></template>`,
+    PB: `<template><div class="pb">B</div></template>`,
+    App: outIn(
+      `<KeepAlive><components.PA v-if="data.which === 'a'" /><components.PB v-else /></KeepAlive>`,
+    ),
+  }
+
+  // coverage guards: green before the fix too
+  test('going back to the leaving page', () =>
+    parity(outside, { which: 'a' }, ['which=b', 'which=a', 'doneAll']))
+
+  test('switching pages once the leave ended', () =>
+    parity(outside, { which: 'a' }, [
+      'which=b',
+      'doneAll',
+      'which=a',
+      'doneAll',
+    ]))
+})
