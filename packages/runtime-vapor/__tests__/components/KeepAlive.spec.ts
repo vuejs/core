@@ -5458,10 +5458,11 @@ describe('VaporKeepAlive', () => {
   })
 })
 
-describe('out-in Transition inside a kept-alive component', () => {
+describe('Transition inside a kept-alive component', () => {
   // vapor vs vdom: hook order and the DOM after every step
-  const outIn = (inner: string) =>
-    `<template><Transition mode="out-in" :css="false" @before-enter="data.be" @enter="data.e" @after-enter="data.ae" @before-leave="data.bl" @leave="data.l" @after-leave="data.al">${inner}</Transition></template>`
+  const tr = (mode: string, inner: string) =>
+    `<template><Transition${mode ? ` mode="${mode}"` : ''} :css="false" @before-enter="data.be" @enter="data.e" @after-enter="data.ae" @before-leave="data.bl" @leave="data.l" @after-leave="data.al" @leave-cancelled="data.lc">${inner}</Transition></template>`
+  const outIn = (inner: string) => tr('out-in', inner)
 
   async function parity(
     srcs: Record<string, string>,
@@ -5490,6 +5491,7 @@ describe('out-in Transition inside a kept-alive component', () => {
             data.value.dones.push(done)
           },
           al: (el: Element) => data.value.log.push('al:' + el.className),
+          lc: (el: Element) => data.value.log.push('lc:' + el.className),
         })
         return data
       },
@@ -5559,4 +5561,63 @@ describe('out-in Transition inside a kept-alive component', () => {
       'which=a',
       'doneAll',
     ]))
+
+  // Without out-in the leaving element is still the current branch when the
+  // component is deactivated: KeepAlive's move starts a second leave on it,
+  // and reactivating cancels that leave while the element is back in place.
+  test.each(['', 'in-out'])(
+    'mode "%s": reactivating while the deactivation leave is pending',
+    mode =>
+      parity(
+        {
+          ...inside,
+          A: tr(
+            mode,
+            `<div v-if="data.x" class="x" key="x">x</div><div v-else class="y" key="y">y</div>`,
+          ),
+        },
+        { x: true, which: 'a' },
+        ['x=false', 'which=b', 'which=a', 'doneAll', 'doneAll'],
+      ),
+  )
+
+  // Only the settled DOM: vdom moves the element into the KeepAlive storage
+  // when the deactivation leave ends and removes it from there when the
+  // out-in leave ends; vapor skips the storage. The final DOM is the same.
+  test('a branch replaced while its deactivation leave is in flight is removed, not kept', async () => {
+    const settled: Record<string, string> = {}
+    await renderParity(
+      {
+        A: `<template><Transition mode="out-in" :css="false" @leave="data.l" @enter="data.e"><b v-if="data.show" key="c">c</b><p v-else key="fb">fb</p></Transition></template>`,
+        B: `<template><strong>B</strong></template>`,
+        App: `<template><main><KeepAlive><components.A v-if="data.which === 'a'" /><components.B v-else /></KeepAlive></main></template>`,
+      },
+      () => {
+        const data: any = ref({
+          which: 'a',
+          show: false,
+          dones: [] as (() => void)[],
+          e: (_el: Element, done: () => void) => data.value.dones.push(done),
+          l: (_el: Element, done: () => void) => data.value.dones.push(done),
+        })
+        return data
+      },
+      async (data, root, mode) => {
+        data.value.which = 'b'
+        await nextTick()
+        data.value.show = true
+        await nextTick()
+        data.value.which = 'a'
+        await nextTick()
+        let n = 0
+        while (data.value.dones.length && n++ < 20) {
+          data.value.dones.shift()!()
+          await nextTick()
+        }
+        settled[mode] = root.innerHTML.replace(/<!--[^>]*-->/g, '')
+      },
+    )
+    expect(settled.vdom).toBe('<main><b>c</b></main>')
+    expect(settled.vapor).toBe(settled.vdom)
+  })
 })
