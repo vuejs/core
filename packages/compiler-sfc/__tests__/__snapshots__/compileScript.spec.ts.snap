@@ -1597,6 +1597,24 @@ const $style = _useCssModule("$style")
 }"
 `;
 
+exports[`SFC compile <script setup> > inlineTemplate mode > vapor: should return bindings for render in normal <script> without template 1`] = `
+"
+        const __default__ = {
+          render(ctx) {}
+        }
+        
+export default /*@__PURE__*/Object.assign(__default__, {
+  __vapor: true,
+  setup(__props) {
+
+        const msg = 'hello'
+        
+return { msg }
+}
+
+})"
+`;
+
 exports[`SFC compile <script setup> > inlineTemplate mode > with defineExpose() 1`] = `
 "
 export default {

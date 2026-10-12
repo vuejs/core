@@ -1142,7 +1142,16 @@ export function compileScript(
     ctx.s.appendRight(
       endOffset,
       // vapor mode generates its own return when inlined
-      `\n${vapor && !ssr && inlineMode ? `` : `return `}${returned}\n}\n\n`,
+      // (except with a render in normal <script> and no template, where
+      // the bindings object is returned instead, see #4980)
+      `\n${
+        vapor &&
+        !ssr &&
+        inlineMode &&
+        !(!sfc.template && ctx.hasDefaultExportRender)
+          ? ``
+          : `return `
+      }${returned}\n}\n\n`,
     )
   }
 
