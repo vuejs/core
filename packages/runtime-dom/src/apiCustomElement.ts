@@ -423,7 +423,7 @@ export class VueElement
       // initial mount
       // skip if removed while the async definition was loading; it mounts
       // when connected again (see connectedCallback)
-      if (this.isConnected) {
+      if (this._connected) {
         this._mount(def)
       }
     }
