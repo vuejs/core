@@ -616,9 +616,10 @@ const vaporInteropImpl = {
       )
     } else if (vnode.vb) {
       const anchor = vnode.anchor as Node | null
-      // `hydrateSlot()` records the opening marker for VDOM SSR slot fragments
-      // on vnode.el while vnode.anchor points at the closing marker.
-      if (vnode.el && vnode.el !== anchor && isRangeStart(vnode.el as Node)) {
+      // The slot's own start node, or the opening marker `hydrateSlot()`
+      // records for VDOM SSR slot fragments, while vnode.anchor points at the
+      // closing one.
+      if (vnode.el && vnode.el !== anchor) {
         slotStartAnchor = vnode.el as Node
       }
       // Fragment child unmounts invoke VaporSlot with doRemove = false, so the
@@ -696,7 +697,10 @@ const vaporInteropImpl = {
         // use fragment's anchor when possible
         (isFragment(slotBlock) ? slotBlock.anchor : undefined) ||
         createTextNode()
-      insert((n2.el = n2.anchor = selfAnchor), container, anchor)
+      // Like a vdom Fragment, the vnode starts on a node of its own: vdom
+      // places a sibling entering ahead of it before `el`.
+      insert((n2.el = createTextNode()), container, anchor)
+      insert((n2.anchor = selfAnchor), container, anchor)
       applyVaporSlotTransition(n2, (n2.vb = slotBlock))
       insert(slotBlock, container, selfAnchor, parentSuspense)
     } else {
@@ -714,9 +718,7 @@ const vaporInteropImpl = {
         const parent = selfAnchor.parentNode as ParentNode
         const nextSibling = selfAnchor.nextSibling
         const rangeStartAnchor =
-          n1.el && n1.el !== selfAnchor && isRangeStart(n1.el as Node)
-            ? (n1.el as Node)
-            : undefined
+          n1.el && n1.el !== selfAnchor ? (n1.el as Node) : undefined
         const oldBlockOwnsAnchor =
           isFragment(n1.vb!) && n1.vb!.anchor === selfAnchor
         // remove old vapor block
@@ -772,11 +774,13 @@ const vaporInteropImpl = {
     // pending hydration range includes it. Avoid moving `vnode.el` twice.
     const pendingRangeOwnsFragmentStart =
       isVaporComponent(block) && !!block.pendingBlock
+    // A slot's own start node, or the opening marker of a hydrated range. A
+    // component's `el` is its first root, which its block moves.
     if (
       vnode.el &&
       vnode.el !== vnode.anchor &&
-      isRangeStart(vnode.el as Node) &&
-      !pendingRangeOwnsFragmentStart
+      (vnode.vb ||
+        (isRangeStart(vnode.el as Node) && !pendingRangeOwnsFragmentStart))
     ) {
       move(
         vnode.el as any,
@@ -1116,7 +1120,7 @@ function resolveVNodeNodes(vnode: VNode): Block {
     const { el, anchor, vb } = vnode
     if (!anchor) return vb
 
-    return el && el !== anchor && isRangeStart(el as Node)
+    return el && el !== anchor
       ? [el as Node, vb, anchor as Node]
       : [vb, anchor as Node]
   }
@@ -3084,6 +3088,12 @@ function mountSlotWithoutHydration(
 ): void {
   const container = parentNode(close)!
   const mount = () => {
+    // the slot's own start node as on mount, ahead of a fallback adopted in
+    // place (its nodes may be replaced as they are adopted)
+    const start = open || createTextNode()
+    if (!open) {
+      insert(start, container, fallbackRange ? fallbackRange.first : close)
+    }
     const block = (vnode.vb = renderVaporSlot(
       vnode,
       parentComponent,
@@ -3097,7 +3107,7 @@ function mountSlotWithoutHydration(
       anchor = (isFragment(block) && block.anchor) || createTextNode()
       insert(anchor, container, close)
     }
-    vnode.el = open || anchor
+    vnode.el = start
     vnode.anchor = anchor
     insert(block, container, anchor, parentSuspense)
   }
