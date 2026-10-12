@@ -14224,3 +14224,151 @@ test.each([true, false])(
     }
   },
 )
+
+// vdom places a sibling entering before the next vnode's `el`, and a keyed
+// row moving before it: a vapor slot vnode in a vdom outlet starts on a node
+// of its own, like a vdom Fragment, instead of ending on its anchor.
+describe('a vapor slot in a vdom outlet starts on a node of its own', () => {
+  const vdomScript = `
+    <script setup>
+      const data = _data
+      const components = _components
+    </script>`
+  const strip = (html: string) => html.replace(/<!--[^>]*-->/g, '')
+
+  // the app all-vdom against the app with the components in `vaporOnes`
+  // compiled vapor, the DOM compared after every step
+  async function parity(
+    srcs: Record<string, string>,
+    vaporOnes: string[],
+    init: () => Record<string, any>,
+    steps: ((data: any) => void)[],
+  ) {
+    const run = async (vapor: boolean) => {
+      const data: any = ref(init())
+      const components: Record<string, any> = {}
+      const compileOne = (name: string) =>
+        compile(
+          `${vapor && vaporOnes.includes(name) ? '' : vdomScript}${srcs[name]}`,
+          data,
+          components,
+          { vapor: vapor && vaporOnes.includes(name) },
+        )
+      for (const name in srcs) {
+        if (name !== 'App') components[name] = compileOne(name)
+      }
+      const App = compileOne('App')
+      const root = document.createElement('div')
+      const app = (
+        vapor && vaporOnes.includes('App')
+          ? createVaporApp(App)
+          : createApp(App)
+      ).use(vaporInteropPlugin)
+      app.mount(root)
+      const seen = [strip(root.innerHTML)]
+      for (const step of steps) {
+        step(data)
+        await nextTick()
+        seen.push(strip(root.innerHTML))
+      }
+      app.unmount()
+      return seen
+    }
+    const vdom = await run(false)
+    expect(await run(true)).toEqual(vdom)
+    return vdom
+  }
+
+  test.each([
+    [
+      'a fallback on the forwarding outlet',
+      `<components.Child><i v-if="data.x">x</i><slot><p>outer</p></slot></components.Child>`,
+      `<div><slot /></div>`,
+    ],
+    [
+      'a fallback on the inner outlet',
+      `<components.Child><i v-if="data.x">x</i><slot /></components.Child>`,
+      `<div><slot><p>inner</p></slot></div>`,
+    ],
+    [
+      'no fallback',
+      `<components.Child><i v-if="data.x">x</i><slot /></components.Child>`,
+      `<div><slot /></div>`,
+    ],
+  ])(
+    'a vdom sibling entering before the slot, with %s',
+    async (_, wrapper, child) => {
+      const seen = await parity(
+        {
+          Child: `<template>${child}</template>`,
+          Wrapper: `<template>${wrapper}</template>`,
+          App: `
+          <template>
+            <components.Wrapper>
+              <b v-if="data.c">c</b>
+            </components.Wrapper>
+          </template>`,
+        },
+        ['App'],
+        () => ({ c: false, x: false }),
+        [data => (data.value.x = true), data => (data.value.c = true)],
+      )
+      expect(seen[2]).toBe('<div><i>x</i><b>c</b></div>')
+    },
+  )
+
+  describe('keyed slot outlets reordered', () => {
+    const srcs = {
+      List: `
+        <template>
+          <div>
+            <slot v-for="it in data.list" :key="it.id" :it="it">
+              <i v-if="it.fb">f{{ it.id }}</i>
+            </slot>
+          </div>
+        </template>`,
+      App: `
+        <template>
+          <components.List>
+            <template #default="{ it }">
+              <b v-if="it.c">c{{ it.id }}</b>
+            </template>
+          </components.List>
+        </template>`,
+    }
+    const row = (id: number, c: boolean) => ({ id, c, fb: true })
+
+    test('a row added before one showing content', async () => {
+      const seen = await parity(
+        srcs,
+        ['App'],
+        () => ({ list: [row(1, true)] }),
+        [data => data.value.list.unshift(row(2, true))],
+      )
+      expect(seen[1]).toBe('<div><b>c2</b><b>c1</b></div>')
+    })
+
+    test('a row added before one showing its fallback', async () => {
+      const seen = await parity(
+        srcs,
+        ['App'],
+        () => ({ list: [row(1, false)] }),
+        [data => data.value.list.unshift(row(2, true))],
+      )
+      expect(seen[1]).toBe('<div><b>c2</b><i>f1</i></div>')
+    })
+
+    test('rows reversed, then every row switching', async () => {
+      const seen = await parity(
+        srcs,
+        ['App'],
+        () => ({ list: [row(1, true), row(2, false), row(3, true)] }),
+        [
+          data => data.value.list.reverse(),
+          data => data.value.list.forEach((r: any) => (r.c = !r.c)),
+        ],
+      )
+      expect(seen[2]).toBe('<div><i>f3</i><b>c2</b><i>f1</i></div>')
+    })
+  })
+})
