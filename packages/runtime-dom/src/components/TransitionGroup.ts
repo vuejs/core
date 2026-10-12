@@ -11,6 +11,7 @@ import {
 } from './Transition'
 import { type VShowElement, vShowHidden } from '../directives/vShow'
 import {
+  type ComponentInternalInstance,
   type ComponentOptions,
   DeprecationTypes,
   Fragment,
@@ -35,10 +36,20 @@ interface Position {
   left: number
 }
 
+// the item of an enclosing group that a nested group is rendered in, sampled
+// together with the old positions of the nested group's own children
+interface Origin extends Position {
+  item: Element
+  willMove: () => boolean
+}
+
 const positionMap = new WeakMap<VNode, Position>()
 const newPositionMap = new WeakMap<VNode, Position>()
 const moveCbKey = Symbol('_moveCb')
 const enterCbKey = Symbol('_enterCb')
+// groups that have re-rendered but not yet run their move, mapped to whether
+// they are going to move their children
+const pendingGroups = new WeakMap<ComponentInternalInstance, () => boolean>()
 
 export type TransitionGroupProps = Omit<TransitionProps, 'mode'> & {
   tag?: string
@@ -72,29 +83,45 @@ const TransitionGroupImpl: ComponentOptions = /*@__PURE__*/ decorate({
     const state = useTransitionState()
     let prevChildren: VNode[]
     let children: VNode[]
+    let origins: Origin[] | undefined
+    let moves: boolean | undefined
+    // probed lazily: the move class is checked on a child after the patch, and a
+    // nested group may need the answer before this group's own updated hook
+    const willMove = () => {
+      if (moves === undefined) {
+        // children is guaranteed to exist after initial render
+        moves =
+          prevChildren.length > 0 &&
+          hasCSSTransform(
+            prevChildren[0].el as ElementWithTransition,
+            instance.vnode.el as Node,
+            resolveMoveClass(props),
+          )
+      }
+      return moves
+    }
 
     onUpdated(() => {
-      // children is guaranteed to exist after initial render
-      if (!prevChildren.length) {
-        return
-      }
-      const moveClass = props.moveClass || `${props.name || 'v'}-move`
-
-      if (
-        !hasCSSTransform(
-          prevChildren[0].el as ElementWithTransition,
-          instance.vnode.el as Node,
-          moveClass,
-        )
-      ) {
+      pendingGroups.delete(instance)
+      if (!willMove()) {
         prevChildren = []
+        origins = undefined
         return
       }
+      const moveClass = resolveMoveClass(props)
 
       // we divide the work into three loops to avoid mixing DOM reads and writes
       // in each iteration - which helps prevent layout thrashing.
       prevChildren.forEach(callPendingCbs)
-      prevChildren.forEach(recordPosition)
+      // between them, the enclosing groups that move animate how far the item
+      // this group is rendered in has moved, so that part is left out here. The
+      // item is sampled together with this group's children both times, so the
+      // two samples stay in the same frame whether or not those groups have
+      // already applied their own translations.
+      const shift =
+        origins && getOriginShift(origins, instance.vnode.el as Node)
+      origins = undefined
+      prevChildren.forEach(c => recordPosition(c, shift))
       const movedChildren = prevChildren.filter(applyTranslation)
 
       // force reflow to put everything in position
@@ -137,6 +164,7 @@ const TransitionGroupImpl: ComponentOptions = /*@__PURE__*/ decorate({
       }
 
       prevChildren = []
+      moves = undefined
       if (children) {
         for (let i = 0; i < children.length; i++) {
           const child = children[i]
@@ -175,6 +203,11 @@ const TransitionGroupImpl: ComponentOptions = /*@__PURE__*/ decorate({
         }
       }
 
+      if (prevChildren.length) {
+        origins = getOrigins(instance)
+        pendingGroups.set(instance, willMove)
+      }
+
       return createVNode(tag, null, children)
     }
   },
@@ -196,8 +229,12 @@ function callPendingCbs(c: VNode) {
   }
 }
 
-function recordPosition(c: VNode) {
-  newPositionMap.set(c, getPosition(c.el as HTMLElement))
+function resolveMoveClass(props: TransitionGroupProps): string {
+  return props.moveClass || `${props.name || 'v'}-move`
+}
+
+function recordPosition(c: VNode, shift?: Position) {
+  newPositionMap.set(c, getPosition(c.el as HTMLElement, shift))
 }
 
 function applyTranslation(c: VNode): VNode | undefined {
@@ -226,12 +263,49 @@ function applyTranslation(c: VNode): VNode | undefined {
   }
 }
 
-function getPosition(el: HTMLElement): Position {
+function getPosition(el: Element, shift?: Position): Position {
   const rect = el.getBoundingClientRect()
   return {
-    left: rect.left,
-    top: rect.top,
+    left: rect.left - (shift ? shift.left : 0),
+    top: rect.top - (shift ? shift.top : 0),
   }
+}
+
+// origins in the enclosing groups that are updating as well, nearest first
+function getOrigins(instance: ComponentInternalInstance): Origin[] | undefined {
+  let origins: Origin[] | undefined
+  for (let group = instance.parent; group; group = group.parent) {
+    const willMove = pendingGroups.get(group)
+    if (willMove) {
+      const item = findItem(group.vnode.el as Node, instance.vnode.el as Node)
+      if (item) {
+        ;(origins || (origins = [])).push(
+          extend(getPosition(item), { item, willMove }),
+        )
+      }
+    }
+  }
+  return origins
+}
+
+// the item of the group rooted at `root` that `node` is rendered in
+function findItem(root: Node, node: Node | null): Element | undefined {
+  // a group without `tag` renders a fragment, its children share the parent node
+  const container = root.nodeType === 1 ? root : root.parentNode
+  while (node && node.parentNode !== container) {
+    node = node.parentNode
+  }
+  if (node && node.nodeType === 1) {
+    return node as Element
+  }
+}
+
+// the nearest origin whose group is going to move it: what farther groups
+// animate is part of its movement. An item this group's elements have left
+// since no longer carries them.
+function getOriginShift(origins: Origin[], root: Node): Position | undefined {
+  const origin = origins.find(o => o.willMove() && o.item.contains(root))
+  return origin && getPosition(origin.item, origin)
 }
 
 function hasCSSTransform(

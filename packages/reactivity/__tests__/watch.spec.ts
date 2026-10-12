@@ -359,4 +359,16 @@ describe('watch', () => {
       stopDeep()
     },
   )
+
+  test('once watcher should stop when its callback throws', () => {
+    const source = ref(0)
+    const callback = vi.fn(() => {
+      throw new Error('oops')
+    })
+    watch(source, callback, { once: true })
+
+    expect(() => (source.value = 1)).toThrow('oops')
+    expect(() => (source.value = 2)).not.toThrow()
+    expect(callback).toHaveBeenCalledTimes(1)
+  })
 })

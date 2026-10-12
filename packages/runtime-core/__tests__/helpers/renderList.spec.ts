@@ -114,4 +114,15 @@ describe('renderList', () => {
     arr[0].foo = 2
     expect(dummy).toEqual([2])
   })
+
+  it('should render nothing for an invalid range in prod', () => {
+    __DEV__ = false
+    try {
+      expect(renderList(3.1, () => {})).toEqual([])
+      expect(renderList(-1, () => {})).toEqual([])
+      expect(renderList(NaN, () => {})).toEqual([])
+    } finally {
+      __DEV__ = true
+    }
+  })
 })
