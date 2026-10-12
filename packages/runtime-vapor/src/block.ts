@@ -283,8 +283,10 @@ export function move(
               parentComponent.isUnmounted
             ) {
               block.remove()
-            } else {
-              parent.insertBefore(block, anchor as Node)
+            } else if (!anchor || anchor.parentNode === parent) {
+              // the anchor left `parent` when a later move (a KeepAlive
+              // reactivation during the leave) overtook this one
+              parent.insertBefore(block, anchor)
             }
           },
           true,
@@ -411,8 +413,12 @@ export function removeNode(block: Node, parent?: ParentNode): void {
     performTransitionLeave(
       block,
       (block as TransitionBlock).$transition as TransitionHooks,
-      // deferred: an unmount may have removed the node meanwhile
-      () => parent && block.parentNode === parent && parent.removeChild(block),
+      // deferred: an unmount may have removed the node meanwhile, or a
+      // KeepAlive deactivation may have moved it into its storage
+      () => {
+        const current = block.parentNode
+        if (parent && current) current.removeChild(block)
+      },
     )
   } else {
     parent && parent.removeChild(block)
