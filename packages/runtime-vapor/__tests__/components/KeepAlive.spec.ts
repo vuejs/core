@@ -5460,9 +5460,27 @@ describe('VaporKeepAlive', () => {
 
 describe('Transition inside a kept-alive component', () => {
   // vapor vs vdom: hook order and the DOM after every step
-  const tr = (mode: string, inner: string) =>
-    `<template><Transition${mode ? ` mode="${mode}"` : ''} :css="false" @before-enter="data.be" @enter="data.e" @after-enter="data.ae" @before-leave="data.bl" @leave="data.l" @after-leave="data.al" @leave-cancelled="data.lc">${inner}</Transition></template>`
+  const tr = (mode: string, inner: string) => `
+    <template>
+      <Transition
+        ${mode ? `mode="${mode}"` : ''}
+        :css="false"
+        @before-enter="data.be"
+        @enter="data.e"
+        @after-enter="data.ae"
+        @before-leave="data.bl"
+        @leave="data.l"
+        @after-leave="data.al"
+        @leave-cancelled="data.lc"
+      >
+        ${inner}
+      </Transition>
+    </template>`
   const outIn = (inner: string) => tr('out-in', inner)
+  const xOrY = `
+    <div v-if="data.x" class="x" key="x">x</div>
+    <div v-else class="y" key="y">y</div>
+  `
 
   async function parity(
     srcs: Record<string, string>,
@@ -5517,11 +5535,17 @@ describe('Transition inside a kept-alive component', () => {
   }
 
   const inside = {
-    A: outIn(
-      `<div v-if="data.x" class="x" key="x">x</div><div v-else class="y" key="y">y</div>`,
-    ),
+    A: outIn(xOrY),
     B: `<template><p class="b">b</p></template>`,
-    App: `<template><div class="root"><KeepAlive><components.A v-if="data.which === 'a'" /><components.B v-else /></KeepAlive></div></template>`,
+    App: `
+      <template>
+        <div class="root">
+          <KeepAlive>
+            <components.A v-if="data.which === 'a'" />
+            <components.B v-else />
+          </KeepAlive>
+        </div>
+      </template>`,
   }
 
   test('the pending branch renders where the fragment is after a deactivation', () =>
@@ -5545,9 +5569,12 @@ describe('Transition inside a kept-alive component', () => {
   const outside = {
     PA: `<template><div class="pa">A</div></template>`,
     PB: `<template><div class="pb">B</div></template>`,
-    App: outIn(
-      `<KeepAlive><components.PA v-if="data.which === 'a'" /><components.PB v-else /></KeepAlive>`,
-    ),
+    App: outIn(`
+      <KeepAlive>
+        <components.PA v-if="data.which === 'a'" />
+        <components.PB v-else />
+      </KeepAlive>
+    `),
   }
 
   // coverage guards: green before the fix too
@@ -5568,17 +5595,13 @@ describe('Transition inside a kept-alive component', () => {
   test.each(['', 'in-out'])(
     'mode "%s": reactivating while the deactivation leave is pending',
     mode =>
-      parity(
-        {
-          ...inside,
-          A: tr(
-            mode,
-            `<div v-if="data.x" class="x" key="x">x</div><div v-else class="y" key="y">y</div>`,
-          ),
-        },
-        { x: true, which: 'a' },
-        ['x=false', 'which=b', 'which=a', 'doneAll', 'doneAll'],
-      ),
+      parity({ ...inside, A: tr(mode, xOrY) }, { x: true, which: 'a' }, [
+        'x=false',
+        'which=b',
+        'which=a',
+        'doneAll',
+        'doneAll',
+      ]),
   )
 
   // Only the settled DOM: vdom moves the element into the KeepAlive storage
@@ -5588,9 +5611,23 @@ describe('Transition inside a kept-alive component', () => {
     const settled: Record<string, string> = {}
     await renderParity(
       {
-        A: `<template><Transition mode="out-in" :css="false" @leave="data.l" @enter="data.e"><b v-if="data.show" key="c">c</b><p v-else key="fb">fb</p></Transition></template>`,
+        A: `
+          <template>
+            <Transition mode="out-in" :css="false" @leave="data.l" @enter="data.e">
+              <b v-if="data.show" key="c">c</b>
+              <p v-else key="fb">fb</p>
+            </Transition>
+          </template>`,
         B: `<template><strong>B</strong></template>`,
-        App: `<template><main><KeepAlive><components.A v-if="data.which === 'a'" /><components.B v-else /></KeepAlive></main></template>`,
+        App: `
+          <template>
+            <main>
+              <KeepAlive>
+                <components.A v-if="data.which === 'a'" />
+                <components.B v-else />
+              </KeepAlive>
+            </main>
+          </template>`,
       },
       () => {
         const data: any = ref({

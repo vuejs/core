@@ -3174,10 +3174,26 @@ describe('out-in leave during a v-for reorder', () => {
     return 'off' + id
   }
 
-  const Row =
-    `<script setup>const data = _data; const components = _components; const props = defineProps(['it'])</script>` +
-    `<template><Transition mode="out-in" :css="false" @leave="data.l"><span v-if="props.it.on" :class="'a' + props.it.id" key="a">a{{ props.it.id }}</span><span v-else :class="'b' + props.it.id" key="b">b{{ props.it.id }}</span></Transition></template>`
-  const App = `<template><div><components.Row v-for="it in data.list" :key="it.id" :it="it" /></div></template>`
+  const Row = `
+    <script setup>
+      const data = _data
+      const components = _components
+      const props = defineProps(['it'])
+    </script>
+    <template>
+      <Transition mode="out-in" :css="false" @leave="data.l">
+        <span v-if="props.it.on" :class="'a' + props.it.id" key="a">
+          a{{ props.it.id }}
+        </span>
+        <span v-else :class="'b' + props.it.id" key="b">b{{ props.it.id }}</span>
+      </Transition>
+    </template>`
+  const App = `
+    <template>
+      <div>
+        <components.Row v-for="it in data.list" :key="it.id" :it="it" />
+      </div>
+    </template>`
 
   test('rows moved before a leaving tail row', () =>
     parity({ Row, App }, [off(4), reorder(3, 4, 1, 2), doneAll]))
@@ -3188,8 +3204,182 @@ describe('out-in leave during a v-for reorder', () => {
   test('template v-for rows starting with the Transition', () =>
     parity(
       {
-        App: `<template><div><template v-for="it in data.list" :key="it.id"><Transition mode="out-in" :css="false" @leave="data.l"><span v-if="it.on" :class="'a' + it.id" key="a">a{{ it.id }}</span><span v-else :class="'b' + it.id" key="b">b{{ it.id }}</span></Transition><i>{{ it.id }}</i></template></div></template>`,
+        App: `
+          <template>
+            <div>
+              <template v-for="it in data.list" :key="it.id">
+                <Transition mode="out-in" :css="false" @leave="data.l">
+                  <span v-if="it.on" :class="'a' + it.id" key="a">a{{ it.id }}</span>
+                  <span v-else :class="'b' + it.id" key="b">b{{ it.id }}</span>
+                </Transition>
+                <i>{{ it.id }}</i>
+              </template>
+            </div>
+          </template>`,
       },
       [off(4), reorder(3, 4, 1, 2), doneAll],
     ))
+})
+
+describe('in-out: the current branch leaves when nothing takes its place', () => {
+  // vapor vs vdom: hook order and the DOM after every step. With no element
+  // entering there is nothing to wait for, so the leave runs right away.
+  async function parity(
+    srcs: Record<string, string>,
+    init: Record<string, any>,
+    steps: string[],
+  ) {
+    const logs: Record<string, string[]> = {}
+    const dom = (root: HTMLElement) =>
+      root.innerHTML.replace(/<!--[^>]*-->/g, '')
+    await renderParity(
+      srcs,
+      () => {
+        const data: any = ref({
+          ...init,
+          dones: [] as (() => void)[],
+          log: [] as string[],
+          be: (el: Element) => data.value.log.push('be:' + el.className),
+          e: (el: Element, done: () => void) => {
+            data.value.log.push('e:' + el.className)
+            data.value.dones.push(done)
+          },
+          ae: (el: Element) => data.value.log.push('ae:' + el.className),
+          bl: (el: Element) => data.value.log.push('bl:' + el.className),
+          l: (el: Element, done: () => void) => {
+            data.value.log.push('l:' + el.className)
+            data.value.dones.push(done)
+          },
+          al: (el: Element) => data.value.log.push('al:' + el.className),
+        })
+        return data
+      },
+      async (data, root, m) => {
+        const log: string[] = (logs[m] = data.value.log)
+        for (const s of steps) {
+          if (s === 'doneAll') {
+            let n = 0
+            while (data.value.dones.length && n++ < 10) {
+              data.value.dones.shift()!()
+              await nextTick()
+            }
+          } else {
+            const [k, v] = s.split('=')
+            data.value[k] = v === 'true' ? true : v === 'false' ? false : v
+          }
+          await nextTick()
+          log.push(s + ' ' + dom(root))
+        }
+      },
+    )
+    expect(logs.vapor).toEqual(logs.vdom)
+  }
+
+  const inOut = (inner: string) => `
+    <template>
+      <Transition
+        mode="in-out"
+        :css="false"
+        @before-enter="data.be"
+        @enter="data.e"
+        @after-enter="data.ae"
+        @before-leave="data.bl"
+        @leave="data.l"
+        @after-leave="data.al"
+      >
+        ${inner}
+      </Transition>
+    </template>`
+
+  test('v-if / v-else-if chain with every branch false', () =>
+    parity(
+      {
+        App: inOut(`
+          <div v-if="data.x" class="x">x</div>
+          <div v-else-if="data.y" class="y">y</div>
+        `),
+      },
+      { x: true, y: false },
+      ['x=false', 'doneAll', 'y=true', 'doneAll', 'y=false', 'doneAll'],
+    ))
+
+  test('a component branch replaced by nothing', () =>
+    parity(
+      {
+        C: `<template><div class="c">c</div></template>`,
+        App: inOut(`
+          <components.C v-if="data.x" />
+          <i v-else-if="data.y" class="y">y</i>
+        `),
+      },
+      { x: true, y: false },
+      ['x=false', 'doneAll', 'y=true', 'doneAll'],
+    ))
+
+  // vdom keeps the current branch for a component child, however long its
+  // root stays empty
+  test('a component branch whose root is still empty', () =>
+    parity(
+      {
+        A: `<template><div class="a">a</div></template>`,
+        B: `<template><div v-if="data.flag" class="b">b</div></template>`,
+        App: inOut(`
+          <components.A v-if="data.x" />
+          <components.B v-else />
+        `),
+      },
+      { x: true, flag: false },
+      ['x=false', 'doneAll', 'flag=true', 'doneAll'],
+    ))
+
+  // the fallback entering for the emptied slot content takes the leave over
+  test('slot content replaced by the outlet fallback', () =>
+    parity(
+      {
+        Card: inOut(`<slot><p class="fb">fb</p></slot>`),
+        App: `
+          <template>
+            <components.Card>
+              <b v-if="data.x" class="x">x</b>
+              <i v-else-if="data.y" class="y">y</i>
+            </components.Card>
+          </template>`,
+      },
+      { x: true, y: false },
+      ['x=false', 'doneAll'],
+    ))
+
+  // hooks relayed from a vdom Transition have no state to hand the leave to:
+  // the vdom Transition keeps waiting, as it does for a vdom child
+  test('a vapor child of a vdom in-out Transition picks an empty branch', async () => {
+    const data = ref({ x: true, flag: false })
+    const A = compile(`<template><div class="a">a</div></template>`, data)
+    const B = compile(
+      `<template>
+        <template v-if="data.flag"></template>
+      </template>`,
+      data,
+    )
+    const App = compile(
+      `<script setup>
+        const data = _data
+        const components = _components
+      </script>
+      <template>
+        <Transition mode="in-out" :css="false">
+          <components.A v-if="data.x" />
+          <components.B v-else />
+        </Transition>
+      </template>`,
+      data,
+      { A, B },
+      { vapor: false },
+    )
+    const { html } = defineInterop(App as any).render()
+    data.value.x = false
+    await nextTick()
+    data.value.flag = true
+    await nextTick()
+    expect(html().replace(/<!--[^>]*-->/g, '')).toBe('<div class="a">a</div>')
+  })
 })

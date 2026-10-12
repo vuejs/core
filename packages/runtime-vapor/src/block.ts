@@ -37,6 +37,10 @@ export interface VaporTransitionState extends TransitionState {
   // dev only: resolves the hooks again from the Transition's own content
   // after an HMR rerender replaced a root they were applied to
   refresh?: (hooks: VaporTransitionHooks) => void
+  // in-out: a leave handed to a branch that rendered nothing. The next
+  // element entering under this Transition runs it after its enter; it runs
+  // after the flush when none does.
+  pendingLeave?: () => void
 }
 
 export interface VaporTransitionHooks extends TransitionHooks {

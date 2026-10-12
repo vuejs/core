@@ -15,6 +15,7 @@ import {
   isKeepAlive,
   isTemplateNode,
   leaveCbKey,
+  queuePostFlushCb,
   queuePostRenderEffect,
   resolveTransitionProps,
   restoreCurrentInstance,
@@ -392,6 +393,10 @@ export function applyTransitionHooksImpl(
     if (block.length === 1) {
       block = block[0]
     } else if (block.length === 0) {
+      // relayed vdom hooks: the vdom Transition keeps waiting on its own
+      if (!refresh && isVaporTransitionHooks(hooks)) {
+        releaseDelayedLeave(hooks)
+      }
       return hooks
     }
   }
@@ -428,6 +433,9 @@ export function applyTransitionHooksImpl(
   )
   if (refresh && child && child.$transition) hooks = child.$transition
   if (!child) {
+    // vdom keeps the current child for a component child, however long its
+    // root stays empty; only a branch with no component is an empty child
+    if (!refresh && !hasComponent(block)) releaseDelayedLeave(hooks)
     // set transition hooks on fragments for later use
     fragments.forEach(f => (f.$transition = hooks))
     // warn if no child and no fragments
@@ -440,7 +448,13 @@ export function applyTransitionHooksImpl(
   const { props, instance, state, delayedLeave } = hooks
   state.persisted = isPersistedRoot(state.root)
   const resolvedHooks = resolveTransitionHooks(child, props, state, instance)
-  resolvedHooks.delayedLeave = delayedLeave
+  // an element entering now (a slot fallback) claims the leave waiting on the
+  // Transition; one already in the DOM does not enter
+  const pendingLeave =
+    !refresh && child instanceof Element && !child.parentNode
+      ? claimPendingLeave(state)
+      : undefined
+  resolvedHooks.delayedLeave = pendingLeave || delayedLeave
   child.$transition = resolvedHooks
   settleMountShown(child)
   fragments.forEach(f => (f.$transition = resolvedHooks))
@@ -547,6 +561,58 @@ export function applyTransitionLeaveHooksImpl(
     }
   }
   return true
+}
+
+function hasComponent(block: Block): boolean {
+  if (isVaporComponent(block)) return true
+  if (isArray(block)) {
+    for (let i = 0; i < block.length; i++) {
+      if (hasComponent(block[i])) return true
+    }
+    return false
+  }
+  return isFragment(block) && hasComponent(block.nodes)
+}
+
+// in-out: the branch these hooks were handed a leave for rendered nothing, so
+// nothing of its own enters to run it. As for vdom's empty child it runs after
+// the flush, unless an element entering meanwhile (a slot fallback) claims it.
+function releaseDelayedLeave(hooks: VaporTransitionHooks): void {
+  const delayedLeave = hooks.delayedLeave
+  if (delayedLeave) {
+    hooks.delayedLeave = undefined
+    queuePendingLeave(hooks.state, delayedLeave)
+  }
+}
+
+function queuePendingLeave(
+  state: VaporTransitionState,
+  leave: () => void,
+): void {
+  const pending = state.pendingLeave
+  if (pending) {
+    // one leave waits at a time: an earlier one runs along with this one
+    const incoming = leave
+    leave = () => {
+      pending()
+      incoming()
+    }
+  }
+  state.pendingLeave = leave
+  queuePostFlushCb(() => {
+    if (state.pendingLeave === leave) {
+      state.pendingLeave = undefined
+      leave()
+    }
+  })
+}
+
+function claimPendingLeave(
+  state: VaporTransitionState,
+): (() => void) | undefined {
+  const leave = state.pendingLeave
+  state.pendingLeave = undefined
+  return leave
 }
 
 // Hooks copies share this callback. Keep its captures separate from the
