@@ -3088,6 +3088,12 @@ function mountSlotWithoutHydration(
 ): void {
   const container = parentNode(close)!
   const mount = () => {
+    // the slot's own start node as on mount, ahead of a fallback adopted in
+    // place (its nodes may be replaced as they are adopted)
+    const start = open || createTextNode()
+    if (!open) {
+      insert(start, container, fallbackRange ? fallbackRange.first : close)
+    }
     const block = (vnode.vb = renderVaporSlot(
       vnode,
       parentComponent,
@@ -3101,7 +3107,7 @@ function mountSlotWithoutHydration(
       anchor = (isFragment(block) && block.anchor) || createTextNode()
       insert(anchor, container, close)
     }
-    vnode.el = open || anchor
+    vnode.el = start
     vnode.anchor = anchor
     insert(block, container, anchor, parentSuspense)
   }

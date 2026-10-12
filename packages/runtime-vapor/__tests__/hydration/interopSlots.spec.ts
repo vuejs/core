@@ -1182,6 +1182,51 @@ describe('VDOM interop', () => {
     },
   )
 
+  // Mounted in place of a fallback the server rendered, the slot starts on a
+  // node of its own as on the client: vdom places a sibling entering ahead
+  // of it before `el`.
+  test.each([
+    ['content, then the sibling', ['show', 'sibling']],
+    ['the sibling, then content', ['sibling', 'show']],
+  ])(
+    'a vdom sibling entering before a vapor slot mounted over its outlet fallback: %s',
+    async (_, steps) => {
+      const data = reactive({ show: false, sibling: false })
+      const { container, html } = await testWithVaporApp(
+        `${setup}<template>
+          <components.Wrapper><b v-if="data.show">b</b></components.Wrapper>
+        </template>`,
+        {
+          Child: {
+            code: `${setup}<template>
+              <div><slot><p>fallback</p></slot></div>
+            </template>`,
+            vapor: false,
+          },
+          Wrapper: {
+            code: `${setup}<template>
+              <components.Child>
+                <i v-if="data.sibling">i</i>
+                <slot />
+              </components.Child>
+            </template>`,
+            vapor: false,
+          },
+        },
+        data,
+      )
+      expect(html).toBe(`<div><!--(--><p>fallback</p><!--)--></div>`)
+      expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+      expect(`Hydration children mismatch`).not.toHaveBeenWarned()
+
+      for (const key of steps) {
+        ;(data as any)[key] = true
+        await nextTick()
+      }
+      expect(visible(container)).toBe(`<div><i>i</i><b>b</b></div>`)
+    },
+  )
+
   // content the server did render, however it differs from the client's, is
   // not a fallback to adopt
   test.each([
