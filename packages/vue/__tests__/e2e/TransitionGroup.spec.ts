@@ -16,6 +16,21 @@ describe('e2e: TransitionGroup', () => {
 
   const transitionFinish = (time = duration) => timeout(time + buffer)
 
+  // id, top and classes of the matched elements right before the click and
+  // when the move transitions start, i.e. where the FLIP translation holds them
+  const layoutWhenTransitionStart = (selector: string) =>
+    page().evaluate(selector => {
+      const layout = () =>
+        Array.from(document.querySelectorAll(selector)).map(node => ({
+          id: node.id,
+          top: Math.round(node.getBoundingClientRect().top),
+          classes: Array.from(node.classList),
+        }))
+      const before = layout()
+      ;(document.querySelector('#toggleBtn') as any)!.click()
+      return Promise.resolve().then(() => ({ before, start: layout() }))
+    }, selector)
+
   beforeEach(async () => {
     await reset()
     await page().waitForSelector('#app')
@@ -882,6 +897,462 @@ describe('e2e: TransitionGroup', () => {
 
       // transitionstart can fire at zero progress, before the element moves.
       expect(original_top).toBeLessThanOrEqual(new_top as number)
+    },
+    E2E_TIMEOUT,
+  )
+
+  // #5385, #1531: nested groups a1/a2 and b1/b2 inside outer items a and b, with
+  // the outer group's children replaced by `next` on click
+  const nestedGroupsWhenTransitionStart = async (
+    moveClasses: string,
+    next: { id: string; items: string[] }[],
+  ) => {
+    await page().evaluate(
+      ({ duration, moveClasses, next }) => {
+        const { createApp, ref, onMounted } = (window as any).Vue
+        createApp({
+          template: `
+            <div id="container">
+              <transition-group name="outer" tag="div">
+                <div v-for="group in groups" :key="group.id" :id="group.id" class="outer-item">
+                  <transition-group name="inner" tag="div">
+                    <div v-for="item in group.items" :key="item" :id="item" class="inner-item">{{ item }}</div>
+                  </transition-group>
+                </div>
+              </transition-group>
+            </div>
+            <button id="toggleBtn" @click="click">button</button>
+          `,
+          setup: () => {
+            const groups = ref([
+              { id: 'a', items: ['a1', 'a2'] },
+              { id: 'b', items: ['b1', 'b2'] },
+            ])
+            const click = () => {
+              groups.value = next
+            }
+
+            onMounted(() => {
+              const styleNode = document.createElement('style')
+              styleNode.textContent = `
+                .inner-item { height: 30px; }
+                ${moveClasses} {
+                  transition: transform ${duration}ms ease;
+                }
+              `
+              document.head.appendChild(styleNode)
+            })
+
+            return { groups, click }
+          },
+        }).mount('#app')
+      },
+      { duration, moveClasses, next },
+    )
+    const { before, start } = await layoutWhenTransitionStart(
+      '.outer-item, .inner-item',
+    )
+    expect(before.map(({ top }) => top)).toStrictEqual([0, 0, 30, 60, 60, 90])
+    return start
+  }
+
+  test(
+    'nested group moving along with its outer item',
+    async () => {
+      // a and b swap places while a1 and a2 swap within a: every item starts
+      // out where it was, b1/b2 only ride along with their outer item
+      const start = await nestedGroupsWhenTransitionStart(
+        '.outer-move, .inner-move',
+        [
+          { id: 'b', items: ['b1', 'b2'] },
+          { id: 'a', items: ['a2', 'a1'] },
+        ],
+      )
+      expect(start).toStrictEqual([
+        { id: 'b', top: 60, classes: ['outer-item', 'outer-move'] },
+        { id: 'b1', top: 60, classes: ['inner-item'] },
+        { id: 'b2', top: 90, classes: ['inner-item'] },
+        { id: 'a', top: 0, classes: ['outer-item', 'outer-move'] },
+        { id: 'a2', top: 30, classes: ['inner-item', 'inner-move'] },
+        { id: 'a1', top: 0, classes: ['inner-item', 'inner-move'] },
+      ])
+
+      await transitionFinish()
+    },
+    E2E_TIMEOUT,
+  )
+
+  // coverage guard: without a move transition on the outer group, the inner
+  // groups animate the whole movement of their items themselves
+  test(
+    'nested group moving along with an outer item that has no move transition',
+    async () => {
+      const start = await nestedGroupsWhenTransitionStart('.inner-move', [
+        { id: 'b', items: ['b1', 'b2'] },
+        { id: 'a', items: ['a2', 'a1'] },
+      ])
+      expect(start).toStrictEqual([
+        { id: 'b', top: 0, classes: ['outer-item'] },
+        { id: 'b1', top: 60, classes: ['inner-item', 'inner-move'] },
+        { id: 'b2', top: 90, classes: ['inner-item', 'inner-move'] },
+        { id: 'a', top: 60, classes: ['outer-item'] },
+        { id: 'a2', top: 30, classes: ['inner-item', 'inner-move'] },
+        { id: 'a1', top: 0, classes: ['inner-item', 'inner-move'] },
+      ])
+
+      await transitionFinish()
+    },
+    E2E_TIMEOUT,
+  )
+
+  // coverage guard: b1/b2 record their old positions after a has already grown,
+  // so they must be compared in the same frame as their new positions
+  test(
+    'nested group pushed down by an earlier outer item growing',
+    async () => {
+      const start = await nestedGroupsWhenTransitionStart(
+        '.outer-move, .inner-move',
+        [
+          { id: 'a', items: ['a1', 'a2', 'a3'] },
+          { id: 'b', items: ['b1', 'b2'] },
+        ],
+      )
+      expect(start).toStrictEqual([
+        { id: 'a', top: 0, classes: ['outer-item'] },
+        { id: 'a1', top: 0, classes: ['inner-item'] },
+        { id: 'a2', top: 30, classes: ['inner-item'] },
+        {
+          id: 'a3',
+          top: 60,
+          classes: ['inner-item', 'inner-enter-from', 'inner-enter-active'],
+        },
+        { id: 'b', top: 60, classes: ['outer-item', 'outer-move'] },
+        { id: 'b1', top: 60, classes: ['inner-item'] },
+        { id: 'b2', top: 90, classes: ['inner-item'] },
+      ])
+
+      await transitionFinish()
+    },
+    E2E_TIMEOUT,
+  )
+
+  // the outer group's updated hook runs first here: the inner group updates
+  // through its own job, after a has already moved in the DOM
+  test(
+    'nested group updating on its own while its outer item moves',
+    async () => {
+      await page().evaluate(duration => {
+        const { createApp, ref, onMounted, defineComponent } = (window as any)
+          .Vue
+        const items = ref(['a1', 'a2'])
+        const Inner = defineComponent({
+          template: `
+            <transition-group name="inner" tag="div">
+              <div v-for="item in items" :key="item" :id="item" class="inner-item">{{ item }}</div>
+            </transition-group>
+          `,
+          setup: () => ({ items }),
+        })
+        createApp({
+          components: { Inner },
+          template: `
+            <div id="container">
+              <transition-group name="outer" tag="div">
+                <div v-for="group in groups" :key="group" :id="group" class="outer-item">
+                  <Inner v-if="group === 'a'" />
+                  <div v-else id="b1" class="inner-item">b1</div>
+                </div>
+              </transition-group>
+            </div>
+            <button id="toggleBtn" @click="click">button</button>
+          `,
+          setup: () => {
+            const groups = ref(['a', 'b'])
+            const click = () => {
+              groups.value = ['b', 'a']
+              items.value = ['a2', 'a1']
+            }
+
+            onMounted(() => {
+              const styleNode = document.createElement('style')
+              styleNode.textContent = `
+                .inner-item { height: 30px; }
+                .outer-move,
+                .inner-move {
+                  transition: transform ${duration}ms ease;
+                }
+              `
+              document.head.appendChild(styleNode)
+            })
+
+            return { groups, click }
+          },
+        }).mount('#app')
+      }, duration)
+
+      const { before, start } = await layoutWhenTransitionStart(
+        '.outer-item, .inner-item',
+      )
+      expect(before.map(({ top }) => top)).toStrictEqual([0, 0, 30, 60, 60])
+      expect(start).toStrictEqual([
+        { id: 'b', top: 60, classes: ['outer-item', 'outer-move'] },
+        { id: 'b1', top: 60, classes: ['inner-item'] },
+        { id: 'a', top: 0, classes: ['outer-item', 'outer-move'] },
+        { id: 'a2', top: 30, classes: ['inner-item', 'inner-move'] },
+        { id: 'a1', top: 0, classes: ['inner-item', 'inner-move'] },
+      ])
+
+      await transitionFinish()
+    },
+    E2E_TIMEOUT,
+  )
+
+  // three levels: sections as1/as2 inside outer item a, bs inside b, two items
+  // each. On click a and b swap places while as1 and as2 swap within a
+  const threeLevelGroupsWhenTransitionStart = async (moveClasses: string) => {
+    await page().evaluate(
+      ({ duration, moveClasses }) => {
+        const { createApp, ref, onMounted } = (window as any).Vue
+        createApp({
+          template: `
+            <div id="container">
+              <transition-group name="outer" tag="div">
+                <div v-for="group in groups" :key="group.id" :id="group.id" class="outer-item">
+                  <transition-group name="middle" tag="div">
+                    <section v-for="section in group.sections" :key="section.id" :id="section.id" class="middle-item">
+                      <transition-group name="inner" tag="div">
+                        <div v-for="item in section.items" :key="item" :id="item" class="inner-item">{{ item }}</div>
+                      </transition-group>
+                    </section>
+                  </transition-group>
+                </div>
+              </transition-group>
+            </div>
+            <button id="toggleBtn" @click="click">button</button>
+          `,
+          setup: () => {
+            const groups = ref([
+              {
+                id: 'a',
+                sections: [
+                  { id: 'as1', items: ['a1', 'a2'] },
+                  { id: 'as2', items: ['a3', 'a4'] },
+                ],
+              },
+              { id: 'b', sections: [{ id: 'bs', items: ['b1', 'b2'] }] },
+            ])
+            const click = () => {
+              const [a, b] = groups.value
+              groups.value = [
+                b,
+                { ...a, sections: [a.sections[1], a.sections[0]] },
+              ]
+            }
+
+            onMounted(() => {
+              const styleNode = document.createElement('style')
+              styleNode.textContent = `
+                .inner-item { height: 30px; }
+                ${moveClasses} {
+                  transition: transform ${duration}ms ease;
+                }
+              `
+              document.head.appendChild(styleNode)
+            })
+
+            return { groups, click }
+          },
+        }).mount('#app')
+      },
+      { duration, moveClasses },
+    )
+    const { before, start } = await layoutWhenTransitionStart(
+      '.outer-item, .middle-item, .inner-item',
+    )
+    expect(before.map(({ top }) => top)).toStrictEqual([
+      0, 0, 0, 30, 60, 60, 90, 120, 120, 120, 150,
+    ])
+    return start
+  }
+
+  // the nearest enclosing group has no move transition, the one above it does:
+  // the inner groups animate the sections' jumps but not the outer items' moves
+  test(
+    'nested group three levels deep with a middle group that does not move',
+    async () => {
+      const start = await threeLevelGroupsWhenTransitionStart(
+        '.outer-move, .inner-move',
+      )
+      expect(start).toStrictEqual([
+        { id: 'b', top: 120, classes: ['outer-item', 'outer-move'] },
+        { id: 'bs', top: 120, classes: ['middle-item'] },
+        { id: 'b1', top: 120, classes: ['inner-item'] },
+        { id: 'b2', top: 150, classes: ['inner-item'] },
+        { id: 'a', top: 0, classes: ['outer-item', 'outer-move'] },
+        { id: 'as2', top: 0, classes: ['middle-item'] },
+        { id: 'a3', top: 60, classes: ['inner-item', 'inner-move'] },
+        { id: 'a4', top: 90, classes: ['inner-item', 'inner-move'] },
+        { id: 'as1', top: 60, classes: ['middle-item'] },
+        { id: 'a1', top: 0, classes: ['inner-item', 'inner-move'] },
+        { id: 'a2', top: 30, classes: ['inner-item', 'inner-move'] },
+      ])
+
+      await transitionFinish()
+    },
+    E2E_TIMEOUT,
+  )
+
+  // coverage guard: with all three levels moving, each group leaves out what
+  // its nearest moving enclosing group animates, so every item starts out where
+  // it was
+  test(
+    'nested group three levels deep with every group moving',
+    async () => {
+      const start = await threeLevelGroupsWhenTransitionStart(
+        '.outer-move, .middle-move, .inner-move',
+      )
+      expect(start).toStrictEqual([
+        { id: 'b', top: 120, classes: ['outer-item', 'outer-move'] },
+        { id: 'bs', top: 120, classes: ['middle-item'] },
+        { id: 'b1', top: 120, classes: ['inner-item'] },
+        { id: 'b2', top: 150, classes: ['inner-item'] },
+        { id: 'a', top: 0, classes: ['outer-item', 'outer-move'] },
+        { id: 'as2', top: 60, classes: ['middle-item', 'middle-move'] },
+        { id: 'a3', top: 60, classes: ['inner-item'] },
+        { id: 'a4', top: 90, classes: ['inner-item'] },
+        { id: 'as1', top: 0, classes: ['middle-item', 'middle-move'] },
+        { id: 'a1', top: 0, classes: ['inner-item'] },
+        { id: 'a2', top: 30, classes: ['inner-item'] },
+      ])
+
+      await transitionFinish()
+    },
+    E2E_TIMEOUT,
+  )
+
+  // coverage guard: the outer item moves without the outer group updating, so
+  // the inner group has to animate that movement itself
+  test(
+    'nested group updating on its own inside a moving outer item',
+    async () => {
+      await page().evaluate(duration => {
+        const { createApp, ref, onMounted, defineComponent } = (window as any)
+          .Vue
+        const Inner = defineComponent({
+          template: `
+            <transition-group name="inner" tag="div">
+              <div v-for="item in items" :key="item" :id="item" class="inner-item">{{ item }}</div>
+            </transition-group>
+            <button id="toggleBtn" @click="items.push('i3')">button</button>
+          `,
+          setup: () => ({ items: ref(['i1', 'i2']) }),
+        })
+        createApp({
+          components: { Inner },
+          template: `
+            <div id="container">
+              <transition-group name="outer" tag="div" class="stack">
+                <div key="group" id="group" class="outer-item"><Inner /></div>
+              </transition-group>
+            </div>
+          `,
+          setup: () => {
+            onMounted(() => {
+              const styleNode = document.createElement('style')
+              styleNode.textContent = `
+                .stack { position: fixed; bottom: 0; }
+                .inner-item { height: 30px; }
+                .outer-move,
+                .inner-move {
+                  transition: transform ${duration}ms ease;
+                }
+              `
+              document.head.appendChild(styleNode)
+            })
+          },
+        }).mount('#app')
+      }, duration)
+
+      const { before, start } = await layoutWhenTransitionStart('.inner-item')
+      expect(start.slice(0, 2)).toStrictEqual(
+        before.map(item => ({
+          ...item,
+          classes: ['inner-item', 'inner-move'],
+        })),
+      )
+
+      await transitionFinish()
+    },
+    E2E_TIMEOUT,
+  )
+
+  // coverage guard: positions must stay comparable when the inner group's
+  // elements are teleported into or out of the outer item on the same update
+  test(
+    'nested group teleported across the outer item',
+    async () => {
+      await page().evaluate(duration => {
+        const { createApp, ref, onMounted } = (window as any).Vue
+        createApp({
+          template: `
+            <div id="target"></div>
+            <div id="container">
+              <transition-group name="outer" tag="div">
+                <div key="group" id="group" class="outer-item">
+                  <Teleport to="#target" :disabled="disabled">
+                    <transition-group name="inner" tag="div">
+                      <div v-for="item in items" :key="item" :id="item" class="inner-item">{{ item }}</div>
+                    </transition-group>
+                  </Teleport>
+                </div>
+              </transition-group>
+            </div>
+            <button id="toggleBtn" @click="click">button</button>
+          `,
+          setup: () => {
+            const items = ref(['i1', 'i2'])
+            const disabled = ref(false)
+            const click = () => {
+              disabled.value = !disabled.value
+              items.value.reverse()
+            }
+
+            onMounted(() => {
+              const styleNode = document.createElement('style')
+              styleNode.textContent = `
+                #target { position: fixed; top: 100px; }
+                #group { position: fixed; top: 200px; }
+                .inner-item { height: 30px; }
+                .outer-move,
+                .inner-move {
+                  transition: transform ${duration}ms ease;
+                }
+              `
+              document.head.appendChild(styleNode)
+            })
+
+            return { items, disabled, click }
+          },
+        }).mount('#app')
+      }, duration)
+
+      // out of the target, back into the outer item
+      let { before, start } = await layoutWhenTransitionStart('.inner-item')
+      expect(before.map(({ top }) => top)).toStrictEqual([100, 130])
+      expect(start).toStrictEqual([
+        { id: 'i2', top: 130, classes: ['inner-item', 'inner-move'] },
+        { id: 'i1', top: 100, classes: ['inner-item', 'inner-move'] },
+      ])
+      await transitionFinish()
+
+      // out of the outer item, into the target
+      ;({ before, start } = await layoutWhenTransitionStart('.inner-item'))
+      expect(before.map(({ top }) => top)).toStrictEqual([200, 230])
+      expect(start).toStrictEqual([
+        { id: 'i1', top: 230, classes: ['inner-item', 'inner-move'] },
+        { id: 'i2', top: 200, classes: ['inner-item', 'inner-move'] },
+      ])
+      await transitionFinish()
     },
     E2E_TIMEOUT,
   )
