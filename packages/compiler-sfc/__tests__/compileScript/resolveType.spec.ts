@@ -148,6 +148,35 @@ describe('resolveType', () => {
       })
     })
 
+    test('inherited properties do not widen a callable interface', () => {
+      expect(
+        resolve(`
+      interface Metadata { description?: string }
+      interface Callback extends Metadata { (): string }
+      interface Callable { (): string }
+      interface WithCallableBase extends Metadata, Callable {}
+      defineProps<{
+        cb: Callback
+        cb2: WithCallableBase
+      }>()
+      `).props,
+      ).toStrictEqual({
+        cb: ['Function'],
+        cb2: ['Function'],
+      })
+    })
+
+    test('@vue-ignore on a base type', () => {
+      expect(
+        resolve(`
+      interface D extends /* @vue-ignore */ Date { foo: string }
+      defineProps<{ d: D }>()
+      `).props,
+      ).toStrictEqual({
+        d: ['Object'],
+      })
+    })
+
     test('Symbol type reference', () => {
       expect(
         resolve(`

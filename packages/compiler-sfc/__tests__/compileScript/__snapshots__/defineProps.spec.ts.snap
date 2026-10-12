@@ -552,6 +552,46 @@ return { props }
 })"
 `;
 
+exports[`defineProps > withDefaults w/ callable interface extending a base 1`] = `
+"import { defineComponent as _defineComponent } from 'vue'
+interface Metadata { description?: string }
+    interface Callback extends Metadata { (): string }
+    
+export default /*@__PURE__*/_defineComponent({
+  props: {
+    cb: { type: Function, required: false, default: () => 'ok' }
+  },
+  setup(__props: any, { expose: __expose }) {
+  __expose();
+
+    const props = __props
+    
+return { props }
+}
+
+})"
+`;
+
+exports[`defineProps > withDefaults w/ callable interface extending a base 2`] = `
+"import { defineComponent as _defineComponent } from 'vue'
+interface Metadata { description?: string }
+    interface Callback extends Metadata { (): string }
+    
+export default /*@__PURE__*/_defineComponent({
+  props: {
+    cb: { type: Function, default: () => 'ok' }
+  },
+  setup(__props: any, { expose: __expose }) {
+  __expose();
+
+    const props = __props
+    
+return { props }
+}
+
+})"
+`;
+
 exports[`defineProps > withDefaults w/ dynamic object method 1`] = `
 "import { mergeDefaults as _mergeDefaults, defineComponent as _defineComponent } from 'vue'
 

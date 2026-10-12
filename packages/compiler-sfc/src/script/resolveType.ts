@@ -1740,6 +1740,7 @@ export function inferRuntimeType(
           node.type === 'TSInterfaceDeclaration' &&
           node.extends
         ) {
+          const inherited = new Set<string>()
           for (const ext of node.extends) {
             for (const t of inferRuntimeType(
               ctx,
@@ -1747,15 +1748,27 @@ export function inferRuntimeType(
                 type: 'TSTypeReference',
                 typeName: ext.expression,
                 typeParameters: ext.typeParameters,
+                // keep comments so `/* @vue-ignore */` on a base is respected
+                leadingComments: ext.leadingComments,
               } as TSTypeReference,
               scope,
             )) {
               // ignore bases that cannot be inferred, otherwise a single
               // unresolvable base would discard the whole inferred type
               if (t !== UNKNOWN_TYPE) {
-                types.add(t)
+                inherited.add(t)
               }
             }
+          }
+          // for a callable interface, properties inherited from a base
+          // describe the function itself and must not widen `Function` to
+          // `[Function, Object]`, otherwise a function default would be
+          // treated as a factory
+          if (types.has('Function') || inherited.has('Function')) {
+            inherited.delete('Object')
+          }
+          for (const t of inherited) {
+            types.add(t)
           }
         }
 
