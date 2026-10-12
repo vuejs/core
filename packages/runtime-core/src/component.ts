@@ -611,6 +611,10 @@ const emptyAppContext = createAppContext()
 
 let uid = 0
 
+export function getNextUid(): number {
+  return uid
+}
+
 export function createComponentInstance(
   vnode: VNode,
   parent: ComponentInternalInstance | null,
