@@ -115,4 +115,16 @@ describe('ssr: renderList', () => {
     )
     expect(stack).toEqual([])
   })
+
+  it('should render nothing for an invalid range in prod', () => {
+    __DEV__ = false
+    try {
+      ssrRenderList(3.1, item => stack.push(`${item}`))
+      ssrRenderList(-1, item => stack.push(`${item}`))
+      ssrRenderList(NaN, item => stack.push(`${item}`))
+    } finally {
+      __DEV__ = true
+    }
+    expect(stack).toEqual([])
+  })
 })
