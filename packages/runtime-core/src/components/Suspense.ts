@@ -464,6 +464,7 @@ export interface SuspenseBoundary {
     instance: ComponentInternalInstance,
     setupRenderEffect: SetupRenderEffectFn,
     optimized: boolean,
+    namespace: ElementNamespace,
   ): void
   unmount(parentSuspense: SuspenseBoundary | null, doRemove?: boolean): void
 }
@@ -733,7 +734,10 @@ function createSuspenseBoundary(
       return suspense.activeBranch && next(suspense.activeBranch)
     },
 
-    registerDep(instance, setupRenderEffect, optimized) {
+    // `namespace` intentionally shadows the boundary's own: the dep must be
+    // mounted with the namespace of the position it was rendered at, which can
+    // differ from the boundary's (e.g. a component nested inside an <svg>).
+    registerDep(instance, setupRenderEffect, optimized, namespace) {
       const isInPendingSuspense = !!suspense.pendingBranch
       if (isInPendingSuspense) {
         suspense.deps++
