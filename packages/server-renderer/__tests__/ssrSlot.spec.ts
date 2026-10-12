@@ -629,5 +629,21 @@ describe('ssr: slot', () => {
       }
       expect(await renderToString(createApp(App))).toBe(`<div><p>a</p></div>`)
     })
+
+    // a built-in resolved to a vapor component on the client calls the slot
+    // inline there, so the vdom one standing in for it has to do the same
+    test('a built-in with a vapor counterpart renders its slot inline', async () => {
+      const App = {
+        __vapor: true,
+        template:
+          `<component :is="'section'"><ol>` +
+          `<TransitionGroup><li v-for="i in [1, 2]" :key="i">{{ i }}</li></TransitionGroup>` +
+          `</ol></component>`,
+      }
+      expect(await renderToString(createApp(App))).toBe(
+        `<section><ol><!--[--><li>1</li><li>2</li><!--]--></ol></section>`,
+      )
+      expect(`children must be keyed`).not.toHaveBeenWarned()
+    })
   })
 })

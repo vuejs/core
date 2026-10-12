@@ -13,6 +13,7 @@ import {
   formatHtml,
   mountWithHydration,
   setupHydrationTest,
+  testWithVDOMApp,
   testWithVaporApp,
   triggerEvent,
 } from './_helpers'
@@ -1578,5 +1579,68 @@ describe('VDOM interop', () => {
     data.value.cls = 'b'
     await nextTick()
     expect(container.querySelector('button')!.className).toBe('b')
+  })
+
+  test('hydrate TransitionGroup in a dynamic component rendered as a VNode', async () => {
+    const data = ref({ items: [1, 2, 3] })
+    const { html, container } = await testWithVaporApp(
+      `<template>
+        <component :is="'section'">
+          <ol>
+            <TransitionGroup name="t">
+              <li v-for="i in data.items" :key="i">{{ i }}</li>
+            </TransitionGroup>
+          </ol>
+        </component>
+      </template>`,
+      undefined,
+      data,
+    )
+
+    expect(html).toBe(
+      `<section><ol><!--[--><li>1</li><li>2</li><li>3</li><!--]--></ol></section>`,
+    )
+    expect(container.innerHTML).toBe(
+      `<section><ol><!--[--><li>1</li><li>2</li><li>3</li><!--]--></ol></section><!--dynamic-component-->`,
+    )
+    expect(`children must be keyed`).not.toHaveBeenWarned()
+    expect(`Hydration children mismatch`).not.toHaveBeenWarned()
+
+    data.value.items.push(4)
+    await nextTick()
+    expect(container.querySelector('ol')!.lastElementChild!.outerHTML).toBe(
+      `<li class="t-enter-from t-enter-active">4</li>`,
+    )
+  })
+
+  test('hydrate TransitionGroup in a dynamic component of a vapor child', async () => {
+    const data = ref({ items: [1, 2, 3] })
+    const { html, container } = await testWithVDOMApp(
+      `<script setup>
+        const components = _components
+      </script>
+      <template><components.List /></template>`,
+      {
+        List: `<template>
+          <component :is="'section'">
+            <ol>
+              <TransitionGroup name="t">
+                <li v-for="i in data.items" :key="i">{{ i }}</li>
+              </TransitionGroup>
+            </ol>
+          </component>
+        </template>`,
+      },
+      data,
+    )
+
+    expect(html).toBe(
+      `<section><ol><!--[--><li>1</li><li>2</li><li>3</li><!--]--></ol></section>`,
+    )
+    expect(container.innerHTML).toBe(
+      `<section><ol><!--[--><li>1</li><li>2</li><li>3</li><!--]--></ol></section><!--dynamic-component-->`,
+    )
+    expect(`children must be keyed`).not.toHaveBeenWarned()
+    expect(`Hydration children mismatch`).not.toHaveBeenWarned()
   })
 })

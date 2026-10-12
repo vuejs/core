@@ -6,8 +6,11 @@ import {
   ErrorCodes,
   Fragment,
   type FunctionalComponent,
+  KeepAlive,
   Static,
   Text,
+  Transition,
+  TransitionGroup,
   type VNode,
   type VNodeArrayChildren,
   type VNodeProps,
@@ -176,6 +179,13 @@ function findVaporSlot(children: VNodeArrayChildren): boolean {
   return true
 }
 
+// the built-ins taking slots that the vapor compiler resolves to a vapor
+// component (`isBuiltInComponent`): `<Teleport>` normalizes its children to an
+// array, and `<Suspense>` has no vapor counterpart yet
+function hasVaporCounterpart(type: VNode['type']): boolean {
+  return type === TransitionGroup || type === Transition || type === KeepAlive
+}
+
 export function renderComponentVNode(
   vnode: VNode,
   parentComponent: ComponentInternalInstance | null = null,
@@ -187,6 +197,10 @@ export function renderComponentVNode(
   // slot, valid however little they render, like the client does. A render
   // function calling one itself gets that vapor slot too, as it does from the
   // client's slots proxy: only an ssr outlet, passing `push`, renders the slot.
+  // Built-ins the vapor compiler resolves to a vapor component are the
+  // exception: the client renders their children as a plain vapor slot, so the
+  // vdom one standing in for it here (in a dynamic component's vnode branch)
+  // has to render the slot itself, not an outlet holding it.
   const ctx = vnode.ctx
   const slots = vnode.children as Record<string, any>
   if (
@@ -194,7 +208,8 @@ export function renderComponentVNode(
     ctx &&
     ctx.type.__vapor &&
     // compiled: slots handed over with `h()` are vdom slots on the client too
-    slots._
+    slots._ &&
+    !hasVaporCounterpart(vnode.type)
   ) {
     for (const name in slots) {
       const slot = slots[name]
