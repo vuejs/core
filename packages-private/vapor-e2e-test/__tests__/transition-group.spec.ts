@@ -1238,3 +1238,47 @@ describe('vapor transition-group', () => {
     })
   })
 })
+
+describe('vapor transition-group', () => {
+  test.each([
+    'nested group moving with outer item',
+    'nested group vdom control',
+    'nested group without tags',
+    'nested group without outer move',
+  ])('%s', async name => {
+    const layout = () => {
+      const origin = document
+        .querySelector('#origin')!
+        .getBoundingClientRect().top
+      return Array.from(
+        document.querySelectorAll('.outer-item, .inner-item'),
+        el => ({
+          id: el.id,
+          top: Math.round(el.getBoundingClientRect().top - origin),
+          moving:
+            el.classList.contains('inner-move') ||
+            el.classList.contains('outer-move'),
+        }),
+      )
+    }
+    expect(layout().map(el => el.top)).toEqual([0, 0, 30, 60, 60, 90])
+    ;(document.querySelector('#move-nested') as HTMLButtonElement).click()
+    await nextTick()
+    const start = layout()
+    // Vapor moves the outer rows before updating their nested groups. Without
+    // an outer move transition, only the inner reorder animates.
+    const outerMoves = name !== 'nested group without outer move'
+    try {
+      expect(start).toEqual([
+        { id: 'b', top: outerMoves ? 60 : 0, moving: outerMoves },
+        { id: 'b1', top: outerMoves ? 60 : 0, moving: false },
+        { id: 'b2', top: outerMoves ? 90 : 30, moving: false },
+        { id: 'a', top: outerMoves ? 0 : 60, moving: outerMoves },
+        { id: 'a2', top: outerMoves ? 30 : 90, moving: true },
+        { id: 'a1', top: outerMoves ? 0 : 60, moving: true },
+      ])
+    } finally {
+      await transitionFinish(400)
+    }
+  })
+})
