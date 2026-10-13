@@ -44,6 +44,10 @@ export function parseStringStyle(cssText: string): NormalizedStyle {
   return ret
 }
 
+// hyphenate() does not add a dash before the first letter, so camelCase
+// vendor-prefixed keys (e.g. WebkitLineClamp, msTransform) need it restored
+const vendorPrefixRE = /^(?:webkit|moz|ms)-/
+
 export function stringifyStyle(
   styles: NormalizedStyle | string | undefined,
 ): string {
@@ -54,7 +58,9 @@ export function stringifyStyle(
   for (const key in styles) {
     const value = styles[key]
     if (isString(value) || typeof value === 'number') {
-      const normalizedKey = key.startsWith(`--`) ? key : hyphenate(key)
+      const normalizedKey = key.startsWith(`--`)
+        ? key
+        : hyphenate(key).replace(vendorPrefixRE, '-$&')
       // only render valid values
       ret += `${normalizedKey}:${value};`
     }
