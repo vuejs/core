@@ -1498,5 +1498,89 @@ function testRender(type: string, render: typeof renderToString) {
         'Unhandled error during execution of setup function',
       ).toHaveBeenWarned()
     })
+
+    describe('watcher cleanup errors', () => {
+      const cleanupError = new Error('cleanup failed')
+      const cleanup = vi.fn(() => {
+        throw cleanupError
+      })
+      const ThrowingCleanup = {
+        setup() {
+          watchEffect(onCleanup => onCleanup(cleanup), { flush: 'sync' })
+          return () => h('div')
+        },
+      }
+
+      beforeEach(() => {
+        cleanup.mockClear()
+      })
+
+      test('after a successful render', async () => {
+        const app = createApp({
+          render: () => h(ThrowingCleanup),
+        })
+
+        await expect(render(app)).rejects.toBe(cleanupError)
+        expect(cleanup).toHaveBeenCalledTimes(1)
+        expect(
+          'Unhandled error during execution of watcher cleanup function',
+        ).toHaveBeenWarned()
+      })
+
+      test('should not mask the render error', async () => {
+        const error = new Error('setup failed')
+        const Bad = {
+          async setup() {
+            throw error
+          },
+        }
+        const app = createApp({
+          render: () => h('div', [h(ThrowingCleanup), h(Bad)]),
+        })
+
+        await expect(render(app)).rejects.toBe(error)
+        await new Promise<void>(resolve => setTimeout(resolve))
+        expect(cleanup).toHaveBeenCalledTimes(1)
+        expect(
+          'Unhandled error during execution of setup function',
+        ).toHaveBeenWarned()
+        expect(
+          'Unhandled error during execution of watcher cleanup function',
+        ).toHaveBeenWarned()
+      })
+
+      test('for watchers registered after a failed render', async () => {
+        const error = new Error('setup failed')
+        let resolveSlow!: () => void
+        const slow = new Promise<void>(resolve => {
+          resolveSlow = resolve
+        })
+        const Bad = {
+          async setup() {
+            throw error
+          },
+        }
+        const Slow = {
+          async setup() {
+            await slow
+            return () => h(ThrowingCleanup)
+          },
+        }
+        const app = createApp({
+          render: () => h('div', [h(Bad), h(Slow)]),
+        })
+
+        await expect(render(app)).rejects.toBe(error)
+        resolveSlow()
+        await new Promise<void>(resolve => setTimeout(resolve))
+        expect(cleanup).toHaveBeenCalledTimes(1)
+        expect(
+          'Unhandled error during execution of setup function',
+        ).toHaveBeenWarned()
+        expect(
+          'Unhandled error during execution of watcher cleanup function',
+        ).toHaveBeenWarned()
+      })
+    })
   })
 }

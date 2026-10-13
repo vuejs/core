@@ -10,8 +10,8 @@ import { isPromise, isString } from '@vue/shared'
 import { type SSRBuffer, type SSRContext, renderComponentVNode } from './render'
 import type { Readable, Writable } from 'node:stream'
 import {
+  cleanupFailedRender,
   resolveTeleports,
-  settlePendingRender,
   stopWatchers,
 } from './renderToString'
 
@@ -81,13 +81,17 @@ export function renderToSimpleStream<T extends SimpleReadable>(
   Promise.resolve(renderComponentVNode(vnode))
     .then(b => unrollBuffer((buffer = b), stream))
     .then(() => resolveTeleports(context))
-    .then(() => {
-      stopWatchers(context)
-      stream.push(null)
-    })
+    .then(
+      () => {
+        stopWatchers(context)
+        stream.push(null)
+      },
+      error => {
+        cleanupFailedRender(buffer, context)
+        throw error
+      },
+    )
     .catch(error => {
-      stopWatchers(context)
-      settlePendingRender(buffer, context)
       stream.destroy(error)
     })
 
