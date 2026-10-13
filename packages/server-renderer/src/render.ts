@@ -51,6 +51,7 @@ const {
   popWarningContext,
   VaporSlot,
   rawVaporSlotKey,
+  getVaporSlotProps,
   invokeSlotFallback,
 } = ssrUtils
 
@@ -441,7 +442,7 @@ export function renderVNode(
       renderVaporOutlet(
         push,
         slot,
-        vnode.props,
+        getVaporSlotProps(vnode),
         outlets && outlets[0],
         parentComponent,
         slotScopeId,

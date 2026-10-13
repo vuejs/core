@@ -14371,4 +14371,102 @@ describe('a vapor slot in a vdom outlet starts on a node of its own', () => {
       expect(seen[2]).toBe('<div><i>f3</i><b>c2</b><i>f1</i></div>')
     })
   })
+
+  describe('keyed by its vdom outlet', () => {
+    test('rows of a keyed <template v-for> move with their key', async () => {
+      const data = ref({ list: [1, 2, 3] })
+      const components: Record<string, any> = {}
+      components.List = compile(
+        `${vdomScript}
+        <template>
+          <div>
+            <template v-for="it in data.list" :key="it">
+              <slot :it="it" />
+            </template>
+          </div>
+        </template>`,
+        data,
+        components,
+        { vapor: false },
+      )
+      const App = compile(
+        `<template>
+          <components.List v-slot="{ it }"><input :name="it" /></components.List>
+        </template>`,
+        data,
+        components,
+      )
+      const root = document.createElement('div')
+      createVaporApp(App).use(vaporInteropPlugin).mount(root)
+      const first = root.querySelector('input')
+
+      data.value.list.reverse()
+      await nextTick()
+      expect(strip(root.innerHTML)).toBe(
+        '<div><input name="3"><input name="2"><input name="1"></div>',
+      )
+      expect(root.querySelectorAll('input')[2]).toBe(first)
+    })
+
+    test('switching between v-if / v-else outlets remounts the slot', async () => {
+      const data = ref({ ok: true })
+      const components: Record<string, any> = {}
+      components.Child = compile(
+        `${vdomScript}
+        <template>
+          <div><slot v-if="data.ok" /><slot v-else /></div>
+        </template>`,
+        data,
+        components,
+        { vapor: false },
+      )
+      const App = compile(
+        `<template><components.Child><input /></components.Child></template>`,
+        data,
+        components,
+      )
+      const root = document.createElement('div')
+      createVaporApp(App).use(vaporInteropPlugin).mount(root)
+      const first = root.querySelector('input')
+
+      data.value.ok = false
+      await nextTick()
+      expect(strip(root.innerHTML)).toBe('<div><input></div>')
+      expect(root.querySelector('input')).not.toBe(first)
+    })
+
+    test('the branch key is not a slot prop, also on a TransitionGroup clone', async () => {
+      const data = ref({ list: [1, 2] })
+      const components: Record<string, any> = {}
+      components.List = compile(
+        `${vdomScript}
+        <template>
+          <TransitionGroup tag="div">
+            <template v-for="it in data.list" :key="it">
+              <slot :it="it" />
+            </template>
+          </TransitionGroup>
+        </template>`,
+        data,
+        components,
+        { vapor: false },
+      )
+      const App = compile(
+        `<template>
+          <components.List v-slot="p">
+            <i>{{ Object.keys(p).join() }}{{ p.it }}</i>
+          </components.List>
+        </template>`,
+        data,
+        components,
+      )
+      const root = document.createElement('div')
+      createVaporApp(App).use(vaporInteropPlugin).mount(root)
+      expect(strip(root.innerHTML)).toBe('<div><i>it1</i><i>it2</i></div>')
+
+      data.value.list.reverse()
+      await nextTick()
+      expect(strip(root.innerHTML)).toBe('<div><i>it2</i><i>it1</i></div>')
+    })
+  })
 })

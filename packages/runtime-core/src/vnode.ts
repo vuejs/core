@@ -295,6 +295,8 @@ export interface VNode<
     // vdom outlets whose fallback this slot resolves, innermost first. Never
     // written in place: clones share the list
     outlets?: readonly VdomSlotOutlet[]
+    // the `key` in props is the outlet's branch key, not a slot prop
+    bk?: boolean
     state?: unknown
     ref?: ShallowRef<any>
     scope?: EffectScope
@@ -852,6 +854,7 @@ function cloneVaporSlotMeta(vnode: VNode): VNode['vs'] {
   const cloned: NonNullable<VNode['vs']> = {
     slot: vaporSlot.slot,
     outlets: vaporSlot.outlets,
+    bk: vaporSlot.bk,
   }
 
   if (vnode.el) {

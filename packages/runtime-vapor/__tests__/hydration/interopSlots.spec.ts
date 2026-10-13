@@ -2626,4 +2626,52 @@ describe('VDOM interop', () => {
       expect('Hydration children mismatch').not.toHaveBeenWarned()
     },
   )
+
+  // a vdom outlet rendered by its client render function on the server, as
+  // a component library ships it
+  test('the branch key of a keyed <template v-for> vdom outlet is not a vapor slot prop in ssr', async () => {
+    const setup = `<script setup>const data = _data; const components = _components</script>`
+    const data = reactive({ list: [1, 2] })
+    const App = (ssr: boolean) => {
+      const List = compile(
+        `${setup}<template>
+          <div>
+            <template v-for="it in data.list" :key="it">
+              <slot :it="it" />
+            </template>
+          </div>
+        </template>`,
+        data as any,
+        {},
+        { vapor: false },
+      )
+      return compile(
+        `${setup}<template>
+          <components.List v-slot="p"><i>{{ Object.keys(p).join() }}</i></components.List>
+        </template>`,
+        data as any,
+        { List },
+        { vapor: true, ssr },
+      )
+    }
+    const html = await VueServerRenderer.renderToString(
+      runtimeDom.createSSRApp(App(true)),
+    )
+    expect(html.replace(/<!--[^>]*-->/g, '')).toBe(
+      '<div><i>it</i><i>it</i></div>',
+    )
+
+    const container = document.createElement('div')
+    document.body.appendChild(container)
+    container.innerHTML = html
+    const app = runtimeVapor
+      .createVaporSSRApp(App(false))
+      .use(runtimeVapor.vaporInteropPlugin)
+    app.mount(container)
+    expect(`Hydration text mismatch`).not.toHaveBeenWarned()
+    expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+
+    app.unmount()
+    expect(container.innerHTML).toBe('')
+  })
 })

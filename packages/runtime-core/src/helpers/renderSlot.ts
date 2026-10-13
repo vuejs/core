@@ -37,6 +37,21 @@ import type { ComponentInternalInstance, Data } from '../component'
 export const rawVaporSlotKey: unique symbol = Symbol(`rawVaporSlot`)
 
 /**
+ * The slot props of a vapor slot rendered by a vdom outlet: its vnode props
+ * without the outlet's branch key, which is there only to key the vnode.
+ * Internal to vapor interop and SSR.
+ */
+export function getVaporSlotProps(vnode: VNode): Data | null {
+  const props = vnode.props
+  if (!props || !vnode.vs!.bk) return props
+  const slotProps: Data = {}
+  for (const key in props) {
+    if (key !== 'key') slotProps[key] = props[key]
+  }
+  return slotProps
+}
+
+/**
  * Invokes a VDOM slot fallback under the outlet owner that produced it, the
  * way `renderSlot` would have rendered it inline. Vapor interop invokes
  * fallbacks late, outside any render, so it passes the owner recorded on the
@@ -85,12 +100,18 @@ export function renderSlot(
   // vapor slots rendered in vdom
   const vaporSlot = slot && (slot as any)[rawVaporSlotKey]
   if (vaporSlot) {
-    const ret = (openBlock(), createBlock(VaporSlot, props))
+    // the branch key of a `<template v-for>` / `v-if` outlet keys the vnode
+    // like the Fragment below. It goes in props so clones keep it, and `bk`
+    // keeps it out of the slot props
+    const bk = branchKey != null && props.key == null
+    const vnodeProps = bk ? extend({}, props, { key: branchKey }) : props
+    const ret = (openBlock(), createBlock(VaporSlot, vnodeProps))
     ret.vs = {
       slot: vaporSlot,
       outlets: fallback
         ? [{ fallback, owner: currentRenderingInstance }]
         : undefined,
+      bk,
     }
     if (!noSlotted && ret.scopeId) {
       ret.slotScopeIds = [ret.scopeId + '-s']
