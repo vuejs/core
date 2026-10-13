@@ -450,12 +450,10 @@ export function hydrateSlotFragmentContent(
   frag: SlotFragment,
   render: BlockFn,
   key: any,
-  shouldForce: boolean,
 ): void {
   locateHydrationNode()
   const open = currentHydrationNode
-  const resolve = () =>
-    recheckSlotResolution(frag, shouldForce || frag.pendingRecheckForce)
+  const resolve = () => recheckSlotResolution(frag)
   if (
     open &&
     isComment(open, '[') &&
@@ -515,8 +513,8 @@ export interface SlotFallbackRange {
 /**
  * The nodes in the range are the fallback's: `createContent` runs the slot
  * content without hydration and places it as on the client. The fallback is
- * adopted from within it, by whichever slot on the boundary chain resolves it
- * (see `renderSlotFallback`), and never moves.
+ * adopted from within it, by the slot providing it (see
+ * `renderSlotFallbacks`), and never moves.
  */
 export function hydrateSlotFallbackRange(
   range: SlotFallbackRange,

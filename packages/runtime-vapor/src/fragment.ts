@@ -4,11 +4,7 @@ import {
   onScopeDispose,
   setActiveSub,
 } from '@vue/reactivity'
-import {
-  VaporSlotFlags,
-  slotInheritsFallback,
-  slotNotifiesBoundary,
-} from '@vue/shared'
+import { slotNotifiesBoundary } from '@vue/shared'
 import { createComment, createTextNode } from './dom/node'
 import {
   type Block,
@@ -62,6 +58,7 @@ import {
   prepareDeferredHydrationAnchor,
 } from './dom/hydrateFragment'
 import {
+  type RenderedSlotFallback,
   type SlotResolutionState,
   disposeSlotResolution,
   invalidateExposedSlotContent,
@@ -221,24 +218,24 @@ export function runWithRenderCtx<R>(
   }
 }
 
+const noParentBoundary = (): null => null
+
 /**
  * The one construction point for a slot host's boundary context, shared by
  * SlotFragment and both vdom-interop slot hosts. `run` always comes from the
  * host fragment's render seam, and so does the id cell unless the boundary
- * stands for an enclosing outlet; `getParent`, `getFallback` and `markDirty`
- * stay host-specific (ownership caps, fallback sources and dirty batching
- * differ per host).
+ * stands for another outlet of the host (see `getParent`).
  */
 export function createSlotBoundary(
   fragment: RenderContextFragment,
-  // a getter: the chain above an interop outlet follows the outlets recorded
-  // on its latest vnode
-  getParent: () => SlotBoundaryContext | null,
   getFallback: () => BlockFn | undefined,
-  markDirty: (force?: boolean) => void,
+  markDirty: () => void,
   onContentInvalid?: (() => void)[],
   // the host fragment's cell unless the boundary stands for another outlet
   getScopeIds: () => string[] | null = () => fragment.slotScopeIds,
+  // a getter: the chain above an interop outlet follows the outlets recorded
+  // on its latest vnode
+  getParent: () => SlotBoundaryContext | null = noParentBoundary,
 ): SlotBoundaryContext {
   return {
     getParent,
@@ -584,9 +581,9 @@ export class SlotFragment
   activeFallback: Block | null = null
   fallbackInserted = false
   fallbackScope?: EffectScope
+  renderedFallbacks?: RenderedSlotFallback[]
   lastNodesValid?: boolean
   pendingRecheck = false
-  pendingRecheckForce = false
   isReconciling = false
   private content: Block = EMPTY_BLOCK
   private localFallback?: BlockFn
@@ -595,10 +592,8 @@ export class SlotFragment
   private contentCtx?: RenderContext
   // Decoded from VaporSlotFlags: forwarded roots expose their content
   // validity to the enclosing boundary (unless once, whose content never
-  // changes validity) and resolve fallback in shared or inherit mode.
+  // changes validity).
   private readonly notifyParentBoundary: boolean
-  readonly sharedFallback: boolean
-  readonly inheritFallback: boolean
   constructor(flags: number = 0, adoptAnchor?: Node) {
     super(
       SLOT_FRAGMENT | SLOT_RESOLVER,
@@ -614,28 +609,26 @@ export class SlotFragment
       this.disposed = true
       if (this.fallbackScope) this.fallbackScope.stop()
     }, true)
-    this.sharedFallback = !!(flags & VaporSlotFlags.SHARED_FALLBACK)
-    this.inheritFallback = slotInheritsFallback(flags)
     this.notifyParentBoundary = slotNotifiesBoundary(flags)
-    if (this.sharedFallback) {
-      if (this.slotBoundary) {
-        registerContentInvalid(
-          this.slotBoundary,
-          () => {
-            invalidateExposedSlotContent(this)
-            const anchor = this.anchor
-            const parent = anchor.parentNode
-            if (parent) {
-              removeAttachedNodes(this.content, parent)
-              if (this.activeFallback) {
-                removeAttachedNodes(this.activeFallback, parent)
-              }
-              removeNode(anchor, parent)
+    // only a forwarded root has one (createSlot): it is parked with the rest
+    // of the enclosing outlet's content while that outlet shows its fallback
+    if (this.slotBoundary) {
+      registerContentInvalid(
+        this.slotBoundary,
+        () => {
+          invalidateExposedSlotContent(this)
+          const anchor = this.anchor
+          const parent = anchor.parentNode
+          if (parent) {
+            removeAttachedNodes(this.content, parent)
+            if (this.activeFallback) {
+              removeAttachedNodes(this.activeFallback, parent)
             }
-          },
-          this,
-        )
-      }
+            removeNode(anchor, parent)
+          }
+        },
+        this,
+      )
     }
   }
 
@@ -669,18 +662,16 @@ export class SlotFragment
     // the fallback decision follow the branch that actually rendered.
     if (!this.isUpdating) {
       this.content = this.nodes
-      recheckSlotResolution(this, false)
+      recheckSlotResolution(this)
     }
   }
 
   get boundary(): SlotBoundaryContext {
     if (!this.ownBoundary) {
-      const parent = this.inheritFallback ? this.slotBoundary : null
       this.ownBoundary = createSlotBoundary(
         this,
-        () => parent,
         () => this.localFallback,
-        force => markSlotResolutionDirty(this, force),
+        () => markSlotResolutionDirty(this),
       )
     }
     return this.ownBoundary
@@ -761,7 +752,6 @@ export class SlotFragment
     fallback?: BlockFn,
     key: any = render || fallback,
   ): void {
-    const prevLocalFallback = this.localFallback
     this.localFallback = fallback
     const boundary = this.boundary
     // Content renders under the outlet context plus this boundary; both are
@@ -777,16 +767,14 @@ export class SlotFragment
     this.pendingRecheck = false
 
     try {
-      const shouldForce = prevLocalFallback !== fallback
       if (isHydrating) {
-        hydrateSlotFragmentContent(this, slotRender, key, shouldForce)
+        hydrateSlotFragmentContent(this, slotRender, key)
       } else {
         this.updateContent(slotRender, key)
-        recheckSlotResolution(this, shouldForce || this.pendingRecheckForce)
+        recheckSlotResolution(this)
       }
     } finally {
       this.pendingRecheck = false
-      this.pendingRecheckForce = false
       this.isUpdating = false
     }
   }

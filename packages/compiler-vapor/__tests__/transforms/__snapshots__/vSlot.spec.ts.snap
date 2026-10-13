@@ -233,7 +233,7 @@ exports[`compiler: transform slot > forwarded slots > <slot> tag w/ v-for 1`] = 
 export function render(_ctx) {
   const n3 = _createAssetComponent("Comp", null, _extend(() => {
     const n0 = _createFor(() => (_ctx.b), (_for_item0) => {
-      const n2 = _createSlot("default", null, null, 12 /* FORWARDED, SHARED_FALLBACK */)
+      const n2 = _createSlot("default", null, null, 4 /* FORWARDED */)
       return n2
     }, undefined, 48 /* IS_FRAGMENT, SLOT_ROOT */)
     return n0

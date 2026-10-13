@@ -103,7 +103,7 @@ describe('Vapor Mode hydration', () => {
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
         `
         "<div>
-        <!--(-->foo<!--slot--><!--)-->
+        <!--(-->foo<!--)-->
         </div>"
       `,
       )
@@ -113,7 +113,7 @@ describe('Vapor Mode hydration', () => {
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
         `
         "<div>
-        <!--(-->foo1<!--slot--><!--)-->
+        <!--(-->foo1<!--)-->
         </div>"
       `,
       )
@@ -1073,6 +1073,46 @@ describe('Vapor Mode hydration', () => {
       data.showB = true
       await nextTick()
       expect(container.textContent).toBe('ABC')
+    })
+
+    // a fallback adopted with a mismatch (the server rendered one node, the
+    // client renders two) must not take the outlet's close marker as its
+    // own node: the outlet keeps its anchor and the fallback comes back
+    test('forwarded slot restores a fallback that grows during hydration', async () => {
+      const data = reactive({ show: false, single: false })
+      const { container } = await testHydration(
+        `<script setup>const data = _data; const components = _components</script>
+        <template>
+          <components.Forwarder>
+            <span v-if="data.show">content</span>
+          </components.Forwarder>
+        </template>`,
+        {
+          Receiver: `<script setup>const data = _data</script>
+            <template>
+              <slot>
+                <span v-if="data.single">fallback</span>
+                <template v-else><span>fallback 1</span><span>fallback 2</span></template>
+              </slot>
+            </template>`,
+          Forwarder: `<script setup>const components = _components</script>
+            <template>
+              <components.Receiver><slot /></components.Receiver>
+            </template>`,
+        },
+        data,
+        { serverData: reactive({ show: false, single: true }) },
+      )
+      expect(`Hydration node mismatch`).toHaveBeenWarned()
+      expect(container.textContent).toContain('fallback')
+      for (let i = 0; i < 2; i++) {
+        data.show = true
+        await nextTick()
+        expect(container.textContent).toBe('content')
+        data.show = false
+        await nextTick()
+        expect(container.textContent).toBe('fallback 1fallback 2')
+      }
     })
 
     test('forwarded slot with empty content', async () => {

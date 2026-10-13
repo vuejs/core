@@ -7,6 +7,7 @@ import {
   enterHydrationCursor,
   exitHydrationCursor,
   hydrateTextNode,
+  isClaimedAnchor,
   isComment,
   isHydrating,
   parseAdoptTarget,
@@ -90,13 +91,18 @@ export function template(html: string, flags: number = 0, ns?: Namespace) {
       // markers, and hydration anchors before advancing the hydration
       // cursor, so they don't need to go through adoptTemplate. Vapor
       // never mutates their DOM afterwards.
-      if (
+      const target =
         isStatic &&
         // SSR empty branches are empty comments. Let adoptTemplate() replace
         // them when the client selected this static branch.
         !isComment(currentHydrationNode!, '')
-      ) {
-        adopted = resolveHydrationTarget(currentHydrationNode!)
+          ? resolveHydrationTarget(currentHydrationNode!)
+          : null
+      // A claimed anchor (an outlet's close marker) is where the server's
+      // output stopped, not this node: adoptTemplate() recreates the node
+      // ahead of it and keeps the anchor, as handleMismatch does.
+      if (target && !isClaimedAnchor(target)) {
+        adopted = target
         if (html !== '') {
           if (html[0] !== '<') {
             // Static text normally matches, but patch the rare mismatch to
