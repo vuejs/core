@@ -393,13 +393,12 @@ export function resolveTransitionHooks(
       }
       // for toggled element with same key (v-if)
       const leavingVNode = leavingVNodesCache[key]
-      if (
-        leavingVNode &&
-        isSameVNodeType(vnode, leavingVNode) &&
-        (leavingVNode.el as TransitionElement)[leaveCbKey]
-      ) {
-        // force early removal (not cancelled)
-        ;(leavingVNode.el as TransitionElement)[leaveCbKey]!()
+      if (leavingVNode && isSameVNodeType(vnode, leavingVNode)) {
+        const leavingRoot = getTransitionRoot(leavingVNode)
+        if (leavingRoot && (leavingRoot.el as TransitionElement)[leaveCbKey]) {
+          // force early removal (not cancelled)
+          ;(leavingRoot.el as TransitionElement)[leaveCbKey]!()
+        }
       }
       callHook(hook, [el])
     },

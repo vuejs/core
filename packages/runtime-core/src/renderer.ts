@@ -2321,7 +2321,10 @@ function baseCreateRenderer(
     const leavingNode = isFragment ? getTransitionRoot(vnode) : vnode
     const performRemove = () => {
       if (isFragment) {
-        removeFragment(el!, anchor!)
+        // An ancestor may have removed the fragment during leave.
+        if (hostParentNode(el!)) {
+          removeFragment(el!, anchor!)
+        }
       } else {
         hostRemove(el!)
       }

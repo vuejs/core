@@ -1525,4 +1525,48 @@ describe('BaseTransition', () => {
     expect(serializeInner(root)).toBe('<p>C</p>')
     expect(root.children).toHaveLength(1)
   })
+
+  test.each(['default', 'in-out'] as const)(
+    'should finish pending leave when a comment root re-enters (mode: %s)',
+    async mode => {
+      const { code } = compile('<!--start--><div>A</div><!--end-->', {
+        comments: true,
+        hoistStatic: true,
+      })
+      const One = { render: new Function('Vue', code)(runtime) }
+      const Two = { render: () => h('span', 'B') }
+      const toggle = ref(true)
+      const { props, cbs } = mockProps({ mode })
+      const { root } = mount(props, () =>
+        h(toggle.value ? One : Two, { key: toggle.value ? 'one' : 'two' }),
+      )
+      const leavingNodes = root.children.slice()
+
+      toggle.value = false
+      await nextTick()
+      cbs.doneEnter['<span>B</span>']()
+      expect(props.onLeave).toHaveBeenCalledTimes(1)
+      expect(props.onAfterLeave).not.toHaveBeenCalled()
+      const finishFirstLeave = cbs.doneLeave['<div>A</div>']
+
+      toggle.value = true
+      await nextTick()
+      expect(props.onAfterLeave).toHaveBeenCalledTimes(1)
+      assertCalledWithEl(props.onAfterLeave, '<div>A</div>')
+      expect(props.onLeaveCancelled).not.toHaveBeenCalled()
+      expect(leavingNodes.every(node => node.parentNode === null)).toBe(true)
+      expect(serializeInner(root)).toBe(
+        '<span>B</span><!--start--><div>A</div><!--end-->',
+      )
+      expect(root.children).toHaveLength(6)
+
+      cbs.doneEnter['<div>A</div>']()
+      expect(props.onLeave).toHaveBeenCalledTimes(2)
+      cbs.doneLeave['<span>B</span>']()
+      finishFirstLeave()
+      expect(props.onAfterLeave).toHaveBeenCalledTimes(2)
+      expect(serializeInner(root)).toBe('<!--start--><div>A</div><!--end-->')
+      expect(root.children).toHaveLength(5)
+    },
+  )
 })
