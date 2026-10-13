@@ -23,6 +23,7 @@ import { isTeleport } from './Teleport'
 import type { RendererElement } from '../renderer'
 import { SchedulerJobFlags } from '../scheduler'
 import { isHmrUpdating } from '../hmr'
+import { filterSingleRoot } from '../componentRenderUtils'
 
 type Hook<T = () => void> = T | T[]
 
@@ -139,11 +140,6 @@ export const BaseTransitionPropsValidators: Record<string, any> = {
   onAppearCancelled: TransitionHookValidator,
 }
 
-const recursiveGetSubtree = (instance: ComponentInternalInstance): VNode => {
-  const subTree = instance.subTree
-  return subTree.component ? recursiveGetSubtree(subTree.component) : subTree
-}
-
 const BaseTransitionImpl: ComponentOptions = {
   name: `BaseTransition`,
 
@@ -214,7 +210,7 @@ const BaseTransitionImpl: ComponentOptions = {
         oldInnerChild &&
         oldInnerChild.type !== Comment &&
         !isSameVNodeType(oldInnerChild, innerChild) &&
-        recursiveGetSubtree(instance).type !== Comment
+        getTransitionRoot(instance.subTree)
       ) {
         let leavingHooks = resolveTransitionHooks(
           oldInnerChild,
@@ -548,6 +544,12 @@ export function setTransitionHooks(vnode: VNode, hooks: TransitionHooks): void {
     vnode.ssFallback!.transition = hooks.clone(vnode.ssFallback!)
   } else {
     vnode.transition = hooks
+    if (vnode.type === Fragment && isArray(vnode.children)) {
+      const child = filterSingleRoot(vnode.children, false)
+      if (child) {
+        setTransitionHooks(child, hooks)
+      }
+    }
   }
 }
 
@@ -587,4 +589,18 @@ export function getTransitionRawChildren(
     }
   }
   return ret
+}
+
+export function getTransitionRoot(vnode: VNode): VNode | undefined {
+  if (vnode.component) {
+    return getTransitionRoot(vnode.component.subTree)
+  }
+  if (vnode.type === Fragment) {
+    const child =
+      isArray(vnode.children) && filterSingleRoot(vnode.children, false)
+    return child ? getTransitionRoot(child) : undefined
+  }
+  if (vnode.type !== Comment) {
+    return vnode
+  }
 }

@@ -4066,4 +4066,72 @@ describe('e2e: Transition', () => {
       expect(await isCollected()).toBe(true)
     })
   })
+
+  // #6080
+  test.each([false, true])(
+    'out-in with comments around a component root (KeepAlive: %s)',
+    async withKeepAlive => {
+      await page().evaluate(withKeepAlive => {
+        const { createApp, ref } = (window as any).Vue
+        const children = '<One v-if="toggle" /><Two v-else />'
+        createApp({
+          components: {
+            One: {
+              components: {
+                Leaf: { template: '<div class="test one">One</div>' },
+              },
+              template: '<!--start--><Leaf /><!--end-->',
+            },
+            Two: { template: '<div class="test two">Two</div>' },
+          },
+          template: `
+            <div id="container">
+              <transition mode="out-in">
+                ${withKeepAlive ? `<KeepAlive>${children}</KeepAlive>` : children}
+              </transition>
+            </div>
+            <button id="toggleBtn" @click="toggle = !toggle">toggle</button>
+          `,
+          setup: () => ({ toggle: ref(true) }),
+        }).mount('#app')
+      }, withKeepAlive)
+
+      for (const [leaving, entering] of [
+        ['one', 'two'],
+        ['two', 'one'],
+      ]) {
+        expect(await classWhenTransitionStart()).toStrictEqual([
+          'test',
+          leaving,
+          'v-leave-from',
+          'v-leave-active',
+        ])
+        await nextFrame()
+        expect(await classList(`.${leaving}`)).toStrictEqual([
+          'test',
+          leaving,
+          'v-leave-active',
+          'v-leave-to',
+        ])
+        await transitionFinish()
+        await nextFrame()
+        expect(await classList(`.${entering}`)).toStrictEqual([
+          'test',
+          entering,
+          'v-enter-active',
+          'v-enter-to',
+        ])
+        await transitionFinish()
+        expect(await html('#container')).toBe(
+          entering === 'one'
+            ? '<!--start--><div class="test one">One</div><!--end-->'
+            : '<div class="test two">Two</div>',
+        )
+        expect(
+          await page().$eval('#container', el => el.childNodes.length),
+        ).toBe(entering === 'one' ? 5 : 1)
+      }
+    },
+    E2E_TIMEOUT,
+  )
 })
