@@ -11,8 +11,10 @@ import {
   type VNode,
   type VNodeArrayChildren,
   type VNodeProps,
+  type VNodeTypes,
   type VaporInVdomInterface,
   type VdomSlotOutlet,
+  createVNode,
   handleError,
   mergeProps,
   renderSlot,
@@ -501,11 +503,44 @@ export function renderVNodeChildren(
   }
 }
 
+// `<component :is>` in a vapor template: a plain element renders its slot
+// through the ssr branch, as the same element written statically does, since
+// the client renders it as vapor content
+export function renderDynamicComponent(
+  push: PushFn,
+  type: VNodeTypes,
+  props: Props | null,
+  slots: Record<string, any> | null,
+  parentComponent: ComponentInternalInstance,
+  slotScopeId?: string,
+): void {
+  // `''` takes the invalid-type comment fallback of `createVNode`
+  if (isString(type) && type) {
+    const slot = slots && slots.default
+    renderElementVNode(
+      push,
+      createVNode(type, props),
+      parentComponent,
+      slotScopeId,
+      // no props, as the client calls it: slot prop defaults apply
+      slot && (() => slot(undefined, push, parentComponent, slotScopeId || '')),
+    )
+  } else {
+    renderVNode(
+      push,
+      createVNode(type, props, slots),
+      parentComponent,
+      slotScopeId,
+    )
+  }
+}
+
 function renderElementVNode(
   push: PushFn,
   vnode: VNode,
   parentComponent: ComponentInternalInstance,
   slotScopeId?: string,
+  renderChildren?: () => void,
 ) {
   const tag = vnode.type as string
   let { props, children, shapeFlag, scopeId } = vnode
@@ -563,7 +598,9 @@ function renderElementVNode(
       }
     }
     if (!hasChildrenOverride) {
-      if (shapeFlag & ShapeFlags.TEXT_CHILDREN) {
+      if (renderChildren) {
+        renderChildren()
+      } else if (shapeFlag & ShapeFlags.TEXT_CHILDREN) {
         push(escapeHtml(children as string))
       } else if (shapeFlag & ShapeFlags.ARRAY_CHILDREN) {
         renderVNodeChildren(
