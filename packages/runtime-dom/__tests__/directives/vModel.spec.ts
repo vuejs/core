@@ -1875,6 +1875,59 @@ describe('vModel', () => {
     expect(foo.checked).toEqual(false)
   })
 
+  it(`should sync array/set checkbox models with the element value when no value is given`, async () => {
+    const component = defineComponent({
+      data() {
+        return { value: ['on'] }
+      },
+      render() {
+        return [
+          withDirectives(
+            h('input', {
+              type: 'checkbox',
+              class: 'foo',
+              'onUpdate:modelValue': setValue.bind(this),
+            }),
+            [[vModelCheckbox, this.value]],
+          ),
+        ]
+      },
+    })
+    render(h(component), root)
+
+    const foo = root.querySelector('.foo') as HTMLInputElement
+    const data = root._vnode.component.data
+
+    // checkboxes without an explicit value use "on", which is the value the
+    // change listener assigns to the model, so the checked state must match it
+    expect(foo.value).toBe('on')
+    expect(foo.checked).toBe(true)
+
+    // re-rendering with a new array holding the same value keeps it checked
+    data.value = ['on']
+    await nextTick()
+    expect(foo.checked).toBe(true)
+
+    // unchecking removes the native value from the model
+    foo.checked = false
+    triggerEvent('change', foo)
+    await nextTick()
+    expect(data.value).toEqual([])
+
+    data.value = ['on']
+    await nextTick()
+    expect(foo.checked).toBe(true)
+
+    // Set models follow the same rule
+    data.value = new Set(['on'])
+    await nextTick()
+    expect(foo.checked).toBe(true)
+
+    data.value = new Set(['foo'])
+    await nextTick()
+    expect(foo.checked).toBe(false)
+  })
+
   // #15320
   it('selects the matching option when values are maps', () => {
     const mapA = new Map([['id', 1]])
