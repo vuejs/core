@@ -40,6 +40,24 @@ describe('compiler: expression transform', () => {
     })
   })
 
+  // #8494
+  test('interpolation ending in a line comment', () => {
+    const node = parseWithExpressionTransform(
+      `{{ foo // comment\n}}`,
+    ) as InterpolationNode
+    expect(node.content).toMatchObject({
+      type: NodeTypes.COMPOUND_EXPRESSION,
+      children: [{ content: `_ctx.foo` }, ` // comment\n`],
+    })
+    expect(compile(`{{ foo // comment\n}}`).code).toContain(
+      '_toDisplayString(_ctx.foo // comment\n)',
+    )
+    // a lone \r terminates a line comment too
+    expect(compile(`{{ foo // comment\r}}`).code).toContain(
+      '_toDisplayString(_ctx.foo // comment\n)',
+    )
+  })
+
   test('empty interpolation', () => {
     const node = parseWithExpressionTransform(`{{}}`) as InterpolationNode
     const node2 = parseWithExpressionTransform(`{{ }}`) as InterpolationNode
