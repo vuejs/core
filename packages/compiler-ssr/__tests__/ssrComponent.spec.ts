@@ -53,6 +53,30 @@ describe('ssr: components', () => {
       `)
   })
 
+  test('dynamic component in a vapor component', () => {
+    expect(
+      compile(`<component :is="foo"><div/></component>`, { vapor: true }).code,
+    ).toMatchInlineSnapshot(`
+      "const { resolveDynamicComponent: _resolveDynamicComponent, withCtx: _withCtx, createVNode: _createVNode } = require("vue")
+      const { ssrRenderDynamicComponent: _ssrRenderDynamicComponent } = require("vue/server-renderer")
+
+      return function ssrRender(_ctx, _push, _parent, _attrs) {
+        _ssrRenderDynamicComponent(_push, _resolveDynamicComponent(_ctx.foo), _attrs, {
+          default: _withCtx((_, _push, _parent, _scopeId) => {
+            if (_push) {
+              _push(\`<div\${_scopeId}></div>\`)
+            } else {
+              return [
+                _createVNode("div")
+              ]
+            }
+          }),
+          _: 1 /* STABLE */
+        }, _parent)
+      }"
+    `)
+  })
+
   describe('slots', () => {
     test('implicit default slot', () => {
       expect(compile(`<foo>hello<div/></foo>`).code).toMatchInlineSnapshot(`

@@ -39,7 +39,11 @@ import {
   stringifyExpression,
   traverseNode,
 } from '@vue/compiler-dom'
-import { SSR_RENDER_COMPONENT, SSR_RENDER_VNODE } from '../runtimeHelpers'
+import {
+  SSR_RENDER_COMPONENT,
+  SSR_RENDER_DYNAMIC_COMPONENT,
+  SSR_RENDER_VNODE,
+} from '../runtimeHelpers'
 import {
   type SSRTransformContext,
   processChildren,
@@ -182,7 +186,16 @@ export const ssrTransformComponent: NodeTransform = (node, context) => {
       ? buildSlots(node, context, buildSSRSlotFn).slots
       : `null`
 
-    if (typeof component !== 'string') {
+    if (
+      typeof component !== 'string' &&
+      rawOptionsMap.get(context.root)!.vapor
+    ) {
+      // a plain element renders its slot through the ssr branch
+      node.ssrCodegenNode = createCallExpression(
+        context.helper(SSR_RENDER_DYNAMIC_COMPONENT),
+        [`_push`, component, propsExp, slots, `_parent`],
+      )
+    } else if (typeof component !== 'string') {
       // dynamic component that resolved to a `resolveDynamicComponent` call
       // expression - since the resolved result may be a plain element (string)
       // or a VNode, handle it with `renderVNode`.
@@ -268,7 +281,7 @@ export function ssrProcessComponent(
       )
     } else {
       // dynamic component (`resolveDynamicComponent` call)
-      // the codegen node is a `renderVNode` call
+      // the codegen node is a `renderVNode` / `renderDynamicComponent` call
       context.pushStatement(node.ssrCodegenNode)
     }
   }

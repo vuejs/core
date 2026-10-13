@@ -1054,9 +1054,9 @@ describe('Vapor Mode hydration', () => {
       )
 
       expect(`Hydration children mismatch`).not.toHaveBeenWarned()
-      expect(html).toBe(`<div><!--v-if--></div>`)
+      expect(html).toBe(`<div><!----></div>`)
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
-        `"<div><!--v-if--></div><!--dynamic-component-->"`,
+        `"<div><!----></div><!--dynamic-component-->"`,
       )
 
       data.value = true
@@ -1300,5 +1300,127 @@ describe('Vapor Mode hydration', () => {
         }
       },
     )
+
+    test('TransitionGroup in a dynamic native element', async () => {
+      const { container, data, html } = await testHydration(
+        `<template>
+          <component :is="'section'">
+            <ol>
+              <TransitionGroup>
+                <li v-for="i in data" :key="i">{{ i }}</li>
+              </TransitionGroup>
+            </ol>
+          </component>
+        </template>`,
+        {},
+        ref([1, 2]),
+      )
+
+      expect(`children must be keyed`).not.toHaveBeenWarned()
+      expect(`Hydration children mismatch`).not.toHaveBeenWarned()
+      expect(html).toBe(
+        `<section><ol><!--[--><!--[--><li>1</li><li>2</li><!--]--><!--]--></ol></section>`,
+      )
+
+      data.value.push(3)
+      await nextTick()
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
+        "<section><ol>
+        <!--[-->
+        <!--[--><li>1</li><li>2</li><li class="v-enter-from v-enter-active">3</li><!--]-->
+        <!--]-->
+        </ol></section><!--dynamic-component-->"
+      `)
+    })
+
+    test('TransitionGroup with a tag and two lists in a dynamic native element', async () => {
+      const { container, data, html } = await testHydration(
+        `<template>
+          <component :is="'section'">
+            <TransitionGroup tag="ul">
+              <li v-for="i in data" :key="i">a{{ i }}</li>
+              <li v-for="i in data" :key="'b' + i">b{{ i }}</li>
+            </TransitionGroup>
+          </component>
+        </template>`,
+        {},
+        ref([1]),
+      )
+
+      expect(`children must be keyed`).not.toHaveBeenWarned()
+      expect(`Hydration children mismatch`).not.toHaveBeenWarned()
+      expect(html).toBe(
+        `<section><ul><!--[--><li>a1</li><!--]--><!--[--><li>b1</li><!--]--></ul></section>`,
+      )
+
+      data.value.push(2)
+      await nextTick()
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
+        "<section><ul>
+        <!--[--><li>a1</li><li class="v-enter-from v-enter-active">a2</li><!--]-->
+        <!--[--><li>b1</li><li class="v-enter-from v-enter-active">b2</li><!--]-->
+        </ul></section><!--dynamic-component-->"
+      `)
+    })
+
+    test('Transition with a false v-if in a dynamic native element', async () => {
+      const { container, data, html } = await testHydration(
+        `<template>
+          <component :is="'div'">
+            <Transition>
+              <p v-if="data">a</p>
+            </Transition>
+            <span>s</span>
+          </component>
+        </template>`,
+        {},
+        ref(false),
+      )
+
+      expect(`Hydration children mismatch`).not.toHaveBeenWarned()
+      expect(html).toBe(`<div><!----><span>s</span></div>`)
+
+      data.value = true
+      await nextTick()
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `"<div><p class="v-enter-from v-enter-active">a</p><!----><span>s</span></div><!--dynamic-component-->"`,
+      )
+    })
+
+    test('dynamic native element slot props keep their default', async () => {
+      const { container, html } = await testHydration(
+        `<template>
+          <component :is="'section'" v-slot="p = { msg: 'fallback' }">
+            <b>{{ p.msg }}</b>
+          </component>
+        </template>`,
+      )
+
+      expect(html).toBe(`<section><b>fallback</b></section>`)
+      expect(container.querySelector('b')!.textContent).toBe('fallback')
+    })
+
+    test('empty string dynamic component', async () => {
+      const { container, data, html } = await testHydration(
+        `<template>
+          <div>
+            <component :is="data" />
+            <i>tail</i>
+          </div>
+        </template>`,
+        {},
+        ref(''),
+      )
+
+      expect(`Invalid vnode type when creating vnode`).toHaveBeenWarned()
+      expect(`Invalid dynamic component type`).toHaveBeenWarned()
+      expect(html).toBe(`<div><!----><i>tail</i></div>`)
+
+      data.value = 'section'
+      await nextTick()
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `"<div><section></section><!----><i>tail</i></div>"`,
+      )
+    })
   })
 })
