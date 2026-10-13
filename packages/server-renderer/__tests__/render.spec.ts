@@ -37,9 +37,7 @@ const promisifyStream = (stream: Readable) => {
     stream.on('data', data => {
       result += data
     })
-    stream.on('error', () => {
-      reject(result)
-    })
+    stream.on('error', reject)
     stream.on('end', () => {
       resolve(result)
     })
@@ -1330,6 +1328,71 @@ function testRender(type: string, render: typeof renderToString) {
       })
       const html = await render(app)
       expect(html).toBe(`<div attr="attr">Functional Component</div>`)
+    })
+
+    test('should propagate unhandled async setup errors', async () => {
+      const error = new Error('setup failed')
+      const app = createApp({
+        async setup() {
+          throw error
+        },
+        render: () => h('div', 'should not render'),
+      })
+
+      await expect(render(app)).rejects.toBe(error)
+      expect(
+        'Unhandled error during execution of setup function',
+      ).toHaveBeenWarned()
+    })
+
+    test('should recover from synchronous onServerPrefetch errors', async () => {
+      const app = createApp({
+        setup() {
+          onServerPrefetch(() => {
+            throw new Error('prefetch failed')
+          })
+          return () => h('div', 'rendered')
+        },
+      })
+
+      expect(await render(app)).toBe('<div>rendered</div>')
+      expect(
+        'Unhandled error during execution of serverPrefetch hook',
+      ).toHaveBeenWarned()
+    })
+
+    test('should handle async setup rejection while awaiting an earlier sibling', async () => {
+      let resolveSlow!: () => void
+      const slow = new Promise<void>(resolve => {
+        resolveSlow = resolve
+      })
+      const error = new Error('setup failed')
+      const app = createApp({
+        components: {
+          Slow: {
+            async setup() {
+              await slow
+              return () => h('div', 'slow')
+            },
+          },
+          Bad: {
+            async setup() {
+              throw error
+            },
+          },
+        },
+        template: '<div><Slow /><Bad /></div>',
+      })
+
+      const result = render(app).catch(error => error)
+      // Allow unhandled rejections to surface before the buffer reaches Bad.
+      await new Promise<void>(resolve => setImmediate(resolve))
+      resolveSlow()
+
+      expect(await result).toBe(error)
+      expect(
+        'Unhandled error during execution of setup function',
+      ).toHaveBeenWarned()
     })
   })
 }
