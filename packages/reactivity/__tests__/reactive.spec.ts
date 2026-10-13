@@ -433,6 +433,36 @@ describe('reactivity/reactive', () => {
     }
   })
 
+  test('isShallow returns true for shallow collection proxies', () => {
+    expect(isShallow(shallowReactive(new Map()))).toBe(true)
+    expect(isShallow(shallowReadonly(new Map()))).toBe(true)
+    expect(isShallow(shallowReactive(new Set()))).toBe(true)
+    expect(isShallow(shallowReadonly(new Set()))).toBe(true)
+    expect(isShallow(reactive(new Map()))).toBe(false)
+    expect(isShallow(readonly(new Map()))).toBe(false)
+    expect(isShallow(reactive(new Set()))).toBe(false)
+    expect(isShallow(readonly(new Set()))).toBe(false)
+  })
+
+  test('shallow collection wrappers are preserved on assignment', () => {
+    const shallowMap = shallowReactive(new Map<string, { count: number }>())
+
+    const state = reactive({ m: null as unknown as typeof shallowMap })
+    state.m = shallowMap
+    expect(state.m).toBe(shallowMap)
+    expect(isShallow(state.m)).toBe(true)
+
+    const r = ref<typeof shallowMap | null>(null)
+    r.value = shallowMap
+    expect(r.value).toBe(shallowMap)
+    expect(isShallow(r.value)).toBe(true)
+
+    const outer = reactive(new Map<string, typeof shallowMap>())
+    outer.set('m', shallowMap)
+    expect(outer.get('m')).toBe(shallowMap)
+    expect(isShallow(outer.get('m'))).toBe(true)
+  })
+
   // #11696
   test('should use correct receiver on set handler for refs', () => {
     const a = reactive(ref(1))

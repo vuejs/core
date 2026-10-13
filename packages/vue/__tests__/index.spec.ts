@@ -1,7 +1,16 @@
 import { BindingTypes, type CompilerOptions } from '@vue/compiler-core'
 import { compile } from '@vue/compiler-dom'
 import { EMPTY_ARR } from '@vue/shared'
-import { type VNode, createApp, nextTick, reactive, ref } from '../src'
+import {
+  Suspense,
+  type VNode,
+  createApp,
+  defineComponent,
+  h,
+  nextTick,
+  reactive,
+  ref,
+} from '../src'
 import * as Vue from '../src'
 import type { InternalRenderFunction } from '../../runtime-core/src/component'
 
@@ -421,6 +430,64 @@ describe('compiler + runtime integration', () => {
     expect(container.innerHTML).toBe(`<div>2<div>1</div></div>`)
   })
 
+  // #15551
+  test.each([false, true])('async setup (wrapped: %s)', async wrapped => {
+    const loading = ref(false)
+    const slotFilled = ref(true)
+    const Dummy = defineComponent({
+      async setup() {
+        await new Promise(() => {})
+      },
+    })
+    const Common = defineComponent({
+      components: {
+        Dummy: wrapped
+          ? { components: { Dummy }, template: '<Dummy />' }
+          : Dummy,
+      },
+      props: { loading: Boolean },
+      template: `
+        <div><div>
+          <slot name="prepend"></slot>
+          <Dummy v-if="loading" />
+          <div>{{ loading }}</div>
+        </div></div>`,
+    })
+    const Inner = defineComponent({
+      components: { Common },
+      setup: () => ({ loading, slotFilled }),
+      template: `
+        <Common :loading="loading">
+          <template #prepend><div v-if="slotFilled" /></template>
+        </Common>`,
+    })
+    const container = document.createElement('div')
+    createApp({
+      render: () => h(Suspense, null, () => h(Inner)),
+    }).mount(container)
+    expect(container.innerHTML).toBe(
+      `<div><div><div></div><!--v-if--><div>false</div></div></div>`,
+    )
+
+    loading.value = true
+    await nextTick()
+    expect(container.innerHTML).toBe(
+      `<div><div><div></div><!----><div>true</div></div></div>`,
+    )
+
+    slotFilled.value = false
+    await nextTick()
+    expect(container.innerHTML).toBe(
+      `<div><div><!----><div>true</div></div></div>`,
+    )
+
+    loading.value = false
+    await nextTick()
+    expect(container.innerHTML).toBe(
+      `<div><div><!----><!--v-if--><div>false</div></div></div>`,
+    )
+  })
+
   test('nullish v-bind on <slot>', async () => {
     const Child = {
       props: ['error', 'value'],
@@ -653,4 +720,33 @@ describe('compiler + runtime integration', () => {
       }).toEqual({ once: 1, live: 1 })
     },
   )
+
+  test('prop update while an async setup() component is pending', async () => {
+    const loading = ref(false)
+    const value = ref(0)
+    const Dummy = defineComponent({
+      props: ['value'],
+      async setup() {
+        await new Promise(() => {})
+      },
+    })
+    const container = document.createElement('div')
+    const app = createApp({
+      components: { Dummy },
+      setup: () => ({ loading, value }),
+      template: `<Suspense><div><div><Dummy v-if="loading" :value="value" /><span /></div></div></Suspense>`,
+    })
+    app.mount(container)
+
+    loading.value = true
+    await nextTick()
+    value.value++
+    await nextTick()
+    loading.value = false
+    await nextTick()
+    expect(container.innerHTML).toBe(
+      `<div><div><!----><!--v-if--><span></span></div></div>`,
+    )
+    app.unmount()
+  })
 })

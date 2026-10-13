@@ -699,6 +699,43 @@ function testRender(type: string, render: typeof renderToString) {
           ),
         ).toBe(`<textarea>${escapeHtml(`<span>hello</span>`)}</textarea>`)
       })
+
+      test.each(['', 0, false])('falsy content overrides: %j', async value => {
+        for (const children of ['ignored', [h('span', 'ignored')]]) {
+          expect(await render(h('div', { innerHTML: value }, children))).toBe(
+            `<div>${value}</div>`,
+          )
+          expect(
+            `The \`innerHTML\` prop on <div> will override its children`,
+          ).toHaveBeenWarned()
+
+          expect(await render(h('div', { textContent: value }, children))).toBe(
+            `<div>${value}</div>`,
+          )
+          expect(
+            `The \`textContent\` prop on <div> will override its children`,
+          ).toHaveBeenWarned()
+
+          expect(await render(h('textarea', { value }, children))).toBe(
+            `<textarea>${value}</textarea>`,
+          )
+        }
+      })
+
+      test.each([null, undefined])(
+        'nullish content overrides preserve children: %j',
+        async value => {
+          expect(await render(h('div', { innerHTML: value }, 'fallback'))).toBe(
+            `<div>fallback</div>`,
+          )
+          expect(
+            await render(h('div', { textContent: value }, 'fallback')),
+          ).toBe(`<div>fallback</div>`)
+          expect(await render(h('textarea', { value }, 'fallback'))).toBe(
+            `<textarea>fallback</textarea>`,
+          )
+        },
+      )
     })
 
     describe('vnode component', () => {

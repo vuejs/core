@@ -166,6 +166,86 @@ return { count }
 }"
 `;
 
+exports[`defineModel() > w/ props destructure, default factory using the props argument 1`] = `
+"import { useModel as _useModel, mergeModels as _mergeModels, defineComponent as _defineComponent } from 'vue'
+
+export default /*@__PURE__*/_defineComponent({
+  props: /*@__PURE__*/_mergeModels({
+    x: { type: Number, required: false }
+  }, {
+    "modelValue": {
+        default: props => props.x
+      },
+    "modelModifiers": {},
+  }),
+  emits: ["update:modelValue"],
+  setup(__props: any, { expose: __expose }) {
+  __expose();
+
+      
+      const modelValue = _useModel(__props, "modelValue")
+      
+return { modelValue }
+}
+
+})"
+`;
+
+exports[`defineModel() > w/ props destructure, local shadowing a destructured prop 1`] = `
+"import { useModel as _useModel, mergeModels as _mergeModels, defineComponent as _defineComponent } from 'vue'
+
+export default /*@__PURE__*/_defineComponent({
+  props: /*@__PURE__*/_mergeModels({
+    x: { type: Number, required: false }
+  }, {
+    "modelValue": {
+        default: () => { const x = 1; return x }
+      },
+    "modelModifiers": {},
+  }),
+  emits: ["update:modelValue"],
+  setup(__props: any, { expose: __expose }) {
+  __expose();
+
+      
+      const modelValue = _useModel(__props, "modelValue")
+      
+return { modelValue }
+}
+
+})"
+`;
+
+exports[`defineModel() > w/ props destructure, nested var shadowing a destructured prop 1`] = `
+"import { useModel as _useModel, mergeModels as _mergeModels, defineComponent as _defineComponent } from 'vue'
+
+export default /*@__PURE__*/_defineComponent({
+  props: /*@__PURE__*/_mergeModels({
+    x: { type: Number, required: false }
+  }, {
+    "modelValue": {
+        default: () => {
+          if (true) {
+            var x = 1
+          }
+          return x
+        }
+      },
+    "modelModifiers": {},
+  }),
+  emits: ["update:modelValue"],
+  setup(__props: any, { expose: __expose }) {
+  __expose();
+
+      
+      const modelValue = _useModel(__props, "modelValue")
+      
+return { modelValue }
+}
+
+})"
+`;
+
 exports[`defineModel() > w/ template literal name 1`] = `
 "import { useModel as _useModel } from 'vue'
 
