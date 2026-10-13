@@ -91,7 +91,11 @@ import { initFeatureFlags } from './featureFlags'
 import { isAsyncWrapper } from './apiAsyncComponent'
 import { isCompatEnabled } from './compat/compatConfig'
 import { DeprecationTypes } from './compat/compatConfig'
-import { type TransitionHooks, leaveCbKey } from './components/BaseTransition'
+import {
+  type TransitionHooks,
+  getTransitionRoot,
+  leaveCbKey,
+} from './components/BaseTransition'
 import type { ComponentCustomElementInterface } from './component'
 
 export interface Renderer<HostElement = RendererElement> {
@@ -2298,24 +2302,9 @@ function baseCreateRenderer(
 
   const remove: RemoveFn = vnode => {
     const { type, el, anchor, transition } = vnode
-    if (type === Fragment) {
-      if (
-        __DEV__ &&
-        vnode.patchFlag > 0 &&
-        vnode.patchFlag & PatchFlags.DEV_ROOT_FRAGMENT &&
-        transition &&
-        !transition.persisted
-      ) {
-        ;(vnode.children as VNode[]).forEach(child => {
-          if (child.type === Comment) {
-            hostRemove(child.el!)
-          } else {
-            remove(child)
-          }
-        })
-      } else {
-        removeFragment(el!, anchor!)
-      }
+    const isFragment = type === Fragment
+    if (isFragment && !transition) {
+      removeFragment(el!, anchor!)
       return
     }
 
@@ -2329,22 +2318,32 @@ function baseCreateRenderer(
       return
     }
 
+    const leavingNode = isFragment ? getTransitionRoot(vnode) : vnode
     const performRemove = () => {
-      hostRemove(el!)
+      if (isFragment) {
+        // An ancestor may have removed the fragment during leave.
+        if (hostParentNode(el!)) {
+          removeFragment(el!, anchor!)
+        }
+      } else {
+        hostRemove(el!)
+      }
       if (transition && !transition.persisted && transition.afterLeave) {
         transition.afterLeave()
       }
     }
 
     if (
-      vnode.shapeFlag & ShapeFlags.ELEMENT &&
+      leavingNode &&
+      leavingNode.shapeFlag & ShapeFlags.ELEMENT &&
       transition &&
       !transition.persisted
     ) {
       const { leave, delayLeave } = transition
-      const performLeave = () => leave(el!, performRemove)
+      const leavingEl = leavingNode.el!
+      const performLeave = () => leave(leavingEl, performRemove)
       if (delayLeave) {
-        delayLeave(vnode.el!, performRemove, performLeave)
+        delayLeave(leavingEl, performRemove, performLeave)
       } else {
         performLeave()
       }

@@ -749,4 +749,71 @@ describe('compiler + runtime integration', () => {
     )
     app.unmount()
   })
+
+  test.each(['template', 'div'])(
+    'finishes a comment-root transition after its %s ancestor unmounts',
+    async tag => {
+      const outer = ref(true)
+      const inner = ref(true)
+      let finishLeave!: () => void
+      const onLeave = vi.fn((_el: Element, done: () => void) => {
+        finishLeave = done
+      })
+      const onAfterLeave = vi.fn()
+      const container = document.createElement('div')
+      document.body.appendChild(container)
+      const app = createApp({
+        components: {
+          One: {
+            render: compileToFunction('<!--a--><section>A</section><!--b-->', {
+              comments: true,
+            }),
+          },
+        },
+        setup: () => ({ outer, inner, onLeave, onAfterLeave }),
+        render: compileToFunction(
+          `<main>
+            <${tag} v-if="outer">
+              <Transition :css="false" @leave="onLeave" @after-leave="onAfterLeave">
+                <One v-if="inner" />
+              </Transition>
+              <i>S</i>
+            </${tag}>
+          </main>`,
+          { comments: true },
+        ),
+      })
+
+      try {
+        app.mount(container)
+        const leavingElement = container.querySelector('section')!
+        const parent = leavingElement.parentNode!
+
+        inner.value = false
+        await nextTick()
+        expect(onLeave).toHaveBeenCalledTimes(1)
+        expect(onLeave).toHaveBeenCalledWith(
+          leavingElement,
+          expect.any(Function),
+        )
+        expect(onAfterLeave).not.toHaveBeenCalled()
+        expect(leavingElement.isConnected).toBe(true)
+
+        outer.value = false
+        await nextTick()
+        expect(container.innerHTML).toBe('<main><!--v-if--></main>')
+        expect(leavingElement.isConnected).toBe(false)
+        expect(leavingElement.parentNode).toBe(tag === 'div' ? parent : null)
+
+        expect(() => finishLeave()).not.toThrow()
+        expect(onAfterLeave).toHaveBeenCalledTimes(1)
+        expect(onAfterLeave).toHaveBeenCalledWith(leavingElement)
+        expect(leavingElement.parentNode).toBeNull()
+        expect(parent.childNodes).toHaveLength(tag === 'div' ? 2 : 1)
+      } finally {
+        app.unmount()
+        container.remove()
+      }
+    },
+  )
 })
