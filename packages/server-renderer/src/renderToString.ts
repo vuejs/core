@@ -81,19 +81,53 @@ export async function renderToString(
   vnode.appContext = input._context
   // provide the ssr context to the tree
   input.provide(ssrContextKey, context)
-  const buffer = await renderComponentVNode(vnode)
+  let buffer: SSRBuffer | undefined
+  try {
+    buffer = await renderComponentVNode(vnode)
+    const result = await unrollBuffer(buffer)
+    await resolveTeleports(context)
+    return result
+  } catch (err) {
+    settlePendingRender(buffer, context)
+    throw err
+  } finally {
+    stopWatchers(context)
+  }
+}
 
-  const result = await unrollBuffer(buffer as SSRBuffer)
-
-  await resolveTeleports(context)
-
+export function stopWatchers(context: SSRContext): void {
   if (context.__watcherHandles) {
     for (const unwatch of context.__watcherHandles) {
       unwatch()
     }
   }
+}
 
-  return result
+/**
+ * A failed render leaves components after the failure point still in flight,
+ * and they can register watchers once the render has settled.
+ */
+export function settlePendingRender(
+  buffer: SSRBuffer | undefined,
+  context: SSRContext,
+): void {
+  ;(async () => {
+    if (buffer) await settleBuffer(buffer)
+    for (const key in context.__teleportBuffers) {
+      await settleBuffer(context.__teleportBuffers[key])
+    }
+    stopWatchers(context)
+  })()
+}
+
+async function settleBuffer(buffer: SSRBuffer): Promise<void> {
+  if (!buffer.hasAsync) return
+  for (let item of buffer) {
+    try {
+      if (isPromise(item)) item = await item
+      if (!isString(item)) await settleBuffer(item)
+    } catch {}
+  }
 }
 
 export async function resolveTeleports(context: SSRContext): Promise<void> {

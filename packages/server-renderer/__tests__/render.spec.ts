@@ -20,6 +20,7 @@ import {
   renderSlot,
   resolveComponent,
   resolveDynamicComponent,
+  watch,
   watchEffect,
   withCtx,
 } from 'vue'
@@ -1390,6 +1391,72 @@ function testRender(type: string, render: typeof renderToString) {
       resolveSlow()
 
       expect(await result).toBe(error)
+      expect(
+        'Unhandled error during execution of setup function',
+      ).toHaveBeenWarned()
+    })
+
+    test('should stop sync watchers when async setup errors', async () => {
+      const source = ref(0)
+      const spy = vi.fn()
+      const error = new Error('setup failed')
+      const Watcher = {
+        setup() {
+          watch(source, spy, { flush: 'sync' })
+          return () => h('div')
+        },
+      }
+      const Bad = {
+        async setup() {
+          throw error
+        },
+      }
+      const app = createApp({
+        render: () => h('div', [h(Watcher), h(Bad)]),
+      })
+
+      await expect(render(app)).rejects.toBe(error)
+      source.value++
+      expect(spy).not.toHaveBeenCalled()
+      expect(
+        'Unhandled error during execution of setup function',
+      ).toHaveBeenWarned()
+    })
+
+    test('should stop sync watchers registered after a failed render', async () => {
+      const source = ref(0)
+      const spy = vi.fn()
+      const error = new Error('setup failed')
+      let resolveSlow!: () => void
+      const slow = new Promise<void>(resolve => {
+        resolveSlow = resolve
+      })
+      const Watcher = {
+        setup() {
+          watch(source, spy, { flush: 'sync' })
+          return () => h('div')
+        },
+      }
+      const Bad = {
+        async setup() {
+          throw error
+        },
+      }
+      const Slow = {
+        async setup() {
+          await slow
+          return () => h(Watcher)
+        },
+      }
+      const app = createApp({
+        render: () => h('div', [h(Bad), h(Slow)]),
+      })
+
+      await expect(render(app)).rejects.toBe(error)
+      resolveSlow()
+      await new Promise<void>(resolve => setTimeout(resolve))
+      source.value++
+      expect(spy).not.toHaveBeenCalled()
       expect(
         'Unhandled error during execution of setup function',
       ).toHaveBeenWarned()

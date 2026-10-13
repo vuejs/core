@@ -9,7 +9,11 @@ import {
 import { isPromise, isString } from '@vue/shared'
 import { type SSRBuffer, type SSRContext, renderComponentVNode } from './render'
 import type { Readable, Writable } from 'node:stream'
-import { resolveTeleports } from './renderToString'
+import {
+  resolveTeleports,
+  settlePendingRender,
+  stopWatchers,
+} from './renderToString'
 
 const { isVNode } = ssrUtils
 
@@ -73,18 +77,17 @@ export function renderToSimpleStream<T extends SimpleReadable>(
   // provide the ssr context to the tree
   input.provide(ssrContextKey, context)
 
+  let buffer: SSRBuffer | undefined
   Promise.resolve(renderComponentVNode(vnode))
-    .then(buffer => unrollBuffer(buffer, stream))
+    .then(b => unrollBuffer((buffer = b), stream))
     .then(() => resolveTeleports(context))
     .then(() => {
-      if (context.__watcherHandles) {
-        for (const unwatch of context.__watcherHandles) {
-          unwatch()
-        }
-      }
+      stopWatchers(context)
+      stream.push(null)
     })
-    .then(() => stream.push(null))
     .catch(error => {
+      stopWatchers(context)
+      settlePendingRender(buffer, context)
       stream.destroy(error)
     })
 
