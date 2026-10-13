@@ -1396,6 +1396,43 @@ function testRender(type: string, render: typeof renderToString) {
       ).toHaveBeenWarned()
     })
 
+    test('should handle render error while awaiting an earlier sibling', async () => {
+      let resolveSlow!: () => void
+      const slow = new Promise<void>(resolve => {
+        resolveSlow = resolve
+      })
+      const error = new Error('render failed')
+      const Slow = {
+        async setup() {
+          await slow
+          return () => h('div', 'slow')
+        },
+      }
+      const Bad = {
+        setup() {
+          return {
+            fail() {
+              throw error
+            },
+          }
+        },
+        template: `<div>{{ fail() }}</div>`,
+      }
+      const app = createApp({
+        render: () => h('div', [h(Slow), h(Bad)]),
+      })
+
+      const result = render(app).catch(error => error)
+      // Allow unhandled rejections to surface before the buffer reaches Bad.
+      await new Promise<void>(resolve => setImmediate(resolve))
+      resolveSlow()
+
+      expect(await result).toBe(error)
+      expect(
+        'Unhandled error during execution of render function',
+      ).toHaveBeenWarned()
+    })
+
     test('should stop sync watchers when async setup errors', async () => {
       const source = ref(0)
       const spy = vi.fn()
