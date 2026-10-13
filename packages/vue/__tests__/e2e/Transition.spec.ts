@@ -4134,4 +4134,50 @@ describe('e2e: Transition', () => {
     },
     E2E_TIMEOUT,
   )
+
+  test(
+    'should finish enter classes when a component updates its own root',
+    async () => {
+      expect(
+        await page().evaluate(async () => {
+          const { createApp, ref, nextTick } = (window as any).Vue
+          const showA = ref(true)
+          let finishLeave!: () => void
+          createApp({
+            components: {
+              Foo: {
+                template:
+                  '<div v-if="showA" class="test">A</div><span v-else class="test">B</span>',
+                setup: () => ({ showA }),
+              },
+            },
+            template: `
+              <div id="container">
+                <Transition @leave="onLeave"><Foo /></Transition>
+              </div>
+            `,
+            setup: () => ({
+              onLeave: (_el: Element, done: () => void) => {
+                finishLeave = done
+              },
+            }),
+          }).mount('#app')
+
+          showA.value = false
+          await nextTick()
+          finishLeave()
+          return document.querySelector('#container span')!.className
+        }),
+      ).toBe('test v-enter-from v-enter-active')
+      await nextFrame()
+      expect(await classList('#container span')).toStrictEqual([
+        'test',
+        'v-enter-active',
+        'v-enter-to',
+      ])
+      await transitionFinish()
+      expect(await html('#container')).toBe('<span class="test">B</span>')
+    },
+    E2E_TIMEOUT,
+  )
 })

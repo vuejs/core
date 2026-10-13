@@ -1569,4 +1569,43 @@ describe('BaseTransition', () => {
       expect(root.children).toHaveLength(5)
     },
   )
+
+  test.each([true, false])(
+    'should enter when a component updates its own root (__DEV__: %s)',
+    async dev => {
+      __DEV__ = dev
+      try {
+        const showA = ref(true)
+        const { code } = compile(
+          '<div v-if="showA">A</div><span v-else>B</span>',
+          { prefixIdentifiers: true },
+        )
+        const Comp = {
+          setup: () => ({ showA }),
+          render: new Function('Vue', code)(runtime),
+        }
+        const { props, cbs } = mockProps()
+        const { root } = mount(props, () => h(Comp))
+
+        showA.value = false
+        await nextTick()
+
+        expect(props.onLeave).toHaveBeenCalledTimes(1)
+        expect(props.onBeforeEnter).toHaveBeenCalledTimes(1)
+        expect(props.onEnter).toHaveBeenCalledTimes(1)
+        assertCalledWithEl(props.onEnter, '<span>B</span>')
+        expect(props.onAfterLeave).toHaveBeenCalledTimes(1)
+        assertCalledWithEl(props.onAfterLeave, '<div>A</div>')
+        expect(serializeInner(root)).toBe('<span>B</span>')
+
+        cbs.doneLeave['<div>A</div>']()
+        expect(props.onAfterLeave).toHaveBeenCalledTimes(1)
+        expect(props.onLeaveCancelled).not.toHaveBeenCalled()
+        cbs.doneEnter['<span>B</span>']()
+        expect(props.onAfterEnter).toHaveBeenCalledTimes(1)
+      } finally {
+        __DEV__ = true
+      }
+    },
+  )
 })

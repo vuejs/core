@@ -394,10 +394,16 @@ export function resolveTransitionHooks(
       // for toggled element with same key (v-if)
       const leavingVNode = leavingVNodesCache[key]
       if (leavingVNode && isSameVNodeType(vnode, leavingVNode)) {
-        const leavingRoot = getTransitionRoot(leavingVNode)
-        if (leavingRoot && (leavingRoot.el as TransitionElement)[leaveCbKey]) {
+        // A component's el still points to its leaving root during patch.
+        let leavingCb = (leavingVNode.el as TransitionElement)[leaveCbKey]
+        if (!leavingCb) {
+          const leavingRoot = getTransitionRoot(leavingVNode)
+          leavingCb =
+            leavingRoot && (leavingRoot.el as TransitionElement)[leaveCbKey]
+        }
+        if (leavingCb) {
           // force early removal (not cancelled)
-          ;(leavingRoot.el as TransitionElement)[leaveCbKey]!()
+          leavingCb()
         }
       }
       callHook(hook, [el])
