@@ -459,6 +459,6 @@ describe('component: slots', () => {
 
     const root = nodeOps.createElement('div')
     createApp(App).mount(root)
-    expect(serializeInner(root)).toBe('foo')
+    expect(serializeInner(root)).toBe('<!---->foo<!---->')
   })
 })

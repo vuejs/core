@@ -424,10 +424,10 @@ describe('compiler + runtime integration', () => {
     const container = document.createElement('div')
     createApp(App).mount(container)
 
-    expect(container.innerHTML).toBe(`<div>1<div>1</div></div>`)
+    expect(container.innerHTML).toBe(`<div>1<!----><div>1</div><!----></div>`)
     list.push(2)
     await nextTick()
-    expect(container.innerHTML).toBe(`<div>2<div>1</div></div>`)
+    expect(container.innerHTML).toBe(`<div>2<!----><div>1</div><!----></div>`)
   })
 
   // #15551
@@ -503,7 +503,9 @@ describe('compiler + runtime integration', () => {
       components: { Child },
       template: `<Child :error="null" :value="null"/>`,
     }).mount(fallbackContainer)
-    expect(fallbackContainer.innerHTML).toBe(`<div>fallback</div>`)
+    expect(fallbackContainer.innerHTML).toBe(
+      `<div><!---->fallback<!----></div>`,
+    )
 
     const value = ref<{ label: string } | null>(null)
     const container = document.createElement('div')
@@ -517,11 +519,11 @@ describe('compiler + runtime integration', () => {
         `<template #scoped="{ label }">{{ label || 'none' }}</template>` +
         `</Child>`,
     }).mount(container)
-    expect(container.innerHTML).toBe(`<div>none</div>`)
+    expect(container.innerHTML).toBe(`<div><!---->none<!----></div>`)
 
     value.value = { label: 'foo' }
     await nextTick()
-    expect(container.innerHTML).toBe(`<div>foo</div>`)
+    expect(container.innerHTML).toBe(`<div><!---->foo<!----></div>`)
   })
 
   // #2413
