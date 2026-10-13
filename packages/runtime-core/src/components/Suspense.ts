@@ -752,8 +752,6 @@ function createSuspenseBoundary(
       if (isInPendingSuspense) {
         suspense.deps++
       }
-      const hydratedEl = instance.vnode && instance.vnode.el
-
       instance
         .asyncDep!.catch(err => {
           handleError(err, instance, ErrorCodes.SETUP_FUNCTION)
@@ -773,9 +771,9 @@ function createSuspenseBoundary(
           // Clear it first.
           setCurrentInstance(null, undefined)
           // The scope is stopped synchronously on unmount, while `isUnmounted`
-          // is deferred until the boundary resolves. Bail but still release the
-          // dep even if the claimed DOM remains attached to a removed ancestor.
-          if (hydratedEl && !instance.scope.active) {
+          // is deferred until the boundary resolves. Skip rendering but still
+          // release the dep so the boundary can resolve.
+          if (!instance.scope.active) {
             if (isInPendingSuspense && --suspense.deps === 0) {
               suspense.resolve()
             }

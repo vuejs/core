@@ -439,7 +439,11 @@ export abstract class VueElementBase<
       }
 
       // initial mount
-      this._mountComponent(def)
+      // skip if removed while the async definition was loading; it mounts
+      // when connected again (see connectedCallback)
+      if (this._connected) {
+        this._mountComponent(def)
+      }
     }
 
     const asyncDef = (this._def as ComponentOptions).__asyncLoader

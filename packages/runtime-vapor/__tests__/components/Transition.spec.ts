@@ -1690,46 +1690,56 @@ describe('Transition', () => {
     expect(onEnter).toHaveBeenCalledOnce()
   })
 
-  test('does not treat inherited VDOM transition hooks as Vapor state', async () => {
-    const show = ref(true)
-    const onEnter = vi.fn()
-    const onLeave = vi.fn()
-    const Child = compile(`<template><slot /></template>`, show)
-    const App = defineComponent({
-      setup() {
-        return () => {
-          // Force BaseTransition to propagate refreshed VDOM hooks through the
-          // slot root.
-          const visible = show.value
-          return h(
-            Transition,
-            { mode: 'out-in', css: false, onEnter, onLeave },
-            {
-              default: () =>
-                h(
-                  Child,
-                  { visible },
-                  {
-                    default: () =>
-                      visible ? h('div', { id: 'content' }, 'content') : [],
-                  },
-                ),
-            },
-          )
-        }
-      },
-    })
-    const { host } = defineInterop(App).render()
+  test.each([false, true])(
+    'inherits VDOM transition hooks for a slot root (vapor: %s)',
+    async vapor => {
+      const show = ref(true)
+      const onEnter = vi.fn()
+      const onLeave = vi.fn()
+      const Child = compile(
+        `<template><slot /></template>`,
+        show,
+        {},
+        { vapor },
+      )
+      const App = defineComponent({
+        setup() {
+          return () => {
+            // Force BaseTransition to propagate refreshed VDOM hooks through the
+            // slot root.
+            const visible = show.value
+            return h(
+              Transition,
+              { mode: 'out-in', css: false, onEnter, onLeave },
+              {
+                default: () =>
+                  h(
+                    Child,
+                    { visible },
+                    {
+                      default: () =>
+                        visible ? h('div', { id: 'content' }, 'content') : [],
+                    },
+                  ),
+              },
+            )
+          }
+        },
+      })
+      const { host } = defineInterop(App).render()
+      const content = host.querySelector('#content')
 
-    show.value = false
-    await nextTick()
+      show.value = false
+      await nextTick()
 
-    expect(host.querySelector('#content')).toBeNull()
-    expect(onEnter).not.toHaveBeenCalled()
-    expect(onLeave).not.toHaveBeenCalled()
-    // `visible` is an attr on a slot outlet root: vdom warns too
-    expect('Extraneous non-props attributes (visible)').toHaveBeenWarned()
-  })
+      expect(host.querySelector('#content')).toBeNull()
+      expect(onEnter).not.toHaveBeenCalled()
+      expect(onLeave).toHaveBeenCalledOnce()
+      expect(onLeave.mock.calls[0][0]).toBe(content)
+      // `visible` is an attr on a slot outlet root: vdom warns too
+      expect('Extraneous non-props attributes (visible)').toHaveBeenWarned()
+    },
+  )
 
   test('preserves multi-element vdom slot content nested under transition root', () => {
     const data = ref({})

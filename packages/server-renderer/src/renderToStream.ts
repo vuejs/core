@@ -14,7 +14,7 @@ import {
   renderComponentVNode,
 } from './render'
 import type { Readable, Writable } from 'node:stream'
-import { resolveTeleports } from './renderToString'
+import { cleanupFailedRender, resolveTeleports } from './renderToString'
 
 const { isVNode } = ssrUtils
 
@@ -78,27 +78,17 @@ export function renderToSimpleStream<T extends SimpleReadable>(
   // provide the ssr context to the tree
   input.provide(ssrContextKey, context)
 
-  let cleaned = false
-  const finalize = () => {
-    if (cleaned) return
-    cleaned = true
-    cleanupContext(context)
-  }
-
+  let buffer: SSRBuffer | undefined
   Promise.resolve()
     .then(() => renderComponentVNode(vnode))
-    .then(buffer => unrollBuffer(buffer, stream))
+    .then(b => unrollBuffer((buffer = b), stream))
     .then(() => resolveTeleports(context))
     .then(() => {
-      finalize()
+      cleanupContext(context)
       return stream.push(null)
     })
     .catch(error => {
-      try {
-        finalize()
-      } catch {
-        // preserve original render error as the stream failure reason
-      }
+      cleanupFailedRender(buffer, context)
       stream.destroy(error)
     })
 

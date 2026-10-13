@@ -4,6 +4,7 @@ import {
   WatchErrorCodes,
   type WatchOptions,
   computed,
+  effect,
   onEffectCleanup,
   onWatcherCleanup,
   ref,
@@ -363,5 +364,68 @@ describe('watch', () => {
     stop()
     expect(cleaned).toEqual([0, 2, 1])
     expect(active.size).toBe(0)
+  })
+
+  test('once watcher should stop when its callback throws', () => {
+    const source = ref(0)
+    const callback = vi.fn(() => {
+      throw new Error('oops')
+    })
+    watch(source, callback, { once: true })
+
+    expect(() => (source.value = 1)).toThrow('oops')
+    expect(() => (source.value = 2)).not.toThrow()
+    expect(callback).toHaveBeenCalledTimes(1)
+  })
+
+  // #5009
+  test('should not track deps of cleanup and callback run inside another effect', () => {
+    const source = ref(0)
+    const dep = ref(0)
+    const cb = vi.fn(() => {
+      dep.value
+      onWatcherCleanup(() => dep.value)
+    })
+    watch(source, cb)
+    source.value++
+    expect(cb).toHaveBeenCalledTimes(1)
+
+    const fn = vi.fn(() => {
+      source.value = 10
+    })
+    effect(fn)
+    expect(cb).toHaveBeenCalledTimes(2)
+    expect(fn).toHaveBeenCalledTimes(1)
+
+    dep.value++
+    expect(fn).toHaveBeenCalledTimes(1)
+  })
+
+  test('should restore tracking when cleanup throws inside another effect', () => {
+    const source = ref(0)
+    const dep = ref(0)
+    const err = new Error('cleanup error')
+    watch(source, () => {
+      onWatcherCleanup(() => {
+        throw err
+      })
+    })
+    source.value++
+
+    let dummy
+    let caught
+    effect(() => {
+      try {
+        source.value = 10
+      } catch (e) {
+        caught = e
+      }
+      dummy = dep.value
+    })
+    expect(caught).toBe(err)
+    expect(dummy).toBe(0)
+
+    dep.value++
+    expect(dummy).toBe(1)
   })
 })

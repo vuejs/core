@@ -592,7 +592,7 @@ describe('scheduler', () => {
     queuePostFlushCb(job1)
 
     try {
-      flushOnAppMount()
+      flushOnAppMount(() => {})
     } catch (e: any) {
       expect(e).toBe(err)
     }
@@ -601,7 +601,7 @@ describe('scheduler', () => {
 
     queuePostFlushCb(job1)
 
-    flushOnAppMount()
+    flushOnAppMount(() => {})
 
     expect(job1).toHaveBeenCalledTimes(2)
   })
@@ -930,6 +930,26 @@ describe('scheduler', () => {
 
     // should not be called
     expect(spy).toHaveBeenCalledTimes(0)
+  })
+
+  test('flushOnAppMount recovers from a throwing pre job', async () => {
+    const err = new Error('test')
+    let shouldThrow = true
+    const job: SchedulerJob = vi.fn(() => {
+      if (shouldThrow) {
+        shouldThrow = false
+        throw err
+      }
+    })
+    job.flags = SchedulerJobFlags.ALLOW_RECURSE
+
+    expect(() => flushOnAppMount(() => queueJob(job, 0, true), 0)).toThrow(err)
+    expect(job).toHaveBeenCalledTimes(1)
+
+    // the next root render must still flush synchronously
+    flushOnAppMount(() => queueJob(job, 0, true), 0)
+    expect(job).toHaveBeenCalledTimes(2)
+    await nextTick()
   })
 
   it('flushPreFlushCbs inside a pre job', async () => {

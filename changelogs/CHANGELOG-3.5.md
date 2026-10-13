@@ -1,3 +1,33 @@
+## [3.5.44](https://github.com/vuejs/core/compare/v3.5.43...v3.5.44) (2026-10-13)
+
+### Bug Fixes
+
+* **compat:** expose _setupProxy for Vue 2.7 compiled script setup (fix [#11164](https://github.com/vuejs/core/issues/11164)) ([#15618](https://github.com/vuejs/core/issues/15618)) ([f08059d](https://github.com/vuejs/core/commit/f08059d0ca8cf28b8258a6095f8760fa1804d333))
+* **compiler-core:** parenthesise v-for key in v-memo cache guard ([#15724](https://github.com/vuejs/core/issues/15724)) ([d084b90](https://github.com/vuejs/core/commit/d084b904903a7710ea19b7256b7c681e838eb63e)), closes [#15723](https://github.com/vuejs/core/issues/15723)
+* **compiler-dom:** correctly stringify `0` and `false` in `v-html` ([#15571](https://github.com/vuejs/core/issues/15571)) ([9f3b437](https://github.com/vuejs/core/commit/9f3b4377c4bb5ff32b35ff08ce7670f6be6f5dbb))
+* **compiler-dom:** inject transition persisted for v-show in production ([#15783](https://github.com/vuejs/core/issues/15783)) ([89cb272](https://github.com/vuejs/core/commit/89cb2724bf3423fc38dca68af3139d736e6b4833))
+* **compiler-sfc:** error when defineModel prop options reference a destructured prop ([#15604](https://github.com/vuejs/core/issues/15604)) ([38012a5](https://github.com/vuejs/core/commit/38012a5ad90a41c228e153774d089cba9515cf2d)), closes [#15602](https://github.com/vuejs/core/issues/15602)
+* **custom-element:** skip mounting an async custom element removed while its component loads ([#15777](https://github.com/vuejs/core/issues/15777)) ([0f8e7b4](https://github.com/vuejs/core/commit/0f8e7b40175059e262e0db232ae0c08b427486b5)), closes [#15775](https://github.com/vuejs/core/issues/15775)
+* **hydration:** observe children of a display: contents root in hydrateOnVisible ([#15773](https://github.com/vuejs/core/issues/15773)) ([7f688e8](https://github.com/vuejs/core/commit/7f688e84745558d95b836c0aac25c3ca3257e943))
+* **KeepAlive:** unmount pruned current component when its vnode was cloned on mount ([#15711](https://github.com/vuejs/core/issues/15711)) ([92798ac](https://github.com/vuejs/core/commit/92798ac0a8810283055478dab1e54569f3e94c23)), closes [#15710](https://github.com/vuejs/core/issues/15710)
+* **reactivity:** avoid mutating native array iterators ([#15703](https://github.com/vuejs/core/issues/15703)) ([7f9d45d](https://github.com/vuejs/core/commit/7f9d45d15bd10b6b9b136eb2b3a8879b449fec0d)), closes [#15643](https://github.com/vuejs/core/issues/15643)
+* **reactivity:** do not track deps in watcher callbacks run inside another effect ([#15782](https://github.com/vuejs/core/issues/15782)) ([db00fe9](https://github.com/vuejs/core/commit/db00fe9819eb17f0a5bde7e1fcfafe5984e267a3)), closes [#5009](https://github.com/vuejs/core/issues/5009)
+* **reactivity:** once watcher should stop when its callback throws ([#15755](https://github.com/vuejs/core/issues/15755)) ([ae4bd94](https://github.com/vuejs/core/commit/ae4bd94b6e5675f991696236dcc76a11d0597535))
+* **reactivity:** preserve shallow collection semantics ([#15793](https://github.com/vuejs/core/issues/15793)) ([b600466](https://github.com/vuejs/core/commit/b600466135e0910d142d14f56ffec933c1c420a2)), closes [#15792](https://github.com/vuejs/core/issues/15792)
+* **runtime-core:** detect new prop keys when comparing full props ([#15634](https://github.com/vuejs/core/issues/15634)) ([702fa61](https://github.com/vuejs/core/commit/702fa61be9344852989bcd178681adec13264469)), closes [#15632](https://github.com/vuejs/core/issues/15632)
+* **runtime-core:** keep async placeholder for block patching and pending component updates ([#15554](https://github.com/vuejs/core/issues/15554)) ([05ec25f](https://github.com/vuejs/core/commit/05ec25f835cc65058bac7a85e4a5eb8075ed3151)), closes [#15551](https://github.com/vuejs/core/issues/15551)
+* **runtime-core:** only flush jobs queued by the root render itself ([#15757](https://github.com/vuejs/core/issues/15757)) ([0bea14b](https://github.com/vuejs/core/commit/0bea14b962f1f6e27d2d994132efc2269945ab0f)), closes [#6728](https://github.com/vuejs/core/issues/6728)
+* **runtime-core:** render nothing for an invalid v-for range in production ([#15742](https://github.com/vuejs/core/issues/15742)) ([ad19e7d](https://github.com/vuejs/core/commit/ad19e7da3d58b772513ba3c2ded731eedb7d227d))
+* **runtime-dom:** preserve v-show display for unchanged style strings ([#15794](https://github.com/vuejs/core/issues/15794)) ([c0a6d3f](https://github.com/vuejs/core/commit/c0a6d3f2bbf80cf930f4c837409dbee95a149271))
+* **runtime-dom:** treat playsinline as a boolean attribute ([#15627](https://github.com/vuejs/core/issues/15627)) ([a084e44](https://github.com/vuejs/core/commit/a084e4486f1c4dc118518d43a1c7547031c53a5c))
+* **server-renderer:** propagate async setup errors ([#15857](https://github.com/vuejs/core/issues/15857)) ([6930374](https://github.com/vuejs/core/commit/693037486f38b3d3acf4cdf7b9850917c44cf9cb)), closes [#15716](https://github.com/vuejs/core/issues/15716)
+* **ssr:** honor falsy vnode content overrides ([#15769](https://github.com/vuejs/core/issues/15769)) ([c11c5c8](https://github.com/vuejs/core/commit/c11c5c8f07c8527b537b9ce6d801f80bbdd12129))
+* **suspense:** mount resolved async component with its own namespace ([#15640](https://github.com/vuejs/core/issues/15640)) ([2a086a2](https://github.com/vuejs/core/commit/2a086a2bee33abc30e20f8a3b0a2be418ae48967)), closes [#15639](https://github.com/vuejs/core/issues/15639)
+* **suspense:** skip rendering async components unmounted while pending ([4ab865a](https://github.com/vuejs/core/commit/4ab865a848a1da3d10fb674f857e5fff13094644))
+* **teleport:** move targetStart and keep children before targetAnchor ([#15818](https://github.com/vuejs/core/issues/15818)) ([d3c6e02](https://github.com/vuejs/core/commit/d3c6e02e7405b9dafa75b1007ca45fb376d45729)), closes [#15817](https://github.com/vuejs/core/issues/15817)
+* **transition-group:** measure nested groups against their moving outer item ([#15848](https://github.com/vuejs/core/issues/15848)) ([1936c87](https://github.com/vuejs/core/commit/1936c8791b61374fd21a99c99f450ee2b057b33e)), closes [#5385](https://github.com/vuejs/core/issues/5385) [#1531](https://github.com/vuejs/core/issues/1531)
+* **transition:** handle comment-wrapped component roots ([#15853](https://github.com/vuejs/core/issues/15853)) ([ff35014](https://github.com/vuejs/core/commit/ff3501429d4970c37194708b055492a56d9e5be5)), closes [#6080](https://github.com/vuejs/core/issues/6080) [#5500](https://github.com/vuejs/core/issues/5500)
+
 ## [3.5.43](https://github.com/vuejs/core/compare/v3.5.42...v3.5.43) (2026-09-17)
 
 ### Bug Fixes

@@ -2283,6 +2283,99 @@ describe('defineCustomElement', () => {
     expect(inner.shadowRoot!.innerHTML).toBe('<div>foo/bar</div>')
   })
 
+  test('should not mount async custom element removed before its definition resolves', async () => {
+    const ParentComp = defineComponent({
+      setup() {
+        provide('foo', 'foo')
+      },
+      render() {
+        return h('slot')
+      },
+    })
+    const mounted = vi.fn()
+    const ChildComp = defineComponent({
+      setup() {
+        const foo = inject('foo')
+        return () => [h('div', `child ${foo}`), h('slot')]
+      },
+      mounted,
+    })
+    let resolveChild!: (comp: typeof ChildComp) => void
+    const childReady = new Promise<typeof ChildComp>(resolve => {
+      resolveChild = resolve
+    })
+    customElements.define(
+      'async-removed-parent',
+      defineCustomElement(ParentComp),
+    )
+    customElements.define(
+      'async-removed-child',
+      defineCustomElement(defineAsyncComponent(() => childReady)),
+    )
+    customElements.define(
+      'async-removed-grandchild',
+      defineCustomElement({ render: () => h('div', 'grandchild') }),
+    )
+    container.innerHTML =
+      `<div><async-removed-parent>` +
+      `<async-removed-child>` +
+      `<async-removed-grandchild></async-removed-grandchild>` +
+      `</async-removed-child>` +
+      `</async-removed-parent></div>`
+
+    const block = container.firstChild as HTMLElement
+    const child = block.querySelector('async-removed-child') as VueElement
+    const grandchild = block.querySelector(
+      'async-removed-grandchild',
+    ) as VueElement
+    // the parent and the child are removed while the child is loading
+    block.remove()
+    await nextTick()
+    resolveChild(ChildComp)
+    await new Promise(resolve => setTimeout(resolve))
+
+    expect(mounted).not.toHaveBeenCalled()
+    expect(child.shadowRoot!.innerHTML).toBe('')
+
+    container.appendChild(block)
+    await new Promise(resolve => setTimeout(resolve))
+    expect(mounted).toHaveBeenCalledOnce()
+    expect(child.shadowRoot!.innerHTML).toBe(
+      '<div>child foo</div><slot></slot>',
+    )
+    expect(grandchild.shadowRoot!.innerHTML).toBe('<div>grandchild</div>')
+  })
+
+  test('should defer async custom element mounting until reconnect', async () => {
+    const mounted = vi.fn()
+    const Comp = defineComponent({
+      mounted,
+      render: () => h('div', 'child'),
+    })
+    let resolveComp!: (comp: typeof Comp) => void
+    const ready = new Promise<typeof Comp>(resolve => {
+      resolveComp = resolve
+    })
+    customElements.define(
+      'async-detached-no-parent',
+      defineCustomElement(defineAsyncComponent(() => ready)),
+    )
+    container.innerHTML =
+      '<async-detached-no-parent></async-detached-no-parent>'
+    const el = container.firstChild as VueElement
+    el.remove()
+    await nextTick()
+    resolveComp(Comp)
+    await new Promise(resolve => setTimeout(resolve))
+
+    expect(mounted).not.toHaveBeenCalled()
+    expect(el.shadowRoot!.innerHTML).toBe('')
+
+    container.appendChild(el)
+    expect(mounted).toHaveBeenCalledOnce()
+    expect(el.shadowRoot!.innerHTML).toBe('<div>child</div>')
+  })
+
   test('should not resolve nested custom element after disconnect', async () => {
     const mounted = vi.fn()
     const ParentComp = defineComponent({

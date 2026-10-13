@@ -15,11 +15,15 @@ import {
   createApp,
   currentInstance,
   inject,
+  nextTick,
+  onMounted,
+  onUnmounted,
   provide,
   ref,
   resolveComponent,
   resolveDirective,
   warn,
+  watch,
 } from '@vue/runtime-dom'
 import { compile, compileToVaporRender, makeRender } from './_utils'
 import type { VaporComponent } from '../src/component'
@@ -121,6 +125,56 @@ describe('api: createVaporApp', () => {
     app.unmount()
     expect(root.innerHTML).toBe(``)
   })
+
+  test.each([false, true])(
+    'mount and unmount leave other apps watchers queued (hydrate: %s)',
+    async hydrate => {
+      const source = ref(0)
+      const order: string[] = []
+      const existing = createApp({
+        setup() {
+          watch(source, () => order.push('existing pre'))
+          watch(source, () => order.push('existing post'), { flush: 'post' })
+          return () => null
+        },
+      })
+      existing.mount(document.createElement('div'))
+
+      const Comp = defineVaporComponent({
+        setup() {
+          const count = ref(0)
+          watch(count, () => order.push('own pre'))
+          onMounted(() => order.push('mounted'))
+          onUnmounted(() => order.push('unmounted'))
+          count.value++
+          source.value++
+          return template('<div>nested</div>')()
+        },
+      })
+      const root = document.createElement('div')
+      if (hydrate) root.innerHTML = '<div>nested</div>'
+      const app = (hydrate ? createVaporSSRApp : createVaporApp)(Comp)
+      try {
+        source.value++
+        app.mount(root)
+        expect(root.innerHTML).toBe('<div>nested</div>')
+        expect(order).toEqual(['own pre', 'mounted'])
+        app.unmount()
+        expect(order).toEqual(['own pre', 'mounted', 'unmounted'])
+        await nextTick()
+        expect(order).toEqual([
+          'own pre',
+          'mounted',
+          'unmounted',
+          'existing pre',
+          'existing post',
+        ])
+      } finally {
+        if (app._container?.hasChildNodes()) app.unmount()
+        existing.unmount()
+      }
+    },
+  )
 
   test('unmount in non-dev mode', () => {
     __DEV__ = false

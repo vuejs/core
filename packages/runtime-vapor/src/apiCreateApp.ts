@@ -13,6 +13,7 @@ import {
   type CreateAppFunction,
   createAppAPI,
   flushOnAppMount,
+  getNextUid,
   initFeatureFlags,
   normalizeContainer,
   setDevtoolsHook,
@@ -37,20 +38,23 @@ const mountApp: AppMountFn<ParentNode> = (app, container) => {
     container.textContent = ''
   }
 
-  const instance =
-    (app._ceComponent as VaporComponentInstance) ||
-    createComponent(
-      app._component,
-      app._props as RawProps,
-      null,
-      false,
-      false,
-      app._context,
-      true,
-    )
-  mountComponent(instance, container)
-  flushOnAppMount()
-  rootInstances.set(app, instance)
+  const minUid = app._ceComponent ? app._ceComponent.uid : getNextUid()
+  let instance: VaporComponentInstance
+  flushOnAppMount(() => {
+    instance =
+      (app._ceComponent as VaporComponentInstance) ||
+      createComponent(
+        app._component,
+        app._props as RawProps,
+        null,
+        false,
+        false,
+        app._context,
+        true,
+      )
+    mountComponent(instance, container)
+  }, minUid)
+  rootInstances.set(app, instance!)
 
   return instance!
 }
@@ -68,22 +72,24 @@ const hydrateApp: AppMountFn<ParentNode> = (app, container) => {
   }
 
   optimizePropertyLookup()
+  const minUid = app._ceComponent ? app._ceComponent.uid : getNextUid()
   let instance: VaporComponentInstance
-  withHydration(container, () => {
-    instance =
-      (app._ceComponent as VaporComponentInstance) ||
-      createComponent(
-        app._component,
-        app._props as RawProps,
-        null,
-        false,
-        false,
-        app._context,
-        true,
-      )
-    mountComponent(instance, container)
-  })
-  flushOnAppMount()
+  flushOnAppMount(() => {
+    withHydration(container, () => {
+      instance =
+        (app._ceComponent as VaporComponentInstance) ||
+        createComponent(
+          app._component,
+          app._props as RawProps,
+          null,
+          false,
+          false,
+          app._context,
+          true,
+        )
+      mountComponent(instance, container)
+    })
+  }, minUid)
   rootInstances.set(app, instance!)
 
   return instance!
@@ -92,8 +98,9 @@ const hydrateApp: AppMountFn<ParentNode> = (app, container) => {
 const unmountApp: AppUnmountFn = app => {
   const instance = ((__DEV__ && app._instance) ||
     rootInstances.get(app)!) as VaporComponentInstance
-  unmountComponent(instance, app._container)
-  flushOnAppMount(instance)
+  flushOnAppMount(() => {
+    unmountComponent(instance, app._container)
+  }, getNextUid())
   rootInstances.delete(app)
 }
 

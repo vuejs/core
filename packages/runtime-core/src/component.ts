@@ -738,6 +738,10 @@ const emptyAppContext = /*@__PURE__*/ createAppContext()
 
 let uid = 0
 
+export function getNextUid(): number {
+  return uid
+}
+
 /**
  * @internal for vapor
  */

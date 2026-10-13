@@ -6,7 +6,7 @@ import {
   ssrContextKey,
   ssrUtils,
 } from '@vue/runtime-dom'
-import { isPromise, isString } from '@vue/shared'
+import { NOOP, isPromise, isString } from '@vue/shared'
 import {
   type SSRBuffer,
   type SSRContext,
@@ -86,16 +86,49 @@ export async function renderToString(
   vnode.appContext = input._context
   // provide the ssr context to the tree
   input.provide(ssrContextKey, context)
+  let buffer: SSRBuffer | undefined
+  let result: string
   try {
-    const buffer = await renderComponentVNode(vnode)
-
-    const result = await unrollBuffer(buffer as SSRBuffer)
-
+    buffer = await renderComponentVNode(vnode)
+    result = await unrollBuffer(buffer)
     await resolveTeleports(context)
+  } catch (err) {
+    cleanupFailedRender(buffer, context)
+    throw err
+  }
+  cleanupContext(context)
+  return result
+}
 
-    return result
-  } finally {
+/**
+ * Stops watchers without masking the render error. Components after the
+ * failure point are still in flight and can register watchers once the render
+ * has settled, so those are stopped when they finish.
+ * Cleanup errors here have already been reported by the watcher.
+ */
+export function cleanupFailedRender(
+  buffer: SSRBuffer | undefined,
+  context: SSRContext,
+): void {
+  try {
     cleanupContext(context)
+  } catch {}
+  ;(async () => {
+    if (buffer) await settleBuffer(buffer)
+    for (const key in context.__teleportBuffers) {
+      await settleBuffer(context.__teleportBuffers[key])
+    }
+    cleanupContext(context)
+  })().catch(NOOP)
+}
+
+async function settleBuffer(buffer: SSRBuffer): Promise<void> {
+  if (!buffer.hasAsync) return
+  for (let item of buffer) {
+    try {
+      if (isPromise(item)) item = await item
+      if (!isString(item)) await settleBuffer(item)
+    } catch {}
   }
 }
 

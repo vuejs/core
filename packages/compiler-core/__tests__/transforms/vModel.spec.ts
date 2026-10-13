@@ -597,6 +597,7 @@ describe('compiler: transform v-model', () => {
       expect(onError).toHaveBeenCalledWith(
         expect.objectContaining({
           code: ErrorCodes.X_V_MODEL_ON_PROPS,
+          message: expect.stringContaining('defineModel()'),
         }),
       )
     })

@@ -35,7 +35,8 @@ export function postTransformTransition(
       return
     }
 
-    if (hasMultipleChildren(node)) {
+    const multipleChildren = hasMultipleChildren(node)
+    if (__DEV__ && multipleChildren) {
       onError(
         createDOMCompilerError(DOMErrorCodes.X_TRANSITION_INVALID_CHILDREN, {
           start: node.children[0].loc.start,

@@ -237,29 +237,36 @@ export function renderComponentVNode(
   if (__DEV__) popWarningContext()
   const hasAsyncSetup = isPromise(res)
   let prefetches = instance.sp /* LifecycleHooks.SERVER_PREFETCH */
+  let p: Promise<SSRBuffer>
   if (hasAsyncSetup || prefetches) {
-    const p: Promise<unknown> = Promise.resolve(res as Promise<void>)
+    p = Promise.resolve(res as Promise<void>)
       .then(() => {
         // instance.sp may be null until an async setup resolves, so evaluate it here
         if (hasAsyncSetup) prefetches = instance.sp
         if (prefetches) {
-          return Promise.all(
-            prefetches.map(prefetch => prefetch.call(instance.proxy)),
-          )
+          try {
+            return Promise.all(
+              prefetches.map(prefetch => prefetch.call(instance.proxy)),
+            ).catch(NOOP)
+          } catch {
+            // The wrapped lifecycle hook has already reported the error.
+          }
         }
       })
-      // Note: error display is already done by the wrapped lifecycle hook function.
-      .catch(NOOP)
-    return p.then(() => renderComponentSubTree(instance, slotScopeId))
+      .then(() => renderComponentSubTree(instance, slotScopeId))
   } else {
     try {
       return renderComponentSubTree(instance, slotScopeId)
     } catch (err) {
       // let the SSR buffer propagate the error so parent render functions
       // don't handle the same error again
-      return Promise.reject(err)
+      p = Promise.reject(err)
     }
   }
+  // Observe rejections before the buffer reaches this component, but let the
+  // caller receive them by returning the original promise.
+  p.catch(NOOP)
+  return p
 }
 
 function renderComponentSubTree(
@@ -586,13 +593,13 @@ function renderElementVNode(
   if (!isVoidTag(tag)) {
     let hasChildrenOverride = false
     if (props) {
-      if (props.innerHTML) {
+      if (props.innerHTML != null) {
         hasChildrenOverride = true
-        push(props.innerHTML)
-      } else if (props.textContent) {
+        push(String(props.innerHTML))
+      } else if (props.textContent != null) {
         hasChildrenOverride = true
         push(escapeHtml(props.textContent))
-      } else if (tag === 'textarea' && props.value) {
+      } else if (tag === 'textarea' && props.value != null) {
         hasChildrenOverride = true
         push(escapeHtml(props.value))
       }

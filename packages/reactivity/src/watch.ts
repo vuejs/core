@@ -195,9 +195,11 @@ export class WatcherEffect extends ReactiveEffect {
     if (once && cb) {
       const _cb = cb
       cb = (...args) => {
-        const res = _cb(...args)
-        this.stop()
-        return res
+        try {
+          return _cb(...args)
+        } finally {
+          this.stop()
+        }
       }
     }
 
@@ -249,11 +251,12 @@ export class WatcherEffect extends ReactiveEffect {
         ? (newValue as any[]).some((v, i) => hasChanged(v, oldValue[i]))
         : hasChanged(newValue, oldValue))
     ) {
-      // cleanup before running cb again
-      this.cleanupCallback()
       const currentWatcher = activeWatcher
-      activeWatcher = this
+      const prevSub = setActiveSub()
       try {
+        // cleanup before running cb again
+        this.cleanupCallback()
+        activeWatcher = this
         const args = [
           newValue,
           // pass undefined as the old value when it's changed for the first time
@@ -270,6 +273,7 @@ export class WatcherEffect extends ReactiveEffect {
             this.cb(...args)
       } finally {
         activeWatcher = currentWatcher
+        setActiveSub(prevSub)
       }
     }
   }

@@ -38,8 +38,9 @@ export interface SchedulerJob extends Function {
   /**
    * Attached by renderer.ts when setting up a component's render effect
    * Used to obtain component information when reporting max recursive updates.
+   * Also set on watcher jobs: null marks a watcher without an owner component.
    */
-  i?: GenericComponentInstance
+  i?: GenericComponentInstance | null
 }
 
 export type SchedulerJobs = SchedulerJob | SchedulerJob[]
@@ -201,6 +202,8 @@ export function queuePostFlushCb(
 
 export function flushPreFlushCbs(
   instance?: GenericComponentInstance,
+  // root mount: only flush the jobs of the components it created
+  minUid?: number,
   seen?: CountMap,
 ): void {
   if (__DEV__) {
@@ -211,14 +214,18 @@ export function flushPreFlushCbs(
     if (cb.order! & 1 || cb.order === Infinity) {
       continue
     }
-    if (instance && cb.order !== instance.uid * 2) {
+    if (
+      (instance && cb.order !== instance.uid * 2) ||
+      (minUid !== undefined && !(cb.order! >= minUid * 2))
+    ) {
       continue
     }
     if (__DEV__ && checkRecursiveUpdates(seen!, cb)) {
       continue
     }
     jobs.splice(i, 1)
-    i--
+    // A job may queue a job with a smaller order ahead of this index.
+    i = instance ? i - 1 : flushIndex - 1
     jobsLength--
     if (cb.flags! & SchedulerJobFlags.ALLOW_RECURSE) {
       cb.flags! &= ~SchedulerJobFlags.QUEUED
@@ -233,19 +240,40 @@ export function flushPreFlushCbs(
   }
 }
 
-export function flushPostFlushCbs(seen?: CountMap): void {
+export function flushPostFlushCbs(
+  seen?: CountMap,
+  // root mount: cbs queued before it, left in the queue
+  skip?: Set<SchedulerJob>,
+  // root mount: watchers are kept or flushed by owner instead
+  minUid = 0,
+): void {
   if (postJobs.length) {
+    let cbs = postJobs
+    if (skip) {
+      cbs = []
+      let kept = 0
+      for (let i = 0; i < postJobs.length; i++) {
+        const cb = postJobs[i]
+        if (cb.i !== undefined ? !cb.i || cb.i.uid < minUid : skip.has(cb)) {
+          postJobs[kept++] = cb
+        } else {
+          cbs.push(cb)
+        }
+      }
+      postJobs.length = kept
+    } else {
+      postJobs = []
+    }
+
     // #1947 already has active queue, nested flushPostFlushCbs call
     if (activePostJobs) {
-      for (let i = 0; i < postJobs.length; i++) {
-        activePostJobs.push(postJobs[i])
+      for (let i = 0; i < cbs.length; i++) {
+        activePostJobs.push(cbs[i])
       }
-      postJobs.length = 0
       return
     }
 
-    activePostJobs = postJobs
-    postJobs = []
+    activePostJobs = cbs
 
     if (__DEV__) {
       seen = seen || new Map()
@@ -283,18 +311,30 @@ export function flushPostFlushCbs(seen?: CountMap): void {
 }
 
 let isFlushing = false
+
 /**
+ * Run a root render, then flush the jobs it is responsible for. A mount or
+ * unmount (`minUid` given) only flushes the jobs of the components it created
+ * and the post cbs it queued, so pre watchers triggered in setup run before
+ * mounted (#5721) while the jobs of other components stay in the queue and
+ * keep their order (#6728). A root update keeps flushing all pending pre jobs
+ * and post cbs, as the jobs of the components it re-renders may predate it.
+ *
  * @internal
  */
-export function flushOnAppMount(instance?: GenericComponentInstance): void {
-  if (!isFlushing) {
-    isFlushing = true
-    try {
-      flushPreFlushCbs(instance)
-      flushPostFlushCbs()
-    } finally {
-      isFlushing = false
-    }
+export function flushOnAppMount(fn: () => void, minUid?: number): void {
+  if (isFlushing) {
+    fn()
+    return
+  }
+  const queued = minUid === undefined ? undefined : new Set(postJobs)
+  fn()
+  isFlushing = true
+  try {
+    flushPreFlushCbs(undefined, minUid)
+    flushPostFlushCbs(undefined, queued, minUid)
+  } finally {
+    isFlushing = false
   }
 }
 

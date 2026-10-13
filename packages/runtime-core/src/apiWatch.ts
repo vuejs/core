@@ -169,9 +169,7 @@ class RenderWatcherEffect extends WatcherEffect {
       this.flags |= EffectFlags.ALLOW_RECURSE
       job.flags! |= SchedulerJobFlags.ALLOW_RECURSE
     }
-    if (instance) {
-      job.i = instance
-    }
+    job.i = instance
     this.job = job
   }
 

@@ -37,6 +37,7 @@ import {
 } from '../renderer'
 import { SchedulerJobFlags } from '../scheduler'
 import { isHmrUpdating } from '../hmr'
+import { filterSingleRoot } from '../componentRenderUtils'
 
 type Hook<T = () => void> = T | T[]
 
@@ -160,6 +161,11 @@ function isEmptyTransitionChild(
   instance: GenericComponentInstance,
 ): boolean {
   if (vnode.type === Comment) return true
+  if (vnode.type === Fragment) {
+    const child =
+      isArray(vnode.children) && filterSingleRoot(vnode.children, false)
+    return !child || isEmptyTransitionChild(child, instance)
+  }
   if (
     vnode.type === VaporSlot ||
     isVaporComponent(vnode.type as ConcreteComponent)
@@ -304,13 +310,18 @@ export function resolveTransitionHooks(
     },
     earlyRemove: () => {
       const leavingVNode = leavingVNodesCache[key]
-      if (
-        leavingVNode &&
-        isSameVNodeType(vnode, leavingVNode) &&
-        (leavingVNode.el as TransitionElement)[leaveCbKey]
-      ) {
-        // force early removal (not cancelled)
-        ;(leavingVNode.el as TransitionElement)[leaveCbKey]!()
+      if (leavingVNode && isSameVNodeType(vnode, leavingVNode)) {
+        // A component's el still points to its leaving root during patch.
+        let leavingCb = (leavingVNode.el as TransitionElement)[leaveCbKey]
+        if (!leavingCb) {
+          const leavingRoot = getTransitionRoot(leavingVNode)
+          leavingCb =
+            leavingRoot && (leavingRoot.el as TransitionElement)[leaveCbKey]
+        }
+        if (leavingCb) {
+          // force early removal (not cancelled)
+          leavingCb()
+        }
       }
     },
     cloneHooks: vnode => {
@@ -754,6 +765,12 @@ export function setTransitionHooks(
       : contentHooks
   } else {
     vnode.transition = hooks
+    if (vnode.type === Fragment && isArray(vnode.children)) {
+      const child = filterSingleRoot(vnode.children, false)
+      if (child) {
+        setTransitionHooks(child, hooks)
+      }
+    }
   }
   return hooks
 }
@@ -808,5 +825,19 @@ export function checkTransitionMode(mode: string | undefined): void {
     mode !== 'default'
   ) {
     warn(`invalid <transition> mode: ${mode}`)
+  }
+}
+
+export function getTransitionRoot(vnode: VNode): VNode | undefined {
+  if (vnode.component && !isVaporComponent(vnode.type as ConcreteComponent)) {
+    return getTransitionRoot(vnode.component.subTree)
+  }
+  if (vnode.type === Fragment) {
+    const child =
+      isArray(vnode.children) && filterSingleRoot(vnode.children, false)
+    return child ? getTransitionRoot(child) : undefined
+  }
+  if (vnode.type !== Comment) {
+    return vnode
   }
 }

@@ -3,14 +3,14 @@ packages:
   - 'packages-private/*'
 
 catalog:
-  '@babel/parser': ^7.29.8
+  '@babel/parser': ^7.29.9
   '@babel/types': ^7.29.8
   'entities': '^7.0.1'
   'estree-walker': ^2.0.2
   'vite': npm:@voidzero-dev/vite-plus-core@1.1.0
-  '@vitejs/plugin-vue': ^6.0.9
+  '@vitejs/plugin-vue': ^6.0.10
   'magic-string': ^0.30.21
-  'source-map-js': ^1.2.1
+  'source-map-js': ^1.2.2
   vitest: 5.0.3
   vite-plus: 1.1.0
   '@vitest/browser-playwright': 5.0.3

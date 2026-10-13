@@ -9,9 +9,10 @@ import { makeMap } from './makeMap'
  * - ismap -> isMap
  * - nomodule -> noModule
  * - novalidate -> noValidate
+ * - playsinline -> playsInline
  * - readonly -> readOnly
  */
-const specialBooleanAttrs = `itemscope,allowfullscreen,formnovalidate,ismap,nomodule,novalidate,readonly`
+const specialBooleanAttrs = `itemscope,allowfullscreen,formnovalidate,ismap,nomodule,novalidate,playsinline,readonly`
 export const isSpecialBooleanAttr: (key: string) => boolean =
   /*@__PURE__*/ makeMap(specialBooleanAttrs)
 

@@ -560,7 +560,7 @@ export { queueJob, flushOnAppMount, SchedulerJobFlags } from './scheduler'
 /**
  * @internal
  */
-export { expose, nextUid, validateComponentName } from './component'
+export { expose, getNextUid, nextUid, validateComponentName } from './component'
 /**
  * @internal
  */

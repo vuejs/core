@@ -254,20 +254,50 @@ function iterator(
   // given that JS iterator can only be read once, this doesn't seem like
   // a plausible use-case, so this tracking simplification seems ok.
   const arr = shallowReadArray(self)
-  const iter = (arr[method] as any)() as IterableIterator<unknown> & {
+  const methodFn = arr[method] as any
+  const iter = methodFn.call(arr) as IterableIterator<unknown> & {
     _next: IterableIterator<unknown>['next']
   }
   if (arr !== self && !isShallow(self)) {
-    iter._next = iter.next
-    iter.next = () => {
-      const result = iter._next()
-      if (!result.done) {
-        result.value = wrapValue(result.value)
+    // #15643 an own `next` on a native array iterator permanently disables
+    // V8's array iteration fast paths (spread, Array.from, etc.) for the whole
+    // isolate, so it is wrapped instead. Checked on the iterator itself as
+    // user-extended or cross-realm arrays can return native iterators too.
+    if ((iter as any)[Symbol.toStringTag] === 'Array Iterator') {
+      const wrapped = Object.create(Object.getPrototypeOf(iter))
+      wrapped.next = () => wrapResult(iter.next(), wrapValue)
+      if (methodFn !== arrayProto[method]) {
+        Object.defineProperties(wrapped, {
+          return: {
+            get() {
+              const fn = iter.return
+              return typeof fn === 'function' ? fn.bind(iter) : fn
+            },
+          },
+          throw: {
+            get() {
+              const fn = iter.throw
+              return typeof fn === 'function' ? fn.bind(iter) : fn
+            },
+          },
+        })
       }
-      return result
+      return wrapped
     }
+    iter._next = iter.next
+    iter.next = () => wrapResult(iter._next(), wrapValue)
   }
   return iter
+}
+
+function wrapResult(
+  result: IteratorResult<unknown>,
+  wrapValue: (value: any) => unknown,
+) {
+  if (!result.done) {
+    result.value = wrapValue(result.value)
+  }
+  return result
 }
 
 // in the codebase we enforce es2016, but user code may run in environments

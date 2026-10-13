@@ -4385,4 +4385,57 @@ describe('SSR hydration', () => {
       expect(container.innerHTML).not.toContain(`<!--]-->`)
     })
   })
+
+  test('stop observing nested display: contents roots after hydration', async () => {
+    const observe = vi.fn()
+    const disconnect = vi.fn()
+    const mounted = vi.fn()
+    const originalIntersectionObserver = globalThis.IntersectionObserver
+    globalThis.IntersectionObserver = class {
+      observe = observe
+      disconnect = disconnect
+    } as any
+
+    const AsyncComp = defineAsyncComponent({
+      loader: () =>
+        Promise.resolve({
+          template: `
+            <div style="display: contents">
+              <span id="offscreen">offscreen</span>
+              <div style="display: contents">
+                <button id="visible">visible</button>
+                <span>later sibling</span>
+              </div>
+            </div>
+            <div>later fragment root</div>
+          `,
+          setup() {
+            onMounted(mounted)
+          },
+        }),
+      hydrate: hydrateOnVisible(),
+    })
+    const container = document.createElement('div')
+    const app = createSSRApp(AsyncComp)
+    try {
+      container.innerHTML = await renderToString(h(AsyncComp))
+      document.body.appendChild(container)
+      vi.spyOn(
+        container.querySelector('#visible')!,
+        'getBoundingClientRect',
+      ).mockReturnValue(new DOMRect(10, 10, 20, 20))
+      app.mount(container)
+
+      expect(mounted).toHaveBeenCalledTimes(1)
+      expect(disconnect).toHaveBeenCalledTimes(1)
+      expect(observe).toHaveBeenCalledTimes(1)
+      expect(observe).toHaveBeenCalledWith(
+        container.querySelector('#offscreen'),
+      )
+    } finally {
+      app.unmount()
+      container.remove()
+      globalThis.IntersectionObserver = originalIntersectionObserver
+    }
+  })
 })
