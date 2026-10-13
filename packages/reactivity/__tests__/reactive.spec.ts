@@ -329,6 +329,26 @@ describe('reactivity/reactive', () => {
     expect(() => markRaw(obj)).not.toThrowError()
   })
 
+  test('markRaw preserves opt-out on non-extensible targets', () => {
+    const sealed = Object.seal({ a: 1 })
+    const marked = markRaw(sealed)
+    expect(marked).toBe(sealed)
+    // SKIP flag cannot be added onto a sealed target, so reactive() learns
+    // about the opt-out via the side rawSet instead.
+    expect(reactive(marked)).toBe(sealed)
+    expect(isReactive(reactive({ inner: markRaw(sealed) }).inner)).toBe(false)
+  })
+
+  test('deep traverse should skip markRaw non-extensible targets', async () => {
+    const { traverse } = await import('../src/watch')
+    const sealed = Object.seal({ inner: { a: 1 } })
+    const marked = markRaw(sealed)
+    const seen = new Map()
+    traverse(marked, Infinity, seen)
+    // SKIP-flag markRaw stops here; the rawSet fallback must do the same.
+    expect(seen.has(marked.inner)).toBe(false)
+  })
+
   test('markRaw should not redefine on an marked object', () => {
     const obj = markRaw({ foo: 1 })
     const raw = markRaw(obj)
@@ -343,16 +363,34 @@ describe('reactivity/reactive', () => {
     expect(b.a === a).toBe(false)
   })
 
-  test('should not observe non-extensible objects', () => {
+  test('should not observe frozen objects', () => {
     const obj = reactive({
-      foo: Object.preventExtensions({ a: 1 }),
-      // sealed or frozen objects are considered non-extensible as well
-      bar: Object.freeze({ a: 1 }),
-      baz: Object.seal({ a: 1 }),
+      foo: Object.freeze({ a: 1 }),
     })
     expect(isReactive(obj.foo)).toBe(false)
-    expect(isReactive(obj.bar)).toBe(false)
-    expect(isReactive(obj.baz)).toBe(false)
+  })
+
+  test('should observe sealed and non-extensible objects', () => {
+    // sealed and Object.preventExtensions targets still allow mutating their
+    // existing keys, so reactive() should proxy them. See issue #14893.
+    const sealed = reactive(Object.seal({ a: 1 }))
+    const nonExtensible = reactive(Object.preventExtensions({ a: 1 }))
+    expect(isReactive(sealed)).toBe(true)
+    expect(isReactive(nonExtensible)).toBe(true)
+
+    let dummy
+    effect(() => {
+      dummy = sealed.a + nonExtensible.a
+    })
+    expect(dummy).toBe(2)
+    sealed.a = 10
+    nonExtensible.a = 20
+    expect(dummy).toBe(30)
+
+    // siblings share the same createReactiveObject guard.
+    expect(isReactive(shallowReactive(Object.seal({ a: 1 })))).toBe(true)
+    expect(isReadonly(readonly(Object.seal({ a: 1 })))).toBe(true)
+    expect(isReadonly(shallowReadonly(Object.seal({ a: 1 })))).toBe(true)
   })
 
   test('should not observe objects with __v_skip', () => {
