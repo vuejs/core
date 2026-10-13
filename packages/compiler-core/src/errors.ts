@@ -102,6 +102,7 @@ export enum ErrorCodes {
   // placed here to preserve order for the current minor
   // TODO adjust order in 3.5
   X_V_BIND_INVALID_SAME_NAME_ARGUMENT,
+  X_SETUP_TEMPLATE_REFERENCE_CONFLICT,
 
   // Special value for higher-order compilers to pick up the last code
   // to avoid collision of error codes. This should always be kept as the last
@@ -181,6 +182,7 @@ export const errorMessages: Record<ErrorCodes, string> = {
   [ErrorCodes.X_INVALID_EXPRESSION]: `Error parsing JavaScript expression: `,
   [ErrorCodes.X_KEEP_ALIVE_INVALID_CHILDREN]: `<KeepAlive> expects exactly one child component.`,
   [ErrorCodes.X_VNODE_HOOKS]: `@vnode-* hooks in templates are no longer supported. Use the vue: prefix instead. For example, @vnode-mounted should be changed to @vue:mounted. @vnode-* hooks support has been removed in 3.4.`,
+  [ErrorCodes.X_SETUP_TEMPLATE_REFERENCE_CONFLICT]: `Ambiguous template reference in <script setup>.`,
 
   // generic errors
   [ErrorCodes.X_PREFIX_ID_NOT_SUPPORTED]: `"prefixIdentifiers" option is not supported in this build of compiler.`,

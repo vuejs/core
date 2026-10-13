@@ -13,6 +13,7 @@ import {
   NodeTypes,
   type ObjectExpression,
   type Property,
+  type SourceLocation,
   type TemplateTextChildNode,
   type VNodeCall,
   createArrayExpression,
@@ -296,13 +297,21 @@ export function resolveComponentType(
   // this is skipped in browser build since browser builds do not perform
   // binding analysis.
   if (!__BROWSER__) {
-    const fromSetup = resolveSetupReference(tag, context)
+    const fromSetup = resolveSetupReference(tag, context, {
+      type: 'component',
+      name: tag,
+      loc: node.loc,
+    })
     if (fromSetup) {
       return fromSetup
     }
     const dotIndex = tag.indexOf('.')
     if (dotIndex > 0) {
-      const ns = resolveSetupReference(tag.slice(0, dotIndex), context)
+      const ns = resolveSetupReference(tag.slice(0, dotIndex), context, {
+        type: 'component',
+        name: tag,
+        loc: node.loc,
+      })
       if (ns) {
         return ns + tag.slice(dotIndex)
       }
@@ -329,7 +338,33 @@ export function resolveComponentType(
   return toValidAssetId(tag, `component`)
 }
 
-function resolveSetupReference(name: string, context: TransformContext) {
+type SetupTemplateReference = {
+  type: 'component' | 'directive'
+  name: string
+  loc: SourceLocation
+}
+
+function describeSetupTemplateReference(reference: SetupTemplateReference) {
+  if (reference.type === 'component') {
+    return `Component tag <${reference.name}>`
+  }
+  return `Custom directive ${reference.name}`
+}
+
+function getSetupTemplateReferenceSuggestion(
+  reference: SetupTemplateReference,
+) {
+  if (reference.type === 'component') {
+    return `Rename one of the bindings or use an unambiguous component tag.`
+  }
+  return `Rename one of the bindings or use an unambiguous directive name.`
+}
+
+function resolveSetupReference(
+  name: string,
+  context: TransformContext,
+  reference: SetupTemplateReference,
+) {
   const bindings = context.bindingMetadata
   if (!bindings || bindings.__isScriptSetup === false) {
     return
@@ -337,6 +372,31 @@ function resolveSetupReference(name: string, context: TransformContext) {
 
   const camelName = camelize(name)
   const PascalName = capitalize(camelName)
+  const candidateNames = [...new Set([name, camelName, PascalName])]
+  const matchingNames = candidateNames.filter(candidate =>
+    canResolveSetupReference(bindings[candidate]),
+  )
+  const emitIfAmbiguous = (resolved: string) => {
+    if (matchingNames.length <= 1) {
+      return
+    }
+    const error = createCompilerError(
+      ErrorCodes.X_SETUP_TEMPLATE_REFERENCE_CONFLICT,
+      reference.loc,
+      undefined,
+      ` ${describeSetupTemplateReference(
+        reference,
+      )} matches multiple script setup bindings: ` +
+        `${matchingNames.map(name => JSON.stringify(name)).join(', ')}. ` +
+        `It currently resolves to ${JSON.stringify(resolved)}. ` +
+        getSetupTemplateReferenceSuggestion(reference),
+    )
+    if (context.hmr) {
+      context.onError(error)
+    } else {
+      context.onWarn(error)
+    }
+  }
   const checkType = (type: BindingTypes) => {
     if (bindings[name] === type) {
       return name
@@ -354,6 +414,7 @@ function resolveSetupReference(name: string, context: TransformContext) {
     checkType(BindingTypes.SETUP_REACTIVE_CONST) ||
     checkType(BindingTypes.LITERAL_CONST)
   if (fromConst) {
+    emitIfAmbiguous(fromConst)
     return context.inline
       ? // in inline mode, const setup bindings (e.g. imports) can be used as-is
         fromConst
@@ -365,6 +426,7 @@ function resolveSetupReference(name: string, context: TransformContext) {
     checkType(BindingTypes.SETUP_REF) ||
     checkType(BindingTypes.SETUP_MAYBE_REF)
   if (fromMaybeRef) {
+    emitIfAmbiguous(fromMaybeRef)
     return context.inline
       ? // setup scope bindings that may be refs need to be unrefed
         `${context.helperString(UNREF)}(${fromMaybeRef})`
@@ -373,10 +435,23 @@ function resolveSetupReference(name: string, context: TransformContext) {
 
   const fromProps = checkType(BindingTypes.PROPS)
   if (fromProps) {
+    emitIfAmbiguous(fromProps)
     return `${context.helperString(UNREF)}(${
       context.inline ? '__props' : '$props'
     }[${JSON.stringify(fromProps)}])`
   }
+}
+
+function canResolveSetupReference(type: BindingTypes | undefined): boolean {
+  return (
+    type === BindingTypes.SETUP_CONST ||
+    type === BindingTypes.SETUP_REACTIVE_CONST ||
+    type === BindingTypes.LITERAL_CONST ||
+    type === BindingTypes.SETUP_LET ||
+    type === BindingTypes.SETUP_REF ||
+    type === BindingTypes.SETUP_MAYBE_REF ||
+    type === BindingTypes.PROPS
+  )
 }
 
 export type PropsExpression = ObjectExpression | CallExpression | ExpressionNode
@@ -912,8 +987,14 @@ export function buildDirectiveArgs(
   } else {
     // user directive.
     // see if we have directives exposed via <script setup>
+    const directiveName = 'v-' + dir.name
     const fromSetup =
-      !__BROWSER__ && resolveSetupReference('v-' + dir.name, context)
+      !__BROWSER__ &&
+      resolveSetupReference(directiveName, context, {
+        type: 'directive',
+        name: directiveName,
+        loc: dir.loc,
+      })
     if (fromSetup) {
       dirArgs.push(fromSetup)
     } else {
