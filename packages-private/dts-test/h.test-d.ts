@@ -25,6 +25,21 @@ describe('h inference w/ element', () => {
   h('div', { ref: 'foo' })
   h('div', { ref: ref(null) })
   h('div', { ref: _el => {} })
+  h('form', { ref: (_el: HTMLFormElement | null) => {} })
+  // @ts-expect-error a form ref cannot receive an input element
+  h('form', { ref: (_el: HTMLInputElement | null) => {} })
+  // @ts-expect-error native element refs receive null during unmount
+  h('form', { ref: (_el: HTMLFormElement) => {} })
+  h('svg', { ref: (_el: SVGSVGElement | null) => {} })
+  h('circle', { ref: (_el: SVGCircleElement | null) => {} })
+  // @ts-expect-error an svg ref cannot receive an HTML element
+  h('svg', { ref: (_el: HTMLDivElement | null) => {} })
+  h('custom-element', { ref: (_el: Element | null) => {} })
+  // @ts-expect-error
+  h('form', { ref: (_el: string) => {} })
+  const ComponentWithRef = defineComponent({})
+  // @ts-expect-error element-only callbacks are invalid for component refs
+  h(ComponentWithRef, { ref: (_el: HTMLFormElement | null) => {} })
   //  @ts-expect-error
   h('div', { ref: [] })
   //  @ts-expect-error

@@ -84,13 +84,15 @@ export type VNodeTypes =
   | typeof Suspense
   | typeof SuspenseImpl
 
-export type VNodeRef =
-  | string
-  | Ref
-  | ((
-      ref: Element | ComponentPublicInstance | null,
-      refs: Record<string, any>,
-    ) => void)
+type VNodeRefCallback = (
+  ref: Element | ComponentPublicInstance | null,
+  refs: Record<string, any>,
+) => void
+
+export type VNodeElementRef<T extends Element = Element> =
+  string | Ref | ((ref: T | null, refs: Record<string, any>) => void)
+
+export type VNodeRef = string | Ref | VNodeRefCallback
 
 export type VNodeNormalizedRefAtom = {
   /**
