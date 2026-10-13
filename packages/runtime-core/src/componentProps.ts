@@ -84,12 +84,7 @@ type PropMethod<T, TConstructor = any> = {
 }
 
 type RequiredKeys<T> = {
-  [K in keyof T]: T[K] extends
-    | { required: true }
-    | { default: any }
-    // don't mark Boolean props as undefined
-    | BooleanConstructor
-    | { type: BooleanConstructor }
+  [K in keyof T]: T[K] extends { required: true } | { default: any }
     ? T[K] extends { default: undefined | (() => undefined) }
       ? never
       : K
@@ -99,15 +94,7 @@ type RequiredKeys<T> = {
 type OptionalKeys<T> = Exclude<keyof T, RequiredKeys<T>>
 
 type DefaultKeys<T> = {
-  [K in keyof T]: T[K] extends
-    | { default: any }
-    // Boolean implicitly defaults to false
-    | BooleanConstructor
-    | { type: BooleanConstructor }
-    ? T[K] extends { type: BooleanConstructor; required: true } // not default if Boolean is marked as required
-      ? never
-      : K
-    : never
+  [K in keyof T]: T[K] extends { default: any } ? K : never
 }[keyof T]
 
 type InferPropType<T, NullAsAny = true> = [T] extends [null]
@@ -141,7 +128,6 @@ type InferPropType<T, NullAsAny = true> = [T] extends [null]
  * Extract prop types from a runtime props options object.
  * The extracted types are **internal** - i.e. the resolved props received by
  * the component.
- * - Boolean props are always present
  * - Props with default values are always present
  *
  * To extract accepted props from the parent, use {@link ExtractPublicPropTypes}.
@@ -176,7 +162,6 @@ export type ExtractPublicPropTypes<O> = {
 }
 
 enum BooleanFlags {
-  shouldCast,
   shouldCastTrue,
 }
 
@@ -187,7 +172,6 @@ export type ExtractDefaultPropTypes<O> = O extends object
   : {}
 
 type NormalizedProp = PropOptions & {
-  [BooleanFlags.shouldCast]?: boolean
   [BooleanFlags.shouldCastTrue]?: boolean
 }
 
@@ -294,7 +278,6 @@ export function updateProps(
               camelizedKey,
               value,
               instance,
-              false /* isAbsent */,
             )
           }
         } else {
@@ -343,7 +326,6 @@ export function updateProps(
               key,
               undefined,
               instance,
-              true /* isAbsent */,
             )
           }
         } else {
@@ -446,7 +428,6 @@ function setFullProps(
         key,
         castValues[key],
         instance,
-        !hasOwn(castValues, key),
       )
     }
   }
@@ -460,7 +441,6 @@ function resolvePropValue(
   key: string,
   value: unknown,
   instance: ComponentInternalInstance,
-  isAbsent: boolean,
 ) {
   const opt = options[key]
   if (opt != null) {
@@ -496,15 +476,11 @@ function resolvePropValue(
       }
     }
     // boolean casting
-    if (opt[BooleanFlags.shouldCast]) {
-      if (isAbsent && !hasDefault) {
-        value = false
-      } else if (
-        opt[BooleanFlags.shouldCastTrue] &&
-        (value === '' || value === hyphenate(key))
-      ) {
-        value = true
-      }
+    if (
+      opt[BooleanFlags.shouldCastTrue] &&
+      (value === '' || value === hyphenate(key))
+    ) {
+      value = true
     }
   }
   return value
@@ -579,8 +555,7 @@ export function normalizePropsOptions(
         const prop: NormalizedProp = (normalized[normalizedKey] =
           isArray(opt) || isFunction(opt) ? { type: opt } : extend({}, opt))
         const propType = prop.type
-        let shouldCast = false
-        let shouldCastTrue = true
+        let shouldCastTrue = false
 
         if (isArray(propType)) {
           for (let index = 0; index < propType.length; ++index) {
@@ -588,25 +563,22 @@ export function normalizePropsOptions(
             const typeName = isFunction(type) && type.name
 
             if (typeName === 'Boolean') {
-              shouldCast = true
+              shouldCastTrue = true
               break
             } else if (typeName === 'String') {
               // If we find `String` before `Boolean`, e.g. `[String, Boolean]`,
-              // we need to handle the casting slightly differently. Props
-              // passed as `<Comp checked="">` or `<Comp checked="checked">`
-              // will either be treated as strings or converted to a boolean
-              // `true`, depending on the order of the types.
-              shouldCastTrue = false
+              // string values are kept as-is instead of being cast to a
+              // boolean `true`.
+              break
             }
           }
         } else {
-          shouldCast = isFunction(propType) && propType.name === 'Boolean'
+          shouldCastTrue = isFunction(propType) && propType.name === 'Boolean'
         }
 
-        prop[BooleanFlags.shouldCast] = shouldCast
         prop[BooleanFlags.shouldCastTrue] = shouldCastTrue
         // if the prop needs boolean casting or default value
-        if (shouldCast || hasOwn(prop, 'default')) {
+        if (shouldCastTrue || hasOwn(prop, 'default')) {
           needCastKeys.push(normalizedKey)
         }
       }
