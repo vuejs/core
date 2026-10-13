@@ -2886,6 +2886,33 @@ test('resolves destructure defaults that reference a sibling alias', async () =>
   expect(titles.vapor).toBe(titles.vdom)
 })
 
+test.each([
+  [
+    '{ b: { c } = { c: 1 } }',
+    '{{ c }}',
+    [{ b: {} }, {}, { b: { c: 2 } }],
+    ',1,2,',
+  ],
+  ['({ a } = { a: 1 })', '{{ a }}', [undefined, { a: 2 }], '1,2,'],
+  [
+    '{ b: { c, ...r } = { c: 1, d: 2 } }',
+    '{{ c }}{{ r.d }}',
+    [{}, { b: { c: 3, d: 4 } }],
+    '12,34,',
+  ],
+])(
+  'destructure defaults apply at their own level like vdom: %s',
+  async (alias, body, list, expected) => {
+    const { vdom, vapor } = await renderParity(
+      { App: `<template><i v-for="${alias} in data">${body},</i></template>` },
+      () => ref<any[]>(list),
+      () => {},
+    )
+    expect(vdom.text).toBe(expected)
+    expect(vapor.text).toBe(vdom.text)
+  },
+)
+
 function getEffectsCount(scope: { deps: any }) {
   let count = 0
   for (let dep = scope.deps; dep !== undefined; dep = dep.nextDep) {

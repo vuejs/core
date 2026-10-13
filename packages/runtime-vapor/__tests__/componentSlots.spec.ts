@@ -8416,3 +8416,23 @@ test('scoped slot props with an undefined value shadow Object.prototype', async 
   expect(vdom.text).toBe('false-true')
   expect(vapor.text).toBe(vdom.text)
 })
+
+test.each([
+  ['{ b: { c } = { c: 1 } }', '{{ c }}', { b: {} }, ''],
+  ['{ b: { c } = { c: 1 } }', '{{ c }}', {}, '1'],
+  ['{ b: [x, y] = [1, 2] }', '{{ x }}-{{ y }}', { b: [] }, '-'],
+])(
+  'scoped slot destructure defaults apply at their own level like vdom: %s',
+  async (pattern, body, init, expected) => {
+    const { vdom, vapor } = await renderParity(
+      {
+        Child: `<template><slot v-bind="data" /></template>`,
+        App: `<template><components.Child v-slot="${pattern}">${body}</components.Child></template>`,
+      },
+      () => ref<any>(init),
+      () => {},
+    )
+    expect(vdom.text).toBe(expected)
+    expect(vapor.text).toBe(vdom.text)
+  },
+)

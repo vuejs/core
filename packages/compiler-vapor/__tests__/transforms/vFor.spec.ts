@@ -794,4 +794,25 @@ describe('compiler: v-for', () => {
       '_toDisplayString(_for_item0.value[_for_item0.value.label])',
     )
   })
+
+  test('applies nested destructure defaults at their own level', () => {
+    const { code } = compileWithVFor(
+      `<div v-for="{ b: { c } = { c: 1 }, d: [x = 2] = [] } in items">{{ c }}{{ x }}</div>`,
+    )
+    expect(code).toContain(
+      '_getDefaultValue(_for_item0.value.b, () => ({ c: 1 })).c',
+    )
+    expect(code).toContain(
+      '_getDefaultValue(_getDefaultValue(_for_item0.value.d, () => ([]))[0], () => (2))',
+    )
+  })
+
+  test('applies a default of a destructured alias', () => {
+    const { code } = compileWithVFor(
+      `<div v-for="({ a } = { a: 1 }) in items">{{ a }}</div>`,
+    )
+    expect(code).toContain(
+      '_getDefaultValue(_for_item0.value, () => ({ a: 1 })).a',
+    )
+  })
 })
