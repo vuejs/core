@@ -21,7 +21,7 @@ import { PatchFlags, ShapeFlags, isArray, isFunction } from '@vue/shared'
 import { onBeforeUnmount, onMounted } from '../apiLifecycle'
 import { isTeleport } from './Teleport'
 import type { RendererElement } from '../renderer'
-import { SchedulerJobFlags } from '../scheduler'
+import { SchedulerJobFlags, queueJob } from '../scheduler'
 import { isHmrUpdating } from '../hmr'
 import { filterSingleRoot } from '../componentRenderUtils'
 
@@ -228,8 +228,13 @@ const BaseTransitionImpl: ComponentOptions = {
             state.isLeaving = false
             // #6835
             // it also needs to be updated when active is undefined
+            // Defer the update so the empty placeholder returned below is
+            // mounted before the re-render runs. Calling instance.update()
+            // synchronously crashes when done() is called from inside the
+            // leave hook because the placeholder has no parentNode yet.
+            // See https://github.com/vuejs/core/issues/15727
             if (!(instance.job.flags! & SchedulerJobFlags.DISPOSED)) {
-              instance.update()
+              queueJob(instance.update)
             }
             delete leavingHooks.afterLeave
             oldInnerChild = undefined

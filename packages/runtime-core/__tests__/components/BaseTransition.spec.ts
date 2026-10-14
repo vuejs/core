@@ -1291,6 +1291,8 @@ describe('BaseTransition', () => {
       expect(props.onEnter).not.toHaveBeenCalled()
       expect(props.onAfterEnter).not.toHaveBeenCalled()
       cbs.doneLeave[`<div class="test">0</div>`]()
+      // afterLeave now queues the update via queueJob, so flush before asserting
+      await nextTick()
       expect(serializeInner(root)).toBe(`<span class="test">0</span>`)
     }
     await runTestWithKeepAlive(testOutIn)
