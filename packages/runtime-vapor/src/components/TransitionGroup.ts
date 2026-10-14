@@ -213,6 +213,7 @@ const VaporTransitionGroupImpl = /*@__PURE__*/ defineVaporComponent({
       if (!willMove()) {
         prevChildren = []
         origins = undefined
+        moveElement = undefined
         return
       }
 
@@ -231,6 +232,7 @@ const VaporTransitionGroupImpl = /*@__PURE__*/ defineVaporComponent({
       // force reflow to put everything in position; use the group's own
       // document so this works inside iframes / foreign documents
       forceReflow(moveElement)
+      moveElement = undefined
 
       movedChildren.forEach(c =>
         handleMovedChildren(
