@@ -1,12 +1,17 @@
 import {
+  type AsyncComputedError,
   EffectFlags,
   type EffectScope,
+  type PendingComputed,
   ReactiveEffect,
   onScopeDispose,
 } from '@vue/reactivity'
 import {
   type SchedulerJob,
   SchedulerJobFlags,
+  type SuspenseBoundary,
+  cancelAsyncRender,
+  commitAsyncRender,
   currentInstance,
   endMeasure,
   popWarningContext,
@@ -16,6 +21,7 @@ import {
   restoreCurrentInstance,
   setCurrentInstance,
   startMeasure,
+  suspendAsyncRender,
   warn,
 } from '@vue/runtime-dom'
 import {
@@ -29,6 +35,8 @@ import { invokeArrayFns, remove } from '@vue/shared'
 import { isSuspenseEnabled } from './suspense'
 import { isInteropEnabled } from './vdomInteropState'
 import { adoptVdomOwnedEffect } from './vdomSlotOwner'
+import { setPendingDomUpdates } from './dom/async'
+import { currentRenderContext, withRenderContext } from './renderContext'
 
 export class RenderEffect extends ReactiveEffect {
   i: VaporComponentInstance | null
@@ -41,6 +49,8 @@ export class RenderEffect extends ReactiveEffect {
   render: () => void
   // Creation order within the owning component.
   order: number
+  private boundary: SuspenseBoundary | null
+  pending?: PendingComputed | AsyncComputedError
 
   constructor(render: () => void, noLifecycle = false) {
     super(noLifecycle ? render : undefined)
@@ -65,6 +75,10 @@ export class RenderEffect extends ReactiveEffect {
     }
 
     this.i = instance
+    this.boundary =
+      __FEATURE_SUSPENSE__ && isSuspenseEnabled
+        ? currentRenderContext.suspense || (instance && instance.suspense)
+        : null
     this.job = undefined
 
     // Allow self re-queue when render/hook logic mutates reactive state.
@@ -74,6 +88,57 @@ export class RenderEffect extends ReactiveEffect {
 
     // last, so the fields a vdom owner adds extend the shared shape
     if (vdomOwner) adoptVdomOwnedEffect(this, vdomOwner)
+  }
+
+  run(): void {
+    if (!__FEATURE_SUSPENSE__ || !this.i) return super.run()
+    const updates: (() => void)[] | undefined = this.boundary ? [] : undefined
+    const previous = setPendingDomUpdates(updates)
+    const context = currentRenderContext
+    const scope = this.subs ? (this.subs.sub as EffectScope) : undefined
+    try {
+      this.pending = undefined
+      super.run()
+    } catch (error) {
+      if (
+        !suspendAsyncRender(
+          error,
+          this,
+          this.i,
+          () => this.run(),
+          this.boundary,
+        )
+      )
+        throw error
+      this.pending = error as PendingComputed | AsyncComputedError
+      return
+    } finally {
+      setPendingDomUpdates(previous)
+    }
+    if (updates) {
+      commitAsyncRender(
+        this,
+        this.i,
+        () => {
+          const prev = setCurrentInstance(this.i, scope)
+          const outer = setPendingDomUpdates(undefined)
+          try {
+            withRenderContext(context, () => {
+              for (const update of updates) update()
+            })
+          } finally {
+            setPendingDomUpdates(outer)
+            restoreCurrentInstance(prev)
+          }
+        },
+        this.boundary,
+      )
+    }
+  }
+
+  stop(): void {
+    super.stop()
+    cancelAsyncRender(this)
   }
 
   createJob(): SchedulerJob {

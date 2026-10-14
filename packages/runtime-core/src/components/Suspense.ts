@@ -2,6 +2,7 @@ import {
   Comment,
   type VNode,
   type VNodeProps,
+  blockStack,
   closeBlock,
   createVNode,
   currentBlock,
@@ -13,6 +14,7 @@ import {
 import { ShapeFlags, isArray, isFunction, toNumber } from '@vue/shared'
 import {
   type ComponentInternalInstance,
+  type FunctionalComponent,
   type GenericComponentInstance,
   setCurrentInstance,
 } from '../component'
@@ -34,6 +36,8 @@ import { filterSingleRoot, updateHOCHostEl } from '../componentRenderUtils'
 import { assertNumber, warn } from '../warning'
 import { ErrorCodes, handleError } from '../errorHandling'
 import { NULL_DYNAMIC_COMPONENT } from '../helpers/resolveAssets'
+import type { AsyncRenderState } from '../asyncRender'
+import { AsyncComputedError, PendingComputed } from '@vue/reactivity'
 
 export interface SuspenseProps {
   onResolve?: () => void
@@ -440,6 +444,7 @@ function patchSuspense(
 }
 
 export interface SuspenseBoundary {
+  asyncRender?: AsyncRenderState
   vnode: VNode<RendererNode, RendererElement, SuspenseProps>
   parent: SuspenseBoundary | null
   parentComponent: ComponentInternalInstance | null
@@ -457,7 +462,7 @@ export interface SuspenseBoundary {
   isUnmounted: boolean
   effects: Function[]
   resolve(force?: boolean, sync?: boolean): void
-  fallback(fallbackVNode: VNode): void
+  fallback(fallbackVNode: VNode, preserve?: boolean): void
   move(
     container: RendererElement,
     anchor: RendererNode | null,
@@ -638,6 +643,10 @@ function createSuspenseBoundary(
       setActiveBranch(suspense, pendingBranch!)
       suspense.pendingBranch = null
       suspense.isInFallback = false
+      if (suspense.asyncRender && suspense.asyncRender.fallback) {
+        suspense.asyncRender.fallback = false
+        suspense.asyncRender.pending = false
+      }
 
       // flush buffered effects
       // check if there is a pending parent suspense
@@ -680,7 +689,18 @@ function createSuspenseBoundary(
       triggerEvent(vnode, 'onResolve')
     },
 
-    fallback(fallbackVNode) {
+    fallback(fallbackVNode, preserve = false) {
+      if (preserve && !suspense.pendingBranch && suspense.activeBranch) {
+        suspense.pendingBranch = suspense.activeBranch
+        const state = suspense.asyncRender!
+        state.fallback = true
+        for (const dep of state.dependencies.values()) {
+          if (!dep.counted && dep.generation === suspense.pendingId) {
+            dep.counted = true
+            suspense.deps++
+          }
+        }
+      }
       if (!suspense.pendingBranch) {
         return
       }
@@ -725,12 +745,22 @@ function createSuspenseBoundary(
       suspense.isInFallback = true
 
       // unmount current active branch
-      unmount(
-        activeBranch!,
-        parentComponent,
-        null, // no suspense so unmount hooks fire now
-        true, // shouldRemove
-      )
+      if (preserve) {
+        move(
+          activeBranch!,
+          suspense.hiddenContainer,
+          null,
+          MoveType.REORDER,
+          parentComponent,
+        )
+      } else {
+        unmount(
+          activeBranch!,
+          parentComponent,
+          null, // no suspense so unmount hooks fire now
+          true, // shouldRemove
+        )
+      }
 
       if (!delayEnter) {
         mountFallback()
@@ -871,15 +901,21 @@ function normalizeSuspenseChildren(vnode: VNode): void {
   const isSlotChildren = shapeFlag & ShapeFlags.SLOTS_CHILDREN
   vnode.ssContent = normalizeSuspenseSlot(
     isSlotChildren ? (children as Slots).default : children,
+    true,
   )
   vnode.ssFallback = isSlotChildren
     ? normalizeSuspenseSlot((children as Slots).fallback)
     : createVNode(Comment)
 }
 
-function normalizeSuspenseSlot(s: any) {
+const AsyncComputedSlot: FunctionalComponent<{ render: () => VNode }> = props =>
+  normalizeSuspenseSlot(props.render)
+AsyncComputedSlot.props = ['render']
+
+function normalizeSuspenseSlot(s: any, deferAsync = false) {
   let block: VNode[] | null | undefined
   if (isFunction(s)) {
+    const blockDepth = blockStack.length
     const trackBlock = isBlockTreeEnabled && s._c
     if (trackBlock) {
       // disableTracking: false
@@ -888,11 +924,27 @@ function normalizeSuspenseSlot(s: any) {
       s._d = false
       openBlock()
     }
-    s = s()
-    if (trackBlock) {
-      s._d = true
-      block = currentBlock
-      closeBlock()
+    const slot = s
+    try {
+      s = slot()
+    } catch (error) {
+      if (
+        !deferAsync ||
+        !(
+          error instanceof PendingComputed ||
+          error instanceof AsyncComputedError
+        )
+      )
+        throw error
+      while (blockStack.length > blockDepth + (trackBlock ? 1 : 0)) closeBlock()
+      if (trackBlock && currentBlock) currentBlock.length = 0
+      s = createVNode(AsyncComputedSlot, { render: slot })
+    } finally {
+      if (trackBlock) {
+        slot._d = true
+        block = currentBlock
+      }
+      while (blockStack.length > blockDepth) closeBlock()
     }
   }
   if (isArray(s)) {

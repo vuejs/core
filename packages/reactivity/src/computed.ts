@@ -1,8 +1,15 @@
-import { hasChanged, isFunction } from '@vue/shared'
+import { hasChanged, isFunction, isObject } from '@vue/shared'
+import {
+  AsyncComputedError,
+  type AsyncComputedState,
+  PendingComputed,
+} from './asyncComputed'
 import { ReactiveFlags, TrackOpTypes } from './constants'
 import { onTrack, setupOnTrigger } from './debug'
 import type { DebuggerEvent, DebuggerOptions } from './effect'
 import { activeEffectScope } from './effectScope'
+import { triggerDep } from './dep'
+import type { OptimisticState } from './optimistic'
 import type { Ref } from './ref'
 import {
   type Link,
@@ -53,6 +60,12 @@ export class ComputedRefImpl<T = any> implements ReactiveNode {
    * @internal
    */
   _value: T | undefined = undefined
+  /** @internal */
+  _async?: AsyncComputedState
+  private hasValue = false
+  /** @internal */
+  _optimistic?: OptimisticState<T>
+  private readonly scope = activeEffectScope
 
   subs: Link | undefined = undefined
   subsTail: Link | undefined = undefined
@@ -140,7 +153,7 @@ export class ComputedRefImpl<T = any> implements ReactiveNode {
     }
     if (activeSub !== undefined) {
       if (__DEV__) {
-        onTrack(activeSub!, {
+        onTrack(activeSub, {
           target: this,
           type: TrackOpTypes.GET,
           key: 'value',
@@ -149,6 +162,12 @@ export class ComputedRefImpl<T = any> implements ReactiveNode {
       link(this, activeSub)
     } else if (activeEffectScope !== undefined) {
       link(this, activeEffectScope)
+    }
+    if (this._optimistic) return this._optimistic.value
+    if (this._async) {
+      if (this._async.pending) throw this._async.pending
+      if (this._async.error)
+        throw activeSub ? this._async.error : this._async.error.error
     }
     return this._value!
   }
@@ -163,14 +182,84 @@ export class ComputedRefImpl<T = any> implements ReactiveNode {
 
   update(): boolean {
     const prevSub = startTracking(this)
+    const previousAsync = this._async
+    const wasAsync = !!(
+      previousAsync &&
+      (previousAsync.pending || previousAsync.error)
+    )
+    if (previousAsync) {
+      previousAsync.generation++
+      previousAsync.pending = previousAsync.error = undefined
+    }
     try {
       const oldValue = this._value
       const newValue = this.fn(oldValue)
-      if (hasChanged(oldValue, newValue)) {
-        this._value = newValue
+      if (
+        !this.setter &&
+        (isObject(newValue) || isFunction(newValue)) &&
+        isFunction((newValue as any).then)
+      ) {
+        const state =
+          this._async ||
+          (this._async = { generation: 1, settled: this.hasValue })
+        const pending = (state.pending = new PendingComputed(
+          this,
+          state.generation,
+        ))
+        const isCurrent = () =>
+          state.pending === pending &&
+          (!this.scope || this.scope.active) &&
+          !this._dirty
+        pending.promise = Promise.resolve(newValue).then(
+          value => {
+            if (!isCurrent()) return
+            this._value = value as T
+            this.hasValue = true
+            state.pending = undefined
+            state.settled = true
+            if (this._optimistic) this._optimistic.rebase(this._value)
+            triggerDep(this)
+          },
+          error => {
+            if (!isCurrent()) return
+            if (error instanceof PendingComputed) {
+              return error.promise.then(() => {
+                if (!isCurrent()) return
+                this.flags |= SystemReactiveFlags.Dirty
+                triggerDep(this)
+              })
+            }
+            state.pending = undefined
+            state.error =
+              error instanceof AsyncComputedError
+                ? error
+                : new AsyncComputedError(this, error)
+            triggerDep(this)
+          },
+        )
         return true
       }
-      return false
+      if (previousAsync) previousAsync.settled = true
+      this.hasValue = true
+      if (hasChanged(oldValue, newValue)) {
+        this._value = newValue
+        if (this._optimistic) this._optimistic.rebase(newValue)
+        return true
+      }
+      return wasAsync
+    } catch (error) {
+      if (
+        error instanceof PendingComputed ||
+        error instanceof AsyncComputedError
+      ) {
+        const state =
+          this._async ||
+          (this._async = { generation: 1, settled: this.hasValue })
+        if (error instanceof PendingComputed) state.pending = error
+        else state.error = error
+        return true
+      }
+      throw error
     } finally {
       endTracking(this, prevSub)
     }
@@ -215,9 +304,9 @@ if (__DEV__) {
  * @see {@link https://vuejs.org/api/reactivity-core.html#computed}
  */
 export function computed<T>(
-  getter: ComputedGetter<T>,
+  getter: (oldValue?: Awaited<T>) => T,
   debugOptions?: DebuggerOptions,
-): ComputedRef<T>
+): ComputedRef<Awaited<T>>
 export function computed<T, S = T>(
   options: WritableComputedOptions<T, S>,
   debugOptions?: DebuggerOptions,

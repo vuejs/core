@@ -49,6 +49,9 @@ export {
   type ComputedSetter,
   type ComputedRefImpl,
 } from './computed'
+export { optimistic, type OptimisticOptions } from './optimistic'
+/** @internal */
+export { PendingComputed, AsyncComputedError } from './asyncComputed'
 export {
   effect,
   stop,

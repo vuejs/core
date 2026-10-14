@@ -63,6 +63,12 @@ import {
   setCurrentScope,
 } from '@vue/reactivity'
 import { updateProps } from './componentProps'
+import {
+  cancelAsyncRender,
+  commitAsyncRender,
+  suspendAsyncRender,
+  trackAsyncRender,
+} from './asyncRender'
 import { updateSlots } from './componentSlots'
 import { popWarningContext, pushWarningContext, warn } from './warning'
 import {
@@ -1430,6 +1436,33 @@ function baseCreateRenderer(
   class SetupRenderEffect extends ReactiveEffect {
     job: SchedulerJob
 
+    stop(): void {
+      super.stop()
+      cancelAsyncRender(this)
+    }
+
+    render(): VNode | undefined {
+      try {
+        return renderComponentRoot(this.instance)
+      } catch (error) {
+        if (
+          !suspendAsyncRender(
+            error,
+            this,
+            this.instance,
+            () => this.run(),
+            this.parentSuspense,
+          )
+        )
+          throw error
+        if (!this.instance.isMounted && !this.initialVNode.el) {
+          const placeholder = (this.instance.subTree = createVNode(Comment))
+          processCommentNode(null, placeholder, this.container, this.anchor)
+          this.initialVNode.el = this.initialVNode.placeholder = placeholder.el
+        }
+      }
+    }
+
     constructor(
       private instance: ComponentInternalInstance,
       private initialVNode: VNode,
@@ -1472,7 +1505,6 @@ function baseCreateRenderer(
         instance,
         initialVNode,
         container,
-        anchor,
         parentSuspense,
         namespace,
         optimized,
@@ -1503,13 +1535,15 @@ function baseCreateRenderer(
         }
         toggleRecurse(instance, true)
 
-        if (el && hydrateNode) {
+        if (el && hydrateNode && !initialVNode.placeholder) {
           // vnode has adopted host node - perform hydration instead of mount.
           const hydrateSubTree = () => {
             if (__DEV__) {
               startMeasure(instance, `render`)
             }
-            instance.subTree = renderComponentRoot(instance)
+            const subTree = this.render()
+            if (!subTree) return false
+            instance.subTree = subTree
             if (__DEV__) {
               endMeasure(instance, `render`)
             }
@@ -1538,7 +1572,7 @@ function baseCreateRenderer(
               hydrateSubTree,
             )
           } else {
-            hydrateSubTree()
+            if (hydrateSubTree() === false) return
           }
         } else {
           // custom element style injection
@@ -1555,7 +1589,16 @@ function baseCreateRenderer(
           if (__DEV__) {
             startMeasure(instance, `render`)
           }
-          const subTree = (instance.subTree = renderComponentRoot(instance))
+          const subTree = this.render()
+          if (!subTree) return
+          instance.subTree = subTree
+          if (initialVNode.placeholder) {
+            this.container =
+              hostParentNode(initialVNode.placeholder) || container
+            this.anchor = hostNextSibling(initialVNode.placeholder)
+            hostRemove(initialVNode.placeholder)
+            initialVNode.placeholder = null
+          }
           if (__DEV__) {
             endMeasure(instance, `render`)
           }
@@ -1565,8 +1608,8 @@ function baseCreateRenderer(
           patch(
             null,
             subTree,
-            container,
-            anchor,
+            this.container,
+            this.anchor,
             instance,
             parentSuspense,
             namespace,
@@ -1628,6 +1671,8 @@ function baseCreateRenderer(
           }
         }
         instance.isMounted = true
+        trackAsyncRender(this, parentSuspense)
+        cancelAsyncRender(this)
 
         if (__DEV__ || __FEATURE_PROD_DEVTOOLS__) {
           devtoolsComponentAdded(instance)
@@ -1702,66 +1747,83 @@ function baseCreateRenderer(
         if (__DEV__) {
           startMeasure(instance, `render`)
         }
-        const nextTree = renderComponentRoot(instance)
+        const nextTree = this.render()
+        if (!nextTree) {
+          if (__DEV__) {
+            endMeasure(instance, `render`)
+            popWarningContext()
+          }
+          return
+        }
         if (__DEV__) {
           endMeasure(instance, `render`)
         }
-        const prevTree = instance.subTree
-        instance.subTree = nextTree
-
-        if (__DEV__) {
-          startMeasure(instance, `patch`)
-        }
-        patch(
-          prevTree,
-          nextTree,
-          // parent may have changed if it's in a teleport
-          hostParentNode(prevTree.el!)!,
-          // anchor may have changed if it's in a fragment
-          getNextHostNode(prevTree),
+        commitAsyncRender(
+          this,
           instance,
-          parentSuspense,
-          namespace,
-        )
-        if (__DEV__) {
-          endMeasure(instance, `patch`)
-        }
-        next.el = nextTree.el
-        if (originNext === null) {
-          // self-triggered update. In case of HOC, update parent component
-          // vnode el. HOC is indicated by parent instance's subTree pointing
-          // to child component's vnode
-          updateHOCHostEl(instance, nextTree.el)
-        }
-        // updated hook
-        if (u) {
-          queuePostRenderEffect(u, undefined, parentSuspense)
-        }
-        // onVnodeUpdated
-        if ((vnodeHook = next.props && next.props.onVnodeUpdated) || next.iu) {
-          queuePostRenderEffect(
-            () => {
-              vnodeHook && invokeVNodeHook(vnodeHook, parent, next!, vnode)
-              next!.iu && next!.iu()
-            },
-            undefined,
-            parentSuspense,
-          )
-        }
-        if (
-          __COMPAT__ &&
-          isCompatEnabled(DeprecationTypes.INSTANCE_EVENT_HOOKS, instance)
-        ) {
-          queuePostRenderEffect(
-            () => instance.emit('hook:updated'),
-            undefined,
-            parentSuspense,
-          )
-        }
+          () => {
+            const prevTree = instance.subTree
+            instance.subTree = nextTree
 
-        if (__DEV__ || __FEATURE_PROD_DEVTOOLS__) {
-          devtoolsComponentUpdated(instance)
-        }
+            if (__DEV__) {
+              startMeasure(instance, `patch`)
+            }
+            patch(
+              prevTree,
+              nextTree,
+              // parent may have changed if it's in a teleport
+              hostParentNode(prevTree.el!)!,
+              // anchor may have changed if it's in a fragment
+              getNextHostNode(prevTree),
+              instance,
+              parentSuspense,
+              namespace,
+            )
+            if (__DEV__) {
+              endMeasure(instance, `patch`)
+            }
+            next.el = nextTree.el
+            if (originNext === null) {
+              // self-triggered update. In case of HOC, update parent component
+              // vnode el. HOC is indicated by parent instance's subTree pointing
+              // to child component's vnode
+              updateHOCHostEl(instance, nextTree.el)
+            }
+            // updated hook
+            if (u) {
+              queuePostRenderEffect(u, undefined, parentSuspense)
+            }
+            // onVnodeUpdated
+            if (
+              (vnodeHook = next.props && next.props.onVnodeUpdated) ||
+              next.iu
+            ) {
+              queuePostRenderEffect(
+                () => {
+                  vnodeHook && invokeVNodeHook(vnodeHook, parent, next!, vnode)
+                  next!.iu && next!.iu()
+                },
+                undefined,
+                parentSuspense,
+              )
+            }
+            if (
+              __COMPAT__ &&
+              isCompatEnabled(DeprecationTypes.INSTANCE_EVENT_HOOKS, instance)
+            ) {
+              queuePostRenderEffect(
+                () => instance.emit('hook:updated'),
+                undefined,
+                parentSuspense,
+              )
+            }
+
+            if (__DEV__ || __FEATURE_PROD_DEVTOOLS__) {
+              devtoolsComponentUpdated(instance)
+            }
+          },
+          parentSuspense,
+        )
 
         if (__DEV__) {
           popWarningContext()

@@ -10,6 +10,7 @@ import {
   slotNotifiesBoundary,
 } from '@vue/shared'
 import { createComment, createTextNode } from './dom/node'
+import { pendingDomUpdates } from './dom/async'
 import {
   type Block,
   type BlockFn,
@@ -373,6 +374,10 @@ export class DynamicFragment extends RenderContextFragment {
     noScope: boolean = false,
     branchKey?: any,
   ): void {
+    if (pendingDomUpdates && this.everUpdated) {
+      pendingDomUpdates.push(() => this.update(render, key, noScope, branchKey))
+      return
+    }
     const everUpdated = this.everUpdated
     this.everUpdated = true
     if (key === this.current) {

@@ -37,6 +37,7 @@ import { MoveType, queuePostFlushCb, warn } from '@vue/runtime-dom'
 import { currentInstance } from './component'
 import type { DynamicSlot, VaporSlot } from './componentSlots'
 import { renderEffect } from './renderEffect'
+import { pendingDomUpdates } from './dom/async'
 import { VaporVForFlags } from '@vue/shared'
 import {
   type FragmentClaim,
@@ -154,23 +155,33 @@ export const createFor = (
     const source = normalizeSource(src())
     const sourceKeys = source.keys
     const newLength = source.values.length
-    const oldLength = oldBlocks.length
-    newBlocks = new Array(newLength)
     // Key expressions can depend on item fields, not just list shape. Evaluate
     // them while the render effect is still the active subscriber so those deps
     // can trigger keyed diff, then reuse the same keys below after
     // setActiveSub() clears the active subscriber during patching.
-    newKeys = undefined
+    let keys: any[] | undefined
     if (getKey) {
-      newKeys = new Array(newLength)
+      keys = new Array(newLength)
       for (let i = 0; i < newLength; i++) {
         const value = getItemValue(source, i)
-        newKeys[i] = sourceKeys
+        keys[i] = sourceKeys
           ? getKey(value, sourceKeys[i], i)
           : getKey(value, i, undefined)
       }
     }
 
+    if (pendingDomUpdates && isMounted) {
+      pendingDomUpdates.push(() => patchList(source, keys))
+    } else {
+      patchList(source, keys)
+    }
+  }
+
+  const patchList = (source: ResolvedSource, keys: any[] | undefined) => {
+    const newLength = source.values.length
+    const oldLength = oldBlocks.length
+    newBlocks = new Array(newLength)
+    newKeys = keys
     const prevSub = setActiveSub()
     const wasMounted = isMounted
     if (wasMounted && frag.bu) {
