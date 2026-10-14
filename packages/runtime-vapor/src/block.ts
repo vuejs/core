@@ -424,8 +424,11 @@ export function removeNode(block: Node, parent?: ParentNode): void {
         if (parent && current) current.removeChild(block)
       },
     )
-  } else {
-    parent && parent.removeChild(block)
+  } else if (parent) {
+    const current = block.parentNode
+    if (current) {
+      current.removeChild(block)
+    }
   }
 }
 

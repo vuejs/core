@@ -128,9 +128,26 @@ describe('block + node ops', () => {
     remove(frag, container)
     expect(Array.from(container.childNodes)).toEqual([node2])
 
-    expect(() => remove(anchor, container)).toThrowError(
-      'The node to be removed is not a child of this node.',
-    )
+    // should safely ignore detached nodes without throwing
+    expect(() => remove(anchor, container)).not.toThrow()
+  })
+
+  test('remove moved or detached node', () => {
+    const container = document.createElement('div')
+    const externalContainer = document.createElement('div')
+    const target = document.createElement('span')
+    container.appendChild(target)
+
+    // Move node to external container (e.g. portal or custom relocation in onMounted)
+    externalContainer.appendChild(target)
+
+    // Should remove from its actual parentNode without throwing NotFoundError
+    remove(target, container)
+    expect(externalContainer.contains(target)).toBe(false)
+    expect(target.parentNode).toBeNull()
+
+    // Should safely ignore already detached nodes
+    expect(() => remove(target, container)).not.toThrow()
   })
 })
 
