@@ -382,6 +382,18 @@ export function remove(block: Block, parent?: ParentNode): void {
   }
 }
 
+// The hooks running an element's removal leave (removeNode): vdom's unmounted
+// child, in the DOM until the leave ends. It is never removed again, keeps
+// these hooks over a prop refresh, and a leave asked of it meanwhile chains
+// onto them. A leave running for another reason (a KeepAlive move, a v-show
+// toggle) is not here: the element is still a child, and leaves again as
+// vdom's does.
+const removing: WeakMap<object, VaporTransitionHooks> = new WeakMap()
+
+export function removingLeave(block: object): VaporTransitionHooks | undefined {
+  return removing.get(block)
+}
+
 export function removeNode(block: Node, parent?: ParentNode): void {
   if (
     isTransitionEnabled &&
@@ -390,12 +402,18 @@ export function removeNode(block: Node, parent?: ParentNode): void {
     // a held slot root never entered the DOM: nothing to animate
     block.parentNode
   ) {
+    // only an unmount cuts a running removal leave short
+    const running = removing.get(block)
+    if (running && !(running.state && running.state.isUnmounting)) return
+    const hooks = (block as TransitionBlock).$transition!
+    removing.set(block, hooks)
     performTransitionLeave(
       block,
-      (block as TransitionBlock).$transition as TransitionHooks,
+      hooks,
       // deferred: an unmount may have removed the node meanwhile, or a
       // KeepAlive deactivation may have moved it into its storage
       () => {
+        removing.delete(block)
         const current = block.parentNode
         if (parent && current) current.removeChild(block)
       },

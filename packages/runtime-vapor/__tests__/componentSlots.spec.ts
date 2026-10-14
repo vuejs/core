@@ -10095,3 +10095,263 @@ describe('content and fallback sequenced under a Transition', () => {
     })
   })
 })
+
+describe('a fallback already leaving on its own', () => {
+  type Step = string | ((data: any) => void)
+  // vapor vs vdom: the DOM after every step and the hook order; `k=v` sets,
+  // `doneAll` drains the hook callbacks, a function mutates in place
+  async function parity(
+    srcs: Record<string, string>,
+    init: Record<string, any>,
+    steps: Step[],
+    attach = false,
+  ) {
+    const logs: Record<string, string[]> = {}
+    await renderParity(
+      srcs,
+      () => {
+        const data: any = ref({
+          ...init,
+          dones: [] as (() => void)[],
+          log: [] as string[],
+          e: (el: Element, done: () => void) => {
+            data.value.log.push('e:' + el.textContent)
+            data.value.dones.push(done)
+          },
+          l: (el: Element, done: () => void) => {
+            data.value.log.push('l:' + el.textContent)
+            data.value.dones.push(done)
+          },
+        })
+        return data
+      },
+      async (data, root, mode) => {
+        // vapor's v-show checks isConnected
+        if (attach) document.body.append(root)
+        try {
+          const log: string[] = (logs[mode] = data.value.log)
+          for (const s of steps) {
+            if (!isString(s)) {
+              s(data)
+            } else if (s === 'doneAll') {
+              let n = 0
+              while (data.value.dones.length && n++ < 20) {
+                data.value.dones.shift()!()
+                await nextTick()
+              }
+            } else {
+              const [k, v] = s.split('=')
+              data.value[k] = v === 'true' ? true : v === 'false' ? false : v
+            }
+            await nextTick()
+            log.push(
+              (isString(s) ? s : 'set') + ' ' + stripAnchors(root.innerHTML),
+            )
+          }
+        } finally {
+          if (attach) root.remove()
+        }
+      },
+    )
+    expect(logs.vapor).toEqual(logs.vdom)
+  }
+
+  const outIn = (body: string, props = '') => `
+    <template>
+      <Transition mode="out-in" :css="false" ${props} @enter="data.e" @leave="data.l">
+        ${body}
+      </Transition>
+    </template>`
+  const contentApp = `
+    <template>
+      <components.Outlet>
+        <b v-if="data.show">c</b>
+      </components.Outlet>
+    </template>`
+
+  test('content arriving while the fallback root already left does not wait, like vdom', () =>
+    parity(
+      {
+        Outlet: outIn(`<slot><p v-if="data.fb">fb</p></slot>`),
+        App: contentApp,
+      },
+      { fb: true, show: false },
+      ['fb=false', 'show=true', 'doneAll'],
+    ))
+
+  test('an outlet swapped out and back while its fallback leaves defers like a branch of its own', () =>
+    parity(
+      {
+        Outlet: outIn(`
+          <slot v-if="data.a"><p>fb</p></slot>
+          <i v-else>off</i>`),
+        App: contentApp,
+      },
+      { a: true, show: false },
+      ['show=true', 'a=false', 'a=true', 'doneAll'],
+    ))
+
+  // a Transition prop change re-resolves hooks for the current root, which is
+  // the leaving element until the leave ends: it keeps the hooks running its
+  // leave, as vdom's unmounted child does, so the content's wait still ends
+  test('a prop changed while the fallback root leaves keeps the leave the content waits on', () =>
+    parity(
+      {
+        Outlet: outIn(
+          `<slot><p v-if="data.fb">fb</p><i v-else>alt</i></slot>`,
+          ':appear="data.appear"',
+        ),
+        App: contentApp,
+      },
+      { fb: true, show: false, appear: false },
+      ['fb=false', 'appear=true', 'show=true', 'doneAll'],
+    ))
+
+  test('a prop changed while the outlet swaps out and back keeps the leave the branch waits on', () =>
+    parity(
+      {
+        Outlet: outIn(
+          `
+          <slot v-if="data.a"><p>fb</p></slot>
+          <i v-else>off</i>`,
+          ':appear="data.appear"',
+        ),
+        App: contentApp,
+      },
+      { a: true, show: false, appear: false },
+      ['show=true', 'appear=true', 'a=false', 'a=true', 'doneAll'],
+    ))
+
+  // the refresh that leaves the leaving root alone still tracks the props:
+  // the root rendered after the leave sees later changes
+  const swapLeave = (tag: string) => (data: any) => {
+    data.value.leave = (el: Element, done: () => void) => {
+      data.value.log.push(tag + ':' + el.textContent)
+      data.value.dones.push(done)
+    }
+  }
+  test('a handler swapped during and after the fallback root leave reaches the next root', () =>
+    parity(
+      {
+        Outlet: `
+          <template>
+            <Transition mode="out-in" :css="false" @leave="data.leave">
+              <slot><p v-if="data.fb">fb</p><i v-else v-show="data.vis">alt</i></slot>
+            </Transition>
+          </template>`,
+        App: `<template><components.Outlet></components.Outlet></template>`,
+      },
+      { fb: true, vis: true, leave: NOOP },
+      [
+        swapLeave('l1'),
+        'fb=false',
+        swapLeave('l2'),
+        'doneAll',
+        swapLeave('l3'),
+        'vis=false',
+      ],
+      true,
+    ))
+
+  test.each(['out-in', 'in-out', 'default'])(
+    'content arriving during the fallback root v-show leave takes over at once: %s',
+    async mode => {
+      const clean = (s: string) => stripAnchors(s).replace(/ style=""/g, '')
+      const result = await renderParity(
+        {
+          Outlet: `
+            <template>
+              <Transition mode="${mode}" :css="false" @leave="data.leave">
+                <slot><p v-show="data.visible">fallback</p></slot>
+              </Transition>
+            </template>`,
+          App: `
+            <template>
+              <components.Outlet>
+                <b v-if="data.show">content</b>
+              </components.Outlet>
+            </template>`,
+        },
+        () => {
+          const dones: (() => void)[] = []
+          return ref({
+            show: false,
+            visible: true,
+            dones,
+            leave: (_el: Element, done: () => void) => dones.push(done),
+          })
+        },
+        async (data, root) => {
+          document.body.append(root)
+          try {
+            data.value.visible = false
+            await nextTick()
+            data.value.show = true
+            await nextTick()
+            while (data.value.dones.length) {
+              data.value.dones.shift()!()
+              await nextTick()
+            }
+          } finally {
+            root.remove()
+          }
+        },
+      )
+      expect(clean(result.vdom.after)).toBe('<b>content</b>')
+      expect(clean(result.vapor.after)).toBe(clean(result.vdom.after))
+    },
+  )
+
+  // CSS out-in: the fallback root's own leave and the one the content asks for
+  // land on the same element, whose callbacks would override each other and
+  // freeze every later update. Hidden, that leave is the root's (structural),
+  // not v-show's, so the content waits for it all the same.
+  test.each([
+    ['', '<p v-if="data.fb">fb</p>'],
+    [' hidden by v-show', '<p v-if="data.fb" v-show="data.visible">fb</p>'],
+  ])(
+    'content arriving while the fallback root leaves under CSS out-in sequences later updates%s',
+    async (_, fallback) => {
+      vi.useFakeTimers()
+      vi.stubGlobal('requestAnimationFrame', (cb: () => void) =>
+        setTimeout(cb, 0),
+      )
+      const frames: Record<string, string[]> = {}
+      try {
+        await renderParity(
+          {
+            Outlet: `
+              <template>
+                <Transition mode="out-in" :duration="20">
+                  <slot>${fallback}</slot>
+                </Transition>
+              </template>`,
+            App: contentApp,
+          },
+          () => ref({ fb: true, visible: false, show: false }),
+          async (data, root, mode) => {
+            document.body.append(root)
+            frames[mode] = []
+            try {
+              data.value.fb = false
+              await nextTick()
+              for (const show of [true, false, true]) {
+                data.value.show = show
+                await nextTick()
+                await vi.advanceTimersByTimeAsync(100)
+                frames[mode].push(root.textContent!)
+              }
+            } finally {
+              root.remove()
+            }
+          },
+        )
+        expect(frames.vdom).toEqual(['c', '', 'c'])
+        expect(frames.vapor).toEqual(frames.vdom)
+      } finally {
+        vi.useRealTimers()
+        vi.unstubAllGlobals()
+      }
+    },
+  )
+})

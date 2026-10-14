@@ -326,7 +326,7 @@ export class DynamicFragment extends RenderContextFragment {
     noScope: boolean
     branchKey?: any
     // key mounted when the first update was deferred
-    prevKey: any
+    prevKey?: any
   }
   // out-in: the current branch is leaving and is removed once it has left
   leaving?: boolean
