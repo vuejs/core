@@ -436,7 +436,7 @@ function setStyleIncremental(el: any, value: any): void {
   // drops the attribute and its css vars
   let next: NormalizedStyle | undefined = normalizedValue
   if ('$styi$' in el) {
-    const base = el.$styi !== undefined ? el.$styi : (el.$root && el.$root.sty)
+    const base = el.$styi !== undefined ? el.$styi : el.$root && el.$root.sty
     next = base ? extend({}, base, el.$styi$) : el.$styi$ || {}
   }
 
