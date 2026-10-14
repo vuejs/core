@@ -259,6 +259,8 @@ export function move(
   parentSuspense?: any, // TODO Suspense
 ): void {
   if (block instanceof Node) {
+    // a held slot root's branch is not in the DOM: its outlet places it
+    if (isTransitionEnabled && !block.parentNode) return
     // only apply transition on Element nodes
     if (
       isTransitionEnabled &&
@@ -525,14 +527,11 @@ export function getBlockFirstNode(block: Block): Node | undefined {
         }
       }
     }
-    const nodes = block.nodes
-    if (isValidBlock(nodes)) return getBlockFirstNode(nodes)
     // Empty fragments may keep their insertion anchor in `anchor` or in
     // `nodes` (ForFragment). An empty fragment nested in `nodes` places its
-    // anchor before the outer one, but a fallback committed before the host
-    // was placed is not in the DOM yet, so only use a node that sits next to
-    // `anchor`.
-    const node = getBlockFirstNode(nodes)
+    // anchor before the outer one, but a held slot root's nodes are out of
+    // the DOM, valid or not, so only use a node that sits next to `anchor`.
+    const node = getBlockFirstNode(block.nodes)
     return node && (!anchor || node.parentNode === anchor.parentNode)
       ? node
       : anchor

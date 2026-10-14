@@ -99,6 +99,9 @@ export class VaporFragment<
   isBlockValid?: (componentAsValid?: boolean) => boolean
   // a slot host: its content, in the DOM ahead of the fallback it exposes
   getContent?(): Block
+  // a slot outlet: the slot's name, the stem of the keys Transition composes
+  // under its branches (`_<name>`, `_<name>_fb`)
+  slotName?: string
   insert?(
     parent: ParentNode,
     anchor: Node | null,
@@ -225,20 +228,34 @@ export function createSlotBoundary(
   fragment: RenderContextFragment,
   getFallback: () => BlockFn | undefined,
   markDirty: () => void,
-  isHolding: () => boolean = NO,
+  // the host's own hold (isHoldingSlotContent), on top of the enclosing
+  // outlet's
+  isHoldingContent?: () => boolean,
   // the host fragment's cell unless the boundary stands for another outlet
   getScopeIds: () => string[] | null = () => fragment.slotScopeIds,
   // a getter: the chain above an interop outlet follows the outlets recorded
   // on its latest vnode
   getParent: () => SlotBoundaryContext | null = noParentBoundary,
 ): SlotBoundaryContext {
+  // Transition is set up before anything under it is created: without it,
+  // nothing ever holds.
+  const isHeld = !isTransitionEnabled
+    ? NO
+    : () => {
+        const enclosing = fragment.slotBoundary
+        return !!enclosing && enclosing.isHolding()
+      }
   return {
     getParent,
     getFallback,
     run: (fn, scope) => runWithRenderCtx(fragment, fn, scope),
     getScopeIds,
     markDirty,
-    isHolding,
+    isHolding:
+      isTransitionEnabled && isHoldingContent
+        ? () => isHoldingContent() || isHeld()
+        : isHeld,
+    isHeld,
   }
 }
 
@@ -281,6 +298,15 @@ export class ForBlock extends VaporFragment {
     this.indexRef = index
     this.key = renderKey
   }
+}
+
+// Whether a fragment's next branch renders detached: a slot outlet showing
+// (or, out-in, leaving) a fallback under a Transition holds its own content
+// and the slot roots under it; the outlet places them (slotFragment.ts).
+function isBranchHeld(frag: DynamicFragment): boolean {
+  return frag.__vf & SLOT_RESOLVER
+    ? (frag as SlotFragment).boundary.isHolding()
+    : !!(frag.__vf & SLOT_ROOT) && frag.slotBoundary!.isHolding()
 }
 
 export class DynamicFragment extends RenderContextFragment {
@@ -383,15 +409,12 @@ export class DynamicFragment extends RenderContextFragment {
     const prevSub = setActiveSub()
     let reusingDeferredAnchor = false
     try {
-      const parent = !isHydrating ? this.anchor.parentNode : null
-      // a held slot root renders out of the DOM; the outlet places it
-      const renderParent =
-        parent &&
-        isTransitionEnabled &&
-        this.__vf & SLOT_ROOT &&
-        this.slotBoundary!.isHolding()
+      const liveParent = isHydrating ? null : this.anchor.parentNode
+      // a held slot root renders detached; its outlet places the branch
+      const parent =
+        liveParent && isTransitionEnabled && isBranchHeld(this)
           ? null
-          : parent
+          : liveParent
       // Every update after the mount-time render brackets its hooks; see the
       // `everUpdated` field comment.
       const isUpdate = wasMounted || (everUpdated && !!parent)
@@ -405,9 +428,11 @@ export class DynamicFragment extends RenderContextFragment {
         }
       }
       // currently leaving: defer mounting the next branch until
-      // the leave finishes.
+      // the leave finishes. A branch rendering out of the DOM (a held slot
+      // root) is in nobody's way.
       if (
         transition &&
+        parent &&
         deferBranchUpdateDuringLeave(
           this,
           render,
@@ -425,7 +450,7 @@ export class DynamicFragment extends RenderContextFragment {
       if (wasMounted) {
         const scope = this.scope
         const previous = this.nodes
-        const removeBranch = () => remove(previous, parent || undefined)
+        const removeBranch = () => remove(previous, liveParent || undefined)
         let deferRemoval = false
         if (scope) {
           if (this.keepAliveCtx) {
@@ -468,7 +493,7 @@ export class DynamicFragment extends RenderContextFragment {
         render,
         // in-out leave may have swapped in the hooks for the incoming branch
         transition && this.$transition,
-        renderParent,
+        parent,
         key,
         noScope,
         isUpdate,
@@ -586,6 +611,7 @@ export class SlotFragment
   fallbackScope?: EffectScope
   renderedFallbacks?: RenderedSlotFallback[]
   lastNodesValid?: boolean
+  held?: 'leaving' | 'placing'
   pendingRecheck = false
   isReconciling = false
   private content: Block = EMPTY_BLOCK
@@ -699,9 +725,12 @@ export class SlotFragment
     // pipeline re-renders content, then capture the result back; the
     // subsequent recheckSlotResolution decides what `nodes` exposes
     // (syncNodes).
+    const exposed = this.nodes
     this.nodes = this.content
     this.update(render, key)
     this.content = this.nodes
+    // out-in: the leaving fallback stays exposed until its leave ends
+    if (isTransitionEnabled && this.held === 'leaving') this.nodes = exposed
   }
 
   updateSlot(

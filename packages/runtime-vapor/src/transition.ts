@@ -17,6 +17,7 @@ type ApplyTransitionLeaveHooksFn = (
   block: Block,
   hooks: VaporTransitionHooks,
   afterLeave: () => void,
+  unpaired?: boolean,
 ) => boolean
 type DeferBranchUpdateDuringLeaveFn = (
   frag: DynamicFragment,

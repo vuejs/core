@@ -38,14 +38,16 @@ import {
 } from '@vue/runtime-dom'
 import {
   NO,
+  NOOP,
   VaporBlockShape,
   VaporIfFlags,
   VaporSlotFlags,
   VaporSlotStability,
   VaporVForFlags,
   extend,
+  isString,
 } from '@vue/shared'
-import { compile, makeRender, renderParity } from './_utils'
+import { compile, makeRender, renderParity, stripAnchors } from './_utils'
 import type { DynamicSlot } from '../src/componentSlots'
 import { setElementText, setText } from '../src/dom/prop'
 import {
@@ -126,6 +128,7 @@ function createTestSlotResolutionState(options: {
     run: (fn, scope) => (scope ? scope.run(fn)! : fn()),
     markDirty: () => markSlotResolutionDirty(state),
     isHolding: NO,
+    isHeld: NO,
   }
   state = {
     boundary,
@@ -329,6 +332,7 @@ describe('component: slots', () => {
         run: fn => fn(),
         markDirty,
         isHolding: NO,
+        isHeld: NO,
       }
       const frag = withSlotBoundary(
         parentBoundary,
@@ -371,6 +375,7 @@ describe('component: slots', () => {
         run: fn => fn(),
         markDirty: vi.fn(),
         isHolding: NO,
+        isHeld: NO,
       }
       const frag = withSlotBoundary(
         parentBoundary,
@@ -396,6 +401,7 @@ describe('component: slots', () => {
         run: fn => fn(),
         markDirty: vi.fn(),
         isHolding: NO,
+        isHeld: NO,
       }
       const frag = withSlotBoundary(
         parentBoundary,
@@ -419,6 +425,7 @@ describe('component: slots', () => {
         run: (fn: () => any) => fn(),
         markDirty: vi.fn(),
         isHolding: NO,
+        isHeld: NO,
       }
       const frag = withSlotBoundary(
         parentBoundary,
@@ -448,6 +455,7 @@ describe('component: slots', () => {
         run: (fn: () => any) => fn(),
         markDirty: vi.fn(),
         isHolding: NO,
+        isHeld: NO,
       }
       const frag = withSlotBoundary(
         parentBoundary,
@@ -488,6 +496,7 @@ describe('component: slots', () => {
         run: (fn: () => any) => fn(),
         markDirty: vi.fn(),
         isHolding: NO,
+        isHeld: NO,
       }
       const frag = withSlotBoundary(parentBoundary, () => new SlotFragment())
 
@@ -791,6 +800,7 @@ describe('component: slots', () => {
         run: fn => fn(),
         markDirty: vi.fn(),
         isHolding: NO,
+        isHeld: NO,
       }
       const boundary: SlotBoundaryContext = {
         getParent: () => parentBoundary,
@@ -804,6 +814,7 @@ describe('component: slots', () => {
         run: fn => fn(),
         markDirty: () => markSlotResolutionDirty(state),
         isHolding: NO,
+        isHeld: NO,
       }
       state = {
         boundary,
@@ -843,6 +854,7 @@ describe('component: slots', () => {
         run: fn => fn(),
         markDirty: vi.fn(),
         isHolding: NO,
+        isHeld: NO,
       }
       const boundary: SlotBoundaryContext = {
         getParent: () => parentBoundary,
@@ -850,6 +862,7 @@ describe('component: slots', () => {
         run: fn => fn(),
         markDirty: () => markSlotResolutionDirty(state),
         isHolding: NO,
+        isHeld: NO,
       }
       state = {
         boundary,
@@ -885,6 +898,7 @@ describe('component: slots', () => {
         run: fn => fn(),
         markDirty,
         isHolding: NO,
+        isHeld: NO,
       }
       const Child = defineVaporComponent(() =>
         withSlotBoundary(boundary, () =>
@@ -913,6 +927,7 @@ describe('component: slots', () => {
         run: fn => fn(),
         markDirty,
         isHolding: NO,
+        isHeld: NO,
       }
       const Child = defineVaporComponent(() =>
         withSlotBoundary(boundary, () =>
@@ -939,6 +954,7 @@ describe('component: slots', () => {
         run: fn => fn(),
         markDirty,
         isHolding: NO,
+        isHeld: NO,
       }
       const Child = defineVaporComponent(() =>
         withSlotBoundary(boundary, () =>
@@ -972,6 +988,7 @@ describe('component: slots', () => {
         run: fn => fn(),
         markDirty,
         isHolding: NO,
+        isHeld: NO,
       }
       const Child = defineVaporComponent(() => {
         const n = template('<div><!></div>', 1)() as any
@@ -1008,6 +1025,7 @@ describe('component: slots', () => {
         run: fn => fn(),
         markDirty,
         isHolding: NO,
+        isHeld: NO,
       }
       const Child = defineVaporComponent(() =>
         withSlotBoundary(boundary, () =>
@@ -1041,6 +1059,7 @@ describe('component: slots', () => {
         run: fn => fn(),
         markDirty,
         isHolding: NO,
+        isHeld: NO,
       }
       const Child = defineVaporComponent(() =>
         withSlotBoundary(boundary, () => createForwardedSlotRoot('default')),
@@ -1239,6 +1258,7 @@ describe('component: slots', () => {
         run: (fn: () => any) => fn(),
         markDirty: vi.fn(),
         isHolding: NO,
+        isHeld: NO,
       }
       const instance = renderWithSlots({})
       const app = createApp({ render: () => null })
@@ -1272,6 +1292,7 @@ describe('component: slots', () => {
         run: (fn: () => any) => fn(),
         markDirty: vi.fn(),
         isHolding: NO,
+        isHeld: NO,
       }
       const instance = renderWithSlots({})
       const app = createApp({ render: () => null })
@@ -1303,6 +1324,7 @@ describe('component: slots', () => {
         run: (fn: () => any) => fn(),
         markDirty: vi.fn(),
         isHolding: NO,
+        isHeld: NO,
       }
       const instance = renderWithSlots({})
       const app = createApp({ render: () => null })
@@ -1639,6 +1661,7 @@ describe('component: slots', () => {
         run: (fn: () => any) => fn(),
         markDirty: vi.fn(),
         isHolding: NO,
+        isHeld: NO,
       }
       const instance = renderWithSlots({})
       const app = createApp({ render: () => null })
@@ -3786,6 +3809,7 @@ describe('component: slots', () => {
             run: fn => fn(),
             markDirty,
             isHolding: NO,
+            isHeld: NO,
           }
           const show = ref(true)
           const Comp = defineVaporComponent(() => {
@@ -3939,6 +3963,7 @@ describe('component: slots', () => {
             run: fn => fn(),
             markDirty: vi.fn(),
             isHolding: NO,
+            isHeld: NO,
           }
           const Comp = defineVaporComponent(() =>
             withSlotBoundary(boundary, () => [
@@ -8674,5 +8699,1374 @@ describe('invalid content stays in the DOM', () => {
     }
     expect(texts.vdom).toEqual(['|fb', 'c|', '|fb'])
     expect(texts.vapor).toEqual(texts.vdom)
+  })
+})
+
+describe('content and fallback sequenced under a Transition', () => {
+  // Transition mode on the providing outlet sequences the leaving content
+  // against the fallback the way vdom sequences a child swap: the hooks
+  // and the DOM after every step must match for every slot-root shape.
+  // `done` releases the oldest pending leave.
+  const transitionLog = async (
+    srcs: Record<string, string>,
+    steps: ('on' | 'off' | 'done' | ((data: any) => void))[],
+    {
+      init = {},
+      settledOnly = false,
+    }: {
+      init?: Record<string, any>
+      settledOnly?: boolean
+    } = {},
+  ) => {
+    const logs: Record<string, string[]> = {}
+    const dom = (root: HTMLElement) =>
+      Array.from(root.querySelectorAll('div,i'))
+        .map(
+          el =>
+            (el.className || el.tagName) +
+            ((el as HTMLElement).style.display === 'none' ? '(hidden)' : ''),
+        )
+        .join(',')
+    await renderParity(
+      srcs,
+      () => {
+        const data: any = ref({
+          show: true,
+          ...init,
+          dones: [] as (() => void)[],
+          onEnter: (el: Element) =>
+            data.value.log.push('enter:' + el.className),
+          onLeave: (el: Element, done: () => void) => {
+            data.value.log.push('leave:' + el.className)
+            data.value.dones.push(done)
+          },
+        })
+        return data
+      },
+      async (data, root, mode) => {
+        const log: string[] = (data.value.log = logs[mode] = [])
+        for (const step of steps) {
+          if (step === 'done') {
+            const done = data.value.dones.shift()
+            if (done) done()
+          } else if (isString(step)) {
+            data.value.show = step === 'on'
+          } else {
+            step(data.value)
+          }
+          await nextTick()
+          log.push((isString(step) ? step : 'set') + ' ' + dom(root))
+        }
+        if (settledOnly) log.splice(0, log.length - 1)
+      },
+    )
+    expect(logs.vapor).toEqual(logs.vdom)
+  }
+  const transitionOutlet = (
+    mode: string,
+    fallback = '<div class="fallback">fb</div>',
+  ) => `
+    <template>
+      <Transition
+        ${mode ? `mode="${mode}"` : ''}
+        :css="false"
+        @before-enter="data.onEnter"
+        @leave="data.onLeave"
+      >
+        <slot>${fallback}</slot>
+      </Transition>
+    </template>`
+  const contentApp = (outer: string) => `
+    <template>
+      <components.${outer}>
+        <div v-if="data.show" class="content">c</div>
+      </components.${outer}>
+    </template>`
+  const forwardingMiddle = `
+    <template>
+      <components.Outer><slot /></components.Outer>
+    </template>`
+  const transitionShapes = (
+    mode: string,
+  ): Record<string, Record<string, string>> => ({
+    'slot-root v-if': {
+      Outer: transitionOutlet(mode),
+      App: contentApp('Outer'),
+    },
+    'forwarded slot-root v-if': {
+      Outer: transitionOutlet(mode),
+      Middle: contentApp('Outer'),
+      App: `<template><components.Middle /></template>`,
+    },
+    'forwarded outlet with a conditional slot': {
+      Outer: transitionOutlet(mode),
+      Middle: forwardingMiddle,
+      App: `
+        <template>
+          <components.Middle>
+            <template v-if="data.show" #default>
+              <div class="content">c</div>
+            </template>
+          </components.Middle>
+        </template>`,
+    },
+    'forwarded outlet whose content v-if flips': {
+      Outer: transitionOutlet(mode),
+      Middle: forwardingMiddle,
+      App: contentApp('Middle'),
+    },
+  })
+
+  describe.each(['out-in', 'in-out'])('%s swap, like vdom', mode => {
+    test.each(Object.entries(transitionShapes(mode)))('%s', (_, srcs) =>
+      transitionLog(srcs, ['off', 'done', 'on', 'done']),
+    )
+
+    // Toggles racing a leave: the content keeps rendering while the
+    // fallback leaves, and the branch exposed once the leave ends follows
+    // the data rather than the leave that happened to be running.
+    test.each(Object.entries(transitionShapes(mode)))(
+      '%s, toggled during a leave',
+      async (_, srcs) => {
+        await transitionLog(
+          srcs,
+          ['off', 'done', 'on', 'off', 'done', 'done', 'done'],
+          { settledOnly: true },
+        )
+        await transitionLog(srcs, ['off', 'on', 'done', 'done', 'done'], {
+          settledOnly: true,
+        })
+        await transitionLog(srcs, ['on', 'off', 'on', 'done', 'done', 'done'], {
+          init: { show: false },
+          settledOnly: true,
+        })
+      },
+    )
+
+    // A fallback-body root leaving empty has no incoming branch: it leaves
+    // right away, like a vdom child swapping to a comment.
+    test('fallback-body slot root leaving empty', () =>
+      transitionLog(
+        {
+          Outer: transitionOutlet(
+            mode,
+            '<div v-if="data.show" class="fallback">fb</div>',
+          ),
+          App: `
+            <template>
+              <components.Outer>
+                <div v-if="data.c" class="content">c</div>
+              </components.Outer>
+            </template>`,
+        },
+        ['off', 'done', 'on', 'done'],
+        { init: { c: false } },
+      ))
+
+    test('fallback-body slot root swapping to its v-else', () =>
+      transitionLog(
+        {
+          Outer: transitionOutlet(
+            mode,
+            '<div v-if="data.show" class="fallback">fb</div><div v-else class="other">o</div>',
+          ),
+          App: `
+            <template>
+              <components.Outer>
+                <div v-if="data.c" class="content">c</div>
+              </components.Outer>
+            </template>`,
+        },
+        ['off', 'done', 'on', 'done'],
+        { init: { c: false } },
+      ))
+
+    // The leave of content handed to the next entering block goes to the
+    // fallback that actually enters, past a nearer provider whose fallback
+    // is invalid.
+    test('content leaving past an invalid nearer fallback', () =>
+      transitionLog(
+        {
+          Outer: transitionOutlet(mode),
+          Middle: `
+            <template>
+              <components.Outer>
+                <slot><i v-if="data.y">mf</i></slot>
+              </components.Outer>
+            </template>`,
+          App: contentApp('Middle'),
+        },
+        ['off', 'done', 'on', 'done'],
+        { init: { y: false } },
+      ))
+  })
+
+  describe.each(['out-in', 'in-out', ''])('mode "%s"', mode => {
+    // A fallback shown from the mount is exposed before Transition applies
+    // its hooks. The content replacing it still enters, and the fallback
+    // still leaves as its own branch (vdom keys it `_fb`).
+    test('content arriving after a mount-time fallback', () =>
+      transitionLog(
+        { Outer: transitionOutlet(mode), App: contentApp('Outer') },
+        ['on', 'done', 'off', 'done', 'on', 'done'],
+        { init: { show: false } },
+      ))
+
+    test('content arriving after a mount-time keyed fallback', () =>
+      transitionLog(
+        {
+          Outer: transitionOutlet(
+            mode,
+            '<div key="k" class="fallback">fb</div>',
+          ),
+          App: contentApp('Outer'),
+        },
+        ['on', 'done', 'off', 'done'],
+        { init: { show: false } },
+      ))
+
+    // A v-show fallback root makes the hooks persisted (vapor derives it
+    // at runtime, vdom never does through a slot): the swap is not
+    // sequenced, since a persisted leave never reports its end.
+    test('v-show fallback root', async () => {
+      const data = ref({ show: false, vis: true, onLeave: NOOP })
+      const Outer = compile(
+        transitionOutlet(
+          mode,
+          '<div v-show="data.vis" class="fallback">fb</div>',
+        ),
+        data,
+      )
+      const App = compile(contentApp('Outer'), data, { Outer })
+      const root = document.createElement('div')
+      const app = createVaporApp(App)
+      app.mount(root)
+      expect(root.textContent).toBe('fb')
+      for (let i = 0; i < 2; i++) {
+        data.value.show = true
+        await nextTick()
+        expect(root.textContent).toBe('c')
+        data.value.show = false
+        await nextTick()
+        expect(root.textContent).toBe('fb')
+      }
+      app.unmount()
+    })
+
+    // A held root still removes its previous branch from the DOM: only the
+    // next branch renders detached.
+    test('a held root replaces its previous invalid branch', async () => {
+      const dones: (() => void)[] = []
+      const data = ref({
+        show: true,
+        onEnter: NOOP,
+        onLeave: (_el: Element, done: () => void) => {
+          dones.push(done)
+        },
+      })
+      const Outer = compile(
+        transitionOutlet(mode, '<div class="fb">fb</div>'),
+        data,
+      )
+      const App = compile(
+        `<template>
+          <div class="root">
+            <components.Outer>
+              <div v-if="data.show" class="content">c</div>
+              <template v-else><!--keep--></template>
+            </components.Outer>
+          </div>
+        </template>`,
+        data,
+        { Outer },
+      )
+      const root = document.createElement('div')
+      const app = createVaporApp(App)
+      app.mount(root)
+      const settle = async () => {
+        for (let i = 0; i < 3; i++) {
+          dones.splice(0).forEach(done => done())
+          await nextTick()
+        }
+      }
+      const initial = root.innerHTML
+      for (let i = 0; i < 3; i++) {
+        data.value.show = false
+        await nextTick()
+        await settle()
+        data.value.show = true
+        await nextTick()
+        await settle()
+        expect(root.innerHTML).toBe(initial)
+      }
+      // the comment branch is no child for Transition (vdom skips it)
+      expect(
+        'Transition component has no valid child element',
+      ).toHaveBeenWarned()
+      app.unmount()
+    })
+
+    // Coverage guard: a fallback root keyed like the content root is still a
+    // branch of its own (vdom composes the key under `_fb`).
+    test('content and fallback sharing an explicit key', () =>
+      transitionLog(
+        {
+          Outer: transitionOutlet(
+            mode,
+            '<div key="k" class="fallback">fb</div>',
+          ),
+          App: `
+            <template>
+              <components.Outer>
+                <div v-if="data.show" key="k" class="content">c</div>
+              </components.Outer>
+            </template>`,
+        },
+        ['off', 'done', 'on', 'done'],
+      ))
+  })
+
+  // The fallback of an outlet nested in a fallback body is keyed under the
+  // enclosing fallback's key, `_<name>_fb` composed as vdom composes them: a
+  // re-rendered one early-removes the previous one still leaving.
+  test('a nested outlet fallback re-rendered while the previous one leaves replaces it', () =>
+    transitionLog(
+      {
+        Outer: transitionOutlet(
+          '',
+          '<slot name="other"><div class="fallback">fb</div></slot>',
+        ),
+        App: contentApp('Outer'),
+      },
+      ['off', 'on', 'off', 'done', 'done', 'done'],
+    ))
+
+  const keepAliveApp = `
+    <template>
+      <div class="root">
+        <KeepAlive>
+          <components.A v-if="data.which === 'a'" />
+          <components.B v-else />
+        </KeepAlive>
+      </div>
+    </template>`
+
+  // The out-in window belongs to the outlet: tearing the outlet down while
+  // its fallback leaves must neither throw nor land the content afterwards.
+  const outInOutlet = transitionOutlet('out-in', '<div class="fb">fb</div>')
+  test('out-in: the outlet unmounts while its fallback leaves', async () => {
+    const dones: (() => void)[] = []
+    const data = ref({
+      show: false,
+      alive: true,
+      onEnter: NOOP,
+      onLeave: (_el: Element, done: () => void) => {
+        dones.push(done)
+      },
+    })
+    const Outer = compile(outInOutlet, data)
+    const App = compile(
+      `<template>
+        <div class="root">
+          <components.Outer v-if="data.alive">
+            <div v-if="data.show" class="content">c</div>
+          </components.Outer>
+        </div>
+      </template>`,
+      data,
+      { Outer },
+    )
+    const root = document.createElement('div')
+    const app = createVaporApp(App)
+    app.mount(root)
+    data.value.show = true
+    await nextTick()
+    expect(root.innerHTML).toBe(
+      '<div class="root"><!--if--><div class="fb">fb</div><!--slot--><!--if--></div>',
+    )
+
+    data.value.alive = false
+    await nextTick()
+    expect(root.innerHTML).toBe(
+      '<div class="root"><div class="fb">fb</div><!--if--></div>',
+    )
+    dones.splice(0).forEach(done => done())
+    await nextTick()
+    expect(root.innerHTML).toBe('<div class="root"><!--if--></div>')
+    app.unmount()
+  })
+
+  test('out-in: the outlet is deactivated while its fallback leaves', async () => {
+    const dones: (() => void)[] = []
+    const data = ref({
+      show: false,
+      which: 'a',
+      onEnter: NOOP,
+      onLeave: (_el: Element, done: () => void) => {
+        dones.push(done)
+      },
+    })
+    const Outer = compile(outInOutlet, data)
+    const A = compile(contentApp('Outer'), data, { Outer })
+    const B = compile(`<template><p>b</p></template>`, data)
+    const App = compile(keepAliveApp, data, { A, B })
+    const root = document.createElement('div')
+    const app = createVaporApp(App)
+    app.mount(root)
+    data.value.show = true
+    await nextTick()
+    data.value.which = 'b'
+    await nextTick()
+    dones.splice(0).forEach(done => done())
+    await nextTick()
+    expect(root.innerHTML).toBe('<div class="root"><p>b</p><!--if--></div>')
+
+    data.value.which = 'a'
+    await nextTick()
+    expect(root.innerHTML).toBe(
+      '<div class="root"><div class="content">c</div><!--if--><!--slot--><!--if--></div>',
+    )
+    app.unmount()
+  })
+
+  // Held content re-renders detached while the fallback leaves: the
+  // slot itself can swap out and back without touching the live DOM.
+  test('out-in: the slot is swapped while its fallback leaves', async () => {
+    const dones: (() => void)[] = []
+    const data = ref({
+      show: false,
+      onEnter: NOOP,
+      onLeave: (_el: Element, done: () => void) => {
+        dones.push(done)
+      },
+    })
+    const Outer = compile(outInOutlet, data)
+    const App = compile(
+      `<template>
+        <div class="root">
+          <components.Outer>
+            <template v-if="data.show" #default>
+              <div class="content">c</div>
+            </template>
+          </components.Outer>
+        </div>
+      </template>`,
+      data,
+      { Outer },
+    )
+    const root = document.createElement('div')
+    const app = createVaporApp(App)
+    app.mount(root)
+    data.value.show = true
+    await nextTick()
+    data.value.show = false
+    await nextTick()
+    dones.splice(0).forEach(done => done())
+    await nextTick()
+    expect(root.innerHTML).toBe(
+      '<div class="root"><div class="fb">fb</div><!--slot--></div>',
+    )
+
+    data.value.show = true
+    await nextTick()
+    dones.splice(0).forEach(done => done())
+    await nextTick()
+    expect(root.innerHTML).toBe(
+      '<div class="root"><div class="content">c</div><!--slot--></div>',
+    )
+    app.unmount()
+  })
+
+  // An outlet held by an enclosing one commits its fallback without
+  // placing or animating it: the enclosing outlet places both at the end
+  // of its own leave, like vdom mounting the whole subtree then.
+  test('a nearer fallback committed during the enclosing out-in window', () =>
+    transitionLog(
+      {
+        Outer: transitionOutlet('out-in'),
+        Middle: `
+          <template>
+            <components.Outer>
+              <slot><i v-if="data.y" class="local">l</i></slot>
+            </components.Outer>
+          </template>`,
+        App: contentApp('Middle'),
+      },
+      [
+        'off',
+        'done',
+        'on',
+        d => {
+          d.show = false
+          d.y = true
+        },
+        'done',
+        'done',
+        'done',
+      ],
+      { init: { y: false } },
+    ))
+
+  // Only the roots of held content are held: an outlet inside one of its
+  // elements renders into that element.
+  test.each([
+    ['its local fallback', false, '<i class="local">l</i>'],
+    ['content arriving during the window', true, '<b class="y">y</b>'],
+  ])(
+    'an outlet inside an element of held content shows %s',
+    async (_, y, inner) => {
+      const { vdom, vapor } = await renderParity(
+        {
+          Outer: `
+            <template>
+              <Transition mode="out-in" :css="false" @leave="data.onLeave">
+                <slot><div class="fallback">fb</div></slot>
+              </Transition>
+            </template>`,
+          Middle: `
+            <template>
+              <components.Outer>
+                <div v-if="data.show" class="content">
+                  <slot><i class="local">l</i></slot>
+                </div>
+              </components.Outer>
+            </template>`,
+          App: `
+            <template>
+              <components.Middle>
+                <b v-if="data.y" class="y">y</b>
+              </components.Middle>
+            </template>`,
+        },
+        () => {
+          const data: any = ref({
+            show: false,
+            y: false,
+            onLeave: (_: Element, done: () => void) => {
+              data.value.done = done
+            },
+          })
+          return data
+        },
+        async data => {
+          data.value.show = true
+          await nextTick()
+          data.value.y = y
+          await nextTick()
+          data.value.done()
+          await nextTick()
+        },
+      )
+      expect(stripAnchors(vdom.after)).toBe(
+        `<div class="content">${inner}</div>`,
+      )
+      expect(stripAnchors(vapor.after)).toBe(stripAnchors(vdom.after))
+    },
+  )
+
+  // Content already in place is not moved when it takes over again.
+  test('content taking over again without a Transition stays where it is', async () => {
+    const data = ref({ show: false })
+    const Outer = compile(
+      `<template>
+        <slot><div class="fb">fb</div></slot>
+      </template>`,
+      data,
+    )
+    const App = compile(contentApp('Outer'), data, { Outer })
+    const root = document.createElement('div')
+    const app = createVaporApp(App)
+    app.mount(root)
+    const added: string[] = []
+    const removed: string[] = []
+    const observer = new MutationObserver(records => {
+      for (const record of records) {
+        record.addedNodes.forEach(n => added.push(n.nodeName))
+        record.removedNodes.forEach(n => removed.push(n.nodeName))
+      }
+    })
+    observer.observe(root, { childList: true, subtree: true })
+    data.value.show = true
+    await nextTick()
+    await new Promise(resolve => setTimeout(resolve))
+    observer.disconnect()
+    expect(root.innerHTML).toBe(
+      '<div class="content">c</div><!--if--><!--slot-->',
+    )
+    expect(added).toEqual(['DIV'])
+    expect(removed).toEqual(['DIV'])
+    app.unmount()
+  })
+
+  // The fallback is a branch of its own for Transition only: KeepAlive
+  // still tells the branches under it apart.
+  test('KeepAlive caches the branches of a fallback apart', async () => {
+    const created: string[] = []
+    const data = ref({
+      x: true,
+      create: (name: string) => (created.push(name), name),
+    })
+    const A = compile(
+      `<template><p>{{ data.create('a') }}</p></template>`,
+      data,
+    )
+    const B = compile(
+      `<template><p>{{ data.create('b') }}</p></template>`,
+      data,
+    )
+    const Outer = compile(
+      `<template>
+        <KeepAlive>
+          <slot>
+            <components.A v-if="data.x" />
+            <components.B v-else />
+          </slot>
+        </KeepAlive>
+      </template>`,
+      data,
+      { A, B },
+    )
+    // a Transition anywhere turns the fallback's branch identity on
+    const App = compile(
+      `<template>
+        <Transition><i>t</i></Transition>
+        <components.Outer />
+      </template>`,
+      data,
+      { Outer },
+    )
+    const root = document.createElement('div')
+    const app = createVaporApp(App)
+    app.mount(root)
+    expect(root.querySelector('p')!.textContent).toBe('a')
+    for (const text of ['b', 'a', 'b']) {
+      data.value.x = !data.value.x
+      await nextTick()
+      expect(root.querySelector('p')!.textContent).toBe(text)
+    }
+    expect(created).toEqual(['a', 'b'])
+    app.unmount()
+  })
+
+  // A DocumentFragment used as a container is an ordinary parent.
+  test('an app mounted into a DocumentFragment runs enter hooks', async () => {
+    const log: string[] = []
+    const data = ref({
+      show: true,
+      onBeforeEnter: (el: Element) => log.push('before-enter:' + el.className),
+    })
+    const App = compile(
+      `<template>
+        <Transition appear :css="false" @before-enter="data.onBeforeEnter">
+          <div v-if="data.show" class="a">a</div>
+        </Transition>
+      </template>`,
+      data,
+    )
+    const app = createVaporApp(App)
+    app.mount(document.createDocumentFragment() as any)
+    data.value.show = false
+    await nextTick()
+    data.value.show = true
+    await nextTick()
+    expect(log).toEqual(['before-enter:a', 'before-enter:a'])
+    app.unmount()
+  })
+
+  test('a component inside slot content is not held by the enclosing outlet, like vdom', async () => {
+    const leaving: Record<string, (string | null)[]> = { vdom: [], vapor: [] }
+    await renderParity(
+      {
+        Card: `
+          <template>
+            <Transition><slot><p>card fb</p></slot></Transition>
+          </template>`,
+        Comp: `
+          <template>
+            <div class="c">
+              <Teleport to="body" disabled><slot>x</slot></Teleport>
+            </div>
+          </template>`,
+        App: `
+          <template>
+            <components.Card>
+              <components.Comp v-if="data.ok">
+                <span v-if="data.s">s</span>
+              </components.Comp>
+            </components.Card>
+          </template>`,
+      },
+      () => ref({ ok: true, s: true }),
+      async (data, root, mode) => {
+        const c = () => {
+          const el = root.querySelector('div.c')
+          return el && el.textContent
+        }
+        for (let i = 0; i < 2; i++) {
+          data.value.ok = false
+          await nextTick()
+          leaving[mode].push(c())
+          data.value.ok = true
+          await nextTick()
+          leaving[mode].push(c())
+        }
+      },
+    )
+    expect(leaving.vdom).toEqual(['s', 's', 's', 's'])
+    expect(leaving.vapor).toEqual(leaving.vdom)
+  })
+
+  describe('the hook log after every step, like vdom', () => {
+    type Step = ((data: any) => void) | 'done'
+    // The hook log interleaved with the DOM after each step, from an all-vdom
+    // and an all-vapor run. `done` finishes every pending leave.
+    const hookLog = async (
+      srcs: Record<string, string>,
+      steps: Step[],
+      init: Record<string, any> = {},
+    ) => {
+      const logs: Record<string, string[]> = {}
+      await renderParity(
+        srcs,
+        () => {
+          const data: any = ref({
+            show: true,
+            ...init,
+            dones: [] as (() => void)[],
+            be: (el: Element) => data.value.log.push('be:' + el.className),
+            l: (el: Element, done: () => void) => {
+              data.value.log.push('l:' + el.className)
+              data.value.dones.push(done)
+            },
+            al: (el: Element) => data.value.log.push('al:' + el.className),
+          })
+          return data
+        },
+        async (data, root, mode) => {
+          const log: string[] = (data.value.log = logs[mode] = [])
+          const dom = () =>
+            stripAnchors(root.innerHTML).replace(/ style=""/g, '')
+          const flush = async () => {
+            for (let i = 0; i < 4; i++) {
+              data.value.dones.splice(0).forEach((done: () => void) => done())
+              await nextTick()
+            }
+          }
+          for (const step of steps) {
+            if (step === 'done') {
+              await flush()
+              log.push('done ' + dom())
+            } else {
+              step(data.value)
+              await nextTick()
+              log.push(dom())
+            }
+          }
+          await flush()
+          log.push('settled ' + dom())
+        },
+      )
+      return logs
+    }
+    const hooks = `:css="false" @before-enter="data.be" @leave="data.l" @after-leave="data.al"`
+    const outlet = (
+      mode: string,
+      fallback = '<div class="fallback">fb</div>',
+    ) => `
+      <template>
+        <Transition ${mode ? `mode="${mode}"` : ''} ${hooks}>
+          <slot>${fallback}</slot>
+        </Transition>
+      </template>`
+    const count = (log: string[], entry: string) =>
+      log.filter(e => e === entry).length
+    // the frames after every leave finished
+    const settled = (log: string[]) =>
+      log.filter(e => e.startsWith('done ') || e.startsWith('settled '))
+    // the DOM after every step, hooks left out
+    const frames = (log: string[]) => log.filter(e => !/^(be|l|al):/.test(e))
+    const modes = ['', 'out-in', 'in-out']
+
+    test.each(modes)(
+      'mode "%s": v-for content enters once after the fallback',
+      async mode => {
+        const logs = await hookLog(
+          {
+            Outer: outlet(mode),
+            App: `
+              <template>
+                <components.Outer>
+                  <div v-for="i in data.items" :key="i" :class="'i' + i">
+                    {{ i }}
+                  </div>
+                </components.Outer>
+              </template>`,
+          },
+          [d => (d.items = []), 'done', d => (d.items = [2]), 'done'],
+          { items: [1] },
+        )
+        expect(count(logs.vdom, 'be:i2')).toBe(1)
+        expect(count(logs.vapor, 'be:i2')).toBe(1)
+        expect(settled(logs.vapor)).toEqual(settled(logs.vdom))
+      },
+    )
+
+    test('TransitionGroup: list items enter once after an empty-list fallback', async () => {
+      const logs = await hookLog(
+        {
+          List: `
+            <template>
+              <TransitionGroup tag="ul" ${hooks}>
+                <slot><li key="empty" class="empty">none</li></slot>
+              </TransitionGroup>
+            </template>`,
+          App: `
+            <template>
+              <components.List>
+                <li v-for="i in data.items" :key="i" :class="'i' + i">
+                  {{ i }}
+                </li>
+              </components.List>
+            </template>`,
+        },
+        [d => (d.items = []), 'done', d => (d.items = [1, 2]), 'done'],
+        { items: [1] },
+      )
+      expect(count(logs.vdom, 'be:i2')).toBe(1)
+      expect(count(logs.vapor, 'be:i2')).toBe(1)
+      expect(settled(logs.vapor)).toEqual(settled(logs.vdom))
+    })
+
+    const itemRows = `
+      <template>
+        <div class="root">
+          <components.Item v-for="x in data.list" :key="x">
+            <div v-if="data['r' + x]" :class="'c' + x">{{ x }}</div>
+          </components.Item>
+        </div>
+      </template>`
+
+    test('out-in: a row inserted beside an outlet in its leave window keeps its place', async () => {
+      const logs = await hookLog(
+        { Item: outlet('out-in', '<p class="fb">fb</p>'), App: itemRows },
+        [d => (d.r2 = true), d => (d.list = [1, 3, 2]), 'done'],
+        { list: [1, 2], r1: false, r2: false, r3: false },
+      )
+      expect(settled(logs.vapor)).toEqual(settled(logs.vdom))
+    })
+
+    test('out-in: rows reordered while one is in its leave window', async () => {
+      const logs = await hookLog(
+        { Item: outlet('out-in', '<p class="fb">fb</p>'), App: itemRows },
+        [d => (d.r1 = true), d => (d.list = [2, 1]), 'done'],
+        { list: [1, 2], r1: false, r2: true },
+      )
+      expect(settled(logs.vapor)).toEqual(settled(logs.vdom))
+    })
+
+    // The held rows are out of the DOM while their outlet's fallback leaves:
+    // the keyed list moving the outlets locates them by an attached node.
+    test.each([[[2, 1, 3]], [[3, 2, 1]]])(
+      'out-in: outlets reordered to %j while one holds its content',
+      async order => {
+        const logs = await hookLog(
+          { Item: outlet('out-in', '<p class="fb">fb</p>'), App: itemRows },
+          [d => (d.r2 = true), d => (d.list = order), 'done'],
+          { list: [1, 2, 3], r1: false, r2: false, r3: false },
+        )
+        expect(frames(logs.vapor)).toEqual(frames(logs.vdom))
+      },
+    )
+
+    describe('a forwarded outlet with a local fallback under the enclosing one', () => {
+      const srcs = (mode: string) => ({
+        Outer: outlet(mode),
+        Mid: `
+          <template>
+            <components.Outer>
+              <slot><div v-if="data.y" class="local">l</div></slot>
+            </components.Outer>
+          </template>`,
+        App: contentApp('Mid'),
+      })
+      test('the local fallback takes over', async () => {
+        const logs = await hookLog(srcs(''), [d => (d.y = true), 'done'], {
+          show: false,
+          y: false,
+        })
+        expect(logs.vapor).toEqual(logs.vdom)
+      })
+      test('the local fallback leaves', async () => {
+        const logs = await hookLog(srcs(''), [d => (d.y = false), 'done'], {
+          show: false,
+          y: true,
+        })
+        expect(logs.vapor).toEqual(logs.vdom)
+      })
+      test('in-out: the enclosing fallback leaves once the local one took over', async () => {
+        const logs = await hookLog(
+          srcs('in-out'),
+          [d => (d.y = true), 'done'],
+          { show: false, y: false },
+        )
+        expect(count(logs.vdom, 'l:fallback')).toBe(1)
+        expect(count(logs.vapor, 'l:fallback')).toBe(1)
+        expect(settled(logs.vapor)).toEqual(settled(logs.vdom))
+      })
+    })
+
+    describe('multi-root content', () => {
+      const srcs = (mode: string) => ({
+        Outer: outlet(mode),
+        App: `
+          <template>
+            <components.Outer>
+              <div v-if="data.show" class="content">c</div>
+              <div v-if="data.alt" class="alt">a</div>
+            </components.Outer>
+          </template>`,
+      })
+      test.each(['', 'in-out'])(
+        'mode "%s": a second root takes over from the fallback',
+        async mode => {
+          const logs = await hookLog(
+            srcs(mode),
+            [d => (d.alt = true), 'done'],
+            { show: false, alt: false },
+          )
+          expect(settled(logs.vapor)).toEqual(settled(logs.vdom))
+        },
+      )
+      test('in-out: the roots swap in one tick', async () => {
+        const logs = await hookLog(
+          srcs('in-out'),
+          [
+            d => {
+              d.show = false
+              d.alt = true
+            },
+            'done',
+          ],
+          { alt: false },
+        )
+        expect(settled(logs.vapor)).toEqual(settled(logs.vdom))
+      })
+    })
+
+    test.each(modes)(
+      'mode "%s": a Symbol key on the fallback root',
+      async mode => {
+        const logs = await hookLog(
+          {
+            Outer: outlet(
+              mode,
+              '<div :key="data.sym" class="fallback">fb</div>',
+            ),
+            App: contentApp('Outer'),
+          },
+          [d => (d.show = false), 'done', d => (d.show = true), 'done'],
+          { sym: Symbol('k') },
+        )
+        expect(settled(logs.vapor)).toEqual(settled(logs.vdom))
+      },
+    )
+
+    test('out-in: content arriving while a fallback root leaves shows afterwards', async () => {
+      const logs = await hookLog(
+        {
+          Outer: outlet('out-in', '<i v-if="data.m" class="fb">fb</i>'),
+          App: `
+            <template>
+              <components.Outer>
+                <span v-if="data.c" class="c">c</span>
+              </components.Outer>
+            </template>`,
+        },
+        [
+          d => (d.c = true),
+          'done',
+          d => (d.c = false),
+          'done',
+          d => (d.m = false),
+          d => (d.c = true),
+          'done',
+        ],
+        { c: false, m: true },
+      )
+      expect(settled(logs.vapor)).toEqual(settled(logs.vdom))
+    })
+
+    test('out-in: the nearest fallback wins after a window the enclosing outlet re-read', async () => {
+      const logs = await hookLog(
+        {
+          Outer: outlet('out-in', '<div class="ofb">ofb</div>'),
+          Mid: `
+            <template>
+              <components.Outer>
+                <template #default>
+                  <slot><div class="mfb">mfb</div></slot>
+                </template>
+                <template v-if="data.n" #extra>x</template>
+              </components.Outer>
+            </template>`,
+          App: contentApp('Mid'),
+        },
+        [
+          d => (d.show = true),
+          d => (d.show = false),
+          d => (d.n = true),
+          'done',
+          d => (d.show = true),
+          'done',
+        ],
+        { show: false, n: false },
+      )
+      expect(settled(logs.vapor)).toEqual(settled(logs.vdom))
+    })
+
+    test.each(modes)(
+      'mode "%s": a plain element child toggling while the outlet holds',
+      async mode => {
+        const logs = await hookLog(
+          {
+            Outer: outlet(mode, '<p>fb</p>'),
+            App: `
+              <template>
+                <components.Outer>
+                  <component :is="data.tag"><b v-if="data.x">b</b></component>
+                </components.Outer>
+              </template>`,
+          },
+          [
+            d => (d.tag = 'div'),
+            d => (d.x = true),
+            'done',
+            d => (d.x = false),
+            d => (d.x = true),
+          ],
+          { tag: null, x: false },
+        )
+        expect(settled(logs.vapor)).toEqual(settled(logs.vdom))
+      },
+    )
+
+    // The leave a deactivation started is overtaken by the reactivation: its
+    // end must not put the element back where the deactivation was taking it.
+    test.each([
+      ['slot content of an outlet with a fallback', '', contentApp('Outer')],
+      [
+        'slot content of an outlet with a fallback',
+        'in-out',
+        contentApp('Outer'),
+      ],
+      [
+        'a plain branch',
+        '',
+        `<template>
+          <Transition ${hooks}>
+            <div v-if="data.show" class="content">c</div>
+            <div v-else class="fallback">fb</div>
+          </Transition>
+        </template>`,
+      ],
+    ])(
+      'KeepAlive reactivating %s (mode "%s") while its leave is pending',
+      async (_, mode, a) => {
+        const logs = await hookLog(
+          {
+            Outer: outlet(mode),
+            A: a,
+            B: `<template><p class="b">b</p></template>`,
+            App: keepAliveApp,
+          },
+          [
+            d => (d.show = true),
+            d => (d.which = 'b'),
+            d => (d.which = 'a'),
+            'done',
+            d => (d.show = false),
+            'done',
+          ],
+          { show: false, which: 'a' },
+        )
+        expect(settled(logs.vapor)).toEqual(settled(logs.vdom))
+      },
+    )
+
+    describe('in-out: a chain whose taken branch goes away leaves', () => {
+      const steps: Step[] = [
+        d => (d.x = true),
+        'done',
+        d => (d.x = false),
+        'done',
+        d => (d.y = true),
+        'done',
+        d => (d.y = false),
+        'done',
+      ]
+      const init = { x: false, y: false }
+      const chain = `
+        <b v-if="data.x" class="x">x</b>
+        <i v-else-if="data.y" class="y">y</i>`
+      test.each([
+        [
+          'slot content',
+          {
+            Card: outlet('in-out', '<p class="fb">fb</p>'),
+            App: `
+              <template>
+                <components.Card>${chain}</components.Card>
+              </template>`,
+          },
+        ],
+        [
+          'forwarded slot content',
+          {
+            Outer: outlet('in-out', '<p class="fb">fb</p>'),
+            Card: `
+              <template>
+                <components.Outer><slot /></components.Outer>
+              </template>`,
+            App: `
+              <template>
+                <components.Card>${chain}</components.Card>
+              </template>`,
+          },
+        ],
+        [
+          'slot content with an empty v-else',
+          {
+            Card: outlet('in-out', '<p class="fb">fb</p>'),
+            App: `
+              <template>
+                <components.Card>
+                  <b v-if="data.x" class="x">x</b>
+                  <template v-else-if="data.y"><i class="y">y</i></template>
+                  <template v-else></template>
+                </components.Card>
+              </template>`,
+          },
+        ],
+        [
+          'no slot',
+          {
+            App: `
+              <template>
+                <Transition mode="in-out" ${hooks}>${chain}</Transition>
+              </template>`,
+          },
+        ],
+      ])('%s', async (_, srcs) => {
+        const logs = await hookLog(srcs as Record<string, string>, steps, init)
+        expect(settled(logs.vapor)).toEqual(settled(logs.vdom))
+      })
+    })
+  })
+
+  describe('v-for slot root under a Transition outlet', () => {
+    test('rows arriving while the fallback leaves are held and entered when placed, like vdom', async () => {
+      const logs: Record<string, string[]> = {}
+      await renderParity(
+        {
+          Outlet: `
+            <template>
+              <Transition
+                mode="out-in"
+                :css="false"
+                @before-enter="data.be"
+                @enter="data.e"
+                @after-enter="data.ae"
+                @before-leave="data.bl"
+                @leave="data.l"
+                @after-leave="data.al"
+              >
+                <slot><p>fb</p></slot>
+              </Transition>
+            </template>`,
+          App: `
+            <template>
+              <components.Outlet>
+                <b v-for="i in data.items" :key="i">{{ i }}</b>
+              </components.Outlet>
+            </template>`,
+        },
+        () => {
+          const data: any = ref({
+            items: [] as number[],
+            dones: [] as (() => void)[],
+            log: [] as string[],
+            be: (el: Element) => data.value.log.push('be:' + el.textContent),
+            e: (el: Element, done: () => void) => {
+              data.value.log.push('e:' + el.textContent)
+              data.value.dones.push(done)
+            },
+            ae: (el: Element) => data.value.log.push('ae:' + el.textContent),
+            bl: (el: Element) => data.value.log.push('bl:' + el.textContent),
+            l: (el: Element, done: () => void) => {
+              data.value.log.push('l:' + el.textContent)
+              data.value.dones.push(done)
+            },
+            al: (el: Element) => data.value.log.push('al:' + el.textContent),
+          })
+          return data
+        },
+        async (data, root, mode) => {
+          const log: string[] = (logs[mode] = data.value.log)
+          data.value.items = [1]
+          await nextTick()
+          log.push('items=[1] ' + stripAnchors(root.innerHTML))
+          let n = 0
+          while (data.value.dones.length && n++ < 10) {
+            data.value.dones.shift()!()
+            await nextTick()
+          }
+          log.push('settled ' + stripAnchors(root.innerHTML))
+        },
+      )
+      expect(logs.vapor).toEqual(logs.vdom)
+    })
+
+    // rows in the DOM turn invalid (the fallback shows and holds the root),
+    // then the list clears: the rows and their anchors go, nothing accumulates
+    test('rows cleared while the fallback shows are removed with their anchors', async () => {
+      const frames: Record<string, string[]> = {}
+      await renderParity(
+        {
+          Outlet: `
+            <template>
+              <Transition :css="false"><slot><p>fb</p></slot></Transition>
+            </template>`,
+          App: `
+            <template>
+              <components.Outlet>
+                <template v-for="i in data.list" :key="i">
+                  <b v-if="data.on">{{ i }}</b>
+                </template>
+              </components.Outlet>
+            </template>`,
+        },
+        () => ref({ list: [] as number[], on: true }),
+        async (data, root, mode) => {
+          const seen: string[] = (frames[mode] = [])
+          for (let i = 0; i < 3; i++) {
+            data.value.on = true
+            data.value.list = [1]
+            await nextTick()
+            data.value.on = false
+            await nextTick()
+            data.value.list = []
+            await nextTick()
+            seen.push(root.innerHTML)
+          }
+        },
+      )
+      // the same DOM after every cycle, in both modes
+      expect(frames.vapor[1]).toBe(frames.vapor[0])
+      expect(frames.vapor[2]).toBe(frames.vapor[0])
+      expect(frames.vdom[2]).toBe(frames.vdom[0])
+      expect(stripAnchors(frames.vapor[0])).toBe(stripAnchors(frames.vdom[0]))
+    })
+
+    // the outer keyed list prepends a row while this row's v-for content waits
+    // behind the fallback's out-in leave: the held rows are out of the DOM, so
+    // the row is located by its list anchor, and the new row lands ahead of it
+    test('a row prepended while a sibling row holds its v-for content lands ahead of it', async () => {
+      const texts: Record<string, string> = {}
+      await renderParity(
+        {
+          Outlet: `
+            <template>
+              <Transition mode="out-in" :css="false" @leave="data.leave">
+                <slot><p>fb</p></slot>
+              </Transition>
+            </template>`,
+          App: `
+            <template>
+              <div>
+                <components.Outlet v-for="r in data.rows" :key="r">
+                  <i v-for="j in data.inner" :key="j">{{ r }}-{{ j }},</i>
+                </components.Outlet>
+              </div>
+            </template>`,
+        },
+        () => {
+          const dones: (() => void)[] = []
+          return ref({
+            rows: [1],
+            inner: [] as number[],
+            dones,
+            leave: (_el: Element, done: () => void) => dones.push(done),
+          })
+        },
+        async (data, root, mode) => {
+          data.value.inner = [1]
+          await nextTick()
+          data.value.rows = [2, 1]
+          await nextTick()
+          let n = 0
+          while (data.value.dones.length && n++ < 10) {
+            data.value.dones.shift()!()
+            await nextTick()
+          }
+          texts[mode] = root.textContent!
+        },
+      )
+      expect(texts.vdom).toBe('2-1,1-1,')
+      expect(texts.vapor).toBe(texts.vdom)
+    })
+
+    // the row's first node is the outlet; its content switched twice while the
+    // fallback leaves (the second branch renders held, out of the DOM): the
+    // row is still located by an attached node, and a prepended row lands ahead
+    test('a row prepended while a sibling row switches held slot content twice lands ahead of it', async () => {
+      const texts: Record<string, string> = {}
+      await renderParity(
+        {
+          Outlet: `
+            <template>
+              <Transition mode="out-in" :css="false" @leave="data.leave">
+                <slot :name="data.name"><p>fb</p></slot>
+              </Transition>
+            </template>`,
+          App: `
+            <template>
+              <div>
+                <template v-for="r in data.rows" :key="r">
+                  <components.Outlet>
+                    <template #a><i>a</i></template>
+                    <template #b><i>b</i></template>
+                  </components.Outlet>
+                  <span>{{ r }},</span>
+                </template>
+              </div>
+            </template>`,
+        },
+        () => {
+          const dones: (() => void)[] = []
+          return ref({
+            rows: [1],
+            name: 'missing',
+            dones,
+            leave: (_el: Element, done: () => void) => dones.push(done),
+          })
+        },
+        async (data, root, mode) => {
+          data.value.name = 'a'
+          await nextTick()
+          data.value.name = 'b'
+          await nextTick()
+          data.value.rows = [2, 1]
+          await nextTick()
+          let n = 0
+          while (data.value.dones.length && n++ < 10) {
+            data.value.dones.shift()!()
+            await nextTick()
+          }
+          texts[mode] = root.textContent!
+        },
+      )
+      expect(texts.vdom).toBe('b2,b1,')
+      expect(texts.vapor).toBe(texts.vdom)
+    })
   })
 })
