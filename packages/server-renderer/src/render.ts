@@ -205,7 +205,8 @@ function renderComponentSubTree(
       // set current rendering instance for asset resolution
       const prev = setCurrentRenderingInstance(instance)
       try {
-        ssrRender(
+        ssrRender.call(
+          instance.proxy,
           instance.proxy,
           push,
           instance,

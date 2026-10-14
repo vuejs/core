@@ -886,6 +886,19 @@ function testRender(type: string, render: typeof renderToString) {
         } catch {}
         expect(getCurrentInstance()).toBe(null)
       })
+
+      test('`this` in template', async () => {
+        expect(
+          await render(
+            createApp({
+              data() {
+                return { msg: 'hello' }
+              },
+              template: `<div :title="this.msg">{{ this.msg }}</div>`,
+            }),
+          ),
+        ).toBe(`<div title="hello">hello</div>`)
+      })
     })
 
     // #7733
