@@ -297,6 +297,10 @@ export interface VNode<
     outlets?: readonly VdomSlotOutlet[]
     // slot data saved before adding an outlet's branch key to vnode props
     props?: Data
+    // extra props added via cloneVNode, applied to the slot's element root in interop
+    extraProps?: Data
+    // whether this slot vnode represents content returned by a slot function
+    isContent?: boolean
     state?: unknown
     ref?: ShallowRef<any>
     scope?: EffectScope
@@ -858,6 +862,8 @@ function cloneVaporSlotMeta(
     slot: vaporSlot.slot,
     outlets: vaporSlot.outlets,
     props: vaporSlot.props,
+    extraProps: vaporSlot.extraProps,
+    isContent: vaporSlot.isContent,
   }
 
   if (vaporSlot.props && extraProps) {
@@ -871,6 +877,21 @@ function cloneVaporSlotMeta(
     }
     if (extraSlotProps) {
       cloned.props = mergeProps(vaporSlot.props, extraSlotProps)
+    }
+  }
+
+  if (extraProps) {
+    let nonKeyExtraProps: Data | undefined
+    for (const key in extraProps) {
+      if (key !== 'key') {
+        if (!nonKeyExtraProps) nonKeyExtraProps = {}
+        nonKeyExtraProps[key] = extraProps[key]
+      }
+    }
+    if (nonKeyExtraProps) {
+      cloned.extraProps = vaporSlot.extraProps
+        ? mergeProps(vaporSlot.extraProps, nonKeyExtraProps)
+        : nonKeyExtraProps
     }
   }
 
