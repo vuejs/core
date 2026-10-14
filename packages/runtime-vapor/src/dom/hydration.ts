@@ -28,6 +28,7 @@ import {
 import { currentRenderContext } from '../renderContext'
 import { setElementScopeIdsDeep } from './scopeIdStamp'
 import { remove } from '../block'
+import { isHydrating, setHydrating } from './hydrationState'
 
 const START_TAG_RE = /^<([^\s/>]+)/
 
@@ -39,16 +40,12 @@ export function setIsHydratingEnabled(value: boolean): void {
 
 export let currentHydrationNode: Node | null = null
 
-export let isHydrating = false
+export { isHydrating }
 function setIsHydrating(value: boolean) {
   if (!isHydratingEnabled && !isVdomHydrating && !isVdomHydratingEnabled) {
     return false
   }
-  try {
-    return isHydrating
-  } finally {
-    isHydrating = value
-  }
+  return setHydrating(value)
 }
 
 let deferredHydrationBoundaryDepth = 0

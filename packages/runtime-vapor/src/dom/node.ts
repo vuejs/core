@@ -1,11 +1,11 @@
 import { type Namespace, Namespaces } from '@vue/shared'
 import type { InsertionParent } from '../insertionState'
 import {
-  isHydrating,
   nextLogicalSibling,
   resolveBlankTextTarget,
   skipUntrackedAnchors,
 } from './hydration'
+import { isHydrating } from './hydrationState'
 
 const SVG_NS = 'http://www.w3.org/2000/svg'
 const MATHML_NS = 'http://www.w3.org/1998/Math/MathML'

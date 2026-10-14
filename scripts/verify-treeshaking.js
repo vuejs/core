@@ -105,7 +105,11 @@ exec('vp', [
     const { output } = await bundle.generate({ minify: 'dce-only' })
     await bundle.close()
     const csrBuild = output[0].code
-    for (const marker of ['setIsHydrating', 'currentHydrationNode']) {
+    for (const marker of [
+      'setIsHydrating',
+      'currentHydrationNode',
+      'locateChildByLogicalIndex',
+    ]) {
       if (csrBuild.includes(marker)) {
         errors.push(
           `${name} build contains unexpected hydration code: ${marker}.\n` +
