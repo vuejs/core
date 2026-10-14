@@ -269,6 +269,9 @@ const KeepAliveImpl: ComponentOptions = {
         if (cached.type === vnode.type && cached.key === vnode.key) {
           // current instance will be unmounted as part of keep-alive's unmount
           resetShapeFlag(vnode)
+          // the mounted vnode can differ from subTree's when a pending ancestor
+          // Suspense skipped patching the child Suspense
+          resetShapeFlag(cached)
           // but invoke its deactivated hook here
           const da = vnode.component!.da
           da && queuePostRenderEffect(da, suspense)
