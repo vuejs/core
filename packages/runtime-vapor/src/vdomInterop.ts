@@ -590,15 +590,29 @@ const vaporInteropImpl = {
         vnode,
       )
       if (instance.block) {
+        if (!doRemove && vnode.transition) {
+          // The enclosing VDOM fragment owns the leave and its DOM range.
+          // Dispose the block below without starting the inherited leave again.
+          const child = findTransitionBlock(instance.block, fragment => {
+            if (fragment.$transition === vnode.transition) {
+              fragment.$transition = undefined
+            }
+          })
+          if (child && child.$transition === vnode.transition) {
+            child.$transition = undefined
+          }
+        }
         unmountComponent(instance, container, parentSuspense)
         if (!doRemove) {
           // When the surrounding VDOM fragment owns DOM removal, we still need
           // to dispose the vapor-returned block tree so nested interop state
           // (for example forwarded VDOM slots or nested KeepAlive cleanup)
           // does not stay subscribed.
-          const blockContainer = needsHostParentForRemove(instance.block)
-            ? ((anchor && anchor.parentNode) as ParentNode)
-            : undefined
+          // A transitioning fragment must keep its complete range until leave.
+          const blockContainer =
+            !vnode.transition && needsHostParentForRemove(instance.block)
+              ? ((anchor && anchor.parentNode) as ParentNode)
+              : undefined
           remove(instance.block, blockContainer)
         }
       } else {
@@ -957,6 +971,8 @@ const vaporInteropImpl = {
     ensureTransitionHooksRegistered()
     relayTransitionHooks((component as any).block, hooks)
   },
+
+  getTransitionElement: getInteropTransitionElement,
 
   hasTransitionChild(vnode) {
     return !!findTransitionBlock(vnode.vb || getVaporInstance(vnode).block)

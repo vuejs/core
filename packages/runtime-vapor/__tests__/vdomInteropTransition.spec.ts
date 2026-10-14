@@ -1,4 +1,5 @@
-import { type Ref, nextTick, ref } from '@vue/runtime-dom'
+import { type Ref, createApp, nextTick, ref } from '@vue/runtime-dom'
+import { createVaporApp, vaporInteropPlugin } from '../src'
 import { compile, makeInteropRender } from './_utils'
 
 const define = makeInteropRender()
@@ -764,4 +765,164 @@ describe('vapor component as the child of a vdom Transition', () => {
       'enter done: <p>p</p> | afterEnter:p',
     ])
   })
+})
+
+describe('comment-root transition removal across renderers', () => {
+  test.each(
+    [false, true].flatMap(parentVapor =>
+      [false, true].flatMap(wrapperVapor =>
+        [false, true].flatMap(dev =>
+          [false, true].map(comments => ({
+            parentVapor,
+            wrapperVapor,
+            dev,
+            comments,
+          })),
+        ),
+      ),
+    ),
+  )(
+    'parentVapor=$parentVapor wrapperVapor=$wrapperVapor dev=$dev comments=$comments',
+    async ({ parentVapor, wrapperVapor, dev, comments }) => {
+      const errors: unknown[] = []
+      const events: string[] = []
+      const done: Record<string, () => void> = {}
+      const data = ref({
+        show: true,
+        onEnter: (el: Element, finish: () => void) => {
+          events.push(`enter:${el.textContent}`)
+          done.enter = finish
+        },
+        onLeave: (el: Element, finish: () => void) => {
+          events.push(`leave:${el.textContent}`)
+          done.leave = finish
+        },
+        onAfterLeave: (el: Element) =>
+          events.push(`afterLeave:${el.textContent}`),
+      })
+      __DEV__ = dev
+      const Leaf = sfc(!wrapperVapor, data, '<div>A</div>')
+      const One = compile(
+        '<script setup>const components = _components</script>' +
+          `<template>${comments ? '<!--start-->' : ''}<components.Leaf/>${comments ? '<!--end-->' : ''}</template>`,
+        data,
+        { Leaf },
+        { vapor: wrapperVapor, compilerOptions: { comments: true } },
+      )
+      const Two = sfc(false, data, '<span>B</span>')
+      const App = sfc(
+        parentVapor,
+        data,
+        '<Transition mode="out-in" :css="false" @enter="data.onEnter" @leave="data.onLeave" @after-leave="data.onAfterLeave"><component :is="data.show ? components.One : components.Two"/></Transition>',
+        { One, Two },
+      )
+      const host = document.createElement('div')
+      const app = (parentVapor ? createVaporApp(App) : createApp(App)).use(
+        vaporInteropPlugin,
+      )
+      app.config.errorHandler = error => errors.push(error)
+      try {
+        app.mount(host)
+        data.value.show = false
+        await nextTick()
+        expect([...errors]).toEqual([])
+        expect(events).toEqual(['leave:A'])
+        expect(host.textContent).toBe('A')
+        done.leave()
+        await nextTick()
+        expect(events).toEqual(['leave:A', 'afterLeave:A', 'enter:B'])
+        expect(host.textContent).toBe('B')
+        done.enter()
+        data.value.show = true
+        await nextTick()
+        expect(events[events.length - 1]).toBe('leave:B')
+        done.leave()
+        await nextTick()
+        expect(events.slice(-2)).toEqual(['afterLeave:B', 'enter:A'])
+        expect(host.textContent).toBe('A')
+        done.enter()
+        expect(errors).toEqual([])
+      } finally {
+        try {
+          app.unmount()
+        } catch (error) {
+          errors.push(error)
+        }
+        host.remove()
+        __DEV__ = true
+      }
+      expect(errors).toEqual([])
+    },
+  )
+
+  test.each(['conditional', 'slot', 'keep-alive', 'empty'])(
+    'nested root: %s',
+    async kind => {
+      const target = document.createElement('div')
+      target.id = 'transition-leave-target'
+      document.body.appendChild(target)
+      try {
+        await compareRuns(
+          (vapor, data) => {
+            data.value.onDispose = vi.fn()
+            data.value.onUnmounted = vi.fn()
+            const Child = compile(
+              '<script setup>import { onScopeDispose, onUnmounted } from "vue";' +
+                'const data = _data; onScopeDispose(() => data.value.onDispose()); onUnmounted(() => data.value.onUnmounted())</script>' +
+                '<template><div>A<Teleport to="#transition-leave-target"><span>T</span></Teleport></div></template>',
+              data,
+              {},
+              { vapor },
+            )
+            const Leaf = sfc(
+              vapor,
+              data,
+              kind === 'conditional'
+                ? '<div v-if="!data.alt">A</div>'
+                : kind === 'slot'
+                  ? '<slot/>'
+                  : kind === 'keep-alive'
+                    ? '<KeepAlive><components.Child/></KeepAlive>'
+                    : '<!--empty-->',
+              { Child },
+            )
+            const One = compile(
+              '<script setup>const components = _components</script>' +
+                '<template><!--start--><components.Leaf><div>A</div></components.Leaf><!--end--></template>',
+              data,
+              { Leaf },
+              { vapor: false, compilerOptions: { comments: true } },
+            )
+            const Two = sfc(false, data, '<span>B</span>')
+            return sfc(
+              false,
+              data,
+              `<Transition mode="out-in" ${hooks}><component :is="data.show ? components.One : components.Two"/></Transition>`,
+              { One, Two },
+            )
+          },
+          async r => {
+            await r.step('switch to B', () => (r.data.value.show = false))
+            if (kind === 'keep-alive') {
+              expect(r.data.value.onDispose).toHaveBeenCalledTimes(1)
+              expect(r.data.value.onUnmounted).toHaveBeenCalledTimes(1)
+              expect(target.textContent).toBe('')
+            }
+            if (kind !== 'empty') await r.step('leave A done', r.done.leave)
+            await r.step('enter B done', r.done.enter)
+            await r.step('switch back to A', () => (r.data.value.show = true))
+            await r.step('leave B done', r.done.leave)
+            if (kind !== 'empty') await r.step('enter A done', r.done.enter)
+          },
+        )
+        if (kind === 'slot') {
+          expect(
+            'Component inside <Transition> renders non-element root node that cannot be animated.',
+          ).toHaveBeenWarnedTimes(2)
+        }
+      } finally {
+        target.remove()
+      }
+    },
+  )
 })
