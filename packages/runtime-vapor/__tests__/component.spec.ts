@@ -1074,6 +1074,41 @@ describe('component', () => {
       '<div><span>chosen</span><span>chosen</span></div>',
     )
   })
+
+  it('unmounts a component whose root element was moved in onMounted', async () => {
+    const show = ref(true)
+    const externalContainer = document.createElement('div')
+    document.body.appendChild(externalContainer)
+
+    const Child = defineVaporComponent({
+      setup() {
+        onMounted(() => {
+          const el = (currentInstance as VaporComponentInstance).block as Node
+          externalContainer.appendChild(el)
+        })
+        return template('<div>portal child</div>')()
+      },
+    })
+
+    const Parent = defineVaporComponent({
+      setup() {
+        return createIf(
+          () => show.value,
+          () => createComponent(Child),
+        )
+      },
+    })
+
+    const { host } = define(Parent).render()
+    expect(externalContainer.textContent).toBe('portal child')
+
+    show.value = false
+    await nextTick()
+
+    expect(externalContainer.textContent).toBe('')
+    expect(host.textContent).toBe('')
+    externalContainer.remove()
+  })
 })
 
 function getEffectsCount(scope: EffectScope): number {
