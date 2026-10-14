@@ -10,7 +10,7 @@ import {
 import type { SFCDescriptor } from '../parse'
 import type { PluginCreator } from 'postcss'
 import hash from 'hash-sum'
-import { getEscapedCssVarName } from '@vue/shared'
+import { getEscapedCssVarName, isString } from '@vue/shared'
 
 export const CSS_VARS_HELPER = `useCssVars`
 
@@ -319,9 +319,7 @@ export function genCssVarsCode(
       ? transformed.content
       : transformed.children
           .map(c => {
-            return typeof c === 'string'
-              ? c
-              : (c as SimpleExpressionNode).content
+            return isString(c) ? c : (c as SimpleExpressionNode).content
           })
           .join('')
 

@@ -11,6 +11,7 @@ import {
   invokeArrayFns,
   isArray,
   isSet,
+  isString,
   looseEqual,
   looseIndexOf,
   looseToNumber,
@@ -434,7 +435,7 @@ export function initVModelForSSR(): void {
   }
 
   vModelDynamic.getSSRProps = (binding, vnode) => {
-    if (typeof vnode.type !== 'string') {
+    if (!isString(vnode.type)) {
       return
     }
     const modelToUse = resolveDynamicModel(

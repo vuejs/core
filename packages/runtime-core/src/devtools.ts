@@ -1,3 +1,4 @@
+import { isFunction } from '@vue/shared'
 /* eslint-disable no-restricted-globals */
 import type { App } from './apiCreateApp'
 import { Comment, Fragment, Static, Text } from './vnode'
@@ -115,7 +116,7 @@ export const devtoolsComponentRemoved = (
 ): void => {
   if (
     devtools &&
-    typeof devtools.cleanupBuffer === 'function' &&
+    isFunction(devtools.cleanupBuffer) &&
     // remove the component if it wasn't buffered
     !devtools.cleanupBuffer(component)
   ) {

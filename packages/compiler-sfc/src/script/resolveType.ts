@@ -35,7 +35,7 @@ import {
 } from './utils'
 import { type ScriptCompileContext, resolveParserPlugins } from './context'
 import type { ImportBinding, SFCScriptCompileOptions } from '../compileScript'
-import { capitalize, hasOwn } from '@vue/shared'
+import { capitalize, hasOwn, isString } from '@vue/shared'
 import { parse as babelParse } from '@babel/parser'
 import { parse } from '../parse'
 import { createCache } from '../cache'
@@ -283,7 +283,7 @@ function innerResolveTypeElements(
           typeParams,
         )
       } else {
-        if (typeof typeName === 'string') {
+        if (isString(typeName)) {
           if (typeParameters && typeParameters[typeName]) {
             return resolveTypeElements(
               ctx,
@@ -793,7 +793,7 @@ function innerResolveTypeReference(
   node: ReferenceTypes,
   onlyExported: boolean,
 ): ScopeTypeNode | undefined {
-  if (typeof name === 'string') {
+  if (isString(name)) {
     if (scope.imports[name]) {
       return resolveTypeFromImport(ctx, node, name, scope)
     } else {
@@ -895,10 +895,7 @@ export function registerTS(_loadTS: () => typeof TS): void {
     try {
       return _loadTS()
     } catch (err: any) {
-      if (
-        typeof err.message === 'string' &&
-        err.message.includes('Cannot find module')
-      ) {
+      if (isString(err.message) && err.message.includes('Cannot find module')) {
         throw new Error(
           'Failed to load TypeScript, which is required for resolving imported types. ' +
             'Please make sure "TypeScript" is installed as a project dependency.',

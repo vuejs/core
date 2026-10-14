@@ -10,7 +10,7 @@ import {
   toReadonly,
 } from './reactive'
 import { ARRAY_ITERATE_KEY, track } from './dep'
-import { isArray } from '@vue/shared'
+import { isArray, isFunction } from '@vue/shared'
 
 /**
  * Track array iteration and return:
@@ -271,13 +271,13 @@ function iterator(
           return: {
             get() {
               const fn = iter.return
-              return typeof fn === 'function' ? fn.bind(iter) : fn
+              return isFunction(fn) ? fn.bind(iter) : fn
             },
           },
           throw: {
             get() {
               const fn = iter.throw
-              return typeof fn === 'function' ? fn.bind(iter) : fn
+              return isFunction(fn) ? fn.bind(iter) : fn
             },
           },
         })

@@ -1,3 +1,4 @@
+import { isFunction } from '@vue/shared'
 import type { SourceLocation } from '../ast'
 import type { CompilerError } from '../errors'
 import type { MergedParserOptions } from '../parser'
@@ -139,7 +140,7 @@ export function warnDeprecation(
   }
   const { message, link } = deprecationData[key]
   const msg = `(deprecation ${key}) ${
-    typeof message === 'function' ? message(...args) : message
+    isFunction(message) ? message(...args) : message
   }${link ? `\n  Details: ${link}` : ``}`
 
   const err = new SyntaxError(msg) as CompilerError

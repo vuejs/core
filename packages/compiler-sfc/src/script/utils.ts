@@ -1,3 +1,4 @@
+import { isString } from '@vue/shared'
 import type {
   CallExpression,
   Expression,
@@ -47,9 +48,7 @@ export function isCallOf(
     test &&
     node.type === 'CallExpression' &&
     node.callee.type === 'Identifier' &&
-    (typeof test === 'string'
-      ? node.callee.name === test
-      : test(node.callee.name))
+    (isString(test) ? node.callee.name === test : test(node.callee.name))
   )
 }
 

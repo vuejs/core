@@ -1,3 +1,4 @@
+import { isFunction } from '@vue/shared'
 import {
   type ComponentPublicInstance,
   type Directive,
@@ -11,7 +12,7 @@ export function ssrGetDirectiveProps(
   arg?: string,
   modifiers: Record<string, boolean> = {},
 ): Record<string, any> {
-  if (typeof dir !== 'function' && dir.getSSRProps) {
+  if (!isFunction(dir) && dir.getSSRProps) {
     return (
       dir.getSSRProps(
         {

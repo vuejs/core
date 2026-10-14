@@ -1,3 +1,4 @@
+import { isObject } from '@vue/shared'
 import { RESOLVE_FILTER } from '../runtimeHelpers'
 import {
   type AttributeNode,
@@ -44,7 +45,7 @@ function rewriteFilter(node: ExpressionNode, context: TransformContext) {
   } else {
     for (let i = 0; i < node.children.length; i++) {
       const child = node.children[i]
-      if (typeof child !== 'object') continue
+      if (!isObject(child)) continue
       if (child.type === NodeTypes.SIMPLE_EXPRESSION) {
         parseFilter(child, context)
       } else if (child.type === NodeTypes.COMPOUND_EXPRESSION) {

@@ -5,6 +5,7 @@ import { patchDOMProp } from './modules/props'
 import { patchEvent } from './modules/events'
 import {
   camelize,
+  isArray,
   isFunction,
   isModelListener,
   isOn,
@@ -167,7 +168,7 @@ function shouldSetAsPropForVueCE(el: VueElement, key: string) {
   }
 
   const camelKey = camelize(key)
-  return Array.isArray(props)
+  return isArray(props)
     ? props.some(prop => camelize(prop) === camelKey)
     : Object.keys(props).some(prop => camelize(prop) === camelKey)
 }

@@ -1,3 +1,4 @@
+import { isString } from '@vue/shared'
 import {
   type CodegenResult,
   type CompilerOptions,
@@ -46,7 +47,7 @@ export function compile(
     hoistStatic: false,
   }
 
-  const ast = typeof source === 'string' ? baseParse(source, options) : source
+  const ast = isString(source) ? baseParse(source, options) : source
 
   // Save raw options for AST. This is needed when performing sub-transforms
   // on slot vnode branches.

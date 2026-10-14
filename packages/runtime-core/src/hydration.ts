@@ -1098,7 +1098,7 @@ function isMismatchAllowedByNode(node: Node): boolean {
 function isMismatchAllowedByVNode({ props }: VNode): boolean {
   const allowedAttr = props && props[allowMismatchAttr]
   return (
-    typeof allowedAttr === 'string' &&
+    isString(allowedAttr) &&
     isMismatchAllowedByAttr(allowedAttr, MismatchTypes.CHILDREN)
   )
 }

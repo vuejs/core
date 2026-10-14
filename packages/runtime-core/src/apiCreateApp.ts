@@ -419,7 +419,7 @@ export function createAppAPI<HostElement>(
       },
 
       onUnmount(cleanupFn: () => void) {
-        if (__DEV__ && typeof cleanupFn !== 'function') {
+        if (__DEV__ && !isFunction(cleanupFn)) {
           warn(
             `Expected function as first argument to app.onUnmount(), ` +
               `but got ${typeof cleanupFn}`,

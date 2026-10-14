@@ -9,7 +9,7 @@ import {
   type SSRBufferItem,
   renderVNodeChildren,
 } from '../render'
-import { isArray } from '@vue/shared'
+import { isArray, isString } from '@vue/shared'
 
 const { ensureValidVNode } = ssrUtils
 
@@ -138,7 +138,7 @@ export function ssrRenderSlotInner(
 const commentTestRE = /^<!--[\s\S]*-->$/
 const commentRE = /<!--[^]*?-->/gm
 function isComment(item: SSRBufferItem) {
-  if (typeof item !== 'string' || !commentTestRE.test(item)) return false
+  if (!isString(item) || !commentTestRE.test(item)) return false
   // if item is '<!---->' or '<!--[-->' or '<!--]-->', return true directly
   if (item.length <= 8) return true
   return !item.replace(commentRE, '').trim()

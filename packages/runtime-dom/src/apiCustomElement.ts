@@ -39,6 +39,7 @@ import {
   hyphenate,
   isArray,
   isPlainObject,
+  isString,
   toNumber,
 } from '@vue/shared'
 import { createApp, createSSRApp, render } from '.'
@@ -550,7 +551,7 @@ export class VueElement
         }
         if (val === true) {
           this.setAttribute(hyphenate(key), '')
-        } else if (typeof val === 'string' || typeof val === 'number') {
+        } else if (isString(val) || typeof val === 'number') {
           this.setAttribute(hyphenate(key), val + '')
         } else if (!val) {
           this.removeAttribute(hyphenate(key))
