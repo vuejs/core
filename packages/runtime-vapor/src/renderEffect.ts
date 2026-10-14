@@ -35,7 +35,7 @@ import { invokeArrayFns, remove } from '@vue/shared'
 import { isSuspenseEnabled } from './suspense'
 import { isInteropEnabled } from './vdomInteropState'
 import { adoptVdomOwnedEffect } from './vdomSlotOwner'
-import { setPendingDomUpdates } from './dom/async'
+import { pendingDomUpdates, setPendingDomUpdates } from './dom/async'
 import { currentRenderContext, withRenderContext } from './renderContext'
 
 export class RenderEffect extends ReactiveEffect {
@@ -50,6 +50,7 @@ export class RenderEffect extends ReactiveEffect {
   // Creation order within the owning component.
   order: number
   private boundary: SuspenseBoundary | null
+  private initiallySuspended = false
   /** @internal */
   pending?: PendingComputed | AsyncComputedError
 
@@ -126,6 +127,7 @@ export class RenderEffect extends ReactiveEffect {
       )
         throw error
       this.pending = error as PendingComputed | AsyncComputedError
+      if (!this.i.isMounted) this.initiallySuspended = true
       return
     } finally {
       setPendingDomUpdates(previous)
@@ -141,6 +143,7 @@ export class RenderEffect extends ReactiveEffect {
             withRenderContext(context, () => {
               for (const update of updates) update()
             })
+            this.initiallySuspended = false
           } finally {
             setPendingDomUpdates(outer)
             restoreCurrentInstance(prev)
@@ -203,7 +206,29 @@ export class RenderEffect extends ReactiveEffect {
     }
     const prev = setCurrentInstance(instance, scope)
     try {
-      if (hasUpdateHooks && instance.isMounted && !instance.isUpdating) {
+      if (pendingDomUpdates) {
+        this.render()
+        if (hasUpdateHooks && instance.isMounted && !this.initiallySuspended) {
+          pendingDomUpdates.unshift(() => {
+            if (instance.isUpdating) return
+            instance.isUpdating = true
+            try {
+              instance.bu && invokeArrayFns(instance.bu)
+            } catch (error) {
+              instance.isUpdating = false
+              throw error
+            }
+            let updateJob = this.updateJob
+            if (!updateJob) {
+              updateJob = this.updateJob = () => {
+                instance.isUpdating = false
+                instance.u && invokeArrayFns(instance.u)
+              }
+            }
+            queuePostRenderEffect(updateJob, undefined, instance.suspense)
+          })
+        }
+      } else if (hasUpdateHooks && instance.isMounted && !instance.isUpdating) {
         // avoid recurse update until updateJob flushed
         instance.isUpdating = true
         try {

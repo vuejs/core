@@ -209,9 +209,11 @@ describe.each([
     const b = [deferred<string>(), deferred<string>()]
     const first = computed(() => a[id.value].promise)
     const second = computed(() => b[id.value].promise)
-    const data = shallowRef({ first, second })
+    const suffix = ref('')
+    const updated = vi.fn(() => host.textContent)
+    const data = shallowRef({ first, second, suffix, updated })
     const First = compile(
-      `<script setup>const value = _data.value.first</script><template><i>{{ value }}</i></template>`,
+      `<script setup>import { onUpdated } from 'vue'; const { first: value, suffix } = _data.value; onUpdated(_data.value.updated)</script><template><i>{{ value }}{{ suffix }}</i></template>`,
       data,
       {},
       { vapor: childVapor },
@@ -239,14 +241,22 @@ describe.each([
     b[0].resolve('b0')
     await flush()
     expect(host.textContent).toBe('a0b0')
+    expect(updated).not.toHaveBeenCalled()
     id.value++
     await nextTick()
     a[1].resolve('a1')
     await flush()
     expect(host.textContent).toBe('a0b0')
+    expect(updated).not.toHaveBeenCalled()
+    suffix.value = '!'
+    await nextTick()
+    expect(host.textContent).toBe('a0b0')
+    expect(updated).not.toHaveBeenCalled()
     b[1].resolve('b1')
     await flush()
-    expect(host.textContent).toBe('a1b1')
+    expect(host.textContent).toBe('a1!b1')
+    expect(updated).toHaveBeenCalledTimes(1)
+    expect(updated).toHaveReturnedWith('a1!b1')
     app.unmount()
   })
 
@@ -390,6 +400,52 @@ describe.each([
     later.resolve('late')
     await flush()
     expect(mounted.host.textContent).toBe('')
+  })
+
+  test('applies state changes from beforeUpdate before updated observes the DOM', async () => {
+    const id = ref(0)
+    const requests = [deferred<string>(), deferred<string>()]
+    const value = computed(() => requests[id.value].promise)
+    const suffix = ref('')
+    const beforeUpdate = () => {
+      suffix.value = '!'
+    }
+    const updated = vi.fn(() => host.textContent)
+    const data = shallowRef({ value, suffix, beforeUpdate, updated })
+    const Child = compile(
+      `<script setup>
+      import { onBeforeUpdate, onUpdated } from 'vue'
+      const { value, suffix, beforeUpdate, updated } = _data.value
+      onBeforeUpdate(beforeUpdate)
+      onUpdated(updated)
+    </script><template><p>{{ value }}{{ suffix }}</p></template>`,
+      data,
+      {},
+      { vapor: childVapor },
+    )
+    const App = compile(
+      `<script setup>const Child = _components.Child</script><template><Suspense><Child /><template #fallback>loading</template></Suspense></template>`,
+      data,
+      { Child },
+      { vapor },
+    )
+    const host = document.createElement('div')
+    const app = (vapor ? createVaporApp : createApp)(App).use(
+      vaporInteropPlugin,
+    )
+    app.mount(host)
+    requests[0].resolve('one')
+    await flush()
+    expect(host.textContent).toBe('one')
+    expect(updated).not.toHaveBeenCalled()
+    id.value++
+    await nextTick()
+    requests[1].resolve('two')
+    await flush()
+    expect(host.textContent).toBe('two!')
+    expect(updated).toHaveBeenCalledTimes(1)
+    expect(updated).toHaveReturnedWith('two!')
+    app.unmount()
   })
 })
 
