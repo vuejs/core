@@ -325,6 +325,53 @@ describe.each([
     app.unmount()
   })
 
+  test('replaces a pending promise prop without waiting for its obsolete request', async () => {
+    const first = deferred<string>()
+    const second = deferred<string>()
+    const source = shallowRef(first.promise)
+    const mounted = vi.fn()
+    const beforeMount = vi.fn()
+    const data = shallowRef({ source, mounted, beforeMount })
+    const Child = compile(
+      `<script setup>
+      import { computed, onBeforeMount, onMounted } from 'vue'
+      const props = defineProps(['source'])
+      const value = computed(() => props.source)
+      onBeforeMount(_data.value.beforeMount)
+      onMounted(_data.value.mounted)
+    </script><template><p>{{ value }}</p></template>`,
+      data,
+      {},
+      { vapor: childVapor },
+    )
+    const App = compile(
+      `<script setup>
+      const Child = _components.Child
+      const source = _data.value.source
+    </script><template><Suspense><Child :source="source" /><template #fallback>loading</template></Suspense></template>`,
+      data,
+      { Child },
+      { vapor },
+    )
+    const host = document.createElement('div')
+    const app = (vapor ? createVaporApp : createApp)(App).use(
+      vaporInteropPlugin,
+    )
+    app.mount(host)
+    expect(host.textContent).toBe('loading')
+    source.value = second.promise
+    await nextTick()
+    second.resolve('latest')
+    await flush()
+    expect(host.textContent).toBe('latest')
+    first.resolve('obsolete')
+    await flush()
+    expect(host.textContent).toBe('latest')
+    expect(beforeMount).toHaveBeenCalledTimes(1)
+    expect(mounted).toHaveBeenCalledTimes(1)
+    app.unmount()
+  })
+
   test('keeps the initial fallback on rejection and ignores completion after unmount', async () => {
     const request = deferred<string>()
     const { app, host, errorHandler } = mount(

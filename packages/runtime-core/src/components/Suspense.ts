@@ -444,6 +444,7 @@ function patchSuspense(
 }
 
 export interface SuspenseBoundary {
+  /** @internal */
   asyncRender?: AsyncRenderState
   vnode: VNode<RendererNode, RendererElement, SuspenseProps>
   parent: SuspenseBoundary | null

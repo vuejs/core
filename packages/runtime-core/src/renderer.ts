@@ -1421,7 +1421,13 @@ function baseCreateRenderer(
         return
       } else {
         // normal update
-        instance.next = n2
+        if (!instance.isMounted) {
+          n2.el = n1.el
+          n2.placeholder = n1.placeholder
+          updateComponentPreRender(instance, n2, optimized)
+        } else {
+          instance.next = n2
+        }
         // instance.update is the reactive effect.
         instance.effect.run()
       }
@@ -1435,6 +1441,7 @@ function baseCreateRenderer(
 
   class SetupRenderEffect extends ReactiveEffect {
     job: SchedulerJob
+    private mountHooksCalled = false
 
     stop(): void {
       super.stop()
@@ -1501,6 +1508,7 @@ function baseCreateRenderer(
     }
 
     fn() {
+      if (!this.instance.isMounted) this.initialVNode = this.instance.vnode
       const {
         instance,
         initialVNode,
@@ -1515,25 +1523,28 @@ function baseCreateRenderer(
         const { bm, parent, root, type } = instance
         const isAsyncWrapperVNode = isAsyncWrapper(initialVNode)
 
-        toggleRecurse(instance, false)
-        // beforeMount hook
-        if (bm) {
-          invokeArrayFns(bm)
+        if (!this.mountHooksCalled) {
+          this.mountHooksCalled = true
+          toggleRecurse(instance, false)
+          // beforeMount hook
+          if (bm) {
+            invokeArrayFns(bm)
+          }
+          // onVnodeBeforeMount
+          if (
+            !isAsyncWrapperVNode &&
+            (vnodeHook = props && props.onVnodeBeforeMount)
+          ) {
+            invokeVNodeHook(vnodeHook, parent, initialVNode)
+          }
+          if (
+            __COMPAT__ &&
+            isCompatEnabled(DeprecationTypes.INSTANCE_EVENT_HOOKS, instance)
+          ) {
+            instance.emit('hook:beforeMount')
+          }
+          toggleRecurse(instance, true)
         }
-        // onVnodeBeforeMount
-        if (
-          !isAsyncWrapperVNode &&
-          (vnodeHook = props && props.onVnodeBeforeMount)
-        ) {
-          invokeVNodeHook(vnodeHook, parent, initialVNode)
-        }
-        if (
-          __COMPAT__ &&
-          isCompatEnabled(DeprecationTypes.INSTANCE_EVENT_HOOKS, instance)
-        ) {
-          instance.emit('hook:beforeMount')
-        }
-        toggleRecurse(instance, true)
 
         if (el && hydrateNode && !initialVNode.placeholder) {
           // vnode has adopted host node - perform hydration instead of mount.
@@ -1542,7 +1553,10 @@ function baseCreateRenderer(
               startMeasure(instance, `render`)
             }
             const subTree = this.render()
-            if (!subTree) return false
+            if (!subTree) {
+              if (__DEV__) endMeasure(instance, `render`)
+              return false
+            }
             instance.subTree = subTree
             if (__DEV__) {
               endMeasure(instance, `render`)
@@ -1590,7 +1604,10 @@ function baseCreateRenderer(
             startMeasure(instance, `render`)
           }
           const subTree = this.render()
-          if (!subTree) return
+          if (!subTree) {
+            if (__DEV__) endMeasure(instance, `render`)
+            return
+          }
           instance.subTree = subTree
           if (initialVNode.placeholder) {
             this.container =

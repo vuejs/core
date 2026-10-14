@@ -68,7 +68,11 @@ export async function optimistic<T, Result>(
       },
     }
   }
-  const layer: Layer<T> = { ...options, fulfilled: false }
+  const layer: Layer<T> = {
+    update: options.update,
+    commit: options.commit,
+    fulfilled: false,
+  }
   // Evaluate before attaching a layer, so a throwing update cannot leak it.
   const value = options.update(current)
   state.layers.push(layer)

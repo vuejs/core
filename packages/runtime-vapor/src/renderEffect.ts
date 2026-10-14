@@ -1,8 +1,8 @@
 import {
-  type AsyncComputedError,
+  AsyncComputedError,
   EffectFlags,
   type EffectScope,
-  type PendingComputed,
+  PendingComputed,
   ReactiveEffect,
   onScopeDispose,
 } from '@vue/reactivity'
@@ -50,6 +50,7 @@ export class RenderEffect extends ReactiveEffect {
   // Creation order within the owning component.
   order: number
   private boundary: SuspenseBoundary | null
+  /** @internal */
   pending?: PendingComputed | AsyncComputedError
 
   constructor(render: () => void, noLifecycle = false) {
@@ -92,6 +93,20 @@ export class RenderEffect extends ReactiveEffect {
 
   run(): void {
     if (!__FEATURE_SUSPENSE__ || !this.i) return super.run()
+    if (!isSuspenseEnabled) {
+      try {
+        return super.run()
+      } catch (error) {
+        if (error instanceof PendingComputed) {
+          if (__DEV__)
+            warn(
+              'A component read a pending computed value, but no <Suspense> boundary was found in the parent component tree.',
+            )
+          return
+        }
+        throw error instanceof AsyncComputedError ? error.error : error
+      }
+    }
     const updates: (() => void)[] | undefined = this.boundary ? [] : undefined
     const previous = setPendingDomUpdates(updates)
     const context = currentRenderContext
@@ -138,7 +153,7 @@ export class RenderEffect extends ReactiveEffect {
 
   stop(): void {
     super.stop()
-    cancelAsyncRender(this)
+    if (__FEATURE_SUSPENSE__ && isSuspenseEnabled) cancelAsyncRender(this)
   }
 
   createJob(): SchedulerJob {
