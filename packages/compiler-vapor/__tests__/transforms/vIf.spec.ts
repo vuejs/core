@@ -729,11 +729,6 @@ describe('compiler: v-if', () => {
           `<template v-if="ok" key="k"><div/></template><template v-else key="k"><div/></template>`,
         ),
       ).toEqual([ErrorCodes.X_V_IF_SAME_KEY])
-
-      // a duplicated dynamic key is caught as well
-      expect(
-        codes(`<Comp v-if="ok" :key="k"/><Comp2 v-else :key="k"/>`),
-      ).toEqual([ErrorCodes.X_V_IF_SAME_KEY])
     })
 
     test('no error on unique keys in v-if/else branches', () => {
@@ -750,6 +745,15 @@ describe('compiler: v-if', () => {
       expect(codes(`<Comp v-if="ok"/><Comp2 v-else key="b"/>`)).toEqual([])
       expect(
         codes(`<Comp v-if="ok" :key="a"/><Comp2 v-else :key="b"/>`),
+      ).toEqual([])
+      // dynamic keys may be reused across branches (#15862)
+      expect(
+        codes(`<Comp v-if="ok" :key="k"/><Comp2 v-else :key="k"/>`),
+      ).toEqual([])
+      expect(
+        codes(
+          `<div v-if="ok" :key="resetKey">A</div><div v-else :key="resetKey">B</div>`,
+        ),
       ).toEqual([])
       // two independent v-if chains may reuse the same key
       expect(

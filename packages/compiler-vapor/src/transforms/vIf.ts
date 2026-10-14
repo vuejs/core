@@ -5,7 +5,6 @@ import {
   ElementTypes,
   ErrorCodes,
   NodeTypes,
-  type SimpleExpressionNode,
   type TemplateChildNode,
   createCompilerError,
   createSimpleExpression,
@@ -345,23 +344,10 @@ function isSameKey(
     return false
   }
   if (a.type === NodeTypes.ATTRIBUTE) {
-    if (a.value!.content !== (b as AttributeNode).value!.content) {
-      return false
+    if (a.value && (b as AttributeNode).value) {
+      return a.value.content === (b as AttributeNode).value!.content
     }
-  } else {
-    // directive
-    const exp = a.exp!
-    const branchExp = (b as DirectiveNode).exp!
-    if (exp.type !== branchExp.type) {
-      return false
-    }
-    if (
-      exp.type !== NodeTypes.SIMPLE_EXPRESSION ||
-      exp.isStatic !== (branchExp as SimpleExpressionNode).isStatic ||
-      exp.content !== (branchExp as SimpleExpressionNode).content
-    ) {
-      return false
-    }
+    return !a.value && !(b as AttributeNode).value
   }
-  return true
+  return false
 }
