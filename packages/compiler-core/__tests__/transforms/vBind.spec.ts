@@ -449,4 +449,70 @@ describe('compiler: transform v-bind', () => {
       },
     })
   })
+
+  test('error on argument unusable for same-name shorthand', () => {
+    const onError = vi.fn()
+    const node = parseWithVBind(`<div :1foo />`, { onError })
+    expect(onError).toHaveBeenCalledTimes(1)
+    expect(onError.mock.calls[0][0]).toMatchObject({
+      code: ErrorCodes.X_V_BIND_NO_EXPRESSION,
+      loc: {
+        start: {
+          line: 1,
+          column: 7,
+        },
+        end: {
+          line: 1,
+          column: 11,
+        },
+      },
+    })
+    const props = (node.codegenNode as VNodeCall).props as ObjectExpression
+    expect(props.properties[0]).toMatchObject({
+      key: {
+        content: `1foo`,
+        isStatic: true,
+      },
+      value: {
+        content: ``,
+        isStatic: true,
+      },
+    })
+  })
+
+  test('error on argument unusable for same-name shorthand in-DOM templates', () => {
+    try {
+      __BROWSER__ = true
+      const onError = vi.fn()
+      // :1foo in in-DOM templates will be parsed into :1foo="" by the browser
+      const node = parseWithVBind(`<div :1foo="" />`, { onError })
+      expect(onError).toHaveBeenCalledTimes(1)
+      expect(onError.mock.calls[0][0]).toMatchObject({
+        code: ErrorCodes.X_V_BIND_NO_EXPRESSION,
+        loc: {
+          start: {
+            line: 1,
+            column: 7,
+          },
+          end: {
+            line: 1,
+            column: 11,
+          },
+        },
+      })
+      const props = (node.codegenNode as VNodeCall).props as ObjectExpression
+      expect(props.properties[0]).toMatchObject({
+        key: {
+          content: `1foo`,
+          isStatic: true,
+        },
+        value: {
+          content: ``,
+          isStatic: true,
+        },
+      })
+    } finally {
+      __BROWSER__ = false
+    }
+  })
 })

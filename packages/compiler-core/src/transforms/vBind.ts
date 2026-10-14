@@ -16,24 +16,25 @@ export const transformBind: DirectiveTransform = (dir, _node, context) => {
   const { modifiers, loc } = dir
   const arg = dir.arg!
 
-  let { exp } = dir
+  const { exp } = dir
 
-  // handle empty expression
-  if (exp && exp.type === NodeTypes.SIMPLE_EXPRESSION && !exp.content.trim()) {
-    if (!__BROWSER__) {
-      // #10280 only error against empty expression in non-browser build
-      // because :foo in in-DOM templates will be parsed into :foo="" by the
-      // browser
+  // handle a missing or empty expression. An empty expression is only an error
+  // in non-browser builds (#10280) because :foo in in-DOM templates will be
+  // parsed into :foo="" by the browser, and a missing one means the argument
+  // could not be used by the same-name shorthand, which
+  // transformVBindShorthand has already reported.
+  if (
+    !exp ||
+    (exp.type === NodeTypes.SIMPLE_EXPRESSION && !exp.content.trim())
+  ) {
+    if (exp && !__BROWSER__) {
       context.onError(
         createCompilerError(ErrorCodes.X_V_BIND_NO_EXPRESSION, loc),
       )
-      return {
-        props: [
-          createObjectProperty(arg, createSimpleExpression('', true, loc)),
-        ],
-      }
-    } else {
-      exp = undefined
+    }
+    // codegen must always receive an expression, so fall back to an empty one
+    return {
+      props: [createObjectProperty(arg, createSimpleExpression('', true, loc))],
     }
   }
 

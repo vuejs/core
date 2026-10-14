@@ -40,6 +40,13 @@ export const transformVBindShorthand: NodeTransform = (node, context) => {
             propName[0] === '-'
           ) {
             prop.exp = createSimpleExpression(propName, false, arg.loc)
+          } else {
+            // the argument cannot be used as an expression, so the shorthand
+            // cannot be expanded - report it and leave the binding without an
+            // expression for transformBind to fall back on
+            context.onError(
+              createCompilerError(ErrorCodes.X_V_BIND_NO_EXPRESSION, arg.loc),
+            )
           }
         }
       }
