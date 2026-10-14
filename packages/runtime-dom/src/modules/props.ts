@@ -54,6 +54,17 @@ export function patchDOMProp(
     return
   }
 
+  if (key === 'popover') {
+    if (value === true) {
+      el[key] = ''
+    } else if (value !== false && value != null) {
+      el[key] = value
+    } else {
+      el[key] = null
+    }
+    return
+  }
+
   let needRemove = false
   if (value === '' || value == null) {
     const type = typeof el[key]

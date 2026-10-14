@@ -205,6 +205,20 @@ describe('ssr: element', () => {
       `)
     })
 
+    test('v-bind:arg (popover)', () => {
+      expect(
+        getCompiledString(
+          `<div><span :popover="false"></span><span :popover="'auto'"></span></div>`,
+        ),
+      ).toMatchInlineSnapshot(`
+        "\`<div><span\${
+            _ssrRenderDynamicAttr("popover", false)
+          }></span><span\${
+            _ssrRenderDynamicAttr("popover", 'auto')
+          }></span></div>\`"
+      `)
+    })
+
     test('v-bind:[arg]', () => {
       expect(getCompiledString(`<div v-bind:[key]="value"></div>`))
         .toMatchInlineSnapshot(`
