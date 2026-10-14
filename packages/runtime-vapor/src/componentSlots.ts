@@ -336,9 +336,9 @@ export function createSlot(
   let fragment: VaporFragment
   let isCustomElementSlot = false
   // Only a forwarded root is content of the enclosing outlet: it reports its
-  // validity flips there and is parked with it, like a slot-root v-if. Any
-  // other outlet is on its own: nothing inside it reports to, or renders the
-  // fallback of, an enclosing outlet.
+  // validity flips there, like a slot-root v-if. Any other outlet is on its
+  // own: nothing inside it reports to, or renders the fallback of, an
+  // enclosing outlet.
   const ctx = currentRenderContext
   const boundary = isForwardedSlot(flags) ? ctx.slotBoundary : null
   const interopSlotsSource =
@@ -413,7 +413,6 @@ export function createSlot(
               __DEV__ ? 'slot' : undefined,
               false,
               false,
-              undefined,
               _insertionAnchor,
             ),
     )

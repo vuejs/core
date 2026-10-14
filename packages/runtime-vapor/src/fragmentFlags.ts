@@ -21,5 +21,11 @@ export const NATIVE_CHILDREN: number = 1 << 9
  */
 export const SLOT_RESOLVER: number = 1 << 10
 
+/**
+ * A DynamicFragment created as a slot root under a slot boundary: `update()`
+ * asks the boundary whether to render its branch held (see `isHolding`).
+ */
+export const SLOT_ROOT: number = 1 << 11
+
 // Subtype bits only — the DynamicFragment constructor adds DYNAMIC itself.
 export const SLOT_FRAGMENT: number = SLOT | SLOT_OUTLET

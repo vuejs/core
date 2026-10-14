@@ -1,6 +1,5 @@
 import type { EffectScope } from '@vue/reactivity'
-import { type Block, type BlockFn, isValidSlot } from './block'
-import type { VaporFragment } from './fragment'
+import type { Block, BlockFn } from './block'
 import {
   currentRenderContext,
   deriveSlotBoundary,
@@ -30,7 +29,10 @@ export interface SlotBoundaryContext {
   // under this boundary may have changed; routes into the slot resolution
   // state machine (markSlotResolutionDirty).
   markDirty: () => void
-  onContentInvalid?: (() => void)[]
+  // Whether slot roots under this boundary render held, out of the DOM: the
+  // host shows a fallback under a Transition and places the content itself
+  // once it takes over, after the fallback's leave.
+  isHolding: () => boolean
 }
 
 export function withSlotBoundary<R>(
@@ -41,46 +43,6 @@ export function withSlotBoundary<R>(
     deriveSlotBoundary(currentRenderContext, boundary),
     fn,
   )
-}
-
-// Dynamic children (`v-if`, `v-for`, interop fragments) created under a slot
-// boundary dirty the boundary only when their rendered validity changes.
-export function trackSlotBoundaryDirtying(
-  fragment: VaporFragment,
-  onInvalid?: () => void,
-): void {
-  const boundary = currentRenderContext.slotBoundary
-  if (!boundary) return
-
-  if (onInvalid) {
-    registerContentInvalid(boundary, onInvalid, fragment)
-  }
-
-  let prevValid: boolean
-  ;(fragment.bu ||= []).push(() => {
-    prevValid = isValidSlot(fragment)
-  })
-  ;(fragment.u ||= []).push(() => {
-    if (isValidSlot(fragment) !== prevValid) {
-      boundary.markDirty()
-    }
-  })
-}
-
-export function registerContentInvalid(
-  boundary: SlotBoundaryContext,
-  onInvalid: () => void,
-  fragment: VaporFragment,
-): void {
-  const callbacks = (boundary.onContentInvalid ||= [])
-  callbacks.push(onInvalid)
-  const unregister = () => {
-    const index = callbacks.indexOf(onInvalid)
-    if (index > -1) callbacks.splice(index, 1)
-  }
-  // The callback belongs to the slot-root fragment; remove it with that
-  // fragment so stale branches do not stay on a long-lived boundary.
-  ;(fragment.bum ||= []).push(unregister)
 }
 
 export function hasSlotFallback(

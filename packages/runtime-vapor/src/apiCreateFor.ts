@@ -27,6 +27,7 @@ import {
   insert,
   insertFragment,
   insertNode,
+  isValidSlot,
   move,
   remove,
   removeFragment,
@@ -116,17 +117,10 @@ export const createFor = (
     }
   }
 
-  const trackSlotBoundary = !!(flags & VaporVForFlags.SLOT_ROOT)
-  const frag = new ForFragment(
-    oldBlocks,
-    trackSlotBoundary,
-    trackSlotBoundary
-      ? () => {
-          const parent = parentAnchor.parentNode
-          if (parent) removeNode(parentAnchor, parent)
-        }
-      : undefined,
-  )
+  // a slot root reports its validity flips to the enclosing outlet
+  const slotBoundary =
+    flags & VaporVForFlags.SLOT_ROOT ? currentRenderContext.slotBoundary : null
+  const frag = new ForFragment(oldBlocks)
   const instance = currentInstance!
   const isComponent = !!(flags & VaporVForFlags.IS_COMPONENT)
   const canUseFastRemove =
@@ -173,6 +167,8 @@ export const createFor = (
 
     const prevSub = setActiveSub()
     const wasMounted = isMounted
+    let wasValid: boolean | undefined
+    if (wasMounted && slotBoundary) wasValid = isValidSlot(frag)
     if (wasMounted && frag.bu) {
       for (let i = 0; i < frag.bu.length; i++) {
         frag.bu[i]()
@@ -412,6 +408,9 @@ export const createFor = (
     oldBlocks = newBlocks
     frag.nodes = parentAnchor ? [newBlocks, parentAnchor] : [newBlocks]
 
+    if (wasMounted && slotBoundary && isValidSlot(frag) !== wasValid) {
+      slotBoundary.markDirty()
+    }
     if (wasMounted && frag.u) {
       for (const fn of frag.u) fn(frag.nodes)
     }

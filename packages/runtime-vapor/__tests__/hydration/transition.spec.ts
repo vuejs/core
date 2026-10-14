@@ -1,5 +1,5 @@
 import { nextTick, reactive, ref } from '@vue/runtime-dom'
-import { VueServerRenderer, runtimeDom } from '../_utils'
+import { VueServerRenderer, runtimeDom, stripAnchors } from '../_utils'
 import {
   compileVaporComponent,
   formatHtml,
@@ -35,7 +35,9 @@ describe('Vapor Mode hydration', () => {
       )
 
       expect(`Hydration node mismatch`).not.toHaveBeenWarned()
-      expect(container.innerHTML).toBe(`<!--(--><div>fallback</div><!--)-->`)
+      expect(container.innerHTML).toBe(
+        `<!--(--><div>fallback</div><!--if--><!--)-->`,
+      )
 
       data.show = true
       await nextTick()
@@ -1251,7 +1253,7 @@ describe('Vapor Mode hydration', () => {
         expect(`Hydration node mismatch`).not.toHaveBeenWarned()
         expect(`Hydration children mismatch`).not.toHaveBeenWarned()
         const b = container.querySelector('li')
-        const visible = () => container.innerHTML.replace(/<!--[^>]*-->/g, '')
+        const visible = () => stripAnchors(container.innerHTML)
 
         data.show = true
         await nextTick()

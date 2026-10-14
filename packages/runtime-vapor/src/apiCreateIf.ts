@@ -1,4 +1,4 @@
-import { type Block, type BlockFn, removeNode } from './block'
+import type { Block, BlockFn } from './block'
 import {
   type FragmentClaim,
   type HydrationCursor,
@@ -85,13 +85,6 @@ export function createIf(
       __DEV__ ? 'if' : undefined,
       keyed,
       trackSlotBoundary,
-      trackSlotBoundary
-        ? () => {
-            const anchor = dynamicFragment.anchor
-            const parent = anchor.parentNode
-            if (parent) removeNode(anchor, parent)
-          }
-        : undefined,
       _insertionAnchor,
     )
     anchor = dynamicFragment.anchor

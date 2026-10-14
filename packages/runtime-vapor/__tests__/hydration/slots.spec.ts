@@ -1092,7 +1092,7 @@ describe('Vapor Mode hydration', () => {
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
         `
         "
-        <!--(--><div>foo</div><!--)-->
+        <!--(--><div>foo</div><!--if--><!--)-->
         "
       `,
       )
@@ -1104,7 +1104,7 @@ describe('Vapor Mode hydration', () => {
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
         `
         "
-        <!--(--><div>baz</div><!--)-->
+        <!--(--><div>baz</div><!--if--><!--)-->
         "
       `,
       )
@@ -1161,7 +1161,7 @@ describe('Vapor Mode hydration', () => {
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
         `
         "
-        <!--(--><!----><div>foo</div><!--)-->
+        <!--(--><!----><div>foo</div><!--if--><!--)-->
         "
       `,
       )
@@ -1171,7 +1171,7 @@ describe('Vapor Mode hydration', () => {
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
         `
         "
-        <!--(--><i>prefix</i><!----><div>foo</div><!--)-->
+        <!--(--><i>prefix</i><!----><div>foo</div><!--if--><!--)-->
         "
       `,
       )
@@ -1191,7 +1191,7 @@ describe('Vapor Mode hydration', () => {
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
         `
         "
-        <!--(--><i>prefix</i><!--if--><div>foo</div><!--)-->
+        <!--(--><!--if--><i>prefix</i><!--if--><div>foo</div><!--)-->
         "
       `,
       )
@@ -1294,7 +1294,7 @@ describe('Vapor Mode hydration', () => {
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
         `
         "
-        <!--(--><div>foo</div><!----><!--)-->
+        <!--(--><div>foo</div><!----><!--if--><!--)-->
         "
       `,
       )
@@ -1304,7 +1304,7 @@ describe('Vapor Mode hydration', () => {
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
         `
         "
-        <!--(--><div>foo</div><i>suffix</i><!----><!--)-->
+        <!--(--><div>foo</div><i>suffix</i><!----><!--if--><!--)-->
         "
       `,
       )
@@ -1466,7 +1466,7 @@ describe('Vapor Mode hydration', () => {
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
         `
         "
-        <!--(--><div>foo</div><!--)-->
+        <!--(--><div>foo</div><!--for--><!--)-->
         "
       `,
       )
@@ -1478,7 +1478,7 @@ describe('Vapor Mode hydration', () => {
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
         `
         "
-        <!--(--><div>baz</div><!--)-->
+        <!--(--><div>baz</div><!--for--><!--)-->
         "
       `,
       )
@@ -1609,7 +1609,7 @@ describe('Vapor Mode hydration', () => {
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
         `
         "
-        <!--(--><div>foo</div><!--)-->
+        <!--(--><div>foo</div><!--if--><!--for--><!--)-->
         "
       `,
       )
@@ -1621,7 +1621,7 @@ describe('Vapor Mode hydration', () => {
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
         `
         "
-        <!--(--><div>baz</div><!--)-->
+        <!--(--><div>baz</div><!--if--><!--for--><!--)-->
         "
       `,
       )
@@ -1641,7 +1641,7 @@ describe('Vapor Mode hydration', () => {
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
         `
         "
-        <!--(--><div>baz</div><!--)-->
+        <!--(--><!--if--><!--for--><div>baz</div><!--)-->
         "
       `,
       )

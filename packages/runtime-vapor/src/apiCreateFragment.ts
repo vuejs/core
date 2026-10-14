@@ -1,4 +1,4 @@
-import { type Block, type BlockFn, removeNode } from './block'
+import type { Block, BlockFn } from './block'
 import {
   type HydrationCursor,
   captureHydrationCursor,
@@ -40,12 +40,6 @@ export function createKeyedFragment(
     __DEV__ ? 'keyed' : undefined,
     true,
     trackSlotBoundary,
-    trackSlotBoundary
-      ? () => {
-          const parent = frag.anchor.parentNode
-          if (parent) removeNode(frag.anchor, parent)
-        }
-      : undefined,
     _insertionAnchor,
   )
   if (isHydrating) locateHydrationNode()

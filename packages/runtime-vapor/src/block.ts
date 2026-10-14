@@ -380,39 +380,13 @@ export function remove(block: Block, parent?: ParentNode): void {
   }
 }
 
-// Detach a live block from `parent` without running fragment/component teardown.
-// Slot content uses this while an enclosing fallback temporarily owns the DOM.
-export function removeAttachedNodes(
-  block: Block,
-  parent: ParentNode,
-  removeAnchors: boolean = true,
-): void {
-  if (block instanceof Node) {
-    if (block.parentNode === parent) {
-      removeNode(block, parent)
-    }
-  } else if (isVaporComponent(block)) {
-    if (block.block) {
-      removeAttachedNodes(block.block, parent, removeAnchors)
-    }
-  } else if (isArray(block)) {
-    for (let i = 0; i < block.length; i++) {
-      removeAttachedNodes(block[i], parent, removeAnchors)
-    }
-  } else {
-    removeAttachedNodes(block.nodes, parent, removeAnchors)
-    const anchor = block.anchor
-    if (removeAnchors && anchor && anchor.parentNode === parent) {
-      removeNode(anchor, parent)
-    }
-  }
-}
-
 export function removeNode(block: Node, parent?: ParentNode): void {
   if (
     isTransitionEnabled &&
     (block as TransitionBlock).$transition &&
-    block instanceof Element
+    block instanceof Element &&
+    // a held slot root never entered the DOM: nothing to animate
+    block.parentNode
   ) {
     performTransitionLeave(
       block,
@@ -534,14 +508,31 @@ export function getBlockFirstNode(block: Block): Node | undefined {
     if (isTransitionEnabled && (block as DynamicFragment).leaving) {
       return block.anchor
     }
+    const anchor = block.anchor
+    // a slot host showing its fallback: the invalid content is in the DOM
+    // too, on either side of it
+    if (block.getContent) {
+      const content = block.getContent()
+      if (content !== block.nodes) {
+        const first = getBlockFirstNode(content)
+        if (first && (!anchor || first.parentNode === anchor.parentNode)) {
+          const fallback = getBlockFirstNode(block.nodes)
+          return fallback &&
+            fallback.parentNode === first.parentNode &&
+            first.compareDocumentPosition(fallback) & 2 /* PRECEDING */
+            ? fallback
+            : first
+        }
+      }
+    }
     const nodes = block.nodes
     if (isValidBlock(nodes)) return getBlockFirstNode(nodes)
     // Empty fragments may keep their insertion anchor in `anchor` or in
     // `nodes` (ForFragment). An empty fragment nested in `nodes` places its
-    // anchor before the outer one, but an invalid slot fallback in `nodes` is
-    // kept out of the DOM, so only use a node that sits next to `anchor`.
+    // anchor before the outer one, but a fallback committed before the host
+    // was placed is not in the DOM yet, so only use a node that sits next to
+    // `anchor`.
     const node = getBlockFirstNode(nodes)
-    const anchor = block.anchor
     return node && (!anchor || node.parentNode === anchor.parentNode)
       ? node
       : anchor

@@ -4,7 +4,7 @@ import {
   onScopeDispose,
   setActiveSub,
 } from '@vue/reactivity'
-import { slotNotifiesBoundary } from '@vue/shared'
+import { NO, slotNotifiesBoundary } from '@vue/shared'
 import { createComment, createTextNode } from './dom/node'
 import {
   type Block,
@@ -14,11 +14,8 @@ import {
   type VaporTransitionHooks,
   insert,
   isValidSlot,
-  move,
   registerNestedVDOMCleanup,
   remove,
-  removeAttachedNodes,
-  removeNode,
 } from './block'
 import {
   type GenericComponentInstance,
@@ -38,7 +35,6 @@ import {
   claimUntrackedAnchor,
   exitHydrationCursor,
   isHydrating,
-  isHydratingSlotFallback,
 } from './dom/hydration'
 import {
   type RenderContext,
@@ -47,11 +43,7 @@ import {
   withRenderContext,
 } from './renderContext'
 import { applyScopeIdOwners } from './scopeId'
-import {
-  type SlotBoundaryContext,
-  registerContentInvalid,
-  trackSlotBoundaryDirtying,
-} from './slotBoundary'
+import type { SlotBoundaryContext } from './slotBoundary'
 import {
   hydrateDynamicFragmentAnchor,
   hydrateSlotFragmentContent,
@@ -61,9 +53,9 @@ import {
   type RenderedSlotFallback,
   type SlotResolutionState,
   disposeSlotResolution,
-  invalidateExposedSlotContent,
+  isHoldingSlotContent,
   markSlotResolutionDirty,
-  placeAdoptedFallback,
+  placeSlotContent,
   recheckSlotResolution,
   resolveExposedSlotNodes,
 } from './slotFragment'
@@ -87,6 +79,7 @@ import {
   SLOT_FRAGMENT,
   SLOT_OUTLET,
   SLOT_RESOLVER,
+  SLOT_ROOT,
   VDOM,
 } from './fragmentFlags'
 
@@ -104,6 +97,8 @@ export class VaporFragment<
   vnode?: VNode | null
   anchor?: Node
   isBlockValid?: (componentAsValid?: boolean) => boolean
+  // a slot host: its content, in the DOM ahead of the fallback it exposes
+  getContent?(): Block
   insert?(
     parent: ParentNode,
     anchor: Node | null,
@@ -230,7 +225,7 @@ export function createSlotBoundary(
   fragment: RenderContextFragment,
   getFallback: () => BlockFn | undefined,
   markDirty: () => void,
-  onContentInvalid?: (() => void)[],
+  isHolding: () => boolean = NO,
   // the host fragment's cell unless the boundary stands for another outlet
   getScopeIds: () => string[] | null = () => fragment.slotScopeIds,
   // a getter: the chain above an interop outlet follows the outlets recorded
@@ -243,7 +238,7 @@ export function createSlotBoundary(
     run: (fn, scope) => runWithRenderCtx(fragment, fn, scope),
     getScopeIds,
     markDirty,
-    onContentInvalid,
+    isHolding,
   }
 }
 
@@ -254,13 +249,8 @@ export class ForFragment extends VaporFragment<Block[]> {
   // O(1) instead of N per-item Map.delete calls.
   resetListeners?: (() => void)[]
 
-  constructor(
-    nodes: Block[],
-    trackSlotBoundary: boolean,
-    onInvalid?: () => void,
-  ) {
+  constructor(nodes: Block[]) {
     super(nodes, FOR)
-    if (trackSlotBoundary) trackSlotBoundaryDirtying(this, onInvalid)
   }
 
   onReset(fn: () => void): void {
@@ -334,6 +324,8 @@ export class DynamicFragment extends RenderContextFragment {
   // Ancestor instances whose root-only scope ids resolve through this
   // fragment; branch switches re-apply them to the new root before insertion.
   scopeIdOwners?: VaporComponentInstance[]
+  // slot root: validity before the update in flight
+  wasValid?: boolean
   // Whether update() ran before. The very first update renders as part of
   // the mount and must not fire updated hooks; with an adopted template
   // anchor `parent` is non-null even then, so mount status can no longer be
@@ -345,17 +337,20 @@ export class DynamicFragment extends RenderContextFragment {
     flags: number = 0,
     anchorLabel?: string,
     keyed: boolean = false,
-    trackSlotBoundary: boolean = false,
-    onInvalid?: () => void,
+    slotRoot: boolean = false,
     adoptAnchor?: Node,
   ) {
-    super(EMPTY_BLOCK, DYNAMIC | flags)
+    super(
+      EMPTY_BLOCK,
+      DYNAMIC |
+        flags |
+        (slotRoot && currentRenderContext.slotBoundary ? SLOT_ROOT : 0),
+    )
     if (keyed) this.keyed = true
     if (__DEV__) this.anchorLabel = anchorLabel
     if (!isHydrating) {
       this.anchor = resolveFragmentAnchor(adoptAnchor, anchorLabel)
     }
-    if (trackSlotBoundary) trackSlotBoundaryDirtying(this, onInvalid)
   }
 
   // Whether update() claims the SSR anchor itself during hydration.
@@ -388,11 +383,20 @@ export class DynamicFragment extends RenderContextFragment {
     const prevSub = setActiveSub()
     let reusingDeferredAnchor = false
     try {
-      const parent = !isHydrating ? this.getBranchParent() : null
+      const parent = !isHydrating ? this.anchor.parentNode : null
+      // a held slot root renders out of the DOM; the outlet places it
+      const renderParent =
+        parent &&
+        isTransitionEnabled &&
+        this.__vf & SLOT_ROOT &&
+        this.slotBoundary!.isHolding()
+          ? null
+          : parent
       // Every update after the mount-time render brackets its hooks; see the
       // `everUpdated` field comment.
       const isUpdate = wasMounted || (everUpdated && !!parent)
       if (isUpdate) {
+        if (this.__vf & SLOT_ROOT) this.wasValid = isValidSlot(this)
         const bu = this.bu
         if (bu) {
           for (let i = 0; i < bu.length; i++) {
@@ -464,7 +468,7 @@ export class DynamicFragment extends RenderContextFragment {
         render,
         // in-out leave may have swapped in the hooks for the incoming branch
         transition && this.$transition,
-        parent,
+        renderParent,
         key,
         noScope,
         isUpdate,
@@ -478,12 +482,6 @@ export class DynamicFragment extends RenderContextFragment {
     if (isHydrating && this.autoHydrate && !reusingDeferredAnchor) {
       hydrateDynamicFragmentAnchor(this, render == null)
     }
-  }
-
-  // Where update() removes the previous branch from and inserts the next one
-  // into. Returning null keeps the branch out of the DOM.
-  protected getBranchParent(): ParentNode | null {
-    return this.anchor.parentNode
   }
 
   renderBranch(
@@ -531,10 +529,16 @@ export class DynamicFragment extends RenderContextFragment {
       if (removePrevious) removePrevious()
     }
 
-    const u = this.u
-    if (notifyUpdated && u) {
-      for (let i = 0; i < u.length; i++) {
-        u[i](this.nodes)
+    if (notifyUpdated) {
+      // a slot root reports its validity flips to the enclosing outlet
+      if (this.__vf & SLOT_ROOT && isValidSlot(this) !== this.wasValid) {
+        this.slotBoundary!.markDirty()
+      }
+      const u = this.u
+      if (u) {
+        for (let i = 0; i < u.length; i++) {
+          u[i](this.nodes)
+        }
       }
     }
   }
@@ -579,7 +583,6 @@ export class SlotFragment
 {
   private disposed = false
   activeFallback: Block | null = null
-  fallbackInserted = false
   fallbackScope?: EffectScope
   renderedFallbacks?: RenderedSlotFallback[]
   lastNodesValid?: boolean
@@ -600,7 +603,6 @@ export class SlotFragment
       __DEV__ ? 'slot' : undefined,
       false,
       false,
-      undefined,
       adoptAnchor,
     )
     // Fallback scopes are detached from content updates, but still belong
@@ -610,26 +612,6 @@ export class SlotFragment
       if (this.fallbackScope) this.fallbackScope.stop()
     }, true)
     this.notifyParentBoundary = slotNotifiesBoundary(flags)
-    // only a forwarded root has one (createSlot): it is parked with the rest
-    // of the enclosing outlet's content while that outlet shows its fallback
-    if (this.slotBoundary) {
-      registerContentInvalid(
-        this.slotBoundary,
-        () => {
-          invalidateExposedSlotContent(this)
-          const anchor = this.anchor
-          const parent = anchor.parentNode
-          if (parent) {
-            removeAttachedNodes(this.content, parent)
-            if (this.activeFallback) {
-              removeAttachedNodes(this.activeFallback, parent)
-            }
-            removeNode(anchor, parent)
-          }
-        },
-        this,
-      )
-    }
   }
 
   // updateSlot owns hydration timing, so opt out of autoHydrate.
@@ -672,6 +654,7 @@ export class SlotFragment
         this,
         () => this.localFallback,
         () => markSlotResolutionDirty(this),
+        () => isHoldingSlotContent(this),
       )
     }
     return this.ownBoundary
@@ -683,14 +666,7 @@ export class SlotFragment
     parentSuspense?: SuspenseBoundary | null,
   ): void {
     this.disposed = false
-    if (
-      !(isHydratingSlotFallback && placeAdoptedFallback(this, parent, anchor))
-    ) {
-      insert(this.nodes, parent, anchor, parentSuspense)
-    }
-    if (this.activeFallback === this.nodes) {
-      this.fallbackInserted = true
-    }
+    placeSlotContent(this, parent, anchor, parentSuspense)
   }
 
   move(
@@ -700,43 +676,24 @@ export class SlotFragment
     parentComponent?: VaporComponentInstance,
     parentSuspense?: SuspenseBoundary | null,
   ): void {
-    move(this.nodes, parent, anchor, moveType, parentComponent, parentSuspense)
-    if (this.activeFallback === this.nodes) {
-      this.fallbackInserted = true
-    }
+    placeSlotContent(
+      this,
+      parent,
+      anchor,
+      parentSuspense,
+      moveType,
+      parentComponent,
+    )
   }
 
   remove(parent?: ParentNode): void {
     this.disposed = true
-    if (this.fallbackScope) this.fallbackScope.stop()
-    const nodes = this.nodes
-    remove(nodes, parent)
-    if (this.activeFallback === nodes) {
-      // the exposed fallback was just torn down by remove() above; null it
-      // so disposeSlotResolution does not remove it a second time
-      this.activeFallback = null
-      this.fallbackInserted = false
-    }
-    this.clearContentInvalid()
+    remove(this.content, parent)
     disposeSlotResolution(this, parent)
-  }
-
-  // Parked callbacks of content roots; they die with the content branch.
-  private clearContentInvalid(): void {
-    const callbacks = this.ownBoundary && this.ownBoundary.onContentInvalid
-    if (callbacks) callbacks.length = 0
-  }
-
-  protected getBranchParent(): ParentNode | null {
-    // When fallback is active, recompute content without inserting it. The
-    // content may still be invalid, so recheckSlotResolution decides whether it
-    // can return to the DOM.
-    return this.activeFallback ? null : super.getBranchParent()
   }
 
   // @internal shared with hydrateSlotFragmentContent
   updateContent(render: BlockFn | undefined, key: any): void {
-    if (key !== this.current) this.clearContentInvalid()
     // update() operates on this.nodes, but while fallback is active `nodes`
     // points at the fallback block. Aim it at the content branch so the base
     // pipeline re-renders content, then capture the result back; the

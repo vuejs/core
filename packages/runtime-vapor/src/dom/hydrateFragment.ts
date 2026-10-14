@@ -453,7 +453,6 @@ export function hydrateSlotFragmentContent(
 ): void {
   locateHydrationNode()
   const open = currentHydrationNode
-  const resolve = () => recheckSlotResolution(frag)
   if (
     open &&
     isComment(open, '[') &&
@@ -464,7 +463,7 @@ export function hydrateSlotFragmentContent(
     const close = (frag.anchor = claimAnchor(open.nextSibling))
     runWithoutHydration(() => {
       frag.updateContent(render, key)
-      resolve()
+      recheckSlotResolution(frag)
     })
     advanceHydrationNode(close)
   } else if (open && isComment(open, '(')) {
@@ -473,12 +472,7 @@ export function hydrateSlotFragmentContent(
       { first: open.nextSibling!, close, boundary: frag.boundary },
       () => {
         frag.updateContent(render, key)
-        resolve()
-        // what the parent's insert does on the client: even a fallback that
-        // renders nothing valid has to be in the DOM to update in place
-        if (frag.activeFallback && !frag.fallbackInserted) {
-          frag.insert(close.parentNode!, close)
-        }
+        recheckSlotResolution(frag)
       },
     )
     advanceHydrationNode(close)
@@ -486,14 +480,14 @@ export function hydrateSlotFragmentContent(
     withHydratingSlotBoundary(() => {
       frag.updateContent(render, key)
       if (isValidSlot(frag.getContent())) {
-        resolve()
+        recheckSlotResolution(frag)
         hydrateDynamicFragmentAnchor(frag, !isValidBlock(frag.nodes))
       } else {
         // content the client finds empty: there is no fallback to adopt
         if (open) warnHydrationNodeMismatch(open, `slot fallback`)
         frag.syncNodes()
         hydrateDynamicFragmentAnchor(frag, true)
-        runWithoutHydration(resolve)
+        runWithoutHydration(() => recheckSlotResolution(frag))
       }
     })
   }

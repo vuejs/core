@@ -156,7 +156,7 @@ describe('fragment protocol flags', () => {
     const fragment = new VaporFragment(node1)
     const dynamic = new DynamicFragment(0, undefined, false, false)
     const slot = new SlotFragment()
-    const forFragment = new ForFragment([], false)
+    const forFragment = new ForFragment([])
     const forBlock = new ForBlock(
       node2,
       undefined,
