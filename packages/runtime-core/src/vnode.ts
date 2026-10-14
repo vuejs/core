@@ -295,6 +295,8 @@ export interface VNode<
     // vdom outlets whose fallback this slot resolves, innermost first. Never
     // written in place: clones share the list
     outlets?: readonly VdomSlotOutlet[]
+    // slot data saved before adding an outlet's branch key to vnode props
+    props?: Data
     state?: unknown
     ref?: ShallowRef<any>
     scope?: EffectScope
@@ -816,7 +818,7 @@ export function cloneVNode<T, U>(
     ctx: vnode.ctx,
     ce: vnode.ce,
     vi: vnode.vi,
-    vs: cloneVaporSlotMeta(vnode as VNode),
+    vs: cloneVaporSlotMeta(vnode as VNode, extraProps),
     vb: vnode.vb,
     // interop range tracking must survive renderer-internal clones of mounted
     // vnodes (cloneIfMounted / normalizeVNode), or nested updates would stop
@@ -843,7 +845,10 @@ export function cloneVNode<T, U>(
   return cloned
 }
 
-function cloneVaporSlotMeta(vnode: VNode): VNode['vs'] {
+function cloneVaporSlotMeta(
+  vnode: VNode,
+  extraProps?: Data | null,
+): VNode['vs'] {
   const vaporSlot = vnode.vs
   if (!vaporSlot) {
     return vaporSlot
@@ -852,6 +857,21 @@ function cloneVaporSlotMeta(vnode: VNode): VNode['vs'] {
   const cloned: NonNullable<VNode['vs']> = {
     slot: vaporSlot.slot,
     outlets: vaporSlot.outlets,
+    props: vaporSlot.props,
+  }
+
+  if (vaporSlot.props && extraProps) {
+    // A key-only clone changes vnode identity without copying the slot data.
+    let extraSlotProps: Data | undefined
+    for (const key in extraProps) {
+      if (key !== 'key') {
+        if (!extraSlotProps) extraSlotProps = {}
+        extraSlotProps[key] = extraProps[key]
+      }
+    }
+    if (extraSlotProps) {
+      cloned.props = mergeProps(vaporSlot.props, extraSlotProps)
+    }
   }
 
   if (vnode.el) {

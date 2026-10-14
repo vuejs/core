@@ -2626,4 +2626,98 @@ describe('VDOM interop', () => {
       expect('Hydration children mismatch').not.toHaveBeenWarned()
     },
   )
+
+  // a vdom outlet rendered by its client render function on the server, as
+  // a component library ships it
+  test('the branch key of a keyed <template v-for> vdom outlet is not a vapor slot prop in ssr', async () => {
+    const setup = `<script setup>const data = _data; const components = _components</script>`
+    const data = reactive({ list: [1, 2] })
+    const App = (ssr: boolean) => {
+      const List = compile(
+        `${setup}<template>
+          <div>
+            <template v-for="it in data.list" :key="it">
+              <slot :it="it" />
+            </template>
+          </div>
+        </template>`,
+        data as any,
+        {},
+        { vapor: false },
+      )
+      return compile(
+        `${setup}<template>
+          <components.List v-slot="p"><i>{{ Object.keys(p).join() }}</i></components.List>
+        </template>`,
+        data as any,
+        { List },
+        { vapor: true, ssr },
+      )
+    }
+    const html = await VueServerRenderer.renderToString(
+      runtimeDom.createSSRApp(App(true)),
+    )
+    expect(html.replace(/<!--[^>]*-->/g, '')).toBe(
+      '<div><i>it</i><i>it</i></div>',
+    )
+
+    const container = document.createElement('div')
+    document.body.appendChild(container)
+    container.innerHTML = html
+    const app = runtimeVapor
+      .createVaporSSRApp(App(false))
+      .use(runtimeVapor.vaporInteropPlugin)
+    app.mount(container)
+    expect(`Hydration text mismatch`).not.toHaveBeenWarned()
+    expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+
+    app.unmount()
+    expect(container.innerHTML).toBe('')
+  })
+
+  test('preserves array slot props of a keyed vdom outlet in ssr and hydration', async () => {
+    const data = runtimeDom.shallowRef(['foo', 'bar'])
+    const Child = compile(
+      `<script setup>const data = _data</script>
+      <template><div><slot v-if="true" v-bind="data" /></div></template>`,
+      data,
+      {},
+      { vapor: false },
+    )
+    const App = (ssr: boolean) =>
+      compile(
+        `<script setup>const components = _components</script>
+        <template>
+          <components.Child v-slot="p"><i>{{ p.length }}:{{ [...p].join() }}</i></components.Child>
+        </template>`,
+        data,
+        { Child },
+        { vapor: true, ssr },
+      )
+    const html = await VueServerRenderer.renderToString(
+      runtimeDom.createSSRApp(App(true)),
+    )
+    expect(html.replace(/<!--[^>]*-->/g, '')).toBe(
+      '<div><i>2:foo,bar</i></div>',
+    )
+
+    const container = document.createElement('div')
+    document.body.appendChild(container)
+    container.innerHTML = html
+    const app = runtimeVapor
+      .createVaporSSRApp(App(false))
+      .use(runtimeVapor.vaporInteropPlugin)
+    app.mount(container)
+    expect(`Hydration text mismatch`).not.toHaveBeenWarned()
+    expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+    expect(`Hydration children mismatch`).not.toHaveBeenWarned()
+
+    data.value = ['baz']
+    await nextTick()
+    expect(container.innerHTML.replace(/<!--[^>]*-->/g, '')).toBe(
+      '<div><i>1:baz</i></div>',
+    )
+    app.unmount()
+    expect(container.innerHTML).toBe('')
+  })
 })

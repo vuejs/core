@@ -768,7 +768,7 @@ const vaporInteropImpl = {
         n2.vb = n1.vb
         vs2.scope = vs1.scope
         patchVdomSlot(parentComponent, () => {
-          ;(vs2.ref = vs1.ref)!.value = n2.props
+          ;(vs2.ref = vs1.ref)!.value = vs2.props || n2.props
           syncInteropVaporSlotState(n1, n2)
         })
         applyVaporSlotTransition(n2, n2.vb, true)
@@ -3606,7 +3606,7 @@ function stopVaporSlotScope(vnode: VNode): void {
  * dispose them immediately instead of waiting for the parent component.
  */
 function invokeVaporSlot(vnode: VNode): Block {
-  const propsRef = (vnode.vs!.ref = shallowRef(vnode.props))
+  const propsRef = (vnode.vs!.ref = shallowRef(vnode.vs!.props || vnode.props))
   const scope = effectScope()
   vnode.vs!.scope = scope
   try {

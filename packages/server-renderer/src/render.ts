@@ -437,11 +437,11 @@ export function renderVNode(
         slotScopeId =
           (slotScopeId ? slotScopeId + ' ' : '') + vnode.slotScopeIds.join(' ')
       }
-      const { slot, outlets } = vnode.vs!
+      const { slot, outlets, props } = vnode.vs!
       renderVaporOutlet(
         push,
         slot,
-        vnode.props,
+        props || vnode.props,
         outlets && outlets[0],
         parentComponent,
         slotScopeId,
