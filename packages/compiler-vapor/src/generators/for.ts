@@ -289,11 +289,12 @@ function getSingleReturnedChild(block: BlockIRNode): IRDynamicInfo | undefined {
   }
 }
 
+// an accessor segment, or a helper call wrapping the accessor built so far
+type DestructureStep = string | { helper: string; args: string }
+
 export type DestructureMapValue = {
-  path: string
+  steps: DestructureStep[]
   dynamic: boolean
-  helper?: string
-  helperArgs?: string
 }
 
 export type DestructureMap = Map<string, DestructureMapValue | null>
@@ -320,8 +321,10 @@ export function genAliasParams(
   )
 }
 
-// construct a id -> accessor path map.
-// e.g. `{ x: { y: [z] }}` -> `Map{ 'z' => '.x.y[0]' }`
+// construct a id -> accessor steps map.
+// e.g. `{ x: { y: [z] }}` -> `Map{ 'z' => ['.x', '.y', '[0]'] }`
+// a default or rest applies at its own level: `{ x: { y } = {} }` gives `y`
+// the steps `.x`, getDefaultValue(…), `.y`
 export function parseValueDestructure(
   value: SimpleExpressionNode | undefined,
   context: CodegenContext,
@@ -340,40 +343,37 @@ export function parseValueDestructure(
         value.ast,
         (id, _, parentStack) => {
           if (bindings.has(id)) {
-            let path = ''
+            const steps: DestructureStep[] = []
             let isDynamic = false
-            let helper
-            let helperArgs
             for (let i = 0; i < parentStack.length; i++) {
               const parent = parentStack[i]
               const child = parentStack[i + 1] || id
 
               if (parent.type === 'ObjectProperty' && parent.value === child) {
                 if (parent.key.type === 'StringLiteral') {
-                  path += `[${JSON.stringify(parent.key.value)}]`
+                  steps.push(`[${JSON.stringify(parent.key.value)}]`)
                 } else if (parent.computed) {
                   isDynamic = true
-                  path += `[${rawValue.slice(
-                    parent.key.start! - 1,
-                    parent.key.end! - 1,
-                  )}]`
+                  steps.push(
+                    `[${rawValue.slice(parent.key.start! - 1, parent.key.end! - 1)}]`,
+                  )
                 } else {
                   // non-computed, can only be identifier
-                  path += `.${(parent.key as Identifier).name}`
+                  steps.push(`.${(parent.key as Identifier).name}`)
                 }
               } else if (parent.type === 'ArrayPattern') {
                 const index = parent.elements.indexOf(child as any)
                 if (child.type === 'RestElement') {
-                  path += `.slice(${index})`
+                  steps.push(`.slice(${index})`)
                 } else {
-                  path += `[${index}]`
+                  steps.push(`[${index}]`)
                 }
               } else if (
                 parent.type === 'ObjectPattern' &&
                 child.type === 'RestElement'
               ) {
-                helper = context.helper('getRestElement')
-                helperArgs =
+                const helper = context.helper('getRestElement')
+                const args =
                   '[' +
                   parent.properties
                     .filter(p => p.type === 'ObjectProperty')
@@ -389,27 +389,29 @@ export function parseValueDestructure(
                     })
                     .join(', ') +
                   ']'
+                steps.push({ helper, args })
               }
 
               // default value, either inside the pattern (`{ a = 1 }`) or on
-              // the alias itself (`(item, key, index = 0)`) - the latter sits
-              // directly under the arrow the alias is parsed as
+              // the alias itself (`(item, key, index = 0)`, `({ a } = {})`) -
+              // the latter sits directly under the arrow the alias is parsed as
               if (
                 child.type === 'AssignmentPattern' &&
                 (parent.type === 'ObjectProperty' ||
                   parent.type === 'ArrayPattern' ||
-                  (parent.type === 'ArrowFunctionExpression' &&
-                    child.left === id))
+                  parent.type === 'ArrowFunctionExpression')
               ) {
                 isDynamic = true
-                helper = context.helper('getDefaultValue')
-                helperArgs = `() => (${rawValue.slice(
-                  child.right.start! - 1,
-                  child.right.end! - 1,
-                )})`
+                steps.push({
+                  helper: context.helper('getDefaultValue'),
+                  args: `() => (${rawValue.slice(
+                    child.right.start! - 1,
+                    child.right.end! - 1,
+                  )})`,
+                })
               }
             }
-            map.set(id.name, { path, dynamic: isDynamic, helper, helperArgs })
+            map.set(id.name, { steps, dynamic: isDynamic })
           }
         },
         true,
@@ -430,13 +432,13 @@ export function buildDestructureIdMap(
   idToPathMap.forEach((pathInfo, id) => {
     let path = baseAccessor
     if (pathInfo) {
-      path = `${baseAccessor}${pathInfo.path}`
-
-      if (pathInfo.helper) {
-        idMap[pathInfo.helper] = null
-        path = pathInfo.helperArgs
-          ? `${pathInfo.helper}(${path}, ${pathInfo.helperArgs})`
-          : `${pathInfo.helper}(${path})`
+      for (const step of pathInfo.steps) {
+        if (typeof step === 'string') {
+          path += step
+        } else {
+          idMap[step.helper] = null
+          path = `${step.helper}(${path}, ${step.args})`
+        }
       }
 
       if (pathInfo.dynamic) {
