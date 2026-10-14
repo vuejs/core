@@ -524,4 +524,39 @@ describe('api: createVaporApp', () => {
     expect(console.warn).not.toHaveBeenCalled()
     app.unmount()
   })
+
+  test.each([false, true])(
+    'config.warnHandler receives warnings raised during an update (vapor: %s)',
+    async vapor => {
+      const data = ref({ show: false })
+      const components: Record<string, any> = {}
+      components.Child = compile(
+        `<script setup>defineOptions({ name: 'Child' }); const data = _data</script>` +
+          `<template><div v-if="data.show">{{ missing }}</div></template>`,
+        data,
+        components,
+        { vapor, inlineTemplate: false },
+      )
+      const App = compile(
+        `<script setup>defineOptions({ name: 'App' }); const { Child } = _components</script>` +
+          `<template><Child /></template>`,
+        data,
+        components,
+        { vapor, inlineTemplate: false },
+      )
+      const handler = vi.fn()
+      const app = vapor ? createVaporApp(App) : createApp(App)
+      app.config.warnHandler = handler
+      app.mount(document.createElement('div'))
+
+      data.value.show = true
+      await nextTick()
+      expect(handler).toHaveBeenCalledTimes(1)
+      expect(handler.mock.calls[0][0]).toMatch(
+        'Property "missing" was accessed during render',
+      )
+      expect(handler.mock.calls[0][2]).toBe('at <Child>\nat <App>')
+      app.unmount()
+    },
+  )
 })

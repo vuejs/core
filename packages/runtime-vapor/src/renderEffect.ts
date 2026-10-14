@@ -9,6 +9,8 @@ import {
   SchedulerJobFlags,
   currentInstance,
   endMeasure,
+  popWarningContext,
+  pushWarningContext,
   queueJob,
   queuePostRenderEffect,
   restoreCurrentInstance,
@@ -116,6 +118,7 @@ export class RenderEffect extends ReactiveEffect {
     // renderEffect is always called after user has registered all hooks
     const hasUpdateHooks = instance && (instance.bu || instance.u)
     if (__DEV__ && instance) {
+      pushWarningContext(instance)
       startMeasure(instance, `renderEffect`)
     }
     const prev = setCurrentInstance(instance, scope)
@@ -145,6 +148,7 @@ export class RenderEffect extends ReactiveEffect {
       restoreCurrentInstance(prev)
       if (__DEV__ && instance) {
         endMeasure(instance, `renderEffect`)
+        popWarningContext()
       }
     }
   }
