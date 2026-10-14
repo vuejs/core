@@ -14371,4 +14371,224 @@ describe('a vapor slot in a vdom outlet starts on a node of its own', () => {
       expect(seen[2]).toBe('<div><i>f3</i><b>c2</b><i>f1</i></div>')
     })
   })
+
+  describe('keyed by its vdom outlet', () => {
+    test('rows of a keyed <template v-for> move with their key', async () => {
+      const data = ref({ list: [1, 2, 3] })
+      const components: Record<string, any> = {}
+      components.List = compile(
+        `${vdomScript}
+        <template>
+          <div>
+            <template v-for="it in data.list" :key="it">
+              <slot :it="it" />
+            </template>
+          </div>
+        </template>`,
+        data,
+        components,
+        { vapor: false },
+      )
+      const App = compile(
+        `<template>
+          <components.List v-slot="{ it }"><input :name="it" /></components.List>
+        </template>`,
+        data,
+        components,
+      )
+      const root = document.createElement('div')
+      createVaporApp(App).use(vaporInteropPlugin).mount(root)
+      const first = root.querySelector('input')
+
+      data.value.list.reverse()
+      await nextTick()
+      expect(strip(root.innerHTML)).toBe(
+        '<div><input name="3"><input name="2"><input name="1"></div>',
+      )
+      expect(root.querySelectorAll('input')[2]).toBe(first)
+    })
+
+    test('switching between v-if / v-else outlets remounts the slot', async () => {
+      const data = ref({ ok: true })
+      const components: Record<string, any> = {}
+      components.Child = compile(
+        `${vdomScript}
+        <template>
+          <div><slot v-if="data.ok" /><slot v-else /></div>
+        </template>`,
+        data,
+        components,
+        { vapor: false },
+      )
+      const App = compile(
+        `<template><components.Child><input /></components.Child></template>`,
+        data,
+        components,
+      )
+      const root = document.createElement('div')
+      createVaporApp(App).use(vaporInteropPlugin).mount(root)
+      const first = root.querySelector('input')
+
+      data.value.ok = false
+      await nextTick()
+      expect(strip(root.innerHTML)).toBe('<div><input></div>')
+      expect(root.querySelector('input')).not.toBe(first)
+    })
+
+    test('the branch key is not a slot prop, also on a TransitionGroup clone', async () => {
+      const data = ref({ list: [1, 2] })
+      const components: Record<string, any> = {}
+      components.List = compile(
+        `${vdomScript}
+        <template>
+          <TransitionGroup tag="div">
+            <template v-for="it in data.list" :key="it">
+              <slot :it="it" />
+            </template>
+          </TransitionGroup>
+        </template>`,
+        data,
+        components,
+        { vapor: false },
+      )
+      const App = compile(
+        `<template>
+          <components.List v-slot="p">
+            <i>{{ Object.keys(p).join() }}{{ p.it }}</i>
+          </components.List>
+        </template>`,
+        data,
+        components,
+      )
+      const root = document.createElement('div')
+      createVaporApp(App).use(vaporInteropPlugin).mount(root)
+      expect(strip(root.innerHTML)).toBe('<div><i>it1</i><i>it2</i></div>')
+
+      data.value.list.reverse()
+      await nextTick()
+      expect(strip(root.innerHTML)).toBe('<div><i>it2</i><i>it1</i></div>')
+    })
+
+    test.each([
+      ['length', 'p.length', '2', '1', 'div'],
+      ['iteration', "[...p].join(',')", 'foo,bar', 'baz', 'div'],
+      [
+        'cloned iteration',
+        "[...p].join(',')",
+        'foo,bar',
+        'baz',
+        'TransitionGroup',
+      ],
+    ])(
+      'preserves array slot props %s',
+      async (_, expression, initial, updated, tag) => {
+        const data = shallowRef(['foo', 'bar'])
+        const Child = compile(
+          `${vdomScript}<template>
+          <${tag}${tag === 'TransitionGroup' ? ' tag="div"' : ''}>
+            <slot v-if="true" v-bind="data" />
+          </${tag}>
+        </template>`,
+          data,
+          {},
+          { vapor: false },
+        )
+        const App = compile(
+          `<template>
+          <components.Child v-slot="p"><i>{{ ${expression} }}</i></components.Child>
+        </template>`,
+          data,
+          { Child },
+        )
+        const root = document.createElement('div')
+        const app = createVaporApp(App).use(vaporInteropPlugin)
+        app.mount(root)
+        expect(strip(root.innerHTML)).toBe(`<div><i>${initial}</i></div>`)
+
+        data.value = ['baz']
+        await nextTick()
+        expect(strip(root.innerHTML)).toBe(`<div><i>${updated}</i></div>`)
+        app.unmount()
+      },
+    )
+
+    test('preserves symbol slot props', async () => {
+      const prop = Symbol()
+      const data = shallowRef({ [prop]: 'foo' })
+      const Child = compile(
+        `${vdomScript}<template><div><slot v-if="true" v-bind="data" /></div></template>`,
+        data,
+        {},
+        { vapor: false },
+      )
+      const App = compile(
+        `<script setup>
+          const components = _components
+          const prop = Object.getOwnPropertySymbols(_data.value)[0]
+        </script>
+        <template>
+          <components.Child v-slot="p"><i>{{ p[prop] }}</i></components.Child>
+        </template>`,
+        data,
+        { Child },
+      )
+      const root = document.createElement('div')
+      const app = createVaporApp(App).use(vaporInteropPlugin)
+      app.mount(root)
+      expect(strip(root.innerHTML)).toBe('<div><i>foo</i></div>')
+
+      data.value = { [prop]: 'bar' }
+      await nextTick()
+      expect(strip(root.innerHTML)).toBe('<div><i>bar</i></div>')
+      app.unmount()
+    })
+
+    test('clones merge extra slot props without exposing the branch key', async () => {
+      const data = ref('foo')
+      const Child = {
+        setup(_: any, { slots }: any) {
+          return () => {
+            const vnode = renderSlot(
+              slots,
+              'default',
+              { msg: 'original', class: 'original' },
+              undefined,
+              undefined,
+              0,
+            )
+            return h('div', [
+              vnode,
+              cloneVNode(vnode, {
+                key: 'clone',
+                msg: data.value,
+                class: 'extra',
+              }),
+            ])
+          }
+        },
+      }
+      const App = compile(
+        `<template>
+          <components.Child v-slot="p">
+            <i>{{ p.msg }}:{{ p.class }}:{{ Object.keys(p).join() }}</i>
+          </components.Child>
+        </template>`,
+        data,
+        { Child },
+      )
+      const root = document.createElement('div')
+      const app = createVaporApp(App).use(vaporInteropPlugin)
+      app.mount(root)
+      expect(strip(root.innerHTML)).toBe(
+        '<div><i>original:original:msg,class</i><i>foo:original extra:msg,class</i></div>',
+      )
+
+      data.value = 'bar'
+      await nextTick()
+      expect(strip(root.innerHTML)).toBe(
+        '<div><i>original:original:msg,class</i><i>bar:original extra:msg,class</i></div>',
+      )
+      app.unmount()
+    })
+  })
 })

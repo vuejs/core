@@ -2912,6 +2912,38 @@ test.each([
     expect(vapor.text).toBe(vdom.text)
   },
 )
+test('renders nothing for an invalid range in prod', async () => {
+  __DEV__ = false
+  try {
+    const html: Record<string, string[]> = {}
+    const { vdom, vapor } = await renderParity(
+      {
+        App: `<template><div><span v-for="i in data.n">{{ i }}</span></div></template>`,
+      },
+      () => ref({ n: -1 }),
+      async (data, root, mode) => {
+        const seen = [root.innerHTML]
+        for (const n of [2, 3.1, 1, NaN]) {
+          data.value.n = n
+          await nextTick()
+          seen.push(root.innerHTML)
+        }
+        html[mode] = seen
+      },
+    )
+    expect(html.vdom).toEqual([
+      '<div></div>',
+      '<div><span>1</span><span>2</span></div>',
+      '<div></div>',
+      '<div><span>1</span></div>',
+      '<div></div>',
+    ])
+    expect(html.vapor).toEqual(html.vdom)
+    expect(vapor.text).toBe(vdom.text)
+  } finally {
+    __DEV__ = true
+  }
+})
 
 function getEffectsCount(scope: { deps: any }) {
   let count = 0

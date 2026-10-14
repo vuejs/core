@@ -92,6 +92,13 @@ export function renderSlot(
         ? [{ fallback, owner: currentRenderingInstance }]
         : undefined,
     }
+    if (branchKey != null && props.key == null) {
+      // Keep the normalized slot data separate from the vnode's branch key.
+      // The key also belongs in vnode props so clones retain its identity.
+      ret.vs.props = ret.props!
+      ret.props = extend({}, ret.props, { key: branchKey })
+      ret.key = branchKey
+    }
     if (!noSlotted && ret.scopeId) {
       ret.slotScopeIds = [ret.scopeId + '-s']
     }

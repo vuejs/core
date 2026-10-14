@@ -394,6 +394,10 @@ export {
   callPendingCbs,
   handleMovedChildren,
   baseApplyTranslation,
+  getPosition as getTransitionGroupPosition,
+  getOrigins as getTransitionGroupOrigins,
+  getOriginShift as getTransitionGroupShift,
+  pendingGroups as pendingTransitionGroups,
 } from './components/TransitionGroup'
 /**
  * @internal

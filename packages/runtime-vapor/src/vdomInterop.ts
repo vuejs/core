@@ -590,15 +590,29 @@ const vaporInteropImpl = {
         vnode,
       )
       if (instance.block) {
+        if (!doRemove && vnode.transition) {
+          // The enclosing VDOM fragment owns the leave and its DOM range.
+          // Dispose the block below without starting the inherited leave again.
+          const child = findTransitionBlock(instance.block, fragment => {
+            if (fragment.$transition === vnode.transition) {
+              fragment.$transition = undefined
+            }
+          })
+          if (child && child.$transition === vnode.transition) {
+            child.$transition = undefined
+          }
+        }
         unmountComponent(instance, container, parentSuspense)
         if (!doRemove) {
           // When the surrounding VDOM fragment owns DOM removal, we still need
           // to dispose the vapor-returned block tree so nested interop state
           // (for example forwarded VDOM slots or nested KeepAlive cleanup)
           // does not stay subscribed.
-          const blockContainer = needsHostParentForRemove(instance.block)
-            ? ((anchor && anchor.parentNode) as ParentNode)
-            : undefined
+          // A transitioning fragment must keep its complete range until leave.
+          const blockContainer =
+            !vnode.transition && needsHostParentForRemove(instance.block)
+              ? ((anchor && anchor.parentNode) as ParentNode)
+              : undefined
           remove(instance.block, blockContainer)
         }
       } else {
@@ -754,7 +768,7 @@ const vaporInteropImpl = {
         n2.vb = n1.vb
         vs2.scope = vs1.scope
         patchVdomSlot(parentComponent, () => {
-          ;(vs2.ref = vs1.ref)!.value = n2.props
+          ;(vs2.ref = vs1.ref)!.value = vs2.props || n2.props
           syncInteropVaporSlotState(n1, n2)
         })
         applyVaporSlotTransition(n2, n2.vb, true)
@@ -957,6 +971,8 @@ const vaporInteropImpl = {
     ensureTransitionHooksRegistered()
     relayTransitionHooks((component as any).block, hooks)
   },
+
+  getTransitionElement: getInteropTransitionElement,
 
   hasTransitionChild(vnode) {
     return !!findTransitionBlock(vnode.vb || getVaporInstance(vnode).block)
@@ -3590,7 +3606,7 @@ function stopVaporSlotScope(vnode: VNode): void {
  * dispose them immediately instead of waiting for the parent component.
  */
 function invokeVaporSlot(vnode: VNode): Block {
-  const propsRef = (vnode.vs!.ref = shallowRef(vnode.props))
+  const propsRef = (vnode.vs!.ref = shallowRef(vnode.vs!.props || vnode.props))
   const scope = effectScope()
   vnode.vs!.scope = scope
   try {

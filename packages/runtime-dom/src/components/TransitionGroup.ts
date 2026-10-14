@@ -48,9 +48,12 @@ const positionMap = new WeakMap<VNode, Position>()
 const newPositionMap = new WeakMap<VNode, Position>()
 const moveCbKey: unique symbol = Symbol('_moveCb')
 const enterCbKey = Symbol('_enterCb')
-// groups that have re-rendered but not yet run their move, mapped to whether
-// they are going to move their children
-const pendingGroups = new WeakMap<GenericComponentInstance, () => boolean>()
+// groups that have updated but not yet run their move, mapped to their root
+// and whether they are going to move their children
+export const pendingGroups: WeakMap<
+  GenericComponentInstance,
+  { root: Node; willMove: () => boolean }
+> = new WeakMap()
 
 export type TransitionGroupProps = Omit<TransitionProps, 'mode'> & {
   tag?: string
@@ -192,8 +195,9 @@ const TransitionGroupImpl: ComponentOptions = /*@__PURE__*/ decorate({
       }
 
       if (prevChildren.length) {
-        origins = getOrigins(instance)
-        pendingGroups.set(instance, willMove)
+        const root = instance.vnode.el as Node
+        origins = getOrigins(instance, root)
+        pendingGroups.set(instance, { root, willMove })
       }
 
       return createVNode(tag, null, children)
@@ -265,7 +269,7 @@ export function baseApplyTranslation(
   return false
 }
 
-function getPosition(el: Element, shift?: Position): Position {
+export function getPosition(el: Element, shift?: Position): Position {
   const rect = el.getBoundingClientRect()
   return {
     left: rect.left - (shift ? shift.left : 0),
@@ -274,15 +278,18 @@ function getPosition(el: Element, shift?: Position): Position {
 }
 
 // origins in the enclosing groups that are updating as well, nearest first
-function getOrigins(instance: ComponentInternalInstance): Origin[] | undefined {
+export function getOrigins(
+  instance: GenericComponentInstance,
+  root: Node,
+): Origin[] | undefined {
   let origins: Origin[] | undefined
   for (let group = instance.parent; group; group = group.parent) {
-    const willMove = pendingGroups.get(group)
-    if (willMove && group.vnode) {
-      const item = findItem(group.vnode.el as Node, instance.vnode.el as Node)
+    const pending = pendingGroups.get(group)
+    if (pending) {
+      const item = findItem(pending.root, root)
       if (item) {
         ;(origins || (origins = [])).push(
-          extend(getPosition(item), { item, willMove }),
+          extend(getPosition(item), { item, willMove: pending.willMove }),
         )
       }
     }
@@ -305,7 +312,10 @@ function findItem(root: Node, node: Node | null): Element | undefined {
 // the nearest origin whose group is going to move it: what farther groups
 // animate is part of its movement. An item this group's elements have left
 // since no longer carries them.
-function getOriginShift(origins: Origin[], root: Node): Position | undefined {
+export function getOriginShift(
+  origins: Origin[],
+  root: Node,
+): Position | undefined {
   const origin = origins.find(o => o.willMove() && o.item.contains(root))
   return origin && getPosition(origin.item, origin)
 }

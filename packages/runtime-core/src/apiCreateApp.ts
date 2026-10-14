@@ -250,6 +250,7 @@ export interface VaporInVdomInterface {
    * Transition can leave.
    */
   hasTransitionChild(vnode: VNode): boolean
+  getTransitionElement(vnode: VNode): RendererElement | undefined
   applyCssVars(vnode: VNode, vars: Record<string, string>): void
   /**
    * Hands the fallback of a vdom outlet over to the vapor slot its content

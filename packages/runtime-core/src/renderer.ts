@@ -2528,11 +2528,26 @@ function baseCreateRenderer(
     }
 
     if (transition) {
+      let leavingEl = leavingNode && leavingNode.el
+      let isElement = !!(
+        leavingNode && leavingNode.shapeFlag & ShapeFlags.ELEMENT
+      )
+      if (
+        isFragment &&
+        leavingNode &&
+        isVaporComponent(leavingNode.type as ConcreteComponent)
+      ) {
+        leavingEl = getVaporInterface(
+          leavingNode.component,
+          leavingNode,
+        ).getTransitionElement(leavingNode)
+        isElement = !!leavingEl
+      }
       performTransitionLeave(
-        leavingNode ? leavingNode.el! : el!,
+        leavingEl || el!,
         transition,
         performRemove,
-        !!(leavingNode && leavingNode.shapeFlag & ShapeFlags.ELEMENT),
+        isElement,
       )
     } else {
       performRemove()
