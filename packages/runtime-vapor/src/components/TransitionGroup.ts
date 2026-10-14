@@ -10,10 +10,14 @@ import {
   callPendingCbs,
   currentInstance,
   forceReflow,
+  getTransitionGroupOrigins,
+  getTransitionGroupPosition,
+  getTransitionGroupShift,
   handleMovedChildren,
   hasCSSTransform,
   onBeforeUpdate,
   onUpdated,
+  pendingTransitionGroups,
   queuePostRenderEffect,
   resolveTransitionProps,
   restoreCurrentInstance,
@@ -84,8 +88,9 @@ import {
 import { isTransitionEnabled, registerTransitionHooks } from '../transition'
 import { isInteropEnabled } from '../vdomInteropState'
 
-const positionMap = new WeakMap<TransitionBlock, DOMRect>()
-const newPositionMap = new WeakMap<TransitionBlock, DOMRect>()
+type Position = ReturnType<typeof getTransitionGroupPosition>
+const positionMap = new WeakMap<TransitionBlock, Position>()
+const newPositionMap = new WeakMap<TransitionBlock, Position>()
 
 type TransitionGroupUpdateOwner = VaporFragment | VaporComponentInstance
 
@@ -141,11 +146,29 @@ const VaporTransitionGroupImpl = /*@__PURE__*/ defineVaporComponent({
     let isUpdatePending = false
     let isUpdatedPending = false
     let slottedBlock: Block = []
+    let origins: ReturnType<typeof getTransitionGroupOrigins>
+    let moves: boolean | undefined
+    let moveElement: Element | undefined
+    const willMove = () => {
+      if (moves === undefined) {
+        moveElement = getFirstConnectedChild(prevChildren)
+        moves = !!(
+          moveElement &&
+          hasCSSTransform(
+            moveElement as ElementWithTransition,
+            moveElement.parentNode as Node,
+            props.moveClass || `${props.name || 'v'}-move`,
+          )
+        )
+      }
+      return moves
+    }
 
     const beforeUpdate = () => {
       if (isUpdatePending) return
       isUpdatePending = true
       prevChildren = []
+      moves = undefined
       // collect-only: the snapshot loop below reads elements and existing
       // hooks; skip owner tracking and key-inheritance bookkeeping.
       const children = resolveTransitionBlocks(
@@ -169,26 +192,28 @@ const VaporTransitionGroupImpl = /*@__PURE__*/ defineVaporComponent({
           positionMap.set(child, el.getBoundingClientRect())
         }
       }
+      const firstChild = getFirstConnectedChild(prevChildren)
+      if (firstChild) {
+        origins = getTransitionGroupOrigins(instance, firstChild)
+        pendingTransitionGroups.set(instance, {
+          root: firstChild.parentNode!,
+          willMove,
+        })
+      }
     }
 
     const flushUpdated = () => {
       isUpdatedPending = false
       if (!isUpdatePending) return
       isUpdatePending = false
+      pendingTransitionGroups.delete(instance)
       if (!prevChildren.length) return
 
       const moveClass = props.moveClass || `${props.name || 'v'}-move`
-      const firstChild = getFirstConnectedChild(prevChildren)
-      const hasMove = !!(
-        firstChild &&
-        hasCSSTransform(
-          firstChild as ElementWithTransition,
-          firstChild.parentNode as Node,
-          moveClass,
-        )
-      )
-      if (!hasMove) {
+      if (!willMove()) {
         prevChildren = []
+        origins = undefined
+        moveElement = undefined
         return
       }
 
@@ -199,12 +224,15 @@ const VaporTransitionGroupImpl = /*@__PURE__*/ defineVaporComponent({
         if (el) callPendingCbs(el)
       })
 
-      prevChildren.forEach(recordPosition)
+      const shift = origins && getTransitionGroupShift(origins, moveElement!)
+      origins = undefined
+      prevChildren.forEach(child => recordPosition(child, shift))
       const movedChildren = prevChildren.filter(applyTranslation)
 
       // force reflow to put everything in position; use the group's own
       // document so this works inside iframes / foreign documents
-      forceReflow(firstChild)
+      forceReflow(moveElement)
+      moveElement = undefined
 
       movedChildren.forEach(c =>
         handleMovedChildren(
@@ -582,9 +610,9 @@ function trackTransitionGroupUpdate(
   }
 }
 
-function recordPosition(c: ResolvedTransitionBlock) {
+function recordPosition(c: ResolvedTransitionBlock, shift?: Position) {
   const el = getTransitionElement(c)
-  if (el) newPositionMap.set(c, el.getBoundingClientRect())
+  if (el) newPositionMap.set(c, getTransitionGroupPosition(el, shift))
 }
 
 function applyTranslation(
