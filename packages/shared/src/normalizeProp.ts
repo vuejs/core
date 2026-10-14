@@ -53,7 +53,11 @@ export function stringifyStyle(
   let ret = ''
   for (const key in styles) {
     const value = styles[key]
-    if (isString(value) || typeof value === 'number') {
+    if (
+      key.startsWith('--') ||
+      isString(value) ||
+      (typeof value === 'number' && isFinite(value))
+    ) {
       const normalizedKey = key.startsWith(`--`) ? key : hyphenate(key)
       // only render valid values
       ret += `${normalizedKey}:${value};`
