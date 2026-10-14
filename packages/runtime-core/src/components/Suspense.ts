@@ -578,7 +578,10 @@ function createSuspenseBoundary(
           activeBranch &&
           pendingBranch!.transition &&
           pendingBranch!.transition.mode === 'out-in'
-        let hasUpdatedAnchor = false
+        // Keep the insertion point captured before a preserved branch left.
+        let hasUpdatedAnchor = !!(
+          suspense.asyncRender && suspense.asyncRender.fallback
+        )
         if (delayEnter) {
           activeBranch!.transition!.afterLeave = () => {
             if (pendingId === suspense.pendingId) {
@@ -712,7 +715,8 @@ function createSuspenseBoundary(
       // invoke @fallback event
       triggerEvent(vnode, 'onFallback')
 
-      const anchor = next(activeBranch!)
+      const fallbackAnchor = next(activeBranch!)
+      if (preserve) anchor = fallbackAnchor
       const mountFallback = () => {
         suspense.isFallbackMountPending = false
         if (!suspense.isInFallback) {
@@ -727,7 +731,7 @@ function createSuspenseBoundary(
           null,
           latestFallback,
           container,
-          anchor,
+          fallbackAnchor,
           parentComponent,
           null, // fallback tree will not have suspense context
           namespace,
@@ -751,7 +755,7 @@ function createSuspenseBoundary(
           activeBranch!,
           suspense.hiddenContainer,
           null,
-          MoveType.REORDER,
+          MoveType.LEAVE,
           parentComponent,
         )
       } else {

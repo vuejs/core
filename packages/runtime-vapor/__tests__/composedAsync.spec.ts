@@ -447,6 +447,82 @@ describe.each([
     expect(updated).toHaveReturnedWith('two!')
     app.unmount()
   })
+
+  test('completes out-in transitions when a refresh falls back', async () => {
+    const id = ref(0)
+    const requests = [
+      deferred<string>(),
+      deferred<string>(),
+      deferred<string>(),
+    ]
+    const value = computed(() => requests[id.value].promise)
+    let finishLeave!: () => void
+    const leave = vi.fn((_el, done) => {
+      finishLeave = done
+    })
+    const mounted = vi.fn()
+    const data = shallowRef({ value, leave, mounted })
+    const Child = compile(
+      `<script setup>
+      import { onMounted } from 'vue'
+      const value = _data.value.value
+      onMounted(_data.value.mounted)
+    </script><template><p>{{ value }}</p></template>`,
+      data,
+      {},
+      { vapor: childVapor },
+    )
+    const Boundary = compile(
+      `<script setup>const Child = _components.Child; const leave = _data.value.leave</script>
+    <template><Transition mode="out-in" :css="false" @leave="leave">
+      <Suspense :timeout="0"><Child /><template #fallback><span>loading</span></template></Suspense>
+    </Transition></template>`,
+      data,
+      { Child },
+      { vapor: false },
+    )
+    const App = compile(
+      `<script setup>const Boundary = _components.Boundary</script><template><Boundary /></template>`,
+      data,
+      { Boundary },
+      { vapor },
+    )
+    const host = document.createElement('div')
+    const app = (vapor ? createVaporApp : createApp)(App).use(
+      vaporInteropPlugin,
+    )
+    app.mount(host)
+    requests[0].resolve('one')
+    await flush()
+    finishLeave()
+    await flush()
+    expect(host.textContent).toBe('one')
+    const node = host.querySelector('p')
+    id.value++
+    await nextTick()
+    expect(leave).toHaveBeenCalledTimes(2)
+    expect(host.textContent).toBe('one')
+    finishLeave()
+    await flush()
+    expect(host.textContent).toBe('loading')
+    requests[1].resolve('two')
+    await flush()
+    finishLeave()
+    await flush()
+    expect(host.textContent).toBe('two')
+    expect(host.querySelector('p')).toBe(node)
+
+    id.value++
+    await nextTick()
+    requests[2].resolve('three')
+    await flush()
+    finishLeave()
+    await flush()
+    expect(host.textContent).toBe('three')
+    expect(host.querySelector('p')).toBe(node)
+    expect(mounted).toHaveBeenCalledTimes(1)
+    app.unmount()
+  })
 })
 
 describe.each([false, true])(
