@@ -1093,4 +1093,63 @@ describe('hot module replacement', () => {
       `1 <button>++</button> static text updated2`,
     )
   })
+
+  // #14425
+  // Preserve slot order when HMR removes and re-adds a slot
+  test('rerender should preserve slot order after slot removal and re-addition', () => {
+    const root = nodeOps.createElement('div')
+    const parentId = 'test-hmr-slot-reorder-parent'
+    const childId = 'test-hmr-slot-reorder-child'
+
+    let childInstance: any
+    const Child: ComponentOptions = {
+      __hmrId: childId,
+      render() {
+        childInstance = this
+        return h('div', Object.keys(this.$slots).join(','))
+      },
+    }
+    createRecord(childId, Child)
+
+    const Parent: ComponentOptions = {
+      __hmrId: parentId,
+      components: { Child },
+      render: compileToFunction(
+        `<Child>
+          <template #foo>foo</template>
+          <template #bar>bar</template>
+          <template #baz>baz</template>
+        </Child>`,
+      ),
+    }
+    createRecord(parentId, Parent)
+
+    render(h(Parent), root)
+    expect(Object.keys(childInstance.$slots)).toEqual(['foo', 'bar', 'baz'])
+
+    // HMR rerender: remove #bar slot
+    rerender(
+      parentId,
+      compileToFunction(
+        `<Child>
+          <template #foo>foo</template>
+          <template #baz>baz</template>
+        </Child>`,
+      ),
+    )
+    expect(Object.keys(childInstance.$slots)).toEqual(['foo', 'baz'])
+
+    // HMR rerender: re-add #bar in its original position
+    rerender(
+      parentId,
+      compileToFunction(
+        `<Child>
+          <template #foo>foo</template>
+          <template #bar>bar</template>
+          <template #baz>baz</template>
+        </Child>`,
+      ),
+    )
+    expect(Object.keys(childInstance.$slots)).toEqual(['foo', 'bar', 'baz'])
+  })
 })
