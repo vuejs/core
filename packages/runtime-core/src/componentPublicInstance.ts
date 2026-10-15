@@ -226,7 +226,7 @@ export type CreateComponentPublicInstanceWithMixins<
   Defaults = {},
   MakeDefaultsOptional extends boolean = false,
   I extends ComponentInjectOptions = {},
-  S extends SlotsType = {},
+  S extends SlotsType | Record<string, any> = {},
   LC extends Record<string, Component> = {},
   Directives extends Record<string, Directive> = {},
   Exposed extends string = string,
@@ -274,7 +274,7 @@ export type CreateComponentPublicInstanceWithMixins<
     Provide
   >,
   I,
-  S,
+  S extends SlotsType ? S : SlotsType<S>,
   Exposed,
   TypeRefs,
   TypeEl
