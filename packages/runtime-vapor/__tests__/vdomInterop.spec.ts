@@ -14596,3 +14596,409 @@ describe('a vapor slot in a vdom outlet starts on a node of its own', () => {
     })
   })
 })
+
+describe('vdom content in a vapor outlet, sequenced by the outlet', () => {
+  const vdomScript = `<script setup>const data = _data; const components = _components</script>`
+
+  test('the vdom root element follows an enclosing outlet switching back to content', async () => {
+    const data = ref({ show: true, c: false })
+    const Outer = compile(
+      `<template><slot><span>outer</span></slot></template>`,
+      data,
+    )
+    const Mid = compile(
+      `<template><components.Outer><slot /></components.Outer></template>`,
+      data,
+      { Outer },
+    )
+    const App = compile(
+      `${vdomScript}
+      <template>
+        <div>
+          <components.Mid v-if="data.show">
+            <b v-if="data.c">content</b>
+          </components.Mid>
+        </div>
+      </template>`,
+      data,
+      { Mid },
+      { vapor: false },
+    )
+    const root = document.createElement('div')
+    const app = createApp(App).use(vaporInteropPlugin)
+    app.mount(root)
+    expect(root.textContent).toBe('outer')
+
+    data.value.c = true
+    await nextTick()
+    expect(root.textContent).toBe('content')
+
+    data.value.show = false
+    await nextTick()
+    expect(root.innerHTML).toBe('<div><!--v-if--></div>')
+    app.unmount()
+  })
+
+  // forwarded v-once content resolves after creation too: it reports its
+  // validity like any forwarded root
+  test('a forwarded v-once outlet with empty vdom content shows the enclosing fallback', () => {
+    const data = ref({ c: false })
+    const Outer = compile(
+      `<template><div><slot><span>fallback</span></slot></div></template>`,
+      data,
+    )
+    const Parent = compile(
+      `<template><components.Outer><slot v-once /></components.Outer></template>`,
+      data,
+      { Outer },
+    )
+    const App = compile(
+      `${vdomScript}
+      <template>
+        <components.Parent>
+          <b v-if="data.c">content</b>
+        </components.Parent>
+      </template>`,
+      data,
+      { Parent },
+      { vapor: false },
+    )
+    const root = document.createElement('div')
+    const app = createApp(App).use(vaporInteropPlugin)
+    app.mount(root)
+    expect(root.textContent).toBe('fallback')
+    app.unmount()
+  })
+
+  // vapor vs vdom outlet: the hook order and the visible classes after every
+  // step, content off / leave done / on / leave done unless given. `vdomOnly`
+  // names the components the vapor run keeps vdom, the App unless given.
+  const interopTransitionLog = async (
+    srcs: Record<string, string>,
+    {
+      init = {},
+      steps = ['off', 'done', 'on', 'done'],
+      vdomOnly = ['App'],
+    }: {
+      init?: Record<string, any>
+      steps?: string[]
+      vdomOnly?: string[]
+    } = {},
+  ) => {
+    const run = async (vapor: boolean) => {
+      const data: any = ref({
+        show: true,
+        ...init,
+        log: [] as string[],
+        onEnter: (el: Element) => data.value.log.push('enter:' + el.className),
+        onLeave: (el: Element, done: () => void) => {
+          data.value.log.push('leave:' + el.className)
+          data.value.done = done
+        },
+        onEnterAsync: (el: Element, done: () => void) => {
+          data.value.enterDone = done
+        },
+      })
+      const isVapor = (name: string) => vapor && !vdomOnly.includes(name)
+      const components: Record<string, any> = {}
+      for (const name in srcs) {
+        if (name !== 'App') {
+          // a script-less SFC compiles as vapor whatever the option says
+          components[name] = compile(
+            (isVapor(name) ? '' : vdomScript) + srcs[name],
+            data,
+            components,
+            { vapor: isVapor(name) },
+          )
+        }
+      }
+      const App = compile(
+        (isVapor('App') ? '' : vdomScript) + srcs.App,
+        data,
+        components,
+        { vapor: isVapor('App') },
+      )
+      const root = document.createElement('div')
+      const app = (isVapor('App') ? createVaporApp(App) : createApp(App)).use(
+        vaporInteropPlugin,
+      )
+      app.mount(root)
+      const log: string[] = data.value.log
+      for (const step of steps) {
+        if (step === 'done') {
+          data.value.done && data.value.done()
+          data.value.done = undefined
+        } else if (step === 'enterDone') {
+          data.value.enterDone && data.value.enterDone()
+          data.value.enterDone = undefined
+        } else if (step === 'off' || step === 'on') {
+          data.value.show = step === 'on'
+        } else {
+          const [key, value] = step.split('=')
+          data.value[key] = value === 'true'
+        }
+        await nextTick()
+        log.push(
+          step +
+            ' ' +
+            Array.from(root.querySelectorAll('div, span'))
+              .map(el => el.className)
+              .join(','),
+        )
+      }
+      app.unmount()
+      log.push('unmount ' + root.innerHTML)
+      return log
+    }
+    expect(await run(true)).toEqual(await run(false))
+  }
+  const interopTransitionOutlet = (
+    mode: string,
+    fallback: string,
+    asyncEnter = false,
+  ) => `
+    <template>
+      <Transition mode="${mode}" :css="false" @before-enter="data.onEnter" @leave="data.onLeave"${
+        asyncEnter ? ' @enter="data.onEnterAsync"' : ''
+      }>
+        <slot>${fallback}</slot>
+      </Transition>
+    </template>`
+  const contentApp = (outlet: string) => `
+    <template>
+      <components.${outlet}>
+        <span v-if="data.show" class="content">c</span>
+      </components.${outlet}>
+    </template>`
+
+  test.each(['default', 'out-in', 'in-out'])(
+    '%s between forwarded vdom content and the enclosing fallback, like vdom',
+    mode =>
+      interopTransitionLog({
+        Outer: interopTransitionOutlet(mode, '<div class="fallback">fb</div>'),
+        Parent: `<template><components.Outer><slot /></components.Outer></template>`,
+        App: contentApp('Parent'),
+      }),
+  )
+
+  // the order vdom runs the hooks, animatable or not
+  test.each(['default', 'out-in', 'in-out'])(
+    '%s between vdom content and the local fallback, like vdom',
+    mode =>
+      interopTransitionLog({
+        Outer: interopTransitionOutlet(mode, '<div class="fallback">fb</div>'),
+        App: contentApp('Outer'),
+      }),
+  )
+
+  // a vdom component forwarding a vapor-provided slot conditionally: the
+  // vapor slot vnode it takes away is still valid, and leaves to the fallback
+  test.each(['default', 'out-in', 'in-out'])(
+    '%s between a vapor slot a vdom component stops forwarding and the fallback, like vdom',
+    mode =>
+      interopTransitionLog(
+        {
+          Outer: interopTransitionOutlet(
+            mode,
+            '<div class="fallback">fb</div>',
+          ),
+          Mid: `
+            <template>
+              <components.Outer><slot v-if="data.show" /></components.Outer>
+            </template>`,
+          App: `
+            <template>
+              <components.Mid><span class="content">c</span></components.Mid>
+            </template>`,
+        },
+        { vdomOnly: ['Mid'] },
+      ),
+  )
+
+  // a fallback component entering takes the leave over: its root's enter
+  // being done runs it, as under vdom's delayLeave
+  test.each(['vapor', 'vdom'])(
+    'in-out: vdom content leaves once a %s fallback component entered',
+    kind =>
+      interopTransitionLog(
+        {
+          Fb: `<template><div class="fallback">fb</div></template>`,
+          Outer: interopTransitionOutlet('in-out', '<components.Fb />', true),
+          App: contentApp('Outer'),
+        },
+        {
+          steps: ['off', 'enterDone', 'done', 'on', 'enterDone', 'done'],
+          vdomOnly: kind === 'vdom' ? ['App', 'Fb'] : ['App'],
+        },
+      ),
+  )
+
+  // however long its root stays empty: the root entering later runs it
+  test.each(['vapor', 'vdom'])(
+    'in-out: vdom content leaves once a %s fallback component rendered its root',
+    kind =>
+      interopTransitionLog(
+        {
+          Fb: `
+            <template>
+              <div v-if="data.fbReady" class="fallback">fb</div>
+            </template>`,
+          Outer: interopTransitionOutlet('in-out', '<components.Fb />'),
+          App: contentApp('Outer'),
+        },
+        {
+          init: { fbReady: false },
+          steps: ['off', 'fbReady=true', 'done'],
+          vdomOnly: kind === 'vdom' ? ['App', 'Fb'] : ['App'],
+        },
+      ),
+  )
+
+  // hooks a vdom Transition relays through a vapor component: the fallback
+  // and the content are different children to it, as a vdom root switching
+  // elements is; its same-child early removal must not take the fallback
+  test('a vdom Transition over a forwarding vapor component keeps the fallback leaving while vdom content enters', async () => {
+    await interopTransitionLog(
+      {
+        Outer: `<template><slot><div class="fallback">fb</div></slot></template>`,
+        Mid: `<template><components.Outer><slot /></components.Outer></template>`,
+        App: `
+          <template>
+            <Transition :css="false" @before-enter="data.onEnter" @leave="data.onLeave">
+              <components.Mid><span v-if="data.show" class="content">c</span></components.Mid>
+            </Transition>
+          </template>`,
+      },
+      { init: { show: false }, steps: ['on', 'done', 'off', 'done'] },
+    )
+    // vdom's complaint about the outlet root; it animates the branch anyway
+    expect(
+      'renders non-element root node that cannot be animated',
+    ).toHaveBeenWarned()
+  })
+
+  // content a vdom component forwards from a vapor slot, held back by the
+  // enclosing outlet: placing it inserts the roots the vapor slot kept out of
+  // the DOM, which a vdom move would leave there
+  test.each(['default', 'out-in', 'in-out'])(
+    '%s: a vapor slot forwarded through a vdom component is placed with its roots once the fallback is out of the way',
+    mode =>
+      interopTransitionLog(
+        {
+          Outer: interopTransitionOutlet(
+            mode,
+            '<div class="fallback">fb</div>',
+          ),
+          Mid: `<template><components.Outer><slot /></components.Outer></template>`,
+          Pass: `<template><components.Mid><slot /></components.Mid></template>`,
+          App: `
+            <template>
+              <components.Pass>
+                <span v-if="data.show" class="content">c</span>
+              </components.Pass>
+            </template>`,
+        },
+        {
+          init: { show: false },
+          steps: ['on', 'done', 'off', 'done', 'on', 'done'],
+          vdomOnly: ['Pass'],
+        },
+      ),
+  )
+
+  // A vdom component mounted from vapor is a component to the enclosing
+  // outlet: the vapor slots its own outlets render do not report to it.
+  test('vapor slots rendered inside a vdom component stay out of the enclosing vapor outlet', async () => {
+    const N = 5
+    const data = ref({
+      show: true,
+      cell: true,
+      rows: Array.from({ length: N }, (_, i) => i),
+    })
+    const Outer = compile(`<template><slot>fb</slot></template>`, data)
+    const VdomTable = compile(
+      `${vdomScript}
+      <template>
+        <div>
+          <p v-for="i in data.rows" :key="i"><slot name="cell" :i="i" /></p>
+        </div>
+      </template>`,
+      data,
+      {},
+      { vapor: false },
+    )
+    const App = compile(
+      `<template>
+        <components.Outer>
+          <div v-if="data.show">
+            <components.VdomTable>
+              <template #cell="{ i }"><b v-if="data.cell">{{ i }}</b></template>
+            </components.VdomTable>
+          </div>
+        </components.Outer>
+      </template>`,
+      data,
+      { Outer, VdomTable },
+    )
+    const root = document.createElement('div')
+    const app = createVaporApp(App).use(vaporInteropPlugin)
+    app.mount(root)
+    expect(root.querySelectorAll('b').length).toBe(N)
+    const outlet = (app as any)._instance.block.block as any
+    const recheck = vi.spyOn(outlet, 'isContentValid')
+
+    data.value.cell = false
+    await nextTick()
+    expect(root.querySelectorAll('b').length).toBe(0)
+    expect(recheck).not.toHaveBeenCalled()
+    data.value.show = false
+    await nextTick()
+    expect(root.textContent).toBe('fb')
+    data.value.show = true
+    await nextTick()
+    expect(root.querySelectorAll('p').length).toBe(N)
+    app.unmount()
+  })
+
+  // The fallback is taken away before the content mounts, as vdom unmounts
+  // the old child first: the content lands after the leaving element.
+  test.each(['default', 'in-out'])(
+    '%s: vdom content returning to a fallback shown since mount enters after it, like vdom',
+    mode =>
+      interopTransitionLog(
+        {
+          Outer: interopTransitionOutlet(
+            mode,
+            '<div class="fallback">fb</div>',
+          ),
+          App: contentApp('Outer'),
+        },
+        { init: { show: false }, steps: ['on', 'done'] },
+      ),
+  )
+
+  // the forwarding outlet itself is conditional: the content goes with the
+  // branch, which leaves with the hooks the enclosing Transition resolved
+  // for it, so the out-in swap completes and the next one runs
+  test('out-in: a conditional forwarding outlet turned off and on keeps sequencing', () =>
+    interopTransitionLog(
+      {
+        Outer: interopTransitionOutlet(
+          'out-in',
+          '<div class="fallback">fb</div>',
+        ),
+        Parent: `
+          <template>
+            <components.Outer><slot v-if="data.show" /></components.Outer>
+          </template>`,
+        App: `
+          <template>
+            <components.Parent><span class="content">c</span></components.Parent>
+          </template>`,
+      },
+      {
+        init: { show: false },
+        steps: ['on', 'done', 'off', 'done', 'on', 'done', 'off', 'done'],
+      },
+    ))
+})

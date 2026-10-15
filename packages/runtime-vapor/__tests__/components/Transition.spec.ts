@@ -3502,6 +3502,24 @@ describe('in-out: the current branch leaves when nothing takes its place', () =>
       ['x=false', 'doneAll'],
     ))
 
+  // the fallback component takes it over however long its root stays empty:
+  // the root entering later runs it
+  test('slot content replaced by a fallback component whose root is still empty', () =>
+    parity(
+      {
+        Fb: `<template><p v-if="data.flag" class="fb">fb</p></template>`,
+        Card: inOut(`<slot><components.Fb /></slot>`),
+        App: `
+          <template>
+            <components.Card>
+              <b v-if="data.x" class="x">x</b>
+            </components.Card>
+          </template>`,
+      },
+      { x: true, flag: false },
+      ['x=false', 'doneAll', 'flag=true', 'doneAll'],
+    ))
+
   // hooks relayed from a vdom Transition have no state to hand the leave to:
   // the vdom Transition keeps waiting, as it does for a vdom child
   test('a vapor child of a vdom in-out Transition picks an empty branch', async () => {
