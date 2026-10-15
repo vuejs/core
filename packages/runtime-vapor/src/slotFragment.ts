@@ -194,7 +194,14 @@ export function placeSlotContent(
   } else {
     move(content, parent, anchor, moveType, parentComponent, parentSuspense)
   }
-  insertActiveSlotFallback(state, moveType, parentComponent, parentSuspense)
+  insertActiveSlotFallback(
+    state,
+    moveType,
+    parent,
+    anchor,
+    parentComponent,
+    parentSuspense,
+  )
 }
 
 function beforeExpose(state: SlotResolutionState, block: Block): void {
@@ -261,18 +268,18 @@ export function leaveSlotFallback(
 }
 
 // A fallback is placed even while invalid: its anchors have to be live for it
-// to update in place. It goes after the content, at the host's anchor.
+// to update in place. It goes after the content, at the placement's own
+// target: the host's anchor may still be on its way when a move places it.
 export function insertActiveSlotFallback(
   state: SlotResolutionState,
-  moveType?: MoveType,
+  moveType: MoveType | undefined,
+  parentNode: ParentNode | null,
+  anchor: Node | null,
   parentComponent?: VaporComponentInstance,
   parentSuspense?: SuspenseBoundary | null,
 ): void {
   const fallback = state.activeFallback
-  if (isHydrating || !fallback) return
-  const parentNode = state.getParentNode()
-  if (!parentNode) return
-  const anchor = state.getAnchor()
+  if (isHydrating || !fallback || !parentNode) return
   // hydration: the fallback adopted from the server is in the DOM already
   // and stays where the server put it. A vdom one keeps its own record of
   // where that is.
@@ -321,7 +328,12 @@ function commitSlotFallback(
     if (hooks) applySlotTransitionHooks(state, block, hooks)
   }
   beforeExpose(state, block)
-  insertActiveSlotFallback(state)
+  insertActiveSlotFallback(
+    state,
+    undefined,
+    state.getParentNode(),
+    state.getAnchor(),
+  )
 }
 
 // The hooks resolved for the exposed branch become the outlet's, except a
