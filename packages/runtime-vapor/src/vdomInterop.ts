@@ -121,6 +121,7 @@ import {
 import {
   EMPTY_ARR,
   EMPTY_OBJ,
+  NO,
   NOOP,
   PatchFlags,
   ShapeFlags,
@@ -2360,7 +2361,7 @@ function renderVDOMSlot(
     getContent: frag.getContent,
     getParentNode: () => currentParentNode,
     getAnchor: () => currentAnchor,
-    isBusy: () => false,
+    isBusy: NO,
     isDisposed: () => disposed,
     isContentValid,
     syncNodes: () => {
