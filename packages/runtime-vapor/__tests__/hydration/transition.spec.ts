@@ -36,7 +36,7 @@ describe('Vapor Mode hydration', () => {
 
       expect(`Hydration node mismatch`).not.toHaveBeenWarned()
       expect(container.innerHTML).toBe(
-        `<!--(--><div>fallback</div><!--if--><!--)-->`,
+        `<!--(--><!--if--><div>fallback</div><!--)-->`,
       )
 
       data.show = true
@@ -701,7 +701,7 @@ describe('Vapor Mode hydration', () => {
       ).not.toHaveBeenWarned()
     })
 
-    test('with tag should keep the forwarded slot anchors after mixed slot content with an inherited fallback', async () => {
+    test('with tag should keep the forwarded slot anchors after mixed slot content behind an enclosing fallback', async () => {
       const data = ref({
         items: [1, 2],
         tail: 'tail',

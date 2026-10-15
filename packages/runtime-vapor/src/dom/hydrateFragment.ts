@@ -34,6 +34,7 @@ import {
   type BlockFn,
   EMPTY_BLOCK,
   findBlockBoundary,
+  insert,
   isValidBlock,
   isValidSlot,
 } from '../block'
@@ -469,7 +470,12 @@ export function hydrateSlotFragmentContent(
   } else if (open && isComment(open, '(')) {
     const close = (frag.anchor = claimAnchor(locateEndAnchor(open)!))
     hydrateSlotFallbackRange(
-      { first: open.nextSibling!, close, boundary: frag.boundary },
+      {
+        first: open.nextSibling!,
+        close,
+        boundary: frag.boundary,
+        getContent: () => frag.getContent(),
+      },
       () => {
         frag.updateContent(render, key)
         recheckSlotResolution(frag)
@@ -502,6 +508,8 @@ export interface SlotFallbackRange {
   // `adopt` over as its `adoptFallback`
   boundary?: SlotBoundaryContext
   adopt?: (render: BlockFn) => Block
+  // the slot's content, to go ahead of the fallback once that is adopted
+  getContent?: () => Block
 }
 
 /**
@@ -516,13 +524,28 @@ export function hydrateSlotFallbackRange(
 ): void {
   const first = range.first
   const last = range.close.previousSibling!
+  // what precedes the fallback outlives a mismatch replacing its nodes
+  let before: Node | undefined
   // The content is created without hydration, and the fallback rendered from
   // within that: it alone has something to adopt, unless it rendered nothing.
   if (first !== range.close) {
-    range.adopt = render => hydrateNode(first, render)
+    range.adopt = render => {
+      before = first.previousSibling!
+      return hydrateNode(first, render)
+    }
     if (range.boundary) range.boundary.adoptFallback = range.adopt
   }
-  withHydratingSlotFallback(createContent)
+  withHydratingSlotFallback(() => {
+    createContent()
+    // The content was created at the cursor, behind the fallback adopted
+    // where the server put it; it goes ahead of it, as on the client, while
+    // still out of hydration (inserts are skipped under it). Content the
+    // slot has no DOM for (vdom content in a vapor outlet) passes none.
+    const getContent = range.getContent
+    if (before && getContent) {
+      insert(getContent(), before.parentNode!, before.nextSibling)
+    }
+  })
   const boundary = range.boundary
   if (boundary && boundary.adoptFallback) {
     // the client has content after all: nothing of the fallback is kept

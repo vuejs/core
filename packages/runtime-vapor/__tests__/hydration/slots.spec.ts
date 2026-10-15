@@ -1092,7 +1092,7 @@ describe('Vapor Mode hydration', () => {
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
         `
         "
-        <!--(--><div>foo</div><!--if--><!--)-->
+        <!--(--><!--if--><div>foo</div><!--)-->
         "
       `,
       )
@@ -1104,7 +1104,7 @@ describe('Vapor Mode hydration', () => {
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
         `
         "
-        <!--(--><div>baz</div><!--if--><!--)-->
+        <!--(--><!--if--><div>baz</div><!--)-->
         "
       `,
       )
@@ -1161,7 +1161,7 @@ describe('Vapor Mode hydration', () => {
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
         `
         "
-        <!--(--><!----><div>foo</div><!--if--><!--)-->
+        <!--(--><!--if--><!----><div>foo</div><!--)-->
         "
       `,
       )
@@ -1171,7 +1171,7 @@ describe('Vapor Mode hydration', () => {
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
         `
         "
-        <!--(--><i>prefix</i><!----><div>foo</div><!--if--><!--)-->
+        <!--(--><!--if--><i>prefix</i><!----><div>foo</div><!--)-->
         "
       `,
       )
@@ -1294,7 +1294,7 @@ describe('Vapor Mode hydration', () => {
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
         `
         "
-        <!--(--><div>foo</div><!----><!--if--><!--)-->
+        <!--(--><!--if--><div>foo</div><!----><!--)-->
         "
       `,
       )
@@ -1304,7 +1304,7 @@ describe('Vapor Mode hydration', () => {
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
         `
         "
-        <!--(--><div>foo</div><i>suffix</i><!----><!--if--><!--)-->
+        <!--(--><!--if--><div>foo</div><i>suffix</i><!----><!--)-->
         "
       `,
       )
@@ -1466,7 +1466,7 @@ describe('Vapor Mode hydration', () => {
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
         `
         "
-        <!--(--><div>foo</div><!--for--><!--)-->
+        <!--(--><!--for--><div>foo</div><!--)-->
         "
       `,
       )
@@ -1478,7 +1478,7 @@ describe('Vapor Mode hydration', () => {
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
         `
         "
-        <!--(--><div>baz</div><!--for--><!--)-->
+        <!--(--><!--for--><div>baz</div><!--)-->
         "
       `,
       )
@@ -1609,7 +1609,7 @@ describe('Vapor Mode hydration', () => {
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
         `
         "
-        <!--(--><div>foo</div><!--if--><!--for--><!--)-->
+        <!--(--><!--if--><!--for--><div>foo</div><!--)-->
         "
       `,
       )
@@ -1621,7 +1621,7 @@ describe('Vapor Mode hydration', () => {
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
         `
         "
-        <!--(--><div>baz</div><!--if--><!--for--><!--)-->
+        <!--(--><!--if--><!--for--><div>baz</div><!--)-->
         "
       `,
       )
@@ -1942,6 +1942,55 @@ describe('Vapor Mode hydration', () => {
             .replace('<!--]-->', '<!--)-->'),
         )
       })
+
+      // The adopted fallback is where the content goes ahead of: a
+      // data-driven mismatch replacing its first node must not lose that.
+      test.each([
+        ['a vapor outlet', true, true],
+        ['vdom content in a vapor outlet', false, true],
+        ['a vapor slot in a vdom outlet', true, false],
+      ])(
+        'a mismatch on the first node of the adopted fallback of %s',
+        async (_, vaporApp, vaporChild) => {
+          const script = `<script setup>const data = _data; const components = _components</script>`
+          const data = reactive({ c: false, f: false })
+          const { container } = await testHydration(
+            `${script}
+            <template>
+              <components.Child><b v-if="data.c">c</b></components.Child>
+            </template>`,
+            {
+              Child: {
+                code: `${script}
+                <template>
+                  <div>
+                    <i>a</i>
+                    <slot><p v-if="data.f">fb</p><i>t</i></slot>
+                    <i>z</i>
+                  </div>
+                </template>`,
+                vapor: vaporChild,
+              },
+            },
+            data,
+            {
+              isVaporApp: vaporApp,
+              interop: !vaporApp || !vaporChild,
+              serverData: reactive({ c: false, f: true }),
+            },
+          )
+          expect('Hydration').toHaveBeenWarned()
+          expect(visible(container)).toBe('<div><i>a</i><i>t</i><i>z</i></div>')
+
+          data.c = true
+          await nextTick()
+          expect(visible(container)).toBe('<div><i>a</i><b>c</b><i>z</i></div>')
+
+          data.c = false
+          await nextTick()
+          expect(visible(container)).toBe('<div><i>a</i><i>t</i><i>z</i></div>')
+        },
+      )
     })
   })
 })

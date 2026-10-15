@@ -3446,8 +3446,6 @@ function renderVaporSlot(
       content.resolved ? isValidBlock(frag.nodes, componentAsValid) : true
     const slotBoundary = frag.slotBoundary
     let isResolvingContent = false
-    let currentParentNode: ParentNode | null = null
-    let currentAnchor: Node | null = null
     let disposed = false
     let slotResolutionState!: SlotResolutionState
     const markDirty = () => markSlotResolutionDirty(slotResolutionState)
@@ -3490,8 +3488,10 @@ function renderVaporSlot(
     frag.getContent = () => content.nodes
     slotResolutionState = createSlotResolutionState(rootBoundary, {
       getContent: frag.getContent,
-      getParentNode: () => currentParentNode,
-      getAnchor: () => currentAnchor,
+      // the slot's own end anchor, wherever vdom has placed it by now (a
+      // patch carries the node over, a remount renders anew)
+      getParentNode: () => (vnode.anchor ? vnode.anchor.parentNode : null),
+      getAnchor: () => vnode.anchor as Node | null,
       isBusy: () => isResolvingContent,
       isDisposed: () => disposed,
       isContentValid: () => isValidSlot(content.nodes),
@@ -3514,13 +3514,8 @@ function renderVaporSlot(
     }
     const dispose = (parentNode?: ParentNode): void => {
       if (disposed) return
-      if (parentNode) {
-        currentParentNode = parentNode
-      }
       disposed = true
       disposeSlotResolution(slotResolutionState, parentNode)
-      currentParentNode = null
-      currentAnchor = null
     }
 
     try {
@@ -3537,6 +3532,7 @@ function renderVaporSlot(
           ;(fallbackRange.boundary = getOutletBoundary(
             fallbackRange.depth,
           )!).adoptFallback = fallbackRange.adopt
+          fallbackRange.getContent = frag.getContent
         }
         if (isHydrating) {
           withHydratingSlotBoundary(renderContent)
@@ -3546,27 +3542,20 @@ function renderVaporSlot(
       } finally {
         isResolvingContent = false
       }
-      frag.insert = (parentNode, anchor, parentSuspense) => {
-        currentParentNode = parentNode
-        currentAnchor = anchor
+      frag.insert = (parentNode, anchor, parentSuspense) =>
         placeSlotContent(
           slotResolutionState,
           parentNode,
           anchor,
           parentSuspense,
         )
-      }
       frag.move = (
         parentNode,
         anchor,
         moveType,
         parentComponent,
         parentSuspense,
-      ) => {
-        // `anchor` is the sibling this move lands ahead of; later insertions
-        // keep using the slot's own end anchor, which the vnode moves right
-        // after this
-        currentParentNode = parentNode
+      ) =>
         placeSlotContent(
           slotResolutionState,
           parentNode,
@@ -3575,7 +3564,6 @@ function renderVaporSlot(
           moveType,
           parentComponent,
         )
-      }
       frag.remove = parentNode => {
         remove(content.nodes, parentNode)
         dispose(parentNode)
@@ -3585,14 +3573,9 @@ function renderVaporSlot(
         markDirty()
       })
 
-      if (isHydrating && currentHydrationNode) {
-        currentAnchor = currentHydrationNode
-        currentParentNode = currentAnchor.parentNode as ParentNode | null
-      }
-
       return frag
     } catch (e) {
-      dispose(currentParentNode || undefined)
+      dispose()
       stopVaporSlotScope(vnode)
       throw e
     }
