@@ -21,7 +21,7 @@ import {
   pauseTracking,
   resetTracking,
 } from './effect'
-import { isReactive, isShallow } from './reactive'
+import { type ReactiveMarker, isReactive, isShallow } from './reactive'
 import { type Ref, isRef } from './ref'
 import { getCurrentScope } from './effectScope'
 
@@ -117,6 +117,65 @@ export function onWatcherCleanup(
   }
 }
 
+type MaybeUndefined<T, I> = I extends true ? T | undefined : T
+
+export type MultiWatchSources = (WatchSource<unknown> | object)[]
+
+type MapSources<T, Immediate> = {
+  [K in keyof T]: T[K] extends WatchSource<infer V>
+    ? MaybeUndefined<V, Immediate>
+    : T[K] extends object
+      ? MaybeUndefined<T[K], Immediate>
+      : never
+}
+
+// overload: simple effect
+export function watch<Immediate extends Readonly<boolean> = false>(
+  source: WatchEffect,
+  cb?: null,
+  options?: WatchOptions<Immediate>,
+): WatchHandle
+
+// overload: single source + cb
+export function watch<T, Immediate extends Readonly<boolean> = false>(
+  source: WatchSource<T>,
+  cb: WatchCallback<T, MaybeUndefined<T, Immediate>>,
+  options?: WatchOptions<Immediate>,
+): WatchHandle
+
+// overload: reactive array or tuple of multiple sources + cb
+export function watch<
+  T extends Readonly<MultiWatchSources>,
+  Immediate extends Readonly<boolean> = false,
+>(
+  sources: readonly [...T] | T,
+  cb: [T] extends [ReactiveMarker]
+    ? WatchCallback<T, MaybeUndefined<T, Immediate>>
+    : WatchCallback<MapSources<T, false>, MapSources<T, Immediate>>,
+  options?: WatchOptions<Immediate>,
+): WatchHandle
+
+// overload: array of multiple sources + cb
+export function watch<
+  T extends MultiWatchSources,
+  Immediate extends Readonly<boolean> = false,
+>(
+  sources: [...T],
+  cb: WatchCallback<MapSources<T, false>, MapSources<T, Immediate>>,
+  options?: WatchOptions<Immediate>,
+): WatchHandle
+
+// overload: watching reactive object w/ cb
+export function watch<
+  T extends object,
+  Immediate extends Readonly<boolean> = false,
+>(
+  source: T,
+  cb: WatchCallback<T, MaybeUndefined<T, Immediate>>,
+  options?: WatchOptions<Immediate>,
+): WatchHandle
+
+// implementation
 export function watch(
   source: WatchSource | WatchSource[] | WatchEffect | object,
   cb?: WatchCallback | null,
