@@ -451,7 +451,7 @@ export function warnDeprecation(
 
   // check user config
   const config = getCompatConfigForKey(key, instance)
-  if (config === 'suppress-warning') {
+  if (config === false || config === 'suppress-warning') {
     return
   }
 
