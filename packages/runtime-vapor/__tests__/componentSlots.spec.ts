@@ -9037,6 +9037,32 @@ describe('content and fallback sequenced under a Transition', () => {
         { init: { y: false } },
       ),
     )
+
+    // the root that left is found below a structural wrapper around a
+    // forwarding outlet exposing its own empty fallback
+    test.each([
+      ['v-if', 'v-if="data.wrap"'],
+      ['v-for', 'v-for="i in data.items" :key="i"'],
+    ])(
+      'content leaving below a template %s around a forwarding outlet',
+      (_, dir) =>
+        transitionLog(
+          {
+            Outer: transitionOutlet(mode),
+            Middle: `
+            <template>
+              <components.Outer>
+                <template ${dir}>
+                  <slot><i v-if="data.y" class="mf">mf</i></slot>
+                </template>
+              </components.Outer>
+            </template>`,
+            App: contentApp('Middle'),
+          },
+          ['off', 'done', 'on', 'done'],
+          { init: { y: false, wrap: true, items: [1] } },
+        ),
+    )
   })
 
   describe.each(['out-in', 'in-out', ''])('mode "%s"', mode => {

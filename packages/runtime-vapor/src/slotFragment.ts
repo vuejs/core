@@ -356,7 +356,7 @@ function commitSlotFallback(
       ) {
         const onLeft = () => placeAfterLeave(state)
         if (
-          state.awaitLeavingRoot
+          isInteropEnabled && state.awaitLeavingRoot
             ? state.awaitLeavingRoot(onLeft)
             : awaitLeavingRoot(state.getContent(), onLeft)
         ) {

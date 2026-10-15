@@ -732,19 +732,27 @@ function awaitLeavingRootImpl(block: Block, cb: () => void): boolean {
     if ((frag as DynamicFragment).leaving) leavingFrag = frag as DynamicFragment
   })
   if (!leavingFrag) {
-    // an outlet exposing a fallback of its own: the root that left is in its
-    // content, vnode content it leaves itself
+    // an outlet exposing a fallback of its own, below any structural
+    // wrapper: the root that left is in its content, vnode content it
+    // leaves itself
     if (isArray(block)) {
       for (let i = 0; i < block.length; i++) {
         const b = block[i]
-        if (isFragment(b) && b.getContent && awaitLeavingRootImpl(b, cb)) {
+        if ((isArray(b) || isFragment(b)) && awaitLeavingRootImpl(b, cb)) {
           return true
         }
       }
       return false
     }
-    if (!isFragment(block) || !block.getContent) return false
-    if (block.awaitLeavingRoot && block.awaitLeavingRoot(cb)) return true
+    if (!isFragment(block)) return false
+    if (!block.getContent) return awaitLeavingRootImpl(block.nodes, cb)
+    if (
+      isInteropEnabled &&
+      block.awaitLeavingRoot &&
+      block.awaitLeavingRoot(cb)
+    ) {
+      return true
+    }
     return awaitLeavingRootImpl(block.getContent(), cb)
   }
   const root = findTransitionBlock(leavingFrag.nodes)
