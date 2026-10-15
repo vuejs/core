@@ -128,6 +128,7 @@ import {
   VaporSlotFlags,
   extend,
   hasOwn,
+  invokeArrayFns,
   isArray,
   isForwardedSlot,
   isFunction,
@@ -2294,30 +2295,27 @@ function renderVDOMSlot(
   let heldContent: VNode | undefined
   let pendingOutIn: PendingOutIn | undefined
   // out-in: the content root leaving on its own (it left to a fallback, as
-  // vdom's comment child), and what follows that leave
+  // vdom's comment child), what follows that leave, and the Transition's
+  // state once its own branches wait on it (a vdom Transition's re-renders
+  // on it: left to it)
   let contentLeaving: Element | undefined
   let contentLeave: (() => void)[] | undefined
-  // the Transition's state, when its own branches wait on the leave the
-  // content root runs (a vdom Transition's re-renders on it: left to it)
-  const pairedState = (): TransitionState | undefined => {
-    const hooks = slotResolutionState.$transition
-    return hooks && hooks.instance.vapor ? hooks.state : undefined
-  }
+  let contentLeaveState: TransitionState | undefined
   const endContentLeave = (): void => {
     const cbs = contentLeave
-    contentLeave = contentLeaving = undefined
-    if (cbs) {
-      const state = cbs.length && pairedState()
-      if (state) state.isLeaving = false
-      for (let i = 0; i < cbs.length; i++) cbs[i]()
-    }
+    const state = contentLeaveState
+    contentLeave = contentLeaving = contentLeaveState = undefined
+    if (state) state.isLeaving = false
+    if (cbs) invokeArrayFns(cbs)
   }
   const awaitLeavingRoot = (cb: () => void): boolean => {
     if (!contentLeave) return false
     // paired after all: the Transition's other branches wait on the leave
     // as well, as under vdom's out-in, until it ends
-    const state = pairedState()
-    if (state) state.isLeaving = true
+    const hooks = slotResolutionState.$transition
+    if (hooks && hooks.instance.vapor) {
+      ;(contentLeaveState = hooks.state).isLeaving = true
+    }
     contentLeave.push(cb)
     return true
   }
@@ -2898,7 +2896,6 @@ function renderVDOMSlot(
             transition.state,
             transition.instance,
             endContentLeave,
-            true,
           )
         ) {
           contentLeaving = getInteropTransitionElement(prevVNode)

@@ -562,15 +562,8 @@ export function applyTransitionLeaveHooksImpl(
     if (unpaired) {
       const next = leavingFrag && leavingFrag.pending
       if (!(next && next.render)) return false
-    } else {
-      state.isLeaving = true
     }
-    const prevAfterLeave = runningLeave.afterLeave
-    runningLeave.afterLeave = () => {
-      if (!unpaired) state.isLeaving = false
-      if (prevAfterLeave) prevAfterLeave()
-      afterLeaveCb()
-    }
+    chainAfterLeave(runningLeave, afterLeaveCb, unpaired ? undefined : state)
     return true
   }
 
@@ -766,15 +759,28 @@ function awaitLeavingRootImpl(block: Block, cb: () => void): boolean {
   // paired after all: the Transition's other branches wait on the leave as
   // well, as under vdom's out-in, until it ends. A vdom Transition (hooks
   // shaped for a vapor slot) re-renders on its own state: left to it.
-  const state = running.instance.vapor ? running.state : undefined
+  chainAfterLeave(
+    running,
+    cb,
+    running.instance.vapor ? running.state : undefined,
+  )
+  return true
+}
+
+// `cb` follows the leave `hooks` run; given `state`, its Transition's other
+// branches wait on that leave meanwhile (out-in)
+function chainAfterLeave(
+  hooks: VaporTransitionHooks,
+  cb: () => void,
+  state?: TransitionState,
+): void {
   if (state) state.isLeaving = true
-  const prevAfterLeave = running.afterLeave
-  running.afterLeave = () => {
+  const prevAfterLeave = hooks.afterLeave
+  hooks.afterLeave = () => {
     if (state) state.isLeaving = false
     if (prevAfterLeave) prevAfterLeave()
     cb()
   }
-  return true
 }
 
 function removeBranchWithLeaveImpl(
@@ -807,7 +813,7 @@ function removeBranchWithLeaveImpl(
     // A slot root leaving empty may have a fallback entering for it, its
     // outlet's or an enclosing one's, decided afterwards: its leave waits
     // on the Transition for that, and runs after the flush otherwise.
-    (mode !== 'in-out' || render || frag.__vf & SLOT_ROOT) &&
+    (mode !== 'in-out' || render || emptySlotRoot) &&
     // out-in only needs to defer when the current branch actually has
     // a rendered child to leave before mounting the next one.
     (mode !== 'out-in' || isValidBlock(frag.nodes))
@@ -867,7 +873,6 @@ function removeBranchWithLeaveImpl(
       // the captured instance.
       const prevInstance = setCurrentInstance(instance)
       try {
-        const pending = frag.pending!
         frag.pending = undefined
         frag.renderBranch(
           pending.render,
@@ -884,16 +889,14 @@ function removeBranchWithLeaveImpl(
       }
     }
     if (
-      !applyTransitionLeaveHooksImpl(
+      applyTransitionLeaveHooksImpl(
         frag.nodes,
         enterHooks,
         afterLeave,
-        (mode === 'in-out' && !render) || (mode === 'out-in' && emptySlotRoot),
-      )
+        emptySlotRoot && (mode === 'out-in' || mode === 'in-out'),
+      ) &&
+      mode === 'out-in'
     ) {
-      return false
-    }
-    if (mode === 'out-in') {
       // out-in owns the removal here so update() can return before
       // rendering; the next branch mounts from the afterLeave callback. The
       // branch it holds tells a leave reusing this one whether one follows.

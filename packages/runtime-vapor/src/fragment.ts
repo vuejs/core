@@ -617,7 +617,7 @@ export class SlotFragment
   fallbackScope?: EffectScope
   renderedFallbacks?: RenderedSlotFallback[]
   lastNodesValid?: boolean
-  held?: 'leaving' | 'placing' | 'entering'
+  held?: SlotResolutionState['held']
   pendingRecheck = false
   isReconciling = false
   private content: Block = EMPTY_BLOCK

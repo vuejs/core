@@ -231,9 +231,10 @@ function beforeExpose(state: SlotResolutionState, block: Block): void {
 export function resolveExposedSlotNodes(state: SlotResolutionState): Block {
   // a fallback waiting to enter is not in the DOM yet: until then the root
   // leaving ahead of it is what the host exposes
-  return state.held === 'entering'
-    ? state.getContent()
-    : state.activeFallback || state.getContent()
+  if (isTransitionEnabled && state.held === 'entering') {
+    return state.getContent()
+  }
+  return state.activeFallback || state.getContent()
 }
 
 // Entry point for validity-change notifications (boundary.markDirty). During
@@ -353,10 +354,7 @@ function commitSlotFallback(
         hooks.props.mode === 'out-in' &&
         hasTransitionChild(block)
       ) {
-        const onLeft = () => {
-          state.held = 'placing'
-          markSlotResolutionDirty(state)
-        }
+        const onLeft = () => placeAfterLeave(state)
         if (
           state.awaitLeavingRoot
             ? state.awaitLeavingRoot(onLeft)
@@ -368,6 +366,10 @@ function commitSlotFallback(
       }
     }
   }
+  exposeSlotFallback(state, block)
+}
+
+function exposeSlotFallback(state: SlotResolutionState, block: Block): void {
   beforeExpose(state, block)
   insertActiveSlotFallback(
     state,
@@ -510,12 +512,13 @@ function exposeSlotContent(state: SlotResolutionState): boolean {
       // as vdom re-renders its child then: the content may have gone
       // invalid again.
       state.held = 'leaving'
-      const afterLeave = () => {
-        state.held = 'placing'
-        markSlotResolutionDirty(state)
-      }
       if (
-        leaveSlotFallback(state, transition, afterLeave, true) &&
+        leaveSlotFallback(
+          state,
+          transition,
+          () => placeAfterLeave(state),
+          true,
+        ) &&
         state.held === 'leaving'
       ) {
         return true
@@ -542,6 +545,12 @@ function exposeSlotContent(state: SlotResolutionState): boolean {
     if (parentNode) insert(content, parentNode, state.getAnchor())
   }
   return false
+}
+
+// the leave a held branch waited on ended: the next recheck places it
+function placeAfterLeave(state: SlotResolutionState): void {
+  state.held = 'placing'
+  markSlotResolutionDirty(state)
 }
 
 function recheckSlotResolutionNow(state: SlotResolutionState): void {
@@ -573,13 +582,7 @@ function recheckSlotResolutionNow(state: SlotResolutionState): void {
       renderAndCommitSlotFallback(state)
     } else if (placing) {
       // the leave the fallback waited on ended
-      beforeExpose(state, prevFallback)
-      insertActiveSlotFallback(
-        state,
-        undefined,
-        state.getParentNode(),
-        state.getAnchor(),
-      )
+      exposeSlotFallback(state, prevFallback)
     }
   }
 

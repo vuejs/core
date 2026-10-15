@@ -14799,6 +14799,7 @@ describe('vdom content in a vapor outlet, sequenced by the outlet', () => {
   // meanwhile enters at once, as it does after vdom's comment child.
   describe('out-in: a fallback growing an element while the content leaves', () => {
     const fallback = '<div v-if="data.ready" class="fallback">fb</div>'
+    const forwardingParent = `<template><components.Outer><slot /></components.Outer></template>`
     const shapes = Object.entries<Record<string, string>>({
       local: {
         Outer: interopTransitionOutlet('out-in', fallback),
@@ -14806,30 +14807,29 @@ describe('vdom content in a vapor outlet, sequenced by the outlet', () => {
       },
       forwarded: {
         Outer: interopTransitionOutlet('out-in', fallback),
-        Parent: `<template><components.Outer><slot /></components.Outer></template>`,
+        Parent: forwardingParent,
         App: contentApp('Parent'),
       },
     })
-    test.each(shapes)('%s', (_, srcs) =>
-      interopTransitionLog(srcs, {
-        init: { ready: false },
-        steps: ['off', 'ready=true', 'done', 'on', 'done'],
-      }),
-    )
-
-    test.each(shapes)('%s, with the element at the swap', (_, srcs) =>
-      interopTransitionLog(srcs, {
-        init: { ready: false },
-        steps: ['ready=true', 'off', 'done', 'on', 'done'],
-      }),
-    )
-
-    test.each(shapes)('%s, the content back meanwhile', (_, srcs) =>
-      interopTransitionLog(srcs, {
-        init: { ready: false },
-        steps: ['off', 'ready=true', 'on', 'done', 'done'],
-      }),
-    )
+    describe.each(shapes)('%s', (_, srcs) => {
+      const scripts: [string, string[]][] = [
+        [
+          'growing it after the swap',
+          ['off', 'ready=true', 'done', 'on', 'done'],
+        ],
+        [
+          'with the element at the swap',
+          ['ready=true', 'off', 'done', 'on', 'done'],
+        ],
+        [
+          'the content back meanwhile',
+          ['off', 'ready=true', 'on', 'done', 'done'],
+        ],
+      ]
+      test.each(scripts)('%s', (_, steps) =>
+        interopTransitionLog(srcs, { init: { ready: false }, steps }),
+      )
+    })
 
     // forwarded vdom content toggled off, on and off again while its leave
     // runs: the swaps suspended on that leave resume when it ends
@@ -14840,7 +14840,7 @@ describe('vdom content in a vapor outlet, sequenced by the outlet', () => {
             'out-in',
             '<div class="fallback">fb</div>',
           ),
-          Parent: `<template><components.Outer><slot /></components.Outer></template>`,
+          Parent: forwardingParent,
           App: contentApp('Parent'),
         },
         { steps: ['off', 'on', 'off', 'done', 'done', 'on', 'done', 'done'] },
