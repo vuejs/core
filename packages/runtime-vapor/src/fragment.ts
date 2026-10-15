@@ -487,9 +487,12 @@ export class DynamicFragment extends RenderContextFragment {
           removeBranch()
         }
       }
-      // rendering while the last branch leaves on its own (held, the leave
-      // unpaired): the leave's end has nothing left to render
-      if (isTransitionEnabled && this.leaving) this.pending = undefined
+      // rendering past a leave of its own (unpaired): the root that left
+      // finishes where it is, the fragment goes on without it
+      if (isTransitionEnabled && this.leaving) {
+        this.leaving = false
+        this.pending = undefined
+      }
 
       reusingDeferredAnchor = isHydrating
         ? prepareDeferredHydrationAnchor(this, !!render)

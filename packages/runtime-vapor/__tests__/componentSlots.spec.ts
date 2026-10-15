@@ -8878,6 +8878,16 @@ describe('content and fallback sequenced under a Transition', () => {
             'the content back meanwhile',
             ['off', d => (d.ready = true), 'on', 'done', 'done'],
           ],
+          // back before the fallback grew anything: the root that left
+          // finishes on its own, the next one enters at once
+          [
+            'the content back during its own leave',
+            ['off', 'on', 'done', 'done'],
+          ],
+          [
+            'the content toggled off, on and off during its leave',
+            ['off', 'on', 'off', 'done', 'done', 'on', 'done', 'done'],
+          ],
         ]
         test.each(scripts)('%s', (_, steps) =>
           transitionLog(srcs, steps, { init: { ready: false } }),
