@@ -429,4 +429,14 @@ describe('ssr: components', () => {
       `)
     })
   })
+
+  test('v-for slot without slot props and keyed child', () => {
+    const onError = vi.fn()
+    const { code } = compile(
+      `<foo><template v-for="key in names" v-slot:[key]><bar :key="key" /></template></foo>`,
+      { onError },
+    )
+    expect(onError).not.toHaveBeenCalled()
+    expect(code).not.toMatch(`_ctx.key`)
+  })
 })
