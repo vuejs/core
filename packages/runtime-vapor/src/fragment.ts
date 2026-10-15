@@ -99,6 +99,9 @@ export class VaporFragment<
   isBlockValid?: (componentAsValid?: boolean) => boolean
   // a slot host: its content, in the DOM ahead of the fallback it exposes
   getContent?(): Block
+  // a slot host patching vnode content: `cb` follows the leave its content
+  // root is running on its own, if any
+  awaitLeavingRoot?(cb: () => void): boolean
   // a slot outlet: the slot's name, the stem of the keys Transition composes
   // under its branches (`_<name>`, `_<name>_fb`)
   slotName?: string
@@ -484,6 +487,9 @@ export class DynamicFragment extends RenderContextFragment {
           removeBranch()
         }
       }
+      // rendering while the last branch leaves on its own (held, the leave
+      // unpaired): the leave's end has nothing left to render
+      if (isTransitionEnabled && this.leaving) this.pending = undefined
 
       reusingDeferredAnchor = isHydrating
         ? prepareDeferredHydrationAnchor(this, !!render)
@@ -611,7 +617,7 @@ export class SlotFragment
   fallbackScope?: EffectScope
   renderedFallbacks?: RenderedSlotFallback[]
   lastNodesValid?: boolean
-  held?: 'leaving' | 'placing'
+  held?: 'leaving' | 'placing' | 'entering'
   pendingRecheck = false
   isReconciling = false
   private content: Block = EMPTY_BLOCK

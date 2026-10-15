@@ -655,15 +655,28 @@ export function prepareTransitionLeave(
   state: TransitionState,
   instance: GenericComponentInstance,
   resumeAfterLeave: () => void,
+  // the incoming branch is a comment child's: no mode holds for it, the
+  // leave runs on its own, `resumeAfterLeave` following it
+  unpaired?: boolean,
 ): boolean {
   const previousInner = getInnerChild(previous)
   if (!previousInner || isEmptyTransitionChild(previousInner, instance)) {
     return false
   }
 
+  const leavingHooks = prepareLeavingTransitionHooks(
+    previousInner,
+    props,
+    state,
+    instance,
+  )
+  if (unpaired) {
+    leavingHooks.afterLeave = resumeAfterLeave
+    return true
+  }
   return applyTransitionModeSwitch(
     previousInner,
-    prepareLeavingTransitionHooks(previousInner, props, state, instance),
+    leavingHooks,
     enterHooks ? () => enterHooks : undefined,
     props,
     state,

@@ -28,6 +28,7 @@ import {
   type Block,
   type BlockFn,
   EMPTY_BLOCK,
+  type TransitionBlock,
   type TransitionOptions,
   VShowFlags,
   type VaporTransitionHooks,
@@ -92,6 +93,9 @@ export const ensureTransitionHooksRegistered = (): void => {
       deferBranchUpdateDuringLeaveImpl,
       removeBranchWithLeaveImpl,
       ownsMode,
+      awaitLeavingRootImpl,
+      // a component is a child however empty its root, as to vdom
+      block => !!findTransitionBlock(block) || hasComponent(block),
     )
   }
 }
@@ -543,6 +547,10 @@ export function applyTransitionLeaveHooksImpl(
     if ((frag as DynamicFragment).leaving) leavingFrag = frag as DynamicFragment
   })
   if (!leavingBlock) return false
+  // a block that never entered the DOM (a root rendered held) has nothing to
+  // animate: the branch switches at once, as vdom's does after the leave
+  const el = getTransitionElement(leavingBlock)
+  if (!el || !el.parentNode) return false
 
   const { props, state, instance } = enterHooks
   const { mode } = props
@@ -725,6 +733,50 @@ function deferBranchUpdateDuringLeaveImpl(
   return true
 }
 
+function awaitLeavingRootImpl(block: Block, cb: () => void): boolean {
+  let leavingFrag: DynamicFragment | undefined
+  findTransitionBlock(block, frag => {
+    if ((frag as DynamicFragment).leaving) leavingFrag = frag as DynamicFragment
+  })
+  if (!leavingFrag) {
+    // an outlet exposing a fallback of its own: the root that left is in its
+    // content, vnode content it leaves itself
+    if (isArray(block)) {
+      for (let i = 0; i < block.length; i++) {
+        const b = block[i]
+        if (isFragment(b) && b.getContent && awaitLeavingRootImpl(b, cb)) {
+          return true
+        }
+      }
+      return false
+    }
+    if (!isFragment(block) || !block.getContent) return false
+    if (block.awaitLeavingRoot && block.awaitLeavingRoot(cb)) return true
+    return awaitLeavingRootImpl(block.getContent(), cb)
+  }
+  const root = findTransitionBlock(leavingFrag.nodes)
+  // the hooks running the root's leave: an element's removal leave, or the
+  // ones a component or interop root was handed to leave under
+  const running =
+    root &&
+    (root instanceof Element
+      ? removingLeave(root)
+      : (root as TransitionBlock).$transition)
+  if (!running) return false
+  // paired after all: the Transition's other branches wait on the leave as
+  // well, as under vdom's out-in, until it ends. A vdom Transition (hooks
+  // shaped for a vapor slot) re-renders on its own state: left to it.
+  const state = running.instance.vapor ? running.state : undefined
+  if (state) state.isLeaving = true
+  const prevAfterLeave = running.afterLeave
+  running.afterLeave = () => {
+    if (state) state.isLeaving = false
+    if (prevAfterLeave) prevAfterLeave()
+    cb()
+  }
+  return true
+}
+
 function removeBranchWithLeaveImpl(
   frag: DynamicFragment,
   transition: VaporTransitionHooks,
@@ -735,6 +787,11 @@ function removeBranchWithLeaveImpl(
   branchKey: any,
 ): boolean {
   const mode = transition.mode
+  // A slot root leaving empty is vdom's comment child: out-in holds nothing
+  // for it. Its outlet resolves the fallback at once (the root counts as
+  // invalid from here, isValidBlock), and a fallback with a child to animate
+  // waits on this leave there (commitSlotFallback).
+  const emptySlotRoot = !render && !!(frag.__vf & SLOT_ROOT)
   if (
     mode &&
     ownsMode(frag) &&
@@ -768,7 +825,9 @@ function removeBranchWithLeaveImpl(
       // the pending branch must not be rendered into the torn-down tree.
       if (transition.state.isUnmounting) return
       // The branch has left: an enclosing teardown must not leave it again.
-      frag.nodes = EMPTY_BLOCK
+      // A branch rendered meanwhile (held, this leave unpaired) is in place.
+      const pending = frag.pending
+      if (pending) frag.nodes = EMPTY_BLOCK
       // Like vdom rendering Transition's latest child after the leave, the
       // outermost fragment that switched meanwhile replaces this one.
       let outer: DynamicFragment | undefined
@@ -799,6 +858,7 @@ function removeBranchWithLeaveImpl(
         )
         return
       }
+      if (!pending) return
       // where the fragment is now: a KeepAlive may have moved it meanwhile
       const liveParent = frag.anchor.parentNode
       if (!liveParent) return
@@ -823,12 +883,16 @@ function removeBranchWithLeaveImpl(
         restoreCurrentInstance(prevInstance)
       }
     }
-    applyTransitionLeaveHooksImpl(
-      frag.nodes,
-      enterHooks,
-      afterLeave,
-      mode === 'in-out' && !render,
-    )
+    if (
+      !applyTransitionLeaveHooksImpl(
+        frag.nodes,
+        enterHooks,
+        afterLeave,
+        (mode === 'in-out' && !render) || (mode === 'out-in' && emptySlotRoot),
+      )
+    ) {
+      return false
+    }
     if (mode === 'out-in') {
       // out-in owns the removal here so update() can return before
       // rendering; the next branch mounts from the afterLeave callback. The
@@ -836,6 +900,7 @@ function removeBranchWithLeaveImpl(
       frag.leaving = true
       frag.pending = { render, key, noScope, branchKey }
       remove(frag.nodes, parent)
+      if (emptySlotRoot) frag.slotBoundary!.markDirty()
       return true
     }
   }

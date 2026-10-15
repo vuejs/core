@@ -20,6 +20,8 @@ import {
 import {
   applyTransitionHooks,
   applyTransitionLeaveHooks,
+  awaitLeavingRoot,
+  hasTransitionChild,
   isTransitionEnabled,
   isVaporTransitionHooks,
   ownsTransitionMode,
@@ -135,8 +137,10 @@ export interface SlotResolutionState {
   // forwarding the slot joined or left); see isSlotFallbackChainStale.
   fallbackChainStale?: boolean
   // out-in: the fallback leaves on its own first (`leaving`: rechecks wait,
-  // roots render held), then the held roots are placed (`placing`).
-  held?: 'leaving' | 'placing'
+  // roots render held), then the held roots are placed (`placing`); or the
+  // fallback waits to enter until the content root's own leave ends
+  // (`entering`).
+  held?: 'leaving' | 'placing' | 'entering'
   // an interop host with vapor content: it holds and places that content
   // like a vapor outlet (a host patching vnode content leaves it in place)
   holdsContent?: boolean
@@ -166,6 +170,10 @@ export interface SlotResolutionState {
   notifyExposedValidityChange(): void
   // beforeMount hooks, handed every block about to be exposed
   bm?: ((nodes: Block) => void)[]
+  // An interop host patching vnode content: `cb` follows the leave its
+  // content root is running on its own, if any. A vapor root is found
+  // through the content block instead.
+  awaitLeavingRoot?(cb: () => void): boolean
 }
 
 // The host's own reason to hold its content detached: a fallback shows (or
@@ -174,7 +182,11 @@ export function isHoldingSlotContent(state: SlotResolutionState): boolean {
   return (
     isTransitionEnabled &&
     !!state.$transition &&
-    !!(state.activeFallback || state.held === 'leaving')
+    !!(
+      state.activeFallback ||
+      state.held === 'leaving' ||
+      state.held === 'entering'
+    )
   )
 }
 
@@ -217,7 +229,11 @@ function beforeExpose(state: SlotResolutionState, block: Block): void {
  * its exposed nodes here.
  */
 export function resolveExposedSlotNodes(state: SlotResolutionState): Block {
-  return state.activeFallback || state.getContent()
+  // a fallback waiting to enter is not in the DOM yet: until then the root
+  // leaving ahead of it is what the host exposes
+  return state.held === 'entering'
+    ? state.getContent()
+    : state.activeFallback || state.getContent()
 }
 
 // Entry point for validity-change notifications (boundary.markDirty). During
@@ -280,6 +296,8 @@ export function insertActiveSlotFallback(
 ): void {
   const fallback = state.activeFallback
   if (isHydrating || !fallback || !parentNode) return
+  // waiting to enter: the recheck at the end of the leave places it
+  if (isTransitionEnabled && state.held === 'entering') return
   // hydration: the fallback adopted from the server is in the DOM already
   // and stays where the server put it. A vdom one keeps its own record of
   // where that is.
@@ -325,7 +343,30 @@ function commitSlotFallback(
     // fallback with its own content
     if (state.boundary.isHeld()) return
     const hooks = state.$transition
-    if (hooks) applySlotTransitionHooks(state, block, hooks)
+    if (hooks) {
+      applySlotTransitionHooks(state, block, hooks)
+      // out-in: a content root still leaving on its own (it left empty, as
+      // vdom's comment child) is what a fallback with a child to animate
+      // swaps in for: it enters once that leave ends
+      if (
+        isVaporTransitionHooks(hooks) &&
+        hooks.props.mode === 'out-in' &&
+        hasTransitionChild(block)
+      ) {
+        const onLeft = () => {
+          state.held = 'placing'
+          markSlotResolutionDirty(state)
+        }
+        if (
+          state.awaitLeavingRoot
+            ? state.awaitLeavingRoot(onLeft)
+            : awaitLeavingRoot(state.getContent(), onLeft)
+        ) {
+          state.held = 'entering'
+          return
+        }
+      }
+    }
   }
   beforeExpose(state, block)
   insertActiveSlotFallback(
@@ -452,7 +493,10 @@ function exposeSlotContent(state: SlotResolutionState): boolean {
   if (transition && !isHydrating && !state.boundary.isHeld()) {
     // only a mode of the outlet's own sequences the swap: relayed vdom hooks,
     // and hooks inherited inside a child component, animate the branches
-    const mode = ownsSlotMode(state, transition) ? transition.mode : undefined
+    // (the hooks shell carries the mode in its props only)
+    const mode = ownsSlotMode(state, transition)
+      ? transition.props.mode
+      : undefined
     // persisted roots are toggled in place; mode only sequences
     // structural swaps, and a persisted leave never reports its end
     if (
@@ -506,6 +550,12 @@ function recheckSlotResolutionNow(state: SlotResolutionState): void {
   let placing = false
   if (isTransitionEnabled && state.held) {
     if (state.held === 'leaving') return
+    if (state.held === 'entering') {
+      // content back meanwhile: it is the child to show once the leave
+      // ends, as vdom renders its latest child then
+      if (state.isContentValid()) clearSlotFallback(state)
+      return
+    }
     placing = true
   }
   const prevFallback = state.activeFallback
@@ -521,6 +571,15 @@ function recheckSlotResolutionNow(state: SlotResolutionState): void {
     if (placing) state.held = undefined
     if (!prevFallback || isSlotFallbackChainStale(state)) {
       renderAndCommitSlotFallback(state)
+    } else if (placing) {
+      // the leave the fallback waited on ended
+      beforeExpose(state, prevFallback)
+      insertActiveSlotFallback(
+        state,
+        undefined,
+        state.getParentNode(),
+        state.getAnchor(),
+      )
     }
   }
 

@@ -2183,6 +2183,7 @@ type SlotResolutionHooks = Pick<
   | 'isContentValid'
   | 'syncNodes'
   | 'notifyExposedValidityChange'
+  | 'awaitLeavingRoot'
 >
 
 /**
@@ -2291,6 +2292,34 @@ function renderVDOMSlot(
   // valid content waiting for the enclosing outlet holding this one to place it
   let heldContent: VNode | undefined
   let pendingOutIn: PendingOutIn | undefined
+  // out-in: the content root leaving on its own (it left to a fallback, as
+  // vdom's comment child), and what follows that leave
+  let contentLeaving: Element | undefined
+  let contentLeave: (() => void)[] | undefined
+  // the Transition's state, when its own branches wait on the leave the
+  // content root runs (a vdom Transition's re-renders on it: left to it)
+  const pairedState = (): TransitionState | undefined => {
+    const hooks = slotResolutionState.$transition
+    return hooks && hooks.instance.vapor ? hooks.state : undefined
+  }
+  const endContentLeave = (): void => {
+    const cbs = contentLeave
+    contentLeave = contentLeaving = undefined
+    if (cbs) {
+      const state = cbs.length && pairedState()
+      if (state) state.isLeaving = false
+      for (let i = 0; i < cbs.length; i++) cbs[i]()
+    }
+  }
+  const awaitLeavingRoot = (cb: () => void): boolean => {
+    if (!contentLeave) return false
+    // paired after all: the Transition's other branches wait on the leave
+    // as well, as under vdom's out-in, until it ends
+    const state = pairedState()
+    if (state) state.isLeaving = true
+    contentLeave.push(cb)
+    return true
+  }
   let isContentUpdateRecheck = false
   // forwarded v-once content resolves after creation too: it reports as well
   const reportsValidity = forwarded && !!slotBoundary
@@ -2326,6 +2355,7 @@ function renderVDOMSlot(
   // never notify the dead-end own boundary.
   const contentBoundary = forwarded || fallback ? boundary : null
   frag.getContent = () => content.nodes
+  frag.awaitLeavingRoot = awaitLeavingRoot
   slotResolutionState = createSlotResolutionState(boundary, {
     getContent: frag.getContent,
     getParentNode: () => currentParentNode,
@@ -2336,6 +2366,7 @@ function renderVDOMSlot(
     syncNodes: () => {
       frag.nodes = resolveExposedSlotNodes(slotResolutionState)
     },
+    awaitLeavingRoot,
     notifyExposedValidityChange: () => {
       if (reportsValidity && !isContentUpdateRecheck) {
         slotBoundary!.markDirty()
@@ -2431,7 +2462,9 @@ function renderVDOMSlot(
     disposed = true
     // out-in transfers logical ownership before the outgoing branch's
     // physical leave finishes, so disposal must cancel that leave explicitly.
-    const leavingElement = pendingOutIn && pendingOutIn.leavingElement
+    const leavingElement = pendingOutIn
+      ? pendingOutIn.leavingElement
+      : contentLeaving
     pendingOutIn = undefined
     const leave =
       leavingElement && (leavingElement as TransitionElement)[leaveCbKey]
@@ -2775,6 +2808,20 @@ function renderVDOMSlot(
       slotContentValid &&
       (transition || (isTransitionEnabled && frag.$transition))
     ) {
+      if (slotResolutionState.held === 'entering' && contentLeave) {
+        // the fallback waiting on the content root's leave never shows: the
+        // content enters once that leave ends, as vdom's latest child
+        clearSlotFallback(slotResolutionState)
+        pendingOutIn = {
+          content: slotContent,
+          placeholder: prevVNode,
+          contentValid: true,
+        }
+        content.valid = true
+        contentLeave.push(resumeOutIn)
+        finishContentUpdate()
+        return
+      }
       if (!transition) {
         // hooks an enclosing vdom Transition relayed: it sequences the swap
         // on its own state, the fallback leaving as its old child
@@ -2838,9 +2885,10 @@ function renderVDOMSlot(
       (localFallback || reportsValidity)
     ) {
       if (mode === 'out-in') {
-        const placeholder =
-          prepareInteropSlotTransition(frag, slotContent, undefined, NOOP) ||
-          createCommentVNode()
+        // vdom's comment child: out-in holds nothing for it, the content
+        // leaves on its own and the outlet resolves the fallback at once; a
+        // fallback with a child to animate waits on that leave
+        // (commitSlotFallback, awaitLeavingRoot)
         if (
           prepareTransitionLeave(
             prevVNode,
@@ -2848,11 +2896,13 @@ function renderVDOMSlot(
             transition.props,
             transition.state,
             transition.instance,
-            resumeOutIn,
+            endContentLeave,
+            true,
           )
         ) {
-          suspendForOutIn(prevVNode, placeholder, slotContent, false)
-          return
+          contentLeaving = getInteropTransitionElement(prevVNode)
+          contentLeave = []
+          leaving = true
         }
       } else if (mode === 'in-out') {
         // the leave waits for the fallback to enter; see patchSlotVNode
@@ -2883,6 +2933,8 @@ function renderVDOMSlot(
       transition.state.isLeaving
     ) {
       suspendForOutIn(prevVNode, nextVNode, slotContent, slotContentValid)
+      // the leave waited on is the content root's own: it resumes this swap
+      if (contentLeave) contentLeave.push(resumeOutIn)
       return
     }
     if (prevRendered && !prevVNode) {
@@ -4381,6 +4433,8 @@ function createVNodeChildrenFragment(
 
   frag.remove = (parentNode, transition) => {
     scope.stop()
+    // never placed (a fallback discarded while it waited to enter)
+    if (!isMounted) return
     const parentSuspense = resolveUnmountSuspense(suspense)
     currentChildren.forEach(vnode => {
       // the mode handoff of a leave the slot's removal drives

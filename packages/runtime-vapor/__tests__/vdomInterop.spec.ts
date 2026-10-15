@@ -14794,6 +14794,91 @@ describe('vdom content in a vapor outlet, sequenced by the outlet', () => {
       }),
   )
 
+  // A fallback rendering no element at the swap is no transition child: the
+  // content leaves on its own, and the element the fallback renders
+  // meanwhile enters at once, as it does after vdom's comment child.
+  describe('out-in: a fallback growing an element while the content leaves', () => {
+    const fallback = '<div v-if="data.ready" class="fallback">fb</div>'
+    const shapes = Object.entries<Record<string, string>>({
+      local: {
+        Outer: interopTransitionOutlet('out-in', fallback),
+        App: contentApp('Outer'),
+      },
+      forwarded: {
+        Outer: interopTransitionOutlet('out-in', fallback),
+        Parent: `<template><components.Outer><slot /></components.Outer></template>`,
+        App: contentApp('Parent'),
+      },
+    })
+    test.each(shapes)('%s', (_, srcs) =>
+      interopTransitionLog(srcs, {
+        init: { ready: false },
+        steps: ['off', 'ready=true', 'done', 'on', 'done'],
+      }),
+    )
+
+    test.each(shapes)('%s, with the element at the swap', (_, srcs) =>
+      interopTransitionLog(srcs, {
+        init: { ready: false },
+        steps: ['ready=true', 'off', 'done', 'on', 'done'],
+      }),
+    )
+
+    test.each(shapes)('%s, the content back meanwhile', (_, srcs) =>
+      interopTransitionLog(srcs, {
+        init: { ready: false },
+        steps: ['off', 'ready=true', 'on', 'done', 'done'],
+      }),
+    )
+
+    // forwarded vdom content toggled off, on and off again while its leave
+    // runs: the swaps suspended on that leave resume when it ends
+    test('forwarded, toggled off and on and off during the leave', () =>
+      interopTransitionLog(
+        {
+          Outer: interopTransitionOutlet(
+            'out-in',
+            '<div class="fallback">fb</div>',
+          ),
+          Parent: `<template><components.Outer><slot /></components.Outer></template>`,
+          App: contentApp('Parent'),
+        },
+        { steps: ['off', 'on', 'off', 'done', 'done', 'on', 'done', 'done'] },
+      ))
+
+    // a vapor slot in a vdom outlet: the Transition around the outlet
+    // sequences the fallback, its own child, on its own state
+    test('a vapor slot whose vdom outlet fallback empties while the content leaves', () =>
+      interopTransitionLog(
+        {
+          Child: interopTransitionOutlet(
+            'out-in',
+            '<div v-if="data.fb" class="fallback">fb</div>',
+          ),
+          App: contentApp('Child'),
+        },
+        {
+          init: { fb: true },
+          steps: ['off', 'fb=false', 'done', 'on', 'done', 'done'],
+          vdomOnly: ['Child'],
+        },
+      ))
+
+    // a vapor slot in a vdom outlet: the fallback waiting on the content's
+    // leave is a vdom fragment never mounted, discarded as such
+    test('a vapor slot whose content returns while the vdom outlet fallback waits', () =>
+      interopTransitionLog(
+        {
+          Child: interopTransitionOutlet(
+            'out-in',
+            '<p class="fallback">fb</p>',
+          ),
+          App: contentApp('Child'),
+        },
+        { steps: ['off', 'on', 'done', 'done'], vdomOnly: ['Child'] },
+      ))
+  })
+
   // the order vdom runs the hooks, animatable or not
   test.each(['default', 'out-in', 'in-out'])(
     '%s between vdom content and the local fallback, like vdom',
