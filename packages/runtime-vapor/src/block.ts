@@ -321,9 +321,9 @@ export function move(
         parentComponent,
         parentSuspense,
       )
-    } else if (!isTransitionEnabled || isComponentPlaced(block)) {
-      // a held slot root's component is not in the DOM either: its outlet
-      // places it. A pending async one moves its placeholder.
+    } else if (!isTransitionEnabled || block.asyncDepRegistered) {
+      // an unmounted component is either held slot content, which its outlet
+      // places, or a pending async one, which moves its placeholder
       mountComponent(block, parent, anchor)
     }
   } else if (isArray(block)) {
@@ -618,11 +618,6 @@ function getComponentPhysicalBlock(instance: VaporComponentInstance): Block {
     (__FEATURE_SUSPENSE__ && isSuspenseEnabled && instance.pendingBlock) ||
     instance.block
   )
-}
-
-function isComponentPlaced(instance: VaporComponentInstance): boolean {
-  const node = getBlockFirstNode(instance)
-  return !!(node && node.parentNode)
 }
 
 export function isFragmentBlock(block: Block): boolean {
