@@ -3901,6 +3901,30 @@ describe('SSR hydration', () => {
       expect(`Hydration children mismatch`).not.toHaveBeenWarned()
     })
 
+    test('consecutive text children after a mismatched element', () => {
+      // the DOM node the first text vnode is aligned to is an element, so the
+      // consecutive-text lookahead must not read `.data` off it
+      const { container } = mountWithHydration(
+        `<div data-allow-mismatch="children"><span>foo</span></div>`,
+        () => h('div', ['foo', 'bar']),
+      )
+      expect(container.innerHTML).toBe(
+        '<div data-allow-mismatch="children">foobar</div>',
+      )
+      expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+    })
+
+    test('consecutive text children after a mismatched comment', () => {
+      const { container } = mountWithHydration(
+        `<div data-allow-mismatch="children"><!--v-if--></div>`,
+        () => h('div', ['foo', 'bar']),
+      )
+      expect(container.innerHTML).toBe(
+        '<div data-allow-mismatch="children">foobar</div>',
+      )
+      expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+    })
+
     test('comment mismatch (element)', () => {
       const { container } = mountWithHydration(
         `<div data-allow-mismatch="children"><span></span></div>`,
