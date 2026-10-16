@@ -9864,6 +9864,31 @@ describe('content and fallback sequenced under a Transition', () => {
   })
 
   describe('v-for slot root under a Transition outlet', () => {
+    // held rows are not in the DOM: a reorder meanwhile keeps them out as
+    // well, the placement at the end of the leave orders them
+    test('rows reordered while held are placed after the leave, like vdom', () =>
+      transitionLog(
+        {
+          Outer: transitionOutlet('out-in'),
+          Item: `<template><div class="item">item</div></template>`,
+          App: `
+            <template>
+              <components.Outer>
+                <template v-for="i in data.items" :key="i">
+                  <components.Item v-if="i === 2" />
+                </template>
+              </components.Outer>
+            </template>`,
+        },
+        [
+          d => (d.items = [1, 2]),
+          d => (d.items = [2, 1]),
+          d => (d.items = [2]),
+          'done',
+        ],
+        { init: { items: [] } },
+      ))
+
     test('rows arriving while the fallback leaves are held and entered when placed, like vdom', async () => {
       const logs: Record<string, string[]> = {}
       await renderParity(

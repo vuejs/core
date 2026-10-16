@@ -21,6 +21,8 @@ import {
   applyTransitionHooks,
   applyTransitionLeaveHooks,
   isTransitionEnabled,
+  isVaporTransitionHooks,
+  ownsTransitionMode,
 } from './transition'
 import type { VaporComponentInstance } from './component'
 import { type VaporFragment, isInteropFragment } from './fragment'
@@ -333,6 +335,18 @@ function applySlotTransitionHooks(
   if (!hooks.applyGroup) state.$transition = applied
 }
 
+// A mode is the outlet's to apply under vapor hooks it did not inherit across
+// a child component (Transition's ownsMode); an interop outlet has no
+// fragment of its own in that walk and resolves as its host does.
+function ownsSlotMode(
+  state: SlotResolutionState,
+  hooks: VaporTransitionHooks,
+): boolean {
+  if (!isVaporTransitionHooks(hooks)) return false
+  const frag = ownerFragment(state)
+  return !frag || ownsTransitionMode(frag)
+}
+
 // A vapor SlotFragment is its own resolution state; an interop outlet keeps
 // its state apart from the fragment, so only the former owns a key context.
 function ownerFragment(state: SlotResolutionState): VaporFragment | undefined {
@@ -424,7 +438,9 @@ function exposeSlotContent(state: SlotResolutionState): boolean {
   let place = false
   const transition = isTransitionEnabled ? state.$transition : undefined
   if (transition && !isHydrating && !state.boundary.isHeld()) {
-    const mode = transition.mode
+    // only a mode of the outlet's own sequences the swap: relayed vdom hooks,
+    // and hooks inherited inside a child component, animate the branches
+    const mode = ownsSlotMode(state, transition) ? transition.mode : undefined
     // persisted roots are toggled in place; mode only sequences
     // structural swaps, and a persisted leave never reports its end
     if (

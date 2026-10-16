@@ -400,8 +400,11 @@ export const createFor = (
 
           const block = newBlocks[index]
           if (block !== undefined) {
-            // relocating an existing row is not a structural enter
-            move(block.nodes, parent!, anchorNode, MoveType.REORDER)
+            // relocating an existing row is not a structural enter; held,
+            // the outlet places the rows in order once the hold ends
+            if (!held) {
+              move(block.nodes, parent!, anchorNode, MoveType.REORDER)
+            }
           } else {
             mount(source, index, anchorNode)
           }

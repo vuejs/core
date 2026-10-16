@@ -90,6 +90,7 @@ export const ensureTransitionHooksRegistered = (): void => {
       applyTransitionLeaveHooksImpl,
       deferBranchUpdateDuringLeaveImpl,
       removeBranchWithLeaveImpl,
+      ownsMode,
     )
   }
 }
@@ -651,7 +652,7 @@ function createDelayedLeave(
 // vdom applies `mode` where Transition itself re-renders, i.e. down to its
 // child component; a fragment inside that component only inherits the
 // enter / leave hooks.
-function ownsMode(frag: DynamicFragment): boolean {
+export function ownsMode(frag: VaporFragment): boolean {
   const ctx = keyContexts.get(frag)
   return !ctx || !ctx.type
 }
