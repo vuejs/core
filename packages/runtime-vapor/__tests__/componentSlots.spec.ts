@@ -10287,6 +10287,169 @@ describe('content and fallback sequenced under a Transition', () => {
       expect(texts.vapor).toBe(texts.vdom)
     })
   })
+
+  // Content held while the fallback leaves is out of the DOM: a move of the
+  // whole outlet meanwhile carries the content's anchor only, and the outlet
+  // places the content once the leave ends.
+  describe('held content moved with its outlet, like vdom', () => {
+    const hostContents: Record<string, string> = {
+      component: `<components.Item v-if="data.show" />`,
+      'v-for rows of components': `
+        <template v-for="i in data.show ? [1] : []" :key="i">
+          <components.Item />
+        </template>`,
+    }
+    const movers: [string, string, Parameters<typeof transitionLog>[1]][] = [
+      [
+        'a KeepAlive deactivating and reactivating it',
+        `<template>
+          <KeepAlive>
+            <components.Host v-if="data.alive" />
+          </KeepAlive>
+        </template>`,
+        ['on', d => (d.alive = false), d => (d.alive = true), 'done'],
+      ],
+      [
+        'a keyed v-for reordering it',
+        `<template>
+          <components.Host v-for="i in data.order" :key="i" />
+        </template>`,
+        ['on', d => (d.order = [2, 1]), 'done', 'done'],
+      ],
+    ]
+    describe.each(movers)('%s', (_, App, steps) => {
+      test.each(Object.entries(hostContents))('%s', (_, content) =>
+        transitionLog(
+          {
+            Outer: transitionOutlet('out-in'),
+            Item: `<template><div class="item">item</div></template>`,
+            Host: `
+              <template>
+                <components.Outer>${content}</components.Outer>
+              </template>`,
+            App,
+          },
+          steps,
+          { init: { show: false, alive: true, order: [1, 2] } },
+        ),
+      )
+    })
+  })
+
+  // An async setup component in held content has no block until its outlet
+  // places it. Async setup needs a Suspense, which only vdom provides, so
+  // the root is vdom in both modes.
+  describe('held content with an async setup moved with its outlet, like vdom', () => {
+    const hostContents: Record<string, string> = {
+      'an async setup component': `<components.AsyncItem v-if="data.show" />`,
+      'a component rooted in one': `<components.Wrapper v-if="data.show" />`,
+    }
+    const movers: [
+      string,
+      string,
+      Parameters<typeof transitionLog>[1],
+      Record<string, any>,
+      boolean?,
+    ][] = [
+      [
+        'a KeepAlive deactivating and reactivating it',
+        `<template>
+          <KeepAlive>
+            <components.Host v-if="data.alive" />
+          </KeepAlive>
+        </template>`,
+        ['on', d => (d.alive = false), d => (d.alive = true), 'done'],
+        { alive: true },
+      ],
+      [
+        'a keyed v-for reordering it',
+        `<template>
+          <components.Host v-for="i in data.order" :key="i" />
+        </template>`,
+        ['on', d => (d.order = [2, 1]), 'done', 'done'],
+        { order: [1, 2] },
+      ],
+      // vdom lands the new row after the leaving fallback, so only the
+      // settled DOM is compared
+      [
+        'a keyed v-for inserting a row before it',
+        `<template>
+          <components.Host v-for="i in data.order" :key="i" />
+        </template>`,
+        ['on', d => (d.order = [1, 2]), 'done'],
+        { order: [2] },
+        true,
+      ],
+    ]
+    describe.each(movers)('%s', (_, Mover, steps, init, settledOnly) => {
+      test.each(Object.entries(hostContents))('%s', async (_, content) => {
+        const srcs: Record<string, string> = {
+          Outer: transitionOutlet('out-in'),
+          AsyncItem: `
+            <script setup>
+            await Promise.resolve()
+            </script>
+            <template><div class="item">item</div></template>`,
+          Wrapper: `<template><components.AsyncItem /></template>`,
+          Host: `
+            <template>
+              <components.Outer>${content}</components.Outer>
+            </template>`,
+          Mover,
+          App: `
+            <template>
+              <Suspense><components.Mover /></Suspense>
+            </template>`,
+        }
+        const logs: Record<string, string[]> = {}
+        for (const vapor of [false, true]) {
+          const log: string[] = (logs[vapor ? 'vapor' : 'vdom'] = [])
+          // no enter is logged: vapor runs no hooks on an async setup
+          // component's DOM yet
+          const data: any = ref({
+            show: false,
+            ...init,
+            dones: [] as (() => void)[],
+            onLeave: (el: Element, done: () => void) => {
+              log.push('leave:' + el.className)
+              data.value.dones.push(done)
+            },
+          })
+          const components: Record<string, any> = {}
+          for (const name in srcs) {
+            const src = srcs[name].includes('<script')
+              ? srcs[name]
+              : `<script setup>const data = _data; const components = _components;</script>` +
+                srcs[name]
+            components[name] = compile(src, data, components, {
+              vapor: vapor && name !== 'App',
+            })
+          }
+          const root = document.createElement('div')
+          const app = createApp(components.App).use(vaporInteropPlugin)
+          app.mount(root)
+          for (const step of steps) {
+            if (step === 'done') {
+              const done = data.value.dones.shift()
+              if (done) done()
+            } else if (isString(step)) {
+              data.value.show = step === 'on'
+            } else {
+              step(data.value)
+            }
+            await new Promise(r => setTimeout(r))
+            const dom = Array.from(root.querySelectorAll('div'))
+              .map(el => el.className)
+              .join(',')
+            log.push((isString(step) ? step : 'set') + ' ' + dom)
+          }
+          if (settledOnly) log.splice(0, log.length - 1)
+          app.unmount()
+        }
+        expect(logs.vapor).toEqual(logs.vdom)
+      })
+    })
+  })
 })
 
 describe('a fallback already leaving on its own', () => {

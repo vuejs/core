@@ -321,7 +321,9 @@ export function move(
         parentComponent,
         parentSuspense,
       )
-    } else {
+    } else if (!isTransitionEnabled || isComponentPlaced(block)) {
+      // a held slot root's component is not in the DOM either: its outlet
+      // places it. A pending async one moves its placeholder.
       mountComponent(block, parent, anchor)
     }
   } else if (isArray(block)) {
@@ -511,8 +513,9 @@ export function normalizeBlock(block: Block): Node[] {
 
 /**
  * First node of a block as it appears in its own container, or `undefined`
- * when the block has no node there: an empty array of blocks, or a block
- * whose content lives elsewhere (a teleport target) and has no marker left.
+ * when the block has no node there: an empty array of blocks, an async setup
+ * component not mounted yet, or a block whose content lives elsewhere (a
+ * teleport target) and has no marker left.
  */
 export function getBlockFirstNode(block: Block): Node | undefined {
   if (block instanceof Node) {
@@ -524,7 +527,8 @@ export function getBlockFirstNode(block: Block): Node | undefined {
     }
     return undefined
   } else if (isVaporComponent(block)) {
-    return getBlockFirstNode(getComponentPhysicalBlock(block))
+    const physicalBlock = getComponentPhysicalBlock(block)
+    return physicalBlock ? getBlockFirstNode(physicalBlock) : undefined
   } else {
     if (isTeleportEnabled && isTeleportFragment(block)) {
       // teleported content lives in the target container; in the main view
@@ -614,6 +618,11 @@ function getComponentPhysicalBlock(instance: VaporComponentInstance): Block {
     (__FEATURE_SUSPENSE__ && isSuspenseEnabled && instance.pendingBlock) ||
     instance.block
   )
+}
+
+function isComponentPlaced(instance: VaporComponentInstance): boolean {
+  const node = getBlockFirstNode(instance)
+  return !!(node && node.parentNode)
 }
 
 export function isFragmentBlock(block: Block): boolean {
