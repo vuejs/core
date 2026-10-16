@@ -32,6 +32,7 @@ import {
   compileToVaporRender,
   makeRender,
   renderParity,
+  stripAnchors,
 } from './_utils'
 
 const define = makeRender()
@@ -2080,8 +2081,8 @@ describe('vdom interop', () => {
 
     data.value = true
     await nextTick()
-    // content parked behind the active fallback still received the slot's
-    // ids, so re-exposing it yields the same DOM as VDOM (<em child-s>)
+    // content kept behind the active fallback still carries the slot's ids,
+    // so re-exposing it yields the same DOM as VDOM (<em child-s>)
     expect(host.querySelector('em')!.hasAttribute('child-s')).toBe(true)
     app.unmount()
   })
@@ -2101,9 +2102,7 @@ describe('vdom interop', () => {
     // time, which the test compile helper does not do) — only slotted (-s)
     // parity is under test
     const strip = (html: string) =>
-      html
-        .replace(/<!--[^>]*-->/g, '')
-        .replace(/ (receiver|wrapper|inner|leaf)=""/g, '')
+      stripAnchors(html).replace(/ (receiver|wrapper|inner|leaf)=""/g, '')
 
     const mountPair = (makeSide: (vapor: boolean) => any) => {
       const vdomHost = document.createElement('div')
@@ -2600,7 +2599,7 @@ describe('vdom interop', () => {
       expect(vdom.after).toBe(
         `<p data-v-child="" data-v-child-s="">fallback</p>`,
       )
-      expect(vapor.after).toBe(vdom.after)
+      expect(stripAnchors(vapor.after)).toBe(vdom.after)
     })
 
     test('fallback revealed after the content goes away carries it too', async () => {
@@ -2619,7 +2618,7 @@ describe('vdom interop', () => {
       expect(vdom.after).toBe(
         `<p data-v-child="" data-v-child-s="">fallback</p>`,
       )
-      expect(vapor.after).toBe(vdom.after)
+      expect(stripAnchors(vapor.after)).toBe(vdom.after)
     })
 
     test('a component inside the fallback renders its slot under the fallback owner', async () => {
@@ -2640,7 +2639,7 @@ describe('vdom interop', () => {
         `<div data-v-foo="" data-v-child="" data-v-child-s="">` +
           `<span data-v-child="" data-v-foo-s="">x</span></div>`,
       )
-      expect(vapor.after).toBe(vdom.after)
+      expect(stripAnchors(vapor.after)).toBe(vdom.after)
     })
 
     test('an outlet nested in the fallback keeps the owner scope id', async () => {
@@ -2661,7 +2660,7 @@ describe('vdom interop', () => {
         { Child },
       )
       expect(vdom.after).toBe(`<p data-v-child="" data-v-child-s="">deep</p>`)
-      expect(vapor.after).toBe(vdom.after)
+      expect(stripAnchors(vapor.after)).toBe(vdom.after)
     })
 
     // The enclosing outlet's fallback is recorded on the forwarded vapor slot
@@ -2706,7 +2705,7 @@ describe('vdom interop', () => {
           { Wrapper },
         )
         expect(vdom.after).toBe(expected)
-        expect(vapor.after).toBe(vdom.after)
+        expect(stripAnchors(vapor.after)).toBe(vdom.after)
       },
     )
 
@@ -2734,7 +2733,7 @@ describe('vdom interop', () => {
       expect(vdom.after).toBe(
         `<p data-v-leaf="" data-v-leaf-s="">leaf fallback</p>`,
       )
-      expect(vapor.after).toBe(vdom.after)
+      expect(stripAnchors(vapor.after)).toBe(vdom.after)
     })
   })
 })

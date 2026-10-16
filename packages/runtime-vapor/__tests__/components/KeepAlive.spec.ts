@@ -28,7 +28,13 @@ import {
   type VaporComponentInstance,
   currentInstance,
 } from '../../src/component'
-import { compile, ifFlags, makeRender, renderParity } from '../_utils'
+import {
+  compile,
+  ifFlags,
+  makeRender,
+  renderParity,
+  stripAnchors,
+} from '../_utils'
 import { VaporKeepAlive } from '../../src/components/KeepAlive'
 import {
   child,
@@ -489,7 +495,9 @@ describe('VaporKeepAlive', () => {
 
     toggle.value = true
     await nextTick()
-    expect(html()).toBe('<div>fallback</div><!--slot--><!--if--><!--slot-->')
+    expect(html()).toBe(
+      '<!--for--><div>fallback</div><!--slot--><!--if--><!--slot-->',
+    )
 
     itemsA.value = [3]
     await nextTick()
@@ -5171,11 +5179,7 @@ describe('VaporKeepAlive', () => {
             await nextTick()
           }
           const { log, checks } = data.value.box
-          out[mode] = [
-            root.innerHTML.replace(/<!--[^>]*-->/g, ''),
-            log.join(),
-            String(checks),
-          ]
+          out[mode] = [stripAnchors(root.innerHTML), log.join(), String(checks)]
         },
       )
       return out
@@ -5488,8 +5492,7 @@ describe('Transition inside a kept-alive component', () => {
     steps: string[],
   ) {
     const logs: Record<string, string[]> = {}
-    const dom = (root: HTMLElement) =>
-      root.innerHTML.replace(/<!--[^>]*-->/g, '')
+    const dom = (root: HTMLElement) => stripAnchors(root.innerHTML)
     await renderParity(
       srcs,
       () => {
@@ -5651,7 +5654,7 @@ describe('Transition inside a kept-alive component', () => {
           data.value.dones.shift()!()
           await nextTick()
         }
-        settled[mode] = root.innerHTML.replace(/<!--[^>]*-->/g, '')
+        settled[mode] = stripAnchors(root.innerHTML)
       },
     )
     expect(settled.vdom).toBe('<main><b>c</b></main>')

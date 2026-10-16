@@ -103,7 +103,7 @@ describe('Vapor Mode hydration', () => {
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
         `
         "<div>
-        <!--(-->foo<!--)-->
+        <!--(-->foo<!--slot--><!--)-->
         </div>"
       `,
       )
@@ -113,7 +113,7 @@ describe('Vapor Mode hydration', () => {
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
         `
         "<div>
-        <!--(-->foo1<!--)-->
+        <!--(-->foo1<!--slot--><!--)-->
         </div>"
       `,
       )
@@ -339,7 +339,7 @@ describe('Vapor Mode hydration', () => {
       },
     )
 
-    test('multiple invalid forwarded roots hydrate fragment fallback without child anchors', async () => {
+    test('multiple invalid forwarded roots hydrate fragment fallback with their anchors in place', async () => {
       const data = reactive({ showA: false, showB: false, fallback: true })
       const { container } = await testHydration(
         `<script setup>
@@ -373,7 +373,7 @@ describe('Vapor Mode hydration', () => {
       )
 
       expect(container.textContent).toBe('fallback 1fallback 2')
-      expect(container.innerHTML).not.toContain('<!--slot-->')
+      expect(container.innerHTML).toContain('<!--slot-->')
       expect(`Hydration children mismatch`).not.toHaveBeenWarned()
     })
 
@@ -622,11 +622,9 @@ describe('Vapor Mode hydration', () => {
       expect(container.textContent).toBe('B')
     })
 
-    // The deferred shared fallback parks content in a detached
-    // DocumentFragment during hydration, so the slot's namespace has to come
-    // from the SSR container captured before rendering, not from
-    // `currentParentNode`.
-    test('shared roots parked during hydration keep the svg namespace', async () => {
+    // The slot's namespace comes from the SSR container captured before
+    // rendering, as VDOM closes it over the render effect.
+    test('forwarded roots hydrated behind a fallback keep the svg namespace', async () => {
       const data = reactive({ showA: false, showB: false })
       const { container } = await testWithVDOMApp(
         `<script setup>const components = _components; const data = _data</script>
@@ -1280,6 +1278,36 @@ describe('Vapor Mode hydration', () => {
         <!--slot--><div>bar1</div></div>"
       `,
       )
+    })
+
+    test('a fallback root toggled after hydration stays in the fallback', async () => {
+      const data = ref('foo')
+      const { container } = await testHydration(
+        `<script setup>const components = _components</script>
+        <template>
+          <components.Child>
+            <template #foo><slot name="foo" /></template>
+          </components.Child>
+        </template>`,
+        {
+          Child: `<script setup>const data = _data</script>
+          <template>
+            <div>
+              <slot name="foo"><i>a</i><b v-if="data">{{ data }}</b></slot>
+            </div>
+          </template>`,
+        },
+        data,
+      )
+      expect(container.textContent).toBe('afoo')
+
+      data.value = ''
+      await nextTick()
+      expect(container.textContent).toBe('a')
+
+      data.value = 'bar'
+      await nextTick()
+      expect(container.textContent).toBe('abar')
     })
   })
 })

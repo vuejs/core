@@ -50,7 +50,12 @@ import {
 } from '@vue/runtime-dom'
 import { VaporDynamicComponentFlags, VaporSlotFlags } from '@vue/shared'
 import { VaporSlot } from '../../runtime-core/src/vnode'
-import { compile, makeInteropRender, renderParity } from './_utils'
+import {
+  compile,
+  makeInteropRender,
+  renderParity,
+  stripAnchors,
+} from './_utils'
 import { type DynamicFragment, isInteropFragment } from '../src/fragment'
 import { isInteropVShowPending } from '../src/vdomInterop'
 import {
@@ -3324,24 +3329,30 @@ describe('vdomInterop', () => {
 
       const root = document.createElement('div')
       createVaporApp(VaporBridge).use(vaporInteropPlugin).mount(root)
-      expect(root.innerHTML).toBe('<div>local fallback</div>')
+      expect(root.innerHTML).toBe('<!--slot--><div>local fallback</div>')
 
       mode.value = 'empty'
       await nextTick()
-      expect(root.innerHTML).toBe('<section>outlet fallback</section>')
+      expect(root.innerHTML).toBe(
+        '<!--slot--><section>outlet fallback</section>',
+      )
 
       localText.value = 'stale local fallback'
       outletText.value = 'updated outlet fallback'
       await nextTick()
-      expect(root.innerHTML).toBe('<section>updated outlet fallback</section>')
+      expect(root.innerHTML).toBe(
+        '<!--slot--><section>updated outlet fallback</section>',
+      )
 
       mode.value = 'local'
       await nextTick()
-      expect(root.innerHTML).toBe('<div>stale local fallback</div>')
+      expect(root.innerHTML).toBe('<!--slot--><div>stale local fallback</div>')
 
       mode.value = 'none'
       await nextTick()
-      expect(root.innerHTML).toBe('<section>updated outlet fallback</section>')
+      expect(root.innerHTML).toBe(
+        '<!--slot--><section>updated outlet fallback</section>',
+      )
     })
 
     test('compiled vdom local fallback keeps outlet fallback clean across invalid updates', async () => {
@@ -4100,7 +4111,7 @@ describe('vdomInterop', () => {
       const vdom = mount(false)
       const vapor = mount(true)
       expect(vdom.root.innerHTML).toBe('<div><i>0</i><p>fallback</p></div>')
-      expect(vapor.root.innerHTML).toBe(vdom.root.innerHTML)
+      expect(stripAnchors(vapor.root.innerHTML)).toBe(vdom.root.innerHTML)
       const vdomFallback = vdom.root.querySelector('p')
       const vaporFallback = vapor.root.querySelector('p')
 
@@ -4108,7 +4119,7 @@ describe('vdomInterop', () => {
       vapor.data.value.tick++
       await nextTick()
       expect(vdom.root.innerHTML).toBe('<div><i>1</i><p>fallback</p></div>')
-      expect(vapor.root.innerHTML).toBe(vdom.root.innerHTML)
+      expect(stripAnchors(vapor.root.innerHTML)).toBe(vdom.root.innerHTML)
       expect(vdom.root.querySelector('p')).toBe(vdomFallback)
       expect(vapor.root.querySelector('p')).toBe(vaporFallback)
 
@@ -4120,8 +4131,7 @@ describe('vdomInterop', () => {
       // A vapor parent fills a chain of vdom components that forward its slot;
       // each vdom outlet on the chain must resolve its own fallback the way it
       // does under a vdom parent. Anchors are stripped for the comparison.
-      const html = (root: HTMLElement) =>
-        root.innerHTML.replace(/<!--[^>]*-->/g, '')
+      const html = (root: HTMLElement) => stripAnchors(root.innerHTML)
       const vdomComponent = (
         data: any,
         template: string,
@@ -14228,7 +14238,7 @@ describe('a vapor slot in a vdom outlet starts on a node of its own', () => {
       const data = _data
       const components = _components
     </script>`
-  const strip = (html: string) => html.replace(/<!--[^>]*-->/g, '')
+  const strip = stripAnchors
 
   // the app all-vdom against the app with the components in `vaporOnes`
   // compiled vapor, the DOM compared after every step

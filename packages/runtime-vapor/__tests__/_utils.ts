@@ -347,3 +347,7 @@ export function shuffle(array: Array<any>): any[] {
   }
   return array
 }
+
+export function stripAnchors(html: string): string {
+  return html.replace(/<!--[^>]*-->/g, '')
+}

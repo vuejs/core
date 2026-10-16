@@ -11,7 +11,7 @@ import {
   warn,
 } from '@vue/runtime-dom'
 import { Namespaces, VaporDynamicComponentFlags } from '@vue/shared'
-import { type Block, isBlock, removeNode } from './block'
+import { type Block, isBlock } from './block'
 import {
   type VaporComponentInstance,
   createComponentWithFallback,
@@ -130,20 +130,6 @@ export function createDynamicComponent(
     __DEV__ ? 'dynamic-component' : undefined,
     false,
     slotRoot,
-    slotRoot
-      ? () => {
-          // A single-node block (e.g. a router view block) sits in `nodes`
-          // in addition to the DynamicFragment anchor. Remove both so slot
-          // fallback does not expose it as content.
-          const nodes = frag.nodes
-          if (nodes instanceof Node) {
-            const parent = nodes.parentNode
-            if (parent) removeNode(nodes, parent)
-          }
-          const anchorParent = frag.anchor.parentNode
-          if (anchorParent) removeNode(frag.anchor, anchorParent)
-        }
-      : undefined,
     _insertionAnchor,
   )
   if (isHydrating) locateHydrationNode()

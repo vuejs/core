@@ -1,6 +1,6 @@
 import { EffectScope } from '@vue/reactivity'
-import { extend, isArray } from '@vue/shared'
-import type { MoveType } from '@vue/runtime-dom'
+import { NO, extend, isArray } from '@vue/shared'
+import type { MoveType, SuspenseBoundary } from '@vue/runtime-dom'
 import {
   type Block,
   type VaporTransitionHooks,
@@ -8,7 +8,6 @@ import {
   isValidSlot,
   move,
   remove,
-  removeAttachedNodes,
 } from './block'
 import { isHydrating, isHydratingSlotFallback } from './dom/hydration'
 import { renderWithSlotScopeIds } from './scopeId'
@@ -23,6 +22,7 @@ import {
   isTransitionEnabled,
 } from './transition'
 import { setBlockKey } from './helpers/setKey'
+import type { VaporComponentInstance } from './component'
 import { type VaporFragment, isFragment, isInteropFragment } from './fragment'
 import { isInteropEnabled } from './vdomInteropState'
 
@@ -42,6 +42,12 @@ import { isInteropEnabled } from './vdomInteropState'
 // nearest-wins is the cascade of those decisions. `boundary.getParent()`
 // enumerates the further fallbacks a host provides itself (slotBoundary.ts).
 //
+// Invalid content stays alive and in the DOM (it consists of anchors and
+// comments only); the fallback is placed after it. Content roots keep
+// rendering in place, except under a Transition showing the fallback, where
+// the host holds them out of the DOM until the content takes over
+// (slotBoundary.ts `isHolding`).
+//
 // The machine is written against the duck-typed SlotResolutionState interface
 // because it has three hosts: SlotFragment (vapor slots) and the two interop
 // slot implementations in vdomInterop.ts, which keep their per-slot state in
@@ -50,8 +56,6 @@ import { isInteropEnabled } from './vdomInteropState'
 export interface RenderedSlotFallback {
   block: Block
   boundary: SlotBoundaryContext
-  // Parking callbacks registered by hosts rendered in the fallback body.
-  onContentInvalid: (() => void)[]
   // hydration: adopted where the server rendered it
   adopted: boolean
 }
@@ -80,19 +84,19 @@ function renderSlotFallbacks(
         : render
       const adopt = isHydratingSlotFallback && boundary.adoptFallback
       if (adopt) boundary.adoptFallback = undefined
-      const onContentInvalid: (() => void)[] = []
       // The body sees no provider of its own: an outlet inside it exposes its
       // invalidity to the host instead of resolving the same fallback again.
+      // Nor is it held by the host it is the fallback of.
       const body = extend({}, boundary, {
         getFallback: noFallback,
-        onContentInvalid,
+        isHolding: NO,
       })
       const block = boundary.run(
         () =>
           withSlotBoundary(body, adopt ? () => adopt(renderBody) : renderBody),
         scope,
       )
-      rendered.push({ block, boundary, onContentInvalid, adopted: !!adopt })
+      rendered.push({ block, boundary, adopted: !!adopt })
       if (isValidSlot(block)) break
     }
 
@@ -113,8 +117,6 @@ export interface SlotResolutionState {
   // Every fallback rendered on the way to the active one, nearest first; the
   // active one is the last.
   renderedFallbacks?: RenderedSlotFallback[]
-  // A committed fallback can be invalid and therefore remain detached.
-  fallbackInserted: boolean
   // Detached scope owning the rendered fallbacks' effects (see
   // renderAndCommitSlotFallback); stopped with the outlet or by
   // clearSlotFallback.
@@ -150,6 +152,30 @@ export interface SlotResolutionState {
   bm?: ((nodes: Block) => void)[]
 }
 
+// A Transition showing the fallback holds the content out of the DOM.
+export function isHoldingSlotContent(state: SlotResolutionState): boolean {
+  return isTransitionEnabled && !!state.$transition && !!state.activeFallback
+}
+
+// The host places its content, in the DOM even while invalid, and the
+// machine the fallback after it.
+export function placeSlotContent(
+  state: SlotResolutionState,
+  parent: ParentNode,
+  anchor: Node | null,
+  parentSuspense?: SuspenseBoundary | null,
+  moveType?: MoveType,
+  parentComponent?: VaporComponentInstance,
+): void {
+  const content = state.getContent()
+  if (moveType === undefined) {
+    insert(content, parent, anchor, parentSuspense)
+  } else {
+    move(content, parent, anchor, moveType, parentComponent, parentSuspense)
+  }
+  insertActiveSlotFallback(state, moveType, parentComponent, parentSuspense)
+}
+
 function beforeExpose(state: SlotResolutionState, block: Block): void {
   const bm = state.bm
   if (bm) {
@@ -180,18 +206,6 @@ export function markSlotResolutionDirty(state: SlotResolutionState): void {
   recheckSlotResolution(state)
 }
 
-export function invalidateExposedSlotContent(state: SlotResolutionState): void {
-  const rendered = state.renderedFallbacks
-  const callbacks = rendered
-    ? rendered[rendered.length - 1].onContentInvalid
-    : state.boundary.onContentInvalid
-  if (callbacks) {
-    for (let i = 0; i < callbacks.length; i++) {
-      callbacks[i]()
-    }
-  }
-}
-
 function clearSlotFallback(
   state: SlotResolutionState,
   parentNode: ParentNode | null = state.getParentNode(),
@@ -202,12 +216,8 @@ function clearSlotFallback(
   }
   const fallback = state.activeFallback
   if (fallback) {
-    remove(
-      fallback,
-      state.fallbackInserted ? parentNode || undefined : undefined,
-    )
+    remove(fallback, parentNode || undefined)
     state.activeFallback = null
-    state.fallbackInserted = false
   }
   state.renderedFallbacks = undefined
 }
@@ -225,54 +235,49 @@ export function leaveSlotFallback(
   return true
 }
 
-// hydration, behind `isHydratingSlotFallback`: the fallback adopted from the server is
-// in the DOM already and stays where the server put it. A vdom one keeps its
-// own record of where that is.
-export function placeAdoptedFallback(
-  state: SlotResolutionState,
-  parentNode: ParentNode,
-  anchor: Node | null,
-): boolean {
-  if (!state.fallbackInserted) return false
-  const fallback = state.activeFallback
-  if (isInteropEnabled && isInteropFragment(fallback)) {
-    fallback.insert!(parentNode, anchor)
-  }
-  return true
-}
-
+// A fallback is placed even while invalid: its anchors have to be live for it
+// to update in place. It goes after the content, at the host's anchor.
 export function insertActiveSlotFallback(
   state: SlotResolutionState,
   moveType?: MoveType,
+  parentComponent?: VaporComponentInstance,
+  parentSuspense?: SuspenseBoundary | null,
 ): void {
   const fallback = state.activeFallback
-  if (isHydrating || !fallback || !isValidSlot(fallback)) {
-    return
-  }
+  if (isHydrating || !fallback) return
   const parentNode = state.getParentNode()
-  if (
-    !parentNode ||
-    (isHydratingSlotFallback &&
-      placeAdoptedFallback(state, parentNode, state.getAnchor()))
-  ) {
-    return
+  if (!parentNode) return
+  const anchor = state.getAnchor()
+  // hydration: the fallback adopted from the server is in the DOM already
+  // and stays where the server put it. A vdom one keeps its own record of
+  // where that is.
+  if (isHydratingSlotFallback) {
+    const rendered = state.renderedFallbacks!
+    if (rendered[rendered.length - 1].adopted) {
+      if (isInteropEnabled && isInteropFragment(fallback)) {
+        fallback.insert!(parentNode, anchor)
+      }
+      return
+    }
   }
   if (moveType === undefined) {
-    insert(fallback, parentNode, state.getAnchor())
+    insert(fallback, parentNode, anchor, parentSuspense)
   } else {
-    move(fallback, parentNode, state.getAnchor(), moveType)
+    move(
+      fallback,
+      parentNode,
+      anchor,
+      moveType,
+      parentComponent,
+      parentSuspense,
+    )
   }
-  state.fallbackInserted = true
 }
 
-// `detachContent` is true only on the first content -> fallback switch: the
-// (invalid) content gets parked outside the DOM while staying alive. When
-// replacing an already active fallback, the content is parked already.
 function commitSlotFallback(
   state: SlotResolutionState,
   rendered: RenderedSlotFallback[],
   scope: EffectScope,
-  detachContent: boolean,
 ): void {
   // the nearest valid one, or the outermost one when none is valid
   const active = rendered[rendered.length - 1]
@@ -280,7 +285,6 @@ function commitSlotFallback(
   state.activeFallback = block
   state.renderedFallbacks = rendered
   state.fallbackScope = scope
-  state.fallbackInserted = isHydrating || active.adopted
   if (isTransitionEnabled) {
     if (state.$transition) {
       // Match VDOM slot fallback branch identity so fallback enter does not
@@ -291,16 +295,6 @@ function commitSlotFallback(
         state.$transition,
         ownerFragment(state),
       )
-    }
-  }
-  if (detachContent && !isHydrating) {
-    const parentNode = state.getParentNode()
-    const contentInvalidCallbacks = state.boundary.onContentInvalid
-    if (contentInvalidCallbacks)
-      for (let i = 0; i < contentInvalidCallbacks.length; i++)
-        contentInvalidCallbacks[i]()
-    if (parentNode) {
-      removeAttachedNodes(state.getContent(), parentNode, false)
     }
   }
   beforeExpose(state, block)
@@ -314,8 +308,13 @@ function ownerFragment(state: SlotResolutionState): VaporFragment | undefined {
   return frag.__vf ? frag : undefined
 }
 
-// The host has a provider (hasSlotFallback): the caller checks.
 function renderAndCommitSlotFallback(state: SlotResolutionState): void {
+  if (state.fallbackChainStale) state.fallbackChainStale = false
+  if (!hasSlotFallback(state.boundary)) {
+    // the providers went away: nothing replaces the fallback
+    if (state.activeFallback) clearSlotFallback(state)
+    return
+  }
   // A dedicated detached scope: the fallbacks must not die with whatever
   // branch scope happens to be active when a recheck fires. The host stops
   // it on replacement or disposal; a failed render is stopped here.
@@ -327,27 +326,25 @@ function renderAndCommitSlotFallback(state: SlotResolutionState): void {
     scope.stop()
     throw err
   }
-  const hadFallback = !!state.activeFallback
   clearSlotFallback(state)
-  state.fallbackChainStale = false
-  commitSlotFallback(state, rendered, scope, !hadFallback)
+  commitSlotFallback(state, rendered, scope)
 }
 
 // Whether the rendered chain no longer resolves to the right fallback: the
 // providers changed, a nearer rendered one became valid, or the active one
 // is invalid while the host has providers beyond the rendered ones. Any
 // takes a fresh walk.
-function isSlotFallbackChainStale(
-  state: SlotResolutionState,
-  activeValid: boolean,
-): boolean {
+function isSlotFallbackChainStale(state: SlotResolutionState): boolean {
   if (state.fallbackChainStale) return true
   const rendered = state.renderedFallbacks!
   const last = rendered.length - 1
   for (let i = 0; i < last; i++) {
     if (isValidSlot(rendered[i].block)) return true
   }
-  return !activeValid && hasSlotFallback(rendered[last].boundary.getParent())
+  return (
+    hasSlotFallback(rendered[last].boundary.getParent()) &&
+    !isValidSlot(rendered[last].block)
+  )
 }
 
 export function disposeSlotResolution(
@@ -361,10 +358,10 @@ export function disposeSlotResolution(
 }
 
 // Reconciles which branch the slot exposes after something may have changed:
-// the content's validity, a rendered fallback's validity, or (hosts flag it)
-// the provider chain itself. Ordinary dirty notifications from the active
-// fallback's own dynamic children re-render nothing; those children update in
-// place.
+// the content's validity, a rendered fallback's validity, or (interop hosts
+// flag it) the provider chain itself. Ordinary dirty notifications from the
+// active fallback's own dynamic children re-render nothing; those children
+// update in place.
 export function recheckSlotResolution(state: SlotResolutionState): void {
   if (state.isReconciling) {
     state.pendingRecheck = true
@@ -382,56 +379,45 @@ export function recheckSlotResolution(state: SlotResolutionState): void {
   } while (state.pendingRecheck)
 }
 
+// Valid content takes over from the active fallback. It is in place already,
+// unless the host held it: then it is placed after the fallback's leave, as
+// vdom unmounts the old child before the new one enters.
+function exposeSlotContent(state: SlotResolutionState): void {
+  const content = state.getContent()
+  const place =
+    isTransitionEnabled && !isHydrating && state.boundary.isHolding()
+  clearSlotFallback(state)
+  const transition = isTransitionEnabled ? state.$transition : undefined
+  // content first shown after a mount-time fallback has no hooks yet
+  if (transition && (place || (isFragment(content) && !content.$transition))) {
+    state.$transition = applyTransitionHooks(
+      content,
+      transition,
+      ownerFragment(state),
+    )
+  }
+  beforeExpose(state, content)
+  if (place) {
+    const parentNode = state.getParentNode()
+    if (parentNode) insert(content, parentNode, state.getAnchor())
+  }
+}
+
 function recheckSlotResolutionNow(state: SlotResolutionState): void {
-  const fallback = state.activeFallback
-  const fallbackValid = !!fallback && isValidSlot(fallback)
+  const prevFallback = state.activeFallback
   const contentValid = state.isContentValid()
   // Validity of the currently exposed branch (fallback if active, else content).
-  const prevNodesValid =
-    state.lastNodesValid ?? (fallback ? fallbackValid : contentValid)
+  const prevNodesValid = state.lastNodesValid ?? contentValid
 
-  // Content wins over fallback. If fallback was mounted, content may need to
-  // be inserted back because it can be invalid while fallback is active. It
-  // also returns, invalid or not, once the host lost its last fallback, so
-  // its anchors are live for later updates.
-  if (contentValid || (fallback && !hasSlotFallback(state.boundary))) {
-    if (fallback) {
-      clearSlotFallback(state)
-      const content = state.getContent()
-      // content rendered behind the fallback from the start has no hooks yet
-      const transition = isTransitionEnabled ? state.$transition : undefined
-      if (transition && isFragment(content) && !content.$transition) {
-        state.$transition = applyTransitionHooks(
-          content,
-          transition,
-          ownerFragment(state),
-        )
-      }
-      beforeExpose(state, content)
-      if (!isHydrating) {
-        const parentNode = state.getParentNode()
-        if (parentNode) {
-          insert(content, parentNode, state.getAnchor())
-        }
-      }
-    }
-  } else if (fallback) {
-    if (isSlotFallbackChainStale(state, fallbackValid)) {
-      renderAndCommitSlotFallback(state)
-    } else if (!prevNodesValid && fallbackValid) {
-      // A fallback committed while invalid is inserted once it becomes valid.
-      insertActiveSlotFallback(state)
-    }
-  } else if (hasSlotFallback(state.boundary)) {
+  // Content wins over fallback.
+  if (contentValid) {
+    if (prevFallback) exposeSlotContent(state)
+  } else if (!prevFallback || isSlotFallbackChainStale(state)) {
     renderAndCommitSlotFallback(state)
   }
 
-  const nextFallback = state.activeFallback
-  const nextNodesValid = nextFallback
-    ? nextFallback === fallback
-      ? fallbackValid
-      : isValidSlot(nextFallback)
-    : contentValid
+  const fallback = state.activeFallback
+  const nextNodesValid = fallback ? isValidSlot(fallback) : contentValid
   state.syncNodes()
   state.lastNodesValid = nextNodesValid
   if (prevNodesValid !== nextNodesValid) {

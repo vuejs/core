@@ -171,10 +171,9 @@ describe('vdom-in-vapor element namespace', () => {
     expect(host.querySelector('mi')!.namespaceURI).toBe(mathmlNS)
   })
 
-  // The namespace is captured once from the real container. Re-reading it per
-  // patch would report HTML while the content is parked in the detached
-  // DocumentFragment a shared fallback swaps in.
-  test('slot content keeps its namespace across a fallback park/restore', async () => {
+  // The namespace is captured once from the real container, as VDOM closes
+  // the mount-time namespace over a component's render effect.
+  test('slot content keeps its namespace across a fallback switch', async () => {
     const show = ref(true)
     const Child = defineVaporComponent({
       setup() {
