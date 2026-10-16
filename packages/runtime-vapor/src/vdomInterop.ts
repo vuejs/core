@@ -2301,12 +2301,14 @@ function renderVDOMSlot(
   let contentLeaving: Element | undefined
   let contentLeave: (() => void)[] | undefined
   let contentLeaveState: TransitionState | undefined
-  const endContentLeave = (): void => {
-    const cbs = contentLeave
+  // `own` is the ending leave's: one the content rendered past holds nothing
+  // any more, what waits is the leave of the root after it
+  const endContentLeave = (own: (() => void)[]): void => {
+    if (contentLeave !== own) return
     const state = contentLeaveState
     contentLeave = contentLeaving = contentLeaveState = undefined
     if (state) state.isLeaving = false
-    if (cbs) invokeArrayFns(cbs)
+    invokeArrayFns(own)
   }
   const awaitLeavingRoot = (cb: () => void): boolean => {
     if (!contentLeave) return false
@@ -2888,6 +2890,7 @@ function renderVDOMSlot(
         // leaves on its own and the outlet resolves the fallback at once; a
         // fallback with a child to animate waits on that leave
         // (commitSlotFallback, awaitLeavingRoot)
+        const own: (() => void)[] = []
         if (
           prepareTransitionLeave(
             prevVNode,
@@ -2895,11 +2898,11 @@ function renderVDOMSlot(
             transition.props,
             transition.state,
             transition.instance,
-            endContentLeave,
+            () => endContentLeave(own),
           )
         ) {
           contentLeaving = getInteropTransitionElement(prevVNode)
-          contentLeave = []
+          contentLeave = own
           leaving = true
         }
       } else if (mode === 'in-out') {
@@ -2931,8 +2934,10 @@ function renderVDOMSlot(
       transition.state.isLeaving
     ) {
       suspendForOutIn(prevVNode, nextVNode, slotContent, slotContentValid)
-      // the leave waited on is the content root's own: it resumes this swap
-      if (contentLeave) contentLeave.push(resumeOutIn)
+      // the leave waited on is the content root's own (paired after all, see
+      // awaitLeavingRoot): it resumes this swap. One the content rendered
+      // past is not: the swap's own leave resumes it.
+      if (contentLeaveState) contentLeave!.push(resumeOutIn)
       return
     }
     if (prevRendered && !prevVNode) {

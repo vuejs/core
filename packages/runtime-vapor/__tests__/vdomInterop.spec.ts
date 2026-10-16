@@ -14679,10 +14679,13 @@ describe('vdom content in a vapor outlet, sequenced by the outlet', () => {
       init = {},
       steps = ['off', 'done', 'on', 'done'],
       vdomOnly = ['App'],
+      selector = 'div, span',
     }: {
       init?: Record<string, any>
+      // `done` releases the latest leave, `done:<class>` that element's
       steps?: string[]
       vdomOnly?: string[]
+      selector?: string
     } = {},
   ) => {
     const run = async (vapor: boolean) => {
@@ -14690,10 +14693,12 @@ describe('vdom content in a vapor outlet, sequenced by the outlet', () => {
         show: true,
         ...init,
         log: [] as string[],
+        dones: {} as Record<string, () => void>,
         onEnter: (el: Element) => data.value.log.push('enter:' + el.className),
         onLeave: (el: Element, done: () => void) => {
           data.value.log.push('leave:' + el.className)
           data.value.done = done
+          data.value.dones[el.className] = done
         },
         onEnterAsync: (el: Element, done: () => void) => {
           data.value.enterDone = done
@@ -14728,6 +14733,10 @@ describe('vdom content in a vapor outlet, sequenced by the outlet', () => {
         if (step === 'done') {
           data.value.done && data.value.done()
           data.value.done = undefined
+        } else if (step.startsWith('done:')) {
+          const done = data.value.dones[step.slice(5)]
+          done && done()
+          delete data.value.dones[step.slice(5)]
         } else if (step === 'enterDone') {
           data.value.enterDone && data.value.enterDone()
           data.value.enterDone = undefined
@@ -14735,13 +14744,18 @@ describe('vdom content in a vapor outlet, sequenced by the outlet', () => {
           data.value.show = step === 'on'
         } else {
           const [key, value] = step.split('=')
-          data.value[key] = value === 'true'
+          data.value[key] =
+            value === 'true' || value === 'false'
+              ? value === 'true'
+              : value === 'null'
+                ? null
+                : value
         }
         await nextTick()
         log.push(
           step +
             ' ' +
-            Array.from(root.querySelectorAll('div, span'))
+            Array.from(root.querySelectorAll(selector))
               .map(el => el.className)
               .join(','),
         )
@@ -14903,6 +14917,54 @@ describe('vdom content in a vapor outlet, sequenced by the outlet', () => {
         {
           init: { local: true },
           steps: ['local=false', 'done', 'local=true', 'done'],
+        },
+      ))
+
+    // a root that left to nothing and was rendered past: the leave of the
+    // root after it is the one the fallback and a suspended swap wait on,
+    // whichever of the two ends first
+    const dynamicContentApp = `
+      <template>
+        <components.Outer>
+          <component :is="data.tag" :class="data.tag" />
+        </components.Outer>
+      </template>`
+    test('the fallback waits on the latest leave, not one the content rendered past', () =>
+      interopTransitionLog(
+        {
+          Outer: interopTransitionOutlet(
+            'out-in',
+            '<i v-if="data.ready" class="fallback">fb</i>',
+          ),
+          App: dynamicContentApp,
+        },
+        {
+          init: { tag: 'div', ready: false },
+          steps: [
+            'tag=null',
+            'tag=p',
+            'ready=true',
+            'tag=null',
+            'done:div',
+            'done:p',
+          ],
+          selector: 'div, p, i',
+        },
+      ))
+
+    test('a swap suspended on its own leave resumes after it, not after one the content rendered past', () =>
+      interopTransitionLog(
+        {
+          Outer: interopTransitionOutlet(
+            'out-in',
+            '<i v-if="data.ready" class="fallback">fb</i>',
+          ),
+          App: dynamicContentApp,
+        },
+        {
+          init: { tag: 'div', ready: false },
+          steps: ['tag=null', 'tag=p', 'tag=span', 'done:div', 'done:p'],
+          selector: 'div, p, span',
         },
       ))
   })
