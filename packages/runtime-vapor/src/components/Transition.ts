@@ -839,14 +839,18 @@ function removeBranchWithLeaveImpl(
       // enter will run. Hand this leave to the incoming branch through a copy.
       enterHooks = frag.$transition = extend({}, transition)
     }
+    let own: DynamicFragment['pending']
     const afterLeave = () => {
-      frag.leaving = false
+      // a leave the fragment rendered past (unpaired) holds no branch of its
+      // own any more: the one a later leave holds is that leave's to release
+      const current = frag.pending === own
+      if (current) frag.leaving = false
       // Unmounting cuts the leave short and runs afterLeave synchronously;
       // the pending branch must not be rendered into the torn-down tree.
       if (transition.state.isUnmounting) return
       // The branch has left: an enclosing teardown must not leave it again.
       // A branch rendered meanwhile (held, this leave unpaired) is in place.
-      const pending = frag.pending
+      const pending = current ? frag.pending : undefined
       if (pending) frag.nodes = EMPTY_BLOCK
       // Like vdom rendering Transition's latest child after the leave, the
       // outermost fragment that switched meanwhile replaces this one.
@@ -870,7 +874,8 @@ function removeBranchWithLeaveImpl(
       if (outer) {
         const target = outer
         const { render, key, noScope, branchKey, prevKey } = target.pending!
-        target.pending = frag.pending = undefined
+        target.pending = undefined
+        if (current) frag.pending = undefined
         // back on the mounted key, the deferred update runs as a regular one
         target.current = prevKey
         runWithRenderCtx(target, () =>
@@ -915,7 +920,7 @@ function removeBranchWithLeaveImpl(
       // rendering; the next branch mounts from the afterLeave callback. The
       // branch it holds tells a leave reusing this one whether one follows.
       frag.leaving = true
-      frag.pending = { render, key, noScope, branchKey }
+      frag.pending = own = { render, key, noScope, branchKey }
       remove(frag.nodes, parent)
       if (emptySlotRoot) frag.slotBoundary!.markDirty()
       return true

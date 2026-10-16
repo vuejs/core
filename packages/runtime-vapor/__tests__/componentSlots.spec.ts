@@ -8713,14 +8713,16 @@ describe('content and fallback sequenced under a Transition', () => {
     {
       init = {},
       settledOnly = false,
+      selector = 'div,i',
     }: {
       init?: Record<string, any>
       settledOnly?: boolean
+      selector?: string
     } = {},
   ) => {
     const logs: Record<string, string[]> = {}
     const dom = (root: HTMLElement) =>
-      Array.from(root.querySelectorAll('div,i'))
+      Array.from(root.querySelectorAll(selector))
         .map(
           el =>
             (el.className || el.tagName) +
@@ -9579,6 +9581,33 @@ describe('content and fallback sequenced under a Transition', () => {
     expect(leaving.vdom).toEqual(['s', 's', 's', 's'])
     expect(leaving.vapor).toEqual(leaving.vdom)
   })
+
+  // a slot root that left to nothing (unpaired) and rendered past its leave:
+  // the branch a later leave holds is that leave's to release, whichever of
+  // the two ends first
+  test('a leave rendered past does not release the branch a later leave holds', () =>
+    transitionLog(
+      {
+        Outer: transitionOutlet(
+          'out-in',
+          '<i v-if="data.ready" class="fallback">fb</i>',
+        ),
+        App: `
+          <template>
+            <components.Outer>
+              <component :is="data.tag" :class="data.tag" />
+            </components.Outer>
+          </template>`,
+      },
+      [
+        d => (d.tag = null),
+        d => (d.tag = 'p'),
+        d => (d.tag = 'span'),
+        'done',
+        'done',
+      ],
+      { init: { ready: false, tag: 'div' }, selector: 'div,p,span' },
+    ))
 
   describe('the hook log after every step, like vdom', () => {
     type Step = ((data: any) => void) | 'done'
