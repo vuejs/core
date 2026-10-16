@@ -3674,3 +3674,113 @@ describe('structural removal during a v-show leave', () => {
     expect(clean(result.vapor.after)).toBe(clean(result.vdom.after))
   })
 })
+
+// vdom's persisted rule only sees Transition's direct child: a v-show root
+// reached through a <slot> is never persisted there, so the outlet switching
+// branches is a structural swap that runs @leave / @enter
+describe('v-show root swapped through a slot outlet', () => {
+  const fallback = `<slot><p>fb</p></slot>`
+  const shownFallback = `<slot><p v-show="data.show">fb</p></slot>`
+  const content = `<template v-if="data.on" #default><span>c</span></template>`
+  const contentBehind = `<span v-if="data.on">c</span>`
+  const shownContent = `<template v-if="data.on" #default>
+    <span v-show="data.show">c</span>
+  </template>`
+  const keyedContent = `<template v-if="data.on" #default>
+    <span v-show="data.show">a</span>
+  </template>
+  <template v-else #default>
+    <i v-show="data.show">b</i>
+  </template>`
+
+  test.each<[string, boolean, string, string, Record<string, any>, string]>([
+    [
+      'fallback replaced by content',
+      false,
+      shownFallback,
+      content,
+      { on: false },
+      'c',
+    ],
+    [
+      'fallback replaced by content rendered behind it',
+      false,
+      shownFallback,
+      contentBehind,
+      { on: false },
+      'c',
+    ],
+    [
+      'fallback replaced by content rendered behind it',
+      true,
+      shownFallback,
+      contentBehind,
+      { on: false },
+      'c',
+    ],
+    [
+      'fallback replaced by hidden content',
+      false,
+      fallback,
+      shownContent,
+      { on: false, show: false },
+      'c',
+    ],
+    [
+      'content replaced by fallback',
+      false,
+      fallback,
+      shownContent,
+      { on: true },
+      'fb',
+    ],
+    [
+      'content replaced by fallback',
+      true,
+      fallback,
+      shownContent,
+      { on: true },
+      'fb',
+    ],
+    [
+      'hidden content swapped by key',
+      false,
+      fallback,
+      keyedContent,
+      { on: true, show: false },
+      'b',
+    ],
+    [
+      'hidden content swapped by key',
+      true,
+      fallback,
+      keyedContent,
+      { on: true, show: false },
+      'b',
+    ],
+  ])('%s (out-in: %s)', async (_, outIn, slot, app, init, text) => {
+    const { vdom, vapor } = await runOutInPhases(
+      {
+        Comp: `<template>
+          <Transition
+            ${outIn ? 'mode="out-in"' : ''}
+            :css="false"
+            @enter="data.onEnter"
+            @leave="data.onLeave"
+          >
+            ${slot}
+          </Transition>
+        </template>`,
+        App: `<template>
+          <components.Comp>
+            ${app}
+          </components.Comp>
+        </template>`,
+      },
+      { show: true, ...init },
+      [{ set: { on: !init.on }, text }],
+    )
+    expect(vapor.trace).toEqual(vdom.trace)
+    expect(vapor.settled).toEqual([text])
+  })
+})

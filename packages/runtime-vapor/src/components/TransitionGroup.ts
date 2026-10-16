@@ -120,7 +120,16 @@ const VaporTransitionGroupImpl = /*@__PURE__*/ defineVaporComponent({
     expose()
 
     if (!isTransitionEnabled) {
-      registerTransitionHooks(applyTransitionHooksImpl, NO, NO, NO, NO, NO, NO)
+      registerTransitionHooks(
+        applyTransitionHooksImpl,
+        NO,
+        NO,
+        NO,
+        NO,
+        NO,
+        NO,
+        NO,
+      )
     }
 
     const instance = currentInstance as VaporComponentInstance

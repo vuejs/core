@@ -96,6 +96,7 @@ export const ensureTransitionHooksRegistered = (): void => {
       awaitLeavingRootImpl,
       // a component is a child however empty its root, as to vdom
       block => !!findTransitionBlock(block) || hasComponent(block),
+      resolveOutletLeaveImpl,
     )
   }
 }
@@ -471,7 +472,7 @@ export function applyTransitionHooksImpl(
   }
 
   const { props, instance, state, delayedLeave } = hooks
-  state.persisted = isPersistedRoot(state.root)
+  state.persisted = isPersistedRoot(state.root, owner)
   const resolvedHooks = resolveTransitionHooks(child, props, state, instance)
   // an element entering now (a slot fallback) claims the leave waiting on the
   // Transition; one already in the DOM does not enter
@@ -506,11 +507,15 @@ export function relayTransitionHooks(
 // Runtime equivalent of the compiler's persisted rule for roots the compiler
 // can't see (slot content): the v-show target is reached from Transition's
 // root through components and slot outlets only; a v-if / v-for / dynamic
-// slot boundary before it makes the root structural. Walked from the root on
-// every apply so branch swaps can't latch a stale result. Only a directive
-// target counts: a v-show inherited from above the Transition leaves the
-// root structural, as vdom's does.
-function isPersistedRoot(block: Block | undefined): boolean {
+// slot boundary before it makes the root structural, and so does `swap`, an
+// outlet switching branches (vdom never persists a root reached through a
+// slot). Walked from the root on every apply so branch swaps can't latch a
+// stale result. Only a directive target counts: a v-show inherited from above
+// the Transition leaves the root structural, as vdom's does.
+function isPersistedRoot(
+  block: Block | undefined,
+  swap?: VaporFragment,
+): boolean {
   while (block) {
     if ((block as TransitionOptions).$vshow! & VShowFlags.TARGET) return true
     if (isVaporComponent(block)) {
@@ -523,8 +528,9 @@ function isPersistedRoot(block: Block | undefined): boolean {
       block = block.find(b => !(b instanceof Comment))
     } else if (
       isFragment(block) &&
-      (isVaporSlotOutlet(block) ||
-        !(isDynamicFragment(block) || isForFragment(block)))
+      (isVaporSlotOutlet(block)
+        ? block !== swap
+        : !(isDynamicFragment(block) || isForFragment(block)))
     ) {
       block = block.nodes
     } else {
@@ -532,6 +538,32 @@ function isPersistedRoot(block: Block | undefined): boolean {
     }
   }
   return false
+}
+
+// The root leaving `outlet` may hold hooks resolved persisted through it, as
+// the Transition's own root.
+function resolveOutletLeaveImpl(
+  outlet: VaporFragment | undefined,
+  block: Block,
+  hooks: TransitionHooks,
+): boolean {
+  // relayed vdom hooks: the vdom Transition's own rule applies
+  if (!isVaporTransitionHooks(hooks)) return hooks.persisted
+  const { state } = hooks
+  // an interop outlet's state has no fragment in the walk
+  if (!outlet) return hooks.persisted || !!state.persisted
+  if (hooks.props.persisted) return true
+  // leave hooks resolved for this switch fold it in
+  state.persisted = isPersistedRoot(state.root, outlet)
+  // only a branch persisted on its own holds such hooks
+  if (!state.persisted && isPersistedRoot(block)) {
+    const child = findTransitionBlock(block)
+    const childHooks = child && child.$transition
+    if (childHooks && childHooks.persisted) {
+      child.$transition = extend({}, childHooks, { persisted: false })
+    }
+  }
+  return state.persisted
 }
 
 export function applyTransitionLeaveHooksImpl(
@@ -823,12 +855,15 @@ function removeBranchWithLeaveImpl(
   // invalid from here, isValidBlock), and a fallback with a child to animate
   // waits on this leave there (commitSlotFallback).
   const emptySlotRoot = !render && !!(frag.__vf & SLOT_ROOT)
+  const persisted = isVaporSlotOutlet(frag)
+    ? resolveOutletLeaveImpl(frag, frag.nodes, transition)
+    : transition.persisted
   if (
     mode &&
     ownsMode(transition, frag) &&
     // persisted roots are toggled in place; mode only sequences structural
     // swaps, and a skipped persisted leave would never fire afterLeave.
-    !transition.persisted &&
+    !persisted &&
     // in-out only works when there is an incoming branch to trigger
     // delayedLeave; otherwise the current branch should leave immediately.
     // A slot root leaving empty may have a fallback entering for it, its
