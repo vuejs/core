@@ -8713,14 +8713,16 @@ describe('content and fallback sequenced under a Transition', () => {
     {
       init = {},
       settledOnly = false,
+      selector = 'div,i',
     }: {
       init?: Record<string, any>
       settledOnly?: boolean
+      selector?: string
     } = {},
   ) => {
     const logs: Record<string, string[]> = {}
     const dom = (root: HTMLElement) =>
-      Array.from(root.querySelectorAll('div,i'))
+      Array.from(root.querySelectorAll(selector))
         .map(
           el =>
             (el.className || el.tagName) +
@@ -8788,18 +8790,19 @@ describe('content and fallback sequenced under a Transition', () => {
     </template>`
   const transitionShapes = (
     mode: string,
+    fallback?: string,
   ): Record<string, Record<string, string>> => ({
     'slot-root v-if': {
-      Outer: transitionOutlet(mode),
+      Outer: transitionOutlet(mode, fallback),
       App: contentApp('Outer'),
     },
     'forwarded slot-root v-if': {
-      Outer: transitionOutlet(mode),
+      Outer: transitionOutlet(mode, fallback),
       Middle: contentApp('Outer'),
       App: `<template><components.Middle /></template>`,
     },
     'forwarded outlet with a conditional slot': {
-      Outer: transitionOutlet(mode),
+      Outer: transitionOutlet(mode, fallback),
       Middle: forwardingMiddle,
       App: `
         <template>
@@ -8811,7 +8814,7 @@ describe('content and fallback sequenced under a Transition', () => {
         </template>`,
     },
     'forwarded outlet whose content v-if flips': {
-      Outer: transitionOutlet(mode),
+      Outer: transitionOutlet(mode, fallback),
       Middle: forwardingMiddle,
       App: contentApp('Middle'),
     },
@@ -8842,6 +8845,134 @@ describe('content and fallback sequenced under a Transition', () => {
         })
       },
     )
+
+    // A fallback rendering no element at the swap is no transition child:
+    // the content leaves on its own, and the element the fallback renders
+    // meanwhile enters at once, as it does after vdom's comment child.
+    describe('fallback growing an element while the content leaves', () => {
+      // a conditional slot leaving as a whole is still paired, unlike vdom's
+      // comment child (T37)
+      const shapes = Object.entries(
+        transitionShapes(
+          mode,
+          '<div v-if="data.ready" class="fallback">fb</div>',
+        ),
+      ).filter(([name]) => name !== 'forwarded outlet with a conditional slot')
+      describe.each(shapes)('%s', (_, srcs) => {
+        const scripts: [string, Parameters<typeof transitionLog>[1]][] = [
+          [
+            'growing it after the swap',
+            ['off', d => (d.ready = true), 'done', 'on', 'done'],
+          ],
+          [
+            'with the element at the swap',
+            [
+              d => {
+                d.show = false
+                d.ready = true
+              },
+              'done',
+              'on',
+              'done',
+            ],
+          ],
+          [
+            'the content back meanwhile',
+            ['off', d => (d.ready = true), 'on', 'done', 'done'],
+          ],
+          // back before the fallback grew anything: the root that left
+          // finishes on its own, the next one enters at once
+          [
+            'the content back during its own leave',
+            ['off', 'on', 'done', 'done'],
+          ],
+          [
+            'the content toggled off, on and off during its leave',
+            ['off', 'on', 'off', 'done', 'done', 'on', 'done', 'done'],
+          ],
+        ]
+        test.each(scripts)('%s', (_, steps) =>
+          transitionLog(srcs, steps, { init: { ready: false } }),
+        )
+      })
+
+      // a component is a child to animate however empty its root, as to vdom
+      test('a fallback component whose root renders later', () =>
+        transitionLog(
+          {
+            Fb: `
+              <template>
+                <div v-if="data.ready" class="fallback">fb</div>
+              </template>`,
+            Outer: transitionOutlet(mode, '<components.Fb />'),
+            App: contentApp('Outer'),
+          },
+          ['off', d => (d.ready = true), 'done', 'done'],
+          { init: { ready: false } },
+        ))
+
+      // nested outlets whose fallbacks grow an element at once: the nearer
+      // one shows, the root still leaving is placed by its anchor only
+      test('nested fallbacks growing an element together', () =>
+        transitionLog(
+          {
+            Outer: transitionOutlet(
+              mode,
+              '<div v-if="data.far" class="far">far</div>',
+            ),
+            Middle: `
+              <template>
+                <components.Outer>
+                  <slot><div v-if="data.near" class="near">near</div></slot>
+                </components.Outer>
+              </template>`,
+            App: contentApp('Middle'),
+          },
+          [
+            'off',
+            d => {
+              d.far = true
+              d.near = true
+            },
+            'done',
+            'done',
+          ],
+          { init: { far: false, near: false } },
+        ))
+
+      // the swap is paired once the fallback has a child: the Transition's
+      // other branches wait on the leave as they would under vdom, also
+      // once the content came back meanwhile
+      const switchingOutlet = `
+        <template>
+          <Transition
+            mode="${mode}"
+            :css="false"
+            @before-enter="data.onEnter"
+            @leave="data.onLeave"
+          >
+            <slot v-if="data.outlet"><div class="fallback">fb</div></slot>
+            <i v-else class="alt">alt</i>
+          </Transition>
+        </template>`
+      const switches: [string, Parameters<typeof transitionLog>[1]][] = [
+        [
+          'while the fallback waits',
+          ['off', d => (d.outlet = false), 'done', 'done'],
+        ],
+        [
+          'after the content returned during the leave',
+          ['off', 'on', d => (d.outlet = false), 'done', 'done'],
+        ],
+      ]
+      test.each(switches)('an enclosing branch switched %s', (_, steps) =>
+        transitionLog(
+          { Outer: switchingOutlet, App: contentApp('Outer') },
+          steps,
+          { init: { outlet: true } },
+        ),
+      )
+    })
 
     // A fallback-body root leaving empty has no incoming branch: it leaves
     // right away, like a vdom child swapping to a comment.
@@ -8883,22 +9014,57 @@ describe('content and fallback sequenced under a Transition', () => {
 
     // The leave of content handed to the next entering block goes to the
     // fallback that actually enters, past a nearer provider whose fallback
-    // is invalid.
-    test('content leaving past an invalid nearer fallback', () =>
+    // is invalid; the root that left is found through that outlet also when
+    // a comment makes the content an array.
+    test.each([
+      ['', '<slot><i v-if="data.y">mf</i></slot>'],
+      [
+        ' beside a comment',
+        `<!-- keep -->
+                <slot><i v-if="data.y" class="mf">mf</i></slot>`,
+      ],
+    ])('content leaving past an invalid nearer fallback%s', (_, body) =>
       transitionLog(
         {
           Outer: transitionOutlet(mode),
           Middle: `
             <template>
               <components.Outer>
-                <slot><i v-if="data.y">mf</i></slot>
+                ${body}
               </components.Outer>
             </template>`,
           App: contentApp('Middle'),
         },
         ['off', 'done', 'on', 'done'],
         { init: { y: false } },
-      ))
+      ),
+    )
+
+    // the root that left is found below a structural wrapper around a
+    // forwarding outlet exposing its own empty fallback
+    test.each([
+      ['v-if', 'v-if="data.wrap"'],
+      ['v-for', 'v-for="i in data.items" :key="i"'],
+    ])(
+      'content leaving below a template %s around a forwarding outlet',
+      (_, dir) =>
+        transitionLog(
+          {
+            Outer: transitionOutlet(mode),
+            Middle: `
+            <template>
+              <components.Outer>
+                <template ${dir}>
+                  <slot><i v-if="data.y" class="mf">mf</i></slot>
+                </template>
+              </components.Outer>
+            </template>`,
+            App: contentApp('Middle'),
+          },
+          ['off', 'done', 'on', 'done'],
+          { init: { y: false, wrap: true, items: [1] } },
+        ),
+    )
   })
 
   describe.each(['out-in', 'in-out', ''])('mode "%s"', mode => {
@@ -9415,6 +9581,33 @@ describe('content and fallback sequenced under a Transition', () => {
     expect(leaving.vdom).toEqual(['s', 's', 's', 's'])
     expect(leaving.vapor).toEqual(leaving.vdom)
   })
+
+  // a slot root that left to nothing (unpaired) and rendered past its leave:
+  // the branch a later leave holds is that leave's to release, whichever of
+  // the two ends first
+  test('a leave rendered past does not release the branch a later leave holds', () =>
+    transitionLog(
+      {
+        Outer: transitionOutlet(
+          'out-in',
+          '<i v-if="data.ready" class="fallback">fb</i>',
+        ),
+        App: `
+          <template>
+            <components.Outer>
+              <component :is="data.tag" :class="data.tag" />
+            </components.Outer>
+          </template>`,
+      },
+      [
+        d => (d.tag = null),
+        d => (d.tag = 'p'),
+        d => (d.tag = 'span'),
+        'done',
+        'done',
+      ],
+      { init: { ready: false, tag: 'div' }, selector: 'div,p,span' },
+    ))
 
   describe('the hook log after every step, like vdom', () => {
     type Step = ((data: any) => void) | 'done'

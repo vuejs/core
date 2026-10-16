@@ -122,6 +122,12 @@ export function isValidBlock(
     if (isInteropEnabled && block.isBlockValid) {
       return block.isBlockValid(componentAsValid)
     }
+    // out-in: a branch leaving with none to follow stays behind in the DOM
+    // only, as vdom's unmounted child does
+    if (isTransitionEnabled && (block as DynamicFragment).leaving) {
+      const pending = (block as DynamicFragment).pending
+      if (pending && !pending.render) return false
+    }
     return isValidBlock(block.nodes, componentAsValid)
   }
 }
@@ -238,6 +244,9 @@ export function insertFragment(
     insertNode(blockAnchor, parent, anchor, parentSuspense)
     anchor = blockAnchor
   }
+  // a leaving branch is out of the tree: it finishes where it is, the
+  // fragment goes on from its anchor
+  if (isTransitionEnabled && (block as DynamicFragment).leaving) return
   if (block.insert) {
     block.insert(
       parent,

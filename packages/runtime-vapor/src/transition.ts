@@ -30,7 +30,7 @@ type DeferBranchUpdateDuringLeaveFn = (
 type RemoveBranchWithLeaveFn = (
   frag: DynamicFragment,
   transition: VaporTransitionHooks,
-  parent: ParentNode | null,
+  parent: ParentNode,
   render: BlockFn | undefined,
   key: any,
   noScope: boolean,
@@ -39,14 +39,21 @@ type RemoveBranchWithLeaveFn = (
 
 export let applyTransitionHooks: ApplyTransitionHooksFn
 export let applyTransitionLeaveHooks: ApplyTransitionLeaveHooksFn
+// `cb` follows the leave a root of the block is still running on its own
+// (out-in, to nothing), if any; whether the block has a child to animate
+export let awaitLeavingRoot: (block: Block, cb: () => void) => boolean
+export let hasTransitionChild: (block: Block) => boolean
 // Branch-switch scheduling for DynamicFragment.update(): defer the incoming
 // branch while a leave is in progress, and apply leave hooks (plus the
 // deferred re-render for out-in) when tearing down the outgoing branch.
 export let deferBranchUpdateDuringLeave: DeferBranchUpdateDuringLeaveFn
 export let removeBranchWithLeave: RemoveBranchWithLeaveFn
-// whether a fragment's Transition mode is its own to apply: not inherited
-// across a child component, where only the enter / leave hooks reach
-export let ownsTransitionMode: (frag: VaporFragment) => boolean
+// whether `hooks` carry a mode of the block's own to apply: vapor hooks not
+// inherited across a child component, where only the enter / leave hooks reach
+export let ownsTransitionMode: (
+  hooks: TransitionHooks,
+  frag?: VaporFragment,
+) => boolean
 
 export let isTransitionEnabled = false
 
@@ -55,7 +62,9 @@ export function registerTransitionHooks(
   applyLeaveHooks: ApplyTransitionLeaveHooksFn,
   deferBranchUpdate: DeferBranchUpdateDuringLeaveFn,
   removeBranch: RemoveBranchWithLeaveFn,
-  ownsMode: (frag: VaporFragment) => boolean,
+  ownsMode: (hooks: TransitionHooks, frag?: VaporFragment) => boolean,
+  awaitLeaving: (block: Block, cb: () => void) => boolean,
+  transitionChild: (block: Block) => boolean,
 ): void {
   isTransitionEnabled = true
   ownsTransitionMode = ownsMode
@@ -63,6 +72,8 @@ export function registerTransitionHooks(
   applyTransitionLeaveHooks = applyLeaveHooks
   deferBranchUpdateDuringLeave = deferBranchUpdate
   removeBranchWithLeave = removeBranch
+  awaitLeavingRoot = awaitLeaving
+  hasTransitionChild = transitionChild
 }
 
 // Hooks vapor resolves from (its own, or a vdom Transition's for a vapor slot,

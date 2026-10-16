@@ -99,6 +99,9 @@ export class VaporFragment<
   isBlockValid?: (componentAsValid?: boolean) => boolean
   // a slot host: its content, in the DOM ahead of the fallback it exposes
   getContent?(): Block
+  // a slot host patching vnode content: `cb` follows the leave its content
+  // root is running on its own, if any
+  awaitLeavingRoot?(cb: () => void): boolean
   // a slot outlet: the slot's name, the stem of the keys Transition composes
   // under its branches (`_<name>`, `_<name>_fb`)
   slotName?: string
@@ -172,9 +175,9 @@ export class RenderContextFragment<
 > extends VaporFragment<T> {
   readonly renderInstance: GenericComponentInstance | null = currentInstance
   readonly keepAliveCtx?: VaporKeepAliveContext | null
-  // The context this fragment's content renders under. Slot outlets replace
-  // it with their own cell right after construction (see createSlot), so late
-  // renders create their DOM under the outlet's context.
+  // The context this fragment's content renders under. A slot outlet is built
+  // under its own cell (see createSlot), so late renders create their DOM
+  // under the outlet's context.
   ctx: RenderContext = currentRenderContext
 
   constructor(nodes: T, flags: number = FRAGMENT) {
@@ -465,6 +468,7 @@ export class DynamicFragment extends RenderContextFragment {
         }
         if (
           transition &&
+          parent &&
           removeBranchWithLeave(
             this,
             transition,
@@ -483,6 +487,12 @@ export class DynamicFragment extends RenderContextFragment {
         } else {
           removeBranch()
         }
+      }
+      // rendering past a leave of its own (unpaired): the root that left
+      // finishes where it is, the fragment goes on without it
+      if (isTransitionEnabled && this.leaving) {
+        this.leaving = false
+        this.pending = undefined
       }
 
       reusingDeferredAnchor = isHydrating
@@ -611,7 +621,8 @@ export class SlotFragment
   fallbackScope?: EffectScope
   renderedFallbacks?: RenderedSlotFallback[]
   lastNodesValid?: boolean
-  held?: 'leaving' | 'placing'
+  held?: SlotResolutionState['held']
+  holdsContent = true
   pendingRecheck = false
   isReconciling = false
   private content: Block = EMPTY_BLOCK

@@ -14679,10 +14679,13 @@ describe('vdom content in a vapor outlet, sequenced by the outlet', () => {
       init = {},
       steps = ['off', 'done', 'on', 'done'],
       vdomOnly = ['App'],
+      selector = 'div, span',
     }: {
       init?: Record<string, any>
+      // `done` releases the latest leave, `done:<class>` that element's
       steps?: string[]
       vdomOnly?: string[]
+      selector?: string
     } = {},
   ) => {
     const run = async (vapor: boolean) => {
@@ -14690,10 +14693,12 @@ describe('vdom content in a vapor outlet, sequenced by the outlet', () => {
         show: true,
         ...init,
         log: [] as string[],
+        dones: {} as Record<string, () => void>,
         onEnter: (el: Element) => data.value.log.push('enter:' + el.className),
         onLeave: (el: Element, done: () => void) => {
           data.value.log.push('leave:' + el.className)
           data.value.done = done
+          data.value.dones[el.className] = done
         },
         onEnterAsync: (el: Element, done: () => void) => {
           data.value.enterDone = done
@@ -14728,6 +14733,10 @@ describe('vdom content in a vapor outlet, sequenced by the outlet', () => {
         if (step === 'done') {
           data.value.done && data.value.done()
           data.value.done = undefined
+        } else if (step.startsWith('done:')) {
+          const done = data.value.dones[step.slice(5)]
+          done && done()
+          delete data.value.dones[step.slice(5)]
         } else if (step === 'enterDone') {
           data.value.enterDone && data.value.enterDone()
           data.value.enterDone = undefined
@@ -14735,13 +14744,18 @@ describe('vdom content in a vapor outlet, sequenced by the outlet', () => {
           data.value.show = step === 'on'
         } else {
           const [key, value] = step.split('=')
-          data.value[key] = value === 'true'
+          data.value[key] =
+            value === 'true' || value === 'false'
+              ? value === 'true'
+              : value === 'null'
+                ? null
+                : value
         }
         await nextTick()
         log.push(
           step +
             ' ' +
-            Array.from(root.querySelectorAll('div, span'))
+            Array.from(root.querySelectorAll(selector))
               .map(el => el.className)
               .join(','),
         )
@@ -14793,6 +14807,167 @@ describe('vdom content in a vapor outlet, sequenced by the outlet', () => {
         App: contentApp('Parent'),
       }),
   )
+
+  // A fallback rendering no element at the swap is no transition child: the
+  // content leaves on its own, and the element the fallback renders
+  // meanwhile enters at once, as it does after vdom's comment child.
+  describe('out-in: a fallback growing an element while the content leaves', () => {
+    const fallback = '<div v-if="data.ready" class="fallback">fb</div>'
+    const forwardingParent = `<template><components.Outer><slot /></components.Outer></template>`
+    const shapes = Object.entries<Record<string, string>>({
+      local: {
+        Outer: interopTransitionOutlet('out-in', fallback),
+        App: contentApp('Outer'),
+      },
+      forwarded: {
+        Outer: interopTransitionOutlet('out-in', fallback),
+        Parent: forwardingParent,
+        App: contentApp('Parent'),
+      },
+    })
+    describe.each(shapes)('%s', (_, srcs) => {
+      const scripts: [string, string[]][] = [
+        [
+          'growing it after the swap',
+          ['off', 'ready=true', 'done', 'on', 'done'],
+        ],
+        [
+          'with the element at the swap',
+          ['ready=true', 'off', 'done', 'on', 'done'],
+        ],
+        [
+          'the content back meanwhile',
+          ['off', 'ready=true', 'on', 'done', 'done'],
+        ],
+      ]
+      test.each(scripts)('%s', (_, steps) =>
+        interopTransitionLog(srcs, { init: { ready: false }, steps }),
+      )
+    })
+
+    // forwarded vdom content toggled off, on and off again while its leave
+    // runs: the swaps suspended on that leave resume when it ends
+    test('forwarded, toggled off and on and off during the leave', () =>
+      interopTransitionLog(
+        {
+          Outer: interopTransitionOutlet(
+            'out-in',
+            '<div class="fallback">fb</div>',
+          ),
+          Parent: forwardingParent,
+          App: contentApp('Parent'),
+        },
+        { steps: ['off', 'on', 'off', 'done', 'done', 'on', 'done', 'done'] },
+      ))
+
+    // a vapor slot in a vdom outlet: the Transition around the outlet
+    // sequences the fallback, its own child, on its own state
+    test('a vapor slot whose vdom outlet fallback empties while the content leaves', () =>
+      interopTransitionLog(
+        {
+          Child: interopTransitionOutlet(
+            'out-in',
+            '<div v-if="data.fb" class="fallback">fb</div>',
+          ),
+          App: contentApp('Child'),
+        },
+        {
+          init: { fb: true },
+          steps: ['off', 'fb=false', 'done', 'on', 'done', 'done'],
+          vdomOnly: ['Child'],
+        },
+      ))
+
+    // a vapor slot in a vdom outlet: the fallback waiting on the content's
+    // leave is a vdom fragment never mounted, discarded as such
+    test('a vapor slot whose content returns while the vdom outlet fallback waits', () =>
+      interopTransitionLog(
+        {
+          Child: interopTransitionOutlet(
+            'out-in',
+            '<p class="fallback">fb</p>',
+          ),
+          App: contentApp('Child'),
+        },
+        { steps: ['off', 'on', 'done', 'done'], vdomOnly: ['Child'] },
+      ))
+
+    // a vapor forwarding outlet given empty vdom content: the root that
+    // leaves is its own fallback's, exposed by the interop host itself
+    test('the fallback root of a forwarding outlet with empty vdom content leaving', () =>
+      interopTransitionLog(
+        {
+          Outer: interopTransitionOutlet(
+            'out-in',
+            '<div class="fallback">fb</div>',
+          ),
+          Mid: `
+            <template>
+              <components.Outer>
+                <slot><i v-if="data.local" class="local">local</i></slot>
+              </components.Outer>
+            </template>`,
+          App: `
+            <template>
+              <components.Mid>
+                <template #default></template>
+              </components.Mid>
+            </template>`,
+        },
+        {
+          init: { local: true },
+          steps: ['local=false', 'done', 'local=true', 'done'],
+        },
+      ))
+
+    // a root that left to nothing and was rendered past: the leave of the
+    // root after it is the one the fallback and a suspended swap wait on,
+    // whichever of the two ends first
+    const dynamicContentApp = `
+      <template>
+        <components.Outer>
+          <component :is="data.tag" :class="data.tag" />
+        </components.Outer>
+      </template>`
+    test('the fallback waits on the latest leave, not one the content rendered past', () =>
+      interopTransitionLog(
+        {
+          Outer: interopTransitionOutlet(
+            'out-in',
+            '<i v-if="data.ready" class="fallback">fb</i>',
+          ),
+          App: dynamicContentApp,
+        },
+        {
+          init: { tag: 'div', ready: false },
+          steps: [
+            'tag=null',
+            'tag=p',
+            'ready=true',
+            'tag=null',
+            'done:div',
+            'done:p',
+          ],
+          selector: 'div, p, i',
+        },
+      ))
+
+    test('a swap suspended on its own leave resumes after it, not after one the content rendered past', () =>
+      interopTransitionLog(
+        {
+          Outer: interopTransitionOutlet(
+            'out-in',
+            '<i v-if="data.ready" class="fallback">fb</i>',
+          ),
+          App: dynamicContentApp,
+        },
+        {
+          init: { tag: 'div', ready: false },
+          steps: ['tag=null', 'tag=p', 'tag=span', 'done:div', 'done:p'],
+          selector: 'div, p, span',
+        },
+      ))
+  })
 
   // the order vdom runs the hooks, animatable or not
   test.each(['default', 'out-in', 'in-out'])(

@@ -644,7 +644,9 @@ function forwardDelayedLeave(
 
 /**
  * Prepares an outgoing VNode when the incoming branch belongs to another
- * renderer. Returns true when out-in must defer the incoming branch.
+ * renderer. Returns true under out-in, where that branch is a comment
+ * child's: no mode holds for it, the leave runs on its own and
+ * `resumeAfterLeave` follows it.
  *
  * @internal
  */
@@ -661,9 +663,19 @@ export function prepareTransitionLeave(
     return false
   }
 
+  const leavingHooks = prepareLeavingTransitionHooks(
+    previousInner,
+    props,
+    state,
+    instance,
+  )
+  if (props.mode === 'out-in') {
+    leavingHooks.afterLeave = resumeAfterLeave
+    return true
+  }
   return applyTransitionModeSwitch(
     previousInner,
-    prepareLeavingTransitionHooks(previousInner, props, state, instance),
+    leavingHooks,
     enterHooks ? () => enterHooks : undefined,
     props,
     state,

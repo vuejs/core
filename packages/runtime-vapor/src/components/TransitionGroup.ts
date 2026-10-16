@@ -26,7 +26,7 @@ import {
   vShowHidden,
   warn,
 } from '@vue/runtime-dom'
-import { extend, isArray } from '@vue/shared'
+import { NO, extend, isArray } from '@vue/shared'
 import {
   type Block,
   type BlockFn,
@@ -120,13 +120,7 @@ const VaporTransitionGroupImpl = /*@__PURE__*/ defineVaporComponent({
     expose()
 
     if (!isTransitionEnabled) {
-      registerTransitionHooks(
-        applyTransitionHooksImpl,
-        () => false,
-        () => false,
-        () => false,
-        () => false,
-      )
+      registerTransitionHooks(applyTransitionHooksImpl, NO, NO, NO, NO, NO, NO)
     }
 
     const instance = currentInstance as VaporComponentInstance
