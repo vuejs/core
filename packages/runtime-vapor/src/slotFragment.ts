@@ -227,7 +227,7 @@ export function markSlotResolutionDirty(state: SlotResolutionState): void {
   recheckSlotResolution(state)
 }
 
-function clearSlotFallback(
+export function clearSlotFallback(
   state: SlotResolutionState,
   parentNode: ParentNode | null = state.getParentNode(),
 ): void {

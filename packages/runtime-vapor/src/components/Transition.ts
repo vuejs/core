@@ -442,9 +442,19 @@ export function applyTransitionHooksImpl(
   // the next branch resolves its own when it renders
   if (refresh && child && removingLeave(child)) return hooks
   if (!child) {
-    // vdom keeps the current child for a component child, however long its
-    // root stays empty; only a branch with no component is an empty child
-    if (!refresh && !hasComponent(block)) releaseDelayedLeave(hooks)
+    if (!refresh) {
+      // vdom keeps the current child for a component child, however long its
+      // root stays empty, and the leave handed to it with it: the root
+      // entering later runs it. Only a branch with no component is empty.
+      if (hasComponent(block)) {
+        const pendingLeave = claimPendingLeave(hooks.state)
+        if (pendingLeave) {
+          hooks = extend({}, hooks, { delayedLeave: pendingLeave })
+        }
+      } else {
+        releaseDelayedLeave(hooks)
+      }
+    }
     // set transition hooks on fragments for later use
     fragments.forEach(f => (f.$transition = hooks))
     // warn if no child and no fragments
@@ -629,7 +639,7 @@ function releaseDelayedLeave(hooks: VaporTransitionHooks): void {
   }
 }
 
-function queuePendingLeave(
+export function queuePendingLeave(
   state: VaporTransitionState,
   leave: () => void,
 ): void {
@@ -651,7 +661,7 @@ function queuePendingLeave(
   })
 }
 
-function claimPendingLeave(
+export function claimPendingLeave(
   state: VaporTransitionState,
 ): (() => void) | undefined {
   const leave = state.pendingLeave
