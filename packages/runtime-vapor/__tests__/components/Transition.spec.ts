@@ -2815,6 +2815,79 @@ describe('Transition', () => {
     },
   )
 
+  test('in-out: a KeepAlive child is deactivated by a leave that waits for the enter', async () => {
+    const log: string[] = []
+    const enters: Record<string, () => void> = {}
+    const leaves: Record<string, () => void> = {}
+    const data = ref<any>({
+      view: 'A',
+      log,
+      onEnter: (el: Element, done: () => void) => {
+        log.push(`enter:${el.id}`)
+        enters[el.id] = done
+      },
+      onLeave: (el: Element, done: () => void) => {
+        log.push(`leave:${el.id}`)
+        leaves[el.id] = done
+      },
+    })
+    const view = (id: string) =>
+      compile(
+        `<script setup vapor>
+          import { onActivated, onDeactivated, onUnmounted } from 'vue'
+          const data = _data
+          onActivated(() => data.value.log.push('activated:${id}'))
+          onDeactivated(() => data.value.log.push('deactivated:${id}'))
+          onUnmounted(() => data.value.log.push('unmounted:${id}'))
+        </script>
+        <template><div id="${id}">${id}</div></template>`,
+        data,
+      )
+    const App = compile(
+      `<script setup vapor>
+        const data = _data
+        const views = _components
+      </script>
+      <template>
+        <Transition mode="in-out" :css="false" @enter="data.onEnter" @leave="data.onLeave">
+          <KeepAlive>
+            <component :is="views[data.view]" />
+          </KeepAlive>
+        </Transition>
+      </template>`,
+      data,
+      { A: view('a'), B: view('b') },
+    )
+    const { host } = define(App).render()
+    const html = () => stripAnchors(host.innerHTML)
+    const a = host.querySelector('#a')
+    log.length = 0
+
+    data.value.view = 'B'
+    await nextTick()
+    expect(log).toEqual(['deactivated:a', 'enter:b', 'activated:b'])
+    expect(html()).toBe('<div id="a">a</div><div id="b">b</div>')
+
+    enters.b()
+    expect(log.slice(3)).toEqual(['leave:a'])
+    leaves.a()
+    await nextTick()
+    expect(html()).toBe('<div id="b">b</div>')
+
+    // a was kept alive: switching back reactivates the same element
+    log.length = 0
+    data.value.view = 'A'
+    await nextTick()
+    expect(log).toEqual(['deactivated:b', 'enter:a', 'activated:a'])
+    expect(host.querySelector('#a')).toBe(a)
+
+    enters.a()
+    expect(log.slice(3)).toEqual(['leave:b'])
+    leaves.b()
+    await nextTick()
+    expect(html()).toBe('<div id="a">a</div>')
+  })
+
   const outInTransition = (content: string) =>
     `<Transition mode="out-in" :css="false" @leave="data.onLeave" @enter="data.onEnter">
       ${content}

@@ -543,6 +543,8 @@ export function applyTransitionLeaveHooksImpl(
   // updates for it; in-out stores the handoff on the Transition, where the
   // next entering block claims it, and runs it after the flush when none does.
   unpaired = false,
+  // in-out: the fragment switching to the incoming branch
+  owner?: VaporFragment,
 ): boolean {
   const leavingBlock = findTransitionBlock(block)
   if (!leavingBlock) return false
@@ -615,7 +617,9 @@ export function applyTransitionLeaveHooksImpl(
         releaseDelayedLeave(enterHooks)
         queuePendingLeave(state, delayedLeaveCb)
       } else {
-        enterHooks.delayedLeave = delayedLeaveCb
+        // to the hooks the incoming branch holds when the leave starts: the
+        // copy, or its own once it rendered first (a KeepAlive's late removal)
+        ;(owner ? owner.$transition! : enterHooks).delayedLeave = delayedLeaveCb
       }
     }
   }
@@ -916,6 +920,7 @@ function removeBranchWithLeaveImpl(
         enterHooks,
         afterLeave,
         emptySlotRoot && (mode === 'out-in' || mode === 'in-out'),
+        frag,
       ) &&
       mode === 'out-in'
     ) {
