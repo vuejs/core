@@ -1741,6 +1741,73 @@ describe('Transition', () => {
     },
   )
 
+  // relayed to the component child's root chain as inherited enter / leave
+  // hooks only: the mode stays the vdom Transition's own, as for a v-if root
+  test.each(['out-in', 'in-out'])(
+    'a slot fallback swap inside the vapor child animates under relayed hooks with mode %s',
+    async mode => {
+      const data = ref({ show: false })
+      const log: string[] = []
+      const dones: (() => void)[] = []
+      const Outlet = compile(
+        `<template>
+          <slot><p class="fallback">fallback</p></slot>
+        </template>`,
+        data,
+      )
+      const Panel = compile(
+        `<script setup vapor>
+          const props = defineProps({ show: Boolean })
+          const components = _components
+        </script>
+        <template>
+          <components.Outlet>
+            <div v-if="props.show" class="content">content</div>
+          </components.Outlet>
+        </template>`,
+        data,
+        { Outlet },
+      )
+      const App = defineComponent({
+        setup() {
+          return () =>
+            h(
+              Transition,
+              {
+                mode: mode as 'out-in' | 'in-out',
+                css: false,
+                onBeforeEnter: (el: Element) =>
+                  log.push('enter:' + el.className),
+                onLeave: (el: Element, done: () => void) => {
+                  log.push('leave:' + el.className)
+                  dones.push(done)
+                },
+              },
+              () => h(Panel, { show: data.value.show }),
+            )
+        },
+      })
+      const { host } = defineInterop(App).render()
+      expect(host.querySelector('.fallback')).not.toBeNull()
+
+      data.value.show = true
+      await nextTick()
+      expect(log).toEqual(['leave:fallback', 'enter:content'])
+      dones.shift()!()
+      await nextTick()
+      expect(host.querySelector('.content')).not.toBeNull()
+      expect(host.querySelector('.fallback')).toBeNull()
+
+      data.value.show = false
+      await nextTick()
+      expect(log.slice(2)).toEqual(['leave:content', 'enter:fallback'])
+      dones.shift()!()
+      await nextTick()
+      expect(host.querySelector('.fallback')).not.toBeNull()
+      expect(host.querySelector('.content')).toBeNull()
+    },
+  )
+
   test('preserves multi-element vdom slot content nested under transition root', () => {
     const data = ref({})
     const Child = compile(
@@ -2901,6 +2968,76 @@ describe('Transition', () => {
     expect(vapor.trace).toEqual(vdom.trace)
     expect(vapor.settled).toEqual(phases.map(p => p.text))
   })
+
+  // vapor extends the hooks to the slot swap at the child's root; the mode
+  // stays the Transition's own there too, as for a v-if root (vdom warns on
+  // the non-element root instead of animating it, so no parity run)
+  test.each(['out-in', 'in-out'])(
+    'a slot fallback swap at the root of the child component inherits the hooks, not mode %s',
+    async mode => {
+      const data: any = ref({
+        show: false,
+        log: [] as string[],
+        dones: [] as (() => void)[],
+        onEnter: (el: Element) => data.value.log.push('enter:' + el.className),
+        onLeave: (el: Element, done: () => void) => {
+          data.value.log.push('leave:' + el.className)
+          data.value.dones.push(done)
+        },
+      })
+      const Outlet = compile(
+        `<template>
+          <slot><p class="fallback">fallback</p></slot>
+        </template>`,
+        data,
+      )
+      const Panel = compile(
+        `<script setup vapor>
+          const props = defineProps({ show: Boolean })
+          const components = _components
+        </script>
+        <template>
+          <components.Outlet>
+            <div v-if="props.show" class="content">content</div>
+          </components.Outlet>
+        </template>`,
+        data,
+        { Outlet },
+      )
+      const App = compile(
+        `<template>
+          <Transition
+            mode="${mode}"
+            :css="false"
+            @before-enter="data.onEnter"
+            @leave="data.onLeave"
+          >
+            <components.Panel :show="data.show" />
+          </Transition>
+        </template>`,
+        data,
+        { Panel },
+      )
+      const { host } = define(App).render()
+      const { log, dones } = data.value
+
+      data.value.show = true
+      await nextTick()
+      expect(log).toEqual(['leave:fallback', 'enter:content'])
+      dones.shift()()
+      await nextTick()
+      expect(host.querySelector('.content')).not.toBeNull()
+      expect(host.querySelector('.fallback')).toBeNull()
+
+      data.value.show = false
+      await nextTick()
+      expect(log.slice(2)).toEqual(['leave:content', 'enter:fallback'])
+      dones.shift()()
+      await nextTick()
+      expect(host.querySelector('.fallback')).not.toBeNull()
+      expect(host.querySelector('.content')).toBeNull()
+    },
+  )
 
   test('out-in renders the latest dynamic default slot after a leave inside it', async () => {
     const { leaves, onLeave } = collectLeaves()

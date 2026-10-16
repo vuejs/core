@@ -29,10 +29,13 @@ export interface SlotBoundaryContext {
   // under this boundary may have changed; routes into the slot resolution
   // state machine (markSlotResolutionDirty).
   markDirty: () => void
-  // Whether slot roots under this boundary render held, out of the DOM: the
-  // host shows a fallback under a Transition and places the content itself
-  // once it takes over, after the fallback's leave.
+  // Whether slot roots under this boundary render detached: the host shows
+  // a fallback under a Transition and places the content itself once it
+  // takes over (sequenced by the mode), or an enclosing outlet does.
   isHolding: () => boolean
+  // The enclosing outlet's part of `isHolding`: that outlet places and
+  // sequences this host's content with its own.
+  isHeld: () => boolean
 }
 
 export function withSlotBoundary<R>(

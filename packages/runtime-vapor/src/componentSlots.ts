@@ -57,6 +57,7 @@ import {
 import { createElement } from './dom/node'
 import { setDynamicProps } from './dom/prop'
 import { interopSlotsKey, isInteropEnabled } from './vdomInteropState'
+import { isTransitionEnabled } from './transition'
 import { isAsyncComponentEnabled } from './asyncComponentState'
 import { renderWithSlotScopeIds } from './scopeId'
 import { setElementScopeIds } from './dom/scopeIdStamp'
@@ -477,6 +478,8 @@ export function createSlot(
         resolvedSlot && !isFunction(resolvedSlot) && hasOwn(resolvedSlot, 'key')
           ? resolvedSlot.key
           : render || fallback
+      // Transition keys the outlet's branches by the slot's name
+      if (isTransitionEnabled) outlet.slotName = slotName
       if (slotFragment) {
         slotFragment.updateSlot(render, fallback, key)
       } else {

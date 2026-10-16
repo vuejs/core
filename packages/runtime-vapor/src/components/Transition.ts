@@ -58,11 +58,13 @@ import {
   isDynamicFragment,
   isForFragment,
   isFragment,
+  isSlotOutletFragment,
   isVaporSlotOutlet,
   runWithRenderCtx,
 } from '../fragment'
 import { isKeepAliveEnabled } from '../keepAlive'
-import { DYNAMIC, TELEPORT } from '../fragmentFlags'
+import { DYNAMIC, SLOT_ROOT, TELEPORT } from '../fragmentFlags'
+import { isSlotFallbackBlock } from '../slotFragment'
 import {
   currentHydrationNode,
   isHydrating,
@@ -88,6 +90,7 @@ export const ensureTransitionHooksRegistered = (): void => {
       applyTransitionLeaveHooksImpl,
       deferBranchUpdateDuringLeaveImpl,
       removeBranchWithLeaveImpl,
+      ownsMode,
     )
   }
 }
@@ -513,6 +516,11 @@ export function applyTransitionLeaveHooksImpl(
   block: Block,
   enterHooks: VaporTransitionHooks,
   afterLeaveCb: () => void,
+  // No incoming branch is paired with this leave (a slot root leaving empty,
+  // a slot fallback leaving before its content): out-in does not hold branch
+  // updates for it; in-out stores the handoff on the Transition, where the
+  // next entering block claims it, and runs it after the flush when none does.
+  unpaired = false,
 ): boolean {
   const leavingBlock = findTransitionBlock(block)
   if (!leavingBlock) return false
@@ -528,9 +536,9 @@ export function applyTransitionLeaveHooksImpl(
 
   const { mode } = props
   if (mode === 'out-in') {
-    state.isLeaving = true
+    if (!unpaired) state.isLeaving = true
     leavingHooks.afterLeave = () => {
-      state.isLeaving = false
+      if (!unpaired) state.isLeaving = false
       afterLeaveCb()
       leavingBlock.$transition = undefined
       delete leavingHooks.afterLeave
@@ -557,7 +565,14 @@ export function applyTransitionLeaveHooksImpl(
           delete leavingNodes[leavingKey]
         }
       }
-      enterHooks.delayedLeave = delayedLeaveCb
+      if (unpaired) {
+        // The leaving block's own enter no longer completes: a leave it
+        // still held waits on with this one.
+        releaseDelayedLeave(enterHooks)
+        queuePendingLeave(state, delayedLeaveCb)
+      } else {
+        enterHooks.delayedLeave = delayedLeaveCb
+      }
     }
   }
   return true
@@ -637,7 +652,7 @@ function createDelayedLeave(
 // vdom applies `mode` where Transition itself re-renders, i.e. down to its
 // child component; a fragment inside that component only inherits the
 // enter / leave hooks.
-function ownsMode(frag: DynamicFragment): boolean {
+export function ownsMode(frag: VaporFragment): boolean {
   const ctx = keyContexts.get(frag)
   return !ctx || !ctx.type
 }
@@ -689,21 +704,26 @@ function removeBranchWithLeaveImpl(
     // persisted roots are toggled in place; mode only sequences structural
     // swaps, and a skipped persisted leave would never fire afterLeave.
     !transition.persisted &&
+    // a detached branch (a held slot root) has nothing to animate
+    parent &&
     // in-out only works when there is an incoming branch to trigger
     // delayedLeave; otherwise the current branch should leave immediately.
-    (mode !== 'in-out' || render) &&
+    // A slot root leaving empty may have a fallback entering for it, its
+    // outlet's or an enclosing one's, decided afterwards: its leave waits
+    // on the Transition for that, and runs after the flush otherwise.
+    (mode !== 'in-out' || render || frag.__vf & SLOT_ROOT) &&
     // out-in only needs to defer when the current branch actually has
     // a rendered child to leave before mounting the next one.
     (mode !== 'out-in' || isValidBlock(frag.nodes))
   ) {
     const instance = currentInstance
     let enterHooks = transition
-    if (mode === 'in-out') {
+    if (mode === 'in-out' && render) {
       // The current child's hooks may still hold the handoff its own pending
       // enter will run. Hand this leave to the incoming branch through a copy.
       enterHooks = frag.$transition = extend({}, transition)
     }
-    applyTransitionLeaveHooksImpl(frag.nodes, enterHooks, () => {
+    const afterLeave = () => {
       frag.leaving = false
       // Unmounting cuts the leave short and runs afterLeave synchronously;
       // the pending branch must not be rendered into the torn-down tree.
@@ -740,8 +760,8 @@ function removeBranchWithLeaveImpl(
         return
       }
       // where the fragment is now: a KeepAlive may have moved it meanwhile
-      const liveParent = parent && frag.anchor.parentNode
-      if (parent && !liveParent) return
+      const liveParent = frag.anchor.parentNode
+      if (!liveParent) return
       // By the time this deferred out-in branch runs, the renderEffect
       // has finished and currentInstance may have changed, so restore
       // the captured instance.
@@ -775,12 +795,18 @@ function removeBranchWithLeaveImpl(
       } finally {
         restoreCurrentInstance(prevInstance)
       }
-    })
+    }
+    applyTransitionLeaveHooksImpl(
+      frag.nodes,
+      enterHooks,
+      afterLeave,
+      mode === 'in-out' && !render,
+    )
     if (mode === 'out-in') {
       // out-in owns the removal here so update() can return before
       // rendering; the next branch mounts from the afterLeave callback.
       frag.leaving = true
-      parent && remove(frag.nodes, parent)
+      remove(frag.nodes, parent)
       return true
     }
   }
@@ -795,6 +821,9 @@ function removeBranchWithLeaveImpl(
 export interface KeyContext {
   key: any
   type?: any
+  // under a slot outlet's branch: keys compose under its key, as the keys
+  // under vdom's slot fragments compose under theirs
+  slot?: boolean
 }
 export const ROOT_KEY_CONTEXT: KeyContext = { key: undefined }
 const keyContexts: WeakMap<VaporFragment, KeyContext> = new WeakMap()
@@ -808,8 +837,31 @@ export function transitionTypeOf(block: VaporComponentInstance): any {
   )
 }
 
+// vdom keys a slot's fragment `_<name>`, its fallback's `_<name>_fb`, and
+// composes the keys under them: the content, the fallback and the fallbacks
+// of the outlets inside either never early-remove each other's leave. An
+// interop outlet has no name here; its fallback still keys apart.
+function enterSlotKeyContext(
+  ctx: KeyContext,
+  outlet: VaporFragment | undefined,
+  fallback: boolean,
+): KeyContext {
+  if (ctx.type) return ctx
+  const name = outlet && outlet.slotName
+  if (name === undefined && !fallback) return ctx
+  const key = (name === undefined ? '' : '_' + name) + (fallback ? '_fb' : '')
+  return { key: ownKey(ctx, key), slot: true }
+}
+
+// a block's own key in `ctx`
+function ownKey(ctx: KeyContext, key: any): any {
+  return key == null ? ctx.key : ctx.slot ? ctx.key + String(key) : key
+}
+
 export function withDefaultKey(ctx: KeyContext, key: any): KeyContext {
-  return ctx.type || key == null ? ctx : { key }
+  return ctx.type || key == null
+    ? ctx
+    : { key: ownKey(ctx, key), slot: ctx.slot }
 }
 
 function isUnresolvedAsyncWrapper(block: VaporComponentInstance): boolean {
@@ -831,7 +883,7 @@ export function enterComponentKeyContext(
   if (ctx.type) return ctx
   return unresolved
     ? withDefaultKey(ctx, block.$key)
-    : { key: block.$key ?? ctx.key, type: transitionTypeOf(block) }
+    : { key: ownKey(ctx, block.$key), type: transitionTypeOf(block) }
 }
 
 // Records the context a fragment's content resolves in and returns that
@@ -849,7 +901,7 @@ function resolveChildIdentity(
   child: ResolvedTransitionBlock,
   ctx: KeyContext,
 ): void {
-  transitionKeys.set(child, ctx.type ? ctx.key : (child.$key ?? ctx.key))
+  transitionKeys.set(child, ctx.type ? ctx.key : ownKey(ctx, child.$key))
   if (ctx.type) setTransitionType(child, ctx.type)
 }
 
@@ -869,7 +921,13 @@ export function resolveTransitionBlock(
       )
     : ROOT_KEY_CONTEXT
   const children: ResolvedTransitionBlock[] = []
-  collectTransitionBlocks(block, onFragment, children, ctx)
+  collectTransitionBlocks(
+    block,
+    onFragment,
+    children,
+    // a slot outlet's branch, applied by the outlet itself
+    enterSlotKeyContext(ctx, owner, isSlotFallbackBlock(block)),
+  )
   return children[0]
 }
 
@@ -949,19 +1007,23 @@ function collectArrayTransitionBlocks(
   let hasFound = false
   for (const c of block) {
     if (c instanceof Comment) continue
-    if (__DEV__ && hasFound) {
-      // warn more than one non-comment child
-      warn(
-        '<transition> can only be used on a single element or component. ' +
-          'Use <transition-group> for lists.',
-      )
-      break
-    }
     const nested: ResolvedTransitionBlock[] = []
     collectTransitionBlocks(c, onFragment, nested, ctx)
-    if (nested.length) children.push(nested[0])
+    // a root rendering nothing is no child, like a comment in vdom; its
+    // fragments still take the hooks for what it renders later
+    if (!nested.length) continue
+    if (hasFound) {
+      if (__DEV__) {
+        // warn more than one non-comment child
+        warn(
+          '<transition> can only be used on a single element or component. ' +
+            'Use <transition-group> for lists.',
+        )
+      }
+      break
+    }
+    children.push(nested[0])
     hasFound = true
-    if (!__DEV__) break
   }
 }
 
@@ -985,12 +1047,15 @@ function collectFragmentTransitionBlocks(
 
   // collect fragments for setting transition hooks
   if (onFragment) onFragment(block)
-  collectTransitionBlocks(
-    block.nodes,
-    onFragment,
-    children,
-    ctx && enterFragmentKeyContext(block, ctx),
-  )
+  let contentCtx = ctx && enterFragmentKeyContext(block, ctx)
+  if (contentCtx && isSlotOutletFragment(block)) {
+    contentCtx = enterSlotKeyContext(
+      contentCtx,
+      block,
+      isSlotFallbackBlock(block.nodes),
+    )
+  }
+  collectTransitionBlocks(block.nodes, onFragment, children, contentCtx)
 }
 
 export function isValidTransitionBlock(

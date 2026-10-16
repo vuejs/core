@@ -1,8 +1,9 @@
 import { EffectScope } from '@vue/reactivity'
-import { NO, extend, isArray } from '@vue/shared'
+import { NOOP, extend } from '@vue/shared'
 import type { MoveType, SuspenseBoundary } from '@vue/runtime-dom'
 import {
   type Block,
+  EMPTY_BLOCK,
   type VaporTransitionHooks,
   insert,
   isValidSlot,
@@ -20,10 +21,11 @@ import {
   applyTransitionHooks,
   applyTransitionLeaveHooks,
   isTransitionEnabled,
+  isVaporTransitionHooks,
+  ownsTransitionMode,
 } from './transition'
-import { setBlockKey } from './helpers/setKey'
 import type { VaporComponentInstance } from './component'
-import { type VaporFragment, isFragment, isInteropFragment } from './fragment'
+import { type VaporFragment, isInteropFragment } from './fragment'
 import { isInteropEnabled } from './vdomInteropState'
 
 // Slot resolution.
@@ -44,9 +46,8 @@ import { isInteropEnabled } from './vdomInteropState'
 //
 // Invalid content stays alive and in the DOM (it consists of anchors and
 // comments only); the fallback is placed after it. Content roots keep
-// rendering in place, except under a Transition showing the fallback, where
-// the host holds them out of the DOM until the content takes over
-// (slotBoundary.ts `isHolding`).
+// rendering in place, except under a Transition, where the host holds them
+// detached until it sequences the swap (slotBoundary.ts `isHolding`).
 //
 // The machine is written against the duck-typed SlotResolutionState interface
 // because it has three hosts: SlotFragment (vapor slots) and the two interop
@@ -61,6 +62,14 @@ export interface RenderedSlotFallback {
 }
 
 const noFallback = (): undefined => undefined
+
+// Blocks committed as a fallback: Transition keys what is under them apart
+// from the content, as vdom keys a slot's fallback fragment `_<name>_fb`.
+const slotFallbackBlocks: WeakSet<object> = new WeakSet()
+
+export function isSlotFallbackBlock(block: Block): boolean {
+  return slotFallbackBlocks.has(block)
+}
 
 // Walks the host's fallback providers outward and renders their fallbacks
 // into `scope`, stopping at the first valid one. Every rendered fallback
@@ -86,10 +95,11 @@ function renderSlotFallbacks(
       if (adopt) boundary.adoptFallback = undefined
       // The body sees no provider of its own: an outlet inside it exposes its
       // invalidity to the host instead of resolving the same fallback again.
-      // Nor is it held by the host it is the fallback of.
+      // It is held only by an enclosing outlet, never by the host it is the
+      // fallback of.
       const body = extend({}, boundary, {
         getFallback: noFallback,
-        isHolding: NO,
+        isHolding: boundary.isHeld,
       })
       const block = boundary.run(
         () =>
@@ -124,6 +134,12 @@ export interface SlotResolutionState {
   // Set by an interop host when its providers changed (a vdom outlet
   // forwarding the slot joined or left); see isSlotFallbackChainStale.
   fallbackChainStale?: boolean
+  // out-in: the fallback leaves on its own first (`leaving`: rechecks wait,
+  // roots render held), then the held roots are placed (`placing`).
+  held?: 'leaving' | 'placing'
+  // an interop host with vapor content: it holds and places that content
+  // like a vapor outlet (a host patching vnode content leaves it in place)
+  holdsContent?: boolean
   // Validity of the exposed branch as of the last recheck; undefined before
   // the first recheck. Flips trigger notifyExposedValidityChange.
   lastNodesValid?: boolean
@@ -152,9 +168,14 @@ export interface SlotResolutionState {
   bm?: ((nodes: Block) => void)[]
 }
 
-// A Transition showing the fallback holds the content out of the DOM.
+// The host's own reason to hold its content detached: a fallback shows (or
+// leaves under out-in) under a Transition, which sequences the swap.
 export function isHoldingSlotContent(state: SlotResolutionState): boolean {
-  return isTransitionEnabled && !!state.$transition && !!state.activeFallback
+  return (
+    isTransitionEnabled &&
+    !!state.$transition &&
+    !!(state.activeFallback || state.held === 'leaving')
+  )
 }
 
 // The host places its content, in the DOM even while invalid, and the
@@ -222,17 +243,21 @@ function clearSlotFallback(
   state.renderedFallbacks = undefined
 }
 
+// The fallback leaves under `hooks`, with `afterLeave` following. False when
+// there is nothing to animate: it is gone at once. The caller owns placing
+// the content.
 export function leaveSlotFallback(
   state: SlotResolutionState,
   hooks: VaporTransitionHooks,
   afterLeave: () => void,
+  unpaired?: boolean,
 ): boolean {
   const fallback = state.activeFallback
-  if (!fallback || !applyTransitionLeaveHooks(fallback, hooks, afterLeave)) {
-    return false
-  }
+  const leaving =
+    !!fallback &&
+    applyTransitionLeaveHooks(fallback, hooks, afterLeave, unpaired)
   clearSlotFallback(state)
-  return true
+  return leaving
 }
 
 // A fallback is placed even while invalid: its anchors have to be live for it
@@ -286,19 +311,40 @@ function commitSlotFallback(
   state.renderedFallbacks = rendered
   state.fallbackScope = scope
   if (isTransitionEnabled) {
-    if (state.$transition) {
-      // Match VDOM slot fallback branch identity so fallback enter does not
-      // early-remove the currently leaving slot content.
-      if (!isArray(block)) setBlockKey(block, '_fb')
-      state.$transition = applyTransitionHooks(
-        block,
-        state.$transition,
-        ownerFragment(state),
-      )
-    }
+    // before Transition applies its hooks, which can come after a
+    // mount-time fallback
+    if (block !== EMPTY_BLOCK) slotFallbackBlocks.add(block)
+    // held by an enclosing outlet: that one places and animates the
+    // fallback with its own content
+    if (state.boundary.isHeld()) return
+    const hooks = state.$transition
+    if (hooks) applySlotTransitionHooks(state, block, hooks)
   }
   beforeExpose(state, block)
   insertActiveSlotFallback(state)
+}
+
+// The hooks resolved for the exposed branch become the outlet's, except a
+// TransitionGroup's, which apply to every block as they are.
+function applySlotTransitionHooks(
+  state: SlotResolutionState,
+  block: Block,
+  hooks: VaporTransitionHooks,
+): void {
+  const applied = applyTransitionHooks(block, hooks, ownerFragment(state))
+  if (!hooks.applyGroup) state.$transition = applied
+}
+
+// A mode is the outlet's to apply under vapor hooks it did not inherit across
+// a child component (Transition's ownsMode); an interop outlet has no
+// fragment of its own in that walk and resolves as its host does.
+function ownsSlotMode(
+  state: SlotResolutionState,
+  hooks: VaporTransitionHooks,
+): boolean {
+  if (!isVaporTransitionHooks(hooks)) return false
+  const frag = ownerFragment(state)
+  return !frag || ownsTransitionMode(frag)
 }
 
 // A vapor SlotFragment is its own resolution state; an interop outlet keeps
@@ -379,31 +425,77 @@ export function recheckSlotResolution(state: SlotResolutionState): void {
   } while (state.pendingRecheck)
 }
 
-// Valid content takes over from the active fallback. It is in place already,
-// unless the host held it: then it is placed after the fallback's leave, as
-// vdom unmounts the old child before the new one enters.
-function exposeSlotContent(state: SlotResolutionState): void {
+// Valid content takes over from the active fallback. Under a Transition mode
+// the two are sequenced like a vdom child swap: out-in lets the fallback
+// leave alone and exposes the content after; in-out mounts the content first
+// and its enter runs the fallback's delayed leave. True while the out-in
+// leave runs: the leaving fallback stays exposed, the recheck at the end of
+// the leave exposes the content.
+function exposeSlotContent(state: SlotResolutionState): boolean {
   const content = state.getContent()
-  const place =
-    isTransitionEnabled && !isHydrating && state.boundary.isHolding()
-  clearSlotFallback(state)
+  // In place unless a Transition holds it: the host sequences the swap and
+  // places it, or an enclosing outlet does both with its own content.
+  let place = false
   const transition = isTransitionEnabled ? state.$transition : undefined
-  // content first shown after a mount-time fallback has no hooks yet
-  if (transition && (place || (isFragment(content) && !content.$transition))) {
-    state.$transition = applyTransitionHooks(
-      content,
-      transition,
-      ownerFragment(state),
-    )
+  if (transition && !isHydrating && !state.boundary.isHeld()) {
+    // only a mode of the outlet's own sequences the swap: relayed vdom hooks,
+    // and hooks inherited inside a child component, animate the branches
+    const mode = ownsSlotMode(state, transition) ? transition.mode : undefined
+    // persisted roots are toggled in place; mode only sequences
+    // structural swaps, and a persisted leave never reports its end
+    if (
+      mode === 'out-in' &&
+      state.activeFallback &&
+      !transition.persisted &&
+      !transition.state.persisted
+    ) {
+      // The content stays live meanwhile (its roots render held), and the
+      // recheck at the end of the leave re-derives the branch to expose,
+      // as vdom re-renders its child then: the content may have gone
+      // invalid again.
+      state.held = 'leaving'
+      const afterLeave = () => {
+        state.held = 'placing'
+        markSlotResolutionDirty(state)
+      }
+      if (
+        leaveSlotFallback(state, transition, afterLeave, true) &&
+        state.held === 'leaving'
+      ) {
+        return true
+      }
+    } else if (mode === 'in-out') {
+      // The fallback leaves once the content entered: content entering
+      // under these hooks claims the leave, the flush runs it otherwise.
+      leaveSlotFallback(state, transition, NOOP, true)
+    }
+    // A host of vapor content holds and places it; a host patching vnode
+    // content leaves it where it is, under the hooks its vnodes carry.
+    if (ownerFragment(state) || state.holdsContent) {
+      // content first shown after a mount-time fallback has no hooks yet:
+      // Transition only reached the fallback when it mounted
+      applySlotTransitionHooks(state, content, transition)
+      place = true
+    }
   }
   beforeExpose(state, content)
+  clearSlotFallback(state)
+  if (isTransitionEnabled) state.held = undefined
   if (place) {
     const parentNode = state.getParentNode()
     if (parentNode) insert(content, parentNode, state.getAnchor())
   }
+  return false
 }
 
 function recheckSlotResolutionNow(state: SlotResolutionState): void {
+  // out-in: the fallback is leaving on its own; its end rechecks, and that
+  // recheck places the held content
+  let placing = false
+  if (isTransitionEnabled && state.held) {
+    if (state.held === 'leaving') return
+    placing = true
+  }
   const prevFallback = state.activeFallback
   const contentValid = state.isContentValid()
   // Validity of the currently exposed branch (fallback if active, else content).
@@ -411,9 +503,13 @@ function recheckSlotResolutionNow(state: SlotResolutionState): void {
 
   // Content wins over fallback.
   if (contentValid) {
-    if (prevFallback) exposeSlotContent(state)
-  } else if (!prevFallback || isSlotFallbackChainStale(state)) {
-    renderAndCommitSlotFallback(state)
+    if ((prevFallback || placing) && exposeSlotContent(state)) return
+  } else {
+    // the window closed on content that went invalid again
+    if (placing) state.held = undefined
+    if (!prevFallback || isSlotFallbackChainStale(state)) {
+      renderAndCommitSlotFallback(state)
+    }
   }
 
   const fallback = state.activeFallback

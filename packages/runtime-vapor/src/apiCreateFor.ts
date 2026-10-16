@@ -107,6 +107,9 @@ export const createFor = (
   let newBlocks: ForBlock[]
   let newKeys: any[] | undefined
   let parent: ParentNode | undefined | null
+  // held by the outlet (a fallback shows under a Transition): rows render
+  // detached and the outlet places them, like a DynamicFragment root's branch
+  let held = false
   let parentAnchor: Node
   if (!isHydrating) {
     parentAnchor = resolveFragmentAnchor(_insertionAnchor, 'for')
@@ -183,6 +186,7 @@ export const createFor = (
       }
     } else {
       parent = parentAnchor!.parentNode
+      held = isTransitionEnabled && !!slotBoundary && slotBoundary.isHolding()
       if (!oldLength) {
         // fast path for all new
         mountAll(source, newLength)
@@ -396,8 +400,11 @@ export const createFor = (
 
           const block = newBlocks[index]
           if (block !== undefined) {
-            // relocating an existing row is not a structural enter
-            move(block.nodes, parent!, anchorNode, MoveType.REORDER)
+            // relocating an existing row is not a structural enter; held,
+            // the outlet places the rows in order once the hold ends
+            if (!held) {
+              move(block.nodes, parent!, anchorNode, MoveType.REORDER)
+            }
           } else {
             mount(source, index, anchorNode)
           }
@@ -489,7 +496,7 @@ export const createFor = (
       for (let i = 0; i < bm.length; i++) bm[i](block.nodes)
     }
 
-    if (parent) {
+    if (parent && !held) {
       insertForBlock(block, anchor)
     }
 

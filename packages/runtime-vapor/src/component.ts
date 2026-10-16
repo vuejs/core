@@ -115,6 +115,7 @@ import {
 import {
   currentRenderContext,
   deriveRenderContext,
+  deriveSlotBoundary,
   deriveSuspense,
   setRenderContext,
 } from './renderContext'
@@ -1321,6 +1322,11 @@ export function createPlainElement(
   }
 
   if (rawSlots) {
+    // No outlet renders an element's children: nothing inside reports to,
+    // or is held by, the enclosing outlet.
+    const outerCtx = setRenderContext(
+      deriveSlotBoundary(currentRenderContext, null),
+    )
     let nextNode: Node | null = null
     if (isHydrating) {
       nextNode = nextLogicalSibling(el)
@@ -1378,6 +1384,7 @@ export function createPlainElement(
     if (isHydrating) {
       setCurrentHydrationNode(nextNode)
     }
+    setRenderContext(outerCtx)
   }
 
   finishBlockCreation(

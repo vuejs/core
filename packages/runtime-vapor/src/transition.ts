@@ -17,6 +17,7 @@ type ApplyTransitionLeaveHooksFn = (
   block: Block,
   hooks: VaporTransitionHooks,
   afterLeave: () => void,
+  unpaired?: boolean,
 ) => boolean
 type DeferBranchUpdateDuringLeaveFn = (
   frag: DynamicFragment,
@@ -43,6 +44,9 @@ export let applyTransitionLeaveHooks: ApplyTransitionLeaveHooksFn
 // deferred re-render for out-in) when tearing down the outgoing branch.
 export let deferBranchUpdateDuringLeave: DeferBranchUpdateDuringLeaveFn
 export let removeBranchWithLeave: RemoveBranchWithLeaveFn
+// whether a fragment's Transition mode is its own to apply: not inherited
+// across a child component, where only the enter / leave hooks reach
+export let ownsTransitionMode: (frag: VaporFragment) => boolean
 
 export let isTransitionEnabled = false
 
@@ -51,8 +55,10 @@ export function registerTransitionHooks(
   applyLeaveHooks: ApplyTransitionLeaveHooksFn,
   deferBranchUpdate: DeferBranchUpdateDuringLeaveFn,
   removeBranch: RemoveBranchWithLeaveFn,
+  ownsMode: (frag: VaporFragment) => boolean,
 ): void {
   isTransitionEnabled = true
+  ownsTransitionMode = ownsMode
   applyTransitionHooks = applyHooks
   applyTransitionLeaveHooks = applyLeaveHooks
   deferBranchUpdateDuringLeave = deferBranchUpdate
