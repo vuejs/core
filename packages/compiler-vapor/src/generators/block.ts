@@ -275,10 +275,8 @@ export function isVModelListener(
 export function markSlotRootOperations(
   block: BlockIRNode,
   context: CodegenContext,
-  sharedFallback: boolean = false,
 ): void {
   if (hasStableSlotRoot(block, context)) return
-  sharedFallback = sharedFallback || hasMultipleDynamicSlotRoots(block)
 
   for (let i = 0; i < block.returns.length; i++) {
     const child = findReturnedDynamic(block, block.returns[i])
@@ -286,39 +284,32 @@ export function markSlotRootOperations(
     if (!operation) continue
 
     if (operation.type === IRNodeTypes.IF) {
-      markSlotRootIf(operation, context, sharedFallback)
+      markSlotRootIf(operation, context)
     } else if (operation.type === IRNodeTypes.FOR) {
       markSlotRootFor(operation, context)
     } else if (operation.type === IRNodeTypes.KEY) {
       operation.slotRoot = true
-      markSlotRootOperations(operation.block, context, sharedFallback)
+      markSlotRootOperations(operation.block, context)
     } else if (operation.type === IRNodeTypes.CREATE_COMPONENT_NODE) {
       markSlotRootComponent(operation)
     } else if (operation.type === IRNodeTypes.SLOT_OUTLET_NODE) {
       operation.flags |= VaporSlotFlags.FORWARDED
-      if (sharedFallback) {
-        operation.flags |= VaporSlotFlags.SHARED_FALLBACK
-      }
     }
   }
 }
 
-function markSlotRootIf(
-  operation: IfIRNode,
-  context: CodegenContext,
-  sharedFallback: boolean,
-): void {
+function markSlotRootIf(operation: IfIRNode, context: CodegenContext): void {
   if (!operation.once) {
     operation.slotRoot = true
   }
-  markSlotRootOperations(operation.positive, context, sharedFallback)
+  markSlotRootOperations(operation.positive, context)
 
   const negative = operation.negative
   if (!negative) return
   if (negative.type === IRNodeTypes.IF) {
-    markSlotRootIf(negative, context, sharedFallback)
+    markSlotRootIf(negative, context)
   } else {
-    markSlotRootOperations(negative, context, sharedFallback)
+    markSlotRootOperations(negative, context)
   }
 }
 
@@ -326,16 +317,7 @@ function markSlotRootFor(operation: ForIRNode, context: CodegenContext): void {
   if (!operation.once) {
     operation.slotRoot = true
   }
-  markSlotRootOperations(operation.render, context, true)
-}
-
-function hasMultipleDynamicSlotRoots(block: BlockIRNode): boolean {
-  let count = 0
-  for (let i = 0; i < block.returns.length; i++) {
-    const child = findReturnedDynamic(block, block.returns[i])
-    if (child && child.operation && ++count > 1) return true
-  }
-  return false
+  markSlotRootOperations(operation.render, context)
 }
 
 function markSlotRootComponent(operation: CreateComponentIRNode): void {

@@ -66,11 +66,7 @@ import {
   isVaporSlotOutlet,
 } from '../src/fragment'
 import { IF } from '../src/fragmentFlags'
-import {
-  type SlotBoundaryContext,
-  trackSlotBoundaryDirtying,
-  withSlotBoundary,
-} from '../src/slotBoundary'
+import { type SlotBoundaryContext, withSlotBoundary } from '../src/slotBoundary'
 import { currentRenderContext } from '../src/renderContext'
 import {
   type SlotResolutionState,
@@ -89,7 +85,7 @@ const slotRootIfShape = VaporBlockShape.SINGLE_ROOT | VaporIfFlags.SLOT_ROOT
 const keyedSlotRootIfShape = keyedIfShape | VaporIfFlags.SLOT_ROOT
 const slotRootForFlags = VaporVForFlags.SLOT_ROOT
 const nonStableSlot = { _: VaporSlotStability.NON_STABLE } as const
-const createInheritedSlotRoot = (name: string, fallback?: BlockFn) =>
+const createForwardedSlotRoot = (name: string, fallback?: BlockFn) =>
   createSlot(name, null, fallback, VaporSlotFlags.FORWARDED)
 
 function renderWithSlots(slots: any): any {
@@ -127,14 +123,13 @@ function createTestSlotResolutionState(options: {
     getParent: () => null,
     getFallback: () => options.fallback,
     run: (fn, scope) => (scope ? scope.run(fn)! : fn()),
-    markDirty: force => markSlotResolutionDirty(state, force),
+    markDirty: () => markSlotResolutionDirty(state),
   }
   state = {
     boundary,
     activeFallback: null,
     fallbackInserted: false,
     pendingRecheck: false,
-    pendingRecheckForce: false,
     isReconciling: false,
     getContent: () => options.content || [],
     getParentNode: () => options.parentNode || null,
@@ -361,16 +356,16 @@ describe('component: slots', () => {
       expect(stop).toHaveBeenCalledTimes(1)
     })
 
-    test('slot fragment prefers local fallback over inherited fallback', () => {
+    test('slot fragment renders its local fallback, not the enclosing one', () => {
       const localFallback = vi.fn(() =>
         document.createTextNode('local fallback'),
       )
-      const inheritedFallback = vi.fn(() =>
-        document.createTextNode('inherited fallback'),
+      const enclosingFallback = vi.fn(() =>
+        document.createTextNode('enclosing fallback'),
       )
       const parentBoundary: SlotBoundaryContext = {
         getParent: () => null,
-        getFallback: () => inheritedFallback,
+        getFallback: () => enclosingFallback,
         run: fn => fn(),
         markDirty: vi.fn(),
       }
@@ -384,39 +379,39 @@ describe('component: slots', () => {
       expect(frag.activeFallback).toBeInstanceOf(Text)
       expect((frag.activeFallback as Text).textContent).toBe('local fallback')
       expect(localFallback).toHaveBeenCalled()
-      expect(inheritedFallback).not.toHaveBeenCalled()
+      expect(enclosingFallback).not.toHaveBeenCalled()
     })
 
-    test('shared fallback slot root leaves inherited fallback to parent', () => {
+    test('forwarded slot root with an invalid local fallback exposes it, not the enclosing fallback', () => {
       const localFallback = vi.fn(() => [])
-      const inheritedFallback = vi.fn(() =>
-        document.createTextNode('inherited fallback'),
+      const enclosingFallback = vi.fn(() =>
+        document.createTextNode('enclosing fallback'),
       )
       const parentBoundary: SlotBoundaryContext = {
         getParent: () => null,
-        getFallback: () => inheritedFallback,
+        getFallback: () => enclosingFallback,
         run: fn => fn(),
         markDirty: vi.fn(),
       }
       const frag = withSlotBoundary(
         parentBoundary,
-        () =>
-          new SlotFragment(
-            VaporSlotFlags.FORWARDED | VaporSlotFlags.SHARED_FALLBACK,
-          ),
+        () => new SlotFragment(VaporSlotFlags.FORWARDED),
       )
 
       frag.updateSlot(undefined, localFallback)
 
       expect(isValidBlock(frag)).toBe(false)
       expect(localFallback).toHaveBeenCalled()
-      expect(inheritedFallback).not.toHaveBeenCalled()
+      expect(enclosingFallback).not.toHaveBeenCalled()
     })
 
-    test('slot fragment local fallback renders nested slots against the parent boundary', () => {
+    test('slot fragment local fallback renders nested slots against its own outlet only', () => {
+      const enclosingFallback = vi.fn(() =>
+        document.createTextNode('outer fallback'),
+      )
       const parentBoundary: SlotBoundaryContext = {
         getParent: () => null,
-        getFallback: () => () => document.createTextNode('outer fallback'),
+        getFallback: () => enclosingFallback,
         run: (fn: () => any) => fn(),
         markDirty: vi.fn(),
       }
@@ -431,14 +426,16 @@ describe('component: slots', () => {
         return []
       })
 
-      // Fallback body renders under a redirected boundary whose `.parent` is
-      // the owning boundary's parent — so nested slots inherit from the
-      // grandparent, avoiding fallback -> <slot> -> same fallback recursion.
+      // The fallback body renders under a boundary of this outlet with no
+      // parent: nested outlets never reach the enclosing outlet's fallback,
+      // the outlet exposes its own invalidity to it instead.
       expect(fallbackBoundary).not.toBe(frag.boundary)
-      expect(fallbackBoundary.getParent()).toBe(parentBoundary)
+      expect(fallbackBoundary.getParent()).toBeNull()
+      expect(enclosingFallback).not.toHaveBeenCalled()
+      expect(isValidBlock(frag)).toBe(false)
     })
 
-    test('slot fragment local fallback keeps itself as owner for nested fragments', () => {
+    test('slot fragment keeps an invalid local fallback and exposes its invalidity', () => {
       const container = document.createElement('div')
       const parentBoundary: SlotBoundaryContext = {
         getParent: () => null,
@@ -450,13 +447,12 @@ describe('component: slots', () => {
         parentBoundary,
         () => new SlotFragment(VaporSlotFlags.FORWARDED),
       )
-      const child = new DynamicFragment(IF, 'if', false, false)
-      let initialized = false
+      let child!: DynamicFragment
 
       frag.updateSlot(undefined, () => {
-        if (!initialized) {
-          initialized = true
-          trackSlotBoundaryDirtying(child)
+        if (!child) {
+          // a slot root, created under the fallback's boundary
+          child = new DynamicFragment(IF, 'if', false, true)
           child.update(() => document.createTextNode('inner fallback'))
         }
         return child
@@ -464,10 +460,14 @@ describe('component: slots', () => {
       insert(frag, container)
 
       expect(container.innerHTML).toBe('inner fallback<!--if--><!--slot-->')
+      expect(isValidBlock(frag)).toBe(true)
 
       child.update(() => [])
 
-      expect(container.innerHTML).toBe('outer fallback<!--slot-->')
+      // the enclosing outlet renders its fallback from here, not this one
+      expect(container.innerHTML).toBe('<!--if--><!--slot-->')
+      expect(isValidBlock(frag)).toBe(false)
+      expect(parentBoundary.markDirty).toHaveBeenCalled()
     })
 
     test('slot fragment local fallback ignores unrelated ancestor fallback refs', async () => {
@@ -773,7 +773,7 @@ describe('component: slots', () => {
       const app = createVaporApp(App)
       app.mount(root)
 
-      expect(root.innerHTML).toBe('parent fallback<!--slot--><!--slot-->')
+      expect(root.innerHTML).toBe('parent fallback<!--slot-->')
 
       show.value = true
       await nextTick()
@@ -785,7 +785,7 @@ describe('component: slots', () => {
       show.value = false
       await nextTick()
 
-      expect(root.innerHTML).toBe('parent fallback<!--slot--><!--slot-->')
+      expect(root.innerHTML).toBe('parent fallback<!--slot-->')
       app.unmount()
     })
 
@@ -904,14 +904,13 @@ describe('component: slots', () => {
             keyedSlotRootIfShape,
           ),
         run: fn => fn(),
-        markDirty: force => markSlotResolutionDirty(state, force),
+        markDirty: () => markSlotResolutionDirty(state),
       }
       state = {
         boundary,
         activeFallback: null,
         fallbackInserted: false,
         pendingRecheck: false,
-        pendingRecheckForce: false,
         isReconciling: false,
         getContent: () => [],
         getParentNode: () => container,
@@ -950,14 +949,13 @@ describe('component: slots', () => {
         getParent: () => parentBoundary,
         getFallback: () => localFallback,
         run: fn => fn(),
-        markDirty: force => markSlotResolutionDirty(state, force),
+        markDirty: () => markSlotResolutionDirty(state),
       }
       state = {
         boundary,
         activeFallback: null,
         fallbackInserted: false,
         pendingRecheck: false,
-        pendingRecheckForce: false,
         isReconciling: false,
         getContent: () => [],
         getParentNode: () => container,
@@ -974,7 +972,8 @@ describe('component: slots', () => {
       expect(container.innerHTML).toBe('local fallback<!--slot-->')
 
       localFallback = undefined
-      recheckSlotResolution(state, true)
+      state.fallbackChainStale = true
+      recheckSlotResolution(state)
       expect(container.innerHTML).toBe('parent fallback<!--slot-->')
     })
 
@@ -1139,7 +1138,7 @@ describe('component: slots', () => {
         markDirty,
       }
       const Child = defineVaporComponent(() =>
-        withSlotBoundary(boundary, () => createInheritedSlotRoot('default')),
+        withSlotBoundary(boundary, () => createForwardedSlotRoot('default')),
       )
 
       define(() =>
@@ -1592,7 +1591,7 @@ describe('component: slots', () => {
       app.unmount()
     })
 
-    test('compiled forwarded slot fallback validity re-resolves inherited fallback', async () => {
+    test('compiled forwarded slot fallback validity re-resolves the enclosing fallback', async () => {
       const data = ref(false)
       const Child = compile(
         `<template><slot><span>child fallback</span></slot></template>`,
@@ -1622,9 +1621,7 @@ describe('component: slots', () => {
       const app = createVaporApp(App)
       app.mount(root)
 
-      expect(root.innerHTML).toBe(
-        '<span>child fallback</span><!--slot--><!--slot-->',
-      )
+      expect(root.innerHTML).toBe('<span>child fallback</span><!--slot-->')
 
       data.value = true
       await nextTick()
@@ -1828,9 +1825,7 @@ describe('component: slots', () => {
       show.value = false
       await nextTick()
 
-      expect(root.innerHTML).toBe(
-        '<span>outer fallback</span><!--slot--><!--slot-->',
-      )
+      expect(root.innerHTML).toBe('<span>outer fallback</span><!--slot-->')
 
       show.value = true
       await nextTick()
@@ -3841,7 +3836,7 @@ describe('component: slots', () => {
           let slotBlock!: Block
           let observedBoundary: SlotBoundaryContext | null | undefined
           const Comp = defineVaporComponent(() => {
-            return (slotBlock = createInheritedSlotRoot('default'))
+            return (slotBlock = createForwardedSlotRoot('default'))
           })
 
           define(() =>
@@ -4013,7 +4008,6 @@ describe('component: slots', () => {
           let forwardedBlock!: Block
           let fallbackBlock!: Block
           let nonStableFallbackBlock!: Block
-          let loneSharedBlock!: Block
           const nonStableSlotFn = (() => template('d')()) as BlockFn
           ;(nonStableSlotFn as any)._ = VaporSlotStability.NON_STABLE
           const boundary: SlotBoundaryContext = {
@@ -4024,20 +4018,12 @@ describe('component: slots', () => {
           }
           const Comp = defineVaporComponent(() =>
             withSlotBoundary(boundary, () => [
-              (forwardedBlock = createInheritedSlotRoot('a')),
+              (forwardedBlock = createForwardedSlotRoot('a')),
               (fallbackBlock = createSlot('b', null, () =>
                 template('fallback')(),
               )),
               (nonStableFallbackBlock = createSlot('d', null, () =>
                 template('fallback')(),
-              )),
-              // Hand-written flags may carry the lone SHARED_FALLBACK bit;
-              // isForwardedSlot normalizes it as forwarded.
-              (loneSharedBlock = createSlot(
-                'c',
-                null,
-                undefined,
-                VaporSlotFlags.SHARED_FALLBACK,
               )),
             ]),
           )
@@ -4057,7 +4043,6 @@ describe('component: slots', () => {
           // applies; a non-stable slot keeps SlotFragment arbitration.
           expect(fallbackBlock).not.toBeInstanceOf(SlotFragment)
           expect(nonStableFallbackBlock).toBeInstanceOf(SlotFragment)
-          expect(loneSharedBlock).toBeInstanceOf(SlotFragment)
         })
 
         test('slot with fallback and explicit empty slots', () => {
@@ -4550,7 +4535,7 @@ describe('component: slots', () => {
         setup() {
           const n2 = createComponent(Child, null, {
             default: extend(() => {
-              const n0 = createInheritedSlotRoot('default', () =>
+              const n0 = createForwardedSlotRoot('default', () =>
                 template('<!-- <div></div> -->')(),
               )
               return n0
@@ -4571,7 +4556,7 @@ describe('component: slots', () => {
         },
       }).render()
 
-      expect(html()).toBe('child fallback<!--slot--><!--slot-->')
+      expect(html()).toBe('child fallback<!--slot-->')
     })
 
     test('named forwarded slot with v-if', async () => {
@@ -4654,7 +4639,7 @@ describe('component: slots', () => {
         setup() {
           const n2 = createComponent(Child, null, {
             default: extend(() => {
-              const n0 = createInheritedSlotRoot('default', () => {
+              const n0 = createForwardedSlotRoot('default', () => {
                 const n2 = createIf(
                   () => show.value,
                   () => {
@@ -4684,7 +4669,7 @@ describe('component: slots', () => {
         },
       }).render()
 
-      expect(html()).toBe('child fallback<!--slot--><!--slot-->')
+      expect(html()).toBe('child fallback<!--slot-->')
 
       show.value = true
       await nextTick()
@@ -4705,7 +4690,7 @@ describe('component: slots', () => {
         setup() {
           const n2 = createComponent(Child, null, {
             default: extend(() => {
-              const n0 = createInheritedSlotRoot('default', () => {
+              const n0 = createForwardedSlotRoot('default', () => {
                 const n2 = createFor(
                   () => items.value,
                   for_item0 => {
@@ -4739,7 +4724,7 @@ describe('component: slots', () => {
         },
       }).render()
 
-      expect(html()).toBe('child fallback<!--slot--><!--slot-->')
+      expect(html()).toBe('child fallback<!--slot-->')
 
       items.value.push(1)
       await nextTick()
@@ -4748,7 +4733,7 @@ describe('component: slots', () => {
       items.value.pop()
       await nextTick()
       await nextTick()
-      expect(html()).toBe('child fallback<!--slot--><!--slot-->')
+      expect(html()).toBe('child fallback<!--slot-->')
     })
 
     test('consecutive slots with insertion state', async () => {
@@ -4841,11 +4826,11 @@ describe('component: slots', () => {
               {
                 foo: extend(() => {
                   return fallbackText
-                    ? createInheritedSlotRoot('foo', () => {
+                    ? createForwardedSlotRoot('foo', () => {
                         const n2 = template(`<div>${fallbackText}</div>`)()
                         return n2
                       })
-                    : createInheritedSlotRoot('foo')
+                    : createForwardedSlotRoot('foo')
                 }, nonStableSlot),
               },
               true,
@@ -5230,7 +5215,7 @@ describe('component: slots', () => {
               VdomSlotWithDynamicFallback,
               null,
               {
-                foo: () => createInheritedSlotRoot('foo'),
+                foo: () => createForwardedSlotRoot('foo'),
               },
               true,
             )
@@ -5239,11 +5224,11 @@ describe('component: slots', () => {
 
         const root = document.createElement('div')
         createVaporApp(VaporForwardedSlot).use(vaporInteropPlugin).mount(root)
-        expect(root.innerHTML).toBe('<div>fallback</div><!--slot-->')
+        expect(root.innerHTML).toBe('<div>fallback</div>')
 
         useAlt.value = true
         await nextTick()
-        expect(root.innerHTML).toBe('<p>alt fallback</p><!--slot-->')
+        expect(root.innerHTML).toBe('<p>alt fallback</p>')
       })
 
       test('vdom fallback ownership ignores fast-path outlet fragments', async () => {
@@ -5298,7 +5283,7 @@ describe('component: slots', () => {
               VdomSlotWithCountingFallback,
               null,
               {
-                foo: () => createInheritedSlotRoot('foo'),
+                foo: () => createForwardedSlotRoot('foo'),
               },
               true,
             )
@@ -5308,13 +5293,13 @@ describe('component: slots', () => {
         const root = document.createElement('div')
         createVaporApp(VaporForwardedSlot).use(vaporInteropPlugin).mount(root)
 
-        expect(root.innerHTML).toBe('<div>fallback</div><!--slot-->')
+        expect(root.innerHTML).toBe('<div>fallback</div>')
         expect(fallbackSpy).toHaveBeenCalledTimes(1)
 
         fallbackText.value = 'updated fallback'
         await nextTick()
 
-        expect(root.innerHTML).toBe('<div>updated fallback</div><!--slot-->')
+        expect(root.innerHTML).toBe('<div>updated fallback</div>')
         expect(fallbackSpy).toHaveBeenCalledTimes(2)
       })
 
@@ -5334,7 +5319,7 @@ describe('component: slots', () => {
               VdomSlotWithTextFallback,
               null,
               {
-                foo: () => createInheritedSlotRoot('foo'),
+                foo: () => createForwardedSlotRoot('foo'),
               },
               true,
             )
@@ -5344,13 +5329,13 @@ describe('component: slots', () => {
         const root = document.createElement('div')
         createVaporApp(VaporForwardedSlot).use(vaporInteropPlugin).mount(root)
 
-        expect(root.innerHTML).toBe('fallback<!--slot-->')
+        expect(root.innerHTML).toBe('fallback')
         expect(fallbackSpy).toHaveBeenCalledTimes(1)
 
         fallbackText.value = 'updated fallback'
         await nextTick()
 
-        expect(root.innerHTML).toBe('updated fallback<!--slot-->')
+        expect(root.innerHTML).toBe('updated fallback')
         expect(fallbackSpy).toHaveBeenCalledTimes(2)
       })
 
@@ -5386,7 +5371,7 @@ describe('component: slots', () => {
                       VdomSlotWithReactiveFallback,
                       null,
                       {
-                        foo: () => createInheritedSlotRoot('foo'),
+                        foo: () => createForwardedSlotRoot('foo'),
                       },
                       true,
                     ),
@@ -5401,19 +5386,19 @@ describe('component: slots', () => {
           app.mount(host)
           await nextTick()
 
-          expect(targetA.innerHTML).toBe('<div>fallback</div><!--slot-->')
+          expect(targetA.innerHTML).toBe('<div>fallback</div>')
           expect(targetB.innerHTML).toBe('')
 
           to.value = '#component-slots-fallback-target-b'
           await nextTick()
 
           expect(targetA.innerHTML).toBe('')
-          expect(targetB.innerHTML).toBe('<div>fallback</div><!--slot-->')
+          expect(targetB.innerHTML).toBe('<div>fallback</div>')
 
           fallbackText.value = 'moved fallback'
           await nextTick()
 
-          expect(targetB.innerHTML).toBe('<div>moved fallback</div><!--slot-->')
+          expect(targetB.innerHTML).toBe('<div>moved fallback</div>')
 
           app.unmount()
         } finally {
@@ -5422,7 +5407,7 @@ describe('component: slots', () => {
         }
       })
 
-      test('vdom fallback removal clears inherited vapor fallback', async () => {
+      test('vdom fallback removal clears the fallback rendered for a vapor slot', async () => {
         const useFallback = ref(true)
 
         const VdomSlotWithOptionalFallback = {
@@ -5442,7 +5427,7 @@ describe('component: slots', () => {
               VdomSlotWithOptionalFallback,
               null,
               {
-                foo: () => createInheritedSlotRoot('foo'),
+                foo: () => createForwardedSlotRoot('foo'),
               },
               true,
             )
@@ -5451,7 +5436,7 @@ describe('component: slots', () => {
 
         const root = document.createElement('div')
         createVaporApp(VaporForwardedSlot).use(vaporInteropPlugin).mount(root)
-        expect(root.innerHTML).toBe('<div>fallback</div><!--slot-->')
+        expect(root.innerHTML).toBe('<div>fallback</div>')
 
         useFallback.value = false
         await nextTick()
@@ -5475,7 +5460,7 @@ describe('component: slots', () => {
               VdomSlotWithReactiveFallback,
               null,
               {
-                foo: () => createInheritedSlotRoot('foo'),
+                foo: () => createForwardedSlotRoot('foo'),
               },
               true,
             )
@@ -5484,15 +5469,15 @@ describe('component: slots', () => {
 
         const root = document.createElement('div')
         createVaporApp(VaporForwardedSlot).use(vaporInteropPlugin).mount(root)
-        expect(root.innerHTML).toBe('<div>fallback</div><!--slot-->')
+        expect(root.innerHTML).toBe('<div>fallback</div>')
 
         showFallback.value = false
         await nextTick()
-        expect(root.innerHTML).toBe('<!--slot-->')
+        expect(root.innerHTML).toBe('')
 
         showFallback.value = true
         await nextTick()
-        expect(root.innerHTML).toBe('<div>fallback</div><!--slot-->')
+        expect(root.innerHTML).toBe('<div>fallback</div>')
       })
 
       test('vdom fallback removal clears active wrapper fallback for non-slot-fragment content', async () => {
@@ -5542,7 +5527,7 @@ describe('component: slots', () => {
         expect(root.innerHTML).toBe('<span>content</span><!--if-->')
       })
 
-      test('vdom fallback toggles between local and inherited fallback for non-slot-fragment content', async () => {
+      test('vdom fallback toggles between local and outer fallback for non-slot-fragment content', async () => {
         const useFallback = ref(true)
         const VaporSlot = createVaporSlot('outer fallback')
 
@@ -5648,7 +5633,7 @@ describe('component: slots', () => {
         expect(root.innerHTML).toBe('<div>local fallback</div><!--slot-->')
       })
 
-      test('vdom fallback addition activates inherited vapor fallback', async () => {
+      test('vdom fallback addition activates the fallback rendered for a vapor slot', async () => {
         const useFallback = ref(false)
 
         const VdomSlotWithOptionalFallback = {
@@ -5668,7 +5653,7 @@ describe('component: slots', () => {
               VdomSlotWithOptionalFallback,
               null,
               {
-                foo: () => createInheritedSlotRoot('foo'),
+                foo: () => createForwardedSlotRoot('foo'),
               },
               true,
             )
@@ -5681,7 +5666,7 @@ describe('component: slots', () => {
 
         useFallback.value = true
         await nextTick()
-        expect(root.innerHTML).toBe('<!--slot--><div>fallback</div>')
+        expect(root.innerHTML).toBe('<div>fallback</div>')
       })
 
       test('vdom fallback addition should not remount valid forwarded vapor content', async () => {
@@ -5810,7 +5795,7 @@ describe('component: slots', () => {
               VdomSlotWithOptionalFallback,
               null,
               {
-                foo: () => createInheritedSlotRoot('foo'),
+                foo: () => createForwardedSlotRoot('foo'),
               },
               true,
             )
@@ -6032,7 +6017,7 @@ describe('component: slots', () => {
         expect(root.textContent).toBe('')
       })
 
-      test('vdom local fallback should expose inherited fallback to nested interop vapor forwarded slots', async () => {
+      test('vdom local fallback rendering an empty vapor component stays content', async () => {
         const VaporSlot = createVaporSlot('outer fallback')
 
         const NestedVdomSlot = {
@@ -6047,7 +6032,7 @@ describe('component: slots', () => {
               NestedVdomSlot,
               null,
               {
-                bar: () => createInheritedSlotRoot('bar'),
+                bar: () => createForwardedSlotRoot('bar'),
               },
               true,
             )
@@ -6071,10 +6056,11 @@ describe('component: slots', () => {
         const root = document.createElement('div')
         createApp(App).use(vaporInteropPlugin).mount(root)
         expect(localFallback).toHaveBeenCalledTimes(1)
-        expect(root.textContent).toBe('outer fallback')
+        // an empty vapor component is content, as a vdom one is
+        expect(root.textContent).toBe('')
       })
 
-      test('vdom local fallback keeps nested component slots isolated from inherited fallback', async () => {
+      test('vdom local fallback keeps nested component slots isolated from the outer fallback', async () => {
         const fallbackText = ref('outer fallback')
 
         const VaporSlot = defineVaporComponent({
@@ -6224,7 +6210,7 @@ describe('component: slots', () => {
               InnerVdomSlot,
               null,
               {
-                bar: () => createInheritedSlotRoot('bar'),
+                bar: () => createForwardedSlotRoot('bar'),
               },
               true,
             )
@@ -6237,7 +6223,7 @@ describe('component: slots', () => {
               OuterVdomSlot,
               null,
               {
-                foo: () => createInheritedSlotRoot('foo'),
+                foo: () => createForwardedSlotRoot('foo'),
               },
               true,
             )
@@ -6312,7 +6298,7 @@ describe('component: slots', () => {
               InnerVdomSlot,
               null,
               {
-                bar: () => createInheritedSlotRoot('bar'),
+                bar: () => createForwardedSlotRoot('bar'),
               },
               true,
             )
@@ -6325,7 +6311,7 @@ describe('component: slots', () => {
               OuterVdomSlot,
               null,
               {
-                foo: () => createInheritedSlotRoot('foo'),
+                foo: () => createForwardedSlotRoot('foo'),
               },
               true,
             )
@@ -6627,7 +6613,7 @@ describe('component: slots', () => {
 
         show.value = false
         await nextTick()
-        expect(root.innerHTML).toBe('<div>fallback</div><!--slot--><!--slot-->')
+        expect(root.innerHTML).toBe('<div>fallback</div>')
 
         show.value = true
         await nextTick()
@@ -6659,9 +6645,7 @@ describe('component: slots', () => {
 
         show.value = false
         await nextTick()
-        expect(root.innerHTML).toBe(
-          '<div>vdom fallback</div><!--slot--><!--slot-->',
-        )
+        expect(root.innerHTML).toBe('<div>vdom fallback</div>')
 
         show.value = true
         await nextTick()
@@ -6801,7 +6785,7 @@ describe('component: slots', () => {
 
         show.value = false
         await nextTick()
-        expect(root.innerHTML).toBe('<div>fallback</div><!--slot-->')
+        expect(root.innerHTML).toBe('<div>fallback</div>')
 
         show.value = true
         await nextTick()
@@ -6888,7 +6872,7 @@ describe('component: slots', () => {
 
         show.value = false
         await nextTick()
-        expect(root.innerHTML).toBe('<div>fallback</div><!--slot--><!--slot-->')
+        expect(root.innerHTML).toBe('<div>fallback</div><!--slot-->')
 
         show.value = true
         await nextTick()
@@ -8436,3 +8420,167 @@ test.each([
     expect(vapor.text).toBe(vdom.text)
   },
 )
+
+describe('fallback is owned by the providing outlet', () => {
+  // `tick()` runs once per live copy of the outer fallback body each time
+  // it renders, so its count tells how many outlets materialized it.
+  function mount(outerFallback: string, localFallback: string, levels = 2) {
+    let ticks = 0
+    const data = ref({ x: false, y: false, tick: () => (ticks++, '') })
+    const Outer = compile(
+      `<template>
+        <slot>${outerFallback}</slot>
+      </template>`,
+      data,
+    )
+    let Parent = compile(
+      `<template>
+        <components.Outer><slot>${localFallback}</slot></components.Outer>
+      </template>`,
+      data,
+      { Outer },
+    )
+    if (levels === 3) {
+      Parent = compile(
+        `<template>
+          <components.Mid><slot /></components.Mid>
+        </template>`,
+        data,
+        { Mid: Parent },
+      )
+    }
+    const App = compile(
+      `<template>
+        <components.Parent>
+          <span v-if="false">content</span>
+        </components.Parent>
+      </template>`,
+      data,
+      { Parent },
+    )
+    const root = document.createElement('div')
+    const app = createVaporApp(App)
+    app.mount(root)
+    return { data, root, app, ticks: () => ticks }
+  }
+
+  const dynamicOuter = `<span v-if="data.x">{{ data.tick() }}outer</span>`
+  const dynamicLocal = `<i v-if="data.y">local</i>`
+
+  test('renders an outer fallback once per chain, not once per outlet', async () => {
+    const t = mount(dynamicOuter, '')
+    expect(t.ticks()).toBe(0)
+
+    t.data.value.x = true
+    await nextTick()
+    expect(t.root.textContent).toBe('outer')
+    expect(t.ticks()).toBe(1)
+
+    t.data.value.x = false
+    await nextTick()
+    expect(t.root.textContent).toBe('')
+
+    t.data.value.x = true
+    await nextTick()
+    expect(t.root.textContent).toBe('outer')
+    expect(t.ticks()).toBe(2)
+    t.app.unmount()
+  })
+
+  test('renders an outer fallback once behind three forwarded levels', async () => {
+    const t = mount(dynamicOuter, '', 3)
+
+    t.data.value.x = true
+    await nextTick()
+    expect(t.root.textContent).toBe('outer')
+    expect(t.ticks()).toBe(1)
+    t.app.unmount()
+  })
+
+  test('local fallback wins when it becomes valid after the outer one', async () => {
+    const t = mount(dynamicOuter, dynamicLocal)
+
+    t.data.value.x = true
+    await nextTick()
+    expect(t.root.textContent).toBe('outer')
+
+    t.data.value.y = true
+    await nextTick()
+    expect(t.root.textContent).toBe('local')
+
+    t.data.value.y = false
+    await nextTick()
+    expect(t.root.textContent).toBe('outer')
+    t.app.unmount()
+  })
+
+  // coverage guard
+  test('local fallback keeps winning when it becomes valid before the outer one', async () => {
+    const t = mount(dynamicOuter, dynamicLocal)
+
+    t.data.value.y = true
+    await nextTick()
+    expect(t.root.textContent).toBe('local')
+
+    t.data.value.x = true
+    await nextTick()
+    expect(t.root.textContent).toBe('local')
+
+    t.data.value.y = false
+    await nextTick()
+    expect(t.root.textContent).toBe('outer')
+
+    t.data.value.y = true
+    await nextTick()
+    expect(t.root.textContent).toBe('local')
+    t.app.unmount()
+  })
+
+  // the text after every step, vapor against vdom
+  async function textAfterSteps(
+    srcs: Record<string, string>,
+    init: Record<string, boolean>,
+    steps: Record<string, boolean>[],
+  ): Promise<string[]> {
+    const texts: Record<string, string[]> = { vdom: [], vapor: [] }
+    await renderParity(
+      srcs,
+      () => ref({ ...init }),
+      async (data, root, mode) => {
+        texts[mode].push(root.textContent!)
+        for (const step of steps) {
+          Object.assign(data.value, step)
+          await nextTick()
+          texts[mode].push(root.textContent!)
+        }
+      },
+    )
+    expect(texts.vapor).toEqual(texts.vdom)
+    return texts.vdom
+  }
+
+  // a forwarded outlet as the body of a local fallback, with the outer
+  // outlet providing a fallback of its own
+  const nestedFallbackOutlet = {
+    Outer: `<template>
+      <div><slot><b v-if="data.o">ofb</b></slot></div>
+    </template>`,
+    Mid: `<template>
+      <components.Outer>
+        <slot><slot name="x"><i v-if="data.m">mfb</i></slot></slot>
+      </components.Outer>
+    </template>`,
+    App: `<template>
+      <components.Mid><span v-if="data.c">c</span></components.Mid>
+    </template>`,
+  }
+
+  test('a forwarded outlet inside a local fallback becomes valid', async () => {
+    const texts = await textAfterSteps(
+      nestedFallbackOutlet,
+      { c: false, m: false, o: false },
+      [{ m: true }, { m: false }, { m: true }],
+    )
+    expect(texts).toEqual(['', 'mfb', '', 'mfb'])
+  })
+})

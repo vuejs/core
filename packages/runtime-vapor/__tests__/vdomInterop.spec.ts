@@ -3324,30 +3324,24 @@ describe('vdomInterop', () => {
 
       const root = document.createElement('div')
       createVaporApp(VaporBridge).use(vaporInteropPlugin).mount(root)
-      expect(root.innerHTML).toBe('<div>local fallback</div><!--slot-->')
+      expect(root.innerHTML).toBe('<div>local fallback</div>')
 
       mode.value = 'empty'
       await nextTick()
-      expect(root.innerHTML).toBe(
-        '<section>outlet fallback</section><!--slot-->',
-      )
+      expect(root.innerHTML).toBe('<section>outlet fallback</section>')
 
       localText.value = 'stale local fallback'
       outletText.value = 'updated outlet fallback'
       await nextTick()
-      expect(root.innerHTML).toBe(
-        '<section>updated outlet fallback</section><!--slot-->',
-      )
+      expect(root.innerHTML).toBe('<section>updated outlet fallback</section>')
 
       mode.value = 'local'
       await nextTick()
-      expect(root.innerHTML).toBe('<div>stale local fallback</div><!--slot-->')
+      expect(root.innerHTML).toBe('<div>stale local fallback</div>')
 
       mode.value = 'none'
       await nextTick()
-      expect(root.innerHTML).toBe(
-        '<section>updated outlet fallback</section><!--slot-->',
-      )
+      expect(root.innerHTML).toBe('<section>updated outlet fallback</section>')
     })
 
     test('compiled vdom local fallback keeps outlet fallback clean across invalid updates', async () => {

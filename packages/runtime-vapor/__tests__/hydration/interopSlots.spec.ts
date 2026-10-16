@@ -1027,7 +1027,7 @@ describe('VDOM interop', () => {
       `
       "
       <!--(--><div>
-      <!--(-->foo<!--slot--><!--)-->
+      <!--(-->foo<!--)-->
       </div><!--)-->
       "
     `,
@@ -1041,7 +1041,7 @@ describe('VDOM interop', () => {
       `
       "
       <!--(--><div>
-      <!--(-->bar<!--slot--><!--)-->
+      <!--(-->bar<!--)-->
       </div><!--)-->
       "
     `,
@@ -1402,7 +1402,7 @@ describe('VDOM interop', () => {
       "<div>
       <!--(-->
       <!--[--><span>foo</span><!--if--><!--]-->
-      <!--if--><!--slot--><!--)-->
+      <!--if--><!--)-->
       </div>"
     `)
   })
@@ -1441,7 +1441,8 @@ describe('VDOM interop', () => {
     expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
       "<div>
       <!--(-->
-      <!--[--><!--slot--><!--for--><!--)-->
+      <!--[--><!--]-->
+      <!--)-->
       </div>"
     `)
 
@@ -1450,7 +1451,8 @@ describe('VDOM interop', () => {
     expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
       "<div>
       <!--(-->
-      <!--[--><!--slot--><span>foo</span><!--for--><!--)-->
+      <!--[--><span>foo</span><!--]-->
+      <!--)-->
       </div>"
     `)
 
@@ -1459,7 +1461,8 @@ describe('VDOM interop', () => {
     expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
       "<div>
       <!--(-->
-      <!--[--><!--slot--><span>bar</span><!--for--><!--)-->
+      <!--[--><span>bar</span><!--]-->
+      <!--)-->
       </div>"
     `)
   })

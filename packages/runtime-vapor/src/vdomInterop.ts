@@ -117,6 +117,7 @@ import {
   isValidSlot,
   move,
   remove,
+  removeAttachedNodes as removeAttachedBlockNodes,
 } from './block'
 import {
   EMPTY_ARR,
@@ -133,7 +134,6 @@ import {
   isObject,
   isReservedProp,
   isString,
-  slotInheritsFallback,
   slotNotifiesBoundary,
 } from '@vue/shared'
 import {
@@ -179,11 +179,9 @@ import {
 import {
   type DynamicFragment,
   RenderContextFragment,
-  type SlotFragment,
   type VaporFragment,
   createSlotBoundary,
   isFragment,
-  isSlotResolver,
   resolveFragmentAnchor,
 } from './fragment'
 import { SLOT_OUTLET, VDOM } from './fragmentFlags'
@@ -1118,7 +1116,7 @@ function resolveVNodeRange(vnode: VNode): [Node, Node] | undefined {
   }
 }
 
-function resolveVNodeNodes(vnode: VNode): Block {
+function resolveVNodeNodes(vnode: VNode, liveSlot?: boolean): Block {
   // Vapor component VNodes expose only their first root on `vnode.el`.
   // Use the mounted block so multi-root output keeps slot anchors and other
   // trailing anchors in the resolved block shape.
@@ -1142,6 +1140,22 @@ function resolveVNodeNodes(vnode: VNode): Block {
   }
   const vnodeRange = resolveVNodeRange(vnode)
   if (vnodeRange) {
+    // A range containing a vapor slot keeps the slot's block rather than the
+    // nodes it exposes right now: what it exposes later travels with the
+    // content.
+    if (
+      vnode.type === Fragment &&
+      vnodeRange[0] !== vnodeRange[1] &&
+      (liveSlot === undefined ? hasVaporSlot(vnode) : liveSlot)
+    ) {
+      const blocks: Block[] = [vnodeRange[0]]
+      const children = vnode.children as VNodeArrayChildren
+      for (let i = 0; i < children.length; i++) {
+        blocks.push(resolveVNodeNodes(children[i] as VNode))
+      }
+      blocks.push(vnodeRange[1])
+      return blocks
+    }
     const nodeRange: Node[] = []
     let n: Node | null = vnodeRange[0]
     while (n) {
@@ -1160,12 +1174,12 @@ function resolveVNodeNodes(vnode: VNode): Block {
   return vnode.el as Block
 }
 
-// Deliberately shallower than block.ts's removeAttachedNodes (which this
-// local declaration shadows): interop node snapshots (resolveVNodeNodes) can
-// embed live vapor component/fragment entries whose DOM teardown belongs to
-// their own owners (the VDOM renderer / block removal). This detaches only
-// loose top-level DOM nodes, recursing through arrays — never into block
-// structures. Do not "dedupe" the two.
+// Deliberately shallower than block.ts's removeAttachedNodes (imported as
+// removeAttachedBlockNodes for the vapor blocks the hosts own): interop node
+// snapshots (resolveVNodeNodes) can embed live vapor component/fragment
+// entries whose DOM teardown belongs to their own owners (the VDOM renderer /
+// block removal). This detaches only loose top-level DOM nodes, recursing
+// through arrays — never into block structures. Do not "dedupe" the two.
 function removeAttachedNodes(block: Block, parent: ParentNode): void {
   if (block instanceof Node) {
     if (block.parentNode === parent) {
@@ -2106,12 +2120,20 @@ function ensureRendererBridge(
   return bridge
 }
 
-function hasValidVNodeContent(vnode: VNode): boolean {
-  return !!ensureValidVNode(
-    vnode.type === Fragment && isArray(vnode.children)
-      ? (vnode.children as VNodeArrayChildren)
-      : [vnode],
-  )
+function isValidVNodeContent(vnodes: VNodeArrayChildren): boolean {
+  for (let i = 0; i < vnodes.length; i++) {
+    const child = vnodes[i]
+    if (!isVNode(child) || isValidVNodeChild(child)) return true
+  }
+  return false
+}
+
+function isValidVNodeChild(vnode: VNode): boolean {
+  if (vnode.type === VNodeComment) return false
+  if (vnode.type === Fragment) {
+    return isValidVNodeContent(vnode.children as VNodeArrayChildren)
+  }
+  return !vnode.vs || !vnode.vb || isValidSlot(vnode.vb)
 }
 
 function trackSlotVNodeUpdatesWithRefresh(
@@ -2163,7 +2185,6 @@ function createSlotResolutionState(
       activeFallback: null,
       fallbackInserted: false,
       pendingRecheck: false,
-      pendingRecheckForce: false,
       isReconciling: false,
     },
     hooks,
@@ -2231,9 +2252,7 @@ function renderVDOMSlot(
 ): VaporFragment {
   const { fallback, flags = 0, adoptAnchor } = options
   const once = !!(flags & VaporSlotFlags.ONCE)
-  const sharedFallback = !!(flags & VaporSlotFlags.SHARED_FALLBACK)
   const forwarded = isForwardedSlot(flags)
-  const inheritFallback = slotInheritsFallback(flags)
   const notifiesBoundary = slotNotifiesBoundary(flags)
   let suspense = currentRenderContext.suspense || parentComponent.suspense
   // content mounts under the component rendering the outlet, like renderSlot
@@ -2252,32 +2271,39 @@ function renderVDOMSlot(
   let currentParentNode: ParentNode | null = null
   // Captured from the real DOM container on insert. `currentParentNode` is
   // not a safe namespace source here: it is swapped to a detached
-  // DocumentFragment while content is parked for a shared fallback (see
-  // `sharedContentStorage`).
+  // DocumentFragment while content is parked for the enclosing outlet's
+  // fallback (see `parkedContentStorage`).
   let slotNamespace: ElementNamespace
   let currentAnchor: Node | null = null
-  let sharedContentStorage: DocumentFragment | undefined
+  let parkedContentStorage: DocumentFragment | undefined
   let disposed = false
   let pendingInOutVNode: VNode | undefined
   let pendingOutIn: PendingOutIn | undefined
   let isContentUpdateRecheck = false
+  // The committed vnode while it contains a vapor slot: what it exposes is
+  // read live, not from the patch-time snapshot.
+  let liveVNode: VNode | null = null
   let slotResolutionState!: SlotResolutionState
+  // A vapor slot inside reports through the boundary, not through a patch.
+  // `content.valid` keeps the patch-time value the patch paths rely on.
+  const isContentValid = (): boolean =>
+    liveVNode && rendered === liveVNode
+      ? isValidVNodeChild(liveVNode)
+      : content.valid
 
-  // `isBlockValid` reports VDOM-side validity (`content.valid`), not
+  // `isBlockValid` reports the content's live validity, not
   // `isValidBlock(frag.nodes)`: `frag.nodes` tracks the active fallback
   // when one is shown.
   frag.isBlockValid = componentAsValid => {
     if (!content.resolved) return true
     return slotResolutionState.activeFallback
       ? isValidBlock(slotResolutionState.activeFallback, componentAsValid)
-      : content.valid
+      : isContentValid()
   }
-  const parentBoundary = inheritFallback ? slotBoundary : null
   const boundary = createSlotBoundary(
     frag,
-    () => parentBoundary,
     (): BlockFn | undefined => localFallback,
-    force => markSlotResolutionDirty(slotResolutionState, force),
+    () => markSlotResolutionDirty(slotResolutionState),
     [cleanupInvalidContent],
   )
   // Mirrors the vapor fast path: an outlet joining no fallback arbitration
@@ -2291,7 +2317,7 @@ function renderVDOMSlot(
     getAnchor: () => currentAnchor,
     isBusy: () => false,
     isDisposed: () => disposed,
-    isContentValid: () => content.valid,
+    isContentValid,
     syncNodes: () => {
       frag.nodes = resolveExposedSlotNodes(slotResolutionState)
     },
@@ -2302,14 +2328,13 @@ function renderVDOMSlot(
     },
   })
   installInteropTransitionAccessor(slotResolutionState, frag)
-  if (sharedFallback && slotBoundary) {
-    registerContentInvalid(slotBoundary, parkSharedContent, frag)
+  // only a forwarded root has one (createSlot): it is parked with the rest
+  // of the enclosing outlet's content while that outlet shows its fallback
+  if (slotBoundary) {
+    registerContentInvalid(slotBoundary, parkContent, frag)
   }
   if (notifiesBoundary) {
-    trackSlotBoundaryDirtying(
-      frag,
-      sharedFallback ? undefined : cleanupInvalidContent,
-    )
+    trackSlotBoundaryDirtying(frag)
   }
   localFallback = fallback
     ? once
@@ -2325,16 +2350,16 @@ function renderVDOMSlot(
   ) => {
     if (isHydrating) return
     if (parentSuspense !== undefined) suspense = parentSuspense
-    // A non-inherited local fallback can revive independently of sibling
-    // roots, so it needs an insertion point separate from the enclosing slot.
-    if (localFallback && !inheritFallback && !frag.anchor) {
+    // A local fallback enters later, at the outlet's own anchor: the one
+    // passed in belongs to whatever follows the outlet.
+    if (localFallback && !frag.anchor) {
       frag.anchor = resolveFragmentAnchor(adoptAnchor, undefined)
       if (frag.anchor !== adoptAnchor) {
         parentNode.insertBefore(frag.anchor, anchor)
       }
       anchor = frag.anchor
     }
-    const sharedContentParked = !!sharedContentStorage
+    const contentParked = !!parkedContentStorage
     currentParentNode = parentNode
     currentAnchor = anchor
 
@@ -2343,9 +2368,9 @@ function renderVDOMSlot(
       scope.run(render)
       isMounted = true
     } else {
-      if (sharedContentParked) {
+      if (contentParked) {
         insert(frag.nodes, parentNode, anchor, suspense)
-        sharedContentStorage = undefined
+        parkedContentStorage = undefined
         if (slotResolutionState.activeFallback) {
           slotResolutionState.fallbackInserted = true
         }
@@ -2368,7 +2393,7 @@ function renderVDOMSlot(
         }
       }
 
-      if (!sharedContentParked) {
+      if (!contentParked) {
         insertActiveSlotFallback(slotResolutionState, moveType)
       }
     }
@@ -2386,7 +2411,7 @@ function renderVDOMSlot(
   ) => place(parentNode, anchor, parentSuspense, moveType)
 
   frag.remove = parentNode => {
-    const storage = sharedContentStorage
+    const storage = parkedContentStorage
     if (parentNode && !storage) {
       currentParentNode = parentNode
     }
@@ -2408,7 +2433,7 @@ function renderVDOMSlot(
       if (anchor && anchor.parentNode === storage) {
         frag.anchor = undefined
       }
-      sharedContentStorage = undefined
+      parkedContentStorage = undefined
     }
   }
 
@@ -2435,9 +2460,9 @@ function renderVDOMSlot(
       return
     }
     // Resolve the namespace from the SSR container before rendering: parked
-    // shared content (`parkSharedContent`) points `currentParentNode` at a
-    // detached DocumentFragment, which would report HTML for content that
-    // belongs under an <svg>/<math>.
+    // content (`parkContent`) points `currentParentNode` at a detached
+    // DocumentFragment, which would report HTML for content that belongs
+    // under an <svg>/<math>.
     const hydrationParent =
       currentHydrationNode && currentHydrationNode.parentNode
     scope.run(render)
@@ -2448,7 +2473,7 @@ function renderVDOMSlot(
     slotNamespace = getContainerType(
       (hydrationParent || currentParentNode) as Element,
     )
-    if (content.valid && localFallback && !inheritFallback && !frag.anchor) {
+    if (content.valid && localFallback && !frag.anchor) {
       // The outlet owns this anchor; as an untracked anchor it is invisible
       // to hydration traversal, so it cannot shift hydration indices.
       const outletAnchor = claimUntrackedAnchor(createTextNode())
@@ -2490,9 +2515,9 @@ function renderVDOMSlot(
   }
 
   // Parks the exposed content in a detached DocumentFragment while the
-  // enclosing shared (aggregate) fallback takes over the live DOM.
-  function parkSharedContent(): void {
-    if (!currentParentNode || sharedContentStorage) return
+  // enclosing outlet's fallback takes over the live DOM.
+  function parkContent(): void {
+    if (!currentParentNode || parkedContentStorage) return
     invalidateExposedSlotContent(slotResolutionState)
     const storage = document.createDocumentFragment()
     let anchor = frag.anchor
@@ -2501,9 +2526,9 @@ function renderVDOMSlot(
     }
     storage.appendChild(anchor)
     // VDOM Fragment ranges must keep a common parent while parked so the
-    // renderer can patch them before the aggregate fallback switches back.
+    // renderer can patch them before the enclosing fallback switches back.
     insert(frag.nodes, storage, anchor, suspense)
-    sharedContentStorage = storage
+    parkedContentStorage = storage
     currentParentNode = storage
     currentAnchor = anchor
   }
@@ -2521,17 +2546,17 @@ function renderVDOMSlot(
     }
   }
 
-  function recheckAfterContentUpdate(forceResolutionRecheck = false): void {
+  function recheckAfterContentUpdate(): void {
     isContentUpdateRecheck = true
     try {
-      recheckSlotResolution(slotResolutionState, forceResolutionRecheck)
+      recheckSlotResolution(slotResolutionState)
     } finally {
       isContentUpdateRecheck = false
     }
   }
 
-  function finishContentUpdate(forceResolutionRecheck = false): void {
-    recheckAfterContentUpdate(forceResolutionRecheck)
+  function finishContentUpdate(): void {
+    recheckAfterContentUpdate()
     notifyUpdated()
   }
 
@@ -2683,7 +2708,7 @@ function renderVDOMSlot(
 
       if (isVNode(slotContent)) {
         slotContentValid =
-          slotContent.type !== Fragment || hasValidVNodeContent(slotContent)
+          slotContent.type !== Fragment || isValidVNodeChild(slotContent)
       } else if (slotContent) {
         slotContentValid = isValidSlot(slotContent)
       }
@@ -2869,18 +2894,29 @@ function renderVDOMSlot(
     renderedContent: VNode | Block | null,
     knownValid?: boolean,
   ): void {
+    const prevRendered = rendered
     rendered = renderedContent
     if (isVNode(renderedContent)) {
-      content.nodes = resolveVNodeNodes(renderedContent)
+      // a vnode's tree is fixed once patched: child self-updates refresh the
+      // same one
+      if (renderedContent !== prevRendered) {
+        liveVNode = hasVaporSlot(renderedContent) ? renderedContent : null
+      }
+      content.nodes = resolveVNodeNodes(
+        renderedContent,
+        renderedContent === liveVNode,
+      )
       content.valid =
         knownValid === undefined
-          ? hasValidVNodeContent(renderedContent)
+          ? isValidVNodeChild(renderedContent)
           : knownValid
     } else if (renderedContent) {
+      liveVNode = null
       content.nodes = renderedContent
       content.valid =
         knownValid === undefined ? isValidSlot(renderedContent) : knownValid
     } else {
+      liveVNode = null
       content.nodes = EMPTY_BLOCK
       content.valid = false
     }
@@ -2950,7 +2986,10 @@ function renderVDOMSlot(
       const hydrationVNode = transitionChild || hydratedContent
       setVNode(hydrationVNode)
       const refreshSlotVNode = () => {
-        frag.nodes = resolveVNodeNodes(hydrationVNode)
+        frag.nodes = resolveVNodeNodes(
+          hydrationVNode,
+          hydrationVNode === liveVNode,
+        )
         notifyUpdated()
       }
       trackSlotVNodeUpdatesWithRefresh(
@@ -2991,7 +3030,7 @@ function renderVDOMSlot(
       setVNode(null)
       setRendered(null)
     }
-    finishContentUpdate(true)
+    finishContentUpdate()
   }
 }
 
@@ -3169,7 +3208,7 @@ function hydrateOutletFallback(
         },
       )
       next = close
-    } else if (child.type === Fragment && hasVaporSlot(child)) {
+    } else if (hasVaporSlot(child)) {
       insert((child.el = createTextNode()), container, next)
       next = hydrateOutletFallback(
         child.children as VNode[],
@@ -3201,9 +3240,10 @@ function hydrateOutletFallback(
   return next
 }
 
-function hasVaporSlot(fragment: VNode): boolean {
-  return (fragment.children as VNode[]).some(
-    child => child.vs || (child.type === Fragment && hasVaporSlot(child)),
+function hasVaporSlot(vnode: VNode): boolean {
+  return (
+    !!vnode.vs ||
+    (vnode.type === Fragment && (vnode.children as VNode[]).some(hasVaporSlot))
   )
 }
 
@@ -3348,10 +3388,6 @@ function renderVaporSlot(
       return EMPTY_BLOCK
     }
     const slotState = resolveInteropVaporSlotState(vnode)
-    // Most of the interop setup is shared, but slots that start with a local
-    // VDOM fallback still need to let an inner SlotFragment own the active
-    // fallback lifecycle. Forcing the interop wrapper to own that branch breaks
-    // fallback blocks that can later resolve to an empty vnode list.
     const frag = createInteropFragment(EMPTY_BLOCK, null, SLOT_OUTLET)
     // The vnode-derived slot context becomes the creation ambient for the
     // vapor-rendered content, restored via the fragment's render seam.
@@ -3373,55 +3409,30 @@ function renderVaporSlot(
     let currentAnchor: Node | null = null
     let disposed = false
     let slotResolutionState!: SlotResolutionState
-    let ownedSlotFragment: SlotFragment | undefined
-    let ownedSlotFragmentDirtyQueued = false
-    let ownedSlotFragmentDirtyForce = false
+    // the content is a vapor block of this slot's own: parked with its anchors
     const onContentInvalid = [
       () => {
         if (currentParentNode) {
-          removeAttachedNodes(content.nodes, currentParentNode)
+          removeAttachedBlockNodes(content.nodes, currentParentNode)
         }
       },
     ]
-    const markInteropSlotResolutionDirty = (force?: boolean): void => {
-      const target = ownedSlotFragment
-      if (!target) {
-        markSlotResolutionDirty(slotResolutionState, force)
-        return
-      }
-      ownedSlotFragmentDirtyForce = ownedSlotFragmentDirtyForce || !!force
-      // When the inner SlotFragment owns the fallback, a single vdom flush
-      // can dirty this slot multiple times; batch into one post-flush recheck
-      // so it observes the settled re-rendered content.
-      if (ownedSlotFragmentDirtyQueued) {
-        return
-      }
-      ownedSlotFragmentDirtyQueued = true
-      queuePostFlushCb(() => {
-        ownedSlotFragmentDirtyQueued = false
-        const force = ownedSlotFragmentDirtyForce
-        ownedSlotFragmentDirtyForce = false
-        markSlotResolutionDirty(target, force)
-      })
-    }
+    const markDirty = () => markSlotResolutionDirty(slotResolutionState)
     // One boundary per vdom outlet on the chain, innermost first, built as
     // the chain is walked. The chain follows the outlets recorded on the
-    // latest vnode and continues into the ambient boundary past the last.
+    // latest vnode; it is this slot's own, so it ends there.
     const outletBoundaries: SlotBoundaryContext[] = []
-    const createOutletBoundary = (
-      depth: number,
-      onContentInvalid?: (() => void)[],
-    ): SlotBoundaryContext => {
+    const createOutletBoundary = (depth: number): SlotBoundaryContext => {
       let fallback: BlockFn | undefined
       return createSlotBoundary(
         frag,
-        () => getOutletBoundary(depth + 1),
         () =>
           slotState.outlets[depth]
             ? (fallback ||= createFallback(slotState, depth, parentComponent))
             : undefined,
-        markInteropSlotResolutionDirty,
-        onContentInvalid,
+        markDirty,
+        // the slot's own resolution point is where the content parks
+        depth ? undefined : onContentInvalid,
         () => {
           const outlet = slotState.outlets[depth]
           // the vnode's own outlet renders under the vnode's own cell
@@ -3433,18 +3444,14 @@ function renderVaporSlot(
               )
             : frag.slotScopeIds
         },
+        () => getOutletBoundary(depth + 1),
       )
     }
     const getOutletBoundary = (depth: number): SlotBoundaryContext | null =>
       depth < slotState.outlets.length
         ? (outletBoundaries[depth] ||= createOutletBoundary(depth))
-        : slotBoundary
-    // the slot's own resolution point stays with no outlet on the chain: it
-    // is where the content parks while a fallback shows
-    const rootBoundary = (outletBoundaries[0] = createOutletBoundary(
-      0,
-      onContentInvalid,
-    ))
+        : null
+    const rootBoundary = (outletBoundaries[0] = createOutletBoundary(0))
     slotResolutionState = createSlotResolutionState(rootBoundary, {
       getContent: () => content.nodes,
       getParentNode: () => currentParentNode,
@@ -3468,11 +3475,18 @@ function renderVaporSlot(
     if (vnode.transition) {
       installInteropTransitionAccessor(slotResolutionState, frag)
     }
-    const takePendingRecheck = (): boolean => {
-      const force = slotResolutionState.pendingRecheckForce
-      slotResolutionState.pendingRecheck = false
-      slotResolutionState.pendingRecheckForce = false
-      return force
+    // Parked with the enclosing outlet's content while that outlet shows its
+    // fallback: that outlet detaches what this slot exposes, and nothing of it
+    // comes back before the outlet inserts it again.
+    if (slotBoundary) {
+      registerContentInvalid(
+        slotBoundary,
+        () => {
+          invalidateExposedSlotContent(slotResolutionState)
+          currentParentNode = null
+        },
+        frag,
+      )
     }
 
     const dispose = (parentNode?: ParentNode): void => {
@@ -3487,28 +3501,13 @@ function renderVaporSlot(
     }
 
     try {
-      const hasInteropFallback = slotState.outlets.length > 0
-      slotResolutionState.pendingRecheck = false
-      slotResolutionState.pendingRecheckForce = false
-      const finalizeResolvedContent = (
-        resolvedContent: Block | undefined,
-      ): Block | undefined => {
-        // SLOT_RESOLVER, not the SLOT bit: fast-path outlet fragments
-        // carry SLOT but run no slot resolution to delegate to.
-        if (hasInteropFallback && isSlotResolver(resolvedContent)) {
-          return resolvedContent
-        }
-        content.nodes = resolvedContent || EMPTY_BLOCK
-        recheckSlotResolution(slotResolutionState, takePendingRecheck())
-        return resolvedContent
-      }
-      let resolvedContent: Block | undefined
-      const renderContent = () =>
-        (resolvedContent = finalizeResolvedContent(
+      const renderContent = (): void => {
+        content.nodes =
           withRenderContext(frag.ctx, () =>
             withSlotBoundary(rootBoundary, () => invokeVaporSlot(vnode)),
-          ),
-        ))
+          ) || EMPTY_BLOCK
+        recheckSlotResolution(slotResolutionState)
+      }
       isResolvingContent = true
       try {
         if (fallbackRange) {
@@ -3524,17 +3523,6 @@ function renderVaporSlot(
       } finally {
         isResolvingContent = false
       }
-      if (hasInteropFallback && isSlotResolver(resolvedContent)) {
-        ownedSlotFragment = resolvedContent
-        trackInteropFallbackChanges(vnode.vs!.scope, slotState, () =>
-          markInteropSlotResolutionDirty(),
-        )
-        dispose()
-        return resolvedContent
-      }
-
-      slotResolutionState.pendingRecheck = false
-      slotResolutionState.pendingRecheckForce = false
       frag.insert = (parentNode, anchor, parentSuspense) => {
         currentParentNode = parentNode
         currentAnchor = anchor
@@ -3573,7 +3561,8 @@ function renderVaporSlot(
         dispose(parentNode)
       }
       trackInteropFallbackChanges(vnode.vs!.scope, slotState, () => {
-        recheckSlotResolution(slotResolutionState, true)
+        slotResolutionState.fallbackChainStale = true
+        markDirty()
       })
 
       if (isHydrating && currentHydrationNode) {
@@ -4171,15 +4160,20 @@ function createVNodeChildrenFragment(
     registerContentInvalid(frag.slotBoundary, cleanupInvalidContent, frag)
   }
 
-  const syncResolvedNodes = (children: VNode[] = currentChildren): boolean => {
+  const syncResolvedNodes = (
+    children: VNode[] = currentChildren,
+    mounted = true,
+  ): boolean => {
     const prevValid = content.resolved ? content.valid : true
     content.valid = !!ensureValidVNode(children)
-    if (children.length === 0) {
+    // nothing of an unmounted fragment is in the DOM: placed later, it
+    // resolves its nodes again
+    if (!mounted || children.length === 0) {
       frag.nodes = EMPTY_BLOCK
     } else if (children.length === 1) {
       frag.nodes = resolveVNodeNodes(children[0])
     } else {
-      frag.nodes = children.map(resolveVNodeNodes) as Block[]
+      frag.nodes = children.map(child => resolveVNodeNodes(child)) as Block[]
     }
     content.resolved = true
     return prevValid !== content.valid
@@ -4246,7 +4240,7 @@ function createVNodeChildrenFragment(
             currentChildren = nextChildren
             frag.vnode = createVNode(Fragment, null, nextChildren)
             const wasResolved = content.resolved
-            const validityChanged = syncResolvedNodes(nextChildren)
+            const validityChanged = syncResolvedNodes(nextChildren, false)
             if (wasResolved) {
               notifyUpdated(validityChanged)
             }

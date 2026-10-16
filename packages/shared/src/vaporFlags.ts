@@ -112,26 +112,17 @@ export enum TemplateFlags {
 export enum VaporSlotFlags {
   NO_SLOTTED = 1,
   ONCE = 1 << 1,
-  // The outlet is a dynamic root on a forwarded slot chain. It exposes its
-  // content validity to the enclosing boundary (unless ONCE) and, without
-  // SHARED_FALLBACK, may resolve an enclosing fallback after its own local
-  // fallback is exhausted.
+  // The outlet is a dynamic root of slot content. It exposes its validity to
+  // the enclosing boundary (unless ONCE), which renders its own fallback once
+  // every root is invalid.
   FORWARDED = 1 << 2,
-  // Implies FORWARDED: multiple independently invalid roots share one
-  // enclosing fallback decision instead of resolving that fallback from each
-  // root.
-  SHARED_FALLBACK = 1 << 3,
 }
 
 export function isForwardedSlot(flags: number): boolean {
-  return !!(flags & (VaporSlotFlags.FORWARDED | VaporSlotFlags.SHARED_FALLBACK))
+  return !!(flags & VaporSlotFlags.FORWARDED)
 }
 
-export function slotInheritsFallback(flags: number): boolean {
-  return isForwardedSlot(flags) && !(flags & VaporSlotFlags.SHARED_FALLBACK)
-}
-
-// v-once content never changes validity, so it has nothing to notify.
+// vapor v-once content never changes validity, so it has nothing to notify.
 export function slotNotifiesBoundary(flags: number): boolean {
   return isForwardedSlot(flags) && !(flags & VaporSlotFlags.ONCE)
 }

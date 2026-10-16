@@ -1,5 +1,5 @@
 import { EffectScope } from '@vue/reactivity'
-import { isArray } from '@vue/shared'
+import { extend, isArray } from '@vue/shared'
 import type { MoveType } from '@vue/runtime-dom'
 import {
   type Block,
@@ -31,112 +31,103 @@ import { isInteropEnabled } from './vdomInteropState'
 // Vapor has no component-level re-render: once slot content is rendered, the
 // only signal that its *validity* changed (e.g. a root v-if inside the slot
 // toggled) is a markDirty() notification delivered through the slot boundary
-// chain (slotBoundary.ts). The functions below form a state machine that
-// reacts to those notifications and decides which branch a slot exposes:
-// the content while it is valid, otherwise the nearest valid fallback up the
-// boundary chain.
+// (slotBoundary.ts). The functions below form a state machine that reacts to
+// those notifications and decides which branch a slot host exposes: the
+// content while it is valid, otherwise the nearest valid fallback the host
+// provides.
+//
+// Every fallback is rendered by the host providing it. A forwarded outlet
+// never renders an enclosing outlet's fallback: it exposes the validity of
+// its own branch, and the enclosing outlet treats it as plain content, so
+// nearest-wins is the cascade of those decisions. `boundary.getParent()`
+// enumerates the further fallbacks a host provides itself (slotBoundary.ts).
 //
 // The machine is written against the duck-typed SlotResolutionState interface
 // because it has three hosts: SlotFragment (vapor slots) and the two interop
 // slot implementations in vdomInterop.ts, which keep their per-slot state in
 // closures.
 
-interface RenderedSlotFallback {
+export interface RenderedSlotFallback {
   block: Block
+  boundary: SlotBoundaryContext
+  // Parking callbacks registered by hosts rendered in the fallback body.
   onContentInvalid: (() => void)[]
   // hydration: adopted where the server rendered it
   adopted: boolean
 }
 
-// Walks the boundary chain outward and renders fallbacks into `scope`. Returns:
-// - a valid block: the innermost fallback that rendered valid output;
-// - an invalid block: every boundary providing a fallback rendered invalid
-//   output (e.g. a fallback whose root v-if is currently false). The outermost
-//   invalid result is kept. Their effects stay live in the shared scope, so a
-//   fallback can become valid later;
-// - undefined: no boundary in the chain provides a fallback at all.
-function renderSlotFallback(
+const noFallback = (): undefined => undefined
+
+// Walks the host's fallback providers outward and renders their fallbacks
+// into `scope`, stopping at the first valid one. Every rendered fallback
+// stays alive: an invalid one can become valid later and then takes over.
+function renderSlotFallbacks(
   boundary: SlotBoundaryContext | null,
   scope: EffectScope,
-): RenderedSlotFallback | undefined {
-  let result: RenderedSlotFallback | undefined
+): RenderedSlotFallback[] {
+  const rendered: RenderedSlotFallback[] = []
 
   while (boundary) {
-    const current = boundary
-    const localFallback = current.getFallback()
+    const render = boundary.getFallback()
 
-    if (localFallback) {
-      let selected = false
-      const onContentInvalid: (() => void)[] = []
+    if (render) {
       // the PROVIDING outlet's ids, none included: as in vdom, an outer
       // outlet's fallback replaces the forwarded content and the slotted ids
       // around it
-      const getScopeIds = current.getScopeIds
-      const render = getScopeIds
-        ? () => renderWithSlotScopeIds(getScopeIds(), localFallback)
-        : localFallback
-      const adopt = isHydratingSlotFallback && current.adoptFallback
-      if (adopt) current.adoptFallback = undefined
-      const renderFallback = adopt ? () => adopt(render) : render
-      const content = current.run(
+      const getScopeIds = boundary.getScopeIds
+      const renderBody = getScopeIds
+        ? () => renderWithSlotScopeIds(getScopeIds(), render)
+        : render
+      const adopt = isHydratingSlotFallback && boundary.adoptFallback
+      if (adopt) boundary.adoptFallback = undefined
+      const onContentInvalid: (() => void)[] = []
+      // The body sees no provider of its own: an outlet inside it exposes its
+      // invalidity to the host instead of resolving the same fallback again.
+      const body = extend({}, boundary, {
+        getFallback: noFallback,
+        onContentInvalid,
+      })
+      const block = boundary.run(
         () =>
-          withSlotBoundary(
-            {
-              ...current,
-              // Hide the local fallback while rendering it, so slot outlets inside
-              // the fallback don't resolve to the same fallback again.
-              getFallback: () => undefined,
-              onContentInvalid,
-              // Hidden invalid fallbacks in a forwarded fallback chain must
-              // force a recheck when they become valid so the nearer fallback
-              // can win again. The selected fallback only needs a normal
-              // validity recheck because its own dynamic children update in
-              // place.
-              markDirty: force =>
-                current.markDirty(
-                  !!force ||
-                    (!selected && hasSlotFallback(current.getParent())),
-                ),
-            },
-            renderFallback,
-          ),
+          withSlotBoundary(body, adopt ? () => adopt(renderBody) : renderBody),
         scope,
       )
-      if (isValidSlot(content)) {
-        selected = true
-        return { block: content, onContentInvalid, adopted: !!adopt }
-      }
-      result = { block: content, onContentInvalid, adopted: !!adopt }
+      rendered.push({ block, boundary, onContentInvalid, adopted: !!adopt })
+      if (isValidSlot(block)) break
     }
 
-    boundary = current.getParent()
+    boundary = boundary.getParent()
   }
 
-  return result
+  return rendered
 }
 
 // Per-slot state the slot resolution machine operates on. Implemented by
 // SlotFragment and by the two interop slots in vdomInterop.ts.
 export interface SlotResolutionState {
-  // The slot's own resolution point; its parent chain supplies inherited
-  // fallbacks for forwarded slots.
+  // The slot's own resolution point; its parent chain supplies the further
+  // fallbacks the host provides.
   boundary: SlotBoundaryContext
   // The committed fallback block, or null while content is exposed.
   activeFallback: Block | null
-  // Parking callbacks registered by hosts rendered in the active fallback.
-  activeFallbackInvalidCallbacks?: (() => void)[]
+  // Every fallback rendered on the way to the active one, nearest first; the
+  // active one is the last.
+  renderedFallbacks?: RenderedSlotFallback[]
   // A committed fallback can be invalid and therefore remain detached.
   fallbackInserted: boolean
-  // Detached scope owning the active fallback's effects (see
-  // renderFallbackInScope); stopped with the outlet or by clearSlotFallback.
+  // Detached scope owning the rendered fallbacks' effects (see
+  // renderAndCommitSlotFallback); stopped with the outlet or by
+  // clearSlotFallback.
   fallbackScope?: EffectScope
+  // Set by an interop host when its providers changed (a vdom outlet
+  // forwarding the slot joined or left); see isSlotFallbackChainStale.
+  fallbackChainStale?: boolean
   // Validity of the exposed branch as of the last recheck; undefined before
   // the first recheck. Flips trigger notifyExposedValidityChange.
   lastNodesValid?: boolean
   // A dirty notification arrived during reconciliation or a host update;
   // folded into the recheck that completes that operation.
   pendingRecheck: boolean
-  pendingRecheckForce: boolean
   // Reentrancy guard for one atomic content/fallback reconciliation.
   isReconciling: boolean
   $transition?: VaporTransitionHooks
@@ -178,24 +169,21 @@ export function resolveExposedSlotNodes(state: SlotResolutionState): Block {
 // Entry point for validity-change notifications (boundary.markDirty). During
 // reconciliation or a host content update, fold notifications into the
 // in-flight operation instead of recursing.
-export function markSlotResolutionDirty(
-  state: SlotResolutionState,
-  force: boolean = false,
-): void {
+export function markSlotResolutionDirty(state: SlotResolutionState): void {
   if (state.isDisposed()) {
     return
   }
   if (state.isReconciling || state.isBusy()) {
     state.pendingRecheck = true
-    state.pendingRecheckForce = state.pendingRecheckForce || force
     return
   }
-  recheckSlotResolution(state, force)
+  recheckSlotResolution(state)
 }
 
 export function invalidateExposedSlotContent(state: SlotResolutionState): void {
-  const callbacks = state.activeFallback
-    ? state.activeFallbackInvalidCallbacks
+  const rendered = state.renderedFallbacks
+  const callbacks = rendered
+    ? rendered[rendered.length - 1].onContentInvalid
     : state.boundary.onContentInvalid
   if (callbacks) {
     for (let i = 0; i < callbacks.length; i++) {
@@ -221,7 +209,7 @@ function clearSlotFallback(
     state.activeFallback = null
     state.fallbackInserted = false
   }
-  state.activeFallbackInvalidCallbacks = undefined
+  state.renderedFallbacks = undefined
 }
 
 export function leaveSlotFallback(
@@ -235,35 +223,6 @@ export function leaveSlotFallback(
   }
   clearSlotFallback(state)
   return true
-}
-
-// Renders the fallback into a dedicated detached scope: the fallback must
-// not die with whatever branch scope happens to be active when a recheck
-// fires. The slot owner stops it on replacement or disposal; failed renders
-// are stopped here.
-function renderFallbackInScope(
-  state: SlotResolutionState,
-): (RenderedSlotFallback & { scope: EffectScope }) | undefined {
-  const scope = new EffectScope(true)
-  let renderedFallback: RenderedSlotFallback | undefined
-  try {
-    renderedFallback = renderSlotFallback(state.boundary, scope)
-  } catch (err) {
-    scope.stop()
-    throw err
-  }
-
-  if (!renderedFallback) {
-    scope.stop()
-    return undefined
-  }
-
-  return {
-    block: renderedFallback.block,
-    onContentInvalid: renderedFallback.onContentInvalid,
-    adopted: renderedFallback.adopted,
-    scope,
-  }
 }
 
 // hydration, behind `isHydratingSlotFallback`: the fallback adopted from the server is
@@ -311,16 +270,17 @@ export function insertActiveSlotFallback(
 // replacing an already active fallback, the content is parked already.
 function commitSlotFallback(
   state: SlotResolutionState,
-  block: Block,
+  rendered: RenderedSlotFallback[],
   scope: EffectScope,
-  onContentInvalid: (() => void)[],
   detachContent: boolean,
-  adopted: boolean,
 ): void {
+  // the nearest valid one, or the outermost one when none is valid
+  const active = rendered[rendered.length - 1]
+  const block = active.block
   state.activeFallback = block
-  state.activeFallbackInvalidCallbacks = onContentInvalid
+  state.renderedFallbacks = rendered
   state.fallbackScope = scope
-  state.fallbackInserted = isHydrating || adopted
+  state.fallbackInserted = isHydrating || active.adopted
   if (isTransitionEnabled) {
     if (state.$transition) {
       // Match VDOM slot fallback branch identity so fallback enter does not
@@ -354,22 +314,40 @@ function ownerFragment(state: SlotResolutionState): VaporFragment | undefined {
   return frag.__vf ? frag : undefined
 }
 
-function renderAndCommitSlotFallback(
-  state: SlotResolutionState,
-  hadFallback: boolean,
-): void {
-  const result = renderFallbackInScope(state)
-  clearSlotFallback(state)
-  if (result) {
-    commitSlotFallback(
-      state,
-      result.block,
-      result.scope,
-      result.onContentInvalid,
-      !hadFallback,
-      result.adopted,
-    )
+// The host has a provider (hasSlotFallback): the caller checks.
+function renderAndCommitSlotFallback(state: SlotResolutionState): void {
+  // A dedicated detached scope: the fallbacks must not die with whatever
+  // branch scope happens to be active when a recheck fires. The host stops
+  // it on replacement or disposal; a failed render is stopped here.
+  const scope = new EffectScope(true)
+  let rendered: RenderedSlotFallback[]
+  try {
+    rendered = renderSlotFallbacks(state.boundary, scope)
+  } catch (err) {
+    scope.stop()
+    throw err
   }
+  const hadFallback = !!state.activeFallback
+  clearSlotFallback(state)
+  state.fallbackChainStale = false
+  commitSlotFallback(state, rendered, scope, !hadFallback)
+}
+
+// Whether the rendered chain no longer resolves to the right fallback: the
+// providers changed, a nearer rendered one became valid, or the active one
+// is invalid while the host has providers beyond the rendered ones. Any
+// takes a fresh walk.
+function isSlotFallbackChainStale(
+  state: SlotResolutionState,
+  activeValid: boolean,
+): boolean {
+  if (state.fallbackChainStale) return true
+  const rendered = state.renderedFallbacks!
+  const last = rendered.length - 1
+  for (let i = 0; i < last; i++) {
+    if (isValidSlot(rendered[i].block)) return true
+  }
+  return !activeValid && hasSlotFallback(rendered[last].boundary.getParent())
 }
 
 export function disposeSlotResolution(
@@ -379,64 +357,46 @@ export function disposeSlotResolution(
   // The enclosing block owns DOM removal when no parent is passed.
   clearSlotFallback(state, parentNode || null)
   state.pendingRecheck = false
-  state.pendingRecheckForce = false
   state.lastNodesValid = undefined
 }
 
-// Reconciles which branch the slot exposes after something may have changed.
-// `force` means the fallback chain may now resolve to a different block (the
-// fallback source changed, or a hidden fallback became valid), so a kept valid
-// fallback must be re-rendered. Ordinary dirty notifications from the selected
-// fallback's own dynamic children are not forced; those children update in
+// Reconciles which branch the slot exposes after something may have changed:
+// the content's validity, a rendered fallback's validity, or (hosts flag it)
+// the provider chain itself. Ordinary dirty notifications from the active
+// fallback's own dynamic children re-render nothing; those children update in
 // place.
-export function recheckSlotResolution(
-  state: SlotResolutionState,
-  force: boolean = false,
-): void {
+export function recheckSlotResolution(state: SlotResolutionState): void {
   if (state.isReconciling) {
     state.pendingRecheck = true
-    state.pendingRecheckForce = state.pendingRecheckForce || force
     return
   }
 
-  let nextForce = force || state.pendingRecheckForce
   do {
     state.pendingRecheck = false
-    state.pendingRecheckForce = false
     state.isReconciling = true
     try {
-      recheckSlotResolutionNow(state, nextForce)
+      recheckSlotResolutionNow(state)
     } finally {
       state.isReconciling = false
     }
-    if (!state.pendingRecheck) return
-    nextForce = state.pendingRecheckForce
-  } while (true)
+  } while (state.pendingRecheck)
 }
 
-function recheckSlotResolutionNow(
-  state: SlotResolutionState,
-  force: boolean,
-): void {
+function recheckSlotResolutionNow(state: SlotResolutionState): void {
   const fallback = state.activeFallback
-  const fallbackValid = fallback ? isValidSlot(fallback) : false
+  const fallbackValid = !!fallback && isValidSlot(fallback)
   const contentValid = state.isContentValid()
   // Validity of the currently exposed branch (fallback if active, else content).
-  const exposedValid = fallback ? fallbackValid : contentValid
-  const prevNodesValid = state.lastNodesValid ?? exposedValid
-  if (!force && contentValid && !fallback && prevNodesValid) {
-    state.syncNodes()
-    state.lastNodesValid = true
-    return
-  }
+  const prevNodesValid =
+    state.lastNodesValid ?? (fallback ? fallbackValid : contentValid)
 
   // Content wins over fallback. If fallback was mounted, content may need to
   // be inserted back because it can be invalid while fallback is active. It
-  // also returns, invalid or not, once the chain lost its last fallback, so
+  // also returns, invalid or not, once the host lost its last fallback, so
   // its anchors are live for later updates.
   if (contentValid || (fallback && !hasSlotFallback(state.boundary))) {
-    clearSlotFallback(state)
     if (fallback) {
+      clearSlotFallback(state)
       const content = state.getContent()
       // content rendered behind the fallback from the start has no hooks yet
       const transition = isTransitionEnabled ? state.$transition : undefined
@@ -456,36 +416,22 @@ function recheckSlotResolutionNow(
       }
     }
   } else if (fallback) {
-    // With an active fallback, `prevNodesValid` tells whether it could already
-    // be in the DOM. Previously invalid fallback is inserted only after it
-    // becomes valid.
-    if (prevNodesValid) {
-      // If the selected fallback becomes invalid and no inherited fallback can
-      // take over, keep it active. This is an internal fallback update, so its
-      // anchors/effects must stay live until it becomes valid again.
-      if (!fallbackValid && hasSlotFallback(state.boundary.getParent())) {
-        renderAndCommitSlotFallback(state, true)
-      } else if (force && fallbackValid) {
-        renderAndCommitSlotFallback(state, true)
-      }
-    } else if (fallbackValid) {
+    if (isSlotFallbackChainStale(state, fallbackValid)) {
+      renderAndCommitSlotFallback(state)
+    } else if (!prevNodesValid && fallbackValid) {
+      // A fallback committed while invalid is inserted once it becomes valid.
       insertActiveSlotFallback(state)
-    } else if (force) {
-      renderAndCommitSlotFallback(state, true)
     }
-  } else {
-    renderAndCommitSlotFallback(state, false)
+  } else if (hasSlotFallback(state.boundary)) {
+    renderAndCommitSlotFallback(state)
   }
 
   const nextFallback = state.activeFallback
-  const nextNodesValid =
-    contentValid && !nextFallback
-      ? true
-      : nextFallback
-        ? nextFallback === fallback
-          ? fallbackValid
-          : isValidSlot(nextFallback)
-        : state.isContentValid()
+  const nextNodesValid = nextFallback
+    ? nextFallback === fallback
+      ? fallbackValid
+      : isValidSlot(nextFallback)
+    : contentValid
   state.syncNodes()
   state.lastNodesValid = nextNodesValid
   if (prevNodesValid !== nextNodesValid) {

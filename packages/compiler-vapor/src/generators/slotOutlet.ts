@@ -72,9 +72,6 @@ function genSlotFlags(flags: number): string | undefined {
   if (flags & VaporSlotFlags.FORWARDED) {
     names.push('FORWARDED')
   }
-  if (flags & VaporSlotFlags.SHARED_FALLBACK) {
-    names.push('SHARED_FALLBACK')
-  }
 
   return genFlags(flags, names)
 }

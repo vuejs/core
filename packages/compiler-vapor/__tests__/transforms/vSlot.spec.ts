@@ -25,7 +25,6 @@ import { makeCompile } from './_utils'
 const dynamicSlotRootFlag = `${VaporDynamicComponentFlags.SLOT_ROOT} /* SLOT_ROOT */`
 const slotNonStableFlag = `_: ${VaporSlotStability.NON_STABLE} /* NON_STABLE */`
 const forwardedFlag = `${VaporSlotFlags.FORWARDED} /* FORWARDED */`
-const sharedFallbackFlag = `${VaporSlotFlags.FORWARDED | VaporSlotFlags.SHARED_FALLBACK} /* FORWARDED, SHARED_FALLBACK */`
 const keyedSlotRootCallRE =
   /const (n\d+) = _createKeyedFragment\([\s\S]*?\n\s*}, true\)\n\s*return \1/
 
@@ -761,37 +760,34 @@ describe('compiler: transform slot', () => {
       expect(code).not.toContain(slotNonStableFlag)
     })
 
-    test('multiple dynamic slot roots share the enclosing fallback decision', () => {
+    test('multiple dynamic slot roots are each forwarded', () => {
       const { code } = compileWithSlots(
         `<Comp><slot name="a"/><slot name="b"/></Comp>`,
       )
 
-      expect(code.match(/SHARED_FALLBACK/g)).toHaveLength(2)
-      expect(code).toContain(sharedFallbackFlag)
+      expect(code.match(/FORWARDED/g)).toHaveLength(2)
+      expect(code).toContain(forwardedFlag)
     })
 
-    test('slot root shares fallback with a dynamic sibling', () => {
+    test('slot root beside a dynamic sibling is forwarded', () => {
       const { code } = compileWithSlots(`<Comp><slot/><span v-if="ok"/></Comp>`)
 
-      expect(code).toContain(sharedFallbackFlag)
+      expect(code).toContain(forwardedFlag)
     })
 
-    test('v-once slot root shares fallback without update tracking', () => {
+    test('v-once slot roots are forwarded without update tracking', () => {
       const { code } = compileVapor(
         `<Comp><slot v-once name="a"/><slot name="b"/></Comp>`,
       )
 
-      expect(code.match(/SHARED_FALLBACK/g)).toHaveLength(2)
-      expect(code).toContain('ONCE, FORWARDED, SHARED_FALLBACK')
+      expect(code.match(/FORWARDED/g)).toHaveLength(2)
+      expect(code).toContain('ONCE, FORWARDED')
     })
 
-    test('v-once unique slot root inherits fallback without update tracking', () => {
+    test('v-once unique slot root is forwarded without update tracking', () => {
       const { code } = compileVapor(`<Comp><slot v-once /></Comp>`)
 
-      // 'ONCE, FORWARDED' alone would also match the shared-mode emission
-      // 'ONCE, FORWARDED, SHARED_FALLBACK', so pin inherit mode explicitly.
       expect(code).toContain('ONCE, FORWARDED')
-      expect(code).not.toContain('SHARED_FALLBACK')
     })
 
     test.each([
