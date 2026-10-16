@@ -175,6 +175,48 @@ export function render(_ctx) {
 }"
 `;
 
+exports[`compiler: template ref transform > ref in v-bind object > component + v-for 1`] = `
+"import { resolveComponent as _resolveComponent, createComponentWithFallback as _createComponentWithFallback, setComponentPropsRef as _setComponentPropsRef, createFor as _createFor } from 'vue';
+
+export function render(_ctx) {
+  const _component_Foo = _resolveComponent("Foo")
+  const n0 = _createFor(() => (_ctx.list), (_for_item0) => {
+    const n2 = _createComponentWithFallback(_component_Foo, { $: [
+      () => (_ctx.obj)
+    ] })
+    _setComponentPropsRef(n2, true)
+    return n2
+  }, undefined, 2 /* IS_COMPONENT */)
+  return n0
+}"
+`;
+
+exports[`compiler: template ref transform > ref in v-bind object > component 1`] = `
+"import { createAssetComponent as _createAssetComponent, setComponentPropsRef as _setComponentPropsRef } from 'vue';
+
+export function render(_ctx) {
+  const n0 = _createAssetComponent("Foo", { $: [
+    () => (_ctx.obj)
+  ] }, null, true)
+  _setComponentPropsRef(n0)
+  return n0
+}"
+`;
+
+exports[`compiler: template ref transform > ref in v-bind object > element + v-for 1`] = `
+"import { setDynamicProps as _setDynamicProps, renderEffect as _renderEffect, createFor as _createFor, template as _template } from 'vue';
+const t0 = _template("<div>")
+
+export function render(_ctx) {
+  const n0 = _createFor(() => (_ctx.list), (_for_item0) => {
+    const n2 = t0()
+    _renderEffect(() => _setDynamicProps(n2, [{ ref_for: true }, _ctx.obj]))
+    return n2
+  }, undefined, 8 /* IS_SINGLE_NODE */)
+  return n0
+}"
+`;
+
 exports[`compiler: template ref transform > simple function ref 1`] = `
 "import { setTemplateRefBinding as _setTemplateRefBinding, template as _template } from 'vue';
 const t0 = _template("<div>", 1)

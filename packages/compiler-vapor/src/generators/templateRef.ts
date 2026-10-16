@@ -10,6 +10,16 @@ export function genSetTemplateRef(
   oper: SetTemplateRefIRNode,
   context: CodegenContext,
 ): CodeFragment[] {
+  if (oper.fromProps) {
+    return [
+      NEWLINE,
+      ...genCall(
+        context.helper('setComponentPropsRef'),
+        `n${oper.element}`,
+        oper.refFor && 'true',
+      ),
+    ]
+  }
   const [refValue, refKey] = genRefValue(oper.value, context)
   // A ref with a static value and no `ref_for` array membership never changes,
   // so it needs no old-ref tracking: lower it to the stateless helper and skip

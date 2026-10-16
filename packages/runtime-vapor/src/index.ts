@@ -73,6 +73,7 @@ export {
 } from './apiCreateFor'
 export {
   createTemplateRefSetter,
+  setComponentPropsRef,
   setStaticTemplateRef,
   setTemplateRefBinding,
 } from './apiTemplateRef'

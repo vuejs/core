@@ -12,6 +12,7 @@ import {
   type SuspenseBoundary,
   callWithErrorHandling,
   createCanSetSetupRefChecker,
+  currentInstance,
   isAsyncWrapper,
   isTemplateRefKey,
   knownTemplateRefs,
@@ -44,6 +45,7 @@ import {
 } from './refCleanup'
 import { renderEffect } from './renderEffect'
 import { currentRenderContext } from './renderContext'
+import { trackRawValues } from './componentProps'
 
 export type NodeRef =
   | string
@@ -281,6 +283,86 @@ export function setTemplateRefBinding(
     if (!state) state = { ref, suspense: currentRenderContext.suspense }
     setTemplateRefWithState(instance, el, state, ref, refFor, refKey)
   })
+}
+
+type DynamicPropsRefEl = Element & {
+  $dref?: TemplateRefState & { i: VaporComponentInstance | null }
+  $drc?: typeof currentRenderContext
+}
+
+/**
+ * A `ref` inside `v-bind="obj"` is only known at runtime, so it is set from
+ * the merged props instead of a compiled ref binding. Like vdom, the compiler
+ * adds `ref_for: true` to the props inside v-for (#10696).
+ */
+export function setDynamicPropsRef(
+  el: DynamicPropsRefEl,
+  props: Record<string, any>,
+  isMount: boolean,
+): void {
+  const ref = props.ref
+  let state = el.$dref
+  if (!state) {
+    if (ref == null) {
+      // updates do not restore the slot owner or suspense of the render, so
+      // keep them for a ref that only appears later
+      if (
+        isMount &&
+        (currentRenderContext.slotOwner || currentRenderContext.suspense)
+      ) {
+        el.$drc = currentRenderContext
+      }
+      return
+    }
+    const ctx = el.$drc || currentRenderContext
+    state = el.$dref = {
+      ref,
+      suspense: ctx.suspense,
+      i: ctx.slotOwner || (currentInstance as VaporComponentInstance | null),
+    }
+  }
+  setTemplateRefWithState(
+    state.i!,
+    el,
+    state,
+    ref,
+    !!props.ref_for,
+    props.ref_key,
+  )
+}
+
+/**
+ * A component's `ref` inside `v-bind="obj"` arrives with its inputs, so it is
+ * read from the delivered values after creation, as vdom reads it from the
+ * vnode props (#10696).
+ */
+export function setComponentPropsRef(el: RefEl, refFor?: boolean): void {
+  if (!isVaporComponent(el)) return
+  const instance = getScopeOwner()!
+  const suspense = currentRenderContext.suspense
+  let state: TemplateRefState | undefined
+  const apply = () => {
+    const rawValues = trackRawValues(el)
+    const ref = rawValues.ref
+    if (!state) {
+      if (ref == null) return
+      state = { ref, suspense }
+    }
+    setTemplateRefWithState(
+      instance,
+      el,
+      state,
+      ref,
+      refFor || !!rawValues.ref_for,
+      rawValues.ref_key,
+    )
+  }
+  // constant inputs never deliver another ref
+  if (el.hasDynamicProps) {
+    renderEffect(apply)
+  } else {
+    apply()
+  }
 }
 
 /**

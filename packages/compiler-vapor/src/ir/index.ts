@@ -216,6 +216,8 @@ export interface SetTemplateRefIRNode extends BaseIRNode {
   value: SimpleExpressionNode
   refFor: boolean
   effect: boolean
+  // the ref is read from the component's v-bind="obj" at runtime
+  fromProps?: boolean
 }
 
 export interface InsertNodeIRNode extends BaseIRNode, InsertionState {

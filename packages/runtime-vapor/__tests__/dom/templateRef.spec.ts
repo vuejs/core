@@ -976,6 +976,233 @@ describe('api: template ref', () => {
     expect(refs.bar).toBe(el)
   })
 
+  // #10696
+  describe('ref in v-bind object', () => {
+    test('on an element', async () => {
+      const data = ref<Record<string, any>>({ ref: 'foo', id: 'a' })
+      const { instance, host } = define(
+        compile(`<template><div v-bind="data" /></template>`, data),
+      ).render()
+      const el = host.querySelector('div')!
+      const refs = (instance as any).refs
+      expect(refs.foo).toBe(el)
+      expect(el.hasAttribute('ref')).toBe(false)
+
+      data.value = { ref: 'bar', id: 'a' }
+      await nextTick()
+      expect(refs.foo).toBe(null)
+      expect(refs.bar).toBe(el)
+
+      data.value = { id: 'a' }
+      await nextTick()
+      expect(refs.bar).toBe(null)
+    })
+
+    test('on an element inside v-for', async () => {
+      const data = ref([1, 2, 3])
+      const { instance, host } = define(
+        compile(
+          `<template>
+            <div v-for="i in data" :key="i" v-bind="{ ref: 'foo' }" />
+          </template>`,
+          data,
+        ),
+      ).render()
+      const refs = (instance as any).refs
+      expect(refs.foo).toEqual(Array.from(host.querySelectorAll('div')))
+      expect(refs.foo.length).toBe(3)
+
+      data.value = [1]
+      await nextTick()
+      expect(refs.foo).toEqual(Array.from(host.querySelectorAll('div')))
+      expect(refs.foo.length).toBe(1)
+    })
+
+    test('on an element inside slots binds to the owner', () => {
+      const data = ref(0)
+      const Child = compile(`<template><slot /></template>`, data)
+      const Parent = compile(
+        `<template>
+          <components.Child><div v-bind="{ ref: 'foo' }" /></components.Child>
+        </template>`,
+        data,
+        { Child },
+      )
+
+      const { instance, host } = define(Parent).render()
+      expect((instance as any).refs.foo).toBe(host.querySelector('div'))
+    })
+
+    test('on an element inside slots binds to the owner when it appears on update', async () => {
+      const data = ref<Record<string, any>>({})
+      const Child = compile(`<template><slot /></template>`, data)
+      const Parent = compile(
+        `<template>
+          <components.Child><div v-bind="data" /></components.Child>
+        </template>`,
+        data,
+        { Child },
+      )
+
+      const { instance, host } = define(Parent).render()
+      expect((instance as any).refs.foo).toBe(undefined)
+
+      data.value = { ref: 'foo' }
+      await nextTick()
+      expect((instance as any).refs.foo).toBe(host.querySelector('div'))
+    })
+
+    test('on a component', async () => {
+      const Child = defineVaporComponent({
+        setup(_, { expose }) {
+          expose({ name: 'child' })
+          return template('<span></span>')()
+        },
+      })
+      const data = ref<Record<string, any>>({ ref: 'foo' })
+      const { instance, host } = define(
+        compile(
+          `<template><components.Child v-bind="data" /></template>`,
+          data,
+          { Child },
+        ),
+      ).render()
+      const refs = (instance as any).refs
+      expect(refs.foo.name).toBe('child')
+      expect(host.innerHTML).toBe('<span></span>')
+
+      data.value = { ref: 'bar' }
+      await nextTick()
+      expect(refs.foo).toBe(null)
+      expect(refs.bar.name).toBe('child')
+    })
+
+    test('on a component with constant props', () => {
+      const Child = defineVaporComponent({
+        setup(_, { expose }) {
+          expose({ name: 'child' })
+          return template('<span></span>')()
+        },
+      })
+      const { instance } = define(
+        compile(
+          `<template><components.Child v-bind="{ ref: 'foo' }" /></template>`,
+          ref(0),
+          { Child },
+        ),
+      ).render()
+      expect((instance as any).refs.foo.name).toBe('child')
+    })
+
+    test('on a component inside v-for', async () => {
+      const Child = defineVaporComponent({
+        props: ['i'],
+        setup(props, { expose }) {
+          expose({ i: () => props.i })
+          return template('<span></span>')()
+        },
+      })
+      const data = ref([1, 2])
+      const { instance } = define(
+        compile(
+          `<template>
+            <components.Child v-for="i in data" :key="i" v-bind="{ ref: 'foo', i }" />
+          </template>`,
+          data,
+          { Child },
+        ),
+      ).render()
+      const refs = (instance as any).refs
+      expect(refs.foo.map((c: any) => c.i())).toEqual([1, 2])
+
+      data.value = [2]
+      await nextTick()
+      expect(refs.foo.map((c: any) => c.i())).toEqual([2])
+    })
+
+    test('without a ref', async () => {
+      const Child = defineVaporComponent({
+        props: ['msg'],
+        setup(props) {
+          const n0 = template('<span></span>')()
+          renderEffect(() => setElementText(n0, props.msg))
+          return n0
+        },
+      })
+      const data = ref<Record<string, any>>({ id: 'a', msg: 'hi' })
+      const { instance, host } = define(
+        compile(
+          `<template>
+            <div v-bind="data" /><components.Child v-bind="data" />
+          </template>`,
+          data,
+          { Child },
+        ),
+      ).render()
+      expect(host.innerHTML).toBe(
+        '<div id="a" msg="hi"></div><span id="a">hi</span>',
+      )
+      expect((instance as any).refs).toEqual({})
+
+      data.value = { id: 'b', msg: 'bye' }
+      await nextTick()
+      expect(host.innerHTML).toBe(
+        '<div id="b" msg="bye"></div><span id="b">bye</span>',
+      )
+      expect((instance as any).refs).toEqual({})
+    })
+
+    test('with a static ref', () => {
+      const data = ref({ id: 'a' })
+      const { instance, host } = define(
+        compile(`<template><div ref="foo" v-bind="data" /></template>`, data),
+      ).render()
+      const el = host.querySelector('div')!
+      expect((instance as any).refs.foo).toBe(el)
+      expect(el.id).toBe('a')
+    })
+
+    test('on a root element with fallthrough attrs', async () => {
+      const child = shallowRef<any>(null)
+      const Child = compile(
+        `<script vapor>
+          import { ref, useTemplateRef } from 'vue'
+          const obj = ref({ ref: 'foo' })
+          _data.value = {
+            obj,
+            foo: useTemplateRef('foo'),
+            bar: useTemplateRef('bar'),
+          }
+        </script>
+        <template><div v-bind="obj" /></template>`,
+        child,
+      )
+      const id = ref('a')
+      const { host } = define(
+        compile(`<template><components.Child :id="data" /></template>`, id, {
+          Child,
+        }),
+      ).render()
+      const el = host.querySelector('div')!
+      expect(el.id).toBe('a')
+      expect(el.hasAttribute('ref')).toBe(false)
+      expect(child.value.foo.value).toBe(el)
+
+      // the fallthrough attrs carry no ref and must keep the root's own ref
+      id.value = 'b'
+      await nextTick()
+      expect(el.id).toBe('b')
+      expect(child.value.foo.value).toBe(el)
+
+      child.value.obj.value = { ref: 'bar' }
+      id.value = 'c'
+      await nextTick()
+      expect(el.id).toBe('c')
+      expect(child.value.foo.value).toBe(null)
+      expect(child.value.bar.value).toBe(el)
+    })
+  })
+
   test('work with dynamic component', async () => {
     const Child = defineVaporComponent({
       setup(_, { expose }) {

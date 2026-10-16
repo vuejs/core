@@ -308,6 +308,54 @@ describe('compiler: template ref transform', () => {
     expect(code).not.contains('_setTemplateRefBinding')
   })
 
+  // #10696
+  describe('ref in v-bind object', () => {
+    test('element', () => {
+      const { code } = compileWithTransformRef(`<div v-bind="obj" />`)
+      expect(code).contains('_setDynamicProps(n0, [_ctx.obj])')
+      expect(code).not.contains('ref_for')
+    })
+
+    test('element + v-for', () => {
+      const { code } = compileWithTransformRef(
+        `<div v-for="item in list" v-bind="obj" />`,
+      )
+      expect(code).matchSnapshot()
+      expect(code).contains(
+        '_setDynamicProps(n2, [{ ref_for: true }, _ctx.obj])',
+      )
+    })
+
+    test('component', () => {
+      const { code } = compileWithTransformRef(`<Foo v-bind="obj" />`)
+      expect(code).matchSnapshot()
+      expect(code).contains('_setComponentPropsRef(n0)')
+      expect(code).not.contains('_createTemplateRefSetter')
+    })
+
+    test('component + v-for', () => {
+      const { code } = compileWithTransformRef(
+        `<Foo v-for="item in list" v-bind="obj" />`,
+      )
+      expect(code).matchSnapshot()
+      expect(code).contains('_setComponentPropsRef(n2, true)')
+      expect(code).not.contains('ref_for')
+    })
+
+    test('component with a static ref', () => {
+      const { code } = compileWithTransformRef(`<Foo v-bind="obj" ref="foo" />`)
+      expect(code).contains('_setStaticTemplateRef(n0, "foo")')
+      expect(code).not.contains('_setComponentPropsRef')
+    })
+
+    test('dynamic component', () => {
+      const { code } = compileWithTransformRef(
+        `<component :is="view" v-bind="obj" />`,
+      )
+      expect(code).not.contains('_setComponentPropsRef')
+    })
+  })
+
   // #9482
   test('known globals are shadowed by setup bindings', () => {
     const { code } = compileWithTransformRef(`<div :ref="isNaN" />`, {

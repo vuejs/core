@@ -1135,6 +1135,7 @@ export function buildProps(
       return !!resolvedBindProps
     })
   let listenerResults: DirectiveTransformResult[] = []
+  let hasRefForMarker = false
 
   function pushMergeArg(listeners = false) {
     const props = listeners ? listenerResults : results
@@ -1193,6 +1194,15 @@ export function buildProps(
             }
           } else {
             dynamicExpr.push(prop.exp)
+            // #10696 the object may contain a ref, which must be set as an
+            // array inside v-for
+            if (!isComponent && context.inVFor && !hasRefForMarker) {
+              hasRefForMarker = true
+              results.push({
+                key: createSimpleExpression('ref_for', true),
+                value: createSimpleExpression('true'),
+              })
+            }
             pushMergeArg()
             dynamicArgs.push({
               kind: IRDynamicPropsKind.EXPRESSION,

@@ -74,6 +74,7 @@ import { isTransitionEnabled } from '../transition'
 import { isInteropEnabled } from '../vdomInteropState'
 import { inOnce } from '../once'
 import { queueSelectUpdates, registerSelectUpdate } from '../renderEffect'
+import { setDynamicPropsRef } from '../apiTemplateRef'
 
 type TargetElement = Element & {
   $root?: boolean | RootMeta
@@ -700,6 +701,15 @@ export function patchDynamicProps(
         }
       }
     }
+  }
+
+  // reserved keys never become attributes, but a `ref` in v-bind="obj" still
+  // sets a template ref, as in vdom (#10696)
+  if (
+    !isApplyingFallthroughProps &&
+    (props.ref != null || el.$dref || !prevProps)
+  ) {
+    setDynamicPropsRef(el, props, !prevProps)
   }
 
   const hydratedKeys = isHydrating ? staticKeys : undefined
