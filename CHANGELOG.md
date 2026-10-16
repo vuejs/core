@@ -1,3 +1,30 @@
+# [3.6.0-rc.12](https://github.com/vuejs/core/compare/v3.6.0-rc.11...v3.6.0-rc.12) (2026-10-16)
+
+### Bug Fixes
+
+* **reactivity:** preserve watcher cleanups until callback reruns ([#15766](https://github.com/vuejs/core/issues/15766)) ([14cfe0f](https://github.com/vuejs/core/commit/14cfe0f1833eac08e9ec126d676ab67d1e6ff1e8)), closes [#15765](https://github.com/vuejs/core/issues/15765)
+* **runtime-vapor:** account for ancestor movement in nested transition groups ([#15865](https://github.com/vuejs/core/issues/15865)) ([44c2cc7](https://github.com/vuejs/core/commit/44c2cc7a1bff152b45fa4b2d2cc6b0339a707dda))
+* **runtime-vapor:** defer interop fragment removal until leave completes ([#15866](https://github.com/vuejs/core/issues/15866)) ([ca2896a](https://github.com/vuejs/core/commit/ca2896aa5524a0b0a983e216480ec7d486f4babc))
+* **runtime-vapor:** finish a deactivation leave where the element is after a KeepAlive move ([#15846](https://github.com/vuejs/core/issues/15846)) ([e5a56b0](https://github.com/vuejs/core/commit/e5a56b066c9b034815745867ec5d2546b808cbbe))
+* **runtime-vapor:** push warning context during render effect updates ([#15874](https://github.com/vuejs/core/issues/15874)) ([34b6f08](https://github.com/vuejs/core/commit/34b6f089b7cefba5ab1589f21fa54acae495cb0a))
+* **runtime-vapor:** remove block node from its actual parentNode on unmount ([#15867](https://github.com/vuejs/core/issues/15867)) ([8d0e8bd](https://github.com/vuejs/core/commit/8d0e8bd0f121e5900065989231b5e880e52653ae)), closes [#15861](https://github.com/vuejs/core/issues/15861)
+* **runtime-vapor:** render nothing for an invalid v-for range in production ([#15863](https://github.com/vuejs/core/issues/15863)) ([6af5d97](https://github.com/vuejs/core/commit/6af5d972f034be32c77c75940557b37751280335))
+* **runtime-vapor:** render the deferred out-in branch where the fragment is after a KeepAlive move ([#15844](https://github.com/vuejs/core/issues/15844)) ([ae68315](https://github.com/vuejs/core/commit/ae683152bee03c7991b2aa43f31fe777b7e45d15))
+* **runtime-vapor:** resolve a slot fallback at once when its content leaves empty under out-in ([#15890](https://github.com/vuejs/core/issues/15890)) ([c1091d4](https://github.com/vuejs/core/commit/c1091d4b317ac2fc2a8bc556ac7b0fb10e5a18e5))
+* **runtime-vapor:** run an in-out leave that no entering element claims ([#15849](https://github.com/vuejs/core/issues/15849)) ([e3843e5](https://github.com/vuejs/core/commit/e3843e5f80b56d69c9029154b0eb91194ad3b287))
+* **runtime-vapor:** start a vapor slot vnode in a vdom outlet on a node of its own ([#15850](https://github.com/vuejs/core/issues/15850)) ([2d1282a](https://github.com/vuejs/core/commit/2d1282ad1955727edb65ce795997e8f8b51faf09))
+* **runtime-vapor:** start the in-out leave of a kept-alive branch after the incoming enter ([#15895](https://github.com/vuejs/core/issues/15895)) ([18837d1](https://github.com/vuejs/core/commit/18837d11eacdebbe84c376bed721459c78c7a30e))
+* **runtime-vapor:** support hasOwnProperty on props, attrs and slot props ([#15841](https://github.com/vuejs/core/issues/15841)) ([d47d313](https://github.com/vuejs/core/commit/d47d31301f56e65fded4bb7417a307098b595ffa)), closes [#15840](https://github.com/vuejs/core/issues/15840)
+* **runtime-vapor:** treat slot outlet branch switches under Transition as structural ([#15897](https://github.com/vuejs/core/issues/15897)) ([b5a5a1c](https://github.com/vuejs/core/commit/b5a5a1c0bca978040a7f45e46652e42ca9425183))
+* **vapor:** apply destructure defaults at their own level ([#15860](https://github.com/vuejs/core/issues/15860)) ([6a04898](https://github.com/vuejs/core/commit/6a04898fc8ff332f444ff11553dba54e0021194c))
+* **vapor:** preserve keyed slot outlet identity ([d7c0ab5](https://github.com/vuejs/core/commit/d7c0ab5a1029f87c535f0887897058d522c34757))
+* **vapor:** render the children of a dynamic native element like a static one in ssr ([#15852](https://github.com/vuejs/core/issues/15852)) ([08b441e](https://github.com/vuejs/core/commit/08b441ef59405182873ca7e9922649683d716c54)), closes [#15845](https://github.com/vuejs/core/issues/15845)
+* **vapor:** return bindings for render in normal script in vapor inline mode ([#15780](https://github.com/vuejs/core/issues/15780)) ([0434cd4](https://github.com/vuejs/core/commit/0434cd463c98de187bff41058aeae03366daa1da))
+
+### Performance Improvements
+
+* **runtime-vapor:** tree-shake hydration lookups of dom node helpers in client bundles ([#15875](https://github.com/vuejs/core/issues/15875)) ([9af0ab8](https://github.com/vuejs/core/commit/9af0ab887168a698f47116dcb15073b72c604ca2))
+
 # [3.6.0-rc.11](https://github.com/vuejs/core/compare/v3.6.0-rc.10...v3.6.0-rc.11) (2026-10-10)
 
 ### Bug Fixes
