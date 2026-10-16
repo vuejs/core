@@ -103,7 +103,7 @@ describe('Vapor Mode hydration', () => {
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
         `
         "<div>
-        <!--(-->foo<!--slot--><!--)-->
+        <!--(--><!--slot-->foo<!--)-->
         </div>"
       `,
       )
@@ -113,7 +113,7 @@ describe('Vapor Mode hydration', () => {
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
         `
         "<div>
-        <!--(-->foo1<!--slot--><!--)-->
+        <!--(--><!--slot-->foo1<!--)-->
         </div>"
       `,
       )
@@ -157,7 +157,7 @@ describe('Vapor Mode hydration', () => {
       },
     )
 
-    test('forwarded slot with inherited fallback keeps mixed content in order', async () => {
+    test('forwarded slot behind an enclosing fallback keeps mixed content in order', async () => {
       const data = ref({ items: [1, 2], tail: 'tail' })
       const { container } = await testHydration(
         `<template>
@@ -339,7 +339,7 @@ describe('Vapor Mode hydration', () => {
       },
     )
 
-    test('multiple invalid forwarded roots hydrate fragment fallback with their anchors in place', async () => {
+    test('multiple invalid forwarded roots hydrate fragment fallback with their anchors ahead of it', async () => {
       const data = reactive({ showA: false, showB: false, fallback: true })
       const { container } = await testHydration(
         `<script setup>
@@ -373,7 +373,9 @@ describe('Vapor Mode hydration', () => {
       )
 
       expect(container.textContent).toBe('fallback 1fallback 2')
-      expect(container.innerHTML).toContain('<!--slot-->')
+      expect(container.innerHTML).toContain(
+        '<!--(--><!--if--><!--slot--><!--if--><!--slot--><!--[--><span>fallback 1</span>',
+      )
       expect(`Hydration children mismatch`).not.toHaveBeenWarned()
     })
 
@@ -424,7 +426,7 @@ describe('Vapor Mode hydration', () => {
       expect(container.textContent).toBe('receiver fallback')
     })
 
-    test('nested fallbacks stay within a shared boundary during hydration', async () => {
+    test('nested outlets in the fallbacks of sibling roots hydrate from the receiver fallback', async () => {
       const data = reactive({ showX: false })
       const { container } = await testHydration(
         `<script setup>const components = _components; const data = _data</script>
@@ -492,7 +494,7 @@ describe('Vapor Mode hydration', () => {
       expect(`Hydration children mismatch`).not.toHaveBeenWarned()
     })
 
-    test('shared local fallback participates in aggregate hydration', async () => {
+    test('local fallback of a sibling root takes over from the hydrated receiver fallback', async () => {
       const data = reactive({ localA: false })
       const { container } = await testHydration(
         `<script setup>const components = _components</script>
@@ -582,7 +584,7 @@ describe('Vapor Mode hydration', () => {
       expect(container.textContent).toBe('itemitem')
     })
 
-    test('vdom shared roots preserve hydration order and receiver fallback', async () => {
+    test('vdom sibling roots preserve hydration order and receiver fallback', async () => {
       const data = reactive({ showA: false, showB: true })
       const { container } = await testWithVDOMApp(
         `<script setup>const components = _components; const data = _data</script>
@@ -623,8 +625,8 @@ describe('Vapor Mode hydration', () => {
     })
 
     // The slot's namespace comes from the SSR container captured before
-    // rendering, as VDOM closes it over the render effect.
-    test('forwarded roots hydrated behind a fallback keep the svg namespace', async () => {
+    // rendering.
+    test('invalid sibling roots hydrated under a fallback keep the svg namespace', async () => {
       const data = reactive({ showA: false, showB: false })
       const { container } = await testWithVDOMApp(
         `<script setup>const components = _components; const data = _data</script>
@@ -662,7 +664,7 @@ describe('Vapor Mode hydration', () => {
       )
     })
 
-    test('vdom shared roots hydrate from receiver fallback', async () => {
+    test('vdom sibling roots hydrate from receiver fallback', async () => {
       const data = reactive({ mount: true, showA: false, showB: false })
       const { app, container } = await testWithVDOMApp(
         `<script setup>const components = _components; const data = _data</script>
@@ -709,7 +711,7 @@ describe('Vapor Mode hydration', () => {
       app.unmount()
     })
 
-    test('vdom shared roots leave fragment receiver fallback to the parent', async () => {
+    test('vdom sibling roots leave fragment receiver fallback to the parent', async () => {
       const data = reactive({ showA: false, showB: false })
       const { container } = await testWithVDOMApp(
         `<script setup>const components = _components; const data = _data</script>
@@ -746,7 +748,7 @@ describe('Vapor Mode hydration', () => {
       expect(container.textContent).toBe('B')
     })
 
-    test('vdom shared local fallback participates in aggregate hydration', async () => {
+    test('vdom local fallback of a sibling root takes over from the hydrated receiver fallback', async () => {
       const data = reactive({ localA: false, showB: false })
       const { container } = await testWithVDOMApp(
         `<script setup>const components = _components; const data = _data</script>
@@ -795,7 +797,7 @@ describe('Vapor Mode hydration', () => {
       expect(container.textContent).toBe('local A')
     })
 
-    test('vdom shared local fallback does not claim fragment receiver fallback', async () => {
+    test('vdom local fallback of a sibling root does not claim fragment receiver fallback', async () => {
       const data = reactive({ localA: false })
       const { container } = await testWithVDOMApp(
         `<script setup>const components = _components</script>
@@ -831,7 +833,7 @@ describe('Vapor Mode hydration', () => {
       expect(container.textContent).toBe('receiver 1receiver 2')
     })
 
-    test('vdom shared local fallback preserves sibling hydration order', async () => {
+    test('vdom local fallback of a sibling root preserves hydration order', async () => {
       const data = reactive({ localA: false, showB: true })
       const { container } = await testWithVDOMApp(
         `<script setup>const components = _components; const data = _data</script>
@@ -865,7 +867,7 @@ describe('Vapor Mode hydration', () => {
       expect(container.textContent).toBe('B')
     })
 
-    test('hydrated vdom shared local fallback restores before its sibling', async () => {
+    test('hydrated vdom local fallback restores before its dynamic sibling', async () => {
       const data = reactive({ localA: true, showC: true })
       const { container } = await testWithVDOMApp(
         `<script setup>const components = _components</script>
@@ -1006,7 +1008,7 @@ describe('Vapor Mode hydration', () => {
       expect(container.textContent).toBe('provided')
     })
 
-    test('vdom nested hosts recover through a shared local fallback', async () => {
+    test('vdom nested hosts recover through the local fallback of a sibling root', async () => {
       const data = reactive({ showX: true, showY: false })
       const { container } = await testWithVDOMApp(
         `<script setup>const components = _components; const data = _data</script>
@@ -1041,7 +1043,7 @@ describe('Vapor Mode hydration', () => {
       expect(container.textContent).toBe('Y')
     })
 
-    test('shared slot keeps its hydration position after a valid dynamic component', async () => {
+    test('forwarded sibling slot keeps its hydration position after a valid dynamic component', async () => {
       const data = reactive({ showB: false, showC: true })
       const { container } = await testHydration(
         `<script setup>const components = _components; const data = _data</script>
