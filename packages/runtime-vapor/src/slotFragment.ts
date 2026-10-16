@@ -25,6 +25,7 @@ import {
   isTransitionEnabled,
   isVaporTransitionHooks,
   ownsTransitionMode,
+  resolveOutletLeave,
 } from './transition'
 import type { VaporComponentInstance } from './component'
 import { type VaporFragment, isInteropFragment } from './fragment'
@@ -483,17 +484,16 @@ function exposeSlotContent(state: SlotResolutionState): boolean {
     // only a mode of the outlet's own sequences the swap: relayed vdom hooks,
     // and hooks inherited inside a child component, animate the branches
     // (the hooks shell carries the mode in its props only)
-    const mode = ownsTransitionMode(transition, ownerFragment(state))
+    const outlet = ownerFragment(state)
+    const mode = ownsTransitionMode(transition, outlet)
       ? transition.props.mode
       : undefined
+    const fallback = state.activeFallback
     // persisted roots are toggled in place; mode only sequences
     // structural swaps, and a persisted leave never reports its end
-    if (
-      mode === 'out-in' &&
-      state.activeFallback &&
-      !transition.persisted &&
-      !transition.state.persisted
-    ) {
+    const structural =
+      !!fallback && !resolveOutletLeave(outlet, fallback, transition)
+    if (mode === 'out-in' && structural) {
       // The content stays live meanwhile (its roots render held), and the
       // recheck at the end of the leave re-derives the branch to expose,
       // as vdom re-renders its child then: the content may have gone

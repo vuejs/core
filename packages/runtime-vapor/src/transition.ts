@@ -36,6 +36,11 @@ type RemoveBranchWithLeaveFn = (
   noScope: boolean,
   branchKey: any,
 ) => boolean
+type ResolveOutletLeaveFn = (
+  outlet: VaporFragment | undefined,
+  block: Block,
+  hooks: TransitionHooks,
+) => boolean
 
 export let applyTransitionHooks: ApplyTransitionHooksFn
 export let applyTransitionLeaveHooks: ApplyTransitionLeaveHooksFn
@@ -54,6 +59,10 @@ export let ownsTransitionMode: (
   hooks: TransitionHooks,
   frag?: VaporFragment,
 ) => boolean
+// A slot outlet switching branches: whether the switch is persisted, i.e. a
+// v-show target above the outlet (or `persisted`); the branch leaving it
+// leaves structurally otherwise
+export let resolveOutletLeave: ResolveOutletLeaveFn
 
 export let isTransitionEnabled = false
 
@@ -65,6 +74,7 @@ export function registerTransitionHooks(
   ownsMode: (hooks: TransitionHooks, frag?: VaporFragment) => boolean,
   awaitLeaving: (block: Block, cb: () => void) => boolean,
   transitionChild: (block: Block) => boolean,
+  resolveLeave: ResolveOutletLeaveFn,
 ): void {
   isTransitionEnabled = true
   ownsTransitionMode = ownsMode
@@ -74,6 +84,7 @@ export function registerTransitionHooks(
   removeBranchWithLeave = removeBranch
   awaitLeavingRoot = awaitLeaving
   hasTransitionChild = transitionChild
+  resolveOutletLeave = resolveLeave
 }
 
 // Hooks vapor resolves from (its own, or a vdom Transition's for a vapor slot,
