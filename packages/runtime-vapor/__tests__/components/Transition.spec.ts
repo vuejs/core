@@ -22,7 +22,13 @@ import {
   nextTick,
   ref,
 } from 'vue'
-import { compile, makeInteropRender, makeRender, renderParity } from '../_utils'
+import {
+  compile,
+  makeInteropRender,
+  makeRender,
+  renderParity,
+  stripAnchors,
+} from '../_utils'
 
 const define = makeRender()
 const defineInterop = makeInteropRender()
@@ -3528,5 +3534,52 @@ describe('in-out: the current branch leaves when nothing takes its place', () =>
     data.value.flag = true
     await nextTick()
     expect(html().replace(/<!--[^>]*-->/g, '')).toBe('<div class="a">a</div>')
+  })
+})
+
+describe('structural removal during a v-show leave', () => {
+  // the v-show leave only toggles display: the branch swap removes the
+  // element at once, like vdom removing a persisted root
+  const clean = (s: string) => stripAnchors(s).replace(/ style=""/g, '')
+
+  test.each(['out-in', 'in-out', 'default'])('mode %s', async mode => {
+    const result = await renderParity(
+      {
+        App: `
+          <template>
+            <Transition mode="${mode}" :css="false" @leave="data.leave">
+              <b v-if="data.present" v-show="data.visible">content</b>
+              <p v-else>fallback</p>
+            </Transition>
+          </template>`,
+      },
+      () => {
+        const dones: (() => void)[] = []
+        return ref({
+          present: true,
+          visible: true,
+          dones,
+          leave: (_el: Element, done: () => void) => dones.push(done),
+        })
+      },
+      async (data, root) => {
+        // vapor's v-show checks isConnected
+        document.body.append(root)
+        try {
+          data.value.visible = false
+          await nextTick()
+          data.value.present = false
+          await nextTick()
+          while (data.value.dones.length) {
+            data.value.dones.shift()!()
+            await nextTick()
+          }
+        } finally {
+          root.remove()
+        }
+      },
+    )
+    expect(clean(result.vdom.after)).toBe('<p>fallback</p>')
+    expect(clean(result.vapor.after)).toBe(clean(result.vdom.after))
   })
 })

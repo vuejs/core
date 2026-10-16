@@ -34,6 +34,7 @@ import {
   type VaporTransitionState,
   isValidBlock,
   remove,
+  removingLeave,
   settleMountShown,
 } from '../block'
 import {
@@ -239,6 +240,8 @@ export const VaporTransition: FunctionalVaporComponent<TransitionProps> =
     // re-resolve. Read runtime state (delayedLeave) from the current branch
     // without retaining an earlier branch's hooks in this effect.
     renderEffect(() => {
+      // tracked here: a leaving root sits a refresh out without resolving
+      resolvedProps.value
       const appliedHooks = applyTransitionHooksImpl(
         children,
         hooks,
@@ -435,6 +438,9 @@ export function applyTransitionHooksImpl(
     owner,
   )
   if (refresh && child && child.$transition) hooks = child.$transition
+  // a leaving root keeps the hooks running its leave (block.ts `removing`);
+  // the next branch resolves its own when it renders
+  if (refresh && child && removingLeave(child)) return hooks
   if (!child) {
     // vdom keeps the current child for a component child, however long its
     // root stays empty; only a branch with no component is an empty child
@@ -522,10 +528,34 @@ export function applyTransitionLeaveHooksImpl(
   // next entering block claims it, and runs it after the flush when none does.
   unpaired = false,
 ): boolean {
-  const leavingBlock = findTransitionBlock(block)
+  let leavingFrag: DynamicFragment | undefined
+  const leavingBlock = findTransitionBlock(block, frag => {
+    if ((frag as DynamicFragment).leaving) leavingFrag = frag as DynamicFragment
+  })
   if (!leavingBlock) return false
 
   const { props, state, instance } = enterHooks
+  const { mode } = props
+  // Chained onto the removal leave already running (block.ts `removing`):
+  // unpaired, only when a branch follows, as vdom's out-in waits only for an
+  // element child; a paired out-in swap, as for a leave of its own.
+  const runningLeave = removingLeave(leavingBlock)
+  if (runningLeave && (unpaired || mode === 'out-in')) {
+    if (unpaired) {
+      const next = leavingFrag && leavingFrag.pending
+      if (!(next && next.render)) return false
+    } else {
+      state.isLeaving = true
+    }
+    const prevAfterLeave = runningLeave.afterLeave
+    runningLeave.afterLeave = () => {
+      if (!unpaired) state.isLeaving = false
+      if (prevAfterLeave) prevAfterLeave()
+      afterLeaveCb()
+    }
+    return true
+  }
+
   const leavingHooks = resolveTransitionHooks(
     leavingBlock,
     props,
@@ -534,7 +564,6 @@ export function applyTransitionLeaveHooksImpl(
   )
   leavingBlock.$transition = leavingHooks
 
-  const { mode } = props
   if (mode === 'out-in') {
     if (!unpaired) state.isLeaving = true
     leavingHooks.afterLeave = () => {
@@ -737,7 +766,8 @@ function removeBranchWithLeaveImpl(
         transition.state.root!,
         f => {
           const pending = (f as DynamicFragment).pending
-          if (!pending || f === frag) return
+          // a fragment leaving on its own holds its next branch, not a switch
+          if (!pending || f === frag || (f as DynamicFragment).leaving) return
           if (outer || pending.key === pending.prevKey) {
             // superseded by the outer switch, or switched back
             ;(f as DynamicFragment).pending = undefined
@@ -767,31 +797,18 @@ function removeBranchWithLeaveImpl(
       // the captured instance.
       const prevInstance = setCurrentInstance(instance)
       try {
-        const pending = frag.pending
-        if (pending) {
-          frag.pending = undefined
-          frag.renderBranch(
-            pending.render,
-            transition,
-            liveParent,
-            pending.key,
-            pending.noScope,
-            true,
-            undefined,
-            pending.branchKey,
-          )
-        } else {
-          frag.renderBranch(
-            render,
-            transition,
-            liveParent,
-            key,
-            noScope,
-            true,
-            undefined,
-            branchKey,
-          )
-        }
+        const pending = frag.pending!
+        frag.pending = undefined
+        frag.renderBranch(
+          pending.render,
+          transition,
+          liveParent,
+          pending.key,
+          pending.noScope,
+          true,
+          undefined,
+          pending.branchKey,
+        )
       } finally {
         restoreCurrentInstance(prevInstance)
       }
@@ -804,8 +821,10 @@ function removeBranchWithLeaveImpl(
     )
     if (mode === 'out-in') {
       // out-in owns the removal here so update() can return before
-      // rendering; the next branch mounts from the afterLeave callback.
+      // rendering; the next branch mounts from the afterLeave callback. The
+      // branch it holds tells a leave reusing this one whether one follows.
       frag.leaving = true
+      frag.pending = { render, key, noScope, branchKey }
       remove(frag.nodes, parent)
       return true
     }
