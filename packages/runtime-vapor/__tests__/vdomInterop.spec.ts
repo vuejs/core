@@ -15015,3 +15015,236 @@ describe('vdom content in a vapor outlet, sequenced by the outlet', () => {
       },
     ))
 })
+
+describe('vapor slot rows inside a vdom keyed list', () => {
+  const script = `<script setup>const data = _data; const components = _components</script>`
+  // vdom Row / List, vapor App providing the slot; the vdom reference runs
+  // the same sources all-vdom. Returns the vdom frames.
+  async function frames(
+    steps: ((d: any) => void)[],
+    items = () => [1, 2, 3].map(id => ({ id, show: true })),
+    fallback = `<i>f{{ props.it.id }}</i>`,
+  ): Promise<string[]> {
+    const srcs = {
+      Row: `
+        <script setup>
+        const data = _data
+        const components = _components
+        const props = defineProps(['it'])
+        </script>
+        <template><slot>${fallback}</slot></template>`,
+      List: `${script}
+        <template>
+          <div>
+            <components.Row v-for="it in data.items" :key="it.id" :it="it">
+              <slot :it="it" />
+            </components.Row>
+          </div>
+        </template>`,
+      App: `${script}
+        <template>
+          <components.List #default="{ it }">
+            <b v-if="it.show">c{{ it.id }}</b>
+          </components.List>
+        </template>`,
+    }
+    const run = async (vapor: boolean) => {
+      const data: any = ref({ items: items() })
+      const components: Record<string, any> = {}
+      for (const [name, src] of Object.entries(srcs)) {
+        components[name] = compile(src, data, components, {
+          vapor: vapor && name === 'App',
+        })
+      }
+      const root = document.createElement('div')
+      const app = (vapor ? createVaporApp : createApp)(components.App).use(
+        vaporInteropPlugin,
+      )
+      const out: string[] = []
+      app.mount(root)
+      for (const step of steps) {
+        step(data.value)
+        await nextTick()
+        out.push(stripAnchors(root.innerHTML))
+      }
+      app.unmount()
+      return out
+    }
+    const vdom = await run(false)
+    expect(await run(true)).toEqual(vdom)
+    return vdom
+  }
+
+  test('fallbacks keep their row positions across keyed moves', () =>
+    frames([
+      d => d.items.reverse(),
+      d => d.items.forEach((i: any) => (i.show = false)),
+      d => d.items.forEach((i: any) => (i.show = true)),
+      d => d.items.reverse(),
+      d => d.items.forEach((i: any) => (i.show = false)),
+    ]))
+
+  test('a fallback shown after the row that was moved next to it is removed', () =>
+    frames([
+      d => d.items.reverse(),
+      d => d.items.splice(1, 1),
+      d => d.items.forEach((i: any) => (i.show = false)),
+    ]))
+
+  test('an existing fallback keeps its own anchor after a keyed move', async () => {
+    const vdom = await frames(
+      [
+        d => d.items.reverse(),
+        d => d.items.forEach((i: any) => (i.fb = true)),
+        d => d.items.splice(0, 1),
+      ],
+      () => [1, 2].map(id => ({ id, show: false, fb: false })),
+      `<i v-if="props.it.fb">f{{ props.it.id }}</i>`,
+    )
+    expect(vdom[2]).toBe('<div><i>f1</i></div>')
+  })
+})
+
+describe('slot fallback owned by the providing outlet', () => {
+  const vdomScript = `<script setup>const data = _data; const components = _components</script>`
+
+  test('a vdom outlet fallback rendered by a vapor slot follows KeepAlive moves', async () => {
+    const data = ref({ show: true, c: false, x: true })
+    const Comp = compile(
+      `${vdomScript}
+      <template><slot><span v-if="data.x">fb</span></slot></template>`,
+      data,
+      {},
+      { vapor: false },
+    )
+    const W = compile(
+      `<template><components.Comp><slot /></components.Comp></template>`,
+      data,
+      { Comp },
+    )
+    const App = compile(
+      `<template>
+        <KeepAlive>
+          <components.W v-if="data.show">
+            <b v-if="data.c">content</b>
+          </components.W>
+        </KeepAlive>
+      </template>`,
+      data,
+      { W },
+    )
+    const root = document.createElement('div')
+    const app = createVaporApp(App).use(vaporInteropPlugin)
+    app.mount(root)
+    expect(root.textContent).toBe('fb')
+
+    data.value.x = false
+    await nextTick()
+    expect(root.textContent).toBe('')
+
+    data.value.show = false
+    await nextTick()
+    data.value.x = true
+    await nextTick()
+    expect(root.textContent).toBe('')
+
+    data.value.show = true
+    await nextTick()
+    expect(root.textContent).toBe('fb')
+    app.unmount()
+  })
+
+  test('a vdom outlet fallback rendered by a vapor slot follows Teleport target switches', async () => {
+    const a = document.createElement('div')
+    const b = document.createElement('div')
+    const data = ref({ to: a as Element, c: false, x: true })
+    const Comp = compile(
+      `${vdomScript}
+      <template><slot><span v-if="data.x">fb</span></slot></template>`,
+      data,
+      {},
+      { vapor: false },
+    )
+    const W = compile(
+      `<template><components.Comp><slot /></components.Comp></template>`,
+      data,
+      { Comp },
+    )
+    const App = compile(
+      `<template>
+        <Teleport :to="data.to">
+          <components.W><b v-if="data.c">content</b></components.W>
+        </Teleport>
+      </template>`,
+      data,
+      { W },
+    )
+    const root = document.createElement('div')
+    const app = createVaporApp(App).use(vaporInteropPlugin)
+    app.mount(root)
+    expect(a.textContent).toBe('fb')
+
+    data.value.x = false
+    await nextTick()
+    data.value.to = b
+    await nextTick()
+    data.value.x = true
+    await nextTick()
+    expect(a.textContent).toBe('')
+    expect(b.textContent).toBe('fb')
+    app.unmount()
+  })
+
+  test('a vdom outlet fallback behind a forwarded vapor slot mounts and toggles', async () => {
+    const data = ref({ inner: false, fb: false })
+    const VaporChild = compile(
+      `<template><slot>child fb</slot></template>`,
+      data,
+    )
+    const VdomParent = compile(
+      `${vdomScript}
+      <template>
+        <components.VaporChild>
+          <slot><template v-if="data.fb">vdom fb</template></slot>
+        </components.VaporChild>
+      </template>`,
+      data,
+      { VaporChild },
+      { vapor: false },
+    )
+    const App = compile(
+      `<template>
+        <components.VdomParent>
+          <span v-if="data.inner">inner</span>
+        </components.VdomParent>
+      </template>`,
+      data,
+      { VdomParent },
+    )
+    const root = document.createElement('div')
+    const app = createVaporApp(App).use(vaporInteropPlugin)
+    app.mount(root)
+    expect(root.textContent).toBe('child fb')
+
+    data.value.fb = true
+    await nextTick()
+    expect(root.textContent).toBe('vdom fb')
+
+    data.value.fb = false
+    await nextTick()
+    expect(root.textContent).toBe('child fb')
+
+    data.value.fb = true
+    await nextTick()
+    expect(root.textContent).toBe('vdom fb')
+
+    data.value.inner = true
+    await nextTick()
+    expect(root.textContent).toBe('inner')
+
+    data.value.inner = false
+    await nextTick()
+    expect(root.textContent).toBe('vdom fb')
+    app.unmount()
+  })
+})

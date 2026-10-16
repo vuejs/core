@@ -2387,7 +2387,12 @@ function renderVDOMSlot(
           mountParent as any,
           suspense,
         )
-        insertActiveSlotFallback(slotResolutionState, moveType)
+        insertActiveSlotFallback(
+          slotResolutionState,
+          moveType,
+          parentNode,
+          anchor,
+        )
       } else {
         // vapor content, or vdom content placed by the outlet that held it
         // back: a vapor slot inside kept its held roots out of the DOM, which
@@ -3417,6 +3422,8 @@ function renderVaporSlot(
     setRenderContext(deriveSuspense(prevCtx, parentSuspense))
   }
   if (parentComponent && !parentComponent.vapor) initVdomOwner(parentComponent)
+  // before the slot's boundaries are created: they hold under the hooks
+  if (vnode.transition) ensureTransitionHooksRegistered()
   try {
     if (!vnode.vs || !vnode.vs.slot) {
       return EMPTY_BLOCK
@@ -3539,15 +3546,27 @@ function renderVaporSlot(
       } finally {
         isResolvingContent = false
       }
-      const place = (
-        parentNode: ParentNode,
-        anchor: Node | null,
-        parentSuspense: SuspenseBoundary | null | undefined,
-        moveType?: MoveType,
-        parentComponent?: VaporComponentInstance,
-      ) => {
+      frag.insert = (parentNode, anchor, parentSuspense) => {
         currentParentNode = parentNode
         currentAnchor = anchor
+        placeSlotContent(
+          slotResolutionState,
+          parentNode,
+          anchor,
+          parentSuspense,
+        )
+      }
+      frag.move = (
+        parentNode,
+        anchor,
+        moveType,
+        parentComponent,
+        parentSuspense,
+      ) => {
+        // `anchor` is the sibling this move lands ahead of; later insertions
+        // keep using the slot's own end anchor, which the vnode moves right
+        // after this
+        currentParentNode = parentNode
         placeSlotContent(
           slotResolutionState,
           parentNode,
@@ -3557,15 +3576,6 @@ function renderVaporSlot(
           parentComponent,
         )
       }
-      frag.insert = (parentNode, anchor, parentSuspense) =>
-        place(parentNode, anchor, parentSuspense)
-      frag.move = (
-        parentNode,
-        anchor,
-        moveType,
-        parentComponent,
-        parentSuspense,
-      ) => place(parentNode, anchor, parentSuspense, moveType, parentComponent)
       frag.remove = parentNode => {
         remove(content.nodes, parentNode)
         dispose(parentNode)
@@ -4328,8 +4338,11 @@ function createVNodeChildrenFragment(
     if (isHydrating) return
     if (parentSuspense !== undefined) suspense = parentSuspense
     currentParentNode = parentNode
-    currentAnchor = anchor
+    // the first placement's anchor is the outlet's own and travels with the
+    // fragment; a move lands ahead of a sibling this once, later patches keep
+    // inserting at the outlet's
     if (!isMounted) {
+      currentAnchor = anchor
       childrenNamespace = getContainerType(parentNode as Element)
       startRenderEffect()
       if (frag.vnode) {
