@@ -2323,7 +2323,7 @@ function renderVDOMSlot(
   }
   let isContentUpdateRecheck = false
   // forwarded v-once content resolves after creation too: it reports as well
-  const reportsValidity = forwarded && !!slotBoundary
+  const reportsValidity = !!slotBoundary
   let wasExposedValid: boolean | undefined
   // The committed vnode while it contains a vapor slot: what it exposes is
   // read live, not from the patch-time snapshot.
@@ -2355,6 +2355,9 @@ function renderVDOMSlot(
   // identically under both hosts and validity flips inside the content
   // never notify the dead-end own boundary.
   const contentBoundary = forwarded || fallback ? boundary : null
+  // the context the content renders and patches in: a vapor slot mounted by
+  // a patch captures the boundary it reports to
+  const contentCtx = deriveSlotBoundary(frag.ctx, contentBoundary)
   frag.getContent = () => content.nodes
   frag.awaitLeavingRoot = awaitLeavingRoot
   slotResolutionState = createSlotResolutionState(boundary, {
@@ -2676,10 +2679,8 @@ function renderVDOMSlot(
     }
   }
 
-  // The context the content renders and patches in: a vapor slot mounted by
-  // a patch captures the boundary it reports to.
   function inContentContext(fn: () => void): void {
-    withRenderContext(deriveSlotBoundary(frag.ctx, contentBoundary), fn)
+    withRenderContext(contentCtx, fn)
   }
 
   function renderContent(): void {
@@ -2799,7 +2800,7 @@ function renderVDOMSlot(
       return
     }
     heldContent = undefined
-    let prevRendered = rendered
+    const prevRendered = rendered
     const mode = transition && transition.props.mode
     let delayedLeaveSource: TransitionHooks | undefined
     // the previous vnode stays in the DOM while a fallback shows: patch it
@@ -2828,8 +2829,9 @@ function renderVDOMSlot(
         // on its own state, the fallback leaving as its old child
         clearSlotFallback(slotResolutionState)
       } else if (mode === 'out-in') {
-        const fallback = slotResolutionState.activeFallback
-        const leavingBlock = fallback && findTransitionBlock(fallback)
+        const leavingBlock = findTransitionBlock(
+          slotResolutionState.activeFallback!,
+        )
         const leavingElement =
           leavingBlock && getTransitionElement(leavingBlock)
         pendingOutIn = {
@@ -2859,7 +2861,7 @@ function renderVDOMSlot(
       // patched.
       if (prevVNode) {
         removeRenderedContent(prevVNode, currentParentNode!)
-        prevRendered = prevVNode = null
+        prevVNode = null
       }
     } else if (
       slotContentValid &&
@@ -2940,7 +2942,7 @@ function renderVDOMSlot(
       if (contentLeaveState) contentLeave!.push(resumeOutIn)
       return
     }
-    if (prevRendered && !prevVNode) {
+    if (prevRendered && !isVNode(prevRendered)) {
       removeRenderedContent(prevRendered, currentParentNode!)
     }
     // Preserve the original slot wrapper's scope IDs for :slotted

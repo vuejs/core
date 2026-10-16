@@ -141,8 +141,8 @@ export interface SlotResolutionState {
   // fallback waits to enter until the content root's own leave ends
   // (`entering`).
   held?: 'leaving' | 'placing' | 'entering'
-  // an interop host with vapor content: it holds and places that content
-  // like a vapor outlet (a host patching vnode content leaves it in place)
+  // a host of vapor content holds and places it (a host patching vnode
+  // content leaves it in place)
   holdsContent?: boolean
   // Validity of the exposed branch as of the last recheck; undefined before
   // the first recheck. Flips trigger notifyExposedValidityChange.
@@ -331,8 +331,7 @@ function commitSlotFallback(
   scope: EffectScope,
 ): void {
   // the nearest valid one, or the outermost one when none is valid
-  const active = rendered[rendered.length - 1]
-  const block = active.block
+  const block = rendered[rendered.length - 1].block
   state.activeFallback = block
   state.renderedFallbacks = rendered
   state.fallbackScope = scope
@@ -388,18 +387,6 @@ function applySlotTransitionHooks(
 ): void {
   const applied = applyTransitionHooks(block, hooks, ownerFragment(state))
   if (!hooks.applyGroup) state.$transition = applied
-}
-
-// A mode is the outlet's to apply under vapor hooks it did not inherit across
-// a child component (Transition's ownsMode); an interop outlet has no
-// fragment of its own in that walk and resolves as its host does.
-function ownsSlotMode(
-  state: SlotResolutionState,
-  hooks: VaporTransitionHooks,
-): boolean {
-  if (!isVaporTransitionHooks(hooks)) return false
-  const frag = ownerFragment(state)
-  return !frag || ownsTransitionMode(frag)
 }
 
 // A vapor SlotFragment is its own resolution state; an interop outlet keeps
@@ -496,7 +483,7 @@ function exposeSlotContent(state: SlotResolutionState): boolean {
     // only a mode of the outlet's own sequences the swap: relayed vdom hooks,
     // and hooks inherited inside a child component, animate the branches
     // (the hooks shell carries the mode in its props only)
-    const mode = ownsSlotMode(state, transition)
+    const mode = ownsTransitionMode(transition, ownerFragment(state))
       ? transition.props.mode
       : undefined
     // persisted roots are toggled in place; mode only sequences
@@ -530,7 +517,7 @@ function exposeSlotContent(state: SlotResolutionState): boolean {
     }
     // A host of vapor content holds and places it; a host patching vnode
     // content leaves it where it is, under the hooks its vnodes carry.
-    if (ownerFragment(state) || state.holdsContent) {
+    if (state.holdsContent) {
       // content first shown after a mount-time fallback has no hooks yet:
       // Transition only reached the fallback when it mounted
       applySlotTransitionHooks(state, content, transition)

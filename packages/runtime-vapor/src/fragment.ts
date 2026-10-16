@@ -175,9 +175,9 @@ export class RenderContextFragment<
 > extends VaporFragment<T> {
   readonly renderInstance: GenericComponentInstance | null = currentInstance
   readonly keepAliveCtx?: VaporKeepAliveContext | null
-  // The context this fragment's content renders under. Slot outlets replace
-  // it with their own cell right after construction (see createSlot), so late
-  // renders create their DOM under the outlet's context.
+  // The context this fragment's content renders under. A slot outlet is built
+  // under its own cell (see createSlot), so late renders create their DOM
+  // under the outlet's context.
   ctx: RenderContext = currentRenderContext
 
   constructor(nodes: T, flags: number = FRAGMENT) {
@@ -468,6 +468,7 @@ export class DynamicFragment extends RenderContextFragment {
         }
         if (
           transition &&
+          parent &&
           removeBranchWithLeave(
             this,
             transition,
@@ -621,6 +622,7 @@ export class SlotFragment
   renderedFallbacks?: RenderedSlotFallback[]
   lastNodesValid?: boolean
   held?: SlotResolutionState['held']
+  holdsContent = true
   pendingRecheck = false
   isReconciling = false
   private content: Block = EMPTY_BLOCK

@@ -441,10 +441,12 @@ export function applyTransitionHooksImpl(
     },
     owner,
   )
-  if (refresh && child && child.$transition) hooks = child.$transition
-  // a leaving root keeps the hooks running its leave (block.ts `removing`);
-  // the next branch resolves its own when it renders
-  if (refresh && child && removingLeave(child)) return hooks
+  if (refresh && child) {
+    if (child.$transition) hooks = child.$transition
+    // a leaving root keeps the hooks running its leave (block.ts `removing`);
+    // the next branch resolves its own when it renders
+    if (removingLeave(child)) return hooks
+  }
   if (!child) {
     if (!refresh) {
       // vdom keeps the current child for a component child, however long its
@@ -542,10 +544,7 @@ export function applyTransitionLeaveHooksImpl(
   // next entering block claims it, and runs it after the flush when none does.
   unpaired = false,
 ): boolean {
-  let leavingFrag: DynamicFragment | undefined
-  const leavingBlock = findTransitionBlock(block, frag => {
-    if ((frag as DynamicFragment).leaving) leavingFrag = frag as DynamicFragment
-  })
+  const leavingBlock = findTransitionBlock(block)
   if (!leavingBlock) return false
   // a block that never entered the DOM (a root rendered held) has nothing to
   // animate: the branch switches at once, as vdom's does after the leave
@@ -554,16 +553,19 @@ export function applyTransitionLeaveHooksImpl(
 
   const { props, state, instance } = enterHooks
   const { mode } = props
+  // the Transition's other branches wait on a paired leave (out-in)
+  const pairedState = unpaired ? undefined : state
   // Chained onto the removal leave already running (block.ts `removing`):
   // unpaired, only when a branch follows, as vdom's out-in waits only for an
   // element child; a paired out-in swap, as for a leave of its own.
   const runningLeave = removingLeave(leavingBlock)
   if (runningLeave && (unpaired || mode === 'out-in')) {
     if (unpaired) {
+      const leavingFrag = findLeavingFragment(block)
       const next = leavingFrag && leavingFrag.pending
       if (!(next && next.render)) return false
     }
-    chainAfterLeave(runningLeave, afterLeaveCb, unpaired ? undefined : state)
+    chainAfterLeave(runningLeave, afterLeaveCb, pairedState)
     return true
   }
 
@@ -576,13 +578,15 @@ export function applyTransitionLeaveHooksImpl(
   leavingBlock.$transition = leavingHooks
 
   if (mode === 'out-in') {
-    if (!unpaired) state.isLeaving = true
-    leavingHooks.afterLeave = () => {
-      if (!unpaired) state.isLeaving = false
-      afterLeaveCb()
-      leavingBlock.$transition = undefined
-      delete leavingHooks.afterLeave
-    }
+    chainAfterLeave(
+      leavingHooks,
+      () => {
+        afterLeaveCb()
+        leavingBlock.$transition = undefined
+        delete leavingHooks.afterLeave
+      },
+      pairedState,
+    )
   } else if (mode === 'in-out') {
     leavingHooks.delayLeave = (
       block: TransitionElement,
@@ -691,9 +695,11 @@ function createDelayedLeave(
 
 // vdom applies `mode` where Transition itself re-renders, i.e. down to its
 // child component; a fragment inside that component only inherits the
-// enter / leave hooks.
-export function ownsMode(frag: VaporFragment): boolean {
-  const ctx = keyContexts.get(frag)
+// enter / leave hooks, as does one under hooks a vdom Transition relayed. An
+// interop outlet's state has no fragment in the walk: the mode is its own.
+function ownsMode(hooks: TransitionHooks, frag?: VaporFragment): boolean {
+  if (!isVaporTransitionHooks(hooks)) return false
+  const ctx = frag && keyContexts.get(frag)
   return !ctx || !ctx.type
 }
 
@@ -706,14 +712,7 @@ function deferBranchUpdateDuringLeaveImpl(
   prevKey: any,
 ): boolean {
   const transition = frag.$transition!
-  // relayed vdom hooks: the vdom Transition sequences its own branches
-  if (
-    !isVaporTransitionHooks(transition) ||
-    !transition.state.isLeaving ||
-    !ownsMode(frag)
-  ) {
-    return false
-  }
+  if (!ownsMode(transition, frag) || !transition.state.isLeaving) return false
   const pending = frag.pending
   if (pending) {
     pending.render = render
@@ -726,41 +725,18 @@ function deferBranchUpdateDuringLeaveImpl(
   return true
 }
 
-function awaitLeavingRootImpl(block: Block, cb: () => void): boolean {
-  let leavingFrag: DynamicFragment | undefined
+// the fragment whose branch is leaving on its own (out-in, to nothing)
+function findLeavingFragment(block: Block): DynamicFragment | undefined {
+  let leaving: DynamicFragment | undefined
   findTransitionBlock(block, frag => {
-    if ((frag as DynamicFragment).leaving) leavingFrag = frag as DynamicFragment
+    if ((frag as DynamicFragment).leaving) leaving = frag as DynamicFragment
   })
-  if (!leavingFrag) {
-    // an outlet exposing a fallback of its own, below any structural
-    // wrapper: the root that left is in its content, vnode content it
-    // leaves itself
-    if (isArray(block)) {
-      for (let i = 0; i < block.length; i++) {
-        const b = block[i]
-        if ((isArray(b) || isFragment(b)) && awaitLeavingRootImpl(b, cb)) {
-          return true
-        }
-      }
-      return false
-    }
-    if (!isFragment(block)) return false
-    if (!block.getContent) return awaitLeavingRootImpl(block.nodes, cb)
-    if (
-      isInteropEnabled &&
-      block.awaitLeavingRoot &&
-      block.awaitLeavingRoot(cb)
-    ) {
-      return true
-    }
-    // an interop host is the child itself to the walk above: the root that
-    // left may be its own exposed fallback's (nodes), not in its content
-    const content = block.getContent()
-    return (
-      awaitLeavingRootImpl(content, cb) ||
-      (block.nodes !== content && awaitLeavingRootImpl(block.nodes, cb))
-    )
-  }
+  return leaving
+}
+
+function awaitLeavingRootImpl(block: Block, cb: () => void): boolean {
+  const leavingFrag = findLeavingFragment(block)
+  if (!leavingFrag) return descendToLeavingRoot(block, cb)
   const root = findTransitionBlock(leavingFrag.nodes)
   // the hooks running the root's leave: an element's removal leave, or the
   // ones a component or interop root was handed to leave under
@@ -779,6 +755,37 @@ function awaitLeavingRootImpl(block: Block, cb: () => void): boolean {
     running.instance.vapor ? running.state : undefined,
   )
   return true
+}
+
+// No root of `block` is leaving: an outlet exposing a fallback of its own,
+// below any structural wrapper, has the root that left in its content (vnode
+// content leaves it itself). A fragment's own nodes were walked with it.
+function descendToLeavingRoot(block: Block, cb: () => void): boolean {
+  if (isArray(block)) {
+    for (let i = 0; i < block.length; i++) {
+      const b = block[i]
+      if ((isArray(b) || isFragment(b)) && awaitLeavingRootImpl(b, cb)) {
+        return true
+      }
+    }
+    return false
+  }
+  if (!isFragment(block)) return false
+  if (!block.getContent) return descendToLeavingRoot(block.nodes, cb)
+  if (
+    isInteropEnabled &&
+    block.awaitLeavingRoot &&
+    block.awaitLeavingRoot(cb)
+  ) {
+    return true
+  }
+  // an interop host is the child itself to the walk above: the root that
+  // left may be its own exposed fallback's (nodes), not in its content
+  const content = block.getContent()
+  return (
+    awaitLeavingRootImpl(content, cb) ||
+    (block.nodes !== content && awaitLeavingRootImpl(block.nodes, cb))
+  )
 }
 
 // `cb` follows the leave `hooks` run; given `state`, its Transition's other
@@ -800,7 +807,7 @@ function chainAfterLeave(
 function removeBranchWithLeaveImpl(
   frag: DynamicFragment,
   transition: VaporTransitionHooks,
-  parent: ParentNode | null,
+  parent: ParentNode,
   render: BlockFn | undefined,
   key: any,
   noScope: boolean,
@@ -814,14 +821,10 @@ function removeBranchWithLeaveImpl(
   const emptySlotRoot = !render && !!(frag.__vf & SLOT_ROOT)
   if (
     mode &&
-    ownsMode(frag) &&
-    // relayed vdom hooks: an inner root switch is a plain leave + enter
-    isVaporTransitionHooks(transition) &&
+    ownsMode(transition, frag) &&
     // persisted roots are toggled in place; mode only sequences structural
     // swaps, and a skipped persisted leave would never fire afterLeave.
     !transition.persisted &&
-    // a detached branch (a held slot root) has nothing to animate
-    parent &&
     // in-out only works when there is an incoming branch to trigger
     // delayedLeave; otherwise the current branch should leave immediately.
     // A slot root leaving empty may have a fallback entering for it, its

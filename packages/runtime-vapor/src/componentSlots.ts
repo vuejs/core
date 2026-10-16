@@ -51,6 +51,7 @@ import { SLOT_FRAGMENT } from './fragmentFlags'
 import {
   currentRenderContext,
   deriveRenderContext,
+  deriveSlotBoundary,
   deriveSlotOwner,
   withRenderContext,
 } from './renderContext'
@@ -342,32 +343,33 @@ export function createSlot(
   // enclosing outlet.
   const ctx = currentRenderContext
   const boundary = isForwardedSlot(flags) ? ctx.slotBoundary : null
+  // The outlet's own cell: late renders (fallbacks, branch switches) run
+  // under it rather than the ambient context.
+  const outletCtx = deriveRenderContext(
+    ctx,
+    ctx.slotOwner,
+    boundary,
+    slotScopeIds,
+    ctx.suspense,
+  )
   const interopSlotsSource =
     isInteropEnabled && (rawSlots as any)[interopSlotsKey]
   if (interopSlotsSource) {
     if (isHydrating) hydrationCursor = enterHydrationCursor()
-    // Establish the outlet cell as the creation ambient; the interop slot
-    // captures it as the base patch context for the vdom-rendered content.
-    fragment = withRenderContext(
-      deriveRenderContext(
-        ctx,
-        ctx.slotOwner,
-        boundary,
-        slotScopeIds,
-        ctx.suspense,
+    // the interop slot captures the cell as the base patch context for the
+    // vdom-rendered content
+    fragment = withRenderContext(outletCtx, () =>
+      instance.appContext.vdom!.slot(
+        interopSlotsSource,
+        name,
+        slotProps,
+        instance,
+        {
+          fallback,
+          flags,
+          adoptAnchor: _insertionAnchor,
+        },
       ),
-      () =>
-        instance.appContext.vdom!.slot(
-          interopSlotsSource,
-          name,
-          slotProps,
-          instance,
-          {
-            fallback,
-            flags,
-            adoptAnchor: _insertionAnchor,
-          },
-        ),
     )
   } else {
     // renderVDOMSlot wraps its fallback from flags itself, so only the
@@ -391,21 +393,16 @@ export function createSlot(
     isCustomElementSlot = !!(ce && ce._hasShadowRoot())
     // A native <slot> hands fallback to the browser, so there is nothing for
     // a SlotFragment to arbitrate, and nothing inside it is slot content.
+    // A forwarded root under a boundary reports its validity flips to the
+    // enclosing outlet through its SlotFragment; the rest is static analysis
+    // of local fallback reachability, boundary or not.
     const needsSlotFragment =
       !isCustomElementSlot &&
-      shouldUseSlotFragment(rawSlots, name, fallback, flags)
-    // The outlet is built under its own cell: late renders (fallbacks,
-    // branch switches) run under it rather than the ambient context. Fast
-    // path: DynamicFragment is enough, but hydration still enters the slot
-    // boundary so it can own the SSR close marker.
+      (!!boundary || shouldUseSlotFragment(rawSlots, name, fallback))
+    // Fast path: DynamicFragment is enough, but hydration still enters the
+    // slot boundary so it can own the SSR close marker.
     const outlet: DynamicFragment = withRenderContext(
-      deriveRenderContext(
-        ctx,
-        ctx.slotOwner,
-        isCustomElementSlot ? null : boundary,
-        slotScopeIds,
-        ctx.suspense,
-      ),
+      isCustomElementSlot ? deriveSlotBoundary(outletCtx, null) : outletCtx,
       () =>
         needsSlotFragment
           ? new SlotFragment(flags, _insertionAnchor)
@@ -542,14 +539,7 @@ function shouldUseSlotFragment(
   rawSlots: RawSlots,
   name: string | (() => string),
   fallback: VaporSlot | undefined,
-  flags: number,
 ): boolean {
-  // A forwarded root under a boundary reports its validity flips to the
-  // enclosing outlet through its SlotFragment. Everything below is
-  // boundary-independent: local fallback reachability follows the same static
-  // analysis with or without an enclosing boundary.
-  if (currentRenderContext.slotBoundary && isForwardedSlot(flags)) return true
-
   // Without fallback, there is no fallback branch to track.
   if (!fallback) return false
 
