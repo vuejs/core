@@ -14877,6 +14877,34 @@ describe('vdom content in a vapor outlet, sequenced by the outlet', () => {
         },
         { steps: ['off', 'on', 'done', 'done'], vdomOnly: ['Child'] },
       ))
+
+    // a vapor forwarding outlet given empty vdom content: the root that
+    // leaves is its own fallback's, exposed by the interop host itself
+    test('the fallback root of a forwarding outlet with empty vdom content leaving', () =>
+      interopTransitionLog(
+        {
+          Outer: interopTransitionOutlet(
+            'out-in',
+            '<div class="fallback">fb</div>',
+          ),
+          Mid: `
+            <template>
+              <components.Outer>
+                <slot><i v-if="data.local" class="local">local</i></slot>
+              </components.Outer>
+            </template>`,
+          App: `
+            <template>
+              <components.Mid>
+                <template #default></template>
+              </components.Mid>
+            </template>`,
+        },
+        {
+          init: { local: true },
+          steps: ['local=false', 'done', 'local=true', 'done'],
+        },
+      ))
   })
 
   // the order vdom runs the hooks, animatable or not

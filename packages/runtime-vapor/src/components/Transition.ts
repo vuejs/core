@@ -753,7 +753,13 @@ function awaitLeavingRootImpl(block: Block, cb: () => void): boolean {
     ) {
       return true
     }
-    return awaitLeavingRootImpl(block.getContent(), cb)
+    // an interop host is the child itself to the walk above: the root that
+    // left may be its own exposed fallback's (nodes), not in its content
+    const content = block.getContent()
+    return (
+      awaitLeavingRootImpl(content, cb) ||
+      (block.nodes !== content && awaitLeavingRootImpl(block.nodes, cb))
+    )
   }
   const root = findTransitionBlock(leavingFrag.nodes)
   // the hooks running the root's leave: an element's removal leave, or the
