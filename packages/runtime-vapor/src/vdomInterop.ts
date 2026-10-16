@@ -183,11 +183,7 @@ import {
   resolveFragmentAnchor,
 } from './fragment'
 import { SLOT_OUTLET, VDOM } from './fragmentFlags'
-import {
-  type SlotBoundaryContext,
-  hasSlotFallback,
-  withSlotBoundary,
-} from './slotBoundary'
+import { type SlotBoundaryContext, withSlotBoundary } from './slotBoundary'
 import {
   type SlotResolutionState,
   clearSlotFallback,
@@ -2825,15 +2821,16 @@ function renderVDOMSlot(
         delayedLeaveSource = { delayedLeave: pendingLeave } as TransitionHooks
       }
     }
-    // valid content leaving to a fallback, the outlet's own or that of the
-    // enclosing outlet it reports to
+    // valid content leaving to a fallback: the outlet's own, or one of an
+    // enclosing outlet a forwarded root reports to (its boundary chain holds
+    // only the providers of its own host; the hosts above decide)
     let leaving = false
     if (
       prevVNode &&
       !slotContentValid &&
       transition &&
       isContentValid() &&
-      (localFallback || (reportsValidity && hasSlotFallback(slotBoundary)))
+      (localFallback || reportsValidity)
     ) {
       if (mode === 'out-in') {
         const placeholder =

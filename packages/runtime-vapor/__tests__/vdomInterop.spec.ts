@@ -14781,6 +14781,19 @@ describe('vdom content in a vapor outlet, sequenced by the outlet', () => {
       }),
   )
 
+  // forwarded through a fallback-free outlet: the host reports to that
+  // outlet's boundary, the fallback is further up
+  test.each(['default', 'out-in', 'in-out'])(
+    '%s between vdom content forwarded twice and the enclosing fallback, like vdom',
+    mode =>
+      interopTransitionLog({
+        Outer: interopTransitionOutlet(mode, '<div class="fallback">fb</div>'),
+        Mid: `<template><components.Outer><slot /></components.Outer></template>`,
+        Parent: `<template><components.Mid><slot /></components.Mid></template>`,
+        App: contentApp('Parent'),
+      }),
+  )
+
   // the order vdom runs the hooks, animatable or not
   test.each(['default', 'out-in', 'in-out'])(
     '%s between vdom content and the local fallback, like vdom',
