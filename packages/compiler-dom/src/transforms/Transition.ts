@@ -21,8 +21,10 @@ export const transformTransition: NodeTransform = (node, context) => {
           return
         }
 
+        const multipleChildren = hasMultipleChildren(node)
+
         // warn multiple transition children
-        if (hasMultipleChildren(node)) {
+        if (__DEV__ && multipleChildren) {
           context.onError(
             createDOMCompilerError(
               DOMErrorCodes.X_TRANSITION_INVALID_CHILDREN,

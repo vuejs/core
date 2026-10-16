@@ -91,10 +91,12 @@ export function renderList(
       )
     }
   } else if (typeof source === 'number') {
-    if (__DEV__ && (!Number.isInteger(source) || source < 0)) {
-      warn(
-        `The v-for range expects a positive integer value but got ${source}.`,
-      )
+    if (!Number.isInteger(source) || source < 0) {
+      if (__DEV__) {
+        warn(
+          `The v-for range expects a positive integer value but got ${source}.`,
+        )
+      }
       ret = []
     } else {
       ret = new Array(source)

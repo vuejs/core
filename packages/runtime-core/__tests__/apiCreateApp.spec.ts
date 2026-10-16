@@ -1,5 +1,8 @@
 import {
+  type Component,
+  Fragment,
   type Plugin,
+  type TestElement,
   createApp,
   defineComponent,
   getCurrentInstance,
@@ -7,15 +10,20 @@ import {
   inject,
   nextTick,
   nodeOps,
+  onBeforeUpdate,
   onMounted,
+  onUpdated,
   provide,
+  queuePostFlushCb,
   ref,
+  render,
   resolveComponent,
   resolveDirective,
   serializeInner,
   watch,
   withDirectives,
 } from '@vue/runtime-test'
+import { flushPostFlushCbs } from '../src/scheduler'
 
 describe('api: createApp', () => {
   test('mount', () => {
@@ -646,7 +654,7 @@ describe('api: createApp', () => {
   })
 
   // #14215
-  test("unmount new app should not trigger other app's watcher", async () => {
+  test("mount or unmount new app should not trigger other app's watcher", async () => {
     const compWatcherTriggerFn = vi.fn()
     const data = ref(true)
     const foo = ref('')
@@ -677,12 +685,431 @@ describe('api: createApp', () => {
     await nextTick()
 
     data.value = false
-    const destroy = createNewApp()
     foo.value = 'bar'
+    const destroy = createNewApp()
     destroy()
     await nextTick()
 
     expect(compWatcherTriggerFn).toBeCalledTimes(0)
+  })
+
+  // #6728
+  describe('root render inside a pre watcher', () => {
+    const makeNested = (order: string[]) =>
+      defineComponent({
+        setup() {
+          const count = ref(0)
+          watch(count, () => order.push('nested watcher'))
+          onMounted(() => order.push('nested mounted'))
+          count.value++
+          return () => h('div')
+        },
+      })
+
+    test.each<[string, (comp: Component, el: TestElement) => void]>([
+      ['createApp().mount()', (comp, el) => createApp(comp).mount(el)],
+      [
+        'render() with a fragment root',
+        (comp, el) => render(h(Fragment, [h('div', [h(comp)])]), el),
+      ],
+    ])(
+      '%s flushes own pre watchers before mounted and leaves sibling watchers to the scheduler',
+      async (_, mount) => {
+        const order: string[] = []
+        const source = ref(0)
+        const Nested = makeNested(order)
+
+        const App = defineComponent({
+          setup() {
+            watch(source, () => {
+              order.push('watcher 1 start')
+              mount(Nested, nodeOps.createElement('div'))
+              order.push('watcher 1 end')
+            })
+            watch(source, () => order.push('watcher 2'))
+            return () => h('div')
+          },
+        })
+
+        createApp(App).mount(nodeOps.createElement('div'))
+        source.value++
+        await nextTick()
+
+        expect(order).toEqual([
+          'watcher 1 start',
+          'nested watcher',
+          'nested mounted',
+          'watcher 1 end',
+          'watcher 2',
+        ])
+      },
+    )
+
+    test('keeps sibling pre/post watcher order', async () => {
+      const order: string[] = []
+      const source = ref(0)
+      let prepared = 0
+
+      const App = defineComponent({
+        setup() {
+          watch(source, () => {
+            order.push('watcher 1 start')
+            createApp({
+              mounted: () => order.push('nested mounted'),
+              render: () => h('div'),
+            }).mount(nodeOps.createElement('div'))
+            order.push('watcher 1 end')
+          })
+          watch(source, value => {
+            prepared = value
+            order.push('watcher 2')
+          })
+          watch(source, () => order.push(`post:${prepared}`), {
+            flush: 'post',
+          })
+          return () => h('div')
+        },
+      })
+
+      createApp(App).mount(nodeOps.createElement('div'))
+      source.value++
+      await nextTick()
+
+      expect(order).toEqual([
+        'watcher 1 start',
+        'nested mounted',
+        'watcher 1 end',
+        'watcher 2',
+        'post:1',
+      ])
+    })
+  })
+
+  test('sync mount of a new app should leave pending pre/post watchers to the scheduler', async () => {
+    const order: string[] = []
+    const source = ref(0)
+    let prepared = 0
+
+    const App = defineComponent({
+      setup() {
+        watch(source, value => {
+          prepared = value
+          order.push('pre')
+        })
+        watch(source, () => order.push(`post:${prepared}`), { flush: 'post' })
+        return () => h('div')
+      },
+    })
+
+    createApp(App).mount(nodeOps.createElement('div'))
+    source.value++
+    createApp({
+      mounted: () => order.push('nested mounted'),
+      render: () => h('div'),
+    }).mount(nodeOps.createElement('div'))
+    await nextTick()
+
+    expect(order).toEqual(['nested mounted', 'pre', 'post:1'])
+  })
+
+  test('mount new app in a post watcher should leave pending pre watchers to the scheduler', async () => {
+    const order: string[] = []
+    const source = ref(0)
+    const trigger = ref(0)
+
+    const App = defineComponent({
+      setup() {
+        watch(source, () => order.push('pre'))
+        watch(
+          trigger,
+          () => {
+            order.push('post start')
+            source.value++
+            createApp({ render: () => h('div') }).mount(
+              nodeOps.createElement('div'),
+            )
+            order.push('post end')
+          },
+          { flush: 'post' },
+        )
+        return () => h('div')
+      },
+    })
+
+    createApp(App).mount(nodeOps.createElement('div'))
+    trigger.value++
+    await nextTick()
+
+    expect(order).toEqual(['post start', 'post end', 'pre'])
+  })
+
+  // like a scheduler-driven update, a root render update runs the pre watchers
+  // triggered in beforeUpdate before the updated hook
+  describe('root render update flushes own pre watchers before updated', () => {
+    const setup = () => {
+      const results: number[] = []
+      const Comp = defineComponent({
+        props: ['n'],
+        setup(props) {
+          const local = ref(0)
+          let prepared = 0
+          watch(local, value => {
+            prepared = value
+          })
+          onBeforeUpdate(() => {
+            local.value++
+          })
+          onUpdated(() => {
+            results.push(prepared)
+          })
+          return () => h('div', props.n)
+        },
+      })
+      const container = nodeOps.createElement('div')
+      render(h(Comp, { n: 0 }), container)
+      return { results, update: () => render(h(Comp, { n: 1 }), container) }
+    }
+
+    test('sync', async () => {
+      const { results, update } = setup()
+      update()
+      expect(results).toEqual([1])
+      await nextTick()
+      expect(results).toEqual([1])
+    })
+
+    test('inside a pre watcher', async () => {
+      const { results, update } = setup()
+      const source = ref(0)
+      const App = defineComponent({
+        setup() {
+          watch(source, () => {
+            update()
+            expect(results).toEqual([1])
+          })
+          return () => h('div')
+        },
+      })
+      createApp(App).mount(nodeOps.createElement('div'))
+      source.value++
+      await nextTick()
+      expect(results).toEqual([1])
+    })
+  })
+
+  // the jobs of the components a root render updates may already be queued,
+  // so a root update flushes everything pending, like a scheduler flush
+  describe('root render update flushes pending jobs like a scheduler flush', () => {
+    test('pre watcher re-queued from beforeUpdate runs before updated', async () => {
+      const order: string[] = []
+      const count = ref(0)
+      let prepared = 0
+      const Comp = defineComponent({
+        props: ['n'],
+        setup(props) {
+          watch(count, value => {
+            prepared = value
+            order.push(`pre:${value}`)
+          })
+          onBeforeUpdate(() => {
+            count.value++
+          })
+          onUpdated(() => order.push(`updated:${prepared}`))
+          return () => h('div', props.n)
+        },
+      })
+      const container = nodeOps.createElement('div')
+      render(h(Comp, { n: 0 }), container)
+      count.value = 1
+      render(h(Comp, { n: 1 }), container)
+      expect(order).toEqual(['pre:1', 'pre:2', 'updated:2'])
+      await nextTick()
+      expect(order).toEqual(['pre:1', 'pre:2', 'updated:2'])
+    })
+
+    test('pre watcher queued ahead of the flush position by another pre watcher is not skipped', async () => {
+      const order: string[] = []
+      const show = ref(false)
+      const other = ref(0)
+      const childSrc = ref(0)
+      const parentSrc = ref(0)
+      let prepared = 0
+      const Child = defineComponent({
+        setup() {
+          watch(childSrc, () => {
+            order.push('child pre')
+            parentSrc.value++
+          })
+          return () => h('div')
+        },
+      })
+      const Parent = defineComponent({
+        props: ['n'],
+        setup(props) {
+          watch(parentSrc, value => {
+            prepared = value
+            order.push('parent pre')
+          })
+          onBeforeUpdate(() => {
+            if (show.value) childSrc.value++
+          })
+          onUpdated(() => order.push(`parent updated:${prepared}`))
+          return () => h('div', [props.n, show.value ? h(Child) : null])
+        },
+      })
+      const container = nodeOps.createElement('div')
+      render(h(Parent, { n: 0 }), container)
+      // created between Parent and Child so its queued jobs sit between theirs
+      createApp({
+        setup() {
+          watch(other, () => order.push('other pre'))
+          return () => h('div', other.value)
+        },
+      }).mount(nodeOps.createElement('div'))
+      show.value = true
+      await nextTick()
+      order.length = 0
+
+      other.value++
+      render(h(Parent, { n: 1 }), container)
+      expect(order).toEqual([
+        'other pre',
+        'child pre',
+        'parent pre',
+        'parent updated:1',
+      ])
+    })
+
+    test('own post watcher runs before updated', async () => {
+      const order: string[] = []
+      const local = ref(0)
+      let prepared = 0
+      const Comp = defineComponent({
+        props: ['n'],
+        setup(props) {
+          watch(
+            local,
+            value => {
+              prepared = value
+              order.push(`post:${value}`)
+            },
+            { flush: 'post' },
+          )
+          onUpdated(() => order.push(`updated:${prepared}`))
+          return () => h('div', `${props.n}:${local.value}`)
+        },
+      })
+      const container = nodeOps.createElement('div')
+      render(h(Comp, { n: 0 }), container)
+      local.value++
+      render(h(Comp, { n: 1 }), container)
+      expect(order).toEqual(['post:1', 'updated:1'])
+    })
+
+    test('updated hook queued before and during the update runs once', async () => {
+      const order: string[] = []
+      const state = ref(0)
+      const source = ref(0)
+      const Comp = defineComponent({
+        props: ['n'],
+        setup(props) {
+          onUpdated(() => order.push('updated'))
+          return () => h('div', `${props.n}:${state.value}`)
+        },
+      })
+      const container = nodeOps.createElement('div')
+      render(h(Comp, { n: 0 }), container)
+      // created after Comp so its watcher runs after Comp's own update job
+      createApp({
+        setup() {
+          watch(source, () => {
+            order.push('watcher')
+            render(h(Comp, { n: 1 }), container)
+          })
+          return () => h('div')
+        },
+      }).mount(nodeOps.createElement('div'))
+      state.value++
+      source.value++
+      await nextTick()
+      expect(order).toEqual(['watcher', 'updated'])
+    })
+  })
+
+  test('mount new app in a pre watcher should leave the watchers it triggers in other apps to the scheduler', async () => {
+    const order: string[] = []
+    const x = ref(0)
+    const y = ref(0)
+    const source = ref(0)
+    let prepared = 0
+
+    const App = defineComponent({
+      setup() {
+        watch(source, () => {
+          order.push('watcher start')
+          x.value++
+          createApp({
+            setup() {
+              y.value++
+              return () => h('div')
+            },
+          }).mount(nodeOps.createElement('div'))
+          order.push('watcher end')
+        })
+        watch(x, value => {
+          prepared = value
+          order.push('pre')
+        })
+        watch(y, () => order.push(`post:${prepared}`), { flush: 'post' })
+        return () => h('div')
+      },
+    })
+
+    createApp(App).mount(nodeOps.createElement('div'))
+    source.value++
+    await nextTick()
+
+    expect(order).toEqual(['watcher start', 'watcher end', 'pre', 'post:1'])
+  })
+
+  test('mount new app should leave the component-less watchers its setup triggers to the scheduler', async () => {
+    const order: string[] = []
+    const source = ref(0)
+    let prepared = 0
+    // created outside any component, e.g. in a store module
+    watch(source, value => {
+      prepared = value
+      order.push(`pre:${value}`)
+    })
+    watch(source, () => order.push(`post:${prepared}`), { flush: 'post' })
+
+    createApp({
+      setup() {
+        source.value++
+        return () => h('div')
+      },
+    }).mount(nodeOps.createElement('div'))
+    order.push('mount returned')
+    await nextTick()
+
+    expect(order).toEqual(['mount returned', 'pre:1', 'post:1'])
+  })
+
+  test('mount flushes its own post cbs even if the pending queue was flushed during setup', () => {
+    const order: string[] = []
+    queuePostFlushCb(() => order.push('pending post'))
+
+    createApp({
+      setup() {
+        // e.g. hydrating another app inside setup
+        flushPostFlushCbs()
+        const el = ref<TestElement | null>(null)
+        onMounted(() => order.push(`mounted ref:${!!el.value}`))
+        return () => h('div', { ref: el })
+      },
+    }).mount(nodeOps.createElement('div'))
+
+    expect(order).toEqual(['pending post', 'mounted ref:true'])
   })
 
   // config.compilerOptions is tested in packages/vue since it is only

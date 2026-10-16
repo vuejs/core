@@ -6,7 +6,14 @@
 // - compiler-core/src/transforms/transformElement.ts
 
 import { vtcKey } from '../../runtime-dom/src/components/Transition'
-import { h, nextTick, ref, render } from '../src'
+import {
+  Suspense,
+  defineAsyncComponent,
+  h,
+  nextTick,
+  ref,
+  render,
+} from '../src'
 
 describe('SVG support', () => {
   afterEach(() => {
@@ -68,5 +75,50 @@ describe('SVG support', () => {
     await nextTick()
     expect(f1.getAttribute('class')).toBe('bar')
     expect(f2.className).toBe('bar baz')
+  })
+
+  // #15639
+  test('should mount async component resolved under Suspense with the namespace of its own position', async () => {
+    const root = document.createElement('div')
+    document.body.appendChild(root)
+    const Path = { render: () => h('path', { d: 'M0 0L10 10' }) }
+    const AsyncPath = defineAsyncComponent(() => Promise.resolve(Path))
+    const App = {
+      render: () =>
+        h(Suspense, null, {
+          default: () => h('svg', null, [h(AsyncPath)]),
+        }),
+    }
+    render(h(App), root)
+    await new Promise(r => setTimeout(r))
+    await nextTick()
+
+    const path = root.querySelector('path')!
+    expect(path.namespaceURI).toBe('http://www.w3.org/2000/svg')
+    expect(root.innerHTML).toBe('<svg><path d="M0 0L10 10"></path></svg>')
+  })
+
+  test('should mount async setup() resolved under Suspense with the namespace of its own position', async () => {
+    const root = document.createElement('div')
+    document.body.appendChild(root)
+    const AsyncPath = {
+      async setup() {
+        await Promise.resolve()
+        return () => h('path', { d: 'M0 0L10 10' })
+      },
+    }
+    const App = {
+      render: () =>
+        h(Suspense, null, {
+          default: () => h('svg', null, [h(AsyncPath)]),
+        }),
+    }
+    render(h(App), root)
+    await new Promise(r => setTimeout(r))
+    await nextTick()
+
+    const path = root.querySelector('path')!
+    expect(path.namespaceURI).toBe('http://www.w3.org/2000/svg')
+    expect(root.innerHTML).toBe('<svg><path d="M0 0L10 10"></path></svg>')
   })
 })
