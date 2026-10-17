@@ -5,6 +5,7 @@ export {
   // core
   reactive,
   ref,
+  optimistic,
   readonly,
   // utilities
   unref,
@@ -38,6 +39,12 @@ export {
   onScopeDispose,
 } from '@vue/reactivity'
 export { computed } from './apiComputed'
+/** @internal */
+export {
+  cancelAsyncRender,
+  commitAsyncRender,
+  suspendAsyncRender,
+} from './asyncRender'
 export {
   watch,
   watchEffect,
@@ -210,6 +217,7 @@ declare module '@vue/reactivity' {
 export { TrackOpTypes, TriggerOpTypes } from '@vue/reactivity'
 export type {
   Ref,
+  OptimisticOptions,
   MaybeRef,
   MaybeRefOrGetter,
   ToRef,
@@ -427,8 +435,11 @@ import {
   rawVaporSlotKey,
 } from './helpers/renderSlot'
 import { popWarningContext, pushWarningContext } from './warning'
+import { AsyncComputedError, PendingComputed } from '@vue/reactivity'
 
 const _ssrUtils: {
+  PendingComputed: typeof PendingComputed
+  AsyncComputedError: typeof AsyncComputedError
   createComponentInstance: typeof createComponentInstance
   setupComponent: typeof setupComponent
   renderComponentRoot: typeof renderComponentRoot
@@ -444,6 +455,8 @@ const _ssrUtils: {
   rawVaporSlotKey: typeof rawVaporSlotKey
   invokeSlotFallback: typeof invokeSlotFallback
 } = {
+  PendingComputed,
+  AsyncComputedError,
   createComponentInstance,
   setupComponent,
   renderComponentRoot,

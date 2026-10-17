@@ -10,6 +10,7 @@ import {
   computed,
   customRef,
   isRef,
+  optimistic,
   proxyRefs,
   reactive,
   readonly,
@@ -582,4 +583,38 @@ describe('customRef with different getter/setter types', () => {
   cr.value = 123
   // @ts-expect-error setter doesn't accept string
   cr.value = 'world'
+})
+
+describe('async computed and optimistic updates', () => {
+  const value = computed(async () => ({ id: 1 }))
+  expectType<ComputedRef<{ id: number }>>(value)
+  // @ts-expect-error async computed values are readonly
+  value.value = { id: 2 }
+  const mixed = computed(() => (Math.random() ? 1 : Promise.resolve(1)))
+  expectType<ComputedRef<number>>(mixed)
+  const previous = computed<Promise<number>>(async previous => {
+    expectType<number | undefined>(previous)
+    return (previous || 0) + 1
+  })
+  expectType<ComputedRef<number>>(previous)
+  const writable = computed({
+    get: () => Promise.resolve(1),
+    set: (_: Promise<number>) => {},
+  })
+  expectType<WritableComputedRef<Promise<number>>>(writable)
+  const result = optimistic(value, {
+    update(current) {
+      expectType<{ id: number }>(current)
+      return { id: current.id + 1 }
+    },
+    run: () => Promise.resolve('saved'),
+    commit(current, result) {
+      expectType<{ id: number }>(current)
+      expectType<string>(result)
+      return current
+    },
+  })
+  expectType<Promise<string>>(result)
+  // @ts-expect-error update must return the target's value type
+  optimistic(value, { update: () => 'invalid', run: () => 1 })
 })

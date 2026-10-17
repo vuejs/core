@@ -8,6 +8,7 @@ import {
   isSymbol,
 } from '@vue/shared'
 import type { ComputedRef, WritableComputedRef } from './computed'
+import type { OptimisticState } from './optimistic'
 import { ReactiveFlags, TrackOpTypes, TriggerOpTypes } from './constants'
 import { onTrack, triggerEventInfos } from './debug'
 import { getDepFromReactive } from './dep'
@@ -128,6 +129,7 @@ class RefImpl<T = any> implements ReactiveNode {
   flags: _ReactiveFlags = _ReactiveFlags.Mutable
 
   _value: T
+  _optimistic?: OptimisticState<T>
   _wrap?: <T>(v: T) => T
   private _oldValue: T
   private _rawValue: T
@@ -162,7 +164,7 @@ class RefImpl<T = any> implements ReactiveNode {
         shallowPropagate(subs)
       }
     }
-    return this._value
+    return this._optimistic ? this._optimistic.value : this._value
   }
 
   set value(newValue) {
@@ -177,6 +179,7 @@ class RefImpl<T = any> implements ReactiveNode {
       this._rawValue = newValue
       this._value =
         !useDirectValue && this._wrap ? this._wrap(newValue) : newValue
+      if (this._optimistic) this._optimistic.rebase(this._value)
       const subs = this.subs
       if (subs !== undefined) {
         if (__DEV__) {
