@@ -17,11 +17,14 @@ export const transformTransition: NodeTransform = (node, context) => {
     const component = context.isBuiltInComponent(node.tag)
     if (component === TRANSITION) {
       return () => {
+        const multipleChildren = hasMultipleChildren(node)
+
+        // comments and preserved whitespace are filtered out above, which
+        // leaves a transition whose only child was commented out with no
+        // children at all - there is nothing to check in that case.
         if (!node.children.length) {
           return
         }
-
-        const multipleChildren = hasMultipleChildren(node)
 
         // warn multiple transition children
         if (__DEV__ && multipleChildren) {

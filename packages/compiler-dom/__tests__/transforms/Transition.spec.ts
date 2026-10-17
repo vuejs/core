@@ -224,3 +224,19 @@ test('comments and preserved whitespace are ignored', () => {
     ).code,
   ).toMatchSnapshot()
 })
+
+test('should not throw when only comments are left as children', () => {
+  const onError = vi.fn()
+  const code = compile(
+    `
+    <transition>
+      <!-- foo -->
+      <!-- bar -->
+    </transition>
+    `,
+    { onError },
+  ).code
+  expect(code).toMatchSnapshot()
+  // filtering out the comments must not be reported as multiple children
+  expect(onError).not.toHaveBeenCalled()
+})

@@ -36,6 +36,18 @@ return function render(_ctx, _cache) {
 }"
 `;
 
+exports[`should not throw when only comments are left as children 1`] = `
+"const _Vue = Vue
+
+return function render(_ctx, _cache) {
+  with (_ctx) {
+    const { createCommentVNode: _createCommentVNode, Transition: _Transition, openBlock: _openBlock, createBlock: _createBlock } = _Vue
+
+    return (_openBlock(), _createBlock(_Transition))
+  }
+}"
+`;
+
 exports[`the v-if/else-if/else branches in Transition should ignore comments 1`] = `
 "const _Vue = Vue
 
