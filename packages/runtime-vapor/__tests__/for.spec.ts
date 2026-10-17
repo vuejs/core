@@ -2945,6 +2945,49 @@ test('renders nothing for an invalid range in prod', async () => {
   }
 })
 
+test('keeps refs in the source as items like vdom', async () => {
+  const html: Record<string, string[]> = {}
+  const { vdom, vapor } = await renderParity(
+    {
+      App: `<template><i v-for="(r, i) in data" :key="i">{{ r.value }}</i></template>`,
+    },
+    () => ref([ref('a'), ref('b')]),
+    async (data, root, mode) => {
+      const seen = [root.innerHTML]
+      data.value.reverse()
+      await nextTick()
+      seen.push(root.innerHTML)
+      data.value.push(ref('c'))
+      await nextTick()
+      seen.push(root.innerHTML)
+      html[mode] = seen
+    },
+  )
+  expect(html.vdom).toEqual([
+    '<i>a</i><i>b</i>',
+    '<i>b</i><i>a</i>',
+    '<i>b</i><i>a</i><i>c</i>',
+  ])
+  expect(html.vapor.map(h => h.replace(/<!--for-->/g, ''))).toEqual(html.vdom)
+  expect(vapor.text).toBe(vdom.text)
+})
+
+test('keeps refs in the source as items of v-for slots like vdom', async () => {
+  const { vdom, vapor } = await renderParity(
+    {
+      Child: `<template><slot name="a" />|<slot name="b" /></template>`,
+      App: `<template><components.Child><template v-for="r in data" #[r.value]>{{ r.value }}</template></components.Child></template>`,
+    },
+    () => ref([ref('a'), ref('b')]),
+    async data => {
+      data.value.reverse()
+      await nextTick()
+    },
+  )
+  expect(vdom.text).toBe('a|b')
+  expect(vapor.text).toBe(vdom.text)
+})
+
 function getEffectsCount(scope: { deps: any }) {
   let count = 0
   for (let dep = scope.deps; dep !== undefined; dep = dep.nextDep) {
