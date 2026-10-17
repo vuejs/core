@@ -4,6 +4,7 @@ import {
   defineVaporComponent,
   setBlockKey,
   template,
+  vaporInteropPlugin,
 } from '../../src'
 import {
   getTransitionKey,
@@ -17,6 +18,8 @@ import {
   Teleport,
   Transition,
   type VNode,
+  createApp,
+  defineAsyncComponent,
   defineComponent,
   h,
   nextTick,
@@ -3783,4 +3786,127 @@ describe('v-show root swapped through a slot outlet', () => {
     expect(vapor.trace).toEqual(vdom.trace)
     expect(vapor.settled).toEqual([text])
   })
+})
+
+// The child renders its root after the Transition applied its hooks. Async
+// setup needs a Suspense, which only vdom provides, so the root is vdom in
+// both modes.
+describe('a child rendering its root after the hooks were applied, like vdom', () => {
+  type Step = 'on' | 'off' | 'ready' | 'done'
+
+  async function parity(
+    mode: string,
+    content: string,
+    init: Record<string, any>,
+    steps: Step[],
+  ) {
+    const srcs: Record<string, string> = {
+      Item: `<template><div class="item">item</div></template>`,
+      AsyncItem: `
+        <script setup>
+        await Promise.resolve()
+        </script>
+        <template><div class="item">item</div></template>`,
+      Wrapper: `<template><components.AsyncItem /></template>`,
+      LateItem: `
+        <template>
+          <div v-if="data.ready" class="item">item</div>
+        </template>`,
+      Host: `
+        <template>
+          <Transition
+            ${mode === 'default' ? '' : `mode="${mode}"`}
+            :css="false"
+            @before-enter="data.onBeforeEnter"
+            @leave="data.onLeave"
+          >
+            ${content}
+            <div v-else class="fallback">fb</div>
+          </Transition>
+        </template>`,
+      App: `
+        <template>
+          <Suspense><components.Host /></Suspense>
+        </template>`,
+    }
+    const logs: Record<string, string[]> = {}
+    for (const vapor of [false, true]) {
+      const log: string[] = (logs[vapor ? 'vapor' : 'vdom'] = [])
+      const data = ref<any>({
+        ...init,
+        dones: [] as (() => void)[],
+        onBeforeEnter: (el: Element) => log.push('enter:' + el.className),
+        onLeave: (el: Element, done: () => void) => {
+          log.push('leave:' + el.className)
+          data.value.dones.push(done)
+        },
+      })
+      const components: Record<string, any> = {}
+      for (const name in srcs) {
+        const src = srcs[name].includes('<script')
+          ? srcs[name]
+          : `<script setup>const data = _data; const components = _components;</script>` +
+            srcs[name]
+        components[name] = compile(src, data, components, {
+          vapor: vapor && name !== 'App',
+        })
+      }
+      const load = () => Promise.resolve(components.Item)
+      components.Lazy = vapor
+        ? defineVaporAsyncComponent(load)
+        : defineAsyncComponent(load)
+      const root = document.createElement('div')
+      const app = createApp(components.App).use(vaporInteropPlugin)
+      app.mount(root)
+      const dom = () =>
+        Array.from(root.querySelectorAll('div'))
+          .map(el => el.className)
+          .join(',')
+      await new Promise(r => setTimeout(r))
+      log.push('init ' + dom())
+      for (const step of steps) {
+        if (step === 'done') {
+          const done = data.value.dones.shift()
+          if (done) done()
+        } else if (step === 'ready') {
+          data.value.ready = true
+        } else {
+          data.value.show = step === 'on'
+        }
+        await new Promise(r => setTimeout(r))
+        log.push(step + ' ' + dom())
+      }
+      app.unmount()
+    }
+    expect(logs.vapor).toEqual(logs.vdom)
+  }
+
+  const children: Record<string, string> = {
+    'an async setup component': `<components.AsyncItem v-if="data.show" />`,
+    'a component rooted in one': `<components.Wrapper v-if="data.show" />`,
+    'an async wrapper loading': `<components.Lazy v-if="data.show" />`,
+  }
+
+  describe.each(['out-in', 'in-out', 'default'])('%s', mode => {
+    test.each(Object.entries(children))(
+      '%s enters once its setup resolves',
+      (_, content) => parity(mode, content, { show: false }, ['on', 'done']),
+    )
+
+    test.each(Object.entries(children))(
+      '%s rendered while the Transition mounts leaves',
+      (_, content) => parity(mode, content, { show: true }, ['off', 'done']),
+    )
+  })
+
+  test.each(['out-in', 'in-out'])(
+    '%s: a component whose own root renders later leaves',
+    mode =>
+      parity(
+        mode,
+        `<components.LateItem v-if="data.show" />`,
+        { show: true, ready: false },
+        ['ready', 'off', 'done'],
+      ),
+  )
 })

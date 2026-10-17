@@ -65,6 +65,7 @@ import {
   runWithRenderCtx,
 } from '../fragment'
 import { isKeepAliveEnabled } from '../keepAlive'
+import { isSuspenseEnabled } from '../suspense'
 import { DYNAMIC, SLOT_ROOT, TELEPORT } from '../fragmentFlags'
 import { isSlotFallbackBlock } from '../slotFragment'
 import {
@@ -82,6 +83,10 @@ export type ResolvedTransitionBlock = (
   | DynamicFragment
 ) &
   TransitionOptions
+
+// What takes the hooks for content it renders later: a fragment, or a
+// component whose async setup has not resolved yet.
+type HooksTarget = VaporFragment | (VaporComponentInstance & TransitionOptions)
 
 let registered = false
 export const ensureTransitionHooksRegistered = (): void => {
@@ -245,8 +250,10 @@ export const VaporTransition: FunctionalVaporComponent<TransitionProps> =
     // re-resolve. Read runtime state (delayedLeave) from the current branch
     // without retaining an earlier branch's hooks in this effect.
     renderEffect(() => {
-      // tracked here: a leaving root sits a refresh out without resolving
-      resolvedProps.value
+      // tracked here: a leaving root sits a refresh out without resolving.
+      // A branch keeps these hooks until it renders a child to resolve them
+      // for, and DynamicFragment.update() reads their mode meanwhile.
+      hooks.mode = resolvedProps.value.mode
       const appliedHooks = applyTransitionHooksImpl(
         children,
         hooks,
@@ -397,6 +404,9 @@ export function applyTransitionHooksImpl(
   hooks: VaporTransitionHooks,
   owner?: VaporFragment,
   refresh = false,
+  // the key context `block` resolves in, when not its owner's (a component
+  // root rendered after its async setup)
+  ctx?: KeyContext,
 ): VaporTransitionHooks {
   // filter out comment nodes
   if (isArray(block)) {
@@ -431,7 +441,7 @@ export function applyTransitionHooksImpl(
     return hooks
   }
 
-  const fragments: VaporFragment[] = []
+  const fragments: HooksTarget[] = []
   const child = resolveTransitionBlock(
     block,
     fragment => {
@@ -441,6 +451,7 @@ export function applyTransitionHooksImpl(
       if (refresh && fragment.$transition) hooks = fragment.$transition
     },
     owner,
+    ctx,
   )
   if (refresh && child) {
     if (child.$transition) hooks = child.$transition
@@ -985,7 +996,7 @@ export interface KeyContext {
   slot?: boolean
 }
 export const ROOT_KEY_CONTEXT: KeyContext = { key: undefined }
-const keyContexts: WeakMap<VaporFragment, KeyContext> = new WeakMap()
+const keyContexts: WeakMap<HooksTarget, KeyContext> = new WeakMap()
 // fragments that re-apply hooks on their own content, i.e. read this back
 const KEY_CONTEXT_OWNER = DYNAMIC | TELEPORT
 
@@ -1070,30 +1081,29 @@ function resolveChildIdentity(
  */
 export function resolveTransitionBlock(
   block: Block,
-  onFragment?: (frag: VaporFragment) => void,
+  onFragment?: (target: HooksTarget) => void,
   owner?: VaporFragment,
+  ctx?: KeyContext,
 ): ResolvedTransitionBlock | undefined {
-  const ctx = owner
-    ? withDefaultKey(
-        keyContexts.get(owner) || ROOT_KEY_CONTEXT,
-        getFragmentKey(owner),
-      )
-    : ROOT_KEY_CONTEXT
-  const children: ResolvedTransitionBlock[] = []
-  collectTransitionBlocks(
-    block,
-    onFragment,
-    children,
+  if (!ctx) {
+    ctx = owner
+      ? withDefaultKey(
+          keyContexts.get(owner) || ROOT_KEY_CONTEXT,
+          getFragmentKey(owner),
+        )
+      : ROOT_KEY_CONTEXT
     // a slot outlet's branch, applied by the outlet itself
-    enterSlotKeyContext(ctx, owner, isSlotFallbackBlock(block)),
-  )
+    ctx = enterSlotKeyContext(ctx, owner, isSlotFallbackBlock(block))
+  }
+  const children: ResolvedTransitionBlock[] = []
+  collectTransitionBlocks(block, onFragment, children, ctx)
   return children[0]
 }
 
 /** Locate the transition child of `block` without touching its identity. */
 export function findTransitionBlock(
   block: Block,
-  onFragment?: (frag: VaporFragment) => void,
+  onFragment?: (target: HooksTarget) => void,
 ): ResolvedTransitionBlock | undefined {
   const children: ResolvedTransitionBlock[] = []
   collectTransitionBlocks(block, onFragment, children, undefined)
@@ -1103,7 +1113,7 @@ export function findTransitionBlock(
 // `ctx` undefined: locate only
 function collectTransitionBlocks(
   block: Block,
-  onFragment: ((frag: VaporFragment) => void) | undefined,
+  onFragment: ((target: HooksTarget) => void) | undefined,
   children: ResolvedTransitionBlock[],
   ctx: KeyContext | undefined,
 ): void {
@@ -1124,13 +1134,27 @@ function collectTransitionBlocks(
 
 function collectComponentTransitionBlocks(
   block: VaporComponentInstance,
-  onFragment: ((frag: VaporFragment) => void) | undefined,
+  onFragment: ((target: HooksTarget) => void) | undefined,
   children: ResolvedTransitionBlock[],
   ctx: KeyContext | undefined,
 ): void {
   // vdom's getInnerChild: KeepAlive is looked through, its child is the one
   if (isKeepAliveEnabled && isKeepAlive(block)) {
     collectTransitionBlocks(block.block, onFragment, children, ctx)
+    return
+  }
+  // An async setup renders the root once it resolves: the component keeps the
+  // hooks until then, as vdom's root inherits them from the component vnode.
+  if (
+    __FEATURE_SUSPENSE__ &&
+    isSuspenseEnabled &&
+    block.asyncDep &&
+    !block.asyncResolved
+  ) {
+    if (ctx) {
+      if (onFragment) onFragment(block)
+      resolveRootAfterSetup(block, ctx)
+    }
     return
   }
   const async = isAsyncComponentEnabled && isAsyncWrapper(block)
@@ -1157,9 +1181,32 @@ function collectComponentTransitionBlocks(
   collectTransitionBlocks(block.block, onFragment, children, ctx)
 }
 
+function resolveRootAfterSetup(
+  instance: VaporComponentInstance & TransitionOptions,
+  ctx: KeyContext,
+): void {
+  // one callback per instance: a later walk only updates the context it uses
+  if (!keyContexts.has(instance)) {
+    ;(instance.bm ||= []).push(() => {
+      const hooks = instance.$transition
+      if (hooks) {
+        instance.$transition = undefined
+        applyTransitionHooksImpl(
+          instance,
+          hooks,
+          undefined,
+          false,
+          keyContexts.get(instance),
+        )
+      }
+    })
+  }
+  keyContexts.set(instance, ctx)
+}
+
 function collectArrayTransitionBlocks(
   block: Block[],
-  onFragment: ((frag: VaporFragment) => void) | undefined,
+  onFragment: ((target: HooksTarget) => void) | undefined,
   children: ResolvedTransitionBlock[],
   ctx: KeyContext | undefined,
 ): void {
@@ -1188,7 +1235,7 @@ function collectArrayTransitionBlocks(
 
 function collectFragmentTransitionBlocks(
   block: VaporFragment,
-  onFragment: ((frag: VaporFragment) => void) | undefined,
+  onFragment: ((target: HooksTarget) => void) | undefined,
   children: ResolvedTransitionBlock[],
   ctx: KeyContext | undefined,
 ): void {

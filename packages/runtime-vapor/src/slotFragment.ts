@@ -483,7 +483,6 @@ function exposeSlotContent(state: SlotResolutionState): boolean {
   if (transition && !isHydrating && !state.boundary.isHeld()) {
     // only a mode of the outlet's own sequences the swap: relayed vdom hooks,
     // and hooks inherited inside a child component, animate the branches
-    // (the hooks shell carries the mode in its props only)
     const outlet = ownerFragment(state)
     const mode = ownsTransitionMode(transition, outlet)
       ? transition.props.mode

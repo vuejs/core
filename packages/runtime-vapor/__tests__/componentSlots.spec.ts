@@ -10404,12 +10404,11 @@ describe('content and fallback sequenced under a Transition', () => {
         const logs: Record<string, string[]> = {}
         for (const vapor of [false, true]) {
           const log: string[] = (logs[vapor ? 'vapor' : 'vdom'] = [])
-          // no enter is logged: vapor runs no hooks on an async setup
-          // component's DOM yet
           const data: any = ref({
             show: false,
             ...init,
             dones: [] as (() => void)[],
+            onEnter: (el: Element) => log.push('enter:' + el.className),
             onLeave: (el: Element, done: () => void) => {
               log.push('leave:' + el.className)
               data.value.dones.push(done)
