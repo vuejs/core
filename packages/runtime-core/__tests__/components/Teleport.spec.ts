@@ -937,6 +937,60 @@ describe('renderer: teleport', () => {
       expect(serializeInner(target)).toBe(`<div>teleported</div>`)
     })
 
+    test('should warn instead of throwing when enabled without a resolvable target', async () => {
+      const root = nodeOps.createElement('div')
+      const disabled = ref(true)
+
+      const App = {
+        setup: () => () =>
+          h(
+            Teleport,
+            { to: null, disabled: disabled.value },
+            h('div', 'teleported'),
+          ),
+      }
+      render(h(App), root)
+      expect(serializeInner(root)).toBe(
+        `<!--teleport start--><div>teleported</div><!--teleport end-->`,
+      )
+
+      disabled.value = false
+      await nextTick()
+      expect(`Invalid Teleport target on update`).toHaveBeenWarned()
+      // the content has nowhere to go, so it stays in the main view instead of
+      // throwing while trying to insert it into a `null` container
+      expect(serializeInner(root)).toBe(
+        `<!--teleport start--><div>teleported</div><!--teleport end-->`,
+      )
+    })
+
+    test('should keep patching in the main view after being enabled without a target', async () => {
+      const root = nodeOps.createElement('div')
+      const disabled = ref(true)
+      const items = ref(['one'])
+
+      const App = {
+        setup: () => () =>
+          h(
+            Teleport,
+            { to: null, disabled: disabled.value },
+            items.value.map(item => h('div', item)),
+          ),
+      }
+      render(h(App), root)
+
+      disabled.value = false
+      await nextTick()
+      expect(`Invalid Teleport target on update`).toHaveBeenWarned()
+
+      // a structural update must not try to patch against the missing target
+      items.value.push('two')
+      await nextTick()
+      expect(serializeInner(root)).toBe(
+        `<!--teleport start--><div>one</div><div>two</div><!--teleport end-->`,
+      )
+    })
+
     test('moving teleport while enabled', () => {
       const target = nodeOps.createElement('div')
       const root = nodeOps.createElement('div')

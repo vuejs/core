@@ -218,8 +218,12 @@ export const TeleportImpl = {
       const target = (n2.target = n1.target)!
       const targetAnchor = (n2.targetAnchor = n1.targetAnchor)!
       const wasDisabled = isTeleportDisabled(n1.props)
-      const currentContainer = wasDisabled ? container : target
-      const currentAnchor = wasDisabled ? mainAnchor : targetAnchor
+      // a target that failed to resolve at mount time leaves the content in
+      // the main view, so it must keep being patched there even after the
+      // teleport gets enabled - there is no target to patch it against.
+      const inMainView = wasDisabled || !target
+      const currentContainer = inMainView ? container : target
+      const currentAnchor = inMainView ? mainAnchor : targetAnchor
 
       if (namespace === 'svg' || isTargetSVG(target)) {
         namespace = 'svg'
@@ -299,16 +303,26 @@ export const TeleportImpl = {
         } else if (wasDisabled) {
           // disabled -> enabled
           // move into teleport target
-          moveTeleport(
-            n2,
-            target,
-            targetAnchor,
-            internals,
-            TeleportMoveTypes.TOGGLE,
-          )
+          if (target) {
+            moveTeleport(
+              n2,
+              target,
+              targetAnchor,
+              internals,
+              TeleportMoveTypes.TOGGLE,
+            )
+          } else if (__DEV__) {
+            // the target never resolved, so the content has nowhere to go and
+            // stays in the main view - warn instead of moving it into `null`
+            warn(
+              'Invalid Teleport target on update:',
+              target,
+              `(${typeof target})`,
+            )
+          }
         }
       }
-      updateCssVars(n2, disabled)
+      updateCssVars(n2, disabled || !n2.target)
     }
   },
 
