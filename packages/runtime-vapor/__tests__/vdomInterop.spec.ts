@@ -77,6 +77,7 @@ import {
   defineVaporComponent,
   insert,
   renderEffect,
+  setClass,
   setText,
   template,
   txt,
@@ -3579,6 +3580,119 @@ describe('vdomInterop', () => {
       expect(root.innerHTML).toBe(
         '<div><span>left-2</span><span>right-2</span></div>',
       )
+    })
+
+    test('cloneVNode props applied to vapor slot content root element', async () => {
+      const clicked = ref(false)
+      const VDomChild = defineComponent({
+        setup(_, { slots }) {
+          return () => {
+            const child = slots.default!()[0]
+            return cloneVNode(child, {
+              'data-cloned': 'yes',
+              class: 'extra-class',
+              onClick: () => {
+                clicked.value = true
+              },
+            })
+          }
+        },
+      })
+
+      const VaporChild = defineVaporComponent({
+        setup() {
+          return createComponent(
+            VDomChild as any,
+            null,
+            {
+              default: () => {
+                const btn = document.createElement('button')
+                btn.className = 'initial'
+                btn.textContent = 'from vapor'
+                return btn
+              },
+            },
+            true,
+          )
+        },
+      })
+
+      const root = document.createElement('div')
+      createApp(VaporChild as any)
+        .use(vaporInteropPlugin)
+        .mount(root)
+
+      const btn = root.querySelector('button')!
+      expect(btn).not.toBeNull()
+      expect(btn.getAttribute('data-cloned')).toBe('yes')
+      expect(btn.classList.contains('extra-class')).toBe(true)
+      expect(btn.classList.contains('initial')).toBe(true)
+
+      btn.dispatchEvent(new MouseEvent('click'))
+      expect(clicked.value).toBe(true)
+    })
+
+    test('cloneVNode updates extra props on vapor slot root element', async () => {
+      const extraClass = ref('c1')
+      const count = ref(0)
+      const internalClass = ref('base')
+
+      const VDomChild = defineComponent({
+        setup(_, { slots }) {
+          return () => {
+            const child = slots.default!()[0]
+            return cloneVNode(child, {
+              class: extraClass.value,
+              'data-count': count.value,
+            })
+          }
+        },
+      })
+
+      const VaporChild = defineVaporComponent({
+        setup() {
+          return createComponent(
+            VDomChild as any,
+            null,
+            {
+              default: () => {
+                const span = document.createElement('span')
+                renderEffect(() => {
+                  setClass(span, internalClass.value)
+                })
+                span.textContent = 'text'
+                return span
+              },
+            },
+            true,
+          )
+        },
+      })
+
+      const root = document.createElement('div')
+      createApp(VaporChild as any)
+        .use(vaporInteropPlugin)
+        .mount(root)
+
+      const span = root.querySelector('span')!
+      expect(span.classList.contains('base')).toBe(true)
+      expect(span.classList.contains('c1')).toBe(true)
+      expect(span.getAttribute('data-count')).toBe('0')
+
+      extraClass.value = 'c2'
+      count.value = 1
+      await nextTick()
+
+      expect(span.classList.contains('base')).toBe(true)
+      expect(span.classList.contains('c1')).toBe(false)
+      expect(span.classList.contains('c2')).toBe(true)
+      expect(span.getAttribute('data-count')).toBe('1')
+
+      // Internal dynamic class update should not wipe out the cloned class
+      internalClass.value = 'base-updated'
+      await nextTick()
+      expect(span.classList.contains('base-updated')).toBe(true)
+      expect(span.classList.contains('c2')).toBe(true)
     })
 
     test('functional slot', () => {

@@ -247,7 +247,7 @@ export function setClass(
   isNormalized: boolean = false,
 ): void {
   if (el.$clsFlags !== undefined) el.$clsFlags = undefined
-  if (el.$root) {
+  if (el.$root || isApplyingFallthroughProps || '$clsi$' in el) {
     setClassIncremental(el, value, isNormalized)
   } else {
     if (!isNormalized) value = normalizeClass(value)
@@ -353,7 +353,9 @@ function setClassIncremental(
 // template class
 function keptClasses(el: any): string[] {
   const other = isApplyingFallthroughProps ? el.$clsi : el.$clsi$
-  return other !== undefined ? other.split(/\s+/) : el.$root.cls || EMPTY_ARR
+  return other !== undefined
+    ? other.split(/\s+/)
+    : (el.$root && el.$root.cls) || EMPTY_ARR
 }
 
 // Defer css-var style mismatch checks until instance.block is set, so root
@@ -407,7 +409,7 @@ export function setStyle(el: TargetElement, value: any): void {
   // normalization, but the patch is skipped during hydration, so iterate
   // the reactive object here to track its keys
   if (isHydrating && isReactive(value)) for (const key in value) value[key]
-  if (el.$root) {
+  if (el.$root || isApplyingFallthroughProps || '$styi$' in el) {
     setStyleIncremental(el, value)
   } else {
     const normalizedValue = normalizeStyle(value)
@@ -434,7 +436,7 @@ function setStyleIncremental(el: any, value: any): void {
   // drops the attribute and its css vars
   let next: NormalizedStyle | undefined = normalizedValue
   if ('$styi$' in el) {
-    const base = el.$styi !== undefined ? el.$styi : el.$root.sty
+    const base = el.$styi !== undefined ? el.$styi : el.$root && el.$root.sty
     next = base ? extend({}, base, el.$styi$) : el.$styi$ || {}
   }
 

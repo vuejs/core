@@ -91,6 +91,7 @@ import {
   type LooseRawProps,
   type VaporComponent,
   VaporComponentInstance,
+  applyFallthroughProps,
   createComponent,
   getRootElement,
   isVaporComponent,
@@ -717,6 +718,12 @@ const vaporInteropImpl = {
       insert((n2.anchor = selfAnchor), container, anchor)
       applyVaporSlotTransition(n2, (n2.vb = slotBlock))
       insert(slotBlock, container, selfAnchor, parentSuspense)
+      if (n2.vs && n2.vs.isContent && n2.vs.extraProps) {
+        const rootEl = getRootElement(slotBlock)
+        if (rootEl instanceof Element) {
+          applyFallthroughProps(rootEl, n2.vs.extraProps)
+        }
+      }
     } else {
       // update
       // slot function changed (e.g. dynamic slots from _createForSlots),
@@ -760,6 +767,12 @@ const vaporInteropImpl = {
         n2.el = rangeStartAnchor || newAnchor
         applyVaporSlotTransition(n2, (n2.vb = slotBlock))
         insert(slotBlock, parent, newAnchor, parentSuspense)
+        if (n2.vs && n2.vs.isContent && n2.vs.extraProps) {
+          const rootEl = getRootElement(slotBlock)
+          if (rootEl instanceof Element) {
+            applyFallthroughProps(rootEl, n2.vs.extraProps)
+          }
+        }
       } else {
         const vs1 = n1.vs!
         const vs2 = n2.vs!
@@ -772,6 +785,12 @@ const vaporInteropImpl = {
           syncInteropVaporSlotState(n1, n2)
         })
         applyVaporSlotTransition(n2, n2.vb, true)
+        if (vs2.isContent && (vs1.extraProps || vs2.extraProps)) {
+          const rootEl = getRootElement(n2.vb!)
+          if (rootEl instanceof Element) {
+            applyFallthroughProps(rootEl, vs2.extraProps || {})
+          }
+        }
       }
     }
   },
@@ -1071,9 +1090,13 @@ const vaporSlotsProxyHandler: ProxyHandler<any> = {
 
       // Create a wrapper that internally uses renderSlot for proper vapor slot handling
       // This ensures that calling slots.default() works the same as renderSlot(slots, 'default')
-      const wrapped = (props?: Record<string, any>) => [
-        renderSlot({ [key]: slot }, key as string, props),
-      ]
+      const wrapped = (props?: Record<string, any>) => {
+        const vnode = renderSlot({ [key]: slot }, key as string, props)
+        if (vnode.vs) {
+          vnode.vs.isContent = true
+        }
+        return [vnode]
+      }
       ;(wrapped as any)[rawVaporSlotKey] = slot
       // already normalized, so VDOM slot normalization keeps it as is
       ;(wrapped as any)._n = true
