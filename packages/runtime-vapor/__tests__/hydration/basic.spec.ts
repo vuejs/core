@@ -168,6 +168,22 @@ describe('Vapor Mode hydration', () => {
       `,
       )
     })
+
+    // #9229 the html parser turns \r\n and \r into \n
+    test('text with \\r\\n line breaks', async () => {
+      const data = reactive({ txt: 'a\r\nb\rc' })
+      const { container } = await testHydration(
+        `<template><div>{{ data.txt }}</div><pre>{{ data.txt }}</pre>` +
+          `<p v-text="data.txt"></p><textarea :value="data.txt"></textarea></template>`,
+        undefined,
+        data,
+      )
+      expect(`mismatch`).not.toHaveBeenWarned()
+
+      data.txt = 'foo'
+      await nextTick()
+      expect(container.querySelector('div')!.textContent).toBe('foo')
+    })
   })
 
   describe('element', () => {
