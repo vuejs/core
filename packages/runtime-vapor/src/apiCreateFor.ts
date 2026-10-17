@@ -3,6 +3,7 @@ import {
   type ShallowRef,
   isReactive,
   isReadonly,
+  isRef,
   isShallow,
   onScopeDispose,
   setActiveSub,
@@ -451,7 +452,7 @@ export const createFor = (
     anchor: Node | undefined,
   ): ForBlock => {
     const keys = source.keys
-    const itemRef = shallowRef(getItemValue(source, idx))
+    const itemRef = createItemRef(getItemValue(source, idx))
     // avoid creating refs if the render fn doesn't need it
     const keyRef = needKey ? shallowRef(keys ? keys[idx] : idx) : undefined
     const indexRef = needIndex ? shallowRef(keys ? idx : undefined) : undefined
@@ -941,7 +942,7 @@ export function createForSlots(
         record.name = names[i]
       } else {
         const [item, key, index] = slotItem
-        const itemRef = shallowRef(item)
+        const itemRef = createItemRef(item)
         const keyRef = needKey ? shallowRef(key) : undefined
         const indexRef = needIndex ? shallowRef(index) : undefined
         record = {
@@ -1018,6 +1019,15 @@ function getItemValue(
       ? toReadonly(toReactive(values[idx]))
       : toReactive(values[idx])
     : values[idx]
+}
+
+// `shallowRef(item)` would return an item that is a ref itself, so the row
+// would read its value and write other rows into it: wrap it like any value
+function createItemRef(item: any): ShallowRef {
+  if (!isRef(item)) return shallowRef(item)
+  const itemRef = shallowRef()
+  itemRef.value = item
+  return itemRef
 }
 
 function getItem(
