@@ -406,6 +406,26 @@ describe('stringify static html', () => {
     ])
   })
 
+  test.each(['0', '-0', '!1', '1 > 2'])(
+    'should remove boolean attributes with falsy value `%s`',
+    value => {
+      const { ast } = compileWithStringify(
+        `<div>
+      ${repeat(
+        `<input :disabled="${value}" :checked="${value}">`,
+        StringifyThresholds.ELEMENT_WITH_BINDING_COUNT,
+      )}
+    </div>`,
+      )
+      expect(ast.cached).toMatchObject([
+        cachedArrayStaticNodeMatcher(
+          repeat(`<input>`, StringifyThresholds.ELEMENT_WITH_BINDING_COUNT),
+          StringifyThresholds.ELEMENT_WITH_BINDING_COUNT,
+        ),
+      ])
+    },
+  )
+
   test('should stringify svg', () => {
     const svg = `<svg width="50" height="50" viewBox="0 0 50 50" fill="none" xmlns="http://www.w3.org/2000/svg">`
     const repeated = `<rect width="50" height="50" fill="#C4C4C4"></rect>`

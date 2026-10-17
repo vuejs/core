@@ -358,9 +358,10 @@ function stringifyElement(
         let evaluated = evaluateConstant(exp)
         if (evaluated != null) {
           const arg = p.arg && (p.arg as SimpleExpressionNode).content
+          // a falsy constant (e.g. `0` or `!1`) leaves a boolean attribute out,
+          // as it does at runtime and in SSR
           if (
-            arg === 'hidden' &&
-            typeof evaluated === 'number' &&
+            (isBooleanAttr(arg as string) || arg === 'hidden') &&
             !includeBooleanAttr(evaluated)
           ) {
             continue
