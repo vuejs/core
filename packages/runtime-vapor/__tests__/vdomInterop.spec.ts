@@ -14969,6 +14969,27 @@ describe('vdom content in a vapor outlet, sequenced by the outlet', () => {
       ))
   })
 
+  // a vapor slot in a vdom outlet: the static fallback returns while its
+  // previous copy is still leaving
+  test.each(['default', 'out-in', 'in-out'])(
+    '%s: a vapor slot in a vdom outlet emptied while the fallback leaves',
+    mode =>
+      interopTransitionLog(
+        {
+          Child: interopTransitionOutlet(
+            mode,
+            '<div class="fallback">fb</div>',
+          ),
+          App: contentApp('Child'),
+        },
+        {
+          init: { show: false },
+          steps: ['on', 'off', 'on', 'off', 'done:content', 'done:fallback'],
+          vdomOnly: ['Child'],
+        },
+      ),
+  )
+
   // the order vdom runs the hooks, animatable or not
   test.each(['default', 'out-in', 'in-out'])(
     '%s between vdom content and the local fallback, like vdom',

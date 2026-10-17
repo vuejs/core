@@ -4235,7 +4235,13 @@ function createVNodeChildrenFragment(
     const transition = frag.$transition
     if (isVaporTransitionHooks(transition)) {
       const { props, state, instance } = transition
-      currentChildren.forEach(vnode => {
+      currentChildren.forEach((vnode, i) => {
+        // the renderer mounts a cached vnode as a fresh clone the hooks would
+        // not know: clone it here with extra props, which drops the cached
+        // flag, so the clone mounts as it is
+        if (vnode.patchFlag === PatchFlags.CACHED) {
+          vnode = currentChildren[i] = cloneVNode(vnode, {})
+        }
         const hooks = resolveVNodeTransitionHooks(vnode, props, state, instance)
         // an in-out handoff the fragment's hooks received on entering
         hooks.delayedLeave = transition.delayedLeave
