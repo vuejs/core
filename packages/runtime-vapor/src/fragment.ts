@@ -449,8 +449,13 @@ export class DynamicFragment extends RenderContextFragment {
       }
 
       let removePrevious: (() => void) | undefined
-      // teardown previous branch
-      if (wasMounted) {
+      // rendering past a leave of its own (unpaired): the root that left
+      // finishes where it is, the fragment goes on without it
+      if (isTransitionEnabled && this.leaving) {
+        this.leaving = false
+        this.pending = undefined
+      } else if (wasMounted) {
+        // teardown previous branch
         const scope = this.scope
         const previous = this.nodes
         const removeBranch = () => remove(previous, liveParent || undefined)
@@ -487,12 +492,6 @@ export class DynamicFragment extends RenderContextFragment {
         } else {
           removeBranch()
         }
-      }
-      // rendering past a leave of its own (unpaired): the root that left
-      // finishes where it is, the fragment goes on without it
-      if (isTransitionEnabled && this.leaving) {
-        this.leaving = false
-        this.pending = undefined
       }
 
       reusingDeferredAnchor = isHydrating
