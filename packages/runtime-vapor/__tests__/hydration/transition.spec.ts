@@ -1,5 +1,11 @@
-import { nextTick, reactive, ref } from '@vue/runtime-dom'
-import { VueServerRenderer, runtimeDom, stripAnchors } from '../_utils'
+import { defineAsyncComponent, nextTick, reactive, ref } from '@vue/runtime-dom'
+import {
+  VueServerRenderer,
+  compile,
+  runtimeDom,
+  runtimeVapor,
+  stripAnchors,
+} from '../_utils'
 import {
   compileVaporComponent,
   formatHtml,
@@ -9,6 +15,8 @@ import {
   testWithVDOMApp,
   triggerEvent,
 } from './_helpers'
+import { defineVaporAsyncComponent } from '../../src'
+import { setIsHydratingEnabled } from '../../src/dom/hydration'
 
 setupHydrationTest()
 
@@ -162,6 +170,25 @@ describe('Vapor Mode hydration', () => {
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
         `"<div style="display:none;" class="v-enter-from v-enter-active">foo</div>"`,
       )
+      expect(`mismatch`).not.toHaveBeenWarned()
+    })
+
+    // the v-show state outlives what the hook does to the display
+    test('transition appear with v-show and a before-enter hook setting display', async () => {
+      const data = ref({
+        show: false,
+        onBeforeEnter: (el: HTMLElement) => (el.style.display = 'block'),
+      })
+      const { container } = await testHydration(
+        `<template>
+          <Transition appear :css="false" @before-enter="data.onBeforeEnter">
+            <div v-show="data.show">foo</div>
+          </Transition>
+        </template>`,
+        undefined,
+        data,
+      )
+      expect(container.innerHTML).toBe(`<div style="display: none;">foo</div>`)
       expect(`mismatch`).not.toHaveBeenWarned()
     })
 
@@ -368,6 +395,134 @@ describe('Vapor Mode hydration', () => {
         ).not.toHaveBeenWarned()
       },
     )
+
+    // A child whose root renders after the Transition hydrated: an async
+    // setup (direct, or as a sync component's root) under a vdom Suspense,
+    // or an async wrapper still loading. vdom appear-hydrates element
+    // children only; its Suspense-hydrated async setup child is the control.
+    describe('appear with a child rendering its root later', () => {
+      beforeEach(() => {
+        setIsHydratingEnabled(false)
+      })
+
+      const children: Record<string, string> = {
+        'an async setup component': `<components.AsyncItem v-if="data.show" />`,
+        'a component rooted in one': `<components.Wrapper v-if="data.show" />`,
+        'an async wrapper loading': `<components.Lazy v-if="data.show" />`,
+      }
+
+      async function run(vapor: boolean, mode: string, content: string) {
+        const log: string[] = []
+        const data = ref<any>({
+          show: true,
+          dones: [] as (() => void)[],
+          onBeforeEnter: (el: Element) => log.push('enter:' + el.className),
+          onLeave: (el: Element, done: () => void) => {
+            log.push('leave:' + el.className)
+            data.value.dones.push(done)
+          },
+        })
+        const srcs: Record<string, string> = {
+          Item: `<template><div class="item">item</div></template>`,
+          AsyncItem: `
+            <script setup>
+            await Promise.resolve()
+            </script>
+            <template><div class="item">item</div></template>`,
+          Wrapper: `<template><components.AsyncItem /></template>`,
+          Host: `
+            <template>
+              <Transition
+                appear
+                ${mode === 'default' ? '' : `mode="${mode}"`}
+                :css="false"
+                @before-enter="data.onBeforeEnter"
+                @leave="data.onLeave"
+              >
+                ${content}
+                <div v-else class="fallback">fb</div>
+              </Transition>
+            </template>`,
+          App: `
+            <template>
+              <Suspense><components.Host /></Suspense>
+            </template>`,
+        }
+        const build = (ssr: boolean) => {
+          const components: Record<string, any> = {}
+          for (const name in srcs) {
+            if (name === 'Host') {
+              const load = () => Promise.resolve(components.Item)
+              components.Lazy =
+                vapor && !ssr
+                  ? defineVaporAsyncComponent(load)
+                  : defineAsyncComponent(load)
+            }
+            const src = srcs[name].includes('<script')
+              ? srcs[name]
+              : `<script setup>const data = _data; const components = _components;</script>` +
+                srcs[name]
+            components[name] = compile(src, data, components, {
+              vapor: vapor && name !== 'App',
+              ssr,
+            })
+          }
+          return components
+        }
+        const html = await VueServerRenderer.renderToString(
+          runtimeDom.createSSRApp(build(true).App),
+        )
+        const container = document.createElement('div')
+        document.body.appendChild(container)
+        container.innerHTML = html
+        const app = runtimeDom
+          .createSSRApp(build(false).App)
+          .use(runtimeVapor.vaporInteropPlugin)
+        app.mount(container)
+
+        const dom = () =>
+          Array.from(container.querySelectorAll('div'))
+            .map(
+              el =>
+                el.className +
+                ((el as HTMLElement).style.display ? '[hidden]' : ''),
+            )
+            .join(',')
+        const flush = async () => {
+          await nextTick()
+          await new Promise(r => setTimeout(r))
+          await nextTick()
+        }
+        await flush()
+        log.push('hydrated ' + dom())
+        for (const step of ['off', 'done', 'on', 'done']) {
+          if (step === 'done') {
+            data.value.dones.shift()()
+          } else {
+            data.value.show = step === 'on'
+          }
+          await flush()
+          log.push(step + ' ' + dom())
+        }
+        app.unmount()
+        return log
+      }
+
+      describe.each(['out-in', 'in-out', 'default'])('%s', mode => {
+        test.each(Object.entries(children))(
+          '%s hydrates on screen and transitions afterwards',
+          async (_, content) => {
+            const control = await run(
+              false,
+              mode,
+              children['an async setup component'],
+            )
+            expect(await run(true, mode, content)).toEqual(control)
+            expect('mismatch').not.toHaveBeenWarned()
+          },
+        )
+      })
+    })
   })
 
   describe('transition-group', () => {

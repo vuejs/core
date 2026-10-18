@@ -906,7 +906,7 @@ const vaporInteropImpl = {
         slotScopeIds,
       )
       const hooks = applyVaporSlotTransition(vnode, vnode.vb)
-      if (performAppear && hooks) performAppear(hooks)
+      if (performAppear && hooks) performAppear(vnode.vb, hooks)
       const fragmentAnchor = isFragment(vnode.vb) && vnode.vb.anchor
       let anchor = fragmentAnchor || currentHydrationNode!
       const wrapped = isRangeStart(node) && isRangeEnd(anchor)

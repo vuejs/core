@@ -110,7 +110,7 @@ export const ensureTransitionHooksRegistered = (): void => {
 // returns the appear to perform once the content's hooks are applied.
 export const hydrateTransitionImpl = (
   suspense: SuspenseBoundary | null,
-): ((hooks: TransitionHooks) => void) | undefined => {
+): ((block: Block, hooks: TransitionHooks) => void) | undefined => {
   if (!currentHydrationNode || !isTemplateNode(currentHydrationNode)) return
   // replace <template> node with inner child
   const templateNode = currentHydrationNode
@@ -143,7 +143,14 @@ export const hydrateTransitionImpl = (
       const originalDisplay = transitionEl.style.display
       transitionEl.style.display = 'none'
 
-      return (hooks: TransitionHooks) => {
+      return (block: Block, hooks: TransitionHooks) => {
+        // A child rendering its root later (an async setup, an async wrapper
+        // loading) hydrates it on screen already: it does not appear, as
+        // under vdom's Suspense.
+        if (!findTransitionBlock(block)) {
+          transitionEl.style.display = originalDisplay
+          return
+        }
         hooks.beforeEnter(transitionEl)
         transitionEl.style.display = originalDisplay
         queuePostRenderEffect(
@@ -225,7 +232,9 @@ export const VaporTransition: FunctionalVaporComponent<TransitionProps> =
             true,
           )
         }
-        if (!isMounted && shouldPerformAppear) performAppear(frag.$transition!)
+        if (!isMounted && shouldPerformAppear) {
+          performAppear(frag, frag.$transition!)
+        }
         isMounted = true
       })
       return frag
@@ -262,7 +271,7 @@ export const VaporTransition: FunctionalVaporComponent<TransitionProps> =
       )
       if (!isMounted) {
         isMounted = true
-        if (shouldPerformAppear) performAppear(appliedHooks)
+        if (shouldPerformAppear) performAppear(children, appliedHooks)
       }
     })
     return children
