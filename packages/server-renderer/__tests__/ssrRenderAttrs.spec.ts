@@ -224,6 +224,14 @@ describe('ssr: renderStyle', () => {
     ).toBe(`opacity:0.5;`)
   })
 
+  test('array values as fallbacks', () => {
+    expect(
+      ssrRenderStyle({
+        display: ['-webkit-box', '-ms-flexbox', 'flex'],
+      }),
+    ).toBe(`display:-webkit-box;display:-ms-flexbox;display:flex;`)
+  })
+
   test('escape inline CSS', () => {
     expect(ssrRenderStyle(`"><script`)).toBe(`&quot;&gt;&lt;script`)
     expect(

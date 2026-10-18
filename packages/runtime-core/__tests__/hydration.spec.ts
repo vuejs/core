@@ -3532,6 +3532,17 @@ describe('SSR hydration', () => {
       expect(`Hydration style mismatch`).toHaveBeenWarnedTimes(1)
     })
 
+    test('style array values as fallbacks', () => {
+      mountWithHydration(
+        `<div style="display:-webkit-box;display:-ms-flexbox;display:flex;"></div>`,
+        () =>
+          h('div', {
+            style: { display: ['-webkit-box', '-ms-flexbox', 'flex'] },
+          }),
+      )
+      expect(`Hydration style mismatch`).not.toHaveBeenWarned()
+    })
+
     test('style mismatch when no style attribute is present', () => {
       mountWithHydration(`<div></div>`, () =>
         h('div', { style: { color: 'red' } }),
