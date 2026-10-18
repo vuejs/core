@@ -581,7 +581,7 @@ export function applyTransitionLeaveHooksImpl(
   block: Block,
   enterHooks: VaporTransitionHooks,
   afterLeaveCb: () => void,
-  // No incoming branch is paired with this leave (a slot root leaving empty,
+  // No incoming branch is paired with this leave (a branch leaving to nothing,
   // a slot fallback leaving before its content): out-in does not hold branch
   // updates for it; in-out stores the handoff on the Transition, where the
   // next entering block claims it, and runs it after the flush when none does.
@@ -965,7 +965,7 @@ function removeBranchWithLeaveImpl(
         frag.nodes,
         enterHooks,
         afterLeave,
-        emptySlotRoot && (mode === 'out-in' || mode === 'in-out'),
+        !render && (mode === 'out-in' || mode === 'in-out'),
         frag,
       ) &&
       mode === 'out-in'

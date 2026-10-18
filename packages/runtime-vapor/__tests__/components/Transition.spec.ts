@@ -3910,3 +3910,153 @@ describe('a child rendering its root after the hooks were applied, like vdom', (
       ),
   )
 })
+
+describe('out-in: a branch leaving to nothing holds back no branch', () => {
+  // vapor vs vdom: hook order and the DOM after every step. The branch that
+  // left to nothing is vdom's comment child, which out-in does not wait for:
+  // content back during the leave enters at once.
+  async function parity(
+    srcs: Record<string, string>,
+    init: Record<string, any>,
+    steps: string[],
+  ) {
+    const logs: Record<string, string[]> = {}
+    const dom = (root: HTMLElement) => stripAnchors(root.innerHTML)
+    await renderParity(
+      srcs,
+      () => {
+        const data: any = ref({
+          ...init,
+          dones: [] as (() => void)[],
+          log: [] as string[],
+          be: (el: Element) => data.value.log.push('be:' + el.className),
+          l: (el: Element, done: () => void) => {
+            data.value.log.push('l:' + el.className)
+            data.value.dones.push(done)
+          },
+          al: (el: Element) => data.value.log.push('al:' + el.className),
+        })
+        return data
+      },
+      async (data, root, m) => {
+        const log: string[] = (logs[m] = data.value.log)
+        for (const s of steps) {
+          if (s === 'done') {
+            const done = data.value.dones.shift()
+            if (done) done()
+          } else {
+            const [k, v] = s.split('=')
+            data.value[k] = v === 'true'
+          }
+          await nextTick()
+          log.push(s + ' ' + dom(root))
+        }
+      },
+    )
+    expect(logs.vapor).toEqual(logs.vdom)
+  }
+
+  const outIn = (inner: string) => `
+    <template>
+      <Transition
+        mode="out-in"
+        :css="false"
+        @before-enter="data.be"
+        @leave="data.l"
+        @after-leave="data.al"
+      >
+        ${inner}
+      </Transition>
+    </template>`
+
+  const content = `<div v-if="data.show" class="content">c</div>`
+  const shapes: Record<string, Record<string, string>> = {
+    'a v-if': {
+      App: outIn(content),
+    },
+    'slot content of an outlet with no fallback': {
+      Outer: outIn(`<slot></slot>`),
+      App: `
+        <template>
+          <components.Outer>${content}</components.Outer>
+        </template>`,
+    },
+    'slot content forwarded through an outlet with no fallback': {
+      Outer: outIn(`<slot></slot>`),
+      Middle: `
+        <template>
+          <components.Outer><slot /></components.Outer>
+        </template>`,
+      App: `
+        <template>
+          <components.Middle>${content}</components.Middle>
+        </template>`,
+    },
+    'a conditional slot': {
+      Outer: outIn(`<slot></slot>`),
+      App: `
+        <template>
+          <components.Outer>
+            <template v-if="data.show" #default>
+              <div class="content">c</div>
+            </template>
+          </components.Outer>
+        </template>`,
+    },
+    'a v-if under KeepAlive': {
+      Child: `
+        <template>
+          <div class="content">c</div>
+        </template>`,
+      App: outIn(`
+        <KeepAlive>
+          <components.Child v-if="data.show" />
+        </KeepAlive>`),
+    },
+  }
+
+  describe.each(Object.entries(shapes))('%s', (_, srcs) => {
+    test('back while it leaves', () =>
+      parity(srcs, { show: true }, [
+        'show=false',
+        'show=true',
+        'done',
+        'show=false',
+        'done',
+      ]))
+
+    test('back and off again while it leaves', () =>
+      parity(srcs, { show: true }, [
+        'show=false',
+        'show=true',
+        'show=false',
+        'done',
+        'done',
+        'show=true',
+        'done',
+      ]))
+  })
+
+  // vdom removes a leaving element early only for the same key and type:
+  // another vnode back leaves the one that left to nothing where it is
+  const vnodeComps: Record<string, any> = {
+    a: defineComponent({ render: () => h('div', { class: 'a' }, 'a') }),
+    b: defineComponent({ render: () => h('div', { class: 'b' }, 'b') }),
+  }
+  test.each([
+    [
+      'an element vnode',
+      (k: string) => h(k === 'a' ? 'div' : 'p', { class: k }),
+    ],
+    ['a vdom component vnode', (k: string) => h(vnodeComps[k])],
+  ])('%s back as another one while it leaves', (_, vn) =>
+    parity(
+      {
+        App: outIn(`
+          <component :is="data.show ? data.vn(data.next ? 'b' : 'a') : null" />`),
+      },
+      { show: true, next: false, vn },
+      ['show=false', 'next=true', 'show=true', 'done', 'done'],
+    ),
+  )
+})
