@@ -3799,6 +3799,8 @@ describe('a child rendering its root after the hooks were applied, like vdom', (
     content: string,
     init: Record<string, any>,
     steps: Step[],
+    // the Transition stays vdom: its hooks are relayed to the vapor child
+    vdomHost = false,
   ) {
     const srcs: Record<string, string> = {
       Item: `<template><div class="item">item</div></template>`,
@@ -3848,7 +3850,7 @@ describe('a child rendering its root after the hooks were applied, like vdom', (
           : `<script setup>const data = _data; const components = _components;</script>` +
             srcs[name]
         components[name] = compile(src, data, components, {
-          vapor: vapor && name !== 'App',
+          vapor: vapor && name !== 'App' && !(vdomHost && name === 'Host'),
         })
       }
       const load = () => Promise.resolve(components.Item)
@@ -3908,5 +3910,17 @@ describe('a child rendering its root after the hooks were applied, like vdom', (
         { show: true, ready: false },
         ['ready', 'off', 'done'],
       ),
+  )
+
+  describe.each(['out-in', 'in-out', 'default'])(
+    'under a vdom Transition, %s',
+    mode => {
+      test.each([
+        ['an async setup component', children['an async setup component']],
+        ['a component rooted in one', children['a component rooted in one']],
+      ])('%s enters once its setup resolves', (_, content) =>
+        parity(mode, content, { show: false }, ['on', 'done'], true),
+      )
+    },
   )
 })

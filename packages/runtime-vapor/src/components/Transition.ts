@@ -1151,8 +1151,8 @@ function collectComponentTransitionBlocks(
     block.asyncDep &&
     !block.asyncResolved
   ) {
-    if (ctx) {
-      if (onFragment) onFragment(block)
+    if (onFragment) {
+      onFragment(block)
       resolveRootAfterSetup(block, ctx)
     }
     return
@@ -1181,9 +1181,10 @@ function collectComponentTransitionBlocks(
   collectTransitionBlocks(block.block, onFragment, children, ctx)
 }
 
+// `ctx` undefined: hooks relayed from a vdom Transition, resolving no identity
 function resolveRootAfterSetup(
   instance: VaporComponentInstance & TransitionOptions,
-  ctx: KeyContext,
+  ctx: KeyContext | undefined,
 ): void {
   // one callback per instance: a later walk only updates the context it uses
   if (!keyContexts.has(instance)) {
@@ -1200,8 +1201,10 @@ function resolveRootAfterSetup(
         )
       }
     })
+    keyContexts.set(instance, ctx || ROOT_KEY_CONTEXT)
+  } else if (ctx) {
+    keyContexts.set(instance, ctx)
   }
-  keyContexts.set(instance, ctx)
 }
 
 function collectArrayTransitionBlocks(
