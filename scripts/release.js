@@ -2,7 +2,7 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import pico from 'picocolors'
-import semver from 'semver'
+import { getPrerelease, increment, isValid } from 'verkit'
 import enquirer from 'enquirer'
 import { createRequire } from 'node:module'
 import { fileURLToPath } from 'node:url'
@@ -61,7 +61,7 @@ const { values: args, positionals } = parseArgs({
   },
 })
 
-const preId = args.preid || semver.prerelease(currentVersion)?.[0]
+const preId = args.preid || getPrerelease(currentVersion)?.[0]
 const isDryRun = args.dry
 /** @type {boolean | undefined} */
 let skipTests = args.skipTests
@@ -107,7 +107,7 @@ const keepThePackageName = (/** @type {string} */ pkgName) => pkgName
 /** @type {string[]} */
 const alreadyPublishedPackages = []
 
-/** @type {ReadonlyArray<import('semver').ReleaseType>} */
+/** @type {ReadonlyArray<import('verkit').IncrementType>} */
 const versionIncrements = [
   'patch',
   'minor',
@@ -117,8 +117,10 @@ const versionIncrements = [
     : []),
 ]
 
-const inc = (/** @type {import('semver').ReleaseType} */ i) =>
-  semver.inc(currentVersion, i, typeof preId === 'string' ? preId : undefined)
+const inc = (/** @type {import('verkit').IncrementType} */ i) =>
+  increment(currentVersion, i, {
+    identifier: typeof preId === 'string' ? preId : undefined,
+  })
 const run = async (
   /** @type {string} */ bin,
   /** @type {ReadonlyArray<string>} */ args,
@@ -181,7 +183,7 @@ async function main() {
     targetVersion = inc(targetVersion)
   }
 
-  if (!semver.valid(targetVersion)) {
+  if (!isValid(targetVersion)) {
     throw new Error(`invalid target version: ${targetVersion}`)
   }
 

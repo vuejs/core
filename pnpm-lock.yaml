@@ -224,9 +224,6 @@ importers:
       '@types/node':
         specifier: ^24.19.2
         version: 24.19.2
-      '@types/semver':
-        specifier: ^7.8.0
-        version: 7.8.0
       '@types/serve-handler':
         specifier: ^6.1.4
         version: 6.1.4
@@ -320,9 +317,6 @@ importers:
       rollup-plugin-polyfill-node:
         specifier: ^0.13.0
         version: 0.13.0(rollup@4.64.5)
-      semver:
-        specifier: ^7.8.5
-        version: 7.8.5
       serve:
         specifier: ^14.2.6
         version: 14.2.6(supports-color@7.2.0)
@@ -344,6 +338,9 @@ importers:
       typescript-eslint:
         specifier: ^8.71.1
         version: 8.71.1(eslint@10.12.0)(supports-color@7.2.0)(typescript@6.0.3)
+      verkit:
+        specifier: ^0.5.0
+        version: 0.5.0
       vite:
         specifier: 'catalog:'
         version: 8.3.4(@types/node@24.19.2)(esbuild@0.28.2)(sass@1.105.1)(yaml@2.9.1)
@@ -1528,9 +1525,6 @@ packages:
 
   '@types/resolve@1.20.2':
     resolution: {integrity: sha512-60BCwRFOZCQhDncwQdxxeOEEkbc5dIMccYLwbxsS4TUNeVECQ/pBJ0j09mrHOl/JJvpRPGwO9SvE4nR2Nb/a4Q==}
-
-  '@types/semver@7.8.0':
-    resolution: {integrity: sha512-1mAINjtQCXXeLkJ9ehXkwOcBpqtLxiVtKhpUf83DdRNdQKV0iXZpaHYqRr7nj+wvxuJzoAmAwXI+sCNMv1CzLQ==}
 
   '@types/serve-handler@6.1.4':
     resolution: {integrity: sha512-aXy58tNie0NkuSCY291xUxl0X+kGYy986l4kqW6Gi4kEXgr6Tx0fpSH7YwUSa5usPpG3s9DBeIR6hHcDtL2IvQ==}
@@ -3352,6 +3346,10 @@ packages:
     resolution: {integrity: sha512-BNGbWLfd0eUPabhkXUVm0j8uuvREyTh5ovRa/dyow/BqAbZJyC+5fU+IzQOzmAKzYqYRAISoRhdQr3eIZ/PXqg==}
     engines: {node: '>= 0.8'}
 
+  verkit@0.5.0:
+    resolution: {integrity: sha512-u4J1hr6Y+C/hit34GwL3eIcUf3wngT8TlYUjK7tk0jxydKLAq3sYvifjdTDA6U3KCKRcQCQDGf/srjxfZF3l7g==}
+    engines: {node: '>=18.12.0'}
+
   vite@8.3.4:
     resolution: {integrity: sha512-IftLE8phJhdNRIGNEV4JCCvfNScoZQVfcXaN8TQropWGJtOHcu+iAB9pHcuGvmEb/kddw0LBe/jS8ztdC6xdiQ==}
     engines: {node: ^20.19.0 || >=22.12.0}
@@ -4164,8 +4162,6 @@ snapshots:
       undici-types: 7.24.6
 
   '@types/resolve@1.20.2': {}
-
-  '@types/semver@7.8.0': {}
 
   '@types/serve-handler@6.1.4':
     dependencies:
@@ -6047,6 +6043,8 @@ snapshots:
   util-deprecate@1.0.2: {}
 
   vary@1.1.2: {}
+
+  verkit@0.5.0: {}
 
   vite@8.3.4(@types/node@24.19.2)(esbuild@0.28.2)(sass@1.105.1)(yaml@2.9.1):
     dependencies:
