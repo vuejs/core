@@ -208,6 +208,22 @@ describe('stringifyStyle', () => {
     const expected = 'color:blue;font-size:14px;'
     expect(stringifyStyle(style)).toBe(expected)
   })
+
+  test('should render array values as CSS fallbacks', () => {
+    const style = {
+      display: ['-webkit-box', '-ms-flexbox', 'flex'],
+      width: ['100px', 200],
+      opacity: [0.5, null as any, 'calc(1 / 2)'],
+      '--custom-display': ['-webkit-box', 'flex'],
+    }
+
+    expect(stringifyStyle(style)).toBe(
+      'display:-webkit-box;display:-ms-flexbox;display:flex;' +
+        'width:100px;width:200;' +
+        'opacity:0.5;opacity:calc(1 / 2);' +
+        '--custom-display:-webkit-box;--custom-display:flex;',
+    )
+  })
 })
 
 describe('normalizeProps', () => {
