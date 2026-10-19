@@ -96,6 +96,18 @@ let hydrationDepth = 0
 // scope never had its resume point restored, which shows up far away as a
 // drifted cursor.
 let liveCursors = 0
+let afterHydration: (() => void)[] | undefined
+
+/**
+ * Runs `cb` once the outermost hydration pass has ended, or now outside one.
+ */
+export function queueAfterHydration(cb: () => void): void {
+  if (hydrationDepth) {
+    ;(afterHydration || (afterHydration = [])).push(cb)
+  } else {
+    cb()
+  }
+}
 
 function performHydration<T>(
   fn: () => T,
@@ -131,6 +143,11 @@ function performHydration<T>(
     // the walk the locator cache belongs to.
     if (--hydrationDepth === 0) {
       releaseLocatorCache()
+      const cbs = afterHydration
+      if (cbs) {
+        afterHydration = undefined
+        for (let i = 0; i < cbs.length; i++) cbs[i]()
+      }
       if (__DEV__) {
         if (liveCursors > 0) {
           warn(
