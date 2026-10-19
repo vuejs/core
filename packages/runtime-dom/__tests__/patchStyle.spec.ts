@@ -85,6 +85,34 @@ describe(`runtime-dom: style patching`, () => {
     )
   })
 
+  it.each([
+    '!IMPORTANT',
+    '!Important',
+    '! important',
+    '!important ',
+    '!\tImPoRtAnT\r\n',
+  ])('should normalize CSS priority %j', priority => {
+    const el = document.createElement('div')
+    const setProperty = vi.spyOn(el.style, 'setProperty')
+    patchProp(el, 'style', null, {
+      color: `red ${priority}`,
+      marginRight: `10px ${priority}`,
+      '--theme': `blue ${priority}`,
+    })
+
+    expect(setProperty).toHaveBeenCalledWith('color', 'red', 'important')
+    expect(setProperty).toHaveBeenCalledWith(
+      'margin-right',
+      '10px',
+      'important',
+    )
+    expect(setProperty).toHaveBeenCalledWith('--theme', 'blue', 'important')
+    expect(el.style.color).toBe('red')
+    expect(el.style.marginRight).toBe('10px')
+    expect(el.style.getPropertyPriority('color')).toBe('important')
+    expect(el.style.getPropertyPriority('margin-right')).toBe('important')
+  })
+
   it('object with multiple entries', () => {
     const el = document.createElement('div')
     patchProp(el, 'style', {}, { color: 'red', marginRight: '10px' })

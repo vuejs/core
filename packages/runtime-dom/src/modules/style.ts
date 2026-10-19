@@ -81,7 +81,7 @@ export function patchStyle(el: Element, prev: Style, next: Style): void {
 }
 
 const semicolonRE = /[^\\];\s*$/
-const importantRE = /\s*!important$/
+const importantRE = /\s*!\s*important\s*$/i
 
 function setStyle(
   style: CSSStyleDeclaration,
