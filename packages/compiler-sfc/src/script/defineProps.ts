@@ -237,10 +237,10 @@ function validateWithDefaultsExtra(
         }
       } else if (optionKey === 'validator') {
         if (option.type === 'ObjectMethod') {
-          if (option.kind !== 'method') {
+          if (option.kind !== 'method' || option.async || option.generator) {
             ctx.error(
-              `"validator" for prop "${key}" must be a function or method ` +
-                `shorthand.`,
+              `"validator" for prop "${key}" must be a synchronous function ` +
+                `or method shorthand.`,
               option,
             )
           }
@@ -252,6 +252,19 @@ function validateWithDefaultsExtra(
           ) {
             ctx.error(
               `"validator" for prop "${key}" must be an inline function.`,
+              option.value,
+            )
+          }
+          // the runtime checks validators synchronously via truthiness, so
+          // async / generator validators (always-truthy return values) would
+          // silently suppress the warning
+          if (
+            (fn.type === 'ArrowFunctionExpression' && fn.async) ||
+            (fn.type === 'FunctionExpression' && (fn.async || fn.generator))
+          ) {
+            ctx.error(
+              `"validator" for prop "${key}" must be a synchronous inline ` +
+                `function.`,
               option.value,
             )
           }

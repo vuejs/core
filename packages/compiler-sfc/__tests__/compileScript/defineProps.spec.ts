@@ -940,6 +940,62 @@ const props = defineProps({ foo: String })
         `),
       ).toThrow(`"values" for prop "foo" must only contain literal values`)
     })
+
+    test('async validator (arrow function)', () => {
+      expect(() =>
+        compile(`
+        <script setup lang="ts">
+        const props = withDefaults(defineProps<{ foo?: string }>(), { foo: 'hi' }, {
+          foo: { validator: async (v: string) => v !== 'a' }
+        })
+        </script>
+        `),
+      ).toThrow(
+        `"validator" for prop "foo" must be a synchronous inline function`,
+      )
+    })
+
+    test('async validator (method shorthand)', () => {
+      expect(() =>
+        compile(`
+        <script setup lang="ts">
+        const props = withDefaults(defineProps<{ foo?: string }>(), { foo: 'hi' }, {
+          foo: { async validator(v: string) { return v !== 'a' } }
+        })
+        </script>
+        `),
+      ).toThrow(
+        `"validator" for prop "foo" must be a synchronous function or method shorthand`,
+      )
+    })
+
+    test('generator validator (function expression)', () => {
+      expect(() =>
+        compile(`
+        <script setup lang="ts">
+        const props = withDefaults(defineProps<{ foo?: string }>(), { foo: 'hi' }, {
+          foo: { validator: function* (v: string) { yield v } }
+        })
+        </script>
+        `),
+      ).toThrow(
+        `"validator" for prop "foo" must be a synchronous inline function`,
+      )
+    })
+
+    test('generator validator (method shorthand)', () => {
+      expect(() =>
+        compile(`
+        <script setup lang="ts">
+        const props = withDefaults(defineProps<{ foo?: string }>(), { foo: 'hi' }, {
+          foo: { *validator(v: string) { yield v } }
+        })
+        </script>
+        `),
+      ).toThrow(
+        `"validator" for prop "foo" must be a synchronous function or method shorthand`,
+      )
+    })
   })
 
   test('runtime inference for Enum', () => {
