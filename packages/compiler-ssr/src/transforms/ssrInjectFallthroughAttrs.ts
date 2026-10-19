@@ -95,10 +95,11 @@ export const ssrInjectFallthroughAttrs: NodeTransform = (node, context) => {
       return
     }
     const children = filterChild(node)
-    if (children.length === 1) {
-      injectFallthroughAttrs(children[0])
-    } else if (isSingleIfChain(children)) {
+    // checked first, as a sole <template v-if> child can't take the attrs
+    if (isSingleIfChain(children)) {
       rootIfBranches.add(node)
+    } else if (children.length === 1) {
+      injectFallthroughAttrs(children[0])
     }
   } else if (hasSingleChild(parent)) {
     injectFallthroughAttrs(node)

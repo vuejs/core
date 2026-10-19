@@ -100,6 +100,28 @@ describe('ssr: attrs fallthrough', () => {
     `)
   })
 
+  test('sole nested <template v-if> in a root <template v-if>', () => {
+    expect(
+      compile(
+        `<template v-if="foo"><template v-if="bar"><div/></template></template>`,
+      ).code,
+    ).toMatchInlineSnapshot(`
+      "const { ssrRenderAttrs: _ssrRenderAttrs } = require("vue/server-renderer")
+
+      return function ssrRender(_ctx, _push, _parent, _attrs) {
+        if (_ctx.foo) {
+          if (_ctx.bar) {
+            _push(\`<div\${_ssrRenderAttrs(_attrs)}></div>\`)
+          } else {
+            _push(\`<!---->\`)
+          }
+        } else {
+          _push(\`<!---->\`)
+        }
+      }"
+    `)
+  })
+
   test('v-if branches with comments', () => {
     expect(
       compile(
