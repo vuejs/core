@@ -81,6 +81,7 @@ export type SimpleTypeResolveContext = Pick<
   // props
   | 'propsTypeDecl'
   | 'propsRuntimeDefaults'
+  | 'propsRuntimeExtra'
   | 'propsDestructuredBindings'
 
   // emits

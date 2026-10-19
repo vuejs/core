@@ -441,6 +441,25 @@ return { props, get defaults() { return defaults } }
 })"
 `;
 
+exports[`defineProps > withDefaults (dynamic) w/ extra 1`] = `
+"import { mergeDefaults as _mergeDefaults, defineComponent as _defineComponent } from 'vue'
+import { defaults } from './foo'
+    
+export default /*@__PURE__*/_defineComponent({
+  props: /*@__PURE__*/_mergeDefaults({
+    foo: { type: String, required: false, validator: v => ['a', 'b'].includes(v) }
+  }, defaults),
+  setup(__props: any, { expose: __expose }) {
+  __expose();
+
+    const props = __props
+    
+return { props, get defaults() { return defaults } }
+}
+
+})"
+`;
+
 exports[`defineProps > withDefaults (dynamic) w/ production mode 1`] = `
 "import { mergeDefaults as _mergeDefaults, defineComponent as _defineComponent } from 'vue'
 import { defaults } from './foo'
@@ -561,6 +580,118 @@ export default /*@__PURE__*/_defineComponent({
   }, {
       ['fo' + 'o']() { return 'foo' }
     }),
+  setup(__props: any, { expose: __expose }) {
+  __expose();
+
+    const props = __props
+    
+return { props }
+}
+
+})"
+`;
+
+exports[`defineProps > withDefaults w/ extra validator only (arrow function) 1`] = `
+"import { defineComponent as _defineComponent } from 'vue'
+
+export default /*@__PURE__*/_defineComponent({
+  props: {
+    count: { type: Number, required: false, default: 1, validator: (v: number) => v > 0 }
+  },
+  setup(__props: any, { expose: __expose }) {
+  __expose();
+
+    const props = __props
+    
+return { props }
+}
+
+})"
+`;
+
+exports[`defineProps > withDefaults w/ extra validator only (method shorthand) 1`] = `
+"import { defineComponent as _defineComponent } from 'vue'
+
+export default /*@__PURE__*/_defineComponent({
+  props: {
+    count: { type: Number, required: false, default: 1, validator(v: number) { return v > 0 } }
+  },
+  setup(__props: any, { expose: __expose }) {
+  __expose();
+
+    const props = __props
+    
+return { props }
+}
+
+})"
+`;
+
+exports[`defineProps > withDefaults w/ extra values + validator (method shorthand) 1`] = `
+"import { defineComponent as _defineComponent } from 'vue'
+
+export default /*@__PURE__*/_defineComponent({
+  props: {
+    status: { type: String, required: false, default: 'active', validator: v => ['active', 'paused'].includes(v) && ((v: string) => { return v !== 'paused' })(v) }
+  },
+  setup(__props: any, { expose: __expose }) {
+  __expose();
+
+    const props = __props
+    
+return { props }
+}
+
+})"
+`;
+
+exports[`defineProps > withDefaults w/ extra values + validator 1`] = `
+"import { defineComponent as _defineComponent } from 'vue'
+
+export default /*@__PURE__*/_defineComponent({
+  props: {
+    status: { type: String, required: false, default: 'active', validator: v => ['active', 'paused'].includes(v) && ((v: string) => v !== 'paused')(v) },
+    count: { type: Number, required: false }
+  },
+  setup(__props: any, { expose: __expose }) {
+  __expose();
+
+    const props = __props
+    
+return { props }
+}
+
+})"
+`;
+
+exports[`defineProps > withDefaults w/ extra values only 1`] = `
+"import { defineComponent as _defineComponent } from 'vue'
+
+export default /*@__PURE__*/_defineComponent({
+  props: {
+    status: { type: String, required: false, default: 'active', validator: v => ['active', 'paused'].includes(v) },
+    count: { type: Number, required: false }
+  },
+  setup(__props: any, { expose: __expose }) {
+  __expose();
+
+    const props = __props
+    
+return { props }
+}
+
+})"
+`;
+
+exports[`defineProps > withDefaults w/ extra w/ production mode 1`] = `
+"import { defineComponent as _defineComponent } from 'vue'
+
+export default /*@__PURE__*/_defineComponent({
+  props: {
+    foo: { type: Boolean },
+    bar: { default: 'hi' },
+    baz: { default: 'a' }
+  },
   setup(__props: any, { expose: __expose }) {
   __expose();
 
