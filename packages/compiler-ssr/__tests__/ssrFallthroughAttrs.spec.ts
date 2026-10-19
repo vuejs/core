@@ -128,6 +128,55 @@ describe('ssr: attrs fallthrough', () => {
     `)
   })
 
+  test(`v-if branches with comments (with whitespace: 'preserve')`, () => {
+    // whitespace next to a comment at the edges of a branch is kept, so the
+    // client renders these branches as fragments
+    expect(
+      compile(
+        `<template v-if="foo"><!--a--> <div v-if="bar"/> <span v-else/></template>` +
+          `<template v-else><div/> <!--b--></template>`,
+        { whitespace: 'preserve' },
+      ).code,
+    ).toMatchInlineSnapshot(`
+      "
+      return function ssrRender(_ctx, _push, _parent, _attrs) {
+        if (_ctx.foo) {
+          _push(\`<!--[--><!--a--> \`)
+          if (_ctx.bar) {
+            _push(\`<div></div>\`)
+          } else {
+            _push(\`<span></span>\`)
+          }
+          _push(\`<!--]-->\`)
+        } else {
+          _push(\`<!--[--><div></div> <!--b--><!--]-->\`)
+        }
+      }"
+    `)
+
+    // whitespace between v-if/v-else siblings is removed
+    expect(
+      compile(
+        `<template v-if="foo"><div v-if="bar"/> <span v-else/></template>`,
+        { whitespace: 'preserve' },
+      ).code,
+    ).toMatchInlineSnapshot(`
+      "const { ssrRenderAttrs: _ssrRenderAttrs } = require("vue/server-renderer")
+
+      return function ssrRender(_ctx, _push, _parent, _attrs) {
+        if (_ctx.foo) {
+          if (_ctx.bar) {
+            _push(\`<div\${_ssrRenderAttrs(_attrs)}></div>\`)
+          } else {
+            _push(\`<span\${_ssrRenderAttrs(_attrs)}></span>\`)
+          }
+        } else {
+          _push(\`<!---->\`)
+        }
+      }"
+    `)
+  })
+
   test('should not inject to nested v-if chain if not the only content', () => {
     expect(
       compile(`<template v-if="foo"><div v-if="bar"/><p/></template>`).code,

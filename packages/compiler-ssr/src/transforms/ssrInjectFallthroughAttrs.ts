@@ -9,6 +9,7 @@ import {
   createSimpleExpression,
   findDir,
   isCommentOrWhitespace,
+  isWhitespaceText,
   locStub,
 } from '@vue/compiler-dom'
 
@@ -82,6 +83,17 @@ export const ssrInjectFallthroughAttrs: NodeTransform = (node, context) => {
   if (node.type === NodeTypes.IF_BRANCH) {
     // detect cases where the parent v-if is not the only root level node
     if (!isSingleIfChain(filterChild(parent))) return
+    // whitespace kept next to a comment at the edges of the branch (with
+    // whitespace: 'preserve') makes the client render a fragment root, unlike
+    // whitespace between v-if/v-else siblings, which v-if removes
+    const content = node.children.filter(c => c.type !== NodeTypes.COMMENT)
+    if (
+      content.length &&
+      (isWhitespaceText(content[0]) ||
+        isWhitespaceText(content[content.length - 1]))
+    ) {
+      return
+    }
     const children = filterChild(node)
     if (children.length === 1) {
       injectFallthroughAttrs(children[0])
