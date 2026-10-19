@@ -231,7 +231,7 @@ function validateWithDefaultsExtra(
           ) {
             ctx.error(
               `"values" for prop "${key}" must only contain literal values.`,
-              (el || element)!,
+              el || option.value,
             )
           }
         }
@@ -512,7 +512,8 @@ function getPropExtras(ctx: TypeResolveContext): PropExtras | undefined {
  *
  * - `values` only: `validator: v => [...values].includes(v)`
  * - `validator` only: inlined as-is (method shorthand becomes a method)
- * - both: AND-merged via `&& (fn)(v)`
+ * - both: AND-merged via `&& (fn)(v, p)`, forwarding the `props` argument
+ *   the runtime passes as the validator's second argument
  */
 function genValidatorString(
   ctx: TypeResolveContext,
@@ -528,13 +529,13 @@ function genValidatorString(
       const paramsString = getFunctionParamsSource(ctx, validator)
       if (valuesString) {
         const fnString = `${validator.async ? 'async ' : ''}(${paramsString}) => ${ctx.getString(validator.body)}`
-        return `validator: v => ${valuesString}.includes(v) && (${fnString})(v)`
+        return `validator: (v, p) => ${valuesString}.includes(v) && (${fnString})(v, p)`
       }
       return `${validator.async ? 'async ' : ''}validator(${paramsString}) ${ctx.getString(validator.body)}`
     }
     const fnString = ctx.getString(unwrapTSNode(validator.value))
     if (valuesString) {
-      return `validator: v => ${valuesString}.includes(v) && (${fnString})(v)`
+      return `validator: (v, p) => ${valuesString}.includes(v) && (${fnString})(v, p)`
     }
     return `validator: ${fnString}`
   }

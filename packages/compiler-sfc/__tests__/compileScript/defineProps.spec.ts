@@ -664,7 +664,7 @@ const props = defineProps({ foo: String })
     `)
     assertCode(content)
     expect(content).toMatch(
-      `status: { type: String, required: false, default: 'active', validator: v => ['active', 'paused'].includes(v) && ((v: string) => v !== 'paused')(v) }`,
+      `status: { type: String, required: false, default: 'active', validator: (v, p) => ['active', 'paused'].includes(v) && ((v: string) => v !== 'paused')(v, p) }`,
     )
     expect(content).toMatch(`count: { type: Number, required: false }`)
   })
@@ -686,8 +686,51 @@ const props = defineProps({ foo: String })
     `)
     assertCode(content)
     expect(content).toMatch(
-      `status: { type: String, required: false, default: 'active', validator: v => ['active', 'paused'].includes(v) && ((v: string) => { return v !== 'paused' })(v) }`,
+      `status: { type: String, required: false, default: 'active', validator: (v, p) => ['active', 'paused'].includes(v) && ((v: string) => { return v !== 'paused' })(v, p) }`,
     )
+  })
+
+  // the runtime calls validators with (value, props) - the AND-merged wrapper
+  // must forward the props argument so validators reading it keep working
+  test('withDefaults w/ extra values + validator receiving props', () => {
+    const { content } = compile(`
+    <script setup lang="ts">
+    const props = withDefaults(defineProps<{
+      status?: 'active' | 'paused'
+      count?: number
+    }>(), {
+      status: 'active',
+      count: 1
+    }, {
+      status: {
+        values: ['active', 'paused'],
+        validator: (v: string, all) => all.count !== undefined && v !== 'paused'
+      }
+    })
+    </script>
+    `)
+    assertCode(content)
+    expect(content).toMatch(
+      `validator: (v, p) => ['active', 'paused'].includes(v) && ((v: string, all) => all.count !== undefined && v !== 'paused')(v, p)`,
+    )
+  })
+
+  // module-scope references (imports) are hoist-safe and must keep working
+  test('withDefaults w/ extra validator referencing module-scope import', () => {
+    const { content } = compile(`
+    <script setup lang="ts">
+    import { max } from './foo'
+    const props = withDefaults(defineProps<{
+      count?: number
+    }>(), {
+      count: 1
+    }, {
+      count: { validator: (v: number) => v <= max }
+    })
+    </script>
+    `)
+    assertCode(content)
+    expect(content).toMatch(`validator: (v: number) => v <= max`)
   })
 
   // validators are dev-only checks and should be stripped in production,
@@ -871,6 +914,31 @@ const props = defineProps({ foo: String })
         </script>
         `),
       ).toThrow(`Extra option key "bar" has no corresponding prop declaration`)
+    })
+
+    test('validator referencing setup local variable', () => {
+      expect(() =>
+        compile(`
+        <script setup lang="ts">
+        let allowed = true
+        const props = withDefaults(defineProps<{ foo?: string }>(), { foo: 'hi' }, {
+          foo: { validator: (v: string) => allowed }
+        })
+        </script>
+        `),
+      ).toThrow(`cannot reference locally declared variables`)
+    })
+
+    test('values containing array hole', () => {
+      expect(() =>
+        compile(`
+        <script setup lang="ts">
+        const props = withDefaults(defineProps<{ foo?: string }>(), { foo: 'hi' }, {
+          foo: { values: ['a', , 'b'] }
+        })
+        </script>
+        `),
+      ).toThrow(`"values" for prop "foo" must only contain literal values`)
     })
   })
 

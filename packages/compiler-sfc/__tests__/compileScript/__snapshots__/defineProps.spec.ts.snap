@@ -627,12 +627,31 @@ return { props }
 })"
 `;
 
+exports[`defineProps > withDefaults w/ extra validator referencing module-scope import 1`] = `
+"import { defineComponent as _defineComponent } from 'vue'
+import { max } from './foo'
+    
+export default /*@__PURE__*/_defineComponent({
+  props: {
+    count: { type: Number, required: false, default: 1, validator: (v: number) => v <= max }
+  },
+  setup(__props: any, { expose: __expose }) {
+  __expose();
+
+    const props = __props
+    
+return { props, get max() { return max } }
+}
+
+})"
+`;
+
 exports[`defineProps > withDefaults w/ extra values + validator (method shorthand) 1`] = `
 "import { defineComponent as _defineComponent } from 'vue'
 
 export default /*@__PURE__*/_defineComponent({
   props: {
-    status: { type: String, required: false, default: 'active', validator: v => ['active', 'paused'].includes(v) && ((v: string) => { return v !== 'paused' })(v) }
+    status: { type: String, required: false, default: 'active', validator: (v, p) => ['active', 'paused'].includes(v) && ((v: string) => { return v !== 'paused' })(v, p) }
   },
   setup(__props: any, { expose: __expose }) {
   __expose();
@@ -650,8 +669,27 @@ exports[`defineProps > withDefaults w/ extra values + validator 1`] = `
 
 export default /*@__PURE__*/_defineComponent({
   props: {
-    status: { type: String, required: false, default: 'active', validator: v => ['active', 'paused'].includes(v) && ((v: string) => v !== 'paused')(v) },
+    status: { type: String, required: false, default: 'active', validator: (v, p) => ['active', 'paused'].includes(v) && ((v: string) => v !== 'paused')(v, p) },
     count: { type: Number, required: false }
+  },
+  setup(__props: any, { expose: __expose }) {
+  __expose();
+
+    const props = __props
+    
+return { props }
+}
+
+})"
+`;
+
+exports[`defineProps > withDefaults w/ extra values + validator receiving props 1`] = `
+"import { defineComponent as _defineComponent } from 'vue'
+
+export default /*@__PURE__*/_defineComponent({
+  props: {
+    status: { type: String, required: false, default: 'active', validator: (v, p) => ['active', 'paused'].includes(v) && ((v: string, all) => all.count !== undefined && v !== 'paused')(v, p) },
+    count: { type: Number, required: false, default: 1 }
   },
   setup(__props: any, { expose: __expose }) {
   __expose();

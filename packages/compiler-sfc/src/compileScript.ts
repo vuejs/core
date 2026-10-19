@@ -716,6 +716,7 @@ export function compileScript(
   // variables
   checkInvalidScopeReference(ctx.propsRuntimeDecl, DEFINE_PROPS)
   checkInvalidScopeReference(ctx.propsRuntimeDefaults, DEFINE_PROPS)
+  checkInvalidScopeReference(ctx.propsRuntimeExtra, DEFINE_PROPS)
   checkInvalidScopeReference(ctx.propsDestructureDecl, DEFINE_PROPS)
   checkInvalidScopeReference(ctx.emitsRuntimeDecl, DEFINE_EMITS)
   checkInvalidScopeReference(ctx.optionsRuntimeDecl, DEFINE_OPTIONS)
