@@ -15,6 +15,7 @@ import {
   type VShowElement,
   performTransitionEnter,
   performTransitionLeave,
+  queuePostFlushCb,
   queuePostRenderEffect,
   vShowHidden,
 } from '@vue/runtime-dom'
@@ -405,6 +406,28 @@ export function removingLeave(block: object): VaporTransitionHooks | undefined {
   return removing.get(block)
 }
 
+// The hooks a root rendered with, over the update relaying a vdom
+// Transition's new ones to it: removed before the flush ends, it leaves with
+// them, as vdom's replaced vnode does.
+const renderedHooks: WeakMap<object, VaporTransitionHooks> = new WeakMap()
+
+export function keepRenderedHooks(
+  block: object,
+  hooks: VaporTransitionHooks,
+): void {
+  renderedHooks.set(block, hooks)
+  queuePostFlushCb(() => renderedHooks.delete(block))
+}
+
+export function dropRenderedHooks(block: object): void {
+  renderedHooks.delete(block)
+}
+
+function leaveHooks(block: TransitionBlock): VaporTransitionHooks | undefined {
+  const hooks = block.$transition
+  return (hooks && isInteropEnabled && renderedHooks.get(block)) || hooks
+}
+
 export function removeNode(block: Node, parent?: ParentNode): void {
   if (
     isTransitionEnabled &&
@@ -416,7 +439,7 @@ export function removeNode(block: Node, parent?: ParentNode): void {
     // only an unmount cuts a running removal leave short
     const running = removing.get(block)
     if (running && !(running.state && running.state.isUnmounting)) return
-    const hooks = (block as TransitionBlock).$transition!
+    const hooks = leaveHooks(block as TransitionBlock)!
     removing.set(block, hooks)
     performTransitionLeave(
       block,
@@ -448,7 +471,7 @@ export function removeFragment(
     }
   }
   if (block.remove) {
-    block.remove(parent, (block as TransitionBlock).$transition)
+    block.remove(parent, leaveHooks(block as TransitionBlock))
   } else {
     remove(block.nodes, parent)
   }

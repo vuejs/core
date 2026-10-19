@@ -112,9 +112,11 @@ import {
   type BlockFn,
   EMPTY_BLOCK,
   type VaporTransitionHooks,
+  dropRenderedHooks,
   insert,
   isValidBlock,
   isValidSlot,
+  keepRenderedHooks,
   move,
   remove,
 } from './block'
@@ -560,7 +562,17 @@ const vaporInteropImpl = {
       }
       if (n2.transition && instance.block) {
         ensureTransitionHooksRegistered()
+        // vdom: the patched root takes the new hooks, while one this update
+        // replaces leaves with the ones it rendered with, under the old vnode
+        // (which has no element for a fragment root, a slot outlet)
+        const root = findTransitionBlock(instance.block)
+        const rendered = root && root.$transition
+        if (root && rendered && rendered !== n2.transition) {
+          keepRenderedHooks(root, rendered)
+        }
         relayTransitionHooks(instance.block, n2.transition)
+        n1.el =
+          getRootElement(instance, { excludeSlotOutlets: true }) || n1.anchor
       }
       updateInteropVNode(instance, vnodeHookState, n2, n1)
     }
@@ -969,7 +981,9 @@ const vaporInteropImpl = {
 
   setTransitionHooks(component, hooks) {
     ensureTransitionHooksRegistered()
-    relayTransitionHooks((component as any).block, hooks)
+    const root = relayTransitionHooks((component as any).block, hooks)
+    // a handoff the vdom Transition installs supersedes what it rendered with
+    if (root) dropRenderedHooks(root)
   },
 
   getTransitionElement: getInteropTransitionElement,
@@ -4625,6 +4639,18 @@ function registerInteropRootSync(
   if (interopRootSyncProducers.get(frag) === instance) return
   interopRootSyncProducers.set(frag, instance)
   ;(frag.u ||= []).push(() => syncInteropRoot(instance))
+  // A slot outlet is vdom's fragment root, whose transition root is the
+  // branch entering: a relayed vdom Transition's early removal reads it
+  // through `vnode.el` before the update ends.
+  if (frag.__vf & SLOT_OUTLET) {
+    ;(frag.bm ||= []).push(nodes => {
+      const hooks = isTransitionEnabled && frag.$transition
+      const el =
+        hooks && !isVaporTransitionHooks(hooks) && getRootElement(nodes)
+      const state = el && vnodeHookStateMap.get(instance)
+      if (state) state.vnode.el = el
+    })
+  }
 }
 
 // dev only: and across the HMR rerender of a component on its root chain

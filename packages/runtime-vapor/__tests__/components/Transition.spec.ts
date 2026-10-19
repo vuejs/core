@@ -4074,3 +4074,238 @@ describe('out-in: a branch leaving to nothing holds back no branch', () => {
     ),
   )
 })
+
+describe('a vdom Transition around a vapor child whose root is a slot outlet', () => {
+  // vapor vs vdom children under the same vdom Transition: hook order and the
+  // DOM after every step. Its hooks are resolved for the child's vnode, whose
+  // root vdom can't animate (a fragment): the fallback and the content are no
+  // same-key elements to each other, and none early-removes the other's leave.
+  async function parity(
+    srcs: Record<string, string>,
+    mode: string,
+    steps: string[],
+    {
+      child = `<components.Panel :show="data.show" />`,
+      fragmentRoot = true,
+      // compiled as vdom children in both runs
+      vdom = [] as string[],
+    } = {},
+  ): Promise<void> {
+    const logs: Record<string, string[]> = {}
+    for (const vapor of [false, true]) {
+      const log: string[] = (logs[vapor ? 'vapor' : 'vdom'] = [])
+      const data = ref<any>({
+        show: false,
+        dones: [] as (() => void)[],
+        be: (el: Element) => log.push('be:' + el.className),
+        e: (el: Element) => log.push('e:' + el.className),
+        ae: (el: Element) => log.push('ae:' + el.className),
+        l: (el: Element, done: () => void) => {
+          log.push('l:' + el.className)
+          data.value.dones.push(done)
+        },
+        // the handler the Transition is re-rendered with ('next')
+        l2: (el: Element, done: () => void) => {
+          log.push('l2:' + el.className)
+          data.value.dones.push(done)
+        },
+        al: (el: Element) => log.push('al:' + el.className),
+      })
+      const components: Record<string, any> = {}
+      const script = `<script setup>const data = _data; const components = _components;</script>`
+      for (const name in srcs) {
+        const src = srcs[name].includes('<script')
+          ? srcs[name]
+          : script + srcs[name]
+        components[name] = compile(src, data, components, {
+          vapor: vapor && !vdom.includes(name),
+        })
+      }
+      const App = compile(
+        script +
+          `<template>
+            <Transition
+              ${mode ? `mode="${mode}"` : ''}
+              :css="false"
+              @before-enter="data.be"
+              @enter="data.e"
+              @after-enter="data.ae"
+              :on-leave="data.next ? data.l2 : data.l"
+              @after-leave="data.al"
+            >
+              ${child}
+            </Transition>
+          </template>`,
+        data,
+        components,
+        { vapor: false },
+      )
+      // a v-show root animates in the document only
+      const root = document.body.appendChild(document.createElement('div'))
+      const app = createApp(App).use(vaporInteropPlugin)
+      app.mount(root)
+      // a step's actions run in one tick
+      for (const s of steps) {
+        for (const a of s.split(' ')) {
+          if (a === 'done') {
+            const done = data.value.dones.shift()
+            if (done) done()
+          } else if (a === 'next') {
+            data.value.next = true
+          } else {
+            data.value.show = a === 'on'
+          }
+        }
+        await nextTick()
+        log.push(s + ' ' + stripAnchors(root.innerHTML))
+      }
+      app.unmount()
+      root.remove()
+    }
+    // vdom: the child's root is a fragment
+    if (fragmentRoot) {
+      expect(
+        'Component inside <Transition> renders non-element root node',
+      ).toHaveBeenWarned()
+    }
+    expect(logs.vapor).toEqual(logs.vdom)
+  }
+
+  const outlet = `
+    <template>
+      <slot><p class="fallback">fallback</p></slot>
+    </template>`
+  const shapes: Record<string, Record<string, string>> = {
+    'its own outlet': {
+      Outlet: outlet,
+      Panel: `
+        <script setup>
+          defineProps({ show: Boolean })
+          const components = _components
+        </script>
+        <template>
+          <components.Outlet>
+            <div v-if="show" class="content">content</div>
+          </components.Outlet>
+        </template>`,
+    },
+    'an outlet it forwards its slot to': {
+      Outlet: outlet,
+      Mid: `
+        <template>
+          <components.Outlet><slot /></components.Outlet>
+        </template>`,
+      Panel: `
+        <script setup>
+          defineProps({ show: Boolean })
+          const components = _components
+        </script>
+        <template>
+          <components.Mid>
+            <div v-if="show" class="content">content</div>
+          </components.Mid>
+        </template>`,
+    },
+  }
+
+  describe.each(Object.entries(shapes))('%s', (_, srcs) => {
+    test.each(['out-in', 'in-out', ''])(
+      'the content in and out, each leave done first (mode "%s")',
+      mode => parity(srcs, mode, ['on', 'done', 'off', 'done']),
+    )
+
+    test.each(['out-in', 'in-out', ''])(
+      'the content in and out while the fallback leaves (mode "%s")',
+      mode => parity(srcs, mode, ['on', 'off', 'done', 'done']),
+    )
+  })
+
+  // the child switches on its own: no parent patch re-reads its root
+  test('the content in and out by the child itself', () =>
+    parity(
+      {
+        Outlet: outlet,
+        Panel: `
+          <template>
+            <components.Outlet>
+              <div v-if="data.show" class="content">content</div>
+            </components.Outlet>
+          </template>`,
+      },
+      '',
+      ['on', 'off', 'done', 'done'],
+      { child: `<components.Panel />` },
+    ))
+
+  // vdom: a root the update replaces leaves with the hooks it rendered with,
+  // the root it patches takes the new ones
+  test('the content replaced as the Transition re-renders with a new hook', () =>
+    parity(shapes['its own outlet'], '', ['on', 'done', 'next off', 'done']))
+
+  test('a v-show root toggled as the Transition re-renders with a new hook', () =>
+    parity(
+      {
+        Panel: `
+          <script setup>
+            defineProps({ show: Boolean })
+          </script>
+          <template>
+            <div v-show="show" class="content">content</div>
+          </template>`,
+      },
+      '',
+      ['on', 'next off', 'done'],
+      { fragmentRoot: false },
+    ))
+
+  test('a vdom fallback component replaced by the content', () =>
+    parity(
+      {
+        Fallback: `
+          <template>
+            <p class="fallback">fallback</p>
+          </template>`,
+        Outlet: `
+          <template>
+            <slot><components.Fallback /></slot>
+          </template>`,
+        Panel: shapes['its own outlet'].Panel,
+      },
+      '',
+      ['on', 'off', 'done', 'done'],
+      { vdom: ['Fallback'] },
+    ))
+
+  // the flush that patched the child switches the Transition away from it:
+  // the leaving hooks the Transition installs carry the mode's handoff
+  test.each(['out-in', 'in-out'])(
+    'the child switched away in the flush that patched it (mode "%s")',
+    mode =>
+      parity(
+        {
+          Panel: `
+            <script setup>
+              import { watch } from 'vue'
+              const props = defineProps({ show: Boolean })
+              const emit = defineEmits(['flip'])
+              watch(() => props.show, () => emit('flip'))
+            </script>
+            <template>
+              <div class="panel">panel</div>
+            </template>`,
+        },
+        mode,
+        ['on', 'done', 'done'],
+        {
+          child: `
+            <components.Panel
+              v-if="!data.flipped"
+              :show="data.show"
+              @flip="data.flipped = true"
+            />
+            <p v-else class="other">other</p>`,
+          fragmentRoot: false,
+        },
+      ),
+  )
+})
