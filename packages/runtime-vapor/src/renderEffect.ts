@@ -20,9 +20,9 @@ import {
 } from '@vue/runtime-dom'
 import {
   type VaporComponentInstance,
-  isDeferredKeepAliveStateLive,
+  isDeferredRootUpdatesLive,
   isVaporComponent,
-  settleDeferredKeepAliveUpdates,
+  settleDeferredRootUpdates,
 } from './component'
 import { inOnce } from './once'
 import { invokeArrayFns, remove } from '@vue/shared'
@@ -80,14 +80,14 @@ export class RenderEffect extends ReactiveEffect {
     const job: SchedulerJob = () => {
       // The job may already be queued when its owning scope is paused.
       if (!(this.flags & EffectFlags.PAUSED) && this.dirty) {
-        // A pending KeepAlive async root defers updates along its root chain.
+        // A pending async root defers updates along its root chain.
         const deferred =
           __FEATURE_SUSPENSE__ &&
           isSuspenseEnabled &&
           this.i &&
-          this.i.deferredKeepAliveUpdates
+          this.i.deferredRootUpdates
         if (deferred) {
-          if (isDeferredKeepAliveStateLive(deferred)) {
+          if (isDeferredRootUpdatesLive(deferred)) {
             deferred.effects.push(job)
             return
           }
@@ -95,7 +95,7 @@ export class RenderEffect extends ReactiveEffect {
           // (unmounted early or superseded suspense cycle) - drop the stale
           // state and replay its buffered updates together with this job in
           // scheduler order (this job re-enters with the state cleared).
-          settleDeferredKeepAliveUpdates(deferred, job)
+          settleDeferredRootUpdates(deferred, job)
           return
         }
         // Input effects also update the owner's options through child props,
