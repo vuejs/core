@@ -1,5 +1,6 @@
 import {
   createComponent,
+  createVaporApp,
   defineVaporAsyncComponent,
   defineVaporComponent,
   setBlockKey,
@@ -1092,9 +1093,9 @@ describe('Transition', () => {
     expect(host.innerHTML).toBe('<div>one</div><!--if-->')
 
     app.unmount()
-    expect(host.innerHTML).toBe('')
+    // the leaving branch stays until its leave ends, as in vdom
+    expect(host.innerHTML).toBe('<div>one</div>')
 
-    // the pending leave callback from the interrupted leave
     expect(() => leaveDone!()).not.toThrow()
     expect(host.innerHTML).toBe('')
   })
@@ -1329,7 +1330,8 @@ describe('Transition', () => {
     app.unmount()
     await nextTick()
 
-    expect(host.innerHTML).toBe('')
+    // the leaving fallback stays until its leave ends, as in vdom
+    expect(host.innerHTML).toBe('<div class="fallback">fallback</div>')
 
     leaveDone!()
     await nextTick()
@@ -1356,7 +1358,8 @@ describe('Transition', () => {
     app.unmount()
     await nextTick()
 
-    expect(host.innerHTML).toBe('')
+    // the leaving content stays until its leave ends, as in vdom
+    expect(host.innerHTML).toBe('<span class="content">content</span>')
 
     leaveDone!()
     await nextTick()
@@ -1392,7 +1395,8 @@ describe('Transition', () => {
     app.unmount()
     await nextTick()
 
-    expect(host.innerHTML).toBe('')
+    // the leaving content stays until its leave ends, as in vdom
+    expect(host.innerHTML).toBe('<span class="content">content</span>')
 
     leaveDone!()
     await nextTick()
@@ -1428,8 +1432,9 @@ describe('Transition', () => {
     app.unmount()
     await nextTick()
 
+    // the leaving content stays in the target until its leave ends, as in vdom
     expect(host.innerHTML).toBe('')
-    expect(target.innerHTML).toBe('')
+    expect(target.innerHTML).toBe('<span class="content">content</span>')
 
     leaveDone!()
     await nextTick()
@@ -4308,4 +4313,107 @@ describe('a vdom Transition around a vapor child whose root is a slot outlet', (
         },
       ),
   )
+})
+
+describe('a Transition unmounted while its child leaves', () => {
+  // vdom leaves an unmounted child in the DOM until its leave ends, also when
+  // the Transition itself goes away meanwhile
+  const holders: Record<string, string> = {
+    'a child leaving to nothing': `
+      <span v-if="data.show" class="a">a</span>`,
+    'a child switched to another': `
+      <span v-if="data.show" class="a">a</span>
+      <b v-else class="b">b</b>`,
+    'slot content leaving to the fallback': `
+      <slot><i class="fallback">fb</i></slot>`,
+  }
+
+  async function parity(
+    holder: string,
+    mode: string,
+    unmount: 'v-if' | 'app',
+    app: 'vapor' | 'vdom',
+  ) {
+    const logs: Record<string, string[]> = {}
+    for (const vapor of [false, true]) {
+      const log: string[] = (logs[vapor ? 'vapor' : 'vdom'] = [])
+      const data = ref<any>({
+        show: true,
+        alive: true,
+        dones: [] as (() => void)[],
+        l: (el: Element, done: () => void) => {
+          log.push('l:' + el.className)
+          data.value.dones.push(done)
+        },
+        al: (el: Element) => log.push('al:' + el.className),
+        lc: (el: Element) => log.push('lc:' + el.className),
+      })
+      const script = `<script setup>const data = _data; const components = _components;</script>`
+      const components: Record<string, any> = {}
+      components.Holder = compile(
+        script +
+          `<template>
+            <Transition
+              ${mode ? `mode="${mode}"` : ''}
+              :css="false"
+              @leave="data.l"
+              @after-leave="data.al"
+              @leave-cancelled="data.lc"
+            >
+              ${holders[holder]}
+            </Transition>
+          </template>`,
+        data,
+        components,
+        { vapor },
+      )
+      const appVapor = vapor && app === 'vapor'
+      const App = compile(
+        script +
+          `<template>
+            <components.Holder v-if="data.alive">
+              <span v-if="data.show" class="a">a</span>
+            </components.Holder>
+          </template>`,
+        data,
+        components,
+        { vapor: appVapor },
+      )
+      const root = document.createElement('div')
+      const instance = (appVapor ? createVaporApp(App) : createApp(App)).use(
+        vaporInteropPlugin,
+      )
+      instance.mount(root)
+      data.value.show = false
+      await nextTick()
+      log.push('off ' + stripAnchors(root.innerHTML))
+      if (unmount === 'app') {
+        instance.unmount()
+      } else {
+        data.value.alive = false
+        await nextTick()
+      }
+      log.push('unmount ' + stripAnchors(root.innerHTML))
+      for (const done of data.value.dones.splice(0)) done()
+      await nextTick()
+      log.push('done ' + stripAnchors(root.innerHTML))
+      if (unmount !== 'app') instance.unmount()
+    }
+    expect(logs.vapor).toEqual(logs.vdom)
+  }
+
+  for (const app of ['vapor', 'vdom'] as const) {
+    describe(`under a ${app} app`, () => {
+      for (const holder in holders) {
+        test.each(['out-in', 'in-out', ''])(
+          `${holder}, the Transition unmounted by a v-if (mode %j)`,
+          mode => parity(holder, mode, 'v-if', app),
+        )
+        test.each(['out-in', 'in-out', ''])(
+          `${holder}, the app unmounted (mode %j)`,
+          mode => parity(holder, mode, 'app', app),
+        )
+      }
+    })
+  }
 })

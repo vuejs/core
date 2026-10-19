@@ -19,7 +19,6 @@ import {
   type Slots,
   Static,
   type SuspenseBoundary,
-  type TransitionElement,
   type TransitionHooks,
   type TransitionState,
   type VNode,
@@ -54,7 +53,6 @@ import {
   isVNode,
   isHydrating as isVdomHydrating,
   isHydratingEnabled as isVdomHydratingEnabled,
-  leaveCbKey,
   normalizeRef,
   normalizeVNode,
   onScopeDispose,
@@ -2252,7 +2250,6 @@ interface PendingOutIn {
   content: VNode | Block | undefined
   placeholder: VNode | null
   contentValid: boolean
-  leavingElement?: Element
 }
 
 /**
@@ -2308,11 +2305,10 @@ function renderVDOMSlot(
   // valid content waiting for the enclosing outlet holding this one to place it
   let heldContent: VNode | undefined
   let pendingOutIn: PendingOutIn | undefined
-  // out-in: the content root leaving on its own (it left to a fallback, as
-  // vdom's comment child), what follows that leave, and the Transition's
+  // out-in: what follows the leave of the content root leaving on its own
+  // (it left to a fallback, as vdom's comment child), and the Transition's
   // state once its own branches wait on it (a vdom Transition's re-renders
   // on it: left to it)
-  let contentLeaving: Element | undefined
   let contentLeave: (() => void)[] | undefined
   let contentLeaveState: TransitionState | undefined
   // `own` is the ending leave's: one the content rendered past holds nothing
@@ -2320,7 +2316,7 @@ function renderVDOMSlot(
   const endContentLeave = (own: (() => void)[]): void => {
     if (contentLeave !== own) return
     const state = contentLeaveState
-    contentLeave = contentLeaving = contentLeaveState = undefined
+    contentLeave = contentLeaveState = undefined
     if (state) state.isLeaving = false
     invokeArrayFns(own)
   }
@@ -2478,15 +2474,7 @@ function renderVDOMSlot(
     if (parentNode) currentParentNode = parentNode
     scope.stop()
     disposed = true
-    // out-in transfers logical ownership before the outgoing branch's
-    // physical leave finishes, so disposal must cancel that leave explicitly.
-    const leavingElement = pendingOutIn
-      ? pendingOutIn.leavingElement
-      : contentLeaving
     pendingOutIn = undefined
-    const leave =
-      leavingElement && (leavingElement as TransitionElement)[leaveCbKey]
-    if (leave) leave(true)
     if (rendered) {
       // the enclosing branch leaves with the hooks its Transition resolved
       // for this fragment (an out-in swap waits on their afterLeave), not
@@ -2843,16 +2831,10 @@ function renderVDOMSlot(
         // on its own state, the fallback leaving as its old child
         clearSlotFallback(slotResolutionState)
       } else if (mode === 'out-in') {
-        const leavingBlock = findTransitionBlock(
-          slotResolutionState.activeFallback!,
-        )
-        const leavingElement =
-          leavingBlock && getTransitionElement(leavingBlock)
         pendingOutIn = {
           content: slotContent,
           placeholder: prevVNode,
           contentValid: true,
-          leavingElement,
         }
         if (leaveSlotFallback(slotResolutionState, transition, resumeOutIn)) {
           return
@@ -2917,7 +2899,6 @@ function renderVDOMSlot(
             () => endContentLeave(own),
           )
         ) {
-          contentLeaving = getInteropTransitionElement(prevVNode)
           contentLeave = own
           leaving = true
         }
@@ -3041,12 +3022,10 @@ function renderVDOMSlot(
     slotContent: VNode | Block,
     contentValid: boolean,
   ): void {
-    const leavingElement = getInteropTransitionElement(prevVNode)
     pendingOutIn = {
       content: slotContent,
       placeholder,
       contentValid,
-      leavingElement,
     }
     setVNode(placeholder)
     // The renderer owns the placeholder while the outgoing VNode remains in
