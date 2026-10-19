@@ -21,6 +21,7 @@
     child,
     renderEffect,
     setText,
+    toDisplayString,
   } from '../../dist/vue.runtime-with-vapor.esm-browser.js'
 
   delegateEvents('click')
@@ -56,7 +57,7 @@
         const n0 = template('<button> </button>', true)()
         const x0 = child(n0)
         n0.$evtclick = () => count.value++
-        renderEffect(() => setText(x0, count.value))
+        renderEffect(() => setText(x0, toDisplayString(count.value)))
         const n2 = template('<span>two</span>')()
         return [n1, n0, n2]
       } else if (isContents) {
@@ -67,13 +68,13 @@
         const n1 = child(n0)
         const x0 = child(n1)
         n1.$evtclick = () => count.value++
-        renderEffect(() => setText(x0, count.value))
+        renderEffect(() => setText(x0, toDisplayString(count.value)))
         return n0
       } else {
         const n0 = template('<button> </button>', true)()
         const x0 = child(n0)
         n0.$evtclick = () => count.value++
-        renderEffect(() => setText(x0, count.value))
+        renderEffect(() => setText(x0, toDisplayString(count.value)))
         return n0
       }
     },
