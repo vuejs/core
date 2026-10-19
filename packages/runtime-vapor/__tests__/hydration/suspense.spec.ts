@@ -1625,3 +1625,153 @@ describe('Vapor Mode hydration', () => {
 
   describe.todo('Suspense')
 })
+
+describe('hydrating a component whose root is a pending async setup child', () => {
+  // vdom holds back the update of each component whose root resolves to an
+  // async setup child still pending, until that child resolves
+  const branches = `
+    <components.AsyncItem v-if="data.show" />
+    <div v-else class="fallback">fb</div>`
+  const transition = `
+    <Transition :css="false" @before-enter="data.enter" @leave="data.leave">
+      ${branches}
+    </Transition>`
+  const dynamic = `
+    <component
+      :is="data.show ? components.AsyncItem : components.Fallback"
+    />`
+  const hosts: Record<string, string> = {
+    'a v-if root': branches,
+    'a v-if root through a sync wrapper': `
+      <components.Wrapper v-if="data.show" />
+      <div v-else class="fallback">fb</div>`,
+    'a dynamic component root': dynamic,
+    'a Transition root': transition,
+    'a KeepAlive root': `<KeepAlive>${dynamic}</KeepAlive>`,
+    // Host roots at an element, not at the Transition / KeepAlive
+    'a Transition inside an element': `<div class="wrap">${transition}</div>`,
+    'a KeepAlive inside an element': `
+      <div class="wrap">
+        <KeepAlive>${dynamic}</KeepAlive>
+      </div>`,
+  }
+  const sequences: Record<string, string[]> = {
+    'switched away while pending': ['off', 'open', 'done', 'done'],
+    'switched away and back while pending': [
+      'off',
+      'on',
+      'open',
+      'done',
+      'done',
+    ],
+  }
+  const script = `<script setup>const data = _data; const components = _components;</script>`
+  const flush = async () => {
+    await nextTick()
+    await new Promise(r => setTimeout(r))
+    await nextTick()
+  }
+
+  async function parity(host: string, steps: string[]) {
+    const logs: Record<string, string[]> = {}
+    for (const vapor of [false, true]) {
+      const log: string[] = (logs[vapor ? 'vapor' : 'vdom'] = [])
+      const opens: (() => void)[] = []
+      const dones: (() => void)[] = []
+      const openAll = () => {
+        for (const open of opens.splice(0)) open()
+      }
+      const build = (ssr: boolean) => {
+        const data = ref<any>({
+          show: true,
+          // the server renders the resolved content
+          gate: () =>
+            ssr ? Promise.resolve() : new Promise<void>(r => opens.push(r)),
+          enter: (el: Element) => log.push('enter:' + el.className),
+          leave: (el: Element, done: () => void) => {
+            log.push('leave:' + el.className)
+            dones.push(done)
+          },
+        })
+        const components: Record<string, any> = {}
+        const define = (name: string, src: string) =>
+          (components[name] = compile(src, data, components, { vapor, ssr }))
+        define(
+          'AsyncItem',
+          `<script setup>
+            const data = _data
+            await data.value.gate()
+          </script>
+          <template>
+            <div class="item">item</div>
+          </template>`,
+        )
+        define(
+          'Wrapper',
+          script +
+            `<template>
+              <components.AsyncItem />
+            </template>`,
+        )
+        define(
+          'Fallback',
+          script +
+            `<template>
+              <div class="fallback">fb</div>
+            </template>`,
+        )
+        define('Host', script + `<template>${hosts[host]}</template>`)
+        const App = compile(
+          script +
+            `<template>
+              <Suspense>
+                <components.Host />
+              </Suspense>
+            </template>`,
+          data,
+          components,
+          { vapor: false, ssr },
+        )
+        return { data, App }
+      }
+      const html = await VueServerRenderer.renderToString(
+        runtimeDom.createSSRApp(build(true).App),
+      )
+      const { data, App } = build(false)
+      const container = document.createElement('div')
+      container.innerHTML = html
+      document.body.appendChild(container)
+      const app = runtimeDom.createSSRApp(App)
+      app.use(runtimeVapor.vaporInteropPlugin)
+      app.mount(container)
+      const dom = () =>
+        Array.from(container.querySelectorAll('div'))
+          .map(el => el.className)
+          .join(',')
+      log.push('init ' + dom())
+      for (const step of steps) {
+        if (step === 'done') {
+          const done = dones.shift()
+          if (done) done()
+        } else if (step === 'open') {
+          openAll()
+        } else {
+          data.value.show = step === 'on'
+        }
+        await flush()
+        log.push(step + ' ' + dom())
+      }
+      openAll()
+      await flush()
+      app.unmount()
+      container.remove()
+    }
+    expect(logs.vapor).toEqual(logs.vdom)
+  }
+
+  for (const host in hosts) {
+    test.each(Object.keys(sequences))(`${host}, %s`, name =>
+      parity(host, sequences[name]),
+    )
+  }
+})

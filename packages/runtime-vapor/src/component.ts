@@ -138,6 +138,7 @@ import {
   locateEndAnchor,
   locateHydrationNode,
   nextLogicalSibling,
+  queueAfterHydration,
   setCurrentHydrationNode,
   trimHydrationBoundary,
   withDeferredHydrationBoundary,
@@ -1432,7 +1433,7 @@ export function mountComponent(
     }
 
     const suspense = instance.suspense
-    const deferred = deferRootChainRenderEffects(instance)
+    let deferred: DeferredRootUpdates | undefined
     const hydrating = isHydrating
     if (!hydrating) {
       // Keep a placeholder in the DOM while async setup is pending so
@@ -1513,8 +1514,10 @@ export function mountComponent(
       finishAsyncSetup(setupResult)
     })
 
-    if (deferred) {
-      const state = deferred
+    // a hydrating root chain is complete once its pass has committed it
+    queueAfterHydration(() => {
+      const state = (deferred = deferRootChainRenderEffects(instance))
+      if (!state) return
       // Suspense skips the callback above for unmounted roots or stale
       // generations. If the replacement generation is already gone, complete
       // a surviving instance before replaying deferred owner updates. The
@@ -1534,7 +1537,7 @@ export function mountComponent(
           settleDeferredRootUpdates(state)
         }
       })
-    }
+    })
     return
   }
 
@@ -2127,36 +2130,21 @@ function deferRootChainRenderEffects(
 ): DeferredRootUpdates | undefined {
   const suspense = instance.suspense!
   const owners: VaporComponentInstance[] = []
-  if (isHydrating) {
-    // Ancestor blocks are not committed during hydration: only a direct
-    // KeepAlive owner is known to root at the instance.
-    const owner = instance.parent
-    if (
-      owner &&
-      owner.vapor &&
-      isKeepAliveEnabled &&
-      isKeepAlive(owner) &&
-      owner.suspense === suspense
-    ) {
-      owners.push(owner as VaporComponentInstance)
+  let child: Block = instance
+  let owner = instance.parent
+  while (owner && owner.vapor && owner.suspense === suspense) {
+    const vaporOwner = owner as VaporComponentInstance
+    let root = vaporOwner.block
+    // Dynamic component and v-if roots use fragments in Vapor where VDOM
+    // exposes the active component directly as `subTree.component`.
+    while (isDynamicFragment(root) && !(root.__vf & SLOT)) {
+      root = root.nodes
     }
-  } else {
-    let child: Block = instance
-    let owner = instance.parent
-    while (owner && owner.vapor && owner.suspense === suspense) {
-      const vaporOwner = owner as VaporComponentInstance
-      let root = vaporOwner.block
-      // Dynamic component and v-if roots use fragments in Vapor where VDOM
-      // exposes the active component directly as `subTree.component`.
-      while (isDynamicFragment(root) && !(root.__vf & SLOT)) {
-        root = root.nodes
-      }
-      if (root !== child) break
+    if (root !== child) break
 
-      owners.push(vaporOwner)
-      child = vaporOwner
-      owner = vaporOwner.parent
-    }
+    owners.push(vaporOwner)
+    child = vaporOwner
+    owner = vaporOwner.parent
   }
 
   if (!owners.length) return
