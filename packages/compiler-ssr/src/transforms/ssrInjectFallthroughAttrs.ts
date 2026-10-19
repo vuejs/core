@@ -1,5 +1,6 @@
 import {
   ElementTypes,
+  type IfBranchNode,
   type NodeTransform,
   NodeTypes,
   type ParentNode,
@@ -16,6 +17,33 @@ const filterChild = (node: ParentNode) =>
 
 const hasSingleChild = (node: ParentNode): boolean =>
   filterChild(node).length === 1
+
+// whether the nodes are a single v-if chain, e.g. a v-if + v-else pair
+function isSingleIfChain(nodes: TemplateChildNode[]): boolean {
+  let hasEncounteredIf = false
+  for (const c of nodes) {
+    if (
+      c.type === NodeTypes.IF ||
+      (c.type === NodeTypes.ELEMENT && findDir(c, 'if'))
+    ) {
+      // multiple v-if
+      if (hasEncounteredIf) return false
+      hasEncounteredIf = true
+    } else if (
+      // node before v-if
+      !hasEncounteredIf ||
+      // non else nodes
+      !(c.type === NodeTypes.ELEMENT && findDir(c, /else/, true))
+    ) {
+      return false
+    }
+  }
+  return hasEncounteredIf
+}
+
+// root v-if branches whose only content is a nested v-if chain, which then
+// renders the root in their place
+const rootIfBranches = new WeakSet<IfBranchNode>()
 
 export const ssrInjectFallthroughAttrs: NodeTransform = (node, context) => {
   // _attrs is provided as a function argument.
@@ -43,31 +71,23 @@ export const ssrInjectFallthroughAttrs: NodeTransform = (node, context) => {
   }
 
   const parent = context.parent
-  if (!parent || parent.type !== NodeTypes.ROOT) {
+  if (
+    !parent ||
+    (parent.type !== NodeTypes.ROOT &&
+      !(parent.type === NodeTypes.IF_BRANCH && rootIfBranches.has(parent)))
+  ) {
     return
   }
 
-  if (node.type === NodeTypes.IF_BRANCH && hasSingleChild(node)) {
+  if (node.type === NodeTypes.IF_BRANCH) {
     // detect cases where the parent v-if is not the only root level node
-    let hasEncounteredIf = false
-    for (const c of filterChild(parent)) {
-      if (
-        c.type === NodeTypes.IF ||
-        (c.type === NodeTypes.ELEMENT && findDir(c, 'if'))
-      ) {
-        // multiple root v-if
-        if (hasEncounteredIf) return
-        hasEncounteredIf = true
-      } else if (
-        // node before v-if
-        !hasEncounteredIf ||
-        // non else nodes
-        !(c.type === NodeTypes.ELEMENT && findDir(c, /else/, true))
-      ) {
-        return
-      }
+    if (!isSingleIfChain(filterChild(parent))) return
+    const children = filterChild(node)
+    if (children.length === 1) {
+      injectFallthroughAttrs(children[0])
+    } else if (isSingleIfChain(children)) {
+      rootIfBranches.add(node)
     }
-    injectFallthroughAttrs(node.children[0])
   } else if (hasSingleChild(parent)) {
     injectFallthroughAttrs(node)
   }

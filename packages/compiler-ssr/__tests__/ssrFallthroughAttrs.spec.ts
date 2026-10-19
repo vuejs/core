@@ -73,6 +73,82 @@ describe('ssr: attrs fallthrough', () => {
       `)
   })
 
+  // #5933
+  test('nested v-if chain in a root <template v-if>', () => {
+    expect(
+      compile(
+        `<template v-if="foo"><div v-if="bar"/><template v-else><p v-if="baz"/><span v-else/></template></template><i v-else/>`,
+      ).code,
+    ).toMatchInlineSnapshot(`
+      "const { ssrRenderAttrs: _ssrRenderAttrs } = require("vue/server-renderer")
+
+      return function ssrRender(_ctx, _push, _parent, _attrs) {
+        if (_ctx.foo) {
+          if (_ctx.bar) {
+            _push(\`<div\${_ssrRenderAttrs(_attrs)}></div>\`)
+          } else {
+            if (_ctx.baz) {
+              _push(\`<p\${_ssrRenderAttrs(_attrs)}></p>\`)
+            } else {
+              _push(\`<span\${_ssrRenderAttrs(_attrs)}></span>\`)
+            }
+          }
+        } else {
+          _push(\`<i\${_ssrRenderAttrs(_attrs)}></i>\`)
+        }
+      }"
+    `)
+  })
+
+  test('v-if branches with comments', () => {
+    expect(
+      compile(
+        `<template v-if="foo"><!--a--><div v-if="bar"/></template>` +
+          `<template v-else-if="baz"><!--b--><p/></template>` +
+          `<!--c--><span v-else/>`,
+      ).code,
+    ).toMatchInlineSnapshot(`
+      "const { ssrRenderAttrs: _ssrRenderAttrs } = require("vue/server-renderer")
+
+      return function ssrRender(_ctx, _push, _parent, _attrs) {
+        if (_ctx.foo) {
+          _push(\`<!--[--><!--a-->\`)
+          if (_ctx.bar) {
+            _push(\`<div\${_ssrRenderAttrs(_attrs)}></div>\`)
+          } else {
+            _push(\`<!---->\`)
+          }
+          _push(\`<!--]-->\`)
+        } else if (_ctx.baz) {
+          _push(\`<!--[--><!--b--><p\${_ssrRenderAttrs(_attrs)}></p><!--]-->\`)
+        } else {
+          _push(\`<!--[--><!--c--><span\${_ssrRenderAttrs(_attrs)}></span><!--]-->\`)
+        }
+      }"
+    `)
+  })
+
+  test('should not inject to nested v-if chain if not the only content', () => {
+    expect(
+      compile(`<template v-if="foo"><div v-if="bar"/><p/></template>`).code,
+    ).toMatchInlineSnapshot(`
+      "
+      return function ssrRender(_ctx, _push, _parent, _attrs) {
+        if (_ctx.foo) {
+          _push(\`<!--[-->\`)
+          if (_ctx.bar) {
+            _push(\`<div></div>\`)
+          } else {
+            _push(\`<!---->\`)
+          }
+          _push(\`<p></p><!--]-->\`)
+        } else {
+          _push(\`<!---->\`)
+        }
+      }"
+    `)
+  })
+
   test('should not inject to fallthrough component content if not root', () => {
     expect(compile(`<div/><transition><div/></transition>`).code)
       .toMatchInlineSnapshot(`

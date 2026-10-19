@@ -282,6 +282,43 @@ describe('compiler + runtime integration', () => {
     document.querySelector = origin
   })
 
+  // #5933
+  test('<template v-if> wrapping a nested v-if chain as component root', async () => {
+    const state = reactive({ outer: true, inner: true, msg: 'a' })
+    const Child = {
+      props: ['state'],
+      render: compileToFunction(
+        `<template v-if="state.outer">
+          <div v-if="state.inner">{{ state.msg }}</div>
+          <div v-else>inner <b>{{ state.msg }}</b></div>
+        </template>
+        <div v-else>outer <b>{{ state.msg }}</b></div>`,
+      ),
+    }
+    const container = document.createElement('div')
+    createApp({
+      render: () => h(Child, { class: 'foo', state }),
+    }).mount(container)
+    expect(container.innerHTML).toBe(`<div class="foo">a</div>`)
+
+    state.inner = false
+    await nextTick()
+    expect(container.innerHTML).toBe(`<div class="foo">inner <b>a</b></div>`)
+
+    // the inner and outer v-else branches must not be patched into each other
+    state.outer = false
+    await nextTick()
+    expect(container.innerHTML).toBe(`<div class="foo">outer <b>a</b></div>`)
+
+    state.msg = 'b'
+    await nextTick()
+    expect(container.innerHTML).toBe(`<div class="foo">outer <b>b</b></div>`)
+
+    state.outer = state.inner = true
+    await nextTick()
+    expect(container.innerHTML).toBe(`<div class="foo">b</div>`)
+  })
+
   test('v-if + v-once', async () => {
     const ok = ref(true)
     const App = {
