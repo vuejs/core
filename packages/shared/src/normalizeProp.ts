@@ -60,9 +60,13 @@ export function stringifyStyle(
     if (isArray(value)) {
       // array values are CSS fallbacks, e.g.
       // { display: ['-webkit-box', 'flex'] }
+      const start = ret.length
       for (let i = 0; i < value.length; i++) {
         const v = value[i]
-        if (isString(v) || typeof v === 'number') {
+        if (v === '' || (v == null && i in value)) {
+          // Empty CSS declarations cannot clear preceding fallbacks.
+          ret = ret.slice(0, start)
+        } else if (isString(v) || typeof v === 'number') {
           ret += `${normalizedKey}:${v};`
         }
       }
