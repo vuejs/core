@@ -18,7 +18,7 @@ import {
 } from '../vnode'
 import { warn } from '../warning'
 import { isKeepAlive } from './KeepAlive'
-import { toRaw } from '@vue/reactivity'
+import { EffectFlags, toRaw } from '@vue/reactivity'
 import { ErrorCodes, callWithAsyncErrorHandling } from '../errorHandling'
 import {
   NOOP,
@@ -35,7 +35,6 @@ import {
   getVaporInterface,
   isVaporComponent,
 } from '../renderer'
-import { SchedulerJobFlags } from '../scheduler'
 import { isHmrUpdating } from '../hmr'
 import { filterSingleRoot } from '../componentRenderUtils'
 
@@ -216,7 +215,7 @@ const BaseTransitionImpl: ComponentOptions = {
         mode === 'out-in'
           ? (resumeAfterLeave ||= () => {
               // #6835: update even when the active branch is undefined.
-              if (!(instance.job.flags! & SchedulerJobFlags.DISPOSED)) {
+              if (!(instance.effect.flags & EffectFlags.STOP)) {
                 instance.update()
               }
             })

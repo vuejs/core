@@ -1608,4 +1608,59 @@ describe('BaseTransition', () => {
       }
     },
   )
+
+  describe('mode: "out-in" unmounted while the current branch leaves', () => {
+    async function testOutIn(
+      { trueBranch, falseBranch, trueSerialized }: ToggleOptions,
+      withKeepAlive = false,
+    ) {
+      const toggle = ref(true)
+      const { props, cbs } = mockProps({ mode: 'out-in' }, withKeepAlive)
+      const { root, unmount } = mount(
+        props,
+        () => (toggle.value ? trueBranch() : falseBranch()),
+        withKeepAlive,
+      )
+
+      toggle.value = false
+      await nextTick()
+      expect(serializeInner(root)).toBe(`${trueSerialized}<!---->`)
+
+      unmount()
+      await nextTick()
+      // the leaving branch stays until its leave ends, unless KeepAlive
+      // unmounts it with its cache
+      expect(serializeInner(root)).toBe(
+        withKeepAlive ? `<!---->` : `${trueSerialized}<!---->`,
+      )
+
+      // the pending branch is not rendered into the unmounted Transition
+      if (!withKeepAlive) cbs.doneLeave[trueSerialized]()
+      await nextTick()
+      expect(serializeInner(root)).toBe(`<!---->`)
+
+      assertCalls(props, {
+        onBeforeEnter: 0,
+        onEnter: 0,
+        onAfterEnter: 0,
+        onEnterCancelled: 0,
+        onBeforeLeave: 1,
+        onLeave: 1,
+        onAfterLeave: withKeepAlive ? 0 : 1,
+        onLeaveCancelled: 0,
+      })
+    }
+
+    test('w/ elements', async () => {
+      await runTestWithElements(testOutIn)
+    })
+
+    test('w/ components', async () => {
+      await runTestWithComponents(testOutIn)
+    })
+
+    test('w/ KeepAlive', async () => {
+      await runTestWithKeepAlive(testOutIn)
+    })
+  })
 })
