@@ -529,6 +529,21 @@ describe('stringify static html', () => {
     expect(code).toMatchSnapshot()
   })
 
+  test.each([
+    `<textarea value="foo"></textarea>`,
+    `<textarea :value="'foo'"></textarea>`,
+    `<select value="b"><option value="a"/><option value="b"/></select>`,
+    `<select :value="'b'"><option value="a"/><option value="b"/></select>`,
+  ])('should bail for value on <textarea> and <select>: %s', tag => {
+    const { ast } = compileWithStringify(
+      `<div><div>${tag}${repeat(
+        `<span class="foo"/>`,
+        StringifyThresholds.ELEMENT_WITH_BINDING_COUNT,
+      )}</div></div>`,
+    )
+    expect(ast.cached).toMatchObject([cachedArrayBailedMatcher()])
+  })
+
   test('eligible content (elements > 20) + non-eligible content', () => {
     const { code } = compileWithStringify(
       `<div>${repeat(

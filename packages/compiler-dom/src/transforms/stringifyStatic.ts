@@ -238,8 +238,21 @@ function analyzeNode(node: StringifiableNode): [number, number] | false {
   // i.e. non-phrasing-content tags inside `<p>`
   function walk(node: ElementNode): boolean {
     const isOptionTag = node.tag === 'option' && node.ns === Namespaces.HTML
+    const isValuePropTag =
+      (node.tag === 'textarea' || node.tag === 'select') &&
+      node.ns === Namespaces.HTML
     for (let i = 0; i < node.props.length; i++) {
       const p = node.props[i]
+      // <textarea> and <select> have no `value` content attribute, it is set
+      // as a DOM prop at runtime and would be lost in the stringified html
+      if (
+        isValuePropTag &&
+        (p.type === NodeTypes.ATTRIBUTE
+          ? p.name === 'value'
+          : p.name === 'bind' && isStaticArgOf(p.arg, 'value'))
+      ) {
+        return bail()
+      }
       // bail on non-attr bindings
       if (
         p.type === NodeTypes.ATTRIBUTE &&
