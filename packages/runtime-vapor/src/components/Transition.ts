@@ -1,5 +1,6 @@
 import {
   type BaseTransitionProps,
+  ErrorCodes,
   type GenericComponentInstance,
   type SuspenseBoundary,
   type TransitionElement,
@@ -9,6 +10,7 @@ import {
   TransitionPropsValidators,
   type TransitionState,
   baseResolveTransitionHooks,
+  callWithErrorHandling,
   checkTransitionMode,
   currentInstance,
   isAsyncWrapper,
@@ -939,10 +941,17 @@ function removeBranchWithLeaveImpl(
         const { render, key, noScope, branchKey, prevKey } = target.pending!
         target.pending = undefined
         if (current) frag.pending = undefined
-        // back on the mounted key, the deferred update runs as a regular one
+        // back on the mounted key, the deferred update runs as a regular one.
+        // Like a render job, an error here is reported as the owner's update
+        // error instead of being thrown out of the leave's done().
         target.current = prevKey
-        runWithRenderCtx(target, () =>
-          target.update(render, key, noScope, branchKey),
+        callWithErrorHandling(
+          () =>
+            runWithRenderCtx(target, () =>
+              target.update(render, key, noScope, branchKey),
+            ),
+          target.renderInstance,
+          ErrorCodes.COMPONENT_UPDATE,
         )
         return
       }
@@ -956,15 +965,20 @@ function removeBranchWithLeaveImpl(
       const prevInstance = setCurrentInstance(instance)
       try {
         frag.pending = undefined
-        frag.renderBranch(
-          pending.render,
-          transition,
-          liveParent,
-          pending.key,
-          pending.noScope,
-          true,
-          undefined,
-          pending.branchKey,
+        callWithErrorHandling(
+          () =>
+            frag.renderBranch(
+              pending.render,
+              transition,
+              liveParent,
+              pending.key,
+              pending.noScope,
+              true,
+              undefined,
+              pending.branchKey,
+            ),
+          instance,
+          ErrorCodes.COMPONENT_UPDATE,
         )
       } finally {
         restoreCurrentInstance(prevInstance)
