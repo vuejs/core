@@ -900,6 +900,54 @@ describe('SSR hydration', () => {
     expect(teleportContainer2.innerHTML).toBe('<span>Teleported</span>')
   })
 
+  // #15937
+  test('Teleport (enabled, empty content, no SSR anchors in target)', async () => {
+    const show = ref(false)
+    const App = {
+      setup() {
+        return () =>
+          h('div', [
+            h('span', 'Hello from SSR'),
+            h(Teleport, { to: '#target15937' }, [
+              show.value ? h('p', 'overlay') : createCommentVNode('v-if'),
+            ]),
+          ])
+      },
+    }
+
+    const target = document.createElement('div')
+    target.id = 'target15937'
+    document.body.appendChild(target)
+
+    const ssrHTML = await renderToString(h(App))
+    expect(ssrHTML).toBe(
+      '<div><span>Hello from SSR</span><!--teleport start--><!--teleport end--></div>',
+    )
+
+    // the teleport target was never fed `ctx.teleports`, so it holds no
+    // teleport anchors - only the indented app root
+    target.innerHTML = `\n  <div id="app">${ssrHTML}</div>\n`
+    const container = target.querySelector('#app')!
+
+    const app = createSSRApp(App)
+    app.mount(container)
+
+    expect(target.contains(container)).toBe(true)
+    expect(container.innerHTML).toBe(ssrHTML)
+    expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+
+    show.value = true
+    await nextTick()
+    expect(target.querySelector('p')!.outerHTML).toBe('<p>overlay</p>')
+
+    app.unmount()
+    expect(target.querySelector('p')).toBe(null)
+
+    // no anchors in the target means the children could not be hydrated
+    expect(`Hydration children mismatch`).toHaveBeenWarned()
+    target.remove()
+  })
+
   // compile SSR + client render fn from the same template & hydrate
   test('full compiler integration', async () => {
     const mounted: string[] = []
