@@ -3,7 +3,6 @@ import {
   type ShallowRef,
   isReactive,
   isReadonly,
-  isRef,
   isShallow,
   onScopeDispose,
   setActiveSub,
@@ -1024,9 +1023,11 @@ function getItemValue(
 // `shallowRef(item)` would return an item that is a ref itself, so the row
 // would read its value and write other rows into it: wrap it like any value
 function createItemRef(item: any): ShallowRef {
-  if (!isRef(item)) return shallowRef(item)
-  const itemRef = shallowRef()
-  itemRef.value = item
+  let itemRef = shallowRef(item)
+  if (itemRef === item) {
+    itemRef = shallowRef()
+    itemRef.value = item
+  }
   return itemRef
 }
 

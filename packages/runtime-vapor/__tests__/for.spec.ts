@@ -2988,6 +2988,22 @@ test('keeps refs in the source as items of v-for slots like vdom', async () => {
   expect(vapor.text).toBe(vdom.text)
 })
 
+test('does not overwrite source refs when appending rows', async () => {
+  await renderParity(
+    {
+      App: `<template><i v-for="(r, i) in data" :key="i">x</i></template>`,
+    },
+    () => shallowRef([ref('a')]),
+    async (data, root) => {
+      const a = data.value[0]
+      data.value = [a, ref('b')]
+      await nextTick()
+      expect(root.textContent).toBe('xx')
+      expect(a.value).toBe('a')
+    },
+  )
+})
+
 function getEffectsCount(scope: { deps: any }) {
   let count = 0
   for (let dep = scope.deps; dep !== undefined; dep = dep.nextDep) {
