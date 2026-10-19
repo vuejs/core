@@ -436,9 +436,7 @@ export function removeNode(block: Node, parent?: ParentNode): void {
     // a held slot root never entered the DOM: nothing to animate
     block.parentNode
   ) {
-    // only an unmount cuts a running removal leave short
-    const running = removing.get(block)
-    if (running && !(running.state && running.state.isUnmounting)) return
+    if (removing.has(block)) return
     const hooks = leaveHooks(block as TransitionBlock)!
     removing.set(block, hooks)
     performTransitionLeave(
