@@ -953,6 +953,8 @@ function attributeHasMismatch(el: any, key: string, value: any): boolean {
 }
 
 function getClientText(el: Node, value: string): string {
+  // innerHTML normalizes \r\n and \r into a single \n in the DOM
+  value = value.replace(/\r\n?/g, '\n')
   if (
     value[0] === '\n' &&
     ((el as Element).tagName === 'PRE' ||
