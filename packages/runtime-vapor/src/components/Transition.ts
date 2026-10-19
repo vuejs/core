@@ -908,8 +908,8 @@ function removeBranchWithLeaveImpl(
       // own any more: the one a later leave holds is that leave's to release
       const current = frag.pending === own
       if (current) frag.leaving = false
-      // Unmounting cuts the leave short and runs afterLeave synchronously;
-      // the pending branch must not be rendered into the torn-down tree.
+      // The Transition unmounted meanwhile: the pending branch must not be
+      // rendered into the torn-down tree.
       if (transition.state.isUnmounting) return
       // The branch has left: an enclosing teardown must not leave it again.
       // A branch rendered meanwhile (held, this leave unpaired) is in place.

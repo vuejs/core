@@ -4331,7 +4331,7 @@ describe('a Transition unmounted while its child leaves', () => {
   async function parity(
     holder: string,
     mode: string,
-    unmount: 'v-if' | 'app',
+    unmount: 'v-if' | 'app.unmount()',
     app: 'vapor' | 'vdom',
   ) {
     const logs: Record<string, string[]> = {}
@@ -4387,7 +4387,7 @@ describe('a Transition unmounted while its child leaves', () => {
       data.value.show = false
       await nextTick()
       log.push('off ' + stripAnchors(root.innerHTML))
-      if (unmount === 'app') {
+      if (unmount === 'app.unmount()') {
         instance.unmount()
       } else {
         data.value.alive = false
@@ -4397,7 +4397,7 @@ describe('a Transition unmounted while its child leaves', () => {
       for (const done of data.value.dones.splice(0)) done()
       await nextTick()
       log.push('done ' + stripAnchors(root.innerHTML))
-      if (unmount !== 'app') instance.unmount()
+      if (unmount === 'v-if') instance.unmount()
     }
     expect(logs.vapor).toEqual(logs.vdom)
   }
@@ -4405,14 +4405,12 @@ describe('a Transition unmounted while its child leaves', () => {
   for (const app of ['vapor', 'vdom'] as const) {
     describe(`under a ${app} app`, () => {
       for (const holder in holders) {
-        test.each(['out-in', 'in-out', ''])(
-          `${holder}, the Transition unmounted by a v-if (mode %j)`,
-          mode => parity(holder, mode, 'v-if', app),
-        )
-        test.each(['out-in', 'in-out', ''])(
-          `${holder}, the app unmounted (mode %j)`,
-          mode => parity(holder, mode, 'app', app),
-        )
+        for (const unmount of ['v-if', 'app.unmount()'] as const) {
+          test.each(['out-in', 'in-out', ''])(
+            `${holder}, unmounted by ${unmount} (mode %j)`,
+            mode => parity(holder, mode, unmount, app),
+          )
+        }
       }
     })
   }
