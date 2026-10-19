@@ -1,6 +1,7 @@
 import {
   type SchedulerJob,
   SchedulerJobFlags,
+  flushOnAppMount,
   flushPostFlushCbs,
   flushPreFlushCbs,
   nextTick,
@@ -805,6 +806,27 @@ describe('scheduler', () => {
 
     // should not be called
     expect(spy).toHaveBeenCalledTimes(0)
+  })
+
+  test('flushOnAppMount recovers from a throwing pre job', async () => {
+    const err = new Error('test')
+    let shouldThrow = true
+    const job: SchedulerJob = vi.fn(() => {
+      if (shouldThrow) {
+        shouldThrow = false
+        throw err
+      }
+    })
+    job.flags = SchedulerJobFlags.PRE | SchedulerJobFlags.ALLOW_RECURSE
+    job.id = 0
+
+    expect(() => flushOnAppMount(() => queueJob(job), 0)).toThrow(err)
+    expect(job).toHaveBeenCalledTimes(1)
+
+    // the next root render must still flush synchronously
+    flushOnAppMount(() => queueJob(job), 0)
+    expect(job).toHaveBeenCalledTimes(2)
+    await nextTick()
   })
 
   it('flushPreFlushCbs inside a pre job', async () => {

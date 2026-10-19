@@ -184,6 +184,22 @@ return function render(_ctx, _cache) {
 }"
 `;
 
+exports[`stringify static html > stringify v-html with \`0\` 1`] = `
+"const { createElementVNode: _createElementVNode, createStaticVNode: _createStaticVNode } = Vue
+
+return function render(_ctx, _cache) {
+  return _cache[0] || (_cache[0] = _createStaticVNode("<div>0</div><div>0</div><div>0</div><div>0</div><div>0</div>", 5))
+}"
+`;
+
+exports[`stringify static html > stringify v-html with \`false\` 1`] = `
+"const { createElementVNode: _createElementVNode, createStaticVNode: _createStaticVNode } = Vue
+
+return function render(_ctx, _cache) {
+  return _cache[0] || (_cache[0] = _createStaticVNode("<div>false</div><div>false</div><div>false</div><div>false</div><div>false</div>", 5))
+}"
+`;
+
 exports[`stringify static html > stringify v-text 1`] = `
 "const { createElementVNode: _createElementVNode, createStaticVNode: _createStaticVNode } = Vue
 

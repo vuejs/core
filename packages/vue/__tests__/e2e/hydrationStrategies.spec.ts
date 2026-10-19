@@ -68,6 +68,16 @@ describe('async component hydration strategies', () => {
     await assertHydrationSuccess()
   })
 
+  test('visible (root with display: contents)', async () => {
+    await goToCase('visible', '?contents')
+    await page().waitForFunction(() => window.isRootMounted)
+    expect(await page().evaluate(() => window.isHydrated)).toBe(false)
+    // scroll down
+    await page().evaluate(() => window.scrollTo({ top: 1000 }))
+    await page().waitForFunction(() => window.isHydrated)
+    await assertHydrationSuccess()
+  })
+
   test('visible (root v-if) should not throw error', async () => {
     const spy = vi.fn()
     const currentPage = page()
@@ -158,5 +168,41 @@ describe('async component hydration strategies', () => {
     expect(await text('#app')).toBe('off')
     expect(await page().evaluate(() => window.isHydrated)).toBe(false)
     expect(await page().evaluate(() => window.teardownCalled)).toBe(true)
+  })
+
+  test('visible (display: contents root gains a box after a media query)', async () => {
+    await page().setViewport({ width: 800, height: 600 })
+    await goToCase('visible', '?contents')
+    await page().waitForFunction(() => window.isRootMounted)
+    await page().addStyleTag({
+      content: `
+        #app button { position: fixed; top: 1000px; }
+        @media (max-width: 600px) {
+          #app > div {
+            display: block !important;
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            width: 160px;
+            height: 60px;
+            background: lightblue;
+          }
+        }
+      `,
+    })
+    expect(await page().evaluate(() => window.isHydrated)).toBe(false)
+
+    await page().setViewport({ width: 500, height: 600 })
+    expect(
+      await page().$eval('#app > div', el => el.getBoundingClientRect().top),
+    ).toBe(20)
+    expect(
+      await page().$eval('button', el => el.getBoundingClientRect().top),
+    ).toBeGreaterThan(600)
+    await page().waitForFunction(() => window.isHydrated, { timeout: 2000 })
+
+    // Dispatch the click without scrolling the offscreen child into view.
+    await page().$eval('button', el => el.click())
+    expect(await text('button')).toBe('1')
   })
 })

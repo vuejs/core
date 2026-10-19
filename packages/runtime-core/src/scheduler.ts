@@ -34,8 +34,9 @@ export interface SchedulerJob extends Function {
   /**
    * Attached by renderer.ts when setting up a component's render effect
    * Used to obtain component information when reporting max recursive updates.
+   * Also set on watcher jobs: null marks a watcher without an owner component.
    */
-  i?: ComponentInternalInstance
+  i?: ComponentInternalInstance | null
 }
 
 export type SchedulerJobs = SchedulerJob | SchedulerJob[]
@@ -146,6 +147,8 @@ export function queuePostFlushCb(cb: SchedulerJobs): void {
 
 export function flushPreFlushCbs(
   instance?: ComponentInternalInstance,
+  // root mount: only flush the jobs of the components it created
+  minUid?: number,
   seen?: CountMap,
   // skip the current job
   i: number = flushIndex + 1,
@@ -156,14 +159,19 @@ export function flushPreFlushCbs(
   for (; i < queue.length; i++) {
     const cb = queue[i]
     if (cb && cb.flags! & SchedulerJobFlags.PRE) {
-      if (instance && cb.id !== instance.uid) {
+      if (
+        (instance && cb.id !== instance.uid) ||
+        (minUid !== undefined && !(cb.id! >= minUid))
+      ) {
         continue
       }
       if (__DEV__ && checkRecursiveUpdates(seen!, cb)) {
         continue
       }
       queue.splice(i, 1)
-      i--
+      // the job may queue a job with a smaller id ahead of this index. A job
+      // of the same instance can't, so no rescan is needed for that filter.
+      i = instance ? i - 1 : flushIndex
       if (cb.flags! & SchedulerJobFlags.ALLOW_RECURSE) {
         cb.flags! &= ~SchedulerJobFlags.QUEUED
       }
@@ -175,12 +183,30 @@ export function flushPreFlushCbs(
   }
 }
 
-export function flushPostFlushCbs(seen?: CountMap): void {
+export function flushPostFlushCbs(
+  seen?: CountMap,
+  // root mount: cbs queued before it, left in the queue
+  skip?: Set<SchedulerJob>,
+  // root mount: watchers are kept or flushed by owner instead, so that those
+  // of other components (or without one) are left too
+  minUid = 0,
+): void {
   if (pendingPostFlushCbs.length) {
-    const deduped = [...new Set(pendingPostFlushCbs)].sort(
-      (a, b) => getId(a) - getId(b),
-    )
-    pendingPostFlushCbs.length = 0
+    let cbs = pendingPostFlushCbs
+    let kept = 0
+    if (skip) {
+      cbs = []
+      for (let i = 0; i < pendingPostFlushCbs.length; i++) {
+        const cb = pendingPostFlushCbs[i]
+        if (cb.i !== undefined ? !cb.i || cb.i.uid < minUid : skip.has(cb)) {
+          pendingPostFlushCbs[kept++] = cb
+        } else {
+          cbs.push(cb)
+        }
+      }
+    }
+    const deduped = [...new Set(cbs)].sort((a, b) => getId(a) - getId(b))
+    pendingPostFlushCbs.length = kept
 
     // #1947 already has active queue, nested flushPostFlushCbs call
     if (activePostFlushCbs) {
@@ -212,6 +238,32 @@ export function flushPostFlushCbs(seen?: CountMap): void {
     }
     activePostFlushCbs = null
     postFlushIndex = 0
+  }
+}
+
+let isFlushing = false
+
+/**
+ * Run a root render, then flush the jobs it is responsible for. A mount or
+ * unmount (`minUid` given) only flushes the jobs of the components it created
+ * and the post cbs it queued, so pre watchers triggered in setup run before
+ * mounted (#5721) while the jobs of other components stay in the queue and
+ * keep their order (#6728). A root update keeps flushing all pending pre jobs
+ * and post cbs, as the jobs of the components it re-renders may predate it.
+ */
+export function flushOnAppMount(fn: () => void, minUid?: number): void {
+  if (isFlushing) {
+    fn()
+    return
+  }
+  const queued = minUid === undefined ? undefined : new Set(pendingPostFlushCbs)
+  fn()
+  isFlushing = true
+  try {
+    flushPreFlushCbs(undefined, minUid)
+    flushPostFlushCbs(undefined, queued, minUid)
+  } finally {
+    isFlushing = false
   }
 }
 
