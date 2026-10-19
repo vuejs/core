@@ -56,6 +56,7 @@ export interface KeepAliveProps {
   include?: MatchPattern
   exclude?: MatchPattern
   max?: number | string
+  freeze?: boolean | string
 }
 
 type CacheKey = PropertyKey | ConcreteComponent
@@ -91,6 +92,7 @@ const KeepAliveImpl: ComponentOptions = {
     include: [String, RegExp, Array],
     exclude: [String, RegExp, Array],
     max: [String, Number],
+    freeze: [String, Boolean],
   },
 
   setup(props: KeepAliveProps, { slots }: SetupContext) {
@@ -127,6 +129,8 @@ const KeepAliveImpl: ComponentOptions = {
       o: { createElement },
     } = renderer
     const storageContainer = createElement('div')
+    // paused by `freeze`, resumed on activation even if `freeze` changed
+    const frozen = new WeakSet<ComponentInternalInstance>()
 
     sharedContext.getStorageContainer = () => storageContainer
 
@@ -143,6 +147,9 @@ const KeepAliveImpl: ComponentOptions = {
       namespace,
       optimized,
     ) => {
+      const instance = vnode.component!
+      // resume before patching so the catch-up runs with the new props
+      if (frozen.delete(instance)) instance.scope.resume()
       activate(
         vnode,
         container,
@@ -163,6 +170,11 @@ const KeepAliveImpl: ComponentOptions = {
         keepAliveInstance,
         parentSuspense,
       )
+      if (props.freeze || props.freeze === '') {
+        const instance = vnode.component!
+        instance.scope.pause()
+        frozen.add(instance)
+      }
     }
 
     function unmount(vnode: VNode) {
