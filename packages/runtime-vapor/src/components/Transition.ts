@@ -515,13 +515,14 @@ export function applyTransitionHooksImpl(
 export function relayTransitionHooks(
   block: Block,
   hooks: TransitionHooks,
-): void {
+): ResolvedTransitionBlock | undefined {
   const relayed = hooks as VaporTransitionHooks
   const child = findTransitionBlock(block, f => (f.$transition = relayed))
   if (child) {
     child.$transition = relayed
     settleMountShown(child)
   }
+  return child
 }
 
 // Runtime equivalent of the compiler's persisted rule for roots the compiler
