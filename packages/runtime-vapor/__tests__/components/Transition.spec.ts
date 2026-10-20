@@ -4752,3 +4752,95 @@ describe('in-out: a slot fallback entering keeps the leave it was handed', () =>
       'left',
     ]))
 })
+
+describe('in-out: a kept-alive vdom child switched back while it leaves', () => {
+  // vapor vs vdom: hook order and the DOM after every step. The child
+  // activated from the KeepAlive cache enters under the hooks resolved for
+  // this switch, which hold the leave of the branch it replaces.
+  async function run(
+    vapor: boolean,
+    child: 'component' | 'vnode' | 'vapor-vnode',
+  ) {
+    const data: any = ref({
+      a: true,
+      va: null,
+      vb: null,
+      log: [] as string[],
+      leaves: [] as (() => void)[],
+      onLeave: (el: Element, done: () => void) => {
+        data.value.log.push('l:' + el.tagName)
+        data.value.leaves.push(done)
+      },
+      onAfterLeave: (el: Element) => data.value.log.push('al:' + el.tagName),
+    })
+    const components: Record<string, any> = {}
+    const sfc = (template: string) =>
+      `<script setup>const data = _data; const components = _components</script>${template}`
+    components.A = compile(
+      sfc(`
+        <template>
+          <div><b>a</b></div>
+        </template>`),
+      data,
+      components,
+      { vapor: child === 'vapor-vnode' },
+    )
+    components.B = compile(
+      sfc(`
+        <template>
+          <i>b</i>
+        </template>`),
+      data,
+      components,
+      { vapor },
+    )
+    data.value.va = h(components.A)
+    data.value.vb = h(components.B)
+    const is =
+      child === 'component'
+        ? 'data.a ? components.A : components.B'
+        : 'data.a ? data.va : data.vb'
+    const App = compile(
+      sfc(`
+        <template>
+          <Transition
+            mode="in-out"
+            :css="false"
+            @leave="data.onLeave"
+            @after-leave="data.onAfterLeave"
+          >
+            <KeepAlive><component :is="${is}" /></KeepAlive>
+          </Transition>
+        </template>`),
+      data,
+      components,
+      { vapor },
+    )
+    const container = document.createElement('div')
+    document.body.appendChild(container)
+    if (vapor) createVaporApp(App).use(vaporInteropPlugin).mount(container)
+    else createApp(App).use(vaporInteropPlugin).mount(container)
+    const frames: string[] = []
+    const frame = (step: string) =>
+      frames.push(
+        `${step} ${stripAnchors(container.innerHTML)} ${data.value.log.join(',')}`,
+      )
+    for (const step of ['B', 'A', 'done', 'done']) {
+      if (step === 'done') data.value.leaves.shift()!()
+      else data.value.a = step === 'A'
+      await nextTick()
+      frame(step)
+    }
+    container.remove()
+    return frames
+  }
+
+  test.each(['component', 'vnode', 'vapor-vnode'] as const)(
+    'the branch it replaces leaves after its enter (%s child)',
+    async child => {
+      const vdom = await run(false, child)
+      expect(vdom[3]).toBe('done <div><b>a</b></div> l:DIV,l:I,al:I')
+      expect(await run(true, child)).toEqual(vdom)
+    },
+  )
+})
