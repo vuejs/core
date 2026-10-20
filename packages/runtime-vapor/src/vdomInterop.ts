@@ -1597,6 +1597,9 @@ function mountVNode(
     if (parentSuspense !== undefined) suspense = parentSuspense
     const operationSuspense = suspense
     if (vnode.shapeFlag & ShapeFlags.COMPONENT_KEPT_ALIVE) {
+      // entering under the hooks resolved for this switch, as vdom sets them
+      // on every render: an in-out leave handed to them runs after the enter
+      if (transition) setVNodeTransitionHooks(vnode, transition)
       if ((vnode.type as any).__vapor) {
         activate(vnode.component as any, parentNode, anchor, operationSuspense)
         insert(vnode.anchor as Node, parentNode, anchor)
@@ -1998,6 +2001,9 @@ function createVDOMComponent(
       // An activated child re-enters with the inputs its parent holds now, so
       // catch the commit up with the sources before activating.
       if (frag.inputScope) frag.inputScope.resume()
+      // entering under the hooks resolved for this switch, as vdom sets them
+      // on every render: an in-out leave handed to them runs after the enter
+      if (transition) setVNodeTransitionHooks(vnode, transition)
       withSlotBoundary(null, () =>
         vdomActivate(
           vnode,
