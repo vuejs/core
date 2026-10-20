@@ -439,6 +439,11 @@ export function removeNode(block: Node, parent?: ParentNode): void {
     if (removing.has(block)) return
     const hooks = leaveHooks(block as TransitionBlock)!
     removing.set(block, hooks)
+    // vdom's v-show beforeUnmount: a root v-show hid leaves hidden, even
+    // while the hide still animates
+    if ((block as VShowElement)[vShowHidden]) {
+      ;(block as VShowElement).style.display = 'none'
+    }
     performTransitionLeave(
       block,
       hooks,
