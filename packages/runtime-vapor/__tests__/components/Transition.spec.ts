@@ -1646,6 +1646,40 @@ describe('Transition', () => {
     expect(host.querySelectorAll('.content')).toHaveLength(1)
   })
 
+  // coverage guard: the fallback's leave is handed to the content's enter
+  // through the Transition (claimPendingLeave), as a vapor outlet's is
+  test('in-out: vdom content back after the fallback entered and its leave ran', async () => {
+    const enters: (() => void)[] = []
+    const leaves: (() => void)[] = []
+    const log: string[] = []
+    const data = ref({
+      show: true,
+      onEnter: (el: Element, done: () => void) => {
+        log.push('e:' + el.className)
+        enters.push(done)
+      },
+      onLeave: (el: Element, done: () => void) => {
+        log.push('l:' + el.className)
+        leaves.push(done)
+      },
+    })
+    const { host } = renderInteropSlotFallbackTransition('in-out', data)
+    data.value.show = false
+    await nextTick()
+    enters.shift()!()
+    leaves.shift()!()
+    expect(log).toEqual(['e:fallback', 'l:content'])
+    expect(host.querySelector('.content')).toBeNull()
+    data.value.show = true
+    await nextTick()
+    expect(log).toEqual(['e:fallback', 'l:content', 'e:content'])
+    expect(host.querySelector('.fallback')).not.toBeNull()
+    enters.shift()!()
+    expect(log).toEqual(['e:fallback', 'l:content', 'e:content', 'l:fallback'])
+    leaves.shift()!()
+    expect(host.querySelector('.fallback')).toBeNull()
+    expect(host.querySelectorAll('.content')).toHaveLength(1)
+  })
   test('out-in fallback switch should render the latest vdom slot content', async () => {
     let leaveDone: (() => void) | undefined
     const onEnter = vi.fn((_el: Element, done: () => void) => done())
