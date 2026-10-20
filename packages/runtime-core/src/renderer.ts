@@ -543,6 +543,10 @@ function baseCreateRenderer(
     } else {
       // there's no support for dynamic comments
       n2.el = n1.el
+      // but HMR can still change them, since it patches by position
+      if (__DEV__ && isHmrUpdating && n2.children !== n1.children) {
+        hostSetText(n2.el!, (n2.children as string) || '')
+      }
     }
   }
 
