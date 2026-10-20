@@ -960,4 +960,31 @@ describe('api: defineAsyncComponent', () => {
     expect(serializeInner(root)).toBe('Foo')
     expect(spy).toBeCalledTimes(1)
   })
+
+  test('with loading component + default delay', async () => {
+    vi.useFakeTimers()
+    try {
+      const Foo = defineAsyncComponent({
+        loader: () => new Promise(() => {}),
+        loadingComponent: () => 'loading',
+      })
+
+      const root = nodeOps.createElement('div')
+      createApp({
+        render: () => h(Foo),
+      }).mount(root)
+
+      // loading should wait for the default 200ms delay
+      expect(serializeInner(root)).toBe('<!---->')
+      vi.advanceTimersByTime(199)
+      await nextTick()
+      expect(serializeInner(root)).toBe('<!---->')
+
+      vi.advanceTimersByTime(1)
+      await nextTick()
+      expect(serializeInner(root)).toBe('loading')
+    } finally {
+      vi.useRealTimers()
+    }
+  })
 })

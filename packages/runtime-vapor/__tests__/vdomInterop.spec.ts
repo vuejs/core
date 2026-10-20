@@ -6119,6 +6119,7 @@ describe('vdomInterop', () => {
           })
         },
         loadingComponent: () => h('span', 'loading...'),
+        delay: 0,
       })
 
       const { html } = define({

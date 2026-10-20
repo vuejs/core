@@ -270,7 +270,7 @@ export function createAsyncComponentContext<T, C = ConcreteComponent>(
 
 // shared between core and vapor
 export const useAsyncComponentState = (
-  delay: number | undefined,
+  delay: number | undefined = 200,
   timeout: number | undefined,
   onError: (err: Error) => void,
   instance: GenericComponentInstance | null = currentInstance,
