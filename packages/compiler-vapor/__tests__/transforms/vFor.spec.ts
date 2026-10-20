@@ -815,4 +815,20 @@ describe('compiler: v-for', () => {
       '_getDefaultValue(_for_item0.value, () => ({ a: 1 })).a',
     )
   })
+
+  test('object shorthand of a destructured alias', () => {
+    const { code } = compileWithVFor(
+      `<div v-for="{ a } in items">{{ JSON.stringify({ a }) }}</div>`,
+    )
+    expect(code).toContain('JSON.stringify({ a: _for_item0.value.a })')
+  })
+
+  test('object shorthand of a destructured alias with a default', () => {
+    const { code } = compileWithVFor(
+      `<div v-for="{ a = 3, [k]: b } in items">{{ JSON.stringify({ a, b }) }}</div>`,
+    )
+    expect(code).toContain(
+      'JSON.stringify({ a: _getDefaultValue(_for_item0.value.a, () => (3)), b: _for_item0.value[_ctx.k] })',
+    )
+  })
 })

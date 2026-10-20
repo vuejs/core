@@ -190,7 +190,11 @@ function genIdentifier(
       }
     } else {
       // replacement is an expression - process it again
-      return genExpression(replacement, context, assignment)
+      const exp = genExpression(replacement, context, assignment)
+      if (parent && parent.type === 'ObjectProperty' && parent.shorthand) {
+        return [`${name}: `, ...exp]
+      }
+      return exp
     }
   }
 
