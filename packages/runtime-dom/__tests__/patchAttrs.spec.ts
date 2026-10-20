@@ -47,6 +47,17 @@ describe('runtime-dom: attrs patching', () => {
     expect(el.getAttribute('playsinline')).toBe('')
   })
 
+  test.each(['disablepictureinpicture', 'disableremoteplayback'])(
+    '%s boolean attribute',
+    key => {
+      const el = document.createElement('video')
+      patchProp(el, key, null, true)
+      expect(el.getAttribute(key)).toBe('')
+      patchProp(el, key, true, false)
+      expect(el.getAttribute(key)).toBe(null)
+    },
+  )
+
   test('attributes', () => {
     const el = document.createElement('div')
     patchProp(el, 'foo', null, 'a')
