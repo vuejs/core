@@ -3738,6 +3738,84 @@ describe('structural removal during a v-show leave', () => {
     expect(clean(result.vdom.after)).toBe('<p>fallback</p>')
     expect(clean(result.vapor.after)).toBe(clean(result.vdom.after))
   })
+
+  // vdom's v-show beforeUnmount hides the root at once: a hide still
+  // animating when the branch swaps does not show through the leave
+  async function hiddenThroughLeave(srcs: Record<string, string>) {
+    const logs: Record<string, string[]> = {}
+    await renderParity(
+      srcs,
+      () => {
+        const data: any = ref({
+          present: true,
+          visible: true,
+          dones: [] as (() => void)[],
+          log: [] as string[],
+          leave: (el: Element, done: () => void) => {
+            data.value.log.push('l:' + el.tagName)
+            data.value.dones.push(done)
+          },
+          afterLeave: (el: Element) => data.value.log.push('al:' + el.tagName),
+        })
+        return data
+      },
+      async (data, root, m) => {
+        const log: string[] = (logs[m] = data.value.log)
+        document.body.append(root)
+        try {
+          data.value.visible = false
+          await nextTick()
+          log.push(clean(root.innerHTML))
+          data.value.present = false
+          await nextTick()
+          log.push(clean(root.innerHTML))
+          while (data.value.dones.length) {
+            data.value.dones.shift()!()
+            await nextTick()
+          }
+          log.push(clean(root.innerHTML))
+        } finally {
+          root.remove()
+        }
+      },
+    )
+    expect(logs.vapor).toEqual(logs.vdom)
+  }
+
+  const hooks = `:css="false" @leave="data.leave" @after-leave="data.afterLeave"`
+
+  test.each(['out-in', 'in-out', 'default'])(
+    'a hide still animating stays hidden through the leave (mode %s)',
+    mode =>
+      hiddenThroughLeave({
+        App: `
+          <template>
+            <Transition mode="${mode}" ${hooks}>
+              <b v-if="data.present" v-show="data.visible">content</b>
+              <p v-else>fallback</p>
+            </Transition>
+          </template>`,
+      }),
+  )
+
+  test.each(['out-in', 'in-out', 'default'])(
+    'a slot fallback root hidden while it leaves (mode %s)',
+    mode =>
+      hiddenThroughLeave({
+        Outer: `
+          <template>
+            <Transition mode="${mode}" ${hooks}>
+              <slot><p v-show="data.visible">fallback</p></slot>
+            </Transition>
+          </template>`,
+        App: `
+          <template>
+            <components.Outer>
+              <b v-if="!data.present">content</b>
+            </components.Outer>
+          </template>`,
+      }),
+  )
 })
 
 // vdom's persisted rule only sees Transition's direct child: a v-show root
