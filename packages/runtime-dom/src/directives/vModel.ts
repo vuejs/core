@@ -180,8 +180,9 @@ export const vModelCheckbox: ModelDirective<HTMLInputElement> = {
       }
     })
   },
-  // set initial checked on mount to wait for true-value/false-value
-  mounted: setChecked,
+  // set initial checked after true-value/false-value are patched and before
+  // the element is inserted into the DOM
+  beforeMount: setChecked,
   beforeUpdate(el, binding, vnode) {
     el[assignKey] = getModelAssigner(vnode)
     setChecked(el, binding, vnode)
@@ -363,6 +364,9 @@ export const vModelDynamic: ObjectDirective<
 > = {
   created(el, binding, vnode) {
     callModelHook(el, binding, vnode, null, 'created')
+  },
+  beforeMount(el, binding, vnode) {
+    callModelHook(el, binding, vnode, null, 'beforeMount')
   },
   mounted(el, binding, vnode) {
     callModelHook(el, binding, vnode, null, 'mounted')
