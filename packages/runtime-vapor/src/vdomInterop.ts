@@ -2847,12 +2847,9 @@ function renderVDOMSlot(
         }
         pendingOutIn = undefined
       } else if (mode === 'in-out') {
-        // the fallback leaves once the content has entered, under the
-        // fallback's own hooks minus the leave its enter may still hold
-        const enterHooks = extend({}, transition)
-        enterHooks.delayedLeave = undefined
-        leaveSlotFallback(slotResolutionState, enterHooks, NOOP)
-        delayedLeaveSource = enterHooks
+        // the fallback leaves once the content has entered: the content
+        // claims the leave below, as a vapor outlet's does (exposeSlotContent)
+        leaveSlotFallback(slotResolutionState, transition, NOOP, true)
       } else {
         // the fallback leaves before the content enters, as vdom unmounts
         // the old child first
@@ -2865,14 +2862,15 @@ function renderVDOMSlot(
         removeRenderedContent(prevVNode, currentParentNode!)
         prevVNode = null
       }
-    } else if (
+    }
+    if (
       slotContentValid &&
       transition &&
       mode === 'in-out' &&
       !(prevVNode && isValidVNodeChild(prevVNode))
     ) {
       // in-out: content entering under the Transition runs the leave left on
-      // it, that of the enclosing outlet's fallback
+      // it, that of this outlet's fallback or an enclosing outlet's
       const pendingLeave = claimPendingLeave(transition.state)
       if (pendingLeave) {
         delayedLeaveSource = { delayedLeave: pendingLeave } as TransitionHooks
