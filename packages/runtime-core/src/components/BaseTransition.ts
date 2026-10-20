@@ -41,7 +41,7 @@ import { filterSingleRoot } from '../componentRenderUtils'
 type Hook<T = () => void> = T | T[]
 
 export const leaveCbKey: unique symbol = Symbol('_leaveCb')
-const enterCbKey: unique symbol = Symbol('_enterCb')
+export const enterCbKey: unique symbol = Symbol('_enterCb')
 
 export interface BaseTransitionProps<HostElement = RendererElement> {
   mode?: 'in-out' | 'out-in' | 'default'
