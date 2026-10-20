@@ -1316,4 +1316,13 @@ describe('compiler: transform slot', () => {
       '_getDefaultValue(_slotProps0.title, () => (_slotProps0.label))',
     )
   })
+
+  test('object shorthand of a slot prop with a default', () => {
+    const { code } = compileWithSlots(
+      `<Comp v-slot="{ a = 1, b }">{{ JSON.stringify({ a, b }) }}</Comp>`,
+    )
+    expect(code).toContain(
+      'JSON.stringify({ a: _getDefaultValue(_slotProps0.a, () => (1)), b: _slotProps0.b })',
+    )
+  })
 })
