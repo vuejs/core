@@ -4586,3 +4586,91 @@ describe('out-in branch resumed from afterLeave holding a slot outlet', () => {
     ),
   )
 })
+
+describe('in-out: a slot fallback entering keeps the leave it was handed', () => {
+  // vdom vs vapor: hook order and the DOM after every step. The leave of
+  // content that left is handed to the fallback's enter; content coming back
+  // before that enter ends does not take it over.
+  async function parity(content: string, steps: string[]) {
+    const logs: Record<string, string[]> = {}
+    await renderParity(
+      {
+        Outer: `
+          <template>
+            <Transition
+              mode="in-out"
+              :css="false"
+              @before-enter="data.be"
+              @enter="data.e"
+              @leave="data.l"
+              @after-leave="data.al"
+            >
+              <slot><div class="fallback">fb</div></slot>
+            </Transition>
+          </template>`,
+        App: `
+          <template>
+            <components.Outer>${content}</components.Outer>
+          </template>`,
+      },
+      () => {
+        const data: any = ref({
+          tag: 'section',
+          enters: [] as (() => void)[],
+          leaves: [] as (() => void)[],
+          log: [] as string[],
+          be: (el: Element) => data.value.log.push('be:' + el.className),
+          e: (el: Element, done: () => void) => {
+            data.value.log.push('e:' + el.className)
+            data.value.enters.push(done)
+          },
+          l: (el: Element, done: () => void) => {
+            data.value.log.push('l:' + el.className)
+            data.value.leaves.push(done)
+          },
+          al: (el: Element) => data.value.log.push('al:' + el.className),
+        })
+        return data
+      },
+      async (data, root, m) => {
+        const log: string[] = (logs[m] = data.value.log)
+        for (const s of steps) {
+          if (s === 'entered' || s === 'enteredLast') {
+            const done = data.value.enters[s === 'entered' ? 'shift' : 'pop']()
+            if (done) done()
+          } else if (s === 'left') {
+            const done = data.value.leaves.shift()
+            if (done) done()
+          } else {
+            const [k, v] = s.split('=')
+            data.value[k] = v === 'null' ? null : v
+          }
+          await nextTick()
+          log.push(s + ' ' + stripAnchors(root.innerHTML))
+        }
+      },
+    )
+    expect(logs.vapor).toEqual(logs.vdom)
+  }
+
+  const content = `<component :is="data.tag" :class="data.tag">x</component>`
+
+  test('the fallback enters before the content back leaves it', () =>
+    parity(content, ['tag=null', 'tag=article', 'entered', 'left', 'left']))
+
+  // coverage guard: the fallback's leave, once the content entered, cancels
+  // its enter, which runs the leave it holds
+  test('the content entering cancels the fallback enter', () =>
+    parity(content, ['tag=null', 'tag=article', 'enteredLast', 'left', 'left']))
+
+  // coverage guard: the handoff ran before the content came back
+  test('the fallback entered before the content comes back', () =>
+    parity(content, [
+      'tag=null',
+      'entered',
+      'left',
+      'tag=article',
+      'entered',
+      'left',
+    ]))
+})

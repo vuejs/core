@@ -708,6 +708,7 @@ export { isTemplateNode, getContainerType } from './hydration'
 export {
   baseResolveTransitionHooks,
   checkTransitionMode,
+  enterCbKey,
   leaveCbKey,
   prepareTransitionLeave,
   prepareTransitionSwitch,

@@ -13,6 +13,7 @@ import {
   callWithErrorHandling,
   checkTransitionMode,
   currentInstance,
+  enterCbKey,
   isAsyncWrapper,
   isKeepAlive,
   isTemplateNode,
@@ -667,9 +668,10 @@ export function applyTransitionLeaveHooksImpl(
         }
       }
       if (unpaired) {
-        // The leaving block's own enter no longer completes: a leave it
-        // still held waits on with this one.
-        releaseDelayedLeave(enterHooks)
+        // A leave the leaving block's own enter still holds runs when that
+        // enter ends or is cancelled, as vdom's; one whose enter never ran
+        // (torn down in the flush it mounted) waits with this leave instead.
+        if (!block[enterCbKey]) releaseDelayedLeave(enterHooks)
         queuePendingLeave(state, delayedLeaveCb)
       } else {
         // to the hooks the incoming branch holds when the leave starts: the
