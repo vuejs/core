@@ -2348,4 +2348,28 @@ describe('directive: v-model', () => {
       },
     )
   })
+
+  // like `.number`, a number input shows the number it set once changed
+  test('should format a number input on change', async () => {
+    const values: Record<string, string> = {}
+    await renderParity(
+      {
+        App: `<template><input type="number" v-model="data"><input :type="'number'" v-model="data"></template>`,
+      },
+      () => ref(1),
+      async (data, root, mode) => {
+        for (const input of root.querySelectorAll('input')) {
+          input.value = '1.50'
+          triggerEvent('input', input)
+          triggerEvent('change', input)
+        }
+        await nextTick()
+        values[mode] = Array.from(root.querySelectorAll('input'))
+          .map(input => input.value)
+          .join()
+      },
+    )
+    expect(values.vdom).toBe('1.5,1.5')
+    expect(values.vapor).toBe('1.5,1.5')
+  })
 })

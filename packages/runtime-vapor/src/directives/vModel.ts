@@ -46,7 +46,7 @@ export const applyTextModel: VaporModelDirective<
   HTMLInputElement | HTMLTextAreaElement,
   'trim' | 'number' | 'lazy'
 > = (el, get, set, { trim, number, lazy } = {}) => {
-  vModelTextInit(el, trim, number, lazy, set)
+  vModelTextInit(el, trim, number || el.type === 'number', lazy, set)
   ensureMounted(() => {
     let value: any
     renderEffect(() => {
