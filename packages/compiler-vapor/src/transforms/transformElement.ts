@@ -359,6 +359,7 @@ export function getChildTemplateCloseState(
 
 export function isInSameTemplateAsParent(
   context: TransformContext<ElementNode>,
+  checkAncestors = true,
 ): boolean {
   const { parent, node, block } = context
   if (!parent || block !== parent.block) {
@@ -376,8 +377,40 @@ export function isInSameTemplateAsParent(
     !shouldUseCreateElement(
       parentNode,
       parent as TransformContext<ElementNode>,
-    ) && isValidHTMLNesting(parentNode.tag, node.tag)
+    ) &&
+    isValidHTMLNesting(parentNode.tag, node.tag) &&
+    !(checkAncestors && closesOpenAncestor(context))
   )
+}
+
+const isScopeBoundaryTag = /*@__PURE__*/ makeMap(
+  'applet,caption,marquee,object,table,td,th',
+)
+const isClosedBySameTag = /*@__PURE__*/ makeMap('a,button,form')
+
+/**
+ * The HTML parser also ends an open `<p>`, `<a>`, `<button>` or `<form>` at a
+ * deeper descendant it cannot contain, e.g. the `<div>` of `<p><span><div>`,
+ * so that descendant needs a template of its own too.
+ */
+function closesOpenAncestor(context: TransformContext<ElementNode>): boolean {
+  const { tag } = context.node
+  if (!isBlockTag(tag) && !isClosedBySameTag(tag)) return false
+  let inButtonScope = true
+  while (isInSameTemplateAsParent(context, false)) {
+    context = context.parent as TransformContext<ElementNode>
+    const { tag: open, ns } = context.node
+    if (ns !== Namespaces.HTML || isScopeBoundaryTag(open)) break
+    if (
+      open === 'p'
+        ? inButtonScope && isBlockTag(tag)
+        : open === tag && isClosedBySameTag(tag)
+    ) {
+      return true
+    }
+    if (open === 'button') inButtonScope = false
+  }
+  return false
 }
 
 function transformComponentElement(
@@ -829,7 +862,8 @@ function transformNativeElement(
   if (
     context.parent &&
     context.parent.node.type === NodeTypes.ELEMENT &&
-    !isValidHTMLNesting(context.parent.node.tag, tag)
+    (!isValidHTMLNesting(context.parent.node.tag, tag) ||
+      closesOpenAncestor(context as TransformContext<ElementNode>))
   ) {
     context.reference()
     context.dynamic.template = context.pushTemplate(template)

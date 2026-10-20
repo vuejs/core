@@ -593,3 +593,41 @@ describe('DOM prop initialization order', () => {
     )
   })
 })
+
+describe('descendants that close an open ancestor', () => {
+  const define = makeRender()
+
+  // the parser ends the `<p>` at the `<div>` start tag, although the `<div>`
+  // is not its child
+  test('block element inside an inline child of a paragraph', async () => {
+    const data = ref({ msg: 'hi' })
+    const { host } = define(
+      compile(
+        `<template><p><span><div>{{ data.msg }}</div></span></p></template>`,
+        data,
+      ),
+    ).render()
+    expect(host.innerHTML).toBe('<p><span><div>hi</div></span></p>')
+
+    data.value.msg = 'bye'
+    await nextTick()
+    expect(host.innerHTML).toBe('<p><span><div>bye</div></span></p>')
+  })
+
+  test('link nested in a link', async () => {
+    const data = ref({ msg: 'hi' })
+    const { host } = define(
+      compile(
+        `<template><a href="#a"><div><a href="#b">{{ data.msg }}</a></div></a></template>`,
+        data,
+      ),
+    ).render()
+    expect(host.innerHTML).toBe(
+      '<a href="#a"><div><a href="#b">hi</a></div></a>',
+    )
+
+    data.value.msg = 'bye'
+    await nextTick()
+    expect(host.querySelector('[href="#b"]')!.textContent).toBe('bye')
+  })
+})

@@ -391,3 +391,40 @@ test('nested list end tag', () => {
     '<ul><li>a</li><li>b<ul><li>c</li></ul></li></ul>',
   )
 })
+
+test('descendant that closes an open ancestor', () => {
+  // a block start tag ends an open `<p>` in button scope, not only a parent one
+  checkAbbr(
+    '<p><span><div>x</div></span></p>',
+    ['<div>x', '<p><span>'],
+    ['<div>x</div>', '<p><span></span></p>'],
+  )
+  // so do `<a>`, `<button>` and `<form>` start tags for open ones
+  checkAbbr(
+    '<a href="#a"><div><a href="#b">x</a></div></a>',
+    ['<a href=#b>x', '<a href=#a><div>'],
+    ['<a href="#b">x</a>', '<a href="#a"><div></div></a>'],
+  )
+  checkAbbr(
+    '<button><span><button>x</button></span></button>',
+    ['<button>x', '<button><span>'],
+    ['<button>x</button>', '<button><span></span></button>'],
+  )
+  checkAbbr(
+    '<form><div><form>x</form></div></form>',
+    ['<form>x', '<form><div>'],
+    ['<form>x</form>', '<form><div></div></form>'],
+  )
+
+  // a scope boundary keeps the ancestor open
+  checkAbbr(
+    '<p><button><div>x</div></button></p>',
+    '<p><button><div>x',
+    '<p><button><div>x</div></button></p>',
+  )
+  checkAbbr(
+    '<a><table><tbody><tr><td><a>x</a></td></tr></tbody></table></a>',
+    '<a><table><tbody><tr><td><a>x',
+    '<a><table><tbody><tr><td><a>x</a></td></tr></tbody></table></a>',
+  )
+})
