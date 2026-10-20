@@ -87,10 +87,13 @@ export type VNodeTypes =
 export type VNodeRef =
   | string
   | Ref
-  | ((
-      ref: Element | ComponentPublicInstance | null,
-      refs: Record<string, any>,
-    ) => void)
+  | {
+      // allow callbacks to use a more specific element type
+      bivarianceHack(
+        ref: Element | ComponentPublicInstance | null,
+        refs: Record<string, any>,
+      ): void
+    }['bivarianceHack']
 
 export type VNodeNormalizedRefAtom = {
   /**
