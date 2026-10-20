@@ -68,6 +68,7 @@ import {
 import {
   applyTransitionHooks,
   deferBranchUpdateDuringLeave,
+  deferSlotRootFlip,
   isTransitionEnabled,
   removeBranchWithLeave,
 } from './transition'
@@ -569,7 +570,11 @@ export class DynamicFragment extends RenderContextFragment {
 
     if (notifyUpdated) {
       // a slot root reports its validity flips to the enclosing outlet
-      if (this.__vf & SLOT_ROOT && isValidSlot(this) !== this.wasValid) {
+      if (
+        this.__vf & SLOT_ROOT &&
+        isValidSlot(this) !== this.wasValid &&
+        !(isTransitionEnabled && this.$transition && deferSlotRootFlip(this))
+      ) {
         this.slotBoundary!.markDirty()
       }
       const u = this.u
