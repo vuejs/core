@@ -4415,3 +4415,86 @@ describe('a Transition unmounted while its child leaves', () => {
     })
   }
 })
+
+describe('out-in: a branch rendered from the leave', () => {
+  // like vdom's afterLeave re-render, the resumed render reports its error
+  // through the component's error handling instead of the leave's done()
+  async function errors(
+    App: string,
+    init: Record<string, any>,
+    steps: Record<string, any>[],
+  ) {
+    const logs: Record<string, string[]> = {}
+    for (const vapor of [false, true]) {
+      const log: string[] = (logs[vapor ? 'vapor' : 'vdom'] = [])
+      const data: any = ref({
+        ...init,
+        dones: [] as (() => void)[],
+        l: (_el: Element, done: () => void) => data.value.dones.push(done),
+        fail: () => {
+          throw new Error('boom')
+        },
+      })
+      const Comp = compile(
+        `<script setup>const data = _data</script>` + App,
+        data,
+        {},
+        { vapor },
+      )
+      const root = document.createElement('div')
+      const app = (vapor ? createVaporApp(Comp) : createApp(Comp)).use(
+        vaporInteropPlugin,
+      )
+      app.config.errorHandler = err => log.push((err as Error).message)
+      app.mount(root)
+      try {
+        for (const step of steps) {
+          Object.assign(data.value, step)
+          await nextTick()
+        }
+        for (const done of data.value.dones.splice(0)) done()
+        await nextTick()
+      } catch (err) {
+        log.push('uncaught ' + (err as Error).message)
+      }
+      app.unmount()
+    }
+    return logs
+  }
+
+  test('an error while the next branch renders reaches the error handler', async () => {
+    expect(
+      await errors(
+        `
+        <template>
+          <Transition mode="out-in" :css="false" @leave="data.l">
+            <div v-if="data.a" class="a">a</div>
+            <div v-else class="b">{{ data.fail() }}</div>
+          </Transition>
+        </template>`,
+        { a: true },
+        [{ a: false }],
+      ),
+    ).toEqual({ vdom: ['boom'], vapor: ['boom'] })
+  })
+
+  // the inner branch leaves first; the outer switch held meanwhile renders
+  // from its afterLeave. vdom renders the held child once more while holding
+  // it (the slot is read before the isLeaving check); vapor defers the render.
+  test('an error while an outer switch renders reaches the error handler', async () => {
+    expect(
+      await errors(
+        `
+        <template>
+          <Transition mode="out-in" :css="false" @leave="data.l">
+            <div v-if="data.a" class="a">{{ data.fail() }}</div>
+            <i v-else-if="data.inner" class="i1">i1</i>
+            <span v-else class="i2">i2</span>
+          </Transition>
+        </template>`,
+        { a: false, inner: true },
+        [{ inner: false }, { a: true }],
+      ),
+    ).toEqual({ vdom: ['boom', 'boom'], vapor: ['boom'] })
+  })
+})
