@@ -3675,6 +3675,41 @@ describe('SSR hydration', () => {
       expect(`Hydration attribute mismatch`).toHaveBeenWarnedTimes(2)
     })
 
+    test('popover enumerated attribute', () => {
+      mountWithHydration(`<div></div>`, () => h('div', { popover: false }))
+      expect(`Hydration attribute mismatch`).not.toHaveBeenWarned()
+
+      mountWithHydration(`<div popover></div>`, () =>
+        h('div', { popover: true }),
+      )
+      expect(`Hydration attribute mismatch`).not.toHaveBeenWarned()
+
+      mountWithHydration(`<div popover></div>`, () =>
+        h('div', { popover: 'auto' }),
+      )
+      expect(`Hydration attribute mismatch`).not.toHaveBeenWarned()
+
+      mountWithHydration(`<div popover=""></div>`, () =>
+        h('div', { popover: 'auto' }),
+      )
+      expect(`Hydration attribute mismatch`).not.toHaveBeenWarned()
+
+      mountWithHydration(`<div popover="auto"></div>`, () =>
+        h('div', { popover: 'auto' }),
+      )
+      expect(`Hydration attribute mismatch`).not.toHaveBeenWarned()
+
+      mountWithHydration(`<div popover="anything"></div>`, () =>
+        h('div', { popover: 'manual' }),
+      )
+      expect(`Hydration attribute mismatch`).not.toHaveBeenWarned()
+
+      mountWithHydration(`<div popover="AUTO"></div>`, () =>
+        h('div', { popover: 'auto' }),
+      )
+      expect(`Hydration attribute mismatch`).not.toHaveBeenWarned()
+    })
+
     test('client value is null or undefined', () => {
       mountWithHydration(`<div></div>`, () =>
         h('div', { draggable: undefined }),

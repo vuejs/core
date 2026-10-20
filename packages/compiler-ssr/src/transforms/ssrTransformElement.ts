@@ -300,7 +300,7 @@ export const ssrTransformElement: NodeTransform = (node, context) => {
                         false /* no newline */,
                       ),
                     )
-                  } else if (attrName === 'hidden') {
+                  } else if (attrName === 'hidden' || attrName === 'popover') {
                     openTag.push(
                       createCallExpression(
                         context.helper(SSR_RENDER_DYNAMIC_ATTR),

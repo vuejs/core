@@ -75,7 +75,8 @@ export function ssrRenderDynamicAttr(
   if (
     isBooleanAttr(attrKey) ||
     (attrKey === 'hidden' &&
-      (typeof value === 'boolean' || typeof value === 'number'))
+      (typeof value === 'boolean' || typeof value === 'number')) ||
+    (attrKey === 'popover' && typeof value === 'boolean')
   ) {
     return includeBooleanAttr(value) ? ` ${attrKey}` : ``
   } else if (isSSRSafeAttrName(attrKey)) {
