@@ -1624,6 +1624,34 @@ describe('api: defineAsyncComponent', () => {
     expect(errors).toEqual([failure])
     app.unmount()
   })
+
+  test('with loading component + default delay', async () => {
+    vi.useFakeTimers()
+    try {
+      const Foo = defineVaporAsyncComponent({
+        loader: () => new Promise(() => {}),
+        loadingComponent: () => template('loading')(),
+      })
+
+      const { html } = define({
+        setup() {
+          return createComponent(Foo)
+        },
+      }).render()
+
+      // loading should wait for the default 200ms delay
+      expect(html()).toBe('<!--async component-->')
+      vi.advanceTimersByTime(199)
+      await nextTick()
+      expect(html()).toBe('<!--async component-->')
+
+      vi.advanceTimersByTime(1)
+      await nextTick()
+      expect(html()).toBe('loading<!--async component-->')
+    } finally {
+      vi.useRealTimers()
+    }
+  })
 })
 
 function mountAsyncError(
