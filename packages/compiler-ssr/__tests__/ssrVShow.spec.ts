@@ -8,12 +8,18 @@ describe('ssr: v-show', () => {
   test('basic as root', () => {
     expect(compile(`<div v-show="foo"/>`).code).toMatchInlineSnapshot(`
       "const { mergeProps: _mergeProps } = require("vue")
-      const { ssrRenderAttrs: _ssrRenderAttrs } = require("vue/server-renderer")
+      const { ssrRenderAttrs: _ssrRenderAttrs, ssrInterpolate: _ssrInterpolate } = require("vue/server-renderer")
 
       return function ssrRender(_ctx, _push, _parent, _attrs) {
-        _push(\`<div\${_ssrRenderAttrs(_mergeProps(_attrs, {
-          style: (_ctx.foo) ? null : { display: "none" }
-        }))}></div>\`)
+        let _temp0
+
+        _push(\`<div\${
+          _ssrRenderAttrs(_temp0 = _mergeProps(_attrs, {
+            style: (_ctx.foo) ? null : { display: "none" }
+          }))
+        }>\${
+          ("textContent" in _temp0) ? _ssrInterpolate(_temp0.textContent) : _temp0.innerHTML ?? ''
+        }</div>\`)
       }"
     `)
   })
@@ -117,20 +123,24 @@ describe('ssr: v-show', () => {
       ).code,
     ).toMatchInlineSnapshot(`
       "const { mergeProps: _mergeProps } = require("vue")
-      const { ssrRenderAttrs: _ssrRenderAttrs } = require("vue/server-renderer")
+      const { ssrRenderAttrs: _ssrRenderAttrs, ssrInterpolate: _ssrInterpolate } = require("vue/server-renderer")
 
       return function ssrRender(_ctx, _push, _parent, _attrs) {
+        let _temp0
+
         _push(\`<div\${
           _ssrRenderAttrs(_attrs)
         }><div\${
-          _ssrRenderAttrs(_mergeProps(_ctx.baz, {
+          _ssrRenderAttrs(_temp0 = _mergeProps(_ctx.baz, {
             style: [
               {"color":"red"},
               { fontSize: 14 },
               (_ctx.foo) ? null : { display: "none" }
             ]
           }))
-        }></div></div>\`)
+        }>\${
+          ("textContent" in _temp0) ? _ssrInterpolate(_temp0.textContent) : _temp0.innerHTML ?? ''
+        }</div></div>\`)
       }"
     `)
   })

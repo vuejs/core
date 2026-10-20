@@ -178,28 +178,34 @@ export const ssrTransformElement: NodeTransform = (node, context) => {
               ]),
             ]
           }
-        } else if (directives.length && !node.children.length) {
-          // v-text/v-html have higher priority than the merged props
-          if (!hasContentOverrideDirective(node)) {
-            const tempId = `_temp${context.temps++}`
-            propsExp.arguments = [
-              createAssignmentExpression(
-                createSimpleExpression(tempId, false),
-                mergedProps,
-              ),
-            ]
-            rawChildrenMap.set(
-              node,
-              createConditionalExpression(
-                createSimpleExpression(`"textContent" in ${tempId}`, false),
-                createCallExpression(context.helper(SSR_INTERPOLATE), [
-                  createSimpleExpression(`${tempId}.textContent`, false),
-                ]),
-                createSimpleExpression(`${tempId}.innerHTML ?? ''`, false),
-                false,
-              ),
-            )
-          }
+        } else if (
+          !node.children.length &&
+          !hasContentOverrideDirective(node)
+        ) {
+          // the merged props may contain textContent / innerHTML. Both are
+          // applied as DOM props on the client (thus overriding children)
+          // and are handled as children overrides by the vnode SSR path in
+          // server-renderer (renderVNode). Since we cannot know the merged
+          // keys statically, check them at runtime so that SSR output
+          // matches the client.
+          const tempId = `_temp${context.temps++}`
+          propsExp.arguments = [
+            createAssignmentExpression(
+              createSimpleExpression(tempId, false),
+              mergedProps,
+            ),
+          ]
+          rawChildrenMap.set(
+            node,
+            createConditionalExpression(
+              createSimpleExpression(`"textContent" in ${tempId}`, false),
+              createCallExpression(context.helper(SSR_INTERPOLATE), [
+                createSimpleExpression(`${tempId}.textContent`, false),
+              ]),
+              createSimpleExpression(`${tempId}.innerHTML ?? ''`, false),
+              false,
+            ),
+          )
         }
 
         if (needTagForRuntime) {
@@ -240,6 +246,28 @@ export const ssrTransformElement: NodeTransform = (node, context) => {
           if (!needMergeProps) {
             node.children = [createInterpolation(prop.exp, prop.loc)]
           }
+        } else if (
+          !needMergeProps &&
+          prop.name === 'bind' &&
+          prop.exp &&
+          isStaticArgOf(prop.arg, 'innerHTML')
+        ) {
+          // :innerHTML is applied as a DOM prop on the client, which
+          // overrides the element's children - same effect as v-html.
+          // Emitting it as an attribute would produce wrong output.
+          rawChildrenMap.set(
+            node,
+            createCompoundExpression([`(`, prop.exp, `) ?? ''`]),
+          )
+        } else if (
+          !needMergeProps &&
+          prop.name === 'bind' &&
+          prop.exp &&
+          isStaticArgOf(prop.arg, 'textContent')
+        ) {
+          // :textContent is applied as a DOM prop on the client, which
+          // overrides the element's children - same effect as v-text.
+          node.children = [createInterpolation(prop.exp, prop.loc)]
         } else if (!needMergeProps && prop.name !== 'on') {
           // Directive transforms.
           const directiveTransform = context.directiveTransforms[prop.name]

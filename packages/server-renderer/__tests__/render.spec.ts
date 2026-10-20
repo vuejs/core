@@ -737,6 +737,57 @@ function testRender(type: string, render: typeof renderToString) {
       )
     })
 
+    describe('innerHTML / textContent as props (compiled templates)', () => {
+      // innerHTML / textContent are applied as DOM props on the client and
+      // are handled as children overrides by the vnode SSR path (see the
+      // 'innerHTML' / 'textContent' tests above). Compiled templates must
+      // produce the same output.
+
+      test('v-bind object with innerHTML', async () => {
+        const app = createApp({
+          data: () => ({ html: `<span>hello</span>` }),
+          template: `<div v-bind="{ innerHTML: html }"></div>`,
+        })
+        expect(await render(app)).toBe(`<div><span>hello</span></div>`)
+      })
+
+      test('v-bind object with textContent', async () => {
+        const app = createApp({
+          data: () => ({ text: `<b>plain</b>` }),
+          template: `<div v-bind="{ textContent: text }"></div>`,
+        })
+        expect(await render(app)).toBe(`<div>&lt;b&gt;plain&lt;/b&gt;</div>`)
+      })
+
+      test('v-bind object with neither key preserves empty content', async () => {
+        const app = createApp({
+          data: () => ({ id: 'foo' }),
+          template: `<div v-bind="{ id }"></div>`,
+        })
+        expect(await render(app)).toBe(`<div id="foo"></div>`)
+      })
+
+      test(':innerHTML / :textContent bindings', async () => {
+        const app = createApp({
+          data: () => ({ html: `<span>a</span>`, text: `<b>b</b>` }),
+          template: `<div><p :innerHTML="html"></p><p :textContent="text"></p></div>`,
+        })
+        expect(await render(app)).toBe(
+          `<div><p><span>a</span></p><p>&lt;b&gt;b&lt;/b&gt;</p></div>`,
+        )
+      })
+
+      test('fallthrough textContent attr on component root', async () => {
+        const app = createApp({
+          template: `<Child :textContent="'hello'" />`,
+        })
+        app.component('Child', {
+          template: `<div class="box"></div>`,
+        })
+        expect(await render(app)).toBe(`<div class="box">hello</div>`)
+      })
+    })
+
     describe('vnode component', () => {
       test('KeepAlive', async () => {
         const MyComp = {

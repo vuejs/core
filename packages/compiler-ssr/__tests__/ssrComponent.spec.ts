@@ -350,10 +350,16 @@ describe('ssr: components', () => {
       test('transition', () => {
         expect(compile(`<transition><div/></transition>`).code)
           .toMatchInlineSnapshot(`
-            "const { ssrRenderAttrs: _ssrRenderAttrs } = require("vue/server-renderer")
+            "const { ssrRenderAttrs: _ssrRenderAttrs, ssrInterpolate: _ssrInterpolate } = require("vue/server-renderer")
 
             return function ssrRender(_ctx, _push, _parent, _attrs) {
-              _push(\`<div\${_ssrRenderAttrs(_attrs)}></div>\`)
+              let _temp0
+
+              _push(\`<div\${
+                _ssrRenderAttrs(_temp0 = _attrs)
+              }>\${
+                ("textContent" in _temp0) ? _ssrInterpolate(_temp0.textContent) : _temp0.innerHTML ?? ''
+              }</div>\`)
             }"
           `)
       })

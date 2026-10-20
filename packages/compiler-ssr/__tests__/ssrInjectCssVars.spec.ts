@@ -9,11 +9,17 @@ describe('ssr: inject <style vars>', () => {
       }).code,
     ).toMatchInlineSnapshot(`
       "const { mergeProps: _mergeProps } = require("vue")
-      const { ssrRenderAttrs: _ssrRenderAttrs } = require("vue/server-renderer")
+      const { ssrRenderAttrs: _ssrRenderAttrs, ssrInterpolate: _ssrInterpolate } = require("vue/server-renderer")
 
       return function ssrRender(_ctx, _push, _parent, _attrs) {
+        let _temp0
+
         const _cssVars = { style: { color: _ctx.color }}
-        _push(\`<div\${_ssrRenderAttrs(_mergeProps(_attrs, _cssVars))}></div>\`)
+        _push(\`<div\${
+          _ssrRenderAttrs(_temp0 = _mergeProps(_attrs, _cssVars))
+        }>\${
+          ("textContent" in _temp0) ? _ssrInterpolate(_temp0.textContent) : _temp0.innerHTML ?? ''
+        }</div>\`)
       }"
     `)
   })
@@ -24,15 +30,21 @@ describe('ssr: inject <style vars>', () => {
         ssrCssVars: `{ color }`,
       }).code,
     ).toMatchInlineSnapshot(`
-      "const { ssrRenderAttrs: _ssrRenderAttrs } = require("vue/server-renderer")
+      "const { ssrRenderAttrs: _ssrRenderAttrs, ssrInterpolate: _ssrInterpolate } = require("vue/server-renderer")
 
       return function ssrRender(_ctx, _push, _parent, _attrs) {
+        let _temp0, _temp1
+
         const _cssVars = { style: { color: _ctx.color }}
         _push(\`<!--[--><div\${
-          _ssrRenderAttrs(_cssVars)
-        }></div><div\${
-          _ssrRenderAttrs(_cssVars)
-        }></div><!--]-->\`)
+          _ssrRenderAttrs(_temp0 = _cssVars)
+        }>\${
+          ("textContent" in _temp0) ? _ssrInterpolate(_temp0.textContent) : _temp0.innerHTML ?? ''
+        }</div><div\${
+          _ssrRenderAttrs(_temp1 = _cssVars)
+        }>\${
+          ("textContent" in _temp1) ? _ssrInterpolate(_temp1.textContent) : _temp1.innerHTML ?? ''
+        }</div><!--]-->\`)
       }"
     `)
   })
@@ -44,13 +56,18 @@ describe('ssr: inject <style vars>', () => {
       }).code,
     ).toMatchInlineSnapshot(`
       "const { resolveComponent: _resolveComponent } = require("vue")
-      const { ssrRenderAttrs: _ssrRenderAttrs, ssrRenderComponent: _ssrRenderComponent } = require("vue/server-renderer")
+      const { ssrRenderAttrs: _ssrRenderAttrs, ssrInterpolate: _ssrInterpolate, ssrRenderComponent: _ssrRenderComponent } = require("vue/server-renderer")
 
       return function ssrRender(_ctx, _push, _parent, _attrs) {
         const _component_foo = _resolveComponent("foo")
+        let _temp0
 
         const _cssVars = { style: { color: _ctx.color }}
-        _push(\`<!--[--><div\${_ssrRenderAttrs(_cssVars)}></div>\`)
+        _push(\`<!--[--><div\${
+          _ssrRenderAttrs(_temp0 = _cssVars)
+        }>\${
+          ("textContent" in _temp0) ? _ssrInterpolate(_temp0.textContent) : _temp0.innerHTML ?? ''
+        }</div>\`)
         _push(_ssrRenderComponent(_component_foo, _cssVars, null, _parent))
         _push(\`<!--]-->\`)
       }"
@@ -64,18 +81,28 @@ describe('ssr: inject <style vars>', () => {
       }).code,
     ).toMatchInlineSnapshot(`
       "const { mergeProps: _mergeProps } = require("vue")
-      const { ssrRenderAttrs: _ssrRenderAttrs } = require("vue/server-renderer")
+      const { ssrRenderAttrs: _ssrRenderAttrs, ssrInterpolate: _ssrInterpolate } = require("vue/server-renderer")
 
       return function ssrRender(_ctx, _push, _parent, _attrs) {
+        let _temp0, _temp1, _temp2
+
         const _cssVars = { style: { color: _ctx.color }}
         if (_ctx.ok) {
-          _push(\`<div\${_ssrRenderAttrs(_mergeProps(_attrs, _cssVars))}></div>\`)
+          _push(\`<div\${
+            _ssrRenderAttrs(_temp0 = _mergeProps(_attrs, _cssVars))
+          }>\${
+            ("textContent" in _temp0) ? _ssrInterpolate(_temp0.textContent) : _temp0.innerHTML ?? ''
+          }</div>\`)
         } else {
           _push(\`<!--[--><div\${
-            _ssrRenderAttrs(_cssVars)
-          }></div><div\${
-            _ssrRenderAttrs(_cssVars)
-          }></div><!--]-->\`)
+            _ssrRenderAttrs(_temp1 = _cssVars)
+          }>\${
+            ("textContent" in _temp1) ? _ssrInterpolate(_temp1.textContent) : _temp1.innerHTML ?? ''
+          }</div><div\${
+            _ssrRenderAttrs(_temp2 = _cssVars)
+          }>\${
+            ("textContent" in _temp2) ? _ssrInterpolate(_temp2.textContent) : _temp2.innerHTML ?? ''
+          }</div><!--]-->\`)
         }
       }"
     `)
@@ -122,8 +149,14 @@ describe('ssr: inject <style vars>', () => {
 
     expect(result.code).toMatchInlineSnapshot(`
       "(_ctx, _push, _parent, _attrs) => {
+        let _temp0
+
         const _cssVars = { style: { "--hash": (_unref(dynamic)) }}
-        _push(\`<div\${_ssrRenderAttrs(_mergeProps(_attrs, _cssVars))}></div>\`)
+        _push(\`<div\${
+          _ssrRenderAttrs(_temp0 = _mergeProps(_attrs, _cssVars))
+        }>\${
+          ("textContent" in _temp0) ? _ssrInterpolate(_temp0.textContent) : _temp0.innerHTML ?? ''
+        }</div>\`)
       }"
     `)
     expect(result.ast.helpers).toMatchInlineSnapshot(`
