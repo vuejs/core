@@ -1737,6 +1737,32 @@ describe('api: watch', () => {
     expect(cb).toHaveBeenCalledTimes(4)
   })
 
+  it('watching multiple sources depth', async () => {
+    const state = reactive({ a: { b: 1 } })
+    const r = ref({ a: { b: 1 } })
+    const g = ref({ a: { b: 1 } })
+    const cb = vi.fn()
+    watch([state, r, () => g.value], cb, { deep: 1 })
+
+    state.a.b = 2
+    r.value.a.b = 2
+    g.value.a.b = 2
+    await nextTick()
+    expect(cb).toHaveBeenCalledTimes(0)
+
+    state.a = { b: 3 }
+    await nextTick()
+    expect(cb).toHaveBeenCalledTimes(1)
+
+    r.value.a = { b: 3 }
+    await nextTick()
+    expect(cb).toHaveBeenCalledTimes(2)
+
+    g.value.a = { b: 3 }
+    await nextTick()
+    expect(cb).toHaveBeenCalledTimes(3)
+  })
+
   test('watching the same object at different depths', async () => {
     const arr1: any[] = reactive([[[{ foo: {} }]]])
     const arr2 = arr1[0]
