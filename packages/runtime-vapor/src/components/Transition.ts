@@ -69,7 +69,7 @@ import {
 import { isKeepAliveEnabled } from '../keepAlive'
 import { isSuspenseEnabled } from '../suspense'
 import { DYNAMIC, SLOT_ROOT, TELEPORT } from '../fragmentFlags'
-import { isSlotFallbackBlock } from '../slotFragment'
+import { isSlotFallbackBlock, setSettlingNotify } from '../slotFragment'
 import {
   currentHydrationNode,
   isHydrating,
@@ -941,17 +941,12 @@ function removeBranchWithLeaveImpl(
         const { render, key, noScope, branchKey, prevKey } = target.pending!
         target.pending = undefined
         if (current) frag.pending = undefined
-        // back on the mounted key, the deferred update runs as a regular one.
-        // Like a render job, an error here is reported as the owner's update
-        // error instead of being thrown out of the leave's done().
+        // back on the mounted key, the deferred update runs as a regular one
         target.current = prevKey
-        callWithErrorHandling(
-          () =>
-            runWithRenderCtx(target, () =>
-              target.update(render, key, noScope, branchKey),
-            ),
-          target.renderInstance,
-          ErrorCodes.COMPONENT_UPDATE,
+        renderResumed(target, target.renderInstance, () =>
+          runWithRenderCtx(target, () =>
+            target.update(render, key, noScope, branchKey),
+          ),
         )
         return
       }
@@ -965,20 +960,17 @@ function removeBranchWithLeaveImpl(
       const prevInstance = setCurrentInstance(instance)
       try {
         frag.pending = undefined
-        callWithErrorHandling(
-          () =>
-            frag.renderBranch(
-              pending.render,
-              transition,
-              liveParent,
-              pending.key,
-              pending.noScope,
-              true,
-              undefined,
-              pending.branchKey,
-            ),
-          instance,
-          ErrorCodes.COMPONENT_UPDATE,
+        renderResumed(frag, instance, () =>
+          frag.renderBranch(
+            pending.render,
+            transition,
+            liveParent,
+            pending.key,
+            pending.noScope,
+            true,
+            undefined,
+            pending.branchKey,
+          ),
         )
       } finally {
         restoreCurrentInstance(prevInstance)
@@ -1005,6 +997,34 @@ function removeBranchWithLeaveImpl(
     }
   }
   return false
+}
+
+// Renders what `frag` holds after a leave. The outlet the fragment reports to
+// sees the branch once it is in place: an outlet inside it notifies while it
+// renders, with the nodes that left still empty (an enclosing outlet would
+// resolve its fallback for them), so it rechecks after. Like a render job, an
+// error, from the branch or from a fallback that recheck renders, is reported
+// as the owner's update error instead of being thrown out of the leave's
+// done().
+function renderResumed(
+  frag: DynamicFragment,
+  instance: GenericComponentInstance | null,
+  render: () => void,
+): void {
+  const boundary = frag.slotBoundary
+  callWithErrorHandling(
+    () => {
+      const prevNotify = setSettlingNotify(boundary && boundary.markDirty)
+      try {
+        render()
+      } finally {
+        setSettlingNotify(prevNotify)
+      }
+      if (boundary) boundary.markDirty()
+    },
+    instance,
+    ErrorCodes.COMPONENT_UPDATE,
+  )
 }
 
 // vdom identity of a transition child as the chain is walked: the first

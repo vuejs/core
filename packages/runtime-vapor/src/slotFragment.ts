@@ -238,6 +238,21 @@ export function resolveExposedSlotNodes(state: SlotResolutionState): Block {
   return state.activeFallback || state.getContent()
 }
 
+// The notifications of the outlet a branch resumed after a leave reports to
+// (components/Transition.ts removeBranchWithLeaveImpl): they wait for the
+// branch being rendered, as outlets inside it notify before it is in place.
+// Matched by `markDirty` rather than the boundary: a fallback body reports
+// through a copy of its provider's boundary.
+let settlingNotify: (() => void) | null = null
+
+export function setSettlingNotify(
+  notify: (() => void) | null,
+): (() => void) | null {
+  const prev = settlingNotify
+  settlingNotify = notify
+  return prev
+}
+
 // Entry point for validity-change notifications (boundary.markDirty). During
 // reconciliation or a host content update, fold notifications into the
 // in-flight operation instead of recursing.
@@ -245,7 +260,11 @@ export function markSlotResolutionDirty(state: SlotResolutionState): void {
   if (state.isDisposed()) {
     return
   }
-  if (state.isReconciling || state.isBusy()) {
+  if (
+    state.isReconciling ||
+    state.isBusy() ||
+    (isTransitionEnabled && state.boundary.markDirty === settlingNotify)
+  ) {
     state.pendingRecheck = true
     return
   }

@@ -3361,6 +3361,63 @@ async function runOutInPhases(
   return results
 }
 
+// Mounts `srcs` as a vdom and as a vapor app and runs the steps (`k=true` /
+// `k=false` sets a flag, `done` releases the next leave), comparing the hook
+// calls and the DOM after every step.
+async function runOutInSteps(
+  srcs: Record<string, string>,
+  init: Record<string, any>,
+  steps: string[],
+) {
+  const logs: Record<string, string[]> = {}
+  const dom = (root: HTMLElement) => stripAnchors(root.innerHTML)
+  await renderParity(
+    srcs,
+    () => {
+      const data: any = ref({
+        ...init,
+        dones: [] as (() => void)[],
+        log: [] as string[],
+        be: (el: Element) => data.value.log.push('be:' + el.className),
+        l: (el: Element, done: () => void) => {
+          data.value.log.push('l:' + el.className)
+          data.value.dones.push(done)
+        },
+        al: (el: Element) => data.value.log.push('al:' + el.className),
+      })
+      return data
+    },
+    async (data, root, m) => {
+      const log: string[] = (logs[m] = data.value.log)
+      for (const s of steps) {
+        if (s === 'done') {
+          const done = data.value.dones.shift()
+          if (done) done()
+        } else {
+          const [k, v] = s.split('=')
+          data.value[k] = v === 'true'
+        }
+        await nextTick()
+        log.push(s + ' ' + dom(root))
+      }
+    },
+  )
+  expect(logs.vapor).toEqual(logs.vdom)
+}
+
+const outIn = (inner: string) => `
+  <template>
+    <Transition
+      mode="out-in"
+      :css="false"
+      @before-enter="data.be"
+      @leave="data.l"
+      @after-leave="data.al"
+    >
+      ${inner}
+    </Transition>
+  </template>`
+
 describe('out-in leave during a v-for reorder', () => {
   // vapor vs vdom: the DOM after every step. The leaving element stays where
   // it is, like vdom's; rows anchor on the fragment, like vdom's placeholder.
@@ -3931,63 +3988,8 @@ describe('a child rendering its root after the hooks were applied, like vdom', (
 })
 
 describe('out-in: a branch leaving to nothing holds back no branch', () => {
-  // vapor vs vdom: hook order and the DOM after every step. The branch that
-  // left to nothing is vdom's comment child, which out-in does not wait for:
-  // content back during the leave enters at once.
-  async function parity(
-    srcs: Record<string, string>,
-    init: Record<string, any>,
-    steps: string[],
-  ) {
-    const logs: Record<string, string[]> = {}
-    const dom = (root: HTMLElement) => stripAnchors(root.innerHTML)
-    await renderParity(
-      srcs,
-      () => {
-        const data: any = ref({
-          ...init,
-          dones: [] as (() => void)[],
-          log: [] as string[],
-          be: (el: Element) => data.value.log.push('be:' + el.className),
-          l: (el: Element, done: () => void) => {
-            data.value.log.push('l:' + el.className)
-            data.value.dones.push(done)
-          },
-          al: (el: Element) => data.value.log.push('al:' + el.className),
-        })
-        return data
-      },
-      async (data, root, m) => {
-        const log: string[] = (logs[m] = data.value.log)
-        for (const s of steps) {
-          if (s === 'done') {
-            const done = data.value.dones.shift()
-            if (done) done()
-          } else {
-            const [k, v] = s.split('=')
-            data.value[k] = v === 'true'
-          }
-          await nextTick()
-          log.push(s + ' ' + dom(root))
-        }
-      },
-    )
-    expect(logs.vapor).toEqual(logs.vdom)
-  }
-
-  const outIn = (inner: string) => `
-    <template>
-      <Transition
-        mode="out-in"
-        :css="false"
-        @before-enter="data.be"
-        @leave="data.l"
-        @after-leave="data.al"
-      >
-        ${inner}
-      </Transition>
-    </template>`
-
+  // The branch that left to nothing is vdom's comment child, which out-in
+  // does not wait for: content back during the leave enters at once.
   const content = `<div v-if="data.show" class="content">c</div>`
   const shapes: Record<string, Record<string, string>> = {
     'a v-if': {
@@ -4036,7 +4038,7 @@ describe('out-in: a branch leaving to nothing holds back no branch', () => {
 
   describe.each(Object.entries(shapes))('%s', (_, srcs) => {
     test('back while it leaves', () =>
-      parity(srcs, { show: true }, [
+      runOutInSteps(srcs, { show: true }, [
         'show=false',
         'show=true',
         'done',
@@ -4045,7 +4047,7 @@ describe('out-in: a branch leaving to nothing holds back no branch', () => {
       ]))
 
     test('back and off again while it leaves', () =>
-      parity(srcs, { show: true }, [
+      runOutInSteps(srcs, { show: true }, [
         'show=false',
         'show=true',
         'show=false',
@@ -4069,7 +4071,7 @@ describe('out-in: a branch leaving to nothing holds back no branch', () => {
     ],
     ['a vdom component vnode', (k: string) => h(vnodeComps[k])],
   ])('%s back as another one while it leaves', (_, vn) =>
-    parity(
+    runOutInSteps(
       {
         App: outIn(`
           <component :is="data.show ? data.vn(data.next ? 'b' : 'a') : null" />`),
@@ -4420,7 +4422,7 @@ describe('out-in: a branch rendered from the leave', () => {
   // like vdom's afterLeave re-render, the resumed render reports its error
   // through the component's error handling instead of the leave's done()
   async function errors(
-    App: string,
+    srcs: Record<string, string>,
     init: Record<string, any>,
     steps: Record<string, any>[],
   ) {
@@ -4435,14 +4437,20 @@ describe('out-in: a branch rendered from the leave', () => {
           throw new Error('boom')
         },
       })
-      const Comp = compile(
-        `<script setup>const data = _data</script>` + App,
-        data,
-        {},
-        { vapor },
-      )
+      const components: Record<string, any> = {}
+      const withScript = (src: string) =>
+        `<script setup>const data = _data; const components = _components;</script>` +
+        src
+      for (const name in srcs) {
+        if (name !== 'App') {
+          components[name] = compile(withScript(srcs[name]), data, components, {
+            vapor,
+          })
+        }
+      }
+      const App = compile(withScript(srcs.App), data, components, { vapor })
       const root = document.createElement('div')
-      const app = (vapor ? createVaporApp(Comp) : createApp(Comp)).use(
+      const app = (vapor ? createVaporApp(App) : createApp(App)).use(
         vaporInteropPlugin,
       )
       app.config.errorHandler = err => log.push((err as Error).message)
@@ -4465,13 +4473,15 @@ describe('out-in: a branch rendered from the leave', () => {
   test('an error while the next branch renders reaches the error handler', async () => {
     expect(
       await errors(
-        `
-        <template>
-          <Transition mode="out-in" :css="false" @leave="data.l">
-            <div v-if="data.a" class="a">a</div>
-            <div v-else class="b">{{ data.fail() }}</div>
-          </Transition>
-        </template>`,
+        {
+          App: `
+          <template>
+            <Transition mode="out-in" :css="false" @leave="data.l">
+              <div v-if="data.a" class="a">a</div>
+              <div v-else class="b">{{ data.fail() }}</div>
+            </Transition>
+          </template>`,
+        },
         { a: true },
         [{ a: false }],
       ),
@@ -4484,17 +4494,95 @@ describe('out-in: a branch rendered from the leave', () => {
   test('an error while an outer switch renders reaches the error handler', async () => {
     expect(
       await errors(
-        `
-        <template>
-          <Transition mode="out-in" :css="false" @leave="data.l">
-            <div v-if="data.a" class="a">{{ data.fail() }}</div>
-            <i v-else-if="data.inner" class="i1">i1</i>
-            <span v-else class="i2">i2</span>
-          </Transition>
-        </template>`,
+        {
+          App: `
+          <template>
+            <Transition mode="out-in" :css="false" @leave="data.l">
+              <div v-if="data.a" class="a">{{ data.fail() }}</div>
+              <i v-else-if="data.inner" class="i1">i1</i>
+              <span v-else class="i2">i2</span>
+            </Transition>
+          </template>`,
+        },
         { a: false, inner: true },
         [{ inner: false }, { a: true }],
       ),
     ).toEqual({ vdom: ['boom', 'boom'], vapor: ['boom'] })
   })
+
+  // the rendered branch leaves the enclosing outlet without content: its
+  // fallback renders from the recheck after the branch, under the same handling
+  test('an error in the enclosing outlet fallback after the branch renders reaches the error handler', async () => {
+    expect(
+      await errors(
+        {
+          Outer: `
+          <template>
+            <Transition mode="out-in" :css="false" @leave="data.l">
+              <slot><div class="fallback">{{ data.fail() }}</div></slot>
+            </Transition>
+          </template>`,
+          Mid: `
+          <template>
+            <components.Outer>
+              <slot v-if="data.a"><div class="a">a</div></slot>
+              <slot v-else name="y" />
+            </components.Outer>
+          </template>`,
+          App: `<template><components.Mid /></template>`,
+        },
+        { a: true },
+        [{ a: false }],
+      ),
+    ).toEqual({ vdom: ['boom'], vapor: ['boom'] })
+  })
+})
+
+describe('out-in branch resumed from afterLeave holding a slot outlet', () => {
+  // vdom re-renders Transition's child after the leave: the outer outlet
+  // sees the branch rendered then as its content, never its fallback
+  test.each<[string, string, string[]]>([
+    [
+      'the leaving branch re-entering',
+      `<slot v-if="data.a"><div class="a">a</div></slot>
+      <div v-else class="b">b</div>`,
+      ['a=false', 'a=true', 'done'],
+    ],
+    [
+      'another branch holding an outlet',
+      `<slot v-if="data.a" name="x"><div class="a">a</div></slot>
+      <slot v-else name="y"><div class="c">c</div></slot>`,
+      ['a=false', 'done'],
+    ],
+    [
+      'the leaving branch re-entering under a template root',
+      `<template v-if="data.x">
+        <slot v-if="data.a"><div class="a">a</div></slot>
+        <div v-else class="b">b</div>
+      </template>`,
+      ['a=false', 'a=true', 'done'],
+    ],
+    [
+      'an outer switch to a branch holding an outlet',
+      `<template v-if="data.x">
+        <slot v-if="data.a"><div class="a">a</div></slot>
+        <div v-else class="b">b</div>
+      </template>
+      <slot v-else name="z"><div class="d">d</div></slot>`,
+      ['a=false', 'x=false', 'done'],
+    ],
+  ])('%s', (_, mid, steps) =>
+    runOutInSteps(
+      {
+        Outer: outIn(`<slot><div class="fallback">fb</div></slot>`),
+        Mid: `
+          <template>
+            <components.Outer>${mid}</components.Outer>
+          </template>`,
+        App: `<template><components.Mid /></template>`,
+      },
+      { a: true, x: true },
+      steps,
+    ),
+  )
 })
