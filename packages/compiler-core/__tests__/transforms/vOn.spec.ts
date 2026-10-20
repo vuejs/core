@@ -257,6 +257,49 @@ describe('compiler: transform v-on', () => {
     })
   })
 
+  test('function expression w/ semicolon in body w/ prefixIdentifiers: true (#14287)', () => {
+    const onError = vi.fn()
+    const { node } = parseWithVOn(`<div @click="function () { ';' }"/>`, {
+      prefixIdentifiers: true,
+      onError,
+    })
+    // the `;` inside the function body must not be treated as multiple inline
+    // statements, which are parsed as statements and would fail for an
+    // anonymous function expression
+    expect(onError).not.toHaveBeenCalled()
+    expect((node.codegenNode as VNodeCall).props).toMatchObject({
+      properties: [
+        {
+          key: { content: `onClick` },
+          value: {
+            type: NodeTypes.SIMPLE_EXPRESSION,
+            content: `function () { ';' }`,
+          },
+        },
+      ],
+    })
+  })
+
+  test('async function expression w/ semicolon in body (#14287)', () => {
+    const onError = vi.fn()
+    parseWithVOn(`<div @click="async function () { a(); }"/>`, {
+      prefixIdentifiers: true,
+      onError,
+    })
+    expect(onError).not.toHaveBeenCalled()
+  })
+
+  test('should still error for non-function expression w/ semicolon (#14287)', () => {
+    const onError = vi.fn()
+    parseWithVOn(`<div @click="class { m() { a; } }"/>`, {
+      prefixIdentifiers: true,
+      onError,
+    })
+    // only function expressions are valid handlers on their own - other
+    // expressions must keep reporting the original parse error
+    expect(onError).toHaveBeenCalled()
+  })
+
   test('should NOT wrap as function if expression is already function expression', () => {
     const { node } = parseWithVOn(`<div @click="$event => foo($event)"/>`)
     expect((node.codegenNode as VNodeCall).props).toMatchObject({

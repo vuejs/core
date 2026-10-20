@@ -359,6 +359,15 @@ test('template errors', () => {
   expect(result.errors).toMatchSnapshot()
 })
 
+// #14287
+test('event handler that is a function expression containing semicolons', () => {
+  const result = compile({
+    filename: 'example.vue',
+    source: `<input @input="function () { ';' }" />`,
+  })
+  expect(result.errors).toEqual([])
+})
+
 test('preprocessor errors', () => {
   const template = parse(
     `

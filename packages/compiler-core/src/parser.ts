@@ -993,8 +993,23 @@ function createExp(
         plugins: plugins ? [...plugins, 'typescript'] : ['typescript'],
       }
       if (parseMode === ExpParseMode.Statements) {
-        // v-on with multi-inline-statements, pad 1 char
-        exp.ast = parse(` ${content} `, options).program
+        try {
+          // v-on with multi-inline-statements, pad 1 char
+          exp.ast = parse(` ${content} `, options).program
+        } catch (e) {
+          // #14287 the handler may also be a single function expression whose
+          // body contains `;`. It is not valid when parsed as statements,
+          // since a function declaration requires a name, so retry with parens
+          // to parse it as an expression instead. The parens occupy the same
+          // single leading char as the padded source above, so identifier
+          // offsets stay consistent.
+          const fnExp = parseFunctionExpression(content, options)
+          if (!fnExp) {
+            // not a function expression either - report the original error
+            throw e
+          }
+          exp.ast = fnExp
+        }
       } else if (parseMode === ExpParseMode.Params) {
         exp.ast = parseExpression(`(${content})=>{}`, options)
       } else {
@@ -1007,6 +1022,32 @@ function createExp(
     }
   }
   return exp
+}
+
+/**
+ * Parse a v-on handler that failed to parse as statements as a single function
+ * expression instead (#14287). Only function expressions are accepted: any
+ * other expression is not a valid handler on its own, so those should keep
+ * reporting the original parse error rather than producing invalid output.
+ */
+function parseFunctionExpression(
+  content: string,
+  options: BabelOptions,
+): SimpleExpressionNode['ast'] {
+  try {
+    const program = parse(`(${content})`, options).program
+    const statement = program.body[0]
+    if (
+      statement &&
+      statement.type === 'ExpressionStatement' &&
+      (statement.expression.type === 'FunctionExpression' ||
+        statement.expression.type === 'ArrowFunctionExpression')
+    ) {
+      return program
+    }
+  } catch {
+    // not a valid expression
+  }
 }
 
 function emitError(code: ErrorCodes, index: number, message?: string) {
