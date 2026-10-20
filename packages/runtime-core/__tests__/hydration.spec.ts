@@ -3484,6 +3484,15 @@ describe('SSR hydration', () => {
       expect(`Hydration node mismatch`).toHaveBeenWarned()
     })
 
+    test('static mismatch', () => {
+      const { container } = mountWithHydration(
+        `<div><!----><span>bar</span></div>`,
+        () => h('div', [createStaticVNode(`<p>foo</p>`, 1), h('span', 'bar')]),
+      )
+      expect(container.innerHTML).toBe('<div><p>foo</p><span>bar</span></div>')
+      expect(`Hydration node mismatch`).toHaveBeenWarnedTimes(1)
+    })
+
     test('class mismatch', () => {
       mountWithHydration(`<div class="foo bar"></div>`, () =>
         h('div', { class: ['foo', 'bar'] }),
