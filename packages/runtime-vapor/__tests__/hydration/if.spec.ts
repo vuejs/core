@@ -1,5 +1,6 @@
 import { nextTick, reactive, ref } from '@vue/runtime-dom'
 import { formatHtml, setupHydrationTest, testHydration } from './_helpers'
+import { ifChain } from '../_utils'
 
 setupHydrationTest()
 
@@ -296,6 +297,159 @@ describe('Vapor Mode hydration', () => {
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
         `"<span><span>foo1</span><!--if--><span>bar</span><!--if--><span>baz</span><span>qux1</span><!--if--><span>quux</span></span><!--if-->"`,
       )
+    })
+
+    // a chain past the compiler's threshold: one fragment, a multi-root
+    // branch, and no v-else so the chain can land on nothing
+    const longChain = ifChain(
+      (i, dir) =>
+        i === 7
+          ? `<template ${dir}><b>${i}</b><i>${i}</i></template>`
+          : `<div ${dir}>${i}</div>`,
+      { withElse: false, cond: i => `data === 'a${i}'` },
+    )
+
+    test('long v-else-if chain - switch branches', async () => {
+      const data = ref('a0')
+      const { container } = await testHydration(
+        `<template>
+          ${longChain}
+          <span>after</span>
+        </template>`,
+        undefined,
+        data,
+      )
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
+        "
+        <!--[--><div>0</div><!--if--><span>after</span><!--]-->
+        "
+      `)
+
+      data.value = 'a7'
+      await nextTick()
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
+        "
+        <!--[--><b>7</b><i>7</i><!--if--><span>after</span><!--]-->
+        "
+      `)
+
+      data.value = 'none'
+      await nextTick()
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
+        "
+        <!--[--><!--if--><span>after</span><!--]-->
+        "
+      `)
+
+      data.value = 'a11'
+      await nextTick()
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
+        "
+        <!--[--><div>11</div><!--if--><span>after</span><!--]-->
+        "
+      `)
+    })
+
+    test('long v-else-if chain - hydrate a multi-root branch', async () => {
+      const data = ref('a7')
+      const { container } = await testHydration(
+        `<template>
+          ${longChain}
+          <span>after</span>
+        </template>`,
+        undefined,
+        data,
+      )
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
+        "
+        <!--[-->
+        <!--[--><b>7</b><i>7</i><!--]-->
+        <span>after</span><!--]-->
+        "
+      `)
+
+      data.value = 'a0'
+      await nextTick()
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
+        "
+        <!--[-->
+        <!--[--><div>0</div><!--]-->
+        <span>after</span><!--]-->
+        "
+      `)
+    })
+
+    test('long v-else-if chain - hydrate with every branch false', async () => {
+      const data = ref('none')
+      const { container } = await testHydration(
+        `<template>
+          ${longChain}
+          <span>after</span>
+        </template>`,
+        undefined,
+        data,
+      )
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
+        "
+        <!--[--><!----><span>after</span><!--]-->
+        "
+      `)
+
+      data.value = 'a11'
+      await nextTick()
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
+        "
+        <!--[--><div>11</div><!----><span>after</span><!--]-->
+        "
+      `)
+    })
+
+    test('long v-else-if chain inside template v-for', async () => {
+      const data = ref('none')
+      const { container } = await testHydration(
+        `<template>
+          <template v-for="n in 2">${longChain}</template>
+          <span>after</span>
+        </template>`,
+        undefined,
+        data,
+      )
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
+        "
+        <!--[-->
+        <!--[-->
+        <!--[--><!----><!--]-->
+        <!--[--><!----><!--]-->
+        <!--]-->
+        <span>after</span><!--]-->
+        "
+      `)
+
+      data.value = 'a7'
+      await nextTick()
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
+        "
+        <!--[-->
+        <!--[-->
+        <!--[--><b>7</b><i>7</i><!----><!--]-->
+        <!--[--><b>7</b><i>7</i><!----><!--]-->
+        <!--]-->
+        <span>after</span><!--]-->
+        "
+      `)
+
+      data.value = 'a0'
+      await nextTick()
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
+        "
+        <!--[-->
+        <!--[-->
+        <!--[--><div>0</div><!----><!--]-->
+        <!--[--><div>0</div><!----><!--]-->
+        <!--]-->
+        <span>after</span><!--]-->
+        "
+      `)
     })
 
     test('v-if/else-if/else chain on component - switch branches', async () => {

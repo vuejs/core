@@ -1,21 +1,29 @@
 import type { CodegenContext } from '../generate'
-import { IRNodeTypes, type IfIRNode } from '../ir'
+import { type BlockIRNode, IRNodeTypes, type IfIRNode } from '../ir'
 import { VaporBlockShape, VaporIfFlags } from '@vue/shared'
 import { genBlock } from './block'
 import { genExpression } from './expression'
 import {
   type CodeFragment,
+  DELIMITERS_ARRAY,
+  INDENT_END,
+  INDENT_START,
   NEWLINE,
   buildCodeFragment,
   genCall,
   genFlags,
+  genMulti,
 } from './utils'
+import { isLongIfChain } from '../utils'
 
 export function genIf(
   oper: IfIRNode,
   context: CodegenContext,
   isNested = false,
 ): CodeFragment[] {
+  if (!isNested && isLongIfChain(oper)) {
+    return genIfChain(oper, context)
+  }
   const { helper } = context
   const { condition, positive, negative, once, slotRoot, index, blockShape } =
     oper
@@ -131,4 +139,96 @@ function genBlockShapeName(flags: number): string {
       return 'MULTI_ROOT'
   }
   return 'UNKNOWN'
+}
+
+// `() => (a) ? 0 : (b) ? 1 : 2` selects the branch, `blocks.length` past the
+// last one; branch flags describe every branch plus that empty state.
+function genIfChain(oper: IfIRNode, context: CodegenContext): CodeFragment[] {
+  const { helper } = context
+  const [frag, push] = buildCodeFragment()
+  const selector: CodeFragment[] = ['() => ', INDENT_START]
+  const blocks: CodeFragment[][] = []
+  const branchFlags: number[] = []
+  let slotRoot = false
+  let node = oper
+  for (let i = 0; ; i++) {
+    if (i > 0) selector.push(NEWLINE, ': ')
+    selector.push('(', ...genExpression(node.condition, context), `) ? ${i}`)
+    blocks.push(genBlock(node.positive, context))
+    branchFlags.push(node.blockShape & (0b11 | VaporIfFlags.TRUE_NO_SCOPE))
+    if (node.slotRoot) slotRoot = true
+    const { negative } = node
+    if (negative && negative.type === IRNodeTypes.IF) {
+      node = negative
+      continue
+    }
+    selector.push(NEWLINE, `: ${i + 1}`, INDENT_END)
+    if (negative) blocks.push(genBlock(negative as BlockIRNode, context))
+    // the `v-else` branch, or the empty state the selector lands on without one
+    branchFlags.push(
+      ((node.blockShape >> 2) & 0b11) |
+        (node.blockShape & VaporIfFlags.FALSE_NO_SCOPE
+          ? VaporIfFlags.TRUE_NO_SCOPE
+          : 0),
+    )
+    break
+  }
+
+  push(
+    NEWLINE,
+    `const n${oper.id} = `,
+    ...genCall(
+      helper('createIfChain'),
+      selector,
+      genMulti(DELIMITERS_ARRAY, ...blocks),
+      genIfChainBranchFlags(branchFlags, blocks.length),
+      genIfChainFlags(oper.once, slotRoot, oper.index!),
+    ),
+  )
+  return frag
+}
+
+function genIfChainBranchFlags(
+  branchFlags: number[],
+  blockCount: number,
+): CodeFragment[] | false {
+  // the runtime default: scoped single roots, and an empty state
+  if (
+    branchFlags.every(
+      (flags, i) =>
+        flags ===
+        (i < blockCount ? VaporBlockShape.SINGLE_ROOT : VaporBlockShape.EMPTY),
+    )
+  ) {
+    return false
+  }
+  return genMulti(
+    DELIMITERS_ARRAY,
+    ...branchFlags.map(flags => {
+      const names = [genBlockShapeName(flags)]
+      if (flags & VaporIfFlags.TRUE_NO_SCOPE) names.push('NO_SCOPE')
+      return genFlags(flags, names)
+    }),
+  )
+}
+
+function genIfChainFlags(
+  once: boolean | undefined,
+  slotRoot: boolean,
+  index: number,
+): string {
+  let flags = 0
+  const names: string[] = []
+  if (once) {
+    flags |= VaporIfFlags.ONCE
+    names.push('ONCE')
+  } else {
+    flags |= (index + 1) << VaporIfFlags.INDEX_SHIFT
+    names.push(`KEYED_INDEX_${index}`)
+  }
+  if (slotRoot) {
+    flags |= VaporIfFlags.SLOT_ROOT
+    names.push('SLOT_ROOT')
+  }
+  return genFlags(flags, names)
 }

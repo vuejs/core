@@ -64,7 +64,7 @@ export function processIf(
 
     return () => {
       onExit()
-      context.dynamic.operation = {
+      const operation: IfIRNode = {
         type: IRNodeTypes.IF,
         id,
         ...context.effectBoundary(),
@@ -81,6 +81,8 @@ export function processIf(
           context.inVOnce ||
           isStaticExpression(dir.exp!, context.options.bindingMetadata),
       }
+      context.dynamic.operation = operation
+      context.root.ifHeads.set(operation, context.inVOnce)
     }
   } else {
     // check the adjacent v-if

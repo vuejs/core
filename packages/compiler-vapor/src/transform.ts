@@ -24,6 +24,7 @@ import {
   type IRDynamicInfo,
   IRNodeTypes,
   type IRSlots,
+  type IfIRNode,
   type OperationNode,
   type RootIRNode,
   type SetEventIRNode,
@@ -32,9 +33,11 @@ import {
   isBlockOperation,
 } from './ir'
 import {
+  getIfChainLength,
   isConstantBinding,
   isConstantExpression,
   isKeepAliveTag,
+  isLongIfChain,
   isTransitionNode,
 } from './utils'
 import { newBlock, newDynamic } from './transforms/utils'
@@ -133,6 +136,9 @@ export class TransformContext<T extends AllNode = AllNode> {
   private globalId = 0
   private nextIdMap: Map<number, number> | null = null
   private ifIndex = 0
+  // every `v-if` head with whether it sits in `v-once`; chains that grow past
+  // IF_CHAIN_THRESHOLD get their key range reserved once the tree is done
+  ifHeads: Map<IfIRNode, boolean> = new Map()
 
   constructor(
     public ir: RootIRNode,
@@ -215,8 +221,10 @@ export class TransformContext<T extends AllNode = AllNode> {
     return (this.dynamic.id = this.increaseId())
   }
 
-  nextIfIndex(): number {
-    return this.ifIndex++
+  nextIfIndex(count = 1): number {
+    const index = this.ifIndex
+    this.ifIndex += count
+    return index
   }
 
   private getTemplateNamespace(): number {
@@ -532,10 +540,29 @@ export function transform(
   const context = new TransformContext(ir, node, options)
 
   transformNode(context)
+  finalizeIfChains(context)
 
   ir.node.imports = context.imports
 
   return ir
+}
+
+// A long chain renders as one keyed fragment: its selection is frozen only by
+// `v-once` on the head, and its branch keys are consecutive, so the range is
+// reserved after every `v-else-if` has joined (indexes handed out in between
+// to nested `v-if`s are left as gaps).
+function finalizeIfChains(context: TransformContext<RootNode>): void {
+  context.ifHeads.forEach((inVOnce, head) => {
+    if (!isLongIfChain(head)) return
+    head.once = inVOnce
+    if (!inVOnce) {
+      // one index covers two keys; the chain keys every branch plus the empty
+      // state past the last one
+      head.index = context.nextIfIndex(
+        Math.ceil((getIfChainLength(head) + 1) / 2),
+      )
+    }
+  })
 }
 
 export function transformNode(

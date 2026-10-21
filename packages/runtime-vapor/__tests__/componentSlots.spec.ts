@@ -47,7 +47,13 @@ import {
   extend,
   isString,
 } from '@vue/shared'
-import { compile, makeRender, renderParity, stripAnchors } from './_utils'
+import {
+  compile,
+  ifChain,
+  makeRender,
+  renderParity,
+  stripAnchors,
+} from './_utils'
 import type { DynamicSlot } from '../src/componentSlots'
 import { setElementText, setText } from '../src/dom/prop'
 import {
@@ -10709,4 +10715,47 @@ describe('a fallback already leaving on its own', () => {
       }
     },
   )
+})
+
+describe('long v-else-if chain as slot content', () => {
+  // the text after every step, vapor against vdom
+  async function parity(content: string, ks: number[]) {
+    const out = {} as Record<string, string[]>
+    await renderParity(
+      {
+        Card: `<template><div><slot><p>fb</p></slot></div></template>`,
+        App: `<template><components.Card>${content}</components.Card></template>`,
+      },
+      () => ref({ k: -1 }),
+      async (data, root, mode) => {
+        const log = (out[mode] = [root.textContent!])
+        for (const k of ks) {
+          data.value.k = k
+          await nextTick()
+          log.push(root.textContent!)
+        }
+      },
+    )
+    expect(out.vapor).toEqual(out.vdom)
+    return out.vapor
+  }
+
+  test('falls back while every branch is false', async () => {
+    const out = await parity(
+      ifChain((i, dir) => `<i ${dir}>${i}</i>`, { withElse: false }),
+      [11, -1, 0, 5, -1],
+    )
+    expect(out).toEqual(['fb', '11', 'fb', '0', '5', 'fb'])
+  })
+
+  test('falls back past a static false head', async () => {
+    const out = await parity(
+      ifChain((i, dir) => `<i ${dir}>${i}</i>`, {
+        withElse: false,
+        cond: i => (i === 0 ? 'false' : `data.k === ${i}`),
+      }),
+      [11, -1, 1],
+    )
+    expect(out).toEqual(['fb', '11', 'fb', '1'])
+  })
 })
