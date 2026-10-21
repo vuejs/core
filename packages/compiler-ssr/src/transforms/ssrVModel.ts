@@ -6,12 +6,16 @@ import {
   NodeTypes,
   type PlainElementNode,
   type TemplateChildNode,
+  type TemplateLiteral,
+  type TextNode,
   createCallExpression,
   createConditionalExpression,
   createDOMCompilerError,
   createInterpolation,
   createObjectProperty,
   createSimpleExpression,
+  createTemplateLiteral,
+  findDir,
   findProp,
   hasDynamicKeyVBind,
   transformModel,
@@ -54,7 +58,7 @@ export const ssrTransformModel: DirectiveTransform = (dir, node, context) => {
   function processOption(plainNode: PlainElementNode) {
     if (plainNode.tag === 'option') {
       if (plainNode.props.findIndex(p => p.name === 'selected') === -1) {
-        const value = findValueBinding(plainNode)
+        const value = findOptionValue(plainNode)
         plainNode.ssrCodegenNode!.elements.push(
           createConditionalExpression(
             createCallExpression(context.helper(SSR_INCLUDE_BOOLEAN_ATTR), [
@@ -190,6 +194,59 @@ export const ssrTransformModel: DirectiveTransform = (dir, node, context) => {
   }
 }
 
+function findOptionValue(
+  node: PlainElementNode,
+): ExpressionNode | TemplateLiteral {
+  const valueBinding = findProp(node, 'value')
+  if (valueBinding) {
+    return valueBinding.type === NodeTypes.DIRECTIVE
+      ? valueBinding.exp!
+      : createSimpleExpression(valueBinding.value!.content, true)
+  }
+
+  const textDir = findDir(node, 'text')
+  if (textDir) {
+    return textDir.exp!
+  }
+
+  if (
+    node.children.every(
+      x =>
+        x.type === NodeTypes.TEXT ||
+        x.type === NodeTypes.COMMENT ||
+        x.type === NodeTypes.INTERPOLATION,
+    )
+  ) {
+    const relevantNodes = collapseTextBetweenComments(node.children).filter(
+      x => x.type !== NodeTypes.COMMENT,
+    )
+    if (relevantNodes.length) {
+      const expressions = relevantNodes.map((x, i) => {
+        if (x.type === NodeTypes.TEXT) {
+          let content = x.content
+          if (i === 0) {
+            content = content.trimStart()
+          }
+          if (i === relevantNodes.length - 1) {
+            content = content.trimEnd()
+          }
+          return createSimpleExpression(content, true)
+        } else {
+          return x.content
+        }
+      })
+
+      if (expressions.length === 1) {
+        return expressions[0]
+      } else {
+        return createTemplateLiteral(expressions)
+      }
+    }
+  }
+
+  return createSimpleExpression(``, true)
+}
+
 function findValueBinding(node: PlainElementNode): ExpressionNode {
   const valueBinding = findProp(node, 'value')
   return valueBinding
@@ -197,4 +254,42 @@ function findValueBinding(node: PlainElementNode): ExpressionNode {
       ? valueBinding.exp!
       : createSimpleExpression(valueBinding.value!.content, true)
     : createSimpleExpression(`null`, false)
+}
+
+function collapseTextBetweenComments<T extends TemplateChildNode>(
+  children: T[],
+) {
+  const result: (T | TextNode)[] = []
+  let prevTextNode: TextNode | undefined
+  for (let i = 0; i < children.length; i++) {
+    const child = children[i]
+    if (child.type === NodeTypes.TEXT) {
+      if (prevTextNode) {
+        const prevContent = prevTextNode.content
+        let thisContent = child.content
+        if (prevContent.endsWith(' ') && thisContent.startsWith(' ')) {
+          thisContent = thisContent.slice(1)
+        }
+        const combined: TextNode = {
+          ...prevTextNode,
+          content: prevContent + thisContent,
+        }
+        prevTextNode = combined
+      } else {
+        prevTextNode = child
+      }
+    } else if (child.type === NodeTypes.COMMENT) {
+      continue
+    } else {
+      if (prevTextNode) {
+        result.push(prevTextNode)
+        prevTextNode = undefined
+      }
+      result.push(child)
+    }
+  }
+  if (prevTextNode) {
+    result.push(prevTextNode)
+  }
+  return result
 }
