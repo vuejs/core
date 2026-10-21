@@ -6,7 +6,7 @@ import {
   logMismatchError,
   warn,
 } from '@vue/runtime-dom'
-import type { Namespace } from '@vue/shared'
+import { type Namespace, Namespaces } from '@vue/shared'
 import {
   insertionAnchor,
   insertionIndex,
@@ -17,6 +17,8 @@ import {
 import {
   _child,
   _next,
+  createComment,
+  createElement,
   createTextNode,
   locateChildByLogicalIndex,
   parentNode,
@@ -200,6 +202,10 @@ export interface AdoptTarget {
   tagUpper: string | null
   /** whitespace-only text template (empty slot text handling) */
   blank: boolean
+  /** the tag as written of a bare `<tag/>` (createPlainElement,
+   * TransitionGroup): on a mismatch it is created directly, not parsed under
+   * a namespace wrapper; null otherwise */
+  bare: string | null
 }
 
 export let adoptTemplate: (
@@ -398,7 +404,7 @@ function adoptTemplateImpl(
   }
 
   if (!matchesAdoptTarget(node, target)) {
-    node = handleMismatch(node, template, adoptChildren, ns)
+    node = handleMismatch(node, template, adoptChildren, ns, target)
   }
 
   advanceHydrationNode(node)
@@ -434,10 +440,18 @@ function locateHydrationNodeImpl(claim?: FragmentClaim, isBlankText?: boolean) {
     // appends and withHydration entry). Locating through the logical walk
     // also stamps $llc/$lli so mismatch recovery keeps the cache coherent.
     node = locateChildByLogicalIndex(insertionParent, insertionIndex || 0)
-    if (!node && isBlankText) {
-      // SSR omits an empty text node, so the walk finds nothing at its
-      // append position. Seed it there and cache it like a located node.
-      node = resolveBlankTextTarget(null, insertionParent)
+    if (!node) {
+      if (isBlankText) {
+        // SSR omits an empty text node, so the walk finds nothing at its
+        // append position. Seed it there and cache it like a located node.
+        node = resolveBlankTextTarget(null, insertionParent)
+      } else {
+        // The server rendered nothing at this position: the html parser
+        // moved the node elsewhere (a `<div>` out of `<svg>`), or the parent
+        // was itself recreated by mismatch recovery. Seed an empty comment,
+        // which adoptTemplate() replaces like an empty SSR branch.
+        node = insertionParent.appendChild(createComment(''))
+      }
       setLastLocatedLogicalChild(insertionParent, node, insertionIndex || 0)
     }
   } else {
@@ -516,9 +530,15 @@ function handleMismatch(
   node: Node,
   template: string,
   adoptChildren: boolean,
-  ns?: Namespace,
+  ns: Namespace | undefined,
+  target: AdoptTarget,
 ): Node {
-  warnHydrationNodeMismatch(node, template)
+  const container = parentNode(node)!
+  // everything under a recreated node is missing by construction; the
+  // mismatch was reported once for that node
+  if (!isRecreatedNode(container)) {
+    warnHydrationNodeMismatch(node, template)
+  }
 
   // fragment
   if (isRangeStart(node)) {
@@ -529,7 +549,6 @@ function handleMismatch(
   // content. Mismatch recovery inserts the new node before the anchor and
   // keeps the anchor in place.
   const shouldPreserveAnchor = isClaimedAnchor(node)
-  const container = parentNode(node)!
   const next = shouldPreserveAnchor ? node : _next(node)
   if (!shouldPreserveAnchor) {
     remove(node, container)
@@ -545,8 +564,20 @@ function handleMismatch(
     return newNode
   }
 
-  // element node
-  const newNode = parseTemplate(template, ns).cloneNode(true) as Element
+  // element node. A bare element is created directly: parsed under its
+  // namespace wrapper, an html element would break out of the foreign content
+  // again. A foreign root takes its namespace, as the parser would give it.
+  const { bare } = target
+  const newNode = bare
+    ? createElement(
+        bare,
+        bare === 'svg'
+          ? Namespaces.SVG
+          : bare === 'math'
+            ? Namespaces.MATH_ML
+            : ns,
+      )
+    : (parseTemplate(template, ns).cloneNode(true) as Element)
   markRecreatedNode(newNode)
   if (newNode.nodeType === 1) {
     // Mark template-born descendants before adopting server children below,
@@ -580,6 +611,7 @@ function parseAdoptTargetImpl(template: string): AdoptTarget {
   let tag: string | null = null
   let tagUpper: string | null = null
   let blank = false
+  let bare: string | null = null
   if (template[0] !== '<') {
     type = 3 // Text
     blank = template.trim() === ''
@@ -591,9 +623,10 @@ function parseAdoptTargetImpl(template: string): AdoptTarget {
     if (match) {
       tag = match[1].toLowerCase()
       tagUpper = match[1].toUpperCase()
+      if (template === `<${match[1]}/>`) bare = match[1]
     }
   }
-  return { type, tag, tagUpper, blank }
+  return { type, tag, tagUpper, blank, bare }
 }
 
 /**

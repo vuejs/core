@@ -2054,11 +2054,12 @@ describe('compiler: element transform', () => {
     })
 
     test('not applied outside the html namespace', () => {
+      // an svg `<pre>` is created in the svg namespace, with its text inserted
       const { ir } = compileWithElementTransform(
         `<svg><pre>\n\nline</pre></svg>`,
       )
 
-      expect([...ir.template.keys()]).toContain('<pre> line')
+      expect([...ir.template.keys()]).toContain(' line')
     })
   })
 

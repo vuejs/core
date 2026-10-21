@@ -591,3 +591,46 @@ test('special element under a parent whose end tag cannot close it', () => {
     '<main><legend><span><div>x</div></span></legend><p>y</p></main>',
   )
 })
+
+test('html breakout element in foreign content', () => {
+  // the parser moves an html element out of an `<svg>`/`<math>` subtree; vdom
+  // creates it in the foreign namespace instead, and so does the runtime when
+  // the element is created like a custom element
+  checkAbbr(
+    '<svg><g><div>x</div></g></svg>',
+    ['x', '<svg><g>'],
+    ['x', '<svg><g></g></svg>'],
+  )
+  checkAbbr(
+    '<math><mrow><div>x</div></mrow></math>',
+    ['x', '<math><mrow>'],
+    ['x', '<math><mrow></mrow></math>'],
+  )
+  // an html integration point takes html children as written
+  checkAbbr(
+    '<svg><foreignObject><div>x</div></foreignObject></svg>',
+    '<svg><foreignObject><div>x',
+    '<svg><foreignObject><div>x</div></foreignObject></svg>',
+  )
+})
+
+test('text in a table part', () => {
+  // the parser foster-parents text other than whitespace out of a table part,
+  // so such text is created (an empty template) and inserted imperatively
+  checkAbbr(
+    '<table><tbody>foo<tr><td>x</td></tr></tbody></table>',
+    ['', '<table><tbody><!><tr><td>x'],
+    ['', '<table><tbody><!----><tr><td>x</td></tr></tbody></table>'],
+  )
+  checkAbbr(
+    '<table><tbody><tr><td>x</td></tr>tail</tbody></table>',
+    ['', '<table><tbody><tr><td>x</tr>'],
+    ['', '<table><tbody><tr><td>x</td></tr></tbody></table>'],
+  )
+  // whitespace stays where it is
+  checkAbbr(
+    '<table><tbody><tr><td>x</td></tr> <tr><td>y</td></tr></tbody></table>',
+    '<table><tbody><tr><td>x</tr> <tr><td>y',
+    '<table><tbody><tr><td>x</td></tr> <tr><td>y</td></tr></tbody></table>',
+  )
+})

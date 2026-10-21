@@ -51,6 +51,7 @@ import type {
 } from '../transform'
 import {
   OpenScope,
+  isForeignBreakoutTag,
   isSpecialTag,
   popsOpenDescendants,
 } from '../htmlNesting'
@@ -394,7 +395,8 @@ function transformComponentElement(
     : undefined
 
   let { tag } = node
-  let asset = true
+  // a createElement-backed element resolves no component asset
+  let asset = !useCreateElement
   let slotScopeNamespace: string | undefined
 
   if (!dynamicComponent && !useCreateElement) {
@@ -1813,6 +1815,10 @@ export function shouldUseCreateElement(
 ): boolean {
   return (
     context.options.isCustomElement(node.tag) ||
-    (node.tagType === ElementTypes.ELEMENT && node.tag === 'template')
+    (node.tagType === ElementTypes.ELEMENT &&
+      (node.tag === 'template' ||
+        // an html element the parser would move out of foreign content is
+        // created in the foreign namespace it was written in, like vdom does
+        (node.ns !== Namespaces.HTML && isForeignBreakoutTag(node.tag))))
   )
 }

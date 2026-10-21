@@ -1333,6 +1333,26 @@ describe('Vapor Mode hydration', () => {
   )
 })
 
+describe('nodes the html parser moved out of place', () => {
+  // The server markup is parsed by the browser, which moves an html element
+  // out of `<svg>`: the client finds nothing at its position, recreates it
+  // there as a mismatch, and renders its content on the client.
+  test('breakout element in foreign content', async () => {
+    const { data, container } = await testHydration(
+      `<template><div><svg><g><div>{{ data }}</div></g></svg></div></template>`,
+    )
+    // once for the element; its content is missing by construction
+    expect(`Hydration node mismatch`).toHaveBeenWarnedTimes(1)
+    const div = container.querySelector('g > div')!
+    expect(div.namespaceURI).toBe('http://www.w3.org/2000/svg')
+    expect(div.textContent).toBe('foo')
+
+    data.value = 'bar'
+    await nextTick()
+    expect(div.textContent).toBe('bar')
+  })
+})
+
 describe('mismatch recovery of elements the parser cannot place', () => {
   // The browser drops a `<td>` the server rendered inside a custom element,
   // so the template string of the cell must not take the static path, which
@@ -1346,5 +1366,37 @@ describe('mismatch recovery of elements the parser cannot place', () => {
     )
     expect(`Hydration node mismatch`).toHaveBeenWarned()
     expect(container.innerHTML).toBe('<my-el><td>foo</td></my-el>')
+  })
+
+  // a recreated bare element keeps the spelling of its case-sensitive tag
+  test('a case-sensitive svg element recreated on a mismatch', async () => {
+    const { container } = await mountWithHydration(
+      '<svg><rect></rect></svg>',
+      `<svg><component :is="'linearGradient'"/></svg>`,
+    )
+    expect(`Hydration node mismatch`).toHaveBeenWarned()
+    const el = container.querySelector('svg')!.firstElementChild!
+    expect(el.tagName).toBe('linearGradient')
+    expect(el.namespaceURI).toBe('http://www.w3.org/2000/svg')
+  })
+})
+
+describe('bare element recreated on a mismatch', () => {
+  // the wrapper the server rendered differs from the client's tag; a
+  // recreated `<svg>`/`<math>` root takes its namespace like a parsed one
+  test.each([
+    ['svg', 'http://www.w3.org/2000/svg'],
+    ['math', 'http://www.w3.org/1998/Math/MathML'],
+  ])('a TransitionGroup %s wrapper keeps its namespace', async (tag, ns) => {
+    const { container } = await testHydration(
+      `<template><TransitionGroup :tag="data" :css="false"/></template>`,
+      {},
+      ref(tag),
+      { serverData: ref('div') },
+    )
+    expect(`Hydration node mismatch`).toHaveBeenWarned()
+    const el = container.firstElementChild!
+    expect(el.tagName).toBe(tag)
+    expect(el.namespaceURI).toBe(ns)
   })
 })

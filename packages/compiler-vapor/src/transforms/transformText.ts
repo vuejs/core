@@ -8,11 +8,13 @@ import {
   type TemplateChildNode,
   type TextNode,
   createSimpleExpression,
+  isAllWhitespace,
 } from '@vue/compiler-dom'
 import type { NodeTransform, TransformContext } from '../transform'
 import { DynamicFlag, IRNodeTypes } from '../ir'
 import { getLiteralExpressionValue } from '../utils'
-import { escapeHtml } from '@vue/shared'
+import { Namespaces, escapeHtml } from '@vue/shared'
+import { isFosterParentingTag } from '../htmlNesting'
 import { shouldUseCreateElement } from './transformElement'
 import { getSiblingIf } from './transformComment'
 
@@ -122,11 +124,7 @@ export const transformText: NodeTransform = (node, context) => {
     // itself into the dom - `&` showing up as `&amp;`.
     const isRawText = createElementParent || isRootText
 
-    // Unescaped text becomes a template of its own, and the runtime only turns
-    // such a template into a text node when it does not start with "<" (see
-    // `template()` in runtime-vapor). Text that does start with "<" has to be
-    // materialized imperatively, or it would be parsed as html instead.
-    if (isRawText && node.content[0] === '<') {
+    if (needsTextNode(parent, node.content, isRawText)) {
       materializeLiteralTextNode(
         createSimpleExpression(node.content, true, node.loc),
         context as TransformContext<TextNode>,
@@ -167,7 +165,7 @@ function processInterpolation(context: TransformContext<InterpolationNode>) {
           parentNode,
           context.parent as TransformContext<ElementNode>,
         ))
-    if (isRawText && text[0] === '<') {
+    if (needsTextNode(parentNode, text, isRawText)) {
       materializeLiteralTextNode(
         createSimpleExpression(text, true, context.node.loc),
         context,
@@ -271,6 +269,28 @@ function processCreateElementTextContainer(
   // createElement-backed parents must materialize text nodes imperatively so
   // text that starts with "<" remains text instead of being parsed as HTML.
   registerSyntheticTextChild(context, '', values)
+}
+
+/**
+ * Text that cannot be written into a template string and is created
+ * imperatively instead: unescaped text starting with "<" (the runtime only
+ * turns a template into a text node when it does not start with "<", see
+ * `template()` in runtime-vapor), and text other than ascii whitespace in a
+ * table part, which the parser would move in front of the table.
+ */
+function needsTextNode(
+  parent: RootNode | ElementNode | undefined,
+  text: string,
+  isRawText: boolean,
+): boolean {
+  return (
+    (isRawText && text[0] === '<') ||
+    (!!parent &&
+      parent.type === NodeTypes.ELEMENT &&
+      parent.ns === Namespaces.HTML &&
+      isFosterParentingTag(parent.tag) &&
+      !isAllWhitespace(text))
+  )
 }
 
 function materializeLiteralTextNode(
