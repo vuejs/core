@@ -3,6 +3,7 @@ import type { Block, BlockFn } from './block'
 import type { VaporTransitionHooks } from './block'
 import type { FunctionalVaporComponent, VaporComponent } from './component'
 import type { DynamicFragment, VaporFragment } from './fragment'
+import type { SlotResolutionState } from './slotFragment'
 
 // Transition hooks registry for tree-shaking
 // These are registered by Transition component when it's used
@@ -36,6 +37,14 @@ type RemoveBranchWithLeaveFn = (
   noScope: boolean,
   branchKey: any,
 ) => boolean
+// A slot fallback committed under out-in: `cb` follows the leave a root of
+// the content is still running on its own (to nothing), if any, when the
+// fallback has a child to animate for it
+type AwaitLeavingRootFn = (
+  fallback: Block,
+  state: SlotResolutionState,
+  cb: () => void,
+) => boolean
 type ResolveOutletLeaveFn = (
   outlet: VaporFragment | undefined,
   block: Block,
@@ -44,10 +53,7 @@ type ResolveOutletLeaveFn = (
 
 export let applyTransitionHooks: ApplyTransitionHooksFn
 export let applyTransitionLeaveHooks: ApplyTransitionLeaveHooksFn
-// `cb` follows the leave a root of the block is still running on its own
-// (out-in, to nothing), if any; whether the block has a child to animate
-export let awaitLeavingRoot: (block: Block, cb: () => void) => boolean
-export let hasTransitionChild: (block: Block) => boolean
+export let awaitLeavingRoot: AwaitLeavingRootFn
 // Branch-switch scheduling for DynamicFragment.update(): defer the incoming
 // branch while a leave is in progress, and apply leave hooks (plus the
 // deferred re-render for out-in) when tearing down the outgoing branch.
@@ -72,8 +78,7 @@ export function registerTransitionHooks(
   deferBranchUpdate: DeferBranchUpdateDuringLeaveFn,
   removeBranch: RemoveBranchWithLeaveFn,
   ownsMode: (hooks: TransitionHooks, frag?: VaporFragment) => boolean,
-  awaitLeaving: (block: Block, cb: () => void) => boolean,
-  transitionChild: (block: Block) => boolean,
+  awaitLeaving: AwaitLeavingRootFn,
   resolveLeave: ResolveOutletLeaveFn,
 ): void {
   isTransitionEnabled = true
@@ -83,7 +88,6 @@ export function registerTransitionHooks(
   deferBranchUpdateDuringLeave = deferBranchUpdate
   removeBranchWithLeave = removeBranch
   awaitLeavingRoot = awaitLeaving
-  hasTransitionChild = transitionChild
   resolveOutletLeave = resolveLeave
 }
 

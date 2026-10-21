@@ -110,7 +110,6 @@ import {
   type BlockFn,
   EMPTY_BLOCK,
   type VaporTransitionHooks,
-  dropRenderedHooks,
   insert,
   isValidBlock,
   isValidSlot,
@@ -981,7 +980,7 @@ const vaporInteropImpl = {
     ensureTransitionHooksRegistered()
     const root = relayTransitionHooks((component as any).block, hooks)
     // a handoff the vdom Transition installs supersedes what it rendered with
-    if (root) dropRenderedHooks(root)
+    if (root) root.$rendered = undefined
   },
 
   getTransitionElement: getInteropTransitionElement,

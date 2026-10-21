@@ -9,8 +9,8 @@ import {
   template,
 } from '../../src'
 import { defineComponent, h, nextTick, ref } from '@vue/runtime-dom'
-import { getTransitionKey } from '../../src/components/Transition'
 import { compile, makeInteropRender, makeRender } from '../_utils'
+import type { TransitionBlock } from '../../src/block'
 
 const define = makeRender()
 const defineInterop = makeInteropRender()
@@ -35,7 +35,7 @@ describe('TransitionGroup', () => {
       },
     }).render()
 
-    expect(getTransitionKey(child.block)).toBe('foo')
+    expect((child.block as TransitionBlock).$tkey).toBe('foo')
     // the resolved key never touches the block's own key
     expect(child.block.$key).toBeUndefined()
     expect(child.block.$transition).toBeDefined()
@@ -56,7 +56,7 @@ describe('TransitionGroup', () => {
       },
     }).render()
 
-    expect(getTransitionKey(frag.nodes)).toBe('foo')
+    expect((frag.nodes as TransitionBlock).$tkey).toBe('foo')
     expect(frag.nodes.$transition).toBeDefined()
   })
 
@@ -81,8 +81,8 @@ describe('TransitionGroup', () => {
       },
     }).render()
 
-    expect(getTransitionKey(child.block[0])).toBe('foo0')
-    expect(getTransitionKey(child.block[1])).toBe('foo1')
+    expect((child.block[0] as TransitionBlock).$tkey).toBe('foo0')
+    expect((child.block[1] as TransitionBlock).$tkey).toBe('foo1')
     expect(child.block[0].$transition).toBeDefined()
     expect(child.block[1].$transition).toBeDefined()
   })
@@ -109,8 +109,8 @@ describe('TransitionGroup', () => {
       },
     }).render()
 
-    expect(getTransitionKey(child.block[0])).toBe('fooa')
-    expect(getTransitionKey(child.block[1])).toBe('foob')
+    expect((child.block[0] as TransitionBlock).$tkey).toBe('fooa')
+    expect((child.block[1] as TransitionBlock).$tkey).toBe('foob')
     expect(child.block[0].$transition).toBeDefined()
     expect(child.block[1].$transition).toBeDefined()
   })
@@ -147,7 +147,7 @@ describe('TransitionGroup', () => {
     await nextTick()
     await nextTick()
 
-    expect(getTransitionKey(child.block.nodes.block)).toBe('foo')
+    expect((child.block.nodes.block as TransitionBlock).$tkey).toBe('foo')
     expect(child.block.nodes.block.$transition).toBeDefined()
   })
 
@@ -171,7 +171,7 @@ describe('TransitionGroup', () => {
     items.value = [1, 2]
     await nextTick()
 
-    expect(getTransitionKey(list.nodes[0][1].nodes)).toBe(2)
+    expect((list.nodes[0][1].nodes as TransitionBlock).$tkey).toBe(2)
     expect(list.nodes[0][1].nodes.$transition).toBeDefined()
   })
 
@@ -194,8 +194,8 @@ describe('TransitionGroup', () => {
 
     const nodes = list.nodes[0][0].nodes
 
-    expect(getTransitionKey(nodes[0])).toBe('1:0')
-    expect(getTransitionKey(nodes[1])).toBe('1:1')
+    expect((nodes[0] as TransitionBlock).$tkey).toBe('1:0')
+    expect((nodes[1] as TransitionBlock).$tkey).toBe('1:1')
     expect(nodes[0].$transition).toBeDefined()
     expect(nodes[1].$transition).toBeDefined()
   })
@@ -296,7 +296,10 @@ describe('TransitionGroup', () => {
     await nextTick()
     expect(onBeforeEnter).toHaveBeenCalledTimes(2)
     const rowKeys = () =>
-      Array.from(host.querySelectorAll('li'), li => getTransitionKey(li))
+      Array.from(
+        host.querySelectorAll('li'),
+        li => (li as TransitionBlock).$tkey,
+      )
     expect(rowKeys()).toEqual([0, 1])
 
     data.value.list.push(2)
@@ -338,7 +341,9 @@ describe('TransitionGroup', () => {
     resolve(Child)
     await timeout()
     await nextTick()
-    expect(getTransitionKey(host.querySelector('.async')!)).toBe('outer')
+    expect((host.querySelector('.async')! as TransitionBlock).$tkey).toBe(
+      'outer',
+    )
 
     data.value.show = false
     await nextTick()
@@ -405,7 +410,7 @@ describe('TransitionGroup', () => {
     expect(forBlock.u).toBeUndefined()
     // while its element child carries the group hooks and the derived key
     expect(forBlock.nodes.$transition).toBeDefined()
-    expect(getTransitionKey(forBlock.nodes)).toBe(1)
+    expect((forBlock.nodes as TransitionBlock).$tkey).toBe(1)
   })
 
   test('mounted children should react to transition prop changes', async () => {

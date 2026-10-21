@@ -7,10 +7,8 @@ import {
   template,
   vaporInteropPlugin,
 } from '../../src'
-import {
-  getTransitionKey,
-  resolveTransitionBlock,
-} from '../../src/components/Transition'
+import { resolveTransitionBlock } from '../../src/components/Transition'
+import type { TransitionBlock } from '../../src/block'
 import { resolveTransitionBlocks } from '../../src/components/TransitionGroup'
 import { type DynamicFragment, SlotFragment } from '../../src/fragment'
 import {
@@ -129,7 +127,7 @@ describe('Transition', () => {
     }).render()
 
     const resolved = resolveTransitionBlock(child)!
-    expect(getTransitionKey(resolved)).toBe('foo')
+    expect((resolved as TransitionBlock).$tkey).toBe('foo')
     expect(resolved.$key).toBeUndefined()
   })
 
@@ -152,7 +150,7 @@ describe('Transition', () => {
     // instances of the same component type share the leaving-cache bucket
     // and earlyRemove can match the previous still-leaving instance.
     const resolved = resolveTransitionBlock(child)!
-    expect(getTransitionKey(resolved)).toBeUndefined()
+    expect((resolved as TransitionBlock).$tkey).toBeUndefined()
   })
 
   test('preserves falsy explicit component key when resolving child', () => {
@@ -172,7 +170,7 @@ describe('Transition', () => {
     }).render()
 
     const resolved = resolveTransitionBlock(child)!
-    expect(getTransitionKey(resolved)).toBe(0)
+    expect((resolved as TransitionBlock).$tkey).toBe(0)
   })
 
   test('treats null component key as absent when resolving child', () => {
@@ -195,7 +193,7 @@ describe('Transition', () => {
     // child stays unkeyed (stable across same-type instances, so it shares
     // the leaving bucket by type).
     const resolved = resolveTransitionBlock(child)!
-    expect(getTransitionKey(resolved)).toBeUndefined()
+    expect((resolved as TransitionBlock).$tkey).toBeUndefined()
   })
 
   // vdom: Transition keys by the child vnode; keys inside the child's own
@@ -340,7 +338,9 @@ describe('Transition', () => {
     resolve(Child)
     await new Promise(r => setTimeout(r))
     await nextTick()
-    expect(getTransitionKey(host.querySelector('.async')!)).toBe('outer')
+    expect((host.querySelector('.async')! as TransitionBlock).$tkey).toBe(
+      'outer',
+    )
 
     data.value.show = false
     await nextTick()
@@ -413,8 +413,8 @@ describe('Transition', () => {
 
     const resolved = resolveTransitionBlocks(child)
     expect(resolved).toEqual([child.block[1], child.block[2]])
-    expect(getTransitionKey(child.block[1])).toBe('foo0')
-    expect(getTransitionKey(child.block[2])).toBe('foo1')
+    expect((child.block[1] as TransitionBlock).$tkey).toBe('foo0')
+    expect((child.block[2] as TransitionBlock).$tkey).toBe('foo1')
   })
 
   test('keeps inherited group keys stable across repeated resolutions', () => {
@@ -440,8 +440,8 @@ describe('Transition', () => {
     resolveTransitionBlocks(child)
     resolveTransitionBlocks(child)
 
-    expect(getTransitionKey(child.block[1])).toBe('foo0')
-    expect(getTransitionKey(child.block[2])).toBe('foo1')
+    expect((child.block[1] as TransitionBlock).$tkey).toBe('foo0')
+    expect((child.block[2] as TransitionBlock).$tkey).toBe('foo1')
   })
 
   test('treats null group owner key as absent', () => {
@@ -465,8 +465,8 @@ describe('Transition', () => {
 
     resolveTransitionBlocks(child)
 
-    expect(getTransitionKey(child.block[0])).toBeUndefined()
-    expect(getTransitionKey(child.block[1])).toBeUndefined()
+    expect((child.block[0] as TransitionBlock).$tkey).toBeUndefined()
+    expect((child.block[1] as TransitionBlock).$tkey).toBeUndefined()
   })
 
   test('composes nested group key prefixes', () => {
@@ -490,8 +490,8 @@ describe('Transition', () => {
 
     const resolved = resolveTransitionBlocks(child)
 
-    expect(getTransitionKey(resolved[0])).toBe('foo0')
-    expect(getTransitionKey(resolved[1])).toBe('foobar')
+    expect((resolved[0] as TransitionBlock).$tkey).toBe('foo0')
+    expect((resolved[1] as TransitionBlock).$tkey).toBe('foobar')
   })
 
   test('allows empty transition content', async () => {

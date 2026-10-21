@@ -29,6 +29,7 @@ import {
 } from '@vue/runtime-dom'
 import type { VaporComponentInstance } from './component'
 import type { NodeRef } from './apiTemplateRef'
+import type { KeyContext } from './components/Transition'
 import {
   type FragmentClaim,
   type HydrationCursor,
@@ -93,6 +94,9 @@ export class VaporFragment<
   readonly __vf: number
   $key?: any
   $transition?: VaporTransitionHooks | undefined
+  $tkey?: any
+  $ttype?: any
+  $keyCtx?: KeyContext
   nodes: T
   vnode?: VNode | null
   anchor?: Node

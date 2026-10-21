@@ -29,6 +29,7 @@ import { isTeleportEnabled, isTeleportFragment } from './teleport'
 import { isTransitionEnabled } from './transition'
 import { isInteropEnabled } from './vdomInteropState'
 import { isSuspenseEnabled, resolveUnmountSuspense } from './suspense'
+import type { KeyContext } from './components/Transition'
 
 export interface VaporTransitionState extends TransitionState {
   // Transition's own root block; persisted derivation walks from here on
@@ -73,6 +74,24 @@ export interface TransitionOptions {
   $key?: any
   $transition?: VaporTransitionHooks
   $vshow?: VShowFlags
+  // the identity Transition / TransitionGroup resolved for a child: vdom's
+  // `vnode.key` and `vnode.type` as they see them
+  $tkey?: any
+  $ttype?: any
+  // the key context the content of a fragment, or the root of a component
+  // whose async setup has not resolved, resolves its identity in
+  $keyCtx?: KeyContext
+  // The hooks running an element's removal leave (removeNode): vdom's
+  // unmounted child, in the DOM until the leave ends. It is never removed
+  // again, keeps these hooks over a prop refresh, and a leave asked of it
+  // meanwhile chains onto them. A leave running for another reason (a
+  // KeepAlive move, a v-show toggle) is not here: the element is still a
+  // child, and leaves again as vdom's does.
+  $removing?: VaporTransitionHooks
+  // The hooks a root rendered with, over the update relaying a vdom
+  // Transition's new ones to it: removed before the flush ends, it leaves
+  // with them, as vdom's replaced vnode does.
+  $rendered?: VaporTransitionHooks
 }
 
 export type TransitionBlock = (
@@ -394,38 +413,17 @@ export function remove(block: Block, parent?: ParentNode): void {
   }
 }
 
-// The hooks running an element's removal leave (removeNode): vdom's unmounted
-// child, in the DOM until the leave ends. It is never removed again, keeps
-// these hooks over a prop refresh, and a leave asked of it meanwhile chains
-// onto them. A leave running for another reason (a KeepAlive move, a v-show
-// toggle) is not here: the element is still a child, and leaves again as
-// vdom's does.
-const removing: WeakMap<object, VaporTransitionHooks> = new WeakMap()
-
-export function removingLeave(block: object): VaporTransitionHooks | undefined {
-  return removing.get(block)
-}
-
-// The hooks a root rendered with, over the update relaying a vdom
-// Transition's new ones to it: removed before the flush ends, it leaves with
-// them, as vdom's replaced vnode does.
-const renderedHooks: WeakMap<object, VaporTransitionHooks> = new WeakMap()
-
 export function keepRenderedHooks(
-  block: object,
+  block: TransitionBlock,
   hooks: VaporTransitionHooks,
 ): void {
-  renderedHooks.set(block, hooks)
-  queuePostFlushCb(() => renderedHooks.delete(block))
-}
-
-export function dropRenderedHooks(block: object): void {
-  renderedHooks.delete(block)
+  block.$rendered = hooks
+  queuePostFlushCb(() => (block.$rendered = undefined))
 }
 
 function leaveHooks(block: TransitionBlock): VaporTransitionHooks | undefined {
   const hooks = block.$transition
-  return (hooks && isInteropEnabled && renderedHooks.get(block)) || hooks
+  return (hooks && isInteropEnabled && block.$rendered) || hooks
 }
 
 export function removeNode(block: Node, parent?: ParentNode): void {
@@ -436,9 +434,10 @@ export function removeNode(block: Node, parent?: ParentNode): void {
     // a held slot root never entered the DOM: nothing to animate
     block.parentNode
   ) {
-    if (removing.has(block)) return
-    const hooks = leaveHooks(block as TransitionBlock)!
-    removing.set(block, hooks)
+    const el = block as Element & TransitionOptions
+    if (el.$removing) return
+    const hooks = leaveHooks(el)!
+    el.$removing = hooks
     // vdom's v-show beforeUnmount: a root v-show hid leaves hidden, even
     // while the hide still animates
     if ((block as VShowElement)[vShowHidden]) {
@@ -450,7 +449,7 @@ export function removeNode(block: Node, parent?: ParentNode): void {
       // deferred: an unmount may have removed the node meanwhile, or a
       // KeepAlive deactivation may have moved it into its storage
       () => {
-        removing.delete(block)
+        el.$removing = undefined
         const current = block.parentNode
         if (parent && current) current.removeChild(block)
       },

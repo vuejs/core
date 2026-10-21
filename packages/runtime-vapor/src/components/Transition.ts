@@ -31,14 +31,12 @@ import {
   type Block,
   type BlockFn,
   EMPTY_BLOCK,
-  type TransitionBlock,
   type TransitionOptions,
   VShowFlags,
   type VaporTransitionHooks,
   type VaporTransitionState,
   isValidBlock,
   remove,
-  removingLeave,
   settleMountShown,
 } from '../block'
 import {
@@ -70,7 +68,11 @@ import {
 import { isKeepAliveEnabled } from '../keepAlive'
 import { isSuspenseEnabled } from '../suspense'
 import { DYNAMIC, SLOT_ROOT, TELEPORT } from '../fragmentFlags'
-import { isSlotFallbackBlock, setSettlingNotify } from '../slotFragment'
+import {
+  type SlotResolutionState,
+  isSlotFallbackBlock,
+  setSettlingNotify,
+} from '../slotFragment'
 import {
   currentHydrationNode,
   isHydrating,
@@ -102,8 +104,6 @@ export const ensureTransitionHooksRegistered = (): void => {
       removeBranchWithLeaveImpl,
       ownsMode,
       awaitLeavingRootImpl,
-      // a component is a child however empty its root, as to vdom
-      block => !!findTransitionBlock(block) || hasComponent(block),
       resolveOutletLeaveImpl,
     )
   }
@@ -280,10 +280,8 @@ export const VaporTransition: FunctionalVaporComponent<TransitionProps> =
     return children
   })
 
-const transitionTypeMap = new WeakMap<ResolvedTransitionBlock, any>()
-
 function getTransitionType(block: ResolvedTransitionBlock): any {
-  const type = transitionTypeMap.get(block)
+  const type = block.$ttype
   if (type !== undefined) return type
   if (block instanceof Element) return block.localName
   if (isInteropEnabled && isFragment(block) && block.getTransitionType) {
@@ -291,13 +289,6 @@ function getTransitionType(block: ResolvedTransitionBlock): any {
     if (type !== undefined) return type
   }
   return block
-}
-
-export function setTransitionType(
-  block: ResolvedTransitionBlock,
-  type: any,
-): void {
-  transitionTypeMap.set(block, type)
 }
 
 function getLeavingNodesForType(
@@ -320,43 +311,14 @@ export function markLeavingBlock(
   block: ResolvedTransitionBlock,
   state: TransitionState,
 ): void {
-  getLeavingNodesForType(state, block)[String(getTransitionKey(block))] = block
-}
-
-function getLeaveElement(
-  block: ResolvedTransitionBlock,
-): TransitionElement | undefined {
-  const el = getTransitionElement(block)
-  if (el) return el as TransitionElement
-  if (
-    isFragment(block) &&
-    !isArray(block.nodes) &&
-    (block.nodes instanceof Element || isFragment(block.nodes))
-  ) {
-    return getLeaveElement(block.nodes)
-  }
-}
-
-// Keys resolved for transition children (vdom's `vnode.key` as seen by
-// Transition / TransitionGroup), written when the content is resolved.
-const transitionKeys: WeakMap<ResolvedTransitionBlock, any> = new WeakMap()
-
-export function getTransitionKey(block: ResolvedTransitionBlock): any {
-  return transitionKeys.get(block)
-}
-
-export function setTransitionKey(
-  block: ResolvedTransitionBlock,
-  key: any,
-): void {
-  transitionKeys.set(block, key)
+  getLeavingNodesForType(state, block)[String(block.$tkey)] = block
 }
 
 const getTransitionHooksContext = (
   block: ResolvedTransitionBlock,
   state: TransitionState,
 ) => {
-  const key = String(getTransitionKey(block))
+  const key = String(block.$tkey)
   const leavingNodes = getLeavingNodesForType(state, block)
   const context: TransitionHooksContext = {
     isLeaving: () => leavingNodes[key] === block,
@@ -375,11 +337,10 @@ const getTransitionHooksContext = (
       // String($key), which coerces e.g. 1 and '1' into the same slot. Compare
       // the raw keys so a number-keyed leaving node isn't force-removed by a
       // string-keyed entering node (and vice versa).
-      if (
-        leavingNode &&
-        getTransitionKey(leavingNode) === getTransitionKey(block)
-      ) {
-        const el = getLeaveElement(leavingNode)
+      if (leavingNode && leavingNode.$tkey === block.$tkey) {
+        const el = getTransitionElement(leavingNode) as
+          | TransitionElement
+          | undefined
         if (el && el[leaveCbKey]) {
           // force early removal (not cancelled)
           el[leaveCbKey]!()
@@ -467,9 +428,9 @@ export function applyTransitionHooksImpl(
   )
   if (refresh && child) {
     if (child.$transition) hooks = child.$transition
-    // a leaving root keeps the hooks running its leave (block.ts `removing`);
-    // the next branch resolves its own when it renders
-    if (removingLeave(child)) return hooks
+    // a leaving root keeps the hooks running its leave ($removing); the next
+    // branch resolves its own when it renders
+    if (child.$removing) return hooks
   }
   if (!child) {
     if (!refresh) {
@@ -599,7 +560,7 @@ export function applyTransitionLeaveHooksImpl(
   // updates for it; in-out stores the handoff on the Transition, where the
   // next entering block claims it, and runs it after the flush when none does.
   unpaired = false,
-  // in-out: the fragment switching to the incoming branch
+  // paired in-out: the fragment switching to the incoming branch
   owner?: VaporFragment,
 ): boolean {
   const leavingBlock = findTransitionBlock(block)
@@ -613,10 +574,10 @@ export function applyTransitionLeaveHooksImpl(
   const { mode } = props
   // the Transition's other branches wait on a paired leave (out-in)
   const pairedState = unpaired ? undefined : state
-  // Chained onto the removal leave already running (block.ts `removing`):
-  // unpaired, only when a branch follows, as vdom's out-in waits only for an
-  // element child; a paired out-in swap, as for a leave of its own.
-  const runningLeave = removingLeave(leavingBlock)
+  // Chained onto the removal leave already running ($removing): unpaired,
+  // only when a branch follows, as vdom's out-in waits only for an element
+  // child; a paired out-in swap, as for a leave of its own.
+  const runningLeave = leavingBlock.$removing
   if (runningLeave && (unpaired || mode === 'out-in')) {
     if (unpaired) {
       const leavingFrag = findLeavingFragment(block)
@@ -652,7 +613,7 @@ export function applyTransitionLeaveHooksImpl(
       delayedLeave,
     ) => {
       const leavingNodes = getLeavingNodesForType(state, leavingBlock)
-      const leavingKey = String(getTransitionKey(leavingBlock))
+      const leavingKey = String(leavingBlock.$tkey)
       leavingNodes[leavingKey] = leavingBlock
       const delayedLeaveCb = createDelayedLeave(leavingBlock, delayedLeave)
       // early removal callback
@@ -676,7 +637,7 @@ export function applyTransitionLeaveHooksImpl(
       } else {
         // to the hooks the incoming branch holds when the leave starts: the
         // copy, or its own once it rendered first (a KeepAlive's late removal)
-        ;(owner ? owner.$transition! : enterHooks).delayedLeave = delayedLeaveCb
+        owner!.$transition!.delayedLeave = delayedLeaveCb
       }
     }
   }
@@ -760,7 +721,7 @@ function createDelayedLeave(
 // interop outlet's state has no fragment in the walk: the mode is its own.
 function ownsMode(hooks: TransitionHooks, frag?: VaporFragment): boolean {
   if (!isVaporTransitionHooks(hooks)) return false
-  const ctx = frag && keyContexts.get(frag)
+  const ctx = frag && frag.$keyCtx
   return !ctx || !ctx.type
 }
 
@@ -795,17 +756,30 @@ function findLeavingFragment(block: Block): DynamicFragment | undefined {
   return leaving
 }
 
-function awaitLeavingRootImpl(block: Block, cb: () => void): boolean {
+// A fallback committed under out-in waits on the leave a root of the content
+// is still running on its own when it has a child to animate: a component is
+// one however empty its root, as to vdom. An interop host patching vnode
+// content finds that leave itself.
+function awaitLeavingRootImpl(
+  fallback: Block,
+  state: SlotResolutionState,
+  cb: () => void,
+): boolean {
+  if (!findTransitionBlock(fallback) && !hasComponent(fallback)) return false
+  if (isInteropEnabled && state.awaitLeavingRoot) {
+    return state.awaitLeavingRoot(cb)
+  }
+  return awaitLeavingRoot(state.getContent(), cb)
+}
+
+function awaitLeavingRoot(block: Block, cb: () => void): boolean {
   const leavingFrag = findLeavingFragment(block)
   if (!leavingFrag) return descendToLeavingRoot(block, cb)
   const root = findTransitionBlock(leavingFrag.nodes)
   // the hooks running the root's leave: an element's removal leave, or the
   // ones a component or interop root was handed to leave under
   const running =
-    root &&
-    (root instanceof Element
-      ? removingLeave(root)
-      : (root as TransitionBlock).$transition)
+    root && (root instanceof Element ? root.$removing : root.$transition)
   if (!running) return false
   // paired after all: the Transition's other branches wait on the leave as
   // well, as under vdom's out-in, until it ends. A vdom Transition (hooks
@@ -825,7 +799,7 @@ function descendToLeavingRoot(block: Block, cb: () => void): boolean {
   if (isArray(block)) {
     for (let i = 0; i < block.length; i++) {
       const b = block[i]
-      if ((isArray(b) || isFragment(b)) && awaitLeavingRootImpl(b, cb)) {
+      if ((isArray(b) || isFragment(b)) && awaitLeavingRoot(b, cb)) {
         return true
       }
     }
@@ -844,8 +818,8 @@ function descendToLeavingRoot(block: Block, cb: () => void): boolean {
   // left may be its own exposed fallback's (nodes), not in its content
   const content = block.getContent()
   return (
-    awaitLeavingRootImpl(content, cb) ||
-    (block.nodes !== content && awaitLeavingRootImpl(block.nodes, cb))
+    awaitLeavingRoot(content, cb) ||
+    (block.nodes !== content && awaitLeavingRoot(block.nodes, cb))
   )
 }
 
@@ -1042,7 +1016,6 @@ export interface KeyContext {
   slot?: boolean
 }
 export const ROOT_KEY_CONTEXT: KeyContext = { key: undefined }
-const keyContexts: WeakMap<HooksTarget, KeyContext> = new WeakMap()
 // fragments that re-apply hooks on their own content, i.e. read this back
 const KEY_CONTEXT_OWNER = DYNAMIC | TELEPORT
 
@@ -1109,7 +1082,7 @@ export function enterFragmentKeyContext(
   ctx: KeyContext,
   key: any = getFragmentKey(frag),
 ): KeyContext {
-  if (frag.__vf & KEY_CONTEXT_OWNER) keyContexts.set(frag, ctx)
+  if (frag.__vf & KEY_CONTEXT_OWNER) frag.$keyCtx = ctx
   return withDefaultKey(ctx, key)
 }
 
@@ -1117,8 +1090,8 @@ function resolveChildIdentity(
   child: ResolvedTransitionBlock,
   ctx: KeyContext,
 ): void {
-  transitionKeys.set(child, ctx.type ? ctx.key : ownKey(ctx, child.$key))
-  if (ctx.type) setTransitionType(child, ctx.type)
+  child.$tkey = ctx.type ? ctx.key : ownKey(ctx, child.$key)
+  if (ctx.type) child.$ttype = ctx.type
 }
 
 /**
@@ -1133,10 +1106,7 @@ export function resolveTransitionBlock(
 ): ResolvedTransitionBlock | undefined {
   if (!ctx) {
     ctx = owner
-      ? withDefaultKey(
-          keyContexts.get(owner) || ROOT_KEY_CONTEXT,
-          getFragmentKey(owner),
-        )
+      ? withDefaultKey(owner.$keyCtx || ROOT_KEY_CONTEXT, getFragmentKey(owner))
       : ROOT_KEY_CONTEXT
     // a slot outlet's branch, applied by the outlet itself
     ctx = enterSlotKeyContext(ctx, owner, isSlotFallbackBlock(block))
@@ -1213,7 +1183,7 @@ function collectComponentTransitionBlocks(
       // unresolved: the wrapper's fragment re-renders the resolved child
       if (isFragment(block.block)) {
         if (onFragment) onFragment(block.block)
-        if (ctx) keyContexts.set(block.block, ctx)
+        if (ctx) block.block.$keyCtx = ctx
       }
       return
     }
@@ -1233,7 +1203,7 @@ function resolveRootAfterSetup(
   ctx: KeyContext | undefined,
 ): void {
   // one callback per instance: a later walk only updates the context it uses
-  if (!keyContexts.has(instance)) {
+  if (!instance.$keyCtx) {
     ;(instance.bm ||= []).push(() => {
       const hooks = instance.$transition
       if (hooks) {
@@ -1243,13 +1213,13 @@ function resolveRootAfterSetup(
           hooks,
           undefined,
           false,
-          keyContexts.get(instance),
+          instance.$keyCtx,
         )
       }
     })
-    keyContexts.set(instance, ctx || ROOT_KEY_CONTEXT)
+    instance.$keyCtx = ctx || ROOT_KEY_CONTEXT
   } else if (ctx) {
-    keyContexts.set(instance, ctx)
+    instance.$keyCtx = ctx
   }
 }
 
@@ -1294,7 +1264,7 @@ function collectFragmentTransitionBlocks(
       resolveChildIdentity(block, ctx)
       if (!ctx.type) {
         const type = block.getTransitionType!()
-        if (type !== undefined) setTransitionType(block, type)
+        if (type !== undefined) block.$ttype = type
       }
     }
     return
