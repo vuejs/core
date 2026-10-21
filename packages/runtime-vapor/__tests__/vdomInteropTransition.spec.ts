@@ -6,7 +6,10 @@ const define = makeInteropRender()
 
 type Run = {
   data: Ref<any>
+  // ends the latest element held under a hook name
   done: Record<string, () => void>
+  // every element still held under a hook name, with its `done`
+  held: Record<string, [Element, () => void][]>
   step: (label: string, fn?: () => void) => Promise<void>
 }
 
@@ -38,11 +41,19 @@ async function compareRuns(
   for (const vapor of [false, true]) {
     const log: string[] = []
     const done: Record<string, () => void> = {}
+    const heldCbs: Record<string, [Element, () => void][]> = {}
     const sync = (name: string) => (el: Element) =>
       log.push(`${name}:${el.textContent}`)
     const held = (name: string) => (el: Element, d: () => void) => {
       log.push(`${name}:${el.textContent}`)
-      done[name] = d
+      const entry: [Element, () => void] = [el, d]
+      const cbs = (heldCbs[name] ||= [])
+      cbs.push(entry)
+      done[name] = () => {
+        const i = cbs.indexOf(entry)
+        if (i >= 0) cbs.splice(i, 1)
+        d()
+      }
     }
     const data = ref<any>({
       show: true,
@@ -59,6 +70,9 @@ async function compareRuns(
       onAppear: held('appear'),
       onAfterAppear: sync('afterAppear'),
       onAppearCancelled: sync('appearCancelled'),
+      // the hooks a wrapper swaps in
+      onEnter2: held('enter2'),
+      onLeave2: held('leave2'),
     })
     const { app, host, html } = define(makeApp(vapor, data)).render()
     // v-show only leaves a connected element
@@ -73,7 +87,7 @@ async function compareRuns(
     }
     await step('mount')
     try {
-      await act({ data, done, step })
+      await act({ data, done, held: heldCbs, step })
     } catch (e: any) {
       e.message += `\n${vapor ? 'vapor' : 'vdom'} steps so far:\n${steps.join('\n')}`
       throw e
@@ -925,4 +939,452 @@ describe('comment-root transition removal across renderers', () => {
       }
     },
   )
+})
+
+describe('vapor slot content inside a vdom TransitionGroup', () => {
+  // A vapor App passes `content` to a vdom Wrapper whose template is `group`
+  // (a `<TransitionGroup>` around a `<slot/>`); `init` seeds the data of
+  // each run
+  const parity = (
+    group: string,
+    content: string,
+    act: (r: Run) => Promise<void>,
+    init: Record<string, any> = {},
+    extra: (vapor: boolean, data: Ref<any>) => Record<string, any> = () => ({}),
+  ) =>
+    compareRuns((vapor, data) => {
+      Object.assign(data.value, JSON.parse(JSON.stringify(init)))
+      return sfc(
+        vapor,
+        data,
+        `<components.Wrapper>${content}</components.Wrapper>`,
+        { Wrapper: sfc(false, data, group), ...extra(vapor, data) },
+      )
+    }, act)
+  // ends every held hook, the elements of a name in document order
+  const settle = (r: Run) => {
+    for (const name in r.held) {
+      const cbs = r.held[name].splice(0)
+      cbs.sort(([a], [b]) => (a.compareDocumentPosition(b) & 4 ? -1 : 1))
+      for (const [, cb] of cbs) cb()
+    }
+  }
+  const group = (attrs = '', child = '<slot/>') =>
+    `<TransitionGroup tag="ul" ${hooks} ${attrs}>${child}</TransitionGroup>`
+  const list = `<li v-for="i in data.list" :key="i">{{ i }}</li>`
+  const abc = { list: ['a', 'b', 'c'] }
+
+  let rects = 0
+  beforeEach(() => {
+    rects = 0
+    vi.spyOn(Element.prototype, 'getBoundingClientRect').mockImplementation(
+      () => {
+        rects++
+        return { top: 0, left: 0, width: 0, height: 0 } as DOMRect
+      },
+    )
+  })
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  test('rows enter and leave, and are sampled for the move', async () => {
+    await parity(
+      group(),
+      list,
+      async r => {
+        await r.step('push', () => r.data.value.list.push('d'))
+        await r.step('enter done', r.done.enter)
+        await r.step('remove a', () => r.data.value.list.shift())
+        await r.step('leave done', r.done.leave)
+        rects = 0
+        await r.step('reverse', () => r.data.value.list.reverse())
+        expect(rects).toBe(3)
+      },
+      abc,
+    )
+  })
+
+  test('rows appear', async () => {
+    await parity(
+      group(appearHooks),
+      list,
+      async r => {
+        await r.step('appear done', () => settle(r))
+      },
+      abc,
+    )
+  })
+
+  test('a slot the wrapper renders later enters, and leaves when the wrapper drops it', async () => {
+    await parity(
+      group('', '<slot v-if="data.show"/>'),
+      list,
+      async r => {
+        await r.step('show', () => (r.data.value.show = true))
+        await r.step('enter done', () => settle(r))
+        await r.step('hide', () => (r.data.value.show = false))
+        await r.step('leave done', () => settle(r))
+      },
+      { ...abc, show: false },
+    )
+  })
+
+  test('a vdom sibling is a child of the same group', async () => {
+    await parity(
+      group('', '<slot/><li key="tail">tail</li>'),
+      list,
+      async r => {
+        await r.step('push', () => r.data.value.list.push('d'))
+        await r.step('remove a', () => r.data.value.list.shift())
+        rects = 0
+        await r.step('reverse', () => r.data.value.list.reverse())
+        expect(rects).toBe(4)
+      },
+      abc,
+    )
+  })
+
+  // vdom re-renders the group (and samples) when a row's props change
+  test('a component row samples on a prop change', async () => {
+    await parity(
+      group(),
+      `<components.Item v-for="i in data.items" :key="i.id" :opened="i.opened" />`,
+      async r => {
+        rects = 0
+        await r.step('open', () => (r.data.value.items[0].opened = true))
+        expect(rects).toBe(2)
+      },
+      {
+        items: [
+          { id: 1, opened: false },
+          { id: 2, opened: false },
+        ],
+      },
+      (vapor, data) => ({
+        Item: compile(
+          `<script setup${vapor ? ' vapor' : ''}>
+            const props = defineProps(['opened'])
+          </script>
+          <template><li>{{ props.opened ? 'open' : 'closed' }}</li></template>`,
+          data,
+          {},
+          { vapor },
+        ),
+      }),
+    )
+  })
+
+  test('the group samples the rows before the content effect moves them', async () => {
+    const seen: string[] = []
+    vi.spyOn(Element.prototype, 'getBoundingClientRect').mockImplementation(
+      function (this: Element) {
+        seen.push(this.parentNode!.textContent!)
+        return { top: 0, left: 0, width: 0, height: 0 } as DOMRect
+      },
+    )
+    await parity(
+      group(),
+      list,
+      async r => {
+        seen.length = 0
+        await r.step('reverse', () => r.data.value.list.reverse())
+        expect(seen).toEqual(['abc', 'abc', 'abc'])
+      },
+      abc,
+    )
+  })
+
+  test('rows entering after a hook swap use the new hook', async () => {
+    await parity(
+      `<TransitionGroup tag="ul" :css="false" :onEnter="data.alt ? data.onEnter2 : data.onEnter">
+        <slot/>
+      </TransitionGroup>`,
+      list,
+      async r => {
+        await r.step('swap', () => (r.data.value.alt = true))
+        await r.step('push', () => r.data.value.list.push('d'))
+      },
+      abc,
+    )
+  })
+
+  test('a slot removed in the render swapping the hooks leaves under the new ones', async () => {
+    await parity(
+      `<TransitionGroup tag="ul" :css="false" :onLeave="data.alt ? data.onLeave2 : data.onLeave">
+        <slot v-if="data.show"/>
+      </TransitionGroup>`,
+      list,
+      async r => {
+        await r.step('swap and hide', () => {
+          r.data.value.alt = true
+          r.data.value.show = false
+        })
+      },
+      abc,
+    )
+  })
+
+  test('one scoped slot per item', async () => {
+    await parity(
+      group(
+        '',
+        '<template v-for="it in data.list" :key="it"><slot :it="it"/></template>',
+      ),
+      `<template #default="{ it }"><li>{{ it }}</li></template>`,
+      async r => {
+        await r.step('push', () => r.data.value.list.push('d'))
+        await r.step('enter done', r.done.enter)
+        await r.step('remove a', () => r.data.value.list.shift())
+        await r.step('leave done', r.done.leave)
+        rects = 0
+        await r.step('reverse', () => r.data.value.list.reverse())
+        expect(rects).toBe(3)
+      },
+      abc,
+    )
+  })
+
+  test('re-adding a leaving row of a keyed slot early-removes it', async () => {
+    await parity(
+      group('', '<slot key="s"/>'),
+      list,
+      async r => {
+        await r.step('remove a', () => r.data.value.list.shift())
+        await r.step('re-add a', () => r.data.value.list.unshift('a'))
+        await r.step('done', () => settle(r))
+      },
+      abc,
+    )
+  })
+
+  test('re-adding a keyed v-if branch row mid-leave early-removes it', async () => {
+    await parity(
+      group(),
+      `<li v-if="data.show" key="a">a</li>
+      <li v-else key="b">b</li>`,
+      async r => {
+        await r.step('hide', () => (r.data.value.show = false))
+        await r.step('show', () => (r.data.value.show = true))
+        await r.step('done', () => settle(r))
+      },
+      { show: true },
+    )
+  })
+
+  test('re-adding the v-if root of a template v-for row mid-leave early-removes it', async () => {
+    await parity(
+      group(),
+      `<template v-for="i in data.list" :key="i">
+        <li v-if="data.show">{{ i }}</li>
+      </template>`,
+      async r => {
+        await r.step('hide', () => (r.data.value.show = false))
+        await r.step('show', () => (r.data.value.show = true))
+        await r.step('done', () => settle(r))
+      },
+      { ...abc, show: true },
+    )
+  })
+
+  test('re-adding the keyed v-if root of a template v-for row mid-leave early-removes it', async () => {
+    await parity(
+      group(),
+      `<template v-for="i in data.list" :key="i">
+        <li v-if="data.show" :key="i">{{ i }}</li>
+      </template>`,
+      async r => {
+        await r.step('hide', () => (r.data.value.show = false))
+        await r.step('show', () => (r.data.value.show = true))
+        await r.step('done', () => settle(r))
+      },
+      { ...abc, show: true },
+    )
+  })
+
+  test('re-adding a row of a nested v-for mid-leave early-removes it', async () => {
+    await parity(
+      group(),
+      `<template v-for="g in data.groups" :key="g.id">
+        <li v-for="i in g.items" :key="i">{{ g.id }}:{{ i }}</li>
+      </template>`,
+      async r => {
+        await r.step('shift', () => r.data.value.groups[0].items.shift())
+        await r.step('unshift', () => r.data.value.groups[0].items.unshift('a'))
+        await r.step('done', () => settle(r))
+      },
+      { groups: [{ id: 'g', items: ['a', 'b'] }] },
+    )
+  })
+
+  test('content returning from the fallback mid-leave early-removes its leaving row', async () => {
+    await parity(
+      group('', '<slot><li key="fb">fb</li></slot>'),
+      `<li v-if="data.show" key="x">x</li>`,
+      async r => {
+        await r.step('hide', () => (r.data.value.show = false))
+        await r.step('show', () => (r.data.value.show = true))
+        await r.step('done', () => settle(r))
+      },
+      { show: true },
+    )
+  })
+
+  test('switching to the v-else list mid-leave keeps the leaving rows', async () => {
+    await parity(
+      group(),
+      `<template v-if="data.show">
+        <li v-for="i in data.list" :key="i">A{{ i }}</li>
+      </template>
+      <template v-else>
+        <li v-for="i in data.list" :key="i">B{{ i }}</li>
+      </template>`,
+      async r => {
+        await r.step('switch', () => (r.data.value.show = false))
+        await r.step('done', () => settle(r))
+      },
+      { list: ['a'], show: true },
+    )
+  })
+
+  test('a slot key change keeps the old row leaving beside the new one', async () => {
+    await parity(
+      group('', '<slot :key="data.epoch"/>'),
+      `<li key="a">a</li>`,
+      async r => {
+        await r.step('epoch', () => (r.data.value.epoch = 'two'))
+        await r.step('done', () => settle(r))
+      },
+      { epoch: 'one' },
+    )
+  })
+
+  test('a v-once slot remounted by a tag change enters its rows', async () => {
+    await parity(
+      `<TransitionGroup :tag="data.tag" ${hooks}><slot v-once/></TransitionGroup>`,
+      `<li key="a">a</li><li key="b">b</li>`,
+      async r => {
+        await r.step('tag', () => (r.data.value.tag = 'ol'))
+        await r.step('done', () => settle(r))
+      },
+      { tag: 'ul' },
+    )
+  })
+
+  test('a tag change remounts the rows without leaving them', async () => {
+    await parity(
+      `<TransitionGroup :tag="data.tag" ${hooks}><slot/></TransitionGroup>`,
+      list,
+      async r => {
+        await r.step('tag', () => (r.data.value.tag = 'ol'))
+        await r.step('done', () => settle(r))
+      },
+      { ...abc, tag: 'ul' },
+    )
+  })
+
+  test('the fallback enters when the content empties, and leaves when it refills', async () => {
+    await parity(
+      group('', '<slot><li key="f">fallback</li></slot>'),
+      list,
+      async r => {
+        await r.step('empty', () => (r.data.value.list = []))
+        await r.step('done', () => settle(r))
+        await r.step('refill', () => (r.data.value.list = ['a']))
+        await r.step('done', () => settle(r))
+      },
+      abc,
+    )
+  })
+
+  test('v-if content and the fallback take turns', async () => {
+    await parity(
+      group('', '<slot><li key="fb">fb</li></slot>'),
+      `<li v-if="data.show" key="x">x</li>`,
+      async r => {
+        await r.step('hide', () => (r.data.value.show = false))
+        await r.step('leave done', r.done.leave)
+        await r.step('show', () => (r.data.value.show = true))
+        await r.step('done', () => settle(r))
+      },
+    )
+  })
+
+  test('fallback rows are children of the group', async () => {
+    await parity(
+      group('', '<slot><li v-for="i in data.f" :key="i">{{ i }}</li></slot>'),
+      `<li v-if="data.content" key="x">x</li>`,
+      async r => {
+        rects = 0
+        await r.step('reverse', () => r.data.value.f.reverse())
+        expect(rects).toBe(3)
+        await r.step('remove b', () => r.data.value.f.splice(1, 1))
+        await r.step('done', () => settle(r))
+      },
+      { content: false, f: ['a', 'b', 'c'] },
+    )
+  })
+
+  test('a nested group with tag is one row', async () => {
+    await parity(
+      group(),
+      `<TransitionGroup v-if="data.show" key="g" tag="ol"><li key="x">x</li></TransitionGroup>`,
+      async r => {
+        await r.step('show', () => (r.data.value.show = true))
+        await r.step('done', () => settle(r))
+        await r.step('hide', () => (r.data.value.show = false))
+        await r.step('done', () => settle(r))
+      },
+      { show: false },
+    )
+  })
+
+  // the reverse host (a vdom slot inside a vapor group) resolves its fallback
+  // through the same outlet code
+  test('a vdom slot fallback keyed like a vapor sibling row leaves the sibling alone', async () => {
+    await compareRuns(
+      (vapor, data) => {
+        Object.assign(data.value, { content: false, fb: false })
+        return sfc(
+          false,
+          data,
+          `<components.Wrapper>
+            <li v-if="data.content">content</li>
+          </components.Wrapper>`,
+          {
+            Wrapper: sfc(
+              vapor,
+              data,
+              group(
+                '',
+                `<li v-if="data.show" key="x">sibling</li>
+                <slot><li v-if="data.fb" key="x">fallback</li></slot>`,
+              ),
+            ),
+          },
+        )
+      },
+      async r => {
+        await r.step('leave sibling', () => (r.data.value.show = false))
+        await r.step('show fallback', () => (r.data.value.fb = true))
+        await r.step('done', () => settle(r))
+      },
+    )
+  })
+
+  test('a fallback removed in the render swapping the hooks leaves under the new ones', async () => {
+    await parity(
+      `<TransitionGroup tag="ul" :css="false" :onLeave="data.alt ? data.onLeave2 : data.onLeave">
+        <slot v-if="data.outlet"><li key="f">f</li></slot>
+      </TransitionGroup>`,
+      `<li v-if="data.content" key="x">x</li>`,
+      async r => {
+        await r.step('swap and hide', () => {
+          r.data.value.alt = true
+          r.data.value.outlet = false
+        })
+      },
+      { content: false, outlet: true },
+    )
+  })
 })

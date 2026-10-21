@@ -181,6 +181,7 @@ import {
   type VaporFragment,
   createSlotBoundary,
   isFragment,
+  isInteropFragment,
   resolveFragmentAnchor,
 } from './fragment'
 import { SLOT_OUTLET, VDOM } from './fragmentFlags'
@@ -206,17 +207,23 @@ import {
 } from './dom/hydrateFragment'
 import type { NodeRef } from './apiTemplateRef'
 import {
+  type ResolvedTransitionBlock,
   applyTransitionHooksImpl,
   claimPendingLeave,
   ensureTransitionHooksRegistered,
   findTransitionBlock,
   getTransitionElement,
   hydrateTransitionImpl,
+  isValidTransitionBlock,
   markLeavingBlock,
   queuePendingLeave,
   relayTransitionHooks,
 } from './components/Transition'
 import { isTransitionEnabled, isVaporTransitionHooks } from './transition'
+import {
+  applyGroupTransitionHooks,
+  resolveTransitionBlocks,
+} from './components/TransitionGroup'
 import {
   interopKey,
   interopSlotsKey,
@@ -309,11 +316,49 @@ function applyVaporSlotTransition(
   block: Block,
   refresh?: boolean,
 ): VaporTransitionHooks | undefined {
+  if (vnode.vs && vnode.vs.group) {
+    // a refresh is the group's own render's (`forEachGroupChild`)
+    if (!refresh) applyGroupHooks(vnode, block)
+    return
+  }
   const hooks = vnode.transition
   if (isVaporTransitionHooks(hooks) && !(refresh && hooks.state.isLeaving)) {
     ensureTransitionHooksRegistered()
     hooks.state.root = block
     return applyTransitionHooksImpl(block, hooks, undefined, refresh)
+  }
+}
+
+// The rows a vapor slot renders under a vdom TransitionGroup are children of
+// the group: their hooks resolve from the group's props and state, keyed
+// under the slot's key as vdom keys the rows of a slot fragment.
+function applyGroupHooks(
+  vnode: VNode,
+  block: Block,
+): ResolvedTransitionBlock[] {
+  const { props, state, instance } = vnode.vs!.group!
+  ensureTransitionHooksRegistered()
+  return applyGroupTransitionHooks(block, props, state, instance, undefined, {
+    key: groupOwnerKey(vnode),
+    slot: true,
+  })
+}
+
+// vdom keys an unkeyed slot's fragment `_<name>`
+function groupOwnerKey(vnode: VNode): any {
+  return vnode.key != null ? vnode.key : '_' + vnode.vs!.name
+}
+
+type VaporSlotGroup = NonNullable<NonNullable<VNode['vs']>['group']>
+
+// the vdom rows of such a slot's fallback are children of the group too
+function applyGroupRowHooks(rows: VNode[], group: VaporSlotGroup): void {
+  const { props, state, instance } = group
+  for (let i = 0; i < rows.length; i++) {
+    setVNodeTransitionHooks(
+      rows[i],
+      resolveVNodeTransitionHooks(rows[i], props, state, instance),
+    )
   }
 }
 
@@ -668,6 +713,25 @@ const vaporInteropImpl = {
             : undefined,
         )
       }
+      if (!doRemove && vnode.vs!.group) {
+        // The removal of the group's element takes the rows in it along, as
+        // it does vdom's, without a leave; a row rendered elsewhere (a
+        // Teleport's) still leaves. Before the scope stops, which may already
+        // remove rows.
+        const parent = anchor && anchor.parentNode
+        const rows = resolveTransitionBlocks(
+          vnode.vb,
+          undefined,
+          undefined,
+          true,
+        )
+        for (let i = 0; i < rows.length; i++) {
+          const row = rows[i]
+          if (row instanceof Element && row.parentNode === parent) {
+            row.$transition = undefined
+          }
+        }
+      }
       stopVaporSlotScope(vnode)
       remove(vnode.vb, blockContainer)
       // the record vdom's in-out `delayLeave` kept for this vnode: nothing
@@ -984,6 +1048,29 @@ const vaporInteropImpl = {
   },
 
   getTransitionElement: getInteropTransitionElement,
+
+  forEachGroupChild(vnode, cb) {
+    const handOver = (el: Node | null | undefined) => {
+      // a hidden v-show row has no box to move from
+      if (el && el.nodeType === 1 && !(el as VShowElement)[vShowHidden]) cb(el)
+    }
+    const children = applyGroupHooks(vnode, vnode.vb)
+    for (let i = 0; i < children.length; i++) {
+      const child = children[i]
+      if (
+        isInteropFragment(child) &&
+        child.vnode &&
+        child.vnode.type === Fragment
+      ) {
+        // the rows of the slot's fallback, vdom children of the group
+        const rows = child.vnode.children as VNode[]
+        applyGroupRowHooks(rows, vnode.vs!.group!)
+        for (let j = 0; j < rows.length; j++) handOver(rows[j].el as Node)
+      } else if (isValidTransitionBlock(child) && child.$transition) {
+        handOver(getTransitionElement(child))
+      }
+    }
+  },
 
   hasTransitionChild(vnode) {
     return !!findTransitionBlock(vnode.vb || getVaporInstance(vnode).block)
@@ -3196,8 +3283,15 @@ function createFallback(
   state: InteropVaporSlotState,
   depth: number,
   parentComponent: ComponentInternalInstance | null,
+  // the slot's vnode as mounted: its group and key hold for the slot's life
+  vnode: VNode,
 ): BlockFn {
   const internals = ensureRenderer().internals
+  const group = vnode.vs!.group
+  // under a TransitionGroup every row is a child of the group, keyed under
+  // the fallback's key, as vdom renders the rows of its slot fragment (the
+  // fragments of a v-for flattened)
+  const fallbackKey = group && groupOwnerKey(vnode) + '_fb'
   return () => {
     const frag = createVNodeChildrenFragment(
       internals,
@@ -3207,11 +3301,12 @@ function createFallback(
         const outlet = state.outletsRef.value[depth]
         const children =
           outlet && invokeSlotFallback(outlet.fallback, outlet.owner)
-        return children == null
-          ? EMPTY_VNODES
-          : normalizeInteropSlotValue(children)
+        if (children == null) return EMPTY_VNODES
+        const rows = normalizeInteropSlotValue(children)
+        return group ? getTransitionRawChildren(rows, false, fallbackKey) : rows
       },
       parentComponent,
+      group,
     )
     if (isHydrating && frag.hydrate) {
       frag.hydrate()
@@ -3476,7 +3571,9 @@ function renderVaporSlot(
   }
   if (parentComponent && !parentComponent.vapor) initVdomOwner(parentComponent)
   // before the slot's boundaries are created: they hold under the hooks
-  if (vnode.transition) ensureTransitionHooksRegistered()
+  if (vnode.transition || (vnode.vs && vnode.vs.group)) {
+    ensureTransitionHooksRegistered()
+  }
   try {
     if (!vnode.vs || !vnode.vs.slot) {
       return EMPTY_BLOCK
@@ -3512,7 +3609,12 @@ function renderVaporSlot(
         frag,
         () =>
           slotState.outlets[depth]
-            ? (fallback ||= createFallback(slotState, depth, parentComponent))
+            ? (fallback ||= createFallback(
+                slotState,
+                depth,
+                parentComponent,
+                vnode,
+              ))
             : undefined,
         markDirty,
         // the slot's own content renders held while its fallback shows
@@ -3561,8 +3663,9 @@ function renderVaporSlot(
     slotResolutionState.holdsContent = true
     // under a vdom Transition (the hooks are on the vnode before the slot
     // renders), a fallback committed later transitions with the hooks the
-    // Transition applied to the fragment
-    if (vnode.transition) {
+    // Transition applied to the fragment; under a vdom TransitionGroup, the
+    // content and the fallback swap in sequence under the group's
+    if (vnode.transition || vnode.vs.group) {
       installInteropTransitionAccessor(slotResolutionState, frag)
     }
     const dispose = (parentNode?: ParentNode): void => {
@@ -4187,6 +4290,8 @@ function createVNodeChildrenFragment(
   internals: RendererInternals,
   render: () => VNode[],
   parentComponent: ComponentInternalInstance | null,
+  // the group of the vapor slot whose fallback this renders
+  group?: VaporSlotGroup,
 ): VaporFragment {
   let suspense =
     currentRenderContext.suspense ||
@@ -4228,6 +4333,10 @@ function createVNodeChildrenFragment(
   // the fallback of a transitioned slot: while it shows, its children are the
   // Transition's child, each with hooks of its own, as a vdom child's would be
   const setChildrenTransition = (): void => {
+    if (group) {
+      applyGroupRowHooks(currentChildren, group)
+      return
+    }
     const transition = frag.$transition
     if (isVaporTransitionHooks(transition)) {
       const { props, state, instance } = transition

@@ -11,6 +11,7 @@ import {
 } from './Transition'
 import { type VShowElement, vShowHidden } from '../directives/vShow'
 import {
+  type BaseTransitionProps,
   type ComponentInternalInstance,
   type ComponentOptions,
   DeprecationTypes,
@@ -85,6 +86,8 @@ const TransitionGroupImpl: ComponentOptions = /*@__PURE__*/ decorate({
   setup(props: TransitionGroupProps, { slots }: SetupContext) {
     const instance = getCurrentInstance()!
     const state = useTransitionState()
+    // what the rows of a vapor slot child resolve their hooks from
+    const group = { props: {} as BaseTransitionProps<Element>, state, instance }
     let prevChildren: VNode[]
     let children: VNode[]
     let origins: Origin[] | undefined
@@ -140,7 +143,8 @@ const TransitionGroupImpl: ComponentOptions = /*@__PURE__*/ decorate({
 
     return () => {
       const rawProps = toRaw(props)
-      const cssTransitionProps = resolveTransitionProps(rawProps)
+      const cssTransitionProps = (group.props =
+        resolveTransitionProps(rawProps))
       let tag = rawProps.tag || Fragment
 
       if (
@@ -176,6 +180,15 @@ const TransitionGroupImpl: ComponentOptions = /*@__PURE__*/ decorate({
               ),
             )
             positionMap.set(child, getPosition(child.el as HTMLElement))
+          } else if (child.vs && child.vb) {
+            // the rows of a mounted vapor slot: hooks refreshed like the
+            // children above, positions sampled for the move, which reads
+            // only `el`
+            instance.appContext.vapor!.forEachGroupChild(child, el => {
+              const row = { el } as VNode
+              prevChildren.push(row)
+              positionMap.set(row, getPosition(el as Element))
+            })
           }
         }
       }
@@ -184,7 +197,10 @@ const TransitionGroupImpl: ComponentOptions = /*@__PURE__*/ decorate({
 
       for (let i = 0; i < children.length; i++) {
         const child = children[i]
-        if (child.key != null) {
+        if (child.vs) {
+          // the vapor renderer resolves the rows' hooks from the group's
+          child.vs.group = group
+        } else if (child.key != null) {
           setTransitionHooks(
             child,
             resolveTransitionHooks(child, cssTransitionProps, state, instance),

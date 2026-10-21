@@ -41,7 +41,9 @@ import {
 } from './components/Suspense'
 import type { DirectiveBinding } from './directives'
 import {
+  type BaseTransitionProps,
   type TransitionHooks,
+  type TransitionState,
   setTransitionHooks,
 } from './components/BaseTransition'
 import { warn } from './warning'
@@ -292,11 +294,19 @@ export interface VNode<
    */
   vs?: {
     slot: (props: any) => any
+    name: string
     // vdom outlets whose fallback this slot resolves, innermost first. Never
     // written in place: clones share the list
     outlets?: readonly VdomSlotOutlet[]
     // slot data saved before adding an outlet's branch key to vnode props
     props?: Data
+    // the TransitionGroup rendering the slot: what the rows the slot renders
+    // resolve their transition hooks from
+    group?: {
+      props: BaseTransitionProps<any>
+      state: TransitionState
+      instance: GenericComponentInstance
+    }
     state?: unknown
     ref?: ShallowRef<any>
     scope?: EffectScope
@@ -856,8 +866,10 @@ function cloneVaporSlotMeta(
 
   const cloned: NonNullable<VNode['vs']> = {
     slot: vaporSlot.slot,
+    name: vaporSlot.name,
     outlets: vaporSlot.outlets,
     props: vaporSlot.props,
+    group: vaporSlot.group,
   }
 
   if (vaporSlot.props && extraProps) {
