@@ -1173,6 +1173,56 @@ describe('vModel', () => {
     expect(two.selected).toEqual(true)
   })
 
+  it('v-model.number should work with multiple select (model is Set)', async () => {
+    const component = defineComponent({
+      data() {
+        return { value: new Set([1]) }
+      },
+      render() {
+        return [
+          withVModel(
+            h(
+              'select',
+              {
+                value: null,
+                multiple: true,
+                'onUpdate:modelValue': setValue.bind(this),
+              },
+              [h('option', { value: '1' }), h('option', { value: '2' })],
+            ),
+            this.value,
+            {
+              number: true,
+            },
+          ),
+        ]
+      },
+    })
+    render(h(component), root)
+
+    const input = root.querySelector('select')
+    const one = root.querySelector('option[value="1"]')
+    const two = root.querySelector('option[value="2"]')
+    const data = root._vnode.component.data
+
+    // the number stored in the Set must be matched against the string option
+    // value on mount
+    expect(one.selected).toEqual(true)
+    expect(two.selected).toEqual(false)
+
+    two.selected = true
+    triggerEvent('change', input)
+    await nextTick()
+    expect(data.value).toMatchObject(new Set([1, 2]))
+
+    one.selected = false
+    two.selected = false
+    data.value = new Set([2])
+    await nextTick()
+    expect(one.selected).toEqual(false)
+    expect(two.selected).toEqual(true)
+  })
+
   it('multiple select (model is Array, option value is object)', async () => {
     const fooValue = { foo: 1 }
     const barValue = { bar: 1 }

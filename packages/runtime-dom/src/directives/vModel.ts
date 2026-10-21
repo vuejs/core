@@ -307,6 +307,22 @@ function isSameSelectValue(
   return false
 }
 
+// A Set model stores the value assigned by the change handler as-is, which can
+// be a number when the `.number` modifier is used, while option values read
+// from the DOM are always strings. Keep the O(1) lookup for an exact match,
+// then fall back to the string comparison the array branch uses above.
+function isSelectedInSet(value: Set<any>, optionValue: string | number) {
+  if (value.has(optionValue)) {
+    return true
+  }
+  for (const v of value) {
+    if (String(v) === String(optionValue)) {
+      return true
+    }
+  }
+  return false
+}
+
 function setSelected(el: HTMLSelectElement, value: any) {
   const isMultiple = el.multiple
   const isArrayValue = isArray(value)
@@ -323,14 +339,16 @@ function setSelected(el: HTMLSelectElement, value: any) {
     const option = el.options[i]
     const optionValue = getValue(option)
     if (isMultiple) {
+      const optionType = typeof optionValue
       if (isArrayValue) {
-        const optionType = typeof optionValue
         // fast path for string / number values
         if (optionType === 'string' || optionType === 'number') {
           option.selected = value.some(v => String(v) === String(optionValue))
         } else {
           option.selected = looseIndexOf(value, optionValue) > -1
         }
+      } else if (optionType === 'string' || optionType === 'number') {
+        option.selected = isSelectedInSet(value, optionValue)
       } else {
         option.selected = value.has(optionValue)
       }
