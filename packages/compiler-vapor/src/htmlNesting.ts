@@ -14,18 +14,32 @@ const isScopeBoundaryTag = /*@__PURE__*/ makeMap(
 )
 // Markers in the list of active formatting elements.
 const isFormattingMarkerTag = /*@__PURE__*/ makeMap('caption,object,td,th')
-// Special elements, which end the search for an open `<li>`, `<dd>` or `<dt>`
-// (the parser exempts address, div and p).
-const isSpecialTag = /*@__PURE__*/ makeMap(
-  'area,article,aside,base,blockquote,body,br,button,caption,col,colgroup,' +
-    'dd,details,dl,dt,embed,fieldset,figcaption,figure,footer,form,h1,h2,h3,' +
-    'h4,h5,h6,head,header,hgroup,hr,html,iframe,img,input,li,link,main,menu,' +
-    'meta,nav,noscript,object,ol,param,pre,script,section,select,source,' +
-    'style,summary,table,tbody,td,template,textarea,tfoot,th,thead,title,tr,' +
-    'track,ul,wbr',
+// Special elements: they end the search for an open `<li>`, `<dd>` or `<dt>`
+// (the parser exempts address, div and p there), and an "any other end tag"
+// that reaches one while still open is ignored.
+export const isSpecialTag: (tag: string) => boolean = /*@__PURE__*/ makeMap(
+  'address,area,article,aside,base,blockquote,body,br,button,caption,col,' +
+    'colgroup,dd,details,div,dl,dt,embed,fieldset,figcaption,figure,footer,' +
+    'form,h1,h2,h3,h4,h5,h6,head,header,hgroup,hr,html,iframe,img,input,li,' +
+    'link,main,menu,meta,nav,noscript,object,ol,p,param,pre,script,section,' +
+    'select,source,style,summary,table,tbody,td,template,textarea,tfoot,th,' +
+    'thead,title,tr,track,ul,wbr',
 )
 const endsListItemSearch = (tag: string): boolean =>
   isSpecialTag(tag) && tag !== 'address' && tag !== 'div' && tag !== 'p'
+/**
+ * End tags with handling of their own pop whatever is still open below them.
+ * Any other end tag is ignored when it meets a special element on its way up
+ * the stack, and a formatting end tag runs the adoption agency around one, so
+ * under those an open special descendant has to close itself.
+ */
+export const popsOpenDescendants: (tag: string) => boolean =
+  /*@__PURE__*/ makeMap(
+    'address,article,aside,blockquote,button,caption,colgroup,dd,details,' +
+      'dialog,div,dl,dt,fieldset,figcaption,figure,footer,h1,h2,h3,h4,h5,h6,' +
+      'header,hgroup,li,main,menu,nav,object,ol,p,pre,section,summary,table,' +
+      'tbody,td,tfoot,th,thead,tr,ul',
+  )
 // Elements whose end tag the parser implies before an `<rt>` or `<rp>`.
 const isImpliedEndTag = /*@__PURE__*/ makeMap(
   'dd,dt,li,optgroup,option,p,rp,rt',

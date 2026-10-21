@@ -656,3 +656,26 @@ describe('descendants that close an open ancestor', () => {
     expect(stripAnchors(vapor.after)).toBe(expected)
   })
 })
+
+describe('special element under a parent whose end tag cannot close it', () => {
+  test.each([
+    [
+      '<main><legend><div>x</div></legend><p>{{ data }}</p></main>',
+      '<main><legend><div>x</div></legend><p>bar</p></main>',
+    ],
+    [
+      '<div><audio><p>a</p></audio><p>{{ data }}</p></div>',
+      '<div><audio><p>a</p></audio><p>bar</p></div>',
+    ],
+  ])('%j renders as %j in both modes', async (tpl, expected) => {
+    const { vdom, vapor } = await renderParity(
+      { App: `<template>${tpl}</template>` },
+      () => ref('foo'),
+      data => {
+        data.value = 'bar'
+      },
+    )
+    expect(vdom.after).toBe(expected)
+    expect(vapor.after).toBe(expected)
+  })
+})
