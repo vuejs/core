@@ -20,6 +20,7 @@ import {
   warn,
 } from '@vue/runtime-dom'
 import type { RawProps } from './componentProps'
+import { registerChildScopesHook } from './childScopes'
 import { getGlobalThis } from '@vue/shared'
 import { optimizePropertyLookup } from './dom/prop'
 import { setIsHydratingEnabled, withHydration } from './dom/hydration'
@@ -105,6 +106,7 @@ const unmountApp: AppUnmountFn = app => {
 }
 
 function prepareApp() {
+  registerChildScopesHook()
   // compile-time feature flags check
   if (__ESM_BUNDLER__ && !__TEST__) {
     initFeatureFlags()

@@ -5723,3 +5723,99 @@ describe('KeepAlive with a long v-else-if chain', () => {
     )
   })
 })
+
+describe('VaporKeepAlive freeze', () => {
+  const define = makeRender()
+  const script = (body: string) =>
+    `<script setup vapor>\nimport { watch } from 'vue'\nconst data = _data; const components = _components\n${body}\n</script>`
+  // renders `data.src` and logs its sync watcher runs
+  const leaf = (name: string) =>
+    script(
+      `watch(() => data.value.src, () => components.log('${name}'), { flush: 'sync' })`,
+    ) + `<template><i>${name}{{ data.src }}</i></template>`
+
+  function setupFreeze(freeze: boolean) {
+    const data = ref({ src: 0, view: 'A' })
+    const log: string[] = []
+    const components: any = { log: (s: string) => log.push(s) }
+    components.A = compile(leaf('A'), data, components)
+    components.B = compile(leaf('B'), data, components)
+    const App = compile(
+      `<template><KeepAlive${freeze ? ' freeze' : ''}><component :is="data.view === 'A' ? components.A : components.B"/></KeepAlive></template>`,
+      data,
+      components,
+    )
+    const { host } = define(App).render()
+    return { data, log, host }
+  }
+
+  test('pauses deactivated components and catches up on activation', async () => {
+    const { data, log, host } = setupFreeze(true)
+    expect(host.innerHTML).toContain('<i>A0</i>')
+
+    data.value.view = 'B'
+    await nextTick()
+    data.value.src++
+    expect(log).toEqual(['B'])
+    await nextTick()
+    expect(host.innerHTML).toContain('<i>B1</i>')
+
+    data.value.view = 'A'
+    await nextTick()
+    expect(log).toEqual(['B', 'A'])
+    expect(host.innerHTML).toContain('<i>A1</i>')
+  })
+
+  test('deactivated components keep running without freeze', async () => {
+    const { data, log } = setupFreeze(false)
+
+    data.value.view = 'B'
+    await nextTick()
+    data.value.src++
+    expect(log).toEqual(['A', 'B'])
+  })
+
+  test('activating a component does not resume a nested frozen one', async () => {
+    const data = ref({ src: 0, outer: 'X', inner: 'Z' })
+    const log: string[] = []
+    const components: any = { log: (s: string) => log.push(s) }
+    components.Y = compile(leaf('Y'), data, components)
+    components.Z = compile(leaf('Z'), data, components)
+    components.W = compile(`<template><b></b></template>`, data, components)
+    components.X = compile(
+      script(
+        `watch(() => data.value.src, () => components.log('X'), { flush: 'sync' })`,
+      ) +
+        `<template><div><KeepAlive freeze><component :is="data.inner === 'Z' ? components.Z : components.Y"/></KeepAlive></div></template>`,
+      data,
+      components,
+    )
+    const App = compile(
+      `<template><KeepAlive freeze><component :is="data.outer === 'X' ? components.X : components.W"/></KeepAlive></template>`,
+      data,
+      components,
+    )
+    const { host } = define(App).render()
+    expect(host.innerHTML).toContain('<i>Z0</i>')
+
+    // Z is frozen by the inner KeepAlive, then X by the outer one
+    data.value.inner = 'Y'
+    await nextTick()
+    data.value.outer = 'W'
+    await nextTick()
+    data.value.src++
+    expect(log).toEqual([])
+
+    // X and Y catch up; Z stays frozen
+    data.value.outer = 'X'
+    await nextTick()
+    expect(log.sort()).toEqual(['X', 'Y'])
+    data.value.src++
+    expect(log.sort()).toEqual(['X', 'X', 'Y', 'Y'])
+
+    data.value.inner = 'Z'
+    await nextTick()
+    expect(log).toContain('Z')
+    expect(host.innerHTML).toContain('<i>Z2</i>')
+  })
+})
