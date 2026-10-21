@@ -177,19 +177,57 @@ describe('v-once', () => {
     })
   })
 
-  test('v-once on the head of a long v-else-if chain freezes the selection', async () => {
-    const { vdom, vapor } = await renderParity(
+  // the text after every step for a chain with `v-once` on one branch; 10
+  // `v-else-if` compile to nested createIf, 11 to one createIfChain
+  async function chainWithOnce(elseIfs: number, oncePos: number) {
+    const out = {} as Record<string, string[]>
+    await renderParity(
       {
         App: `<template>${ifChain(
-          (i, dir) => `<p ${dir}${i === 0 ? ' v-once' : ''}>${i}</p>`,
+          (i, dir) =>
+            `<p ${dir}${i === oncePos ? ' v-once' : ''}>${i}:{{ data.msg }}</p>`,
+          { elseIfs },
         )}</template>`,
       },
-      () => ref({ k: 0 }),
-      data => {
-        data.value.k = 11
+      () => ref({ k: 5, msg: 'a' }),
+      async (data, root, mode) => {
+        const log = (out[mode] = [root.textContent!])
+        for (const step of [{ k: 6 }, { msg: 'b' }]) {
+          Object.assign(data.value, step)
+          await nextTick()
+          log.push(root.textContent!)
+        }
       },
     )
-    expect(vdom.text).toBe('0')
+    expect(out.vapor).toEqual(out.vdom)
+    return out.vapor
+  }
+
+  test.each([10, 11])(
+    'v-once on the head of a chain with %i v-else-if freezes the whole chain',
+    async elseIfs => {
+      expect(await chainWithOnce(elseIfs, 0)).toEqual(['5:a', '5:a', '5:a'])
+    },
+  )
+
+  test.each([10, 11])(
+    'v-once on a v-else-if of a chain with %i v-else-if is dropped',
+    async elseIfs => {
+      expect(await chainWithOnce(elseIfs, 5)).toEqual(['5:a', '6:a', '6:b'])
+    },
+  )
+
+  test('v-once on v-else is dropped', async () => {
+    const { vdom, vapor } = await renderParity(
+      {
+        App: `<template><p v-if="data.a">A</p><p v-else v-once>{{ data.msg }}</p></template>`,
+      },
+      () => ref({ a: false, msg: 'x' }),
+      data => {
+        data.value.msg = 'y'
+      },
+    )
+    expect(vdom.text).toBe('y')
     expect(vapor.text).toBe(vdom.text)
   })
 
@@ -209,46 +247,6 @@ describe('v-once', () => {
       )
       expect(vdom.text).toBe('111')
       expect(vapor.text).toBe('123')
-    })
-
-    test('v-once on v-else freezes the branch instance', async () => {
-      const { vdom, vapor } = await renderParity(
-        {
-          App: `<template><p v-if="data.a">A</p><p v-else v-once>{{ data.msg }}</p></template>`,
-        },
-        () => ref({ a: false, msg: 'x' }),
-        data => {
-          data.value.msg = 'y'
-        },
-      )
-      expect(vdom.text).toBe('y')
-      expect(vapor.text).toBe('x')
-    })
-
-    // vdom drops v-once on a v-else-if element; a short vapor chain freezes
-    // the selection from that branch on, a long one (`createIfChain`) only
-    // the branch's content
-    test('v-once on a v-else-if branch of a long chain freezes that branch', async () => {
-      const out = {} as Record<string, string[]>
-      await renderParity(
-        {
-          App: `<template>${ifChain(
-            (i, dir) =>
-              `<p ${dir}${i === 5 ? ' v-once' : ''}>${i}:{{ data.msg }}</p>`,
-          )}</template>`,
-        },
-        () => ref({ k: 5, msg: 'a' }),
-        async (data, root, mode) => {
-          const log = (out[mode] = [root.textContent!])
-          for (const step of [{ msg: 'b' }, { k: 6 }, { msg: 'c' }]) {
-            Object.assign(data.value, step)
-            await nextTick()
-            log.push(root.textContent!)
-          }
-        },
-      )
-      expect(out.vdom).toEqual(['5:a', '5:b', '6:b', '6:c'])
-      expect(out.vapor).toEqual(['5:a', '5:a', '6:b', '6:c'])
     })
 
     test('v-once on a slot template freezes that slot', async () => {

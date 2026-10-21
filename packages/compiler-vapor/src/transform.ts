@@ -669,7 +669,7 @@ export function getNextId(
   return n
 }
 
-function isComponentNode(node: AllNode): boolean {
+export function isComponentNode(node: AllNode): boolean {
   return (
     node.type === NodeTypes.ELEMENT && node.tagType === ElementTypes.COMPONENT
   )
