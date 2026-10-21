@@ -180,6 +180,30 @@ export default defineConfig({
           },
         },
       },
+      {
+        extends: true,
+        optimizeDeps: {
+          // Native ESM: avoid late optimization reloading the test iframe.
+          exclude: ['entities/decode'],
+        },
+        test: {
+          name: 'e2e-browser-vapor',
+          setupFiles: 'scripts/setup-vitest.ts',
+          include: ['packages/runtime-vapor/__tests__/e2e/*.spec.ts'],
+          browser: {
+            enabled: true,
+            provider: playwright({
+              launchOptions: {
+                args: process.env.CI
+                  ? ['--no-sandbox', '--disable-setuid-sandbox']
+                  : [],
+              },
+            }),
+            headless: true,
+            instances: [{ browser: 'chromium' }],
+          },
+        },
+      },
       // @ts-expect-error - https://github.com/vuejs/core/actions/runs/23430103557/job/68154030981
       // When running `vp test --project unit*`, Vitest still initializes all projects (this is
       // expected  behavior see https://github.com/vitest-dev/vitest/issues/9849) and loads

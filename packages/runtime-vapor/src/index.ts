@@ -63,6 +63,7 @@ export {
   withVaporKeys,
 } from './dom/event'
 export { createIf } from './apiCreateIf'
+export { createIfChain } from './apiCreateIfChain'
 export { createKeyedFragment } from './apiCreateFragment'
 export {
   createFor,

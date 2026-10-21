@@ -1,6 +1,6 @@
 import { nextTick, ref } from '@vue/runtime-dom'
 import { renderEffect } from '../src'
-import { renderParity } from './_utils'
+import { ifChain, renderParity } from './_utils'
 
 // Works as a vdom function directive (mounted + updated with a binding) and
 // as a vapor directive (a getter), so one definition serves both modes.
@@ -177,6 +177,22 @@ describe('v-once', () => {
     })
   })
 
+  test('v-once on the head of a long v-else-if chain freezes the selection', async () => {
+    const { vdom, vapor } = await renderParity(
+      {
+        App: `<template>${ifChain(
+          (i, dir) => `<p ${dir}${i === 0 ? ' v-once' : ''}>${i}</p>`,
+        )}</template>`,
+      },
+      () => ref({ k: 0 }),
+      data => {
+        data.value.k = 11
+      },
+    )
+    expect(vdom.text).toBe('0')
+    expect(vapor.text).toBe(vdom.text)
+  })
+
   // vdom caches the v-once vnode per component instance (`_cache[i]`) and
   // drops v-once where nothing can be cached. Vapor freezes per creation
   // instead; these cells pin that on purpose, with the vdom result recorded.
@@ -207,6 +223,32 @@ describe('v-once', () => {
       )
       expect(vdom.text).toBe('y')
       expect(vapor.text).toBe('x')
+    })
+
+    // vdom drops v-once on a v-else-if element; a short vapor chain freezes
+    // the selection from that branch on, a long one (`createIfChain`) only
+    // the branch's content
+    test('v-once on a v-else-if branch of a long chain freezes that branch', async () => {
+      const out = {} as Record<string, string[]>
+      await renderParity(
+        {
+          App: `<template>${ifChain(
+            (i, dir) =>
+              `<p ${dir}${i === 5 ? ' v-once' : ''}>${i}:{{ data.msg }}</p>`,
+          )}</template>`,
+        },
+        () => ref({ k: 5, msg: 'a' }),
+        async (data, root, mode) => {
+          const log = (out[mode] = [root.textContent!])
+          for (const step of [{ msg: 'b' }, { k: 6 }, { msg: 'c' }]) {
+            Object.assign(data.value, step)
+            await nextTick()
+            log.push(root.textContent!)
+          }
+        },
+      )
+      expect(out.vdom).toEqual(['5:a', '5:b', '6:b', '6:c'])
+      expect(out.vapor).toEqual(['5:a', '5:a', '6:b', '6:c'])
     })
 
     test('v-once on a slot template freezes that slot', async () => {

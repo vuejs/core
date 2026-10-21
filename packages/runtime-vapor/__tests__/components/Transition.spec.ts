@@ -26,6 +26,7 @@ import {
 } from 'vue'
 import {
   compile,
+  ifChain,
   makeInteropRender,
   makeRender,
   renderParity,
@@ -3641,6 +3642,29 @@ describe('in-out: the current branch leaves when nothing takes its place', () =>
       },
       { x: true, y: false },
       ['x=false', 'doneAll', 'y=true', 'doneAll', 'y=false', 'doneAll'],
+    ))
+
+  test('a long v-else-if chain', () =>
+    parity(
+      {
+        App: inOut(
+          ifChain((i, dir) => `<div ${dir} class="c${i}">${i}</div>`, {
+            withElse: false,
+            cond: i => `data.k === 'c${i}'`,
+          }),
+        ),
+      },
+      { k: 'c0' },
+      [
+        'k=c11',
+        'doneAll',
+        'k=c5',
+        'doneAll',
+        'k=none',
+        'doneAll',
+        'k=c0',
+        'doneAll',
+      ],
     ))
 
   test('a component branch replaced by nothing', () =>

@@ -68,6 +68,10 @@ export enum VaporIfFlags {
   /**
    * Documents the packed true/false branch shape bits. Runtime decode shifts
    * to the selected branch first, then masks with 0b11 for one VaporBlockShape.
+   *
+   * `createIfChain` splits the same bits across two arguments: each branch
+   * flags entry holds that branch's shape with `TRUE_NO_SCOPE`, the chain
+   * flags hold `ONCE`, `SLOT_ROOT` and the keyed index.
    */
   BLOCK_SHAPE = 0b1111,
   /**

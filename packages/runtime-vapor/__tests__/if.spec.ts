@@ -13,7 +13,7 @@ import {
 import { nextTick, ref } from '@vue/runtime-dom'
 import { VaporBlockShape, VaporIfFlags } from '@vue/shared'
 import type { Mock } from 'vite-plus/test'
-import { compile, ifFlags, makeRender, renderParity } from './_utils'
+import { compile, ifChain, ifFlags, makeRender, renderParity } from './_utils'
 import { setElementText } from '../src/dom/prop'
 import type { DynamicFragment } from '../src/fragment'
 import type { TransitionBlock } from '../src/block'
@@ -635,4 +635,123 @@ describe('createIf', () => {
       })
     },
   )
+})
+
+describe('createIfChain', () => {
+  // the text after every step, vapor against vdom
+  async function parity(
+    App: string,
+    init: Record<string, any>,
+    steps: Record<string, any>[],
+    extra: Record<string, string> = {},
+  ) {
+    const out = {} as Record<'vdom' | 'vapor', string[]>
+    const html = {} as Record<'vdom' | 'vapor', string>
+    await renderParity(
+      { ...extra, App },
+      () => ref({ ...init }),
+      async (data, root, mode) => {
+        const log = (out[mode] = [root.textContent!])
+        for (const step of steps) {
+          Object.assign(data.value, step)
+          await nextTick()
+          log.push(root.textContent!)
+        }
+        html[mode] = root.innerHTML
+      },
+    )
+    expect(out.vapor).toEqual(out.vdom)
+    return { out: out.vapor, html }
+  }
+
+  test('switches between the branches', async () => {
+    const { out, html } = await parity(
+      `<template><section>${ifChain(
+        (i, dir) => `<div ${dir}>${i}</div>`,
+      )}</section></template>`,
+      { k: 0 },
+      [{ k: 11 }, { k: 12 }, { k: 5 }, { k: 0 }, { k: -1 }],
+    )
+    expect(out).toEqual(['0', '11', '12', '5', '0', '12'])
+    // one fragment for the whole chain
+    expect(html.vapor).toBe('<section><div>12</div><!--if--></section>')
+  })
+
+  test('renders nothing past the last branch without v-else', async () => {
+    const { out, html } = await parity(
+      `<template><section>${ifChain((i, dir) => `<div ${dir}>${i}</div>`, {
+        withElse: false,
+      })}</section></template>`,
+      { k: -1 },
+      [{ k: 11 }, { k: 12 }, { k: 0 }],
+    )
+    expect(out).toEqual(['', '11', '', '0'])
+    expect(html.vapor).toBe('<section><div>0</div><!--if--></section>')
+  })
+
+  test('evaluates the conditions past a static false head', async () => {
+    const { out } = await parity(
+      `<template>${ifChain((i, dir) => `<div ${dir}>${i}</div>`, {
+        cond: i => (i === 0 ? 'false' : `data.k === ${i}`),
+      })}</template>`,
+      { k: 0 },
+      [{ k: 11 }, { k: 1 }],
+    )
+    expect(out).toEqual(['12', '11', '1'])
+  })
+
+  test('keeps dynamic content in every branch live', async () => {
+    const { out } = await parity(
+      `<template>${ifChain(
+        (i, dir) => `<div ${dir}>${i}:{{ data.msg }}</div>`,
+      )}</template>`,
+      { k: 11, msg: 'a' },
+      [{ msg: 'b' }, { k: 3 }, { msg: 'c' }],
+    )
+    expect(out).toEqual(['11:a', '11:b', '3:b', '3:c'])
+  })
+
+  test('comments between branches belong to the next branch', async () => {
+    const out = {} as Record<'vdom' | 'vapor', string[]>
+    await renderParity(
+      {
+        App: `<template><section>${ifChain(
+          (i, dir) => `<!-- c${i} --><div ${dir}>${i}</div>`,
+        )}</section></template>`,
+      },
+      () => ref({ k: 0 }),
+      async (data, root, mode) => {
+        // the comment ahead of the head is a plain sibling, the others
+        // belong to their branch; drop only the fragment anchor
+        const dom = () => root.innerHTML.replace(/<!--if-->/g, '')
+        const log = (out[mode] = [dom()])
+        for (const k of [11, 12]) {
+          data.value.k = k
+          await nextTick()
+          log.push(dom())
+        }
+      },
+    )
+    expect(out.vdom).toEqual([
+      '<section><!-- c0 --><div>0</div></section>',
+      '<section><!-- c0 --><!-- c11 --><div>11</div></section>',
+      '<section><!-- c0 --><!-- c12 --><div>12</div></section>',
+    ])
+    expect(out.vapor).toEqual(out.vdom)
+  })
+
+  test('switches between component branches of one type', async () => {
+    const { out } = await parity(
+      `<template>${ifChain(
+        (i, dir) => `<components.Leaf ${dir} id="${i}" />`,
+      )}</template>`,
+      { k: 0 },
+      [{ k: 11 }, { k: 12 }, { k: 0 }],
+      {
+        Leaf: `<script setup>const props = defineProps(['id'])</script>
+        <template><i>{{ props.id }}</i></template>`,
+      },
+    )
+    expect(out).toEqual(['0', '11', '12', '0'])
+  })
 })

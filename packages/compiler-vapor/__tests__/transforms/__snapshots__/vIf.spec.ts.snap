@@ -1,5 +1,78 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
+exports[`compiler: long v-else-if chain > flattens past the threshold 1`] = `
+"import { createIfChain as _createIfChain, template as _template } from 'vue';
+const t0 = _template("<div>0", 3)
+const t1 = _template("<div>1", 3)
+const t2 = _template("<div>2", 3)
+const t3 = _template("<div>3", 3)
+const t4 = _template("<div>4", 3)
+const t5 = _template("<div>5", 3)
+const t6 = _template("<div>6", 3)
+const t7 = _template("<div>7", 3)
+const t8 = _template("<div>8", 3)
+const t9 = _template("<div>9", 3)
+const t10 = _template("<div>10", 3)
+const t11 = _template("<div>11", 3)
+const t12 = _template("<div>12", 3)
+
+export function render(_ctx) {
+  const n0 = _createIfChain(() => (_ctx.c0) ? 0
+    : (_ctx.c1) ? 1
+    : (_ctx.c2) ? 2
+    : (_ctx.c3) ? 3
+    : (_ctx.c4) ? 4
+    : (_ctx.c5) ? 5
+    : (_ctx.c6) ? 6
+    : (_ctx.c7) ? 7
+    : (_ctx.c8) ? 8
+    : (_ctx.c9) ? 9
+    : (_ctx.c10) ? 10
+    : (_ctx.c11) ? 11
+    : 12, [() => {
+    const n2 = t0()
+    return n2
+  }, () => {
+    const n4 = t1()
+    return n4
+  }, () => {
+    const n7 = t2()
+    return n7
+  }, () => {
+    const n10 = t3()
+    return n10
+  }, () => {
+    const n13 = t4()
+    return n13
+  }, () => {
+    const n16 = t5()
+    return n16
+  }, () => {
+    const n19 = t6()
+    return n19
+  }, () => {
+    const n22 = t7()
+    return n22
+  }, () => {
+    const n25 = t8()
+    return n25
+  }, () => {
+    const n28 = t9()
+    return n28
+  }, () => {
+    const n31 = t10()
+    return n31
+  }, () => {
+    const n34 = t11()
+    return n34
+  }, () => {
+    const n37 = t12()
+    return n37
+  }], [33 /* SINGLE_ROOT, NO_SCOPE */, 33 /* SINGLE_ROOT, NO_SCOPE */, 33 /* SINGLE_ROOT, NO_SCOPE */, 33 /* SINGLE_ROOT, NO_SCOPE */, 33 /* SINGLE_ROOT, NO_SCOPE */, 33 /* SINGLE_ROOT, NO_SCOPE */, 33 /* SINGLE_ROOT, NO_SCOPE */, 33 /* SINGLE_ROOT, NO_SCOPE */, 33 /* SINGLE_ROOT, NO_SCOPE */, 33 /* SINGLE_ROOT, NO_SCOPE */, 33 /* SINGLE_ROOT, NO_SCOPE */, 33 /* SINGLE_ROOT, NO_SCOPE */, 33 /* SINGLE_ROOT, NO_SCOPE */], 3328 /* KEYED_INDEX_12 */)
+  return n0
+}"
+`;
+
 exports[`compiler: v-if > basic v-if 1`] = `
 "import { txt as _txt, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, createIf as _createIf, template as _template } from 'vue';
 const t0 = _template("<div> ", 1)

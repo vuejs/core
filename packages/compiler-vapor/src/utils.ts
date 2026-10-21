@@ -13,7 +13,12 @@ import {
   isConstantNode,
   isLiteralWhitelisted,
 } from '@vue/compiler-dom'
-import { type BlockIRNode, IRNodeTypes, type VaporDirectiveNode } from './ir'
+import {
+  type BlockIRNode,
+  IRNodeTypes,
+  type IfIRNode,
+  type VaporDirectiveNode,
+} from './ir'
 import { EMPTY_EXPRESSION } from './transforms/utils'
 import type { TransformContext } from './transform'
 
@@ -208,4 +213,24 @@ export function getBlockShape(block: BlockIRNode): VaporBlockShape {
     )
     ? VaporBlockShape.MULTI_ROOT
     : VaporBlockShape.SINGLE_ROOT
+}
+
+// A `v-if` chain with more `v-else-if` branches than this compiles to one
+// `createIfChain` call: nested `createIf` calls create each branch inside the
+// previous one's effect and run out of stack on long chains.
+export const IF_CHAIN_THRESHOLD = 10
+
+/** the number of `v-if` / `v-else-if` nodes in the chain starting at `head` */
+export function getIfChainLength(head: IfIRNode): number {
+  let length = 1
+  let negative = head.negative
+  while (negative && negative.type === IRNodeTypes.IF) {
+    length++
+    negative = negative.negative
+  }
+  return length
+}
+
+export function isLongIfChain(head: IfIRNode): boolean {
+  return getIfChainLength(head) - 1 > IF_CHAIN_THRESHOLD
 }

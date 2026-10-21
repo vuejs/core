@@ -30,6 +30,7 @@ import {
 } from '../../src/component'
 import {
   compile,
+  ifChain,
   ifFlags,
   makeRender,
   renderParity,
@@ -5659,5 +5660,66 @@ describe('Transition inside a kept-alive component', () => {
     )
     expect(settled.vdom).toBe('<main><b>c</b></main>')
     expect(settled.vapor).toBe(settled.vdom)
+  })
+})
+
+describe('KeepAlive with a long v-else-if chain', () => {
+  // one component type on every branch, told apart by the branch key; each
+  // tab logs its lifecycle and keeps a click counter in its id
+  const srcs = {
+    Tab:
+      `<script setup>` +
+      `import { ref, onActivated, onDeactivated } from 'vue'\n` +
+      `const props = defineProps(['id'])\n` +
+      `const n = ref(0)\n` +
+      `const log = _data.value.box.log\n` +
+      `log.push('setup:' + props.id)\n` +
+      `onActivated(() => log.push('act:' + props.id))\n` +
+      `onDeactivated(() => log.push('deact:' + props.id))\n` +
+      `</script>` +
+      `<template><section :id="props.id + n" @click="n++" /></template>`,
+    App: `<template><KeepAlive>${ifChain(
+      (i, dir) => `<components.Tab ${dir} id="t${i}" />`,
+      { withElse: false },
+    )}</KeepAlive></template>`,
+  }
+
+  // steps: a branch to switch to, or 'click' to bump the shown tab's counter
+  async function run(steps: (number | 'click')[]) {
+    const out = {} as Record<'vdom' | 'vapor', string[]>
+    await renderParity(
+      srcs,
+      () => {
+        const box = markRaw({ log: [] as string[] })
+        return ref<any>({ k: 0, box })
+      },
+      async (data, root, mode) => {
+        for (const step of steps) {
+          if (step === 'click') root.querySelector('section')!.click()
+          else data.value.k = step
+          await nextTick()
+        }
+        out[mode] = [stripAnchors(root.innerHTML), data.value.box.log.join()]
+      },
+    )
+    expect(out.vapor).toEqual(out.vdom)
+    return out.vapor
+  }
+
+  test('caches every branch separately', async () => {
+    const [html, log] = await run([11, 'click', 0, 11, 'click', 5, 11])
+    expect(html).toBe('<section id="t112"></section>')
+    expect(log).toBe(
+      'setup:t0,act:t0,setup:t11,deact:t0,act:t11,deact:t11,act:t0,' +
+        'deact:t0,act:t11,setup:t5,deact:t11,act:t5,deact:t5,act:t11',
+    )
+  })
+
+  test('deactivates the shown branch when none matches', async () => {
+    const [html, log] = await run([12, 11, 12, 11, 'click'])
+    expect(html).toBe('<section id="t111"></section>')
+    expect(log).toBe(
+      'setup:t0,act:t0,deact:t0,setup:t11,act:t11,deact:t11,act:t11',
+    )
   })
 })

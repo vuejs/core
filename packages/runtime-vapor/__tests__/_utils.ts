@@ -351,3 +351,25 @@ export function shuffle(array: Array<any>): any[] {
 export function stripAnchors(html: string): string {
   return html.replace(/<!--[^>]*-->/g, '')
 }
+
+// A `v-if` + `elseIfs` × `v-else-if` (+ `v-else`) chain; the default length
+// is past the compiler's threshold, so it compiles to one `createIfChain`.
+export function ifChain(
+  branch: (i: number, dir: string) => string,
+  {
+    elseIfs = 11,
+    withElse = true,
+    cond = (i: number) => `data.k === ${i}`,
+  }: {
+    elseIfs?: number
+    withElse?: boolean
+    cond?: (i: number) => string
+  } = {},
+): string {
+  let src = ''
+  for (let i = 0; i <= elseIfs; i++) {
+    src += branch(i, `${i === 0 ? 'v-if' : 'v-else-if'}="${cond(i)}"`) + '\n'
+  }
+  if (withElse) src += branch(elseIfs + 1, 'v-else')
+  return src
+}

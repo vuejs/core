@@ -785,3 +785,123 @@ describe('compiler: v-if', () => {
     ])
   })
 })
+
+describe('compiler: long v-else-if chain', () => {
+  // `v-if` + `elseIfs` × `v-else-if` (+ `v-else`), one `<div>` per branch
+  function chain(
+    elseIfs: number,
+    {
+      withElse = true,
+      branch = (i: number, dir: string) => `<div ${dir}>${i}</div>`,
+    }: {
+      withElse?: boolean
+      branch?: (i: number, dir: string) => string
+    } = {},
+  ) {
+    let src = ''
+    for (let i = 0; i <= elseIfs; i++) {
+      src += branch(i, i === 0 ? `v-if="c${i}"` : `v-else-if="c${i}"`)
+    }
+    if (withElse) src += branch(elseIfs + 1, 'v-else')
+    return src
+  }
+
+  test('nests up to the threshold', () => {
+    const { code, helpers } = compileWithVIf(chain(10))
+    expect(helpers).not.contains('createIfChain')
+    expect(code).contains('() => _createIf(')
+  })
+
+  test('flattens past the threshold', () => {
+    const { code, ir, helpers } = compileWithVIf(chain(11))
+    expect(helpers).contains('createIfChain')
+    expect(helpers).not.contains('createIf')
+    expect(code).matchSnapshot()
+
+    const op = ir.block.dynamic.children[0].operation as IfIRNode
+    // 12 `v-if` nodes took indexes 0-11; the chain's 13 keys span 7 indexes
+    expect(op.index).toBe(12)
+    expect(op.once).toBe(false)
+    expect(code).contains(
+      `${(12 + 1) << VaporIfFlags.INDEX_SHIFT} /* KEYED_INDEX_12 */`,
+    )
+  })
+
+  test('keeps the numbering of the chains around it', () => {
+    const { code } = compileWithVIf(
+      `<div v-if="a">a</div><div v-else>b</div>` +
+        chain(11) +
+        `<div v-if="z">z</div><div v-else>y</div>`,
+    )
+    expect(code).contains('KEYED_INDEX_0 */')
+    expect(code).contains('KEYED_INDEX_13 */')
+    // reserved after everything else: 14 nodes before it, 7 indexes
+    expect(code).contains('KEYED_INDEX_14 */')
+  })
+
+  test('selects the empty state without v-else', () => {
+    const { code } = compileWithVIf(
+      chain(11, {
+        withElse: false,
+        branch: (i, dir) =>
+          i === 11 ? `<template ${dir}><p/><p/></template>` : `<div ${dir}/>`,
+      }),
+    )
+    expect(code).contains(': (_ctx.c11) ? 11')
+    expect(code).contains(': 12, [')
+    expect(code).contains(
+      `], [33 /* SINGLE_ROOT, NO_SCOPE */, 33 /* SINGLE_ROOT, NO_SCOPE */, 33 /* SINGLE_ROOT, NO_SCOPE */, 33 /* SINGLE_ROOT, NO_SCOPE */, 33 /* SINGLE_ROOT, NO_SCOPE */, 33 /* SINGLE_ROOT, NO_SCOPE */, 33 /* SINGLE_ROOT, NO_SCOPE */, 33 /* SINGLE_ROOT, NO_SCOPE */, 33 /* SINGLE_ROOT, NO_SCOPE */, 33 /* SINGLE_ROOT, NO_SCOPE */, 33 /* SINGLE_ROOT, NO_SCOPE */, 34 /* MULTI_ROOT, NO_SCOPE */, 0 /* EMPTY */], `,
+    )
+  })
+
+  test('omits default branch flags', () => {
+    const { code } = compileWithVIf(
+      chain(11, { branch: (i, dir) => `<div ${dir}>{{ m${i} }}</div>` }),
+    )
+    expect(code).contains('}], null, ')
+    const { code: noElse } = compileWithVIf(
+      chain(11, {
+        withElse: false,
+        branch: (i, dir) => `<div ${dir}>{{ m${i} }}</div>`,
+      }),
+    )
+    expect(noElse).contains('}], null, ')
+  })
+
+  test('forces multi-root on every state inside template v-for', () => {
+    const { code } = compileWithVIf(
+      `<template v-for="i in list">${chain(11, { withElse: false })}</template>`,
+    )
+    expect(code).contains(
+      '2 /* MULTI_ROOT */, 2 /* MULTI_ROOT */, 2 /* MULTI_ROOT */, 2 /* MULTI_ROOT */, 2 /* MULTI_ROOT */, 2 /* MULTI_ROOT */, 2 /* MULTI_ROOT */, 2 /* MULTI_ROOT */, 2 /* MULTI_ROOT */, 2 /* MULTI_ROOT */, 2 /* MULTI_ROOT */, 2 /* MULTI_ROOT */, 2 /* MULTI_ROOT */]',
+    )
+  })
+
+  test('static conditions keep the selector live', () => {
+    const { code } = compileWithVIf(
+      chain(11).replace('v-if="c0"', 'v-if="false"'),
+    )
+    expect(code).contains('() => (false) ? 0')
+    expect(code).not.contains('ONCE')
+  })
+
+  test('v-once on a branch freezes that branch only', () => {
+    const { code } = compileWithVIf(
+      chain(11, {
+        branch: (i, dir) => `<div ${dir}>{{ m${i} }}</div>`,
+      }).replace('v-else-if="c5"', 'v-else-if="c5" v-once'),
+    )
+    expect(code).not.contains('ONCE')
+    expect(code.match(/_renderEffect\(/g)!.length).toBe(12)
+    expect(code).toMatch(/\n\s*_setText\(\w+, _toDisplayString\(_ctx\.m5\)\)/)
+  })
+
+  test('v-once on the head freezes the selection', () => {
+    const { code } = compileWithVIf(
+      chain(11).replace('v-if="c0"', 'v-if="c0" v-once'),
+    )
+    expect(code).contains('], 16 /* ONCE */)')
+    const { code: inVOnce } = compileWithVIf(`<div v-once>${chain(11)}</div>`)
+    expect(inVOnce).contains('], 16 /* ONCE */)')
+  })
+})
