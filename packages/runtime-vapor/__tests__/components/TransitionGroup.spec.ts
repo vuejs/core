@@ -8,7 +8,7 @@ import {
   setBlockKey,
   template,
 } from '../../src'
-import { defineComponent, h, nextTick, ref } from '@vue/runtime-dom'
+import { type Ref, defineComponent, h, nextTick, ref } from '@vue/runtime-dom'
 import { compile, makeInteropRender, makeRender } from '../_utils'
 import type { TransitionBlock } from '../../src/block'
 
@@ -194,8 +194,8 @@ describe('TransitionGroup', () => {
 
     const nodes = list.nodes[0][0].nodes
 
-    expect((nodes[0] as TransitionBlock).$tkey).toBe('1:0')
-    expect((nodes[1] as TransitionBlock).$tkey).toBe('1:1')
+    expect((nodes[0] as TransitionBlock).$tkey).toBe('1.0')
+    expect((nodes[1] as TransitionBlock).$tkey).toBe('1.1')
     expect(nodes[0].$transition).toBeDefined()
     expect(nodes[1].$transition).toBeDefined()
   })
@@ -626,5 +626,113 @@ describe('TransitionGroup', () => {
     data.value.show = false
     await nextTick()
     expect(host.querySelector('ul')!.innerHTML).toBe('')
+  })
+
+  // A keyed <template v-for> row keys its roots under the row key on the full
+  // collect and on a branch re-render inside the row alike, as vdom keys the
+  // children of a keyed fragment: re-adding a branch while the previous one
+  // still leaves early-removes it instead of leaving both in the DOM.
+  describe('keyed <template v-for> rows re-rendered mid-leave', () => {
+    const leaves: (() => void)[] = []
+    const onAfterLeave = vi.fn()
+    const group = (rows: string) =>
+      `<template>
+        <TransitionGroup tag="ul" :css="false" @leave="data.onLeave" @after-leave="data.onAfterLeave">
+          <template v-for="i in data.list" :key="i">
+            ${rows}
+          </template>
+        </TransitionGroup>
+      </template>`
+    const render = (rows: string, extra: Record<string, any> = {}) => {
+      const data = ref<any>({
+        list: ['a', 'b'],
+        show: true,
+        onLeave: (_: Element, done: () => void) => leaves.push(done),
+        onAfterLeave,
+        ...extra,
+      })
+      const { host } = define(compile(group(rows), data) as any).render()
+      return { host, data }
+    }
+    const texts = (host: HTMLElement) =>
+      Array.from(host.querySelectorAll('li'), li => li.textContent).join(' ')
+    const toggleBack = async (
+      { host, data }: { host: HTMLElement; data: Ref<any> },
+      hidden: string,
+      back: string,
+    ) => {
+      data.value.show = false
+      await nextTick()
+      expect(texts(host)).toBe(hidden)
+
+      // back to the first branch while the previous one still leaves
+      data.value.show = true
+      await nextTick()
+      expect(texts(host)).toBe(back)
+      expect(onAfterLeave).toHaveBeenCalledTimes(2)
+
+      leaves.forEach(done => done())
+      await nextTick()
+    }
+    beforeEach(() => {
+      leaves.length = 0
+      onAfterLeave.mockClear()
+    })
+
+    test('unkeyed v-if/v-else row', async () => {
+      const run = render(
+        `<li v-if="data.show">{{ i }}-on</li>
+            <li v-else>{{ i }}-off</li>`,
+      )
+      expect(texts(run.host)).toBe('a-on b-on')
+      await toggleBack(run, 'a-on a-off b-on b-off', 'a-off a-on b-off b-on')
+      expect(texts(run.host)).toBe('a-on b-on')
+    })
+
+    test('unkeyed v-if/v-else-if/v-else row', async () => {
+      const run = render(
+        `<li v-if="data.show">{{ i }}-on</li>
+            <li v-else-if="data.alt">{{ i }}-alt</li>
+            <li v-else>{{ i }}-off</li>`,
+        { alt: false },
+      )
+      expect(texts(run.host)).toBe('a-on b-on')
+      await toggleBack(run, 'a-on a-off b-on b-off', 'a-off a-on b-off b-on')
+      expect(texts(run.host)).toBe('a-on b-on')
+    })
+
+    test('branches with their own keys', async () => {
+      const run = render(
+        `<li v-if="data.show" key="on">{{ i }}-on</li>
+            <li v-else key="off">{{ i }}-off</li>`,
+      )
+      expect(texts(run.host)).toBe('a-on b-on')
+      await toggleBack(run, 'a-on a-off b-on b-off', 'a-off a-on b-off b-on')
+      expect(texts(run.host)).toBe('a-on b-on')
+    })
+
+    test('a root keyed apart from its row', async () => {
+      const run = render(`<li v-if="data.show" :key="i + 'x'">{{ i }}</li>`)
+      expect(texts(run.host)).toBe('a b')
+      await toggleBack(run, 'a b', 'a b')
+      expect(texts(run.host)).toBe('a b')
+    })
+
+    test('a conditional root beside another root of the row', async () => {
+      const run = render(
+        `<li v-if="data.show">{{ i }}</li>
+            <li>{{ i }}-tail</li>`,
+      )
+      expect(texts(run.host)).toBe('a a-tail b b-tail')
+      await toggleBack(run, 'a a-tail b b-tail', 'a a-tail b b-tail')
+      expect(texts(run.host)).toBe('a a-tail b b-tail')
+      // the roots take the row key and their position, as on the re-render
+      expect(
+        Array.from(
+          run.host.querySelectorAll('li'),
+          li => (li as TransitionBlock).$tkey,
+        ),
+      ).toEqual(['a.0', 'a.1', 'b.0', 'b.1'])
+    })
   })
 })
