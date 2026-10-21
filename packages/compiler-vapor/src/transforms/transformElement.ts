@@ -51,6 +51,7 @@ import type {
   NodeTransform,
   TransformContext,
 } from '../transform'
+import { OpenScope } from '../htmlNesting'
 import {
   DynamicFlag,
   IRDynamicPropsKind,
@@ -333,11 +334,10 @@ export function getChildTemplateCloseState(
     return
   }
 
-  const inSameTemplateAsParent = isInSameTemplateAsParent(context)
-  const inheritedTags = inSameTemplateAsParent
-    ? context.templateCloseTags
-    : undefined
-  const inheritedBlocks = inSameTemplateAsParent && context.templateCloseBlocks
+  // set by transformChildren only when the element shares its parent's
+  // template
+  const inheritedTags = context.templateCloseTags
+  const inheritedBlocks = context.templateCloseBlocks
 
   const omitEndTag =
     context.root === context.effectiveParent ||
@@ -357,27 +357,23 @@ export function getChildTemplateCloseState(
   }
 }
 
-export function isInSameTemplateAsParent(
+/**
+ * The parent whose template string the element would be written into: a
+ * plain element in the same block that is not created with createElement.
+ */
+function getTemplateParent(
   context: TransformContext<ElementNode>,
-): boolean {
-  const { parent, node, block } = context
-  if (!parent || block !== parent.block) {
-    return false
-  }
+): TransformContext<ElementNode> | undefined {
+  const { parent, block } = context
+  if (!parent || block !== parent.block) return
   const parentNode = parent.node
   if (
-    parentNode.type !== NodeTypes.ELEMENT ||
-    parentNode.tagType !== ElementTypes.ELEMENT
+    parentNode.type === NodeTypes.ELEMENT &&
+    parentNode.tagType === ElementTypes.ELEMENT &&
+    !shouldUseCreateElement(parentNode, parent as TransformContext<ElementNode>)
   ) {
-    return false
+    return parent as TransformContext<ElementNode>
   }
-
-  return (
-    !shouldUseCreateElement(
-      parentNode,
-      parent as TransformContext<ElementNode>,
-    ) && isValidHTMLNesting(parentNode.tag, node.tag)
-  )
 }
 
 function transformComponentElement(
@@ -826,10 +822,19 @@ function transformNativeElement(
 
   context.templateRoot = singleRoot
 
+  // An element the parser would not place under its parent (`keepsInTemplate`,
+  // decided by transformChildren) gets a template of its own. So does one a
+  // component or createElement parent cannot hold: its parent registers it
+  // like any other child, but it must stay off the static path - the server
+  // renders it in place, and the browser's parser drops or moves it, so only
+  // the non-static hydration path can recreate it (`<my-el><td>`). The parent
+  // check runs again here on the tag the element's own transforms left behind.
   if (
-    context.parent &&
-    context.parent.node.type === NodeTypes.ELEMENT &&
-    !isValidHTMLNesting(context.parent.node.tag, tag)
+    (context.parent &&
+      context.parent.node.type === NodeTypes.ELEMENT &&
+      !isValidHTMLNesting(context.parent.node.tag, tag)) ||
+    (!(context.templateScope & OpenScope.SHARED) &&
+      getTemplateParent(context as TransformContext<ElementNode>) !== undefined)
   ) {
     context.reference()
     context.dynamic.template = context.pushTemplate(template)

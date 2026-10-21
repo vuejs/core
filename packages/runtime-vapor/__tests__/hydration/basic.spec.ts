@@ -1332,3 +1332,19 @@ describe('Vapor Mode hydration', () => {
     },
   )
 })
+
+describe('mismatch recovery of elements the parser cannot place', () => {
+  // The browser drops a `<td>` the server rendered inside a custom element,
+  // so the template string of the cell must not take the static path, which
+  // only validates: the cell is recreated instead.
+  test('a cell the parser dropped from a custom element', async () => {
+    const { container } = await testHydration(
+      `<template><my-el><td>foo</td></my-el></template>`,
+      {},
+      undefined,
+      { compilerOptions: { isCustomElement: tag => tag === 'my-el' } },
+    )
+    expect(`Hydration node mismatch`).toHaveBeenWarned()
+    expect(container.innerHTML).toBe('<my-el><td>foo</td></my-el>')
+  })
+})

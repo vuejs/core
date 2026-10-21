@@ -2,12 +2,16 @@
  * @vitest-environment jsdom
  */
 
+import { NodeTypes } from '@vue/compiler-dom'
 import { compile } from '../src'
 
-const parser: DOMParser = new DOMParser()
+// parse the way the runtime does (`template.innerHTML`): the template content
+// parser accepts any root, while a document body would drop `<td>` and the like
+const t = document.createElement('template')
 
 function parseHTML(html: string): string {
-  return parser.parseFromString(html, 'text/html').body.innerHTML
+  t.innerHTML = html
+  return t.innerHTML
 }
 
 function getCompiledTemplates(template: string): string[] {
@@ -390,4 +394,150 @@ test('nested list end tag', () => {
     '<ul><li>a</li><li>b<ul><li>c',
     '<ul><li>a</li><li>b<ul><li>c</li></ul></li></ul>',
   )
+})
+
+test('descendant that closes an open ancestor', () => {
+  // the parser ends an open `<p>` in button scope at a block start tag below
+  // it, not only at a child one, so that descendant needs a template of its own
+  checkAbbr(
+    '<p><span><div>x</div></span></p>',
+    ['<div>x', '<p><span>'],
+    ['<div>x</div>', '<p><span></span></p>'],
+  )
+  // the split element starts a template of its own: its descendants see no
+  // open `<p>` any more and stay with it
+  checkAbbr(
+    '<p><span><div><section>x</section></div></span></p>',
+    ['<div><section>x', '<p><span>'],
+    ['<div><section>x</section></div>', '<p><span></span></p>'],
+  )
+  // `<a>`, `<button>` and `<form>` start tags close an open one too
+  checkAbbr(
+    '<a href="#a"><div><a href="#b">x</a></div></a>',
+    ['<a href=#b>x', '<a href=#a><div>'],
+    ['<a href="#b">x</a>', '<a href="#a"><div></div></a>'],
+  )
+  checkAbbr(
+    '<button><span><button>x</button></span></button>',
+    ['<button>x', '<button><span>'],
+    ['<button>x</button>', '<button><span></span></button>'],
+  )
+  checkAbbr(
+    '<form><div><form>x</form></div></form>',
+    ['<form>x', '<form><div>'],
+    ['<form>x</form>', '<form><div></div></form>'],
+  )
+  // the form element pointer knows no scope: a cell does not shield a form
+  checkAbbr(
+    '<form><table><tbody><tr><td><form>x</form></td></tr></tbody></table></form>',
+    ['<form>x', '<form><table><tbody><tr><td>'],
+    [
+      '<form>x</form>',
+      '<form><table><tbody><tr><td></td></tr></tbody></table></form>',
+    ],
+  )
+  // `<li>` and `<dd>`/`<dt>` close an open one through non-special elements
+  // (and through `<div>`, which the parser exempts)
+  checkAbbr(
+    '<ul><li><span><li>x</li></span></li></ul>',
+    ['<li>x', '<ul><li><span>'],
+    ['<li>x</li>', '<ul><li><span></span></li></ul>'],
+  )
+  checkAbbr(
+    '<ul><li><div><li>x</li></div></li></ul>',
+    ['<li>x', '<ul><li><div>'],
+    ['<li>x</li>', '<ul><li><div></div></li></ul>'],
+  )
+  checkAbbr(
+    '<dl><dt><div><dd>x</dd></div></dt></dl>',
+    ['<dd>x', '<dl><dt><div>'],
+    ['<dd>x</dd>', '<dl><dt><div></div></dt></dl>'],
+  )
+  // `<rt>` implies the end of an open `<rt>`/`<p>` while a `<ruby>` is in scope
+  checkAbbr(
+    '<ruby><rt>a</rt><rt><rt>x</rt></rt></ruby>',
+    ['<rt>x', '<ruby><rt>a</rt><rt>'],
+    ['<rt>x</rt>', '<ruby><rt>a</rt><rt></rt></ruby>'],
+  )
+  checkAbbr(
+    '<ruby><p><rp>x</rp></p></ruby>',
+    ['<rp>x', '<ruby><p>'],
+    ['<rp>x</rp>', '<ruby><p></p></ruby>'],
+  )
+
+  // a scope boundary keeps the ancestor open
+  checkAbbr(
+    '<p><button><div>x</div></button></p>',
+    '<p><button><div>x',
+    '<p><button><div>x</div></button></p>',
+  )
+  checkAbbr(
+    '<a><table><tbody><tr><td><a>x</a></td></tr></tbody></table></a>',
+    '<a><table><tbody><tr><td><a>x',
+    '<a><table><tbody><tr><td><a>x</a></td></tr></tbody></table></a>',
+  )
+  checkAbbr(
+    '<button><table><tbody><tr><td><button>x</button></td></tr></tbody></table></button>',
+    '<button><table><tbody><tr><td><button>x',
+    '<button><table><tbody><tr><td><button>x</button></td></tr></tbody></table></button>',
+  )
+  // a special element (other than address/div/p) stops the `<li>` search
+  checkAbbr(
+    '<ul><li><section><li>x</li></section></li></ul>',
+    '<ul><li><section><li>x',
+    '<ul><li><section><li>x</li></section></li></ul>',
+  )
+  checkAbbr(
+    '<dl><dd><dl><dd>x</dd></dl></dd></dl>',
+    '<dl><dd><dl><dd>x',
+    '<dl><dd><dl><dd>x</dd></dl></dd></dl>',
+  )
+  // `<rt>` only ends an element the parser implies the end of
+  checkAbbr(
+    '<ruby><span><rt>x</rt></span></ruby>',
+    '<ruby><span><rt>x',
+    '<ruby><span><rt>x</rt></span></ruby>',
+  )
+  // a block root sits in a template of its own already
+  checkAbbr(
+    '<p><span><div v-if="x">a</div></span></p>',
+    ['<div>a', '<p><span>'],
+    ['<div>a</div>', '<p><span></span></p>'],
+  )
+
+  // an html integration point is a scope boundary, but neither a formatting
+  // marker nor a reset of the form element pointer
+  checkAbbr(
+    '<p><svg><foreignObject><div>x</div></foreignObject></svg></p>',
+    '<p><svg><foreignObject><div>x',
+    '<p><svg><foreignObject><div>x</div></foreignObject></svg></p>',
+  )
+  checkAbbr(
+    '<a><svg><foreignObject><a>x</a></foreignObject></svg></a>',
+    ['<a>x', '<a><svg><foreignObject>'],
+    ['<a>x</a>', '<a><svg><foreignObject></foreignObject></svg></a>'],
+  )
+  checkAbbr(
+    '<form><svg><foreignObject><form>x</form></foreignObject></svg></form>',
+    ['<form>x', '<form><svg><foreignObject>'],
+    [
+      '<form>x</form>',
+      '<form><svg><foreignObject></foreignObject></svg></form>',
+    ],
+  )
+})
+
+test('element renamed by a transform after its parent placed it', () => {
+  // the parent decides what shares its template before the children's
+  // transforms run; the final check sees the tag they left behind
+  const { ast } = compile('<div><span>x</span></div>', {
+    nodeTransforms: [
+      node => {
+        if (node.type === NodeTypes.ELEMENT && node.tag === 'span') {
+          node.tag = 'td'
+        }
+      },
+    ],
+  })
+  expect([...ast.template.keys()]).toEqual(['<td>x', '<div>'])
 })

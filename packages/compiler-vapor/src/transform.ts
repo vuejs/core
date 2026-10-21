@@ -132,6 +132,10 @@ export class TransformContext<T extends AllNode = AllNode> {
   // Inline ancestors with explicit close tags also require block descendants
   // in the same template to close explicitly.
   templateCloseBlocks: boolean = false
+  // Whether the element is written into its parent's template and what that
+  // template leaves open above it (`OpenScope` bits); 0 when it starts a
+  // template of its own.
+  templateScope: number = 0
 
   private globalId = 0
   private nextIdMap: Map<number, number> | null = null
@@ -378,6 +382,7 @@ export class TransformContext<T extends AllNode = AllNode> {
       isSingleRoot,
       templateCloseTags: this.templateCloseTags,
       templateCloseBlocks: this.templateCloseBlocks,
+      templateScope: 0,
     } satisfies Partial<TransformContext<T>>)
   }
 

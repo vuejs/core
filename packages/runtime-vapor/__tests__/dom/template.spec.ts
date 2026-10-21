@@ -1,6 +1,6 @@
 import { template } from '../../src/dom/template'
 import { nextTick, ref } from '@vue/runtime-dom'
-import { compile, makeRender, renderParity } from '../_utils'
+import { compile, makeRender, renderParity, stripAnchors } from '../_utils'
 import { child, next, nthChild } from '../../src/dom/node'
 
 describe('api: template', () => {
@@ -591,5 +591,68 @@ describe('DOM prop initialization order', () => {
         expect(root.querySelector('input')!.value).toBe('500')
       },
     )
+  })
+})
+
+describe('descendants that close an open ancestor', () => {
+  // The html parser closes an open `<p>`, `<li>`, `<a>`, ... at a start tag
+  // deeper down, not only at a child one. VDOM builds these trees with the
+  // dom api; the compiler has to keep such a descendant out of the html
+  // string of its ancestors.
+  test.each([
+    [
+      '<p><span><div>{{ data }}</div></span></p>',
+      '<p><span><div>bar</div></span></p>',
+    ],
+    [
+      '<p><span><div><section>{{ data }}</section></div></span></p>',
+      '<p><span><div><section>bar</section></div></span></p>',
+    ],
+    [
+      '<a href="#a"><div><a href="#b">{{ data }}</a></div></a>',
+      '<a href="#a"><div><a href="#b">bar</a></div></a>',
+    ],
+    [
+      '<ul><li><span><li>{{ data }}</li></span></li></ul>',
+      '<ul><li><span><li>bar</li></span></li></ul>',
+    ],
+    [
+      '<dl><dt><div><dd>{{ data }}</dd></div></dt></dl>',
+      '<dl><dt><div><dd>bar</dd></div></dt></dl>',
+    ],
+    [
+      '<form><table><tbody><tr><td><form><input :value="data"></form></td></tr></tbody></table></form>',
+      '<form><table><tbody><tr><td><form><input value="bar"></form></td></tr></tbody></table></form>',
+    ],
+    [
+      '<ruby><rt>a</rt><rt><rt>{{ data }}</rt></rt></ruby>',
+      '<ruby><rt>a</rt><rt><rt>bar</rt></rt></ruby>',
+    ],
+    [
+      '<p><button><div>{{ data }}</div></button></p>',
+      '<p><button><div>bar</div></button></p>',
+    ],
+    [
+      '<a><svg><foreignObject><a>x</a></foreignObject></svg><span>{{ data }}</span></a>',
+      '<a><svg><foreignObject><a>x</a></foreignObject></svg><span>bar</span></a>',
+    ],
+    [
+      '<form><svg><foreignObject><form>x</form></foreignObject></svg><span>{{ data }}</span></form>',
+      '<form><svg><foreignObject><form>x</form></foreignObject></svg><span>bar</span></form>',
+    ],
+    [
+      '<p><span><i>{{ data }}</i><div v-if="data === \'bar\'">{{ data }}</div></span></p>',
+      '<p><span><i>bar</i><div>bar</div></span></p>',
+    ],
+  ])('%j renders as %j in both modes', async (tpl, expected) => {
+    const { vdom, vapor } = await renderParity(
+      { App: `<template>${tpl}</template>` },
+      () => ref('foo'),
+      data => {
+        data.value = 'bar'
+      },
+    )
+    expect(vdom.after).toBe(expected)
+    expect(stripAnchors(vapor.after)).toBe(expected)
   })
 })
