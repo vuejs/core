@@ -129,8 +129,9 @@ export class TransformContext<T extends AllNode = AllNode> {
   // with matching tags must also close so the browser doesn't consume the
   // ancestor close tag for the descendant.
   templateCloseTags: Set<string> | undefined = undefined
-  // Inline ancestors with explicit close tags also require block descendants
-  // in the same template to close explicitly.
+  // An ancestor with an explicit close tag that cannot pop an open special
+  // descendant (any other end tag, formatting elements) also requires special
+  // descendants in the same template to close explicitly.
   templateCloseBlocks: boolean = false
   // Whether the element is written into its parent's template and what that
   // template leaves open above it (`OpenScope` bits); 0 when it starts a

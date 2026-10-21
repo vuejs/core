@@ -541,3 +541,53 @@ test('element renamed by a transform after its parent placed it', () => {
   })
   expect([...ast.template.keys()]).toEqual(['<td>x', '<div>'])
 })
+
+test('special element under a parent whose end tag cannot close it', () => {
+  // "any other end tag" (legend, audio, rt, ...) walks the open elements and
+  // is ignored at a special one, so a special child has to close itself or
+  // the next sibling lands inside it
+  checkAbbr(
+    '<main><legend><div>x</div></legend><p>y</p></main>',
+    '<main><legend><div>x</div></legend><p>y',
+    '<main><legend><div>x</div></legend><p>y</p></main>',
+  )
+  checkAbbr(
+    '<div><audio><p>a</p></audio><p>b</p></div>',
+    '<div><audio><p>a</p></audio><p>b',
+    '<div><audio><p>a</p></audio><p>b</p></div>',
+  )
+  checkAbbr(
+    '<ruby><rt><div>x</div></rt><rt>y</rt></ruby>',
+    '<ruby><rt><div>x</div></rt><rt>y',
+    '<ruby><rt><div>x</div></rt><rt>y</rt></ruby>',
+  )
+  // an end tag with handling of its own pops its open descendants
+  checkAbbr(
+    '<main><button><div>x</div></button><p>y</p></main>',
+    '<main><button><div>x</button><p>y',
+    '<main><button><div>x</div></button><p>y</p></main>',
+  )
+  checkAbbr(
+    '<main><object><div>x</div></object><p>y</p></main>',
+    '<main><object><div>x</object><p>y',
+    '<main><object><div>x</div></object><p>y</p></main>',
+  )
+  // a non-special child is closed along the way
+  checkAbbr(
+    '<main><legend><span>x</span></legend><p>y</p></main>',
+    '<main><legend><span>x</legend><p>y',
+    '<main><legend><span>x</span></legend><p>y</p></main>',
+  )
+  // the special child's own end tag pops whatever is still open below it
+  checkAbbr(
+    '<main><span><div><p>x</p></div></span><i>y</i></main>',
+    '<main><span><div><p>x</div></span><i>y',
+    '<main><span><div><p>x</p></div></span><i>y</i></main>',
+  )
+  // the requirement passes through a child that omits its own end tag
+  checkAbbr(
+    '<main><legend><span><div>x</div></span></legend><p>y</p></main>',
+    '<main><legend><span><div>x</div></legend><p>y',
+    '<main><legend><span><div>x</div></span></legend><p>y</p></main>',
+  )
+})

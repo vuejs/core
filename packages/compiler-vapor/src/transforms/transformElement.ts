@@ -30,11 +30,9 @@ import {
   includeBooleanAttr,
   isAlwaysCloseTag,
   isArray,
-  isBlockTag,
   isBooleanAttr,
   isBuiltInDirective,
   isFormattingTag,
-  isInlineTag,
   isModelListener,
   isNativeOn,
   isOn,
@@ -51,7 +49,11 @@ import type {
   NodeTransform,
   TransformContext,
 } from '../transform'
-import { OpenScope } from '../htmlNesting'
+import {
+  OpenScope,
+  isSpecialTag,
+  popsOpenDescendants,
+} from '../htmlNesting'
 import {
   DynamicFlag,
   IRDynamicPropsKind,
@@ -288,7 +290,7 @@ function canOmitEndTag(
           (node.tag === 'ul' || node.tag === 'ol')) ||
         isAlwaysCloseTag(node.tag) ||
         isFormattingTag(node.tag))) ||
-    (context.templateCloseBlocks && isBlockTag(node.tag))
+    (context.templateCloseBlocks && isSpecialTag(node.tag))
   ) {
     return false
   }
@@ -353,7 +355,9 @@ export function getChildTemplateCloseState(
   tags.add(node.tag)
   return {
     tags,
-    blocks: inheritedBlocks || isInlineTag(node.tag),
+    // an end tag that pops its open descendants closes everything an outer
+    // one could not, so the inherited state ends here
+    blocks: !popsOpenDescendants(node.tag),
   }
 }
 
