@@ -40,6 +40,24 @@ export const popsOpenDescendants: (tag: string) => boolean =
       'header,hgroup,li,main,menu,nav,object,ol,p,pre,section,summary,table,' +
       'tbody,td,tfoot,th,thead,tr,ul',
   )
+/**
+ * Html start tags that end foreign content: the parser pops the open svg or
+ * mathml elements and inserts these in the html namespace, while vdom creates
+ * them in the foreign namespace their ast node carries. Only at html
+ * integration points (`foreignObject`, `mi`, ...) do html children stay.
+ */
+export const isForeignBreakoutTag: (tag: string) => boolean =
+  /*@__PURE__*/ makeMap(
+    'b,blockquote,body,br,code,dd,div,dl,dt,em,embed,h1,h2,h3,h4,h5,h6,head,' +
+      'hr,i,img,li,menu,meta,ol,p,pre,ruby,s,small,span,strong,sub,sup,table,' +
+      'u,ul,var',
+  )
+/**
+ * Table parts whose text content other than whitespace the parser
+ * foster-parents in front of the table.
+ */
+export const isFosterParentingTag: (tag: string) => boolean =
+  /*@__PURE__*/ makeMap('colgroup,table,tbody,tfoot,thead,tr')
 // Elements whose end tag the parser implies before an `<rt>` or `<rp>`.
 const isImpliedEndTag = /*@__PURE__*/ makeMap(
   'dd,dt,li,optgroup,option,p,rp,rt',

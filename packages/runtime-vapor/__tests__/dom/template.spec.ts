@@ -679,3 +679,64 @@ describe('special element under a parent whose end tag cannot close it', () => {
     expect(vapor.after).toBe(expected)
   })
 })
+
+describe('nodes the html parser would move out of place', () => {
+  const SVG_NS = 'http://www.w3.org/2000/svg'
+  const MATHML_NS = 'http://www.w3.org/1998/Math/MathML'
+  test.each([
+    ['<svg><div>{{ data }}</div></svg>', '<svg><div>bar</div></svg>', SVG_NS],
+    [
+      '<svg><g><div>{{ data }}</div></g></svg>',
+      '<svg><g><div>bar</div></g></svg>',
+      SVG_NS,
+    ],
+    [
+      '<math><mrow><div>{{ data }}</div></mrow></math>',
+      '<math><mrow><div>bar</div></mrow></math>',
+      MATHML_NS,
+    ],
+    [
+      '<table><tbody>foo<tr><td>{{ data }}</td></tr></tbody></table>',
+      '<table><tbody>foo<tr><td>bar</td></tr></tbody></table>',
+    ],
+    [
+      `<table>{{ 'x' }}<tbody><tr><td>{{ data }}</td></tr></tbody></table>`,
+      '<table>x<tbody><tr><td>bar</td></tr></tbody></table>',
+    ],
+    // only ascii whitespace may stay in a table part
+    [
+      '<table>&nbsp;<tbody><tr><td>{{ data }}</td></tr></tbody></table>',
+      '<table>&nbsp;<tbody><tr><td>bar</td></tr></tbody></table>',
+    ],
+  ] as [string, string, string?][])(
+    '%j renders as %j in both modes',
+    async (tpl, expected, ns) => {
+      const { vdom, vapor } = await renderParity(
+        { App: `<template>${tpl}</template>` },
+        () => ref('foo'),
+        (data, root) => {
+          // created in the namespace it was written in, like vdom
+          if (ns) expect(root.querySelector('div')!.namespaceURI).toBe(ns)
+          data.value = 'bar'
+        },
+      )
+      expect(vdom.after).toBe(expected)
+      expect(stripAnchors(vapor.after)).toBe(expected)
+    },
+  )
+
+  test('a custom element keeps the namespace of its foreign parent', async () => {
+    const { vdom, vapor } = await renderParity(
+      { App: `<template><svg><my-el>{{ data }}</my-el></svg></template>` },
+      () => ref('foo'),
+      (data, root) => {
+        expect(root.querySelector('my-el')!.namespaceURI).toBe(SVG_NS)
+        data.value = 'bar'
+      },
+      {},
+      { isCustomElement: tag => tag === 'my-el' },
+    )
+    expect(vdom.after).toBe('<svg><my-el>bar</my-el></svg>')
+    expect(vapor.after).toBe('<svg><my-el>bar</my-el></svg>')
+  })
+})
