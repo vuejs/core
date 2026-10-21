@@ -7716,7 +7716,7 @@ describe('vdomInterop', () => {
     test('preserves source order when an async vapor child precedes a dynamic sibling', async () => {
       const pending = deferred()
       const Tail = compile(`<template><i>tail</i></template>`, ref(null))
-      const data = ref({ wait: pending.promise, current: Tail })
+      const data = ref({ wait: pending.promise, current: shallowRef(Tail) })
       const AsyncChild = compile(
         `<script vapor>
           const data = _data
@@ -7990,7 +7990,7 @@ describe('vdomInterop', () => {
         wait: pending.promise,
         asyncSetup,
         syncSetup,
-        current: null as any,
+        current: shallowRef<any>(null),
       })
       const AsyncChild = compile(
         `<script vapor>
@@ -8068,7 +8068,7 @@ describe('vdomInterop', () => {
     test('defers KeepAlive updates for pending async wrappers', async () => {
       const pending = deferred()
       const syncSetup = vi.fn()
-      const data = ref({ current: null as any, syncSetup })
+      const data = ref({ current: shallowRef<any>(null), syncSetup })
       const ResolvedChild = compile(
         `<template><span>async</span></template>`,
         data,
@@ -8141,7 +8141,7 @@ describe('vdomInterop', () => {
         wait: pending.promise,
         asyncSetup,
         syncSetup,
-        current: null as any,
+        current: shallowRef<any>(null),
       })
       const AsyncChild = compile(
         `<script vapor>
@@ -8228,7 +8228,7 @@ describe('vdomInterop', () => {
         wait: pending.promise,
         asyncSetup,
         syncSetup,
-        current: null as any,
+        current: shallowRef<any>(null),
       })
       const AsyncChild = compile(
         `<script vapor>
@@ -8320,7 +8320,7 @@ describe('vdomInterop', () => {
         wait: pending.promise,
         syncSetup,
         show: true,
-        current: null as any,
+        current: shallowRef<any>(null),
       })
       const AsyncChild = compile(
         `<script vapor>
@@ -8420,7 +8420,7 @@ describe('vdomInterop', () => {
         asyncSetup,
         syncSetup,
         show: true,
-        current: null as any,
+        current: shallowRef<any>(null),
       })
       const InnerAsync = compile(
         `<script vapor>
@@ -8590,7 +8590,7 @@ describe('vdomInterop', () => {
         wait: pending.promise,
         asyncSetup,
         syncSetup,
-        current: null as any,
+        current: shallowRef<any>(null),
       })
       const InitialChild = compile(
         `<template><span>initial</span></template>`,
@@ -8741,7 +8741,7 @@ describe('vdomInterop', () => {
           wait: pending.promise,
           asyncSetup,
           syncSetup,
-          current: null as any,
+          current: shallowRef<any>(null),
         })
         const { InitialChild, AsyncChild, SyncChild } = makeChildren(data)
         data.value.current = InitialChild
@@ -8805,7 +8805,7 @@ describe('vdomInterop', () => {
           asyncSetup,
           syncSetup,
           show: true,
-          current: null as any,
+          current: shallowRef<any>(null),
         })
         const { InitialChild, AsyncChild, SyncChild } = makeChildren(data)
         data.value.current = InitialChild
@@ -8879,7 +8879,7 @@ describe('vdomInterop', () => {
           wait: pending.promise,
           asyncSetup,
           syncSetup,
-          current: null as any,
+          current: shallowRef<any>(null),
         })
         const { InitialChild, AsyncChild, SyncChild } = makeChildren(data)
         data.value.current = InitialChild
@@ -8960,7 +8960,7 @@ describe('vdomInterop', () => {
           bSetup,
           cSetup,
           show: 1,
-          current: null as any,
+          current: shallowRef<any>(null),
         })
         const AsyncA = compile(
           `<script vapor>
@@ -9093,7 +9093,7 @@ describe('vdomInterop', () => {
           wait: aPending.promise,
           asyncSetup: aSetup,
           syncSetup,
-          current: null as any,
+          current: shallowRef<any>(null),
         })
         const { AsyncChild, SyncChild } = makeChildren(data)
         data.value.current = AsyncChild
@@ -9169,7 +9169,7 @@ describe('vdomInterop', () => {
           wait: pending.promise,
           asyncSetup,
           syncSetup: vi.fn(),
-          current: null as any,
+          current: shallowRef<any>(null),
         })
         const { InitialChild, AsyncChild } = makeChildren(data)
         data.value.current = InitialChild
