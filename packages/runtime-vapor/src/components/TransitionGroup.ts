@@ -43,9 +43,12 @@ import {
   applyTransitionHooksImpl,
   enterComponentKeyContext,
   enterFragmentKeyContext,
+  enterRootsKeyContext,
+  enterRowKeyContext,
   getTransitionElement,
   isValidTransitionBlock,
   resolveTransitionHooks,
+  rootKeyContext,
   transitionTypeOf,
   withDefaultKey,
 } from './Transition'
@@ -458,18 +461,35 @@ function collectTransitionBlocks(
         }
       }
       // a root-slot component is transparent, like the slot outlet it wraps
-      resolveOwnerKey(children, start, block.$key, keys, !isRootSlot)
+      resolveOwnerKey(
+        children,
+        start,
+        block.$key,
+        keys,
+        !isRootSlot,
+        ctx && ctx.slot,
+      )
     }
   } else if (isArray(block)) {
+    // under a composing key an unkeyed root takes its position, as on a
+    // branch re-render inside it (ownKey)
+    const roots =
+      keys && ctx && ctx.slot ? enterRootsKeyContext(ctx, block) : undefined
     for (let i = 0; i < block.length; i++) {
+      const start = children.length
       collectTransitionBlocks(
         block[i],
         children,
         onFragment,
         onUpdateOwner,
         keys,
-        ctx,
+        roots ? rootKeyContext(roots, i) : ctx,
       )
+      if (roots) {
+        for (let j = start; j < children.length; j++) {
+          if (keys!.get(children[j]) == null) keys!.set(children[j], '.' + i)
+        }
+      }
     }
   } else if (isFragment(block)) {
     // ForBlock wrappers have no transition consumers of their own: they
@@ -493,20 +513,21 @@ function collectTransitionBlocks(
         onFragment,
         onUpdateOwner,
         keys,
-        ctx && enterFragmentKeyContext(block, ctx, key),
+        ctx &&
+          (isItem
+            ? enterRowKeyContext(ctx, key)
+            : enterFragmentKeyContext(block, ctx, key)),
       )
       if (!keys) return
       if (!isItem) {
-        resolveOwnerKey(children, start, key, keys, false)
+        resolveOwnerKey(children, start, key, keys, false, ctx && ctx.slot)
       } else if (key != null) {
-        // an unkeyed row composes nothing: its roots keep their own keys
-        if (children.length - start === 1) {
-          // the row key is the single root's own key
-          keys.set(children[start], key)
-        } else {
-          for (let i = start; i < children.length; i++) {
-            keys.set(children[i], `${key}:${i - start}`)
-          }
+        // a keyed row composes the keys under it (enterRowKeyContext); an
+        // unkeyed row composes nothing: its roots keep their own keys
+        for (let i = start; i < children.length; i++) {
+          const child = children[i]
+          const inner = keys.get(child)
+          keys.set(child, inner != null ? String(key) + String(inner) : key)
         }
       }
     }
@@ -516,17 +537,22 @@ function collectTransitionBlocks(
 // vdom key semantics for the block owning the collected roots: a component
 // is the child vnode, so its key is final for a single root; a fragment only
 // supplies the default key of its single root. Multiple roots compose the
-// owner key with each root's key, as vdom does for fragment children.
+// owner key with each root's key, as vdom does for fragment children. Under
+// a composing key a fragment composes its single root's key too, as the key
+// context folds it on a branch re-render.
 function resolveOwnerKey(
   children: ResolvedTransitionBlock[],
   start: number,
   key: any,
   keys: ComposedKeys,
   final: boolean,
+  slot?: boolean,
 ): void {
   if (children.length - start === 1) {
     const child = children[start]
-    if (final || keys.get(child) == null) keys.set(child, key)
+    const inner = keys.get(child)
+    if (final || inner == null) keys.set(child, key)
+    else if (slot && key != null) keys.set(child, String(key) + String(inner))
     return
   }
   if (key == null) return

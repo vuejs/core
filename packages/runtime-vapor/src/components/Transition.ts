@@ -1157,8 +1157,9 @@ function removeBranchWithLeaveImpl(
 export interface KeyContext {
   key: any
   type?: any
-  // under a slot outlet's branch: keys compose under its key, as the keys
-  // under vdom's slot fragments compose under theirs
+  // under a slot outlet's branch or a keyed v-for row: keys compose under its
+  // key, as the keys under vdom's slot and keyed v-for fragments compose
+  // under theirs
   slot?: boolean
   // one of several roots beside each other: vdom's one child, swapping
   siblings?: boolean
@@ -1190,6 +1191,36 @@ function enterSlotKeyContext(
   if (name === undefined && !fallback) return ctx
   const key = (name === undefined ? '' : '_' + name) + (fallback ? '_fb' : '')
   return { key: ownKey(ctx, key), slot: true, siblings: ctx.siblings }
+}
+
+// vdom keys the children of a keyed `<template v-for>` row under the row key,
+// as under a slot's; an unkeyed row composes nothing
+export function enterRowKeyContext(ctx: KeyContext, key: any): KeyContext {
+  if (ctx.type || key == null) return ctx
+  return { key: ownKey(ctx, key), slot: true, siblings: ctx.siblings }
+}
+
+// The context the roots of `block` beside each other share under a composing
+// `ctx`: vdom keys a fragment's unkeyed children by their position (each
+// root's `index`), and roots beside each other anywhere under a slot swap as
+// its one child.
+export function enterRootsKeyContext(
+  ctx: KeyContext,
+  block: Block[],
+): KeyContext {
+  let n = 0
+  for (let i = 0; i < block.length; i++) {
+    if (!(block[i] instanceof Comment)) n++
+  }
+  return {
+    key: ownKey(ctx, undefined),
+    slot: true,
+    siblings: n > 1 || !!ctx.siblings,
+  }
+}
+
+export function rootKeyContext(roots: KeyContext, index: number): KeyContext {
+  return { key: roots.key, slot: true, siblings: roots.siblings, index }
 }
 
 // a block's own key in `ctx`
@@ -1385,21 +1416,10 @@ function collectArrayTransitionBlocks(
   ctx: KeyContext | undefined,
 ): void {
   let hasFound = false
-  // under a slot's key: vdom keys the slot fragment's unkeyed children by
-  // their position, and roots beside each other there swap as its one child
-  const indexed = !!ctx && !!ctx.slot
-  let siblings = false
-  let key: any
-  if (indexed) {
-    let n = 0
-    for (let i = 0; i < block.length; i++) {
-      if (!(block[i] instanceof Comment)) n++
-    }
-    // vdom flattens the fragments under the slot: roots beside each other
-    // anywhere in them swap, and a nested array composes under its position
-    siblings = n > 1 || !!ctx!.siblings
-    key = ownKey(ctx!, undefined)
-  }
+  // under a composing key: vdom flattens the fragments under the slot, so
+  // roots beside each other anywhere in them swap, and a nested array
+  // composes under its position
+  const roots = ctx && ctx.slot ? enterRootsKeyContext(ctx, block) : undefined
   for (let i = 0; i < block.length; i++) {
     const c = block[i]
     if (c instanceof Comment) continue
@@ -1408,7 +1428,7 @@ function collectArrayTransitionBlocks(
       c,
       onFragment,
       nested,
-      indexed ? { key, slot: true, siblings, index: i } : ctx,
+      roots ? rootKeyContext(roots, i) : ctx,
     )
     // a root rendering nothing is no child, like a comment in vdom; its
     // fragments still take the hooks for what it renders later
