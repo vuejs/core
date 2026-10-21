@@ -885,23 +885,67 @@ describe('compiler: long v-else-if chain', () => {
     expect(code).not.contains('ONCE')
   })
 
-  test('v-once on a branch freezes that branch only', () => {
+  test('v-once on a branch is dropped, like vdom', () => {
     const { code } = compileWithVIf(
       chain(11, {
         branch: (i, dir) => `<div ${dir}>{{ m${i} }}</div>`,
       }).replace('v-else-if="c5"', 'v-else-if="c5" v-once'),
     )
     expect(code).not.contains('ONCE')
-    expect(code.match(/_renderEffect\(/g)!.length).toBe(12)
-    expect(code).toMatch(/\n\s*_setText\(\w+, _toDisplayString\(_ctx\.m5\)\)/)
+    expect(code.match(/_renderEffect\(/g)!.length).toBe(13)
   })
 
-  test('v-once on the head freezes the selection', () => {
+  test('v-once on the head freezes the whole chain', () => {
+    const dynamic = {
+      branch: (i: number, dir: string) => `<div ${dir}>{{ m${i} }}</div>`,
+    }
     const { code } = compileWithVIf(
-      chain(11).replace('v-if="c0"', 'v-if="c0" v-once'),
+      chain(11, dynamic).replace('v-if="c0"', 'v-if="c0" v-once'),
     )
-    expect(code).contains('], 16 /* ONCE */)')
-    const { code: inVOnce } = compileWithVIf(`<div v-once>${chain(11)}</div>`)
-    expect(inVOnce).contains('], 16 /* ONCE */)')
+    expect(code).contains('], null, 16 /* ONCE */)')
+    expect(code).not.contains('_renderEffect')
+    expect(code.match(/_setText\(/g)!.length).toBe(13)
+    const { code: inVOnce } = compileWithVIf(
+      `<div v-once>${chain(11, dynamic)}</div>`,
+    )
+    expect(inVOnce).contains('], null, 16 /* ONCE */)')
+    expect(inVOnce).not.contains('_renderEffect')
+  })
+})
+
+describe('compiler: v-once on a v-else-if chain', () => {
+  // vdom caches the whole conditional for `v-once` on the head and drops
+  // `v-once` on the other branches; nested createIf calls follow suit
+  test('v-once on the head freezes every branch', () => {
+    const { code } = compileWithVIf(
+      `<div v-if="a" v-once>{{ x }}</div><div v-else-if="b">{{ y }}</div><div v-else>{{ z }}</div>`,
+    )
+    expect(code.match(/ONCE \*\//g)!.length).toBe(2)
+    expect(code).not.contains('_renderEffect')
+    expect(code.match(/_setText\(/g)!.length).toBe(3)
+  })
+
+  test('v-once on v-else-if or v-else is dropped', () => {
+    const { code } = compileWithVIf(
+      `<div v-if="a">{{ x }}</div><div v-else-if="b" v-once>{{ y }}</div><div v-else v-once>{{ z }}</div>`,
+    )
+    expect(code).not.contains('ONCE')
+    expect(code.match(/_renderEffect\(/g)!.length).toBe(3)
+  })
+
+  test('v-once on a branch behind a comment is dropped', () => {
+    const { code } = compileWithVIf(
+      `<div v-if="a">{{ x }}</div><!-- c --><div v-else v-once>{{ y }}</div>`,
+    )
+    expect(code).not.contains('ONCE')
+    expect(code.match(/_renderEffect\(/g)!.length).toBe(2)
+  })
+
+  test('v-once inherited from an ancestor still freezes every branch', () => {
+    const { code } = compileWithVIf(
+      `<section v-once><div v-if="a">{{ x }}</div><div v-else-if="b">{{ y }}</div><div v-else>{{ z }}</div></section>`,
+    )
+    expect(code.match(/ONCE \*\//g)!.length).toBe(2)
+    expect(code).not.contains('_renderEffect')
   })
 })

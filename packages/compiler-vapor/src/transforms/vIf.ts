@@ -15,6 +15,7 @@ import {
   type NodeTransform,
   type TransformContext,
   createStructuralDirectiveTransform,
+  isComponentNode,
 } from '../transform'
 import {
   type BlockIRNode,
@@ -116,9 +117,18 @@ export function processIf(
       return
     }
 
+    const head = lastIfNode
     while (lastIfNode.negative && lastIfNode.negative.type === IRNodeTypes.IF) {
       lastIfNode = lastIfNode.negative
     }
+
+    // vdom caches the whole conditional for `v-once` on its head and drops
+    // `v-once` on the other branches: this branch is in v-once only through
+    // an ancestor or the head
+    const parent = context.parent!
+    context.inVOnce =
+      (parent.inVOnce && !isComponentNode(parent.node)) ||
+      !!context.root.ifHeads.get(head)
 
     // Check if v-else was followed by v-else-if
     if (dir.name === 'else-if' && lastIfNode.negative) {
@@ -130,6 +140,15 @@ export function processIf(
     // check if user is forcing same key on different branches
     if (__DEV__ || !__BROWSER__) {
       checkSameKey(node, context)
+    }
+
+    if (!context.inVOnce) {
+      // the wrapped element is transformed again, so its own `v-once` goes
+      context.node = node = extend({}, node, {
+        props: node.props.filter(
+          prop => prop.type !== NodeTypes.DIRECTIVE || prop.name !== 'once',
+        ),
+      })
     }
 
     const comments = context.comment
