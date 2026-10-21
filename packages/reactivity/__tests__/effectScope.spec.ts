@@ -3,6 +3,7 @@ import {
   type ComputedRef,
   EffectScope,
   ReactiveEffect,
+  addChildScopesHook,
   computed,
   effect,
   effectScope,
@@ -10,6 +11,7 @@ import {
   onScopeDispose,
   reactive,
   ref,
+  removeChildScopesHook,
   setCurrentScope,
 } from '../src'
 
@@ -506,6 +508,56 @@ describe('reactivity/effect/scope', () => {
     expect(firstSpy).toHaveBeenCalledTimes(1)
     expect(secondSpy).not.toHaveBeenCalled()
     expect(getEffectsCount(scope)).toBe(1)
+  })
+
+  it('should start effects and child scopes created in a paused scope paused', () => {
+    const counter = ref(0)
+    const effectSpy = vi.fn(() => counter.value)
+    const nestedSpy = vi.fn(() => counter.value)
+    const scope = effectScope()
+    scope.pause()
+    scope.run(() => {
+      effect(effectSpy)
+      effectScope().run(() => effect(nestedSpy))
+    })
+    expect(effectSpy).toHaveBeenCalledTimes(1)
+    expect(nestedSpy).toHaveBeenCalledTimes(1)
+
+    counter.value++
+    expect(effectSpy).toHaveBeenCalledTimes(1)
+    expect(nestedSpy).toHaveBeenCalledTimes(1)
+
+    scope.resume()
+    expect(effectSpy).toHaveBeenCalledTimes(2)
+    expect(nestedSpy).toHaveBeenCalledTimes(2)
+  })
+
+  it('pauses and resumes the scopes handed over by the child scopes hook', () => {
+    const counter = ref(0)
+    const spy = vi.fn(() => counter.value)
+    const parent = effectScope()
+    const child = effectScope(true)
+    child.run(() => effect(spy))
+    const calls: EffectScope[] = []
+    const hook = (scope: EffectScope, fn: (child: EffectScope) => void) => {
+      calls.push(scope)
+      if (scope === parent) fn(child)
+    }
+    addChildScopesHook(hook)
+    try {
+      parent.pause()
+      parent.pause()
+      counter.value++
+      expect(spy).toHaveBeenCalledTimes(1)
+      parent.resume()
+      parent.resume()
+      expect(spy).toHaveBeenCalledTimes(2)
+      // asked once per pause and once per resume, after the scope's own
+      // effects; a handed-over scope asks in turn
+      expect(calls).toEqual([parent, child, parent, child])
+    } finally {
+      removeChildScopesHook(hook)
+    }
   })
 })
 

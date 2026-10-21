@@ -55,6 +55,11 @@ export enum EffectFlags {
   ALLOW_RECURSE = 1 << 7,
   PAUSED = 1 << 8,
   STOP = 1 << 10,
+  /**
+   * ReactiveEffect only: renders a component and holds its instance, through
+   * which a paused or resumed scope reaches the components rendered under it.
+   */
+  RENDER = 1 << 11,
 }
 
 export class ReactiveEffect<T = any>
@@ -89,6 +94,8 @@ export class ReactiveEffect<T = any>
     }
     if (activeEffectScope) {
       link(this, activeEffectScope)
+      // pause() only reaches existing effects, so inherit the scope's state
+      this.flags |= activeEffectScope.flags & EffectFlags.PAUSED
     }
   }
 

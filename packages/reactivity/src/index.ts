@@ -85,6 +85,14 @@ export {
    */
   setCurrentScope,
   onScopeDispose,
+  /**
+   * @internal
+   */
+  addChildScopesHook,
+  /**
+   * @internal
+   */
+  removeChildScopesHook,
 } from './effectScope'
 export { reactiveReadArray, shallowReadArray } from './arrayInstrumentations'
 export { TrackOpTypes, TriggerOpTypes, ReactiveFlags } from './constants'

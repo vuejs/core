@@ -1,5 +1,6 @@
 import { type VNode, type VNodeChild, isVNode } from './vnode'
 import {
+  EffectFlags,
   EffectScope,
   type ReactiveEffect,
   TrackOpTypes,
@@ -844,6 +845,11 @@ export function createComponentInstance(
   }
   instance.root = parent ? parent.root : instance
   instance.emit = emit.bind(null, instance)
+  // pausing a scope only reaches the components already rendered under it, so
+  // one created later under a paused parent starts paused
+  if (parent && parent.scope.flags & EffectFlags.PAUSED) {
+    instance.scope.flags |= EffectFlags.PAUSED
+  }
 
   // apply custom element special handling
   if (vnode.ce) {

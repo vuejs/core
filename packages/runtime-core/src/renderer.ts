@@ -13,6 +13,7 @@ import {
   createVNode,
   invokeVNodeHook,
   isSameVNodeType,
+  isVNode,
   normalizeVNode,
 } from './vnode'
 import {
@@ -58,7 +59,9 @@ import {
 } from './scheduler'
 import {
   EffectFlags,
+  type EffectScope,
   ReactiveEffect,
+  addChildScopesHook,
   setActiveSub,
   setCurrentScope,
 } from '@vue/reactivity'
@@ -1431,7 +1434,7 @@ function baseCreateRenderer(
     job: SchedulerJob
 
     constructor(
-      private instance: ComponentInternalInstance,
+      public instance: ComponentInternalInstance,
       private initialVNode: VNode,
       private container: RendererElement,
       private anchor: RendererNode | null,
@@ -1442,6 +1445,7 @@ function baseCreateRenderer(
       const prevScope = setCurrentScope(instance.scope)
       super()
       setCurrentScope(prevScope)
+      this.flags |= EffectFlags.RENDER
 
       this.job = instance.job = () => {
         if (this.dirty) {
@@ -1769,6 +1773,8 @@ function baseCreateRenderer(
       }
     }
   }
+
+  addChildScopesHook(componentChildScopes)
 
   const setupRenderEffect: SetupRenderEffectFn = (
     instance,
@@ -2783,6 +2789,73 @@ function resolveChildrenNamespace(
       props.encoding.includes('html'))
     ? undefined
     : currentNamespace
+}
+
+// component scopes are detached: the components rendered under a component
+// are reached through the instance tree, and each one reports in turn
+function componentChildScopes(
+  scope: EffectScope,
+  fn: (child: EffectScope) => void,
+): void {
+  // the render effect is linked during setup, before any post-mount effect
+  for (let link = scope.depsTail; link !== undefined; link = link.prevDep) {
+    const dep = link.dep
+    if (dep.flags & EffectFlags.RENDER) {
+      const subTree = (
+        dep as ReactiveEffect & { instance: ComponentInternalInstance }
+      ).instance.subTree
+      if (
+        subTree &&
+        subTree.shapeFlag &
+          (ShapeFlags.COMPONENT |
+            ShapeFlags.ARRAY_CHILDREN |
+            ShapeFlags.SUSPENSE)
+      ) {
+        forEachChildScope(subTree, fn)
+      }
+      return
+    }
+  }
+}
+
+function forEachChildScope(
+  vnode: VNode,
+  fn: (scope: EffectScope) => void,
+): void {
+  const { shapeFlag, component } = vnode
+  if (shapeFlag & ShapeFlags.COMPONENT) {
+    // a component the patch has not created yet inherits the state from its
+    // parent instead
+    if (component) {
+      fn(component.scope)
+    }
+  } else if (shapeFlag & ShapeFlags.ARRAY_CHILDREN) {
+    const children = vnode.children as VNodeArrayChildren
+    for (let i = 0, l = children.length; i < l; i++) {
+      const child = children[i]
+      // raw children are only normalized once the patch reaches them; text
+      // and leaf elements have nothing under them
+      if (
+        isVNode(child) &&
+        child.shapeFlag &
+          (ShapeFlags.COMPONENT |
+            ShapeFlags.ARRAY_CHILDREN |
+            ShapeFlags.SUSPENSE)
+      ) {
+        forEachChildScope(child, fn)
+      }
+    }
+  } else if (__FEATURE_SUSPENSE__ && shapeFlag & ShapeFlags.SUSPENSE) {
+    const suspense = vnode.suspense
+    if (suspense) {
+      if (suspense.activeBranch) {
+        forEachChildScope(suspense.activeBranch, fn)
+      }
+      if (suspense.pendingBranch) {
+        forEachChildScope(suspense.pendingBranch, fn)
+      }
+    }
+  }
 }
 
 function toggleRecurse(

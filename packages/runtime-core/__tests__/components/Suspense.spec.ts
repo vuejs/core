@@ -4,6 +4,7 @@
 
 import {
   type ComponentOptions,
+  type EffectScope,
   Fragment,
   KeepAlive,
   Suspense,
@@ -13,6 +14,7 @@ import {
   createCommentVNode,
   createElementBlock,
   getCurrentInstance,
+  getCurrentScope,
   h,
   nextTick,
   nodeOps,
@@ -3836,4 +3838,45 @@ describe('Suspense', () => {
       app.unmount()
     },
   )
+
+  test('async setup resolved while an ancestor scope is paused starts paused', async () => {
+    const count = ref(0)
+    let resolveSetup!: () => void
+    const setupDone = new Promise<void>(resolve => (resolveSetup = resolve))
+    let scope!: EffectScope
+
+    const Async = {
+      async setup() {
+        await setupDone
+        return () => h('span', count.value)
+      },
+    }
+    const Parent = {
+      setup() {
+        scope = getCurrentScope()!
+        return () =>
+          h(Suspense, null, {
+            default: h(Async),
+            fallback: h('i', 'loading'),
+          })
+      },
+    }
+
+    const root = nodeOps.createElement('div')
+    render(h(Parent), root)
+    expect(serializeInner(root)).toBe(`<i>loading</i>`)
+
+    scope.pause()
+    resolveSetup()
+    await new Promise(r => setTimeout(r))
+    expect(serializeInner(root)).toBe(`<span>0</span>`)
+
+    count.value++
+    await nextTick()
+    expect(serializeInner(root)).toBe(`<span>0</span>`)
+
+    scope.resume()
+    await nextTick()
+    expect(serializeInner(root)).toBe(`<span>1</span>`)
+  })
 })

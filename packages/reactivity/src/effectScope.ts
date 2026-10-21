@@ -4,6 +4,35 @@ import { warn } from './warning'
 
 export let activeEffectScope: EffectScope | undefined
 
+/**
+ * Enumerate the child scopes a scope can't see: component scopes are
+ * detached, so each renderer registers a hook that hands over the scopes of
+ * the components rendered under a component. A scope calls them with the
+ * operation once it has dealt with its own effects and nested scopes.
+ */
+type ChildScopesHook = (
+  scope: EffectScope,
+  fn: (child: EffectScope) => void,
+) => void
+
+const childScopesHooks: ChildScopesHook[] = []
+
+export function addChildScopesHook(hook: ChildScopesHook): void {
+  if (!childScopesHooks.includes(hook)) {
+    childScopesHooks.push(hook)
+  }
+}
+
+export function removeChildScopesHook(hook: ChildScopesHook): void {
+  const i = childScopesHooks.indexOf(hook)
+  if (i > -1) {
+    childScopesHooks.splice(i, 1)
+  }
+}
+
+const pauseScope = (scope: EffectScope): void => scope.pause()
+const resumeScope = (scope: EffectScope): void => scope.resume()
+
 export class EffectScope implements ReactiveNode {
   deps: Link | undefined = undefined
   depsTail: Link | undefined = undefined
@@ -23,6 +52,8 @@ export class EffectScope implements ReactiveNode {
   constructor(detached = false) {
     if (!detached && activeEffectScope) {
       link(this, activeEffectScope)
+      // pause() only reaches existing child scopes, so inherit the state
+      this.flags |= activeEffectScope.flags & EffectFlags.PAUSED
     }
   }
 
@@ -39,6 +70,9 @@ export class EffectScope implements ReactiveNode {
           dep.pause()
         }
       }
+      for (let i = 0; i < childScopesHooks.length; i++) {
+        childScopesHooks[i](this, pauseScope)
+      }
     }
   }
 
@@ -54,6 +88,9 @@ export class EffectScope implements ReactiveNode {
         if ('resume' in dep) {
           dep.resume()
         }
+      }
+      for (let i = 0; i < childScopesHooks.length; i++) {
+        childScopesHooks[i](this, resumeScope)
       }
     }
   }
