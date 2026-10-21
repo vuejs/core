@@ -1,7 +1,11 @@
 import {
+  type EffectScope,
   type Ref,
   type SetupContext,
+  Teleport,
   type VNode,
+  createApp,
+  getCurrentScope,
   h,
   inject,
   nextTick,
@@ -580,5 +584,148 @@ describe('renderer: component', () => {
     props.value = { onClick: () => {} }
     await nextTick()
     expect(serializeInner(root)).toBe(`<div>undefined</div>`)
+  })
+
+  test('pausing a component scope pauses its descendants', async () => {
+    const count = ref(0)
+    const childWatcher = vi.fn()
+    let scope!: EffectScope
+
+    const Child = {
+      setup() {
+        watch(count, childWatcher)
+        return () => h('span', count.value)
+      },
+    }
+    const Wrapper = {
+      setup(_: any, { slots }: SetupContext) {
+        return () => h('div', slots.default!())
+      },
+    }
+    const Parent = {
+      setup() {
+        scope = getCurrentScope()!
+        return () =>
+          h('div', [h(Child), h(Wrapper, null, () => h('i', count.value))])
+      },
+    }
+
+    const root = nodeOps.createElement('div')
+    render(h(Parent), root)
+    expect(serializeInner(root)).toBe(
+      `<div><span>0</span><div><i>0</i></div></div>`,
+    )
+
+    scope.pause()
+    count.value++
+    await nextTick()
+    expect(serializeInner(root)).toBe(
+      `<div><span>0</span><div><i>0</i></div></div>`,
+    )
+    expect(childWatcher).not.toHaveBeenCalled()
+
+    scope.resume()
+    await nextTick()
+    expect(serializeInner(root)).toBe(
+      `<div><span>1</span><div><i>1</i></div></div>`,
+    )
+    expect(childWatcher).toHaveBeenCalledTimes(1)
+  })
+
+  test('the renderer keeps stopping child component scopes', async () => {
+    const show = ref(true)
+    const source = ref(0)
+    const cleanup = vi.fn()
+
+    const Child = {
+      setup() {
+        watch(source, (_value, _oldValue, onCleanup) => onCleanup(cleanup), {
+          flush: 'sync',
+        })
+        return () => h('span')
+      },
+    }
+    const Middle = { render: () => h(Child) }
+    const Parent = { render: () => (show.value ? h(Middle) : null) }
+
+    render(h(Parent), nodeOps.createElement('div'))
+    source.value++
+    show.value = false
+    await nextTick()
+    expect(cleanup).toHaveBeenCalledTimes(1)
+  })
+
+  test('an app mounted from a component keeps a detached scope', async () => {
+    const count = ref(0)
+    const host = nodeOps.createElement('div')
+    let scope!: EffectScope
+
+    const Inner = { render: () => h('span', count.value) }
+    const Outer = {
+      setup() {
+        scope = getCurrentScope()!
+        onMounted(() => createApp(Inner).mount(host))
+        return () => null
+      },
+    }
+
+    render(h(Outer), nodeOps.createElement('div'))
+    scope.pause()
+    count.value++
+    await nextTick()
+    expect(serializeInner(host)).toBe(`<span>1</span>`)
+    scope.resume()
+  })
+
+  test('components mounted under a paused scope start paused', async () => {
+    const count = ref(0)
+    let scope!: EffectScope
+
+    const Child = { render: () => h('span', count.value) }
+    const Parent = {
+      setup() {
+        scope = getCurrentScope()!
+        scope.pause()
+        return () => h(Child)
+      },
+    }
+
+    const root = nodeOps.createElement('div')
+    render(h(Parent), root)
+    expect(serializeInner(root)).toBe(`<span>0</span>`)
+
+    count.value++
+    await nextTick()
+    expect(serializeInner(root)).toBe(`<span>0</span>`)
+
+    scope.resume()
+    await nextTick()
+    expect(serializeInner(root)).toBe(`<span>1</span>`)
+  })
+
+  test('pausing a component scope reaches components inside a Teleport', async () => {
+    const count = ref(0)
+    let scope!: EffectScope
+
+    const Child = { render: () => h('span', count.value) }
+    const target = nodeOps.createElement('div')
+    const Parent = {
+      setup() {
+        scope = getCurrentScope()!
+        return () => h(Teleport, { to: target }, [h(Child)])
+      },
+    }
+
+    render(h(Parent), nodeOps.createElement('div'))
+    expect(serializeInner(target)).toBe(`<span>0</span>`)
+
+    scope.pause()
+    count.value++
+    await nextTick()
+    expect(serializeInner(target)).toBe(`<span>0</span>`)
+
+    scope.resume()
+    await nextTick()
+    expect(serializeInner(target)).toBe(`<span>1</span>`)
   })
 })
