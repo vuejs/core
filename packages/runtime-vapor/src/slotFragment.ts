@@ -21,7 +21,6 @@ import {
   applyTransitionHooks,
   applyTransitionLeaveHooks,
   awaitLeavingRoot,
-  hasTransitionChild,
   isTransitionEnabled,
   isVaporTransitionHooks,
   ownsTransitionMode,
@@ -371,17 +370,10 @@ function commitSlotFallback(
       if (
         isVaporTransitionHooks(hooks) &&
         hooks.props.mode === 'out-in' &&
-        hasTransitionChild(block)
+        awaitLeavingRoot(block, state, () => placeAfterLeave(state))
       ) {
-        const onLeft = () => placeAfterLeave(state)
-        if (
-          isInteropEnabled && state.awaitLeavingRoot
-            ? state.awaitLeavingRoot(onLeft)
-            : awaitLeavingRoot(state.getContent(), onLeft)
-        ) {
-          state.held = 'entering'
-          return
-        }
+        state.held = 'entering'
+        return
       }
     }
   }

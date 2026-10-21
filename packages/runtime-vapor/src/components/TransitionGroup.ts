@@ -44,11 +44,8 @@ import {
   enterComponentKeyContext,
   enterFragmentKeyContext,
   getTransitionElement,
-  getTransitionKey,
   isValidTransitionBlock,
   resolveTransitionHooks,
-  setTransitionKey,
-  setTransitionType,
   transitionTypeOf,
   withDefaultKey,
 } from './Transition'
@@ -120,16 +117,7 @@ const VaporTransitionGroupImpl = /*@__PURE__*/ defineVaporComponent({
     expose()
 
     if (!isTransitionEnabled) {
-      registerTransitionHooks(
-        applyTransitionHooksImpl,
-        NO,
-        NO,
-        NO,
-        NO,
-        NO,
-        NO,
-        NO,
-      )
+      registerTransitionHooks(applyTransitionHooksImpl, NO, NO, NO, NO, NO, NO)
     }
 
     const instance = currentInstance as VaporComponentInstance
@@ -416,7 +404,7 @@ export function resolveTransitionBlocks(
     ROOT_KEY_CONTEXT,
   )
   for (let i = 0; i < children.length; i++) {
-    setTransitionKey(children[i], keys.get(children[i]))
+    children[i].$tkey = keys.get(children[i])
   }
   return children
 }
@@ -457,7 +445,7 @@ function collectTransitionBlocks(
       if (!isRootSlot) {
         const t = transitionTypeOf(block)
         for (let i = start; i < children.length; i++) {
-          setTransitionType(children[i], t)
+          children[i].$ttype = t
         }
       }
       // a root-slot component is transparent, like the slot outlet it wraps
@@ -556,7 +544,7 @@ function applyGroupTransitionHooks(
   for (let i = 0; i < children.length; i++) {
     const child = children[i]
     if (isValidTransitionBlock(child)) {
-      if (getTransitionKey(child) != null) {
+      if (child.$tkey != null) {
         child.$transition = resolveTransitionHooks(
           child,
           props,

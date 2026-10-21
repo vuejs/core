@@ -16,7 +16,7 @@ import type { Mock } from 'vite-plus/test'
 import { compile, ifFlags, makeRender, renderParity } from './_utils'
 import { setElementText } from '../src/dom/prop'
 import type { DynamicFragment } from '../src/fragment'
-import { getTransitionKey } from '../src/components/Transition'
+import type { TransitionBlock } from '../src/block'
 
 const define = makeRender()
 const singleRootIfElse =
@@ -541,7 +541,7 @@ describe('createIf', () => {
     ).render()
 
     expect(branch.$key).toBeUndefined()
-    expect(getTransitionKey(branch)).toBe(0)
+    expect((branch as TransitionBlock).$tkey).toBe(0)
   })
 
   test('should ignore key on <template v-if> like vdom', async () => {
