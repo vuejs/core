@@ -686,6 +686,27 @@ describe('compiler + runtime integration', () => {
 
       app.unmount()
     })
+
+    test('keeps svg namespace for dynamic children on update', async () => {
+      const active = ref(1)
+      const app = createApp({
+        setup: () => ({ active }),
+        render: compileToFunction(
+          `<div><svg v-for="i in 2" :key="i"><path :class="{ on: i === active }" /></svg></div>`,
+          { prefixIdentifiers: true },
+        ),
+      })
+      const container = document.createElement('div')
+
+      app.mount(container)
+      active.value = 2
+      await nextTick()
+      const paths = container.querySelectorAll('path')
+      expect(paths[0].getAttribute('class')).toBe('')
+      expect(paths[1].getAttribute('class')).toBe('on')
+
+      app.unmount()
+    })
   })
 
   test.each([false, true])(
