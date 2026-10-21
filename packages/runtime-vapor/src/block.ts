@@ -9,6 +9,7 @@ import {
 import { isClaimedAnchor, isHydrating, isRangeEnd } from './dom/hydration'
 import {
   MoveType,
+  type SchedulerJob,
   type TransitionHooks,
   type TransitionProps,
   type TransitionState,
@@ -30,6 +31,7 @@ import { isTransitionEnabled } from './transition'
 import { isInteropEnabled } from './vdomInteropState'
 import { isSuspenseEnabled, resolveUnmountSuspense } from './suspense'
 import type { KeyContext } from './components/Transition'
+import type { SlotBoundaryContext } from './slotBoundary'
 
 export interface VaporTransitionState extends TransitionState {
   // Transition's own root block; persisted derivation walks from here on
@@ -43,6 +45,12 @@ export interface VaporTransitionState extends TransitionState {
   // element entering under this Transition runs it after its enter; it runs
   // after the flush when none does.
   pendingLeave?: () => void
+  // roots beside each other under the Transition, swapping within one flush
+  // as vdom's one child (components/Transition.ts settleSiblingRoots)
+  siblingLeave?: DynamicFragment
+  siblingEnter?: DynamicFragment[]
+  siblingDirty?: SlotBoundaryContext[]
+  siblingJob?: SchedulerJob
 }
 
 export interface VaporTransitionHooks extends TransitionHooks {

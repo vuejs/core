@@ -3396,15 +3396,28 @@ async function runOutInPhases(
 }
 
 // Mounts `srcs` as a vdom and as a vapor app and runs the steps (`k=true` /
-// `k=false` sets a flag, `done` releases the next leave), comparing the hook
-// calls and the DOM after every step.
+// `k=false` sets a flag, `a=true,b=false` several at once, `done` releases
+// the next leave), comparing the hook calls and the DOM after every step.
 async function runOutInSteps(
   srcs: Record<string, string>,
   init: Record<string, any>,
   steps: string[],
+  {
+    // vdom inserts a root entering beside one still leaving right after it,
+    // vapor's roots keep their own anchors: those steps compare without order
+    unordered = false,
+    // the hooks are left out of the comparison
+    domOnly = false,
+  } = {},
 ) {
   const logs: Record<string, string[]> = {}
-  const dom = (root: HTMLElement) => stripAnchors(root.innerHTML)
+  const dom = (root: HTMLElement) =>
+    unordered
+      ? Array.from(root.querySelectorAll('div'))
+          .map(el => el.className)
+          .sort()
+          .join(',')
+      : stripAnchors(root.innerHTML)
   await renderParity(
     srcs,
     () => {
@@ -3422,14 +3435,16 @@ async function runOutInSteps(
       return data
     },
     async (data, root, m) => {
-      const log: string[] = (logs[m] = data.value.log)
+      const log: string[] = (logs[m] = domOnly ? [] : data.value.log)
       for (const s of steps) {
         if (s === 'done') {
           const done = data.value.dones.shift()
           if (done) done()
         } else {
-          const [k, v] = s.split('=')
-          data.value[k] = v === 'true'
+          for (const part of s.split(',')) {
+            const [k, v] = part.split('=')
+            data.value[k] = JSON.parse(v)
+          }
         }
         await nextTick()
         log.push(s + ' ' + dom(root))
@@ -4530,58 +4545,61 @@ describe('a Transition unmounted while its child leaves', () => {
   }
 })
 
+// Mounts `srcs` as a vdom and as a vapor app with an error handler, runs the
+// steps (objects assigned to the data), releases the leaves and returns the
+// errors each app reported.
+async function errors(
+  srcs: Record<string, string>,
+  init: Record<string, any>,
+  steps: Record<string, any>[],
+) {
+  const logs: Record<string, string[]> = {}
+  for (const vapor of [false, true]) {
+    const log: string[] = (logs[vapor ? 'vapor' : 'vdom'] = [])
+    const data: any = ref({
+      ...init,
+      dones: [] as (() => void)[],
+      l: (_el: Element, done: () => void) => data.value.dones.push(done),
+      fail: () => {
+        throw new Error('boom')
+      },
+    })
+    const components: Record<string, any> = {}
+    const withScript = (src: string) =>
+      `<script setup>const data = _data; const components = _components;</script>` +
+      src
+    for (const name in srcs) {
+      if (name !== 'App') {
+        components[name] = compile(withScript(srcs[name]), data, components, {
+          vapor,
+        })
+      }
+    }
+    const App = compile(withScript(srcs.App), data, components, { vapor })
+    const root = document.createElement('div')
+    const app = (vapor ? createVaporApp(App) : createApp(App)).use(
+      vaporInteropPlugin,
+    )
+    app.config.errorHandler = err => log.push((err as Error).message)
+    app.mount(root)
+    try {
+      for (const step of steps) {
+        Object.assign(data.value, step)
+        await nextTick()
+      }
+      for (const done of data.value.dones.splice(0)) done()
+      await nextTick()
+    } catch (err) {
+      log.push('uncaught ' + (err as Error).message)
+    }
+    app.unmount()
+  }
+  return logs
+}
+
 describe('out-in: a branch rendered from the leave', () => {
   // like vdom's afterLeave re-render, the resumed render reports its error
   // through the component's error handling instead of the leave's done()
-  async function errors(
-    srcs: Record<string, string>,
-    init: Record<string, any>,
-    steps: Record<string, any>[],
-  ) {
-    const logs: Record<string, string[]> = {}
-    for (const vapor of [false, true]) {
-      const log: string[] = (logs[vapor ? 'vapor' : 'vdom'] = [])
-      const data: any = ref({
-        ...init,
-        dones: [] as (() => void)[],
-        l: (_el: Element, done: () => void) => data.value.dones.push(done),
-        fail: () => {
-          throw new Error('boom')
-        },
-      })
-      const components: Record<string, any> = {}
-      const withScript = (src: string) =>
-        `<script setup>const data = _data; const components = _components;</script>` +
-        src
-      for (const name in srcs) {
-        if (name !== 'App') {
-          components[name] = compile(withScript(srcs[name]), data, components, {
-            vapor,
-          })
-        }
-      }
-      const App = compile(withScript(srcs.App), data, components, { vapor })
-      const root = document.createElement('div')
-      const app = (vapor ? createVaporApp(App) : createApp(App)).use(
-        vaporInteropPlugin,
-      )
-      app.config.errorHandler = err => log.push((err as Error).message)
-      app.mount(root)
-      try {
-        for (const step of steps) {
-          Object.assign(data.value, step)
-          await nextTick()
-        }
-        for (const done of data.value.dones.splice(0)) done()
-        await nextTick()
-      } catch (err) {
-        log.push('uncaught ' + (err as Error).message)
-      }
-      app.unmount()
-    }
-    return logs
-  }
-
   test('an error while the next branch renders reaches the error handler', async () => {
     expect(
       await errors(
@@ -4877,4 +4895,434 @@ describe('in-out: a kept-alive vdom child switched back while it leaves', () => 
       expect(await run(true, child)).toEqual(vdom)
     },
   )
+})
+
+describe('sibling v-if roots of slot content swapping', () => {
+  // vdom's Transition sees the one root that is not a comment: two v-if roots
+  // swapping are one child switching, run by the mode
+  const modes = ['', 'out-in', 'in-out']
+  const fallback = '<div class="fallback">fb</div>'
+  const outer = (mode: string, fallback: string) => `
+    <template>
+      <Transition
+        ${mode ? `mode="${mode}"` : ''}
+        :css="false"
+        @before-enter="data.be"
+        @leave="data.l"
+        @after-leave="data.al"
+      >
+        <slot>${fallback}</slot>
+      </Transition>
+    </template>`
+  const roots = {
+    A: `
+      <template>
+        <div class="a">a</div>
+      </template>`,
+    B: `
+      <template>
+        <div class="b">b</div>
+      </template>`,
+  }
+  const app = (content: string) => `
+    <template>
+      <components.Outer>${content}</components.Outer>
+    </template>`
+
+  const fallbacks: Record<string, string> = {
+    'no fallback': '',
+    'a fallback': fallback,
+  }
+  const contents: Record<string, string> = {
+    elements: `
+      <div v-if="data.a" class="a">a</div>
+      <div v-if="data.b" class="b">b</div>`,
+    components: `
+      <components.A v-if="data.a" />
+      <components.B v-if="data.b" />`,
+  }
+  const sequences: Record<string, { steps: string[]; unordered?: boolean }> = {
+    'swapped in one tick': { steps: ['a=false,b=true', 'done', 'done'] },
+    'swapped back while the first leaves': {
+      steps: ['a=false,b=true', 'a=true,b=false', 'done', 'done'],
+      unordered: true,
+    },
+    // the root entering updates before the one leaving
+    'swapped back after the first left': {
+      steps: [
+        'a=false,b=true',
+        'done',
+        'done',
+        'a=true,b=false',
+        'done',
+        'done',
+      ],
+      unordered: true,
+    },
+    // vdom pairs a leave and an enter of one render only
+    'left and entered in different ticks': {
+      steps: ['a=false', 'b=true', 'done', 'done'],
+    },
+  }
+
+  for (const mode of modes) {
+    for (const name in fallbacks) {
+      for (const content in contents) {
+        test.each(Object.keys(sequences))(
+          `${content}, ${name} (mode ${JSON.stringify(mode)}), %s`,
+          sequence =>
+            runOutInSteps(
+              {
+                ...roots,
+                Outer: outer(mode, fallbacks[name]),
+                App: app(contents[content]),
+              },
+              { a: true, b: false },
+              sequences[sequence].steps,
+              sequences[sequence],
+            ),
+        )
+      }
+    }
+  }
+
+  // the branch rendered once the siblings settled goes invalid itself
+  test('a validity flip produced while the siblings settle reports at once', () =>
+    runOutInSteps(
+      {
+        Empty: `
+          <template>
+            <i v-if="data.never" />
+          </template>`,
+        Outer: outer('', fallback),
+        App: app(`
+          <components.Empty v-if="data.a" />
+          <div v-else-if="data.c" class="c">c</div>
+          <div v-if="data.b" class="b">b</div>`),
+      },
+      { a: true, b: false, c: false, never: false },
+      ['a=false', 'done'],
+    ))
+
+  // NON-ALIGNED hooks: vdom patches one into the other, with no hooks; vapor
+  // early-removes the one leaving as the other enters
+  test('roots with the same explicit key are one root', () =>
+    runOutInSteps(
+      {
+        Outer: outer('', ''),
+        App: app(`
+          <div v-if="data.a" key="same" class="a">a</div>
+          <div v-if="data.b" key="same" class="b">b</div>`),
+      },
+      { a: true, b: false },
+      ['a=false,b=true', 'done'],
+      { domOnly: true },
+    ))
+
+  // the generated branch keys of a chain compose under its position: a root
+  // beside it never shares them
+  test.each(modes)(
+    'a branch of a chain beside a root keeps its own identity (mode %j)',
+    mode =>
+      runOutInSteps(
+        {
+          Outer: outer(mode, ''),
+          App: app(`
+            <div v-if="data.n === 0" class="a">a</div>
+            <div v-else-if="data.n === 1" class="b">b</div>
+            <div v-if="data.n === 2" class="c">c</div>`),
+        },
+        { n: 1 },
+        ['n=2', 'done', 'done'],
+        { unordered: true },
+      ),
+  )
+
+  // the rows compose under the position of the list
+  test('a v-for beside a v-if keeps the position of the list', () =>
+    runOutInSteps(
+      {
+        Outer: outer('', ''),
+        App: app(`
+          <div v-if="data.a" class="a">a</div>
+          <div v-for="i in data.items" class="b">b</div>`),
+      },
+      { a: false, items: [1] },
+      ['a=true,items=[]', 'done'],
+      { unordered: true },
+    ))
+
+  // the branch keeps its key over the comment beside its root
+  test.each(modes)(
+    'a commented template branch back while it leaves (mode %j)',
+    mode =>
+      runOutInSteps(
+        {
+          Outer: outer(mode, ''),
+          App: app(`
+            <template v-if="data.show">
+              <!-- c -->
+              <div class="a">a</div>
+            </template>`),
+        },
+        { show: true },
+        ['show=false', 'show=true', 'done', 'done'],
+      ),
+  )
+
+  const nested: Record<string, string> = {
+    // the outlet inside the root entering notifies the enclosing one while
+    // the root renders: that one decides once the root is in place
+    'a nested outlet entering as a sibling root': `
+      <slot v-if="data.a"><div class="a">a</div></slot>
+      <div v-if="data.b" class="b">b</div>`,
+    // a fallback body reports through a copy of its provider's boundary
+    'sibling roots in a fallback body': `
+      <slot>
+        <slot v-if="data.a"><div class="a">a</div></slot>
+        <div v-if="data.b" class="b">b</div>
+      </slot>`,
+  }
+  for (const name in nested) {
+    test.each(modes)(`${name} mounts no outer fallback (mode %j)`, mode =>
+      runOutInSteps(
+        {
+          Outer: outer(mode, fallback),
+          Mid: app(nested[name]),
+          App: `
+            <template>
+              <components.Mid />
+            </template>`,
+        },
+        { a: false, b: true },
+        ['a=true,b=false', 'done', 'done'],
+        { unordered: true },
+      ),
+    )
+  }
+
+  // the leave ends with two fragments switched: the wrapper of the roots
+  // that swapped, and a sibling of its own beside it
+  test.each(Object.keys(fallbacks))(
+    'an out-in leave ending with a sibling switched beside the wrapper, %s',
+    name =>
+      runOutInSteps(
+        {
+          Outer: outer('out-in', fallbacks[name]),
+          App: app(`
+            <template v-if="data.a || data.b">
+              <div v-if="data.a" class="a">a</div>
+              <div v-if="data.b" class="b">b</div>
+            </template>
+            <div v-if="data.c" class="c">c</div>`),
+        },
+        { a: true, b: false, c: false },
+        ['a=false,b=true', 'b=false,c=true', 'done', 'done', 'done'],
+      ),
+  )
+
+  // the deferred render runs for the component rendering the roots, resumed
+  // by the leave (out-in) as well
+  test.each(['', 'out-in'])(
+    'an error while a sibling root renders reaches the error handler (mode %j)',
+    async mode =>
+      expect(
+        await errors(
+          {
+            Outer: `
+              <template>
+                <Transition ${mode ? `mode="${mode}"` : ''} :css="false" @leave="data.l">
+                  <slot />
+                </Transition>
+              </template>`,
+            App: app(`
+              <div v-if="data.a" class="a">{{ data.fail() }}</div>
+              <div v-if="data.b" class="b">b</div>`),
+          },
+          { a: false, b: true },
+          [{ a: true, b: false }],
+        ),
+      ).toEqual({ vdom: ['boom'], vapor: ['boom'] }),
+  )
+
+  test('a paired out-in swap constructs no fallback', () =>
+    runOutInSteps(
+      {
+        ...roots,
+        Fallback: `
+          <script setup>
+            const data = _data
+            data.value.log.push('setup:fallback')
+          </script>
+          <template>
+            <div class="fallback">fb</div>
+          </template>`,
+        Outer: outer('out-in', '<components.Fallback />'),
+        App: app(contents.components),
+      },
+      { a: false, b: true },
+      ['a=true,b=false', 'done'],
+    ))
+
+  // vdom flattens a forwarded slot's fragment into the roots beside it: a
+  // root of the forwarding component swaps with one of its slot content.
+  // Mode "" and the fallback cells are coverage guards
+  const forwarded = (fallback: string) =>
+    app(`
+      <div v-if="data.m" class="m">m</div>
+      <slot>${fallback}</slot>`)
+  const forwardedApp = `
+    <template>
+      <components.Mid>
+        <div v-if="data.a" class="a">a</div>
+      </components.Mid>
+    </template>`
+  for (const mode of modes) {
+    test.each<[Record<string, boolean>, string]>([
+      [{ a: true, m: false }, 'a=false,m=true'],
+      [{ a: false, m: true }, 'a=true,m=false'],
+    ])(
+      `a root beside a forwarded slot (mode ${JSON.stringify(mode)}), %j %s`,
+      (init, step) =>
+        runOutInSteps(
+          { Outer: outer(mode, ''), Mid: forwarded(''), App: forwardedApp },
+          init,
+          [step, 'done', 'done'],
+          { unordered: true },
+        ),
+    )
+
+    // the forwarded slot's fallback swaps with the content root the same way
+    test.each<[Record<string, boolean>, string]>([
+      [{ a: true, m: false }, 'a=false'],
+      [{ a: false, m: false }, 'a=true'],
+    ])(
+      `the fallback of a forwarded slot beside a root (mode ${JSON.stringify(mode)}), %j %s`,
+      (init, step) =>
+        runOutInSteps(
+          {
+            Outer: outer(mode, ''),
+            Mid: forwarded('<div class="mfb">mfb</div>'),
+            App: forwardedApp,
+          },
+          init,
+          [step, 'done', 'done'],
+          { unordered: true },
+        ),
+    )
+  }
+
+  // vapor only: vdom counts the component rendering nothing as a second
+  // child. A root switched while the leave ran leaves itself as it renders
+  // after it; the others switched wait on that leave in turn
+  test('a switched root leaving as it renders holds the others', async () => {
+    const { leaves, onLeave } = collectLeaves()
+    const data = ref({ a: true, g: true, s: false, never: false, l: onLeave })
+    const components: Record<string, any> = {}
+    components.Empty = compile(
+      `<template>
+        <i v-if="data.never" />
+      </template>`,
+      data,
+      components,
+    )
+    components.Outer = compile(
+      `<template>
+        <Transition mode="out-in" :css="false" @leave="data.l">
+          <slot />
+        </Transition>
+      </template>`,
+      data,
+      components,
+    )
+    const App = compile(
+      `<template>
+        <components.Outer>
+          <div v-if="data.a" class="a">a</div>
+          <components.Empty v-if="data.g" />
+          <div v-else class="g2">g2</div>
+          <div v-if="data.s" class="s">s</div>
+        </components.Outer>
+      </template>`,
+      data,
+      components,
+    )
+    const { host, app } = define(App).render()
+    data.value.a = false
+    data.value.s = true
+    await nextTick()
+    data.value.never = true
+    await nextTick()
+    data.value.g = false
+    await nextTick()
+    leaves.shift()!()
+    await nextTick()
+    expect(stripAnchors(host.innerHTML)).toBe('<i></i>')
+    leaves.shift()!()
+    await nextTick()
+    expect(stripAnchors(host.innerHTML)).toBe(
+      '<div class="g2">g2</div><div class="s">s</div>',
+    )
+    app.unmount()
+  })
+
+  // vapor only (several children, warned). A fragment
+  // switched to nothing while the leave ran leaves on its own as it renders
+  // after it; the branch leaving took its inner fragments with it, so one
+  // switched meanwhile renders nowhere
+  test('an inner fragment of a branch leaving as it renders stays torn down', async () => {
+    let renders = 0
+    const { leaves, onLeave } = collectLeaves()
+    const data: any = ref({
+      o: true,
+      i: true,
+      j: true,
+      t: 0,
+      l: onLeave,
+      mark: () => (renders++, data.value.t),
+    })
+    const components: Record<string, any> = {}
+    components.Outer = compile(
+      `<template>
+        <Transition mode="out-in" :css="false" @leave="data.l">
+          <slot />
+        </Transition>
+      </template>`,
+      data,
+      components,
+    )
+    const App = compile(
+      `<template>
+        <components.Outer>
+          <template v-if="data.o">
+            <div v-if="data.i" class="i1">i1</div>
+            <div v-else class="i2">i2</div>
+            <span v-if="data.j">j</span>
+            <b v-else>{{ data.mark() }}</b>
+          </template>
+        </components.Outer>
+      </template>`,
+      data,
+      components,
+    )
+    const { host, app } = define(App).render()
+    data.value.i = false
+    await nextTick()
+    data.value.o = false
+    data.value.j = false
+    await nextTick()
+    while (leaves.length) {
+      leaves.shift()!()
+      await nextTick()
+    }
+    expect(stripAnchors(host.innerHTML)).toBe('')
+    renders = 0
+    data.value.t = 1
+    await nextTick()
+    expect(renders).toBe(0)
+    app.unmount()
+    expect(
+      '<transition> can only be used on a single element',
+    ).toHaveBeenWarned()
+  })
 })

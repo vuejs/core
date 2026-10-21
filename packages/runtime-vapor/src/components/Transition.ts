@@ -18,6 +18,7 @@ import {
   isKeepAlive,
   isTemplateNode,
   leaveCbKey,
+  queueJob,
   queuePostFlushCb,
   queuePostRenderEffect,
   resolveTransitionProps,
@@ -73,6 +74,7 @@ import {
   isSlotFallbackBlock,
   setSettlingNotify,
 } from '../slotFragment'
+import type { SlotBoundaryContext } from '../slotBoundary'
 import {
   currentHydrationNode,
   isHydrating,
@@ -105,6 +107,7 @@ export const ensureTransitionHooksRegistered = (): void => {
       ownsMode,
       awaitLeavingRootImpl,
       resolveOutletLeaveImpl,
+      deferSlotRootFlipImpl,
     )
   }
 }
@@ -381,12 +384,14 @@ export function applyTransitionHooksImpl(
   // root rendered after its async setup)
   ctx?: KeyContext,
 ): VaporTransitionHooks {
-  // filter out comment nodes
+  // the one child beside comments; the array is walked as it is, its
+  // positions keying the children
+  let single = block
   if (isArray(block)) {
-    block = block.filter(b => !(b instanceof Comment))
-    if (block.length === 1) {
-      block = block[0]
-    } else if (block.length === 0) {
+    const children = block.filter(b => !(b instanceof Comment))
+    if (children.length === 1) {
+      single = children[0]
+    } else if (children.length === 0) {
       // relayed vdom hooks: the vdom Transition keeps waiting on its own
       if (!refresh && isVaporTransitionHooks(hooks)) {
         releaseDelayedLeave(hooks)
@@ -400,11 +405,11 @@ export function applyTransitionHooksImpl(
   // enter/leave hooks for their resolved single child.
   if (
     hooks.applyGroup &&
-    (isForFragment(block) ||
-      isVaporSlotOutlet(block) ||
-      (isVaporComponent(block) && isVaporSlotOutlet(block.block)))
+    (isForFragment(single) ||
+      isVaporSlotOutlet(single) ||
+      (isVaporComponent(single) && isVaporSlotOutlet(single.block)))
   ) {
-    hooks.applyGroup(block, hooks.props, hooks.state, hooks.instance)
+    hooks.applyGroup(single, hooks.props, hooks.state, hooks.instance)
     return hooks
   }
 
@@ -734,17 +739,184 @@ function deferBranchUpdateDuringLeaveImpl(
   prevKey: any,
 ): boolean {
   const transition = frag.$transition!
-  if (!ownsMode(transition, frag) || !transition.state.isLeaving) return false
+  if (!ownsMode(transition, frag)) return false
+  const { isLeaving } = transition.state
+  // a sibling root rendering a branch from nothing is one side of the swap
+  // vdom renders at once: it renders once its siblings updated, which may
+  // leave in this flush (settleSiblingRoots)
+  const sibling =
+    !isLeaving &&
+    !!render &&
+    holdsForSiblings(frag, transition) &&
+    !isValidBlock(frag.nodes)
+  if (!isLeaving && !sibling) {
+    // updated past a deferred render: that one is stale
+    if (frag.pending && !frag.leaving) frag.pending = undefined
+    return false
+  }
   const pending = frag.pending
   if (pending) {
-    pending.render = render
-    pending.key = key
-    pending.noScope = noScope
-    pending.branchKey = branchKey
+    // back on the mounted branch: nothing to render (a leaving fragment's
+    // own branch holds no mounted key)
+    if (key === pending.prevKey && !frag.leaving) {
+      frag.pending = undefined
+    } else {
+      pending.render = render
+      pending.key = key
+      pending.noScope = noScope
+      pending.branchKey = branchKey
+    }
   } else {
     frag.pending = { render, key, noScope, branchKey, prevKey }
+    if (sibling) {
+      ;(transition.state.siblingEnter ||= []).push(frag)
+      queueSiblingSettle(transition)
+    }
   }
   return true
+}
+
+// a sibling root flipping invalid: one beside it may render in this flush,
+// as in the one render vdom resolves the slot in
+function deferSlotRootFlipImpl(frag: DynamicFragment): boolean {
+  const hooks = frag.$transition!
+  if (
+    // the flip to valid: the branch is in place
+    !frag.wasValid ||
+    !isVaporTransitionHooks(hooks) ||
+    !holdsForSiblings(frag, hooks)
+  ) {
+    return false
+  }
+  ;(hooks.state.siblingDirty ||= []).push(frag.slotBoundary!)
+  queueSiblingSettle(hooks)
+  return true
+}
+
+// a root beside others under the Transition (collectArrayTransitionBlocks)
+function isSiblingRoot(frag: DynamicFragment): boolean {
+  const ctx = frag.$keyCtx
+  return !!ctx && !!ctx.siblings && !isVaporSlotOutlet(frag)
+}
+
+// a settle point renders deferred branches (renderResumed): a sibling root
+// rendering there decides at once
+let settling = false
+
+// a sibling root deciding with its siblings at the settle point
+function holdsForSiblings(
+  frag: DynamicFragment,
+  hooks: VaporTransitionHooks,
+): boolean {
+  return !settling && !hooks.applyGroup && isSiblingRoot(frag)
+}
+
+// Renders the deferred update `frag` holds (renderResumed)
+function renderPending(frag: DynamicFragment): SlotBoundaryContext | null {
+  const pending = frag.pending
+  // updated past meanwhile, or in a branch a fragment rendered before replaced
+  if (!pending || !frag.anchor.parentNode) return null
+  frag.pending = undefined
+  const { render, key, noScope, branchKey, prevKey } = pending
+  // back on the mounted key, the deferred update runs as a regular one
+  frag.current = prevKey
+  return renderResumed(frag, frag.renderInstance, () =>
+    runWithRenderCtx(frag, () => frag.update(render, key, noScope, branchKey)),
+  )
+}
+
+// Renders what `frag` holds after a leave. The outlet the fragment reports to
+// sees the branch once it is in place: an outlet inside it notifies while it
+// renders, with the nodes that left still empty (an enclosing outlet would
+// resolve its fallback for them), so it is returned to recheck once the
+// fragments rendering together are all in place (recheckBoundaries). Like a
+// render job, an error is reported as the owner's update error instead of
+// being thrown out of the leave's done().
+function renderResumed(
+  frag: DynamicFragment,
+  instance: GenericComponentInstance | null,
+  render: () => void,
+): SlotBoundaryContext | null {
+  const boundary = frag.slotBoundary
+  callWithErrorHandling(
+    () => {
+      const prevNotify = setSettlingNotify(boundary && boundary.markDirty)
+      const prevSettling = settling
+      settling = true
+      try {
+        render()
+      } finally {
+        settling = prevSettling
+        setSettlingNotify(prevNotify)
+      }
+    },
+    instance,
+    ErrorCodes.COMPONENT_UPDATE,
+  )
+  return boundary
+}
+
+// An error from a fallback a recheck renders is the owner's, like the
+// branch's (renderResumed)
+function recheckBoundaries(
+  owner: GenericComponentInstance | null,
+  boundaries: (SlotBoundaryContext | null)[],
+): void {
+  if (!boundaries.length) return
+  callWithErrorHandling(
+    () => {
+      for (let i = 0; i < boundaries.length; i++) {
+        const boundary = boundaries[i]
+        if (boundary && boundaries.indexOf(boundary) === i) {
+          boundary.markDirty()
+        }
+      }
+    },
+    owner,
+    ErrorCodes.COMPONENT_UPDATE,
+  )
+}
+
+// the roots render in the Transition's render frame: its instance owns the
+// job, after every render effect of the flush (an error is handled as its
+// update's, flushJobs)
+function queueSiblingSettle(hooks: VaporTransitionHooks): void {
+  const { state, instance } = hooks
+  let job = state.siblingJob
+  if (!job) {
+    job = state.siblingJob = () => settleSiblingRoots(state, instance)
+    job.i = instance
+  }
+  queueJob(job, instance.uid, false, instance.effectCount)
+}
+
+function settleSiblingRoots(
+  state: VaporTransitionState,
+  owner: VaporComponentInstance,
+): void {
+  const left = state.siblingLeave
+  const entering = state.siblingEnter
+  // the outlets of the roots that flipped invalid report with the rendered ones
+  const dirty = state.siblingDirty
+  state.siblingLeave = state.siblingEnter = state.siblingDirty = undefined
+  if (state.isUnmounting) return
+  const boundaries: (SlotBoundaryContext | null)[] = []
+  if (entering) {
+    // out-in: paired after all, the roots entering wait on the leave; the
+    // leaving root's afterLeave renders what they hold then, and the slots
+    // decide on their fallbacks after that
+    if (
+      left &&
+      left.leaving &&
+      awaitLeavingRoot(left, () => recheckBoundaries(owner, dirty || []))
+    ) {
+      return
+    }
+    for (let i = 0; i < entering.length; i++) {
+      boundaries.push(renderPending(entering[i]))
+    }
+  }
+  recheckBoundaries(owner, dirty ? boundaries.concat(dirty) : boundaries)
 }
 
 // the fragment whose branch is leaving on its own (out-in, to nothing)
@@ -854,6 +1026,7 @@ function removeBranchWithLeaveImpl(
   // invalid from here, isValidBlock), and a fallback with a child to animate
   // waits on this leave there (commitSlotFallback).
   const emptySlotRoot = !render && !!(frag.__vf & SLOT_ROOT)
+  const siblingRoot = !!mode && !render && isSiblingRoot(frag)
   const persisted = isVaporSlotOutlet(frag)
     ? resolveOutletLeaveImpl(frag, frag.nodes, transition)
     : transition.persisted
@@ -868,7 +1041,7 @@ function removeBranchWithLeaveImpl(
     // A slot root leaving empty may have a fallback entering for it, its
     // outlet's or an enclosing one's, decided afterwards: its leave waits
     // on the Transition for that, and runs after the flush otherwise.
-    (mode !== 'in-out' || render || emptySlotRoot) &&
+    (mode !== 'in-out' || render || emptySlotRoot || siblingRoot) &&
     // out-in only needs to defer when the current branch actually has
     // a rendered child to leave before mounting the next one.
     (mode !== 'out-in' || isValidBlock(frag.nodes))
@@ -894,63 +1067,54 @@ function removeBranchWithLeaveImpl(
       const pending = current ? frag.pending : undefined
       if (pending) frag.nodes = EMPTY_BLOCK
       // Like vdom rendering Transition's latest child after the leave, the
-      // outermost fragment that switched meanwhile replaces this one.
-      let outer: DynamicFragment | undefined
-      collectTransitionBlocks(
-        transition.state.root!,
-        f => {
-          const pending = (f as DynamicFragment).pending
-          // a fragment leaving on its own holds its next branch, not a switch
-          if (!pending || f === frag || (f as DynamicFragment).leaving) return
-          if (outer || pending.key === pending.prevKey) {
-            // superseded by the outer switch, or switched back
-            ;(f as DynamicFragment).pending = undefined
-          } else {
-            outer = f as DynamicFragment
-          }
-        },
-        [],
-        undefined,
-      )
-      if (outer) {
-        const target = outer
-        const { render, key, noScope, branchKey, prevKey } = target.pending!
-        target.pending = undefined
-        if (current) frag.pending = undefined
-        // back on the mounted key, the deferred update runs as a regular one
-        target.current = prevKey
-        renderResumed(target, target.renderInstance, () =>
-          runWithRenderCtx(target, () =>
-            target.update(render, key, noScope, branchKey),
-          ),
-        )
-        return
-      }
-      if (!pending) return
-      // where the fragment is now: a KeepAlive may have moved it meanwhile
-      const liveParent = frag.anchor.parentNode
-      if (!liveParent) return
-      // By the time this deferred out-in branch runs, the renderEffect
-      // has finished and currentInstance may have changed, so restore
-      // the captured instance.
-      const prevInstance = setCurrentInstance(instance)
-      try {
+      // fragments that switched meanwhile render, outermost first: the walk
+      // reads a fragment's nodes after the callback, so the inner ones an
+      // outer switch replaced are never reached. One leaving as it renders
+      // holds the rest until its own leave ends
+      const boundaries: (SlotBoundaryContext | null)[] = []
+      findTransitionBlock(transition.state.root!, f => {
+        const switched = f as DynamicFragment
+        // a fragment leaving on its own holds its next branch, not a switch
+        if (
+          switched.pending &&
+          switched !== frag &&
+          !switched.leaving &&
+          !transition.state.isLeaving
+        ) {
+          boundaries.push(renderPending(switched))
+        }
+      })
+      if (pending) {
         frag.pending = undefined
-        renderResumed(frag, instance, () =>
-          frag.renderBranch(
-            pending.render,
-            transition,
-            liveParent,
-            pending.key,
-            pending.noScope,
-            true,
-            undefined,
-            pending.branchKey,
-          ),
-        )
-      } finally {
-        restoreCurrentInstance(prevInstance)
+        // where the fragment is now: an outer switch may have replaced it, a
+        // KeepAlive may have moved it meanwhile
+        const liveParent = frag.anchor.parentNode
+        if (liveParent) {
+          // By the time this deferred out-in branch runs, the renderEffect
+          // has finished and currentInstance may have changed, so restore
+          // the captured instance.
+          const prevInstance = setCurrentInstance(instance)
+          try {
+            boundaries.push(
+              renderResumed(frag, instance, () =>
+                frag.renderBranch(
+                  pending.render,
+                  transition,
+                  liveParent,
+                  pending.key,
+                  pending.noScope,
+                  true,
+                  undefined,
+                  pending.branchKey,
+                ),
+              ),
+            )
+          } finally {
+            restoreCurrentInstance(prevInstance)
+          }
+        }
       }
+      recheckBoundaries(instance, boundaries)
     }
     if (
       applyTransitionLeaveHooksImpl(
@@ -968,39 +1132,21 @@ function removeBranchWithLeaveImpl(
       frag.leaving = true
       frag.pending = own = { render, key, noScope, branchKey }
       remove(frag.nodes, parent)
-      if (emptySlotRoot) frag.slotBoundary!.markDirty()
+      // a sibling root's outlet decides with its siblings (settleSiblingRoots)
+      if (siblingRoot) {
+        const { state } = transition
+        state.siblingLeave = frag
+        if (emptySlotRoot) {
+          ;(state.siblingDirty ||= []).push(frag.slotBoundary!)
+        }
+        queueSiblingSettle(transition)
+      } else if (emptySlotRoot) {
+        frag.slotBoundary!.markDirty()
+      }
       return true
     }
   }
   return false
-}
-
-// Renders what `frag` holds after a leave. The outlet the fragment reports to
-// sees the branch once it is in place: an outlet inside it notifies while it
-// renders, with the nodes that left still empty (an enclosing outlet would
-// resolve its fallback for them), so it rechecks after. Like a render job, an
-// error, from the branch or from a fallback that recheck renders, is reported
-// as the owner's update error instead of being thrown out of the leave's
-// done().
-function renderResumed(
-  frag: DynamicFragment,
-  instance: GenericComponentInstance | null,
-  render: () => void,
-): void {
-  const boundary = frag.slotBoundary
-  callWithErrorHandling(
-    () => {
-      const prevNotify = setSettlingNotify(boundary && boundary.markDirty)
-      try {
-        render()
-      } finally {
-        setSettlingNotify(prevNotify)
-      }
-      if (boundary) boundary.markDirty()
-    },
-    instance,
-    ErrorCodes.COMPONENT_UPDATE,
-  )
 }
 
 // vdom identity of a transition child as the chain is walked: the first
@@ -1014,6 +1160,10 @@ export interface KeyContext {
   // under a slot outlet's branch: keys compose under its key, as the keys
   // under vdom's slot fragments compose under theirs
   slot?: boolean
+  // one of several roots beside each other: vdom's one child, swapping
+  siblings?: boolean
+  // the position of an unkeyed root among them, its key then
+  index?: number
 }
 export const ROOT_KEY_CONTEXT: KeyContext = { key: undefined }
 // fragments that re-apply hooks on their own content, i.e. read this back
@@ -1039,18 +1189,23 @@ function enterSlotKeyContext(
   const name = outlet && outlet.slotName
   if (name === undefined && !fallback) return ctx
   const key = (name === undefined ? '' : '_' + name) + (fallback ? '_fb' : '')
-  return { key: ownKey(ctx, key), slot: true }
+  return { key: ownKey(ctx, key), slot: true, siblings: ctx.siblings }
 }
 
 // a block's own key in `ctx`
 function ownKey(ctx: KeyContext, key: any): any {
-  return key == null ? ctx.key : ctx.slot ? ctx.key + String(key) : key
+  if (key == null) {
+    // the position of an unkeyed root, apart from the generated keys of the
+    // branches beside it (createIf keys the branches of a chain only)
+    return ctx.index === undefined ? ctx.key : ctx.key + '.' + ctx.index
+  }
+  return ctx.slot ? ctx.key + String(key) : key
 }
 
 export function withDefaultKey(ctx: KeyContext, key: any): KeyContext {
   return ctx.type || key == null
     ? ctx
-    : { key: ownKey(ctx, key), slot: ctx.slot }
+    : { key: ownKey(ctx, key), slot: ctx.slot, siblings: ctx.siblings }
 }
 
 function isUnresolvedAsyncWrapper(block: VaporComponentInstance): boolean {
@@ -1230,10 +1385,31 @@ function collectArrayTransitionBlocks(
   ctx: KeyContext | undefined,
 ): void {
   let hasFound = false
-  for (const c of block) {
+  // under a slot's key: vdom keys the slot fragment's unkeyed children by
+  // their position, and roots beside each other there swap as its one child
+  const indexed = !!ctx && !!ctx.slot
+  let siblings = false
+  let key: any
+  if (indexed) {
+    let n = 0
+    for (let i = 0; i < block.length; i++) {
+      if (!(block[i] instanceof Comment)) n++
+    }
+    // vdom flattens the fragments under the slot: roots beside each other
+    // anywhere in them swap, and a nested array composes under its position
+    siblings = n > 1 || !!ctx!.siblings
+    key = ownKey(ctx!, undefined)
+  }
+  for (let i = 0; i < block.length; i++) {
+    const c = block[i]
     if (c instanceof Comment) continue
     const nested: ResolvedTransitionBlock[] = []
-    collectTransitionBlocks(c, onFragment, nested, ctx)
+    collectTransitionBlocks(
+      c,
+      onFragment,
+      nested,
+      indexed ? { key, slot: true, siblings, index: i } : ctx,
+    )
     // a root rendering nothing is no child, like a comment in vdom; its
     // fragments still take the hooks for what it renders later
     if (!nested.length) continue
