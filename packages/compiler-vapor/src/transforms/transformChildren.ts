@@ -5,9 +5,9 @@ import {
   transformNode,
 } from '../transform'
 import { DynamicFlag, IRNodeTypes, isBlockOperation } from '../ir'
+import { OpenScope, enterOpenScope, keepsInTemplate } from '../htmlNesting'
 import {
   getChildTemplateCloseState,
-  isInSameTemplateAsParent,
   shouldUseCreateElement,
 } from './transformElement'
 
@@ -23,24 +23,37 @@ export const transformChildren: NodeTransform = (node, context) => {
   const useCreateElement =
     node.type === NodeTypes.ELEMENT &&
     shouldUseCreateElement(node, context as TransformContext<ElementNode>)
-  const childTemplateCloseState =
-    !isFragment && !useCreateElement
-      ? getChildTemplateCloseState(context as TransformContext<ElementNode>)
-      : undefined
+  // a plain element writes its children into its template string, unless the
+  // html parser would not place one there (`keepsInTemplate`)
+  const hostsTemplate =
+    node.type === NodeTypes.ELEMENT &&
+    node.tagType === ElementTypes.ELEMENT &&
+    !useCreateElement
+  const childTemplateCloseState = hostsTemplate
+    ? getChildTemplateCloseState(context as TransformContext<ElementNode>)
+    : undefined
+  const childScope = hostsTemplate
+    ? enterOpenScope(context.templateScope, node.tag, node.ns)
+    : 0
 
   for (const [i, child] of node.children.entries()) {
     const childContext = context.create(child, i)
     const isInSameTemplate =
-      childTemplateCloseState &&
+      hostsTemplate &&
       child.type === NodeTypes.ELEMENT &&
       child.tagType === ElementTypes.ELEMENT &&
-      isInSameTemplateAsParent(childContext as TransformContext<ElementNode>)
-    childContext.templateCloseTags = isInSameTemplate
-      ? childTemplateCloseState.tags
-      : undefined
-    childContext.templateCloseBlocks = isInSameTemplate
-      ? childTemplateCloseState.blocks
-      : false
+      keepsInTemplate(
+        child.tag,
+        child.ns,
+        (node as ElementNode).tag,
+        childScope,
+      )
+    const closeState = isInSameTemplate ? childTemplateCloseState : undefined
+    childContext.templateScope = isInSameTemplate
+      ? childScope | OpenScope.SHARED
+      : 0
+    childContext.templateCloseTags = closeState && closeState.tags
+    childContext.templateCloseBlocks = !!closeState && closeState.blocks
     transformNode(childContext)
 
     const childDynamic = childContext.dynamic
