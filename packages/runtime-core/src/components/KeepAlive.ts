@@ -219,7 +219,10 @@ const KeepAliveImpl: ComponentOptions = {
       const cached = cache.get(key) as VNode
       if (cached && (!current || !isSameVNodeType(cached, current))) {
         unmount(cached)
-      } else if (current) {
+      } else if (
+        current &&
+        (current.key == null ? current.type : current.key) === key
+      ) {
         // current active instance should no longer be kept-alive.
         // we can't unmount it now but it might be later, so reset its flag now.
         resetShapeFlag(current)
