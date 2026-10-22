@@ -1732,6 +1732,46 @@ export function inferRuntimeType(
           }
         }
 
+        // an interface can inherit its runtime type from the types it extends,
+        // e.g. `interface Branded extends Symbol {}` is a Symbol at runtime.
+        // #15740
+        if (
+          !isKeyOf &&
+          node.type === 'TSInterfaceDeclaration' &&
+          node.extends
+        ) {
+          const inherited = new Set<string>()
+          for (const ext of node.extends) {
+            for (const t of inferRuntimeType(
+              ctx,
+              {
+                type: 'TSTypeReference',
+                typeName: ext.expression,
+                typeParameters: ext.typeParameters,
+                // keep comments so `/* @vue-ignore */` on a base is respected
+                leadingComments: ext.leadingComments,
+              } as TSTypeReference,
+              scope,
+            )) {
+              // ignore bases that cannot be inferred, otherwise a single
+              // unresolvable base would discard the whole inferred type
+              if (t !== UNKNOWN_TYPE) {
+                inherited.add(t)
+              }
+            }
+          }
+          // for a callable interface, properties inherited from a base
+          // describe the function itself and must not widen `Function` to
+          // `[Function, Object]`, otherwise a function default would be
+          // treated as a factory
+          if (types.has('Function') || inherited.has('Function')) {
+            inherited.delete('Object')
+          }
+          for (const t of inherited) {
+            types.add(t)
+          }
+        }
+
         return types.size
           ? Array.from(types)
           : [isKeyOf ? UNKNOWN_TYPE : 'Object']
@@ -1876,6 +1916,7 @@ export function inferRuntimeType(
               case 'Date':
               case 'Promise':
               case 'Error':
+              case 'Symbol':
                 return [node.typeName.name]
 
               // TS built-in utility types
