@@ -29,6 +29,21 @@ export type OverloadParameters<T extends (...args: any[]) => any> = Parameters<
 
 type OverloadProps<TOverload> = Pick<TOverload, keyof TOverload>
 
+/**
+ * Rebuilds the parameter list of a signature as it was declared: a trailing
+ * `void` parameter is inferred as optional by `infer TArgs`, so a signature
+ * rebuilt from it is no longer identical to the original one.
+ */
+type RequireVoidParams<T extends unknown[]> = T extends [infer H, ...infer R]
+  ? [H, ...RequireVoidParams<R>]
+  : T extends [(infer H)?, ...infer R]
+    ? unknown extends H
+      ? T
+      : void extends H
+        ? [Exclude<H, undefined>, ...RequireVoidParams<R>]
+        : T
+    : T
+
 type OverloadUnionRecursive<
   TOverload,
   TPartialOverload = unknown,
@@ -38,7 +53,12 @@ type OverloadUnionRecursive<
     : | OverloadUnionRecursive<
           TPartialOverload & TOverload,
           TPartialOverload &
+            // both forms are collected, because it is not possible to tell
+            // `(v: void)` from `(v?: void)` after the parameters are inferred.
+            // The one that is identical to the original signature
+            // is deduplicated, which lets the recursion terminate.
             ((...args: TArgs) => TReturn) &
+            ((...args: RequireVoidParams<TArgs>) => TReturn) &
             OverloadProps<TOverload>
         >
       | ((...args: TArgs) => TReturn)
