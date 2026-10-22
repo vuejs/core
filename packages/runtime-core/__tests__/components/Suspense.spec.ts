@@ -3537,4 +3537,87 @@ describe('Suspense', () => {
       app.unmount()
     },
   )
+  // async setup() has not resolved: the component is only represented by its
+  // placeholder comment, which its unmount must take along
+  test('removes the placeholder of a pending async child unmounted in the active branch', async () => {
+    const show = ref(false)
+    const Async = {
+      async setup() {
+        await new Promise(() => {})
+        return () => h('div', 'async')
+      },
+    }
+    const App = {
+      render: () =>
+        h(Suspense, null, {
+          default: h('div', [
+            show.value ? h(Async) : createCommentVNode('v-if'),
+          ]),
+          fallback: h('p', 'loading'),
+        }),
+    }
+    const root = nodeOps.createElement('div')
+    render(h(App), root)
+    expect(serializeInner(root)).toBe('<div><!--v-if--></div>')
+
+    show.value = true
+    await nextTick()
+    expect(serializeInner(root)).toBe('<div><!----></div>')
+
+    show.value = false
+    await nextTick()
+    expect(serializeInner(root)).toBe('<div><!--v-if--></div>')
+  })
+
+  test('removes the placeholders of pending async children unmounted in the pending branch', async () => {
+    const show = ref(true)
+    let resolveDep!: () => void
+    const resolveAsync: (() => void)[] = []
+    const Dep = {
+      async setup() {
+        await new Promise<void>(resolve => {
+          resolveDep = resolve
+        })
+        return () => h('span', 'dep')
+      },
+    }
+    const Async = {
+      async setup() {
+        await new Promise<void>(resolve => {
+          resolveAsync.push(resolve)
+        })
+        return () => h('div', 'async')
+      },
+    }
+    const App = {
+      render: () =>
+        h(Suspense, null, {
+          default: h('div', [
+            h(Dep),
+            show.value ? h(Async) : createCommentVNode('v-if'),
+          ]),
+          fallback: h('p', 'loading'),
+        }),
+    }
+    const root = nodeOps.createElement('div')
+    render(h(App), root)
+    expect(serializeInner(root)).toBe('<p>loading</p>')
+
+    for (let i = 0; i < 2; i++) {
+      show.value = false
+      await nextTick()
+      show.value = true
+      await nextTick()
+    }
+    show.value = false
+    await nextTick()
+    expect(resolveAsync.length).toBe(3)
+    expect(serializeInner(root)).toBe('<p>loading</p>')
+
+    // the discarded instances still release their deps on resolve
+    resolveDep()
+    resolveAsync.forEach(resolve => resolve())
+    await new Promise(r => setTimeout(r))
+    expect(serializeInner(root)).toBe('<div><span>dep</span><!--v-if--></div>')
+  })
 })
