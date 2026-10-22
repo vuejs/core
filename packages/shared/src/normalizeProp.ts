@@ -24,7 +24,6 @@ export function normalizeStyle(
   }
 }
 
-const listDelimiterRE = /;(?![^(]*\))/g
 const propertyDelimiterRE = /:([^]+)/
 // Match strings and escapes first to preserve comment-like text in CSS values.
 const styleCommentRE =
@@ -32,16 +31,38 @@ const styleCommentRE =
 
 export function parseStringStyle(cssText: string): NormalizedStyle {
   const ret: NormalizedStyle = {}
-  cssText
-    .replace(styleCommentRE, match => (match.startsWith('/*') ? '' : match))
-    .split(listDelimiterRE)
-    .forEach(item => {
-      if (item) {
-        const tmp = item.split(propertyDelimiterRE)
-        tmp.length > 1 && (ret[tmp[0].trim()] = tmp[1].trim())
-      }
-    })
+  const text = cssText.replace(styleCommentRE, match =>
+    match.startsWith('/*') ? '' : match,
+  )
+  let start = 0
+  let parens = 0
+  let quote = ''
+  // Only a `;` outside of strings and parentheses ends a declaration, e.g.
+  // `--sep: ';'` or `url(data:image/png;base64,...)`.
+  for (let i = 0; i < text.length; i++) {
+    const char = text[i]
+    if (char === '\\') {
+      i++
+    } else if (quote) {
+      if (char === quote) quote = ''
+    } else if (char === '"' || char === "'") {
+      quote = char
+    } else if (char === '(') {
+      parens++
+    } else if (char === ')') {
+      if (parens) parens--
+    } else if (char === ';' && !parens) {
+      parseDeclaration(text.slice(start, i), ret)
+      start = i + 1
+    }
+  }
+  parseDeclaration(text.slice(start), ret)
   return ret
+}
+
+function parseDeclaration(item: string, ret: NormalizedStyle): void {
+  const tmp = item.split(propertyDelimiterRE)
+  tmp.length > 1 && (ret[tmp[0].trim()] = tmp[1].trim())
 }
 
 export function stringifyStyle(
