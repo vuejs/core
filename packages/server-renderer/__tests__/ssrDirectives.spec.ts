@@ -620,4 +620,115 @@ describe('ssr: directives', () => {
     expect(renderString).toBe(`<div id="foo"></div>`)
     expect(exposeVars).toBe('foo')
   })
+
+  test('template checkbox with true-value on the root', async () => {
+    expect(
+      await renderToString(
+        createApp({
+          data: () => ({ model: 'no' }),
+          template: `<input type="checkbox" v-model="model" true-value="yes" false-value="no">`,
+        }),
+      ),
+    ).toBe(`<input type="checkbox" true-value="yes" false-value="no">`)
+  })
+
+  describe.each([
+    [
+      'root',
+      `<input type="checkbox" :value="value" v-model="model" :true-value="trueValue">`,
+    ],
+    [
+      'nested',
+      `<div><input type="checkbox" :value="value" v-model="model" :true-value="trueValue"></div>`,
+    ],
+    [
+      'dynamic type',
+      `<div><input :type="type" :value="value" v-model="model" :true-value="trueValue"></div>`,
+    ],
+    ['v-bind', `<div><input v-bind="props" v-model="model"></div>`],
+  ])('template checkbox with true-value (%s)', (_name, template) => {
+    test.each([
+      ['truthy mismatch', 'no', 'yes', 'foo', false],
+      ['false', false, false, 'foo', true],
+      ['zero', 0, 0, 'foo', true],
+      ['empty string', '', '', 'foo', true],
+      ['null', null, null, 'foo', true],
+      ['explicit undefined', true, undefined, 'foo', false],
+      ['loose scalar match', 1, '1', 'foo', true],
+      ['array membership', [1], 'yes', '1', true],
+      ['array before true-value', ['foo'], ['foo'], 'bar', false],
+      ['set membership', new Set(['foo']), 'yes', 'foo', true],
+      ['strict set membership', new Set([1]), 'yes', '1', false],
+    ])('%s', async (_case, model, trueValue, value, checked) => {
+      const html = await renderToString(
+        createApp({
+          data: () => ({
+            model,
+            trueValue,
+            value,
+            type: 'checkbox',
+            props: { type: 'checkbox', value, 'true-value': trueValue },
+          }),
+          template,
+        }),
+      )
+      expect(html.includes(' checked')).toBe(checked)
+    })
+  })
+
+  test.each([
+    `<input type="checkbox" value="foo" v-model="model">`,
+    `<div><input type="checkbox" value="foo" v-model="model"></div>`,
+    `<div><input :type="type" value="foo" v-model="model"></div>`,
+    `<div><input v-bind="props" v-model="model"></div>`,
+  ])('template checkbox with a Set: %s', async template => {
+    for (const model of [new Set(), new Set(['foo']), new Set(['bar'])]) {
+      const html = await renderToString(
+        createApp({
+          data: () => ({
+            model,
+            type: 'checkbox',
+            props: { type: 'checkbox', value: 'foo' },
+          }),
+          template,
+        }),
+      )
+      expect(html.includes(' checked')).toBe(model.has('foo'))
+    }
+  })
+
+  test('template checkbox uses the final merged true-value', async () => {
+    expect(
+      await renderToString(
+        createApp(
+          {
+            data: () => ({ model: 'yes' }),
+            template: `<input type="checkbox" true-value="yes" v-model="model">`,
+          },
+          { 'true-value': 'no', checked: true },
+        ),
+      ),
+    ).toBe(`<input type="checkbox" true-value="no">`)
+  })
+
+  test.each([
+    `<input type="checkbox" v-model="model">`,
+    `<div><input type="checkbox" v-model="model"></div>`,
+    `<div><input :type="type" v-model="model"></div>`,
+    `<div><input v-bind="props" v-model="model"></div>`,
+  ])('template checkbox with a Set and no value: %s', async template => {
+    for (const value of [undefined, null]) {
+      const html = await renderToString(
+        createApp({
+          data: () => ({
+            model: new Set([value]),
+            type: 'checkbox',
+            props: { type: 'checkbox' },
+          }),
+          template,
+        }),
+      )
+      expect(html.includes(' checked')).toBe(value === undefined)
+    }
+  })
 })

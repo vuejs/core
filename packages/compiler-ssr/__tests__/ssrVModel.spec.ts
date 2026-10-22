@@ -313,15 +313,13 @@ describe('ssr: v-model', () => {
   test('<input type="checkbox">', () => {
     expect(compileWithWrapper(`<input type="checkbox" v-model="bar">`).code)
       .toMatchInlineSnapshot(`
-        "const { ssrLooseContain: _ssrLooseContain, ssrIncludeBooleanAttr: _ssrIncludeBooleanAttr, ssrRenderAttrs: _ssrRenderAttrs } = require("vue/server-renderer")
+        "const { ssrRenderDynamicModel: _ssrRenderDynamicModel, ssrRenderAttrs: _ssrRenderAttrs } = require("vue/server-renderer")
 
         return function ssrRender(_ctx, _push, _parent, _attrs) {
           _push(\`<div\${
             _ssrRenderAttrs(_attrs)
           }><input type="checkbox"\${
-            (_ssrIncludeBooleanAttr((Array.isArray(_ctx.bar))
-              ? _ssrLooseContain(_ctx.bar, null)
-              : _ctx.bar)) ? " checked" : ""
+            _ssrRenderDynamicModel("checkbox", _ctx.bar, undefined)
           }></div>\`)
         }"
       `)
@@ -330,15 +328,13 @@ describe('ssr: v-model', () => {
       compileWithWrapper(`<input type="checkbox" value="foo" v-model="bar">`)
         .code,
     ).toMatchInlineSnapshot(`
-      "const { ssrLooseContain: _ssrLooseContain, ssrIncludeBooleanAttr: _ssrIncludeBooleanAttr, ssrRenderAttrs: _ssrRenderAttrs } = require("vue/server-renderer")
+      "const { ssrRenderDynamicModel: _ssrRenderDynamicModel, ssrRenderAttrs: _ssrRenderAttrs } = require("vue/server-renderer")
 
       return function ssrRender(_ctx, _push, _parent, _attrs) {
         _push(\`<div\${
           _ssrRenderAttrs(_attrs)
         }><input type="checkbox" value="foo"\${
-          (_ssrIncludeBooleanAttr((Array.isArray(_ctx.bar))
-            ? _ssrLooseContain(_ctx.bar, "foo")
-            : _ctx.bar)) ? " checked" : ""
+          _ssrRenderDynamicModel("checkbox", _ctx.bar, "foo")
         }></div>\`)
       }"
     `)
@@ -348,13 +344,13 @@ describe('ssr: v-model', () => {
         `<input type="checkbox" :true-value="foo" :false-value="bar" v-model="baz">`,
       ).code,
     ).toMatchInlineSnapshot(`
-      "const { ssrLooseEqual: _ssrLooseEqual, ssrIncludeBooleanAttr: _ssrIncludeBooleanAttr, ssrRenderAttrs: _ssrRenderAttrs } = require("vue/server-renderer")
+      "const { ssrRenderDynamicModel: _ssrRenderDynamicModel, ssrRenderAttrs: _ssrRenderAttrs } = require("vue/server-renderer")
 
       return function ssrRender(_ctx, _push, _parent, _attrs) {
         _push(\`<div\${
           _ssrRenderAttrs(_attrs)
         }><input type="checkbox"\${
-          (_ssrIncludeBooleanAttr(_ssrLooseEqual(_ctx.baz, _ctx.foo))) ? " checked" : ""
+          _ssrRenderDynamicModel("checkbox", _ctx.baz, undefined, _ctx.foo)
         }></div>\`)
       }"
     `)
@@ -364,13 +360,13 @@ describe('ssr: v-model', () => {
         `<input type="checkbox" true-value="foo" false-value="bar" v-model="baz">`,
       ).code,
     ).toMatchInlineSnapshot(`
-      "const { ssrLooseEqual: _ssrLooseEqual, ssrIncludeBooleanAttr: _ssrIncludeBooleanAttr, ssrRenderAttrs: _ssrRenderAttrs } = require("vue/server-renderer")
+      "const { ssrRenderDynamicModel: _ssrRenderDynamicModel, ssrRenderAttrs: _ssrRenderAttrs } = require("vue/server-renderer")
 
       return function ssrRender(_ctx, _push, _parent, _attrs) {
         _push(\`<div\${
           _ssrRenderAttrs(_attrs)
         }><input type="checkbox"\${
-          (_ssrIncludeBooleanAttr(_ssrLooseEqual(_ctx.baz, "foo"))) ? " checked" : ""
+          _ssrRenderDynamicModel("checkbox", _ctx.baz, undefined, "foo")
         }></div>\`)
       }"
     `)
@@ -402,7 +398,7 @@ describe('ssr: v-model', () => {
           }><input\${
             _ssrRenderAttr("type", _ctx.x)
           }\${
-            _ssrRenderDynamicModel(_ctx.x, _ctx.foo, null)
+            _ssrRenderDynamicModel(_ctx.x, _ctx.foo, undefined)
           }></div>\`)
         }"
       `)
@@ -440,6 +436,19 @@ describe('ssr: v-model', () => {
         }></div>\`)
       }"
     `)
+  })
+
+  test.each([
+    ['true-value="yes"', '"yes"'],
+    [':true-value="trueValue"', '_ctx.trueValue'],
+    [':true-value="undefined"', 'undefined'],
+  ])('dynamic type with %s', (binding, value) => {
+    expect(
+      compileWithWrapper(`<input :type="type" v-model="model" ${binding}>`)
+        .code,
+    ).toContain(
+      `_ssrRenderDynamicModel(_ctx.type, _ctx.model, undefined, ${value})`,
+    )
   })
 
   test('<input v-bind="obj">', () => {
