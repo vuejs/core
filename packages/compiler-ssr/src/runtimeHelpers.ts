@@ -17,6 +17,7 @@ export const SSR_INCLUDE_BOOLEAN_ATTR: unique symbol = Symbol(
 )
 export const SSR_LOOSE_EQUAL: unique symbol = Symbol(`ssrLooseEqual`)
 export const SSR_LOOSE_CONTAIN: unique symbol = Symbol(`ssrLooseContain`)
+export const SSR_IS_SET: unique symbol = Symbol(`ssrIsSet`)
 export const SSR_RENDER_DYNAMIC_MODEL: unique symbol = Symbol(
   `ssrRenderDynamicModel`,
 )
@@ -43,6 +44,7 @@ export const ssrHelpers: Record<symbol, string> = {
   [SSR_INCLUDE_BOOLEAN_ATTR]: `ssrIncludeBooleanAttr`,
   [SSR_LOOSE_EQUAL]: `ssrLooseEqual`,
   [SSR_LOOSE_CONTAIN]: `ssrLooseContain`,
+  [SSR_IS_SET]: `ssrIsSet`,
   [SSR_RENDER_DYNAMIC_MODEL]: `ssrRenderDynamicModel`,
   [SSR_GET_DYNAMIC_MODEL_PROPS]: `ssrGetDynamicModelProps`,
   [SSR_RENDER_TELEPORT]: `ssrRenderTeleport`,
