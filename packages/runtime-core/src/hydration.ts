@@ -84,6 +84,28 @@ const getContainerType = (
 export const isComment = (node: Node): node is Comment =>
   node.nodeType === DOMNodeTypes.COMMENT
 
+/**
+ * Text that is rendered on the server may differ from the client value while
+ * still being equivalent, because the HTML parser:
+ * - #9232 normalizes `\r\n` / `\r` into a single `\n`
+ * - #11873 drops the first newline right after a <pre> / <textarea> start tag
+ *   (line endings are normalized first, so the order of the two steps matters)
+ */
+function normalizeClientText(
+  clientText: string,
+  parent: Element | null,
+): string {
+  const normalized = clientText.replace(/\r\n|\r/g, '\n')
+  if (
+    normalized[0] === '\n' &&
+    parent &&
+    (parent.tagName === 'PRE' || parent.tagName === 'TEXTAREA')
+  ) {
+    return normalized.slice(1)
+  }
+  return normalized
+}
+
 // Note: hydration is DOM-specific
 // But we have to place it in core due to tight coupling with core - splitting
 // it out creates a ton of unnecessary complexity.
@@ -181,17 +203,22 @@ export function createHydrationFunctions(
             nextNode = onMismatch()
           }
         } else {
-          if ((node as Text).data !== vnode.children) {
-            ;(__DEV__ || __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__) &&
-              warn(
-                `Hydration text mismatch in`,
-                node.parentNode,
-                `\n  - rendered on server: ${JSON.stringify(
-                  (node as Text).data,
-                )}` +
-                  `\n  - expected on client: ${JSON.stringify(vnode.children)}`,
-              )
-            logMismatchError()
+          const parent = node.parentNode as Element | null
+          const serverText = (node as Text).data
+          if (
+            serverText !== vnode.children &&
+            serverText !== normalizeClientText(vnode.children as string, parent)
+          ) {
+            if (!isMismatchAllowed(parent, MismatchTypes.TEXT)) {
+              ;(__DEV__ || __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__) &&
+                warn(
+                  `Hydration text mismatch in`,
+                  node.parentNode,
+                  `\n  - rendered on server: ${JSON.stringify(serverText)}` +
+                    `\n  - expected on client: ${JSON.stringify(vnode.children)}`,
+                )
+              logMismatchError()
+            }
             ;(node as Text).data = vnode.children as string
           }
           nextNode = nextSibling(node)
@@ -473,21 +500,11 @@ export function createHydrationFunctions(
           remove(cur)
         }
       } else if (shapeFlag & ShapeFlags.TEXT_CHILDREN) {
-        // #11873 the HTML parser will "eat" the first newline when parsing
-        // <pre> and <textarea>, so if the client value starts with a newline,
-        // we need to remove it before comparing
-        let clientText = vnode.children as string
-        if (
-          clientText[0] === '\n' &&
-          (el.tagName === 'PRE' || el.tagName === 'TEXTAREA')
-        ) {
-          clientText = clientText.slice(1)
-        }
+        const clientText = vnode.children as string
         const { textContent } = el
         if (
           textContent !== clientText &&
-          // innerHTML normalize \r\n or \r into a single \n in the DOM
-          textContent !== clientText.replace(/\r\n|\r/g, '\n')
+          textContent !== normalizeClientText(clientText, el)
         ) {
           if (!isMismatchAllowed(el, MismatchTypes.TEXT)) {
             ;(__DEV__ || __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__) &&
