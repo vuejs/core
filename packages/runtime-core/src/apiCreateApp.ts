@@ -251,6 +251,11 @@ export interface VaporInVdomInterface {
    */
   hasTransitionChild(vnode: VNode): boolean
   getTransitionElement(vnode: VNode): RendererElement | undefined
+  /**
+   * Re-resolves the hooks of the rows a mounted vapor slot renders under a
+   * TransitionGroup (`vnode.vs.group`) and hands over their elements.
+   */
+  forEachGroupChild(vnode: VNode, cb: (el: RendererElement) => void): void
   applyCssVars(vnode: VNode, vars: Record<string, string>): void
   /**
    * Hands the fallback of a vdom outlet over to the vapor slot its content

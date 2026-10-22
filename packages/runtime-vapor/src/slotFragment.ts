@@ -391,14 +391,22 @@ function exposeSlotFallback(state: SlotResolutionState, block: Block): void {
 }
 
 // The hooks resolved for the exposed branch become the outlet's, except a
-// TransitionGroup's, which apply to every block as they are.
+// TransitionGroup's, which apply to every block as they are. A vapor-content
+// interop outlet owns no key context: the group keys the branch where it
+// collected the outlet (its fallback is vdom, keyed apart there). The other
+// outlets key their fallback apart on this path; the group collector does not.
 function applySlotTransitionHooks(
   state: SlotResolutionState,
   block: Block,
   hooks: VaporTransitionHooks,
 ): void {
-  const applied = applyTransitionHooks(block, hooks, ownerFragment(state))
-  if (!hooks.applyGroup) state.$transition = applied
+  const owner = ownerFragment(state)
+  if (isInteropEnabled && hooks.applyGroup && !owner && state.holdsContent) {
+    hooks.applyGroup(block, hooks.props, hooks.state, hooks.instance)
+  } else {
+    const applied = applyTransitionHooks(block, hooks, owner)
+    if (!hooks.applyGroup) state.$transition = applied
+  }
 }
 
 // A vapor SlotFragment is its own resolution state; an interop outlet keeps

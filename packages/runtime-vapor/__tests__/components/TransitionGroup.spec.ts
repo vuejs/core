@@ -735,4 +735,46 @@ describe('TransitionGroup', () => {
       ).toEqual(['a.0', 'a.1', 'b.0', 'b.1'])
     })
   })
+
+  test('a slot fallback keyed like the content leaves the content alone', async () => {
+    const leaves: (() => void)[] = []
+    const onAfterLeave = vi.fn()
+    const data = ref<any>({
+      show: true,
+      onLeave: (_: Element, done: () => void) => leaves.push(done),
+      onAfterLeave,
+    })
+    const Wrapper = compile(
+      `<template>
+        <TransitionGroup tag="ul" :css="false" @leave="data.onLeave" @after-leave="data.onAfterLeave">
+          <slot><li key="x">fallback</li></slot>
+        </TransitionGroup>
+      </template>`,
+      data,
+    )
+    const { host } = define(
+      compile(
+        `<template>
+          <components.Wrapper>
+            <li v-if="data.show" key="x">content</li>
+          </components.Wrapper>
+        </template>`,
+        data,
+        { Wrapper },
+      ) as any,
+    ).render()
+    const texts = () =>
+      Array.from(host.querySelectorAll('li'), li => li.textContent).join(' ')
+    expect(texts()).toBe('content')
+
+    // the fallback keys apart from the content: the leave keeps running
+    data.value.show = false
+    await nextTick()
+    expect(texts()).toBe('content fallback')
+    expect(onAfterLeave).not.toHaveBeenCalled()
+
+    leaves.forEach(done => done())
+    await nextTick()
+    expect(texts()).toBe('fallback')
+  })
 })

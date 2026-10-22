@@ -88,6 +88,7 @@ export function renderSlot(
     const ret = (openBlock(), createBlock(VaporSlot, props))
     ret.vs = {
       slot: vaporSlot,
+      name,
       outlets: fallback
         ? [{ fallback, owner: currentRenderingInstance }]
         : undefined,
