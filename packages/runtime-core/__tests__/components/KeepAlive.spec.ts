@@ -4,6 +4,7 @@ import {
   type ComponentPublicInstance,
   KeepAlive,
   type Ref,
+  Suspense,
   type TestElement,
   cloneVNode,
   createApp,
@@ -654,6 +655,50 @@ describe('KeepAlive', () => {
       expect(serializeInner(root)).toBe(`<div>two</div>`)
       expect(one.deactivated).not.toHaveBeenCalled()
       expect(one.unmounted).toHaveBeenCalledTimes(1)
+    })
+
+    test('max should not unmount current component when pruning a key that was never cached', async () => {
+      // never resolves, so it is discarded before it enters the cache but its
+      // key still counts towards `max`
+      const Pending = {
+        name: 'Pending',
+        async setup() {
+          await new Promise(() => {})
+          return () => h('div', 'pending')
+        },
+      }
+      const viewRef = shallowRef<ComponentOptions>(Pending)
+      const App = {
+        render() {
+          return h(KeepAlive, { max: 2 }, () =>
+            h(Suspense, null, {
+              default: h(viewRef.value),
+              fallback: h('div', 'loading'),
+            }),
+          )
+        },
+      }
+      render(h(App), root)
+      expect(serializeInner(root)).toBe(`<div>loading</div>`)
+
+      viewRef.value = one
+      await nextTick()
+      expect(serializeInner(root)).toBe(`<div>one</div>`)
+      assertHookCalls(one, [1, 1, 1, 0, 0])
+
+      // keys = [Pending, one, two] > max: Pending is pruned, `one` must stay
+      // kept-alive
+      viewRef.value = two
+      await nextTick()
+      expect(serializeInner(root)).toBe(`<div>two</div>`)
+      assertHookCalls(one, [1, 1, 1, 1, 0])
+      assertHookCalls(two, [1, 1, 1, 0, 0])
+
+      viewRef.value = one
+      await nextTick()
+      expect(serializeInner(root)).toBe(`<div>one</div>`)
+      assertHookCalls(one, [1, 1, 2, 1, 0])
+      assertHookCalls(two, [1, 1, 1, 1, 0])
     })
   })
 
