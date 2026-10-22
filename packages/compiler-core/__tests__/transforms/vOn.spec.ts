@@ -761,4 +761,24 @@ describe('compiler: transform v-on', () => {
       })
     })
   })
+
+  test('function expression handler with semicolons in in-DOM templates', () => {
+    try {
+      __BROWSER__ = true
+      const onError = vi.fn()
+      const { node } = parseWithVOn(
+        `<div @click="function () { ';' }" @input="async function () { await foo; }"/>`,
+        { onError },
+      )
+      expect(onError).not.toHaveBeenCalled()
+      expect((node.codegenNode as VNodeCall).props).toMatchObject({
+        properties: [
+          { value: { content: `function () { ';' }` } },
+          { value: { content: `async function () { await foo; }` } },
+        ],
+      })
+    } finally {
+      __BROWSER__ = false
+    }
+  })
 })
