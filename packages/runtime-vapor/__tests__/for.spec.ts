@@ -2296,7 +2296,7 @@ describe('createFor', () => {
           return template('<em>C</em>')()
         },
       })
-      const items = ref([
+      const items = shallowRef([
         { id: 'a', comp: CompA },
         { id: 'b', comp: CompB },
         { id: 'c', comp: CompC },

@@ -61,6 +61,7 @@ import {
   type Dep,
   type ShallowRef,
   getCurrentScope,
+  isProxy,
   isRef,
   markRaw,
   onScopeDispose,
@@ -333,6 +334,18 @@ export function createComponent(
   managedMount = false,
   ce?: (instance: VaporComponentInstance) => void,
 ): VaporComponentInstance {
+  if (__DEV__ && isProxy(component)) {
+    component = toRaw(component)
+    warn(
+      `Vue received a Component that was made a reactive object. This can ` +
+        `lead to unnecessary performance overhead and should be avoided by ` +
+        `marking the component with \`markRaw\` or using \`shallowRef\` ` +
+        `instead of \`ref\`.`,
+      `\nComponent that was made reactive: `,
+      component,
+    )
+  }
+
   // A component created while rendering a v-once region receives frozen
   // parent inputs, but its own render effects stay live.
   const wasInOnce = inOnce

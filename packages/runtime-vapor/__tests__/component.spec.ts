@@ -1109,6 +1109,26 @@ describe('component', () => {
     expect(host.textContent).toBe('')
     externalContainer.remove()
   })
+
+  test('warns when a component was made reactive', async () => {
+    const result = await renderParity(
+      {
+        Child: '<template><span>child</span></template>',
+        App: `<script setup>
+          import { ref } from 'vue'
+          const current = ref(_components.Child)
+          </script>
+          <template><component :is="current" /></template>`,
+      },
+      () => ref(null),
+      () => {},
+    )
+
+    expect(result.vapor.text).toBe(result.vdom.text)
+    expect(
+      'Vue received a Component that was made a reactive object',
+    ).toHaveBeenWarnedTimes(2)
+  })
 })
 
 function getEffectsCount(scope: EffectScope): number {

@@ -1,6 +1,7 @@
 import {
   createApp,
   defineAsyncComponent,
+  markRaw,
   nextTick,
   onActivated,
   onMounted,
@@ -1289,11 +1290,13 @@ describe('api: defineAsyncComponent', () => {
     let resolve: (comp: VaporComponent) => void
     const data = ref<any>({
       show: false,
-      Async: defineVaporAsyncComponent(
-        () =>
-          new Promise(r => {
-            resolve = r as any
-          }),
+      Async: markRaw(
+        defineVaporAsyncComponent(
+          () =>
+            new Promise(r => {
+              resolve = r as any
+            }),
+        ),
       ),
     })
     const Comp = compile(
