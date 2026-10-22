@@ -122,7 +122,7 @@ export const vModelTextInit = (
       castValue(el.value, trim, number || el.type === 'number'),
     )
   })
-  if (trim || number) {
+  if (trim || number || el.type === 'number') {
     addEventListener(el, 'change', () => {
       el.value = castValue(el.value, trim, number || el.type === 'number')
     })

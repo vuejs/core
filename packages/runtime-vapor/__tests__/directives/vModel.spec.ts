@@ -2348,4 +2348,51 @@ describe('directive: v-model', () => {
       },
     )
   })
+
+  test.each(['type="number"', ':type="\'number\'"'])(
+    'formats a number input on change with %s',
+    async binding => {
+      await renderParity(
+        {
+          App: `<template><input ${binding} v-model="data"></template>`,
+        },
+        () => ref(1),
+        async (data, root) => {
+          const input = root.querySelector('input')!
+          input.value = '1.50'
+          triggerEvent('input', input)
+          await nextTick()
+          expect(data.value).toBe(1.5)
+
+          triggerEvent('change', input)
+          await nextTick()
+          expect(input.value).toBe('1.5')
+        },
+      )
+    },
+  )
+
+  test('preserves a text model when fallthrough attrs override a number input', async () => {
+    await renderParity(
+      {
+        App: `<template><components.Field type="text" v-model="data" /></template>`,
+        Field: `<script setup>const model = defineModel()</script><template><input type="number" v-model="model" /></template>`,
+      },
+      () => ref(''),
+      async (data, root) => {
+        const input = root.querySelector('input')!
+        expect(input.type).toBe('text')
+        input.value = '007'
+        triggerEvent('input', input)
+        await nextTick()
+        expect(data.value).toBe('007')
+        expect(input.value).toBe('007')
+
+        triggerEvent('change', input)
+        await nextTick()
+        expect(data.value).toBe('007')
+        expect(input.value).toBe('007')
+      },
+    )
+  })
 })
