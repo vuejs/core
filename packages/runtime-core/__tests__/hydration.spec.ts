@@ -3532,6 +3532,17 @@ describe('SSR hydration', () => {
       expect(`Hydration style mismatch`).toHaveBeenWarnedTimes(1)
     })
 
+    test('style array values as fallbacks', () => {
+      mountWithHydration(
+        `<div style="display:-webkit-box;display:-ms-flexbox;display:flex;"></div>`,
+        () =>
+          h('div', {
+            style: { display: ['-webkit-box', '-ms-flexbox', 'flex'] },
+          }),
+      )
+      expect(`Hydration style mismatch`).not.toHaveBeenWarned()
+    })
+
     test('style mismatch when no style attribute is present', () => {
       mountWithHydration(`<div></div>`, () =>
         h('div', { style: { color: 'red' } }),
@@ -4200,4 +4211,34 @@ describe('SSR hydration', () => {
       globalThis.IntersectionObserver = originalIntersectionObserver
     }
   })
+
+  test.each(['', null, undefined])(
+    'style fallback arrays cleared by %s match client rendering',
+    async value => {
+      const App = {
+        template: `<div :style="{ color: 'red', display: values }">visible</div>`,
+        setup: () => ({ values: ['none', value] }),
+      }
+      const clientContainer = document.createElement('div')
+      const clientApp = runtimeDom.createApp(App)
+      clientApp.mount(clientContainer)
+      const clientEl = clientContainer.firstChild as HTMLElement
+      expect(clientEl.style.display).toBe('')
+
+      const container = document.createElement('div')
+      container.innerHTML = await renderToString(h(App))
+      const el = container.firstChild as HTMLElement
+      expect(el.style.display).toBe(clientEl.style.display)
+      expect(el.style.color).toBe('red')
+
+      const app = createSSRApp(App)
+      app.mount(container)
+      expect(container.firstChild).toBe(el)
+      expect(el.style.display).toBe(clientEl.style.display)
+      expect(`Hydration style mismatch`).not.toHaveBeenWarned()
+
+      app.unmount()
+      clientApp.unmount()
+    },
+  )
 })
