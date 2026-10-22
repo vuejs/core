@@ -94,3 +94,36 @@ return function render(_ctx, _cache) {
   }
 }"
 `;
+
+exports[`compiler: v-once transform > with v-else 1`] = `
+"const _Vue = Vue
+
+return function render(_ctx, _cache) {
+  with (_ctx) {
+    const { openBlock: _openBlock, createElementBlock: _createElementBlock, createCommentVNode: _createCommentVNode, withMemo: _withMemo } = _Vue
+
+    return BOOLEAN
+      ? (_openBlock(), _createElementBlock("div", { key: 0 }))
+      : _withMemo([], () => (_openBlock(), _createElementBlock("p", { key: 1 })), _cache, 0)
+  }
+}"
+`;
+
+exports[`compiler: v-once transform > with v-else-if 1`] = `
+"const _Vue = Vue
+
+return function render(_ctx, _cache) {
+  with (_ctx) {
+    const { openBlock: _openBlock, createElementBlock: _createElementBlock, createCommentVNode: _createCommentVNode, createElementVNode: _createElementVNode, Fragment: _Fragment, withMemo: _withMemo } = _Vue
+
+    return BOOLEAN
+      ? (_openBlock(), _createElementBlock("div", { key: 0 }))
+      : FOO
+        ? _withMemo([], () => (_openBlock(), _createElementBlock(_Fragment, { key: 1 }, [
+            _createElementVNode("p"),
+            _createElementVNode("p")
+          ], 64 /* STABLE_FRAGMENT */)), _cache, 0)
+        : (_openBlock(), _createElementBlock("span", { key: 2 }))
+  }
+}"
+`;
