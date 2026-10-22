@@ -39,6 +39,7 @@ import {
   isBooleanAttr,
   isBuiltInDirective,
   isSSRSafeAttrName,
+  isSVGTag,
   propsToAttrMap,
 } from '@vue/shared'
 import { SSRErrorCodes, createSSRCompilerError } from '../errors'
@@ -79,7 +80,7 @@ export const ssrTransformElement: NodeTransform = (node, context) => {
     const openTag: TemplateLiteral['elements'] = [`<${node.tag}`]
     // some tags need to be passed to runtime for special checks
     const needTagForRuntime =
-      node.tag === 'textarea' || node.tag.indexOf('-') > 0
+      node.tag === 'textarea' || node.tag.indexOf('-') > 0 || isSVGTag(node.tag)
 
     // v-bind="obj", v-bind:[key] and custom directives can potentially
     // overwrite other static attrs and can affect final rendering result,

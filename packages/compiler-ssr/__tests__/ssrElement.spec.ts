@@ -21,6 +21,29 @@ describe('ssr: element', () => {
     expect(getCompiledString(`<input>`)).toMatchInlineSnapshot(`"\`<input>\`"`)
   })
 
+  describe('svg', () => {
+    test('static camelCase attrs are emitted as-is', () => {
+      expect(
+        getCompiledString(
+          `<svg viewBox="0 0 24 24" preserveAspectRatio="xMidYMid"/>`,
+        ),
+      ).toMatchInlineSnapshot(
+        `"\`<svg viewBox="0 0 24 24" preserveAspectRatio="xMidYMid"></svg>\`"`,
+      )
+    })
+
+    test('tag is passed to renderAttrs when merging props', () => {
+      // ssrRenderAttrs only preserves the raw attribute name (e.g. `viewBox`
+      // instead of `viewbox`) when it knows the tag is an SVG one
+      expect(getCompiledString(`<svg viewBox="0 0 24 24" v-bind="attrs"/>`))
+        .toMatchInlineSnapshot(`
+        "\`<svg\${
+            _ssrRenderAttrs(_mergeProps({ viewBox: "0 0 24 24" }, _ctx.attrs), "svg")
+          }></svg>\`"
+      `)
+    })
+  })
+
   describe('children override', () => {
     test('v-html', () => {
       expect(getCompiledString(`<div v-html="foo"/>`)).toMatchInlineSnapshot(`

@@ -75,4 +75,18 @@ describe('ssr: attr fallthrough', () => {
       `<div id="foo" class="bar baz"></div>`,
     )
   })
+
+  // #6755: attribute names on SVG elements must keep their case
+  test('svg element', async () => {
+    const Child = {
+      template: `<svg viewBox="0 0 24 24"><path d="M0 0"/></svg>`,
+    }
+    const Parent = {
+      components: { Child },
+      template: `<child aria-hidden="true"/>`,
+    }
+    expect(await renderToString(createApp(Parent))).toBe(
+      `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M0 0"></path></svg>`,
+    )
+  })
 })
