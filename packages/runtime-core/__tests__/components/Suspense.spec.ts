@@ -2319,6 +2319,64 @@ describe('Suspense', () => {
     )
   })
 
+  // #15976
+  test('KeepAlive + Suspense async dep resolves while branch is inactive', async () => {
+    let resolveChild!: () => void
+    const childReady = new Promise<void>(resolve => {
+      resolveChild = resolve
+    })
+    const AsyncChild = {
+      props: ['revision'],
+      setup(props: any) {
+        return childReady.then(() => () => h('span', `child ${props.revision}`))
+      },
+    }
+    const show = ref(false)
+    const revision = ref(0)
+    const Entry = {
+      name: 'Entry',
+      render: () =>
+        h('div', [
+          show.value ? h(AsyncChild, { revision: revision.value }) : null,
+        ]),
+    }
+    const Other = {
+      render: () => h('div', 'other'),
+    }
+    const view = shallowRef<any>(Entry)
+    const root = nodeOps.createElement('div')
+    const App = {
+      render() {
+        return h(KeepAlive, null, {
+          default: () =>
+            h(Suspense, null, {
+              default: h(view.value),
+              fallback: h('div', 'loading'),
+            }),
+        })
+      },
+    }
+
+    render(h(App), root)
+    expect(serializeInner(root)).toBe('<div><!----></div>')
+
+    show.value = true
+    await nextTick()
+
+    view.value = Other
+    await nextTick()
+    expect(serializeInner(root)).toBe('<div>other</div>')
+
+    resolveChild()
+    await childReady
+    await nextTick()
+
+    view.value = Entry
+    revision.value++
+    await nextTick()
+    expect(serializeInner(root)).toBe('<div><span>child 1</span></div>')
+  })
+
   test('KeepAlive + Suspense + comment slot', async () => {
     const toggle = ref(false)
     const Async = defineAsyncComponent({

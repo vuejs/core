@@ -753,7 +753,7 @@ function createSuspenseBoundary(
           if (
             instance.isUnmounted ||
             suspense.isUnmounted ||
-            suspense.pendingId !== instance.suspenseId
+            (isInPendingSuspense && suspense.pendingId !== instance.suspenseId)
           ) {
             return
           }
