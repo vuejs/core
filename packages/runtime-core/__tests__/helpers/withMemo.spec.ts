@@ -278,17 +278,17 @@ describe('v-memo', () => {
         count: 0,
       }),
     })
-    expect(el.innerHTML).toBe(`<div>0</div><div>0</div><div>0</div>`)
+    expect(el.innerHTML).toBe(`<div> 0 </div><div> 0 </div><div> 0 </div>`)
 
     vm.count = 1
     await nextTick()
     // should not update
-    expect(el.innerHTML).toBe(`<div>0</div><div>0</div><div>0</div>`)
+    expect(el.innerHTML).toBe(`<div> 0 </div><div> 0 </div><div> 0 </div>`)
 
     vm.count = 2
     await nextTick()
     // should update
-    expect(el.innerHTML).toBe(`<div>2</div><div>2</div><div>2</div>`)
+    expect(el.innerHTML).toBe(`<div> 2 </div><div> 2 </div><div> 2 </div>`)
   })
 
   test('v-memo dependency is NaN should be equal', async () => {
