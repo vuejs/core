@@ -9,6 +9,7 @@ import {
   type InterpolationNode,
   type JSChildNode,
   MERGE_PROPS,
+  Namespaces,
   type NodeTransform,
   NodeTypes,
   type PlainElementNode,
@@ -38,7 +39,9 @@ import {
   escapeHtml,
   isBooleanAttr,
   isBuiltInDirective,
+  isHTMLTag,
   isSSRSafeAttrName,
+  isSVGTag,
   propsToAttrMap,
 } from '@vue/shared'
 import { SSRErrorCodes, createSSRCompilerError } from '../errors'
@@ -77,9 +80,13 @@ export const ssrTransformElement: NodeTransform = (node, context) => {
     // element
     // generate the template literal representing the open tag.
     const openTag: TemplateLiteral['elements'] = [`<${node.tag}`]
-    // some tags need to be passed to runtime for special checks
+    // Pass tags that need special runtime checks. SVG-only component roots
+    // can be parsed in the HTML namespace.
     const needTagForRuntime =
-      node.tag === 'textarea' || node.tag.indexOf('-') > 0
+      node.tag === 'textarea' ||
+      node.tag.indexOf('-') > 0 ||
+      (isSVGTag(node.tag) &&
+        (node.ns === Namespaces.SVG || !isHTMLTag(node.tag)))
 
     // v-bind="obj", v-bind:[key] and custom directives can potentially
     // overwrite other static attrs and can affect final rendering result,
