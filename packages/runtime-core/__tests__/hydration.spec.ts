@@ -3438,7 +3438,7 @@ describe('SSR hydration', () => {
       expect(container.innerHTML).toBe(
         '<div><!--[--><div>foo</div><div>bar</div><!--]--><div>baz</div></div>',
       )
-      expect(`Hydration node mismatch`).toHaveBeenWarned()
+      expect(`Hydration children mismatch`).toHaveBeenWarned()
     })
 
     test('fragment too many children', () => {
@@ -4401,4 +4401,52 @@ describe('SSR hydration', () => {
       expect(target.childNodes.length).toBe(0)
     },
   )
+
+  test('Teleport preserves SSR anchors when hydrating a longer v-for fragment', async () => {
+    const items = ref<number[]>([])
+    const App = {
+      setup: () => ({ items }),
+      template: `
+        <div>
+          <Teleport to="#teleport-fragment-mismatch">
+            <span v-for="item in items" :key="item">{{ item }}</span>
+            <span>tail</span>
+          </Teleport>
+        </div>
+      `,
+    }
+    const container = document.createElement('div')
+    const target = document.createElement('div')
+    target.id = 'teleport-fragment-mismatch'
+    document.body.appendChild(target)
+    const ctx: SSRContext = {}
+    container.innerHTML = await renderToString(h(App), ctx)
+    target.innerHTML = ctx.teleports!['#teleport-fragment-mismatch']
+    expect(target.innerHTML).toBe(
+      '<!--teleport start anchor--><!--[--><!--]--><span>tail</span><!--teleport anchor-->',
+    )
+    const anchor = target.lastChild!
+    const tail = target.querySelector('span')!
+    const app = createSSRApp(App)
+    items.value = [1, 2, 3]
+
+    try {
+      app.mount(container)
+      expect('Hydration children mismatch').toHaveBeenWarned()
+      expect('Hydration node mismatch').not.toHaveBeenWarned()
+      expect(target.textContent).toBe('123tail')
+      expect(target.lastChild).toBe(anchor)
+      expect(anchor.previousSibling).toBe(tail)
+
+      items.value = [1, 2, 3, 4]
+      await nextTick()
+      expect(target.textContent).toBe('1234tail')
+      expect(target.lastChild).toBe(anchor)
+      expect(anchor.previousSibling).toBe(tail)
+    } finally {
+      app.unmount()
+      target.remove()
+    }
+    expect(target.childNodes.length).toBe(0)
+  })
 })

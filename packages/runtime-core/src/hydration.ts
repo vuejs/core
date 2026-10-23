@@ -601,12 +601,16 @@ export function createHydrationFunctions(
     optimized = optimized || !!parentVNode.dynamicChildren
     const children = parentVNode.children as VNode[]
     const l = children.length
+    const isFragment = parentVNode.type === Fragment
     let hasCheckedMismatch = false
     for (let i = 0; i < l; i++) {
       const vnode = optimized
         ? children[i]
         : (children[i] = normalizeVNode(children[i]))
       const isText = vnode.type === Text
+      if (isFragment && node && isComment(node) && node.data === ']') {
+        anchor = node
+      }
       if (node && node !== anchor) {
         if (isText && !optimized) {
           // #7285 possible consecutive text vnodes from manual render fns or
