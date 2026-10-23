@@ -1,3 +1,4 @@
+import { pendingDomUpdates } from './async'
 import {
   EMPTY_ARR,
   EMPTY_OBJ,
@@ -112,6 +113,10 @@ const shouldSkipFallthroughKey = (el: TargetElement, key: string) => {
 }
 
 export function setProp(el: any, key: string, value: any): void {
+  if (pendingDomUpdates) {
+    pendingDomUpdates.push(() => setProp(el, key, value))
+    return
+  }
   if (key in el) {
     setDOMProp(el, key, value)
   } else {
@@ -126,6 +131,10 @@ export function setAttr(
   isSVG: boolean = false,
   forceHydrate: boolean = true,
 ): void {
+  if (pendingDomUpdates) {
+    pendingDomUpdates.push(() => setAttr(el, key, value, isSVG, forceHydrate))
+    return
+  }
   if (shouldSkipFallthroughKey(el, key)) {
     return
   }
@@ -179,6 +188,12 @@ export function setDOMProp(
   forceHydrate: boolean = true,
   attrName?: string,
 ): void {
+  if (pendingDomUpdates) {
+    pendingDomUpdates.push(() =>
+      setDOMProp(el, key, value, forceHydrate, attrName),
+    )
+    return
+  }
   if (shouldSkipFallthroughKey(el, key)) {
     return
   }
@@ -247,6 +262,10 @@ export function setClass(
   isSVG: boolean = false,
   isNormalized: boolean = false,
 ): void {
+  if (pendingDomUpdates) {
+    pendingDomUpdates.push(() => setClass(el, value, isSVG, isNormalized))
+    return
+  }
   if (el.$clsFlags !== undefined) el.$clsFlags = undefined
   if (el.$root) {
     setClassIncremental(el, value, isNormalized)
@@ -279,6 +298,10 @@ export function setClassName(
   prefix: string = '',
   suffix: string = '',
 ): void {
+  if (pendingDomUpdates) {
+    pendingDomUpdates.push(() => setClassName(el, flags, cls, prefix, suffix))
+    return
+  }
   // The compiler passes static fragments/prefix/suffix, so flags uniquely
   // identify the rendered class string for this element. Generic setClass()
   // calls clear this cache before writing class through the slower path.
@@ -404,6 +427,10 @@ function checkHydrationStyleMismatch(
 }
 
 export function setStyle(el: TargetElement, value: any): void {
+  if (pendingDomUpdates) {
+    pendingDomUpdates.push(() => setStyle(el, value))
+    return
+  }
   // #11372: object style values are iterated during patch instead of
   // normalization, but the patch is skipped during hydration, so iterate
   // the reactive object here to track its keys
@@ -477,6 +504,10 @@ export function setValue(
   value: any,
   forceHydrate: boolean = true,
 ): void {
+  if (pendingDomUpdates) {
+    pendingDomUpdates.push(() => setValue(el, value, forceHydrate))
+    return
+  }
   if (shouldSkipFallthroughKey(el, 'value')) {
     return
   }
@@ -548,6 +579,10 @@ export function setValue(
  * `toDisplayString`
  */
 export function setText(el: Text & { $txt?: string }, value: string): void {
+  if (pendingDomUpdates) {
+    pendingDomUpdates.push(() => setText(el, value))
+    return
+  }
   if (isHydrating && !isRecreatedNode(el) && !isRecreatedNode(el.parentNode)) {
     const clientText = getClientText(el.parentNode!, value)
     if (el.nodeValue == clientText) {
@@ -577,6 +612,10 @@ export function setElementText(
   value: unknown,
   forceHydrate: boolean = true,
 ): void {
+  if (pendingDomUpdates) {
+    pendingDomUpdates.push(() => setElementText(el, value, forceHydrate))
+    return
+  }
   value = toDisplayString(value)
   if (isHydrating && !isRecreatedNode(el)) {
     let clientText = getClientText(el, value as string)
@@ -611,6 +650,10 @@ export function setHtml(
   value: any,
   forceHydrate: boolean = true,
 ): void {
+  if (pendingDomUpdates) {
+    pendingDomUpdates.push(() => setHtml(el, value, forceHydrate))
+    return
+  }
   value = value == null ? '' : unsafeToTrustedHTML(value)
   // like vdom, a static key binding replaces the server content during
   // hydration and a spread key keeps it; neither compares nor warns
@@ -633,6 +676,10 @@ export function setDynamicProps(
   staticKeys?: string[],
   isSVG?: boolean,
 ): void {
+  if (pendingDomUpdates) {
+    pendingDomUpdates.push(() => setDynamicProps(el, args, staticKeys, isSVG))
+    return
+  }
   patchDynamicProps(
     el,
     args.length > 1 ? mergeProps(...args) : args[0] || EMPTY_OBJ,

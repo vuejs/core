@@ -34,7 +34,11 @@ import {
   isCompatEnabled,
   warnDeprecation,
 } from './compat/compatConfig'
-import { shallowReadonly } from '@vue/reactivity'
+import {
+  AsyncComputedError,
+  PendingComputed,
+  shallowReadonly,
+} from '@vue/reactivity'
 import { getInnerChild, setTransitionHooks } from './components/BaseTransition'
 import { isTeleport } from './components/Teleport'
 
@@ -144,6 +148,10 @@ export function renderComponentRoot(
     }
   } catch (err) {
     blockStack.length = 0
+    if (err instanceof PendingComputed || err instanceof AsyncComputedError) {
+      setCurrentRenderingInstance(prev)
+      throw err
+    }
     handleError(err, instance, ErrorCodes.RENDER_FUNCTION)
     result = createVNode(Comment)
   }

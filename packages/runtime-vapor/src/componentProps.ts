@@ -242,6 +242,8 @@ export function getPropsProxyHandlers(
       return true
     if (isProp(key)) {
       trackPropsValue(instance, key)
+      if (instance.inputEffect && instance.inputEffect.pending)
+        throw instance.inputEffect.pending
       return instance.propsValues[key]
     }
     // fall back to Object.prototype so `props.hasOwnProperty()` works like vdom
@@ -275,6 +277,8 @@ export function getPropsProxyHandlers(
   const getAttr = (instance: VaporComponentInstance, key: string | symbol) => {
     if (isAttr(key)) {
       trackPropsValue(instance, key)
+      if (instance.inputEffect && instance.inputEffect.pending)
+        throw instance.inputEffect.pending
       if (hasOwn(instance.propsValues, key)) return instance.propsValues[key]
     }
     // fall back to Object.prototype so `attrs.hasOwnProperty()` works like vdom
@@ -634,7 +638,7 @@ export function initInputs(
         hasDelivered = true
       }
     }, true)
-    if (canRebind) instance.inputEffect = effect
+    instance.inputEffect = effect
     if (!prevEffect) {
       effect.run()
       // every getter and descriptor turned out to be constant
@@ -934,7 +938,7 @@ function setPropValue(
   isInitial: boolean,
 ) {
   const propsValues = instance.propsValues
-  if (isInitial) {
+  if (isInitial && !instance.propsDeps) {
     propsValues[key] = value
     return
   }

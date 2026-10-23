@@ -1,12 +1,17 @@
 import {
+  AsyncComputedError,
   EffectFlags,
   type EffectScope,
+  PendingComputed,
   ReactiveEffect,
   onScopeDispose,
 } from '@vue/reactivity'
 import {
   type SchedulerJob,
   SchedulerJobFlags,
+  type SuspenseBoundary,
+  cancelAsyncRender,
+  commitAsyncRender,
   currentInstance,
   endMeasure,
   popWarningContext,
@@ -16,6 +21,7 @@ import {
   restoreCurrentInstance,
   setCurrentInstance,
   startMeasure,
+  suspendAsyncRender,
   warn,
 } from '@vue/runtime-dom'
 import {
@@ -29,6 +35,8 @@ import { invokeArrayFns, remove } from '@vue/shared'
 import { isSuspenseEnabled } from './suspense'
 import { isInteropEnabled } from './vdomInteropState'
 import { adoptVdomOwnedEffect } from './vdomSlotOwner'
+import { pendingDomUpdates, setPendingDomUpdates } from './dom/async'
+import { currentRenderContext, withRenderContext } from './renderContext'
 
 export class RenderEffect extends ReactiveEffect {
   i: VaporComponentInstance | null
@@ -41,6 +49,10 @@ export class RenderEffect extends ReactiveEffect {
   render: () => void
   // Creation order within the owning component.
   order: number
+  private boundary: SuspenseBoundary | null
+  private initiallySuspended = false
+  /** @internal */
+  pending?: PendingComputed | AsyncComputedError
 
   constructor(render: () => void, noLifecycle = false) {
     super(noLifecycle ? render : undefined)
@@ -65,6 +77,10 @@ export class RenderEffect extends ReactiveEffect {
     }
 
     this.i = instance
+    this.boundary =
+      __FEATURE_SUSPENSE__ && isSuspenseEnabled
+        ? currentRenderContext.suspense || (instance && instance.suspense)
+        : null
     this.job = undefined
 
     // Allow self re-queue when render/hook logic mutates reactive state.
@@ -74,6 +90,73 @@ export class RenderEffect extends ReactiveEffect {
 
     // last, so the fields a vdom owner adds extend the shared shape
     if (vdomOwner) adoptVdomOwnedEffect(this, vdomOwner)
+  }
+
+  run(): void {
+    if (!__FEATURE_SUSPENSE__ || !this.i) return super.run()
+    if (!isSuspenseEnabled) {
+      try {
+        return super.run()
+      } catch (error) {
+        if (error instanceof PendingComputed) {
+          if (__DEV__)
+            warn(
+              'A component read a pending computed value, but no <Suspense> boundary was found in the parent component tree.',
+            )
+          return
+        }
+        throw error instanceof AsyncComputedError ? error.error : error
+      }
+    }
+    const updates: (() => void)[] | undefined = this.boundary ? [] : undefined
+    const previous = setPendingDomUpdates(updates)
+    const context = currentRenderContext
+    const scope = this.subs ? (this.subs.sub as EffectScope) : undefined
+    try {
+      this.pending = undefined
+      super.run()
+    } catch (error) {
+      if (
+        !suspendAsyncRender(
+          error,
+          this,
+          this.i,
+          () => this.run(),
+          this.boundary,
+        )
+      )
+        throw error
+      this.pending = error as PendingComputed | AsyncComputedError
+      if (!this.i.isMounted) this.initiallySuspended = true
+      return
+    } finally {
+      setPendingDomUpdates(previous)
+    }
+    if (updates) {
+      commitAsyncRender(
+        this,
+        this.i,
+        () => {
+          const prev = setCurrentInstance(this.i, scope)
+          const outer = setPendingDomUpdates(undefined)
+          try {
+            withRenderContext(context, () => {
+              for (const update of updates) update()
+            })
+            this.initiallySuspended = false
+          } finally {
+            setPendingDomUpdates(outer)
+            restoreCurrentInstance(prev)
+          }
+        },
+        this.boundary,
+      )
+    }
+  }
+
+  stop(): void {
+    super.stop()
+    if (__FEATURE_SUSPENSE__ && isSuspenseEnabled) cancelAsyncRender(this)
   }
 
   createJob(): SchedulerJob {
@@ -123,7 +206,29 @@ export class RenderEffect extends ReactiveEffect {
     }
     const prev = setCurrentInstance(instance, scope)
     try {
-      if (hasUpdateHooks && instance.isMounted && !instance.isUpdating) {
+      if (pendingDomUpdates) {
+        this.render()
+        if (hasUpdateHooks && instance.isMounted && !this.initiallySuspended) {
+          pendingDomUpdates.unshift(() => {
+            if (instance.isUpdating) return
+            instance.isUpdating = true
+            try {
+              instance.bu && invokeArrayFns(instance.bu)
+            } catch (error) {
+              instance.isUpdating = false
+              throw error
+            }
+            let updateJob = this.updateJob
+            if (!updateJob) {
+              updateJob = this.updateJob = () => {
+                instance.isUpdating = false
+                instance.u && invokeArrayFns(instance.u)
+              }
+            }
+            queuePostRenderEffect(updateJob, undefined, instance.suspense)
+          })
+        }
+      } else if (hasUpdateHooks && instance.isMounted && !instance.isUpdating) {
         // avoid recurse update until updateJob flushed
         instance.isUpdating = true
         try {

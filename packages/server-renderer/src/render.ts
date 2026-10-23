@@ -41,6 +41,8 @@ import { ssrCompile } from './helpers/ssrCompile'
 import { ssrRenderTeleport } from './helpers/ssrRenderTeleport'
 
 const {
+  PendingComputed,
+  AsyncComputedError,
   createComponentInstance,
   setCurrentRenderingInstance,
   setupComponent,
@@ -274,6 +276,24 @@ function renderComponentSubTree(
   slotScopeId?: string,
 ): SSRBuffer | Promise<SSRBuffer> {
   if (__DEV__) pushWarningContext(instance.vnode)
+  try {
+    return renderComponentSubTreeOnce(instance, slotScopeId)
+  } catch (error) {
+    if (error instanceof PendingComputed) {
+      return error.promise.then(() =>
+        renderComponentSubTree(instance, slotScopeId),
+      )
+    }
+    throw error
+  } finally {
+    if (__DEV__) popWarningContext()
+  }
+}
+
+function renderComponentSubTreeOnce(
+  instance: ComponentInternalInstance,
+  slotScopeId?: string,
+): SSRBuffer | Promise<SSRBuffer> {
   const comp = instance.type as Component
   const { getBuffer, push } = createBuffer()
   if (isFunction(comp)) {
@@ -348,7 +368,12 @@ function renderComponentSubTree(
           instance.ctx,
         )
       } catch (err) {
-        handleError(err, instance, ErrorCodes.RENDER_FUNCTION)
+        if (err instanceof PendingComputed) throw err
+        handleError(
+          err instanceof AsyncComputedError ? err.error : err,
+          instance,
+          ErrorCodes.RENDER_FUNCTION,
+        )
       } finally {
         setCurrentRenderingInstance(prev)
       }
@@ -365,7 +390,6 @@ function renderComponentSubTree(
       push(`<!---->`)
     }
   }
-  if (__DEV__) popWarningContext()
   return getBuffer()
 }
 
