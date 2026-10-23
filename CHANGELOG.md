@@ -1,3 +1,52 @@
+# [3.6.0-rc.13](https://github.com/vuejs/core/compare/v3.6.0-rc.12...v3.6.0-rc.13) (2026-10-23)
+
+### Bug Fixes
+
+* **compiler-vapor:** add key to object shorthand of aliases with default or computed key ([#15953](https://github.com/vuejs/core/issues/15953)) ([af9b86c](https://github.com/vuejs/core/commit/af9b86c870e58edfae77def786b1a456a5909b2c))
+* **compiler-vapor:** align v-once on v-else-if chains with vdom ([#15966](https://github.com/vuejs/core/issues/15966)) ([072e5f0](https://github.com/vuejs/core/commit/072e5f0259e1ce1daa13175e0b29a407568ca2d9))
+* **compiler-vapor:** compile long v-else-if chains to a flat createIfChain ([#15965](https://github.com/vuejs/core/issues/15965)) ([7fad6c5](https://github.com/vuejs/core/commit/7fad6c5ee1e518635535d15e1801c8b97ccb61f0))
+* **compiler-vapor:** create breakout elements in foreign content and text in table parts imperatively ([fd157a6](https://github.com/vuejs/core/commit/fd157a6edd55718d0e3e215824419feb67acddeb))
+* **compiler-vapor:** give a template of its own to a descendant the parser would close an ancestor at ([e489f2b](https://github.com/vuejs/core/commit/e489f2b268b61975e37418fe0bd46f5e20adf90c))
+* **compiler-vapor:** keep the end tag of a special element under a parent whose end tag cannot close it ([d38ed24](https://github.com/vuejs/core/commit/d38ed248cb9889d912bc52bf6c1e9aeb586816ab))
+* **compiler-vapor:** mark the child of a non-root Transition / KeepAlive as single root ([#15988](https://github.com/vuejs/core/issues/15988)) ([2f366ae](https://github.com/vuejs/core/commit/2f366ae83607caad86b7ee4e1711c151f0fb5276))
+* **runtime-core:** restore the default 200ms delay of async loading components ([#15950](https://github.com/vuejs/core/issues/15950)) ([0096402](https://github.com/vuejs/core/commit/00964028736de5e3810d1b8894f53b751b5f8cae))
+* **runtime-core:** skip the out-in re-render of a transition unmounted mid-leave ([#15919](https://github.com/vuejs/core/issues/15919)) ([37c03b0](https://github.com/vuejs/core/commit/37c03b0443397ab28322215dd23aa21eabb6186b))
+* **runtime-vapor:** apply transition hooks to a child's root rendered after its async setup ([#15907](https://github.com/vuejs/core/issues/15907)) ([2e9d110](https://github.com/vuejs/core/commit/2e9d110d8ce90d38f2fd45e2c9648ffb01644997))
+* **runtime-vapor:** don't make out-in wait for a branch that left to nothing ([#15913](https://github.com/vuejs/core/issues/15913)) ([b6efd2b](https://github.com/vuejs/core/commit/b6efd2b45588326cb793cbf21542feb40ed20687))
+* **runtime-vapor:** enter a kept-alive vdom child under the hooks of the switch ([#15954](https://github.com/vuejs/core/issues/15954)) ([e30bd46](https://github.com/vuejs/core/commit/e30bd46472de4f0490f0f985105ff046a28aece7))
+* **runtime-vapor:** flush custom element component creation with its mount ([#15991](https://github.com/vuejs/core/issues/15991)) ([953933a](https://github.com/vuejs/core/commit/953933a01c8d3faee943c8fd0b24e97a0cb5e804))
+* **runtime-vapor:** format number inputs on change ([#15974](https://github.com/vuejs/core/issues/15974)) ([9453008](https://github.com/vuejs/core/commit/9453008ad16be164a6841404cc8bb372d4218a1c))
+* **runtime-vapor:** hold back the updates of a hydrated root chain over pending async setup ([#15927](https://github.com/vuejs/core/issues/15927)) ([68ef3e9](https://github.com/vuejs/core/commit/68ef3e9214ae41d93888f2a4117db74d8bba388d))
+* **runtime-vapor:** hold back updates of a component whose root is pending async setup ([#15925](https://github.com/vuejs/core/issues/15925)) ([35a439e](https://github.com/vuejs/core/commit/35a439e154db05b5965ea10b17fd24c096c9d499))
+* **runtime-vapor:** keep a slot branch leaving under a vdom transition's relayed hooks ([#15916](https://github.com/vuejs/core/issues/15916)) ([9c88792](https://github.com/vuejs/core/commit/9c8879236d1ba6dafd3fe4f6e11974833ca43bad))
+* **runtime-vapor:** keep a v-show hidden root hidden through its structural leave ([#15951](https://github.com/vuejs/core/issues/15951)) ([7c1a29f](https://github.com/vuejs/core/commit/7c1a29f4cf63e16e79867f85cbe068349a8feacb))
+* **runtime-vapor:** keep an out-in leave running when its transition unmounts ([#15923](https://github.com/vuejs/core/issues/15923)) ([549ea4c](https://github.com/vuejs/core/commit/549ea4cde8478cb60786e26c8955d689632be5e1))
+* **runtime-vapor:** keep refs in a v-for source as row items ([df4e86c](https://github.com/vuejs/core/commit/df4e86cedf5d04bf0ebbb6cb1b7af1babb1f6008))
+* **runtime-vapor:** keep the in-out leave a slot fallback's pending enter holds ([#15949](https://github.com/vuejs/core/issues/15949)) ([ee63b75](https://github.com/vuejs/core/commit/ee63b75b5a0bad5a3b91b437e7e6442ef19db4f6))
+* **runtime-vapor:** key the roots of a keyed v-for row the same way on collect and branch re-render ([#15968](https://github.com/vuejs/core/issues/15968)) ([e195bf4](https://github.com/vuejs/core/commit/e195bf4f6a8624986021195ead441ed6139809d5))
+* **runtime-vapor:** leave held slot content unmounted when its outlet moves ([#15901](https://github.com/vuejs/core/issues/15901)) ([f19af6c](https://github.com/vuejs/core/commit/f19af6c5dde87e3330c5dc220288a29b6d8a1cce))
+* **runtime-vapor:** measure only the outermost render effect run of a component ([#15993](https://github.com/vuejs/core/issues/15993)) ([3bdbdd3](https://github.com/vuejs/core/commit/3bdbdd306e24090f93cc570e4788042f9fba71a0))
+* **runtime-vapor:** normalize line breaks when hydrating text ([#15906](https://github.com/vuejs/core/issues/15906)) ([4c5ff02](https://github.com/vuejs/core/commit/4c5ff022a41ae91223d3cd5cdaaca25361037043))
+* **runtime-vapor:** relay vdom transition hooks to a child's root rendered after its async setup ([#15908](https://github.com/vuejs/core/issues/15908)) ([1f867d9](https://github.com/vuejs/core/commit/1f867d9c6bdd7666b9b21a1488a0d79d9fa9a1d6))
+* **runtime-vapor:** report errors of an out-in branch rendered from the leave to the error handler ([#15941](https://github.com/vuejs/core/issues/15941)) ([d040e4a](https://github.com/vuejs/core/commit/d040e4ad1f53bcc18c1771aa62193890487d7e74))
+* **runtime-vapor:** resolve interop fallback transition hooks for the vnode that mounts ([#15903](https://github.com/vuejs/core/issues/15903)) ([931497f](https://github.com/vuejs/core/commit/931497fa830291c5897e3088d3ed38c734e589f1))
+* **runtime-vapor:** settle the enclosing outlet after an out-in branch resumes from its leave ([#15942](https://github.com/vuejs/core/issues/15942)) ([5a53efc](https://github.com/vuejs/core/commit/5a53efce7c5eba458f34a8ec121fb1443ffe07e2))
+* **runtime-vapor:** skip the hydration appear of a Transition child rendering its root later ([#15911](https://github.com/vuejs/core/issues/15911)) ([e291103](https://github.com/vuejs/core/commit/e291103616de6ad7984f57bbb72cdaed3c5249a0))
+* **runtime-vapor:** switch sibling v-if roots of slot content as one transition child ([#15945](https://github.com/vuejs/core/issues/15945)) ([bc4c50f](https://github.com/vuejs/core/commit/bc4c50ff5e39c85835a824fda20870149d62c3c3))
+* **runtime-vapor:** warn when a component was made reactive ([0c2ad89](https://github.com/vuejs/core/commit/0c2ad895267b46a0fd6dfbb6eff884683399dac0))
+* **vapor:** fall through cloneVNode extras to the vapor slot content root ([#15989](https://github.com/vuejs/core/issues/15989)) ([fb1fb19](https://github.com/vuejs/core/commit/fb1fb193648da671d00cad31fd2d95bf654be106)), closes [#15881](https://github.com/vuejs/core/issues/15881)
+* **vapor:** keep the branch key of vdom conditional slots ([#15992](https://github.com/vuejs/core/issues/15992)) ([d940919](https://github.com/vuejs/core/commit/d940919c7021a9ce55e4b8911a0ab1c6a66005ed))
+
+### Features
+
+* **runtime-vapor:** transition the rows of a vapor slot as children of a vdom TransitionGroup ([#15963](https://github.com/vuejs/core/issues/15963)) ([b426b34](https://github.com/vuejs/core/commit/b426b34a35db7e017ba3e6c7a3b98cb6da464c67))
+
+### Performance Improvements
+
+* **runtime-core:** tree-shake vapor interop code when vaporInteropPlugin is not used ([#15990](https://github.com/vuejs/core/issues/15990)) ([9f97cb6](https://github.com/vuejs/core/commit/9f97cb6cde4ab5508ccfcb1865d2880fb4a0c221))
+* **runtime-vapor:** avoid redundant ref checks for v-for items ([ce9b91b](https://github.com/vuejs/core/commit/ce9b91bda372e118f8af3e05ef2ba9ac6f8bf0d6))
+* **runtime-vapor:** tree-shake Transition, KeepAlive and Suspense interop code when the components are not use ([#15994](https://github.com/vuejs/core/issues/15994)) ([abab35f](https://github.com/vuejs/core/commit/abab35fe5d5455deb50e302342ba83c385bc3152))
+
 # [3.6.0-rc.12](https://github.com/vuejs/core/compare/v3.6.0-rc.11...v3.6.0-rc.12) (2026-10-16)
 
 ### Bug Fixes
