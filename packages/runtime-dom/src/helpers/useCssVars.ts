@@ -4,6 +4,7 @@ import {
   Static,
   type VNode,
   getCurrentInstance,
+  isVaporInteropEnabled,
   onBeforeUpdate,
   onMounted,
   onUnmounted,
@@ -92,7 +93,7 @@ function setVarsOnVNode(vnode: VNode, vars: Record<string, string>) {
   while (vnode.component) {
     // a vapor root has no subTree; the interop writes its block
     const component = vnode.component as GenericComponentInstance
-    if (component.vapor) {
+    if (isVaporInteropEnabled && component.vapor) {
       component.appContext.vapor!.applyCssVars(vnode, vars)
       return
     }
@@ -101,7 +102,7 @@ function setVarsOnVNode(vnode: VNode, vars: Record<string, string>) {
 
   if (vnode.shapeFlag & ShapeFlags.ELEMENT && vnode.el) {
     setVarsOnNode(vnode.el as Node, vars)
-  } else if (vnode.vb) {
+  } else if (isVaporInteropEnabled && vnode.vb) {
     // vapor slot content rendered in a vdom component: the block belongs to
     // the vapor owner, so the write has to go through the interop
     vnode.ctx!.appContext.vapor!.applyCssVars(vnode, vars)

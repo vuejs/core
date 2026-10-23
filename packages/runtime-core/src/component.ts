@@ -34,6 +34,7 @@ import {
   initSlots,
 } from './componentSlots'
 import { warn } from './warning'
+import { isVaporInteropEnabled } from './vaporInteropState'
 import { ErrorCodes, callWithErrorHandling, handleError } from './errorHandling'
 import {
   type AppConfig,
@@ -883,7 +884,7 @@ export function setupComponent(
   const { props, children, vi } = instance.vnode
   const isStateful = isStatefulComponent(instance)
 
-  if (vi) {
+  if (isVaporInteropEnabled && vi) {
     // Vapor interop override - use Vapor props/attrs proxy
     vi(instance)
   } else {
