@@ -4,9 +4,6 @@
  */
 export let isVaporInteropEnabled = false
 
-/**
- * @internal
- */
 export function setVaporInteropEnabled(): void {
   isVaporInteropEnabled = true
 }
