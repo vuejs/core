@@ -94,9 +94,11 @@ export const isComment = (node: Node): node is Comment =>
 function normalizeClientText(
   clientText: string,
   parent: Element | null,
+  isAtStart: boolean,
 ): string {
   const normalized = clientText.replace(/\r\n|\r/g, '\n')
   if (
+    isAtStart &&
     normalized[0] === '\n' &&
     parent &&
     (parent.tagName === 'PRE' || parent.tagName === 'TEXTAREA')
@@ -203,11 +205,16 @@ export function createHydrationFunctions(
             nextNode = onMismatch()
           }
         } else {
-          const parent = node.parentNode as Element | null
+          const parent = node.parentElement
           const serverText = (node as Text).data
           if (
             serverText !== vnode.children &&
-            serverText !== normalizeClientText(vnode.children as string, parent)
+            serverText !==
+              normalizeClientText(
+                vnode.children as string,
+                parent,
+                parent !== null && node === parent.firstChild,
+              )
           ) {
             if (!isMismatchAllowed(parent, MismatchTypes.TEXT)) {
               ;(__DEV__ || __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__) &&
@@ -504,7 +511,7 @@ export function createHydrationFunctions(
         const { textContent } = el
         if (
           textContent !== clientText &&
-          textContent !== normalizeClientText(clientText, el)
+          textContent !== normalizeClientText(clientText, el, true)
         ) {
           if (!isMismatchAllowed(el, MismatchTypes.TEXT)) {
             ;(__DEV__ || __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__) &&

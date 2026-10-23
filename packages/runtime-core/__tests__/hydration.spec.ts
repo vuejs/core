@@ -4238,4 +4238,61 @@ describe('SSR hydration', () => {
       globalThis.IntersectionObserver = originalIntersectionObserver
     }
   })
+
+  test('text vnode w/ missing newline after an element in <pre>', () => {
+    const { container } = mountWithHydration(
+      '<pre><span>x</span>foo</pre>',
+      () => h('pre', [h('span', 'x'), '\nfoo']),
+    )
+    expect(container.innerHTML).toBe('<pre><span>x</span>\nfoo</pre>')
+    expect('Hydration text mismatch').toHaveBeenWarned()
+  })
+
+  test('text vnode w/ missing newline after a comment in <pre>', () => {
+    const { container } = mountWithHydration('<pre><!---->foo</pre>', () =>
+      h('pre', [createCommentVNode(''), '\nfoo']),
+    )
+    expect(container.innerHTML).toBe('<pre><!---->\nfoo</pre>')
+    expect('Hydration text mismatch').toHaveBeenWarned()
+  })
+
+  test('text vnode w/ normalized newlines after an element in <pre>', async () => {
+    const App = {
+      template: '<pre><span>x</span>{{ code }}</pre>',
+      setup: () => ({ code: '\r\nfoo' }),
+    }
+    const container = document.createElement('div')
+    container.innerHTML = await renderToString(h(App))
+    const text = container.firstChild!.lastChild
+
+    createSSRApp(App).mount(container)
+
+    expect(container.innerHTML).toBe('<pre><span>x</span>\nfoo</pre>')
+    expect(container.firstChild!.lastChild).toBe(text)
+    expect('Hydration text mismatch').not.toHaveBeenWarned()
+  })
+
+  test.each([true, false])(
+    'root text mismatch in a ShadowRoot (__DEV__=%s)',
+    dev => {
+      __DEV__ = dev
+      try {
+        const root = document
+          .createElement('div')
+          .attachShadow({ mode: 'open' })
+        root.innerHTML = 'server'
+        const text = root.firstChild
+
+        createSSRApp({ render: () => 'client' }).mount(root as any)
+
+        expect(root.textContent).toBe('client')
+        expect(root.firstChild).toBe(text)
+        if (dev) {
+          expect('Hydration text mismatch').toHaveBeenWarned()
+        }
+      } finally {
+        __DEV__ = true
+      }
+    },
+  )
 })
