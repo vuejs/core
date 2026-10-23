@@ -27,6 +27,8 @@ import {
   type VaporComponent,
   type VaporComponentInstance,
   isVaporComponent,
+  linkChild,
+  unlinkChild,
 } from '../component'
 import { isAsyncComponentEnabled } from '../asyncComponentState'
 import {
@@ -84,6 +86,7 @@ const VaporKeepAliveImpl = defineVaporComponent({
     include: [String, RegExp, Array],
     exclude: [String, RegExp, Array],
     max: [String, Number],
+    freeze: [String, Boolean],
   },
   setup(props: KeepAliveProps, { slots, expose }) {
     let exposed!: Record<string, any>
@@ -103,6 +106,8 @@ const VaporKeepAliveImpl = defineVaporComponent({
     const cache: Cache = new Map()
     const keys: Keys = new Set()
     const storageContainer = createElement('div')
+    // paused by `freeze`, resumed on activation even if `freeze` changed
+    const frozen = new WeakSet<VaporComponentInstance>()
     const keptAliveScopes = new Map<any, EffectScope>()
 
     const resolveCacheKeyFromBlock = (
@@ -371,11 +376,21 @@ const VaporKeepAliveImpl = defineVaporComponent({
       },
       activate: (instance, parentNode, anchor, parentSuspense) => {
         current = instance
+        // back under its parent's scope; resume before moving back so the
+        // catch-up runs with the new state
+        linkChild(instance)
+        if (frozen.delete(instance)) instance.scope.resume()
         activate(instance, parentNode, anchor, parentSuspense)
       },
       deactivate: (instance, parentSuspense) => {
         current = undefined
         deactivate(instance, storageContainer, parentSuspense)
+        // a cached component is out of its parent's reach
+        unlinkChild(instance)
+        if (props.freeze || props.freeze === '') {
+          instance.scope.pause()
+          frozen.add(instance)
+        }
       },
       prepareBranchRemoval(frag, scope, prevKey) {
         // Async-wrapper internals share this context but are not themselves

@@ -59,6 +59,7 @@ import {
 } from './block'
 import {
   type Dep,
+  EffectFlags,
   type ShallowRef,
   getCurrentScope,
   isProxy,
@@ -102,6 +103,7 @@ import {
   resolveSource,
 } from './componentProps'
 import { type RenderEffect, renderEffect } from './renderEffect'
+import { registerScopeOwner } from './childScopes'
 import { emit, normalizeEmitsOptions } from './componentEmits'
 import { patchDynamicProps } from './dom/prop'
 import {
@@ -681,6 +683,8 @@ export function createComponent(
     }
     if (keepAliveCtx) instance.unmountScope = getCurrentScope()
     registerUnmount(instance)
+    linkChild(instance)
+    registerScopeOwner(instance)
     if (_insertionParent) registerNestedVDOMCleanup(instance)
 
     if (!managedMount && (_insertionParent || isHydrating)) {
@@ -1031,6 +1035,11 @@ export class VaporComponentInstance<
   inputScope?: EffectScope
   // The branch scope that unmounts a cached component when disposed.
   unmountScope?: EffectScope
+  // Children under a vapor parent, as a circular list in creation order; the
+  // parent's scope reaches them through it (see childScopes.ts).
+  firstChild: VaporComponentInstance | null
+  prevSibling: VaporComponentInstance | null
+  nextSibling: VaporComponentInstance | null
   $key?: any
   // Updates held back while the component-root chain ends in a pending async
   // setup child, shared by the async roots on the chain, matching VDOM.
@@ -1118,6 +1127,7 @@ export class VaporComponentInstance<
     }
 
     this.block = null! // to be set
+    this.firstChild = this.prevSibling = this.nextSibling = null
     this.scope = new EffectScope(true)
 
     this.emit = emit.bind(null, this) as EmitFn<Emits>
@@ -1634,6 +1644,46 @@ export function mountComponent(
   }
 }
 
+/**
+ * Links `instance` after its siblings under its vapor parent. A parent that is
+ * stopping drops its whole list, so `unlinkChild` only works under a live one.
+ */
+export function linkChild(instance: VaporComponentInstance): void {
+  const parent = instance.parent
+  if (!parent || !parent.vapor || instance.nextSibling) return
+  const first = (parent as VaporComponentInstance).firstChild
+  if (first === null) {
+    ;(parent as VaporComponentInstance).firstChild =
+      instance.prevSibling =
+      instance.nextSibling =
+        instance
+  } else {
+    const last = first.prevSibling!
+    instance.prevSibling = last
+    instance.nextSibling = first
+    last.nextSibling = first.prevSibling = instance
+  }
+}
+
+export function unlinkChild(instance: VaporComponentInstance): void {
+  const next = instance.nextSibling
+  if (next === null) return
+  const parent = instance.parent as VaporComponentInstance
+  if (!(parent.scope.flags & EffectFlags.STOP)) {
+    if (next === instance) {
+      parent.firstChild = null
+    } else {
+      const prev = instance.prevSibling!
+      prev.nextSibling = next
+      next.prevSibling = prev
+      if (parent.firstChild === instance) {
+        parent.firstChild = next
+      }
+    }
+  }
+  instance.prevSibling = instance.nextSibling = null
+}
+
 function registerUnmount(instance: VaporComponentInstance): void {
   const scope = instance.unmountScope
   onScopeDispose(() => {
@@ -1708,6 +1758,7 @@ export function unmountComponent(
       const inputScope = instance.inputScope
       if (inputScope) inputScope.stop()
     }
+    unlinkChild(instance)
     instance.scope.stop()
 
     if (hasLifecycle && instance.um) {

@@ -232,6 +232,7 @@ import {
   interopSlotsKey,
   setInteropEnabled,
 } from './vdomInteropState'
+import { registerChildScopesHook } from './childScopes'
 import {
   type KeepAliveInstance,
   activate,
@@ -3239,6 +3240,7 @@ function needsHostParentForRemove(block: Block): boolean {
 }
 
 export const vaporInteropPlugin: Plugin = app => {
+  registerChildScopesHook()
   if (__FEATURE_SUSPENSE__) {
     enableSuspense()
   }
