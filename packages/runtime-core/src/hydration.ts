@@ -596,6 +596,7 @@ export function createHydrationFunctions(
     parentSuspense: SuspenseBoundary | null,
     slotScopeIds: string[] | null,
     optimized: boolean,
+    anchor?: Node | null,
   ): Node | null => {
     optimized = optimized || !!parentVNode.dynamicChildren
     const children = parentVNode.children as VNode[]
@@ -636,7 +637,7 @@ export function createHydrationFunctions(
       } else if (isText && !vnode.children) {
         // #7215 create a TextNode for empty text node
         // because server rendered HTML won't contain a text node
-        insert((vnode.el = createText('')), container)
+        insert((vnode.el = createText('')), container, anchor)
       } else {
         if (!hasCheckedMismatch) {
           hasCheckedMismatch = true
@@ -656,7 +657,7 @@ export function createHydrationFunctions(
           null,
           vnode,
           container,
-          null,
+          anchor,
           parentComponent,
           parentSuspense,
           getContainerType(container),

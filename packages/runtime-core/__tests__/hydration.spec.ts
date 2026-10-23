@@ -4200,4 +4200,160 @@ describe('SSR hydration', () => {
       globalThis.IntersectionObserver = originalIntersectionObserver
     }
   })
+
+  // #15937
+  test.each([true, false])(
+    'Teleport without SSR anchors preserves the app root (__DEV__=%s)',
+    async dev => {
+      const show = ref(false)
+      const App = {
+        setup: () => ({ show }),
+        template: `
+          <div>
+            <span>Hello from SSR</span>
+            <Teleport to="#missing-teleport-anchors">
+              <p v-if="show">overlay</p>
+            </Teleport>
+          </div>
+        `,
+      }
+      const target = document.createElement('div')
+      target.id = 'missing-teleport-anchors'
+      document.body.appendChild(target)
+      const html = await renderToString(h(App))
+      target.innerHTML = `\n  <div id="app">${html}</div>\n`
+      const container = target.querySelector('#app')!
+      const app = createSSRApp(App)
+
+      __DEV__ = dev
+      try {
+        app.mount(container)
+        if (dev) {
+          expect('Hydration children mismatch').toHaveBeenWarned()
+          expect('Hydration node mismatch').not.toHaveBeenWarned()
+        }
+        expect(target.contains(container)).toBe(true)
+        expect(container.innerHTML).toBe(html)
+
+        show.value = true
+        await nextTick()
+        expect(target.querySelector('p')!.outerHTML).toBe('<p>overlay</p>')
+
+        show.value = false
+        await nextTick()
+        expect(target.querySelector('p')).toBe(null)
+
+        app.unmount()
+        expect(target.innerHTML).toBe('\n  <div id="app"></div>\n')
+      } finally {
+        __DEV__ = true
+        target.remove()
+      }
+    },
+  )
+
+  test.each(['empty', 'unrelated content', 'SSR content'])(
+    'Teleport hydration preserves child order and css vars with %s',
+    async content => {
+      const items = ref(['A'])
+      const color = ref('red')
+      const App = {
+        setup() {
+          useCssVars(() => ({ color: color.value }))
+          return () =>
+            h(
+              Teleport,
+              { to: '#teleport-child-order' },
+              items.value.map(key => h('span', { key }, key)),
+            )
+        },
+      }
+      const container = document.createElement('div')
+      const target = document.createElement('div')
+      target.id = 'teleport-child-order'
+      document.body.appendChild(target)
+      const ctx: SSRContext = {}
+      container.innerHTML = await renderToString(h(App), ctx)
+      const hasSSRContent = content === 'SSR content'
+      target.innerHTML = hasSSRContent
+        ? ctx.teleports!['#teleport-child-order']
+        : content === 'unrelated content'
+          ? '<i>Keep me</i>'
+          : ''
+      const unrelated = target.querySelector('i')
+      const ssrChild = target.querySelector('span')
+      const app = createSSRApp(App)
+
+      try {
+        const vm = app.mount(container)
+        if (!hasSSRContent) {
+          expect('Hydration children mismatch').toHaveBeenWarned()
+        }
+        expect('Hydration node mismatch').not.toHaveBeenWarned()
+        const firstChild = target.querySelector('span')!
+        const initialColor = firstChild.style.getPropertyValue('--color')
+        if (hasSSRContent) {
+          expect(firstChild).toBe(ssrChild)
+        }
+
+        items.value = ['A', 'B']
+        await nextTick()
+        const children = [...target.querySelectorAll('span')]
+        expect(children.map(child => child.textContent)).toEqual(['A', 'B'])
+        expect(children[0]).toBe(firstChild)
+        expect(vm.$.subTree.targetStart!.nextSibling).toBe(firstChild)
+        expect(children[1].nextSibling).toBe(vm.$.subTree.targetAnchor)
+        expect(initialColor).toBe('red')
+        expect(children[1].style.getPropertyValue('--color')).toBe('red')
+
+        color.value = 'blue'
+        await nextTick()
+        for (const child of children) {
+          expect(child.style.getPropertyValue('--color')).toBe('blue')
+        }
+
+        app.unmount()
+        expect(target.innerHTML).toBe(unrelated ? '<i>Keep me</i>' : '')
+        expect(target.firstChild).toBe(unrelated)
+      } finally {
+        target.remove()
+      }
+    },
+  )
+
+  test('Teleport without SSR anchors mounts empty text before the target anchor', async () => {
+    const target = document.createElement('div')
+    target.id = 'teleport-empty-text'
+    document.body.appendChild(target)
+    const text = ref('')
+    const App = {
+      render: () =>
+        h(Teleport, { to: '#teleport-empty-text' }, [
+          text.value,
+          h('span', 'child'),
+        ]),
+    }
+    const container = document.createElement('div')
+    container.innerHTML = await renderToString(h(App))
+    const app = createSSRApp(App)
+
+    try {
+      const vm = app.mount(container)
+      expect('Hydration children mismatch').toHaveBeenWarned()
+      const teleport = vm.$.subTree
+      const children = teleport.children as VNode[]
+      expect(teleport.targetStart!.nextSibling).toBe(children[0].el)
+      expect(children[0].el!.nextSibling).toBe(children[1].el)
+      expect(children[1].el!.nextSibling).toBe(teleport.targetAnchor)
+
+      text.value = 'before'
+      await nextTick()
+      expect(target.innerHTML).toBe('before<span>child</span>')
+
+      app.unmount()
+      expect(target.childNodes.length).toBe(0)
+    } finally {
+      target.remove()
+    }
+  })
 })
