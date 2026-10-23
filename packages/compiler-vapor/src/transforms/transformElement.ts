@@ -23,6 +23,7 @@ import {
 } from '@vue/compiler-dom'
 import {
   Namespaces,
+  VaporSingleRoot,
   camelize,
   capitalize,
   extend,
@@ -238,7 +239,8 @@ export const transformElement: NodeTransform = (node, context) => {
         node as ComponentNode,
         propsResult,
         staticKey,
-        singleRoot,
+        singleRoot ||
+          (context.isSlotRoot && !useCreateElement && VaporSingleRoot.SLOT),
         context,
         isDynamicComponent,
         useCreateElement,
@@ -385,7 +387,7 @@ function transformComponentElement(
   node: ComponentNode,
   propsResult: PropsResult,
   staticKey: SimpleExpressionNode | undefined,
-  singleRoot: boolean,
+  root: boolean | VaporSingleRoot,
   context: TransformContext,
   isDynamicComponent: boolean,
   useCreateElement: boolean,
@@ -469,7 +471,7 @@ function transformComponentElement(
     slotScopeNamespace,
     props,
     asset,
-    root: singleRoot,
+    root,
     slots: [...context.slots],
     once: context.inVOnce,
     dynamic: dynamicComponent,

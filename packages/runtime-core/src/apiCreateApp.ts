@@ -29,7 +29,14 @@ import type { InjectionKey } from './apiInject'
 import { warn } from './warning'
 import type { VNode, VNodeArrayChildren } from './vnode'
 import { devtoolsInitApp, devtoolsUnmountApp } from './devtools'
-import { NO, extend, hasOwn, isFunction, isObject } from '@vue/shared'
+import {
+  NO,
+  type VaporSingleRoot,
+  extend,
+  hasOwn,
+  isFunction,
+  isObject,
+} from '@vue/shared'
 import { type SuspenseBoundary, type TransitionHooks, version } from '.'
 import { installAppCompatProperties } from './compat/global'
 import type { NormalizedPropsOptions } from './componentProps'
@@ -312,7 +319,7 @@ export interface VdomInVaporInterface {
   mountVNode: (
     vnode: VNode,
     parentComponent: any, // VaporComponentInstance
-    isSingleRoot?: boolean,
+    isSingleRoot?: boolean | VaporSingleRoot,
     rawProps?: any,
     once?: boolean,
   ) => any

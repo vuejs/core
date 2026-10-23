@@ -5,7 +5,7 @@ import type {
   SimpleExpressionNode,
   TemplateChildNode,
 } from '@vue/compiler-dom'
-import type { Namespace, Prettify } from '@vue/shared'
+import type { Namespace, Prettify, VaporSingleRoot } from '@vue/shared'
 import type { DirectiveTransform, NodeTransform } from '../transform'
 import type { IRProp, IRProps, IRSlots } from './component'
 
@@ -246,7 +246,7 @@ export interface CreateComponentIRNode
   props: IRProps[]
   slots: IRSlots[]
   asset: boolean
-  root: boolean
+  root: boolean | VaporSingleRoot
   once: boolean
   slotRoot?: boolean
   dynamic?: SimpleExpressionNode

@@ -7,6 +7,7 @@ import {
   extend,
   getEscapedCssVarName,
   hasChanged,
+  hasOwn,
   includeBooleanAttr,
   isArray,
   isNativeOn,
@@ -797,6 +798,36 @@ export function setDynamicProp(
     setAttr(el, key, value, isSVG, forceHydrate)
   }
   return value
+}
+
+// Make an element whose own class and style were set whole a root (see
+// `$root`), so a layer of fallthrough attrs merges over them incrementally.
+// What it holds becomes the base layer: its template class and style, or the
+// value its own binding last set. Vdom interop only, for a slot root.
+export function adoptRoot(el: any): void {
+  if (el.$root) return
+  const meta: { cls?: string[]; sty?: NormalizedStyle } = {}
+  // the caches default to '' on the prototype (optimizePropertyLookup)
+  if (hasOwn(el, '$cls')) {
+    el.$clsi = el.$cls
+  } else if (el.classList.length) {
+    meta.cls = Array.from(el.classList)
+  }
+  if (hasOwn(el, '$sty')) {
+    el.$styi = isString(el.$sty) ? parseStringStyle(el.$sty) : el.$sty
+  } else {
+    const style = el.getAttribute('style')
+    if (style !== null) {
+      const sty = (meta.sty = parseStringStyle(style))
+      // v-show owns `display`: what it restores is the template value
+      if (vShowOriginalDisplay in el) {
+        const display = el[vShowOriginalDisplay]
+        if (display) sty.display = display
+        else delete sty.display
+      }
+    }
+  }
+  el.$root = meta
 }
 
 let isOptimized = false

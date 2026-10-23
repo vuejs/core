@@ -10,7 +10,11 @@ import {
   setCurrentRenderingInstance,
   warn,
 } from '@vue/runtime-dom'
-import { Namespaces, VaporDynamicComponentFlags } from '@vue/shared'
+import {
+  Namespaces,
+  VaporDynamicComponentFlags,
+  VaporSingleRoot,
+} from '@vue/shared'
 import { type Block, isBlock } from './block'
 import {
   type VaporComponentInstance,
@@ -46,7 +50,12 @@ export function createDynamicComponent(
   flags: number = 0,
   key?: () => any,
 ): Block {
-  const isSingleRoot = !!(flags & VaporDynamicComponentFlags.SINGLE_ROOT)
+  const isSingleRoot =
+    flags & VaporDynamicComponentFlags.SINGLE_ROOT
+      ? true
+      : isInteropEnabled && flags & VaporDynamicComponentFlags.SLOT_SINGLE_ROOT
+        ? VaporSingleRoot.SLOT
+        : false
   const once = !!(flags & VaporDynamicComponentFlags.ONCE)
   const slotRoot = !!(flags & VaporDynamicComponentFlags.SLOT_ROOT)
   const ns =

@@ -2157,7 +2157,9 @@ describe('compiler: element transform', () => {
       const { code } = compileWithElementAndSlotTransform(
         `<Comp v-slot="${props}"><${tag} /></Comp>`,
       )
-      expect(code).toContain(`_createComponent(${expression})`)
+      expect(code).toContain(
+        `_createComponent(${expression}, null, null, 2 /* SLOT */)`,
+      )
       expect(code).not.toContain(`_resolveComponent("${tag}")`)
     })
 
@@ -2166,7 +2168,9 @@ describe('compiler: element transform', () => {
         `<Comp><template #default="{ Foo }"><foo /></template></Comp>`,
         { bindingMetadata: { foo: BindingTypes.SETUP_CONST } },
       )
-      expect(code).toContain('_createComponent(_slotProps0.Foo)')
+      expect(code).toContain(
+        '_createComponent(_slotProps0.Foo, null, null, 2 /* SLOT */)',
+      )
       expect(code).not.toContain('_createComponent(_ctx.foo)')
     })
 
@@ -2174,7 +2178,9 @@ describe('compiler: element transform', () => {
       const { code } = compileWithElementAndSlotTransform(
         `<Foo v-slot="{ Foo }"><Foo /></Foo><Foo />`,
       )
-      expect(code).toContain('_createComponent(_slotProps0.Foo)')
+      expect(code).toContain(
+        '_createComponent(_slotProps0.Foo, null, null, 2 /* SLOT */)',
+      )
       expect(code).toContain('const _component_Foo = _resolveComponent("Foo")')
       expect(
         code.match(/_createComponentWithFallback\(_component_Foo/g),
@@ -2193,7 +2199,9 @@ describe('compiler: element transform', () => {
       const { code } = compileWithElementAndSlotTransform(
         `<div v-for="Foo in list"><Comp v-slot="{ Foo }"><Foo /></Comp></div>`,
       )
-      expect(code).toMatch(/_createComponent\(_slotProps\d+\.Foo\)/)
+      expect(code).toMatch(
+        /_createComponent\(_slotProps\d+\.Foo, null, null, 2 \/\* SLOT \*\/\)/,
+      )
       expect(code).not.toContain('_resolveComponent("Foo")')
     })
 

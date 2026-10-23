@@ -2,6 +2,7 @@ import {
   type Namespace,
   Namespaces,
   VaporDynamicComponentFlags,
+  type VaporSingleRoot,
   VaporSlotStability,
   camelize,
   extend,
@@ -132,7 +133,9 @@ export function genCreateComponent(
       tag,
       rawProps,
       rawSlots,
-      isRuntimeDynamicComponent ? dynamicComponentFlags : root ? 'true' : false,
+      isRuntimeDynamicComponent
+        ? dynamicComponentFlags
+        : root && (root === true ? 'true' : genFlags(root, ['SLOT'])),
       isRuntimeDynamicComponent
         ? operation.key && [
             '() => (',
@@ -186,7 +189,7 @@ export function genCreateComponent(
 }
 
 function genDynamicComponentFlags(
-  root: boolean | undefined,
+  root: boolean | VaporSingleRoot | undefined,
   once: boolean | undefined,
   slotRoot: boolean | undefined,
   ns: Namespace | undefined,
@@ -194,9 +197,12 @@ function genDynamicComponentFlags(
   let flags = 0
   const names: string[] = []
 
-  if (root) {
+  if (root === true) {
     flags |= VaporDynamicComponentFlags.SINGLE_ROOT
     names.push('SINGLE_ROOT')
+  } else if (root) {
+    flags |= VaporDynamicComponentFlags.SLOT_SINGLE_ROOT
+    names.push('SLOT_SINGLE_ROOT')
   }
   if (once) {
     flags |= VaporDynamicComponentFlags.ONCE

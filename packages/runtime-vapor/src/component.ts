@@ -77,6 +77,7 @@ import {
   Namespaces,
   type Prettify,
   ShapeFlags,
+  VaporSingleRoot,
   extend,
   hasOwn,
   invokeArrayFns,
@@ -109,6 +110,7 @@ import {
   type SlotSourceCell,
   type StaticSlots,
   dynamicSlotsProxyHandlers,
+  getRawSlotsOwner,
   getSlot,
   initSlots,
   normalizeRawSlots,
@@ -301,16 +303,44 @@ function useVdomInterop(
   return !!appContext.vdom && !component.__vapor
 }
 
-// The instance whose fallthrough attrs a block created right now inherits:
-// its single root, or any child of a Transition (which passes attrs through).
+// What a block inherits fallthrough attrs from: a component instance, or
+// under vdom interop a clone of a vapor slot vnode (SlotFallthroughOwner)
+export interface FallthroughOwner {
+  type: VaporComponent
+  attrs: Record<string, any>
+  accessedAttrs?: boolean
+  // interop only
+  instance?: GenericComponentInstance | null
+  adoptRoot?: (el: Element) => void
+}
+
+// The owner whose fallthrough attrs a block created right now inherits: the
+// instance for its single root, any child of a Transition or the body root of
+// a KeepAlive (which pass attrs through), the slot vnode's clone for the
+// single root of a slot body.
 export function resolveFallthroughOwner(
-  isSingleRoot?: boolean,
-): VaporComponentInstance | undefined {
+  isSingleRoot?: boolean | VaporSingleRoot,
+): FallthroughOwner | undefined {
+  if (isInteropEnabled && isSingleRoot === VaporSingleRoot.SLOT) {
+    const boundary = currentRenderContext.slotBoundary
+    const owner = boundary && boundary.fallthroughOwner
+    // the body's own render only: an outlet forwarding the boundary inside
+    // it renders its content under its own component
+    if (owner && owner.instance === currentInstance) return owner
+  }
   const instance = currentInstance
   if (
-    (isSingleRoot ||
-      (isTransitionEnabled && instance && isVaporTransition(instance.type))) &&
     isVaporComponent(instance) &&
+    (isSingleRoot === true ||
+      (isTransitionEnabled && isVaporTransition(instance.type)) ||
+      // the single root of the KeepAlive's own body (a dynamic reference
+      // compiles it as SLOT, a literal one as `true`), not content an outlet
+      // in that body renders: vdom stops at the slot fragment
+      (isKeepAliveEnabled &&
+        isSingleRoot === VaporSingleRoot.SLOT &&
+        isKeepAlive(instance) &&
+        currentRenderContext.slotOwner ===
+          getRawSlotsOwner(instance.rawSlots))) &&
     instance.type.inheritAttrs !== false &&
     instance.hasFallthrough
   ) {
@@ -322,7 +352,7 @@ export function createComponent(
   component: VaporComponent,
   rawProps?: LooseRawProps | null,
   rawSlots?: LooseRawSlots | null,
-  isSingleRoot?: boolean,
+  isSingleRoot?: boolean | VaporSingleRoot,
   once?: boolean,
   appContext: GenericAppContext = (currentInstance &&
     currentInstance.appContext) ||
@@ -783,7 +813,7 @@ export function shouldUseFunctionalFallthrough(
  * returns undefined so consumers can always diff away stale keys.
  */
 export function resolveFallthroughAttrs(
-  instance: VaporComponentInstance,
+  instance: FallthroughOwner,
   forProps = false,
 ): Record<string, any> {
   const attrs = shouldUseFunctionalFallthrough(instance.type)
@@ -1041,7 +1071,7 @@ export class VaporComponentInstance<
   hmrReload?: (newComp: VaporComponent) => void
   propsOptions?: NormalizedPropsOptions
   emitsOptions?: ObjectEmitsOptions | null
-  isSingleRoot?: boolean
+  isSingleRoot?: boolean | VaporSingleRoot
   // for HMR rerender
   renderScope?: EffectScope
   // root-chain state ancestors apply through this component (v-show,
@@ -1187,7 +1217,7 @@ export function createAssetComponent(
   name: string,
   rawProps?: LooseRawProps | null,
   rawSlots?: LooseRawSlots | null,
-  isSingleRoot?: boolean,
+  isSingleRoot?: boolean | VaporSingleRoot,
   once?: boolean,
   maybeSelfReference?: boolean,
   ns?: Namespace,
@@ -1213,7 +1243,7 @@ export function createComponentWithFallback(
   comp: VaporComponent | typeof NULL_DYNAMIC_COMPONENT | string,
   rawProps?: LooseRawProps | null,
   rawSlots?: LooseRawSlots | null,
-  isSingleRoot?: boolean,
+  isSingleRoot?: boolean | VaporSingleRoot,
   once?: boolean,
   ns?: Namespace,
   appContext?: GenericAppContext,
@@ -1272,7 +1302,7 @@ export function createPlainElement(
   comp: string,
   rawProps?: LooseRawProps | null,
   rawSlots?: LooseRawSlots | null,
-  isSingleRoot?: boolean,
+  isSingleRoot?: boolean | VaporSingleRoot,
   once?: boolean,
   ns?: Namespace,
 ): HTMLElement {
@@ -1303,7 +1333,7 @@ export function createPlainElement(
     : createElement(comp, ns)
 
   // mark single root
-  ;(el as any).$root = isSingleRoot
+  ;(el as any).$root = isSingleRoot === true
   if ((isKeepAliveEnabled || isTransitionEnabled) && rawProps) {
     const key = resolveSource(rawProps.key)
     if (key !== undefined) (el as any).$key = key
@@ -1936,9 +1966,9 @@ export function applyComponentFallthrough(
 // under dynamic fragments (e.g. v-if), the attrs are (re-)applied on each
 // branch update via the fragments' fallthrough hook. Slots and teleports
 // warn instead of receiving the attrs, consistent with VDOM behavior.
-function applyFallthroughAttrs(
+export function applyFallthroughAttrs(
   block: Block,
-  instance: VaporComponentInstance,
+  instance: FallthroughOwner,
   scope?: EffectScope,
 ): void {
   const state = new FallthroughResolveState(scope)
@@ -1955,6 +1985,7 @@ function applyFallthroughAttrs(
   }
 
   if (root && !hasSlotOutlet) {
+    if (isInteropEnabled && instance.adoptRoot) instance.adoptRoot(root)
     let ownerScope = scope
     if (innermost) {
       // A compiler-proven no-scope branch may have rendered without a scope;
@@ -2064,7 +2095,7 @@ function containsTeleportFragment(block: Block): boolean {
 
 function registerDynamicFragmentFallthroughAttrs(
   frag: DynamicFragment,
-  instance: VaporComponentInstance,
+  instance: FallthroughOwner,
 ): void {
   // one application per fragment: attrs fold at component boundaries, so
   // only the first registering instance can sit on this fragment's chain
