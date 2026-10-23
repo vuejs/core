@@ -14,6 +14,48 @@ export function render(_ctx) {
 }"
 `;
 
+exports[`compiler: transition > child of a non-root transition is a root template 1`] = `
+"import { setInsertionState as _setInsertionState, VaporTransition as _VaporTransition, createComponent as _createComponent, template as _template } from 'vue';
+const t0 = _template("<p class=y>z", 3)
+const t1 = _template("<div>", 1)
+
+export function render(_ctx) {
+  const n2 = t1()
+  _setInsertionState(n2)
+  const n1 = _createComponent(_VaporTransition, null, () => {
+    const n0 = t0()
+    return n0
+  })
+  return n2
+}"
+`;
+
+exports[`compiler: transition > child of a transition under a v-for is a root template 1`] = `
+"import { setInsertionState as _setInsertionState, VaporTransition as _VaporTransition, createIf as _createIf, extend as _extend, createComponent as _createComponent, createFor as _createFor, template as _template } from 'vue';
+const t0 = _template("<p class=y>y", 1)
+const t1 = _template("<p class=n>n", 1)
+const t2 = _template("<div>")
+
+export function render(_ctx) {
+  const n0 = _createFor(() => (_ctx.l), (_for_item0) => {
+    const n9 = t2()
+    _setInsertionState(n9)
+    const n8 = _createComponent(_VaporTransition, null, _extend(() => {
+      const n2 = _createIf(() => (_ctx.ok), () => {
+        const n4 = t0()
+        return n4
+      }, () => {
+        const n6 = t1()
+        return n6
+      }, 389 /* TRUE_SINGLE_ROOT, FALSE_SINGLE_ROOT, SLOT_ROOT, KEYED_INDEX_0 */)
+      return n2
+    }, { _: 1 /* NON_STABLE */ }))
+    return n9
+  }, undefined, 8 /* IS_SINGLE_NODE */)
+  return n0
+}"
+`;
+
 exports[`compiler: transition > inject persisted when child has v-show 1`] = `
 "import { VaporTransition as _VaporTransition, applyVShow as _applyVShow, createComponent as _createComponent, template as _template } from 'vue';
 const t0 = _template("<div>", 1)

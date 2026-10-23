@@ -5037,6 +5037,30 @@ describe('VaporKeepAlive', () => {
     expect(el.classList).toHaveLength(3)
   })
 
+  test('should pass its attrs to the child of a non-root KeepAlive', async () => {
+    const data = ref({ cls: 'a' })
+    const A = compile(`<template><p class="y">A</p></template>`, data)
+    const App = compile(
+      `<script setup vapor>
+        const A = _components.A
+        const data = _data
+      </script>
+      <template>
+        <div>
+          <KeepAlive :class="data.cls" id="k"><A /></KeepAlive>
+        </div>
+      </template>`,
+      data,
+      { A },
+    )
+    const { host } = define(App).render()
+    expect(host.innerHTML).toBe('<div><p class="y a" id="k">A</p></div>')
+
+    data.value.cls = 'b'
+    await nextTick()
+    expect(host.innerHTML).toBe('<div><p class="y b" id="k">A</p></div>')
+  })
+
   test('should inherit fallthrough attrs through a KeepAlive root with a dynamic component', async () => {
     const out: Record<string, string[]> = {}
     await renderParity(
