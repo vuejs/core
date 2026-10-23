@@ -127,7 +127,6 @@ exec('vp', [
       for (const marker of [
         'getVaporInterface',
         'isVaporComponent',
-        'cloneVaporSlotMeta',
         'rawVaporSlotKey',
         'vaporScopeIds',
         'forEachGroupChild',
