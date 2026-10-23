@@ -559,4 +559,36 @@ describe('api: createVaporApp', () => {
       app.unmount()
     },
   )
+
+  test.each([false, true])(
+    'config.performance traces branch effects without breaking the render (vapor: %s)',
+    async vapor => {
+      const data = ref({ show: true, list: [1] })
+      const App = compile(
+        `<script setup>const data = _data</script>` +
+          `<template><div v-if="data.show">{{ data.list.length }}</div>` +
+          `<i v-for="n in data.list">{{ n }}</i></template>`,
+        data,
+        {},
+        { vapor },
+      )
+      const handler = vi.fn()
+      const root = document.createElement('div')
+      const app = vapor ? createVaporApp(App) : createApp(App)
+      app.config.performance = true
+      app.config.errorHandler = handler
+      app.mount(root)
+      expect(root.textContent).toBe('11')
+
+      data.value.list.push(2)
+      await nextTick()
+      data.value.show = false
+      await nextTick()
+      data.value.show = true
+      await nextTick()
+      expect(root.textContent).toBe('212')
+      expect(handler).not.toHaveBeenCalled()
+      app.unmount()
+    },
+  )
 })
