@@ -4356,4 +4356,49 @@ describe('SSR hydration', () => {
       target.remove()
     }
   })
+
+  test.each(['element', 'text'])(
+    'Teleport preserves SSR anchors when hydrating missing %s children',
+    async kind => {
+      const items = ref<string[]>([])
+      const App = {
+        render: () =>
+          h(
+            Teleport,
+            { to: '#teleport-missing-children' },
+            items.value.map(value =>
+              kind === 'element' ? h('span', { key: value }, value) : value,
+            ),
+          ),
+      }
+      const container = document.createElement('div')
+      const target = document.createElement('div')
+      target.id = 'teleport-missing-children'
+      document.body.appendChild(target)
+      const ctx: SSRContext = {}
+      container.innerHTML = await renderToString(h(App), ctx)
+      target.innerHTML = ctx.teleports!['#teleport-missing-children']
+      const anchor = target.lastChild!
+      items.value = ['A']
+      const app = createSSRApp(App)
+
+      try {
+        const vm = app.mount(container)
+        expect('Hydration children mismatch').toHaveBeenWarned()
+        expect('Hydration node mismatch').not.toHaveBeenWarned()
+        expect(vm.$.subTree.targetAnchor).toBe(anchor)
+        expect(target.lastChild).toBe(anchor)
+        expect(target.textContent).toBe('A')
+
+        items.value = ['A', 'B']
+        await nextTick()
+        expect(target.textContent).toBe('AB')
+        expect(target.lastChild).toBe(anchor)
+      } finally {
+        app.unmount()
+        target.remove()
+      }
+      expect(target.childNodes.length).toBe(0)
+    },
+  )
 })

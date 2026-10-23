@@ -607,7 +607,7 @@ export function createHydrationFunctions(
         ? children[i]
         : (children[i] = normalizeVNode(children[i]))
       const isText = vnode.type === Text
-      if (node) {
+      if (node && node !== anchor) {
         if (isText && !optimized) {
           // #7285 possible consecutive text vnodes from manual render fns or
           // JSX-compiled fns, but on the client the browser parses only 1 text

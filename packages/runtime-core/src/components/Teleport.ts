@@ -530,7 +530,7 @@ function hydrateTeleport(
           parentSuspense,
           slotScopeIds,
           optimized,
-          hasSSRAnchor ? null : (vnode.targetAnchor as Node),
+          vnode.targetAnchor as Node,
         )
       }
     }
