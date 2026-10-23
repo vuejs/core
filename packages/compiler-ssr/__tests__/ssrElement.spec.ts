@@ -164,6 +164,35 @@ describe('ssr: element', () => {
         `)
     })
 
+    test('static style', () => {
+      expect(
+        getCompiledString(
+          `<div style="color: red; --Custom-Prop: 1px; z-index: 1; font-size: 14px !important"></div>`,
+        ),
+      ).toMatchInlineSnapshot(
+        `"\`<div style="color:red;--Custom-Prop:1px;z-index:1;font-size:14px !important;"></div>\`"`,
+      )
+    })
+
+    test('static style with escaping', () => {
+      expect(
+        getCompiledString(
+          `<div style="font-family: &quot;A&amp;B&quot;; background: url('a.png?x=1&y=2')"></div>`,
+        ),
+      ).toMatchInlineSnapshot(
+        `"\`<div style="font-family:&quot;A&amp;B&quot;;background:url(&#39;a.png?x=1&amp;y=2&#39;);"></div>\`"`,
+      )
+    })
+
+    test('v-bind:style + static style', () => {
+      expect(getCompiledString(`<div :style="bar" style="color:red;"></div>`))
+        .toMatchInlineSnapshot(`
+          "\`<div style="\${
+              _ssrRenderStyle([_ctx.bar, {"color":"red"}])
+            }"></div>\`"
+        `)
+    })
+
     test('static style + v-bind:style', () => {
       expect(getCompiledString(`<div style="color:red;" :style="bar"></div>`))
         .toMatchInlineSnapshot(`
@@ -271,6 +300,13 @@ describe('ssr: element', () => {
               _ssrRenderAttrs(_mergeProps({
                 class: ["a", _ctx.b]
               }, _ctx.obj))
+            }></div>\`"
+        `)
+
+      expect(getCompiledString(`<div style="color:red;" v-bind="obj"></div>`))
+        .toMatchInlineSnapshot(`
+          "\`<div\${
+              _ssrRenderAttrs(_mergeProps({ style: {"color":"red"} }, _ctx.obj))
             }></div>\`"
         `)
 
