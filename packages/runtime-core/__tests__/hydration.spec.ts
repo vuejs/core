@@ -178,6 +178,23 @@ describe('SSR hydration', () => {
     expect(`Hydration text mismatch`).not.toHaveBeenWarned()
   })
 
+  // #9232 applies to text vnodes as well, not just to the text content of an
+  // element
+  test('text vnode w/ newlines', async () => {
+    mountWithHydration('<div><span>x</span>1\n2\n3</div>', () =>
+      h('div', [h('span', 'x'), '1\r\n2\r3']),
+    )
+    expect(`Hydration text`).not.toHaveBeenWarned()
+  })
+
+  // #11873 applies to text vnodes as well
+  test('text vnode w/ newlines at the beginning of <pre>', async () => {
+    const render = () => h('pre', ['\r\nhello', h('b', '!')])
+    const html = await renderToString(createSSRApp({ render }))
+    mountWithHydration(html, render)
+    expect(`Hydration text`).not.toHaveBeenWarned()
+  })
+
   test('comment', () => {
     const { vnode, container } = mountWithHydration('<!---->', () => null)
     expect(vnode.el).toBe(container.firstChild)
@@ -3606,6 +3623,15 @@ describe('SSR hydration', () => {
       expect(`Hydration text content mismatch`).not.toHaveBeenWarned()
     })
 
+    // line endings are normalized before the leading newline is dropped, so a
+    // leading `\r\n` is dropped as well
+    test('<pre> with CRLF at the beginning', async () => {
+      const render = () => h('pre', null, '\r\nhello')
+      const html = await renderToString(createSSRApp({ render }))
+      mountWithHydration(html, render)
+      expect(`Hydration text content mismatch`).not.toHaveBeenWarned()
+    })
+
     test('boolean attr handling', () => {
       mountWithHydration(`<input />`, () => h('input', { readonly: false }))
       expect(`Hydration attribute mismatch`).not.toHaveBeenWarned()
@@ -3829,6 +3855,18 @@ describe('SSR hydration', () => {
         '<div data-allow-mismatch="text">bar</div>',
       )
       expect(`Hydration text content mismatch`).not.toHaveBeenWarned()
+    })
+
+    test('text vnode', () => {
+      const { container } = mountWithHydration(
+        `<div data-allow-mismatch="text"><span>x</span>foo</div>`,
+        () =>
+          h('div', { 'data-allow-mismatch': 'text' }, [h('span', 'x'), 'bar']),
+      )
+      expect(container.innerHTML).toBe(
+        '<div data-allow-mismatch="text"><span>x</span>bar</div>',
+      )
+      expect(`Hydration text`).not.toHaveBeenWarned()
     })
 
     test('not enough children', () => {
@@ -4200,4 +4238,61 @@ describe('SSR hydration', () => {
       globalThis.IntersectionObserver = originalIntersectionObserver
     }
   })
+
+  test('text vnode w/ missing newline after an element in <pre>', () => {
+    const { container } = mountWithHydration(
+      '<pre><span>x</span>foo</pre>',
+      () => h('pre', [h('span', 'x'), '\nfoo']),
+    )
+    expect(container.innerHTML).toBe('<pre><span>x</span>\nfoo</pre>')
+    expect('Hydration text mismatch').toHaveBeenWarned()
+  })
+
+  test('text vnode w/ missing newline after a comment in <pre>', () => {
+    const { container } = mountWithHydration('<pre><!---->foo</pre>', () =>
+      h('pre', [createCommentVNode(''), '\nfoo']),
+    )
+    expect(container.innerHTML).toBe('<pre><!---->\nfoo</pre>')
+    expect('Hydration text mismatch').toHaveBeenWarned()
+  })
+
+  test('text vnode w/ normalized newlines after an element in <pre>', async () => {
+    const App = {
+      template: '<pre><span>x</span>{{ code }}</pre>',
+      setup: () => ({ code: '\r\nfoo' }),
+    }
+    const container = document.createElement('div')
+    container.innerHTML = await renderToString(h(App))
+    const text = container.firstChild!.lastChild
+
+    createSSRApp(App).mount(container)
+
+    expect(container.innerHTML).toBe('<pre><span>x</span>\nfoo</pre>')
+    expect(container.firstChild!.lastChild).toBe(text)
+    expect('Hydration text mismatch').not.toHaveBeenWarned()
+  })
+
+  test.each([true, false])(
+    'root text mismatch in a ShadowRoot (__DEV__=%s)',
+    dev => {
+      __DEV__ = dev
+      try {
+        const root = document
+          .createElement('div')
+          .attachShadow({ mode: 'open' })
+        root.innerHTML = 'server'
+        const text = root.firstChild
+
+        createSSRApp({ render: () => 'client' }).mount(root as any)
+
+        expect(root.textContent).toBe('client')
+        expect(root.firstChild).toBe(text)
+        if (dev) {
+          expect('Hydration text mismatch').toHaveBeenWarned()
+        }
+      } finally {
+        __DEV__ = true
+      }
+    },
+  )
 })
