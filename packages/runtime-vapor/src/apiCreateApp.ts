@@ -38,9 +38,8 @@ const mountApp: AppMountFn<ParentNode> = (app, container) => {
     container.textContent = ''
   }
 
-  const minUid = app._ceComponent ? app._ceComponent.uid : getNextUid()
   let instance: VaporComponentInstance
-  flushOnAppMount(() => {
+  const mount = () => {
     instance =
       (app._ceComponent as VaporComponentInstance) ||
       createComponent(
@@ -53,7 +52,10 @@ const mountApp: AppMountFn<ParentNode> = (app, container) => {
         true,
       )
     mountComponent(instance, container)
-  }, minUid)
+  }
+  // a custom element flushes the creation and mount of its component itself
+  if (app._ceComponent) mount()
+  else flushOnAppMount(mount, getNextUid())
   rootInstances.set(app, instance!)
 
   return instance!
@@ -72,9 +74,8 @@ const hydrateApp: AppMountFn<ParentNode> = (app, container) => {
   }
 
   optimizePropertyLookup()
-  const minUid = app._ceComponent ? app._ceComponent.uid : getNextUid()
   let instance: VaporComponentInstance
-  flushOnAppMount(() => {
+  const hydrate = () => {
     withHydration(container, () => {
       instance =
         (app._ceComponent as VaporComponentInstance) ||
@@ -89,7 +90,10 @@ const hydrateApp: AppMountFn<ParentNode> = (app, container) => {
         )
       mountComponent(instance, container)
     })
-  }, minUid)
+  }
+  // a custom element flushes the creation and mount of its component itself
+  if (app._ceComponent) hydrate()
+  else flushOnAppMount(hydrate, getNextUid())
   rootInstances.set(app, instance!)
 
   return instance!

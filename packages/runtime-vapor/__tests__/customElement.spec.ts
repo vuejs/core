@@ -3054,6 +3054,31 @@ describe('defineVaporCustomElement', () => {
     expect(beforeMount).toHaveBeenCalledTimes(1)
   })
 
+  test('sets template refs and mounts children before mounted', () => {
+    const calls: string[] = []
+    const Child = defineVaporComponent({
+      setup() {
+        onMounted(() => calls.push('child mounted'))
+        return {}
+      },
+      render: compileToVaporRender('<p>child</p>'),
+    })
+    const E = defineVaporCustomElement(
+      defineVaporComponent({
+        components: { Child },
+        setup() {
+          const el = ref<HTMLElement | null>(null)
+          onMounted(() => calls.push(`mounted ${el.value && el.value.tagName}`))
+          return { el }
+        },
+        render: compileToVaporRender('<div ref="el"><Child /></div>'),
+      }),
+    )
+    customElements.define('my-el-mount-order', E)
+    container.innerHTML = `<my-el-mount-order></my-el-mount-order>`
+    expect(calls).toEqual(['child mounted', 'mounted DIV'])
+  })
+
   afterAll(async () => {
     document.body.innerHTML = ''
     await nextTick()
