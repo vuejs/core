@@ -53,6 +53,9 @@ import {
   isVNode,
   isHydrating as isVdomHydrating,
   isHydratingEnabled as isVdomHydratingEnabled,
+  isKeepAliveEnabled as isVdomKeepAliveEnabled,
+  isSuspenseEnabled as isVdomSuspenseEnabled,
+  isTransitionEnabled as isVdomTransitionEnabled,
   normalizeRef,
   normalizeVNode,
   onScopeDispose,
@@ -320,6 +323,7 @@ function applyVaporSlotTransition(
   block: Block,
   refresh?: boolean,
 ): VaporTransitionHooks | undefined {
+  if (!isTransitionEnabled) return
   if (vnode.vs && vnode.vs.group) {
     // a refresh is the group's own render's (`forEachGroupChild`)
     if (!refresh) applyGroupHooks(vnode, block)
@@ -327,7 +331,6 @@ function applyVaporSlotTransition(
   }
   const hooks = vnode.transition
   if (isVaporTransitionHooks(hooks) && !(refresh && hooks.state.isLeaving)) {
-    ensureTransitionHooksRegistered()
     hooks.state.root = block
     return applyTransitionHooksImpl(block, hooks, undefined, refresh)
   }
@@ -341,7 +344,6 @@ function applyGroupHooks(
   block: Block,
 ): ResolvedTransitionBlock[] {
   const { props, state, instance } = vnode.vs!.group!
-  ensureTransitionHooksRegistered()
   return applyGroupTransitionHooks(block, props, state, instance, undefined, {
     key: groupOwnerKey(vnode),
     slot: true,
@@ -418,7 +420,7 @@ function getVNodeKey(vnode: VNode | undefined): VNode['key'] | undefined {
 function getInteropTransitionElement(
   vnode: VNode | undefined,
 ): Element | undefined {
-  if (!vnode) return
+  if (!isTransitionEnabled || !vnode) return
   const component = vnode.component as
     | ComponentInternalInstance
     | VaporComponentInstance
@@ -483,8 +485,13 @@ const vaporInteropImpl = {
     if (__FEATURE_SUSPENSE__ && isSuspenseEnabled && parentSuspense) {
       setRenderContext(deriveSuspense(prevCtx, parentSuspense))
     }
-    // before the block renders: its outlets sequence under the hooks
-    if (vnode.transition) ensureTransitionHooksRegistered()
+    // A vdom Transition's hooks reach vapor: register the transition runtime
+    // they apply through (`isTransitionEnabled` from here on, under which
+    // every transition path below runs). Before the block renders: its
+    // outlets sequence under the hooks.
+    if (isVdomTransitionEnabled && vnode.transition) {
+      ensureTransitionHooksRegistered()
+    }
 
     // @ts-expect-error
     const instance = (vnode.component = createComponent(
@@ -503,12 +510,16 @@ const vaporInteropImpl = {
     setInteropComponentScopeIds(instance, vnode)
 
     // copy the shape flag from the vdom component if inside a keep-alive
-    if (parentComponent && isKeepAlive(parentComponent)) {
+    if (
+      isVdomKeepAliveEnabled &&
+      parentComponent &&
+      isKeepAlive(parentComponent)
+    ) {
       enableKeepAlive()
       instance.shapeFlag = vnode.shapeFlag
     }
 
-    if (vnode.transition) {
+    if (isTransitionEnabled && vnode.transition) {
       // Async setup resolves the block after interop mount. Apply the latest
       // hooks once the block exists, before it is inserted by mountComponent.
       ;(instance.bm ||= []).push(() => {
@@ -606,8 +617,10 @@ const vaporInteropImpl = {
       if (rootEl) {
         n2.el = rootEl
       }
-      if (n2.transition && instance.block) {
+      if (isVdomTransitionEnabled && n2.transition) {
         ensureTransitionHooksRegistered()
+      }
+      if (isTransitionEnabled && n2.transition && instance.block) {
         // vdom: the patched root takes the new hooks, while one this update
         // replaces leaves with the ones it rendered with, under the old vnode
         // (which has no element for a fragment root, a slot outlet)
@@ -648,7 +661,7 @@ const vaporInteropImpl = {
         vnode,
       )
       if (instance.block) {
-        if (!doRemove && vnode.transition) {
+        if (!doRemove && isTransitionEnabled && vnode.transition) {
           // The enclosing VDOM fragment owns the leave and its DOM range.
           // Dispose the block below without starting the inherited leave again.
           const child = findTransitionBlock(instance.block, fragment => {
@@ -668,7 +681,9 @@ const vaporInteropImpl = {
           // does not stay subscribed.
           // A transitioning fragment must keep its complete range until leave.
           const blockContainer =
-            !vnode.transition && needsHostParentForRemove(instance.block)
+            !vnode.transition &&
+            isKeepAliveEnabled &&
+            needsHostParentForRemove(instance.block)
               ? ((anchor && anchor.parentNode) as ParentNode)
               : undefined
           remove(instance.block, blockContainer)
@@ -700,12 +715,12 @@ const vaporInteropImpl = {
       // to remove its current block and reach nested Teleport cleanup.
       const blockContainer =
         container ||
-        (needsHostParentForRemove(vnode.vb)
+        (isKeepAliveEnabled && needsHostParentForRemove(vnode.vb)
           ? ((anchor && anchor.parentNode) as ParentNode)
           : undefined)
       // a leave driven by the vdom Transition: the vnode's hooks carry its
       // mode handoff
-      const transition = vnode.transition
+      const transition = isTransitionEnabled ? vnode.transition : undefined
       const child = transition && findTransitionBlock(vnode.vb)
       const hooks = child && child.$transition
       if (hooks) {
@@ -717,7 +732,7 @@ const vaporInteropImpl = {
             : undefined,
         )
       }
-      if (!doRemove && vnode.vs!.group) {
+      if (!doRemove && isTransitionEnabled && vnode.vs!.group) {
         // The removal of the group's element takes the rows in it along, as
         // it does vdom's, without a leave; a row rendered elsewhere (a
         // Teleport's) still leaves. Before the scope stops, which may already
@@ -973,9 +988,13 @@ const vaporInteropImpl = {
     let createdAnchor = false
     let resumeNode: Node | null = null
     vaporHydrateNode(node, () => {
-      const performAppear = vnode.transition
-        ? hydrateTransitionImpl(parentSuspense)
-        : undefined
+      if (isVdomTransitionEnabled && vnode.transition) {
+        ensureTransitionHooksRegistered()
+      }
+      const performAppear =
+        isTransitionEnabled && vnode.transition
+          ? hydrateTransitionImpl(parentSuspense)
+          : undefined
       vnode.vb = renderVaporSlot(
         vnode,
         parentComponent,
@@ -1044,8 +1063,12 @@ const vaporInteropImpl = {
 
   attachSlotOutlet,
 
+  // reached through runtime-core's `setTransitionHooks`: by a vdom Transition
+  // (registering the vapor transition runtime, see `mount`), or by the interop
+  // relaying a VaporTransition's hooks through a vdom component
   setTransitionHooks(component, hooks) {
-    ensureTransitionHooksRegistered()
+    if (isVdomTransitionEnabled) ensureTransitionHooksRegistered()
+    if (!isTransitionEnabled) return
     const root = relayTransitionHooks((component as any).block, hooks)
     // a handoff the vdom Transition installs supersedes what it rendered with
     if (root) root.$rendered = undefined
@@ -1053,7 +1076,10 @@ const vaporInteropImpl = {
 
   getTransitionElement: getInteropTransitionElement,
 
+  // only vdom's TransitionGroup calls it: dead under the flag its export sets
   forEachGroupChild(vnode, cb) {
+    if (!isVdomTransitionEnabled) return
+    ensureTransitionHooksRegistered()
     const handOver = (el: Node | null | undefined) => {
       // a hidden v-show row has no box to move from
       if (el && el.nodeType === 1 && !(el as VShowElement)[vShowHidden]) cb(el)
@@ -1077,9 +1103,13 @@ const vaporInteropImpl = {
   },
 
   hasTransitionChild(vnode) {
-    return !!findTransitionBlock(vnode.vb || getVaporInstance(vnode).block)
+    return (
+      isTransitionEnabled &&
+      !!findTransitionBlock(vnode.vb || getVaporInstance(vnode).block)
+    )
   },
 
+  // only vdom's KeepAlive calls these: dead under the flag its export sets
   activate(
     vnode,
     container: ParentNode,
@@ -1087,6 +1117,7 @@ const vaporInteropImpl = {
     parentComponent,
     parentSuspense,
   ) {
+    if (!isVdomKeepAliveEnabled) return
     const cached = (parentComponent.ctx as KeepAliveContext).getCachedComponent(
       vnode,
     )
@@ -1115,6 +1146,7 @@ const vaporInteropImpl = {
   },
 
   deactivate(vnode, container: ParentNode, parentSuspense) {
+    if (!isVdomKeepAliveEnabled) return
     const instance = getVaporInstance(vnode)
     deactivate(instance, container, parentSuspense)
     insert(vnode.anchor as any, container)
@@ -1516,7 +1548,7 @@ function mountDynamicVNode(
   rawProps?: RawProps | null,
   once?: boolean,
 ): VaporFragment {
-  if (parentComponent && isKeepAlive(parentComponent)) {
+  if (isKeepAliveEnabled && parentComponent && isKeepAlive(parentComponent)) {
     const cached = (
       parentComponent as KeepAliveInstance
     ).ctx.getCachedComponent(vnode.type, vnode.key) as VaporFragment
@@ -1638,9 +1670,14 @@ function mountVNode(
       }
       return
     }
-    if (transition) setVNodeTransitionHooks(vnode, transition)
+    if (isTransitionEnabled && transition) {
+      setVNodeTransitionHooks(vnode, transition)
+    }
     const parentSuspense = resolveUnmountSuspense(suspense)
-    if (vnode.shapeFlag & ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE) {
+    if (
+      isKeepAliveEnabled &&
+      vnode.shapeFlag & ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE
+    ) {
       const keepAliveCtx = (parentComponent as KeepAliveInstance).ctx
       keepAliveCtx.clearCurrent!(frag)
       const storageContainer = keepAliveCtx.getStorageContainer()
@@ -1691,10 +1728,15 @@ function mountVNode(
     if (isHydrating) return
     if (parentSuspense !== undefined) suspense = parentSuspense
     const operationSuspense = suspense
-    if (vnode.shapeFlag & ShapeFlags.COMPONENT_KEPT_ALIVE) {
+    if (
+      isKeepAliveEnabled &&
+      vnode.shapeFlag & ShapeFlags.COMPONENT_KEPT_ALIVE
+    ) {
       // entering under the hooks resolved for this switch, as vdom sets them
       // on every render: an in-out leave handed to them runs after the enter
-      if (transition) setVNodeTransitionHooks(vnode, transition)
+      if (isTransitionEnabled && transition) {
+        setVNodeTransitionHooks(vnode, transition)
+      }
       if ((vnode.type as any).__vapor) {
         activate(vnode.component as any, parentNode, anchor, operationSuspense)
         insert(vnode.anchor as Node, parentNode, anchor)
@@ -1717,7 +1759,9 @@ function mountVNode(
       // functional child falls back to its rendering instance
       simpleSetCurrentInstance(null)
       if (!isMounted) {
-        if (transition) setVNodeTransitionHooks(vnode, transition)
+        if (isTransitionEnabled && transition) {
+          setVNodeTransitionHooks(vnode, transition)
+        }
         namespace = getContainerType(parentNode as Element)
         internals.p(
           null,
@@ -1732,7 +1776,11 @@ function mountVNode(
         isMounted = true
       } else {
         // move
-        if (transition && moveType !== MoveType.REORDER) {
+        if (
+          isTransitionEnabled &&
+          transition &&
+          moveType !== MoveType.REORDER
+        ) {
           setVNodeTransitionHooks(vnode, transition)
         }
         internals.m(
@@ -1769,7 +1817,9 @@ function mountVNode(
     const previous = vnode
     // Like a vdom parent re-rendering it, the fresh vnode gets what vapor set
     // on the mounted one after creation; every such writer belongs here.
-    if (frag.$transition) setVNodeTransitionHooks(next, frag.$transition)
+    if (isTransitionEnabled && frag.$transition) {
+      setVNodeTransitionHooks(next, frag.$transition)
+    }
     if (previous.vaporScopeIds) {
       setVNodeVaporScopeIds(next, previous.vaporScopeIds)
     }
@@ -2042,9 +2092,14 @@ function createVDOMComponent(
       if (!transition) removeDom(parentNode)
       return
     }
-    if (transition) setVNodeTransitionHooks(vnode, transition)
+    if (isTransitionEnabled && transition) {
+      setVNodeTransitionHooks(vnode, transition)
+    }
     const parentSuspense = resolveUnmountSuspense(suspense)
-    if (vnode.shapeFlag & ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE) {
+    if (
+      isKeepAliveEnabled &&
+      vnode.shapeFlag & ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE
+    ) {
       // unset ref (`um` unsets `vnode.ref` otherwise)
       if (rawRef) vdomSetRef(rawRef, null, null, vnode, true)
       // A deactivated child is no longer patched by its parent in VDOM, so
@@ -2092,13 +2147,18 @@ function createVDOMComponent(
     if (isHydrating) return
     if (parentSuspense !== undefined) suspense = parentSuspense
     const operationSuspense = suspense
-    if (vnode.shapeFlag & ShapeFlags.COMPONENT_KEPT_ALIVE) {
+    if (
+      isKeepAliveEnabled &&
+      vnode.shapeFlag & ShapeFlags.COMPONENT_KEPT_ALIVE
+    ) {
       // An activated child re-enters with the inputs its parent holds now, so
       // catch the commit up with the sources before activating.
       if (frag.inputScope) frag.inputScope.resume()
       // entering under the hooks resolved for this switch, as vdom sets them
       // on every render: an in-out leave handed to them runs after the enter
-      if (transition) setVNodeTransitionHooks(vnode, transition)
+      if (isTransitionEnabled && transition) {
+        setVNodeTransitionHooks(vnode, transition)
+      }
       withSlotBoundary(null, () =>
         vdomActivate(
           vnode,
@@ -2115,7 +2175,7 @@ function createVDOMComponent(
       const prev = currentInstance
       simpleSetCurrentInstance(null)
       if (!isMounted) {
-        if (transition) {
+        if (isTransitionEnabled && transition) {
           // entering, the leave waiting on the Transition is the component's
           // to run from the root it renders, as under vdom's delayLeave; its
           // enter reads it off these hooks, resolved for this fragment
@@ -2141,7 +2201,11 @@ function createVDOMComponent(
         isMounted = true
       } else {
         // move
-        if (transition && moveType !== MoveType.REORDER) {
+        if (
+          isTransitionEnabled &&
+          transition &&
+          moveType !== MoveType.REORDER
+        ) {
           setVNodeTransitionHooks(vnode, transition)
         }
         internals.m(
@@ -2422,7 +2486,7 @@ function renderVDOMSlot(
     invokeArrayFns(own)
   }
   const awaitLeavingRoot = (cb: () => void): boolean => {
-    if (!contentLeave) return false
+    if (!isTransitionEnabled || !contentLeave) return false
     // paired after all: the Transition's other branches wait on the leave
     // as well, as under vdom's out-in, until it ends
     const hooks = slotResolutionState.$transition
@@ -2708,7 +2772,7 @@ function renderVDOMSlot(
     simpleSetCurrentInstance(prev)
     const leaving = inOutLeave
     inOutLeave = undefined
-    if (leaving && leaving.delayedLeave) {
+    if (isTransitionEnabled && leaving && leaving.delayedLeave) {
       // read back when it runs: an early removal takes it off the holder
       queuePendingLeave(
         (slotResolutionState.$transition as VaporTransitionHooks).state,
@@ -2849,7 +2913,9 @@ function renderVDOMSlot(
     slotContent: VNode,
     slotContentValid: boolean,
   ): void {
-    const transition = slotResolutionState.$transition
+    const transition = isTransitionEnabled
+      ? slotResolutionState.$transition
+      : undefined
     // Hydration precedes root hook propagation. Once this outlet is known to
     // be the Transition root, adopt its hydrated branch without remounting it.
     if (
@@ -3014,14 +3080,16 @@ function renderVDOMSlot(
         leaving = true
       }
     }
-    const transitionChild = prepareInteropSlotTransition(
-      frag,
-      slotContent,
-      // its leave is prepared already
-      leaving ? undefined : prevVNode || undefined,
-      resumeOutIn,
-      delayedLeaveSource,
-    )
+    const transitionChild = isTransitionEnabled
+      ? prepareInteropSlotTransition(
+          frag,
+          slotContent,
+          // its leave is prepared already
+          leaving ? undefined : prevVNode || undefined,
+          resumeOutIn,
+          delayedLeaveSource,
+        )
+      : undefined
     const nextVNode = transitionChild || slotContent
     if (
       prevVNode &&
@@ -3164,12 +3232,9 @@ function renderVDOMSlot(
         ? slotContent
         : undefined
     if (isVNode(hydratedContent)) {
-      const transitionChild = prepareInteropSlotTransition(
-        frag,
-        hydratedContent,
-        undefined,
-        NOOP,
-      )
+      const transitionChild = isTransitionEnabled
+        ? prepareInteropSlotTransition(frag, hydratedContent, undefined, NOOP)
+        : undefined
       const hydrationVNode = transitionChild || hydratedContent
       setVNode(hydrationVNode)
       const refreshSlotVNode = () => {
@@ -3240,7 +3305,9 @@ function needsHostParentForRemove(block: Block): boolean {
 }
 
 export const vaporInteropPlugin: Plugin = app => {
-  if (__FEATURE_SUSPENSE__) {
+  // vdom Suspense boundaries reach vapor through the interop: the vapor
+  // suspense paths run whenever the bundle holds the component
+  if (__FEATURE_SUSPENSE__ && isVdomSuspenseEnabled) {
     enableSuspense()
   }
   setInteropEnabled()
@@ -3297,7 +3364,7 @@ function createFallback(
   vnode: VNode,
 ): BlockFn {
   const internals = ensureRenderer().internals
-  const group = vnode.vs!.group
+  const group = isTransitionEnabled ? vnode.vs!.group : undefined
   // under a TransitionGroup every row is a child of the group, keyed under
   // the fallback's key, as vdom renders the rows of its slot fragment (the
   // fragments of a v-for flattened)
@@ -3621,8 +3688,12 @@ function renderVaporSlot(
     setRenderContext(deriveSuspense(prevCtx, parentSuspense))
   }
   if (parentComponent && !parentComponent.vapor) initVdomOwner(parentComponent)
+  // a vdom Transition's or TransitionGroup's hooks reach vapor (see `mount`);
   // before the slot's boundaries are created: they hold under the hooks
-  if (vnode.transition || (vnode.vs && vnode.vs.group)) {
+  if (
+    isVdomTransitionEnabled &&
+    (vnode.transition || (vnode.vs && vnode.vs.group))
+  ) {
     ensureTransitionHooksRegistered()
   }
   try {
@@ -3723,7 +3794,7 @@ function renderVaporSlot(
     // renders), a fallback committed later transitions with the hooks the
     // Transition applied to the fragment; under a vdom TransitionGroup, the
     // content and the fallback swap in sequence under the group's
-    if (vnode.transition || vnode.vs.group) {
+    if (isTransitionEnabled && (vnode.transition || vnode.vs.group)) {
       installInteropTransitionAccessor(slotResolutionState, frag)
     }
     const dispose = (parentNode?: ParentNode): void => {
@@ -4399,6 +4470,7 @@ function createVNodeChildrenFragment(
   // the fallback of a transitioned slot: while it shows, its children are the
   // Transition's child, each with hooks of its own, as a vdom child's would be
   const setChildrenTransition = (): void => {
+    if (!isTransitionEnabled) return
     if (group) {
       applyGroupRowHooks(currentChildren, group)
       return
@@ -4620,7 +4692,7 @@ function createVNodeChildrenFragment(
     const parentSuspense = resolveUnmountSuspense(suspense)
     currentChildren.forEach(vnode => {
       // the mode handoff of a leave the slot's removal drives
-      const hooks = vnode.transition
+      const hooks = isTransitionEnabled && vnode.transition
       if (hooks && isVaporTransitionHooks(transition)) {
         forwardLeaveHandoff(hooks, transition, () =>
           markLeavingVNode(vnode, transition.state),
@@ -5069,11 +5141,15 @@ function interopSetKey(this: VaporFragment, key: any): void {
 }
 
 function interopGetTransitionType(this: VaporFragment): any {
-  return this.vnode ? getInteropTransitionType(this.vnode) : undefined
+  return isTransitionEnabled && this.vnode
+    ? getInteropTransitionType(this.vnode)
+    : undefined
 }
 
 function interopGetTransitionElement(this: VaporFragment): Element | undefined {
-  return this.vnode ? getInteropTransitionElement(this.vnode) : undefined
+  return isTransitionEnabled && this.vnode
+    ? getInteropTransitionElement(this.vnode)
+    : undefined
 }
 
 function createInteropFragment(

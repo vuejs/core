@@ -154,6 +154,15 @@ export const BaseTransitionPropsValidators: Record<string, any> = {
   onAppearCancelled: TransitionHookValidator,
 }
 
+// true once BaseTransition or TransitionGroup is in the bundle (set by their
+// exports): the vapor interop keeps its transition paths behind it
+export let isTransitionEnabled = false
+
+export function withTransitionEnabled<T>(value: T): T {
+  isTransitionEnabled = true
+  return value
+}
+
 // whether a mounted child renders nothing a Transition can leave: a comment
 // root, through components (a vapor one asks the vapor renderer)
 function isEmptyTransitionChild(
@@ -257,7 +266,9 @@ function findNonCommentChild(children: VNode[]): VNode {
 
 // export the public type for h/tsx inference
 // also to avoid inline import() in generated d.ts files
-export const BaseTransition = BaseTransitionImpl as unknown as {
+export const BaseTransition = /*@__PURE__*/ withTransitionEnabled(
+  BaseTransitionImpl,
+) as unknown as {
   new (): {
     $props: BaseTransitionProps<any>
     $slots: {
