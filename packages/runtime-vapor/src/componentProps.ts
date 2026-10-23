@@ -414,7 +414,11 @@ export function normalizePropsOptions(
   const needCastKeys: NormalizedPropsOptions[1] = []
   baseNormalizePropsOptions(raw, normalized, needCastKeys)
 
-  return (comp.__propsOptions = [normalized, needCastKeys])
+  return (comp.__propsOptions = [
+    normalized,
+    needCastKeys,
+    Object.keys(normalized),
+  ])
 }
 
 function resolveDefault(
