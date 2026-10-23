@@ -10,6 +10,8 @@ import {
   type EmitsToProps,
   type ExtractPropTypes,
   VueElementBase,
+  flushOnAppMount,
+  getNextUid,
   warn,
 } from '@vue/runtime-dom'
 import {
@@ -227,15 +229,20 @@ export class VaporElement extends VueElementBase<
       this._def.configureApp(this._app)
     }
 
-    // create component in hydration context
-    const hydrate = vaporCustomElementHydrates.get(this.constructor)
-    if (this.shadowRoot && hydrate) {
-      hydrate(this._root, this._createComponent.bind(this))
-    } else {
-      this._createComponent()
-    }
+    // the component is created before the app mounts it, so the root mount
+    // flush has to cover the jobs queued while creating it (template refs,
+    // mounted hooks of children)
+    flushOnAppMount(() => {
+      // create component in hydration context
+      const hydrate = vaporCustomElementHydrates.get(this.constructor)
+      if (this.shadowRoot && hydrate) {
+        hydrate(this._root, this._createComponent.bind(this))
+      } else {
+        this._createComponent()
+      }
 
-    this._app!.mount(this._root)
+      this._app!.mount(this._root)
+    }, getNextUid())
   }
 
   protected _update(): void {
