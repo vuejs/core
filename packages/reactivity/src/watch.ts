@@ -221,9 +221,11 @@ export function watch(
   if (once && cb) {
     const _cb = cb
     cb = (...args) => {
-      const res = _cb(...args)
-      watchHandle()
-      return res
+      try {
+        return _cb(...args)
+      } finally {
+        watchHandle()
+      }
     }
   }
 
@@ -249,13 +251,14 @@ export function watch(
           ? (newValue as any[]).some((v, i) => hasChanged(v, oldValue[i]))
           : hasChanged(newValue, oldValue))
       ) {
-        // cleanup before running cb again
-        if (cleanup) {
-          cleanup()
-        }
         const currentWatcher = activeWatcher
-        activeWatcher = effect
+        pauseTracking()
         try {
+          // cleanup before running cb again
+          if (cleanup) {
+            cleanup()
+          }
+          activeWatcher = effect
           const args = [
             newValue,
             // pass undefined as the old value when it's changed for the first time
@@ -273,6 +276,7 @@ export function watch(
               cb!(...args)
         } finally {
           activeWatcher = currentWatcher
+          resetTracking()
         }
       }
     } else {

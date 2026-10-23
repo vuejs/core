@@ -9,6 +9,8 @@ import {
   vModelDynamic,
   withDirectives,
 } from '@vue/runtime-dom'
+import { compile } from '@vue/compiler-dom'
+import * as runtimeDom from '@vue/runtime-dom'
 
 const triggerEvent = (type: string, el: Element) => {
   const event = new Event(type)
@@ -1901,5 +1903,112 @@ describe('vModel', () => {
     render(h(component), root)
 
     expect(root.querySelector('select').selectedIndex).toBe(1)
+  })
+
+  it('v-model.number should sync Set select values on mount and updates', async () => {
+    const value = ref(new Set<string | number>(['1', 2]))
+    const options = ref(['1', '2.0'])
+    const { code } = compile(
+      `<select multiple v-model.number="value">
+        <option v-for="option in options" :key="option" :value="option" />
+      </select>`,
+      { prefixIdentifiers: true },
+    )
+    render(
+      h({
+        setup: () => ({ value, options }),
+        render: new Function('Vue', code)(runtimeDom),
+      }),
+      root,
+    )
+    const select = root.querySelector('select') as HTMLSelectElement
+    const [one, two] = select.options
+
+    expect(one.selected).toBe(true)
+    expect(two.selected).toBe(true)
+
+    value.value = new Set([1])
+    await nextTick()
+    expect(one.selected).toBe(true)
+    expect(two.selected).toBe(false)
+
+    value.value.add(2)
+    await nextTick()
+    expect(two.selected).toBe(true)
+
+    value.value.delete(1)
+    await nextTick()
+    expect(one.selected).toBe(false)
+
+    value.value.add(3)
+    await nextTick()
+    options.value.push('3.0')
+    await nextTick()
+    expect(select.options[2].selected).toBe(true)
+  })
+
+  it.each(['1', '1.0', '01'])(
+    'v-model.number should retain Set selection for "%s" after an unrelated update',
+    async optionValue => {
+      const value = ref(new Set<number>())
+      const count = ref(0)
+      const { code } = compile(
+        `<select multiple v-model.number="value">
+          <option value="${optionValue}" />
+          <option value="2" />
+        </select>
+        <span>{{ count }}</span>`,
+        { prefixIdentifiers: true },
+      )
+      render(
+        h({
+          setup: () => ({ value, count }),
+          render: new Function('Vue', code)(runtimeDom),
+        }),
+        root,
+      )
+      const select = root.querySelector('select') as HTMLSelectElement
+      const [one, two] = select.options
+
+      one.selected = true
+      triggerEvent('change', select)
+      await nextTick()
+      expect(value.value).toEqual(new Set([1]))
+      expect(one.selected).toBe(true)
+
+      count.value++
+      await nextTick()
+      expect(root.querySelector('span').textContent).toBe('1')
+      expect(value.value).toEqual(new Set([1]))
+      expect(one.selected).toBe(true)
+      expect(two.selected).toBe(false)
+    },
+  )
+
+  it('should preserve exact Set select matching without .number', async () => {
+    const value = ref(new Set<string | number>([1]))
+    const { code } = compile(
+      `<select multiple v-model="value">
+        <option :value="1" />
+        <option value="1" />
+      </select>`,
+      { prefixIdentifiers: true },
+    )
+    render(
+      h({
+        setup: () => ({ value }),
+        render: new Function('Vue', code)(runtimeDom),
+      }),
+      root,
+    )
+    const [number, string] = root.querySelectorAll('option')
+
+    expect(number.selected).toBe(true)
+    expect(string.selected).toBe(false)
+
+    value.value = new Set(['1'])
+    await nextTick()
+    expect(number.selected).toBe(false)
+    expect(string.selected).toBe(true)
   })
 })

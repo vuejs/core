@@ -26,7 +26,8 @@ export { parserOptions }
 
 export const DOMNodeTransforms: NodeTransform[] = [
   transformStyle,
-  ...(__DEV__ ? [transformTransition, validateHtmlNesting] : []),
+  transformTransition,
+  ...(__DEV__ ? [validateHtmlNesting] : []),
 ]
 
 export const DOMDirectiveTransforms: Record<string, DirectiveTransform> = {
