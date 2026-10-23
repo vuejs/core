@@ -31,6 +31,7 @@ import {
   toRaw,
   useTransitionState,
   warn,
+  withTransitionEnabled,
 } from '@vue/runtime-core'
 import { extend } from '@vue/shared'
 
@@ -222,7 +223,9 @@ const TransitionGroupImpl: ComponentOptions = /*@__PURE__*/ decorate({
   },
 })
 
-export const TransitionGroup = TransitionGroupImpl as unknown as {
+export const TransitionGroup = /*@__PURE__*/ withTransitionEnabled(
+  TransitionGroupImpl,
+) as unknown as {
   new (): {
     $props: TransitionGroupProps
   }

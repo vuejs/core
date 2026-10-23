@@ -410,6 +410,15 @@ export {
   isVaporInteropEnabled,
   setVaporInteropEnabled,
 } from './vaporInteropState'
+export {
+  isKeepAliveEnabled,
+  withKeepAliveEnabled,
+} from './components/KeepAlive'
+export { isSuspenseEnabled, withSuspenseEnabled } from './components/Suspense'
+export {
+  isTransitionEnabled,
+  withTransitionEnabled,
+} from './components/BaseTransition'
 
 // For test-utils
 export { transformVNodeArgs } from './vnode'

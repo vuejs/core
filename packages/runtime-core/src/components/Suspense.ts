@@ -54,6 +54,15 @@ export interface SuspenseProps {
 
 export const isSuspense = (type: any): boolean => type.__isSuspense
 
+// true once Suspense is in the bundle (set by its export): the vapor interop
+// keeps its suspense paths behind it
+export let isSuspenseEnabled = false
+
+export function withSuspenseEnabled<T>(value: T): T {
+  isSuspenseEnabled = true
+  return value
+}
+
 // incrementing unique id for every pending branch
 let suspenseId = 0
 
@@ -137,9 +146,9 @@ export const SuspenseImpl = {
 }
 
 // Force-casted public typing for h and TSX props inference
-export const Suspense = (__FEATURE_SUSPENSE__
-  ? SuspenseImpl
-  : null) as unknown as {
+export const Suspense = /*@__PURE__*/ withSuspenseEnabled(
+  __FEATURE_SUSPENSE__ ? SuspenseImpl : null,
+) as unknown as {
   __isSuspense: true
   new (): {
     $props: VNodeProps & SuspenseProps

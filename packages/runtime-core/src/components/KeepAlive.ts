@@ -79,6 +79,15 @@ export interface KeepAliveContext extends ComponentRenderContext {
 export const isKeepAlive = (vnode: any): boolean =>
   (vnode.type as any).__isKeepAlive
 
+// true once KeepAlive is in the bundle (set by its export): the vapor interop
+// keeps its keep-alive paths behind it
+export let isKeepAliveEnabled = false
+
+export function withKeepAliveEnabled<T>(value: T): T {
+  isKeepAliveEnabled = true
+  return value
+}
+
 const KeepAliveImpl: ComponentOptions = {
   name: `KeepAlive`,
 
@@ -359,9 +368,9 @@ const decorate = (t: typeof KeepAliveImpl) => {
 
 // export the public type for h/tsx inference
 // also to avoid inline import() in generated d.ts files
-export const KeepAlive = (__COMPAT__
-  ? /*@__PURE__*/ decorate(KeepAliveImpl)
-  : KeepAliveImpl) as any as {
+export const KeepAlive = /*@__PURE__*/ withKeepAliveEnabled(
+  __COMPAT__ ? /*@__PURE__*/ decorate(KeepAliveImpl) : KeepAliveImpl,
+) as any as {
   __isKeepAlive: true
   new (): {
     $props: VNodeProps & KeepAliveProps
