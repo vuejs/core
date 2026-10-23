@@ -441,22 +441,26 @@ export class TransformContext<T extends AllNode = AllNode> {
   }
 
   private isSingleRootChild(childInfo: ChildContextInfo): boolean {
-    if (this.inVFor || !childInfo.hasSingleRootChild) {
+    if (!childInfo.hasSingleRootChild) {
       return false
     }
 
-    if (this.node.type === NodeTypes.ROOT) {
+    const node = this.node
+    if (node.type === NodeTypes.ROOT) {
       return true
     }
-
-    return (
-      this.node.type === NodeTypes.ELEMENT &&
-      (this.node.tagType === ElementTypes.TEMPLATE ||
-        isTransitionNode(this.node) ||
-        isKeepAliveTag(this.node.tag)) &&
-      !!this.parent &&
-      this.isSingleRoot
-    )
+    if (node.type !== NodeTypes.ELEMENT || !this.parent) {
+      return false
+    }
+    // a v-for row is never the host's root, but the cut only applies to the
+    // wrapper between them, not to a v-for above a built-in
+    if (node.tagType === ElementTypes.TEMPLATE) {
+      return this.isSingleRoot && !findDir(node, 'for')
+    }
+    // Transition / KeepAlive pass their attrs through to their single child
+    // wherever they sit, so the child layers fallthrough class / style like
+    // a component root does
+    return isTransitionNode(node) || isKeepAliveTag(node.tag)
   }
 }
 

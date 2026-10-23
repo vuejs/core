@@ -325,4 +325,31 @@ describe('compiler: transition', () => {
     expect(code).not.toContain('this should be ignored')
     expect(code).toContain('this should not be ignored')
   })
+
+  test('child of a non-root transition is a root template', () => {
+    const { code } = compileWithElementTransform(
+      `<div><Transition><p class="y">z</p></Transition></div>`,
+    )
+    expect(code).toMatchSnapshot()
+    // the child inherits the transition's fallthrough attrs, so its template
+    // is a root one (class / style layered, not overwritten)
+    expect(code).contains('_template("<p class=y>z", 3)')
+  })
+
+  test('child of a transition under a v-for is a root template', () => {
+    // a v-for only cuts the chain between a host and its root; the
+    // transition's fallthrough reaches its child wherever the transition sits
+    const { code } = compile(
+      `<div v-for="i in l">
+        <Transition>
+          <p v-if="ok" class="y">y</p>
+          <p v-else class="n">n</p>
+        </Transition>
+      </div>`,
+      { prefixIdentifiers: true },
+    )
+    expect(code).toMatchSnapshot()
+    expect(code).contains('_template("<p class=y>y", 1)')
+    expect(code).contains('_template("<p class=n>n", 1)')
+  })
 })

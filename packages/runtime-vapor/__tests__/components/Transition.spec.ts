@@ -2573,12 +2573,15 @@ describe('Transition', () => {
     expect(p.className).toBe('v-leave-from v-leave-active')
     expect(circle.getAttribute('class')).toBe('a v-enter-from v-enter-active')
 
+    // a transition child layers its class like a root (classList), so the
+    // token order after an update differs from a className rewrite
+    const classes = (el: Element) => [...el.classList].sort()
     data.value.cls = 'b'
     data.value.active = true
     await nextTick()
-    expect(div.className).toBe('b v-enter-from v-enter-active')
-    expect(p.className).toBe('active v-leave-from v-leave-active')
-    expect(circle.getAttribute('class')).toBe('b v-enter-from v-enter-active')
+    expect(classes(div)).toEqual(['b', 'v-enter-active', 'v-enter-from'])
+    expect(classes(p)).toEqual(['active', 'v-leave-active', 'v-leave-from'])
+    expect(classes(circle)).toEqual(['b', 'v-enter-active', 'v-enter-from'])
 
     data.value.cls = ''
     data.value.active = false
@@ -5348,5 +5351,75 @@ describe('sibling v-if roots of slot content swapping', () => {
     expect(
       '<transition> can only be used on a single element',
     ).toHaveBeenWarned()
+  })
+})
+
+describe('non-root transition fallthrough', () => {
+  // vdom merges the Transition's attrs into its child's props, layering
+  // class / style over the child's own ones
+  test('should merge its fallthrough class into its child', () => {
+    const data = ref({})
+    const App = compile(
+      `<template>
+        <div>
+          <Transition class="t">
+            <p class="y">z</p>
+          </Transition>
+        </div>
+      </template>`,
+      data,
+    )
+    const { host } = define(App).render()
+    expect(host.innerHTML).toBe('<div><p class="y t">z</p></div>')
+  })
+
+  test('should layer dynamic fallthrough class / style over its child', async () => {
+    const data = ref({ outer: 'o1', inner: 'i1', color: 'red' })
+    const App = compile(
+      `<template>
+        <div>
+          <Transition :class="data.outer" :style="{ color: data.color }">
+            <p class="y" :class="data.inner" style="font-size: 12px">z</p>
+          </Transition>
+        </div>
+      </template>`,
+      data,
+    )
+    const { host } = define(App).render()
+    const p = host.querySelector('p')!
+    expect([...p.classList].sort()).toEqual(['i1', 'o1', 'y'])
+    expect(p.getAttribute('style')).toBe('font-size: 12px; color: red;')
+
+    data.value.outer = 'o2'
+    data.value.inner = 'i2'
+    data.value.color = 'blue'
+    await nextTick()
+    expect([...p.classList].sort()).toEqual(['i2', 'o2', 'y'])
+    expect(p.getAttribute('style')).toBe('font-size: 12px; color: blue;')
+  })
+
+  test('should merge its fallthrough class into a v-if child under a v-for', async () => {
+    const data = ref({ list: [1, 2], ok: true })
+    const App = compile(
+      `<template>
+        <div v-for="i in data.list" :key="i">
+          <Transition class="t" :css="false">
+            <p v-if="data.ok" class="y">{{ i }}</p>
+            <b v-else class="n">{{ i }}</b>
+          </Transition>
+        </div>
+      </template>`,
+      data,
+    )
+    const { host } = define(App).render()
+    expect(stripAnchors(host.innerHTML)).toBe(
+      '<div><p class="y t">1</p></div><div><p class="y t">2</p></div>',
+    )
+
+    data.value.ok = false
+    await nextTick()
+    expect(stripAnchors(host.innerHTML)).toBe(
+      '<div><b class="n t">1</b></div><div><b class="n t">2</b></div>',
+    )
   })
 })
