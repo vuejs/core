@@ -1,5 +1,6 @@
 import {
   EMPTY_ARR,
+  EMPTY_OBJ,
   PatchFlags,
   ShapeFlags,
   SlotFlags,
@@ -874,12 +875,16 @@ function cloneVaporSlotMeta(
     name: vaporSlot.name,
     outlets: vaporSlot.outlets,
     props: vaporSlot.props,
-    attrs: vaporSlot.attrs,
+    // a clone of a content vnode hands out attrs of its own, even without
+    // extras (EMPTY_OBJ marks content never cloned): a later clone may add
+    // some, and the interop sets the content up for them at creation
+    attrs:
+      vaporSlot.attrs && vaporSlot.attrs === EMPTY_OBJ ? {} : vaporSlot.attrs,
     group: vaporSlot.group,
   }
 
   // content vnodes (`attrs` set) always carry `props`
-  const attrs = vaporSlot.attrs
+  const attrs = cloned.attrs
   if (extraProps && vaporSlot.props) {
     // A key-only clone changes vnode identity without copying the slot data.
     let extraSlotProps: Data | undefined

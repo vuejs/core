@@ -14997,6 +14997,48 @@ describe('cloneVNode extras fall through to vapor slot content', () => {
     )
   })
 
+  test('attach once a clone first adds attrs, after cloning without any', async () => {
+    // `cloneVNode(child, undefined)` keeps the props identity
+    const Cloner = defineComponent({
+      props: ['on'],
+      setup(props, { slots }) {
+        return () =>
+          cloneVNode(
+            slots.default!()[0],
+            props.on ? { 'data-cloned': 'yes' } : undefined,
+          )
+      },
+    })
+    await renderParity(
+      {
+        Btn: `<template><button>x</button></template>`,
+        App: `<template>
+          <components.Cloner :on="data.on"><button>e</button></components.Cloner>
+          <components.Cloner :on="data.on"><components.Btn /></components.Cloner>
+        </template>`,
+      },
+      () => ref({ on: false }),
+      async (data, root) => {
+        const buttons = root.querySelectorAll('button')
+        expect(buttons).toHaveLength(2)
+        for (const btn of buttons) {
+          expect(btn.hasAttribute('data-cloned')).toBe(false)
+        }
+        data.value.on = true
+        await nextTick()
+        for (const btn of buttons) {
+          expect(btn.getAttribute('data-cloned')).toBe('yes')
+        }
+        data.value.on = false
+        await nextTick()
+        for (const btn of buttons) {
+          expect(btn.hasAttribute('data-cloned')).toBe(false)
+        }
+      },
+      { Cloner },
+    )
+  })
+
   // coverage guard: only interop content roots become fallthrough roots, so a
   // vapor slot root keeps its own binding for a key in the outlet owner's attrs
   test('a vapor slot root keeps a binding the outlet owner also receives', () => {

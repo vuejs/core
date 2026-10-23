@@ -3570,7 +3570,7 @@ function createSlotFallthroughOwner(
 
 function applySlotFallthrough(owner: SlotFallthroughOwner): void {
   const apply = owner.apply
-  if (apply && owner.attrs !== EMPTY_OBJ) {
+  if (apply && Object.keys(owner.attrs).length) {
     owner.apply = undefined
     apply()
   }
@@ -3689,10 +3689,10 @@ function renderVaporSlot(
         ? (outletBoundaries[depth] ||= createOutletBoundary(depth))
         : null
     const rootBoundary = (outletBoundaries[0] = createOutletBoundary(0))
-    // only content a `cloneVNode` touched (new props) can carry attrs for its
-    // root: plain `slots.x()` consumers cost nothing
+    // only content a `cloneVNode` touched can carry attrs for its root (a
+    // clone may add them later): plain `slots.x()` consumers cost nothing
     const fallthrough =
-      vnode.vs.attrs && vnode.props !== vnode.vs.props
+      vnode.vs.attrs && vnode.vs.attrs !== EMPTY_OBJ
         ? (slotState.fallthrough = rootBoundary.fallthroughOwner =
             createSlotFallthroughOwner(vnode.vs.attrs, parentComponent))
         : undefined
