@@ -16,6 +16,7 @@ import {
   h,
   nextTick,
   nodeOps,
+  onDeactivated,
   onErrorCaptured,
   onMounted,
   onUnmounted,
@@ -2317,6 +2318,60 @@ describe('Suspense', () => {
     expect(serializeInner(root)).toBe(
       '<div><div>root</div><div>page B</div></div>',
     )
+  })
+
+  // #15878
+  test('KeepAlive + Suspense unmounts its current child when unmounted after re-rendering while ancestor is pending', async () => {
+    const deactivated = vi.fn()
+    const unmounted = vi.fn()
+    const Tab = {
+      props: ['count'],
+      setup(props: any) {
+        onDeactivated(deactivated)
+        onUnmounted(unmounted)
+        return () => h('div', `tab ${props.count}`)
+      },
+    }
+    const NextPage = defineAsyncComponent({
+      render: () => h('div', 'next page'),
+    })
+    const count = ref(0)
+    const Shell = {
+      render: () =>
+        h(KeepAlive, null, {
+          default: () =>
+            h(Suspense, null, {
+              default: h(Tab, { count: count.value }),
+            }),
+        }),
+    }
+    const page = ref('shell')
+    const root = nodeOps.createElement('div')
+    const App = {
+      render() {
+        return h(Suspense, null, {
+          default: page.value === 'shell' ? h(Shell) : h(NextPage),
+        })
+      },
+    }
+
+    render(h(App), root)
+    expect(serializeInner(root)).toBe('<div>tab 0</div>')
+
+    // NextPage suspends the root boundary, which keeps Shell mounted meanwhile
+    page.value = 'next'
+    await nextTick()
+    expect(serializeInner(root)).toBe('<div>tab 0</div>')
+
+    // re-render KeepAlive while the root boundary is still pending
+    count.value++
+    await nextTick()
+
+    await Promise.all(deps)
+    await nextTick()
+    expect(serializeInner(root)).toBe('<div>next page</div>')
+    expect(deactivated).toHaveBeenCalledTimes(1)
+    expect(unmounted).toHaveBeenCalledTimes(1)
   })
 
   test('KeepAlive + Suspense + comment slot', async () => {
