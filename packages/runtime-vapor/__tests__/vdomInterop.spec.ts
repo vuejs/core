@@ -1,4 +1,5 @@
 import {
+  Comment as CommentVNode,
   type ComponentInternalInstance,
   type FunctionalComponent,
   type HMRRuntime,
@@ -21,6 +22,8 @@ import {
   getCurrentScope,
   h,
   inject,
+  markRaw,
+  mergeProps,
   nextTick,
   onActivated,
   onBeforeMount,
@@ -14605,6 +14608,454 @@ describe('a vapor slot in a vdom outlet starts on a node of its own', () => {
       )
       app.unmount()
     })
+  })
+})
+
+describe('cloneVNode extras fall through to vapor slot content', () => {
+  // Reka UI `Slot` (`asChild`): take the first non-comment child and clone it
+  // with the attrs merged in
+  const AsChild = defineComponent({
+    inheritAttrs: false,
+    setup(_, { attrs, slots }) {
+      return () => {
+        const children = slots.default!()
+        const i = children.findIndex((c: any) => c.type !== CommentVNode)
+        if (i === -1) return children
+        const child = children[i] as any
+        const cloned = cloneVNode(
+          { ...child, props: {} } as VNode,
+          child.props ? mergeProps(attrs, child.props) : attrs,
+        )
+        if (children.length === 1) return cloned
+        children[i] = cloned
+        return children
+      }
+    },
+  })
+  const vdomScript = `<script setup>const data = _data; const components = _components</script>`
+  // vdom `mergeProps` repeats a class both sides carry; the DOM does not
+  const classes = (el: Element) => Array.from(el.classList).sort()
+
+  test('attrs, class and listeners land on a single element root', async () => {
+    const clicks: string[] = []
+    await renderParity(
+      {
+        App: `<template>
+          <components.AsChild
+            data-cloned="yes"
+            class="extra"
+            @click="data.onClick(data.mode)"
+          >
+            <button class="initial">x</button>
+          </components.AsChild>
+        </template>`,
+      },
+      () => ref({ mode: '', onClick: (mode: string) => clicks.push(mode) }),
+      (data, root, mode) => {
+        data.value.mode = mode
+        const btn = root.querySelector('button')!
+        expect(btn.getAttribute('data-cloned')).toBe('yes')
+        expect(classes(btn)).toEqual(['extra', 'initial'])
+        btn.click()
+      },
+      { AsChild },
+    )
+    expect(clicks).toEqual(['vdom', 'vapor'])
+  })
+
+  test('follow the root across a v-if switch, past a leading comment', async () => {
+    await renderParity(
+      {
+        App: `<template>
+          <components.AsChild data-cloned="yes">
+            <!-- c -->
+            <button v-if="data.ok">a</button>
+            <span v-else>b</span>
+          </components.AsChild>
+        </template>`,
+      },
+      () => ref({ ok: true }),
+      async (data, root) => {
+        expect(root.querySelector('button')!.getAttribute('data-cloned')).toBe(
+          'yes',
+        )
+        data.value.ok = false
+        await nextTick()
+        expect(root.querySelector('button')).toBeNull()
+        expect(root.querySelector('span')!.getAttribute('data-cloned')).toBe(
+          'yes',
+        )
+        data.value.ok = true
+        await nextTick()
+        expect(root.querySelector('button')!.getAttribute('data-cloned')).toBe(
+          'yes',
+        )
+      },
+      { AsChild },
+      { comments: true },
+    )
+  })
+
+  test('merge into the attrs of a component root', async () => {
+    await renderParity(
+      {
+        Btn: `<template><button class="btn">x</button></template>`,
+        App: `<template>
+          <components.AsChild class="extra">
+            <components.Btn class="a" :data-x="data.x" />
+          </components.AsChild>
+        </template>`,
+      },
+      () => ref({ x: '1' }),
+      async (data, root) => {
+        const btn = root.querySelector('button')!
+        expect(classes(btn)).toEqual(['a', 'btn', 'extra'])
+        expect(btn.getAttribute('data-x')).toBe('1')
+        data.value.x = '2'
+        await nextTick()
+        expect(classes(btn)).toEqual(['a', 'btn', 'extra'])
+        expect(btn.getAttribute('data-x')).toBe('2')
+      },
+      { AsChild },
+    )
+  })
+
+  test('layer over the root element class binding', async () => {
+    await renderParity(
+      {
+        App: `<template>
+          <components.AsChild :class="data.extra">
+            <span class="static" :class="data.own">t</span>
+          </components.AsChild>
+        </template>`,
+      },
+      () => ref({ extra: 'extra', own: 'base' }),
+      async (data, root) => {
+        const span = root.querySelector('span')!
+        expect(classes(span)).toEqual(['base', 'extra', 'static'])
+        data.value.own = 'base-2'
+        await nextTick()
+        expect(classes(span)).toEqual(['base-2', 'extra', 'static'])
+        data.value.extra = ''
+        await nextTick()
+        expect(classes(span)).toEqual(['base-2', 'static'])
+        data.value.extra = 'extra-2'
+        await nextTick()
+        expect(classes(span)).toEqual(['base-2', 'extra-2', 'static'])
+      },
+      { AsChild },
+    )
+  })
+
+  test('keep a template class the removed attrs also carried', async () => {
+    await renderParity(
+      {
+        App: `<template>
+          <components.AsChild :class="data.extra">
+            <button class="initial">x</button>
+          </components.AsChild>
+        </template>`,
+      },
+      () => ref({ extra: 'initial extra' }),
+      async (data, root) => {
+        const btn = root.querySelector('button')!
+        expect(classes(btn)).toEqual(['extra', 'initial'])
+        data.value.extra = ''
+        await nextTick()
+        expect(classes(btn)).toEqual(['initial'])
+      },
+      { AsChild },
+    )
+  })
+
+  test('reach a vdom component root as props', async () => {
+    const data = ref({ c: 'base' })
+    const VBtn = compile(
+      vdomScript + `<template><button :class="data.c">x</button></template>`,
+      data,
+      {},
+      { vapor: false },
+    )
+    const VBtnP = compile(
+      `<script setup>const p = defineProps(['c'])</script>
+      <template><button :class="p.c">x</button></template>`,
+      data,
+      {},
+      { vapor: false },
+    )
+    const App = compile(
+      `<template>
+        <components.AsChild class="extra" data-cloned="yes">
+          <components.VBtn />
+        </components.AsChild>
+        <components.AsChild class="extra" data-cloned="yes">
+          <components.VBtnP :c="data.c" />
+        </components.AsChild>
+      </template>`,
+      data,
+      { AsChild, VBtn, VBtnP },
+    )
+    const root = document.createElement('div')
+    const app = createVaporApp(App).use(vaporInteropPlugin)
+    app.mount(root)
+    const check = (c: string) => {
+      for (const btn of root.querySelectorAll('button')) {
+        expect(classes(btn)).toEqual([c, 'extra'])
+        expect(btn.getAttribute('data-cloned')).toBe('yes')
+      }
+    }
+    check('base')
+    data.value.c = 'base-2'
+    await nextTick()
+    check('base-2')
+    app.unmount()
+  })
+
+  test('stop at a forwarding component, like its own attrs', async () => {
+    await renderParity(
+      {
+        Mid: `<template><slot /></template>`,
+        Btn: `<template><button>x</button></template>`,
+        App: `<template>
+          <components.AsChild data-cloned="yes">
+            <components.Mid><components.Btn /></components.Mid>
+          </components.AsChild>
+        </template>`,
+      },
+      () => ref({}),
+      (_, root) => {
+        expect(root.querySelector('button')!.hasAttribute('data-cloned')).toBe(
+          false,
+        )
+      },
+      { AsChild },
+    )
+    expect('Extraneous non-props attributes (data-cloned)').toHaveBeenWarned()
+  })
+
+  test('pass through a KeepAlive root referenced dynamically', async () => {
+    const data = ref({ KA: markRaw(VaporKeepAlive) })
+    const Btn = compile(`<template><button>x</button></template>`, data)
+    const App = compile(
+      `<template>
+        <components.AsChild data-cloned="yes">
+          <component :is="data.KA"><components.Btn /></component>
+        </components.AsChild>
+        <components.AsChild data-cloned="yes">
+          <components.KA><components.Btn /></components.KA>
+        </components.AsChild>
+      </template>`,
+      data,
+      { AsChild, Btn, KA: VaporKeepAlive },
+    )
+    const root = document.createElement('div')
+    const app = createVaporApp(App).use(vaporInteropPlugin)
+    app.mount(root)
+    const buttons = root.querySelectorAll('button')
+    expect(buttons).toHaveLength(2)
+    for (const btn of buttons) {
+      expect(btn.getAttribute('data-cloned')).toBe('yes')
+    }
+    app.unmount()
+  })
+
+  test('leave the content of a Teleport root alone', async () => {
+    const target = document.createElement('div')
+    target.id = 'tp'
+    document.body.appendChild(target)
+    await renderParity(
+      {
+        Btn: `<template><button>x</button></template>`,
+        App: `<template>
+          <components.AsChild data-cloned="yes">
+            <Teleport to="#tp"><components.Btn /></Teleport>
+          </components.AsChild>
+        </template>`,
+      },
+      () => ref({}),
+      () => {
+        expect(
+          target.querySelector('button')!.hasAttribute('data-cloned'),
+        ).toBe(false)
+        target.innerHTML = ''
+      },
+      { AsChild },
+    )
+    target.remove()
+    // vapor only: the attrs land on the Teleport, which has no root for them
+    expect('Extraneous non-props attributes (data-cloned)').toHaveBeenWarned()
+  })
+
+  test('seed the style v-show restores, not the hidden one', async () => {
+    await renderParity(
+      {
+        App: `<template>
+          <components.AsChild :style="data.extra">
+            <div v-show="data.show">t</div>
+          </components.AsChild>
+        </template>`,
+      },
+      () => ref({ show: false, extra: { color: 'red' } }),
+      async (data, root) => {
+        const div = root.querySelector('div')!
+        expect(div.style.display).toBe('none')
+        expect(div.style.color).toBe('red')
+        data.value.show = true
+        await nextTick()
+        expect(div.style.display).toBe('')
+        expect(div.style.color).toBe('red')
+      },
+      { AsChild },
+    )
+  })
+
+  test('pass through a Transition or KeepAlive root', async () => {
+    for (const host of ['Transition', 'KeepAlive']) {
+      await renderParity(
+        {
+          Btn: `<template><button>x</button></template>`,
+          App: `<template>
+            <components.AsChild data-cloned="yes">
+              <${host}><components.Btn /></${host}>
+            </components.AsChild>
+          </template>`,
+        },
+        () => ref({}),
+        (_, root) => {
+          expect(
+            root.querySelector('button')!.getAttribute('data-cloned'),
+          ).toBe('yes')
+        },
+        { AsChild },
+      )
+    }
+  })
+
+  test('multi-root content takes nothing', async () => {
+    // vdom content is a vnode list the consumer picks from; vapor content is a
+    // block, which inherits like a component root: single root or nothing
+    const { vdom, vapor } = await renderParity(
+      {
+        App: `<template>
+          <components.AsChild data-cloned="yes">
+            <button>a</button>
+            <span>b</span>
+          </components.AsChild>
+        </template>`,
+      },
+      () => ref({}),
+      () => {},
+      { AsChild },
+    )
+    expect(stripAnchors(vdom.after)).toBe(
+      '<button data-cloned="yes">a</button><span>b</span>',
+    )
+    expect(stripAnchors(vapor.after)).toBe('<button>a</button><span>b</span>')
+    expect('Extraneous non-props attributes (data-cloned)').toHaveBeenWarned()
+  })
+
+  test('stay out of the scoped slot props', async () => {
+    await renderParity(
+      {
+        App: `<template>
+          <components.AsChild data-cloned="yes" v-slot="p">
+            <button>{{ Object.keys(p || {}).join() }}</button>
+          </components.AsChild>
+        </template>`,
+      },
+      () => ref({}),
+      (_, root) => {
+        expect(root.querySelector('button')!.textContent).toBe('')
+      },
+      { AsChild },
+    )
+  })
+
+  test('attach once attrs arrive, and drop with them', async () => {
+    await renderParity(
+      {
+        App: `<template>
+          <components.AsChild v-bind="data.attrs">
+            <button class="initial">x</button>
+          </components.AsChild>
+        </template>`,
+      },
+      () => ref({ attrs: {} as Record<string, string> }),
+      async (data, root) => {
+        const btn = root.querySelector('button')!
+        expect(btn.hasAttribute('data-cloned')).toBe(false)
+        data.value.attrs = { 'data-cloned': 'yes', class: 'extra' }
+        await nextTick()
+        expect(btn.getAttribute('data-cloned')).toBe('yes')
+        expect(classes(btn)).toEqual(['extra', 'initial'])
+        data.value.attrs = {}
+        await nextTick()
+        expect(btn.hasAttribute('data-cloned')).toBe(false)
+        expect(classes(btn)).toEqual(['initial'])
+      },
+      { AsChild },
+    )
+  })
+
+  test('attach once a clone first adds attrs, after cloning without any', async () => {
+    // `cloneVNode(child, undefined)` keeps the props identity
+    const Cloner = defineComponent({
+      props: ['on'],
+      setup(props, { slots }) {
+        return () =>
+          cloneVNode(
+            slots.default!()[0],
+            props.on ? { 'data-cloned': 'yes' } : undefined,
+          )
+      },
+    })
+    await renderParity(
+      {
+        Btn: `<template><button>x</button></template>`,
+        App: `<template>
+          <components.Cloner :on="data.on"><button>e</button></components.Cloner>
+          <components.Cloner :on="data.on"><components.Btn /></components.Cloner>
+        </template>`,
+      },
+      () => ref({ on: false }),
+      async (data, root) => {
+        const buttons = root.querySelectorAll('button')
+        expect(buttons).toHaveLength(2)
+        for (const btn of buttons) {
+          expect(btn.hasAttribute('data-cloned')).toBe(false)
+        }
+        data.value.on = true
+        await nextTick()
+        for (const btn of buttons) {
+          expect(btn.getAttribute('data-cloned')).toBe('yes')
+        }
+        data.value.on = false
+        await nextTick()
+        for (const btn of buttons) {
+          expect(btn.hasAttribute('data-cloned')).toBe(false)
+        }
+      },
+      { Cloner },
+    )
+  })
+
+  // coverage guard: only interop content roots become fallthrough roots, so a
+  // vapor slot root keeps its own binding for a key in the outlet owner's attrs
+  test('a vapor slot root keeps a binding the outlet owner also receives', () => {
+    const data = ref({ y: 'y' })
+    const C = compile(`<template><div><slot /></div></template>`, data)
+    const App = compile(
+      `<template>
+        <components.C id="x"><span :id="data.y">t</span></components.C>
+      </template>`,
+      data,
+      { C },
+    )
+    const root = document.createElement('div')
+    createVaporApp(App).mount(root)
+    expect(stripAnchors(root.innerHTML)).toBe(
+      '<div id="x"><span id="y">t</span></div>',
+    )
   })
 })
 

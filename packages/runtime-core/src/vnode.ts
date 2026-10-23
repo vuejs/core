@@ -1,5 +1,6 @@
 import {
   EMPTY_ARR,
+  EMPTY_OBJ,
   PatchFlags,
   ShapeFlags,
   SlotFlags,
@@ -9,6 +10,7 @@ import {
   isModelListener,
   isObject,
   isOn,
+  isReservedProp,
   isString,
   normalizeClass,
   normalizeStyle,
@@ -300,6 +302,10 @@ export interface VNode<
     outlets?: readonly VdomSlotOutlet[]
     // slot data saved before adding an outlet's branch key to vnode props
     props?: Data
+    // set on the content vnodes a vdom slot function call returns: the props
+    // `cloneVNode` adds to one fall through to the single root of the slot
+    // content, as they would merge into a vdom content vnode
+    attrs?: Data
     // the TransitionGroup rendering the slot: what the rows the slot renders
     // resolve their transition hooks from
     group?: {
@@ -869,20 +875,31 @@ function cloneVaporSlotMeta(
     name: vaporSlot.name,
     outlets: vaporSlot.outlets,
     props: vaporSlot.props,
+    // a clone of a content vnode hands out attrs of its own, even without
+    // extras (EMPTY_OBJ marks content never cloned): a later clone may add
+    // some, and the interop sets the content up for them at creation
+    attrs:
+      vaporSlot.attrs && vaporSlot.attrs === EMPTY_OBJ ? {} : vaporSlot.attrs,
     group: vaporSlot.group,
   }
 
-  if (vaporSlot.props && extraProps) {
+  // content vnodes (`attrs` set) always carry `props`
+  const attrs = cloned.attrs
+  if (extraProps && vaporSlot.props) {
     // A key-only clone changes vnode identity without copying the slot data.
     let extraSlotProps: Data | undefined
     for (const key in extraProps) {
-      if (key !== 'key') {
+      if (attrs ? !isReservedProp(key) : key !== 'key') {
         if (!extraSlotProps) extraSlotProps = {}
         extraSlotProps[key] = extraProps[key]
       }
     }
     if (extraSlotProps) {
-      cloned.props = mergeProps(vaporSlot.props, extraSlotProps)
+      if (attrs) {
+        cloned.attrs = mergeProps(attrs, extraSlotProps)
+      } else {
+        cloned.props = mergeProps(vaporSlot.props, extraSlotProps)
+      }
     }
   }
 

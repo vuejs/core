@@ -172,6 +172,13 @@ export function initSlots(instance: VaporComponentInstance): void {
   }
 }
 
+// the instance whose template authored these slots (see withSlotOwner)
+export function getRawSlotsOwner(
+  slots: RawSlots | null | undefined,
+): VaporComponentInstance | null | undefined {
+  return slots ? rawSlotsOwnerMap.get(slots) : undefined
+}
+
 function withSlotOwner<T>(slots: RawSlots, fn: () => T): T {
   const owner = rawSlotsOwnerMap.get(slots)
   if (owner === undefined) {

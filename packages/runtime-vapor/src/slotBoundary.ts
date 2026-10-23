@@ -1,5 +1,6 @@
 import type { EffectScope } from '@vue/reactivity'
 import type { Block, BlockFn } from './block'
+import type { FallthroughOwner } from './component'
 import {
   currentRenderContext,
   deriveSlotBoundary,
@@ -36,6 +37,8 @@ export interface SlotBoundaryContext {
   // The enclosing outlet's part of `isHolding`: that outlet places and
   // sequences this host's content with its own.
   isHeld: () => boolean
+  // vdom interop only: see resolveFallthroughOwner
+  fallthroughOwner?: FallthroughOwner
 }
 
 export function withSlotBoundary<R>(

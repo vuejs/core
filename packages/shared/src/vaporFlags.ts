@@ -147,4 +147,15 @@ export enum VaporDynamicComponentFlags {
   // element fallback namespace, from the parser namespace of the tag
   NS_SVG = 1 << 3,
   NS_MATHML = 1 << 4,
+  // the single root of a slot body (VaporSingleRoot.SLOT)
+  SLOT_SINGLE_ROOT = 1 << 5,
+}
+
+/**
+ * `isSingleRoot` of a component creation call for the single root of a slot
+ * body (`true` marks the single root of a component template). See
+ * resolveFallthroughOwner in runtime-vapor.
+ */
+export enum VaporSingleRoot {
+  SLOT = 2,
 }

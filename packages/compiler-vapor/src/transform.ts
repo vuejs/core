@@ -34,10 +34,12 @@ import {
 } from './ir'
 import {
   getIfChainLength,
+  isBuiltInComponent,
   isConstantBinding,
   isConstantExpression,
   isKeepAliveTag,
   isLongIfChain,
+  isSlotTemplate,
   isTransitionNode,
 } from './utils'
 import { newBlock, newDynamic } from './transforms/utils'
@@ -81,6 +83,8 @@ const generatedVarRE = /^[nxr](\d+)$/
 interface ChildContextInfo {
   node: AllNode
   hasSingleRootChild: boolean
+  // a component's default slot body: its children minus the slot templates
+  hasSingleSlotRootChild: boolean
   isLastEffectiveChild: boolean[]
 }
 
@@ -125,6 +129,8 @@ export class TransformContext<T extends AllNode = AllNode> {
   isOnRightmostPath: boolean = true
   // whether this node is the component/template root
   isSingleRoot: boolean = false
+  // whether this node is the single root of a slot body
+  isSlotRoot: boolean = false
   // If an ancestor in the same template must close explicitly, descendants
   // with matching tags must also close so the browser doesn't consume the
   // ancestor close tag for the descendant.
@@ -361,6 +367,7 @@ export class TransformContext<T extends AllNode = AllNode> {
     const isLastEffectiveChild = childInfo.isLastEffectiveChild[index]
     const isOnRightmostPath = this.isOnRightmostPath && isLastEffectiveChild
     const isSingleRoot = this.isSingleRootChild(childInfo)
+    const isSlotRoot = this.isSlotRootChild(childInfo)
 
     return Object.assign(Object.create(TransformContext.prototype), this, {
       node,
@@ -381,6 +388,7 @@ export class TransformContext<T extends AllNode = AllNode> {
       isLastEffectiveChild,
       isOnRightmostPath,
       isSingleRoot,
+      isSlotRoot,
       templateCloseTags: this.templateCloseTags,
       templateCloseBlocks: this.templateCloseBlocks,
       templateScope: 0,
@@ -412,6 +420,7 @@ export class TransformContext<T extends AllNode = AllNode> {
       return {
         node,
         hasSingleRootChild: true,
+        hasSingleSlotRootChild: false,
         isLastEffectiveChild: [],
       }
     }
@@ -431,13 +440,38 @@ export class TransformContext<T extends AllNode = AllNode> {
       }
     }
 
+    const hasSingleRoot = hasSingleRootChild(children)
     const childInfo = {
       node,
-      hasSingleRootChild: hasSingleRootChild(children),
+      hasSingleRootChild: hasSingleRoot,
+      hasSingleSlotRootChild:
+        node.type === NodeTypes.ELEMENT &&
+        node.tagType === ElementTypes.COMPONENT &&
+        !isBuiltInComponent(node.tag) &&
+        (children.some(isSlotTemplate)
+          ? hasSingleRootChild(children.filter(child => !isSlotTemplate(child)))
+          : hasSingleRoot),
       isLastEffectiveChild,
     }
     childContextInfoCache.set(this, childInfo)
     return childInfo
+  }
+
+  // The direct content of a component (its default slot body, built-ins
+  // aside) or of a slot template, or a v-if branch of either. A v-for wrapper
+  // makes rows, and a slot outlet's fallback does not count (see
+  // transformSlotOutlet).
+  private isSlotRootChild(childInfo: ChildContextInfo): boolean {
+    const node = this.node
+    if (node.type !== NodeTypes.ELEMENT) return false
+    if (node.tagType === ElementTypes.COMPONENT) {
+      return childInfo.hasSingleSlotRootChild
+    }
+    return (
+      node.tagType === ElementTypes.TEMPLATE &&
+      childInfo.hasSingleRootChild &&
+      (isSlotTemplate(node) || (this.isSlotRoot && !findDir(node, 'for')))
+    )
   }
 
   private isSingleRootChild(childInfo: ChildContextInfo): boolean {

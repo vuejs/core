@@ -196,7 +196,7 @@ export function render(_ctx) {
     const n1 = _createComponentWithFallback(_component_Comp, null, _extend(() => {
       const n0 = _createSlot("default", null, null, 4 /* FORWARDED */)
       return n0
-    }, { _: 1 /* NON_STABLE */ }))
+    }, { _: 1 /* NON_STABLE */ }), 2 /* SLOT */)
     return n1
   }, true)
   return n2
@@ -302,7 +302,7 @@ export function render(_ctx) {
       return []
     }, { _: 1 /* NON_STABLE */ }),
     "default": () => {
-      const n1 = _createComponentWithFallback(_component_Bar)
+      const n1 = _createComponentWithFallback(_component_Bar, null, null, 2 /* SLOT */)
       return n1
     }
   }, true)
@@ -423,7 +423,7 @@ exports[`compiler: transform slot > slot fast path > component root is stable 1`
 export function render(_ctx) {
   const _component_B = _resolveComponent("B")
   const n1 = _createAssetComponent("A", null, () => {
-    const n0 = _createComponentWithFallback(_component_B)
+    const n0 = _createComponentWithFallback(_component_B, null, null, 2 /* SLOT */)
     return n0
   }, true)
   return n1
@@ -505,7 +505,7 @@ exports[`compiler: transform slot > slot fast path > runtime dynamic component r
 
 export function render(_ctx) {
   const n1 = _createAssetComponent("Comp", null, _extend(() => {
-    const n0 = _createDynamicComponent(() => (_ctx.view), null, null, 4 /* SLOT_ROOT */)
+    const n0 = _createDynamicComponent(() => (_ctx.view), null, null, 36 /* SLOT_SINGLE_ROOT, SLOT_ROOT */)
     return n0
   }, { _: 1 /* NON_STABLE */ }), true)
   return n1
@@ -590,7 +590,7 @@ exports[`compiler: transform slot > slot owner context > slot with component is 
 export function render(_ctx) {
   const _component_ChildComp = _resolveComponent("ChildComp")
   const n2 = _createAssetComponent("Comp", null, () => {
-    const n0 = _createComponentWithFallback(_component_ChildComp)
+    const n0 = _createComponentWithFallback(_component_ChildComp, null, null, 2 /* SLOT */)
     return n0
   }, true)
   return n2

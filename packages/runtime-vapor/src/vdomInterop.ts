@@ -86,9 +86,11 @@ import {
   startBatch,
 } from '@vue/reactivity'
 import {
+  type FallthroughOwner,
   type LooseRawProps,
   type VaporComponent,
   VaporComponentInstance,
+  applyFallthroughAttrs,
   createComponent,
   getRootElement,
   isVaporComponent,
@@ -124,6 +126,7 @@ import {
   NOOP,
   PatchFlags,
   ShapeFlags,
+  type VaporSingleRoot,
   VaporSlotFlags,
   extend,
   hasOwn,
@@ -155,7 +158,7 @@ import { inOnce, withOnce } from './once'
 import { RenderEffect, renderEffect } from './renderEffect'
 import { initVdomOwner, patchVdomSlot } from './vdomSlotOwner'
 import { createTextNode, parentNode } from './dom/node'
-import { optimizePropertyLookup } from './dom/prop'
+import { adoptRoot, optimizePropertyLookup } from './dom/prop'
 import {
   advanceHydrationNode,
   claimAnchor,
@@ -1169,9 +1172,14 @@ const vaporSlotsProxyHandler: ProxyHandler<any> = {
 
       // Create a wrapper that internally uses renderSlot for proper vapor slot handling
       // This ensures that calling slots.default() works the same as renderSlot(slots, 'default')
-      const wrapped = (props?: Record<string, any>) => [
-        renderSlot({ [key]: slot }, key as string, props),
-      ]
+      const wrapped = (props?: Record<string, any>) => {
+        const vnode = renderSlot({ [key]: slot }, key as string, props)
+        // content rather than an outlet: what `cloneVNode` adds to it falls
+        // through to the content root, and the slot props stay as given
+        vnode.vs!.props = vnode.props!
+        vnode.vs!.attrs = EMPTY_OBJ
+        return [vnode]
+      }
       ;(wrapped as any)[rawVaporSlotKey] = slot
       // already normalized, so VDOM slot normalization keeps it as is
       ;(wrapped as any)._n = true
@@ -1503,7 +1511,7 @@ function mountDynamicVNode(
   internals: RendererInternals,
   vnode: VNode,
   parentComponent: VaporComponentInstance | null,
-  isSingleRoot?: boolean,
+  isSingleRoot?: boolean | VaporSingleRoot,
   rawProps?: RawProps | null,
   once?: boolean,
 ): VaporFragment {
@@ -3505,6 +3513,8 @@ interface InteropVaporSlotState {
   // inside some effect does not subscribe it to every patch of the slot.
   outlets: readonly VdomSlotOutlet[]
   outletsRef: ShallowRef<readonly VdomSlotOutlet[]>
+  // the content vnode's clone attrs (see VNode.vs.attrs)
+  fallthrough?: SlotFallthroughOwner
 }
 
 function resolveInteropVaporSlotState(vnode: VNode): InteropVaporSlotState {
@@ -3525,6 +3535,45 @@ function syncInteropVaporSlotState(n1: VNode, n2: VNode): void {
   }
   n2.vs!.state = prevState
   prevState.outletsRef.value = prevState.outlets = n2.vs!.outlets || EMPTY_ARR
+  const fallthrough = prevState.fallthrough
+  if (fallthrough) {
+    fallthrough.attrsRef.value = n2.vs!.attrs || EMPTY_OBJ
+    applySlotFallthrough(fallthrough)
+  }
+}
+
+// The fallthrough owner for the single root of the content a vdom slot
+// function call returned: a vdom `cloneVNode` of that content vnode adds the
+// attrs, as an `asChild`-style component does.
+interface SlotFallthroughOwner extends FallthroughOwner {
+  attrsRef: ShallowRef<Record<string, any>>
+  // Attaches the attrs to an element root (a component root took them at its
+  // creation). Deferred until there are attrs: most content is never cloned.
+  apply?: () => void
+}
+
+function createSlotFallthroughOwner(
+  attrs: Record<string, any>,
+  instance: ComponentInternalInstance | null,
+): SlotFallthroughOwner {
+  const attrsRef = shallowRef(attrs)
+  return {
+    type: EMPTY_OBJ as VaporComponent,
+    get attrs() {
+      return attrsRef.value
+    },
+    attrsRef,
+    instance,
+    adoptRoot,
+  }
+}
+
+function applySlotFallthrough(owner: SlotFallthroughOwner): void {
+  const apply = owner.apply
+  if (apply && Object.keys(owner.attrs).length) {
+    owner.apply = undefined
+    apply()
+  }
 }
 
 function trackInteropFallbackChanges(
@@ -3640,6 +3689,13 @@ function renderVaporSlot(
         ? (outletBoundaries[depth] ||= createOutletBoundary(depth))
         : null
     const rootBoundary = (outletBoundaries[0] = createOutletBoundary(0))
+    // only content a `cloneVNode` touched can carry attrs for its root (a
+    // clone may add them later): plain `slots.x()` consumers cost nothing
+    const fallthrough =
+      vnode.vs.attrs && vnode.vs.attrs !== EMPTY_OBJ
+        ? (slotState.fallthrough = rootBoundary.fallthroughOwner =
+            createSlotFallthroughOwner(vnode.vs.attrs, parentComponent))
+        : undefined
     frag.getContent = () => content.nodes
     slotResolutionState = createSlotResolutionState(rootBoundary, {
       getContent: frag.getContent,
@@ -3680,6 +3736,14 @@ function renderVaporSlot(
           withRenderContext(frag.ctx, () =>
             withSlotBoundary(rootBoundary, () => invokeVaporSlot(vnode)),
           ) || EMPTY_BLOCK
+        if (fallthrough) {
+          const scope = vnode.vs!.scope
+          fallthrough.apply = () =>
+            rootBoundary.run(() =>
+              applyFallthroughAttrs(content.nodes, fallthrough, scope),
+            )
+          applySlotFallthrough(fallthrough)
+        }
         recheckSlotResolution(slotResolutionState)
       }
       isResolvingContent = true

@@ -251,7 +251,7 @@ export function render(_ctx) {
   const _component_Child = _resolveComponent("Child")
   const n0 = _createComponentWithFallback(_component_Child)
   const n2 = _createAssetComponent("Parent", null, () => {
-    const n1 = _createComponentWithFallback(_component_Child)
+    const n1 = _createComponentWithFallback(_component_Child, null, null, 2 /* SLOT */)
     return n1
   })
   return [n0, n2]
@@ -266,7 +266,7 @@ export function render(_ctx) {
   const n0 = _createComponentWithFallback(_component_Child)
   const n5 = _createAssetComponent("Parent", null, _extend(() => {
     const n1 = _createIf(() => (_ctx.ok), () => {
-      const n3 = _createComponentWithFallback(_component_Child)
+      const n3 = _createComponentWithFallback(_component_Child, null, null, 2 /* SLOT */)
       return n3
     }, null, 129 /* TRUE_SINGLE_ROOT, SLOT_ROOT */)
     return n1

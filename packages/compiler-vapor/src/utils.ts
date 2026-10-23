@@ -7,11 +7,14 @@ import {
   NodeTypes,
   type RootNode,
   type SimpleExpressionNode,
+  type TemplateChildNode,
   findDir as _findDir,
   findProp as _findProp,
   createSimpleExpression,
   isConstantNode,
   isLiteralWhitelisted,
+  isTemplateNode,
+  isVSlot,
 } from '@vue/compiler-dom'
 import {
   type BlockIRNode,
@@ -233,4 +236,13 @@ export function getIfChainLength(head: IfIRNode): number {
 
 export function isLongIfChain(head: IfIRNode): boolean {
   return getIfChainLength(head) - 1 > IF_CHAIN_THRESHOLD
+}
+
+// `<template v-slot>`: a slot body of its own, unlike a plain `<template>`
+export function isSlotTemplate(node: TemplateChildNode): node is ElementNode {
+  return (
+    node.type === NodeTypes.ELEMENT &&
+    isTemplateNode(node) &&
+    node.props.some(isVSlot)
+  )
 }

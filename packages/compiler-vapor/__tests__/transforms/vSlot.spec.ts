@@ -22,7 +22,10 @@ import {
 } from '../../src'
 import { makeCompile } from './_utils'
 
-const dynamicSlotRootFlag = `${VaporDynamicComponentFlags.SLOT_ROOT} /* SLOT_ROOT */`
+const dynamicSlotRootFlag = `${
+  VaporDynamicComponentFlags.SLOT_SINGLE_ROOT |
+  VaporDynamicComponentFlags.SLOT_ROOT
+} /* SLOT_SINGLE_ROOT, SLOT_ROOT */`
 const slotNonStableFlag = `_: ${VaporSlotStability.NON_STABLE} /* NON_STABLE */`
 const forwardedFlag = `${VaporSlotFlags.FORWARDED} /* FORWARDED */`
 const keyedSlotRootCallRE =
@@ -1324,5 +1327,32 @@ describe('compiler: transform slot', () => {
     expect(code).toContain(
       'JSON.stringify({ a: _getDefaultValue(_slotProps0.a, () => (1)), b: _slotProps0.b })',
     )
+  })
+
+  test('marks the single root of a slot body', () => {
+    const slotRoot = 'null, null, 2 /* SLOT */)'
+    const code = (src: string) => compileWithSlots(src).code
+    expect(code(`<Comp><Foo /></Comp>`)).toContain(slotRoot)
+    expect(code(`<Comp><template #a><Foo /></template></Comp>`)).toContain(
+      slotRoot,
+    )
+    expect(
+      code(`<Comp><Foo v-if="ok" /><Bar v-else /></Comp>`).match(
+        /2 \/\* SLOT/g,
+      ),
+    ).toHaveLength(2)
+    expect(code(`<Comp><Foo /><Bar /></Comp>`)).not.toContain(slotRoot)
+    expect(code(`<Comp><Foo v-for="i in l" /></Comp>`)).not.toContain(slotRoot)
+    expect(code(`<Comp><div><Foo /></div></Comp>`)).not.toContain(slotRoot)
+    expect(code(`<Comp><slot><Foo /></slot></Comp>`)).not.toContain(slotRoot)
+    // Transition and KeepAlive pass the attrs they inherit on to their child
+    for (const host of ['Transition', 'KeepAlive']) {
+      const out = code(`<Comp><${host}><Foo /></${host}></Comp>`)
+      expect(out).toContain(`_Vapor${host}, null, () => {`)
+      expect(out).toContain('}, 2 /* SLOT */)')
+      expect(out).toContain(
+        '_createComponentWithFallback(_component_Foo, null, null, true)',
+      )
+    }
   })
 })
