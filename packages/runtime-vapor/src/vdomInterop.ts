@@ -4733,9 +4733,13 @@ function normalizeInteropDefaultSlot(value: unknown): Slots {
 }
 
 function normalizeInteropSlotValue(value: unknown): VNode[] {
-  return isArray(value)
-    ? value.map(child => normalizeVNode(child as any))
-    : [normalizeVNode(value as any)]
+  if (!isArray(value)) return [normalizeVNode(value as any)]
+  const normalized = value.map(child => normalizeVNode(child as any))
+  // keep the branch key `createSlots` attaches to conditional slot content,
+  // so `renderSlot` keys each branch differently
+  const key = (value as any).key
+  if (key != null) (normalized as any).key = key
+  return normalized
 }
 
 const isInternalSlotKey = (key: string): boolean =>
