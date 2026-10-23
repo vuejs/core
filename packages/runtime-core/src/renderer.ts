@@ -65,6 +65,7 @@ import {
 import { updateProps } from './componentProps'
 import { updateSlots } from './componentSlots'
 import { popWarningContext, pushWarningContext, warn } from './warning'
+import { isVaporInteropEnabled } from './vaporInteropState'
 import {
   type AppMountFn,
   type AppUnmountFn,
@@ -478,15 +479,17 @@ function baseCreateRenderer(
         )
         break
       case VaporSlot:
-        getVaporInterface(parentComponent, n2).slot(
-          n1,
-          n2,
-          container,
-          anchor,
-          parentComponent,
-          parentSuspense,
-          slotScopeIds,
-        )
+        if (isVaporInteropEnabled) {
+          getVaporInterface(parentComponent, n2).slot(
+            n1,
+            n2,
+            container,
+            anchor,
+            parentComponent,
+            parentSuspense,
+            slotScopeIds,
+          )
+        }
         break
       default:
         if (shapeFlag & ShapeFlags.ELEMENT) {
@@ -891,7 +894,7 @@ function baseCreateRenderer(
     if ((vnodeHook = newProps.onVnodeBeforeUpdate)) {
       invokeVNodeHook(vnodeHook, parentComponent, n2, n1)
     }
-    if (n2.ibu) n2.ibu()
+    if (isVaporInteropEnabled && n2.ibu) n2.ibu()
     if (dirs) {
       invokeDirectiveHook(n2, n1, parentComponent, 'beforeUpdate')
     }
@@ -1005,11 +1008,15 @@ function baseCreateRenderer(
       patchProps(el, oldProps, newProps, parentComponent, namespace)
     }
 
-    if ((vnodeHook = newProps.onVnodeUpdated) || dirs || n2.iu) {
+    if (
+      (vnodeHook = newProps.onVnodeUpdated) ||
+      dirs ||
+      (isVaporInteropEnabled && n2.iu)
+    ) {
       queuePostRenderEffect(
         () => {
           vnodeHook && invokeVNodeHook(vnodeHook, parentComponent, n2, n1)
-          n2.iu && n2.iu()
+          isVaporInteropEnabled && n2.iu && n2.iu()
           dirs && invokeDirectiveHook(n2, n1, parentComponent, 'updated')
         },
         undefined,
@@ -1224,7 +1231,12 @@ function baseCreateRenderer(
   ) => {
     n2.slotScopeIds = slotScopeIds
 
-    if ((n2.type as ConcreteComponent).__vapor) {
+    // in dev, reach getVaporInterface without the flag so that a forgotten
+    // plugin is reported
+    if (
+      (isVaporInteropEnabled || __DEV__) &&
+      (n2.type as ConcreteComponent).__vapor
+    ) {
       if (n1 == null) {
         if (n2.shapeFlag & ShapeFlags.COMPONENT_KEPT_ALIVE) {
           getVaporInterface(parentComponent, n2).activate(
@@ -1689,7 +1701,7 @@ function baseCreateRenderer(
         if ((vnodeHook = next.props && next.props.onVnodeBeforeUpdate)) {
           invokeVNodeHook(vnodeHook, parent, next, vnode)
         }
-        if (next.ibu) next.ibu()
+        if (isVaporInteropEnabled && next.ibu) next.ibu()
         if (
           __COMPAT__ &&
           isCompatEnabled(DeprecationTypes.INSTANCE_EVENT_HOOKS, instance)
@@ -1738,11 +1750,14 @@ function baseCreateRenderer(
           queuePostRenderEffect(u, undefined, parentSuspense)
         }
         // onVnodeUpdated
-        if ((vnodeHook = next.props && next.props.onVnodeUpdated) || next.iu) {
+        if (
+          (vnodeHook = next.props && next.props.onVnodeUpdated) ||
+          (isVaporInteropEnabled && next.iu)
+        ) {
           queuePostRenderEffect(
             () => {
               vnodeHook && invokeVNodeHook(vnodeHook, parent, next!, vnode)
-              next!.iu && next!.iu()
+              isVaporInteropEnabled && next!.iu && next!.iu()
             },
             undefined,
             parentSuspense,
@@ -2239,7 +2254,10 @@ function baseCreateRenderer(
   ) => {
     const { el, type, transition, children, shapeFlag } = vnode
 
-    if (isVaporComponent(type as ConcreteComponent) || type === VaporSlot) {
+    if (
+      isVaporInteropEnabled &&
+      (isVaporComponent(type as ConcreteComponent) || type === VaporSlot)
+    ) {
       getVaporInterface(parentComponent, vnode).move(
         vnode,
         container,
@@ -2372,7 +2390,10 @@ function baseCreateRenderer(
     }
 
     if (shapeFlag & ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE) {
-      if (isVaporComponent(vnode.type as ConcreteComponent)) {
+      if (
+        isVaporInteropEnabled &&
+        isVaporComponent(vnode.type as ConcreteComponent)
+      ) {
         getVaporInterface(parentComponent!, vnode).deactivate(
           vnode,
           (parentComponent!.ctx as KeepAliveContext).getStorageContainer(),
@@ -2386,6 +2407,7 @@ function baseCreateRenderer(
 
     // the vapor interop owns the vnode and directive hooks of its component
     if (
+      isVaporInteropEnabled &&
       shapeFlag & ShapeFlags.COMPONENT &&
       isVaporComponent(type as ConcreteComponent)
     ) {
@@ -2457,7 +2479,7 @@ function baseCreateRenderer(
         unmountChildren(children as VNode[], parentComponent, parentSuspense)
       }
 
-      if (type === VaporSlot) {
+      if (isVaporInteropEnabled && type === VaporSlot) {
         getVaporInterface(parentComponent, vnode).unmount(
           vnode,
           doRemove,
@@ -2533,6 +2555,7 @@ function baseCreateRenderer(
         leavingNode && leavingNode.shapeFlag & ShapeFlags.ELEMENT
       )
       if (
+        isVaporInteropEnabled &&
         isFragment &&
         leavingNode &&
         isVaporComponent(leavingNode.type as ConcreteComponent)
@@ -2647,7 +2670,10 @@ function baseCreateRenderer(
 
   const getNextHostNode: NextFn = vnode => {
     if (vnode.shapeFlag & ShapeFlags.COMPONENT) {
-      if (isVaporComponent(vnode.type as ConcreteComponent)) {
+      if (
+        isVaporInteropEnabled &&
+        isVaporComponent(vnode.type as ConcreteComponent)
+      ) {
         return hostNextSibling(vnode.anchor!)
       }
       return getNextHostNode(vnode.component!.subTree)
@@ -2789,7 +2815,7 @@ function toggleRecurse(
   { effect, job, vapor }: ComponentInternalInstance,
   allowed: boolean,
 ) {
-  if (!vapor) {
+  if (!isVaporInteropEnabled || !vapor) {
     if (allowed) {
       effect.flags |= EffectFlags.ALLOW_RECURSE
       job.flags! |= SchedulerJobFlags.ALLOW_RECURSE
@@ -3031,7 +3057,8 @@ export function getInheritedScopeIds(
 
   // Where the chain tops out, append root-only ids published by the vapor
   // interop so they land before insertion.
-  const vaporScopeIds = includeVaporRootIds && currentVNode.vaporScopeIds
+  const vaporScopeIds =
+    isVaporInteropEnabled && includeVaporRootIds && currentVNode.vaporScopeIds
   if (vaporScopeIds) {
     inheritedScopeIds.push(...vaporScopeIds)
   }

@@ -24,12 +24,14 @@ import {
   createVNode,
   getCurrentInstance,
   getTransitionRawChildren,
+  isVaporInteropEnabled,
   onUpdated,
   resolveTransitionHooks,
   setTransitionHooks,
   toRaw,
   useTransitionState,
   warn,
+  withTransitionEnabled,
 } from '@vue/runtime-core'
 import { extend } from '@vue/shared'
 
@@ -180,7 +182,7 @@ const TransitionGroupImpl: ComponentOptions = /*@__PURE__*/ decorate({
               ),
             )
             positionMap.set(child, getPosition(child.el as HTMLElement))
-          } else if (child.vs && child.vb) {
+          } else if (isVaporInteropEnabled && child.vs && child.vb) {
             // the rows of a mounted vapor slot: hooks refreshed like the
             // children above, positions sampled for the move, which reads
             // only `el`
@@ -197,7 +199,7 @@ const TransitionGroupImpl: ComponentOptions = /*@__PURE__*/ decorate({
 
       for (let i = 0; i < children.length; i++) {
         const child = children[i]
-        if (child.vs) {
+        if (isVaporInteropEnabled && child.vs) {
           // the vapor renderer resolves the rows' hooks from the group's
           child.vs.group = group
         } else if (child.key != null) {
@@ -221,7 +223,9 @@ const TransitionGroupImpl: ComponentOptions = /*@__PURE__*/ decorate({
   },
 })
 
-export const TransitionGroup = TransitionGroupImpl as unknown as {
+export const TransitionGroup = /*@__PURE__*/ withTransitionEnabled(
+  TransitionGroupImpl,
+) as unknown as {
   new (): {
     $props: TransitionGroupProps
   }

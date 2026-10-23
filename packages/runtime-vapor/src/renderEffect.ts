@@ -30,6 +30,11 @@ import { isSuspenseEnabled } from './suspense'
 import { isInteropEnabled } from './vdomInteropState'
 import { adoptVdomOwnedEffect } from './vdomSlotOwner'
 
+// dev only: instances with a measured render effect run in progress. Effects
+// created by that run (v-if / v-for branches, slot content) run nested under
+// the same mark and would clear it before the outer run ends.
+const measuringInstances = /*@__PURE__*/ new Set<VaporComponentInstance>()
+
 export class RenderEffect extends ReactiveEffect {
   i: VaporComponentInstance | null
   // Created lazily on first notify: most render effects are never
@@ -117,9 +122,14 @@ export class RenderEffect extends ReactiveEffect {
     const scope = this.subs ? (this.subs.sub as EffectScope) : undefined
     // renderEffect is always called after user has registered all hooks
     const hasUpdateHooks = instance && (instance.bu || instance.u)
+    let measuring = false
     if (__DEV__ && instance) {
       pushWarningContext(instance)
-      startMeasure(instance, `renderEffect`)
+      if (!measuringInstances.has(instance)) {
+        measuringInstances.add(instance)
+        measuring = true
+        startMeasure(instance, `renderEffect`)
+      }
     }
     const prev = setCurrentInstance(instance, scope)
     try {
@@ -147,7 +157,10 @@ export class RenderEffect extends ReactiveEffect {
     } finally {
       restoreCurrentInstance(prev)
       if (__DEV__ && instance) {
-        endMeasure(instance, `renderEffect`)
+        if (measuring) {
+          measuringInstances.delete(instance)
+          endMeasure(instance, `renderEffect`)
+        }
         popWarningContext()
       }
     }

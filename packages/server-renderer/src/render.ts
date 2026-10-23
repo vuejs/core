@@ -18,6 +18,7 @@ import {
   handleError,
   mergeProps,
   renderSlot,
+  setVaporInteropEnabled,
   ssrContextKey,
   ssrUtils,
   warn,
@@ -217,7 +218,10 @@ export function renderComponentVNode(
         slots[name] = wrapped
       }
     }
-    if (!ctx.appContext.vapor) ctx.appContext.vapor = vaporInterface
+    if (!ctx.appContext.vapor) {
+      ctx.appContext.vapor = vaporInterface
+      setVaporInteropEnabled()
+    }
   }
   const instance = (vnode.component = createComponentInstance(
     vnode,

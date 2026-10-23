@@ -15,6 +15,7 @@ import { flushPostFlushCbs } from './scheduler'
 import type { ComponentInternalInstance, ConcreteComponent } from './component'
 import { invokeDirectiveHook } from './directives'
 import { warn } from './warning'
+import { isVaporInteropEnabled } from './vaporInteropState'
 import {
   PatchFlags,
   ShapeFlags,
@@ -293,13 +294,15 @@ export function createHydrationFunctions(
         }
         break
       case VaporSlot:
-        nextNode = getVaporInterface(parentComponent, vnode).hydrateSlot(
-          vnode,
-          node,
-          parentComponent,
-          parentSuspense,
-          slotScopeIds,
-        )
+        if (isVaporInteropEnabled) {
+          nextNode = getVaporInterface(parentComponent, vnode).hydrateSlot(
+            vnode,
+            node,
+            parentComponent,
+            parentSuspense,
+            slotScopeIds,
+          )
+        }
         break
       default:
         if (shapeFlag & ShapeFlags.ELEMENT) {
@@ -341,8 +344,12 @@ export function createHydrationFunctions(
             nextNode = nextSibling(node)
           }
 
-          // hydrate vapor component
-          if ((vnode.type as ConcreteComponent).__vapor) {
+          // hydrate vapor component; in dev, reach getVaporInterface without
+          // the flag so that a forgotten plugin is reported
+          if (
+            (isVaporInteropEnabled || __DEV__) &&
+            (vnode.type as ConcreteComponent).__vapor
+          ) {
             getVaporInterface(parentComponent, vnode).hydrate(
               vnode,
               node,
@@ -747,7 +754,7 @@ export function createHydrationFunctions(
     // the client kept the forwarded vapor slot and what is around it, the
     // server rendered the outlet's fallback in their place
     const next =
-      vnode.vo && (node as Comment).data === '('
+      isVaporInteropEnabled && vnode.vo && (node as Comment).data === '('
         ? getVaporInterface(parentComponent, vnode).hydrateSlotOutlet(
             vnode,
             node,

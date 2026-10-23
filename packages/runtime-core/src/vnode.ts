@@ -834,6 +834,9 @@ export function cloneVNode<T, U>(
     ctx: vnode.ctx,
     ce: vnode.ce,
     vi: vnode.vi,
+    // not behind isVaporInteropEnabled: the vnode may come from another copy
+    // of the runtime whose interop is on (the server renderer's browser build
+    // next to vue's, as in the SFC playground)
     vs: cloneVaporSlotMeta(vnode as VNode, extraProps),
     vb: vnode.vb,
     // interop range tracking must survive renderer-internal clones of mounted
