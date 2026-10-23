@@ -1,4 +1,12 @@
-import { createApp, defineAsyncComponent, h, renderSlot } from 'vue'
+import {
+  cloneVNode,
+  createApp,
+  createCommentVNode,
+  defineAsyncComponent,
+  h,
+  renderSlot,
+  withCtx,
+} from 'vue'
 import { renderToString } from '../src/renderToString'
 
 const components = {
@@ -628,6 +636,160 @@ describe('ssr: slot', () => {
         template: `<component :is="view()" />`,
       }
       expect(await renderToString(createApp(App))).toBe(`<div><p>a</p></div>`)
+    })
+  })
+
+  describe('slots passed to element vnodes', () => {
+    const Primitive = {
+      props: { as: { type: String, default: 'div' } },
+      setup(props: any, { attrs, slots }: any) {
+        return () => h(props.as, attrs, { default: slots.default })
+      },
+    }
+    const render = (template: string, extra?: Record<string, any>) =>
+      renderToString(
+        createApp({ components: { Primitive }, template, ...extra }),
+      )
+
+    test('render compiled slots in push mode', async () => {
+      expect(
+        await render(
+          `<Primitive as="ul" id="a"><li v-for="i in 2">{{ i }}</li><li v-if="false"/></Primitive>`,
+        ),
+      ).toBe(`<ul id="a"><!--[--><li>1</li><li>2</li><!--]--><!----></ul>`)
+
+      const Functional = (_: any, { slots }: any) => h('p', slots.default)
+      expect(
+        await render(`<Functional>a<i>b</i></Functional>`, {
+          components: { Functional },
+        }),
+      ).toBe(`<p>a<i>b</i></p>`)
+    })
+
+    test('nested', async () => {
+      const Child = { template: `<b>{{ id }}</b>`, setup: () => ({ id: 1 }) }
+      expect(
+        await render(
+          `<Primitive><Primitive as="span"><Child/><Primitive as="i">c</Primitive></Primitive></Primitive>`,
+          { components: { Primitive, Child } },
+        ),
+      ).toBe(`<div><span><b>1</b><i>c</i></span></div>`)
+    })
+
+    test('cloned, async and suspended', async () => {
+      const Clone = {
+        setup:
+          (_: any, { slots }: any) =>
+          () =>
+            cloneVNode(h('div', null, { default: slots.default }), { id: 'c' }),
+      }
+      const AsyncSetup = {
+        async setup(_: any, { slots }: any) {
+          await Promise.resolve()
+          return () => h('div', null, { default: slots.default })
+        },
+      }
+      const AsyncComp = defineAsyncComponent(() => Promise.resolve(Primitive))
+      expect(
+        await render(
+          `<Clone><i>a</i></Clone>` +
+            `<Suspense><AsyncSetup><i>b</i></AsyncSetup></Suspense>` +
+            `<AsyncComp><i>c</i></AsyncComp>`,
+          { components: { Clone, AsyncSetup, AsyncComp } },
+        ),
+      ).toBe(
+        `<!--[--><div id="c"><i>a</i></div><div><i>b</i></div><div><i>c</i></div><!--]-->`,
+      )
+    })
+
+    test('with scopeId', async () => {
+      const Wrapper = {
+        __scopeId: 'data-v-wrap',
+        compilerOptions: { scopeId: 'data-v-wrap' },
+        template: `<div><slot/></div>`,
+      }
+      const ScopedPrimitive = {
+        __scopeId: 'data-v-prim',
+        setup(_: any, { slots }: any) {
+          return () => h('section', null, { default: slots.default })
+        },
+      }
+      expect(
+        await render(
+          `<Primitive><i>a</i></Primitive>` +
+            `<Wrapper><Primitive><Primitive as="i">b</Primitive></Primitive></Wrapper>` +
+            `<Wrapper><ScopedPrimitive><i>c</i></ScopedPrimitive></Wrapper>`,
+          {
+            __scopeId: 'data-v-root',
+            compilerOptions: { scopeId: 'data-v-root' },
+            components: { Primitive, Wrapper, ScopedPrimitive },
+          },
+        ),
+      ).toBe(
+        `<!--[-->` +
+          `<div data-v-root><i data-v-root>a</i></div>` +
+          `<div data-v-root data-v-wrap><!--[-->` +
+          `<div data-v-root data-v-wrap-s><i data-v-root data-v-wrap-s>b</i></div>` +
+          `<!--]--></div>` +
+          `<div data-v-root data-v-wrap><!--[-->` +
+          `<section data-v-prim data-v-root data-v-wrap-s><i data-v-root data-v-wrap-s>c</i></section>` +
+          `<!--]--></div>` +
+          `<!--]-->`,
+      )
+    })
+
+    test('compiled slots returning vnodes', async () => {
+      const Parent = {
+        render: () =>
+          h(Primitive, null, {
+            default: withCtx(() => [h('i', 'a'), createCommentVNode('c')]),
+          }),
+      }
+      expect(await renderToString(h(Parent))).toBe(
+        `<div><i>a</i><!--c--></div>`,
+      )
+      const TextParent = {
+        render: () => h(Primitive, null, { default: withCtx(() => 'a&b') }),
+      }
+      expect(await renderToString(h(TextParent))).toBe(`<div>a&amp;b</div>`)
+    })
+
+    test('non-compiled slots', async () => {
+      expect(
+        await renderToString(h(Primitive, null, () => [h('i', 'a'), 'b'])),
+      ).toBe(`<div><i>a</i>b</div>`)
+      expect(await renderToString(h(Primitive, null, () => 'a'))).toBe(
+        `<div>a</div>`,
+      )
+    })
+
+    test('vapor slots', async () => {
+      expect(
+        await render(`<Primitive><h1>a</h1></Primitive>`, { __vapor: true }),
+      ).toBe(`<div><!--[--><h1>a</h1><!--]--></div>`)
+    })
+
+    test('slot that throws', async () => {
+      const err = new Error('slot')
+      const app = createApp({
+        components: { Primitive },
+        template: `<Primitive><i>{{ fail() }}</i></Primitive><b>after</b>`,
+        setup: () => ({
+          fail: () => {
+            throw err
+          },
+        }),
+      })
+      const handler = vi.fn()
+      app.config.errorHandler = handler
+      expect(await renderToString(app)).toBe(
+        `<!--[--><div></div><b>after</b><!--]-->`,
+      )
+      expect(handler).toHaveBeenCalledWith(
+        err,
+        expect.objectContaining({ as: 'div' }),
+        'render function',
+      )
     })
   })
 })

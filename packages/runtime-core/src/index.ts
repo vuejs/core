@@ -435,7 +435,12 @@ import {
 } from './component'
 import { renderComponentRoot } from './componentRenderUtils'
 import { setCurrentRenderingInstance } from './componentRenderContext'
-import { VaporSlot, isVNode, normalizeVNode } from './vnode'
+import {
+  VaporSlot,
+  isVNode,
+  normalizeVNode,
+  setDeferElementSlots,
+} from './vnode'
 import {
   ensureValidVNode,
   invokeSlotFallback,
@@ -458,6 +463,7 @@ const _ssrUtils: {
   VaporSlot: typeof VaporSlot
   rawVaporSlotKey: typeof rawVaporSlotKey
   invokeSlotFallback: typeof invokeSlotFallback
+  setDeferElementSlots: typeof setDeferElementSlots
 } = {
   createComponentInstance,
   setupComponent,
@@ -472,6 +478,7 @@ const _ssrUtils: {
   VaporSlot,
   rawVaporSlotKey,
   invokeSlotFallback,
+  setDeferElementSlots,
 }
 
 /**

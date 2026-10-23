@@ -3503,6 +3503,35 @@ describe('SSR hydration', () => {
     expect(root.innerHTML).toBe('<div>bar</div>')
   })
 
+  test('element vnode with a compiled slot (full integration)', async () => {
+    const Primitive = {
+      props: ['as'],
+      setup(props: any, { slots }: any) {
+        return () => h(props.as, null, { default: slots.default })
+      },
+    }
+    const toggle = ref(false)
+    const App = {
+      components: { Primitive },
+      setup: () => ({ toggle }),
+      template: `<Primitive as="ul"><li v-for="i in 2">{{ i }}</li><li v-if="toggle">x</li><Primitive as="li">{{ toggle }}</Primitive></Primitive>`,
+    }
+
+    const root = document.createElement('div')
+    root.innerHTML = await renderToString(h(App))
+    expect(root.innerHTML).toBe(
+      '<ul><!--[--><li>1</li><li>2</li><!--]--><!----><li>false</li></ul>',
+    )
+    createSSRApp(App).mount(root)
+    expect(`mismatch`).not.toHaveBeenWarned()
+
+    toggle.value = true
+    await nextTick()
+    expect(root.innerHTML).toBe(
+      '<ul><!--[--><li>1</li><li>2</li><!--]--><li>x</li><li>true</li></ul>',
+    )
+  })
+
   describe('mismatch handling', () => {
     test('text node', () => {
       const { container } = mountWithHydration(`foo`, () => 'bar')
