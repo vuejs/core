@@ -22,6 +22,7 @@ import {
   reactive,
   ref,
   setBlockTracking,
+  setVaporInteropEnabled,
   withCtx,
 } from '../src'
 import { createApp, nodeOps, serializeInner } from '@vue/runtime-test'
@@ -303,6 +304,7 @@ describe('vnode', () => {
   })
 
   test('cloneVNode preserves vapor slot metadata', () => {
+    setVaporInteropEnabled()
     const node = createVNode(VaporSlot as any)
     const viHook = vi.fn()
     const outlets = [{ fallback: () => [], owner: null, vdom: true }]
@@ -334,6 +336,7 @@ describe('vnode', () => {
   })
 
   test('cloneVNode keeps mounted vapor slot runtime state', () => {
+    setVaporInteropEnabled()
     const node = createVNode(VaporSlot as any)
     const slotRef = {} as any
     const slotScope = {} as any

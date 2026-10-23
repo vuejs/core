@@ -71,8 +71,14 @@ exec('vp', [
       name: 'createApp + vaporInteropPlugin CSR',
       imports: 'createApp, vaporInteropPlugin',
     },
+    // Bundle vdom entry points without the vapor interop plugin.
+    {
+      name: 'createApp CSR',
+      imports: 'createApp, renderSlot, Transition, KeepAlive, TransitionGroup',
+      withoutInterop: true,
+    },
   ]
-  for (const { name, imports } of presets) {
+  for (const { name, imports, withoutInterop } of presets) {
     const id = 'virtual:vapor-csr'
     const bundle = await rolldown({
       input: id,
@@ -115,6 +121,24 @@ exec('vp', [
           `${name} build contains unexpected hydration code: ${marker}.\n` +
             'Hydration logic should be guarded by isHydrating so it can be tree-shaken when SSR APIs are not used.',
         )
+      }
+    }
+    if (withoutInterop) {
+      for (const marker of [
+        'getVaporInterface',
+        'isVaporComponent',
+        'cloneVaporSlotMeta',
+        'rawVaporSlotKey',
+        'vaporScopeIds',
+        'forEachGroupChild',
+        'vs.group',
+      ]) {
+        if (csrBuild.includes(marker)) {
+          errors.push(
+            `${name} build contains unexpected vapor interop code: ${marker}.\n` +
+              'Vapor-in-vdom logic should be guarded by isVaporInteropEnabled so it can be tree-shaken when vaporInteropPlugin is not used.',
+          )
+        }
       }
     }
   }

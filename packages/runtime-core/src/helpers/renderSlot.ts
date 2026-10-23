@@ -25,6 +25,7 @@ import {
   isSymbol,
 } from '@vue/shared'
 import { warn } from '../warning'
+import { isVaporInteropEnabled } from '../vaporInteropState'
 import { isAsyncWrapper } from '../apiAsyncComponent'
 import type { ComponentInternalInstance, Data } from '../component'
 
@@ -83,7 +84,8 @@ export function renderSlot(
   let slot = slots[name]
 
   // vapor slots rendered in vdom
-  const vaporSlot = slot && (slot as any)[rawVaporSlotKey]
+  const vaporSlot =
+    isVaporInteropEnabled && slot && (slot as any)[rawVaporSlotKey]
   if (vaporSlot) {
     const ret = (openBlock(), createBlock(VaporSlot, props))
     ret.vs = {
@@ -158,7 +160,12 @@ export function renderSlot(
     // a forwarded vapor slot resolves this outlet's fallback itself; the
     // interop finds it, so none of that ships without it
     let attached = false
-    if (fallback && validSlotContent && currentRenderingInstance) {
+    if (
+      isVaporInteropEnabled &&
+      fallback &&
+      validSlotContent &&
+      currentRenderingInstance
+    ) {
       const interop = currentRenderingInstance.appContext.vapor
       if (interop) {
         attached = interop.attachSlotOutlet(

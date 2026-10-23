@@ -49,6 +49,7 @@ import {
   setTransitionHooks,
 } from './components/BaseTransition'
 import { warn } from './warning'
+import { isVaporInteropEnabled } from './vaporInteropState'
 import {
   type Teleport,
   type TeleportImpl,
@@ -834,7 +835,9 @@ export function cloneVNode<T, U>(
     ctx: vnode.ctx,
     ce: vnode.ce,
     vi: vnode.vi,
-    vs: cloneVaporSlotMeta(vnode as VNode, extraProps),
+    vs: isVaporInteropEnabled
+      ? cloneVaporSlotMeta(vnode as VNode, extraProps)
+      : undefined,
     vb: vnode.vb,
     // interop range tracking must survive renderer-internal clones of mounted
     // vnodes (cloneIfMounted / normalizeVNode), or nested updates would stop

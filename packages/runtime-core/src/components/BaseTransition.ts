@@ -17,6 +17,7 @@ import {
   isSameVNodeType,
 } from '../vnode'
 import { warn } from '../warning'
+import { isVaporInteropEnabled } from '../vaporInteropState'
 import { isKeepAlive } from './KeepAlive'
 import { EffectFlags, toRaw } from '@vue/reactivity'
 import { ErrorCodes, callWithAsyncErrorHandling } from '../errorHandling'
@@ -166,8 +167,9 @@ function isEmptyTransitionChild(
     return !child || isEmptyTransitionChild(child, instance)
   }
   if (
-    vnode.type === VaporSlot ||
-    isVaporComponent(vnode.type as ConcreteComponent)
+    isVaporInteropEnabled &&
+    (vnode.type === VaporSlot ||
+      isVaporComponent(vnode.type as ConcreteComponent))
   ) {
     return !getVaporInterface(
       instance as ComponentInternalInstance,
@@ -340,7 +342,7 @@ export function resolveTransitionHooks(
   // a vapor slot transitions the blocks it renders itself (see the interop
   // `slot()`): hand it what vapor hooks are resolved from, in the shape of a
   // VaporTransition root's hooks
-  if (vnode.type === VaporSlot) {
+  if (isVaporInteropEnabled && vnode.type === VaporSlot) {
     extend(hooks, { __vapor: true, props, state, instance })
   }
   return hooks
@@ -752,7 +754,10 @@ export function setTransitionHooks(
 ): TransitionHooks {
   if (vnode.shapeFlag & ShapeFlags.COMPONENT && vnode.component) {
     vnode.transition = hooks
-    if (isVaporComponent(vnode.type as ConcreteComponent)) {
+    if (
+      isVaporInteropEnabled &&
+      isVaporComponent(vnode.type as ConcreteComponent)
+    ) {
       getVaporInterface(vnode.component, vnode).setTransitionHooks(
         vnode.component,
         hooks,
@@ -840,7 +845,11 @@ export function checkTransitionMode(mode: string | undefined): void {
 }
 
 export function getTransitionRoot(vnode: VNode): VNode | undefined {
-  if (vnode.component && !isVaporComponent(vnode.type as ConcreteComponent)) {
+  if (
+    vnode.component &&
+    (!isVaporInteropEnabled ||
+      !isVaporComponent(vnode.type as ConcreteComponent))
+  ) {
     return getTransitionRoot(vnode.component.subTree)
   }
   if (vnode.type === Fragment) {

@@ -581,4 +581,12 @@ describe('renderer: component', () => {
     await nextTick()
     expect(serializeInner(root)).toBe(`<div>undefined</div>`)
   })
+
+  // coverage guard: the vapor branches of the renderer are gated for
+  // tree-shaking, the dev hint for a missing interop plugin must survive it
+  test('warns when a vapor component is rendered without the interop plugin', () => {
+    const Vapor = { __vapor: true, setup() {} } as any
+    expect(() => render(h(Vapor), nodeOps.createElement('div'))).toThrow()
+    expect('vapor-in-vdom interop was not installed').toHaveBeenWarned()
+  })
 })

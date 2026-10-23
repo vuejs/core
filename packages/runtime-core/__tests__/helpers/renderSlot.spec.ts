@@ -12,6 +12,7 @@ import {
   createVNode,
   h,
   openBlock,
+  setVaporInteropEnabled,
   withCtx,
 } from '../../src'
 import { PatchFlags } from '@vue/shared'
@@ -227,6 +228,8 @@ describe('renderSlot', () => {
   })
 
   describe('vapor slot outlets', () => {
+    beforeAll(() => setVaporInteropEnabled())
+
     const vaporSlot = () => []
     ;(vaporSlot as any)[rawVaporSlotKey] = vaporSlot
     const forward = (fallback?: () => any[]) =>

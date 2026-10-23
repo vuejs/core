@@ -404,6 +404,12 @@ export {
   normalizeStyle,
 } from '@vue/shared'
 export { setIsHydratingEnabled } from './hydration'
+// not under VAPOR below: runtime-dom and server-renderer need these in
+// every build format
+export {
+  isVaporInteropEnabled,
+  setVaporInteropEnabled,
+} from './vaporInteropState'
 
 // For test-utils
 export { transformVNodeArgs } from './vnode'

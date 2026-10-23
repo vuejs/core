@@ -67,6 +67,7 @@ import {
   restoreCurrentInstance,
   setCurrentInstance,
   setTransitionHooks as setVNodeTransitionHooks,
+  setVaporInteropEnabled,
   shallowReactive,
   shallowRef,
   shouldUpdateComponent,
@@ -3243,6 +3244,7 @@ export const vaporInteropPlugin: Plugin = app => {
     enableSuspense()
   }
   setInteropEnabled()
+  setVaporInteropEnabled()
   setPublishInteropScopeIds(publishVaporScopeIds)
   app._context.vapor = vaporInteropImpl
   const internals = ensureRenderer().internals
