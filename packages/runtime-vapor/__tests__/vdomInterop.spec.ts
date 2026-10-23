@@ -16056,3 +16056,87 @@ describe('updates of a component whose root is a pending async setup child', () 
     )
   }
 })
+
+describe('vdom conditional slot branches in a vapor outlet', () => {
+  const vdomScript = `<script setup>const data = _data; const components = _components</script>`
+  const html = (root: Element) => root.innerHTML.replace(/<!--[^>]*-->/g, '')
+
+  test.each(['Child', 'Middle'])(
+    'switching v-if / v-else slot branches remounts the content (vapor %s)',
+    async outer => {
+      const data = ref({ ok: true, n: 0 })
+      const components: Record<string, any> = {}
+      components.Child = compile(
+        `<template><div><slot /></div></template>`,
+        data,
+        components,
+      )
+      // forwards its slot to Child
+      components.Middle = compile(
+        `<template><components.Child><slot /></components.Child></template>`,
+        data,
+        components,
+      )
+      const App = compile(
+        `${vdomScript}
+        <template>
+          <components.${outer}>
+            <template v-if="data.ok" #default><input :name="data.n" /></template>
+            <template v-else #default><input :name="data.n" /></template>
+          </components.${outer}>
+        </template>`,
+        data,
+        components,
+        { vapor: false },
+      )
+      const root = document.createElement('div')
+      createApp(App).use(vaporInteropPlugin).mount(root)
+      const first = root.querySelector('input')
+
+      // same branch: patched in place
+      data.value.n++
+      await nextTick()
+      expect(html(root)).toBe('<div><input name="1"></div>')
+      expect(root.querySelector('input')).toBe(first)
+
+      // other branch: remounted
+      data.value.ok = false
+      await nextTick()
+      expect(html(root)).toBe('<div><input name="1"></div>')
+      expect(root.querySelector('input')).not.toBe(first)
+    },
+  )
+
+  test('each branch of a v-if / v-else-if / v-else named slot remounts', async () => {
+    const data = ref({ n: 0 })
+    const components: Record<string, any> = {}
+    components.Child = compile(
+      `<template><div><slot name="head" :n="data.n" /></div></template>`,
+      data,
+      components,
+    )
+    const App = compile(
+      `${vdomScript}
+      <template>
+        <components.Child>
+          <template v-if="data.n === 0" #head="{ n }"><input :name="n" /></template>
+          <template v-else-if="data.n === 1" #head="{ n }"><input :name="n" /></template>
+          <template v-else #head="{ n }"><input :name="n" /></template>
+        </components.Child>
+      </template>`,
+      data,
+      components,
+      { vapor: false },
+    )
+    const root = document.createElement('div')
+    createApp(App).use(vaporInteropPlugin).mount(root)
+    const seen = [root.querySelector('input')]
+    for (const n of [1, 2]) {
+      data.value.n = n
+      await nextTick()
+      expect(html(root)).toBe(`<div><input name="${n}"></div>`)
+      seen.push(root.querySelector('input'))
+    }
+    expect(new Set(seen).size).toBe(3)
+  })
+})
