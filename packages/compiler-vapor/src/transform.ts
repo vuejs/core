@@ -143,6 +143,10 @@ export class TransformContext<T extends AllNode = AllNode> {
   // template leaves open above it (`OpenScope` bits); 0 when it starts a
   // template of its own.
   templateScope: number
+  // the latest `v-if` chain among this node's children: its head, and the
+  // `v-if` / `v-else-if` node a following `v-else[-if]` attaches to
+  ifHead: IfIRNode | null
+  ifTail: IfIRNode | null
 
   // root-only state, read through `this.root`
   private globalId: number
@@ -233,6 +237,8 @@ export class TransformContext<T extends AllNode = AllNode> {
     this.effectIndex = this.block.effect.length
     this.operationIndex = this.block.operation.length
     this.templateScope = 0
+    this.ifHead = null
+    this.ifTail = null
     this.globalId = 0
     this.nextIdMap = null
     this.ifIndex = 0
