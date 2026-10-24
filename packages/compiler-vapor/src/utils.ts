@@ -11,6 +11,7 @@ import {
   findDir as _findDir,
   findProp as _findProp,
   createSimpleExpression,
+  extractIdentifiers,
   isConstantNode,
   isLiteralWhitelisted,
   isTemplateNode,
@@ -24,6 +25,7 @@ import {
 } from './ir'
 import { EMPTY_EXPRESSION } from './transforms/utils'
 import type { TransformContext } from './transform'
+import type { ArrowFunctionExpression } from '@babel/types'
 
 export const findProp = _findProp as (
   node: ElementNode,
@@ -49,14 +51,24 @@ export function propToExpression(
     : prop.exp
 }
 
+// a transform or codegen context that knows the v-for aliases and v-slot props
+// in scope
+export interface ScopeContext {
+  isScopeVariable(name: string): boolean
+}
+
 export function isConstantExpression(
   exp: SimpleExpressionNode,
   bindings?: BindingMetadata,
+  scope?: ScopeContext,
 ): boolean {
   return (
     isLiteralWhitelisted(exp.content) ||
-    // a known global shadowed by a binding is not a constant
-    (isGloballyAllowed(exp.content) && !(bindings && bindings[exp.content])) ||
+    // a known global shadowed by a binding or a scope variable is not a
+    // constant
+    (isGloballyAllowed(exp.content) &&
+      !(bindings && bindings[exp.content]) &&
+      !(scope && scope.isScopeVariable(exp.content))) ||
     getLiteralExpressionValue(exp) !== null
   )
 }
@@ -66,9 +78,11 @@ export function isConstantExpression(
 export function isConstantBinding(
   exp: SimpleExpressionNode,
   bindings: BindingMetadata,
+  scope?: ScopeContext,
 ): boolean {
   return (
-    isConstantExpression(exp, bindings) || isStaticExpression(exp, bindings)
+    isConstantExpression(exp, bindings, scope) ||
+    isStaticExpression(exp, bindings)
   )
 }
 
@@ -245,4 +259,36 @@ export function isSlotTemplate(node: TemplateChildNode): node is ElementNode {
     isTemplateNode(node) &&
     node.props.some(isVSlot)
   )
+}
+
+export function hasScopeBinding(
+  name: string,
+  exp: SimpleExpressionNode | undefined,
+): boolean | undefined {
+  return (
+    exp &&
+    (exp.ast
+      ? (exp.ast as ArrowFunctionExpression).params.some(param =>
+          extractIdentifiers(param).some(id => id.name === name),
+        )
+      : exp.content === name)
+  )
+}
+
+export function isScopeVariable(
+  name: string,
+  context: TransformContext,
+): boolean {
+  for (let parent = context.parent; parent; parent = parent.parent) {
+    const { node } = parent
+    if (node.type !== NodeTypes.ELEMENT) continue
+    const vFor = findDir(node, 'for')
+    const aliases = vFor && vFor.forParseResult
+    const scopes = aliases ? [aliases.value, aliases.key, aliases.index] : []
+    const slot = findDir(node, 'slot')
+    if (slot) scopes.push(slot.exp)
+    if (scopes.some(exp => hasScopeBinding(name, exp as SimpleExpressionNode)))
+      return true
+  }
+  return false
 }

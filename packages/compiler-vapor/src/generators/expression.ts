@@ -63,7 +63,7 @@ export function genExpression(
     ast === false ||
     // never parsed, e.g. asset url imports added by compiler-sfc
     ast === undefined ||
-    isConstantExpression(node, options.bindingMetadata)
+    isConstantExpression(node, options.bindingMetadata, context)
   ) {
     return [[content, NewlineType.None, loc], assignment && ` = ${assignment}`]
   }

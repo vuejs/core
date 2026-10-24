@@ -12,7 +12,6 @@ import {
   advancePositionWithClone,
   createCompilerError,
   createSimpleExpression,
-  extractIdentifiers,
   hasDynamicKeyVBind,
   isSimpleIdentifier,
   isStaticArgOf,
@@ -73,6 +72,7 @@ import { EMPTY_EXPRESSION } from './utils'
 import {
   findDir,
   findProp,
+  hasScopeBinding,
   isBuiltInComponent,
   isComponentTag,
   isConstantBinding,
@@ -87,12 +87,7 @@ import {
 } from '../generators/utils'
 import { normalizeBindShorthand } from './vBind'
 import { ignoreVHtmlChildren } from './vHtml'
-import type {
-  ArrowFunctionExpression,
-  Expression,
-  ObjectExpression,
-  ObjectProperty,
-} from '@babel/types'
+import type { Expression, ObjectExpression, ObjectProperty } from '@babel/types'
 import { parseExpression } from '@babel/parser'
 
 export const isReservedProp: (key: string) => boolean = /*#__PURE__*/ makeMap(
@@ -533,20 +528,6 @@ function resolveSlotScopeReference(name: string, context: TransformContext) {
       parent = parent.parent
     }
   }
-}
-
-export function hasScopeBinding(
-  name: string,
-  exp: SimpleExpressionNode | undefined,
-): boolean | undefined {
-  return (
-    exp &&
-    (exp.ast
-      ? (exp.ast as ArrowFunctionExpression).params.some(param =>
-          extractIdentifiers(param).some(id => id.name === name),
-        )
-      : exp.content === name)
-  )
 }
 
 function resolveSetupReference(name: string, context: TransformContext) {

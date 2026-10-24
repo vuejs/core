@@ -831,4 +831,20 @@ describe('compiler: v-for', () => {
       'JSON.stringify({ a: _getDefaultValue(_for_item0.value.a, () => (3)), b: _for_item0.value[_ctx.k] })',
     )
   })
+
+  test('alias named like a known global', () => {
+    const { code } = compileWithVFor(
+      `<div v-for="Date in items">{{ Date }}</div>`,
+    )
+    expect(code).toContain(
+      '_renderEffect(() => _setText(x2, _toDisplayString(_for_item0.value)))',
+    )
+
+    const { code: key } = compileWithVFor(
+      `<div v-for="(item, Number) in items" :title="Number"></div>`,
+    )
+    expect(key).toContain(
+      '_renderEffect(() => _setProp(n2, "title", _for_key0.value))',
+    )
+  })
 })

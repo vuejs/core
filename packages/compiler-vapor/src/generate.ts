@@ -81,6 +81,10 @@ export class CodegenContext {
     return node
   }
 
+  isScopeVariable(name: string): boolean {
+    return !!this.identifiers[name]?.length
+  }
+
   block: BlockIRNode
   withId<T>(
     fn: () => T,

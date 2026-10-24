@@ -39,6 +39,7 @@ import {
   isConstantExpression,
   isKeepAliveTag,
   isLongIfChain,
+  isScopeVariable,
   isSlotTemplate,
   isTransitionNode,
 } from './utils'
@@ -302,6 +303,10 @@ export class TransformContext<T extends AllNode = AllNode> {
     return (this.dynamic.template = id)
   }
 
+  isScopeVariable(name: string): boolean {
+    return isScopeVariable(name, this)
+  }
+
   registerEffect(
     expressions: SimpleExpressionNode[],
     operation: OperationNode | OperationNode[],
@@ -310,10 +315,11 @@ export class TransformContext<T extends AllNode = AllNode> {
   ): boolean {
     const operations = [operation].flat()
     expressions = expressions.filter(
-      exp => !isConstantExpression(exp, this.root.options.bindingMetadata),
+      exp =>
+        !isConstantExpression(exp, this.root.options.bindingMetadata, this),
     )
     const once = expressions.every(e =>
-      isConstantBinding(e, this.root.options.bindingMetadata),
+      isConstantBinding(e, this.root.options.bindingMetadata, this),
     )
     // Merged listeners use effect cleanup even when their props are constant.
     const needsEffect = operations.some(

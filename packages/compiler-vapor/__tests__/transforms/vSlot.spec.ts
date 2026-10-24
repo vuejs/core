@@ -1355,4 +1355,13 @@ describe('compiler: transform slot', () => {
       )
     }
   })
+
+  test('slot prop named like a known global', () => {
+    const { code } = compileWithSlots(
+      `<Comp v-slot="{ Number }">{{ Number }}</Comp>`,
+    )
+    expect(code).toContain(
+      '_renderEffect(() => _setText(n0, _toDisplayString(_slotProps0.Number)))',
+    )
+  })
 })
