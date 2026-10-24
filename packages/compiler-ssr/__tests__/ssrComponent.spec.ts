@@ -17,6 +17,22 @@ describe('ssr: components', () => {
     `)
   })
 
+  test('static style', () => {
+    expect(compile(`<div><foo style="color: red" /></div>`).code)
+      .toMatchInlineSnapshot(`
+      "const { resolveComponent: _resolveComponent } = require("vue")
+      const { ssrRenderComponent: _ssrRenderComponent, ssrRenderAttrs: _ssrRenderAttrs } = require("vue/server-renderer")
+
+      return function ssrRender(_ctx, _push, _parent, _attrs) {
+        const _component_foo = _resolveComponent("foo")
+
+        _push(\`<div\${_ssrRenderAttrs(_attrs)}>\`)
+        _push(_ssrRenderComponent(_component_foo, { style: {"color":"red"} }, null, _parent))
+        _push(\`</div>\`)
+      }"
+    `)
+  })
+
   // event listeners should still be passed
   test('event listeners', () => {
     expect(compile(`<foo @click="bar" />`).code).toMatchInlineSnapshot(`

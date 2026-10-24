@@ -32,6 +32,27 @@ describe('ssr: attr fallthrough', () => {
     )
   })
 
+  test('with static style', async () => {
+    const Child = {
+      props: ['ok'],
+      template: `<div v-if="ok" style="color: red; margin: 0" /><span v-else style="color: red" />`,
+    }
+    const TransitionChild = {
+      template: `<transition><div style="color: red; margin: 0" /></transition>`,
+    }
+    const Parent = {
+      props: ['ok'],
+      components: { Child, TransitionChild },
+      template: `<div><child :ok="ok" style="color: blue" /><transition-child style="color: blue" /></div>`,
+    }
+    expect(await renderToString(createApp(Parent, { ok: true }))).toBe(
+      `<div><div style="color:blue;margin:0;"></div><div style="color:blue;margin:0;"></div></div>`,
+    )
+    expect(await renderToString(createApp(Parent, { ok: false }))).toBe(
+      `<div><span style="color:blue;"></span><div style="color:blue;margin:0;"></div></div>`,
+    )
+  })
+
   test('with v-model', async () => {
     const Child = {
       props: ['text'],

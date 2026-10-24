@@ -11,6 +11,17 @@ describe('ssr: attrs fallthrough', () => {
     `)
   })
 
+  test('with static style', () => {
+    expect(compile(`<div style="color: red"/>`).code).toMatchInlineSnapshot(`
+      "const { mergeProps: _mergeProps } = require("vue")
+      const { ssrRenderAttrs: _ssrRenderAttrs } = require("vue/server-renderer")
+
+      return function ssrRender(_ctx, _push, _parent, _attrs) {
+        _push(\`<div\${_ssrRenderAttrs(_mergeProps({ style: {"color":"red"} }, _attrs))}></div>\`)
+      }"
+    `)
+  })
+
   test('with comments', () => {
     expect(compile(`<!--!--><div/>`).code).toMatchInlineSnapshot(`
       "const { ssrRenderAttrs: _ssrRenderAttrs } = require("vue/server-renderer")
