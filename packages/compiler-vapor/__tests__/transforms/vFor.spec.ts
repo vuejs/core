@@ -197,6 +197,8 @@ describe('compiler: v-for', () => {
     expect(compileClass('i', 'i === page - 1')).contains(
       'const _selector0 = _createSelector(() => _ctx.page - 1)',
     )
+    // no key on either side of any comparison
+    expect(compileClass('i', 'a === b === c')).not.contains('_createSelector')
   })
 
   test('multi effect', () => {

@@ -606,10 +606,11 @@ function matchSelectorPattern(
               [right, left],
             ]) {
               // must be the key itself, not an expression derived from it
-              const aIsKey = content.slice(a.start! - 1, a.end! - 1) === key
-              const bIsKey = isKeyOnlyBinding(b, key, content)
-              const bVars = analyzeVariableScopes(b, idMap)
-              if (aIsKey && !bIsKey && !bVars.length) {
+              if (content.slice(a.start! - 1, a.end! - 1) !== key) continue
+              if (
+                !isKeyOnlyBinding(b, key, content) &&
+                !analyzeVariableScopes(b, idMap).length
+              ) {
                 matcheds.push([a, b])
               }
             }
