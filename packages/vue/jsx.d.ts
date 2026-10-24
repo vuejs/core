@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/ban-ts-comment */
 // global JSX namespace registration
-// somehow we have to copy=pase the jsx-runtime types here to make TypeScript happy
+// somehow we have to copy-paste the jsx-runtime types here to make TypeScript happy
 import type { NativeElements, ReservedProps, VNode } from '@vue/runtime-dom'
 
 declare global {

@@ -1,9 +1,15 @@
 import {
+  Fragment,
+  Suspense,
+  TestNodeTypes,
   createApp,
+  createCommentVNode,
+  createElementBlock,
   defineComponent,
   getCurrentInstance,
   h,
   nodeOps,
+  openBlock,
   render,
   shallowReadonly,
 } from '@vue/runtime-test'
@@ -11,6 +17,7 @@ import type {
   ComponentInternalInstance,
   ComponentOptions,
 } from '../src/component'
+import { PatchFlags } from '@vue/shared'
 
 describe('component: proxy', () => {
   test('data', () => {
@@ -105,6 +112,168 @@ describe('component: proxy', () => {
       return this
     })
     expect(nextTickThis).toBe(instanceProxy)
+  })
+
+  // #12680
+  test('$el should resolve to the real root element when root is a dev comment + single element fragment', () => {
+    let instanceProxy: any
+    const Comp = {
+      setup() {
+        return () => (
+          openBlock(),
+          createElementBlock(
+            Fragment,
+            null,
+            [createCommentVNode(' comment '), h('div', 'real root')],
+            PatchFlags.STABLE_FRAGMENT | PatchFlags.DEV_ROOT_FRAGMENT,
+          )
+        )
+      },
+      mounted() {
+        instanceProxy = this
+      },
+    }
+    render(h(Comp), nodeOps.createElement('div'))
+    expect(instanceProxy.$el.type).toBe(TestNodeTypes.ELEMENT)
+    expect(instanceProxy.$el.tag).toBe('div')
+  })
+
+  // #12680
+  test('$el should resolve through a single-root child component to its real root element', () => {
+    let instanceProxy: any
+    const Inner = {
+      setup() {
+        return () => (
+          openBlock(),
+          createElementBlock(
+            Fragment,
+            null,
+            [createCommentVNode(' comment '), h('div', 'inner root')],
+            PatchFlags.STABLE_FRAGMENT | PatchFlags.DEV_ROOT_FRAGMENT,
+          )
+        )
+      },
+    }
+    const Outer = {
+      setup() {
+        return () => h(Inner)
+      },
+      mounted() {
+        instanceProxy = this
+      },
+    }
+    render(h(Outer), nodeOps.createElement('div'))
+    expect(instanceProxy.$el.type).toBe(TestNodeTypes.ELEMENT)
+    expect(instanceProxy.$el.tag).toBe('div')
+  })
+
+  // #12680
+  test('$el should resolve through nested dev comment fragments across component boundaries', () => {
+    let instanceProxy: any
+    const Inner = {
+      setup() {
+        return () => (
+          openBlock(),
+          createElementBlock(
+            Fragment,
+            null,
+            [createCommentVNode(' comment '), h('div', 'inner root')],
+            PatchFlags.STABLE_FRAGMENT | PatchFlags.DEV_ROOT_FRAGMENT,
+          )
+        )
+      },
+    }
+    const Outer = {
+      setup() {
+        return () => (
+          openBlock(),
+          createElementBlock(
+            Fragment,
+            null,
+            [createCommentVNode(' comment '), h(Inner)],
+            PatchFlags.STABLE_FRAGMENT | PatchFlags.DEV_ROOT_FRAGMENT,
+          )
+        )
+      },
+      mounted() {
+        instanceProxy = this
+      },
+    }
+    render(h(Outer), nodeOps.createElement('div'))
+    expect(instanceProxy.$el.type).toBe(TestNodeTypes.ELEMENT)
+    expect(instanceProxy.$el.tag).toBe('div')
+  })
+
+  test('$el access should be safe while a root child component is mounting', () => {
+    const Child = {
+      setup() {
+        getCurrentInstance()!.parent!.proxy!.$el
+        return () => h('div')
+      },
+    }
+    const Parent = {
+      setup: () => () => h(Child),
+    }
+
+    expect(() => render(h(Parent), nodeOps.createElement('div'))).not.toThrow()
+  })
+
+  test('$el should resolve through a Suspense root', () => {
+    let instanceProxy: any
+    const Inner = {
+      setup() {
+        return () => (
+          openBlock(),
+          createElementBlock(
+            Fragment,
+            null,
+            [createCommentVNode(' comment '), h('div', 'inner root')],
+            PatchFlags.STABLE_FRAGMENT | PatchFlags.DEV_ROOT_FRAGMENT,
+          )
+        )
+      },
+    }
+    const Outer = {
+      setup() {
+        return () =>
+          h(Suspense, null, {
+            default: () => h(Inner),
+          })
+      },
+      mounted() {
+        instanceProxy = this
+      },
+    }
+
+    render(h(Outer), nodeOps.createElement('div'))
+    expect(instanceProxy.$el.type).toBe(TestNodeTypes.ELEMENT)
+    expect(instanceProxy.$el.tag).toBe('div')
+  })
+
+  test('$el should preserve the unresolved async root value without a dev root fragment', () => {
+    let instance: ComponentInternalInstance
+    let instanceProxy: any
+    const Child = {
+      name: 'Child',
+      async setup() {
+        await new Promise(() => {})
+      },
+    }
+    const Parent = {
+      setup: () => () => h(Child),
+      mounted() {
+        instance = getCurrentInstance()!
+        instanceProxy = this
+      },
+    }
+
+    render(h(Parent), nodeOps.createElement('div'))
+
+    expect(
+      `A component with async setup() must be nested in a <Suspense>`,
+    ).toHaveBeenWarned()
+    expect(instance!.vnode.el).toBeNull()
+    expect(instanceProxy.$el === instance!.vnode.el).toBe(true)
   })
 
   test('user attached properties', async () => {

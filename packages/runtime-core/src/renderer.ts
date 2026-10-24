@@ -19,6 +19,7 @@ import {
   type Data,
   type LifecycleHook,
   createComponentInstance,
+  getNextUid,
   setupComponent,
 } from './component'
 import {
@@ -43,7 +44,7 @@ import {
   type SchedulerJob,
   SchedulerJobFlags,
   type SchedulerJobs,
-  flushPostFlushCbs,
+  flushOnAppMount,
   flushPreFlushCbs,
   queueJob,
   queuePostFlushCb,
@@ -90,7 +91,11 @@ import { initFeatureFlags } from './featureFlags'
 import { isAsyncWrapper } from './apiAsyncComponent'
 import { isCompatEnabled } from './compat/compatConfig'
 import { DeprecationTypes } from './compat/compatConfig'
-import { type TransitionHooks, leaveCbKey } from './components/BaseTransition'
+import {
+  type TransitionHooks,
+  getTransitionRoot,
+  leaveCbKey,
+} from './components/BaseTransition'
 import type { ComponentCustomElementInterface } from './component'
 
 export interface Renderer<HostElement = RendererElement> {
@@ -401,6 +406,19 @@ function baseCreateRenderer(
     if (n2.patchFlag === PatchFlags.BAIL) {
       optimized = false
       n2.dynamicChildren = null
+    }
+
+    // Cached v-once nodes skip block tracking on subsequent renders.
+    if (
+      n2.dynamicChildren &&
+      n1 &&
+      n1.dynamicChildren &&
+      n1.dynamicChildren.hasOnce
+    ) {
+      if (n2.dynamicChildren === (EMPTY_ARR as any)) {
+        n2.dynamicChildren = []
+      }
+      n2.dynamicChildren.hasOnce = true
     }
 
     const { type, ref, shapeFlag } = n2
@@ -855,8 +873,15 @@ function baseCreateRenderer(
     }
     parentComponent && toggleRecurse(parentComponent, true)
 
-    if (__DEV__ && isHmrUpdating) {
+    if (
       // HMR updated, force full diff
+      (__DEV__ && isHmrUpdating) ||
+      // #6385 the old vnode may be a user-wrapped non-isomorphic block
+      // Force full diff when block metadata is unstable.
+      (dynamicChildren &&
+        (!n1.dynamicChildren ||
+          n1.dynamicChildren.length !== dynamicChildren.length))
+    ) {
       patchFlag = 0
       optimized = false
       dynamicChildren = null
@@ -978,10 +1003,12 @@ function baseCreateRenderer(
       const oldVNode = oldChildren[i]
       const newVNode = newChildren[i]
       // Determine the container (parent element) for the patch.
+      // a pending async setup() component only has its placeholder comment
+      const oldEl = oldVNode.el || resolveAsyncComponentPlaceholder(oldVNode)
       const container =
         // oldVNode may be an errored async setup() component inside Suspense
         // which will not have a mounted element
-        oldVNode.el &&
+        oldEl &&
         // - In the case of a Fragment, we need to provide the actual parent
         // of the Fragment itself so it can move its children.
         (oldVNode.type === Fragment ||
@@ -991,7 +1018,7 @@ function baseCreateRenderer(
           // - In the case of a component, it could contain anything.
           oldVNode.shapeFlag &
             (ShapeFlags.COMPONENT | ShapeFlags.TELEPORT | ShapeFlags.SUSPENSE))
-          ? hostParentNode(oldVNode.el)!
+          ? hostParentNode(oldEl)!
           : // In other cases, the parent container is not actually used so we
             // just pass the block element here to avoid a DOM parentNode call.
             fallbackContainer
@@ -1245,7 +1272,12 @@ function baseCreateRenderer(
     // before proceeding
     if (__FEATURE_SUSPENSE__ && instance.asyncDep) {
       parentSuspense &&
-        parentSuspense.registerDep(instance, setupRenderEffect, optimized)
+        parentSuspense.registerDep(
+          instance,
+          setupRenderEffect,
+          optimized,
+          namespace,
+        )
 
       // Give it a placeholder if this is not hydration
       // TODO handle self-defined fallback
@@ -1281,10 +1313,14 @@ function baseCreateRenderer(
         !instance.asyncResolved
       ) {
         // async & still pending - just update props and slots
-        // since the component's reactive effect for render isn't set-up yet
+        // since the component's reactive effect for render isn't set-up yet.
+        // carry over the el adopted during hydration: if hydration is
+        // interrupted, teardown of the claimed DOM depends on it
         if (__DEV__) {
           pushWarningContext(n2)
         }
+        n2.el = n1.el
+        n2.placeholder = n1.placeholder
         updateComponentPreRender(instance, n2, optimized)
         if (__DEV__) {
           popWarningContext()
@@ -1299,6 +1335,7 @@ function baseCreateRenderer(
     } else {
       // no update needed. just copy over properties
       n2.el = n1.el
+      n2.placeholder = n1.placeholder
       instance.vnode = n2
     }
   }
@@ -2151,7 +2188,10 @@ function baseCreateRenderer(
       memo,
     } = vnode
 
-    if (patchFlag === PatchFlags.BAIL) {
+    if (
+      patchFlag === PatchFlags.BAIL ||
+      (dynamicChildren && dynamicChildren.hasOnce)
+    ) {
       optimized = false
     }
 
@@ -2163,7 +2203,8 @@ function baseCreateRenderer(
     }
 
     // #6593 should clean memo cache when unmount
-    if (cacheIndex != null) {
+    // Slot receivers must not invalidate caches owned by the slot author.
+    if (cacheIndex != null && (!vnode.ctx || vnode.ctx === parentComponent)) {
       parentComponent!.renderCache[cacheIndex] = undefined
     }
 
@@ -2261,48 +2302,48 @@ function baseCreateRenderer(
 
   const remove: RemoveFn = vnode => {
     const { type, el, anchor, transition } = vnode
-    if (type === Fragment) {
-      if (
-        __DEV__ &&
-        vnode.patchFlag > 0 &&
-        vnode.patchFlag & PatchFlags.DEV_ROOT_FRAGMENT &&
-        transition &&
-        !transition.persisted
-      ) {
-        ;(vnode.children as VNode[]).forEach(child => {
-          if (child.type === Comment) {
-            hostRemove(child.el!)
-          } else {
-            remove(child)
-          }
-        })
-      } else {
-        removeFragment(el!, anchor!)
-      }
+    const isFragment = type === Fragment
+    if (isFragment && !transition) {
+      removeFragment(el!, anchor!)
       return
     }
 
     if (type === Static) {
       removeStaticNode(vnode)
+      // An opaque hydration placeholder cannot animate, but its removal must
+      // still release an out-in transition waiting for the claimed DOM.
+      if (transition && !transition.persisted && transition.afterLeave) {
+        transition.afterLeave()
+      }
       return
     }
 
+    const leavingNode = isFragment ? getTransitionRoot(vnode) : vnode
     const performRemove = () => {
-      hostRemove(el!)
+      if (isFragment) {
+        // An ancestor may have removed the fragment during leave.
+        if (hostParentNode(el!)) {
+          removeFragment(el!, anchor!)
+        }
+      } else {
+        hostRemove(el!)
+      }
       if (transition && !transition.persisted && transition.afterLeave) {
         transition.afterLeave()
       }
     }
 
     if (
-      vnode.shapeFlag & ShapeFlags.ELEMENT &&
+      leavingNode &&
+      leavingNode.shapeFlag & ShapeFlags.ELEMENT &&
       transition &&
       !transition.persisted
     ) {
       const { leave, delayLeave } = transition
-      const performLeave = () => leave(el!, performRemove)
+      const leavingEl = leavingNode.el!
+      const performLeave = () => leave(leavingEl, performRemove)
       if (delayLeave) {
-        delayLeave(vnode.el!, performRemove, performLeave)
+        delayLeave(leavingEl, performRemove, performLeave)
       } else {
         performLeave()
       }
@@ -2357,6 +2398,12 @@ function baseCreateRenderer(
       // so that scheduler will no longer invoke it
       job.flags! |= SchedulerJobFlags.DISPOSED
       unmount(subTree, instance, parentSuspense, doRemove)
+    } else if (instance.vnode.el && subTree) {
+      // hydration was interrupted before this component rendered (`vnode.el`
+      // is only set this early when hydrating) - unmount the placeholder
+      // covering the claimed DOM, carrying the root's transition hooks
+      subTree.transition = instance.vnode.transition
+      unmount(subTree, instance, parentSuspense, doRemove)
     }
     // unmounted hook
     if (um) {
@@ -2408,32 +2455,34 @@ function baseCreateRenderer(
     return teleportEnd ? hostNextSibling(teleportEnd) : el
   }
 
-  let isFlushing = false
   const render: RootRenderFunction = (vnode, container, namespace) => {
-    let instance
-    if (vnode == null) {
-      if (container._vnode) {
-        unmount(container._vnode, null, null, true)
-        instance = container._vnode.component
+    // a mount or unmount is only responsible for the components it creates
+    // (a compat root is created before its $mount); a root update is for the
+    // whole pending queue
+    const minUid =
+      vnode && container._vnode
+        ? undefined
+        : vnode && vnode.component
+          ? vnode.component.uid
+          : getNextUid()
+    flushOnAppMount(() => {
+      if (vnode == null) {
+        if (container._vnode) {
+          unmount(container._vnode, null, null, true)
+        }
+      } else {
+        patch(
+          container._vnode || null,
+          vnode,
+          container,
+          null,
+          null,
+          null,
+          namespace,
+        )
       }
-    } else {
-      patch(
-        container._vnode || null,
-        vnode,
-        container,
-        null,
-        null,
-        null,
-        namespace,
-      )
-    }
-    container._vnode = vnode
-    if (!isFlushing) {
-      isFlushing = true
-      flushPreFlushCbs(instance)
-      flushPostFlushCbs()
-      isFlushing = false
-    }
+      container._vnode = vnode
+    }, minUid)
   }
 
   const internals: RendererInternals = {

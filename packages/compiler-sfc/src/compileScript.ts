@@ -266,7 +266,7 @@ export function compileScript(
       !sfc.template.src &&
       !sfc.template.lang
     ) {
-      isUsedInTemplate = isImportUsed(local, sfc)
+      isUsedInTemplate = isImportUsed(local, sfc, options.templateOptions)
     }
 
     ctx.userImports[local] = {
@@ -646,6 +646,8 @@ export function compileScript(
           }
           if (child.type === 'BlockStatement') {
             scope.push(child.body)
+          } else if (child.type === 'SwitchCase') {
+            scope.push(child.consequent)
           }
           if (child.type === 'AwaitExpression') {
             hasAwait = true
@@ -669,8 +671,10 @@ export function compileScript(
             )
           }
         },
-        exit(node: Node) {
-          if (node.type === 'BlockStatement') scope.pop()
+        leave(node: Node) {
+          if (node.type === 'BlockStatement' || node.type === 'SwitchCase') {
+            scope.pop()
+          }
         },
       })
     }
@@ -769,7 +773,10 @@ export function compileScript(
   // which requires a SETUP_LET binding (getter + setter) to keep script state in sync.
   // In inline mode, it generates `foo = $event`, which also requires `let`.
   if (sfc.template && !sfc.template.src && sfc.template.ast) {
-    const vModelIds = resolveTemplateVModelIdentifiers(sfc)
+    const vModelIds = resolveTemplateVModelIdentifiers(
+      sfc,
+      options.templateOptions,
+    )
     if (vModelIds.size) {
       const toDemote = new Set<string>()
       for (const id of vModelIds) {

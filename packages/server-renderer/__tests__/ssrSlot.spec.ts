@@ -110,6 +110,33 @@ describe('ssr: slot', () => {
     )
   })
 
+  test('nullish slot props', async () => {
+    const nullishBind = {
+      one: {
+        props: ['value'],
+        template: `<div><slot v-bind="value" name="foo">fallback</slot></div>`,
+      },
+    }
+
+    expect(
+      await renderToString(
+        createApp({
+          components: nullishBind,
+          template: `<one :value="null"/>`,
+        }),
+      ),
+    ).toBe(`<div><!--[-->fallback<!--]--></div>`)
+
+    expect(
+      await renderToString(
+        createApp({
+          components: nullishBind,
+          template: `<one :value="null"><template #foo="{ label }">{{ label || 'none' }}</template></one>`,
+        }),
+      ),
+    ).toBe(`<div><!--[-->none<!--]--></div>`)
+  })
+
   test('transition slot', async () => {
     const ReusableTransition = {
       template: `<transition><slot/></transition>`,

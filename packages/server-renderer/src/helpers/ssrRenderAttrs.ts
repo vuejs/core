@@ -72,7 +72,11 @@ export function ssrRenderDynamicAttr(
     tag && (tag.indexOf('-') > 0 || isSVGTag(tag))
       ? key // preserve raw name on custom elements and svg
       : propsToAttrMap[key] || key.toLowerCase()
-  if (isBooleanAttr(attrKey)) {
+  if (
+    isBooleanAttr(attrKey) ||
+    (attrKey === 'hidden' &&
+      (typeof value === 'boolean' || typeof value === 'number'))
+  ) {
     return includeBooleanAttr(value) ? ` ${attrKey}` : ``
   } else if (isSSRSafeAttrName(attrKey)) {
     return value === '' ? ` ${attrKey}` : ` ${attrKey}="${escapeHtml(value)}"`

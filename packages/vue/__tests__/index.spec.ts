@@ -1,5 +1,28 @@
+import { BindingTypes, type CompilerOptions } from '@vue/compiler-core'
+import { compile } from '@vue/compiler-dom'
 import { EMPTY_ARR } from '@vue/shared'
-import { createApp, nextTick, reactive, ref } from '../src'
+import {
+  Suspense,
+  type VNode,
+  createApp,
+  defineComponent,
+  h,
+  nextTick,
+  reactive,
+  ref,
+} from '../src'
+import * as Vue from '../src'
+import type { InternalRenderFunction } from '../../runtime-core/src/component'
+
+function compileToFunction(template: string, options?: CompilerOptions) {
+  const { code } = compile(template, {
+    hoistStatic: true,
+    ...options,
+  })
+  const render = new Function('Vue', code)(Vue) as InternalRenderFunction
+  render._rc = true
+  return render
+}
 
 describe('compiler + runtime integration', () => {
   it('should support runtime template compilation', () => {
@@ -276,6 +299,120 @@ describe('compiler + runtime integration', () => {
     expect(container.innerHTML).toBe(`<div>false<div>true</div></div>`)
   })
 
+  test.each([
+    '<div><Child v-once />{{ count }}</div>',
+    '<Child v-once />{{ count }}',
+  ])('unmounts a v-once child after rerendering: %s', async template => {
+    const count = ref(0)
+    const unmounted = vi.fn()
+    const container = document.createElement('div')
+    const app = createApp({
+      components: {
+        Child: { template: 'child', unmounted },
+      },
+      setup: () => ({ count }),
+      template,
+    })
+
+    app.mount(container)
+    expect(container.textContent).toBe('child0')
+    count.value++
+    await nextTick()
+    expect(container.textContent).toBe('child1')
+
+    app.unmount()
+    expect(unmounted).toHaveBeenCalledTimes(1)
+  })
+
+  test.each([0, 1])(
+    'preserves cached slot content after removing outlet %i',
+    async removeIndex => {
+      const show = ref(true)
+      const count = ref(0)
+      const tick = ref(0)
+      const unmounted = vi.fn()
+      let id = 0
+      const container = document.createElement('div')
+      const app = createApp({
+        components: {
+          Child: {
+            props: ['value'],
+            data: () => ({ id: ++id }),
+            template: '<p>{{ value }}</p>',
+            unmounted() {
+              unmounted(this.id)
+            },
+          },
+          Twice: {
+            setup(_, { slots }) {
+              return () => {
+                tick.value
+                return Vue.h(
+                  'div',
+                  ['section', 'aside'].map((tag, index) =>
+                    show.value || index !== removeIndex
+                      ? Vue.h(tag, slots.default!())
+                      : null,
+                  ),
+                )
+              }
+            },
+          },
+        },
+        setup: () => ({ count }),
+        template: '<Twice><Child v-once :value="count" /></Twice>',
+      })
+
+      app.mount(container)
+      expect(container.textContent).toBe('00')
+      show.value = false
+      await nextTick()
+      expect(container.textContent).toBe('0')
+      expect(unmounted).toHaveBeenCalledTimes(1)
+      expect(unmounted).toHaveBeenLastCalledWith(removeIndex + 1)
+      count.value++
+      tick.value++
+      await nextTick()
+      expect(container.textContent).toBe('0')
+      show.value = true
+      await nextTick()
+      expect(container.textContent).toBe('00')
+      app.unmount()
+      expect(unmounted.mock.calls.map(([id]) => id).sort()).toEqual([1, 2, 3])
+    },
+  )
+
+  test('does not clear the receiver cache when a cloned v-once slot unmounts', async () => {
+    const show = ref(true)
+    const count = ref(0)
+    const container = document.createElement('div')
+    const app = createApp({
+      components: {
+        Child: { template: 'child' },
+        Twice: {
+          components: {
+            OwnChild: { props: ['value'], template: '<p>{{ value }}</p>' },
+          },
+          setup: () => ({ count, show }),
+          template:
+            '<div><OwnChild v-once :value="count" /><slot /><slot v-if="show" /><b>{{ count }}</b></div>',
+        },
+      },
+      setup: () => ({ enabled: true }),
+      template:
+        '<Twice><template #default v-if="enabled"><Child v-once /></template></Twice>',
+    })
+
+    app.mount(container)
+    show.value = false
+    await nextTick()
+    count.value++
+    await nextTick()
+    expect(container.querySelector('p')!.textContent).toBe('0')
+    expect(container.querySelector('b')!.textContent).toBe('1')
+    app.unmount()
+  })
+
   test('v-for + v-once', async () => {
     const list = reactive([1])
     const App = {
@@ -291,6 +428,100 @@ describe('compiler + runtime integration', () => {
     list.push(2)
     await nextTick()
     expect(container.innerHTML).toBe(`<div>2<div>1</div></div>`)
+  })
+
+  // #15551
+  test.each([false, true])('async setup (wrapped: %s)', async wrapped => {
+    const loading = ref(false)
+    const slotFilled = ref(true)
+    const Dummy = defineComponent({
+      async setup() {
+        await new Promise(() => {})
+      },
+    })
+    const Common = defineComponent({
+      components: {
+        Dummy: wrapped
+          ? { components: { Dummy }, template: '<Dummy />' }
+          : Dummy,
+      },
+      props: { loading: Boolean },
+      template: `
+        <div><div>
+          <slot name="prepend"></slot>
+          <Dummy v-if="loading" />
+          <div>{{ loading }}</div>
+        </div></div>`,
+    })
+    const Inner = defineComponent({
+      components: { Common },
+      setup: () => ({ loading, slotFilled }),
+      template: `
+        <Common :loading="loading">
+          <template #prepend><div v-if="slotFilled" /></template>
+        </Common>`,
+    })
+    const container = document.createElement('div')
+    createApp({
+      render: () => h(Suspense, null, () => h(Inner)),
+    }).mount(container)
+    expect(container.innerHTML).toBe(
+      `<div><div><div></div><!--v-if--><div>false</div></div></div>`,
+    )
+
+    loading.value = true
+    await nextTick()
+    expect(container.innerHTML).toBe(
+      `<div><div><div></div><!----><div>true</div></div></div>`,
+    )
+
+    slotFilled.value = false
+    await nextTick()
+    expect(container.innerHTML).toBe(
+      `<div><div><!----><div>true</div></div></div>`,
+    )
+
+    loading.value = false
+    await nextTick()
+    expect(container.innerHTML).toBe(
+      `<div><div><!----><!--v-if--><div>false</div></div></div>`,
+    )
+  })
+
+  test('nullish v-bind on <slot>', async () => {
+    const Child = {
+      props: ['error', 'value'],
+      template:
+        `<div>` +
+        `<template v-if="error">{{ error }}</template>` +
+        `<template v-else><slot v-bind="value" name="scoped">fallback</slot></template>` +
+        `</div>`,
+    }
+
+    const fallbackContainer = document.createElement('div')
+    createApp({
+      components: { Child },
+      template: `<Child :error="null" :value="null"/>`,
+    }).mount(fallbackContainer)
+    expect(fallbackContainer.innerHTML).toBe(`<div>fallback</div>`)
+
+    const value = ref<{ label: string } | null>(null)
+    const container = document.createElement('div')
+    createApp({
+      components: { Child },
+      setup() {
+        return { value }
+      },
+      template:
+        `<Child :error="null" :value="value">` +
+        `<template #scoped="{ label }">{{ label || 'none' }}</template>` +
+        `</Child>`,
+    }).mount(container)
+    expect(container.innerHTML).toBe(`<div>none</div>`)
+
+    value.value = { label: 'foo' }
+    await nextTick()
+    expect(container.innerHTML).toBe(`<div>foo</div>`)
   })
 
   // #2413
@@ -311,4 +542,278 @@ describe('compiler + runtime integration', () => {
     app.mount(root)
     expect(root.innerHTML).toBe('<div>60000000100000111</div>')
   })
+
+  describe('stable v-for lifecycle', () => {
+    test('clears static ref arrays on branch removal', async () => {
+      const show = ref(true)
+      const items = ref<HTMLElement[]>([])
+      const app = createApp({
+        setup: () => ({ items, show }),
+        render: compileToFunction(
+          `<template v-if="show"><div v-for="i in 3" :key="i" ref="items" /></template>`,
+          { prefixIdentifiers: true },
+        ),
+      })
+      const container = document.createElement('div')
+
+      app.mount(container)
+      expect(items.value).toHaveLength(3)
+
+      show.value = false
+      await nextTick()
+      expect(items.value).toHaveLength(0)
+
+      app.unmount()
+    })
+
+    test('calls setup-const function refs with null on branch removal', async () => {
+      const show = ref(true)
+      const values: (Element | null)[] = []
+      const setRef = (value: Element | null) => values.push(value)
+      const app = createApp({
+        setup: () => ({ setRef, show }),
+        render: compileToFunction(
+          `<template v-if="show"><div v-for="i in 1" :ref="setRef" /></template>`,
+          {
+            prefixIdentifiers: true,
+            bindingMetadata: {
+              setRef: BindingTypes.SETUP_CONST,
+            },
+          },
+        ),
+      })
+      const container = document.createElement('div')
+
+      app.mount(container)
+      expect(values).toHaveLength(1)
+      expect(values[0]).toBeInstanceOf(HTMLDivElement)
+
+      show.value = false
+      await nextTick()
+      expect(values).toHaveLength(2)
+      expect(values[1]).toBeNull()
+
+      app.unmount()
+    })
+
+    test('calls directive unmounted hooks on branch removal', async () => {
+      const show = ref(true)
+      const unmounted = vi.fn()
+      const app = createApp({
+        directives: { dir: { unmounted } },
+        setup: () => ({ show }),
+        render: compileToFunction(
+          `<template v-if="show"><div v-for="i in 1" v-dir /></template>`,
+          { prefixIdentifiers: true },
+        ),
+      })
+      const container = document.createElement('div')
+
+      app.mount(container)
+      show.value = false
+      await nextTick()
+      expect(unmounted).toHaveBeenCalledOnce()
+
+      app.unmount()
+    })
+
+    test('calls vnode unmounted hooks on branch removal', async () => {
+      const show = ref(true)
+      const onVnodeUnmounted = vi.fn()
+      const app = createApp({
+        setup: () => ({ onVnodeUnmounted, show }),
+        render: compileToFunction(
+          `<template v-if="show"><div v-for="i in 1" @vue:unmounted="onVnodeUnmounted" /></template>`,
+          { prefixIdentifiers: true },
+        ),
+      })
+      const container = document.createElement('div')
+
+      app.mount(container)
+      show.value = false
+      await nextTick()
+      expect(onVnodeUnmounted).toHaveBeenCalledOnce()
+
+      app.unmount()
+    })
+
+    test('runs directive beforeUpdate before child updates', async () => {
+      const value = ref('old')
+      const observed: string[] = []
+      const app = createApp({
+        directives: {
+          dir: {
+            beforeUpdate(el: HTMLElement) {
+              observed.push(el.textContent!)
+            },
+          },
+        },
+        setup: () => ({ value }),
+        render: compileToFunction(
+          `<div v-for="i in 1" v-dir>{{ value }}</div>`,
+          { prefixIdentifiers: true },
+        ),
+      })
+      const container = document.createElement('div')
+
+      app.mount(container)
+      value.value = 'new'
+      await nextTick()
+      expect(observed).toEqual(['old'])
+
+      app.unmount()
+    })
+
+    test('runs vnode beforeUpdate before nested child updates', async () => {
+      const value = ref('old')
+      const observed: string[] = []
+      const onVnodeBeforeUpdate = (vnode: VNode) => {
+        observed.push((vnode.el as HTMLElement).textContent!)
+      }
+      const app = createApp({
+        setup: () => ({ onVnodeBeforeUpdate, value }),
+        render: compileToFunction(
+          `<div v-for="i in 1" @vue:beforeUpdate="onVnodeBeforeUpdate"><span>{{ value }}</span></div>`,
+          { prefixIdentifiers: true },
+        ),
+      })
+      const container = document.createElement('div')
+
+      app.mount(container)
+      value.value = 'new'
+      await nextTick()
+      expect(observed).toEqual(['old'])
+
+      app.unmount()
+    })
+  })
+
+  test.each([false, true])(
+    'unmounts all children of a nested v-once block (updated: %s)',
+    async updated => {
+      const count = ref(0)
+      const onceUnmounted = vi.fn()
+      const liveUnmounted = vi.fn()
+      const container = document.createElement('div')
+      const app = createApp({
+        components: {
+          OnceChild: { template: 'once', unmounted: onceUnmounted },
+          LiveChild: { template: 'live', unmounted: liveUnmounted },
+        },
+        setup: () => ({ count, show: true }),
+        template:
+          '<div><section v-if="show"><OnceChild v-once /><LiveChild />{{ count }}</section></div>',
+      })
+
+      app.mount(container)
+      expect(container.textContent).toBe('oncelive0')
+      if (updated) {
+        count.value++
+        await nextTick()
+        expect(container.textContent).toBe('oncelive1')
+      }
+
+      app.unmount()
+      expect({
+        once: onceUnmounted.mock.calls.length,
+        live: liveUnmounted.mock.calls.length,
+      }).toEqual({ once: 1, live: 1 })
+    },
+  )
+
+  test('prop update while an async setup() component is pending', async () => {
+    const loading = ref(false)
+    const value = ref(0)
+    const Dummy = defineComponent({
+      props: ['value'],
+      async setup() {
+        await new Promise(() => {})
+      },
+    })
+    const container = document.createElement('div')
+    const app = createApp({
+      components: { Dummy },
+      setup: () => ({ loading, value }),
+      template: `<Suspense><div><div><Dummy v-if="loading" :value="value" /><span /></div></div></Suspense>`,
+    })
+    app.mount(container)
+
+    loading.value = true
+    await nextTick()
+    value.value++
+    await nextTick()
+    loading.value = false
+    await nextTick()
+    expect(container.innerHTML).toBe(
+      `<div><div><!----><!--v-if--><span></span></div></div>`,
+    )
+    app.unmount()
+  })
+
+  test.each(['template', 'div'])(
+    'finishes a comment-root transition after its %s ancestor unmounts',
+    async tag => {
+      const outer = ref(true)
+      const inner = ref(true)
+      let finishLeave!: () => void
+      const onLeave = vi.fn((_el: Element, done: () => void) => {
+        finishLeave = done
+      })
+      const onAfterLeave = vi.fn()
+      const container = document.createElement('div')
+      document.body.appendChild(container)
+      const app = createApp({
+        components: {
+          One: {
+            render: compileToFunction('<!--a--><section>A</section><!--b-->', {
+              comments: true,
+            }),
+          },
+        },
+        setup: () => ({ outer, inner, onLeave, onAfterLeave }),
+        render: compileToFunction(
+          `<main>
+            <${tag} v-if="outer">
+              <Transition :css="false" @leave="onLeave" @after-leave="onAfterLeave">
+                <One v-if="inner" />
+              </Transition>
+              <i>S</i>
+            </${tag}>
+          </main>`,
+          { comments: true },
+        ),
+      })
+
+      try {
+        app.mount(container)
+        const leavingElement = container.querySelector('section')!
+        const parent = leavingElement.parentNode!
+
+        inner.value = false
+        await nextTick()
+        expect(onLeave).toHaveBeenCalledTimes(1)
+        expect(onLeave).toHaveBeenCalledWith(
+          leavingElement,
+          expect.any(Function),
+        )
+        expect(onAfterLeave).not.toHaveBeenCalled()
+        expect(leavingElement.isConnected).toBe(true)
+
+        outer.value = false
+        await nextTick()
+        expect(container.innerHTML).toBe('<main><!--v-if--></main>')
+        expect(leavingElement.isConnected).toBe(false)
+        expect(leavingElement.parentNode).toBe(tag === 'div' ? parent : null)
+
+        expect(() => finishLeave()).not.toThrow()
+        expect(onAfterLeave).toHaveBeenCalledTimes(1)
+        expect(onAfterLeave).toHaveBeenCalledWith(leavingElement)
+        expect(leavingElement.parentNode).toBeNull()
+        expect(parent.childNodes).toHaveLength(tag === 'div' ? 2 : 1)
+      } finally {
+        app.unmount()
+        container.remove()
+      }
+    },
+  )
 })

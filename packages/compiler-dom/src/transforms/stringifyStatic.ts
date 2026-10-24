@@ -22,6 +22,7 @@ import {
 } from '@vue/compiler-core'
 import {
   escapeHtml,
+  includeBooleanAttr,
   isArray,
   isBooleanAttr,
   isKnownHtmlAttr,
@@ -326,7 +327,7 @@ function stringifyElement(
   context: TransformContext,
 ): string {
   let res = `<${node.tag}`
-  let innerHTML = ''
+  let innerHTML = undefined
   for (let i = 0; i < node.props.length; i++) {
     const p = node.props[i]
     if (p.type === NodeTypes.ATTRIBUTE) {
@@ -347,7 +348,8 @@ function stringifyElement(
         }
         // #6568
         if (
-          isBooleanAttr((p.arg as SimpleExpressionNode).content) &&
+          (isBooleanAttr((p.arg as SimpleExpressionNode).content) ||
+            (p.arg as SimpleExpressionNode).content === 'hidden') &&
           exp.content === 'false'
         ) {
           continue
@@ -356,6 +358,13 @@ function stringifyElement(
         let evaluated = evaluateConstant(exp)
         if (evaluated != null) {
           const arg = p.arg && (p.arg as SimpleExpressionNode).content
+          if (
+            arg === 'hidden' &&
+            typeof evaluated === 'number' &&
+            !includeBooleanAttr(evaluated)
+          ) {
+            continue
+          }
           if (arg === 'class') {
             evaluated = normalizeClass(evaluated)
           } else if (arg === 'style') {
@@ -368,7 +377,7 @@ function stringifyElement(
       } else if (p.name === 'html') {
         // #5439 v-html with constant value
         // not sure why would anyone do this but it can happen
-        innerHTML = evaluateConstant(p.exp as SimpleExpressionNode)
+        innerHTML = evaluateConstant(p.exp as SimpleExpressionNode) ?? ''
       } else if (p.name === 'text') {
         innerHTML = escapeHtml(
           toDisplayString(evaluateConstant(p.exp as SimpleExpressionNode)),
@@ -380,7 +389,7 @@ function stringifyElement(
     res += ` ${context.scopeId}`
   }
   res += `>`
-  if (innerHTML) {
+  if (innerHTML !== undefined) {
     res += innerHTML
   } else {
     for (let i = 0; i < node.children.length; i++) {

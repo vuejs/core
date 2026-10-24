@@ -7,6 +7,8 @@ import {
   mockId,
 } from './utils'
 import { type RawSourceMap, SourceMapConsumer } from 'source-map-js'
+import { compileScript, compileTemplate, parse } from '../src'
+import { templateAnalysisCache } from '../src/script/importUsageCheck'
 
 vi.mock('../src/warn', () => ({
   warn: vi.fn(),
@@ -343,6 +345,43 @@ describe('SFC compile <script setup>', () => {
         `import { useCssVars as _useCssVars, unref as _unref } from 'vue'`,
       )
       expect(content).toMatch(`import { useCssVars, ref } from 'vue'`)
+    })
+
+    test('should re-analyze a transformed template after cache invalidation', () => {
+      const delimiters: [string, string] = ['[[', ']]']
+      const { descriptor } = parse(
+        `
+        <script setup lang="ts">
+        import { cachedMsg } from './cachedMsg'
+        </script>
+        <template><p>[[ cachedMsg ]]</p></template>
+        `,
+        { templateParseOptions: { delimiters } },
+      )
+
+      const templateOptions = { compilerOptions: { delimiters } }
+      compileScript(descriptor, { id: mockId, templateOptions })
+      expect(templateAnalysisCache.has(descriptor.template!.content)).toBe(true)
+
+      compileTemplate({
+        filename: 'example.vue',
+        id: mockId,
+        source: descriptor.template!.content,
+        ast: descriptor.template!.ast,
+        compilerOptions: { delimiters },
+      })
+      expect(descriptor.template!.ast!.transformed).toBe(true)
+
+      templateAnalysisCache.clear()
+      expect(templateAnalysisCache.has(descriptor.template!.content)).toBe(
+        false,
+      )
+
+      const { content } = compileScript(descriptor, {
+        id: mockId,
+        templateOptions,
+      })
+      expect(content).toMatch(`return { get cachedMsg() { return cachedMsg } }`)
     })
 
     test('import dedupe between <script> and <script setup>', () => {
@@ -921,6 +960,28 @@ describe('SFC compile <script setup>', () => {
       assertAwaitDetection(`if (ok) { await foo } else { await bar }`)
     })
 
+    // #15495
+    test('await in switch case', () => {
+      const code = assertAwaitDetection(`switch (a) {
+        case 1:
+          foo()
+          await bar()
+      }`)
+      expect(code).toMatch(/foo\(\)\s*;\(/)
+    })
+
+    // #15495
+    test('await in switch case nested in a block', () => {
+      const code = assertAwaitDetection(`if (a) {
+        switch (b) {
+          case 1:
+            qux()
+            await bar()
+        }
+      }`)
+      expect(code).toMatch(/qux\(\)\s*;\(/)
+    })
+
     test('multiple `if` nested statements', () => {
       assertAwaitDetection(`if (ok) {
         let a = 'foo'
@@ -986,6 +1047,25 @@ describe('SFC compile <script setup>', () => {
         `const cls = class Foo { async method() { await bar }}`,
         false,
       )
+    })
+
+    // #15465
+    test('await statements after a nested block should be separated', async () => {
+      const { content } = compile(
+        `<script setup>
+        if (true) {
+          if (false) {}
+          await Promise.resolve(1)
+          await Promise.resolve(2)
+        }
+        </script>`,
+        { genDefaultAs: '_sfc_' },
+      )
+      const component = new Function(
+        '_withAsyncContext',
+        `${content.replace(/^import .*\n/, '')};return _sfc_`,
+      )((getAwaitable: () => unknown) => [getAwaitable(), () => {}])
+      await expect(component.setup({}, { expose() {} })).resolves.toEqual({})
     })
   })
 

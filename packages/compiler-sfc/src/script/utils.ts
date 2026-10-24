@@ -59,9 +59,7 @@ export function toRuntimeTypeString(types: string[]): string {
 
 export function getImportedName(
   specifier:
-    | ImportSpecifier
-    | ImportDefaultSpecifier
-    | ImportNamespaceSpecifier,
+    ImportSpecifier | ImportDefaultSpecifier | ImportNamespaceSpecifier,
 ): string {
   if (specifier.type === 'ImportSpecifier')
     return specifier.imported.type === 'Identifier'

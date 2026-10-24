@@ -159,6 +159,38 @@ test('inject persisted when child has v-show', () => {
   ).toMatchSnapshot()
 })
 
+test('inject persisted when child has v-show in production', async () => {
+  __DEV__ = false
+  vi.resetModules()
+  try {
+    const { compile: prodCompile } = await import('../../src')
+    expect(
+      prodCompile(`
+      <transition>
+        <div v-show="ok" />
+      </transition>
+      `).code,
+    ).toMatch(`persisted: ""`)
+    expect(
+      prodCompile(
+        `
+        <transition>
+          <!-- comment -->
+          <div v-show="ok" />
+        </transition>
+        `,
+        { comments: true },
+      ).code,
+    ).toMatch(`persisted: ""`)
+
+    const onError = vi.fn()
+    prodCompile(`<transition><div/><div/></transition>`, { onError })
+    expect(onError).not.toHaveBeenCalled()
+  } finally {
+    __DEV__ = true
+  }
+})
+
 test('the v-if/else-if/else branches in Transition should ignore comments', () => {
   expect(
     compile(`

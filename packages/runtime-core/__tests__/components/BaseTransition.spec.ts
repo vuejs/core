@@ -2,6 +2,7 @@ import {
   BaseTransition,
   type BaseTransitionProps,
   KeepAlive,
+  Teleport,
   type TestElement,
   type VNodeProps,
   h,
@@ -12,6 +13,8 @@ import {
   serialize,
   serializeInner,
 } from '@vue/runtime-test'
+import * as runtime from '@vue/runtime-test'
+import { compile } from '@vue/compiler-dom'
 
 function mount(
   props: BaseTransitionProps<TestElement>,
@@ -1293,4 +1296,316 @@ describe('BaseTransition', () => {
     await runTestWithKeepAlive(testOutIn)
     __DEV__ = true
   })
+
+  test('should preserve transition for component with KeepAlive root', async () => {
+    const root = nodeOps.createElement('div')
+    const show = ref(false)
+    const onBeforeEnter = vi.fn()
+    const Child = { render: () => h('div', 'content') }
+    const Comp = {
+      render: () => h(KeepAlive, null, { default: () => h(Child) }),
+    }
+    const App = () =>
+      h(BaseTransition, { onBeforeEnter }, () => (show.value ? h(Comp) : null))
+
+    render(h(App), root)
+
+    show.value = true
+    await nextTick()
+    expect(serializeInner(root)).toBe('<div>content</div>')
+    expect(onBeforeEnter).toHaveBeenCalledTimes(1)
+  })
+
+  test('should not error on component with empty Teleport root', () => {
+    const root = nodeOps.createElement('div')
+    const target = nodeOps.createElement('div')
+    const Comp = () => h(Teleport, { to: target }, [])
+
+    expect(() =>
+      render(
+        h(BaseTransition, null, () => h(Comp)),
+        root,
+      ),
+    ).not.toThrow()
+    expect(serializeInner(root)).toBe(
+      '<!--teleport start--><!--teleport end-->',
+    )
+    expect(serializeInner(target)).toBe('')
+    expect(
+      'Component inside <Transition> renders non-element root node',
+    ).toHaveBeenWarned()
+  })
+
+  test('should update transition hooks for component with Teleport root', async () => {
+    const root = nodeOps.createElement('div')
+    const target = nodeOps.createElement('div')
+    const show = ref(true)
+    const firstBeforeLeave = vi.fn()
+    const nextBeforeLeave = vi.fn()
+    const beforeLeave = ref(firstBeforeLeave)
+    const Comp = () => h(Teleport, { to: target }, h('div', 'content'))
+    const App = () =>
+      h(BaseTransition, { onBeforeLeave: beforeLeave.value }, () =>
+        show.value ? h(Comp) : null,
+      )
+
+    render(h(App), root)
+
+    beforeLeave.value = nextBeforeLeave
+    show.value = false
+    await nextTick()
+
+    expect(firstBeforeLeave).not.toHaveBeenCalled()
+    expect(nextBeforeLeave).toHaveBeenCalledTimes(1)
+  })
+
+  describe.each([true, false])('comment roots (__DEV__: %s)', dev => {
+    const roots = [
+      ['element', '<!--start--><div>A</div><!--end-->', 5],
+      ['component', '<!--start--><Leaf /><!--end-->', 5],
+      [
+        'nested fragment',
+        '<!--start--><div v-if="false">If</div><!--between--><div v-else>A</div><!--end-->',
+        dev ? 8 : 5,
+      ],
+    ] as const
+
+    test.each(
+      roots.flatMap(([name, template, nodes]) =>
+        (['out-in', 'in-out'] as const).flatMap(mode =>
+          [false, true].map(withKeepAlive => ({
+            name,
+            template,
+            nodes,
+            mode,
+            withKeepAlive,
+          })),
+        ),
+      ),
+    )('$name, $mode, KeepAlive: $withKeepAlive', async options => {
+      __DEV__ = dev
+      try {
+        const { template, nodes, mode, withKeepAlive } = options
+        const { code } = compile(template, {
+          comments: true,
+          hoistStatic: true,
+        })
+        const One = {
+          components: { Leaf: { render: () => h('div', 'A') } },
+          render: new Function('Vue', code)(runtime),
+        }
+        const Two = { render: () => h('span', 'B') }
+        const toggle = ref(true)
+        const { props, cbs } = mockProps({ mode }, withKeepAlive)
+        const { root } = mount(
+          props,
+          () => h(toggle.value ? One : Two),
+          withKeepAlive,
+        )
+        expect(root.children).toHaveLength(nodes)
+
+        for (const active of [false, true]) {
+          const leaving = active ? '<span>B</span>' : '<div>A</div>'
+          const entering = active ? '<div>A</div>' : '<span>B</span>'
+          const call = active ? 1 : 0
+          toggle.value = active
+          await nextTick()
+
+          if (mode === 'out-in') {
+            expect(props.onLeave).toHaveBeenCalledTimes(call + 1)
+            assertCalledWithEl(props.onLeave, leaving, call)
+            expect(props.onEnter).toHaveBeenCalledTimes(call)
+            cbs.doneLeave[leaving]()
+            await nextTick()
+            expect(props.onEnter).toHaveBeenCalledTimes(call + 1)
+            assertCalledWithEl(props.onEnter, entering, call)
+            cbs.doneEnter[entering]()
+          } else {
+            expect(props.onEnter).toHaveBeenCalledTimes(call + 1)
+            assertCalledWithEl(props.onEnter, entering, call)
+            expect(props.onLeave).toHaveBeenCalledTimes(call)
+            cbs.doneEnter[entering]()
+            expect(props.onLeave).toHaveBeenCalledTimes(call + 1)
+            assertCalledWithEl(props.onLeave, leaving, call)
+            cbs.doneLeave[leaving]()
+            await nextTick()
+          }
+
+          expect(props.onAfterLeave).toHaveBeenCalledTimes(call + 1)
+          expect(props.onAfterEnter).toHaveBeenCalledTimes(call + 1)
+          expect(root.children).toHaveLength(active ? nodes : 1)
+          expect(serializeInner(root)).toBe(
+            active
+              ? `<!--start-->${dev && options.name === 'nested fragment' ? '<!--between-->' : ''}<div>A</div><!--end-->`
+              : '<span>B</span>',
+          )
+        }
+      } finally {
+        __DEV__ = true
+      }
+    })
+  })
+
+  test.each([false, true])(
+    'should update leave hooks through comment roots (KeepAlive: %s)',
+    async withKeepAlive => {
+      const root = nodeOps.createElement('div')
+      const toggle = ref(true)
+      const firstLeave = vi.fn((_el, done) => done())
+      const nextLeave = vi.fn((_el, done) => done())
+      const onLeave = ref(firstLeave)
+      const { code } = compile('<!--start--><div>A</div><!--end-->')
+      const One = { render: new Function('Vue', code)(runtime) }
+      const Two = { render: () => h('span', 'B') }
+      const slot = () => h(toggle.value ? One : Two)
+      const App = () =>
+        h(BaseTransition, { onLeave: onLeave.value }, () =>
+          withKeepAlive ? h(KeepAlive, null, slot()) : slot(),
+        )
+      render(h(App), root)
+
+      onLeave.value = nextLeave
+      toggle.value = false
+      await nextTick()
+
+      expect(firstLeave).not.toHaveBeenCalled()
+      expect(nextLeave).toHaveBeenCalledTimes(1)
+      assertCalledWithEl(nextLeave, '<div>A</div>')
+      expect(root.children).toHaveLength(1)
+      expect(serializeInner(root)).toBe('<span>B</span>')
+      render(null, root)
+    },
+  )
+
+  test.each([true, false])(
+    'should skip out-in leave for empty comment roots (__DEV__: %s)',
+    async dev => {
+      __DEV__ = dev
+      try {
+        const { code } = compile(
+          '<!--start--><div v-if="false">A</div><!--end-->',
+          { comments: true },
+        )
+        const One = { render: new Function('Vue', code)(runtime) }
+        const toggle = ref(true)
+        const { props } = mockProps({ mode: 'out-in' })
+        const { root } = mount(props, () =>
+          toggle.value ? h(One) : h('span', 'B'),
+        )
+
+        toggle.value = false
+        await nextTick()
+
+        expect(props.onLeave).not.toHaveBeenCalled()
+        expect(props.onEnter).toHaveBeenCalledTimes(1)
+        expect(serializeInner(root)).toBe('<span>B</span>')
+        expect(root.children).toHaveLength(1)
+      } finally {
+        __DEV__ = true
+      }
+    },
+  )
+
+  test('should not animate a fragment with multiple element roots', async () => {
+    const { code } = compile(
+      '<!--start--><template v-if="true"><div>A</div><span>B</span></template><!--end-->',
+    )
+    const One = { render: new Function('Vue', code)(runtime) }
+    const toggle = ref(true)
+    const { props } = mockProps()
+    const { root } = mount(props, () => (toggle.value ? h(One) : h('p', 'C')))
+    expect(
+      'Component inside <Transition> renders non-element root node',
+    ).toHaveBeenWarned()
+
+    toggle.value = false
+    await nextTick()
+
+    expect(props.onLeave).not.toHaveBeenCalled()
+    expect(serializeInner(root)).toBe('<p>C</p>')
+    expect(root.children).toHaveLength(1)
+  })
+
+  test.each(['default', 'in-out'] as const)(
+    'should finish pending leave when a comment root re-enters (mode: %s)',
+    async mode => {
+      const { code } = compile('<!--start--><div>A</div><!--end-->', {
+        comments: true,
+        hoistStatic: true,
+      })
+      const One = { render: new Function('Vue', code)(runtime) }
+      const Two = { render: () => h('span', 'B') }
+      const toggle = ref(true)
+      const { props, cbs } = mockProps({ mode })
+      const { root } = mount(props, () =>
+        h(toggle.value ? One : Two, { key: toggle.value ? 'one' : 'two' }),
+      )
+      const leavingNodes = root.children.slice()
+
+      toggle.value = false
+      await nextTick()
+      cbs.doneEnter['<span>B</span>']()
+      expect(props.onLeave).toHaveBeenCalledTimes(1)
+      expect(props.onAfterLeave).not.toHaveBeenCalled()
+      const finishFirstLeave = cbs.doneLeave['<div>A</div>']
+
+      toggle.value = true
+      await nextTick()
+      expect(props.onAfterLeave).toHaveBeenCalledTimes(1)
+      assertCalledWithEl(props.onAfterLeave, '<div>A</div>')
+      expect(props.onLeaveCancelled).not.toHaveBeenCalled()
+      expect(leavingNodes.every(node => node.parentNode === null)).toBe(true)
+      expect(serializeInner(root)).toBe(
+        '<span>B</span><!--start--><div>A</div><!--end-->',
+      )
+      expect(root.children).toHaveLength(6)
+
+      cbs.doneEnter['<div>A</div>']()
+      expect(props.onLeave).toHaveBeenCalledTimes(2)
+      cbs.doneLeave['<span>B</span>']()
+      finishFirstLeave()
+      expect(props.onAfterLeave).toHaveBeenCalledTimes(2)
+      expect(serializeInner(root)).toBe('<!--start--><div>A</div><!--end-->')
+      expect(root.children).toHaveLength(5)
+    },
+  )
+
+  test.each([true, false])(
+    'should enter when a component updates its own root (__DEV__: %s)',
+    async dev => {
+      __DEV__ = dev
+      try {
+        const showA = ref(true)
+        const { code } = compile(
+          '<div v-if="showA">A</div><span v-else>B</span>',
+          { prefixIdentifiers: true },
+        )
+        const Comp = {
+          setup: () => ({ showA }),
+          render: new Function('Vue', code)(runtime),
+        }
+        const { props, cbs } = mockProps()
+        const { root } = mount(props, () => h(Comp))
+
+        showA.value = false
+        await nextTick()
+
+        expect(props.onLeave).toHaveBeenCalledTimes(1)
+        expect(props.onBeforeEnter).toHaveBeenCalledTimes(1)
+        expect(props.onEnter).toHaveBeenCalledTimes(1)
+        assertCalledWithEl(props.onEnter, '<span>B</span>')
+        expect(props.onAfterLeave).toHaveBeenCalledTimes(1)
+        assertCalledWithEl(props.onAfterLeave, '<div>A</div>')
+        expect(serializeInner(root)).toBe('<span>B</span>')
+
+        cbs.doneLeave['<div>A</div>']()
+        expect(props.onAfterLeave).toHaveBeenCalledTimes(1)
+        expect(props.onLeaveCancelled).not.toHaveBeenCalled()
+        cbs.doneEnter['<span>B</span>']()
+        expect(props.onAfterEnter).toHaveBeenCalledTimes(1)
+      } finally {
+        __DEV__ = true
+      }
+    },
+  )
 })

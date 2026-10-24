@@ -23,6 +23,7 @@ import { isTeleport } from './Teleport'
 import type { RendererElement } from '../renderer'
 import { SchedulerJobFlags } from '../scheduler'
 import { isHmrUpdating } from '../hmr'
+import { filterSingleRoot } from '../componentRenderUtils'
 
 type Hook<T = () => void> = T | T[]
 
@@ -139,11 +140,6 @@ export const BaseTransitionPropsValidators: Record<string, any> = {
   onAppearCancelled: TransitionHookValidator,
 }
 
-const recursiveGetSubtree = (instance: ComponentInternalInstance): VNode => {
-  const subTree = instance.subTree
-  return subTree.component ? recursiveGetSubtree(subTree.component) : subTree
-}
-
 const BaseTransitionImpl: ComponentOptions = {
   name: `BaseTransition`,
 
@@ -214,7 +210,7 @@ const BaseTransitionImpl: ComponentOptions = {
         oldInnerChild &&
         oldInnerChild.type !== Comment &&
         !isSameVNodeType(oldInnerChild, innerChild) &&
-        recursiveGetSubtree(instance).type !== Comment
+        getTransitionRoot(instance.subTree)
       ) {
         let leavingHooks = resolveTransitionHooks(
           oldInnerChild,
@@ -397,13 +393,18 @@ export function resolveTransitionHooks(
       }
       // for toggled element with same key (v-if)
       const leavingVNode = leavingVNodesCache[key]
-      if (
-        leavingVNode &&
-        isSameVNodeType(vnode, leavingVNode) &&
-        (leavingVNode.el as TransitionElement)[leaveCbKey]
-      ) {
-        // force early removal (not cancelled)
-        ;(leavingVNode.el as TransitionElement)[leaveCbKey]!()
+      if (leavingVNode && isSameVNodeType(vnode, leavingVNode)) {
+        // A component's el still points to its leaving root during patch.
+        let leavingCb = (leavingVNode.el as TransitionElement)[leaveCbKey]
+        if (!leavingCb) {
+          const leavingRoot = getTransitionRoot(leavingVNode)
+          leavingCb =
+            leavingRoot && (leavingRoot.el as TransitionElement)[leaveCbKey]
+        }
+        if (leavingCb) {
+          // force early removal (not cancelled)
+          leavingCb()
+        }
       }
       callHook(hook, [el])
     },
@@ -506,7 +507,7 @@ function emptyPlaceholder(vnode: VNode): VNode | undefined {
   }
 }
 
-function getInnerChild(vnode: VNode): VNode | undefined {
+export function getInnerChild(vnode: VNode): VNode | undefined {
   if (!isKeepAlive(vnode)) {
     if (isTeleport(vnode.type) && vnode.children) {
       return findNonCommentChild(vnode.children as VNode[])
@@ -538,12 +539,22 @@ function getInnerChild(vnode: VNode): VNode | undefined {
 export function setTransitionHooks(vnode: VNode, hooks: TransitionHooks): void {
   if (vnode.shapeFlag & ShapeFlags.COMPONENT && vnode.component) {
     vnode.transition = hooks
-    setTransitionHooks(vnode.component.subTree, hooks)
+    const subTree = vnode.component.subTree
+    setTransitionHooks(
+      isTeleport(subTree.type) ? getInnerChild(subTree) || subTree : subTree,
+      hooks,
+    )
   } else if (__FEATURE_SUSPENSE__ && vnode.shapeFlag & ShapeFlags.SUSPENSE) {
     vnode.ssContent!.transition = hooks.clone(vnode.ssContent!)
     vnode.ssFallback!.transition = hooks.clone(vnode.ssFallback!)
   } else {
     vnode.transition = hooks
+    if (vnode.type === Fragment && isArray(vnode.children)) {
+      const child = filterSingleRoot(vnode.children, false)
+      if (child) {
+        setTransitionHooks(child, hooks)
+      }
+    }
   }
 }
 
@@ -583,4 +594,18 @@ export function getTransitionRawChildren(
     }
   }
   return ret
+}
+
+export function getTransitionRoot(vnode: VNode): VNode | undefined {
+  if (vnode.component) {
+    return getTransitionRoot(vnode.component.subTree)
+  }
+  if (vnode.type === Fragment) {
+    const child =
+      isArray(vnode.children) && filterSingleRoot(vnode.children, false)
+    return child ? getTransitionRoot(child) : undefined
+  }
+  if (vnode.type !== Comment) {
+    return vnode
+  }
 }

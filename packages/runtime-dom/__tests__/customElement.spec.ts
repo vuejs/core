@@ -237,6 +237,7 @@ describe('defineCustomElement', () => {
       await nextTick()
       expect(e.shadowRoot!.innerHTML).toBe('<div>foo2</div><div>bar2</div>')
       expect(e.getAttribute('foo')).toBe('foo2')
+      expect(e.foo).toBe('foo2')
       expect(e.hasAttribute('bar')).toBe(false)
 
       // change prop then attr
@@ -2210,6 +2211,211 @@ describe('defineCustomElement', () => {
     expect(barVal).toBe('bar')
   })
 
+  test('nested async custom elements should mount ancestor-first', async () => {
+    const mounted: string[] = []
+    const OuterComp = defineComponent({
+      setup() {
+        provide('foo', 'foo')
+      },
+      mounted() {
+        mounted.push('outer')
+      },
+      render() {
+        return h('slot')
+      },
+    })
+    const MiddleComp = defineComponent({
+      setup() {
+        provide('bar', 'bar')
+      },
+      mounted() {
+        mounted.push('middle')
+      },
+      render() {
+        return h('slot')
+      },
+    })
+    const InnerComp = defineComponent({
+      setup() {
+        const foo = inject('foo')
+        const bar = inject('bar')
+        return () => h('div', `${foo}/${bar}`)
+      },
+      mounted() {
+        mounted.push('inner')
+      },
+    })
+    let resolveOuter!: (comp: typeof OuterComp) => void
+    let resolveMiddle!: (comp: typeof MiddleComp) => void
+    let resolveInner!: (comp: typeof InnerComp) => void
+    const outerReady = new Promise<typeof OuterComp>(resolve => {
+      resolveOuter = resolve
+    })
+    const middleReady = new Promise<typeof MiddleComp>(resolve => {
+      resolveMiddle = resolve
+    })
+    const innerReady = new Promise<typeof InnerComp>(resolve => {
+      resolveInner = resolve
+    })
+
+    const Outer = defineCustomElement(defineAsyncComponent(() => outerReady))
+    const Middle = defineCustomElement(defineAsyncComponent(() => middleReady))
+    const Inner = defineCustomElement(defineAsyncComponent(() => innerReady))
+
+    customElements.define('async-chain-outer', Outer)
+    customElements.define('async-chain-middle', Middle)
+    customElements.define('async-chain-inner', Inner)
+    container.innerHTML =
+      `<async-chain-outer>` +
+      `<async-chain-middle>` +
+      `<async-chain-inner></async-chain-inner>` +
+      `</async-chain-middle>` +
+      `</async-chain-outer>`
+
+    resolveInner(InnerComp)
+    resolveOuter(OuterComp)
+    await new Promise(resolve => setTimeout(resolve))
+    resolveMiddle(MiddleComp)
+    await new Promise(resolve => setTimeout(resolve))
+
+    const inner = container.querySelector('async-chain-inner') as VueElement
+    expect(mounted).toEqual(['outer', 'middle', 'inner'])
+    expect(inner.shadowRoot!.innerHTML).toBe('<div>foo/bar</div>')
+  })
+
+  test('should not mount async custom element removed before its definition resolves', async () => {
+    const ParentComp = defineComponent({
+      setup() {
+        provide('foo', 'foo')
+      },
+      render() {
+        return h('slot')
+      },
+    })
+    const mounted = vi.fn()
+    const ChildComp = defineComponent({
+      setup() {
+        const foo = inject('foo')
+        return () => [h('div', `child ${foo}`), h('slot')]
+      },
+      mounted,
+    })
+    let resolveChild!: (comp: typeof ChildComp) => void
+    const childReady = new Promise<typeof ChildComp>(resolve => {
+      resolveChild = resolve
+    })
+    customElements.define(
+      'async-removed-parent',
+      defineCustomElement(ParentComp),
+    )
+    customElements.define(
+      'async-removed-child',
+      defineCustomElement(defineAsyncComponent(() => childReady)),
+    )
+    customElements.define(
+      'async-removed-grandchild',
+      defineCustomElement({ render: () => h('div', 'grandchild') }),
+    )
+    container.innerHTML =
+      `<div><async-removed-parent>` +
+      `<async-removed-child>` +
+      `<async-removed-grandchild></async-removed-grandchild>` +
+      `</async-removed-child>` +
+      `</async-removed-parent></div>`
+
+    const block = container.firstChild as HTMLElement
+    const child = block.querySelector('async-removed-child') as VueElement
+    const grandchild = block.querySelector(
+      'async-removed-grandchild',
+    ) as VueElement
+    // the parent and the child are removed while the child is loading
+    block.remove()
+    await nextTick()
+    resolveChild(ChildComp)
+    await new Promise(resolve => setTimeout(resolve))
+
+    expect(mounted).not.toHaveBeenCalled()
+    expect(child.shadowRoot!.innerHTML).toBe('')
+
+    container.appendChild(block)
+    await new Promise(resolve => setTimeout(resolve))
+    expect(mounted).toHaveBeenCalledOnce()
+    expect(child.shadowRoot!.innerHTML).toBe(
+      '<div>child foo</div><slot></slot>',
+    )
+    expect(grandchild.shadowRoot!.innerHTML).toBe('<div>grandchild</div>')
+  })
+
+  test('should defer async custom element mounting until reconnect', async () => {
+    const mounted = vi.fn()
+    const Comp = defineComponent({
+      mounted,
+      render: () => h('div', 'child'),
+    })
+    let resolveComp!: (comp: typeof Comp) => void
+    const ready = new Promise<typeof Comp>(resolve => {
+      resolveComp = resolve
+    })
+    customElements.define(
+      'async-detached-no-parent',
+      defineCustomElement(defineAsyncComponent(() => ready)),
+    )
+    container.innerHTML =
+      '<async-detached-no-parent></async-detached-no-parent>'
+    const el = container.firstChild as VueElement
+    el.remove()
+    await nextTick()
+    resolveComp(Comp)
+    await new Promise(resolve => setTimeout(resolve))
+
+    expect(mounted).not.toHaveBeenCalled()
+    expect(el.shadowRoot!.innerHTML).toBe('')
+
+    container.appendChild(el)
+    expect(mounted).toHaveBeenCalledOnce()
+    expect(el.shadowRoot!.innerHTML).toBe('<div>child</div>')
+  })
+
+  test('should not resolve nested custom element after disconnect', async () => {
+    const mounted = vi.fn()
+    const ParentComp = defineComponent({
+      render() {
+        return h('slot')
+      },
+    })
+    let resolveParent!: (comp: typeof ParentComp) => void
+    const parentReady = new Promise<typeof ParentComp>(resolve => {
+      resolveParent = resolve
+    })
+    const Parent = defineCustomElement(defineAsyncComponent(() => parentReady))
+    const Child = defineCustomElement({
+      mounted,
+      render() {
+        return h('div', 'child')
+      },
+    })
+
+    customElements.define('async-disconnect-parent', Parent)
+    customElements.define('async-disconnect-child', Child)
+    container.innerHTML =
+      `<async-disconnect-parent>` +
+      `<async-disconnect-child></async-disconnect-child>` +
+      `</async-disconnect-parent>`
+
+    const parent = container.firstChild as VueElement
+    const child = parent.firstChild as VueElement
+    child.remove()
+    resolveParent(ParentComp)
+    await new Promise(resolve => setTimeout(resolve))
+
+    expect(mounted).not.toHaveBeenCalled()
+    expect(child.shadowRoot!.innerHTML).toBe('')
+
+    parent.appendChild(child)
+    expect(mounted).toHaveBeenCalledOnce()
+    expect(child.shadowRoot!.innerHTML).toBe('<div>child</div>')
+  })
+
   describe('configureApp', () => {
     test('should work', () => {
       const E = defineCustomElement(
@@ -2375,6 +2581,76 @@ describe('defineCustomElement', () => {
     e.removeAttribute('boo')
     await nextTick()
     expect(e.shadowRoot!.innerHTML).toBe(`false,boolean`)
+  })
+
+  test('prop name conflicts with native property', () => {
+    const E = defineCustomElement({
+      props: {
+        tagName: {
+          type: String,
+        },
+      },
+      render() {
+        return this.tagName
+      },
+    })
+    customElements.define('el-attr-tag-name', E)
+    container.innerHTML = '<el-attr-tag-name tag-name="foo">'
+    const e = container.childNodes[0] as VueElement
+    expect(e.shadowRoot!.innerHTML).toBe(`foo`)
+    expect(e.tagName).toBe('foo')
+    expect(
+      `[Vue warn]: Custom element prop "tagName" conflicts with an existing property on the element and will overwrite it.`,
+    ).toHaveBeenWarned()
+  })
+
+  test('prop name conflicts with reflected native property', async () => {
+    const E = defineCustomElement({
+      props: {
+        id: String,
+      },
+      render() {
+        return this.id
+      },
+    })
+    customElements.define('el-attr-id', E)
+    container.innerHTML = '<el-attr-id id="foo">'
+    const e = container.childNodes[0] as VueElement
+
+    e.setAttribute('id', 'bar')
+    await nextTick()
+    expect(e.shadowRoot!.innerHTML).toBe(`bar`)
+    expect(e.id).toBe('bar')
+    expect(
+      `[Vue warn]: Custom element prop "id" conflicts with an existing property on the element and will overwrite it.`,
+    ).toHaveBeenWarned()
+  })
+
+  test('native method conflict when rendered by Vue', () => {
+    const value = { text: 'foo' }
+    const E = defineCustomElement({
+      props: {
+        hasAttribute: Object,
+      },
+      render() {
+        return this.hasAttribute!.text
+      },
+    })
+    customElements.define('el-vue-has-attribute', E)
+
+    render(
+      h('el-vue-has-attribute', {
+        'has-attribute': value,
+      }),
+      container,
+    )
+
+    const e = container.firstChild as VueElement
+    expect(e.shadowRoot!.innerHTML).toBe('foo')
+    expect((e as any).hasAttribute).toBe(value)
+    expect(
+      `[Vue warn]: Custom element prop "hasAttribute" conflicts with an existing property on the element and will overwrite it.`,
+    ).toHaveBeenWarned()
   })
 
   test('hyphenated attr removal', async () => {

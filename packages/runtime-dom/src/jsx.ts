@@ -86,13 +86,7 @@ export interface AriaAttributes {
   'aria-controls'?: string | undefined
   /** Indicates the element that represents the current item within a container or set of related elements. */
   'aria-current'?:
-    | Booleanish
-    | 'page'
-    | 'step'
-    | 'location'
-    | 'date'
-    | 'time'
-    | undefined
+    Booleanish | 'page' | 'step' | 'location' | 'date' | 'time' | undefined
   /**
    * Identifies the element (or elements) that describes the object.
    * @see aria-labelledby
@@ -113,13 +107,7 @@ export interface AriaAttributes {
    * @deprecated in ARIA 1.1
    */
   'aria-dropeffect'?:
-    | 'none'
-    | 'copy'
-    | 'execute'
-    | 'link'
-    | 'move'
-    | 'popup'
-    | undefined
+    'none' | 'copy' | 'execute' | 'link' | 'move' | 'popup' | undefined
   /**
    * Identifies the element that provides an error message for the object.
    * @see aria-invalid @see aria-describedby.
@@ -139,13 +127,7 @@ export interface AriaAttributes {
   'aria-grabbed'?: Booleanish | undefined
   /** Indicates the availability and type of interactive popup element, such as menu or dialog, that can be triggered by an element. */
   'aria-haspopup'?:
-    | Booleanish
-    | 'menu'
-    | 'listbox'
-    | 'tree'
-    | 'grid'
-    | 'dialog'
-    | undefined
+    Booleanish | 'menu' | 'listbox' | 'tree' | 'grid' | 'dialog' | undefined
   /**
    * Indicates whether the element is exposed to an accessibility API.
    * @see aria-disabled.
@@ -268,21 +250,11 @@ export interface AriaAttributes {
 
 // Vue's style normalization supports nested arrays
 export type StyleValue =
-  | false
-  | null
-  | undefined
-  | string
-  | CSSProperties
-  | Array<StyleValue>
+  false | null | undefined | string | CSSProperties | Array<StyleValue>
 
 // Support for `class` attribute
 export type ClassValue =
-  | false
-  | null
-  | undefined
-  | string
-  | Record<string, any>
-  | Array<ClassValue>
+  false | null | undefined | string | Record<string, any> | Array<ClassValue>
 
 export interface HTMLAttributes extends AriaAttributes, EventHandlers<Events> {
   innerHTML?: string | undefined
@@ -989,11 +961,7 @@ export interface SVGAttributes extends AriaAttributes, EventHandlers<Events> {
   'clip-rule'?: Numberish | undefined
   'color-interpolation'?: Numberish | undefined
   'color-interpolation-filters'?:
-    | 'auto'
-    | 'sRGB'
-    | 'linearRGB'
-    | 'inherit'
-    | undefined
+    'auto' | 'sRGB' | 'linearRGB' | 'inherit' | undefined
   'color-profile'?: Numberish | undefined
   'color-rendering'?: Numberish | undefined
   contentScriptType?: Numberish | undefined

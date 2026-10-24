@@ -435,4 +435,40 @@ describe('reactivity/effect/scope', () => {
     expect(rs.value.stage).toBe(1)
     expect(renderCount).toBe(5)
   })
+
+  it('should stop child scopes when cleanup stops a sibling scope', () => {
+    const parent = effectScope()
+    let sibling!: EffectScope
+
+    parent.run(() => {
+      effectScope().run(() => {
+        onScopeDispose(() => sibling.stop())
+      })
+      sibling = effectScope()
+    })
+
+    expect(() => parent.stop()).not.toThrow()
+    expect(sibling.active).toBe(false)
+  })
+
+  it('should resume effects when a watcher stops a sibling watcher', () => {
+    const count = ref(0)
+    const scope = effectScope()
+    let stopSecond = () => {}
+    const firstSpy = vi.fn(() => stopSecond())
+    const secondSpy = vi.fn()
+
+    scope.run(() => {
+      watch(count, firstSpy, { flush: 'sync' })
+      stopSecond = watch(count, secondSpy, { flush: 'sync' })
+    })
+
+    scope.pause()
+    count.value++
+
+    expect(() => scope.resume()).not.toThrow()
+    expect(firstSpy).toHaveBeenCalledTimes(1)
+    expect(secondSpy).not.toHaveBeenCalled()
+    expect(scope.effects).toHaveLength(1)
+  })
 })

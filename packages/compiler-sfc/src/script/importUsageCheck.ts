@@ -1,4 +1,5 @@
 import type { SFCDescriptor } from '../parse'
+import type { SFCTemplateCompileOptions } from '../compileTemplate'
 import {
   type ExpressionNode,
   NodeTypes,
@@ -8,36 +9,57 @@ import {
   parserOptions,
   walkIdentifiers,
 } from '@vue/compiler-dom'
+import type { LRUCache } from 'lru-cache'
 import { createCache } from '../cache'
 import { camelize, capitalize, isBuiltInDirective } from '@vue/shared'
+import { resolveTemplateAST } from '../template/resolveTemplateAST'
+
+type TemplateOptions = Pick<
+  SFCTemplateCompileOptions,
+  'compiler' | 'compilerOptions' | 'ssr'
+>
 
 /**
  * Check if an import is used in the SFC's template. This is used to determine
  * the properties that should be included in the object returned from setup()
  * when not using inline mode.
  */
-export function isImportUsed(local: string, sfc: SFCDescriptor): boolean {
-  return resolveTemplateUsedIdentifiers(sfc).has(local)
+export function isImportUsed(
+  local: string,
+  sfc: SFCDescriptor,
+  options?: TemplateOptions,
+): boolean {
+  return resolveTemplateUsedIdentifiers(sfc, options).has(local)
 }
 
-const templateAnalysisCache = createCache<{
+type TemplateAnalysisResult = {
   usedIds?: Set<string>
   vModelIds: Set<string>
-}>()
+}
+
+export const templateAnalysisCache:
+  | Map<string, TemplateAnalysisResult>
+  | LRUCache<string, TemplateAnalysisResult> =
+  createCache<TemplateAnalysisResult>()
 
 export function resolveTemplateVModelIdentifiers(
   sfc: SFCDescriptor,
+  options?: TemplateOptions,
 ): Set<string> {
-  return resolveTemplateAnalysisResult(sfc, false).vModelIds
+  return resolveTemplateAnalysisResult(sfc, false, options).vModelIds
 }
 
-function resolveTemplateUsedIdentifiers(sfc: SFCDescriptor): Set<string> {
-  return resolveTemplateAnalysisResult(sfc).usedIds!
+function resolveTemplateUsedIdentifiers(
+  sfc: SFCDescriptor,
+  options?: TemplateOptions,
+): Set<string> {
+  return resolveTemplateAnalysisResult(sfc, true, options).usedIds!
 }
 
 function resolveTemplateAnalysisResult(
   sfc: SFCDescriptor,
   collectUsedIds = true,
+  options?: TemplateOptions,
 ): {
   usedIds?: Set<string>
   vModelIds: Set<string>
@@ -53,7 +75,15 @@ function resolveTemplateAnalysisResult(
   const ids = collectUsedIds ? new Set<string>() : undefined
   const vModelIds = new Set<string>()
 
-  ast!.children.forEach(walk)
+  const root = resolveTemplateAST(ast, {
+    compiler: options?.compiler,
+    compilerOptions: options?.compilerOptions,
+    ssr: options?.ssr,
+    // ignore errors since they were already reported by the SFC parser
+    onError: () => {},
+  })
+
+  root!.children.forEach(walk)
 
   function walk(node: TemplateChildNode) {
     switch (node.type) {

@@ -223,6 +223,7 @@ const KeepAliveImpl: ComponentOptions = {
         // current active instance should no longer be kept-alive.
         // we can't unmount it now but it might be later, so reset its flag now.
         resetShapeFlag(current)
+        if (cached) resetShapeFlag(cached)
       }
       cache.delete(key)
       keys.delete(key)
@@ -248,7 +249,10 @@ const KeepAliveImpl: ComponentOptions = {
         // avoid caching vnode that not been mounted
         if (isSuspense(instance.subTree.type)) {
           queuePostRenderEffect(() => {
-            cache.set(pendingCacheKey!, getInnerChild(instance.subTree))
+            const vnode = getInnerChild(instance.subTree)
+            if (vnode.component) {
+              cache.set(pendingCacheKey!, vnode)
+            }
           }, instance.subTree.suspense)
         } else {
           cache.set(pendingCacheKey, getInnerChild(instance.subTree))

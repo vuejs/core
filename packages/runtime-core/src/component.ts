@@ -611,6 +611,10 @@ const emptyAppContext = createAppContext()
 
 let uid = 0
 
+export function getNextUid(): number {
+  return uid
+}
+
 export function createComponentInstance(
   vnode: VNode,
   parent: ComponentInternalInstance | null,
@@ -894,7 +898,12 @@ function setupStatefulComponent(
         // return the promise so server-renderer can wait on it
         return setupResult
           .then((resolvedResult: unknown) => {
-            handleSetupResult(instance, resolvedResult, isSSR)
+            setInSSRSetupState(true)
+            try {
+              handleSetupResult(instance, resolvedResult, isSSR)
+            } finally {
+              setInSSRSetupState(false)
+            }
           })
           .catch(e => {
             handleError(e, instance, ErrorCodes.SETUP_FUNCTION)

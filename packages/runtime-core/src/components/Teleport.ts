@@ -279,11 +279,9 @@ export const TeleportImpl = {
       } else {
         // target changed
         if ((n2.props && n2.props.to) !== (n1.props && n1.props.to)) {
-          const nextTarget = (n2.target = resolveTarget(
-            n2.props,
-            querySelector,
-          ))
+          const nextTarget = resolveTarget(n2.props, querySelector)
           if (nextTarget) {
+            n2.target = nextTarget
             moveTeleport(
               n2,
               nextTarget,
@@ -330,8 +328,8 @@ export const TeleportImpl = {
       target,
       props,
     } = vnode
-
-    const shouldRemove = doRemove || !isTeleportDisabled(props)
+    const disabled = isTeleportDisabled(props)
+    const shouldRemove = doRemove || !disabled
     // A deferred teleport inside a pending suspense may be unmounted before its
     // content is ever mounted. Clear the queued mount effect; the children
     // loop below is skipped because nothing has been mounted yet.
@@ -348,8 +346,12 @@ export const TeleportImpl = {
 
     // an unmounted teleport should always unmount its children whether it's disabled or not
     doRemove && hostRemove(anchor!)
-    // #14876 don't unmount children if in pending mount (nothing was mounted)
-    if (!pendingMount && shapeFlag & ShapeFlags.ARRAY_CHILDREN) {
+    // #14876 don't unmount children if nothing was mounted
+    if (
+      !pendingMount &&
+      (disabled || target) &&
+      shapeFlag & ShapeFlags.ARRAY_CHILDREN
+    ) {
       for (let i = 0; i < (children as VNode[]).length; i++) {
         const child = (children as VNode[])[i]
         unmount(
@@ -380,9 +382,17 @@ function moveTeleport(
   { o: { insert }, m: move }: RendererInternals,
   moveType: TeleportMoveTypes = TeleportMoveTypes.REORDER,
 ): void {
-  // move target anchor if this is a target change.
+  // move target anchors if this is a target change.
   if (moveType === TeleportMoveTypes.TARGET_CHANGE) {
+    // targetStart is only set by hydration when the start anchor is found
+    if (vnode.targetStart) {
+      insert(vnode.targetStart, container, parentAnchor)
+    }
     insert(vnode.targetAnchor!, container, parentAnchor)
+    // children have to stay between the two anchors, otherwise subsequently
+    // appended children are mounted before targetAnchor while the moved ones
+    // sit after it
+    parentAnchor = vnode.targetAnchor!
   }
   const { el, anchor, shapeFlag, children, props } = vnode
   const isReorder = moveType === TeleportMoveTypes.REORDER

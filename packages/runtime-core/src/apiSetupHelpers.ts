@@ -9,6 +9,7 @@ import {
   isPromise,
 } from '@vue/shared'
 import {
+  type Data,
   type SetupContext,
   createSetupContext,
   getCurrentInstance,
@@ -269,6 +270,11 @@ export type DefineModelOptions<T = any, G = T, S = T> = {
   set?: (v: S) => any
 }
 
+type DefineModelRuntimeOptions<T, G, S> = Omit<PropOptions<T>, 'default'> &
+  DefineModelOptions<T, G, S>
+
+type DefineModelDefault<T> = InferDefault<Data, T>
+
 /**
  * Vue `<script setup>` compiler macro for declaring a
  * two-way binding prop that can be consumed via `v-model` from the parent
@@ -303,25 +309,23 @@ export type DefineModelOptions<T = any, G = T, S = T> = {
  * ```
  */
 export function defineModel<T, M extends PropertyKey = string, G = T, S = T>(
-  options: ({ default: any } | { required: true }) &
-    PropOptions<T> &
-    DefineModelOptions<T, G, S>,
+  options: DefineModelRuntimeOptions<T, G, S> &
+    ({ default: DefineModelDefault<T> } | { required: true }),
 ): ModelRef<T, M, G, S>
 
 export function defineModel<T, M extends PropertyKey = string, G = T, S = T>(
-  options?: PropOptions<T> & DefineModelOptions<T, G, S>,
+  options?: DefineModelRuntimeOptions<T, G, S>,
 ): ModelRef<T | undefined, M, G | undefined, S | undefined>
 
 export function defineModel<T, M extends PropertyKey = string, G = T, S = T>(
   name: string,
-  options: ({ default: any } | { required: true }) &
-    PropOptions<T> &
-    DefineModelOptions<T, G, S>,
+  options: DefineModelRuntimeOptions<T, G, S> &
+    ({ default: DefineModelDefault<T> } | { required: true }),
 ): ModelRef<T, M, G, S>
 
 export function defineModel<T, M extends PropertyKey = string, G = T, S = T>(
   name: string,
-  options?: PropOptions<T> & DefineModelOptions<T, G, S>,
+  options?: DefineModelRuntimeOptions<T, G, S>,
 ): ModelRef<T | undefined, M, G | undefined, S | undefined>
 
 export function defineModel(): any {
@@ -340,17 +344,10 @@ type InferDefaults<T> = {
 }
 
 type NativeType =
-  | null
-  | undefined
-  | number
-  | string
-  | boolean
-  | symbol
-  | Function
+  null | undefined | number | string | boolean | symbol | Function
 
 type InferDefault<P, T> =
-  | ((props: P) => T & {})
-  | (T extends NativeType ? T : never)
+  ((props: P) => T & {}) | (T extends NativeType ? T : never)
 
 type PropsWithDefaults<
   T,
@@ -358,9 +355,9 @@ type PropsWithDefaults<
   BKeys extends keyof T,
 > = T extends unknown
   ? Readonly<MappedOmit<T, keyof Defaults>> & {
-      readonly [K in keyof Defaults as K extends keyof T
-        ? K
-        : never]-?: K extends keyof T
+      readonly [
+        K in keyof Defaults as K extends keyof T ? K : never
+      ]-?: K extends keyof T
         ? Defaults[K] extends undefined
           ? IfAny<Defaults[K], NotUndefined<T[K]>, T[K]>
           : NotUndefined<T[K]>

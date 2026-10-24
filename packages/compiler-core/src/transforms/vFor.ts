@@ -186,7 +186,9 @@ export const transformFor: NodeTransform = createStructuralDirectiveTransform(
           if (isTemplate && keyProperty) {
             injectProp(childBlock, keyProperty, context)
           }
-          if (childBlock.isBlock !== !isStableFragment) {
+          const shouldUseBlock =
+            !isStableFragment || childBlock.isBlockRequired === true
+          if (childBlock.isBlock !== shouldUseBlock) {
             if (childBlock.isBlock) {
               // switch from block to vnode
               removeHelper(OPEN_BLOCK)
@@ -200,12 +202,16 @@ export const transformFor: NodeTransform = createStructuralDirectiveTransform(
               )
             }
           }
-          childBlock.isBlock = !isStableFragment
+          childBlock.isBlock = shouldUseBlock
           if (childBlock.isBlock) {
             helper(OPEN_BLOCK)
             helper(getVNodeBlockHelper(context.inSSR, childBlock.isComponent))
           } else {
             helper(getVNodeHelper(context.inSSR, childBlock.isComponent))
+            if (childBlock.needsPatch) {
+              childBlock.patchFlag = ((childBlock.patchFlag ?? 0) |
+                PatchFlags.NEED_PATCH) as PatchFlags
+            }
           }
         }
 
@@ -219,7 +225,7 @@ export const transformFor: NodeTransform = createStructuralDirectiveTransform(
             createCompoundExpression([`const _memo = (`, memo.exp!, `)`]),
             createCompoundExpression([
               `if (_cached && _cached.el`,
-              ...(keyExp ? [` && _cached.key === `, keyExp] : []),
+              ...(keyExp ? [` && _cached.key === (`, keyExp, `)`] : []),
               ` && ${context.helperString(
                 IS_MEMO_SAME,
               )}(_cached, _memo)) return _cached`,

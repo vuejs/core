@@ -1,6 +1,7 @@
 import {
   type SchedulerJob,
   SchedulerJobFlags,
+  flushOnAppMount,
   flushPostFlushCbs,
   flushPreFlushCbs,
   nextTick,
@@ -301,6 +302,44 @@ describe('scheduler', () => {
       expect(calls).toEqual([])
       await nextTick()
       expect(calls).toEqual(['cb1', 'cb2', 'cb3'])
+    })
+
+    it('should not overflow the call stack with a very large cb array', async () => {
+      // a suspense boundary can buffer an unbounded number of post effects
+      // while pending (e.g. a large tree re-rendering under it) and flush them
+      // all at once on resolve - spreading such an array into push() throws
+      // RangeError: Maximum call stack size exceeded
+      let called = 0
+      const cbs: SchedulerJob[] = []
+      for (let i = 0; i < 1000000; i++) {
+        cbs.push(() => {
+          called++
+        })
+      }
+
+      queuePostFlushCb(cbs)
+      await nextTick()
+      expect(called).toBe(1000000)
+    })
+
+    it('should not overflow the call stack when merging a very large cb array into an active flush', async () => {
+      // same as above, but the large array is queued while a post flush is
+      // already in progress, exercising the merge into activePostFlushCbs
+      // inside a nested flushPostFlushCbs call
+      let called = 0
+      const cbs: SchedulerJob[] = []
+      for (let i = 0; i < 1000000; i++) {
+        cbs.push(() => {
+          called++
+        })
+      }
+
+      queuePostFlushCb(() => {
+        queuePostFlushCb(cbs)
+        flushPostFlushCbs()
+      })
+      await nextTick()
+      expect(called).toBe(1000000)
     })
 
     it('should dedupe queued postFlushCb', async () => {
@@ -767,6 +806,27 @@ describe('scheduler', () => {
 
     // should not be called
     expect(spy).toHaveBeenCalledTimes(0)
+  })
+
+  test('flushOnAppMount recovers from a throwing pre job', async () => {
+    const err = new Error('test')
+    let shouldThrow = true
+    const job: SchedulerJob = vi.fn(() => {
+      if (shouldThrow) {
+        shouldThrow = false
+        throw err
+      }
+    })
+    job.flags = SchedulerJobFlags.PRE | SchedulerJobFlags.ALLOW_RECURSE
+    job.id = 0
+
+    expect(() => flushOnAppMount(() => queueJob(job), 0)).toThrow(err)
+    expect(job).toHaveBeenCalledTimes(1)
+
+    // the next root render must still flush synchronously
+    flushOnAppMount(() => queueJob(job), 0)
+    expect(job).toHaveBeenCalledTimes(2)
+    await nextTick()
   })
 
   it('flushPreFlushCbs inside a pre job', async () => {

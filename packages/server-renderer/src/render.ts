@@ -3,6 +3,7 @@ import {
   type Component,
   type ComponentInternalInstance,
   type DirectiveBinding,
+  ErrorCodes,
   Fragment,
   type FunctionalComponent,
   Static,
@@ -10,15 +11,17 @@ import {
   type VNode,
   type VNodeArrayChildren,
   type VNodeProps,
+  handleError,
   mergeProps,
   ssrUtils,
   warn,
-} from 'vue'
+} from '@vue/runtime-dom'
 import {
   NOOP,
   ShapeFlags,
   escapeHtml,
   escapeHtmlComment,
+  hasOwn,
   isArray,
   isFunction,
   isPromise,
@@ -103,23 +106,36 @@ export function renderComponentVNode(
   if (__DEV__) popWarningContext()
   const hasAsyncSetup = isPromise(res)
   let prefetches = instance.sp /* LifecycleHooks.SERVER_PREFETCH */
+  let p: Promise<SSRBuffer>
   if (hasAsyncSetup || prefetches) {
-    const p: Promise<unknown> = Promise.resolve(res as Promise<void>)
+    p = Promise.resolve(res as Promise<void>)
       .then(() => {
         // instance.sp may be null until an async setup resolves, so evaluate it here
         if (hasAsyncSetup) prefetches = instance.sp
         if (prefetches) {
-          return Promise.all(
-            prefetches.map(prefetch => prefetch.call(instance.proxy)),
-          )
+          try {
+            return Promise.all(
+              prefetches.map(prefetch => prefetch.call(instance.proxy)),
+            ).catch(NOOP)
+          } catch {
+            // The wrapped lifecycle hook has already reported the error.
+          }
         }
       })
-      // Note: error display is already done by the wrapped lifecycle hook function.
-      .catch(NOOP)
-    return p.then(() => renderComponentSubTree(instance, slotScopeId))
+      .then(() => renderComponentSubTree(instance, slotScopeId))
   } else {
-    return renderComponentSubTree(instance, slotScopeId)
+    try {
+      return renderComponentSubTree(instance, slotScopeId)
+    } catch (err) {
+      // let the SSR buffer propagate the error so parent render functions
+      // don't handle the same error again
+      p = Promise.reject(err)
+    }
   }
+  // Observe rejections before the buffer reaches this component, but let the
+  // caller receive them by returning the original promise.
+  p.catch(NOOP)
+  return p
 }
 
 function renderComponentSubTree(
@@ -200,6 +216,8 @@ function renderComponentSubTree(
           instance.data,
           instance.ctx,
         )
+      } catch (err) {
+        handleError(err, instance, ErrorCodes.RENDER_FUNCTION)
       } finally {
         setCurrentRenderingInstance(prev)
       }
@@ -303,8 +321,20 @@ function renderElementVNode(
     openTag += ssrRenderAttrs(props, tag)
   }
 
+  const renderedScopeIds: string[] = []
+  const appendScopeId = (id: string) => {
+    if (
+      id &&
+      (!props || !hasOwn(props, id)) &&
+      !renderedScopeIds.includes(id)
+    ) {
+      openTag += ` ${id}`
+      renderedScopeIds.push(id)
+    }
+  }
+
   if (scopeId) {
-    openTag += ` ${scopeId}`
+    appendScopeId(scopeId)
   }
   // inherit parent chain scope id if this is the root node
   let curParent: ComponentInternalInstance | null = parentComponent
@@ -312,25 +342,28 @@ function renderElementVNode(
   while (curParent && curVnode === curParent.subTree) {
     curVnode = curParent.vnode
     if (curVnode.scopeId) {
-      openTag += ` ${curVnode.scopeId}`
+      appendScopeId(curVnode.scopeId)
     }
     curParent = curParent.parent
   }
   if (slotScopeId) {
-    openTag += ` ${slotScopeId}`
+    const slotScopeIdList = slotScopeId.trim().split(' ')
+    for (let i = 0; i < slotScopeIdList.length; i++) {
+      appendScopeId(slotScopeIdList[i])
+    }
   }
 
   push(openTag + `>`)
   if (!isVoidTag(tag)) {
     let hasChildrenOverride = false
     if (props) {
-      if (props.innerHTML) {
+      if (props.innerHTML != null) {
         hasChildrenOverride = true
-        push(props.innerHTML)
-      } else if (props.textContent) {
+        push(String(props.innerHTML))
+      } else if (props.textContent != null) {
         hasChildrenOverride = true
         push(escapeHtml(props.textContent))
-      } else if (tag === 'textarea' && props.value) {
+      } else if (tag === 'textarea' && props.value != null) {
         hasChildrenOverride = true
         push(escapeHtml(props.value))
       }

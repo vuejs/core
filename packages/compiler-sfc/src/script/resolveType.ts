@@ -97,8 +97,7 @@ export type SimpleTypeResolveContext = Pick<
   }
 
 export type TypeResolveContext = (
-  | ScriptCompileContext
-  | SimpleTypeResolveContext
+  ScriptCompileContext | SimpleTypeResolveContext
 ) & {
   silentOnExtendsFailure?: boolean
 }
@@ -761,10 +760,7 @@ function resolveBuiltin(
 }
 
 type ReferenceTypes =
-  | TSTypeReference
-  | TSExpressionWithTypeArguments
-  | TSImportType
-  | TSTypeQuery
+  TSTypeReference | TSExpressionWithTypeArguments | TSImportType | TSTypeQuery
 
 function resolveTypeReference(
   ctx: TypeResolveContext,
@@ -1084,6 +1080,13 @@ interface CachedConfig {
 const tsConfigCache = createCache<CachedConfig[]>()
 const tsConfigRefMap = new Map<string, string>()
 
+// `loadTSConfig` recurses through project references, so in a workspace where every
+// package extends a shared base, that base is re-read and re-parsed once per config the
+// traversal reaches - each parse allocating its own fully expanded options. TypeScript
+// takes this cache as the 8th argument of `parseJsonConfigFileContent` and shares the
+// parsed parents instead.
+const extendedConfigCache = new Map<string, TS.ExtendedConfigCacheEntry>()
+
 function resolveWithTS(
   containingFile: string,
   source: string,
@@ -1197,6 +1200,9 @@ function loadTSConfig(
     dirname(configPath),
     undefined,
     configPath,
+    undefined,
+    undefined,
+    extendedConfigCache,
   )
   const res = [config]
   visited.add(configPath)
@@ -1228,6 +1234,13 @@ export function invalidateTypeCache(filename: string): void {
   fileToScopeCache.delete(filename)
   fileToGlobalScopeCache.delete(filename)
   tsConfigCache.delete(filename)
+  // A changed config can be extended by any number of others and is cached under its own
+  // resolved path, so there is no single entry to drop; clearing is cheap because this
+  // only runs when a config file itself changed.
+  if (filename.endsWith('.json')) {
+    extendedConfigCache.clear()
+    tsConfigCache.clear()
+  }
   const affectedConfig = tsConfigRefMap.get(filename)
   if (affectedConfig) tsConfigCache.delete(affectedConfig)
 }

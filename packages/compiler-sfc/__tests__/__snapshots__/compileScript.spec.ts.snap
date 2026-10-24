@@ -206,6 +206,54 @@ return { n, get x() { return x } }
 })"
 `;
 
+exports[`SFC compile <script setup> > async/await detection > await in switch case 1`] = `
+"import { withAsyncContext as _withAsyncContext } from 'vue'
+
+export default {
+  async setup(__props, { expose: __expose }) {
+  __expose();
+
+let __temp, __restore
+switch (a) {
+        case 1:
+          foo()
+          ;(
+  ([__temp,__restore] = _withAsyncContext(() => bar())),
+  await __temp,
+  __restore()
+)
+      }
+return {  }
+}
+
+}"
+`;
+
+exports[`SFC compile <script setup> > async/await detection > await in switch case nested in a block 1`] = `
+"import { withAsyncContext as _withAsyncContext } from 'vue'
+
+export default {
+  async setup(__props, { expose: __expose }) {
+  __expose();
+
+let __temp, __restore
+if (a) {
+        switch (b) {
+          case 1:
+            qux()
+            ;(
+  ([__temp,__restore] = _withAsyncContext(() => bar())),
+  await __temp,
+  __restore()
+)
+        }
+      }
+return {  }
+}
+
+}"
+`;
+
 exports[`SFC compile <script setup> > async/await detection > expression statement 1`] = `
 "import { withAsyncContext as _withAsyncContext } from 'vue'
 

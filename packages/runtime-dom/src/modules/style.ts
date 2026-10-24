@@ -70,7 +70,9 @@ export function patchStyle(el: Element, prev: Style, next: Style): void {
   // indicates the element also has `v-show`.
   if (vShowOriginalDisplay in el) {
     // make v-show respect the current v-bind style display when shown
-    el[vShowOriginalDisplay] = hasControlledDisplay ? style.display : ''
+    if (!isCssString || prev !== next) {
+      el[vShowOriginalDisplay] = hasControlledDisplay ? style.display : ''
+    }
     // if v-show is in hidden state, v-show has higher priority
     if ((el as VShowElement)[vShowHidden]) {
       style.display = 'none'
@@ -99,7 +101,12 @@ function setStyle(
     }
     if (name.startsWith('--')) {
       // custom property definition
-      style.setProperty(name, val)
+      if (importantRE.test(val)) {
+        // !important
+        style.setProperty(name, val.replace(importantRE, ''), 'important')
+      } else {
+        style.setProperty(name, val)
+      }
     } else {
       const prefixed = autoPrefix(style, name)
       if (importantRE.test(val)) {
