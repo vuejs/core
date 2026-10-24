@@ -88,78 +88,156 @@ interface ChildContextInfo {
   isLastEffectiveChild: boolean[]
 }
 
-const childContextInfoCache = new WeakMap<TransformContext, ChildContextInfo>()
-
 export class TransformContext<T extends AllNode = AllNode> {
-  selfName: string | null = null
-  parent: TransformContext<RootNode | ElementNode> | null = null
+  ir: RootIRNode
+  node: T
+  selfName: string | null
+  parent: TransformContext<RootNode | ElementNode> | null
   // cached parent that skips template tags
-  effectiveParent: TransformContext<RootNode | ElementNode> | null = null
+  effectiveParent: TransformContext<RootNode | ElementNode> | null
   root: TransformContext<RootNode>
-  index: number = 0
+  index: number
 
-  block: BlockIRNode = this.ir.block
+  block: BlockIRNode
   options: Required<
     Omit<TransformOptions, 'filename' | keyof CompilerCompatOptions>
   >
 
-  template: string = ''
-  templateRoot: boolean = false
-  templateIndexMap: Map<string, number> = new Map()
-  childrenTemplate: (string | null)[] = []
-  dynamic: IRDynamicInfo = this.ir.block.dynamic
-  imports: ImportItem[] = []
+  template: string
+  templateRoot: boolean
+  templateIndexMap: Map<string, number>
+  childrenTemplate: (string | null)[]
+  dynamic: IRDynamicInfo
+  imports: ImportItem[]
 
-  inVOnce: boolean = false
-  inVFor: number = 0
-  comment: CommentNode[] = []
-  component: Set<string> = this.ir.component
-  directive: Set<string> = this.ir.directive
+  inVOnce: boolean
+  inVFor: number
+  comment: CommentNode[]
+  component: Set<string>
+  directive: Set<string>
 
-  slots: IRSlots[] = []
+  slots: IRSlots[]
 
-  effectIndex: number = this.block.effect.length
-  operationIndex: number = this.block.operation.length
+  effectIndex: number
+  operationIndex: number
 
   // whether this node is the last effective child of its parent
   // (all siblings after it are components, which don't appear in HTML template)
-  isLastEffectiveChild: boolean = true
+  isLastEffectiveChild: boolean
   // whether this node is on the rightmost path of the tree
   // (all ancestors are also last effective children)
-  isOnRightmostPath: boolean = true
+  isOnRightmostPath: boolean
   // whether this node is the component/template root
-  isSingleRoot: boolean = false
+  isSingleRoot: boolean
   // whether this node is the single root of a slot body
-  isSlotRoot: boolean = false
+  isSlotRoot: boolean
   // If an ancestor in the same template must close explicitly, descendants
   // with matching tags must also close so the browser doesn't consume the
   // ancestor close tag for the descendant.
-  templateCloseTags: Set<string> | undefined = undefined
+  templateCloseTags: Set<string> | undefined
   // An ancestor with an explicit close tag that cannot pop an open special
   // descendant (any other end tag, formatting elements) also requires special
   // descendants in the same template to close explicitly.
-  templateCloseBlocks: boolean = false
+  templateCloseBlocks: boolean
   // Whether the element is written into its parent's template and what that
   // template leaves open above it (`OpenScope` bits); 0 when it starts a
   // template of its own.
-  templateScope: number = 0
+  templateScope: number
 
-  private globalId = 0
-  private nextIdMap: Map<number, number> | null = null
-  private ifIndex = 0
+  // root-only state, read through `this.root`
+  private globalId: number
+  private nextIdMap: Map<number, number> | null
+  private ifIndex: number
   // every `v-if` head with whether it sits in `v-once`; chains that grow past
   // IF_CHAIN_THRESHOLD get their key range reserved once the tree is done
-  ifHeads: Map<IfIRNode, boolean> = new Map()
+  ifHeads: Map<IfIRNode, boolean>
+  private childInfo: ChildContextInfo | null
 
+  // Root and child contexts assign the same fields in the same order so they
+  // share one hidden class; a child copied from its parent with
+  // `Object.assign` lands in dictionary mode instead.
   constructor(
-    public ir: RootIRNode,
-    public node: T,
-    options: TransformOptions = {},
+    ir: RootIRNode,
+    node: T,
+    options: TransformOptions = EMPTY_OBJ,
+    parent: TransformContext<RootNode | ElementNode> | null = null,
+    index: number = 0,
   ) {
-    this.options = extend({}, defaultOptions, options)
-    this.root = this as TransformContext<RootNode>
-    if (options.filename) this.selfName = getSelfName(options.filename)
-    this.initNextIdMap()
+    this.ir = ir
+    this.node = node
+    this.parent = parent
+    this.index = index
+    if (parent) {
+      this.root = parent.root
+      this.options = parent.options
+      this.selfName = parent.selfName
+      this.block = parent.block
+      this.templateIndexMap = parent.templateIndexMap
+      this.dynamic = newDynamic()
+      this.imports = parent.imports
+      // Slot content is executed by the child component, which re-runs it on
+      // its own updates (vdom parity), so v-once does not reach into it.
+      this.inVOnce = parent.inVOnce && !isComponentNode(parent.node)
+      this.inVFor = parent.inVFor
+      this.comment = parent.comment
+      this.slots = parent.slots
+      this.ifHeads = parent.ifHeads
+      this.templateCloseTags = parent.templateCloseTags
+      this.templateCloseBlocks = parent.templateCloseBlocks
+
+      // find effectiveParent (skip template tags)
+      let effectiveParent: TransformContext<RootNode | ElementNode> | null =
+        parent
+      while (
+        effectiveParent &&
+        effectiveParent.node.type === NodeTypes.ELEMENT &&
+        (effectiveParent.node as ElementNode).tagType === ElementTypes.TEMPLATE
+      ) {
+        effectiveParent = effectiveParent.parent
+      }
+      this.effectiveParent = effectiveParent
+
+      const childInfo = parent.getChildContextInfo()
+      // compute whether this node is effectively the last child
+      const isLastEffectiveChild = childInfo.isLastEffectiveChild[index]
+      this.isLastEffectiveChild = isLastEffectiveChild
+      this.isOnRightmostPath = parent.isOnRightmostPath && isLastEffectiveChild
+      this.isSingleRoot = parent.isSingleRootChild(childInfo)
+      this.isSlotRoot = parent.isSlotRootChild(childInfo)
+    } else {
+      this.root = this as TransformContext<RootNode>
+      this.options = extend({}, defaultOptions, options)
+      this.selfName = options.filename ? getSelfName(options.filename) : null
+      this.block = ir.block
+      this.templateIndexMap = new Map()
+      this.dynamic = ir.block.dynamic
+      this.imports = []
+      this.inVOnce = false
+      this.inVFor = 0
+      this.comment = []
+      this.slots = []
+      this.ifHeads = new Map()
+      this.templateCloseTags = undefined
+      this.templateCloseBlocks = false
+      this.effectiveParent = null
+      this.isLastEffectiveChild = true
+      this.isOnRightmostPath = true
+      this.isSingleRoot = false
+      this.isSlotRoot = false
+    }
+    this.template = ''
+    this.templateRoot = false
+    this.childrenTemplate = []
+    this.component = ir.component
+    this.directive = ir.directive
+    this.effectIndex = this.block.effect.length
+    this.operationIndex = this.block.operation.length
+    this.templateScope = 0
+    this.globalId = 0
+    this.nextIdMap = null
+    this.ifIndex = 0
+    this.childInfo = null
+    if (!parent) this.initNextIdMap()
   }
 
   enterBlock(ir: BlockIRNode, isVFor: boolean = false): () => void {
@@ -200,17 +278,18 @@ export class TransformContext<T extends AllNode = AllNode> {
     }
   }
 
-  increaseId = (): number => {
+  increaseId(): number {
+    const root = this.root
     // allocate an id that won't conflict with user-defined bindings when used
     // as generated identifiers with n/x/r prefixes (e.g., n1, x1, r1).
-    const id = getNextId(this.nextIdMap, this.globalId)
+    const id = getNextId(root.nextIdMap, root.globalId)
     // advance next
-    this.globalId = getNextId(this.nextIdMap, id + 1)
+    root.globalId = getNextId(root.nextIdMap, id + 1)
     return id
   }
 
   private initNextIdMap(): void {
-    const binding = this.root.options.bindingMetadata
+    const binding = this.options.bindingMetadata
     if (!binding) return
 
     const keys = Object.keys(binding)
@@ -233,8 +312,9 @@ export class TransformContext<T extends AllNode = AllNode> {
   }
 
   nextIfIndex(count = 1): number {
-    const index = this.ifIndex
-    this.ifIndex += count
+    const root = this.root
+    const index = root.ifIndex
+    root.ifIndex += count
     return index
   }
 
@@ -351,48 +431,13 @@ export class TransformContext<T extends AllNode = AllNode> {
     node: T,
     index: number,
   ): TransformContext<T> {
-    // find effectiveParent (skip template tags)
-    let effectiveParent: TransformContext<RootNode | ElementNode> | null =
-      this as TransformContext<RootNode | ElementNode>
-    while (
-      effectiveParent &&
-      effectiveParent.node.type === NodeTypes.ELEMENT &&
-      (effectiveParent.node as ElementNode).tagType === ElementTypes.TEMPLATE
-    ) {
-      effectiveParent = effectiveParent.parent
-    }
-
-    const childInfo = this.getChildContextInfo()
-    // compute whether this node is effectively the last child
-    const isLastEffectiveChild = childInfo.isLastEffectiveChild[index]
-    const isOnRightmostPath = this.isOnRightmostPath && isLastEffectiveChild
-    const isSingleRoot = this.isSingleRootChild(childInfo)
-    const isSlotRoot = this.isSlotRootChild(childInfo)
-
-    return Object.assign(Object.create(TransformContext.prototype), this, {
+    return new TransformContext(
+      this.ir,
       node,
-      parent: this as any,
+      EMPTY_OBJ,
+      this as TransformContext<RootNode | ElementNode>,
       index,
-      // Slot content is executed by the child component, which re-runs it on
-      // its own updates (vdom parity), so v-once does not reach into it.
-      inVOnce: this.inVOnce && !isComponentNode(this.node),
-
-      template: '',
-      templateRoot: false,
-      childrenTemplate: [],
-      templateIndexMap: this.templateIndexMap,
-      dynamic: newDynamic(),
-      effectIndex: this.block.effect.length,
-      operationIndex: this.block.operation.length,
-      effectiveParent,
-      isLastEffectiveChild,
-      isOnRightmostPath,
-      isSingleRoot,
-      isSlotRoot,
-      templateCloseTags: this.templateCloseTags,
-      templateCloseBlocks: this.templateCloseBlocks,
-      templateScope: 0,
-    } satisfies Partial<TransformContext<T>>)
+    )
   }
 
   private shiftEffectBoundaries(
@@ -425,7 +470,7 @@ export class TransformContext<T extends AllNode = AllNode> {
       }
     }
 
-    const cached = childContextInfoCache.get(this)
+    const cached = this.childInfo
     if (cached && cached.node === node) {
       return cached
     }
@@ -453,7 +498,7 @@ export class TransformContext<T extends AllNode = AllNode> {
           : hasSingleRoot),
       isLastEffectiveChild,
     }
-    childContextInfoCache.set(this, childInfo)
+    this.childInfo = childInfo
     return childInfo
   }
 
