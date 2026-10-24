@@ -632,6 +632,7 @@ export function transform(
   finalizeIfChains(context)
 
   ir.node.imports = context.imports
+  ir.node.transformed = true
 
   return ir
 }

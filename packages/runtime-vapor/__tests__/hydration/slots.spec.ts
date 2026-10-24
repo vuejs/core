@@ -502,7 +502,7 @@ describe('Vapor Mode hydration', () => {
         {
           Child: `
           <template>
-            <div/>
+            <div>
               <div/>
               <slot/>
               <div/>
@@ -512,11 +512,9 @@ describe('Vapor Mode hydration', () => {
       )
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
         `
-        "
-        <!--[--><div></div><div></div>
+        "<div><div></div>
         <!--[--><span></span><span>foo</span><span></span><!--]-->
-        <div></div><!--]-->
-        "
+        <div></div></div>"
       `,
       )
 
@@ -524,11 +522,9 @@ describe('Vapor Mode hydration', () => {
       await nextTick()
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
         `
-        "
-        <!--[--><div></div><div></div>
+        "<div><div></div>
         <!--[--><span></span><span>bar</span><span></span><!--]-->
-        <div></div><!--]-->
-        "
+        <div></div></div>"
       `,
       )
     })
