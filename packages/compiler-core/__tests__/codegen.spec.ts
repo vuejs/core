@@ -42,6 +42,7 @@ function createRoot(options: Partial<RootNode> = {}): RootNode {
     type: NodeTypes.ROOT,
     source: '',
     children: [],
+    comments: [],
     helpers: new Set(),
     components: [],
     directives: [],
