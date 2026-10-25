@@ -27,7 +27,7 @@ import { warn } from './warning'
 
 const isNonTrackableKeys = /*@__PURE__*/ makeMap(`__proto__,__v_isRef,__isVue`)
 
-const builtInSymbols = new Set(
+const builtInSymbols = /*@__PURE__*/ new Set(
   /*@__PURE__*/
   Object.getOwnPropertyNames(Symbol)
     // ios10.x Object.getOwnPropertyNames(Symbol) can enumerate 'arguments' and 'caller'

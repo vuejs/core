@@ -607,7 +607,7 @@ export interface ComponentInternalInstance {
   resolvedOptions?: MergedComponentOptions
 }
 
-const emptyAppContext = createAppContext()
+const emptyAppContext = /*@__PURE__*/ createAppContext()
 
 let uid = 0
 
