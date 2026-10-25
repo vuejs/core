@@ -405,6 +405,23 @@ describe('reactivity/effect', () => {
     expect(counterSpy).toHaveBeenCalledTimes(2)
   })
 
+  // #16014
+  it('should allow explicit recursive self-trigger with allowRecurse option', () => {
+    const num = ref(0)
+    let runs = 0
+    effect(
+      () => {
+        runs++
+        if (num.value < 10) {
+          num.value++
+        }
+      },
+      { allowRecurse: true },
+    )
+    expect(runs).toBe(11)
+    expect(num.value).toBe(10)
+  })
+
   it('should avoid infinite recursive loops when use Array.prototype.push/unshift/pop/shift', () => {
     ;(['push', 'unshift'] as const).forEach(key => {
       const arr = reactive<number[]>([])

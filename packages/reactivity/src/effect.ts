@@ -492,6 +492,10 @@ export function effect<T = any>(
   const e = new ReactiveEffect(fn)
   if (options) {
     extend(e, options)
+    // the recursion guard in notify() reads the flag, not the option
+    if (options.allowRecurse) {
+      e.flags |= EffectFlags.ALLOW_RECURSE
+    }
   }
   try {
     e.run()
