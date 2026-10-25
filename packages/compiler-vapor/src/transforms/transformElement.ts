@@ -394,14 +394,13 @@ function transformComponentElement(
   isDynamicComponent: boolean,
   useCreateElement: boolean,
 ) {
-  const dynamicComponent = isDynamicComponent
+  let dynamicComponent = isDynamicComponent
     ? resolveDynamicComponent(node)
     : undefined
 
   let { tag } = node
   // a createElement-backed element resolves no component asset
   let asset = !useCreateElement
-  let slotScopeNamespace: string | undefined
 
   if (!dynamicComponent && !useCreateElement) {
     // <button is="vue:xxx">: the parser marks it as a component and the
@@ -410,9 +409,8 @@ function transformComponentElement(
     if (isProp && isProp.type === NodeTypes.ATTRIBUTE && isVueIsValue(isProp)) {
       tag = isProp.value!.content.slice(4)
     }
-    const resolved =
-      resolveSlotScopeReference(tag, context) ||
-      resolveSetupReference(tag, context)
+    const slotScopeTag = resolveSlotScopeReference(tag, context)
+    const resolved = slotScopeTag || resolveSetupReference(tag, context)
     if (resolved) {
       tag = resolved
       asset = false
@@ -424,6 +422,7 @@ function transformComponentElement(
       asset = false
     }
 
+    let slotScopeNamespace: string | undefined
     const dotIndex = tag.indexOf('.')
     if (dotIndex > 0) {
       slotScopeNamespace = resolveSlotScopeReference(
@@ -437,6 +436,18 @@ function transformComponentElement(
         tag = ns + tag.slice(dotIndex)
         asset = false
       }
+    }
+
+    // a slot prop can change while the slot stays mounted and can be a tag
+    // name, so it is created like `<component :is>`
+    if ((slotScopeTag && !builtInTag) || slotScopeNamespace) {
+      dynamicComponent = createSimpleExpression(tag, false, node.loc)
+      dynamicComponent.ast = isSimpleIdentifier(tag)
+        ? null
+        : parseExpression(
+            `(${tag})`,
+            getParserOptions(context.options.expressionPlugins),
+          )
     }
 
     if (asset) {
@@ -470,7 +481,6 @@ function transformComponentElement(
     id,
     ...context.effectBoundary(),
     tag,
-    slotScopeNamespace,
     props,
     asset,
     root,
