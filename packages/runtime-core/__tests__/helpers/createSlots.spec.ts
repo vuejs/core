@@ -73,4 +73,65 @@ describe('createSlot', () => {
       descriptor3: slot,
     })
   })
+
+  describe('order parameter', () => {
+    it('should treat duplicate slot names as a no-op (v-if/v-else branches)', () => {
+      record = { default: slot }
+
+      const actual = createSlots(
+        record,
+        [
+          { name: 'header', fn: slot, key: '0' },
+          { name: 'header', fn: slot, key: '1' },
+        ],
+        ['header', 'header'],
+      )
+
+      expect(Object.keys(actual)).toEqual(['default', 'header'])
+      expect(actual).toHaveProperty('header')
+    })
+
+    // Simulates `<template v-if #header> / <template v-else #footer>`
+    it('should reorder mutually exclusive slots from the active branch', () => {
+      record = { default: slot }
+
+      const actual = createSlots(
+        record,
+        [{ name: 'footer', fn: slot }],
+        ['header', 'footer'],
+      )
+
+      const keys = Object.keys(actual)
+      expect(keys).toEqual(['default', 'footer'])
+      expect(actual).toHaveProperty('footer', slot)
+      expect(actual).not.toHaveProperty('header')
+    })
+
+    it('should leave slots unchanged when order is an empty array', () => {
+      const actual = createSlots(record, [{ name: 'default', fn: slot }], [])
+
+      expect(Object.keys(actual)).toEqual(['default'])
+      expect(actual).toHaveProperty('default', slot)
+    })
+
+    it('should leave keys not in the order array untouched', () => {
+      record = { _: 2 as any, default: slot }
+
+      const actual = createSlots(
+        record,
+        [
+          { name: 'header', fn: slot },
+          { name: 'footer', fn: slot },
+        ],
+        ['header', 'footer'],
+      )
+
+      const keys = Object.keys(actual)
+      expect(keys).toEqual(['_', 'default', 'header', 'footer'])
+      expect(actual).toHaveProperty('_', 2)
+      expect(actual).toHaveProperty('default', slot)
+      expect(actual).toHaveProperty('header', slot)
+      expect(actual).toHaveProperty('footer', slot)
+    })
+  })
 })
