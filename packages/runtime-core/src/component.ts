@@ -124,19 +124,7 @@ export type ComponentInstance<T> = T extends { new (): ComponentPublicInstance }
         | FunctionalComponent<
             infer Props,
             infer Emits,
-            T extends (
-              props: any,
-              ctx: {
-                attrs: any
-                emit: any
-                slots: infer Slots extends Record<string, any>
-              },
-              ...args: any[]
-            ) => any
-              ? [Slots] extends [never]
-                ? any
-                : Slots
-              : any
+            ComponentInstanceSlots<T>
           >
     ? ComponentPublicInstance<Props, {}, {}, {}, {}, ShortEmitsToObject<Emits>>
     : T extends Component<
@@ -158,6 +146,20 @@ export type ComponentInstance<T> = T extends { new (): ComponentPublicInstance }
             M
           >
       : never // not a vue Component
+
+type ComponentInstanceSlots<T> = T extends (
+  props: any,
+  ctx: {
+    attrs: any
+    emit: any
+    slots: infer S extends Record<string, any>
+  },
+  ...args: any[]
+) => any
+  ? [S] extends [never]
+    ? any
+    : S
+  : any
 
 /**
  * For extending allowed non-declared props on components in TSX
