@@ -168,22 +168,17 @@ export function genCreateComponent(
     } else if (operation.asset) {
       return toValidAssetId(operation.tag, 'component')
     } else {
-      const { tag, slotScopeNamespace } = operation
+      const { tag } = operation
       const builtInTag = isBuiltInComponent(tag)
       if (builtInTag) {
         // @ts-expect-error
         helper(builtInTag)
         return `_${builtInTag}`
       }
-      return [
-        genExpression(
-          extend(createSimpleExpression(slotScopeNamespace || tag, false), {
-            ast: null,
-          }),
-          context,
-        ),
-        slotScopeNamespace && tag.slice(slotScopeNamespace.length),
-      ]
+      return genExpression(
+        extend(createSimpleExpression(tag, false), { ast: null }),
+        context,
+      )
     }
   }
 }

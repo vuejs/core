@@ -2158,7 +2158,7 @@ describe('compiler: element transform', () => {
         `<Comp v-slot="${props}"><${tag} /></Comp>`,
       )
       expect(code).toContain(
-        `_createComponent(${expression}, null, null, 2 /* SLOT */)`,
+        `_createDynamicComponent(() => (${expression}), null, null, 36 /* SLOT_SINGLE_ROOT, SLOT_ROOT */)`,
       )
       expect(code).not.toContain(`_resolveComponent("${tag}")`)
     })
@@ -2169,7 +2169,7 @@ describe('compiler: element transform', () => {
         { bindingMetadata: { foo: BindingTypes.SETUP_CONST } },
       )
       expect(code).toContain(
-        '_createComponent(_slotProps0.Foo, null, null, 2 /* SLOT */)',
+        '_createDynamicComponent(() => (_slotProps0.Foo), null, null, 36 /* SLOT_SINGLE_ROOT, SLOT_ROOT */)',
       )
       expect(code).not.toContain('_createComponent(_ctx.foo)')
     })
@@ -2179,7 +2179,7 @@ describe('compiler: element transform', () => {
         `<Foo v-slot="{ Foo }"><Foo /></Foo><Foo />`,
       )
       expect(code).toContain(
-        '_createComponent(_slotProps0.Foo, null, null, 2 /* SLOT */)',
+        '_createDynamicComponent(() => (_slotProps0.Foo), null, null, 36 /* SLOT_SINGLE_ROOT, SLOT_ROOT */)',
       )
       expect(code).toContain('const _component_Foo = _resolveComponent("Foo")')
       expect(
@@ -2191,7 +2191,7 @@ describe('compiler: element transform', () => {
       const { code } = compileWithElementAndSlotTransform(
         `<Comp v-slot="{ Foo }"><template v-for="Foo in list"><Foo /></template><Foo /></Comp>`,
       )
-      expect(code).toContain('_createComponent(_slotProps0.Foo)')
+      expect(code).toContain('_createDynamicComponent(() => (_slotProps0.Foo)')
       expect(code).toContain('_createComponentWithFallback(_component_Foo)')
     })
 
@@ -2200,7 +2200,7 @@ describe('compiler: element transform', () => {
         `<div v-for="Foo in list"><Comp v-slot="{ Foo }"><Foo /></Comp></div>`,
       )
       expect(code).toMatch(
-        /_createComponent\(_slotProps\d+\.Foo, null, null, 2 \/\* SLOT \*\/\)/,
+        /_createDynamicComponent\(\(\) => \(_slotProps\d+\.Foo\), null, null, 36 \/\* SLOT_SINGLE_ROOT, SLOT_ROOT \*\/\)/,
       )
       expect(code).not.toContain('_resolveComponent("Foo")')
     })

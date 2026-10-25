@@ -8309,6 +8309,43 @@ describe('slot-scope component tags', () => {
       template.includes('Other') ? 'leafnestedleaf' : 'leaf',
     )
   })
+
+  test.each([
+    '<components.Provider v-slot="{ Foo }"><Foo /></components.Provider>',
+    '<components.Provider v-slot="{ parts }"><parts.Foo /></components.Provider>',
+  ])('follows slot prop updates: %s', async template => {
+    const result = await renderParity(
+      {
+        Leaf: '<template><b>leaf</b></template>',
+        Nested: '<template><i>nested</i></template>',
+        Provider:
+          '<template><slot :Foo="data.nested ? components.Nested : components.Leaf" :parts="{ Foo: data.nested ? components.Nested : components.Leaf }" /></template>',
+        App: `<template>${template}</template>`,
+      },
+      () => ref({ nested: false }),
+      async data => {
+        data.value.nested = true
+        await nextTick()
+      },
+    )
+    expect(result.vapor.text).toBe(result.vdom.text)
+    expect(result.vapor.text).toBe('nested')
+  })
+
+  test('renders an element from a string slot prop', async () => {
+    const result = await renderParity(
+      {
+        Provider: '<template><slot Foo="span" /></template>',
+        App: '<template><components.Provider v-slot="{ Foo }"><Foo>x</Foo></components.Provider></template>',
+      },
+      () => ref(null),
+      () => {},
+    )
+    expect(stripAnchors(result.vapor.after)).toBe(
+      stripAnchors(result.vdom.after),
+    )
+    expect(stripAnchors(result.vapor.after)).toBe('<span>x</span>')
+  })
 })
 
 describe('whitespace between conditional slots', () => {
