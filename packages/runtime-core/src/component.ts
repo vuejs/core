@@ -119,7 +119,9 @@ export type Attrs = Data & AllowedAttrs
  */
 export type ComponentInstance<T> = T extends { new (): ComponentPublicInstance }
   ? InstanceType<T>
-  : T extends FunctionalComponent<infer Props, infer Emits>
+  : T extends
+        | FunctionalComponent<infer Props, infer Emits>
+        | FunctionalComponent<infer Props, infer Emits, never>
     ? ComponentPublicInstance<Props, {}, {}, {}, {}, ShortEmitsToObject<Emits>>
     : T extends Component<
           infer PropsOrInstance,

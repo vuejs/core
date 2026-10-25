@@ -1,11 +1,16 @@
 import {
+  type AllowedComponentProps,
+  type ComponentCustomProps,
   type ComponentInstance,
   type ComponentPublicInstance,
   type FunctionalComponent,
+  type ShallowUnwrapRef,
+  type VNode,
+  type VNodeProps,
   defineComponent,
   ref,
 } from 'vue'
-import { describe, expectType } from './utils'
+import { type IsAny, describe, expectType } from './utils'
 
 describe('defineComponent', () => {
   const CompSetup = defineComponent({
@@ -151,4 +156,52 @@ describe('Generic component', () => {
   expectType<{ 'onUpdate:visible'?: (value?: boolean) => any }>(comp['$props'])
   // @ts-expect-error
   comp['$props']['$props']
+}
+
+// #12210
+{
+  const GenericComp: <T>(
+    __VLS_props: {
+      msg: T
+      onFoo?: (val: T) => void
+    } & VNodeProps &
+      AllowedComponentProps &
+      ComponentCustomProps,
+    __VLS_ctx?: {
+      attrs: any
+      slots: {
+        anySlot: (props: { item: T }) => any
+      }
+      emit: (evt: 'foo', val: T) => void
+    },
+    __VLS_expose?: (exposed: ShallowUnwrapRef<{}>) => void,
+    __VLS_setup?: Promise<any>,
+  ) => VNode = {} as any
+
+  const comp: ComponentInstance<typeof GenericComp<string>> = {} as any
+  expectType<string>(comp.msg)
+  expectType<((val: string) => void) | undefined>(comp.onFoo)
+  expectType<ComponentPublicInstance>(comp)
+  expectType<false>({} as IsAny<typeof comp>)
+  // @ts-expect-error
+  comp.nonExistent
+
+  const compUninstantiated: ComponentInstance<typeof GenericComp> = {} as any
+  expectType<unknown>(compUninstantiated.msg)
+  expectType<ComponentPublicInstance>(compUninstantiated)
+  expectType<false>({} as IsAny<typeof compUninstantiated>)
+
+  const CompFunctionalSlots: FunctionalComponent<
+    { test?: string },
+    { foo: [val: number] },
+    { default: () => any }
+  > = {} as any
+  const compFunctionalSlots: ComponentInstance<typeof CompFunctionalSlots> =
+    {} as any
+  expectType<string | undefined>(compFunctionalSlots.test)
+  expectType<(event: 'foo', val: number) => void>(compFunctionalSlots.$emit)
+  expectType<false>({} as IsAny<typeof compFunctionalSlots>)
+
+  type InvalidFn = (props: { a: string }, ctx: number) => any
+  expectType<never>({} as ComponentInstance<InvalidFn>)
 }
