@@ -8,6 +8,9 @@ import {
   isArray,
   isForwardedSlot,
   isFunction,
+  isString,
+  normalizeClass,
+  normalizeStyle,
 } from '@vue/shared'
 import {
   type Block,
@@ -18,6 +21,8 @@ import {
 import {
   type FunctionSource,
   type RawProps,
+  getAttrFromRawProps,
+  hasAttrFromRawProps,
   rawPropsProxyHandlers,
   snapshotRawProps,
 } from './componentProps'
@@ -311,6 +316,63 @@ export function getScopeOwner(): VaporComponentInstance | null {
     currentInstance) as VaporComponentInstance | null
 }
 
+// class and style reach slot content the way a vdom slot gets them. The raw
+// props getter returns one value per source that sets them, in order.
+function getSlotProp(target: RawProps, key: string): unknown {
+  const value = getAttrFromRawProps(target, key)
+  if (value === undefined || (key !== 'class' && key !== 'style')) {
+    return value
+  }
+  const isClass = key === 'class'
+  const sources = value as unknown[]
+  // vdom passes a slot's props through `mergeProps` when they come in more
+  // than one object: the outlet's own props and each `v-bind` object
+  const objects = target.$
+  let objectCount = objects ? objects.length : 0
+  for (const k in target) {
+    if (k !== '$') {
+      objectCount++
+      break
+    }
+  }
+  if (objectCount > 1) {
+    let merged: unknown
+    for (let i = 0; i < sources.length; i++) {
+      const source = sources[i]
+      if (!isClass) {
+        merged = normalizeStyle([merged, source])
+      } else if (merged !== source) {
+        merged = normalizeClass([merged, source])
+      }
+    }
+    return merged
+  }
+  const source = sources[0]
+  // a lone `v-bind` object goes through `normalizeProps`, which keeps a
+  // falsy value and a string class; the compiler normalizes a binding
+  if (objects && (!source || (isClass && isString(source)))) {
+    return source
+  }
+  return isClass ? normalizeClass(source) : normalizeStyle(source)
+}
+
+const slotPropsProxyHandlers: ProxyHandler<RawProps> = extend(
+  {},
+  rawPropsProxyHandlers,
+  {
+    get: getSlotProp,
+    getOwnPropertyDescriptor(target: RawProps, key: string) {
+      if (hasAttrFromRawProps(target, key)) {
+        return {
+          configurable: true,
+          enumerable: true,
+          get: () => getSlotProp(target, key),
+        }
+      }
+    },
+  },
+)
+
 export function createSlot(
   name: string | (() => string) = 'default',
   rawProps?: LooseRawProps | null,
@@ -339,7 +401,7 @@ export function createSlot(
   const slotProps = rawProps
     ? new Proxy(
         once ? snapshotRawProps(rawProps as RawProps) : rawProps,
-        rawPropsProxyHandlers,
+        slotPropsProxyHandlers,
       )
     : EMPTY_OBJ
   let fragment: VaporFragment

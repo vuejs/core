@@ -10759,3 +10759,39 @@ describe('long v-else-if chain as slot content', () => {
     expect(out).toEqual(['fb', '11', 'fb', '1'])
   })
 })
+
+test.each([
+  [`class="a"`, {}],
+  [`:class="['a', { b: data.on }]"`, { on: true }],
+  [`class="a" v-bind="data"`, { class: 'b' }],
+  [`:style="{ color: 'red' }"`, {}],
+  [`:style="'color: red'"`, {}],
+  [`style="color: red" v-bind="data"`, { style: { top: 0 } }],
+  [`v-once class="a"`, {}],
+  [`:title="'t'"`, {}],
+  [`v-bind="data"`, { class: undefined }],
+  [`v-bind="data"`, { class: null, style: null }],
+  [`class="a" v-bind="data"`, { class: 'a' }],
+  [`:class="data.c" :style="data.s"`, { c: null, s: null }],
+  [`v-bind="data"`, { class: ['a', { b: true }], style: 'color: red' }],
+  [`style="color: red"`, {}],
+  [`:class="data.c" v-bind="data.o"`, { c: 'a', o: { class: 'a b' } }],
+  [`:title="'t'" v-bind="data"`, { class: false, style: false }],
+  [`:title="'t'" v-bind="data"`, { class: ' a  b ', style: '' }],
+  [`v-bind="data" :class="data.c"`, { c: false }],
+  [`v-bind="data" :class="data.c"`, { c: ' x ' }],
+  [`v-bind="data.a" :title="'t'"`, { a: { class: 0 } }],
+])(
+  'class and style slot props are normalized like vdom: %s',
+  async (attrs, init) => {
+    const { vdom, vapor } = await renderParity(
+      {
+        Child: `<template><slot ${attrs} /></template>`,
+        App: `<template><components.Child v-slot="p">{{ typeof p.class }}:{{ p.class }}|{{ typeof p.style }}:{{ p.style }}</components.Child></template>`,
+      },
+      () => ref<any>(init),
+      () => {},
+    )
+    expect(vapor.text).toBe(vdom.text)
+  },
+)

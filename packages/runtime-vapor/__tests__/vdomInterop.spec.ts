@@ -16140,3 +16140,25 @@ describe('vdom conditional slot branches in a vapor outlet', () => {
     expect(new Set(seen).size).toBe(3)
   })
 })
+
+test('vdom slot content in a vapor outlet gets normalized class and style', () => {
+  const data = ref({})
+  const components: Record<string, any> = {}
+  components.Child = compile(
+    `<template><slot class="a" :style="{ color: 'red' }" /></template>`,
+    data,
+    components,
+  )
+  const App = compile(
+    `<script setup>const data = _data; const components = _components</script>
+    <template>
+      <components.Child v-slot="p">{{ p.class }}|{{ JSON.stringify(p.style) }}</components.Child>
+    </template>`,
+    data,
+    components,
+    { vapor: false },
+  )
+  const root = document.createElement('div')
+  createApp(App).use(vaporInteropPlugin).mount(root)
+  expect(root.textContent).toBe('a|{"color":"red"}')
+})
