@@ -97,6 +97,11 @@ export interface ParserOptions
    */
   prefixIdentifiers?: boolean
   /**
+   * Whether to calculate the location of open tag and close tag of each node.
+   * @default false
+   */
+  tagLocations?: boolean
+  /**
    * A list of parser plugins to enable for `@babel/parser`, which is used to
    * parse expressions in bindings and interpolations.
    * https://babeljs.io/docs/en/next/babel-parser#plugins
