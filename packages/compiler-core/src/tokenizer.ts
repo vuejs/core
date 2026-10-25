@@ -681,6 +681,7 @@ export default class Tokenizer {
       this.state = State.InDirName
       this.sectionStart = this.index
     } else if (
+      c === CharCodes.ExclamationMark ||
       c === CharCodes.Dot ||
       c === CharCodes.Colon ||
       c === CharCodes.At ||
