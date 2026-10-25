@@ -1106,12 +1106,18 @@ export function finishComponentSetup(
   }
 }
 
+/**
+ * Read through the setup context `attrs` proxy to get the raw attrs object.
+ * @internal
+ */
+export const rawAttrsKey: unique symbol = Symbol()
+
 const attrsProxyHandlers = __DEV__
   ? {
-      get(target: Data, key: string) {
+      get(target: Data, key: string | symbol) {
         markAttrsAccessed()
         track(target, TrackOpTypes.GET, '')
-        return target[key]
+        return key === rawAttrsKey ? target : target[key as string]
       },
       set() {
         warn(`setupContext.attrs is readonly.`)
@@ -1123,9 +1129,9 @@ const attrsProxyHandlers = __DEV__
       },
     }
   : {
-      get(target: Data, key: string) {
+      get(target: Data, key: string | symbol) {
         track(target, TrackOpTypes.GET, '')
-        return target[key]
+        return key === rawAttrsKey ? target : target[key as string]
       },
     }
 
