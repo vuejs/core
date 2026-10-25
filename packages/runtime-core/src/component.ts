@@ -121,7 +121,23 @@ export type ComponentInstance<T> = T extends { new (): ComponentPublicInstance }
   ? InstanceType<T>
   : T extends
         | FunctionalComponent<infer Props, infer Emits>
-        | FunctionalComponent<infer Props, infer Emits, never>
+        | FunctionalComponent<
+            infer Props,
+            infer Emits,
+            T extends (
+              props: any,
+              ctx: {
+                attrs: any
+                emit: any
+                slots: infer Slots extends Record<string, any>
+              },
+              ...args: any[]
+            ) => any
+              ? [Slots] extends [never]
+                ? any
+                : Slots
+              : any
+          >
     ? ComponentPublicInstance<Props, {}, {}, {}, {}, ShortEmitsToObject<Emits>>
     : T extends Component<
           infer PropsOrInstance,

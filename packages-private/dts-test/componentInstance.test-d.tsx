@@ -204,4 +204,14 @@ describe('Generic component', () => {
 
   type InvalidFn = (props: { a: string }, ctx: number) => any
   expectType<never>({} as ComponentInstance<InvalidFn>)
+
+  type InvalidSlotsFn = (
+    props: { a: string },
+    ctx: {
+      attrs: Record<string, unknown>
+      emit: (event: string) => void
+      slots: number
+    },
+  ) => VNode
+  expectType<never>({} as ComponentInstance<InvalidSlotsFn>)
 }
