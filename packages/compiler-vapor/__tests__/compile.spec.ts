@@ -503,6 +503,23 @@ describe('compile', () => {
       expect(code).contains('const t4 = _template("<p>", 2)')
     })
 
+    test('should bump template var (t*) on a multi-digit conflict', () => {
+      const code = compile(
+        `<a/><b/><i/><u/>
+        <s/><q/><p/><em/>
+        <sub/><sup/><span/>`,
+        {
+          bindingMetadata: {
+            t10: BindingTypes.SETUP_REF,
+          },
+        },
+      )
+
+      expect(code).not.contains('const t10 =')
+      expect(code).contains('const t9 = _template("<sup>", 2)')
+      expect(code).contains('const t11 = _template("<span>", 2)')
+    })
+
     test('should bump placeholder cursor var (p*) on conflict', () => {
       const code = compile(
         `<div>
