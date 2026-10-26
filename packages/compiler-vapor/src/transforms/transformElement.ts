@@ -1118,8 +1118,6 @@ export function buildProps(
   const dynamicArgs: IRProps[] = []
   const dynamicExpr: SimpleExpressionNode[] = []
   let results: DirectiveTransformResult[] = []
-  let resolvedBind: VaporDirectiveNode | undefined
-  let resolvedBindProps: IRPropsStatic | undefined
   // Keep merged listeners after v-model without delaying DOM props such as
   // input type. Unknown v-bind keys still need one combined props payload.
   const deferListeners =
@@ -1138,14 +1136,12 @@ export function buildProps(
         )
       }
       if (!prop.exp) return false
-      resolvedBind = prop
-      resolvedBindProps = resolveNativeObjectLiteralBindProps(
+      return !!resolveNativeObjectLiteralBindProps(
         prop.exp,
         context,
         props,
         prop,
       )
-      return !!resolvedBindProps
     })
   let listenerResults: DirectiveTransformResult[] = []
 
@@ -1182,14 +1178,12 @@ export function buildProps(
                 props,
                 prop,
               )
-            : prop === resolvedBind
-              ? resolvedBindProps
-              : resolveNativeObjectLiteralBindProps(
-                  prop.exp,
-                  context,
-                  props,
-                  prop,
-                )
+            : resolveNativeObjectLiteralBindProps(
+                prop.exp,
+                context,
+                props,
+                prop,
+              )
           if (objectLiteralProps) {
             if (isComponent) {
               pushStaticObjectLiteralProps(objectLiteralProps)
@@ -1328,16 +1322,19 @@ export function buildProps(
   return [false, irProps]
 }
 
-function resolveObjectLiteralProps(
+// The keys of an object literal that can be expanded into static props, in
+// property order; undefined when any property rules the expansion out. The
+// values are only materialized (`materializeObjectLiteralProps`) once the
+// keys have also passed the conflict check against the other props.
+function resolveObjectLiteralKeys(
   exp: SimpleExpressionNode,
-  context: TransformContext<ElementNode>,
   keyTransform?: (key: string) => string,
   isValidKey?: (key: string) => boolean,
-): IRPropsStatic | undefined {
+): string[] | undefined {
   const ast = exp.ast
   if (!ast || ast.type !== 'ObjectExpression') return
 
-  const props: IRPropsStatic = []
+  const keys: string[] = []
   const knownKeys = new Set<string>()
   for (const property of ast.properties) {
     if (property.type !== 'ObjectProperty' || property.computed) {
@@ -1350,22 +1347,32 @@ function resolveObjectLiteralProps(
     if (keyTransform) key = keyTransform(key)
     if (knownKeys.has(key)) return
     knownKeys.add(key)
-
-    props.push({
-      key: createSimpleExpression(key, true),
-      values: [
-        resolveExpression(
-          createObjectBindSubExpression(
-            exp,
-            property.value as Expression,
-            context,
-          ),
-          true,
-        ),
-      ],
-    })
+    keys.push(key)
   }
-  return props
+  return keys
+}
+
+function materializeObjectLiteralProps(
+  exp: SimpleExpressionNode,
+  keys: string[],
+  context: TransformContext<ElementNode>,
+): IRPropsStatic {
+  // checked by resolveObjectLiteralKeys
+  const properties = (exp.ast as ObjectExpression)
+    .properties as ObjectProperty[]
+  return keys.map((key, i) => ({
+    key: createSimpleExpression(key, true),
+    values: [
+      resolveExpression(
+        createObjectBindSubExpression(
+          exp,
+          properties[i].value as Expression,
+          context,
+        ),
+        true,
+      ),
+    ],
+  }))
 }
 
 function resolveComponentObjectLiteralBindProps(
@@ -1374,19 +1381,18 @@ function resolveComponentObjectLiteralBindProps(
   nodeProps: (VaporDirectiveNode | AttributeNode)[],
   currentProp: VaporDirectiveNode,
 ): IRPropsStatic | undefined {
-  const props = resolveObjectLiteralProps(
+  const keys = resolveObjectLiteralKeys(
     exp,
-    context,
     undefined,
     isSafeObjectLiteralBindKey,
   )
   if (
-    !props ||
-    hasComponentObjectLiteralBindConflict(nodeProps, currentProp, props)
+    !keys ||
+    hasComponentObjectLiteralBindConflict(nodeProps, currentProp, keys)
   ) {
     return
   }
-  return props
+  return materializeObjectLiteralProps(exp, keys, context)
 }
 
 const listenerMerge = new WeakMap<ElementNode, boolean>()
@@ -1454,25 +1460,33 @@ function resolveListenerMerge(
   return hasVOnObject && hasStaticListener
 }
 
+// `buildProps` and the listener merge check both ask for the same v-bind;
+// `null` records an object that stays a dynamic source
+const nativeObjectLiteralBindProps = new WeakMap<
+  VaporDirectiveNode,
+  IRPropsStatic | null
+>()
+
 function resolveNativeObjectLiteralBindProps(
   exp: SimpleExpressionNode,
   context: TransformContext<ElementNode>,
   nodeProps: (VaporDirectiveNode | AttributeNode)[],
   currentProp: VaporDirectiveNode,
 ): IRPropsStatic | undefined {
-  const props = resolveObjectLiteralProps(
-    exp,
-    context,
-    undefined,
-    isSafeNativeObjectLiteralBindKey,
-  )
-  if (
-    !props ||
-    hasNativeObjectLiteralBindConflict(nodeProps, currentProp, props)
-  ) {
-    return
+  let props = nativeObjectLiteralBindProps.get(currentProp)
+  if (props === undefined) {
+    const keys = resolveObjectLiteralKeys(
+      exp,
+      undefined,
+      isSafeNativeObjectLiteralBindKey,
+    )
+    props =
+      keys && !hasNativeObjectLiteralBindConflict(nodeProps, currentProp, keys)
+        ? materializeObjectLiteralProps(exp, keys, context)
+        : null
+    nativeObjectLiteralBindProps.set(currentProp, props)
   }
-  return props
+  return props || undefined
 }
 
 function resolveComponentObjectLiteralOnProps(
@@ -1481,14 +1495,14 @@ function resolveComponentObjectLiteralOnProps(
   nodeProps: (VaporDirectiveNode | AttributeNode)[],
   currentProp: VaporDirectiveNode,
 ): IRPropsStatic | undefined {
-  const props = resolveObjectLiteralProps(exp, context, toHandlerKey)
+  const keys = resolveObjectLiteralKeys(exp, toHandlerKey)
   if (
-    !props ||
-    hasComponentObjectLiteralBindConflict(nodeProps, currentProp, props)
+    !keys ||
+    hasComponentObjectLiteralBindConflict(nodeProps, currentProp, keys)
   ) {
     return
   }
-  return props
+  return materializeObjectLiteralProps(exp, keys, context)
 }
 
 function isSafeNativeObjectLiteralBindKey(key: string): boolean {
@@ -1509,11 +1523,9 @@ function isSafeObjectLiteralBindKey(key: string): boolean {
 function hasComponentObjectLiteralBindConflict(
   props: (VaporDirectiveNode | AttributeNode)[],
   currentProp: VaporDirectiveNode,
-  objectLiteralProps: IRPropsStatic,
+  objectLiteralKeys: string[],
 ): boolean {
-  const keys = createComponentConflictKeySet(
-    objectLiteralProps.map(prop => prop.key.content),
-  )
+  const keys = createComponentConflictKeySet(objectLiteralKeys)
   for (const prop of props) {
     if (prop === currentProp) continue
 
@@ -1563,9 +1575,9 @@ function hasComponentModelKey(
 function hasNativeObjectLiteralBindConflict(
   props: (VaporDirectiveNode | AttributeNode)[],
   currentProp: VaporDirectiveNode,
-  objectLiteralProps: IRPropsStatic,
+  objectLiteralKeys: string[],
 ): boolean {
-  const keys = new Set(objectLiteralProps.map(prop => prop.key.content))
+  const keys = new Set(objectLiteralKeys)
   for (const prop of props) {
     if (prop === currentProp) continue
 
