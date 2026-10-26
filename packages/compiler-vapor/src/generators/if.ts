@@ -37,7 +37,7 @@ export function genIf(
 
   const conditionExpr: CodeFragment[] = [
     '() => (',
-    ...genExpression(condition, context),
+    genExpression(condition, context),
     ')',
   ]
 
@@ -48,19 +48,13 @@ export function genIf(
     if (negative.type === IRNodeTypes.BLOCK) {
       negativeArg = genBlock(negative, context)
     } else {
-      negativeArg = ['() => ', ...genIf(negative!, context, true)]
+      negativeArg = ['() => ', genIf(negative!, context, true)]
     }
   }
 
   if (!isNested) push(NEWLINE, `const n${oper.id} = `)
   push(
-    ...genCall(
-      helper('createIf'),
-      conditionExpr,
-      positiveArg,
-      negativeArg,
-      flags,
-    ),
+    genCall(helper('createIf'), conditionExpr, positiveArg, negativeArg, flags),
   )
 
   return frag
@@ -153,7 +147,7 @@ function genIfChain(oper: IfIRNode, context: CodegenContext): CodeFragment[] {
   let node = oper
   for (let i = 0; ; i++) {
     if (i > 0) selector.push(NEWLINE, ': ')
-    selector.push('(', ...genExpression(node.condition, context), `) ? ${i}`)
+    selector.push('(', genExpression(node.condition, context), `) ? ${i}`)
     blocks.push(genBlock(node.positive, context))
     branchFlags.push(node.blockShape & (0b11 | VaporIfFlags.TRUE_NO_SCOPE))
     if (node.slotRoot) slotRoot = true
@@ -177,7 +171,7 @@ function genIfChain(oper: IfIRNode, context: CodegenContext): CodeFragment[] {
   push(
     NEWLINE,
     `const n${oper.id} = `,
-    ...genCall(
+    genCall(
       helper('createIfChain'),
       selector,
       genMulti(DELIMITERS_ARRAY, ...blocks),

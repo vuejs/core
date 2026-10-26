@@ -129,7 +129,7 @@ export function genExpression(
         if (leadingText.length) push([leadingText, NewlineType.Unknown])
 
         push(
-          ...genIdentifier(
+          genIdentifier(
             asParams ? id.name : source,
             context,
             {
@@ -192,7 +192,7 @@ function genIdentifier(
       // replacement is an expression - process it again
       const exp = genExpression(replacement, context, assignment)
       if (parent && parent.type === 'ObjectProperty' && parent.shorthand) {
-        return [`${name}: `, ...exp]
+        return [`${name}: `, exp]
       }
       return exp
     }
@@ -266,7 +266,7 @@ function genIdentifier(
           return [
             prefix,
             `${helper('isRef')}(${raw}) ? ${raw}.value ${operator} `,
-            ...genExpression(rightExp, context),
+            genExpression(rightExp, context),
             ` : `,
             [raw, NewlineType.None, loc, name],
           ]
@@ -1095,7 +1095,7 @@ function genDeclarations(
       if (shouldDeclare) {
         push(`const `)
       }
-      push(`${varName} = `, ...genExpression(value, context), NEWLINE)
+      push(`${varName} = `, genExpression(value, context), NEWLINE)
     }
   })
 
@@ -1108,7 +1108,7 @@ function genDeclarations(
       }
       push(
         `${varName} = `,
-        ...context.withId(() => genExpression(value, context), ids),
+        context.withId(() => genExpression(value, context), ids),
         NEWLINE,
       )
       ids[name] = varName

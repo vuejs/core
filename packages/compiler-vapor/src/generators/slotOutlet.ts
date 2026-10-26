@@ -40,18 +40,12 @@ export function genSlotOutlet(
     ? undefined
     : name.isStatic
       ? genExpression(name, context)
-      : ['() => (', ...genExpression(name, context), ')']
+      : ['() => (', genExpression(name, context), ')']
 
   push(
     NEWLINE,
     `const n${id} = `,
-    ...genCall(
-      createSlot,
-      nameArg,
-      rawPropsArg,
-      fallbackArg,
-      genSlotFlags(flags),
-    ),
+    genCall(createSlot, nameArg, rawPropsArg, fallbackArg, genSlotFlags(flags)),
   )
 
   return frag

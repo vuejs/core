@@ -65,17 +65,17 @@ export function genSelf(
       operation.type === IRNodeTypes.INSERT_NODE &&
       operation.appendIndex !== undefined
     ) {
-      push(...genInsertionState(operation, context))
+      push(genInsertionState(operation, context))
     }
     push(NEWLINE, `const n${id} = ${context.tName(template)}()`)
   }
 
   if (operation) {
-    push(...genOperationWithInsertionState(operation, context))
+    push(genOperationWithInsertionState(operation, context))
   }
 
   if (hasDynamicChild) {
-    push(...genChildren(dynamic, context, push, `n${id}`, flushBeforeDynamic))
+    push(genChildren(dynamic, context, push, `n${id}`, flushBeforeDynamic))
   }
 
   return frag
@@ -97,7 +97,7 @@ export function genChildren(
     const { access } = child
     if (!access) {
       flushBeforeDynamic && flushBeforeDynamic(child, push)
-      push(...genSelf(child, context, flushBeforeDynamic))
+      push(genSelf(child, context, flushBeforeDynamic))
       continue
     }
 
@@ -105,7 +105,7 @@ export function genChildren(
     switch (access.kind) {
       case DynamicAccess.INLINE:
         push(
-          ...genChildren(
+          genChildren(
             child,
             context,
             pushBlock,
@@ -116,36 +116,36 @@ export function genChildren(
         continue
       case DynamicAccess.INLINE_REUSE:
         push(
-          ...genChildren(
+          genChildren(
             child,
             context,
             pushBlock,
-            ['(', prev!, ' = ', ...accessPath, ')'],
+            ['(', prev!, ' = ', accessPath, ')'],
             flushBeforeDynamic,
           ),
         )
         continue
       case DynamicAccess.REUSE:
-        pushBlock(NEWLINE, `${prev} = `, ...accessPath)
+        pushBlock(NEWLINE, `${prev} = `, accessPath)
         break
       case DynamicAccess.PLACEHOLDER:
         // p for "placeholder" variables that are meant for possible reuse by
         // other access paths
         prev = context.pName(context.block.tempId++)
-        pushBlock(NEWLINE, `let ${prev} = `, ...accessPath)
+        pushBlock(NEWLINE, `let ${prev} = `, accessPath)
         break
       case DynamicAccess.REFERENCE:
         prev = `n${access.id}`
-        pushBlock(NEWLINE, `const ${prev} = `, ...accessPath)
+        pushBlock(NEWLINE, `const ${prev} = `, accessPath)
     }
 
     if (child.operation) {
       // created by its own operation (block, component, inserted template):
       // the access located its anchor, genSelf owns the subtree
       flushBeforeDynamic && flushBeforeDynamic(child, push)
-      push(...genSelf(child, context, flushBeforeDynamic))
+      push(genSelf(child, context, flushBeforeDynamic))
     } else if (child.hasDynamicChild) {
-      push(...genChildren(child, context, pushBlock, prev, flushBeforeDynamic))
+      push(genChildren(child, context, pushBlock, prev, flushBeforeDynamic))
     }
   }
 

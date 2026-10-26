@@ -14,7 +14,7 @@ export function genSetText(
   const texts = combineValues(values, context)
   return [
     NEWLINE,
-    ...genCall(helper('setText'), `${generated ? 'x' : 'n'}${element}`, texts),
+    genCall(helper('setText'), `${generated ? 'x' : 'n'}${element}`, texts),
   ]
 }
 

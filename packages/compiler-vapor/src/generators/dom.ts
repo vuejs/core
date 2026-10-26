@@ -10,7 +10,7 @@ export function genInsertNode(
   if (elements.length > 1) element = `[${element}]`
   return [
     NEWLINE,
-    ...genCall(
+    genCall(
       helper('insert'),
       element,
       `n${parent}`,

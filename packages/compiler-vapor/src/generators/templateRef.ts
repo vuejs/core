@@ -21,7 +21,7 @@ export function genSetTemplateRef(
   context.needsTemplateRefSetter = true
   return [
     NEWLINE,
-    ...genCall(
+    genCall(
       setTemplateRefIdent, // will be generated in root scope
       `n${oper.element}`,
       refValue,
@@ -39,7 +39,7 @@ function genSetStaticTemplateRef(
 ): CodeFragment[] {
   return [
     NEWLINE,
-    ...genCall(
+    genCall(
       context.helper('setStaticTemplateRef'),
       `n${oper.element}`,
       refValue,
@@ -59,10 +59,10 @@ export function genSetTemplateRefBinding(
   // the owner's shared setter.
   return [
     NEWLINE,
-    ...genCall(
+    genCall(
       [context.helper('setTemplateRefBinding'), 'undefined'],
       `n${oper.element}`,
-      ['() => ', ...refValue],
+      ['() => ', refValue],
       ...(oper.refFor || refKey ? [oper.refFor && 'true', refKey] : []),
     ),
   ]

@@ -21,6 +21,7 @@ import {
   NEWLINE,
   buildCodeFragment,
   genCall,
+  isNestedFragments,
 } from './utils'
 import { genCreateComponent } from './component'
 import { genSlotOutlet } from './slotOutlet'
@@ -34,7 +35,7 @@ export function genOperations(
 ): CodeFragment[] {
   const [frag, push] = buildCodeFragment()
   for (const operation of opers) {
-    push(...genOperationWithInsertionState(operation, context))
+    push(genOperationWithInsertionState(operation, context))
   }
   return frag
 }
@@ -45,9 +46,9 @@ export function genOperationWithInsertionState(
 ): CodeFragment[] {
   const [frag, push] = buildCodeFragment()
   if (isBlockOperation(oper) && oper.parent) {
-    push(...genInsertionState(oper, context))
+    push(genInsertionState(oper, context))
   }
-  push(...genOperation(oper, context))
+  push(genOperation(oper, context))
   return frag
 }
 
@@ -108,12 +109,12 @@ export function genEffects(
   for (let i = 0; i < effects.length; i++) {
     const effect = effects[i]
     if (effect.once) {
-      push(...genReactiveEffects(effects.slice(start, i), context))
-      push(...genOperations(effect.operations, context))
+      push(genReactiveEffects(effects.slice(start, i), context))
+      push(genOperations(effect.operations, context))
       start = i + 1
     }
   }
-  push(...genReactiveEffects(effects.slice(start), context, genExtraFrag))
+  push(genReactiveEffects(effects.slice(start), context, genExtraFrag))
   return frag
 }
 
@@ -156,7 +157,7 @@ function genReactiveEffects(
   // after processExpressions, so the handler names avoid the ones it declares
   const handlerFrags = genHoistedHandlers(effects, context)
   return context.withExpressionReplacements(expressionReplacements, () => {
-    push(...declarationFrags)
+    push(declarationFrags)
     // one id scope for the whole group; the hoisted handlers above stay
     // outside it so they don't capture the values cached by this effect
     context.withId(() => {
@@ -165,14 +166,14 @@ function genReactiveEffects(
         operationsCount += effect.operations.length
         const frags = genEffect(effect, context)
         i > 0 && push(NEWLINE)
-        if (frag[frag.length - 1] === ')' && frags[0] === '(') {
+        if (lastFragment(frag) === ')' && firstFragment(frags) === '(') {
           push(';')
         }
-        push(...frags)
+        push(frags)
       }
     }, ids)
 
-    const newLineCount = frag.filter(frag => frag === NEWLINE).length
+    const newLineCount = countNewlines(frag)
     if (
       newLineCount > 1 ||
       operationsCount > 1 ||
@@ -195,10 +196,10 @@ function genReactiveEffects(
     }
 
     if (genExtraFrag) {
-      push(...context.withId(genExtraFrag, ids))
+      push(context.withId(genExtraFrag, ids))
     }
 
-    unshift(...handlerFrags)
+    unshift(handlerFrags)
     return frag
   })
 }
@@ -209,15 +210,69 @@ export function genEffect(
 ): CodeFragment[] {
   const [frag, push] = buildCodeFragment()
   const operationsExps = genOperations(operations, context)
-  const newlineCount = operationsExps.filter(frag => frag === NEWLINE).length
+  const newlineCount = countNewlines(operationsExps)
 
   if (newlineCount > 1) {
-    push(...operationsExps)
+    push(operationsExps)
   } else {
-    push(...operationsExps.filter(frag => frag !== NEWLINE))
+    push(withoutNewlines(operationsExps))
   }
 
   return frag
+}
+
+// a generator's output is one nested item, so the questions genReactiveEffects
+// asks of the flat code descend into it
+const NO_FRAGMENT = Symbol()
+
+function firstFragment(
+  frags: CodeFragment[],
+): CodeFragment | typeof NO_FRAGMENT {
+  for (const frag of frags) {
+    if (isNestedFragments(frag)) {
+      const inner = firstFragment(frag)
+      if (inner !== NO_FRAGMENT) return inner
+    } else {
+      return frag
+    }
+  }
+  return NO_FRAGMENT
+}
+
+function lastFragment(
+  frags: CodeFragment[],
+): CodeFragment | typeof NO_FRAGMENT {
+  for (let i = frags.length - 1; i >= 0; i--) {
+    const frag = frags[i]
+    if (isNestedFragments(frag)) {
+      const inner = lastFragment(frag)
+      if (inner !== NO_FRAGMENT) return inner
+    } else {
+      return frag
+    }
+  }
+  return NO_FRAGMENT
+}
+
+function countNewlines(frags: CodeFragment[]): number {
+  let count = 0
+  for (const frag of frags) {
+    if (frag === NEWLINE) count++
+    else if (isNestedFragments(frag)) count += countNewlines(frag)
+  }
+  return count
+}
+
+function withoutNewlines(
+  frags: CodeFragment[],
+  out: CodeFragment[] = [],
+): CodeFragment[] {
+  for (const frag of frags) {
+    if (frag === NEWLINE) continue
+    if (isNestedFragments(frag)) withoutNewlines(frag, out)
+    else out.push(frag)
+  }
+  return out
 }
 
 export function genInsertionState(
@@ -227,7 +282,7 @@ export function genInsertionState(
   const { parent, anchor, appendIndex } = operation
   return [
     NEWLINE,
-    ...genCall(
+    genCall(
       context.helper('setInsertionState'),
       `n${parent}`,
       // see setInsertionState() in runtime-vapor for the anchor/index

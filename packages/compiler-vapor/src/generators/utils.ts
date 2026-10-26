@@ -19,7 +19,7 @@ export function genOnce(
   call: CodeFragment[],
   context: CodegenContext,
 ): CodeFragment[] {
-  return genCall(context.helper('withOnce'), ['() => ', ...call])
+  return genCall(context.helper('withOnce'), ['() => ', call])
 }
 
 export const IMPORT_EXP_START = '__IMPORT_EXP_START__'
@@ -36,14 +36,27 @@ export const INDENT_START: unique symbol = Symbol(__DEV__ ? `indent start` : ``)
 export const INDENT_END: unique symbol = Symbol(__DEV__ ? `indent end` : ``)
 
 type FalsyValue = false | null | undefined
+/** code with its source position; its numeric newline index is what tells it apart from a nested list */
+export type MappedFragment = [
+  code: string,
+  newlineIndex?: number,
+  loc?: SourceLocation,
+  name?: string,
+]
 export type CodeFragment =
   | typeof NEWLINE
   | typeof LF
   | typeof INDENT_START
   | typeof INDENT_END
   | string
-  | [code: string, newlineIndex?: number, loc?: SourceLocation, name?: string]
+  | MappedFragment
+  // a generator's output, pushed as one item instead of being spread
+  | CodeFragment[]
   | FalsyValue
+
+export function isNestedFragments(frag: CodeFragment): frag is CodeFragment[] {
+  return isArray(frag) && typeof frag[1] !== 'number'
+}
 export type CodeFragments = Exclude<CodeFragment, any[]> | CodeFragment[]
 
 export function buildCodeFragment(
@@ -69,29 +82,34 @@ export function genMulti(
   [left, right, seg, placeholder]: CodeFragmentDelimiters,
   ...frags: CodeFragments[]
 ): CodeFragment[] {
-  if (placeholder) {
-    while (frags.length > 0 && !frags[frags.length - 1]) {
-      frags.pop()
-    }
-    frags = frags.map(frag => frag || placeholder)
-  } else {
-    frags = frags.filter(Boolean)
-  }
-
-  const frag: CodeFragment[] = []
-  push(left)
-  for (let [i, fn] of (
-    frags as Array<Exclude<CodeFragments, FalsyValue>>
-  ).entries()) {
-    push(fn)
-    if (i < frags.length - 1) push(seg)
-  }
-  push(right)
+  const frag: CodeFragment[] = [left]
+  pushJoined(frag, frags, seg, placeholder)
+  frag.push(right)
   return frag
+}
 
-  function push(fn: CodeFragments) {
-    if (!isArray(fn)) fn = [fn]
-    frag.push(...fn)
+// with a placeholder, trailing empty arguments are dropped and inner ones take
+// the placeholder; without one, empty arguments are skipped
+function pushJoined(
+  frag: CodeFragment[],
+  frags: CodeFragments[],
+  seg: CodeFragments,
+  placeholder: CodeFragments | undefined,
+) {
+  let end = frags.length
+  if (placeholder) {
+    while (end > 0 && !frags[end - 1]) end--
+  }
+  let first = true
+  for (let i = 0; i < end; i++) {
+    let fn = frags[i]
+    if (!fn) {
+      if (!placeholder) continue
+      fn = placeholder
+    }
+    if (!first) frag.push(seg)
+    frag.push(fn)
+    first = false
   }
 }
 export const DELIMITERS_ARRAY: CodeFragmentDelimiters = ['[', ']', ', ']
@@ -114,7 +132,10 @@ export function genCall(
   const hasPlaceholder = isArray(name)
   const fnName = hasPlaceholder ? name[0] : name
   const placeholder = hasPlaceholder ? name[1] : 'null'
-  return [fnName, ...genMulti(['(', ')', ', ', placeholder], ...frags)]
+  const frag: CodeFragment[] = [fnName, '(']
+  pushJoined(frag, frags, ', ', placeholder)
+  frag.push(')')
+  return frag
 }
 
 export function getParserOptions(
@@ -149,73 +170,90 @@ export function codeFragmentToString(
   const pos = { line: 1, column: 1, offset: 0 }
   let indentLevel = 0
 
-  for (let frag of code) {
-    if (!frag) continue
+  emit(code)
 
-    if (frag === NEWLINE) {
-      frag = [`\n${`  `.repeat(indentLevel)}`, NewlineType.Start]
-    } else if (frag === INDENT_START) {
-      indentLevel++
-      continue
-    } else if (frag === INDENT_END) {
-      indentLevel--
-      continue
-    } else if (frag === LF) {
-      pos.line++
-      pos.column = 0
-      pos.offset++
-      continue
-    }
+  return [codegen, map]
 
-    if (isString(frag)) frag = [frag]
-
-    let [code, newlineIndex = NewlineType.None, loc, name] = frag
-    codegen += code
-
-    if (map) {
-      if (loc) addMapping(loc.start, name)
-      if (newlineIndex === NewlineType.Unknown) {
-        // multiple newlines, full iteration
-        advancePositionWithMutation(pos, code)
-      } else {
-        // fast paths
-        pos.offset += code.length
-        if (newlineIndex === NewlineType.None) {
-          // no newlines; fast path to avoid newline detection
-          if (__TEST__ && code.includes('\n')) {
-            throw new Error(
-              `CodegenContext.push() called newlineIndex: none, but contains` +
-                `newlines: ${code.replace(/\n/g, '\\n')}`,
-            )
-          }
-          pos.column += code.length
-        } else {
-          // single newline at known index
-          if (newlineIndex === NewlineType.End) {
-            newlineIndex = code.length - 1
-          }
-          if (
-            __TEST__ &&
-            (code.charAt(newlineIndex) !== '\n' ||
-              code.slice(0, newlineIndex).includes('\n') ||
-              code.slice(newlineIndex + 1).includes('\n'))
-          ) {
-            throw new Error(
-              `CodegenContext.push() called with newlineIndex: ${newlineIndex} ` +
-                `but does not conform: ${code.replace(/\n/g, '\\n')}`,
-            )
-          }
-          pos.line++
-          pos.column = code.length - newlineIndex
-        }
+  function emit(code: CodeFragment[]) {
+    for (let frag of code) {
+      if (!frag) continue
+      if (isNestedFragments(frag)) {
+        emit(frag)
+        continue
       }
-      if (loc && loc !== locStub) {
-        addMapping(loc.end)
+
+      let code: string
+      let newlineIndex: number = NewlineType.None
+      let loc: SourceLocation | undefined
+      let name: string | undefined
+      if (frag === NEWLINE) {
+        code = `\n${`  `.repeat(indentLevel)}`
+        newlineIndex = NewlineType.Start
+      } else if (frag === INDENT_START) {
+        indentLevel++
+        continue
+      } else if (frag === INDENT_END) {
+        indentLevel--
+        continue
+      } else if (frag === LF) {
+        pos.line++
+        pos.column = 0
+        pos.offset++
+        continue
+      } else if (isString(frag)) {
+        code = frag
+      } else {
+        const mapped = frag as MappedFragment
+        code = mapped[0]
+        if (mapped[1] !== undefined) newlineIndex = mapped[1]
+        loc = mapped[2]
+        name = mapped[3]
+      }
+      codegen += code
+
+      if (map) {
+        if (loc) addMapping(loc.start, name)
+        if (newlineIndex === NewlineType.Unknown) {
+          // multiple newlines, full iteration
+          advancePositionWithMutation(pos, code)
+        } else {
+          // fast paths
+          pos.offset += code.length
+          if (newlineIndex === NewlineType.None) {
+            // no newlines; fast path to avoid newline detection
+            if (__TEST__ && code.includes('\n')) {
+              throw new Error(
+                `CodegenContext.push() called newlineIndex: none, but contains` +
+                  `newlines: ${code.replace(/\n/g, '\\n')}`,
+              )
+            }
+            pos.column += code.length
+          } else {
+            // single newline at known index
+            if (newlineIndex === NewlineType.End) {
+              newlineIndex = code.length - 1
+            }
+            if (
+              __TEST__ &&
+              (code.charAt(newlineIndex) !== '\n' ||
+                code.slice(0, newlineIndex).includes('\n') ||
+                code.slice(newlineIndex + 1).includes('\n'))
+            ) {
+              throw new Error(
+                `CodegenContext.push() called with newlineIndex: ${newlineIndex} ` +
+                  `but does not conform: ${code.replace(/\n/g, '\\n')}`,
+              )
+            }
+            pos.line++
+            pos.column = code.length - newlineIndex
+          }
+        }
+        if (loc && loc !== locStub) {
+          addMapping(loc.end)
+        }
       }
     }
   }
-
-  return [codegen, map]
 
   function addMapping(loc: Position, name: string | null = null) {
     // we use the private property to directly add the mapping

@@ -15,9 +15,9 @@ export function genKey(
   push(
     NEWLINE,
     `const n${id} = `,
-    ...genCall(
+    genCall(
       context.helper('createKeyedFragment'),
-      [`() => (`, ...genExpression(value, context), ')'],
+      [`() => (`, genExpression(value, context), ')'],
       blockFn,
       slotRoot ? 'true' : false,
     ),
@@ -32,7 +32,7 @@ export function genSetBlockKey(
 ): CodeFragment[] {
   return [
     NEWLINE,
-    ...genCall(
+    genCall(
       context.helper('setBlockKey'),
       `n${oper.element}`,
       genExpression(oper.value, context),
