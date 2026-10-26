@@ -321,6 +321,33 @@ export enum DynamicFlag {
   INSERT = 1 << 2,
 }
 
+/**
+ * How the parent reaches a child codegen holds on to. Decided once the
+ * parent's children are final (`planAccess`), printed by `genChildren`.
+ */
+export enum DynamicAccess {
+  /** `const n<id> = ...` */
+  REFERENCE,
+  /** `let p<n> = ...`, a cursor later lookups may reassign */
+  PLACEHOLDER,
+  /** `p<n> = ...`, reassigning the previous cursor */
+  REUSE,
+  /** no variable: written into the lookup of its only descendant access */
+  INLINE,
+  /** `(p<n> = ...)` written inline, reassigning the previous cursor */
+  INLINE_REUSE,
+}
+
+export interface IRDynamicAccess {
+  kind: DynamicAccess
+  /** position among the parent's rendered child nodes */
+  index: number
+  /** reached with `next()` from the previous access instead of the parent */
+  adjacent: boolean
+  /** the located node, for `REFERENCE` */
+  id?: number
+}
+
 export interface IRDynamicInfo {
   id?: number
   flags: DynamicFlag
@@ -330,6 +357,7 @@ export interface IRDynamicInfo {
   hasDynamicChild?: boolean
   isText?: boolean
   operation?: OperationNode
+  access?: IRDynamicAccess
 }
 
 export interface IREffect {

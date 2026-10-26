@@ -82,7 +82,7 @@ describe('compiler: children transform', () => {
     expect(code).toMatchSnapshot()
   })
 
-  test('reuse cursor assignment for non-adjacent following access path', () => {
+  test('inline placeholders nothing chains off', () => {
     const { code } = compileWithElementTransform(
       `<div>
         <div><span>{{ first }}</span></div>
@@ -90,10 +90,39 @@ describe('compiler: children transform', () => {
         <div><span>{{ second }}</span></div>
       </div>`,
     )
+    // the static sibling means neither lookup can continue from a cursor
+    expect(code).toContain(`const n0 = _child(_child(n2))`)
+    expect(code).toContain(`const n1 = _child(_nthChild(n2, 2))`)
+    expect(code).not.toMatch(/let p\d/)
+    expect(code).toMatchSnapshot()
+  })
+
+  test('reuse cursor assignment for non-adjacent following access path', () => {
+    const { code } = compileWithElementTransform(
+      `<div>
+        <div><span>{{ first }}</span></div>
+        <div><span>{{ second }}</span></div>
+        <i></i>
+        <div><span>{{ third }}</span></div>
+      </div>`,
+    )
     const pDecls = code.match(/let p\d =/g) || []
     expect(pDecls).toHaveLength(1)
     expect(code).toMatch(/let p\d = _child\(n\d\)/)
-    expect(code).toMatch(/const n\d = _child\(\(p\d = _nthChild\(n\d, 2\)\)\)/)
+    expect(code).toMatch(/const n\d = _child\(\(p\d = _next\(p\d\)\)\)/)
+    expect(code).toMatch(/const n\d = _child\(\(p\d = _nthChild\(n\d, 3\)\)\)/)
+    expect(code).toMatchSnapshot()
+  })
+
+  test('chain the sibling after an absent child off the placeholder', () => {
+    const { code } = compileWithElementTransform(
+      `<div>
+        <div><span>{{ first }}</span></div>{{ '' }}<div><span>{{ second }}</span></div>
+      </div>`,
+    )
+    expect(code).toContain(`let p0 = _child(n2)`)
+    expect(code).toContain(`const n0 = _child(p0)`)
+    expect(code).toContain(`const n1 = _child((p0 = _next(p0)))`)
     expect(code).toMatchSnapshot()
   })
 
@@ -110,6 +139,26 @@ describe('compiler: children transform', () => {
     expect(code).toMatch(/let p\d = _child\(n\d\)/)
     expect(code).toMatch(/_nthChild\(p\d, 2\)/)
     expect(code).not.toMatch(/_nthChild\(_child\(n\d\), 2\)/)
+    expect(code).toMatchSnapshot()
+  })
+
+  // coverage guard: a placeholder needing two parent lookups takes over the
+  // previous cursor with a standalone assignment
+  test('reassign the cursor for a placeholder with several lookups', () => {
+    const { code } = compileWithElementTransform(
+      `<div>
+        <section><span>{{ a }}</span></section>
+        <section><b>{{ b }}</b><i/><span>{{ c }}</span></section>
+        <section><span>{{ d }}</span></section>
+      </div>`,
+    )
+    expect(code).toContain(`let p0 = _child(n4)`)
+    expect(code).toContain(`const n0 = _child(p0)`)
+    expect(code).toContain(`p0 = _next(p0)\n`)
+    expect(code).toContain(`const n1 = _child(p0)`)
+    expect(code).toContain(`const n2 = _nthChild(p0, 2)`)
+    expect(code).toContain(`const n3 = _child((p0 = _next(p0)))`)
+    expect(code).not.toMatch(/let p[1-9]/)
     expect(code).toMatchSnapshot()
   })
 
