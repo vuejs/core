@@ -34,6 +34,7 @@ export class CodegenContext {
   bindingNames: Set<string> = new Set<string>()
 
   helpers: Map<string, string> = new Map()
+  helperAliases: Set<string> = new Set()
 
   needsTemplateRefSetter: boolean = false
   inSlotBlock: boolean = false
@@ -46,6 +47,7 @@ export class CodegenContext {
     const base = `_${helperNameAliases[name] || name}`
     const alias = this.findAvailableName(base, this.generatedLocalNames)
     this.helpers.set(name, alias)
+    this.helperAliases.add(alias)
     return alias
   }
 
@@ -95,7 +97,8 @@ export class CodegenContext {
     }
 
     const ret = fn()
-    ids.forEach(id => remove(identifiers[id], map[id] || id))
+    // scopes nest, so the entries added above are still at the front
+    for (const id of ids) identifiers[id].shift()
 
     return ret
   }
@@ -137,10 +140,7 @@ export class CodegenContext {
     if (name === '_ctx' || name === setTemplateRefIdent) return false
     if (this.bindingNames.has(name) || reservedNames.has(name)) return false
     if (this.identifiers[name]?.length) return false
-    for (const alias of this.helpers.values()) {
-      if (alias === name) return false
-    }
-    return true
+    return !this.helperAliases.has(name)
   }
 
   private findAvailableName(base: string, reservedNames: Set<string>): string {
@@ -283,6 +283,7 @@ export function generate(
     push(NEWLINE, `const ${setTemplateRefIdent} = ${templateRefSetterHelper}()`)
   } else if (templateRefSetterHelper) {
     context.helpers.delete('createTemplateRefSetter')
+    context.helperAliases.delete(templateRefSetterHelper)
   }
   push(...body)
   push(INDENT_END, NEWLINE)
@@ -297,9 +298,18 @@ export function generate(
   const preamble =
     imports + templates + genDynamicPropNames(context) + delegates
 
-  const newlineCount = [...preamble].filter(c => c === '\n').length
-  if (newlineCount && !inline) {
-    frag.unshift(...new Array<CodeFragment>(newlineCount).fill(LF))
+  if (!inline) {
+    let newlineCount = 0
+    for (
+      let i = preamble.indexOf('\n');
+      i !== -1;
+      i = preamble.indexOf('\n', i + 1)
+    ) {
+      newlineCount++
+    }
+    if (newlineCount) {
+      frag.unshift(...new Array<CodeFragment>(newlineCount).fill(LF))
+    }
   }
 
   let [code, map] = codeFragmentToString(frag, context)
