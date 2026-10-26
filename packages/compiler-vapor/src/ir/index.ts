@@ -81,6 +81,14 @@ export interface RootIRNode {
   directive: Set<string>
   block: BlockIRNode
   hasTemplateRef: boolean
+  reservedNames: ReservedNames
+}
+
+// the user's bindings, which generated identifiers must not shadow: the names
+// themselves, and the numbers they take under each prefix (`t10` takes 10 of `t`)
+export interface ReservedNames {
+  names: Set<string>
+  ids: Map<string, Set<number>>
 }
 
 export interface IRTemplate {
