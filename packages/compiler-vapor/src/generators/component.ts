@@ -53,7 +53,7 @@ import {
   toValidAssetId,
 } from '@vue/compiler-dom'
 import { genEventHandler, getUniqueHandlerName } from './event'
-import { genBlock, hasStableSlotRoot, markSlotRootOperations } from './block'
+import { genBlock, markSlotRootOperations } from './block'
 import {
   type DestructureMap,
   type DestructureMapValue,
@@ -865,10 +865,7 @@ function genSlotBlockWithProps(
   }
 
   const exitSlotBlock = context.enterSlotBlock()
-  const hasStableRoot = hasStableSlotRoot(oper, context)
-  if (!hasStableRoot) {
-    markSlotRootOperations(oper, context)
-  }
+  const hasStableRoot = markSlotRootOperations(oper, context)
   let blockFn = context.withId(
     () => genBlock(oper, context, propsName ? [propsName] : []),
     idMap,
