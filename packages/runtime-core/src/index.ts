@@ -675,7 +675,7 @@ export {
 /**
  * @internal
  */
-export { devtoolsComponentAdded } from './devtools'
+export { devtoolsComponentAdded, devtoolsComponentRemoved } from './devtools'
 /**
  * @internal
  */

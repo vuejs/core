@@ -25,6 +25,8 @@ import {
   type VNode,
   callWithErrorHandling,
   currentInstance,
+  devtoolsComponentAdded,
+  devtoolsComponentRemoved,
   endMeasure,
   expose,
   filterModelListeners,
@@ -1632,6 +1634,9 @@ export function mountComponent(
   if (__DEV__) {
     endMeasure(instance, `mount`)
   }
+  if (__DEV__ || __FEATURE_PROD_DEVTOOLS__) {
+    devtoolsComponentAdded(instance)
+  }
 }
 
 function registerUnmount(instance: VaporComponentInstance): void {
@@ -1714,6 +1719,10 @@ export function unmountComponent(
       queuePostRenderEffect(instance.um!, undefined, parentSuspense)
     }
     instance.isUnmounted = true
+
+    if ((__DEV__ || __FEATURE_PROD_DEVTOOLS__) && instance.isMounted) {
+      devtoolsComponentRemoved(instance)
+    }
   }
 
   if (__FEATURE_SUSPENSE__ && isSuspenseEnabled && pendingAsyncSetup) {
