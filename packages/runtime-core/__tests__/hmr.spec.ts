@@ -155,6 +155,44 @@ describe('hot module replacement', () => {
   })
 
   // #7042
+  test('reload with changed props and emits', async () => {
+    const root = nodeOps.createElement('div')
+    const childId = 'test-reload-props-emits'
+    let emitsOptions: any
+
+    const Child: ComponentOptions = {
+      __hmrId: childId,
+      props: ['foo'],
+      emits: ['a'],
+      created(this: any) {
+        emitsOptions = this.$.emitsOptions
+      },
+      render: compileToFunction(`<div>{{ foo }}</div>`),
+    }
+    createRecord(childId, Child)
+
+    const Parent: ComponentOptions = {
+      render: () => h(Child, { foo: 'foo', bar: 'bar' }),
+    }
+
+    render(h(Parent), root)
+    expect(serializeInner(root)).toBe(`<div bar="bar">foo</div>`)
+    expect(emitsOptions).toEqual({ a: null })
+
+    reload(childId, {
+      __hmrId: childId,
+      props: ['bar'],
+      emits: ['b'],
+      created(this: any) {
+        emitsOptions = this.$.emitsOptions
+      },
+      render: compileToFunction(`<div>{{ bar }}</div>`),
+    })
+    await nextTick()
+    expect(serializeInner(root)).toBe(`<div foo="foo">bar</div>`)
+    expect(emitsOptions).toEqual({ b: null })
+  })
+
   test('reload KeepAlive slot', async () => {
     const root = nodeOps.createElement('div')
     const childId = 'test-child-keep-alive'

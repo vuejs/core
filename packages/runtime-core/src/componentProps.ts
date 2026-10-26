@@ -511,6 +511,12 @@ function resolvePropValue(
 }
 
 const mixinPropsCache = new WeakMap<ConcreteComponent, NormalizedPropsOptions>()
+// the result only depends on the app through its global mixins, so apps
+// without them can share one cache (e.g. SSR, which creates an app per request)
+export const sharedPropsCache: WeakMap<
+  ConcreteComponent,
+  NormalizedPropsOptions
+> = new WeakMap()
 
 export function normalizePropsOptions(
   comp: ConcreteComponent,
@@ -518,7 +524,11 @@ export function normalizePropsOptions(
   asMixin = false,
 ): NormalizedPropsOptions {
   const cache =
-    __FEATURE_OPTIONS_API__ && asMixin ? mixinPropsCache : appContext.propsCache
+    __FEATURE_OPTIONS_API__ && asMixin
+      ? mixinPropsCache
+      : appContext.mixins.length
+        ? appContext.propsCache
+        : sharedPropsCache
   const cached = cache.get(comp)
   if (cached) {
     return cached

@@ -662,6 +662,45 @@ describe('component props', () => {
     expect(serializeInner(root)).toMatch(`from global mixin, from mixin`)
   })
 
+  test('share normalized props between apps without global mixins', () => {
+    const instances: ComponentInternalInstance[] = []
+    const Child = {
+      props: { foo: String, bar: Boolean },
+      setup() {
+        instances.push(getCurrentInstance()!)
+        return () => null
+      },
+    }
+    const mount = () =>
+      createApp({ render: () => h(Child) }).mount(nodeOps.createElement('div'))
+
+    mount()
+    mount()
+
+    expect(instances[1].propsOptions).toBe(instances[0].propsOptions)
+  })
+
+  test('normalize props per app when the app has global mixins', () => {
+    let instance: ComponentInternalInstance
+    const Child = {
+      props: ['self'],
+      setup() {
+        instance = getCurrentInstance()!
+        return () => null
+      },
+    }
+    const mount = (mixin?: any) => {
+      const app = createApp({ render: () => h(Child) })
+      if (mixin) app.mixin(mixin)
+      app.mount(nodeOps.createElement('div'))
+      return Object.keys(instance.propsOptions[0]!)
+    }
+
+    expect(mount()).toEqual(['self'])
+    expect(mount({ props: ['m'] })).toEqual(['m', 'self'])
+    expect(mount()).toEqual(['self'])
+  })
+
   test('props type support BigInt', () => {
     const Comp = {
       props: {

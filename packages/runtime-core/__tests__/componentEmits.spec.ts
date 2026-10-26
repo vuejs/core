@@ -668,4 +668,43 @@ describe('component: emit', () => {
     expect(validateByMixin).toHaveBeenCalledTimes(1)
     expect(validateByGlobalMixin).not.toHaveBeenCalled()
   })
+
+  test('share normalized emits between apps without global mixins', () => {
+    const emitsOptions: any[] = []
+    const Child = defineComponent({
+      emits: ['foo'],
+      created() {
+        emitsOptions.push(this.$.emitsOptions)
+      },
+      render: () => h('div'),
+    })
+    const mount = () =>
+      createApp({ render: () => h(Child) }).mount(nodeOps.createElement('div'))
+
+    mount()
+    mount()
+
+    expect(emitsOptions[1]).toBe(emitsOptions[0])
+  })
+
+  test('normalize emits per app when the app has global mixins', () => {
+    let emitsOptions: any
+    const Child = defineComponent({
+      emits: ['foo'],
+      created() {
+        emitsOptions = this.$.emitsOptions
+      },
+      render: () => h('div'),
+    })
+    const mount = (mixin?: any) => {
+      const app = createApp({ render: () => h(Child) })
+      if (mixin) app.mixin(mixin)
+      app.mount(nodeOps.createElement('div'))
+      return emitsOptions
+    }
+
+    expect(mount()).toEqual({ foo: null })
+    expect(mount({ emits: ['bar'] })).toEqual({ bar: null, foo: null })
+    expect(mount()).toEqual({ foo: null })
+  })
 })
