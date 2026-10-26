@@ -17,6 +17,25 @@ export function render(_ctx) {
 }"
 `;
 
+exports[`compiler: children transform > chain the sibling after an absent child off the placeholder 1`] = `
+"import { child as _child, next as _next, txt as _txt, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, template as _template } from 'vue';
+const t0 = _template("<div><div><span> </div><div><span> ", 1)
+
+export function render(_ctx) {
+  const n2 = t0()
+  let p0 = _child(n2)
+  const n0 = _child(p0)
+  const n1 = _child((p0 = _next(p0)))
+  const x0 = _txt(n0)
+  const x1 = _txt(n1)
+  _renderEffect(() => {
+    _setText(x0, _toDisplayString(_ctx.first))
+    _setText(x1, _toDisplayString(_ctx.second))
+  })
+  return n2
+}"
+`;
+
 exports[`compiler: children transform > children & sibling references 1`] = `
 "import { child as _child, next as _next, txt as _txt, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, template as _template } from 'vue';
 const t0 = _template("<div><p> </p> <p> ", 1)
@@ -92,6 +111,24 @@ export function render(_ctx) {
 }"
 `;
 
+exports[`compiler: children transform > inline placeholders nothing chains off 1`] = `
+"import { child as _child, nthChild as _nthChild, txt as _txt, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, template as _template } from 'vue';
+const t0 = _template("<div><div><span> </div><i></i><div><span> ", 1)
+
+export function render(_ctx) {
+  const n2 = t0()
+  const n0 = _child(_child(n2))
+  const n1 = _child(_nthChild(n2, 2))
+  const x0 = _txt(n0)
+  const x1 = _txt(n1)
+  _renderEffect(() => {
+    _setText(x0, _toDisplayString(_ctx.first))
+    _setText(x1, _toDisplayString(_ctx.second))
+  })
+  return n2
+}"
+`;
+
 exports[`compiler: children transform > keep nested operation parent as node variable before sibling lookup 1`] = `
 "import { child as _child, setInsertionState as _setInsertionState, createAssetComponent as _createAssetComponent, next as _next, txt as _txt, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, template as _template } from 'vue';
 const t0 = _template("<div><section></section><section><span> ", 1)
@@ -115,9 +152,8 @@ const t0 = _template("<div><section><div><span> </div><i></i><div><span> ", 1)
 export function render(_ctx) {
   const n2 = t0()
   let p0 = _child(n2)
-  let p1 = _child(p0)
-  const n0 = _child(p1)
-  const n1 = _child((p1 = _nthChild(p0, 2)))
+  const n0 = _child(_child(p0))
+  const n1 = _child(_nthChild(p0, 2))
   const x0 = _txt(n0)
   const x1 = _txt(n1)
   _renderEffect(() => {
@@ -128,21 +164,50 @@ export function render(_ctx) {
 }"
 `;
 
-exports[`compiler: children transform > reuse cursor assignment for non-adjacent following access path 1`] = `
-"import { child as _child, nthChild as _nthChild, txt as _txt, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, template as _template } from 'vue';
-const t0 = _template("<div><div><span> </div><i></i><div><span> ", 1)
+exports[`compiler: children transform > reassign the cursor for a placeholder with several lookups 1`] = `
+"import { child as _child, next as _next, nthChild as _nthChild, txt as _txt, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, template as _template } from 'vue';
+const t0 = _template("<div><section><span> </section><section><b> </b><i></i><span> </section><section><span> ", 1)
 
 export function render(_ctx) {
-  const n2 = t0()
-  let p0 = _child(n2)
+  const n4 = t0()
+  let p0 = _child(n4)
   const n0 = _child(p0)
-  const n1 = _child((p0 = _nthChild(n2, 2)))
+  p0 = _next(p0)
+  const n1 = _child(p0)
+  const n2 = _nthChild(p0, 2)
+  const n3 = _child((p0 = _next(p0)))
   const x0 = _txt(n0)
   const x1 = _txt(n1)
+  const x2 = _txt(n2)
+  const x3 = _txt(n3)
+  _renderEffect(() => {
+    _setText(x0, _toDisplayString(_ctx.a))
+    _setText(x1, _toDisplayString(_ctx.b))
+    _setText(x2, _toDisplayString(_ctx.c))
+    _setText(x3, _toDisplayString(_ctx.d))
+  })
+  return n4
+}"
+`;
+
+exports[`compiler: children transform > reuse cursor assignment for non-adjacent following access path 1`] = `
+"import { child as _child, next as _next, nthChild as _nthChild, txt as _txt, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, template as _template } from 'vue';
+const t0 = _template("<div><div><span> </div><div><span> </div><i></i><div><span> ", 1)
+
+export function render(_ctx) {
+  const n3 = t0()
+  let p0 = _child(n3)
+  const n0 = _child(p0)
+  const n1 = _child((p0 = _next(p0)))
+  const n2 = _child((p0 = _nthChild(n3, 3)))
+  const x0 = _txt(n0)
+  const x1 = _txt(n1)
+  const x2 = _txt(n2)
   _renderEffect(() => {
     _setText(x0, _toDisplayString(_ctx.first))
     _setText(x1, _toDisplayString(_ctx.second))
+    _setText(x2, _toDisplayString(_ctx.third))
   })
-  return n2
+  return n3
 }"
 `;

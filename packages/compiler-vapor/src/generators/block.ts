@@ -25,7 +25,7 @@ import {
   genOperationWithInsertionState,
   genOperations,
 } from './operation'
-import { genChildren, genSelf } from './template'
+import { genSelf } from './template'
 import { genCustomDirectives } from './directive'
 import { toValidAssetId } from '@vue/compiler-dom'
 import { VaporSlotFlags } from '@vue/shared'
@@ -140,19 +140,6 @@ export function genBlockContent(
   for (const child of dynamic.children) {
     flushBeforeDynamic(child, push)
     push(...genSelf(child, context, flushBeforeDynamic))
-  }
-  for (const child of dynamic.children) {
-    if (!child.hasDynamicChild) {
-      push(
-        ...genChildren(
-          child,
-          context,
-          push,
-          `n${child.id!}`,
-          flushBeforeDynamic,
-        ),
-      )
-    }
   }
 
   if (operationIndex < deferredOperationIndex) {

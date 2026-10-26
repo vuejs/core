@@ -4,7 +4,14 @@ import {
   type TransformContext,
   transformNode,
 } from '../transform'
-import { DynamicFlag, IRNodeTypes, isBlockOperation } from '../ir'
+import {
+  DynamicAccess,
+  DynamicFlag,
+  type IRDynamicAccess,
+  type IRDynamicInfo,
+  IRNodeTypes,
+  isBlockOperation,
+} from '../ir'
 import { OpenScope, enterOpenScope, keepsInTemplate } from '../htmlNesting'
 import {
   getChildTemplateCloseState,
@@ -177,5 +184,73 @@ function processDynamicChildren(
     } else if (!(child.flags & DynamicFlag.NON_TEMPLATE)) {
       unitIndex++
     }
+  }
+
+  if (context.dynamic.hasDynamicChild) {
+    planAccess(children)
+  }
+}
+
+/**
+ * Decide how codegen reaches each child it has to hold on to, now that the
+ * children's flags, anchors and own plans are final. Static, absent and
+ * appended children need no lookup; a child created by its own operation is
+ * reached through its anchor at most. Adjacent lookups chain off the previous
+ * one with `next()`; a placeholder gets a variable only when a lookup chains
+ * off it, otherwise it is written inline into its single descendant lookup.
+ */
+function planAccess(children: IRDynamicInfo[]) {
+  let index = 0
+  let prev: IRDynamicAccess | undefined
+  // a placeholder nothing has chained off yet: open until the next template
+  // sibling shows whether it needs a lookup
+  let pending: IRDynamicAccess | undefined
+
+  for (const child of children) {
+    if (child.flags & DynamicFlag.NON_TEMPLATE) continue
+
+    const id = child.anchor !== undefined ? child.anchor : child.id
+    // lookups the child's own children make from it rather than from a sibling
+    let uses = 0
+    if (id === undefined && child.hasDynamicChild) {
+      for (const c of child.children) {
+        if (c.access && !c.access.adjacent) uses++
+      }
+    }
+
+    if (id === undefined && uses === 0) {
+      // static: nothing will chain off a pending placeholder
+      pending = undefined
+      index++
+      continue
+    }
+
+    if (pending) {
+      // this lookup chains off the placeholder, so it is worth a variable
+      pending.kind = DynamicAccess.PLACEHOLDER
+      prev = pending
+      pending = undefined
+    }
+    const reusable = prev !== undefined && prev.kind !== DynamicAccess.REFERENCE
+    let kind: DynamicAccess
+    if (id !== undefined) {
+      kind = DynamicAccess.REFERENCE
+    } else if (uses > 1) {
+      kind = reusable ? DynamicAccess.REUSE : DynamicAccess.PLACEHOLDER
+    } else {
+      kind = reusable ? DynamicAccess.INLINE_REUSE : DynamicAccess.INLINE
+    }
+    const access = (child.access = {
+      kind,
+      index,
+      adjacent: prev !== undefined && index === prev.index + 1,
+      id,
+    })
+    if (kind === DynamicAccess.INLINE) {
+      pending = access
+    } else {
+      prev = access
+    }
+    index++
   }
 }
