@@ -131,7 +131,6 @@ export class TransformContext<T extends AllNode = AllNode> {
 
   template: string
   templateRoot: boolean
-  templateIndexMap: Map<string, number>
   childrenTemplate: (string | null)[]
   dynamic: IRDynamicInfo
   imports: ImportItem[]
@@ -207,7 +206,6 @@ export class TransformContext<T extends AllNode = AllNode> {
       this.options = parent.options
       this.selfName = parent.selfName
       this.block = parent.block
-      this.templateIndexMap = parent.templateIndexMap
       this.dynamic = newDynamic()
       this.imports = parent.imports
       // Slot content is executed by the child component, which re-runs it on
@@ -245,7 +243,6 @@ export class TransformContext<T extends AllNode = AllNode> {
       this.options = extend({}, defaultOptions, options)
       this.selfName = options.filename ? getSelfName(options.filename) : null
       this.block = ir.block
-      this.templateIndexMap = new Map()
       this.dynamic = ir.block.dynamic
       this.imports = []
       this.inVOnce = false
@@ -286,7 +283,6 @@ export class TransformContext<T extends AllNode = AllNode> {
       block,
       template,
       templateRoot,
-      templateIndexMap,
       dynamic,
       childrenTemplate,
       slots,
@@ -297,7 +293,6 @@ export class TransformContext<T extends AllNode = AllNode> {
     this.dynamic = ir.dynamic
     this.template = ''
     this.templateRoot = false
-    this.templateIndexMap = templateIndexMap
     this.childrenTemplate = []
     this.slots = []
     this.effectIndex = ir.effect.length
@@ -310,7 +305,6 @@ export class TransformContext<T extends AllNode = AllNode> {
       this.block = block
       this.template = template
       this.templateRoot = templateRoot
-      this.templateIndexMap = templateIndexMap
       this.dynamic = dynamic
       this.childrenTemplate = childrenTemplate
       this.slots = slots
@@ -400,17 +394,12 @@ export class TransformContext<T extends AllNode = AllNode> {
       static?: boolean
     } = {},
   ): number {
-    const ns = this.getTemplateNamespace()
-    const templateKey = `${ns}:${root ? 1 : 0}${isStatic ? 1 : 0}${content}`
-    const existingIndex = this.templateIndexMap.get(templateKey)
-    if (existingIndex !== undefined) {
-      return existingIndex
-    }
-
-    const newIndex = this.ir.template.entries.length
-    this.ir.template.entries.push({ content, ns, root, static: isStatic })
-    this.templateIndexMap.set(templateKey, newIndex)
-    return newIndex
+    return this.ir.template.intern(
+      content,
+      this.getTemplateNamespace(),
+      root,
+      isStatic,
+    )
   }
   registerTemplate(): number {
     if (!this.template) return -1
