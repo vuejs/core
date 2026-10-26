@@ -3,7 +3,14 @@ import type {
   BaseCodegenResult,
   SimpleExpressionNode,
 } from '@vue/compiler-dom'
-import type { BlockIRNode, CoreHelper, RootIRNode, VaporHelper } from './ir'
+import type {
+  BlockIRNode,
+  CoreHelper,
+  IRProp,
+  RootIRNode,
+  SetEventIRNode,
+  VaporHelper,
+} from './ir'
 import { extend, remove } from '@vue/shared'
 import { genBlockContent } from './generators/block'
 import { genTemplates } from './generators/template'
@@ -22,8 +29,6 @@ import { buildNextIdMap, getNextId } from './transform'
 
 export type CodegenOptions = Omit<BaseCodegenOptions, 'optimizeImports'>
 
-// lazy prefix: the whole trailing number is the id, `t10` is `t` + 10
-const idWithTrailingDigitsRE = /^([A-Za-z_$][\w$]*?)(\d+)$/
 const helperNameAliases: Record<string, string> = {
   withVaporKeys: 'withKeys',
   withVaporModifiers: 'withModifiers',
@@ -32,10 +37,12 @@ const helperNameAliases: Record<string, string> = {
 export class CodegenContext {
   options: Required<CodegenOptions>
 
-  bindingNames: Set<string> = new Set<string>()
+  bindingNames: Set<string>
 
   helpers: Map<string, string> = new Map()
   helperAliases: Set<string> = new Set()
+  // handlers declared ahead of their render effect, see genHoistedHandlers
+  hoistedHandlers: Map<IRProp | SetEventIRNode, string> = new Map()
 
   needsTemplateRefSetter: boolean = false
   inSlotBlock: boolean = false
@@ -158,26 +165,6 @@ export class CodegenContext {
   }
 
   private lastTIndex: number = -1
-  private initNextIdMap(): void {
-    if (this.bindingNames.size === 0) return
-
-    // build a map of binding names to their occupied ids
-    const map = new Map<string, Set<number>>()
-    for (const name of this.bindingNames) {
-      const m = idWithTrailingDigitsRE.exec(name)
-      if (!m) continue
-
-      const prefix = m[1]
-      const num = Number(m[2])
-      let set = map.get(prefix)
-      if (!set) map.set(prefix, (set = new Set<number>()))
-      set.add(num)
-    }
-
-    for (const [prefix, nums] of map) {
-      this.nextIdMap.set(prefix, buildNextIdMap(nums))
-    }
-  }
 
   tName(i: number): string {
     let name = this.templateVars.get(i)
@@ -236,12 +223,10 @@ export class CodegenContext {
     }
     this.options = extend(defaultOptions, options)
     this.block = ir.block
-    this.bindingNames = new Set<string>(
-      this.options.bindingMetadata
-        ? Object.keys(this.options.bindingMetadata)
-        : [],
-    )
-    this.initNextIdMap()
+    this.bindingNames = ir.reservedNames.names
+    for (const [prefix, nums] of ir.reservedNames.ids) {
+      this.nextIdMap.set(prefix, buildNextIdMap(nums))
+    }
   }
 }
 

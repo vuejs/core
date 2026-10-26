@@ -26,6 +26,7 @@ import {
   type IRSlots,
   type IfIRNode,
   type OperationNode,
+  type ReservedNames,
   type RootIRNode,
   type SetEventIRNode,
   TemplateRegistry,
@@ -78,7 +79,25 @@ export type StructuralDirectiveTransform = (
 
 export type TransformOptions = HackOptions<BaseTransformOptions>
 
-const generatedVarRE = /^[nxr](\d+)$/
+// lazy prefix: the whole trailing number is the id, `t10` is `t` + 10
+const idWithTrailingDigitsRE = /^([A-Za-z_$][\w$]*?)(\d+)$/
+
+function collectReservedNames(
+  bindingMetadata: TransformOptions['bindingMetadata'],
+): ReservedNames {
+  const names = new Set<string>(
+    bindingMetadata ? Object.keys(bindingMetadata) : [],
+  )
+  const ids = new Map<string, Set<number>>()
+  for (const name of names) {
+    const m = idWithTrailingDigitsRE.exec(name)
+    if (!m) continue
+    let set = ids.get(m[1])
+    if (!set) ids.set(m[1], (set = new Set<number>()))
+    set.add(Number(m[2]))
+  }
+  return { names, ids }
+}
 
 interface ChildContextInfo {
   node: AllNode
@@ -295,19 +314,14 @@ export class TransformContext<T extends AllNode = AllNode> {
   }
 
   private initNextIdMap(): void {
-    const binding = this.options.bindingMetadata
-    if (!binding) return
-
-    const keys = Object.keys(binding)
-    if (keys.length === 0) return
-
-    // extract numbers for specific literal prefixes
-    const numbers = new Set<number>()
-    for (const name of keys) {
-      const m = generatedVarRE.exec(name)
-      if (m) numbers.add(Number(m[1]))
-    }
-    if (numbers.size === 0) return
+    // one counter serves the n / x / r prefixes
+    const { ids } = this.ir.reservedNames
+    const numbers = [
+      ...(ids.get('n') || []),
+      ...(ids.get('x') || []),
+      ...(ids.get('r') || []),
+    ]
+    if (numbers.length === 0) return
 
     this.globalId = getNextId((this.nextIdMap = buildNextIdMap(numbers)), 0)
   }
@@ -625,6 +639,7 @@ export function transform(
     directive: new Set(),
     block: newBlock(node),
     hasTemplateRef: false,
+    reservedNames: collectReservedNames(options.bindingMetadata),
   }
 
   const context = new TransformContext(ir, node, options)

@@ -130,8 +130,6 @@ export function genSetDynamicEvents(
   ]
 }
 
-const hoistedHandlers = new WeakMap<IRProp | SetEventIRNode, string>()
-
 // a handler bound inside a render effect (merged into its dynamic props, or
 // under a dynamic event name) runs on its event, not on render, so it is
 // declared ahead of the effect, which would otherwise put the values it caches
@@ -151,7 +149,7 @@ export function genHoistedHandlers(
       context,
       `_on_${key.content.replace(/-/g, '_')}`,
     )
-    hoistedHandlers.set(node, name)
+    context.hoistedHandlers.set(node, name)
     push(
       NEWLINE,
       `const ${name} = `,
@@ -212,7 +210,7 @@ export function genEventHandler(
     modifierHelper = 'runtime',
     hoisted,
   } = options
-  const hoistedName = hoisted && hoistedHandlers.get(hoisted)
+  const hoistedName = hoisted && context.hoistedHandlers.get(hoisted)
   if (hoistedName) return [hoistedName]
   const useVaporModifierHelper = modifierHelper === 'vapor'
   let handlerExp: CodeFragment[] = []
