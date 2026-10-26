@@ -38,10 +38,10 @@ export function genBlock(
 ): CodeFragment[] {
   return [
     '(',
-    ...args,
+    args,
     ') => {',
     INDENT_START,
-    ...genBlockContent(oper, context, root),
+    genBlockContent(oper, context, root),
     INDENT_END,
     NEWLINE,
     '}',
@@ -88,7 +88,7 @@ export function genBlockContent(
       push(
         NEWLINE,
         `const ${id} = `,
-        ...genCall(
+        genCall(
           context.helper('resolveComponent'),
           JSON.stringify(name),
           // pass additional `maybeSelfReference` flag
@@ -107,14 +107,12 @@ export function genBlockContent(
     push: (...items: CodeFragment[]) => number,
   ) => {
     while (operationIndex < operationEnd) {
-      push(
-        ...genOperationWithInsertionState(operation[operationIndex], context),
-      )
+      push(genOperationWithInsertionState(operation[operationIndex], context))
       operationIndex++
     }
 
     if (effectIndex < effectEnd) {
-      push(...genEffectRange(effectIndex, effectEnd))
+      push(genEffectRange(effectIndex, effectEnd))
       effectIndex = effectEnd
     }
   }
@@ -139,32 +137,30 @@ export function genBlockContent(
 
   for (const child of dynamic.children) {
     flushBeforeDynamic(child, push)
-    push(...genSelf(child, context, flushBeforeDynamic))
+    push(genSelf(child, context, flushBeforeDynamic))
   }
 
   if (operationIndex < deferredOperationIndex) {
     push(
-      ...genOperations(
+      genOperations(
         operation.slice(operationIndex, deferredOperationIndex),
         context,
       ),
     )
   }
   if (effectIndex < deferredEffectIndex) {
-    push(
-      ...genEffectRange(effectIndex, deferredEffectIndex, genEffectsExtraFrag),
-    )
+    push(genEffectRange(effectIndex, deferredEffectIndex, genEffectsExtraFrag))
   } else if (genEffectsExtraFrag) {
-    push(...genEffects([], context, genEffectsExtraFrag))
+    push(genEffects([], context, genEffectsExtraFrag))
   }
   // v-model directives and the listeners of their elements, see finalizeBlock
   if (deferredOperationIndex < operation.length) {
-    push(...genOperations(operation.slice(deferredOperationIndex), context))
+    push(genOperations(operation.slice(deferredOperationIndex), context))
   }
   if (deferredEffectIndex < effect.length) {
-    push(...genEffectRange(deferredEffectIndex, effect.length))
+    push(genEffectRange(deferredEffectIndex, effect.length))
   }
-  push(...genCustomDirectives(operation, context))
+  push(genCustomDirectives(operation, context))
 
   push(NEWLINE, `return `)
 
@@ -173,7 +169,7 @@ export function genBlockContent(
     returnNodes.length > 1
       ? genMulti(DELIMITERS_ARRAY, ...returnNodes)
       : [returnNodes[0] || '[]']
-  push(...returnsCode)
+  push(returnsCode)
 
   resetBlock()
   context.singleUseAssetComponentNames = prevSingleUseAssetComponentNames
@@ -209,7 +205,7 @@ export function genBlockContent(
       push(
         NEWLINE,
         `const ${toValidAssetId(name, kind)} = `,
-        ...genCall(context.helper(helper), JSON.stringify(name)),
+        genCall(context.helper(helper), JSON.stringify(name)),
       )
     }
   }

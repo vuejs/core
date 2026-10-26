@@ -12,6 +12,6 @@ export function genSetHtml(
   const { value, element } = oper
   return [
     NEWLINE,
-    ...genCall(helper('setHtml'), `n${element}`, genExpression(value, context)),
+    genCall(helper('setHtml'), `n${element}`, genExpression(value, context)),
   ]
 }

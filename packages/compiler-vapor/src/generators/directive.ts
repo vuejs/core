@@ -32,7 +32,7 @@ export function genBuiltinDirective(
     default:
       return []
   }
-  return [NEWLINE, ...(oper.once ? genOnce(call, context) : call)]
+  return [NEWLINE, oper.once ? genOnce(call, context) : call]
 }
 
 /**
@@ -53,7 +53,7 @@ export function genCustomDirectives(
   }
   const [frag, push] = buildCodeFragment()
   for (const dirs of byElement.values()) {
-    push(...genElementDirectives(dirs, context))
+    push(genElementDirectives(dirs, context))
   }
   return frag
 }
@@ -69,7 +69,7 @@ function genElementDirectives(
   const directives = genMulti(DELIMITERS_ARRAY, ...directiveItems)
 
   const call = genCall(helper('withVaporDirectives'), element, directives)
-  return [NEWLINE, ...(opers[0].once ? genOnce(call, context) : call)]
+  return [NEWLINE, opers[0].once ? genOnce(call, context) : call]
 
   function genDirectiveItem({
     dir,
@@ -82,14 +82,10 @@ function genElementDirectives(
           extend(createSimpleExpression(name, false), { ast: null }),
           context,
         )
-    const value = dir.exp && [
-      '() => (',
-      ...genExpression(dir.exp, context),
-      ')',
-    ]
+    const value = dir.exp && ['() => (', genExpression(dir.exp, context), ')']
     const argument = dir.arg && [
       '() => (',
-      ...genExpression(dir.arg, context),
+      genExpression(dir.arg, context),
       ')',
     ]
     const modifiers = !!dir.modifiers.length && [

@@ -28,7 +28,7 @@ export function genVModel(
     context.helper(helperMap[modelType!]),
     `n${element}`,
     // getter
-    [`() => (`, ...genExpression(exp!, context), `)`],
+    [`() => (`, genExpression(exp!, context), `)`],
     // setter
     genModelHandler(exp!, context),
     // modifiers
@@ -44,7 +44,7 @@ export function genModelHandler(
 ): CodeFragment[] {
   return [
     `${context.options.isTS ? `(_value: any)` : `_value`} => (`,
-    ...genExpression(exp, context, '_value'),
+    genExpression(exp, context, '_value'),
     ')',
   ]
 }

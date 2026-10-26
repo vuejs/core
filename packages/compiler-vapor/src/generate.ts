@@ -22,7 +22,6 @@ import {
   NEWLINE,
   buildCodeFragment,
   codeFragmentToString,
-  genCall,
 } from './generators/utils'
 import { setTemplateRefIdent } from './generators/templateRef'
 import { buildNextIdMap, getNextId } from './transform'
@@ -271,7 +270,7 @@ export function generate(
     context.helpers.delete('createTemplateRefSetter')
     context.helperAliases.delete(templateRefSetterHelper)
   }
-  push(...body)
+  push(body)
   push(INDENT_END, NEWLINE)
 
   if (!inline) {
@@ -322,10 +321,9 @@ function genDynamicPropNames({ dynamicPropNames }: CodegenContext) {
 
 function genDelegates({ delegates, helper }: CodegenContext) {
   return delegates.size
-    ? genCall(
-        helper('delegateEvents'),
-        ...Array.from(delegates).map(v => `"${v}"`),
-      ).join('') + '\n'
+    ? `${helper('delegateEvents')}(${Array.from(delegates)
+        .map(v => `"${v}"`)
+        .join(', ')})\n`
     : ''
 }
 

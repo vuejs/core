@@ -109,18 +109,18 @@ export function genCreateComponent(
   const inlineHandlers: CodeFragment[] = handlers.reduce<CodeFragment[]>(
     (acc, { name, value }: InlineHandler) => {
       const handler = genEventHandler(context, [value])
-      return [...acc, `const ${name} = `, ...handler, NEWLINE]
+      return [...acc, `const ${name} = `, handler, NEWLINE]
     },
     [],
   )
   return [
     NEWLINE,
-    ...inlineHandlers,
-    ...(slotDeclarations.length
+    inlineHandlers,
+    slotDeclarations.length
       ? genMulti(['let ', NEWLINE, ', '], ...slotDeclarations)
-      : []),
+      : [],
     `const n${operation.id} = `,
-    ...genCall(
+    genCall(
       isRuntimeDynamicComponent
         ? helper('createDynamicComponent')
         : operation.useCreateElement
@@ -139,7 +139,7 @@ export function genCreateComponent(
       isRuntimeDynamicComponent
         ? operation.key && [
             '() => (',
-            ...genExpression(operation.key, context),
+            genExpression(operation.key, context),
             ')',
           ]
         : once && 'true',
@@ -158,7 +158,7 @@ export function genCreateComponent(
           genExpression(operation.dynamic, context),
         )
       } else {
-        return ['() => (', ...genExpression(operation.dynamic, context), ')']
+        return ['() => (', genExpression(operation.dynamic, context), ')']
       }
     } else if (useAssetComponentHelper) {
       const name = maybeSelfReference
@@ -176,7 +176,7 @@ export function genCreateComponent(
         return `_${builtInTag}`
       }
       return [
-        ...genExpression(
+        genExpression(
           extend(createSimpleExpression(slotScopeNamespace || tag, false), {
             ast: null,
           }),
@@ -316,7 +316,7 @@ function genStaticProps(
         // `:onXxx` merges with the `@xxx` handlers like mergeProps
         handlerGroups.add(keyName, keyFrag, [
           '(',
-          ...genPropValue(prop.values, context),
+          genPropValue(prop.values, context),
           ')',
         ])
         continue
@@ -375,13 +375,13 @@ function genStaticProps(
       } else {
         const keyFrag: CodeFragment[] = [
           '["onUpdate:" + ',
-          ...genExpression(prop.key, context),
+          genExpression(prop.key, context),
           ']',
         ]
         args.push([
-          ...keyFrag,
+          keyFrag,
           ': () => ',
-          ...genModelHandler(prop.values[0], context),
+          genModelHandler(prop.values[0], context),
         ])
       }
 
@@ -390,10 +390,10 @@ function genStaticProps(
       if (modelModifiers && modelModifiers.length) {
         const modifiersKey = key.isStatic
           ? genStaticModifierPropKey(key.content)
-          : ['[', ...genExpression(key, context), ' + "Modifiers"]']
+          : ['[', genExpression(key, context), ' + "Modifiers"]']
         const modifiersVal = genDirectiveModifiers(modelModifiers)
         args.push([
-          ...modifiersKey,
+          modifiersKey,
           directStaticLiteralProps
             ? `: { ${modifiersVal} }`
             : `: () => ({ ${modifiersVal} })`,
@@ -405,7 +405,7 @@ function genStaticProps(
   handlerGroups.fill()
 
   if (dynamicProps) {
-    args.push([`$: `, ...dynamicProps])
+    args.push([`$: `, dynamicProps])
   }
   return genMulti(
     args.length > 1 ? DELIMITERS_OBJECT_NEWLINE : DELIMITERS_OBJECT,
@@ -441,14 +441,10 @@ function genDynamicProps(
               ] as CodeFragment[])
             : ([
                 '["onUpdate:" + ',
-                ...genExpression(p.key, context),
+                genExpression(p.key, context),
                 ']',
               ] as CodeFragment[])
-          entries.push([
-            ...updateKey,
-            ': ',
-            ...genModelHandler(p.values[0], context),
-          ])
+          entries.push([updateKey, ': ', genModelHandler(p.values[0], context)])
 
           // *Modifiers
           const { modelModifiers } = p
@@ -457,11 +453,11 @@ function genDynamicProps(
               ? genStaticModifierPropKey(p.key.content)
               : ([
                   '[',
-                  ...genExpression(p.key, context),
+                  genExpression(p.key, context),
                   ' + "Modifiers"]',
                 ] as CodeFragment[])
             const modifiersVal = genDirectiveModifiers(modelModifiers)
-            entries.push([...modifiersKey, `: { ${modifiersVal} }`])
+            entries.push([modifiersKey, `: { ${modifiersVal} }`])
           }
 
           expr = genMulti(DELIMITERS_OBJECT_NEWLINE, ...entries)
@@ -476,7 +472,7 @@ function genDynamicProps(
         if (p.handler) expr = genCall(helper('toHandlers'), expr)
       }
     }
-    frags.push(['() => (', ...expr, ')'])
+    frags.push(['() => (', expr, ')'])
   }
   if (frags.length) {
     return genMulti(DELIMITERS_ARRAY_NEWLINE, ...frags)
@@ -495,9 +491,9 @@ function genProp(
     values = genCall(context.helper('toDisplayString'), values)
   }
   return [
-    ...genPropKey(prop, context),
+    genPropKey(prop, context),
     ': ',
-    ...(prop.handler
+    prop.handler
       ? genEventHandler(context, prop.values, prop.handlerModifiers, {
           asComponentProp: true,
           extraWrap: wrapHandler,
@@ -505,8 +501,8 @@ function genProp(
       : isStatic
         ? directStaticLiteral
           ? values
-          : ['() => (', ...values, ')']
-        : values),
+          : ['() => (', values, ')']
+        : values,
   ]
 }
 
@@ -655,13 +651,10 @@ function genStaticSlots(
 ) {
   const args = Object.keys(slots).map(name => [
     `${JSON.stringify(name)}: `,
-    ...genSlotBlockWithProps(slots[name], context),
+    genSlotBlockWithProps(slots[name], context),
   ])
   if (dynamicSlots) {
-    args.push([
-      `$: `,
-      ...genDynamicSlots(dynamicSlots, context, slotDeclarations),
-    ])
+    args.push([`$: `, genDynamicSlots(dynamicSlots, context, slotDeclarations)])
   }
   return genMulti(DELIMITERS_OBJECT_NEWLINE, ...args)
 }
@@ -708,7 +701,7 @@ function genDynamicSlot(
   }
   if (!withFunction) return frag
 
-  return ['() => (', ...frag, ')']
+  return ['() => (', frag, ')']
 }
 
 function genBasicDynamicSlot(
@@ -722,10 +715,10 @@ function genBasicDynamicSlot(
   slotDeclarations.push(slotName)
   return genMulti(
     DELIMITERS_OBJECT_NEWLINE,
-    ['name: ', ...genExpression(name, context)],
+    ['name: ', genExpression(name, context)],
     [
       `fn: ${slotName} || (${slotName} = `,
-      ...genSlotBlockWithProps(fn, context, false),
+      genSlotBlockWithProps(fn, context, false),
       ')',
     ],
   )
@@ -769,9 +762,9 @@ function genLoopSlot(
   }
 
   const renderSlot = [
-    ...genMulti(['(', ')', ', '], ...args),
+    genMulti(['(', ')', ', '], ...args),
     ' => ',
-    ...context.withId(() => genSlotBlockWithProps(fn, context, false), idMap),
+    context.withId(() => genSlotBlockWithProps(fn, context, false), idMap),
   ]
   exitScope()
 
@@ -786,22 +779,22 @@ function genLoopSlot(
     rawIdMap,
   )
   const getName = [
-    ...rawParams,
+    rawParams,
     ' => (',
-    ...context.withId(() => genExpression(name, context), rawIdMap),
+    context.withId(() => genExpression(name, context), rawIdMap),
     ')',
   ]
   const getKey = keyProp && [
-    ...rawParams,
+    rawParams,
     ' => (',
-    ...context.withId(() => genExpression(keyProp, context), rawIdMap),
+    context.withId(() => genExpression(keyProp, context), rawIdMap),
     ')',
   ]
 
   return [
-    ...genCall(
+    genCall(
       context.helper('createForSlots'),
-      ['() => (', ...genExpression(source, context), ')'],
+      ['() => (', genExpression(source, context), ')'],
       renderSlot,
       getName,
       getKey,
@@ -816,16 +809,14 @@ function genConditionalSlot(
 ): CodeFragment[] {
   const { condition, positive, negative } = slot
   return [
-    ...genExpression(condition, context),
+    genExpression(condition, context),
     INDENT_START,
     NEWLINE,
     '? ',
-    ...genDynamicSlot(positive, context, slotDeclarations),
+    genDynamicSlot(positive, context, slotDeclarations),
     NEWLINE,
     ': ',
-    ...(negative
-      ? genDynamicSlot(negative, context, slotDeclarations)
-      : ['void 0']),
+    negative ? genDynamicSlot(negative, context, slotDeclarations) : ['void 0'],
     INDENT_END,
   ]
 }

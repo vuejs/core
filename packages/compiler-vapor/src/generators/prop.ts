@@ -97,7 +97,7 @@ export function genSetProp(
     propValue,
     resolvedHelper.isSVG && 'true',
   )
-  return [NEWLINE, ...(oper.once ? genOnce(call, context) : call)]
+  return [NEWLINE, oper.once ? genOnce(call, context) : call]
 }
 
 const optionsModifierRE = /(Once|Passive|Capture)$/
@@ -116,7 +116,7 @@ function genSetListener(
     // re-bound by the effect through the element's invoker for the key
     return [
       NEWLINE,
-      ...genCall(
+      genCall(
         helper('setListener'),
         `n${element}`,
         JSON.stringify(prop.key.content),
@@ -139,7 +139,7 @@ function genSetListener(
   const event = name[2] === ':' ? name.slice(3) : hyphenate(name.slice(2))
   return [
     NEWLINE,
-    ...genCall(
+    genCall(
       helper('on'),
       `n${element}`,
       JSON.stringify(event),
@@ -189,7 +189,7 @@ function genSetClassName(
 
   return [
     NEWLINE,
-    ...genCall(
+    genCall(
       // Use an empty prefix placeholder so suffix can be emitted alone.
       [helper('setClassName'), '""'],
       `n${oper.element}`,
@@ -324,7 +324,7 @@ function genClassFlags(
     // than it, e.g. `{ a: b ? c : d }`, so it gets its own parens
     values.push(
       '((',
-      ...genExpression(entry.condition!, context),
+      genExpression(entry.condition!, context),
       ')',
       entry.negate ? ` ? 0 : ${bit}` : ` ? ${bit} : 0`,
       ')',
@@ -413,7 +413,7 @@ export function genDynamicProps(
     genDynamicPropNames(oper, context),
     oper.isSVG && 'true',
   )
-  return [NEWLINE, ...(oper.once ? genOnce(call, context) : call)]
+  return [NEWLINE, oper.once ? genOnce(call, context) : call]
 }
 
 export function genSyncSelectValue(
@@ -422,7 +422,7 @@ export function genSyncSelectValue(
 ): CodeFragment[] {
   return [
     NEWLINE,
-    ...genCall(
+    genCall(
       context.helper('syncSelectValue'),
       `n${oper.element}`,
       genDynamicPropNames(oper, context),
@@ -488,9 +488,9 @@ function genLiteralObjectProps(
       )
     } else {
       entries.push([
-        ...genPropKey(prop, context),
+        genPropKey(prop, context),
         `: `,
-        ...genPropValue(prop.values, context),
+        genPropValue(prop.values, context),
       ])
     }
   }
@@ -539,12 +539,10 @@ export function createHandlerGroups(
     fill() {
       for (const { keyFrag, handlers, index } of groups.values()) {
         entries[index] = [
-          ...keyFrag,
+          keyFrag,
           ': ',
           prefix,
-          ...(handlers.length > 1
-            ? genMulti(delimiters, ...handlers)
-            : handlers[0]),
+          handlers.length > 1 ? genMulti(delimiters, ...handlers) : handlers[0],
         ]
       }
     },
@@ -610,10 +608,10 @@ export function genPropKey(
     key.push(' || ""')
     key = genCall(helper('camelize'), key)
   } else if (modifier) {
-    key = ['(', ...key, ' || ""', ')']
+    key = ['(', key, ' || ""', ')']
   } else if (!handler && !model) {
     // match vdom: a nullish dynamic arg becomes `""`, which is skipped at runtime
-    key = node.ast === null ? [...key, ' || ""'] : ['(', ...key, ') || ""']
+    key = node.ast === null ? [key, ' || ""'] : ['(', key, ') || ""']
   }
   if (handler) {
     key = genCall(helper('toHandlerKey'), key)
@@ -621,7 +619,7 @@ export function genPropKey(
   return [
     '[',
     modifier && `${JSON.stringify(modifier)} + `,
-    ...key,
+    key,
     handlerModifierPostfix
       ? ` + ${JSON.stringify(handlerModifierPostfix)}`
       : undefined,

@@ -41,11 +41,7 @@ export function genSetEvent(
     // we can generate optimized handler attachment code
     // e.g. n1.$evtclick = () => {}
     if (!context.block.operation.some(isSameDelegateEvent)) {
-      return [
-        NEWLINE,
-        `n${element}.$evt${key.content} = `,
-        ...genDirectHandler(),
-      ]
+      return [NEWLINE, `n${element}.$evt${key.content} = `, genDirectHandler()]
     }
   }
 
@@ -53,7 +49,7 @@ export function genSetEvent(
   const eventOptions = genEventOptions()
   return [
     NEWLINE,
-    ...genCall(
+    genCall(
       helper(effect ? 'onBinding' : delegate ? 'delegate' : 'on'),
       `n${element}`,
       name,
@@ -69,7 +65,7 @@ export function genSetEvent(
   }
 
   function genInvoker(): CodeFragment[] {
-    return [`${helper('createInvoker')}(`, ...genHandler(), `)`]
+    return [`${helper('createInvoker')}(`, genHandler(), `)`]
   }
 
   function genDirectHandler(): CodeFragment[] {
@@ -85,8 +81,8 @@ export function genSetEvent(
     if (keyOverride) {
       const find = JSON.stringify(keyOverride[0])
       const replacement = JSON.stringify(keyOverride[1])
-      const wrapped: CodeFragment[] = ['(', ...expr, ')']
-      return [...wrapped, ` === ${find} ? ${replacement} : `, ...wrapped]
+      const wrapped: CodeFragment[] = ['(', expr, ')']
+      return [wrapped, ` === ${find} ? ${replacement} : `, wrapped]
     } else {
       return genExpression(key, context)
     }
@@ -122,7 +118,7 @@ export function genSetDynamicEvents(
   const { helper } = context
   return [
     NEWLINE,
-    ...genCall(
+    genCall(
       helper('setDynamicEvents'),
       `n${oper.element}`,
       genExpression(oper.event, context),
@@ -153,7 +149,7 @@ export function genHoistedHandlers(
     push(
       NEWLINE,
       `const ${name} = `,
-      ...genEventHandler(context, values, modifiers),
+      genEventHandler(context, values, modifiers),
     )
   }
   for (const { operations } of effects) {
@@ -231,7 +227,7 @@ export function genEventHandler(
             exp = [
               `e => `,
               isTSNode ? '(' : '',
-              ...exp,
+              exp,
               isTSNode ? ')' : '',
               `(e)`,
             ]
@@ -253,16 +249,16 @@ export function genEventHandler(
           exp = [
             referencesEvent ? '$event => ' : '() => ',
             hasMultipleStatements ? '{' : '(',
-            ...expr,
+            expr,
             hasMultipleStatements ? '}' : ')',
           ]
         }
-        handlerExp = handlerExp.concat([index !== 0 ? ', ' : '', ...exp])
+        handlerExp = handlerExp.concat([index !== 0 ? ', ' : '', exp])
       }
     })
 
     if (values.length > 1) {
-      handlerExp = ['[', ...handlerExp, ']']
+      handlerExp = ['[', handlerExp, ']']
     }
   }
 

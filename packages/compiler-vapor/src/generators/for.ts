@@ -56,7 +56,7 @@ export function genFor(
     wrappedRows,
   } = oper
 
-  const sourceExpr = ['() => (', ...genExpression(source, context), ')']
+  const sourceExpr = ['() => (', genExpression(source, context), ')']
   const plugins = context.options.expressionPlugins
   // key and index are parsed as function params too, so they go through the
   // same destructure walk as value - it reads the bound name off the ast and
@@ -102,9 +102,9 @@ export function genFor(
     const { selector } = selectorPatterns[i]
     selectorDeclarations.push(
       `const ${selectorName(i)} = `,
-      ...genCall(helper('createSelector'), [
+      genCall(helper('createSelector'), [
         `() => `,
-        ...genExpression(selector, context),
+        genExpression(selector, context),
       ]),
       NEWLINE,
     )
@@ -112,10 +112,10 @@ export function genFor(
 
   const blockFn = context.withId(() => {
     const frag: CodeFragment[] = []
-    frag.push('(', ...args, ') => {', INDENT_START)
+    frag.push('(', args, ') => {', INDENT_START)
     if (selectorPatterns.length || keyOnlyBindingPatterns.length) {
       frag.push(
-        ...genBlockContent(
+        genBlockContent(
           render,
           context,
           false,
@@ -127,19 +127,19 @@ export function genFor(
               patternFrag.push(
                 NEWLINE,
                 `${selectorName(i)}(`,
-                ...genExpression(keyProp!, context),
+                genExpression(keyProp!, context),
                 `, () => {`,
                 INDENT_START,
               )
               for (const oper of effect.operations) {
-                patternFrag.push(...genOperation(oper, context))
+                patternFrag.push(genOperation(oper, context))
               }
               patternFrag.push(INDENT_END, NEWLINE, `})`)
             }
 
             for (const { effect } of keyOnlyBindingPatterns) {
               for (const oper of effect.operations) {
-                patternFrag.push(...genOperation(oper, context))
+                patternFrag.push(genOperation(oper, context))
               }
             }
 
@@ -149,7 +149,7 @@ export function genFor(
         ),
       )
     } else {
-      frag.push(...genBlockContent(render, context))
+      frag.push(genBlockContent(render, context))
     }
     frag.push(INDENT_END, NEWLINE, '}')
     return frag
@@ -173,25 +173,25 @@ export function genFor(
 
   return [
     NEWLINE,
-    ...selectorDeclarations,
+    selectorDeclarations,
     `const n${id} = `,
-    ...genCall(
+    genCall(
       [helper('createFor'), 'undefined'],
       sourceExpr,
       blockFn,
       genCallback(keyProp),
       flags,
     ),
-    ...onResetCalls,
+    onResetCalls,
   ]
 
   function genCallback(expr: SimpleExpressionNode | undefined) {
     if (!expr) return false
     return context.withId(
       () => [
-        ...genAliasParams(value, key, index, context),
+        genAliasParams(value, key, index, context),
         ' => (',
-        ...genExpression(expr, context),
+        genExpression(expr, context),
         ')',
       ],
       genSimpleIdMap(),

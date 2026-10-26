@@ -10,7 +10,7 @@ export function genVShow(
   const { element } = oper
   return genCall(context.helper('applyVShow'), `n${element}`, [
     `() => (`,
-    ...genExpression(oper.dir.exp!, context),
+    genExpression(oper.dir.exp!, context),
     `)`,
   ])
 }
