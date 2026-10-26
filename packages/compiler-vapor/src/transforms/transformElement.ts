@@ -172,8 +172,10 @@ export function isFoldableBooleanAttr(key: string): boolean {
 }
 
 export const transformElement: NodeTransform = (node, context) => {
-  let effectIndex = context.block.effect.length
-  const getEffectIndex = () => effectIndex++
+  // the element's effects are keyed right after its own node, ahead of its
+  // children's, however late they register (see finalizeBlock)
+  let effectOrder = context.order
+  const getEffectOrder = () => ++effectOrder
 
   if (node.type === NodeTypes.ELEMENT && node.children.length) {
     ignoreVHtmlChildren(node, context as TransformContext<ElementNode>, 'node')
@@ -229,7 +231,7 @@ export const transformElement: NodeTransform = (node, context) => {
       context as TransformContext<ElementNode>,
       isComponent,
       isDynamicComponent,
-      getEffectIndex,
+      getEffectOrder,
     )
 
     const singleRoot = context.isSingleRoot
@@ -252,7 +254,7 @@ export const transformElement: NodeTransform = (node, context) => {
         staticKey,
         singleRoot,
         context,
-        getEffectIndex,
+        getEffectOrder,
         // Root-level elements generate dedicated templates
         // so closing tags can be omitted
         context.root === context.effectiveParent ||
@@ -609,7 +611,7 @@ function transformNativeElement(
   staticKey: SimpleExpressionNode | undefined,
   singleRoot: boolean,
   context: TransformContext,
-  getEffectIndex: () => number,
+  getEffectOrder: () => number,
   omitEndTag: boolean,
 ) {
   const { tag } = node
@@ -642,7 +644,7 @@ function transformNativeElement(
         isSVG,
         once: isSelect && context.inVOnce,
       },
-      getEffectIndex,
+      getEffectOrder,
     )
     // v-once already sets these props after the children
     if (isSelect && !context.inVOnce) {
@@ -707,7 +709,7 @@ function transformNativeElement(
           operation.effect = context.registerEffect(
             values,
             operation,
-            getEffectIndex,
+            getEffectOrder,
             needsOrderedProps && hasEffect,
           )
           hasEffect = operation.effect || hasEffect
@@ -784,7 +786,7 @@ function transformNativeElement(
           },
           // like vdom, set a select's value after its children, since it
           // needs the options to be rendered (#1318)
-          isSelectValue ? undefined : getEffectIndex,
+          isSelectValue ? undefined : getEffectOrder,
           isSelectValue ||
             ((needsOrderedProps || (tag === 'input' && prop === valueProp)) &&
               hasEffect),
@@ -805,7 +807,7 @@ function transformNativeElement(
           props: [nativeOnProps],
           isSVG,
         },
-        getEffectIndex,
+        getEffectOrder,
       )
     }
   }
@@ -1110,7 +1112,7 @@ export function buildProps(
   context: TransformContext<ElementNode>,
   isComponent: boolean,
   isDynamicComponent?: boolean,
-  getEffectIndex?: () => number,
+  getEffectOrder?: () => number,
 ): PropsResult {
   const props = node.props as (VaporDirectiveNode | AttributeNode)[]
   if (props.length === 0) return [false, []]
@@ -1241,7 +1243,7 @@ export function buildProps(
                 element: context.reference(),
                 event: prop.exp,
               },
-              getEffectIndex,
+              getEffectOrder,
             )
           }
         } else {
@@ -1306,7 +1308,7 @@ export function buildProps(
         isSVG: node.ns === Namespaces.SVG,
         listeners: true,
       },
-      getEffectIndex,
+      getEffectOrder,
     )
     return [false, dedupeProperties(results)]
   }

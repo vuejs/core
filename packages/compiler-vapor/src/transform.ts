@@ -22,6 +22,7 @@ import {
   DynamicFlag,
   type HackOptions,
   type IRDynamicInfo,
+  type IREffect,
   IRNodeTypes,
   type IRSlots,
   type IfIRNode,
@@ -42,6 +43,8 @@ import {
   isLongIfChain,
   isSlotTemplate,
   isTransitionNode,
+  isVModelListener,
+  isVModelOperation,
 } from './utils'
 import { newBlock, newDynamic } from './transforms/utils'
 import type { ImportItem } from '@vue/compiler-core'
@@ -98,6 +101,10 @@ function collectReservedNames(
   }
   return { names, ids }
 }
+
+// A context takes one stride of registration order keys when it is created;
+// the prop effects of its element use `order + 1 ... order + k`
+const ORDER_STRIDE = 1 << 20
 
 interface ChildContextInfo {
   node: AllNode
@@ -166,11 +173,16 @@ export class TransformContext<T extends AllNode = AllNode> {
   // `v-if` / `v-else-if` node a following `v-else[-if]` attaches to
   ifHead: IfIRNode | null
   ifTail: IfIRNode | null
+  // registration order key of this node, see finalizeBlock
+  order: number
+  // registration order key of every effect, shared by all contexts
+  effectOrder: Map<IREffect, number>
 
   // root-only state, read through `this.root`
   private globalId: number
   private nextIdMap: Map<number, number> | null
   private ifIndex: number
+  private nextOrder: number
   // every `v-if` head with whether it sits in `v-once`; chains that grow past
   // IF_CHAIN_THRESHOLD get their key range reserved once the tree is done
   ifHeads: Map<IfIRNode, boolean>
@@ -205,6 +217,7 @@ export class TransformContext<T extends AllNode = AllNode> {
       this.comment = parent.comment
       this.slots = parent.slots
       this.ifHeads = parent.ifHeads
+      this.effectOrder = parent.effectOrder
       this.templateCloseTags = parent.templateCloseTags
       this.templateCloseBlocks = parent.templateCloseBlocks
 
@@ -240,6 +253,7 @@ export class TransformContext<T extends AllNode = AllNode> {
       this.comment = []
       this.slots = []
       this.ifHeads = new Map()
+      this.effectOrder = new Map()
       this.templateCloseTags = undefined
       this.templateCloseBlocks = false
       this.effectiveParent = null
@@ -261,7 +275,9 @@ export class TransformContext<T extends AllNode = AllNode> {
     this.globalId = 0
     this.nextIdMap = null
     this.ifIndex = 0
+    this.nextOrder = 0
     this.childInfo = null
+    this.order = this.allocateOrder()
     if (!parent) this.initNextIdMap()
   }
 
@@ -289,6 +305,7 @@ export class TransformContext<T extends AllNode = AllNode> {
     isVFor && this.inVFor++
     return () => {
       // exit
+      this.finalizeBlock(ir)
       this.registerTemplate()
       this.block = block
       this.template = template
@@ -301,6 +318,13 @@ export class TransformContext<T extends AllNode = AllNode> {
       this.operationIndex = operationIndex
       isVFor && this.inVFor--
     }
+  }
+
+  private allocateOrder(): number {
+    const root = this.root
+    const order = root.nextOrder
+    root.nextOrder += ORDER_STRIDE
+    return order
   }
 
   increaseId(): number {
@@ -400,7 +424,7 @@ export class TransformContext<T extends AllNode = AllNode> {
   registerEffect(
     expressions: SimpleExpressionNode[],
     operation: OperationNode | OperationNode[],
-    getIndex?: () => number,
+    getOrder?: () => number,
     preserveOrder = false,
   ): boolean {
     const operations = isArray(operation) ? operation : [operation]
@@ -419,15 +443,13 @@ export class TransformContext<T extends AllNode = AllNode> {
       return false
     }
 
-    const index = getIndex ? getIndex() : this.block.effect.length
-    this.block.effect.splice(index, 0, {
+    const effect: IREffect = {
       expressions,
       operations,
       ...(once && !needsEffect ? { once: true } : {}),
-    })
-    if (getIndex) {
-      this.shiftEffectBoundaries(index)
     }
+    this.effectOrder.set(effect, getOrder ? getOrder() : this.allocateOrder())
+    this.block.effect.push(effect)
     return true
   }
 
@@ -435,11 +457,92 @@ export class TransformContext<T extends AllNode = AllNode> {
     this.block.operation.push(...node)
   }
 
+  // the boundary of the block operation created for this node; `effectIndex`
+  // is an order key until finalizeBlock resolves it
   effectBoundary(): { operationIndex: number; effectIndex: number } {
     return {
       operationIndex: this.operationIndex,
-      effectIndex: this.effectIndex,
+      effectIndex: this.order,
     }
+  }
+
+  // Settles the order a block's operations and effects are generated in, once
+  // all of its nodes are transformed. Effects sort by order key: an element's
+  // prop effects are keyed from the element's own context, so they precede
+  // the effects of its children although the element exits last. Built-in
+  // v-model needs the initial DOM props applied first (the runtime picks the
+  // text / checkbox / radio implementation from them), and listeners on the
+  // same element run after v-model's own so a handler for the same event sees
+  // the updated value, as in vdom: both move behind every other operation and
+  // effect. The block operations' boundaries then become indexes into the
+  // settled arrays.
+  finalizeBlock(block: BlockIRNode): void {
+    const { effect, operation } = block
+    const { effectOrder } = this
+    effect.sort((a, b) => effectOrder.get(a)! - effectOrder.get(b)!)
+
+    const modelElements = new Set<number>()
+    for (const oper of operation) {
+      if (isVModelOperation(oper)) modelElements.add(oper.element)
+    }
+    // where each operation boundary lands once the deferred operations move
+    let operationIndexes: number[] | undefined
+    if (modelElements.size) {
+      const immediate: OperationNode[] = []
+      const models: OperationNode[] = []
+      const listeners: OperationNode[] = []
+      operationIndexes = []
+      for (const oper of operation) {
+        operationIndexes.push(immediate.length)
+        ;(isVModelOperation(oper)
+          ? models
+          : isVModelListener(oper, modelElements)
+            ? listeners
+            : immediate
+        ).push(oper)
+      }
+      operationIndexes.push(immediate.length)
+      operation.length = 0
+      operation.push(...immediate, ...models, ...listeners)
+      block.deferredOperationIndex = immediate.length
+
+      const immediateEffects: IREffect[] = []
+      const listenerEffects: IREffect[] = []
+      for (const e of effect) {
+        ;(e.operations.every(oper => isVModelListener(oper, modelElements))
+          ? listenerEffects
+          : immediateEffects
+        ).push(e)
+      }
+      effect.length = 0
+      effect.push(...immediateEffects, ...listenerEffects)
+      block.deferredEffectIndex = immediateEffects.length
+    } else {
+      block.deferredOperationIndex = operation.length
+      block.deferredEffectIndex = effect.length
+    }
+
+    const resolveBoundaries = (dynamic: IRDynamicInfo) => {
+      const oper = dynamic.operation
+      if (oper && isBlockOperation(oper) && oper.effectIndex !== undefined) {
+        // the effects keyed before this operation's node
+        let lo = 0
+        let hi = block.deferredEffectIndex
+        while (lo < hi) {
+          const mid = (lo + hi) >> 1
+          if (effectOrder.get(effect[mid])! < oper.effectIndex) lo = mid + 1
+          else hi = mid
+        }
+        oper.effectIndex = lo
+        if (operationIndexes) {
+          oper.operationIndex = operationIndexes[oper.operationIndex!]
+        }
+      }
+      for (const child of dynamic.children) {
+        resolveBoundaries(child)
+      }
+    }
+    resolveBoundaries(block.dynamic)
   }
 
   create<T extends TemplateChildNode>(
@@ -453,25 +556,6 @@ export class TransformContext<T extends AllNode = AllNode> {
       this as TransformContext<RootNode | ElementNode>,
       index,
     )
-  }
-
-  private shiftEffectBoundaries(
-    index: number,
-    dynamic: IRDynamicInfo = this.dynamic,
-  ): void {
-    const operation = dynamic.operation
-    if (
-      operation &&
-      isBlockOperation(operation) &&
-      operation.effectIndex !== undefined &&
-      operation.effectIndex >= index
-    ) {
-      operation.effectIndex++
-    }
-
-    for (const child of dynamic.children) {
-      this.shiftEffectBoundaries(index, child)
-    }
   }
 
   private getChildContextInfo(): ChildContextInfo {
@@ -646,6 +730,7 @@ export function transform(
 
   transformNode(context)
   finalizeIfChains(context)
+  context.finalizeBlock(ir.block)
 
   ir.node.imports = context.imports
   ir.node.transformed = true

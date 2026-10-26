@@ -42,6 +42,9 @@ export interface BaseIRNode {
   type: IRNodeTypes
 }
 
+// where a block operation sits among the operations and effects of its block,
+// as indexes once the block is finalized (`finalizeBlock`); until then
+// `effectIndex` holds the registration order key of the operation's node
 export interface EffectBoundary {
   operationIndex?: number
   effectIndex?: number
@@ -70,6 +73,10 @@ export interface BlockIRNode extends BaseIRNode {
   effect: IREffect[]
   operation: OperationNode[]
   returns: number[]
+  // the operations / effects from these indexes on run after every render
+  // effect: v-model directives and the listeners of their elements
+  deferredOperationIndex: number
+  deferredEffectIndex: number
 }
 
 export interface RootIRNode {
