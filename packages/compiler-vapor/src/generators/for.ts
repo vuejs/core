@@ -4,7 +4,8 @@ import {
   walkFunctionParams,
   walkIdentifiers,
 } from '@vue/compiler-dom'
-import { genBlockContent, isVModelListener, isVModelOperation } from './block'
+import { genBlockContent } from './block'
+import { isVModelListener, isVModelOperation } from '../utils'
 import { genExpression } from './expression'
 import type { CodegenContext } from '../generate'
 import {

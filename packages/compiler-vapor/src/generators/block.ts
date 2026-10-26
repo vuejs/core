@@ -2,10 +2,8 @@ import type {
   BlockIRNode,
   CoreHelper,
   CreateComponentIRNode,
-  DirectiveIRNode,
   ForIRNode,
   IRDynamicInfo,
-  IREffect,
   IRSlots,
   IfIRNode,
   OperationNode,
@@ -30,7 +28,7 @@ import {
 import { genChildren, genSelf } from './template'
 import { genCustomDirectives } from './directive'
 import { toValidAssetId } from '@vue/compiler-dom'
-import { VaporSlotFlags, isOn } from '@vue/shared'
+import { VaporSlotFlags } from '@vue/shared'
 
 export function genBlock(
   oper: BlockIRNode,
@@ -58,29 +56,14 @@ export function genBlockContent(
   skippedEffectIndexes?: Set<number>,
 ): CodeFragment[] {
   const [frag, push] = buildCodeFragment()
-  const { dynamic, effect, operation, returns } = block
-  // Built-in v-model needs to run after initial DOM props are applied. This is
-  // especially important for inputs with a dynamic type, since the runtime
-  // selects the text, checkbox, or radio implementation from the DOM property.
-  const modelOperations = operation.filter(isVModelOperation)
-  // Listeners on the same element are added after v-model's own, so that a
-  // handler for the same event already sees the updated value, as in vdom.
-  const modelElements = new Set(modelOperations.map(oper => oper.element))
-  const isModelListener = (oper: OperationNode) =>
-    isVModelListener(oper, modelElements)
-  const isDeferred = (oper: OperationNode) =>
-    isVModelOperation(oper) || isModelListener(oper)
-  const modelListenerEffects: IREffect[] = []
-  if (modelElements.size) {
-    for (let i = 0; i < effect.length; i++) {
-      if (
-        !(skippedEffectIndexes && skippedEffectIndexes.has(i)) &&
-        effect[i].operations.every(isModelListener)
-      ) {
-        modelListenerEffects.push(effect[i])
-      }
-    }
-  }
+  const {
+    dynamic,
+    effect,
+    operation,
+    returns,
+    deferredOperationIndex,
+    deferredEffectIndex,
+  } = block
   const resetBlock = context.enterBlock(block)
   const singleUseAssetComponentNames = root
     ? collectSingleUseAssetComponents(block)
@@ -124,10 +107,9 @@ export function genBlockContent(
     push: (...items: CodeFragment[]) => number,
   ) => {
     while (operationIndex < operationEnd) {
-      const oper = operation[operationIndex]
-      if (!isDeferred(oper)) {
-        push(...genOperationWithInsertionState(oper, context))
-      }
+      push(
+        ...genOperationWithInsertionState(operation[operationIndex], context),
+      )
       operationIndex++
     }
 
@@ -173,25 +155,27 @@ export function genBlockContent(
     }
   }
 
-  if (operationIndex < operation.length) {
+  if (operationIndex < deferredOperationIndex) {
     push(
       ...genOperations(
-        operation.slice(operationIndex).filter(oper => !isDeferred(oper)),
+        operation.slice(operationIndex, deferredOperationIndex),
         context,
       ),
     )
   }
-  if (effectIndex < effect.length) {
-    push(...genEffectRange(effectIndex, effect.length, genEffectsExtraFrag))
+  if (effectIndex < deferredEffectIndex) {
+    push(
+      ...genEffectRange(effectIndex, deferredEffectIndex, genEffectsExtraFrag),
+    )
   } else if (genEffectsExtraFrag) {
     push(...genEffects([], context, genEffectsExtraFrag))
   }
-  if (modelOperations.length) {
-    push(...genOperations(modelOperations, context))
-    push(...genOperations(operation.filter(isModelListener), context))
-    if (modelListenerEffects.length) {
-      push(...genEffects(modelListenerEffects, context))
-    }
+  // v-model directives and the listeners of their elements, see finalizeBlock
+  if (deferredOperationIndex < operation.length) {
+    push(...genOperations(operation.slice(deferredOperationIndex), context))
+  }
+  if (deferredEffectIndex < effect.length) {
+    push(...genEffectRange(deferredEffectIndex, effect.length))
   }
   push(...genCustomDirectives(operation, context))
 
@@ -213,16 +197,13 @@ export function genBlockContent(
     end: number,
     genExtraFrag?: () => CodeFragment[],
   ): CodeFragment[] {
-    if (!skippedEffectIndexes && !modelListenerEffects.length) {
+    if (!skippedEffectIndexes) {
       return genEffects(effect.slice(start, end), context, genExtraFrag)
     }
 
     const effects: typeof effect = []
     for (let i = start; i < end; i++) {
-      if (
-        !(skippedEffectIndexes && skippedEffectIndexes.has(i)) &&
-        !modelListenerEffects.includes(effect[i])
-      ) {
+      if (!skippedEffectIndexes.has(i)) {
         effects.push(effect[i])
       }
     }
@@ -245,31 +226,6 @@ export function genBlockContent(
       )
     }
   }
-}
-
-export function isVModelOperation(
-  oper: OperationNode,
-): oper is DirectiveIRNode {
-  return (
-    oper.type === IRNodeTypes.DIRECTIVE &&
-    oper.builtin === true &&
-    oper.name === 'model'
-  )
-}
-
-export function isVModelListener(
-  oper: OperationNode,
-  modelElements: Set<number>,
-): boolean {
-  return (
-    (oper.type === IRNodeTypes.SET_EVENT ||
-      oper.type === IRNodeTypes.SET_DYNAMIC_EVENTS ||
-      (oper.type === IRNodeTypes.SET_DYNAMIC_PROPS && oper.listeners) ||
-      (oper.type === IRNodeTypes.SET_PROP &&
-        !oper.prop.modifier &&
-        isOn(oper.prop.key.content))) &&
-    modelElements.has(oper.element)
-  )
 }
 
 // Marks the root operations of a slot block that has no stable root, and

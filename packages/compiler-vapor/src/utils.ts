@@ -1,4 +1,4 @@
-import { VaporBlockShape, isGloballyAllowed } from '@vue/shared'
+import { VaporBlockShape, isGloballyAllowed, isOn } from '@vue/shared'
 import {
   type AttributeNode,
   type BindingMetadata,
@@ -18,8 +18,10 @@ import {
 } from '@vue/compiler-dom'
 import {
   type BlockIRNode,
+  type DirectiveIRNode,
   IRNodeTypes,
   type IfIRNode,
+  type OperationNode,
   type VaporDirectiveNode,
 } from './ir'
 import { EMPTY_EXPRESSION } from './transforms/utils'
@@ -244,5 +246,30 @@ export function isSlotTemplate(node: TemplateChildNode): node is ElementNode {
     node.type === NodeTypes.ELEMENT &&
     isTemplateNode(node) &&
     node.props.some(isVSlot)
+  )
+}
+
+export function isVModelOperation(
+  oper: OperationNode,
+): oper is DirectiveIRNode {
+  return (
+    oper.type === IRNodeTypes.DIRECTIVE &&
+    oper.builtin === true &&
+    oper.name === 'model'
+  )
+}
+
+export function isVModelListener(
+  oper: OperationNode,
+  modelElements: Set<number>,
+): boolean {
+  return (
+    (oper.type === IRNodeTypes.SET_EVENT ||
+      oper.type === IRNodeTypes.SET_DYNAMIC_EVENTS ||
+      (oper.type === IRNodeTypes.SET_DYNAMIC_PROPS && oper.listeners) ||
+      (oper.type === IRNodeTypes.SET_PROP &&
+        !oper.prop.modifier &&
+        isOn(oper.prop.key.content))) &&
+    modelElements.has(oper.element)
   )
 }
