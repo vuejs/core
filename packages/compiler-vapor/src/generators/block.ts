@@ -272,14 +272,17 @@ export function isVModelListener(
   )
 }
 
+// Marks the root operations of a slot block that has no stable root, and
+// returns whether it has one (nothing is marked then).
 export function markSlotRootOperations(
   block: BlockIRNode,
   context: CodegenContext,
-): void {
-  if (hasStableSlotRoot(block, context)) return
+): boolean {
+  const roots = getReturnedDynamics(block)
+  if (hasStableSlotRoot(roots, context)) return true
 
-  for (let i = 0; i < block.returns.length; i++) {
-    const child = findReturnedDynamic(block, block.returns[i])
+  for (let i = 0; i < roots.length; i++) {
+    const child = roots[i]
     const operation = child && child.operation
     if (!operation) continue
 
@@ -296,6 +299,7 @@ export function markSlotRootOperations(
       operation.flags |= VaporSlotFlags.FORWARDED
     }
   }
+  return false
 }
 
 function markSlotRootIf(operation: IfIRNode, context: CodegenContext): void {
@@ -326,42 +330,38 @@ function markSlotRootComponent(operation: CreateComponentIRNode): void {
   }
 }
 
-export function findReturnedDynamic(
+// the dynamic info of each returned root, in `returns` order
+function getReturnedDynamics(
   block: BlockIRNode,
-  id: number,
-): IRDynamicInfo | undefined {
-  for (let i = 0; i < block.dynamic.children.length; i++) {
-    const child = block.dynamic.children[i]
-    if (child.id === id) return child
+): (IRDynamicInfo | undefined)[] {
+  const { children } = block.dynamic
+  const byId = new Map<number, IRDynamicInfo>()
+  for (let i = 0; i < children.length; i++) {
+    const child = children[i]
+    if (child.id !== undefined) byId.set(child.id, child)
   }
+  return block.returns.map(id => byId.get(id))
 }
 
 const commentOnlyTemplateRE = /^(?:<!--[\s\S]*?-->)+$/
 
 // A slot can skip fallback/boundary tracking when at least one root is stable.
 // Components count as valid even if their own render result is a comment.
-export function hasStableSlotRoot(
-  block: BlockIRNode,
+function hasStableSlotRoot(
+  roots: (IRDynamicInfo | undefined)[],
   context: CodegenContext,
 ): boolean {
-  let hasValidRoot = false
-  for (let i = 0; i < block.returns.length; i++) {
-    const id = block.returns[i]
-    const child = findReturnedDynamic(block, id)
+  for (let i = 0; i < roots.length; i++) {
+    const child = roots[i]
     const operation = child && child.operation
     if (!operation) {
-      if (child && isStableTemplateSlotRoot(child, context)) {
-        hasValidRoot = true
-      }
+      if (child && isStableTemplateSlotRoot(child, context)) return true
       continue
     }
 
     switch (operation.type) {
       case IRNodeTypes.CREATE_COMPONENT_NODE:
-        if (!operation.dynamic || operation.dynamic.isStatic) {
-          hasValidRoot = true
-          continue
-        }
+        if (!operation.dynamic || operation.dynamic.isStatic) return true
         // Align with VDOM fallback semantics:
         // <component :is="view" /> renders fallback when view is null because
         // the dynamic component root becomes a comment vnode. This differs from
@@ -370,16 +370,15 @@ export function hasStableSlotRoot(
         // still make the whole slot content valid.
         continue
       case IRNodeTypes.KEY:
-        if (hasStableSlotRoot(operation.block, context)) {
-          hasValidRoot = true
-          continue
+        if (hasStableSlotRoot(getReturnedDynamics(operation.block), context)) {
+          return true
         }
         continue
       default:
         continue
     }
   }
-  return hasValidRoot
+  return false
 }
 
 function isStableTemplateSlotRoot(
