@@ -36,10 +36,10 @@ export const INDENT_START: unique symbol = Symbol(__DEV__ ? `indent start` : ``)
 export const INDENT_END: unique symbol = Symbol(__DEV__ ? `indent end` : ``)
 
 type FalsyValue = false | null | undefined
-/** code with its source position; its numeric newline index is what tells it apart from a nested list */
+/** code with its source position; the newline index tells it apart from a nested list */
 export type MappedFragment = [
   code: string,
-  newlineIndex?: number,
+  newlineIndex: number,
   loc?: SourceLocation,
   name?: string,
 ]
@@ -205,7 +205,7 @@ export function codeFragmentToString(
       } else {
         const mapped = frag as MappedFragment
         code = mapped[0]
-        if (mapped[1] !== undefined) newlineIndex = mapped[1]
+        newlineIndex = mapped[1]
         loc = mapped[2]
         name = mapped[3]
       }
