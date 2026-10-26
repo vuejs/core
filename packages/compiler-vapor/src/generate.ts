@@ -22,7 +22,8 @@ import { buildNextIdMap, getNextId } from './transform'
 
 export type CodegenOptions = Omit<BaseCodegenOptions, 'optimizeImports'>
 
-const idWithTrailingDigitsRE = /^([A-Za-z_$][\w$]*)(\d+)$/
+// lazy prefix: the whole trailing number is the id, `t10` is `t` + 10
+const idWithTrailingDigitsRE = /^([A-Za-z_$][\w$]*?)(\d+)$/
 const helperNameAliases: Record<string, string> = {
   withVaporKeys: 'withKeys',
   withVaporModifiers: 'withModifiers',
