@@ -56,7 +56,7 @@ export function getSiblingIf(
 
   const siblings = parent.node.children
   let sibling: TemplateChildNode | undefined
-  let i = siblings.indexOf(context.node)
+  let i = context.index
   while (reverse ? --i >= 0 : ++i < siblings.length) {
     sibling = siblings[i]
     if (!isCommentOrWhitespace(sibling)) {

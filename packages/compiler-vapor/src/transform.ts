@@ -362,18 +362,13 @@ export class TransformContext<T extends AllNode = AllNode> {
       static?: boolean
     } = {},
   ): number {
-    const templateKey = JSON.stringify([
-      this.getTemplateNamespace(),
-      root,
-      isStatic,
-      content,
-    ])
+    const ns = this.getTemplateNamespace()
+    const templateKey = `${ns}:${root ? 1 : 0}${isStatic ? 1 : 0}${content}`
     const existingIndex = this.templateIndexMap.get(templateKey)
     if (existingIndex !== undefined) {
       return existingIndex
     }
 
-    const ns = this.getTemplateNamespace()
     const newIndex = this.ir.template.entries.length
     this.ir.template.entries.push({ content, ns, root, static: isStatic })
     this.templateIndexMap.set(templateKey, newIndex)
@@ -394,7 +389,7 @@ export class TransformContext<T extends AllNode = AllNode> {
     getIndex?: () => number,
     preserveOrder = false,
   ): boolean {
-    const operations = [operation].flat()
+    const operations = isArray(operation) ? operation : [operation]
     expressions = expressions.filter(
       exp => !isConstantExpression(exp, this.root.options.bindingMetadata),
     )
