@@ -157,16 +157,20 @@ function genReactiveEffects(
   const handlerFrags = genHoistedHandlers(effects, context)
   return context.withExpressionReplacements(expressionReplacements, () => {
     push(...declarationFrags)
-    for (let i = 0; i < effects.length; i++) {
-      const effect = effects[i]
-      operationsCount += effect.operations.length
-      const frags = context.withId(() => genEffect(effect, context), ids)
-      i > 0 && push(NEWLINE)
-      if (frag[frag.length - 1] === ')' && frags[0] === '(') {
-        push(';')
+    // one id scope for the whole group; the hoisted handlers above stay
+    // outside it so they don't capture the values cached by this effect
+    context.withId(() => {
+      for (let i = 0; i < effects.length; i++) {
+        const effect = effects[i]
+        operationsCount += effect.operations.length
+        const frags = genEffect(effect, context)
+        i > 0 && push(NEWLINE)
+        if (frag[frag.length - 1] === ')' && frags[0] === '(') {
+          push(';')
+        }
+        push(...frags)
       }
-      push(...frags)
-    }
+    }, ids)
 
     const newLineCount = frag.filter(frag => frag === NEWLINE).length
     if (
