@@ -84,32 +84,20 @@ export function processIf(
       }
       context.dynamic.operation = operation
       context.root.ifHeads.set(operation, context.inVOnce)
+      const parent = context.parent!
+      parent.ifHead = parent.ifTail = operation
     }
   } else {
     // check the adjacent v-if
     const siblingIf = getSiblingIf(context, true)
-
-    const siblings = context.parent && context.parent.dynamic.children
-    let lastIfNode
-    if (siblings) {
-      let i = siblings.length
-      while (i--) {
-        if (
-          siblings[i].operation &&
-          siblings[i].operation!.type === IRNodeTypes.IF
-        ) {
-          lastIfNode = siblings[i].operation
-          break
-        }
-      }
-    }
+    const parent = context.parent
+    const head = parent && parent.ifHead
 
     if (
       // check if v-if is the sibling node
       !siblingIf ||
-      // check if IfNode is the last operation and get the root IfNode
-      !lastIfNode ||
-      lastIfNode.type !== IRNodeTypes.IF
+      // check if a preceding sibling started a chain
+      !head
     ) {
       context.options.onError(
         createCompilerError(ErrorCodes.X_V_ELSE_NO_ADJACENT_IF, node.loc),
@@ -117,15 +105,11 @@ export function processIf(
       return
     }
 
-    const head = lastIfNode
-    while (lastIfNode.negative && lastIfNode.negative.type === IRNodeTypes.IF) {
-      lastIfNode = lastIfNode.negative
-    }
+    const lastIfNode = parent.ifTail!
 
     // vdom caches the whole conditional for `v-once` on its head and drops
     // `v-once` on the other branches: this branch is in v-once only through
     // an ancestor or the head
-    const parent = context.parent!
     context.inVOnce =
       (parent.inVOnce && !isComponentNode(parent.node)) ||
       !!context.root.ifHeads.get(head)
@@ -165,10 +149,11 @@ export function processIf(
 
     const [branch, onExit] = createIfBranch(node, context)
 
+    let negative: BlockIRNode | IfIRNode
     if (dir.name === 'else') {
-      lastIfNode.negative = branch
+      negative = branch
     } else {
-      lastIfNode.negative = {
+      negative = parent.ifTail = {
         type: IRNodeTypes.IF,
         id: -1,
         condition: dir.exp!,
@@ -180,12 +165,13 @@ export function processIf(
           isStaticExpression(dir.exp!, context.options.bindingMetadata),
       }
     }
+    lastIfNode.negative = negative
 
     return () => {
       onExit()
-      if (lastIfNode.negative.type === IRNodeTypes.IF) {
-        lastIfNode.negative.blockShape = encodeIfBlockShape(
-          lastIfNode.negative.positive,
+      if (negative.type === IRNodeTypes.IF) {
+        negative.blockShape = encodeIfBlockShape(
+          negative.positive,
           forceMultiRoot,
           undefined,
           allowNoScope,
@@ -194,7 +180,7 @@ export function processIf(
       lastIfNode.blockShape = encodeIfBlockShape(
         lastIfNode.positive,
         forceMultiRoot,
-        lastIfNode.negative,
+        negative,
         allowNoScope,
       )
     }
