@@ -656,3 +656,28 @@ test.each([false, true])(
     expect(result.tips[0]).toContain('v-memo="[foo]"')
   },
 )
+
+test('marks the vapor template AST as transformed so a reuse re-parses it', () => {
+  const { descriptor } = parse(
+    `
+    <template>
+      <img src="./logo.png">
+    </template>
+    `,
+    { filename: 'example.vue' },
+  )
+  const template = descriptor.template!
+  const options = {
+    filename: 'example.vue',
+    source: template.content,
+    ast: template.ast,
+    vapor: true,
+  }
+
+  const { code } = compile(options)
+  expect(code).toContain(`import _imports_0 from './logo.png'`)
+  expect(template.ast!.transformed).toBe(true)
+  // the asset transform rewrote the AST in place; a second compile must not
+  // reuse it and lose the import
+  expect(compile(options).code).toBe(code)
+})
