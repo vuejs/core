@@ -107,6 +107,25 @@ export interface IRTemplate {
 
 export class TemplateRegistry {
   entries: IRTemplate[] = []
+  private indexes: Map<string, number> = new Map()
+
+  intern(
+    content: string,
+    ns: Namespace,
+    root: boolean,
+    isStatic: boolean,
+  ): number {
+    const key = `${ns}:${root ? 1 : 0}${isStatic ? 1 : 0}${content}`
+    const existing = this.indexes.get(key)
+    if (existing !== undefined) {
+      return existing
+    }
+
+    const index = this.entries.length
+    this.entries.push({ content, ns, root, static: isStatic })
+    this.indexes.set(key, index)
+    return index
+  }
 
   keys(): string[] {
     return this.entries.map(({ content }) => content)
