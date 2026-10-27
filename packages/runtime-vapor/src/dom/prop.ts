@@ -548,15 +548,18 @@ export function setValue(
  * `toDisplayString`
  */
 export function setText(el: Text & { $txt?: string }, value: string): void {
-  if (isHydrating && !isRecreatedNode(el) && !isRecreatedNode(el.parentNode)) {
-    const clientText = getClientText(el.parentNode!, value)
+  const parent = isHydrating && !isRecreatedNode(el) ? el.parentNode : null
+  if (parent && !isRecreatedNode(parent)) {
+    const clientText = getClientText(parent, value)
     if (el.nodeValue == clientText) {
       el.$txt = clientText
       return
     }
 
-    const parent = el.parentElement
-    if (parent && !isMismatchAllowed(parent, MismatchTypes.TEXT)) {
+    if (
+      parent.nodeType === 1 &&
+      !isMismatchAllowed(parent as Element, MismatchTypes.TEXT)
+    ) {
       ;(__DEV__ || __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__) &&
         warnHydrationTextMismatch(el, value)
       logMismatchError()
@@ -985,7 +988,7 @@ function attributeHasMismatch(el: any, key: string, value: any): boolean {
 
 function getClientText(el: Node, value: string): string {
   // innerHTML normalizes \r\n and \r into a single \n in the DOM
-  value = value.replace(/\r\n?/g, '\n')
+  if (value.indexOf('\r') !== -1) value = value.replace(/\r\n?/g, '\n')
   if (
     value[0] === '\n' &&
     ((el as Element).tagName === 'PRE' ||
