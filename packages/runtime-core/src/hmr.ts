@@ -8,7 +8,7 @@ import {
   isClassComponent,
 } from './component'
 import { SchedulerJobFlags, queueJob, queuePostFlushCb } from './scheduler'
-import { extend, getGlobalThis } from '@vue/shared'
+import { NOOP, extend, getGlobalThis } from '@vue/shared'
 
 type HMRComponent = ComponentOptions | ClassComponent
 
@@ -154,15 +154,32 @@ function reload(id: string, newComp: HMRComponent): void {
       // 4. Force the parent instance to re-render. This will cause all updated
       // components to be unmounted and re-mounted. Queue the update so that we
       // don't end up forcing the same parent to re-render multiple times.
-      queueJob(() => {
+      const update = () => {
         // vite-plugin-vue/issues/599
-        // don't update if the job is already disposed
-        if (!(instance.job.flags! & SchedulerJobFlags.DISPOSED)) {
-          isHmrUpdating = true
-          instance.parent!.update()
-          isHmrUpdating = false
-          // #6930, #11248 avoid infinite recursion
-          dirtyInstances.delete(instance)
+        // don't update if the instance is already unmounted. `instance.job` is
+        // not a reliable marker here because it is still null while an async
+        // setup() is pending - the scope is stopped synchronously on unmount.
+        if (!instance.scope.active) return
+        isHmrUpdating = true
+        instance.parent!.update()
+        isHmrUpdating = false
+        // #6930, #11248 avoid infinite recursion
+        dirtyInstances.delete(instance)
+      }
+      queueJob(() => {
+        if (instance.asyncDep && !instance.asyncResolved) {
+          // #16040 the renderer postpones a parent update whose root is a
+          // not-yet-resolved async component, and by the time it runs the
+          // dirty marker has been cleared, so the child would be patched
+          // instead of replaced. Await the setup here and re-mark instead.
+          instance.asyncDep.catch(NOOP).then(() => {
+            hmrDirtyComponents.set(oldComp, dirtyInstances)
+            dirtyInstances.add(instance)
+            queueJob(update)
+            queuePostFlushCb(() => hmrDirtyComponents.clear())
+          })
+        } else {
+          update()
         }
       })
     } else if (instance.appContext.reload) {

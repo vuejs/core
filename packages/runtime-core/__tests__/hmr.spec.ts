@@ -895,6 +895,108 @@ describe('hot module replacement', () => {
     expect(serializeInner(root)).toBe('<div>bar</div>')
   })
 
+  // #16040
+  test('reload async child in Suspense twice while setup is pending', async () => {
+    const id = 'async-child-reload-twice'
+    const makeChild = (text: string, delay: number): ComponentOptions => ({
+      __hmrId: id,
+      async setup() {
+        await timeout(delay)
+        return () => text
+      },
+    })
+    const AsyncChild = makeChild('foo', 0)
+    createRecord(id, AsyncChild)
+
+    const App: ComponentOptions = {
+      __hmrId: 'app-reload-twice',
+      components: { AsyncChild },
+      render: compileToFunction(`
+        <div>
+          <Suspense>
+            <AsyncChild />
+          </Suspense>
+        </div>
+      `),
+    }
+
+    const root = nodeOps.createElement('div')
+    render(h(App), root)
+    await timeout(10)
+    expect(serializeInner(root)).toBe('<div>foo</div>')
+
+    const errors: unknown[] = []
+    const spy = vi.spyOn(console, 'error').mockImplementation(e => {
+      errors.push(e)
+    })
+
+    // first reload remounts the child; its async setup takes 20ms
+    reload(id, makeChild('bar', 20))
+    // flush the queued hmr job -> parent.update() -> new child instance whose
+    // setup is still pending, so instance.job is null
+    await timeout(0)
+
+    // second reload while the remounted instance is still pending
+    reload(id, makeChild('baz', 0))
+    await timeout(50)
+
+    spy.mockRestore()
+    expect(errors).toEqual([])
+    expect(serializeInner(root)).toBe('<div>baz</div>')
+  })
+
+  // #16040 - the parent's root vnode is the async child itself, which makes
+  // the renderer postpone the parent update until the setup resolves
+  test('reload async child in Suspense twice when it is the parent root', async () => {
+    const id = 'async-root-reload-twice'
+    const makeChild = (text: string, delay: number): ComponentOptions => ({
+      __hmrId: id,
+      async setup() {
+        await timeout(delay)
+        return () => text
+      },
+    })
+    const AsyncChild = makeChild('foo', 0)
+    createRecord(id, AsyncChild)
+
+    const Parent: ComponentOptions = {
+      __hmrId: 'parent-reload-twice',
+      components: { AsyncChild },
+      render: compileToFunction(`<AsyncChild />`),
+    }
+
+    const App: ComponentOptions = {
+      __hmrId: 'app-root-reload-twice',
+      components: { Parent },
+      render: compileToFunction(`
+        <div>
+          <Suspense>
+            <Parent />
+          </Suspense>
+        </div>
+      `),
+    }
+
+    const root = nodeOps.createElement('div')
+    render(h(App), root)
+    await timeout(10)
+    expect(serializeInner(root)).toBe('<div>foo</div>')
+
+    const errors: unknown[] = []
+    const spy = vi.spyOn(console, 'error').mockImplementation(e => {
+      errors.push(e)
+    })
+
+    reload(id, makeChild('bar', 20))
+    await timeout(0)
+    reload(id, makeChild('baz', 0))
+    await timeout(50)
+
+    spy.mockRestore()
+    expect(errors).toEqual([])
+    expect(serializeInner(root)).toBe('<div>baz</div>')
+  })
+
   test('multi reload child wrapped in Suspense + KeepAlive', async () => {
     const id = 'test-child-reload-3'
     const Child: ComponentOptions = {
