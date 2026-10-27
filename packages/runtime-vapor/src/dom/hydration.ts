@@ -255,13 +255,17 @@ type CommentAnchor = Comment & Anchor
 
 // `<!--(-->`…`<!--)-->` wraps a slot fallback the server rendered: a range like
 // a fragment's for whatever steps over, claims or removes one.
-export const isRangeStart = (node: Node): node is CommentAnchor =>
-  node.nodeType === 8 &&
-  ((node as Comment).data === '[' || (node as Comment).data === '(')
+export const isRangeStart = (node: Node): node is CommentAnchor => {
+  if (node.nodeType !== 8) return false
+  const data = (node as Comment).data
+  return data === '[' || data === '('
+}
 
-export const isRangeEnd = (node: Node): node is CommentAnchor =>
-  node.nodeType === 8 &&
-  ((node as Comment).data === ']' || (node as Comment).data === ')')
+export const isRangeEnd = (node: Node): node is CommentAnchor => {
+  if (node.nodeType !== 8) return false
+  const data = (node as Comment).data
+  return data === ']' || data === ')'
+}
 
 export const isComment = (node: Node, data: string): node is CommentAnchor =>
   node.nodeType === 8 && (node as Comment).data === data
@@ -412,13 +416,23 @@ function adoptTemplateImpl(
 }
 
 export function nextLogicalSibling(node: Node): Node | null {
-  return skipUntrackedAnchors(
-    isRangeStart(node)
-      ? locateEndAnchor(node)!.nextSibling
-      : isComment(node, 'teleport start')
-        ? locateEndAnchor(node, 'teleport start', 'teleport end')!.nextSibling
-        : node.nextSibling,
-  )
+  let next: Node | null
+  if (node.nodeType === 8) {
+    const data = (node as Comment).data
+    next =
+      data === '[' || data === '('
+        ? locateEndAnchor(node as CommentAnchor)!.nextSibling
+        : data === 'teleport start'
+          ? locateEndAnchor(
+              node as CommentAnchor,
+              'teleport start',
+              'teleport end',
+            )!.nextSibling
+          : node.nextSibling
+  } else {
+    next = node.nextSibling
+  }
+  return skipUntrackedAnchors(next)
 }
 
 /** Advance past anchors that occupy no SSR logical position. */
@@ -492,14 +506,15 @@ export function locateEndAnchor(
   const stack: CommentAnchor[] = [node]
   while ((node = _next(node) as CommentAnchor) && stack.length > 0) {
     if (node.nodeType === 8) {
-      if (node.data === open) {
+      const data = node.data
+      if (data === open) {
         // a nested range walked before is skipped through its cached end
         if (node.$fe) {
           node = node.$fe as CommentAnchor
         } else {
           stack.push(node)
         }
-      } else if (node.data === close) {
+      } else if (data === close) {
         const matchingOpen = stack.pop()!
         matchingOpen.$fe = node
         if (stack.length === 0) return node
@@ -877,15 +892,22 @@ export function resolveHydrationTarget(node: Node): Node {
     const flags = (node as Anchor).$vha!
     if (flags) {
       if (!(flags & AnchorFlags.UNTRACKED)) return node
-    } else if (
-      !(
-        isRangeStart(node) ||
-        isRangeEnd(node) ||
-        isComment(node, 'teleport start') ||
-        isComment(node, 'teleport end')
-      )
-    ) {
+    } else if (node.nodeType !== 8) {
       return node
+    } else {
+      const data = (node as Comment).data
+      if (
+        !(
+          data === '[' ||
+          data === '(' ||
+          data === ']' ||
+          data === ')' ||
+          data === 'teleport start' ||
+          data === 'teleport end'
+        )
+      ) {
+        return node
+      }
     }
 
     const next = node.nextSibling
