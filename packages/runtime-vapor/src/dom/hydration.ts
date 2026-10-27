@@ -522,6 +522,9 @@ export function locateEndAnchor(
  * normally rests on it, so only a mismatch pays for the walk from `start`.
  */
 export function locateClaimedEnd(start: CommentAnchor): Node | null {
+  // A close located once is never read off the cursor again: by a later call
+  // the cursor may rest on an enclosing close of the same kind.
+  if (start.$fe) return start.$fe
   const node = currentHydrationNode
   if (
     node &&

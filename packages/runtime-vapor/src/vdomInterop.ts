@@ -207,9 +207,9 @@ import {
 } from './slotFragment'
 import {
   type SlotFallbackRange,
-  currentSlotEndAnchor,
   hydrateSlotFallbackRange,
   insertUntrackedAnchor,
+  locateSlotEndAnchor,
   withHydratingSlotBoundary,
 } from './dom/hydrateFragment'
 import type { NodeRef } from './apiTemplateRef'
@@ -2686,7 +2686,7 @@ function renderVDOMSlot(
     }
     scope.run(render)
     if (!currentParentNode) {
-      currentAnchor = currentSlotEndAnchor || currentHydrationNode
+      currentAnchor = locateSlotEndAnchor() || currentHydrationNode
       currentParentNode = currentAnchor!.parentNode as ParentNode
     }
     slotNamespace = getContainerType(currentParentNode as Element)
