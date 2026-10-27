@@ -1,6 +1,7 @@
 import {
   type CompilerOptions,
   type PlainElementNode,
+  generate,
   baseParse as parse,
   transform,
 } from '@vue/compiler-core'
@@ -60,6 +61,22 @@ describe('compiler: v-html transform', () => {
     transformWithVHtml(`<div v-html></div>`, {
       onError,
     })
+    expect(onError.mock.calls).toMatchObject([
+      [{ code: DOMErrorCodes.X_V_HTML_NO_EXPRESSION }],
+    ])
+  })
+
+  it('should treat an empty expression as no expression', () => {
+    const onError = vi.fn()
+    const ast = transformWithVHtml(`<div v-html=""></div>`, { onError })
+    expect(onError.mock.calls).toMatchObject([
+      [{ code: DOMErrorCodes.X_V_HTML_NO_EXPRESSION }],
+    ])
+    // must still generate valid code instead of `{ innerHTML:  }`
+    expect(generate(ast).code).toContain(`innerHTML: ""`)
+
+    onError.mockClear()
+    transformWithVHtml(`<div v-html="  "></div>`, { onError })
     expect(onError.mock.calls).toMatchObject([
       [{ code: DOMErrorCodes.X_V_HTML_NO_EXPRESSION }],
     ])

@@ -46,6 +46,13 @@ describe('compiler: v-memo transform', () => {
     expect(compile(`<Comp v-memo="[x]"></Comp>`)).toMatchSnapshot()
   })
 
+  test('ignore an empty expression', () => {
+    // an empty value is the same as no value, and must not generate
+    // `_withMemo(, ...)` which is not valid code
+    expect(compile(`<div v-memo="">{{ x }}</div>`)).not.toContain(`_withMemo`)
+    expect(compile(`<div v-memo="  ">{{ x }}</div>`)).not.toContain(`_withMemo`)
+  })
+
   test('on v-if', () => {
     expect(
       compile(

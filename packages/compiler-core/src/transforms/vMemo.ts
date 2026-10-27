@@ -16,7 +16,14 @@ const seen = new WeakSet()
 export const transformMemo: NodeTransform = (node, context) => {
   if (node.type === NodeTypes.ELEMENT) {
     const dir = findDir(node, 'memo')
-    if (!dir || seen.has(node) || context.inSSR) {
+    // an empty value is the same as no value, e.g. `v-memo=""`
+    if (
+      !dir ||
+      !dir.exp ||
+      !dir.exp.loc.source.trim() ||
+      seen.has(node) ||
+      context.inSSR
+    ) {
       return
     }
     seen.add(node)
