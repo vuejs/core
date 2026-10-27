@@ -1,6 +1,14 @@
-import { BindingTypes, type RootNode, parse } from '@vue/compiler-dom'
+import {
+  BindingTypes,
+  NodeTypes,
+  type RootNode,
+  createSimpleExpression,
+  parse,
+  toValidAssetId,
+} from '@vue/compiler-dom'
 import {
   type CompilerOptions,
+  type NodeTransform,
   VaporErrorCodes,
   compile as _compile,
 } from '../src'
@@ -667,5 +675,97 @@ describe('compile', () => {
     expect(code).contains('a: () => (__props.foo)')
     expect(code).contains('b: () => ($foo)')
     expect(code).contains('c: () => (Math.PI)')
+  })
+
+  describe('user transform resolving asset components', () => {
+    const importComponents =
+      (tags: string[]): NodeTransform =>
+      (node, context) => {
+        if (node.type !== NodeTypes.ROOT) return
+        return () => {
+          for (const tag of tags) {
+            if (!context.component.has(tag)) continue
+            context.imports.push({
+              exp: createSimpleExpression(toValidAssetId(tag, 'component')),
+              path: `/components/${tag}.vue`,
+            })
+            context.component.delete(tag)
+          }
+        }
+      }
+
+    test('single-use root component', () => {
+      const code = compile(`<Foo/>`, {
+        nodeTransforms: [importComponents(['Foo'])],
+      })
+      expect(code).matchSnapshot()
+      expect(code).contains(`import _component_Foo from '/components/Foo.vue';`)
+      expect(code).not.contains('_resolveComponent("Foo")')
+      expect(code).not.contains('_createAssetComponent("Foo"')
+      expect(code).contains(
+        'const n0 = _createComponentWithFallback(_component_Foo, null, null, true)',
+      )
+    })
+
+    test('component used more than once', () => {
+      const code = compile(`<Foo/><div><Foo/></div>`, {
+        nodeTransforms: [importComponents(['Foo'])],
+      })
+      expect(code).matchSnapshot()
+      expect(code).contains(`import _component_Foo from '/components/Foo.vue';`)
+      expect(code).not.contains('_resolveComponent("Foo")')
+      expect(code).not.contains('_createAssetComponent("Foo"')
+      expect(code).contains(
+        'const n0 = _createComponentWithFallback(_component_Foo)',
+      )
+      expect(code).contains(
+        'const n1 = _createComponentWithFallback(_component_Foo)',
+      )
+    })
+
+    test('component inside a slot', () => {
+      const code = compile(`<Parent><Foo/></Parent>`, {
+        nodeTransforms: [importComponents(['Foo'])],
+      })
+      expect(code).matchSnapshot()
+      expect(code).contains(`import _component_Foo from '/components/Foo.vue';`)
+      expect(code).not.contains('_resolveComponent("Foo")')
+      expect(code).not.contains('_createAssetComponent("Foo"')
+      expect(code).contains(
+        'const n0 = _createComponentWithFallback(_component_Foo, null, null, 2 /* SLOT */)',
+      )
+      expect(code).contains('_createAssetComponent("Parent"')
+    })
+
+    test('leaves self-referencing component untouched', () => {
+      const code = compile(`<Example/><Foo/>`, {
+        filename: `/foo/bar/Example.vue?vue&type=template`,
+        nodeTransforms: [importComponents(['Foo'])],
+      })
+      expect(code).matchSnapshot()
+      expect(code).contains(`import _component_Foo from '/components/Foo.vue';`)
+      expect(code).contains(
+        'const n0 = _createAssetComponent("Example", null, null, null, null, true)',
+      )
+      expect(code).contains(
+        'const n1 = _createComponentWithFallback(_component_Foo)',
+      )
+    })
+
+    test('self-referencing component', () => {
+      const code = compile(`<Example/>`, {
+        filename: `/foo/bar/Example.vue?vue&type=template`,
+        nodeTransforms: [importComponents(['Example__self'])],
+      })
+      expect(code).matchSnapshot()
+      expect(code).contains(
+        `import _component_Example__self from '/components/Example__self.vue';`,
+      )
+      expect(code).not.contains('_resolveComponent("Example"')
+      expect(code).not.contains('_createAssetComponent("Example"')
+      expect(code).contains(
+        'const n0 = _createComponentWithFallback(_component_Example__self, null, null, true)',
+      )
+    })
   })
 })

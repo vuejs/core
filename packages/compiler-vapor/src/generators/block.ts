@@ -66,7 +66,7 @@ export function genBlockContent(
   } = block
   const resetBlock = context.enterBlock(block)
   const singleUseAssetComponentNames = root
-    ? collectSingleUseAssetComponents(block)
+    ? collectSingleUseAssetComponents(block, context.ir.component)
     : undefined
   const prevSingleUseAssetComponentNames = context.singleUseAssetComponentNames
 
@@ -335,7 +335,10 @@ interface AssetComponentUsage {
   root: boolean
 }
 
-function collectSingleUseAssetComponents(block: BlockIRNode): Set<string> {
+function collectSingleUseAssetComponents(
+  block: BlockIRNode,
+  assetComponents: Set<string>,
+): Set<string> {
   const usageMap = new Map<string, AssetComponentUsage>()
   const seenOperations = new Set<OperationNode>()
 
@@ -346,7 +349,7 @@ function collectSingleUseAssetComponents(block: BlockIRNode): Set<string> {
   const names = new Set<string>()
 
   for (const [name, usage] of usageMap) {
-    if (usage.count === 1 && usage.root) {
+    if (usage.count === 1 && usage.root && assetComponents.has(name)) {
       names.add(name)
     }
   }
