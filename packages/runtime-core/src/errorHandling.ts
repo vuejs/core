@@ -128,7 +128,7 @@ export function handleError(
       : `https://vuejs.org/error-reference/#runtime-${type}`
     while (cur) {
       const errorCapturedHooks = cur.ec
-      if (errorCapturedHooks) {
+      if (errorCapturedHooks && !cur.isUnmounted) {
         for (let i = 0; i < errorCapturedHooks.length; i++) {
           if (
             errorCapturedHooks[i](err, exposedInstance, errorInfo) === false

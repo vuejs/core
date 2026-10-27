@@ -784,6 +784,100 @@ describe('Suspense', () => {
     expect(serializeInner(root)).toBe(`<div>oops</div>`)
   })
 
+  test.each([
+    { unmount: 'none', captureOuter: true },
+    { unmount: 'boundary', captureOuter: true },
+    { unmount: 'boundary', captureOuter: false },
+    { unmount: 'app', captureOuter: true },
+  ])(
+    'async setup rejection (unmount: $unmount, capture outer: $captureOuter)',
+    async ({ unmount, captureOuter }) => {
+      const error = new Error('request failed')
+      let reject!: (error: Error) => void
+      const pending = new Promise<void>((_, rejectPending) => {
+        reject = rejectPending
+      })
+      const innerHandler = vi.fn(() => false)
+      const outerHandler = vi.fn(() => (captureOuter ? false : undefined))
+      const appHandler = vi.fn()
+      const renderAsync = vi.fn(() => h('div', 'ready'))
+      const show = ref(true)
+      const Async = {
+        async setup() {
+          await pending
+        },
+        render: renderAsync,
+      }
+      const Boundary = {
+        setup() {
+          onErrorCaptured(innerHandler)
+          return () =>
+            h(Suspense, null, {
+              default: () => h(Async),
+              fallback: () => h('p', 'loading'),
+            })
+        },
+      }
+      const app = createApp({
+        setup() {
+          onErrorCaptured(outerHandler)
+          return () => (show.value ? h(Boundary) : h('p', 'left'))
+        },
+      })
+      app.config.errorHandler = appHandler
+      const root = document.createElement('div')
+      app.mount(root)
+      expect(root.innerHTML).toBe('<p>loading</p>')
+
+      if (unmount === 'boundary') {
+        show.value = false
+      } else if (unmount === 'app') {
+        app.unmount()
+      }
+      await nextTick()
+
+      reject(error)
+      // Drain the async setup rejection and Suspense's promise chain.
+      await new Promise(r => setTimeout(r))
+
+      if (unmount === 'none') {
+        expect(innerHandler).toHaveBeenCalledTimes(1)
+        expect(innerHandler).toHaveBeenCalledWith(
+          error,
+          expect.any(Object),
+          'setup function',
+        )
+        expect(outerHandler).not.toHaveBeenCalled()
+        expect(appHandler).not.toHaveBeenCalled()
+      } else {
+        expect(innerHandler).not.toHaveBeenCalled()
+        if (unmount === 'boundary') {
+          expect(outerHandler).toHaveBeenCalledTimes(1)
+          expect(outerHandler).toHaveBeenCalledWith(
+            error,
+            expect.any(Object),
+            'setup function',
+          )
+        } else {
+          expect(outerHandler).not.toHaveBeenCalled()
+        }
+        if (unmount === 'app' || !captureOuter) {
+          expect(appHandler).toHaveBeenCalledTimes(1)
+          expect(appHandler).toHaveBeenCalledWith(
+            error,
+            expect.any(Object),
+            'setup function',
+          )
+        } else {
+          expect(appHandler).not.toHaveBeenCalled()
+        }
+        expect(renderAsync).not.toHaveBeenCalled()
+        expect(root.innerHTML).toBe(unmount === 'app' ? '' : '<p>left</p>')
+      }
+      if (unmount !== 'app') app.unmount()
+    },
+  )
+
   // #3857
   test('error handling w/ template optimization', async () => {
     const Async = {

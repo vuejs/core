@@ -6,8 +6,10 @@ import {
   h,
   nextTick,
   nodeOps,
+  onBeforeUnmount,
   onErrorCaptured,
   onMounted,
+  onUnmounted,
   ref,
   render,
   watch,
@@ -91,6 +93,35 @@ describe('error handling', () => {
     expect(fn).toHaveBeenCalledTimes(1)
     expect(fn).toHaveBeenCalledWith(err, 'mounted hook', 'child')
   })
+
+  test.each([onBeforeUnmount, onUnmounted])(
+    'captures teardown errors before the ancestor finishes unmounting (%s)',
+    async registerHook => {
+      const error = new Error('teardown failed')
+      const handler = vi.fn((_: unknown) => false)
+      const Child = {
+        setup() {
+          registerHook(() => {
+            throw error
+          })
+          return () => null
+        },
+      }
+      const Parent = {
+        setup() {
+          onErrorCaptured(handler)
+          return () => h(Child)
+        },
+      }
+      const root = nodeOps.createElement('div')
+      render(h(Parent), root)
+      render(null, root)
+      await nextTick()
+
+      expect(handler).toHaveBeenCalledTimes(1)
+      expect(handler.mock.calls[0][0]).toBe(error)
+    },
+  )
 
   test('async error handling', async () => {
     const err = new Error('foo')
