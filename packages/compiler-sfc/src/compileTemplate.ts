@@ -254,8 +254,14 @@ function doCompileTemplate({
         compilerOptions.nodeTransforms || [],
       ),
       filename,
-      onError: e => errors.push(e),
-      onWarn: w => warnings.push(w),
+      onError: e => {
+        errors.push(e)
+        compilerOptions.onError?.(e)
+      },
+      onWarn: w => {
+        warnings.push(w)
+        compilerOptions.onWarn?.(w)
+      },
     },
   )
 

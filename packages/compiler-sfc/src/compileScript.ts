@@ -1009,6 +1009,7 @@ export function compileScript(
 
   let templateMap
   let templateCode
+  let tips: string[] | undefined
   // 9. generate return statement
   let returned
   // ensure props bindings register before compile template in inline mode
@@ -1058,7 +1059,14 @@ export function compileScript(
       }
       // inline render function mode - we are going to compile the template and
       // inline it right here
-      const { code, preamble, tips, errors, helpers, map } = compileTemplate({
+      const {
+        code,
+        preamble,
+        tips: inlineTips,
+        errors,
+        helpers,
+        map,
+      } = compileTemplate({
         filename,
         ast: sfc.template.ast,
         source: sfc.template.content,
@@ -1077,10 +1085,11 @@ export function compileScript(
           bindingMetadata: ctx.bindingMetadata,
         },
       })
+      tips = inlineTips
       templateMap = map
       templateCode = code
-      if (tips.length) {
-        tips.forEach(warnOnce)
+      if (inlineTips.length) {
+        inlineTips.forEach(warnOnce)
       }
       const err = errors[0]
       if (typeof err === 'string') {
@@ -1279,6 +1288,7 @@ export function compileScript(
     scriptAst: scriptAst?.body,
     scriptSetupAst: scriptSetupAst?.body,
     deps: ctx.deps ? [...ctx.deps] : undefined,
+    tips,
   }
 }
 
