@@ -4377,7 +4377,7 @@ describe('component: slots', () => {
           expect(slotBlock).toBeInstanceOf(DynamicFragment)
           expect(slotBlock).not.toBeInstanceOf(SlotFragment)
           expect(container.innerHTML).toBe(
-            '<!--[--><main>content</main><!--[--><!--]--><!--slot--><p>after</p><!--]-->',
+            '<!--[--><main>content</main><!--[--><!--slot--><!--]--><p>after</p><!--]-->',
           )
           expect(`Hydration node mismatch`).not.toHaveBeenWarned()
           expect(`Hydration children mismatch`).not.toHaveBeenWarned()

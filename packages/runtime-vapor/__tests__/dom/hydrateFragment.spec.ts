@@ -179,7 +179,7 @@ describe('resolveDynamicAnchor', () => {
     expect(create.mark).toBeUndefined()
   })
 
-  test('empty inner v-if that consumed the slot range reuses the slot end anchor', () => {
+  test('empty inner v-if at the slot range close creates before it', () => {
     const host = document.createElement('div')
     const start = document.createComment('[')
     const end = document.createComment(']')
@@ -191,9 +191,11 @@ describe('resolveDynamicAnchor', () => {
       ),
     )
 
-    const reuse = expectKind(plan, 'reuse')
-    expect(reuse.node).toBe(end)
-    expect(reuse.resetNodes).toBeUndefined()
+    // the close stays the slot's own anchor
+    const create = expectKind(plan, 'create')
+    expect(create.parent).toBe(host)
+    expect(create.next).toBe(end)
+    expect(create.mark).toBeUndefined()
   })
 
   test('empty fragment creates after an already reused placeholder', () => {

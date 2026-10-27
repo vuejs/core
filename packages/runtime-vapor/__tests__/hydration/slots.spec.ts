@@ -304,8 +304,8 @@ describe('Vapor Mode hydration', () => {
         `
         "
         <!--[--><div>
-        <!--[--><!--]-->
-        <!--slot--></div><span>tail</span><!--]-->
+        <!--[--><!--if--><!--]-->
+        </div><span>tail</span><!--]-->
         "
       `,
       )
@@ -319,8 +319,8 @@ describe('Vapor Mode hydration', () => {
         `
         "
         <!--[--><div>
-        <!--[--><span>bar</span><!--]-->
-        <!--slot--></div><span>tail updated</span><!--]-->
+        <!--[--><span>bar</span><!--if--><!--]-->
+        </div><span>tail updated</span><!--]-->
         "
       `,
       )
@@ -332,8 +332,8 @@ describe('Vapor Mode hydration', () => {
         `
         "
         <!--[--><div>
-        <!--[--><!--]-->
-        <!--slot--></div><span>tail updated</span><!--]-->
+        <!--[--><!--if--><!--]-->
+        </div><span>tail updated</span><!--]-->
         "
       `,
       )

@@ -14,8 +14,9 @@ import { defineVaporComponent } from '../../src'
  *
  * Because a wrong shape would silently send the bench through mismatch
  * recovery instead of the adoption path it means to measure,
- * `__tests__/hydration/benchFixtures.spec.ts` asserts every fixture hydrates
- * with no mismatch and reproduces its own markup.
+ * `__tests__/hydration/benchFixtures.spec.ts` asserts every fixture's markup
+ * is what the SSR compiler renders for its component (compiled from `sources`)
+ * and that it hydrates with no mismatch.
  */
 
 const N = 250
@@ -40,6 +41,12 @@ function compileToRender(
   })
 }
 
+/** The template and setup state each fixture component was compiled from. */
+export const sources: Map<
+  any,
+  { template: string; setupState: Record<string, any> }
+> = new Map()
+
 function component(
   template: string,
   setupState: Record<string, any> = {},
@@ -48,10 +55,12 @@ function component(
   for (const key in setupState) {
     bindingMetadata[key] = BindingTypes.SETUP_CONST
   }
-  return defineVaporComponent({
+  const comp = defineVaporComponent({
     render: compileToRender(template, bindingMetadata),
     setup: () => setupState,
   })
+  sources.set(comp, { template, setupState })
+  return comp
 }
 
 export interface HydrationFixture {
@@ -163,7 +172,7 @@ export const fixtures: HydrationFixture[] = [
       Card,
     }),
     html: `<ul><!--[-->${range(
-      () => `<li class="row"><!--[--><span>s</span><!--]--></li>`,
+      () => `<li class="row"><!--(--><span>s</span><!--)--></li>`,
     )}<!--]--></ul>`,
   },
 ]

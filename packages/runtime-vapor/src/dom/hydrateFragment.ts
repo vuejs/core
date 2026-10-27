@@ -80,10 +80,11 @@ export function insertUntrackedAnchor(
 }
 
 /**
- * Whether `node` can serve as `frag`'s anchor. Beyond the SSR candidates
- * (`<!---->` and a fragment close), dev builds also accept a runtime anchor
- * this fragment kind already created: those carry the fragment's debug label
- * as their comment data, where prod uses unlabeled text nodes.
+ * Whether `node` can serve as `frag`'s anchor. Beyond the SSR candidate
+ * (`<!---->`), dev builds also accept a runtime anchor this fragment kind
+ * already created: those carry the fragment's debug label as their comment
+ * data, where prod uses unlabeled text nodes. A range close is never one: it
+ * belongs to the list, row or slot whose range it closes.
  */
 function isReusableAnchorCandidate(
   node: Node | null,
@@ -92,7 +93,6 @@ function isReusableAnchorCandidate(
   return (
     !!node &&
     (isComment(node, '') ||
-      isRangeEnd(node) ||
       (__DEV__ &&
         frag !== undefined &&
         ((frag.__vf & IF && isComment(node, 'v-if')) ||
@@ -196,9 +196,11 @@ export type AnchorPlan =
  * 4. `planRestartFromRuntimeComment` — the block is a bare runtime comment
  *    (an empty branch created earlier in this same pass): reuse it if it is
  *    still in the DOM, otherwise restart from the cursor and trim.
- * 5. `planFromBlockBoundary` — fallback: derive parent/next from the
- *    hydrated block itself (dynamic component, async component, keyed
- *    fragment with single-root content, anything whose range was stripped).
+ * 5. `planFromBlockBoundary` — fallback: an empty block at the close of a
+ *    range it does not own goes in front of that close; otherwise derive
+ *    parent/next from the hydrated block itself (dynamic component, async
+ *    component, keyed fragment with single-root content, anything whose
+ *    range was stripped).
  *
  * Marker discipline: a plan that adopts an SSR node claims it with
  * `claimAnchor` (it keeps its logical position); a plan that creates a
@@ -346,11 +348,12 @@ function planRestartFromRuntimeComment(
 function planFromBlockBoundary(frag: DynamicFragment): AnchorPlan {
   // Covers: dynamic component, async component, keyed fragment, and any
   // fragment whose SSR range was stripped.
-  const end = currentSlotEndAnchor
-  if (end && currentHydrationNode === end && !isValidBlock(frag.nodes)) {
-    // a branch rendering nothing, e.g. `<template v-else />`, as the whole
-    // slot content the server dropped: it goes before the slot's close
-    return { kind: 'create', parent: end.parentNode!, next: end }
+  const close = currentHydrationNode
+  if (!isValidBlock(frag.nodes) && close && isRangeEnd(close)) {
+    // A branch rendering nothing at the close of the range around it, e.g.
+    // `<template v-else />` as the whole slot content the server dropped:
+    // the close stays that range's anchor, the branch goes before it.
+    return { kind: 'create', parent: close.parentNode!, next: close }
   }
   const node = findBlockBoundary(frag.nodes)
   return { kind: 'create', parent: node.parentNode!, next: node.nextNode }

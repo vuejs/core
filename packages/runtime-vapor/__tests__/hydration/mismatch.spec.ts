@@ -22,6 +22,7 @@ import {
   compileVaporComponent,
   mountWithHydration,
   setupHydrationTest,
+  testHydration,
   testWithVaporApp,
 } from './_helpers'
 
@@ -1608,5 +1609,153 @@ describe('data-allow-mismatch', () => {
     )
 
     expect(`Hydration attribute mismatch`).not.toHaveBeenWarned()
+  })
+})
+
+// An empty client branch replacing server content never takes the close
+// marker of the range around it as its anchor: that marker stays with the
+// list, row or slot that owns it, and the branch gets a runtime anchor
+// in front of it.
+describe('range close ownership', () => {
+  const state = (show: boolean) =>
+    ref({
+      show,
+      groups: [
+        { id: 'A', items: [1, 2] },
+        { id: 'B', items: [1, 2] },
+      ],
+      items: [1, 2],
+    })
+
+  test('single-root v-if as a whole v-for row', async () => {
+    const data = state(false)
+    const { container } = await testHydration(
+      `<template>
+        <div>
+          <template v-for="g in data.groups" :key="g.id">
+            <i>{{ g.id }}</i>
+            <template v-for="item in g.items" :key="item">
+              <span v-if="data.show">{{ g.id }}:{{ item }}</span>
+            </template>
+          </template>
+        </div>
+      </template>`,
+      {},
+      data,
+      { serverData: state(true) },
+    )
+    const group = (id: string) =>
+      `<!--[--><i>${id}</i><!--[--><!--[--><!--if--><!--]--><!--[--><!--if--><!--]--><!--]--><!--]-->`
+    expect(container.innerHTML).toBe(
+      `<div><!--[-->${group('A')}${group('B')}<!--]--></div>`,
+    )
+    expect(`Hydration children mismatch`).toHaveBeenWarned()
+
+    data.value.show = true
+    data.value.groups[0].items.push(3)
+    await nextTick()
+    expect(container.innerHTML).toBe(
+      `<div><!--[--><!--[--><i>A</i><!--[-->` +
+        `<!--[--><span>A:1</span><!--if--><!--]-->` +
+        `<!--[--><span>A:2</span><!--if--><!--]-->` +
+        `<span>A:3</span><!--if-->` +
+        `<!--]--><!--]-->` +
+        `<!--[--><i>B</i><!--[-->` +
+        `<!--[--><span>B:1</span><!--if--><!--]-->` +
+        `<!--[--><span>B:2</span><!--if--><!--]-->` +
+        `<!--]--><!--]--><!--]--></div>`,
+    )
+
+    data.value.groups[0].items.splice(0, 2)
+    await nextTick()
+    expect(container.querySelector('div')!.textContent).toBe('AA:3BB:1B:2')
+  })
+
+  test('single-root v-if closing a wrapped v-for row', async () => {
+    const data = state(false)
+    const { container } = await testHydration(
+      `<template>
+        <div>
+          <template v-for="g in data.groups" :key="g.id">
+            <template v-for="item in g.items" :key="item">
+              <i>{{ g.id }}:{{ item }}</i>
+              <span v-if="data.show">x</span>
+            </template>
+            <b>tail</b>
+          </template>
+        </div>
+      </template>`,
+      {},
+      data,
+      { serverData: state(true) },
+    )
+    const group = (id: string) =>
+      `<!--[--><!--[-->` +
+      `<!--[--><i>${id}:1</i><!--if--><!--]-->` +
+      `<!--[--><i>${id}:2</i><!--if--><!--]-->` +
+      `<!--]--><b>tail</b><!--]-->`
+    expect(container.innerHTML).toBe(
+      `<div><!--[-->${group('A')}${group('B')}<!--]--></div>`,
+    )
+    expect(`Hydration children mismatch`).toHaveBeenWarned()
+
+    data.value.show = true
+    data.value.groups[0].items.push(3)
+    await nextTick()
+    expect(container.innerHTML).toBe(
+      `<div><!--[--><!--[--><!--[-->` +
+        `<!--[--><i>A:1</i><span>x</span><!--if--><!--]-->` +
+        `<!--[--><i>A:2</i><span>x</span><!--if--><!--]-->` +
+        `<i>A:3</i><span>x</span><!--if-->` +
+        `<!--]--><b>tail</b><!--]-->` +
+        `<!--[--><!--[-->` +
+        `<!--[--><i>B:1</i><span>x</span><!--if--><!--]-->` +
+        `<!--[--><i>B:2</i><span>x</span><!--if--><!--]-->` +
+        `<!--]--><b>tail</b><!--]--><!--]--></div>`,
+    )
+
+    data.value.groups[0].items.splice(0, 2)
+    await nextTick()
+    expect(container.querySelector('div')!.textContent).toBe(
+      'A:3xtailB:1xB:2xtail',
+    )
+  })
+
+  test('single-root v-if as the whole slot content', async () => {
+    const data = state(false)
+    const { container } = await testHydration(
+      `<template>
+        <div>
+          <components.Child v-for="item in data.items" :key="item">
+            <li v-if="data.show">{{ item }}</li>
+          </components.Child>
+        </div>
+      </template>`,
+      { Child: `<template><ul><slot /></ul></template>` },
+      data,
+      { serverData: state(true) },
+    )
+    expect(container.innerHTML).toBe(
+      `<div><!--[-->` +
+        `<ul><!--[--><!--if--><!--]--></ul>` +
+        `<ul><!--[--><!--if--><!--]--></ul>` +
+        `<!--]--></div>`,
+    )
+    expect(`Hydration children mismatch`).toHaveBeenWarned()
+
+    data.value.show = true
+    data.value.items.push(3)
+    await nextTick()
+    expect(container.innerHTML).toBe(
+      `<div><!--[-->` +
+        `<ul><!--[--><li>1</li><!--if--><!--]--></ul>` +
+        `<ul><!--[--><li>2</li><!--if--><!--]--></ul>` +
+        `<ul><li>3</li><!--if--><!--slot--></ul>` +
+        `<!--]--></div>`,
+    )
+
+    data.value.items.splice(0, 2)
+    await nextTick()
+    expect(container.querySelector('div')!.textContent).toBe('3')
   })
 })
