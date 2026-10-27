@@ -199,6 +199,20 @@ init();
     assertCode(content)
   })
 
+  test('default values w/ array runtime declaration & key containing symbols', () => {
+    const { content } = compile(`
+      <script setup>
+      const { 'foo:bar': fooBar = () => {}, 'aria-label': label = () => 'x' } = defineProps(['foo', 'foo:bar', 'aria-label'])
+      </script>
+    `)
+    // keys containing symbols are escaped, and so must be the skip marker key
+    expect(content).toMatch(`{
+  "foo:bar": () => {}, "__skip_foo:bar": true,
+  "aria-label": () => 'x', "__skip_aria-label": true
+})`)
+    assertCode(content)
+  })
+
   test('default values w/ object runtime declaration', () => {
     const { content } = compile(`
       <script setup>
