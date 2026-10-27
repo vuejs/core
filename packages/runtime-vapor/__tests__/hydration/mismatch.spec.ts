@@ -1759,3 +1759,33 @@ describe('range close ownership', () => {
     expect(container.querySelector('div')!.textContent).toBe('3')
   })
 })
+
+// Coverage guard: a wrapped v-for row whose content does not end on the row's
+// own close marker (an extra server node) still resumes after that marker.
+describe('v-for row close', () => {
+  test('row with an extra server node resumes after its close', async () => {
+    const data = ref({ items: ['a', 'b'] })
+    const row = (item: string, extra = '') =>
+      `<!--[--><li>${item}</li><i>-</i>${extra}<!--]-->`
+    const { container } = await mountWithHydration(
+      `<ul><!--[-->${row('a', '<b>extra</b>')}${row('b')}<!--]--></ul>`,
+      `<ul>
+        <template v-for="item in data.items" :key="item">
+          <li>{{ item }}</li>
+          <i>-</i>
+        </template>
+      </ul>`,
+      data,
+    )
+    expect(container.innerHTML).toBe(
+      `<ul><!--[-->${row('a', '<b>extra</b>')}${row('b')}<!--]--></ul>`,
+    )
+
+    data.value.items.push('c')
+    await nextTick()
+    expect(container.innerHTML).toBe(
+      `<ul><!--[-->${row('a', '<b>extra</b>')}${row('b')}` +
+        `<li>c</li><i>-</i><!--]--></ul>`,
+    )
+  })
+})

@@ -251,7 +251,7 @@ type RecreatedNode = Node & {
   $rcn?: 1
 }
 
-type CommentAnchor = Comment & Anchor
+export type CommentAnchor = Comment & Anchor
 
 // `<!--(-->`…`<!--)-->` wraps a slot fallback the server rendered: a range like
 // a fragment's for whatever steps over, claims or removes one.

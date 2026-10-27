@@ -40,6 +40,7 @@ import type { DynamicSlot, VaporSlot } from './componentSlots'
 import { renderEffect } from './renderEffect'
 import { VaporVForFlags } from '@vue/shared'
 import {
+  type CommentAnchor,
   type FragmentClaim,
   type HydrationCursor,
   advanceHydrationNode,
@@ -51,7 +52,6 @@ import {
   isComment,
   isHydrating,
   locateClaimedEnd,
-  nextLogicalSibling,
   setCurrentHydrationNode,
 } from './dom/hydration'
 import {
@@ -538,15 +538,23 @@ export const createFor = (
         const node = currentHydrationNode!
         // an unwrapped row is a single node: its own hydration moves on
         let nextNode: Node | null = null
-        if (isComment(node, ']')) {
-          // fewer server rows: the rest mount before the close marker
-          nextNode = claimAnchor(node)
-        } else if (wrappedRows && isComment(node, '[')) {
-          // the row resumes after its wrapper's close marker
-          nextNode = nextLogicalSibling(node)
-          setCurrentHydrationNode(node.nextSibling)
+        let rowStart: CommentAnchor | null = null
+        if (node.nodeType === 8) {
+          const data = (node as Comment).data
+          if (data === ']') {
+            // fewer server rows: the rest mount before the close marker
+            nextNode = claimAnchor(node)
+          } else if (wrappedRows && data === '[') {
+            rowStart = node as CommentAnchor
+            setCurrentHydrationNode(node.nextSibling)
+          }
         }
         mount(source, i, parentAnchor)
+        if (rowStart) {
+          // the row's blocks consumed its range, so the cursor rests on its
+          // close marker; only a mismatch pays for the walk from the start
+          nextNode = locateClaimedEnd(rowStart)!.nextSibling
+        }
         if (nextNode) setCurrentHydrationNode(nextNode)
       }
 
