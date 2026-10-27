@@ -600,7 +600,13 @@ function genImports(importsOptions: ImportItem[], context: CodegenContext) {
   }
   importsOptions.forEach(imports => {
     context.push(`import `)
-    genNode(imports.exp, context)
+    if (imports.imported) {
+      context.push(`{ ${imports.imported} as `)
+      genNode(imports.exp, context)
+      context.push(` }`)
+    } else {
+      genNode(imports.exp, context)
+    }
     context.push(` from '${imports.path}'`)
     context.newline()
   })
