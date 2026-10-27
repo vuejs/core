@@ -267,6 +267,53 @@ describe('component: slots', () => {
     expect(vapor.text).toBe(vdom.text)
   })
 
+  test.each([
+    [`:key="data" :x="1"`, 'k2|key,x'],
+    [`:x="1" :key="data"`, 'k2|x,key'],
+    [`key="s" :x="1"`, 's|key,x'],
+    [`:key="'c'"`, 'c|key'],
+    [`:key="data" v-bind="{ y: 2 }"`, 'k2|key,y'],
+    [`v-for="i in 1" :key="data + i" :x="i"`, 'k21|key,x'],
+    [`v-for="i in [data]" :key="i"`, 'k2|key'],
+  ])(
+    'should pass the key of <slot> as a slot prop like vdom: %s',
+    async (attrs, expected) => {
+      const { vdom, vapor } = await renderParity(
+        {
+          Child: `<template><slot ${attrs} /></template>`,
+          App: `<template><components.Child v-slot="p">{{ p.key }}|{{ Object.keys(p).join() }}</components.Child></template>`,
+        },
+        () => ref('k1'),
+        async data => {
+          data.value = 'k2'
+          await nextTick()
+        },
+      )
+      expect(vdom.text).toBe(expected)
+      expect(vapor.text).toBe(vdom.text)
+    },
+  )
+
+  test('should remount slot content on a <slot> key change like vdom', async () => {
+    const reused: Record<string, boolean> = {}
+    const { vdom, vapor } = await renderParity(
+      {
+        Child: `<template><slot :key="data" /></template>`,
+        App: `<template><components.Child v-slot="p"><input />{{ p.key }}</components.Child></template>`,
+      },
+      () => ref('k1'),
+      async (data, root, mode) => {
+        const input = root.querySelector('input')
+        data.value = 'k2'
+        await nextTick()
+        reused[mode] = root.querySelector('input') === input
+      },
+    )
+    expect(reused).toEqual({ vdom: false, vapor: false })
+    expect(vdom.text).toBe('k2')
+    expect(vapor.text).toBe(vdom.text)
+  })
+
   test('v-if / v-for slots override unconditional ones like vdom', async () => {
     const texts: Record<string, string[]> = {}
     await renderParity(

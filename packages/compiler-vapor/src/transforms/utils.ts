@@ -86,6 +86,10 @@ export function wrapTemplate(node: ElementNode, dirs: string[]): TemplateNode {
           dirs.includes('key')))
     ) {
       reserved.push(prop)
+      // same as vdom: the key of a `<slot>` is also a slot prop, so the
+      // outlet keeps it too
+      if (prop.name === 'bind' && node.tagType === ElementTypes.SLOT)
+        pass.push(prop)
     } else {
       pass.push(prop)
     }

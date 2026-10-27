@@ -63,6 +63,40 @@ describe('Vapor Mode hydration', () => {
       )
     })
 
+    test('slot with a key', async () => {
+      // the server passes the key of a `<slot>` to the slot as well, so the
+      // client has to, otherwise hydration mismatches
+      const { data, container } = await testHydration(
+        `<template>
+          <components.Child v-slot="p"><span>{{ p.key }}</span></components.Child>
+        </template>`,
+        {
+          Child: `<template><slot :key="data" /></template>`,
+        },
+      )
+      expect(container.textContent).toBe('foo')
+
+      data.value = 'bar'
+      await nextTick()
+      expect(container.textContent).toBe('bar')
+    })
+
+    test('slot with a key in v-for', async () => {
+      const { data, container } = await testHydration(
+        `<template>
+          <components.Child v-slot="p"><span>{{ p.key }}</span></components.Child>
+        </template>`,
+        {
+          Child: `<template><slot v-for="n in 2" :key="data + n" /></template>`,
+        },
+      )
+      expect(container.textContent).toBe('foo1foo2')
+
+      data.value = 'bar'
+      await nextTick()
+      expect(container.textContent).toBe('bar1bar2')
+    })
+
     test('dynamic slot outlet update preserves slotted scope id', async () => {
       const data = ref({ slotName: 'one' })
       const childCode = `<template><slot :name="data.slotName" /></template>`

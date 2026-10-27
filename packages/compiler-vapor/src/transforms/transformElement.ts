@@ -1727,7 +1727,12 @@ function transformProp(
   let { name } = prop
 
   if (prop.type === NodeTypes.ATTRIBUTE) {
-    if (isReservedProp(name)) return
+    if (
+      isReservedProp(name) &&
+      // same as vdom: the key of a `<slot>` is also a slot prop
+      !(name === 'key' && node.tagType === ElementTypes.SLOT)
+    )
+      return
     return {
       key: createSimpleExpression(prop.name, true, prop.nameLoc),
       value: prop.value

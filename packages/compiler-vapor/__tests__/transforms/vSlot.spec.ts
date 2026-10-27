@@ -825,10 +825,31 @@ describe('compiler: transform slot', () => {
         prefixIdentifiers: true,
       })
 
+      // the key is also a slot prop, like vdom
       expect(code).toContain(
-        `_createSlot("default", null, null, ${forwardedFlag})`,
+        `_createSlot("default", { key: () => (_ctx.key) }, null, ${forwardedFlag})`,
       )
       expect(code).toMatch(keyedSlotRootCallRE)
+    })
+
+    test('the key of a slot outlet is also a slot prop', () => {
+      const { code } = compileVapor(`<slot :key="id" :x="1" />`, {
+        prefixIdentifiers: true,
+      })
+      expect(code).toContain('_createKeyedFragment(() => (_ctx.id)')
+      expect(code).toMatch(
+        /_createSlot\("default", \{\s+key: \(\) => \(_ctx\.id\),\s+x: 1\s+\}\)/,
+      )
+
+      // keyed by v-for: no keyed fragment of its own
+      const { code: forCode } = compileVapor(
+        `<slot v-for="i in list" :key="i" />`,
+        { prefixIdentifiers: true },
+      )
+      expect(forCode).not.toContain('_createKeyedFragment(')
+      expect(forCode).toContain(
+        '_createSlot("default", { key: () => (_for_item0.value) })',
+      )
     })
 
     test('keyed slot block with stable sibling does not track slot boundary', () => {
