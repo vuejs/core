@@ -212,4 +212,22 @@ describe('compiler sfc: transform asset url', () => {
     expect(code).toContain('_createComponent(_ctx.Number')
     expect(code).toContain('src: () => (_imports_0)')
   })
+
+  test('transform assetUrls alongside resolved component imports', () => {
+    const { code } = compileTemplate({
+      vapor: true,
+      id: 'test',
+      filename: 'test.vue',
+      source: `<Foo/><img src="./logo.png" srcset="./logo.png 2x" :alt="myFoo"/>`,
+      compilerOptions: {
+        resolveComponent: () => ({ from: './Foo.vue', id: 'Foo' }),
+      },
+    })
+    expect(code).toContain(`import Foo from './Foo.vue'`)
+    expect(code).toContain(`import _imports_1 from './logo.png'`)
+    expect(code).toContain(
+      `_template("<img src=\\"" + _imports_1 + "\\" srcset=\\"" + _imports_1 + ' 2x' + "\\">"`,
+    )
+    expect(code).toContain('_setProp(n1, "alt", _ctx.myFoo)')
+  })
 })

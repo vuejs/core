@@ -279,6 +279,7 @@ export interface CreateComponentIRNode
   props: IRProps[]
   slots: IRSlots[]
   asset: boolean
+  imported: boolean
   root: boolean | VaporSingleRoot
   once: boolean
   slotRoot?: boolean
