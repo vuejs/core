@@ -751,7 +751,6 @@ function createSuspenseBoundary(
           // retry when the setup() promise resolves.
           // component may have been unmounted before resolve.
           if (
-            instance.isUnmounted ||
             suspense.isUnmounted ||
             suspense.pendingId !== instance.suspenseId
           ) {
@@ -761,10 +760,10 @@ function createSuspenseBoundary(
           // still be set when Suspense re-enters another component's render path.
           // Clear it first.
           unsetCurrentInstance()
-          // The scope is stopped synchronously on unmount, while `isUnmounted`
-          // is deferred until the boundary resolves. Skip rendering but still
-          // release the dep so the boundary can resolve.
-          if (!instance.scope.active) {
+          // Skip rendering an unmounted component but still release its dep
+          // so the pending boundary can resolve. The scope stops synchronously,
+          // before the queued `isUnmounted` assignment.
+          if (instance.isUnmounted || !instance.scope.active) {
             if (isInPendingSuspense && --suspense.deps === 0) {
               suspense.resolve()
             }

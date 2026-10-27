@@ -789,6 +789,8 @@ describe('Suspense', () => {
     { unmount: 'boundary', captureOuter: true },
     { unmount: 'boundary', captureOuter: false },
     { unmount: 'app', captureOuter: true },
+    { unmount: 'branch', captureOuter: true },
+    { unmount: 'branch', captureOuter: false },
   ])(
     'async setup rejection (unmount: $unmount, capture outer: $captureOuter)',
     async ({ unmount, captureOuter }) => {
@@ -812,16 +814,25 @@ describe('Suspense', () => {
         setup() {
           onErrorCaptured(innerHandler)
           return () =>
-            h(Suspense, null, {
-              default: () => h(Async),
-              fallback: () => h('p', 'loading'),
-            })
+            unmount === 'branch'
+              ? h(Async)
+              : h(Suspense, null, {
+                  default: () => h(Async),
+                  fallback: () => h('p', 'loading'),
+                })
         },
       }
       const app = createApp({
         setup() {
           onErrorCaptured(outerHandler)
-          return () => (show.value ? h(Boundary) : h('p', 'left'))
+          const content = () => (show.value ? h(Boundary) : h('p', 'left'))
+          return unmount === 'branch'
+            ? () =>
+                h(Suspense, null, {
+                  default: content,
+                  fallback: () => h('p', 'loading'),
+                })
+            : content
         },
       })
       app.config.errorHandler = appHandler
@@ -829,7 +840,7 @@ describe('Suspense', () => {
       app.mount(root)
       expect(root.innerHTML).toBe('<p>loading</p>')
 
-      if (unmount === 'boundary') {
+      if (unmount === 'boundary' || unmount === 'branch') {
         show.value = false
       } else if (unmount === 'app') {
         app.unmount()
@@ -851,7 +862,7 @@ describe('Suspense', () => {
         expect(appHandler).not.toHaveBeenCalled()
       } else {
         expect(innerHandler).not.toHaveBeenCalled()
-        if (unmount === 'boundary') {
+        if (unmount === 'boundary' || unmount === 'branch') {
           expect(outerHandler).toHaveBeenCalledTimes(1)
           expect(outerHandler).toHaveBeenCalledWith(
             error,

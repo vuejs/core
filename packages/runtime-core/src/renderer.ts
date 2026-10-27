@@ -2418,9 +2418,10 @@ function baseCreateRenderer(
         parentSuspense,
       )
     }
-    queuePostRenderEffect(() => {
+    // Mark unmounted even if a pending Suspense branch discards its effects.
+    queuePostFlushCb(() => {
       instance.isUnmounted = true
-    }, parentSuspense)
+    })
 
     if (__DEV__ || __FEATURE_PROD_DEVTOOLS__) {
       devtoolsComponentRemoved(instance)
