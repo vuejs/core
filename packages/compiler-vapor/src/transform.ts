@@ -685,6 +685,7 @@ const defaultOptions = {
   transformHoist: null,
   isBuiltInComponent: NOOP,
   isCustomElement: NOOP,
+  resolveComponent: NOOP,
   expressionPlugins: [],
   scopeId: null,
   slotted: true,

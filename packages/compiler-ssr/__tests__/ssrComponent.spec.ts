@@ -568,4 +568,48 @@ describe('ssr: components', () => {
     const code = compile(src, { vapor: true }).code
     expect(code.includes('<!--{-->')).toBe(ranged)
   })
+
+  test('resolveComponent option', () => {
+    const resolveComponent = vi.fn((tag: string) =>
+      tag === 'Foo' || tag === 'Bar' ? { from: `./${tag}.vue` } : undefined,
+    )
+    const { code } = compile(`<Foo><Bar/><Baz/></Foo>`, {
+      mode: 'module',
+      resolveComponent,
+    })
+    expect(resolveComponent).toHaveBeenCalledWith(
+      'Foo',
+      expect.objectContaining({ ssr: true }),
+    )
+    expect(resolveComponent).toHaveBeenCalledWith(
+      'Bar',
+      expect.objectContaining({ ssr: true }),
+    )
+    expect(code).toMatchInlineSnapshot(`
+      "import { resolveComponent as _resolveComponent, withCtx as _withCtx, createVNode as _createVNode } from "vue"
+      import { ssrRenderComponent as _ssrRenderComponent } from "vue/server-renderer"
+      import _resolved_component_Foo from './Foo.vue'
+      import _resolved_component_Bar from './Bar.vue'
+
+
+      export function ssrRender(_ctx, _push, _parent, _attrs) {
+        const _component_Baz = _resolveComponent("Baz")
+
+        _push(_ssrRenderComponent(_resolved_component_Foo, _attrs, {
+          default: _withCtx((_, _push, _parent, _scopeId) => {
+            if (_push) {
+              _push(_ssrRenderComponent(_resolved_component_Bar, null, null, _parent, _scopeId))
+              _push(_ssrRenderComponent(_component_Baz, null, null, _parent, _scopeId))
+            } else {
+              return [
+                _createVNode(_resolved_component_Bar),
+                _createVNode(_component_Baz)
+              ]
+            }
+          }),
+          _: 1 /* STABLE */
+        }, _parent))
+      }"
+    `)
+  })
 })
