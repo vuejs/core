@@ -416,23 +416,15 @@ function adoptTemplateImpl(
 }
 
 export function nextLogicalSibling(node: Node): Node | null {
-  let next: Node | null
   if (node.nodeType === 8) {
     const data = (node as Comment).data
-    next =
-      data === '[' || data === '('
-        ? locateEndAnchor(node as CommentAnchor)!.nextSibling
-        : data === 'teleport start'
-          ? locateEndAnchor(
-              node as CommentAnchor,
-              'teleport start',
-              'teleport end',
-            )!.nextSibling
-          : node.nextSibling
-  } else {
-    next = node.nextSibling
+    if (data === '[' || data === '(') {
+      node = locateEndAnchor(node as CommentAnchor, data)!
+    } else if (data === 'teleport start') {
+      node = locateEndAnchor(node as CommentAnchor, data, 'teleport end')!
+    }
   }
-  return skipUntrackedAnchors(next)
+  return skipUntrackedAnchors(node.nextSibling)
 }
 
 /** Advance past anchors that occupy no SSR logical position. */
