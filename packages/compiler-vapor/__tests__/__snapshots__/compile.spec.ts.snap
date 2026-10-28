@@ -571,3 +571,61 @@ export function render(_ctx) {
   return n0
 }"
 `;
+
+exports[`compile > user transform resolving asset components > component inside a slot 1`] = `
+"import { createComponentWithFallback as _createComponentWithFallback, createAssetComponent as _createAssetComponent } from 'vue';
+import _component_Foo from '/components/Foo.vue';
+
+export function render(_ctx) {
+  const n1 = _createAssetComponent("Parent", null, () => {
+    const n0 = _createComponentWithFallback(_component_Foo, null, null, 2 /* SLOT */)
+    return n0
+  }, true)
+  return n1
+}"
+`;
+
+exports[`compile > user transform resolving asset components > component used more than once 1`] = `
+"import { createComponentWithFallback as _createComponentWithFallback, setInsertionState as _setInsertionState, template as _template } from 'vue';
+import _component_Foo from '/components/Foo.vue';
+const t0 = _template("<div>")
+
+export function render(_ctx) {
+  const n0 = _createComponentWithFallback(_component_Foo)
+  const n2 = t0()
+  _setInsertionState(n2)
+  const n1 = _createComponentWithFallback(_component_Foo)
+  return [n0, n2]
+}"
+`;
+
+exports[`compile > user transform resolving asset components > leaves self-referencing component untouched 1`] = `
+"import { createAssetComponent as _createAssetComponent, createComponentWithFallback as _createComponentWithFallback } from 'vue';
+import _component_Foo from '/components/Foo.vue';
+
+export function render(_ctx) {
+  const n0 = _createAssetComponent("Example", null, null, null, null, true)
+  const n1 = _createComponentWithFallback(_component_Foo)
+  return [n0, n1]
+}"
+`;
+
+exports[`compile > user transform resolving asset components > self-referencing component 1`] = `
+"import { createComponentWithFallback as _createComponentWithFallback } from 'vue';
+import _component_Example__self from '/components/Example__self.vue';
+
+export function render(_ctx) {
+  const n0 = _createComponentWithFallback(_component_Example__self, null, null, true)
+  return n0
+}"
+`;
+
+exports[`compile > user transform resolving asset components > single-use root component 1`] = `
+"import { createComponentWithFallback as _createComponentWithFallback } from 'vue';
+import _component_Foo from '/components/Foo.vue';
+
+export function render(_ctx) {
+  const n0 = _createComponentWithFallback(_component_Foo, null, null, true)
+  return n0
+}"
+`;
