@@ -279,6 +279,20 @@ export const isRangeEnd = (node: Node): node is CommentAnchor => {
 export const isComment = (node: Node, data: string): node is CommentAnchor =>
   node.nodeType === 8 && (node as Comment).data === data
 
+/** An SSR marker bounding a unit: a fragment, a slot fallback or a teleport. */
+export const isBoundaryMarker = (node: Node): boolean => {
+  if (node.nodeType !== 8) return false
+  const data = (node as Comment).data
+  return (
+    data === '[' ||
+    data === ']' ||
+    data === '(' ||
+    data === ')' ||
+    data === 'teleport start' ||
+    data === 'teleport end'
+  )
+}
+
 /** A block's claim on the `<!--[-->` opening its SSR range. */
 export interface FragmentClaim {
   start: CommentAnchor | null
@@ -398,8 +412,8 @@ export function exitHydrationCursor(cursor: HydrationCursor | null): void {
 }
 
 /**
- * Locate the first non-fragment-comment node and locate the next node
- * while handling potential fragments.
+ * Adopt the server unit under the cursor for `template`, or recover from the
+ * mismatch, and move the cursor past it.
  */
 function adoptTemplateImpl(
   node: Node,
@@ -415,7 +429,6 @@ function adoptTemplateImpl(
   if (target.blank) {
     node = resolveBlankTextTarget(node, parentNode(node)!)
   } else {
-    node = resolveHydrationTarget(node)
     if (!matchesAdoptTarget(node, target)) {
       node = handleMismatch(node, template, ns, target, nested)
     } else if (target.type === 3) {
@@ -564,19 +577,12 @@ function handleMismatch(
     warnHydrationNodeMismatch(node, template)
   }
 
-  // fragment
-  if (isRangeStart(node)) {
-    removeFragmentNodes(node)
-  }
-
-  // Reused hydration anchors are structural boundaries, not replaceable
-  // content. Mismatch recovery inserts the new node before the anchor and
-  // keeps the anchor in place.
-  const shouldPreserveAnchor = isClaimedAnchor(node)
-  const next = shouldPreserveAnchor ? node : _next(node)
-  if (!shouldPreserveAnchor) {
-    remove(node, container)
-  }
+  // Reused hydration anchors and the close of the range the block owns are
+  // structural boundaries, not replaceable content: the new node goes in
+  // front of them and they stay. A range or a teleport under the cursor is
+  // one server unit and goes as a whole.
+  const shouldPreserveAnchor = isClaimedAnchor(node) || isRangeEnd(node)
+  const next = shouldPreserveAnchor ? node : removeHydrationNode(node)
 
   let newNode: Node
   if (template[0] !== '<') {
@@ -669,8 +675,11 @@ function matchesAdoptTarget(node: Node, target: AdoptTarget): boolean {
   }
 
   if (target.type !== 1) {
-    // a claimed anchor is a structural boundary, never content
-    return !isClaimedAnchor(node)
+    // a claimed anchor or an SSR marker is a structural boundary, never
+    // content; a text node is never a marker
+    return (
+      !isClaimedAnchor(node) && (target.type === 3 || !isBoundaryMarker(node))
+    )
   }
 
   const tagName = (node as Element).tagName
@@ -736,29 +745,33 @@ export function removeFragmentNodes(node: Node, endAnchor?: Node): void {
   }
 }
 
-function removeHydrationNode(node: Node, close: Node | null = null): void {
+/**
+ * Remove the server unit `node` opens — a range, a teleport or the node by
+ * itself — keeping `close` in place, and return the node that followed it.
+ */
+function removeHydrationNode(
+  node: Node,
+  close: Node | null = null,
+): Node | null {
   const parent = parentNode(node)
   if (!parent) {
-    return
+    return null
   }
-
-  if (isRangeStart(node)) {
-    const end = locateEndAnchor(node)
-    removeFragmentNodes(node, end || undefined)
-    const endParent = end && parentNode(end)
-    if (end && end !== close && endParent) {
-      remove(end, endParent)
-    }
-  } else if (isComment(node, 'teleport start')) {
-    const end = locateEndAnchor(node, 'teleport start', 'teleport end')
-    removeFragmentNodes(node, end || undefined)
-    const endParent = end && parentNode(end)
-    if (end && end !== close && endParent) {
+  const end = isRangeStart(node)
+    ? locateEndAnchor(node)
+    : isComment(node, 'teleport start')
+      ? locateEndAnchor(node, 'teleport start', 'teleport end')
+      : null
+  const next = _next(end || node)
+  if (end) {
+    removeFragmentNodes(node, end)
+    const endParent = parentNode(end)
+    if (end !== close && endParent) {
       remove(end, endParent)
     }
   }
-
   remove(node, parent)
+  return next
 }
 
 /**
@@ -957,40 +970,6 @@ export function resolveBlankTextTarget(
   // the seeded text takes over the logical position `node` was cached at
   if (node) updateLastLocatedLogicalChild(parent, node, text)
   return text
-}
-
-export function resolveHydrationTarget(node: Node): Node {
-  while (true) {
-    // One read covers both anchor questions: an untracked anchor holds no
-    // server position and is stepped over rather than offered up for adoption
-    // (which would report a spurious mismatch); any other claimed anchor is
-    // the target itself. Unlike `skipUntrackedAnchors`, a trailing run of
-    // anchors resolves to the last one — the caller needs a node, not null.
-    const flags = (node as Anchor).$vha!
-    if (flags) {
-      if (!(flags & AnchorFlags.UNTRACKED)) return node
-    } else if (node.nodeType !== 8) {
-      return node
-    } else {
-      const data = (node as Comment).data
-      if (
-        !(
-          data === '[' ||
-          data === '(' ||
-          data === ']' ||
-          data === ')' ||
-          data === 'teleport start' ||
-          data === 'teleport end'
-        )
-      ) {
-        return node
-      }
-    }
-
-    const next = node.nextSibling
-    if (!next) return node
-    node = next
-  }
 }
 
 function warnHydrationChildrenMismatch(container: Element | null): void {

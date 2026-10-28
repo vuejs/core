@@ -101,6 +101,18 @@ describe('compiler: v-if', () => {
     )
   })
 
+  // SSR wraps every branch whose only child is not an element in a fragment,
+  // comments included: the client branch must own that range
+  test('marks a comment-only branch as multi-root', () => {
+    const { code } = compileWithVIf(`<template v-if="ok"><!--C--></template>`, {
+      comments: true,
+    })
+
+    expect(code).contains(
+      `}, null, ${VaporBlockShape.MULTI_ROOT | VaporIfFlags.TRUE_NO_SCOPE} /* TRUE_MULTI_ROOT, TRUE_NO_SCOPE */)`,
+    )
+  })
+
   test('packs once flag', () => {
     const { code } = compileWithVIf(`<div v-if="ok" v-once />`)
 

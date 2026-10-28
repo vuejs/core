@@ -4398,6 +4398,8 @@ describe('component: slots', () => {
         test('forwarded empty slot without consuming following sibling', () => {
           let slotBlock!: Block
           const Child = defineVaporComponent({
+            // a compiled multi-root component claims its SSR range
+            __multiRoot: true,
             setup() {
               return [
                 template('<main>content</main>')(),

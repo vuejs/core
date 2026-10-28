@@ -6,10 +6,10 @@ import {
   currentHydrationNode,
   enterHydrationCursor,
   exitHydrationCursor,
+  isBoundaryMarker,
   isClaimedAnchor,
   isHydrating,
   parseAdoptTarget,
-  resolveHydrationTarget,
 } from './hydration'
 import { insertionParent, resetInsertionState } from '../insertionState'
 import {
@@ -86,13 +86,10 @@ export function template(html: string, flags: number = 0, ns?: Namespace) {
       let adopted: Node
       // A static template stripped of its content at build time has nothing
       // to compare against: the node is adopted as it stands, as vdom adopts
-      // a stripped static vnode. A claimed anchor (an outlet's close marker)
-      // is where the server's output stopped, not this node.
-      const target =
-        isStatic && html === ''
-          ? resolveHydrationTarget(currentHydrationNode!)
-          : null
-      if (target && !isClaimedAnchor(target)) {
+      // a stripped static vnode. A claimed anchor or an SSR marker is where
+      // the server's output stopped, or a unit of its own, not this node.
+      const target = isStatic && html === '' ? currentHydrationNode! : null
+      if (target && !isClaimedAnchor(target) && !isBoundaryMarker(target)) {
         adopted = target
         // a hydrated node carries instance state (SSR fallthrough attrs, slot
         // scope ids), so post-hydration CSR clones come from the parsed html

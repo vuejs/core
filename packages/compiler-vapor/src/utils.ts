@@ -204,20 +204,15 @@ export function isBuiltInComponent(tag: string): string | undefined {
 }
 
 export function getBlockShape(block: BlockIRNode): VaporBlockShape {
-  // SSR renders a branch as a fragment unless its only child is an element,
-  // so an empty `<template>` branch or a lone nested `v-if` owns a range too
-  if (block.returns.length !== 1) return VaporBlockShape.MULTI_ROOT
-  const root = block.dynamic.children.find(c => c.id === block.returns[0])
-  if (root && root.operation && root.operation.type === IRNodeTypes.IF) {
-    return VaporBlockShape.MULTI_ROOT
-  }
-  return block.node.type === NodeTypes.ELEMENT &&
-    block.node.children.every(
-      child =>
-        child.type === NodeTypes.TEXT || child.type === NodeTypes.INTERPOLATION,
-    )
-    ? VaporBlockShape.MULTI_ROOT
-    : VaporBlockShape.SINGLE_ROOT
+  // Mirrors compiler-ssr's `needFragmentWrapper`: SSR renders a branch as a
+  // fragment unless its only child is an element. A lone nested v-if is an IF
+  // node there; a lone v-for is exempt and owns its own range.
+  const { node } = block
+  if (node.type !== NodeTypes.ELEMENT) return VaporBlockShape.SINGLE_ROOT
+  const child = node.children.length === 1 ? node.children[0] : undefined
+  return child && child.type === NodeTypes.ELEMENT && !findDir(child, 'if')
+    ? VaporBlockShape.SINGLE_ROOT
+    : VaporBlockShape.MULTI_ROOT
 }
 
 // A `v-if` chain with more `v-else-if` branches than this compiles to one

@@ -1955,7 +1955,7 @@ describe('Vapor Mode hydration', () => {
         )
       })
 
-      test('recovers from a mismatching range the way it does for a fragment', async () => {
+      test('replaces a mismatching unclaimed range as one unit, fallback or fragment', async () => {
         const recover = async (open: string, close: string) => {
           const { container } = await mountWithHydration(
             `<!--${open}--><p>a</p><p>b</p><!--${close}-->`,
@@ -1964,13 +1964,9 @@ describe('Vapor Mode hydration', () => {
           )
           return container.innerHTML
         }
-        const fragment = await recover('[', ']')
-        expect(`Hydration node mismatch`).toHaveBeenWarned()
-        expect(await recover('(', ')')).toBe(
-          fragment
-            .replace('<!--[-->', '<!--(-->')
-            .replace('<!--]-->', '<!--)-->'),
-        )
+        expect(await recover('[', ']')).toBe('<i>client</i><!--if-->')
+        expect(await recover('(', ')')).toBe('<i>client</i><!--if-->')
+        expect(`Hydration node mismatch`).toHaveBeenWarnedTimes(2)
       })
 
       // The adopted fallback is where the content goes ahead of: a
