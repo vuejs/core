@@ -28,6 +28,7 @@ import {
   isKnownHtmlAttr,
   isKnownMathMLAttr,
   isKnownSvgAttr,
+  isSpecialBooleanAttr,
   isString,
   isSymbol,
   isVoidTag,
@@ -353,9 +354,12 @@ function stringifyElement(
           // #6568 / #16051 same rule as the runtime: drop falsy boolean attrs
           // so that e.g. `:disabled="0"` doesn't become a present attribute.
           // A custom element has no DOM property to coerce the binding, so the
-          // runtime sets it as a plain attribute and the value must be kept.
+          // runtime falls back to `setAttribute` and keeps the value, except
+          // for special boolean attrs, which `patchAttr` coerces regardless of
+          // the element.
           if (
             (arg === 'hidden' ||
+              isSpecialBooleanAttr(arg) ||
               (isBooleanAttr(arg) && !context.isCustomElement(node.tag))) &&
             !includeBooleanAttr(evaluated)
           ) {

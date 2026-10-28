@@ -444,12 +444,13 @@ describe('stringify static html', () => {
   })
 
   // a custom element has no DOM property to coerce the binding, so the runtime
-  // sets it as a plain attribute - the falsy value must be preserved
+  // sets it as a plain attribute - the falsy value must be preserved, except
+  // for special boolean attrs, which `patchAttr` coerces on any element
   test('should keep falsy boolean attribute on custom elements', () => {
     const { ast } = compileWithStringify(
       `<div>
         ${repeat(
-          `<my-picker :default="0">pick</my-picker>`,
+          `<my-picker :default="0" :readonly="0">pick</my-picker>`,
           StringifyThresholds.ELEMENT_WITH_BINDING_COUNT,
         )}
       </div>`,
