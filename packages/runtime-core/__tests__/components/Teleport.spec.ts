@@ -540,6 +540,83 @@ describe('renderer: teleport', () => {
       expect(serializeInner(targetB)).toBe(`<div>teleported</div>`)
     })
 
+    test('should move targetStart and keep appended children in order after target change', async () => {
+      const root = document.createElement('div')
+      const targetA = document.createElement('div')
+      const targetB = document.createElement('div')
+      document.body.append(root, targetA, targetB)
+
+      const target = ref<HTMLElement>(targetA)
+      const showB = ref(false)
+
+      domRender(
+        h(() =>
+          h(
+            Teleport,
+            { to: target.value },
+            showB.value ? [h('div', 'A'), h('div', 'B')] : [h('div', 'A')],
+          ),
+        ),
+        root,
+      )
+      await nextTick()
+
+      expect(targetA.innerHTML).toBe(`<div>A</div>`)
+
+      target.value = targetB
+      await nextTick()
+
+      // targetStart must not be left behind in the old target
+      expect(targetA.childNodes.length).toBe(0)
+      // targetStart, A, targetAnchor
+      expect(targetB.childNodes.length).toBe(3)
+
+      showB.value = true
+      await nextTick()
+
+      expect(targetB.innerHTML).toBe(`<div>A</div><div>B</div>`)
+
+      domRender(null, root)
+      root.remove()
+      targetA.remove()
+      targetB.remove()
+    })
+
+    test('should not crash when root is replaced after target changed from own container', async () => {
+      const root = document.createElement('div')
+      const targetB = document.createElement('div')
+      document.body.append(root, targetB)
+
+      const target = ref<HTMLElement>(root)
+      const swapped = ref(false)
+
+      const Comp = {
+        render: () =>
+          swapped.value
+            ? h('div', 'swapped')
+            : [
+                h(Teleport, { to: target.value }, [h('div', 'A')]),
+                h('div', 'x'),
+              ],
+      }
+
+      domRender(h(Comp), root)
+      await nextTick()
+
+      target.value = targetB
+      await nextTick()
+
+      swapped.value = true
+      await nextTick()
+
+      expect(root.innerHTML).toBe(`<div>swapped</div>`)
+      expect(targetB.childNodes.length).toBe(0)
+
+      domRender(null, root)
+      root.remove()
+      targetB.remove()
+    })
+
     test('move cached text nodes', async () => {
       document.body.innerHTML = ''
       const root = document.createElement('div')

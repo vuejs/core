@@ -55,6 +55,26 @@ describe('ssr: renderAttrs', () => {
     ).toBe(` checked disabled`) // boolean attr w/ false should be ignored
   })
 
+  test('playsinline boolean attr', () => {
+    expect(ssrRenderAttrs({ playsinline: true })).toBe(` playsinline`)
+    expect(ssrRenderAttrs({ playsinline: false })).toBe(``)
+  })
+
+  test('media boolean attrs', () => {
+    expect(
+      ssrRenderAttrs({
+        disablepictureinpicture: true,
+        disableremoteplayback: true,
+      }),
+    ).toBe(` disablepictureinpicture disableremoteplayback`)
+    expect(
+      ssrRenderAttrs({
+        disablepictureinpicture: false,
+        disableremoteplayback: false,
+      }),
+    ).toBe(``)
+  })
+
   test('hidden enumerated attribute', () => {
     expect(ssrRenderAttrs({ hidden: true })).toBe(` hidden`)
     expect(ssrRenderAttrs({ disabled: true, hidden: false })).toBe(` disabled`)

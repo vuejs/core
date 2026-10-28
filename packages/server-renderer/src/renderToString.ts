@@ -6,7 +6,7 @@ import {
   ssrContextKey,
   ssrUtils,
 } from '@vue/runtime-dom'
-import { isPromise, isString } from '@vue/shared'
+import { NOOP, isPromise, isString } from '@vue/shared'
 import { type SSRBuffer, type SSRContext, renderComponentVNode } from './render'
 
 const { isVNode } = ssrUtils
@@ -81,19 +81,60 @@ export async function renderToString(
   vnode.appContext = input._context
   // provide the ssr context to the tree
   input.provide(ssrContextKey, context)
-  const buffer = await renderComponentVNode(vnode)
+  let buffer: SSRBuffer | undefined
+  let result: string
+  try {
+    buffer = await renderComponentVNode(vnode)
+    result = await unrollBuffer(buffer)
+    await resolveTeleports(context)
+  } catch (err) {
+    cleanupFailedRender(buffer, context)
+    throw err
+  }
+  stopWatchers(context)
+  return result
+}
 
-  const result = await unrollBuffer(buffer as SSRBuffer)
-
-  await resolveTeleports(context)
-
-  if (context.__watcherHandles) {
-    for (const unwatch of context.__watcherHandles) {
-      unwatch()
+export function stopWatchers(context: SSRContext, start = 0): void {
+  const handles = context.__watcherHandles
+  if (handles) {
+    for (let i = start; i < handles.length; i++) {
+      handles[i]()
     }
   }
+}
 
-  return result
+/**
+ * Stops watchers without masking the render error. Components after the
+ * failure point are still in flight and can register watchers once the render
+ * has settled, so those are stopped when they finish.
+ * Cleanup errors here have already been reported by the watcher.
+ */
+export function cleanupFailedRender(
+  buffer: SSRBuffer | undefined,
+  context: SSRContext,
+): void {
+  const stopped = context.__watcherHandles ? context.__watcherHandles.length : 0
+  try {
+    stopWatchers(context)
+  } catch {}
+  ;(async () => {
+    if (buffer) await settleBuffer(buffer)
+    for (const key in context.__teleportBuffers) {
+      await settleBuffer(context.__teleportBuffers[key])
+    }
+    stopWatchers(context, stopped)
+  })().catch(NOOP)
+}
+
+async function settleBuffer(buffer: SSRBuffer): Promise<void> {
+  if (!buffer.hasAsync) return
+  for (let item of buffer) {
+    try {
+      if (isPromise(item)) item = await item
+      if (!isString(item)) await settleBuffer(item)
+    } catch {}
+  }
 }
 
 export async function resolveTeleports(context: SSRContext): Promise<void> {

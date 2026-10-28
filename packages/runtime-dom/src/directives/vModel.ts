@@ -271,14 +271,14 @@ export const vModelSelect: ModelDirective<HTMLSelectElement, 'number'> = {
   },
   // set value in mounted & updated because <select> relies on its children
   // <option>s.
-  mounted(el, { value }) {
-    setSelected(el, value)
+  mounted(el, { value, modifiers: { number } }) {
+    setSelected(el, value, number)
   },
   beforeUpdate(el, { value }, vnode) {
     ;(el as any)._modelValue = value
     el[assignKey] = getModelAssigner(vnode)
   },
-  updated(el, { value }) {
+  updated(el, { value, modifiers: { number } }) {
     const pending = el._pendingValue
     el._pendingValue = undefined
     if (
@@ -286,7 +286,7 @@ export const vModelSelect: ModelDirective<HTMLSelectElement, 'number'> = {
       pending[0] !== el.multiple ||
       !isSameSelectValue(value, pending[1], pending[0])
     ) {
-      setSelected(el, value)
+      setSelected(el, value, number)
     }
   },
 }
@@ -308,7 +308,7 @@ function isSameSelectValue(
   return false
 }
 
-function setSelected(el: HTMLSelectElement, value: any) {
+function setSelected(el: HTMLSelectElement, value: any, number = false) {
   const isMultiple = el.multiple
   const isArrayValue = isArray(value)
   if (isMultiple && !isArrayValue && !isSet(value)) {
@@ -333,7 +333,11 @@ function setSelected(el: HTMLSelectElement, value: any) {
           option.selected = looseIndexOf(value, optionValue) > -1
         }
       } else {
-        option.selected = value.has(optionValue)
+        option.selected =
+          value.has(optionValue) ||
+          (number &&
+            typeof optionValue === 'string' &&
+            value.has(looseToNumber(optionValue)))
       }
     } else if (looseEqual(getValue(option), value)) {
       if (el.selectedIndex !== i) el.selectedIndex = i

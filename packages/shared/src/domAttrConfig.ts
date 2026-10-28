@@ -5,13 +5,18 @@ import { makeMap } from './makeMap'
  * have different names from their corresponding dom properties:
  * - itemscope -> N/A
  * - allowfullscreen -> allowFullscreen
+ * - disablepictureinpicture -> disablePictureInPicture
+ * - disableremoteplayback -> disableRemotePlayback
  * - formnovalidate -> formNoValidate
  * - ismap -> isMap
  * - nomodule -> noModule
  * - novalidate -> noValidate
+ * - playsinline -> playsInline
  * - readonly -> readOnly
  */
-const specialBooleanAttrs = `itemscope,allowfullscreen,formnovalidate,ismap,nomodule,novalidate,readonly`
+const specialBooleanAttrs =
+  `itemscope,allowfullscreen,disablepictureinpicture,disableremoteplayback,` +
+  `formnovalidate,ismap,nomodule,novalidate,playsinline,readonly`
 export const isSpecialBooleanAttr: (key: string) => boolean =
   /*@__PURE__*/ makeMap(specialBooleanAttrs)
 
