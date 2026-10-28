@@ -389,18 +389,50 @@ describe('stringify static html', () => {
     ])
   })
 
-  test.each(['false', '0'])('should remove `hidden` with value `%s`', value => {
+  // #16051
+  test.each(['false', '0', 'null'])(
+    'should remove boolean attribute with falsy value `%s`',
+    value => {
+      const { ast } = compileWithStringify(
+        `<div>
+        ${repeat(
+          `<button :disabled="${value}" :checked="${value}" :readonly="${value}" :hidden="${value}">enable</button>`,
+          StringifyThresholds.ELEMENT_WITH_BINDING_COUNT,
+        )}
+      </div>`,
+      )
+      expect(ast.cached).toMatchObject([
+        cachedArrayStaticNodeMatcher(
+          repeat(
+            `<button>enable</button>`,
+            StringifyThresholds.ELEMENT_WITH_BINDING_COUNT,
+          ),
+          StringifyThresholds.ELEMENT_WITH_BINDING_COUNT,
+        ),
+      ])
+    },
+  )
+
+  test.each([
+    ['true', 'true'],
+    ['1', '1'],
+    [`''`, ''],
+    [`'false'`, 'false'],
+  ])('should keep boolean attribute with value `%s`', (exp, expected) => {
     const { ast } = compileWithStringify(
       `<div>
-      ${repeat(
-        `<span :hidden="${value}"></span>`,
-        StringifyThresholds.ELEMENT_WITH_BINDING_COUNT,
-      )}
-    </div>`,
+        ${repeat(
+          `<button :disabled="${exp}">enable</button>`,
+          StringifyThresholds.ELEMENT_WITH_BINDING_COUNT,
+        )}
+      </div>`,
     )
     expect(ast.cached).toMatchObject([
       cachedArrayStaticNodeMatcher(
-        repeat(`<span></span>`, StringifyThresholds.ELEMENT_WITH_BINDING_COUNT),
+        repeat(
+          `<button disabled="${expected}">enable</button>`,
+          StringifyThresholds.ELEMENT_WITH_BINDING_COUNT,
+        ),
         StringifyThresholds.ELEMENT_WITH_BINDING_COUNT,
       ),
     ])

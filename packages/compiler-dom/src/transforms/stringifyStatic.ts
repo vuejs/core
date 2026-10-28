@@ -346,21 +346,14 @@ function stringifyElement(
           }="__VUE_EXP_START__${exp.content}__VUE_EXP_END__"`
           continue
         }
-        // #6568
-        if (
-          (isBooleanAttr((p.arg as SimpleExpressionNode).content) ||
-            (p.arg as SimpleExpressionNode).content === 'hidden') &&
-          exp.content === 'false'
-        ) {
-          continue
-        }
         // constant v-bind, e.g. :foo="1"
         let evaluated = evaluateConstant(exp)
         if (evaluated != null) {
-          const arg = p.arg && (p.arg as SimpleExpressionNode).content
+          const arg = (p.arg as SimpleExpressionNode).content
+          // #6568 / #16051 same rule as the runtime: drop falsy boolean attrs
+          // so that e.g. `:disabled="0"` doesn't become a present attribute
           if (
-            arg === 'hidden' &&
-            typeof evaluated === 'number' &&
+            (isBooleanAttr(arg) || arg === 'hidden') &&
             !includeBooleanAttr(evaluated)
           ) {
             continue
