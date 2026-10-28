@@ -6,7 +6,7 @@ import {
   logMismatchError,
   warn,
 } from '@vue/runtime-dom'
-import { type Namespace, Namespaces } from '@vue/shared'
+import { type Namespace, Namespaces, isArray } from '@vue/shared'
 import {
   insertionAnchor,
   insertionIndex,
@@ -29,7 +29,7 @@ import {
 } from './node'
 import { currentRenderContext } from '../renderContext'
 import { setElementScopeIdsDeep } from './scopeIdStamp'
-import { type Block, remove } from '../block'
+import { type Block, insert, remove } from '../block'
 import { isHydrating, setHydrating } from './hydrationState'
 
 const START_TAG_RE = /^<([^\s/>]+)/
@@ -234,6 +234,7 @@ const enum AnchorFlags {
   // The node occupies no SSR logical position, so every traversal primitive
   // steps over it. This — not being client-created — is what lets an anchor be
   // inserted the moment it is resolved instead of after the hydration pass.
+  // Alone, it marks client content rendered behind a mismatch-recreated root.
   UNTRACKED = 2,
 }
 
@@ -869,7 +870,30 @@ let currentMismatch: Node | null = null
 export function hydrateBlock<T extends Block>(fn: () => T, close?: Node): T {
   try {
     const block = fn()
-    if (currentMismatch && close) trimHydrationBoundary(close)
+    const root = currentMismatch
+    if (root && block) {
+      // The recreated root took over the server unit's position, and any
+      // root before it hydrated in place; the roots behind it are the
+      // detached ones. They hold no server position, so logical-index
+      // locates step over them, but they are content, not anchors
+      // (isValidBlock).
+      const parent = root.parentNode!
+      const next = root.nextSibling
+      const roots: Block[] = isArray(block) ? block : [block]
+      let i = roots.indexOf(root) + 1
+      if (__DEV__ && i === 0) {
+        warn(
+          `Hydration mismatch recovery: the recreated root is not a root of ` +
+            `the block that reported it. This is likely a Vue internal bug.`,
+        )
+      }
+      for (; i < roots.length; i++) insert(roots[i], parent, next)
+      for (let n = root.nextSibling; n && n !== next; n = n.nextSibling) {
+        // a runtime anchor among them keeps its ANCHOR bit
+        ;(n as Anchor).$vha! |= AnchorFlags.UNTRACKED
+      }
+      if (close) trimHydrationBoundary(close)
+    }
     return block
   } finally {
     // every owner runs with hydration on; a mismatch inside turned it off

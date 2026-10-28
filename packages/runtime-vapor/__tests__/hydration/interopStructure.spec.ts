@@ -1757,8 +1757,12 @@ describe('VDOM interop', () => {
       data,
       reactive({ page: false, text: 'child' }),
     )
-    expect(`Hydration node mismatch`).toHaveBeenWarned()
-    expect(container.querySelectorAll('span').length).toBe(1)
+    expect(`Hydration node mismatch`).toHaveBeenWarnedTimes(1)
+    // the component hydrating where the server left an empty branch is a
+    // client render past its first root: it does not adopt the sibling's nodes
+    expect(container.innerHTML).toBe(
+      '<div><main>a</main><p>b</p><span>child</span></div>',
+    )
 
     data.text = 'updated'
     await nextTick()
