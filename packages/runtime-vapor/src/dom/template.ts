@@ -127,8 +127,8 @@ export function template(html: string, flags: number = 0, ns?: Namespace) {
         adopted = adoptTemplate(
           currentHydrationNode!,
           html,
-          false,
           ns,
+          !!hydrationCursor,
           (adoptTarget ||= parseAdoptTarget(html)),
         )!
       }

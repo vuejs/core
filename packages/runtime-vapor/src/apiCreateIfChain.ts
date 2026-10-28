@@ -7,6 +7,7 @@ import {
   createFragmentClaim,
   currentHydrationNode,
   enterHydrationCursor,
+  hydrateBlock,
   isComment,
   isHydrating,
   locateEndAnchor,
@@ -74,13 +75,15 @@ export function createIfChain(
       hydrateDynamicFragmentAnchor(placeholder, true)
       frag = [placeholder.anchor]
     } else {
-      frag = render
-        ? render()
-        : [
+      frag = !render
+        ? [
             claimUntrackedAnchor(
               __DEV__ ? createComment('if') : createTextNode(),
             ),
           ]
+        : isHydrating
+          ? hydrateBlock(render)
+          : render()
     }
     if (isHydrating && claim && claim.start) {
       // Non-empty v-once branches have no DynamicFragment to consume the close.

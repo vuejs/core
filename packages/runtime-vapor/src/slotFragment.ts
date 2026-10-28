@@ -10,7 +10,11 @@ import {
   move,
   remove,
 } from './block'
-import { isHydrating, isHydratingSlotFallback } from './dom/hydration'
+import {
+  hydrateBlock,
+  isHydrating,
+  isHydratingSlotFallback,
+} from './dom/hydration'
 import { renderWithSlotScopeIds } from './scopeId'
 import {
   type SlotBoundaryContext,
@@ -103,9 +107,14 @@ function renderSlotFallbacks(
         getFallback: noFallback,
         isHolding: boundary.isHeld,
       })
+      // an adopted fallback owns its mismatches inside `adopt`
+      const renderFallback = adopt
+        ? () => adopt(renderBody)
+        : isHydrating
+          ? () => hydrateBlock(renderBody)
+          : renderBody
       const block = boundary.run(
-        () =>
-          withSlotBoundary(body, adopt ? () => adopt(renderBody) : renderBody),
+        () => withSlotBoundary(body, renderFallback),
         scope,
       )
       rendered.push({ block, boundary, adopted: !!adopt })

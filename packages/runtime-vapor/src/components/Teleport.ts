@@ -36,10 +36,12 @@ import {
   advanceHydrationNode,
   claimAnchor,
   currentHydrationNode,
+  hydrateBlock,
   isComment,
   isHydrating,
   runWithoutHydration,
   setCurrentHydrationNode,
+  trimHydrationBoundary,
 } from '../dom/hydration'
 import type { DefineVaporSetupFnComponent } from '../apiDefineComponent'
 import type { RawSlots } from '../componentSlots'
@@ -165,11 +167,10 @@ export class TeleportFragment extends RenderContextFragment {
           const prevScope = this.scope
           if (prevScope) prevScope.stop()
           const scope = (this.scope = new EffectScope())
+          const render = this.rawSlots && (this.rawSlots.default as BlockFn)
           this.handleChildrenUpdate(
             scope.run(() =>
-              this.rawSlots && this.rawSlots.default
-                ? (this.rawSlots.default as BlockFn)()
-                : [],
+              !render ? [] : isHydrating ? hydrateBlock(render) : render(),
             ) || [],
           )
         }),
@@ -501,6 +502,8 @@ export class TeleportFragment extends RenderContextFragment {
       this.targetAnchor = targetNode && targetNode.nextSibling
     }
     this.initChildren()
+    // server children the block did not adopt are the teleport's to drop
+    trimHydrationBoundary(this.anchor)
   }
 
   private mountChildren(target: Node): void {
@@ -566,6 +569,8 @@ export class TeleportFragment extends RenderContextFragment {
           this.mountChildren(target)
         } else {
           this.initChildren()
+          // server children the block did not adopt are the teleport's to drop
+          trimHydrationBoundary(this.targetAnchor)
         }
       }
     } else if (disabled) {

@@ -35,6 +35,7 @@ import {
   type HydrationCursor,
   claimUntrackedAnchor,
   exitHydrationCursor,
+  hydrateBlock,
   isHydrating,
 } from './dom/hydration'
 import {
@@ -592,10 +593,10 @@ export class DynamicFragment extends RenderContextFragment {
     parent: ParentNode | null,
     transition: VaporTransitionHooks | undefined,
   ): void {
+    const run = isHydrating ? () => hydrateBlock(render) : render
     try {
       this.nodes = this.runWithRenderCtx(() => {
-        const nodes =
-          (useScope ? this.scope!.run(render) : render()) || EMPTY_BLOCK
+        const nodes = (useScope ? this.scope!.run(run) : run()) || EMPTY_BLOCK
         // (Re-)apply fallthrough attrs for the new branch inside the
         // render ctx, before insertion. Disconnected renders are skipped
         // on purpose: the enclosing application traverses into them and

@@ -42,6 +42,7 @@ import {
   type HydrationCursor,
   captureHydrationCursor,
   enterHydrationCursor,
+  hydrateBlock,
   isHydrating,
 } from './dom/hydration'
 import {
@@ -503,7 +504,7 @@ export function createSlot(
           // The fallback renders outside update(), so restore the outlet's
           // context explicitly.
           withRenderContext(outlet.ctx, () => {
-            const block = fallbackFn()
+            const block = isHydrating ? hydrateBlock(fallbackFn) : fallbackFn()
             insert(block, el)
             registerNestedVDOMCleanup(block)
           })

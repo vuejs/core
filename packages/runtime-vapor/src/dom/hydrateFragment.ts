@@ -7,6 +7,7 @@ import {
   createFragmentClaim,
   currentHydrationNode,
   enterHydrationBoundary,
+  hydrateBlock,
   hydrateNode,
   isClaimedAnchor,
   isComment,
@@ -538,7 +539,11 @@ export function hydrateSlotFallbackRange(
   if (first !== range.close) {
     range.adopt = render => {
       before = first.previousSibling!
-      return hydrateNode(first, render)
+      // A mismatch drops what the fallback no longer adopts of its own server
+      // nodes, which end at `last`. What the content placed behind them (vdom
+      // content in a vapor outlet keeps its anchors there) is not its to drop.
+      const stop = nextLogicalSibling(last)!
+      return hydrateNode(first, () => hydrateBlock(render, stop))
     }
     if (range.boundary) range.boundary.adoptFallback = range.adopt
   }
