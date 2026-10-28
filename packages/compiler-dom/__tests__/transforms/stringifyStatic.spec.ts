@@ -1,5 +1,6 @@
 import {
   CREATE_STATIC,
+  type CompilerOptions,
   ConstantTypes,
   NodeTypes,
   compile,
@@ -11,11 +12,15 @@ import {
 } from '../../src/transforms/stringifyStatic'
 
 describe('stringify static html', () => {
-  function compileWithStringify(template: string) {
+  function compileWithStringify(
+    template: string,
+    options: CompilerOptions = {},
+  ) {
     return compile(template, {
       hoistStatic: true,
       prefixIdentifiers: true,
       transformHoist: stringifyStatic,
+      ...options,
     })
   }
 
@@ -431,6 +436,29 @@ describe('stringify static html', () => {
       cachedArrayStaticNodeMatcher(
         repeat(
           `<button disabled="${expected}">enable</button>`,
+          StringifyThresholds.ELEMENT_WITH_BINDING_COUNT,
+        ),
+        StringifyThresholds.ELEMENT_WITH_BINDING_COUNT,
+      ),
+    ])
+  })
+
+  // a custom element has no DOM property to coerce the binding, so the runtime
+  // sets it as a plain attribute - the falsy value must be preserved
+  test('should keep falsy boolean attribute on custom elements', () => {
+    const { ast } = compileWithStringify(
+      `<div>
+        ${repeat(
+          `<my-picker :default="0">pick</my-picker>`,
+          StringifyThresholds.ELEMENT_WITH_BINDING_COUNT,
+        )}
+      </div>`,
+      { isCustomElement: tag => tag === 'my-picker' },
+    )
+    expect(ast.cached).toMatchObject([
+      cachedArrayStaticNodeMatcher(
+        repeat(
+          `<my-picker default="0">pick</my-picker>`,
           StringifyThresholds.ELEMENT_WITH_BINDING_COUNT,
         ),
         StringifyThresholds.ELEMENT_WITH_BINDING_COUNT,

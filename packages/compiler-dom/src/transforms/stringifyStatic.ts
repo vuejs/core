@@ -351,9 +351,12 @@ function stringifyElement(
         if (evaluated != null) {
           const arg = (p.arg as SimpleExpressionNode).content
           // #6568 / #16051 same rule as the runtime: drop falsy boolean attrs
-          // so that e.g. `:disabled="0"` doesn't become a present attribute
+          // so that e.g. `:disabled="0"` doesn't become a present attribute.
+          // A custom element has no DOM property to coerce the binding, so the
+          // runtime sets it as a plain attribute and the value must be kept.
           if (
-            (isBooleanAttr(arg) || arg === 'hidden') &&
+            (arg === 'hidden' ||
+              (isBooleanAttr(arg) && !context.isCustomElement(node.tag))) &&
             !includeBooleanAttr(evaluated)
           ) {
             continue
