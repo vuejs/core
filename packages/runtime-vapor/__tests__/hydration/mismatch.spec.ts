@@ -11,7 +11,7 @@ import {
 } from '../../src'
 import { nextTick, ref } from '@vue/runtime-dom'
 import { Namespaces } from '@vue/shared'
-import { VueServerRenderer, compile, runtimeDom } from '../_utils'
+import { VueServerRenderer, compile, ifChain, runtimeDom } from '../_utils'
 import {
   currentHydrationNode,
   hydrateNode,
@@ -2054,6 +2054,29 @@ describe('mismatch recovery drops the server tail of the block', () => {
   const server = `<p>P</p><i>I</i>`
 
   test.each([
+    [
+      'v-once branch',
+      `<div>
+        <template v-if="data.a" v-once>${client}</template>
+        <template v-else>${server}</template>
+        <u>after</u>
+      </div>`,
+      {},
+    ],
+    [
+      'v-once branch of a long chain',
+      `<div>
+        ${ifChain((i, dir) =>
+          i === 0
+            ? `<template ${dir} v-once>${client}</template>`
+            : dir === 'v-else'
+              ? `<template ${dir}>${server}</template>`
+              : `<p ${dir}>other</p>`,
+        )}
+        <u>after</u>
+      </div>`,
+      {},
+    ],
     [
       'dynamic native element children',
       `<component :is="'div'" v-if="data.a">${client}</component>

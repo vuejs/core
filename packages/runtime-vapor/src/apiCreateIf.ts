@@ -10,7 +10,8 @@ import {
   hydrateBlock,
   isComment,
   isHydrating,
-  locateEndAnchor,
+  locateClaimedEnd,
+  trimHydrationBoundary,
 } from './dom/hydration'
 import {
   insertionAnchor,
@@ -71,8 +72,11 @@ export function createIf(
           : render()
     }
     if (isHydrating && claim && claim.start) {
-      // Non-empty v-once branches have no DynamicFragment to consume the close.
-      advanceHydrationNode(locateEndAnchor(claim.start)!)
+      // Non-empty v-once branches have no DynamicFragment to consume the
+      // close: drop what the branch left in its range, then step past it.
+      const close = locateClaimedEnd(claim.start)!
+      trimHydrationBoundary(close)
+      advanceHydrationNode(close)
     }
   } else {
     // DynamicFragment should be keyed for correct transition behavior
