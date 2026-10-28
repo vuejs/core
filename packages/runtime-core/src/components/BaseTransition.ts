@@ -241,6 +241,9 @@ const BaseTransitionImpl: ComponentOptions = {
             earlyRemove,
             delayedLeave,
           ) => {
+            // the delayed leave of this switch already settled, e.g. a
+            // kept-alive vnode removed again later, so leave normally
+            if (!oldInnerChild) return delayedLeave()
             const leavingVNodesCache = getLeavingNodesForType(
               state,
               oldInnerChild!,

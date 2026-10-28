@@ -1608,4 +1608,30 @@ describe('BaseTransition', () => {
       }
     },
   )
+
+  test('mode: "in-out" w/ KeepAlive should unmount after a finished switch', async () => {
+    await runTestWithKeepAlive(
+      async ({ trueBranch, falseBranch, trueSerialized, falseSerialized }) => {
+        const toggle = ref(true)
+        const { props, cbs } = mockProps({ mode: 'in-out' }, true)
+        const { root, unmount } = mount(
+          props,
+          () => (toggle.value ? trueBranch() : falseBranch()),
+          true,
+        )
+
+        toggle.value = false
+        await nextTick()
+        cbs.doneEnter[falseSerialized]()
+        cbs.doneLeave[trueSerialized]()
+        expect(serializeInner(root)).toBe(falseSerialized)
+
+        // the cached true branch is removed again by KeepAlive
+        unmount()
+        await nextTick()
+        expect(serializeInner(root)).toBe(`<!---->`)
+        expect(props.onLeave).toHaveBeenCalledTimes(1)
+      },
+    )
+  })
 })
