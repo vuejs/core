@@ -192,6 +192,10 @@ export class WatcherEffect extends ReactiveEffect {
     this.forceTrigger = forceTrigger
     this.isMultiSource = isMultiSource
 
+    if (__COMPAT__ && (options as any).compatWatchArray) {
+      ;(this as any).compatWatchArray = true
+    }
+
     if (once && cb) {
       const _cb = cb
       cb = (...args) => {
@@ -249,7 +253,8 @@ export class WatcherEffect extends ReactiveEffect {
       this.forceTrigger ||
       (this.isMultiSource
         ? (newValue as any[]).some((v, i) => hasChanged(v, oldValue[i]))
-        : hasChanged(newValue, oldValue))
+        : hasChanged(newValue, oldValue)) ||
+      (__COMPAT__ && (this as any).compatWatchArray && isArray(newValue))
     ) {
       const currentWatcher = activeWatcher
       const prevSub = setActiveSub()
