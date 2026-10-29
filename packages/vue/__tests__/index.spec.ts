@@ -6,6 +6,7 @@ import {
   type VNode,
   createApp,
   defineComponent,
+  defineCustomElement,
   h,
   nextTick,
   reactive,
@@ -816,4 +817,147 @@ describe('compiler + runtime integration', () => {
       }
     },
   )
+
+  describe('static boolean bindings', () => {
+    test('keeps native controls enabled and unchecked in stringified content', () => {
+      const save = vi.fn()
+      const render = compileToFunction(
+        `<form @submit.prevent="save">
+          ${'<p>static</p>'.repeat(20)}
+          <button :disabled="0">Save</button>
+          <input type="checkbox" :checked="!1">
+        </form>`,
+        { prefixIdentifiers: true },
+      )
+      expect(render.toString()).toContain('_createStaticVNode')
+      const container = document.createElement('div')
+      document.body.appendChild(container)
+      const app = createApp({ setup: () => ({ save }), render })
+      try {
+        app.mount(container)
+        const button = container.querySelector('button')!
+        const input = container.querySelector('input')!
+        expect(button.disabled).toBe(false)
+        expect(button.hasAttribute('disabled')).toBe(false)
+        expect(input.checked).toBe(false)
+        expect(input.hasAttribute('checked')).toBe(false)
+        button.click()
+        expect(save).toHaveBeenCalledTimes(1)
+      } finally {
+        app.unmount()
+        container.remove()
+      }
+    })
+
+    test.each(['false', '0'])(
+      'preserves custom element attribute semantics for `%s`',
+      value => {
+        const container = document.createElement('div')
+        const app = createApp({
+          render: compileToFunction(
+            `<div>${`<static-plain-element :default="0" :readonly="${value}" :hidden="${value}" />`.repeat(5)}</div>`,
+            {
+              prefixIdentifiers: true,
+              isCustomElement: tag => tag === 'static-plain-element',
+            },
+          ),
+        })
+        app.mount(container)
+        const elements = container.querySelectorAll('static-plain-element')
+        expect(elements).toHaveLength(5)
+        for (const el of elements) {
+          expect(el.getAttribute('default')).toBe('0')
+          expect(el.hasAttribute('readonly')).toBe(false)
+          expect(el.hasAttribute('hidden')).toBe(false)
+        }
+        app.unmount()
+      },
+    )
+
+    test.each(['false', '0'])(
+      'assigns `%s` to registered custom element boolean properties',
+      value => {
+        class BooleanElement extends HTMLElement {
+          get disabled() {
+            return this.hasAttribute('disabled')
+          }
+          set disabled(value: boolean) {
+            this.toggleAttribute('disabled', value)
+          }
+        }
+        const tag = `static-boolean-${value}`
+        customElements.define(tag, BooleanElement)
+        const container = document.createElement('div')
+        document.body.appendChild(container)
+        const app = createApp({
+          render: compileToFunction(
+            `<div>${`<${tag} :disabled="${value}" />`.repeat(5)}</div>`,
+            { prefixIdentifiers: true, isCustomElement: name => name === tag },
+          ),
+        })
+        try {
+          app.mount(container)
+          const elements = container.querySelectorAll<BooleanElement>(tag)
+          expect(elements).toHaveLength(5)
+          for (const el of elements) {
+            expect(el.disabled).toBe(false)
+            expect(el.hasAttribute('disabled')).toBe(false)
+          }
+        } finally {
+          app.unmount()
+          container.remove()
+        }
+      },
+    )
+
+    test.each(['false', '0'])(
+      'keeps nested Vue custom elements enabled with disabled=`%s`',
+      async value => {
+        const tag = `static-vue-boolean-${value}`
+        const VueButton = defineCustomElement({
+          props: { disabled: Boolean },
+          render() {
+            return h('button', { disabled: this.disabled }, 'Save')
+          },
+        })
+        customElements.define(tag, VueButton)
+        const count = ref(0)
+        const container = document.createElement('div')
+        document.body.appendChild(container)
+        const app = createApp({
+          setup: () => ({ count }),
+          render: compileToFunction(
+            `<div>{{ count }}<section>${'<p>static</p>'.repeat(20)}<${tag} :disabled="${value}" /></section></div>`,
+            { prefixIdentifiers: true, isCustomElement: name => name === tag },
+          ),
+        })
+        try {
+          const vm = app.mount(container)
+          const subtree = vm.$.renderCache[0]
+          expect(subtree).toBeDefined()
+          const el = container.querySelector<
+            HTMLElement & { disabled: boolean | number }
+          >(tag)!
+          expect(el.disabled).toBe(value === 'false' ? false : 0)
+          expect(el.shadowRoot!.querySelector('button')!.disabled).toBe(false)
+          expect(el.getAttribute('disabled')).toBe(value === '0' ? '0' : null)
+          if (value === '0') {
+            expect(
+              'Invalid prop: type check failed for prop "disabled". Expected Boolean, got Number with value 0.',
+            ).toHaveBeenWarned()
+          }
+
+          count.value++
+          await nextTick()
+          expect(container.textContent).toBe(`1${'static'.repeat(20)}`)
+          expect(vm.$.renderCache[0]).toBe(subtree)
+          expect(container.querySelector(tag)).toBe(el)
+          expect(el.shadowRoot!.querySelector('button')!.disabled).toBe(false)
+        } finally {
+          app.unmount()
+          container.remove()
+        }
+      },
+    )
+  })
 })
