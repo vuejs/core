@@ -1041,6 +1041,213 @@ describe('hot module replacement', () => {
     expect(serializeInner(root)).toBe('<div>bar</div>')
   })
 
+  // #16040
+  test.each([false, true])(
+    'reload async child twice while setup is pending (parent root: %s)',
+    async parentRoot => {
+      const id = `pending-async-reload-${parentRoot}`
+      let resolveSetup!: () => void
+      const pending = new Promise<void>(resolve => {
+        resolveSetup = resolve
+      })
+      const versions: string[] = []
+      const makeChild = (text: string): ComponentOptions => ({
+        __hmrId: id,
+        async setup() {
+          versions.push(text)
+          if (text === 'bar') await pending
+          return { text }
+        },
+        render: compileToFunction('<span>{{ text }}</span>'),
+      })
+      const Child = makeChild('foo')
+      createRecord(id, Child)
+      const Parent: ComponentOptions = {
+        __hmrId: `${id}-parent`,
+        components: { Child },
+        render: compileToFunction(
+          parentRoot ? '<Child />' : '<div><Child /></div>',
+        ),
+      }
+      const App: ComponentOptions = {
+        components: { Parent },
+        render: compileToFunction('<Suspense><Parent /></Suspense>'),
+      }
+      const root = nodeOps.createElement('div')
+      render(h(App), root)
+      await timeout()
+
+      reload(id, makeChild('bar'))
+      await nextTick()
+      expect(versions).toEqual(['foo', 'bar'])
+
+      reload(id, makeChild('baz'))
+      await nextTick()
+      resolveSetup()
+      await timeout()
+
+      expect(serializeInner(root)).toBe(
+        parentRoot ? '<span>baz</span>' : '<div><span>baz</span></div>',
+      )
+      expect(versions).toEqual(['foo', 'bar', 'baz'])
+    },
+  )
+
+  test('reload waits for newly exposed async roots', async () => {
+    const id = 'pending-async-nested-reload'
+    let resolveSetup!: () => void
+    let resolveInner!: () => void
+    const pending = new Promise<void>(resolve => {
+      resolveSetup = resolve
+    })
+    const innerPending = new Promise<void>(resolve => {
+      resolveInner = resolve
+    })
+    const Inner: ComponentOptions = {
+      props: ['text'],
+      async setup(props: any) {
+        if (props.text === 'bar') await innerPending
+      },
+      render: compileToFunction('<span>{{ text }}</span>'),
+    }
+    const versions: string[] = []
+    const makeChild = (text: string): ComponentOptions => ({
+      __hmrId: id,
+      components: { Inner },
+      async setup() {
+        versions.push(text)
+        if (text === 'bar') await pending
+        return { text }
+      },
+      render: compileToFunction('<Inner :text="text" />'),
+    })
+    const Child = makeChild('foo')
+    createRecord(id, Child)
+    const Parent: ComponentOptions = {
+      __hmrId: `${id}-parent`,
+      components: { Child },
+      render: compileToFunction('<Child />'),
+    }
+    const App: ComponentOptions = {
+      components: { Parent },
+      render: compileToFunction('<div><Suspense><Parent /></Suspense></div>'),
+    }
+    const root = nodeOps.createElement('div')
+    render(h(App), root)
+    await timeout()
+    expect(serializeInner(root)).toBe('<div><span>foo</span></div>')
+
+    reload(id, makeChild('bar'))
+    await nextTick()
+    reload(id, makeChild('baz'))
+    await nextTick()
+
+    resolveSetup()
+    await timeout()
+    expect(versions).toEqual(['foo', 'bar'])
+
+    resolveInner()
+    await timeout()
+    expect(serializeInner(root)).toBe('<div><span>baz</span></div>')
+    expect(versions).toEqual(['foo', 'bar', 'baz'])
+  })
+
+  test('pending reload of an unmounted instance does not overwrite a newer reload', async () => {
+    const id = 'pending-async-unmounted-reload'
+    const resolves: (() => void)[] = []
+    const versions: string[] = []
+    const makeChild = (text: string): ComponentOptions => ({
+      __hmrId: id,
+      async setup() {
+        versions.push(text)
+        if (text !== 'v2') {
+          await new Promise<void>(resolve => {
+            resolves.push(resolve)
+          })
+        }
+        return { text }
+      },
+      render: compileToFunction('<span>{{ text }}</span>'),
+    })
+    const Child = makeChild('foo')
+    createRecord(id, Child)
+    const show = ref(true)
+    const App: ComponentOptions = {
+      __hmrId: `${id}-app`,
+      components: { Child },
+      setup: () => ({ show }),
+      render: compileToFunction(
+        '<div><Suspense v-if="show"><Child /></Suspense></div>',
+      ),
+    }
+    const root = nodeOps.createElement('div')
+    render(h(App), root)
+
+    reload(id, makeChild('v1'))
+    await nextTick()
+    show.value = false
+    await nextTick()
+    show.value = true
+    await nextTick()
+    expect(versions).toEqual(['foo', 'v1'])
+
+    reload(id, makeChild('v2'))
+    await nextTick()
+    resolves[1]()
+    resolves[0]()
+    await timeout()
+
+    expect(serializeInner(root)).toBe('<div><span>v2</span></div>')
+    expect(versions).toEqual(['foo', 'v1', 'v2'])
+  })
+
+  test('reload after a pending async setup rejects', async () => {
+    const id = 'pending-async-rejected-reload'
+    let rejectSetup!: (error: Error) => void
+    const Child: ComponentOptions = {
+      __hmrId: id,
+      setup: () =>
+        new Promise((_, reject) => {
+          rejectSetup = reject
+        }),
+      render: compileToFunction('<span>old</span>'),
+    }
+    createRecord(id, Child)
+    const Parent: ComponentOptions = {
+      __hmrId: `${id}-parent`,
+      components: { Child },
+      render: compileToFunction('<Child />'),
+    }
+    const App: ComponentOptions = {
+      components: { Parent },
+      render: compileToFunction('<Suspense><Parent /></Suspense>'),
+    }
+    const root = nodeOps.createElement('div')
+    const app = createApp(App)
+    const onError = (app.config.errorHandler = vi.fn())
+    app.mount(root)
+
+    const setup = vi.fn(() => ({}))
+    reload(id, {
+      __hmrId: id,
+      setup,
+      render: compileToFunction('<span>latest</span>'),
+    })
+    await nextTick()
+    const error = new Error('setup failed')
+    rejectSetup(error)
+    await timeout()
+
+    expect(onError).toHaveBeenCalledWith(
+      error,
+      expect.anything(),
+      'setup function',
+    )
+    expect(serializeInner(root)).toBe('<span>latest</span>')
+    expect(setup).toHaveBeenCalledTimes(1)
+    app.unmount()
+  })
+
   // #14127
   test('update cached text nodes', async () => {
     const root = nodeOps.createElement('div')
