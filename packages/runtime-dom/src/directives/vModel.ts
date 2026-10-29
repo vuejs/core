@@ -221,9 +221,9 @@ export const vModelRadio: ModelDirective<HTMLInputElement> = {
       el[assignKey](getValue(el))
     })
   },
-  beforeUpdate(el, { value, oldValue }, vnode) {
+  beforeUpdate(el, { value, oldValue }, vnode, prevVNode) {
     el[assignKey] = getModelAssigner(vnode)
-    if (value !== oldValue) {
+    if (value !== oldValue || vnode.props!.value !== prevVNode.props!.value) {
       el.checked = looseEqual(value, vnode.props!.value)
     }
   },
