@@ -52,6 +52,8 @@ const replacer = (_key: string, val: unknown): any => {
     return {
       [`Set(${val.size})`]: [...val.values()].map(v => stringifySymbol(v)),
     }
+  } else if (typeof val === 'bigint') {
+    return String(val)
   } else if (isSymbol(val)) {
     return stringifySymbol(val)
   } else if (isObject(val) && !isArray(val) && !isPlainObject(val)) {
