@@ -663,4 +663,24 @@ describe('stringify static html', () => {
       ),
     ])
   })
+
+  test('should stringify style fallbacks after clearing earlier values', () => {
+    const count = StringifyThresholds.ELEMENT_WITH_BINDING_COUNT
+    const { ast } = compileWithStringify(
+      `<div>${repeat(
+        `<span :style="{ display: ['none', '', '-webkit-box', 'flex'], opacity: [1, null, 0] }" />`,
+        count,
+      )}</div>`,
+    )
+
+    expect(ast.cached).toMatchObject([
+      cachedArrayStaticNodeMatcher(
+        repeat(
+          `<span style="display:-webkit-box;display:flex;opacity:0;"></span>`,
+          count,
+        ),
+        count,
+      ),
+    ])
+  })
 })
