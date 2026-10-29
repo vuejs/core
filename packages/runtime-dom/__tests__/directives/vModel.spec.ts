@@ -955,6 +955,117 @@ describe('vModel', () => {
     expect(bar.checked).toEqual(true)
   })
 
+  it.each(['type="radio"', ':type="type"'])(
+    'should update radio checked state when its value changes with %s',
+    async typeBinding => {
+      const value = ref('foo')
+      const option = ref('foo')
+      const { code } = compile(
+        `<input ${typeBinding} v-model="value" :value="option">`,
+        { prefixIdentifiers: true },
+      )
+      render(
+        h({
+          setup: () => ({ value, option, type: 'radio' }),
+          render: new Function('Vue', code)(runtimeDom),
+        }),
+        root,
+      )
+
+      const input = root.querySelector('input')!
+      expect(input.checked).toBe(true)
+
+      option.value = 'bar'
+      await nextTick()
+      expect(input.value).toBe('bar')
+      expect(input.checked).toBe(false)
+      expect(value.value).toBe('foo')
+
+      option.value = 'foo'
+      await nextTick()
+      expect(input.value).toBe('foo')
+      expect(input.checked).toBe(true)
+      expect(value.value).toBe('foo')
+    },
+  )
+
+  it.each(['type="radio"', ':type="type"'])(
+    'should preserve radio selections when switching groups with %s',
+    async typeBinding => {
+      const value = ref('foo')
+      const option = ref('bar')
+      const name = ref('old')
+      const { code } = compile(
+        `<div>` +
+          `<input type="radio" name="old" v-model="value" value="foo">` +
+          `<input ${typeBinding} :name="name" v-model="value" :value="option">` +
+          `</div>`,
+        { prefixIdentifiers: true },
+      )
+      render(
+        h({
+          setup: () => ({ value, option, name, type: 'radio' }),
+          render: new Function('Vue', code)(runtimeDom),
+        }),
+        root,
+      )
+
+      const [original, moving] = root.querySelectorAll('input')
+      expect(original.checked).toBe(true)
+      expect(moving.checked).toBe(false)
+
+      name.value = 'new'
+      option.value = 'foo'
+      await nextTick()
+      expect(moving.name).toBe('new')
+      expect(original.checked).toBe(true)
+      expect(moving.checked).toBe(true)
+      expect(value.value).toBe('foo')
+
+      name.value = 'old'
+      option.value = 'bar'
+      await nextTick()
+      expect(moving.name).toBe('old')
+      expect(original.checked).toBe(true)
+      expect(moving.checked).toBe(false)
+      expect(value.value).toBe('foo')
+    },
+  )
+
+  it('should update radio checked state when its object value changes', async () => {
+    const value = ref({ id: 1 })
+    const option = ref({ id: '1' })
+    render(
+      h({
+        render: () =>
+          withVModel(
+            h('input', {
+              type: 'radio',
+              value: option.value,
+              'onUpdate:modelValue': (newValue: { id: number }) => {
+                value.value = newValue
+              },
+            }),
+            value.value,
+          ),
+      }),
+      root,
+    )
+
+    const input = root.querySelector('input')!
+    expect(input.checked).toBe(true)
+
+    option.value = { id: '2' }
+    await nextTick()
+    expect(input.checked).toBe(false)
+    expect(value.value).toEqual({ id: 1 })
+
+    option.value = { id: '1' }
+    await nextTick()
+    expect(input.checked).toBe(true)
+    expect(value.value).toEqual({ id: 1 })
+  })
+
   it('should work with single select', async () => {
     const component = defineComponent({
       data() {
