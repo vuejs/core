@@ -620,64 +620,88 @@ describe('component props', () => {
     })
   })
 
-  test('merging props for a component that is also used as a mixin', () => {
-    const CompA = {
-      render(this: any) {
-        return this.foo
-      },
-    }
-
-    const mixin = {
-      props: {
-        foo: {
-          default: 'from mixin',
+  test.each([false, true])(
+    'merging props for a component that is also used as a mixin (mixin first: %s)',
+    mixinFirst => {
+      const CompA = {
+        render(this: any) {
+          return this.foo
         },
-      },
-    }
+      }
 
-    const CompB = {
-      mixins: [mixin, CompA],
-      render(this: any) {
-        return this.foo
-      },
-    }
-
-    const app = createApp({
-      render() {
-        return [h(CompA), ', ', h(CompB)]
-      },
-    })
-
-    app.mixin({
-      props: {
-        foo: {
-          default: 'from global mixin',
+      const mixin = {
+        props: {
+          foo: {
+            default: 'from mixin',
+          },
         },
-      },
-    })
+      }
 
-    const root = nodeOps.createElement('div')
-    app.mount(root)
+      const CompB = {
+        mixins: [mixin, CompA],
+        render(this: any) {
+          return this.foo
+        },
+      }
 
-    expect(serializeInner(root)).toMatch(`from global mixin, from mixin`)
-  })
+      const app = createApp({
+        render() {
+          return mixinFirst
+            ? [h(CompB), ', ', h(CompA)]
+            : [h(CompA), ', ', h(CompB)]
+        },
+      })
 
-  test('share normalized props between apps without global mixins', () => {
+      app.mixin({
+        props: {
+          foo: {
+            default: 'from global mixin',
+          },
+        },
+      })
+
+      const root = nodeOps.createElement('div')
+      app.mount(root)
+
+      expect(serializeInner(root)).toMatch(
+        mixinFirst
+          ? `from mixin, from global mixin`
+          : `from global mixin, from mixin`,
+      )
+    },
+  )
+
+  test('share normalized props between apps without sharing defaults', () => {
     const instances: ComponentInternalInstance[] = []
+    const defaultFactory = vi.fn(() => ({
+      request: inject<string>('request'),
+    }))
     const Child = {
-      props: { foo: String, bar: Boolean },
+      props: {
+        foo: String,
+        bar: Boolean,
+        payload: { type: Object, default: defaultFactory },
+      },
       setup() {
         instances.push(getCurrentInstance()!)
         return () => null
       },
     }
-    const mount = () =>
-      createApp({ render: () => h(Child) }).mount(nodeOps.createElement('div'))
+    const mount = (request: string) => {
+      const app = createApp({ render: () => h(Child) })
+      app.provide('request', request)
+      app.mount(nodeOps.createElement('div'))
+      app.unmount()
+    }
 
-    mount()
-    mount()
+    mount('first')
+    mount('second')
 
     expect(instances[1].propsOptions).toBe(instances[0].propsOptions)
+    expect(instances[0].props.payload).toEqual({ request: 'first' })
+    expect(instances[1].props.payload).toEqual({ request: 'second' })
+    expect(instances[1].props.payload).not.toBe(instances[0].props.payload)
+    expect(defaultFactory).toHaveBeenCalledTimes(2)
   })
 
   test('normalize props per app when the app has global mixins', () => {
@@ -698,6 +722,7 @@ describe('component props', () => {
 
     expect(mount()).toEqual(['self'])
     expect(mount({ props: ['m'] })).toEqual(['m', 'self'])
+    expect(mount({ props: ['n'] })).toEqual(['n', 'self'])
     expect(mount()).toEqual(['self'])
   })
 

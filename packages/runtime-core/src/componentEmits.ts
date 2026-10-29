@@ -234,8 +234,7 @@ export function emit(
   }
 }
 
-const mixinEmitsCache = new WeakMap<ConcreteComponent, ObjectEmitsOptions>()
-// shared by apps without global mixins, see sharedPropsCache
+// Same cache split as sharedPropsCache.
 export const sharedEmitsCache: WeakMap<
   ConcreteComponent,
   ObjectEmitsOptions | null
@@ -247,11 +246,9 @@ export function normalizeEmitsOptions(
   asMixin = false,
 ): ObjectEmitsOptions | null {
   const cache =
-    __FEATURE_OPTIONS_API__ && asMixin
-      ? mixinEmitsCache
-      : appContext.mixins.length
-        ? appContext.emitsCache
-        : sharedEmitsCache
+    __FEATURE_OPTIONS_API__ && !asMixin && appContext.mixins.length
+      ? appContext.emitsCache
+      : sharedEmitsCache
   const cached = cache.get(comp)
   if (cached !== undefined) {
     return cached

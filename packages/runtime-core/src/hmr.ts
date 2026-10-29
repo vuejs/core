@@ -121,6 +121,9 @@ function reload(id: string, newComp: HMRComponent): void {
   newComp = normalizeClassComponent(newComp)
   // update initial def (for not-yet-rendered components)
   updateComponentDef(record.initialDef, newComp)
+  // Invalidate shared caches even when there are no mounted instances.
+  sharedPropsCache.delete(record.initialDef)
+  sharedEmitsCache.delete(record.initialDef)
 
   // create a snapshot which avoids the set being mutated during updates
   const instances = [...record.instances]
