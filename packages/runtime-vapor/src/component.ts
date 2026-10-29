@@ -138,6 +138,7 @@ import {
   enterHydrationCursor,
   exitHydrationCursor,
   hydrateBlock,
+  hydrateBlockWithErrorHandling,
   hydrateNode,
   isComment,
   isHydrating,
@@ -748,13 +749,15 @@ export function setupComponent(
 
   const setupFn = isFunction(component) ? component : component.setup
   // an inline-compiled setup renders the block itself: a root mismatch inside
-  // turns the rest of it into a client render (hydrateCall)
+  // turns the rest of it into a client render (hydrateBlockWithErrorHandling)
   const setupResult = setupFn
     ? (isHydrating
-        ? hydrateCall(setupFn, instance, ErrorCodes.SETUP_FUNCTION, [
-            instance.props,
+        ? hydrateBlockWithErrorHandling(
+            setupFn,
             instance,
-          ])
+            ErrorCodes.SETUP_FUNCTION,
+            [instance.props, instance],
+          )
         : callWithErrorHandling(setupFn, instance, ErrorCodes.SETUP_FUNCTION, [
             instance.props,
             instance,
@@ -901,24 +904,13 @@ function callRender(
     instance.slots,
   ]
   return isHydrating
-    ? hydrateCall(render, instance, ErrorCodes.RENDER_FUNCTION, args)
+    ? hydrateBlockWithErrorHandling(
+        render,
+        instance,
+        ErrorCodes.RENDER_FUNCTION,
+        args,
+      )
     : callWithErrorHandling(render, instance, ErrorCodes.RENDER_FUNCTION, args)
-}
-
-/**
- * `callWithErrorHandling` as the owner of the block it renders: a root
- * mismatch inside turns the rest of the block into a client render
- * (hydrateBlock). Its own function so the closure lives here, not in the
- * component hot paths, where capturing the locals would cost every call a
- * context allocation, hydrating or not.
- */
-function hydrateCall(
-  fn: Function,
-  instance: VaporComponentInstance,
-  type: ErrorCodes,
-  args?: unknown[],
-): any {
-  return hydrateBlock(() => callWithErrorHandling(fn, instance, type, args))
 }
 
 /**
@@ -1948,7 +1940,11 @@ function handleSetupResult(
     // continuation; render now, under the instance.
     instance.block =
       (isHydrating
-        ? hydrateCall(setupResult, instance, ErrorCodes.RENDER_FUNCTION)
+        ? hydrateBlockWithErrorHandling(
+            setupResult,
+            instance,
+            ErrorCodes.RENDER_FUNCTION,
+          )
         : callWithErrorHandling(
             setupResult,
             instance,

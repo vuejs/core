@@ -1,5 +1,8 @@
 import {
+  type ErrorCodes,
+  type GenericComponentInstance,
   MismatchTypes,
+  callWithErrorHandling,
   isMismatchAllowed,
   isHydrating as isVdomHydrating,
   isHydratingEnabled as isVdomHydratingEnabled,
@@ -869,37 +872,60 @@ let currentMismatch: Node | null = null
  */
 export function hydrateBlock<T extends Block>(fn: () => T, close?: Node): T {
   try {
-    const block = fn()
-    const root = currentMismatch
-    if (root && block) {
-      // The recreated root took over the server unit's position, and any
-      // root before it hydrated in place; the roots behind it are the
-      // detached ones. They hold no server position, so logical-index
-      // locates step over them, but they are content, not anchors
-      // (isValidBlock).
-      const parent = root.parentNode!
-      const next = root.nextSibling
-      const roots: Block[] = isArray(block) ? block : [block]
-      let i = roots.indexOf(root) + 1
-      if (__DEV__ && i === 0) {
-        warn(
-          `Hydration mismatch recovery: the recreated root is not a root of ` +
-            `the block that reported it. This is likely a Vue internal bug.`,
-        )
-      }
-      for (; i < roots.length; i++) insert(roots[i], parent, next)
-      for (let n = root.nextSibling; n && n !== next; n = n.nextSibling) {
-        // a runtime anchor among them keeps its ANCHOR bit
-        ;(n as Anchor).$vha! |= AnchorFlags.UNTRACKED
-      }
-      if (close) trimHydrationBoundary(close)
-    }
-    return block
+    return finishMismatchRecovery(fn(), close)
   } finally {
     // every owner runs with hydration on; a mismatch inside turned it off
     currentMismatch = null
     setIsHydrating(true)
   }
+}
+
+/**
+ * `hydrateBlock` without the closure: every component setup and render runs
+ * as an owner.
+ */
+export function hydrateBlockWithErrorHandling(
+  fn: Function,
+  instance: GenericComponentInstance,
+  type: ErrorCodes,
+  args?: unknown[],
+): any {
+  try {
+    return finishMismatchRecovery(
+      callWithErrorHandling(fn, instance, type, args),
+    )
+  } finally {
+    currentMismatch = null
+    setIsHydrating(true)
+  }
+}
+
+function finishMismatchRecovery<T extends Block>(block: T, close?: Node): T {
+  const root = currentMismatch
+  if (root && block) {
+    // The recreated root took over the server unit's position, and any
+    // root before it hydrated in place; the roots behind it are the
+    // detached ones. They hold no server position, so logical-index
+    // locates step over them, but they are content, not anchors
+    // (isValidBlock).
+    const parent = root.parentNode!
+    const next = root.nextSibling
+    const roots: Block[] = isArray(block) ? block : [block]
+    let i = roots.indexOf(root) + 1
+    if (__DEV__ && i === 0) {
+      warn(
+        `Hydration mismatch recovery: the recreated root is not a root of ` +
+          `the block that reported it. This is likely a Vue internal bug.`,
+      )
+    }
+    for (; i < roots.length; i++) insert(roots[i], parent, next)
+    for (let n = root.nextSibling; n && n !== next; n = n.nextSibling) {
+      // a runtime anchor among them keeps its ANCHOR bit
+      ;(n as Anchor).$vha! |= AnchorFlags.UNTRACKED
+    }
+    if (close) trimHydrationBoundary(close)
+  }
+  return block
 }
 
 function markRecreatedNode(node: Node): void {
