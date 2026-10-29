@@ -4,6 +4,7 @@ import {
   type Document,
   type PluginCreator,
   Rule,
+  list,
 } from 'postcss'
 import selectorParser from 'postcss-selector-parser'
 import { warn } from '../warn'
@@ -11,9 +12,18 @@ import { warn } from '../warn'
 const animationNameRE = /^(?:-\w+-)?animation-name$/
 const animationRE = /^(?:-\w+-)?animation$/
 const keyframesRE = /^(?:-\w+-)?keyframes$/
+const animationFields = [
+  /^(?:linear|ease|ease-in|ease-out|ease-in-out|step-start|step-end)$/i,
+  /^infinite$/i,
+  /^(?:normal|reverse|alternate|alternate-reverse)$/i,
+  /^(?:none|forwards|backwards|both)$/i,
+  /^(?:running|paused)$/i,
+]
+const animationNumberRE = /^[+-]?(?:\d*\.)?\d+(?:e[+-]?\d+)?$/i
+const animationTimingFunctionRE = /^(?:cubic-bezier|steps|linear)\(/i
 
 const scopedPlugin: PluginCreator<string> = (id = '') => {
-  const keyframes = Object.create(null)
+  const keyframes = new Set<string>()
   const shortId = id.replace(/^data-v-/, '')
 
   return {
@@ -22,13 +32,16 @@ const scopedPlugin: PluginCreator<string> = (id = '') => {
       processRule(id, rule)
     },
     AtRule(node) {
-      if (keyframesRE.test(node.name) && !node.params.endsWith(`-${shortId}`)) {
-        // register keyframes
-        keyframes[node.params] = node.params = node.params + '-' + shortId
+      if (keyframesRE.test(node.name)) {
+        const name = getKeyframeName(node.params)
+        if (name && !name.endsWith(`-${shortId}`)) {
+          keyframes.add(name)
+          node.params = scopeKeyframeName(node.params, shortId)
+        }
       }
     },
     OnceExit(root) {
-      if (Object.keys(keyframes).length) {
+      if (keyframes.size) {
         // If keyframes are found in this <style>, find and rewrite animation names
         // in declarations.
         // Caveat: this only works for keyframes and animation rules in the same
@@ -36,20 +49,24 @@ const scopedPlugin: PluginCreator<string> = (id = '') => {
         // individual animation-name declaration
         root.walkDecls(decl => {
           if (animationNameRE.test(decl.prop)) {
-            decl.value = decl.value
-              .split(',')
-              .map(v => keyframes[v.trim()] || v.trim())
+            decl.value = list
+              .comma(decl.value)
+              .map(v =>
+                keyframes.has(getKeyframeName(v))
+                  ? scopeKeyframeName(v, shortId)
+                  : v,
+              )
               .join(',')
           }
           // shorthand
           if (animationRE.test(decl.prop)) {
-            decl.value = decl.value
-              .split(',')
+            decl.value = list
+              .comma(decl.value)
               .map(v => {
-                const vals = v.trim().split(/\s+/)
-                const i = vals.findIndex(val => keyframes[val])
-                if (i !== -1) {
-                  vals.splice(i, 1, keyframes[vals[i]])
+                const vals = splitAnimationValues(v)
+                const i = findAnimationName(vals)
+                if (i !== -1 && keyframes.has(getKeyframeName(vals[i]))) {
+                  vals[i] = scopeKeyframeName(vals[i], shortId)
                   return vals.join(' ')
                 } else {
                   return v
@@ -61,6 +78,118 @@ const scopedPlugin: PluginCreator<string> = (id = '') => {
       }
     },
   }
+}
+
+function splitAnimationValues(value: string): string[] {
+  const values: string[] = []
+  const escapeRE = /\\(?:[\da-f]{1,6}(?:\r\n|[\t\n\f\r ])?|[\s\S])/iy
+  let start = 0
+  let quote = ''
+  let depth = 0
+  for (let i = 0; i < value.length; i++) {
+    const char = value[i]
+    if (char === '\\') {
+      // Hex escapes can include whitespace that belongs to the same token.
+      escapeRE.lastIndex = i
+      if (escapeRE.test(value)) i = escapeRE.lastIndex - 1
+      continue
+    }
+    if (quote) {
+      if (char === quote) quote = ''
+      continue
+    }
+    if (char === '"' || char === "'") {
+      quote = char
+    } else if (char === '/' && value[i + 1] === '*') {
+      const end = value.indexOf('*/', i + 2)
+      if (!depth && start < i) values.push(value.slice(start, i))
+      i = end < 0 ? value.length - 1 : end + 1
+      if (!depth) start = i + 1
+    } else if (char === '(') {
+      depth++
+    } else if (char === ')') {
+      if (depth) depth--
+    } else if (!depth && /[\t\n\f\r ]/.test(char)) {
+      if (start < i) values.push(value.slice(start, i))
+      start = i + 1
+    }
+  }
+  if (start < value.length) values.push(value.slice(start))
+  return values
+}
+
+function findAnimationName(values: string[]): number {
+  const seen = new Set<number>()
+  for (let i = 0; i < values.length; i++) {
+    const value = values[i]
+    if (value[0] === '"' || value[0] === "'") {
+      return i
+    }
+    const identifier = isCssIdentifier(value)
+    const decoded = unescapeCss(value)
+    const field = identifier
+      ? animationFields.findIndex(re => re.test(decoded))
+      : animationNumberRE.test(value)
+        ? 1
+        : animationTimingFunctionRE.test(decoded)
+          ? 0
+          : -1
+    // Keywords belong to an unset shorthand field before they can be names.
+    // A later keyword for an already populated field can be the animation name.
+    if (field !== -1 && !seen.has(field)) {
+      seen.add(field)
+      continue
+    }
+    if (identifier) {
+      return i
+    }
+  }
+  return -1
+}
+
+function getKeyframeName(value: string): string {
+  const quoted = value[0] === '"' || value[0] === "'"
+  // A string can name a keyframe without being a valid unquoted identifier.
+  // In particular, do not mistake functions such as var() for those names.
+  if (!quoted && !isCssIdentifier(value)) {
+    return ''
+  }
+  const name = unescapeCss(quoted ? value.slice(1, -1) : value)
+  return !quoted &&
+    /^(?:none|default|initial|inherit|unset|revert|revert-layer)$/i.test(name)
+    ? ''
+    : name
+}
+
+function isCssIdentifier(value: string): boolean {
+  const identifier = value.replace(
+    /\\(?:[\da-f]{1,6}(?:\r\n|[\t\n\f\r ])?|[^\n\f\r])/gi,
+    'a',
+  )
+  return /^(?:--|-?[_a-z\u0080-\uffff])[-\w\u0080-\uffff]*$/i.test(identifier)
+}
+
+function scopeKeyframeName(value: string, shortId: string): string {
+  return value[0] === '"' || value[0] === "'"
+    ? `${value.slice(0, -1)}-${shortId}${value[0]}`
+    : `${value}-${shortId}`
+}
+
+function unescapeCss(value: string): string {
+  return value.replace(
+    /\\(?:([\da-f]{1,6})(?:\r\n|[\t\n\f\r ])?|(\r\n|[\n\f\r])|(.))/gi,
+    (_, hex: string | undefined, newline: string | undefined, char: string) => {
+      if (hex) {
+        const code = parseInt(hex, 16)
+        return code === 0 ||
+          code > 0x10ffff ||
+          (code >= 0xd800 && code <= 0xdfff)
+          ? '\ufffd'
+          : String.fromCodePoint(code)
+      }
+      return newline ? '' : char
+    },
+  )
 }
 
 const processedRules = new WeakSet<Rule>()
