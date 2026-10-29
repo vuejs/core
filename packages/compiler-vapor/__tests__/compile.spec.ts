@@ -626,7 +626,6 @@ describe('compile', () => {
     `<div v-example=""></div>`,
     `<div v-example:foo=""></div>`,
     `<component :is=""></component>`,
-    `<slot v-bind=""></slot>`,
   ])('empty expression: %s', template => {
     const code = compile(template, {
       bindingMetadata: {
@@ -635,6 +634,14 @@ describe('compile', () => {
     })
     expect(() => babelParse(code, { sourceType: 'module' })).not.toThrow()
     expect(code).contains('() => (void 0)')
+  })
+
+  test('empty slot spread is normalized inside its getter', () => {
+    const code = compile(`<slot v-bind=""></slot>`)
+    expect(() => babelParse(code, { sourceType: 'module' })).not.toThrow()
+    expect(code).toContain(
+      '() => (_normalizeProps(_guardReactiveProps(void 0)))',
+    )
   })
 
   test.each([

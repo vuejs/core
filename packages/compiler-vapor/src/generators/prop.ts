@@ -469,20 +469,22 @@ function genDynamicPropNames(
   return id
 }
 
-function genLiteralObjectProps(
+export function genLiteralObjectProps(
   props: IRProp[],
   context: CodegenContext,
+  isComponent = false,
 ): CodeFragment[] {
   const entries: CodeFragment[][] = []
   const listeners = createHandlerGroups(entries)
   for (const prop of props) {
     if (isListenerProp(prop)) {
       listeners.add(
-        getStaticPropKeyName(prop, true),
-        genPropKey(prop, context, true),
+        getStaticPropKeyName(prop, !isComponent),
+        genPropKey(prop, context, !isComponent),
         prop.handler
           ? genEventHandler(context, prop.values, prop.handlerModifiers, {
               hoisted: prop,
+              asComponentProp: isComponent,
             })
           : genPropValue(prop.values, context),
       )

@@ -1,6 +1,6 @@
 import type { CodegenContext } from '../generate'
-import type { SlotOutletIRNode } from '../ir'
-import { VaporSlotFlags } from '@vue/shared'
+import type { IRProps, IRPropsDynamicExpression, SlotOutletIRNode } from '../ir'
+import { VaporSlotFlags, isArray } from '@vue/shared'
 import { genBlock, markSlotRootOperations } from './block'
 import { genExpression } from './expression'
 import {
@@ -11,6 +11,7 @@ import {
   genFlags,
 } from './utils'
 import { genRawProps } from './component'
+import { genLiteralObjectProps } from './prop'
 
 export function genSlotOutlet(
   oper: SlotOutletIRNode,
@@ -29,7 +30,7 @@ export function genSlotOutlet(
     fallbackArg = genBlock(fallback, context)
   }
   const createSlot = helper('createSlot')
-  const rawPropsArg = genRawProps(oper.props, context, true)
+  const rawPropsArg = genSlotProps(oper.props, context)
   const omitDefaultName =
     name.isStatic &&
     name.content === 'default' &&
@@ -49,6 +50,48 @@ export function genSlotOutlet(
   )
 
   return frag
+}
+
+function genSlotProps(
+  props: IRProps[],
+  context: CodegenContext,
+): CodeFragment[] | undefined {
+  if (!props.length) return
+  const first = props[0]
+  if (
+    props.length === 1 &&
+    isArray(first) &&
+    first.every(prop => prop.key.isStatic)
+  ) {
+    return genRawProps(props, context, true)
+  }
+
+  const { helper } = context
+  const groups = props.map(group => {
+    if (isArray(group)) {
+      return genLiteralObjectProps(group, context, true)
+    }
+    // Slot outlets keep dynamic keys in their original object group.
+    const value = genExpression(
+      (group as IRPropsDynamicExpression).value,
+      context,
+    )
+    return group.handler ? genCall(helper('toHandlers'), value) : value
+  })
+  let value = groups[0]
+  if (groups.length > 1) {
+    value = genCall(helper('mergeProps'), ...groups)
+  } else if (isArray(first)) {
+    if (first.some(prop => !prop.key.isStatic && !prop.handler)) {
+      value = genCall(helper('normalizeProps'), value)
+    }
+  } else if (!first.handler) {
+    value = genCall(
+      helper('normalizeProps'),
+      genCall(helper('guardReactiveProps'), value),
+    )
+  }
+  return ['{ $: [() => (', value, ')] }']
 }
 
 function genSlotFlags(flags: number): string | undefined {

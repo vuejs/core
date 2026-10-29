@@ -52,7 +52,8 @@ export const transformVBind: DirectiveTransform = (dir, node, context) => {
     exp = createSimpleExpression('', true, loc)
   }
 
-  arg = resolveExpression(arg)
+  // A slot's computed key must retain object overwrite / normalization semantics.
+  if (node.tagType !== ElementTypes.SLOT) arg = resolveExpression(arg)
 
   // A number literal loses its type as soon as it is stringified into the
   // template, so hold it back wherever the value does not end up there as a

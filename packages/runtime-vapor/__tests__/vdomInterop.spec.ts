@@ -16140,3 +16140,95 @@ describe('vdom conditional slot branches in a vapor outlet', () => {
     expect(new Set(seen).size).toBe(3)
   })
 })
+
+test.each([
+  [false, false],
+  [false, true],
+  [true, false],
+  [true, true],
+])(
+  'normalized slot props reach typed consumers (vapor outlet: %s, content: %s)',
+  async (outletVapor, contentVapor) => {
+    const data = ref<any>({
+      o: { class: ['a'], style: [{ color: 'red' }] },
+    })
+    const components: Record<string, any> = {}
+    const script = `<script setup>const data = _data; const components = _components;</script>`
+    components.Child = compile(
+      `${script}<template><slot class="base" :style="{ fontSize: '12px' }" v-bind="data.o" /></template>`,
+      data,
+      components,
+      { vapor: outletVapor },
+    )
+    components.Sink = compile(
+      `<script setup>defineProps({ value: String, styles: Object })</script>
+       <template><span>{{ value.split(' ').join('|') }}:{{ styles.color || '-' }}</span></template>`,
+      data,
+      components,
+      { vapor: contentVapor },
+    )
+    const App = compile(
+      `${script}<template><components.Child v-slot="p"><components.Sink :value="p.class" :styles="p.style" /></components.Child></template>`,
+      data,
+      components,
+      { vapor: contentVapor },
+    )
+    const root = document.createElement('div')
+    const app = contentVapor ? createVaporApp(App) : createApp(App)
+    app.use(vaporInteropPlugin).mount(root)
+    expect(root.textContent).toBe('base|a:red')
+    data.value.o.class.push('b')
+    data.value.o.style[0].color = 'blue'
+    await nextTick()
+    expect(root.textContent).toBe('base|a|b:blue')
+    data.value.o = { class: 'c', style: { color: 'green' } }
+    await nextTick()
+    expect(root.textContent).toBe('base|c:green')
+    delete data.value.o.class
+    delete data.value.o.style
+    await nextTick()
+    expect(root.textContent).toBe('base:-')
+    app.unmount()
+  },
+)
+
+test.each([false, true])(
+  'forwards VDOM slot props through a Vapor component (vapor content: %s)',
+  async contentVapor => {
+    const data = ref({ s: { color: 'red' } })
+    const components: Record<string, any> = {}
+    const script = `<script setup>const data = _data; const components = _components;</script>`
+    components.Child = compile(
+      `${script}<template><slot :style="data.s" /></template>`,
+      data,
+      components,
+      { vapor: false },
+    )
+    components.Relay = compile(
+      `${script}<template><components.Child v-slot="p"><slot v-bind="p" /></components.Child></template>`,
+      data,
+      components,
+      { vapor: true },
+    )
+    const App = compile(
+      `${script}<template><components.Relay v-slot="p"><span :style="p.style">content</span></components.Relay></template>`,
+      data,
+      components,
+      { vapor: contentVapor },
+    )
+    const root = document.createElement('div')
+    const app = contentVapor ? createVaporApp(App) : createApp(App)
+    app.use(vaporInteropPlugin).mount(root)
+    expect(root.textContent).toBe('content')
+    expect(root.querySelector('span')!.style.color).toBe('red')
+
+    data.value.s.color = 'blue'
+    await nextTick()
+    expect(root.querySelector('span')!.style.color).toBe('blue')
+
+    data.value.s = { color: 'green' }
+    await nextTick()
+    expect(root.querySelector('span')!.style.color).toBe('green')
+    app.unmount()
+  },
+)

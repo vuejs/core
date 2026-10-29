@@ -1400,6 +1400,24 @@ describe('Vapor Mode hydration', () => {
       expect(container.querySelector('b')!.textContent).toBe('fallback')
     })
 
+    test('normalizes slot style before hydration and subsequent updates', async () => {
+      const { container, html, data, app } = await testHydration(
+        `<template><components.Child v-slot="p"><span>{{ p.style.color }}</span></components.Child></template>`,
+        {
+          Child: `<template><slot :style="data.s" v-bind="{ title: 't' }" /></template>`,
+        },
+        ref({ s: 'color: red' }),
+      )
+      expect(html).toContain('<span>red</span>')
+      const span = container.querySelector('span')!
+      expect(span.textContent).toBe('red')
+      data.value.s = 'color: blue'
+      await nextTick()
+      expect(container.querySelector('span')).toBe(span)
+      expect(span.textContent).toBe('blue')
+      app.unmount()
+    })
+
     test('empty string dynamic component', async () => {
       const { container, data, html } = await testHydration(
         `<template>

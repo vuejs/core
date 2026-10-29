@@ -393,4 +393,55 @@ describe('compiler: transform <slot> outlets', () => {
       flags: 0,
     })
   })
+
+  test('normalizes static slot keys inside their own lazy getters', () => {
+    const { code, helpers } = compileWithSlotsOutlet(
+      `<slot :class="classes()" :style="styles()" :title="title()" />`,
+    )
+    expect(code).toContain(`class: () => (_normalizeClass(_ctx.classes()))`)
+    expect(code).toContain(`style: () => (_normalizeStyle(_ctx.styles()))`)
+    expect(code).toContain(`title: () => (_ctx.title())`)
+    expect(helpers).not.toContain('normalizeProps')
+    expect(helpers).not.toContain('mergeProps')
+  })
+
+  test('keeps modified class and style keys as ordinary props', () => {
+    const { code, helpers } = compileWithSlotsOutlet(
+      `<slot :class.prop="classes" :style.attr="styles" />`,
+    )
+    expect(code).toContain(`".class": () => (_ctx.classes)`)
+    expect(code).toContain(`"^style": () => (_ctx.styles)`)
+    expect(helpers).not.toContain('normalizeClass')
+    expect(helpers).not.toContain('normalizeStyle')
+  })
+
+  test.each([
+    [
+      `:style="s" v-bind="{ title: 't' }"`,
+      `_mergeProps({ style: _ctx.s }, { title: 't' })`,
+    ],
+    [
+      `v-bind="{ title: 't' }" :style="s"`,
+      `_mergeProps({ title: 't' }, { style: _ctx.s })`,
+    ],
+    [
+      `v-bind="{ class: c, style: s }"`,
+      `_normalizeProps(_guardReactiveProps({ class: _ctx.c, style: _ctx.s }))`,
+    ],
+    [
+      `class="a" :[key]="value"`,
+      `_normalizeProps({ class: "a", [_ctx.key || ""]: _ctx.value })`,
+    ],
+    [
+      `:[key]="value" class="a"`,
+      `_normalizeProps({ [_ctx.key || ""]: _ctx.value, class: "a" })`,
+    ],
+    [
+      `class="a" :[key]="value" v-bind="obj"`,
+      `_mergeProps({ class: "a", [_ctx.key || ""]: _ctx.value }, _ctx.obj)`,
+    ],
+  ])('preserves the normalization boundary for %s', (attrs, expression) => {
+    const { code } = compileWithSlotsOutlet(`<slot ${attrs} />`)
+    expect(code).toContain(`{ $: [() => (${expression})] }`)
+  })
 })

@@ -51,7 +51,8 @@ export const transformVOn: DirectiveTransform = (dir, node, context) => {
     modifiers = nonDelegateModifiers
   }
 
-  arg = resolveExpression(arg!)
+  // Even a constant computed event name forms its own slot props merge group.
+  arg = isSlotOutlet ? arg! : resolveExpression(arg!)
 
   if (arg.isStatic && arg.content.startsWith('vue:')) {
     if (node.tagType === ElementTypes.ELEMENT) {

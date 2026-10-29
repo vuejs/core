@@ -1115,6 +1115,9 @@ export function buildProps(
   getEffectOrder?: () => number,
 ): PropsResult {
   const props = node.props as (VaporDirectiveNode | AttributeNode)[]
+  // Slot props expose values to user code, so retain the object boundaries
+  // that determine whether class/style are normalized or merged.
+  const isSlot = node.tagType === ElementTypes.SLOT
   if (props.length === 0) return [false, []]
 
   const dynamicArgs: IRProps[] = []
@@ -1173,19 +1176,21 @@ export function buildProps(
       if (prop.name === 'bind') {
         // v-bind="obj"
         if (prop.exp) {
-          const objectLiteralProps = isComponent
-            ? resolveComponentObjectLiteralBindProps(
-                prop.exp,
-                context,
-                props,
-                prop,
-              )
-            : resolveNativeObjectLiteralBindProps(
-                prop.exp,
-                context,
-                props,
-                prop,
-              )
+          const objectLiteralProps = isSlot
+            ? undefined
+            : isComponent
+              ? resolveComponentObjectLiteralBindProps(
+                  prop.exp,
+                  context,
+                  props,
+                  prop,
+                )
+              : resolveNativeObjectLiteralBindProps(
+                  prop.exp,
+                  context,
+                  props,
+                  prop,
+                )
           if (objectLiteralProps) {
             if (isComponent) {
               pushStaticObjectLiteralProps(objectLiteralProps)
@@ -1217,14 +1222,15 @@ export function buildProps(
       } else if (prop.name === 'on') {
         // v-on="obj"
         if (prop.exp) {
-          const objectLiteralProps = isComponent
-            ? resolveComponentObjectLiteralOnProps(
-                prop.exp,
-                context,
-                props,
-                prop,
-              )
-            : undefined
+          const objectLiteralProps =
+            isComponent && !isSlot
+              ? resolveComponentObjectLiteralOnProps(
+                  prop.exp,
+                  context,
+                  props,
+                  prop,
+                )
+              : undefined
           if (objectLiteralProps) {
             pushStaticObjectLiteralProps(objectLiteralProps)
           } else if (isComponent || mergesListeners(node, context)) {
@@ -1282,7 +1288,10 @@ export function buildProps(
       if (!result.handler) dynamicExpr.push(result.value)
       if (deferListeners) {
         listenerResults.push(result)
-      } else if (isComponent && !result.key.isStatic) {
+      } else if (isSlot && result.handler && !result.key.isStatic) {
+        pushMergeArg()
+        dynamicArgs.push([resolveDirectiveResult(result)])
+      } else if (isComponent && !isSlot && !result.key.isStatic) {
         // v-bind:[name]="value" or v-on:[name]="value"
         pushMergeArg()
         dynamicArgs.push(

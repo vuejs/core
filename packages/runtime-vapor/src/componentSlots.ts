@@ -18,11 +18,15 @@ import {
 import {
   type FunctionSource,
   type RawProps,
-  rawPropsProxyHandlers,
+  getKeysFromRawProps,
+  hasAttrFromRawProps,
+  resolveFunctionSource,
+  resolveSource,
   snapshotRawProps,
 } from './componentProps'
 import {
   type GenericComponentInstance,
+  createInternalObject,
   currentInstance,
   isAsyncWrapper,
 } from '@vue/runtime-dom'
@@ -311,6 +315,46 @@ export function getScopeOwner(): VaporComponentInstance | null {
     currentInstance) as VaporComponentInstance | null
 }
 
+function getSlotProp(rawProps: RawProps, key: string): unknown {
+  if (key === '$') return
+  const sources = rawProps.$
+  if (sources) {
+    let i = sources.length
+    while (i--) {
+      const source = sources[i]
+      const dynamic = isFunction(source)
+      const props = dynamic ? resolveFunctionSource(source) : source
+      if (props && hasOwn(props, key)) {
+        return dynamic ? props[key] : resolveSource(props[key])
+      }
+    }
+  }
+  return hasOwn(rawProps, key)
+    ? resolveSource(rawProps[key])
+    : (Object.prototype as any)[key]
+}
+
+// Forwarded props must be copied before normalizeProps writes to them.
+export const slotPropsProto: object = /*@__PURE__*/ Object.getPrototypeOf(
+  /*@__PURE__*/ createInternalObject(),
+)
+
+const slotPropsProxyHandlers: ProxyHandler<RawProps> = {
+  get: getSlotProp,
+  has: hasAttrFromRawProps,
+  ownKeys: getKeysFromRawProps,
+  getPrototypeOf: () => slotPropsProto,
+  getOwnPropertyDescriptor(target, key: string) {
+    if (hasAttrFromRawProps(target, key)) {
+      return {
+        configurable: true,
+        enumerable: true,
+        get: () => getSlotProp(target, key),
+      }
+    }
+  },
+}
+
 export function createSlot(
   name: string | (() => string) = 'default',
   rawProps?: LooseRawProps | null,
@@ -339,7 +383,7 @@ export function createSlot(
   const slotProps = rawProps
     ? new Proxy(
         once ? snapshotRawProps(rawProps as RawProps) : rawProps,
-        rawPropsProxyHandlers,
+        slotPropsProxyHandlers,
       )
     : EMPTY_OBJ
   let fragment: VaporFragment
