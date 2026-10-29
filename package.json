@@ -1,7 +1,7 @@
 {
   "private": true,
   "version": "3.5.44",
-  "packageManager": "pnpm@12.11.2",
+  "packageManager": "pnpm@12.16.1",
   "type": "module",
   "scripts": {
     "dev": "node scripts/dev.js",
@@ -91,9 +91,9 @@
     "magic-string": "^0.30.21",
     "markdown-table": "^3.0.4",
     "marked": "13.0.3",
-    "npm-run-all2": "^9.0.3",
+    "npm-run-all2": "^9.0.4",
     "picocolors": "^1.1.1",
-    "playwright": "^1.64.0",
+    "playwright": "^1.64.1",
     "prettier": "^3.9.10",
     "pretty-bytes": "^7.2.0",
     "pug": "^3.0.4",
