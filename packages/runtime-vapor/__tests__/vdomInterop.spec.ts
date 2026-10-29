@@ -16191,3 +16191,44 @@ test.each([
     app.unmount()
   },
 )
+
+test.each([false, true])(
+  'forwards VDOM slot props through a Vapor component (vapor content: %s)',
+  async contentVapor => {
+    const data = ref({ s: { color: 'red' } })
+    const components: Record<string, any> = {}
+    const script = `<script setup>const data = _data; const components = _components;</script>`
+    components.Child = compile(
+      `${script}<template><slot :style="data.s" /></template>`,
+      data,
+      components,
+      { vapor: false },
+    )
+    components.Relay = compile(
+      `${script}<template><components.Child v-slot="p"><slot v-bind="p" /></components.Child></template>`,
+      data,
+      components,
+      { vapor: true },
+    )
+    const App = compile(
+      `${script}<template><components.Relay v-slot="p"><span :style="p.style">content</span></components.Relay></template>`,
+      data,
+      components,
+      { vapor: contentVapor },
+    )
+    const root = document.createElement('div')
+    const app = contentVapor ? createVaporApp(App) : createApp(App)
+    app.use(vaporInteropPlugin).mount(root)
+    expect(root.textContent).toBe('content')
+    expect(root.querySelector('span')!.style.color).toBe('red')
+
+    data.value.s.color = 'blue'
+    await nextTick()
+    expect(root.querySelector('span')!.style.color).toBe('blue')
+
+    data.value.s = { color: 'green' }
+    await nextTick()
+    expect(root.querySelector('span')!.style.color).toBe('green')
+    app.unmount()
+  },
+)

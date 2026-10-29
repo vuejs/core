@@ -335,7 +335,7 @@ function getSlotProp(rawProps: RawProps, key: string): unknown {
 }
 
 // Forwarded props must be copied before normalizeProps writes to them.
-const slotPropsProto = /*@__PURE__*/ Object.getPrototypeOf(
+export const slotPropsProto: object = /*@__PURE__*/ Object.getPrototypeOf(
   /*@__PURE__*/ createInternalObject(),
 )
 
