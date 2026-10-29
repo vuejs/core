@@ -518,6 +518,53 @@ color: red
     },
   )
 
+  test.each([
+    ['auto fade', 'auto fade-test'],
+    ['auto 1s fade', 'auto 1s fade-test'],
+    ['ease auto fade', 'ease auto fade-test'],
+    ['2 auto fade', '2 auto fade-test'],
+    ['-1s auto fade', '-1s auto fade-test'],
+    ['AUTO fade', 'AUTO fade-test'],
+    [String.raw`\61 uto fade`, String.raw`\61 uto fade-test`],
+    ['auto auto', 'auto auto-test'],
+    ['auto 1s auto', 'auto 1s auto-test'],
+    ['auto', 'auto'],
+    ['auto external', 'auto external'],
+    ['1s auto', '1s auto-test'],
+    ['250ms auto', '250ms auto-test'],
+    ['-1s 250ms auto', '-1s 250ms auto-test'],
+    ['+1e2MS auto', '+1e2MS auto-test'],
+    ['-0s auto', '-0s auto-test'],
+    ['calc(1s) auto', 'calc(1s) auto-test'],
+    ['var(--duration) auto', 'var(--duration) auto-test'],
+    ['auto "auto"', 'auto "auto-test"'],
+  ])(
+    'distinguishes auto duration from animation names: %s',
+    (value, expected) => {
+      const style = compileScoped(`
+@keyframes auto { to { opacity: 1; } }
+@keyframes fade { to { opacity: 1; } }
+.anim { animation: ${value}; }
+`)
+      expect(style).toContain(`animation: ${expected};`)
+    },
+  )
+
+  test('resets auto duration parsing between prefixed animations', () => {
+    const style = compileScoped(`
+@keyframes auto { to { opacity: 1; } }
+@keyframes fade { to { opacity: 1; } }
+.anim {
+  -webkit-animation: auto fade, 1s auto, auto auto;
+  animation-name: auto;
+}
+`)
+    expect(style).toContain(
+      '-webkit-animation: auto fade-test,1s auto-test,auto auto-test;',
+    )
+    expect(style).toContain('animation-name: auto-test;')
+  })
+
   test('scoped animation shorthand recognizes case-insensitive keywords', () => {
     const style = compileScoped(`
       @keyframes EASE { to { opacity: 0 } }

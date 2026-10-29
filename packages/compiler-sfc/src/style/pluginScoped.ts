@@ -20,6 +20,7 @@ const animationFields = [
   /^(?:running|paused)$/i,
 ]
 const animationNumberRE = /^[+-]?(?:\d*\.)?\d+(?:e[+-]?\d+)?$/i
+const animationTimeRE = /^[+-]?(?:\d*\.)?\d+(?:e[+-]?\d+)?m?s$/i
 const animationTimingFunctionRE = /^(?:cubic-bezier|steps|linear)\(/i
 
 const scopedPlugin: PluginCreator<string> = (id = '') => {
@@ -120,6 +121,7 @@ function splitAnimationValues(value: string): string[] {
 
 function findAnimationName(values: string[]): number {
   const seen = new Set<number>()
+  let durationAvailable = true
   for (let i = 0; i < values.length; i++) {
     const value = values[i]
     if (value[0] === '"' || value[0] === "'") {
@@ -127,6 +129,10 @@ function findAnimationName(values: string[]): number {
     }
     const identifier = isCssIdentifier(value)
     const decoded = unescapeCss(value)
+    if (identifier && /^auto$/i.test(decoded) && durationAvailable) {
+      durationAvailable = false
+      continue
+    }
     const field = identifier
       ? animationFields.findIndex(re => re.test(decoded))
       : animationNumberRE.test(value)
@@ -134,6 +140,17 @@ function findAnimationName(values: string[]): number {
         : animationTimingFunctionRE.test(decoded)
           ? 0
           : -1
+    // Negative literal times are delays. Other times occupy the duration;
+    // preserve possible names after functions with an unresolved result type.
+    if (
+      !identifier &&
+      field === -1 &&
+      (animationTimeRE.test(value)
+        ? parseFloat(value) >= 0
+        : value.includes('('))
+    ) {
+      durationAvailable = false
+    }
     // Keywords belong to an unset shorthand field before they can be names.
     // A later keyword for an already populated field can be the animation name.
     if (field !== -1 && !seen.has(field)) {
