@@ -145,8 +145,8 @@ function findAnimationName(values: string[]): number {
     if (
       !identifier &&
       field === -1 &&
-      (animationTimeRE.test(value)
-        ? parseFloat(value) >= 0
+      (animationTimeRE.test(decoded)
+        ? parseFloat(decoded) >= 0
         : value.includes('('))
     ) {
       durationAvailable = false
