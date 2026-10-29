@@ -283,6 +283,39 @@ describe('compiler + runtime integration', () => {
     document.querySelector = origin
   })
 
+  // #10929
+  test('re-sync radio checked when the bound value stays the same', async () => {
+    const selected = ref('a')
+    const options = ref(['a', 'b'])
+    const container = document.createElement('div')
+    document.body.appendChild(container)
+    createApp({
+      setup() {
+        // moves the selected option first, so each radio keeps its checked value
+        const select = (item: string) => {
+          selected.value = item
+          options.value = [item, ...options.value.filter(o => o !== item)]
+        }
+        return { selected, options, select }
+      },
+      render: compileToFunction(
+        `<input v-for="item in options" type="radio" name="option" :value="item" :checked="item === selected" @change="select(item)">`,
+      ),
+    }).mount(container)
+
+    const radios = () =>
+      Array.from(container.querySelectorAll('input')).map(
+        el => `${el.value}:${el.checked}`,
+      )
+    expect(radios()).toEqual(['a:true', 'b:false'])
+
+    container.querySelectorAll('input')[1].click()
+    await nextTick()
+    expect(selected.value).toBe('b')
+    expect(radios()).toEqual(['b:true', 'a:false'])
+    container.remove()
+  })
+
   test('v-if + v-once', async () => {
     const ok = ref(true)
     const App = {
