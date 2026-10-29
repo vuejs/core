@@ -8,6 +8,8 @@ import {
   isClassComponent,
 } from './component'
 import { SchedulerJobFlags, queueJob, queuePostFlushCb } from './scheduler'
+import { sharedPropsCache } from './componentProps'
+import { sharedEmitsCache } from './componentEmits'
 import { extend, getGlobalThis } from '@vue/shared'
 
 type HMRComponent = ComponentOptions | ClassComponent
@@ -119,6 +121,9 @@ function reload(id: string, newComp: HMRComponent): void {
   newComp = normalizeClassComponent(newComp)
   // update initial def (for not-yet-rendered components)
   updateComponentDef(record.initialDef, newComp)
+  // Invalidate shared caches even when there are no mounted instances.
+  sharedPropsCache.delete(record.initialDef)
+  sharedEmitsCache.delete(record.initialDef)
 
   // create a snapshot which avoids the set being mutated during updates
   const instances = [...record.instances]
@@ -143,6 +148,8 @@ function reload(id: string, newComp: HMRComponent): void {
     instance.appContext.propsCache.delete(instance.type as any)
     instance.appContext.emitsCache.delete(instance.type as any)
     instance.appContext.optionsCache.delete(instance.type as any)
+    sharedPropsCache.delete(instance.type as any)
+    sharedEmitsCache.delete(instance.type as any)
 
     // 4. actually update
     if (instance.ceReload) {
