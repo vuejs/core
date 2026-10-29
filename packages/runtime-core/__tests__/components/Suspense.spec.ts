@@ -16,6 +16,7 @@ import {
   h,
   nextTick,
   nodeOps,
+  onBeforeUnmount,
   onErrorCaptured,
   onMounted,
   onUnmounted,
@@ -3534,6 +3535,310 @@ describe('Suspense', () => {
       expect(root.textContent).toBe('kept')
       expect(renderRemoved).not.toHaveBeenCalled()
       expect(onResolve).toHaveBeenCalledTimes(1)
+      app.unmount()
+    },
+  )
+
+  test.each([
+    { unmount: 'none', captureOuter: true },
+    { unmount: 'boundary', captureOuter: true },
+    { unmount: 'boundary', captureOuter: false },
+    { unmount: 'app', captureOuter: true },
+    { unmount: 'branch', captureOuter: true },
+    { unmount: 'branch', captureOuter: false },
+  ])(
+    'async setup rejection (unmount: $unmount, capture outer: $captureOuter)',
+    async ({ unmount, captureOuter }) => {
+      const error = new Error('request failed')
+      let reject!: (error: Error) => void
+      const pending = new Promise<void>((_, rejectPending) => {
+        reject = rejectPending
+      })
+      const innerHandler = vi.fn(() => false)
+      const outerHandler = vi.fn(() => (captureOuter ? false : undefined))
+      const appHandler = vi.fn()
+      const renderAsync = vi.fn(() => h('div', 'ready'))
+      const show = ref(true)
+      const Async = {
+        async setup() {
+          await pending
+        },
+        render: renderAsync,
+      }
+      const Boundary = {
+        setup() {
+          onErrorCaptured(innerHandler)
+          return () =>
+            unmount === 'branch'
+              ? h(Async)
+              : h(Suspense, null, {
+                  default: () => h(Async),
+                  fallback: () => h('p', 'loading'),
+                })
+        },
+      }
+      const app = createApp({
+        setup() {
+          onErrorCaptured(outerHandler)
+          const content = () => (show.value ? h(Boundary) : h('p', 'left'))
+          return unmount === 'branch'
+            ? () =>
+                h(Suspense, null, {
+                  default: content,
+                  fallback: () => h('p', 'loading'),
+                })
+            : content
+        },
+      })
+      app.config.errorHandler = appHandler
+      const root = document.createElement('div')
+      app.mount(root)
+      expect(root.innerHTML).toBe('<p>loading</p>')
+
+      if (unmount === 'boundary' || unmount === 'branch') {
+        show.value = false
+      } else if (unmount === 'app') {
+        app.unmount()
+      }
+      await nextTick()
+
+      reject(error)
+      // Drain the async setup rejection and Suspense's promise chain.
+      await new Promise(r => setTimeout(r))
+
+      if (unmount === 'none') {
+        expect(innerHandler).toHaveBeenCalledTimes(1)
+        expect(innerHandler).toHaveBeenCalledWith(
+          error,
+          expect.any(Object),
+          'setup function',
+        )
+        expect(outerHandler).not.toHaveBeenCalled()
+        expect(appHandler).not.toHaveBeenCalled()
+      } else {
+        expect(innerHandler).not.toHaveBeenCalled()
+        if (unmount === 'boundary' || unmount === 'branch') {
+          expect(outerHandler).toHaveBeenCalledTimes(1)
+          expect(outerHandler).toHaveBeenCalledWith(
+            error,
+            expect.any(Object),
+            'setup function',
+          )
+        } else {
+          expect(outerHandler).not.toHaveBeenCalled()
+        }
+        if (unmount === 'app' || !captureOuter) {
+          expect(appHandler).toHaveBeenCalledTimes(1)
+          expect(appHandler).toHaveBeenCalledWith(
+            error,
+            expect.any(Object),
+            'setup function',
+          )
+        } else {
+          expect(appHandler).not.toHaveBeenCalled()
+        }
+        expect(renderAsync).not.toHaveBeenCalled()
+        expect(root.innerHTML).toBe(unmount === 'app' ? '' : '<p>left</p>')
+      }
+      if (unmount !== 'app') app.unmount()
+    },
+  )
+
+  test.each([
+    { source: 'setup', replaceBranch: false },
+    { source: 'loader', replaceBranch: false },
+    { source: 'loader', replaceBranch: true },
+    { source: 'watcher', replaceBranch: false },
+    { source: 'teardown', replaceBranch: false },
+  ])(
+    'late $source rejection after removing a pending boundary (replace branch: $replaceBranch)',
+    async ({ source, replaceBranch }) => {
+      const error = new Error('request failed')
+      let reject!: (error: Error) => void
+      const pending = new Promise<void>((_, rejectPending) => {
+        reject = rejectPending
+      })
+      let resolveSibling!: () => void
+      const Sibling = {
+        async setup() {
+          await new Promise<void>(resolve => {
+            resolveSibling = resolve
+          })
+          return () => h('span', 'kept')
+        },
+      }
+      const renderChild = vi.fn(() => h('span', 'child'))
+      const Child =
+        source === 'loader'
+          ? defineAsyncComp(() => pending.then(() => ({ render: renderChild })))
+          : {
+              setup() {
+                if (source === 'setup') {
+                  return pending.then(() => renderChild)
+                }
+                if (source === 'watcher') {
+                  watch(ref(0), () => pending, { immediate: true })
+                } else {
+                  onBeforeUnmount(() => pending)
+                }
+                return renderChild
+              },
+            }
+      const innerHandler = vi.fn(() => false)
+      const outerHandler = vi.fn(() => false)
+      const appHandler = vi.fn()
+      const onResolve = vi.fn()
+      const show = ref(true)
+      const Boundary = {
+        components: { Child, Sibling },
+        setup() {
+          onErrorCaptured(innerHandler)
+        },
+        template: replaceBranch
+          ? '<div><Child /><Sibling /></div>'
+          : '<Child />',
+      }
+      const app = createApp({
+        components: { Boundary, Sibling },
+        setup() {
+          onErrorCaptured(outerHandler)
+          return { show, onResolve }
+        },
+        template: replaceBranch
+          ? `<Suspense @resolve="onResolve">
+               <Boundary v-if="show" /><p v-else>left</p>
+               <template #fallback><p>loading</p></template>
+             </Suspense>`
+          : `<Suspense @resolve="onResolve">
+               <div><Boundary v-if="show" /><Sibling /></div>
+               <template #fallback><p>loading</p></template>
+             </Suspense>`,
+      })
+      app.config.errorHandler = appHandler
+      const root = document.createElement('div')
+      app.mount(root)
+      expect(root.innerHTML).toBe('<p>loading</p>')
+
+      show.value = false
+      await nextTick()
+      expect(root.innerHTML).toBe(
+        replaceBranch ? '<p>left</p>' : '<p>loading</p>',
+      )
+
+      reject(error)
+      await new Promise(r => setTimeout(r))
+
+      expect(innerHandler).not.toHaveBeenCalled()
+      expect(outerHandler).toHaveBeenCalledTimes(1)
+      expect(outerHandler).toHaveBeenCalledWith(
+        error,
+        expect.any(Object),
+        source === 'loader'
+          ? 'async component loader'
+          : source === 'watcher'
+            ? 'watcher callback'
+            : source === 'teardown'
+              ? 'beforeUnmount hook'
+              : 'setup function',
+      )
+      expect(appHandler).not.toHaveBeenCalled()
+      if (source === 'setup' || source === 'loader') {
+        expect(renderChild).not.toHaveBeenCalled()
+      }
+      if (!replaceBranch) {
+        expect(root.innerHTML).toBe('<p>loading</p>')
+        expect(onResolve).not.toHaveBeenCalled()
+      }
+
+      resolveSibling()
+      await new Promise(r => setTimeout(r))
+      expect(root.textContent).toBe(replaceBranch ? 'left' : 'kept')
+      expect(onResolve).toHaveBeenCalledTimes(1)
+      app.unmount()
+    },
+  )
+
+  test.each(['emit', 'hook error', 'event error'])(
+    'preserves deferred unmounted hooks (%s)',
+    async source => {
+      const error = new Error('cleanup failed')
+      const unmounted = vi.fn()
+      const cleanup = vi.fn(() => {
+        if (source === 'event error') throw error
+      })
+      const innerHandler = vi.fn(() => false)
+      const outerHandler = vi.fn(() => false)
+      const appHandler = vi.fn()
+      let resolveSibling!: () => void
+      const Sibling = {
+        async setup() {
+          await new Promise<void>(resolve => {
+            resolveSibling = resolve
+          })
+          return () => h('span', 'kept')
+        },
+      }
+      const Child = defineComponent({
+        emits: ['cleanup'],
+        setup(_, { emit }) {
+          onUnmounted(() => {
+            unmounted()
+            if (source === 'hook error') throw error
+            emit('cleanup')
+          })
+        },
+        template: '<span>child</span>',
+      })
+      const Boundary = {
+        components: { Child },
+        setup() {
+          onErrorCaptured(innerHandler)
+          return { cleanup }
+        },
+        template: '<Child @cleanup="cleanup" />',
+      }
+      const show = ref(true)
+      const app = createApp({
+        components: { Boundary, Sibling },
+        setup() {
+          onErrorCaptured(outerHandler)
+          return { show }
+        },
+        template: `
+          <Suspense>
+            <div><Boundary v-if="show" /><Sibling /></div>
+            <template #fallback><p>loading</p></template>
+          </Suspense>`,
+      })
+      app.config.errorHandler = appHandler
+      const root = document.createElement('div')
+      app.mount(root)
+      expect(root.innerHTML).toBe('<p>loading</p>')
+
+      show.value = false
+      await nextTick()
+      expect(unmounted).not.toHaveBeenCalled()
+      expect(cleanup).not.toHaveBeenCalled()
+
+      resolveSibling()
+      await new Promise(r => setTimeout(r))
+      expect(root.textContent).toBe('kept')
+      expect(unmounted).toHaveBeenCalledTimes(1)
+      expect(cleanup).toHaveBeenCalledTimes(source === 'hook error' ? 0 : 1)
+      if (source === 'emit') {
+        expect(innerHandler).not.toHaveBeenCalled()
+      } else {
+        expect(innerHandler).toHaveBeenCalledTimes(1)
+        expect(innerHandler).toHaveBeenCalledWith(
+          error,
+          expect.any(Object),
+          source === 'hook error'
+            ? 'unmounted hook'
+            : 'component event handler',
+        )
+      }
+      expect(outerHandler).not.toHaveBeenCalled()
+      expect(appHandler).not.toHaveBeenCalled()
       app.unmount()
     },
   )

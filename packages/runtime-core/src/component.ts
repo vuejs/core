@@ -906,7 +906,7 @@ function setupStatefulComponent(
             }
           })
           .catch(e => {
-            handleError(e, instance, ErrorCodes.SETUP_FUNCTION)
+            handleError(e, instance, ErrorCodes.SETUP_FUNCTION, undefined, true)
           })
       } else if (__FEATURE_SUSPENSE__) {
         // async setup returned Promise.
