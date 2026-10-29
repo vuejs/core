@@ -989,6 +989,49 @@ describe('vModel', () => {
     },
   )
 
+  it.each(['type="radio"', ':type="type"'])(
+    'should preserve radio selections when switching groups with %s',
+    async typeBinding => {
+      const value = ref('foo')
+      const option = ref('bar')
+      const name = ref('old')
+      const { code } = compile(
+        `<div>` +
+          `<input type="radio" name="old" v-model="value" value="foo">` +
+          `<input ${typeBinding} :name="name" v-model="value" :value="option">` +
+          `</div>`,
+        { prefixIdentifiers: true },
+      )
+      render(
+        h({
+          setup: () => ({ value, option, name, type: 'radio' }),
+          render: new Function('Vue', code)(runtimeDom),
+        }),
+        root,
+      )
+
+      const [original, moving] = root.querySelectorAll('input')
+      expect(original.checked).toBe(true)
+      expect(moving.checked).toBe(false)
+
+      name.value = 'new'
+      option.value = 'foo'
+      await nextTick()
+      expect(moving.name).toBe('new')
+      expect(original.checked).toBe(true)
+      expect(moving.checked).toBe(true)
+      expect(value.value).toBe('foo')
+
+      name.value = 'old'
+      option.value = 'bar'
+      await nextTick()
+      expect(moving.name).toBe('old')
+      expect(original.checked).toBe(true)
+      expect(moving.checked).toBe(false)
+      expect(value.value).toBe('foo')
+    },
+  )
+
   it('should update radio checked state when its object value changes', async () => {
     const value = ref({ id: 1 })
     const option = ref({ id: '1' })
