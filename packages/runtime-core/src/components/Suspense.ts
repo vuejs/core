@@ -668,7 +668,10 @@ function createSuspenseBoundary(
     },
 
     fallback(fallbackVNode) {
-      if (!suspense.pendingBranch) {
+      // the fallback is requested asynchronously (by the `timeout` timer), so
+      // the boundary may already be unmounted when we get here. the container
+      // is no longer ours in that case.
+      if (suspense.isUnmounted || !suspense.pendingBranch) {
         return
       }
 
@@ -681,7 +684,9 @@ function createSuspenseBoundary(
       const anchor = next(activeBranch!)
       const mountFallback = () => {
         suspense.isFallbackMountPending = false
-        if (!suspense.isInFallback) {
+        // this may run later via `afterLeave`, which is not cancelled when the
+        // branch gets unmounted in the meantime.
+        if (suspense.isUnmounted || !suspense.isInFallback) {
           return
         }
         // a parent update may have produced a newer fallback vnode while the

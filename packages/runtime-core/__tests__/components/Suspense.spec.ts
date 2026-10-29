@@ -16,6 +16,7 @@ import {
   h,
   nextTick,
   nodeOps,
+  onBeforeUnmount,
   onErrorCaptured,
   onMounted,
   onUnmounted,
@@ -3537,4 +3538,64 @@ describe('Suspense', () => {
       app.unmount()
     },
   )
+
+  // a pending boundary unmounted before its timeout fires must not mount the
+  // fallback into a container that no longer belongs to it, nor unmount the
+  // already unmounted branch a second time.
+  test('should not mount fallback after the boundary is unmounted', async () => {
+    const toggleChild = ref(false)
+    const toggleSuspense = ref(true)
+    const beforeUnmount = vi.fn()
+    const unmounted = vi.fn()
+
+    const Child = {
+      setup() {
+        onBeforeUnmount(beforeUnmount)
+        onUnmounted(unmounted)
+        return () => h('div', 'child')
+      },
+    }
+
+    const Async = {
+      async setup() {
+        await new Promise(() => {})
+        return () => h('div', 'async')
+      },
+    }
+
+    const Comp = {
+      setup() {
+        return () =>
+          toggleSuspense.value
+            ? h(
+                Suspense,
+                { timeout: 20 },
+                {
+                  default: () => (toggleChild.value ? h(Async) : h(Child)),
+                  fallback: h('div', 'fallback'),
+                },
+              )
+            : h('div', 'gone')
+      },
+    }
+
+    const root = nodeOps.createElement('div')
+    render(h(Comp), root)
+    expect(serializeInner(root)).toBe(`<div>child</div>`)
+
+    // enter the pending state, arming the timeout
+    toggleChild.value = true
+    await nextTick()
+
+    // unmount the boundary before the timeout fires
+    toggleSuspense.value = false
+    await nextTick()
+    expect(serializeInner(root)).toBe(`<div>gone</div>`)
+
+    await new Promise(r => setTimeout(r, 50))
+
+    expect(serializeInner(root)).toBe(`<div>gone</div>`)
+    expect(beforeUnmount).toHaveBeenCalledTimes(1)
+    expect(unmounted).toHaveBeenCalledTimes(1)
+  })
 })
