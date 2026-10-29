@@ -8346,6 +8346,34 @@ describe('slot-scope component tags', () => {
     )
     expect(stripAnchors(result.vapor.after)).toBe('<span>x</span>')
   })
+
+  test.each(['Foo', 'component :is="Foo"'])(
+    'mounts v-once component rows before a sibling: <%s>',
+    async tag => {
+      const { vdom, vapor } = await renderParity(
+        {
+          Leaf: '<template><b>leaf</b></template>',
+          Provider: '<template><slot :Foo="components.Leaf" /></template>',
+          App: `<template>
+            <components.Provider v-slot="{ Foo }">
+              <div><${tag} v-for="n in data.list" :key="n" v-once /><span>end</span></div>
+            </components.Provider>
+          </template>`,
+        },
+        () => ref({ list: [1, 2] }),
+        (data, root) => {
+          expect(stripAnchors(root.innerHTML)).toBe(
+            '<div><b>leaf</b><b>leaf</b><span>end</span></div>',
+          )
+          data.value.list = [3]
+        },
+      )
+      expect(stripAnchors(vapor.after)).toBe(stripAnchors(vdom.after))
+      expect(stripAnchors(vapor.after)).toBe(
+        '<div><b>leaf</b><b>leaf</b><span>end</span></div>',
+      )
+    },
+  )
 })
 
 describe('whitespace between conditional slots', () => {

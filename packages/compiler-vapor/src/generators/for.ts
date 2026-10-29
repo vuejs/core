@@ -277,6 +277,7 @@ function isFragmentBlock(block: BlockIRNode): boolean {
     (operation.type === IRNodeTypes.IF && !operation.once) ||
     // <component :is="..."/>
     (operation.type === IRNodeTypes.CREATE_COMPONENT_NODE &&
+      !operation.once &&
       !!operation.dynamic &&
       !operation.dynamic.isStatic)
   )
