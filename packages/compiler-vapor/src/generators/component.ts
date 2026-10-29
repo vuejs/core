@@ -487,6 +487,14 @@ function genProp(
   directStaticLiteral = false,
 ) {
   let values = genPropValue(prop.values, context)
+  if (prop.normalize) {
+    values = genCall(
+      context.helper(
+        prop.normalize === 'class' ? 'normalizeClass' : 'normalizeStyle',
+      ),
+      values,
+    )
+  }
   if (prop.toDisplayString) {
     values = genCall(context.helper('toDisplayString'), values)
   }

@@ -243,31 +243,19 @@ export function render(_ctx) {
 `;
 
 exports[`compiler: transform <slot> outlets > statically named slot outlet with v-bind="obj" 1`] = `
-"import { createSlot as _createSlot } from 'vue';
+"import { createSlot as _createSlot, mergeProps as _mergeProps } from 'vue';
 
 export function render(_ctx) {
-  const n0 = _createSlot("foo", {
-    foo: "bar",
-    $: [
-      () => (_ctx.obj),
-      { baz: () => (_ctx.qux) }
-    ]
-  })
+  const n0 = _createSlot("foo", { $: [() => (_mergeProps({ foo: "bar" }, _ctx.obj, { baz: _ctx.qux }))] })
   return n0
 }"
 `;
 
 exports[`compiler: transform <slot> outlets > statically named slot outlet with v-on 1`] = `
-"import { createSlot as _createSlot, toHandlers as _toHandlers } from 'vue';
+"import { createSlot as _createSlot, toHandlers as _toHandlers, mergeProps as _mergeProps } from 'vue';
 
 export function render(_ctx) {
-  const n0 = _createSlot("default", {
-    onClick: () => _ctx.foo,
-    $: [
-      () => (_toHandlers(_ctx.bar)),
-      { baz: () => (_ctx.qux) }
-    ]
-  })
+  const n0 = _createSlot("default", { $: [() => (_mergeProps({ onClick: _ctx.foo }, _toHandlers(_ctx.bar), { baz: _ctx.qux }))] })
   return n0
 }"
 `;

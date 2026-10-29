@@ -80,6 +80,24 @@ export const transformSlotOutlet: NodeTransform = (node, context) => {
       true,
     )
     irProps = isDynamic ? props : [props]
+    if (!isDynamic) {
+      for (const prop of props) {
+        const name = prop.key.content
+        if (
+          prop.key.isStatic &&
+          !prop.handler &&
+          !prop.modifier &&
+          (name === 'class' || name === 'style')
+        ) {
+          const value = prop.values[0]
+          if (prop.values.length === 1 && value.isStatic) {
+            if (name === 'class') value.content = value.content.trim()
+          } else {
+            prop.normalize = name
+          }
+        }
+      }
+    }
   }
 
   return () => {

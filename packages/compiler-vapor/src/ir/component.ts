@@ -5,6 +5,7 @@ import type { BlockIRNode, IRFor } from './index'
 // props
 export interface IRProp extends Omit<DirectiveTransformResult, 'value'> {
   values: SimpleExpressionNode[]
+  normalize?: 'class' | 'style'
 }
 
 export enum IRDynamicPropsKind {

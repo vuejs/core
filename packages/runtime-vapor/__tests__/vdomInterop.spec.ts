@@ -16140,3 +16140,54 @@ describe('vdom conditional slot branches in a vapor outlet', () => {
     expect(new Set(seen).size).toBe(3)
   })
 })
+
+test.each([
+  [false, false],
+  [false, true],
+  [true, false],
+  [true, true],
+])(
+  'normalized slot props reach typed consumers (vapor outlet: %s, content: %s)',
+  async (outletVapor, contentVapor) => {
+    const data = ref<any>({
+      o: { class: ['a'], style: [{ color: 'red' }] },
+    })
+    const components: Record<string, any> = {}
+    const script = `<script setup>const data = _data; const components = _components;</script>`
+    components.Child = compile(
+      `${script}<template><slot class="base" :style="{ fontSize: '12px' }" v-bind="data.o" /></template>`,
+      data,
+      components,
+      { vapor: outletVapor },
+    )
+    components.Sink = compile(
+      `<script setup>defineProps({ value: String, styles: Object })</script>
+       <template><span>{{ value.split(' ').join('|') }}:{{ styles.color || '-' }}</span></template>`,
+      data,
+      components,
+      { vapor: contentVapor },
+    )
+    const App = compile(
+      `${script}<template><components.Child v-slot="p"><components.Sink :value="p.class" :styles="p.style" /></components.Child></template>`,
+      data,
+      components,
+      { vapor: contentVapor },
+    )
+    const root = document.createElement('div')
+    const app = contentVapor ? createVaporApp(App) : createApp(App)
+    app.use(vaporInteropPlugin).mount(root)
+    expect(root.textContent).toBe('base|a:red')
+    data.value.o.class.push('b')
+    data.value.o.style[0].color = 'blue'
+    await nextTick()
+    expect(root.textContent).toBe('base|a|b:blue')
+    data.value.o = { class: 'c', style: { color: 'green' } }
+    await nextTick()
+    expect(root.textContent).toBe('base|c:green')
+    delete data.value.o.class
+    delete data.value.o.style
+    await nextTick()
+    expect(root.textContent).toBe('base:-')
+    app.unmount()
+  },
+)

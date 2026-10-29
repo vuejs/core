@@ -10806,3 +10806,121 @@ describe('long v-else-if chain as slot content', () => {
     expect(out).toEqual(['fb', '11', 'fb', '1'])
   })
 })
+
+describe('normalized slot props', () => {
+  test.each([
+    `class=" a  b " style="color: red"`,
+    `:class="' a  b '" :style="'color: red'"`,
+    `:class="data.c" :style="data.s"`,
+    `:class="data.c" :style="data.s" @[data.event]="data.handler"`,
+    `:class="data.c" :style="data.s" @['click']="data.handler"`,
+    `:['class']="data.c" :['style']="data.s"`,
+    `v-bind="{ class: data.c, style: data.s }"`,
+    `v-bind="data.o"`,
+    `:style="data.s" v-bind="{ title: 't' }"`,
+    `v-bind="{ title: 't' }" :style="data.s"`,
+    `class="a" v-bind="data.o"`,
+    `v-bind="data.o" class="a"`,
+    `class="a" :[data.k]="data.v"`,
+    `class="a" :['class']="data.v"`,
+    `:[data.k]="data.v" class="a"`,
+    `class="a" :[data.k]="data.v" v-bind="data.o"`,
+    `class="a" :[data.k]="data.v" :class="data.c"`,
+    `v-bind="data.o" class="a" :[data.k]="data.v"`,
+    `v-once class="a" v-bind="data.o"`,
+  ])('preserves vdom normalization and grouping: %s', async attrs => {
+    const frames: Record<string, string[]> = {}
+    await renderParity(
+      {
+        Child: `<template><slot ${attrs} /></template>`,
+        App: `<template><components.Child v-slot="p">{{ typeof p.class }}:{{ p.class }}|{{ typeof p.style }}:{{ p.style }}</components.Child></template>`,
+      },
+      () =>
+        ref<any>({
+          c: ['a', { b: true }],
+          s: 'color: red',
+          o: { class: ['a'], style: 'color: red' },
+          k: 'class',
+          v: 'b',
+          event: 'click',
+          handler: NOOP,
+        }),
+      async (data, root, mode) => {
+        const out = (frames[mode] = [root.textContent!])
+        for (const values of [
+          { c: null, s: false, o: { class: null, style: false } },
+          {
+            c: ' a  b ',
+            s: 'color: blue',
+            o: { class: ' a  b ', style: 'color: blue' },
+            k: 'style',
+            v: { color: 'green' },
+          },
+          { c: false, s: [{ top: 0 }, { color: 'red' }], o: {} },
+          { o: null, k: 'title', v: 't' },
+        ]) {
+          Object.assign(data.value, values)
+          await nextTick()
+          out.push(root.textContent!)
+        }
+      },
+    )
+    expect(frames.vapor).toEqual(frames.vdom)
+  })
+
+  test('exposes final values consistently when slot props are forwarded and enumerated', async () => {
+    const frames: Record<string, string[]> = {}
+    await renderParity(
+      {
+        Child: `<template><slot v-bind="data.o" /></template>`,
+        Forward: `<template><components.Child v-slot="p"><slot v-bind="p" /></components.Child></template>`,
+        App: `<template><components.Forward v-slot="p">{{ Object.assign({}, p) }}|{{ Object.keys(p).sort() }}|{{ 'class' in p }}|{{ Object.getOwnPropertyDescriptor(p, 'class')?.get?.() ?? p.class }}</components.Forward></template>`,
+      },
+      () => ref<any>({ o: { class: ['a'], style: [{ color: 'red' }] } }),
+      async (data, root, mode) => {
+        const out = (frames[mode] = [root.textContent!])
+        data.value.o.class.push('b')
+        data.value.o.style[0].color = 'blue'
+        await nextTick()
+        out.push(root.textContent!)
+        delete data.value.o.class
+        await nextTick()
+        out.push(root.textContent!)
+        data.value.o = { class: null, title: 't' }
+        await nextTick()
+        out.push(root.textContent!)
+      },
+    )
+    expect(frames.vapor).toEqual(frames.vdom)
+  })
+
+  test('caches normalization per static key without reading unused props', async () => {
+    const active = ref(false)
+    const readClass = vi.fn(() => ['a', { b: active.value }])
+    const unused = vi.fn(() => 'unused')
+    const data = ref({ readClass, unused })
+    const components: Record<string, any> = {}
+    components.Child = compile(
+      `<template><slot :class="data.readClass()" :title="data.unused()" /></template>`,
+      data,
+      components,
+    )
+    const App = compile(
+      `<template><components.Child v-slot="p">{{ p.class }}|{{ p.class }}</components.Child></template>`,
+      data,
+      components,
+    )
+    const root = document.createElement('div')
+    const app = createVaporApp(App)
+    app.mount(root)
+    expect(root.textContent).toBe('a|a')
+    expect(readClass).toHaveBeenCalledTimes(1)
+    expect(unused).not.toHaveBeenCalled()
+    active.value = true
+    await nextTick()
+    expect(root.textContent).toBe('a b|a b')
+    expect(readClass).toHaveBeenCalledTimes(2)
+    expect(unused).not.toHaveBeenCalled()
+    app.unmount()
+  })
+})
