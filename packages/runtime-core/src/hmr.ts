@@ -8,7 +8,8 @@ import {
   isClassComponent,
 } from './component'
 import { SchedulerJobFlags, queueJob, queuePostFlushCb } from './scheduler'
-import { extend, getGlobalThis } from '@vue/shared'
+import { NOOP, extend, getGlobalThis } from '@vue/shared'
+import { locateNonHydratedAsyncRoot } from './renderer'
 
 type HMRComponent = ComponentOptions | ClassComponent
 
@@ -154,17 +155,49 @@ function reload(id: string, newComp: HMRComponent): void {
       // 4. Force the parent instance to re-render. This will cause all updated
       // components to be unmounted and re-mounted. Queue the update so that we
       // don't end up forcing the same parent to re-render multiple times.
-      queueJob(() => {
+      const update = () => {
         // vite-plugin-vue/issues/599
-        // don't update if the job is already disposed
-        if (!(instance.job.flags! & SchedulerJobFlags.DISPOSED)) {
-          isHmrUpdating = true
+        // Async setup may not have created a render job yet.
+        if (!instance.scope.active) return
+
+        const pending =
+          __FEATURE_SUSPENSE__ &&
+          (instance.asyncDep && !instance.asyncResolved
+            ? instance
+            : locateNonHydratedAsyncRoot(instance.parent!))
+        if (pending) {
+          // #16040 Recheck the root chain after each setup resolves: it may
+          // expose another async root that would defer the parent update.
+          pending.asyncDep!.catch(NOOP).then(() => {
+            // A rejected setup may never reach Suspense's initialization.
+            if (
+              instance.scope.active &&
+              (pending.asyncResolved || !pending.scope.active)
+            ) {
+              queueJob(update)
+            }
+          })
+          return
+        }
+
+        // The previous flush may have cleared the dirty set while waiting.
+        dirtyInstances = hmrDirtyComponents.get(oldComp)
+        if (!dirtyInstances) {
+          hmrDirtyComponents.set(oldComp, (dirtyInstances = new Set()))
+        }
+        dirtyInstances.add(instance)
+
+        isHmrUpdating = true
+        try {
           instance.parent!.update()
+        } finally {
           isHmrUpdating = false
           // #6930, #11248 avoid infinite recursion
           dirtyInstances.delete(instance)
+          queuePostFlushCb(() => hmrDirtyComponents.clear())
         }
-      })
+      }
+      queueJob(update)
     } else if (instance.appContext.reload) {
       // root instance mounted via createApp() has a reload method
       instance.appContext.reload()

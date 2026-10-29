@@ -2646,7 +2646,7 @@ function getSequence(arr: number[]): number[] {
   return result
 }
 
-function locateNonHydratedAsyncRoot(
+export function locateNonHydratedAsyncRoot(
   instance: ComponentInternalInstance,
 ): ComponentInternalInstance | undefined {
   const subComponent = instance.subTree.component
