@@ -150,7 +150,7 @@ export const stringifyStatic: HoistTransform = (children, context, parent) => {
     const isCached = isParentCached || getCachedNode(child)
     if (isCached) {
       // presence of cached means child must be a stringifiable node
-      const result = analyzeNode(child as StringifiableNode)
+      const result = analyzeNode(child as StringifiableNode, context)
       if (result) {
         // node is stringifiable, record state
         nc += result[0]
@@ -210,7 +210,10 @@ const isNonStringifiable = /*@__PURE__*/ makeMap(
  *   - nc is the number of nodes inside
  *   - ec is the number of element with bindings inside
  */
-function analyzeNode(node: StringifiableNode): [number, number] | false {
+function analyzeNode(
+  node: StringifiableNode,
+  context: TransformContext,
+): [number, number] | false {
   if (node.type === NodeTypes.ELEMENT && isNonStringifiable(node.tag)) {
     return false
   }
@@ -260,6 +263,15 @@ function analyzeNode(node: StringifiableNode): [number, number] | false {
           p.exp &&
           (p.exp.type === NodeTypes.COMPOUND_EXPRESSION ||
             p.exp.constType < ConstantTypes.CAN_STRINGIFY)
+        ) {
+          return bail()
+        }
+        // Custom elements may route these bindings to DOM properties at runtime.
+        if (
+          p.arg &&
+          p.arg.isStatic &&
+          (isBooleanAttr(p.arg.content) || p.arg.content === 'hidden') &&
+          context.isCustomElement(node.tag)
         ) {
           return bail()
         }
@@ -346,21 +358,12 @@ function stringifyElement(
           }="__VUE_EXP_START__${exp.content}__VUE_EXP_END__"`
           continue
         }
-        // #6568
-        if (
-          (isBooleanAttr((p.arg as SimpleExpressionNode).content) ||
-            (p.arg as SimpleExpressionNode).content === 'hidden') &&
-          exp.content === 'false'
-        ) {
-          continue
-        }
         // constant v-bind, e.g. :foo="1"
         let evaluated = evaluateConstant(exp)
         if (evaluated != null) {
-          const arg = p.arg && (p.arg as SimpleExpressionNode).content
+          const arg = (p.arg as SimpleExpressionNode).content
           if (
-            arg === 'hidden' &&
-            typeof evaluated === 'number' &&
+            (isBooleanAttr(arg) || arg === 'hidden') &&
             !includeBooleanAttr(evaluated)
           ) {
             continue
