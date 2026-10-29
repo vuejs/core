@@ -1,8 +1,10 @@
 import {
+  type SetupContext,
   type VNode,
   computed,
   createApp,
   defineComponent,
+  getCurrentInstance,
   h,
   nextTick,
   nodeOps,
@@ -705,6 +707,57 @@ describe('error handling', () => {
       err,
       ErrorTypeStrings[ErrorCodes.COMPONENT_UPDATE],
     )
+  })
+
+  // #16068
+  test('should reset currentInstance when an unhandled setup() error is rethrown', async () => {
+    const err = new Error('foo')
+    const Broken = {
+      setup() {
+        throw err
+      },
+      render() {},
+    }
+
+    const Child = {
+      setup(_: any, { slots }: SetupContext) {
+        return () => h('div', slots.default!())
+      },
+    }
+
+    const show = ref(false)
+    const msg = ref('a')
+    const App = {
+      setup() {
+        return () => [
+          h(Child, null, { default: () => msg.value }),
+          show.value ? h(Broken) : null,
+        ]
+      },
+    }
+
+    render(h(App), nodeOps.createElement('div'))
+
+    show.value = true
+    await expect(nextTick()).rejects.toThrow('foo')
+    expect(
+      'Unhandled error during execution of setup function',
+    ).toHaveBeenWarned()
+    expect(
+      'Unhandled error during execution of component update',
+    ).toHaveBeenWarned()
+
+    // compared as a boolean because serializing the instance proxy on failure
+    // triggers an unrelated compat assertion
+    expect(getCurrentInstance() === null).toBe(true)
+
+    // a healthy sibling re-rendering must not hit the stale instance
+    show.value = false
+    msg.value = 'b'
+    await nextTick()
+    expect(
+      'Slot "default" invoked outside of the render function',
+    ).not.toHaveBeenWarned()
   })
 
   // native event handler handling should be tested in respective renderers

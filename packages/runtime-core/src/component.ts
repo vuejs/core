@@ -874,25 +874,32 @@ function setupStatefulComponent(
     const setupContext = (instance.setupContext =
       setup.length > 1 ? createSetupContext(instance) : null)
     const reset = setCurrentInstance(instance)
-    const setupResult = callWithErrorHandling(
-      setup,
-      instance,
-      ErrorCodes.SETUP_FUNCTION,
-      [
-        __DEV__ ? shallowReadonly(instance.props) : instance.props,
-        setupContext,
-      ],
-    )
+    // the cleanup must run even when the error is rethrown (which is what
+    // happens in dev with no error handler), otherwise currentInstance and
+    // the component's scope stay active for the rest of the app's lifetime
+    let setupResult: unknown
+    try {
+      setupResult = callWithErrorHandling(
+        setup,
+        instance,
+        ErrorCodes.SETUP_FUNCTION,
+        [
+          __DEV__ ? shallowReadonly(instance.props) : instance.props,
+          setupContext,
+        ],
+      )
+    } finally {
+      resetTracking()
+      reset()
+    }
     const isAsyncSetup = isPromise(setupResult)
-    resetTracking()
-    reset()
 
     if ((isAsyncSetup || instance.sp) && !isAsyncWrapper(instance)) {
       // async setup / serverPrefetch, mark as async boundary for useId()
       markAsyncBoundary(instance)
     }
 
-    if (isAsyncSetup) {
+    if (isPromise(setupResult)) {
       setupResult.then(unsetCurrentInstance, unsetCurrentInstance)
       if (isSSR) {
         // return the promise so server-renderer can wait on it
