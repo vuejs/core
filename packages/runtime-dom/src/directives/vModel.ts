@@ -432,6 +432,10 @@ export function initVModelForSSR(): void {
       if (vnode.props && value.has(vnode.props.value)) {
         return { checked: true }
       }
+    } else if (vnode.props && 'true-value' in vnode.props) {
+      if (looseEqual(value, vnode.props['true-value'])) {
+        return { checked: true }
+      }
     } else if (value) {
       return { checked: true }
     }

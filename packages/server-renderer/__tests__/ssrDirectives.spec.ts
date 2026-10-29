@@ -172,6 +172,32 @@ describe('ssr: directives', () => {
       ).toBe(`<input type="checkbox" value="foo">`)
     })
 
+    test('checkbox with true-value', async () => {
+      expect(
+        await renderToString(
+          createApp({
+            render: () =>
+              withDirectives(
+                h('input', { type: 'checkbox', 'true-value': 'yes' }),
+                [[vModelCheckbox, 'no']],
+              ),
+          }),
+        ),
+      ).toBe(`<input type="checkbox" true-value="yes">`)
+
+      expect(
+        await renderToString(
+          createApp({
+            render: () =>
+              withDirectives(
+                h('input', { type: 'checkbox', 'true-value': false }),
+                [[vModelCheckbox, false]],
+              ),
+          }),
+        ),
+      ).toBe(`<input type="checkbox" true-value="false" checked>`)
+    })
+
     test('textarea', async () => {
       expect(
         await renderToString(
