@@ -758,10 +758,9 @@ export function createHydrationFunctions(
       getContainerType(container),
       slotScopeIds,
     )
-    // the component vnode's el should be updated when a mismatch occurs,
-    // but only when the mismatched vnode is the component's root - otherwise
-    // the component el would point to a node nested inside its own subtree.
-    if (parentComponent && parentComponent.subTree === vnode) {
+    // update the component's el only if it pointed to the replaced node,
+    // including when the root is wrapped in a pending Suspense.
+    if (parentComponent && parentComponent.vnode.el === node) {
       parentComponent.vnode.el = vnode.el
       updateHOCHostEl(parentComponent, vnode.el)
     }
