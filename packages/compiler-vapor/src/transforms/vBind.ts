@@ -76,7 +76,13 @@ export const transformVBind: DirectiveTransform = (dir, node, context) => {
         isModelValueProp(node, arg.content)))
   exp = resolveExpression(exp, excludeNumber)
 
-  if (arg.isStatic && isReservedProp(arg.content)) return
+  if (
+    arg.isStatic &&
+    isReservedProp(arg.content) &&
+    // same as vdom: the key of a `<slot>` is also a slot prop
+    !(arg.content === 'key' && node.tagType === ElementTypes.SLOT)
+  )
+    return
 
   let camel = false
   if (modifiersString.includes('camel')) {

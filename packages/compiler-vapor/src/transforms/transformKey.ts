@@ -43,6 +43,16 @@ export const transformKey: NodeTransform = (node, context) => {
 
   const dir = findProp(node, 'key', true, true)
   if (!dir || dir.type === NodeTypes.ATTRIBUTE) return
+  // a `<slot>` keeps its key as a slot prop when `wrapTemplate` moves the key
+  // to a wrapper, and that wrapper already does the keying
+  const parent = context.parent && context.parent.node
+  if (
+    node.tagType === ElementTypes.SLOT &&
+    parent &&
+    parent.type === NodeTypes.ELEMENT &&
+    parent.props.includes(dir)
+  )
+    return
 
   let value: SimpleExpressionNode
   value = dir.exp || normalizeBindShorthand(dir.arg!, context)
