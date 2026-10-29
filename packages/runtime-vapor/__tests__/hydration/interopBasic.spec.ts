@@ -1065,3 +1065,87 @@ describe('VDOM interop', () => {
     }
   })
 })
+
+// a vapor v-if chain renders its branch in a `<!--[i-->` range: a vdom parent
+// steps over it, at the root of the vapor component and inside a fragment
+describe('vapor v-if chain under a vdom parent', () => {
+  const VaporChild = {
+    code: `<template>
+      <div v-if="data.a"><p>a</p></div>
+      <div v-else><span>b</span></div>
+    </template>`,
+    vapor: true,
+  }
+
+  test.each([
+    ['at the root of the vapor component', '<components.VaporChild />'],
+    [
+      'inside a vdom fragment',
+      '<template v-for="i in 1"><components.VaporChild /><b>row</b></template>',
+    ],
+  ])('%s', async (_, child) => {
+    const data = ref({ a: true })
+    const { container } = await testWithVDOMApp(
+      `<script setup>const data = _data; const components = _components;</script>
+      <template>
+        <div>
+          ${child}
+          <i>tail</i>
+        </div>
+      </template>`,
+      { VaporChild },
+      data,
+    )
+    const tail = container.querySelector('i')!
+    expect(tail.textContent).toBe('tail')
+    expect('Hydration').not.toHaveBeenWarned()
+
+    data.value.a = false
+    await nextTick()
+    expect(container.querySelector('span')!.textContent).toBe('b')
+    expect(container.querySelector('p')).toBeNull()
+    expect(container.querySelector('i')).toBe(tail)
+  })
+
+  // a render function calling a vapor slot gets a vapor slot on the server
+  // too, rendered through its ssr branch rather than the vnode fallback: the
+  // branch range the chain checks is there
+  test('in a vapor slot a vdom render function renders', async () => {
+    const data = ref({ a: false, tail: 'T' })
+    const { container } = await testWithVaporApp(
+      `<script setup>
+        import { h } from 'vue'
+        const data = _data
+        const Wrap = {
+          setup(_, { slots }) {
+            return () => h('section', null, slots.default())
+          },
+        }
+      </script>
+      <template>
+        <Wrap>
+          <div v-if="data.a"><p>a</p></div>
+          <div v-else><span>b</span></div>
+        </Wrap>
+        <u>{{ data.tail }}</u>
+      </template>`,
+      {},
+      data,
+      ref({ a: true, tail: 'T' }),
+    )
+    expect(container.querySelector('section')!.innerHTML).toBe(
+      '<!--[--><!--[0--><div><span>b</span></div><!--]--><!--]-->',
+    )
+    expect('Hydration node mismatch').toHaveBeenWarnedTimes(1)
+
+    const u = container.querySelector('u')!
+    data.value.tail = 'U'
+    data.value.a = true
+    await nextTick()
+    expect(container.querySelector('u')).toBe(u)
+    expect(u.textContent).toBe('U')
+    expect(container.querySelector('section')!.innerHTML).toBe(
+      '<!--[--><!--[0--><div><p>a</p></div><!--]--><!--]-->',
+    )
+  })
+})

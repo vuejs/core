@@ -1,4 +1,4 @@
-import type { Block, BlockFn } from './block'
+import { type Block, type BlockFn, insert } from './block'
 import {
   type FragmentClaim,
   type HydrationCursor,
@@ -8,9 +8,11 @@ import {
   currentHydrationNode,
   enterHydrationCursor,
   hydrateBlock,
+  hydrateChainBranch,
   isComment,
   isHydrating,
   locateClaimedEnd,
+  runWithoutHydration,
   trimHydrationBoundary,
 } from './dom/hydration'
 import {
@@ -25,6 +27,12 @@ import { IF } from './fragmentFlags'
 import { createComment, createTextNode } from './dom/node'
 import { VaporBlockShape, VaporIfFlags } from '@vue/shared'
 
+// The position in its chain of the branch a hydrating `createIf` renders when
+// its condition holds: a short `v-else-if` chain compiles to nested calls, and
+// the call whose false branch is the rest of the chain (`ELSE_IF`) sets it just
+// before running that branch, whose first statement is the next call.
+let nextChainPosition = 0
+
 export function createIf(
   condition: () => any,
   b1: BlockFn,
@@ -36,6 +44,13 @@ export function createIf(
   const _insertionParent = insertionParent
   const _insertionAnchor = insertionAnchor
   if (!isHydrating) resetInsertionState()
+  let position = 0
+  let inChain = false
+  if (isHydrating) {
+    position = nextChainPosition
+    nextChainPosition = 0
+    inChain = position > 0 || !!b2
+  }
   let hydrationCursor: HydrationCursor | null = null
   let branchShape: VaporBlockShape | undefined
   // the fragment's own anchor, when it has one; the `v-if` once path has none
@@ -45,6 +60,7 @@ export function createIf(
   if (flags & VaporIfFlags.ONCE) {
     const ok = condition()
     let claim: FragmentClaim | undefined
+    let otherBranch: Node | null = null
     if (isHydrating) {
       branchShape = decodeIfShape(flags, ok)
       claim =
@@ -52,13 +68,26 @@ export function createIf(
           ? createFragmentClaim()
           : undefined
       hydrationCursor = enterHydrationCursor(claim)
+      if (branchShape === VaporBlockShape.ELSE_IF) {
+        nextChainPosition = position + 1
+      } else if (inChain) {
+        otherBranch = hydrateChainBranch(
+          (claim ||= createFragmentClaim()),
+          ok ? position : position + 1,
+        )
+      }
     }
     if (isHydrating && !ok && !b2) {
-      // Resolve the empty branch's SSR anchor without installing an effect.
-      const placeholder = new DynamicFragment(IF, __DEV__ ? 'if' : undefined)
-      placeholder.hydrationClaim = claim
-      hydrateDynamicFragmentAnchor(placeholder, true)
-      frag = [placeholder.anchor]
+      // Resolve the empty branch's SSR anchor without installing an effect:
+      // the close of a server branch the chain dropped, or a placeholder's.
+      if (otherBranch) {
+        frag = [otherBranch]
+      } else {
+        const placeholder = new DynamicFragment(IF, __DEV__ ? 'if' : undefined)
+        placeholder.hydrationClaim = claim
+        hydrateDynamicFragmentAnchor(placeholder, true)
+        frag = [placeholder.anchor]
+      }
     } else {
       const render = ok ? b1 : b2
       frag = !render
@@ -67,9 +96,16 @@ export function createIf(
               __DEV__ ? createComment('if') : createTextNode(),
             ),
           ]
-        : isHydrating
-          ? hydrateBlock(render)
-          : render()
+        : otherBranch
+          ? runWithoutHydration(() => {
+              // the server rendered another branch: this one goes in its range
+              const block = render()
+              insert(block, otherBranch!.parentNode!, otherBranch)
+              return block
+            })
+          : isHydrating
+            ? hydrateBlock(render)
+            : render()
     }
     if (isHydrating && claim && claim.start) {
       // Non-empty v-once branches have no DynamicFragment to consume the
@@ -97,6 +133,7 @@ export function createIf(
     frag = dynamicFragment
     renderEffect(() => {
       const ok = condition()
+      let otherBranch: Node | null = null
       if (isHydrating) {
         branchShape = decodeIfShape(flags, ok)
         dynamicFragment.hydrationClaim =
@@ -104,12 +141,25 @@ export function createIf(
             ? createFragmentClaim()
             : undefined
         hydrationCursor = enterHydrationCursor(dynamicFragment.hydrationClaim)
+        if (branchShape === VaporBlockShape.ELSE_IF) {
+          nextChainPosition = position + 1
+        } else if (inChain) {
+          otherBranch = hydrateChainBranch(
+            (dynamicFragment.hydrationClaim ||= createFragmentClaim()),
+            ok ? position : position + 1,
+          )
+        }
       }
-      dynamicFragment.update(
-        ok ? b1 : b2,
-        keyed ? keyBase + (ok ? 0 : 1) : undefined,
-        isNoScopeBranch(flags, ok),
-      )
+      const render = ok ? b1 : b2
+      const key = keyed ? keyBase + (ok ? 0 : 1) : undefined
+      const noScope = isNoScopeBranch(flags, ok)
+      if (otherBranch) {
+        // the server rendered another branch: this one goes in its range
+        dynamicFragment.anchor = otherBranch
+        runWithoutHydration(() => dynamicFragment.update(render, key, noScope))
+      } else {
+        dynamicFragment.update(render, key, noScope)
+      }
     })
   }
 
@@ -140,6 +190,7 @@ export function createIf(
 //   EMPTY       = 0b00
 //   SINGLE_ROOT = 0b01
 //   MULTI_ROOT  = 0b10
+//   ELSE_IF     = 0b11 (false branch only)
 //
 // Example:
 //   trueShape  = MULTI_ROOT  = 0b10

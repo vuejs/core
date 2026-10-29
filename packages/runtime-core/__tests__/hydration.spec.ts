@@ -32,6 +32,7 @@ import {
   ref,
   registerRuntimeCompiler,
   renderSlot,
+  setVaporInteropEnabled,
   useCssVars,
   vModelCheckbox,
   vShow,
@@ -4368,6 +4369,53 @@ describe('SSR hydration', () => {
         found.push(el.tagName)
       })
       expect(found).toEqual(['P', 'B'])
+    })
+
+    // vapor marks the branch of a v-if chain with its position, `<!--[1-->`:
+    // a range like a fragment's for whatever steps over vapor output
+    test('steps over a vapor branch range at the root of a component', () => {
+      setVaporInteropEnabled()
+      const Comp = {
+        render: () => h(Fragment, [h('p', 'a'), h('p', 'b')]),
+      }
+      const html = `<div><!--[1--><p>a</p><p>b</p><!--]--><span>after</span></div>`
+      const { vnode, container } = mountWithHydration(html, () =>
+        h('div', [h(Comp), h('span', 'after')]),
+      )
+      expect((vnode.children as VNode[])[1].el).toBe(
+        container.querySelector('span'),
+      )
+      expect(container.innerHTML).toBe(html)
+      expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+      expect(`Hydration children mismatch`).not.toHaveBeenWarned()
+    })
+
+    test('counts a vapor branch range nested in a fragment', () => {
+      setVaporInteropEnabled()
+      const Comp = {
+        render: () =>
+          h(Fragment, [h('p', 'a'), h(Fragment, [h('b', 'b')]), h('i', 'c')]),
+      }
+      const html = `<div><!--[--><p>a</p><!--[0--><b>b</b><!--]--><i>c</i><!--]--><span>after</span></div>`
+      const { vnode, container } = mountWithHydration(html, () =>
+        h('div', [h(Comp), h('span', 'after')]),
+      )
+      expect((vnode.children as VNode[])[1].el).toBe(
+        container.querySelector('span'),
+      )
+      expect(container.innerHTML).toBe(html)
+      expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+      expect(`Hydration children mismatch`).not.toHaveBeenWarned()
+    })
+
+    test('lazy hydration counts a vapor branch range', () => {
+      const container = document.createElement('div')
+      container.innerHTML = `<!--[--><p>a</p><!--[0--><b>b</b><!--]--><i>c</i><!--]--><u>outside</u>`
+      const found: string[] = []
+      forEachElement(container.firstChild!, el => {
+        found.push(el.tagName)
+      })
+      expect(found).toEqual(['P', 'B', 'I'])
     })
 
     // the node handed to the mismatch is inside the range by then: the range

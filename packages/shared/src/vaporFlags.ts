@@ -47,6 +47,11 @@ export enum VaporBlockShape {
   EMPTY = 0,
   SINGLE_ROOT = 1,
   MULTI_ROOT = 2,
+  /**
+   * A `createIf` false branch that is the `v-else-if` rest of the chain: a
+   * nested `createIf` that renders the chain's later branches.
+   */
+  ELSE_IF = 3,
 }
 
 /**
@@ -124,6 +129,20 @@ export enum VaporSlotFlags {
 
 export function isForwardedSlot(flags: number): boolean {
   return !!(flags & VaporSlotFlags.FORWARDED)
+}
+
+/**
+ * The data of the comment a vapor server render opens the branch of a `v-if`
+ * chain with, `<!--[1-->`: the digits are the branch's position in the chain,
+ * and `<!--]-->` closes it like a fragment.
+ */
+export function isVaporBranchStart(data: string): boolean {
+  if (data.length < 2 || data.charCodeAt(0) !== 91 /* [ */) return false
+  for (let i = 1; i < data.length; i++) {
+    const c = data.charCodeAt(i)
+    if (c < 48 || c > 57) return false
+  }
+  return true
 }
 
 // vapor v-once content never changes validity, so it has nothing to notify.

@@ -208,7 +208,13 @@ function encodeIfBlockShape(
   // Pack the true/false branch shapes into one integer so runtime `createIf()`
   // can decode the selected branch with a single bit-mask operation.
   if (forceMultiRoot) {
-    return VaporBlockShape.MULTI_ROOT | (VaporBlockShape.MULTI_ROOT << 2)
+    return (
+      VaporBlockShape.MULTI_ROOT |
+      ((negative && negative.type === IRNodeTypes.IF
+        ? VaporBlockShape.ELSE_IF
+        : VaporBlockShape.MULTI_ROOT) <<
+        2)
+    )
   }
 
   const positiveNoScope = allowNoScope && canSkipIfBranchScope(positive)
@@ -231,7 +237,7 @@ function getNegativeIfBranchShape(
 ): VaporBlockShape {
   if (!negative) return VaporBlockShape.EMPTY
   return negative.type === IRNodeTypes.IF
-    ? VaporBlockShape.SINGLE_ROOT
+    ? VaporBlockShape.ELSE_IF
     : getBlockShape(negative)
 }
 
