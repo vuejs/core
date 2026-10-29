@@ -4,6 +4,7 @@
 
 import {
   type Component,
+  type ComponentPublicInstance,
   Fragment,
   type ObjectDirective,
   Suspense,
@@ -32,6 +33,7 @@ import {
   ref,
   registerRuntimeCompiler,
   renderSlot,
+  shallowRef,
   useCssVars,
   vModelCheckbox,
   vShow,
@@ -3817,6 +3819,129 @@ describe('SSR hydration', () => {
       app.mount(container)
       expect(`Hydration style mismatch`).not.toHaveBeenWarned()
     })
+
+    test('nested mismatch should not change the component el', async () => {
+      const PageA = {
+        setup() {
+          const show = ref(true)
+          onServerPrefetch(() => (show.value = false))
+          return { show }
+        },
+        template: `<main><p><button v-if="show">btn</button></p>A</main>`,
+      }
+      const PageB = {
+        template: `<section>B</section>`,
+      }
+      const page = shallowRef<Component>(PageA)
+      const App = {
+        setup() {
+          return { page }
+        },
+        template: `<div><component :is="page" /><footer>footer</footer></div>`,
+      }
+
+      const container = document.createElement('div')
+      container.innerHTML = await renderToString(h(App))
+      createSSRApp(App).mount(container)
+      expect(`Hydration node mismatch`).toHaveBeenWarned()
+      expect(container.innerHTML).toBe(
+        '<div><main><p><button>btn</button></p>A</main><footer>footer</footer></div>',
+      )
+
+      page.value = PageB
+      await nextTick()
+      expect(container.innerHTML).toBe(
+        '<div><section>B</section><footer>footer</footer></div>',
+      )
+    })
+
+    test('nested mismatch should not change the component el with Suspense', async () => {
+      const PageA = {
+        setup() {
+          const show = ref(true)
+          onServerPrefetch(() => (show.value = false))
+          return { show }
+        },
+        template: `<main><p><button v-if="show">btn</button></p>A</main>`,
+      }
+      const PageB = {
+        template: `<section>B</section>`,
+      }
+      const page = shallowRef<Component>(PageA)
+      const App = {
+        setup() {
+          return { page }
+        },
+        template: `<div><Suspense><component :is="page" /></Suspense><footer>footer</footer></div>`,
+      }
+
+      const container = document.createElement('div')
+      container.innerHTML = await renderToString(h(App))
+      createSSRApp(App).mount(container)
+      await nextTick()
+      expect(`Hydration node mismatch`).toHaveBeenWarned()
+      expect(container.innerHTML).toBe(
+        '<div><main><p><button>btn</button></p>A</main><footer>footer</footer></div>',
+      )
+
+      page.value = PageB
+      await nextTick()
+      await nextTick()
+      expect(container.innerHTML).toBe(
+        '<div><section>B</section><footer>footer</footer></div>',
+      )
+    })
+  })
+
+  test('root mismatch with pending Suspense should preserve the component el', async () => {
+    const { container, ssrHtml, page, pageRef, onResolve, release } =
+      await hydrateSuspenseApp(gate => {
+        const onResolve = vi.fn()
+        const AsyncChild = {
+          async setup() {
+            await gate()
+            return {}
+          },
+          template: `<span>async</span>`,
+        }
+        const PageA = {
+          components: { AsyncChild },
+          setup() {
+            const show = ref(true)
+            onServerPrefetch(() => (show.value = false))
+            return { show, onResolve }
+          },
+          template: `
+            <Suspense @resolve="onResolve">
+              <main v-if="show"><AsyncChild /></main>
+              <section v-else><AsyncChild /></section>
+            </Suspense>
+          `,
+        }
+        const page = shallowRef<Component>(PageA)
+        const pageRef = ref<ComponentPublicInstance>()
+        const App = {
+          setup() {
+            return { page, pageRef }
+          },
+          template: `<div><component :is="page" ref="pageRef" /></div>`,
+        }
+        return { App, page, pageRef, onResolve }
+      })
+
+    expect(ssrHtml).toBe('<div><section><span>async</span></section></div>')
+    expect(`Hydration node mismatch`).toHaveBeenWarned()
+    expect(onResolve).not.toHaveBeenCalled()
+    expect(container.innerHTML).toBe('<div><main><!----></main></div>')
+    expect.soft(pageRef.value!.$el).toBe(container.querySelector('main'))
+
+    page.value = { template: `<article>B</article>` }
+    await nextTick()
+    expect(container.innerHTML).toBe('<div><article>B</article></div>')
+
+    release()
+    await new Promise(r => setTimeout(r))
+    expect(container.innerHTML).toBe('<div><article>B</article></div>')
   })
 
   describe('data-allow-mismatch', () => {
