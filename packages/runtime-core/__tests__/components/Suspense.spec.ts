@@ -1751,6 +1751,164 @@ describe('Suspense', () => {
     expect(calls).toContain('innerB mounted')
   })
 
+  test('unmounting a pending nested suspensible suspense should resolve its parent', async () => {
+    const Inner = defineAsyncComponent(
+      {
+        setup: () => () => h('div', 'inner'),
+      },
+      10,
+    )
+
+    const show = ref(true)
+
+    /**
+     *  <Suspense>
+     *    <div>
+     *      <Suspense suspensible v-if="show"><Inner /></Suspense>
+     *      <span>other</span>
+     *    </div>
+     *  </Suspense>
+     */
+    const Comp = {
+      setup() {
+        return () =>
+          h(Suspense, null, {
+            default: h('div', [
+              show.value
+                ? h(Suspense, { suspensible: true }, { default: h(Inner) })
+                : createCommentVNode('v-if', true),
+              h('span', 'other'),
+            ]),
+            fallback: h('div', 'fallback'),
+          })
+      },
+    }
+
+    const root = nodeOps.createElement('div')
+    render(h(Comp), root)
+    expect(serializeInner(root)).toBe(`<div>fallback</div>`)
+
+    show.value = false
+    await nextTick()
+    expect(serializeInner(root)).toBe(
+      `<div><!--v-if--><span>other</span></div>`,
+    )
+
+    await Promise.all(deps)
+  })
+
+  test('replacing a pending nested suspensible suspense with an async component', async () => {
+    const Inner = defineAsyncComponent(
+      {
+        setup: () => () => h('div', 'inner'),
+      },
+      20,
+    )
+    const Other = defineAsyncComponent(
+      {
+        setup: () => () => h('div', 'other'),
+      },
+      10,
+    )
+
+    const show = ref(true)
+
+    /**
+     *  <Suspense>
+     *    <Wrapper>
+     *      <div>
+     *        <Suspense suspensible v-if="show"><Inner /></Suspense>
+     *        <Other v-else />
+     *      </div>
+     *    </Wrapper>
+     *  </Suspense>
+     */
+    const Wrapper = {
+      setup() {
+        return () =>
+          h('div', [
+            show.value
+              ? h(Suspense, { suspensible: true }, { default: h(Inner) })
+              : h(Other),
+          ])
+      },
+    }
+
+    const root = nodeOps.createElement('div')
+    render(
+      h(Suspense, null, {
+        default: h(Wrapper),
+        fallback: h('div', 'fallback'),
+      }),
+      root,
+    )
+    expect(serializeInner(root)).toBe(`<div>fallback</div>`)
+
+    show.value = false
+    await nextTick()
+    expect(serializeInner(root)).toBe(`<div>fallback</div>`)
+
+    await Promise.all(deps)
+    await nextTick()
+    expect(serializeInner(root)).toBe(`<div><div>other</div></div>`)
+  })
+
+  test('discarded nested suspensible suspense should not release a stale parent dep', async () => {
+    const Inner = defineAsyncComponent(
+      {
+        setup: () => () => h('div', 'inner'),
+      },
+      10,
+    )
+    const Other = defineAsyncComponent(
+      {
+        setup: () => () => h('div', 'other'),
+      },
+      10,
+    )
+
+    const toggle = ref(true)
+
+    /**
+     *  <Suspense>
+     *    <div v-if="toggle"><Suspense suspensible><Inner /></Suspense></div>
+     *    <span v-else><Other /></span>
+     *  </Suspense>
+     */
+    const Comp = {
+      setup() {
+        return () =>
+          h(Suspense, null, {
+            default: toggle.value
+              ? h('div', [
+                  h(Suspense, { suspensible: true }, { default: h(Inner) }),
+                ])
+              : h('span', [h(Other)]),
+            fallback: h('div', 'fallback'),
+          })
+      },
+    }
+
+    const root = nodeOps.createElement('div')
+    render(h(Comp), root)
+
+    toggle.value = false
+    await nextTick()
+    expect(serializeInner(root)).toBe(`<div>fallback</div>`)
+
+    toggle.value = true
+    await nextTick()
+    render(null, root)
+    await nextTick()
+    expect(
+      'suspense.resolve() is called on an already unmounted suspense boundary',
+    ).not.toHaveBeenWarned()
+
+    await Promise.all(deps)
+    await nextTick()
+    expect(serializeInner(root)).toBe(``)
+  })
+
   // #8206
   test('nested suspense with suspensible & no async deps', async () => {
     const calls: string[] = []
