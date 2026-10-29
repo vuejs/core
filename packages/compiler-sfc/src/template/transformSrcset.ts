@@ -84,7 +84,10 @@ export const transformSrcset: NodeTransform = (
           }
 
           if (options.base) {
-            const base = options.base
+            const base = parseUrl(options.base)
+            const protocol = base.protocol || ''
+            const host = base.host ? protocol + '//' + base.host : ''
+            const basePath = base.host ? base.path || '/' : options.base
             const set: string[] = []
             let needImportTransform = false
 
@@ -92,7 +95,8 @@ export const transformSrcset: NodeTransform = (
               let { url, descriptor } = candidate
               descriptor = descriptor ? ` ${descriptor}` : ``
               if (url[0] === '.') {
-                candidate.url = (path.posix || path).join(base, url)
+                // Join only the path so protocol and hostname stay intact.
+                candidate.url = host + (path.posix || path).join(basePath, url)
                 set.push(candidate.url + descriptor)
               } else if (shouldProcessUrl(url)) {
                 needImportTransform = true
