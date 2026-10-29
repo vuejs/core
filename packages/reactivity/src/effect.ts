@@ -167,9 +167,12 @@ export class ReactiveEffect<T = any>
       return this.fn()
     }
 
+    // a recursive run (with allowRecurse, or calling the runner inside the
+    // effect) shares the outer run's active links
+    const isRecursive = !!(this.flags & EffectFlags.RUNNING)
     this.flags |= EffectFlags.RUNNING
     cleanupEffect(this)
-    prepareDeps(this)
+    prepareDeps(this, isRecursive)
     const prevEffect = activeSub
     const prevShouldTrack = shouldTrack
     activeSub = this
@@ -184,10 +187,10 @@ export class ReactiveEffect<T = any>
             'this is likely a Vue internal bug.',
         )
       }
-      cleanupDeps(this)
+      cleanupDeps(this, isRecursive)
       activeSub = prevEffect
       shouldTrack = prevShouldTrack
-      this.flags &= ~EffectFlags.RUNNING
+      if (!isRecursive) this.flags &= ~EffectFlags.RUNNING
     }
   }
 
@@ -309,26 +312,33 @@ export function endBatch(): void {
   if (error) throw error
 }
 
-function prepareDeps(sub: Subscriber) {
+function prepareDeps(sub: Subscriber, isRecursive?: boolean) {
   // Prepare deps for tracking, starting from the head
   for (let link = sub.deps; link; link = link.nextDep) {
     // set all previous deps' (if any) version to -1 so that we can track
     // which ones are unused after the run
     link.version = -1
-    // store previous active sub if link was being used in another context
-    link.prevActiveLink = link.dep.activeLink
-    link.dep.activeLink = link
+    if (!isRecursive) {
+      // store previous active sub if link was being used in another context
+      link.prevActiveLink = link.dep.activeLink
+      link.dep.activeLink = link
+    }
   }
 }
 
-function cleanupDeps(sub: Subscriber) {
+function cleanupDeps(sub: Subscriber, isRecursive?: boolean) {
   // Cleanup unused deps
   let head
   let tail = sub.depsTail
   let link = tail
   while (link) {
     const prev = link.prevDep
-    if (link.version === -1) {
+    // a recursive run keeps used links active for the outer run, and leaves an
+    // unused link to the outer run if another subscriber's link is active on
+    // top of it (that subscriber restores it as its previous active link)
+    const unused =
+      link.version === -1 && (!isRecursive || link.dep.activeLink === link)
+    if (unused) {
       if (link === tail) tail = prev
       // unused - remove it from the dep's subscribing effect list
       removeSub(link)
@@ -340,9 +350,11 @@ function cleanupDeps(sub: Subscriber) {
       head = link
     }
 
-    // restore previous active link if any
-    link.dep.activeLink = link.prevActiveLink
-    link.prevActiveLink = undefined
+    if (!isRecursive || unused) {
+      // restore previous active link if any
+      link.dep.activeLink = link.prevActiveLink
+      link.prevActiveLink = undefined
+    }
     link = prev
   }
   // set the new head & tail
@@ -492,6 +504,7 @@ export function effect<T = any>(
   const e = new ReactiveEffect(fn)
   if (options) {
     extend(e, options)
+    if (options.allowRecurse) e.flags |= EffectFlags.ALLOW_RECURSE
   }
   try {
     e.run()

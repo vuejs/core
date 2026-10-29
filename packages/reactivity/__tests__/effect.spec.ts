@@ -441,6 +441,107 @@ describe('reactivity/effect', () => {
     expect(numSpy).toHaveBeenCalledTimes(10)
   })
 
+  // #16014
+  it('should allow recursive self-trigger with allowRecurse option', () => {
+    const num = ref(0)
+    const spy = vi.fn(() => {
+      if (num.value < 10) num.value++
+    })
+    effect(spy, { allowRecurse: true })
+    expect(num.value).toBe(10)
+    expect(spy).toHaveBeenCalledTimes(11)
+  })
+
+  it('should track deps dropped by a recursive run when they are read again', () => {
+    const stage = ref(0)
+    const value = ref(0)
+    let dummy
+    const spy = vi.fn(() => {
+      if (stage.value === 1) return
+      dummy = value.value
+      if (stage.value === 0) stage.value = 1
+    })
+    effect(spy, { allowRecurse: true })
+    expect(spy).toHaveBeenCalledTimes(2)
+    value.value = 1
+    expect(spy).toHaveBeenCalledTimes(2)
+    stage.value = 2
+    value.value = 2
+    expect(dummy).toBe(2)
+  })
+
+  it('should not be triggered by deps dropped by a recursive run', () => {
+    const stage = ref(0)
+    const value = ref(0)
+    const spy = vi.fn(() => {
+      if (stage.value === 1) return
+      value.value
+      if (stage.value === 0) stage.value = 1
+      value.value = 1
+    })
+    effect(spy, { allowRecurse: true })
+    expect(spy).toHaveBeenCalledTimes(2)
+  })
+
+  it('should keep deps tracked when another effect triggers a recursive run', () => {
+    const shared = ref(0)
+    const trigger = ref(0)
+    const stage = ref(0)
+    effect(() => {
+      shared.value
+      if (trigger.value) stage.value = 1
+    })
+    const spy = vi.fn(() => {
+      if (stage.value === 1) return
+      shared.value
+      trigger.value = 1
+      shared.value
+    })
+    effect(spy, { allowRecurse: true })
+    expect(spy).toHaveBeenCalledTimes(2)
+    shared.value++
+    expect(spy).toHaveBeenCalledTimes(3)
+  })
+
+  it('should track deps dropped by a nested runner call when they are read again', () => {
+    const stage = ref(0)
+    const value = ref(0)
+    let dummy
+    let nested = false
+    const runner = effect(() => {
+      if (stage.value === 1) return
+      dummy = value.value
+      if (nested) {
+        nested = false
+        stage.value = 1
+        runner()
+      }
+    })
+    nested = true
+    value.value = 1
+    stage.value = 2
+    value.value = 2
+    expect(dummy).toBe(2)
+  })
+
+  it('should not self-trigger after a nested runner call returns', () => {
+    const num = ref(0)
+    let nested = false
+    let runs = 0
+    const runner = effect(() => {
+      runs++
+      num.value
+      if (nested) {
+        nested = false
+        runner()
+        num.value++
+      }
+    })
+    nested = true
+    num.value++
+    expect(runs).toBe(3)
+  })
+
   it('should avoid infinite loops with other effects', () => {
     const nums = reactive({ num1: 0, num2: 1 })
 
