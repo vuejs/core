@@ -160,6 +160,65 @@ describe('compiler sfc: transform srcset', () => {
     )
   })
 
+  test.each([
+    [
+      'https://cdn.example.com/assets/?token=abc',
+      'https://cdn.example.com/assets/',
+    ],
+    ['https://cdn.example.com?token=abc', 'https://cdn.example.com/'],
+    ['//cdn.example.com/assets/?token=abc', '//cdn.example.com/assets/'],
+    ['/assets/?token=abc#base', '/assets/'],
+    ['assets/?token=abc#base', 'assets/'],
+    ['~/assets/#base/path', '~/assets/'],
+  ])(
+    'should resolve srcset paths independently of base suffix %s',
+    (base, prefix) => {
+      const { code } = compileWithSrcset(
+        `<img srcset="./logo.png 1x, ./large.png?size=2#icon 2x" />`,
+        { base },
+      )
+
+      // A relative path replaces the base URL's query and fragment.
+      expect(code).toContain(
+        `srcset: "${prefix}logo.png 1x, ${prefix}large.png?size=2#icon 2x"`,
+      )
+    },
+  )
+
+  test.each([
+    '?url=https://other.example/image',
+    '#//icon/../view',
+    '?url=https://other.example/a/../image#//icon/../view',
+    '#icon?url=https://other.example/image',
+    '?url=https%3A%2F%2Fother.example%2Fimage#%2Ficon',
+    "?url='https://other.example/image'",
+  ])('should preserve srcset candidate suffix %s', suffix => {
+    const { code } = compileWithSrcset(
+      `<img srcset="../logo.svg${suffix} 2x" />`,
+      { base: 'https://cdn.example.com/assets/images/' },
+    )
+
+    expect(code).toContain(
+      `srcset: "https://cdn.example.com/assets/logo.svg${suffix} 2x"`,
+    )
+  })
+
+  test.each(['https://cdn.example.com/assets/', '/assets/'])(
+    'should preserve srcset suffixes alongside imports with base %s',
+    base => {
+      const suffix = '?url=https://other.example/image#//icon/../view'
+      const { code } = compileWithSrcset(
+        `<img srcset="./logo.svg${suffix} 1x, @/large.png 2x" />`,
+        { base: `${base}?token=abc` },
+      )
+
+      expect(code).toContain(`import _imports_0 from '@/large.png'`)
+      expect(code).not.toContain('import _imports_1')
+      expect(code).toContain(`"${base}logo.svg${suffix}" + ' 1x, '`)
+      expect(code).toContain(`_imports_0 + ' 2x'`)
+    },
+  )
+
   test('should transform subpath import paths starting with #', () => {
     const code = compileWithSrcset(
       `<img srcset="#src/assets/vue.svg" />` +
