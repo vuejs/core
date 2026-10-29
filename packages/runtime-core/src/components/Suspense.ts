@@ -745,7 +745,7 @@ function createSuspenseBoundary(
       const hydratedEl = instance.vnode.el
       instance
         .asyncDep!.catch(err => {
-          handleError(err, instance, ErrorCodes.SETUP_FUNCTION)
+          handleError(err, instance, ErrorCodes.SETUP_FUNCTION, undefined, true)
         })
         .then(asyncSetupResult => {
           // retry when the setup() promise resolves.
