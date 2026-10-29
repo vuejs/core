@@ -58,6 +58,24 @@ return (_ctx, _cache) => {
 }"
 `;
 
+exports[`sfc reactive props destructure > default values w/ array runtime declaration & key containing symbols 1`] = `
+"import { mergeDefaults as _mergeDefaults } from 'vue'
+
+export default {
+  props: /*@__PURE__*/_mergeDefaults(['foo', 'foo:bar', 'aria-label'], {
+  "foo:bar": () => {}, "__skip_foo:bar": true,
+  "aria-label": () => 'x', "__skip_aria-label": true
+}),
+  setup(__props) {
+
+      
+      
+return () => {}
+}
+
+}"
+`;
+
 exports[`sfc reactive props destructure > default values w/ array runtime declaration 1`] = `
 "import { mergeDefaults as _mergeDefaults } from 'vue'
 

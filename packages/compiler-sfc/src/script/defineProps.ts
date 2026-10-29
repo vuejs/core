@@ -151,7 +151,12 @@ export function genRuntimeProps(ctx: ScriptCompileContext): string | undefined {
         if (d)
           defaults.push(
             `${finalKey}: ${d.valueString}${
-              d.needSkipFactory ? `, __skip_${finalKey}: true` : ``
+              d.needSkipFactory
+                ? // the skip marker is a separate key and needs the same
+                  // escaping, e.g. `"__skip_foo:bar"` instead of
+                  // `__skip_"foo:bar"` which is not a valid identifier
+                  `, ${getEscapedPropName(`__skip_${key}`)}: true`
+                : ``
             }`,
           )
       }
