@@ -414,9 +414,21 @@ export function useAttrs(): SetupContext['attrs'] {
 }
 
 function getContext(calledFunctionName: string): SetupContext {
-  const i = getCurrentInstance()!
+  const i = getCurrentInstance()
   if (__DEV__ && !i) {
     warn(`${calledFunctionName}() called without active instance.`)
+  }
+  if (!i) {
+    // #12228: computeds created in setup may be re-evaluated by the
+    // scheduler's dirty check during a component update, where no instance
+    // is active. Return a detached empty context instead of crashing on a
+    // null instance.
+    return {
+      attrs: {},
+      slots: {},
+      emit: () => {},
+      expose: () => {},
+    }
   }
   return i.setupContext || (i.setupContext = createSetupContext(i))
 }
