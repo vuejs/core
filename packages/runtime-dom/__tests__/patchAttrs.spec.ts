@@ -1,5 +1,5 @@
 import { patchProp } from '../src/patchProp'
-import { xlinkNS } from '../src/modules/attrs'
+import { xlinkNS, xmlNS } from '../src/modules/attrs'
 
 describe('runtime-dom: attrs patching', () => {
   test('xlink attributes', () => {
@@ -8,6 +8,31 @@ describe('runtime-dom: attrs patching', () => {
     expect(el.getAttributeNS(xlinkNS, 'href')).toBe('a')
     patchProp(el, 'xlink:href', 'a', null, 'svg')
     expect(el.getAttributeNS(xlinkNS, 'href')).toBe(null)
+  })
+
+  test('xml attributes', () => {
+    const el = document.createElementNS('http://www.w3.org/2000/svg', 'text')
+    patchProp(el, 'xml:space', null, 'preserve', 'svg')
+    expect(el.getAttributeNS(xmlNS, 'space')).toBe('preserve')
+    expect(el.getAttribute('xml:space')).toBe('preserve')
+    expect(el.attributes.length).toBe(1)
+
+    patchProp(el, 'xml:space', 'preserve', 'default', 'svg')
+    expect(el.getAttributeNS(xmlNS, 'space')).toBe('default')
+    expect(el.attributes.length).toBe(1)
+
+    patchProp(el, 'xml:space', 'default', null, 'svg')
+    expect(el.getAttributeNS(xmlNS, 'space')).toBe(null)
+    expect(el.attributes.length).toBe(0)
+  })
+
+  test('xml attributes on non-svg elements are not namespaced', () => {
+    // the HTML parser only moves `xml:*` into the XML namespace for foreign
+    // content, so HTML elements must keep a plain attribute
+    const el = document.createElement('div')
+    patchProp(el, 'xml:lang', null, 'en')
+    expect(el.getAttribute('xml:lang')).toBe('en')
+    expect(el.getAttributeNode('xml:lang')!.namespaceURI).toBe(null)
   })
 
   test('textContent attributes /w svg', () => {

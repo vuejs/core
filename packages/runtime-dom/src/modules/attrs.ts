@@ -12,6 +12,7 @@ import {
 } from '@vue/runtime-core'
 
 export const xlinkNS = 'http://www.w3.org/1999/xlink'
+export const xmlNS = 'http://www.w3.org/XML/1998/namespace'
 
 export function patchAttr(
   el: Element,
@@ -26,6 +27,17 @@ export function patchAttr(
       el.removeAttributeNS(xlinkNS, key.slice(6, key.length))
     } else {
       el.setAttributeNS(xlinkNS, key, value)
+    }
+  } else if (isSVG && key.startsWith('xml:')) {
+    // the HTML parser moves `xml:*` attributes into the XML namespace when
+    // parsing foreign content, so setting them with plain `setAttribute`
+    // yields an attribute the browser ignores (`xml:space="preserve"`
+    // no longer sets `white-space: pre`, `xml:lang` no longer matches
+    // `:lang()`), while SSR output keeps working.
+    if (value == null) {
+      el.removeAttributeNS(xmlNS, key.slice(4, key.length))
+    } else {
+      el.setAttributeNS(xmlNS, key, value)
     }
   } else {
     if (__COMPAT__ && compatCoerceAttr(el, key, value, instance)) {
