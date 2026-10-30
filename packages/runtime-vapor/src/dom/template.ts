@@ -6,13 +6,10 @@ import {
   currentHydrationNode,
   enterHydrationCursor,
   exitHydrationCursor,
-  hydrateTextNode,
   isClaimedAnchor,
-  isComment,
   isHydrating,
   parseAdoptTarget,
   resolveHydrationTarget,
-  validateHydrationTarget,
 } from './hydration'
 import { insertionParent, resetInsertionState } from '../insertionState'
 import {
@@ -81,46 +78,26 @@ export function template(html: string, flags: number = 0, ns?: Namespace) {
       if (isHydrating) {
         hydrationCursor = enterHydrationCursor(
           undefined,
-          (adoptTarget ||= parseAdoptTarget(html)).blank,
+          (adoptTarget ||= parseAdoptTarget(html, isStatic)).blank,
         )
       } else resetInsertionState()
     }
     if (isHydrating) {
-      let adopted: Node | null = null
-      // static templates only need to skip fragment markers, teleport
-      // markers, and hydration anchors before advancing the hydration
-      // cursor, so they don't need to go through adoptTemplate. Vapor
-      // never mutates their DOM afterwards.
+      let adopted: Node
+      // A static template stripped of its content at build time has nothing
+      // to compare against: the node is adopted as it stands, as vdom adopts
+      // a stripped static vnode. A claimed anchor (an outlet's close marker)
+      // is where the server's output stopped, not this node.
       const target =
-        isStatic &&
-        // SSR empty branches are empty comments. Let adoptTemplate() replace
-        // them when the client selected this static branch.
-        !isComment(currentHydrationNode!, '')
+        isStatic && html === ''
           ? resolveHydrationTarget(currentHydrationNode!)
           : null
-      // A claimed anchor (an outlet's close marker) is where the server's
-      // output stopped, not this node: adoptTemplate() recreates the node
-      // ahead of it and keeps the anchor, as handleMismatch does.
       if (target && !isClaimedAnchor(target)) {
         adopted = target
-        if (html !== '') {
-          if (html[0] !== '<') {
-            // Static text normally matches, but patch the rare mismatch to
-            // align with vdom text hydration.
-            if (
-              !hydrateTextNode(adopted, html) &&
-              (__DEV__ || __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__)
-            ) {
-              validateHydrationTarget(adopted, html)
-            }
-          } else if (__DEV__ || __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__) {
-            validateHydrationTarget(adopted, html)
-          }
-        }
         // a hydrated node carries instance state (SSR fallthrough attrs, slot
         // scope ids), so post-hydration CSR clones come from the parsed html
         // unless that was stripped
-        if (!node && !html) node = adopted.cloneNode(true)
+        if (!node) node = adopted.cloneNode(true)
         advanceHydrationNode(adopted)
       } else {
         // do not assign `adopted` to `node`, or CSR clones would duplicate children.
@@ -129,7 +106,7 @@ export function template(html: string, flags: number = 0, ns?: Namespace) {
           html,
           ns,
           !!hydrationCursor,
-          (adoptTarget ||= parseAdoptTarget(html)),
+          (adoptTarget ||= parseAdoptTarget(html, isStatic)),
         )!
       }
       if (root) (adopted as any).$root = rootMeta ||= createRootMeta()

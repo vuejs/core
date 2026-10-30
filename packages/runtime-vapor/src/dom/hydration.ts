@@ -204,7 +204,8 @@ export interface AdoptTarget {
   tag: string | null
   /** uppercase tag name — matches `tagName` for HTML elements directly */
   tagUpper: string | null
-  /** whitespace-only text template (empty slot text handling) */
+  /** the placeholder of a dynamic text (`' '`, or `''` for text the compiler
+   * materializes): the server may have omitted the node */
   blank: boolean
   /** the tag as written of a bare `<tag/>` (createPlainElement,
    * TransitionGroup): on a mismatch it is created directly, not parsed under
@@ -223,7 +224,10 @@ export let locateHydrationNode: (
   claim?: FragmentClaim,
   isBlankText?: boolean,
 ) => void
-export let parseAdoptTarget: (template: string) => AdoptTarget
+export let parseAdoptTarget: (
+  template: string,
+  isStatic?: boolean,
+) => AdoptTarget
 
 const enum AnchorFlags {
   // A node claimed as a fragment's insertion anchor. Mismatch recovery and
@@ -408,14 +412,17 @@ function adoptTemplateImpl(
   // TransitionGroup) omit this and parse per call
   target: AdoptTarget = parseAdoptTargetImpl(template),
 ): Node | null {
-  if (target.type !== 8 /* Comment */) {
-    node = target.blank
-      ? resolveBlankTextTarget(node, parentNode(node)!)
-      : resolveHydrationTarget(node)
-  }
-
-  if (!matchesAdoptTarget(node, target)) {
-    node = handleMismatch(node, template, ns, target, nested)
+  if (target.blank) {
+    node = resolveBlankTextTarget(node, parentNode(node)!)
+  } else {
+    node = resolveHydrationTarget(node)
+    if (!matchesAdoptTarget(node, target)) {
+      node = handleMismatch(node, template, ns, target, nested)
+    } else if (target.type === 3) {
+      // a text template is matched by node type; its content is compared and
+      // repaired in place, like vdom text hydration
+      hydrateTextNode(node as Text, template)
+    }
   }
 
   advanceHydrationNode(node)
@@ -621,7 +628,7 @@ function handleMismatch(
   return newNode
 }
 
-function parseAdoptTargetImpl(template: string): AdoptTarget {
+function parseAdoptTargetImpl(template: string, isStatic = false): AdoptTarget {
   let type: number
   let tag: string | null = null
   let tagUpper: string | null = null
@@ -629,7 +636,10 @@ function parseAdoptTargetImpl(template: string): AdoptTarget {
   let bare: string | null = null
   if (template[0] !== '<') {
     type = 3 // Text
-    blank = template.trim() === ''
+    // The compiler's two text placeholders. Any other text, whitespace
+    // constants included, was rendered by the server; so was a static space
+    // (a literal one survives inside <pre>), which only the flag tells apart.
+    blank = !isStatic && (template === ' ' || template === '')
   } else if (template[1] === '!') {
     type = 8 // Comment
   } else {
@@ -649,8 +659,9 @@ function parseAdoptTargetImpl(template: string): AdoptTarget {
  * template: the node type must match the template's expected type, and
  * element tags must match exactly — a prefix check is not enough
  * (e.g. a server `<i>` must not be adopted for a client `<ins>`).
- * The uppercase identity compare handles HTML elements without allocating;
- * the lowercase fallback covers case-preserving foreign elements (SVG/MathML).
+ * The identity compares handle HTML elements and lowercase foreign elements
+ * (svg, path, math) without allocating; the lowercase fallback covers
+ * camel-cased foreign elements (linearGradient).
  */
 function matchesAdoptTarget(node: Node, target: AdoptTarget): boolean {
   if (node.nodeType !== target.type) {
@@ -658,30 +669,21 @@ function matchesAdoptTarget(node: Node, target: AdoptTarget): boolean {
   }
 
   if (target.type !== 1) {
-    return true
+    // a claimed anchor is a structural boundary, never content
+    return !isClaimedAnchor(node)
   }
 
+  const tagName = (node as Element).tagName
   return (
     !target.tag ||
-    (node as Element).tagName === target.tagUpper ||
-    (node as Element).tagName.toLowerCase() === target.tag
+    tagName === target.tagUpper ||
+    tagName === target.tag ||
+    tagName.toLowerCase() === target.tag
   )
 }
 
-export function validateHydrationTarget(node: Node, template: string): void {
-  if (!matchesAdoptTarget(node, parseAdoptTargetImpl(template))) {
-    warnHydrationNodeMismatch(node, template)
-  }
-}
-
-export function hydrateTextNode(node: Node, expected: string): boolean {
-  if (node.nodeType !== 3) {
-    return false
-  }
-  const text = node as Text
-  if (text.data === expected) {
-    return true
-  }
+function hydrateTextNode(text: Text, expected: string): void {
+  if (text.data === expected) return
   const parent = text.parentElement
   if (parent && !isMismatchAllowed(parent, MismatchTypes.TEXT)) {
     ;(__DEV__ || __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__) &&
@@ -689,7 +691,6 @@ export function hydrateTextNode(node: Node, expected: string): boolean {
     logMismatchError()
   }
   text.data = expected
-  return true
 }
 
 export function warnHydrationTextMismatch(node: Text, expected: string): void {
@@ -947,7 +948,7 @@ export function resolveBlankTextTarget(
 ): Node {
   node = skipUntrackedAnchors(node)
 
-  if (node && node.nodeType === 3 /* Text */) {
+  if (node && node.nodeType === 3 /* Text */ && !isClaimedAnchor(node)) {
     return node
   }
 
