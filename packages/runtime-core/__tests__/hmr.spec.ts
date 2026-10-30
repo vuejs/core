@@ -1093,4 +1093,52 @@ describe('hot module replacement', () => {
       `1 <button>++</button> static text updated2`,
     )
   })
+  test('update comment nodes', () => {
+    const root = nodeOps.createElement('div')
+    const appId = 'test-comment-nodes'
+    const App: ComponentOptions = {
+      __hmrId: appId,
+      render: compileToFunction(
+        `<!-- top --><div>top</div><!-- bottom --><div>bottom</div>`,
+      ),
+    }
+    createRecord(appId, App)
+    render(h(App), root)
+    expect(serializeInner(root)).toBe(
+      `<!-- top --><div>top</div><!-- bottom --><div>bottom</div>`,
+    )
+
+    // update the text of a comment
+    rerender(
+      appId,
+      compileToFunction(
+        `<!-- top updated --><div>top</div><!-- bottom --><div>bottom</div>`,
+      ),
+    )
+    expect(serializeInner(root)).toBe(
+      `<!-- top updated --><div>top</div><!-- bottom --><div>bottom</div>`,
+    )
+
+    // insert a commented block in the middle
+    rerender(
+      appId,
+      compileToFunction(
+        `<!-- top updated --><div>top</div><!-- middle --><div>middle</div><!-- bottom --><div>bottom</div>`,
+      ),
+    )
+    expect(serializeInner(root)).toBe(
+      `<!-- top updated --><div>top</div><!-- middle --><div>middle</div><!-- bottom --><div>bottom</div>`,
+    )
+
+    // remove it again
+    rerender(
+      appId,
+      compileToFunction(
+        `<!-- top updated --><div>top</div><!-- bottom --><div>bottom</div>`,
+      ),
+    )
+    expect(serializeInner(root)).toBe(
+      `<!-- top updated --><div>top</div><!-- bottom --><div>bottom</div>`,
+    )
+  })
 })
