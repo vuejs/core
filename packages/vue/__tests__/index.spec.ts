@@ -300,6 +300,45 @@ describe('compiler + runtime integration', () => {
     expect(container.innerHTML).toBe(`<div>false<div>true</div></div>`)
   })
 
+  test('v-else-if / v-else + v-once', async () => {
+    const state = reactive({ branch: 'a', n: 0 })
+    const App = {
+      setup() {
+        return { state }
+      },
+      template: `<div>
+        <p v-if="state.branch === 'a'">a{{ state.n }}</p>
+        <p v-else-if="state.branch === 'b'" v-once>b{{ state.n }}</p>
+        <p v-else v-once>c{{ state.n }}</p>
+        <span v-once>{{ state.n }}</span>
+      </div>`,
+    }
+    const container = document.createElement('div')
+    createApp(App).mount(container)
+    expect(container.innerHTML).toBe(`<div><p>a0</p><span>0</span></div>`)
+
+    state.branch = 'b'
+    await nextTick()
+    expect(container.innerHTML).toBe(`<div><p>b0</p><span>0</span></div>`)
+
+    // the v-once branch is not updated, while the conditions stay reactive
+    state.n++
+    await nextTick()
+    expect(container.innerHTML).toBe(`<div><p>b0</p><span>0</span></div>`)
+
+    state.branch = 'c'
+    await nextTick()
+    expect(container.innerHTML).toBe(`<div><p>c1</p><span>0</span></div>`)
+
+    state.n++
+    await nextTick()
+    expect(container.innerHTML).toBe(`<div><p>c1</p><span>0</span></div>`)
+
+    state.branch = 'a'
+    await nextTick()
+    expect(container.innerHTML).toBe(`<div><p>a2</p><span>0</span></div>`)
+  })
+
   test.each([
     '<div><Child v-once />{{ count }}</div>',
     '<Child v-once />{{ count }}',
