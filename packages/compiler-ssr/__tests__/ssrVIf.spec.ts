@@ -145,6 +145,31 @@ describe('ssr: v-if', () => {
     `)
   })
 
+  // #5933
+  test('<template v-if> (with nested v-if chain)', () => {
+    expect(
+      compile(
+        `<div><template v-if="foo"><div v-if="bar">hi</div><span v-else>ho</span></template></div>`,
+      ).code,
+    ).toMatchInlineSnapshot(`
+      "const { ssrRenderAttrs: _ssrRenderAttrs } = require("vue/server-renderer")
+
+      return function ssrRender(_ctx, _push, _parent, _attrs) {
+        _push(\`<div\${_ssrRenderAttrs(_attrs)}>\`)
+        if (_ctx.foo) {
+          if (_ctx.bar) {
+            _push(\`<div>hi</div>\`)
+          } else {
+            _push(\`<span>ho</span>\`)
+          }
+        } else {
+          _push(\`<!---->\`)
+        }
+        _push(\`</div>\`)
+      }"
+    `)
+  })
+
   test('<template v-if> + normal v-else', () => {
     expect(
       compile(

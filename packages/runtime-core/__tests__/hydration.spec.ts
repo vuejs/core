@@ -995,6 +995,38 @@ describe('SSR hydration', () => {
     expect(text.textContent).toBe('bye')
   })
 
+  // #5933
+  test('<template v-if> wrapping a nested v-if chain as component root', async () => {
+    const state = reactive({ outer: true, inner: true })
+    const Child = {
+      props: ['state'],
+      template: `
+        <template v-if="state.outer">
+          <div v-if="state.inner">a</div>
+          <span v-else>b</span>
+        </template>
+        <p v-else>c</p>`,
+    }
+    const App = {
+      render: () => h(Child, { class: 'foo', state }),
+    }
+
+    const container = document.createElement('div')
+    container.innerHTML = await renderToString(h(App))
+    expect(container.innerHTML).toBe(`<div class="foo">a</div>`)
+
+    createSSRApp(App).mount(container)
+    expect(`Hydration`).not.toHaveBeenWarned()
+
+    state.inner = false
+    await nextTick()
+    expect(container.innerHTML).toBe(`<span class="foo">b</span>`)
+
+    state.outer = false
+    await nextTick()
+    expect(container.innerHTML).toBe(`<p class="foo">c</p>`)
+  })
+
   test('handle click error in ssr mode', async () => {
     const App = {
       setup() {

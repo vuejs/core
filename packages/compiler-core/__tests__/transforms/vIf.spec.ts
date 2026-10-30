@@ -32,6 +32,7 @@ import {
   RENDER_SLOT,
 } from '../../src/runtimeHelpers'
 import { createObjectMatcher } from '../testUtils'
+import { PatchFlags } from '@vue/shared'
 
 function parseWithIfTransform(
   template: string,
@@ -520,6 +521,109 @@ describe('compiler: v-if', () => {
         ],
       })
       expect(generate(root).code).toMatchSnapshot()
+    })
+
+    // #5933
+    test('template v-if w/ single nested v-if chain', () => {
+      const {
+        root,
+        node: { codegenNode },
+      } = parseWithIfTransform(
+        `<template v-if="ok"><div v-if="orNot"/><p v-else/></template><span v-else/>`,
+      )
+      // the nested chain renders the branch root, so no fragment is needed
+      expect(codegenNode.consequent).toMatchObject({
+        type: NodeTypes.JS_CONDITIONAL_EXPRESSION,
+        test: { content: `orNot` },
+        consequent: {
+          tag: `"div"`,
+          props: createObjectMatcher({ key: `0-0` }),
+        },
+        alternate: {
+          tag: `"p"`,
+          props: createObjectMatcher({ key: `0-1` }),
+        },
+      })
+      expect(codegenNode.alternate).toMatchObject({
+        tag: `"span"`,
+        props: createObjectMatcher({ key: `[1]` }),
+      })
+      expect(generate(root).code).toMatchSnapshot()
+    })
+
+    test('template v-else(-if) w/ nested template v-if chains', () => {
+      const {
+        root,
+        node: { codegenNode },
+      } = parseWithIfTransform(
+        `<div v-if="a"/>` +
+          `<template v-else-if="b">` +
+          `<template v-if="c"><i v-if="d"/><b v-else/></template><u v-else/>` +
+          `</template>` +
+          `<template v-else><p v-if="e"/></template>`,
+      )
+      expect(codegenNode.consequent).toMatchObject({
+        tag: `"div"`,
+        props: createObjectMatcher({ key: `[0]` }),
+      })
+      const elseIfBranch = codegenNode.alternate as IfConditionalExpression
+      expect(elseIfBranch.consequent).toMatchObject({
+        type: NodeTypes.JS_CONDITIONAL_EXPRESSION,
+        test: { content: `c` },
+        consequent: {
+          type: NodeTypes.JS_CONDITIONAL_EXPRESSION,
+          test: { content: `d` },
+          consequent: {
+            tag: `"i"`,
+            props: createObjectMatcher({ key: `1-0-0` }),
+          },
+          alternate: {
+            tag: `"b"`,
+            props: createObjectMatcher({ key: `1-0-1` }),
+          },
+        },
+        alternate: {
+          tag: `"u"`,
+          props: createObjectMatcher({ key: `1-1` }),
+        },
+      })
+      expect(elseIfBranch.alternate).toMatchObject({
+        type: NodeTypes.JS_CONDITIONAL_EXPRESSION,
+        test: { content: `e` },
+        consequent: {
+          tag: `"p"`,
+          props: createObjectMatcher({ key: `2-0` }),
+        },
+        alternate: {
+          type: NodeTypes.JS_CALL_EXPRESSION,
+          callee: CREATE_COMMENT,
+        },
+      })
+      expect(generate(root).code).toMatchSnapshot()
+    })
+
+    test('template v-if w/ comments and a single root child', () => {
+      // with comments stripped in production, these render a single root
+      for (const template of [
+        `<template v-if="ok"><!--foo--><div/></template>`,
+        `<template v-if="ok"><!--foo--><div v-if="orNot"/></template>`,
+      ]) {
+        const {
+          node: { codegenNode },
+        } = parseWithIfTransform(template)
+        expect(codegenNode.consequent).toMatchObject({
+          tag: FRAGMENT,
+          patchFlag: PatchFlags.STABLE_FRAGMENT | PatchFlags.DEV_ROOT_FRAGMENT,
+        })
+      }
+
+      const {
+        node: { codegenNode },
+      } = parseWithIfTransform(`<template v-if="ok"><!--foo-->hello</template>`)
+      expect(codegenNode.consequent).toMatchObject({
+        tag: FRAGMENT,
+        patchFlag: PatchFlags.STABLE_FRAGMENT,
+      })
     })
 
     test('v-if on <slot/>', () => {
