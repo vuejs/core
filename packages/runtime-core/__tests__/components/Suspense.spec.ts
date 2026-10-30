@@ -3537,4 +3537,96 @@ describe('Suspense', () => {
       app.unmount()
     },
   )
+
+  test('KeepAlive + Suspense: pending branch discarded before it resolves is unmounted', async () => {
+    const instances: any[] = []
+    const refCalls: any[] = []
+    const Async = {
+      async setup() {
+        instances.push(getCurrentInstance())
+        await new Promise(r => setTimeout(r))
+        return () => h('div', 'async')
+      },
+    }
+    const Sync = { render: () => h('div', 'sync') }
+    const view = shallowRef<any>(Async)
+    const root = nodeOps.createElement('div')
+    const App = {
+      render: () =>
+        h(KeepAlive, null, {
+          default: () =>
+            h(Suspense, null, {
+              default: h(view.value, {
+                ref:
+                  view.value === Async
+                    ? (i: any) => refCalls.push(i)
+                    : undefined,
+              }),
+              fallback: h('div', 'loading'),
+            }),
+        }),
+    }
+    render(h(App), root)
+    expect(serializeInner(root)).toBe('<div>loading</div>')
+    refCalls.length = 0
+
+    // switch away while the async root is still pending
+    view.value = Sync
+    await nextTick()
+    expect(serializeInner(root)).toBe('<div>sync</div>')
+    expect(instances[0].scope.active).toBe(false)
+    // the ref is released once, as for any unmounted component
+    expect(refCalls).toEqual([null])
+
+    view.value = Async
+    await nextTick()
+    await new Promise(r => setTimeout(r))
+    await nextTick()
+    expect(serializeInner(root)).toBe('<div>async</div>')
+
+    render(null, root)
+    expect(instances.length).toBe(2)
+    for (const instance of instances) {
+      expect(instance.scope.active).toBe(false)
+    }
+  })
+
+  test('KeepAlive discarded with a pending branch before it cached its child', async () => {
+    let instance: any
+    const Dep = {
+      async setup() {
+        await new Promise(r => setTimeout(r))
+        return () => h('span', 'dep')
+      },
+    }
+    const Inner = {
+      setup() {
+        instance = getCurrentInstance()
+        return () => h('div', 'inner')
+      },
+    }
+    const show = ref(true)
+    const root = nodeOps.createElement('div')
+    const App = {
+      render: () =>
+        h(Suspense, null, {
+          default: show.value
+            ? h('div', [
+                h(Dep),
+                h(KeepAlive, null, { default: () => h(Inner) }),
+              ])
+            : h('p', 'empty'),
+          fallback: h('p', 'loading'),
+        }),
+    }
+    render(h(App), root)
+    expect(serializeInner(root)).toBe('<p>loading</p>')
+    expect(instance.scope.active).toBe(true)
+
+    // the branch holding the KeepAlive is discarded before its mounted hook ran
+    show.value = false
+    await nextTick()
+    expect(serializeInner(root)).toBe('<p>empty</p>')
+    expect(instance.scope.active).toBe(false)
+  })
 })
