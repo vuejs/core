@@ -1,4 +1,5 @@
 import { type UrlWithStringQuery, parse as uriParse } from 'url'
+import path from 'path'
 import { isString } from '@vue/shared'
 
 export function isRelativeUrl(url: string): boolean {
@@ -49,4 +50,20 @@ function parseUriParts(urlString: string): UrlWithStringQuery {
   // A TypeError is thrown if urlString is not a string
   // @see https://nodejs.org/api/url.html#url_url_parse_urlstring_parsequerystring_slashesdenotehost
   return uriParse(isString(urlString) ? urlString : '', false, true)
+}
+
+export function joinUrl(
+  base: UrlWithStringQuery,
+  url: string,
+  basePath: string = base.pathname || '/',
+): string {
+  const protocol = base.protocol || ''
+  const host = base.host ? protocol + '//' + base.host : ''
+  const suffixIndex = url.search(/[?#]/)
+  const pathname = suffixIndex < 0 ? url : url.slice(0, suffixIndex)
+  const suffix = suffixIndex < 0 ? '' : url.slice(suffixIndex)
+
+  // Only normalize the pathname, preserving the query and hash.
+  // The browser build provides a posix-only path polyfill.
+  return host + (path.posix || path).join(basePath, pathname) + suffix
 }

@@ -1,4 +1,3 @@
-import path from 'path'
 import {
   ConstantTypes,
   type ExpressionNode,
@@ -12,6 +11,7 @@ import {
   isDataUrl,
   isExternalUrl,
   isRelativeUrl,
+  joinUrl,
   normalizeDecodedImportPath,
   parseUrl,
 } from './templateUtils'
@@ -84,7 +84,10 @@ export const transformSrcset: NodeTransform = (
           }
 
           if (options.base) {
-            const base = options.base
+            const base = parseUrl(options.base)
+            const basePath = base.host
+              ? base.pathname || '/'
+              : options.base.split(/[?#]/, 1)[0]
             const set: string[] = []
             let needImportTransform = false
 
@@ -92,7 +95,7 @@ export const transformSrcset: NodeTransform = (
               let { url, descriptor } = candidate
               descriptor = descriptor ? ` ${descriptor}` : ``
               if (url[0] === '.') {
-                candidate.url = (path.posix || path).join(base, url)
+                candidate.url = joinUrl(base, url, basePath)
                 set.push(candidate.url + descriptor)
               } else if (shouldProcessUrl(url)) {
                 needImportTransform = true
