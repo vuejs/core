@@ -61,6 +61,10 @@ export function locateSlotEndAnchor(): Node | null {
 export function withHydratingSlotBoundary<R>(fn: () => R): R {
   const claim = createFragmentClaim()
   locateHydrationNode(claim)
+  // An empty range: content adopting its close as an anchor moves the cursor
+  // past it, so the close cannot be read off the cursor afterwards.
+  const node = currentHydrationNode
+  if (claim.start && node && isRangeEnd(node)) locateEndAnchor(claim.start)
   const prev = currentSlotClaim
   currentSlotClaim = claim
 
