@@ -1558,6 +1558,131 @@ describe('SSR hydration', () => {
     expect(onResolve).toHaveBeenCalledTimes(1)
   })
 
+  // the toggled-away root stays on screen while the new branch loads. its
+  // setup finishing in that window must not render yet: async children it
+  // mounts would be counted as deps of the new branch. once the toggle is
+  // reverted and the boundary has settled, it hydrates in place
+  test('Suspense: toggle a hydrating suspense away from an unresolved async branch root to a pending branch and back', async () => {
+    const renderA = vi.fn(() => h('div', [h('span', 'page a')]))
+    const { container, ssrHtml, route, release, onResolve } =
+      await hydrateSuspenseApp(gate => {
+        const route = ref('a')
+        const onResolve = vi.fn()
+
+        const PageA = defineComponent({
+          async setup() {
+            await gate('a')
+            return renderA
+          },
+        })
+        const PageB = defineComponent({
+          async setup() {
+            await gate('b')
+            return () => h('div', [h('span', 'page b')])
+          },
+        })
+
+        const App = defineComponent({
+          setup() {
+            return () =>
+              h(
+                Suspense,
+                { onResolve },
+                {
+                  default: () =>
+                    route.value === 'a'
+                      ? h(PageA, { key: 'a' })
+                      : h(PageB, { key: 'b' }),
+                },
+              )
+          },
+        })
+
+        return { App, route, onResolve }
+      })
+
+    expect(ssrHtml).toBe(`<div><span>page a</span></div>`)
+    renderA.mockClear()
+
+    route.value = 'b'
+    await nextTick()
+    expect(container.innerHTML).toBe(`<div><span>page a</span></div>`)
+    expect(onResolve).not.toHaveBeenCalled()
+
+    release('a')
+    await new Promise(r => setTimeout(r))
+    expect(container.innerHTML).toBe(`<div><span>page a</span></div>`)
+    expect(renderA).not.toHaveBeenCalled()
+    expect(onResolve).not.toHaveBeenCalled()
+
+    route.value = 'a'
+    await nextTick()
+    expect(container.innerHTML).toBe(`<div><span>page a</span></div>`)
+    expect(renderA).toHaveBeenCalledTimes(1)
+    expect(onResolve).toHaveBeenCalledTimes(1)
+  })
+
+  test('Suspense: async child of a toggled-away hydrating root does not hold the pending branch', async () => {
+    const { container, ssrHtml, route, release, onResolve } =
+      await hydrateSuspenseApp(gate => {
+        const route = ref('a')
+        const onResolve = vi.fn()
+
+        const Stuck = defineComponent({
+          async setup() {
+            await gate('stuck')
+            return () => h('span', 'stuck')
+          },
+        })
+        const PageA = defineComponent({
+          async setup() {
+            await gate('a')
+            return () => h('div', [h(Stuck)])
+          },
+        })
+        const PageB = defineComponent({
+          async setup() {
+            await gate('b')
+            return () => h('div', [h('span', 'page b')])
+          },
+        })
+
+        const App = defineComponent({
+          setup() {
+            return () =>
+              h(
+                Suspense,
+                { onResolve },
+                {
+                  default: () =>
+                    route.value === 'a'
+                      ? h(PageA, { key: 'a' })
+                      : h(PageB, { key: 'b' }),
+                },
+              )
+          },
+        })
+
+        return { App, route, onResolve }
+      })
+
+    expect(ssrHtml).toBe(`<div><span>stuck</span></div>`)
+
+    route.value = 'b'
+    await nextTick()
+    expect(container.innerHTML).toBe(`<div><span>stuck</span></div>`)
+    expect(onResolve).not.toHaveBeenCalled()
+
+    // page a finishes first; the never-loading child it renders must not be
+    // counted as a dep of page b
+    release('a')
+    await new Promise(r => setTimeout(r))
+    release('b')
+    await new Promise(r => setTimeout(r))
+    expect(container.innerHTML).toBe(`<div><span>page b</span></div>`)
+    expect(onResolve).toHaveBeenCalledTimes(1)
+  })
+
   // an out-in transition around a hydrating suspense defers moving the new
   // branch in until the old branch's leave transition has finished. when the
   // old branch root's async setup() is still pending, its claimed DOM is torn
