@@ -96,7 +96,7 @@ exports[`compiler: transform v-model > with dynamic argument (with prefixIdentif
 export function render(_ctx, _cache) {
   return (_openBlock(), _createElementBlock("input", _normalizeProps({
     [_ctx.value]: _ctx.model,
-    ["onUpdate:" + _ctx.value]: $event => ((_ctx.model) = $event)
+    ["onUpdate:" + (_ctx.value)]: $event => ((_ctx.model) = $event)
   }), null, 16 /* FULL_PROPS */))
 }"
 `;
@@ -110,7 +110,7 @@ return function render(_ctx, _cache) {
 
     return (_openBlock(), _createElementBlock("input", _normalizeProps({
       [value]: model,
-      ["onUpdate:" + value]: $event => ((model) = $event)
+      ["onUpdate:" + (value)]: $event => ((model) = $event)
     }), null, 16 /* FULL_PROPS */))
   }
 }"
