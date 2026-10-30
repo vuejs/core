@@ -612,7 +612,12 @@ function _createVNode(
     // for reactive or proxy objects, we need to clone it to enable mutation.
     props = guardReactiveProps(props)!
     let { class: klass, style } = props
-    if (klass && !isString(klass)) {
+    // normalize falsy values as well (`false`, `0`) so that the client output
+    // agrees with SSR / hydration, which both run the value through
+    // `normalizeClass` (see `ssrRenderClass` / `propHasMismatch`) and treat
+    // e.g. `class: cond && 'active'` as having no class when the condition
+    // is falsy.
+    if (klass != null && !isString(klass)) {
       props.class = normalizeClass(klass)
     }
     if (isObject(style)) {
