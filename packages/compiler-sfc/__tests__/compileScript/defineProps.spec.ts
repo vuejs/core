@@ -590,6 +590,414 @@ const props = defineProps({ foo: String })
     )
   })
 
+  test('withDefaults w/ extra values only', () => {
+    const { content } = compile(`
+    <script setup lang="ts">
+    const props = withDefaults(defineProps<{
+      status?: 'active' | 'paused'
+      count?: number
+    }>(), {
+      status: 'active'
+    }, {
+      status: { values: ['active', 'paused'] }
+    })
+    </script>
+    `)
+    assertCode(content)
+    expect(content).toMatch(
+      `status: { type: String, required: false, default: 'active', validator: v => ['active', 'paused'].includes(v) }`,
+    )
+    expect(content).toMatch(`count: { type: Number, required: false }`)
+  })
+
+  test('withDefaults w/ extra validator only (arrow function)', () => {
+    const { content } = compile(`
+    <script setup lang="ts">
+    const props = withDefaults(defineProps<{
+      count?: number
+    }>(), {
+      count: 1
+    }, {
+      count: { validator: (v: number) => v > 0 }
+    })
+    </script>
+    `)
+    assertCode(content)
+    expect(content).toMatch(
+      `count: { type: Number, required: false, default: 1, validator: (v: number) => v > 0 }`,
+    )
+  })
+
+  test('withDefaults w/ extra validator only (method shorthand)', () => {
+    const { content } = compile(`
+    <script setup lang="ts">
+    const props = withDefaults(defineProps<{
+      count?: number
+    }>(), {
+      count: 1
+    }, {
+      count: { validator(v: number) { return v > 0 } }
+    })
+    </script>
+    `)
+    assertCode(content)
+    expect(content).toMatch(
+      `count: { type: Number, required: false, default: 1, validator(v: number) { return v > 0 } }`,
+    )
+  })
+
+  test('withDefaults w/ extra values + validator', () => {
+    const { content } = compile(`
+    <script setup lang="ts">
+    const props = withDefaults(defineProps<{
+      status?: 'active' | 'paused'
+      count?: number
+    }>(), {
+      status: 'active'
+    }, {
+      status: {
+        values: ['active', 'paused'],
+        validator: (v: string) => v !== 'paused'
+      }
+    })
+    </script>
+    `)
+    assertCode(content)
+    expect(content).toMatch(
+      `status: { type: String, required: false, default: 'active', validator: (v, p) => ['active', 'paused'].includes(v) && ((v: string) => v !== 'paused')(v, p) }`,
+    )
+    expect(content).toMatch(`count: { type: Number, required: false }`)
+  })
+
+  test('withDefaults w/ extra values + validator (method shorthand)', () => {
+    const { content } = compile(`
+    <script setup lang="ts">
+    const props = withDefaults(defineProps<{
+      status?: 'active' | 'paused'
+    }>(), {
+      status: 'active'
+    }, {
+      status: {
+        values: ['active', 'paused'],
+        validator(v: string) { return v !== 'paused' }
+      }
+    })
+    </script>
+    `)
+    assertCode(content)
+    expect(content).toMatch(
+      `status: { type: String, required: false, default: 'active', validator: (v, p) => ['active', 'paused'].includes(v) && ((v: string) => { return v !== 'paused' })(v, p) }`,
+    )
+  })
+
+  // the runtime calls validators with (value, props) - the AND-merged wrapper
+  // must forward the props argument so validators reading it keep working
+  test('withDefaults w/ extra values + validator receiving props', () => {
+    const { content } = compile(`
+    <script setup lang="ts">
+    const props = withDefaults(defineProps<{
+      status?: 'active' | 'paused'
+      count?: number
+    }>(), {
+      status: 'active',
+      count: 1
+    }, {
+      status: {
+        values: ['active', 'paused'],
+        validator: (v: string, all) => all.count !== undefined && v !== 'paused'
+      }
+    })
+    </script>
+    `)
+    assertCode(content)
+    expect(content).toMatch(
+      `validator: (v, p) => ['active', 'paused'].includes(v) && ((v: string, all) => all.count !== undefined && v !== 'paused')(v, p)`,
+    )
+  })
+
+  // module-scope references (imports) are hoist-safe and must keep working
+  test('withDefaults w/ extra validator referencing module-scope import', () => {
+    const { content } = compile(`
+    <script setup lang="ts">
+    import { max } from './foo'
+    const props = withDefaults(defineProps<{
+      count?: number
+    }>(), {
+      count: 1
+    }, {
+      count: { validator: (v: number) => v <= max }
+    })
+    </script>
+    `)
+    assertCode(content)
+    expect(content).toMatch(`validator: (v: number) => v <= max`)
+  })
+
+  // validators are dev-only checks and should be stripped in production,
+  // while `type` retention still follows the existing rules (#4783 / #7111)
+  test('withDefaults w/ extra w/ production mode', () => {
+    const { content } = compile(
+      `
+    <script setup lang="ts">
+    const props = withDefaults(defineProps<{
+      foo: boolean
+      bar?: string
+      baz?: 'a' | 'b'
+    }>(), {
+      bar: 'hi',
+      baz: 'a'
+    }, {
+      baz: {
+        values: ['a', 'b'],
+        validator: (v: string) => v !== 'b'
+      }
+    })
+    </script>
+    `,
+      { isProd: true },
+    )
+    assertCode(content)
+    expect(content).toMatch(`foo: { type: Boolean }`)
+    expect(content).toMatch(`bar: { default: 'hi' }`)
+    expect(content).toMatch(`baz: { default: 'a' }`)
+    expect(content).not.toMatch(`validator`)
+  })
+
+  // extra options work with dynamic defaults too - the validator is baked
+  // into the static declaration and `mergeDefaults` only merges `default` on top
+  test('withDefaults (dynamic) w/ extra', () => {
+    const { content } = compile(`
+    <script setup lang="ts">
+    import { defaults } from './foo'
+    const props = withDefaults(defineProps<{
+      foo?: 'a' | 'b'
+    }>(), defaults, {
+      foo: { values: ['a', 'b'] }
+    })
+    </script>
+    `)
+    assertCode(content)
+    expect(content).toMatch(`import { mergeDefaults as _mergeDefaults`)
+    expect(content).toMatch(
+      `
+  _mergeDefaults({
+    foo: { type: String, required: false, validator: v => ['a', 'b'].includes(v) }
+  }, defaults)`.trim(),
+    )
+  })
+
+  test('withDefaults w/ extra should not affect destructure warning', () => {
+    compile(`
+    <script setup lang="ts">
+    const { foo } = withDefaults(defineProps<{ foo: string }>(), { foo: 'foo' }, {
+      foo: { validator(v: string) { return true } }
+    })
+    </script>
+    `)
+    expect(
+      `withDefaults() is unnecessary when using destructure`,
+    ).toHaveBeenWarned()
+  })
+
+  describe('errors w/ extra', () => {
+    test('non-object-literal 3rd argument', () => {
+      expect(() =>
+        compile(`
+        <script setup lang="ts">
+        import { extra } from './foo'
+        const props = withDefaults(defineProps<{ foo?: string }>(), { foo: 'hi' }, extra)
+        </script>
+        `),
+      ).toThrow(`The 3rd argument of withDefaults must be an object literal`)
+    })
+
+    test('spread element in 3rd argument', () => {
+      expect(() =>
+        compile(`
+        <script setup lang="ts">
+        import { extra } from './foo'
+        const props = withDefaults(defineProps<{ foo?: string }>(), { foo: 'hi' }, { ...extra })
+        </script>
+        `),
+      ).toThrow(
+        `Spread elements are not allowed in the 3rd argument of withDefaults`,
+      )
+    })
+
+    test('dynamic key in 3rd argument', () => {
+      expect(() =>
+        compile(`
+        <script setup lang="ts">
+        const key = 'foo'
+        const props = withDefaults(defineProps<{ foo?: string }>(), { foo: 'hi' }, {
+          [key]: { values: ['a'] }
+        })
+        </script>
+        `),
+      ).toThrow(
+        `Dynamic keys are not allowed in the 3rd argument of withDefaults`,
+      )
+    })
+
+    test('extra option is not an object literal', () => {
+      expect(() =>
+        compile(`
+        <script setup lang="ts">
+        const props = withDefaults(defineProps<{ foo?: string }>(), { foo: 'hi' }, {
+          foo: 'bar'
+        })
+        </script>
+        `),
+      ).toThrow(`The extra option for prop "foo" must be an object literal`)
+    })
+
+    test('values is not an array literal', () => {
+      expect(() =>
+        compile(`
+        <script setup lang="ts">
+        import { values } from './foo'
+        const props = withDefaults(defineProps<{ foo?: string }>(), { foo: 'hi' }, {
+          foo: { values }
+        })
+        </script>
+        `),
+      ).toThrow(`"values" for prop "foo" must be an array literal of literals`)
+    })
+
+    test('values contains non-literal element', () => {
+      expect(() =>
+        compile(`
+        <script setup lang="ts">
+        const A = 'a'
+        const props = withDefaults(defineProps<{ foo?: string }>(), { foo: 'hi' }, {
+          foo: { values: ['a', A] }
+        })
+        </script>
+        `),
+      ).toThrow(`"values" for prop "foo" must only contain literal values`)
+    })
+
+    test('validator is not an inline function', () => {
+      expect(() =>
+        compile(`
+        <script setup lang="ts">
+        import { validator } from './foo'
+        const props = withDefaults(defineProps<{ foo?: string }>(), { foo: 'hi' }, {
+          foo: { validator }
+        })
+        </script>
+        `),
+      ).toThrow(`"validator" for prop "foo" must be an inline function`)
+    })
+
+    test('unknown option key', () => {
+      expect(() =>
+        compile(`
+        <script setup lang="ts">
+        const props = withDefaults(defineProps<{ foo?: string }>(), { foo: 'hi' }, {
+          foo: { value: ['a'] }
+        })
+        </script>
+        `),
+      ).toThrow(
+        `Unknown option "value" in extra options for prop "foo". Only "values" and "validator" are allowed`,
+      )
+    })
+
+    test('extra key w/o prop declaration', () => {
+      expect(() =>
+        compile(`
+        <script setup lang="ts">
+        const props = withDefaults(defineProps<{ foo?: string }>(), { foo: 'hi' }, {
+          bar: { values: ['a'] }
+        })
+        </script>
+        `),
+      ).toThrow(`Extra option key "bar" has no corresponding prop declaration`)
+    })
+
+    test('validator referencing setup local variable', () => {
+      expect(() =>
+        compile(`
+        <script setup lang="ts">
+        let allowed = true
+        const props = withDefaults(defineProps<{ foo?: string }>(), { foo: 'hi' }, {
+          foo: { validator: (v: string) => allowed }
+        })
+        </script>
+        `),
+      ).toThrow(`cannot reference locally declared variables`)
+    })
+
+    test('values containing array hole', () => {
+      expect(() =>
+        compile(`
+        <script setup lang="ts">
+        const props = withDefaults(defineProps<{ foo?: string }>(), { foo: 'hi' }, {
+          foo: { values: ['a', , 'b'] }
+        })
+        </script>
+        `),
+      ).toThrow(`"values" for prop "foo" must only contain literal values`)
+    })
+
+    test('async validator (arrow function)', () => {
+      expect(() =>
+        compile(`
+        <script setup lang="ts">
+        const props = withDefaults(defineProps<{ foo?: string }>(), { foo: 'hi' }, {
+          foo: { validator: async (v: string) => v !== 'a' }
+        })
+        </script>
+        `),
+      ).toThrow(
+        `"validator" for prop "foo" must be a synchronous inline function`,
+      )
+    })
+
+    test('async validator (method shorthand)', () => {
+      expect(() =>
+        compile(`
+        <script setup lang="ts">
+        const props = withDefaults(defineProps<{ foo?: string }>(), { foo: 'hi' }, {
+          foo: { async validator(v: string) { return v !== 'a' } }
+        })
+        </script>
+        `),
+      ).toThrow(
+        `"validator" for prop "foo" must be a synchronous function or method shorthand`,
+      )
+    })
+
+    test('generator validator (function expression)', () => {
+      expect(() =>
+        compile(`
+        <script setup lang="ts">
+        const props = withDefaults(defineProps<{ foo?: string }>(), { foo: 'hi' }, {
+          foo: { validator: function* (v: string) { yield v } }
+        })
+        </script>
+        `),
+      ).toThrow(
+        `"validator" for prop "foo" must be a synchronous inline function`,
+      )
+    })
+
+    test('generator validator (method shorthand)', () => {
+      expect(() =>
+        compile(`
+        <script setup lang="ts">
+        const props = withDefaults(defineProps<{ foo?: string }>(), { foo: 'hi' }, {
+          foo: { *validator(v: string) { yield v } }
+        })
+        </script>
+        `),
+      ).toThrow(
+        `"validator" for prop "foo" must be a synchronous function or method shorthand`,
+      )
+    })
+  })
+
   test('runtime inference for Enum', () => {
     expect(
       compile(
