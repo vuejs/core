@@ -1,4 +1,3 @@
-import path from 'path'
 import {
   ConstantTypes,
   type ExpressionNode,
@@ -12,6 +11,7 @@ import {
   isDataUrl,
   isExternalUrl,
   isRelativeUrl,
+  joinUrl,
   normalizeDecodedImportPath,
   parseUrl,
 } from './templateUtils'
@@ -85,8 +85,6 @@ export const transformSrcset: NodeTransform = (
 
           if (options.base) {
             const base = parseUrl(options.base)
-            const protocol = base.protocol || ''
-            const host = base.host ? protocol + '//' + base.host : ''
             const basePath = base.host
               ? base.pathname || '/'
               : options.base.split(/[?#]/, 1)[0]
@@ -97,13 +95,7 @@ export const transformSrcset: NodeTransform = (
               let { url, descriptor } = candidate
               descriptor = descriptor ? ` ${descriptor}` : ``
               if (url[0] === '.') {
-                const suffixIndex = url.search(/[?#]/)
-                const pathname =
-                  suffixIndex < 0 ? url : url.slice(0, suffixIndex)
-                const suffix = suffixIndex < 0 ? '' : url.slice(suffixIndex)
-                // Only normalize the pathname, preserving the query and hash.
-                candidate.url =
-                  host + (path.posix || path).join(basePath, pathname) + suffix
+                candidate.url = joinUrl(base, url, basePath)
                 set.push(candidate.url + descriptor)
               } else if (shouldProcessUrl(url)) {
                 needImportTransform = true
