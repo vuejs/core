@@ -1162,29 +1162,21 @@ describe('mismatch handling', () => {
     })
 
     test('multi-root static nodes', async () => {
-      const container = document.createElement('div')
-      container.innerHTML = `<!--[--><div>one</div><p>two</p><!--]--><span>after</span>`
-      const msg = ref('after')
-
-      hydrateNode(container.firstChild!, () => {
-        const n0 = template('<div>one', 2)() as HTMLElement
-        const n1 = template('<p>two', 2)() as HTMLElement
-        const n2 = template('<span> </span>')() as HTMLElement
-        const x2 = child(n2) as Text
-
-        expect(n0).toBe(container.childNodes[1])
-        expect(n1).toBe(container.childNodes[2])
-        expect(n2).toBe(container.lastChild)
-        renderEffect(() => setText(x2, msg.value))
-      })
-
-      expect(container.innerHTML).toBe(
-        `<!--[--><div>one</div><p>two</p><!--]--><span>after</span>`,
+      const data = ref('after')
+      const { container } = await testHydration(
+        `<script setup>const data = _data; const components = _components</script>
+        <template><components.Child /><span>{{ data }}</span></template>`,
+        { Child: `<template><div>one</div><p>two</p></template>` },
+        data,
       )
-      msg.value = 'updated'
+      expect(container.innerHTML).toBe(
+        `<!--[--><!--[--><div>one</div><p>two</p><!--]--><span>after</span><!--]-->`,
+      )
+      expect('Hydration').not.toHaveBeenWarned()
+      data.value = 'updated'
       await nextTick()
       expect(container.innerHTML).toBe(
-        `<!--[--><div>one</div><p>two</p><!--]--><span>updated</span>`,
+        `<!--[--><!--[--><div>one</div><p>two</p><!--]--><span>updated</span><!--]-->`,
       )
     })
 
@@ -2300,15 +2292,14 @@ describe('static branch root mismatch', () => {
     },
   )
 
-  // a comment-only `<template v-if>` branch compiles to a single root while
-  // SSR wraps it in a fragment: the unclaimed wrapper is stepped over like
-  // any other unclaimed range marker, never adopted as the comment. Comment
+  // SSR wraps a comment-only `<template v-if>` branch in a fragment like any
+  // other non-element branch, so the client branch owns that range. Comment
   // data is not compared (vdom parity)
   test.each([
     ['matching data', true, 'C'],
     ['a branch switch', false, 'B'],
   ])(
-    'static comment branch under an unclaimed server wrapper, %s',
+    'comment-only branch owns its server range, %s',
     async (_, serverA, comment) => {
       const { container } = await testHydration(
         `<template>
@@ -2321,7 +2312,7 @@ describe('static branch root mismatch', () => {
         { serverData: ref({ a: serverA, x: 'after' }) },
       )
       expect(container.innerHTML).toBe(
-        `<!--[--><!--[--><!--${comment}--><!--if--><!--]--><i>after</i><!--]-->`,
+        `<!--[--><!--[--><!--${comment}--><!--]--><i>after</i><!--]-->`,
       )
     },
   )
@@ -2449,5 +2440,212 @@ describe('static branch root mismatch', () => {
     )
     expect('Hydration node mismatch').toHaveBeenWarnedTimes(1)
     expect('Hydration children mismatch').not.toHaveBeenWarned()
+  })
+})
+
+// A server range under the cursor is one unit: an unclaimed `[`/`(`/teleport
+// start is the whole mismatched server unit and goes as a whole; the close of
+// the range the block owns is where its server content stopped, so the rest
+// of the block renders ahead of it. Neither is stepped over.
+describe('a server range is one unit', () => {
+  const branch = `<div v-if="data.a">x</div>
+        <template v-else><p>1</p><p>2</p></template>`
+
+  // the server rendered a multi-root branch, the client picks a single
+  // root. vdom replaces the whole fragment.
+  test('replaces a server multi-root branch at the component root', async () => {
+    const { container } = await testHydration(
+      `<template>${branch}</template>`,
+      undefined,
+      ref({ a: true }),
+      { serverData: ref({ a: false }) },
+    )
+    expect(container.innerHTML).toBe('<div>x</div><!--if-->')
+    expect('Hydration node mismatch').toHaveBeenWarnedTimes(1)
+    expect('Hydration children mismatch').not.toHaveBeenWarned()
+  })
+
+  test('replaces a server multi-root branch between siblings', async () => {
+    const data = ref({ a: true, x: 'x' })
+    const { container } = await testHydration(
+      `<template>
+        <div>
+          <i>before</i>
+          ${branch}
+          <i>{{ data.x }}</i>
+        </div>
+      </template>`,
+      undefined,
+      data,
+      { serverData: ref({ a: false, x: 'x' }) },
+    )
+    expect(container.innerHTML).toBe(
+      '<div><i>before</i><div>x</div><!--if--><i>x</i></div>',
+    )
+    expect('Hydration node mismatch').toHaveBeenWarnedTimes(1)
+    expect('Hydration children mismatch').not.toHaveBeenWarned()
+
+    const tail = container.querySelectorAll('i')[1]
+    data.value.x = 'y'
+    await nextTick()
+    expect(container.querySelectorAll('i')[1]).toBe(tail)
+    expect(tail.textContent).toBe('y')
+  })
+
+  // the mismatched unit of a row root is a nested list the row never
+  // claimed: its close must not be mistaken for the row's own
+  test('replaces a nested server list under a row root', async () => {
+    const data = ref({ a: true, list: [1, 2], inner: [1], x: 'x' })
+    const { container } = await testHydration(
+      `<template>
+        <div>
+          <template v-if="data.a">
+            <template v-for="i in data.list" :key="i">
+              <span :title="data.x">A{{ i }}</span>
+              <b :title="data.x">B{{ i }}</b>
+            </template>
+          </template>
+          <template v-else>
+            <template v-for="i in data.list" :key="i">
+              <template v-for="j in data.inner"><p>P{{ i }}{{ j }}</p></template>
+              <i>I{{ i }}</i>
+            </template>
+          </template>
+          <u>after</u>
+        </div>
+      </template>`,
+      undefined,
+      data,
+      { serverData: ref({ a: false, list: [1, 2], inner: [1], x: 'x' }) },
+    )
+    expect(container.textContent).toBe('A1B1A2B2after')
+    expect('Hydration node mismatch').toHaveBeenWarnedTimes(2)
+    // each row drops the server tail behind the replaced unit
+    expect('Hydration children mismatch').toHaveBeenWarnedTimes(2)
+
+    data.value.list = []
+    await nextTick()
+    expect(container.textContent).toBe('after')
+  })
+
+  // the server picked an empty branch: the client branch content goes ahead
+  // of the range close, the sibling behind the range is adopted
+  test.each([
+    ['a comment', '<!--C-->'],
+    ['an element', '<p>P</p>'],
+  ])(
+    'renders %s ahead of the close of an emptied row range',
+    async (_, content) => {
+      const { container } = await testHydration(
+        `<template>
+          <template v-for="n in data.list" :key="n.id">
+            <template v-if="n.a">${content}</template>
+            <template v-else></template>
+            <b>{{ n.id }}</b>
+          </template>
+          <i>after</i>
+        </template>`,
+        undefined,
+        ref({
+          list: [
+            { id: 1, a: true },
+            { id: 2, a: false },
+          ],
+        }),
+        {
+          serverData: ref({
+            list: [
+              { id: 1, a: false },
+              { id: 2, a: false },
+            ],
+          }),
+          compilerOptions: { comments: true },
+        },
+      )
+      expect(container.innerHTML).toContain(content)
+      expect(
+        [...container.querySelectorAll('b')].map(n => n.textContent),
+      ).toEqual(['1', '2'])
+      expect(container.querySelectorAll('i')).toHaveLength(1)
+      expect('Hydration node mismatch').toHaveBeenWarnedTimes(1)
+      expect('Hydration children mismatch').not.toHaveBeenWarned()
+    },
+  )
+
+  // the client branch owns a range the server left empty or short: its
+  // content goes ahead of the close, the sibling behind the range is adopted
+  // (the shorter-range row already passes before this change: a coverage
+  // guard). A single-root client branch owns no range, so the whole server
+  // range is the mismatched unit instead.
+  test.each([
+    [
+      'an emptied range',
+      '',
+      '<p>P</p><em>E</em>',
+      '<!--[--><p>P</p><em>E</em><!--]-->',
+    ],
+    [
+      'a shorter range',
+      'S',
+      '<p>P</p><em>E</em>',
+      '<!--[--><p>P</p><em>E</em><!--]-->',
+    ],
+    [
+      'a server empty range, single-root branch',
+      '',
+      '<p>P</p>',
+      '<p>P</p><!--if-->',
+    ],
+  ])(
+    'renders the rest of the branch behind %s',
+    async (_, server, client, expected) => {
+      const data = ref({ a: true, x: 'x' })
+      const { container } = await testHydration(
+        `<template>
+          <div>
+            <template v-if="data.a">${client}</template>
+            <template v-else>${server}</template>
+            <b>{{ data.x }}</b>
+          </div>
+        </template>`,
+        undefined,
+        data,
+        { serverData: ref({ a: false, x: 'x' }) },
+      )
+      expect(container.innerHTML).toBe(`<div>${expected}<b>x</b></div>`)
+      expect('Hydration node mismatch').toHaveBeenWarnedTimes(1)
+      expect('Hydration children mismatch').not.toHaveBeenWarned()
+
+      const b = container.querySelector('b')!
+      data.value.x = 'y'
+      await nextTick()
+      expect(container.querySelector('b')).toBe(b)
+      expect(b.textContent).toBe('y')
+    },
+  )
+
+  test('replaces a server teleport as one unit', async () => {
+    const data = ref({ a: false, x: 'x' })
+    const { container } = await testHydration(
+      `<template>
+        <div>
+          <Teleport v-if="data.a" to="#unit-target"><p>P</p></Teleport>
+          <div v-else>x</div>
+          <i>{{ data.x }}</i>
+        </div>
+      </template>`,
+      undefined,
+      data,
+      { serverData: ref({ a: true, x: 'x' }) },
+    )
+    expect(container.innerHTML).toBe('<div><div>x</div><!--if--><i>x</i></div>')
+    expect('Hydration node mismatch').toHaveBeenWarnedTimes(1)
+    expect('Hydration children mismatch').not.toHaveBeenWarned()
+
+    const tail = container.querySelector('i')!
+    data.value.x = 'y'
+    await nextTick()
+    expect(container.querySelector('i')).toBe(tail)
+    expect(tail.textContent).toBe('y')
   })
 })

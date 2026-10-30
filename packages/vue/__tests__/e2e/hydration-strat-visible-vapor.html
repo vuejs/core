@@ -32,7 +32,7 @@
   const isContents = location.search.includes('?contents')
   if (isFragment) {
     document.getElementById('app').innerHTML =
-      `<!--[--><!--[--><span>one</span><!--]--><button>0</button><span>two</span><!--]-->`
+      `<!--[--><span>one</span><button>0</button><span>two</span><!--]-->`
   } else if (isVIf) {
     document.getElementById('app').innerHTML = `<!---->`
   } else if (isContents) {
@@ -43,6 +43,8 @@
   window.isHydrated = false
 
   const Comp = {
+    // a compiled multi-root component claims its SSR range
+    __multiRoot: isFragment,
     setup() {
       const count = ref(0)
       onMounted(() => {
