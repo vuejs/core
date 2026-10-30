@@ -485,7 +485,7 @@ describe('compiler + runtime integration', () => {
     loading.value = false
     await nextTick()
     expect(container.innerHTML).toBe(
-      `<div><div><!----><!--v-if--><div>false</div></div></div>`,
+      `<div><div><!--v-if--><div>false</div></div></div>`,
     )
   })
 
@@ -746,7 +746,7 @@ describe('compiler + runtime integration', () => {
     loading.value = false
     await nextTick()
     expect(container.innerHTML).toBe(
-      `<div><div><!----><!--v-if--><span></span></div></div>`,
+      `<div><div><!--v-if--><span></span></div></div>`,
     )
     app.unmount()
   })
