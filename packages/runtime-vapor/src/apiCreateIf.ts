@@ -7,9 +7,11 @@ import {
   createFragmentClaim,
   currentHydrationNode,
   enterHydrationCursor,
+  hydrateBlock,
   isComment,
   isHydrating,
-  locateEndAnchor,
+  locateClaimedEnd,
+  trimHydrationBoundary,
 } from './dom/hydration'
 import {
   insertionAnchor,
@@ -58,19 +60,23 @@ export function createIf(
       hydrateDynamicFragmentAnchor(placeholder, true)
       frag = [placeholder.anchor]
     } else {
-      frag = ok
-        ? b1()
-        : b2
-          ? b2()
-          : [
-              claimUntrackedAnchor(
-                __DEV__ ? createComment('if') : createTextNode(),
-              ),
-            ]
+      const render = ok ? b1 : b2
+      frag = !render
+        ? [
+            claimUntrackedAnchor(
+              __DEV__ ? createComment('if') : createTextNode(),
+            ),
+          ]
+        : isHydrating
+          ? hydrateBlock(render)
+          : render()
     }
     if (isHydrating && claim && claim.start) {
-      // Non-empty v-once branches have no DynamicFragment to consume the close.
-      advanceHydrationNode(locateEndAnchor(claim.start)!)
+      // Non-empty v-once branches have no DynamicFragment to consume the
+      // close: drop what the branch left in its range, then step past it.
+      const close = locateClaimedEnd(claim.start)!
+      trimHydrationBoundary(close)
+      advanceHydrationNode(close)
     }
   } else {
     // DynamicFragment should be keyed for correct transition behavior

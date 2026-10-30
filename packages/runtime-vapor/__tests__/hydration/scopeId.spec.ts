@@ -20,7 +20,6 @@ import {
   runtimeDom,
   runtimeVapor,
 } from '../_utils'
-import { isHydrating } from '../../src/dom/hydration'
 import {
   compileVaporComponent,
   setupHydrationTest,
@@ -63,16 +62,11 @@ describe('scopeId hydration writes', () => {
     container.remove()
   })
 
-  test('writes recreated plain element scopeId without breaking hydration', () => {
-    let restored: boolean | undefined
+  test('writes recreated plain element scopeId', () => {
     const App = defineVaporComponent({
       __scopeId: 'parent',
       setup() {
-        const element = createPlainElement('div')
-        // scope id writes on a recreated element must not knock the runtime
-        // out of hydration mode for subsequent siblings
-        restored = isHydrating
-        return element
+        return createPlainElement('div')
       },
     })
     const container = document.createElement('div')
@@ -83,7 +77,6 @@ describe('scopeId hydration writes', () => {
     app.mount(container)
 
     expect(container.innerHTML).toBe(`<div parent=""></div>`)
-    expect(restored).toBe(true)
     expect(`Hydration node mismatch`).toHaveBeenWarned()
     app.unmount()
     container.remove()

@@ -2021,6 +2021,66 @@ describe('Vapor Mode hydration', () => {
           expect(visible(container)).toBe('<div><i>a</i><i>t</i><i>z</i></div>')
         },
       )
+
+      // The server rendered another component's fallback: the client fallback
+      // replaces it from its first root on and drops only the fallback's own
+      // server nodes. What the content placed behind them (vdom content in a
+      // vapor outlet keeps its anchors there) must survive for later toggles.
+      test.each([
+        ['a vapor outlet', true, true],
+        ['vdom content in a vapor outlet', false, true],
+      ])(
+        'a root mismatch of the adopted fallback of %s keeps the content in place',
+        async (_, vaporApp, vaporChild) => {
+          const script = `<script setup>const data = _data; const components = _components</script>`
+          const data = reactive({ a: true, c: false, t: 't' })
+          const { container } = await testHydration(
+            `${script}
+            <template>
+              <component :is="data.a ? components.A : components.B">
+                <b v-if="data.c">c</b>
+              </component>
+              <u>after</u>
+            </template>`,
+            {
+              A: {
+                code: `${script}
+                <template>
+                  <div><slot><span :title="data.t">A</span><em>e</em></slot></div>
+                </template>`,
+                vapor: vaporChild,
+              },
+              B: {
+                code: `${script}
+                <template>
+                  <div><slot><p>P</p><i>I</i></slot></div>
+                </template>`,
+                vapor: vaporChild,
+              },
+            },
+            data,
+            {
+              isVaporApp: vaporApp,
+              interop: !vaporApp || !vaporChild,
+              serverData: reactive({ a: false, c: false, t: 't' }),
+            },
+          )
+          expect('Hydration').toHaveBeenWarned()
+          expect(visible(container)).toBe(
+            '<div><span title="t">A</span><em>e</em></div><u>after</u>',
+          )
+
+          data.c = true
+          await nextTick()
+          expect(visible(container)).toBe('<div><b>c</b></div><u>after</u>')
+
+          data.c = false
+          await nextTick()
+          expect(visible(container)).toBe(
+            '<div><span title="t">A</span><em>e</em></div><u>after</u>',
+          )
+        },
+      )
     })
   })
 })

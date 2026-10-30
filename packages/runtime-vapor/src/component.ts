@@ -132,10 +132,13 @@ import {
   adoptTemplate,
   advanceHydrationNode,
   claimAnchor,
+  cleanupHydrationTail,
   createFragmentClaim,
   currentHydrationNode,
   enterHydrationCursor,
   exitHydrationCursor,
+  hydrateBlock,
+  hydrateBlockWithErrorHandling,
   hydrateNode,
   isComment,
   isHydrating,
@@ -144,6 +147,7 @@ import {
   locateHydrationNode,
   nextLogicalSibling,
   queueAfterHydration,
+  runWithoutHydration,
   setCurrentHydrationNode,
   trimHydrationBoundary,
   withDeferredHydrationBoundary,
@@ -744,11 +748,20 @@ export function setupComponent(
   const prevSub = setActiveSub()
 
   const setupFn = isFunction(component) ? component : component.setup
+  // an inline-compiled setup renders the block itself: a root mismatch inside
+  // turns the rest of it into a client render (hydrateBlockWithErrorHandling)
   const setupResult = setupFn
-    ? callWithErrorHandling(setupFn, instance, ErrorCodes.SETUP_FUNCTION, [
-        instance.props,
-        instance,
-      ]) || EMPTY_OBJ
+    ? (isHydrating
+        ? hydrateBlockWithErrorHandling(
+            setupFn,
+            instance,
+            ErrorCodes.SETUP_FUNCTION,
+            [instance.props, instance],
+          )
+        : callWithErrorHandling(setupFn, instance, ErrorCodes.SETUP_FUNCTION, [
+            instance.props,
+            instance,
+          ])) || EMPTY_OBJ
     : // a template-only component reads `<style module>` names off its
       // render context, like the vdom render proxy does
       (component as VaporComponentOptions).__cssModules || EMPTY_OBJ
@@ -883,13 +896,21 @@ function callRender(
   instance: VaporComponentInstance,
   setupState: Record<string, any>,
 ) {
-  return callWithErrorHandling(render, instance, ErrorCodes.RENDER_FUNCTION, [
+  const args = [
     setupState,
     instance.props,
     instance.emit,
     instance.attrs,
     instance.slots,
-  ])
+  ]
+  return isHydrating
+    ? hydrateBlockWithErrorHandling(
+        render,
+        instance,
+        ErrorCodes.RENDER_FUNCTION,
+        args,
+      )
+    : callWithErrorHandling(render, instance, ErrorCodes.RENDER_FUNCTION, args)
 }
 
 /**
@@ -1317,22 +1338,24 @@ export function createPlainElement(
   const _insertionParent = insertionParent
   const _insertionAnchor = insertionAnchor
   let hydrationCursor: HydrationCursor | null = null
+  let el: HTMLElement
   if (isHydrating) {
     hydrationCursor = enterHydrationCursor()
+    el = adoptTemplate(
+      currentHydrationNode!,
+      `<${comp}/>`,
+      ns,
+      !!_insertionParent,
+    ) as HTMLElement
+    if (!isHydrating) {
+      // a recreated block root: the rest of this block renders on the client
+      // (see hydrateBlock), so hand the cursor back now
+      exitHydrationCursor(hydrationCursor)
+    }
   } else {
     resetInsertionState()
+    el = createElement(comp, ns)
   }
-
-  const defaultSlot =
-    rawSlots && getSlot(rawSlots as RawSlots, 'default', resolveFunctionSource)
-  const el = isHydrating
-    ? (adoptTemplate(
-        currentHydrationNode!,
-        `<${comp}/>`,
-        !!defaultSlot,
-        ns,
-      ) as HTMLElement)
-    : createElement(comp, ns)
 
   // mark single root
   ;(el as any).$root = isSingleRoot === true
@@ -1364,69 +1387,15 @@ export function createPlainElement(
   }
 
   if (rawSlots) {
-    // No outlet renders an element's children: nothing inside reports to,
-    // or is held by, the enclosing outlet.
-    const outerCtx = setRenderContext(
-      deriveSlotBoundary(currentRenderContext, null),
-    )
-    let nextNode: Node | null = null
-    if (isHydrating) {
-      nextNode = nextLogicalSibling(el)
-      let child = el.firstChild
-      if (rawSlots.$ && !child) {
-        // SSR may omit default-slot nodes for dynamic native children.
-        // Seed a local anchor so the inner fragment can locate and reuse it.
-        child = el.appendChild(
-          claimAnchor(__DEV__ ? createComment('') : createTextNode()),
-        )
-      }
-      setCurrentHydrationNode(child)
-    }
-    if (rawSlots.$) {
-      // Dynamic element children don't own an SSR slot-range anchor, so flag
-      // this as a native-children fragment. Hydration keys off `nativeChildren`
-      // to inject/reuse its own anchor instead of trying to reuse
-      // SlotFragment-style anchors. The hydrating label stays empty so the
-      // runtime anchor renders as `<!---->`.
-      const frag = new DynamicFragment(
-        NATIVE_CHILDREN,
-        __DEV__ ? (isHydrating ? '' : 'slot') : undefined,
+    // a recreated child element (a static `is`, a custom element) has no
+    // server children: they mount on the client
+    if (isHydrating && isRecreatedNode(el)) {
+      runWithoutHydration(() =>
+        renderPlainElementChildren(el, rawSlots as RawSlots),
       )
-      if (isHydrating) locateHydrationNode()
-      renderEffect(() =>
-        frag.update(
-          getSlot(rawSlots as RawSlots, 'default', resolveFunctionSource),
-        ),
-      )
-      if (!isHydrating) insert(frag, el)
-      registerNestedVDOMCleanup(frag)
     } else {
-      const slot = getSlot(
-        rawSlots as RawSlots,
-        'default',
-        resolveFunctionSource,
-      )
-      if (slot) {
-        // SSR renders nothing for an empty trailing text, so the slot can run out
-        // of server nodes; an end anchor keeps the cursor inside `el`. A comment
-        // cannot be adopted as blank text, and a non-empty label (also in prod)
-        // prevents nested fragments from treating it as a reusable SSR anchor.
-        let end: Node | undefined
-        if (isHydrating) {
-          // nce = native-children-end
-          end = el.appendChild(claimAnchor(createComment('nce')))
-          if (!currentHydrationNode) setCurrentHydrationNode(end)
-        }
-        const block = slot()
-        if (end) el.removeChild(end)
-        if (!isHydrating) insert(block, el)
-        registerNestedVDOMCleanup(block)
-      }
+      renderPlainElementChildren(el, rawSlots as RawSlots)
     }
-    if (isHydrating) {
-      setCurrentHydrationNode(nextNode)
-    }
-    setRenderContext(outerCtx)
   }
 
   finishBlockCreation(
@@ -1438,6 +1407,69 @@ export function createPlainElement(
   )
 
   return el
+}
+
+function renderPlainElementChildren(el: HTMLElement, rawSlots: RawSlots): void {
+  // No outlet renders an element's children: nothing inside reports to,
+  // or is held by, the enclosing outlet.
+  const outerCtx = setRenderContext(
+    deriveSlotBoundary(currentRenderContext, null),
+  )
+  let nextNode: Node | null = null
+  if (isHydrating) {
+    nextNode = nextLogicalSibling(el)
+    let child = el.firstChild
+    if (rawSlots.$ && !child) {
+      // SSR may omit default-slot nodes for dynamic native children.
+      // Seed a local anchor so the inner fragment can locate and reuse it.
+      child = el.appendChild(
+        claimAnchor(__DEV__ ? createComment('') : createTextNode()),
+      )
+    }
+    setCurrentHydrationNode(child)
+  }
+  if (rawSlots.$) {
+    // Dynamic element children don't own an SSR slot-range anchor, so flag
+    // this as a native-children fragment. Hydration keys off `nativeChildren`
+    // to inject/reuse its own anchor instead of trying to reuse
+    // SlotFragment-style anchors. The hydrating label stays empty so the
+    // runtime anchor renders as `<!---->`.
+    const frag = new DynamicFragment(
+      NATIVE_CHILDREN,
+      __DEV__ ? (isHydrating ? '' : 'slot') : undefined,
+    )
+    if (isHydrating) locateHydrationNode()
+    renderEffect(() =>
+      frag.update(getSlot(rawSlots, 'default', resolveFunctionSource)),
+    )
+    if (!isHydrating) insert(frag, el)
+    registerNestedVDOMCleanup(frag)
+  } else {
+    const slot = getSlot(rawSlots, 'default', resolveFunctionSource)
+    if (slot) {
+      // SSR renders nothing for an empty trailing text, so the slot can run out
+      // of server nodes; an end anchor keeps the cursor inside `el`. A comment
+      // cannot be adopted as blank text, and a non-empty label (also in prod)
+      // prevents nested fragments from treating it as a reusable SSR anchor.
+      let end: Node | undefined
+      if (isHydrating) {
+        // nce = native-children-end
+        end = el.appendChild(claimAnchor(createComment('nce')))
+        if (!currentHydrationNode) setCurrentHydrationNode(end)
+      }
+      const block = isHydrating ? hydrateBlock(slot) : slot()
+      if (end) el.removeChild(end)
+      if (!isHydrating) insert(block, el)
+      registerNestedVDOMCleanup(block)
+    }
+  }
+  if (isHydrating) {
+    // server children the slot did not take are the element's to drop
+    const cur = currentHydrationNode
+    if (cur && cur.parentNode === el) cleanupHydrationTail(cur, el)
+    setCurrentHydrationNode(nextNode)
+  }
+  setRenderContext(outerCtx)
 }
 
 export function mountComponent(
@@ -1907,11 +1939,17 @@ function handleSetupResult(
     // output, or hand-written like vdom) since it cannot render in a
     // continuation; render now, under the instance.
     instance.block =
-      callWithErrorHandling(
-        setupResult,
-        instance,
-        ErrorCodes.RENDER_FUNCTION,
-      ) || []
+      (isHydrating
+        ? hydrateBlockWithErrorHandling(
+            setupResult,
+            instance,
+            ErrorCodes.RENDER_FUNCTION,
+          )
+        : callWithErrorHandling(
+            setupResult,
+            instance,
+            ErrorCodes.RENDER_FUNCTION,
+          )) || []
   } else {
     if (isFunction(component)) {
       if (__DEV__) {

@@ -80,6 +80,7 @@ import {
   cleanupHydrationTail,
   createFragmentClaim,
   currentHydrationNode,
+  hydrateBlock,
   isHydrating,
   locateEndAnchor,
   locateHydrationNode,
@@ -306,28 +307,30 @@ const VaporTransitionGroupImpl = /*@__PURE__*/ defineVaporComponent({
       }
     }, true)
 
-    const createContainer = (): HTMLElement | undefined =>
-      tag
-        ? isHydrating
-          ? (adoptTemplate(currentHydrationNode!, `<${tag}/>`) as HTMLElement)
-          : createElement(tag)
-        : undefined
-
     const renderChildren = (
       slot: BlockFn | undefined,
-      container: HTMLElement | undefined,
       // the dynamic slot path renders through its fragment
       run: (render: BlockFn) => void = render => render(),
-    ): void => {
-      let nextNode: Node | null = null
-      if (isHydrating && container) {
-        // the cursor sits on the container itself when it is empty
-        nextNode = nextLogicalSibling(container)
-        setCurrentHydrationNode(container.firstChild || container)
-      }
-      try {
-        run(() => {
-          const block = (slot && slot()) || []
+    ): Block => {
+      let container: HTMLElement | undefined
+      run(() => {
+        // adopted inside the render: a wrapper mismatch is owned by the
+        // render's hydrateBlock (the fragment's, or the group's setup), and
+        // turns the rest of this callback into a client render
+        container = tag
+          ? isHydrating
+            ? (adoptTemplate(currentHydrationNode!, `<${tag}/>`) as HTMLElement)
+            : createElement(tag)
+          : undefined
+        let nextNode: Node | null = null
+        if (isHydrating && container) {
+          // the cursor sits on the container itself when it is empty
+          nextNode = nextLogicalSibling(container)
+          setCurrentHydrationNode(container.firstChild || container)
+        }
+        try {
+          const block =
+            (slot && (isHydrating ? hydrateBlock(slot) : slot())) || []
           applyGroupTransitionHooks(
             block,
             propsProxy,
@@ -342,34 +345,27 @@ const VaporTransitionGroupImpl = /*@__PURE__*/ defineVaporComponent({
             return container
           }
           return block
-        })
-        if (
-          isHydrating &&
-          container &&
-          currentHydrationNode &&
-          currentHydrationNode.parentNode === container
-        ) {
-          // Remove extra SSR nodes left after hydrating the current children.
-          cleanupHydrationTail(currentHydrationNode, container)
+        } finally {
+          if (isHydrating && container) {
+            // server children the slot did not take are the container's to drop
+            const cur = currentHydrationNode
+            if (cur && cur.parentNode === container) {
+              cleanupHydrationTail(cur, container)
+            }
+            setCurrentHydrationNode(nextNode)
+          }
         }
-        if (isHydrating && close) {
-          trimHydrationBoundary(close)
-          if (currentHydrationNode === close) advanceHydrationNode(close)
-          close = null
-        }
-      } finally {
-        if (isHydrating && container) {
-          setCurrentHydrationNode(nextNode)
-        }
+      })
+      if (isHydrating && close) {
+        trimHydrationBoundary(close)
+        if (currentHydrationNode === close) advanceHydrationNode(close)
+        close = null
       }
       isMounted = true
-    }
-
-    if (!instance.rawSlots.$) {
-      const container = createContainer()
-      renderChildren(slots.default, container)
       return container || slottedBlock
     }
+
+    if (!instance.rawSlots.$) return renderChildren(slots.default)
 
     // Dynamic slot sources can add/remove the default slot after setup, so
     // the group re-renders it through a DynamicFragment (as Transition does).
@@ -381,7 +377,7 @@ const VaporTransitionGroupImpl = /*@__PURE__*/ defineVaporComponent({
     renderEffect(() => {
       const slot = slots.default
       if (isMounted && slot === currentSlot) return
-      renderChildren(slot, createContainer(), render => frag.update(render))
+      renderChildren(slot, render => frag.update(render))
       currentSlot = slot
     })
     return frag

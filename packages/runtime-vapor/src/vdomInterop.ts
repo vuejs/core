@@ -170,6 +170,7 @@ import {
   claimUntrackedAnchor,
   createFragmentClaim,
   currentHydrationNode,
+  hydrateBlock,
   isComment,
   isHydrating,
   isHydratingEnabled,
@@ -3897,8 +3898,9 @@ function invokeVaporSlot(vnode: VNode): Block {
   const scope = effectScope()
   vnode.vs!.scope = scope
   try {
-    const run = () =>
+    const invoke = () =>
       vnode.vs!.slot(new Proxy(propsRef, vaporSlotPropsProxyHandler))
+    const run = isHydrating ? () => hydrateBlock(invoke) : invoke
     // vdom is a boundary: the slot it invokes runs live even when the vdom
     // render sits inside a v-once extent.
     return (inOnce ? withOnce(() => scope.run(run), false) : scope.run(run))!

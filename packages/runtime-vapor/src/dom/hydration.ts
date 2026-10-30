@@ -1,12 +1,15 @@
 import {
+  type ErrorCodes,
+  type GenericComponentInstance,
   MismatchTypes,
+  callWithErrorHandling,
   isMismatchAllowed,
   isHydrating as isVdomHydrating,
   isHydratingEnabled as isVdomHydratingEnabled,
   logMismatchError,
   warn,
 } from '@vue/runtime-dom'
-import { type Namespace, Namespaces } from '@vue/shared'
+import { type Namespace, Namespaces, isArray } from '@vue/shared'
 import {
   insertionAnchor,
   insertionIndex,
@@ -29,7 +32,7 @@ import {
 } from './node'
 import { currentRenderContext } from '../renderContext'
 import { setElementScopeIdsDeep } from './scopeIdStamp'
-import { remove } from '../block'
+import { type Block, insert, remove } from '../block'
 import { isHydrating, setHydrating } from './hydrationState'
 
 const START_TAG_RE = /^<([^\s/>]+)/
@@ -144,6 +147,7 @@ function performHydration<T>(
     // `runWithoutHydration` flip it mid-walk. Only the outermost exit ends
     // the walk the locator cache belongs to.
     if (--hydrationDepth === 0) {
+      currentMismatch = null
       releaseLocatorCache()
       const cbs = afterHydration
       if (cbs) {
@@ -211,8 +215,8 @@ export interface AdoptTarget {
 export let adoptTemplate: (
   node: Node,
   template: string,
-  adoptChildren?: boolean,
   ns?: Namespace,
+  nested?: boolean,
   target?: AdoptTarget,
 ) => Node | null
 export let locateHydrationNode: (
@@ -230,9 +234,10 @@ const enum AnchorFlags {
   // in `component.ts`, teleport target anchors), and those still count as
   // server positions for traversal.
   ANCHOR = 1,
-  // The anchor occupies no SSR logical position, so every traversal primitive
+  // The node occupies no SSR logical position, so every traversal primitive
   // steps over it. This — not being client-created — is what lets an anchor be
   // inserted the moment it is resolved instead of after the hydration pass.
+  // Alone, it marks client content rendered behind a mismatch-recreated root.
   UNTRACKED = 2,
 }
 
@@ -395,8 +400,10 @@ export function exitHydrationCursor(cursor: HydrationCursor | null): void {
 function adoptTemplateImpl(
   node: Node,
   template: string,
-  adoptChildren = false,
   ns?: Namespace,
+  // a child of an element this block renders (custom element children,
+  // template.ts), as opposed to a root of the block
+  nested = false,
   // callers with dynamic template strings (createPlainElement,
   // TransitionGroup) omit this and parse per call
   target: AdoptTarget = parseAdoptTargetImpl(template),
@@ -408,7 +415,7 @@ function adoptTemplateImpl(
   }
 
   if (!matchesAdoptTarget(node, target)) {
-    node = handleMismatch(node, template, adoptChildren, ns, target)
+    node = handleMismatch(node, template, ns, target, nested)
   }
 
   advanceHydrationNode(node)
@@ -539,9 +546,9 @@ export function locateClaimedEnd(start: CommentAnchor): Node | null {
 function handleMismatch(
   node: Node,
   template: string,
-  adoptChildren: boolean,
   ns: Namespace | undefined,
   target: AdoptTarget,
+  nested: boolean,
 ): Node {
   const container = parentNode(node)!
   // everything under a recreated node is missing by construction; the
@@ -564,54 +571,52 @@ function handleMismatch(
     remove(node, container)
   }
 
-  // fast path for text nodes
+  let newNode: Node
   if (template[0] !== '<') {
-    const newNode = markRecreatedNode(createTextNode(template))
-    container.insertBefore(newNode, next)
-    if (!shouldPreserveAnchor) {
-      updateLastLocatedLogicalChild(container, node, newNode)
+    newNode = createTextNode(template)
+  } else {
+    // A bare element is created directly: parsed under its namespace wrapper,
+    // an html element would break out of the foreign content again. A foreign
+    // root takes its namespace, as the parser would give it.
+    const { bare } = target
+    newNode = bare
+      ? createElement(
+          bare,
+          bare === 'svg'
+            ? Namespaces.SVG
+            : bare === 'math'
+              ? Namespaces.MATH_ML
+              : ns,
+        )
+      : parseTemplate(template, ns).cloneNode(true)
+    if (newNode.nodeType === 1) {
+      // The block hydrates on around a recreated nested child, so writes
+      // reaching its template-born descendants must take the client path.
+      // Behind a recreated root the block renders on the client anyway.
+      if (nested) {
+        const descendants = (newNode as Element).querySelectorAll('*')
+        for (let i = 0; i < descendants.length; i++) {
+          markRecreatedNode(descendants[i])
+        }
+      }
+      // Recreated nodes carry no SSR scope attrs; stamp like a client render.
+      const slotScopeIds = currentRenderContext.slotScopeIds
+      if (slotScopeIds) {
+        setElementScopeIdsDeep(newNode as Element, slotScopeIds)
+      }
     }
-    return newNode
   }
-
-  // element node. A bare element is created directly: parsed under its
-  // namespace wrapper, an html element would break out of the foreign content
-  // again. A foreign root takes its namespace, as the parser would give it.
-  const { bare } = target
-  const newNode = bare
-    ? createElement(
-        bare,
-        bare === 'svg'
-          ? Namespaces.SVG
-          : bare === 'math'
-            ? Namespaces.MATH_ML
-            : ns,
-      )
-    : (parseTemplate(template, ns).cloneNode(true) as Element)
   markRecreatedNode(newNode)
-  if (newNode.nodeType === 1) {
-    // Mark template-born descendants before adopting server children below,
-    // so adopted server content keeps normal check-only hydration semantics.
-    const descendants = newNode.querySelectorAll('*')
-    for (let i = 0; i < descendants.length; i++) {
-      markRecreatedNode(descendants[i])
-    }
-    // Recreated nodes carry no SSR scope attrs; run the same creation-time
-    // stamping a client render would, before server children are adopted in.
-    const slotScopeIds = currentRenderContext.slotScopeIds
-    if (slotScopeIds) setElementScopeIdsDeep(newNode as Element, slotScopeIds)
-  }
-  if (adoptChildren && node.nodeType === 1 && !newNode.firstChild) {
-    let child = node.firstChild
-    while (child) {
-      const nextChild = child.nextSibling
-      newNode.appendChild(child)
-      child = nextChild
-    }
-  }
   container.insertBefore(newNode, next)
   if (!shouldPreserveAnchor) {
     updateLastLocatedLogicalChild(container, node, newNode)
+  }
+  // A block root turned into client content turns the rest of its block fn
+  // into a client render; see hydrateBlock. A nested child is the whole
+  // unit: the block hydrates on behind it, into the recreated subtree.
+  if (!nested) {
+    currentMismatch = newNode
+    setIsHydrating(false)
   }
   return newNode
 }
@@ -846,9 +851,85 @@ export function isClaimedAnchor(node: Node | null | undefined): boolean {
   return !!node && !!((node as Anchor).$vha! & AnchorFlags.ANCHOR)
 }
 
-function markRecreatedNode<T extends Node>(node: T): T {
+/**
+ * The root a mismatch of the block being hydrated recreated, if any. Set by
+ * `handleMismatch`, which also turns hydration off: the rest of the block fn
+ * that adopted the root renders as a client mount. That is vdom's patch(null)
+ * for the recreated root, but the roots after it in the block render anew
+ * too, where vdom would still hydrate them.
+ * The owner of that block fn (`hydrateBlock`) inserts the finished block
+ * there and turns hydration back on, so to its own post-processing the block
+ * looks like one that hydrated.
+ */
+let currentMismatch: Node | null = null
+
+/**
+ * Runs a block fn as the owner of any mismatch its roots report. Owners trim
+ * the server nodes the block no longer adopts when they leave their range.
+ * One whose range also holds roots that other owners adopt (an adopted slot
+ * fallback) may only trim after a mismatch, which only this helper knows: it
+ * passes the range's `close` to have it done here.
+ */
+export function hydrateBlock<T extends Block>(fn: () => T, close?: Node): T {
+  try {
+    return finishMismatchRecovery(fn(), close)
+  } finally {
+    // every owner runs with hydration on; a mismatch inside turned it off
+    currentMismatch = null
+    setIsHydrating(true)
+  }
+}
+
+/**
+ * `hydrateBlock` without the closure: every component setup and render runs
+ * as an owner.
+ */
+export function hydrateBlockWithErrorHandling(
+  fn: Function,
+  instance: GenericComponentInstance,
+  type: ErrorCodes,
+  args?: unknown[],
+): any {
+  try {
+    return finishMismatchRecovery(
+      callWithErrorHandling(fn, instance, type, args),
+    )
+  } finally {
+    currentMismatch = null
+    setIsHydrating(true)
+  }
+}
+
+function finishMismatchRecovery<T extends Block>(block: T, close?: Node): T {
+  const root = currentMismatch
+  if (root && block) {
+    // The recreated root took over the server unit's position, and any
+    // root before it hydrated in place; the roots behind it are the
+    // detached ones. They hold no server position, so logical-index
+    // locates step over them, but they are content, not anchors
+    // (isValidBlock).
+    const parent = root.parentNode!
+    const next = root.nextSibling
+    const roots: Block[] = isArray(block) ? block : [block]
+    let i = roots.indexOf(root) + 1
+    if (__DEV__ && i === 0) {
+      warn(
+        `Hydration mismatch recovery: the recreated root is not a root of ` +
+          `the block that reported it. This is likely a Vue internal bug.`,
+      )
+    }
+    for (; i < roots.length; i++) insert(roots[i], parent, next)
+    for (let n = root.nextSibling; n && n !== next; n = n.nextSibling) {
+      // a runtime anchor among them keeps its ANCHOR bit
+      ;(n as Anchor).$vha! |= AnchorFlags.UNTRACKED
+    }
+    if (close) trimHydrationBoundary(close)
+  }
+  return block
+}
+
+function markRecreatedNode(node: Node): void {
   ;(node as RecreatedNode).$rcn = 1
-  return node
 }
 
 export function isRecreatedNode(node: Node | null | undefined): boolean {

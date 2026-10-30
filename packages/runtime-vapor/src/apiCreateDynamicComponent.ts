@@ -37,6 +37,7 @@ import {
   type HydrationCursor,
   captureHydrationCursor,
   enterHydrationCursor,
+  hydrateBlock,
   isHydrating,
   locateHydrationNode,
 } from './dom/hydration'
@@ -115,11 +116,10 @@ export function createDynamicComponent(
     const hydrationCursor = isHydrating ? enterHydrationCursor() : null
     const value = getter()
     const appContext = getAppContext()
-    const block = render(
-      value,
-      resolveValue(value, appContext, scopeOwner),
-      appContext,
-    )
+    const resolved = resolveValue(value, appContext, scopeOwner)
+    const block = isHydrating
+      ? hydrateBlock(() => render(value, resolved, appContext))
+      : render(value, resolved, appContext)
     finishBlockCreation(
       block,
       undefined,

@@ -49,10 +49,12 @@ import {
   currentHydrationNode,
   enterHydrationBoundary,
   enterHydrationCursor,
+  hydrateBlock,
   isComment,
   isHydrating,
   locateClaimedEnd,
   setCurrentHydrationNode,
+  trimHydrationBoundary,
 } from './dom/hydration'
 import {
   ForBlock,
@@ -533,6 +535,9 @@ export const createFor = (
       exitHydrationBoundary = enterHydrationBoundary(parentAnchor)
     }
 
+    // one owner callback for the list: a closure per row would allocate
+    let row = 0
+    const mountRow = () => mount(source, row, parentAnchor).nodes
     try {
       for (let i = 0; i < newLength; i++) {
         const node = currentHydrationNode!
@@ -549,11 +554,15 @@ export const createFor = (
             setCurrentHydrationNode(node.nextSibling)
           }
         }
-        mount(source, i, parentAnchor)
+        row = i
+        hydrateBlock(mountRow)
         if (rowStart) {
           // the row's blocks consumed its range, so the cursor rests on its
           // close marker; only a mismatch pays for the walk from the start
-          nextNode = locateClaimedEnd(rowStart)!.nextSibling
+          // and for dropping what the row no longer adopts
+          const close = locateClaimedEnd(rowStart)!
+          trimHydrationBoundary(close)
+          nextNode = close.nextSibling
         }
         if (nextNode) setCurrentHydrationNode(nextNode)
       }

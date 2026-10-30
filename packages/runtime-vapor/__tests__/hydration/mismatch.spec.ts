@@ -11,7 +11,7 @@ import {
 } from '../../src'
 import { nextTick, ref } from '@vue/runtime-dom'
 import { Namespaces } from '@vue/shared'
-import { VueServerRenderer, compile, runtimeDom } from '../_utils'
+import { VueServerRenderer, compile, ifChain, runtimeDom } from '../_utils'
 import {
   currentHydrationNode,
   hydrateNode,
@@ -257,7 +257,7 @@ describe('mismatch handling', () => {
       warn.mock.calls.some(call => call.includes('(start of fragment)')),
     ).toBe(true)
   })
-  test('dynamic component element mismatch should adopt slot children', async () => {
+  test('dynamic component element mismatch renders slot children on the client', async () => {
     const data = ref('foo')
     const { container } = await mountWithHydration(
       '<span><b>foo</b></span>',
@@ -288,15 +288,16 @@ describe('mismatch handling', () => {
       data,
     )
 
+    // the recreated element mounts its children on the client
     expect(container.innerHTML).toBe(
-      '<div><!----></div><!--dynamic-component-->',
+      '<div><!--slot--></div><!--dynamic-component-->',
     )
     expect(`Hydration node mismatch`).toHaveBeenWarned()
 
     data.value = { name: 'default', msg: 'updated' }
     await nextTick()
     expect(container.innerHTML).toBe(
-      '<div><b>updated</b><!----></div><!--dynamic-component-->',
+      '<div><b>updated</b><!--slot--></div><!--dynamic-component-->',
     )
   })
 
@@ -1760,10 +1761,11 @@ describe('range close ownership', () => {
   })
 })
 
-// Coverage guard: a wrapped v-for row whose content does not end on the row's
-// own close marker (an extra server node) still resumes after that marker.
+// A wrapped v-for row whose content does not end on the row's own close
+// marker drops the extra server node, as a children mismatch, and still
+// resumes after that marker.
 describe('v-for row close', () => {
-  test('row with an extra server node resumes after its close', async () => {
+  test('row with an extra server node drops it and resumes after its close', async () => {
     const data = ref({ items: ['a', 'b'] })
     const row = (item: string, extra = '') =>
       `<!--[--><li>${item}</li><i>-</i>${extra}<!--]-->`
@@ -1778,14 +1780,411 @@ describe('v-for row close', () => {
       data,
     )
     expect(container.innerHTML).toBe(
-      `<ul><!--[-->${row('a', '<b>extra</b>')}${row('b')}<!--]--></ul>`,
+      `<ul><!--[-->${row('a')}${row('b')}<!--]--></ul>`,
     )
+    expect('Hydration children mismatch').toHaveBeenWarned()
 
     data.value.items.push('c')
     await nextTick()
     expect(container.innerHTML).toBe(
-      `<ul><!--[-->${row('a', '<b>extra</b>')}${row('b')}` +
-        `<li>c</li><i>-</i><!--]--></ul>`,
+      `<ul><!--[-->${row('a')}${row('b')}<li>c</li><i>-</i><!--]--></ul>`,
     )
+  })
+})
+
+// After a root mismatch the rest of the owning block renders on the client,
+// as vdom's patch(null) does; hydration resumes behind the recreated root.
+// The nested-components, empty-branch and fallthrough cells already pass on
+// the previous recovery model and guard it against regressions.
+describe('mismatch recovery renders the rest of the block on the client', () => {
+  const Child = `<template><b>child</b></template>`
+
+  test('branch root with a nested v-for', async () => {
+    const data = ref({ a: false, list: [1, 2] })
+    const { container } = await testHydration(
+      `<template>
+        <div v-if="data.a">A</div>
+        <ul v-else><li v-for="i in data.list" :key="i">{{ i }}</li></ul>
+      </template>`,
+      undefined,
+      data,
+      { serverData: ref({ a: true, list: [1, 2] }) },
+    )
+    expect(container.querySelector('div')).toBeNull()
+    expect(container.querySelector('ul')!.textContent).toBe('12')
+    expect('Hydration node mismatch').toHaveBeenWarnedTimes(1)
+
+    data.value.list.push(3)
+    await nextTick()
+    expect(container.querySelector('ul')!.textContent).toBe('123')
+  })
+
+  test('branch root with nested components', async () => {
+    const { container } = await testHydration(
+      `<template>
+        <div v-if="data">A</div>
+        <section v-else><components.Child/><components.Child/></section>
+      </template>`,
+      { Child },
+      ref(false),
+      { serverData: ref(true) },
+    )
+    expect(container.innerHTML).toBe(
+      '<section><b>child</b><b>child</b></section><!--if-->',
+    )
+    expect('Hydration node mismatch').toHaveBeenWarnedTimes(1)
+  })
+
+  test('branch root with text, component and trailing node', async () => {
+    const data = ref({ a: false, x: 'x' })
+    const { container } = await testHydration(
+      `<template>
+        <div v-if="data.a">A</div>
+        <section v-else><p>{{ data.x }}</p><components.Child/><p>tail</p></section>
+      </template>`,
+      { Child },
+      data,
+      { serverData: ref({ a: true, x: 'x' }) },
+    )
+    // a client render: the component keeps its `<!>` placeholder anchor
+    expect(container.innerHTML).toBe(
+      '<section><p>x</p><b>child</b><!----><p>tail</p></section><!--if-->',
+    )
+    expect('Hydration node mismatch').toHaveBeenWarnedTimes(1)
+
+    data.value.x = 'y'
+    await nextTick()
+    expect(container.querySelector('p')!.textContent).toBe('y')
+  })
+
+  test('server empty branch, client branch with nested blocks', async () => {
+    const data = ref({ a: true, b: true, x: 'x' })
+    const { container } = await testHydration(
+      `<template>
+        <div>
+          <section v-if="data.a"><p v-if="data.b">{{ data.x }}</p><components.Child/></section>
+        </div>
+      </template>`,
+      { Child },
+      data,
+      { serverData: ref({ a: false, b: true, x: 'x' }) },
+    )
+    expect(container.innerHTML).toBe(
+      '<div><section><p>x</p><!--if--><b>child</b></section><!--if--></div>',
+    )
+    expect('Hydration node mismatch').toHaveBeenWarnedTimes(1)
+
+    data.value.b = false
+    await nextTick()
+    expect(container.querySelector('section')!.innerHTML).toBe(
+      '<!--if--><b>child</b>',
+    )
+  })
+
+  test('dynamic native element: children render on the client, the sibling hydrates', async () => {
+    const data = ref({ tag: 'span', x: 'x' })
+    const { container } = await testHydration(
+      `<template>
+        <component :is="data.tag"><components.Child/>{{ data.x }}</component>
+        <i>after</i>
+      </template>`,
+      { Child },
+      data,
+      { serverData: ref({ tag: 'div', x: 'x' }) },
+    )
+    expect(container.querySelector('div')).toBeNull()
+    expect(container.querySelector('span')!.innerHTML).toBe('<b>child</b>x')
+    expect(container.querySelectorAll('i')).toHaveLength(1)
+    expect('Hydration node mismatch').toHaveBeenWarnedTimes(1)
+
+    data.value.x = 'y'
+    await nextTick()
+    expect(container.querySelector('span')!.innerHTML).toBe('<b>child</b>y')
+  })
+
+  test('dynamic native element inside a v-if branch with mismatching content', async () => {
+    const data = ref({ a: true, x: 'x' })
+    const { container } = await testHydration(
+      `<template>
+        <component :is="'div'" v-if="data.a"><span>{{ data.x }}</span></component>
+        <p v-else>B</p>
+        <i>after</i>
+      </template>`,
+      undefined,
+      data,
+      { serverData: ref({ a: false, x: 'x' }) },
+    )
+    expect(container.querySelector('p')).toBeNull()
+    expect(container.querySelector('div')!.innerHTML).toBe('<span>x</span>')
+    expect(container.querySelectorAll('i')).toHaveLength(1)
+    expect('Hydration node mismatch').toHaveBeenWarnedTimes(1)
+
+    data.value.x = 'y'
+    await nextTick()
+    expect(container.querySelector('div')!.innerHTML).toBe('<span>y</span>')
+  })
+
+  // a static `is` keeps the element nested in its block (insertion state is
+  // not consumed by a fragment): the recreated element is the unit, and its
+  // children mount on the client
+  test('static is element with mismatching children inside a matching branch root', async () => {
+    const data = ref({ a: true, list: [1, 2] })
+    const { container } = await testHydration(
+      `<template>
+        <section v-if="data.a">
+          <component is="div"><b v-for="i in data.list" :key="i">{{ i }}</b></component>
+          <u>after</u>
+        </section>
+        <section v-else>
+          <aside><b v-for="i in data.list" :key="i">{{ i }}</b></aside>
+          <u>after</u>
+        </section>
+        <strong>end</strong>
+      </template>`,
+      {},
+      data,
+      { serverData: ref({ a: false, list: [1, 2] }) },
+    )
+    expect(container.querySelector('aside')).toBeNull()
+    expect(container.querySelector('div')!.textContent).toBe('12')
+    expect(container.querySelectorAll('u')).toHaveLength(1)
+    expect('Hydration node mismatch').toHaveBeenWarnedTimes(1)
+
+    data.value.list.push(3)
+    await nextTick()
+    expect(container.querySelector('div')!.textContent).toBe('123')
+  })
+
+  // the custom element is created by createPlainElement and its children are
+  // templates inserted into it by the same block: the element is a block
+  // root, so the whole block, trailing roots included, renders on the client
+  test('custom element as a multi-root branch root keeps the sibling behind the branch', async () => {
+    const { container } = await testHydration(
+      `<template>
+        <template v-if="data"><my-el><p>in</p></my-el><p>tail</p></template>
+        <div v-else>B</div>
+        <i>after</i>
+      </template>`,
+      undefined,
+      ref(true),
+      {
+        serverData: ref(false),
+        compilerOptions: { isCustomElement: tag => tag === 'my-el' },
+      },
+    )
+    expect(container.innerHTML).toBe(
+      '<!--[--><my-el><p>in</p></my-el><p>tail</p><!--if--><i>after</i><!--]-->',
+    )
+    expect('Hydration node mismatch').toHaveBeenWarnedTimes(1)
+  })
+
+  // a root rendered behind the recreated one is content: hiding it later
+  // still exposes the slot fallback
+  test('extra roots stay valid slot content', async () => {
+    const data = ref({ a: true, show: true, x: 'x' })
+    const { container } = await testHydration(
+      `<template>
+        <template v-if="data.a">
+          <article :title="data.x">head</article>
+          <components.Child><b v-if="data.show">content</b></components.Child>
+        </template>
+        <template v-else>
+          <p>old</p>
+          <components.Child><b v-if="data.show">content</b></components.Child>
+        </template>
+      </template>`,
+      { Child: `<template><slot><em>fallback</em></slot></template>` },
+      data,
+      { serverData: ref({ a: false, show: true, x: 'x' }) },
+    )
+    expect(container.querySelector('b')!.textContent).toBe('content')
+    expect('Hydration node mismatch').toHaveBeenWarned()
+    expect('Hydration children mismatch').toHaveBeenWarned()
+
+    data.value.show = false
+    await nextTick()
+    expect(container.querySelector('b')).toBeNull()
+    expect(container.querySelector('em')!.textContent).toBe('fallback')
+  })
+
+  test('component root switching tag keeps fallthrough attrs', async () => {
+    const { container } = await testHydration(
+      `<template>
+        <components.Child class="red" :a="data"/>
+      </template>`,
+      {
+        Child: `<script setup>const props = defineProps(['a'])</script>
+          <template>
+            <div v-if="a">A</div>
+            <span v-else :data-a="a">B</span>
+          </template>`,
+      },
+      ref(false),
+      { serverData: ref(true) },
+    )
+    expect(container.innerHTML).toBe(
+      '<span data-a="false" class="red">B</span><!--if-->',
+    )
+    expect('Hydration node mismatch').toHaveBeenWarnedTimes(1)
+  })
+
+  // the wrapper is the root of the block the group's render returns: the
+  // render's owner handles the mismatch, the children render on the client
+  test('TransitionGroup wrapper mismatch with a dynamic slot', async () => {
+    const { container } = await testHydration(
+      `<template>
+        <TransitionGroup :tag="data.tag">
+          <template #default v-if="data.show"><p key="p">{{ data.x }}</p></template>
+        </TransitionGroup>
+      </template>`,
+      {},
+      ref({ tag: 'ul', show: false, x: 'x' }),
+      { serverData: ref({ tag: 'div', show: false, x: 'x' }) },
+    )
+    expect(container.querySelector('div')).toBeNull()
+    expect(container.querySelector('ul')).not.toBeNull()
+    expect('Hydration node mismatch').toHaveBeenWarned()
+  })
+})
+
+// The block behind a recreated root renders on the client, so the owner has
+// to drop the server nodes that block would otherwise have adopted.
+describe('mismatch recovery drops the server tail of the block', () => {
+  const client = `<span :title="data.x">A</span><b :title="data.x">B</b>`
+  const server = `<p>P</p><i>I</i>`
+
+  test.each([
+    [
+      'v-once branch',
+      `<div>
+        <template v-if="data.a" v-once>${client}</template>
+        <template v-else>${server}</template>
+        <u>after</u>
+      </div>`,
+      {},
+    ],
+    [
+      'v-once branch of a long chain',
+      `<div>
+        ${ifChain((i, dir) =>
+          i === 0
+            ? `<template ${dir} v-once>${client}</template>`
+            : dir === 'v-else'
+              ? `<template ${dir}>${server}</template>`
+              : `<p ${dir}>other</p>`,
+        )}
+        <u>after</u>
+      </div>`,
+      {},
+    ],
+    [
+      'dynamic native element children',
+      `<component :is="'div'" v-if="data.a">${client}</component>
+      <div v-else>${server}</div>
+      <u>after</u>`,
+      {},
+    ],
+    [
+      'dynamic native element dynamic slot',
+      `<component :is="'div'" v-if="data.a">
+        <template #[data.name]>${client}</template>
+      </component>
+      <div v-else>${server}</div>
+      <u>after</u>`,
+      {},
+    ],
+    [
+      'disabled Teleport children',
+      `<Teleport v-if="data.a" to="body" disabled>${client}</Teleport>
+      <Teleport v-else to="body" disabled>${server}</Teleport>
+      <u>after</u>`,
+      {},
+    ],
+    [
+      'adopted slot fallback',
+      `<component :is="data.a ? components.A : components.B">
+        <em v-if="data.show">content</em>
+      </component>
+      <u>after</u>`,
+      {
+        A: `<template><div><slot>${client}</slot></div></template>`,
+        B: `<template><div><slot>${server}</slot></div></template>`,
+      },
+    ],
+  ])('%s', async (_, code, components) => {
+    const { container } = await testHydration(
+      `<template>${code}</template>`,
+      components,
+      ref({ a: true, k: 0, show: false, name: 'default', x: 'x' }),
+      {
+        serverData: ref({
+          a: false,
+          k: 99,
+          show: false,
+          name: 'default',
+          x: 'x',
+        }),
+      },
+    )
+    expect(container.querySelector('p')).toBeNull()
+    expect(container.querySelector('i')).toBeNull()
+    expect(container.querySelector('span')!.textContent).toBe('A')
+    expect(container.querySelector('b')!.textContent).toBe('B')
+    expect(container.querySelectorAll('u')).toHaveLength(1)
+    expect('Hydration node mismatch').toHaveBeenWarned()
+    // the server tail is dropped as a children mismatch, as vdom reports it
+    expect('Hydration children mismatch').toHaveBeenWarned()
+  })
+
+  // an enclosing branch can select another list: the row template differs
+  test('wrapped v-for rows', async () => {
+    const data = ref({ a: true, list: [1, 2], x: 'x' })
+    const { container } = await testHydration(
+      `<template>
+        <div>
+          <template v-if="data.a">
+            <template v-for="i in data.list" :key="i">
+              <span :title="data.x">A{{ i }}</span><b :title="data.x">B{{ i }}</b>
+            </template>
+          </template>
+          <template v-else>
+            <template v-for="i in data.list" :key="i"><p>P{{ i }}</p><i>I{{ i }}</i></template>
+          </template>
+          <u>after</u>
+        </div>
+      </template>`,
+      {},
+      data,
+      { serverData: ref({ a: false, list: [1, 2], x: 'x' }) },
+    )
+    expect(container.querySelectorAll('p, i')).toHaveLength(0)
+    expect(container.textContent).toBe('A1B1A2B2after')
+    expect('Hydration node mismatch').toHaveBeenWarned()
+    expect('Hydration children mismatch').toHaveBeenWarned()
+
+    data.value.list = []
+    await nextTick()
+    expect(container.textContent).toBe('after')
+  })
+
+  test('Teleport children in the target', async () => {
+    const target = document.createElement('div')
+    target.id = 'tail-target'
+    target.innerHTML = `<!--teleport start anchor--><p>P</p><i>I</i><!--teleport anchor-->`
+    document.body.appendChild(target)
+    const { container } = await mountWithHydration(
+      '<!--teleport start--><!--teleport end--><u>after</u>',
+      `<teleport to="#tail-target">${client}</teleport><u>after</u>`,
+      ref({ x: 'x' }),
+    )
+    expect(target.innerHTML).toBe(
+      '<!--teleport start anchor--><span title="x">A</span><b title="x">B</b><!--teleport anchor-->',
+    )
+    expect(container.innerHTML).toBe(
+      '<!--teleport start--><!--teleport end--><u>after</u>',
+    )
+    expect('Hydration node mismatch').toHaveBeenWarned()
+    expect('Hydration children mismatch').toHaveBeenWarned()
+    target.remove()
   })
 })
