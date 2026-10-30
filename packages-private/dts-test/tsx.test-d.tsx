@@ -136,6 +136,16 @@ expectType<JSX.Element>(
     xmlns="http://www.w3.org/2000/svg"
   />,
 )
+// Template / SFC colon forms are typed on SVGAttributes (used by vue-tsc / content-mapper)
+expectType<string | undefined>(
+  undefined as JSX.IntrinsicElements['svg']['xmlns:xlink'],
+)
+expectType<string | undefined>(
+  undefined as JSX.IntrinsicElements['svg']['xlink:href'],
+)
+expectType<string | undefined>(
+  undefined as JSX.IntrinsicElements['use']['xlink:href'],
+)
 // details
 expectType<JSX.Element>(<details name="details" />)
 

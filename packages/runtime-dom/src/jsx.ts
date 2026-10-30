@@ -1164,8 +1164,20 @@ export interface SVGAttributes extends AriaAttributes, EventHandlers<Events> {
   xlinkShow?: string | undefined
   xlinkTitle?: string | undefined
   xlinkType?: string | undefined
+  // Template / SFC attribute forms (colon names). JSX/TSX keeps the camelCase keys above.
+  'xlink:actuate'?: string | undefined
+  'xlink:arcrole'?: string | undefined
+  'xlink:href'?: string | undefined
+  'xlink:role'?: string | undefined
+  'xlink:show'?: string | undefined
+  'xlink:title'?: string | undefined
+  'xlink:type'?: string | undefined
   xmlns?: string | undefined
   xmlnsXlink?: string | undefined
+  'xmlns:xlink'?: string | undefined
+  'xml:base'?: string | undefined
+  'xml:lang'?: string | undefined
+  'xml:space'?: 'default' | 'preserve' | undefined
   y1?: Numberish | undefined
   y2?: Numberish | undefined
   y?: Numberish | undefined
