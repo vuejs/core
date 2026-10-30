@@ -1,3 +1,38 @@
+# [3.6.0-rc.14](https://github.com/vuejs/core/compare/v3.6.0-rc.13...v3.6.0-rc.14) (2026-10-30)
+
+### Bug Fixes
+
+* **compiler-vapor:** avoid fragment flags for v-once dynamic components ([47d0ec9](https://github.com/vuejs/core/commit/47d0ec90aedc2082d44fce098eca830abec978a1))
+* **compiler-vapor:** mark the root node as transformed ([#16003](https://github.com/vuejs/core/issues/16003)) ([0b96ce2](https://github.com/vuejs/core/commit/0b96ce2ba8fbe41901f7c6b3e33cd988bc3e95cc))
+* **compiler-vapor:** pass the key of <slot> as a slot prop like vdom ([#16045](https://github.com/vuejs/core/issues/16045)) ([1bc7715](https://github.com/vuejs/core/commit/1bc77158d67a4c21813475c9510524fe8ce71176))
+* **compiler-vapor:** reserve binding names ending in multi-digit numbers for generated vars ([#16025](https://github.com/vuejs/core/issues/16025)) ([58652b7](https://github.com/vuejs/core/commit/58652b74f511895d97ad9ccef847978d125f43ef))
+* **compiler-vapor:** skip inline asset resolve for removed components ([#16046](https://github.com/vuejs/core/issues/16046)) ([fc16cc7](https://github.com/vuejs/core/commit/fc16cc734056540847ec33983c09347bc0201851))
+* **compiler-vapor:** update slot prop component tags when the slot prop changes ([8809141](https://github.com/vuejs/core/commit/88091419838470fb90dd41043e2e95d3c769241f))
+* **runtime-vapor:** finish a block as a client render after a hydration root mismatch ([#16044](https://github.com/vuejs/core/issues/16044)) ([d21a40e](https://github.com/vuejs/core/commit/d21a40e139033051f61c1c61096d4e5047d9d955))
+* **runtime-vapor:** hydrate a v-if chain by the branch the server rendered ([#16067](https://github.com/vuejs/core/issues/16067)) ([d86ea3e](https://github.com/vuejs/core/commit/d86ea3eec299cfb6656b13ec1af94fd23baf0ac5))
+* **runtime-vapor:** recover a mismatched static template root during hydration ([#16049](https://github.com/vuejs/core/issues/16049)) ([a3e94c5](https://github.com/vuejs/core/commit/a3e94c59b39147d56660ffd7ad83a5b59eaddc81))
+* **runtime-vapor:** treat a server range as one unit during hydration mismatch recovery ([#16052](https://github.com/vuejs/core/issues/16052)) ([2495354](https://github.com/vuejs/core/commit/2495354080267ab3162fa1e5389df12f1f6e6c47))
+* **vapor:** normalize slot props at compile time ([#16059](https://github.com/vuejs/core/issues/16059)) ([84d04aa](https://github.com/vuejs/core/commit/84d04aac699ec3780747a0a41b34582bcf81d224))
+
+### Features
+
+* **runtime-vapor:** add devtools component hooks ([#16027](https://github.com/vuejs/core/issues/16027)) ([f3714a5](https://github.com/vuejs/core/commit/f3714a5f1c3c22fefa481b2eedb10417248d928a))
+
+### Performance Improvements
+
+* **compiler-core:** skip re-parsing simple identifiers in isMemberExpression / isFnExpression ([#16005](https://github.com/vuejs/core/issues/16005)) ([4dc8fe4](https://github.com/vuejs/core/commit/4dc8fe46522b988c881d64234d11fa32b6e1d506))
+* **compiler-vapor:** bind effect ids once per reactive effect group ([#16022](https://github.com/vuejs/core/issues/16022)) ([e4da4e8](https://github.com/vuejs/core/commit/e4da4e8091b2a95cc363aa6be0ae9061b3509ae0))
+* **compiler-vapor:** cache the v-if chain head and tail while transforming ([#16008](https://github.com/vuejs/core/issues/16008)) ([5807240](https://github.com/vuejs/core/commit/5807240e8109a47463639cbd665dae0e301e000c))
+* **compiler-vapor:** construct child transform contexts instead of copying the parent ([#16002](https://github.com/vuejs/core/issues/16002)) ([bc0aabf](https://github.com/vuejs/core/commit/bc0aabfe13ee6d2ad1a7c2a5d6a4d0648e886e68))
+* **compiler-vapor:** index returned roots per block ([#16021](https://github.com/vuejs/core/issues/16021)) ([b086140](https://github.com/vuejs/core/commit/b086140b0de64c8df36a3d2e957a79c7c7e02587))
+* **compiler-vapor:** misc transform and codegen allocation trims ([#16024](https://github.com/vuejs/core/issues/16024)) ([de7a4dc](https://github.com/vuejs/core/commit/de7a4dcd34cc916224767712718e0f82ba79d37b))
+* **compiler-vapor:** nest code fragments instead of spreading them ([#16032](https://github.com/vuejs/core/issues/16032)) ([e29122c](https://github.com/vuejs/core/commit/e29122c1053097d9aadb2c78591ebd05a3bda381))
+* **compiler-vapor:** resolve object v-bind props once per directive ([#16020](https://github.com/vuejs/core/issues/16020)) ([ce9411f](https://github.com/vuejs/core/commit/ce9411f12166cbcc6ce1c113babc899aab713d79))
+* **compiler-vapor:** short-circuit v-for selector matching on non-key operands ([#16007](https://github.com/vuejs/core/issues/16007)) ([dad5c13](https://github.com/vuejs/core/commit/dad5c131cd5cf3af1c788ccf93a3a815703ac09c))
+* **runtime-vapor:** locate a slot boundary's close lazily during hydration ([#16039](https://github.com/vuejs/core/issues/16039)) ([9297155](https://github.com/vuejs/core/commit/92971551dc81bbff6db3f3e14d2a83458ac4e0de))
+* **runtime-vapor:** locate wrapped v-for row closes lazily during hydration ([#16038](https://github.com/vuejs/core/issues/16038)) ([2100ef9](https://github.com/vuejs/core/commit/2100ef9d7c012cd7679ed20379e73c13e8b325b7))
+* **runtime-vapor:** read nodeType and comment data once in hydration traversal ([#16034](https://github.com/vuejs/core/issues/16034)) ([177e72b](https://github.com/vuejs/core/commit/177e72b5fe749f2cbcbecf015cb3aa1f71784847))
+
 # [3.6.0-rc.13](https://github.com/vuejs/core/compare/v3.6.0-rc.12...v3.6.0-rc.13) (2026-10-23)
 
 ### Bug Fixes
