@@ -587,8 +587,14 @@ function _createVNode(
       normalizeChildren(cloned, children)
     }
     if (isBlockTreeEnabled > 0 && !isBlockNode && currentBlock) {
-      if (cloned.shapeFlag & ShapeFlags.COMPONENT) {
-        currentBlock[currentBlock.indexOf(type)] = cloned
+      // the source component vnode is tracked only if it was created in the
+      // current block; otherwise (e.g. created in setup) track the clone
+      const index =
+        cloned.shapeFlag & ShapeFlags.COMPONENT
+          ? currentBlock.indexOf(type)
+          : -1
+      if (index > -1) {
+        currentBlock[index] = cloned
       } else {
         currentBlock.push(cloned)
       }
