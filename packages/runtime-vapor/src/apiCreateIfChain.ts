@@ -12,6 +12,7 @@ import {
   isComment,
   isHydrating,
   locateClaimedEnd,
+  renderChainBranch,
   runWithoutHydration,
   trimHydrationBoundary,
 } from './dom/hydration'
@@ -141,9 +142,12 @@ export function createIfChain(
       const noScope = !!(flag & VaporIfFlags.TRUE_NO_SCOPE)
       if (otherBranch) {
         // the server rendered another branch: this one goes in its range
-        dynamicFragment.anchor = otherBranch
-        runWithoutHydration(() =>
-          dynamicFragment.update(blocks[i], keyBase + i, noScope),
+        renderChainBranch(
+          dynamicFragment,
+          otherBranch,
+          blocks[i],
+          keyBase + i,
+          noScope,
         )
       } else {
         dynamicFragment.update(blocks[i], keyBase + i, noScope)
