@@ -29,6 +29,7 @@ import {
   isRenderableAttrValue,
   isReservedProp,
   isString,
+  isVaporBranchStart,
   normalizeClass,
   normalizeCssVarValue,
   normalizeStyle,
@@ -117,6 +118,10 @@ export const getContainerType = (
 export const isComment = (node: Node): node is Comment =>
   node.nodeType === DOMNodeTypes.COMMENT
 
+/** The data of a comment opening a range a hydration steps over as one. */
+export const isRangeStart = (data: string): boolean =>
+  data === '[' || data === '(' || isVaporBranchStart(data)
+
 // Note: hydration is DOM-specific
 // But we have to place it in core due to tight coupling with core - splitting
 // it out creates a ton of unnecessary complexity.
@@ -179,9 +184,13 @@ export function createHydrationFunctions(
     optimized = false,
   ): Node | null => {
     optimized = optimized || !!vnode.dynamicChildren
-    // `(` opens a slot fallback: a range like a fragment's
+    // `(` opens a slot fallback and `[1` the branch of a vapor v-if chain:
+    // ranges like a fragment's
     const isFragmentStart =
-      isComment(node) && (node.data === '[' || node.data === '(')
+      isComment(node) &&
+      (node.data === '[' ||
+        node.data === '(' ||
+        (isVaporInteropEnabled && isVaporBranchStart(node.data)))
     const onMismatch = () =>
       handleMismatch(
         node,
@@ -803,7 +812,7 @@ export function createHydrationFunctions(
           node,
           node.nodeType === DOMNodeTypes.TEXT
             ? `(text)`
-            : isComment(node) && (node.data === '[' || node.data === '(')
+            : isComment(node) && isRangeStart(node.data)
               ? `(start of fragment)`
               : ``,
           `\n- expected on client:`,
@@ -861,7 +870,14 @@ export function createHydrationFunctions(
     while (node) {
       node = nextSibling(node)
       if (node && isComment(node)) {
-        if (node.data === open) match++
+        if (
+          node.data === open ||
+          (isVaporInteropEnabled &&
+            open === '[' &&
+            isVaporBranchStart(node.data))
+        ) {
+          match++
+        }
         if (node.data === close) {
           if (match === 0) {
             return nextSibling(node)

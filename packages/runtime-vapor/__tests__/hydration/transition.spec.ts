@@ -125,8 +125,10 @@ describe('Vapor Mode hydration', () => {
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
         `
         "
+        <!--[0-->
         <!--[--><!--]-->
-        <!--if-->"
+        <!--]-->
+        "
       `,
       )
       expect(`mismatch`).not.toHaveBeenWarned()
@@ -136,7 +138,9 @@ describe('Vapor Mode hydration', () => {
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
         `
         "
-        <!--[--><span class="v-enter-from v-enter-active">foo</span><!--if-->"
+        <!--[0-->
+        <!--[--><span class="v-enter-from v-enter-active">foo</span><!--]-->
+        "
       `,
       )
     })
@@ -522,6 +526,28 @@ describe('Vapor Mode hydration', () => {
           },
         )
       })
+    })
+
+    // the client renders the branch the server did not anew: that element
+    // appears, not the server one it replaces
+    test('transition appear on a v-if branch the server did not render', async () => {
+      const { container } = await testHydration(
+        `<template>
+          <transition appear>
+            <div v-if="data">a</div>
+            <div v-else>b</div>
+          </transition>
+          <i>tail</i>
+        </template>`,
+        undefined,
+        ref(false),
+        { serverData: ref(true) },
+      )
+      const div = container.querySelector('div')!
+      expect(div.textContent).toBe('b')
+      expect(div.className).toBe('v-enter-from v-enter-active')
+      expect(container.querySelectorAll('i')).toHaveLength(1)
+      expect('Hydration node mismatch').toHaveBeenWarnedTimes(1)
     })
   })
 

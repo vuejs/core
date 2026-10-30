@@ -1,4 +1,4 @@
-import type { Block, BlockFn } from './block'
+import { type Block, type BlockFn, insert } from './block'
 import {
   type FragmentClaim,
   type HydrationCursor,
@@ -8,9 +8,12 @@ import {
   currentHydrationNode,
   enterHydrationCursor,
   hydrateBlock,
+  hydrateChainBranch,
   isComment,
   isHydrating,
   locateClaimedEnd,
+  renderChainBranch,
+  runWithoutHydration,
   trimHydrationBoundary,
 } from './dom/hydration'
 import {
@@ -61,6 +64,7 @@ export function createIfChain(
     const i = select()
     const render = blocks[i]
     let claim: FragmentClaim | undefined
+    let otherBranch: Node | null = null
     if (isHydrating) {
       branchShape = branchFlag(i) & 0b11
       claim =
@@ -68,13 +72,19 @@ export function createIfChain(
           ? createFragmentClaim()
           : undefined
       hydrationCursor = enterHydrationCursor(claim)
+      otherBranch = hydrateChainBranch((claim ||= createFragmentClaim()), i)
     }
     if (isHydrating && !render) {
-      // Resolve the empty branch's SSR anchor without installing an effect.
-      const placeholder = new DynamicFragment(IF, __DEV__ ? 'if' : undefined)
-      placeholder.hydrationClaim = claim
-      hydrateDynamicFragmentAnchor(placeholder, true)
-      frag = [placeholder.anchor]
+      // Resolve the empty branch's SSR anchor without installing an effect:
+      // the close of a server branch the chain dropped, or a placeholder's.
+      if (otherBranch) {
+        frag = [otherBranch]
+      } else {
+        const placeholder = new DynamicFragment(IF, __DEV__ ? 'if' : undefined)
+        placeholder.hydrationClaim = claim
+        hydrateDynamicFragmentAnchor(placeholder, true)
+        frag = [placeholder.anchor]
+      }
     } else {
       frag = !render
         ? [
@@ -82,9 +92,16 @@ export function createIfChain(
               __DEV__ ? createComment('if') : createTextNode(),
             ),
           ]
-        : isHydrating
-          ? hydrateBlock(render)
-          : render()
+        : otherBranch
+          ? runWithoutHydration(() => {
+              // the server rendered another branch: this one goes in its range
+              const block = render()
+              insert(block, otherBranch!.parentNode!, otherBranch)
+              return block
+            })
+          : isHydrating
+            ? hydrateBlock(render)
+            : render()
     }
     if (isHydrating && claim && claim.start) {
       // Non-empty v-once branches have no DynamicFragment to consume the
@@ -109,6 +126,7 @@ export function createIfChain(
     renderEffect(() => {
       const i = select()
       const flag = branchFlag(i)
+      let otherBranch: Node | null = null
       if (isHydrating) {
         branchShape = flag & 0b11
         dynamicFragment.hydrationClaim =
@@ -116,12 +134,24 @@ export function createIfChain(
             ? createFragmentClaim()
             : undefined
         hydrationCursor = enterHydrationCursor(dynamicFragment.hydrationClaim)
+        otherBranch = hydrateChainBranch(
+          (dynamicFragment.hydrationClaim ||= createFragmentClaim()),
+          i,
+        )
       }
-      dynamicFragment.update(
-        blocks[i],
-        keyBase + i,
-        !!(flag & VaporIfFlags.TRUE_NO_SCOPE),
-      )
+      const noScope = !!(flag & VaporIfFlags.TRUE_NO_SCOPE)
+      if (otherBranch) {
+        // the server rendered another branch: this one goes in its range
+        renderChainBranch(
+          dynamicFragment,
+          otherBranch,
+          blocks[i],
+          keyBase + i,
+          noScope,
+        )
+      } else {
+        dynamicFragment.update(blocks[i], keyBase + i, noScope)
+      }
     })
   }
 

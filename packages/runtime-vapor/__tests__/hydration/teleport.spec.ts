@@ -514,7 +514,7 @@ describe('Vapor Mode hydration', () => {
         ctx,
       )
       expect(mainHtml).toBe(
-        '<div><!--teleport start--><!--teleport end--></div>',
+        '<div><!--[0--><!--teleport start--><!--teleport end--><!--]--></div>',
       )
       teleportContainer.innerHTML = ctx.teleports![`#${targetId}`]
 
@@ -524,7 +524,7 @@ describe('Vapor Mode hydration', () => {
       })
 
       expect(container.innerHTML).toBe(
-        '<div><!--teleport start--><!--teleport end--><!--if--></div>',
+        '<div><!--[0--><!--teleport start--><!--teleport end--><!--]--></div>',
       )
       expect(teleportContainer.innerHTML).toBe(
         `<!--teleport start anchor-->` +
@@ -535,7 +535,9 @@ describe('Vapor Mode hydration', () => {
 
       data.value.toggle = false
       await nextTick()
-      expect(container.innerHTML).toBe('<div><div>Comp2</div><!--if--></div>')
+      expect(container.innerHTML).toBe(
+        '<div><!--[0--><div>Comp2</div><!--]--></div>',
+      )
       expect(teleportContainer.innerHTML).toBe('')
     })
 
@@ -588,7 +590,7 @@ describe('Vapor Mode hydration', () => {
         runtimeDom.createSSRApp(SSRApp),
       )
       expect(mainHtml).toBe(
-        '<div><!--teleport start--><!--teleport end--></div>',
+        '<div><!--[0--><!--teleport start--><!--teleport end--><!--]--></div>',
       )
       expect(teleportContainer.innerHTML).toBe('')
 
@@ -598,14 +600,16 @@ describe('Vapor Mode hydration', () => {
       })
 
       expect(container.innerHTML).toBe(
-        '<div><!--teleport start--><!--teleport end--><!--if--></div>',
+        '<div><!--[0--><!--teleport start--><!--teleport end--><!--]--></div>',
       )
       expect(teleportContainer.innerHTML).toBe(`<span>Teleported Comp1</span>`)
       expect(`Hydration children mismatch`).toHaveBeenWarned()
 
       data.value.toggle = false
       await nextTick()
-      expect(container.innerHTML).toBe('<div><div>Comp2</div><!--if--></div>')
+      expect(container.innerHTML).toBe(
+        '<div><!--[0--><div>Comp2</div><!--]--></div>',
+      )
       expect(teleportContainer.innerHTML).toBe('')
     })
 

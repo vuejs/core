@@ -57,17 +57,21 @@ describe('Vapor Mode hydration', () => {
         truthy,
       )
       expect(formatHtml(trueContainer.innerHTML)).toMatchInlineSnapshot(
-        `"
-<!--[--><span>foo</span>bar<!--]-->
-"`,
+        `
+        "
+        <!--[0--><span>foo</span>bar<!--]-->
+        "
+      `,
       )
 
       truthy.value.ok = false
       await nextTick()
       expect(formatHtml(trueContainer.innerHTML)).toMatchInlineSnapshot(
-        `"
-<!--[--><div>baz</div><!--]-->
-"`,
+        `
+        "
+        <!--[0--><div>baz</div><!--]-->
+        "
+      `,
       )
 
       const falsy = ref({ ok: false })
@@ -77,13 +81,21 @@ describe('Vapor Mode hydration', () => {
         falsy,
       )
       expect(formatHtml(falseContainer.innerHTML)).toMatchInlineSnapshot(
-        `"<div>baz</div><!--if-->"`,
+        `
+        "
+        <!--[1--><div>baz</div><!--]-->
+        "
+      `,
       )
 
       falsy.value.ok = true
       await nextTick()
       expect(formatHtml(falseContainer.innerHTML)).toMatchInlineSnapshot(
-        `"<span>foo</span>bar<!--if-->"`,
+        `
+        "
+        <!--[1--><span>foo</span>bar<!--]-->
+        "
+      `,
       )
     })
 
@@ -127,25 +139,41 @@ describe('Vapor Mode hydration', () => {
         data,
       )
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
-        `"<div>foo</div><!--if-->"`,
+        `
+        "
+        <!--[0--><div>foo</div><!--]-->
+        "
+      `,
       )
 
       data.value = 'b'
       await nextTick()
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
-        `"<div>bar</div><!--if--><!--if-->"`,
+        `
+        "
+        <!--[0--><div>bar</div><!--if--><!--]-->
+        "
+      `,
       )
 
       data.value = 'c'
       await nextTick()
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
-        `"<div>baz</div><!--if--><!--if-->"`,
+        `
+        "
+        <!--[0--><div>baz</div><!--if--><!--]-->
+        "
+      `,
       )
 
       data.value = 'a'
       await nextTick()
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
-        `"<div>foo</div><!--if-->"`,
+        `
+        "
+        <!--[0--><div>foo</div><!--]-->
+        "
+      `,
       )
     })
 
@@ -173,13 +201,21 @@ describe('Vapor Mode hydration', () => {
       )
 
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
-        `"<div><span>comp</span><div>11</div><div>foo</div><!--if--><div>11</div><span>comp</span></div>"`,
+        `
+        "<div><span>comp</span><div>11</div>
+        <!--[0--><div>foo</div><!--]-->
+        <div>11</div><span>comp</span></div>"
+      `,
       )
 
       data.value = 'b'
       await nextTick()
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
-        `"<div><span>comp</span><div>11</div><div>baz</div><!--if--><div>11</div><span>comp</span></div>"`,
+        `
+        "<div><span>comp</span><div>11</div>
+        <!--[0--><div>baz</div><!--]-->
+        <div>11</div><span>comp</span></div>"
+      `,
       )
     })
 
@@ -321,7 +357,9 @@ describe('Vapor Mode hydration', () => {
       )
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
         "
-        <!--[--><div>0</div><!--if--><span>after</span><!--]-->
+        <!--[-->
+        <!--[0--><div>0</div><!--]-->
+        <span>after</span><!--]-->
         "
       `)
 
@@ -329,7 +367,9 @@ describe('Vapor Mode hydration', () => {
       await nextTick()
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
         "
-        <!--[--><b>7</b><i>7</i><!--if--><span>after</span><!--]-->
+        <!--[-->
+        <!--[0--><b>7</b><i>7</i><!--]-->
+        <span>after</span><!--]-->
         "
       `)
 
@@ -337,7 +377,9 @@ describe('Vapor Mode hydration', () => {
       await nextTick()
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
         "
-        <!--[--><!--if--><span>after</span><!--]-->
+        <!--[-->
+        <!--[0--><!--]-->
+        <span>after</span><!--]-->
         "
       `)
 
@@ -345,7 +387,9 @@ describe('Vapor Mode hydration', () => {
       await nextTick()
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
         "
-        <!--[--><div>11</div><!--if--><span>after</span><!--]-->
+        <!--[-->
+        <!--[0--><div>11</div><!--]-->
+        <span>after</span><!--]-->
         "
       `)
     })
@@ -363,7 +407,7 @@ describe('Vapor Mode hydration', () => {
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
         "
         <!--[-->
-        <!--[--><b>7</b><i>7</i><!--]-->
+        <!--[7--><b>7</b><i>7</i><!--]-->
         <span>after</span><!--]-->
         "
       `)
@@ -373,7 +417,7 @@ describe('Vapor Mode hydration', () => {
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
         "
         <!--[-->
-        <!--[--><div>0</div><!--]-->
+        <!--[7--><div>0</div><!--]-->
         <span>after</span><!--]-->
         "
       `)
@@ -468,25 +512,41 @@ describe('Vapor Mode hydration', () => {
         data,
       )
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
-        `"<span>a child1</span><!--if-->"`,
+        `
+        "
+        <!--[0--><span>a child1</span><!--]-->
+        "
+      `,
       )
 
       data.value = 'b'
       await nextTick()
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
-        `"<span>b child2</span><!--if--><!--if-->"`,
+        `
+        "
+        <!--[0--><span>b child2</span><!--if--><!--]-->
+        "
+      `,
       )
 
       data.value = 'c'
       await nextTick()
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
-        `"<span>c child3</span><!--if--><!--if-->"`,
+        `
+        "
+        <!--[0--><span>c child3</span><!--if--><!--]-->
+        "
+      `,
       )
 
       data.value = 'a'
       await nextTick()
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
-        `"<span>a child1</span><!--if-->"`,
+        `
+        "
+        <!--[0--><span>a child1</span><!--]-->
+        "
+      `,
       )
     })
 

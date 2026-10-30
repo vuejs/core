@@ -109,7 +109,7 @@ export function render(_ctx) {
     const n10 = t3()
     const n11 = t4()
     return [n10, n11]
-  }, 618 /* TRUE_MULTI_ROOT, FALSE_MULTI_ROOT, TRUE_NO_SCOPE, FALSE_NO_SCOPE, KEYED_INDEX_1 */), 293 /* TRUE_SINGLE_ROOT, FALSE_SINGLE_ROOT, TRUE_NO_SCOPE, KEYED_INDEX_0 */)
+  }, 618 /* TRUE_MULTI_ROOT, FALSE_MULTI_ROOT, TRUE_NO_SCOPE, FALSE_NO_SCOPE, KEYED_INDEX_1 */), 301 /* TRUE_SINGLE_ROOT, FALSE_ELSE_IF, TRUE_NO_SCOPE, KEYED_INDEX_0 */)
   const n13 = t5()
   const x13 = _txt(n13)
   _renderEffect(() => _setText(x13, _toDisplayString(_ctx.text)))
@@ -160,7 +160,7 @@ export function render(_ctx) {
   }, () => _createIf(() => (_ctx.bar), () => {
     const n4 = t1()
     return n4
-  }, null, 33 /* TRUE_SINGLE_ROOT, TRUE_NO_SCOPE */), 293 /* TRUE_SINGLE_ROOT, FALSE_SINGLE_ROOT, TRUE_NO_SCOPE, KEYED_INDEX_0 */)
+  }, null, 33 /* TRUE_SINGLE_ROOT, TRUE_NO_SCOPE */), 301 /* TRUE_SINGLE_ROOT, FALSE_ELSE_IF, TRUE_NO_SCOPE, KEYED_INDEX_0 */)
   const n6 = _createIf(() => (_ctx.baz), () => {
     const n8 = t2()
     return n8
@@ -318,7 +318,7 @@ export function render(_ctx) {
   }, () => {
     const n10 = t2()
     return n10
-  }, 121 /* TRUE_SINGLE_ROOT, FALSE_MULTI_ROOT, TRUE_NO_SCOPE, FALSE_NO_SCOPE, ONCE */), 549 /* TRUE_SINGLE_ROOT, FALSE_SINGLE_ROOT, TRUE_NO_SCOPE, KEYED_INDEX_1 */), 293 /* TRUE_SINGLE_ROOT, FALSE_SINGLE_ROOT, TRUE_NO_SCOPE, KEYED_INDEX_0 */)
+  }, 121 /* TRUE_SINGLE_ROOT, FALSE_MULTI_ROOT, TRUE_NO_SCOPE, FALSE_NO_SCOPE, ONCE */), 557 /* TRUE_SINGLE_ROOT, FALSE_ELSE_IF, TRUE_NO_SCOPE, KEYED_INDEX_1 */), 301 /* TRUE_SINGLE_ROOT, FALSE_ELSE_IF, TRUE_NO_SCOPE, KEYED_INDEX_0 */)
   return n0
 }"
 `;
@@ -335,7 +335,7 @@ export function render(_ctx) {
   }, () => _createIf(() => (_ctx.orNot), () => {
     const n4 = t1()
     return n4
-  }, null, 33 /* TRUE_SINGLE_ROOT, TRUE_NO_SCOPE */), 293 /* TRUE_SINGLE_ROOT, FALSE_SINGLE_ROOT, TRUE_NO_SCOPE, KEYED_INDEX_0 */)
+  }, null, 33 /* TRUE_SINGLE_ROOT, TRUE_NO_SCOPE */), 301 /* TRUE_SINGLE_ROOT, FALSE_ELSE_IF, TRUE_NO_SCOPE, KEYED_INDEX_0 */)
   return n0
 }"
 `;
@@ -379,7 +379,7 @@ export function render(_ctx) {
   }, () => _createIf(() => (_ctx.bar), () => {
     const n4 = t1()
     return n4
-  }, null, 33 /* TRUE_SINGLE_ROOT, TRUE_NO_SCOPE */), 293 /* TRUE_SINGLE_ROOT, FALSE_SINGLE_ROOT, TRUE_NO_SCOPE, KEYED_INDEX_0 */)
+  }, null, 33 /* TRUE_SINGLE_ROOT, TRUE_NO_SCOPE */), 301 /* TRUE_SINGLE_ROOT, FALSE_ELSE_IF, TRUE_NO_SCOPE, KEYED_INDEX_0 */)
   const n6 = t2()
   return [n0, n6]
 }"

@@ -863,7 +863,9 @@ describe('VDOM interop', () => {
 
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
         "
-        <!--[--><p>next</p><!--if--><span>tail</span><!--]-->
+        <!--[-->
+        <!--[0--><p>next</p><!--]-->
+        <span>tail</span><!--]-->
         "
       `)
       expect(target.innerHTML).toBe('')
@@ -980,7 +982,9 @@ describe('VDOM interop', () => {
 
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
         "
-        <!--[--><p>next</p><!--if--><span>tail</span><!--]-->
+        <!--[-->
+        <!--[0--><p>next</p><!--]-->
+        <span>tail</span><!--]-->
         "
       `)
       expect(target.innerHTML).toBe('')

@@ -153,17 +153,17 @@ export const hydrateTransitionImpl = (
         // A child rendering its root later (an async setup, an async wrapper
         // loading) hydrates it on screen already: it does not appear, as
         // under vdom's Suspense.
-        if (!findTransitionBlock(block)) {
+        const child = findTransitionBlock(block)
+        if (!child) {
           transitionEl.style.display = originalDisplay
           return
         }
-        hooks.beforeEnter(transitionEl)
+        // mismatch recovery renders the client's element in place of the
+        // server one
+        const el = getTransitionElement(child) || transitionEl
+        hooks.beforeEnter(el)
         transitionEl.style.display = originalDisplay
-        queuePostRenderEffect(
-          () => hooks.enter(transitionEl),
-          undefined,
-          suspense,
-        )
+        queuePostRenderEffect(() => hooks.enter(el), undefined, suspense)
       }
     }
   }

@@ -134,9 +134,9 @@ function createSSRTransformContext(
   }
 }
 
-function createChildContext(
+export function createChildContext(
   parent: SSRTransformContext,
-  withSlotScopeId = parent.withSlotScopeId,
+  withSlotScopeId: boolean = parent.withSlotScopeId,
 ): SSRTransformContext {
   // ensure child inherits parent helpers
   return createSSRTransformContext(

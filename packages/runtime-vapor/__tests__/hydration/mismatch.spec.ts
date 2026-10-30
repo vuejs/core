@@ -1980,7 +1980,7 @@ describe('mismatch recovery renders the rest of the block on the client', () => 
       },
     )
     expect(container.innerHTML).toBe(
-      '<!--[--><my-el><p>in</p></my-el><p>tail</p><!--if--><i>after</i><!--]-->',
+      '<!--[--><!--[1--><my-el><p>in</p></my-el><p>tail</p><!--]--><i>after</i><!--]-->',
     )
     expect('Hydration node mismatch').toHaveBeenWarnedTimes(1)
   })
@@ -2006,7 +2006,8 @@ describe('mismatch recovery renders the rest of the block on the client', () => 
     )
     expect(container.querySelector('b')!.textContent).toBe('content')
     expect('Hydration node mismatch').toHaveBeenWarned()
-    expect('Hydration children mismatch').toHaveBeenWarned()
+    // the chain replaces the server branch as a whole
+    expect('Hydration children mismatch').not.toHaveBeenWarned()
 
     data.value.show = false
     await nextTick()
@@ -2062,52 +2063,6 @@ describe('mismatch recovery drops the server tail of the block', () => {
 
   test.each([
     [
-      'v-once branch',
-      `<div>
-        <template v-if="data.a" v-once>${client}</template>
-        <template v-else>${server}</template>
-        <u>after</u>
-      </div>`,
-      {},
-    ],
-    [
-      'v-once branch of a long chain',
-      `<div>
-        ${ifChain((i, dir) =>
-          i === 0
-            ? `<template ${dir} v-once>${client}</template>`
-            : dir === 'v-else'
-              ? `<template ${dir}>${server}</template>`
-              : `<p ${dir}>other</p>`,
-        )}
-        <u>after</u>
-      </div>`,
-      {},
-    ],
-    [
-      'dynamic native element children',
-      `<component :is="'div'" v-if="data.a">${client}</component>
-      <div v-else>${server}</div>
-      <u>after</u>`,
-      {},
-    ],
-    [
-      'dynamic native element dynamic slot',
-      `<component :is="'div'" v-if="data.a">
-        <template #[data.name]>${client}</template>
-      </component>
-      <div v-else>${server}</div>
-      <u>after</u>`,
-      {},
-    ],
-    [
-      'disabled Teleport children',
-      `<Teleport v-if="data.a" to="body" disabled>${client}</Teleport>
-      <Teleport v-else to="body" disabled>${server}</Teleport>
-      <u>after</u>`,
-      {},
-    ],
-    [
       'adopted slot fallback',
       `<component :is="data.a ? components.A : components.B">
         <em v-if="data.show">content</em>
@@ -2122,16 +2077,8 @@ describe('mismatch recovery drops the server tail of the block', () => {
     const { container } = await testHydration(
       `<template>${code}</template>`,
       components,
-      ref({ a: true, k: 0, show: false, name: 'default', x: 'x' }),
-      {
-        serverData: ref({
-          a: false,
-          k: 99,
-          show: false,
-          name: 'default',
-          x: 'x',
-        }),
-      },
+      ref({ a: true, show: false, x: 'x' }),
+      { serverData: ref({ a: false, show: false, x: 'x' }) },
     )
     expect(container.querySelector('p')).toBeNull()
     expect(container.querySelector('i')).toBeNull()
@@ -2167,7 +2114,7 @@ describe('mismatch recovery drops the server tail of the block', () => {
     expect(container.querySelectorAll('p, i')).toHaveLength(0)
     expect(container.textContent).toBe('A1B1A2B2after')
     expect('Hydration node mismatch').toHaveBeenWarned()
-    expect('Hydration children mismatch').toHaveBeenWarned()
+    expect('Hydration children mismatch').not.toHaveBeenWarned()
 
     data.value.list = []
     await nextTick()
@@ -2224,8 +2171,8 @@ describe('static branch root mismatch', () => {
       ref(true),
       { serverData: ref(false) },
     )
-    expect(html).toBe('<div>B</div>')
-    expect(container.innerHTML).toBe('A<!--if-->')
+    expect(html).toBe('<!--[1--><div>B</div><!--]-->')
+    expect(container.innerHTML).toBe('<!--[1-->A<!--]-->')
     expect('Hydration node mismatch').toHaveBeenWarned()
   })
 
@@ -2246,13 +2193,15 @@ describe('static branch root mismatch', () => {
       { serverData: ref({ a: false, tail: true, x: 'x' }) },
     )
     expect(container.innerHTML).toBe(
-      '<div>&nbsp;<!--if--><i>x</i><!--if--></div>',
+      '<div><!--[1-->&nbsp;<!--]--><i>x</i><!--if--></div>',
     )
     expect('Hydration node mismatch').toHaveBeenWarnedTimes(1)
 
     data.value.tail = false
     await nextTick()
-    expect(container.innerHTML).toBe('<div>&nbsp;<!--if--><!--if--></div>')
+    expect(container.innerHTML).toBe(
+      '<div><!--[1-->&nbsp;<!--]--><!--if--></div>',
+    )
   })
 
   // a claimed anchor is a boundary, never content: a static comment does not
@@ -2292,15 +2241,14 @@ describe('static branch root mismatch', () => {
     },
   )
 
-  // SSR wraps a comment-only `<template v-if>` branch in a fragment like any
-  // other non-element branch, so the client branch owns that range. Comment
-  // data is not compared (vdom parity)
+  // SSR wraps a comment-only `<template v-if>` branch in its branch range like
+  // any other branch of the chain, so the client branch owns that range
   test.each([
-    ['matching data', true, 'C'],
-    ['a branch switch', false, 'B'],
+    ['matching data', true, 0],
+    ['a branch switch', false, 1],
   ])(
     'comment-only branch owns its server range, %s',
-    async (_, serverA, comment) => {
+    async (_, serverA, open) => {
       const { container } = await testHydration(
         `<template>
           <template v-if="data.a"><!--C--></template>
@@ -2312,8 +2260,13 @@ describe('static branch root mismatch', () => {
         { serverData: ref({ a: serverA, x: 'after' }) },
       )
       expect(container.innerHTML).toBe(
-        `<!--[--><!--[--><!--${comment}--><!--]--><i>after</i><!--]-->`,
+        `<!--[--><!--[${open}--><!--C--><!--]--><i>after</i><!--]-->`,
       )
+      if (serverA) {
+        expect('Hydration').not.toHaveBeenWarned()
+      } else {
+        expect('Hydration node mismatch').toHaveBeenWarnedTimes(1)
+      }
     },
   )
 
@@ -2334,7 +2287,7 @@ describe('static branch root mismatch', () => {
       { serverData: ref({ a: false, tail: true, x: 'x' }) },
     )
     expect(container.innerHTML).toBe(
-      '<div><p>1</p><p>2</p><!--if--><i>x</i><!--if--></div>',
+      '<div><!--[1--><p>1</p><p>2</p><!--]--><i>x</i><!--if--></div>',
     )
     expect('Hydration node mismatch').toHaveBeenWarnedTimes(1)
 
@@ -2343,8 +2296,7 @@ describe('static branch root mismatch', () => {
     expect(container.querySelector('i')!.textContent).toBe('y')
   })
 
-  // templates inside v-for never carry the STATIC flag: a literal text or a
-  // whitespace constant in a row is content like anywhere else
+  // a chain in a v-for row reads the branch the server rendered like any other
   test('literal text in a v-for row is repaired', async () => {
     const { container } = await testHydration(
       `<template>
@@ -2372,7 +2324,7 @@ describe('static branch root mismatch', () => {
       },
     )
     expect(container.querySelector('ul')!.textContent).toBe('hellobye')
-    expect('Hydration text mismatch').toHaveBeenWarnedTimes(1)
+    expect('Hydration node mismatch').toHaveBeenWarnedTimes(1)
   })
 
   test('whitespace constant in a v-for row replaces a server element', async () => {
@@ -2403,10 +2355,10 @@ describe('static branch root mismatch', () => {
       },
     )
     expect(container.querySelectorAll('li')[0].innerHTML).toBe(
-      '&nbsp;<!--if--><i>1</i>',
+      '<!--[1-->&nbsp;<!--]--><i>1</i>',
     )
     expect(container.querySelectorAll('li')[1].innerHTML).toBe(
-      '<p>P</p><!--if--><i>2</i>',
+      '<!--[1--><p>P</p><!--]--><i>2</i>',
     )
     expect('Hydration node mismatch').toHaveBeenWarnedTimes(1)
   })
@@ -2423,7 +2375,7 @@ describe('static branch root mismatch', () => {
       { serverData: ref({ a: false, x: 'tail' }) },
     )
     expect(container.textContent).toBe(' tail')
-    expect('Hydration text mismatch').toHaveBeenWarnedTimes(1)
+    expect('Hydration node mismatch').toHaveBeenWarnedTimes(1)
   })
 
   // vuejs/core#15958: hydration resumes after the recreated node, so the
@@ -2448,39 +2400,42 @@ describe('static branch root mismatch', () => {
 // the range the block owns is where its server content stopped, so the rest
 // of the block renders ahead of it. Neither is stepped over.
 describe('a server range is one unit', () => {
-  const branch = `<div v-if="data.a">x</div>
-        <template v-else><p>1</p><p>2</p></template>`
+  const units = {
+    One: `<template><div>x</div></template>`,
+    Two: `<template><p>1</p><p>2</p></template>`,
+  }
+  const unit = `<component :is="data.a ? components.One : components.Two" />`
 
-  // the server rendered a multi-root branch, the client picks a single
+  // the server rendered a multi-root component, the client picks a single
   // root. vdom replaces the whole fragment.
-  test('replaces a server multi-root branch at the component root', async () => {
+  test('replaces a server multi-root component at the component root', async () => {
     const { container } = await testHydration(
-      `<template>${branch}</template>`,
-      undefined,
+      `<template>${unit}</template>`,
+      units,
       ref({ a: true }),
       { serverData: ref({ a: false }) },
     )
-    expect(container.innerHTML).toBe('<div>x</div><!--if-->')
+    expect(container.innerHTML).toBe('<div>x</div><!--dynamic-component-->')
     expect('Hydration node mismatch').toHaveBeenWarnedTimes(1)
     expect('Hydration children mismatch').not.toHaveBeenWarned()
   })
 
-  test('replaces a server multi-root branch between siblings', async () => {
+  test('replaces a server multi-root component between siblings', async () => {
     const data = ref({ a: true, x: 'x' })
     const { container } = await testHydration(
       `<template>
         <div>
           <i>before</i>
-          ${branch}
+          ${unit}
           <i>{{ data.x }}</i>
         </div>
       </template>`,
-      undefined,
+      units,
       data,
       { serverData: ref({ a: false, x: 'x' }) },
     )
     expect(container.innerHTML).toBe(
-      '<div><i>before</i><div>x</div><!--if--><i>x</i></div>',
+      '<div><i>before</i><div>x</div><!--dynamic-component--><i>x</i></div>',
     )
     expect('Hydration node mismatch').toHaveBeenWarnedTimes(1)
     expect('Hydration children mismatch').not.toHaveBeenWarned()
@@ -2499,22 +2454,24 @@ describe('a server range is one unit', () => {
     const { container } = await testHydration(
       `<template>
         <div>
-          <template v-if="data.a">
-            <template v-for="i in data.list" :key="i">
-              <span :title="data.x">A{{ i }}</span>
-              <b :title="data.x">B{{ i }}</b>
-            </template>
-          </template>
-          <template v-else>
-            <template v-for="i in data.list" :key="i">
-              <template v-for="j in data.inner"><p>P{{ i }}{{ j }}</p></template>
-              <i>I{{ i }}</i>
-            </template>
-          </template>
+          <component :is="data.a ? components.A : components.B" />
           <u>after</u>
         </div>
       </template>`,
-      undefined,
+      {
+        A: `<template>
+          <template v-for="i in data.list" :key="i">
+            <span :title="data.x">A{{ i }}</span>
+            <b :title="data.x">B{{ i }}</b>
+          </template>
+        </template>`,
+        B: `<template>
+          <template v-for="i in data.list" :key="i">
+            <template v-for="j in data.inner"><p>P{{ i }}{{ j }}</p></template>
+            <i>I{{ i }}</i>
+          </template>
+        </template>`,
+      },
       data,
       { serverData: ref({ a: false, list: [1, 2], inner: [1], x: 'x' }) },
     )
@@ -2576,7 +2533,9 @@ describe('a server range is one unit', () => {
   // content goes ahead of the close, the sibling behind the range is adopted
   // (the shorter-range row already passes before this change: a coverage
   // guard). A single-root client branch owns no range, so the whole server
-  // range is the mismatched unit instead.
+  // range is the mismatched unit instead. The server output is written by
+  // hand: a server marks the branch of a chain (`<!--[1-->`), and only an
+  // older one leaves the bare range the client branch claims here.
   test.each([
     [
       'an emptied range',
@@ -2600,17 +2559,14 @@ describe('a server range is one unit', () => {
     'renders the rest of the branch behind %s',
     async (_, server, client, expected) => {
       const data = ref({ a: true, x: 'x' })
-      const { container } = await testHydration(
-        `<template>
-          <div>
-            <template v-if="data.a">${client}</template>
-            <template v-else>${server}</template>
-            <b>{{ data.x }}</b>
-          </div>
-        </template>`,
-        undefined,
+      const { container } = await mountWithHydration(
+        `<div><!--[-->${server}<!--]--><b>x</b></div>`,
+        `<div>
+          <template v-if="data.a">${client}</template>
+          <template v-else>${server}</template>
+          <b>{{ data.x }}</b>
+        </div>`,
         data,
-        { serverData: ref({ a: false, x: 'x' }) },
       )
       expect(container.innerHTML).toBe(`<div>${expected}<b>x</b></div>`)
       expect('Hydration node mismatch').toHaveBeenWarnedTimes(1)
@@ -2629,16 +2585,20 @@ describe('a server range is one unit', () => {
     const { container } = await testHydration(
       `<template>
         <div>
-          <Teleport v-if="data.a" to="#unit-target"><p>P</p></Teleport>
-          <div v-else>x</div>
+          <component :is="data.a ? components.T : components.One" />
           <i>{{ data.x }}</i>
         </div>
       </template>`,
-      undefined,
+      {
+        T: `<template><Teleport to="#unit-target"><p>P</p></Teleport></template>`,
+        One: units.One,
+      },
       data,
       { serverData: ref({ a: true, x: 'x' }) },
     )
-    expect(container.innerHTML).toBe('<div><div>x</div><!--if--><i>x</i></div>')
+    expect(container.innerHTML).toBe(
+      '<div><div>x</div><!--dynamic-component--><i>x</i></div>',
+    )
     expect('Hydration node mismatch').toHaveBeenWarnedTimes(1)
     expect('Hydration children mismatch').not.toHaveBeenWarned()
 
@@ -2647,5 +2607,471 @@ describe('a server range is one unit', () => {
     await nextTick()
     expect(container.querySelector('i')).toBe(tail)
     expect(tail.textContent).toBe('y')
+  })
+})
+
+// The server marks each branch of a v-if chain with its position in the
+// chain, `<!--[i-->`…`<!--]-->`: the chain reads which branch the server
+// rendered and renders its own on the client when they differ, whatever the
+// branches render.
+describe('v-if chain branch the server rendered', () => {
+  test.each([
+    ['a static subtree', '<p>yes</p>', '<span>no</span>'],
+    ['static text', 'A', 'B'],
+    ['an element where the client has text', '<b>x</b>', 'x'],
+  ])('same-tag branches with %s', async (_, yes, no) => {
+    const { container } = await testHydration(
+      `<template>
+        <div v-if="data.a">${yes}</div>
+        <div v-else>${no}</div>
+      </template>`,
+      undefined,
+      ref({ a: false }),
+      { serverData: ref({ a: true }) },
+    )
+    expect(container.innerHTML).toBe(`<!--[0--><div>${no}</div><!--]-->`)
+    expect('Hydration node mismatch').toHaveBeenWarnedTimes(1)
+  })
+
+  test('same-tag branches with a static attribute alone', async () => {
+    const { container } = await testHydration(
+      `<template>
+        <input v-if="data.a" type="text">
+        <input v-else type="checkbox">
+      </template>`,
+      undefined,
+      ref({ a: false }),
+      { serverData: ref({ a: true }) },
+    )
+    expect(container.innerHTML).toBe(`<!--[0--><input type="checkbox"><!--]-->`)
+    expect('Hydration node mismatch').toHaveBeenWarnedTimes(1)
+  })
+
+  test('a dynamic child under a same-tag root the server left empty', async () => {
+    const data = ref({ a: true, x: 'x' })
+    const { container } = await testHydration(
+      `<template>
+        <div v-if="data.a"><span>{{ data.x }}</span></div>
+        <div v-else></div>
+      </template>`,
+      undefined,
+      data,
+      { serverData: ref({ a: false, x: 'x' }) },
+    )
+    expect(container.innerHTML).toBe(
+      '<!--[1--><div><span>x</span></div><!--]-->',
+    )
+    expect('Hydration node mismatch').toHaveBeenWarnedTimes(1)
+
+    data.value.x = 'y'
+    await nextTick()
+    expect(container.querySelector('span')!.textContent).toBe('y')
+  })
+
+  test('two components with the same root tag', async () => {
+    const { container } = await testHydration(
+      `<template>
+        <components.A v-if="data.a" />
+        <components.B v-else />
+      </template>`,
+      {
+        A: `<template><div><p>a</p></div></template>`,
+        B: `<template><div><span>b</span></div></template>`,
+      },
+      ref({ a: false }),
+      { serverData: ref({ a: true }) },
+    )
+    expect(container.innerHTML).toBe(
+      '<!--[0--><div><span>b</span></div><!--]-->',
+    )
+    expect('Hydration node mismatch').toHaveBeenWarnedTimes(1)
+  })
+
+  test.each([
+    [true, false, '<!--[0--><div><span>el</span></div><!--]-->'],
+    [false, true, '<!--[1--><div><p>a</p></div><!--]-->'],
+  ])(
+    'a component branch and an element branch, server %s client %s',
+    async (server, client, expected) => {
+      const { container } = await testHydration(
+        `<template>
+          <components.A v-if="data.a" />
+          <div v-else><span>el</span></div>
+        </template>`,
+        { A: `<template><div><p>a</p></div></template>` },
+        ref({ a: client }),
+        { serverData: ref({ a: server }) },
+      )
+      expect(container.innerHTML).toBe(expected)
+      expect('Hydration node mismatch').toHaveBeenWarnedTimes(1)
+    },
+  )
+
+  test('a multi-root branch the server rendered for a single root', async () => {
+    const { container } = await testHydration(
+      `<template>
+        <div v-if="data.a">x</div>
+        <template v-else><p>1</p><p>2</p></template>
+      </template>`,
+      undefined,
+      ref({ a: true }),
+      { serverData: ref({ a: false }) },
+    )
+    expect(container.innerHTML).toBe('<!--[1--><div>x</div><!--]-->')
+    expect('Hydration node mismatch').toHaveBeenWarnedTimes(1)
+    expect('Hydration children mismatch').not.toHaveBeenWarned()
+  })
+
+  test('two multi-root branches starting with the same tag', async () => {
+    const { container } = await testHydration(
+      `<template>
+        <template v-if="data.a"><p>1</p><p>2</p></template>
+        <template v-else><p>3</p><i>4</i></template>
+      </template>`,
+      undefined,
+      ref({ a: false }),
+      { serverData: ref({ a: true }) },
+    )
+    expect(container.innerHTML).toBe('<!--[0--><p>3</p><i>4</i><!--]-->')
+    expect('Hydration node mismatch').toHaveBeenWarnedTimes(1)
+  })
+
+  // the outer chain's branch is a component whose root is a chain of its own:
+  // each chain reads the marker in front of its own branch
+  test.each(['', ' :title="data.x"'])(
+    'a component branch whose root is a chain%s',
+    async attr => {
+      const { container } = await testHydration(
+        `<template>
+          <section>
+            <components.C v-if="data.a" />
+            <div v-else><p>server</p></div>
+            <u>tail</u>
+          </section>
+        </template>`,
+        {
+          C: `<template>
+            <div v-if="data.b"><b>other</b></div>
+            <div v-else><span${attr}>client</span></div>
+          </template>`,
+        },
+        ref({ a: true, b: false, x: 'x' }),
+        { serverData: ref({ a: false, b: false, x: 'x' }) },
+      )
+      expect(container.querySelector('p')).toBeNull()
+      expect(container.querySelector('span')!.textContent).toBe('client')
+      expect(container.querySelector('u')!.textContent).toBe('tail')
+      expect('Hydration node mismatch').toHaveBeenWarnedTimes(1)
+    },
+  )
+
+  test('a v-else-if continuation', async () => {
+    const { container } = await testHydration(
+      `<template>
+        <div v-if="data.k === 0"><p>0</p></div>
+        <div v-else-if="data.k === 1"><span>1</span></div>
+        <div v-else><i>2</i></div>
+      </template>`,
+      undefined,
+      ref({ k: 2 }),
+      { serverData: ref({ k: 1 }) },
+    )
+    expect(container.querySelector('span')).toBeNull()
+    expect(container.querySelector('i')!.textContent).toBe('2')
+    expect('Hydration node mismatch').toHaveBeenWarnedTimes(1)
+  })
+
+  test('same-tag branches of a long chain', async () => {
+    const { container } = await testHydration(
+      `<template>
+        <div>
+          ${ifChain((i, dir) =>
+            i === 0
+              ? `<div ${dir}><p>0</p></div>`
+              : i === 1
+                ? `<div ${dir}><span>1</span></div>`
+                : `<p ${dir}>other</p>`,
+          )}
+        </div>
+      </template>`,
+      undefined,
+      ref({ k: 1 }),
+      { serverData: ref({ k: 0 }) },
+    )
+    expect(container.innerHTML).toBe(
+      '<div><!--[0--><div><span>1</span></div><!--]--></div>',
+    )
+    expect('Hydration node mismatch').toHaveBeenWarnedTimes(1)
+  })
+
+  test('same-tag branches under v-once', async () => {
+    const { container } = await testHydration(
+      `<template>
+        <div v-if="data.a" v-once><p>yes</p></div>
+        <div v-else><span>no</span></div>
+      </template>`,
+      undefined,
+      ref({ a: false }),
+      { serverData: ref({ a: true }) },
+    )
+    expect(container.innerHTML).toBe(
+      '<!--[0--><div><span>no</span></div><!--]-->',
+    )
+    expect('Hydration node mismatch').toHaveBeenWarnedTimes(1)
+  })
+
+  test('keyed same-tag branches', async () => {
+    const { container } = await testHydration(
+      `<template>
+        <div v-if="data.a" :key="data.k"><p>yes</p></div>
+        <div v-else :key="data.k + 1"><span>no</span></div>
+      </template>`,
+      undefined,
+      ref({ a: false, k: 1 }),
+      { serverData: ref({ a: true, k: 1 }) },
+    )
+    expect(container.querySelector('p')).toBeNull()
+    expect(container.querySelector('span')!.textContent).toBe('no')
+    expect('Hydration node mismatch').toHaveBeenWarnedTimes(1)
+  })
+
+  test('same-tag branches in the rows of a template v-for', async () => {
+    const { container } = await testHydration(
+      `<template>
+        <ul>
+          <template v-for="r in data.rows" :key="r.id">
+            <li v-if="r.ok"><b>yes</b></li>
+            <li v-else><i>no</i></li>
+          </template>
+        </ul>
+      </template>`,
+      undefined,
+      ref({
+        rows: [
+          { id: 1, ok: false },
+          { id: 2, ok: true },
+        ],
+      }),
+      {
+        serverData: ref({
+          rows: [
+            { id: 1, ok: true },
+            { id: 2, ok: false },
+          ],
+        }),
+      },
+    )
+    expect(
+      Array.from(container.querySelectorAll('li'), li => li.innerHTML),
+    ).toEqual(['<i>no</i>', '<b>yes</b>'])
+    expect('Hydration node mismatch').toHaveBeenWarnedTimes(2)
+  })
+
+  test('same-tag branches under a transition', async () => {
+    const { container } = await testHydration(
+      `<template>
+        <Transition>
+          <div v-if="data.a"><p>a</p></div>
+          <div v-else><span>b</span></div>
+        </Transition>
+      </template>`,
+      undefined,
+      ref({ a: false }),
+      { serverData: ref({ a: true }) },
+    )
+    expect(container.querySelector('p')).toBeNull()
+    const div = container.querySelector('div')!
+    expect(div.innerHTML).toBe('<span>b</span>')
+    expect(div.className).toBe('')
+    expect('Hydration node mismatch').toHaveBeenWarnedTimes(1)
+  })
+
+  test.each([
+    [true, false],
+    [false, true],
+  ])(
+    'a vdom component branch and an element branch, server %s client %s',
+    async (server, client) => {
+      const { container } = await testWithVaporApp(
+        `<template>
+          <components.V v-if="data.a" />
+          <div v-else><span>el</span></div>
+        </template>`,
+        {
+          V: {
+            code: `<script setup>const data = _data</script>
+              <template><div><p>v</p></div></template>`,
+            vapor: false,
+          },
+        },
+        ref({ a: client }),
+        ref({ a: server }),
+      )
+      expect(container.querySelector(client ? 'span' : 'p')).toBeNull()
+      expect(container.querySelector(client ? 'p' : 'span')).not.toBeNull()
+      expect('Hydration node mismatch').toHaveBeenWarnedTimes(1)
+    },
+  )
+
+  // one side renders no branch: the server's `<!---->`, or a range the client
+  // branch is empty for (these pass before this change too: coverage guards)
+  test.each([
+    ['', 2, 0],
+    ['', 0, 2],
+    ['v-once', 2, 1],
+    ['v-once', 1, 2],
+  ])(
+    'a chain %s where one side renders no branch, client %s server %s',
+    async (once, client, server) => {
+      const { container } = await testHydration(
+        `<template>
+          <section>
+            <div v-if="data.k === 0" ${once}><p>0</p></div>
+            <div v-else-if="data.k === 1"><span>1</span></div>
+            <u>tail</u>
+          </section>
+        </template>`,
+        undefined,
+        ref({ k: client }),
+        { serverData: ref({ k: server }) },
+      )
+      const section = container.querySelector('section')!
+      expect(section.textContent).toBe(client === 2 ? 'tail' : `${client}tail`)
+      expect(container.querySelectorAll('u')).toHaveLength(1)
+      expect('Hydration').toHaveBeenWarned()
+    },
+  )
+
+  // a client that renders no branch drops the server's branch too, also in a
+  // `<template v-for>` row, where a missing branch has a range shape
+  test.each([
+    ['', false],
+    ['v-once', false],
+    ['', true],
+    ['v-once', true],
+  ])(
+    'a chain %s in a row where the client renders no branch, long %s',
+    async (once, long) => {
+      const chain = long
+        ? ifChain((i, dir) => `<p ${dir} ${i === 0 ? once : ''}>${i}</p>`, {
+            withElse: false,
+            cond: i => `n.k === ${i}`,
+          })
+        : `<p v-if="n.k === 0" ${once}>0</p>
+          <p v-else-if="n.k === 1">1</p>`
+      const data = ref({ list: [{ id: 1, k: 99, x: 'x' }] })
+      const { container } = await testHydration(
+        `<template>
+          <section>
+            <template v-for="n in data.list" :key="n.id">
+              ${chain}
+              <b>{{ n.x }}</b>
+            </template>
+            <u>tail</u>
+          </section>
+        </template>`,
+        undefined,
+        data,
+        { serverData: ref({ list: [{ id: 1, k: 1, x: 'x' }] }) },
+      )
+      // the server range stays as the branch's anchor; the outer `createIf`
+      // of a short chain keeps an anchor of its own
+      expect(container.innerHTML).toBe(
+        `<section><!--[--><!--[--><!--[1--><!--]-->${
+          long || once ? '' : '<!--if-->'
+        }<b>x</b><!--]--><!--]--><u>tail</u></section>`,
+      )
+      expect('Hydration node mismatch').toHaveBeenWarnedTimes(1)
+      expect('Hydration children mismatch').not.toHaveBeenWarned()
+
+      const b = container.querySelector('b')!
+      data.value.list[0].x = 'y'
+      await nextTick()
+      expect(container.querySelector('b')).toBe(b)
+      expect(b.textContent).toBe('y')
+      expect(container.querySelectorAll('u')).toHaveLength(1)
+    },
+  )
+
+  // matching data: each chain adopts its range and keeps updating
+  test('a matching chain hydrates in its range', async () => {
+    const data = ref({ a: true, x: 'x' })
+    const { container } = await testHydration(
+      `<template>
+        <div v-if="data.a"><p>{{ data.x }}</p></div>
+        <div v-else><span>no</span></div>
+      </template>`,
+      undefined,
+      data,
+    )
+    expect(container.innerHTML).toBe('<!--[0--><div><p>x</p></div><!--]-->')
+    expect('Hydration').not.toHaveBeenWarned()
+
+    data.value.x = 'y'
+    await nextTick()
+    expect(container.querySelector('p')!.textContent).toBe('y')
+    data.value.a = false
+    await nextTick()
+    expect(container.innerHTML).toBe(
+      '<!--[0--><div><span>no</span></div><!--]-->',
+    )
+  })
+
+  // a lone v-if owns no branch range: where the server gave it no range of
+  // its own, the `<!--[0-->` under it opens the branch of the chain inside
+  test.each([
+    [
+      'a component in a `<template v-for>` row',
+      `<template v-for="r in data.rows" :key="r.id">
+        <components.C v-if="r.show" />
+      </template>`,
+    ],
+    [
+      'a `<template v-if>` under Transition',
+      `<Transition>
+        <template v-if="data.show">
+          <p v-if="data.a"><b>A</b></p>
+          <p v-else><i>B</i></p>
+        </template>
+      </Transition>`,
+    ],
+  ])('a lone v-if around %s leaves the chain its range', async (_, code) => {
+    const data = ref({
+      rows: [{ id: 1, show: true }],
+      show: true,
+      a: false,
+      tail: 'T',
+    })
+    const { container } = await testHydration(
+      `<template>
+        <div>
+          ${code}
+          <u>{{ data.tail }}</u>
+        </div>
+      </template>`,
+      {
+        C: `<template>
+          <p v-if="data.a"><b>A</b></p>
+          <p v-else><i>B</i></p>
+        </template>`,
+      },
+      data,
+      {
+        serverData: ref({
+          rows: [{ id: 1, show: true }],
+          show: true,
+          a: true,
+          tail: 'T',
+        }),
+      },
+    )
+    expect(container.querySelector('p')!.innerHTML).toBe('<i>B</i>')
+    expect('Hydration node mismatch').toHaveBeenWarnedTimes(1)
+
+    const u = container.querySelector('u')!
+    data.value.tail = 'U'
+    await nextTick()
+    expect(container.querySelector('u')).toBe(u)
+    expect(u.textContent).toBe('U')
   })
 })

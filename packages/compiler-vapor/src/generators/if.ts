@@ -131,6 +131,8 @@ function genBlockShapeName(flags: number): string {
       return 'SINGLE_ROOT'
     case VaporBlockShape.MULTI_ROOT:
       return 'MULTI_ROOT'
+    case VaporBlockShape.ELSE_IF:
+      return 'ELSE_IF'
   }
   return 'UNKNOWN'
 }

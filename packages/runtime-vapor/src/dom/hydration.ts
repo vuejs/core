@@ -9,7 +9,12 @@ import {
   logMismatchError,
   warn,
 } from '@vue/runtime-dom'
-import { type Namespace, Namespaces, isArray } from '@vue/shared'
+import {
+  type Namespace,
+  Namespaces,
+  isArray,
+  isVaporBranchStart,
+} from '@vue/shared'
 import {
   insertionAnchor,
   insertionIndex,
@@ -32,7 +37,8 @@ import {
 } from './node'
 import { currentRenderContext } from '../renderContext'
 import { setElementScopeIdsDeep } from './scopeIdStamp'
-import { type Block, insert, remove } from '../block'
+import { type Block, type BlockFn, insert, remove } from '../block'
+import type { DynamicFragment } from '../fragment'
 import { isHydrating, setHydrating } from './hydrationState'
 
 const START_TAG_RE = /^<([^\s/>]+)/
@@ -262,12 +268,13 @@ type RecreatedNode = Node & {
 
 export type CommentAnchor = Comment & Anchor
 
-// `<!--(-->`…`<!--)-->` wraps a slot fallback the server rendered: a range like
-// a fragment's for whatever steps over, claims or removes one.
+// `<!--(-->`…`<!--)-->` wraps a slot fallback the server rendered, and
+// `<!--[1-->`…`<!--]-->` the branch of a v-if chain (isVaporBranchStart): ranges
+// like a fragment's for whatever steps over, claims or removes one.
 export const isRangeStart = (node: Node): node is CommentAnchor => {
   if (node.nodeType !== 8) return false
   const data = (node as Comment).data
-  return data === '[' || data === '('
+  return data === '[' || data === '(' || isVaporBranchStart(data)
 }
 
 export const isRangeEnd = (node: Node): node is CommentAnchor => {
@@ -280,18 +287,11 @@ export const isComment = (node: Node, data: string): node is CommentAnchor =>
   node.nodeType === 8 && (node as Comment).data === data
 
 /** An SSR marker bounding a unit: a fragment, a slot fallback or a teleport. */
-export const isBoundaryMarker = (node: Node): boolean => {
-  if (node.nodeType !== 8) return false
-  const data = (node as Comment).data
-  return (
-    data === '[' ||
-    data === ']' ||
-    data === '(' ||
-    data === ')' ||
-    data === 'teleport start' ||
-    data === 'teleport end'
-  )
-}
+export const isBoundaryMarker = (node: Node): boolean =>
+  isRangeStart(node) ||
+  isRangeEnd(node) ||
+  isComment(node, 'teleport start') ||
+  isComment(node, 'teleport end')
 
 /** A block's claim on the `<!--[-->` opening its SSR range. */
 export interface FragmentClaim {
@@ -302,10 +302,14 @@ export function createFragmentClaim(): FragmentClaim {
   return { start: null }
 }
 
-/** Consume the fragment start under the cursor for `claim`. */
+/**
+ * Consume the fragment start under the cursor for `claim`. A v-if chain claims
+ * the range of its branch (`<!--[1-->`) itself: an owner the server gave no
+ * range of its own would take the range of the chain it renders.
+ */
 function claimFragmentStart(claim: FragmentClaim): void {
   const node = currentHydrationNode
-  if (node && isRangeStart(node)) {
+  if (node && (isComment(node, '[') || isComment(node, '('))) {
     claim.start = node
     setCurrentHydrationNode(node.nextSibling)
   }
@@ -445,7 +449,7 @@ function adoptTemplateImpl(
 export function nextLogicalSibling(node: Node): Node | null {
   if (node.nodeType === 8) {
     const data = (node as Comment).data
-    if (data === '[' || data === '(') {
+    if (data === '[' || data === '(' || isVaporBranchStart(data)) {
       node = locateEndAnchor(node as CommentAnchor, data)!
     } else if (data === 'teleport start') {
       node = locateEndAnchor(node as CommentAnchor, data, 'teleport end')!
@@ -526,7 +530,11 @@ export function locateEndAnchor(
   while ((node = _next(node) as CommentAnchor) && stack.length > 0) {
     if (node.nodeType === 8) {
       const data = node.data
-      if (data === open) {
+      if (
+        data === open ||
+        // `]` closes a fragment and a v-if branch alike
+        (close === ']' && (data === '[' || isVaporBranchStart(data)))
+      ) {
         // a nested range walked before is skipped through its cached end
         if (node.$fe) {
           node = node.$fe as CommentAnchor
@@ -561,6 +569,57 @@ export function locateClaimedEnd(start: CommentAnchor): Node | null {
     return (start.$fe = node)
   }
   return locateEndAnchor(start)
+}
+
+/**
+ * Check the branch of a v-if chain the server rendered against the branch
+ * `index` the client renders: the `<!--[i-->` under the cursor opens its
+ * range, claimed for `claim` when they match. When they differ, the server
+ * branch's content goes, the cursor steps past the range and its close is
+ * returned, for the client branch to render in front of without hydration.
+ * Null when they match, or when the server marked no branch there: a chain
+ * whose branches differ by tag.
+ */
+export function hydrateChainBranch(
+  claim: FragmentClaim,
+  index: number,
+): Node | null {
+  const node = currentHydrationNode
+  if (
+    claim.start ||
+    !node ||
+    node.nodeType !== 8 ||
+    !isVaporBranchStart((node as Comment).data)
+  ) {
+    return null
+  }
+  const start = node as CommentAnchor
+  if (+start.data.slice(1) === index) {
+    claim.start = start
+    setCurrentHydrationNode(start.nextSibling)
+    return null
+  }
+  warnHydrationNodeMismatch(start, `branch ${index} of the v-if chain`)
+  const close = locateEndAnchor(start)!
+  removeFragmentNodes(start, close)
+  advanceHydrationNode(close)
+  return claimAnchor(close)
+}
+
+/**
+ * Renders the client's branch of a v-if chain in front of the `close`
+ * hydrateChainBranch returned. A function of its own so the effect callbacks
+ * hold no closure: one there costs every run a context, hydrating or not.
+ */
+export function renderChainBranch(
+  frag: DynamicFragment,
+  close: Node,
+  render: BlockFn | undefined,
+  key: any,
+  noScope: boolean,
+): void {
+  frag.anchor = close
+  runWithoutHydration(() => frag.update(render, key, noScope))
 }
 
 function handleMismatch(
@@ -729,12 +788,11 @@ export function warnHydrationNodeMismatch(node: Node, expected: unknown): void {
   }
 }
 
-export function removeFragmentNodes(node: Node, endAnchor?: Node): void {
+export function removeFragmentNodes(node: Node, end: Node): void {
   const parent = parentNode(node)
   if (!parent) {
     return
   }
-  const end = endAnchor || locateEndAnchor(node as CommentAnchor)
   while (true) {
     const next = _next(node)
     if (next && next !== end) {
@@ -765,10 +823,7 @@ function removeHydrationNode(
   const next = _next(end || node)
   if (end) {
     removeFragmentNodes(node, end)
-    const endParent = parentNode(end)
-    if (end !== close && endParent) {
-      remove(end, endParent)
-    }
+    if (end !== close) remove(end, parent)
   }
   remove(node, parent)
   return next

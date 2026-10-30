@@ -158,3 +158,31 @@ describe('vdom Transition inside a vapor app', () => {
     expect(container.innerHTML).toBe('<div>x</div>')
   })
 })
+
+// the client renders the branch the server did not anew: the vdom element it
+// mounts appears, not the server one it replaces
+test('vapor Transition appear on a vdom branch the server did not render', async () => {
+  const { container } = await testWithVaporApp(
+    `<template>
+      <Transition appear>
+        <components.V v-if="data.a" />
+        <components.V v-else />
+      </Transition>
+      <i>tail</i>
+    </template>`,
+    {
+      V: {
+        code: `<script setup>const data = _data</script>
+          <template><div>{{ data.a ? 'a' : 'b' }}</div></template>`,
+        vapor: false,
+      },
+    },
+    reactive({ a: false }),
+    reactive({ a: true }),
+  )
+  const div = container.querySelector('div')!
+  expect(div.textContent).toBe('b')
+  expect(div.className).toBe('v-enter-from v-enter-active')
+  expect(container.querySelectorAll('i')).toHaveLength(1)
+  expect('Hydration node mismatch').toHaveBeenWarnedTimes(1)
+})

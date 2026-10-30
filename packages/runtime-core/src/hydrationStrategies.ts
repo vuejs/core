@@ -1,5 +1,5 @@
-import { getGlobalThis, isString } from '@vue/shared'
-import { DOMNodeTypes, isComment } from './hydration'
+import { getGlobalThis, isString, isVaporBranchStart } from '@vue/shared'
+import { DOMNodeTypes, isComment, isRangeStart } from './hydration'
 
 // Polyfills for Safari support
 // see https://caniuse.com/requestidlecallback
@@ -134,10 +134,10 @@ export function forEachElement(
   node: Node,
   cb: (el: Element) => void | false,
 ): void {
-  // fragment, or a slot fallback (`<!--(-->`)
-  if (isComment(node) && (node.data === '[' || node.data === '(')) {
+  // fragment, a slot fallback (`<!--(-->`) or a vapor v-if branch
+  if (isComment(node) && isRangeStart(node.data)) {
     const open = node.data
-    const close = open === '[' ? ']' : ')'
+    const close = open === '(' ? ')' : ']'
     let depth = 1
     let next = node.nextSibling
     while (next) {
@@ -149,7 +149,11 @@ export function forEachElement(
       } else if (isComment(next)) {
         if (next.data === close) {
           if (--depth === 0) break
-        } else if (next.data === open) {
+        } else if (
+          close === ']'
+            ? next.data === '[' || isVaporBranchStart(next.data)
+            : next.data === open
+        ) {
           depth++
         }
       }

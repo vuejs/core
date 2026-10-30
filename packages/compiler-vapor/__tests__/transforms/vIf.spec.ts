@@ -489,13 +489,14 @@ describe('compiler: v-if', () => {
     const op = ir.block.dynamic.children[0].operation as IfIRNode
     const nested = op.negative as IfIRNode
     const innermost = nested.negative as IfIRNode
-    const noScopeOrSingle =
+    // a false branch that is the rest of the chain is ELSE_IF
+    const noScopeElseIf =
       VaporBlockShape.SINGLE_ROOT |
-      (VaporBlockShape.SINGLE_ROOT << 2) |
+      (VaporBlockShape.ELSE_IF << 2) |
       VaporIfFlags.TRUE_NO_SCOPE
 
-    expect(op.blockShape).toBe(noScopeOrSingle)
-    expect(nested.blockShape).toBe(noScopeOrSingle)
+    expect(op.blockShape).toBe(noScopeElseIf)
+    expect(nested.blockShape).toBe(noScopeElseIf)
     expect(innermost.blockShape).toBe(
       VaporBlockShape.SINGLE_ROOT |
         (VaporBlockShape.MULTI_ROOT << 2) |
