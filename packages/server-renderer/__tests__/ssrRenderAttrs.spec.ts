@@ -239,6 +239,18 @@ describe('ssr: renderStyle', () => {
     ).toBe(`opacity:0.5;`)
   })
 
+  test('vendor prefix handling', () => {
+    expect(
+      ssrRenderStyle({
+        display: '-webkit-box',
+        WebkitBoxOrient: 'vertical',
+        WebkitLineClamp: 3,
+      }),
+    ).toBe(
+      `display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:3;`,
+    )
+  })
+
   test('escape inline CSS', () => {
     expect(ssrRenderStyle(`"><script`)).toBe(`&quot;&gt;&lt;script`)
     expect(
