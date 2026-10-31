@@ -1456,7 +1456,8 @@ function baseCreateRenderer(
       setCurrentScope(prevScope)
 
       this.job = instance.job = () => {
-        if (this.dirty) {
+        // the job may have been queued before the scope was paused
+        if (!(this.flags & EffectFlags.PAUSED) && this.dirty) {
           this.run()
         }
       }
