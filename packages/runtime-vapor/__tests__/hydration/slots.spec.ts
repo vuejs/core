@@ -2078,5 +2078,40 @@ describe('Vapor Mode hydration', () => {
         },
       )
     })
+
+    test('empty list as the whole content of the last slot of a list', async () => {
+      const data = ref({
+        list: [
+          { id: 1, tags: ['a'] },
+          { id: 2, tags: [] as string[] },
+        ],
+      })
+      const { container } = await testHydration(
+        `<template>
+          <div>
+            <components.List v-slot="{ item }">
+              <b v-for="tag in item.tags" :key="tag">{{ tag }}</b>
+            </components.List>
+            <p>after</p>
+          </div>
+        </template>`,
+        {
+          List: `<template>
+            <template v-for="item in data.list" :key="item.id">
+              <slot :item="item" />
+            </template>
+          </template>`,
+        },
+        data,
+      )
+      expect(container.innerHTML).toBe(
+        `<div><!--[--><!--[--><!--[--><b>a</b><!--]--><!--]-->` +
+          `<!--[--><!--]--><!--slot--><!--]--><p>after</p></div>`,
+      )
+
+      data.value.list[1].tags.push('b')
+      await nextTick()
+      expect(container.querySelector('div')!.textContent).toBe('abafter')
+    })
   })
 })
