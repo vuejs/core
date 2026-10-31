@@ -336,15 +336,17 @@ function getSlotProp(rawProps: RawProps, key: string): unknown {
 }
 
 // Forwarded props must be copied before normalizeProps writes to them.
-export const slotPropsProto: object = /*@__PURE__*/ Object.getPrototypeOf(
-  /*@__PURE__*/ createInternalObject(),
-)
+// Resolved on first use: in Node, @vue/runtime-dom's CJS build does not export createInternalObject.
+let slotPropsProto: object | undefined
+export const getSlotPropsProto = (): object =>
+  slotPropsProto ||
+  (slotPropsProto = Object.getPrototypeOf(createInternalObject()))
 
 const slotPropsProxyHandlers: ProxyHandler<RawProps> = {
   get: getSlotProp,
   has: hasAttrFromRawProps,
   ownKeys: getKeysFromRawProps,
-  getPrototypeOf: () => slotPropsProto,
+  getPrototypeOf: getSlotPropsProto,
   getOwnPropertyDescriptor(target, key: string) {
     if (hasAttrFromRawProps(target, key)) {
       return {

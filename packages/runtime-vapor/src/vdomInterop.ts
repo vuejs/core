@@ -156,8 +156,8 @@ import type { RawSlots, SlotSourceCell, VaporSlot } from './componentSlots'
 import {
   dynamicSlotsProxyHandlers,
   getSlot,
+  getSlotPropsProto,
   isolateSlotSources,
-  slotPropsProto,
 } from './componentSlots'
 import { inOnce, withOnce } from './once'
 import { RenderEffect, renderEffect } from './renderEffect'
@@ -1164,7 +1164,7 @@ const vaporInteropImpl = {
 const vaporSlotPropsProxyHandler: ProxyHandler<
   ShallowRef<Record<string, any>>
 > = {
-  getPrototypeOf: () => slotPropsProto,
+  getPrototypeOf: getSlotPropsProto,
   get(target, key: any) {
     return target.value[key]
   },
