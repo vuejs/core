@@ -81,6 +81,63 @@ describe('api: options', () => {
     expect(serializeInner(root)).toBe(`<div>7</div>`)
   })
 
+  test('computed getters receive the instance and previous value', async () => {
+    const calls: unknown[][] = []
+    const Comp = defineComponent({
+      data() {
+        return { count: 1 }
+      },
+      computed: {
+        readonly(vm: { count: number }, previous: number | undefined): number {
+          calls.push(['readonly', vm === this, previous])
+          return this.count
+        },
+        writable: {
+          get(vm: { count: number }, previous: number | undefined): number {
+            calls.push(['writable', vm === this, previous])
+            return this.count
+          },
+          set(value: number) {
+            this.count = value
+          },
+        },
+        arrow: (
+          vm: { count: number },
+          previous: number | undefined,
+        ): number => {
+          calls.push(['arrow', previous])
+          return vm.count
+        },
+      },
+      render() {
+        return h(
+          'div',
+          { onClick: () => (this.writable = 2) },
+          this.readonly + this.writable + this.arrow,
+        )
+      },
+    })
+
+    const root = nodeOps.createElement('div')
+    render(h(Comp), root)
+    expect(serializeInner(root)).toBe('<div>3</div>')
+    expect(calls).toEqual([
+      ['readonly', true, undefined],
+      ['writable', true, undefined],
+      ['arrow', undefined],
+    ])
+
+    calls.length = 0
+    triggerEvent(root.children[0] as TestElement, 'click')
+    await nextTick()
+    expect(serializeInner(root)).toBe('<div>6</div>')
+    expect(calls).toEqual([
+      ['readonly', true, 1],
+      ['writable', true, 1],
+      ['arrow', 1],
+    ])
+  })
+
   test('methods', async () => {
     const Comp = defineComponent({
       data() {

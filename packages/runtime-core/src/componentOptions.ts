@@ -44,11 +44,7 @@ import {
   onUnmounted,
   onUpdated,
 } from './apiLifecycle'
-import {
-  type ComputedGetter,
-  type WritableComputedOptions,
-  reactive,
-} from '@vue/reactivity'
+import { type ComputedSetter, reactive } from '@vue/reactivity'
 import type {
   ComponentObjectPropsOptions,
   ComponentPropsOptions,
@@ -315,9 +311,15 @@ export type ComponentOptionsMixin = ComponentOptionsBase<
   any
 >
 
+type OptionComputedGetter = (vm: any, oldValue?: any) => any
+
 export type ComputedOptions = Record<
   string,
-  ComputedGetter<any> | WritableComputedOptions<any>
+  | OptionComputedGetter
+  | {
+      get: OptionComputedGetter
+      set: ComputedSetter<any>
+    }
 >
 
 export interface MethodOptions {
