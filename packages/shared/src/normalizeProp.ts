@@ -35,10 +35,10 @@ export function parseStringStyle(cssText: string): NormalizedStyle {
     match.startsWith('/*') ? '' : match,
   )
   let start = 0
-  let parens = 0
+  const delimiters: string[] = []
   let quote = ''
-  // Only a `;` outside of strings and parentheses ends a declaration, e.g.
-  // `--sep: ';'` or `url(data:image/png;base64,...)`.
+  // Only a `;` outside of strings and blocks ends a declaration, e.g.
+  // `--sep: ';'`, `--tokens: [a; b]` or `url(data:image/png;base64,...)`.
   for (let i = 0; i < text.length; i++) {
     const char = text[i]
     if (char === '\\') {
@@ -48,10 +48,14 @@ export function parseStringStyle(cssText: string): NormalizedStyle {
     } else if (char === '"' || char === "'") {
       quote = char
     } else if (char === '(') {
-      parens++
-    } else if (char === ')') {
-      if (parens) parens--
-    } else if (char === ';' && !parens) {
+      delimiters.push(')')
+    } else if (char === '[') {
+      delimiters.push(']')
+    } else if (char === '{') {
+      delimiters.push('}')
+    } else if (char === delimiters[delimiters.length - 1]) {
+      delimiters.pop()
+    } else if (char === ';' && !delimiters.length) {
       parseDeclaration(text.slice(start, i), ret)
       start = i + 1
     }

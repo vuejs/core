@@ -26,6 +26,20 @@ function transformWithStyleTransform(
 }
 
 describe('compiler: style transform', () => {
+  test.each(['[red; blue]', '{ red; [blue; green] }'])(
+    'preserves custom property blocks in static styles: %s',
+    value => {
+      const { node } = transformWithStyleTransform(
+        `<div style="--tokens: ${value}; color: red"/>`,
+      )
+      expect(node.props[0]).toMatchObject({
+        exp: {
+          content: JSON.stringify({ '--tokens': value, color: 'red' }),
+        },
+      })
+    },
+  )
+
   test('preserves comment-like text in quoted style values', () => {
     const { node } = transformWithStyleTransform(
       `<div style="--label: 'a/*b*/c'; /* ignored */ color: red"/>`,
