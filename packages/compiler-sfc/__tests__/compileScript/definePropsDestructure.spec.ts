@@ -242,6 +242,20 @@ init();
     assertCode(content)
   })
 
+  // #16082
+  test('default values w/ runtime declaration & key starts with a digit', () => {
+    const { content } = compile(`
+      <script setup>
+      const { '2xl': xxl = 1 } = defineProps({ '2xl': Number })
+      </script>
+    `)
+    expect(content)
+      .toMatch(`props: /*@__PURE__*/_mergeDefaults({ '2xl': Number }, {
+  "2xl": 1
+})`)
+    assertCode(content)
+  })
+
   test('default values w/ type declaration', () => {
     const { content } = compile(`
       <script setup lang="ts">

@@ -93,6 +93,25 @@ return { foo }
 })"
 `;
 
+exports[`defineProps > should escape names starting with a digit 1`] = `
+"import { defineComponent as _defineComponent } from 'vue'
+
+export default /*@__PURE__*/_defineComponent({
+  props: {
+    "2xl": { type: Boolean, required: true },
+    "3d": { type: String, required: false }
+  },
+  setup(__props: any, { expose: __expose }) {
+  __expose();
+
+    
+    
+return {  }
+}
+
+})"
+`;
+
 exports[`defineProps > should escape names w/ special symbols 1`] = `
 "import { defineComponent as _defineComponent } from 'vue'
 
