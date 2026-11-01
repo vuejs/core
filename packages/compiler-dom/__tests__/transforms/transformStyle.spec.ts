@@ -26,6 +26,22 @@ function transformWithStyleTransform(
 }
 
 describe('compiler: style transform', () => {
+  test.each([
+    'url(https://example.com/[)',
+    'URL(https://example.com/{)',
+    String.raw`u\72l(https://example.com/[)`,
+    String.raw`url(https://example.com/a\)b[)`,
+  ])('preserves URL tokens in static styles: %s', value => {
+    const { node } = transformWithStyleTransform(
+      `<div style="--tokens: ${value}; color: red"/>`,
+    )
+    expect(node.props[0]).toMatchObject({
+      exp: {
+        content: JSON.stringify({ '--tokens': value, color: 'red' }),
+      },
+    })
+  })
+
   test.each(['[red; blue]', '{ red; [blue; green] }'])(
     'preserves custom property blocks in static styles: %s',
     value => {
