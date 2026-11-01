@@ -1,7 +1,32 @@
 import { compileStyle, parse } from '../src'
 import { assertCode, compileSFCScript, mockId } from './utils'
+import { parse as babelParse } from '@babel/parser'
 
 describe('CSS vars injection', () => {
+  test.each([
+    String.raw`theme['a\'b']`,
+    String.raw`theme["a\"b"]`,
+    String.raw`theme['a\\']`,
+    String.raw`theme["a\\"]`,
+  ])('handles escaped characters in CSS binding strings (%s)', expression => {
+    const style = `div { color: v-bind(${expression}); }`
+    const source = `<script setup>const theme = {}</script><style>${style}</style>`
+    expect(parse(source).descriptor.cssVars).toEqual([expression])
+
+    const compiled = compileStyle({
+      source: style,
+      filename: 'EscapedBinding.vue',
+      id: mockId,
+    })
+    expect(compiled.errors).toEqual([])
+    expect(compiled.code).toContain('color: var(--')
+    expect(compiled.code).not.toContain('v-bind(')
+
+    const { content } = compileSFCScript(source)
+    expect(content).toContain(`: (${expression})`)
+    expect(() => babelParse(content, { sourceType: 'module' })).not.toThrow()
+  })
+
   test('generating correct code for nested paths', () => {
     const { content } = compileSFCScript(
       `<script>const a = 1</script>\n` +

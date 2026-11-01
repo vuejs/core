@@ -250,12 +250,16 @@ function lexBinding(content: string, start: number): number | null {
         }
         break
       case LexerState.inSingleQuoteString:
-        if (char === `'`) {
+        if (char === `\\`) {
+          i++
+        } else if (char === `'`) {
           state = LexerState.inParens
         }
         break
       case LexerState.inDoubleQuoteString:
-        if (char === `"`) {
+        if (char === `\\`) {
+          i++
+        } else if (char === `"`) {
           state = LexerState.inParens
         }
         break
