@@ -75,4 +75,37 @@ describe('ssr: attr fallthrough', () => {
       `<div id="foo" class="bar baz"></div>`,
     )
   })
+
+  test('SVG root preserves attribute casing', async () => {
+    const Child = {
+      template: `<svg viewBox="0 0 24 24"><path d="M0 0"/></svg>`,
+    }
+    const Parent = {
+      components: { Child },
+      template: `<child aria-hidden="true"/>`,
+    }
+    expect(await renderToString(createApp(Parent))).toBe(
+      `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M0 0"></path></svg>`,
+    )
+  })
+
+  test('SVG child component preserves attribute casing', async () => {
+    const Child = {
+      template: `<path :pathLength="10"/>`,
+    }
+    const Parent = {
+      components: { Child },
+      template: `<svg><child stroke-width="2"/></svg>`,
+    }
+    expect(await renderToString(createApp(Parent))).toBe(
+      `<svg><path pathLength="10" stroke-width="2"></path></svg>`,
+    )
+  })
+
+  test('HTML title normalizes boolean attributes', async () => {
+    const app = createApp({
+      template: `<title v-bind="{ itemScope: false }">Page</title>`,
+    })
+    expect(await renderToString(app)).toBe(`<title>Page</title>`)
+  })
 })

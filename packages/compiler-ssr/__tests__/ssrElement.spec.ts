@@ -1,3 +1,4 @@
+import { createObjectProperty, createSimpleExpression } from '@vue/compiler-dom'
 import { getCompiledString } from './utils'
 import { compile } from '../src'
 
@@ -408,6 +409,44 @@ describe('ssr: element', () => {
             ("textContent" in _temp0) ? _ssrInterpolate(_temp0.textContent) : _temp0.innerHTML ?? ''
           }</div>\`"
       `)
+    })
+  })
+
+  describe('SVG attribute casing', () => {
+    test('passes the tag when merging props', () => {
+      expect(getCompiledString(`<svg viewBox="0 0 24 24" v-bind="attrs"/>`))
+        .toMatchInlineSnapshot(`
+          "\`<svg\${
+              _ssrRenderAttrs(_mergeProps({ viewBox: "0 0 24 24" }, _ctx.attrs), "svg")
+            }></svg>\`"
+        `)
+    })
+
+    test('passes the tag for title in the SVG namespace', () => {
+      expect(getCompiledString(`<svg><title v-bind="attrs">Icon</title></svg>`))
+        .toMatchInlineSnapshot(`
+          "\`<svg><title\${
+              _ssrRenderAttrs(_ctx.attrs, "title")
+            }>Icon</title></svg>\`"
+        `)
+    })
+
+    test('passes the tag for directive transforms with dynamic keys', () => {
+      const { code } = compile(`<div><svg :viewBox="value"/></div>`, {
+        directiveTransforms: {
+          bind: dir => ({
+            props: [
+              createObjectProperty(
+                createSimpleExpression('_ctx.key', false),
+                dir.exp!,
+              ),
+            ],
+          }),
+        },
+      })
+      expect(code).toContain(
+        `_ssrRenderDynamicAttr(_ctx.key, _ctx.value, "svg")`,
+      )
     })
   })
 })
