@@ -375,6 +375,18 @@ describe('compiler: transform <slot> outlets', () => {
     })
   })
 
+  test('slot outlet with scopeId and slotted=undefined should not generate noSlotted', () => {
+    const { ir, code } = compileWithSlotsOutlet(`<slot />`, {
+      scopeId: 'test-scope',
+      slotted: undefined,
+    })
+    expect(code).not.toContain(slotNoSlottedFlag)
+    expect(ir.block.dynamic.children[0].operation).toMatchObject({
+      type: IRNodeTypes.SLOT_OUTLET_NODE,
+      flags: 0,
+    })
+  })
+
   test('slot outlet without scopeId should not generate noSlotted', () => {
     const { ir, code } = compileWithSlotsOutlet(`<slot />`, {
       slotted: false,

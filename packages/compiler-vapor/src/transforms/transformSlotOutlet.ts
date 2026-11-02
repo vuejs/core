@@ -103,7 +103,9 @@ export const transformSlotOutlet: NodeTransform = (node, context) => {
   return () => {
     exitBlock && exitBlock()
     let flags = 0
-    if (context.options.scopeId && !context.options.slotted) {
+    // `slotted` defaults to true: compileTemplate forwards it as undefined
+    // when the caller leaves it out
+    if (context.options.scopeId && context.options.slotted === false) {
       flags |= VaporSlotFlags.NO_SLOTTED
     }
     if (context.inVOnce) {
