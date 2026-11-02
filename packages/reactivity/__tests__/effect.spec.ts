@@ -932,6 +932,45 @@ describe('reactivity/effect', () => {
     expect(dummy2).toBe(3)
   })
 
+  it('should not mutate the provided options object', () => {
+    const obj = reactive({ foo: 1 })
+    let schedulerCalls = 0
+    let onStopCalls = 0
+    const options = {
+      scheduler: () => {
+        schedulerCalls++
+      },
+      onStop: () => {
+        onStopCalls++
+      },
+    }
+
+    const runner1 = effect(() => obj.foo, options)
+    const runner2 = effect(() => obj.foo, options)
+
+    // the caller's object must be left untouched
+    expect(typeof options.scheduler).toBe('function')
+    expect(typeof options.onStop).toBe('function')
+
+    obj.foo++
+    expect(schedulerCalls).toBe(2)
+
+    stop(runner1)
+    stop(runner2)
+    expect(onStopCalls).toBe(2)
+  })
+
+  it('should accept frozen options', () => {
+    const obj = reactive({ foo: 1 })
+    const scheduler = vi.fn()
+    const options = Object.freeze({ scheduler })
+
+    const runner = effect(() => obj.foo, options)
+    obj.foo++
+    expect(scheduler).toHaveBeenCalledTimes(1)
+    stop(runner)
+  })
+
   it('events: onStop', () => {
     const onStop = vi.fn()
     const runner = effect(() => {}, {

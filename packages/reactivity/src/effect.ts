@@ -1,4 +1,3 @@
-import { extend } from '@vue/shared'
 import type { TrackOpTypes, TriggerOpTypes } from './constants'
 import { setupOnTrigger } from './debug'
 import { activeEffectScope } from './effectScope'
@@ -183,9 +182,8 @@ export function effect<T = any>(
 
   const e = new ReactiveEffect(fn)
   if (options) {
-    const { onStop, scheduler } = options
+    const { onStop, scheduler, onTrack, onTrigger } = options
     if (onStop) {
-      options.onStop = undefined
       const stop = e.stop.bind(e)
       e.stop = () => {
         stop()
@@ -193,14 +191,15 @@ export function effect<T = any>(
       }
     }
     if (scheduler) {
-      options.scheduler = undefined
       e.notify = () => {
         if (!(e.flags & EffectFlags.PAUSED)) {
           scheduler()
         }
       }
     }
-    extend(e, options)
+    // copy the remaining options without mutating the caller's object
+    e.onTrack = onTrack
+    e.onTrigger = onTrigger
   }
   try {
     e.run()
