@@ -1129,6 +1129,41 @@ describe('component', () => {
       'Vue received a Component that was made a reactive object',
     ).toHaveBeenWarnedTimes(2)
   })
+
+  test('child setup does not see the dev-rendering parent', () => {
+    const data = ref(null)
+    const seen: unknown[] = []
+    // inline-compiled: resolves its own tag while setup renders the block
+    const TreeNode = compile(
+      `<script setup>
+        import { getCurrentInstance } from 'vue'
+        defineOptions({ name: 'TreeNode' })
+        const props = defineProps(['depth'])
+        _components.seen.push(getCurrentInstance())
+      </script>
+      <template><i>{{ props.depth }}</i><TreeNode v-if="props.depth" :depth="props.depth - 1" /></template>`,
+      data,
+      { seen },
+    )
+    const Host = compile(
+      `<template><b><slot /></b></template>`,
+      data,
+      {},
+      { inlineTemplate: false },
+    )
+    const App = compile(
+      `<script setup>const components = _components</script>
+      <template><components.TreeNode :depth="1" /><components.Host><components.TreeNode :depth="0" /></components.Host></template>`,
+      data,
+      { TreeNode, Host },
+      { inlineTemplate: false },
+    )
+    const { host } = define(App).render()
+    expect(seen).toEqual([null, null, null])
+    expect(host.innerHTML).toBe(
+      '<i>1</i><i>0</i><!--if--><!--if--><b><i>0</i><!--if--><!--slot--></b>',
+    )
+  })
 })
 
 function getEffectsCount(scope: EffectScope): number {

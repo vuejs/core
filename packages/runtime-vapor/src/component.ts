@@ -765,6 +765,8 @@ export function setupComponent(
 ): void {
   const prevInstance = setCurrentInstance(instance)
   const prevSub = setActiveSub()
+  // a parent's dev render must not leak into this setup as its instance
+  const prevRendering = __DEV__ ? setCurrentRenderingInstance(null) : null
 
   const setupFn = isFunction(component) ? component : component.setup
   // an inline-compiled setup renders the block itself: a root mismatch inside
@@ -819,6 +821,7 @@ export function setupComponent(
     handleSetupResult(setupResult, component, instance)
   }
 
+  if (__DEV__) setCurrentRenderingInstance(prevRendering)
   setActiveSub(prevSub)
   restoreCurrentInstance(prevInstance)
 }
