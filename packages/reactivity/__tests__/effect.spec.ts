@@ -1536,5 +1536,28 @@ describe('reactivity/effect', () => {
         expect(onTrigger).not.toHaveBeenCalled()
       },
     )
+
+    test('copies own enumerable symbol options once', () => {
+      const own = Symbol()
+      const inherited = Symbol()
+      const hidden = Symbol()
+      const readOwn = vi.fn(function (this: object) {
+        return this
+      })
+      const options = Object.create({ [inherited]: 'inherited' })
+      Object.defineProperty(options, own, { enumerable: true, get: readOwn })
+      Object.defineProperty(options, hidden, { value: 'hidden' })
+
+      const runner = effect(() => {}, options)
+
+      expect((runner.effect as any)[own]).toBe(options)
+      expect(readOwn).toHaveBeenCalledTimes(1)
+      expect(
+        Object.prototype.hasOwnProperty.call(runner.effect, inherited),
+      ).toBe(false)
+      expect(Object.prototype.hasOwnProperty.call(runner.effect, hidden)).toBe(
+        false,
+      )
+    })
   })
 })

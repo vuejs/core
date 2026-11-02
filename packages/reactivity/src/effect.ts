@@ -1,4 +1,3 @@
-import { extend } from '@vue/shared'
 import type { TrackOpTypes, TriggerOpTypes } from './constants'
 import { setupOnTrigger } from './debug'
 import { activeEffectScope } from './effectScope'
@@ -183,7 +182,7 @@ export function effect<T = any>(
 
   const e = new ReactiveEffect(fn)
   if (options) {
-    const { onStop, scheduler, ...effectOptions } = options
+    const { onStop, scheduler } = options
     if (onStop) {
       const stop = e.stop.bind(e)
       e.stop = () => {
@@ -198,7 +197,15 @@ export function effect<T = any>(
         }
       }
     }
-    extend(e, effectOptions)
+    for (const key of Reflect.ownKeys(options)) {
+      if (
+        key !== 'onStop' &&
+        key !== 'scheduler' &&
+        Object.prototype.propertyIsEnumerable.call(options, key)
+      ) {
+        ;(e as any)[key] = (options as any)[key]
+      }
+    }
   }
   try {
     e.run()
