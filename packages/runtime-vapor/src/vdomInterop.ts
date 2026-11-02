@@ -1199,6 +1199,9 @@ const vaporSlotWrappersCache = new WeakMap<
 >()
 
 const vaporSlotsProxyHandler: ProxyHandler<any> = {
+  // normalized like VDOM slots, so passing them on as children of another
+  // vnode doesn't write `_ctx` into them
+  getPrototypeOf: getSlotPropsProto,
   get(target, key) {
     const slot =
       isString(key) && !isInternalSlotKey(key)
