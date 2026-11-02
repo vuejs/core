@@ -57,6 +57,16 @@ describe('compiler: transform v-model', () => {
     expect(generate(root).code).toMatchSnapshot()
   })
 
+  // HTML input type keywords are ASCII case-insensitive
+  test('simple expression for input (case-insensitive type value)', () => {
+    expect(
+      transformWithModel('<input type="RADIO" v-model="model" />').helpers,
+    ).toContain(V_MODEL_RADIO)
+    expect(
+      transformWithModel('<input type="Checkbox" v-model="model" />').helpers,
+    ).toContain(V_MODEL_CHECKBOX)
+  })
+
   test('simple expression for input (dynamic type)', () => {
     const root = transformWithModel('<input :type="foo" v-model="model" />')
 
