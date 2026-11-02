@@ -1335,6 +1335,49 @@ describe('Vapor Mode hydration', () => {
       expect(container.querySelector('select')!.value).toBe('c')
     },
   )
+
+  test.each([
+    [undefined, 'a'],
+    ['a', undefined],
+  ])(
+    'syncs server-checked radios to the client model (%s -> %s)',
+    async (serverValue, clientValue) => {
+      for (const isVaporApp of [false, true]) {
+        const { container, app } = await testHydration(
+          `<script setup>const data = _data</script>` +
+            `<template><div><input type="radio" v-model="data" :value="undefined"><input type="radio" v-model="data" value="a"></div></template>`,
+          undefined,
+          ref(clientValue),
+          { isVaporApp, serverData: ref(serverValue) },
+        )
+        await nextTick()
+        const inputs = Array.from(container.querySelectorAll('input'))
+        expect(inputs.map(input => input.checked)).toEqual([
+          clientValue === undefined,
+          clientValue === 'a',
+        ])
+        app.unmount()
+      }
+    },
+  )
+
+  // a radio recreated on a mismatch inside a hydrated element mounts like on
+  // the client: the template's checked wins over the unmatched model
+  test('keeps a template-checked radio recreated on a mismatch', async () => {
+    const container = document.createElement('div')
+    container.innerHTML = '<my-el><span></span></my-el>'
+    document.body.appendChild(container)
+    const comp = compile(
+      `<template><my-el><input type="radio" checked v-model="data" value="a"></my-el></template>`,
+      ref(),
+      {},
+      { compilerOptions: { isCustomElement: tag => tag === 'my-el' } },
+    )
+    createVaporSSRApp(comp).mount(container)
+    await nextTick()
+    expect(container.querySelector('input')!.checked).toBe(true)
+    expect(`Hydration node mismatch`).toHaveBeenWarned()
+  })
 })
 
 describe('nodes the html parser moved out of place', () => {

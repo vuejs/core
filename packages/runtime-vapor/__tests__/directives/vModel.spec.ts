@@ -2395,4 +2395,48 @@ describe('directive: v-model', () => {
       },
     )
   })
+
+  test.each(['type="radio"', ':type="\'radio\'"'])(
+    'checks a radio with an undefined value for an initially undefined model (%s)',
+    async type => {
+      await renderParity(
+        {
+          App: `<template><input ${type} v-model="data" :value="undefined"><input ${type} v-model="data" value="a"></template>`,
+        },
+        () => ref(),
+        async (data, root) => {
+          const [all, a] = root.querySelectorAll('input')
+          expect(all.checked).toBe(true)
+          expect(a.checked).toBe(false)
+
+          data.value = 'a'
+          await nextTick()
+          expect(all.checked).toBe(false)
+          expect(a.checked).toBe(true)
+
+          data.value = undefined
+          await nextTick()
+          expect(all.checked).toBe(true)
+          expect(a.checked).toBe(false)
+        },
+      )
+    },
+  )
+
+  test('keeps a radio checked by the template when the initial model does not match', async () => {
+    await renderParity(
+      {
+        App: `<template><input type="radio" checked v-model="data" value="a"></template>`,
+      },
+      () => ref(),
+      async (data, root) => {
+        const input = root.querySelector('input')!
+        expect(input.checked).toBe(true)
+
+        data.value = 'b'
+        await nextTick()
+        expect(input.checked).toBe(false)
+      },
+    )
+  })
 })

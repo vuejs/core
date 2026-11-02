@@ -11,6 +11,7 @@ import {
 } from '@vue/runtime-dom'
 import { registerSelectUpdate, renderEffect } from '../renderEffect'
 import { inOnce, withOnce } from '../once'
+import { isHydrating, isRecreatedNode } from '../dom/hydration'
 import { isArray, isSet, looseEqual } from '@vue/shared'
 import { Dep, getCurrentScope, trackDep, traverse } from '@vue/reactivity'
 
@@ -83,11 +84,18 @@ export const applyRadioModel: VaporModelDirective<HTMLInputElement> = (
 ) => {
   // static listener: lives and dies with the element, no disposer needed
   el.addEventListener('change', () => set(vModelGetValue(el)))
+  const hydrating = isHydrating && !isRecreatedNode(el)
   ensureMounted(() => {
     let value: any
+    let initial = true
     renderEffect(() => {
-      if (value !== (value = get())) {
-        el.checked = looseEqual(value, vModelGetValue(el))
+      const oldValue = value
+      if ((value = get()) !== oldValue || initial) {
+        const checked = looseEqual(value, vModelGetValue(el))
+        // like vdom, a checked set by the template wins over an unmatched
+        // model on mount, while a server-rendered one follows the model
+        if (checked || !initial || hydrating) el.checked = checked
+        initial = false
       }
     })
   })
