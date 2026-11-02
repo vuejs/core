@@ -154,6 +154,59 @@ describe('hot module replacement', () => {
     expect(mountSpy).toHaveBeenCalledTimes(1)
   })
 
+  test.each(['mounted', 'unmounted'])(
+    'reload with changed props and emits (%s)',
+    async state => {
+      const root = nodeOps.createElement('div')
+      const childId = `test-reload-props-emits-${state}`
+      let emitsOptions: any
+
+      const Child: ComponentOptions = {
+        __hmrId: childId,
+        props: ['foo'],
+        emits: ['a'],
+        created(this: any) {
+          emitsOptions = this.$.emitsOptions
+        },
+        render: compileToFunction(`<div>{{ foo }}</div>`),
+      }
+      createRecord(childId, Child)
+
+      const Parent: ComponentOptions = {
+        render: () => h(Child, { foo: 'foo', bar: 'bar' }),
+      }
+
+      let app = createApp(Parent)
+      app.mount(root)
+      expect(serializeInner(root)).toBe(`<div bar="bar">foo</div>`)
+      expect(emitsOptions).toEqual({ a: null })
+
+      if (state === 'unmounted') {
+        app.unmount()
+      }
+
+      reload(childId, {
+        __hmrId: childId,
+        props: ['bar'],
+        emits: ['b'],
+        created(this: any) {
+          emitsOptions = this.$.emitsOptions
+        },
+        render: compileToFunction(`<div>{{ bar }}</div>`),
+      })
+      await nextTick()
+
+      if (state === 'unmounted') {
+        app = createApp(Parent)
+        app.mount(root)
+      }
+
+      expect(serializeInner(root)).toBe(`<div foo="foo">bar</div>`)
+      expect(emitsOptions).toEqual({ b: null })
+      app.unmount()
+    },
+  )
+
   // #7042
   test('reload KeepAlive slot', async () => {
     const root = nodeOps.createElement('div')

@@ -234,14 +234,21 @@ export function emit(
   }
 }
 
-const mixinEmitsCache = new WeakMap<ConcreteComponent, ObjectEmitsOptions>()
+// Same cache split as sharedPropsCache.
+export const sharedEmitsCache: WeakMap<
+  ConcreteComponent,
+  ObjectEmitsOptions | null
+> = new WeakMap()
+
 export function normalizeEmitsOptions(
   comp: ConcreteComponent,
   appContext: AppContext,
   asMixin = false,
 ): ObjectEmitsOptions | null {
   const cache =
-    __FEATURE_OPTIONS_API__ && asMixin ? mixinEmitsCache : appContext.emitsCache
+    __FEATURE_OPTIONS_API__ && !asMixin && appContext.mixins.length
+      ? appContext.emitsCache
+      : sharedEmitsCache
   const cached = cache.get(comp)
   if (cached !== undefined) {
     return cached

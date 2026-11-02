@@ -510,7 +510,12 @@ function resolvePropValue(
   return value
 }
 
-const mixinPropsCache = new WeakMap<ConcreteComponent, NormalizedPropsOptions>()
+// Normalization without global mixins depends only on the component.
+// Shared by mixins and components in apps without global mixins.
+export const sharedPropsCache: WeakMap<
+  ConcreteComponent,
+  NormalizedPropsOptions
+> = new WeakMap()
 
 export function normalizePropsOptions(
   comp: ConcreteComponent,
@@ -518,7 +523,9 @@ export function normalizePropsOptions(
   asMixin = false,
 ): NormalizedPropsOptions {
   const cache =
-    __FEATURE_OPTIONS_API__ && asMixin ? mixinPropsCache : appContext.propsCache
+    __FEATURE_OPTIONS_API__ && !asMixin && appContext.mixins.length
+      ? appContext.propsCache
+      : sharedPropsCache
   const cached = cache.get(comp)
   if (cached) {
     return cached

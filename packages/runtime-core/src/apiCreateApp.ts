@@ -185,11 +185,15 @@ export interface AppContext {
   optionsCache: WeakMap<ComponentOptions, MergedComponentOptions>
   /**
    * Cache for normalized props options
+   * Only used when the app has global mixins, otherwise all apps share one
+   * cache.
    * @internal
    */
   propsCache: WeakMap<ConcreteComponent, NormalizedPropsOptions>
   /**
    * Cache for normalized emits options
+   * Only used when the app has global mixins, otherwise all apps share one
+   * cache.
    * @internal
    */
   emitsCache: WeakMap<ConcreteComponent, ObjectEmitsOptions | null>
