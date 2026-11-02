@@ -15,6 +15,7 @@ import {
   TrackOpTypes,
   TriggerOpTypes,
   effect,
+  effectScope,
   markRaw,
   reactive,
   readonly,
@@ -1423,4 +1424,117 @@ describe('reactivity/effect', () => {
       expect(callback).toHaveBeenCalledTimes(1)
     },
   )
+
+  describe('effect options getters', () => {
+    test.each(['onTrack', 'onTrigger'] as const)(
+      'calls onStop when the %s getter stops its scope',
+      key => {
+        const scope = effectScope()
+        const onStop = vi.fn()
+        const options = {
+          onStop,
+          get [key]() {
+            scope.stop()
+            return () => {}
+          },
+        }
+
+        scope.run(() => effect(() => {}, options))
+
+        expect(scope.active).toBe(false)
+        expect(onStop).toHaveBeenCalledTimes(1)
+      },
+    )
+
+    test.each(['onTrack', 'onTrigger'] as const)(
+      'calls onStop when the %s getter throws and its scope stops',
+      key => {
+        const scope = effectScope()
+        const onStop = vi.fn()
+        const error = new Error('debug option getter')
+        const options = {
+          onStop,
+          get [key](): () => void {
+            throw error
+          },
+        }
+
+        expect(() => scope.run(() => effect(() => {}, options))).toThrow(error)
+        scope.stop()
+
+        expect(onStop).toHaveBeenCalledTimes(1)
+      },
+    )
+
+    test('reads each own enumerable option getter once', () => {
+      const scheduler = vi.fn()
+      const onStop = vi.fn()
+      const onTrack = vi.fn()
+      const onTrigger = vi.fn()
+      const getScheduler = vi.fn(() => scheduler)
+      const getOnStop = vi.fn(() => onStop)
+      const getOnTrack = vi.fn(() => onTrack)
+      const getOnTrigger = vi.fn(() => onTrigger)
+      const options = Object.freeze({
+        get scheduler() {
+          return getScheduler()
+        },
+        get onStop() {
+          return getOnStop()
+        },
+        get onTrack() {
+          return getOnTrack()
+        },
+        get onTrigger() {
+          return getOnTrigger()
+        },
+      })
+      const value = ref(0)
+      const runner = effect(() => value.value, options)
+
+      value.value++
+      stop(runner)
+
+      expect(getScheduler).toHaveBeenCalledTimes(1)
+      expect(getOnStop).toHaveBeenCalledTimes(1)
+      expect(getOnTrack).toHaveBeenCalledTimes(1)
+      expect(getOnTrigger).toHaveBeenCalledTimes(1)
+      expect(scheduler).toHaveBeenCalledTimes(1)
+      expect(onStop).toHaveBeenCalledTimes(1)
+      expect(onTrack).toHaveBeenCalledTimes(1)
+      expect(onTrigger).toHaveBeenCalledTimes(1)
+    })
+
+    test.each(['inherited', 'non-enumerable'] as const)(
+      'preserves %s effect option behavior',
+      kind => {
+        const scheduler = vi.fn()
+        const onStop = vi.fn()
+        const onTrack = vi.fn()
+        const onTrigger = vi.fn()
+        const options =
+          kind === 'inherited'
+            ? Object.create({ scheduler, onStop, onTrack, onTrigger })
+            : Object.defineProperties(
+                {},
+                {
+                  scheduler: { value: scheduler, writable: true },
+                  onStop: { value: onStop, writable: true },
+                  onTrack: { value: onTrack, writable: true },
+                  onTrigger: { value: onTrigger, writable: true },
+                },
+              )
+        const value = ref(0)
+        const runner = effect(() => value.value, options)
+
+        value.value++
+        stop(runner)
+
+        expect(scheduler).toHaveBeenCalledTimes(1)
+        expect(onStop).toHaveBeenCalledTimes(1)
+        expect(onTrack).not.toHaveBeenCalled()
+        expect(onTrigger).not.toHaveBeenCalled()
+      },
+    )
+  })
 })
