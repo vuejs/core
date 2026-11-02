@@ -11,6 +11,7 @@ import {
   defineComponent,
   h,
   inject,
+  isRef,
   markRaw,
   nextTick,
   nodeOps,
@@ -24,6 +25,7 @@ import {
   render,
   serializeInner,
   shallowRef,
+  watch,
 } from '@vue/runtime-test'
 import type { KeepAliveProps } from '../../src/components/KeepAlive'
 
@@ -1249,5 +1251,181 @@ describe('KeepAlive', () => {
     toggle.value = true
     await nextTick()
     expect(serializeInner(root)).toBe('<p>1</p>')
+  })
+
+  describe('freeze', () => {
+    function setupFreeze(freeze: boolean | string | Ref<boolean>) {
+      const count = ref(0)
+      const toggle = ref(true)
+      const watcher = vi.fn()
+      const childRender = vi.fn()
+      const leafRender = vi.fn()
+      const htmlOnActivated: string[] = []
+
+      const Leaf = {
+        render() {
+          leafRender()
+          return h('i', count.value)
+        },
+      }
+      const Child = {
+        setup() {
+          watch(count, watcher)
+          onActivated(() => htmlOnActivated.push(serializeInner(root)))
+          return () => {
+            childRender()
+            return h('div', [h('span', count.value), h(Leaf)])
+          }
+        },
+      }
+      const App = {
+        render: () =>
+          h(KeepAlive, { freeze: isRef(freeze) ? freeze.value : freeze }, () =>
+            toggle.value ? h(Child) : null,
+          ),
+      }
+      render(h(App), root)
+      return {
+        count,
+        toggle,
+        watcher,
+        childRender,
+        leafRender,
+        htmlOnActivated,
+      }
+    }
+
+    test('pauses deactivated components and catches up on activation', async () => {
+      const {
+        count,
+        toggle,
+        watcher,
+        childRender,
+        leafRender,
+        htmlOnActivated,
+      } = setupFreeze(true)
+      expect(serializeInner(root)).toBe(`<div><span>0</span><i>0</i></div>`)
+
+      toggle.value = false
+      await nextTick()
+      expect(serializeInner(root)).toBe(`<!---->`)
+
+      count.value++
+      await nextTick()
+      expect(watcher).not.toHaveBeenCalled()
+      expect(childRender).toHaveBeenCalledTimes(1)
+      expect(leafRender).toHaveBeenCalledTimes(1)
+
+      toggle.value = true
+      await nextTick()
+      expect(serializeInner(root)).toBe(`<div><span>1</span><i>1</i></div>`)
+      expect(htmlOnActivated).toEqual([
+        `<div><span>0</span><i>0</i></div>`,
+        `<div><span>1</span><i>1</i></div>`,
+      ])
+      expect(watcher).toHaveBeenCalledTimes(1)
+      expect(childRender).toHaveBeenCalledTimes(2)
+      expect(leafRender).toHaveBeenCalledTimes(2)
+    })
+
+    test('deactivated components keep running without freeze', async () => {
+      const { count, toggle, watcher, childRender } = setupFreeze(false)
+
+      toggle.value = false
+      await nextTick()
+      count.value++
+      await nextTick()
+      expect(watcher).toHaveBeenCalledTimes(1)
+      expect(childRender).toHaveBeenCalledTimes(2)
+    })
+
+    test('works as a boolean attribute', async () => {
+      const { count, toggle, watcher } = setupFreeze('')
+
+      toggle.value = false
+      await nextTick()
+      count.value++
+      await nextTick()
+      expect(watcher).not.toHaveBeenCalled()
+    })
+
+    test('does not run an update queued before deactivation', async () => {
+      const { count, toggle, watcher, childRender } = setupFreeze(true)
+
+      count.value++
+      toggle.value = false
+      await nextTick()
+      expect(childRender).toHaveBeenCalledTimes(1)
+      expect(watcher).not.toHaveBeenCalled()
+
+      toggle.value = true
+      await nextTick()
+      expect(serializeInner(root)).toBe(`<div><span>1</span><i>1</i></div>`)
+      expect(watcher).toHaveBeenCalledTimes(1)
+    })
+
+    test('resumes a frozen component even if freeze was turned off', async () => {
+      const freeze = ref(true)
+      const { count, toggle, watcher } = setupFreeze(freeze)
+
+      toggle.value = false
+      await nextTick()
+      freeze.value = false
+      count.value++
+      await nextTick()
+      expect(watcher).not.toHaveBeenCalled()
+
+      toggle.value = true
+      await nextTick()
+      expect(serializeInner(root)).toBe(`<div><span>1</span><i>1</i></div>`)
+      expect(watcher).toHaveBeenCalledTimes(1)
+    })
+    test('activating a component does not resume a nested frozen one', async () => {
+      const count = ref(0)
+      const log: string[] = []
+      const defineLeaf = (name: string) => ({
+        setup() {
+          watch(count, () => log.push(name), { flush: 'sync' })
+          return () => h('i', count.value)
+        },
+      })
+      const Inner = defineLeaf('inner')
+      const Other = defineLeaf('other')
+      const innerView = shallowRef(Inner)
+      const Outer = {
+        setup() {
+          watch(count, () => log.push('outer'), { flush: 'sync' })
+          return () => h(KeepAlive, { freeze: true }, () => h(innerView.value))
+        },
+      }
+      const showOuter = ref(true)
+      const App = {
+        render: () =>
+          h(KeepAlive, { freeze: true }, () =>
+            showOuter.value ? h(Outer) : null,
+          ),
+      }
+      render(h(App), root)
+
+      // Inner is frozen by the inner KeepAlive, then Outer by the outer one
+      innerView.value = Other
+      await nextTick()
+      showOuter.value = false
+      await nextTick()
+      count.value++
+      expect(log).toEqual([])
+
+      // Outer and Other catch up; Inner stays frozen
+      showOuter.value = true
+      await nextTick()
+      expect(log).toEqual(['outer', 'other'])
+      count.value++
+      expect(log).toEqual(['outer', 'other', 'outer', 'other'])
+
+      innerView.value = Inner
+      await nextTick()
+      expect(log).toEqual(['outer', 'other', 'outer', 'other', 'inner'])
+      expect(serializeInner(root)).toBe(`<i>2</i>`)
+    })
   })
 })
