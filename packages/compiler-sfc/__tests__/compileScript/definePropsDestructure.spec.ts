@@ -642,4 +642,135 @@ init();
       ).not.toThrowError()
     })
   })
+
+  test('reactive props keep catch pattern bindings local', () => {
+    const { content } = compile(
+      `<script setup>
+      const { message } = defineProps(['message'])
+      function inspect() {
+        try {
+          throw { message: 'caught' }
+        } catch ({ message }) {
+          return message
+        }
+      }
+      function readProp() { return message }
+      </script>`,
+      { inlineTemplate: false, genDefaultAs: '_sfc_' },
+    )
+    const component = new Function(`${content}; return _sfc_`)()
+    const bindings = component.setup({ message: 'prop' }, { expose: () => {} })
+    expect(bindings.readProp()).toBe('prop')
+    expect(bindings.inspect()).toBe('caught')
+  })
+
+  test('reactive props keep switch case bindings local', () => {
+    const { content } = compile(
+      `<script setup>
+      const { message } = defineProps(['message'])
+      function inspect() {
+        switch (0) {
+          case 0:
+            const message = 'case'
+            return message
+        }
+      }
+      function readProp() { return message }
+      </script>`,
+      { inlineTemplate: false, genDefaultAs: '_sfc_' },
+    )
+    const component = new Function(`${content}; return _sfc_`)()
+    const bindings = component.setup({ message: 'prop' }, { expose: () => {} })
+    expect(bindings.readProp()).toBe('prop')
+    expect(bindings.inspect()).toBe('case')
+  })
+
+  test('reactive props keep nested catch pattern bindings local', () => {
+    const { content } = compile(
+      `<script setup>
+      const { message, fallback } = defineProps(['message', 'fallback'])
+      function inspect() {
+        try {
+          throw { entries: [], extra: 'caught' }
+        } catch ({ entries: [message = fallback], ...rest }) {
+          message += '!'
+          return [message, rest.extra, fallback]
+        }
+      }
+      </script>`,
+      { inlineTemplate: false, genDefaultAs: '_sfc_' },
+    )
+    const component = new Function(`${content}; return _sfc_`)()
+    const bindings = component.setup(
+      { message: 'prop', fallback: 'default' },
+      { expose: () => {} },
+    )
+    expect(bindings.inspect()).toEqual(['default!', 'caught', 'default'])
+  })
+
+  test('reactive props keep catch body bindings out of pattern defaults', () => {
+    const { content } = compile(
+      `<script setup>
+      const { fallback } = defineProps(['fallback'])
+      function inspect() {
+        try { throw [] } catch ([value = fallback]) {
+          const fallback = 'local'
+          return [value, fallback]
+        }
+      }
+      </script>`,
+      { inlineTemplate: false, genDefaultAs: '_sfc_' },
+    )
+    const component = new Function(`${content}; return _sfc_`)()
+    const bindings = component.setup({ fallback: 'prop' }, { expose: () => {} })
+    expect(bindings.inspect()).toEqual(['prop', 'local'])
+  })
+
+  test('reactive props keep switch bindings local to all cases', () => {
+    const { content } = compile(
+      `<script setup>
+      const { message } = defineProps(['message'])
+      function inspect() {
+        let result = message
+        switch (message) {
+          case 'prop':
+            let message = 'case'
+          case 'other':
+            result += ':' + message
+            break
+        }
+        return [result, message]
+      }
+      </script>`,
+      { inlineTemplate: false, genDefaultAs: '_sfc_' },
+    )
+    const component = new Function(`${content}; return _sfc_`)()
+    const bindings = component.setup({ message: 'prop' }, { expose: () => {} })
+    expect(bindings.inspect()).toEqual(['prop:case', 'prop'])
+  })
+
+  test('reactive props keep switch case bindings in their temporal dead zone', () => {
+    const { content } = compile(
+      `<script setup>
+      const { message } = defineProps(['message'])
+      function inspectBody() {
+        switch ('first') {
+          case 'first': return message
+          case 'second': let message = 'case'
+        }
+      }
+      function inspectTest() {
+        switch ('first') {
+          case message: return 'matched'
+          case 'second': let message = 'case'
+        }
+      }
+      </script>`,
+      { inlineTemplate: false, genDefaultAs: '_sfc_' },
+    )
+    const component = new Function(`${content}; return _sfc_`)()
+    const bindings = component.setup({ message: 'prop' }, { expose: () => {} })
+    expect(bindings.inspectBody).toThrow(ReferenceError)
+    expect(bindings.inspectTest).toThrow(ReferenceError)
+  })
 })
