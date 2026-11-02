@@ -840,4 +840,85 @@ init();
     expect(bindings.inspect()).toEqual(expected[0])
     expect(bindings.readProp()).toBe(expected[1])
   })
+
+  test('reactive props keep nested and sibling class static block scopes separate', () => {
+    const statements = `
+      let before, inside, after, fromFunction, sibling
+      class Example {
+        static {
+          function nested() { var message = 'function'; return message }
+          before = message
+          class Inner { static { var message = 'inner'; inside = message } }
+          after = message
+          fromFunction = nested()
+        }
+        static { sibling = message }
+      }
+      function inspect() { return [before, inside, after, fromFunction, sibling, message] }
+    `
+    const native = new Function('message', `${statements}; return inspect()`)
+    expect(native('prop')).toEqual([
+      'prop',
+      'inner',
+      'prop',
+      'function',
+      'prop',
+      'prop',
+    ])
+
+    const { content } = compile(
+      `<script setup>
+      const { message } = defineProps(['message'])
+      ${statements}
+      </script>`,
+      { inlineTemplate: false, genDefaultAs: '_sfc_' },
+    )
+    const component = new Function(`${content}; return _sfc_`)()
+    const bindings = component.setup({ message: 'prop' }, { expose: () => {} })
+    expect(bindings.inspect()).toEqual(native('prop'))
+  })
+
+  test('reactive props preserve var hoisting and lexical TDZ in class static blocks', () => {
+    const statements = `
+      let result
+      class Example {
+        static {
+          let beforeVar = message
+          let beforeLet
+          try { beforeLet = fallback } catch (error) {
+            beforeLet = error instanceof ReferenceError ? 'tdz' : 'other'
+          }
+          var message = 'local'
+          let fallback = 'lexical'
+          result = [beforeVar, beforeLet, message, fallback]
+        }
+      }
+      function inspect() { return [result, message, fallback] }
+    `
+    const native = new Function(
+      'message',
+      'fallback',
+      `${statements}; return inspect()`,
+    )
+    const expected = native('prop', 'default')
+    expect(expected).toEqual([
+      [undefined, 'tdz', 'local', 'lexical'],
+      'prop',
+      'default',
+    ])
+
+    const { content } = compile(
+      `<script setup>
+      const { message, fallback } = defineProps(['message', 'fallback'])
+      ${statements}
+      </script>`,
+      { inlineTemplate: false, genDefaultAs: '_sfc_' },
+    )
+    const component = new Function(`${content}; return _sfc_`)()
+    const bindings = component.setup(
+      { message: 'prop', fallback: 'default' },
+      { expose: () => {} },
+    )
+    expect(bindings.inspect()).toEqual(expected)
+  })
 })

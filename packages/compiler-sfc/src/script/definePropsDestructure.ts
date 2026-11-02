@@ -5,6 +5,7 @@ import type {
   Node,
   ObjectPattern,
   Program,
+  StaticBlock,
   SwitchCase,
   VariableDeclaration,
 } from '@babel/types'
@@ -156,7 +157,7 @@ export function transformDestructuredProps(
   }
 
   function walkScope(
-    node: Program | BlockStatement | SwitchCase,
+    node: Program | BlockStatement | StaticBlock | SwitchCase,
     isRoot = false,
   ) {
     const body = node.type === 'SwitchCase' ? node.consequent : node.body
@@ -210,7 +211,7 @@ export function transformDestructuredProps(
   }
 
   function walkFunctionScopeVarDeclarations(
-    scopeNode: Program | BlockStatement,
+    scopeNode: Program | BlockStatement | StaticBlock,
     isRoot = false,
   ) {
     const scope = functionScopeStack[functionScopeStack.length - 1]
@@ -339,6 +340,14 @@ export function transformDestructuredProps(
         return
       }
 
+      // Class static blocks have their own var scope.
+      if (node.type === 'StaticBlock') {
+        pushScope(true)
+        walkFunctionScopeVarDeclarations(node)
+        walkScope(node)
+        return
+      }
+
       // catch param
       if (node.type === 'CatchClause') {
         pushScope()
@@ -390,7 +399,7 @@ export function transformDestructuredProps(
       if (node === currentModelOption) {
         currentModelOption = null
       }
-      if (isFunctionType(node)) {
+      if (isFunctionType(node) || node.type === 'StaticBlock') {
         popScope(true)
       } else if (node.type === 'BlockStatement' && !isFunctionType(parent!)) {
         popScope()
