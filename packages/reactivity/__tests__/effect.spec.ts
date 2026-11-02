@@ -1378,4 +1378,49 @@ describe('reactivity/effect', () => {
     expect(otherSeen).toEqual([0, 1])
     expect(seen).toEqual(['set', 'undefined'])
   })
+
+  test('preserves shared effect options and reuses their callbacks', () => {
+    const scheduler = vi.fn()
+    const onStop = vi.fn()
+    const onTrack = vi.fn()
+    const onTrigger = vi.fn()
+    const options = { scheduler, onStop, onTrack, onTrigger }
+    const a = ref(0)
+    const b = ref(0)
+    const firstRun = vi.fn(() => a.value)
+    const secondRun = vi.fn(() => b.value)
+    const first = effect(firstRun, options)
+    const second = effect(secondRun, options)
+
+    a.value++
+    b.value++
+    stop(first)
+    stop(second)
+
+    expect(options).toEqual({ scheduler, onStop, onTrack, onTrigger })
+    expect(scheduler).toHaveBeenCalledTimes(2)
+    expect(onStop).toHaveBeenCalledTimes(2)
+    expect(onTrack).toHaveBeenCalledTimes(2)
+    expect(onTrigger).toHaveBeenCalledTimes(2)
+    expect(firstRun).toHaveBeenCalledTimes(1)
+    expect(secondRun).toHaveBeenCalledTimes(1)
+  })
+
+  test.each(['scheduler', 'onStop'] as const)(
+    'accepts frozen effect options with %s',
+    key => {
+      const callback = vi.fn()
+      const options = Object.freeze({
+        scheduler: key === 'scheduler' ? callback : undefined,
+        onStop: key === 'onStop' ? callback : undefined,
+      })
+      const value = ref(0)
+      const runner = effect(() => value.value, options)
+
+      value.value++
+      stop(runner)
+
+      expect(callback).toHaveBeenCalledTimes(1)
+    },
+  )
 })

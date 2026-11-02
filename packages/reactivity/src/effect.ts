@@ -183,9 +183,8 @@ export function effect<T = any>(
 
   const e = new ReactiveEffect(fn)
   if (options) {
-    const { onStop, scheduler } = options
+    const { onStop, scheduler, ...effectOptions } = options
     if (onStop) {
-      options.onStop = undefined
       const stop = e.stop.bind(e)
       e.stop = () => {
         stop()
@@ -193,14 +192,13 @@ export function effect<T = any>(
       }
     }
     if (scheduler) {
-      options.scheduler = undefined
       e.notify = () => {
         if (!(e.flags & EffectFlags.PAUSED)) {
           scheduler()
         }
       }
     }
-    extend(e, options)
+    extend(e, effectOptions)
   }
   try {
     e.run()
