@@ -235,6 +235,23 @@ return () => {}
 })"
 `;
 
+exports[`sfc reactive props destructure > function default value w/ runtime declaration & key starts with a digit 1`] = `
+"import { mergeDefaults as _mergeDefaults } from 'vue'
+
+export default {
+  props: /*@__PURE__*/_mergeDefaults({ '2xl': Function }, {
+  "2xl": () => {}, __skip_2xl: true
+}),
+  setup(__props) {
+
+      
+      
+return () => {}
+}
+
+}"
+`;
+
 exports[`sfc reactive props destructure > handle function parameters with same name as destructured props 1`] = `
 "
 export default {
