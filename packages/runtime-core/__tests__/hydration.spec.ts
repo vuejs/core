@@ -360,6 +360,102 @@ describe('SSR hydration', () => {
     expect(container.textContent).toBe('fooo')
   })
 
+  // #8472
+  test('text next to a component that renders only text', async () => {
+    const a = ref('a')
+    const b = ref('b')
+    const c = ref('c')
+    const Comp = { setup: () => ({ c }), template: `{{ c }}` }
+    const App = {
+      components: { Comp },
+      setup: () => ({ a, b }),
+      template:
+        `<div>{{ a }}<Comp />{{ b }}<Comp /></div>` +
+        `<p><Comp />{{ a }}<Comp />{{ b }}</p>` +
+        `<Comp /><Comp />{{ a }}`,
+    }
+    const html = await renderToString(createSSRApp(App))
+    expect(html).toBe(`<!--[--><div>acbc</div><p>cacb</p>cca<!--]-->`)
+
+    const container = document.createElement('div')
+    container.innerHTML = html
+    createSSRApp(App).mount(container)
+    expect(`Hydration text mismatch`).not.toHaveBeenWarned()
+
+    a.value = 'A'
+    b.value = 'B'
+    c.value = 'C'
+    await nextTick()
+    expect(container.innerHTML).toBe(
+      `<!--[--><div>ACBC</div><p>CACB</p>CCA<!--]-->`,
+    )
+  })
+
+  // #8472
+  test('text mismatch next to an element is still reported', async () => {
+    const { container } = mountWithHydration(
+      `<div>foobar<span></span></div>`,
+      () => h('div', ['foo', h('span')]),
+    )
+    expect(`Hydration text mismatch`).toHaveBeenWarned()
+    expect(container.innerHTML).toBe(`<div>foo<span></span></div>`)
+  })
+
+  // #8472
+  test('text next to a component that renders only text (render function)', async () => {
+    const msg = ref('foo')
+    const Comp = () => msg.value
+    const { container } = mountWithHydration('<div>foofoo</div>', () =>
+      h('div', [msg.value, h(Comp)]),
+    )
+    expect(`Hydration text mismatch`).not.toHaveBeenWarned()
+
+    msg.value = 'bar'
+    await nextTick()
+    expect(container.innerHTML).toBe(`<div>barbar</div>`)
+  })
+
+  // #8472
+  test('empty text next to a component that renders only text', async () => {
+    const msg = ref('')
+    const Comp = { template: `foo` }
+    const App = {
+      components: { Comp },
+      setup: () => ({ msg }),
+      template: `<div>{{ msg }}<Comp /></div><p><Comp />{{ msg }}</p>`,
+    }
+    const html = await renderToString(createSSRApp(App))
+    expect(html).toBe(`<!--[--><div>foo</div><p>foo</p><!--]-->`)
+
+    const container = document.createElement('div')
+    container.innerHTML = html
+    createSSRApp(App).mount(container)
+    expect(`Hydration text mismatch`).not.toHaveBeenWarned()
+
+    msg.value = 'bar'
+    await nextTick()
+    expect(container.innerHTML).toBe(
+      `<!--[--><div>barfoo</div><p>foobar</p><!--]-->`,
+    )
+  })
+
+  // #8472
+  test('text next to an async component that renders only text', async () => {
+    const msg = ref('foo')
+    const Comp = defineAsyncComponent(() =>
+      Promise.resolve({ setup: () => ({ msg }), template: `{{ msg }}` }),
+    )
+    const { container } = mountWithHydration('<div>foofoo</div>', () =>
+      h('div', [msg.value, h(Comp)]),
+    )
+    await new Promise(r => setTimeout(r))
+    expect(`Hydration text mismatch`).not.toHaveBeenWarned()
+
+    msg.value = 'bar'
+    await nextTick()
+    expect(container.innerHTML).toBe(`<div>barbar</div>`)
+  })
+
   test('Teleport', async () => {
     const msg = ref('foo')
     const fn = vi.fn()

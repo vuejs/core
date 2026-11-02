@@ -116,6 +116,10 @@ export function createHydrationFunctions(
     },
   } = rendererInternals
 
+  // #8472 text nodes that may also hold the text of the next sibling: the
+  // server merges a text vnode and the text root of a component next to it
+  const mergedTextNodes = new WeakSet<Node>()
+
   const hydrate: RootHydrateFunction = (vnode, container) => {
     if (!container.hasChildNodes()) {
       ;(__DEV__ || __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__) &&
@@ -181,6 +185,20 @@ export function createHydrationFunctions(
             nextNode = onMismatch()
           }
         } else {
+          const text = vnode.children as string
+          if (
+            mergedTextNodes.has(node) &&
+            (node as Text).data.length > text.length &&
+            (node as Text).data.startsWith(text)
+          ) {
+            // leave the rest of the text to the next sibling
+            insert(
+              createText((node as Text).data.slice(text.length)),
+              parentNode(node)!,
+              nextSibling(node),
+            )
+            ;(node as Text).data = text
+          }
           if ((node as Text).data !== vnode.children) {
             ;(__DEV__ || __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__) &&
               warn(
@@ -339,6 +357,12 @@ export function createHydrationFunctions(
             }
             subTree.el = node
             vnode.component!.subTree = subTree
+          }
+
+          // a text root may have left the rest of the text to the next sibling
+          const { subTree } = vnode.component!
+          if (domType === DOMNodeTypes.TEXT && subTree && subTree.el === node) {
+            nextNode = nextSibling(node)
           }
         } else if (shapeFlag & ShapeFlags.TELEPORT) {
           if (domType !== DOMNodeTypes.COMMENT) {
@@ -625,6 +649,19 @@ export function createHydrationFunctions(
             ;(node as Text).data = vnode.children as string
           }
         }
+        let merged: Node | null = null
+        if (
+          i + 1 < l &&
+          node.nodeType === DOMNodeTypes.TEXT &&
+          (isText || vnode.shapeFlag & ShapeFlags.COMPONENT)
+        ) {
+          const next = optimized
+            ? children[i + 1]
+            : (children[i + 1] = normalizeVNode(children[i + 1]))
+          if (next.type === Text || next.shapeFlag & ShapeFlags.COMPONENT) {
+            mergedTextNodes.add((merged = node))
+          }
+        }
         node = hydrateNode(
           node,
           vnode,
@@ -633,6 +670,9 @@ export function createHydrationFunctions(
           slotScopeIds,
           optimized,
         )
+        // the next sibling hydrates right after, so a component that hydrates
+        // later (e.g. async) must not split the text anymore
+        if (merged) mergedTextNodes.delete(merged)
       } else if (isText && !vnode.children) {
         // #7215 create a TextNode for empty text node
         // because server rendered HTML won't contain a text node
