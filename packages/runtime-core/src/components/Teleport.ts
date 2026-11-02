@@ -446,6 +446,7 @@ function hydrateTeleport(
     parentSuspense: SuspenseBoundary | null,
     slotScopeIds: string[] | null,
     optimized: boolean,
+    anchor?: Node | null,
   ) => Node | null,
 ): Node | null {
   // lookahead until we find the target anchor
@@ -511,22 +512,25 @@ function hydrateTeleport(
       } else {
         vnode.anchor = nextSibling(node)
         hydrateAnchor(target as TeleportTargetElement, targetNode)
+        const hasSSRAnchor = !!vnode.targetAnchor
         // #11400 if the HTML corresponding to Teleport is not embedded in the
         // correct position on the final page during SSR. the targetAnchor will
         // always be null, we need to manually add targetAnchor to ensure
         // Teleport it can properly unmount or move
-        if (!vnode.targetAnchor) {
+        if (!hasSSRAnchor) {
           prepareAnchor(target, vnode, createText, insert)
         }
 
         hydrateChildren(
-          targetNode && nextSibling(targetNode),
+          // #15937 without SSR anchors, mount instead of hydrating unrelated nodes.
+          hasSSRAnchor ? targetNode && nextSibling(targetNode) : null,
           vnode,
           target,
           parentComponent,
           parentSuspense,
           slotScopeIds,
           optimized,
+          vnode.targetAnchor as Node,
         )
       }
     }

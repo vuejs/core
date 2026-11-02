@@ -596,17 +596,22 @@ export function createHydrationFunctions(
     parentSuspense: SuspenseBoundary | null,
     slotScopeIds: string[] | null,
     optimized: boolean,
+    anchor?: Node | null,
   ): Node | null => {
     optimized = optimized || !!parentVNode.dynamicChildren
     const children = parentVNode.children as VNode[]
     const l = children.length
+    const isFragment = parentVNode.type === Fragment
     let hasCheckedMismatch = false
     for (let i = 0; i < l; i++) {
       const vnode = optimized
         ? children[i]
         : (children[i] = normalizeVNode(children[i]))
       const isText = vnode.type === Text
-      if (node) {
+      if (isFragment && node && isComment(node) && node.data === ']') {
+        anchor = node
+      }
+      if (node && node !== anchor) {
         if (isText && !optimized) {
           // #7285 possible consecutive text vnodes from manual render fns or
           // JSX-compiled fns, but on the client the browser parses only 1 text
@@ -636,7 +641,7 @@ export function createHydrationFunctions(
       } else if (isText && !vnode.children) {
         // #7215 create a TextNode for empty text node
         // because server rendered HTML won't contain a text node
-        insert((vnode.el = createText('')), container)
+        insert((vnode.el = createText('')), container, anchor)
       } else {
         if (!hasCheckedMismatch) {
           hasCheckedMismatch = true
@@ -656,7 +661,7 @@ export function createHydrationFunctions(
           null,
           vnode,
           container,
-          null,
+          anchor,
           parentComponent,
           parentSuspense,
           getContainerType(container),
