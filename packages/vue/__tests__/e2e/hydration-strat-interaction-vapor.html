@@ -1,5 +1,5 @@
 <div>click to hydrate</div>
-<div id="app"><button>0</button></div>
+<div id="app"><!--{--><button>0</button><!--}--></div>
 <style>
   body {
     margin: 0;
@@ -27,14 +27,12 @@
   const isFragment = location.search.includes('?fragment')
   if (isFragment) {
     document.getElementById('app').innerHTML =
-      `<!--[--><span>one</span><button>0</button><span>two</span><!--]-->`
+      `<!--{--><!--{--><span>one</span><button>0</button><span>two</span><!--}--><!--}-->`
   }
 
   window.isHydrated = false
 
   const Comp = {
-    // a compiled multi-root component claims its SSR range
-    __multiRoot: isFragment,
     setup() {
       const count = ref(0)
       onMounted(() => {

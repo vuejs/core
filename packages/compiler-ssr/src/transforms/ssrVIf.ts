@@ -87,13 +87,18 @@ function processIfBranch(
     childContext.pushStringPart(`<!--]-->`)
     return createBlockStatement(childContext.body)
   }
-  const { children } = branch
-  const needFragmentWrapper =
-    !disableNestedFragments &&
-    (children.length !== 1 || children[0].type !== NodeTypes.ELEMENT) &&
-    // optimize away nested fragments when the only child is a ForNode
-    !(children.length === 1 && children[0].type === NodeTypes.FOR)
+  const needFragmentWrapper = !disableNestedFragments && !isBareBranch(branch)
   return processChildrenAsStatement(branch, context, needFragmentWrapper)
+}
+
+/** Whether a branch renders as it is: its sole element or v-for, unwrapped. */
+export function isBareBranch({ children }: IfBranchNode): boolean {
+  return (
+    children.length === 1 &&
+    (children[0].type === NodeTypes.ELEMENT ||
+      // optimize away nested fragments when the only child is a ForNode
+      children[0].type === NodeTypes.FOR)
+  )
 }
 
 /**

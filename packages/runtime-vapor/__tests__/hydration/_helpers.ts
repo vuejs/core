@@ -35,8 +35,8 @@ export interface MountWithHydrationContext {
 
 export const formatHtml = (raw: string): string => {
   return raw
-    .replace(/<!--([[(])/g, '\n<!--$1')
-    .replace(/([\])])-->/g, '$1-->\n')
+    .replace(/<!--([[({])/g, '\n<!--$1')
+    .replace(/([\])}])-->/g, '$1-->\n')
     .replace(/<!--teleport (start|end)-->/g, '\n<!--teleport $1-->\n')
     .replace(/\n{2,}/g, '\n')
 }

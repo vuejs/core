@@ -102,9 +102,9 @@ describe('Vapor Mode hydration', () => {
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
         `
         "
-        <!--[--><div>
+        <!--{--><div>
         <!--[--><span>a</span><span>b</span><span>c</span><!--]-->
-        </div><div>3</div><!--]-->
+        </div><div>3</div><!--}-->
         "
       `,
       )
@@ -114,9 +114,9 @@ describe('Vapor Mode hydration', () => {
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
         `
         "
-        <!--[--><div>
+        <!--{--><div>
         <!--[--><span>a</span><span>b</span><span>c</span><span>d</span><!--]-->
-        </div><div>4</div><!--]-->
+        </div><div>4</div><!--}-->
         "
       `,
       )
@@ -139,9 +139,9 @@ describe('Vapor Mode hydration', () => {
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
         `
         "
-        <!--[--><div>
+        <!--{--><div>
         <!--[--><span>a</span><span>b</span><span>c</span><!--]-->
-        <div>1</div></div><div>3</div><!--]-->
+        <div>1</div></div><div>3</div><!--}-->
         "
       `,
       )
@@ -151,9 +151,9 @@ describe('Vapor Mode hydration', () => {
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
         `
         "
-        <!--[--><div>
+        <!--{--><div>
         <!--[--><span>a</span><span>b</span><span>c</span><span>d</span><!--]-->
-        <div>1</div></div><div>4</div><!--]-->
+        <div>1</div></div><div>4</div><!--}-->
         "
       `,
       )
@@ -334,9 +334,9 @@ describe('Vapor Mode hydration', () => {
         `
         "<div>
         <!--[-->
-        <!--[--><div>foo</div>-bar-<!--]-->
-        <!--[--><div>foo</div>-bar-<!--]-->
-        <!--[--><div>foo</div>-bar-<!--]-->
+        <!--{--><div>foo</div>-bar-<!--}-->
+        <!--{--><div>foo</div>-bar-<!--}-->
+        <!--{--><div>foo</div>-bar-<!--}-->
         <!--]-->
         </div>"
       `,
@@ -348,9 +348,9 @@ describe('Vapor Mode hydration', () => {
         `
         "<div>
         <!--[-->
-        <!--[--><div>foo</div>-bar-<!--]-->
-        <!--[--><div>foo</div>-bar-<!--]-->
-        <!--[--><div>foo</div>-bar-<!--]-->
+        <!--{--><div>foo</div>-bar-<!--}-->
+        <!--{--><div>foo</div>-bar-<!--}-->
+        <!--{--><div>foo</div>-bar-<!--}-->
         <div>foo</div>-bar-<!--]-->
         </div>"
       `,

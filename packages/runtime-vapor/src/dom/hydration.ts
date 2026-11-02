@@ -14,6 +14,8 @@ import {
   Namespaces,
   isArray,
   isVaporBranchStart,
+  isVaporRangeStart,
+  rangeCloseOf,
 } from '@vue/shared'
 import {
   insertionAnchor,
@@ -268,19 +270,20 @@ type RecreatedNode = Node & {
 
 export type CommentAnchor = Comment & Anchor
 
-// `<!--(-->`…`<!--)-->` wraps a slot fallback the server rendered, and
-// `<!--[1-->`…`<!--]-->` the branch of a v-if chain (isVaporBranchStart): ranges
-// like a fragment's for whatever steps over, claims or removes one.
+// `<!--(-->`…`<!--)-->` wraps a slot fallback the server rendered,
+// `<!--[1-->`…`<!--]-->` the branch of a v-if chain (isVaporBranchStart) and
+// `<!--{-->`…`<!--}-->` the render of a vapor component: ranges like a
+// fragment's for whatever steps over, claims or removes one.
 export const isRangeStart = (node: Node): node is CommentAnchor => {
   if (node.nodeType !== 8) return false
   const data = (node as Comment).data
-  return data === '[' || data === '(' || isVaporBranchStart(data)
+  return data === '[' || data === '(' || isVaporRangeStart(data)
 }
 
 export const isRangeEnd = (node: Node): node is CommentAnchor => {
   if (node.nodeType !== 8) return false
   const data = (node as Comment).data
-  return data === ']' || data === ')'
+  return data === ']' || data === ')' || data === '}'
 }
 
 export const isComment = (node: Node, data: string): node is CommentAnchor =>
@@ -449,7 +452,7 @@ function adoptTemplateImpl(
 export function nextLogicalSibling(node: Node): Node | null {
   if (node.nodeType === 8) {
     const data = (node as Comment).data
-    if (data === '[' || data === '(' || isVaporBranchStart(data)) {
+    if (data === '[' || data === '(' || isVaporRangeStart(data)) {
       node = locateEndAnchor(node as CommentAnchor, data)!
     } else if (data === 'teleport start') {
       node = locateEndAnchor(node as CommentAnchor, data, 'teleport end')!
@@ -519,7 +522,7 @@ export function locateEndAnchor(
   node: CommentAnchor,
   // the pair of the range `node` opens
   open: string = node.data,
-  close: string = open === '(' ? ')' : ']',
+  close: string = rangeCloseOf(open),
 ): Node | null {
   // already cached matching end
   if (node.$fe) {
@@ -563,7 +566,7 @@ export function locateClaimedEnd(start: CommentAnchor): Node | null {
   const node = currentHydrationNode
   if (
     node &&
-    isComment(node, start.data === '(' ? ')' : ']') &&
+    isComment(node, rangeCloseOf(start.data)) &&
     !isClaimedAnchor(node)
   ) {
     return (start.$fe = node)

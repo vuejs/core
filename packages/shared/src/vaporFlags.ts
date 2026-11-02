@@ -145,6 +145,19 @@ export function isVaporBranchStart(data: string): boolean {
   return true
 }
 
+/**
+ * The data of a comment opening a range only a vapor server render emits:
+ * `<!--{-->` around the render of a component, or a v-if branch's.
+ */
+export function isVaporRangeStart(data: string): boolean {
+  return data === '{' || isVaporBranchStart(data)
+}
+
+/** The data of the comment closing the range `open` opens. */
+export function rangeCloseOf(open: string): string {
+  return open === '(' ? ')' : open === '{' ? '}' : ']'
+}
+
 // vapor v-once content never changes validity, so it has nothing to notify.
 export function slotNotifiesBoundary(flags: number): boolean {
   return isForwardedSlot(flags) && !(flags & VaporSlotFlags.ONCE)

@@ -30,9 +30,11 @@ import {
   isReservedProp,
   isString,
   isVaporBranchStart,
+  isVaporRangeStart,
   normalizeClass,
   normalizeCssVarValue,
   normalizeStyle,
+  rangeCloseOf,
   stringifyStyle,
 } from '@vue/shared'
 import {
@@ -120,7 +122,7 @@ export const isComment = (node: Node): node is Comment =>
 
 /** The data of a comment opening a range a hydration steps over as one. */
 export const isRangeStart = (data: string): boolean =>
-  data === '[' || data === '(' || isVaporBranchStart(data)
+  data === '[' || data === '(' || isVaporRangeStart(data)
 
 // Note: hydration is DOM-specific
 // But we have to place it in core due to tight coupling with core - splitting
@@ -184,13 +186,13 @@ export function createHydrationFunctions(
     optimized = false,
   ): Node | null => {
     optimized = optimized || !!vnode.dynamicChildren
-    // `(` opens a slot fallback and `[1` the branch of a vapor v-if chain:
-    // ranges like a fragment's
+    // `(` opens a slot fallback, `[1` the branch of a vapor v-if chain and
+    // `{` the roots of a vapor component: ranges like a fragment's
     const isFragmentStart =
       isComment(node) &&
       (node.data === '[' ||
         node.data === '(' ||
-        (isVaporInteropEnabled && isVaporBranchStart(node.data)))
+        (isVaporInteropEnabled && isVaporRangeStart(node.data)))
     const onMismatch = () =>
       handleMismatch(
         node,
@@ -780,11 +782,13 @@ export function createHydrationFunctions(
             slotScopeIds,
             optimized,
           )
-    if (
-      next &&
-      isComment(next) &&
-      next.data === ((node as Comment).data === '(' ? ')' : ']')
-    ) {
+    // the server may have rendered a vapor component in its `{` range
+    const close = isVaporInteropEnabled
+      ? rangeCloseOf((node as Comment).data)
+      : (node as Comment).data === '('
+        ? ')'
+        : ']'
+    if (next && isComment(next) && next.data === close) {
       return nextSibling((vnode.anchor = next))
     } else {
       // fragment didn't hydrate successfully, since we didn't get a end anchor
@@ -792,7 +796,7 @@ export function createHydrationFunctions(
       logMismatchError()
 
       // since the anchor is missing, we need to create one and insert it
-      insert((vnode.anchor = createComment(`]`)), container, next)
+      insert((vnode.anchor = createComment(close)), container, next)
       return next
     }
   }
@@ -863,8 +867,16 @@ export function createHydrationFunctions(
     node: Node | null,
     // the pair of the range `node` opens: a mismatch hands in a node inside a
     // `[` range as well
-    open: string = node && isComment(node) && node.data === '(' ? '(' : '[',
-    close: string = open === '(' ? ')' : ']',
+    open: string = node &&
+    isComment(node) &&
+    (node.data === '(' || (isVaporInteropEnabled && node.data === '{'))
+      ? node.data
+      : '[',
+    close: string = isVaporInteropEnabled
+      ? rangeCloseOf(open)
+      : open === '('
+        ? ')'
+        : ']',
   ): Node | null => {
     let match = 0
     while (node) {

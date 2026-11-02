@@ -618,6 +618,9 @@ export function findBlockBoundary(block: Block): {
   if (
     nextNode &&
     isRangeEnd(nextNode) &&
+    // a component's `}` is no fragment's end: inert after hydration, or the
+    // anchor of the fragment rendering the component
+    (nextNode as Comment).data !== '}' &&
     isFragmentBlock(boundaryBlock) &&
     !isRangeEnd(lastChild) &&
     !(lastChild.nodeType === 3 && !(lastChild as Text).data)

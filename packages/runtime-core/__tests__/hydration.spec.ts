@@ -4432,6 +4432,52 @@ describe('SSR hydration', () => {
       expect(container.innerHTML).toContain(`<!--[--><b>x</b><span>`)
       expect(container.innerHTML).not.toContain(`<!--]-->`)
     })
+
+    // vapor wraps a multi-root component in `<!--{-->`…`<!--}-->`, a range
+    // of its own: the component tells it from the `[` of a child's range
+    test('hands the vapor interface the node after a vapor component range', () => {
+      setVaporInteropEnabled()
+      const container = document.createElement('div')
+      const html = `<div><!--{--><p>a</p><!--[--><b>b</b><!--]--><!--}--><span>after</span></div>`
+      container.innerHTML = html
+      const hydrate = vi.fn()
+      const VaporComp = { __vapor: true }
+      const app = createSSRApp({
+        render: () => h('div', [h(VaporComp), h('span', 'after')]),
+      })
+      app._context.vapor = { hydrate } as any
+      const vnode = app.mount(container).$.subTree
+      const span = container.querySelector('span')
+      expect(hydrate.mock.calls[0][1]).toBe(container.firstChild!.firstChild)
+      expect(hydrate.mock.calls[0][3]).toBe(span)
+      expect((vnode.children as VNode[])[1].el).toBe(span)
+      expect(container.innerHTML).toBe(html)
+      expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+      expect(`Hydration children mismatch`).not.toHaveBeenWarned()
+    })
+
+    test('lazy hydration finds the elements inside a vapor component range', () => {
+      const container = document.createElement('div')
+      container.innerHTML = `<!--{--><p>a</p><!--[--><b>b</b><!--]--><!--}--><i>outside</i>`
+      const found: string[] = []
+      forEachElement(container.firstChild!, el => {
+        found.push(el.tagName)
+      })
+      expect(found).toEqual(['P', 'B'])
+    })
+
+    test('removes the whole vapor component range that mismatches', () => {
+      setVaporInteropEnabled()
+      const container = document.createElement('div')
+      container.innerHTML = `<div><!--{--><!--x--><!--[--><!--]--><!--}--><span>after</span></div>`
+      const span = container.querySelector('span')
+      const vnode = createSSRApp({
+        render: () => h('div', [h('b', 'x'), h('span', 'after')]),
+      }).mount(container).$.subTree
+      expect(`Hydration node mismatch`).toHaveBeenWarned()
+      expect((vnode.children as VNode[])[1].el).toBe(span)
+      expect(container.innerHTML).toBe(`<div><b>x</b><span>after</span></div>`)
+    })
   })
 
   test('stop observing nested display: contents roots after hydration', async () => {

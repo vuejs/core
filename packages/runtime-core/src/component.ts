@@ -207,10 +207,6 @@ export interface ComponentInternalOptions {
    */
   __vapor?: boolean
   /**
-   * whether this vapor component has multiple root nodes
-   */
-  __multiRoot?: boolean
-  /**
    * indicates keep-alive component
    */
   __isKeepAlive?: boolean

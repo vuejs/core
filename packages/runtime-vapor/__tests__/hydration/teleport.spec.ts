@@ -136,10 +136,10 @@ describe('Vapor Mode hydration', () => {
         ctx,
       )
       expect(mainHtml).toBe(
-        `<!--[-->` +
+        `<!--{-->` +
           `<!--teleport start--><!--teleport end-->` +
           `<!--teleport start--><!--teleport end-->` +
-          `<!--]-->`,
+          `<!--}-->`,
       )
 
       const teleportHtml = ctx.teleports!['#teleport2']
@@ -182,10 +182,10 @@ describe('Vapor Mode hydration', () => {
       expect(teleport2.targetAnchor).toBe(teleportContainer.childNodes[7])
 
       expect(container.innerHTML).toBe(
-        `<!--[-->` +
+        `<!--{-->` +
           `<!--teleport start--><!--teleport end-->` +
           `<!--teleport start--><!--teleport end-->` +
-          `<!--]-->`,
+          `<!--}-->`,
       )
 
       // event handler
@@ -234,14 +234,14 @@ describe('Vapor Mode hydration', () => {
         ctx,
       )
       expect(mainHtml).toBe(
-        `<!--[-->` +
+        `<!--{-->` +
           `<div>foo</div>` +
           `<!--teleport start-->` +
           `<span>foo</span>` +
           `<span class="foo"></span>` +
           `<!--teleport end-->` +
           `<div class="foo2">bar</div>` +
-          `<!--]-->`,
+          `<!--}-->`,
       )
 
       const teleportHtml = ctx.teleports!['#teleport3']
@@ -271,14 +271,14 @@ describe('Vapor Mode hydration', () => {
       expect(blocks[2]).toBe(container.childNodes[6])
 
       expect(container.innerHTML).toBe(
-        `<!--[-->` +
+        `<!--{-->` +
           `<div>foo</div>` +
           `<!--teleport start-->` +
           `<span>foo</span>` +
           `<span class="foo"></span>` +
           `<!--teleport end-->` +
           `<div class="foo2">bar</div>` +
-          `<!--]-->`,
+          `<!--}-->`,
       )
 
       // event handler
@@ -291,21 +291,21 @@ describe('Vapor Mode hydration', () => {
       data.value.msg = 'bar'
       await nextTick()
       expect(container.innerHTML).toBe(
-        `<!--[-->` +
+        `<!--{-->` +
           `<div>foo</div>` +
           `<!--teleport start-->` +
           `<span>bar</span>` +
           `<span class="bar"></span>` +
           `<!--teleport end-->` +
           `<div class="bar2">bar</div>` +
-          `<!--]-->`,
+          `<!--}-->`,
       )
     })
 
     test('nested disabled teleport hydration should locate correct end anchor', async () => {
       const data = ref({ msg: ref('after') })
       const { block, container } = await mountWithHydration(
-        `<!--[-->` +
+        `<!--{-->` +
           `<!--teleport start-->` +
           `<div>outer</div>` +
           `<!--teleport start-->` +
@@ -313,7 +313,7 @@ describe('Vapor Mode hydration', () => {
           `<!--teleport end-->` +
           `<!--teleport end-->` +
           `<div>after</div>` +
-          `<!--]-->`,
+          `<!--}-->`,
         `<teleport to="body" disabled>
           <div>outer</div>
           <teleport to="body" disabled>
@@ -339,7 +339,7 @@ describe('Vapor Mode hydration', () => {
       // If the outer anchor is wrong, the hydration cursor is misaligned
       // and the sibling element won't match.
       expect(container.innerHTML).toBe(
-        `<!--[-->` +
+        `<!--{-->` +
           `<!--teleport start-->` +
           `<div>outer</div>` +
           `<!--teleport start-->` +
@@ -347,7 +347,7 @@ describe('Vapor Mode hydration', () => {
           `<!--teleport end-->` +
           `<!--teleport end-->` +
           `<div>after</div>` +
-          `<!--]-->`,
+          `<!--}-->`,
       )
       expect(`mismatch`).not.toHaveBeenWarned()
     })
@@ -363,10 +363,10 @@ describe('Vapor Mode hydration', () => {
       document.body.appendChild(teleportContainer)
 
       const { block } = await mountWithHydration(
-        `<!--[-->` +
+        `<!--{-->` +
           `<!--teleport start--><div>one</div><!--teleport end-->` +
           `<!--teleport start--><div>two</div><!--teleport end-->` +
-          `<!--]-->`,
+          `<!--}-->`,
         `<teleport to="#teleport-disabled-shared" disabled>
             <div>one</div>
           </teleport>
@@ -384,10 +384,10 @@ describe('Vapor Mode hydration', () => {
 
     test('disabled + as component root', async () => {
       const { container } = await mountWithHydration(
-        `<!--[-->` +
+        `<!--{-->` +
           `<div>Parent fragment</div>` +
           `<!--teleport start--><div>Teleport content</div><!--teleport end-->` +
-          `<!--]-->`,
+          `<!--}-->`,
         `
           <div>Parent fragment</div>
           <teleport to="body" disabled>
@@ -396,12 +396,12 @@ describe('Vapor Mode hydration', () => {
         `,
       )
       expect(container.innerHTML).toBe(
-        `<!--[-->` +
+        `<!--{-->` +
           `<div>Parent fragment</div>` +
           `<!--teleport start-->` +
           `<div>Teleport content</div>` +
           `<!--teleport end-->` +
-          `<!--]-->`,
+          `<!--}-->`,
       )
       expect(`mismatch`).not.toHaveBeenWarned()
     })
@@ -841,7 +841,7 @@ describe('Vapor Mode hydration', () => {
       })
 
       const { container } = await mountWithHydration(
-        '<!--[--><!--teleport start--><div>content</div><!--teleport end--><span>tail</span><!--]-->',
+        '<!--{--><!--teleport start--><div>content</div><!--teleport end--><span>tail</span><!--}-->',
         `<teleport :to="data.target" :disabled="data.disabled">
           <div>content</div>
         </teleport>
@@ -850,14 +850,14 @@ describe('Vapor Mode hydration', () => {
       )
 
       expect(container.innerHTML).toBe(
-        '<!--[--><!--teleport start--><div>content</div><!--teleport end--><span>tail</span><!--]-->',
+        '<!--{--><!--teleport start--><div>content</div><!--teleport end--><span>tail</span><!--}-->',
       )
       expect(`Hydration text mismatch`).not.toHaveBeenWarned()
 
       data.value.tail = 'tail-updated'
       await nextTick()
       expect(container.innerHTML).toBe(
-        '<!--[--><!--teleport start--><div>content</div><!--teleport end--><span>tail-updated</span><!--]-->',
+        '<!--{--><!--teleport start--><div>content</div><!--teleport end--><span>tail-updated</span><!--}-->',
       )
       expect('Invalid Teleport target').not.toHaveBeenWarned()
 
@@ -865,7 +865,7 @@ describe('Vapor Mode hydration', () => {
       await nextTick()
       expect('Invalid Teleport target').toHaveBeenWarned()
       expect(container.innerHTML).toBe(
-        '<!--[--><!--teleport start--><div>content</div><!--teleport end--><span>tail-updated</span><!--]-->',
+        '<!--{--><!--teleport start--><div>content</div><!--teleport end--><span>tail-updated</span><!--}-->',
       )
     })
 
@@ -877,7 +877,7 @@ describe('Vapor Mode hydration', () => {
       })
 
       const { container } = await mountWithHydration(
-        '<!--[--><!--teleport start--><!--teleport end--><span>tail</span><!--]-->',
+        '<!--{--><!--teleport start--><!--teleport end--><span>tail</span><!--}-->',
         `<teleport :to="data.target" :disabled="data.disabled">
           <div>content</div>
         </teleport>
@@ -886,21 +886,21 @@ describe('Vapor Mode hydration', () => {
       )
 
       expect(container.innerHTML).toBe(
-        '<!--[--><!--teleport start--><!--teleport end--><span>tail</span><!--]-->',
+        '<!--{--><!--teleport start--><!--teleport end--><span>tail</span><!--}-->',
       )
       expect('Failed to locate Teleport target').toHaveBeenWarned()
 
       data.value.tail = 'tail-updated'
       await nextTick()
       expect(container.innerHTML).toBe(
-        '<!--[--><!--teleport start--><!--teleport end--><span>tail-updated</span><!--]-->',
+        '<!--{--><!--teleport start--><!--teleport end--><span>tail-updated</span><!--}-->',
       )
 
       data.value.disabled = true
       data.value.target = undefined
       await nextTick()
       expect(container.innerHTML).toBe(
-        '<!--[--><!--teleport start--><div>content</div><!--teleport end--><span>tail-updated</span><!--]-->',
+        '<!--{--><!--teleport start--><div>content</div><!--teleport end--><span>tail-updated</span><!--}-->',
       )
 
       data.value.disabled = false
@@ -908,7 +908,7 @@ describe('Vapor Mode hydration', () => {
       await nextTick()
       expect('Invalid Teleport target on mount').toHaveBeenWarned()
       expect(container.innerHTML).toBe(
-        '<!--[--><!--teleport start--><div>content</div><!--teleport end--><span>tail-updated</span><!--]-->',
+        '<!--{--><!--teleport start--><div>content</div><!--teleport end--><span>tail-updated</span><!--}-->',
       )
     })
 

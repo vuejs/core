@@ -36,6 +36,7 @@ import {
   EMPTY_BLOCK,
   findBlockBoundary,
   insert,
+  isFragmentBlock,
   isValidBlock,
   isValidSlot,
 } from '../block'
@@ -360,8 +361,13 @@ function planFromBlockBoundary(frag: DynamicFragment): AnchorPlan {
     // the close stays that range's anchor, the branch goes before it.
     return { kind: 'create', parent: close.parentNode!, next: close }
   }
-  const node = findBlockBoundary(frag.nodes)
-  return { kind: 'create', parent: node.parentNode!, next: node.nextNode }
+  const { parentNode, nextNode } = findBlockBoundary(frag.nodes)
+  // a block rendering a component's roots ends at that component's `}`: the
+  // marker is the anchor, instead of one created behind it
+  if (nextNode && isComment(nextNode, '}') && isFragmentBlock(frag.nodes)) {
+    return { kind: 'reuse', node: nextNode }
+  }
+  return { kind: 'create', parent: parentNode!, next: nextNode }
 }
 
 export function resolveDynamicAnchor(

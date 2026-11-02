@@ -7,6 +7,7 @@ import {
   defineAsyncComponent,
   defineComponent,
   h,
+  hydrateOnInteraction,
   nextTick,
   ref,
 } from '@vue/runtime-dom'
@@ -21,6 +22,7 @@ import { IF } from '../../src/fragmentFlags'
 import {
   compileVaporComponent,
   formatHtml,
+  mountWithHydration,
   setupHydrationTest,
   triggerEvent,
 } from './_helpers'
@@ -54,7 +56,7 @@ describe('Vapor Mode hydration', () => {
       serverResolve(SSRComp)
       const html = await htmlPromise
       expect(html).toMatchInlineSnapshot(
-        `"<!--[-->hello<button>hello!</button>world<!--]-->"`,
+        `"<!--{-->hello<button>hello!</button>world<!--}-->"`,
       )
 
       // hydration
@@ -85,6 +87,329 @@ describe('Vapor Mode hydration', () => {
       // should be hydrated now
       triggerEvent('click', container.querySelector('button')!)
       expect(data.value.spy).toHaveBeenCalled()
+    })
+
+    // the parent's range and the inner component's open back to back: each
+    // takes its own, the deferred render the inner one whole
+    describe('as the first root of its parent, with multiple roots', () => {
+      const innerCode = `
+        <span>one</span>
+        <b>{{ data.msg }}</b>
+      `
+
+      async function render(
+        hostCode: string,
+        appCode: string,
+        makeAsyncComp: (Comp: any) => any,
+      ) {
+        const data = ref({ msg: 'hello', show: true })
+        const SSRAsync = defineAsyncComponent(() =>
+          Promise.resolve(
+            compileVaporComponent(innerCode, data, undefined, true),
+          ),
+        )
+        const SSRHost = compileVaporComponent(
+          hostCode,
+          data,
+          { AsyncComp: SSRAsync },
+          true,
+        )
+        const html = await VueServerRenderer.renderToString(
+          runtimeDom.createSSRApp(
+            compileVaporComponent(appCode, data, { Host: SSRHost }, true),
+          ),
+        )
+        const AsyncComp = await makeAsyncComp(
+          compileVaporComponent(innerCode, data),
+        )
+        const Host = compileVaporComponent(hostCode, data, { AsyncComp })
+        const { container } = await mountWithHydration(html, appCode, data, {
+          Host,
+        })
+        return { data, container, html }
+      }
+
+      test('hydrates in place when created resolved', async () => {
+        const { data, container, html } = await render(
+          `<components.AsyncComp /><i>tail</i>`,
+          `<components.Host />`,
+          async Comp => {
+            const AsyncComp = defineVaporAsyncComponent(() =>
+              Promise.resolve(Comp),
+            )
+            await (AsyncComp as any).__asyncLoader()
+            return AsyncComp
+          },
+        )
+        const i = container.querySelector('i')
+        expect(container.innerHTML).toBe(html)
+        expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+        expect(`Hydration children mismatch`).not.toHaveBeenWarned()
+
+        data.value.msg = 'world'
+        await nextTick()
+        expect(container.querySelector('i')).toBe(i)
+        expect(container.querySelector('b')!.textContent).toBe('world')
+      })
+
+      test('keeps the sibling of its parent while unresolved', async () => {
+        const { data, container, html } = await render(
+          `<components.AsyncComp /><i>tail</i>`,
+          `<components.Host />`,
+          Comp => defineVaporAsyncComponent(() => Promise.resolve(Comp)),
+        )
+        const i = container.querySelector('i')
+        expect(container.innerHTML).toBe(html)
+        await new Promise(r => setTimeout(r))
+        await nextTick()
+        expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+        expect(`Hydration children mismatch`).not.toHaveBeenWarned()
+        expect(container.querySelector('i')).toBe(i)
+
+        data.value.msg = 'world'
+        await nextTick()
+        expect(container.querySelector('b')!.textContent).toBe('world')
+      })
+
+      test('toggles under a v-if that is the sole root', async () => {
+        const { data, container, html } = await render(
+          `<components.AsyncComp v-if="data.show" />`,
+          `<components.Host />`,
+          Comp => defineVaporAsyncComponent(() => Promise.resolve(Comp)),
+        )
+        expect(container.innerHTML).toBe(html)
+        const span = container.querySelector('span')
+        await new Promise(r => setTimeout(r))
+        await nextTick()
+        expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+        expect(`Hydration children mismatch`).not.toHaveBeenWarned()
+        expect(container.querySelector('span')).toBe(span)
+
+        data.value.show = false
+        await nextTick()
+        expect(container.querySelector('span')).toBeNull()
+        expect(container.querySelector('b')).toBeNull()
+
+        data.value.show = true
+        await nextTick()
+        expect(container.querySelector('span')!.textContent).toBe('one')
+        expect(container.querySelector('b')!.textContent).toBe('hello')
+      })
+    })
+
+    // a single-root parent: its range and the inner component's open back to
+    // back, and the deferred render takes the inner one whole
+    describe('as the lone root of its parent, with multiple roots', () => {
+      const innerCode = `
+        <span>one</span>
+        <button @click="data.spy">{{ data.msg }}</button>
+        <span>two</span>
+      `
+      const appCode = `<components.AsyncComp />`
+
+      async function render(
+        makeAsyncComp: (Comp: any) => any,
+        inner = innerCode,
+        innerComponents: Record<string, string> = {},
+      ) {
+        const data = ref({ msg: 'hello', list: ['a', 'b'], spy: vi.fn() })
+        const compileInner = (ssr: boolean) => {
+          const components: Record<string, any> = {}
+          for (const name in innerComponents) {
+            components[name] = compileVaporComponent(
+              innerComponents[name],
+              data,
+              undefined,
+              ssr,
+            )
+          }
+          return compileVaporComponent(inner, data, components, ssr)
+        }
+        const SSRAsync = defineAsyncComponent(() =>
+          Promise.resolve(compileInner(true)),
+        )
+        const html = await VueServerRenderer.renderToString(
+          runtimeDom.createSSRApp(
+            compileVaporComponent(appCode, data, { AsyncComp: SSRAsync }, true),
+          ),
+        )
+        const AsyncComp = await makeAsyncComp(compileInner(false))
+        const { container } = await mountWithHydration(html, appCode, data, {
+          AsyncComp,
+        })
+        return { data, container, html }
+      }
+
+      test('hydrates on interaction with any of its roots', async () => {
+        const { data, container, html } = await render(Comp =>
+          defineVaporAsyncComponent({
+            loader: () => Promise.resolve(Comp),
+            hydrate: hydrateOnInteraction(['click']),
+          }),
+        )
+        expect(container.innerHTML).toBe(html)
+        const button = container.querySelector('button')!
+        await new Promise(r => setTimeout(r))
+
+        // the click hydrates the component in place
+        triggerEvent('click', button)
+        await new Promise(r => setTimeout(r))
+        expect(container.innerHTML).toBe(html)
+        expect(container.querySelector('button')).toBe(button)
+        expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+        expect(`Hydration children mismatch`).not.toHaveBeenWarned()
+        triggerEvent('click', button)
+        expect(data.value.spy).toHaveBeenCalledTimes(1)
+
+        data.value.msg = 'world'
+        await nextTick()
+        expect(button.textContent).toBe('world')
+      })
+
+      // a strategy hydrating right away runs a pass of its own while the
+      // async component is created: the sibling after it still locates under
+      // its element
+      test('a sibling located under an element hydrates after a synchronous strategy', async () => {
+        const data = ref({ msg: 'hello', spy: vi.fn() })
+        const innerCode = `<button @click="data.spy">{{ data.msg }}</button>`
+        const siblingCode = `<i>{{ data.msg }}</i>`
+        const appCode = `
+          <components.AsyncComp />
+          <div><components.Sibling /></div>
+        `
+        const SSRAsync = defineAsyncComponent(() =>
+          Promise.resolve(
+            compileVaporComponent(innerCode, data, undefined, true),
+          ),
+        )
+        const SSRSibling = compileVaporComponent(
+          siblingCode,
+          data,
+          undefined,
+          true,
+        )
+        const html = await VueServerRenderer.renderToString(
+          runtimeDom.createSSRApp(
+            compileVaporComponent(
+              appCode,
+              data,
+              { AsyncComp: SSRAsync, Sibling: SSRSibling },
+              true,
+            ),
+          ),
+        )
+
+        const AsyncComp = defineVaporAsyncComponent({
+          loader: () => Promise.resolve(compileVaporComponent(innerCode, data)),
+          hydrate: hydrate => hydrate(),
+        })
+        await (AsyncComp as any).__asyncLoader()
+        const Sibling = compileVaporComponent(siblingCode, data)
+        const { container } = await mountWithHydration(html, appCode, data, {
+          AsyncComp,
+          Sibling,
+        })
+
+        const i = container.querySelector('i')!
+        expect(container.innerHTML).toBe(
+          html.replace('</button>', '</button><!--async component-->'),
+        )
+        expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+        expect(`Hydration children mismatch`).not.toHaveBeenWarned()
+
+        data.value.msg = 'world'
+        await nextTick()
+        expect(container.querySelector('i')).toBe(i)
+        expect(i.textContent).toBe('world')
+        expect(container.querySelector('button')!.textContent).toBe('world')
+      })
+
+      // the inner component's first root opens a range of its own: the
+      // placeholder still holds the inner component's whole range
+      test.each([
+        [
+          'a v-for',
+          `
+            <i v-for="x in data.list" :key="x">{{ x }}</i>
+            <button @click="data.spy">{{ data.msg }}</button>
+          `,
+          {},
+        ],
+        [
+          'a multi-root component',
+          `
+            <components.D />
+            <button @click="data.spy">{{ data.msg }}</button>
+          `,
+          { D: `<p>d1</p><p>d2</p>` },
+        ],
+      ])(
+        'keeps the roots after %s while unresolved',
+        async (_, inner, components) => {
+          const { data, container, html } = await render(
+            Comp => defineVaporAsyncComponent(() => Promise.resolve(Comp)),
+            inner,
+            components,
+          )
+          const button = container.querySelector('button')
+          expect(container.innerHTML).toBe(html)
+          await new Promise(r => setTimeout(r))
+          await nextTick()
+          expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+          expect(`Hydration children mismatch`).not.toHaveBeenWarned()
+          expect(container.querySelector('button')).toBe(button)
+
+          data.value.msg = 'world'
+          await nextTick()
+          expect(button!.textContent).toBe('world')
+        },
+      )
+
+      test('hydrates on interaction with a root after a v-for', async () => {
+        const { data, container, html } = await render(
+          Comp =>
+            defineVaporAsyncComponent({
+              loader: () => Promise.resolve(Comp),
+              hydrate: hydrateOnInteraction(['click']),
+            }),
+          `
+            <i v-for="x in data.list" :key="x">{{ x }}</i>
+            <button @click="data.spy">{{ data.msg }}</button>
+          `,
+        )
+        const button = container.querySelector('button')!
+        expect(container.innerHTML).toBe(html)
+        await new Promise(r => setTimeout(r))
+
+        triggerEvent('click', button)
+        await new Promise(r => setTimeout(r))
+        expect(container.querySelector('button')).toBe(button)
+        expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+        expect(`Hydration children mismatch`).not.toHaveBeenWarned()
+        triggerEvent('click', button)
+        expect(data.value.spy).toHaveBeenCalledTimes(1)
+      })
+
+      test('hydrates in place when created resolved', async () => {
+        const { data, container, html } = await render(async Comp => {
+          const AsyncComp = defineVaporAsyncComponent(() =>
+            Promise.resolve(Comp),
+          )
+          await (AsyncComp as any).__asyncLoader()
+          return AsyncComp
+        })
+        const button = container.querySelector('button')!
+        expect(container.innerHTML).toBe(html)
+        expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+        expect(`Hydration children mismatch`).not.toHaveBeenWarned()
+
+        triggerEvent('click', button)
+        expect(data.value.spy).toHaveBeenCalledTimes(1)
+        data.value.msg = 'world'
+        await nextTick()
+        expect(container.querySelector('button')).toBe(button)
+        expect(button.textContent).toBe('world')
+      })
     })
 
     test('updates an earlier branch from sibling beforeMount during async component hydration', async () => {
@@ -198,7 +523,9 @@ describe('Vapor Mode hydration', () => {
       )
       serverResolve(SSRComp)
       const html = await htmlPromise
-      expect(html).toMatchInlineSnapshot(`"<h1>Async component</h1>"`)
+      expect(html).toMatchInlineSnapshot(
+        `"<!--{--><h1>Async component</h1><!--}-->"`,
+      )
 
       // hydration
       let clientResolve: any
@@ -229,13 +556,13 @@ describe('Vapor Mode hydration', () => {
       // mismatch handling path.
       expect(`Hydration text mismatch`).toHaveBeenWarned()
       expect(container.innerHTML).toMatchInlineSnapshot(
-        `"<h1>Updated async component</h1><!--async component-->"`,
+        `"<!--{--><h1>Updated async component</h1><!--async component--><!--}-->"`,
       )
 
       data.value.toggle = true
       await nextTick()
       expect(container.innerHTML).toMatchInlineSnapshot(
-        `"<h1>Async component</h1><!--async component-->"`,
+        `"<!--{--><h1>Async component</h1><!--async component--><!--}-->"`,
       )
     })
 
@@ -300,7 +627,7 @@ describe('Vapor Mode hydration', () => {
       serverResolve(SSRComp)
       const html = await htmlPromise
       expect(html).toMatchInlineSnapshot(
-        `"<!--[--><h1>Async component</h1><h2>fragment root</h2><!--]-->"`,
+        `"<!--{--><!--{--><h1>Async component</h1><h2>fragment root</h2><!--}--><!--}-->"`,
       )
 
       // hydration
@@ -332,7 +659,7 @@ describe('Vapor Mode hydration', () => {
       // mismatch handling path.
       expect(`Hydration text mismatch`).toHaveBeenWarned()
       expect(container.innerHTML).toMatchInlineSnapshot(
-        `"<!--[--><h1>Updated async component</h1><h2>fragment root</h2><!--]--><!--async component-->"`,
+        `"<!--{--><!--{--><h1>Updated async component</h1><h2>fragment root</h2><!--}--><!--}-->"`,
       )
     })
 
@@ -363,7 +690,7 @@ describe('Vapor Mode hydration', () => {
       serverResolve(SSRComp)
       const html = await htmlPromise
       expect(html).toMatchInlineSnapshot(
-        `"<div class=\"foo\">Async component</div>"`,
+        `"<!--{--><div class="foo">Async component</div><!--}-->"`,
       )
 
       let clientResolve: any
@@ -390,7 +717,7 @@ describe('Vapor Mode hydration', () => {
 
       expect(`Hydration class mismatch`).toHaveBeenWarned()
       expect(container.innerHTML).toMatchInlineSnapshot(
-        `"<div class="foo">Async component</div><!--async component-->"`,
+        `"<!--{--><div class="foo">Async component</div><!--async component--><!--}-->"`,
       )
     })
 
@@ -421,9 +748,11 @@ describe('Vapor Mode hydration', () => {
       serverResolve(SSRComp)
       const html = await htmlPromise
       expect(formatHtml(html)).toMatchInlineSnapshot(`
-      	"<div>
-      	<!--[--><span>foo</span><!--]-->
-      	</div>"
+        "
+        <!--{--><div>
+        <!--[--><span>foo</span><!--]-->
+        </div><!--}-->
+        "
       `)
 
       let clientResolve: any
@@ -450,9 +779,11 @@ describe('Vapor Mode hydration', () => {
 
       expect(`Hydration text mismatch`).toHaveBeenWarned()
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
-      	"<div>
-      	<!--[--><span>bar</span><!--]-->
-      	</div><!--async component-->"
+        "
+        <!--{--><div>
+        <!--[--><span>bar</span><!--]-->
+        </div><!--async component--><!--}-->
+        "
       `)
     })
 
@@ -484,9 +815,11 @@ describe('Vapor Mode hydration', () => {
       serverResolve(SSRComp)
       const html = await htmlPromise
       expect(formatHtml(html)).toMatchInlineSnapshot(`
-      	"<div>
-      	<!--[--><!--]-->
-      	</div>"
+        "
+        <!--{--><div>
+        <!--[--><!--]-->
+        </div><!--}-->
+        "
       `)
 
       let clientResolve: any
@@ -514,9 +847,11 @@ describe('Vapor Mode hydration', () => {
       expect(`Hydration node mismatch`).toHaveBeenWarned()
       expect(`Hydration text mismatch`).not.toHaveBeenWarned()
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
-        "<div>
+        "
+        <!--{--><div>
         <!--[--><span>bar</span><!--if--><!--]-->
-        <!--slot--></div><!--async component-->"
+        <!--slot--></div><!--async component--><!--}-->
+        "
       `)
     })
 
@@ -549,9 +884,11 @@ describe('Vapor Mode hydration', () => {
       serverResolve(SSRComp)
       const html = await htmlPromise
       expect(formatHtml(html)).toMatchInlineSnapshot(`
-      	"<div>
-      	<!--[--><!----><i>tail</i><!--]-->
-      	</div>"
+        "
+        <!--{--><div>
+        <!--[--><!----><i>tail</i><!--]-->
+        </div><!--}-->
+        "
       `)
 
       let clientResolve: any
@@ -579,9 +916,11 @@ describe('Vapor Mode hydration', () => {
       expect(`Hydration node mismatch`).toHaveBeenWarned()
       expect(`Hydration text mismatch`).not.toHaveBeenWarned()
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
-      	"<div>
-      	<!--[--><span>bar</span><!--if--><i>tail</i><!--]-->
-      	</div><!--async component-->"
+        "
+        <!--{--><div>
+        <!--[--><span>bar</span><!--if--><i>tail</i><!--]-->
+        </div><!--async component--><!--}-->
+        "
       `)
     })
 
@@ -638,11 +977,13 @@ describe('Vapor Mode hydration', () => {
       expect(`Hydration node mismatch`).toHaveBeenWarned()
       expect(`Hydration text mismatch`).not.toHaveBeenWarned()
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
-      	"<div>
-      	<!--[-->
-      	<!--[--><span>foo</span><span>bar</span><!--]-->
-      	<i>tail</i><!--]-->
-      	</div><!--async component-->"
+        "
+        <!--{--><div>
+        <!--[-->
+        <!--[--><span>foo</span><span>bar</span><!--]-->
+        <i>tail</i><!--]-->
+        </div><!--async component--><!--}-->
+        "
       `)
     })
 
@@ -702,7 +1043,7 @@ describe('Vapor Mode hydration', () => {
       expect(container.querySelectorAll('#docsearch')).toHaveLength(1)
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
         "
-        <!--[--><div id="docsearch"><button type="button">loaded</button></div><!----><!--if--><!--]-->
+        <!--{--><div id="docsearch"><button type="button">loaded</button></div><!----><!--if--><!--}-->
         "
       `)
     })
@@ -827,7 +1168,7 @@ describe('Vapor Mode hydration', () => {
         runtimeDom.createSSRApp(SSRApp),
       )
       expect(html).toMatchInlineSnapshot(
-        `"<!--[--><button>inner</button><div><button>inner</button></div><!--]-->"`,
+        `"<!--{--><button>inner</button><div><button>inner</button></div><!--}-->"`,
       )
 
       // hydration
@@ -903,7 +1244,7 @@ describe('Vapor Mode hydration', () => {
         runtimeDom.createSSRApp(SSRApp),
       )
       expect(html).toMatchInlineSnapshot(
-        `"<!--[--><div><button>hello</button></div><span>after</span><!--]-->"`,
+        `"<!--{--><div><button>hello</button></div><span>after</span><!--}-->"`,
       )
 
       const strategy = vi.fn((hydrate: () => void) => hydrate())
@@ -924,7 +1265,7 @@ describe('Vapor Mode hydration', () => {
       // the wrapper's runtime anchor lands after the hydrated content and the
       // enclosing pass resumes at the trailing sibling
       expect(container.innerHTML).toBe(
-        `<!--[--><div><button>hello</button><!--async component--></div><span>after</span><!--]-->`,
+        `<!--{--><div><button>hello</button><!--async component--></div><span>after</span><!--}-->`,
       )
       triggerEvent('click', container.querySelector('button')!)
       expect(data.value.spy).toHaveBeenCalledTimes(1)
@@ -1028,7 +1369,7 @@ describe('Vapor Mode hydration', () => {
       await new Promise(r => setTimeout(r))
       expect(refs.b.type).toBe(Comp)
       expect(container.innerHTML).toBe(
-        '<!--[--><span>inner</span><!--async component--><span>inner</span><!--async component--><!--]-->',
+        '<!--{--><span>inner</span><!--async component--><span>inner</span><!--async component--><!--}-->',
       )
     })
 
@@ -1081,7 +1422,7 @@ describe('Vapor Mode hydration', () => {
       triggerEvent('click', container.querySelector('button')!)
       expect(data.value.spy).toHaveBeenCalledTimes(1)
       expect(container.innerHTML).toBe(
-        '<!--[--><div><button>inner</button><!--async component--></div><!--async component--><span>after</span><!--]-->',
+        '<!--{--><div><button>inner</button><!--async component--></div><!--async component--><span>after</span><!--}-->',
       )
     })
 

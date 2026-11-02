@@ -1,7 +1,7 @@
 <script src="../../dist/vue.global.js"></script>
 
 <div style="height: 1000px">scroll to the bottom to hydrate</div>
-<div id="app"><button>0</button></div>
+<div id="app"><!--{--><button>0</button><!--}--></div>
 <style>
   body {
     margin: 0;
@@ -32,19 +32,17 @@
   const isContents = location.search.includes('?contents')
   if (isFragment) {
     document.getElementById('app').innerHTML =
-      `<!--[--><span>one</span><button>0</button><span>two</span><!--]-->`
+      `<!--{--><!--{--><span>one</span><button>0</button><span>two</span><!--}--><!--}-->`
   } else if (isVIf) {
-    document.getElementById('app').innerHTML = `<!---->`
+    document.getElementById('app').innerHTML = `<!--{--><!----><!--}-->`
   } else if (isContents) {
     document.getElementById('app').innerHTML =
-      `<div style="display: contents"><button>0</button></div>`
+      `<!--{--><div style="display: contents"><button>0</button></div><!--}-->`
   }
 
   window.isHydrated = false
 
   const Comp = {
-    // a compiled multi-root component claims its SSR range
-    __multiRoot: isFragment,
     setup() {
       const count = ref(0)
       onMounted(() => {

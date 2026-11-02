@@ -1,7 +1,9 @@
 import {
   createComponent,
+  createSlot,
   createVaporSSRApp,
   defineVaporComponent,
+  template,
 } from '../../src'
 import { nextTick, reactive, ref } from '@vue/runtime-dom'
 import { vi } from 'vite-plus/test'
@@ -112,7 +114,7 @@ describe('Vapor Mode hydration', () => {
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
         `
         "<div><span></span>
-        <!--[--><div>foo</div>-foo-<!--]-->
+        <!--{--><div>foo</div>-foo-<!--}-->
         </div>"
       `,
       )
@@ -122,7 +124,7 @@ describe('Vapor Mode hydration', () => {
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
         `
         "<div><span></span>
-        <!--[--><div>bar</div>-bar-<!--]-->
+        <!--{--><div>bar</div>-bar-<!--}-->
         </div>"
       `,
       )
@@ -138,7 +140,7 @@ describe('Vapor Mode hydration', () => {
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
         `
         "<div>
-        <!--[--><div>foo</div>-foo-<!--]-->
+        <!--{--><div>foo</div>-foo-<!--}-->
         <span></span></div>"
       `,
       )
@@ -148,7 +150,7 @@ describe('Vapor Mode hydration', () => {
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
         `
         "<div>
-        <!--[--><div>bar</div>-bar-<!--]-->
+        <!--{--><div>bar</div>-bar-<!--}-->
         <span></span></div>"
       `,
       )
@@ -167,9 +169,9 @@ describe('Vapor Mode hydration', () => {
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
         `
         "<div>
-        <!--[--><div></div>
-        <!--[--><div>foo</div>-foo-<!--]-->
-        <div></div><!--]-->
+        <!--{--><div></div>
+        <!--{--><div>foo</div>-foo-<!--}-->
+        <div></div><!--}-->
         <span></span></div>"
       `,
       )
@@ -179,9 +181,9 @@ describe('Vapor Mode hydration', () => {
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
         `
         "<div>
-        <!--[--><div></div>
-        <!--[--><div>bar</div>-bar-<!--]-->
-        <div></div><!--]-->
+        <!--{--><div></div>
+        <!--{--><div>bar</div>-bar-<!--}-->
+        <div></div><!--}-->
         <span></span></div>"
       `,
       )
@@ -223,13 +225,21 @@ describe('Vapor Mode hydration', () => {
         },
       )
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
-        `"<div><span></span><div>foo</div><span></span></div>"`,
+        `
+        "
+        <!--{--><div><span></span><div>foo</div><span></span></div><!--}-->
+        "
+      `,
       )
 
       data.value = 'bar'
       await nextTick()
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
-        `"<div><span></span><div>bar</div><span></span></div>"`,
+        `
+        "
+        <!--{--><div><span></span><div>bar</div><span></span></div><!--}-->
+        "
+      `,
       )
     })
 
@@ -293,13 +303,21 @@ describe('Vapor Mode hydration', () => {
         },
       )
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
-        `"<div><span></span><div>foo</div><div>foo</div><span></span></div>"`,
+        `
+        "
+        <!--{--><div><span></span><div>foo</div><div>foo</div><span></span></div><!--}-->
+        "
+      `,
       )
 
       data.value = 'bar'
       await nextTick()
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
-        `"<div><span></span><div>bar</div><div>bar</div><span></span></div>"`,
+        `
+        "
+        <!--{--><div><span></span><div>bar</div><div>bar</div><span></span></div><!--}-->
+        "
+      `,
       )
     })
 
@@ -368,7 +386,7 @@ describe('Vapor Mode hydration', () => {
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
         `
         "<div><span></span>
-        <!--[--><div>foo</div>-foo<!--]-->
+        <!--{--><div>foo</div>-foo<!--}-->
         <span></span></div>"
       `,
       )
@@ -378,7 +396,7 @@ describe('Vapor Mode hydration', () => {
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
         `
         "<div><span></span>
-        <!--[--><div>bar</div>-bar<!--]-->
+        <!--{--><div>bar</div>-bar<!--}-->
         <span></span></div>"
       `,
       )
@@ -396,9 +414,11 @@ describe('Vapor Mode hydration', () => {
       )
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
         `
-        "<div><span></span>
-        <!--[--><div>foo</div>-foo-<!--]-->
-        <span></span></div>"
+        "
+        <!--{--><div><span></span>
+        <!--{--><div>foo</div>-foo-<!--}-->
+        <span></span></div><!--}-->
+        "
       `,
       )
 
@@ -406,9 +426,11 @@ describe('Vapor Mode hydration', () => {
       await nextTick()
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
         `
-        "<div><span></span>
-        <!--[--><div>bar</div>-bar-<!--]-->
-        <span></span></div>"
+        "
+        <!--{--><div><span></span>
+        <!--{--><div>bar</div>-bar-<!--}-->
+        <span></span></div><!--}-->
+        "
       `,
       )
     })
@@ -426,7 +448,7 @@ describe('Vapor Mode hydration', () => {
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
         `
         "<div><span></span><div><span></span>
-        <!--[--><div>foo</div>-foo-<!--]-->
+        <!--{--><div>foo</div>-foo-<!--}-->
         <span></span></div><span></span></div>"
       `,
       )
@@ -436,7 +458,7 @@ describe('Vapor Mode hydration', () => {
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
         `
         "<div><span></span><div><span></span>
-        <!--[--><div>bar</div>-bar-<!--]-->
+        <!--{--><div>bar</div>-bar-<!--}-->
         <span></span></div><span></span></div>"
       `,
       )
@@ -460,8 +482,8 @@ describe('Vapor Mode hydration', () => {
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
         `
         "<div><span></span>
-        <!--[--><div>foo</div>-foo<!--]-->
-        <!--[--><div>foo</div>-foo<!--]-->
+        <!--{--><div>foo</div>-foo<!--}-->
+        <!--{--><div>foo</div>-foo<!--}-->
         <span></span></div>"
       `,
       )
@@ -471,8 +493,8 @@ describe('Vapor Mode hydration', () => {
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
         `
         "<div><span></span>
-        <!--[--><div>bar</div>-bar<!--]-->
-        <!--[--><div>bar</div>-bar<!--]-->
+        <!--{--><div>bar</div>-bar<!--}-->
+        <!--{--><div>bar</div>-bar<!--}-->
         <span></span></div>"
       `,
       )
@@ -490,10 +512,12 @@ describe('Vapor Mode hydration', () => {
       )
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
         `
-        "<div><span></span>
-        <!--[--><div>foo</div>-foo-<!--]-->
-        <!--[--><div>foo</div>-foo-<!--]-->
-        <span></span></div>"
+        "
+        <!--{--><div><span></span>
+        <!--{--><div>foo</div>-foo-<!--}-->
+        <!--{--><div>foo</div>-foo-<!--}-->
+        <span></span></div><!--}-->
+        "
       `,
       )
 
@@ -501,10 +525,12 @@ describe('Vapor Mode hydration', () => {
       await nextTick()
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
         `
-        "<div><span></span>
-        <!--[--><div>bar</div>-bar-<!--]-->
-        <!--[--><div>bar</div>-bar-<!--]-->
-        <span></span></div>"
+        "
+        <!--{--><div><span></span>
+        <!--{--><div>bar</div>-bar-<!--}-->
+        <!--{--><div>bar</div>-bar-<!--}-->
+        <span></span></div><!--}-->
+        "
       `,
       )
     })
@@ -522,8 +548,8 @@ describe('Vapor Mode hydration', () => {
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
         `
         "<div><span></span><div><span></span>
-        <!--[--><div>foo</div>-foo-<!--]-->
-        <!--[--><div>foo</div>-foo-<!--]-->
+        <!--{--><div>foo</div>-foo-<!--}-->
+        <!--{--><div>foo</div>-foo-<!--}-->
         <span></span></div><span></span></div>"
       `,
       )
@@ -533,8 +559,8 @@ describe('Vapor Mode hydration', () => {
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
         `
         "<div><span></span><div><span></span>
-        <!--[--><div>bar</div>-bar-<!--]-->
-        <!--[--><div>bar</div>-bar-<!--]-->
+        <!--{--><div>bar</div>-bar-<!--}-->
+        <!--{--><div>bar</div>-bar-<!--}-->
         <span></span></div><span></span></div>"
       `,
       )
@@ -553,10 +579,10 @@ describe('Vapor Mode hydration', () => {
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
         `
         "<div><span></span>
-        <!--[-->
-        <!--[--><div>foo</div>-foo-<!--]-->
-        <!--[--><div>foo</div>-foo-<!--]-->
-        <!--]-->
+        <!--{-->
+        <!--{--><div>foo</div>-foo-<!--}-->
+        <!--{--><div>foo</div>-foo-<!--}-->
+        <!--}-->
         <span></span></div>"
       `,
       )
@@ -566,10 +592,10 @@ describe('Vapor Mode hydration', () => {
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
         `
         "<div><span></span>
-        <!--[-->
-        <!--[--><div>bar</div>-bar-<!--]-->
-        <!--[--><div>bar</div>-bar-<!--]-->
-        <!--]-->
+        <!--{-->
+        <!--{--><div>bar</div>-bar-<!--}-->
+        <!--{--><div>bar</div>-bar-<!--}-->
+        <!--}-->
         <span></span></div>"
       `,
       )
@@ -594,9 +620,9 @@ describe('Vapor Mode hydration', () => {
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
         `
         "<div><span></span>
-        <!--[--><div>foo</div>-foo<!--]-->
+        <!--{--><div>foo</div>-foo<!--}-->
         <span></span>
-        <!--[--><div>foo</div>-foo<!--]-->
+        <!--{--><div>foo</div>-foo<!--}-->
         <span></span></div>"
       `,
       )
@@ -606,9 +632,9 @@ describe('Vapor Mode hydration', () => {
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
         `
         "<div><span></span>
-        <!--[--><div>bar</div>-bar<!--]-->
+        <!--{--><div>bar</div>-bar<!--}-->
         <span></span>
-        <!--[--><div>bar</div>-bar<!--]-->
+        <!--{--><div>bar</div>-bar<!--}-->
         <span></span></div>"
       `,
       )
@@ -633,9 +659,9 @@ describe('Vapor Mode hydration', () => {
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
         `
         "<div><span></span>
-        <!--[--><div>foo</div>-foo<!--]-->
+        <!--{--><div>foo</div>-foo<!--}-->
          foo 
-        <!--[--><div>foo</div>-foo<!--]-->
+        <!--{--><div>foo</div>-foo<!--}-->
         <span></span></div>"
       `,
       )
@@ -645,9 +671,9 @@ describe('Vapor Mode hydration', () => {
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
         `
         "<div><span></span>
-        <!--[--><div>bar</div>-bar<!--]-->
+        <!--{--><div>bar</div>-bar<!--}-->
          bar 
-        <!--[--><div>bar</div>-bar<!--]-->
+        <!--{--><div>bar</div>-bar<!--}-->
         <span></span></div>"
       `,
       )
@@ -801,6 +827,146 @@ describe('Vapor Mode hydration', () => {
       await nextTick()
       expect(el.style.display).toBe('flex')
     })
+
+    // hand-written: hydration goes by the server's markers alone, `<!--{-->`
+    // telling the component's range from the `[` of the outlet inside
+    test('hand-written multi-root component', async () => {
+      const data = ref('foo')
+      const Child = defineVaporComponent({
+        setup() {
+          return [
+            template('<p>a</p>')(),
+            createSlot('default'),
+            template('<p>b</p>')(),
+          ]
+        },
+      })
+      const html =
+        '<!--{--><!--{--><p>a</p><!--[--><span>foo</span><!--]--><p>b</p><!--}--><i>after</i><!--}-->'
+      const { container } = await mountWithHydration(
+        html,
+        `<components.Child><span>{{ data }}</span></components.Child>
+         <i>after</i>`,
+        data,
+        { Child },
+      )
+      const span = container.querySelector('span')
+      expect(container.innerHTML).toBe(html)
+      expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+      expect(`Hydration children mismatch`).not.toHaveBeenWarned()
+
+      data.value = 'bar'
+      await nextTick()
+      expect(container.querySelector('span')).toBe(span)
+      expect(container.innerHTML).toBe(html.replace('foo', 'bar'))
+    })
+
+    // the ranges of nested components open back to back: each component
+    // takes its own
+    describe('multi-root components under single-root ones', () => {
+      test('multi-root first root of a multi-root component', async () => {
+        const data = ref('x')
+        const { container, html } = await testHydration(
+          `<template><components.C /></template>`,
+          {
+            C: `<template><components.D /><span>{{ data }}</span></template>`,
+            D: `<template><p>d1</p><p>d2</p></template>`,
+          },
+          data,
+        )
+        const span = container.querySelector('span')
+        expect(container.innerHTML).toBe(html)
+        expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+        expect(`Hydration children mismatch`).not.toHaveBeenWarned()
+
+        data.value = 'y'
+        await nextTick()
+        expect(container.querySelector('span')).toBe(span)
+        expect(span!.textContent).toBe('y')
+      })
+
+      test('empty component before a sibling', async () => {
+        const data = ref('x')
+        const { container, html } = await testHydration(
+          `<template><components.Empty /><i>{{ data }}</i></template>`,
+          { Empty: `<template></template>` },
+          data,
+        )
+        const i = container.querySelector('i')
+        expect(container.innerHTML).toBe(html)
+        expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+        expect(`Hydration children mismatch`).not.toHaveBeenWarned()
+
+        data.value = 'y'
+        await nextTick()
+        expect(container.querySelector('i')).toBe(i)
+        expect(i!.textContent).toBe('y')
+      })
+
+      // a comment root counts for the server's range, not for the sole
+      // root that inherits fallthrough attrs
+      test('component root followed by a preserved comment', async () => {
+        const data = ref('x')
+        const { container, html } = await testHydration(
+          `<template><components.Child /><!-- trailing --></template>`,
+          { Child: `<template><p>{{ data }}</p></template>` },
+          data,
+          { compilerOptions: { comments: true } },
+        )
+        const p = container.querySelector('p')
+        expect(container.innerHTML).toBe(html)
+        expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+        expect(`Hydration children mismatch`).not.toHaveBeenWarned()
+
+        data.value = 'y'
+        await nextTick()
+        expect(container.querySelector('p')).toBe(p)
+        expect(p!.textContent).toBe('y')
+      })
+
+      // the comment makes the child's output two nodes: one unit for the
+      // parent's locator only inside a range
+      test('component with a preserved comment root among siblings', async () => {
+        const data = ref('x')
+        const { container, html } = await testHydration(
+          `<template><div><components.Child /><i>{{ data }}</i></div></template>`,
+          { Child: `<template><b>{{ data }}</b><!-- tail --></template>` },
+          data,
+          { compilerOptions: { comments: true } },
+        )
+        const i = container.querySelector('i')
+        expect(container.innerHTML).toBe(html)
+        expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+        expect(`Hydration children mismatch`).not.toHaveBeenWarned()
+
+        data.value = 'y'
+        await nextTick()
+        expect(container.querySelector('i')).toBe(i)
+        expect(i!.textContent).toBe('y')
+      })
+
+      test('page over layout over header', async () => {
+        const data = ref('x')
+        const { container, html } = await testHydration(
+          `<template><components.Page /><i>after</i></template>`,
+          {
+            Header: `<template><nav>n</nav><div>d</div></template>`,
+            Layout: `<template><components.Header /><main>{{ data }}</main></template>`,
+            Page: `<template><components.Layout /></template>`,
+          },
+          data,
+        )
+        const main = container.querySelector('main')
+        expect(container.innerHTML).toBe(html)
+        expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+        expect(`Hydration children mismatch`).not.toHaveBeenWarned()
+
+        data.value = 'y'
+        await nextTick()
+        expect(container.querySelector('main')).toBe(main)
+        expect(main!.textContent).toBe('y')
+      })
+    })
   })
 
   describe('dynamic component', () => {
@@ -816,13 +982,21 @@ describe('Vapor Mode hydration', () => {
         ref('foo'),
       )
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
-        `"<div>foo</div><!--dynamic-component-->"`,
+        `
+        "
+        <!--{--><div>foo</div><!--dynamic-component--><!--}-->
+        "
+      `,
       )
 
       data.value = 'bar'
       await nextTick()
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
-        `"<div>bar</div><!--dynamic-component-->"`,
+        `
+        "
+        <!--{--><div>bar</div><!--dynamic-component--><!--}-->
+        "
+      `,
       )
     })
 
@@ -862,9 +1036,11 @@ describe('Vapor Mode hydration', () => {
         },
         data,
       )
-      expect(html).toBe('<div class="box outer" title="one">A</div>')
+      expect(html).toBe(
+        '<!--{--><!--{--><div class="box outer" title="one">A</div><!--}--><!--}-->',
+      )
       const el = () => container.querySelector('div')!
-      expect(el().outerHTML).toBe(html)
+      expect(el().outerHTML).toBe('<div class="box outer" title="one">A</div>')
 
       data.value.title = 'two'
       await nextTick()
@@ -1033,12 +1209,20 @@ describe('Vapor Mode hydration', () => {
       )
 
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
-        `"<button><span>foo</span></button><!--dynamic-component-->"`,
+        `
+        "
+        <!--{--><button><span>foo</span></button><!--dynamic-component--><!--}-->
+        "
+      `,
       )
       data.value = 'bar'
       await nextTick()
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
-        `"<button><span>bar</span></button><!--dynamic-component-->"`,
+        `
+        "
+        <!--{--><button><span>bar</span></button><!--dynamic-component--><!--}-->
+        "
+      `,
       )
     })
 
@@ -1054,15 +1238,23 @@ describe('Vapor Mode hydration', () => {
       )
 
       expect(`Hydration children mismatch`).not.toHaveBeenWarned()
-      expect(html).toBe(`<div><!----></div>`)
+      expect(html).toBe(`<!--{--><div><!----></div><!--}-->`)
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
-        `"<div><!----></div><!--dynamic-component-->"`,
+        `
+        "
+        <!--{--><div><!----></div><!--dynamic-component--><!--}-->
+        "
+      `,
       )
 
       data.value = true
       await nextTick()
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
-        `"<section><span class="badge">named</span><!--if--></section><!--dynamic-component-->"`,
+        `
+        "
+        <!--{--><section><span class="badge">named</span><!--if--></section><!--dynamic-component--><!--}-->
+        "
+      `,
       )
     })
 
@@ -1086,9 +1278,13 @@ describe('Vapor Mode hydration', () => {
 
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
         `
-        "<div>
+        "
+        <!--{-->
+        <!--{--><div>
         <!--[--><span>foo</span><!--]-->
-        </div><!--dynamic-component-->"
+        </div><!--dynamic-component--><!--}-->
+        <!--}-->
+        "
       `,
       )
 
@@ -1096,9 +1292,13 @@ describe('Vapor Mode hydration', () => {
       await nextTick()
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
         `
-        "<div>
+        "
+        <!--{-->
+        <!--{--><div>
         <!--[--><span>bar</span><!--]-->
-        </div><!--dynamic-component-->"
+        </div><!--dynamic-component--><!--}-->
+        <!--}-->
+        "
       `,
       )
     })
@@ -1121,13 +1321,21 @@ describe('Vapor Mode hydration', () => {
       )
 
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
-        `"<div><span>foo</span><!----></div><!--dynamic-component-->"`,
+        `
+        "
+        <!--{--><div><span>foo</span></div><!--dynamic-component--><!--}-->
+        "
+      `,
       )
 
       data.value.msg = 'bar'
       await nextTick()
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
-        `"<div><span>bar</span><!----></div><!--dynamic-component-->"`,
+        `
+        "
+        <!--{--><div><span>bar</span></div><!--dynamic-component--><!--}-->
+        "
+      `,
       )
     })
 
@@ -1149,7 +1357,11 @@ describe('Vapor Mode hydration', () => {
       )
 
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
-        `"<div><!----></div><!--dynamic-component-->"`,
+        `
+        "
+        <!--{--><div><!----></div><!--dynamic-component--><!--}-->
+        "
+      `,
       )
     })
 
@@ -1187,7 +1399,11 @@ describe('Vapor Mode hydration', () => {
 
       expect(`Hydration children mismatch`).toHaveBeenWarned()
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
-        `"<div><!----></div><!--dynamic-component-->"`,
+        `
+        "
+        <!--{--><div><!----></div><!--dynamic-component--><!--}-->
+        "
+      `,
       )
     })
 
@@ -1225,7 +1441,11 @@ describe('Vapor Mode hydration', () => {
       expect(`Hydration node mismatch`).toHaveBeenWarned()
       expect(`Hydration children mismatch`).not.toHaveBeenWarned()
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
-        `"<div><span>foo</span><!----></div><!--dynamic-component-->"`,
+        `
+        "
+        <!--{--><div><span>foo</span><!----></div><!--dynamic-component--><!--}-->
+        "
+      `,
       )
     })
 
@@ -1237,13 +1457,21 @@ describe('Vapor Mode hydration', () => {
         data,
       )
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
-        `"<p></p><!--dynamic-component-->"`,
+        `
+        "
+        <!--{--><p></p><!--dynamic-component--><!--}-->
+        "
+      `,
       )
 
       data.value = 'foo'
       await nextTick()
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
-        `"<p>foo</p><!--dynamic-component-->"`,
+        `
+        "
+        <!--{--><p>foo</p><!--dynamic-component--><!--}-->
+        "
+      `,
       )
     })
 
@@ -1319,17 +1547,19 @@ describe('Vapor Mode hydration', () => {
       expect(`children must be keyed`).not.toHaveBeenWarned()
       expect(`Hydration children mismatch`).not.toHaveBeenWarned()
       expect(html).toBe(
-        `<section><ol><!--[--><!--[--><li>1</li><li>2</li><!--]--><!--]--></ol></section>`,
+        `<!--{--><section><ol><!--[--><!--[--><li>1</li><li>2</li><!--]--><!--]--></ol></section><!--}-->`,
       )
 
       data.value.push(3)
       await nextTick()
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
-        "<section><ol>
+        "
+        <!--{--><section><ol>
         <!--[-->
         <!--[--><li>1</li><li>2</li><li class="v-enter-from v-enter-active">3</li><!--]-->
         <!--]-->
-        </ol></section><!--dynamic-component-->"
+        </ol></section><!--dynamic-component--><!--}-->
+        "
       `)
     })
 
@@ -1350,16 +1580,18 @@ describe('Vapor Mode hydration', () => {
       expect(`children must be keyed`).not.toHaveBeenWarned()
       expect(`Hydration children mismatch`).not.toHaveBeenWarned()
       expect(html).toBe(
-        `<section><ul><!--[--><li>a1</li><!--]--><!--[--><li>b1</li><!--]--></ul></section>`,
+        `<!--{--><section><ul><!--[--><li>a1</li><!--]--><!--[--><li>b1</li><!--]--></ul></section><!--}-->`,
       )
 
       data.value.push(2)
       await nextTick()
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
-        "<section><ul>
+        "
+        <!--{--><section><ul>
         <!--[--><li>a1</li><li class="v-enter-from v-enter-active">a2</li><!--]-->
         <!--[--><li>b1</li><li class="v-enter-from v-enter-active">b2</li><!--]-->
-        </ul></section><!--dynamic-component-->"
+        </ul></section><!--dynamic-component--><!--}-->
+        "
       `)
     })
 
@@ -1378,12 +1610,16 @@ describe('Vapor Mode hydration', () => {
       )
 
       expect(`Hydration children mismatch`).not.toHaveBeenWarned()
-      expect(html).toBe(`<div><!----><span>s</span></div>`)
+      expect(html).toBe(`<!--{--><div><!----><span>s</span></div><!--}-->`)
 
       data.value = true
       await nextTick()
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
-        `"<div><p class="v-enter-from v-enter-active">a</p><!----><span>s</span></div><!--dynamic-component-->"`,
+        `
+        "
+        <!--{--><div><p class="v-enter-from v-enter-active">a</p><!----><span>s</span></div><!--dynamic-component--><!--}-->
+        "
+      `,
       )
     })
 
@@ -1396,7 +1632,7 @@ describe('Vapor Mode hydration', () => {
         </template>`,
       )
 
-      expect(html).toBe(`<section><b>fallback</b></section>`)
+      expect(html).toBe(`<!--{--><section><b>fallback</b></section><!--}-->`)
       expect(container.querySelector('b')!.textContent).toBe('fallback')
     })
 

@@ -155,7 +155,7 @@ describe('vdom Transition inside a vapor app', () => {
       },
       reactive({}),
     )
-    expect(container.innerHTML).toBe('<div>x</div>')
+    expect(container.innerHTML).toBe('<!--{--><div>x</div><!--}-->')
   })
 })
 

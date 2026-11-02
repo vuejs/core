@@ -75,6 +75,13 @@ export let deferSlotRootFlip: (frag: DynamicFragment) => boolean
 
 export let isTransitionEnabled = false
 
+// set when VaporTransition is defined, before its first setup turns the hooks
+// on: hydration tells it apart from the component it wraps before that
+export let isTransitionDefined = false
+export function markTransitionDefined(): void {
+  isTransitionDefined = true
+}
+
 export function registerTransitionHooks(
   applyHooks: ApplyTransitionHooksFn,
   applyLeaveHooks: ApplyTransitionLeaveHooksFn,

@@ -64,7 +64,7 @@ describe('ssr: vapor slots across runtime copies', () => {
       { Wrapper },
     )
     expect(await ssr.renderToString(vue.createSSRApp(App))).toBe(
-      `<!--[--><p>hello</p><!--]-->`,
+      `<!--{--><!--[--><p>hello</p><!--]--><!--}-->`,
     )
   })
 })

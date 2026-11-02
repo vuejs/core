@@ -51,13 +51,13 @@ describe('placeholder unit alignment', () => {
       data,
     )
     expect(container.innerHTML).toBe(
-      `<div><h1>h</h1><!--[--><i>x</i><b>y</b><!--]--><p>t</p></div>`,
+      `<div><h1>h</h1><!--{--><i>x</i><b>y</b><!--}--><p>t</p></div>`,
     )
 
     data.value = { tail: 't2' }
     await nextTick()
     expect(container.innerHTML).toBe(
-      `<div><h1>h</h1><!--[--><i>x</i><b>y</b><!--]--><p>t2</p></div>`,
+      `<div><h1>h</h1><!--{--><i>x</i><b>y</b><!--}--><p>t2</p></div>`,
     )
   })
 

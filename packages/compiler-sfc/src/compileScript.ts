@@ -71,7 +71,6 @@ import {
   resolveTemplateVModelIdentifiers,
 } from './script/importUsageCheck'
 import { processAwait } from './script/topLevelAwait'
-import { isMultiRoot } from './template/templateUtils'
 
 export interface SFCScriptCompileOptions {
   /**
@@ -1175,15 +1174,6 @@ export function compileScript(
 
   const emitsDecl = genRuntimeEmits(ctx)
   if (emitsDecl) runtimeOptions += `\n  emits: ${emitsDecl},`
-
-  // add multiRoot marker for vapor component
-  if (vapor && !ssr && sfc.template && !sfc.template.src) {
-    if (
-      isMultiRoot(sfc.template.ast!, options.templateOptions?.compilerOptions)
-    ) {
-      runtimeOptions += `\n  __multiRoot: true,`
-    }
-  }
 
   let definedOptions = ''
   if (ctx.optionsRuntimeDecl) {

@@ -127,13 +127,11 @@ import {
 import { inOnce, withOnce } from './once'
 import { hmrReload, hmrRerender } from './hmr'
 import {
-  type FragmentClaim,
   type HydrationCursor,
   adoptTemplate,
   advanceHydrationNode,
   claimAnchor,
   cleanupHydrationTail,
-  createFragmentClaim,
   currentHydrationNode,
   enterHydrationCursor,
   exitHydrationCursor,
@@ -199,7 +197,11 @@ import {
   hydrateComponentScopeIds,
 } from './scopeId'
 import { setElementScopeIds } from './dom/scopeIdStamp'
-import { isTransitionEnabled, isVaporTransition } from './transition'
+import {
+  isTransitionDefined,
+  isTransitionEnabled,
+  isVaporTransition,
+} from './transition'
 
 export { currentInstance } from '@vue/runtime-dom'
 
@@ -392,7 +394,12 @@ export function createComponent(
   let hydration: ComponentHydration | null = null
   let pendingAsyncHydration = false
   if (isHydrating) {
-    hydration = enterComponentHydration(component)
+    hydration = enterComponentHydration(
+      // a vdom component, or a runtime wrapper of a user component: a range
+      // at the cursor is the component's inside, for that one to claim
+      !(isInteropEnabled && useVdomInterop(component, appContext)) &&
+        !wrapsComponent(component),
+    )
   } else {
     resetInsertionState()
   }
@@ -662,8 +669,7 @@ export function createComponent(
           // Async setup cannot create `block` yet. Capture the adopted SSR
           // range for pending move/removal before hydration advances past it.
           const pendingBlock: Node[] = []
-          const { claim, cursor } = hydration!
-          let node: Node = (claim && claim.start) || cursor.start!
+          let node: Node = hydration!.cursor.start!
           const hydrationNext = nextLogicalSibling(node)
           do {
             pendingBlock.push(node)
@@ -703,26 +709,39 @@ export function createComponent(
 }
 
 interface ComponentHydration {
-  /** owns the range's opening `[` when the component is multi-root */
-  claim: FragmentClaim | undefined
   cursor: HydrationCursor
-  /** the claimed close marker of a multi-root range */
+  /** the claimed close of the component's own range */
   close: Node | null
 }
 
 /**
- * Open a component's SSR range: locate its start and claim its markers.
- * Shared by creation and by the deferred render of an async setup, which
- * re-enters the range once setup has settled.
+ * Open a component's SSR range: claim the `{` under the cursor, if `claims`,
+ * and its close. A vapor component's server render begins with a node of
+ * its own or with a range of its own, so a range at the cursor is the
+ * component's. Shared by creation and by the deferred render of an async
+ * setup, which re-enters the range once setup has settled.
  */
-function enterComponentHydration(
-  component: VaporComponent,
-): ComponentHydration {
-  const claim = component.__multiRoot ? createFragmentClaim() : undefined
-  const cursor = enterHydrationCursor(claim)
-  const close = claim && claim.start ? locateEndAnchor(claim.start) : null
-  if (close) claimAnchor(close)
-  return { claim, cursor, close }
+function enterComponentHydration(claims: boolean): ComponentHydration {
+  const cursor = enterHydrationCursor()
+  const start = cursor.start
+  let close: Node | null = null
+  if (claims && start && isComment(start, '{')) {
+    setCurrentHydrationNode(start.nextSibling)
+    if ((close = locateEndAnchor(start))) claimAnchor(close)
+  }
+  return { cursor, close }
+}
+
+/**
+ * A runtime wrapper around a user component (the async wrapper, KeepAlive,
+ * Transition): its server render is the component's inside.
+ */
+function wrapsComponent(component: VaporComponent): boolean {
+  return (
+    (isAsyncComponentEnabled && !!component.__asyncLoader) ||
+    (isKeepAliveEnabled && !!component.__isKeepAlive) ||
+    (isTransitionDefined && isVaporTransition(component))
+  )
 }
 
 /**
@@ -1550,7 +1569,7 @@ export function mountComponent(
           hydrateNode(
             getBlockFirstNode(pendingBlock)!,
             () => {
-              const hydration = enterComponentHydration(component)
+              const hydration = enterComponentHydration(true)
               try {
                 withDeferredHydrationBoundary(renderAndMount)
               } finally {

@@ -22,6 +22,35 @@ setupHydrationTest()
 
 describe('Vapor Mode hydration', () => {
   describe('transition', async () => {
+    // A Transition turns its feature on in its own setup, after its entry
+    // into hydration: the first one of a runtime must pass the range at the
+    // cursor on to its child all the same. Keep this the first Transition
+    // this file mounts.
+    test('the first Transition passes its child range on', async () => {
+      const data = ref('a')
+      const { container, html } = await testHydration(
+        `<template>
+          <Transition :css="false"><components.Host /></Transition>
+          <p>{{ data }}</p>
+        </template>`,
+        {
+          Host: `<template><components.Middle /><!--preserved--></template>`,
+          Middle: `<template><components.Leaf /></template>`,
+          Leaf: `<template><div>leaf</div></template>`,
+        },
+        data,
+      )
+      expect(container.innerHTML).toBe(html)
+      expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+      expect(`Hydration children mismatch`).not.toHaveBeenWarned()
+
+      const p = container.querySelector('p')
+      data.value = 'b'
+      await nextTick()
+      expect(container.querySelector('p')).toBe(p)
+      expect(p!.textContent).toBe('b')
+    })
+
     test('hydrates a slot fallback', async () => {
       const data = reactive({ show: false })
       const { container } = await testHydration(
@@ -44,7 +73,7 @@ describe('Vapor Mode hydration', () => {
 
       expect(`Hydration node mismatch`).not.toHaveBeenWarned()
       expect(container.innerHTML).toBe(
-        `<!--(--><!--if--><div>fallback</div><!--)-->`,
+        `<!--{--><!--{--><!--(--><!--if--><div>fallback</div><!--)--><!--}--><!--}-->`,
       )
 
       data.show = true
@@ -213,9 +242,9 @@ describe('Vapor Mode hydration', () => {
       )
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
         `
-      	"
-      	<!--[--><div style="display:none;" class="v-enter-from v-enter-active">foo</div><!--]-->
-      	"
+        "
+        <!--[--><div style="display:none;" class="v-enter-from v-enter-active">foo</div><!--]-->
+        "
       `,
       )
       expect(`mismatch`).not.toHaveBeenWarned()
@@ -239,11 +268,13 @@ describe('Vapor Mode hydration', () => {
       )
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
         `
-      	"
-      	<!--[-->
-      	<!--[--><div style="display:none;" class="v-enter-from v-enter-active">foo</div><!--]-->
-      	<!--]-->
-      	"
+        "
+        <!--{-->
+        <!--[-->
+        <!--[--><div style="display:none;" class="v-enter-from v-enter-active">foo</div><!--]-->
+        <!--]-->
+        <!--}-->
+        "
       `,
       )
       expect(`mismatch`).not.toHaveBeenWarned()
@@ -284,18 +315,30 @@ describe('Vapor Mode hydration', () => {
         data,
       )
 
-      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`"<!---->"`)
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
+        "
+        <!--{--><!----><!--}-->
+        "
+      `)
       expect(`mismatch`).not.toHaveBeenWarned()
 
       data.value = true
       await nextTick()
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
-        `"<div>foo</div><!---->"`,
+        `
+        "
+        <!--{--><div>foo</div><!----><!--}-->
+        "
+      `,
       )
 
       data.value = false
       await nextTick()
-      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`"<!---->"`)
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
+        "
+        <!--{--><!----><!--}-->
+        "
+      `)
     })
 
     test('transition appear should not break following component hydration', async () => {
@@ -1503,7 +1546,7 @@ describe('Vapor Mode hydration', () => {
         data,
       )
       expect(html).toBe(
-        `<!--[--><!--[--><!--[--><li>1</li><li>2</li><!--]--><!--]--><!--]-->`,
+        `<!--{--><!--[--><!--[--><!--[--><li>1</li><li>2</li><!--]--><!--]--><!--]--><!--}-->`,
       )
       expect(container.innerHTML).toBe(html)
       expect(`Hydration node mismatch`).not.toHaveBeenWarned()
@@ -1514,7 +1557,7 @@ describe('Vapor Mode hydration', () => {
       await nextTick()
       expect(container.querySelector('li')).toBe(li)
       expect(container.innerHTML).toBe(
-        `<!--[--><!--[--><!--[--><li>1</li><li>2</li><li>3</li><!--]--><!--]--><!--]-->`,
+        `<!--{--><!--[--><!--[--><!--[--><li>1</li><li>2</li><li>3</li><!--]--><!--]--><!--]--><!--}-->`,
       )
     })
 

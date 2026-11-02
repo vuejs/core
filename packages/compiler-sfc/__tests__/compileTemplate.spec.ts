@@ -532,16 +532,6 @@ test('prefixing props edge case in inline mode', () => {
   expect(content).toMatch(`__props["Foo"]).Bar`)
 })
 
-test('returns multiRoot metadata for a multi-root template when vapor is enabled', () => {
-  const result = compile({
-    filename: 'example.vue',
-    source: `<div /><div />`,
-    vapor: true,
-  })
-
-  expect(result.multiRoot).toBe(true)
-})
-
 test('template-only vapor compile keeps built-in render args for $slots', () => {
   const result = compile({
     filename: 'example.vue',
@@ -565,64 +555,6 @@ test('compiles vapor event delegation only when explicitly requested', () => {
   expect(result.code).toContain(`_on(n0, "click", e => _ctx.onClick(e))`)
   expect(result.code).toContain(`_delegateEvents("keyup")`)
   expect(result.code).toContain(`n1.$evtkeyup`)
-})
-
-test('returns single-root metadata for root control flow when vapor is enabled', () => {
-  const result = compile({
-    filename: 'example.vue',
-    source: `<template v-if="ok"><div /><div /></template>`,
-    vapor: true,
-  })
-
-  expect(result.multiRoot).toBe(false)
-})
-
-test('returns single-root metadata for a root if / else-if / else chain when vapor is enabled', () => {
-  const result = compile({
-    filename: 'example.vue',
-    source: `<template v-if="ok"><div /></template><template v-else-if="maybe"><div /></template><template v-else><div /></template>`,
-    vapor: true,
-  })
-
-  expect(result.multiRoot).toBe(false)
-})
-
-test('ignores preserved whitespace between root if branches when returning multiRoot metadata', () => {
-  const result = compile({
-    filename: 'example.vue',
-    source: `<template v-if="ok"><div /></template>
-
-<template v-else><div /></template>`,
-    vapor: true,
-    compilerOptions: {
-      whitespace: 'preserve',
-    },
-  })
-
-  expect(result.multiRoot).toBe(false)
-})
-
-test('returns multiRoot metadata for a root component with a sibling when vapor is enabled', () => {
-  const result = compile({
-    filename: 'example.vue',
-    source: `<KeepAlive><div /></KeepAlive><span />`,
-    vapor: true,
-  })
-
-  expect(result.multiRoot).toBe(true)
-})
-
-test('respects comments option when returning multiRoot metadata', () => {
-  const result = compile({
-    filename: 'example.vue',
-    source: `<!-- root comment --><div />`,
-    vapor: true,
-    compilerOptions: {
-      comments: false,
-    },
-  })
-
-  expect(result.multiRoot).toBe(false)
 })
 
 test('tells the ssr compiler that the template is a vapor component', () => {

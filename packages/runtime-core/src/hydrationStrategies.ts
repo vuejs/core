@@ -1,4 +1,9 @@
-import { getGlobalThis, isString, isVaporBranchStart } from '@vue/shared'
+import {
+  getGlobalThis,
+  isString,
+  isVaporBranchStart,
+  rangeCloseOf,
+} from '@vue/shared'
 import { DOMNodeTypes, isComment, isRangeStart } from './hydration'
 
 // Polyfills for Safari support
@@ -134,10 +139,11 @@ export function forEachElement(
   node: Node,
   cb: (el: Element) => void | false,
 ): void {
-  // fragment, a slot fallback (`<!--(-->`) or a vapor v-if branch
+  // fragment, a slot fallback (`<!--(-->`), a vapor v-if branch or the
+  // roots of a vapor component (`<!--{-->`)
   if (isComment(node) && isRangeStart(node.data)) {
     const open = node.data
-    const close = open === '(' ? ')' : ']'
+    const close = rangeCloseOf(open)
     let depth = 1
     let next = node.nextSibling
     while (next) {

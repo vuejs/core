@@ -40,7 +40,9 @@ describe('VDOM interop', () => {
     expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
       `
       "
+      <!--{-->
       <!--[--><div>foo</div><!--]-->
+      <!--}-->
       "
     `,
     )
@@ -52,7 +54,9 @@ describe('VDOM interop', () => {
     expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
       `
       "
+      <!--{-->
       <!--[--><div>bar</div><!--]-->
+      <!--}-->
       "
     `,
     )
@@ -174,7 +178,9 @@ describe('VDOM interop', () => {
     expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
       `
       "
+      <!--{-->
       <!--(--><div>foo</div><!--)-->
+      <!--}-->
       "
     `,
     )
@@ -186,7 +192,9 @@ describe('VDOM interop', () => {
     expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
       `
       "
+      <!--{-->
       <!--(--><div>bar</div><!--)-->
+      <!--}-->
       "
     `,
     )
@@ -526,7 +534,9 @@ describe('VDOM interop', () => {
     expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
       `
       "
+      <!--{-->
       <!--(--><span>foo</span><!--)-->
+      <!--}-->
       "
     `,
     )
@@ -538,7 +548,9 @@ describe('VDOM interop', () => {
     expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
       `
       "
+      <!--{-->
       <!--(--><span>bar</span><!--)-->
+      <!--}-->
       "
     `,
     )
@@ -586,7 +598,9 @@ describe('VDOM interop', () => {
     expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
       `
       "
+      <!--{-->
       <!--(--><!--if--><div>foo</div><!--)-->
+      <!--}-->
       "
     `,
     )
@@ -598,7 +612,9 @@ describe('VDOM interop', () => {
     expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
       `
       "
+      <!--{-->
       <!--(--><!--if--><div>baz</div><!--)-->
+      <!--}-->
       "
     `,
     )
@@ -608,7 +624,9 @@ describe('VDOM interop', () => {
     expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
       `
       "
+      <!--{-->
       <!--(--><span>bar</span><!--if--><!--)-->
+      <!--}-->
       "
     `,
     )
@@ -618,7 +636,9 @@ describe('VDOM interop', () => {
     expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
       `
       "
+      <!--{-->
       <!--(--><span>qux</span><!--if--><!--)-->
+      <!--}-->
       "
     `,
     )
@@ -672,7 +692,9 @@ describe('VDOM interop', () => {
     expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
       `
       "
+      <!--{-->
       <!--(--><!--if--><!----><div>foo</div><!--)-->
+      <!--}-->
       "
     `,
     )
@@ -685,7 +707,9 @@ describe('VDOM interop', () => {
     expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
       `
       "
+      <!--{-->
       <!--(--><!--if--><i>prefix</i><div>foo</div><!--)-->
+      <!--}-->
       "
     `,
     )
@@ -744,9 +768,11 @@ describe('VDOM interop', () => {
     expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
       `
       "
+      <!--{-->
       <!--[-->
       <!--(--><div>local fallback</div><!--)-->
       <!--]-->
+      <!--}-->
       "
     `,
     )
@@ -758,9 +784,11 @@ describe('VDOM interop', () => {
     expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
       `
       "
+      <!--{-->
       <!--[-->
       <!--(--><section>outlet fallback</section><!--)-->
       <!--]-->
+      <!--}-->
       "
     `,
     )
@@ -770,9 +798,11 @@ describe('VDOM interop', () => {
     expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
       `
       "
+      <!--{-->
       <!--[-->
       <!--(--><section>updated outlet fallback</section><!--)-->
       <!--]-->
+      <!--}-->
       "
     `,
     )
@@ -783,9 +813,11 @@ describe('VDOM interop', () => {
     expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
       `
       "
+      <!--{-->
       <!--[-->
       <!--(--><div>updated local fallback</div><!--)-->
       <!--]-->
+      <!--}-->
       "
     `,
     )
@@ -832,10 +864,12 @@ describe('VDOM interop', () => {
 
     expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
       `
-        "
-        <!--[--><div><!----><span>bar</span></div><!--]-->
-        "
-      `,
+      "
+      <!--{-->
+      <!--[--><div><!----><span>bar</span></div><!--]-->
+      <!--}-->
+      "
+    `,
     )
 
     expect(`Hydration node mismatch`).not.toHaveBeenWarned()
@@ -844,10 +878,12 @@ describe('VDOM interop', () => {
     await nextTick()
     expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
       `
-        "
-        <!--[--><div><!----><span>baz</span></div><!--]-->
-        "
-      `,
+      "
+      <!--{-->
+      <!--[--><div><!----><span>baz</span></div><!--]-->
+      <!--}-->
+      "
+    `,
     )
   })
 
@@ -899,7 +935,9 @@ describe('VDOM interop', () => {
     expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
       `
       "
+      <!--{-->
       <!--(--><!--if--><div>foo</div><p>bar</p><!--)-->
+      <!--}-->
       "
     `,
     )
@@ -912,7 +950,9 @@ describe('VDOM interop', () => {
     expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
       `
       "
+      <!--{-->
       <!--(--><!--if--><div>qux</div><p>quux</p><!--)-->
+      <!--}-->
       "
     `,
     )
@@ -922,7 +962,9 @@ describe('VDOM interop', () => {
     expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
       `
       "
+      <!--{-->
       <!--(--><span>baz</span><!--if--><!--)-->
+      <!--}-->
       "
     `,
     )
@@ -978,9 +1020,11 @@ describe('VDOM interop', () => {
     expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
       `
       "
+      <!--{-->
       <!--[-->
       <!--(--><!--if--><div>foo</div><!----><!--)-->
       <i>tail</i><!--]-->
+      <!--}-->
       "
     `,
     )
@@ -990,9 +1034,11 @@ describe('VDOM interop', () => {
     expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
       `
       "
+      <!--{-->
       <!--[-->
       <!--(--><!--if--><div>foo</div><p>bar</p><!--)-->
       <i>tail</i><!--]-->
+      <!--}-->
       "
     `,
     )
@@ -1034,9 +1080,13 @@ describe('VDOM interop', () => {
     expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
       `
       "
-      <!--(--><div>
+      <!--{-->
+      <!--(-->
+      <!--{--><div>
       <!--(--><!--slot-->foo<!--)-->
-      </div><!--)-->
+      </div><!--}-->
+      <!--)-->
+      <!--}-->
       "
     `,
     )
@@ -1048,9 +1098,13 @@ describe('VDOM interop', () => {
     expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
       `
       "
-      <!--(--><div>
+      <!--{-->
+      <!--(-->
+      <!--{--><div>
       <!--(--><!--slot-->bar<!--)-->
-      </div><!--)-->
+      </div><!--}-->
+      <!--)-->
+      <!--}-->
       "
     `,
     )
@@ -1163,7 +1217,7 @@ describe('VDOM interop', () => {
         data,
       )
 
-      expect(html).toBe(`<!--(--><p>fallback</p><!--)-->`)
+      expect(html).toBe(`<!--{--><!--(--><p>fallback</p><!--)--><!--}-->`)
       expect(`Hydration node mismatch`).not.toHaveBeenWarned()
       expect(`Hydration children mismatch`).not.toHaveBeenWarned()
       // the server's markers are adopted: none recreated
@@ -1223,7 +1277,9 @@ describe('VDOM interop', () => {
         },
         data,
       )
-      expect(html).toBe(`<div><!--(--><p>fallback</p><!--)--></div>`)
+      expect(html).toBe(
+        `<!--{--><div><!--(--><p>fallback</p><!--)--></div><!--}-->`,
+      )
       expect(`Hydration node mismatch`).not.toHaveBeenWarned()
       expect(`Hydration children mismatch`).not.toHaveBeenWarned()
 
@@ -1271,7 +1327,7 @@ describe('VDOM interop', () => {
       expect(visible(container)).toBe(shown)
 
       app.unmount()
-      expect(container.innerHTML).toBe('')
+      expect(container.innerHTML).toBe('<!--{--><!--}-->')
     },
   )
 
@@ -1299,7 +1355,9 @@ describe('VDOM interop', () => {
     )
     expect(`Hydration node mismatch`).not.toHaveBeenWarned()
     expect(`Hydration children mismatch`).not.toHaveBeenWarned()
-    expect(html).toBe(`<!--[--><!--(--><u>mid</u><!--)--><!--]-->`)
+    expect(html).toBe(
+      `<!--{--><!--[--><!--(--><u>mid</u><!--)--><!--]--><!--}-->`,
+    )
     expect(count(container, '<!--]-->')).toBe(1)
     expect(count(container, '<!--)-->')).toBe(1)
     expect(visible(container)).toBe(`<u>mid</u>`)
@@ -1407,11 +1465,13 @@ describe('VDOM interop', () => {
 
     expect(`Hydration node mismatch`).not.toHaveBeenWarned()
     expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
-      "<div>
+      "
+      <!--{--><div>
       <!--(--><!--slot-->
       <!--[--><span>foo</span><!--if--><!--]-->
       <!--if--><!--)-->
-      </div>"
+      </div><!--}-->
+      "
     `)
   })
 
@@ -1447,31 +1507,37 @@ describe('VDOM interop', () => {
     expect(`Hydration node mismatch`).not.toHaveBeenWarned()
     expect(`Hydration children mismatch`).not.toHaveBeenWarned()
     expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
-      "<div>
+      "
+      <!--{--><div>
       <!--(--><!--slot-->
       <!--[--><!--]-->
       <!--)-->
-      </div>"
+      </div><!--}-->
+      "
     `)
 
     items.value = ['foo']
     await nextTick()
     expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
-      "<div>
+      "
+      <!--{--><div>
       <!--(--><!--slot-->
       <!--[--><span>foo</span><!--]-->
       <!--)-->
-      </div>"
+      </div><!--}-->
+      "
     `)
 
     items.value = ['bar']
     await nextTick()
     expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
-      "<div>
+      "
+      <!--{--><div>
       <!--(--><!--slot-->
       <!--[--><span>bar</span><!--]-->
       <!--)-->
-      </div>"
+      </div><!--}-->
+      "
     `)
   })
 
@@ -1521,23 +1587,31 @@ describe('VDOM interop', () => {
     expect(`Hydration node mismatch`).not.toHaveBeenWarned()
     expect(`Hydration children mismatch`).not.toHaveBeenWarned()
     expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
-      "<div>
+      "
+      <!--{-->
+      <!--{--><div>
       <!--[-->
       <!--[--><!--]-->
       <!--[--><!--]-->
       <b>tail</b><!--]-->
-      </div>"
+      </div><!--}-->
+      <!--}-->
+      "
     `)
 
     data.items = ['foo']
     await nextTick()
     expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
-      "<div>
+      "
+      <!--{-->
+      <!--{--><div>
       <!--[-->
       <!--[--><span>foo</span><!--]-->
       <!--[--><!--]-->
       <b>tail</b><!--]-->
-      </div>"
+      </div><!--}-->
+      <!--}-->
+      "
     `)
   })
 
@@ -1784,7 +1858,7 @@ describe('VDOM interop', () => {
         },
         data,
       )
-      expect(html).toBe(`<div><!--[--><!--]--></div>`)
+      expect(html).toBe(`<!--{--><div><!--[--><!--]--></div><!--}-->`)
       expect(`Hydration node mismatch`).not.toHaveBeenWarned()
       expect(`Hydration children mismatch`).not.toHaveBeenWarned()
       expect(visible(container)).toBe(`<div></div>`)
@@ -1821,7 +1895,9 @@ describe('VDOM interop', () => {
       },
       data,
     )
-    expect(html).toBe(`<!--[--><!--(--><u>mid</u><!--)--><!--]-->`)
+    expect(html).toBe(
+      `<!--{--><!--[--><!--(--><u>mid</u><!--)--><!--]--><!--}-->`,
+    )
     expect(`Hydration node mismatch`).not.toHaveBeenWarned()
     expect(`Hydration children mismatch`).not.toHaveBeenWarned()
     expect(visible(container)).toBe(`<u>mid</u>`)
@@ -1863,7 +1939,9 @@ describe('VDOM interop', () => {
     const html = await VueServerRenderer.renderToString(
       runtimeDom.createSSRApp(App(true)),
     )
-    expect(html).toBe(`<div><!--(--><p>fallback</p><!--)--></div>`)
+    expect(html).toBe(
+      `<!--{--><div><!--(--><p>fallback</p><!--)--></div><!--}-->`,
+    )
 
     const container = document.createElement('div')
     document.body.appendChild(container)
@@ -1885,7 +1963,7 @@ describe('VDOM interop', () => {
     expect(visible(container)).toBe(`<div><p>fallback</p></div>`)
 
     app.unmount()
-    expect(container.innerHTML).toBe('')
+    expect(container.innerHTML).toBe('<!--{--><!--}-->')
   })
 
   // the slot renders the first fallback on its chain that renders something:
@@ -1920,7 +1998,9 @@ describe('VDOM interop', () => {
     const html = await VueServerRenderer.renderToString(
       runtimeDom.createSSRApp(App(true)),
     )
-    expect(html).toBe(`<div><!--(--><p>outer fallback</p><!--)--></div>`)
+    expect(html).toBe(
+      `<!--{--><div><!--(--><p>outer fallback</p><!--)--></div><!--}-->`,
+    )
 
     const container = document.createElement('div')
     document.body.appendChild(container)
@@ -1946,7 +2026,7 @@ describe('VDOM interop', () => {
     expect(visible(container)).toBe(`<div><p>outer fallback</p></div>`)
 
     app.unmount()
-    expect(container.innerHTML).toBe('')
+    expect(container.innerHTML).toBe('<!--{--><!--}-->')
   })
 
   // without `ssrRender` (a render function, or a client-compiled library
@@ -2007,7 +2087,9 @@ describe('VDOM interop', () => {
       const html = await VueServerRenderer.renderToString(
         runtimeDom.createSSRApp(App(true)),
       )
-      expect(html).toBe(`<div><!--(--><p>fallback</p><!--)--></div>`)
+      expect(html).toBe(
+        `<!--{--><div><!--(--><p>fallback</p><!--)--></div><!--}-->`,
+      )
 
       const container = document.createElement('div')
       document.body.appendChild(container)
@@ -2029,7 +2111,7 @@ describe('VDOM interop', () => {
       expect(visible(container)).toBe(`<div><p>fallback</p></div>`)
 
       app.unmount()
-      expect(container.innerHTML).toBe('')
+      expect(container.innerHTML).toBe('<!--{--><!--}-->')
     },
   )
 
@@ -2115,7 +2197,7 @@ describe('VDOM interop', () => {
       expect(visible(container)).toBe(`<div></div>`)
 
       app.unmount()
-      expect(container.innerHTML).toBe('')
+      expect(container.innerHTML).toBe('<!--{--><!--}-->')
     },
   )
 
@@ -2582,7 +2664,8 @@ describe('VDOM interop', () => {
     expect(main.querySelector('button')).not.toBe(first)
     data.mounted = false
     await nextTick()
-    expect(main.childNodes.length).toBe(2)
+    // the hydrated child's range markers stay behind
+    expect(main.childNodes.length).toBe(4)
     expect(main.querySelector('i')).toBe(after)
     app.unmount()
     expect(container.innerHTML).toBe('')
@@ -2684,7 +2767,7 @@ describe('VDOM interop', () => {
     expect(`Hydration node mismatch`).not.toHaveBeenWarned()
 
     app.unmount()
-    expect(container.innerHTML).toBe('')
+    expect(container.innerHTML).toBe('<!--{--><!--}-->')
   })
 
   test('preserves array slot props of a keyed vdom outlet in ssr and hydration', async () => {
@@ -2730,7 +2813,7 @@ describe('VDOM interop', () => {
       '<div><i>1:baz</i></div>',
     )
     app.unmount()
-    expect(container.innerHTML).toBe('')
+    expect(container.innerHTML).toBe('<!--{--><!--}-->')
   })
 
   // Rendered bare by the server inside a vdom Transition, the slot has no range
@@ -2796,4 +2879,81 @@ describe('VDOM interop', () => {
     expect(visible(container)).toBe('<div><b>b</b></div>')
     expect(data.hooks).toEqual(['beforeEnter', 'enter'])
   })
+
+  // a bare slot (under a vdom Transition) has no range of its own: a range its
+  // content opens, and the close the cursor rests on after the content, are
+  // not the slot's
+  test.each([
+    [
+      'a v-if chain ranging its branch',
+      `<template>
+        <span>s</span>
+        <components.Wrapper>
+          <b v-if="data.show">b</b>
+          <b v-else-if="data.alt">c</b>
+        </components.Wrapper>
+      </template>`,
+      {},
+    ],
+    [
+      'a component',
+      `<template>
+        <components.Wrapper>
+          <components.Deep v-if="data.show" />
+        </components.Wrapper>
+      </template>`,
+      {
+        Deep: `<template><components.Leaf /></template>`,
+        Leaf: `<template><b>b</b></template>`,
+      },
+    ],
+    [
+      'a component at the end of the page',
+      `<template>
+        <main>
+          <components.Wrapper>
+            <components.Deep v-if="data.show" />
+          </components.Wrapper>
+        </main>
+      </template>`,
+      {
+        Deep: `<template><components.Leaf /></template>`,
+        Leaf: `<template><b>b</b></template>`,
+      },
+    ],
+  ])(
+    'a bare vapor slot whose content opens with %s keeps its fallback in its host',
+    async (_, app, components) => {
+      const data = reactive({ show: true, alt: false })
+      const { container } = await testWithVaporApp(
+        app,
+        {
+          Wrapper: {
+            code: `<script setup>const data = _data</script>
+              <template>
+                <div>
+                  <Transition :css="false"><slot><p>fallback</p></slot></Transition>
+                </div>
+              </template>`,
+            vapor: false,
+          },
+          ...components,
+        },
+        data,
+      )
+      const div = container.querySelector('div')!
+      expect(div.textContent).toBe('b')
+      expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+      expect(`Hydration children mismatch`).not.toHaveBeenWarned()
+
+      data.show = false
+      await nextTick()
+      expect(div.textContent).toBe('fallback')
+      expect(div.nextElementSibling).toBeNull()
+
+      data.show = true
+      await nextTick()
+      expect(div.textContent).toBe('b')
+    },
+  )
 })

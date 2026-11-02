@@ -44,6 +44,7 @@ import {
   displayName,
   isVaporTransition,
   isVaporTransitionHooks,
+  markTransitionDefined,
   registerTransitionHooks,
 } from '../transition'
 import {
@@ -170,6 +171,7 @@ export const hydrateTransitionImpl = (
 }
 
 const decorate = (t: typeof VaporTransition) => {
+  markTransitionDefined()
   t.displayName = displayName
   t.props = TransitionPropsValidators
   t.__vapor = true

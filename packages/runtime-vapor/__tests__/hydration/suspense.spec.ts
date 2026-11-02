@@ -8,6 +8,7 @@ import {
   formatHtml,
   formatNodeList,
   setupHydrationTest,
+  testHydration,
   testWithVaporApp,
 } from './_helpers'
 
@@ -698,11 +699,11 @@ describe('Vapor Mode hydration', () => {
 
           expect(instance.pendingBlock).toBeUndefined()
           expect(pendingNodes.every(node => !node.isConnected)).toBe(true)
-          expect(container.innerHTML).toBe('<p>fallback</p>')
+          expect(container.innerHTML).toBe('<!--{--><!--}--><p>fallback</p>')
 
           resolveClient()
           await new Promise(resolve => setTimeout(resolve))
-          expect(container.innerHTML).toBe('<p>fallback</p>')
+          expect(container.innerHTML).toBe('<!--{--><!--}--><p>fallback</p>')
         })
 
         test.each([
@@ -710,7 +711,7 @@ describe('Vapor Mode hydration', () => {
           [
             'multi-root range',
             '<span>async</span><b>range</b>',
-            ['<!--[-->', '<span>async</span>', '<b>range</b>', '<!--]-->'],
+            ['<!--{-->', '<span>async</span>', '<b>range</b>', '<!--}-->'],
           ],
         ] as const)(
           'moves pending hydrated async setup before resolving (%s)',
@@ -1064,7 +1065,7 @@ describe('Vapor Mode hydration', () => {
           expect(`Hydration children mismatch`).not.toHaveBeenWarned()
           expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
             "<div>
-            <!--[--><span>one</span><span>two</span><!--]-->
+            <!--{--><span>one</span><span>two</span><!--}-->
             <i>after</i></div>"
           `)
         })
@@ -1599,7 +1600,7 @@ describe('Vapor Mode hydration', () => {
         runtimeDom.createSSRApp(SSRApp),
       )
       expect(root.innerHTML).toMatchInlineSnapshot(
-        `"<div style="display:none;"><!--[--><!--[--><!--[--><div>0</div><!--]--><!--]--><!--]--></div>"`,
+        `"<!--{--><div style="display:none;"><!--[--><!--[--><!--[--><div>0</div><!--]--><!--]--><!--]--></div><!--}-->"`,
       )
 
       const Toggle = compileVaporComponent(toggleCode)
@@ -1617,7 +1618,7 @@ describe('Vapor Mode hydration', () => {
       await nextTick()
       await nextTick()
       expect(root.innerHTML).toMatchInlineSnapshot(
-        `"<div style=""><!--[--><!--[--><!--[--><div>1</div><!--]--><!--]--><!--]--></div>"`,
+        `"<!--{--><div style=""><!--[--><!--[--><!--[--><div>1</div><!--]--><!--]--><!--]--></div><!--}-->"`,
       )
       expect(data.value.fn).toBeCalledTimes(1)
     })
@@ -1774,4 +1775,85 @@ describe('hydrating a component whose root is a pending async setup child', () =
       parity(host, sequences[name]),
     )
   }
+})
+
+// the host's range and the async setup's open back to back: the pending
+// range is the setup's whole range
+describe('async setup as the lone root of a vapor host under vdom Suspense', () => {
+  async function run(
+    childTemplate: string,
+    extra: Record<string, string> = {},
+  ) {
+    let resolveClient!: () => void
+    const serverData = ref({
+      wait: Promise.resolve(),
+      msg: 'one',
+      list: ['a', 'b'],
+    })
+    const clientData = ref({
+      wait: new Promise<void>(r => (resolveClient = r)),
+      msg: 'one',
+      list: ['a', 'b'],
+    })
+    const { container, html } = await testHydration(
+      `<script setup>const components = _components</script>
+      <template>
+        <Suspense><div><components.Host /><i>after</i></div></Suspense>
+      </template>`,
+      {
+        ...extra,
+        Child: `
+          <script vapor>
+            const data = _data
+            const components = _components
+            await data.value.wait
+          </script>
+          <template>${childTemplate}</template>`,
+        Host: `
+          <script vapor>const components = _components</script>
+          <template><components.Child /></template>`,
+      },
+      clientData,
+      { isVaporApp: false, interop: true, serverData },
+    )
+    expect(container.innerHTML).toBe(html)
+    const after = container.querySelector('div')!.lastElementChild
+    resolveClient()
+    await new Promise(r => setTimeout(r))
+    await nextTick()
+    expect(container.innerHTML).toBe(html)
+    expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+    expect(`Hydration children mismatch`).not.toHaveBeenWarned()
+    clientData.value.msg = 'two'
+    await nextTick()
+    expect(container.querySelector('div')!.lastElementChild).toBe(after)
+    return container
+  }
+
+  test('plain roots', async () => {
+    const container = await run(`<span>{{ data.msg }}</span><b>two</b>`)
+    expect(container.querySelector('span')!.textContent).toBe('two')
+  })
+
+  test('first root a v-for', async () => {
+    const container = await run(
+      `<i v-for="x in data.list" :key="x">{{ x }}</i><b>{{ data.msg }}</b>`,
+    )
+    expect(container.querySelector('b')!.textContent).toBe('two')
+  })
+
+  test('first root a multi-root component', async () => {
+    const container = await run(`<components.D /><b>{{ data.msg }}</b>`, {
+      D: `<template><p>d1</p><p>d2</p></template>`,
+    })
+    expect(container.querySelector('b')!.textContent).toBe('two')
+  })
+
+  test('sole root a multi-root component whose first root is one too', async () => {
+    const container = await run(`<components.D />`, {
+      E: `<template><p>e1</p><p>e2</p></template>`,
+      D: `<template><components.E /><b>{{ data.msg }}</b></template>`,
+    })
+    expect(container.querySelector('b')!.textContent).toBe('two')
+  })
 })

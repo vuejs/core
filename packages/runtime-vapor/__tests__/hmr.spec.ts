@@ -32,6 +32,7 @@ import {
   createSlot,
   createTemplateRefSetter,
   createVaporApp,
+  createVaporSSRApp,
   defineVaporAsyncComponent,
   defineVaporComponent,
   delegateEvents,
@@ -2631,5 +2632,41 @@ describe('hot module replacement', () => {
         `<div class="v-leave-from v-leave-active">b</div>`,
       )
     })
+  })
+
+  // the hydrated child's `}` is the anchor of the v-if rendering it: a
+  // rerender puts the new roots before it
+  test('rerender a hydrated multi-root child of a v-if', async () => {
+    const childId = 'test-hydrated-multi-root-child'
+    const Child = defineVaporComponent({
+      __hmrId: childId,
+      render: compileToFunction(`<p>a</p><p>b</p>`),
+    })
+    createRecord(childId, Child as any)
+    const show = ref(true)
+    const Parent = defineVaporComponent({
+      components: { Child },
+      setup: () => ({ show }),
+      render: compileToFunction(`<Child v-if="show" /><b>after</b>`),
+    })
+    const root = document.createElement('div')
+    root.innerHTML = `<!--{--><!--{--><p>a</p><p>b</p><!--}--><b>after</b><!--}-->`
+    document.body.appendChild(root)
+    createVaporSSRApp(Parent).mount(root)
+
+    rerender(childId, compileToFunction(`<p>a1</p><p>b1</p>`))
+    expect(root.innerHTML).toBe(
+      `<!--{--><!--{--><p>a1</p><p>b1</p><!--}--><b>after</b><!--}-->`,
+    )
+
+    show.value = false
+    await nextTick()
+    expect(root.innerHTML).toBe(`<!--{--><!--{--><!--}--><b>after</b><!--}-->`)
+
+    show.value = true
+    await nextTick()
+    expect(root.innerHTML).toBe(
+      `<!--{--><!--{--><p>a1</p><p>b1</p><!--}--><b>after</b><!--}-->`,
+    )
   })
 })

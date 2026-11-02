@@ -68,21 +68,29 @@ describe('Vapor Mode hydration', () => {
       )
 
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
-      	"<div>
-      	<!--[-->
-      	<!--[--><span>foo</span><!--]-->
-      	<!--]-->
-      	</div>"
+        "
+        <!--{-->
+        <!--{--><div>
+        <!--[-->
+        <!--[--><span>foo</span><!--]-->
+        <!--]-->
+        </div><!--}-->
+        <!--}-->
+        "
       `)
 
       data.foo = 'foo1'
       await nextTick()
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
-      	"<div>
-      	<!--[-->
-      	<!--[--><span>foo1</span><!--]-->
-      	<!--]-->
-      	</div>"
+        "
+        <!--{-->
+        <!--{--><div>
+        <!--[-->
+        <!--[--><span>foo1</span><!--]-->
+        <!--]-->
+        </div><!--}-->
+        <!--}-->
+        "
       `)
     })
 
@@ -102,9 +110,13 @@ describe('Vapor Mode hydration', () => {
       )
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
         `
-        "<div>
+        "
+        <!--{-->
+        <!--{--><div>
         <!--(--><!--slot-->foo<!--)-->
-        </div>"
+        </div><!--}-->
+        <!--}-->
+        "
       `,
       )
 
@@ -112,9 +124,13 @@ describe('Vapor Mode hydration', () => {
       await nextTick()
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
         `
-        "<div>
+        "
+        <!--{-->
+        <!--{--><div>
         <!--(--><!--slot-->foo1<!--)-->
-        </div>"
+        </div><!--}-->
+        <!--}-->
+        "
       `,
       )
     })
@@ -1157,9 +1173,17 @@ describe('Vapor Mode hydration', () => {
 
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
         `
-        "<div>
+        "
+        <!--{-->
+        <!--{-->
+        <!--{-->
+        <!--{--><div>
         <!--[--><!--slot--><!--slot--><!--slot--><!--]-->
-        <div>foo</div></div>"
+        <div>foo</div></div><!--}-->
+        <!--}-->
+        <!--}-->
+        <!--}-->
+        "
       `,
       )
 
@@ -1167,9 +1191,17 @@ describe('Vapor Mode hydration', () => {
       await nextTick()
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
         `
-        "<div>
+        "
+        <!--{-->
+        <!--{-->
+        <!--{-->
+        <!--{--><div>
         <!--[--><!--slot--><!--slot--><!--slot--><!--]-->
-        <div>bar</div></div>"
+        <div>bar</div></div><!--}-->
+        <!--}-->
+        <!--}-->
+        <!--}-->
+        "
       `,
       )
     })
@@ -1209,11 +1241,13 @@ describe('Vapor Mode hydration', () => {
 
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
         `
-        "<div>
+        "
+        <!--{--><div>
         <!--[--><div>banner</div><!--]-->
         <div><main><span>content</span></main>
         <!--[--><!--slot--><!--slot--><!--]-->
-        <p>footer</p></div></div>"
+        <p>footer</p></div></div><!--}-->
+        "
       `,
       )
       expect(`Hydration node mismatch`).not.toHaveBeenWarned()
@@ -1254,9 +1288,13 @@ describe('Vapor Mode hydration', () => {
       expect(`Hydration node mismatch`).not.toHaveBeenWarned()
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
         `
-        "<div>
+        "
+        <!--{-->
+        <!--{--><div>
         <!--[--><!--slot--><!--]-->
-        <div>bar</div></div>"
+        <div>bar</div></div><!--}-->
+        <!--}-->
+        "
       `,
       )
 
@@ -1264,9 +1302,13 @@ describe('Vapor Mode hydration', () => {
       await nextTick()
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
         `
-        "<div>
+        "
+        <!--{-->
+        <!--{--><div>
         <!--[--><span>foo</span><!--slot--><!--]-->
-        <div>bar</div></div>"
+        <div>bar</div></div><!--}-->
+        <!--}-->
+        "
       `,
       )
 
@@ -1275,9 +1317,13 @@ describe('Vapor Mode hydration', () => {
       await nextTick()
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
         `
-        "<div>
+        "
+        <!--{-->
+        <!--{--><div>
         <!--[--><span>foo1</span><!--slot--><!--]-->
-        <div>bar1</div></div>"
+        <div>bar1</div></div><!--}-->
+        <!--}-->
+        "
       `,
       )
     })

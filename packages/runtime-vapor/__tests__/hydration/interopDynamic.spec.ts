@@ -32,7 +32,7 @@ describe('VDOM interop', () => {
       tail: 'tail',
     })
     const { container } = await mountWithHydration(
-      '<!--[--><!--dynamic-component--><span>tail</span><!--]-->',
+      '<!--{--><!--dynamic-component--><span>tail</span><!--}-->',
       `<script setup>
         const data = _data
       </script>
@@ -45,13 +45,13 @@ describe('VDOM interop', () => {
 
     expect(`Hydration node mismatch`).not.toHaveBeenWarned()
     expect(container.innerHTML).toBe(
-      '<!--[--><!--dynamic-component--><span>tail</span><!--]-->',
+      '<!--{--><!--dynamic-component--><span>tail</span><!--}-->',
     )
 
     data.value.show = true
     await nextTick()
     expect(container.innerHTML).toBe(
-      '<!--[--><div>late</div><!--dynamic-component--><span>tail</span><!--]-->',
+      '<!--{--><div>late</div><!--dynamic-component--><span>tail</span><!--}-->',
     )
 
     data.value.msg = 'late-updated'
@@ -59,7 +59,7 @@ describe('VDOM interop', () => {
     await nextTick()
 
     expect(container.innerHTML).toBe(
-      '<!--[--><div>late-updated</div><!--dynamic-component--><span>tail-updated</span><!--]-->',
+      '<!--{--><div>late-updated</div><!--dynamic-component--><span>tail-updated</span><!--}-->',
     )
   })
 
@@ -71,7 +71,7 @@ describe('VDOM interop', () => {
       tail: 'tail',
     })
     const { container } = await mountWithHydration(
-      '<!--[--><!----><span>tail</span><!--]-->',
+      '<!--{--><!----><span>tail</span><!--}-->',
       `<script setup>
         const data = _data
       </script>
@@ -87,20 +87,20 @@ describe('VDOM interop', () => {
     )
 
     expect(`Hydration node mismatch`).not.toHaveBeenWarned()
-    expect(container.innerHTML).toBe('<!--[--><!----><span>tail</span><!--]-->')
+    expect(container.innerHTML).toBe('<!--{--><!----><span>tail</span><!--}-->')
 
     data.value.show = true
     data.value.key = 'filled'
     await nextTick()
     expect(container.innerHTML).toBe(
-      '<!--[--><div>late</div><!----><span>tail</span><!--]-->',
+      '<!--{--><div>late</div><!----><span>tail</span><!--}-->',
     )
 
     data.value.msg = 'late-updated'
     data.value.tail = 'tail-updated'
     await nextTick()
     expect(container.innerHTML).toBe(
-      '<!--[--><div>late-updated</div><!----><span>tail-updated</span><!--]-->',
+      '<!--{--><div>late-updated</div><!----><span>tail-updated</span><!--}-->',
     )
   })
 
@@ -111,7 +111,7 @@ describe('VDOM interop', () => {
       tail: 'tail',
     })
     const { container } = await mountWithHydration(
-      '<!--[--><div>late</div><!--dynamic-component--><span>tail</span><!--]-->',
+      '<!--{--><div>late</div><!--dynamic-component--><span>tail</span><!--}-->',
       `<script setup>
         const data = _data
       </script>
@@ -125,13 +125,13 @@ describe('VDOM interop', () => {
     expect(`Hydration node mismatch`).not.toHaveBeenWarned()
     expect(`Hydration children mismatch`).toHaveBeenWarned()
     expect(container.innerHTML).toBe(
-      '<!--[--><!--dynamic-component--><span>tail</span><!--]-->',
+      '<!--{--><!--dynamic-component--><span>tail</span><!--}-->',
     )
 
     data.value.tail = 'tail-updated'
     await nextTick()
     expect(container.innerHTML).toBe(
-      '<!--[--><!--dynamic-component--><span>tail-updated</span><!--]-->',
+      '<!--{--><!--dynamic-component--><span>tail-updated</span><!--}-->',
     )
   })
 
@@ -213,16 +213,18 @@ describe('VDOM interop', () => {
 
     expect(`Hydration node mismatch`).not.toHaveBeenWarned()
     expect(`Hydration children mismatch`).toHaveBeenWarned()
-    expect(container.innerHTML).toBe('<!--dynamic-component-->')
+    expect(container.innerHTML).toBe('<!--{--><!--dynamic-component--><!--}-->')
 
     data.value.show = true
     await nextTick()
-    expect(container.innerHTML).toBe('<div>late</div><!--dynamic-component-->')
+    expect(container.innerHTML).toBe(
+      '<!--{--><div>late</div><!--dynamic-component--><!--}-->',
+    )
 
     data.value.msg = 'late-updated'
     await nextTick()
     expect(container.innerHTML).toBe(
-      '<div>late-updated</div><!--dynamic-component-->',
+      '<!--{--><div>late-updated</div><!--dynamic-component--><!--}-->',
     )
   })
 
@@ -299,12 +301,14 @@ describe('VDOM interop', () => {
 
     expect(`Hydration node mismatch`).not.toHaveBeenWarned()
     expect(`Hydration children mismatch`).toHaveBeenWarned()
-    expect(container.innerHTML).toBe('<!--dynamic-component-->')
+    expect(container.innerHTML).toBe('<!--{--><!--dynamic-component--><!--}-->')
 
     data.value.showMulti = true
     await nextTick()
     expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
-      "<div>first fragment</div><div>second fragment</div><!--dynamic-component-->"
+      "
+      <!--{--><div>first fragment</div><div>second fragment</div><!--dynamic-component--><!--}-->
+      "
     `)
   })
 
@@ -390,16 +394,18 @@ describe('VDOM interop', () => {
 
     expect(`Hydration node mismatch`).not.toHaveBeenWarned()
     expect(`Hydration children mismatch`).toHaveBeenWarned()
-    expect(container.innerHTML).toBe('<!--dynamic-component-->')
+    expect(container.innerHTML).toBe('<!--{--><!--dynamic-component--><!--}-->')
 
     data.value.showTeleport = true
     await nextTick()
     expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
       "
+      <!--{-->
       <!--teleport start-->
       <div>teleported</div>
       <!--teleport end-->
-      <!--dynamic-component-->"
+      <!--dynamic-component--><!--}-->
+      "
     `)
   })
 
@@ -475,9 +481,9 @@ describe('VDOM interop', () => {
     expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
       `
       "
-      <!--[--><div>
+      <!--{--><div>
       <!--[--><!--]-->
-      </div><h1>Hello World!</h1><!--]-->
+      </div><h1>Hello World!</h1><!--}-->
       "
     `,
     )
@@ -489,9 +495,9 @@ describe('VDOM interop', () => {
     expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
       `
       "
-      <!--[--><div>
+      <!--{--><div>
       <!--[--><!--]-->
-      </div><h1>Hi Vapor</h1><!--]-->
+      </div><h1>Hi Vapor</h1><!--}-->
       "
     `,
     )
@@ -529,7 +535,7 @@ describe('VDOM interop', () => {
     expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
       `
       "
-      <!--[--><div>first static</div><div>second static</div><!--dynamic-component--><span>tail</span><!--]-->
+      <!--{--><div>first static</div><div>second static</div><!--dynamic-component--><span>tail</span><!--}-->
       "
     `,
     )
@@ -541,7 +547,7 @@ describe('VDOM interop', () => {
     expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
       `
       "
-      <!--[--><div>first fragment</div><div>second fragment</div><!--dynamic-component--><span>tail</span><!--]-->
+      <!--{--><div>first fragment</div><div>second fragment</div><!--dynamic-component--><span>tail</span><!--}-->
       "
     `,
     )
@@ -551,7 +557,7 @@ describe('VDOM interop', () => {
     expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
       `
       "
-      <!--[--><div>first static</div><div>second static</div><!--dynamic-component--><span>tail</span><!--]-->
+      <!--{--><div>first static</div><div>second static</div><!--dynamic-component--><span>tail</span><!--}-->
       "
     `,
     )
@@ -560,7 +566,7 @@ describe('VDOM interop', () => {
     await nextTick()
     expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
       "
-      <!--[--><div>first static</div><div>second static</div><!--dynamic-component--><span>tail-updated</span><!--]-->
+      <!--{--><div>first static</div><div>second static</div><!--dynamic-component--><span>tail-updated</span><!--}-->
       "
     `)
   })
@@ -593,11 +599,11 @@ describe('VDOM interop', () => {
     expect(`Hydration node mismatch`).not.toHaveBeenWarned()
     expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
       "
-      <!--[-->
+      <!--{-->
       <!--teleport start-->
       <div>teleported</div>
       <!--teleport end-->
-      <!--dynamic-component--><span>tail</span><!--]-->
+      <!--dynamic-component--><span>tail</span><!--}-->
       "
     `)
 
@@ -605,7 +611,7 @@ describe('VDOM interop', () => {
     await nextTick()
     expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
       "
-      <!--[--><p>fallback</p><!--dynamic-component--><span>tail</span><!--]-->
+      <!--{--><p>fallback</p><!--dynamic-component--><span>tail</span><!--}-->
       "
     `)
 
@@ -613,11 +619,11 @@ describe('VDOM interop', () => {
     await nextTick()
     expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
       "
-      <!--[-->
+      <!--{-->
       <!--teleport start-->
       <div>teleported</div>
       <!--teleport end-->
-      <!--dynamic-component--><span>tail</span><!--]-->
+      <!--dynamic-component--><span>tail</span><!--}-->
       "
     `)
 
@@ -625,11 +631,11 @@ describe('VDOM interop', () => {
     await nextTick()
     expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
       "
-      <!--[-->
+      <!--{-->
       <!--teleport start-->
       <div>teleported</div>
       <!--teleport end-->
-      <!--dynamic-component--><span>tail-updated</span><!--]-->
+      <!--dynamic-component--><span>tail-updated</span><!--}-->
       "
     `)
   })
@@ -672,7 +678,7 @@ describe('VDOM interop', () => {
     expect(`Hydration children mismatch`).toHaveBeenWarned()
     expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
       "
-      <!--[--><!--dynamic-component--><span>tail</span><!--]-->
+      <!--{--><!--dynamic-component--><span>tail</span><!--}-->
       "
     `)
 
@@ -680,7 +686,7 @@ describe('VDOM interop', () => {
     await nextTick()
     expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
       "
-      <!--[--><!--dynamic-component--><span>tail-updated</span><!--]-->
+      <!--{--><!--dynamic-component--><span>tail-updated</span><!--}-->
       "
     `)
   })
@@ -728,10 +734,10 @@ describe('VDOM interop', () => {
     expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
       `
       "
-      <!--[-->
+      <!--{-->
       <!--teleport start-->
       <!--teleport end-->
-      <!--dynamic-component--><span>tail</span><!--]-->
+      <!--dynamic-component--><span>tail</span><!--}-->
       "
     `,
     )
@@ -744,7 +750,7 @@ describe('VDOM interop', () => {
     expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
       `
       "
-      <!--[--><p>fallback</p><!--dynamic-component--><span>tail</span><!--]-->
+      <!--{--><p>fallback</p><!--dynamic-component--><span>tail</span><!--}-->
       "
     `,
     )
@@ -755,10 +761,10 @@ describe('VDOM interop', () => {
     expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
       `
       "
-      <!--[-->
+      <!--{-->
       <!--teleport start-->
       <!--teleport end-->
-      <!--dynamic-component--><span>tail</span><!--]-->
+      <!--dynamic-component--><span>tail</span><!--}-->
       "
     `,
     )
@@ -770,10 +776,10 @@ describe('VDOM interop', () => {
     await nextTick()
     expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
       "
-      <!--[-->
+      <!--{-->
       <!--teleport start-->
       <!--teleport end-->
-      <!--dynamic-component--><span>tail-updated</span><!--]-->
+      <!--dynamic-component--><span>tail-updated</span><!--}-->
       "
     `)
   })
@@ -863,9 +869,9 @@ describe('VDOM interop', () => {
 
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
         "
-        <!--[-->
+        <!--{-->
         <!--[0--><p>next</p><!--]-->
-        <span>tail</span><!--]-->
+        <span>tail</span><!--}-->
         "
       `)
       expect(target.innerHTML).toBe('')
@@ -982,9 +988,9 @@ describe('VDOM interop', () => {
 
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
         "
-        <!--[-->
+        <!--{-->
         <!--[0--><p>next</p><!--]-->
-        <span>tail</span><!--]-->
+        <span>tail</span><!--}-->
         "
       `)
       expect(target.innerHTML).toBe('')
@@ -1025,7 +1031,7 @@ describe('VDOM interop', () => {
     expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
       `
       "
-      <!--[--><div>foo</div><!--dynamic-component--><span>tail</span><!--]-->
+      <!--{--><div>foo</div><!--dynamic-component--><span>tail</span><!--}-->
       "
     `,
     )
@@ -1036,7 +1042,7 @@ describe('VDOM interop', () => {
     expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
       `
       "
-      <!--[--><div>bar</div><!--dynamic-component--><span>tail</span><!--]-->
+      <!--{--><div>bar</div><!--dynamic-component--><span>tail</span><!--}-->
       "
     `,
     )
@@ -1046,7 +1052,7 @@ describe('VDOM interop', () => {
     expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
       `
       "
-      <!--[--><p>fallback</p><!--dynamic-component--><span>tail</span><!--]-->
+      <!--{--><p>fallback</p><!--dynamic-component--><span>tail</span><!--}-->
       "
     `,
     )
@@ -1056,7 +1062,7 @@ describe('VDOM interop', () => {
     expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
       `
       "
-      <!--[--><div>bar</div><!--dynamic-component--><span>tail</span><!--]-->
+      <!--{--><div>bar</div><!--dynamic-component--><span>tail</span><!--}-->
       "
     `,
     )
@@ -1065,7 +1071,7 @@ describe('VDOM interop', () => {
     await nextTick()
     expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
       "
-      <!--[--><div>bar</div><!--dynamic-component--><span>tail-updated</span><!--]-->
+      <!--{--><div>bar</div><!--dynamic-component--><span>tail-updated</span><!--}-->
       "
     `)
   })
@@ -1224,7 +1230,7 @@ describe('VDOM interop', () => {
     expect(`Hydration node mismatch`).not.toHaveBeenWarned()
     expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
       "
-      <!--[--><div>async resolved</div><!--dynamic-component--><span>tail</span><!--]-->
+      <!--{--><div>async resolved</div><!--dynamic-component--><span>tail</span><!--}-->
       "
     `)
 
@@ -1232,7 +1238,7 @@ describe('VDOM interop', () => {
     await nextTick()
     expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
       "
-      <!--[--><p>fallback</p><!--dynamic-component--><span>tail</span><!--]-->
+      <!--{--><p>fallback</p><!--dynamic-component--><span>tail</span><!--}-->
       "
     `)
 
@@ -1240,7 +1246,7 @@ describe('VDOM interop', () => {
     await nextTick()
     expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
       "
-      <!--[--><div>pending</div><!--dynamic-component--><span>tail</span><!--]-->
+      <!--{--><div>pending</div><!--dynamic-component--><span>tail</span><!--}-->
       "
     `)
 
@@ -1248,7 +1254,7 @@ describe('VDOM interop', () => {
     await new Promise(r => setTimeout(r))
     expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
       "
-      <!--[--><div>async resolved</div><!--dynamic-component--><span>tail</span><!--]-->
+      <!--{--><div>async resolved</div><!--dynamic-component--><span>tail</span><!--}-->
       "
     `)
 
@@ -1256,7 +1262,7 @@ describe('VDOM interop', () => {
     await nextTick()
     expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
       "
-      <!--[--><div>async resolved</div><!--dynamic-component--><span>tail-updated</span><!--]-->
+      <!--{--><div>async resolved</div><!--dynamic-component--><span>tail-updated</span><!--}-->
       "
     `)
   })
@@ -1290,7 +1296,7 @@ describe('VDOM interop', () => {
     expect(`Hydration node mismatch`).not.toHaveBeenWarned()
     expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
       "
-      <!--[--><div>foo</div><!--dynamic-component--><span>tail</span><!--]-->
+      <!--{--><div>foo</div><!--dynamic-component--><span>tail</span><!--}-->
       "
     `)
 
@@ -1298,7 +1304,7 @@ describe('VDOM interop', () => {
     await nextTick()
     expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
       "
-      <!--[--><div>foo</div><!--dynamic-component--><span>tail-updated</span><!--]-->
+      <!--{--><div>foo</div><!--dynamic-component--><span>tail-updated</span><!--}-->
       "
     `)
   })
@@ -1333,11 +1339,11 @@ describe('VDOM interop', () => {
     expect(`Hydration node mismatch`).not.toHaveBeenWarned()
     expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
       "
-      <!--[-->
+      <!--{-->
       <!--teleport start-->
       <div>teleported</div>
       <!--teleport end-->
-      <!--dynamic-component--><span>tail</span><!--]-->
+      <!--dynamic-component--><span>tail</span><!--}-->
       "
     `)
 
@@ -1345,7 +1351,7 @@ describe('VDOM interop', () => {
     await nextTick()
     expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
       "
-      <!--[--><p class="v-enter-from v-enter-active">fallback</p><!--dynamic-component--><span>tail</span><!--]-->
+      <!--{--><p class="v-enter-from v-enter-active">fallback</p><!--dynamic-component--><span>tail</span><!--}-->
       "
     `)
 
@@ -1353,11 +1359,11 @@ describe('VDOM interop', () => {
     await nextTick()
     expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
       "
-      <!--[--><p class="v-enter-from v-leave-from v-leave-active">fallback</p>
+      <!--{--><p class="v-enter-from v-leave-from v-leave-active">fallback</p>
       <!--teleport start-->
       <div>teleported</div>
       <!--teleport end-->
-      <!--dynamic-component--><span>tail</span><!--]-->
+      <!--dynamic-component--><span>tail</span><!--}-->
       "
     `)
 
@@ -1365,11 +1371,11 @@ describe('VDOM interop', () => {
     await nextTick()
     expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
       "
-      <!--[--><p class="v-enter-from v-leave-from v-leave-active">fallback</p>
+      <!--{--><p class="v-enter-from v-leave-from v-leave-active">fallback</p>
       <!--teleport start-->
       <div>teleported</div>
       <!--teleport end-->
-      <!--dynamic-component--><span>tail-updated</span><!--]-->
+      <!--dynamic-component--><span>tail-updated</span><!--}-->
       "
     `)
   })
@@ -1427,7 +1433,7 @@ describe('VDOM interop', () => {
     await nextTick()
     expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
       "
-      <!--[--><button>1</button><!--dynamic-component--><!--if--><span>tail-updated</span><!--]-->
+      <!--{--><button>1</button><!--dynamic-component--><!--if--><span>tail-updated</span><!--}-->
       "
     `)
   })

@@ -1006,8 +1006,15 @@ const vaporInteropImpl = {
       const hooks = applyVaporSlotTransition(vnode, vnode.vb)
       if (performAppear && hooks) performAppear(vnode.vb, hooks)
       const fragmentAnchor = isFragment(vnode.vb) && vnode.vb.anchor
-      let anchor = fragmentAnchor || currentHydrationNode!
-      const wrapped = isRangeStart(node) && isRangeEnd(anchor)
+      let anchor = fragmentAnchor || currentHydrationNode
+      // a range around the slot's content only: a bare slot's content may
+      // open with a range of its own, and the cursor rest on a close outside
+      // the slot's host
+      const wrapped =
+        isRangeStart(node) &&
+        !!anchor &&
+        isRangeEnd(anchor) &&
+        locateEndAnchor(node) === anchor
       // An unwrapped slot has no SSR-owned boundary. The hydration cursor is
       // only where VDOM should resume and may belong to the next sibling, so
       // create a dedicated self anchor matching the mount path.
@@ -1019,7 +1026,7 @@ const vaporInteropImpl = {
       }
       // VDOM SSR wraps slot output in fragment anchors. Keep that range on the
       // VaporSlot vnode so enabled Teleport removal can dispose both anchors.
-      if (isRangeStart(node) && isRangeEnd(anchor)) {
+      if (wrapped) {
         vnode.el = node
         vnode.anchor = anchor
       } else {
@@ -1607,11 +1614,9 @@ function shouldConsumeFragmentStart(vnode: VNode): boolean {
     return false
   }
 
-  // Only Vapor component VNodes carry `__multiRoot`
-  // e.g. `h(VaporComp)`
+  // a vapor component (`h(VaporComp)`) claims its own `{` range at entry
   if (vnode.shapeFlag & ShapeFlags.COMPONENT) {
-    const type = vnode.type as { __vapor?: boolean; __multiRoot?: boolean }
-    return !!type.__vapor && !type.__multiRoot
+    return !!(vnode.type as { __vapor?: boolean }).__vapor
   }
 
   return true

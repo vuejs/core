@@ -1473,7 +1473,6 @@ import { txt as _txt, toDisplayString as _toDisplayString, setText as _setText, 
 const t0 = _template("<div> ", 1)
 const msg = 'hi'
 export default {
-  __multiRoot: true,
   __vapor: true,
   setup(__props) {
 
