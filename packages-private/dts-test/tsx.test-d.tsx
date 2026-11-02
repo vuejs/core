@@ -138,3 +138,13 @@ expectType<JSX.Element>(
 )
 // details
 expectType<JSX.Element>(<details name="details" />)
+
+// dialog
+expectType<JSX.Element>(<dialog closedby="any" />)
+expectType<JSX.Element>(<dialog closedby="closerequest" />)
+expectType<JSX.Element>(<dialog closedby="none" />)
+expectType<JSX.Element>(<dialog closedby={undefined} />)
+// @ts-expect-error invalid dialog close behavior
+;<dialog closedby="invalid" />
+// @ts-expect-error closedby is an enumerated attribute, not a boolean attribute
+;<dialog closedby />
