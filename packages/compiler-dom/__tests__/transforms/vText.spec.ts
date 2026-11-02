@@ -6,6 +6,7 @@ import {
 } from '@vue/compiler-core'
 import { transformVText } from '../../src/transforms/vText'
 import { transformElement } from '../../../compiler-core/src/transforms/transformElement'
+import { transformSlotOutlet } from '../../../compiler-core/src/transforms/transformSlotOutlet'
 import { createObjectMatcher } from '../../../compiler-core/__tests__/testUtils'
 import { PatchFlags } from '@vue/shared'
 import { DOMErrorCodes } from '../../src/errors'
@@ -13,7 +14,7 @@ import { DOMErrorCodes } from '../../src/errors'
 function transformWithVText(template: string, options: CompilerOptions = {}) {
   const ast = parse(template)
   transform(ast, {
-    nodeTransforms: [transformElement],
+    nodeTransforms: [transformElement, transformSlotOutlet],
     directiveTransforms: {
       text: transformVText,
     },
@@ -66,6 +67,26 @@ describe('compiler: v-text transform', () => {
     })
     expect(onError.mock.calls).toMatchObject([
       [{ code: DOMErrorCodes.X_V_TEXT_NO_EXPRESSION }],
+    ])
+  })
+
+  it('should raise error if uses on component', () => {
+    const onError = vi.fn()
+    transformWithVText(`<Comp v-text="xxxxx'"></Comp>`, {
+      onError,
+    })
+    expect(onError.mock.calls).toMatchObject([
+      [{ code: DOMErrorCodes.X_V_TEXT_ON_INVALID_ELEMENT }],
+    ])
+  })
+
+  it('should raise error if uses on slot', () => {
+    const onError = vi.fn()
+    transformWithVText(`<slot v-text="xxxxx"></slot>`, {
+      onError,
+    })
+    expect(onError.mock.calls).toMatchObject([
+      [{ code: DOMErrorCodes.X_V_TEXT_ON_INVALID_ELEMENT }],
     ])
   })
 })
