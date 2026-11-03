@@ -4582,33 +4582,36 @@ describe('SSR hydration', () => {
   })
 
   test('Suspense: a kept-alive dep re-entered while still pending releases only its own cycle', async () => {
-    const { container, route, release } = await hydrateSuspenseApp(gate => {
-      const route = ref('a')
-      const page = (key: string) =>
-        defineComponent({
-          name: `Page${key}`,
-          async setup() {
-            await gate(key)
-            return () => h('div', key)
-          },
-        })
-      const PageA = page('a')
-      const PageB = page('b')
-      const PageC = page('c')
-      const App = defineComponent({
-        setup: () => () =>
-          h(KeepAlive, null, () =>
-            h(Suspense, null, () =>
-              route.value === 'a'
-                ? h(PageA, { key: 'a' })
-                : route.value === 'b'
-                  ? h(PageB, { key: 'b' })
-                  : h(PageC, { key: 'c' }),
+    const { container, route, release, updated } = await hydrateSuspenseApp(
+      gate => {
+        const route = ref('a')
+        const updated = ref(false)
+        const page = (key: string) =>
+          defineComponent({
+            name: `Page${key}`,
+            async setup() {
+              await gate(key)
+              return () => h('div', updated.value ? `${key}!` : key)
+            },
+          })
+        const PageA = page('a')
+        const PageB = page('b')
+        const PageC = page('c')
+        const App = defineComponent({
+          setup: () => () =>
+            h(KeepAlive, null, () =>
+              h(Suspense, null, () =>
+                route.value === 'a'
+                  ? h(PageA, { key: 'a' })
+                  : route.value === 'b'
+                    ? h(PageB, { key: 'b' })
+                    : h(PageC, { key: 'c' }),
+              ),
             ),
-          ),
-      })
-      return { App, route }
-    })
+        })
+        return { App, route, updated }
+      },
+    )
 
     // toggled away and back during hydration: the boundary is force-resolved
     // and page a is cached while its setup is still pending
@@ -4630,13 +4633,16 @@ describe('SSR hydration', () => {
     release('a')
     await new Promise(r => setTimeout(r))
     expect(container.innerHTML).toBe('<div>a</div>')
+    updated.value = true
+    await nextTick()
+    expect(container.innerHTML).toBe('<div>a!</div>')
 
     // its discarded cycle must not have been counted down against this one
     route.value = 'c'
     await nextTick()
-    expect(container.innerHTML).toBe('<div>a</div>')
+    expect(container.innerHTML).toBe('<div>a!</div>')
     release('c')
     await new Promise(r => setTimeout(r))
-    expect(container.innerHTML).toBe('<div>c</div>')
+    expect(container.innerHTML).toBe('<div>c!</div>')
   })
 })
