@@ -177,6 +177,7 @@ export function defineAsyncComponent<
           instance,
           ErrorCodes.ASYNC_COMPONENT_LOADER,
           !errorComponent /* do not throw in dev if user provided error component */,
+          true,
         )
       }
 

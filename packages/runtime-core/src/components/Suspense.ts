@@ -802,7 +802,7 @@ function createSuspenseBoundary(
       }
       instance
         .asyncDep!.catch(err => {
-          handleError(err, instance, ErrorCodes.SETUP_FUNCTION)
+          handleError(err, instance, ErrorCodes.SETUP_FUNCTION, undefined, true)
         })
         .then(asyncSetupResult => {
           // component may have been unmounted before resolve.
