@@ -2208,8 +2208,10 @@ function baseCreateRenderer(
       parentComponent!.renderCache[cacheIndex] = undefined
     }
 
-    if (shapeFlag & ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE) {
-      ;(parentComponent!.ctx as KeepAliveContext).deactivate(vnode)
+    if (
+      shapeFlag & ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE &&
+      (parentComponent!.ctx as KeepAliveContext).deactivate(vnode)
+    ) {
       return
     }
 
