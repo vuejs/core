@@ -42,6 +42,7 @@ import {
   defineComponent,
   effectScope,
   inject,
+  onScopeDispose,
   provide,
 } from 'vue'
 import type { RawSlots } from '../../src/componentSlots'
@@ -4083,6 +4084,55 @@ describe('Suspense', () => {
       stateRef.value++
       await nextTick()
       expect(updateSpy).not.toHaveBeenCalled()
+    })
+
+    test('onScopeDispose after pending branch is abandoned', async () => {
+      const dispose = vi.fn()
+      let resolvePending!: (v?: unknown) => void
+
+      const SlowComp = defineComponent({
+        async setup() {
+          let __temp: any, __restore: any
+          ;[__temp, __restore] = withAsyncContext(
+            () =>
+              new Promise(r => {
+                resolvePending = r
+              }),
+          )
+          __temp = await __temp
+          __restore()
+
+          onScopeDispose(dispose)
+
+          return () => h('div', 'slow')
+        },
+      })
+
+      const FillerComp = defineComponent({
+        setup: () => () => h('div', 'filler'),
+      })
+
+      const view = shallowRef<any>(SlowComp)
+      const Comp = defineComponent({
+        setup: () => () =>
+          h(Suspense, null, {
+            default: h(view.value),
+            fallback: h('div', 'fallback'),
+          }),
+      })
+
+      const root = nodeOps.createElement('div')
+      render(h(Comp), root)
+      expect(serializeInner(root)).toBe(`<div>fallback</div>`)
+
+      view.value = FillerComp
+      await nextTick()
+      expect(serializeInner(root)).toBe(`<div>filler</div>`)
+
+      resolvePending(undefined)
+      await new Promise(r => setTimeout(r))
+
+      expect(dispose).toHaveBeenCalledTimes(1)
     })
   })
 
