@@ -2208,8 +2208,10 @@ function baseCreateRenderer(
       parentComponent!.renderCache[cacheIndex] = undefined
     }
 
-    if (shapeFlag & ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE) {
-      ;(parentComponent!.ctx as KeepAliveContext).deactivate(vnode)
+    if (
+      shapeFlag & ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE &&
+      (parentComponent!.ctx as KeepAliveContext).deactivate(vnode)
+    ) {
       return
     }
 
@@ -2398,10 +2400,10 @@ function baseCreateRenderer(
       // so that scheduler will no longer invoke it
       job.flags! |= SchedulerJobFlags.DISPOSED
       unmount(subTree, instance, parentSuspense, doRemove)
-    } else if (instance.vnode.el && subTree) {
-      // hydration was interrupted before this component rendered (`vnode.el`
-      // is only set this early when hydrating) - unmount the placeholder
-      // covering the claimed DOM, carrying the root's transition hooks
+    } else if (subTree) {
+      // the component never rendered: unmount the placeholder standing in for
+      // it (the comment holding its position, or the DOM claimed by an
+      // interrupted hydration), carrying the root's transition hooks
       subTree.transition = instance.vnode.transition
       unmount(subTree, instance, parentSuspense, doRemove)
     }
@@ -2646,7 +2648,7 @@ function getSequence(arr: number[]): number[] {
   return result
 }
 
-function locateNonHydratedAsyncRoot(
+export function locateNonHydratedAsyncRoot(
   instance: ComponentInternalInstance,
 ): ComponentInternalInstance | undefined {
   const subComponent = instance.subTree.component
