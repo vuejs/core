@@ -18,6 +18,7 @@ import {
   nextTick,
   nodeOps,
   onBeforeUnmount,
+  onDeactivated,
   onErrorCaptured,
   onMounted,
   onUnmounted,
@@ -4824,5 +4825,213 @@ describe('Suspense', () => {
     await new Promise(r => setTimeout(r))
     expect(renders).not.toHaveBeenCalled()
     expect(serializeInner(root)).toBe(`<div><i>other</i></div>`)
+  })
+
+  // #15878
+  test('patches a same-root update of a nested Suspense in retained content', async () => {
+    const deactivated = vi.fn()
+    const unmounted = vi.fn()
+    const Tab = {
+      props: ['count'],
+      setup(props: any) {
+        onDeactivated(deactivated)
+        onUnmounted(unmounted)
+        return () => h('div', `tab ${props.count}`)
+      },
+    }
+    const NextPage = defineAsyncComponent({
+      render: () => h('div', 'next page'),
+    })
+    const count = ref(0)
+    const Shell = {
+      render: () =>
+        h(KeepAlive, null, {
+          default: () =>
+            h(Suspense, null, {
+              default: h(Tab, { count: count.value }),
+            }),
+        }),
+    }
+    const page = ref('shell')
+    const Comp = {
+      render: () =>
+        h(Suspense, null, {
+          default: page.value === 'shell' ? h(Shell) : h(NextPage),
+        }),
+    }
+
+    const root = nodeOps.createElement('div')
+    render(h(Comp), root)
+    expect(serializeInner(root)).toBe('<div>tab 0</div>')
+
+    // the parent boundary waits for NextPage, Shell stays on screen
+    page.value = 'next'
+    await nextTick()
+    count.value++
+    await nextTick()
+    expect(serializeInner(root)).toBe('<div>tab 1</div>')
+
+    await Promise.all(deps)
+    await nextTick()
+    expect(serializeInner(root)).toBe('<div>next page</div>')
+    expect(deactivated).toHaveBeenCalledTimes(1)
+    expect(unmounted).toHaveBeenCalledTimes(1)
+  })
+
+  test('patches a root replacement in retained content once the parent is no longer pending', async () => {
+    const AsyncChild = {
+      async setup() {
+        await new Promise(() => {})
+        return () => h('b')
+      },
+    }
+    const PageB = {
+      async setup() {
+        await new Promise(() => {})
+        return () => h('div', 'page b')
+      },
+    }
+    const TabA = { render: () => h('i', 'a') }
+    const TabB = { render: () => h('i', 'b') }
+    const tab = shallowRef<ComponentOptions>(TabA)
+    let renders = 0
+    const PageA = {
+      props: ['show'],
+      render(this: any) {
+        if (++renders > 20) throw new Error('re-render loop')
+        return h('div', [
+          h(Suspense, null, { default: h(tab.value) }),
+          this.show ? h(AsyncChild) : null,
+        ])
+      },
+    }
+    const view = shallowRef<ComponentOptions>(PageA)
+    const show = ref(false)
+    const Comp = {
+      render: () =>
+        h(Suspense, null, { default: h(view.value, { show: show.value }) }),
+    }
+
+    const root = nodeOps.createElement('div')
+    render(h(Comp), root)
+
+    view.value = PageB
+    await nextTick()
+    // switching back while PageA mounts an async child leaves the parent
+    // with a dep but without a pending branch
+    view.value = PageA
+    show.value = true
+    await nextTick()
+
+    tab.value = TabB
+    await nextTick()
+    await nextTick()
+    expect(serializeInner(root)).toBe('<div><i>b</i><!----></div>')
+  })
+
+  test('patches a nested Suspense mounted into retained content while the parent is pending', async () => {
+    const show = ref(false)
+    const count = ref(0)
+    const Tab = {
+      props: ['count'],
+      setup: (props: any) => () => h('i', `tab ${props.count}`),
+    }
+    const PageA = {
+      setup: () => () =>
+        h('div', [
+          'a',
+          show.value
+            ? h(Suspense, null, { default: h(Tab, { count: count.value }) })
+            : null,
+        ]),
+    }
+    const PageB = {
+      async setup() {
+        await new Promise(() => {})
+        return () => h('div', 'page b')
+      },
+    }
+    const page = shallowRef<ComponentOptions>(PageA)
+    const Comp = {
+      setup: () => () => h(Suspense, null, { default: h(page.value) }),
+    }
+
+    const root = nodeOps.createElement('div')
+    render(h(Comp), root)
+
+    // the parent boundary waits for PageB, PageA stays on screen
+    page.value = PageB
+    await nextTick()
+    // PageA mounts a nested Suspense meanwhile, then updates it
+    show.value = true
+    await nextTick()
+    expect(serializeInner(root)).toBe('<div>a<i>tab 0</i></div>')
+    count.value++
+    await nextTick()
+    expect(serializeInner(root)).toBe('<div>a<i>tab 1</i></div>')
+  })
+
+  // #8678
+  test('does not mount the new route into a nested Suspense of the retained page', async () => {
+    const setups: string[] = []
+    const nested = () =>
+      h(RouterView, null, {
+        default: ({ Component }: any) => [
+          h(Suspense, null, { default: () => h(Component) }),
+        ],
+      })
+    const ParentSync = {
+      setup() {
+        setups.push('ParentSync')
+        return () => h('div', ['ParentSync', nested()])
+      },
+    }
+    const ParentAsync = {
+      async setup() {
+        setups.push('ParentAsync')
+        await new Promise(r => setTimeout(r))
+        return () => h('div', ['ParentAsync', nested()])
+      },
+    }
+    const ChildSync = {
+      setup() {
+        setups.push('ChildSync')
+        return () => h('i', 'ChildSync')
+      },
+    }
+    const ChildAsync = {
+      async setup() {
+        setups.push('ChildAsync')
+        await new Promise(r => setTimeout(r))
+        return () => h('i', 'ChildAsync')
+      },
+    }
+    const route = shallowRef<ComponentOptions[]>([ParentSync, ChildSync])
+    const Comp = {
+      setup() {
+        provide('route', route)
+        return () =>
+          h(RouterView, null, {
+            default: ({ Component }: any) => [
+              h(Suspense, null, { default: () => h(Component) }),
+            ],
+          })
+      },
+    }
+
+    const root = nodeOps.createElement('div')
+    render(h(Comp), root)
+    expect(serializeInner(root)).toBe('<div>ParentSync<i>ChildSync</i></div>')
+
+    route.value = [ParentAsync, ChildAsync]
+    await nextTick()
+    await new Promise(r => setTimeout(r, 10))
+    expect(serializeInner(root)).toBe('<div>ParentAsync<i>ChildAsync</i></div>')
+    expect(setups).toEqual([
+      'ParentSync',
+      'ChildSync',
+      'ParentAsync',
+      'ChildAsync',
+    ])
   })
 })
