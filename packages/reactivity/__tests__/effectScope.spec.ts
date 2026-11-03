@@ -11,7 +11,9 @@ import {
   reactive,
   ref,
   setCurrentScope,
+  toRaw,
 } from '../src'
+import { getDepFromReactive } from '../src/dep'
 
 describe('reactivity/effect/scope', () => {
   it('should run', () => {
@@ -506,6 +508,20 @@ describe('reactivity/effect/scope', () => {
     expect(firstSpy).toHaveBeenCalledTimes(1)
     expect(secondSpy).not.toHaveBeenCalled()
     expect(getEffectsCount(scope)).toBe(1)
+  })
+
+  it('should not keep a computed read in a stopped scope subscribed', () => {
+    const src = reactive({ foo: 1 })
+    const scope = effectScope()
+    const c = scope.run(() => computed(() => src.foo))!
+
+    scope.run(() => c.value)
+    expect(getDepFromReactive(toRaw(src), 'foo')).toBeDefined()
+
+    scope.stop()
+    src.foo = 2
+    expect(scope.run(() => c.value)).toBe(2)
+    expect(getDepFromReactive(toRaw(src), 'foo')).toBeUndefined()
   })
 })
 

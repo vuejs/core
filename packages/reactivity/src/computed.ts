@@ -14,6 +14,7 @@ import {
   link,
   shallowPropagate,
   startTracking,
+  unlink,
 } from './system'
 import { warn } from './warning'
 
@@ -148,7 +149,17 @@ export class ComputedRefImpl<T = any> implements ReactiveNode {
       }
       link(this, activeSub)
     } else if (activeEffectScope !== undefined) {
-      link(this, activeEffectScope)
+      if (activeEffectScope.active) {
+        link(this, activeEffectScope)
+      } else if (this.subs === undefined) {
+        // a stopped scope never unlinks it, so nothing would release the deps
+        // this read tracked and they would keep the computed alive
+        let dep = this.deps
+        while (dep !== undefined) {
+          dep = unlink(dep, this)
+        }
+        this.flags |= SystemReactiveFlags.Dirty
+      }
     }
     return this._value!
   }
