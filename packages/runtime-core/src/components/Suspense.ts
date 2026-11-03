@@ -26,7 +26,11 @@ import {
   type SetupRenderEffectFn,
   queuePostRenderEffect,
 } from '../renderer'
-import { queuePostFlushCb } from '../scheduler'
+import {
+  type SchedulerJob,
+  SchedulerJobFlags,
+  queuePostFlushCb,
+} from '../scheduler'
 import { filterSingleRoot, updateHOCHostEl } from '../componentRenderUtils'
 import {
   assertNumber,
@@ -100,26 +104,38 @@ export const SuspenseImpl = {
         rendererInternals,
       )
     } else {
-      // #8678 if the current suspense needs to be patched and parentSuspense has
-      // not been resolved. this means that both the current suspense and parentSuspense
-      // need to be patched. because parentSuspense's pendingBranch includes the
-      // current suspense, it will be processed twice:
-      //  1. current patch
-      //  2. mounting along with the pendingBranch of parentSuspense
-      // it is necessary to skip the current patch to avoid multiple mounts
-      // of inner components.
-      // but not while the parent is hydrating: its pending branch is the
-      // adopted SSR DOM, never mounted again, so skipping leaves it stale.
+      const suspense = n1.suspense!
+      // #8678 while the parent is pending, a nested boundary in its new
+      // content is not patched (#10055). One in the content the parent keeps
+      // on screen stays live, except for a root replacement, which would mount
+      // new content into it.
+      // Neither applies while the parent is hydrating: its pending branch is
+      // the adopted SSR DOM, never mounted again, so skipping leaves it stale.
       if (
         parentSuspense &&
         parentSuspense.deps > 0 &&
-        !n1.suspense!.isInFallback &&
+        !suspense.isInFallback &&
         !parentSuspense.isHydrating
       ) {
-        n2.suspense = n1.suspense!
-        n2.suspense.vnode = n2
-        n2.el = n1.el
-        return
+        const owner = suspense.parentComponent
+        const retained =
+          !!owner &&
+          owner.suspense === parentSuspense &&
+          owner.suspenseId !== parentSuspense.pendingId
+        if (
+          !retained ||
+          // deps can outlive the pending branch: skip only while it exists
+          (parentSuspense.pendingBranch &&
+            !isSameVNodeType(
+              n2.ssContent!,
+              (suspense.pendingBranch || suspense.activeBranch)!,
+            ))
+        ) {
+          n2.suspense = suspense
+          suspense.vnode = n2
+          n2.el = n1.el
+          return
+        }
       }
       patchSuspense(
         n1,
@@ -310,7 +326,13 @@ function patchSuspense(
       }
       // reset suspense state
       suspense.deps = 0
-      // discard effects from pending branch
+      // discard effects from the pending branch, except retained recovery jobs
+      for (let i = 0; i < suspense.effects.length; i++) {
+        const effect = suspense.effects[i] as SchedulerJob
+        if (effect.flags! & SchedulerJobFlags.REQUEUE_ON_SUSPENSE_DISCARD) {
+          queuePostFlushCb(effect)
+        }
+      }
       suspense.effects.length = 0
       // discard previous container
       suspense.hiddenContainer = createElement('div')
@@ -400,11 +422,7 @@ function patchSuspense(
       triggerEvent(n2, 'onPending')
       // mount pending branch in off-dom container
       suspense.pendingBranch = newBranch
-      if (newBranch.shapeFlag & ShapeFlags.COMPONENT_KEPT_ALIVE) {
-        suspense.pendingId = newBranch.component!.suspenseId!
-      } else {
-        suspense.pendingId = suspenseId++
-      }
+      suspense.pendingId = suspenseId++
       patch(
         null,
         newBranch,
@@ -626,6 +644,19 @@ function createSuspenseBoundary(
       suspense.pendingBranch = null
       suspense.isInFallback = false
 
+      // a retained async dep only waits for this boundary to resolve: its
+      // recovery must not ride on a pending ancestor or on the transition
+      let kept = 0
+      for (let i = 0; i < effects.length; i++) {
+        const effect = effects[i] as SchedulerJob
+        if (effect.flags! & SchedulerJobFlags.REQUEUE_ON_SUSPENSE_DISCARD) {
+          queuePostFlushCb(effect)
+        } else {
+          effects[kept++] = effect
+        }
+      }
+      effects.length = kept
+
       // flush buffered effects
       // check if there is a pending parent suspense
       let parent = suspense.parent
@@ -668,7 +699,10 @@ function createSuspenseBoundary(
     },
 
     fallback(fallbackVNode) {
-      if (!suspense.pendingBranch) {
+      // the fallback is requested asynchronously (by the `timeout` timer), so
+      // the boundary may already be unmounted when we get here. the container
+      // is no longer ours in that case.
+      if (suspense.isUnmounted || !suspense.pendingBranch) {
         return
       }
 
@@ -681,7 +715,9 @@ function createSuspenseBoundary(
       const anchor = next(activeBranch!)
       const mountFallback = () => {
         suspense.isFallbackMountPending = false
-        if (!suspense.isInFallback) {
+        // this may run later via `afterLeave`, which is not cancelled when the
+        // branch gets unmounted in the meantime.
+        if (suspense.isUnmounted || !suspense.isInFallback) {
           return
         }
         // a parent update may have produced a newer fallback vnode while the
@@ -743,20 +779,62 @@ function createSuspenseBoundary(
         suspense.deps++
       }
       const hydratedEl = instance.vnode.el
+      // retry from this component
+      const render = (asyncSetupResult: unknown) => {
+        instance.asyncResolved = true
+        const { vnode } = instance
+        if (__DEV__) {
+          pushWarningContext(vnode)
+        }
+        handleSetupResult(instance, asyncSetupResult, false)
+        if (hydratedEl) {
+          // vnode may have been replaced if an update happened before the
+          // async dep is resolved.
+          vnode.el = hydratedEl
+        }
+        const placeholder = !hydratedEl && instance.subTree.el
+        setupRenderEffect(
+          instance,
+          vnode,
+          // component may have been moved before resolve.
+          // if this is not a hydration, instance.subTree will be the comment
+          // placeholder.
+          parentNode(hydratedEl || instance.subTree.el!)!,
+          // anchor will not be used if this is hydration, so only need to
+          // consider the comment placeholder case.
+          hydratedEl ? null : next(instance.subTree),
+          suspense,
+          namespace,
+          optimized,
+        )
+        if (placeholder) {
+          // clean up placeholder reference
+          vnode.placeholder = null
+          remove(placeholder)
+        }
+        updateHOCHostEl(instance, vnode.el)
+        if (__DEV__) {
+          popWarningContext()
+        }
+      }
       instance
         .asyncDep!.catch(err => {
-          handleError(err, instance, ErrorCodes.SETUP_FUNCTION)
+          // don't rethrow in dev: the dep must still be released below
+          handleError(err, instance, ErrorCodes.SETUP_FUNCTION, false, true)
+          // a failed setup renders nothing instead of its template
+          return () => null
         })
         .then(asyncSetupResult => {
-          // retry when the setup() promise resolves.
           // component may have been unmounted before resolve.
-          if (
-            instance.isUnmounted ||
-            suspense.isUnmounted ||
-            suspense.pendingId !== instance.suspenseId
-          ) {
+          if (instance.isUnmounted || suspense.isUnmounted) {
             return
           }
+          // the dep is only counted while the pending cycle it registered
+          // under is still current. a toggle discards that cycle, but the
+          // instance can outlive it: kept alive, or in the branch that stayed
+          // active. it still needs its render, or it would stay unresolved.
+          const isPendingDep =
+            isInPendingSuspense && suspense.pendingId === instance.suspenseId
           // withAsyncContext defers cleanup to a later microtask, so currentInstance may
           // still be set when Suspense re-enters another component's render path.
           // Clear it first.
@@ -765,49 +843,37 @@ function createSuspenseBoundary(
           // is deferred until the boundary resolves. Skip rendering but still
           // release the dep so the boundary can resolve.
           if (!instance.scope.active) {
-            if (isInPendingSuspense && --suspense.deps === 0) {
+            if (isPendingDep && --suspense.deps === 0) {
               suspense.resolve()
             }
             return
           }
-          // retry from this component
-          instance.asyncResolved = true
-          const { vnode } = instance
-          if (__DEV__) {
-            pushWarningContext(vnode)
+          if (!isPendingDep && suspense.pendingBranch) {
+            // the boundary is pending on another cycle. async children this
+            // render mounts would register as deps of that cycle and could
+            // hold it back, so hold the render until the boundary has resolved.
+            // the job survives a discard of that cycle and re-parks itself
+            // while a newer one is pending.
+            const job: SchedulerJob = () => {
+              if (
+                instance.isUnmounted ||
+                suspense.isUnmounted ||
+                !instance.scope.active
+              ) {
+                return
+              }
+              if (suspense.pendingBranch) {
+                queueEffectWithSuspense(job, suspense)
+              } else {
+                render(asyncSetupResult)
+              }
+            }
+            job.flags = SchedulerJobFlags.REQUEUE_ON_SUSPENSE_DISCARD
+            queueEffectWithSuspense(job, suspense)
+            return
           }
-          handleSetupResult(instance, asyncSetupResult, false)
-          if (hydratedEl) {
-            // vnode may have been replaced if an update happened before the
-            // async dep is resolved.
-            vnode.el = hydratedEl
-          }
-          const placeholder = !hydratedEl && instance.subTree.el
-          setupRenderEffect(
-            instance,
-            vnode,
-            // component may have been moved before resolve.
-            // if this is not a hydration, instance.subTree will be the comment
-            // placeholder.
-            parentNode(hydratedEl || instance.subTree.el!)!,
-            // anchor will not be used if this is hydration, so only need to
-            // consider the comment placeholder case.
-            hydratedEl ? null : next(instance.subTree),
-            suspense,
-            namespace,
-            optimized,
-          )
-          if (placeholder) {
-            // clean up placeholder reference
-            vnode.placeholder = null
-            remove(placeholder)
-          }
-          updateHOCHostEl(instance, vnode.el)
-          if (__DEV__) {
-            popWarningContext()
-          }
-          // only decrease deps count if suspense is not already resolved
-          if (isInPendingSuspense && --suspense.deps === 0) {
+          render(asyncSetupResult)
+          if (isPendingDep && --suspense.deps === 0) {
             suspense.resolve()
           }
         })
@@ -815,6 +881,22 @@ function createSuspenseBoundary(
 
     unmount(parentSuspense, doRemove) {
       suspense.isUnmounted = true
+      // release the dep on the pending parent, after the flush so that async
+      // deps patched in by the same update are registered first
+      if (parentSuspenseId !== undefined) {
+        const parent = suspense.parent!
+        const pendingId = parentSuspenseId
+        parentSuspenseId = undefined
+        queuePostFlushCb(() => {
+          if (
+            parent.pendingId === pendingId &&
+            !parent.isUnmounted &&
+            --parent.deps === 0
+          ) {
+            parent.resolve()
+          }
+        })
+      }
       if (suspense.activeBranch) {
         unmount(
           suspense.activeBranch,

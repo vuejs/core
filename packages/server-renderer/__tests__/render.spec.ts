@@ -838,6 +838,44 @@ function testRender(type: string, render: typeof renderToString) {
         ).toBe(`<div>hello</div>`)
       })
 
+      test('static style', async () => {
+        expect(
+          await render(
+            createApp({
+              components: {
+                Child: {
+                  inheritAttrs: false,
+                  template: `<i>{{ JSON.stringify($attrs.style) }}</i>`,
+                },
+              },
+              data: () => ({ dynamic: { color: 'blue' }, obj: { id: 'a' } }),
+              template:
+                `<div>` +
+                `<p style="color: red; --Custom-Prop: 1px; z-index: 1; font-size: 14px !important"></p>` +
+                `<p style="font-family: &quot;A&amp;B&quot;; background: url('a.png?x=1&y=2')"></p>` +
+                `<p style="color: red" v-show="false"></p>` +
+                `<p style="color: red; margin: 0" :style="dynamic"></p>` +
+                `<p :style="dynamic" style="color: red; margin: 0"></p>` +
+                `<p style="color: red" v-bind="obj"></p>` +
+                `<svg><path style="stroke-width: 2"/></svg>` +
+                `<Child style="color: red; z-index: 1" />` +
+                `</div>`,
+            }),
+          ),
+        ).toBe(
+          `<div>` +
+            `<p style="color:red;--Custom-Prop:1px;z-index:1;font-size:14px !important;"></p>` +
+            `<p style="font-family:&quot;A&amp;B&quot;;background:url(&#39;a.png?x=1&amp;y=2&#39;);"></p>` +
+            `<p style="color:red;display:none;"></p>` +
+            `<p style="color:blue;margin:0;"></p>` +
+            `<p style="color:red;margin:0;"></p>` +
+            `<p style="color:red;" id="a"></p>` +
+            `<svg><path style="stroke-width:2;"></path></svg>` +
+            `<i>{&quot;color&quot;:&quot;red&quot;,&quot;z-index&quot;:&quot;1&quot;}</i>` +
+            `</div>`,
+        )
+      })
+
       test('handle compiler errors', async () => {
         await render(
           // render different content since compilation is cached
@@ -981,7 +1019,7 @@ function testRender(type: string, render: typeof renderToString) {
       }
 
       const html = await renderToString(app)
-      expect(html).toBe(`<div class="app"><div>asyncChildren</div></div>`)
+      expect(html).toBe(`<div class="app"><!----></div>`)
 
       expect(fn).toHaveBeenCalledTimes(1)
       expect(fn).toBeCalledWith('async child error')
@@ -1260,15 +1298,9 @@ function testRender(type: string, render: typeof renderToString) {
         template: `<Suspense><Child /></Suspense>`,
       })
 
-      expect(await render(app)).toBe('')
-      expect(capturedError.length).toBe(2)
-      expect(capturedError).toStrictEqual([
-        'An error',
-        "Cannot read properties of undefined (reading 'bar')",
-      ])
-      expect(
-        '[Vue warn]: Property "foo" was accessed during render but is not defined on instance',
-      ).toHaveBeenWarned()
+      // the failed component renders nothing, not its template
+      expect(await render(app)).toBe('<!---->')
+      expect(capturedError).toStrictEqual(['An error'])
     })
 
     test('computed reactivity during SSR with onServerPrefetch', async () => {
@@ -1344,6 +1376,25 @@ function testRender(type: string, render: typeof renderToString) {
       expect(
         'Unhandled error during execution of setup function',
       ).toHaveBeenWarned()
+    })
+
+    test('should render nothing for a component whose async setup rejects', async () => {
+      const errorHandler = vi.fn()
+      const app = createApp({
+        components: {
+          Bad: {
+            async setup() {
+              throw new Error('setup failed')
+            },
+            template: '<div>should not render</div>',
+          },
+        },
+        template: '<div><Bad /></div>',
+      })
+      app.config.errorHandler = errorHandler
+
+      expect(await render(app)).toBe('<div><!----></div>')
+      expect(errorHandler).toHaveBeenCalledTimes(1)
     })
 
     test('should recover from synchronous onServerPrefetch errors', async () => {

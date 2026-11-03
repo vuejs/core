@@ -1503,21 +1503,31 @@ function baseCreateRenderer(
         let { next, bu, u, parent, vnode } = instance
 
         if (__FEATURE_SUSPENSE__) {
-          const nonHydratedAsyncRoot = locateNonHydratedAsyncRoot(instance)
-          // we are trying to update some async comp before hydration
-          // this will cause crash because we don't know the root node yet
-          if (nonHydratedAsyncRoot) {
+          const unresolvedAsyncRoot = locateUnresolvedAsyncRoot(instance)
+          // the root is an async component whose setup has not resolved, so
+          // there is no subtree to patch yet
+          if (unresolvedAsyncRoot) {
             // only sync the properties and abort the rest of operations
             if (next) {
               next.el = vnode.el
               updateComponentPreRender(instance, next, optimized)
             }
             // and continue the rest of operations once the deps are resolved
-            nonHydratedAsyncRoot.asyncDep!.then(() => {
-              // the instance may be destroyed during the time period
-              queuePostRenderEffect(() => {
-                if (!instance.isUnmounted) update()
-              }, parentSuspense)
+            unresolvedAsyncRoot.asyncDep!.then(() => {
+              // the instance may be unmounted in the meantime. Its isUnmounted
+              // flag is set by an effect a discarded pending branch drops
+              const retry: SchedulerJob = () => {
+                if (instance.job.flags! & SchedulerJobFlags.DISPOSED) return
+                // wait out a newer pending cycle of the boundary
+                if (parentSuspense && parentSuspense.pendingBranch) {
+                  queuePostRenderEffect(retry, parentSuspense)
+                } else {
+                  update()
+                }
+              }
+              // the retry must survive a discarded pending cycle
+              retry.flags = SchedulerJobFlags.REQUEUE_ON_SUSPENSE_DISCARD
+              queuePostRenderEffect(retry, parentSuspense)
             })
             return
           }
@@ -2208,8 +2218,10 @@ function baseCreateRenderer(
       parentComponent!.renderCache[cacheIndex] = undefined
     }
 
-    if (shapeFlag & ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE) {
-      ;(parentComponent!.ctx as KeepAliveContext).deactivate(vnode)
+    if (
+      shapeFlag & ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE &&
+      (parentComponent!.ctx as KeepAliveContext).deactivate(vnode)
+    ) {
       return
     }
 
@@ -2398,10 +2410,10 @@ function baseCreateRenderer(
       // so that scheduler will no longer invoke it
       job.flags! |= SchedulerJobFlags.DISPOSED
       unmount(subTree, instance, parentSuspense, doRemove)
-    } else if (instance.vnode.el && subTree) {
-      // hydration was interrupted before this component rendered (`vnode.el`
-      // is only set this early when hydrating) - unmount the placeholder
-      // covering the claimed DOM, carrying the root's transition hooks
+    } else if (subTree) {
+      // the component never rendered: unmount the placeholder standing in for
+      // it (the comment holding its position, or the DOM claimed by an
+      // interrupted hydration), carrying the root's transition hooks
       subTree.transition = instance.vnode.transition
       unmount(subTree, instance, parentSuspense, doRemove)
     }
@@ -2646,7 +2658,7 @@ function getSequence(arr: number[]): number[] {
   return result
 }
 
-function locateNonHydratedAsyncRoot(
+export function locateUnresolvedAsyncRoot(
   instance: ComponentInternalInstance,
 ): ComponentInternalInstance | undefined {
   const subComponent = instance.subTree.component
@@ -2654,7 +2666,7 @@ function locateNonHydratedAsyncRoot(
     if (subComponent.asyncDep && !subComponent.asyncResolved) {
       return subComponent
     } else {
-      return locateNonHydratedAsyncRoot(subComponent)
+      return locateUnresolvedAsyncRoot(subComponent)
     }
   }
 }
