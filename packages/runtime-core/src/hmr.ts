@@ -9,7 +9,7 @@ import {
 } from './component'
 import { SchedulerJobFlags, queueJob, queuePostFlushCb } from './scheduler'
 import { NOOP, extend, getGlobalThis } from '@vue/shared'
-import { locateNonHydratedAsyncRoot } from './renderer'
+import { locateUnresolvedAsyncRoot } from './renderer'
 
 type HMRComponent = ComponentOptions | ClassComponent
 
@@ -164,7 +164,7 @@ function reload(id: string, newComp: HMRComponent): void {
           __FEATURE_SUSPENSE__ &&
           (instance.asyncDep && !instance.asyncResolved
             ? instance
-            : locateNonHydratedAsyncRoot(instance.parent!))
+            : locateUnresolvedAsyncRoot(instance.parent!))
         if (pending) {
           // #16040 Recheck the root chain after each setup resolves: it may
           // expose another async root that would defer the parent update.
