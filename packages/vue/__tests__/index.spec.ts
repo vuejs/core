@@ -40,6 +40,16 @@ describe('compiler + runtime integration', () => {
     expect(container.innerHTML).toBe(`0`)
   })
 
+  it('should ignore empty dynamic .attr / .prop names', () => {
+    const container = document.createElement('div')
+    createApp({
+      template: `<div :[key].attr="value" :[key2].prop="value">x</div>`,
+      data: () => ({ key: null, key2: '', value: 'foo' }),
+    }).mount(container)
+    expect(container.innerHTML).toBe('<div>x</div>')
+    expect((container.firstElementChild as any)['']).toBeUndefined()
+  })
+
   it('keep-alive with compiler + runtime integration', async () => {
     const container = document.createElement('div')
     const one = {

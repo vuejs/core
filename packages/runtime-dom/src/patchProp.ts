@@ -31,6 +31,12 @@ export const patchProp: DOMRendererOptions['patchProp'] = (
   parentComponent,
 ) => {
   const isSVG = namespace === 'svg'
+  // dynamic `.attr` / `.prop` arguments with an empty value only produce the
+  // bare prefix, which has no valid attribute/property name to set. Treat it
+  // the same as an empty key in a plain dynamic argument: skip the binding.
+  if (key === '.' || key === '^') {
+    return
+  }
   if (key === 'class') {
     patchClass(el, nextValue, isSVG)
   } else if (key === 'style') {

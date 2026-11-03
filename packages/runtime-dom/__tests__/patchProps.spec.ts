@@ -394,4 +394,15 @@ describe('runtime-dom: props patching', () => {
 
     expect(fn).toBeCalledTimes(0)
   })
+
+  test('ignore empty key after force attr/prop prefix', () => {
+    const el = document.createElement('div')
+    expect(() => patchProp(el, '^', null, 'foo')).not.toThrow()
+    expect(el.hasAttribute('')).toBe(false)
+    expect(el.attributes.length).toBe(0)
+
+    patchProp(el, '.', null, 'foo')
+    expect((el as any)['']).toBeUndefined()
+    expect(el.attributes.length).toBe(0)
+  })
 })
