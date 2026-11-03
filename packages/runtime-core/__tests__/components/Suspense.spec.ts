@@ -5073,4 +5073,49 @@ describe('Suspense', () => {
     expect(errors).toHaveLength(2)
     expect(serializeInner(root)).toBe('<div><!----><!----></div>')
   })
+
+  // #11037
+  test('out-in: a leave finishing after the boundary is unmounted does not bring the new branch back', async () => {
+    const mounted = vi.fn()
+    const Next = {
+      async setup() {
+        onMounted(mounted)
+        return () => h('div', 'next')
+      },
+    }
+    const page = shallowRef<ComponentOptions>({
+      render: () => h('div', 'first'),
+    })
+    const leaves: (() => void)[] = []
+    const App = {
+      render: () =>
+        h(
+          BaseTransition,
+          {
+            mode: 'out-in',
+            onLeave: (_: any, done: () => void) => {
+              leaves.push(done)
+            },
+          },
+          () => h(Suspense, null, { default: h(page.value) }),
+        ),
+    }
+    const root = nodeOps.createElement('div')
+    render(h(App), root)
+    expect(serializeInner(root)).toBe('<div>first</div>')
+
+    page.value = Next
+    await nextTick()
+    await new Promise(r => setTimeout(r))
+    // Next has settled: the first page is leaving, Next waits for afterLeave
+    expect(leaves.length).toBe(1)
+    expect(serializeInner(root)).toBe('<div>first</div>')
+
+    // the app is torn down while the leave is still running
+    render(null, root)
+    leaves[0]()
+    await nextTick()
+    expect(serializeInner(root)).toBe('')
+    expect(mounted).not.toHaveBeenCalled()
+  })
 })
