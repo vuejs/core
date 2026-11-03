@@ -1938,6 +1938,15 @@ describe('e2e: Transition', () => {
             `<button id="changeShowBtn">false</button>`,
         )
 
+        // wait for the transition's own nextFrame so the explicit-duration
+        // timer is already running before the test starts waiting for it
+        await nextFrame()
+        expect(await html('#container')).toBe(
+          `<div class="test-enter-active test-enter-to" style="display: none;"><h2>I shouldn't show </h2></div>` +
+            `<h2>This is page1</h2>` +
+            `<button id="changeShowBtn">false</button>`,
+        )
+
         await transitionFinish(duration * 4)
         expect(await html('#container')).toBe(
           `<div class="" style="display: none;"><h2>I shouldn't show </h2></div>` +

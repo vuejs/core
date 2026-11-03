@@ -2208,8 +2208,10 @@ function baseCreateRenderer(
       parentComponent!.renderCache[cacheIndex] = undefined
     }
 
-    if (shapeFlag & ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE) {
-      ;(parentComponent!.ctx as KeepAliveContext).deactivate(vnode)
+    if (
+      shapeFlag & ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE &&
+      (parentComponent!.ctx as KeepAliveContext).deactivate(vnode)
+    ) {
       return
     }
 
@@ -2646,7 +2648,7 @@ function getSequence(arr: number[]): number[] {
   return result
 }
 
-function locateNonHydratedAsyncRoot(
+export function locateNonHydratedAsyncRoot(
   instance: ComponentInternalInstance,
 ): ComponentInternalInstance | undefined {
   const subComponent = instance.subTree.component

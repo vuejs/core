@@ -441,6 +441,7 @@ export interface DelHTMLAttributes extends HTMLAttributes {
 }
 
 export interface DialogHTMLAttributes extends HTMLAttributes {
+  closedby?: 'any' | 'closerequest' | 'none' | undefined
   open?: Booleanish | undefined
   onClose?: ((payload: Event) => void) | undefined
   onCancel?: ((payload: Event) => void) | undefined
