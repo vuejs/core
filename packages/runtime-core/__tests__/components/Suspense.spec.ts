@@ -4678,4 +4678,120 @@ describe('Suspense', () => {
     expect(beforeUnmount).toHaveBeenCalledTimes(1)
     expect(unmounted).toHaveBeenCalledTimes(1)
   })
+
+  test('should rerun an update waiting on an async root after the pending branch is discarded', async () => {
+    const msg = ref('a')
+    const showAsync = ref(false)
+
+    let resolveChild!: () => void
+    const AsyncChild = {
+      props: ['msg'],
+      async setup(props: { msg: string }) {
+        await new Promise<void>(r => (resolveChild = r))
+        return () => h('span', props.msg)
+      },
+    }
+
+    const Owner = {
+      setup() {
+        return () =>
+          showAsync.value ? h(AsyncChild, { msg: msg.value }) : h('i', 'sync')
+      },
+    }
+
+    const Pending = {
+      async setup() {
+        await new Promise(() => {})
+        return () => h('p', 'pending')
+      },
+    }
+
+    const page = shallowRef<ComponentOptions>(Owner)
+    const Comp = {
+      setup() {
+        return () => h('div', [h(Suspense, null, () => h(page.value))])
+      },
+    }
+
+    const root = nodeOps.createElement('div')
+    render(h(Comp), root)
+    expect(serializeInner(root)).toBe(`<div><i>sync</i></div>`)
+
+    // the root of Owner becomes an async component that has not resolved
+    showAsync.value = true
+    await nextTick()
+
+    page.value = Pending
+    await nextTick()
+    // Owner is retained while the boundary is pending, and updates
+    msg.value = 'b'
+    await nextTick()
+
+    // the async root resolves while the boundary is still pending
+    resolveChild()
+    await new Promise(r => setTimeout(r))
+    expect(serializeInner(root)).toBe(`<div><!----></div>`)
+
+    // switching back discards the pending branch
+    page.value = Owner
+    await nextTick()
+    await new Promise(r => setTimeout(r))
+    expect(serializeInner(root)).toBe(`<div><span>b</span></div>`)
+  })
+
+  test('should not rerun an update of a component discarded with the pending branch', async () => {
+    const msg = ref('a')
+    const renders = vi.fn()
+
+    let resolveChild!: () => void
+    const AsyncChild = {
+      props: ['msg'],
+      async setup(props: { msg: string }) {
+        await new Promise<void>(r => (resolveChild = r))
+        return () => h('span', props.msg)
+      },
+    }
+
+    const Owner = {
+      setup() {
+        return () => {
+          renders()
+          return h(AsyncChild, { msg: msg.value })
+        }
+      },
+    }
+
+    const Other = {
+      setup() {
+        return () => h('i', 'other')
+      },
+    }
+
+    const page = shallowRef<ComponentOptions>(Other)
+    const Comp = {
+      setup() {
+        return () => h('div', [h(Suspense, null, () => h(page.value))])
+      },
+    }
+
+    const root = nodeOps.createElement('div')
+    render(h(Comp), root)
+
+    page.value = Owner
+    await nextTick()
+    // Owner is in the pending branch and updates before its async root resolves
+    msg.value = 'b'
+    await nextTick()
+
+    // switching back discards the pending branch with Owner in it
+    page.value = Other
+    await nextTick()
+    expect(serializeInner(root)).toBe(`<div><i>other</i></div>`)
+
+    renders.mockClear()
+    resolveChild()
+    await new Promise(r => setTimeout(r))
+    expect(renders).not.toHaveBeenCalled()
+    expect(serializeInner(root)).toBe(`<div><i>other</i></div>`)
+  })
 })
