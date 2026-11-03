@@ -1019,7 +1019,7 @@ function testRender(type: string, render: typeof renderToString) {
       }
 
       const html = await renderToString(app)
-      expect(html).toBe(`<div class="app"><div>asyncChildren</div></div>`)
+      expect(html).toBe(`<div class="app"><!----></div>`)
 
       expect(fn).toHaveBeenCalledTimes(1)
       expect(fn).toBeCalledWith('async child error')
@@ -1298,15 +1298,9 @@ function testRender(type: string, render: typeof renderToString) {
         template: `<Suspense><Child /></Suspense>`,
       })
 
-      expect(await render(app)).toBe('')
-      expect(capturedError.length).toBe(2)
-      expect(capturedError).toStrictEqual([
-        'An error',
-        "Cannot read properties of undefined (reading 'bar')",
-      ])
-      expect(
-        '[Vue warn]: Property "foo" was accessed during render but is not defined on instance',
-      ).toHaveBeenWarned()
+      // the failed component renders nothing, not its template
+      expect(await render(app)).toBe('<!---->')
+      expect(capturedError).toStrictEqual(['An error'])
     })
 
     test('computed reactivity during SSR with onServerPrefetch', async () => {
@@ -1382,6 +1376,25 @@ function testRender(type: string, render: typeof renderToString) {
       expect(
         'Unhandled error during execution of setup function',
       ).toHaveBeenWarned()
+    })
+
+    test('should render nothing for a component whose async setup rejects', async () => {
+      const errorHandler = vi.fn()
+      const app = createApp({
+        components: {
+          Bad: {
+            async setup() {
+              throw new Error('setup failed')
+            },
+            template: '<div>should not render</div>',
+          },
+        },
+        template: '<div><Bad /></div>',
+      })
+      app.config.errorHandler = errorHandler
+
+      expect(await render(app)).toBe('<div><!----></div>')
+      expect(errorHandler).toHaveBeenCalledTimes(1)
     })
 
     test('should recover from synchronous onServerPrefetch errors', async () => {

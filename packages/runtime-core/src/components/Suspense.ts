@@ -821,6 +821,8 @@ function createSuspenseBoundary(
         .asyncDep!.catch(err => {
           // don't rethrow in dev: the dep must still be released below
           handleError(err, instance, ErrorCodes.SETUP_FUNCTION, false, true)
+          // a failed setup renders nothing instead of its template
+          return () => null
         })
         .then(asyncSetupResult => {
           // component may have been unmounted before resolve.
