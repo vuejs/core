@@ -815,6 +815,22 @@ function createSuspenseBoundary(
 
     unmount(parentSuspense, doRemove) {
       suspense.isUnmounted = true
+      // release the dep on the pending parent, after the flush so that async
+      // deps patched in by the same update are registered first
+      if (parentSuspenseId !== undefined) {
+        const parent = suspense.parent!
+        const pendingId = parentSuspenseId
+        parentSuspenseId = undefined
+        queuePostFlushCb(() => {
+          if (
+            parent.pendingId === pendingId &&
+            !parent.isUnmounted &&
+            --parent.deps === 0
+          ) {
+            parent.resolve()
+          }
+        })
+      }
       if (suspense.activeBranch) {
         unmount(
           suspense.activeBranch,
