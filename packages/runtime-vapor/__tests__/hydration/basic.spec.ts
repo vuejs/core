@@ -1378,6 +1378,23 @@ describe('Vapor Mode hydration', () => {
     expect(container.querySelector('input')!.checked).toBe(true)
     expect(`Hydration node mismatch`).toHaveBeenWarned()
   })
+
+  test('syncs an adopted radio to the client model when a later root mismatches', async () => {
+    const container = document.createElement('div')
+    container.innerHTML =
+      '<!--{--><input type="radio" checked value="a"><div></div><!--}-->'
+    document.body.appendChild(container)
+    const input = container.querySelector('input')!
+    const comp = compile(
+      `<template><input type="radio" v-model="data" value="a"><span></span></template>`,
+      ref('b'),
+    )
+    createVaporSSRApp(comp).mount(container)
+    await nextTick()
+    expect(container.querySelector('input')).toBe(input)
+    expect(input.checked).toBe(false)
+    expect(`Hydration node mismatch`).toHaveBeenWarned()
+  })
 })
 
 describe('nodes the html parser moved out of place', () => {

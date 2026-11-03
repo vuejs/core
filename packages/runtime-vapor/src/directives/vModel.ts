@@ -92,9 +92,11 @@ export const applyRadioModel: VaporModelDirective<HTMLInputElement> = (
       const oldValue = value
       if ((value = get()) !== oldValue || initial) {
         const checked = looseEqual(value, vModelGetValue(el))
-        // like vdom, a checked set by the template wins over an unmatched
-        // model on mount, while a server-rendered one follows the model
-        if (checked || !initial || hydrating) el.checked = checked
+        // like vdom, an initially undefined model leaves a checked set by the
+        // template alone on mount, while a server-rendered one follows it
+        if (checked || !initial || value !== undefined || hydrating) {
+          el.checked = checked
+        }
         initial = false
       }
     })
