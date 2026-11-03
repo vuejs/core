@@ -4451,6 +4451,68 @@ describe('SSR hydration', () => {
     }
   })
 
+  test('Suspense: an update waiting on an async root waits out a newer pending branch', async () => {
+    const { container, page, msg, release } = await hydrateSuspenseApp(gate => {
+      const msg = ref('a')
+      const page = ref('owner')
+
+      const Never = defineComponent({
+        async setup() {
+          await new Promise(() => {})
+          return () => h('b', 'never')
+        },
+      })
+      // with the new message, the child mounts another async component
+      const AsyncChild = defineComponent({
+        props: ['msg'],
+        async setup(props) {
+          await gate('child')
+          return () =>
+            props.msg === 'b' ? h('div', [h(Never)]) : h('span', props.msg)
+        },
+      })
+      const Slow = defineComponent({
+        async setup() {
+          await gate('slow')
+          return () => h('i', 'slow')
+        },
+      })
+      const Owner = defineComponent({
+        setup: () => () => h(AsyncChild, { msg: msg.value }),
+      })
+      const Next = defineComponent({
+        async setup() {
+          await gate('next')
+          return () => h('p', 'next')
+        },
+      })
+
+      const App = defineComponent({
+        setup: () => () =>
+          h(Suspense, null, () =>
+            page.value === 'owner' ? h('div', [h(Owner), h(Slow)]) : h(Next),
+          ),
+      })
+      return { App, page, msg }
+    })
+
+    // Owner updates before its async root has hydrated
+    msg.value = 'b'
+    await nextTick()
+    // the root resolves while the boundary still waits for Slow
+    release('child')
+    await new Promise(r => setTimeout(r))
+
+    // switching away before hydration finishes starts a newer pending branch
+    page.value = 'next'
+    await nextTick()
+    await new Promise(r => setTimeout(r))
+
+    release('next')
+    await new Promise(r => setTimeout(r))
+    expect(container.innerHTML).toBe('<p>next</p>')
+  })
+
   test('Suspense: hydrates a component whose async setup rejects again', async () => {
     const errorHandler = vi.fn()
     const Bad = {
