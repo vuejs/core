@@ -100,6 +100,26 @@ describe('ssrRenderTeleport', () => {
     )
   })
 
+  test.each([true, ''])(
+    'teleport rendering (vnode + disabled: %j + no target)',
+    async disabled => {
+      const ctx: SSRContext = {}
+      const html = await renderToString(
+        h(
+          Teleport,
+          { to: undefined, disabled: disabled as boolean },
+          h('span', 'hello'),
+        ),
+        ctx,
+      )
+      expect(html).toBe(
+        '<!--teleport start--><span>hello</span><!--teleport end-->',
+      )
+      expect(ctx.teleports).toBeUndefined()
+      expect('Teleport is missing target prop').not.toHaveBeenWarned()
+    },
+  )
+
   test('multiple teleports with same target', async () => {
     const ctx: SSRContext = {}
     const html = await renderToString(

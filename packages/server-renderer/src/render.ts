@@ -412,7 +412,16 @@ function renderTeleportVNode(
   const target = vnode.props && vnode.props.to
   const disabled = vnode.props && vnode.props.disabled
   if (!target) {
-    if (!disabled) {
+    if (disabled || disabled === '') {
+      push(`<!--teleport start-->`)
+      renderVNodeChildren(
+        push,
+        vnode.children as VNodeArrayChildren,
+        parentComponent,
+        slotScopeId,
+      )
+      push(`<!--teleport end-->`)
+    } else {
       warn(`[@vue/server-renderer] Teleport is missing target prop.`)
     }
     return []
