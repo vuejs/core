@@ -251,11 +251,13 @@ const BaseTransitionImpl: ComponentOptions = {
               earlyRemove()
               el[leaveCbKey] = undefined
               delete enterHooks.delayedLeave
+              delete leavingHooks.delayLeave
               oldInnerChild = undefined
             }
             enterHooks.delayedLeave = () => {
               delayedLeave()
               delete enterHooks.delayedLeave
+              delete leavingHooks.delayLeave
               oldInnerChild = undefined
             }
           }

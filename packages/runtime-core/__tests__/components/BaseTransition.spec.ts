@@ -8,6 +8,7 @@ import {
   h,
   nextTick,
   nodeOps,
+  onUnmounted,
   ref,
   render,
   serialize,
@@ -1606,6 +1607,103 @@ describe('BaseTransition', () => {
       } finally {
         __DEV__ = true
       }
+    },
+  )
+
+  test.each([true, false])(
+    'mode: "in-out" w/ KeepAlive should unmount after a finished switch (__DEV__: %s)',
+    async dev => {
+      __DEV__ = dev
+      try {
+        const unmountedA = vi.fn()
+        const unmountedB = vi.fn()
+        const CompA = {
+          setup() {
+            onUnmounted(unmountedA)
+            return () => h('div', 'A')
+          },
+        }
+        const CompB = {
+          setup() {
+            onUnmounted(unmountedB)
+            return () => h('span', 'B')
+          },
+        }
+        const toggle = ref(true)
+        const { props, cbs } = mockProps({ mode: 'in-out' }, true)
+        const { root, unmount } = mount(
+          props,
+          () => h(toggle.value ? CompA : CompB),
+          true,
+        )
+
+        toggle.value = false
+        await nextTick()
+        cbs.doneEnter['<span>B</span>']()
+        cbs.doneLeave['<div>A</div>']()
+        expect(serializeInner(root)).toBe('<span>B</span>')
+
+        unmount()
+        await nextTick()
+        expect(serializeInner(root)).toBe('<!---->')
+        expect(unmountedA).toHaveBeenCalledTimes(1)
+        expect(unmountedB).toHaveBeenCalledTimes(1)
+        expect(props.onLeave).toHaveBeenCalledTimes(1)
+      } finally {
+        __DEV__ = true
+      }
+    },
+  )
+
+  test.each([true, false])(
+    'mode: "in-out" w/ KeepAlive should prune a cached child (enter finished: %s)',
+    async enterFinished => {
+      const unmountedA = vi.fn()
+      const unmountedB = vi.fn()
+      const CompA = {
+        name: 'CompA',
+        render: () => h('div', 'A'),
+        unmounted: unmountedA,
+      }
+      const CompB = {
+        name: 'CompB',
+        render: () => h('span', 'B'),
+        unmounted: unmountedB,
+      }
+      const toggle = ref(true)
+      const include = ref('CompA,CompB')
+      const { props, cbs } = mockProps({ mode: 'in-out' }, true)
+      const { root, unmount } = mount(props, () =>
+        h(KeepAlive, { include: include.value }, [
+          h(toggle.value ? CompA : CompB),
+        ]),
+      )
+
+      toggle.value = false
+      await nextTick()
+      if (enterFinished) {
+        cbs.doneEnter['<span>B</span>']()
+        cbs.doneLeave['<div>A</div>']()
+      }
+
+      include.value = 'CompB'
+      await nextTick()
+      expect(unmountedA).toHaveBeenCalledTimes(1)
+      expect(unmountedB).not.toHaveBeenCalled()
+      if (!enterFinished) {
+        expect(serializeInner(root)).toBe('<div>A</div><span>B</span>')
+        expect(props.onLeave).not.toHaveBeenCalled()
+        cbs.doneEnter['<span>B</span>']()
+      }
+      expect(props.onLeave).toHaveBeenCalledTimes(enterFinished ? 2 : 1)
+      cbs.doneLeave['<div>A</div>']()
+      expect(serializeInner(root)).toBe('<span>B</span>')
+
+      unmount()
+      await nextTick()
+      expect(serializeInner(root)).toBe('<!---->')
+      expect(unmountedA).toHaveBeenCalledTimes(1)
+      expect(unmountedB).toHaveBeenCalledTimes(1)
     },
   )
 })
