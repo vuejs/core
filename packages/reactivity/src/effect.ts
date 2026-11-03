@@ -198,8 +198,10 @@ export function effect<T = any>(
       }
     }
     // copy the remaining options without mutating the caller's object
-    e.onTrack = onTrack
-    e.onTrigger = onTrigger
+    if (__DEV__) {
+      e.onTrack = onTrack
+      e.onTrigger = onTrigger
+    }
   }
   try {
     e.run()
