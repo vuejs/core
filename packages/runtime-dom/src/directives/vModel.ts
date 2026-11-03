@@ -44,7 +44,12 @@ type ModelDirective<T, Modifiers extends string = string> = ObjectDirective<
   T & {
     [assignKey]: AssignerFn
     [initialValueKey]?: string
-    _pendingValue?: [multiple: boolean, value: any]
+    _pendingValue?: [
+      multiple: boolean,
+      value: any,
+      option?: HTMLOptionElement,
+      optionValue?: any,
+    ]
   },
   any,
   Modifiers
@@ -235,11 +240,16 @@ export const vModelSelect: ModelDirective<HTMLSelectElement, 'number'> = {
   created(el, { value, modifiers: { number } }, vnode) {
     ;(el as any)._modelValue = value
     addEventListener(el, 'change', () => {
-      const selectedVal = Array.prototype.filter
-        .call(el.options, (o: HTMLOptionElement) => o.selected)
-        .map((o: HTMLOptionElement) =>
-          number ? looseToNumber(getValue(o)) : getValue(o),
-        )
+      const selectedOptions: HTMLOptionElement[] = Array.prototype.filter.call(
+        el.options,
+        (o: HTMLOptionElement) => o.selected,
+      )
+      const selectedOption = selectedOptions[0]
+      const selectedOptionValue = selectedOption && getValue(selectedOption)
+      const selectedVal = selectedOptions.map((o, index) => {
+        const optionValue = index === 0 ? selectedOptionValue : getValue(o)
+        return number ? looseToNumber(optionValue) : optionValue
+      })
       const multiple = el.multiple
       const assignedValue = multiple
         ? isSet((el as any)._modelValue)
@@ -255,6 +265,8 @@ export const vModelSelect: ModelDirective<HTMLSelectElement, 'number'> = {
             ? selectedVal.slice()
             : selectedVal
           : assignedValue,
+        multiple ? undefined : selectedOption,
+        multiple ? undefined : selectedOptionValue,
       ])
       try {
         el[assignKey](assignedValue)
@@ -286,6 +298,28 @@ export const vModelSelect: ModelDirective<HTMLSelectElement, 'number'> = {
       !isSameSelectValue(value, pending[1], pending[0])
     ) {
       setSelected(el, value, number)
+    } else if (!el.multiple) {
+      const option = el.options[el.selectedIndex]
+      if (
+        option !== pending[2] &&
+        (!option || !looseEqual(getValue(option), pending[3]))
+      ) {
+        for (let i = 0, l = el.options.length; i < l; i++) {
+          const candidate = el.options[i]
+          if (looseEqual(getValue(candidate), pending[3])) {
+            if (
+              number &&
+              typeof pending[1] === 'number' &&
+              !looseEqual(looseToNumber(candidate.value), pending[1])
+            ) {
+              setSelected(el, value, number)
+            } else {
+              el.selectedIndex = i
+            }
+            break
+          }
+        }
+      }
     }
   },
 }

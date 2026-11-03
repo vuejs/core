@@ -1,5 +1,6 @@
 import {
   type VNode,
+  computed,
   defineComponent,
   h,
   nextTick,
@@ -2010,5 +2011,392 @@ describe('vModel', () => {
     await nextTick()
     expect(number.selected).toBe(false)
     expect(string.selected).toBe(true)
+  })
+
+  function mountCompiledSelect(
+    template: string,
+    bindings: Record<string, any>,
+  ) {
+    const { code } = compile(template, { prefixIdentifiers: true })
+    render(
+      h({
+        setup: () => bindings,
+        render: new Function('Vue', code)(runtimeDom),
+      }),
+      root,
+    )
+    return root.querySelector('select') as HTMLSelectElement
+  }
+
+  it('should resync when a selected option moves between optgroups with the same key', async () => {
+    const selected = ref('alice')
+    const people = [
+      { id: 'alice', name: 'Alice' },
+      { id: 'bob', name: 'Bob' },
+      { id: 'carol', name: 'Carol' },
+    ]
+    const memberIds = ref(['alice'])
+    const members = computed(() =>
+      people.filter(person => memberIds.value.includes(person.id)),
+    )
+    const others = computed(() =>
+      people.filter(person => !memberIds.value.includes(person.id)),
+    )
+    const assign = (event: Event) => {
+      const id = (event.target as HTMLSelectElement).value
+      if (!memberIds.value.includes(id))
+        memberIds.value = [...memberIds.value, id]
+    }
+    const select = mountCompiledSelect(
+      `<select v-model="selected" @change="assign">
+        <optgroup label="Project members">
+          <option v-for="person in members" :key="person.id" :value="person.id">{{ person.name }}</option>
+        </optgroup>
+        <optgroup label="Other people">
+          <option v-for="person in others" :key="person.id" :value="person.id">{{ person.name }}</option>
+        </optgroup>
+      </select>`,
+      { selected, members, others, assign },
+    )
+    const originalBob = select.options[1]
+
+    expect(select.value).toBe('alice')
+    expect(originalBob.parentElement!.getAttribute('label')).toBe(
+      'Other people',
+    )
+    select.value = 'bob'
+    triggerEvent('change', select)
+    await nextTick()
+
+    expect(selected.value).toBe('bob')
+    expect(memberIds.value).toEqual(['alice', 'bob'])
+    expect(select.options[1]).not.toBe(originalBob)
+    expect(select.options[1].parentElement!.getAttribute('label')).toBe(
+      'Project members',
+    )
+    expect(select.value).toBe('bob')
+    expect(select.selectedIndex).toBe(1)
+  })
+
+  it('should resync a select when its selected option is replaced during change', async () => {
+    const value = ref('a')
+    const key = ref(0)
+    render(
+      h({
+        setup: () => () =>
+          withVModel(
+            h(
+              'select',
+              {
+                'onUpdate:modelValue': (next: string) => (value.value = next),
+                onChange: () => key.value++,
+              },
+              [
+                h('option', { value: 'a' }),
+                h('option', { key: key.value, value: 'b' }),
+              ],
+            ),
+            value.value,
+          ),
+      }),
+      root,
+    )
+    const select = root.querySelector('select') as HTMLSelectElement
+    const originalOption = select.options[1]
+
+    expect(select.value).toBe('a')
+    select.value = 'b'
+    triggerEvent('change', select)
+    await nextTick()
+
+    expect(value.value).toBe('b')
+    expect(select.options[1]).not.toBe(originalOption)
+    expect(select.value).toBe('b')
+    expect(select.selectedIndex).toBe(1)
+  })
+
+  it.each([
+    ['1.0', '1.0'],
+    ['01', '01'],
+    ['array', [1]],
+    ['boxed number', new Number(1)],
+  ])(
+    'v-model.number should retain and resync the %s option',
+    async (_, optionValue) => {
+      const value = ref<number | null>(null)
+      const key = ref(0)
+      const replace = ref(false)
+      const replaceOption = () => {
+        if (replace.value) key.value++
+      }
+      const option =
+        typeof optionValue === 'string'
+          ? `<option :key="key" value="${optionValue}">value</option>`
+          : `<option :key="key" :value="optionValue">value</option>`
+      const select = mountCompiledSelect(
+        `<select v-model.number="value" @change="replaceOption">
+        <option value="1">one</option>
+          ${option}
+      </select>`,
+        { value, key, replaceOption, optionValue },
+      )
+      const originalOption = select.options[1]
+
+      expect(select.selectedIndex).toBe(-1)
+      select.selectedIndex = 1
+      triggerEvent('change', select)
+      await nextTick()
+      expect(value.value).toBe(1)
+      expect(select.options[1]).toBe(originalOption)
+      expect(select.selectedIndex).toBe(1)
+
+      value.value = null
+      await nextTick()
+      expect(select.selectedIndex).toBe(-1)
+      replace.value = true
+      select.selectedIndex = 1
+      triggerEvent('change', select)
+      await nextTick()
+      expect(value.value).toBe(1)
+      expect(select.options[1]).not.toBe(originalOption)
+      expect(select.value).toBe(String(optionValue))
+      expect(select.selectedIndex).toBe(1)
+    },
+  )
+
+  it.each([
+    ['replaced', '01', 1],
+    ['removed', '1', 0],
+    ['normalized', '1', 1],
+  ])(
+    'v-model.number should retain the submitted value when an option is %s',
+    async (change, submitted, selectedIndex) => {
+      const value = ref<number | null>(null)
+      const key = ref(0)
+      const showOption = ref(true)
+      const optionValue = ref('01')
+      const changeOption = () => {
+        if (change === 'replaced') key.value++
+        if (change === 'removed') showOption.value = false
+        if (change === 'normalized') optionValue.value = '1'
+      }
+      const select = mountCompiledSelect(
+        `<form>
+          <select name="number" v-model.number="value" @change="changeOption">
+            <option value="1">one</option>
+            <option v-if="showOption" :key="key" :value="optionValue">leading zero</option>
+          </select>
+        </form>`,
+        { value, key, showOption, optionValue, changeOption },
+      )
+      const originalOption = select.options[1]
+
+      select.value = '01'
+      triggerEvent('change', select)
+      await nextTick()
+
+      expect(value.value).toBe(1)
+      expect(select.options[1] === originalOption).toBe(change === 'normalized')
+      expect(select.selectedIndex).toBe(selectedIndex)
+      expect(new FormData(select.form!).get('number')).toBe(submitted)
+    },
+  )
+
+  it.each([false, true])(
+    'v-model.number should retain a stringified assignment (replacement: %s)',
+    async replace => {
+      const value = ref('start')
+      const updates: (string | number)[] = []
+      const model = computed({
+        get: () => value.value,
+        set: (next: string | number) => {
+          updates.push(next)
+          value.value = String(next)
+        },
+      })
+      const key = ref(0)
+      const replaceOption = () => {
+        if (replace) key.value++
+      }
+      const select = mountCompiledSelect(
+        `<select v-model.number="model" @change="replaceOption">
+          <option value="start">start</option>
+          <option :key="key" value="01">leading zero</option>
+        </select>`,
+        { model, key, replaceOption },
+      )
+      const originalOption = select.options[1]
+
+      expect(select.selectedIndex).toBe(0)
+      select.selectedIndex = 1
+      triggerEvent('change', select)
+      await nextTick()
+
+      expect(updates).toEqual([1])
+      expect(value.value).toBe('1')
+      expect(select.options[1] === originalOption).toBe(!replace)
+      expect(select.selectedIndex).toBe(1)
+    },
+  )
+
+  it('v-model.number should retain the selected object option when coercion is observable', async () => {
+    const value = ref<string | number>('start')
+    let selecting = false
+    let coercions = 0
+    const optionValue = {
+      toString() {
+        if (!selecting) return '1'
+        return ++coercions === 1 ? '1' : '2'
+      },
+    }
+    const select = mountCompiledSelect(
+      `<select v-model.number="value">
+        <option value="start">start</option>
+        <option :value="optionValue">observable</option>
+      </select>`,
+      { value, optionValue },
+    )
+
+    expect(select.selectedIndex).toBe(0)
+    selecting = true
+    select.selectedIndex = 1
+    triggerEvent('change', select)
+    await nextTick()
+
+    expect(value.value).toBe(1)
+    expect(select.selectedIndex).toBe(1)
+  })
+
+  it.each(['1.0', '01'])(
+    'v-model.number should preserve existing string and number matching for "%s"',
+    async optionValue => {
+      const value = ref<string | number>(optionValue)
+      let select = mountCompiledSelect(
+        `<select v-model.number="value"><option value="${optionValue}" /></select>`,
+        { value },
+      )
+
+      expect(value.value).toBe(optionValue)
+      expect(select.selectedIndex).toBe(0)
+      value.value = 1
+      await nextTick()
+      expect(select.selectedIndex).toBe(-1)
+
+      render(null, root)
+      select = mountCompiledSelect(
+        `<select v-model.number="value"><option :value="optionValue" /></select>`,
+        { value, optionValue },
+      )
+
+      expect(select.selectedIndex).toBe(-1)
+      value.value = optionValue
+      await nextTick()
+      expect(select.selectedIndex).toBe(0)
+      value.value = 1
+      await nextTick()
+      expect(select.selectedIndex).toBe(-1)
+    },
+  )
+
+  it.each([false, true])(
+    'v-model.number should not select a replaced option whose value was mutated (extra option: %s)',
+    async extraOption => {
+      const value = ref(1)
+      const optionValue = ref([1])
+      const key = ref(0)
+      const changeOption = () => {
+        optionValue.value[0] = 2
+        key.value++
+      }
+      const select = mountCompiledSelect(
+        `<select v-model.number="value" @change="changeOption">
+          ${extraOption ? '<option value="other">other</option>' : ''}
+          <option value="1">one</option>
+          <option :key="key" :value="optionValue">array</option>
+        </select>`,
+        { value, optionValue, key, changeOption },
+      )
+      const oneIndex = extraOption ? 1 : 0
+      const originalOption = select.options[oneIndex + 1]
+
+      select.selectedIndex = oneIndex + 1
+      triggerEvent('change', select)
+      await nextTick()
+
+      expect(optionValue.value).toEqual([2])
+      expect(select.options[oneIndex + 1]).not.toBe(originalOption)
+      expect(value.value).toBe(1)
+      expect(select.selectedIndex).toBe(oneIndex)
+      expect(select.value).toBe('1')
+    },
+  )
+
+  it('v-model.number should retain the submitted option after an unrelated update', async () => {
+    const value = ref<number | null>(null)
+    const count = ref(0)
+    const select = mountCompiledSelect(
+      `<form>
+        <select name="number" v-model.number="value">
+          <option value="01">leading zero</option>
+          <option value="1">one</option>
+        </select>
+        <output>{{ count }}</output>
+      </form>`,
+      { value, count },
+    )
+    const form = select.form!
+
+    select.value = '1'
+    triggerEvent('change', select)
+    await nextTick()
+    expect(value.value).toBe(1)
+    expect(new FormData(form).get('number')).toBe('1')
+
+    count.value++
+    await nextTick()
+    expect(select.value).toBe('1')
+    expect(new FormData(form).get('number')).toBe('1')
+  })
+
+  it('v-model.number should skip an unselected Symbol option', () => {
+    const value = ref(1)
+    const other = Symbol('other')
+    const select = mountCompiledSelect(
+      `<select v-model.number="value">
+        <option disabled :value="other">other</option>
+        <option :value="1">one</option>
+      </select>`,
+      { value, other },
+    )
+
+    expect(value.value).toBe(1)
+    expect(select.selectedIndex).toBe(1)
+  })
+
+  it('v-model.number should skip an unselected Symbol while resyncing a replaced option', async () => {
+    const value = ref<number | null>(null)
+    const other = Symbol('other')
+    const optionValue = [1]
+    const key = ref(0)
+    const replaceOption = () => {
+      key.value++
+    }
+    const select = mountCompiledSelect(
+      `<select v-model.number="value" @change="replaceOption">
+        <option :value="other">other</option>
+        <option :key="key" :value="optionValue">one</option>
+      </select>`,
+      { value, other, optionValue, key, replaceOption },
+    )
+    const originalOption = select.options[1]
+
+    expect(select.selectedIndex).toBe(-1)
+    select.selectedIndex = 1
+    triggerEvent('change', select)
+    await nextTick()
+
+    expect(value.value).toBe(1)
+    expect(select.options[1]).not.toBe(originalOption)
+    expect(select.selectedIndex).toBe(1)
   })
 })
