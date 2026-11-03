@@ -104,26 +104,38 @@ export const SuspenseImpl = {
         rendererInternals,
       )
     } else {
-      // #8678 if the current suspense needs to be patched and parentSuspense has
-      // not been resolved. this means that both the current suspense and parentSuspense
-      // need to be patched. because parentSuspense's pendingBranch includes the
-      // current suspense, it will be processed twice:
-      //  1. current patch
-      //  2. mounting along with the pendingBranch of parentSuspense
-      // it is necessary to skip the current patch to avoid multiple mounts
-      // of inner components.
-      // but not while the parent is hydrating: its pending branch is the
-      // adopted SSR DOM, never mounted again, so skipping leaves it stale.
+      const suspense = n1.suspense!
+      // #8678 while the parent is pending, a nested boundary in its new
+      // content is not patched (#10055). One in the content the parent keeps
+      // on screen stays live, except for a root replacement, which would mount
+      // new content into it.
+      // Neither applies while the parent is hydrating: its pending branch is
+      // the adopted SSR DOM, never mounted again, so skipping leaves it stale.
       if (
         parentSuspense &&
         parentSuspense.deps > 0 &&
-        !n1.suspense!.isInFallback &&
+        !suspense.isInFallback &&
         !parentSuspense.isHydrating
       ) {
-        n2.suspense = n1.suspense!
-        n2.suspense.vnode = n2
-        n2.el = n1.el
-        return
+        const owner = suspense.parentComponent
+        const retained =
+          !!owner &&
+          owner.suspense === parentSuspense &&
+          owner.suspenseId !== parentSuspense.pendingId
+        if (
+          !retained ||
+          // deps can outlive the pending branch: skip only while it exists
+          (parentSuspense.pendingBranch &&
+            !isSameVNodeType(
+              n2.ssContent!,
+              (suspense.pendingBranch || suspense.activeBranch)!,
+            ))
+        ) {
+          n2.suspense = suspense
+          suspense.vnode = n2
+          n2.el = n1.el
+          return
+        }
       }
       patchSuspense(
         n1,
