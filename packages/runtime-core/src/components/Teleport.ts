@@ -172,7 +172,7 @@ export const TeleportImpl = {
         mountToTarget(vnode)
       }
       pendingMounts.set(vnode, mountJob)
-      queuePostRenderEffect(mountJob, parentSuspense)
+      queuePostRenderEffect(mountJob, parentSuspense, parentComponent)
     }
 
     if (n1 == null) {

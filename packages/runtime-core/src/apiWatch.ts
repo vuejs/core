@@ -202,7 +202,7 @@ function doWatch(
       // mark the owner (or its absence) so a root mount can tell the watcher
       // from its own post cbs. Set here as the first run queues a bound copy.
       job.i = instance
-      queuePostRenderEffect(job, instance && instance.suspense)
+      queuePostRenderEffect(job, instance && instance.suspense, instance)
     }
   } else if (flush !== 'sync') {
     // default: 'pre'

@@ -4759,10 +4759,11 @@ describe('Suspense', () => {
     msg.value = 'b'
     await nextTick()
 
-    // the async root resolves while the boundary is still pending
+    // the async root resolves while the boundary is still pending: Owner is
+    // on screen, so it renders right away with the updated props
     resolveChild()
     await new Promise(r => setTimeout(r))
-    expect(serializeInner(root)).toBe(`<div><!----></div>`)
+    expect(serializeInner(root)).toBe(`<div><span>b</span></div>`)
 
     // switching back discards the pending branch
     page.value = Owner
@@ -5032,6 +5033,450 @@ describe('Suspense', () => {
       'ChildSync',
       'ParentAsync',
       'ChildAsync',
+    ])
+  })
+
+  function retainedPageApp(OldPage: ComponentOptions) {
+    let resolveNew!: () => void
+    const NewPage = {
+      async setup() {
+        await new Promise<void>(r => (resolveNew = r))
+        return () => h('p', 'new')
+      },
+    }
+    const page = shallowRef<ComponentOptions>(OldPage)
+    const Comp = {
+      setup: () => () => h(Suspense, null, { default: h(page.value) }),
+    }
+    const root = nodeOps.createElement('div')
+    render(h(Comp), root)
+    return {
+      root,
+      showNewPage: () => (page.value = NewPage),
+      showOldPage: () => (page.value = OldPage),
+      resolveNew: () => resolveNew(),
+    }
+  }
+
+  test('runs post-flush effects of the content kept on screen while pending', async () => {
+    const log: string[] = []
+    const draft = ref('')
+    const OldPage = {
+      setup() {
+        watch(draft, v => log.push(`save ${v}`), { flush: 'post' })
+        onUpdated(() => log.push('updated'))
+        return () => h('div', draft.value)
+      },
+    }
+    const app = retainedPageApp(OldPage)
+
+    // the boundary waits for NewPage, OldPage stays on screen
+    app.showNewPage()
+    await nextTick()
+    draft.value = 'hello'
+    await nextTick()
+    expect(serializeInner(app.root)).toBe('<div>hello</div>')
+    expect(log).toEqual(['save hello', 'updated'])
+
+    app.resolveNew()
+    await new Promise(r => setTimeout(r))
+    expect(serializeInner(app.root)).toBe('<p>new</p>')
+  })
+
+  test('keeps post watchers of the content kept on screen when the pending branch is discarded', async () => {
+    const log: string[] = []
+    const draft = ref('')
+    const OldPage = {
+      setup() {
+        watch(draft, v => log.push(`save ${v}`), { flush: 'post' })
+        return () => h('div', draft.value)
+      },
+    }
+    const app = retainedPageApp(OldPage)
+
+    app.showNewPage()
+    await nextTick()
+    draft.value = 'a'
+    await nextTick()
+    // switching back discards the pending branch
+    app.showOldPage()
+    await nextTick()
+    draft.value = 'ab'
+    await nextTick()
+    expect(serializeInner(app.root)).toBe('<div>ab</div>')
+    expect(log).toEqual(['save a', 'save ab'])
+  })
+
+  test('does not wait for async components mounted into the content kept on screen', async () => {
+    const show = ref(false)
+    const Comments = {
+      async setup() {
+        await new Promise(() => {})
+        return () => h('ul')
+      },
+    }
+    const OldPage = {
+      setup: () => () => h('div', [show.value ? h(Comments) : null]),
+    }
+    const app = retainedPageApp(OldPage)
+
+    app.showNewPage()
+    await nextTick()
+    // OldPage, still on screen, mounts an async component meanwhile
+    show.value = true
+    await nextTick()
+
+    app.resolveNew()
+    await new Promise(r => setTimeout(r))
+    expect(serializeInner(app.root)).toBe('<p>new</p>')
+  })
+
+  test('does not wait for a suspensible boundary mounted into the content kept on screen', async () => {
+    const show = ref(false)
+    const Async = {
+      async setup() {
+        await new Promise(() => {})
+        return () => h('ul')
+      },
+    }
+    const OldPage = {
+      setup: () => () =>
+        h('div', [
+          show.value
+            ? h(Suspense, { suspensible: true }, { default: h(Async) })
+            : null,
+        ]),
+    }
+    const app = retainedPageApp(OldPage)
+
+    app.showNewPage()
+    await nextTick()
+    show.value = true
+    await nextTick()
+
+    app.resolveNew()
+    await new Promise(r => setTimeout(r))
+    expect(serializeInner(app.root)).toBe('<p>new</p>')
+  })
+
+  test('runs the unmount hooks of a child removed from the content kept on screen while pending', async () => {
+    const log: string[] = []
+    const show = ref(true)
+    const Child = {
+      setup() {
+        onMounted(() => log.push('mounted'))
+        onUnmounted(() => log.push('unmounted'))
+        return () => h('i')
+      },
+    }
+    const OldPage = {
+      setup: () => () => h('div', [show.value ? h(Child) : null]),
+    }
+    const app = retainedPageApp(OldPage)
+
+    app.showNewPage()
+    await nextTick()
+    show.value = false
+    await nextTick()
+    expect(log).toEqual(['mounted', 'unmounted'])
+
+    // one mounted meanwhile has both hooks run, in order
+    show.value = true
+    await nextTick()
+    show.value = false
+    await nextTick()
+    expect(log).toEqual(['mounted', 'unmounted', 'mounted', 'unmounted'])
+  })
+
+  test('flushes the effects of a nested boundary in the content kept on screen', async () => {
+    const log: string[] = []
+    const show = ref(false)
+    let resolveWidget!: () => void
+    const Widget = {
+      async setup() {
+        onMounted(() => log.push('widget mounted'))
+        await new Promise<void>(r => (resolveWidget = r))
+        return () => h('b', 'widget')
+      },
+    }
+    const OldPage = {
+      setup: () => () =>
+        h('div', [
+          show.value ? h(Suspense, null, { default: h(Widget) }) : null,
+        ]),
+    }
+    const app = retainedPageApp(OldPage)
+
+    app.showNewPage()
+    await nextTick()
+    show.value = true
+    await nextTick()
+    // the nested boundary resolves while the outer one is still pending
+    resolveWidget()
+    await new Promise(r => setTimeout(r))
+    expect(serializeInner(app.root)).toBe('<div><b>widget</b></div>')
+    expect(log).toEqual(['widget mounted'])
+  })
+
+  test('runs the unmount hooks of a nested boundary removed from the content kept on screen', async () => {
+    const log: string[] = []
+    const show = ref(false)
+    let resolveWidget!: () => void
+    const Widget = {
+      async setup() {
+        onMounted(() => log.push('mounted'))
+        onUnmounted(() => log.push('unmounted'))
+        await new Promise<void>(r => (resolveWidget = r))
+        return () => h('b', 'widget')
+      },
+    }
+    const OldPage = {
+      setup: () => () =>
+        h('div', [
+          show.value ? h(Suspense, null, { default: h(Widget) }) : null,
+        ]),
+    }
+    const app = retainedPageApp(OldPage)
+
+    app.showNewPage()
+    await nextTick()
+    show.value = true
+    await nextTick()
+    resolveWidget()
+    await new Promise(r => setTimeout(r))
+    expect(log).toEqual(['mounted'])
+
+    // the unmount goes through the outer boundary, which must still tell
+    // the nested content apart from its pending branch
+    show.value = false
+    await nextTick()
+    expect(log).toEqual(['mounted', 'unmounted'])
+  })
+
+  test('enters with a transition in the content kept on screen while pending', async () => {
+    const hooks: string[] = []
+    const showList = ref(false)
+    const showComments = ref(false)
+    let resolveComments!: () => void
+    const Comments = {
+      async setup() {
+        await new Promise<void>(r => (resolveComments = r))
+        return () => h('ul', 'comments')
+      },
+    }
+    const transition = (name: string) => ({
+      onBeforeEnter: () => hooks.push(`${name} beforeEnter`),
+      onEnter: (_: any, done: () => void) => {
+        hooks.push(`${name} enter`)
+        done()
+      },
+    })
+    const OldPage = {
+      setup: () => () =>
+        h('div', [
+          h(BaseTransition, transition('list'), () =>
+            showList.value ? h('ol', 'list') : null,
+          ),
+          h(BaseTransition, transition('comments'), () =>
+            showComments.value ? h(Comments) : null,
+          ),
+        ]),
+    }
+    const app = retainedPageApp(OldPage)
+    // mounted while the boundary is resolved, so not a dep of any cycle
+    showComments.value = true
+    await nextTick()
+
+    app.showNewPage()
+    await nextTick()
+    // an element mounted into the content kept on screen
+    showList.value = true
+    await nextTick()
+    expect(hooks).toEqual(['list beforeEnter', 'list enter'])
+    // an async child of it resolving meanwhile
+    resolveComments()
+    await new Promise(r => setTimeout(r))
+    expect(serializeInner(app.root)).toBe(
+      '<div><ol>list</ol><ul>comments</ul></div>',
+    )
+    expect(hooks).toEqual([
+      'list beforeEnter',
+      'list enter',
+      'comments beforeEnter',
+      'comments enter',
+    ])
+  })
+
+  test('holds the effects of content kept on screen by a nested boundary while an outer one hides it', async () => {
+    const log: string[] = []
+    const inner = shallowRef<ComponentOptions>()
+    const showWidget = ref(false)
+    const gate = ref(false)
+    let resolveSlow!: () => void
+    let resolveHome!: () => void
+    const Widget = {
+      setup() {
+        onMounted(() => log.push('widget mounted'))
+        return () => h('b', 'w')
+      },
+    }
+    const Sub1 = {
+      setup: () => () => h('i', [showWidget.value ? h(Widget) : null]),
+    }
+    const Sub2 = {
+      async setup() {
+        await new Promise(() => {})
+        return () => h('u', 'sub2')
+      },
+    }
+    inner.value = Sub1
+    const Slow = {
+      async setup() {
+        await new Promise<void>(r => (resolveSlow = r))
+        return () => h('s', 'slow')
+      },
+    }
+    const Layout = {
+      name: 'Layout',
+      props: ['gate'],
+      setup: (props: any) => () =>
+        h('div', [
+          h(Suspense, null, { default: h(inner.value!) }),
+          props.gate ? h(Slow) : null,
+        ]),
+    }
+    const Home = {
+      async setup() {
+        await new Promise<void>(r => (resolveHome = r))
+        return () => h('p', 'home')
+      },
+    }
+    const route = ref('layout')
+    const Comp = {
+      setup: () => () =>
+        h(KeepAlive, null, {
+          default: () =>
+            h(
+              Suspense,
+              { onResolve: () => log.push('outer resolved') },
+              {
+                default:
+                  route.value === 'layout'
+                    ? h(Layout, { gate: gate.value })
+                    : h(Home),
+              },
+            ),
+        }),
+    }
+    const root = nodeOps.createElement('div')
+    render(h(Comp), root)
+    await nextTick()
+
+    // the nested boundary goes pending, keeping Sub1 on screen
+    inner.value = Sub2
+    await nextTick()
+    // Layout is cached in that state, then brought back into the outer's
+    // pending branch, off screen, with a new dep
+    route.value = 'home'
+    await nextTick()
+    resolveHome()
+    await new Promise(r => setTimeout(r))
+    expect(serializeInner(root)).toBe('<p>home</p>')
+    log.length = 0
+    gate.value = true
+    route.value = 'layout'
+    await nextTick()
+    expect(serializeInner(root)).toBe('<p>home</p>')
+
+    // Sub1 mounts a widget there: not on screen until the outer reveals it
+    showWidget.value = true
+    await nextTick()
+    expect(log).toEqual([])
+    // the nested navigation is cancelled: its boundary drops its own buffer,
+    // which must not include the widget's hook
+    inner.value = Sub1
+    await nextTick()
+    expect(log).toEqual([])
+    resolveSlow()
+    await new Promise(r => setTimeout(r))
+    expect(serializeInner(root)).toBe('<div><i><b>w</b></i><s>slow</s></div>')
+    expect(log).toEqual(['outer resolved', 'widget mounted'])
+  })
+
+  test('routes the effects of content kept on screen past resolved ancestors to the pending one', async () => {
+    const log: string[] = []
+    const inner = shallowRef<ComponentOptions>()
+    const showWidget = ref(false)
+    let resolveSlow!: () => void
+    const Widget = {
+      setup() {
+        onMounted(() => log.push('widget mounted'))
+        return () => h('b', 'w')
+      },
+    }
+    const Sub1 = {
+      setup() {
+        watch(showWidget, v => log.push(`post watcher ${v}`), {
+          flush: 'post',
+        })
+        return () => h('i', [showWidget.value ? h(Widget) : null])
+      },
+    }
+    inner.value = Sub1
+    const Sub2 = {
+      async setup() {
+        await new Promise(() => {})
+        return () => h('u', 'sub2')
+      },
+    }
+    const Mid = {
+      setup: () => () =>
+        h('section', [h(Suspense, null, { default: h(inner.value!) })]),
+    }
+    const Slow = {
+      async setup() {
+        await new Promise<void>(r => (resolveSlow = r))
+        return () => h('s', 'slow')
+      },
+    }
+    const Layout = {
+      setup: () => () =>
+        h('div', [h(Suspense, null, { default: h(Mid) }), h(Slow)]),
+    }
+    const Home = { setup: () => () => h('p', 'home') }
+    const page = shallowRef<ComponentOptions>(Home)
+    const Comp = {
+      setup: () => () =>
+        h(
+          Suspense,
+          { onResolve: () => log.push('outer resolved') },
+          { default: h(page.value) },
+        ),
+    }
+    const root = nodeOps.createElement('div')
+    render(h(Comp), root)
+    log.length = 0
+
+    // the outer boundary hides Layout; the middle one in it is resolved, the
+    // inner one switches root on its own and keeps Sub1
+    page.value = Layout
+    await nextTick()
+    inner.value = Sub2
+    await nextTick()
+    showWidget.value = true
+    await nextTick()
+    expect(serializeInner(root)).toBe('<p>home</p>')
+    expect(log).toEqual([])
+
+    resolveSlow()
+    await new Promise(r => setTimeout(r))
+    expect(serializeInner(root)).toBe(
+      '<div><section><i><b>w</b></i></section><s>slow</s></div>',
+    )
+    expect(log).toEqual([
+      'outer resolved',
+      'post watcher true',
+      'widget mounted',
     ])
   })
 })

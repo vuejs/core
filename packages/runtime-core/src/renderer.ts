@@ -63,6 +63,7 @@ import { setRef } from './rendererTemplateRef'
 import {
   type SuspenseBoundary,
   type SuspenseImpl,
+  isRetained,
   isSuspense,
   queueEffectWithSuspense,
 } from './components/Suspense'
@@ -297,11 +298,16 @@ export enum MoveType {
 export const queuePostRenderEffect: (
   fn: SchedulerJobs,
   suspense: SuspenseBoundary | null,
+  // the component the job belongs to, when it is content of the boundary
+  instance?: ComponentInternalInstance | null,
 ) => void = __FEATURE_SUSPENSE__
   ? __TEST__
     ? // vitest can't seem to handle eager circular dependency
-      (fn: Function | Function[], suspense: SuspenseBoundary | null) =>
-        queueEffectWithSuspense(fn, suspense)
+      (
+        fn: Function | Function[],
+        suspense: SuspenseBoundary | null,
+        instance?: ComponentInternalInstance | null,
+      ) => queueEffectWithSuspense(fn, suspense, instance)
     : queueEffectWithSuspense
   : queuePostFlushCb
 
@@ -746,7 +752,11 @@ function baseCreateRenderer(
     }
     // #1583 For inside suspense + suspense not resolved case, enter hook should call when suspense resolved
     // #1689 For inside suspense + suspense resolved case, just call it
-    const needCallTransitionHooks = needTransition(parentSuspense, transition)
+    const needCallTransitionHooks = needTransition(
+      parentSuspense,
+      transition,
+      parentComponent,
+    )
     if (needCallTransitionHooks) {
       transition!.beforeEnter(el)
     }
@@ -757,17 +767,21 @@ function baseCreateRenderer(
       dirs
     ) {
       const isHmr = __DEV__ && isHmrUpdating
-      queuePostRenderEffect(() => {
-        let prev
-        if (__DEV__) prev = setHmrUpdating(isHmr)
-        try {
-          vnodeHook && invokeVNodeHook(vnodeHook, parentComponent, vnode)
-          needCallTransitionHooks && transition!.enter(el)
-          dirs && invokeDirectiveHook(vnode, null, parentComponent, 'mounted')
-        } finally {
-          if (__DEV__) setHmrUpdating(prev!)
-        }
-      }, parentSuspense)
+      queuePostRenderEffect(
+        () => {
+          let prev
+          if (__DEV__) prev = setHmrUpdating(isHmr)
+          try {
+            vnodeHook && invokeVNodeHook(vnodeHook, parentComponent, vnode)
+            needCallTransitionHooks && transition!.enter(el)
+            dirs && invokeDirectiveHook(vnode, null, parentComponent, 'mounted')
+          } finally {
+            if (__DEV__) setHmrUpdating(prev!)
+          }
+        },
+        parentSuspense,
+        parentComponent,
+      )
     }
   }
 
@@ -982,10 +996,14 @@ function baseCreateRenderer(
     }
 
     if ((vnodeHook = newProps.onVnodeUpdated) || dirs) {
-      queuePostRenderEffect(() => {
-        vnodeHook && invokeVNodeHook(vnodeHook, parentComponent, n2, n1)
-        dirs && invokeDirectiveHook(n2, n1, parentComponent, 'updated')
-      }, parentSuspense)
+      queuePostRenderEffect(
+        () => {
+          vnodeHook && invokeVNodeHook(vnodeHook, parentComponent, n2, n1)
+          dirs && invokeDirectiveHook(n2, n1, parentComponent, 'updated')
+        },
+        parentSuspense,
+        parentComponent,
+      )
     }
   }
 
@@ -1448,7 +1466,7 @@ function baseCreateRenderer(
         }
         // mounted hook
         if (m) {
-          queuePostRenderEffect(m, parentSuspense)
+          queuePostRenderEffect(m, parentSuspense, instance)
         }
         // onVnodeMounted
         if (
@@ -1459,6 +1477,7 @@ function baseCreateRenderer(
           queuePostRenderEffect(
             () => invokeVNodeHook(vnodeHook!, parent, scopedInitialVNode),
             parentSuspense,
+            instance,
           )
         }
         if (
@@ -1468,6 +1487,7 @@ function baseCreateRenderer(
           queuePostRenderEffect(
             () => instance.emit('hook:mounted'),
             parentSuspense,
+            instance,
           )
         }
 
@@ -1480,7 +1500,8 @@ function baseCreateRenderer(
             isAsyncWrapper(parent.vnode) &&
             parent.vnode.shapeFlag & ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE)
         ) {
-          instance.a && queuePostRenderEffect(instance.a, parentSuspense)
+          instance.a &&
+            queuePostRenderEffect(instance.a, parentSuspense, instance)
           if (
             __COMPAT__ &&
             isCompatEnabled(DeprecationTypes.INSTANCE_EVENT_HOOKS, instance)
@@ -1488,6 +1509,7 @@ function baseCreateRenderer(
             queuePostRenderEffect(
               () => instance.emit('hook:activated'),
               parentSuspense,
+              instance,
             )
           }
         }
@@ -1517,17 +1539,13 @@ function baseCreateRenderer(
               // the instance may be unmounted in the meantime. Its isUnmounted
               // flag is set by an effect a discarded pending branch drops
               const retry: SchedulerJob = () => {
-                if (instance.job.flags! & SchedulerJobFlags.DISPOSED) return
-                // wait out a newer pending cycle of the boundary
-                if (parentSuspense && parentSuspense.pendingBranch) {
-                  queuePostRenderEffect(retry, parentSuspense)
-                } else {
+                if (!(instance.job.flags! & SchedulerJobFlags.DISPOSED)) {
                   update()
                 }
               }
               // the retry must survive a discarded pending cycle
               retry.flags = SchedulerJobFlags.REQUEUE_ON_SUSPENSE_DISCARD
-              queuePostRenderEffect(retry, parentSuspense)
+              queuePostRenderEffect(retry, parentSuspense, instance)
             })
             return
           }
@@ -1604,13 +1622,14 @@ function baseCreateRenderer(
         }
         // updated hook
         if (u) {
-          queuePostRenderEffect(u, parentSuspense)
+          queuePostRenderEffect(u, parentSuspense, instance)
         }
         // onVnodeUpdated
         if ((vnodeHook = next.props && next.props.onVnodeUpdated)) {
           queuePostRenderEffect(
             () => invokeVNodeHook(vnodeHook!, parent, next!, vnode),
             parentSuspense,
+            instance,
           )
         }
         if (
@@ -1620,6 +1639,7 @@ function baseCreateRenderer(
           queuePostRenderEffect(
             () => instance.emit('hook:updated'),
             parentSuspense,
+            instance,
           )
         }
 
@@ -2301,14 +2321,18 @@ function baseCreateRenderer(
       shouldInvokeDirs ||
       shouldInvalidateMemo
     ) {
-      queuePostRenderEffect(() => {
-        vnodeHook && invokeVNodeHook(vnodeHook, parentComponent, vnode)
-        shouldInvokeDirs &&
-          invokeDirectiveHook(vnode, null, parentComponent, 'unmounted')
-        if (shouldInvalidateMemo) {
-          vnode.el = null
-        }
-      }, parentSuspense)
+      queuePostRenderEffect(
+        () => {
+          vnodeHook && invokeVNodeHook(vnodeHook, parentComponent, vnode)
+          shouldInvokeDirs &&
+            invokeDirectiveHook(vnode, null, parentComponent, 'unmounted')
+          if (shouldInvalidateMemo) {
+            vnode.el = null
+          }
+        },
+        parentSuspense,
+        parentComponent,
+      )
     }
   }
 
@@ -2419,7 +2443,7 @@ function baseCreateRenderer(
     }
     // unmounted hook
     if (um) {
-      queuePostRenderEffect(um, parentSuspense)
+      queuePostRenderEffect(um, parentSuspense, instance)
     }
     if (
       __COMPAT__ &&
@@ -2428,11 +2452,16 @@ function baseCreateRenderer(
       queuePostRenderEffect(
         () => instance.emit('hook:destroyed'),
         parentSuspense,
+        instance,
       )
     }
-    queuePostRenderEffect(() => {
-      instance.isUnmounted = true
-    }, parentSuspense)
+    queuePostRenderEffect(
+      () => {
+        instance.isUnmounted = true
+      },
+      parentSuspense,
+      instance,
+    )
 
     if (__DEV__ || __FEATURE_PROD_DEVTOOLS__) {
       devtoolsComponentRemoved(instance)
@@ -2555,9 +2584,14 @@ function toggleRecurse(
 export function needTransition(
   parentSuspense: SuspenseBoundary | null,
   transition: TransitionHooks | null,
+  parentComponent: ComponentInternalInstance | null,
 ): boolean | null {
   return (
-    (!parentSuspense || (parentSuspense && !parentSuspense.pendingBranch)) &&
+    (!parentSuspense ||
+      !parentSuspense.pendingBranch ||
+      // the content kept on screen while the boundary is pending enters as
+      // usual: only the pending branch waits for the reveal
+      (__FEATURE_SUSPENSE__ && isRetained(parentSuspense, parentComponent))) &&
     transition &&
     !transition.persisted
   )

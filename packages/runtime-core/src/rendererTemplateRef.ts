@@ -195,7 +195,7 @@ export function setRef(
         }
         job.id = -1
         pendingSetRefMap.set(rawRef, job)
-        queuePostRenderEffect(job, parentSuspense)
+        queuePostRenderEffect(job, parentSuspense, owner)
       } else {
         invalidatePendingSetRef(rawRef)
         doSet()

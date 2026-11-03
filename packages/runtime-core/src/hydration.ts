@@ -423,6 +423,7 @@ export function createHydrationFunctions(
           needTransition(
             null, // no need check parentSuspense in hydration
             transition,
+            parentComponent,
           ) &&
           parentComponent &&
           parentComponent.vnode.props &&
@@ -577,11 +578,15 @@ export function createHydrationFunctions(
         dirs ||
         needCallTransitionHooks
       ) {
-        queueEffectWithSuspense(() => {
-          vnodeHooks && invokeVNodeHook(vnodeHooks, parentComponent, vnode)
-          needCallTransitionHooks && transition!.enter(el)
-          dirs && invokeDirectiveHook(vnode, null, parentComponent, 'mounted')
-        }, parentSuspense)
+        queueEffectWithSuspense(
+          () => {
+            vnodeHooks && invokeVNodeHook(vnodeHooks, parentComponent, vnode)
+            needCallTransitionHooks && transition!.enter(el)
+            dirs && invokeDirectiveHook(vnode, null, parentComponent, 'mounted')
+          },
+          parentSuspense,
+          parentComponent,
+        )
       }
     }
 

@@ -137,6 +137,10 @@ const KeepAliveImpl: ComponentOptions = {
       optimized,
     ) => {
       const instance = vnode.component!
+      // the cached tree joins the branch its boundary is mounting now
+      if (instance.suspense) {
+        instance.suspenseId = instance.suspense.pendingId
+      }
       move(vnode, container, anchor, MoveType.ENTER, parentSuspense)
       // in case props have changed
       patch(
@@ -150,16 +154,20 @@ const KeepAliveImpl: ComponentOptions = {
         vnode.slotScopeIds,
         optimized,
       )
-      queuePostRenderEffect(() => {
-        instance.isDeactivated = false
-        if (instance.a) {
-          invokeArrayFns(instance.a)
-        }
-        const vnodeHook = vnode.props && vnode.props.onVnodeMounted
-        if (vnodeHook) {
-          invokeVNodeHook(vnodeHook, instance.parent, vnode)
-        }
-      }, parentSuspense)
+      queuePostRenderEffect(
+        () => {
+          instance.isDeactivated = false
+          if (instance.a) {
+            invokeArrayFns(instance.a)
+          }
+          const vnodeHook = vnode.props && vnode.props.onVnodeMounted
+          if (vnodeHook) {
+            invokeVNodeHook(vnodeHook, instance.parent, vnode)
+          }
+        },
+        parentSuspense,
+        instance,
+      )
 
       if (__DEV__ || __FEATURE_PROD_DEVTOOLS__) {
         // Update components tree
@@ -183,16 +191,20 @@ const KeepAliveImpl: ComponentOptions = {
       invalidateMount(instance.a)
 
       move(vnode, storageContainer, null, MoveType.LEAVE, parentSuspense)
-      queuePostRenderEffect(() => {
-        if (instance.da) {
-          invokeArrayFns(instance.da)
-        }
-        const vnodeHook = vnode.props && vnode.props.onVnodeUnmounted
-        if (vnodeHook) {
-          invokeVNodeHook(vnodeHook, instance.parent, vnode)
-        }
-        instance.isDeactivated = true
-      }, parentSuspense)
+      queuePostRenderEffect(
+        () => {
+          if (instance.da) {
+            invokeArrayFns(instance.da)
+          }
+          const vnodeHook = vnode.props && vnode.props.onVnodeUnmounted
+          if (vnodeHook) {
+            invokeVNodeHook(vnodeHook, instance.parent, vnode)
+          }
+          instance.isDeactivated = true
+        },
+        parentSuspense,
+        instance,
+      )
 
       if (__DEV__ || __FEATURE_PROD_DEVTOOLS__) {
         // Update components tree
@@ -283,7 +295,7 @@ const KeepAliveImpl: ComponentOptions = {
           resetShapeFlag(vnode)
           // but invoke its deactivated hook here
           const da = vnode.component!.da
-          da && queuePostRenderEffect(da, suspense)
+          da && queuePostRenderEffect(da, suspense, instance)
           return
         }
         unmount(cached)

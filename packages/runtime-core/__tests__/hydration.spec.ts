@@ -6,6 +6,7 @@ import {
   type Component,
   type ComponentPublicInstance,
   Fragment,
+  KeepAlive,
   type ObjectDirective,
   Suspense,
   Teleport,
@@ -1611,10 +1612,12 @@ describe('SSR hydration', () => {
     expect(container.innerHTML).toBe(`<div><span>page a</span></div>`)
     expect(onResolve).not.toHaveBeenCalled()
 
+    // the toggled-away root is still on screen: it hydrates right away, but
+    // no longer counts for the pending branch
     release('a')
     await new Promise(r => setTimeout(r))
     expect(container.innerHTML).toBe(`<div><span>page a</span></div>`)
-    expect(renderA).not.toHaveBeenCalled()
+    expect(renderA).toHaveBeenCalledTimes(1)
     expect(onResolve).not.toHaveBeenCalled()
 
     route.value = 'a'
@@ -4511,5 +4514,107 @@ describe('SSR hydration', () => {
     release('next')
     await new Promise(r => setTimeout(r))
     expect(container.innerHTML).toBe('<p>next</p>')
+  })
+
+  test('Suspense: element hooks of a toggled-away hydrating root run when it hydrates', async () => {
+    const mounted = vi.fn()
+    const { container, route, release } = await hydrateSuspenseApp(gate => {
+      const route = ref('a')
+      const PageA = defineComponent({
+        async setup() {
+          await gate('a')
+          return () => h('div', [h('span', { onVnodeMounted: mounted })])
+        },
+      })
+      const PageB = defineComponent({
+        async setup() {
+          await gate('b')
+          return () => h('div', 'b')
+        },
+      })
+      const App = defineComponent({
+        setup: () => () =>
+          h(Suspense, null, {
+            default: () =>
+              route.value === 'a'
+                ? h(PageA, { key: 'a' })
+                : h(PageB, { key: 'b' }),
+          }),
+      })
+      return { App, route }
+    })
+    expect(mounted).not.toHaveBeenCalled()
+
+    route.value = 'b'
+    await nextTick()
+    // page a is still on screen: its hooks must not wait for page b
+    release('a')
+    await new Promise(r => setTimeout(r))
+    expect(mounted).toHaveBeenCalledTimes(1)
+
+    route.value = 'a'
+    await nextTick()
+    await new Promise(r => setTimeout(r))
+    expect(container.innerHTML).toBe('<div><span></span></div>')
+    expect(mounted).toHaveBeenCalledTimes(1)
+  })
+
+  test('Suspense: a kept-alive dep re-entered while still pending releases only its own cycle', async () => {
+    const { container, route, release } = await hydrateSuspenseApp(gate => {
+      const route = ref('a')
+      const page = (key: string) =>
+        defineComponent({
+          name: `Page${key}`,
+          async setup() {
+            await gate(key)
+            return () => h('div', key)
+          },
+        })
+      const PageA = page('a')
+      const PageB = page('b')
+      const PageC = page('c')
+      const App = defineComponent({
+        setup: () => () =>
+          h(KeepAlive, null, () =>
+            h(Suspense, null, () =>
+              route.value === 'a'
+                ? h(PageA, { key: 'a' })
+                : route.value === 'b'
+                  ? h(PageB, { key: 'b' })
+                  : h(PageC, { key: 'c' }),
+            ),
+          ),
+      })
+      return { App, route }
+    })
+
+    // toggled away and back during hydration: the boundary is force-resolved
+    // and page a is cached while its setup is still pending
+    route.value = 'b'
+    await nextTick()
+    route.value = 'a'
+    await nextTick()
+    expect(container.innerHTML).toBe('<div>a</div>')
+
+    // deactivated and re-entered in that state
+    route.value = 'b'
+    await nextTick()
+    release('b')
+    await new Promise(r => setTimeout(r))
+    expect(container.innerHTML).toBe('<div>b</div>')
+    route.value = 'a'
+    await nextTick()
+    expect(container.innerHTML).toBe('<div>a</div>')
+    release('a')
+    await new Promise(r => setTimeout(r))
+    expect(container.innerHTML).toBe('<div>a</div>')
+
+    // its discarded cycle must not have been counted down against this one
+    route.value = 'c'
+    await nextTick()
+    expect(container.innerHTML).toBe('<div>a</div>')
+    release('c')
+    await new Promise(r => setTimeout(r))
+    expect(container.innerHTML).toBe('<div>c</div>')
   })
 })
