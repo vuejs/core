@@ -414,12 +414,14 @@ function renderTeleportVNode(
   if (!target) {
     if (disabled || disabled === '') {
       push(`<!--teleport start-->`)
-      renderVNodeChildren(
-        push,
-        vnode.children as VNodeArrayChildren,
-        parentComponent,
-        slotScopeId,
-      )
+      if (vnode.shapeFlag & ShapeFlags.ARRAY_CHILDREN) {
+        renderVNodeChildren(
+          push,
+          vnode.children as VNodeArrayChildren,
+          parentComponent,
+          slotScopeId,
+        )
+      }
       push(`<!--teleport end-->`)
     } else {
       warn(`[@vue/server-renderer] Teleport is missing target prop.`)
