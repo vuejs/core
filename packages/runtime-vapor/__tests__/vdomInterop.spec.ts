@@ -16232,3 +16232,53 @@ test.each([false, true])(
     app.unmount()
   },
 )
+
+describe('vdom component passing its slots on to a child', () => {
+  const Inner = defineComponent({
+    setup(_, { slots }) {
+      return () => h('div', slots.default ? slots.default() : 'none')
+    },
+  })
+
+  test('this.$slots', async () => {
+    const Outer = defineComponent({
+      render() {
+        return h(Inner, null, this.$slots)
+      },
+    })
+    const { vdom, vapor } = await renderParity(
+      {
+        App: '<template><components.Outer><span>hello</span></components.Outer></template>',
+      },
+      () => ref({}),
+      () => {},
+      { Outer },
+    )
+    expect(vdom.after).toBe('<div><span>hello</span></div>')
+    expect(vapor.after).toBe(vdom.after)
+  })
+
+  test('setup slots', async () => {
+    let outerSlots: any
+    const hasCtx: Record<string, boolean> = {}
+    const Outer = defineComponent({
+      setup(_, { slots }) {
+        outerSlots = slots
+        return () => h(Inner, null, slots)
+      },
+    })
+    const { vdom, vapor } = await renderParity(
+      {
+        App: '<template><components.Outer><span>hello</span></components.Outer></template>',
+      },
+      () => ref({}),
+      (_, __, mode) => {
+        hasCtx[mode] = '_ctx' in outerSlots
+      },
+      { Outer },
+    )
+    expect(vapor.after).toBe(vdom.after)
+    // the slots stay normalized, nothing is written into them
+    expect(hasCtx).toEqual({ vdom: false, vapor: false })
+  })
+})
