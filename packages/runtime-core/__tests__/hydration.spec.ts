@@ -4516,6 +4516,28 @@ describe('SSR hydration', () => {
     expect(container.innerHTML).toBe('<p>next</p>')
   })
 
+  test('Suspense: hydrates a component whose async setup rejects again', async () => {
+    const errorHandler = vi.fn()
+    const Bad = {
+      async setup() {
+        throw new Error('setup failed')
+      },
+      render: () => h('span', 'should not render'),
+    }
+    const container = document.createElement('div')
+    // what the server renders for the failed component
+    container.innerHTML = '<div><!----></div>'
+    const app = createSSRApp({
+      setup: () => () => h(Suspense, null, { default: h('div', [h(Bad)]) }),
+    })
+    app.config.errorHandler = errorHandler
+    app.mount(container)
+
+    await new Promise(r => setTimeout(r))
+    expect(errorHandler).toHaveBeenCalledTimes(1)
+    expect(container.innerHTML).toBe('<div><!----></div>')
+  })
+
   test('Suspense: element hooks of a toggled-away hydrating root run when it hydrates', async () => {
     const mounted = vi.fn()
     const { container, route, release } = await hydrateSuspenseApp(gate => {

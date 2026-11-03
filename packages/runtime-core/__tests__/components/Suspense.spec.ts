@@ -4706,9 +4706,6 @@ describe('Suspense', () => {
     expect(
       'Unhandled error during execution of setup function',
     ).toHaveBeenWarned()
-    expect(
-      'Component is missing template or render function',
-    ).toHaveBeenWarned()
   })
 
   test('should rerun an update waiting on an async root after the pending branch is discarded', async () => {
@@ -5034,6 +5031,48 @@ describe('Suspense', () => {
       'ParentAsync',
       'ChildAsync',
     ])
+  })
+
+  test('renders nothing for a component whose async setup rejects', async () => {
+    const errors: unknown[] = []
+    // a template compiled apart from setup, like a dev SFC
+    const WithTemplate = {
+      async setup() {
+        await Promise.reject(new Error('load failed'))
+        return { comments: 'loaded' }
+      },
+      render(this: any) {
+        return h('div', `Comments: ${this.comments}`)
+      },
+    }
+    // a render function returned from setup, like an inline template
+    const Inline = {
+      async setup() {
+        await Promise.reject(new Error('load failed'))
+        return () => h('div', 'loaded')
+      },
+    }
+    const Comp = {
+      setup() {
+        onErrorCaptured(e => {
+          errors.push(e)
+          return false
+        })
+        return () =>
+          h(Suspense, null, {
+            default: h('div', [h(WithTemplate), h(Inline)]),
+            fallback: h('div', 'fallback'),
+          })
+      },
+    }
+
+    const root = nodeOps.createElement('div')
+    render(h(Comp), root)
+    expect(serializeInner(root)).toBe('<div>fallback</div>')
+
+    await new Promise(r => setTimeout(r))
+    expect(errors).toHaveLength(2)
+    expect(serializeInner(root)).toBe('<div><!----><!----></div>')
   })
 
   function retainedPageApp(OldPage: ComponentOptions) {

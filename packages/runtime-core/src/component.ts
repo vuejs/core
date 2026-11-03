@@ -907,6 +907,9 @@ function setupStatefulComponent(
           })
           .catch(e => {
             handleError(e, instance, ErrorCodes.SETUP_FUNCTION, undefined, true)
+            // a failed setup renders nothing instead of its template
+            instance.ssrRender = (_: unknown, push: (item: string) => void) =>
+              push('<!---->')
           })
       } else if (__FEATURE_SUSPENSE__) {
         // async setup returned Promise.
