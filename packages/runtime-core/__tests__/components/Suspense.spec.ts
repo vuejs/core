@@ -4679,6 +4679,37 @@ describe('Suspense', () => {
     expect(unmounted).toHaveBeenCalledTimes(1)
   })
 
+  test('resolves after an async setup rejects without any error handler', async () => {
+    const Async = {
+      async setup() {
+        await Promise.reject(new Error('load failed'))
+        return () => h('div', 'async')
+      },
+    }
+    const Comp = {
+      setup() {
+        return () =>
+          h(Suspense, null, {
+            default: h(Async),
+            fallback: h('div', 'fallback'),
+          })
+      },
+    }
+
+    const root = nodeOps.createElement('div')
+    render(h(Comp), root)
+    expect(serializeInner(root)).toBe('<div>fallback</div>')
+
+    await new Promise(r => setTimeout(r))
+    expect(serializeInner(root)).toBe('<!---->')
+    expect(
+      'Unhandled error during execution of setup function',
+    ).toHaveBeenWarned()
+    expect(
+      'Component is missing template or render function',
+    ).toHaveBeenWarned()
+  })
+
   test('should rerun an update waiting on an async root after the pending branch is discarded', async () => {
     const msg = ref('a')
     const showAsync = ref(false)
