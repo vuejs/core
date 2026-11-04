@@ -1,5 +1,6 @@
 import {
   type SimpleExpressionNode,
+  advancePositionWithClone,
   createSimpleExpression,
   walkFunctionParams,
   walkIdentifiers,
@@ -636,12 +637,15 @@ function matchSelectorPattern(
         )
 
         if (!hasExtraId) {
-          const name = content.slice(selector.start! - 1, selector.end! - 1)
-          const selectorExpression = createSimpleExpression(
-            name,
-            false,
-            selector.loc as any,
-          )
+          const start = selector.start! - 1
+          const end = selector.end! - 1
+          const name = content.slice(start, end)
+          const { loc } = effect.expressions[0]
+          const selectorExpression = createSimpleExpression(name, false, {
+            start: advancePositionWithClone(loc.start, content, start),
+            end: advancePositionWithClone(loc.start, content, end),
+            source: name,
+          })
           selectorExpression.ast = parseExpression(
             `(${name})`,
             getParserOptions(context.options.expressionPlugins),

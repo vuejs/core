@@ -17,10 +17,8 @@ import { extend, remove } from '@vue/shared'
 import { genBlockContent } from './generators/block'
 import { genTemplates } from './generators/template'
 import {
-  type CodeFragment,
   INDENT_END,
   INDENT_START,
-  LF,
   NEWLINE,
   buildCodeFragment,
   codeFragmentToString,
@@ -38,8 +36,7 @@ const helperNameAliases: Record<string, string> = {
 export class CodegenContext {
   options: Required<CodegenOptions>
 
-  mappings?: BaseCodegenContext['mappings']
-  names?: BaseCodegenContext['names']
+  pieces?: BaseCodegenContext['pieces']
 
   bindingNames: Set<string>
 
@@ -289,36 +286,17 @@ export function generate(
     imports + templates + genDynamicPropNames(context) + delegates
 
   if (!inline) {
-    let newlineCount = 0
-    for (
-      let i = preamble.indexOf('\n');
-      i !== -1;
-      i = preamble.indexOf('\n', i + 1)
-    ) {
-      newlineCount++
-    }
-    if (newlineCount) {
-      frag.unshift(...new Array<CodeFragment>(newlineCount).fill(LF))
-    }
-  }
-
-  let code = codeFragmentToString(frag, context)
-  if (!inline) {
-    code = preamble + code
+    frag.unshift(preamble)
   }
 
   return {
-    code,
+    code: codeFragmentToString(frag, context),
     ast: ir,
     preamble,
     map:
-      context.mappings &&
-      createSourceMap(
-        context.options.filename,
-        ir.source,
-        context.mappings,
-        context.names!,
-      ),
+      context.pieces &&
+      createSourceMap(context.options.filename, context.pieces),
+    pieces: context.pieces,
     helpers: new Set<string>(Array.from(context.helpers.keys())),
   }
 }

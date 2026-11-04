@@ -1,4 +1,4 @@
-import type { SimpleExpressionNode } from '@vue/compiler-dom'
+import { NewlineType, type SimpleExpressionNode } from '@vue/compiler-dom'
 import type { CodegenContext } from '../generate'
 import type { GetTextChildIRNode, SetTextIRNode } from '../ir'
 import { getLiteralExpressionValue } from '../utils'
@@ -26,7 +26,11 @@ function combineValues(
     let exp = genExpression(value, context)
     if (getLiteralExpressionValue(value, true) == null) {
       // dynamic, wrap with toDisplayString
-      exp = genCall(context.helper('toDisplayString'), exp)
+      exp = [
+        [`${context.helper('toDisplayString')}(`, NewlineType.None, value.loc],
+        ...exp,
+        ')',
+      ]
     }
     if (i > 0) {
       exp.unshift(' + ')

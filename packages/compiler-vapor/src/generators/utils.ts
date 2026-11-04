@@ -1,8 +1,7 @@
 import {
-  NewlineType,
   type SourceLocation,
-  addMapping,
-  advancePositionWithMutation,
+  addPiece,
+  createSourcePiece,
   locStub,
 } from '@vue/compiler-dom'
 import { isArray, isString } from '@vue/shared'
@@ -28,8 +27,6 @@ export const IMPORT_EXPR_RE: RegExp = new RegExp(
 )
 
 export const NEWLINE: unique symbol = Symbol(__DEV__ ? `newline` : ``)
-/** increase offset but don't push actual code */
-export const LF: unique symbol = Symbol(__DEV__ ? `line feed` : ``)
 export const INDENT_START: unique symbol = Symbol(__DEV__ ? `indent start` : ``)
 export const INDENT_END: unique symbol = Symbol(__DEV__ ? `indent end` : ``)
 
@@ -39,11 +36,9 @@ export type MappedFragment = [
   code: string,
   newlineIndex: number,
   loc?: SourceLocation,
-  name?: string,
 ]
 export type CodeFragment =
   | typeof NEWLINE
-  | typeof LF
   | typeof INDENT_START
   | typeof INDENT_END
   | string
@@ -152,15 +147,16 @@ export function codeFragmentToString(
   code: CodeFragment[],
   context: CodegenContext,
 ): string {
-  if (context.options.sourceMap) {
-    context.mappings = []
-    context.names = new Map()
-  }
-  const { mappings, names } = context
+  const source = { content: context.ir.source }
+  const pieces =
+    !__BROWSER__ && context.options.sourceMap
+      ? (context.pieces = [createSourcePiece(source)])
+      : undefined
 
   let codegen = ''
-  const pos = { line: 1, column: 1, offset: 0 }
   let indentLevel = 0
+  // text without a location maps to the end of the last located text on its line
+  let mappedEnd = -1
 
   emit(code)
 
@@ -175,73 +171,35 @@ export function codeFragmentToString(
       }
 
       let code: string
-      let newlineIndex: number = NewlineType.None
       let loc: SourceLocation | undefined
-      let name: string | undefined
       if (frag === NEWLINE) {
         code = `\n${`  `.repeat(indentLevel)}`
-        newlineIndex = NewlineType.Start
+        mappedEnd = -1
       } else if (frag === INDENT_START) {
         indentLevel++
         continue
       } else if (frag === INDENT_END) {
         indentLevel--
         continue
-      } else if (frag === LF) {
-        pos.line++
-        pos.column = 0
-        pos.offset++
-        continue
       } else if (isString(frag)) {
         code = frag
       } else {
-        const mapped = frag as MappedFragment
-        code = mapped[0]
-        newlineIndex = mapped[1]
-        loc = mapped[2]
-        name = mapped[3]
+        code = frag[0]
+        loc = frag[2]
       }
       codegen += code
 
-      if (mappings) {
-        if (loc) addMapping(mappings, names!, pos, loc.start, name)
-        if (newlineIndex === NewlineType.Unknown) {
-          // multiple newlines, full iteration
-          advancePositionWithMutation(pos, code)
-        } else {
-          // fast paths
-          pos.offset += code.length
-          if (newlineIndex === NewlineType.None) {
-            // no newlines; fast path to avoid newline detection
-            if (__TEST__ && code.includes('\n')) {
-              throw new Error(
-                `CodegenContext.push() called newlineIndex: none, but contains` +
-                  `newlines: ${code.replace(/\n/g, '\\n')}`,
-              )
-            }
-            pos.column += code.length
-          } else {
-            // single newline at known index
-            if (newlineIndex === NewlineType.End) {
-              newlineIndex = code.length - 1
-            }
-            if (
-              __TEST__ &&
-              (code.charAt(newlineIndex) !== '\n' ||
-                code.slice(0, newlineIndex).includes('\n') ||
-                code.slice(newlineIndex + 1).includes('\n'))
-            ) {
-              throw new Error(
-                `CodegenContext.push() called with newlineIndex: ${newlineIndex} ` +
-                  `but does not conform: ${code.replace(/\n/g, '\\n')}`,
-              )
-            }
-            pos.line++
-            pos.column = code.length - newlineIndex
-          }
-        }
+      if (pieces) {
         if (loc && loc !== locStub) {
-          addMapping(mappings, names!, pos, loc.end)
+          addPiece(pieces, code, source, loc.start.offset, loc.end.offset)
+          mappedEnd = loc.end.offset
+        } else {
+          addPiece(
+            pieces,
+            code,
+            mappedEnd === -1 ? undefined : source,
+            mappedEnd,
+          )
         }
       }
     }

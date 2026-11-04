@@ -157,6 +157,26 @@ describe('compiler: expression transform', () => {
     })
   })
 
+  test('locations of identifiers after a newline in the expression', () => {
+    const node = parseWithExpressionTransform(
+      `{{ foo +\n  bar }}`,
+    ) as InterpolationNode
+    expect(node.content).toMatchObject({
+      type: NodeTypes.COMPOUND_EXPRESSION,
+      children: [
+        { content: `_ctx.foo` },
+        ` +\n  `,
+        {
+          content: `_ctx.bar`,
+          loc: {
+            start: { offset: 11, line: 2, column: 3 },
+            end: { offset: 14, line: 2, column: 6 },
+          },
+        },
+      ],
+    })
+  })
+
   test('should not prefix whitelisted globals', () => {
     const node = parseWithExpressionTransform(
       `{{ Math.max(1, 2) }}`,

@@ -27,8 +27,14 @@ import type {
   Statement,
 } from '@babel/types'
 import { walk } from 'estree-walker'
-import { decodeMappings, encodeMappings } from 'muggle-string'
-import type { DecodedSourceMap, SourceMapSegment } from './editedString'
+import {
+  type Piece,
+  type Source,
+  decodeMappings,
+  renderWithSourceMap,
+  rewritePieceText,
+} from 'muggle-string'
+import { type EditedString, SourceMap } from './editedString'
 import {
   normalScriptDefaultVar,
   processNormalScript,
@@ -1005,8 +1011,9 @@ export function compileScript(
     args += `, { ${destructureElements.join(', ')} }`
   }
 
-  let templateMap
-  let templateCode
+  let templateMap: RawSourceMap | undefined
+  let templatePieces: Piece<{ source: Source }>[] | undefined
+  let templateCode: string | undefined
   // 9. generate return statement
   let returned
   // ensure props bindings register before compile template in inline mode
@@ -1056,27 +1063,29 @@ export function compileScript(
       }
       // inline render function mode - we are going to compile the template and
       // inline it right here
-      const { code, preamble, tips, errors, helpers, map } = compileTemplate({
-        filename,
-        ast: sfc.template.ast,
-        source: sfc.template.content,
-        inMap: sfc.template.map,
-        ...options.templateOptions,
-        id: scopeId,
-        scoped: sfc.styles.some(s => s.scoped),
-        isProd: options.isProd,
-        ssrCssVars: sfc.cssVars,
-        vapor,
-        compilerOptions: {
-          ...(options.templateOptions &&
-            options.templateOptions.compilerOptions),
-          inline: true,
-          isTS: ctx.isTS,
-          bindingMetadata: ctx.bindingMetadata,
-          ...(options.sourceMap === false && { sourceMap: false }),
-        },
-      })
+      const { code, preamble, tips, errors, helpers, map, pieces } =
+        compileTemplate({
+          filename,
+          ast: sfc.template.ast,
+          source: sfc.template.content,
+          inMap: sfc.template.map,
+          ...options.templateOptions,
+          id: scopeId,
+          scoped: sfc.styles.some(s => s.scoped),
+          isProd: options.isProd,
+          ssrCssVars: sfc.cssVars,
+          vapor,
+          compilerOptions: {
+            ...(options.templateOptions &&
+              options.templateOptions.compilerOptions),
+            inline: true,
+            isTS: ctx.isTS,
+            bindingMetadata: ctx.bindingMetadata,
+            ...(options.sourceMap === false && { sourceMap: false }),
+          },
+        })
       templateMap = map
+      templatePieces = pieces
       templateCode = code
       if (tips.length) {
         tips.forEach(warnOnce)
@@ -1257,16 +1266,14 @@ export function compileScript(
   let map: RawSourceMap | undefined
   if (options.sourceMap !== false) {
     const mapOptions = { source: filename, hires: true, includeContent: true }
-    // merge source maps of the script setup and template in inline mode
+    // in inline mode, the render function maps by the pieces of its map
     if (templateMap) {
-      const offset = content.indexOf(templateCode!)
-      const templateLineOffset =
-        content.slice(0, offset).split(/\r?\n/).length - 1
-      map = mergeSourceMaps(
-        ctx.s.generateDecodedMap(mapOptions),
-        templateMap,
-        templateLineOffset,
-      )
+      const pieces = templatePieces || mapToPieces(templateCode!, templateMap)
+      map = new SourceMap(
+        ctx.s._renderMap(mapOptions, renderWithSourceMap, sink =>
+          inlinePieces(sink, ctx.s, templateCode!, pieces),
+        ),
+      ) as unknown as RawSourceMap
     } else {
       map = ctx.s.generateMap(mapOptions) as unknown as RawSourceMap
     }
@@ -1498,130 +1505,75 @@ function canNeverBeRef(node: Node, userReactiveImport?: string): boolean {
   }
 }
 
-type MappedSegment = Exclude<SourceMapSegment, [number]>
-
-// a missing value orders last
-function order<T extends string | number>(a?: T, b?: T): number {
-  return a === b
-    ? 0
-    : a === undefined
-      ? 1
-      : b === undefined
-        ? -1
-        : a > b
-          ? 1
-          : -1
-}
-
-function compareSegments(
-  a: MappedSegment,
-  b: MappedSegment,
-  sources?: string[],
-  names?: string[],
-): number {
-  return (
-    a[0] - b[0] ||
-    (sources ? order(sources[a[1]], sources[b[1]]) : a[1] - b[1]) ||
-    a[2] - b[2] ||
-    a[3] - b[3] ||
-    (names
-      ? order(
-          a[4] === undefined ? a[4] : names[a[4]],
-          b[4] === undefined ? b[4] : names[b[4]],
-        )
-      : order(a[4], b[4]))
-  )
-}
+type InlinePiece = Piece<{ source: Source; name?: string }>
 
 /**
- * The map of the script's output with the template's render function inlined
- * `templateLineOffset` lines into it: the mapped segments of both, with
- * sources and names deduplicated in the order first given, and the segments
- * of each line ordered by column, source, original position and name, with
- * exact duplicates dropped.
+ * `sink` with the inserted text that holds the render function `code`
+ * passed as `pieces`, those of the original of `s` with its source and the
+ * others as text
  */
-export function mergeSourceMaps(
-  scriptMap: DecodedSourceMap,
-  templateMap: RawSourceMap,
-  templateLineOffset: number,
-): RawSourceMap {
-  const sources: string[] = []
-  const names: string[] = []
-  const sourceIds = new Map<string, number>()
-  const nameIds = new Map<string, number>()
-  const intern = (ids: Map<string, number>, list: string[], value: string) => {
-    let id = ids.get(value)
-    if (id === undefined) ids.set(value, (id = list.push(value) - 1))
-    return id
+function inlinePieces(
+  sink: (piece: InlinePiece) => void,
+  s: EditedString,
+  code: string,
+  pieces: Piece<{ source: Source }>[],
+): (piece: InlinePiece) => void {
+  let inlined = false
+  return piece => {
+    const at = inlined || typeof piece !== 'string' ? -1 : piece.indexOf(code)
+    if (at < 0 || typeof piece !== 'string') return sink(piece)
+    inlined = true
+    sink(piece.slice(0, at))
+    for (const p of pieces) {
+      if (typeof p === 'string') sink(p)
+      else if (p.source.content === s.original) sink({ ...p, source: s._src })
+      else sink(rewritePieceText(p))
+    }
+    sink(piece.slice(at + code.length))
   }
-  const contents = new Map<string, string>()
-  const lines: MappedSegment[][] = []
-  let inOrder = true
-  let lastLine = -1
-  let lastColumn = 0
-  const add = (
-    map: Pick<RawSourceMap, 'sources' | 'sourcesContent' | 'names'>,
-    mappings: SourceMapSegment[][],
-    lineOffset: number,
-  ) => {
-    const sourceIndex = map.sources.map((source, i) => {
-      const content = map.sourcesContent && map.sourcesContent[i]
-      if (content != null) contents.set(source, content)
-      return intern(sourceIds, sources, source)
-    })
-    const nameIndex: number[] = []
-    for (let i = 0; i < mappings.length; i++) {
-      const segments = mappings[i].filter(
-        (s): s is MappedSegment => s.length > 1,
-      )
-      if (segments.some((s, j) => j && compareSegments(segments[j - 1], s) > 0))
-        segments.sort((a, b) => compareSegments(a, b))
-      const line = i + lineOffset
-      for (const s of segments) {
-        const source = sourceIndex[s[1]]
-        let mapped: MappedSegment
-        if (s.length === 5) {
-          let name = nameIndex[s[4]]
-          if (name === undefined)
-            name = nameIndex[s[4]] = intern(nameIds, names, map.names[s[4]])
-          mapped = [s[0], source, s[2], s[3], name]
-        } else {
-          mapped = [s[0], source, s[2], s[3]]
-        }
-        if (line > lastLine || (line === lastLine && s[0] >= lastColumn)) {
-          lastLine = line
-          lastColumn = s[0]
-        } else {
-          inOrder = false
-        }
-        ;(lines[line] || (lines[line] = [])).push(mapped)
+}
+
+/** Each run of `code` from a segment of `map` as a piece at its original */
+function mapToPieces(
+  code: string,
+  map: RawSourceMap,
+): Piece<{ source: Source }>[] {
+  const sources = map.sources.map((_, i) => {
+    const content = map.sourcesContent && map.sourcesContent[i]
+    if (content == null) return
+    const lineStarts = [0]
+    for (
+      let i = content.indexOf('\n');
+      i >= 0;
+      i = content.indexOf('\n', i + 1)
+    )
+      lineStarts.push(i + 1)
+    return { source: { content }, lineStarts }
+  })
+  const pieces: Piece<{ source: Source }>[] = []
+  const mappings = decodeMappings(map.mappings)
+  const lines = code.split('\n')
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i] + (i < lines.length - 1 ? '\n' : '')
+    const segments = mappings[i] || []
+    let column = 0
+    for (let j = 0; j <= segments.length; j++) {
+      const next = j < segments.length ? segments[j][0] : line.length
+      const text = line.slice(column, next)
+      const s = segments[j - 1]
+      const original = s && s.length !== 1 && sources[s[1]]
+      if (text && original) {
+        const { source, lineStarts } = original
+        const start = Math.min(
+          (lineStarts[s[2]] ?? source.content.length) + s[3],
+          source.content.length,
+        )
+        pieces.push({ source, start, end: start, text })
+      } else if (text) {
+        pieces.push(text)
       }
+      column = Math.max(column, next)
     }
   }
-
-  add(scriptMap, scriptMap.mappings, 0)
-  add(templateMap, decodeMappings(templateMap.mappings), templateLineOffset)
-  const mappings: MappedSegment[][] = []
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i] || []
-    if (!inOrder) line.sort((a, b) => compareSegments(a, b, sources, names))
-    mappings.push(
-      line.filter((s, j) => !j || compareSegments(line[j - 1], s) !== 0),
-    )
-  }
-  const map: Omit<RawSourceMap, 'version' | 'file'> & {
-    version: number
-    file?: string
-  } = {
-    version: 3,
-    sources,
-    names,
-    mappings: encodeMappings(mappings),
-  }
-  if (scriptMap.file != null) map.file = scriptMap.file
-  if (contents.size)
-    map.sourcesContent = sources.map(source =>
-      contents.has(source) ? contents.get(source)! : (null as any),
-    )
-  return map as unknown as RawSourceMap
+  return pieces
 }

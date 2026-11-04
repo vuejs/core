@@ -683,23 +683,30 @@ export class EditedString {
     return cloned as this
   }
 
-  /** @internal The map of the output, with the mappings that `renderMap` gives. */
+  /**
+   * @internal The map of the output, with the mappings that `renderMap` gives,
+   * of the pieces that `wrap` passes on
+   */
   _renderMap<M>(
     options: SourceMapOptions,
     renderMap: (
       render: (sink: Sink) => void,
       sourceName: (source: Src) => string,
     ) => { text: string; map: { names: string[]; mappings: M } },
+    wrap?: (sink: Sink) => Sink,
   ): Omit<DecodedSourceMap, 'mappings'> & { mappings: M } {
     const sourceName = options.source
       ? relativePath(options.file || '', options.source)
       : options.file || ''
     const locs = options.hires ? null : [...this._locs].sort((a, b) => a - b)
     const { text, map } = renderMap(
-      sink => this._render(locs ? coarse(sink, locs) : sink),
+      sink => {
+        if (wrap) sink = wrap(sink)
+        this._render(locs ? coarse(sink, locs) : sink)
+      },
       () => sourceName,
     )
-    if (this._str === null) this._str = text
+    if (this._str === null && !wrap) this._str = text
     return {
       file: (options.file
         ? options.file.split(/[/\\]/).pop()

@@ -133,8 +133,8 @@ export function genExpression(
             asParams ? id.name : source,
             context,
             {
-              start: advancePositionWithClone(node.loc.start, source, start),
-              end: advancePositionWithClone(node.loc.start, source, end),
+              start: advancePositionWithClone(node.loc.start, content, start),
+              end: advancePositionWithClone(node.loc.start, content, end),
               source,
             },
             isMemberTarget ? undefined : assignment,
@@ -177,14 +177,12 @@ function genIdentifier(
 ): CodeFragment[] {
   const { options, helper, identifiers } = context
   const { inline, bindingMetadata } = options
-  let name: string | undefined = raw
-
   const idMap = identifiers[raw]
   if (idMap && idMap.length) {
     const replacement = idMap[0]
     if (isString(replacement)) {
       if (parent && parent.type === 'ObjectProperty' && parent.shorthand) {
-        return [[`${name}: ${replacement}`, NewlineType.None, loc]]
+        return [[`${raw}: ${replacement}`, NewlineType.None, loc]]
       } else {
         return [[replacement, NewlineType.None, loc]]
       }
@@ -192,7 +190,7 @@ function genIdentifier(
       // replacement is an expression - process it again
       const exp = genExpression(replacement, context, assignment)
       if (parent && parent.type === 'ObjectProperty' && parent.shorthand) {
-        return [`${name}: `, exp]
+        return [`${raw}: `, exp]
       }
       return exp
     }
@@ -268,7 +266,7 @@ function genIdentifier(
             `${helper('isRef')}(${raw}) ? ${raw}.value ${operator} `,
             genExpression(rightExp, context),
             ` : `,
-            [raw, NewlineType.None, loc, name],
+            [raw, NewlineType.None, loc],
           ]
         } else if (isUpdateArg) {
           const { prefix: isPrefix, operator } = parent as UpdateExpression
@@ -276,13 +274,13 @@ function genIdentifier(
           const updatePostfix = isPrefix ? `` : operator
           raw = `${helper('isRef')}(${raw}) ? ${updatePrefix}${raw}.value${updatePostfix} : ${updatePrefix}${raw}${updatePostfix}`
         } else if (!isDestructureAssignment) {
-          name = raw = assignment
+          raw = assignment
             ? `${helper('isRef')}(${raw}) ? (${raw}.value = ${assignment}) : (${raw} = ${assignment})`
             : unref()
         }
         break
       case BindingTypes.SETUP_REF:
-        name = raw = withAssignment(`${raw}.value`)
+        raw = withAssignment(`${raw}.value`)
         break
       case BindingTypes.SETUP_MAYBE_REF:
         // const binding that may or may not be ref
@@ -291,7 +289,7 @@ function genIdentifier(
         // that assumes the value to be a ref for more efficiency
         raw =
           isAssignmentLVal || isUpdateArg || isDestructureAssignment
-            ? (name = `${raw}.value`)
+            ? `${raw}.value`
             : assignment
               ? `${helper('isRef')}(${raw}) ? (${raw}.value = ${assignment}) : null`
               : unref()
@@ -315,7 +313,7 @@ function genIdentifier(
     }
     raw = withAssignment(raw)
   }
-  return [prefix, [raw, NewlineType.None, loc, name]]
+  return [prefix, [raw, NewlineType.None, loc]]
 
   function withAssignment(s: string) {
     return assignment ? `${s} = ${assignment}` : s

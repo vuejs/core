@@ -1,3 +1,4 @@
+import { SourceMapConsumer } from 'source-map-js'
 import { makeCompile } from './_utils'
 import {
   type ForIRNode,
@@ -12,6 +13,7 @@ import {
   transformVIf,
   transformVOn,
 } from '../../src'
+import { compile } from '../../src'
 import { BindingTypes, ErrorCodes, NodeTypes } from '@vue/compiler-dom'
 import { VaporVForFlags } from '@vue/shared'
 
@@ -843,4 +845,21 @@ describe('compiler: v-for', () => {
       '_setDynamicProps(n2, [{ [_for_key0.value || ""]: _for_item0.value }])',
     )
   })
+})
+
+test('source map of a v-for selector', () => {
+  const template = `<div v-for="row of rows" :key="row.id" :class="selected === row.id ? 'a' : ''" />`
+  const { code, map } = compile(template, {
+    prefixIdentifiers: true,
+    sourceMap: true,
+  })
+  const lines = code.split('\n')
+  const line = lines.findIndex(l => l.includes('_createSelector('))
+  const consumer = new SourceMapConsumer(map as any)
+  expect(
+    consumer.originalPositionFor({
+      line: line + 1,
+      column: lines[line].indexOf('_ctx.selected'),
+    }),
+  ).toMatchObject({ line: 1, column: template.indexOf('selected') })
 })
