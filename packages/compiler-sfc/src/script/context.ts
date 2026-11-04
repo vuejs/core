@@ -6,7 +6,7 @@ import type { ImportBinding, SFCScriptCompileOptions } from '../compileScript'
 import type { PropsDestructureBindings } from './defineProps'
 import type { ModelDecl } from './defineModel'
 import type { BindingMetadata } from '../../../compiler-core/src'
-import MagicString from 'magic-string'
+import { EditedString } from '../editedString'
 import type { TypeScope } from './resolveType'
 import { warn } from '../warn'
 import { isJS, isTS } from './utils'
@@ -21,7 +21,7 @@ export class ScriptCompileContext {
 
   source: string
   filename: string
-  s: MagicString
+  s: EditedString
   startOffset: number | undefined
   endOffset: number | undefined
 
@@ -89,7 +89,7 @@ export class ScriptCompileContext {
 
     this.source = descriptor.source
     this.filename = descriptor.filename
-    this.s = new MagicString(descriptor.source)
+    this.s = new EditedString(descriptor.source)
     this.startOffset = descriptor.scriptSetup?.loc.start.offset
     this.endOffset = descriptor.scriptSetup?.loc.end.offset
 

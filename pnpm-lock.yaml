@@ -189,9 +189,6 @@ catalogs:
     estree-walker:
       specifier: ^2.0.2
       version: 2.0.2
-    magic-string:
-      specifier: ^0.30.21
-      version: 0.30.21
     source-map-js:
       specifier: ^1.2.2
       version: 1.2.2
@@ -529,9 +526,6 @@ importers:
       estree-walker:
         specifier: 'catalog:'
         version: 2.0.2
-      magic-string:
-        specifier: 'catalog:'
-        version: 0.30.21
       muggle-string:
         specifier: ^1.0.2
         version: 1.0.2

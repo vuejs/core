@@ -9,7 +9,6 @@ catalog:
   'estree-walker': ^2.0.2
   'vite': npm:@voidzero-dev/vite-plus-core@1.1.0
   '@vitejs/plugin-vue': ^6.0.10
-  'magic-string': ^0.30.21
   'source-map-js': ^1.2.2
   vitest: 5.0.3
   vite-plus: 1.1.0

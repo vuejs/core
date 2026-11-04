@@ -1,6 +1,6 @@
 import { analyzeScriptBindings } from './analyzeScriptBindings'
 import type { ScriptCompileContext } from './context'
-import MagicString from 'magic-string'
+import { EditedString } from '../editedString'
 import { rewriteDefaultAST } from '../rewriteDefault'
 import { genNormalScriptCssVarsCode } from '../style/cssVars'
 import type { SFCScriptBlock } from '../parse'
@@ -22,7 +22,7 @@ export function processNormalScript(
 
     if (cssVars.length || genDefaultAs) {
       const defaultVar = genDefaultAs || normalScriptDefaultVar
-      const s = new MagicString(content)
+      const s = new EditedString(content)
       rewriteDefaultAST(scriptAst.body, s, defaultVar)
       content = s.toString()
       if (cssVars.length && !ctx.options.templateOptions?.ssr) {

@@ -1,5 +1,5 @@
 import { parse } from '@babel/parser'
-import MagicString from 'magic-string'
+import { EditedString } from './editedString'
 import type { ParserPlugin } from '@babel/parser'
 import type { Identifier, Statement } from '@babel/types'
 import { resolveParserPlugins } from './script/context'
@@ -13,7 +13,7 @@ export function rewriteDefault(
     sourceType: 'module',
     plugins: resolveParserPlugins('js', parserPlugins),
   }).program.body
-  const s = new MagicString(input)
+  const s = new EditedString(input)
 
   rewriteDefaultAST(ast, s, as)
 
@@ -26,7 +26,7 @@ export function rewriteDefault(
  */
 export function rewriteDefaultAST(
   ast: Statement[],
-  s: MagicString,
+  s: EditedString,
   as: string,
 ): void {
   if (!hasDefaultExport(ast)) {
@@ -105,7 +105,7 @@ export function hasDefaultExport(ast: Statement[]): boolean {
   return false
 }
 
-function specifierEnd(s: MagicString, end: number, nodeEnd: number | null) {
+function specifierEnd(s: EditedString, end: number, nodeEnd: number | null) {
   // export { default   , foo } ...
   let hasCommas = false
   let oldEnd = end

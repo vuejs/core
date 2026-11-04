@@ -25,8 +25,11 @@ export const errorMessages: Record<number, string> = {
 
 // Utilities
 export { parse as babelParse } from '@babel/parser'
-import MagicString from 'magic-string'
-export { MagicString }
+import { EditedString } from './editedString'
+// a const and a type in place of an aliased export, which the d.ts bundle
+// would export under both names
+export const MagicString: typeof EditedString = EditedString
+export type MagicString = EditedString
 // technically internal but we want it in @vue/repl, cast it as any to avoid
 // relying on estree types
 import { walk as _walk } from 'estree-walker'
