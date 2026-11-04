@@ -1653,4 +1653,58 @@ describe('BaseTransition', () => {
     await nextTick()
     expect(serializeInner(root)).toBe('<div foo="1">two</div>')
   })
+
+  // #15727
+  describe('mode: "out-in" leave done synchronously', () => {
+    async function testOutIn(
+      {
+        trueBranch,
+        falseBranch,
+        trueSerialized,
+        falseSerialized,
+      }: ToggleOptions,
+      withKeepAlive = false,
+    ) {
+      const toggle = ref(true)
+      const { props, cbs } = mockProps(
+        { mode: 'out-in', onLeave: vi.fn((_el, done) => done()) },
+        withKeepAlive,
+      )
+      const { root } = mount(
+        props,
+        () => (toggle.value ? trueBranch() : falseBranch()),
+        withKeepAlive,
+      )
+      expect(serializeInner(root)).toBe(trueSerialized)
+
+      // the leave finishes inside the patch that starts it
+      toggle.value = false
+      await nextTick()
+      expect(props.onAfterLeave).toHaveBeenCalledTimes(1)
+      assertCalledWithEl(props.onAfterLeave, trueSerialized)
+      expect(serializeInner(root)).toBe(falseSerialized)
+      expect(props.onEnter).toHaveBeenCalledTimes(1)
+      assertCalledWithEl(props.onEnter, falseSerialized)
+      cbs.doneEnter[falseSerialized]()
+      expect(props.onAfterEnter).toHaveBeenCalledTimes(1)
+
+      toggle.value = true
+      await nextTick()
+      expect(props.onAfterLeave).toHaveBeenCalledTimes(2)
+      assertCalledWithEl(props.onAfterLeave, falseSerialized, 1)
+      expect(serializeInner(root)).toBe(trueSerialized)
+    }
+
+    test('w/ elements', async () => {
+      await runTestWithElements(testOutIn)
+    })
+
+    test('w/ components', async () => {
+      await runTestWithComponents(testOutIn)
+    })
+
+    test('w/ KeepAlive', async () => {
+      await runTestWithKeepAlive(testOutIn)
+    })
+  })
 })
