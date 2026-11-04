@@ -1,6 +1,7 @@
 import {
   BaseTransition,
   type BaseTransitionProps,
+  type ComponentOptions,
   KeepAlive,
   Teleport,
   type TestElement,
@@ -12,6 +13,7 @@ import {
   render,
   serialize,
   serializeInner,
+  shallowRef,
 } from '@vue/runtime-test'
 import * as runtime from '@vue/runtime-test'
 import { compile } from '@vue/compiler-dom'
@@ -1608,4 +1610,47 @@ describe('BaseTransition', () => {
       }
     },
   )
+
+  // #11061
+  test('in-out with fallthrough attrs on the component roots', async () => {
+    const One = { render: () => h('div', 'one') }
+    const Two = { render: () => h('div', 'two') }
+    const view = shallowRef<ComponentOptions>(One)
+    const enters: (() => void)[] = []
+    const leaves: (() => void)[] = []
+    const App = {
+      render: () =>
+        h(
+          BaseTransition,
+          {
+            mode: 'in-out',
+            onEnter: (_: any, done: () => void) => {
+              enters.push(done)
+            },
+            onLeave: (_: any, done: () => void) => {
+              leaves.push(done)
+            },
+          },
+          // the attr is passed through to the root, which gets cloned
+          () => h(view.value, { foo: '1' }),
+        ),
+    }
+    const root = nodeOps.createElement('div')
+    render(h(App), root)
+    expect(serializeInner(root)).toBe('<div foo="1">one</div>')
+
+    view.value = Two
+    await nextTick()
+    expect(serializeInner(root)).toBe(
+      '<div foo="1">one</div><div foo="1">two</div>',
+    )
+    expect(leaves.length).toBe(0)
+
+    enters[0]()
+    await nextTick()
+    expect(leaves.length).toBe(1)
+    leaves[0]()
+    await nextTick()
+    expect(serializeInner(root)).toBe('<div foo="1">two</div>')
+  })
 })
