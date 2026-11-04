@@ -954,5 +954,23 @@ test('source map of the display string call of an interpolation', () => {
       line: line + 1,
       column: lines[line].indexOf('_toDisplayString('),
     }),
-  ).toMatchObject({ line: 1, column: 8 })
+  ).toMatchObject({ line: 1, column: 5 })
+})
+
+test('source map of the display string call of v-text', () => {
+  for (const template of [`<div v-text="foo" />`, `<Comp v-text="foo" />`]) {
+    const { code, map } = compile(template, {
+      prefixIdentifiers: true,
+      sourceMap: true,
+    })
+    const lines = code.split('\n')
+    const line = lines.findIndex(l => l.includes('_toDisplayString('))
+    const consumer = new SourceMapConsumer(map as any)
+    expect(
+      consumer.originalPositionFor({
+        line: line + 1,
+        column: lines[line].indexOf('_toDisplayString('),
+      }),
+    ).toMatchObject({ line: 1, column: template.indexOf('v-text') })
+  }
 })

@@ -48,10 +48,12 @@ export const transformVText: DirectiveTransform = (dir, node, context) => {
     return {
       key: createSimpleExpression('textContent', true),
       value: exp,
-      toDisplayString: !isConstantVTextExpression(
+      toDisplayString: isConstantVTextExpression(
         exp,
         context.options.bindingMetadata,
-      ),
+      )
+        ? undefined
+        : loc,
     }
   }
 
@@ -59,7 +61,10 @@ export const transformVText: DirectiveTransform = (dir, node, context) => {
   const useCreateElement = shouldUseCreateElement(context.node, context)
   if (literal != null) {
     if (useCreateElement || isRawTextContainer(node.tag)) {
-      const id = registerSyntheticTextChild(context, '', [exp])
+      const id = registerSyntheticTextChild(context, '', {
+        values: [exp],
+        locs: [loc],
+      })
       context.registerOperation({
         type: IRNodeTypes.INSERT_NODE,
         elements: [id],
@@ -88,6 +93,7 @@ export const transformVText: DirectiveTransform = (dir, node, context) => {
       type: IRNodeTypes.SET_TEXT,
       element: useCreateElement ? id! : context.reference(),
       values: [exp],
+      locs: [loc],
       generated: !useCreateElement,
     })
   }

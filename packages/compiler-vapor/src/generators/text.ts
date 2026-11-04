@@ -1,4 +1,8 @@
-import { NewlineType, type SimpleExpressionNode } from '@vue/compiler-dom'
+import {
+  NewlineType,
+  type SimpleExpressionNode,
+  type SourceLocation,
+} from '@vue/compiler-dom'
 import type { CodegenContext } from '../generate'
 import type { GetTextChildIRNode, SetTextIRNode } from '../ir'
 import { getLiteralExpressionValue } from '../utils'
@@ -10,8 +14,8 @@ export function genSetText(
   context: CodegenContext,
 ): CodeFragment[] {
   const { helper } = context
-  const { element, values, generated } = oper
-  const texts = combineValues(values, context)
+  const { element, values, locs, generated } = oper
+  const texts = combineValues(values, locs, context)
   return [
     NEWLINE,
     genCall(helper('setText'), `${generated ? 'x' : 'n'}${element}`, texts),
@@ -20,6 +24,7 @@ export function genSetText(
 
 function combineValues(
   values: SimpleExpressionNode[],
+  locs: SourceLocation[],
   context: CodegenContext,
 ): CodeFragment[] {
   return values.flatMap((value, i) => {
@@ -27,7 +32,7 @@ function combineValues(
     if (getLiteralExpressionValue(value, true) == null) {
       // dynamic, wrap with toDisplayString
       exp = [
-        [`${context.helper('toDisplayString')}(`, NewlineType.None, value.loc],
+        [`${context.helper('toDisplayString')}(`, NewlineType.None, locs[i]],
         ...exp,
         ')',
       ]
