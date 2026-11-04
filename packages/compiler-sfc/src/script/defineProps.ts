@@ -25,6 +25,7 @@ import {
 import { genModelProps } from './defineModel'
 import { getObjectOrArrayExpressionKeys } from './analyzeScriptBindings'
 import { processPropsDestructure } from './definePropsDestructure'
+import { walk } from 'estree-walker'
 
 export const DEFINE_PROPS = 'defineProps'
 export const WITH_DEFAULTS = 'withDefaults'
@@ -373,11 +374,34 @@ function genDestructuredDefaultValue(
       !isLiteralNode(unwrapped) &&
       !inferredType?.includes('Function')
 
+    if (needFactoryWrap && hasOwnAwait(unwrapped)) {
+      ctx.error(
+        `Default value of prop "${key}" cannot contain await because it ` +
+          `is evaluated in a factory function, outside of setup().`,
+        unwrapped,
+      )
+    }
+
     return {
       valueString: needFactoryWrap ? `() => (${value})` : value,
       needSkipFactory,
     }
   }
+}
+
+// an await of `node` itself, not of a function in it
+function hasOwnAwait(node: Node): boolean {
+  let found = false
+  walk(node, {
+    enter(child: Node) {
+      if (found || isFunctionType(child)) {
+        this.skip()
+      } else if (child.type === 'AwaitExpression') {
+        found = true
+      }
+    },
+  })
+  return found
 }
 
 // non-comprehensive, best-effort type inference for a runtime value
