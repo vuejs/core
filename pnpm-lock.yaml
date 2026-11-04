@@ -264,9 +264,6 @@ importers:
       lodash:
         specifier: ^4.18.1
         version: 4.18.1
-      magic-string:
-        specifier: ^0.30.21
-        version: 0.30.21
       markdown-table:
         specifier: ^3.0.4
         version: 3.0.4
