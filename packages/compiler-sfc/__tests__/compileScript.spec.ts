@@ -1450,6 +1450,46 @@ const c = 1
       )
     })
 
+    test('await in macro arguments hoisted outside of setup()', () => {
+      const assertHoisted = (code: string, lang = '') => {
+        const { content } = compile(
+          `<script setup${lang && ` lang="${lang}"`}>\n${code}\n</script>`,
+        )
+        expect(content).not.toMatch(`withAsyncContext`)
+        expect(content).not.toMatch(`async setup(`)
+        assertCode(content)
+        return content
+      }
+      let content = assertHoisted(
+        `const n = defineModel('n', { default: await foo() })`,
+      )
+      expect(content).toMatch(`"n": { default: await foo() },`)
+      expect(content).toMatch(`const n = _useModel(__props, 'n')`)
+      content = assertHoisted(
+        `const n = defineModel('n', { get: v => v, default: await foo() })`,
+      )
+      expect(content).toMatch(`"n": { default: await foo() },`)
+      expect(content).toMatch(
+        `const n = _useModel(__props, 'n', { get: v => v, })`,
+      )
+      content = assertHoisted(
+        `const p = defineProps({ a: { default: await foo() } })`,
+      )
+      expect(content).toMatch(`props: { a: { default: await foo() } },`)
+      expect(content).toMatch(`const p = __props\n`)
+      content = assertHoisted(
+        `const p = withDefaults(defineProps<{ a?: number }>(), { a: await foo() })`,
+        'ts',
+      )
+      expect(content).toMatch(`default: await foo() }`)
+      expect(content).toMatch(`const p = __props\n`)
+      content = assertHoisted(`const e = defineEmits(await foo())`)
+      expect(content).toMatch(`emits: await foo(),`)
+      expect(content).toMatch(`const e = __emit\n`)
+      content = assertHoisted(`defineOptions({ name: await foo() })`)
+      expect(content).toMatch(`Object.assign({ name: await foo() }, {`)
+    })
+
     // should prepend semicolon
     test('nested leading await in expression statement', () => {
       const code = assertAwaitDetection(`foo()\nawait 1 + await 2`)

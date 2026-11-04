@@ -313,6 +313,21 @@ export function compileScript(
     }
   }
 
+  // the macro arguments that are hoisted outside of the setup() function, each
+  // with its macro
+  function hoistedMacroArgs(): [Node | undefined, string][] {
+    return [
+      [ctx.propsRuntimeDecl, DEFINE_PROPS],
+      [ctx.propsRuntimeDefaults, DEFINE_PROPS],
+      [ctx.propsDestructureDecl, DEFINE_PROPS],
+      [ctx.emitsRuntimeDecl, DEFINE_EMITS],
+      [ctx.optionsRuntimeDecl, DEFINE_OPTIONS],
+      ...Object.values(ctx.modelDecls).flatMap(({ runtimeOptionNodes }) =>
+        runtimeOptionNodes.map((node): [Node, string] => [node, DEFINE_MODEL]),
+      ),
+    ]
+  }
+
   function checkInvalidScopeReference(node: Node | undefined, method: string) {
     if (!node) return
     walkIdentifiers(node, id => {
@@ -783,8 +798,14 @@ export function compileScript(
         isStatement: boolean
         rank: number
       }[] = []
+      // their code runs outside of setup(), where an await is the module's
+      const hoisted = new Set(hoistedMacroArgs().map(([node]) => node))
       walk(node, {
         enter(child: Node, parent: Node | null) {
+          if (hoisted.has(child)) {
+            this.skip()
+            return
+          }
           if (isFunctionType(child)) {
             this.skip()
           }
@@ -864,15 +885,8 @@ export function compileScript(
 
   // 4. check macro args to make sure it doesn't reference setup scope
   // variables
-  checkInvalidScopeReference(ctx.propsRuntimeDecl, DEFINE_PROPS)
-  checkInvalidScopeReference(ctx.propsRuntimeDefaults, DEFINE_PROPS)
-  checkInvalidScopeReference(ctx.propsDestructureDecl, DEFINE_PROPS)
-  checkInvalidScopeReference(ctx.emitsRuntimeDecl, DEFINE_EMITS)
-  checkInvalidScopeReference(ctx.optionsRuntimeDecl, DEFINE_OPTIONS)
-  for (const { runtimeOptionNodes } of Object.values(ctx.modelDecls)) {
-    for (const node of runtimeOptionNodes) {
-      checkInvalidScopeReference(node, DEFINE_MODEL)
-    }
+  for (const [node, method] of hoistedMacroArgs()) {
+    checkInvalidScopeReference(node, method)
   }
 
   // 5. remove non-script content
