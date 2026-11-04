@@ -1,5 +1,6 @@
 import {
   BindingTypes,
+  type RawSourceMap,
   UNREF,
   isFunctionType,
   isSimpleIdentifier,
@@ -26,8 +27,7 @@ import type {
   Statement,
 } from '@babel/types'
 import { walk } from 'estree-walker'
-import { type RawSourceMap, SourceMapConsumer } from 'source-map-js'
-import { encodeMappings } from 'muggle-string'
+import { decodeMappings, encodeMappings } from 'muggle-string'
 import type { DecodedSourceMap, SourceMapSegment } from './editedString'
 import {
   normalScriptDefaultVar,
@@ -1533,44 +1533,12 @@ function compareSegments(
   )
 }
 
-// the segments of each line of `map` that have a source, by the indexes of its
-// own sources and names, in the order source-map-js reads them
-function mappedSegments(map: RawSourceMap): MappedSegment[][] {
-  const consumer = new SourceMapConsumer(map)
-  const sourceIndex = new Map<string, number>()
-  consumer.sources.forEach((source, i) => {
-    if (!sourceIndex.has(source)) sourceIndex.set(source, i)
-  })
-  const nameIndex = new Map<string, number>()
-  map.names.forEach((name, i) => {
-    if (!nameIndex.has(name)) nameIndex.set(name, i)
-  })
-  const lines: MappedSegment[][] = []
-  consumer.eachMapping(m => {
-    if (m.originalLine == null) return
-    const line = m.generatedLine - 1
-    while (lines.length <= line) lines.push([])
-    const source = sourceIndex.get(m.source!)!
-    lines[line].push(
-      m.name == null
-        ? [m.generatedColumn, source, m.originalLine - 1, m.originalColumn!]
-        : [
-            m.generatedColumn,
-            source,
-            m.originalLine - 1,
-            m.originalColumn!,
-            nameIndex.get(m.name)!,
-          ],
-    )
-  })
-  return lines
-}
-
 /**
  * The map of the script's output with the template's render function inlined
  * `templateLineOffset` lines into it: the mapped segments of both, with
- * sources and names deduplicated in the order first given, in the order and
- * with the duplicates dropped that the generator of source-map-js gives them.
+ * sources and names deduplicated in the order first given, and the segments
+ * of each line ordered by column, source, original position and name, with
+ * exact duplicates dropped.
  */
 export function mergeSourceMaps(
   scriptMap: DecodedSourceMap,
@@ -1632,7 +1600,7 @@ export function mergeSourceMaps(
   }
 
   add(scriptMap, scriptMap.mappings, 0)
-  add(templateMap, mappedSegments(templateMap), templateLineOffset)
+  add(templateMap, decodeMappings(templateMap.mappings), templateLineOffset)
   const mappings: MappedSegment[][] = []
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i] || []

@@ -7,7 +7,11 @@ import type {
   RawSourceMap,
   RootNode,
 } from '@vue/compiler-core'
-import { SourceMapConsumer, SourceMapGenerator } from 'source-map-js'
+import {
+  type SourceMapSegment,
+  decodeMappings,
+  encodeMappings,
+} from 'muggle-string'
 import {
   type AssetURLOptions,
   type AssetURLTagConfig,
@@ -295,57 +299,34 @@ function doCompileTemplate({
   }
 }
 
+// each line of `oldMap` maps as a whole to the original line of its first
+// segment with a source
 function mapLines(oldMap: RawSourceMap, newMap: RawSourceMap): RawSourceMap {
   if (!oldMap) return newMap
   if (!newMap) return oldMap
 
-  const oldMapConsumer = new SourceMapConsumer(oldMap)
-  const newMapConsumer = new SourceMapConsumer(newMap)
-  const mergedMapGenerator = new SourceMapGenerator()
-
-  newMapConsumer.eachMapping(m => {
-    if (m.originalLine == null) {
-      return
+  const oldLines = decodeMappings(oldMap.mappings).map(segments =>
+    segments.find(s => s.length !== 1),
+  )
+  const mappings = decodeMappings(newMap.mappings).map(segments => {
+    const mapped: SourceMapSegment[] = []
+    for (const s of segments) {
+      const line = s.length !== 1 && oldLines[s[2]]
+      if (line) mapped.push([s[0], line[1], line[2], s[3]])
     }
-
-    const origPosInOldMap = oldMapConsumer.originalPositionFor({
-      line: m.originalLine,
-      column: m.originalColumn!,
-    })
-
-    if (origPosInOldMap.source == null) {
-      return
-    }
-
-    mergedMapGenerator.addMapping({
-      generated: {
-        line: m.generatedLine,
-        column: m.generatedColumn,
-      },
-      original: {
-        line: origPosInOldMap.line, // map line
-        // use current column, since the oldMap produced by @vue/compiler-sfc
-        // does not
-        column: m.originalColumn!,
-      },
-      source: origPosInOldMap.source,
-      name: origPosInOldMap.name,
-    })
+    return mapped
   })
 
-  // source-map's type definition is incomplete
-  const generator = mergedMapGenerator as any
-  ;(oldMapConsumer as any).sources.forEach((sourceFile: string) => {
-    generator._sources.add(sourceFile)
-    const sourceContent = oldMapConsumer.sourceContentFor(sourceFile)
-    if (sourceContent != null) {
-      mergedMapGenerator.setSourceContent(sourceFile, sourceContent)
-    }
-  })
-
-  generator._sourceRoot = oldMap.sourceRoot
-  generator._file = oldMap.file
-  return generator.toJSON()
+  const map: Omit<RawSourceMap, 'version'> & { version: number } = {
+    version: 3,
+    sources: oldMap.sources,
+    names: [],
+    mappings: encodeMappings(mappings),
+  }
+  if (oldMap.file != null) map.file = oldMap.file
+  if (oldMap.sourceRoot != null) map.sourceRoot = oldMap.sourceRoot
+  if (oldMap.sourcesContent) map.sourcesContent = oldMap.sourcesContent
+  return map as unknown as RawSourceMap
 }
 
 function patchErrors(

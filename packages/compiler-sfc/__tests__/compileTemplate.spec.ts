@@ -158,6 +158,37 @@ test('source map', () => {
   ).toMatchObject(getPositionInCode(template.content, `foobar`))
 })
 
+test('source map: inMap without AST', () => {
+  const source = `<script setup>
+const foobar = 1
+</script>
+
+<template>
+  <div><p>{{ foobar }}</p></div>
+</template>
+`
+  const template = parse(source, {
+    filename: 'example.vue',
+    sourceRoot: 'src',
+    sourceMap: true,
+  }).descriptor.template!
+
+  const { code, map } = compile({
+    filename: 'example.vue',
+    source: template.content,
+    inMap: template.map,
+  })
+
+  expect(map!.sources).toEqual([`example.vue`])
+  expect(map!.sourceRoot).toBe(`src`)
+  expect(map!.sourcesContent).toEqual([source])
+
+  const consumer = new SourceMapConsumer(map as RawSourceMap)
+  expect(
+    consumer.originalPositionFor(getPositionInCode(code, 'foobar')),
+  ).toMatchObject({ source: `src/example.vue`, line: 6, column: 13 })
+})
+
 test('source map: v-if generated comment should not have original position', () => {
   const template = parse(
     `

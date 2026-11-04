@@ -25,10 +25,11 @@ export {
 } from './transform'
 export {
   generate,
+  addMapping,
+  createSourceMap,
   NewlineType,
   type CodegenContext,
   type CodegenResult,
-  type CodegenSourceMapGenerator,
   type RawSourceMap,
   type BaseCodegenResult,
 } from './codegen'

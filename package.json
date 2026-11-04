@@ -84,6 +84,7 @@
     "semver": "^7.8.5",
     "serve": "^14.2.6",
     "serve-handler": "^6.1.7",
+    "source-map-js": "catalog:",
     "todomvc-app-css": "^2.4.3",
     "tslib": "^2.8.1",
     "typescript": "~6.0.3",

@@ -189,6 +189,9 @@ catalogs:
     estree-walker:
       specifier: ^2.0.2
       version: 2.0.2
+    muggle-string:
+      specifier: ^1.0.3
+      version: 1.0.3
     source-map-js:
       specifier: ^1.2.2
       version: 1.2.2
@@ -315,6 +318,9 @@ importers:
       serve-handler:
         specifier: ^6.1.7
         version: 6.1.7
+      source-map-js:
+        specifier: 'catalog:'
+        version: 1.2.2
       todomvc-app-css:
         specifier: ^2.4.3
         version: 2.4.3
@@ -483,9 +489,9 @@ importers:
       estree-walker:
         specifier: 'catalog:'
         version: 2.0.2
-      source-map-js:
+      muggle-string:
         specifier: 'catalog:'
-        version: 1.2.2
+        version: 1.0.3
     devDependencies:
       '@babel/types':
         specifier: 'catalog:'
@@ -524,14 +530,11 @@ importers:
         specifier: 'catalog:'
         version: 2.0.2
       muggle-string:
-        specifier: ^1.0.2
-        version: 1.0.2
+        specifier: 'catalog:'
+        version: 1.0.3
       postcss:
         specifier: ^8.5.29
         version: 8.5.29
-      source-map-js:
-        specifier: 'catalog:'
-        version: 1.2.2
     devDependencies:
       '@babel/types':
         specifier: 'catalog:'
@@ -587,9 +590,6 @@ importers:
       estree-walker:
         specifier: 'catalog:'
         version: 2.0.2
-      source-map-js:
-        specifier: 'catalog:'
-        version: 1.2.2
 
   packages/reactivity:
     dependencies:
@@ -699,9 +699,9 @@ importers:
       estree-walker:
         specifier: 'catalog:'
         version: 2.0.2
-      source-map-js:
+      muggle-string:
         specifier: 'catalog:'
-        version: 1.2.2
+        version: 1.0.3
       vue:
         specifier: workspace:*
         version: link:../vue
@@ -3336,8 +3336,8 @@ packages:
   ms@2.1.3:
     resolution: {integrity: sha512-6FlzubTLZG3J2a/NVCAleEhjzq5oxgHyaCU9yYXvcLsvoVaHJq/s5xXI6/XXP6tz7R9xAOtHnSO/tXtF3WRTlA==}
 
-  muggle-string@1.0.2:
-    resolution: {integrity: sha512-ZUkzn39oWE7w5KezE0zh2AlW54BjRo0CUo765HoQBd4JCW0tnFUHeF9gPgILnns/5Uu6fAsc/pRuMua1fGhbIg==}
+  muggle-string@1.0.3:
+    resolution: {integrity: sha512-AWKZWqloOHnvCtw0L4v+PZPWCWjoMwBpimo5GOdUM7giynho7uqcXM+1cK4FyhvDGJAPUmfOXGytSPITp+bF9g==}
     engines: {node: '>=12'}
 
   nanoid@3.3.19:
@@ -5976,7 +5976,7 @@ snapshots:
 
   ms@2.1.3: {}
 
-  muggle-string@1.0.2: {}
+  muggle-string@1.0.3: {}
 
   nanoid@3.3.19: {}
 

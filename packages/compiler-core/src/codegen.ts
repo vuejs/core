@@ -28,7 +28,7 @@ import {
   getVNodeHelper,
   locStub,
 } from './ast'
-import { SourceMapGenerator } from 'source-map-js'
+import { type SourceMapSegment, encodeMappings } from 'muggle-string'
 import {
   advancePositionWithMutation,
   assert,
@@ -36,6 +36,7 @@ import {
   toValidAssetId,
 } from './utils'
 import {
+  NOOP,
   PatchFlagNames,
   type PatchFlags,
   isArray,
@@ -60,26 +61,6 @@ import {
 } from './runtimeHelpers'
 import type { ImportItem } from './transform'
 
-/**
- * The `SourceMapGenerator` type from `source-map-js` is a bit incomplete as it
- * misses `toJSON()`. We also need to add types for internal properties which we
- * need to access for better performance.
- *
- * Since TS 5.3, dts generation starts to strangely include broken triple slash
- * references for source-map-js, so we are inlining all source map related types
- * here to workaround that.
- */
-export interface CodegenSourceMapGenerator {
-  setSourceContent(sourceFile: string, sourceContent: string): void
-  // SourceMapGenerator has this method but the types do not include it
-  toJSON(): RawSourceMap
-  _sources: Set<string>
-  _names: Set<string>
-  _mappings: {
-    add(mapping: MappingItem): void
-  }
-}
-
 export interface RawSourceMap {
   file?: string
   sourceRoot?: string
@@ -88,15 +69,6 @@ export interface RawSourceMap {
   names: string[]
   sourcesContent?: string[]
   mappings: string
-}
-
-interface MappingItem {
-  source: string
-  generatedLine: number
-  generatedColumn: number
-  originalLine: number
-  originalColumn: number
-  name: string | null
 }
 
 const PURE_ANNOTATION = `/*@__PURE__*/`
@@ -139,7 +111,13 @@ export interface CodegenContext extends Omit<
   offset: number
   indentLevel: number
   pure: boolean
-  map?: CodegenSourceMapGenerator
+  /**
+   * The source map segments of each generated line, added in the order of
+   * their generated positions, when a source map is generated
+   */
+  mappings?: SourceMapSegment[][]
+  /** The index of each source map name, when a source map is generated */
+  names?: Map<string, number>
   helper(key: symbol): string
   push(code: string, newlineIndex?: number, node?: CodegenNode): void
   indent(): void
@@ -184,13 +162,12 @@ function createCodegenContext(
     offset: 0,
     indentLevel: 0,
     pure: false,
-    map: undefined,
     helper(key) {
       return `_${helperNameMap[key]}`
     },
     push(code, newlineIndex = NewlineType.None, node) {
       context.code += code
-      if (!__BROWSER__ && context.map) {
+      if (!__BROWSER__ && context.mappings) {
         if (node) {
           let name
           if (node.type === NodeTypes.SIMPLE_EXPRESSION && !node.isStatic) {
@@ -200,7 +177,13 @@ function createCodegenContext(
             }
           }
           if (node.loc.source) {
-            addMapping(node.loc.start, name)
+            addMapping(
+              context.mappings,
+              context.names!,
+              context,
+              node.loc.start,
+              name,
+            )
           }
         }
         if (newlineIndex === NewlineType.Unknown) {
@@ -239,7 +222,7 @@ function createCodegenContext(
           }
         }
         if (node && node.loc !== locStub && node.loc.source) {
-          addMapping(node.loc.end)
+          addMapping(context.mappings, context.names!, context, node.loc.end)
         }
       }
     },
@@ -262,32 +245,52 @@ function createCodegenContext(
     context.push('\n' + `  `.repeat(n), NewlineType.Start)
   }
 
-  function addMapping(loc: Position, name: string | null = null) {
-    // we use the private property to directly add the mapping
-    // because the addMapping() implementation in source-map-js has a bunch of
-    // unnecessary arg and validation checks that are pure overhead in our case.
-    const { _names, _mappings } = context.map!
-    if (name !== null && !_names.has(name)) _names.add(name)
-    _mappings.add({
-      originalLine: loc.line,
-      originalColumn: loc.column - 1, // source-map column is 0 based
-      generatedLine: context.line,
-      generatedColumn: context.column - 1,
-      source: filename,
-      name,
-    })
-  }
-
   if (!__BROWSER__ && sourceMap) {
-    // lazy require source-map implementation, only in non-browser builds
-    context.map =
-      new SourceMapGenerator() as unknown as CodegenSourceMapGenerator
-    context.map.setSourceContent(filename, context.source)
-    context.map._sources.add(filename)
+    context.mappings = []
+    context.names = new Map()
   }
 
   return context
 }
+
+export function addMapping(
+  mappings: SourceMapSegment[][],
+  names: Map<string, number>,
+  generated: { line: number; column: number },
+  original: Position,
+  name: string | null = null,
+): void {
+  while (mappings.length < generated.line) mappings.push([])
+  // source map lines and columns are 0 based
+  const segment: SourceMapSegment = [
+    generated.column - 1,
+    0,
+    original.line - 1,
+    original.column - 1,
+  ]
+  if (name !== null) {
+    let index = names.get(name)
+    if (index === undefined) names.set(name, (index = names.size))
+    segment.push(index)
+  }
+  mappings[generated.line - 1].push(segment)
+}
+
+export const createSourceMap: (
+  filename: string,
+  source: string,
+  mappings: SourceMapSegment[][],
+  names: Map<string, number>,
+) => RawSourceMap = __BROWSER__
+  ? (NOOP as any)
+  : (filename, source, mappings, names) =>
+      ({
+        version: 3,
+        sources: [filename],
+        names: Array.from(names.keys()),
+        mappings: encodeMappings(mappings),
+        sourcesContent: [source],
+      }) as unknown as RawSourceMap
 
 export function generate(
   ast: RootNode,
@@ -410,7 +413,15 @@ export function generate(
     ast,
     code: context.code,
     preamble: isSetupInlined ? preambleContext.code : ``,
-    map: context.map ? context.map.toJSON() : undefined,
+    map:
+      !__BROWSER__ && context.mappings
+        ? createSourceMap(
+            context.filename,
+            context.source,
+            context.mappings,
+            context.names!,
+          )
+        : undefined,
     helpers: ast.helpers,
   }
 }

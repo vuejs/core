@@ -1,7 +1,9 @@
-import type {
-  CodegenOptions as BaseCodegenOptions,
-  BaseCodegenResult,
-  SimpleExpressionNode,
+import {
+  type CodegenContext as BaseCodegenContext,
+  type CodegenOptions as BaseCodegenOptions,
+  type BaseCodegenResult,
+  type SimpleExpressionNode,
+  createSourceMap,
 } from '@vue/compiler-dom'
 import type {
   BlockIRNode,
@@ -35,6 +37,9 @@ const helperNameAliases: Record<string, string> = {
 
 export class CodegenContext {
   options: Required<CodegenOptions>
+
+  mappings?: BaseCodegenContext['mappings']
+  names?: BaseCodegenContext['names']
 
   bindingNames: Set<string>
 
@@ -297,7 +302,7 @@ export function generate(
     }
   }
 
-  let [code, map] = codeFragmentToString(frag, context)
+  let code = codeFragmentToString(frag, context)
   if (!inline) {
     code = preamble + code
   }
@@ -306,7 +311,14 @@ export function generate(
     code,
     ast: ir,
     preamble,
-    map: map && map.toJSON(),
+    map:
+      context.mappings &&
+      createSourceMap(
+        context.options.filename,
+        ir.source,
+        context.mappings,
+        context.names!,
+      ),
     helpers: new Set<string>(Array.from(context.helpers.keys())),
   }
 }

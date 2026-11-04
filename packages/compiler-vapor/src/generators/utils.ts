@@ -1,9 +1,7 @@
-import { SourceMapGenerator } from 'source-map-js'
 import {
-  type CodegenSourceMapGenerator,
   NewlineType,
-  type Position,
   type SourceLocation,
+  addMapping,
   advancePositionWithMutation,
   locStub,
 } from '@vue/compiler-dom'
@@ -153,18 +151,12 @@ export function getParserOptions(
 export function codeFragmentToString(
   code: CodeFragment[],
   context: CodegenContext,
-): [code: string, map: CodegenSourceMapGenerator | undefined] {
-  const {
-    options: { filename, sourceMap },
-  } = context
-
-  let map: CodegenSourceMapGenerator | undefined
-  if (sourceMap) {
-    // lazy require source-map implementation, only in non-browser builds
-    map = new SourceMapGenerator() as unknown as CodegenSourceMapGenerator
-    map.setSourceContent(filename, context.ir.source)
-    map._sources.add(filename)
+): string {
+  if (context.options.sourceMap) {
+    context.mappings = []
+    context.names = new Map()
   }
+  const { mappings, names } = context
 
   let codegen = ''
   const pos = { line: 1, column: 1, offset: 0 }
@@ -172,7 +164,7 @@ export function codeFragmentToString(
 
   emit(code)
 
-  return [codegen, map]
+  return codegen
 
   function emit(code: CodeFragment[]) {
     for (let frag of code) {
@@ -211,8 +203,8 @@ export function codeFragmentToString(
       }
       codegen += code
 
-      if (map) {
-        if (loc) addMapping(loc.start, name)
+      if (mappings) {
+        if (loc) addMapping(mappings, names!, pos, loc.start, name)
         if (newlineIndex === NewlineType.Unknown) {
           // multiple newlines, full iteration
           advancePositionWithMutation(pos, code)
@@ -249,26 +241,10 @@ export function codeFragmentToString(
           }
         }
         if (loc && loc !== locStub) {
-          addMapping(loc.end)
+          addMapping(mappings, names!, pos, loc.end)
         }
       }
     }
-  }
-
-  function addMapping(loc: Position, name: string | null = null) {
-    // we use the private property to directly add the mapping
-    // because the addMapping() implementation in source-map-js has a bunch of
-    // unnecessary arg and validation checks that are pure overhead in our case.
-    const { _names, _mappings } = map!
-    if (name !== null && !_names.has(name)) _names.add(name)
-    _mappings.add({
-      originalLine: loc.line,
-      originalColumn: loc.column - 1, // source-map column is 0 based
-      generatedLine: pos.line,
-      generatedColumn: pos.column - 1,
-      source: filename,
-      name,
-    })
   }
 }
 
