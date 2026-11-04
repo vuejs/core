@@ -1,4 +1,5 @@
 import {
+  Suspense,
   type VNode,
   defineComponent,
   h,
@@ -2010,5 +2011,106 @@ describe('vModel', () => {
     await nextTick()
     expect(number.selected).toBe(false)
     expect(string.selected).toBe(true)
+  })
+
+  // #12460
+  it('keeps a value updated in the same flush as the mount', async () => {
+    const show = ref(false)
+    const text = ref('a')
+    // an event emitted from setup updates the parent while it is mounting
+    const Child = defineComponent({
+      emits: ['setup'],
+      setup(_, { emit }) {
+        emit('setup')
+        return () => null
+      },
+    })
+    const App = defineComponent({
+      setup() {
+        return () =>
+          show.value
+            ? [
+                withVModel(
+                  h('input', {
+                    'onUpdate:modelValue': (v: any) => (text.value = v),
+                  }),
+                  text.value,
+                ),
+                h(Child, { onSetup: () => (text.value = 'b') }),
+              ]
+            : null
+      },
+    })
+    render(h(App), root)
+    show.value = true
+    await nextTick()
+    expect(root.querySelector('input').value).toBe('b')
+  })
+
+  it('keeps a checkbox unchecked in the same flush as the mount', async () => {
+    const show = ref(false)
+    const checked = ref(true)
+    const Child = defineComponent({
+      emits: ['setup'],
+      setup(_, { emit }) {
+        emit('setup')
+        return () => null
+      },
+    })
+    const App = defineComponent({
+      setup() {
+        return () =>
+          show.value
+            ? [
+                withDirectives(
+                  h('input', {
+                    type: 'checkbox',
+                    'onUpdate:modelValue': (v: any) => (checked.value = v),
+                  }),
+                  [[vModelCheckbox, checked.value]],
+                ),
+                h(Child, { onSetup: () => (checked.value = false) }),
+              ]
+            : null
+      },
+    })
+    render(h(App), root)
+    show.value = true
+    await nextTick()
+    expect(root.querySelector('input').checked).toBe(false)
+  })
+
+  it('keeps a value updated while the Suspense boundary is pending', async () => {
+    const text = ref('a')
+    let resolve: () => void
+    const Async = defineComponent({
+      async setup() {
+        await new Promise<void>(r => (resolve = r))
+        return () => h('span')
+      },
+    })
+    const App = defineComponent({
+      setup() {
+        return () =>
+          h(Suspense, null, {
+            default: () =>
+              h('div', [
+                withVModel(
+                  h('input', {
+                    'onUpdate:modelValue': (v: any) => (text.value = v),
+                  }),
+                  text.value,
+                ),
+                h(Async),
+              ]),
+          })
+      },
+    })
+    render(h(App), root)
+    text.value = 'b'
+    await nextTick()
+    resolve!()
+    await new Promise(r => setTimeout(r))
+    expect(root.querySelector('input').value).toBe('b')
   })
 })

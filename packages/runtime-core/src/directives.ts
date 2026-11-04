@@ -12,7 +12,7 @@ return withDirectives(h(comp), [
 */
 
 import type { VNode } from './vnode'
-import { EMPTY_OBJ, isBuiltInDirective, isFunction } from '@vue/shared'
+import { EMPTY_OBJ, extend, isBuiltInDirective, isFunction } from '@vue/shared'
 import { warn } from './warning'
 import {
   type ComponentInternalInstance,
@@ -36,6 +36,17 @@ export interface DirectiveBinding<
   arg?: Arg
   modifiers: DirectiveModifiers<Modifiers>
   dir: ObjectDirective<any, Value, Modifiers, Arg>
+  /**
+   * the binding of the mount while its mounted hook is still queued
+   * @internal
+   */
+  _mount?: DirectiveBinding
+  /**
+   * on the binding of the mount: the vnode of the last update that ran
+   * before its mounted hook
+   * @internal
+   */
+  _latest?: VNode
 }
 
 export type DirectiveHook<
@@ -176,9 +187,32 @@ export function invokeDirectiveHook(
   const bindings = vnode.dirs!
   const oldBindings = prevVNode && prevVNode.dirs!
   for (let i = 0; i < bindings.length; i++) {
-    const binding = bindings[i]
+    let binding = bindings[i]
+    let hookVNode = vnode
     if (oldBindings) {
-      binding.oldValue = oldBindings[i].value
+      const oldBinding = oldBindings[i]
+      binding.oldValue = oldBinding.value
+      // the element is updated before its queued mounted hook ran (an update
+      // in the same flush, or while a Suspense boundary is pending): point
+      // the mount binding at the latest vnode
+      const mount = name === 'beforeUpdate' && oldBinding._mount
+      if (mount) {
+        mount._latest = vnode
+        binding._mount = mount
+      }
+    } else if (name === 'beforeMount') {
+      binding._mount = binding
+    } else if (name === 'mounted') {
+      // the mounted hook gets the binding of the latest update, not the one
+      // from mount time. #12460
+      const latest = binding._latest
+      binding._mount = binding._latest = undefined
+      if (latest) {
+        hookVNode = latest
+        binding = latest.dirs![i]
+        binding._mount = undefined
+        binding = extend({}, binding, { oldValue: undefined })
+      }
     }
     let hook = binding.dir[name] as DirectiveHook | DirectiveHook[] | undefined
     if (__COMPAT__ && !hook) {
@@ -191,7 +225,7 @@ export function invokeDirectiveHook(
       callWithAsyncErrorHandling(hook, instance, ErrorCodes.DIRECTIVE_HOOK, [
         vnode.el,
         binding,
-        vnode,
+        hookVNode,
         prevVNode,
       ])
       resetTracking()
