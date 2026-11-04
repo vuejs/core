@@ -169,6 +169,9 @@ function createCodegenContext(
             source,
             start.offset + pieceOffset,
             end.offset + pieceOffset,
+            node.type === NodeTypes.SIMPLE_EXPRESSION && !node.isStatic
+              ? renamedIdentifier(node, code)
+              : undefined,
           )
           mappedEnd = end.offset + pieceOffset
         } else {
@@ -221,7 +224,18 @@ function createCodegenContext(
   return context
 }
 
-export type CodegenPiece = Piece<{ source: Source }>
+/** A `name` is the identifier of the source that the text of the piece renames */
+export type CodegenPiece = Piece<{ source: Source; name?: string }>
+
+function renamedIdentifier(
+  { content, loc }: SimpleExpressionNode,
+  code: string,
+): string | undefined {
+  const accessed = content.startsWith('_ctx.') && content.slice(5)
+  // a same-name shorthand, e.g. `:foo-bar`, accesses its camelized name
+  const id = accessed && isSimpleIdentifier(accessed) ? accessed : loc.source
+  return code !== id && isSimpleIdentifier(id) ? id : undefined
+}
 
 /** An empty piece of `source`, so that the map names it even if no code maps to it */
 export function createSourcePiece(source: Source): CodegenPiece {
@@ -230,7 +244,7 @@ export function createSourcePiece(source: Source): CodegenPiece {
 
 /**
  * Adds `code` to `pieces`, as the text of `start`..`end` of `source` if given,
- * joined to the last piece when that maps the same way
+ * named `name`, joined to the last piece when that maps the same way
  */
 export function addPiece(
   pieces: CodegenPiece[],
@@ -238,6 +252,7 @@ export function addPiece(
   source?: Source,
   start: number = 0,
   end: number = start,
+  name?: string,
 ): void {
   const last = pieces[pieces.length - 1]
   if (!source) {
@@ -247,7 +262,8 @@ export function addPiece(
     typeof last === 'object' &&
     last.source === source &&
     last.start === start &&
-    last.end === end
+    last.end === end &&
+    !name
   ) {
     last.text += code
   } else {
@@ -260,7 +276,7 @@ export function addPiece(
         code = last.slice(indent) + code
       }
     }
-    pieces.push({ source, start, end, text: code })
+    pieces.push({ source, start, end, text: code, name })
   }
 }
 

@@ -36,6 +36,8 @@ export type MappedFragment = [
   code: string,
   newlineIndex: number,
   loc?: SourceLocation,
+  /** the identifier of the source that `code` renames */
+  name?: string,
 ]
 export type CodeFragment =
   | typeof NEWLINE
@@ -173,6 +175,7 @@ export function codeFragmentToString(
 
       let code: string
       let loc: SourceLocation | undefined
+      let name: string | undefined
       if (frag === NEWLINE) {
         code = `\n${`  `.repeat(indentLevel)}`
         mappedEnd = -1
@@ -187,6 +190,7 @@ export function codeFragmentToString(
       } else {
         code = frag[0]
         loc = frag[2]
+        name = frag[3]
       }
       codegen += code
 
@@ -198,6 +202,7 @@ export function codeFragmentToString(
             source,
             loc.start.offset + offset,
             loc.end.offset + offset,
+            name,
           )
           mappedEnd = loc.end.offset + offset
         } else {

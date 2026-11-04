@@ -177,14 +177,15 @@ function genIdentifier(
 ): CodeFragment[] {
   const { options, helper, identifiers } = context
   const { inline, bindingMetadata } = options
+  const name = raw
   const idMap = identifiers[raw]
   if (idMap && idMap.length) {
     const replacement = idMap[0]
     if (isString(replacement)) {
       if (parent && parent.type === 'ObjectProperty' && parent.shorthand) {
-        return [[`${raw}: ${replacement}`, NewlineType.None, loc]]
+        return [renamed(`${raw}: ${replacement}`)]
       } else {
-        return [[replacement, NewlineType.None, loc]]
+        return [renamed(replacement)]
       }
     } else {
       // replacement is an expression - process it again
@@ -313,8 +314,16 @@ function genIdentifier(
     }
     raw = withAssignment(raw)
   }
-  return [prefix, [raw, NewlineType.None, loc]]
+  return [prefix, renamed(raw)]
 
+  function renamed(code: string): CodeFragment {
+    return [
+      code,
+      NewlineType.None,
+      loc,
+      code !== name && isSimpleIdentifier(name) ? name : undefined,
+    ]
+  }
   function withAssignment(s: string) {
     return assignment ? `${s} = ${assignment}` : s
   }

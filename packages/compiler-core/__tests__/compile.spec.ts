@@ -139,19 +139,19 @@ describe('compiler: integration tests', () => {
     ).toMatchObject(getPositionInCode(source, `bar`))
     expect(
       consumer.originalPositionFor(getPositionInCode(code, `_ctx.bar`, `bar`)),
-    ).toMatchObject({ ...getPositionInCode(source, `bar`), name: null })
+    ).toMatchObject(getPositionInCode(source, `bar`, true))
     expect(
       consumer.originalPositionFor(getPositionInCode(code, `baz`)),
     ).toMatchObject(getPositionInCode(source, `baz`))
 
     expect(
       consumer.originalPositionFor(getPositionInCode(code, `world`, true)),
-    ).toMatchObject({ ...getPositionInCode(source, `world`), name: null })
+    ).toMatchObject(getPositionInCode(source, `world`, `world`))
     expect(
       consumer.originalPositionFor(
         getPositionInCode(code, `_ctx.world`, `world`),
       ),
-    ).toMatchObject({ ...getPositionInCode(source, `world`), name: null })
+    ).toMatchObject(getPositionInCode(source, `world`, `world`))
 
     expect(
       consumer.originalPositionFor(getPositionInCode(code, `burn()`)),
@@ -162,7 +162,7 @@ describe('compiler: integration tests', () => {
     ).toMatchObject(getPositionInCode(source, `ok`))
     expect(
       consumer.originalPositionFor(getPositionInCode(code, `_ctx.ok`, `ok`)),
-    ).toMatchObject({ ...getPositionInCode(source, `ok`), name: null })
+    ).toMatchObject(getPositionInCode(source, `ok`, true))
 
     expect(
       consumer.originalPositionFor(getPositionInCode(code, `list`)),
@@ -171,7 +171,7 @@ describe('compiler: integration tests', () => {
       consumer.originalPositionFor(
         getPositionInCode(code, `_ctx.list`, `list`),
       ),
-    ).toMatchObject({ ...getPositionInCode(source, `list`), name: null })
+    ).toMatchObject(getPositionInCode(source, `list`, true))
 
     expect(
       consumer.originalPositionFor(getPositionInCode(code, `value`)),
@@ -216,19 +216,19 @@ describe('compiler: integration tests', () => {
     ).toMatchObject(getPositionInCode(source, `bar`))
     expect(
       consumer.originalPositionFor(getPositionInCode(code, `_ctx.bar`, `bar`)),
-    ).toMatchObject({ ...getPositionInCode(source, `bar`), name: null })
+    ).toMatchObject(getPositionInCode(source, `bar`, true))
     expect(
       consumer.originalPositionFor(getPositionInCode(code, `baz`)),
     ).toMatchObject(getPositionInCode(source, `baz`))
 
     expect(
       consumer.originalPositionFor(getPositionInCode(code, `world`, true)),
-    ).toMatchObject({ ...getPositionInCode(source, `world`), name: null })
+    ).toMatchObject(getPositionInCode(source, `world`, `world`))
     expect(
       consumer.originalPositionFor(
         getPositionInCode(code, `_ctx.world`, `world`),
       ),
-    ).toMatchObject({ ...getPositionInCode(source, `world`), name: null })
+    ).toMatchObject(getPositionInCode(source, `world`, `world`))
 
     expect(
       consumer.originalPositionFor(getPositionInCode(code, `burn()`)),
@@ -239,7 +239,7 @@ describe('compiler: integration tests', () => {
     ).toMatchObject(getPositionInCode(source, `ok`))
     expect(
       consumer.originalPositionFor(getPositionInCode(code, `_ctx.ok`, `ok`)),
-    ).toMatchObject({ ...getPositionInCode(source, `ok`), name: null })
+    ).toMatchObject(getPositionInCode(source, `ok`, true))
 
     expect(
       consumer.originalPositionFor(getPositionInCode(code, `list`)),
@@ -248,7 +248,7 @@ describe('compiler: integration tests', () => {
       consumer.originalPositionFor(
         getPositionInCode(code, `_ctx.list`, `list`),
       ),
-    ).toMatchObject({ ...getPositionInCode(source, `list`), name: null })
+    ).toMatchObject(getPositionInCode(source, `list`, true))
 
     expect(
       consumer.originalPositionFor(getPositionInCode(code, `value`)),
@@ -270,7 +270,7 @@ describe('compiler: integration tests', () => {
       filename: `foo.vue`,
       mode: 'module',
     })
-    expect(map!.names).toEqual([])
+    expect(map!.names).toEqual([`foo`])
     const consumer = new SourceMapConsumer(map as RawSourceMap)
     for (const [generated, original] of [
       [`_withDirectives(`, `<div`],
@@ -283,6 +283,15 @@ describe('compiler: integration tests', () => {
         consumer.originalPositionFor(getPositionInCode(code, generated)),
       ).toMatchObject(getPositionInCode(template, original))
     }
+  })
+
+  test('source map names a same-name shorthand by its camelized name', () => {
+    const { map } = compile(`<div :foo-bar />`, {
+      sourceMap: true,
+      filename: `foo.vue`,
+      mode: 'module',
+    })
+    expect(map!.names).toEqual([`fooBar`])
   })
 
   test('source map of a text call', () => {

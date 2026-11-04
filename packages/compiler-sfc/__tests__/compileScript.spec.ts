@@ -936,6 +936,29 @@ describe('SFC compile <script setup>', () => {
       }
     })
 
+    test('inline source map names the identifiers the template renames', () => {
+      const source = `<script setup>
+import { ref } from 'vue'
+defineProps(['p'])
+const r = ref(1)
+const c = 1
+</script>
+<template>{{ p }}{{ r }}{{ c }}</template>`
+      for (const vapor of [false, true]) {
+        const { descriptor } = parse(source, { filename: 'App.vue' })
+        const { content, map } = compileScript(descriptor, {
+          id: mockId,
+          inlineTemplate: true,
+          vapor,
+        })
+        expect(map!.names).toEqual(['p', 'r'])
+        const consumer = new SourceMapConsumer(map!)
+        expect(
+          consumer.originalPositionFor(getPositionInCode(content, '__props.p')),
+        ).toMatchObject({ ...getPositionInCode(source, 'p }}'), name: 'p' })
+      }
+    })
+
     describe('destructure setup context for built-in properties', () => {
       const theCompile = (template: string, setup = '/* ... */') =>
         compile(
