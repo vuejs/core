@@ -39,6 +39,9 @@ export function processAwait(
   node: AwaitExpression,
   needSemi: boolean,
   isStatement: boolean,
+  // higher than the rank of every await in it, so that its code after it sits
+  // outside theirs where they end together, as in `await await foo`
+  rank: number,
 ): void {
   const argumentStart =
     node.argument.extra && node.argument.extra.parenthesized
@@ -60,10 +63,12 @@ export function processAwait(
       `withAsyncContext`,
     )}(${containsNestedAwait ? `async ` : ``}() => `,
   )
-  ctx.s.insertAfter(
-    node.end! + startOffset,
-    `)),\n  ${isStatement ? `` : `__temp = `}await __temp,\n  __restore()${
-      isStatement ? `` : `,\n  __temp`
-    }\n)`,
-  )
+  ctx.s
+    .writer(rank)
+    .insertAfter(
+      node.end! + startOffset,
+      `)),\n  ${isStatement ? `` : `__temp = `}await __temp,\n  __restore()${
+        isStatement ? `` : `,\n  __temp`
+      }\n)`,
+    )
 }

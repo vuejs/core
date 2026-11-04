@@ -776,6 +776,13 @@ export function compileScript(
       node.type.endsWith('Statement')
     ) {
       const scope: Statement[][] = [scriptSetupAst.body]
+      // the awaits being walked, each processed when it is left, with the
+      // rank above those of the awaits in it
+      const awaits: {
+        needsSemi: boolean
+        isStatement: boolean
+        rank: number
+      }[] = []
       walk(node, {
         enter(child: Node, parent: Node | null) {
           if (isFunctionType(child)) {
@@ -800,17 +807,23 @@ export function compileScript(
                 n.start === child.start
               )
             })
-            processAwait(
-              ctx,
-              child,
+            awaits.push({
               needsSemi,
-              parent!.type === 'ExpressionStatement',
-            )
+              isStatement: parent!.type === 'ExpressionStatement',
+              rank: 0,
+            })
           }
         },
         leave(node: Node) {
           if (node.type === 'BlockStatement' || node.type === 'SwitchCase') {
             scope.pop()
+          } else if (node.type === 'AwaitExpression') {
+            const { needsSemi, isStatement, rank } = awaits.pop()!
+            processAwait(ctx, node, needsSemi, isStatement, rank)
+            const outer = awaits[awaits.length - 1]
+            if (outer && outer.rank <= rank) {
+              outer.rank = rank + 1
+            }
           }
         },
       })

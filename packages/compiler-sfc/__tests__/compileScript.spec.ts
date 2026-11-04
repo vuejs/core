@@ -1436,6 +1436,20 @@ const c = 1
       assertAwaitDetection(`await (await (await foo))`)
     })
 
+    test('nested await that ends with the outer one', () => {
+      const code = assertAwaitDetection(`await await foo`)
+      expect(code).toMatch(
+        `_withAsyncContext(() => foo)),\n` +
+          `  __temp = await __temp,\n` +
+          `  __restore(),\n` +
+          `  __temp\n` +
+          `))),\n` +
+          `  await __temp,\n` +
+          `  __restore()\n` +
+          `)`,
+      )
+    })
+
     // should prepend semicolon
     test('nested leading await in expression statement', () => {
       const code = assertAwaitDetection(`foo()\nawait 1 + await 2`)

@@ -517,6 +517,30 @@ return {  }
 }"
 `;
 
+exports[`SFC compile <script setup> > async/await detection > nested await that ends with the outer one 1`] = `
+"import { withAsyncContext as _withAsyncContext } from 'vue'
+
+export default {
+  async setup(__props, { expose: __expose }) {
+  __expose();
+
+let __temp, __restore
+;(
+  ([__temp,__restore] = _withAsyncContext(async () => (
+  ([__temp,__restore] = _withAsyncContext(() => foo)),
+  __temp = await __temp,
+  __restore(),
+  __temp
+))),
+  await __temp,
+  __restore()
+)
+return {  }
+}
+
+}"
+`;
+
 exports[`SFC compile <script setup> > async/await detection > nested leading await in expression statement 1`] = `
 "import { withAsyncContext as _withAsyncContext } from 'vue'
 
