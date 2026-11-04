@@ -7,8 +7,15 @@ import {
   getPositionInCode,
   mockId,
 } from './utils'
-import { type RawSourceMap, SourceMapConsumer } from 'source-map-js'
+import {
+  type RawSourceMap,
+  SourceMapConsumer,
+  SourceMapGenerator,
+} from 'source-map-js'
+import { encodeMappings } from 'muggle-string'
 import { compileScript, compileTemplate, parse } from '../src'
+import { mergeSourceMaps } from '../src/compileScript'
+import type { SourceMapSegment } from '../src/editedString'
 import { templateAnalysisCache } from '../src/script/importUsageCheck'
 
 vi.mock('../src/warn', () => ({
@@ -837,6 +844,103 @@ describe('SFC compile <script setup>', () => {
       expect(
         consumer.originalPositionFor(getPositionInCode(content, 'Error')),
       ).toMatchObject(getPositionInCode(source, `Error`))
+    })
+
+    test('source map merged as source-map-js merges it', () => {
+      const throughSourceMapJs = (
+        scriptMap: RawSourceMap,
+        templateMap: RawSourceMap,
+        templateLineOffset: number,
+      ) => {
+        const generator = new SourceMapGenerator()
+        for (const [map, lineOffset] of [
+          [scriptMap, 0],
+          [templateMap, templateLineOffset],
+        ] as const) {
+          const consumer = new SourceMapConsumer(map)
+          ;(consumer as any).sources.forEach((source: string) => {
+            ;(generator as any)._sources.add(source)
+            const content = consumer.sourceContentFor(source)
+            if (content != null) generator.setSourceContent(source, content)
+          })
+          consumer.eachMapping(m => {
+            if (m.originalLine == null) return
+            generator.addMapping({
+              generated: {
+                line: m.generatedLine + lineOffset,
+                column: m.generatedColumn,
+              },
+              original: { line: m.originalLine, column: m.originalColumn! },
+              source: m.source,
+              name: m.name,
+            })
+          })
+        }
+        ;(generator as any)._file = scriptMap.file
+        return (generator as any).toJSON()
+      }
+      let seed = 1
+      const random = (n: number) => (seed = (seed * 16807) % 2147483647) % n
+      const map = (sources: string[], names: string[]) => ({
+        sources,
+        sourcesContent: sources.map(s => (random(3) ? `<${s}>` : null!)),
+        names,
+        mappings: Array.from({ length: random(6) }, () =>
+          Array.from({ length: random(6) }, () => {
+            const mapped = [random(6), random(sources.length), random(4)]
+            return random(4) === 0
+              ? [mapped[0]]
+              : random(2)
+                ? [...mapped, random(6)]
+                : [...mapped, random(6), random(names.length)]
+          }),
+        ) as SourceMapSegment[][],
+      })
+      for (let i = 0; i < 2000; i++) {
+        const script = {
+          ...map(['a.vue', 'b.vue'].slice(0, 1 + random(2)), ['x', 'y']),
+          file: (random(2) ? 'a.js' : undefined)!,
+        }
+        const template = map(['b.vue', 'a.vue', 'c.vue'].slice(random(3)), [
+          'y',
+          'z',
+          'x',
+        ])
+        const encoded = {
+          version: 3,
+          ...template,
+          mappings: encodeMappings(template.mappings),
+        } as unknown as RawSourceMap
+        const offset = random(4)
+        expect(JSON.stringify(mergeSourceMaps(script, encoded, offset))).toBe(
+          JSON.stringify(
+            throughSourceMapJs(
+              {
+                version: 3,
+                ...script,
+                mappings: encodeMappings(script.mappings),
+              } as any,
+              encoded,
+              offset,
+            ),
+          ),
+        )
+      }
+    })
+
+    test('inline source map names the file as given', () => {
+      const filename = 'src/./App.vue'
+      const { descriptor } = parse(
+        `<script setup>const a = 1</script><template>{{ a }}</template>`,
+        { filename },
+      )
+      for (const inlineTemplate of [false, true]) {
+        const { map } = compileScript(descriptor, {
+          id: mockId,
+          inlineTemplate,
+        })
+        expect(map!.sources).toEqual([filename])
+      }
     })
 
     describe('destructure setup context for built-in properties', () => {

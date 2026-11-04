@@ -26,11 +26,9 @@ import type {
   Statement,
 } from '@babel/types'
 import { walk } from 'estree-walker'
-import {
-  type RawSourceMap,
-  SourceMapConsumer,
-  SourceMapGenerator,
-} from 'source-map-js'
+import { type RawSourceMap, SourceMapConsumer } from 'source-map-js'
+import { encodeMappings } from 'muggle-string'
+import type { DecodedSourceMap, SourceMapSegment } from './editedString'
 import {
   normalScriptDefaultVar,
   processNormalScript,
@@ -1255,20 +1253,22 @@ export function compileScript(
   }
 
   const content = ctx.s.toString()
-  let map =
-    options.sourceMap !== false
-      ? (ctx.s.generateMap({
-          source: filename,
-          hires: true,
-          includeContent: true,
-        }) as unknown as RawSourceMap)
-      : undefined
-  // merge source maps of the script setup and template in inline mode
-  if (templateMap && map) {
-    const offset = content.indexOf(templateCode!)
-    const templateLineOffset =
-      content.slice(0, offset).split(/\r?\n/).length - 1
-    map = mergeSourceMaps(map, templateMap, templateLineOffset)
+  let map: RawSourceMap | undefined
+  if (options.sourceMap !== false) {
+    const mapOptions = { source: filename, hires: true, includeContent: true }
+    // merge source maps of the script setup and template in inline mode
+    if (templateMap) {
+      const offset = content.indexOf(templateCode!)
+      const templateLineOffset =
+        content.slice(0, offset).split(/\r?\n/).length - 1
+      map = mergeSourceMaps(
+        ctx.s.generateDecodedMap(mapOptions),
+        templateMap,
+        templateLineOffset,
+      )
+    } else {
+      map = ctx.s.generateMap(mapOptions) as unknown as RawSourceMap
+    }
   }
   return {
     ...scriptSetup,
@@ -1497,41 +1497,162 @@ function canNeverBeRef(node: Node, userReactiveImport?: string): boolean {
   }
 }
 
+type MappedSegment = Exclude<SourceMapSegment, [number]>
+
+// a missing value orders last
+function order<T extends string | number>(a?: T, b?: T): number {
+  return a === b
+    ? 0
+    : a === undefined
+      ? 1
+      : b === undefined
+        ? -1
+        : a > b
+          ? 1
+          : -1
+}
+
+function compareSegments(
+  a: MappedSegment,
+  b: MappedSegment,
+  sources?: string[],
+  names?: string[],
+): number {
+  return (
+    a[0] - b[0] ||
+    (sources ? order(sources[a[1]], sources[b[1]]) : a[1] - b[1]) ||
+    a[2] - b[2] ||
+    a[3] - b[3] ||
+    (names
+      ? order(
+          a[4] === undefined ? a[4] : names[a[4]],
+          b[4] === undefined ? b[4] : names[b[4]],
+        )
+      : order(a[4], b[4]))
+  )
+}
+
+// the segments of each line of `map` that have a source, by the indexes of its
+// own sources and names, in the order source-map-js reads them
+function mappedSegments(map: RawSourceMap): MappedSegment[][] {
+  const consumer = new SourceMapConsumer(map)
+  const sourceIndex = new Map<string, number>()
+  consumer.sources.forEach((source, i) => {
+    if (!sourceIndex.has(source)) sourceIndex.set(source, i)
+  })
+  const nameIndex = new Map<string, number>()
+  map.names.forEach((name, i) => {
+    if (!nameIndex.has(name)) nameIndex.set(name, i)
+  })
+  const lines: MappedSegment[][] = []
+  consumer.eachMapping(m => {
+    if (m.originalLine == null) return
+    const line = m.generatedLine - 1
+    while (lines.length <= line) lines.push([])
+    const source = sourceIndex.get(m.source!)!
+    lines[line].push(
+      m.name == null
+        ? [m.generatedColumn, source, m.originalLine - 1, m.originalColumn!]
+        : [
+            m.generatedColumn,
+            source,
+            m.originalLine - 1,
+            m.originalColumn!,
+            nameIndex.get(m.name)!,
+          ],
+    )
+  })
+  return lines
+}
+
+/**
+ * The map of the script's output with the template's render function inlined
+ * `templateLineOffset` lines into it: the mapped segments of both, with
+ * sources and names deduplicated in the order first given, in the order and
+ * with the duplicates dropped that the generator of source-map-js gives them.
+ */
 export function mergeSourceMaps(
-  scriptMap: RawSourceMap,
+  scriptMap: DecodedSourceMap,
   templateMap: RawSourceMap,
   templateLineOffset: number,
 ): RawSourceMap {
-  const generator = new SourceMapGenerator()
-  const addMapping = (map: RawSourceMap, lineOffset = 0) => {
-    const consumer = new SourceMapConsumer(map)
-    ;(consumer as any).sources.forEach((sourceFile: string) => {
-      ;(generator as any)._sources.add(sourceFile)
-      const sourceContent = consumer.sourceContentFor(sourceFile)
-      if (sourceContent != null) {
-        generator.setSourceContent(sourceFile, sourceContent)
+  const sources: string[] = []
+  const names: string[] = []
+  const sourceIds = new Map<string, number>()
+  const nameIds = new Map<string, number>()
+  const intern = (ids: Map<string, number>, list: string[], value: string) => {
+    let id = ids.get(value)
+    if (id === undefined) ids.set(value, (id = list.push(value) - 1))
+    return id
+  }
+  const contents = new Map<string, string>()
+  const lines: MappedSegment[][] = []
+  let inOrder = true
+  let lastLine = -1
+  let lastColumn = 0
+  const add = (
+    map: Pick<RawSourceMap, 'sources' | 'sourcesContent' | 'names'>,
+    mappings: SourceMapSegment[][],
+    lineOffset: number,
+  ) => {
+    const sourceIndex = map.sources.map((source, i) => {
+      const content = map.sourcesContent && map.sourcesContent[i]
+      if (content != null) contents.set(source, content)
+      return intern(sourceIds, sources, source)
+    })
+    const nameIndex: number[] = []
+    for (let i = 0; i < mappings.length; i++) {
+      const segments = mappings[i].filter(
+        (s): s is MappedSegment => s.length > 1,
+      )
+      if (segments.some((s, j) => j && compareSegments(segments[j - 1], s) > 0))
+        segments.sort((a, b) => compareSegments(a, b))
+      const line = i + lineOffset
+      for (const s of segments) {
+        const source = sourceIndex[s[1]]
+        let mapped: MappedSegment
+        if (s.length === 5) {
+          let name = nameIndex[s[4]]
+          if (name === undefined)
+            name = nameIndex[s[4]] = intern(nameIds, names, map.names[s[4]])
+          mapped = [s[0], source, s[2], s[3], name]
+        } else {
+          mapped = [s[0], source, s[2], s[3]]
+        }
+        if (line > lastLine || (line === lastLine && s[0] >= lastColumn)) {
+          lastLine = line
+          lastColumn = s[0]
+        } else {
+          inOrder = false
+        }
+        ;(lines[line] || (lines[line] = [])).push(mapped)
       }
-    })
-    consumer.eachMapping(m => {
-      if (m.originalLine == null) return
-      generator.addMapping({
-        generated: {
-          line: m.generatedLine + lineOffset,
-          column: m.generatedColumn,
-        },
-        original: {
-          line: m.originalLine,
-          column: m.originalColumn!,
-        },
-        source: m.source,
-        name: m.name,
-      })
-    })
+    }
   }
 
-  addMapping(scriptMap)
-  addMapping(templateMap, templateLineOffset)
-  ;(generator as any)._sourceRoot = scriptMap.sourceRoot
-  ;(generator as any)._file = scriptMap.file
-  return (generator as any).toJSON()
+  add(scriptMap, scriptMap.mappings, 0)
+  add(templateMap, mappedSegments(templateMap), templateLineOffset)
+  const mappings: MappedSegment[][] = []
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i] || []
+    if (!inOrder) line.sort((a, b) => compareSegments(a, b, sources, names))
+    mappings.push(
+      line.filter((s, j) => !j || compareSegments(line[j - 1], s) !== 0),
+    )
+  }
+  const map: Omit<RawSourceMap, 'version' | 'file'> & {
+    version: number
+    file?: string
+  } = {
+    version: 3,
+    sources,
+    names,
+    mappings: encodeMappings(mappings),
+  }
+  if (scriptMap.file != null) map.file = scriptMap.file
+  if (contents.size)
+    map.sourcesContent = sources.map(source =>
+      contents.has(source) ? contents.get(source)! : (null as any),
+    )
+  return map as unknown as RawSourceMap
 }
