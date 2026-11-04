@@ -1,6 +1,6 @@
 import { analyzeScriptBindings } from './analyzeScriptBindings'
 import type { ScriptCompileContext } from './context'
-import { EditedString } from '../editedString'
+import { createSourceRewrite, rewritePieceText } from 'muggle-string'
 import { rewriteDefaultAST } from '../rewriteDefault'
 import { genNormalScriptCssVarsCode } from '../style/cssVars'
 import type { SFCScriptBlock } from '../parse'
@@ -22,9 +22,12 @@ export function processNormalScript(
 
     if (cssVars.length || genDefaultAs) {
       const defaultVar = genDefaultAs || normalScriptDefaultVar
-      const s = new EditedString(content)
+      const s = createSourceRewrite({ content })
       rewriteDefaultAST(scriptAst.body, s, defaultVar)
-      content = s.toString()
+      content = ''
+      s.render(0, s.source.content.length, piece => {
+        content += rewritePieceText(piece)
+      })
       if (cssVars.length && !ctx.options.templateOptions?.ssr) {
         content += genNormalScriptCssVarsCode(
           cssVars,

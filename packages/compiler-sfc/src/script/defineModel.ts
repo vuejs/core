@@ -76,16 +76,17 @@ export function processDefineModel(
       } else {
         // remove prop options from runtime options
         removed++
-        ctx.s.remove(ctx.startOffset! + start, ctx.startOffset! + end)
+        ctx.s.replace(ctx.startOffset! + start, ctx.startOffset! + end, '')
         // record prop options for invalid scope var reference check
         runtimeOptionNodes.push(p)
       }
     }
     if (removed === options.properties.length) {
       optionsRemoved = true
-      ctx.s.remove(
+      ctx.s.replace(
         ctx.startOffset! + (hasName ? arg0.end! : options.start!),
         ctx.startOffset! + options.end!,
+        '',
       )
     }
   }
@@ -101,13 +102,13 @@ export function processDefineModel(
   ctx.bindingMetadata[modelName] = BindingTypes.PROPS
 
   // defineModel -> useModel
-  ctx.s.overwrite(
+  ctx.replace(
     ctx.startOffset! + node.callee.start!,
     ctx.startOffset! + node.callee.end!,
     ctx.helper('useModel'),
   )
   // inject arguments
-  ctx.s.appendLeft(
+  ctx.s.insertAfter(
     ctx.startOffset! +
       (node.arguments.length ? node.arguments[0].start! : node.end! - 1),
     `__props, ` +

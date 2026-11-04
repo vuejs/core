@@ -870,17 +870,18 @@ describe('SFC compile <script setup>', () => {
     })
 
     test('inline source map names the file as given', () => {
-      const filename = 'src/./App.vue'
-      const { descriptor } = parse(
-        `<script setup>const a = 1</script><template>{{ a }}</template>`,
-        { filename },
-      )
-      for (const inlineTemplate of [false, true]) {
-        const { map } = compileScript(descriptor, {
-          id: mockId,
-          inlineTemplate,
-        })
-        expect(map!.sources).toEqual([filename])
+      for (const filename of ['src/./App.vue', 'C:\\src\\App.vue']) {
+        const { descriptor } = parse(
+          `<script setup>const a = 1</script><template>{{ a }}</template>`,
+          { filename },
+        )
+        for (const inlineTemplate of [false, true]) {
+          const { map } = compileScript(descriptor, {
+            id: mockId,
+            inlineTemplate,
+          })
+          expect(map!.sources).toEqual([filename])
+        }
       }
     })
 

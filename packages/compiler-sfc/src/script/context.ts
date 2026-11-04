@@ -6,7 +6,11 @@ import type { ImportBinding, SFCScriptCompileOptions } from '../compileScript'
 import type { PropsDestructureBindings } from './defineProps'
 import type { ModelDecl } from './defineModel'
 import type { BindingMetadata } from '../../../compiler-core/src'
-import { EditedString } from '../editedString'
+import {
+  type Source,
+  type SourceRewrite,
+  createSourceRewrite,
+} from 'muggle-string'
 import type { TypeScope } from './resolveType'
 import { warn } from '../warn'
 import { isJS, isTS } from './utils'
@@ -21,7 +25,7 @@ export class ScriptCompileContext {
 
   source: string
   filename: string
-  s: EditedString
+  s: SourceRewrite<Source>
   startOffset: number | undefined
   endOffset: number | undefined
 
@@ -70,6 +74,18 @@ export class ScriptCompileContext {
   }
 
   /**
+   * `code` in place of `start`..`end` of the source, mapped to the range
+   */
+  replace(start: number, end: number, code: string): void {
+    this.s.replace(start, end, {
+      source: this.s.source,
+      start,
+      end,
+      text: code,
+    })
+  }
+
+  /**
    * to be exposed on compiled script block for HMR cache busting
    */
   deps?: Set<string>
@@ -89,7 +105,7 @@ export class ScriptCompileContext {
 
     this.source = descriptor.source
     this.filename = descriptor.filename
-    this.s = new EditedString(descriptor.source)
+    this.s = createSourceRewrite({ content: descriptor.source })
     this.startOffset = descriptor.scriptSetup?.loc.start.offset
     this.endOffset = descriptor.scriptSetup?.loc.end.offset
 

@@ -53,14 +53,14 @@ export function processAwait(
 
   const containsNestedAwait = /\bawait\b/.test(argumentStr)
 
-  ctx.s.overwrite(
+  ctx.replace(
     node.start! + startOffset,
     argumentStart + startOffset,
     `${needSemi ? `;` : ``}(\n  ([__temp,__restore] = ${ctx.helper(
       `withAsyncContext`,
     )}(${containsNestedAwait ? `async ` : ``}() => `,
   )
-  ctx.s.appendLeft(
+  ctx.s.insertAfter(
     node.end! + startOffset,
     `)),\n  ${isStatement ? `` : `__temp = `}await __temp,\n  __restore()${
       isStatement ? `` : `,\n  __temp`
