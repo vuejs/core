@@ -1,4 +1,5 @@
 import {
+  KeepAlive,
   type VNode,
   computed,
   createApp,
@@ -6,8 +7,10 @@ import {
   h,
   nextTick,
   nodeOps,
+  onBeforeUnmount,
   onErrorCaptured,
   onMounted,
+  onUnmounted,
   ref,
   render,
   watch,
@@ -706,6 +709,88 @@ describe('error handling', () => {
       ErrorTypeStrings[ErrorCodes.COMPONENT_UPDATE],
     )
   })
+
+  test.each([onBeforeUnmount, onUnmounted])(
+    'captures teardown errors before the ancestor finishes unmounting (%s)',
+    async registerHook => {
+      const error = new Error('teardown failed')
+      const handler = vi.fn((_: unknown) => false)
+      const Child = {
+        setup() {
+          registerHook(() => {
+            throw error
+          })
+          return () => null
+        },
+      }
+      const Parent = {
+        setup() {
+          onErrorCaptured(handler)
+          return () => h(Child)
+        },
+      }
+      const root = nodeOps.createElement('div')
+      render(h(Parent), root)
+      render(null, root)
+      await nextTick()
+
+      expect(handler).toHaveBeenCalledTimes(1)
+      expect(handler.mock.calls[0][0]).toBe(error)
+    },
+  )
+
+  test.each([false, true])(
+    'late mounted rejection (keep alive: %s)',
+    async keepAlive => {
+      const error = new Error('request failed')
+      let reject!: (error: Error) => void
+      const pending = new Promise<void>((_, rejectPending) => {
+        reject = rejectPending
+      })
+      const innerHandler = vi.fn(() => false)
+      const outerHandler = vi.fn(() => false)
+      const appHandler = vi.fn()
+      const show = ref(true)
+      const Child = {
+        setup() {
+          onMounted(() => pending)
+          return () => h('div', 'child')
+        },
+      }
+      const Boundary = {
+        setup() {
+          onErrorCaptured(innerHandler)
+          return () => h(Child)
+        },
+      }
+      const app = createApp({
+        setup() {
+          onErrorCaptured(outerHandler)
+          const content = () => (show.value ? h(Boundary) : h('p', 'left'))
+          return keepAlive
+            ? () => h(KeepAlive, null, { default: content })
+            : content
+        },
+      })
+      app.config.errorHandler = appHandler
+      const root = nodeOps.createElement('div')
+      app.mount(root)
+      show.value = false
+      await nextTick()
+
+      reject(error)
+      await new Promise(r => setTimeout(r))
+      expect(innerHandler).toHaveBeenCalledTimes(keepAlive ? 1 : 0)
+      expect(outerHandler).toHaveBeenCalledTimes(keepAlive ? 0 : 1)
+      expect(keepAlive ? innerHandler : outerHandler).toHaveBeenCalledWith(
+        error,
+        expect.any(Object),
+        'mounted hook',
+      )
+      expect(appHandler).not.toHaveBeenCalled()
+      app.unmount()
+    },
+  )
 
   // native event handler handling should be tested in respective renderers
 })

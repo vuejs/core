@@ -22,6 +22,7 @@ export enum SchedulerJobFlags {
    */
   ALLOW_RECURSE = 1 << 2,
   DISPOSED = 1 << 3,
+  REQUEUE_ON_SUSPENSE_DISCARD = 1 << 4,
 }
 
 export interface SchedulerJob extends Function {

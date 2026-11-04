@@ -70,7 +70,8 @@ export interface KeepAliveContext extends ComponentRenderContext {
     namespace: ElementNamespace,
     optimized: boolean,
   ) => void
-  deactivate: (vnode: VNode) => void
+  // returns false for a child that is not cached: the caller unmounts it
+  deactivate: (vnode: VNode) => boolean
 }
 
 export const isKeepAlive = (vnode: VNode): boolean =>
@@ -167,6 +168,16 @@ const KeepAliveImpl: ComponentOptions = {
     }
 
     sharedContext.deactivate = (vnode: VNode) => {
+      // the child enters the cache from the mounted/updated hooks, deferred to
+      // the boundary resolve under Suspense. One unmounted before that (a
+      // discarded pending branch, a KeepAlive torn down in one) is not cached
+      // and never will be: parked in the storage container it would leak.
+      const cached = cache.get(
+        vnode.key == null ? (vnode.type as ConcreteComponent) : vnode.key,
+      )
+      if (!cached || cached.component !== vnode.component) {
+        return false
+      }
       const instance = vnode.component!
       invalidateMount(instance.m)
       invalidateMount(instance.a)
@@ -192,6 +203,7 @@ const KeepAliveImpl: ComponentOptions = {
       if (__DEV__ && __BROWSER__) {
         ;(instance as any).__keepAliveStorageContainer = storageContainer
       }
+      return true
     }
 
     function unmount(vnode: VNode) {
@@ -248,12 +260,19 @@ const KeepAliveImpl: ComponentOptions = {
         // if KeepAlive child is a Suspense, it needs to be cached after Suspense resolves
         // avoid caching vnode that not been mounted
         if (isSuspense(instance.subTree.type)) {
-          queuePostRenderEffect(() => {
+          const cacheInnerChild = () => {
             const vnode = getInnerChild(instance.subTree)
             if (vnode.component) {
               cache.set(pendingCacheKey!, vnode)
             }
-          }, instance.subTree.suspense)
+          }
+          // only a pending boundary defers the cache: a toggle before the
+          // deferred job runs would otherwise leave the child uncached
+          if (instance.subTree.suspense!.pendingBranch) {
+            queuePostRenderEffect(cacheInnerChild, instance.subTree.suspense)
+          } else {
+            cacheInnerChild()
+          }
         } else {
           cache.set(pendingCacheKey, getInnerChild(instance.subTree))
         }
