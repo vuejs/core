@@ -1073,6 +1073,7 @@ export function compileScript(
           inline: true,
           isTS: ctx.isTS,
           bindingMetadata: ctx.bindingMetadata,
+          ...(options.sourceMap === false && { sourceMap: false }),
         },
       })
       templateMap = map
