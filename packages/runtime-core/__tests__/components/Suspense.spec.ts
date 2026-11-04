@@ -5022,7 +5022,9 @@ describe('Suspense', () => {
 
     route.value = [ParentAsync, ChildAsync]
     await nextTick()
-    await new Promise(r => setTimeout(r, 10))
+    // ParentAsync resolves, then ChildAsync
+    await new Promise(r => setTimeout(r))
+    await new Promise(r => setTimeout(r))
     expect(serializeInner(root)).toBe('<div>ParentAsync<i>ChildAsync</i></div>')
     expect(setups).toEqual([
       'ParentSync',
@@ -5117,5 +5119,50 @@ describe('Suspense', () => {
     await nextTick()
     expect(serializeInner(root)).toBe('')
     expect(mounted).not.toHaveBeenCalled()
+  })
+
+  test('KeepAlive caches a resolved Suspense child before a synchronous toggle away', async () => {
+    const setup = vi.fn()
+    const unmounted = vi.fn()
+    const Entry = {
+      name: 'Entry',
+      setup() {
+        setup()
+        onUnmounted(unmounted)
+        return () => h('div', 'entry')
+      },
+    }
+    const Other = { render: () => h('div', 'other') }
+    const route = ref('page')
+    const show = ref(true)
+    const App = {
+      render: () =>
+        show.value
+          ? h(KeepAlive, null, {
+              default: () =>
+                h(Suspense, null, {
+                  default: h(route.value === 'page' ? Entry : Other),
+                }),
+            })
+          : null,
+    }
+    const root = nodeOps.createElement('div')
+    render(h(App), root)
+    expect(serializeInner(root)).toBe('<div>entry</div>')
+
+    // toggled before the next flush: the cache must already hold Entry
+    route.value = 'other'
+    await nextTick()
+    expect(serializeInner(root)).toBe('<div>other</div>')
+    expect(unmounted).not.toHaveBeenCalled()
+
+    route.value = 'page'
+    await nextTick()
+    expect(serializeInner(root)).toBe('<div>entry</div>')
+    expect(setup).toHaveBeenCalledTimes(1)
+
+    show.value = false
+    await nextTick()
+    expect(unmounted).toHaveBeenCalledTimes(1)
   })
 })

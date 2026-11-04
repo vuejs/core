@@ -260,12 +260,19 @@ const KeepAliveImpl: ComponentOptions = {
         // if KeepAlive child is a Suspense, it needs to be cached after Suspense resolves
         // avoid caching vnode that not been mounted
         if (isSuspense(instance.subTree.type)) {
-          queuePostRenderEffect(() => {
+          const cacheInnerChild = () => {
             const vnode = getInnerChild(instance.subTree)
             if (vnode.component) {
               cache.set(pendingCacheKey!, vnode)
             }
-          }, instance.subTree.suspense)
+          }
+          // only a pending boundary defers the cache: a toggle before the
+          // deferred job runs would otherwise leave the child uncached
+          if (instance.subTree.suspense!.pendingBranch) {
+            queuePostRenderEffect(cacheInnerChild, instance.subTree.suspense)
+          } else {
+            cacheInnerChild()
+          }
         } else {
           cache.set(pendingCacheKey, getInnerChild(instance.subTree))
         }
