@@ -316,7 +316,8 @@ export interface CodegenOptions extends SharedTransformCodegenOptions {
   sourceMap?: boolean
   /**
    * @internal The source the pieces of the map refer to, whose content must
-   * be the source of the AST
+   * be the source of the AST. The caller renders the pieces, so no map is
+   * rendered
    */
   pieceSource?: Source | null
   /**

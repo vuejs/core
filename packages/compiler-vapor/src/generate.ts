@@ -296,8 +296,9 @@ export function generate(
     ast: ir,
     preamble,
     map:
-      context.pieces &&
-      createSourceMap(context.options.filename, context.pieces),
+      context.pieces && !context.options.pieceSource
+        ? createSourceMap(context.options.filename, context.pieces)
+        : undefined,
     pieces: context.pieces,
     helpers: new Set<string>(Array.from(context.helpers.keys())),
   }

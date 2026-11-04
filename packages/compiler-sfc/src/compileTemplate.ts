@@ -9,6 +9,7 @@ import type {
   RawSourceMap,
   RootNode,
 } from '@vue/compiler-core'
+import { createSourceMap } from '@vue/compiler-core'
 import {
   type AssetURLOptions,
   type AssetURLTagConfig,
@@ -241,6 +242,11 @@ function doCompileTemplate(
 
   const sfc = inAST || block
   const start = !inAST && block ? block.loc.start : undefined
+  // a caller that gives the source of the pieces renders them itself
+  const callerSource =
+    sfc && pieceSource && pieceSource.content === sfc.source
+      ? pieceSource
+      : undefined
 
   let { code, ast, preamble, map, pieces, helpers } = compiler.compile(
     inAST || source,
@@ -271,10 +277,7 @@ function doCompileTemplate(
       filename,
       onError: e => errors.push(e),
       onWarn: w => warnings.push(w),
-      pieceSource:
-        sfc && pieceSource && pieceSource.content === sfc.source
-          ? pieceSource
-          : start && { content: sfc!.source },
+      pieceSource: callerSource || (start && { content: block!.source }),
       pieceOffset: start && start.offset,
     },
   )
@@ -286,6 +289,7 @@ function doCompileTemplate(
     // a compiler that gives pieces takes `pieceSource` and `pieceOffset`, so
     // its map is of the SFC; one that gives none has a map of `source` only
     if (!pieces) map = undefined
+    else if (!callerSource) map = createSourceMap(filename, pieces)
     for (const { loc } of errors) {
       if (loc) {
         shiftPosition(loc.start, start)
