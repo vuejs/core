@@ -13,7 +13,7 @@ import {
 } from 'muggle-string'
 import type { TypeScope } from './resolveType'
 import { warn } from '../warn'
-import { isJS, isTS } from './utils'
+import { type Code, isJS, isTS } from './utils'
 
 export class ScriptCompileContext {
   isJS: boolean
@@ -151,6 +151,18 @@ export class ScriptCompileContext {
     this.scriptSetupAst =
       descriptor.scriptSetup &&
       parse(descriptor.scriptSetup!.content, this.startOffset!)
+  }
+
+  /**
+   * the code of `start`..`end` of `<script setup>`: a copy of that range of
+   * the source
+   */
+  copy(start: number, end: number): Code {
+    return {
+      source: this.s.source,
+      start: this.startOffset! + start,
+      end: this.startOffset! + end,
+    }
   }
 
   getString(node: Node, scriptSetup = true): string {

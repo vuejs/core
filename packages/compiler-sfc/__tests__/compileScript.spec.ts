@@ -959,6 +959,49 @@ const c = 1
       }
     })
 
+    test('source map of macro arguments hoisted outside of setup()', () => {
+      const sources = [
+        [
+          `<script setup>
+const props = defineProps({ propA: Number })
+const emit = defineEmits(['emitA'])
+defineOptions({ name: 'OptName' })
+const m = defineModel('m', { default: 'mDefault', get: v => v })
+</script>`,
+          ['propA', `'emitA'`, `'OptName'`, `'mDefault'`],
+        ],
+        [
+          `<script setup lang="ts">
+const props = withDefaults(defineProps<{ wa?: string }>(), { wa: 'waDefault' })
+</script>`,
+          [`'waDefault'`],
+        ],
+        [
+          `<script setup lang="ts">
+import { wbDefaults } from './wb'
+const props = withDefaults(defineProps<{ wb?: string }>(), { ...wbDefaults })
+</script>`,
+          [`...wbDefaults`],
+        ],
+        [
+          `<script setup>
+const { da = ['daDefault'] } = defineProps(['da'])
+</script>`,
+          [`'daDefault'`],
+        ],
+      ] as const
+      for (const [source, tokens] of sources) {
+        const { descriptor } = parse(source, { filename: 'App.vue' })
+        const { content, map } = compileScript(descriptor, { id: mockId })
+        const consumer = new SourceMapConsumer(map!)
+        for (const token of tokens) {
+          expect(
+            consumer.originalPositionFor(getPositionInCode(content, token)),
+          ).toMatchObject(getPositionInCode(source, token))
+        }
+      }
+    })
+
     describe('destructure setup context for built-in properties', () => {
       const theCompile = (template: string, setup = '/* ... */') =>
         compile(

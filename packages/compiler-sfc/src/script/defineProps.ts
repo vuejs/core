@@ -14,11 +14,14 @@ import {
   resolveTypeElements,
 } from './resolveType'
 import {
+  type Code,
   UNKNOWN_TYPE,
-  concatStrings,
+  codeText,
+  concatCode,
   getEscapedPropName,
   isCallOf,
   isLiteralNode,
+  joinCode,
   resolveObjectKey,
   toRuntimeTypeString,
 } from './utils'
@@ -148,39 +151,48 @@ function processWithDefaults(
   return true
 }
 
-export function genRuntimeProps(ctx: ScriptCompileContext): string | undefined {
-  let propsDecls: undefined | string
+export function genRuntimeProps(ctx: ScriptCompileContext): Code | undefined {
+  let propsDecls: Code | undefined
+  const copy = (node: Node) => ctx.copy(node.start!, node.end!)
 
   if (ctx.propsRuntimeDecl) {
-    propsDecls = ctx.getString(ctx.propsRuntimeDecl).trim()
+    propsDecls = copy(ctx.propsRuntimeDecl)
     if (ctx.propsDestructureDecl) {
-      const defaults: string[] = []
+      const defaults: Code[] = []
       for (const key in ctx.propsDestructuredBindings) {
-        const d = genDestructuredDefaultValue(ctx, key)
+        const d = genDestructuredDefaultValue(ctx, key, copy)
         const finalKey = getEscapedPropName(key)
         if (d)
-          defaults.push(
-            `${finalKey}: ${d.valueString}${
-              d.needSkipFactory ? `, __skip_${finalKey}: true` : ``
-            }`,
-          )
+          defaults.push([
+            `${finalKey}: `,
+            d.value,
+            d.needSkipFactory ? `, __skip_${finalKey}: true` : ``,
+          ])
       }
       if (defaults.length) {
-        propsDecls = `/*@__PURE__*/${ctx.helper(
-          `mergeDefaults`,
-        )}(${propsDecls}, {\n  ${defaults.join(',\n  ')}\n})`
+        propsDecls = [
+          `/*@__PURE__*/${ctx.helper(`mergeDefaults`)}(`,
+          propsDecls,
+          `, {\n  `,
+          joinCode(defaults, ',\n  '),
+          `\n})`,
+        ]
       }
     }
   } else if (ctx.propsTypeDecl) {
-    propsDecls = extractRuntimeProps(ctx)
+    propsDecls = genPropsFromType(ctx, copy)
   }
 
   const modelsDecls = genModelProps(ctx)
 
   if (propsDecls && modelsDecls) {
-    return `/*@__PURE__*/${ctx.helper(
-      'mergeModels',
-    )}(${propsDecls}, ${modelsDecls})`
+    return [
+      `/*@__PURE__*/${ctx.helper('mergeModels')}(`,
+      propsDecls,
+      `, `,
+      modelsDecls,
+      `)`,
+    ]
   } else {
     return modelsDecls || propsDecls
   }
@@ -189,26 +201,38 @@ export function genRuntimeProps(ctx: ScriptCompileContext): string | undefined {
 export function extractRuntimeProps(
   ctx: TypeResolveContext,
 ): string | undefined {
-  // this is only called if propsTypeDecl exists
+  const propsDecls = genPropsFromType(ctx, node => ctx.getString(node))
+  return propsDecls && codeText(propsDecls)
+}
+
+/**
+ * the props of `ctx.propsTypeDecl`, with `copy` as the code of a node of the
+ * source
+ */
+function genPropsFromType(
+  ctx: TypeResolveContext,
+  copy: (node: Node) => Code,
+): Code | undefined {
   const props = resolveRuntimePropsFromType(ctx, ctx.propsTypeDecl!)
   if (!props.length) {
     return
   }
 
-  const propStrings: string[] = []
   const hasStaticDefaults = hasStaticWithDefaults(ctx)
+  const propCodes = props.map(prop =>
+    genRuntimePropFromType(ctx, prop, hasStaticDefaults, copy),
+  )
 
-  for (const prop of props) {
-    propStrings.push(genRuntimePropFromType(ctx, prop, hasStaticDefaults))
-  }
-
-  let propsDecls = `{
-    ${propStrings.join(',\n    ')}\n  }`
+  let propsDecls: Code = [`{\n    `, joinCode(propCodes, ',\n    '), `\n  }`]
 
   if (ctx.propsRuntimeDefaults && !hasStaticDefaults) {
-    propsDecls = `/*@__PURE__*/${ctx.helper(
-      'mergeDefaults',
-    )}(${propsDecls}, ${ctx.getString(ctx.propsRuntimeDefaults)})`
+    propsDecls = [
+      `/*@__PURE__*/${ctx.helper('mergeDefaults')}(`,
+      propsDecls,
+      `, `,
+      copy(ctx.propsRuntimeDefaults),
+      `)`,
+    ]
   }
 
   return propsDecls
@@ -247,13 +271,16 @@ function genRuntimePropFromType(
   ctx: TypeResolveContext,
   { key, required, type, skipCheck }: PropTypeData,
   hasStaticDefaults: boolean,
-): string {
-  let defaultString: string | undefined
-  const destructured = genDestructuredDefaultValue(ctx, key, type)
+  copy: (node: Node) => Code,
+): Code {
+  let defaultCode: Code | undefined
+  const destructured = genDestructuredDefaultValue(ctx, key, copy, type)
   if (destructured) {
-    defaultString = `default: ${destructured.valueString}${
-      destructured.needSkipFactory ? `, skipFactory: true` : ``
-    }`
+    defaultCode = [
+      `default: `,
+      destructured.value,
+      destructured.needSkipFactory ? `, skipFactory: true` : ``,
+    ]
   } else if (hasStaticDefaults) {
     const prop = (ctx.propsRuntimeDefaults as ObjectExpression).properties.find(
       node => {
@@ -264,57 +291,71 @@ function genRuntimePropFromType(
     if (prop) {
       if (prop.type === 'ObjectProperty') {
         // prop has corresponding static default value
-        defaultString = `default: ${ctx.getString(prop.value)}`
+        defaultCode = [`default: `, copy(prop.value)]
       } else {
-        let paramsString = ''
+        let paramsCode: Code = ''
         if (prop.params.length) {
           const start = prop.params[0].start
           const end = prop.params[prop.params.length - 1].end
-          paramsString = ctx.getString({ start, end } as Node)
+          paramsCode = copy({ start, end } as Node)
         }
-        defaultString = `${prop.async ? 'async ' : ''}${
-          prop.kind !== 'method' ? `${prop.kind} ` : ''
-        }default(${paramsString}) ${ctx.getString(prop.body)}`
+        defaultCode = [
+          `${prop.async ? 'async ' : ''}${
+            prop.kind !== 'method' ? `${prop.kind} ` : ''
+          }default(`,
+          paramsCode,
+          `) `,
+          copy(prop.body),
+        ]
       }
     }
   }
 
   const finalKey = getEscapedPropName(key)
   if (!ctx.options.isProd) {
-    return `${finalKey}: { ${concatStrings([
-      `type: ${toRuntimeTypeString(type)}`,
-      `required: ${required}`,
-      skipCheck && 'skipCheck: true',
-      defaultString,
-    ])} }`
+    return [
+      `${finalKey}: { `,
+      concatCode([
+        `type: ${toRuntimeTypeString(type)}`,
+        `required: ${required}`,
+        skipCheck && 'skipCheck: true',
+        defaultCode,
+      ]),
+      ` }`,
+    ]
   } else if (
     type.some(
       el =>
         el === 'Boolean' ||
-        ((!hasStaticDefaults || defaultString) && el === 'Function'),
+        ((!hasStaticDefaults || defaultCode) && el === 'Function'),
     )
   ) {
     // #4783 for boolean, should keep the type
     // #7111 for function, if default value exists or it's not static, should keep it
     // in production
-    return `${finalKey}: { ${concatStrings([
-      `type: ${toRuntimeTypeString(type)}`,
-      defaultString,
-    ])} }`
+    return [
+      `${finalKey}: { `,
+      concatCode([`type: ${toRuntimeTypeString(type)}`, defaultCode]),
+      ` }`,
+    ]
   } else {
     // #8989 for custom element, should keep the type
     if (ctx.isCE) {
-      if (defaultString) {
-        return `${finalKey}: ${`{ ${defaultString}, type: ${toRuntimeTypeString(
-          type,
-        )} }`}`
+      if (defaultCode) {
+        return [
+          `${finalKey}: { `,
+          defaultCode,
+          `, type: ${toRuntimeTypeString(type)} }`,
+        ]
       } else {
         return `${finalKey}: {type: ${toRuntimeTypeString(type)}}`
       }
     }
 
     // production: checks are useless
-    return `${finalKey}: ${defaultString ? `{ ${defaultString} }` : `{}`}`
+    return defaultCode
+      ? [`${finalKey}: { `, defaultCode, ` }`]
+      : `${finalKey}: {}`
   }
 }
 
@@ -338,17 +379,18 @@ function hasStaticWithDefaults(ctx: TypeResolveContext) {
 function genDestructuredDefaultValue(
   ctx: TypeResolveContext,
   key: string,
+  copy: (node: Node) => Code,
   inferredType?: string[],
 ):
   | {
-      valueString: string
+      value: Code
       needSkipFactory: boolean
     }
   | undefined {
   const destructured = ctx.propsDestructuredBindings[key]
   const defaultVal = destructured && destructured.default
   if (defaultVal) {
-    const value = ctx.getString(defaultVal)
+    const value = copy(defaultVal)
     const unwrapped = unwrapTSNode(defaultVal)
 
     if (inferredType && inferredType.length && !inferredType.includes('null')) {
@@ -383,7 +425,7 @@ function genDestructuredDefaultValue(
     }
 
     return {
-      valueString: needFactoryWrap ? `() => (${value})` : value,
+      value: needFactoryWrap ? [`() => (`, value, `)`] : value,
       needSkipFactory,
     }
   }

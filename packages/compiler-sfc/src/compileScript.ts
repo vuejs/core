@@ -61,6 +61,7 @@ import { DEFINE_OPTIONS, processDefineOptions } from './script/defineOptions'
 import { DEFINE_SLOTS, processDefineSlots } from './script/defineSlots'
 import { DEFINE_MODEL, processDefineModel } from './script/defineModel'
 import {
+  type Code,
   getImportedName,
   isCallOf,
   isJS,
@@ -1223,28 +1224,25 @@ export function compileScript(
     ? `const ${options.genDefaultAs} =`
     : `export default`
 
-  let runtimeOptions = ``
+  const runtimeOptions: Code[] = []
   if (!ctx.hasDefaultExportName && filename && filename !== DEFAULT_FILENAME) {
     const match = filename.match(/([^/\\]+)\.\w+$/)
     if (match) {
-      runtimeOptions += `\n  __name: '${match[1]}',`
+      runtimeOptions.push(`\n  __name: '${match[1]}',`)
     }
   }
   if (hasInlinedSsrRenderFn) {
-    runtimeOptions += `\n  __ssrInlineRender: true,`
+    runtimeOptions.push(`\n  __ssrInlineRender: true,`)
   }
 
-  if (propsDecl) runtimeOptions += `\n  props: ${propsDecl},`
+  if (propsDecl) runtimeOptions.push(`\n  props: `, propsDecl, `,`)
 
   const emitsDecl = genRuntimeEmits(ctx)
-  if (emitsDecl) runtimeOptions += `\n  emits: ${emitsDecl},`
+  if (emitsDecl) runtimeOptions.push(`\n  emits: `, emitsDecl, `,`)
 
-  let definedOptions = ''
-  if (ctx.optionsRuntimeDecl) {
-    definedOptions = scriptSetup.content
-      .slice(ctx.optionsRuntimeDecl.start!, ctx.optionsRuntimeDecl.end!)
-      .trim()
-  }
+  const definedOptions =
+    ctx.optionsRuntimeDecl &&
+    ctx.copy(ctx.optionsRuntimeDecl.start!, ctx.optionsRuntimeDecl.end!)
 
   // <script setup> components are closed by default. If the user did not
   // explicitly call `defineExpose`, call expose() with no args.
@@ -1255,12 +1253,12 @@ export function compileScript(
     ? `  ${setupPreambleLines.join('\n  ')}\n`
     : ''
   // wrap setup code with function.
-  let setupHead: string
+  let setupHead: Code
   let setupEnd: string
   if (ctx.isTS) {
     // in SSR, always use defineComponent, so __vapor flag is required
     if (ssr && vapor) {
-      runtimeOptions += `\n  __vapor: true,`
+      runtimeOptions.push(`\n  __vapor: true,`)
     }
 
     // for TS, make sure the exported type is still valid type with
@@ -1268,33 +1266,39 @@ export function compileScript(
     // we have to use object spread for types to be merged properly
     // user's TS setting should compile it down to proper targets
     // export default defineComponent({ ...__default__, ... })
-    const def =
-      (defaultExport ? `\n  ...${normalScriptDefaultVar},` : ``) +
-      (definedOptions ? `\n  ...${definedOptions},` : '')
-    setupHead = `\n${genDefaultAs} /*@__PURE__*/${ctx.helper(
-      vapor && !ssr ? `defineVaporComponent` : `defineComponent`,
-    )}({${def}${runtimeOptions}\n  ${
-      hasAwait ? `async ` : ``
-    }setup(${args}) {\n${setupPreamble}`
+    setupHead = [
+      `\n${genDefaultAs} /*@__PURE__*/${ctx.helper(
+        vapor && !ssr ? `defineVaporComponent` : `defineComponent`,
+      )}({`,
+      defaultExport ? `\n  ...${normalScriptDefaultVar},` : ``,
+      definedOptions ? [`\n  ...`, definedOptions, `,`] : ``,
+      runtimeOptions,
+      `\n  ${hasAwait ? `async ` : ``}setup(${args}) {\n${setupPreamble}`,
+    ]
     setupEnd = `})`
   } else {
     // in TS, defineVaporComponent adds the option already
     if (vapor) {
-      runtimeOptions += `\n  __vapor: true,`
+      runtimeOptions.push(`\n  __vapor: true,`)
     }
     if (defaultExport || definedOptions) {
       // without TS, can't rely on rest spread, so we use Object.assign
       // export default Object.assign(__default__, { ... })
-      setupHead =
-        `\n${genDefaultAs} /*@__PURE__*/Object.assign(${
-          defaultExport ? `${normalScriptDefaultVar}, ` : ''
-        }${definedOptions ? `${definedOptions}, ` : ''}{${runtimeOptions}\n  ` +
-        `${hasAwait ? `async ` : ``}setup(${args}) {\n${setupPreamble}`
+      setupHead = [
+        `\n${genDefaultAs} /*@__PURE__*/Object.assign(`,
+        defaultExport ? `${normalScriptDefaultVar}, ` : '',
+        definedOptions ? [definedOptions, `, `] : '',
+        `{`,
+        runtimeOptions,
+        `\n  ${hasAwait ? `async ` : ``}setup(${args}) {\n${setupPreamble}`,
+      ]
       setupEnd = `})`
     } else {
-      setupHead =
-        `\n${genDefaultAs} {${runtimeOptions}\n  ` +
-        `${hasAwait ? `async ` : ``}setup(${args}) {\n${setupPreamble}`
+      setupHead = [
+        `\n${genDefaultAs} {`,
+        runtimeOptions,
+        `\n  ${hasAwait ? `async ` : ``}setup(${args}) {\n${setupPreamble}`,
+      ]
       setupEnd = `}`
     }
   }
