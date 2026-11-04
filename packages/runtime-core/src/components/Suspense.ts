@@ -591,7 +591,9 @@ function createSuspenseBoundary(
         let hasUpdatedAnchor = false
         if (delayEnter) {
           activeBranch!.transition!.afterLeave = () => {
-            if (pendingId === suspense.pendingId) {
+            // the leave is not cancelled when the boundary gets unmounted in
+            // the meantime: the branch is gone, don't bring its DOM back
+            if (pendingId === suspense.pendingId && !suspense.isUnmounted) {
               move(
                 pendingBranch!,
                 container,
