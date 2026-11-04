@@ -25,6 +25,7 @@ import {
   type RendererNode,
   type SetupRenderEffectFn,
   queuePostRenderEffect,
+  resolveAsyncComponentPlaceholder,
 } from '../renderer'
 import {
   type SchedulerJob,
@@ -677,7 +678,12 @@ function createSuspenseBoundary(
           // (got `pendingBranch.el`).
           // Therefore, after the mounting of activeBranch is completed,
           // it is necessary to get the latest anchor.
-          if (parentNode(activeBranch.el!) === container) {
+          if (
+            parentNode(
+              activeBranch.el ||
+                resolveAsyncComponentPlaceholder(activeBranch)!,
+            ) === container
+          ) {
             anchor = next(activeBranch)
             hasUpdatedAnchor = true
           }

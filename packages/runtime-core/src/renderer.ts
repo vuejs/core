@@ -1588,8 +1588,11 @@ function baseCreateRenderer(
         patch(
           prevTree,
           nextTree,
-          // parent may have changed if it's in a teleport
-          hostParentNode(prevTree.el!)!,
+          // parent may have changed if it's in a teleport. a root that is a
+          // pending async component only has its placeholder comment
+          hostParentNode(
+            prevTree.el || resolveAsyncComponentPlaceholder(prevTree)!,
+          )!,
           // anchor may have changed if it's in a fragment
           getNextHostNode(prevTree),
           instance,
@@ -2682,7 +2685,9 @@ export function invalidateMount(hooks: LifecycleHook): void {
   }
 }
 
-function resolveAsyncComponentPlaceholder(anchorVnode: VNode) {
+export function resolveAsyncComponentPlaceholder(
+  anchorVnode: VNode,
+): RendererNode | null {
   if (anchorVnode.placeholder) {
     return anchorVnode.placeholder
   }
@@ -2691,6 +2696,12 @@ function resolveAsyncComponentPlaceholder(anchorVnode: VNode) {
   const instance = anchorVnode.component
   if (instance) {
     return resolveAsyncComponentPlaceholder(instance.subTree)
+  }
+
+  // or a boundary whose active branch is rooted in one
+  const suspense = anchorVnode.suspense
+  if (__FEATURE_SUSPENSE__ && suspense && suspense.activeBranch) {
+    return resolveAsyncComponentPlaceholder(suspense.activeBranch)
   }
 
   return null

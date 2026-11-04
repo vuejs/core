@@ -5451,4 +5451,72 @@ describe('Suspense', () => {
       __DEV__ = true
     }
   })
+
+  describe('content root swapped to an unresolved async component', () => {
+    const Slow = {
+      async setup() {
+        await new Promise(() => {})
+        return () => h('b', 'slow')
+      },
+    }
+
+    test('the parent whose root is the boundary re-renders', async () => {
+      const showSlow = ref(false)
+      const theme = ref('light')
+      const Page = {
+        render: () => (showSlow.value ? h(Slow) : h('i', 'sync')),
+      }
+      const App = {
+        render: () =>
+          h(
+            Suspense,
+            { 'data-theme': theme.value },
+            { default: () => h(Page) },
+          ),
+      }
+      const root = nodeOps.createElement('div')
+      render(h(App), root)
+      expect(serializeInner(root)).toBe('<i>sync</i>')
+
+      showSlow.value = true
+      await nextTick()
+      expect(serializeInner(root)).toBe('<!---->')
+
+      theme.value = 'dark'
+      await nextTick()
+      expect(serializeInner(root)).toBe('<!---->')
+    })
+
+    test('the boundary reveals a new branch while the retained one has no el', async () => {
+      const showSlow = ref(false)
+      const Home = {
+        render: () => (showSlow.value ? h(Slow) : h('i', 'home')),
+      }
+      let settle: () => void
+      const Settings = {
+        async setup() {
+          await new Promise<void>(r => (settle = r))
+          return () => h('p', 'settings')
+        },
+      }
+      const page = shallowRef<ComponentOptions>(Home)
+      const App = {
+        render: () =>
+          h('div', [h(Suspense, null, { default: () => h(page.value) })]),
+      }
+      const root = nodeOps.createElement('div')
+      render(h(App), root)
+      expect(serializeInner(root)).toBe('<div><i>home</i></div>')
+
+      showSlow.value = true
+      await nextTick()
+      expect(serializeInner(root)).toBe('<div><!----></div>')
+
+      page.value = Settings
+      await nextTick()
+      settle!()
+      await new Promise(r => setTimeout(r))
+      expect(serializeInner(root)).toBe('<div><p>settings</p></div>')
+    })
+  })
 })
