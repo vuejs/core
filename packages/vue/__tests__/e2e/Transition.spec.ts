@@ -2852,6 +2852,66 @@ describe('e2e: Transition', () => {
       },
       E2E_TIMEOUT,
     )
+
+    // #12435
+    test(
+      'appear transition nested under an element inside Suspense',
+      async () => {
+        await page().evaluate(() => {
+          const { createApp, h } = (window as any).Vue
+          createApp({
+            template: `
+            <div id="container">
+              <Suspense>
+                <div class="wrapper">
+                  <transition appear>
+                    <div class="test">content</div>
+                  </transition>
+                  <Async />
+                </div>
+              </Suspense>
+            </div>
+          `,
+            components: {
+              Async: {
+                async setup() {
+                  await new Promise<void>(r => ((window as any).settle = r))
+                  return () => h('span', 'async')
+                },
+              },
+            },
+          }).mount('#app')
+        })
+        expect(await html('#container')).toBe('<!---->')
+
+        const enterClass = await page().evaluate(async () => {
+          ;(window as any).settle()
+          // setup returns
+          await Promise.resolve()
+          // the async dep settles
+          await Promise.resolve()
+          // the boundary resolves and reveals the branch
+          await Promise.resolve()
+          return document.querySelector('.test')!.className.split(/\s+/g)
+        })
+        expect(enterClass).toStrictEqual([
+          'test',
+          'v-enter-from',
+          'v-enter-active',
+        ])
+        await nextFrame()
+        expect(await classList('.test')).toStrictEqual([
+          'test',
+          'v-enter-active',
+          'v-enter-to',
+        ])
+        await transitionFinish()
+        expect(await html('#container')).toBe(
+          '<div class="wrapper"><div class="test">content</div><span>async</span></div>',
+        )
+      },
+      E2E_TIMEOUT,
+    )
   })
 
   describe('transition with Teleport', () => {

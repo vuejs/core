@@ -68,6 +68,10 @@ let suspenseId = 0
  */
 export const resetSuspenseId = (): number => (suspenseId = 0)
 
+// set on an element whose enter the renderer skipped because it was mounted
+// off-dom while its boundary was pending; the boundary enters it on reveal
+export const deferredEnterKey: unique symbol = Symbol('_deferredEnter')
+
 // Suspense exposes a component-like API, and is treated like a component
 // in the compiler, but internally it's a special built-in type that hooks
 // directly into the renderer.
@@ -175,6 +179,53 @@ function triggerEvent(
   const eventListener = vnode.props && vnode.props[name]
   if (isFunction(eventListener)) {
     eventListener()
+  }
+}
+
+// the enter of content mounted while the boundary was pending waits for the
+// reveal. the move enters the branch root; what sits inside an element is
+// entered here: beforeEnter right before the branch moves into the document,
+// enter in the post flush ahead of the buffered jobs, so the transition still
+// sees the mount as its appear
+function enterDeferred(branch: VNode): void {
+  const enters: Function[] = []
+  collectDeferredEnters(branch, enters, true)
+  if (enters.length) {
+    queuePostFlushCb(enters)
+  }
+}
+
+function collectDeferredEnters(
+  vnode: VNode,
+  enters: Function[],
+  isRoot: boolean,
+): void {
+  const { el, transition, children, shapeFlag } = vnode
+  if (shapeFlag & ShapeFlags.COMPONENT) {
+    collectDeferredEnters(vnode.component!.subTree, enters, isRoot)
+    return
+  }
+  // a nested boundary enters its own content; teleported content was not
+  // held back with the branch
+  if (shapeFlag & (ShapeFlags.SUSPENSE | ShapeFlags.TELEPORT)) {
+    return
+  }
+  if (shapeFlag & ShapeFlags.ELEMENT) {
+    // in production a block patch leaves no `el` on the static elements it
+    // skips over; their children are still patched
+    if (!isRoot && el && el[deferredEnterKey]) {
+      el[deferredEnterKey] = undefined
+      if (transition && !transition.persisted) {
+        transition.beforeEnter(el)
+        enters.push(() => transition.enter(el))
+      }
+    }
+    isRoot = false
+  }
+  if (shapeFlag & ShapeFlags.ARRAY_CHILDREN) {
+    for (let i = 0; i < (children as VNode[]).length; i++) {
+      collectDeferredEnters((children as VNode[])[i], enters, isRoot)
+    }
   }
 }
 
@@ -594,6 +645,7 @@ function createSuspenseBoundary(
             // the leave is not cancelled when the boundary gets unmounted in
             // the meantime: the branch is gone, don't bring its DOM back
             if (pendingId === suspense.pendingId && !suspense.isUnmounted) {
+              enterDeferred(pendingBranch!)
               move(
                 pendingBranch!,
                 container,
@@ -637,6 +689,7 @@ function createSuspenseBoundary(
         }
         if (!delayEnter) {
           // move content from off-dom container to actual container
+          enterDeferred(pendingBranch!)
           move(pendingBranch!, container, anchor, MoveType.ENTER)
         }
       }

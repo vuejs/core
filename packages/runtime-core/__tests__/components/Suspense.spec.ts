@@ -13,6 +13,8 @@ import {
   createBlock,
   createCommentVNode,
   createElementBlock,
+  createElementVNode,
+  createVNode,
   getCurrentInstance,
   h,
   nextTick,
@@ -5164,5 +5166,289 @@ describe('Suspense', () => {
     show.value = false
     await nextTick()
     expect(unmounted).toHaveBeenCalledTimes(1)
+  })
+
+  // #12435
+  test('enters a transition nested under an element of the pending branch on reveal', async () => {
+    const calls: string[] = []
+    const appear = (name: string, child: () => any) =>
+      h(
+        BaseTransition,
+        {
+          appear: true,
+          onBeforeAppear: () => calls.push(`${name} beforeAppear`),
+          onAppear: () => calls.push(`${name} appear`),
+          onBeforeEnter: () => calls.push(`${name} beforeEnter`),
+          onEnter: () => calls.push(`${name} enter`),
+        },
+        child,
+      )
+    let settle: () => void
+    const Async = {
+      async setup() {
+        await new Promise<void>(r => (settle = r))
+        return () => h('span')
+      },
+    }
+    const Page = {
+      setup() {
+        onMounted(() => calls.push('page mounted'))
+        return () => h('div', [appear('nested', () => h('p')), h(Async)])
+      },
+    }
+    const root = nodeOps.createElement('div')
+    render(
+      h(Suspense, null, { default: () => appear('root', () => h(Page)) }),
+      root,
+    )
+    expect(calls).toEqual([])
+
+    settle!()
+    await new Promise(r => setTimeout(r))
+    expect(serializeInner(root)).toBe('<div><p></p><span></span></div>')
+    // the whole branch appears, ahead of the buffered mounted hooks
+    expect(calls).toEqual([
+      'nested beforeAppear',
+      'root beforeAppear',
+      'nested appear',
+      'root appear',
+      'page mounted',
+    ])
+  })
+
+  test('enters a nested transition when an out-in leave reveals the pending branch', async () => {
+    const calls: string[] = []
+    let settle: () => void
+    const Next = {
+      async setup() {
+        await new Promise<void>(r => (settle = r))
+        return () =>
+          h('div', [
+            h(
+              BaseTransition,
+              {
+                appear: true,
+                onBeforeAppear: () => calls.push('beforeAppear'),
+                onAppear: () => calls.push('appear'),
+              },
+              () => h('p'),
+            ),
+          ])
+      },
+    }
+    const page = shallowRef<ComponentOptions>({
+      render: () => h('div', 'first'),
+    })
+    const leaves: (() => void)[] = []
+    const App = {
+      render: () =>
+        h(
+          BaseTransition,
+          {
+            mode: 'out-in',
+            onLeave: (_: any, done: () => void) => {
+              leaves.push(done)
+            },
+          },
+          () => h(Suspense, null, { default: h(page.value) }),
+        ),
+    }
+    const root = nodeOps.createElement('div')
+    render(h(App), root)
+    expect(serializeInner(root)).toBe('<div>first</div>')
+
+    page.value = Next
+    await nextTick()
+    settle!()
+    await new Promise(r => setTimeout(r))
+    // Next has settled: the first page is leaving, Next waits for afterLeave
+    expect(leaves.length).toBe(1)
+    expect(calls).toEqual([])
+
+    leaves[0]()
+    await nextTick()
+    expect(serializeInner(root)).toBe('<div><p></p></div>')
+    expect(calls).toEqual(['beforeAppear', 'appear'])
+  })
+
+  test('keeps the appear of a transition around a nested boundary inside a pending parent', async () => {
+    const calls: string[] = []
+    const settles: (() => void)[] = []
+    const asyncComp = (tag: string) => ({
+      async setup() {
+        await new Promise<void>(r => settles.push(r))
+        return () => h(tag)
+      },
+    })
+    const Inner = asyncComp('b')
+    const Outer = asyncComp('span')
+    const transition = (name: string, appear: boolean) =>
+      h(
+        BaseTransition,
+        {
+          appear,
+          onBeforeAppear: () => calls.push(`${name} beforeAppear`),
+          onAppear: () => calls.push(`${name} appear`),
+          onBeforeEnter: () => calls.push(`${name} beforeEnter`),
+          onEnter: () => calls.push(`${name} enter`),
+        },
+        () => h(Suspense, null, { default: () => h(Inner) }),
+      )
+    const App = {
+      render: () =>
+        h(Suspense, null, {
+          default: () =>
+            h('div', [transition('a', true), transition('b', false), h(Outer)]),
+        }),
+    }
+    const root = nodeOps.createElement('div')
+    render(h(App), root)
+    await nextTick()
+    expect(settles.length).toBe(3)
+
+    // the inner boundaries resolve while the outer one is still pending: the
+    // transitions are not mounted yet, their first enter is an appear
+    settles[0]()
+    settles[1]()
+    await new Promise(r => setTimeout(r))
+    expect(calls).toEqual(['a beforeAppear', 'a appear'])
+    // nothing more at the outer reveal
+    settles[2]()
+    await new Promise(r => setTimeout(r))
+    expect(serializeInner(root)).toBe('<div><b></b><b></b><span></span></div>')
+    expect(calls).toEqual(['a beforeAppear', 'a appear'])
+  })
+
+  test('does not enter a transition that became persisted while the branch was pending', async () => {
+    const calls: string[] = []
+    const persisted = ref(false)
+    let settle: () => void
+    const Async = {
+      async setup() {
+        await new Promise<void>(r => (settle = r))
+        return () => h('span')
+      },
+    }
+    const Page = {
+      render: () =>
+        h('div', [
+          h(
+            BaseTransition,
+            {
+              appear: true,
+              persisted: persisted.value,
+              onBeforeAppear: () => calls.push('beforeAppear'),
+              onAppear: () => calls.push('appear'),
+            },
+            () => h('p'),
+          ),
+          h(Async),
+        ]),
+    }
+    const root = nodeOps.createElement('div')
+    render(h(Suspense, null, { default: () => h(Page) }), root)
+
+    // a directive owns the enter of a persisted transition
+    persisted.value = true
+    await nextTick()
+    settle!()
+    await new Promise(r => setTimeout(r))
+    expect(serializeInner(root)).toBe('<div><p></p><span></span></div>')
+    expect(calls).toEqual([])
+  })
+
+  test('enters the pending branch with the transition hooks current at reveal', async () => {
+    const calls: string[] = []
+    const version = ref(1)
+    let settle: () => void
+    const Async = {
+      async setup() {
+        await new Promise<void>(r => (settle = r))
+        return () => h('span')
+      },
+    }
+    const Page = {
+      render: () => {
+        const v = version.value
+        return h('div', [
+          h(
+            BaseTransition,
+            {
+              appear: true,
+              onBeforeAppear: () => calls.push(`beforeAppear ${v}`),
+              onAppear: () => calls.push(`appear ${v}`),
+            },
+            () => h('p'),
+          ),
+          h(Async),
+        ])
+      },
+    }
+    const root = nodeOps.createElement('div')
+    render(h(Suspense, null, { default: () => h(Page) }), root)
+
+    // the pending branch re-renders with new hooks before it is revealed
+    version.value = 2
+    await nextTick()
+    settle!()
+    await new Promise(r => setTimeout(r))
+    expect(serializeInner(root)).toBe('<div><p></p><span></span></div>')
+    expect(calls).toEqual(['beforeAppear 2', 'appear 2'])
+  })
+
+  test('reveals a branch whose static elements lost their el to a block patch (prod)', async () => {
+    __DEV__ = false
+    try {
+      const calls: string[] = []
+      const count = ref(0)
+      let settle: () => void
+      const Async = {
+        async setup() {
+          await new Promise<void>(r => (settle = r))
+          return () => h('i')
+        },
+      }
+      // compiled shape: the section is static, its span and the components
+      // are the block's dynamic children
+      const Page = {
+        render: () => (
+          openBlock(),
+          createElementBlock('div', null, [
+            createElementVNode('section', null, [
+              createElementVNode(
+                'span',
+                null,
+                String(count.value),
+                PatchFlags.TEXT,
+              ),
+              createVNode(
+                BaseTransition,
+                {
+                  appear: true,
+                  onBeforeAppear: () => calls.push('beforeAppear'),
+                  onAppear: () => calls.push('appear'),
+                },
+                { default: () => h('p') },
+              ),
+            ]),
+            createVNode(Async),
+          ])
+        ),
+      }
+      const root = nodeOps.createElement('div')
+      render(h(Suspense, null, { default: () => h(Page) }), root)
+
+      // a block patch while pending: the new section vnode has no el
+      count.value++
+      await nextTick()
+      settle!()
+      await new Promise(r => setTimeout(r))
+      expect(serializeInner(root)).toBe(
+        '<div><section><span>1</span><p></p></section><i></i></div>',
+      )
+      expect(calls).toEqual(['beforeAppear', 'appear'])
+    } finally {
+      __DEV__ = true
+    }
   })
 })
