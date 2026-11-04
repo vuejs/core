@@ -36,6 +36,7 @@ const helperNameAliases: Record<string, string> = {
 export class CodegenContext {
   options: Required<CodegenOptions>
 
+  /** @internal */
   pieces?: BaseCodegenContext['pieces']
 
   bindingNames: Set<string>

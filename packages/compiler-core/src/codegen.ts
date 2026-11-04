@@ -108,7 +108,7 @@ export interface CodegenContext extends Omit<
   code: string
   indentLevel: number
   pure: boolean
-  /** The pieces of the code, when a source map is generated */
+  /** @internal The pieces of the code, when a source map is generated */
   pieces?: CodegenPiece[]
   /** @internal The end of the innermost node with a source being generated */
   openEnd?: number
@@ -224,7 +224,10 @@ function createCodegenContext(
   return context
 }
 
-/** A `name` is the identifier of the source that the text of the piece renames */
+/**
+ * @internal A `name` is the identifier of the source that the text of the
+ * piece renames
+ */
 export type CodegenPiece = Piece<{ source: Source; name?: string }>
 
 function renamedIdentifier(
@@ -237,14 +240,17 @@ function renamedIdentifier(
   return code !== id && isSimpleIdentifier(id) ? id : undefined
 }
 
-/** An empty piece of `source`, so that the map names it even if no code maps to it */
+/**
+ * @internal An empty piece of `source`, so that the map names it even if no
+ * code maps to it
+ */
 export function createSourcePiece(source: Source): CodegenPiece {
   return { source, start: 0, end: 0, text: '' }
 }
 
 /**
- * Adds `code` to `pieces`, as the text of `start`..`end` of `source` if given,
- * named `name`, joined to the last piece when that maps the same way
+ * @internal Adds `code` to `pieces`, as the text of `start`..`end` of `source`
+ * if given, named `name`, joined to the last piece when that maps the same way
  */
 export function addPiece(
   pieces: CodegenPiece[],
@@ -280,6 +286,7 @@ export function addPiece(
   }
 }
 
+/** @internal */
 export const createSourceMap: (
   filename: string,
   pieces: CodegenPiece[],

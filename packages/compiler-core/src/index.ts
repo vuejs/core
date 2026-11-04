@@ -25,15 +25,18 @@ export {
 } from './transform'
 export {
   generate,
-  addPiece,
-  createSourcePiece,
-  createSourceMap,
   NewlineType,
-  type CodegenPiece,
   type CodegenContext,
   type CodegenResult,
   type RawSourceMap,
   type BaseCodegenResult,
+} from './codegen'
+/** @internal for the codegen of compiler-vapor and compiler-sfc */
+export {
+  addPiece,
+  createSourcePiece,
+  createSourceMap,
+  type CodegenPiece,
 } from './codegen'
 export {
   ErrorCodes,
