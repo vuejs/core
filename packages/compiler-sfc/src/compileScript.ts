@@ -158,6 +158,22 @@ export interface ImportBinding {
   isUsedInTemplate: boolean
 }
 
+// ranks of the code before all of the output: a higher rank renders first
+const HeadRank = {
+  DefaultImport: 1,
+  Preamble: 2,
+  HelperImports: 3,
+} as const
+
+// ranks of the code at the tags of `<script setup>`: a lower rank sits closer
+// to them, so it renders first after the start tag and last before the end tag
+const SetupRank = {
+  Setup: 1,
+  AsyncContext: 2,
+  Return: 2,
+  CssVars: 3,
+} as const
+
 const MACROS = [
   DEFINE_PROPS,
   DEFINE_EMITS,
@@ -238,7 +254,6 @@ export function compileScript(
   const setupBindings: Record<string, BindingTypes> = Object.create(null)
 
   let defaultExport: Node | undefined
-  let normalScriptDefaultImport = ''
   let hasAwait = false
   let hasInlinedSsrRenderFn = false
 
@@ -583,7 +598,12 @@ export function compileScript(
             // export { x as default } from './x'
             // rewrite to `import { x as __default__ } from './x'` and
             // add to top
-            normalScriptDefaultImport = `import { ${defaultSpecifier.local.name} as ${normalScriptDefaultVar} } from '${node.source.value}'\n`
+            ctx.s
+              .writer(HeadRank.DefaultImport)
+              .insertAfter(
+                0,
+                `import { ${defaultSpecifier.local.name} as ${normalScriptDefaultVar} } from '${node.source.value}'\n`,
+              )
           } else {
             // export { x as default }
             // rewrite to `const __default__ = x` and move to end
@@ -937,7 +957,6 @@ export function compileScript(
   }
 
   // 7. inject `useCssVars` calls
-  let cssVarsCode = ''
   if (
     sfc.cssVars.length &&
     // no need to do this when targeting SSR
@@ -945,13 +964,18 @@ export function compileScript(
   ) {
     ctx.helperImports.add(getCssVarsHelper(vapor))
     ctx.helperImports.add('unref')
-    cssVarsCode = `\n${genCssVarsCode(
-      sfc.cssVars,
-      ctx.bindingMetadata,
-      scopeId,
-      !!options.isProd,
-      vapor,
-    )}\n`
+    ctx.s
+      .writer(SetupRank.CssVars)
+      .insertAfter(
+        startOffset,
+        `\n${genCssVarsCode(
+          sfc.cssVars,
+          ctx.bindingMetadata,
+          scopeId,
+          !!options.isProd,
+          vapor,
+        )}\n`,
+      )
   }
 
   // 8. finalize setup() argument signature
@@ -989,8 +1013,12 @@ export function compileScript(
   }
 
   // inject temp variables for async context preservation
-  const any = ctx.isTS ? `: any` : ``
-  const asyncTempVars = hasAwait ? `\nlet __temp${any}, __restore${any}\n` : ``
+  if (hasAwait) {
+    const any = ctx.isTS ? `: any` : ``
+    ctx.s
+      .writer(SetupRank.AsyncContext)
+      .insertAfter(startOffset, `\nlet __temp${any}, __restore${any}\n`)
+  }
 
   const destructureElements =
     ctx.hasDefineExposeCall || !inlineMode ? [`expose: __expose`] : []
@@ -1013,7 +1041,6 @@ export function compileScript(
 
   let templatePieces: Piece<{ source: Source }>[] | undefined
   let templateCode: string | undefined
-  let templatePreamble = ''
   // 9. generate return statement
   let returned
   // ensure props bindings register before compile template in inline mode
@@ -1110,7 +1137,7 @@ export function compileScript(
         throw err
       }
       if (preamble) {
-        templatePreamble = preamble
+        ctx.s.writer(HeadRank.Preamble).insertAfter(0, preamble)
       }
       // avoid duplicated unref import
       // as this may get injected by the render function preamble OR the
@@ -1139,15 +1166,16 @@ export function compileScript(
   if (!inlineMode && !__TEST__) {
     // in non-inline mode, the `__isScriptSetup: true` flag is used by
     // componentPublicInstance proxy to allow properties that start with $ or _
-    ctx.s.insertBefore(
-      endOffset,
-      `\nconst __returned__ = ${returned}\n` +
-        `Object.defineProperty(__returned__, '__isScriptSetup', { enumerable: false, value: true })\n` +
-        `return __returned__` +
-        `\n}\n\n`,
-    )
+    ctx.s
+      .writer(SetupRank.Return)
+      .insertBefore(
+        endOffset,
+        `\nconst __returned__ = ${returned}\n` +
+          `Object.defineProperty(__returned__, '__isScriptSetup', { enumerable: false, value: true })\n` +
+          `return __returned__`,
+      )
   } else {
-    ctx.s.insertBefore(
+    ctx.s.writer(SetupRank.Return).insertBefore(
       endOffset,
       // vapor mode generates its own return when inlined
       // (except with a render in normal <script> and no template, where
@@ -1159,7 +1187,7 @@ export function compileScript(
         !(!sfc.template && ctx.hasDefaultExportRender)
           ? ``
           : `return `
-      }${returned}\n}\n\n`,
+      }${returned}`,
     )
   }
 
@@ -1201,6 +1229,7 @@ export function compileScript(
     : ''
   // wrap setup code with function.
   let setupHead: string
+  let setupEnd: string
   if (ctx.isTS) {
     // in SSR, always use defineComponent, so __vapor flag is required
     if (ssr && vapor) {
@@ -1220,7 +1249,7 @@ export function compileScript(
     )}({${def}${runtimeOptions}\n  ${
       hasAwait ? `async ` : ``
     }setup(${args}) {\n${setupPreamble}`
-    ctx.s.insertBefore(endOffset, `})`)
+    setupEnd = `})`
   } else {
     // in TS, defineVaporComponent adds the option already
     if (vapor) {
@@ -1234,32 +1263,36 @@ export function compileScript(
           defaultExport ? `${normalScriptDefaultVar}, ` : ''
         }${definedOptions ? `${definedOptions}, ` : ''}{${runtimeOptions}\n  ` +
         `${hasAwait ? `async ` : ``}setup(${args}) {\n${setupPreamble}`
-      ctx.s.insertBefore(endOffset, `})`)
+      setupEnd = `})`
     } else {
       setupHead =
         `\n${genDefaultAs} {${runtimeOptions}\n  ` +
         `${hasAwait ? `async ` : ``}setup(${args}) {\n${setupPreamble}`
-      ctx.s.insertBefore(endOffset, `}`)
+      setupEnd = `}`
     }
   }
 
-  ctx.s.insertAfter(startOffset, setupHead + asyncTempVars + cssVarsCode)
+  const setup = ctx.s.writer(SetupRank.Setup)
+  setup.insertAfter(startOffset, setupHead)
+  setup.insertBefore(endOffset, `\n}\n\n${setupEnd}`)
 
   // 11. finalize Vue helper imports
-  let helperImportsCode = ''
   if (ctx.helperImports.size > 0) {
     const runtimeModuleName =
       options.templateOptions?.compilerOptions?.runtimeModuleName
     const importSrc = runtimeModuleName
       ? JSON.stringify(runtimeModuleName)
       : `'vue'`
-    helperImportsCode = `import { ${[...ctx.helperImports]
-      .map(h => `${h} as ${h === 'useCssModule' ? cssModuleHelper : `_${h}`}`)
-      .join(', ')} } from ${importSrc}\n`
-  }
-  const head = helperImportsCode + templatePreamble + normalScriptDefaultImport
-  if (head) {
-    ctx.s.insertAfter(0, head)
+    ctx.s
+      .writer(HeadRank.HelperImports)
+      .insertAfter(
+        0,
+        `import { ${[...ctx.helperImports]
+          .map(
+            h => `${h} as ${h === 'useCssModule' ? cssModuleHelper : `_${h}`}`,
+          )
+          .join(', ')} } from ${importSrc}\n`,
+      )
   }
 
   const render = (sink: (piece: Piece<{ source: Source }>) => void) =>
