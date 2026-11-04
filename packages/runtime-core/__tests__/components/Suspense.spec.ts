@@ -5734,4 +5734,149 @@ describe('Suspense', () => {
       expect(serializeInner(root)).toBe('<b>b</b>')
     })
   })
+
+  test('does not mount the new route into a nested boundary of the retained page that shows its fallback', async () => {
+    const setups: string[] = []
+    const nested = () =>
+      h(RouterView, null, {
+        default: ({ Component }: any) => [
+          h(Suspense, null, { default: () => h(Component) }),
+        ],
+      })
+    const ParentSync = {
+      setup() {
+        setups.push('ParentSync')
+        return () => h('div', ['ParentSync', nested()])
+      },
+    }
+    let settle: () => void
+    const ParentAsync = {
+      async setup() {
+        setups.push('ParentAsync')
+        await new Promise<void>(r => (settle = r))
+        return () => h('div', ['ParentAsync', nested()])
+      },
+    }
+    // the child route of the old page is still loading
+    const ChildSlow = {
+      async setup() {
+        setups.push('ChildSlow')
+        await new Promise(() => {})
+        return () => h('i', 'ChildSlow')
+      },
+    }
+    const ChildAsync = {
+      async setup() {
+        setups.push('ChildAsync')
+        await Promise.resolve()
+        return () => h('i', 'ChildAsync')
+      },
+    }
+    const route = shallowRef<ComponentOptions[]>([ParentSync, ChildSlow])
+    const Comp = {
+      setup() {
+        provide('route', route)
+        return () =>
+          h(RouterView, null, {
+            default: ({ Component }: any) => [
+              h(Suspense, null, { default: () => h(Component) }),
+            ],
+          })
+      },
+    }
+
+    const root = nodeOps.createElement('div')
+    render(h(Comp), root)
+    expect(serializeInner(root)).toBe('<div>ParentSync<!----></div>')
+
+    // both route levels change while the old page's nested boundary is in
+    // its fallback state: the new child must not mount into the old page
+    route.value = [ParentAsync, ChildAsync]
+    await nextTick()
+    await new Promise(r => setTimeout(r, 10))
+    expect(serializeInner(root)).toBe('<div>ParentSync<!----></div>')
+    expect(setups).toEqual(['ParentSync', 'ChildSlow', 'ParentAsync'])
+
+    settle!()
+    await new Promise(r => setTimeout(r, 10))
+    expect(serializeInner(root)).toBe('<div>ParentAsync<i>ChildAsync</i></div>')
+    expect(setups).toEqual([
+      'ParentSync',
+      'ChildSlow',
+      'ParentAsync',
+      'ChildAsync',
+    ])
+  })
+
+  test('patches the props of the pending child in a nested boundary of the retained page', async () => {
+    const setups: string[] = []
+    const msg = shallowRef('a')
+    const nested = () =>
+      h(RouterView, null, {
+        default: ({ Component }: any) => [
+          h(Suspense, null, {
+            default: () => h(Component, { msg: msg.value }),
+          }),
+        ],
+      })
+    const ParentSync = {
+      setup() {
+        setups.push('ParentSync')
+        return () => h('div', ['ParentSync', nested()])
+      },
+    }
+    let settle: () => void
+    const ParentAsync = {
+      async setup() {
+        setups.push('ParentAsync')
+        await new Promise<void>(r => (settle = r))
+        return () => h('div', ['ParentAsync', nested()])
+      },
+    }
+    let settleChild: () => void
+    const Child = {
+      props: ['msg'],
+      async setup(props: any) {
+        setups.push('Child')
+        await new Promise<void>(r => (settleChild = r))
+        return () => h('i', `Child ${props.msg}`)
+      },
+    }
+    const route = shallowRef<ComponentOptions[]>([ParentSync, Child])
+    const Comp = {
+      setup() {
+        provide('route', route)
+        return () =>
+          h(RouterView, null, {
+            default: ({ Component }: any) => [
+              h(Suspense, null, { default: () => h(Component) }),
+            ],
+          })
+      },
+    }
+
+    const root = nodeOps.createElement('div')
+    render(h(Comp), root)
+    expect(serializeInner(root)).toBe('<div>ParentSync<!----></div>')
+
+    // the page changes while the old page's child route is still loading: the
+    // same child with new props is an update of the pending child, not a
+    // root replacement, so it goes through
+    route.value = [ParentAsync, Child]
+    msg.value = 'b'
+    await nextTick()
+    expect(setups).toEqual(['ParentSync', 'Child', 'ParentAsync'])
+
+    settleChild!()
+    await new Promise(r => setTimeout(r))
+    expect(serializeInner(root)).toBe('<div>ParentSync<i>Child b</i></div>')
+
+    settle!()
+    await new Promise(r => setTimeout(r))
+    expect(serializeInner(root)).toBe('<div>ParentAsync<!----></div>')
+    settleChild!()
+    await new Promise(r => setTimeout(r))
+    expect(serializeInner(root)).toBe('<div>ParentAsync<i>Child b</i></div>')
+    expect(setups).toEqual(['ParentSync', 'Child', 'ParentAsync', 'Child'])
+  })
 })
