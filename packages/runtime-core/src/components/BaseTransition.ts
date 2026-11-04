@@ -231,11 +231,13 @@ const BaseTransitionImpl: ComponentOptions = {
               // patch that starts it, before the placeholder is mounted:
               // update once that patch is done
               if (instance.effect.flags & EffectFlags.RUNNING) {
-                queueJob(() => {
+                const job: SchedulerJob = () => {
                   if (!(instance.job.flags! & SchedulerJobFlags.DISPOSED)) {
                     instance.update()
                   }
-                })
+                }
+                job.i = instance
+                queueJob(job)
               } else {
                 instance.update()
               }
