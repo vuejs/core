@@ -5519,4 +5519,219 @@ describe('Suspense', () => {
       expect(serializeInner(root)).toBe('<div><p>settings</p></div>')
     })
   })
+
+  describe('keyed boundary as the child of a transition', () => {
+    const A = { render: () => h('i', 'a') }
+    const B = { render: () => h('b', 'b') }
+
+    test('out-in mounts the new boundary after the old one has left', async () => {
+      const page = ref('a')
+      const leaves: (() => void)[] = []
+      const App = {
+        render: () =>
+          h(
+            BaseTransition,
+            {
+              mode: 'out-in',
+              onLeave: (_: any, done: () => void) => {
+                leaves.push(done)
+              },
+            },
+            () =>
+              h(
+                Suspense,
+                { key: page.value },
+                {
+                  default: h(page.value === 'a' ? A : B),
+                },
+              ),
+          ),
+      }
+      const root = nodeOps.createElement('div')
+      render(h(App), root)
+      expect(serializeInner(root)).toBe('<i>a</i>')
+
+      page.value = 'b'
+      await nextTick()
+      expect(leaves.length).toBe(1)
+      expect(serializeInner(root)).toBe('<i>a</i><!---->')
+
+      leaves[0]()
+      await nextTick()
+      expect(serializeInner(root)).toBe('<b>b</b>')
+    })
+
+    test('in-out keeps the old boundary until the new one has entered', async () => {
+      const page = ref('a')
+      const leaves: (() => void)[] = []
+      const enters: (() => void)[] = []
+      const App = {
+        render: () =>
+          h(
+            BaseTransition,
+            {
+              mode: 'in-out',
+              onEnter: (_: any, done: () => void) => {
+                enters.push(done)
+              },
+              onLeave: (_: any, done: () => void) => {
+                leaves.push(done)
+              },
+            },
+            () =>
+              h(
+                Suspense,
+                { key: page.value },
+                {
+                  default: h(page.value === 'a' ? A : B),
+                },
+              ),
+          ),
+      }
+      const root = nodeOps.createElement('div')
+      render(h(App), root)
+      expect(serializeInner(root)).toBe('<i>a</i>')
+
+      page.value = 'b'
+      await nextTick()
+      // the new boundary enters first, the old one waits
+      expect(serializeInner(root)).toBe('<i>a</i><b>b</b>')
+      expect(enters.length).toBe(1)
+      expect(leaves.length).toBe(0)
+
+      enters[0]()
+      await nextTick()
+      expect(leaves.length).toBe(1)
+      leaves[0]()
+      await nextTick()
+      expect(serializeInner(root)).toBe('<b>b</b>')
+    })
+
+    // the old boundary is still pending when the key changes: only what it
+    // shows takes part in the switch, its hidden branch leaves on its own
+    const pendingApp = (mode: 'out-in' | 'in-out', inFallback: boolean) => {
+      const Slow = {
+        async setup() {
+          await new Promise(() => {})
+          return () => h('u', 'slow')
+        },
+      }
+      const PageA = { render: () => h('i', 'a') }
+      // a page whose root is ready while a child is still loading
+      const Pending = { render: () => h('article', [h(Slow)]) }
+      const page = ref('a')
+      const content = shallowRef<ComponentOptions>(inFallback ? Pending : PageA)
+      const enters: (() => void)[] = []
+      const leaves: [string, () => void][] = []
+      const App = {
+        render: () =>
+          h(
+            BaseTransition,
+            {
+              mode,
+              onEnter: (_: any, done: () => void) => {
+                enters.push(done)
+              },
+              onLeave: (el: any, done: () => void) => {
+                leaves.push([el.tag, done])
+              },
+            },
+            () =>
+              h(
+                Suspense,
+                { key: page.value },
+                {
+                  default: h(page.value === 'a' ? content.value : B),
+                  fallback: h('p', 'loading'),
+                },
+              ),
+          ),
+      }
+      const root = nodeOps.createElement('div')
+      render(h(App), root)
+      return { root, page, content, Pending, enters, leaves }
+    }
+
+    test('out-in waits for the visible fallback of a pending boundary', async () => {
+      const { root, page, leaves } = pendingApp('out-in', true)
+      expect(serializeInner(root)).toBe('<p>loading</p>')
+
+      page.value = 'b'
+      await nextTick()
+      expect(serializeInner(root)).toBe('<p>loading</p><!---->')
+      expect(leaves.map(l => l[0])).toEqual(['p', 'article'])
+
+      // the hidden branch finishing its leave reveals nothing
+      leaves[1][1]()
+      await nextTick()
+      expect(serializeInner(root)).toBe('<p>loading</p><!---->')
+
+      leaves[0][1]()
+      await nextTick()
+      expect(serializeInner(root)).toBe('<b>b</b>')
+    })
+
+    test('in-out keeps the visible fallback of a pending boundary until the new one entered', async () => {
+      const { root, page, enters, leaves } = pendingApp('in-out', true)
+      expect(serializeInner(root)).toBe('<p>loading</p>')
+
+      page.value = 'b'
+      await nextTick()
+      expect(serializeInner(root)).toBe('<p>loading</p><b>b</b>')
+      // the hidden branch left at once, the fallback waits
+      expect(leaves.map(l => l[0])).toEqual(['article'])
+
+      enters[0]()
+      await nextTick()
+      expect(leaves.map(l => l[0])).toEqual(['article', 'p'])
+      leaves[1][1]()
+      await nextTick()
+      expect(serializeInner(root)).toBe('<b>b</b>')
+    })
+
+    test('out-in waits for the retained content of a pending boundary', async () => {
+      const { root, page, content, Pending, leaves } = pendingApp(
+        'out-in',
+        false,
+      )
+      expect(serializeInner(root)).toBe('<i>a</i>')
+      // the boundary goes pending again, keeping its content on screen
+      content.value = Pending
+      await nextTick()
+      expect(serializeInner(root)).toBe('<i>a</i>')
+
+      page.value = 'b'
+      await nextTick()
+      expect(leaves.map(l => l[0])).toEqual(['i', 'article'])
+      leaves[1][1]()
+      await nextTick()
+      expect(serializeInner(root)).toBe('<i>a</i><!---->')
+
+      leaves[0][1]()
+      await nextTick()
+      expect(serializeInner(root)).toBe('<b>b</b>')
+    })
+
+    test('in-out keeps the retained content of a pending boundary until the new one entered', async () => {
+      const { root, page, content, Pending, enters, leaves } = pendingApp(
+        'in-out',
+        false,
+      )
+      content.value = Pending
+      await nextTick()
+      expect(serializeInner(root)).toBe('<i>a</i>')
+
+      page.value = 'b'
+      await nextTick()
+      expect(serializeInner(root)).toBe('<i>a</i><b>b</b>')
+      expect(leaves.map(l => l[0])).toEqual(['article'])
+
+      enters[0]()
+      await nextTick()
+      expect(leaves.map(l => l[0])).toEqual(['article', 'i'])
+      leaves[1][1]()
+      await nextTick()
+      expect(serializeInner(root)).toBe('<b>b</b>')
+    })
+  })
 })

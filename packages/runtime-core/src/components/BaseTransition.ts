@@ -190,13 +190,11 @@ const BaseTransitionImpl: ComponentOptions = {
         return emptyPlaceholder(child)
       }
 
-      let enterHooks = resolveTransitionHooks(
+      const enterHooks = resolveTransitionHooks(
         innerChild,
         rawProps,
         state,
         instance,
-        // #11061, ensure enterHooks is fresh after clone
-        hooks => (enterHooks = hooks),
       )
 
       if (innerChild.type !== Comment) {
@@ -330,7 +328,6 @@ export function resolveTransitionHooks(
   props: BaseTransitionProps<any>,
   state: TransitionState,
   instance: ComponentInternalInstance,
-  postClone?: (hooks: TransitionHooks) => void,
 ): TransitionHooks {
   const {
     appear,
@@ -480,15 +477,24 @@ export function resolveTransitionHooks(
     },
 
     clone(vnode) {
-      const hooks = resolveTransitionHooks(
-        vnode,
-        props,
-        state,
-        instance,
-        postClone,
-      )
-      if (postClone) postClone(hooks)
-      return hooks
+      const cloned = resolveTransitionHooks(vnode, props, state, instance)
+      // a clone runs the hooks for a vnode standing in for the one the owning
+      // <BaseTransition> switches (a Suspense branch, a cloned root): the mode
+      // callbacks it sets live on these hooks, the clone defers to them
+      cloned.afterLeave = () => {
+        if (hooks.afterLeave) hooks.afterLeave()
+      }
+      cloned.delayLeave = (el, earlyRemove, delayedLeave) => {
+        if (hooks.delayLeave) {
+          hooks.delayLeave(el, earlyRemove, delayedLeave)
+        } else {
+          delayedLeave()
+        }
+      }
+      cloned.delayedLeave = () => {
+        if (hooks.delayedLeave) hooks.delayedLeave()
+      }
+      return cloned
     },
   }
 
@@ -545,8 +551,21 @@ export function setTransitionHooks(vnode: VNode, hooks: TransitionHooks): void {
       hooks,
     )
   } else if (__FEATURE_SUSPENSE__ && vnode.shapeFlag & ShapeFlags.SUSPENSE) {
-    vnode.ssContent!.transition = hooks.clone(vnode.ssContent!)
-    vnode.ssFallback!.transition = hooks.clone(vnode.ssFallback!)
+    const suspense = vnode.suspense
+    if (suspense) {
+      // mounted: the branch on screen carries the switch, as a component's
+      // subTree does. a pending branch off screen keeps its hooks: it leaves
+      // out of sight on its own and must not drive the mode
+      const branch = suspense.isHydrating
+        ? suspense.pendingBranch
+        : suspense.activeBranch
+      if (branch) {
+        setTransitionHooks(branch, hooks.clone(branch))
+      }
+    } else {
+      vnode.ssContent!.transition = hooks.clone(vnode.ssContent!)
+      vnode.ssFallback!.transition = hooks.clone(vnode.ssFallback!)
+    }
   } else {
     vnode.transition = hooks
     if (vnode.type === Fragment && isArray(vnode.children)) {
