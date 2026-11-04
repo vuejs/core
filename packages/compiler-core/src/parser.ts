@@ -46,7 +46,7 @@ import {
   isStaticArgOf,
   isVPre,
 } from './utils'
-import { decodeHTML } from 'entities/decode'
+import { decodeHTMLStrict } from 'entities/decode'
 import {
   type ParserOptions as BabelOptions,
   parse,
@@ -126,7 +126,9 @@ const tokenizer = new Tokenizer(stack, {
       if (__BROWSER__) {
         exp = currentOptions.decodeEntities!(exp, false)
       } else {
-        exp = decodeHTML(exp)
+        // only decode entities terminated by `;`, otherwise valid JS like
+        // `a&&currentDomain` would turn `&curren` into `¤`
+        exp = decodeHTMLStrict(exp)
       }
     }
     addNode({
