@@ -330,4 +330,22 @@ describe('compiler: integration tests', () => {
       ).toMatchObject({ line, column: column + end.length })
     }
   })
+
+  test('source map of a slot function', () => {
+    const template = `<Comp>\n  <template #default="{ foo }">\n    <div>{{ foo }}</div>\n  </template>\n</Comp>`
+    const { code, map } = compile(template, {
+      sourceMap: true,
+      filename: `foo.vue`,
+      mode: 'module',
+      prefixIdentifiers: true,
+    })
+    const consumer = new SourceMapConsumer(map as RawSourceMap)
+    expect(
+      consumer.originalPositionFor(getPositionInCode(code, `_withCtx(`)),
+    ).toMatchObject(getPositionInCode(template, `<template`))
+    const { line, column } = getPositionInCode(template, `</template>`)
+    expect(
+      consumer.originalPositionFor(getPositionInCode(code, `]),`)),
+    ).toMatchObject({ line, column: column + `</template>`.length })
+  })
 })

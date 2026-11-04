@@ -676,12 +676,7 @@ function genNode(node: CodegenNode | symbol | string, context: CodegenContext) {
   }
   const pieces = !__BROWSER__ && context.pieces
   const openEnd = pieces ? context.openEnd : undefined
-  // the loc of a function is that of its first child, not its own
-  if (
-    pieces &&
-    node.loc.source &&
-    node.type !== NodeTypes.JS_FUNCTION_EXPRESSION
-  ) {
+  if (pieces && node.loc.source) {
     context.openEnd = node.loc.end.offset
   }
   switch (node.type) {
