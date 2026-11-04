@@ -19,6 +19,7 @@ export default defineConfig({
       },
     }),
     copyVuePlugin(),
+    replCompilerSfcPlugin(),
   ],
   define: {
     __COMMIT__: JSON.stringify(commit),
@@ -28,6 +29,23 @@ export default defineConfig({
     exclude: ['@vue/repl'],
   },
 })
+
+function replCompilerSfcPlugin(): Plugin {
+  const shim = path.resolve(import.meta.dirname, 'src/repl-compiler-sfc.ts')
+  return {
+    name: 'repl-compiler-sfc',
+    enforce: 'pre',
+    resolveId(id, importer) {
+      if (
+        id === 'vue/compiler-sfc' &&
+        importer &&
+        /[\\/]@vue[\\/]repl[\\/]/.test(importer)
+      ) {
+        return shim
+      }
+    },
+  }
+}
 
 function copyVuePlugin(): Plugin {
   return {
