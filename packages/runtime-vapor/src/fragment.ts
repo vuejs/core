@@ -71,6 +71,7 @@ import {
   deferBranchUpdateDuringLeave,
   deferSlotRootFlip,
   isTransitionEnabled,
+  releaseBranchHooks,
   removeBranchWithLeave,
 } from './transition'
 import {
@@ -567,6 +568,7 @@ export class DynamicFragment extends RenderContextFragment {
       this.scope = undefined
       this.nodes = EMPTY_BLOCK
       if (removePrevious) removePrevious()
+      if (isTransitionEnabled && this.$transition) releaseBranchHooks(this)
     }
 
     if (notifyUpdated) {

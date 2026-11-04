@@ -72,6 +72,8 @@ export let resolveOutletLeave: ResolveOutletLeaveFn
 // a slot root flipping invalid beside sibling roots: reported once they
 // settled (one of them may render in this flush); false to report it now
 export let deferSlotRootFlip: (frag: DynamicFragment) => boolean
+// a fragment that rendered nothing: its hooks must not hold the block that left
+export let releaseBranchHooks: (frag: DynamicFragment) => void
 
 export let isTransitionEnabled = false
 
@@ -91,8 +93,10 @@ export function registerTransitionHooks(
   awaitLeaving: AwaitLeavingRootFn,
   resolveLeave: ResolveOutletLeaveFn,
   deferFlip: (frag: DynamicFragment) => boolean,
+  releaseHooks: (frag: DynamicFragment) => void,
 ): void {
   deferSlotRootFlip = deferFlip
+  releaseBranchHooks = releaseHooks
   isTransitionEnabled = true
   ownsTransitionMode = ownsMode
   applyTransitionHooks = applyHooks

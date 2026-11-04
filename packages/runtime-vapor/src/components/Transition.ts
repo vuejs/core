@@ -109,6 +109,7 @@ export const ensureTransitionHooksRegistered = (): void => {
       awaitLeavingRootImpl,
       resolveOutletLeaveImpl,
       deferSlotRootFlipImpl,
+      releaseBranchHooksImpl,
     )
   }
 }
@@ -649,6 +650,35 @@ export function applyTransitionLeaveHooksImpl(
     }
   }
   return true
+}
+
+// Hooks resolved for a branch close over its block. With nothing rendered in
+// its place, the fragments keep only what the next branch resolves from.
+function releaseBranchHooksImpl(frag: DynamicFragment): void {
+  const hooks = frag.$transition!
+  if (
+    !isVaporTransitionHooks(hooks) ||
+    hooks.applyGroup ||
+    hooks.delayedLeave ||
+    !hooks.enter
+  ) {
+    return
+  }
+  const { mode, persisted, state, props, instance } = hooks
+  const released = {
+    __vapor: true,
+    mode,
+    persisted,
+    state,
+    props,
+    instance,
+  } as VaporTransitionHooks
+  frag.$transition = released
+  if (state.root) {
+    findTransitionBlock(state.root, f => {
+      if (f.$transition === hooks) f.$transition = released
+    })
+  }
 }
 
 function hasComponent(block: Block): boolean {

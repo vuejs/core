@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { nextTick, ref } from 'vue'
+import { type Ref, nextTick, ref } from 'vue'
 import { compile, makeRender } from '../_utils'
 
 const define = makeRender()
@@ -94,4 +94,79 @@ describe.skipIf(!global.gc)('Transition/gc', () => {
       app.unmount()
     }
   })
+
+  test.each([
+    ['default', ''],
+    ['out-in', 'mode="out-in"'],
+    ['in-out', 'mode="in-out"'],
+  ])(
+    '%s: a branch that left to nothing releases its element',
+    async (_, mode) => {
+      const data = ref({ show: true })
+      const App = compile(
+        `<template>
+        <Transition ${mode} :css="false">
+          <div v-if="data.show" id="a" />
+        </Transition>
+      </template>`,
+        data,
+      )
+      await expectBranchReleased(App, data)
+    },
+  )
+
+  test('a nested branch that left to nothing releases its element', async () => {
+    const data = ref({ show: true })
+    const App = compile(
+      `<template>
+        <Transition :css="false">
+          <template v-if="true">
+            <div v-if="data.show" id="a" />
+          </template>
+        </Transition>
+      </template>`,
+      data,
+    )
+    await expectBranchReleased(App, data)
+  })
+
+  test('a slot branch that left to nothing releases its element', async () => {
+    const data = ref({ show: true })
+    const Wrapper = compile(
+      `<template>
+        <Transition :css="false"><slot /></Transition>
+      </template>`,
+      data,
+    )
+    const App = compile(
+      `<script setup vapor>
+        const data = _data
+        const Wrapper = _components.Wrapper
+      </script>
+      <template>
+        <Wrapper><div v-if="data.show" id="a" /></Wrapper>
+      </template>`,
+      data,
+      { Wrapper },
+    )
+    await expectBranchReleased(App, data)
+  })
+
+  async function expectBranchReleased(App: any, data: Ref<{ show: boolean }>) {
+    const { app, host } = define(App).render()
+    const removed = getElementRef(host)
+
+    try {
+      data.value.show = false
+      await nextTick()
+      await gc()
+      expect(removed.deref()).toBeUndefined()
+
+      data.value.show = true
+      await nextTick()
+      expect(host.firstElementChild!.id).toBe('a')
+    } finally {
+      app.unmount()
+    }
+  }
 })
