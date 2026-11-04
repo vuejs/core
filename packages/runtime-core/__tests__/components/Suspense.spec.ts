@@ -19,6 +19,7 @@ import {
   h,
   nextTick,
   nodeOps,
+  onBeforeMount,
   onBeforeUnmount,
   onDeactivated,
   onErrorCaptured,
@@ -575,6 +576,98 @@ describe('Suspense', () => {
     // should not resolve and cause unmount
     expect(mounted).not.toHaveBeenCalled()
     expect(unmounted).not.toHaveBeenCalled()
+  })
+
+  test('unmount suspense before resolve: no unmounted hook for a component still in setup', async () => {
+    const log: string[] = []
+    let resolveSetup!: (v?: unknown) => void
+
+    const Slow = {
+      async setup() {
+        onBeforeMount(() => log.push('bm'))
+        onMounted(() => log.push('m'))
+        onBeforeUnmount(() => log.push('bum'))
+        onUnmounted(() => log.push('um'))
+        await new Promise(r => {
+          resolveSetup = r
+        })
+        return () => h('div', 'slow')
+      },
+    }
+
+    const toggle = ref(true)
+    const root = nodeOps.createElement('div')
+    render(
+      h(() =>
+        toggle.value
+          ? h(Suspense, null, {
+              default: h(Slow),
+              fallback: h('div', 'fallback'),
+            })
+          : null,
+      ),
+      root,
+    )
+    expect(serializeInner(root)).toBe(`<div>fallback</div>`)
+
+    toggle.value = false
+    await nextTick()
+    expect(serializeInner(root)).toBe(`<!---->`)
+    expect(log).toEqual(['bum'])
+
+    resolveSetup()
+    await new Promise(r => setTimeout(r))
+    await nextTick()
+    expect(log).toEqual(['bum'])
+  })
+
+  test('unmount suspense before resolve: no unmounted hook for a built but unrevealed component', async () => {
+    const log: string[] = []
+    let resolveSetup!: (v?: unknown) => void
+
+    const Slow = {
+      async setup() {
+        await new Promise(r => {
+          resolveSetup = r
+        })
+        return () => h('div', 'slow')
+      },
+    }
+    const Sync = {
+      setup() {
+        onBeforeMount(() => log.push('bm'))
+        onMounted(() => log.push('m'))
+        onBeforeUnmount(() => log.push('bum'))
+        onUnmounted(() => log.push('um'))
+        return () => h('div', 'sync')
+      },
+    }
+
+    const toggle = ref(true)
+    const root = nodeOps.createElement('div')
+    render(
+      h(() =>
+        toggle.value
+          ? h(Suspense, null, {
+              default: h('div', [h(Slow), h(Sync)]),
+              fallback: h('div', 'fallback'),
+            })
+          : null,
+      ),
+      root,
+    )
+    expect(serializeInner(root)).toBe(`<div>fallback</div>`)
+    expect(log).toEqual(['bm'])
+
+    toggle.value = false
+    await nextTick()
+    expect(serializeInner(root)).toBe(`<!---->`)
+    expect(log).toEqual(['bm', 'bum'])
+
+    resolveSetup()
+    await new Promise(r => setTimeout(r))
+    await nextTick()
+    expect(log).toEqual(['bm', 'bum'])
   })
 
   // vuetifyjs/vuetify#15207
