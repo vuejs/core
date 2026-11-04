@@ -414,7 +414,11 @@ const tokenizer = new Tokenizer(stack, {
       addNode({
         type: NodeTypes.COMMENT,
         content: getSlice(start, end),
-        loc: getLoc(start - 4, end + 3),
+        // the comment is closed by `-->`, or `--!>` if incorrectly closed
+        loc: getLoc(
+          start - 4,
+          end + (currentInput.startsWith('--!>', end) ? 4 : 3),
+        ),
       })
     }
   },

@@ -539,6 +539,26 @@ export default class Tokenizer {
       if (this.fastForwardTo(this.currentSequence[0])) {
         this.sequenceIndex = 1
       }
+    } else if (
+      this.sequenceIndex === 2 &&
+      c === CharCodes.ExclamationMark &&
+      this.currentSequence === Sequences.CommentEnd &&
+      this.index - 2 >= this.sectionStart &&
+      this.peek() === CharCodes.Gt
+    ) {
+      // `--!>` also ends a comment (incorrectly-closed-comment in the spec)
+      if (__DEV__ || !__BROWSER__) {
+        this.cbs.onerr(
+          ErrorCodes.INCORRECTLY_CLOSED_COMMENT,
+          this.sectionStart - 4,
+        )
+      }
+      this.cbs.oncomment(this.sectionStart, this.index - 2)
+      // skip the `>`
+      this.index++
+      this.sequenceIndex = 0
+      this.sectionStart = this.index + 1
+      this.state = State.Text
     } else if (c !== this.currentSequence[this.sequenceIndex - 1]) {
       // Allow long sequences, eg. --->, ]]]>
       this.sequenceIndex = 0

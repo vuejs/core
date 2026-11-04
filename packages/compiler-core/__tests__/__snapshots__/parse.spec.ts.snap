@@ -2052,6 +2052,76 @@ exports[`compiler: parse > Errors > EOF_IN_TAG > <template><div id=abc 1`] = `
 }
 `;
 
+exports[`compiler: parse > Errors > INCORRECTLY_CLOSED_COMMENT > <template><!--comment--!></template> 1`] = `
+{
+  "cached": [],
+  "children": [
+    {
+      "children": [
+        {
+          "content": "comment",
+          "loc": {
+            "end": {
+              "column": 26,
+              "line": 1,
+              "offset": 25,
+            },
+            "source": "<!--comment--!>",
+            "start": {
+              "column": 11,
+              "line": 1,
+              "offset": 10,
+            },
+          },
+          "type": 3,
+        },
+      ],
+      "codegenNode": undefined,
+      "loc": {
+        "end": {
+          "column": 37,
+          "line": 1,
+          "offset": 36,
+        },
+        "source": "<template><!--comment--!></template>",
+        "start": {
+          "column": 1,
+          "line": 1,
+          "offset": 0,
+        },
+      },
+      "ns": 0,
+      "props": [],
+      "tag": "template",
+      "tagType": 0,
+      "type": 1,
+    },
+  ],
+  "codegenNode": undefined,
+  "components": [],
+  "directives": [],
+  "helpers": Set {},
+  "hoists": [],
+  "imports": [],
+  "loc": {
+    "end": {
+      "column": 37,
+      "line": 1,
+      "offset": 36,
+    },
+    "source": "<template><!--comment--!></template>",
+    "start": {
+      "column": 1,
+      "line": 1,
+      "offset": 0,
+    },
+  },
+  "source": "<template><!--comment--!></template>",
+  "temps": 0,
+  "type": 0,
+}
+`;
+
 exports[`compiler: parse > Errors > MISSING_ATTRIBUTE_VALUE > <template><div id= /></div></template> 1`] = `
 {
   "cached": [],

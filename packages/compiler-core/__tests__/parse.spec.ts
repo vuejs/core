@@ -396,6 +396,55 @@ describe('compiler: parse', () => {
       expect(astOptionWithComments.children).toHaveLength(1)
     })
 
+    test('comment closed by `--!>`', () => {
+      const onError = vi.fn()
+      const ast = baseParse('<!--abc--!><p/>', { onError })
+      const comment = ast.children[0] as CommentNode
+
+      expect(onError.mock.calls.map(([err]) => err.code)).toEqual([
+        ErrorCodes.INCORRECTLY_CLOSED_COMMENT,
+      ])
+      expect(comment).toStrictEqual({
+        type: NodeTypes.COMMENT,
+        content: 'abc',
+        loc: {
+          start: { offset: 0, line: 1, column: 1 },
+          end: { offset: 11, line: 1, column: 12 },
+          source: '<!--abc--!>',
+        },
+      })
+      expect(ast.children[1]).toMatchObject({
+        type: NodeTypes.ELEMENT,
+        tag: 'p',
+      })
+    })
+
+    test('`--!` not followed by `>` does not close a comment', () => {
+      const ast = baseParse('<!--a--!-->b')
+      expect(ast.children).toMatchObject([
+        { type: NodeTypes.COMMENT, content: 'a--!' },
+        { type: NodeTypes.TEXT, content: 'b' },
+      ])
+    })
+
+    test('`!>` right after `<!--` or `<!---` does not close a comment', () => {
+      expect(baseParse('<!--!>-->').children).toMatchObject([
+        { type: NodeTypes.COMMENT, content: '!>' },
+      ])
+      expect(baseParse('<!---!>-->').children).toMatchObject([
+        { type: NodeTypes.COMMENT, content: '-!>' },
+      ])
+    })
+
+    test('`]]!>` does not close CDATA', () => {
+      const ast = baseParse('<svg><![CDATA[a]]!>b]]></svg>', {
+        getNamespace: () => Namespaces.SVG,
+      })
+      expect((ast.children[0] as ElementNode).children).toMatchObject([
+        { type: NodeTypes.TEXT, content: 'a]]!>b' },
+      ])
+    })
+
     // #2217
     test('comments in the <pre> tag should be removed when comments option requires it', () => {
       const rawText = `<p/><!-- foo --><p/>`
@@ -2998,17 +3047,17 @@ describe('compiler: parse', () => {
           ],
         },
       ],
-      // INCORRECTLY_CLOSED_COMMENT: [
-      //   {
-      //     code: '<template><!--comment--!></template>',
-      //     errors: [
-      //       {
-      //         type: ErrorCodes.INCORRECTLY_CLOSED_COMMENT,
-      //         loc: { offset: 10, line: 1, column: 11 }
-      //       }
-      //     ]
-      //   }
-      // ],
+      INCORRECTLY_CLOSED_COMMENT: [
+        {
+          code: '<template><!--comment--!></template>',
+          errors: [
+            {
+              type: ErrorCodes.INCORRECTLY_CLOSED_COMMENT,
+              loc: { offset: 10, line: 1, column: 11 },
+            },
+          ],
+        },
+      ],
       // INCORRECTLY_OPENED_COMMENT: [
       //   {
       //     code: '<template><!></template>',
