@@ -111,15 +111,15 @@ export const SuspenseImpl = {
     } else {
       const suspense = n1.suspense!
       // #8678 while the parent is pending, a nested boundary in its new
-      // content is not patched (#10055). One in the content the parent keeps
-      // on screen stays live, except for a root replacement, which would mount
-      // new content into it.
+      // content is not patched (#10055), unless it shows its fallback: skipped
+      // there, it would keep a pending branch that is never revealed (#10415).
+      // One in the content the parent keeps on screen stays live, except for
+      // a root replacement, which would mount new content into it.
       // Neither applies while the parent is hydrating: its pending branch is
       // the adopted SSR DOM, never mounted again, so skipping leaves it stale.
       if (
         parentSuspense &&
         parentSuspense.deps > 0 &&
-        !suspense.isInFallback &&
         !parentSuspense.isHydrating
       ) {
         const owner = suspense.parentComponent
@@ -128,13 +128,14 @@ export const SuspenseImpl = {
           owner.suspense === parentSuspense &&
           owner.suspenseId !== parentSuspense.pendingId
         if (
-          !retained ||
-          // deps can outlive the pending branch: skip only while it exists
-          (parentSuspense.pendingBranch &&
-            !isSameVNodeType(
-              n2.ssContent!,
-              (suspense.pendingBranch || suspense.activeBranch)!,
-            ))
+          retained
+            ? // deps can outlive the pending branch: skip only while it exists
+              parentSuspense.pendingBranch &&
+              !isSameVNodeType(
+                n2.ssContent!,
+                (suspense.pendingBranch || suspense.activeBranch)!,
+              )
+            : !suspense.isInFallback
         ) {
           n2.suspense = suspense
           suspense.vnode = n2
