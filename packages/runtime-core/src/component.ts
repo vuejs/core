@@ -34,6 +34,7 @@ import {
   initSlots,
 } from './componentSlots'
 import { warn } from './warning'
+import { isVaporInteropEnabled } from './vaporInteropState'
 import { ErrorCodes, callWithErrorHandling, handleError } from './errorHandling'
 import {
   type AppConfig,
@@ -94,6 +95,7 @@ import { markAsyncBoundary } from './helpers/useId'
 import { isAsyncWrapper } from './apiAsyncComponent'
 import type { RendererElement } from './renderer'
 import {
+  restoreCurrentInstance,
   setCurrentInstance,
   setInSSRSetupState,
 } from './componentCurrentInstance'
@@ -101,6 +103,13 @@ import {
 export * from './componentCurrentInstance'
 
 export type Data = Record<string, unknown>
+
+/**
+ * For extending allowed non-declared attrs on components in TSX
+ */
+export interface AllowedAttrs {}
+
+export type Attrs = Data & AllowedAttrs
 
 /**
  * Public utility type for extracting the instance type of a component.
@@ -327,7 +336,7 @@ export type SetupContext<
   S extends SlotsType = {},
 > = E extends any
   ? {
-      attrs: Data
+      attrs: Attrs
       slots: UnwrapSlotsType<S>
       emit: EmitFn<E>
       expose: <Exposed extends Record<string, any> = Record<string, any>>(
@@ -726,6 +735,10 @@ const emptyAppContext = /*@__PURE__*/ createAppContext()
 
 let uid = 0
 
+export function getNextUid(): number {
+  return uid
+}
+
 /**
  * @internal for vapor
  */
@@ -867,7 +880,7 @@ export function setupComponent(
   const { props, children, vi } = instance.vnode
   const isStateful = isStatefulComponent(instance)
 
-  if (vi) {
+  if (isVaporInteropEnabled && vi) {
     // Vapor interop override - use Vapor props/attrs proxy
     vi(instance)
   } else {
@@ -938,7 +951,7 @@ function setupStatefulComponent(
     )
     const isAsyncSetup = isPromise(setupResult)
     setActiveSub(prevSub)
-    setCurrentInstance(...prev)
+    restoreCurrentInstance(prev)
 
     if ((isAsyncSetup || instance.sp) && !isAsyncWrapper(instance)) {
       // async setup / serverPrefetch, mark as async boundary for useId()
@@ -954,7 +967,12 @@ function setupStatefulComponent(
         // return the promise so server-renderer can wait on it
         return setupResult
           .then((resolvedResult: unknown) => {
-            handleSetupResult(instance, resolvedResult, isSSR)
+            setInSSRSetupState(true)
+            try {
+              handleSetupResult(instance, resolvedResult, isSSR)
+            } finally {
+              setInSSRSetupState(false)
+            }
           })
           .catch(e => {
             handleError(e, instance, ErrorCodes.SETUP_FUNCTION)
@@ -1127,7 +1145,7 @@ export function finishComponentSetup(
       applyOptions(instance)
     } finally {
       setActiveSub(prevSub)
-      setCurrentInstance(...prevInstance)
+      restoreCurrentInstance(prevInstance)
     }
   }
 
@@ -1195,13 +1213,13 @@ export function createSetupContext(
   if (__DEV__) {
     // We use getters in dev in case libs like test-utils overwrite instance
     // properties (overwrites should not be done in prod)
-    let attrsProxy: Data
+    let attrsProxy: Attrs
     let slotsProxy: Slots
     return Object.freeze({
       get attrs() {
         return (
           attrsProxy ||
-          (attrsProxy = new Proxy(instance.attrs, attrsProxyHandlers))
+          (attrsProxy = new Proxy(instance.attrs, attrsProxyHandlers) as Attrs)
         )
       },
       get slots() {
@@ -1214,7 +1232,7 @@ export function createSetupContext(
     })
   } else {
     return {
-      attrs: new Proxy(instance.attrs, attrsProxyHandlers),
+      attrs: new Proxy(instance.attrs, attrsProxyHandlers) as Attrs,
       slots: instance.slots,
       emit: instance.emit,
       expose: exposed => expose(instance, exposed as any),
@@ -1262,7 +1280,7 @@ export function getComponentPublicInstance(
         get(target, key: string) {
           if (key in target) {
             return target[key]
-          } else {
+          } else if (!instance.vapor) {
             const publicPropertiesMap = getPublicPropertiesMap()
             if (key in publicPropertiesMap) {
               return publicPropertiesMap[key](
@@ -1272,8 +1290,10 @@ export function getComponentPublicInstance(
           }
         },
         has(target, key: string) {
-          const publicPropertiesMap = getPublicPropertiesMap()
-          return key in target || key in publicPropertiesMap
+          return (
+            key in target ||
+            (!instance.vapor && key in getPublicPropertiesMap())
+          )
         },
       }))
     )
@@ -1343,7 +1363,7 @@ export interface ComponentCustomElementInterface {
   /**
    * @internal
    */
-  _injectChildStyle(type: ConcreteComponent): void
+  _injectChildStyle(type: ConcreteComponent, parent?: ConcreteComponent): void
   /**
    * @internal
    */

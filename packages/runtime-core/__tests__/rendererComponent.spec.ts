@@ -526,4 +526,67 @@ describe('renderer: component', () => {
     // expect Comp to not be re-rendered
     expect(spy).toHaveBeenCalledTimes(1)
   })
+
+  test('should update child component when a prop is replaced by a new undefined prop', async () => {
+    const props = ref<Record<string, any>>({ foo: 'foo' })
+
+    const Comp = {
+      props: ['foo', 'bar'],
+      render(this: any) {
+        return h('div', `${this.foo}-${this.bar}`)
+      },
+    }
+
+    const App = {
+      render() {
+        return h(Comp, props.value)
+      },
+    }
+
+    const root = nodeOps.createElement('div')
+    render(h(App), root)
+    expect(serializeInner(root)).toBe(`<div>foo-undefined</div>`)
+
+    props.value = { bar: undefined }
+    await nextTick()
+    expect(serializeInner(root)).toBe(`<div>undefined-undefined</div>`)
+
+    props.value = { bar: 'bar' }
+    await nextTick()
+    expect(serializeInner(root)).toBe(`<div>undefined-bar</div>`)
+  })
+
+  test('should update child component when a prop is replaced by an emit listener', async () => {
+    const props = ref<Record<string, any>>({ foo: 'foo' })
+
+    const Comp = {
+      props: ['foo'],
+      emits: ['click'],
+      render(this: any) {
+        return h('div', `${this.foo}`)
+      },
+    }
+
+    const App = {
+      render() {
+        return h(Comp, props.value)
+      },
+    }
+
+    const root = nodeOps.createElement('div')
+    render(h(App), root)
+    expect(serializeInner(root)).toBe(`<div>foo</div>`)
+
+    props.value = { onClick: () => {} }
+    await nextTick()
+    expect(serializeInner(root)).toBe(`<div>undefined</div>`)
+  })
+
+  // coverage guard: the vapor branches of the renderer are gated for
+  // tree-shaking, the dev hint for a missing interop plugin must survive it
+  test('warns when a vapor component is rendered without the interop plugin', () => {
+    const Vapor = { __vapor: true, setup() {} } as any
+    expect(() => render(h(Vapor), nodeOps.createElement('div'))).toThrow()
+    expect('vapor-in-vdom interop was not installed').toHaveBeenWarned()
+  })
 })

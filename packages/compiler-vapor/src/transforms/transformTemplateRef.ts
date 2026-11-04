@@ -28,7 +28,7 @@ export const transformTemplateRef: NodeTransform = (node, context) => {
 
   return () => {
     const id = context.reference()
-    const effect = !isConstantExpression(value)
+    const effect = !isConstantExpression(value, context.options.bindingMetadata)
     context.registerEffect([value], {
       type: IRNodeTypes.SET_TEMPLATE_REF,
       element: id,

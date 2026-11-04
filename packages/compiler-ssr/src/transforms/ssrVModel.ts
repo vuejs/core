@@ -22,7 +22,7 @@ import {
   SSR_LOOSE_EQUAL,
   SSR_RENDER_DYNAMIC_MODEL,
 } from '../runtimeHelpers'
-import type { DirectiveTransformResult } from 'packages/compiler-core/src/transform'
+import type { DirectiveTransformResult } from '../../../compiler-core/src/transform'
 
 export const ssrTransformModel: DirectiveTransform = (dir, node, context) => {
   const model = dir.exp!

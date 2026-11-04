@@ -58,16 +58,70 @@ describe('v-text', () => {
     expect(code).matchSnapshot()
   })
 
-  test('work with dynamic component', () => {
+  test('pass textContent prop to dynamic component', () => {
     const { code } = compileWithVText(`<component :is="Comp" v-text="foo"/>`)
     expect(code).matchSnapshot()
-    expect(code).contains('setBlockText(n0, _toDisplayString(_ctx.foo))')
+    expect(code).contains('{ textContent: () => (_toDisplayString(_ctx.foo)) }')
+    expect(code).not.contains('setBlockText')
   })
 
-  test('work with component', () => {
+  test('pass textContent prop to component', () => {
     const { code } = compileWithVText(`<Comp v-text="foo"/>`)
     expect(code).matchSnapshot()
-    expect(code).contains('setBlockText(n0, _toDisplayString(_ctx.foo))')
+    expect(code).contains('{ textContent: () => (_toDisplayString(_ctx.foo)) }')
+    expect(code).not.contains('setBlockText')
+  })
+
+  test('preserve constant component prop values', () => {
+    const number = compileWithVText(`<Comp v-text="1"/>`).code
+    expect(number).contains('{ textContent: 1 }')
+    expect(number).not.contains('toDisplayString')
+
+    const undefinedValue = compileWithVText(`<Comp v-text="undefined"/>`).code
+    expect(undefinedValue).contains('{ textContent: undefined }')
+    expect(undefinedValue).not.contains('toDisplayString')
+
+    const setupConst = compileWithVText(`<Comp v-text="foo"/>`, {
+      bindingMetadata: {
+        foo: BindingTypes.SETUP_CONST,
+      },
+      inline: true,
+    }).code
+    expect(setupConst).contains('{ textContent: () => (foo) }')
+    expect(setupConst).not.contains('toDisplayString')
+
+    const functionValue = compileWithVText(`<Comp v-text="() => 1"/>`).code
+    expect(functionValue).contains('{ textContent: () => (() => 1) }')
+    expect(functionValue).not.contains('toDisplayString')
+
+    const functionWithReference = compileWithVText(
+      `<Comp v-text="() => foo"/>`,
+    ).code
+    expect(functionWithReference).contains('toDisplayString')
+
+    const setupConstExpression = compileWithVText(`<Comp v-text="foo + 1"/>`, {
+      bindingMetadata: {
+        foo: BindingTypes.SETUP_CONST,
+      },
+      inline: true,
+    }).code
+    expect(setupConstExpression).contains('toDisplayString')
+  })
+
+  test('escape constant text in native element templates', () => {
+    const { code, ir } = compileWithVText(`<div v-text="'<b>foo</b>'"/>`)
+    expect([...ir.template.keys()]).toEqual(['<div>&lt;b&gt;foo&lt;/b&gt;'])
+    expect(code).contains(
+      'const t0 = _template("<div>&lt;b&gt;foo&lt;/b&gt;", 3)',
+    )
+  })
+
+  test('work with plain template createElement path', () => {
+    const { code } = compileWithVText(`<template v-text="foo"></template>`)
+    expect(code).matchSnapshot()
+    expect(code).toContain('createPlainElement')
+    expect(code).toContain('_insert(')
+    expect(code).not.toContain('_txt(n0)')
   })
 
   test('should raise error and ignore children when v-text is present', () => {
@@ -109,7 +163,7 @@ describe('v-text', () => {
 
     expect(code).matchSnapshot()
     // children should have been removed
-    expect(code).contains('template("<div> ", true)')
+    expect(code).contains('template("<div> ", 1)')
   })
 
   test('should raise error if has no expression', () => {
@@ -119,5 +173,44 @@ describe('v-text', () => {
     expect(onError.mock.calls).toMatchObject([
       [{ code: DOMErrorCodes.X_V_TEXT_NO_EXPRESSION }],
     ])
+  })
+
+  // #9482
+  test('known globals are shadowed by setup bindings', () => {
+    const { code } = compileWithVText(`<Comp v-text="isNaN"/>`, {
+      bindingMetadata: { isNaN: BindingTypes.SETUP_REF },
+      inline: true,
+    })
+    expect(code).contains(
+      '{ textContent: () => (_toDisplayString(isNaN.value)) }',
+    )
+  })
+
+  test.each([true, false])(
+    'shadowed globals in compound component expressions (inline: %s)',
+    inline => {
+      for (const name of ['JSON', 'require']) {
+        const value = inline ? `${name}.value` : `_ctx.${name}`
+        for (const [expression, expected] of [
+          [`(${name})`, `(${value})`],
+          [`${name} || ''`, `${value} || ''`],
+        ]) {
+          const { code } = compileWithVText(`<Comp v-text="${expression}"/>`, {
+            bindingMetadata: { [name]: BindingTypes.SETUP_REF },
+            inline,
+          })
+          expect(code).contains(
+            `{ textContent: () => (_toDisplayString(${expected})) }`,
+          )
+        }
+      }
+    },
+  )
+
+  test('preserve unshadowed globals in compound component expressions', () => {
+    for (const expression of ['(JSON)', "JSON || ''", '(require)']) {
+      const { code } = compileWithVText(`<Comp v-text="${expression}"/>`)
+      expect(code).not.contains('toDisplayString')
+    }
   })
 })

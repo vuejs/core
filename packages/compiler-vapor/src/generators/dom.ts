@@ -1,5 +1,5 @@
 import type { CodegenContext } from '../generate'
-import type { InsertNodeIRNode, PrependNodeIRNode } from '../ir'
+import type { InsertNodeIRNode } from '../ir'
 import { type CodeFragment, NEWLINE, genCall } from './utils'
 
 export function genInsertNode(
@@ -10,25 +10,11 @@ export function genInsertNode(
   if (elements.length > 1) element = `[${element}]`
   return [
     NEWLINE,
-    ...genCall(
+    genCall(
       helper('insert'),
       element,
       `n${parent}`,
       anchor === undefined ? undefined : `n${anchor}`,
-    ),
-  ]
-}
-
-export function genPrependNode(
-  oper: PrependNodeIRNode,
-  { helper }: CodegenContext,
-): CodeFragment[] {
-  return [
-    NEWLINE,
-    ...genCall(
-      helper('prepend'),
-      `n${oper.parent}`,
-      ...oper.elements.map(el => `n${el}`),
     ),
   ]
 }

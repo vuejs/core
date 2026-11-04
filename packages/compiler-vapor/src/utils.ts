@@ -1,18 +1,29 @@
-import { isGloballyAllowed } from '@vue/shared'
+import { VaporBlockShape, isGloballyAllowed, isOn } from '@vue/shared'
 import {
   type AttributeNode,
   type BindingMetadata,
   BindingTypes,
   type ElementNode,
   NodeTypes,
+  type RootNode,
   type SimpleExpressionNode,
+  type TemplateChildNode,
   findDir as _findDir,
   findProp as _findProp,
   createSimpleExpression,
   isConstantNode,
   isLiteralWhitelisted,
+  isTemplateNode,
+  isVSlot,
 } from '@vue/compiler-dom'
-import type { VaporDirectiveNode } from './ir'
+import {
+  type BlockIRNode,
+  type DirectiveIRNode,
+  IRNodeTypes,
+  type IfIRNode,
+  type OperationNode,
+  type VaporDirectiveNode,
+} from './ir'
 import { EMPTY_EXPRESSION } from './transforms/utils'
 import type { TransformContext } from './transform'
 
@@ -40,11 +51,26 @@ export function propToExpression(
     : prop.exp
 }
 
-export function isConstantExpression(exp: SimpleExpressionNode): boolean {
+export function isConstantExpression(
+  exp: SimpleExpressionNode,
+  bindings?: BindingMetadata,
+): boolean {
   return (
     isLiteralWhitelisted(exp.content) ||
-    isGloballyAllowed(exp.content) ||
+    // a known global shadowed by a binding is not a constant
+    (isGloballyAllowed(exp.content) && !(bindings && bindings[exp.content])) ||
     getLiteralExpressionValue(exp) !== null
+  )
+}
+
+// vdom's "constant type": the binding gets no effect and is not listed in
+// dynamicProps
+export function isConstantBinding(
+  exp: SimpleExpressionNode,
+  bindings: BindingMetadata,
+): boolean {
+  return (
+    isConstantExpression(exp, bindings) || isStaticExpression(exp, bindings)
   )
 }
 
@@ -57,7 +83,9 @@ export function isStaticExpression(
   } else if (node.ast === null) {
     if (
       !node.isStatic &&
-      (node.content === 'true' || node.content === 'false')
+      (node.content === 'true' ||
+        node.content === 'false' ||
+        node.content === 'null')
     ) {
       return true
     }
@@ -124,6 +152,14 @@ export function isTransitionNode(node: ElementNode): boolean {
   return node.type === NodeTypes.ELEMENT && isTransitionTag(node.tag)
 }
 
+/** Transition or TransitionGroup: hosts whose children render specially. */
+export function isTransitionHostNode(node: RootNode | ElementNode): boolean {
+  return (
+    node.type === NodeTypes.ELEMENT &&
+    (isTransitionTag(node.tag) || isTransitionGroupTag(node.tag))
+  )
+}
+
 export function isTransitionGroupNode(node: ElementNode): boolean {
   return node.type === NodeTypes.ELEMENT && isTransitionGroupTag(node.tag)
 }
@@ -139,7 +175,7 @@ export function isTransitionGroupTag(tag: string): boolean {
 }
 
 export function isKeepAliveTag(tag: string): boolean {
-  tag = tag.toLowerCase()
+  tag = tag.toLowerCase().replace(/-/g, '')
   return tag === 'keepalive' || tag === 'vaporkeepalive'
 }
 
@@ -148,9 +184,16 @@ export function isTeleportTag(tag: string): boolean {
   return tag === 'teleport' || tag === 'vaporteleport'
 }
 
+export function isComponentTag(tag: string): boolean {
+  return tag === 'component' || tag === 'Component'
+}
+
 export function isBuiltInComponent(tag: string): string | undefined {
   if (isTeleportTag(tag)) {
     return 'VaporTeleport'
+  } else if (tag === 'Suspense' || tag === 'suspense') {
+    // TODO: replace with VaporSuspense once it's implemented
+    return 'Suspense'
   } else if (isKeepAliveTag(tag)) {
     return 'VaporKeepAlive'
   } else if (isTransitionTag(tag)) {
@@ -158,4 +201,70 @@ export function isBuiltInComponent(tag: string): string | undefined {
   } else if (isTransitionGroupTag(tag)) {
     return 'VaporTransitionGroup'
   }
+}
+
+export function getBlockShape(block: BlockIRNode): VaporBlockShape {
+  // Mirrors compiler-ssr's `needFragmentWrapper`: SSR renders a branch as a
+  // fragment unless its only child is an element. A lone nested v-if is an IF
+  // node there; a lone v-for is exempt and owns its own range.
+  const { node } = block
+  if (node.type !== NodeTypes.ELEMENT) return VaporBlockShape.SINGLE_ROOT
+  const child = node.children.length === 1 ? node.children[0] : undefined
+  return child && child.type === NodeTypes.ELEMENT && !findDir(child, 'if')
+    ? VaporBlockShape.SINGLE_ROOT
+    : VaporBlockShape.MULTI_ROOT
+}
+
+// A `v-if` chain with more `v-else-if` branches than this compiles to one
+// `createIfChain` call: nested `createIf` calls create each branch inside the
+// previous one's effect and run out of stack on long chains.
+export const IF_CHAIN_THRESHOLD = 10
+
+/** the number of `v-if` / `v-else-if` nodes in the chain starting at `head` */
+export function getIfChainLength(head: IfIRNode): number {
+  let length = 1
+  let negative = head.negative
+  while (negative && negative.type === IRNodeTypes.IF) {
+    length++
+    negative = negative.negative
+  }
+  return length
+}
+
+export function isLongIfChain(head: IfIRNode): boolean {
+  return getIfChainLength(head) - 1 > IF_CHAIN_THRESHOLD
+}
+
+// `<template v-slot>`: a slot body of its own, unlike a plain `<template>`
+export function isSlotTemplate(node: TemplateChildNode): node is ElementNode {
+  return (
+    node.type === NodeTypes.ELEMENT &&
+    isTemplateNode(node) &&
+    node.props.some(isVSlot)
+  )
+}
+
+export function isVModelOperation(
+  oper: OperationNode,
+): oper is DirectiveIRNode {
+  return (
+    oper.type === IRNodeTypes.DIRECTIVE &&
+    oper.builtin === true &&
+    oper.name === 'model'
+  )
+}
+
+export function isVModelListener(
+  oper: OperationNode,
+  modelElements: Set<number>,
+): boolean {
+  return (
+    (oper.type === IRNodeTypes.SET_EVENT ||
+      oper.type === IRNodeTypes.SET_DYNAMIC_EVENTS ||
+      (oper.type === IRNodeTypes.SET_DYNAMIC_PROPS && oper.listeners) ||
+      (oper.type === IRNodeTypes.SET_PROP &&
+        !oper.prop.modifier &&
+        isOn(oper.prop.key.content))) &&
+    modelElements.has(oper.element)
+  )
 }

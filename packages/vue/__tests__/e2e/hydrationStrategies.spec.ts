@@ -7,6 +7,7 @@ declare const window: Window & {
   isRootMounted: boolean
   teardownCalled?: boolean
   show: Ref<boolean>
+  resolveLoader: () => void
 }
 
 describe('async component hydration strategies', () => {
@@ -41,15 +42,27 @@ describe('async component hydration strategies', () => {
       await goToCase('idle', '', vapor)
       // not hydrated yet
       expect(await page().evaluate(() => window.isHydrated)).toBe(false)
+      // trigger loader
+      await page().evaluate(() => window.resolveLoader())
       // wait for hydration
       await page().waitForFunction(() => window.isHydrated)
-      // assert message order: hyration should happen after already queued main thread work
+      // assert message order: hydration should happen after already queued main thread work
       expect(messages.slice(1)).toMatchObject(['resolve', 'busy', 'hydrated'])
       await assertHydrationSuccess()
     })
 
     test('visible', async () => {
       await goToCase('visible', '', vapor)
+      await page().waitForFunction(() => window.isRootMounted)
+      expect(await page().evaluate(() => window.isHydrated)).toBe(false)
+      // scroll down
+      await page().evaluate(() => window.scrollTo({ top: 1000 }))
+      await page().waitForFunction(() => window.isHydrated)
+      await assertHydrationSuccess()
+    })
+
+    test('visible (root with display: contents)', async () => {
+      await goToCase('visible', '?contents', vapor)
       await page().waitForFunction(() => window.isRootMounted)
       expect(await page().evaluate(() => window.isHydrated)).toBe(false)
       // scroll down
@@ -114,18 +127,34 @@ describe('async component hydration strategies', () => {
       // patch
       await page().evaluate(() => (window.show.value = false))
       await click('button')
-      expect(await text('button')).toBe('1')
+      if (!vapor) {
+        expect(await text('button')).toBe('1')
+      } else {
+        // Vapor lazy hydration does not run the async component's setup until
+        // hydration actually starts, so there is no pre-hydration patch here.
+        expect(await text('button')).toBe('0')
+      }
 
       // resize
       await page().setViewport({ width: 400, height: 600 })
       await page().waitForFunction(() => window.isHydrated)
-      await assertHydrationSuccess('2')
+      if (!vapor) {
+        await assertHydrationSuccess('2')
+      } else {
+        await assertHydrationSuccess('1')
+      }
 
       expect(spy).toBeCalledTimes(0)
       currentPage.off('pageerror', spy)
-      expect(
-        warn.some(w => w.includes('Skipping lazy hydration for component')),
-      ).toBe(true)
+
+      // Vapor still enters lazy hydration after the strategy triggers, so it
+      // corrects the drift through mismatch recovery instead of taking the
+      // shared "Skipping lazy hydration..." short-circuit path.
+      if (!vapor) {
+        expect(
+          warn.some(w => w.includes('Skipping lazy hydration for component')),
+        ).toBe(true)
+      }
     })
 
     test('interaction', async () => {
@@ -167,6 +196,42 @@ describe('async component hydration strategies', () => {
       expect(await text('#app')).toBe('off')
       expect(await page().evaluate(() => window.isHydrated)).toBe(false)
       expect(await page().evaluate(() => window.teardownCalled)).toBe(true)
+    })
+
+    test('visible (display: contents root gains a box after a media query)', async () => {
+      await page().setViewport({ width: 800, height: 600 })
+      await goToCase('visible', '?contents', vapor)
+      await page().waitForFunction(() => window.isRootMounted)
+      await page().addStyleTag({
+        content: `
+          #app button { position: fixed; top: 1000px; }
+          @media (max-width: 600px) {
+            #app > div {
+              display: block !important;
+              position: fixed;
+              top: 20px;
+              left: 20px;
+              width: 160px;
+              height: 60px;
+              background: lightblue;
+            }
+          }
+        `,
+      })
+      expect(await page().evaluate(() => window.isHydrated)).toBe(false)
+
+      await page().setViewport({ width: 500, height: 600 })
+      expect(
+        await page().$eval('#app > div', el => el.getBoundingClientRect().top),
+      ).toBe(20)
+      expect(
+        await page().$eval('button', el => el.getBoundingClientRect().top),
+      ).toBeGreaterThan(600)
+      await page().waitForFunction(() => window.isHydrated, { timeout: 2000 })
+
+      // Dispatch the click without scrolling the offscreen child into view.
+      await page().$eval('button', el => el.click())
+      expect(await text('button')).toBe('1')
     })
   }
 })

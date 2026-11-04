@@ -91,11 +91,13 @@ export function onWatcherCleanup(
 ): void {
   if (owner) {
     const { call } = owner.options
-    if (call) {
-      owner.cleanups[owner.cleanupsLength++] = () =>
-        call(cleanupFn, WatchErrorCodes.WATCH_CLEANUP)
+    const cleanup = call
+      ? () => call(cleanupFn, WatchErrorCodes.WATCH_CLEANUP)
+      : cleanupFn
+    if (owner.cb) {
+      ;(owner.cbCleanups || (owner.cbCleanups = [])).push(cleanup)
     } else {
-      owner.cleanups[owner.cleanupsLength++] = cleanupFn
+      owner.cleanups[owner.cleanupsLength++] = cleanup
     }
   } else if (__DEV__ && !failSilently) {
     warn(
@@ -109,6 +111,7 @@ export class WatcherEffect extends ReactiveEffect {
   forceTrigger: boolean
   isMultiSource: boolean
   oldValue: any
+  cbCleanups?: (() => void)[]
   boundCleanup: typeof onWatcherCleanup = fn =>
     onWatcherCleanup(fn, false, this)
 
@@ -192,8 +195,11 @@ export class WatcherEffect extends ReactiveEffect {
     if (once && cb) {
       const _cb = cb
       cb = (...args) => {
-        _cb(...args)
-        this.stop()
+        try {
+          return _cb(...args)
+        } finally {
+          this.stop()
+        }
       }
     }
 
@@ -209,6 +215,24 @@ export class WatcherEffect extends ReactiveEffect {
     }
   }
 
+  cleanupCallback(): void {
+    const cleanups = this.cbCleanups
+    if (cleanups) {
+      // Cleanups may synchronously trigger the watcher again.
+      this.cbCleanups = undefined
+      for (let i = 0, l = cleanups.length; i < l; i++) {
+        cleanups[i]()
+      }
+    }
+  }
+
+  stop(): void {
+    if (this.active) {
+      super.stop()
+      this.cleanupCallback()
+    }
+  }
+
   run(initialRun = false): void {
     const oldValue = this.oldValue
     const newValue = (this.oldValue = super.run())
@@ -220,17 +244,19 @@ export class WatcherEffect extends ReactiveEffect {
       return
     }
     if (
+      initialRun ||
       deep ||
       this.forceTrigger ||
       (this.isMultiSource
         ? (newValue as any[]).some((v, i) => hasChanged(v, oldValue[i]))
         : hasChanged(newValue, oldValue))
     ) {
-      // cleanup before running cb again
-      cleanup(this)
       const currentWatcher = activeWatcher
-      activeWatcher = this
+      const prevSub = setActiveSub()
       try {
+        // cleanup before running cb again
+        this.cleanupCallback()
+        activeWatcher = this
         const args = [
           newValue,
           // pass undefined as the old value when it's changed for the first time
@@ -247,6 +273,7 @@ export class WatcherEffect extends ReactiveEffect {
             this.cb(...args)
       } finally {
         activeWatcher = currentWatcher
+        setActiveSub(prevSub)
       }
     }
   }

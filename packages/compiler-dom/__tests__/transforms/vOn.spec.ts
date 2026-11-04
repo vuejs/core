@@ -301,4 +301,36 @@ describe('compiler-dom: transform v-on', () => {
     // should only have hydration flag
     expect(node.patchFlag).toBe(PatchFlags.NEED_HYDRATION)
   })
+
+  test('should warn and ignore .delegate outside Vapor', () => {
+    const onWarn = vi.fn()
+
+    const {
+      props: [keyupProp],
+    } = parseWithVOn(`<input @keyup.delegate="test" />`, {
+      onWarn,
+      prefixIdentifiers: true,
+    })
+
+    expect(onWarn).toHaveBeenCalledOnce()
+    expect(onWarn.mock.calls[0][0]).toMatchObject({
+      message: `.delegate modifier is only supported in Vapor components.`,
+      loc: {
+        source: 'delegate',
+      },
+    })
+    expect(keyupProp.value).toMatchObject({ content: '_ctx.test' })
+    expect(keyupProp.value).not.toMatchObject({ callee: V_ON_WITH_KEYS })
+
+    const {
+      props: [dynamicProp],
+    } = parseWithVOn(`<div @[event].delegate="test" />`, {
+      onWarn,
+      prefixIdentifiers: true,
+    })
+
+    expect(onWarn).toHaveBeenCalledTimes(2)
+    expect(dynamicProp.value).toMatchObject({ content: '_ctx.test' })
+    expect(dynamicProp.value).not.toMatchObject({ callee: V_ON_WITH_KEYS })
+  })
 })

@@ -5,8 +5,10 @@ import {
   transformElement,
   transformKey,
   transformText,
+  transformVBind,
   transformVFor,
   transformVIf,
+  transformVOnce,
   transformVSlot,
 } from '../../src'
 import { NodeTypes } from '@vue/compiler-dom'
@@ -14,6 +16,7 @@ import { NodeTypes } from '@vue/compiler-dom'
 const compileWithKey = makeCompile({
   nodeTransforms: [
     transformVIf,
+    transformVOnce,
     transformKey,
     transformVFor,
     transformText,
@@ -21,6 +24,9 @@ const compileWithKey = makeCompile({
     transformVSlot,
     transformChildren,
   ],
+  directiveTransforms: {
+    bind: transformVBind,
+  },
 })
 
 describe('compiler: key', () => {
@@ -99,7 +105,11 @@ describe('compiler: key', () => {
     test('<component is/> + key', () => {
       const { code } = compileWithKey(`<component :is="view" :key="id" />`)
       expect(code).toMatchSnapshot()
-      expect(code).contains('_createKeyedFragment(() => (_ctx.id)')
+      // the dynamic component keys its own branches; no wrapping fragment
+      expect(code).not.contains('_createKeyedFragment(')
+      expect(code).contains(
+        '_createDynamicComponent(() => (_ctx.view), null, null, 1 /* SINGLE_ROOT */, () => (_ctx.id))',
+      )
     })
 
     test('v-if + key', () => {
@@ -116,36 +126,147 @@ describe('compiler: key', () => {
       expect(code).contains('_createKeyedFragment(')
     })
 
+    test('<template v-if> + key', () => {
+      const { code } = compileWithKey(
+        `<template v-if="ok" :key="a"><div/></template>` +
+          `<template v-else-if="foo" :key="b"><div/></template>` +
+          `<template v-else :key="c"><div/></template>`,
+      )
+      expect(code).toMatchSnapshot()
+      // same as vdom: the key on a <template> branch is ignored
+      expect(code).not.contains('_createKeyedFragment(')
+    })
+
+    test('<template v-slot> + key', () => {
+      const { code } = compileWithKey(
+        `<Comp><template #foo="{ x }" :key="a">{{ x }}</template></Comp>`,
+      )
+      expect(code).toMatchSnapshot()
+      // same as vdom: the key on a <template> slot is ignored
+      expect(code).not.contains('_createKeyedFragment(')
+      expect(code).contains('"foo": (_slotProps0) =>')
+    })
+
     test('v-for + key', () => {
       const { code } = compileWithKey(`<div v-for="i in list" :key="i"></div>`)
       expect(code).toMatchSnapshot()
       expect(code).not.contains('_createKeyedFragment(')
     })
+
+    test('dynamic argument named key + key', () => {
+      const { code } = compileWithKey(`<div :[key]="v" :key="id" />`)
+      expect(code).contains('_createKeyedFragment(() => (_ctx.id)')
+      expect(code).contains(
+        '_setDynamicProps(n1, [{ [_ctx.key || ""]: _ctx.v }])',
+      )
+    })
   })
 
-  // static keys will be ignored
   describe('with static key', () => {
     test('component + key', () => {
       const { code } = compileWithKey(`<Foo key="1" />`)
       expect(code).toMatchSnapshot()
+      expect(code).contains('key: "1"')
+      expect(code).not.contains('_setBlockKey(')
       expect(code).not.contains('_createKeyedFragment(')
     })
 
-    test('element + key', () => {
-      const { code } = compileWithKey(`<div key="1"></div>`)
+    test('component + key with v-bind', () => {
+      const { code } = compileWithKey(`<Foo v-bind="props" key="a" />`)
       expect(code).toMatchSnapshot()
+    })
+
+    test('element + key', () => {
+      const { code, ir } = compileWithKey(`<div key="1"></div>`)
+      expect(code).toMatchSnapshot()
+      expect(code).contains('_setBlockKey(')
       expect(code).not.contains('_createKeyedFragment(')
+      expect(ir.block.operation).toMatchObject([
+        {
+          type: IRNodeTypes.SET_BLOCK_KEY,
+          element: 0,
+          value: {
+            type: NodeTypes.SIMPLE_EXPRESSION,
+            content: '1',
+            isStatic: true,
+          },
+        },
+      ])
     })
 
     test('<component is/> + key', () => {
       const { code } = compileWithKey(`<component :is="view" key="1" />`)
       expect(code).toMatchSnapshot()
+      expect(code).contains('() => ("1"))')
+      expect(code).not.contains('key: "1"')
+      expect(code).not.contains('_setBlockKey(')
+      expect(code).not.contains('_createKeyedFragment(')
+    })
+
+    test('<component is literal/> + key', () => {
+      const { code } = compileWithKey(`<component :is="'div'" key="1" />`)
+      expect(code).toMatchSnapshot()
+      expect(code).contains('() => ("1"))')
+      expect(code).not.contains('key: "1"')
+      expect(code).not.contains('_setBlockKey(')
       expect(code).not.contains('_createKeyedFragment(')
     })
 
     test('static expression key', () => {
       const { code } = compileWithKey(`<div :key="1" />`)
       expect(code).toMatchSnapshot()
+      expect(code).contains('_setBlockKey(')
+      expect(code).not.contains('_createKeyedFragment(')
+    })
+
+    test('boolean static expression key', () => {
+      const { code } = compileWithKey(`<div :key="true" />`)
+      expect(code).toMatchSnapshot()
+      expect(code).contains('_setBlockKey(')
+      expect(code).not.contains('_createKeyedFragment(')
+    })
+
+    test('null static expression key', () => {
+      const { code } = compileWithKey(`<div :key="null" />`)
+      expect(code).toMatchSnapshot()
+      expect(code).contains('_setBlockKey(')
+      expect(code).not.contains('_createKeyedFragment(')
+    })
+
+    test('nested element + key is dropped', () => {
+      const { code } = compileWithKey(`<div><span key="a"></span></div>`)
+      expect(code).toMatchSnapshot()
+      expect(code).not.contains('_setBlockKey(')
+      expect(code).not.contains('_child(')
+    })
+
+    // coverage guards: block roots other than the template root keep their key
+    test('slot roots + key', () => {
+      const { code } = compileWithKey(
+        `<Foo><div key="a"></div><div key="b"></div></Foo>`,
+      )
+      expect(code).toMatchSnapshot()
+      expect(code.match(/_setBlockKey\(/g)).toHaveLength(2)
+    })
+
+    test('v-if branch root + key', () => {
+      const { code } = compileWithKey(`<div v-if="ok" key="a"></div>`)
+      expect(code).toMatchSnapshot()
+      expect(code).contains('_setBlockKey(')
+    })
+
+    test('v-once + element key', () => {
+      const { code } = compileWithKey(`<div v-once key="foo" />`)
+      expect(code).toMatchSnapshot()
+      expect(code).contains('_setBlockKey(')
+      expect(code).not.contains('_createKeyedFragment(')
+    })
+
+    test('v-once + component key', () => {
+      const { code } = compileWithKey(`<Foo v-once key="bar" />`)
+      expect(code).toMatchSnapshot()
+      expect(code).contains('key: "bar"')
+      expect(code).not.contains('_setBlockKey(')
       expect(code).not.contains('_createKeyedFragment(')
     })
   })

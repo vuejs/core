@@ -1,26 +1,40 @@
 import {
   type SimpleExpressionNode,
   createSimpleExpression,
+  walkFunctionParams,
   walkIdentifiers,
 } from '@vue/compiler-dom'
 import { genBlockContent } from './block'
+import { isVModelListener, isVModelOperation } from '../utils'
 import { genExpression } from './expression'
 import type { CodegenContext } from '../generate'
-import type { BlockIRNode, ForIRNode, IREffect } from '../ir'
+import {
+  type BlockIRNode,
+  type ForIRNode,
+  type IRDynamicInfo,
+  type IREffect,
+  IRNodeTypes,
+} from '../ir'
 import {
   type CodeFragment,
   INDENT_END,
   INDENT_START,
   NEWLINE,
   genCall,
+  genFlags,
   genMulti,
+  getParserOptions,
 } from './utils'
-import type { Expression, Identifier, Node } from '@babel/types'
+import type {
+  ArrowFunctionExpression,
+  Expression,
+  Identifier,
+  Node,
+} from '@babel/types'
 import { parseExpression } from '@babel/parser'
-import { VaporVForFlags } from '../../../shared/src/vaporFlags'
 import { walk } from 'estree-walker'
 import { genOperation } from './operation'
-import { extend, isGloballyAllowed } from '@vue/shared'
+import { VaporVForFlags, isGloballyAllowed } from '@vue/shared'
 
 export function genFor(
   oper: ForIRNode,
@@ -38,169 +52,281 @@ export function genFor(
     id,
     component,
     onlyChild,
+    slotRoot,
+    wrappedRows,
   } = oper
 
-  const rawValue = value && value.content
-  const rawKey = key && key.content
-  const rawIndex = index && index.content
-
-  const sourceExpr = ['() => (', ...genExpression(source, context), ')']
+  const sourceExpr = ['() => (', genExpression(source, context), ')']
+  const plugins = context.options.expressionPlugins
+  // key and index are parsed as function params too, so they go through the
+  // same destructure walk as value - it reads the bound name off the ast and
+  // wires up the default value, if any.
   const idToPathMap = parseValueDestructure(value, context)
+  const keyToPathMap = parseValueDestructure(key, context)
+  const indexToPathMap = parseValueDestructure(index, context)
 
   const [depth, exitScope] = context.enterScope()
   const itemVar = `_for_item${depth}`
-  const idMap = buildDestructureIdMap(
-    idToPathMap,
-    `${itemVar}.value`,
-    context.options.expressionPlugins,
-  )
+  const idMap = buildDestructureIdMap(idToPathMap, `${itemVar}.value`, plugins)
   idMap[itemVar] = null
 
   const args = [itemVar]
-  if (rawKey) {
+  if (key) {
     const keyVar = `_for_key${depth}`
     args.push(`, ${keyVar}`)
-    idMap[rawKey] = `${keyVar}.value`
+    Object.assign(
+      idMap,
+      buildDestructureIdMap(keyToPathMap, `${keyVar}.value`, plugins),
+    )
     idMap[keyVar] = null
+  } else if (index) {
+    args.push(', _')
   }
-  if (rawIndex) {
+  if (index) {
     const indexVar = `_for_index${depth}`
     args.push(`, ${indexVar}`)
-    idMap[rawIndex] = `${indexVar}.value`
+    Object.assign(
+      idMap,
+      buildDestructureIdMap(indexToPathMap, `${indexVar}.value`, plugins),
+    )
     idMap[indexVar] = null
   }
 
-  const { selectorPatterns, keyOnlyBindingPatterns } = matchPatterns(
-    render,
-    keyProp,
-    idMap,
-  )
+  const { selectorPatterns, keyOnlyBindingPatterns, skippedEffectIndexes } =
+    matchPatterns(render, keyProp, idMap, context)
   const selectorDeclarations: CodeFragment[] = []
-  const selectorSetup: CodeFragment[] = []
+  const selectorName = (i: number) =>
+    selectorPatterns.length > 1 ? `_selector${id}_${i}` : `_selector${id}`
 
   for (let i = 0; i < selectorPatterns.length; i++) {
     const { selector } = selectorPatterns[i]
-    const selectorName = `_selector${id}_${i}`
-    selectorDeclarations.push(`let ${selectorName}`, NEWLINE)
-    if (i === 0) {
-      selectorSetup.push(`({ createSelector }) => {`, INDENT_START)
-    }
-    selectorSetup.push(
-      NEWLINE,
-      `${selectorName} = `,
-      ...genCall(`createSelector`, [
+    selectorDeclarations.push(
+      `const ${selectorName(i)} = `,
+      genCall(helper('createSelector'), [
         `() => `,
-        ...genExpression(selector, context),
+        genExpression(selector, context),
       ]),
+      NEWLINE,
     )
-    if (i === selectorPatterns.length - 1) {
-      selectorSetup.push(INDENT_END, NEWLINE, '}')
-    }
   }
 
   const blockFn = context.withId(() => {
     const frag: CodeFragment[] = []
-    frag.push('(', ...args, ') => {', INDENT_START)
+    frag.push('(', args, ') => {', INDENT_START)
     if (selectorPatterns.length || keyOnlyBindingPatterns.length) {
       frag.push(
-        ...genBlockContent(render, context, false, () => {
-          const patternFrag: CodeFragment[] = []
+        genBlockContent(
+          render,
+          context,
+          false,
+          () => {
+            const patternFrag: CodeFragment[] = []
 
-          for (let i = 0; i < selectorPatterns.length; i++) {
-            const { effect } = selectorPatterns[i]
-            patternFrag.push(
-              NEWLINE,
-              `_selector${id}_${i}(() => {`,
-              INDENT_START,
-            )
-            for (const oper of effect.operations) {
-              patternFrag.push(...genOperation(oper, context))
+            for (let i = 0; i < selectorPatterns.length; i++) {
+              const { effect } = selectorPatterns[i]
+              patternFrag.push(
+                NEWLINE,
+                `${selectorName(i)}(`,
+                genExpression(keyProp!, context),
+                `, () => {`,
+                INDENT_START,
+              )
+              for (const oper of effect.operations) {
+                patternFrag.push(genOperation(oper, context))
+              }
+              patternFrag.push(INDENT_END, NEWLINE, `})`)
             }
-            patternFrag.push(INDENT_END, NEWLINE, `})`)
-          }
 
-          for (const { effect } of keyOnlyBindingPatterns) {
-            for (const oper of effect.operations) {
-              patternFrag.push(...genOperation(oper, context))
+            for (const { effect } of keyOnlyBindingPatterns) {
+              for (const oper of effect.operations) {
+                patternFrag.push(genOperation(oper, context))
+              }
             }
-          }
 
-          return patternFrag
-        }),
+            return patternFrag
+          },
+          skippedEffectIndexes,
+        ),
       )
     } else {
-      frag.push(...genBlockContent(render, context))
+      frag.push(genBlockContent(render, context))
     }
     frag.push(INDENT_END, NEWLINE, '}')
     return frag
   }, idMap)
   exitScope()
 
-  let flags = 0
-  if (onlyChild) {
-    flags |= VaporVForFlags.FAST_REMOVE
-  }
-  if (component) {
-    flags |= VaporVForFlags.IS_COMPONENT
-  }
-  if (once) {
-    flags |= VaporVForFlags.ONCE
+  const flags = genForFlags(
+    onlyChild,
+    component,
+    isFragmentBlock(render),
+    !component && isSingleNodeBlock(render),
+    once,
+    slotRoot,
+    wrappedRows,
+  )
+
+  const onResetCalls: CodeFragment[] = []
+  for (let i = 0; i < selectorPatterns.length; i++) {
+    onResetCalls.push(NEWLINE, `n${id}.onReset(${selectorName(i)}.reset)`)
   }
 
   return [
     NEWLINE,
-    ...selectorDeclarations,
+    selectorDeclarations,
     `const n${id} = `,
-    ...genCall(
+    genCall(
       [helper('createFor'), 'undefined'],
       sourceExpr,
       blockFn,
       genCallback(keyProp),
-      flags ? String(flags) : undefined,
-      selectorSetup.length ? selectorSetup : undefined,
-      // todo: hydrationNode
+      flags,
     ),
+    onResetCalls,
   ]
 
   function genCallback(expr: SimpleExpressionNode | undefined) {
     if (!expr) return false
-    const res = context.withId(
-      () => genExpression(expr, context),
+    return context.withId(
+      () => [
+        genAliasParams(value, key, index, context),
+        ' => (',
+        genExpression(expr, context),
+        ')',
+      ],
       genSimpleIdMap(),
     )
-    return [
-      ...genMulti(
-        ['(', ')', ', '],
-        rawValue ? rawValue : rawKey || rawIndex ? '_' : undefined,
-        rawKey ? rawKey : rawIndex ? '__' : undefined,
-        rawIndex,
-      ),
-      ' => (',
-      ...res,
-      ')',
-    ]
   }
 
   function genSimpleIdMap() {
     const idMap: Record<string, null> = {}
-    if (rawKey) idMap[rawKey] = null
-    if (rawIndex) idMap[rawIndex] = null
-    idToPathMap.forEach((_, id) => (idMap[id] = null))
+    const collect = (map: DestructureMap) =>
+      map.forEach((_, id) => (idMap[id] = null))
+    collect(idToPathMap)
+    collect(keyToPathMap)
+    collect(indexToPathMap)
     return idMap
   }
 }
 
+function genForFlags(
+  onlyChild: boolean | undefined,
+  component: boolean | undefined,
+  isFragment: boolean,
+  isSingleNode: boolean,
+  once: boolean | undefined,
+  slotRoot: boolean | undefined,
+  wrappedRows: boolean,
+): string | undefined {
+  let flags = 0
+  const names: string[] = []
+
+  if (onlyChild) {
+    flags |= VaporVForFlags.FAST_REMOVE
+    names.push('FAST_REMOVE')
+  }
+  if (component) {
+    flags |= VaporVForFlags.IS_COMPONENT
+    names.push('IS_COMPONENT')
+  }
+  if (isFragment) {
+    flags |= VaporVForFlags.IS_FRAGMENT
+    names.push('IS_FRAGMENT')
+  }
+  if (isSingleNode) {
+    flags |= VaporVForFlags.IS_SINGLE_NODE
+    names.push('IS_SINGLE_NODE')
+  }
+  if (once) {
+    flags |= VaporVForFlags.ONCE
+    names.push('ONCE')
+  }
+  if (slotRoot) {
+    flags |= VaporVForFlags.SLOT_ROOT
+    names.push('SLOT_ROOT')
+  }
+  if (wrappedRows) {
+    flags |= VaporVForFlags.WRAPPED_ROWS
+    names.push('WRAPPED_ROWS')
+  }
+
+  if (!flags) {
+    return undefined
+  }
+
+  return genFlags(flags, names)
+}
+
+function isSingleNodeBlock(block: BlockIRNode): boolean {
+  const child = getSingleReturnedChild(block)
+  return !!child && child.template != null
+}
+
+function isFragmentBlock(block: BlockIRNode): boolean {
+  const child = getSingleReturnedChild(block)
+  const operation = child && child.operation
+  if (!operation) return false
+  return (
+    // <slot/>
+    operation.type === IRNodeTypes.SLOT_OUTLET_NODE ||
+    // <template v-for> with a single v-for child
+    operation.type === IRNodeTypes.FOR ||
+    // <template v-for> with a single dynamic :key child
+    operation.type === IRNodeTypes.KEY ||
+    // <template v-for> with a single dynamic v-if child
+    (operation.type === IRNodeTypes.IF && !operation.once) ||
+    // <component :is="..."/>
+    (operation.type === IRNodeTypes.CREATE_COMPONENT_NODE &&
+      !operation.once &&
+      !!operation.dynamic &&
+      !operation.dynamic.isStatic)
+  )
+}
+
+function getSingleReturnedChild(block: BlockIRNode): IRDynamicInfo | undefined {
+  if (block.returns.length !== 1) return
+  const id = block.returns[0]
+  for (const child of block.dynamic.children) {
+    if (child.id === id) return child
+  }
+}
+
+// an accessor segment, or a helper call wrapping the accessor built so far
+type DestructureStep = string | { helper: string; args: string }
+
 export type DestructureMapValue = {
-  path: string
+  steps: DestructureStep[]
   dynamic: boolean
-  helper?: string
-  helperArgs?: string
 }
 
 export type DestructureMap = Map<string, DestructureMapValue | null>
 
-// construct a id -> accessor path map.
-// e.g. `{ x: { y: [z] }}` -> `Map{ 'z' => '.x.y[0]' }`
+export function genAliasParams(
+  value: SimpleExpressionNode | undefined,
+  key: SimpleExpressionNode | undefined,
+  index: SimpleExpressionNode | undefined,
+  context: CodegenContext,
+): CodeFragment[] {
+  return genMulti(
+    ['(', ')', ', '],
+    value
+      ? genExpression(value, context, undefined, true)
+      : key || index
+        ? '_'
+        : undefined,
+    key
+      ? genExpression(key, context, undefined, true)
+      : index
+        ? '__'
+        : undefined,
+    index && genExpression(index, context, undefined, true),
+  )
+}
+
+// construct a id -> accessor steps map.
+// e.g. `{ x: { y: [z] }}` -> `Map{ 'z' => ['.x', '.y', '[0]'] }`
+// a default or rest applies at its own level: `{ x: { y } = {} }` gives `y`
+// the steps `.x`, getDefaultValue(…), `.y`
 export function parseValueDestructure(
   value: SimpleExpressionNode | undefined,
   context: CodegenContext,
@@ -209,44 +335,47 @@ export function parseValueDestructure(
   if (value) {
     const rawValue = value.content
     if (value.ast) {
+      // only the identifiers the pattern declares, not reads of them inside it
+      // (default values, computed keys)
+      const bindings = new Set<Identifier>()
+      walkFunctionParams(value.ast as ArrowFunctionExpression, id =>
+        bindings.add(id),
+      )
       walkIdentifiers(
         value.ast,
-        (id, _, parentStack, ___, isLocal) => {
-          if (isLocal) {
-            let path = ''
+        (id, _, parentStack) => {
+          if (bindings.has(id)) {
+            const steps: DestructureStep[] = []
             let isDynamic = false
-            let helper
-            let helperArgs
             for (let i = 0; i < parentStack.length; i++) {
               const parent = parentStack[i]
               const child = parentStack[i + 1] || id
 
               if (parent.type === 'ObjectProperty' && parent.value === child) {
                 if (parent.key.type === 'StringLiteral') {
-                  path += `[${JSON.stringify(parent.key.value)}]`
+                  steps.push(`[${JSON.stringify(parent.key.value)}]`)
                 } else if (parent.computed) {
                   isDynamic = true
-                  path += `[${rawValue.slice(
-                    parent.key.start! - 1,
-                    parent.key.end! - 1,
-                  )}]`
+                  steps.push(
+                    `[${rawValue.slice(parent.key.start! - 1, parent.key.end! - 1)}]`,
+                  )
                 } else {
                   // non-computed, can only be identifier
-                  path += `.${(parent.key as Identifier).name}`
+                  steps.push(`.${(parent.key as Identifier).name}`)
                 }
               } else if (parent.type === 'ArrayPattern') {
                 const index = parent.elements.indexOf(child as any)
                 if (child.type === 'RestElement') {
-                  path += `.slice(${index})`
+                  steps.push(`.slice(${index})`)
                 } else {
-                  path += `[${index}]`
+                  steps.push(`[${index}]`)
                 }
               } else if (
                 parent.type === 'ObjectPattern' &&
                 child.type === 'RestElement'
               ) {
-                helper = context.helper('getRestElement')
-                helperArgs =
+                const helper = context.helper('getRestElement')
+                const args =
                   '[' +
                   parent.properties
                     .filter(p => p.type === 'ObjectProperty')
@@ -262,23 +391,29 @@ export function parseValueDestructure(
                     })
                     .join(', ') +
                   ']'
+                steps.push({ helper, args })
               }
 
-              // default value
+              // default value, either inside the pattern (`{ a = 1 }`) or on
+              // the alias itself (`(item, key, index = 0)`, `({ a } = {})`) -
+              // the latter sits directly under the arrow the alias is parsed as
               if (
                 child.type === 'AssignmentPattern' &&
                 (parent.type === 'ObjectProperty' ||
-                  parent.type === 'ArrayPattern')
+                  parent.type === 'ArrayPattern' ||
+                  parent.type === 'ArrowFunctionExpression')
               ) {
                 isDynamic = true
-                helper = context.helper('getDefaultValue')
-                helperArgs = rawValue.slice(
-                  child.right.start! - 1,
-                  child.right.end! - 1,
-                )
+                steps.push({
+                  helper: context.helper('getDefaultValue'),
+                  args: `() => (${rawValue.slice(
+                    child.right.start! - 1,
+                    child.right.end! - 1,
+                  )})`,
+                })
               }
             }
-            map.set(id.name, { path, dynamic: isDynamic, helper, helperArgs })
+            map.set(id.name, { steps, dynamic: isDynamic })
           }
         },
         true,
@@ -299,20 +434,18 @@ export function buildDestructureIdMap(
   idToPathMap.forEach((pathInfo, id) => {
     let path = baseAccessor
     if (pathInfo) {
-      path = `${baseAccessor}${pathInfo.path}`
-
-      if (pathInfo.helper) {
-        idMap[pathInfo.helper] = null
-        path = pathInfo.helperArgs
-          ? `${pathInfo.helper}(${path}, ${pathInfo.helperArgs})`
-          : `${pathInfo.helper}(${path})`
+      for (const step of pathInfo.steps) {
+        if (typeof step === 'string') {
+          path += step
+        } else {
+          idMap[step.helper] = null
+          path = `${step.helper}(${path}, ${step.args})`
+        }
       }
 
       if (pathInfo.dynamic) {
         const node = (idMap[id] = createSimpleExpression(path))
-        node.ast = parseExpression(`(${path})`, {
-          plugins: plugins ? [...plugins, 'typescript'] : ['typescript'],
-        })
+        node.ast = parseExpression(`(${path})`, getParserOptions(plugins))
       } else {
         idMap[id] = path
       }
@@ -323,10 +456,24 @@ export function buildDestructureIdMap(
   return idMap
 }
 
+function isSelectValueEffect(effect: IREffect): boolean {
+  return (
+    !!effect.once &&
+    effect.operations.some(
+      oper =>
+        oper.type === IRNodeTypes.SYNC_SELECT_VALUE ||
+        (oper.type === IRNodeTypes.SET_PROP &&
+          oper.tag === 'select' &&
+          oper.prop.key.content === 'value'),
+    )
+  )
+}
+
 function matchPatterns(
   render: BlockIRNode,
   keyProp: SimpleExpressionNode | undefined,
   idMap: Record<string, string | SimpleExpressionNode | null>,
+  context: CodegenContext,
 ) {
   const selectorPatterns: NonNullable<
     ReturnType<typeof matchSelectorPattern>
@@ -334,27 +481,79 @@ function matchPatterns(
   const keyOnlyBindingPatterns: NonNullable<
     ReturnType<typeof matchKeyOnlyBindingPattern>
   >[] = []
+  let skippedEffectIndexes: Set<number> | undefined
 
-  render.effect = render.effect.filter(effect => {
-    if (keyProp !== undefined) {
-      const selector = matchSelectorPattern(effect, keyProp.content, idMap)
-      if (selector) {
-        selectorPatterns.push(selector)
-        return false
-      }
-      const keyOnly = matchKeyOnlyBindingPattern(effect, keyProp.content)
-      if (keyOnly) {
-        keyOnlyBindingPatterns.push(keyOnly)
-        return false
+  if (
+    keyProp === undefined ||
+    // lifting would move the option bindings after a one-time select value
+    render.effect.some(isSelectValueEffect)
+  ) {
+    return {
+      keyOnlyBindingPatterns,
+      selectorPatterns,
+      skippedEffectIndexes,
+    }
+  }
+
+  const modelElements = new Set(
+    render.operation.filter(isVModelOperation).map(oper => oper.element),
+  )
+  const lastOrderedProp = new Map<number, number>()
+  for (let i = 0; i < render.effect.length; i++) {
+    const effect = render.effect[i]
+    if (effect.once) {
+      for (const operation of effect.operations) {
+        if (operation.type === IRNodeTypes.SET_PROP) {
+          lastOrderedProp.set(operation.element, i)
+        }
       }
     }
+  }
 
-    return true
-  })
+  for (let index = 0; index < render.effect.length; index++) {
+    const effect = render.effect[index]
+    // Lifted bindings run after ordered prop setters but before v-model, so
+    // same-element listeners must stay in the deferred effect path.
+    if (
+      effect.once ||
+      effect.operations.some(
+        operation =>
+          isVModelListener(operation, modelElements) ||
+          (operation.type === IRNodeTypes.SET_PROP &&
+            index < (lastOrderedProp.get(operation.element) ?? -1)),
+      )
+    ) {
+      continue
+    }
+    const selector = matchSelectorPattern(
+      effect,
+      keyProp.content,
+      idMap,
+      context,
+    )
+    if (selector) {
+      selectorPatterns.push(selector)
+      skipEffect(index)
+      continue
+    }
+    const keyOnly = matchKeyOnlyBindingPattern(effect, keyProp.content)
+    if (keyOnly) {
+      keyOnlyBindingPatterns.push(keyOnly)
+      skipEffect(index)
+    }
+  }
 
   return {
     keyOnlyBindingPatterns,
     selectorPatterns,
+    skippedEffectIndexes,
+  }
+
+  function skipEffect(index: number): void {
+    if (!skippedEffectIndexes) {
+      skippedEffectIndexes = new Set()
+    }
+    skippedEffectIndexes.add(index)
   }
 }
 
@@ -381,6 +580,7 @@ function matchSelectorPattern(
   effect: IREffect,
   key: string,
   idMap: Record<string, string | SimpleExpressionNode | null>,
+  context: CodegenContext,
 ):
   | {
       effect: IREffect
@@ -407,10 +607,12 @@ function matchSelectorPattern(
               [left, right],
               [right, left],
             ]) {
-              const aIsKey = isKeyOnlyBinding(a, key, content)
-              const bIsKey = isKeyOnlyBinding(b, key, content)
-              const bVars = analyzeVariableScopes(b, idMap)
-              if (aIsKey && !bIsKey && !bVars.length) {
+              // must be the key itself, not an expression derived from it
+              if (content.slice(a.start! - 1, a.end! - 1) !== key) continue
+              if (
+                !isKeyOnlyBinding(b, key, content) &&
+                !analyzeVariableScopes(b, idMap).length
+              ) {
                 matcheds.push([a, b])
               }
             }
@@ -435,18 +637,18 @@ function matchSelectorPattern(
 
         if (!hasExtraId) {
           const name = content.slice(selector.start! - 1, selector.end! - 1)
+          const selectorExpression = createSimpleExpression(
+            name,
+            false,
+            selector.loc as any,
+          )
+          selectorExpression.ast = parseExpression(
+            `(${name})`,
+            getParserOptions(context.options.expressionPlugins),
+          )
           return {
             effect,
-            // @ts-expect-error
-            selector: {
-              content: name,
-              ast: extend({}, selector, {
-                start: 1,
-                end: name.length + 1,
-              }),
-              loc: selector.loc as any,
-              isStatic: false,
-            },
+            selector: selectorExpression,
           }
         }
       }

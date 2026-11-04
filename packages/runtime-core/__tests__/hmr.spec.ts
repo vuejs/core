@@ -154,6 +154,38 @@ describe('hot module replacement', () => {
     expect(mountSpy).toHaveBeenCalledTimes(1)
   })
 
+  test('reload multiple children under same parent should rerender parent once', async () => {
+    const root = nodeOps.createElement('div')
+    const childId = 'test-reload-multiple-children-same-parent'
+
+    const Child: ComponentOptions = {
+      __hmrId: childId,
+      render: () => h('div', 'old'),
+    }
+    createRecord(childId, Child)
+
+    let parentRenderCount = 0
+    const Parent: ComponentOptions = {
+      render() {
+        parentRenderCount++
+        return [h(Child), h(Child)]
+      },
+    }
+
+    render(h(Parent), root)
+    expect(serializeInner(root)).toBe(`<div>old</div><div>old</div>`)
+    expect(parentRenderCount).toBe(1)
+
+    reload(childId, {
+      __hmrId: childId,
+      render: () => h('div', 'new'),
+    })
+    await nextTick()
+
+    expect(serializeInner(root)).toBe(`<div>new</div><div>new</div>`)
+    expect(parentRenderCount).toBe(2)
+  })
+
   // #7042
   test('reload KeepAlive slot', async () => {
     const root = nodeOps.createElement('div')

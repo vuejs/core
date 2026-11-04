@@ -531,3 +531,85 @@ test('prefixing props edge case in inline mode', () => {
   expect(content).toMatchSnapshot()
   expect(content).toMatch(`__props["Foo"]).Bar`)
 })
+
+test('template-only vapor compile keeps built-in render args for $slots', () => {
+  const result = compile({
+    filename: 'example.vue',
+    source: `<span v-if="$slots.default"><slot /></span>`,
+    vapor: true,
+  })
+
+  expect(result.code).toContain(
+    `export function render(_ctx, $props, $emit, $attrs, $slots)`,
+  )
+  expect(result.code).toContain(`_createIf(() => ($slots.default)`)
+})
+
+test('compiles vapor event delegation only when explicitly requested', () => {
+  const result = compile({
+    filename: 'example.vue',
+    source: `<button @click="onClick" /><input @keyup.delegate="onKeyup" />`,
+    vapor: true,
+  })
+
+  expect(result.code).toContain(`_on(n0, "click", e => _ctx.onClick(e))`)
+  expect(result.code).toContain(`_delegateEvents("keyup")`)
+  expect(result.code).toContain(`n1.$evtkeyup`)
+})
+
+test('tells the ssr compiler that the template is a vapor component', () => {
+  const ssrCode = (vapor: boolean) =>
+    compile({
+      filename: 'example.vue',
+      source: `<TransitionGroup tag="ul"><li v-for="i in list" :key="i" /></TransitionGroup>`,
+      ssr: true,
+      vapor,
+    }).code
+
+  expect(ssrCode(true)).toContain('<!--[-->')
+  expect(ssrCode(false)).not.toContain('<!--[-->')
+})
+
+test.each([false, true])(
+  'reports ignored v-memo in Vapor templates (isProd: %s)',
+  isProd => {
+    const result = compile({
+      filename: 'example.vue',
+      source: '<div v-memo="[foo]">{{ bar }}</div>',
+      vapor: true,
+      isProd,
+    })
+
+    expect(result.errors).toEqual([])
+    expect(result.tips).toHaveLength(1)
+    expect(result.tips[0]).toContain(
+      'v-memo is not supported in Vapor mode and will be ignored.',
+    )
+    expect(result.tips[0]).toContain('v-memo="[foo]"')
+  },
+)
+
+test('marks the vapor template AST as transformed so a reuse re-parses it', () => {
+  const { descriptor } = parse(
+    `
+    <template>
+      <img src="./logo.png">
+    </template>
+    `,
+    { filename: 'example.vue' },
+  )
+  const template = descriptor.template!
+  const options = {
+    filename: 'example.vue',
+    source: template.content,
+    ast: template.ast,
+    vapor: true,
+  }
+
+  const { code } = compile(options)
+  expect(code).toContain(`import _imports_0 from './logo.png'`)
+  expect(template.ast!.transformed).toBe(true)
+  // the asset transform rewrote the AST in place; a second compile must not
+  // reuse it and lose the import
+  expect(compile(options).code).toBe(code)
+})

@@ -36,6 +36,43 @@ describe('defineModel()', () => {
     })
   })
 
+  test('w/ template literal name', () => {
+    const { content, bindings } = compile(
+      `
+      <script setup>
+      const x = defineModel(\`x\`, { default: 100 })
+      const y = defineModel(\`y\`, { default: 200 })
+      </script>
+      `,
+    )
+    assertCode(content)
+    expect(content).toMatch('"x": { default: 100 },')
+    expect(content).toMatch('"y": { default: 200 },')
+    expect(content).toMatch('emits: ["update:x", "update:y"],')
+    expect(content).toMatch('const x = _useModel(__props, `x`)')
+    expect(content).toMatch('const y = _useModel(__props, `y`)')
+    expect(content).not.toMatch('defineModel')
+
+    expect(bindings).toStrictEqual({
+      x: BindingTypes.SETUP_REF,
+      y: BindingTypes.SETUP_REF,
+    })
+  })
+
+  test('w/ template literal name with expressions falls back to modelValue', () => {
+    const { content } = compile(
+      `
+      <script setup>
+      const name = 'x'
+      const m = defineModel(\`\${name}\`)
+      </script>
+      `,
+    )
+    assertCode(content)
+    expect(content).toMatch('"modelValue":')
+    expect(content).toMatch('_useModel(__props, "modelValue",')
+  })
+
   test('w/ defineProps and defineEmits', () => {
     const { content, bindings } = compile(
       `
@@ -250,6 +287,76 @@ describe('defineModel()', () => {
     expect(content).toMatch(`set: (v) => { return v + __props.x }`)
   })
 
+  // #15602
+  test('w/ props destructure, prop option referencing a destructured prop', () => {
+    expect(() =>
+      compile(
+        `
+      <script setup lang="ts">
+      const { x } = defineProps<{ x?: number }>()
+      const modelValue = defineModel({
+        default: () => x
+      })
+      </script>
+      `,
+        { propsDestructure: true },
+      ),
+    ).toThrow(`prop options cannot reference destructured props`)
+  })
+
+  test('w/ props destructure, default factory using the props argument', () => {
+    const { content } = compile(
+      `
+      <script setup lang="ts">
+      const { x } = defineProps<{ x?: number }>()
+      const modelValue = defineModel({
+        default: props => props.x
+      })
+      </script>
+      `,
+      { propsDestructure: true },
+    )
+    assertCode(content)
+    expect(content).toMatch(`default: props => props.x`)
+  })
+
+  test('w/ props destructure, local shadowing a destructured prop', () => {
+    const { content } = compile(
+      `
+      <script setup lang="ts">
+      const { x } = defineProps<{ x?: number }>()
+      const modelValue = defineModel({
+        default: () => { const x = 1; return x }
+      })
+      </script>
+      `,
+      { propsDestructure: true },
+    )
+    assertCode(content)
+    expect(content).toMatch(`default: () => { const x = 1; return x }`)
+  })
+
+  test('w/ props destructure, nested var shadowing a destructured prop', () => {
+    const { content } = compile(
+      `
+      <script setup lang="ts">
+      const { x } = defineProps<{ x?: number }>()
+      const modelValue = defineModel({
+        default: () => {
+          if (true) {
+            var x = 1
+          }
+          return x
+        }
+      })
+      </script>
+      `,
+      { propsDestructure: true },
+    )
+    assertCode(content)
+    expect(content).toMatch(`return x`)
+  })
+
   test('w/ Boolean And Function types, production mode', () => {
     const { content, bindings } = compile(
       `
@@ -268,5 +375,21 @@ describe('defineModel()', () => {
     expect(bindings).toStrictEqual({
       modelValue: BindingTypes.SETUP_REF,
     })
+  })
+
+  test('v-model on model prop name should hint at the returned ref', () => {
+    expect(() =>
+      compile(
+        `
+        <script setup lang="ts">
+        defineModel<boolean>('submitting')
+        </script>
+        <template>
+          <Comp v-model="submitting" />
+        </template>
+        `,
+        { inlineTemplate: true },
+      ),
+    ).toThrow('assign the returned ref to a variable')
   })
 })

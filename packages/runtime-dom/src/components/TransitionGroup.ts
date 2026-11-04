@@ -9,11 +9,14 @@ import {
   resolveTransitionProps,
   vtcKey,
 } from './Transition'
+import { type VShowElement, vShowHidden } from '../directives/vShow'
 import {
+  type BaseTransitionProps,
   type ComponentInternalInstance,
   type ComponentOptions,
   DeprecationTypes,
   Fragment,
+  type GenericComponentInstance,
   type SetupContext,
   Text,
   type VNode,
@@ -21,12 +24,14 @@ import {
   createVNode,
   getCurrentInstance,
   getTransitionRawChildren,
+  isVaporInteropEnabled,
   onUpdated,
   resolveTransitionHooks,
   setTransitionHooks,
   toRaw,
   useTransitionState,
   warn,
+  withTransitionEnabled,
 } from '@vue/runtime-core'
 import { extend } from '@vue/shared'
 
@@ -35,10 +40,23 @@ interface Position {
   left: number
 }
 
+// the item of an enclosing group that a nested group is rendered in, sampled
+// together with the old positions of the nested group's own children
+interface Origin extends Position {
+  item: Element
+  willMove: () => boolean
+}
+
 const positionMap = new WeakMap<VNode, Position>()
 const newPositionMap = new WeakMap<VNode, Position>()
 const moveCbKey: unique symbol = Symbol('_moveCb')
 const enterCbKey = Symbol('_enterCb')
+// groups that have updated but not yet run their move, mapped to their root
+// and whether they are going to move their children
+export const pendingGroups: WeakMap<
+  GenericComponentInstance,
+  { root: Node; willMove: () => boolean }
+> = new WeakMap()
 
 export type TransitionGroupProps = Omit<TransitionProps, 'mode'> & {
   tag?: string
@@ -70,31 +88,49 @@ const TransitionGroupImpl: ComponentOptions = /*@__PURE__*/ decorate({
   setup(props: TransitionGroupProps, { slots }: SetupContext) {
     const instance = getCurrentInstance()!
     const state = useTransitionState()
+    // what the rows of a vapor slot child resolve their hooks from
+    const group = { props: {} as BaseTransitionProps<Element>, state, instance }
     let prevChildren: VNode[]
     let children: VNode[]
+    let origins: Origin[] | undefined
+    let moves: boolean | undefined
+    // probed lazily: the move class is checked on a child after the patch, and a
+    // nested group may need the answer before this group's own updated hook
+    const willMove = () => {
+      if (moves === undefined) {
+        // children is guaranteed to exist after initial render
+        moves =
+          prevChildren.length > 0 &&
+          hasCSSTransform(
+            prevChildren[0].el as ElementWithTransition,
+            instance.vnode.el as Node,
+            resolveMoveClass(props),
+          )
+      }
+      return moves
+    }
 
     onUpdated(() => {
-      // children is guaranteed to exist after initial render
-      if (!prevChildren.length) {
-        return
-      }
-      const moveClass = props.moveClass || `${props.name || 'v'}-move`
-
-      if (
-        !hasCSSTransform(
-          prevChildren[0].el as ElementWithTransition,
-          instance.vnode.el as Node,
-          moveClass,
-        )
-      ) {
+      pendingGroups.delete(instance)
+      if (!willMove()) {
         prevChildren = []
+        origins = undefined
         return
       }
+      const moveClass = resolveMoveClass(props)
 
       // we divide the work into three loops to avoid mixing DOM reads and writes
       // in each iteration - which helps prevent layout thrashing.
       prevChildren.forEach(vnode => callPendingCbs(vnode.el))
-      prevChildren.forEach(recordPosition)
+      // between them, the enclosing groups that move animate how far the item
+      // this group is rendered in has moved, so that part is left out here. The
+      // item is sampled together with this group's children both times, so the
+      // two samples stay in the same frame whether or not those groups have
+      // already applied their own translations.
+      const shift =
+        origins && getOriginShift(origins, instance.vnode.el as Node)
+      origins = undefined
+      prevChildren.forEach(c => recordPosition(c, shift))
       const movedChildren = prevChildren.filter(applyTranslation)
 
       // force reflow to put everything in position
@@ -109,7 +145,8 @@ const TransitionGroupImpl: ComponentOptions = /*@__PURE__*/ decorate({
 
     return () => {
       const rawProps = toRaw(props)
-      const cssTransitionProps = resolveTransitionProps(rawProps)
+      const cssTransitionProps = (group.props =
+        resolveTransitionProps(rawProps))
       let tag = rawProps.tag || Fragment
 
       if (
@@ -124,10 +161,16 @@ const TransitionGroupImpl: ComponentOptions = /*@__PURE__*/ decorate({
       }
 
       prevChildren = []
+      moves = undefined
       if (children) {
         for (let i = 0; i < children.length; i++) {
           const child = children[i]
-          if (child.el && child.el instanceof Element) {
+          if (
+            child.el &&
+            child.el instanceof Element &&
+            // Hidden v-show nodes have no previous layout box to animate from.
+            !(child.el as VShowElement)[vShowHidden]
+          ) {
             prevChildren.push(child)
             setTransitionHooks(
               child,
@@ -139,6 +182,15 @@ const TransitionGroupImpl: ComponentOptions = /*@__PURE__*/ decorate({
               ),
             )
             positionMap.set(child, getPosition(child.el as HTMLElement))
+          } else if (isVaporInteropEnabled && child.vs && child.vb) {
+            // the rows of a mounted vapor slot: hooks refreshed like the
+            // children above, positions sampled for the move, which reads
+            // only `el`
+            instance.appContext.vapor!.forEachGroupChild(child, el => {
+              const row = { el } as VNode
+              prevChildren.push(row)
+              positionMap.set(row, getPosition(el as Element))
+            })
           }
         }
       }
@@ -147,7 +199,10 @@ const TransitionGroupImpl: ComponentOptions = /*@__PURE__*/ decorate({
 
       for (let i = 0; i < children.length; i++) {
         const child = children[i]
-        if (child.key != null) {
+        if (isVaporInteropEnabled && child.vs) {
+          // the vapor renderer resolves the rows' hooks from the group's
+          child.vs.group = group
+        } else if (child.key != null) {
           setTransitionHooks(
             child,
             resolveTransitionHooks(child, cssTransitionProps, state, instance),
@@ -157,12 +212,20 @@ const TransitionGroupImpl: ComponentOptions = /*@__PURE__*/ decorate({
         }
       }
 
+      if (prevChildren.length) {
+        const root = instance.vnode.el as Node
+        origins = getOrigins(instance, root)
+        pendingGroups.set(instance, { root, willMove })
+      }
+
       return createVNode(tag, null, children)
     }
   },
 })
 
-export const TransitionGroup = TransitionGroupImpl as unknown as {
+export const TransitionGroup = /*@__PURE__*/ withTransitionEnabled(
+  TransitionGroupImpl,
+) as unknown as {
   new (): {
     $props: TransitionGroupProps
   }
@@ -177,8 +240,12 @@ export function callPendingCbs(el: any): void {
   }
 }
 
-function recordPosition(c: VNode) {
-  newPositionMap.set(c, getPosition(c.el as HTMLElement))
+function resolveMoveClass(props: TransitionGroupProps): string {
+  return props.moveClass || `${props.name || 'v'}-move`
+}
+
+function recordPosition(c: VNode, shift?: Position) {
+  newPositionMap.set(c, getPosition(c.el as HTMLElement, shift))
 }
 
 function applyTranslation(c: VNode): VNode | undefined {
@@ -222,12 +289,55 @@ export function baseApplyTranslation(
   return false
 }
 
-function getPosition(el: HTMLElement): Position {
+export function getPosition(el: Element, shift?: Position): Position {
   const rect = el.getBoundingClientRect()
   return {
-    left: rect.left,
-    top: rect.top,
+    left: rect.left - (shift ? shift.left : 0),
+    top: rect.top - (shift ? shift.top : 0),
   }
+}
+
+// origins in the enclosing groups that are updating as well, nearest first
+export function getOrigins(
+  instance: GenericComponentInstance,
+  root: Node,
+): Origin[] | undefined {
+  let origins: Origin[] | undefined
+  for (let group = instance.parent; group; group = group.parent) {
+    const pending = pendingGroups.get(group)
+    if (pending) {
+      const item = findItem(pending.root, root)
+      if (item) {
+        ;(origins || (origins = [])).push(
+          extend(getPosition(item), { item, willMove: pending.willMove }),
+        )
+      }
+    }
+  }
+  return origins
+}
+
+// the item of the group rooted at `root` that `node` is rendered in
+function findItem(root: Node, node: Node | null): Element | undefined {
+  // a group without `tag` renders a fragment, its children share the parent node
+  const container = root.nodeType === 1 ? root : root.parentNode
+  while (node && node.parentNode !== container) {
+    node = node.parentNode
+  }
+  if (node && node.nodeType === 1) {
+    return node as Element
+  }
+}
+
+// the nearest origin whose group is going to move it: what farther groups
+// animate is part of its movement. An item this group's elements have left
+// since no longer carries them.
+export function getOriginShift(
+  origins: Origin[],
+  root: Node,
+): Position | undefined {
+  const origin = origins.find(o => o.willMove() && o.item.contains(root))
+  return origin && getPosition(origin.item, origin)
 }
 
 // shared between vdom and vapor

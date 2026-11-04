@@ -9,10 +9,11 @@ import {
   vModelTextInit,
   vModelTextUpdate,
 } from '@vue/runtime-dom'
-import { renderEffect } from '../renderEffect'
-import { looseEqual } from '@vue/shared'
-import { addEventListener } from '../dom/event'
-import { traverse } from '@vue/reactivity'
+import { registerSelectUpdate, renderEffect } from '../renderEffect'
+import { inOnce, withOnce } from '../once'
+import { isHydrating, isRecreatedNode } from '../dom/hydration'
+import { isArray, isSet, looseEqual } from '@vue/shared'
+import { Dep, getCurrentScope, trackDep, traverse } from '@vue/reactivity'
 
 type VaporModelDirective<
   T extends HTMLElement =
@@ -31,7 +32,14 @@ function ensureMounted(cb: () => void) {
   if (currentInstance!.isMounted) {
     cb()
   } else {
-    onMounted(cb)
+    // Deferred work keeps the branch scope and once ambient it was created under.
+    let scope = getCurrentScope()
+    const run = inOnce ? () => withOnce(cb) : cb
+    onMounted(() => {
+      const currentScope = scope!
+      scope = undefined
+      if (currentScope.active) currentScope.run(run)
+    })
   }
 }
 
@@ -49,7 +57,7 @@ export const applyTextModel: VaporModelDirective<
 }
 
 export const applyCheckboxModel: VaporModelDirective<HTMLInputElement> = (
-  el,
+  el: HTMLInputElement & { _valueDep?: Dep },
   get,
   set,
 ) => {
@@ -57,12 +65,14 @@ export const applyCheckboxModel: VaporModelDirective<HTMLInputElement> = (
   ensureMounted(() => {
     let value: any
     renderEffect(() => {
-      vModelCheckboxUpdate(
-        el,
-        value,
-        // #4096 array checkboxes need to be deep traversed
-        traverse((value = get())),
-      )
+      const oldValue = value
+      // #4096 array checkboxes need to be deep traversed
+      value = traverse(get())
+      if (!inOnce && (isArray(value) || isSet(value))) {
+        // Track the effective value, including merged and fallthrough bindings.
+        trackDep(el._valueDep || (el._valueDep = new Dep()), el, '_value')
+      }
+      vModelCheckboxUpdate(el, oldValue, value)
     })
   })
 }
@@ -72,12 +82,22 @@ export const applyRadioModel: VaporModelDirective<HTMLInputElement> = (
   get,
   set,
 ) => {
-  addEventListener(el, 'change', () => set(vModelGetValue(el)))
+  // static listener: lives and dies with the element, no disposer needed
+  el.addEventListener('change', () => set(vModelGetValue(el)))
+  const hydrating = isHydrating && !isRecreatedNode(el)
   ensureMounted(() => {
     let value: any
+    let initial = true
     renderEffect(() => {
-      if (value !== (value = get())) {
-        el.checked = looseEqual(value, vModelGetValue(el))
+      const oldValue = value
+      if ((value = get()) !== oldValue || initial) {
+        const checked = looseEqual(value, vModelGetValue(el))
+        // like vdom, an initially undefined model leaves a checked set by the
+        // template alone on mount, while a server-rendered one follows it
+        if (checked || !initial || value !== undefined || hydrating) {
+          el.checked = checked
+        }
+        initial = false
       }
     })
   })
@@ -88,8 +108,18 @@ export const applySelectModel: VaporModelDirective<
   'number'
 > = (el, get, set, modifiers) => {
   vModelSelectInit(el, get(), modifiers && modifiers.number, set)
+  if (inOnce) {
+    ensureMounted(() => vModelSetSelected(el, get()))
+    return
+  }
+  // The owner's effects can update options directly or through child inputs
+  // without touching the model. Apply selection after their DOM updates.
+  const update = () => vModelSetSelected(el, get())
+  registerSelectUpdate(update)
   ensureMounted(() => {
-    renderEffect(() => vModelSetSelected(el, traverse(get())))
+    update()
+    // Only tracks the model; the queued selection update applies it.
+    renderEffect(() => traverse(get()))
   })
 }
 

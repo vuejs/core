@@ -1,9 +1,16 @@
 import type { CodegenContext } from '../generate'
-import { DynamicFlag, type IRDynamicInfo } from '../ir'
-import { genDirectivesForElement } from './directive'
-import { genOperationWithInsertionState } from './operation'
+import {
+  DynamicAccess,
+  type IRDynamicAccess,
+  type IRDynamicInfo,
+  IRNodeTypes,
+  type IRTemplate,
+} from '../ir'
+import { TemplateFlags } from '@vue/shared'
+import { genInsertionState, genOperationWithInsertionState } from './operation'
 import {
   type CodeFragment,
+  type CodeFragments,
   IMPORT_EXPR_RE,
   NEWLINE,
   buildCodeFragment,
@@ -11,45 +18,64 @@ import {
 } from './utils'
 
 export function genTemplates(
-  templates: Map<string, number>,
-  rootIndexes: Set<number>,
+  templates: IRTemplate[],
   context: CodegenContext,
 ): string {
   const result: string[] = []
-  let i = 0
-  templates.forEach((ns, template) => {
-    result.push(
-      `const ${context.tName(i)} = ${context.helper('template')}(${JSON.stringify(
-        template,
-      ).replace(
-        // replace import expressions with string concatenation
-        IMPORT_EXPR_RE,
-        `" + $1 + "`,
-      )}${rootIndexes.has(i) ? ', true' : ns ? ', false' : ''}${ns ? `, ${ns}` : ''})\n`,
+  templates.forEach(({ content, ns, root, static: isStatic }, i) => {
+    let args = JSON.stringify(content).replace(
+      // replace import expressions with string concatenation
+      IMPORT_EXPR_RE,
+      `" + $1 + "`,
     )
-    i++
+
+    const flags =
+      (root ? TemplateFlags.ROOT : 0) | (isStatic ? TemplateFlags.STATIC : 0)
+    if (flags || ns) {
+      args += `, ${flags}`
+    }
+
+    if (ns) {
+      args += `, ${ns}`
+    }
+
+    result.push(
+      `const ${context.tName(i)} = ${context.helper('template')}(${args})\n`,
+    )
   })
   return result.join('')
 }
 
+type FlushBeforeDynamic = (
+  dynamic: IRDynamicInfo,
+  push: (...items: CodeFragment[]) => number,
+) => void
+
 export function genSelf(
   dynamic: IRDynamicInfo,
   context: CodegenContext,
+  flushBeforeDynamic?: FlushBeforeDynamic,
 ): CodeFragment[] {
   const [frag, push] = buildCodeFragment()
   const { id, template, operation, hasDynamicChild } = dynamic
 
   if (id !== undefined && template !== undefined) {
+    if (
+      operation &&
+      operation.type === IRNodeTypes.INSERT_NODE &&
+      operation.appendIndex !== undefined
+    ) {
+      push(genInsertionState(operation, context))
+    }
     push(NEWLINE, `const n${id} = ${context.tName(template)}()`)
-    push(...genDirectivesForElement(id, context))
   }
 
   if (operation) {
-    push(...genOperationWithInsertionState(operation, context))
+    push(genOperationWithInsertionState(operation, context))
   }
 
   if (hasDynamicChild) {
-    push(...genChildren(dynamic, context, push, `n${id}`))
+    push(genChildren(dynamic, context, push, `n${id}`, flushBeforeDynamic))
   }
 
   return frag
@@ -59,96 +85,97 @@ export function genChildren(
   dynamic: IRDynamicInfo,
   context: CodegenContext,
   pushBlock: (...items: CodeFragment[]) => number,
-  from: string = `n${dynamic.id}`,
+  from: CodeFragments = `n${dynamic.id}`,
+  flushBeforeDynamic?: FlushBeforeDynamic,
 ): CodeFragment[] {
-  const { helper } = context
   const [frag, push] = buildCodeFragment()
-  const { children } = dynamic
+  // the variable of the previous access: adjacent lookups chain off it and
+  // placeholders may reassign it
+  let prev: string | undefined
 
-  let offset = 0
-  let prev: [variable: string, elementIndex: number] | undefined
-
-  for (const [index, child] of children.entries()) {
-    if (child.flags & DynamicFlag.NON_TEMPLATE) {
-      offset--
-    }
-
-    if (child.flags & DynamicFlag.INSERT && child.template != null) {
-      push(...genSelf(child, context))
+  for (const child of dynamic.children) {
+    const { access } = child
+    if (!access) {
+      flushBeforeDynamic && flushBeforeDynamic(child, push)
+      push(genSelf(child, context, flushBeforeDynamic))
       continue
     }
 
-    const id =
-      child.flags & DynamicFlag.REFERENCED
-        ? child.flags & DynamicFlag.INSERT
-          ? child.anchor
-          : child.id
-        : undefined
-
-    if (id === undefined && !child.hasDynamicChild) {
-      push(...genSelf(child, context))
-      continue
-    }
-
-    const elementIndex = index + offset
-    const logicalIndex =
-      child.logicalIndex !== undefined ? String(child.logicalIndex) : undefined
-    // p for "placeholder" variables that are meant for possible reuse by
-    // other access paths
-    const variable =
-      id === undefined ? context.pName(context.block.tempId++) : `n${id}`
-    pushBlock(NEWLINE, `const ${variable} = `)
-
-    if (prev) {
-      if (elementIndex - prev[1] === 1) {
-        pushBlock(...genCall(helper('next'), prev[0], logicalIndex))
-      } else {
-        pushBlock(
-          ...genCall(
-            helper('nthChild'),
-            from,
-            String(elementIndex),
-            logicalIndex,
+    const accessPath = genAccessPath(context, from, access, prev, child.isText)
+    switch (access.kind) {
+      case DynamicAccess.INLINE:
+        push(
+          genChildren(
+            child,
+            context,
+            pushBlock,
+            accessPath,
+            flushBeforeDynamic,
           ),
         )
-      }
-    } else {
-      if (elementIndex === 0) {
-        pushBlock(
-          ...genCall(
-            helper('child'),
-            from,
-            child.logicalIndex !== 0 ? logicalIndex : undefined,
+        continue
+      case DynamicAccess.INLINE_REUSE:
+        push(
+          genChildren(
+            child,
+            context,
+            pushBlock,
+            ['(', prev!, ' = ', accessPath, ')'],
+            flushBeforeDynamic,
           ),
         )
-      } else {
-        // check if there's a node that we can reuse from
-        let init = genCall(helper('child'), from)
-        if (elementIndex === 1) {
-          init = genCall(helper('next'), init, logicalIndex)
-        } else if (elementIndex > 1) {
-          init = genCall(
-            helper('nthChild'),
-            from,
-            String(elementIndex),
-            logicalIndex,
-          )
-        }
-        pushBlock(...init)
-      }
+        continue
+      case DynamicAccess.REUSE:
+        pushBlock(NEWLINE, `${prev} = `, accessPath)
+        break
+      case DynamicAccess.PLACEHOLDER:
+        // p for "placeholder" variables that are meant for possible reuse by
+        // other access paths
+        prev = context.pName(context.block.tempId++)
+        pushBlock(NEWLINE, `let ${prev} = `, accessPath)
+        break
+      case DynamicAccess.REFERENCE:
+        prev = `n${access.id}`
+        pushBlock(NEWLINE, `const ${prev} = `, accessPath)
     }
 
-    if (id === child.anchor && !child.hasDynamicChild) {
-      push(...genSelf(child, context))
+    if (child.operation) {
+      // created by its own operation (block, component, inserted template):
+      // the access located its anchor, genSelf owns the subtree
+      flushBeforeDynamic && flushBeforeDynamic(child, push)
+      push(genSelf(child, context, flushBeforeDynamic))
+    } else if (child.hasDynamicChild) {
+      push(genChildren(child, context, pushBlock, prev, flushBeforeDynamic))
     }
-
-    if (id !== undefined) {
-      push(...genDirectivesForElement(id, context))
-    }
-
-    prev = [variable, elementIndex]
-    push(...genChildren(child, context, pushBlock, variable))
   }
 
   return frag
+}
+
+/**
+ * Build one DOM lookup path while preserving the fast sibling walk:
+ * adjacent nodes use _next(prev), otherwise fall back to _nthChild(parent).
+ */
+function genAccessPath(
+  { helper }: CodegenContext,
+  from: CodeFragments,
+  { index, adjacent }: IRDynamicAccess,
+  prev: string | undefined,
+  isText?: boolean,
+): CodeFragment[] {
+  const textHint = isText ? 'true' : undefined
+  if (adjacent) {
+    return genCall(helper('next'), prev!, textHint)
+  }
+
+  if (index === 0) {
+    return genCall(helper('child'), from, textHint)
+  }
+
+  // adjacent to the first child: chain off it instead of an indexed lookup
+  if (index === 1) {
+    const firstChild = genCall(helper('child'), from)
+    return genCall(helper('next'), firstChild, textHint)
+  }
+  return genCall(helper('nthChild'), from, String(index), textHint)
 }

@@ -48,4 +48,16 @@ describe('ssr compile: suspense', () => {
       }"
     `)
   })
+
+  // a vapor component renders the vdom Suspense through the interop, where
+  // its slots are vapor slots, hydrating a range of their own
+  test('slots keep a range in a vapor component', () => {
+    const body = (vapor: boolean) => {
+      const { code } = compile(`<suspense><foo/></suspense>`, { vapor })
+      return code.slice(code.indexOf('return function'))
+    }
+    expect(body(false)).not.toContain('<!--[-->')
+    expect(body(true)).toContain('<!--[-->')
+    expect(body(true)).toContain('<!--]-->')
+  })
 })

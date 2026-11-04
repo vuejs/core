@@ -1,0 +1,1165 @@
+import { nextTick, reactive, ref } from '@vue/runtime-dom'
+import { formatHtml, setupHydrationTest, testHydration } from './_helpers'
+import { ifChain } from '../_utils'
+
+setupHydrationTest()
+
+describe('Vapor Mode hydration', () => {
+  describe('if', () => {
+    test('basic toggle - true -> false', async () => {
+      const data = ref(true)
+      const { container } = await testHydration(
+        `<template>
+          <div v-if="data">foo</div>
+        </template>`,
+        undefined,
+        data,
+      )
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `"<div>foo</div><!--if-->"`,
+      )
+
+      data.value = false
+      await nextTick()
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `"<!--if-->"`,
+      )
+    })
+
+    test('basic toggle - false -> true', async () => {
+      const data = ref(false)
+      const { container } = await testHydration(
+        `<template>
+          <div v-if="data">foo</div>
+        </template>`,
+        undefined,
+        data,
+      )
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`"<!---->"`)
+
+      data.value = true
+      await nextTick()
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `"<div>foo</div><!---->"`,
+      )
+    })
+
+    test('v-if decodes packed branch shapes and keyed index during hydration', async () => {
+      const code = `<template>
+        <template v-if="data.ok"><span>foo</span>bar</template>
+        <template v-else><div>baz</div></template>
+      </template>`
+
+      const truthy = ref({ ok: true })
+      const { container: trueContainer } = await testHydration(
+        code,
+        undefined,
+        truthy,
+      )
+      expect(formatHtml(trueContainer.innerHTML)).toMatchInlineSnapshot(
+        `
+        "
+        <!--[0--><span>foo</span>bar<!--]-->
+        "
+      `,
+      )
+
+      truthy.value.ok = false
+      await nextTick()
+      expect(formatHtml(trueContainer.innerHTML)).toMatchInlineSnapshot(
+        `
+        "
+        <!--[0--><div>baz</div><!--]-->
+        "
+      `,
+      )
+
+      const falsy = ref({ ok: false })
+      const { container: falseContainer } = await testHydration(
+        code,
+        undefined,
+        falsy,
+      )
+      expect(formatHtml(falseContainer.innerHTML)).toMatchInlineSnapshot(
+        `
+        "
+        <!--[1--><div>baz</div><!--]-->
+        "
+      `,
+      )
+
+      falsy.value.ok = true
+      await nextTick()
+      expect(formatHtml(falseContainer.innerHTML)).toMatchInlineSnapshot(
+        `
+        "
+        <!--[1--><span>foo</span>bar<!--]-->
+        "
+      `,
+      )
+    })
+
+    test('v-if on insertion parent', async () => {
+      const data = ref(true)
+      const { container } = await testHydration(
+        `<template>
+          <div v-if="data">
+            <components.Child/>
+          </div>
+        </template>`,
+        { Child: `<template>foo</template>` },
+        data,
+      )
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `"<div>foo</div><!--if-->"`,
+      )
+
+      data.value = false
+      await nextTick()
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `"<!--if-->"`,
+      )
+
+      data.value = true
+      await nextTick()
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `"<div>foo</div><!--if-->"`,
+      )
+    })
+
+    test('v-if/else-if/else chain - switch branches', async () => {
+      const data = ref('a')
+      const { container } = await testHydration(
+        `<template>
+          <div v-if="data === 'a'">foo</div>
+          <div v-else-if="data === 'b'">bar</div>
+          <div v-else>baz</div>
+        </template>`,
+        undefined,
+        data,
+      )
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "
+        <!--[0--><div>foo</div><!--]-->
+        "
+      `,
+      )
+
+      data.value = 'b'
+      await nextTick()
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "
+        <!--[0--><div>bar</div><!--if--><!--]-->
+        "
+      `,
+      )
+
+      data.value = 'c'
+      await nextTick()
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "
+        <!--[0--><div>baz</div><!--if--><!--]-->
+        "
+      `,
+      )
+
+      data.value = 'a'
+      await nextTick()
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "
+        <!--[0--><div>foo</div><!--]-->
+        "
+      `,
+      )
+    })
+
+    test('v-if/else with sibling components and elements', async () => {
+      const data = ref('a')
+      const { container } = await testHydration(
+        `<script setup>
+          const msg = _data
+          const { Comp } = _components
+        </script>
+        <template>
+          <div>
+            <Comp/>
+            <div>11</div>
+            <div v-if="msg === 'a'">foo</div>
+            <div v-else>baz</div>
+            <div>11</div>
+            <Comp/>
+          </div>
+        </template>`,
+        {
+          Comp: `<template><span>comp</span></template>`,
+        },
+        data,
+      )
+
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "<div><span>comp</span><div>11</div>
+        <!--[0--><div>foo</div><!--]-->
+        <div>11</div><span>comp</span></div>"
+      `,
+      )
+
+      data.value = 'b'
+      await nextTick()
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "<div><span>comp</span><div>11</div>
+        <!--[0--><div>baz</div><!--]-->
+        <div>11</div><span>comp</span></div>"
+      `,
+      )
+    })
+
+    test('nested if', async () => {
+      const data = reactive({ outer: true, inner: true })
+      const { container } = await testHydration(
+        `<template>
+          <div v-if="data.outer">
+            <span>outer</span>
+            <div v-if="data.inner">inner</div>
+          </div>
+        </template>`,
+        undefined,
+        data,
+      )
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `"<div><span>outer</span><div>inner</div><!--if--></div><!--if-->"`,
+      )
+
+      data.inner = false
+      await nextTick()
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `"<div><span>outer</span><!--if--></div><!--if-->"`,
+      )
+
+      data.outer = false
+      await nextTick()
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `"<!--if-->"`,
+      )
+    })
+
+    test('on component', async () => {
+      const data = ref(true)
+      const { container } = await testHydration(
+        `<template>
+          <components.Child v-if="data"/>
+        </template>`,
+        { Child: `<template>foo</template>` },
+        data,
+      )
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "
+        <!--{-->foo<!--if--><!--}-->
+        "
+      `,
+      )
+
+      data.value = false
+      await nextTick()
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "
+        <!--{--><!--if--><!--}-->
+        "
+      `,
+      )
+    })
+
+    test('consecutive if node', async () => {
+      const data = ref(true)
+      const { container } = await testHydration(
+        `<template>
+          <components.Child v-if="data"/>
+        </template>`,
+        { Child: `<template><div v-if="data">foo</div></template>` },
+        data,
+      )
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "
+        <!--{--><div>foo</div><!--if--><!--if--><!--}-->
+        "
+      `,
+      )
+
+      data.value = false
+      await nextTick()
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "
+        <!--{--><!--if--><!--}-->
+        "
+      `,
+      )
+
+      data.value = true
+      await nextTick()
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "
+        <!--{--><div>foo</div><!--if--><!--if--><!--}-->
+        "
+      `,
+      )
+    })
+
+    test('mixed prepend and insertion anchor', async () => {
+      const data = reactive({
+        show: true,
+        foo: 'foo',
+        bar: 'bar',
+        qux: 'qux',
+      })
+      const { container } = await testHydration(
+        `<template>
+          <components.Child/>
+        </template>`,
+        {
+          Child: `<template>
+            <span v-if="data.show">
+              <span v-if="data.show">{{data.foo}}</span>
+              <span v-if="data.show">{{data.bar}}</span>
+              <span>baz</span>
+              <span v-if="data.show">{{data.qux}}</span>
+              <span>quux</span>
+            </span>
+          </template>`,
+        },
+        data,
+      )
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "
+        <!--{--><span><span>foo</span><!--if--><span>bar</span><!--if--><span>baz</span><span>qux</span><!--if--><span>quux</span></span><!--if--><!--}-->
+        "
+      `,
+      )
+
+      data.qux = 'qux1'
+      await nextTick()
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "
+        <!--{--><span><span>foo</span><!--if--><span>bar</span><!--if--><span>baz</span><span>qux1</span><!--if--><span>quux</span></span><!--if--><!--}-->
+        "
+      `,
+      )
+
+      data.foo = 'foo1'
+      await nextTick()
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "
+        <!--{--><span><span>foo1</span><!--if--><span>bar</span><!--if--><span>baz</span><span>qux1</span><!--if--><span>quux</span></span><!--if--><!--}-->
+        "
+      `,
+      )
+    })
+
+    // a chain past the compiler's threshold: one fragment, a multi-root
+    // branch, and no v-else so the chain can land on nothing
+    const longChain = ifChain(
+      (i, dir) =>
+        i === 7
+          ? `<template ${dir}><b>${i}</b><i>${i}</i></template>`
+          : `<div ${dir}>${i}</div>`,
+      { withElse: false, cond: i => `data === 'a${i}'` },
+    )
+
+    test('long v-else-if chain - switch branches', async () => {
+      const data = ref('a0')
+      const { container } = await testHydration(
+        `<template>
+          ${longChain}
+          <span>after</span>
+        </template>`,
+        undefined,
+        data,
+      )
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
+        "
+        <!--{-->
+        <!--[0--><div>0</div><!--]-->
+        <span>after</span><!--}-->
+        "
+      `)
+
+      data.value = 'a7'
+      await nextTick()
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
+        "
+        <!--{-->
+        <!--[0--><b>7</b><i>7</i><!--]-->
+        <span>after</span><!--}-->
+        "
+      `)
+
+      data.value = 'none'
+      await nextTick()
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
+        "
+        <!--{-->
+        <!--[0--><!--]-->
+        <span>after</span><!--}-->
+        "
+      `)
+
+      data.value = 'a11'
+      await nextTick()
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
+        "
+        <!--{-->
+        <!--[0--><div>11</div><!--]-->
+        <span>after</span><!--}-->
+        "
+      `)
+    })
+
+    test('long v-else-if chain - hydrate a multi-root branch', async () => {
+      const data = ref('a7')
+      const { container } = await testHydration(
+        `<template>
+          ${longChain}
+          <span>after</span>
+        </template>`,
+        undefined,
+        data,
+      )
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
+        "
+        <!--{-->
+        <!--[7--><b>7</b><i>7</i><!--]-->
+        <span>after</span><!--}-->
+        "
+      `)
+
+      data.value = 'a0'
+      await nextTick()
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
+        "
+        <!--{-->
+        <!--[7--><div>0</div><!--]-->
+        <span>after</span><!--}-->
+        "
+      `)
+    })
+
+    test('long v-else-if chain - hydrate with every branch false', async () => {
+      const data = ref('none')
+      const { container } = await testHydration(
+        `<template>
+          ${longChain}
+          <span>after</span>
+        </template>`,
+        undefined,
+        data,
+      )
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
+        "
+        <!--{--><!----><span>after</span><!--}-->
+        "
+      `)
+
+      data.value = 'a11'
+      await nextTick()
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
+        "
+        <!--{--><div>11</div><!----><span>after</span><!--}-->
+        "
+      `)
+    })
+
+    test('long v-else-if chain inside template v-for', async () => {
+      const data = ref('none')
+      const { container } = await testHydration(
+        `<template>
+          <template v-for="n in 2">${longChain}</template>
+          <span>after</span>
+        </template>`,
+        undefined,
+        data,
+      )
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
+        "
+        <!--{-->
+        <!--[-->
+        <!--[--><!----><!--]-->
+        <!--[--><!----><!--]-->
+        <!--]-->
+        <span>after</span><!--}-->
+        "
+      `)
+
+      data.value = 'a7'
+      await nextTick()
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
+        "
+        <!--{-->
+        <!--[-->
+        <!--[--><b>7</b><i>7</i><!----><!--]-->
+        <!--[--><b>7</b><i>7</i><!----><!--]-->
+        <!--]-->
+        <span>after</span><!--}-->
+        "
+      `)
+
+      data.value = 'a0'
+      await nextTick()
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
+        "
+        <!--{-->
+        <!--[-->
+        <!--[--><div>0</div><!----><!--]-->
+        <!--[--><div>0</div><!----><!--]-->
+        <!--]-->
+        <span>after</span><!--}-->
+        "
+      `)
+    })
+
+    test('v-if/else-if/else chain on component - switch branches', async () => {
+      const data = ref('a')
+      const { container } = await testHydration(
+        `<template>
+          <components.Child1 v-if="data === 'a'"/>
+          <components.Child2 v-else-if="data === 'b'"/>
+          <components.Child3 v-else/>
+        </template>`,
+        {
+          Child1: `<template><span>{{data}} child1</span></template>`,
+          Child2: `<template><span>{{data}} child2</span></template>`,
+          Child3: `<template><span>{{data}} child3</span></template>`,
+        },
+        data,
+      )
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "
+        <!--[0--><span>a child1</span><!--]-->
+        "
+      `,
+      )
+
+      data.value = 'b'
+      await nextTick()
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "
+        <!--[0--><span>b child2</span><!--if--><!--]-->
+        "
+      `,
+      )
+
+      data.value = 'c'
+      await nextTick()
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "
+        <!--[0--><span>c child3</span><!--if--><!--]-->
+        "
+      `,
+      )
+
+      data.value = 'a'
+      await nextTick()
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "
+        <!--[0--><span>a child1</span><!--]-->
+        "
+      `,
+      )
+    })
+
+    test('on component with insertion anchor', async () => {
+      const data = ref(true)
+      const { container } = await testHydration(
+        `<template>
+          <div>
+            <span/>
+            <components.Child v-if="data"/>
+            <span/>
+          </div>
+        </template>`,
+        { Child: `<template>foo</template>` },
+        data,
+      )
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `"<div><span></span>foo<!--if--><span></span></div>"`,
+      )
+
+      data.value = false
+      await nextTick()
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `"<div><span></span><!--if--><span></span></div>"`,
+      )
+    })
+
+    test('consecutive component with insertion parent', async () => {
+      const data = reactive({
+        show: true,
+        foo: 'foo',
+        bar: 'bar',
+      })
+      const { container } = await testHydration(
+        `<template>
+          <div v-if="data.show">
+            <components.Child/>
+            <components.Child2/>
+          </div>
+        </template>`,
+        {
+          Child: `<template><span>{{data.foo}}</span></template>`,
+          Child2: `<template><span>{{data.bar}}</span></template>`,
+        },
+        data,
+      )
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `"<div><span>foo</span><span>bar</span></div><!--if-->"`,
+      )
+
+      data.show = false
+      await nextTick()
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `"<!--if-->"`,
+      )
+
+      data.show = true
+      await nextTick()
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `"<div><span>foo</span><span>bar</span></div><!--if-->"`,
+      )
+
+      data.foo = 'foo1'
+      data.bar = 'bar1'
+      await nextTick()
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `"<div><span>foo1</span><span>bar1</span></div><!--if-->"`,
+      )
+    })
+
+    test('on fragment component', async () => {
+      const data = ref(true)
+      const { container } = await testHydration(
+        `<template>
+          <div>
+            <components.Child v-if="data"/>
+          </div>
+        </template>`,
+        {
+          Child: `<template><div>{{ data }}</div>-{{ data }}-</template>`,
+        },
+        data,
+      )
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "<div>
+        <!--{--><div>true</div>-true-<!--}-->
+        </div>"
+      `,
+      )
+
+      data.value = false
+      await nextTick()
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "<div>
+        <!--{--><!--}-->
+        </div>"
+      `,
+      )
+
+      data.value = true
+      await nextTick()
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "<div>
+        <!--{--><div>true</div>-true-<!--}-->
+        </div>"
+      `,
+      )
+    })
+
+    test('on fragment component with insertion anchor', async () => {
+      const data = ref(true)
+      const { container } = await testHydration(
+        `<template>
+          <div>
+            <span/>
+            <components.Child v-if="data"/>
+            <span/>
+          </div>
+        </template>`,
+        {
+          Child: `<template><div>{{ data }}</div>-{{ data }}-</template>`,
+        },
+        data,
+      )
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "<div><span></span>
+        <!--{--><div>true</div>-true-<!--}-->
+        <span></span></div>"
+      `,
+      )
+
+      data.value = false
+      await nextTick()
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "<div><span></span>
+        <!--{--><!--}-->
+        <span></span></div>"
+      `,
+      )
+
+      data.value = true
+      await nextTick()
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
+        "<div><span></span>
+        <!--{--><div>true</div>-true-<!--}-->
+        <span></span></div>"
+      `)
+    })
+
+    test('consecutive v-if on fragment component with insertion anchor', async () => {
+      const data = ref(true)
+      const { container } = await testHydration(
+        `<template>
+          <div>
+            <span/>
+            <components.Child v-if="data"/>
+            <components.Child v-if="data"/>
+            <span/>
+          </div>
+        </template>`,
+        {
+          Child: `<template><div>{{ data }}</div>-{{ data }}-</template>`,
+        },
+        data,
+      )
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "<div><span></span>
+        <!--{--><div>true</div>-true-<!--}-->
+        <!--{--><div>true</div>-true-<!--}-->
+        <span></span></div>"
+      `,
+      )
+
+      data.value = false
+      await nextTick()
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "<div><span></span>
+        <!--{--><!--}-->
+        <!--{--><!--}-->
+        <span></span></div>"
+      `,
+      )
+
+      data.value = true
+      await nextTick()
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
+        "<div><span></span>
+        <!--{--><div>true</div>-true-<!--}-->
+        <!--{--><div>true</div>-true-<!--}-->
+        <span></span></div>"
+      `)
+    })
+
+    test('on dynamic component with insertion anchor', async () => {
+      const data = ref(true)
+      const { container } = await testHydration(
+        `<template>
+          <div>
+            <span/>
+            <component :is="components.Child" v-if="data"/>
+            <span/>
+          </div>
+        </template>`,
+        { Child: `<template>foo</template>` },
+        data,
+      )
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `"<div><span></span>foo<!--dynamic-component--><!--if--><span></span></div>"`,
+      )
+
+      data.value = false
+      await nextTick()
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `"<div><span></span><!--if--><span></span></div>"`,
+      )
+
+      data.value = true
+      await nextTick()
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `"<div><span></span>foo<!--dynamic-component--><!--if--><span></span></div>"`,
+      )
+    })
+
+    test('v-if with insertion parent + sibling component', async () => {
+      const data = ref(true)
+      const { container } = await testHydration(
+        `<template>
+          <div>
+            <span v-if="data">hello</span>
+          </div>
+          <components.Child/>
+        </template>`,
+        {
+          Child: `<template><div>child</div></template>`,
+        },
+        data,
+      )
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "
+        <!--{--><div><span>hello</span><!--if--></div><div>child</div><!--}-->
+        "
+      `,
+      )
+
+      data.value = false
+      await nextTick()
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "
+        <!--{--><div><!--if--></div><div>child</div><!--}-->
+        "
+      `,
+      )
+
+      data.value = true
+      await nextTick()
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "
+        <!--{--><div><span>hello</span><!--if--></div><div>child</div><!--}-->
+        "
+      `,
+      )
+    })
+
+    test('v-if with static sibling + root sibling component', async () => {
+      const data = ref(true)
+      const { container } = await testHydration(
+        `<template>
+          <div>
+            <span v-if="data">hello</span>
+            <div>1</div>
+          </div>
+          <components.Child/>
+        </template>`,
+        {
+          Child: `<template><div>child</div></template>`,
+        },
+        data,
+      )
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "
+        <!--{--><div><span>hello</span><!--if--><div>1</div></div><div>child</div><!--}-->
+        "
+      `,
+      )
+
+      data.value = false
+      await nextTick()
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "
+        <!--{--><div><!--if--><div>1</div></div><div>child</div><!--}-->
+        "
+      `,
+      )
+
+      data.value = true
+      await nextTick()
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "
+        <!--{--><div><span>hello</span><!--if--><div>1</div></div><div>child</div><!--}-->
+        "
+      `,
+      )
+    })
+
+    test('v-if + static sibling + root sibling component (flat)', async () => {
+      const data = ref(true)
+      const { container } = await testHydration(
+        `<template>
+          <span v-if="data">hello</span>
+          <span></span>
+          <components.Child/>
+        </template>`,
+        {
+          Child: `<template><div>child</div></template>`,
+        },
+        data,
+      )
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "
+        <!--{--><span>hello</span><!--if--><span></span><div>child</div><!--}-->
+        "
+      `,
+      )
+
+      data.value = false
+      await nextTick()
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "
+        <!--{--><!--if--><span></span><div>child</div><!--}-->
+        "
+      `,
+      )
+
+      data.value = true
+      await nextTick()
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "
+        <!--{--><span>hello</span><!--if--><span></span><div>child</div><!--}-->
+        "
+      `,
+      )
+    })
+
+    test('empty interpolation branch keeps the following sibling', async () => {
+      const data = reactive({ show: true, txt: '' })
+      const { container } = await testHydration(
+        `<template>
+          <div>
+            <template v-if="data.show">{{ data.txt }}</template>
+            <span>after</span>
+          </div>
+        </template>`,
+        undefined,
+        data,
+      )
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "<div>
+        <!--[--><!--]-->
+        <span>after</span></div>"
+      `,
+      )
+      expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+
+      data.txt = 'foo'
+      await nextTick()
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "<div>
+        <!--[-->foo<!--]-->
+        <span>after</span></div>"
+      `,
+      )
+    })
+
+    test('empty interpolation branch keeps the following static text', async () => {
+      const data = reactive({ show: true, txt: '' })
+      const { container } = await testHydration(
+        `<template><div><template v-if="data.show">{{ data.txt }}</template>tail</div></template>`,
+        undefined,
+        data,
+      )
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "<div>
+        <!--[--><!--]-->
+        tail</div>"
+      `,
+      )
+      expect(`Hydration text mismatch`).not.toHaveBeenWarned()
+
+      data.txt = 'foo'
+      await nextTick()
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "<div>
+        <!--[-->foo<!--]-->
+        tail</div>"
+      `,
+      )
+    })
+
+    test('empty template branch keeps the following sibling', async () => {
+      const data = reactive({ price: 0 })
+      const { container, html } = await testHydration(
+        `<template>
+          <div>
+            <template v-if="data.price > 0">{{ data.price }}</template>
+            <template v-else />
+            <span>after</span>
+          </div>
+        </template>`,
+        undefined,
+        data,
+      )
+      expect(container.innerHTML).toBe(html)
+
+      data.price = 5
+      await nextTick()
+      expect(container.textContent).toBe('5after')
+
+      data.price = 0
+      await nextTick()
+      expect(container.textContent).toBe('after')
+    })
+
+    test('template branch with a lone nested v-if', async () => {
+      const data = reactive({ outer: true, inner: true })
+      const { container } = await testHydration(
+        `<template>
+          <div>
+            <template v-if="data.outer">
+              <components.Child v-if="data.inner" />
+            </template>
+            <span>after</span>
+          </div>
+        </template>`,
+        { Child: `<template><i>a</i><i>b</i></template>` },
+        data,
+      )
+      expect(container.textContent).toBe('abafter')
+
+      data.inner = false
+      await nextTick()
+      expect(container.textContent).toBe('after')
+
+      data.inner = true
+      await nextTick()
+      expect(container.textContent).toBe('abafter')
+
+      data.outer = false
+      await nextTick()
+      expect(container.textContent).toBe('after')
+    })
+
+    test.each([false, true])(
+      'empty v-else text branch keeps a following component (v-once: %s)',
+      async once => {
+        const data = reactive({ show: false, txt: '', child: 'child' })
+        const { container, html } = await testHydration(
+          `<template>
+            <template v-if="data.show" ${once ? 'v-once' : ''}>yes</template>
+            <template v-else>{{ data.txt }}</template>
+            <components.Child />
+          </template>`,
+          { Child: `<template>{{ data.child }}<span>suffix</span></template>` },
+          data,
+        )
+
+        expect(container.innerHTML).toBe(html)
+        expect(container.childNodes[2].nodeType).toBe(3)
+        expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+        expect(`Hydration text mismatch`).not.toHaveBeenWarned()
+
+        if (!once) {
+          data.txt = 'prefix'
+          await nextTick()
+          expect(container.textContent).toBe('prefixchildsuffix')
+
+          data.show = true
+          await nextTick()
+          expect(container.textContent).toBe('yeschildsuffix')
+        }
+      },
+    )
+
+    test.each(['constant', 'v-once'])(
+      'empty constant branch owns its hydrated anchor (%s)',
+      async condition => {
+        const { container, html, app } = await testHydration(
+          `<template>
+            <span v-if="${condition === 'constant' ? 'false' : 'data'}" ${condition === 'v-once' ? 'v-once' : ''}>content</span>
+          </template>`,
+          undefined,
+          ref(false),
+        )
+
+        expect(html).toBe('<!---->')
+        expect(container.innerHTML).toBe(html)
+        expect(container.childNodes).toHaveLength(1)
+        expect('Hydration node mismatch').not.toHaveBeenWarned()
+        expect('Hydration children mismatch').not.toHaveBeenWarned()
+
+        app.unmount()
+        expect(container.innerHTML).toBe('')
+      },
+    )
+
+    test.each([
+      ['single-root', '<span>server</span>'],
+      ['multi-root', '<span>server</span><b>branch</b>'],
+    ])(
+      'empty v-once branch replaces a server %s branch before a sibling',
+      async (_shape, content) => {
+        const { container, html, app } = await testHydration(
+          `<template>
+            <template v-if="data" v-once>${content}</template>
+            <i>after</i>
+          </template>`,
+          undefined,
+          ref(false),
+          { serverData: ref(true) },
+        )
+
+        expect(html).toContain(content)
+        expect(container.querySelector('span')).toBeNull()
+        expect(container.querySelector('b')).toBeNull()
+        expect(container.querySelectorAll('i')).toHaveLength(1)
+        expect(container.querySelector('i')!.outerHTML).toBe('<i>after</i>')
+        expect(container.textContent).toBe('after')
+        expect('Hydration node mismatch').not.toHaveBeenWarned()
+        if (__DEV__) {
+          expect('Hydration children mismatch').toHaveBeenWarned()
+        }
+
+        expect(() => app.unmount()).not.toThrow()
+        expect(container.children).toHaveLength(0)
+        expect(container.textContent).toBe('')
+      },
+    )
+
+    test('empty v-once branch clears its claimed range inside v-for', async () => {
+      const data = ref({ items: [1], show: false })
+      const { container, app } = await testHydration(
+        `<template>
+          <div>
+            <template v-for="id in data.items">
+              <template v-if="data.show" v-once><i>first</i><b>second</b></template>
+            </template>
+            <span>after</span>
+          </div>
+        </template>`,
+        undefined,
+        data,
+        { serverData: ref({ items: [1], show: true }) },
+      )
+      expect(container.textContent).toBe('after')
+      if (__DEV__) {
+        expect('Hydration children mismatch').toHaveBeenWarned()
+      }
+      data.value.items = []
+      await nextTick()
+      expect(container.textContent).toBe('after')
+      app.unmount()
+      expect(container.innerHTML).toBe('')
+    })
+  })
+})

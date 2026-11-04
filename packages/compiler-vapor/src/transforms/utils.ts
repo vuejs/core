@@ -8,6 +8,7 @@ import {
   type TemplateChildNode,
   type TemplateNode,
   createSimpleExpression,
+  isStaticArgOf,
 } from '@vue/compiler-dom'
 import { extend } from '@vue/shared'
 import {
@@ -30,6 +31,8 @@ export const newBlock = (node: BlockIRNode['node']): BlockIRNode => ({
   operation: [],
   returns: [],
   tempId: 0,
+  deferredOperationIndex: 0,
+  deferredEffectIndex: 0,
 })
 
 export function wrapTemplate(node: ElementNode, dirs: string[]): TemplateNode {
@@ -78,12 +81,14 @@ export function wrapTemplate(node: ElementNode, dirs: string[]): TemplateNode {
       prop.type === NodeTypes.DIRECTIVE &&
       (dirs.includes(prop.name) ||
         (prop.name === 'bind' &&
-          prop.arg &&
-          prop.arg.type === NodeTypes.SIMPLE_EXPRESSION &&
-          prop.arg.content === 'key' &&
+          isStaticArgOf(prop.arg, 'key') &&
           dirs.includes('key')))
     ) {
       reserved.push(prop)
+      // same as vdom: the key of a `<slot>` is also a slot prop, so the
+      // outlet keeps it too
+      if (prop.name === 'bind' && node.tagType === ElementTypes.SLOT)
+        pass.push(prop)
     } else {
       pass.push(prop)
     }

@@ -1,4 +1,5 @@
 import { patchProp } from '../src/patchProp'
+import { setVarsOnNode } from '../src/helpers/useCssVars'
 
 describe(`runtime-dom: style patching`, () => {
   it('string', () => {
@@ -27,6 +28,25 @@ describe(`runtime-dom: style patching`, () => {
     const el = document.createElement('div')
     patchProp(el, 'style', {}, { color: 'red' })
     expect(el.style.cssText.replace(/\s/g, '')).toBe('color:red;')
+  })
+
+  it('should preserve textarea resize dimensions while reapplying unrelated unchanged object styles', () => {
+    const el = document.createElement('textarea')
+    const value = {
+      width: '200px',
+      height: '100px',
+      display: 'none',
+    }
+
+    patchProp(el, 'style', null, value)
+    el.style.width = '320px'
+    el.style.height = '160px'
+    el.style.display = 'block'
+
+    patchProp(el, 'style', value, value)
+    expect(el.style.width).toBe('320px')
+    expect(el.style.height).toBe('160px')
+    expect(el.style.display).toBe('none')
   })
 
   it('camelCase', () => {
@@ -142,6 +162,13 @@ describe(`runtime-dom: style patching`, () => {
     expect(el.style.getPropertyValue('--theme')).toBe('red')
   })
 
+  it('CSS custom properties with !important', () => {
+    const setProperty = vi.fn()
+    const el = { style: { setProperty } }
+    patchProp(el as any, 'style', {}, { '--theme': 'red !important' } as any)
+    expect(setProperty).toHaveBeenCalledWith('--theme', 'red', 'important')
+  })
+
   it('auto vendor prefixing', () => {
     const el = mockElementWithStyle()
     patchProp(el as any, 'style', {}, { transition: 'all 1s' })
@@ -166,5 +193,14 @@ describe(`runtime-dom: style patching`, () => {
 
     patchProp(el, 'style', 'color:red', { fontSize: '12px' })
     expect(el.style.cssText.replace(/\s/g, '')).toBe('font-size:12px;')
+  })
+
+  it('should keep injected css vars on falsy value', () => {
+    const el = document.createElement('div')
+    setVarsOnNode(el, { x: 'red' })
+    patchProp(el as any, 'style', null, { color: 'red' })
+    patchProp(el as any, 'style', { color: 'red' }, null)
+    expect(el.style.color).toBe('')
+    expect(el.style.getPropertyValue('--x')).toBe('red')
   })
 })

@@ -57,7 +57,7 @@ export const trackSlotScopes: NodeTransform = (node, context) => {
     if (vSlot) {
       const slotProps = vSlot.exp
       if (!__BROWSER__ && context.prefixIdentifiers) {
-        slotProps && context.addIdentifiers(slotProps)
+        slotProps && context.addIdentifiers(slotProps, 'slot')
       }
       context.scopes.vSlot++
       return () => {

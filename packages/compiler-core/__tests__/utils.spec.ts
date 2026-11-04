@@ -7,6 +7,7 @@ import {
 import { type Position, createSimpleExpression } from '../src/ast'
 import {
   advancePositionWithClone,
+  isFnExpressionNode,
   isMemberExpressionBrowser,
   isMemberExpressionNode,
   toValidAssetId,
@@ -108,6 +109,36 @@ describe('isMemberExpression', () => {
     expect(fn('""')).toBe(false)
     expect(fn('undefined')).toBe(false)
     expect(fn('null')).toBe(false)
+
+    // simple identifiers the parser leaves unparsed (`ast === null`)
+    const unparsed = (str: string) =>
+      isMemberExpressionNode({ ...createSimpleExpression(str), ast: null }, ctx)
+    expect(unparsed('foo')).toBe(true)
+    expect(unparsed('$event')).toBe(true)
+    expect(unparsed('名字')).toBe(true)
+    expect(unparsed('undefined')).toBe(false)
+    expect(unparsed('this')).toBe(false)
+    expect(unparsed('true')).toBe(false)
+    expect(unparsed('class')).toBe(false)
+  })
+})
+
+describe('isFnExpression', () => {
+  test('node', () => {
+    const ctx = { expressionPlugins: ['typescript'] } as any as TransformContext
+    const fn = (str: string) =>
+      isFnExpressionNode(createSimpleExpression(str), ctx)
+    expect(fn('() => foo')).toBe(true)
+    expect(fn('async (a: number) => foo')).toBe(true)
+    expect(fn('function () {}')).toBe(true)
+    expect(fn('foo')).toBe(false)
+    expect(fn('foo()')).toBe(false)
+
+    // simple identifiers the parser leaves unparsed (`ast === null`)
+    const unparsed = (str: string) =>
+      isFnExpressionNode({ ...createSimpleExpression(str), ast: null }, ctx)
+    expect(unparsed('foo')).toBe(false)
+    expect(unparsed('function')).toBe(false)
   })
 })
 

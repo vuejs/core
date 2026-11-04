@@ -55,6 +55,24 @@ describe('ssr: renderAttrs', () => {
     ).toBe(` checked disabled`) // boolean attr w/ false should be ignored
   })
 
+  test('playsinline boolean attr', () => {
+    expect(ssrRenderAttrs({ playsinline: true })).toBe(` playsinline`)
+    expect(ssrRenderAttrs({ playsinline: false })).toBe(``)
+  })
+
+  test('hidden enumerated attribute', () => {
+    expect(ssrRenderAttrs({ hidden: true })).toBe(` hidden`)
+    expect(ssrRenderAttrs({ disabled: true, hidden: false })).toBe(` disabled`)
+    expect(ssrRenderAttrs({ hidden: 'until-found' })).toBe(
+      ` hidden="until-found"`,
+    )
+    expect(ssrRenderAttrs({ hidden: '' })).toBe(` hidden`)
+    expect(ssrRenderAttrs({ hidden: 0 })).toBe(``)
+    expect(ssrRenderAttrs({ hidden: NaN })).toBe(``)
+    expect(ssrRenderAttrs({ hidden: 1 })).toBe(` hidden`)
+    expect(ssrRenderAttrs({ hidden: '0' })).toBe(` hidden="0"`)
+  })
+
   test('ignore falsy values', () => {
     expect(
       ssrRenderAttrs({
@@ -105,6 +123,17 @@ describe('ssr: renderAttrs', () => {
       ),
     ).toBe(` viewBox="foo"`)
   })
+
+  test('ignore attr names containing carriage returns', () => {
+    expect(
+      ssrRenderAttrs({
+        id: 'safe',
+        ['x\rautofocus\ronfocus']: 'alert(1)',
+      }),
+    ).toBe(` id="safe"`)
+    expect(`unsafe attribute name`).toHaveBeenWarned()
+    expect(`Skipped rendering unsafe attribute name`).toHaveBeenWarned()
+  })
 })
 
 describe('ssr: renderAttr', () => {
@@ -154,7 +183,7 @@ describe('ssr: renderClass', () => {
       ssrRenderAttrs({
         className: ['foo', 'bar'],
       }),
-    ).toBe(` class="foo bar"`)
+    ).toBe(` class="foo,bar"`)
   })
 })
 

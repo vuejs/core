@@ -111,9 +111,12 @@ export function defineVaporComponent<
       attrs: Record<string, any>
       expose: (exposed: Exposed) => void
     },
-  ) => VaporRenderResult<TypeBlock> | void,
+  ) =>
+    | VaporRenderResult<TypeBlock>
+    | Promise<VaporRenderResult<TypeBlock>>
+    | void,
   extraOptions?: VaporComponentOptions<
-    (keyof Props)[],
+    (keyof NoInfer<Props>)[],
     Emits,
     RuntimeEmitsKeys,
     Slots,
@@ -137,7 +140,10 @@ export function defineVaporComponent<
       attrs: Record<string, any>
       expose: (exposed: Exposed) => void
     },
-  ) => VaporRenderResult<TypeBlock> | void,
+  ) =>
+    | VaporRenderResult<TypeBlock>
+    | Promise<VaporRenderResult<TypeBlock>>
+    | void,
   extraOptions?: VaporComponentOptions<
     ComponentObjectPropsOptions<Props>,
     Emits,
@@ -210,7 +216,7 @@ export function defineVaporComponent<
   ResolvedEmits,
   RuntimeEmitsKeys,
   Slots,
-  Exposed extends Block ? Record<string, any> : Exposed,
+  Exposed extends VaporRenderResult ? Record<string, any> : Exposed,
   TypeBlock,
   TypeRefs,
   // MakeDefaultsOptional - if TypeProps is provided, set to false to use

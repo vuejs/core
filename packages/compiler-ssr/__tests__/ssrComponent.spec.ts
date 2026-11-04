@@ -53,6 +53,32 @@ describe('ssr: components', () => {
       `)
   })
 
+  test('dynamic component in a vapor component', () => {
+    expect(
+      compile(`<component :is="foo"><div/></component>`, { vapor: true }).code,
+    ).toMatchInlineSnapshot(`
+      "const { resolveDynamicComponent: _resolveDynamicComponent, withCtx: _withCtx, createVNode: _createVNode } = require("vue")
+      const { ssrRenderDynamicComponent: _ssrRenderDynamicComponent } = require("vue/server-renderer")
+
+      return function ssrRender(_ctx, _push, _parent, _attrs) {
+        _push(\`<!--{-->\`)
+        _ssrRenderDynamicComponent(_push, _resolveDynamicComponent(_ctx.foo), _attrs, {
+          default: _withCtx((_, _push, _parent, _scopeId) => {
+            if (_push) {
+              _push(\`<div\${_scopeId}></div>\`)
+            } else {
+              return [
+                _createVNode("div")
+              ]
+            }
+          }),
+          _: 1 /* STABLE */
+        }, _parent)
+        _push(\`<!--}-->\`)
+      }"
+    `)
+  })
+
   describe('slots', () => {
     test('implicit default slot', () => {
       expect(compile(`<foo>hello<div/></foo>`).code).toMatchInlineSnapshot(`
@@ -102,6 +128,54 @@ describe('ssr: components', () => {
             }, _parent))
           }"
         `)
+    })
+
+    test('slot prop component', () => {
+      const { code } = compile(`<foo v-slot="{ Foo }"><Foo /></foo>`)
+
+      expect(code).toContain(
+        `_ssrRenderComponent(Foo, null, null, _parent, _scopeId)`,
+      )
+      expect(code).toContain(`_createVNode(Foo)`)
+      expect(code).not.toContain(`_component_Foo`)
+      expect(code).not.toContain(`_resolveComponent("Foo")`)
+    })
+
+    test('namespaced slot prop component', () => {
+      const { code } = compile(
+        `<foo v-slot="slotProps"><slot-props.Foo /></foo>`,
+      )
+
+      expect(code).toContain(
+        `_ssrRenderComponent(slotProps.Foo, null, null, _parent, _scopeId)`,
+      )
+      expect(code).toContain(`_createVNode(slotProps.Foo)`)
+      expect(code).not.toContain(`_component_slot_props`)
+      expect(code).not.toContain(`_resolveComponent("slot-props.Foo")`)
+    })
+
+    test('does not resolve v-for binding as slot prop component', () => {
+      const { code } = compile(
+        `<template v-for="Foo in list"><Foo :value="Foo" /></template>`,
+      )
+
+      expect(code).toContain(`const _component_Foo = _resolveComponent("Foo")`)
+      expect(code).toContain(`_ssrRenderComponent(_component_Foo`)
+      expect(code).toContain(`value: Foo`)
+      expect(code).not.toContain(`_ssrRenderComponent(Foo,`)
+    })
+
+    test('does not resolve slot prop component when shadowed by v-for', () => {
+      const { code } = compile(
+        `<foo v-slot="{ Foo }"><template v-for="Foo in list"><Foo /></template></foo>`,
+      )
+
+      expect(code).toContain(`const _component_Foo = _resolveComponent("Foo")`)
+      expect(code).toContain(`_ssrRenderComponent(_component_Foo`)
+      expect(code).toContain(`_createBlock(_component_Foo)`)
+      expect(code).not.toContain(`_ssrRenderComponent(Foo, null`)
+      expect(code).not.toContain(`_createVNode(Foo)`)
+      expect(code).not.toContain(`_createBlock(Foo)`)
     })
 
     test('empty attribute should not produce syntax error', () => {
@@ -428,5 +502,54 @@ describe('ssr: components', () => {
         }"
       `)
     })
+  })
+
+  // hydration tells a vapor component's own multi-root range from the `[`
+  // ranges inside it by its markers
+  test('vapor multi-root component', () => {
+    const vapor = (src: string) => compile(src, { vapor: true }).code
+    const multi = vapor(`<div/><slot/>`)
+    expect(multi).toContain('<!--{-->')
+    expect(multi).toContain('<!--}-->')
+    expect(multi).not.toContain('<!--[-->')
+    expect(vapor(`<div/>`)).not.toContain('<!--{-->')
+    expect(compile(`<div/><slot/>`).code).toContain('<!--[-->')
+  })
+
+  // a sole root whose render may begin with the range of a component inside
+  // gets one of the component's own; one that begins with markup of its own
+  // does not
+  test.each([
+    ['a component', `<foo/>`, true],
+    ['a dynamic component', `<component :is="foo"/>`, true],
+    ['a Transition', `<Transition><foo/></Transition>`, true],
+    ['a KeepAlive', `<KeepAlive><foo/></KeepAlive>`, true],
+    ['a v-if rendering a component', `<foo v-if="a"/>`, true],
+    [
+      'a v-if chain ranging its branches',
+      `<foo v-if="a"/><div v-else/>`,
+      false,
+    ],
+    ['a Teleport', `<Teleport to="body"><foo/></Teleport>`, false],
+    [
+      'a TransitionGroup with a tag',
+      `<TransitionGroup tag="ul"><foo/></TransitionGroup>`,
+      false,
+    ],
+    ['a TransitionGroup', `<TransitionGroup><foo/></TransitionGroup>`, false],
+    ['a Suspense', `<Suspense><foo/></Suspense>`, false],
+    [
+      'an appearing Transition',
+      `<Transition appear><foo/></Transition>`,
+      false,
+    ],
+    [
+      'a v-if on a template of several nodes',
+      `<template v-if="a"><!--c--><foo/></template>`,
+      false,
+    ],
+  ])('vapor sole root: %s', (_, src, ranged) => {
+    const code = compile(src, { vapor: true }).code
+    expect(code.includes('<!--{-->')).toBe(ranged)
   })
 })

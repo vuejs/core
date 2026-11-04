@@ -627,6 +627,34 @@ describe('KeepAlive', () => {
       // C should be pruned because B was used last so C is the oldest cached
       assertCount([2, 2, 1, 1, 1, 2, 2, 0, 1, 1, 1, 1])
     })
+
+    // #15710
+    test('max should unmount pruned current component when reusing mounted vnode', async () => {
+      const viewRef = ref('one')
+      const reuse = ref(false)
+      let prev: any
+      const App = {
+        render() {
+          if (reuse.value && prev) return prev
+          return (prev = h(KeepAlive, { max: 1 }, () =>
+            h(views[viewRef.value]),
+          ))
+        },
+      }
+      render(h(App), root)
+      expect(serializeInner(root)).toBe(`<div>one</div>`)
+
+      reuse.value = true
+      await nextTick()
+      expect(serializeInner(root)).toBe(`<div>one</div>`)
+
+      reuse.value = false
+      viewRef.value = 'two'
+      await nextTick()
+      expect(serializeInner(root)).toBe(`<div>two</div>`)
+      expect(one.deactivated).not.toHaveBeenCalled()
+      expect(one.unmounted).toHaveBeenCalledTimes(1)
+    })
   })
 
   describe('cache invalidation', () => {

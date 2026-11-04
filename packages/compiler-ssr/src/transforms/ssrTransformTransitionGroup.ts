@@ -62,6 +62,8 @@ export function ssrProcessTransitionGroup(
   context: SSRTransformContext,
 ): void {
   const entry = wipMap.get(node)
+  // a vapor TransitionGroup flattens nothing: its children keep their ranges
+  const disableNestedFragments = !context.options.vapor
   if (entry) {
     const { tag, propsExp, scopeId } = entry
     if (tag.type === NodeTypes.DIRECTIVE) {
@@ -86,7 +88,7 @@ export function ssrProcessTransitionGroup(
          * be patched using the same key map) so we need to account for that here
          * by disabling nested fragment wrappers from being generated.
          */
-        true,
+        disableNestedFragments,
         /**
          * TransitionGroup filters out comment children at runtime and thus
          * doesn't expect comments to be present during hydration. We need to
@@ -108,11 +110,11 @@ export function ssrProcessTransitionGroup(
         context.pushStringPart(` ${scopeId}`)
       }
       context.pushStringPart(`>`)
-      processChildren(node, context, false, true, true)
+      processChildren(node, context, false, disableNestedFragments, true)
       context.pushStringPart(`</${tag.value!.content}>`)
     }
   } else {
     // fragment
-    processChildren(node, context, true, true, true)
+    processChildren(node, context, true, disableNestedFragments, true)
   }
 }

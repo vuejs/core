@@ -28,6 +28,7 @@ const packagesDir = path.resolve(__dirname, '../packages')
  *   devOnly?: boolean
  *   prodOnly?: boolean
  *   sourceMap?: boolean
+ *   e2eTest?: boolean
  *   localDev?: boolean
  *   inlineDeps?: boolean
  * }} options
@@ -39,6 +40,7 @@ export function createConfigsForPackage({
   devOnly = false,
   prodOnly = false,
   sourceMap = false,
+  e2eTest = false,
   localDev = false,
   inlineDeps = false,
 }) {
@@ -189,6 +191,8 @@ export function createConfigsForPackage({
         __VERSION__: `"${masterVersion}"`,
         // this is only used during Vue's internal tests
         __TEST__: `false`,
+        // this is only used during Vue's internal e2e-tests
+        __E2E_TEST__: String(e2eTest),
         // If the build is expected to run directly in the browser (global / esm builds)
         __BROWSER__: String(isBrowserBuild),
         __GLOBAL__: String(isGlobalBuild),
@@ -333,7 +337,14 @@ export function createConfigsForPackage({
       external: resolveExternal(),
       transform: {
         define: resolveDefine(),
-        target: isServerRenderer || isCJSBuild ? 'es2019' : 'es2016',
+        // compiler-sfc's cjs build inlines deps that use private class fields,
+        // which are much slower once lowered to WeakMaps.
+        target:
+          isCJSBuild && name === 'compiler-sfc'
+            ? 'es2022'
+            : isServerRenderer || isCJSBuild
+              ? 'es2019'
+              : 'es2016',
       },
       // IMPORTANT: the root tsconfig maps `vue` -> `runtime-with-vapor.ts` for TS usage.
       // For bundling we want `vue` to resolve to the normal entry to avoid pulling

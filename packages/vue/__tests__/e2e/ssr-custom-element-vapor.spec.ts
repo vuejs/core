@@ -69,6 +69,7 @@ test('ssr vapor custom element hydration', async () => {
       template,
       child,
       setText,
+      toDisplayString,
       renderEffect,
       delegateEvents,
     } = (window as any).VueVapor
@@ -84,7 +85,7 @@ test('ssr vapor custom element hydration', async () => {
         const n0 = template('<button> </button>')()
         const x0 = child(n0)
         n0.$evtclick = () => count.value++
-        renderEffect(() => setText(x0, count.value))
+        renderEffect(() => setText(x0, toDisplayString(count.value)))
         return n0
       },
     }

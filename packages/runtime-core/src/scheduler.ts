@@ -21,6 +21,11 @@ export enum SchedulerJobFlags {
    */
   ALLOW_RECURSE = 1 << 1,
   DISPOSED = 1 << 2,
+  /**
+   * Requeue a Suspense effect if its pending branch is discarded.
+   * @internal
+   */
+  REQUEUE_ON_SUSPENSE_DISCARD = 1 << 3,
 }
 
 export interface SchedulerJob extends Function {
@@ -33,8 +38,9 @@ export interface SchedulerJob extends Function {
   /**
    * Attached by renderer.ts when setting up a component's render effect
    * Used to obtain component information when reporting max recursive updates.
+   * Also set on watcher jobs: null marks a watcher without an owner component.
    */
-  i?: GenericComponentInstance
+  i?: GenericComponentInstance | null
 }
 
 export type SchedulerJobs = SchedulerJob | SchedulerJob[]
@@ -95,11 +101,26 @@ function findInsertionIndex(
 /**
  * @internal for runtime-vapor only
  */
-export function queueJob(job: SchedulerJob, id?: number, isPre = false): void {
+export function queueJob(
+  job: SchedulerJob,
+  id?: number,
+  isPre = false,
+  order = 0,
+): void {
   if (
     queueJobWorker(
       job,
-      id === undefined ? (isPre ? -2 : Infinity) : isPre ? id * 2 : id * 2 + 1,
+      id === undefined
+        ? isPre
+          ? -2
+          : Infinity
+        : isPre
+          ? id * 2
+          : order
+            ? // `order / (order + 1)` is monotonic and always < 1, so it sorts
+              // same-component Vapor effects without changing component order.
+              id * 2 + 1 + order / (order + 1)
+            : id * 2 + 1,
       jobs,
       jobsLength,
       flushIndex,
@@ -140,6 +161,11 @@ const doFlushJobs = () => {
     flushJobs()
   } catch (e) {
     currentFlushPromise = null
+    // If a nested pre/post flush throws after queueing more work, defer the
+    // leftovers to a fresh microtask
+    if (jobsLength || postJobs.length) {
+      queueFlush()
+    }
     throw e
   }
 }
@@ -163,9 +189,12 @@ export function queuePostFlushCb(
   } else {
     // if cb is an array, it is a component lifecycle hook which can only be
     // triggered by a job, which is already deduped in the main queue, so
-    // we can skip duplicate check here to improve perf
-    for (const job of jobs) {
-      queueJobWorker(job, id, postJobs, postJobs.length, 0)
+    // we can skip duplicate check here to improve perf.
+    // use a loop instead of `push(...cb)`: the array can be arbitrarily large
+    // (e.g. effects buffered by a suspense boundary) and spreading it would
+    // overflow the call stack (#15142)
+    for (let i = 0; i < jobs.length; i++) {
+      queueJobWorker(jobs[i], id, postJobs, postJobs.length, 0)
     }
   }
   queueFlush()
@@ -173,6 +202,8 @@ export function queuePostFlushCb(
 
 export function flushPreFlushCbs(
   instance?: GenericComponentInstance,
+  // root mount: only flush the jobs of the components it created
+  minUid?: number,
   seen?: CountMap,
 ): void {
   if (__DEV__) {
@@ -183,72 +214,126 @@ export function flushPreFlushCbs(
     if (cb.order! & 1 || cb.order === Infinity) {
       continue
     }
-    if (instance && cb.order !== instance.uid * 2) {
+    if (
+      (instance && cb.order !== instance.uid * 2) ||
+      (minUid !== undefined && !(cb.order! >= minUid * 2))
+    ) {
       continue
     }
     if (__DEV__ && checkRecursiveUpdates(seen!, cb)) {
       continue
     }
     jobs.splice(i, 1)
-    i--
+    // A job may queue a job with a smaller order ahead of this index.
+    i = instance ? i - 1 : flushIndex - 1
     jobsLength--
     if (cb.flags! & SchedulerJobFlags.ALLOW_RECURSE) {
       cb.flags! &= ~SchedulerJobFlags.QUEUED
     }
-    cb()
-    if (!(cb.flags! & SchedulerJobFlags.ALLOW_RECURSE)) {
-      cb.flags! &= ~SchedulerJobFlags.QUEUED
+    try {
+      cb()
+    } finally {
+      if (!(cb.flags! & SchedulerJobFlags.ALLOW_RECURSE)) {
+        cb.flags! &= ~SchedulerJobFlags.QUEUED
+      }
     }
   }
 }
 
-export function flushPostFlushCbs(seen?: CountMap): void {
+export function flushPostFlushCbs(
+  seen?: CountMap,
+  // root mount: cbs queued before it, left in the queue
+  skip?: Set<SchedulerJob>,
+  // root mount: watchers are kept or flushed by owner instead
+  minUid = 0,
+): void {
   if (postJobs.length) {
+    let cbs = postJobs
+    if (skip) {
+      cbs = []
+      let kept = 0
+      for (let i = 0; i < postJobs.length; i++) {
+        const cb = postJobs[i]
+        if (cb.i !== undefined ? !cb.i || cb.i.uid < minUid : skip.has(cb)) {
+          postJobs[kept++] = cb
+        } else {
+          cbs.push(cb)
+        }
+      }
+      postJobs.length = kept
+    } else {
+      postJobs = []
+    }
+
     // #1947 already has active queue, nested flushPostFlushCbs call
     if (activePostJobs) {
-      activePostJobs.push(...postJobs)
-      postJobs.length = 0
+      for (let i = 0; i < cbs.length; i++) {
+        activePostJobs.push(cbs[i])
+      }
       return
     }
 
-    activePostJobs = postJobs
-    postJobs = []
+    activePostJobs = cbs
 
     if (__DEV__) {
       seen = seen || new Map()
     }
 
-    while (postFlushIndex < activePostJobs.length) {
-      const cb = activePostJobs[postFlushIndex++]
-      if (__DEV__ && checkRecursiveUpdates(seen!, cb)) {
-        continue
-      }
-      if (cb.flags! & SchedulerJobFlags.ALLOW_RECURSE) {
-        cb.flags! &= ~SchedulerJobFlags.QUEUED
-      }
-      if (!(cb.flags! & SchedulerJobFlags.DISPOSED)) {
-        try {
-          cb()
-        } finally {
+    try {
+      while (postFlushIndex < activePostJobs.length) {
+        const cb = activePostJobs[postFlushIndex++]
+        if (__DEV__ && checkRecursiveUpdates(seen!, cb)) {
+          continue
+        }
+        if (cb.flags! & SchedulerJobFlags.ALLOW_RECURSE) {
           cb.flags! &= ~SchedulerJobFlags.QUEUED
         }
+        if (!(cb.flags! & SchedulerJobFlags.DISPOSED)) {
+          try {
+            cb()
+          } finally {
+            if (!(cb.flags! & SchedulerJobFlags.ALLOW_RECURSE)) {
+              cb.flags! &= ~SchedulerJobFlags.QUEUED
+            }
+          }
+        }
       }
-    }
+    } finally {
+      // If there was an error we still need to clear the QUEUED flags
+      while (postFlushIndex < activePostJobs.length) {
+        activePostJobs[postFlushIndex++].flags! &= ~SchedulerJobFlags.QUEUED
+      }
 
-    activePostJobs = null
-    postFlushIndex = 0
+      activePostJobs = null
+      postFlushIndex = 0
+    }
   }
 }
 
 let isFlushing = false
+
 /**
+ * Run a root render, then flush the jobs it is responsible for. A mount or
+ * unmount (`minUid` given) only flushes the jobs of the components it created
+ * and the post cbs it queued, so pre watchers triggered in setup run before
+ * mounted (#5721) while the jobs of other components stay in the queue and
+ * keep their order (#6728). A root update keeps flushing all pending pre jobs
+ * and post cbs, as the jobs of the components it re-renders may predate it.
+ *
  * @internal
  */
-export function flushOnAppMount(instance?: GenericComponentInstance): void {
-  if (!isFlushing) {
-    isFlushing = true
-    flushPreFlushCbs(instance)
-    flushPostFlushCbs()
+export function flushOnAppMount(fn: () => void, minUid?: number): void {
+  if (isFlushing) {
+    fn()
+    return
+  }
+  const queued = minUid === undefined ? undefined : new Set(postJobs)
+  fn()
+  isFlushing = true
+  try {
+    flushPreFlushCbs(undefined, minUid)
+    flushPostFlushCbs(undefined, queued, minUid)
+  } finally {
     isFlushing = false
   }
 }
@@ -294,13 +379,15 @@ function flushJobs(seen?: CountMap) {
 
     flushIndex = 0
     jobsLength = 0
+    jobs.length = 0
 
     flushPostFlushCbs(seen)
 
-    currentFlushPromise = null
     // If new jobs have been added to either queue, keep flushing
     if (jobsLength || postJobs.length) {
       flushJobs(seen)
+    } else {
+      currentFlushPromise = null
     }
   }
 }

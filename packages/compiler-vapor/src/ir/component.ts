@@ -5,6 +5,7 @@ import type { BlockIRNode, IRFor } from './index'
 // props
 export interface IRProp extends Omit<DirectiveTransformResult, 'value'> {
   values: SimpleExpressionNode[]
+  normalize?: 'class' | 'style'
 }
 
 export enum IRDynamicPropsKind {
@@ -52,6 +53,7 @@ export interface IRSlotDynamicLoop {
   name: SimpleExpressionNode
   fn: SlotBlockIRNode
   loop: IRFor
+  keyProp?: SimpleExpressionNode
 }
 export interface IRSlotDynamicConditional {
   slotType: IRSlotType.CONDITIONAL

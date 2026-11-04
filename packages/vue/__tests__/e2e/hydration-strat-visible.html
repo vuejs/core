@@ -12,11 +12,15 @@
   const rootMargin = location.search.match(/rootMargin=(\d+)/)?.[1] ?? 0
   const isFragment = location.search.includes('?fragment')
   const isVIf = location.search.includes('?v-if')
+  const isContents = location.search.includes('?contents')
   if (isFragment) {
     document.getElementById('app').innerHTML =
       `<!--[--><!--[--><span>one</span><!--]--><button>0</button><span>two</span><!--]-->`
   } else if (isVIf) {
     document.getElementById('app').innerHTML = `<!---->`
+  } else if (isContents) {
+    document.getElementById('app').innerHTML =
+      `<div style="display: contents"><button>0</button></div>`
   }
 
   window.isHydrated = false
@@ -47,6 +51,8 @@
           return createCommentVNode('v-if', true)
         } else if (isFragment) {
           return [[h('span', 'one')], button, h('span', 'two')]
+        } else if (isContents) {
+          return h('div', { style: 'display: contents' }, button)
         } else {
           return button
         }

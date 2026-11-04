@@ -1,4 +1,4 @@
-import { defineConfig } from 'vite'
+import { defineConfig } from 'vite-plus'
 import Vue from '@vitejs/plugin-vue'
 import * as CompilerSFC from 'vue/compiler-sfc'
 import { resolve } from 'node:path'

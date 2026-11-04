@@ -13,7 +13,9 @@ import {
   toDisplayString,
 } from '@vue/runtime-dom'
 import {
+  VaporTransition,
   createComponent,
+  createIf,
   createSlot,
   createTextNode,
   createVaporApp,
@@ -21,7 +23,6 @@ import {
   renderEffect,
   template,
   vaporInteropPlugin,
-  withVaporCtx,
 } from '../src'
 import { makeRender } from './_utils'
 import { setElementText, setText } from '../src/dom/prop'
@@ -393,12 +394,65 @@ describe('api: provide/inject', () => {
     const { host } = define({
       setup() {
         return createComponent(Parent, null, {
-          default: withVaporCtx(() => createComponent(Child)),
+          default: () => createComponent(Child),
         })
       },
     }).render()
 
     expect(host.innerHTML).toBe('hello<!--slot-->')
+  })
+
+  it('transition out-in deferred branch should keep parent inject context', async () => {
+    const toggle = ref(true)
+
+    const ChildA = defineVaporComponent({
+      setup() {
+        const foo = inject('foo', 'missing')
+        const n0 = template('<div></div>')()
+        setElementText(n0, `A:${foo}`)
+        return n0
+      },
+    })
+
+    const ChildB = defineVaporComponent({
+      setup() {
+        const foo = inject('foo', 'missing')
+        const n0 = template('<div></div>')()
+        setElementText(n0, `B:${foo}`)
+        return n0
+      },
+    })
+
+    const Parent = defineVaporComponent({
+      setup() {
+        provide('foo', 'from-parent')
+        const onLeave = (_: any, done: Function) => setTimeout(done, 0)
+        return createComponent(
+          VaporTransition,
+          {
+            mode: () => 'out-in',
+            onLeave: () => onLeave,
+          },
+          {
+            default: () =>
+              createIf(
+                () => toggle.value,
+                () => createComponent(ChildA),
+                () => createComponent(ChildB),
+              ),
+          },
+        )
+      },
+    })
+
+    const { host } = define(Parent).render()
+    expect(host.textContent).toContain('A:from-parent')
+
+    toggle.value = false
+    await nextTick()
+    await new Promise(r => setTimeout(r, 0))
+
+    expect(host.textContent).toContain('B:from-parent')
   })
 
   describe('hasInjectionContext', () => {

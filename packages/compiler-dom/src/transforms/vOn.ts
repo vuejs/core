@@ -1,5 +1,6 @@
 import {
   CompilerDeprecationTypes,
+  type CompilerError,
   type DirectiveTransform,
   type ExpressionNode,
   NodeTypes,
@@ -48,6 +49,18 @@ export const resolveModifiers = (
 
   for (let i = 0; i < modifiers.length; i++) {
     const modifier = modifiers[i].content
+
+    // delegate modifier is vapor-only modifier
+    if (modifier === 'delegate') {
+      if (context) {
+        const error = new SyntaxError(
+          `.delegate modifier is only supported in Vapor components.`,
+        ) as CompilerError
+        error.loc = modifiers[i].loc
+        context.onWarn(error)
+      }
+      continue
+    }
 
     if (
       __COMPAT__ &&

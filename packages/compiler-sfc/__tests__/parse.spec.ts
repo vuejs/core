@@ -447,4 +447,64 @@ h1 { color: red }
       )
     })
   })
+
+  describe('vapor script validation', () => {
+    test.each([
+      '<script>export default { data: () => ({ msg: "hello" }) }</script>',
+      '<script lang="ts">export default {}</script>',
+      '<script src="./component.js"></script>',
+    ])('rejects a normal script without script setup: %s', script => {
+      const { errors } = parse(`${script}<template vapor><div /></template>`)
+
+      expect(errors).toHaveLength(1)
+      expect(errors[0].message).toContain(
+        'Vapor components with a normal <script> must also include <script setup>, <script vapor>, or <script setup vapor>.',
+      )
+    })
+
+    test.each(['', 'const msg = "hello"'])(
+      'allows normal script and script setup: %s',
+      setup => {
+        const normalScript = '<script>export default { name: "Comp" }</script>'
+        const setupScript = `<script setup>${setup}</script>`
+        const template = '<template vapor><div /></template>'
+
+        for (const source of [
+          normalScript + setupScript + template,
+          template + setupScript + normalScript,
+        ]) {
+          const { descriptor, errors } = parse(source)
+          expect(errors).toEqual([])
+          expect(descriptor.scriptSetup).not.toBeNull()
+        }
+      },
+    )
+
+    test.each(['vapor', 'setup vapor'])(
+      'allows an empty script %s alongside a normal script',
+      attrs => {
+        const { descriptor, errors } = parse(
+          '<script>export default { name: "Comp" }</script>' +
+            `<script ${attrs}></script><template><div /></template>`,
+        )
+        expect(errors).toEqual([])
+        expect(descriptor.scriptSetup).not.toBeNull()
+      },
+    )
+
+    test('allows template-only vapor components', () => {
+      const { descriptor, errors } = parse('<template vapor><div /></template>')
+      expect(errors).toEqual([])
+      expect(descriptor.script).toBeNull()
+      expect(descriptor.scriptSetup).toBeNull()
+    })
+
+    test('keeps empty script setup normalization unchanged outside vapor', () => {
+      const { descriptor, errors } = parse(
+        '<script>export default {}</script><script setup></script>',
+      )
+      expect(errors).toEqual([])
+      expect(descriptor.scriptSetup).toBeNull()
+    })
+  })
 })

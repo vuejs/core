@@ -13,6 +13,7 @@ import {
   type CreateAppFunction,
   createAppAPI,
   flushOnAppMount,
+  getNextUid,
   initFeatureFlags,
   normalizeContainer,
   setDevtoolsHook,
@@ -24,6 +25,7 @@ import { optimizePropertyLookup } from './dom/prop'
 import { setIsHydratingEnabled, withHydration } from './dom/hydration'
 
 let _createApp: CreateAppFunction<ParentNode, VaporComponent>
+const rootInstances = new WeakMap<App, VaporComponentInstance>()
 
 const mountApp: AppMountFn<ParentNode> = (app, container) => {
   optimizePropertyLookup()
@@ -36,29 +38,8 @@ const mountApp: AppMountFn<ParentNode> = (app, container) => {
     container.textContent = ''
   }
 
-  const instance =
-    (app._ceComponent as VaporComponentInstance) ||
-    createComponent(
-      app._component,
-      app._props as RawProps,
-      null,
-      false,
-      false,
-      app._context,
-    )
-  mountComponent(instance, container)
-  flushOnAppMount()
-
-  return instance!
-}
-
-let _hydrateApp: CreateAppFunction<ParentNode, VaporComponent>
-
-const hydrateApp: AppMountFn<ParentNode> = (app, container) => {
-  optimizePropertyLookup()
-
   let instance: VaporComponentInstance
-  withHydration(container, () => {
+  const mount = () => {
     instance =
       (app._ceComponent as VaporComponentInstance) ||
       createComponent(
@@ -68,16 +49,63 @@ const hydrateApp: AppMountFn<ParentNode> = (app, container) => {
         false,
         false,
         app._context,
+        true,
       )
     mountComponent(instance, container)
-    flushOnAppMount()
-  })
+  }
+  // a custom element flushes the creation and mount of its component itself
+  if (app._ceComponent) mount()
+  else flushOnAppMount(mount, getNextUid())
+  rootInstances.set(app, instance!)
+
+  return instance!
+}
+
+let _hydrateApp: CreateAppFunction<ParentNode, VaporComponent>
+
+const hydrateApp: AppMountFn<ParentNode> = (app, container) => {
+  if (!container.hasChildNodes()) {
+    ;(__DEV__ || __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__) &&
+      warn(
+        `Attempting to hydrate existing markup but container is empty. ` +
+          `Performing full mount instead.`,
+      )
+    return mountApp(app, container)
+  }
+
+  optimizePropertyLookup()
+  let instance: VaporComponentInstance
+  const hydrate = () => {
+    withHydration(container, () => {
+      instance =
+        (app._ceComponent as VaporComponentInstance) ||
+        createComponent(
+          app._component,
+          app._props as RawProps,
+          null,
+          false,
+          false,
+          app._context,
+          true,
+        )
+      mountComponent(instance, container)
+    })
+  }
+  // a custom element flushes the creation and mount of its component itself
+  if (app._ceComponent) hydrate()
+  else flushOnAppMount(hydrate, getNextUid())
+  rootInstances.set(app, instance!)
 
   return instance!
 }
 
 const unmountApp: AppUnmountFn = app => {
-  unmountComponent(app._instance as VaporComponentInstance, app._container)
+  const instance = ((__DEV__ && app._instance) ||
+    rootInstances.get(app)!) as VaporComponentInstance
+  flushOnAppMount(() => {
+    unmountComponent(instance, app._container)
+  }, getNextUid())
+  rootInstances.delete(app)
 }
 
 function prepareApp() {
@@ -96,8 +124,10 @@ function prepareApp() {
 function postPrepareApp(app: App) {
   app.vapor = true
   const mount = app.mount
-  app.mount = (container, ...args: any[]) => {
+  app.mount = (container, ...args: any[]): any => {
     container = normalizeContainer(container) as ParentNode
+    if (!container) return
+
     const proxy = mount(container, ...args)
     if (container instanceof Element) {
       container.removeAttribute('v-cloak')

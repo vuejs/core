@@ -2,6 +2,7 @@ import {
   BindingTypes,
   UNREF,
   isFunctionType,
+  isSimpleIdentifier,
   isStaticNode,
   unwrapTSNode,
   walkIdentifiers,
@@ -11,7 +12,7 @@ import {
   type SFCDescriptor,
   type SFCScriptBlock,
 } from './parse'
-import type { ParserPlugin } from '@babel/parser'
+import { type ParserPlugin, parse as babelParse } from '@babel/parser'
 import { generateCodeFrame } from '@vue/shared'
 import type {
   ArrayPattern,
@@ -190,6 +191,8 @@ export function compileScript(
   const vapor = sfc.vapor || options.vapor
   const ssr = options.templateOptions?.ssr
   const setupPreambleLines = [] as string[]
+  const cssModuleBindings = [] as string[]
+  let cssModuleHelper = '_useCssModule'
   const isJSOrTS =
     isJS(scriptLang, scriptSetupLang) || isTS(scriptLang, scriptSetupLang)
 
@@ -203,6 +206,11 @@ export function compileScript(
   if (!scriptSetup) {
     if (!script) {
       throw new Error(`[@vue/compiler-sfc] SFC contains no <script> tags.`)
+    }
+    if (vapor) {
+      throw new Error(
+        `[@vue/compiler-sfc] Vapor components with a normal <script> must also include <script setup>, <script vapor>, or <script setup vapor>.`,
+      )
     }
 
     // normal <script> only
@@ -274,7 +282,7 @@ export function compileScript(
       !sfc.template.src &&
       !sfc.template.lang
     ) {
-      isImportUsed = isUsedInTemplate(local, sfc)
+      isImportUsed = isUsedInTemplate(local, sfc, options.templateOptions)
     }
 
     ctx.userImports[local] = {
@@ -337,6 +345,64 @@ export function compileScript(
     }
   }
 
+  /**
+   * vapor resolves template expressions against setup scope instead of a
+   * `_ctx` render proxy, so `<style module>` names need explicit bindings.
+   */
+  function declareTemplateCssModules() {
+    if (!sfc.template) return
+
+    while (
+      ctx.bindingMetadata[cssModuleHelper] ||
+      (inlineMode && sfc.styles.some(style => style.module === cssModuleHelper))
+    ) {
+      cssModuleHelper += '_'
+    }
+
+    for (const style of sfc.styles) {
+      if (!style.module) continue
+      // `<style module>` without a value defaults to `$style`
+      const name = style.module === true ? `$style` : style.module
+      if (
+        !isSimpleIdentifier(name) ||
+        ctx.bindingMetadata[name] ||
+        // Non-inline bindings must remain available across template-only HMR.
+        // Only prune modules when the inline template can be analyzed as-is.
+        (inlineMode &&
+          sfc.template.ast &&
+          !sfc.template.lang &&
+          !options.templateOptions?.preprocessLang &&
+          !isUsedInTemplate(name, sfc, options.templateOptions))
+      ) {
+        continue
+      }
+      if (inlineMode) {
+        // These identifiers are also referenced by generated template code.
+        if (
+          name === '__props' ||
+          name === '_useCssModule' ||
+          (name[0] === '_' && ctx.helperImports.has(name.slice(1)))
+        ) {
+          continue
+        }
+        // CSS module names need not be valid JavaScript binding identifiers.
+        try {
+          babelParse(`const ${name} = null`, { sourceType: 'module' })
+        } catch {
+          continue
+        }
+      }
+      ctx.helperImports.add('useCssModule')
+      const value = `${cssModuleHelper}(${JSON.stringify(name)})`
+      cssModuleBindings.push(
+        inlineMode
+          ? `const ${name} = ${value}`
+          : `${JSON.stringify(name)}: ${value}`,
+      )
+      ctx.bindingMetadata[name] = BindingTypes.SETUP_CONST
+    }
+  }
+
   const scriptAst = ctx.scriptAst
   const scriptSetupAst = ctx.scriptSetupAst!
   const inlineMode = options.inlineTemplate
@@ -391,22 +457,6 @@ export function compileScript(
         const local = specifier.local.name
         const imported = getImportedName(specifier)
         const source = node.source.value
-
-        // rewrite defineVaporAsyncComponent import to defineAsyncComponent
-        // in SSR + Vapor mode
-        if (
-          vapor &&
-          ssr &&
-          specifier.type === 'ImportSpecifier' &&
-          source === 'vue' &&
-          imported === 'defineVaporAsyncComponent'
-        ) {
-          ctx.s.overwrite(
-            specifier.start! + startOffset,
-            specifier.end! + startOffset,
-            `defineAsyncComponent as ${local}`,
-          )
-        }
 
         const existing = ctx.userImports[local]
         if (source === 'vue' && MACROS.includes(imported)) {
@@ -705,6 +755,8 @@ export function compileScript(
           }
           if (child.type === 'BlockStatement') {
             scope.push(child.body)
+          } else if (child.type === 'SwitchCase') {
+            scope.push(child.consequent)
           }
           if (child.type === 'AwaitExpression') {
             hasAwait = true
@@ -728,8 +780,10 @@ export function compileScript(
             )
           }
         },
-        exit(node: Node) {
-          if (node.type === 'BlockStatement') scope.pop()
+        leave(node: Node) {
+          if (node.type === 'BlockStatement' || node.type === 'SwitchCase') {
+            scope.pop()
+          }
         },
       })
     }
@@ -828,7 +882,10 @@ export function compileScript(
   // which requires a SETUP_LET binding (getter + setter) to keep script state in sync.
   // In inline mode, it generates `foo = $event`, which also requires `let`.
   if (sfc.template && !sfc.template.src && sfc.template.ast) {
-    const vModelIds = resolveTemplateVModelIdentifiers(sfc)
+    const vModelIds = resolveTemplateVModelIdentifiers(
+      sfc,
+      options.templateOptions,
+    )
     if (vModelIds.size) {
       const toDemote = new Set<string>()
       for (const id of vModelIds) {
@@ -942,11 +999,16 @@ export function compileScript(
     buildDestructureElements()
   }
 
+  if (vapor && !ssr) {
+    declareTemplateCssModules()
+  }
+
   if (destructureElements.length) {
     args += `, { ${destructureElements.join(', ')} }`
   }
 
   let templateMap
+  let templateCode
   // 9. generate return statement
   let returned
   // ensure props bindings register before compile template in inline mode
@@ -986,6 +1048,7 @@ export function compileScript(
         returned += `${key}, `
       }
     }
+    returned += cssModuleBindings.join(', ')
     returned = returned.replace(/, $/, '') + ` }`
   } else {
     // inline mode
@@ -1015,6 +1078,7 @@ export function compileScript(
         },
       })
       templateMap = map
+      templateCode = code
       if (tips.length) {
         tips.forEach(warnOnce)
       }
@@ -1050,7 +1114,14 @@ export function compileScript(
       ) {
         ctx.helperImports.delete('unref')
       }
-      returned = code
+      // An async setup resumes in a microtask with no ambient insertion or
+      // hydration state, so it must not render there. Return the template as
+      // a render closure; the runtime invokes it once setup has settled.
+      returned = vapor && !ssr && hasAwait ? `return () => {${code}}` : code
+      if (cssModuleBindings.length) {
+        // Keep implicit template bindings out of the user's script scope.
+        returned = `{\n${cssModuleBindings.join('\n')}\n${returned}\n}`
+      }
     } else {
       returned = `() => {}`
     }
@@ -1070,7 +1141,16 @@ export function compileScript(
     ctx.s.appendRight(
       endOffset,
       // vapor mode generates its own return when inlined
-      `\n${vapor && !ssr ? `` : `return `}${returned}\n}\n\n`,
+      // (except with a render in normal <script> and no template, where
+      // the bindings object is returned instead, see #4980)
+      `\n${
+        vapor &&
+        !ssr &&
+        inlineMode &&
+        !(!sfc.template && ctx.hasDefaultExportRender)
+          ? ``
+          : `return `
+      }${returned}\n}\n\n`,
     )
   }
 
@@ -1169,7 +1249,7 @@ export function compileScript(
       : `'vue'`
     ctx.s.prepend(
       `import { ${[...ctx.helperImports]
-        .map(h => `${h} as _${h}`)
+        .map(h => `${h} as ${h === 'useCssModule' ? cssModuleHelper : `_${h}`}`)
         .join(', ')} } from ${importSrc}\n`,
     )
   }
@@ -1185,7 +1265,7 @@ export function compileScript(
       : undefined
   // merge source maps of the script setup and template in inline mode
   if (templateMap && map) {
-    const offset = content.indexOf(returned)
+    const offset = content.indexOf(templateCode!)
     const templateLineOffset =
       content.slice(0, offset).split(/\r?\n/).length - 1
     map = mergeSourceMaps(map, templateMap, templateLineOffset)

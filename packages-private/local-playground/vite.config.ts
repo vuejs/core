@@ -1,4 +1,4 @@
-import { defineConfig } from 'vite'
+import { defineConfig } from 'vite-plus'
 import Inspect from 'vite-plugin-inspect'
 import { DevPlugin } from './setup/dev'
 import Vue from '@vitejs/plugin-vue'

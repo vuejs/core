@@ -1,0 +1,5425 @@
+import {
+  createComponent,
+  createVaporApp,
+  defineVaporAsyncComponent,
+  defineVaporComponent,
+  setBlockKey,
+  template,
+  vaporInteropPlugin,
+} from '../../src'
+import { resolveTransitionBlock } from '../../src/components/Transition'
+import type { TransitionBlock } from '../../src/block'
+import { resolveTransitionBlocks } from '../../src/components/TransitionGroup'
+import { type DynamicFragment, SlotFragment } from '../../src/fragment'
+import {
+  Fragment,
+  type Ref,
+  Teleport,
+  Transition,
+  type VNode,
+  createApp,
+  defineAsyncComponent,
+  defineComponent,
+  h,
+  nextTick,
+  ref,
+} from 'vue'
+import {
+  compile,
+  ifChain,
+  makeInteropRender,
+  makeRender,
+  renderParity,
+  stripAnchors,
+} from '../_utils'
+
+const define = makeRender()
+const defineInterop = makeInteropRender()
+
+// holds every leave open until the test releases it
+function collectLeaves() {
+  const leaves: (() => void)[] = []
+  return {
+    leaves,
+    onLeave: (_el: Element, done: () => void) => leaves.push(done),
+  }
+}
+
+function createAppearTestState(
+  show: boolean,
+  extraState: Record<string, any> = {},
+) {
+  const onBeforeAppear = vi.fn()
+  const onAppear = vi.fn()
+  const data = ref({
+    show,
+    ...extraState,
+    onBeforeAppear,
+    onAppear,
+  })
+
+  return {
+    data,
+    onBeforeAppear,
+    onAppear,
+  }
+}
+
+interface InteropSlotTransitionTestData {
+  show: boolean
+  onEnter: (el: Element, done: () => void) => void
+  onLeave: (el: Element, done: () => void) => void
+}
+
+function renderInteropSlotFallbackTransition<
+  T extends InteropSlotTransitionTestData,
+>(
+  mode: 'out-in' | 'in-out',
+  data: Ref<T>,
+  renderContent: () => VNode = () => h('span', { class: 'content' }, 'content'),
+  fallback: string = '<div class="fallback">fallback</div>',
+  removeSlotWhenHidden = false,
+) {
+  const Child = compile(
+    `<template>
+      <Transition
+        mode="${mode}"
+        :css="false"
+        @enter="data.onEnter"
+        @leave="data.onLeave"
+      >
+        <slot>${fallback}</slot>
+      </Transition>
+    </template>`,
+    data,
+  )
+  const App = defineComponent({
+    setup() {
+      return () =>
+        h(
+          Child,
+          null,
+          removeSlotWhenHidden && !data.value.show
+            ? undefined
+            : {
+                default: () => (data.value.show ? renderContent() : []),
+              },
+        )
+    },
+  })
+  return defineInterop(App).render()
+}
+
+describe('Transition', () => {
+  test('prefers explicit component key over uid when resolving child', () => {
+    const Child = defineVaporComponent({
+      setup() {
+        return template(`<div>child</div>`)() as any
+      },
+    })
+
+    let child: any
+    define({
+      setup() {
+        child = createComponent(Child)
+        setBlockKey(child, 'foo')
+        return child
+      },
+    }).render()
+
+    const resolved = resolveTransitionBlock(child)!
+    expect((resolved as TransitionBlock).$tkey).toBe('foo')
+    expect(resolved.$key).toBeUndefined()
+  })
+
+  test('keeps unkeyed child key undefined (shares leaving bucket by type)', () => {
+    const Child = defineVaporComponent({
+      setup() {
+        return template(`<div>child</div>`)() as any
+      },
+    })
+
+    let child: any
+    define({
+      setup() {
+        child = createComponent(Child)
+        return child
+      },
+    }).render()
+
+    // No explicit key: the resolved child must stay unkeyed so successive
+    // instances of the same component type share the leaving-cache bucket
+    // and earlyRemove can match the previous still-leaving instance.
+    const resolved = resolveTransitionBlock(child)!
+    expect((resolved as TransitionBlock).$tkey).toBeUndefined()
+  })
+
+  test('preserves falsy explicit component key when resolving child', () => {
+    const Child = defineVaporComponent({
+      setup() {
+        return template(`<div>child</div>`)() as any
+      },
+    })
+
+    let child: any
+    define({
+      setup() {
+        child = createComponent(Child)
+        setBlockKey(child, 0)
+        return child
+      },
+    }).render()
+
+    const resolved = resolveTransitionBlock(child)!
+    expect((resolved as TransitionBlock).$tkey).toBe(0)
+  })
+
+  test('treats null component key as absent when resolving child', () => {
+    const Child = defineVaporComponent({
+      setup() {
+        return template(`<div>child</div>`)() as any
+      },
+    })
+
+    let child: any
+    define({
+      setup() {
+        child = createComponent(Child)
+        setBlockKey(child, null)
+        return child
+      },
+    }).render()
+
+    // A null key counts as absent and must not fall back to uid; the resolved
+    // child stays unkeyed (stable across same-type instances, so it shares
+    // the leaving bucket by type).
+    const resolved = resolveTransitionBlock(child)!
+    expect((resolved as TransitionBlock).$tkey).toBeUndefined()
+  })
+
+  // vdom: Transition keys by the child vnode; keys inside the child's own
+  // subtree never reach it
+  test('component child with a dynamic key keeps that key over its root element key', async () => {
+    let leaveDone: (() => void) | undefined
+    const data = ref<any>({
+      k: 1,
+      onLeave: (_el: Element, done: () => void) => (leaveDone = done),
+    })
+    const Comp = compile(`<template><div key="inner">x</div></template>`, data)
+    const App = compile(
+      `<script setup vapor>
+        const data = _data
+        const Comp = _components.Comp
+      </script>
+      <template>
+        <Transition name="t" @leave="data.onLeave">
+          <Comp :key="data.k" />
+        </Transition>
+      </template>`,
+      data,
+      { Comp },
+    )
+    const { host } = define(App).render()
+
+    data.value.k = 2
+    await nextTick()
+    // keys 1 and 2 differ: the entering child must not early-remove the
+    // leaving one
+    expect(host.querySelectorAll('div').length).toBe(2)
+    leaveDone!()
+  })
+
+  test('component key does not leak into a nested Transition', async () => {
+    const { leaves, onLeave } = collectLeaves()
+    const data = ref<any>({
+      ok: true,
+      onLeave,
+    })
+    const Inner = compile(
+      `<template><div class="inner">i</div></template>`,
+      data,
+    )
+    const Mid = compile(
+      `<script setup vapor>
+        const data = _data
+        const Inner = _components.Inner
+      </script>
+      <template>
+        <Transition name="t" @leave="data.onLeave">
+          <Inner v-if="data.ok" key="b" />
+          <Inner v-else key="c" />
+        </Transition>
+      </template>`,
+      data,
+      { Inner },
+    )
+    const App = compile(
+      `<script setup vapor>
+        const data = _data
+        const Mid = _components.Mid
+      </script>
+      <template><Mid key="a" /></template>`,
+      data,
+      { Mid },
+    )
+    const { host } = define(App).render()
+
+    data.value.ok = false
+    await nextTick()
+    data.value.ok = true
+    await nextTick()
+    // b re-enters while the first b is still leaving: same key, so the
+    // leaving one is early-removed
+    expect(host.querySelectorAll('.inner').length).toBe(2)
+    leaves.forEach(done => done())
+  })
+
+  test('keeps the resolved key when leave hooks are re-applied (in-out)', async () => {
+    const { leaves, onLeave } = collectLeaves()
+    const data = ref<any>({
+      k: 1,
+      onLeave,
+    })
+    const Comp = compile(`<template><div>x</div></template>`, data)
+    const App = compile(
+      `<script setup vapor>
+        const data = _data
+        const Comp = _components.Comp
+      </script>
+      <template>
+        <Transition name="t" mode="in-out" @leave="data.onLeave">
+          <Comp :key="data.k" />
+        </Transition>
+      </template>`,
+      data,
+      { Comp },
+    )
+    const { host } = define(App).render()
+
+    data.value.k = 2
+    await nextTick()
+    data.value.k = 1
+    await nextTick()
+    // key 1 re-enters while the first key-1 child is still leaving: the
+    // leaving child keeps its key, so it is early-removed
+    expect(host.querySelectorAll('div').length).toBe(2)
+    leaves.forEach(done => done())
+  })
+
+  test('keeps the wrapper key when an async child resolves', async () => {
+    let resolve!: (comp: any) => void
+    const Child = compile(
+      `<template><div class="async">async</div></template>`,
+      ref(),
+    )
+    const AsyncChild = defineVaporAsyncComponent(
+      () => new Promise(r => (resolve = r as any)),
+    )
+    const { leaves, onLeave } = collectLeaves()
+    const data = ref<any>({
+      show: true,
+      onLeave,
+    })
+    const App = compile(
+      `<script setup vapor>
+        const data = _data
+        const AsyncChild = _components.AsyncChild
+      </script>
+      <template>
+        <Transition :css="false" @leave="data.onLeave">
+          <AsyncChild v-if="data.show" key="outer" />
+          <span v-else key="other">other</span>
+        </Transition>
+      </template>`,
+      data,
+      { AsyncChild },
+    )
+    const { host } = define(App).render()
+
+    resolve(Child)
+    await new Promise(r => setTimeout(r))
+    await nextTick()
+    expect((host.querySelector('.async')! as TransitionBlock).$tkey).toBe(
+      'outer',
+    )
+
+    data.value.show = false
+    await nextTick()
+    data.value.show = true
+    await nextTick()
+    // "outer" re-enters while the first one is still leaving: same key, so
+    // the leaving child is early-removed
+    expect(host.querySelectorAll('.async').length).toBe(1)
+    leaves.forEach(done => done())
+  })
+
+  test('unkeyed component child ignores keys inside its subtree', async () => {
+    const { leaves, onLeave } = collectLeaves()
+    const data = ref<any>({
+      x: 1,
+      onLeave,
+    })
+    const A = compile(
+      `<script setup vapor>
+        const data = _data
+        const props = defineProps(['x'])
+      </script>
+      <template><div class="a" :key="props.x">{{ props.x }}</div></template>`,
+      data,
+    )
+    const App = compile(
+      `<script setup vapor>
+        const data = _data
+        const A = _components.A
+      </script>
+      <template>
+        <Transition name="t" @leave="data.onLeave">
+          <A :x="data.x" />
+        </Transition>
+      </template>`,
+      data,
+      { A },
+    )
+    const { host } = define(App).render()
+
+    data.value.x = 2
+    await nextTick()
+    data.value.x = 1
+    await nextTick()
+    // the child stays unkeyed, so each entering root early-removes the
+    // leaving one
+    expect(host.querySelectorAll('.a').length).toBe(1)
+    leaves.forEach(done => done())
+  })
+
+  test('collects group leaves with component key prefixes', () => {
+    const Child = defineVaporComponent({
+      setup() {
+        return [
+          document.createComment('anchor'),
+          template(`<div>a</div>`)() as any,
+          template(`<div>b</div>`)() as any,
+        ]
+      },
+    })
+
+    let child: any
+    define({
+      setup() {
+        child = createComponent(Child)
+        setBlockKey(child, 'foo')
+        return child
+      },
+    }).render()
+
+    const resolved = resolveTransitionBlocks(child)
+    expect(resolved).toEqual([child.block[1], child.block[2]])
+    expect((child.block[1] as TransitionBlock).$tkey).toBe('foo0')
+    expect((child.block[2] as TransitionBlock).$tkey).toBe('foo1')
+  })
+
+  test('keeps inherited group keys stable across repeated resolutions', () => {
+    const Child = defineVaporComponent({
+      setup() {
+        return [
+          document.createComment('anchor'),
+          template(`<div>a</div>`)() as any,
+          template(`<div>b</div>`)() as any,
+        ]
+      },
+    })
+
+    let child: any
+    define({
+      setup() {
+        child = createComponent(Child)
+        setBlockKey(child, 'foo')
+        return child
+      },
+    }).render()
+
+    resolveTransitionBlocks(child)
+    resolveTransitionBlocks(child)
+
+    expect((child.block[1] as TransitionBlock).$tkey).toBe('foo0')
+    expect((child.block[2] as TransitionBlock).$tkey).toBe('foo1')
+  })
+
+  test('treats null group owner key as absent', () => {
+    const Child = defineVaporComponent({
+      setup() {
+        return [
+          template(`<div>a</div>`)() as any,
+          template(`<div>b</div>`)() as any,
+        ]
+      },
+    })
+
+    let child: any
+    define({
+      setup() {
+        child = createComponent(Child)
+        setBlockKey(child, null)
+        return child
+      },
+    }).render()
+
+    resolveTransitionBlocks(child)
+
+    expect((child.block[0] as TransitionBlock).$tkey).toBeUndefined()
+    expect((child.block[1] as TransitionBlock).$tkey).toBeUndefined()
+  })
+
+  test('composes nested group key prefixes', () => {
+    const data = ref({ items: [{ key: 'bar' }] })
+    const Child = compile(
+      `<template>
+        <span></span>
+        <div v-for="item in data.items" :key="item.key">child</div>
+      </template>`,
+      data,
+    )
+
+    let child: any
+    define({
+      setup() {
+        child = createComponent(Child)
+        setBlockKey(child, 'foo')
+        return child
+      },
+    }).render()
+
+    const resolved = resolveTransitionBlocks(child)
+
+    expect((resolved[0] as TransitionBlock).$tkey).toBe('foo0')
+    expect((resolved[1] as TransitionBlock).$tkey).toBe('foobar')
+  })
+
+  test('allows empty transition content', async () => {
+    const App = compile(`<template><Transition /></template>`, ref({}))
+    const { host } = define(App as any).render()
+
+    await nextTick()
+
+    expect(host.innerHTML).toBe('')
+  })
+
+  test('direct child with initial hidden v-show should not trigger appear hooks', async () => {
+    const { data, onBeforeAppear, onAppear } = createAppearTestState(false)
+    const App = compile(
+      `<template>
+        <Transition
+          appear
+          @before-appear="data.onBeforeAppear"
+          @appear="data.onAppear"
+        >
+          <div v-show="data.show">foo</div>
+        </Transition>
+      </template>`,
+      data,
+    )
+    const { host } = define(App as any).render()
+
+    await nextTick()
+
+    expect(host.querySelector('div')?.style.display).toBe('none')
+    expect(onBeforeAppear).not.toHaveBeenCalled()
+    expect(onAppear).not.toHaveBeenCalled()
+  })
+
+  test('direct child with initial shown v-show should trigger appear hooks once', async () => {
+    const { data, onBeforeAppear, onAppear } = createAppearTestState(true)
+    const App = compile(
+      `<template>
+        <Transition
+          appear
+          @before-appear="data.onBeforeAppear"
+          @appear="data.onAppear"
+        >
+          <div v-show="data.show">foo</div>
+        </Transition>
+      </template>`,
+      data,
+    )
+    const { host } = define(App as any).render()
+
+    await nextTick()
+
+    expect(host.querySelector('div')?.style.display).toBe('')
+    expect(onBeforeAppear).toHaveBeenCalledTimes(1)
+    expect(onAppear).toHaveBeenCalledTimes(1)
+  })
+
+  test('direct child with initial shown v-show should call appear after insertion', async () => {
+    const calls: boolean[] = []
+    const data = ref({
+      show: true,
+      onBeforeAppear: (el: Element) => calls.push(el.isConnected),
+      onAppear: (el: Element) => calls.push(el.isConnected),
+    })
+    const App = compile(
+      `<template>
+        <Transition
+          appear
+          @before-appear="data.onBeforeAppear"
+          @appear="data.onAppear"
+        >
+          <div v-show="data.show">foo</div>
+        </Transition>
+      </template>`,
+      data,
+    )
+    define(App as any).render()
+
+    await nextTick()
+
+    expect(calls).toEqual([false, true])
+  })
+
+  // #15202
+  test('should not track reactive reads from v-show transition hooks', async () => {
+    const show = ref(false)
+    const count = ref(0)
+    const source = vi.fn(() => show.value)
+    const onBeforeEnter = vi.fn(() => count.value++)
+    const data = ref({ source, onBeforeEnter })
+    const App = compile(
+      `<template>
+        <Transition :css="false" @before-enter="data.onBeforeEnter">
+          <div v-show="data.source()">content</div>
+        </Transition>
+      </template>`,
+      data,
+    )
+    define(App as any).render()
+
+    show.value = true
+    await nextTick()
+
+    expect(onBeforeEnter).toHaveBeenCalledTimes(1)
+    expect(count.value).toBe(1)
+    expect(source).toHaveBeenCalledTimes(2)
+  })
+
+  test('should not repeat v-show transition when truthiness is unchanged', async () => {
+    const onBeforeEnter = vi.fn()
+    const data = ref({
+      show: 0,
+      onBeforeEnter,
+    })
+    const App = compile(
+      `<template>
+        <Transition :css="false" @before-enter="data.onBeforeEnter">
+          <div v-show="data.show">content</div>
+        </Transition>
+      </template>`,
+      data,
+    )
+    define(App as any).render()
+
+    data.value.show = 1
+    await nextTick()
+    expect(onBeforeEnter).toHaveBeenCalledTimes(1)
+
+    data.value.show = 2
+    await nextTick()
+    expect(onBeforeEnter).toHaveBeenCalledTimes(1)
+  })
+
+  test('v-if should own enter and leave when its root also has v-show', async () => {
+    const onEnter = vi.fn((_el: Element, done: () => void) => done())
+    const onLeave = vi.fn((_el: Element, done: () => void) => done())
+    const data = ref({
+      show: true,
+      onEnter,
+      onLeave,
+    })
+    const App = compile(
+      `<template>
+        <Transition
+          :css="false"
+          @enter="data.onEnter"
+          @leave="data.onLeave"
+        >
+          <div v-if="data.show" v-show="true">foo</div>
+        </Transition>
+      </template>`,
+      data,
+    )
+    const { host } = define(App as any).render()
+
+    data.value.show = false
+    await nextTick()
+
+    expect(onLeave).toHaveBeenCalledTimes(1)
+    expect(host.querySelector('div')).toBeNull()
+
+    data.value.show = true
+    await nextTick()
+
+    expect(onEnter).toHaveBeenCalledTimes(1)
+    expect(host.querySelector('div')?.textContent).toBe('foo')
+  })
+
+  test('appear should not persist a v-show root owned by v-if', async () => {
+    const onLeave = vi.fn((_el: Element, done: () => void) => done())
+    const data = ref({
+      show: true,
+      onLeave,
+    })
+    const App = compile(
+      `<template>
+        <Transition appear :css="false" @leave="data.onLeave">
+          <div v-if="data.show" v-show="true">foo</div>
+        </Transition>
+      </template>`,
+      data,
+    )
+    const { host } = define(App as any).render()
+
+    await nextTick()
+    data.value.show = false
+    await nextTick()
+
+    expect(onLeave).toHaveBeenCalledTimes(1)
+    expect(host.querySelector('div')).toBeNull()
+  })
+
+  test('direct slot child with initial hidden v-show should not trigger appear hooks', async () => {
+    const { data, onBeforeAppear, onAppear } = createAppearTestState(false)
+    const Child = compile(`<template><slot /></template>`, data)
+    const App = compile(
+      `<template>
+        <Transition
+          appear
+          @before-appear="data.onBeforeAppear"
+          @appear="data.onAppear"
+        >
+          <components.Child>
+            <div v-show="data.show">foo</div>
+          </components.Child>
+        </Transition>
+      </template>`,
+      data,
+      { Child },
+    )
+    const { host } = define(App as any).render()
+
+    await nextTick()
+
+    expect(host.querySelector('div')?.style.display).toBe('none')
+    expect(onBeforeAppear).not.toHaveBeenCalled()
+    expect(onAppear).not.toHaveBeenCalled()
+  })
+
+  test('direct slot child with initial shown v-show should trigger appear hooks once', async () => {
+    const { data, onBeforeAppear, onAppear } = createAppearTestState(true)
+    const Child = compile(`<template><slot /></template>`, data)
+    const App = compile(
+      `<template>
+        <Transition
+          appear
+          @before-appear="data.onBeforeAppear"
+          @appear="data.onAppear"
+        >
+          <components.Child>
+            <div v-show="data.show">foo</div>
+          </components.Child>
+        </Transition>
+      </template>`,
+      data,
+      { Child },
+    )
+    const { host } = define(App as any).render()
+
+    await nextTick()
+
+    expect(host.querySelector('div')?.style.display).toBe('')
+    expect(onBeforeAppear).toHaveBeenCalledTimes(1)
+    expect(onAppear).toHaveBeenCalledTimes(1)
+  })
+
+  test('forwarded slot child with initial hidden v-show should not trigger appear hooks', async () => {
+    const { data, onBeforeAppear, onAppear } = createAppearTestState(false)
+    const Inner = compile(`<template><slot /></template>`, data)
+    const Child = compile(
+      `<template><components.Inner><slot /></components.Inner></template>`,
+      data,
+      { Inner },
+    )
+    const App = compile(
+      `<template>
+        <Transition
+          appear
+          @before-appear="data.onBeforeAppear"
+          @appear="data.onAppear"
+        >
+          <components.Child>
+            <div v-show="data.show">foo</div>
+          </components.Child>
+        </Transition>
+      </template>`,
+      data,
+      { Child, Inner },
+    )
+    const { host } = define(App as any).render()
+
+    await nextTick()
+
+    expect(host.querySelector('div')?.style.display).toBe('none')
+    expect(onBeforeAppear).not.toHaveBeenCalled()
+    expect(onAppear).not.toHaveBeenCalled()
+  })
+
+  test('forwarded slot child with initial shown v-show should trigger appear hooks once', async () => {
+    const { data, onBeforeAppear, onAppear } = createAppearTestState(true)
+    const Inner = compile(`<template><slot /></template>`, data)
+    const Child = compile(
+      `<template><components.Inner><slot /></components.Inner></template>`,
+      data,
+      { Inner },
+    )
+    const App = compile(
+      `<template>
+        <Transition
+          appear
+          @before-appear="data.onBeforeAppear"
+          @appear="data.onAppear"
+        >
+          <components.Child>
+            <div v-show="data.show">foo</div>
+          </components.Child>
+        </Transition>
+      </template>`,
+      data,
+      { Child, Inner },
+    )
+    const { host } = define(App as any).render()
+
+    await nextTick()
+
+    expect(host.querySelector('div')?.style.display).toBe('')
+    expect(onBeforeAppear).toHaveBeenCalledTimes(1)
+    expect(onAppear).toHaveBeenCalledTimes(1)
+  })
+
+  test('slotted component with dynamic fragment root and initial hidden v-show should not trigger appear hooks', async () => {
+    const { data, onBeforeAppear, onAppear } = createAppearTestState(false, {
+      ok: true,
+    })
+    const Child = compile(`<template><slot /></template>`, data)
+    const Inner = compile(
+      `<template><div v-if="data.ok">foo</div><span v-else>foo</span></template>`,
+      data,
+    )
+    const App = compile(
+      `<template>
+        <Transition
+          appear
+          @before-appear="data.onBeforeAppear"
+          @appear="data.onAppear"
+        >
+          <components.Child>
+            <components.Inner v-show="data.show" />
+          </components.Child>
+        </Transition>
+      </template>`,
+      data,
+      { Child, Inner },
+    )
+    const { host } = define(App as any).render()
+
+    await nextTick()
+
+    expect(host.querySelector('div')?.style.display).toBe('none')
+    expect(onBeforeAppear).not.toHaveBeenCalled()
+    expect(onAppear).not.toHaveBeenCalled()
+  })
+
+  // Runtime-derived persisted (slot-propagated roots): independent of
+  // `appear`/`mode`, structural when a v-if/v-for/dynamic-slot boundary sits
+  // between Transition and the v-show target.
+  test('slotted v-if root with v-show leaves on removal with appear', async () => {
+    const onLeave = vi.fn((_el: Element, done: () => void) => done())
+    const data = ref({ visible: true, onLeave })
+    const Child = compile(
+      `<template><div v-if="data.visible" v-show="true">foo</div></template>`,
+      data,
+    )
+    const App = compile(
+      `<template>
+        <Transition appear :css="false" @leave="data.onLeave">
+          <components.Child />
+        </Transition>
+      </template>`,
+      data,
+      { Child },
+    )
+    const { host } = define(App as any).render()
+    await nextTick()
+
+    data.value.visible = false
+    await nextTick()
+    expect(onLeave).toHaveBeenCalledOnce()
+    expect(host.querySelector('div')).toBeNull()
+  })
+
+  test('dynamic slot swap of v-show roots animates with appear', async () => {
+    const onEnter = vi.fn((_el: Element, done: () => void) => done())
+    const onLeave = vi.fn((_el: Element, done: () => void) => done())
+    const data = ref({ branch: true, show: true, onEnter, onLeave })
+    const Child = compile(`<template><slot /></template>`, data)
+    const App = compile(
+      `<template>
+        <Transition appear :css="false" @enter="data.onEnter" @leave="data.onLeave">
+          <template #default v-if="data.branch">
+            <components.Child>
+              <div v-show="data.show">foo</div>
+            </components.Child>
+          </template>
+          <template #default v-else>
+            <components.Child>
+              <div v-show="data.show">bar</div>
+            </components.Child>
+          </template>
+        </Transition>
+      </template>`,
+      data,
+      { Child },
+    )
+    const { host } = define(App as any).render()
+    await nextTick()
+    onEnter.mockClear()
+
+    data.value.branch = false
+    await nextTick()
+    expect(host.textContent).toContain('bar')
+    expect(onLeave).toHaveBeenCalledOnce()
+    expect(onEnter).toHaveBeenCalledOnce()
+    onEnter.mockClear()
+    onLeave.mockClear()
+
+    // the new root keeps v-show driven transitions
+    data.value.show = false
+    await nextTick()
+    expect(onLeave).toHaveBeenCalledOnce()
+    expect(host.querySelector('div')?.style.display).toBe('none')
+
+    data.value.show = true
+    await nextTick()
+    expect(onEnter).toHaveBeenCalledOnce()
+    expect(host.querySelector('div')?.style.display).toBe('')
+  })
+
+  test('dynamic slot removal of a v-show root leaves with appear', async () => {
+    const onLeave = vi.fn((_el: Element, done: () => void) => done())
+    const data = ref({ branch: true, onLeave })
+    const Child = compile(`<template><slot /></template>`, data)
+    const App = compile(
+      `<template>
+        <Transition appear :css="false" @leave="data.onLeave">
+          <template #default v-if="data.branch">
+            <components.Child>
+              <div v-show="true">foo</div>
+            </components.Child>
+          </template>
+        </Transition>
+      </template>`,
+      data,
+      { Child },
+    )
+    const { host } = define(App as any).render()
+    await nextTick()
+
+    data.value.branch = false
+    await nextTick()
+    expect(onLeave).toHaveBeenCalledOnce()
+    expect(host.querySelector('div')).toBeNull()
+  })
+
+  test.each([false, true])(
+    'slotted v-show component with dynamic root swaps branch as persisted (appear: %s)',
+    async appear => {
+      const onEnter = vi.fn((_el: Element, done: () => void) => done())
+      const onLeave = vi.fn((_el: Element, done: () => void) => done())
+      const data = ref({ ok: true, onEnter, onLeave })
+      const Child = compile(`<template><slot /></template>`, data)
+      const Inner = compile(
+        `<template><div v-if="data.ok">foo</div><span v-else>bar</span></template>`,
+        data,
+      )
+      const App = compile(
+        `<template>
+          <Transition :appear="${appear}" :css="false" @enter="data.onEnter" @leave="data.onLeave">
+            <components.Child>
+              <components.Inner v-show="true" />
+            </components.Child>
+          </Transition>
+        </template>`,
+        data,
+        { Child, Inner },
+      )
+      const { host } = define(App as any).render()
+      await nextTick()
+      onEnter.mockClear()
+
+      data.value.ok = false
+      await nextTick()
+      expect(host.querySelector('span')?.textContent).toBe('bar')
+      // same as a direct `<Inner v-show>` child: the new root enters, the
+      // old root is removed without a leave
+      expect(onEnter).toHaveBeenCalledOnce()
+      expect(onLeave).not.toHaveBeenCalled()
+    },
+  )
+
+  test.each(['direct', 'slotted'])(
+    'hidden v-show component with dynamic root swaps branch without hooks (%s)',
+    async placement => {
+      const onBeforeEnter = vi.fn()
+      const onBeforeLeave = vi.fn()
+      const data = ref({ ok: true, onBeforeEnter, onBeforeLeave })
+      const Child = compile(`<template><slot /></template>`, data)
+      const Inner = compile(
+        `<template><div v-if="data.ok">foo</div><span v-else>bar</span></template>`,
+        data,
+      )
+      const App = compile(
+        `<template>
+          <Transition :css="false" @before-enter="data.onBeforeEnter" @before-leave="data.onBeforeLeave">
+            ${
+              placement === 'slotted'
+                ? '<components.Child><components.Inner v-show="false" /></components.Child>'
+                : '<components.Inner v-show="false" />'
+            }
+          </Transition>
+        </template>`,
+        data,
+        { Child, Inner },
+      )
+      const { host } = define(App as any).render()
+      await nextTick()
+
+      data.value.ok = false
+      await nextTick()
+      expect(host.querySelector('span')?.style.display).toBe('none')
+      expect(onBeforeEnter).not.toHaveBeenCalled()
+      expect(onBeforeLeave).not.toHaveBeenCalled()
+    },
+  )
+
+  test('appear on a persisted root without v-show does not enter', async () => {
+    const onBeforeAppear = vi.fn()
+    const data = ref({ onBeforeAppear })
+    const App = compile(
+      `<template>
+        <Transition appear persisted :css="false" @before-appear="data.onBeforeAppear">
+          <div>foo</div>
+        </Transition>
+      </template>`,
+      data,
+    )
+    define(App as any).render()
+    await nextTick()
+    expect(onBeforeAppear).not.toHaveBeenCalled()
+  })
+
+  test('appear on a v-if root with v-show enters once', async () => {
+    const onBeforeAppear = vi.fn()
+    const onAppear = vi.fn((_el: Element, done: () => void) => done())
+    const data = ref({ visible: true, onBeforeAppear, onAppear })
+    const App = compile(
+      `<template>
+        <Transition appear :css="false" @before-appear="data.onBeforeAppear" @appear="data.onAppear">
+          <div v-if="data.visible" v-show="true">foo</div>
+        </Transition>
+      </template>`,
+      data,
+    )
+    define(App as any).render()
+    await nextTick()
+    expect(onBeforeAppear).toHaveBeenCalledOnce()
+    expect(onAppear).toHaveBeenCalledOnce()
+  })
+
+  test('out-in mode does not stall on a persisted root branch swap', async () => {
+    const data = ref({ ok: true })
+    const Inner = compile(
+      `<template><div v-if="data.ok">foo</div><span v-else>bar</span></template>`,
+      data,
+    )
+    const App = compile(
+      `<template>
+        <Transition mode="out-in" :css="false">
+          <components.Inner v-show="true" />
+        </Transition>
+      </template>`,
+      data,
+      { Inner },
+    )
+    const { host } = define(App as any).render()
+    await nextTick()
+
+    data.value.ok = false
+    await nextTick()
+    expect(host.querySelector('span')?.textContent).toBe('bar')
+
+    data.value.ok = true
+    await nextTick()
+    expect(host.querySelector('div')?.textContent).toBe('foo')
+  })
+
+  test('unmount during an out-in leave does not resume the pending branch', async () => {
+    let leaveDone: (() => void) | undefined
+    const data = ref<any>({
+      b: 1,
+      onLeave: (_el: Element, done: () => void) => {
+        leaveDone = done
+      },
+    })
+    const App = compile(
+      `<template>
+        <Transition mode="out-in" :css="false" @leave="data.onLeave">
+          <div v-if="data.b === 1">one</div>
+          <span v-else>two</span>
+        </Transition>
+      </template>`,
+      data,
+    )
+    const { host, app } = define(App as any).render()
+    await nextTick()
+
+    data.value.b = 2
+    await nextTick()
+    expect(host.innerHTML).toBe('<div>one</div><!--if-->')
+
+    app.unmount()
+    // the leaving branch stays until its leave ends, as in vdom
+    expect(host.innerHTML).toBe('<div>one</div>')
+
+    expect(() => leaveDone!()).not.toThrow()
+    expect(host.innerHTML).toBe('')
+  })
+
+  test('does not leak persisted from a v-show branch onto a non-v-show root', async () => {
+    let leaveCalls = 0
+    let leaveDone: (() => void) | undefined
+    const data = ref<any>({
+      b: 1,
+      show: true,
+      onLeave: (_el: Element, done: () => void) => {
+        leaveCalls++
+        leaveDone = done
+      },
+    })
+    const App = compile(
+      `<template>
+        <Transition appear name="t" @leave="data.onLeave">
+          <template #default v-if="data.b === 1">
+            <div v-show="data.show">foo</div>
+          </template>
+          <template #default v-else-if="data.b === 2">
+            <span>bar</span>
+          </template>
+        </Transition>
+      </template>`,
+      data,
+    )
+    const { host } = define(App as any).render()
+    await nextTick()
+
+    // visit the v-show branch (latches the runtime-derived persisted), then
+    // swap to a non-v-show root.
+    data.value.b = 2
+    await nextTick()
+    expect(host.querySelector('span')?.textContent).toBe('bar')
+    leaveCalls = 0
+
+    // structurally remove the non-v-show span. The leaked persisted=true would
+    // make performTransitionLeave skip the leave entirely (span vanishes,
+    // leaveCalls stays 0); with the fix the span leaves normally.
+    data.value.b = 3
+    await nextTick()
+    expect(leaveCalls).toBe(1)
+    const span = host.querySelector('span')!
+    expect(span.className).toContain('t-leave-active')
+
+    leaveDone && leaveDone()
+  })
+
+  test('does not carry persisted into a structural v-if root', async () => {
+    const onLeave = vi.fn((_el: Element, done: () => void) => done())
+    const data = ref({
+      branch: true,
+      show: true,
+      visible: true,
+      onLeave,
+    })
+    const Child = compile(`<template><slot /></template>`, data)
+    const App = compile(
+      `<template>
+        <Transition appear :css="false" @leave="data.onLeave">
+          <template #default v-if="data.branch">
+            <components.Child>
+              <div v-show="data.show">foo</div>
+            </components.Child>
+          </template>
+          <template #default v-else>
+            <div v-if="data.visible" v-show="true">bar</div>
+          </template>
+        </Transition>
+      </template>`,
+      data,
+      { Child },
+    )
+    const { host } = define(App as any).render()
+    await nextTick()
+
+    data.value.branch = false
+    await nextTick()
+    expect(host.querySelector('div')?.textContent).toBe('bar')
+    onLeave.mockClear()
+
+    data.value.visible = false
+    await nextTick()
+    expect(onLeave).toHaveBeenCalledOnce()
+    expect(host.querySelector('div')).toBeNull()
+  })
+
+  test('does not early-remove across mixed number/string keys of equal value', async () => {
+    let leaveDone: (() => void) | undefined
+    const data = ref<any>({
+      k: 1,
+      onLeave: (_el: Element, done: () => void) => {
+        leaveDone = done
+      },
+    })
+    const App = compile(
+      `<template>
+        <Transition name="t" @leave="data.onLeave">
+          <div :key="data.k">{{ data.k }}</div>
+        </Transition>
+      </template>`,
+      data,
+    )
+    const { host } = define(App as any).render()
+    await nextTick()
+
+    // 1 (number) -> '1' (string): same String($key) bucket, different raw key.
+    // The leaving number-keyed node must NOT be early-removed by the entering
+    // string-keyed node, so both coexist during the leave (matching VDOM's
+    // isSameVNodeType raw-key guard). Without the guard the leaving node is
+    // force-removed and only 1 element remains.
+    data.value.k = '1'
+    await nextTick()
+    expect(host.querySelectorAll('div').length).toBe(2)
+
+    leaveDone && leaveDone()
+  })
+
+  test('vdom slot content should wait for fallback leave in out-in mode', async () => {
+    let leaveDone: (() => void) | undefined
+    const onEnter = vi.fn((_el: Element, done: () => void) => done())
+    const onLeave = vi.fn((_el: Element, done: () => void) => {
+      leaveDone = done
+    })
+    const data = ref({
+      show: false,
+      onEnter,
+      onLeave,
+    })
+    const { host } = renderInteropSlotFallbackTransition('out-in', data)
+
+    expect(host.querySelector('.fallback')).not.toBeNull()
+
+    data.value.show = true
+    await nextTick()
+
+    expect(onLeave).toHaveBeenCalledOnce()
+    expect(host.querySelector('.fallback')).not.toBeNull()
+    expect(host.querySelector('.content')).toBeNull()
+
+    leaveDone!()
+    await nextTick()
+
+    expect(host.querySelector('.fallback')).toBeNull()
+    expect(host.querySelector('.content')).not.toBeNull()
+    expect(onEnter).toHaveBeenCalledOnce()
+  })
+
+  test('slot fallback should wait for vdom content leave in out-in mode', async () => {
+    let leaveDone: (() => void) | undefined
+    const onEnter = vi.fn((_el: Element, done: () => void) => done())
+    const onLeave = vi.fn((_el: Element, done: () => void) => {
+      leaveDone = done
+    })
+    const data = ref({
+      show: true,
+      onEnter,
+      onLeave,
+    })
+    const { host } = renderInteropSlotFallbackTransition('out-in', data)
+
+    expect(host.querySelector('.content')).not.toBeNull()
+
+    data.value.show = false
+    await nextTick()
+
+    expect(onLeave).toHaveBeenCalledOnce()
+    expect(host.querySelector('.content')).not.toBeNull()
+    expect(host.querySelector('.fallback')).toBeNull()
+
+    leaveDone!()
+    await nextTick()
+
+    expect(host.querySelector('.content')).toBeNull()
+    expect(host.querySelector('.fallback')).not.toBeNull()
+    expect(onEnter).toHaveBeenCalledOnce()
+  })
+
+  test('removed vdom slot should respect out-in mode', async () => {
+    let leaveDone: (() => void) | undefined
+    const onEnter = vi.fn((_el: Element, done: () => void) => done())
+    const onLeave = vi.fn((_el: Element, done: () => void) => {
+      leaveDone = done
+    })
+    const data = ref({
+      show: true,
+      onEnter,
+      onLeave,
+    })
+    const { host } = renderInteropSlotFallbackTransition(
+      'out-in',
+      data,
+      undefined,
+      undefined,
+      true,
+    )
+
+    data.value.show = false
+    await nextTick()
+
+    expect(onLeave).toHaveBeenCalledOnce()
+    expect(host.querySelector('.content')).not.toBeNull()
+    expect(host.querySelector('.fallback')).toBeNull()
+
+    leaveDone!()
+    await nextTick()
+
+    expect(host.querySelector('.content')).toBeNull()
+    expect(host.querySelector('.fallback')).not.toBeNull()
+    expect(onEnter).toHaveBeenCalledOnce()
+  })
+
+  test('unmounts a leaving fallback during an out-in switch', async () => {
+    let leaveDone: (() => void) | undefined
+    const data = ref({
+      show: false,
+      onEnter: vi.fn(),
+      onLeave: vi.fn((_el: Element, done: () => void) => {
+        leaveDone = done
+      }),
+    })
+    const { app, host } = renderInteropSlotFallbackTransition('out-in', data)
+
+    data.value.show = true
+    await nextTick()
+
+    expect(leaveDone).toBeDefined()
+    expect(host.querySelector('.fallback')).not.toBeNull()
+
+    app.unmount()
+    await nextTick()
+
+    // the leaving fallback stays until its leave ends, as in vdom
+    expect(host.innerHTML).toBe('<div class="fallback">fallback</div>')
+
+    leaveDone!()
+    await nextTick()
+    expect(host.innerHTML).toBe('')
+  })
+
+  test('unmounts leaving vdom content during an out-in switch', async () => {
+    let leaveDone: (() => void) | undefined
+    const data = ref({
+      show: true,
+      onEnter: vi.fn(),
+      onLeave: vi.fn((_el: Element, done: () => void) => {
+        leaveDone = done
+      }),
+    })
+    const { app, host } = renderInteropSlotFallbackTransition('out-in', data)
+
+    data.value.show = false
+    await nextTick()
+
+    expect(leaveDone).toBeDefined()
+    expect(host.querySelector('.content')).not.toBeNull()
+
+    app.unmount()
+    await nextTick()
+
+    // the leaving content stays until its leave ends, as in vdom
+    expect(host.innerHTML).toBe('<span class="content">content</span>')
+
+    leaveDone!()
+    await nextTick()
+    expect(host.innerHTML).toBe('')
+  })
+
+  test('unmounts a leaving Vapor component used as vdom slot content', async () => {
+    let leaveDone: (() => void) | undefined
+    const Content = defineVaporComponent({
+      setup() {
+        return template('<span class="content">content</span>')()
+      },
+    })
+    const data = ref({
+      show: true,
+      onEnter: vi.fn(),
+      onLeave: vi.fn((_el: Element, done: () => void) => {
+        leaveDone = done
+      }),
+    })
+    const { app, host } = renderInteropSlotFallbackTransition(
+      'out-in',
+      data,
+      () => h(Content),
+    )
+
+    data.value.show = false
+    await nextTick()
+
+    expect(leaveDone).toBeDefined()
+    expect(host.querySelector('.content')).not.toBeNull()
+
+    app.unmount()
+    await nextTick()
+
+    // the leaving content stays until its leave ends, as in vdom
+    expect(host.innerHTML).toBe('<span class="content">content</span>')
+
+    leaveDone!()
+    await nextTick()
+    expect(host.innerHTML).toBe('')
+  })
+
+  test('unmounts leaving Teleport content from its target', async () => {
+    let leaveDone: (() => void) | undefined
+    const target = document.createElement('div')
+    document.body.appendChild(target)
+    const data = ref({
+      show: true,
+      onEnter: vi.fn(),
+      onLeave: vi.fn((_el: Element, done: () => void) => {
+        leaveDone = done
+      }),
+    })
+    const { app, host } = renderInteropSlotFallbackTransition(
+      'out-in',
+      data,
+      () =>
+        h(Teleport, { to: target }, [
+          h('span', { class: 'content' }, 'content'),
+        ]),
+    )
+
+    data.value.show = false
+    await nextTick()
+
+    expect(leaveDone).toBeDefined()
+    expect(target.querySelector('.content')).not.toBeNull()
+
+    app.unmount()
+    await nextTick()
+
+    // the leaving content stays in the target until its leave ends, as in vdom
+    expect(host.innerHTML).toBe('')
+    expect(target.innerHTML).toBe('<span class="content">content</span>')
+
+    leaveDone!()
+    await nextTick()
+    expect(target.innerHTML).toBe('')
+    target.remove()
+  })
+
+  test('slot fallback should wait for vdom content enter in in-out mode', async () => {
+    let enterDone: (() => void) | undefined
+    let leaveDone: (() => void) | undefined
+    const onEnter = vi.fn((_el: Element, done: () => void) => {
+      enterDone = done
+    })
+    const onLeave = vi.fn((_el: Element, done: () => void) => {
+      leaveDone = done
+    })
+    const data = ref({
+      show: false,
+      onEnter,
+      onLeave,
+    })
+    const { host } = renderInteropSlotFallbackTransition('in-out', data)
+
+    data.value.show = true
+    await nextTick()
+
+    expect(onEnter).toHaveBeenCalledOnce()
+    expect(onLeave).not.toHaveBeenCalled()
+    expect(host.querySelector('.fallback')).not.toBeNull()
+    expect(host.querySelector('.content')).not.toBeNull()
+
+    enterDone!()
+
+    expect(onLeave).toHaveBeenCalledOnce()
+    expect(host.querySelector('.fallback')).not.toBeNull()
+
+    leaveDone!()
+    expect(host.querySelector('.fallback')).toBeNull()
+    expect(host.querySelector('.content')).not.toBeNull()
+  })
+
+  test('vdom slot content should wait for fallback enter in in-out mode', async () => {
+    let enterDone: (() => void) | undefined
+    let leaveDone: (() => void) | undefined
+    const onEnter = vi.fn((_el: Element, done: () => void) => {
+      enterDone = done
+    })
+    const onLeave = vi.fn((_el: Element, done: () => void) => {
+      leaveDone = done
+    })
+    const data = ref({
+      show: true,
+      onEnter,
+      onLeave,
+    })
+    const { host } = renderInteropSlotFallbackTransition('in-out', data)
+
+    data.value.show = false
+    await nextTick()
+
+    expect(onEnter).toHaveBeenCalledOnce()
+    expect(onLeave).not.toHaveBeenCalled()
+    expect(host.querySelector('.content')).not.toBeNull()
+    expect(host.querySelector('.fallback')).not.toBeNull()
+
+    enterDone!()
+
+    expect(onLeave).toHaveBeenCalledOnce()
+    expect(host.querySelector('.content')).not.toBeNull()
+
+    leaveDone!()
+    expect(host.querySelector('.content')).toBeNull()
+    expect(host.querySelector('.fallback')).not.toBeNull()
+  })
+
+  test('removed vdom slot should respect in-out mode', async () => {
+    let enterDone: (() => void) | undefined
+    let leaveDone: (() => void) | undefined
+    const onEnter = vi.fn((_el: Element, done: () => void) => {
+      enterDone = done
+    })
+    const onLeave = vi.fn((_el: Element, done: () => void) => {
+      leaveDone = done
+    })
+    const data = ref({
+      show: true,
+      onEnter,
+      onLeave,
+    })
+    const { host } = renderInteropSlotFallbackTransition(
+      'in-out',
+      data,
+      undefined,
+      undefined,
+      true,
+    )
+
+    data.value.show = false
+    await nextTick()
+
+    expect(onEnter).toHaveBeenCalledOnce()
+    expect(onLeave).not.toHaveBeenCalled()
+    expect(host.querySelector('.content')).not.toBeNull()
+    expect(host.querySelector('.fallback')).not.toBeNull()
+
+    enterDone!()
+
+    expect(onLeave).toHaveBeenCalledOnce()
+    expect(host.querySelector('.content')).not.toBeNull()
+
+    leaveDone!()
+    expect(host.querySelector('.content')).toBeNull()
+    expect(host.querySelector('.fallback')).not.toBeNull()
+  })
+
+  test('out-in should not wait for an invalid slot fallback', async () => {
+    const onEnter = vi.fn((_el: Element, done: () => void) => done())
+    const onLeave = vi.fn()
+    const data = ref({
+      show: false,
+      fallbackVisible: false,
+      onEnter,
+      onLeave,
+    })
+    const { host } = renderInteropSlotFallbackTransition(
+      'out-in',
+      data,
+      undefined,
+      '<div v-if="data.fallbackVisible" class="fallback">fallback</div>',
+    )
+
+    data.value.show = true
+    await nextTick()
+
+    expect(host.querySelector('.fallback')).toBeNull()
+    expect(host.querySelector('.content')).not.toBeNull()
+    expect(onLeave).not.toHaveBeenCalled()
+    expect(onEnter).toHaveBeenCalledOnce()
+  })
+
+  test('in-out should not delay vdom leave for an invalid slot fallback', async () => {
+    let leaveDone: (() => void) | undefined
+    const onEnter = vi.fn((_el: Element, done: () => void) => done())
+    const onLeave = vi.fn((_el: Element, done: () => void) => {
+      leaveDone = done
+    })
+    const data = ref({
+      show: true,
+      fallbackVisible: false,
+      onEnter,
+      onLeave,
+    })
+    const { host } = renderInteropSlotFallbackTransition(
+      'in-out',
+      data,
+      undefined,
+      '<div v-if="data.fallbackVisible" class="fallback">fallback</div>',
+    )
+
+    data.value.show = false
+    await nextTick()
+
+    expect(onEnter).not.toHaveBeenCalled()
+    expect(onLeave).toHaveBeenCalledOnce()
+    expect(host.querySelector('.content')).not.toBeNull()
+
+    leaveDone!()
+    expect(host.querySelector('.content')).toBeNull()
+  })
+
+  test('in-out should handle switching back to vdom before fallback enter finishes', async () => {
+    let fallbackEnterDone: (() => void) | undefined
+    let contentEnterDone: (() => void) | undefined
+    let leaveDone: (() => void) | undefined
+    const onEnter = vi.fn((el: Element, done: () => void) => {
+      if (el.classList.contains('fallback')) {
+        fallbackEnterDone = done
+      } else {
+        contentEnterDone = done
+      }
+    })
+    const onLeave = vi.fn((_el: Element, done: () => void) => {
+      leaveDone = done
+    })
+    const data = ref({
+      show: true,
+      onEnter,
+      onLeave,
+    })
+    const { host } = renderInteropSlotFallbackTransition('in-out', data)
+
+    data.value.show = false
+    await nextTick()
+
+    expect(fallbackEnterDone).toBeDefined()
+    expect(onLeave).not.toHaveBeenCalled()
+
+    data.value.show = true
+    await nextTick()
+
+    expect(contentEnterDone).toBeDefined()
+    expect(onLeave).not.toHaveBeenCalled()
+
+    contentEnterDone!()
+    expect(onLeave).toHaveBeenCalledOnce()
+
+    leaveDone!()
+    expect(host.querySelector('.fallback')).toBeNull()
+    expect(host.querySelectorAll('.content')).toHaveLength(1)
+  })
+
+  // coverage guard: the fallback's leave is handed to the content's enter
+  // through the Transition (claimPendingLeave), as a vapor outlet's is
+  test('in-out: vdom content back after the fallback entered and its leave ran', async () => {
+    const enters: (() => void)[] = []
+    const leaves: (() => void)[] = []
+    const log: string[] = []
+    const data = ref({
+      show: true,
+      onEnter: (el: Element, done: () => void) => {
+        log.push('e:' + el.className)
+        enters.push(done)
+      },
+      onLeave: (el: Element, done: () => void) => {
+        log.push('l:' + el.className)
+        leaves.push(done)
+      },
+    })
+    const { host } = renderInteropSlotFallbackTransition('in-out', data)
+    data.value.show = false
+    await nextTick()
+    enters.shift()!()
+    leaves.shift()!()
+    expect(log).toEqual(['e:fallback', 'l:content'])
+    expect(host.querySelector('.content')).toBeNull()
+    data.value.show = true
+    await nextTick()
+    expect(log).toEqual(['e:fallback', 'l:content', 'e:content'])
+    expect(host.querySelector('.fallback')).not.toBeNull()
+    enters.shift()!()
+    expect(log).toEqual(['e:fallback', 'l:content', 'e:content', 'l:fallback'])
+    leaves.shift()!()
+    expect(host.querySelector('.fallback')).toBeNull()
+    expect(host.querySelectorAll('.content')).toHaveLength(1)
+  })
+  test('out-in fallback switch should render the latest vdom slot content', async () => {
+    let leaveDone: (() => void) | undefined
+    const onEnter = vi.fn((_el: Element, done: () => void) => done())
+    const onLeave = vi.fn((_el: Element, done: () => void) => {
+      leaveDone = done
+    })
+    const data = ref({
+      show: false,
+      tag: 'span',
+      text: 'A',
+      onEnter,
+      onLeave,
+    })
+    const { host } = renderInteropSlotFallbackTransition('out-in', data, () =>
+      h(data.value.tag, { class: 'content' }, data.value.text),
+    )
+
+    data.value.show = true
+    await nextTick()
+
+    data.value.show = false
+    await nextTick()
+
+    data.value.tag = 'p'
+    data.value.text = 'B'
+    data.value.show = true
+    await nextTick()
+
+    expect(onLeave).toHaveBeenCalledOnce()
+    expect(host.querySelector('.content')).toBeNull()
+
+    leaveDone!()
+    await nextTick()
+
+    expect(host.querySelector('span')).toBeNull()
+    expect(host.querySelector('p.content')?.textContent).toBe('B')
+    expect(onEnter).toHaveBeenCalledOnce()
+  })
+
+  test('out-in fallback switch should handle synchronous leave completion', async () => {
+    const onEnter = vi.fn((_el: Element, done: () => void) => done())
+    const onLeave = vi.fn((_el: Element, done: () => void) => done())
+    const data = ref({
+      show: false,
+      onEnter,
+      onLeave,
+    })
+    const { host } = renderInteropSlotFallbackTransition('out-in', data)
+
+    data.value.show = true
+    await nextTick()
+
+    expect(onLeave).toHaveBeenCalledOnce()
+    expect(host.querySelector('.fallback')).toBeNull()
+    expect(host.querySelector('.content')).not.toBeNull()
+    expect(onEnter).toHaveBeenCalledOnce()
+  })
+
+  test.each([false, true])(
+    'inherits VDOM transition hooks for a slot root (vapor: %s)',
+    async vapor => {
+      const show = ref(true)
+      const onEnter = vi.fn()
+      const onLeave = vi.fn()
+      const Child = compile(
+        `<template><slot /></template>`,
+        show,
+        {},
+        { vapor },
+      )
+      const App = defineComponent({
+        setup() {
+          return () => {
+            // Force BaseTransition to propagate refreshed VDOM hooks through the
+            // slot root.
+            const visible = show.value
+            return h(
+              Transition,
+              { mode: 'out-in', css: false, onEnter, onLeave },
+              {
+                default: () =>
+                  h(
+                    Child,
+                    { visible },
+                    {
+                      default: () =>
+                        visible ? h('div', { id: 'content' }, 'content') : [],
+                    },
+                  ),
+              },
+            )
+          }
+        },
+      })
+      const { host } = defineInterop(App).render()
+      const content = host.querySelector('#content')
+
+      show.value = false
+      await nextTick()
+
+      expect(host.querySelector('#content')).toBeNull()
+      expect(onEnter).not.toHaveBeenCalled()
+      expect(onLeave).toHaveBeenCalledOnce()
+      expect(onLeave.mock.calls[0][0]).toBe(content)
+      // `visible` is an attr on a slot outlet root: vdom warns too
+      expect('Extraneous non-props attributes (visible)').toHaveBeenWarned()
+    },
+  )
+
+  // relayed to the component child's root chain as inherited enter / leave
+  // hooks only: the mode stays the vdom Transition's own, as for a v-if root
+  test.each(['out-in', 'in-out'])(
+    'a slot fallback swap inside the vapor child animates under relayed hooks with mode %s',
+    async mode => {
+      const data = ref({ show: false })
+      const log: string[] = []
+      const dones: (() => void)[] = []
+      const Outlet = compile(
+        `<template>
+          <slot><p class="fallback">fallback</p></slot>
+        </template>`,
+        data,
+      )
+      const Panel = compile(
+        `<script setup vapor>
+          const props = defineProps({ show: Boolean })
+          const components = _components
+        </script>
+        <template>
+          <components.Outlet>
+            <div v-if="props.show" class="content">content</div>
+          </components.Outlet>
+        </template>`,
+        data,
+        { Outlet },
+      )
+      const App = defineComponent({
+        setup() {
+          return () =>
+            h(
+              Transition,
+              {
+                mode: mode as 'out-in' | 'in-out',
+                css: false,
+                onBeforeEnter: (el: Element) =>
+                  log.push('enter:' + el.className),
+                onLeave: (el: Element, done: () => void) => {
+                  log.push('leave:' + el.className)
+                  dones.push(done)
+                },
+              },
+              () => h(Panel, { show: data.value.show }),
+            )
+        },
+      })
+      const { host } = defineInterop(App).render()
+      expect(host.querySelector('.fallback')).not.toBeNull()
+
+      data.value.show = true
+      await nextTick()
+      expect(log).toEqual(['leave:fallback', 'enter:content'])
+      dones.shift()!()
+      await nextTick()
+      expect(host.querySelector('.content')).not.toBeNull()
+      expect(host.querySelector('.fallback')).toBeNull()
+
+      data.value.show = false
+      await nextTick()
+      expect(log.slice(2)).toEqual(['leave:content', 'enter:fallback'])
+      dones.shift()!()
+      await nextTick()
+      expect(host.querySelector('.fallback')).not.toBeNull()
+      expect(host.querySelector('.content')).toBeNull()
+    },
+  )
+
+  test('preserves multi-element vdom slot content nested under transition root', () => {
+    const data = ref({})
+    const Child = compile(
+      `<script setup vapor>
+        defineProps({ show: Boolean })
+      </script>
+      <template>
+        <Transition>
+          <div v-if="show" class="with-transition">
+            <slot />
+          </div>
+        </Transition>
+      </template>`,
+      data,
+    )
+    const App = compile(
+      `<script setup>
+        const Child = _components.Child
+      </script>
+      <template>
+        <Child :show="true">
+          <button class="first">First</button>
+          <button class="last">Last</button>
+        </Child>
+      </template>`,
+      data,
+      { Child },
+      { vapor: false },
+    )
+    const { host } = defineInterop(App as any).render()
+
+    expect(
+      '<transition> can only be used on a single element or component',
+    ).not.toHaveBeenWarned()
+    expect(
+      Array.from(host.querySelectorAll('.with-transition > button')).map(
+        el => el.textContent,
+      ),
+    ).toEqual(['First', 'Last'])
+  })
+
+  test('preserves multi-root vdom slot content forwarded below the transition root', () => {
+    const data = ref({})
+    const Dialog = compile(
+      `<template>
+        <Transition>
+          <div v-if="true"><footer><slot name="footer" /></footer></div>
+        </Transition>
+      </template>`,
+      data,
+    )
+    const Child = compile(
+      `<script setup vapor>
+        const Dialog = _components.Dialog
+        const tag = 'button'
+      </script>
+      <template>
+        <Transition>
+          <div v-if="true"><component :is="tag"><slot /></component></div>
+        </Transition>
+        <Dialog><template #footer><slot name="footer" /></template></Dialog>
+      </template>`,
+      data,
+      { Dialog },
+    )
+    const App = compile(
+      `<script setup>
+        const Child = _components.Child
+      </script>
+      <template>
+        <Child>
+          <i>first</i><b>last</b>
+          <template #footer><i>first</i><b>last</b></template>
+        </Child>
+      </template>`,
+      data,
+      { Child },
+      { vapor: false },
+    )
+    const { host } = defineInterop(App as any).render()
+
+    expect(
+      '<transition> can only be used on a single element or component',
+    ).not.toHaveBeenWarned()
+    expect(host.querySelector('button')!.textContent).toBe('firstlast')
+    expect(host.querySelector('footer')!.textContent).toBe('firstlast')
+  })
+
+  test('vdom slot content should participate in transitions', async () => {
+    let enterDone: (() => void) | undefined
+    let leaveDone: (() => void) | undefined
+    const onEnter = vi.fn((_el: Element, done: () => void) => {
+      enterDone = done
+    })
+    const onLeave = vi.fn((_el: Element, done: () => void) => {
+      leaveDone = done
+    })
+    const data = ref({ show: true, onEnter, onLeave })
+    const Child = compile(
+      `<template>
+        <Transition
+          :css="false"
+          @enter="data.onEnter"
+          @leave="data.onLeave"
+        >
+          <slot />
+        </Transition>
+      </template>`,
+      data,
+    )
+    const App = compile(
+      `<script setup>
+        const data = _data
+        const components = _components
+      </script>
+      <template>
+        <components.Child>
+          <div v-if="data.show">slot</div>
+        </components.Child>
+      </template>`,
+      data,
+      { Child },
+      { vapor: false },
+    )
+    const { host } = defineInterop(App as any).render()
+
+    expect(host.querySelector('div')?.textContent).toBe('slot')
+
+    data.value.show = false
+    await nextTick()
+
+    expect(onLeave).toHaveBeenCalledOnce()
+    expect(host.querySelector('div')?.textContent).toBe('slot')
+
+    leaveDone!()
+    expect(host.querySelector('div')).toBeNull()
+
+    data.value.show = true
+    await nextTick()
+
+    expect(onEnter).toHaveBeenCalledOnce()
+    expect(host.querySelector('div')?.textContent).toBe('slot')
+
+    enterDone!()
+  })
+
+  test('vdom slot fragment keys should control transition child identity', async () => {
+    const key = ref('a')
+    const Child = compile(
+      `<template>
+        <Transition name="fade">
+          <slot />
+        </Transition>
+      </template>`,
+      key,
+    )
+    const App = defineComponent({
+      setup() {
+        return () =>
+          h(Child, null, {
+            default: () => [
+              h(Fragment, { key: key.value }, [h('div', 'slot')]),
+            ],
+          })
+      },
+    })
+    const { host } = defineInterop(App).render()
+    const leaving = host.querySelector('div')!
+
+    key.value = 'b'
+    await nextTick()
+
+    const children = Array.from(host.querySelectorAll('div'))
+    const entering = children.find(child => child !== leaving)!
+    expect(children).toHaveLength(2)
+    expect(leaving.className).toBe('fade-leave-from fade-leave-active')
+    expect(entering.className).toBe('fade-enter-from fade-enter-active')
+  })
+
+  test('vdom slot content should respect out-in transition mode', async () => {
+    let leaveDone: (() => void) | undefined
+    let finishLeaveSynchronously = false
+    const onLeave = vi.fn((_el: Element, done: () => void) => {
+      leaveDone = done
+      if (finishLeaveSynchronously) done()
+    })
+    const onEnter = vi.fn((_el: Element, done: () => void) => done())
+    const data = ref({
+      hasSlot: true,
+      tag: 'div',
+      text: 'first',
+      onLeave,
+      onEnter,
+    })
+    const Child = compile(
+      `<template>
+        <Transition
+          mode="out-in"
+          :css="false"
+          @leave="data.onLeave"
+          @enter="data.onEnter"
+        >
+          <slot />
+        </Transition>
+      </template>`,
+      data,
+    )
+    const App = defineComponent({
+      setup() {
+        return () =>
+          h(
+            Child,
+            null,
+            data.value.hasSlot
+              ? {
+                  default: () => h(data.value.tag, data.value.text),
+                }
+              : undefined,
+          )
+      },
+    })
+    const { host } = defineInterop(App).render()
+
+    data.value.tag = 'span'
+    data.value.text = 'second'
+    await nextTick()
+
+    expect(onLeave).toHaveBeenCalledOnce()
+    expect(host.querySelector('div')?.textContent).toBe('first')
+    expect(host.querySelector('span')).toBeNull()
+
+    data.value.tag = 'p'
+    data.value.text = 'latest'
+    await nextTick()
+    leaveDone!()
+    await nextTick()
+
+    expect(host.querySelector('div')).toBeNull()
+    expect(host.querySelector('span')).toBeNull()
+    expect(host.querySelector('p')?.textContent).toBe('latest')
+    expect(onEnter).toHaveBeenCalledOnce()
+
+    finishLeaveSynchronously = true
+    data.value.tag = 'div'
+    data.value.text = 'sync'
+    await nextTick()
+
+    expect(onLeave).toHaveBeenCalledTimes(2)
+    expect(host.querySelector('p')).toBeNull()
+    expect(host.querySelector('div')?.textContent).toBe('sync')
+    expect(onEnter).toHaveBeenCalledTimes(2)
+
+    finishLeaveSynchronously = false
+    data.value.tag = 'span'
+    data.value.text = 'discarded'
+    await nextTick()
+    expect(onLeave).toHaveBeenCalledTimes(3)
+    data.value.hasSlot = false
+    await nextTick()
+    leaveDone!()
+    await nextTick()
+
+    expect(host.querySelector('div')).toBeNull()
+    expect(host.querySelector('span')).toBeNull()
+    expect(onEnter).toHaveBeenCalledTimes(2)
+  })
+
+  test('vdom slot content should respect in-out transition mode', async () => {
+    let enterDone: (() => void) | undefined
+    let leaveDone: (() => void) | undefined
+    const onEnter = vi.fn((_el: Element, done: () => void) => {
+      enterDone = done
+    })
+    const onLeave = vi.fn((_el: Element, done: () => void) => {
+      leaveDone = done
+    })
+    const data = ref({
+      show: true,
+      onEnter,
+      onLeave,
+    })
+    const Child = compile(
+      `<template>
+        <Transition
+          mode="in-out"
+          :css="false"
+          @enter="data.onEnter"
+          @leave="data.onLeave"
+        >
+          <slot />
+        </Transition>
+      </template>`,
+      data,
+    )
+    const App = compile(
+      `<script setup>
+        const data = _data
+        const components = _components
+      </script>
+      <template>
+        <components.Child>
+          <div v-if="data.show">first</div>
+          <span v-else>second</span>
+        </components.Child>
+      </template>`,
+      data,
+      { Child },
+      { vapor: false },
+    )
+    const { host } = defineInterop(App as any).render()
+
+    data.value.show = false
+    await nextTick()
+
+    expect(onEnter).toHaveBeenCalledOnce()
+    expect(onLeave).not.toHaveBeenCalled()
+    expect(host.querySelector('div')?.textContent).toBe('first')
+    expect(host.querySelector('span')?.textContent).toBe('second')
+
+    enterDone!()
+    expect(onLeave).toHaveBeenCalledOnce()
+    expect(host.querySelector('div')?.textContent).toBe('first')
+
+    leaveDone!()
+    await nextTick()
+
+    expect(host.querySelector('div')).toBeNull()
+    expect(host.querySelector('span')?.textContent).toBe('second')
+  })
+
+  test('teleport root should respect out-in transition mode', async () => {
+    let leaveDone: (() => void) | undefined
+    const target = document.createElement('div')
+    const onEnter = vi.fn((_el: Element, done: () => void) => done())
+    const onLeave = vi.fn((_el: Element, done: () => void) => {
+      leaveDone = done
+    })
+    const data = ref({ show: true, target, onEnter, onLeave })
+    const App = compile(
+      `<template>
+        <Transition
+          mode="out-in"
+          :css="false"
+          @enter="data.onEnter"
+          @leave="data.onLeave"
+        >
+          <template #default v-if="data.show">
+            <Teleport :to="data.target"><div>A</div></Teleport>
+          </template>
+          <template #default v-else>
+            <Teleport :to="data.target"><div>B</div></Teleport>
+          </template>
+        </Transition>
+      </template>`,
+      data,
+    )
+    const { app } = define(App).render()
+
+    try {
+      data.value.show = false
+      await nextTick()
+
+      expect(onLeave).toHaveBeenCalledOnce()
+      expect(onEnter).not.toHaveBeenCalled()
+      expect(target.textContent).toBe('A')
+
+      leaveDone!()
+      await nextTick()
+
+      expect(onEnter).toHaveBeenCalledOnce()
+      expect(target.textContent).toBe('B')
+    } finally {
+      leaveDone?.()
+      app.unmount()
+    }
+  })
+
+  test('disabled teleport should leave with its main-view owner', async () => {
+    let leaveDone: (() => void) | undefined
+    const target = document.createElement('div')
+    const onLeave = vi.fn((_el: Element, done: () => void) => {
+      leaveDone = done
+    })
+    const data = ref({ show: true, target, onLeave })
+    const App = compile(
+      `<template>
+        <Transition :css="false" @leave="data.onLeave">
+          <div v-if="data.show">
+            <Teleport :to="data.target" disabled><span>A</span></Teleport>
+          </div>
+        </Transition>
+      </template>`,
+      data,
+    )
+    const { app, host } = define(App).render()
+
+    try {
+      data.value.show = false
+      await nextTick()
+
+      expect(onLeave).toHaveBeenCalledOnce()
+      expect(host.textContent).toBe('A')
+
+      leaveDone!()
+      await nextTick()
+
+      expect(host.textContent).toBe('')
+    } finally {
+      leaveDone?.()
+      app.unmount()
+    }
+  })
+
+  test('slot fallback should trigger enter hooks when slot content becomes empty', async () => {
+    const onBeforeEnter = vi.fn()
+    const onEnter = vi.fn()
+    const data = ref({
+      show: true,
+      onBeforeEnter,
+      onEnter,
+    })
+    const Child = compile(
+      `<template>
+        <Transition
+          @before-enter="data.onBeforeEnter"
+          @enter="data.onEnter"
+        >
+          <slot>
+            <div>22</div>
+          </slot>
+        </Transition>
+      </template>`,
+      data,
+    )
+    const App = compile(
+      `<template>
+        <button @click="data.show = !data.show">Toggle</button>
+        <components.Child>
+          <div v-if="data.show">3</div>
+        </components.Child>
+      </template>`,
+      data,
+      { Child },
+    )
+    const { host } = define(App as any).render()
+
+    host.querySelector('button')!.click()
+    await nextTick()
+
+    expect(host.innerHTML).toContain(
+      '<div class="v-leave-from v-leave-active">3</div>',
+    )
+    expect(host.innerHTML).toContain(
+      '<div class="v-enter-from v-enter-active">22</div>',
+    )
+    expect(onBeforeEnter).toHaveBeenCalledTimes(1)
+    expect(onEnter).toHaveBeenCalledTimes(1)
+  })
+
+  test('dynamic default slot source should trigger enter hooks when toggled on', async () => {
+    const onBeforeEnter = vi.fn()
+    const onEnter = vi.fn()
+    const data = ref({
+      show: false,
+      onBeforeEnter,
+      onEnter,
+    })
+    const App = compile(
+      `<template>
+        <button @click="data.show = !data.show">toggle</button>
+        <Transition
+          @before-enter="data.onBeforeEnter"
+          @enter="data.onEnter"
+        >
+          <template #default v-if="data.show">
+            <div>foo</div>
+          </template>
+        </Transition>
+      </template>`,
+      data,
+    )
+    const { host } = define(App as any).render()
+
+    host.querySelector('button')!.click()
+    await nextTick()
+
+    expect(host.innerHTML).toContain(
+      '<div class="v-enter-from v-enter-active">foo</div>',
+    )
+    expect(onBeforeEnter).toHaveBeenCalledTimes(1)
+    expect(onEnter).toHaveBeenCalledTimes(1)
+  })
+
+  test('dynamic default slot source should trigger leave hooks when toggled off', async () => {
+    const onBeforeLeave = vi.fn()
+    const onLeave = vi.fn()
+    const data = ref({
+      show: true,
+      onBeforeLeave,
+      onLeave,
+    })
+    const App = compile(
+      `<template>
+        <button @click="data.show = !data.show">toggle</button>
+        <Transition
+          @before-leave="data.onBeforeLeave"
+          @leave="data.onLeave"
+        >
+          <template #default v-if="data.show">
+            <div>foo</div>
+          </template>
+        </Transition>
+      </template>`,
+      data,
+    )
+    const { host } = define(App as any).render()
+
+    host.querySelector('button')!.click()
+    await nextTick()
+
+    expect(host.innerHTML).toContain(
+      '<div class="v-leave-from v-leave-active">foo</div>',
+    )
+    expect(onBeforeLeave).toHaveBeenCalledTimes(1)
+    expect(onLeave).toHaveBeenCalledTimes(1)
+  })
+
+  test('dynamic default slot re-appearing should pair beforeUpdate with updated', async () => {
+    const data = ref({ show: true })
+    const App = compile(
+      `<template>
+        <Transition :css="false">
+          <template #default v-if="data.show">
+            <div>foo</div>
+          </template>
+        </Transition>
+      </template>`,
+      data,
+    )
+    const { instance } = define(App as any).render()
+    // the hook pairing is the fragment protocol under test, so the
+    // Transition's dynamic fragment is observed directly
+    const frag = (instance!.block as any).block as DynamicFragment
+    const bu = vi.fn()
+    const u = vi.fn()
+    ;(frag.bu ||= []).push(bu)
+    ;(frag.u ||= []).push(u)
+
+    data.value.show = false
+    await nextTick()
+    expect(bu).toHaveBeenCalledTimes(1)
+    expect(u).toHaveBeenCalledTimes(1)
+
+    data.value.show = true
+    await nextTick()
+    expect(bu).toHaveBeenCalledTimes(2)
+    expect(u).toHaveBeenCalledTimes(2)
+  })
+
+  test('dynamic default slot source should respect reactive mode changes', async () => {
+    const onLeave = vi.fn((_: Element, done: () => void) => setTimeout(done, 0))
+    const data = ref({
+      mode: 'default',
+      show: true,
+      onLeave,
+    })
+    const App = compile(
+      `<template>
+        <Transition :mode="data.mode" @leave="data.onLeave">
+          <template #default v-if="data.show">
+            <div>A</div>
+          </template>
+          <template #default v-else>
+            <div>B</div>
+          </template>
+        </Transition>
+      </template>`,
+      data,
+    )
+    const { host } = define(App as any).render()
+
+    data.value.mode = 'out-in'
+    await nextTick()
+
+    data.value.show = false
+    await nextTick()
+
+    expect(host.textContent).toContain('A')
+    expect(host.textContent).not.toContain('B')
+
+    await new Promise(r => setTimeout(r, 0))
+    await nextTick()
+
+    expect(host.textContent).toContain('B')
+    expect(onLeave).toHaveBeenCalledTimes(1)
+  })
+
+  test('unkeyed component child should early-remove the previous leaving instance on rapid toggle', async () => {
+    // Capture the leave `done` so the leave stays in progress while we toggle
+    // back on, exercising the earlyRemove path.
+    let leaveDone: (() => void) | undefined
+    const data = ref({
+      show: true,
+      onLeave: (_: Element, done: () => void) => {
+        leaveDone = done
+      },
+    })
+    const Comp = compile(`<template><div class="c">comp</div></template>`, data)
+    const App = compile(
+      `<template>
+        <Transition @leave="data.onLeave">
+          <components.Comp v-if="data.show" />
+        </Transition>
+      </template>`,
+      data,
+      { Comp },
+    )
+    const { host } = define(App as any).render()
+    expect(host.querySelectorAll('.c').length).toBe(1)
+
+    // start leaving; the captured `done` holds the leave open
+    data.value.show = false
+    await nextTick()
+    expect(host.querySelectorAll('.c').length).toBe(1)
+
+    // Re-enter while the previous instance is still leaving. The new instance
+    // has a different uid, but an unkeyed child must share the leaving-cache
+    // bucket by resolved type so earlyRemove force-removes the previous one
+    // instead of leaving both elements in the DOM.
+    data.value.show = true
+    await nextTick()
+    expect(host.querySelectorAll('.c').length).toBe(1)
+
+    // finishing the already early-removed leave must not strand a node
+    leaveDone && leaveDone()
+    await nextTick()
+    expect(host.querySelectorAll('.c').length).toBe(1)
+  })
+
+  test('static single-element child should react to transition prop changes', async () => {
+    const data = ref({ name: 'a', show: true })
+    const App = compile(
+      `<template>
+        <Transition :name="data.name">
+          <div v-show="data.show">foo</div>
+        </Transition>
+      </template>`,
+      data,
+    )
+    const { host } = define(App as any).render()
+    const el = host.querySelector('div')!
+
+    // change the transition name reactively before any toggle
+    data.value.name = 'b'
+    await nextTick()
+
+    // leaving should use the updated name, not the setup-time one
+    data.value.show = false
+    await nextTick()
+    expect(el.className).toBe('b-leave-from b-leave-active')
+  })
+
+  test('dynamic default slot child should react to transition prop changes', async () => {
+    const data = ref({ name: 'a', branch: true, show: true })
+    const App = compile(
+      `<template>
+        <Transition :name="data.name">
+          <template #default v-if="data.branch">
+            <div v-show="data.show">foo</div>
+          </template>
+        </Transition>
+      </template>`,
+      data,
+    )
+    const { host } = define(App as any).render()
+    const el = host.querySelector('div')!
+
+    // hooks were resolved when the branch rendered with the old name
+    data.value.name = 'b'
+    await nextTick()
+
+    data.value.show = false
+    await nextTick()
+    expect(el.className).toBe('b-leave-from b-leave-active')
+  })
+
+  test('should keep transition classes when class binding changes', async () => {
+    const data = ref({ show: false, visible: true, cls: 'a', active: false })
+    const App = compile(
+      `<template>
+        <Transition>
+          <div v-if="data.show" :class="data.cls">enter</div>
+        </Transition>
+        <Transition>
+          <p v-show="data.visible" :class="{ active: data.active }">leave</p>
+        </Transition>
+        <svg>
+          <Transition>
+            <circle v-if="data.show" :class="data.cls" />
+          </Transition>
+        </svg>
+      </template>`,
+      data,
+    )
+    const { host } = define(App as any).render()
+    const p = host.querySelector('p')!
+
+    data.value.show = true
+    data.value.visible = false
+    await nextTick()
+    const div = host.querySelector('div')!
+    const circle = host.querySelector('circle')!
+    expect(div.className).toBe('a v-enter-from v-enter-active')
+    expect(p.className).toBe('v-leave-from v-leave-active')
+    expect(circle.getAttribute('class')).toBe('a v-enter-from v-enter-active')
+
+    // a transition child layers its class like a root (classList), so the
+    // token order after an update differs from a className rewrite
+    const classes = (el: Element) => [...el.classList].sort()
+    data.value.cls = 'b'
+    data.value.active = true
+    await nextTick()
+    expect(classes(div)).toEqual(['b', 'v-enter-active', 'v-enter-from'])
+    expect(classes(p)).toEqual(['active', 'v-leave-active', 'v-leave-from'])
+    expect(classes(circle)).toEqual(['b', 'v-enter-active', 'v-enter-from'])
+
+    data.value.cls = ''
+    data.value.active = false
+    await nextTick()
+    expect(div.className).toBe('v-enter-from v-enter-active')
+    expect(p.className).toBe('v-leave-from v-leave-active')
+    expect(circle.getAttribute('class')).toBe('v-enter-from v-enter-active')
+  })
+
+  // #15274
+  test('should merge fallthrough class with a transition child root', async () => {
+    const data = ref({
+      internalClass: 'internal-box',
+      externalClass: 'external-class',
+    })
+    const Child = compile(
+      `<template>
+        <Transition>
+          <div class="box" :class="data.internalClass">child</div>
+        </Transition>
+      </template>`,
+      data,
+    )
+    const App = compile(
+      `<template>
+        <components.Child :class="data.externalClass" />
+      </template>`,
+      data,
+      { Child },
+    )
+    const { host } = define(App as any).render()
+    const el = host.querySelector('div')!
+
+    expect([...el.classList]).toEqual(
+      expect.arrayContaining(['external-class', 'box', 'internal-box']),
+    )
+    expect(el.classList).toHaveLength(3)
+
+    data.value.internalClass = 'internal-next'
+    data.value.externalClass = 'external-next'
+    await nextTick()
+
+    expect([...el.classList]).toEqual(
+      expect.arrayContaining(['external-next', 'box', 'internal-next']),
+    )
+    expect(el.classList).toHaveLength(3)
+  })
+
+  test('keyed reorder through a slot outlet with fallback should not replay enter', async () => {
+    const onEnter = vi.fn((_el: Element, done: () => void) => done())
+    const onLeave = vi.fn((_el: Element, done: () => void) => done())
+    const data = ref({
+      list: [{ id: 1 }, { id: 2 }, { id: 3 }],
+      show: true,
+      slotName: 'default',
+      onEnter,
+      onLeave,
+    })
+    // a dynamic slot name with fallback resolves through a SlotFragment
+    const Child = compile(
+      `<template><slot :name="data.slotName">fallback</slot></template>`,
+      data,
+    )
+    const App = compile(
+      `<template>
+        <components.Child v-for="item in data.list" :key="item.id">
+          <Transition :css="false" @enter="data.onEnter" @leave="data.onLeave">
+            <div v-if="data.show">{{ item.id }}</div>
+          </Transition>
+        </components.Child>
+      </template>`,
+      data,
+      { Child },
+    )
+    const { host, instance } = define(App as any).render()
+    const rows = (instance!.block as any).nodes[0]
+    expect(rows[0].nodes.block).toBeInstanceOf(SlotFragment)
+    expect(host.textContent).toBe('123')
+
+    data.value.list = [
+      data.value.list[2],
+      data.value.list[0],
+      data.value.list[1],
+    ]
+    await nextTick()
+    expect(host.textContent).toBe('312')
+    expect(onEnter).not.toHaveBeenCalled()
+    expect(onLeave).not.toHaveBeenCalled()
+  })
+
+  test('out-in slot content swap should keep slot fallback resolution in sync', async () => {
+    let finishLeave: (() => void) | undefined
+    const onLeave = vi.fn((_el: Element, done: () => void) => {
+      finishLeave = done
+    })
+    const onEnter = vi.fn((_el: Element, done: () => void) => done())
+    const data = ref({ a: true, showA: true, showB: true, onLeave, onEnter })
+    const Child = compile(
+      `<template>
+        <Transition
+          mode="out-in"
+          :css="false"
+          @enter="data.onEnter"
+          @leave="data.onLeave"
+        >
+          <slot><p class="fb">fallback</p></slot>
+        </Transition>
+      </template>`,
+      data,
+    )
+    const App = compile(
+      `<template>
+        <components.Child>
+          <template v-if="data.a" #default>
+            <div v-if="data.showA" class="a">A</div>
+          </template>
+          <template v-else #default>
+            <div v-if="data.showB" class="b">B</div>
+          </template>
+        </components.Child>
+      </template>`,
+      data,
+      { Child },
+    )
+    const { host } = define(App as any).render()
+    expect(host.innerHTML).toContain('class="a"')
+
+    data.value.a = false
+    await nextTick()
+    expect(onLeave).toHaveBeenCalledTimes(1)
+    // the leave settles asynchronously, so the next branch renders after
+    // the slot update returned
+    finishLeave!()
+    await nextTick()
+    expect(host.innerHTML).toContain('class="b"')
+
+    data.value.showB = false
+    await nextTick()
+    expect(onLeave).toHaveBeenCalledTimes(2)
+    finishLeave!()
+    await nextTick()
+    expect(host.innerHTML).not.toContain('class="b"')
+    expect(host.innerHTML).toContain('fallback')
+  })
+
+  test.each([
+    ['k2', 'k3'],
+    ['k3', 'k2'],
+  ])(
+    'in-out: each entering child hands off its own leave when %s finishes before %s',
+    async (first, second) => {
+      const enters: Record<string, () => void> = {}
+      const left: string[] = []
+      const data = ref<any>({
+        k: 1,
+        onEnter: (el: Element, done: () => void) => (enters[el.id] = done),
+        onLeave: (el: Element, done: () => void) => {
+          left.push(el.id)
+          done()
+        },
+      })
+      const App = compile(
+        `<script setup vapor>
+        const data = _data
+      </script>
+      <template>
+        <Transition mode="in-out" :css="false" @enter="data.onEnter" @leave="data.onLeave">
+          <div :key="data.k" :id="'k' + data.k" />
+        </Transition>
+      </template>`,
+        data,
+      )
+      const { host } = define(App).render()
+
+      data.value.k = 2
+      await nextTick()
+      data.value.k = 3
+      await nextTick()
+      expect(left).toEqual([])
+
+      enters[first]()
+      expect(left).toEqual(first === 'k2' ? ['k1'] : ['k1', 'k2'])
+      enters[second]()
+      expect(left).toEqual(['k1', 'k2'])
+      await nextTick()
+      expect(host.innerHTML).toBe('<div id="k3"></div><!--keyed-->')
+    },
+  )
+
+  test('in-out: toggling back before the enter finishes leaves once', async () => {
+    const enters: Record<string, () => void> = {}
+    const left: string[] = []
+    const data = ref<any>({
+      show: true,
+      onEnter: (el: Element, done: () => void) => (enters[el.id] = done),
+      onLeave: (el: Element, done: () => void) => {
+        left.push(el.id)
+        done()
+      },
+    })
+    const App = compile(
+      `<script setup vapor>
+        const data = _data
+      </script>
+      <template>
+        <Transition mode="in-out" :css="false" @enter="data.onEnter" @leave="data.onLeave">
+          <div v-if="data.show" id="a" />
+          <div v-else id="b" />
+        </Transition>
+      </template>`,
+      data,
+    )
+    const { host } = define(App).render()
+
+    data.value.show = false
+    await nextTick()
+    data.value.show = true
+    await nextTick()
+
+    // the first a was early-removed, so b's enter hands off nothing
+    enters.b()
+    expect(left).toEqual([])
+    enters.a()
+    expect(left).toEqual(['b'])
+    await nextTick()
+    expect(host.innerHTML).toBe('<div id="a"></div><!--if-->')
+  })
+
+  test.each(['static', 'dynamic'])(
+    'in-out: a branch that renders its content later still hands off the leave with a %s default slot',
+    async slotType => {
+      const left: string[] = []
+      const data = ref<any>({
+        view: 'A',
+        hasSlot: true,
+        ready: false,
+        onLeave: (el: Element, done: () => void) => {
+          left.push(el.id)
+          done()
+        },
+      })
+      const A = compile(`<template><div id="a">a</div></template>`, data)
+      const B = compile(
+        `<template><div v-if="data.ready" id="b">b</div></template>`,
+        data,
+      )
+      const App = compile(
+        `<script setup vapor>
+        const data = _data
+        const views = _components
+      </script>
+      <template>
+        <Transition mode="in-out" :css="false" @leave="data.onLeave">
+          ${slotType === 'dynamic' ? '<template #default v-if="data.hasSlot">' : ''}
+            <component :is="views[data.view]" />
+          ${slotType === 'dynamic' ? '</template>' : ''}
+        </Transition>
+      </template>`,
+        data,
+        { A, B },
+      )
+      const { host } = define(App).render()
+
+      data.value.view = 'B'
+      await nextTick()
+      // Refresh the hooks while the entering branch still has no element.
+      data.value.onLeave = (el: Element, done: () => void) => {
+        left.push(el.id)
+        done()
+      }
+      await nextTick()
+
+      data.value.ready = true
+      await nextTick()
+      expect(left).toEqual(['a'])
+      expect(host.innerHTML).not.toContain('id="a"')
+    },
+  )
+
+  test('in-out: a KeepAlive child is deactivated by a leave that waits for the enter', async () => {
+    const log: string[] = []
+    const enters: Record<string, () => void> = {}
+    const leaves: Record<string, () => void> = {}
+    const data = ref<any>({
+      view: 'A',
+      log,
+      onEnter: (el: Element, done: () => void) => {
+        log.push(`enter:${el.id}`)
+        enters[el.id] = done
+      },
+      onLeave: (el: Element, done: () => void) => {
+        log.push(`leave:${el.id}`)
+        leaves[el.id] = done
+      },
+    })
+    const view = (id: string) =>
+      compile(
+        `<script setup vapor>
+          import { onActivated, onDeactivated, onUnmounted } from 'vue'
+          const data = _data
+          onActivated(() => data.value.log.push('activated:${id}'))
+          onDeactivated(() => data.value.log.push('deactivated:${id}'))
+          onUnmounted(() => data.value.log.push('unmounted:${id}'))
+        </script>
+        <template><div id="${id}">${id}</div></template>`,
+        data,
+      )
+    const App = compile(
+      `<script setup vapor>
+        const data = _data
+        const views = _components
+      </script>
+      <template>
+        <Transition mode="in-out" :css="false" @enter="data.onEnter" @leave="data.onLeave">
+          <KeepAlive>
+            <component :is="views[data.view]" />
+          </KeepAlive>
+        </Transition>
+      </template>`,
+      data,
+      { A: view('a'), B: view('b') },
+    )
+    const { host } = define(App).render()
+    const html = () => stripAnchors(host.innerHTML)
+    const a = host.querySelector('#a')
+    log.length = 0
+
+    data.value.view = 'B'
+    await nextTick()
+    expect(log).toEqual(['deactivated:a', 'enter:b', 'activated:b'])
+    expect(html()).toBe('<div id="a">a</div><div id="b">b</div>')
+
+    enters.b()
+    expect(log.slice(3)).toEqual(['leave:a'])
+    leaves.a()
+    await nextTick()
+    expect(html()).toBe('<div id="b">b</div>')
+
+    // a was kept alive: switching back reactivates the same element
+    log.length = 0
+    data.value.view = 'A'
+    await nextTick()
+    expect(log).toEqual(['deactivated:b', 'enter:a', 'activated:a'])
+    expect(host.querySelector('#a')).toBe(a)
+
+    enters.a()
+    expect(log.slice(3)).toEqual(['leave:b'])
+    leaves.b()
+    await nextTick()
+    expect(html()).toBe('<div id="a">a</div>')
+  })
+
+  const outInTransition = (content: string) =>
+    `<Transition mode="out-in" :css="false" @leave="data.onLeave" @enter="data.onEnter">
+      ${content}
+    </Transition>`
+  const outInChain = `<template>${outInTransition(
+    `<p v-if="data.a">a</p>
+    <i v-else-if="data.b">b</i>
+    <span v-else-if="data.c">c</span>
+    <div v-else>d</div>`,
+  )}</template>`
+  const outInKeepAlive = {
+    Page: `<template><p v-if="data.loading">loading</p><div v-else>list</div></template>`,
+    Other: `<template><span>other</span></template>`,
+    App: `<template>${outInTransition(
+      `<KeepAlive>
+        <component :is="data.other ? components.Other : components.Page" />
+      </KeepAlive>`,
+    )}</template>`,
+  }
+
+  test.each<
+    [string, Record<string, string>, Record<string, any>, OutInPhase[]]
+  >([
+    [
+      'an outer branch switching',
+      { App: outInChain },
+      { a: false, b: false, c: false },
+      [
+        { set: { c: true, a: true }, text: 'a' },
+        { set: { a: false }, text: 'c' },
+      ],
+    ],
+    [
+      'an outer branch switching next to a retarget',
+      { App: outInChain },
+      { a: false, b: false, c: false },
+      [
+        { set: { c: true, a: true, c2: false }, text: 'a' },
+        { set: { a: false }, text: 'd' },
+      ],
+    ],
+    [
+      'two outer branches switching',
+      { App: outInChain },
+      { a: false, b: false, c: false },
+      [
+        { set: { c: true, b: true, a: true }, text: 'a' },
+        { set: { a: false }, text: 'b' },
+        { set: { b: false }, text: 'c' },
+      ],
+    ],
+    [
+      'the outermost switch being taken back',
+      { App: outInChain },
+      { a: false, b: false, c: false },
+      [
+        { set: { c: true, a: true, b: true, a2: false }, text: 'b' },
+        { set: { b: false }, text: 'c' },
+      ],
+    ],
+    // coverage guard: passes without the fix
+    [
+      'an outer switch being taken back',
+      { App: outInChain },
+      { a: false, b: false, c: false },
+      [
+        { set: { c: true, a: true, a2: false }, text: 'c' },
+        { set: { c: false }, text: 'd' },
+      ],
+    ],
+    [
+      'an outer KeepAlive branch switching',
+      {
+        A: `<template><p>a</p></template>`,
+        B: `<template><i>b</i></template>`,
+        C: `<template><div>c</div></template>`,
+        App: `<template>${outInTransition(
+          `<KeepAlive>
+              <components.A v-if="data.a" />
+              <components.B v-else-if="data.b" />
+              <components.C v-else />
+            </KeepAlive>`,
+        )}</template>`,
+      },
+      { a: false, b: false },
+      [
+        { set: { b: true, a: true }, text: 'a' },
+        { set: { a: false }, text: 'b' },
+        { set: { b: false }, text: 'c' },
+      ],
+    ],
+    [
+      'an outer slot source switching',
+      {
+        Child: `<template>${outInTransition(`<slot><p>fallback</p></slot>`)}</template>`,
+        App: `<template>
+            <components.Child>
+              <template v-if="data.a" #default>
+                <div v-if="data.c">c</div>
+                <i v-else>d</i>
+              </template>
+              <template v-else #default><span>b</span></template>
+            </components.Child>
+          </template>`,
+      },
+      { a: true, c: true },
+      [
+        { set: { c: false, a: false }, text: 'b' },
+        { set: { a: true }, text: 'd' },
+      ],
+    ],
+  ])(
+    'out-in renders the latest child after a leave with %s',
+    async (_, srcs, init, phases) => {
+      const { vdom, vapor } = await runOutInPhases(srcs, init, phases)
+      expect(vapor.trace).toEqual(vdom.trace)
+      expect(vapor.settled).toEqual(phases.map(p => p.text))
+    },
+  )
+
+  test.each<
+    [string, Record<string, string>, Record<string, any>, OutInPhase[]]
+  >([
+    [
+      'a v-if at the root of the child component',
+      {
+        Comp: outInKeepAlive.Page,
+        App: `<template>${outInTransition(`<components.Comp />`)}</template>`,
+      },
+      { loading: true },
+      [{ set: { loading: false }, text: 'list' }],
+    ],
+    [
+      'a switch away from a child component that is leaving inside',
+      {
+        Comp: outInKeepAlive.Page,
+        Failed: `<template><span>error</span></template>`,
+        App: `<template>${outInTransition(
+          `<components.Failed v-if="data.error" />
+            <components.Comp v-else />`,
+        )}</template>`,
+      },
+      { loading: true, error: false },
+      [{ set: { loading: false, error: true }, text: 'error' }],
+    ],
+    [
+      'a switch away from a kept-alive child that is leaving inside',
+      outInKeepAlive,
+      { loading: true, other: false },
+      [
+        { set: { loading: false, other: true }, text: 'other' },
+        { set: { other: false }, text: 'list' },
+      ],
+    ],
+  ])('mode does not sequence %s', async (_, srcs, init, phases) => {
+    const { vdom, vapor } = await runOutInPhases(srcs, init, phases)
+    expect(vapor.trace).toEqual(vdom.trace)
+    expect(vapor.settled).toEqual(phases.map(p => p.text))
+  })
+
+  // vapor extends the hooks to the slot swap at the child's root; the mode
+  // stays the Transition's own there too, as for a v-if root (vdom warns on
+  // the non-element root instead of animating it, so no parity run)
+  test.each(['out-in', 'in-out'])(
+    'a slot fallback swap at the root of the child component inherits the hooks, not mode %s',
+    async mode => {
+      const data: any = ref({
+        show: false,
+        log: [] as string[],
+        dones: [] as (() => void)[],
+        onEnter: (el: Element) => data.value.log.push('enter:' + el.className),
+        onLeave: (el: Element, done: () => void) => {
+          data.value.log.push('leave:' + el.className)
+          data.value.dones.push(done)
+        },
+      })
+      const Outlet = compile(
+        `<template>
+          <slot><p class="fallback">fallback</p></slot>
+        </template>`,
+        data,
+      )
+      const Panel = compile(
+        `<script setup vapor>
+          const props = defineProps({ show: Boolean })
+          const components = _components
+        </script>
+        <template>
+          <components.Outlet>
+            <div v-if="props.show" class="content">content</div>
+          </components.Outlet>
+        </template>`,
+        data,
+        { Outlet },
+      )
+      const App = compile(
+        `<template>
+          <Transition
+            mode="${mode}"
+            :css="false"
+            @before-enter="data.onEnter"
+            @leave="data.onLeave"
+          >
+            <components.Panel :show="data.show" />
+          </Transition>
+        </template>`,
+        data,
+        { Panel },
+      )
+      const { host } = define(App).render()
+      const { log, dones } = data.value
+
+      data.value.show = true
+      await nextTick()
+      expect(log).toEqual(['leave:fallback', 'enter:content'])
+      dones.shift()()
+      await nextTick()
+      expect(host.querySelector('.content')).not.toBeNull()
+      expect(host.querySelector('.fallback')).toBeNull()
+
+      data.value.show = false
+      await nextTick()
+      expect(log.slice(2)).toEqual(['leave:content', 'enter:fallback'])
+      dones.shift()()
+      await nextTick()
+      expect(host.querySelector('.fallback')).not.toBeNull()
+      expect(host.querySelector('.content')).toBeNull()
+    },
+  )
+
+  test('out-in renders the latest dynamic default slot after a leave inside it', async () => {
+    const { leaves, onLeave } = collectLeaves()
+    const data = ref<any>({ error: false, loading: false, onLeave })
+    const App = compile(
+      `<template>
+        <Transition mode="out-in" :css="false" @leave="data.onLeave">
+          <template #default v-if="data.error"><p>error</p></template>
+          <template #default v-else>
+            <span v-if="data.loading">loading</span>
+            <div v-else>list</div>
+          </template>
+        </Transition>
+      </template>`,
+      data,
+    )
+    const { host } = define(App as any).render()
+
+    data.value.loading = true
+    await nextTick()
+    data.value.error = true
+    await nextTick()
+    leaves.shift()!()
+    await nextTick()
+    expect(host.textContent).toBe('error')
+
+    data.value.error = false
+    await nextTick()
+    leaves.shift()!()
+    await nextTick()
+    expect(host.textContent).toBe('loading')
+    expect(leaves.length).toBe(0)
+  })
+
+  test('out-in renders an outer branch deferred during a leave under its owner', async () => {
+    const { leaves, onLeave } = collectLeaves()
+    const unmounted = vi.fn()
+    const data = ref<any>({
+      show: true,
+      error: false,
+      loading: false,
+      onLeave,
+      unmounted,
+    })
+    const Failed = compile(
+      `<script setup vapor>
+        import { inject, onUnmounted } from 'vue'
+        const data = _data
+        const msg = inject('msg')
+        onUnmounted(() => data.value.unmounted())
+      </script>
+      <template><p>{{ msg }}</p></template>`,
+      data,
+    )
+    const App = compile(
+      `<script setup vapor>
+        import { provide } from 'vue'
+        const data = _data
+        const components = _components
+        provide('msg', 'error')
+      </script>
+      <template>
+        <section v-if="data.show">
+          <Transition mode="out-in" :css="false" @leave="data.onLeave">
+            <components.Failed v-if="data.error" />
+            <span v-else-if="data.loading">loading</span>
+            <div v-else>list</div>
+          </Transition>
+        </section>
+      </template>`,
+      data,
+      { Failed },
+    )
+    const { host } = define(App as any).render()
+
+    data.value.loading = true
+    await nextTick()
+    data.value.error = true
+    await nextTick()
+    leaves.shift()!()
+    await nextTick()
+    expect(host.textContent).toBe('error')
+
+    data.value.show = false
+    await nextTick()
+    expect(unmounted).toHaveBeenCalledTimes(1)
+  })
+
+  // vdom throws on this one, so there is no parity to assert
+  test('out-in keeps a kept-alive child that updates during its own leave current', async () => {
+    const { leaves, onLeave } = collectLeaves()
+    const data = ref<any>({ other: false, loading: true, onLeave })
+    const Page = compile(outInKeepAlive.Page, data)
+    const Other = compile(outInKeepAlive.Other, data)
+    const App = compile(outInKeepAlive.App, data, { Page, Other })
+    const { host } = define(App as any).render()
+
+    data.value.other = true
+    await nextTick()
+    data.value.loading = false
+    await nextTick()
+    while (leaves.length) leaves.shift()!()
+    await nextTick()
+    expect(host.textContent).toBe('other')
+
+    data.value.other = false
+    await nextTick()
+    while (leaves.length) leaves.shift()!()
+    await nextTick()
+    expect(host.textContent).toBe('list')
+  })
+
+  test('out-in is not held by a deactivated child that updates', async () => {
+    const { leaves, onLeave } = collectLeaves()
+    const data = ref<any>({ other: false, loading: true, onLeave })
+    const Page = compile(outInKeepAlive.Page, data)
+    const Other = compile(outInKeepAlive.Other, data)
+    const App = compile(outInKeepAlive.App, data, { Page, Other })
+    const { host } = define(App as any).render()
+
+    data.value.other = true
+    await nextTick()
+    leaves.shift()!()
+    await nextTick()
+    data.value.loading = false
+    await nextTick()
+    expect(leaves.length).toBe(0)
+
+    data.value.other = false
+    await nextTick()
+    leaves.shift()!()
+    await nextTick()
+    expect(host.textContent).toBe('list')
+  })
+
+  test('slot content rendered behind a fallback enters and leaves', async () => {
+    const hooks: string[] = []
+    const data = ref<any>({
+      show: false,
+      onBeforeEnter: (el: Element) => hooks.push(`enter:${el.textContent}`),
+      onLeave: (el: Element, done: () => void) => {
+        hooks.push(`leave:${el.textContent}`)
+        done()
+      },
+    })
+    const Wrapper = compile(
+      `<template>
+        <Transition :css="false" @before-enter="data.onBeforeEnter" @leave="data.onLeave">
+          <slot><span>fb</span></slot>
+        </Transition>
+      </template>`,
+      data,
+    )
+    const App = compile(
+      `<template>
+        <components.Wrapper><div v-if="data.show">x</div></components.Wrapper>
+      </template>`,
+      data,
+      { Wrapper },
+    )
+    const { host } = define(App).render()
+    expect(host.textContent).toBe('fb')
+
+    data.value.show = true
+    await nextTick()
+    expect(host.textContent).toBe('x')
+    expect(hooks).toEqual(['leave:fb', 'enter:x'])
+
+    data.value.show = false
+    await nextTick()
+    expect(host.textContent).toBe('fb')
+    expect(hooks).toEqual(['leave:fb', 'enter:x', 'leave:x', 'enter:fb'])
+  })
+})
+
+interface OutInPhase {
+  // applied one tick apart: the first change starts a leave, the rest land
+  // during it (a trailing digit repeats a key)
+  set: Record<string, any>
+  // rendered once the leaves are released
+  text: string
+}
+
+// Mounts `srcs` as a vdom and as a vapor app and runs the phases, holding
+// every leave until the phase's changes are in. `trace` is the text and the
+// hook calls before and after each release, `settled` the text after it.
+async function runOutInPhases(
+  srcs: Record<string, string>,
+  init: Record<string, any>,
+  phases: OutInPhase[],
+) {
+  const results = {
+    vdom: { trace: [] as string[], settled: [] as string[] },
+    vapor: { trace: [] as string[], settled: [] as string[] },
+  }
+  await renderParity(
+    srcs,
+    () => {
+      const calls: string[] = []
+      const { leaves, onLeave } = collectLeaves()
+      return ref<any>({
+        ...init,
+        calls,
+        leaves,
+        onLeave: (el: Element, done: () => void) => {
+          calls.push(`leave:${el.textContent}`)
+          onLeave(el, done)
+        },
+        onEnter: (el: Element, done: () => void) => {
+          calls.push(`enter:${el.textContent}`)
+          done()
+        },
+      })
+    },
+    async (data, root, mode) => {
+      const { trace, settled } = results[mode]
+      const { calls, leaves } = data.value
+      const text = () => root.textContent!.trim()
+      for (const { set } of phases) {
+        for (const key in set) {
+          data.value[key.replace(/\d$/, '')] = set[key]
+          await nextTick()
+        }
+        trace.push(`${text()} | ${calls}`)
+        while (leaves.length) {
+          leaves.shift()()
+          await nextTick()
+        }
+        trace.push(`${text()} | ${calls}`)
+        settled.push(text())
+      }
+    },
+  )
+  return results
+}
+
+// Mounts `srcs` as a vdom and as a vapor app and runs the steps (`k=true` /
+// `k=false` sets a flag, `a=true,b=false` several at once, `done` releases
+// the next leave), comparing the hook calls and the DOM after every step.
+async function runOutInSteps(
+  srcs: Record<string, string>,
+  init: Record<string, any>,
+  steps: string[],
+  {
+    // vdom inserts a root entering beside one still leaving right after it,
+    // vapor's roots keep their own anchors: those steps compare without order
+    unordered = false,
+    // the hooks are left out of the comparison
+    domOnly = false,
+  } = {},
+) {
+  const logs: Record<string, string[]> = {}
+  const dom = (root: HTMLElement) =>
+    unordered
+      ? Array.from(root.querySelectorAll('div'))
+          .map(el => el.className)
+          .sort()
+          .join(',')
+      : stripAnchors(root.innerHTML)
+  await renderParity(
+    srcs,
+    () => {
+      const data: any = ref({
+        ...init,
+        dones: [] as (() => void)[],
+        log: [] as string[],
+        be: (el: Element) => data.value.log.push('be:' + el.className),
+        l: (el: Element, done: () => void) => {
+          data.value.log.push('l:' + el.className)
+          data.value.dones.push(done)
+        },
+        al: (el: Element) => data.value.log.push('al:' + el.className),
+      })
+      return data
+    },
+    async (data, root, m) => {
+      const log: string[] = (logs[m] = domOnly ? [] : data.value.log)
+      for (const s of steps) {
+        if (s === 'done') {
+          const done = data.value.dones.shift()
+          if (done) done()
+        } else {
+          for (const part of s.split(',')) {
+            const [k, v] = part.split('=')
+            data.value[k] = JSON.parse(v)
+          }
+        }
+        await nextTick()
+        log.push(s + ' ' + dom(root))
+      }
+    },
+  )
+  expect(logs.vapor).toEqual(logs.vdom)
+}
+
+const outIn = (inner: string) => `
+  <template>
+    <Transition
+      mode="out-in"
+      :css="false"
+      @before-enter="data.be"
+      @leave="data.l"
+      @after-leave="data.al"
+    >
+      ${inner}
+    </Transition>
+  </template>`
+
+describe('out-in leave during a v-for reorder', () => {
+  // vapor vs vdom: the DOM after every step. The leaving element stays where
+  // it is, like vdom's; rows anchor on the fragment, like vdom's placeholder.
+  async function parity(
+    srcs: Record<string, string>,
+    steps: ((data: any) => string)[],
+  ) {
+    const logs: Record<string, string[]> = {}
+    const dom = (root: HTMLElement) =>
+      root.innerHTML.replace(/<!--[^>]*-->/g, '')
+    await renderParity(
+      srcs,
+      () => {
+        const data: any = ref({
+          list: [1, 2, 3, 4].map(id => ({ id, on: true })),
+          dones: [] as (() => void)[],
+          l: (_el: Element, done: () => void) => data.value.dones.push(done),
+        })
+        return data
+      },
+      async (data, root, m) => {
+        const log: string[] = (logs[m] = [])
+        for (const s of steps) {
+          const name = s(data.value)
+          await nextTick()
+          log.push(name + ' ' + dom(root))
+        }
+      },
+    )
+    expect(logs.vapor).toEqual(logs.vdom)
+  }
+
+  const doneAll = (d: any) => {
+    while (d.dones.length) d.dones.shift()()
+    return 'doneAll'
+  }
+  const reorder =
+    (...order: number[]) =>
+    (d: any) => {
+      d.list = order.map(id => d.list.find((it: any) => it.id === id))
+      return 'list=' + order
+    }
+  const off = (id: number) => (d: any) => {
+    d.list.find((it: any) => it.id === id).on = false
+    return 'off' + id
+  }
+
+  const Row = `
+    <script setup>
+      const data = _data
+      const components = _components
+      const props = defineProps(['it'])
+    </script>
+    <template>
+      <Transition mode="out-in" :css="false" @leave="data.l">
+        <span v-if="props.it.on" :class="'a' + props.it.id" key="a">
+          a{{ props.it.id }}
+        </span>
+        <span v-else :class="'b' + props.it.id" key="b">b{{ props.it.id }}</span>
+      </Transition>
+    </template>`
+  const App = `
+    <template>
+      <div>
+        <components.Row v-for="it in data.list" :key="it.id" :it="it" />
+      </div>
+    </template>`
+
+  test('rows moved before a leaving tail row', () =>
+    parity({ Row, App }, [off(4), reorder(3, 4, 1, 2), doneAll]))
+
+  test('a row moved before a leaving row that stays', () =>
+    parity({ Row, App }, [off(1), reorder(3, 1, 2, 4), doneAll]))
+
+  test('template v-for rows starting with the Transition', () =>
+    parity(
+      {
+        App: `
+          <template>
+            <div>
+              <template v-for="it in data.list" :key="it.id">
+                <Transition mode="out-in" :css="false" @leave="data.l">
+                  <span v-if="it.on" :class="'a' + it.id" key="a">a{{ it.id }}</span>
+                  <span v-else :class="'b' + it.id" key="b">b{{ it.id }}</span>
+                </Transition>
+                <i>{{ it.id }}</i>
+              </template>
+            </div>
+          </template>`,
+      },
+      [off(4), reorder(3, 4, 1, 2), doneAll],
+    ))
+})
+
+describe('in-out: the current branch leaves when nothing takes its place', () => {
+  // vapor vs vdom: hook order and the DOM after every step. With no element
+  // entering there is nothing to wait for, so the leave runs right away.
+  async function parity(
+    srcs: Record<string, string>,
+    init: Record<string, any>,
+    steps: string[],
+  ) {
+    const logs: Record<string, string[]> = {}
+    const dom = (root: HTMLElement) =>
+      root.innerHTML.replace(/<!--[^>]*-->/g, '')
+    await renderParity(
+      srcs,
+      () => {
+        const data: any = ref({
+          ...init,
+          dones: [] as (() => void)[],
+          log: [] as string[],
+          be: (el: Element) => data.value.log.push('be:' + el.className),
+          e: (el: Element, done: () => void) => {
+            data.value.log.push('e:' + el.className)
+            data.value.dones.push(done)
+          },
+          ae: (el: Element) => data.value.log.push('ae:' + el.className),
+          bl: (el: Element) => data.value.log.push('bl:' + el.className),
+          l: (el: Element, done: () => void) => {
+            data.value.log.push('l:' + el.className)
+            data.value.dones.push(done)
+          },
+          al: (el: Element) => data.value.log.push('al:' + el.className),
+        })
+        return data
+      },
+      async (data, root, m) => {
+        const log: string[] = (logs[m] = data.value.log)
+        for (const s of steps) {
+          if (s === 'doneAll') {
+            let n = 0
+            while (data.value.dones.length && n++ < 10) {
+              data.value.dones.shift()!()
+              await nextTick()
+            }
+          } else {
+            const [k, v] = s.split('=')
+            data.value[k] = v === 'true' ? true : v === 'false' ? false : v
+          }
+          await nextTick()
+          log.push(s + ' ' + dom(root))
+        }
+      },
+    )
+    expect(logs.vapor).toEqual(logs.vdom)
+  }
+
+  const inOut = (inner: string) => `
+    <template>
+      <Transition
+        mode="in-out"
+        :css="false"
+        @before-enter="data.be"
+        @enter="data.e"
+        @after-enter="data.ae"
+        @before-leave="data.bl"
+        @leave="data.l"
+        @after-leave="data.al"
+      >
+        ${inner}
+      </Transition>
+    </template>`
+
+  test('v-if / v-else-if chain with every branch false', () =>
+    parity(
+      {
+        App: inOut(`
+          <div v-if="data.x" class="x">x</div>
+          <div v-else-if="data.y" class="y">y</div>
+        `),
+      },
+      { x: true, y: false },
+      ['x=false', 'doneAll', 'y=true', 'doneAll', 'y=false', 'doneAll'],
+    ))
+
+  test('a long v-else-if chain', () =>
+    parity(
+      {
+        App: inOut(
+          ifChain((i, dir) => `<div ${dir} class="c${i}">${i}</div>`, {
+            withElse: false,
+            cond: i => `data.k === 'c${i}'`,
+          }),
+        ),
+      },
+      { k: 'c0' },
+      [
+        'k=c11',
+        'doneAll',
+        'k=c5',
+        'doneAll',
+        'k=none',
+        'doneAll',
+        'k=c0',
+        'doneAll',
+      ],
+    ))
+
+  test('a component branch replaced by nothing', () =>
+    parity(
+      {
+        C: `<template><div class="c">c</div></template>`,
+        App: inOut(`
+          <components.C v-if="data.x" />
+          <i v-else-if="data.y" class="y">y</i>
+        `),
+      },
+      { x: true, y: false },
+      ['x=false', 'doneAll', 'y=true', 'doneAll'],
+    ))
+
+  // vdom keeps the current branch for a component child, however long its
+  // root stays empty
+  test('a component branch whose root is still empty', () =>
+    parity(
+      {
+        A: `<template><div class="a">a</div></template>`,
+        B: `<template><div v-if="data.flag" class="b">b</div></template>`,
+        App: inOut(`
+          <components.A v-if="data.x" />
+          <components.B v-else />
+        `),
+      },
+      { x: true, flag: false },
+      ['x=false', 'doneAll', 'flag=true', 'doneAll'],
+    ))
+
+  // the fallback entering for the emptied slot content takes the leave over
+  test('slot content replaced by the outlet fallback', () =>
+    parity(
+      {
+        Card: inOut(`<slot><p class="fb">fb</p></slot>`),
+        App: `
+          <template>
+            <components.Card>
+              <b v-if="data.x" class="x">x</b>
+              <i v-else-if="data.y" class="y">y</i>
+            </components.Card>
+          </template>`,
+      },
+      { x: true, y: false },
+      ['x=false', 'doneAll'],
+    ))
+
+  // the fallback component takes it over however long its root stays empty:
+  // the root entering later runs it
+  test('slot content replaced by a fallback component whose root is still empty', () =>
+    parity(
+      {
+        Fb: `<template><p v-if="data.flag" class="fb">fb</p></template>`,
+        Card: inOut(`<slot><components.Fb /></slot>`),
+        App: `
+          <template>
+            <components.Card>
+              <b v-if="data.x" class="x">x</b>
+            </components.Card>
+          </template>`,
+      },
+      { x: true, flag: false },
+      ['x=false', 'doneAll', 'flag=true', 'doneAll'],
+    ))
+
+  // hooks relayed from a vdom Transition have no state to hand the leave to:
+  // the vdom Transition keeps waiting, as it does for a vdom child
+  test('a vapor child of a vdom in-out Transition picks an empty branch', async () => {
+    const data = ref({ x: true, flag: false })
+    const A = compile(`<template><div class="a">a</div></template>`, data)
+    const B = compile(
+      `<template>
+        <template v-if="data.flag"></template>
+      </template>`,
+      data,
+    )
+    const App = compile(
+      `<script setup>
+        const data = _data
+        const components = _components
+      </script>
+      <template>
+        <Transition mode="in-out" :css="false">
+          <components.A v-if="data.x" />
+          <components.B v-else />
+        </Transition>
+      </template>`,
+      data,
+      { A, B },
+      { vapor: false },
+    )
+    const { html } = defineInterop(App as any).render()
+    data.value.x = false
+    await nextTick()
+    data.value.flag = true
+    await nextTick()
+    expect(html().replace(/<!--[^>]*-->/g, '')).toBe('<div class="a">a</div>')
+  })
+})
+
+describe('structural removal during a v-show leave', () => {
+  // the v-show leave only toggles display: the branch swap removes the
+  // element at once, like vdom removing a persisted root
+  const clean = (s: string) => stripAnchors(s).replace(/ style=""/g, '')
+
+  test.each(['out-in', 'in-out', 'default'])('mode %s', async mode => {
+    const result = await renderParity(
+      {
+        App: `
+          <template>
+            <Transition mode="${mode}" :css="false" @leave="data.leave">
+              <b v-if="data.present" v-show="data.visible">content</b>
+              <p v-else>fallback</p>
+            </Transition>
+          </template>`,
+      },
+      () => {
+        const dones: (() => void)[] = []
+        return ref({
+          present: true,
+          visible: true,
+          dones,
+          leave: (_el: Element, done: () => void) => dones.push(done),
+        })
+      },
+      async (data, root) => {
+        // vapor's v-show checks isConnected
+        document.body.append(root)
+        try {
+          data.value.visible = false
+          await nextTick()
+          data.value.present = false
+          await nextTick()
+          while (data.value.dones.length) {
+            data.value.dones.shift()!()
+            await nextTick()
+          }
+        } finally {
+          root.remove()
+        }
+      },
+    )
+    expect(clean(result.vdom.after)).toBe('<p>fallback</p>')
+    expect(clean(result.vapor.after)).toBe(clean(result.vdom.after))
+  })
+
+  // vdom's v-show beforeUnmount hides the root at once: a hide still
+  // animating when the branch swaps does not show through the leave
+  async function hiddenThroughLeave(srcs: Record<string, string>) {
+    const logs: Record<string, string[]> = {}
+    await renderParity(
+      srcs,
+      () => {
+        const data: any = ref({
+          present: true,
+          visible: true,
+          dones: [] as (() => void)[],
+          log: [] as string[],
+          leave: (el: Element, done: () => void) => {
+            data.value.log.push('l:' + el.tagName)
+            data.value.dones.push(done)
+          },
+          afterLeave: (el: Element) => data.value.log.push('al:' + el.tagName),
+        })
+        return data
+      },
+      async (data, root, m) => {
+        const log: string[] = (logs[m] = data.value.log)
+        document.body.append(root)
+        try {
+          data.value.visible = false
+          await nextTick()
+          log.push(clean(root.innerHTML))
+          data.value.present = false
+          await nextTick()
+          log.push(clean(root.innerHTML))
+          while (data.value.dones.length) {
+            data.value.dones.shift()!()
+            await nextTick()
+          }
+          log.push(clean(root.innerHTML))
+        } finally {
+          root.remove()
+        }
+      },
+    )
+    expect(logs.vapor).toEqual(logs.vdom)
+  }
+
+  const hooks = `:css="false" @leave="data.leave" @after-leave="data.afterLeave"`
+
+  test.each(['out-in', 'in-out', 'default'])(
+    'a hide still animating stays hidden through the leave (mode %s)',
+    mode =>
+      hiddenThroughLeave({
+        App: `
+          <template>
+            <Transition mode="${mode}" ${hooks}>
+              <b v-if="data.present" v-show="data.visible">content</b>
+              <p v-else>fallback</p>
+            </Transition>
+          </template>`,
+      }),
+  )
+
+  test.each(['out-in', 'in-out', 'default'])(
+    'a slot fallback root hidden while it leaves (mode %s)',
+    mode =>
+      hiddenThroughLeave({
+        Outer: `
+          <template>
+            <Transition mode="${mode}" ${hooks}>
+              <slot><p v-show="data.visible">fallback</p></slot>
+            </Transition>
+          </template>`,
+        App: `
+          <template>
+            <components.Outer>
+              <b v-if="!data.present">content</b>
+            </components.Outer>
+          </template>`,
+      }),
+  )
+})
+
+// vdom's persisted rule only sees Transition's direct child: a v-show root
+// reached through a <slot> is never persisted there, so the outlet switching
+// branches is a structural swap that runs @leave / @enter
+describe('v-show root swapped through a slot outlet', () => {
+  const fallback = `<slot><p>fb</p></slot>`
+  const shownFallback = `<slot><p v-show="data.show">fb</p></slot>`
+  const content = `<template v-if="data.on" #default><span>c</span></template>`
+  const contentBehind = `<span v-if="data.on">c</span>`
+  const shownContent = `<template v-if="data.on" #default>
+    <span v-show="data.show">c</span>
+  </template>`
+  const keyedContent = `<template v-if="data.on" #default>
+    <span v-show="data.show">a</span>
+  </template>
+  <template v-else #default>
+    <i v-show="data.show">b</i>
+  </template>`
+
+  test.each<[string, boolean, string, string, Record<string, any>, string]>([
+    [
+      'fallback replaced by content',
+      false,
+      shownFallback,
+      content,
+      { on: false },
+      'c',
+    ],
+    [
+      'fallback replaced by content rendered behind it',
+      false,
+      shownFallback,
+      contentBehind,
+      { on: false },
+      'c',
+    ],
+    [
+      'fallback replaced by content rendered behind it',
+      true,
+      shownFallback,
+      contentBehind,
+      { on: false },
+      'c',
+    ],
+    [
+      'fallback replaced by hidden content',
+      false,
+      fallback,
+      shownContent,
+      { on: false, show: false },
+      'c',
+    ],
+    [
+      'content replaced by fallback',
+      false,
+      fallback,
+      shownContent,
+      { on: true },
+      'fb',
+    ],
+    [
+      'content replaced by fallback',
+      true,
+      fallback,
+      shownContent,
+      { on: true },
+      'fb',
+    ],
+    [
+      'hidden content swapped by key',
+      false,
+      fallback,
+      keyedContent,
+      { on: true, show: false },
+      'b',
+    ],
+    [
+      'hidden content swapped by key',
+      true,
+      fallback,
+      keyedContent,
+      { on: true, show: false },
+      'b',
+    ],
+  ])('%s (out-in: %s)', async (_, outIn, slot, app, init, text) => {
+    const { vdom, vapor } = await runOutInPhases(
+      {
+        Comp: `<template>
+          <Transition
+            ${outIn ? 'mode="out-in"' : ''}
+            :css="false"
+            @enter="data.onEnter"
+            @leave="data.onLeave"
+          >
+            ${slot}
+          </Transition>
+        </template>`,
+        App: `<template>
+          <components.Comp>
+            ${app}
+          </components.Comp>
+        </template>`,
+      },
+      { show: true, ...init },
+      [{ set: { on: !init.on }, text }],
+    )
+    expect(vapor.trace).toEqual(vdom.trace)
+    expect(vapor.settled).toEqual([text])
+  })
+})
+
+// The child renders its root after the Transition applied its hooks. Async
+// setup needs a Suspense, which only vdom provides, so the root is vdom in
+// both modes.
+describe('a child rendering its root after the hooks were applied, like vdom', () => {
+  type Step = 'on' | 'off' | 'ready' | 'done'
+
+  async function parity(
+    mode: string,
+    content: string,
+    init: Record<string, any>,
+    steps: Step[],
+    // the Transition stays vdom: its hooks are relayed to the vapor child
+    vdomHost = false,
+  ) {
+    const srcs: Record<string, string> = {
+      Item: `<template><div class="item">item</div></template>`,
+      AsyncItem: `
+        <script setup>
+        await Promise.resolve()
+        </script>
+        <template><div class="item">item</div></template>`,
+      Wrapper: `<template><components.AsyncItem /></template>`,
+      LateItem: `
+        <template>
+          <div v-if="data.ready" class="item">item</div>
+        </template>`,
+      Host: `
+        <template>
+          <Transition
+            ${mode === 'default' ? '' : `mode="${mode}"`}
+            :css="false"
+            @before-enter="data.onBeforeEnter"
+            @leave="data.onLeave"
+          >
+            ${content}
+            <div v-else class="fallback">fb</div>
+          </Transition>
+        </template>`,
+      App: `
+        <template>
+          <Suspense><components.Host /></Suspense>
+        </template>`,
+    }
+    const logs: Record<string, string[]> = {}
+    for (const vapor of [false, true]) {
+      const log: string[] = (logs[vapor ? 'vapor' : 'vdom'] = [])
+      const data = ref<any>({
+        ...init,
+        dones: [] as (() => void)[],
+        onBeforeEnter: (el: Element) => log.push('enter:' + el.className),
+        onLeave: (el: Element, done: () => void) => {
+          log.push('leave:' + el.className)
+          data.value.dones.push(done)
+        },
+      })
+      const components: Record<string, any> = {}
+      for (const name in srcs) {
+        const src = srcs[name].includes('<script')
+          ? srcs[name]
+          : `<script setup>const data = _data; const components = _components;</script>` +
+            srcs[name]
+        components[name] = compile(src, data, components, {
+          vapor: vapor && name !== 'App' && !(vdomHost && name === 'Host'),
+        })
+      }
+      const load = () => Promise.resolve(components.Item)
+      components.Lazy = vapor
+        ? defineVaporAsyncComponent(load)
+        : defineAsyncComponent(load)
+      const root = document.createElement('div')
+      const app = createApp(components.App).use(vaporInteropPlugin)
+      app.mount(root)
+      const dom = () =>
+        Array.from(root.querySelectorAll('div'))
+          .map(el => el.className)
+          .join(',')
+      await new Promise(r => setTimeout(r))
+      log.push('init ' + dom())
+      for (const step of steps) {
+        if (step === 'done') {
+          const done = data.value.dones.shift()
+          if (done) done()
+        } else if (step === 'ready') {
+          data.value.ready = true
+        } else {
+          data.value.show = step === 'on'
+        }
+        await new Promise(r => setTimeout(r))
+        log.push(step + ' ' + dom())
+      }
+      app.unmount()
+    }
+    expect(logs.vapor).toEqual(logs.vdom)
+  }
+
+  const children: Record<string, string> = {
+    'an async setup component': `<components.AsyncItem v-if="data.show" />`,
+    'a component rooted in one': `<components.Wrapper v-if="data.show" />`,
+    'an async wrapper loading': `<components.Lazy v-if="data.show" />`,
+  }
+
+  describe.each(['out-in', 'in-out', 'default'])('%s', mode => {
+    test.each(Object.entries(children))(
+      '%s enters once its setup resolves',
+      (_, content) => parity(mode, content, { show: false }, ['on', 'done']),
+    )
+
+    test.each(Object.entries(children))(
+      '%s rendered while the Transition mounts leaves',
+      (_, content) => parity(mode, content, { show: true }, ['off', 'done']),
+    )
+  })
+
+  test.each(['out-in', 'in-out'])(
+    '%s: a component whose own root renders later leaves',
+    mode =>
+      parity(
+        mode,
+        `<components.LateItem v-if="data.show" />`,
+        { show: true, ready: false },
+        ['ready', 'off', 'done'],
+      ),
+  )
+
+  describe.each(['out-in', 'in-out', 'default'])(
+    'under a vdom Transition, %s',
+    mode => {
+      test.each([
+        ['an async setup component', children['an async setup component']],
+        ['a component rooted in one', children['a component rooted in one']],
+      ])('%s enters once its setup resolves', (_, content) =>
+        parity(mode, content, { show: false }, ['on', 'done'], true),
+      )
+    },
+  )
+})
+
+describe('out-in: a branch leaving to nothing holds back no branch', () => {
+  // The branch that left to nothing is vdom's comment child, which out-in
+  // does not wait for: content back during the leave enters at once.
+  const content = `<div v-if="data.show" class="content">c</div>`
+  const shapes: Record<string, Record<string, string>> = {
+    'a v-if': {
+      App: outIn(content),
+    },
+    'slot content of an outlet with no fallback': {
+      Outer: outIn(`<slot></slot>`),
+      App: `
+        <template>
+          <components.Outer>${content}</components.Outer>
+        </template>`,
+    },
+    'slot content forwarded through an outlet with no fallback': {
+      Outer: outIn(`<slot></slot>`),
+      Middle: `
+        <template>
+          <components.Outer><slot /></components.Outer>
+        </template>`,
+      App: `
+        <template>
+          <components.Middle>${content}</components.Middle>
+        </template>`,
+    },
+    'a conditional slot': {
+      Outer: outIn(`<slot></slot>`),
+      App: `
+        <template>
+          <components.Outer>
+            <template v-if="data.show" #default>
+              <div class="content">c</div>
+            </template>
+          </components.Outer>
+        </template>`,
+    },
+    'a v-if under KeepAlive': {
+      Child: `
+        <template>
+          <div class="content">c</div>
+        </template>`,
+      App: outIn(`
+        <KeepAlive>
+          <components.Child v-if="data.show" />
+        </KeepAlive>`),
+    },
+  }
+
+  describe.each(Object.entries(shapes))('%s', (_, srcs) => {
+    test('back while it leaves', () =>
+      runOutInSteps(srcs, { show: true }, [
+        'show=false',
+        'show=true',
+        'done',
+        'show=false',
+        'done',
+      ]))
+
+    test('back and off again while it leaves', () =>
+      runOutInSteps(srcs, { show: true }, [
+        'show=false',
+        'show=true',
+        'show=false',
+        'done',
+        'done',
+        'show=true',
+        'done',
+      ]))
+  })
+
+  // vdom removes a leaving element early only for the same key and type:
+  // another vnode back leaves the one that left to nothing where it is
+  const vnodeComps: Record<string, any> = {
+    a: defineComponent({ render: () => h('div', { class: 'a' }, 'a') }),
+    b: defineComponent({ render: () => h('div', { class: 'b' }, 'b') }),
+  }
+  test.each([
+    [
+      'an element vnode',
+      (k: string) => h(k === 'a' ? 'div' : 'p', { class: k }),
+    ],
+    ['a vdom component vnode', (k: string) => h(vnodeComps[k])],
+  ])('%s back as another one while it leaves', (_, vn) =>
+    runOutInSteps(
+      {
+        App: outIn(`
+          <component :is="data.show ? data.vn(data.next ? 'b' : 'a') : null" />`),
+      },
+      { show: true, next: false, vn },
+      ['show=false', 'next=true', 'show=true', 'done', 'done'],
+    ),
+  )
+})
+
+describe('a vdom Transition around a vapor child whose root is a slot outlet', () => {
+  // vapor vs vdom children under the same vdom Transition: hook order and the
+  // DOM after every step. Its hooks are resolved for the child's vnode, whose
+  // root vdom can't animate (a fragment): the fallback and the content are no
+  // same-key elements to each other, and none early-removes the other's leave.
+  async function parity(
+    srcs: Record<string, string>,
+    mode: string,
+    steps: string[],
+    {
+      child = `<components.Panel :show="data.show" />`,
+      fragmentRoot = true,
+      // compiled as vdom children in both runs
+      vdom = [] as string[],
+    } = {},
+  ): Promise<void> {
+    const logs: Record<string, string[]> = {}
+    for (const vapor of [false, true]) {
+      const log: string[] = (logs[vapor ? 'vapor' : 'vdom'] = [])
+      const data = ref<any>({
+        show: false,
+        dones: [] as (() => void)[],
+        be: (el: Element) => log.push('be:' + el.className),
+        e: (el: Element) => log.push('e:' + el.className),
+        ae: (el: Element) => log.push('ae:' + el.className),
+        l: (el: Element, done: () => void) => {
+          log.push('l:' + el.className)
+          data.value.dones.push(done)
+        },
+        // the handler the Transition is re-rendered with ('next')
+        l2: (el: Element, done: () => void) => {
+          log.push('l2:' + el.className)
+          data.value.dones.push(done)
+        },
+        al: (el: Element) => log.push('al:' + el.className),
+      })
+      const components: Record<string, any> = {}
+      const script = `<script setup>const data = _data; const components = _components;</script>`
+      for (const name in srcs) {
+        const src = srcs[name].includes('<script')
+          ? srcs[name]
+          : script + srcs[name]
+        components[name] = compile(src, data, components, {
+          vapor: vapor && !vdom.includes(name),
+        })
+      }
+      const App = compile(
+        script +
+          `<template>
+            <Transition
+              ${mode ? `mode="${mode}"` : ''}
+              :css="false"
+              @before-enter="data.be"
+              @enter="data.e"
+              @after-enter="data.ae"
+              :on-leave="data.next ? data.l2 : data.l"
+              @after-leave="data.al"
+            >
+              ${child}
+            </Transition>
+          </template>`,
+        data,
+        components,
+        { vapor: false },
+      )
+      // a v-show root animates in the document only
+      const root = document.body.appendChild(document.createElement('div'))
+      const app = createApp(App).use(vaporInteropPlugin)
+      app.mount(root)
+      // a step's actions run in one tick
+      for (const s of steps) {
+        for (const a of s.split(' ')) {
+          if (a === 'done') {
+            const done = data.value.dones.shift()
+            if (done) done()
+          } else if (a === 'next') {
+            data.value.next = true
+          } else {
+            data.value.show = a === 'on'
+          }
+        }
+        await nextTick()
+        log.push(s + ' ' + stripAnchors(root.innerHTML))
+      }
+      app.unmount()
+      root.remove()
+    }
+    // vdom: the child's root is a fragment
+    if (fragmentRoot) {
+      expect(
+        'Component inside <Transition> renders non-element root node',
+      ).toHaveBeenWarned()
+    }
+    expect(logs.vapor).toEqual(logs.vdom)
+  }
+
+  const outlet = `
+    <template>
+      <slot><p class="fallback">fallback</p></slot>
+    </template>`
+  const shapes: Record<string, Record<string, string>> = {
+    'its own outlet': {
+      Outlet: outlet,
+      Panel: `
+        <script setup>
+          defineProps({ show: Boolean })
+          const components = _components
+        </script>
+        <template>
+          <components.Outlet>
+            <div v-if="show" class="content">content</div>
+          </components.Outlet>
+        </template>`,
+    },
+    'an outlet it forwards its slot to': {
+      Outlet: outlet,
+      Mid: `
+        <template>
+          <components.Outlet><slot /></components.Outlet>
+        </template>`,
+      Panel: `
+        <script setup>
+          defineProps({ show: Boolean })
+          const components = _components
+        </script>
+        <template>
+          <components.Mid>
+            <div v-if="show" class="content">content</div>
+          </components.Mid>
+        </template>`,
+    },
+  }
+
+  describe.each(Object.entries(shapes))('%s', (_, srcs) => {
+    test.each(['out-in', 'in-out', ''])(
+      'the content in and out, each leave done first (mode "%s")',
+      mode => parity(srcs, mode, ['on', 'done', 'off', 'done']),
+    )
+
+    test.each(['out-in', 'in-out', ''])(
+      'the content in and out while the fallback leaves (mode "%s")',
+      mode => parity(srcs, mode, ['on', 'off', 'done', 'done']),
+    )
+  })
+
+  // the child switches on its own: no parent patch re-reads its root
+  test('the content in and out by the child itself', () =>
+    parity(
+      {
+        Outlet: outlet,
+        Panel: `
+          <template>
+            <components.Outlet>
+              <div v-if="data.show" class="content">content</div>
+            </components.Outlet>
+          </template>`,
+      },
+      '',
+      ['on', 'off', 'done', 'done'],
+      { child: `<components.Panel />` },
+    ))
+
+  // vdom: a root the update replaces leaves with the hooks it rendered with,
+  // the root it patches takes the new ones
+  test('the content replaced as the Transition re-renders with a new hook', () =>
+    parity(shapes['its own outlet'], '', ['on', 'done', 'next off', 'done']))
+
+  test('a v-show root toggled as the Transition re-renders with a new hook', () =>
+    parity(
+      {
+        Panel: `
+          <script setup>
+            defineProps({ show: Boolean })
+          </script>
+          <template>
+            <div v-show="show" class="content">content</div>
+          </template>`,
+      },
+      '',
+      ['on', 'next off', 'done'],
+      { fragmentRoot: false },
+    ))
+
+  test('a vdom fallback component replaced by the content', () =>
+    parity(
+      {
+        Fallback: `
+          <template>
+            <p class="fallback">fallback</p>
+          </template>`,
+        Outlet: `
+          <template>
+            <slot><components.Fallback /></slot>
+          </template>`,
+        Panel: shapes['its own outlet'].Panel,
+      },
+      '',
+      ['on', 'off', 'done', 'done'],
+      { vdom: ['Fallback'] },
+    ))
+
+  // the flush that patched the child switches the Transition away from it:
+  // the leaving hooks the Transition installs carry the mode's handoff
+  test.each(['out-in', 'in-out'])(
+    'the child switched away in the flush that patched it (mode "%s")',
+    mode =>
+      parity(
+        {
+          Panel: `
+            <script setup>
+              import { watch } from 'vue'
+              const props = defineProps({ show: Boolean })
+              const emit = defineEmits(['flip'])
+              watch(() => props.show, () => emit('flip'))
+            </script>
+            <template>
+              <div class="panel">panel</div>
+            </template>`,
+        },
+        mode,
+        ['on', 'done', 'done'],
+        {
+          child: `
+            <components.Panel
+              v-if="!data.flipped"
+              :show="data.show"
+              @flip="data.flipped = true"
+            />
+            <p v-else class="other">other</p>`,
+          fragmentRoot: false,
+        },
+      ),
+  )
+})
+
+describe('a Transition unmounted while its child leaves', () => {
+  // vdom leaves an unmounted child in the DOM until its leave ends, also when
+  // the Transition itself goes away meanwhile
+  const holders: Record<string, string> = {
+    'a child leaving to nothing': `
+      <span v-if="data.show" class="a">a</span>`,
+    'a child switched to another': `
+      <span v-if="data.show" class="a">a</span>
+      <b v-else class="b">b</b>`,
+    'slot content leaving to the fallback': `
+      <slot><i class="fallback">fb</i></slot>`,
+  }
+
+  async function parity(
+    holder: string,
+    mode: string,
+    unmount: 'v-if' | 'app.unmount()',
+    app: 'vapor' | 'vdom',
+  ) {
+    const logs: Record<string, string[]> = {}
+    for (const vapor of [false, true]) {
+      const log: string[] = (logs[vapor ? 'vapor' : 'vdom'] = [])
+      const data = ref<any>({
+        show: true,
+        alive: true,
+        dones: [] as (() => void)[],
+        l: (el: Element, done: () => void) => {
+          log.push('l:' + el.className)
+          data.value.dones.push(done)
+        },
+        al: (el: Element) => log.push('al:' + el.className),
+        lc: (el: Element) => log.push('lc:' + el.className),
+      })
+      const script = `<script setup>const data = _data; const components = _components;</script>`
+      const components: Record<string, any> = {}
+      components.Holder = compile(
+        script +
+          `<template>
+            <Transition
+              ${mode ? `mode="${mode}"` : ''}
+              :css="false"
+              @leave="data.l"
+              @after-leave="data.al"
+              @leave-cancelled="data.lc"
+            >
+              ${holders[holder]}
+            </Transition>
+          </template>`,
+        data,
+        components,
+        { vapor },
+      )
+      const appVapor = vapor && app === 'vapor'
+      const App = compile(
+        script +
+          `<template>
+            <components.Holder v-if="data.alive">
+              <span v-if="data.show" class="a">a</span>
+            </components.Holder>
+          </template>`,
+        data,
+        components,
+        { vapor: appVapor },
+      )
+      const root = document.createElement('div')
+      const instance = (appVapor ? createVaporApp(App) : createApp(App)).use(
+        vaporInteropPlugin,
+      )
+      instance.mount(root)
+      data.value.show = false
+      await nextTick()
+      log.push('off ' + stripAnchors(root.innerHTML))
+      if (unmount === 'app.unmount()') {
+        instance.unmount()
+      } else {
+        data.value.alive = false
+        await nextTick()
+      }
+      log.push('unmount ' + stripAnchors(root.innerHTML))
+      for (const done of data.value.dones.splice(0)) done()
+      await nextTick()
+      log.push('done ' + stripAnchors(root.innerHTML))
+      if (unmount === 'v-if') instance.unmount()
+    }
+    expect(logs.vapor).toEqual(logs.vdom)
+  }
+
+  for (const app of ['vapor', 'vdom'] as const) {
+    describe(`under a ${app} app`, () => {
+      for (const holder in holders) {
+        for (const unmount of ['v-if', 'app.unmount()'] as const) {
+          test.each(['out-in', 'in-out', ''])(
+            `${holder}, unmounted by ${unmount} (mode %j)`,
+            mode => parity(holder, mode, unmount, app),
+          )
+        }
+      }
+    })
+  }
+})
+
+// Mounts `srcs` as a vdom and as a vapor app with an error handler, runs the
+// steps (objects assigned to the data), releases the leaves and returns the
+// errors each app reported.
+async function errors(
+  srcs: Record<string, string>,
+  init: Record<string, any>,
+  steps: Record<string, any>[],
+) {
+  const logs: Record<string, string[]> = {}
+  for (const vapor of [false, true]) {
+    const log: string[] = (logs[vapor ? 'vapor' : 'vdom'] = [])
+    const data: any = ref({
+      ...init,
+      dones: [] as (() => void)[],
+      l: (_el: Element, done: () => void) => data.value.dones.push(done),
+      fail: () => {
+        throw new Error('boom')
+      },
+    })
+    const components: Record<string, any> = {}
+    const withScript = (src: string) =>
+      `<script setup>const data = _data; const components = _components;</script>` +
+      src
+    for (const name in srcs) {
+      if (name !== 'App') {
+        components[name] = compile(withScript(srcs[name]), data, components, {
+          vapor,
+        })
+      }
+    }
+    const App = compile(withScript(srcs.App), data, components, { vapor })
+    const root = document.createElement('div')
+    const app = (vapor ? createVaporApp(App) : createApp(App)).use(
+      vaporInteropPlugin,
+    )
+    app.config.errorHandler = err => log.push((err as Error).message)
+    app.mount(root)
+    try {
+      for (const step of steps) {
+        Object.assign(data.value, step)
+        await nextTick()
+      }
+      for (const done of data.value.dones.splice(0)) done()
+      await nextTick()
+    } catch (err) {
+      log.push('uncaught ' + (err as Error).message)
+    }
+    app.unmount()
+  }
+  return logs
+}
+
+describe('out-in: a branch rendered from the leave', () => {
+  // like vdom's afterLeave re-render, the resumed render reports its error
+  // through the component's error handling instead of the leave's done()
+  test('an error while the next branch renders reaches the error handler', async () => {
+    expect(
+      await errors(
+        {
+          App: `
+          <template>
+            <Transition mode="out-in" :css="false" @leave="data.l">
+              <div v-if="data.a" class="a">a</div>
+              <div v-else class="b">{{ data.fail() }}</div>
+            </Transition>
+          </template>`,
+        },
+        { a: true },
+        [{ a: false }],
+      ),
+    ).toEqual({ vdom: ['boom'], vapor: ['boom'] })
+  })
+
+  // the inner branch leaves first; the outer switch held meanwhile renders
+  // from its afterLeave. vdom renders the held child once more while holding
+  // it (the slot is read before the isLeaving check); vapor defers the render.
+  test('an error while an outer switch renders reaches the error handler', async () => {
+    expect(
+      await errors(
+        {
+          App: `
+          <template>
+            <Transition mode="out-in" :css="false" @leave="data.l">
+              <div v-if="data.a" class="a">{{ data.fail() }}</div>
+              <i v-else-if="data.inner" class="i1">i1</i>
+              <span v-else class="i2">i2</span>
+            </Transition>
+          </template>`,
+        },
+        { a: false, inner: true },
+        [{ inner: false }, { a: true }],
+      ),
+    ).toEqual({ vdom: ['boom', 'boom'], vapor: ['boom'] })
+  })
+
+  // the rendered branch leaves the enclosing outlet without content: its
+  // fallback renders from the recheck after the branch, under the same handling
+  test('an error in the enclosing outlet fallback after the branch renders reaches the error handler', async () => {
+    expect(
+      await errors(
+        {
+          Outer: `
+          <template>
+            <Transition mode="out-in" :css="false" @leave="data.l">
+              <slot><div class="fallback">{{ data.fail() }}</div></slot>
+            </Transition>
+          </template>`,
+          Mid: `
+          <template>
+            <components.Outer>
+              <slot v-if="data.a"><div class="a">a</div></slot>
+              <slot v-else name="y" />
+            </components.Outer>
+          </template>`,
+          App: `<template><components.Mid /></template>`,
+        },
+        { a: true },
+        [{ a: false }],
+      ),
+    ).toEqual({ vdom: ['boom'], vapor: ['boom'] })
+  })
+})
+
+describe('out-in branch resumed from afterLeave holding a slot outlet', () => {
+  // vdom re-renders Transition's child after the leave: the outer outlet
+  // sees the branch rendered then as its content, never its fallback
+  test.each<[string, string, string[]]>([
+    [
+      'the leaving branch re-entering',
+      `<slot v-if="data.a"><div class="a">a</div></slot>
+      <div v-else class="b">b</div>`,
+      ['a=false', 'a=true', 'done'],
+    ],
+    [
+      'another branch holding an outlet',
+      `<slot v-if="data.a" name="x"><div class="a">a</div></slot>
+      <slot v-else name="y"><div class="c">c</div></slot>`,
+      ['a=false', 'done'],
+    ],
+    [
+      'the leaving branch re-entering under a template root',
+      `<template v-if="data.x">
+        <slot v-if="data.a"><div class="a">a</div></slot>
+        <div v-else class="b">b</div>
+      </template>`,
+      ['a=false', 'a=true', 'done'],
+    ],
+    [
+      'an outer switch to a branch holding an outlet',
+      `<template v-if="data.x">
+        <slot v-if="data.a"><div class="a">a</div></slot>
+        <div v-else class="b">b</div>
+      </template>
+      <slot v-else name="z"><div class="d">d</div></slot>`,
+      ['a=false', 'x=false', 'done'],
+    ],
+  ])('%s', (_, mid, steps) =>
+    runOutInSteps(
+      {
+        Outer: outIn(`<slot><div class="fallback">fb</div></slot>`),
+        Mid: `
+          <template>
+            <components.Outer>${mid}</components.Outer>
+          </template>`,
+        App: `<template><components.Mid /></template>`,
+      },
+      { a: true, x: true },
+      steps,
+    ),
+  )
+})
+
+describe('in-out: a slot fallback entering keeps the leave it was handed', () => {
+  // vdom vs vapor: hook order and the DOM after every step. The leave of
+  // content that left is handed to the fallback's enter; content coming back
+  // before that enter ends does not take it over.
+  async function parity(content: string, steps: string[]) {
+    const logs: Record<string, string[]> = {}
+    await renderParity(
+      {
+        Outer: `
+          <template>
+            <Transition
+              mode="in-out"
+              :css="false"
+              @before-enter="data.be"
+              @enter="data.e"
+              @leave="data.l"
+              @after-leave="data.al"
+            >
+              <slot><div class="fallback">fb</div></slot>
+            </Transition>
+          </template>`,
+        App: `
+          <template>
+            <components.Outer>${content}</components.Outer>
+          </template>`,
+      },
+      () => {
+        const data: any = ref({
+          tag: 'section',
+          enters: [] as (() => void)[],
+          leaves: [] as (() => void)[],
+          log: [] as string[],
+          be: (el: Element) => data.value.log.push('be:' + el.className),
+          e: (el: Element, done: () => void) => {
+            data.value.log.push('e:' + el.className)
+            data.value.enters.push(done)
+          },
+          l: (el: Element, done: () => void) => {
+            data.value.log.push('l:' + el.className)
+            data.value.leaves.push(done)
+          },
+          al: (el: Element) => data.value.log.push('al:' + el.className),
+        })
+        return data
+      },
+      async (data, root, m) => {
+        const log: string[] = (logs[m] = data.value.log)
+        for (const s of steps) {
+          if (s === 'entered' || s === 'enteredLast') {
+            const done = data.value.enters[s === 'entered' ? 'shift' : 'pop']()
+            if (done) done()
+          } else if (s === 'left') {
+            const done = data.value.leaves.shift()
+            if (done) done()
+          } else {
+            const [k, v] = s.split('=')
+            data.value[k] = v === 'null' ? null : v
+          }
+          await nextTick()
+          log.push(s + ' ' + stripAnchors(root.innerHTML))
+        }
+      },
+    )
+    expect(logs.vapor).toEqual(logs.vdom)
+  }
+
+  const content = `<component :is="data.tag" :class="data.tag">x</component>`
+
+  test('the fallback enters before the content back leaves it', () =>
+    parity(content, ['tag=null', 'tag=article', 'entered', 'left', 'left']))
+
+  // coverage guard: the fallback's leave, once the content entered, cancels
+  // its enter, which runs the leave it holds
+  test('the content entering cancels the fallback enter', () =>
+    parity(content, ['tag=null', 'tag=article', 'enteredLast', 'left', 'left']))
+
+  // coverage guard: the handoff ran before the content came back
+  test('the fallback entered before the content comes back', () =>
+    parity(content, [
+      'tag=null',
+      'entered',
+      'left',
+      'tag=article',
+      'entered',
+      'left',
+    ]))
+})
+
+describe('in-out: a kept-alive vdom child switched back while it leaves', () => {
+  // vapor vs vdom: hook order and the DOM after every step. The child
+  // activated from the KeepAlive cache enters under the hooks resolved for
+  // this switch, which hold the leave of the branch it replaces.
+  async function run(
+    vapor: boolean,
+    child: 'component' | 'vnode' | 'vapor-vnode',
+  ) {
+    const data: any = ref({
+      a: true,
+      va: null,
+      vb: null,
+      log: [] as string[],
+      leaves: [] as (() => void)[],
+      onLeave: (el: Element, done: () => void) => {
+        data.value.log.push('l:' + el.tagName)
+        data.value.leaves.push(done)
+      },
+      onAfterLeave: (el: Element) => data.value.log.push('al:' + el.tagName),
+    })
+    const components: Record<string, any> = {}
+    const sfc = (template: string) =>
+      `<script setup>const data = _data; const components = _components</script>${template}`
+    components.A = compile(
+      sfc(`
+        <template>
+          <div><b>a</b></div>
+        </template>`),
+      data,
+      components,
+      { vapor: child === 'vapor-vnode' },
+    )
+    components.B = compile(
+      sfc(`
+        <template>
+          <i>b</i>
+        </template>`),
+      data,
+      components,
+      { vapor },
+    )
+    data.value.va = h(components.A)
+    data.value.vb = h(components.B)
+    const is =
+      child === 'component'
+        ? 'data.a ? components.A : components.B'
+        : 'data.a ? data.va : data.vb'
+    const App = compile(
+      sfc(`
+        <template>
+          <Transition
+            mode="in-out"
+            :css="false"
+            @leave="data.onLeave"
+            @after-leave="data.onAfterLeave"
+          >
+            <KeepAlive><component :is="${is}" /></KeepAlive>
+          </Transition>
+        </template>`),
+      data,
+      components,
+      { vapor },
+    )
+    const container = document.createElement('div')
+    document.body.appendChild(container)
+    if (vapor) createVaporApp(App).use(vaporInteropPlugin).mount(container)
+    else createApp(App).use(vaporInteropPlugin).mount(container)
+    const frames: string[] = []
+    const frame = (step: string) =>
+      frames.push(
+        `${step} ${stripAnchors(container.innerHTML)} ${data.value.log.join(',')}`,
+      )
+    for (const step of ['B', 'A', 'done', 'done']) {
+      if (step === 'done') data.value.leaves.shift()!()
+      else data.value.a = step === 'A'
+      await nextTick()
+      frame(step)
+    }
+    container.remove()
+    return frames
+  }
+
+  test.each(['component', 'vnode', 'vapor-vnode'] as const)(
+    'the branch it replaces leaves after its enter (%s child)',
+    async child => {
+      const vdom = await run(false, child)
+      expect(vdom[3]).toBe('done <div><b>a</b></div> l:DIV,l:I,al:I')
+      expect(await run(true, child)).toEqual(vdom)
+    },
+  )
+})
+
+describe('sibling v-if roots of slot content swapping', () => {
+  // vdom's Transition sees the one root that is not a comment: two v-if roots
+  // swapping are one child switching, run by the mode
+  const modes = ['', 'out-in', 'in-out']
+  const fallback = '<div class="fallback">fb</div>'
+  const outer = (mode: string, fallback: string) => `
+    <template>
+      <Transition
+        ${mode ? `mode="${mode}"` : ''}
+        :css="false"
+        @before-enter="data.be"
+        @leave="data.l"
+        @after-leave="data.al"
+      >
+        <slot>${fallback}</slot>
+      </Transition>
+    </template>`
+  const roots = {
+    A: `
+      <template>
+        <div class="a">a</div>
+      </template>`,
+    B: `
+      <template>
+        <div class="b">b</div>
+      </template>`,
+  }
+  const app = (content: string) => `
+    <template>
+      <components.Outer>${content}</components.Outer>
+    </template>`
+
+  const fallbacks: Record<string, string> = {
+    'no fallback': '',
+    'a fallback': fallback,
+  }
+  const contents: Record<string, string> = {
+    elements: `
+      <div v-if="data.a" class="a">a</div>
+      <div v-if="data.b" class="b">b</div>`,
+    components: `
+      <components.A v-if="data.a" />
+      <components.B v-if="data.b" />`,
+  }
+  const sequences: Record<string, { steps: string[]; unordered?: boolean }> = {
+    'swapped in one tick': { steps: ['a=false,b=true', 'done', 'done'] },
+    'swapped back while the first leaves': {
+      steps: ['a=false,b=true', 'a=true,b=false', 'done', 'done'],
+      unordered: true,
+    },
+    // the root entering updates before the one leaving
+    'swapped back after the first left': {
+      steps: [
+        'a=false,b=true',
+        'done',
+        'done',
+        'a=true,b=false',
+        'done',
+        'done',
+      ],
+      unordered: true,
+    },
+    // vdom pairs a leave and an enter of one render only
+    'left and entered in different ticks': {
+      steps: ['a=false', 'b=true', 'done', 'done'],
+    },
+  }
+
+  for (const mode of modes) {
+    for (const name in fallbacks) {
+      for (const content in contents) {
+        test.each(Object.keys(sequences))(
+          `${content}, ${name} (mode ${JSON.stringify(mode)}), %s`,
+          sequence =>
+            runOutInSteps(
+              {
+                ...roots,
+                Outer: outer(mode, fallbacks[name]),
+                App: app(contents[content]),
+              },
+              { a: true, b: false },
+              sequences[sequence].steps,
+              sequences[sequence],
+            ),
+        )
+      }
+    }
+  }
+
+  // the branch rendered once the siblings settled goes invalid itself
+  test('a validity flip produced while the siblings settle reports at once', () =>
+    runOutInSteps(
+      {
+        Empty: `
+          <template>
+            <i v-if="data.never" />
+          </template>`,
+        Outer: outer('', fallback),
+        App: app(`
+          <components.Empty v-if="data.a" />
+          <div v-else-if="data.c" class="c">c</div>
+          <div v-if="data.b" class="b">b</div>`),
+      },
+      { a: true, b: false, c: false, never: false },
+      ['a=false', 'done'],
+    ))
+
+  // NON-ALIGNED hooks: vdom patches one into the other, with no hooks; vapor
+  // early-removes the one leaving as the other enters
+  test('roots with the same explicit key are one root', () =>
+    runOutInSteps(
+      {
+        Outer: outer('', ''),
+        App: app(`
+          <div v-if="data.a" key="same" class="a">a</div>
+          <div v-if="data.b" key="same" class="b">b</div>`),
+      },
+      { a: true, b: false },
+      ['a=false,b=true', 'done'],
+      { domOnly: true },
+    ))
+
+  // the generated branch keys of a chain compose under its position: a root
+  // beside it never shares them
+  test.each(modes)(
+    'a branch of a chain beside a root keeps its own identity (mode %j)',
+    mode =>
+      runOutInSteps(
+        {
+          Outer: outer(mode, ''),
+          App: app(`
+            <div v-if="data.n === 0" class="a">a</div>
+            <div v-else-if="data.n === 1" class="b">b</div>
+            <div v-if="data.n === 2" class="c">c</div>`),
+        },
+        { n: 1 },
+        ['n=2', 'done', 'done'],
+        { unordered: true },
+      ),
+  )
+
+  // the rows compose under the position of the list
+  test('a v-for beside a v-if keeps the position of the list', () =>
+    runOutInSteps(
+      {
+        Outer: outer('', ''),
+        App: app(`
+          <div v-if="data.a" class="a">a</div>
+          <div v-for="i in data.items" class="b">b</div>`),
+      },
+      { a: false, items: [1] },
+      ['a=true,items=[]', 'done'],
+      { unordered: true },
+    ))
+
+  // the branch keeps its key over the comment beside its root
+  test.each(modes)(
+    'a commented template branch back while it leaves (mode %j)',
+    mode =>
+      runOutInSteps(
+        {
+          Outer: outer(mode, ''),
+          App: app(`
+            <template v-if="data.show">
+              <!-- c -->
+              <div class="a">a</div>
+            </template>`),
+        },
+        { show: true },
+        ['show=false', 'show=true', 'done', 'done'],
+      ),
+  )
+
+  const nested: Record<string, string> = {
+    // the outlet inside the root entering notifies the enclosing one while
+    // the root renders: that one decides once the root is in place
+    'a nested outlet entering as a sibling root': `
+      <slot v-if="data.a"><div class="a">a</div></slot>
+      <div v-if="data.b" class="b">b</div>`,
+    // a fallback body reports through a copy of its provider's boundary
+    'sibling roots in a fallback body': `
+      <slot>
+        <slot v-if="data.a"><div class="a">a</div></slot>
+        <div v-if="data.b" class="b">b</div>
+      </slot>`,
+  }
+  for (const name in nested) {
+    test.each(modes)(`${name} mounts no outer fallback (mode %j)`, mode =>
+      runOutInSteps(
+        {
+          Outer: outer(mode, fallback),
+          Mid: app(nested[name]),
+          App: `
+            <template>
+              <components.Mid />
+            </template>`,
+        },
+        { a: false, b: true },
+        ['a=true,b=false', 'done', 'done'],
+        { unordered: true },
+      ),
+    )
+  }
+
+  // the leave ends with two fragments switched: the wrapper of the roots
+  // that swapped, and a sibling of its own beside it
+  test.each(Object.keys(fallbacks))(
+    'an out-in leave ending with a sibling switched beside the wrapper, %s',
+    name =>
+      runOutInSteps(
+        {
+          Outer: outer('out-in', fallbacks[name]),
+          App: app(`
+            <template v-if="data.a || data.b">
+              <div v-if="data.a" class="a">a</div>
+              <div v-if="data.b" class="b">b</div>
+            </template>
+            <div v-if="data.c" class="c">c</div>`),
+        },
+        { a: true, b: false, c: false },
+        ['a=false,b=true', 'b=false,c=true', 'done', 'done', 'done'],
+      ),
+  )
+
+  // the deferred render runs for the component rendering the roots, resumed
+  // by the leave (out-in) as well
+  test.each(['', 'out-in'])(
+    'an error while a sibling root renders reaches the error handler (mode %j)',
+    async mode =>
+      expect(
+        await errors(
+          {
+            Outer: `
+              <template>
+                <Transition ${mode ? `mode="${mode}"` : ''} :css="false" @leave="data.l">
+                  <slot />
+                </Transition>
+              </template>`,
+            App: app(`
+              <div v-if="data.a" class="a">{{ data.fail() }}</div>
+              <div v-if="data.b" class="b">b</div>`),
+          },
+          { a: false, b: true },
+          [{ a: true, b: false }],
+        ),
+      ).toEqual({ vdom: ['boom'], vapor: ['boom'] }),
+  )
+
+  test('a paired out-in swap constructs no fallback', () =>
+    runOutInSteps(
+      {
+        ...roots,
+        Fallback: `
+          <script setup>
+            const data = _data
+            data.value.log.push('setup:fallback')
+          </script>
+          <template>
+            <div class="fallback">fb</div>
+          </template>`,
+        Outer: outer('out-in', '<components.Fallback />'),
+        App: app(contents.components),
+      },
+      { a: false, b: true },
+      ['a=true,b=false', 'done'],
+    ))
+
+  // vdom flattens a forwarded slot's fragment into the roots beside it: a
+  // root of the forwarding component swaps with one of its slot content.
+  // Mode "" and the fallback cells are coverage guards
+  const forwarded = (fallback: string) =>
+    app(`
+      <div v-if="data.m" class="m">m</div>
+      <slot>${fallback}</slot>`)
+  const forwardedApp = `
+    <template>
+      <components.Mid>
+        <div v-if="data.a" class="a">a</div>
+      </components.Mid>
+    </template>`
+  for (const mode of modes) {
+    test.each<[Record<string, boolean>, string]>([
+      [{ a: true, m: false }, 'a=false,m=true'],
+      [{ a: false, m: true }, 'a=true,m=false'],
+    ])(
+      `a root beside a forwarded slot (mode ${JSON.stringify(mode)}), %j %s`,
+      (init, step) =>
+        runOutInSteps(
+          { Outer: outer(mode, ''), Mid: forwarded(''), App: forwardedApp },
+          init,
+          [step, 'done', 'done'],
+          { unordered: true },
+        ),
+    )
+
+    // the forwarded slot's fallback swaps with the content root the same way
+    test.each<[Record<string, boolean>, string]>([
+      [{ a: true, m: false }, 'a=false'],
+      [{ a: false, m: false }, 'a=true'],
+    ])(
+      `the fallback of a forwarded slot beside a root (mode ${JSON.stringify(mode)}), %j %s`,
+      (init, step) =>
+        runOutInSteps(
+          {
+            Outer: outer(mode, ''),
+            Mid: forwarded('<div class="mfb">mfb</div>'),
+            App: forwardedApp,
+          },
+          init,
+          [step, 'done', 'done'],
+          { unordered: true },
+        ),
+    )
+  }
+
+  // vapor only: vdom counts the component rendering nothing as a second
+  // child. A root switched while the leave ran leaves itself as it renders
+  // after it; the others switched wait on that leave in turn
+  test('a switched root leaving as it renders holds the others', async () => {
+    const { leaves, onLeave } = collectLeaves()
+    const data = ref({ a: true, g: true, s: false, never: false, l: onLeave })
+    const components: Record<string, any> = {}
+    components.Empty = compile(
+      `<template>
+        <i v-if="data.never" />
+      </template>`,
+      data,
+      components,
+    )
+    components.Outer = compile(
+      `<template>
+        <Transition mode="out-in" :css="false" @leave="data.l">
+          <slot />
+        </Transition>
+      </template>`,
+      data,
+      components,
+    )
+    const App = compile(
+      `<template>
+        <components.Outer>
+          <div v-if="data.a" class="a">a</div>
+          <components.Empty v-if="data.g" />
+          <div v-else class="g2">g2</div>
+          <div v-if="data.s" class="s">s</div>
+        </components.Outer>
+      </template>`,
+      data,
+      components,
+    )
+    const { host, app } = define(App).render()
+    data.value.a = false
+    data.value.s = true
+    await nextTick()
+    data.value.never = true
+    await nextTick()
+    data.value.g = false
+    await nextTick()
+    leaves.shift()!()
+    await nextTick()
+    expect(stripAnchors(host.innerHTML)).toBe('<i></i>')
+    leaves.shift()!()
+    await nextTick()
+    expect(stripAnchors(host.innerHTML)).toBe(
+      '<div class="g2">g2</div><div class="s">s</div>',
+    )
+    app.unmount()
+  })
+
+  // vapor only (several children, warned). A fragment
+  // switched to nothing while the leave ran leaves on its own as it renders
+  // after it; the branch leaving took its inner fragments with it, so one
+  // switched meanwhile renders nowhere
+  test('an inner fragment of a branch leaving as it renders stays torn down', async () => {
+    let renders = 0
+    const { leaves, onLeave } = collectLeaves()
+    const data: any = ref({
+      o: true,
+      i: true,
+      j: true,
+      t: 0,
+      l: onLeave,
+      mark: () => (renders++, data.value.t),
+    })
+    const components: Record<string, any> = {}
+    components.Outer = compile(
+      `<template>
+        <Transition mode="out-in" :css="false" @leave="data.l">
+          <slot />
+        </Transition>
+      </template>`,
+      data,
+      components,
+    )
+    const App = compile(
+      `<template>
+        <components.Outer>
+          <template v-if="data.o">
+            <div v-if="data.i" class="i1">i1</div>
+            <div v-else class="i2">i2</div>
+            <span v-if="data.j">j</span>
+            <b v-else>{{ data.mark() }}</b>
+          </template>
+        </components.Outer>
+      </template>`,
+      data,
+      components,
+    )
+    const { host, app } = define(App).render()
+    data.value.i = false
+    await nextTick()
+    data.value.o = false
+    data.value.j = false
+    await nextTick()
+    while (leaves.length) {
+      leaves.shift()!()
+      await nextTick()
+    }
+    expect(stripAnchors(host.innerHTML)).toBe('')
+    renders = 0
+    data.value.t = 1
+    await nextTick()
+    expect(renders).toBe(0)
+    app.unmount()
+    expect(
+      '<transition> can only be used on a single element',
+    ).toHaveBeenWarned()
+  })
+})
+
+describe('non-root transition fallthrough', () => {
+  // vdom merges the Transition's attrs into its child's props, layering
+  // class / style over the child's own ones
+  test('should merge its fallthrough class into its child', () => {
+    const data = ref({})
+    const App = compile(
+      `<template>
+        <div>
+          <Transition class="t">
+            <p class="y">z</p>
+          </Transition>
+        </div>
+      </template>`,
+      data,
+    )
+    const { host } = define(App).render()
+    expect(host.innerHTML).toBe('<div><p class="y t">z</p></div>')
+  })
+
+  test('should layer dynamic fallthrough class / style over its child', async () => {
+    const data = ref({ outer: 'o1', inner: 'i1', color: 'red' })
+    const App = compile(
+      `<template>
+        <div>
+          <Transition :class="data.outer" :style="{ color: data.color }">
+            <p class="y" :class="data.inner" style="font-size: 12px">z</p>
+          </Transition>
+        </div>
+      </template>`,
+      data,
+    )
+    const { host } = define(App).render()
+    const p = host.querySelector('p')!
+    expect([...p.classList].sort()).toEqual(['i1', 'o1', 'y'])
+    expect(p.getAttribute('style')).toBe('font-size: 12px; color: red;')
+
+    data.value.outer = 'o2'
+    data.value.inner = 'i2'
+    data.value.color = 'blue'
+    await nextTick()
+    expect([...p.classList].sort()).toEqual(['i2', 'o2', 'y'])
+    expect(p.getAttribute('style')).toBe('font-size: 12px; color: blue;')
+  })
+
+  test('should merge its fallthrough class into a v-if child under a v-for', async () => {
+    const data = ref({ list: [1, 2], ok: true })
+    const App = compile(
+      `<template>
+        <div v-for="i in data.list" :key="i">
+          <Transition class="t" :css="false">
+            <p v-if="data.ok" class="y">{{ i }}</p>
+            <b v-else class="n">{{ i }}</b>
+          </Transition>
+        </div>
+      </template>`,
+      data,
+    )
+    const { host } = define(App).render()
+    expect(stripAnchors(host.innerHTML)).toBe(
+      '<div><p class="y t">1</p></div><div><p class="y t">2</p></div>',
+    )
+
+    data.value.ok = false
+    await nextTick()
+    expect(stripAnchors(host.innerHTML)).toBe(
+      '<div><b class="n t">1</b></div><div><b class="n t">2</b></div>',
+    )
+  })
+})

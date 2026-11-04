@@ -5,9 +5,14 @@ import {
   createVNode,
   ssrContextKey,
   ssrUtils,
-} from 'vue'
-import { isPromise, isString } from '@vue/shared'
-import { type SSRBuffer, type SSRContext, renderComponentVNode } from './render'
+} from '@vue/runtime-dom'
+import { NOOP, isPromise, isString } from '@vue/shared'
+import {
+  type SSRBuffer,
+  type SSRContext,
+  cleanupContext,
+  renderComponentVNode,
+} from './render'
 
 const { isVNode } = ssrUtils
 
@@ -81,19 +86,50 @@ export async function renderToString(
   vnode.appContext = input._context
   // provide the ssr context to the tree
   input.provide(ssrContextKey, context)
-  const buffer = await renderComponentVNode(vnode)
-
-  const result = await unrollBuffer(buffer as SSRBuffer)
-
-  await resolveTeleports(context)
-
-  if (context.__watcherHandles) {
-    for (const unwatch of context.__watcherHandles) {
-      unwatch()
-    }
+  let buffer: SSRBuffer | undefined
+  let result: string
+  try {
+    buffer = await renderComponentVNode(vnode)
+    result = await unrollBuffer(buffer)
+    await resolveTeleports(context)
+  } catch (err) {
+    cleanupFailedRender(buffer, context)
+    throw err
   }
-
+  cleanupContext(context)
   return result
+}
+
+/**
+ * Stops watchers without masking the render error. Components after the
+ * failure point are still in flight and can register watchers once the render
+ * has settled, so those are stopped when they finish.
+ * Cleanup errors here have already been reported by the watcher.
+ */
+export function cleanupFailedRender(
+  buffer: SSRBuffer | undefined,
+  context: SSRContext,
+): void {
+  try {
+    cleanupContext(context)
+  } catch {}
+  ;(async () => {
+    if (buffer) await settleBuffer(buffer)
+    for (const key in context.__teleportBuffers) {
+      await settleBuffer(context.__teleportBuffers[key])
+    }
+    cleanupContext(context)
+  })().catch(NOOP)
+}
+
+async function settleBuffer(buffer: SSRBuffer): Promise<void> {
+  if (!buffer.hasAsync) return
+  for (let item of buffer) {
+    try {
+      if (isPromise(item)) item = await item
+      if (!isString(item)) await settleBuffer(item)
+    } catch {}
+  }
 }
 
 export async function resolveTeleports(context: SSRContext): Promise<void> {
@@ -103,7 +139,7 @@ export async function resolveTeleports(context: SSRContext): Promise<void> {
       // note: it's OK to await sequentially here because the Promises were
       // created eagerly in parallel.
       context.teleports[key] = await unrollBuffer(
-        await Promise.all([context.__teleportBuffers[key]]),
+        context.__teleportBuffers[key],
       )
     }
   }

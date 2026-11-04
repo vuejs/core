@@ -36,6 +36,7 @@ import type { TransitionGroupProps } from './components/TransitionGroup'
 import type { vShow } from './directives/vShow'
 import type { VOnDirective } from './directives/vOn'
 import type { VModelDirective } from './directives/vModel'
+import type { ClassValue, StyleValue } from './jsx'
 
 /**
  * This is a stub implementation to prevent the need to use dom types.
@@ -51,6 +52,11 @@ declare module '@vue/reactivity' {
 }
 
 declare module '@vue/runtime-core' {
+  interface AllowedAttrs {
+    class?: ClassValue
+    style?: StyleValue
+  }
+
   interface GlobalComponents {
     Transition: DefineComponent<TransitionProps>
     TransitionGroup: DefineComponent<TransitionGroupProps>
@@ -326,15 +332,23 @@ export { ensureRenderer, ensureHydrationRenderer, normalizeContainer }
 /**
  * @internal
  */
+export { patchClass } from './modules/class'
+/**
+ * @internal
+ */
 export { patchStyle } from './modules/style'
 /**
  * @internal
  */
-export { shouldSetAsProp } from './patchProp'
+export { parseEventName } from './modules/events'
 /**
  * @internal
  */
-export { baseUseCssVars, setVarsOnNode } from './helpers/useCssVars'
+export { shouldSetAsProp, shouldSetAsPropForVueCE } from './patchProp'
+/**
+ * @internal
+ */
+export { setVarsOnNode } from './helpers/useCssVars'
 /**
  * @internal
  */
@@ -380,6 +394,10 @@ export {
   callPendingCbs,
   handleMovedChildren,
   baseApplyTranslation,
+  getPosition as getTransitionGroupPosition,
+  getOrigins as getTransitionGroupOrigins,
+  getOriginShift as getTransitionGroupShift,
+  pendingGroups as pendingTransitionGroups,
 } from './components/TransitionGroup'
 /**
  * @internal

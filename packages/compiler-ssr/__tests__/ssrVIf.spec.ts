@@ -163,3 +163,62 @@ describe('ssr: v-if', () => {
     `)
   })
 })
+
+// vapor: a chain whose branches could start with the same node wraps the
+// branch it renders in `<!--[i-->`…`<!--]-->`, i being the branch's position
+describe('ssr: v-if branch ranges (vapor)', () => {
+  const vapor = (src: string) => compile(src, { vapor: true }).code
+
+  test('same-tag branches', () => {
+    expect(vapor(`<div v-if="a"><p>a</p></div><div v-else><b>b</b></div>`))
+      .toMatchInlineSnapshot(`
+        "const { ssrRenderAttrs: _ssrRenderAttrs } = require("vue/server-renderer")
+
+        return function ssrRender(_ctx, _push, _parent, _attrs) {
+          if (_ctx.a) {
+            _push(\`<!--[0--><div\${_ssrRenderAttrs(_attrs)}><p>a</p></div><!--]-->\`)
+          } else {
+            _push(\`<!--[1--><div\${_ssrRenderAttrs(_attrs)}><b>b</b></div><!--]-->\`)
+          }
+        }"
+      `)
+  })
+
+  test('a component branch, a v-else-if and no branch', () => {
+    const code = vapor(
+      `<section><Comp v-if="a"/><div v-else-if="b">B</div></section>`,
+    )
+    expect(code).toContain('_push(`<!--[0-->`)')
+    expect(code).toContain('_push(`<!--[1--><div>B</div><!--]-->`)')
+    expect(code).toContain('_push(`<!---->`)')
+  })
+
+  test('a multi-root branch and an empty one', () => {
+    const code = vapor(
+      `<template v-if="a"><p>1</p><p>2</p></template><template v-else></template>`,
+    )
+    expect(code).toContain('<!--[0--><p>1</p><p>2</p><!--]-->')
+    expect(code).toContain('<!--[1--><!--]-->')
+    expect(code).not.toContain('<!--[-->')
+  })
+
+  test('branches under a transition', () => {
+    const code = vapor(
+      `<Transition><div v-if="a">A</div><div v-else>B</div></Transition>`,
+    )
+    expect(code).toContain('<!--[0--><div>A</div><!--]-->')
+    expect(code).toContain('<!--[1--><div>B</div><!--]-->')
+  })
+
+  test.each([
+    ['a v-if alone', `<div v-if="a">A</div>`, true],
+    [
+      'branches of different tags',
+      `<div v-if="a">A</div><p v-else>B</p>`,
+      true,
+    ],
+    ['the vdom output', `<div v-if="a">A</div><div v-else>B</div>`, false],
+  ])('none for %s', (_, src, isVapor) => {
+    expect(compile(src, { vapor: isVapor }).code).not.toMatch(/<!--\[\d/)
+  })
+})

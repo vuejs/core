@@ -1,4 +1,4 @@
-import { reactive, ref } from '@vue/reactivity'
+import { type Ref, effectScope, reactive, ref } from '@vue/reactivity'
 import {
   applyCheckboxModel,
   applyDynamicModel,
@@ -14,7 +14,7 @@ import {
   setValue,
   template,
 } from '../../src'
-import { makeRender } from '../_utils'
+import { makeRender, renderParity } from '../_utils'
 import { nextTick } from '@vue/runtime-dom'
 
 const define = makeRender()
@@ -1183,5 +1183,1260 @@ describe('directive: v-model', () => {
       expect(n1!.checked).toEqual(false)
       expect(n2!.checked).toEqual(true)
     })
+  })
+
+  describe('literal values written by the template', () => {
+    // the type the template wrote has to survive into the dom and the model,
+    // so these go through the compiler instead of calling the directives
+    // directly
+    const parity = async <T>(
+      template: string,
+      makeInitial: () => any,
+      probe: (root: HTMLElement, data: Ref<any>) => T | Promise<T>,
+    ): Promise<{ vdom: T; vapor: T }> => {
+      const probed = {} as { vdom: T; vapor: T }
+      await renderParity(
+        { App: `<template>${template}</template>` },
+        () => ref(makeInitial()),
+        async (data, root, mode) => {
+          probed[mode] = await probe(root, data)
+        },
+      )
+      return probed
+    }
+
+    const modelParity = (
+      template: string,
+      makeInitial: () => any,
+      act: (root: HTMLElement) => void,
+    ) =>
+      parity(template, makeInitial, async (root, data) => {
+        act(root)
+        await nextTick()
+        return data.value
+      })
+
+    const pickOption = (root: HTMLElement, index: number) => {
+      const select = root.querySelector('select')!
+      if (select.multiple) {
+        for (let i = 0; i <= index; i++) select.options[i].selected = true
+      } else {
+        select.selectedIndex = index
+      }
+      triggerEvent('change', select)
+    }
+
+    const check = (root: HTMLElement, index: number, checked: boolean) => {
+      const input = root.querySelectorAll('input')[index]
+      input.checked = checked
+      triggerEvent('change', input)
+    }
+
+    test('select keeps number option values', async () => {
+      const { vdom, vapor } = await modelParity(
+        `<select v-model="data"><option :value="1">a</option><option :value="2">b</option></select>`,
+        () => 1,
+        root => pickOption(root, 1),
+      )
+
+      expect(vdom).toBe(2)
+      expect(vapor).toBe(2)
+    })
+
+    test('select multiple keeps number option values', async () => {
+      const { vdom, vapor } = await modelParity(
+        `<select multiple v-model="data"><option :value="1">a</option><option :value="2">b</option></select>`,
+        () => [],
+        root => pickOption(root, 1),
+      )
+
+      expect(vdom).toEqual([1, 2])
+      expect(vapor).toEqual([1, 2])
+    })
+
+    test('radio keeps number values', async () => {
+      const { vdom, vapor } = await modelParity(
+        `<input type="radio" :value="1" v-model="data"><input type="radio" :value="2" v-model="data">`,
+        () => 1,
+        root => check(root, 1, true),
+      )
+
+      expect(vdom).toBe(2)
+      expect(vapor).toBe(2)
+    })
+
+    test('checkbox array keeps number values', async () => {
+      const { vdom, vapor } = await modelParity(
+        `<input type="checkbox" :value="1" v-model="data"><input type="checkbox" :value="2" v-model="data">`,
+        () => [1],
+        root => check(root, 1, true),
+      )
+
+      expect(vdom).toEqual([1, 2])
+      expect(vapor).toEqual([1, 2])
+    })
+
+    test('checkbox keeps number true-value and false-value', async () => {
+      const { vdom, vapor } = await modelParity(
+        `<input type="checkbox" :true-value="1" :false-value="0" v-model="data">`,
+        () => 1,
+        root => check(root, 0, false),
+      )
+
+      expect(vdom).toBe(0)
+      expect(vapor).toBe(0)
+    })
+
+    // taken out of the template string, they have to be put back on the
+    // element by `setAttr` - which is also what stores the raw value
+    // `getCheckboxValue` prefers over the attribute
+    test('checkbox keeps static true-value and false-value in the dom', async () => {
+      const { vdom, vapor } = await parity(
+        `<input type="checkbox" true-value="yes" false-value="no" v-model="data">`,
+        () => 'yes',
+        root => {
+          const input = root.querySelector('input')!
+          return {
+            trueValue: input.getAttribute('true-value'),
+            falseValue: input.getAttribute('false-value'),
+            rawTrueValue: (input as any)._trueValue,
+            rawFalseValue: (input as any)._falseValue,
+            checked: input.checked,
+          }
+        },
+      )
+
+      expect(vapor).toEqual({
+        trueValue: 'yes',
+        falseValue: 'no',
+        rawTrueValue: 'yes',
+        rawFalseValue: 'no',
+        checked: true,
+      })
+      expect(vapor).toEqual(vdom)
+    })
+
+    // a dynamic key never reaches the template string, so the value stays raw
+    // and a boolean attribute is read as the number it was written as
+    test('dynamic key keeps number values', async () => {
+      const { vdom, vapor } = await parity(
+        `<input :[data]="0">`,
+        () => 'disabled',
+        root => root.querySelector('input')!.disabled,
+      )
+
+      expect(vdom).toBe(false)
+      expect(vapor).toBe(false)
+    })
+
+    test('boolean attribute keeps number values', async () => {
+      const { vdom, vapor } = await parity(
+        `<input :disabled="0"><input :disabled="1"><div :hidden="0"></div>`,
+        () => null,
+        root => [
+          root.querySelectorAll('input')[0].disabled,
+          root.querySelectorAll('input')[1].disabled,
+          root.querySelector('div')!.hidden,
+        ],
+      )
+
+      expect(vdom).toEqual([false, true, false])
+      expect(vapor).toEqual([false, true, false])
+    })
+
+    // `<textarea>` / `<select>` ignore a `value` content attribute, so it only
+    // takes effect when it is assigned as a dom property
+    test('textarea value is assigned as a dom property', async () => {
+      const { vdom, vapor } = await parity(
+        `<textarea :value="1"></textarea><textarea value="x"></textarea>`,
+        () => null,
+        root => [...root.querySelectorAll('textarea')].map(el => el.value),
+      )
+
+      expect(vdom).toEqual(['1', 'x'])
+      expect(vapor).toEqual(['1', 'x'])
+    })
+
+    test('select value is assigned as a dom property', async () => {
+      const { vdom, vapor } = await parity(
+        `<select :value="'b'"><option value="a">a</option><option value="b">b</option></select>`,
+        () => null,
+        root => root.querySelector('select')!.selectedIndex,
+      )
+
+      expect(vdom).toBe(1)
+      expect(vapor).toBe(1)
+    })
+
+    test.each([true, false])(
+      'checkbox keeps number true-value and false-value with .attr when checked is %s',
+      async checked => {
+        const { vdom, vapor } = await modelParity(
+          `<input type="checkbox" v-model="data" :true-value.attr="1" :false-value.attr="0">`,
+          () => (checked ? 0 : 1),
+          root => check(root, 0, checked),
+        )
+
+        expect(vdom).toBe(checked ? 1 : 0)
+        expect(vapor).toBe(vdom)
+      },
+    )
+
+    test.each([0, 1])('readonly.attr keeps number value %i', async value => {
+      const { vdom, vapor } = await parity(
+        `<input :readonly.attr="${value}">`,
+        () => null,
+        root => {
+          const input = root.querySelector('input')!
+          return {
+            readOnly: input.readOnly,
+            attribute: input.getAttribute('readonly'),
+          }
+        },
+      )
+
+      expect(vdom).toEqual({
+        readOnly: !!value,
+        attribute: value ? '' : null,
+      })
+      expect(vapor).toEqual(vdom)
+    })
+
+    test('disabled.attr stringifies number values', async () => {
+      const { vdom, vapor } = await parity(
+        `<input :disabled.attr="0">`,
+        () => null,
+        root => {
+          const input = root.querySelector('input')!
+          return {
+            disabled: input.disabled,
+            attribute: input.getAttribute('disabled'),
+          }
+        },
+      )
+
+      expect(vdom).toEqual({ disabled: true, attribute: '0' })
+      expect(vapor).toEqual(vdom)
+    })
+  })
+
+  describe('select re-syncs when its options change', () => {
+    // selection state and serialized model after `act`, checked for parity
+    async function selectionAfter(
+      srcs: Record<string, string>,
+      initial: () => any,
+      act: (data: any, root: HTMLElement) => void | Promise<void>,
+    ) {
+      const seen = {} as Record<'vdom' | 'vapor', [number | boolean[], string]>
+      await renderParity(
+        srcs,
+        () => ref(initial()),
+        async (data, root, mode) => {
+          await act(data.value, root)
+          await nextTick()
+          const select = root.querySelector('select')!
+          seen[mode] = [
+            select.multiple
+              ? Array.from(select.options, o => o.selected)
+              : select.selectedIndex,
+            JSON.stringify(data.value.v),
+          ]
+        },
+      )
+      expect(seen.vapor).toEqual(seen.vdom)
+      return seen.vdom
+    }
+
+    test('options rendered after the model is set', async () => {
+      expect(
+        await selectionAfter(
+          {
+            App: `<template><select v-model="data.v"><option v-for="o in data.opts" :value="o">{{ o }}</option></select></template>`,
+          },
+          () => ({ v: 'b', opts: [] }),
+          data => {
+            data.opts = ['a', 'b', 'c']
+          },
+        ),
+      ).toEqual([1, '"b"'])
+    })
+
+    test('option added by v-if', async () => {
+      expect(
+        await selectionAfter(
+          {
+            App: `<template><select v-model="data.v"><option value="a">a</option><option v-if="data.show" value="b">b</option></select></template>`,
+          },
+          () => ({ v: 'b', show: false }),
+          data => {
+            data.show = true
+          },
+        ),
+      ).toEqual([1, '"b"'])
+    })
+
+    test('option value changed to match the model', async () => {
+      expect(
+        await selectionAfter(
+          {
+            App: `<template><select v-model="data.v"><option :value="data.a">a</option><option :value="{ id: 9 }">z</option></select></template>`,
+          },
+          () => ({ v: { id: 1 }, a: { id: 0 } }),
+          data => {
+            data.a = { id: 1 }
+          },
+        ),
+      ).toEqual([0, '{"id":1}'])
+    })
+
+    test('optgroups rendered inside v-if', async () => {
+      expect(
+        await selectionAfter(
+          {
+            App: `<template><select v-model="data.v"><option value="">-</option><template v-if="data.groups.length"><optgroup v-for="g in data.groups" :label="g.label"><option v-for="o in g.opts" :value="o">{{ o }}</option></optgroup></template></select></template>`,
+          },
+          () => ({ v: 'y', groups: [] }),
+          data => {
+            data.groups = [
+              { label: 'A', opts: ['w', 'x'] },
+              { label: 'B', opts: ['y', 'z'] },
+            ]
+          },
+        ),
+      ).toEqual([3, '"y"'])
+    })
+
+    test('options passed through a slot', async () => {
+      expect(
+        await selectionAfter(
+          {
+            Child: `<template><select v-model="data.v"><slot /></select></template>`,
+            App: `<template><components.Child><option v-for="o in data.opts" :value="o">{{ o }}</option></components.Child></template>`,
+          },
+          () => ({ v: 'b', opts: [] }),
+          data => {
+            data.opts = ['a', 'b', 'c']
+          },
+        ),
+      ).toEqual([1, '"b"'])
+    })
+
+    test('multiple select keeps an object value when options load later', async () => {
+      expect(
+        await selectionAfter(
+          {
+            App: `<template><select multiple v-model="data.v"><option v-for="o in data.opts" :key="o.id" :value="o">{{ o.id }}</option></select></template>`,
+          },
+          () => ({ v: [{ id: 2 }], opts: [] }),
+          async (data, root) => {
+            data.opts = [{ id: 1 }, { id: 2 }, { id: 3 }]
+            await nextTick()
+            const select = root.querySelector('select')!
+            select.options[0].selected = true
+            triggerEvent('change', select)
+          },
+        ),
+      ).toEqual([[true, true, false], '[{"id":1},{"id":2}]'])
+    })
+
+    test('multiple select with a Set model', async () => {
+      expect(
+        await selectionAfter(
+          {
+            App: `<template><select multiple v-model="data.v"><option v-for="o in data.opts" :value="o">{{ o }}</option></select></template>`,
+          },
+          () => ({ v: new Set(['b', 'c']), opts: [] }),
+          data => {
+            data.opts = ['a', 'b', 'c']
+          },
+        ),
+      ).toEqual([[false, true, true], '{}'])
+    })
+
+    test('unrelated owner update keeps the picked option', async () => {
+      expect(
+        await selectionAfter(
+          {
+            App: `<template><p>{{ data.n }}</p><select v-model="data.v"><option value="a">a</option><option value="b">b</option></select></template>`,
+          },
+          () => ({ v: 'a', n: 0 }),
+          async (data, root) => {
+            const select = root.querySelector('select')!
+            select.selectedIndex = 1
+            triggerEvent('change', select)
+            await nextTick()
+            data.n++
+          },
+        ),
+      ).toEqual([1, '"b"'])
+    })
+
+    test('v-once select is not re-synced by owner updates', async () => {
+      expect(
+        await selectionAfter(
+          {
+            App: `<template><p>{{ data.n }}</p><div v-once><select v-model="data.v"><option value="a">a</option><option value="b">b</option></select></div></template>`,
+          },
+          () => ({ v: 'a', n: 0 }),
+          data => {
+            data.v = 'b'
+            data.n++
+          },
+        ),
+      ).toEqual([0, '"b"'])
+    })
+
+    test('removed selects stop re-syncing', async () => {
+      const reads = {} as Record<'vdom' | 'vapor', number[]>
+      let count = 0
+      await renderParity(
+        {
+          App: `<template><p>{{ data.n }}</p><select v-if="data.show" v-model="data.v"><option value="a">a</option></select><div v-for="r in data.rows" :key="r"><select v-model="data.v"><option value="a">a</option></select></div></template>`,
+        },
+        () =>
+          ref({
+            get v() {
+              count++
+              return 'a'
+            },
+            set v(_: string) {},
+            n: 0,
+            show: true,
+            rows: [1, 2, 3],
+          }),
+        async (data, _root, mode) => {
+          const readsPerUpdate = async () => {
+            count = 0
+            data.value.n++
+            await nextTick()
+            return count
+          }
+          const initial = await readsPerUpdate()
+          data.value.show = false
+          data.value.rows = [4]
+          await nextTick()
+          const afterRemoval = await readsPerUpdate()
+          data.value.show = true
+          await nextTick()
+          reads[mode] = [initial, afterRemoval, await readsPerUpdate()]
+        },
+      )
+      // one model read per mounted select
+      expect(reads.vdom).toEqual([4, 1, 2])
+      expect(reads.vapor).toEqual(reads.vdom)
+    })
+
+    test('re-syncs before the owner updated hooks run', async () => {
+      const seen = {} as Record<'vdom' | 'vapor', number[]>
+      let log: number[]
+      await renderParity(
+        {
+          App: `<script setup>
+            import { onUpdated, useTemplateRef } from 'vue'
+            const data = _data
+            const components = _components
+            const select = useTemplateRef('select')
+            onUpdated(() => components.log(select.value.selectedIndex))
+          </script>
+          <template><select ref="select" v-model="data.v"><option v-for="o in data.opts" :value="o">{{ o }}</option></select></template>`,
+        },
+        () => ref({ v: 'b', opts: [] }),
+        async (data, _root, mode) => {
+          log = seen[mode] = []
+          data.value.opts = ['a', 'b']
+          await nextTick()
+        },
+        { log: (i: number) => log.push(i) },
+      )
+      expect(seen.vdom).toEqual([1])
+      expect(seen.vapor).toEqual(seen.vdom)
+    })
+
+    // coverage guard: the re-sync must not undo the #10014 skip after a
+    // change event, which already left the dom in the model's state
+    test('a user change is not re-applied to a multiple select', async () => {
+      const writes = {} as Record<'vdom' | 'vapor', number>
+      await renderParity(
+        {
+          App: `<template><select multiple v-model="data.v"><option v-for="o in data.opts" :value="o">{{ o }}</option></select></template>`,
+        },
+        () => ref({ v: ['b'], opts: ['a', 'b', 'c', 'd'] }),
+        async (data, root, mode) => {
+          const select = root.querySelector('select')!
+          const selected = Object.getOwnPropertyDescriptor(
+            HTMLOptionElement.prototype,
+            'selected',
+          )!
+          let count = 0
+          for (const option of select.options) {
+            Object.defineProperty(option, 'selected', {
+              configurable: true,
+              get: selected.get,
+              set(value) {
+                count++
+                selected.set!.call(this, value)
+              },
+            })
+          }
+          select.options[0].selected = true
+          triggerEvent('change', select)
+          await nextTick()
+          expect(data.value.v).toEqual(['a', 'b'])
+          writes[mode] = count
+        },
+      )
+      // only the write made above: the model already matches the dom
+      expect(writes.vdom).toBe(1)
+      expect(writes.vapor).toBe(writes.vdom)
+    })
+  })
+
+  describe('listeners on the same element', () => {
+    const typeText = (root: HTMLElement, value: string, type = 'input') => {
+      const el = root.querySelector('input, textarea') as HTMLInputElement
+      el.value = value
+      triggerEvent(type, el)
+    }
+
+    const check = (root: HTMLElement, index: number) => {
+      const input = root.querySelectorAll('input')[index]
+      input.checked = true
+      triggerEvent('change', input)
+    }
+
+    const pickOption = (root: HTMLElement, index: number) => {
+      const select = root.querySelector('select')!
+      if (select.multiple) {
+        for (let i = 0; i <= index; i++) select.options[i].selected = true
+      } else {
+        select.selectedIndex = index
+      }
+      triggerEvent('change', select)
+    }
+
+    // records what a handler on the same element sees when it runs
+    const seenParity = async (
+      template: string,
+      makeInitial: () => any,
+      act: (root: HTMLElement) => void,
+      evt = 'input',
+    ) => {
+      const seen = {} as { vdom: any[]; vapor: any[] }
+      let current: any[] = []
+      await renderParity(
+        {
+          App:
+            `<script setup>const data = _data; const log = _components.log; ` +
+            `const type = _components.type; const evt = _components.evt; ` +
+            `const vFoo = _components.vFoo</script>` +
+            `<template>${template}</template>`,
+        },
+        () => ref(makeInitial()),
+        async (_, root, mode) => {
+          // vdom skips a listener attached in the same ms as the event fired
+          await new Promise(r => setTimeout(r, 5))
+          seen[mode] = current = []
+          act(root)
+        },
+        {
+          log: (v: any) => current.push(Array.isArray(v) ? [...v] : v),
+          type: 'checkbox',
+          evt,
+          // a function directive: vdom runs it on mount, after the props
+          vFoo: (el: any) => {
+            if (!el._foo) {
+              el._foo = true
+              el.addEventListener('input', () => current.push('dir'))
+            }
+          },
+        },
+      )
+      return seen
+    }
+
+    const selectTemplate = (attrs: string) =>
+      `<select ${attrs}><option value="us">us</option><option value="de">de</option></select>`
+
+    test.each([
+      [
+        'text',
+        `<input v-model="data" @input="log(data)">`,
+        () => '',
+        (root: HTMLElement) => typeText(root, 'vue'),
+        ['vue'],
+      ],
+      [
+        'text with the listener first',
+        `<input @input="log(data)" v-model="data">`,
+        () => '',
+        (root: HTMLElement) => typeText(root, 'vue'),
+        ['vue'],
+      ],
+      [
+        'textarea',
+        `<textarea v-model="data" @input="log(data)"></textarea>`,
+        () => '',
+        (root: HTMLElement) => typeText(root, 'vue'),
+        ['vue'],
+      ],
+      [
+        '.trim',
+        `<input v-model.trim="data" @input="log(data)">`,
+        () => '',
+        (root: HTMLElement) => typeText(root, '  vue  '),
+        ['vue'],
+      ],
+      [
+        '.number',
+        `<input v-model.number="data" @input="log(data)">`,
+        () => 0,
+        (root: HTMLElement) => typeText(root, '42'),
+        [42],
+      ],
+      [
+        '.lazy',
+        `<input v-model.lazy="data" @change="log(data)">`,
+        () => '',
+        (root: HTMLElement) => typeText(root, 'vue', 'change'),
+        ['vue'],
+      ],
+      [
+        'checkbox',
+        `<input type="checkbox" v-model="data" @change="log(data)">`,
+        () => false,
+        (root: HTMLElement) => check(root, 0),
+        [true],
+      ],
+      [
+        'checkbox array',
+        `<input type="checkbox" value="a" v-model="data" @change="log(data)">`,
+        () => [],
+        (root: HTMLElement) => check(root, 0),
+        [['a']],
+      ],
+      [
+        'radio',
+        `<input type="radio" value="a" v-model="data" @change="log(data)">` +
+          `<input type="radio" value="b" v-model="data" @change="log(data)">`,
+        () => 'a',
+        (root: HTMLElement) => check(root, 1),
+        ['b'],
+      ],
+      [
+        'select',
+        selectTemplate(`v-model="data" @change="log(data)"`),
+        () => 'us',
+        (root: HTMLElement) => pickOption(root, 1),
+        ['de'],
+      ],
+      [
+        'select multiple',
+        selectTemplate(`multiple v-model="data" @change="log(data)"`),
+        () => [],
+        (root: HTMLElement) => pickOption(root, 1),
+        [['us', 'de']],
+      ],
+      [
+        'dynamic type',
+        `<input :type="type" v-model="data" @change="log(data)">`,
+        () => false,
+        (root: HTMLElement) => check(root, 0),
+        [true],
+      ],
+      [
+        'several listeners and modifiers',
+        `<input v-model="data" @input="log('a:' + data)" @input.once="log('b:' + data)" @keyup.enter="log('c:' + data)">`,
+        () => '',
+        (root: HTMLElement) => typeText(root, 'vue'),
+        ['a:vue', 'b:vue'],
+      ],
+      [
+        'dynamic event name',
+        `<input v-model="data" @[evt]="log(data)">`,
+        () => '',
+        (root: HTMLElement) => typeText(root, 'vue'),
+        ['vue'],
+      ],
+      [
+        'key-only event name in keyed v-for',
+        `<input v-for="field in data" :key="field.event" v-model="field.value" @[field.event]="log(field.value)">`,
+        () => [{ event: 'input', value: '' }],
+        (root: HTMLElement) => typeText(root, 'vue'),
+        ['vue'],
+      ],
+      // Keep the selector handler local; the nested event reads the model
+      // without adding another binding to the selector expression.
+      [
+        'selector listeners with dynamic type in keyed v-for',
+        `<input v-for="field in data" :key="field.event" :type="field.event === evt ? 'checkbox' : 'text'" v-model="field.value" ` +
+          `v-on="field.event === evt ? { change: e => e.target.dispatchEvent(new e.constructor('read')) } : {}" @read="log(field.value)">`,
+        () => [{ event: 'input', value: false }],
+        (root: HTMLElement) => check(root, 0),
+        [true],
+      ],
+      [
+        'static listener with an empty v-on object',
+        `<input v-model="data" @input="log(data)" v-on="{}">`,
+        () => '',
+        (root: HTMLElement) => typeText(root, 'vue'),
+        ['vue'],
+      ],
+      [
+        'merged static and object listeners',
+        `<input class="base" :class="data" :type="type" v-model="data" @change="log('a:' + data)" v-on="{ change: () => log('b:' + data) }">`,
+        () => false,
+        (root: HTMLElement) => check(root, 0),
+        ['a:true', 'b:true'],
+      ],
+      [
+        'merged object and static listeners',
+        `<input class="base" :class="data" :type="type" v-model="data" v-on="{ change: () => log('a:' + data) }" @change="log('b:' + data)">`,
+        () => false,
+        (root: HTMLElement) => check(root, 0),
+        ['a:true', 'b:true'],
+      ],
+      [
+        'v-on object',
+        `<input v-model="data" v-on="{ input: () => log(data) }">`,
+        () => '',
+        (root: HTMLElement) => typeText(root, 'vue'),
+        ['vue'],
+      ],
+    ])(
+      'a same-event handler sees the updated model: %s',
+      async (_, template, makeInitial, act, expected) => {
+        const { vdom, vapor } = await seenParity(template, makeInitial, act)
+        expect(vdom).toEqual(expected)
+        expect(vapor).toEqual(vdom)
+      },
+    )
+
+    test.each([
+      ['onInput', false, false],
+      ['onChange', false, false],
+      ['onInput', true, false],
+      ['onChange', true, false],
+      ['onInput', false, true],
+      ['onChange', false, true],
+    ])(
+      'bound %s listener sees the updated model (reactive handler: %s, v-once: %s)',
+      async (listener, reactiveHandler, once) => {
+        const seen = {} as Record<'vdom' | 'vapor', string[]>
+        let log: string[]
+        const attrs = `v-model="data" :${listener}="handler"${once ? ' v-once' : ''}`
+        const template =
+          listener === 'onInput' ? `<input ${attrs}>` : selectTemplate(attrs)
+        await renderParity(
+          {
+            App: `<script setup>
+              import { ref } from 'vue'
+              const data = _data
+              const log = _components.log
+              ${
+                reactiveHandler
+                  ? `const handler = ref(() => log('initial:' + data.value))
+                     function replaceHandler() {
+                       handler.value = () => log('replacement:' + data.value)
+                     }`
+                  : `function handler() { log('initial:' + data.value) }`
+              }
+            </script>
+            <template>${template}${
+              reactiveHandler
+                ? '<button @click="replaceHandler">replace</button>'
+                : ''
+            }</template>`,
+          },
+          () => ref('us'),
+          async (_, root, mode) => {
+            log = seen[mode] = []
+            await new Promise(r => setTimeout(r, 5))
+            if (listener === 'onInput') typeText(root, 'de')
+            else pickOption(root, 1)
+            if (reactiveHandler) {
+              triggerEvent('click', root.querySelector('button')!)
+              await nextTick()
+              if (listener === 'onInput') typeText(root, 'us')
+              else pickOption(root, 0)
+            }
+          },
+          { log: (value: string) => log.push(value) },
+        )
+        expect(seen.vdom).toEqual(
+          reactiveHandler ? ['initial:de', 'replacement:us'] : ['initial:de'],
+        )
+        expect(seen.vapor).toEqual(seen.vdom)
+      },
+    )
+
+    test('merged listeners stay registered when DOM props update', async () => {
+      const seen = {} as Record<'vdom' | 'vapor', string[]>
+      let log: string[]
+      await renderParity(
+        {
+          App: `<script setup>
+            const data = _data
+            const log = _components.log
+          </script>
+          <template>
+            <input class="base" :class="data.class" v-model="data.value"
+              @input="log('a:' + data.value)"
+              v-on="{ input: () => log('b:' + data.value) }">
+          </template>`,
+        },
+        () => ref({ value: '', class: 'before' }),
+        async (data, root, mode) => {
+          log = seen[mode] = []
+          const input = root.querySelector('input')!
+          expect(input.className).toBe('base before')
+          data.value.class = 'after'
+          await nextTick()
+          expect(input.className).toBe('base after')
+          await new Promise(r => setTimeout(r, 5))
+          typeText(root, 'vue')
+        },
+        { log: (value: string) => log.push(value) },
+      )
+      expect(seen.vdom).toEqual(['a:vue', 'b:vue'])
+      expect(seen.vapor).toEqual(seen.vdom)
+    })
+
+    test('listeners stay before a custom directive on the same element', async () => {
+      const { vdom, vapor } = await seenParity(
+        `<input v-foo @input="log(data)" v-model="data">`,
+        () => '',
+        root => typeText(root, 'vue'),
+      )
+      expect(vdom).toEqual(['vue', 'dir'])
+      expect(vapor).toEqual(vdom)
+    })
+
+    // capture listeners on the target run before non-capture ones, so this
+    // handler runs before v-model's own and still sees the old value
+    test('capture listener on the same element runs before v-model', async () => {
+      const { vdom, vapor } = await seenParity(
+        `<input v-model="data" @input.capture="log(data)">`,
+        () => '',
+        root => typeText(root, 'vue'),
+      )
+      expect(vdom).toEqual([''])
+      expect(vapor).toEqual(vdom)
+    })
+  })
+
+  describe('checkbox with a changing value', () => {
+    test.each(['Array', 'Set'])('%s model', async modelType => {
+      const checked = {} as Record<'vdom' | 'vapor', boolean[]>
+      const selected = {} as Record<'vdom' | 'vapor', number[]>
+      await renderParity(
+        {
+          App: `<template><input type="checkbox" v-model="data.selected" :value="data.value"></template>`,
+        },
+        () =>
+          ref({
+            value: 1,
+            selected: modelType === 'Array' ? [1] : new Set([1]),
+          }),
+        async (data, root, mode) => {
+          const input = root.querySelector('input')!
+          const states = (checked[mode] = [input.checked])
+          data.value.value = 2
+          await nextTick()
+          states.push(input.checked)
+          await new Promise(r => setTimeout(r, 5))
+          input.checked = true
+          triggerEvent('change', input)
+          await nextTick()
+          states.push(input.checked)
+          selected[mode] = Array.from(data.value.selected)
+          data.value.value = 3
+          await nextTick()
+          states.push(input.checked)
+          data.value.value = 1
+          await nextTick()
+          states.push(input.checked)
+        },
+      )
+      expect(checked.vdom).toEqual([true, false, true, false, true])
+      expect(selected.vdom).toEqual([1, 2])
+      expect(checked.vapor).toEqual(checked.vdom)
+      expect(selected.vapor).toEqual(selected.vdom)
+    })
+
+    test('updates checked before post watchers', async () => {
+      const seen = {} as Record<'vdom' | 'vapor', boolean[]>
+      await renderParity(
+        {
+          App: `<script setup>
+            import { ref, watch } from 'vue'
+            const data = _data
+            const input = ref()
+            watch(
+              () => data.value.value,
+              () => data.value.observed.push(input.value.checked),
+              { flush: 'post' },
+            )
+          </script>
+          <template><input ref="input" type="checkbox" v-model="data.selected" :value="data.value"></template>`,
+        },
+        () => ref({ value: 1, selected: [1], observed: [] as boolean[] }),
+        async (data, _root, mode) => {
+          await nextTick()
+          data.value.value = 2
+          await nextTick()
+          seen[mode] = data.value.observed.slice()
+        },
+      )
+      expect(seen.vdom).toEqual([false])
+      expect(seen.vapor).toEqual(seen.vdom)
+    })
+
+    test('tracks fields of a replacement object value', async () => {
+      const checked = {} as Record<'vdom' | 'vapor', boolean[]>
+      await renderParity(
+        {
+          App: `<template><input type="checkbox" v-model="data.selected" :value="data.option" :title="data.option.id"></template>`,
+        },
+        () => ref({ option: { id: 0 }, selected: [{ id: 1 }] }),
+        async (data, root, mode) => {
+          const input = root.querySelector('input')!
+          const states = (checked[mode] = [input.checked])
+          data.value.option = { id: 1 }
+          await nextTick()
+          states.push(input.checked)
+          data.value.option.id = 2
+          await nextTick()
+          states.push(input.checked)
+        },
+      )
+      expect(checked.vdom).toEqual([false, true, false])
+      expect(checked.vapor).toEqual(checked.vdom)
+    })
+
+    test('matches Set values without DOM string coercion', async () => {
+      await renderParity(
+        {
+          App: `<template><input type="checkbox" v-model="data.selected" :value="data.option"></template>`,
+        },
+        () => ref({ selected: new Set([1]), option: 1 as number | string }),
+        async (data, root) => {
+          const input = root.querySelector('input')!
+          expect(input.checked).toBe(true)
+          data.value.option = '1'
+          await nextTick()
+          expect(input.value).toBe('1')
+          expect(input.checked).toBe(false)
+          data.value.option = 1
+          await nextTick()
+          expect(input.value).toBe('1')
+          expect(input.checked).toBe(true)
+        },
+      )
+    })
+  })
+
+  test.each(['text', 'checkbox', 'radio', 'select'])(
+    'stops %s model effects when their conditional branch is removed',
+    async type => {
+      const makeForm = () => ({ selected: type === 'checkbox' ? [1] : 1 })
+      const element =
+        type === 'select'
+          ? `<select v-if="data.form" v-model="data.form.selected"><option :value="1">one</option></select>`
+          : `<input v-if="data.form" type="${type}" v-model="data.form.selected"${type === 'text' ? '' : ' :value="1"'}>`
+      await renderParity(
+        { App: `<template><div>${element}</div></template>` },
+        () => ref({ form: makeForm() }),
+        async (data, root) => {
+          await nextTick()
+          for (let i = 0; i < 2; i++) {
+            expect(root.querySelector('input, select')).not.toBe(null)
+            data.value.form = null
+            await nextTick()
+            expect(root.querySelector('input, select')).toBe(null)
+            data.value.form = makeForm()
+            await nextTick()
+          }
+        },
+      )
+    },
+  )
+
+  test('skips model initialization when its scope is disposed before mount', () => {
+    const get = vi.fn(() => 'foo')
+    const { host } = define(() => {
+      const input = template('<input>')() as HTMLInputElement
+      const scope = effectScope()
+      scope.run(() => applyTextModel(input, get, () => {}))
+      scope.stop()
+      return input
+    }).render()
+    expect(get).not.toHaveBeenCalled()
+    expect(host.querySelector('input')!.value).toBe('')
+  })
+
+  // #10598
+  test('checkbox array with symbol values', async () => {
+    const a = Symbol('a')
+    const b = Symbol('b')
+    await renderParity(
+      {
+        App: `<template><input v-for="v in data.values" type="checkbox" v-model="data.model" :value="v"></template>`,
+      },
+      () => ref({ values: [a, b], model: [] as symbol[] }),
+      async (data, root) => {
+        const input = root.querySelectorAll('input')[1]
+        expect(input.value).toBe(b.toString())
+        input.checked = true
+        triggerEvent('change', input)
+        await nextTick()
+        expect(data.value.model).toEqual([b])
+      },
+    )
+  })
+
+  test.each([':value="data.bound"', 'v-bind="{ value: data.bound }"'])(
+    'select model takes precedence over %s after options update',
+    async binding => {
+      const selections = {} as Record<'vdom' | 'vapor', string[][]>
+      await renderParity(
+        {
+          App: `<template>
+            <p>{{ data.n }}</p>
+            <select ${binding} v-model="data.model">
+              <option v-for="option in data.options" :value="option">{{ option }}</option>
+            </select>
+            <select v-if="data.show" ${binding} v-model="data.model">
+              <option v-for="option in data.options" :value="option">{{ option }}</option>
+            </select>
+          </template>`,
+        },
+        () =>
+          ref({
+            bound: 'a',
+            model: 'b',
+            options: [] as string[],
+            show: false,
+            n: 0,
+          }),
+        async (data, root, mode) => {
+          const states: string[][] = (selections[mode] = [])
+          const record = () =>
+            states.push(
+              Array.from(root.querySelectorAll('select'), el => el.value),
+            )
+          record()
+          data.value.options = ['a', 'b']
+          await nextTick()
+          record()
+          data.value.options = ['c', 'd']
+          data.value.bound = 'c'
+          data.value.model = 'd'
+          await nextTick()
+          record()
+          data.value.show = true
+          await nextTick()
+          record()
+          data.value.options = ['e', 'f']
+          data.value.bound = 'e'
+          data.value.model = 'f'
+          await nextTick()
+          record()
+          data.value.n++
+          await nextTick()
+          record()
+        },
+      )
+      expect(selections.vdom).toEqual([
+        [''],
+        ['b'],
+        ['d'],
+        ['d', 'd'],
+        ['f', 'f'],
+        ['f', 'f'],
+      ])
+      expect(selections.vapor).toEqual(selections.vdom)
+    },
+  )
+
+  test('reapplies an unchanged select model after child component options update', async () => {
+    const seen: Record<string, string[]> = { vdom: [], vapor: [] }
+    await renderParity(
+      {
+        App: `<template><select v-model="data.value"><components.Options :options="data.options" /></select></template>`,
+        Options: `<script setup>defineProps(['options'])</script><template><option v-for="option in options" :value="option">{{ option }}</option></template>`,
+      },
+      () => ref({ value: 'b', options: [] as string[] }),
+      async (data, root, mode) => {
+        await nextTick()
+        const select = root.querySelector('select')!
+        seen[mode].push(select.value)
+        for (const options of [
+          ['a', 'b'],
+          ['c', 'b'],
+        ]) {
+          data.value.options = options
+          await nextTick()
+          seen[mode].push(select.value)
+        }
+      },
+    )
+    expect(seen.vdom).toEqual(['', 'b', 'b'])
+    expect(seen.vapor).toEqual(seen.vdom)
+  })
+
+  test('updates selection once before hooks for owner and child input updates', async () => {
+    const get = vi.fn(() => 'b')
+    await renderParity(
+      {
+        App: `<script setup>
+          import { onUpdated, ref } from 'vue'
+          const data = _data
+          const components = _components
+          const select = ref()
+          onUpdated(() => data.value.observed.push(select.value.value))
+        </script><template><p>{{ data.count }}</p><select ref="select" v-model="data.model"><components.Options :options="data.options" /></select></template>`,
+        Options: `<script setup>defineProps(['options'])</script><template><option v-for="option in options" :value="option">{{ option }}</option></template>`,
+      },
+      () =>
+        ref({
+          get model() {
+            return get()
+          },
+          count: 0,
+          options: [] as string[],
+          observed: [] as string[],
+        }),
+      async (data, root) => {
+        await nextTick()
+        get.mockClear()
+        data.value.observed.length = 0
+        data.value.options = ['a', 'b']
+        data.value.count++
+        await nextTick()
+        expect(root.querySelector('select')!.value).toBe('b')
+        expect(data.value.observed).toEqual(['b'])
+        expect(get).toHaveBeenCalledTimes(1)
+      },
+    )
+  })
+
+  test('disposes queued selection updates before reading a removed model', async () => {
+    const get = vi.fn(() => 'b')
+    await renderParity(
+      {
+        App: `<template><select v-if="data.form" v-model="data.form.model"><components.Options :options="data.options" /></select></template>`,
+        Options: `<script setup>defineProps(['options'])</script><template><option v-for="option in options" :value="option">{{ option }}</option></template>`,
+      },
+      () =>
+        ref({
+          form: {
+            get model() {
+              return get()
+            },
+          },
+          options: ['a', 'b'],
+        }),
+      async (data, root) => {
+        await nextTick()
+        expect(root.querySelector('select')!.value).toBe('b')
+        get.mockClear()
+        data.value.options = ['c', 'b']
+        data.value.form = null
+        await nextTick()
+        expect(root.querySelector('select')).toBe(null)
+        expect(get).not.toHaveBeenCalled()
+      },
+    )
+  })
+
+  test.each(['type="number"', ':type="\'number\'"'])(
+    'formats a number input on change with %s',
+    async binding => {
+      await renderParity(
+        {
+          App: `<template><input ${binding} v-model="data"></template>`,
+        },
+        () => ref(1),
+        async (data, root) => {
+          const input = root.querySelector('input')!
+          input.value = '1.50'
+          triggerEvent('input', input)
+          await nextTick()
+          expect(data.value).toBe(1.5)
+
+          triggerEvent('change', input)
+          await nextTick()
+          expect(input.value).toBe('1.5')
+        },
+      )
+    },
+  )
+
+  test('preserves a text model when fallthrough attrs override a number input', async () => {
+    await renderParity(
+      {
+        App: `<template><components.Field type="text" v-model="data" /></template>`,
+        Field: `<script setup>const model = defineModel()</script><template><input type="number" v-model="model" /></template>`,
+      },
+      () => ref(''),
+      async (data, root) => {
+        const input = root.querySelector('input')!
+        expect(input.type).toBe('text')
+        input.value = '007'
+        triggerEvent('input', input)
+        await nextTick()
+        expect(data.value).toBe('007')
+        expect(input.value).toBe('007')
+
+        triggerEvent('change', input)
+        await nextTick()
+        expect(data.value).toBe('007')
+        expect(input.value).toBe('007')
+      },
+    )
+  })
+
+  test.each(['type="radio"', ':type="\'radio\'"'])(
+    'checks a radio with an undefined value for an initially undefined model (%s)',
+    async type => {
+      await renderParity(
+        {
+          App: `<template><input ${type} v-model="data" :value="undefined"><input ${type} v-model="data" value="a"></template>`,
+        },
+        () => ref(),
+        async (data, root) => {
+          const [all, a] = root.querySelectorAll('input')
+          expect(all.checked).toBe(true)
+          expect(a.checked).toBe(false)
+
+          data.value = 'a'
+          await nextTick()
+          expect(all.checked).toBe(false)
+          expect(a.checked).toBe(true)
+
+          data.value = undefined
+          await nextTick()
+          expect(all.checked).toBe(true)
+          expect(a.checked).toBe(false)
+        },
+      )
+    },
+  )
+
+  test('keeps a radio checked by the template when the initial model does not match', async () => {
+    await renderParity(
+      {
+        App: `<template><input type="radio" checked v-model="data" value="a"></template>`,
+      },
+      () => ref(),
+      async (data, root) => {
+        const input = root.querySelector('input')!
+        expect(input.checked).toBe(true)
+
+        data.value = 'b'
+        await nextTick()
+        expect(input.checked).toBe(false)
+      },
+    )
   })
 })

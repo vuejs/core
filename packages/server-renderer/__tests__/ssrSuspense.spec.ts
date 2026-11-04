@@ -1,5 +1,7 @@
-import { Suspense, createApp, h } from 'vue'
+import { Suspense, createApp, defineComponent, h } from 'vue'
 import { renderToString } from '../src/renderToString'
+import { ssrRenderComponent } from '../src/helpers/ssrRenderComponent'
+import { ssrRenderSuspense } from '../src/helpers/ssrRenderSuspense'
 
 describe('SSR Suspense', () => {
   const ResolvingAsync = {
@@ -101,6 +103,32 @@ describe('SSR Suspense', () => {
 
     expect(Comp.errorCaptured).toHaveBeenCalledTimes(1)
     expect('missing template').toHaveBeenWarned()
+  })
+
+  // nuxt/nuxt#28162
+  test('propagates sync errors from compiled ssrRenderSuspense default slot', async () => {
+    const error = new TypeError('bang')
+    const Throwing = defineComponent({
+      ssrRender(_ctx: any, _push: any) {
+        throw error
+      },
+    })
+
+    const Root = defineComponent({
+      ssrRender(_ctx: any, _push: any, _parent: any) {
+        ssrRenderSuspense(_push, {
+          default: () => {
+            _push(ssrRenderComponent(Throwing, null, null, _parent))
+          },
+          _: 1,
+        } as any)
+      },
+    })
+
+    await expect(renderToString(createApp(Root))).rejects.toBe(error)
+    expect(
+      '[Vue warn]: Unhandled error during execution of render function',
+    ).toHaveBeenWarnedTimes(1)
   })
 
   test('passing suspense in failing suspense', async () => {

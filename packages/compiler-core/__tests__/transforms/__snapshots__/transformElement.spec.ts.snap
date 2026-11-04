@@ -121,6 +121,20 @@ return function render(_ctx, _cache) {
 }"
 `;
 
+exports[`compiler: v-for > codegen > template v-for key injection with single slot child 1`] = `
+"const _Vue = Vue
+
+return function render(_ctx, _cache) {
+  with (_ctx) {
+    const { renderList: _renderList, Fragment: _Fragment, openBlock: _openBlock, createElementBlock: _createElementBlock, renderSlot: _renderSlot } = _Vue
+
+    return (_openBlock(true), _createElementBlock(_Fragment, null, _renderList(items, (item) => {
+      return _renderSlot($slots, "default", {}, undefined, undefined, item.id)
+    }), 128 /* KEYED_FRAGMENT */))
+  }
+}"
+`;
+
 exports[`compiler: v-for > codegen > template v-for w/ <slot/> 1`] = `
 "const _Vue = Vue
 

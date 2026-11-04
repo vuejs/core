@@ -1,5 +1,6 @@
 import {
   type VNode,
+  createVNode,
   defineComponent,
   h,
   nextTick,
@@ -7,6 +8,9 @@ import {
   watch,
   withDirectives,
 } from '@vue/runtime-core'
+import { compile } from '@vue/compiler-dom'
+import * as runtimeDom from '@vue/runtime-dom'
+import { PatchFlags } from '@vue/shared'
 import { Transition, render, vShow } from '@vue/runtime-dom'
 
 const withVShow = (node: VNode, exp: any) =>
@@ -275,6 +279,87 @@ describe('runtime-dom: v-show directive', () => {
     isVisible.value = true
     await nextTick()
     expect($div.style.display).toEqual('')
+  })
+
+  test.each(['block', 'inline-flex'])(
+    'should preserve an unchanged string display of %s across component updates',
+    async display => {
+      const visible = ref(false)
+      const count = ref(0)
+      const style = `display: ${display}; color: red`
+      const Component = {
+        setup() {
+          return () =>
+            withVShow(
+              createVNode(
+                'div',
+                { style },
+                count.value,
+                PatchFlags.STYLE | PatchFlags.TEXT,
+              ),
+              visible.value,
+            )
+        },
+      }
+      render(h(Component), root)
+      const el = root.children[0]
+      expect(el.style.display).toBe('none')
+
+      count.value++
+      await nextTick()
+      expect(el.textContent).toBe('1')
+      expect(el.style.display).toBe('none')
+
+      visible.value = true
+      await nextTick()
+      expect(el.style.display).toBe(display)
+
+      count.value++
+      await nextTick()
+      expect(el.style.display).toBe(display)
+
+      visible.value = false
+      await nextTick()
+      expect(el.style.display).toBe('none')
+      visible.value = true
+      await nextTick()
+      expect(el.style.display).toBe(display)
+      expect(el.style.color).toBe('red')
+    },
+  )
+
+  test('should preserve an unchanged string display in a compiled template', async () => {
+    const visible = ref(false)
+    const count = ref(0)
+    const style = ref('display: inline-flex; color: red')
+    const { code } = compile(
+      '<div v-show="visible" :style="style">{{ count }}</div>',
+      { prefixIdentifiers: true },
+    )
+    const Component = {
+      setup: () => ({ visible, count, style }),
+      render: new Function('Vue', code)(runtimeDom),
+    }
+    render(h(Component), root)
+    const el = root.children[0]
+    count.value++
+    await nextTick()
+    expect(el.textContent).toBe('1')
+    expect(el.style.display).toBe('none')
+    visible.value = true
+    await nextTick()
+    expect(el.style.display).toBe('inline-flex')
+    style.value = 'display: block; color: blue'
+    await nextTick()
+    expect(el.style.display).toBe('block')
+    visible.value = false
+    await nextTick()
+    style.value = 'color: green'
+    await nextTick()
+    visible.value = true
+    await nextTick()
+    expect(el.style.display).toBe('')
+    expect(el.style.color).toBe('green')
   })
 
   // #10294

@@ -1,5 +1,5 @@
 import type { CodegenContext } from '../generate'
-import type { KeyIRNode } from '../ir'
+import type { KeyIRNode, SetBlockKeyIRNode } from '../ir'
 import { genBlock } from './block'
 import { genExpression } from './expression'
 import { type CodeFragment, NEWLINE, buildCodeFragment, genCall } from './utils'
@@ -8,19 +8,34 @@ export function genKey(
   oper: KeyIRNode,
   context: CodegenContext,
 ): CodeFragment[] {
-  const { id, value, block } = oper
+  const { id, value, block, slotRoot } = oper
   const [frag, push] = buildCodeFragment()
   const blockFn = genBlock(block, context)
 
   push(
     NEWLINE,
     `const n${id} = `,
-    ...genCall(
+    genCall(
       context.helper('createKeyedFragment'),
-      [`() => (`, ...genExpression(value, context), ')'],
+      [`() => (`, genExpression(value, context), ')'],
       blockFn,
+      slotRoot ? 'true' : false,
     ),
   )
 
   return frag
+}
+
+export function genSetBlockKey(
+  oper: SetBlockKeyIRNode,
+  context: CodegenContext,
+): CodeFragment[] {
+  return [
+    NEWLINE,
+    genCall(
+      context.helper('setBlockKey'),
+      `n${oper.element}`,
+      genExpression(oper.value, context),
+    ),
+  ]
 }

@@ -1,0 +1,1390 @@
+import { type Ref, createApp, nextTick, ref } from '@vue/runtime-dom'
+import { createVaporApp, vaporInteropPlugin } from '../src'
+import { compile, makeInteropRender } from './_utils'
+
+const define = makeInteropRender()
+
+type Run = {
+  data: Ref<any>
+  // ends the latest element held under a hook name
+  done: Record<string, () => void>
+  // every element still held under a hook name, with its `done`
+  held: Record<string, [Element, () => void][]>
+  step: (label: string, fn?: () => void) => Promise<void>
+}
+
+// compiles `template` as a vapor or vdom SFC over `data`
+const sfc = (
+  vapor: boolean,
+  data: Ref<any>,
+  template: string,
+  components: Record<string, any> = {},
+) =>
+  compile(
+    `<script setup${vapor ? ' vapor' : ''}>` +
+      `const data = _data; const components = _components</script>` +
+      `<template>${template}</template>`,
+    data,
+    components,
+    { vapor },
+  )
+
+// Runs `act` against the App `makeApp` builds in vapor mode and in the
+// all-vdom control, and checks that both record the same steps. Each step
+// records the html without anchors and the transition hooks fired since the
+// previous step; `enter`/`leave`/`appear` hold their `done`.
+async function compareRuns(
+  makeApp: (vapor: boolean, data: Ref<any>) => any,
+  act: (r: Run) => Promise<void>,
+) {
+  const runs: string[][] = []
+  for (const vapor of [false, true]) {
+    const log: string[] = []
+    const done: Record<string, () => void> = {}
+    const heldCbs: Record<string, [Element, () => void][]> = {}
+    const sync = (name: string) => (el: Element) =>
+      log.push(`${name}:${el.textContent}`)
+    const held = (name: string) => (el: Element, d: () => void) => {
+      log.push(`${name}:${el.textContent}`)
+      const entry: [Element, () => void] = [el, d]
+      const cbs = (heldCbs[name] ||= [])
+      cbs.push(entry)
+      done[name] = () => {
+        const i = cbs.indexOf(entry)
+        if (i >= 0) cbs.splice(i, 1)
+        d()
+      }
+    }
+    const data = ref<any>({
+      show: true,
+      alt: false,
+      onBeforeEnter: sync('beforeEnter'),
+      onEnter: held('enter'),
+      onAfterEnter: sync('afterEnter'),
+      onEnterCancelled: sync('enterCancelled'),
+      onBeforeLeave: sync('beforeLeave'),
+      onLeave: held('leave'),
+      onAfterLeave: sync('afterLeave'),
+      onLeaveCancelled: sync('leaveCancelled'),
+      onBeforeAppear: sync('beforeAppear'),
+      onAppear: held('appear'),
+      onAfterAppear: sync('afterAppear'),
+      onAppearCancelled: sync('appearCancelled'),
+      // the hooks a wrapper swaps in
+      onEnter2: held('enter2'),
+      onLeave2: held('leave2'),
+    })
+    const { app, host, html } = define(makeApp(vapor, data)).render()
+    // v-show only leaves a connected element
+    document.body.appendChild(host)
+    const steps: string[] = []
+    const step = async (label: string, fn?: () => void) => {
+      if (fn) fn()
+      await nextTick()
+      steps.push(
+        `${label}: ${html().replace(/<!--[^]*?-->/g, '')} | ${log.splice(0).join(' ')}`,
+      )
+    }
+    await step('mount')
+    try {
+      await act({ data, done, held: heldCbs, step })
+    } catch (e: any) {
+      e.message += `\n${vapor ? 'vapor' : 'vdom'} steps so far:\n${steps.join('\n')}`
+      throw e
+    }
+    app.unmount()
+    host.remove()
+    runs.push(steps)
+  }
+  expect(runs[1]).toEqual(runs[0])
+  return runs[0]
+}
+
+const hooks =
+  `:css="false" @before-enter="data.onBeforeEnter" @enter="data.onEnter" ` +
+  `@after-enter="data.onAfterEnter" @enter-cancelled="data.onEnterCancelled" ` +
+  `@before-leave="data.onBeforeLeave" @leave="data.onLeave" ` +
+  `@after-leave="data.onAfterLeave" @leave-cancelled="data.onLeaveCancelled"`
+const appearHooks =
+  `appear @before-appear="data.onBeforeAppear" @appear="data.onAppear" ` +
+  `@after-appear="data.onAfterAppear" @appear-cancelled="data.onAppearCancelled"`
+const wrap = (attrs: string, child = '<slot/>') =>
+  `<Transition ${attrs}>${child}</Transition>`
+
+// The entries left in the leaving-node cache of the Transition a vapor
+// element transitions under; a vdom element's hooks don't expose the state,
+// so the vdom control is not checked.
+const leavingEntries = (el: Element) => {
+  const hooks = (el as any).$transition
+  if (!hooks) return []
+  const entries: string[] = []
+  for (const bucket of hooks.state.leavingNodes.values()) {
+    entries.push(...Object.keys(bucket))
+  }
+  return entries
+}
+
+describe('vapor slot content inside a vdom Transition', () => {
+  // A vapor App passes `content` to a vdom Wrapper whose template is
+  // `transition` (a `<Transition>` around a `<slot/>`)
+  const parity = (
+    transition: string,
+    content: string,
+    act: (r: Run) => Promise<void>,
+  ) =>
+    compareRuns(
+      (vapor, data) =>
+        sfc(
+          vapor,
+          data,
+          `<components.Wrapper>${content}</components.Wrapper>`,
+          {
+            Wrapper: sfc(false, data, transition),
+            Child: sfc(vapor, data, `<div v-if="!data.alt">child</div>`),
+          },
+        ),
+      act,
+    )
+
+  test('v-if content leaves and enters', async () => {
+    const steps = await parity(
+      wrap(hooks),
+      `<div v-if="data.show">x</div>`,
+      async r => {
+        await r.step('hide', () => (r.data.value.show = false))
+        await r.step('leave done', () => r.done.leave())
+        await r.step('show', () => (r.data.value.show = true))
+        await r.step('enter done', () => r.done.enter())
+      },
+    )
+    expect(steps).toEqual([
+      'mount: <div>x</div> | ',
+      'hide: <div>x</div> | beforeLeave:x leave:x',
+      'leave done:  | afterLeave:x',
+      'show: <div>x</div> | beforeEnter:x enter:x',
+      'enter done: <div>x</div> | afterEnter:x',
+    ])
+  })
+
+  test('v-show content toggles in place, cancelling the pending phase', async () => {
+    const steps = await parity(
+      wrap(hooks),
+      `<div v-show="data.show">x</div>`,
+      async r => {
+        await r.step('hide', () => (r.data.value.show = false))
+        await r.step('show while leaving', () => (r.data.value.show = true))
+        await r.step('hide while entering', () => (r.data.value.show = false))
+        await r.step('leave done', () => r.done.leave())
+      },
+    )
+    expect(steps).toEqual([
+      'mount: <div>x</div> | ',
+      'hide: <div>x</div> | beforeLeave:x leave:x',
+      'show while leaving: <div style="">x</div> | leaveCancelled:x beforeEnter:x enter:x',
+      'hide while entering: <div style="">x</div> | enterCancelled:x beforeLeave:x leave:x',
+      'leave done: <div style="display: none;">x</div> | afterLeave:x',
+    ])
+  })
+
+  test.each(['default', 'out-in', 'in-out'])(
+    'v-if/else branches switch under mode %s',
+    async mode => {
+      const steps = await parity(
+        wrap(`mode="${mode}" ${hooks}`),
+        `<div v-if="data.show">a</div><p v-else>b</p>`,
+        async r => {
+          await r.step('swap', () => (r.data.value.show = false))
+          if (mode === 'in-out') {
+            await r.step('enter done', () => r.done.enter())
+            await r.step('leave done', () => r.done.leave())
+          } else {
+            await r.step('leave done', () => r.done.leave())
+            await r.step('enter done', () => r.done.enter())
+          }
+        },
+      )
+      expect(steps).toEqual(
+        mode === 'out-in'
+          ? [
+              'mount: <div>a</div> | ',
+              'swap: <div>a</div> | beforeLeave:a leave:a',
+              'leave done: <p>b</p> | beforeEnter:b afterLeave:a enter:b',
+              'enter done: <p>b</p> | afterEnter:b',
+            ]
+          : mode === 'in-out'
+            ? [
+                'mount: <div>a</div> | ',
+                'swap: <div>a</div><p>b</p> | beforeEnter:b enter:b',
+                'enter done: <div>a</div><p>b</p> | afterEnter:b beforeLeave:a leave:a',
+                'leave done: <p>b</p> | afterLeave:a',
+              ]
+            : [
+                'mount: <div>a</div> | ',
+                'swap: <div>a</div><p>b</p> | beforeLeave:a leave:a beforeEnter:b enter:b',
+                'leave done: <p>b</p> | afterLeave:a',
+                'enter done: <p>b</p> | afterEnter:b',
+              ],
+      )
+    },
+  )
+
+  test('dynamic component content switches under out-in', async () => {
+    const steps = await parity(
+      wrap(`mode="out-in" ${hooks}`),
+      `<component :is="data.show ? 'div' : 'p'">c</component>`,
+      async r => {
+        await r.step('swap', () => (r.data.value.show = false))
+        await r.step('leave done', () => r.done.leave())
+      },
+    )
+    expect(steps).toEqual([
+      'mount: <div>c</div> | ',
+      'swap: <div>c</div> | beforeLeave:c leave:c',
+      'leave done: <p>c</p> | beforeEnter:c afterLeave:c enter:c',
+    ])
+  })
+
+  test('keyed content swaps', async () => {
+    const steps = await parity(
+      wrap(hooks),
+      `<div :key="data.show">{{ data.show }}</div>`,
+      async r => {
+        await r.step('swap', () => (r.data.value.show = false))
+        await r.step('leave done', () => r.done.leave())
+      },
+    )
+    expect(steps).toEqual([
+      'mount: <div>true</div> | ',
+      'swap: <div>true</div><div>false</div> | beforeLeave:true leave:true beforeEnter:false enter:false',
+      'leave done: <div>false</div> | afterLeave:true',
+    ])
+  })
+
+  test('appear hooks run on mount, and are cancelled by a leave', async () => {
+    const steps = await parity(
+      wrap(`${appearHooks} ${hooks}`),
+      `<div v-if="data.show">x</div>`,
+      async r => {
+        await r.step('appear done', () => r.done.appear())
+        await r.step('hide', () => (r.data.value.show = false))
+      },
+    )
+    expect(steps).toEqual([
+      'mount: <div>x</div> | beforeAppear:x appear:x',
+      'appear done: <div>x</div> | afterAppear:x',
+      'hide: <div>x</div> | beforeLeave:x leave:x',
+    ])
+    const cancelled = await parity(
+      wrap(`${appearHooks} ${hooks}`),
+      `<div v-if="data.show">x</div>`,
+      async r => {
+        await r.step('hide while appearing', () => (r.data.value.show = false))
+      },
+    )
+    expect(cancelled[1]).toBe(
+      'hide while appearing: <div>x</div> | appearCancelled:x beforeLeave:x leave:x',
+    )
+  })
+
+  test('a leave cancels a pending enter; re-showing early-removes the leaving node', async () => {
+    const steps = await parity(
+      wrap(hooks),
+      `<div v-if="data.show">x</div>`,
+      async r => {
+        await r.step('hide', () => (r.data.value.show = false))
+        await r.step('leave done', () => r.done.leave())
+        await r.step('show', () => (r.data.value.show = true))
+        await r.step('hide while entering', () => (r.data.value.show = false))
+        await r.step('show while leaving', () => (r.data.value.show = true))
+        await r.step('enter done', () => r.done.enter())
+      },
+    )
+    expect(steps.slice(3)).toEqual([
+      'show: <div>x</div> | beforeEnter:x enter:x',
+      'hide while entering: <div>x</div> | enterCancelled:x beforeLeave:x leave:x',
+      'show while leaving: <div>x</div> | afterLeave:x beforeEnter:x enter:x',
+      'enter done: <div>x</div> | afterEnter:x',
+    ])
+  })
+
+  test('a slot the wrapper renders later enters, and leaves when the wrapper drops it', async () => {
+    const steps = await parity(
+      wrap(hooks, '<slot v-if="data.alt"/>'),
+      `<div>x</div>`,
+      async r => {
+        await r.step('on', () => (r.data.value.alt = true))
+        await r.step('enter done', () => r.done.enter())
+        await r.step('off', () => (r.data.value.alt = false))
+        await r.step('leave done', () => r.done.leave())
+      },
+    )
+    expect(steps).toEqual([
+      'mount:  | ',
+      'on: <div>x</div> | beforeEnter:x enter:x',
+      'enter done: <div>x</div> | afterEnter:x',
+      'off: <div>x</div> | beforeLeave:x leave:x',
+      'leave done:  | afterLeave:x',
+    ])
+  })
+
+  test('re-resolves hooks when the wrapper re-renders with other transition props', async () => {
+    const steps = await parity(
+      wrap(`:css="false" :onLeave="data.alt ? data.onLeaveB : data.onLeave"`),
+      `<div v-if="data.show">x</div>`,
+      async r => {
+        r.data.value.onLeaveB = (el: Element, d: () => void) => {
+          r.data.value.leftB = el.textContent
+          d()
+        }
+        await r.step('swap hook', () => (r.data.value.alt = true))
+        await r.step('hide', () => (r.data.value.show = false))
+        await r.step(`left by B: ${r.data.value.leftB}`)
+      },
+    )
+    expect(steps).toEqual([
+      'mount: <div>x</div> | ',
+      'swap hook: <div>x</div> | ',
+      'hide:  | ',
+      'left by B: x:  | ',
+    ])
+  })
+
+  test('component content, and the root the component toggles itself', async () => {
+    const steps = await parity(
+      wrap(hooks),
+      `<components.Child v-if="data.show" />`,
+      async r => {
+        await r.step('hide', () => (r.data.value.show = false))
+        await r.step('leave done', () => r.done.leave())
+        await r.step('show', () => (r.data.value.show = true))
+        await r.step('enter done', () => r.done.enter())
+        await r.step('inner hide', () => (r.data.value.alt = true))
+        await r.step('leave done', () => r.done.leave())
+        await r.step('inner show', () => (r.data.value.alt = false))
+      },
+    )
+    expect(steps).toEqual([
+      'mount: <div>child</div> | ',
+      'hide: <div>child</div> | beforeLeave:child leave:child',
+      'leave done:  | afterLeave:child',
+      'show: <div>child</div> | beforeEnter:child enter:child',
+      'enter done: <div>child</div> | afterEnter:child',
+      'inner hide: <div>child</div> | beforeLeave:child leave:child',
+      'leave done:  | afterLeave:child',
+      'inner show: <div>child</div> | beforeEnter:child enter:child',
+    ])
+  })
+  // the wrapper switches between the slot and a vdom sibling: the vdom
+  // Transition drives the leave, with its mode handoff on the vnode's hooks
+  const sibling = (mode: string) =>
+    wrap(`mode="${mode}" ${hooks}`, '<slot v-if="data.alt"/><p v-else>p</p>')
+
+  test('out-in switch between the slot and a vdom sibling', async () => {
+    const steps = await parity(
+      sibling('out-in'),
+      `<div v-if="data.show">x</div>`,
+      async r => {
+        await r.step('to slot', () => (r.data.value.alt = true))
+        await r.step('leave done', () => r.done.leave())
+        await r.step('enter done', () => r.done.enter())
+        await r.step('to p', () => (r.data.value.alt = false))
+        await r.step('leave done', () => r.done.leave())
+        await r.step('enter done', () => r.done.enter())
+      },
+    )
+    expect(steps).toEqual([
+      'mount: <p>p</p> | ',
+      'to slot: <p>p</p> | beforeLeave:p leave:p',
+      'leave done: <div>x</div> | beforeEnter:x afterLeave:p enter:x',
+      'enter done: <div>x</div> | afterEnter:x',
+      'to p: <div>x</div> | beforeLeave:x leave:x',
+      'leave done: <p>p</p> | beforeEnter:p afterLeave:x enter:p',
+      'enter done: <p>p</p> | afterEnter:p',
+    ])
+  })
+
+  test('in-out switch between the slot and a vdom sibling', async () => {
+    const steps = await parity(
+      sibling('in-out'),
+      `<div v-if="data.show">x</div>`,
+      async r => {
+        await r.step('to slot', () => (r.data.value.alt = true))
+        await r.step('enter done', () => r.done.enter())
+        await r.step('leave done', () => r.done.leave())
+        const x = document.body.querySelector('div > div')!
+        await r.step('to p', () => (r.data.value.alt = false))
+        await r.step('enter done', () => r.done.enter())
+        await r.step('leave done', () => r.done.leave())
+        // a completed leave leaves no record behind
+        expect(leavingEntries(x)).toEqual([])
+      },
+    )
+    expect(steps).toEqual([
+      'mount: <p>p</p> | ',
+      'to slot: <p>p</p><div>x</div> | beforeEnter:x enter:x',
+      'enter done: <p>p</p><div>x</div> | afterEnter:x beforeLeave:p leave:p',
+      'leave done: <div>x</div> | afterLeave:p',
+      'to p: <div>x</div><p>p</p> | beforeEnter:p enter:p',
+      'enter done: <div>x</div><p>p</p> | afterEnter:p beforeLeave:x leave:x',
+      'leave done: <p>p</p> | afterLeave:x',
+    ])
+  })
+
+  test('out-in switch away from a slot with nothing to leave', async () => {
+    const steps = await parity(
+      sibling('out-in'),
+      `<div v-if="data.show">x</div>`,
+      async r => {
+        r.data.value.show = false
+        await r.step('to slot', () => (r.data.value.alt = true))
+        await r.step('leave done', () => r.done.leave())
+        await r.step('to p', () => (r.data.value.alt = false))
+        await r.step('enter done', () => r.done.enter())
+      },
+    )
+    expect(steps).toEqual([
+      'mount: <p>p</p> | ',
+      'to slot: <p>p</p> | beforeLeave:p leave:p',
+      'leave done:  | afterLeave:p',
+      'to p: <p>p</p> | beforeEnter:p enter:p',
+      'enter done: <p>p</p> | afterEnter:p',
+    ])
+  })
+
+  test('reopening the whole slot early-removes its leaving content', async () => {
+    const steps = await parity(
+      wrap(hooks, '<slot v-if="data.show"/>'),
+      `<b>x</b>`,
+      async r => {
+        await r.step('hide slot', () => (r.data.value.show = false))
+        await r.step('reopen slot', () => (r.data.value.show = true))
+        await r.step('enter done', () => r.done.enter())
+      },
+    )
+    expect(steps).toEqual([
+      'mount: <b>x</b> | ',
+      'hide slot: <b>x</b> | beforeLeave:x leave:x',
+      'reopen slot: <b>x</b> | afterLeave:x beforeEnter:x enter:x',
+      'enter done: <b>x</b> | afterEnter:x',
+    ])
+  })
+
+  test('in-out reopens the slot before the sibling finished entering', async () => {
+    const steps = await parity(
+      wrap(`mode="in-out" ${hooks}`, '<slot v-if="data.show"/><p v-else>p</p>'),
+      `<b>x</b>`,
+      async r => {
+        await r.step('to sibling', () => (r.data.value.show = false))
+        await r.step('back to slot', () => (r.data.value.show = true))
+        await r.step('enter done', () => r.done.enter())
+      },
+    )
+    expect(steps).toEqual([
+      'mount: <b>x</b> | ',
+      'to sibling: <b>x</b><p>p</p> | beforeEnter:p enter:p',
+      'back to slot: <p>p</p><b>x</b> | beforeEnter:x enter:x',
+      'enter done: <p>p</p><b>x</b> | afterEnter:x enterCancelled:p beforeLeave:p leave:p',
+    ])
+  })
+
+  // the wrapper's outlet has a fallback: it is the Transition's child while
+  // the slot content is invalid
+  const withFallback = wrap(hooks, '<slot><span>fb</span></slot>')
+
+  test('fallback enters when the content leaves, and leaves when it returns', async () => {
+    const steps = await parity(
+      withFallback,
+      `<div v-if="data.show">x</div>`,
+      async r => {
+        await r.step('hide', () => (r.data.value.show = false))
+        await r.step('leave done', () => r.done.leave())
+        await r.step('enter done', () => r.done.enter())
+        await r.step('show', () => (r.data.value.show = true))
+        await r.step('leave done', () => r.done.leave())
+        await r.step('enter done', () => r.done.enter())
+      },
+    )
+    expect(steps).toEqual([
+      'mount: <div>x</div> | ',
+      'hide: <div>x</div><span>fb</span> | beforeLeave:x leave:x beforeEnter:fb enter:fb',
+      'leave done: <span>fb</span> | afterLeave:x',
+      'enter done: <span>fb</span> | afterEnter:fb',
+      'show: <span>fb</span><div>x</div> | beforeLeave:fb leave:fb beforeEnter:x enter:x',
+      'leave done: <div>x</div> | afterLeave:fb',
+      'enter done: <div>x</div> | afterEnter:x',
+    ])
+  })
+
+  test('out-in leaves an active fallback before entering a sibling', async () => {
+    const steps = await parity(
+      wrap(
+        `mode="out-in" ${hooks}`,
+        '<slot v-if="data.show"><span>fb</span></slot><p v-else>p</p>',
+      ),
+      `<div v-if="data.alt">x</div>`,
+      async r => {
+        await r.step('to sibling', () => (r.data.value.show = false))
+        await r.step('leave done', () => r.done.leave())
+        await r.step('enter done', () => r.done.enter())
+      },
+    )
+    expect(steps).toEqual([
+      'mount: <span>fb</span> | ',
+      'to sibling: <span>fb</span> | beforeLeave:fb leave:fb',
+      'leave done: <p>p</p> | beforeEnter:p afterLeave:fb enter:p',
+      'enter done: <p>p</p> | afterEnter:p',
+    ])
+  })
+
+  test('in-out delays the leave of an active fallback until the sibling entered', async () => {
+    const steps = await parity(
+      wrap(
+        `mode="in-out" ${hooks}`,
+        '<slot v-if="data.show"><span>fb</span></slot><p v-else>p</p>',
+      ),
+      `<div v-if="data.alt">x</div>`,
+      async r => {
+        await r.step('to sibling', () => (r.data.value.show = false))
+        await r.step('enter done', () => r.done.enter())
+        await r.step('leave done', () => r.done.leave())
+      },
+    )
+    expect(steps).toEqual([
+      'mount: <span>fb</span> | ',
+      'to sibling: <span>fb</span><p>p</p> | beforeEnter:p enter:p',
+      'enter done: <span>fb</span><p>p</p> | afterEnter:p beforeLeave:fb leave:fb',
+      'leave done: <p>p</p> | afterLeave:fb',
+    ])
+  })
+
+  test('in-out reopens the slot showing a fallback before the sibling finished entering', async () => {
+    const steps = await parity(
+      wrap(
+        `mode="in-out" ${hooks}`,
+        '<slot v-if="data.show"><span>fb</span></slot><p v-else>p</p>',
+      ),
+      `<div v-if="data.alt">x</div>`,
+      async r => {
+        await r.step('to sibling', () => (r.data.value.show = false))
+        await r.step('back to slot', () => (r.data.value.show = true))
+        await r.step('enter done', () => r.done.enter())
+      },
+    )
+    expect(steps).toEqual([
+      'mount: <span>fb</span> | ',
+      'to sibling: <span>fb</span><p>p</p> | beforeEnter:p enter:p',
+      'back to slot: <p>p</p><span>fb</span> | beforeEnter:fb enter:fb',
+      'enter done: <p>p</p><span>fb</span> | afterEnter:fb enterCancelled:p beforeLeave:p leave:p',
+    ])
+  })
+
+  test('a fallback switching its own root leaves and enters', async () => {
+    const steps = await parity(
+      wrap(
+        hooks,
+        '<slot><span v-if="!data.alt">fb</span><b v-else>fb2</b></slot>',
+      ),
+      `<div v-if="data.show">x</div>`,
+      async r => {
+        await r.step('hide', () => (r.data.value.show = false))
+        await r.step('leave done', () => r.done.leave())
+        await r.step('enter done', () => r.done.enter())
+        await r.step('switch', () => (r.data.value.alt = true))
+        await r.step('leave done', () => r.done.leave())
+        await r.step('enter done', () => r.done.enter())
+      },
+    )
+    expect(steps.slice(3)).toEqual([
+      'enter done: <span>fb</span> | afterEnter:fb',
+      'switch: <span>fb</span><b>fb2</b> | beforeLeave:fb leave:fb beforeEnter:fb2 enter:fb2',
+      'leave done: <b>fb2</b> | afterLeave:fb',
+      'enter done: <b>fb2</b> | afterEnter:fb2',
+    ])
+  })
+
+  test('a fallback shown from the start leaves when the content appears', async () => {
+    const steps = await parity(
+      withFallback,
+      `<div v-if="data.alt">x</div>`,
+      async r => {
+        await r.step('show', () => (r.data.value.alt = true))
+        await r.step('leave done', () => r.done.leave())
+        await r.step('enter done', () => r.done.enter())
+        await r.step('hide', () => (r.data.value.alt = false))
+        await r.step('leave done', () => r.done.leave())
+        await r.step('enter done', () => r.done.enter())
+      },
+    )
+    expect(steps).toEqual([
+      'mount: <span>fb</span> | ',
+      'show: <span>fb</span><div>x</div> | beforeLeave:fb leave:fb beforeEnter:x enter:x',
+      'leave done: <div>x</div> | afterLeave:fb',
+      'enter done: <div>x</div> | afterEnter:x',
+      'hide: <div>x</div><span>fb</span> | beforeLeave:x leave:x beforeEnter:fb enter:fb',
+      'leave done: <span>fb</span> | afterLeave:x',
+      'enter done: <span>fb</span> | afterEnter:fb',
+    ])
+  })
+})
+
+describe('vapor component as the child of a vdom Transition', () => {
+  // A vdom App renders `transition` (a `<Transition>` around
+  // `<components.Child/>`) with `child` as the Child's template
+  const parity = (
+    transition: string,
+    child: string,
+    act: (r: Run) => Promise<void>,
+    // templates of components the Child renders
+    nested: Record<string, string> = {},
+  ) =>
+    compareRuns((vapor, data) => {
+      const components: Record<string, any> = {}
+      for (const name in nested) {
+        components[name] = sfc(vapor, data, nested[name])
+      }
+      return sfc(false, data, transition, {
+        Child: sfc(vapor, data, child, components),
+      })
+    }, act)
+
+  const around = (attrs: string, child = '<components.Child/>') =>
+    wrap(attrs, child)
+
+  test('the root the child toggles itself leaves and enters', async () => {
+    const steps = await parity(
+      around(hooks),
+      `<div v-if="data.show">c</div>`,
+      async r => {
+        await r.step('hide', () => (r.data.value.show = false))
+        await r.step('leave done', () => r.done.leave())
+        await r.step('show', () => (r.data.value.show = true))
+        await r.step('enter done', () => r.done.enter())
+        await r.step('hide again', () => (r.data.value.show = false))
+      },
+    )
+    expect(steps).toEqual([
+      'mount: <div>c</div> | ',
+      'hide: <div>c</div> | beforeLeave:c leave:c',
+      'leave done:  | afterLeave:c',
+      'show: <div>c</div> | beforeEnter:c enter:c',
+      'enter done: <div>c</div> | afterEnter:c',
+      'hide again: <div>c</div> | beforeLeave:c leave:c',
+    ])
+  })
+
+  test('a root hidden from the start enters', async () => {
+    const steps = await parity(
+      around(hooks),
+      `<div v-if="data.alt">c</div>`,
+      async r => {
+        await r.step('show', () => (r.data.value.alt = true))
+        await r.step('enter done', () => r.done.enter())
+      },
+    )
+    expect(steps).toEqual([
+      'mount:  | ',
+      'show: <div>c</div> | beforeEnter:c enter:c',
+      'enter done: <div>c</div> | afterEnter:c',
+    ])
+  })
+
+  test.each(['default', 'out-in'])(
+    'a root switched by the child early-removes the previous one under mode %s',
+    async mode => {
+      const steps = await parity(
+        around(`mode="${mode}" ${hooks}`),
+        `<div v-if="data.show">a</div><p v-else>b</p>`,
+        async r => {
+          await r.step('swap', () => (r.data.value.show = false))
+          await r.step('enter done', () => r.done.enter())
+        },
+      )
+      expect(steps).toEqual([
+        'mount: <div>a</div> | ',
+        'swap: <p>b</p> | beforeLeave:a leave:a afterLeave:a beforeEnter:b enter:b',
+        'enter done: <p>b</p> | afterEnter:b',
+      ])
+    },
+  )
+
+  test('re-showing the child while it leaves early-removes the leaving root', async () => {
+    const steps = await parity(
+      around(hooks, '<components.Child v-if="data.show"/>'),
+      `<div>c</div>`,
+      async r => {
+        await r.step('hide', () => (r.data.value.show = false))
+        await r.step('show while leaving', () => (r.data.value.show = true))
+        await r.step('enter done', () => r.done.enter())
+      },
+    )
+    expect(steps).toEqual([
+      'mount: <div>c</div> | ',
+      'hide: <div>c</div> | beforeLeave:c leave:c',
+      'show while leaving: <div>c</div> | afterLeave:c beforeEnter:c enter:c',
+      'enter done: <div>c</div> | afterEnter:c',
+    ])
+  })
+
+  test('a v-show root toggles in place', async () => {
+    const steps = await parity(
+      around(hooks),
+      `<div v-show="data.show">c</div>`,
+      async r => {
+        await r.step('hide', () => (r.data.value.show = false))
+        await r.step('leave done', () => r.done.leave())
+        await r.step('show', () => (r.data.value.show = true))
+      },
+    )
+    expect(steps).toEqual([
+      'mount: <div>c</div> | ',
+      'hide: <div>c</div> | beforeLeave:c leave:c',
+      'leave done: <div style="display: none;">c</div> | afterLeave:c',
+      'show: <div style="">c</div> | beforeEnter:c enter:c',
+    ])
+  })
+
+  test('a KeepAlive root switched by the child under out-in', async () => {
+    const steps = await parity(
+      around(`mode="out-in" ${hooks}`),
+      `<KeepAlive><component :is="data.show ? components.A : components.B"/></KeepAlive>`,
+      async r => {
+        await r.step('swap', () => (r.data.value.show = false))
+        await r.step('enter done', () => r.done.enter())
+      },
+      { A: '<div>a</div>', B: '<p>b</p>' },
+    )
+    expect(steps[1]).toBe(
+      'swap: <p>b</p> | beforeLeave:a leave:a afterLeave:a beforeEnter:b enter:b',
+    )
+  })
+
+  test('out-in switch away from a child rendering no element', async () => {
+    const steps = await parity(
+      around(
+        `mode="out-in" ${hooks}`,
+        '<components.Child v-if="data.alt"/><p v-else>p</p>',
+      ),
+      `<div v-if="data.show">c</div>`,
+      async r => {
+        r.data.value.show = false
+        await r.step('to child', () => (r.data.value.alt = true))
+        await r.step('leave done', () => r.done.leave())
+        await r.step('to p', () => (r.data.value.alt = false))
+        await r.step('enter done', () => r.done.enter())
+      },
+    )
+    expect(steps.slice(2)).toEqual([
+      'leave done:  | afterLeave:p',
+      'to p: <p>p</p> | beforeEnter:p enter:p',
+      'enter done: <p>p</p> | afterEnter:p',
+    ])
+  })
+})
+
+describe('comment-root transition removal across renderers', () => {
+  test.each(
+    [false, true].flatMap(parentVapor =>
+      [false, true].flatMap(wrapperVapor =>
+        [false, true].flatMap(dev =>
+          [false, true].map(comments => ({
+            parentVapor,
+            wrapperVapor,
+            dev,
+            comments,
+          })),
+        ),
+      ),
+    ),
+  )(
+    'parentVapor=$parentVapor wrapperVapor=$wrapperVapor dev=$dev comments=$comments',
+    async ({ parentVapor, wrapperVapor, dev, comments }) => {
+      const errors: unknown[] = []
+      const events: string[] = []
+      const done: Record<string, () => void> = {}
+      const data = ref({
+        show: true,
+        onEnter: (el: Element, finish: () => void) => {
+          events.push(`enter:${el.textContent}`)
+          done.enter = finish
+        },
+        onLeave: (el: Element, finish: () => void) => {
+          events.push(`leave:${el.textContent}`)
+          done.leave = finish
+        },
+        onAfterLeave: (el: Element) =>
+          events.push(`afterLeave:${el.textContent}`),
+      })
+      __DEV__ = dev
+      const Leaf = sfc(!wrapperVapor, data, '<div>A</div>')
+      const One = compile(
+        '<script setup>const components = _components</script>' +
+          `<template>${comments ? '<!--start-->' : ''}<components.Leaf/>${comments ? '<!--end-->' : ''}</template>`,
+        data,
+        { Leaf },
+        { vapor: wrapperVapor, compilerOptions: { comments: true } },
+      )
+      const Two = sfc(false, data, '<span>B</span>')
+      const App = sfc(
+        parentVapor,
+        data,
+        '<Transition mode="out-in" :css="false" @enter="data.onEnter" @leave="data.onLeave" @after-leave="data.onAfterLeave"><component :is="data.show ? components.One : components.Two"/></Transition>',
+        { One, Two },
+      )
+      const host = document.createElement('div')
+      const app = (parentVapor ? createVaporApp(App) : createApp(App)).use(
+        vaporInteropPlugin,
+      )
+      app.config.errorHandler = error => errors.push(error)
+      try {
+        app.mount(host)
+        data.value.show = false
+        await nextTick()
+        expect([...errors]).toEqual([])
+        expect(events).toEqual(['leave:A'])
+        expect(host.textContent).toBe('A')
+        done.leave()
+        await nextTick()
+        expect(events).toEqual(['leave:A', 'afterLeave:A', 'enter:B'])
+        expect(host.textContent).toBe('B')
+        done.enter()
+        data.value.show = true
+        await nextTick()
+        expect(events[events.length - 1]).toBe('leave:B')
+        done.leave()
+        await nextTick()
+        expect(events.slice(-2)).toEqual(['afterLeave:B', 'enter:A'])
+        expect(host.textContent).toBe('A')
+        done.enter()
+        expect(errors).toEqual([])
+      } finally {
+        try {
+          app.unmount()
+        } catch (error) {
+          errors.push(error)
+        }
+        host.remove()
+        __DEV__ = true
+      }
+      expect(errors).toEqual([])
+    },
+  )
+
+  test.each(['conditional', 'slot', 'keep-alive', 'empty'])(
+    'nested root: %s',
+    async kind => {
+      const target = document.createElement('div')
+      target.id = 'transition-leave-target'
+      document.body.appendChild(target)
+      try {
+        await compareRuns(
+          (vapor, data) => {
+            data.value.onDispose = vi.fn()
+            data.value.onUnmounted = vi.fn()
+            const Child = compile(
+              '<script setup>import { onScopeDispose, onUnmounted } from "vue";' +
+                'const data = _data; onScopeDispose(() => data.value.onDispose()); onUnmounted(() => data.value.onUnmounted())</script>' +
+                '<template><div>A<Teleport to="#transition-leave-target"><span>T</span></Teleport></div></template>',
+              data,
+              {},
+              { vapor },
+            )
+            const Leaf = sfc(
+              vapor,
+              data,
+              kind === 'conditional'
+                ? '<div v-if="!data.alt">A</div>'
+                : kind === 'slot'
+                  ? '<slot/>'
+                  : kind === 'keep-alive'
+                    ? '<KeepAlive><components.Child/></KeepAlive>'
+                    : '<!--empty-->',
+              { Child },
+            )
+            const One = compile(
+              '<script setup>const components = _components</script>' +
+                '<template><!--start--><components.Leaf><div>A</div></components.Leaf><!--end--></template>',
+              data,
+              { Leaf },
+              { vapor: false, compilerOptions: { comments: true } },
+            )
+            const Two = sfc(false, data, '<span>B</span>')
+            return sfc(
+              false,
+              data,
+              `<Transition mode="out-in" ${hooks}><component :is="data.show ? components.One : components.Two"/></Transition>`,
+              { One, Two },
+            )
+          },
+          async r => {
+            await r.step('switch to B', () => (r.data.value.show = false))
+            if (kind === 'keep-alive') {
+              expect(r.data.value.onDispose).toHaveBeenCalledTimes(1)
+              expect(r.data.value.onUnmounted).toHaveBeenCalledTimes(1)
+              expect(target.textContent).toBe('')
+            }
+            if (kind !== 'empty') await r.step('leave A done', r.done.leave)
+            await r.step('enter B done', r.done.enter)
+            await r.step('switch back to A', () => (r.data.value.show = true))
+            await r.step('leave B done', r.done.leave)
+            if (kind !== 'empty') await r.step('enter A done', r.done.enter)
+          },
+        )
+        if (kind === 'slot') {
+          expect(
+            'Component inside <Transition> renders non-element root node that cannot be animated.',
+          ).toHaveBeenWarnedTimes(2)
+        }
+      } finally {
+        target.remove()
+      }
+    },
+  )
+})
+
+describe('vapor slot content inside a vdom TransitionGroup', () => {
+  // A vapor App passes `content` to a vdom Wrapper whose template is `group`
+  // (a `<TransitionGroup>` around a `<slot/>`); `init` seeds the data of
+  // each run
+  const parity = (
+    group: string,
+    content: string,
+    act: (r: Run) => Promise<void>,
+    init: Record<string, any> = {},
+    extra: (vapor: boolean, data: Ref<any>) => Record<string, any> = () => ({}),
+  ) =>
+    compareRuns((vapor, data) => {
+      Object.assign(data.value, JSON.parse(JSON.stringify(init)))
+      return sfc(
+        vapor,
+        data,
+        `<components.Wrapper>${content}</components.Wrapper>`,
+        { Wrapper: sfc(false, data, group), ...extra(vapor, data) },
+      )
+    }, act)
+  // ends every held hook, the elements of a name in document order
+  const settle = (r: Run) => {
+    for (const name in r.held) {
+      const cbs = r.held[name].splice(0)
+      cbs.sort(([a], [b]) => (a.compareDocumentPosition(b) & 4 ? -1 : 1))
+      for (const [, cb] of cbs) cb()
+    }
+  }
+  const group = (attrs = '', child = '<slot/>') =>
+    `<TransitionGroup tag="ul" ${hooks} ${attrs}>${child}</TransitionGroup>`
+  const list = `<li v-for="i in data.list" :key="i">{{ i }}</li>`
+  const abc = { list: ['a', 'b', 'c'] }
+
+  let rects = 0
+  beforeEach(() => {
+    rects = 0
+    vi.spyOn(Element.prototype, 'getBoundingClientRect').mockImplementation(
+      () => {
+        rects++
+        return { top: 0, left: 0, width: 0, height: 0 } as DOMRect
+      },
+    )
+  })
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  test('rows enter and leave, and are sampled for the move', async () => {
+    await parity(
+      group(),
+      list,
+      async r => {
+        await r.step('push', () => r.data.value.list.push('d'))
+        await r.step('enter done', r.done.enter)
+        await r.step('remove a', () => r.data.value.list.shift())
+        await r.step('leave done', r.done.leave)
+        rects = 0
+        await r.step('reverse', () => r.data.value.list.reverse())
+        expect(rects).toBe(3)
+      },
+      abc,
+    )
+  })
+
+  test('rows appear', async () => {
+    await parity(
+      group(appearHooks),
+      list,
+      async r => {
+        await r.step('appear done', () => settle(r))
+      },
+      abc,
+    )
+  })
+
+  test('a slot the wrapper renders later enters, and leaves when the wrapper drops it', async () => {
+    await parity(
+      group('', '<slot v-if="data.show"/>'),
+      list,
+      async r => {
+        await r.step('show', () => (r.data.value.show = true))
+        await r.step('enter done', () => settle(r))
+        await r.step('hide', () => (r.data.value.show = false))
+        await r.step('leave done', () => settle(r))
+      },
+      { ...abc, show: false },
+    )
+  })
+
+  test('a vdom sibling is a child of the same group', async () => {
+    await parity(
+      group('', '<slot/><li key="tail">tail</li>'),
+      list,
+      async r => {
+        await r.step('push', () => r.data.value.list.push('d'))
+        await r.step('remove a', () => r.data.value.list.shift())
+        rects = 0
+        await r.step('reverse', () => r.data.value.list.reverse())
+        expect(rects).toBe(4)
+      },
+      abc,
+    )
+  })
+
+  // vdom re-renders the group (and samples) when a row's props change
+  test('a component row samples on a prop change', async () => {
+    await parity(
+      group(),
+      `<components.Item v-for="i in data.items" :key="i.id" :opened="i.opened" />`,
+      async r => {
+        rects = 0
+        await r.step('open', () => (r.data.value.items[0].opened = true))
+        expect(rects).toBe(2)
+      },
+      {
+        items: [
+          { id: 1, opened: false },
+          { id: 2, opened: false },
+        ],
+      },
+      (vapor, data) => ({
+        Item: compile(
+          `<script setup${vapor ? ' vapor' : ''}>
+            const props = defineProps(['opened'])
+          </script>
+          <template><li>{{ props.opened ? 'open' : 'closed' }}</li></template>`,
+          data,
+          {},
+          { vapor },
+        ),
+      }),
+    )
+  })
+
+  test('the group samples the rows before the content effect moves them', async () => {
+    const seen: string[] = []
+    vi.spyOn(Element.prototype, 'getBoundingClientRect').mockImplementation(
+      function (this: Element) {
+        seen.push(this.parentNode!.textContent!)
+        return { top: 0, left: 0, width: 0, height: 0 } as DOMRect
+      },
+    )
+    await parity(
+      group(),
+      list,
+      async r => {
+        seen.length = 0
+        await r.step('reverse', () => r.data.value.list.reverse())
+        expect(seen).toEqual(['abc', 'abc', 'abc'])
+      },
+      abc,
+    )
+  })
+
+  test('rows entering after a hook swap use the new hook', async () => {
+    await parity(
+      `<TransitionGroup tag="ul" :css="false" :onEnter="data.alt ? data.onEnter2 : data.onEnter">
+        <slot/>
+      </TransitionGroup>`,
+      list,
+      async r => {
+        await r.step('swap', () => (r.data.value.alt = true))
+        await r.step('push', () => r.data.value.list.push('d'))
+      },
+      abc,
+    )
+  })
+
+  test('a slot removed in the render swapping the hooks leaves under the new ones', async () => {
+    await parity(
+      `<TransitionGroup tag="ul" :css="false" :onLeave="data.alt ? data.onLeave2 : data.onLeave">
+        <slot v-if="data.show"/>
+      </TransitionGroup>`,
+      list,
+      async r => {
+        await r.step('swap and hide', () => {
+          r.data.value.alt = true
+          r.data.value.show = false
+        })
+      },
+      abc,
+    )
+  })
+
+  test('one scoped slot per item', async () => {
+    await parity(
+      group(
+        '',
+        '<template v-for="it in data.list" :key="it"><slot :it="it"/></template>',
+      ),
+      `<template #default="{ it }"><li>{{ it }}</li></template>`,
+      async r => {
+        await r.step('push', () => r.data.value.list.push('d'))
+        await r.step('enter done', r.done.enter)
+        await r.step('remove a', () => r.data.value.list.shift())
+        await r.step('leave done', r.done.leave)
+        rects = 0
+        await r.step('reverse', () => r.data.value.list.reverse())
+        expect(rects).toBe(3)
+      },
+      abc,
+    )
+  })
+
+  test('re-adding a leaving row of a keyed slot early-removes it', async () => {
+    await parity(
+      group('', '<slot key="s"/>'),
+      list,
+      async r => {
+        await r.step('remove a', () => r.data.value.list.shift())
+        await r.step('re-add a', () => r.data.value.list.unshift('a'))
+        await r.step('done', () => settle(r))
+      },
+      abc,
+    )
+  })
+
+  test('re-adding a keyed v-if branch row mid-leave early-removes it', async () => {
+    await parity(
+      group(),
+      `<li v-if="data.show" key="a">a</li>
+      <li v-else key="b">b</li>`,
+      async r => {
+        await r.step('hide', () => (r.data.value.show = false))
+        await r.step('show', () => (r.data.value.show = true))
+        await r.step('done', () => settle(r))
+      },
+      { show: true },
+    )
+  })
+
+  test('re-adding the v-if root of a template v-for row mid-leave early-removes it', async () => {
+    await parity(
+      group(),
+      `<template v-for="i in data.list" :key="i">
+        <li v-if="data.show">{{ i }}</li>
+      </template>`,
+      async r => {
+        await r.step('hide', () => (r.data.value.show = false))
+        await r.step('show', () => (r.data.value.show = true))
+        await r.step('done', () => settle(r))
+      },
+      { ...abc, show: true },
+    )
+  })
+
+  test('re-adding the keyed v-if root of a template v-for row mid-leave early-removes it', async () => {
+    await parity(
+      group(),
+      `<template v-for="i in data.list" :key="i">
+        <li v-if="data.show" :key="i">{{ i }}</li>
+      </template>`,
+      async r => {
+        await r.step('hide', () => (r.data.value.show = false))
+        await r.step('show', () => (r.data.value.show = true))
+        await r.step('done', () => settle(r))
+      },
+      { ...abc, show: true },
+    )
+  })
+
+  test('re-adding a row of a nested v-for mid-leave early-removes it', async () => {
+    await parity(
+      group(),
+      `<template v-for="g in data.groups" :key="g.id">
+        <li v-for="i in g.items" :key="i">{{ g.id }}:{{ i }}</li>
+      </template>`,
+      async r => {
+        await r.step('shift', () => r.data.value.groups[0].items.shift())
+        await r.step('unshift', () => r.data.value.groups[0].items.unshift('a'))
+        await r.step('done', () => settle(r))
+      },
+      { groups: [{ id: 'g', items: ['a', 'b'] }] },
+    )
+  })
+
+  test('content returning from the fallback mid-leave early-removes its leaving row', async () => {
+    await parity(
+      group('', '<slot><li key="fb">fb</li></slot>'),
+      `<li v-if="data.show" key="x">x</li>`,
+      async r => {
+        await r.step('hide', () => (r.data.value.show = false))
+        await r.step('show', () => (r.data.value.show = true))
+        await r.step('done', () => settle(r))
+      },
+      { show: true },
+    )
+  })
+
+  test('switching to the v-else list mid-leave keeps the leaving rows', async () => {
+    await parity(
+      group(),
+      `<template v-if="data.show">
+        <li v-for="i in data.list" :key="i">A{{ i }}</li>
+      </template>
+      <template v-else>
+        <li v-for="i in data.list" :key="i">B{{ i }}</li>
+      </template>`,
+      async r => {
+        await r.step('switch', () => (r.data.value.show = false))
+        await r.step('done', () => settle(r))
+      },
+      { list: ['a'], show: true },
+    )
+  })
+
+  test('a slot key change keeps the old row leaving beside the new one', async () => {
+    await parity(
+      group('', '<slot :key="data.epoch"/>'),
+      `<li key="a">a</li>`,
+      async r => {
+        await r.step('epoch', () => (r.data.value.epoch = 'two'))
+        await r.step('done', () => settle(r))
+      },
+      { epoch: 'one' },
+    )
+  })
+
+  test('a v-once slot remounted by a tag change enters its rows', async () => {
+    await parity(
+      `<TransitionGroup :tag="data.tag" ${hooks}><slot v-once/></TransitionGroup>`,
+      `<li key="a">a</li><li key="b">b</li>`,
+      async r => {
+        await r.step('tag', () => (r.data.value.tag = 'ol'))
+        await r.step('done', () => settle(r))
+      },
+      { tag: 'ul' },
+    )
+  })
+
+  test('a tag change remounts the rows without leaving them', async () => {
+    await parity(
+      `<TransitionGroup :tag="data.tag" ${hooks}><slot/></TransitionGroup>`,
+      list,
+      async r => {
+        await r.step('tag', () => (r.data.value.tag = 'ol'))
+        await r.step('done', () => settle(r))
+      },
+      { ...abc, tag: 'ul' },
+    )
+  })
+
+  test('the fallback enters when the content empties, and leaves when it refills', async () => {
+    await parity(
+      group('', '<slot><li key="f">fallback</li></slot>'),
+      list,
+      async r => {
+        await r.step('empty', () => (r.data.value.list = []))
+        await r.step('done', () => settle(r))
+        await r.step('refill', () => (r.data.value.list = ['a']))
+        await r.step('done', () => settle(r))
+      },
+      abc,
+    )
+  })
+
+  test('v-if content and the fallback take turns', async () => {
+    await parity(
+      group('', '<slot><li key="fb">fb</li></slot>'),
+      `<li v-if="data.show" key="x">x</li>`,
+      async r => {
+        await r.step('hide', () => (r.data.value.show = false))
+        await r.step('leave done', r.done.leave)
+        await r.step('show', () => (r.data.value.show = true))
+        await r.step('done', () => settle(r))
+      },
+    )
+  })
+
+  test('fallback rows are children of the group', async () => {
+    await parity(
+      group('', '<slot><li v-for="i in data.f" :key="i">{{ i }}</li></slot>'),
+      `<li v-if="data.content" key="x">x</li>`,
+      async r => {
+        rects = 0
+        await r.step('reverse', () => r.data.value.f.reverse())
+        expect(rects).toBe(3)
+        await r.step('remove b', () => r.data.value.f.splice(1, 1))
+        await r.step('done', () => settle(r))
+      },
+      { content: false, f: ['a', 'b', 'c'] },
+    )
+  })
+
+  test('a nested group with tag is one row', async () => {
+    await parity(
+      group(),
+      `<TransitionGroup v-if="data.show" key="g" tag="ol"><li key="x">x</li></TransitionGroup>`,
+      async r => {
+        await r.step('show', () => (r.data.value.show = true))
+        await r.step('done', () => settle(r))
+        await r.step('hide', () => (r.data.value.show = false))
+        await r.step('done', () => settle(r))
+      },
+      { show: false },
+    )
+  })
+
+  // the reverse host (a vdom slot inside a vapor group) resolves its fallback
+  // through the same outlet code
+  test('a vdom slot fallback keyed like a vapor sibling row leaves the sibling alone', async () => {
+    await compareRuns(
+      (vapor, data) => {
+        Object.assign(data.value, { content: false, fb: false })
+        return sfc(
+          false,
+          data,
+          `<components.Wrapper>
+            <li v-if="data.content">content</li>
+          </components.Wrapper>`,
+          {
+            Wrapper: sfc(
+              vapor,
+              data,
+              group(
+                '',
+                `<li v-if="data.show" key="x">sibling</li>
+                <slot><li v-if="data.fb" key="x">fallback</li></slot>`,
+              ),
+            ),
+          },
+        )
+      },
+      async r => {
+        await r.step('leave sibling', () => (r.data.value.show = false))
+        await r.step('show fallback', () => (r.data.value.fb = true))
+        await r.step('done', () => settle(r))
+      },
+    )
+  })
+
+  test('a fallback removed in the render swapping the hooks leaves under the new ones', async () => {
+    await parity(
+      `<TransitionGroup tag="ul" :css="false" :onLeave="data.alt ? data.onLeave2 : data.onLeave">
+        <slot v-if="data.outlet"><li key="f">f</li></slot>
+      </TransitionGroup>`,
+      `<li v-if="data.content" key="x">x</li>`,
+      async r => {
+        await r.step('swap and hide', () => {
+          r.data.value.alt = true
+          r.data.value.outlet = false
+        })
+      },
+      { content: false, outlet: true },
+    )
+  })
+})

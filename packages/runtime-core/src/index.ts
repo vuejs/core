@@ -271,7 +271,9 @@ export type {
   ConcreteComponent,
   FunctionalComponent,
   ComponentInternalInstance,
+  Attrs,
   SetupContext,
+  AllowedAttrs,
   ComponentCustomProps,
   AllowedComponentProps,
   GlobalComponents,
@@ -296,6 +298,7 @@ export type {
   ComputedOptions,
   RuntimeCompilerOptions,
   ComponentInjectOptions,
+  RenderResultExtensions,
   // deprecated
   ComponentOptionsWithoutProps,
   ComponentOptionsWithArrayProps,
@@ -401,6 +404,21 @@ export {
   normalizeStyle,
 } from '@vue/shared'
 export { setIsHydratingEnabled } from './hydration'
+// not under VAPOR below: runtime-dom and server-renderer need these in
+// every build format
+export {
+  isVaporInteropEnabled,
+  setVaporInteropEnabled,
+} from './vaporInteropState'
+export {
+  isKeepAliveEnabled,
+  withKeepAliveEnabled,
+} from './components/KeepAlive'
+export { isSuspenseEnabled, withSuspenseEnabled } from './components/Suspense'
+export {
+  isTransitionEnabled,
+  withTransitionEnabled,
+} from './components/BaseTransition'
 
 // For test-utils
 export { transformVNodeArgs } from './vnode'
@@ -417,8 +435,12 @@ import {
 } from './component'
 import { renderComponentRoot } from './componentRenderUtils'
 import { setCurrentRenderingInstance } from './componentRenderContext'
-import { isVNode, normalizeVNode } from './vnode'
-import { ensureValidVNode } from './helpers/renderSlot'
+import { VaporSlot, isVNode, normalizeVNode } from './vnode'
+import {
+  ensureValidVNode,
+  invokeSlotFallback,
+  rawVaporSlotKey,
+} from './helpers/renderSlot'
 import { popWarningContext, pushWarningContext } from './warning'
 
 const _ssrUtils: {
@@ -432,6 +454,10 @@ const _ssrUtils: {
   ensureValidVNode: typeof ensureValidVNode
   pushWarningContext: typeof pushWarningContext
   popWarningContext: typeof popWarningContext
+  // a vapor slot rendered by a vdom outlet
+  VaporSlot: typeof VaporSlot
+  rawVaporSlotKey: typeof rawVaporSlotKey
+  invokeSlotFallback: typeof invokeSlotFallback
 } = {
   createComponentInstance,
   setupComponent,
@@ -443,6 +469,9 @@ const _ssrUtils: {
   ensureValidVNode,
   pushWarningContext,
   popWarningContext,
+  VaporSlot,
+  rawVaporSlotKey,
+  invokeSlotFallback,
 }
 
 /**
@@ -518,7 +547,11 @@ export { type NormalizedPropsOptions } from './componentProps'
 /**
  * @internal
  */
-export { type VaporInteropInterface } from './apiCreateApp'
+export {
+  type VaporInVdomInterface,
+  type VdomInVaporInterface,
+  type VdomSlotOptions,
+} from './apiCreateApp'
 /**
  * @internal
  */
@@ -534,15 +567,15 @@ export {
 /**
  * @internal
  */
-export { baseEmit, isEmitListener } from './componentEmits'
+export { baseEmit, defaultPropGetter, isEmitListener } from './componentEmits'
 /**
  * @internal
  */
-export { queueJob, flushOnAppMount } from './scheduler'
+export { queueJob, flushOnAppMount, SchedulerJobFlags } from './scheduler'
 /**
  * @internal
  */
-export { expose, nextUid, validateComponentName } from './component'
+export { expose, getNextUid, nextUid, validateComponentName } from './component'
 /**
  * @internal
  */
@@ -560,6 +593,7 @@ export {
  */
 export {
   currentInstance,
+  restoreCurrentInstance,
   setCurrentInstance,
   simpleSetCurrentInstance,
 } from './componentCurrentInstance'
@@ -607,11 +641,23 @@ export { setRef } from './rendererTemplateRef'
 /**
  * @internal
  */
-export { type VNodeNormalizedRef, normalizeRef } from './vnode'
+export {
+  VaporSlot,
+  normalizeVNode,
+  type VNodeNormalizedRef,
+  type VdomSlotOutlet,
+  normalizeRef,
+  invokeVNodeHook,
+  type VNodeHook,
+} from './vnode'
 /**
  * @internal
  */
-export { ensureVaporSlotFallback } from './helpers/renderSlot'
+export {
+  ensureValidVNode,
+  invokeSlotFallback,
+  rawVaporSlotKey,
+} from './helpers/renderSlot'
 /**
  * @internal
  */
@@ -629,11 +675,16 @@ export {
 /**
  * @internal
  */
-export { devtoolsComponentAdded } from './devtools'
+export { devtoolsComponentAdded, devtoolsComponentRemoved } from './devtools'
 /**
  * @internal
  */
-export { performTransitionEnter, performTransitionLeave } from './renderer'
+export {
+  performTransitionEnter,
+  performTransitionLeave,
+  invalidateMount,
+  queuePostRenderEffect,
+} from './renderer'
 /**
  * @internal
  */
@@ -644,6 +695,7 @@ export { createInternalObject } from './internalObject'
 export {
   MismatchTypes,
   isMismatchAllowed,
+  isUnchangedResourceProp,
   toClassSet,
   isSetEqual,
   warnPropMismatch,
@@ -652,6 +704,9 @@ export {
   isValidHtmlOrSvgAttribute,
   getAttributeMismatch,
   isHydrating,
+  isHydratingEnabled,
+  logMismatchError,
+  resolveCssVars,
 } from './hydration'
 /**
  * @internal
@@ -660,7 +715,7 @@ export { createCanSetSetupRefChecker } from './rendererTemplateRef'
 /**
  * @internal
  */
-export { isTemplateNode } from './hydration'
+export { isTemplateNode, getContainerType } from './hydration'
 
 /**
  * @internal
@@ -668,7 +723,11 @@ export { isTemplateNode } from './hydration'
 export {
   baseResolveTransitionHooks,
   checkTransitionMode,
+  enterCbKey,
   leaveCbKey,
+  prepareTransitionLeave,
+  prepareTransitionSwitch,
+  resolveTransitionChild,
 } from './components/BaseTransition'
 
 /**
@@ -682,4 +741,21 @@ export type { GenericComponent } from './component'
 export {
   warnExtraneousAttributes,
   getFunctionalFallthrough,
+  isFunctionalFallthroughKey,
+  filterSingleRoot,
+  filterModelListeners,
+  shouldUpdateComponent,
 } from './componentRenderUtils'
+
+/**
+ * @internal
+ */
+export { knownTemplateRefs, isTemplateRefKey } from './helpers/useTemplateRef'
+/**
+ * @internal
+ */
+export { setCurrentRenderingInstance } from './componentRenderContext'
+/**
+ * @internal
+ */
+export { invokeDirectiveHook } from './directives'

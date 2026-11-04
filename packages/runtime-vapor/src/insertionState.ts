@@ -1,60 +1,39 @@
-import { isHydrating } from './dom/hydration'
-export type ChildItem = ChildNode & {
-  // logical index, used during hydration to locate the node
-  $idx: number
-}
-
 export type InsertionParent = ParentNode & {
-  // cache the first child for potential consecutive prepends
-  $fc?: Node | null
-
-  // last located logical child
+  // last located logical child and its logical index (hydration cache).
+  // Lives only for the duration of the hydration pass that installed it.
   $llc?: Node | null
+  $lli?: number
 }
 export let insertionParent: InsertionParent | undefined
-export let insertionAnchor: Node | 0 | undefined | null
-// logical index for hydration
+export let insertionAnchor: Node | undefined
+// hydration start unit index for appends
 export let insertionIndex: number | undefined
-
-// indicates whether the insertion is the last one in the parent.
-// if true, means no more nodes need to be hydrated after this insertion,
-// advancing current hydration node to parent nextSibling
-export let isLastInsertion: boolean | undefined
 
 /**
  * This function is called before a block type that requires insertion
- * (component, slot outlet, if, for) is created. The state is used for actual
- * insertion on client-side render, and used for node adoption during hydration.
+ * (component, slot outlet, if, for) is created.
+ *
+ * - `anchor` is a Node: insert before this template `<!>` placeholder during
+ *   client render; during hydration the located placeholder unit is the
+ *   block's hydration target.
+ * - `anchor` is a number: append; the value is the hydration start unit index
+ *   (the count of preceding logical units), omitted by codegen when 0.
+ * - `anchor` absent: append with no preceding units.
  */
 export function setInsertionState(
-  parent: ParentNode & { $fc?: Node | null },
-  anchor?: Node | 0 | null,
-  logicalIndex?: number,
-  last?: boolean,
+  parent: ParentNode,
+  anchor?: Node | number,
 ): void {
   insertionParent = parent
-  isLastInsertion = last
-  insertionIndex = logicalIndex
-
-  if (anchor !== undefined) {
-    if (isHydrating) {
-      // hydration uses logicalIndex, not anchor
-      insertionAnchor = undefined
-    } else {
-      insertionAnchor = anchor
-      if (anchor === 0 && !parent.$fc) {
-        parent.$fc = parent.firstChild
-      }
-    }
-  } else {
+  if (typeof anchor === 'number') {
     insertionAnchor = undefined
+    insertionIndex = anchor
+  } else {
+    insertionAnchor = anchor
+    insertionIndex = undefined
   }
 }
 
 export function resetInsertionState(): void {
-  insertionParent =
-    insertionAnchor =
-    insertionIndex =
-    isLastInsertion =
-      undefined
+  insertionParent = insertionAnchor = insertionIndex = undefined
 }

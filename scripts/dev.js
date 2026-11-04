@@ -155,6 +155,7 @@ for (const target of targets) {
         __VERSION__: `"${pkg.version}"`,
         __DEV__: prod ? `false` : `true`,
         __TEST__: `false`,
+        __E2E_TEST__: `false`,
         __BROWSER__: String(
           format !== 'cjs' && !pkg.buildOptions?.enableNonBrowserBranches,
         ),

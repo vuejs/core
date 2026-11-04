@@ -16,6 +16,7 @@ import {
   type GenericComponentInstance,
   currentInstance,
   isInSSRComponentSetup,
+  restoreCurrentInstance,
   setCurrentInstance,
 } from './component'
 import { callWithAsyncErrorHandling } from './errorHandling'
@@ -168,9 +169,7 @@ class RenderWatcherEffect extends WatcherEffect {
       this.flags |= EffectFlags.ALLOW_RECURSE
       job.flags! |= SchedulerJobFlags.ALLOW_RECURSE
     }
-    if (instance) {
-      job.i = instance
-    }
+    job.i = instance
     this.job = job
   }
 
@@ -297,7 +296,7 @@ export function instanceWatch(
   }
   const prev = setCurrentInstance(this)
   const res = doWatch(getter, cb.bind(publicThis), options)
-  setCurrentInstance(...prev)
+  restoreCurrentInstance(prev)
   return res
 }
 

@@ -79,6 +79,15 @@ export interface KeepAliveContext extends ComponentRenderContext {
 export const isKeepAlive = (vnode: any): boolean =>
   (vnode.type as any).__isKeepAlive
 
+// true once KeepAlive is in the bundle (set by its export): the vapor interop
+// keeps its keep-alive paths behind it
+export let isKeepAliveEnabled = false
+
+export function withKeepAliveEnabled<T>(value: T): T {
+  isKeepAliveEnabled = true
+  return value
+}
+
 const KeepAliveImpl: ComponentOptions = {
   name: `KeepAlive`,
 
@@ -194,6 +203,7 @@ const KeepAliveImpl: ComponentOptions = {
         // current active instance should no longer be kept-alive.
         // we can't unmount it now but it might be later, so reset its flag now.
         resetShapeFlag(current)
+        if (cached) resetShapeFlag(cached)
       }
       cache.delete(key)
       keys.delete(key)
@@ -220,10 +230,10 @@ const KeepAliveImpl: ComponentOptions = {
         if (isSuspense(keepAliveInstance.subTree.type)) {
           queuePostRenderEffect(
             () => {
-              cache.set(
-                pendingCacheKey!,
-                getInnerChild(keepAliveInstance.subTree),
-              )
+              const vnode = getInnerChild(keepAliveInstance.subTree)
+              if (vnode.component) {
+                cache.set(pendingCacheKey!, vnode)
+              }
             },
             undefined,
             keepAliveInstance.subTree.suspense,
@@ -358,9 +368,9 @@ const decorate = (t: typeof KeepAliveImpl) => {
 
 // export the public type for h/tsx inference
 // also to avoid inline import() in generated d.ts files
-export const KeepAlive = (__COMPAT__
-  ? /*@__PURE__*/ decorate(KeepAliveImpl)
-  : KeepAliveImpl) as any as {
+export const KeepAlive = /*@__PURE__*/ withKeepAliveEnabled(
+  __COMPAT__ ? /*@__PURE__*/ decorate(KeepAliveImpl) : KeepAliveImpl,
+) as any as {
   __isKeepAlive: true
   new (): {
     $props: VNodeProps & KeepAliveProps
@@ -551,7 +561,7 @@ export function deactivate(
   }
 
   // for e2e test
-  if (__DEV__ && __BROWSER__) {
+  if (__E2E_TEST__) {
     ;(instance as any).__keepAliveStorageContainer = container
   }
 }

@@ -18,6 +18,7 @@ import {
   provide,
   reactive,
   ref,
+  watch,
 } from '@vue/runtime-dom'
 import {
   createComponent,
@@ -29,7 +30,7 @@ import {
   template,
 } from '../src'
 import { makeRender } from './_utils'
-import { ITERATE_KEY } from '@vue/reactivity'
+import { ITERATE_KEY, onScopeDispose } from '@vue/reactivity'
 import { setElementText } from '../src/dom/prop'
 
 const define = makeRender<any>()
@@ -246,6 +247,7 @@ describe('api: lifecycle hooks', () => {
         onUpdated(() => calls.push('root onUpdated'))
         onBeforeUnmount(() => calls.push('root onBeforeUnmount'))
         onUnmounted(() => calls.push('root onUnmounted'))
+        onScopeDispose(() => calls.push('root onScopeDispose'))
 
         const n0 = createIf(
           () => toggle.value,
@@ -264,6 +266,7 @@ describe('api: lifecycle hooks', () => {
         onUpdated(() => calls.push('mid onUpdated'))
         onBeforeUnmount(() => calls.push('mid onBeforeUnmount'))
         onUnmounted(() => calls.push('mid onUnmounted'))
+        onScopeDispose(() => calls.push('mid onScopeDispose'))
 
         const n0 = createComponent(Child, { count: () => props.count })
         return n0
@@ -279,6 +282,7 @@ describe('api: lifecycle hooks', () => {
         onUpdated(() => calls.push('child onUpdated'))
         onBeforeUnmount(() => calls.push('child onBeforeUnmount'))
         onUnmounted(() => calls.push('child onUnmounted'))
+        onScopeDispose(() => calls.push('child onScopeDispose'))
 
         const t0 = template('<div></div>')
         const n0 = t0()
@@ -310,15 +314,37 @@ describe('api: lifecycle hooks', () => {
 
     // unmount
     ctx.app.unmount()
-    await nextTick()
     expect(calls).toEqual([
       'root onBeforeUnmount',
       'mid onBeforeUnmount',
+      'mid onScopeDispose',
       'child onBeforeUnmount',
+      'child onScopeDispose',
+      'root onScopeDispose',
       'child onUnmounted',
       'mid onUnmounted',
       'root onUnmounted',
     ])
+  })
+
+  it('does not flush pre watchers from another app on unmount', async () => {
+    const source = ref(0)
+    const cb = vi.fn()
+    const app = define({ setup: () => [] }).render().app
+    const otherApp = define({
+      setup() {
+        watch(source, cb)
+        return []
+      },
+    }).render(undefined, document.createElement('div')).app
+
+    source.value++
+    app.unmount()
+    expect(cb).not.toHaveBeenCalled()
+
+    await nextTick()
+    expect(cb).toHaveBeenCalledOnce()
+    otherApp.unmount()
   })
 
   it('onRenderTracked', async () => {

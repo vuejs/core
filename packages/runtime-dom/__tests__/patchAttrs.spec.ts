@@ -37,6 +37,16 @@ describe('runtime-dom: attrs patching', () => {
     expect(el.getAttribute('readonly')).toBe(null)
   })
 
+  test('playsinline boolean attribute', () => {
+    const el = document.createElement('video')
+    patchProp(el, 'playsinline', null, true)
+    expect(el.getAttribute('playsinline')).toBe('')
+    patchProp(el, 'playsinline', true, false)
+    expect(el.getAttribute('playsinline')).toBe(null)
+    patchProp(el, 'playsinline', false, '')
+    expect(el.getAttribute('playsinline')).toBe('')
+  })
+
   test('attributes', () => {
     const el = document.createElement('div')
     patchProp(el, 'foo', null, 'a')

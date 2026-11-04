@@ -78,6 +78,10 @@ const { values, positionals: targets } = parseArgs({
     size: {
       type: 'boolean',
     },
+    e2eTest: {
+      type: 'boolean',
+      short: 'e',
+    },
   },
 })
 
@@ -90,6 +94,7 @@ const {
   sourceMap,
   release: isRelease,
   size,
+  e2eTest,
 } = values
 
 /**
@@ -206,6 +211,7 @@ function createConfigsForTarget(target) {
     target,
     commit,
     formats: resolvedFormats,
+    e2eTest,
     prodOnly,
     devOnly:
       (pkg.buildOptions && pkg.buildOptions.env === 'development') || devOnly,

@@ -1,0 +1,17 @@
+// if vdom interop plugin is not installed, isInteropEnabled will be false
+// the interop code path will be tree-shaken out by bundlers
+export let isInteropEnabled = false
+
+export function setInteropEnabled(): void {
+  isInteropEnabled = true
+}
+
+export const interopKey: unique symbol = Symbol(`interop`)
+
+/**
+ * Carries the live VDOM slots ref on the raw-slots object handed to a vapor
+ * component mounted from VDOM. Replaces the old overloaded `_` key, which
+ * elsewhere means SlotFlags (vdom slots) or VaporSlotStability (slot
+ * functions).
+ */
+export const interopSlotsKey: unique symbol = Symbol(`interopSlots`)

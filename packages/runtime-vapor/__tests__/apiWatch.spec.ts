@@ -27,33 +27,36 @@ const define = makeRender()
 // only need to port test cases related to in-component usage
 describe('apiWatch', () => {
   // #7030
-  it(// need if support
-  'should not fire on child component unmount w/ flush: pre', async () => {
-    const visible = ref(true)
-    const cb = vi.fn()
-    const Parent = defineVaporComponent({
-      props: ['visible'],
-      setup() {
-        return createIf(
-          () => visible.value,
-          () => createComponent(Comp),
-        )
-      },
-    })
-    const Comp = {
-      setup() {
-        watch(visible, cb, { flush: 'pre' })
-        return []
-      },
-    }
-    define(Parent).render({
-      visible: () => visible.value,
-    })
-    expect(cb).not.toHaveBeenCalled()
-    visible.value = false
-    await nextTick()
-    expect(cb).not.toHaveBeenCalled()
-  })
+  it(
+    // need if support
+    'should not fire on child component unmount w/ flush: pre',
+    async () => {
+      const visible = ref(true)
+      const cb = vi.fn()
+      const Parent = defineVaporComponent({
+        props: ['visible'],
+        setup() {
+          return createIf(
+            () => visible.value,
+            () => createComponent(Comp),
+          )
+        },
+      })
+      const Comp = {
+        setup() {
+          watch(visible, cb, { flush: 'pre' })
+          return []
+        },
+      }
+      define(Parent).render({
+        visible: () => visible.value,
+      })
+      expect(cb).not.toHaveBeenCalled()
+      visible.value = false
+      await nextTick()
+      expect(cb).not.toHaveBeenCalled()
+    },
+  )
 
   // #7030
   it('flush: pre watcher in child component should not fire before parent update', async () => {
@@ -299,8 +302,7 @@ describe('apiWatch', () => {
     }
     define(Comp).render()
     // should not record watcher in detached scope
-    // the 1 is the props validation effect
-    expect(getEffectsCount(instance!.scope)).toBe(1)
+    expect(getEffectsCount(instance!.scope)).toBe(0)
   })
 
   test('watchEffect should keep running if created in a detached scope', async () => {

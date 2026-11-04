@@ -193,7 +193,7 @@ function patchTypes(pkg) {
               removed++
             }
           }
-          if (removed === node.specifiers.length) {
+          if (node.specifiers.length && removed === node.specifiers.length) {
             assert(typeof node.start === 'number')
             assert(typeof node.end === 'number')
             s.remove(node.start, node.end)

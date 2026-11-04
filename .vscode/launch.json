@@ -7,11 +7,11 @@
     {
       "type": "node",
       "request": "launch",
-      "name": "Vitest - Debug Current Test File",
+      "name": "Vite+ Test - Debug Current Test File",
       "autoAttachChildProcesses": true,
       "skipFiles": ["<node_internals>/**", "**/node_modules/**"],
-      "program": "${workspaceRoot}/node_modules/vitest/vitest.mjs",
-      "args": ["run", "${relativeFile}"],
+      "program": "${workspaceRoot}/node_modules/vite-plus/dist/bin.js",
+      "args": ["test", "run", "${relativeFile}"],
       "smartStep": true,
       "console": "integratedTerminal"
     }

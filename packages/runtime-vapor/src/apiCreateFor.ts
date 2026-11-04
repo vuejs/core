@@ -4,76 +4,74 @@ import {
   isReactive,
   isReadonly,
   isShallow,
+  onScopeDispose,
   setActiveSub,
+  setCurrentScope,
   shallowReadArray,
   shallowRef,
   toReactive,
   toReadonly,
   watch,
 } from '@vue/reactivity'
-import { isArray, isObject, isString } from '@vue/shared'
-import { createComment, createTextNode } from './dom/node'
+import {
+  EMPTY_ARR,
+  getSequence,
+  isArray,
+  isObject,
+  isString,
+} from '@vue/shared'
+import { setLastLocatedLogicalChild } from './dom/node'
 import {
   type Block,
-  applyTransitionHooks,
-  findBlockNode,
+  getBlockFirstNode,
   insert,
+  insertFragment,
+  insertNode,
+  isValidSlot,
+  move,
   remove,
+  removeFragment,
+  removeNode,
+  unmountVDOM,
 } from './block'
-import { queuePostFlushCb, warn } from '@vue/runtime-dom'
-import { currentInstance, isVaporComponent } from './component'
-import {
-  type DynamicSlot,
-  currentSlotOwner,
-  setCurrentSlotOwner,
-} from './componentSlots'
+import { MoveType, queuePostFlushCb, warn } from '@vue/runtime-dom'
+import { currentInstance } from './component'
+import type { DynamicSlot, VaporSlot } from './componentSlots'
 import { renderEffect } from './renderEffect'
-import { VaporVForFlags } from '../../shared/src/vaporFlags'
+import { VaporVForFlags } from '@vue/shared'
 import {
+  type CommentAnchor,
+  type FragmentClaim,
+  type HydrationCursor,
   advanceHydrationNode,
+  claimAnchor,
+  createFragmentClaim,
   currentHydrationNode,
+  enterHydrationBoundary,
+  enterHydrationCursor,
+  hydrateBlock,
   isComment,
   isHydrating,
-  locateHydrationNode,
+  locateClaimedEnd,
   setCurrentHydrationNode,
+  trimHydrationBoundary,
 } from './dom/hydration'
-import { ForFragment, VaporFragment } from './fragment'
 import {
-  type ChildItem,
+  ForBlock,
+  ForFragment,
+  type VaporFragment,
+  finishBlockCreation,
+  resolveFragmentAnchor,
+} from './fragment'
+import {
   insertionAnchor,
   insertionIndex,
   insertionParent,
-  isLastInsertion,
   resetInsertionState,
 } from './insertionState'
-
-class ForBlock extends VaporFragment {
-  scope: EffectScope | undefined
-  key: any
-  prev?: ForBlock
-  next?: ForBlock
-  prevAnchor?: ForBlock
-
-  itemRef: ShallowRef<any>
-  keyRef: ShallowRef<any> | undefined
-  indexRef: ShallowRef<number | undefined> | undefined
-
-  constructor(
-    nodes: Block,
-    scope: EffectScope | undefined,
-    item: ShallowRef<any>,
-    key: ShallowRef<any> | undefined,
-    index: ShallowRef<number | undefined> | undefined,
-    renderKey: any,
-  ) {
-    super(nodes)
-    this.scope = scope
-    this.itemRef = item
-    this.keyRef = key
-    this.indexRef = index
-    this.key = renderKey
-  }
-}
+import { applyTransitionHooks, isTransitionEnabled } from './transition'
+import { currentRenderContext, withRenderContext } from './renderContext'
+import { isInteropEnabled } from './vdomInteropState'
 
 type Source = any[] | Record<any, any> | number | Set<any> | Map<any, any>
 
@@ -93,16 +91,15 @@ export const createFor = (
   ) => Block,
   getKey?: (item: any, key: any, index?: number) => any,
   flags = 0,
-  setup?: (_: {
-    createSelector: (source: () => any) => (cb: () => void) => void
-  }) => void,
 ): ForFragment => {
   const _insertionParent = insertionParent
   const _insertionAnchor = insertionAnchor
   const _insertionIndex = insertionIndex
-  const _isLastInsertion = isLastInsertion
+  let hydrationCursor: HydrationCursor | null = null
+  let hydrationClaim: FragmentClaim | undefined
   if (isHydrating) {
-    locateHydrationNode()
+    hydrationClaim = createFragmentClaim()
+    hydrationCursor = enterHydrationCursor(hydrationClaim)
   } else {
     resetInsertionState()
   }
@@ -110,108 +107,116 @@ export const createFor = (
   let isMounted = false
   let oldBlocks: ForBlock[] = []
   let newBlocks: ForBlock[]
+  let newKeys: any[] | undefined
   let parent: ParentNode | undefined | null
-  // createSelector only
-  let currentKey: any
+  // held by the outlet (a fallback shows under a Transition): rows render
+  // detached and the outlet places them, like a DynamicFragment root's branch
+  let held = false
   let parentAnchor: Node
   if (!isHydrating) {
-    parentAnchor = __DEV__ ? createComment('for') : createTextNode()
+    parentAnchor = resolveFragmentAnchor(_insertionAnchor, 'for')
+    if (parentAnchor === _insertionAnchor) {
+      // adopted the template `<!>` placeholder as the list anchor; it is
+      // already in place, so items mount directly in front of it
+      parent = parentAnchor.parentNode
+    }
   }
 
+  // a slot root reports its validity flips to the enclosing outlet
+  const slotBoundary =
+    flags & VaporVForFlags.SLOT_ROOT ? currentRenderContext.slotBoundary : null
   const frag = new ForFragment(oldBlocks)
   const instance = currentInstance!
-  const canUseFastRemove = !!(flags & VaporVForFlags.FAST_REMOVE)
   const isComponent = !!(flags & VaporVForFlags.IS_COMPONENT)
-  const selectors: {
-    deregister: (key: any) => void
-    cleanup: () => void
-  }[] = []
+  const canUseFastRemove =
+    !!(flags & VaporVForFlags.FAST_REMOVE) && !isComponent
+  const isSingleNode = !!(flags & VaporVForFlags.IS_SINGLE_NODE)
+  const isFragment = !!(flags & VaporVForFlags.IS_FRAGMENT)
+  const wrappedRows = !!(flags & VaporVForFlags.WRAPPED_ROWS)
 
-  const scopeOwner = currentSlotOwner
+  const ctx = currentRenderContext
 
   if (__DEV__ && !instance) {
     warn('createFor() can only be used inside setup()')
   }
 
+  onScopeDispose(() => {
+    stopBlockScopes(oldBlocks)
+    if (newBlocks && newBlocks !== oldBlocks) {
+      stopBlockScopes(newBlocks)
+    }
+    oldBlocks = []
+    newBlocks = []
+  }, true)
+
   const renderList = () => {
     const source = normalizeSource(src())
+    const sourceKeys = source.keys
     const newLength = source.values.length
     const oldLength = oldBlocks.length
     newBlocks = new Array(newLength)
-    let isFallback = false
+    // Key expressions can depend on item fields, not just list shape. Evaluate
+    // them while the render effect is still the active subscriber so those deps
+    // can trigger keyed diff, then reuse the same keys below after
+    // setActiveSub() clears the active subscriber during patching.
+    newKeys = undefined
+    if (getKey) {
+      newKeys = new Array(newLength)
+      for (let i = 0; i < newLength; i++) {
+        const value = getItemValue(source, i)
+        newKeys[i] = sourceKeys
+          ? getKey(value, sourceKeys[i], i)
+          : getKey(value, i, undefined)
+      }
+    }
 
     const prevSub = setActiveSub()
-
-    if (!isMounted) {
-      isMounted = true
-      for (let i = 0; i < newLength; i++) {
-        const nodes = mount(source, i).nodes
-        if (isHydrating) {
-          setCurrentHydrationNode(findBlockNode(nodes!).nextNode)
-        }
+    const wasMounted = isMounted
+    let wasValid: boolean | undefined
+    if (wasMounted && slotBoundary) wasValid = isValidSlot(frag)
+    if (wasMounted && frag.bu) {
+      for (let i = 0; i < frag.bu.length; i++) {
+        frag.bu[i]()
       }
-
+    }
+    if (!wasMounted) {
+      isMounted = true
       if (isHydrating) {
-        parentAnchor =
-          newLength === 0
-            ? currentHydrationNode!.nextSibling!
-            : currentHydrationNode!
-        if (
-          __DEV__ &&
-          (!parentAnchor || (parentAnchor && !isComment(parentAnchor, ']')))
-        ) {
-          throw new Error(
-            `v-for fragment anchor node was not found. this is likely a Vue internal bug.`,
-          )
-        }
-
-        // optimization: cache the fragment end anchor as $llc (last logical child)
-        // so that locateChildByLogicalIndex can skip the entire fragment
-        if (_insertionParent && isComment(parentAnchor, ']')) {
-          ;(parentAnchor as any as ChildItem).$idx = _insertionIndex || 0
-          _insertionParent.$llc = parentAnchor
-        }
+        hydrateList(source, newLength)
+      } else {
+        mountAll(source, newLength)
       }
     } else {
-      const prevOwner = setCurrentSlotOwner(scopeOwner)
-      parent = parent || parentAnchor!.parentNode
+      parent = parentAnchor!.parentNode
+      held = isTransitionEnabled && !!slotBoundary && slotBoundary.isHolding()
       if (!oldLength) {
-        // remove fallback nodes
-        if (frag.fallback && (frag.nodes[0] as Block[]).length > 0) {
-          remove(frag.nodes[0], parent!)
-        }
-
         // fast path for all new
-        for (let i = 0; i < newLength; i++) {
-          mount(source, i)
-        }
+        mountAll(source, newLength)
       } else if (!newLength) {
-        // fast path for clearing all
-        for (const selector of selectors) {
-          selector.cleanup()
+        // fast path for clearing all.
+        // Fire reset listeners BEFORE per-item unmount so attached selectors
+        // bump their generation counter; the subsequent block.scope.stop()
+        // calls then short-circuit their onScopeDispose deregisters instead
+        // of doing N individual Map.delete() ops.
+        if (frag.resetListeners) {
+          for (const fn of frag.resetListeners) fn()
         }
         const doRemove = !canUseFastRemove
         for (let i = 0; i < oldLength; i++) {
-          unmount(oldBlocks[i], doRemove, false)
+          unmount(oldBlocks[i], doRemove)
         }
         if (canUseFastRemove) {
           parent!.textContent = ''
           parent!.appendChild(parentAnchor)
         }
-
-        // render fallback nodes
-        if (frag.fallback) {
-          insert((frag.nodes[0] = frag.fallback()), parent!, parentAnchor)
-          isFallback = true
-        }
       } else if (!getKey) {
         // unkeyed fast path
         const commonLength = Math.min(newLength, oldLength)
         for (let i = 0; i < commonLength; i++) {
-          update((newBlocks[i] = oldBlocks[i]), getItem(source, i)[0])
+          updateAt((newBlocks[i] = oldBlocks[i]), source, i)
         }
         for (let i = oldLength; i < newLength; i++) {
-          mount(source, i)
+          mount(source, i, parentAnchor)
         }
         for (let i = newLength; i < oldLength; i++) {
           unmount(oldBlocks[i])
@@ -220,8 +225,7 @@ export const createFor = (
         if (__DEV__) {
           const keyToIndexMap: Map<any, number> = new Map()
           for (let i = 0; i < newLength; i++) {
-            const item = getItem(source, i)
-            const key = getKey(...item)
+            const key = newKeys![i]
             if (key != null) {
               if (keyToIndexMap.has(key)) {
                 warn(
@@ -236,24 +240,14 @@ export const createFor = (
         }
 
         const commonLength = Math.min(oldLength, newLength)
-        const oldKeyIndexPairs: [any, number][] = new Array(oldLength)
-        const queuedBlocks: [
-          index: number,
-          item: ReturnType<typeof getItem>,
-          key: any,
-        ][] = new Array(newLength)
-
         let endOffset = 0
-        let queuedBlocksLength = 0
-        let oldKeyIndexPairsLength = 0
 
         while (endOffset < commonLength) {
           const index = newLength - endOffset - 1
-          const item = getItem(source, index)
-          const key = getKey(...item)
+          const key = newKeys![index]
           const existingBlock = oldBlocks[oldLength - endOffset - 1]
           if (existingBlock.key !== key) break
-          update(existingBlock, ...item)
+          updateAt(existingBlock, source, index)
           newBlocks[index] = existingBlock
           endOffset++
         }
@@ -262,185 +256,220 @@ export const createFor = (
         const e2 = oldLength - endOffset
         const e3 = newLength - endOffset
 
+        // new indices needing a mount or a move, ascending (built packed, so a
+        // small change in a large list only allocates for the actual churn)
+        const queuedIndices: number[] = []
+        const oldKeyIndexMap = new Map<any, number>()
+
         for (let i = 0; i < e1; i++) {
-          const currentItem = getItem(source, i)
-          const currentKey = getKey(...currentItem)
+          const currentKey = newKeys![i]
           const oldBlock = oldBlocks[i]
-          const oldKey = oldBlock.key
-          if (oldKey === currentKey) {
-            update((newBlocks[i] = oldBlock), currentItem[0])
+          if (oldBlock.key === currentKey) {
+            updateAt((newBlocks[i] = oldBlock), source, i)
           } else {
-            queuedBlocks[queuedBlocksLength++] = [i, currentItem, currentKey]
-            oldKeyIndexPairs[oldKeyIndexPairsLength++] = [oldKey, i]
+            queuedIndices.push(i)
+            oldKeyIndexMap.set(oldBlock.key, i)
           }
         }
 
         for (let i = e1; i < e2; i++) {
-          oldKeyIndexPairs[oldKeyIndexPairsLength++] = [oldBlocks[i].key, i]
+          oldKeyIndexMap.set(oldBlocks[i].key, i)
         }
 
         for (let i = e1; i < e3; i++) {
-          const blockItem = getItem(source, i)
-          const blockKey = getKey(...blockItem)
-          queuedBlocks[queuedBlocksLength++] = [i, blockItem, blockKey]
+          queuedIndices.push(i)
         }
 
-        queuedBlocks.length = queuedBlocksLength
-        oldKeyIndexPairs.length = oldKeyIndexPairsLength
-
-        interface MountOper {
-          source: ResolvedSource
-          index: number
-          item: ReturnType<typeof getItem>
-          key: any
-        }
-        interface MoveOper {
-          index: number
-          block: ForBlock
-        }
-
-        const oldKeyIndexMap = new Map(oldKeyIndexPairs)
-        const opers: (MountOper | MoveOper)[] = new Array(queuedBlocks.length)
-
+        let queuedLength = queuedIndices.length
+        // `getSequence` input, doubling as the old-position record: the
+        // block's old index + 1 (0 stays free as the "skip" marker, and also
+        // marks a fresh mount). The bounds filter below zeroes reuses that may
+        // not stay put; the apply pass tells move from mount by
+        // `newBlocks[index]`, which the reuse pass has already filled in.
+        let sources: number[] = EMPTY_ARR as unknown as number[]
         let mountCounter = 0
-        let opersLength = 0
+        let pureInsert = false
 
-        for (let i = queuedBlocks.length - 1; i >= 0; i--) {
-          const [index, item, key] = queuedBlocks[i]
-          const oldIndex = oldKeyIndexMap.get(key)
-          if (oldIndex !== undefined) {
-            oldKeyIndexMap.delete(key)
-            const reusedBlock = (newBlocks[index] = oldBlocks[oldIndex])
-            update(reusedBlock, ...item)
-            opers[opersLength++] = { index, block: reusedBlock }
-          } else {
-            mountCounter++
-            opers[opersLength++] = { source, index, item, key }
+        if (oldKeyIndexMap.size === 0) {
+          // pure insert: nothing to pair up, so the queued run [e1, e3) is
+          // mounts only, the planner below is skipped and `sources` is never
+          // read - don't build it
+          mountCounter = queuedLength
+          pureInsert = true
+        } else {
+          sources = new Array(queuedLength)
+          for (let q = queuedLength - 1; q >= 0; q--) {
+            const index = queuedIndices[q]
+            const key = newKeys![index]
+            const oldIndex = oldKeyIndexMap.get(key)
+            if (oldIndex !== undefined) {
+              oldKeyIndexMap.delete(key)
+              const reusedBlock = (newBlocks[index] = oldBlocks[oldIndex])
+              updateAt(reusedBlock, source, index)
+              sources[q] = oldIndex + 1
+            } else {
+              sources[q] = 0
+              mountCounter++
+            }
           }
         }
 
         const useFastRemove = mountCounter === newLength
 
-        for (const leftoverIndex of oldKeyIndexMap.values()) {
-          unmount(
-            oldBlocks[leftoverIndex],
-            !(useFastRemove && canUseFastRemove),
-            !useFastRemove,
-          )
+        // Same ordering note as the !newLength path: reset before unmount so
+        // the generation bump turns per-item deregisters into no-ops.
+        if (useFastRemove && frag.resetListeners) {
+          for (const fn of frag.resetListeners) fn()
         }
-        if (useFastRemove) {
-          for (const selector of selectors) {
-            selector.cleanup()
-          }
-          if (canUseFastRemove) {
-            parent!.textContent = ''
-            parent!.appendChild(parentAnchor)
-          }
-        }
-
-        if (opers.length === mountCounter) {
-          for (const { source, index, item, key } of opers as MountOper[]) {
-            mount(
-              source,
-              index,
-              index < newLength - 1
-                ? normalizeAnchor(newBlocks[index + 1].nodes)
-                : parentAnchor,
-              item,
-              key,
+        if (oldKeyIndexMap.size) {
+          for (const leftoverIndex of oldKeyIndexMap.values()) {
+            unmount(
+              oldBlocks[leftoverIndex],
+              !(useFastRemove && canUseFastRemove),
             )
           }
-        } else if (opers.length) {
-          let anchor = oldBlocks[0]
-          let blocksTail: ForBlock | undefined
-          for (let i = 0; i < oldLength; i++) {
-            const block = oldBlocks[i]
-            if (oldKeyIndexMap.has(block.key)) {
-              continue
-            }
-            block.prevAnchor = anchor
-            anchor = oldBlocks[i + 1]
-            if (blocksTail !== undefined) {
-              blocksTail.next = block
-              block.prev = blocksTail
-            }
-            blocksTail = block
+        }
+        if (useFastRemove && canUseFastRemove) {
+          parent!.textContent = ''
+          parent!.appendChild(parentAnchor)
+        }
+
+        let sequence: number[] | undefined
+        const hasReuse = mountCounter !== queuedLength
+        if (hasReuse) {
+          sequence = planMoves(queuedIndices, sources, e2, e3)
+          // the dense planner expands both arrays in place
+          queuedLength = queuedIndices.length
+        }
+        // reuses exist and none of them moved: every one of them stays put
+        const allKept = hasReuse && sequence === undefined
+
+        // apply back-to-front so every block can anchor on the finalized
+        // block after it (kept blocks count as finalized: relative order
+        // among all unmoved blocks is already correct)
+        let sequenceEnd = sequence ? sequence.length - 1 : -1
+        // nearest attached node at positions >= scanFrom; positions past it
+        // are already scanned, keeping the whole pass O(newLength) even
+        // across runs of blocks that render nothing
+        let scanFrom = newLength
+        let cachedAnchor: Node | undefined
+        for (let q = queuedLength - 1; q >= 0; q--) {
+          const index = queuedIndices[q]
+          let isKept = allKept && sources[q] !== 0
+          if (sequenceEnd >= 0 && sequence![sequenceEnd] === q) {
+            sequenceEnd--
+            // `getSequence` seeds its result with index 0, so it can report
+            // a leading entry that was never selected; skip that marker
+            isKept = sources[q] !== 0
           }
-          for (const action of opers) {
-            const { index } = action
-            if (index < newLength - 1) {
-              const nextBlock = newBlocks[index + 1]
-              let anchorNode = normalizeAnchor(nextBlock.prevAnchor!.nodes)
-              if (!anchorNode.parentNode)
-                anchorNode = normalizeAnchor(nextBlock.nodes)
-              if ('source' in action) {
-                const { item, key } = action
-                const block = mount(source, index, anchorNode, item, key)
-                moveLink(block, nextBlock.prev, nextBlock)
-              } else if (action.block.next !== nextBlock) {
-                insert(action.block, parent!, anchorNode)
-                moveLink(action.block, nextBlock.prev, nextBlock)
-              }
-            } else if ('source' in action) {
-              const { item, key } = action
-              const block = mount(source, index, parentAnchor, item, key)
-              moveLink(block, blocksTail)
-              blocksTail = block
-            } else if (action.block.next !== undefined) {
-              let anchorNode = anchor
-                ? normalizeAnchor(anchor.nodes)
-                : parentAnchor
-              if (!anchorNode.parentNode) anchorNode = parentAnchor
-              insert(action.block, parent!, anchorNode)
-              moveLink(action.block, blocksTail)
-              blocksTail = action.block
+          // `scanFrom`/`cachedAnchor` stay where they are: the next block
+          // that does move rescans the wider range, and each position is
+          // still visited at most once.
+          if (isKept) continue
+
+          // A block that renders nothing has no first node, so look past it
+          // for the next attached one.
+          let anchorNode: Node | undefined
+          for (let i = index + 1; i < scanFrom; i++) {
+            const node = getBlockFirstNode(newBlocks[i].nodes)
+            // must be attached to *this* list's parent: a node that is still
+            // connected elsewhere (teleport target, suspense pending
+            // container, keep-alive storage) would make insertBefore throw
+            if (node && node.parentNode === parent) {
+              anchorNode = node
+              break
             }
           }
-          for (const block of newBlocks) {
-            block.prevAnchor = block.next = block.prev = undefined
+          if (anchorNode === undefined) {
+            // Landing at the tail: after any rows still leaving, as vdom
+            // anchors on the fragment end.
+            if (cachedAnchor === undefined) cachedAnchor = parentAnchor
+            anchorNode = cachedAnchor
+          }
+          scanFrom = index + 1
+          cachedAnchor = anchorNode
+
+          if (pureInsert) {
+            // the whole run shares the anchor just resolved past it, so mount
+            // it forward: rows are created in source order, as vdom's
+            // "common sequence + mount" branch and every other vapor mount
+            // path do
+            for (let i = 0; i < queuedLength; i++) {
+              mount(source, queuedIndices[i], anchorNode)
+            }
+            break
+          }
+
+          const block = newBlocks[index]
+          if (block !== undefined) {
+            // relocating an existing row is not a structural enter; held,
+            // the outlet places the rows in order once the hold ends
+            if (!held) {
+              move(block.nodes, parent!, anchorNode, MoveType.REORDER)
+            }
+          } else {
+            mount(source, index, anchorNode)
           }
         }
       }
-      setCurrentSlotOwner(prevOwner)
     }
 
-    if (!isFallback) {
-      frag.nodes = [(oldBlocks = newBlocks)]
-      if (parentAnchor) frag.nodes.push(parentAnchor)
-    } else {
-      oldBlocks = []
-    }
+    oldBlocks = newBlocks
+    frag.nodes = parentAnchor ? [newBlocks, parentAnchor] : [newBlocks]
 
-    if (isMounted && frag.onUpdated) frag.onUpdated.forEach(m => m())
+    if (wasMounted && slotBoundary && isValidSlot(frag) !== wasValid) {
+      slotBoundary.markDirty()
+    }
+    if (wasMounted && frag.u) {
+      for (const fn of frag.u) fn(frag.nodes)
+    }
     setActiveSub(prevSub)
   }
 
   const needKey = renderItem.length > 1
   const needIndex = renderItem.length > 2
 
+  type InsertForBlock = (block: ForBlock, anchor: Node | undefined) => void
+  // IS_COMPONENT requires component teardown ordering but does not guarantee
+  // that block.nodes is a VaporComponentInstance. Component fallback may
+  // produce a plain DOM node, so these blocks still use the generic block path.
+  const insertForBlock: InsertForBlock = isSingleNode
+    ? (block, anchor) => insertNode(block.nodes as Node, parent!, anchor)
+    : isFragment
+      ? (block, anchor) =>
+          insertFragment(block.nodes as VaporFragment, parent!, anchor)
+      : (block, anchor) => insert(block.nodes, parent!, anchor)
+
+  type RemoveForBlock = (block: ForBlock) => void
+  const removeForBlock: RemoveForBlock = isSingleNode
+    ? block => removeNode(block.nodes as Node, parent!)
+    : isFragment
+      ? block => removeFragment(block.nodes as VaporFragment, parent!)
+      : block => remove(block.nodes, parent!)
+
   const mount = (
     source: ResolvedSource,
     idx: number,
-    anchor: Node | undefined = parentAnchor,
-    [item, key, index] = getItem(source, idx),
-    key2 = getKey && getKey(item, key, index),
+    anchor: Node | undefined,
   ): ForBlock => {
-    const itemRef = shallowRef(item)
+    const keys = source.keys
+    const itemRef = createItemRef(getItemValue(source, idx))
     // avoid creating refs if the render fn doesn't need it
-    const keyRef = needKey ? shallowRef(key) : undefined
-    const indexRef = needIndex ? shallowRef(index) : undefined
+    const keyRef = needKey ? shallowRef(keys ? keys[idx] : idx) : undefined
+    const indexRef = needIndex ? shallowRef(keys ? idx : undefined) : undefined
 
-    currentKey = key2
     let nodes: Block
-    let scope: EffectScope | undefined
-    if (isComponent) {
-      // component already has its own scope so no outer scope needed
+    const scope = new EffectScope(true)
+    const prevScope = setCurrentScope(scope)
+    let ok = false
+    try {
       nodes = renderItem(itemRef, keyRef as any, indexRef as any)
-    } else {
-      scope = new EffectScope()
-      nodes = scope.run(() =>
-        renderItem(itemRef, keyRef as any, indexRef as any),
-      )!
+      ok = true
+    } finally {
+      // restore before stopping so scope cleanups never observe the dying
+      // scope as current (matches the previous scope.run() ordering)
+      setCurrentScope(prevScope)
+      if (!ok) scope.stop()
     }
 
     const block = (newBlocks[idx] = new ForBlock(
@@ -449,17 +478,128 @@ export const createFor = (
       itemRef,
       keyRef,
       indexRef,
-      key2,
+      newKeys ? newKeys[idx] : undefined,
     ))
 
     // apply transition for new nodes
-    if (frag.$transition) {
-      applyTransitionHooks(block.nodes, frag.$transition)
+    if (isTransitionEnabled && frag.$transition) {
+      const hooks = frag.$transition
+      if (hooks.applyGroup) {
+        // TransitionGroup resolves the row key from the ForBlock itself
+        hooks.applyGroup(block, hooks.props, hooks.state, hooks.instance)
+      } else {
+        applyTransitionHooks(block.nodes, hooks)
+      }
     }
 
-    if (parent) insert(block.nodes, parent, anchor)
+    // a fresh item is rendered but not inserted yet
+    const bm = frag.bm
+    if (bm) {
+      for (let i = 0; i < bm.length; i++) bm[i](block.nodes)
+    }
+
+    if (parent && !held) {
+      insertForBlock(block, anchor)
+    }
 
     return block
+  }
+
+  const mountAll = (source: ResolvedSource, newLength: number): void => {
+    for (let i = 0; i < newLength; i++) {
+      mount(source, i, parentAnchor)
+    }
+  }
+
+  const updateAt = (
+    block: ForBlock,
+    source: ResolvedSource,
+    idx: number,
+  ): void => {
+    const keys = source.keys
+    update(
+      block,
+      getItemValue(source, idx),
+      keys ? keys[idx] : idx,
+      keys ? idx : undefined,
+    )
+  }
+
+  function hydrateList(source: ResolvedSource, newLength: number): void {
+    const claim = hydrationClaim!
+    let exitHydrationBoundary: (() => void) | undefined
+
+    // claiming a close marker as the anchor also bounds the cleanup to it
+    const reuseBoundaryClose = (close: Node): void => {
+      parentAnchor = claimAnchor(close)
+      exitHydrationBoundary = enterHydrationBoundary(parentAnchor)
+    }
+
+    // one owner callback for the list: a closure per row would allocate
+    let row = 0
+    const mountRow = () => mount(source, row, parentAnchor).nodes
+    try {
+      for (let i = 0; i < newLength; i++) {
+        const node = currentHydrationNode!
+        // an unwrapped row is a single node: its own hydration moves on
+        let nextNode: Node | null = null
+        let rowStart: CommentAnchor | null = null
+        if (node.nodeType === 8) {
+          const data = (node as Comment).data
+          if (data === ']') {
+            // fewer server rows: the rest mount before the close marker
+            nextNode = claimAnchor(node)
+          } else if (wrappedRows && data === '[') {
+            rowStart = node as CommentAnchor
+            setCurrentHydrationNode(node.nextSibling)
+          }
+        }
+        row = i
+        hydrateBlock(mountRow)
+        if (rowStart) {
+          // the row's blocks consumed its range, so the cursor rests on its
+          // close marker; only a mismatch pays for the walk from the start
+          // and for dropping what the row no longer adopts
+          const close = locateClaimedEnd(rowStart)!
+          trimHydrationBoundary(close)
+          nextNode = close.nextSibling
+        }
+        if (nextNode) setCurrentHydrationNode(nextNode)
+      }
+
+      if (claim.start) {
+        // the list owns its SSR range: its close marker is the anchor
+        reuseBoundaryClose(locateClaimedEnd(claim.start)!)
+
+        // optimization: cache the fragment end anchor as $llc (last logical child)
+        // so that locateChildByLogicalIndex can skip the entire fragment.
+        // For anchored inserts the unit index is known only while the anchor
+        // is the cached child; otherwise skipping the install just costs a
+        // restart walk.
+        if (_insertionParent) {
+          const idx = _insertionAnchor
+            ? _insertionParent.$llc === _insertionAnchor
+              ? _insertionParent.$lli
+              : undefined
+            : _insertionIndex || 0
+          if (idx !== undefined) {
+            setLastLocatedLogicalChild(_insertionParent, parentAnchor, idx)
+          }
+        }
+      } else {
+        // a marked list always finds its own range: only malformed server
+        // output gets here. Adopt the cursor so prod keeps going.
+        const close = currentHydrationNode!
+        if (__DEV__ && !isComment(close, ']')) {
+          throw new Error(
+            `v-for fragment anchor node was not found. this is likely a Vue internal bug.`,
+          )
+        }
+        reuseBoundaryClose(close)
+      }
+    } finally {
+      exitHydrationBoundary && exitHydrationBoundary()
+    }
   }
 
   const update = (
@@ -474,126 +614,370 @@ export const createFor = (
     if (keyRef && newKey !== undefined && newKey !== keyRef.value) {
       keyRef.value = newKey
     }
-    if (indexRef && newIndex !== undefined && newIndex !== indexRef.value) {
+    if (indexRef && newIndex !== indexRef.value) {
       indexRef.value = newIndex
     }
   }
 
-  const unmount = (block: ForBlock, doRemove = true, doDeregister = true) => {
+  const unmount = (block: ForBlock, doRemove = true) => {
     if (!isComponent) {
       block.scope!.stop()
     }
     if (doRemove) {
-      remove(block.nodes, parent!)
+      removeForBlock(block)
+    } else if (isInteropEnabled) {
+      // the parent's content is cleared at once, bypassing block removal
+      unmountVDOM(block)
     }
-    if (doDeregister) {
-      for (const selector of selectors) {
-        selector.deregister(block.key)
-      }
+    if (isComponent) {
+      // Component item cleanups such as template refs must observe the
+      // component after structural removal.
+      block.scope!.stop()
     }
-  }
-
-  if (setup) {
-    setup({ createSelector })
   }
 
   if (flags & VaporVForFlags.ONCE) {
     renderList()
   } else {
-    renderEffect(renderList)
+    renderEffect(() => {
+      if (!isMounted) return renderList()
+      withRenderContext(ctx, renderList)
+    })
   }
 
-  if (!isHydrating) {
-    if (_insertionParent) insert(frag, _insertionParent, _insertionAnchor)
-  } else {
-    advanceHydrationNode(_isLastInsertion ? _insertionParent! : parentAnchor!)
+  if (isHydrating && currentHydrationNode === parentAnchor!) {
+    advanceHydrationNode(parentAnchor!)
   }
+
+  finishBlockCreation(
+    frag,
+    parentAnchor!,
+    hydrationCursor,
+    _insertionParent,
+    _insertionAnchor,
+  )
 
   return frag
+}
 
-  function createSelector(source: () => any): (cb: () => void) => void {
-    let operMap = new Map<any, (() => void)[]>()
-    let activeKey = source()
-    let activeOpers: (() => void)[] | undefined
+export interface ForSelector {
+  (key: any, oper: () => void): void
+  /**
+   * Bulk-reset the selector's internal state. Hook into a v-for's fast-reset
+   * paths via `forFragment.onReset(selector.reset)` so the lazy per-item
+   * `onScopeDispose` teardowns short-circuit instead of doing N individual
+   * Map.delete() calls.
+   */
+  reset(): void
+}
 
-    watch(source, newValue => {
+/**
+ * Builds a key-indexed selector that activates only the opers registered with
+ * the key matching the current source value. Compared to letting each item
+ * subscribe directly, this keeps re-renders on source change O(2) instead of
+ * O(N) (only previous and new active item re-run).
+ *
+ * Selector cleanup follows the current scope. Per-item teardown is auto-wired
+ * via `onScopeDispose` so callers (typically v-for item scopes) don't need
+ * explicit deregistration. For bulk-reset hot paths, attach the selector to
+ * the v-for via `frag.onReset(selector.reset)` to skip the per-item Map ops.
+ */
+export function createSelector(source: () => any): ForSelector {
+  const operMap = new Map<any, (() => void)[]>()
+  let activeKey = source()
+  let activeOpers: (() => void)[] | undefined
+  let pendingKey = activeKey
+  let pending = false
+  // bumped by reset(); register captures the current value and uses it as
+  // a stale-check so post-reset deregisters become no-ops
+  let generation = 0
+
+  watch(source, newValue => {
+    pendingKey = newValue
+    if (pending) return
+    pending = true
+
+    if (activeOpers !== undefined) {
+      for (const oper of activeOpers) {
+        oper()
+      }
+    }
+
+    // watch may trigger before list patched
+    // defer to post-flush so operMap is up to date
+    queuePostFlushCb(() => {
+      pending = false
+      activeKey = pendingKey
+      activeOpers = operMap.get(activeKey)
       if (activeOpers !== undefined) {
         for (const oper of activeOpers) {
           oper()
         }
       }
-
-      // watch may trigger before list patched
-      // defer to post-flush so operMap is up to date
-      queuePostFlushCb(() => {
-        activeKey = newValue
-        activeOpers = operMap.get(newValue)
-        if (activeOpers !== undefined) {
-          for (const oper of activeOpers) {
-            oper()
-          }
-        }
-      })
     })
+  })
 
-    selectors.push({ deregister, cleanup })
-    return register
-
-    function cleanup() {
-      operMap = new Map()
-      activeOpers = undefined
+  const register: ForSelector = (key, oper) => {
+    oper()
+    let opers = operMap.get(key)
+    if (opers !== undefined) {
+      opers.push(oper)
+    } else {
+      opers = [oper]
+      operMap.set(key, opers)
+      if (key === activeKey) {
+        activeOpers = opers
+      }
     }
-
-    function register(oper: () => void) {
-      oper()
-      let opers = operMap.get(currentKey)
-      if (opers !== undefined) {
-        opers.push(oper)
+    const myGen = generation
+    onScopeDispose(() => {
+      if (myGen !== generation) return // bulk-cleared, skip
+      const list = operMap.get(key)
+      if (list === undefined) return
+      if (list.length === 1) {
+        operMap.delete(key)
+        if (key === activeKey) activeOpers = undefined
       } else {
-        opers = [oper]
-        operMap.set(currentKey, opers)
-        if (currentKey === activeKey) {
-          activeOpers = opers
+        const idx = list.indexOf(oper)
+        if (idx !== -1) list.splice(idx, 1)
+      }
+    }, true)
+  }
+  register.reset = () => {
+    operMap.clear()
+    activeOpers = undefined
+    generation++
+  }
+  return register
+}
+
+/**
+ * Decides which reused blocks may stay where they are: the longest increasing
+ * subsequence of their old indices is already in relative order, so only the
+ * blocks outside it need a DOM move. Returns that subsequence as indices into
+ * `sources`, or `undefined` when no reused block has to move at all.
+ *
+ * Two planners, picked by how dense the change is across the range it touches:
+ *
+ * - dense (the queued indices cover at least half of the range they span):
+ *   pull the in-place matches in that range into the plan too and run an
+ *   unbounded LIS, which is move-count minimal like vdom's. The range is at
+ *   most `2 * queuedIndices.length` wide here, so this stays O(queued).
+ * - sparse (a couple of rows moved across an otherwise untouched list, e.g. a
+ *   far swap): keep the in-place matches pinned, which costs nothing but
+ *   bounds each segment's LIS by its stationary neighbours. Not minimal in
+ *   general, but it never walks the untouched majority.
+ *
+ * Both arrays are expanded in place on the dense path.
+ */
+function planMoves(
+  queuedIndices: number[],
+  sources: number[],
+  e2: number,
+  e3: number,
+): number[] | undefined {
+  let queuedLength = queuedIndices.length
+  // The dense range runs from the first queued index to the start of the
+  // synchronized suffix: an in-place match on either side of a queued block
+  // still constrains where it may land, so the plan has to cover them all,
+  // not just the ones between the first and last queued index.
+  const firstIndex = queuedIndices[0]
+  const denseLength = e3 - firstIndex
+  const isDense = queuedLength * 2 >= denseLength
+
+  // if the eligible old positions already ascend, they are all in relative
+  // order and every one of them stays put - no LIS needed
+  let moved = false
+  let maxSource = 0
+
+  if (isDense) {
+    // Expand in place, back to front so the tail writes never clobber entries
+    // still to be read. Every position in the range that is not queued is a
+    // same-index in-place match, so it needs no lookup.
+    let read = queuedLength - 1
+    queuedIndices.length = sources.length = denseLength
+    for (
+      let write = denseLength - 1, index = e3 - 1;
+      write >= 0;
+      write--, index--
+    ) {
+      if (read >= 0 && queuedIndices[read] === index) {
+        sources[write] = sources[read--]
+      } else {
+        sources[write] = index + 1
+      }
+      queuedIndices[write] = index
+    }
+    queuedLength = denseLength
+
+    // no bounds: every reuse competes for the LIS
+    for (let q = 0; q < queuedLength; q++) {
+      const value = sources[q]
+      if (value !== 0) {
+        if (value < maxSource) moved = true
+        else maxSource = value
+      }
+    }
+  } else {
+    // in-place matches partition the queued indices into segments of
+    // consecutive positions, and bound each segment's eligible old indices.
+    // Because those bounds never overlap between segments, one whole-array
+    // LIS still yields the same answer as running it per segment.
+    let seg = 0
+    while (seg < queuedLength) {
+      let segEnd = seg
+      while (
+        segEnd + 1 < queuedLength &&
+        queuedIndices[segEnd + 1] === queuedIndices[segEnd] + 1
+      ) {
+        segEnd++
+      }
+      // prefix stationaries sit at their own index in both lists; the first
+      // suffix stationary (index e3) sits at old index e2. With no bounding
+      // stationary the bounds are -1 / e2 == oldLength.
+      const lowerBound = queuedIndices[seg] - 1
+      const nextIndex = queuedIndices[segEnd] + 1
+      const upperBound = nextIndex < e3 ? nextIndex : e2
+      for (let q = seg; q <= segEnd; q++) {
+        const value = sources[q]
+        // a mount has value 0, i.e. an old index of -1, which the lower
+        // bound (>= -1) already rejects
+        const oldIndex = value - 1
+        if (oldIndex <= lowerBound || oldIndex >= upperBound) {
+          sources[q] = 0
+        } else {
+          if (value < maxSource) moved = true
+          else maxSource = value
         }
       }
+      seg = segEnd + 1
     }
+  }
 
-    function deregister(key: any) {
-      operMap.delete(key)
-      if (key === activeKey) {
-        activeOpers = undefined
-      }
+  // `moved` can only be set by the second non-zero value onwards, so it
+  // already implies there is something to keep
+  return moved ? getSequence(sources) : undefined
+}
+
+function stopBlockScopes(blocks: ForBlock[]): void {
+  for (let i = 0; i < blocks.length; i++) {
+    const block = blocks[i]
+    if (block) {
+      const scope = block.scope
+      if (scope) scope.stop()
     }
   }
 }
 
-function moveLink(block: ForBlock, newPrev?: ForBlock, newNext?: ForBlock) {
-  const { prev: oldPrev, next: oldNext } = block
-  if (oldPrev) oldPrev.next = oldNext
-  if (oldNext) {
-    oldNext.prev = oldPrev
-    if (block.prevAnchor !== block) {
-      oldNext.prevAnchor = block.prevAnchor
-    }
-  }
-  if (newPrev) newPrev.next = block
-  if (newNext) newNext.prev = block
-  block.prev = newPrev
-  block.next = newNext
-  block.prevAnchor = block
+function isSameMapKey(a: unknown, b: unknown): boolean {
+  return Object.is(a, b) || (a === 0 && b === 0)
 }
 
 export function createForSlots(
-  rawSource: Source,
-  getSlot: (item: any, key: any, index?: number) => DynamicSlot,
-): DynamicSlot[] {
-  const source = normalizeSource(rawSource)
-  const sourceLength = source.values.length
-  const slots = new Array<DynamicSlot>(sourceLength)
-  for (let i = 0; i < sourceLength; i++) {
-    slots[i] = getSlot(...getItem(source, i))
+  rawSource: () => Source,
+  renderSlot: (
+    item: ShallowRef,
+    key?: ShallowRef,
+    index?: ShallowRef,
+  ) => VaporSlot,
+  getName: (item: any, key: any, index?: number) => unknown,
+  getKey?: (item: any, key: any, index?: number) => unknown,
+): () => DynamicSlot[] {
+  type SlotRecord = DynamicSlot & {
+    rawIdentity: unknown
+    itemRef: ShallowRef
+    keyRef?: ShallowRef
+    indexRef?: ShallowRef
   }
-  return slots
+
+  let oldRecords: SlotRecord[] = []
+  const needKey = renderSlot.length > 1
+  const needIndex = renderSlot.length > 2
+
+  const update = (
+    record: SlotRecord,
+    [item, key, index]: ReturnType<typeof getItem>,
+  ) => {
+    if (!Object.is(record.itemRef.value, item)) {
+      record.itemRef.value = item
+    }
+    if (record.keyRef && !Object.is(record.keyRef.value, key)) {
+      record.keyRef.value = key
+    }
+    if (record.indexRef && !Object.is(record.indexRef.value, index)) {
+      record.indexRef.value = index
+    }
+  }
+
+  return () => {
+    const source = normalizeSource(rawSource())
+    const sourceLength = source.values.length
+    const names = new Array<string>(sourceLength)
+    const identities: unknown[] = getKey
+      ? new Array<unknown>(sourceLength)
+      : names
+    const items = new Array<ReturnType<typeof getItem>>(sourceLength)
+    let sameResolution = sourceLength === oldRecords.length
+
+    for (let i = 0; i < sourceLength; i++) {
+      const item = (items[i] = getItem(source, i))
+      const name = (names[i] = String(getName(...item)))
+      const identity = (identities[i] = getKey ? getKey(...item) : name)
+      if (
+        sameResolution &&
+        (!isSameMapKey(oldRecords[i].rawIdentity, identity) ||
+          oldRecords[i].name !== name)
+      ) {
+        sameResolution = false
+      }
+    }
+
+    if (sameResolution) {
+      const prevSub = setActiveSub()
+      for (let i = sourceLength - 1; i >= 0; i--) {
+        update(oldRecords[i], items[i])
+      }
+      setActiveSub(prevSub)
+      return oldRecords
+    }
+
+    const oldByIdentity = new Map<unknown, SlotRecord>()
+    for (let i = 0; i < oldRecords.length; i++) {
+      oldByIdentity.set(oldRecords[i].rawIdentity, oldRecords[i])
+    }
+
+    const records = new Array<SlotRecord>(sourceLength)
+    const prevSub = setActiveSub()
+    for (let i = sourceLength - 1; i >= 0; i--) {
+      const slotItem = items[i]
+      const rawIdentity = identities[i]
+      let record = oldByIdentity.get(rawIdentity)
+      if (record) {
+        oldByIdentity.delete(rawIdentity)
+        update(record, slotItem)
+        record.name = names[i]
+      } else {
+        const [item, key, index] = slotItem
+        const itemRef = createItemRef(item)
+        const keyRef = needKey ? shallowRef(key) : undefined
+        const indexRef = needIndex ? shallowRef(index) : undefined
+        record = {
+          rawIdentity,
+          itemRef,
+          keyRef,
+          indexRef,
+          name: names[i],
+          fn: renderSlot(itemRef, keyRef, indexRef),
+          // The item ref is stable for the lifetime of this slot record.
+          key: itemRef,
+        }
+      }
+      records[i] = record
+    }
+    setActiveSub(prevSub)
+    oldRecords = records
+    return records
+  }
 }
 
 function normalizeSource(source: any): ResolvedSource {
@@ -610,11 +994,17 @@ function normalizeSource(source: any): ResolvedSource {
   } else if (isString(source)) {
     values = source.split('')
   } else if (typeof source === 'number') {
-    if (__DEV__ && !Number.isInteger(source)) {
-      warn(`The v-for range expect an integer value but got ${source}.`)
+    if (!Number.isInteger(source) || source < 0) {
+      if (__DEV__) {
+        warn(
+          `The v-for range expects a positive integer value but got ${source}.`,
+        )
+      }
+      values = []
+    } else {
+      values = new Array(source)
+      for (let i = 0; i < source; i++) values[i] = i + 1
     }
-    values = new Array(source)
-    for (let i = 0; i < source; i++) values[i] = i + 1
   } else if (isObject(source)) {
     if (source[Symbol.iterator as any]) {
       values = Array.from(source as Iterable<any>)
@@ -636,47 +1026,49 @@ function normalizeSource(source: any): ResolvedSource {
   }
 }
 
-function getItem(
-  { keys, values, needsWrap, isReadonlySource }: ResolvedSource,
+function getItemValue(
+  { values, needsWrap, isReadonlySource }: ResolvedSource,
   idx: number,
-): [item: any, key: any, index?: number] {
-  const value = needsWrap
+): any {
+  return needsWrap
     ? isReadonlySource
       ? toReadonly(toReactive(values[idx]))
       : toReactive(values[idx])
     : values[idx]
-  if (keys) {
-    return [value, keys[idx], idx]
-  } else {
-    return [value, idx, undefined]
-  }
 }
 
-function normalizeAnchor(node: Block): Node {
-  if (node instanceof Node) {
-    return node
-  } else if (isArray(node)) {
-    return normalizeAnchor(node[0])
-  } else if (isVaporComponent(node)) {
-    return normalizeAnchor(node.block!)
+// `shallowRef(item)` would return an item that is a ref itself, so the row
+// would read its value and write other rows into it: wrap it like any value
+function createItemRef(item: any): ShallowRef {
+  let itemRef = shallowRef(item)
+  if (itemRef === item) {
+    itemRef = shallowRef()
+    itemRef.value = item
+  }
+  return itemRef
+}
+
+function getItem(
+  source: ResolvedSource,
+  idx: number,
+): [item: any, key: any, index?: number] {
+  const value = getItemValue(source, idx)
+  if (source.keys) {
+    return [value, source.keys[idx], idx]
   } else {
-    return normalizeAnchor(node.nodes!)
+    return [value, idx, undefined]
   }
 }
 
 // runtime helper for rest element destructure
 export function getRestElement(val: any, keys: string[]): any {
   const res: any = {}
-  for (const key in val) {
+  for (const key of Object.keys(val)) {
     if (!keys.includes(key)) res[key] = val[key]
   }
   return res
 }
 
-export function getDefaultValue(val: any, defaultVal: any): any {
-  return val === undefined ? defaultVal : val
-}
-
-export function isForBlock(block: Block): block is ForBlock {
-  return block instanceof ForBlock
+export function getDefaultValue(val: any, getDefaultVal: () => any): any {
+  return val === undefined ? getDefaultVal() : val
 }

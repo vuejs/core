@@ -2,13 +2,15 @@ import {
   applyVShow,
   createComponent,
   createIf,
+  defineVaporAsyncComponent,
   defineVaporComponent,
   on,
   template,
+  vaporInteropPlugin,
 } from '../../src'
-import { type VShowElement, nextTick, ref } from 'vue'
-import { describe, expect, test } from 'vitest'
-import { makeRender } from '../_utils'
+import { type VShowElement, createApp, nextTick, ref } from 'vue'
+import { describe, expect, test, vi } from 'vite-plus/test'
+import { compile, makeRender, renderParity } from '../_utils'
 
 const define = makeRender()
 
@@ -136,5 +138,653 @@ describe('directive: v-show', () => {
     visible.value = !visible.value
     await nextTick()
     expect(host.innerHTML).toBe('<span style="">child</span><!--if-->')
+  })
+
+  test('should not track v-show source in dynamic fragment effect', async () => {
+    const t0 = template('<div>child</div>')
+    const t1 = template('<span>child</span>')
+    const childIf = ref(true)
+    const visible = ref(true)
+    const condition = vi.fn(() => childIf.value)
+
+    const { component: Child } = define({
+      setup() {
+        return createIf(
+          condition,
+          () => t0(),
+          () => t1(),
+        )
+      },
+    })
+
+    define({
+      setup() {
+        const child = createComponent(Child, null, null, true)
+        applyVShow(child, () => visible.value)
+        return child
+      },
+    }).render()
+
+    childIf.value = false
+    await nextTick()
+    expect(condition).toHaveBeenCalledTimes(2)
+
+    visible.value = false
+    await nextTick()
+    expect(condition).toHaveBeenCalledTimes(2)
+  })
+
+  test('keeps a nested dynamic root hidden when the inner branch swaps', async () => {
+    const { vdom, vapor } = await renderParity(
+      {
+        Mid: `<template><div v-if="data.b">m</div><p v-else>p</p></template>`,
+        Inner: `<template><components.Mid v-if="data.a"/><span v-else>s</span></template>`,
+        App: `<template><components.Inner v-show="false"/></template>`,
+      },
+      () => ref({ a: true, b: true }),
+      async data => {
+        data.value.b = false
+        await nextTick()
+      },
+    )
+    expect(vdom.after).toBe('<p style="display: none;">p</p>')
+    expect(vapor.after).toBe(
+      '<p style="display: none;">p</p><!--if--><!--if-->',
+    )
+  })
+
+  test('keeps a nested dynamic root hidden after outer and inner branch swaps', async () => {
+    const { vdom, vapor } = await renderParity(
+      {
+        Mid: `<template><div v-if="data.b">m</div><p v-else>p</p></template>`,
+        Inner: `<template><span v-if="data.a">s</span><components.Mid v-else/></template>`,
+        App: `<template><components.Inner v-show="false"/></template>`,
+      },
+      () => ref({ a: true, b: true }),
+      async data => {
+        data.value.a = false
+        await nextTick()
+        data.value.b = false
+        await nextTick()
+      },
+    )
+    expect(vdom.after).toBe('<p style="display: none;">p</p>')
+    expect(vapor.after).toBe(
+      '<p style="display: none;">p</p><!--if--><!--if-->',
+    )
+  })
+
+  test('follows the root of a resolved async component across branch swaps', async () => {
+    const data = ref({ b: true, show: false })
+    const Inner = compile(
+      `<template><div v-if="data.b">m</div><p v-else>p</p></template>`,
+      data,
+    )
+    let resolve!: (comp: any) => void
+    const AsyncInner = defineVaporAsyncComponent(
+      () => new Promise<any>(r => (resolve = r)),
+    )
+    const App = compile(
+      `<template><components.AsyncInner v-show="data.show"/></template>`,
+      data,
+      { AsyncInner },
+    )
+    const { host } = define(App).render()
+
+    resolve(Inner)
+    await new Promise(r => setTimeout(r))
+    await nextTick()
+    expect(host.querySelector('div')!.style.display).toBe('none')
+
+    data.value.b = false
+    await nextTick()
+    expect(host.querySelector('p')!.style.display).toBe('none')
+
+    data.value.show = true
+    await nextTick()
+    expect(host.querySelector('p')!.style.display).toBe('')
+  })
+
+  test('v-once freezes the value used by later dynamic roots', async () => {
+    const { vdom, vapor } = await renderParity(
+      {
+        Inner: `<template><div v-if="data.b">m</div><p v-else>p</p></template>`,
+        App: `<template><components.Inner v-show="data.show" v-once/></template>`,
+      },
+      () => ref({ b: true, show: true }),
+      async data => {
+        data.value.show = false
+        await nextTick()
+        data.value.b = false
+        await nextTick()
+      },
+    )
+    expect(vdom.after).toBe('<p>p</p>')
+    expect(vapor.after).toBe('<p>p</p><!--if-->')
+  })
+
+  test('ignores a slot outlet root like vdom', async () => {
+    const { vdom, vapor } = await renderParity(
+      {
+        Child: `<template><slot/></template>`,
+        App: `<template><components.Child v-show="false"><div>x</div></components.Child></template>`,
+      },
+      () => ref({}),
+      async () => {},
+    )
+    expect(vdom.after).toBe('<div>x</div>')
+    expect(vapor.after).toBe('<div>x</div><!--slot-->')
+    expect(
+      'Runtime directive used on component with non-element root node',
+    ).toHaveBeenWarned()
+    expect(
+      'v-show used on component with non-single-element root node',
+    ).toHaveBeenWarned()
+  })
+
+  test('ignores a slot outlet reached through the root chain like vdom', async () => {
+    const { vdom, vapor } = await renderParity(
+      {
+        Child: `<template><slot/></template>`,
+        Outer: `<template><components.Child v-if="data.ok"><slot/></components.Child></template>`,
+        App: `<template><components.Outer v-show="false"><div>x</div></components.Outer></template>`,
+      },
+      () => ref({ ok: true }),
+      async () => {},
+    )
+    expect(vdom.after).toBe('<div>x</div>')
+    expect(vapor.after).toBe('<div>x</div><!--slot--><!--slot--><!--if-->')
+    expect(
+      'Runtime directive used on component with non-element root node',
+    ).toHaveBeenWarned()
+    expect(
+      'v-show used on component with non-single-element root node',
+    ).toHaveBeenWarned()
+  })
+
+  // #15625: v-show restores the display of the merged root style layers
+  test('restores display from either root style layer', async () => {
+    const shown: Record<string, string[]> = { vdom: [], vapor: [] }
+    await renderParity(
+      {
+        Child: `<template><div :style="data.own" v-show="data.show">c</div></template>`,
+        App: `<template><components.Child :style="data.par" /></template>`,
+      },
+      () =>
+        ref({ own: { width: '1px' }, par: { display: 'flex' }, show: false }),
+      async (data, root, mode) => {
+        const el = root.firstElementChild as HTMLElement
+        // patch the own layer while fallthrough holds display
+        data.value.own = { width: '2px' }
+        await nextTick()
+        data.value.show = true
+        await nextTick()
+        shown[mode].push(el.style.display)
+        // patch the fallthrough layer while own holds display
+        data.value.show = false
+        data.value.own = { display: 'grid' }
+        data.value.par = { color: 'blue' }
+        await nextTick()
+        data.value.par = { color: 'red' }
+        await nextTick()
+        data.value.show = true
+        await nextTick()
+        shown[mode].push(el.style.display)
+      },
+    )
+    expect(shown.vdom).toEqual(['flex', 'grid'])
+    expect(shown.vapor).toEqual(shown.vdom)
+  })
+
+  test('restores an important display from the fallthrough style layer', async () => {
+    const shown: Record<string, string[]> = { vdom: [], vapor: [] }
+    await renderParity(
+      {
+        Child: `<template><div :style="data.own" v-show="data.show">c</div></template>`,
+        App: `<template><components.Child :style="data.par" /></template>`,
+      },
+      () =>
+        ref({
+          own: { width: '1px' },
+          par: { display: 'flex !important' },
+          show: true,
+        }),
+      async (data, root, mode) => {
+        const el = root.firstElementChild as HTMLElement
+        data.value.own = { width: '2px' }
+        await nextTick()
+        data.value.show = false
+        await nextTick()
+        data.value.show = true
+        await nextTick()
+        shown[mode].push(el.getAttribute('style')!)
+      },
+    )
+    expect(shown.vdom).toEqual(['width: 2px; display: flex !important;'])
+    expect(shown.vapor).toEqual(shown.vdom)
+  })
+
+  test('applies through a Transition wrapping a slot like vdom', async () => {
+    const shown: Record<string, string[]> = { vdom: [], vapor: [] }
+    await renderParity(
+      {
+        Fade: `<template><Transition name="fade"><slot /></Transition></template>`,
+        App: `<template><components.Fade v-show="data.show"><p>x</p></components.Fade></template>`,
+      },
+      () => ref({ show: false }),
+      async (data, root, mode) => {
+        const p = root.querySelector('p')!
+        shown[mode].push(p.style.display)
+        data.value.show = true
+        await nextTick()
+        shown[mode].push(p.style.display)
+      },
+    )
+    expect(shown.vdom).toEqual(['none', ''])
+    expect(shown.vapor).toEqual(shown.vdom)
+  })
+
+  test('applies through forwarding wrappers around a Transition like vdom', async () => {
+    const shown: Record<string, string[]> = { vdom: [], vapor: [] }
+    await renderParity(
+      {
+        Fade: `<template><Transition name="fade"><slot /></Transition></template>`,
+        Wrap: `<template><components.Fade><slot /></components.Fade></template>`,
+        App: `<template><components.Wrap v-show="data.show"><p>x</p></components.Wrap></template>`,
+      },
+      () => ref({ show: false }),
+      async (data, root, mode) => {
+        const p = root.querySelector('p')!
+        shown[mode].push(p.style.display)
+        data.value.show = true
+        await nextTick()
+        shown[mode].push(p.style.display)
+      },
+    )
+    expect(shown.vdom).toEqual(['none', ''])
+    expect(shown.vapor).toEqual(shown.vdom)
+  })
+
+  test('applies to v-show written on a Transition wrapping a slot like vdom', async () => {
+    const shown: Record<string, string[]> = { vdom: [], vapor: [] }
+    await renderParity(
+      {
+        Fade: `<template><Transition name="fade" v-show="data.show"><slot /></Transition></template>`,
+        App: `<template><components.Fade><p>x</p></components.Fade></template>`,
+      },
+      () => ref({ show: false }),
+      async (data, root, mode) => {
+        const p = root.querySelector('p')!
+        shown[mode].push(p.style.display)
+        data.value.show = true
+        await nextTick()
+        shown[mode].push(p.style.display)
+      },
+    )
+    expect(shown.vdom).toEqual(['none', ''])
+    expect(shown.vapor).toEqual(shown.vdom)
+  })
+
+  test('applies through a dynamic Transition slot like vdom', async () => {
+    const shown: Record<string, string[]> = { vdom: [], vapor: [] }
+    await renderParity(
+      {
+        Fade: `<template><Transition name="fade"><template v-if="data.on" #default><slot /></template></Transition></template>`,
+        App: `<template><components.Fade v-show="data.show"><p>x</p></components.Fade></template>`,
+      },
+      () => ref({ on: false, show: false }),
+      async (data, root, mode) => {
+        data.value.on = true
+        await nextTick()
+        shown[mode].push(root.querySelector('p')!.style.display)
+        data.value.show = true
+        await nextTick()
+        shown[mode].push(root.querySelector('p')!.style.display)
+      },
+    )
+    expect(shown.vdom).toEqual(['none', ''])
+    expect(shown.vapor).toEqual(shown.vdom)
+  })
+
+  test('follows the fallback of a Transition slot like vdom', async () => {
+    const shown: Record<string, string[]> = { vdom: [], vapor: [] }
+    await renderParity(
+      {
+        Fade: `<template><Transition name="fade"><slot><span>fallback</span></slot></Transition></template>`,
+        App: `<template><components.Fade v-show="false"><p v-if="data.has">x</p></components.Fade></template>`,
+      },
+      () => ref({ has: true }),
+      async (data, root, mode) => {
+        shown[mode].push(root.querySelector('p')!.style.display)
+        data.value.has = false
+        await nextTick()
+        shown[mode].push(root.querySelector('span')!.style.display)
+        data.value.has = true
+        await nextTick()
+        shown[mode].push(root.querySelector('p')!.style.display)
+      },
+    )
+    expect(shown.vdom).toEqual(['none', 'none', 'none'])
+    expect(shown.vapor).toEqual(shown.vdom)
+  })
+
+  test('still ignores the slot outlet root of a component inside a Transition like vdom', async () => {
+    const { vdom, vapor } = await renderParity(
+      {
+        Fade: `<template><Transition name="fade"><slot /></Transition></template>`,
+        Inner: `<template><slot /></template>`,
+        App: `<template><components.Fade v-show="false"><components.Inner><p>x</p></components.Inner></components.Fade></template>`,
+      },
+      () => ref({}),
+      async () => {},
+    )
+    expect(vdom.after).toBe('<p>x</p>')
+    expect(vapor.after).toBe('<p>x</p><!--slot--><!--slot-->')
+    expect(
+      'Runtime directive used on component with non-element root node',
+    ).toHaveBeenWarned()
+    expect(
+      'Component inside <Transition> renders non-element root node',
+    ).toHaveBeenWarned()
+    expect(
+      'v-show used on component with non-single-element root node',
+    ).toHaveBeenWarned()
+  })
+
+  test('keeps a slot root hidden by its own v-show under a Transition wrapper like vdom', async () => {
+    const shown: Record<string, string[]> = { vdom: [], vapor: [] }
+    await renderParity(
+      {
+        Collapse: `<template><Transition name="collapse"><slot /></Transition></template>`,
+        App: `<template><components.Collapse v-show="data.enabled"><section v-show="data.open">x</section></components.Collapse></template>`,
+      },
+      () => ref({ enabled: true, open: false }),
+      async (data, root, mode) => {
+        const el = root.querySelector('section')!
+        shown[mode].push(el.style.display)
+        data.value.open = true
+        await nextTick()
+        shown[mode].push(el.style.display)
+      },
+    )
+    expect(shown.vdom).toEqual(['none', ''])
+    expect(shown.vapor).toEqual(shown.vdom)
+  })
+
+  test('keeps a swapped-in slot root hidden by its own v-show under a mounted Transition like vdom', async () => {
+    const shown: Record<string, string[]> = { vdom: [], vapor: [] }
+    await renderParity(
+      {
+        Collapse: `<template><Transition :css="false"><slot /></Transition></template>`,
+        App: `<template><components.Collapse v-show="data.enabled"><section v-if="data.a" v-show="data.open">a</section><article v-else v-show="data.open">b</article></components.Collapse></template>`,
+      },
+      () => ref({ enabled: true, open: false, a: true }),
+      async (data, root, mode) => {
+        shown[mode].push(root.querySelector('section')!.style.display)
+        data.value.a = false
+        await nextTick()
+        shown[mode].push(root.querySelector('article')!.style.display)
+      },
+    )
+    expect(shown.vdom).toEqual(['none', 'none'])
+    expect(shown.vapor).toEqual(shown.vdom)
+  })
+
+  test('applies a value flipped before the Transition mounted like vdom', async () => {
+    const shown: Record<string, string[]> = { vdom: [], vapor: [] }
+    await renderParity(
+      {
+        Child: `<script setup>
+import { ref, onBeforeMount } from 'vue'
+const visible = ref(false)
+onBeforeMount(() => { visible.value = true })
+</script>
+<template><Transition :css="false"><section v-show="visible">x</section></Transition></template>`,
+        App: `<template><components.Child v-if="data.mount" /></template>`,
+      },
+      () => ref({ mount: false }),
+      async (data, root, mode) => {
+        data.value.mount = true
+        await nextTick()
+        shown[mode].push(root.querySelector('section')!.style.display)
+      },
+    )
+    expect(shown.vdom).toEqual([''])
+    expect(shown.vapor).toEqual(shown.vdom)
+  })
+
+  test('leaves a Transition root structural under an inherited v-show like vdom', async () => {
+    const counts: Record<string, number[]> = { vdom: [], vapor: [] }
+    await renderParity(
+      {
+        Fade: `<template><Transition :css="false" @leave="data.onLeave"><slot /></Transition></template>`,
+        Inner: `<template><p v-if="data.a">a</p><span v-else>b</span></template>`,
+        App: `<template><components.Fade v-show="true"><components.Inner /></components.Fade></template>`,
+      },
+      () =>
+        ref({
+          a: true,
+          onLeave: vi.fn((_el: Element, done: () => void) => done()),
+        }),
+      async (data, root, mode) => {
+        for (const a of [false, true, false]) {
+          data.value.a = a
+          await nextTick()
+          counts[mode].push(data.value.onLeave.mock.calls.length)
+        }
+      },
+    )
+    expect(counts.vdom).toEqual([1, 2, 3])
+    expect(counts.vapor).toEqual(counts.vdom)
+  })
+
+  test('appears a hidden Transition slot root under an inherited v-show like vdom', async () => {
+    const seen: Record<string, unknown[]> = { vdom: [], vapor: [] }
+    await renderParity(
+      {
+        Fade: `<template><Transition :css="false" appear @appear="data.onAppear"><slot /></Transition></template>`,
+        App: `<template><components.Fade v-show="false"><p>x</p></components.Fade></template>`,
+      },
+      () =>
+        ref({ onAppear: vi.fn((_el: Element, done: () => void) => done()) }),
+      async (data, root, mode) => {
+        await nextTick()
+        seen[mode].push(data.value.onAppear.mock.calls.length)
+        seen[mode].push(root.querySelector('p')!.style.display)
+      },
+    )
+    expect(seen.vdom).toEqual([1, 'none'])
+    expect(seen.vapor).toEqual(seen.vdom)
+  })
+
+  test('toggles a root carrying hooks relayed from a vdom Transition', async () => {
+    const data = ref({ visible: false })
+    const VaporChild = compile(
+      `<template><section v-show="data.visible">x</section></template>`,
+      data,
+    )
+    const App = compile(
+      `<script setup>const data = _data; const components = _components;</script>
+      <template><Transition :css="false"><components.VaporChild /></Transition></template>`,
+      data,
+      { VaporChild },
+      { vapor: false },
+    )
+    const root = document.createElement('div')
+    createApp(App).use(vaporInteropPlugin).mount(root)
+    const el = root.querySelector('section')!
+    expect(el.style.display).toBe('none')
+    data.value.visible = true
+    await nextTick()
+    expect(el.style.display).toBe('')
+  })
+
+  test('registers every inherited v-show on a pending async root like vdom', async () => {
+    const shown: Record<string, string[]> = { vdom: [], vapor: [] }
+    await renderParity(
+      {
+        Async: `<script setup>
+const data = _data
+await data.value.ready
+</script>
+<template><section>x</section></template>`,
+        Wrap: `<template><components.Async v-show="true" /></template>`,
+        App: `<template><Suspense><components.Wrap v-show="false" /></Suspense></template>`,
+      },
+      () => {
+        let resolve!: () => void
+        const ready = new Promise<void>(r => (resolve = r))
+        return ref({ ready, resolve })
+      },
+      async (data, root, mode) => {
+        data.value.resolve()
+        await new Promise(r => setTimeout(r))
+        await nextTick()
+        shown[mode].push(root.querySelector('section')!.style.display)
+      },
+    )
+    expect(shown.vdom).toEqual(['none'])
+    expect(shown.vapor).toEqual(shown.vdom)
+  })
+
+  test('updates a kept-alive root reactivated after the value changed like vdom', async () => {
+    const shown: Record<string, string[]> = { vdom: [], vapor: [] }
+    await renderParity(
+      {
+        A: `<template><section>a</section></template>`,
+        B: `<template><article>b</article></template>`,
+        Wrap: `<template><Transition :css="false"><KeepAlive><component :is="data.cur === 'a' ? components.A : components.B" /></KeepAlive></Transition></template>`,
+        App: `<template><components.Wrap v-show="data.shown" /></template>`,
+      },
+      () => ref({ cur: 'a', shown: false }),
+      async (data, root, mode) => {
+        shown[mode].push(root.querySelector('section')!.style.display)
+        data.value.cur = 'b'
+        await nextTick()
+        data.value.shown = true
+        await nextTick()
+        shown[mode].push(root.querySelector('article')!.style.display)
+        data.value.cur = 'a'
+        await nextTick()
+        shown[mode].push(root.querySelector('section')!.style.display)
+      },
+    )
+    expect(shown.vdom).toEqual(['none', '', ''])
+    expect(shown.vapor).toEqual(shown.vdom)
+  })
+
+  test('keeps a Transition child hidden by its own v-show on mount like vdom', async () => {
+    const shown: Record<string, string[]> = { vdom: [], vapor: [] }
+    await renderParity(
+      {
+        Inner: `<template><section v-show="data.open">x</section></template>`,
+        App: `<template><Transition :css="false"><components.Inner v-show="data.enabled" /></Transition></template>`,
+      },
+      () => ref({ enabled: true, open: false }),
+      async (data, root, mode) => {
+        const el = root.querySelector('section')!
+        shown[mode].push(el.style.display)
+        data.value.open = true
+        await nextTick()
+        shown[mode].push(el.style.display)
+      },
+    )
+    expect(shown.vdom).toEqual(['none', ''])
+    expect(shown.vapor).toEqual(shown.vdom)
+  })
+
+  test('lets the outer v-show win on mount inside a Transition wrapper element like vdom', async () => {
+    const shown: Record<string, string[]> = { vdom: [], vapor: [] }
+    await renderParity(
+      {
+        Inner: `<template><section v-show="data.open">x</section></template>`,
+        App: `<template><Transition :css="false"><div><components.Inner v-show="data.enabled" /></div></Transition></template>`,
+      },
+      () => ref({ enabled: true, open: false }),
+      async (data, root, mode) => {
+        const el = root.querySelector('section')!
+        shown[mode].push(el.style.display)
+        data.value.enabled = false
+        await nextTick()
+        shown[mode].push(el.style.display)
+      },
+    )
+    expect(shown.vdom).toEqual(['', 'none'])
+    expect(shown.vapor).toEqual(shown.vdom)
+  })
+
+  test('keeps Transition slot content hidden by its own v-show on mount like vdom', async () => {
+    const shown: Record<string, string[]> = { vdom: [], vapor: [] }
+    await renderParity(
+      {
+        Inner: `<template><section v-show="data.open">x</section></template>`,
+        Fade: `<template><Transition :css="false"><slot /></Transition></template>`,
+        App: `<template><components.Fade><components.Inner v-show="data.enabled" /></components.Fade></template>`,
+      },
+      () => ref({ enabled: true, open: false }),
+      async (data, root, mode) => {
+        const el = root.querySelector('section')!
+        shown[mode].push(el.style.display)
+        data.value.open = true
+        await nextTick()
+        shown[mode].push(el.style.display)
+      },
+    )
+    expect(shown.vdom).toEqual(['none', ''])
+    expect(shown.vapor).toEqual(shown.vdom)
+  })
+
+  test('keeps a vapor child of a vdom Transition hidden by its own v-show on mount', async () => {
+    const data = ref({ enabled: true, open: false })
+    const Inner = compile(
+      `<template><section v-show="data.open">x</section></template>`,
+      data,
+    )
+    const Wrap = compile(
+      `<template><components.Inner v-show="data.enabled" /></template>`,
+      data,
+      { Inner },
+    )
+    const App = compile(
+      `<script setup>const data = _data; const components = _components;</script>
+      <template><Transition :css="false"><components.Wrap /></Transition></template>`,
+      data,
+      { Wrap },
+      { vapor: false },
+    )
+    const root = document.createElement('div')
+    createApp(App).use(vaporInteropPlugin).mount(root)
+    const el = root.querySelector('section')!
+    expect(el.style.display).toBe('none')
+    data.value.open = true
+    await nextTick()
+    expect(el.style.display).toBe('')
+  })
+
+  test('appears a Transition child hidden by its own v-show for the shown outer v-show like vdom', async () => {
+    const seen: Record<string, unknown[]> = { vdom: [], vapor: [] }
+    await renderParity(
+      {
+        Inner: `<template><section v-show="data.open">x</section></template>`,
+        App: `<template><Transition appear :css="false" @before-appear="data.onBeforeAppear" @appear="data.onAppear"><components.Inner v-show="data.enabled" /></Transition></template>`,
+      },
+      () =>
+        ref({
+          enabled: true,
+          open: false,
+          onBeforeAppear: vi.fn(),
+          onAppear: vi.fn((_el: Element, done: () => void) => done()),
+        }),
+      async (data, root, mode) => {
+        await nextTick()
+        seen[mode].push(
+          root.querySelector('section')!.style.display,
+          data.value.onBeforeAppear.mock.calls.length,
+          data.value.onAppear.mock.calls.length,
+        )
+      },
+    )
+    expect(seen.vdom).toEqual(['none', 1, 1])
+    expect(seen.vapor).toEqual(seen.vdom)
   })
 })

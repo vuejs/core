@@ -21,6 +21,7 @@ import {
   shallowReactive,
   stop,
   toRaw,
+  watch,
 } from '../src/index'
 import { type ReactiveNode, endBatch, startBatch } from '../src/system'
 
@@ -931,6 +932,41 @@ describe('reactivity/effect', () => {
     expect(dummy2).toBe(3)
   })
 
+  it('should not mutate the provided options object', () => {
+    const obj = reactive({ foo: 1 })
+    const fn = vi.fn(() => obj.foo)
+    const scheduler = vi.fn()
+    const onStop = vi.fn()
+    const options = { scheduler, onStop }
+
+    const runner1 = effect(fn, options)
+    const runner2 = effect(fn, options)
+
+    expect(options.scheduler).toBe(scheduler)
+    expect(options.onStop).toBe(onStop)
+
+    obj.foo++
+    expect(scheduler).toHaveBeenCalledTimes(2)
+    expect(fn).toHaveBeenCalledTimes(2)
+
+    stop(runner1)
+    stop(runner2)
+    expect(onStop).toHaveBeenCalledTimes(2)
+  })
+
+  it('should accept frozen options', () => {
+    const obj = reactive({ foo: 1 })
+    const scheduler = vi.fn()
+    const onStop = vi.fn()
+    const options = Object.freeze({ scheduler, onStop })
+
+    const runner = effect(() => obj.foo, options)
+    obj.foo++
+    expect(scheduler).toHaveBeenCalledTimes(1)
+    stop(runner)
+    expect(onStop).toHaveBeenCalledTimes(1)
+  })
+
   it('events: onStop', () => {
     const onStop = vi.fn()
     const runner = effect(() => {}, {
@@ -1320,5 +1356,78 @@ describe('reactivity/effect', () => {
     runner.effect.resume()
     expect(fnSpy).toHaveBeenCalledTimes(2)
     expect(obj.foo).toBe(3)
+  })
+
+  test('should notify remaining effects when an earlier effect throws', () => {
+    const a = ref(0)
+    const seen: number[] = []
+    effect(() => {
+      if (a.value > 0) throw new Error('boom')
+    })
+    effect(() => {
+      seen.push(a.value)
+    })
+
+    expect(() => a.value++).toThrow('boom')
+    expect(seen).toEqual([0, 1])
+  })
+
+  test('should notify remaining watchers when an earlier watcher callback throws', () => {
+    const a = ref(0)
+    const seen: number[] = []
+    watch(a, () => {
+      throw new Error('cb')
+    })
+    watch(a, v => {
+      seen.push(v)
+    })
+
+    expect(() => a.value++).toThrow('cb')
+    expect(seen).toEqual([1])
+  })
+
+  test('should notify remaining subscribers when a computed throws during a dirty check', () => {
+    const x = ref<any>({ y: 'a' })
+    const other = ref(0)
+    const y = computed(() => x.value.y)
+    watch(y, () => {})
+
+    const seen: string[] = []
+    const otherSeen: number[] = []
+    effect(() => {
+      seen.push(x.value === undefined ? 'undefined' : 'set')
+    })
+    effect(() => {
+      otherSeen.push(other.value)
+    })
+    expect(seen).toEqual(['set'])
+
+    // the computed throws while the watcher checks whether it is dirty, which
+    // happens outside of the watcher and so escapes the assignment
+    expect(() => (x.value = undefined)).toThrow(TypeError)
+    // the rest of the batch is notified before the error is rethrown
+    expect(seen).toEqual(['set', 'undefined'])
+
+    // an unrelated write must not deliver leftover notifications
+    other.value++
+    expect(otherSeen).toEqual([0, 1])
+    expect(seen).toEqual(['set', 'undefined'])
+  })
+
+  it('should only access debug options in development', () => {
+    const reads: string[] = []
+    const runner = effect(() => {}, {
+      get onTrack() {
+        reads.push('onTrack')
+        return undefined
+      },
+      get onTrigger() {
+        reads.push('onTrigger')
+        return undefined
+      },
+    })
+
+    expect(reads).toEqual(__DEV__ ? ['onTrack', 'onTrigger'] : [])
+    stop(runner)
   })
 })

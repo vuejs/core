@@ -71,7 +71,13 @@ export function ssrProcessSuspense(
   const { slotsExp, wipSlots } = wipEntry
   for (let i = 0; i < wipSlots.length; i++) {
     const slot = wipSlots[i]
-    slot.fn.body = processChildrenAsStatement(slot, context)
+    // a vapor component renders the vdom Suspense through the interop: its
+    // slots are vapor slots, each hydrating a range of its own
+    slot.fn.body = processChildrenAsStatement(
+      slot,
+      context,
+      !!context.options.vapor,
+    )
   }
   // _push(ssrRenderSuspense(slots))
   context.pushStatement(

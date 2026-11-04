@@ -1,5 +1,10 @@
-import { getGlobalThis, isString } from '@vue/shared'
-import { DOMNodeTypes, isComment } from './hydration'
+import {
+  getGlobalThis,
+  isString,
+  isVaporBranchStart,
+  rangeCloseOf,
+} from '@vue/shared'
+import { DOMNodeTypes, isComment, isRangeStart } from './hydration'
 
 // Polyfills for Safari support
 // see https://caniuse.com/requestidlecallback
@@ -62,14 +67,24 @@ export const hydrateOnVisible: HydrationStrategyFactory<
       break
     }
   }, opts)
-  forEach(el => {
-    if (!(el instanceof Element)) return
+  const observe = (el: Element): false | void => {
     if (elementIsVisibleInViewport(el)) {
       hydrate()
       ob.disconnect()
       return false
     }
+    // an element with `display: contents` has no box of its own, so it is
+    // never reported as visible - also observe its children
+    if (getComputedStyle(el).display === 'contents') {
+      for (let i = 0; i < el.children.length; i++) {
+        if (observe(el.children[i]) === false) return false
+      }
+    }
     ob.observe(el)
+  }
+  forEach(el => {
+    if (!(el instanceof Element)) return
+    return observe(el)
   })
   return () => ob.disconnect()
 }
@@ -124,8 +139,11 @@ export function forEachElement(
   node: Node,
   cb: (el: Element) => void | false,
 ): void {
-  // fragment
-  if (isComment(node) && node.data === '[') {
+  // fragment, a slot fallback (`<!--(-->`), a vapor v-if branch or the
+  // roots of a vapor component (`<!--{-->`)
+  if (isComment(node) && isRangeStart(node.data)) {
+    const open = node.data
+    const close = rangeCloseOf(open)
     let depth = 1
     let next = node.nextSibling
     while (next) {
@@ -135,9 +153,13 @@ export function forEachElement(
           break
         }
       } else if (isComment(next)) {
-        if (next.data === ']') {
+        if (next.data === close) {
           if (--depth === 0) break
-        } else if (next.data === '[') {
+        } else if (
+          close === ']'
+            ? next.data === '[' || isVaporBranchStart(next.data)
+            : next.data === open
+        ) {
           depth++
         }
       }

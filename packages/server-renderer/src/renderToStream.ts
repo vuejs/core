@@ -5,11 +5,16 @@ import {
   createVNode,
   ssrContextKey,
   ssrUtils,
-} from 'vue'
+} from '@vue/runtime-dom'
 import { isPromise, isString } from '@vue/shared'
-import { type SSRBuffer, type SSRContext, renderComponentVNode } from './render'
+import {
+  type SSRBuffer,
+  type SSRContext,
+  cleanupContext,
+  renderComponentVNode,
+} from './render'
 import type { Readable, Writable } from 'node:stream'
-import { resolveTeleports } from './renderToString'
+import { cleanupFailedRender, resolveTeleports } from './renderToString'
 
 const { isVNode } = ssrUtils
 
@@ -43,7 +48,7 @@ async function unrollBuffer(
 
 function unrollBufferSync(buffer: SSRBuffer, stream: SimpleReadable) {
   for (let i = 0; i < buffer.length; i++) {
-    let item = buffer[i]
+    const item = buffer[i]
     if (isString(item)) {
       stream.push(item)
     } else {
@@ -73,18 +78,17 @@ export function renderToSimpleStream<T extends SimpleReadable>(
   // provide the ssr context to the tree
   input.provide(ssrContextKey, context)
 
-  Promise.resolve(renderComponentVNode(vnode))
-    .then(buffer => unrollBuffer(buffer, stream))
+  let buffer: SSRBuffer | undefined
+  Promise.resolve()
+    .then(() => renderComponentVNode(vnode))
+    .then(b => unrollBuffer((buffer = b), stream))
     .then(() => resolveTeleports(context))
     .then(() => {
-      if (context.__watcherHandles) {
-        for (const unwatch of context.__watcherHandles) {
-          unwatch()
-        }
-      }
+      cleanupContext(context)
+      return stream.push(null)
     })
-    .then(() => stream.push(null))
     .catch(error => {
+      cleanupFailedRender(buffer, context)
       stream.destroy(error)
     })
 

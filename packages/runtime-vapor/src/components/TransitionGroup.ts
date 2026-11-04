@@ -1,55 +1,116 @@
 import {
+  type BaseTransitionProps,
   type ElementWithTransition,
+  type GenericComponentInstance,
   type TransitionGroupProps,
+  type TransitionProps,
   TransitionPropsValidators,
+  type TransitionState,
+  type VShowElement,
   baseApplyTranslation,
   callPendingCbs,
   currentInstance,
   forceReflow,
+  getTransitionGroupOrigins,
+  getTransitionGroupPosition,
+  getTransitionGroupShift,
   handleMovedChildren,
   hasCSSTransform,
   onBeforeUpdate,
   onUpdated,
+  pendingTransitionGroups,
+  queuePostRenderEffect,
   resolveTransitionProps,
+  restoreCurrentInstance,
+  setCurrentInstance,
   useTransitionState,
+  vShowHidden,
   warn,
 } from '@vue/runtime-dom'
-import { extend, isArray } from '@vue/shared'
+import { NO, extend, isArray } from '@vue/shared'
 import {
   type Block,
+  type BlockFn,
   type TransitionBlock,
-  type VaporTransitionHooks,
+  type VaporTransitionState,
   insert,
+  registerNestedVDOMCleanup,
 } from '../block'
 import { renderEffect } from '../renderEffect'
 import {
-  ensureTransitionHooksRegistered,
+  type KeyContext,
+  ROOT_KEY_CONTEXT,
+  type ResolvedTransitionBlock,
+  applyTransitionHooksImpl,
+  enterComponentKeyContext,
+  enterFragmentKeyContext,
+  enterRootsKeyContext,
+  enterRowKeyContext,
+  getTransitionElement,
+  isValidTransitionBlock,
   resolveTransitionHooks,
-  setTransitionHooks,
-  setTransitionHooksOnFragment,
+  rootKeyContext,
+  transitionTypeOf,
+  withDefaultKey,
 } from './Transition'
 import {
   type VaporComponentInstance,
   type VaporComponentOptions,
   isVaporComponent,
 } from '../component'
-import { isForBlock } from '../apiCreateFor'
+import { trackRawValues } from '../componentProps'
 import { createElement } from '../dom/node'
-import { isFragment } from '../fragment'
+import {
+  DynamicFragment,
+  type VaporFragment,
+  getFragmentKey,
+  isForBlock,
+  isForFragment,
+  isFragment,
+  isVaporSlotOutlet,
+} from '../fragment'
 import {
   type DefineVaporComponent,
   defineVaporComponent,
 } from '../apiDefineComponent'
+import {
+  adoptTemplate,
+  advanceHydrationNode,
+  claimAnchor,
+  cleanupHydrationTail,
+  createFragmentClaim,
+  currentHydrationNode,
+  hydrateBlock,
+  isHydrating,
+  locateEndAnchor,
+  locateHydrationNode,
+  nextLogicalSibling,
+  setCurrentHydrationNode,
+  trimHydrationBoundary,
+} from '../dom/hydration'
+import { isTransitionEnabled, registerTransitionHooks } from '../transition'
+import { isInteropEnabled } from '../vdomInteropState'
 
-const positionMap = new WeakMap<TransitionBlock, DOMRect>()
-const newPositionMap = new WeakMap<TransitionBlock, DOMRect>()
+type Position = ReturnType<typeof getTransitionGroupPosition>
+const positionMap = new WeakMap<TransitionBlock, Position>()
+const newPositionMap = new WeakMap<TransitionBlock, Position>()
+
+type TransitionGroupUpdateOwner = VaporFragment | VaporComponentInstance
+
+type TransitionGroupUpdateHooks = {
+  beforeUpdate: () => void
+  updated: () => void
+}
+
+// owners whose updates already report to their TransitionGroup
+const trackedTransitionGroupOwners = new WeakSet<TransitionGroupUpdateOwner>()
 
 const decorate = <T extends VaporComponentOptions>(t: T): T => {
   delete (t.props! as any).mode
   return t
 }
 
-const VaporTransitionGroupImpl = defineVaporComponent({
+const VaporTransitionGroupImpl = /*@__PURE__*/ defineVaporComponent({
   name: 'VaporTransitionGroup',
 
   props: /*@__PURE__*/ extend({}, TransitionPropsValidators, {
@@ -57,77 +118,128 @@ const VaporTransitionGroupImpl = defineVaporComponent({
     moveClass: String,
   }),
 
-  setup(props: TransitionGroupProps, { slots }) {
-    // Register transition hooks on first use
-    ensureTransitionHooksRegistered()
+  setup(props: TransitionGroupProps, { slots, expose }) {
+    // @ts-expect-error
+    expose()
+
+    if (!isTransitionEnabled) {
+      registerTransitionHooks(
+        applyTransitionHooksImpl,
+        NO,
+        NO,
+        NO,
+        NO,
+        NO,
+        NO,
+        NO,
+      )
+    }
 
     const instance = currentInstance as VaporComponentInstance
-    const state = useTransitionState()
+    const state: VaporTransitionState = useTransitionState()
 
     // use proxy to keep props reference stable
-    let cssTransitionProps = resolveTransitionProps(props)
-    const propsProxy = new Proxy({} as typeof cssTransitionProps, {
+    let cssTransitionProps!: BaseTransitionProps<Element>
+    const propsProxy = new Proxy({} as BaseTransitionProps<Element>, {
       get(_, key) {
-        return cssTransitionProps[key as keyof typeof cssTransitionProps]
+        return cssTransitionProps[key as keyof BaseTransitionProps<Element>]
       },
     })
 
-    renderEffect(() => {
-      cssTransitionProps = resolveTransitionProps(props)
-    })
+    let prevChildren: ResolvedTransitionBlock[] = []
+    // Multiple child owners can update in the same flush (e.g. a VDOM child
+    // props update plus the surrounding v-for keyed diff). Keep the first old
+    // position snapshot, then apply moves after child render jobs have flushed.
+    let isUpdatePending = false
+    let isUpdatedPending = false
+    let slottedBlock: Block = []
+    let origins: ReturnType<typeof getTransitionGroupOrigins>
+    let moves: boolean | undefined
+    let moveElement: Element | undefined
+    const willMove = () => {
+      if (moves === undefined) {
+        moveElement = getFirstConnectedChild(prevChildren)
+        moves = !!(
+          moveElement &&
+          hasCSSTransform(
+            moveElement as ElementWithTransition,
+            moveElement.parentNode as Node,
+            props.moveClass || `${props.name || 'v'}-move`,
+          )
+        )
+      }
+      return moves
+    }
 
-    let prevChildren: TransitionBlock[]
-    let children: TransitionBlock[]
-    const slottedBlock = slots.default && slots.default()
-
-    onBeforeUpdate(() => {
+    const beforeUpdate = () => {
+      if (isUpdatePending) return
+      isUpdatePending = true
       prevChildren = []
-      children = getTransitionBlocks(slottedBlock)
-      if (children) {
-        for (let i = 0; i < children.length; i++) {
-          const child = children[i]
-          if (isValidTransitionBlock(child)) {
-            prevChildren.push(child)
-            // disabled transition during enter, so the children will be
-            // inserted into the correct position immediately. this prevents
-            // `recordPosition` from getting incorrect positions in `onUpdated`
-            child.$transition!.disabled = true
-            positionMap.set(
-              child,
-              getTransitionElement(child).getBoundingClientRect(),
-            )
-          }
+      moves = undefined
+      // collect-only: the snapshot loop below reads elements and existing
+      // hooks; skip owner tracking and key-inheritance bookkeeping.
+      const children = resolveTransitionBlocks(
+        slottedBlock,
+        undefined,
+        undefined,
+        true,
+      )
+      for (let i = 0; i < children.length; i++) {
+        const child = children[i]
+        const el =
+          isValidTransitionBlock(child) && child.$transition
+            ? getTransitionElement(child)
+            : undefined
+        if (
+          el &&
+          // Hidden v-show nodes have no previous layout box to animate from.
+          !(el as VShowElement)[vShowHidden]
+        ) {
+          prevChildren.push(child)
+          positionMap.set(child, el.getBoundingClientRect())
         }
       }
-    })
-
-    onUpdated(() => {
-      if (!prevChildren.length) {
-        return
-      }
-      const moveClass = props.moveClass || `${props.name || 'v'}-move`
       const firstChild = getFirstConnectedChild(prevChildren)
-      if (
-        !firstChild ||
-        !hasCSSTransform(
-          firstChild as ElementWithTransition,
-          firstChild.parentNode as Node,
-          moveClass,
-        )
-      ) {
+      if (firstChild) {
+        origins = getTransitionGroupOrigins(instance, firstChild)
+        pendingTransitionGroups.set(instance, {
+          root: firstChild.parentNode!,
+          willMove,
+        })
+      }
+    }
+
+    const flushUpdated = () => {
+      isUpdatedPending = false
+      if (!isUpdatePending) return
+      isUpdatePending = false
+      pendingTransitionGroups.delete(instance)
+      if (!prevChildren.length) return
+
+      const moveClass = props.moveClass || `${props.name || 'v'}-move`
+      if (!willMove()) {
         prevChildren = []
+        origins = undefined
+        moveElement = undefined
         return
       }
 
-      prevChildren.forEach(callPendingCbs)
       prevChildren.forEach(child => {
-        child.$transition!.disabled = false
-        recordPosition(child)
+        // pending enter/move cbs live on the element, which for interop
+        // children is not the block itself
+        const el = getTransitionElement(child)
+        if (el) callPendingCbs(el)
       })
+
+      const shift = origins && getTransitionGroupShift(origins, moveElement!)
+      origins = undefined
+      prevChildren.forEach(child => recordPosition(child, shift))
       const movedChildren = prevChildren.filter(applyTranslation)
 
-      // force reflow to put everything in position
-      forceReflow()
+      // force reflow to put everything in position; use the group's own
+      // document so this works inside iframes / foreign documents
+      forceReflow(moveElement)
+      moveElement = undefined
 
       movedChildren.forEach(c =>
         handleMovedChildren(
@@ -136,41 +248,139 @@ const VaporTransitionGroupImpl = defineVaporComponent({
         ),
       )
       prevChildren = []
-    })
+    }
 
-    // store props and state on fragment for reusing during insert new items
-    setTransitionHooksOnFragment(slottedBlock, {
-      props: propsProxy,
-      state,
-      instance,
-    } as VaporTransitionHooks)
+    const updated = () => {
+      if (!isUpdatePending || isUpdatedPending) return
+      isUpdatedPending = true
+      queuePostRenderEffect(flushUpdated, undefined, instance.suspense)
+    }
 
-    children = getTransitionBlocks(slottedBlock)
-    for (let i = 0; i < children.length; i++) {
-      const child = children[i]
-      if (isValidTransitionBlock(child)) {
-        if (child.$key != null) {
-          const hooks = resolveTransitionHooks(
-            child,
-            propsProxy,
-            state,
-            instance!,
-          )
-          setTransitionHooks(child, hooks)
-        } else if (__DEV__) {
-          warn(`<transition-group> children must be keyed`)
-        }
+    onBeforeUpdate(beforeUpdate)
+    onUpdated(updated)
+    const updateHooks: TransitionGroupUpdateHooks = { beforeUpdate, updated }
+    const onUpdateOwner = (owner: TransitionGroupUpdateOwner) =>
+      trackTransitionGroupUpdate(owner, instance, updateHooks)
+
+    // The wrapper element is static configuration, not animated content:
+    // `tag` is read once. (vdom only remounts the children on a tag change
+    // because the parent re-render patches the root vnode type.)
+    const tag = props.tag
+    // without a tag the server wraps the group in a range of its own
+    let close: Node | null = null
+    if (isHydrating) {
+      const claim = tag ? undefined : createFragmentClaim()
+      locateHydrationNode(claim)
+      if (claim && claim.start) {
+        close = claimAnchor(locateEndAnchor(claim.start)!)
+      }
+    }
+    let isMounted = false
+
+    if (__DEV__) {
+      state.refresh = () => {
+        applyGroupTransitionHooks(
+          slottedBlock,
+          propsProxy,
+          state,
+          instance,
+          onUpdateOwner,
+        )
       }
     }
 
-    const tag = props.tag
-    if (tag) {
-      const container = createElement(tag)
-      insert(slottedBlock, container)
-      return container
-    } else {
-      return slottedBlock
+    renderEffect(() => {
+      cssTransitionProps = resolveTransitionProps(props)
+      // The shared baseResolveTransitionHooks destructures props eagerly, so
+      // hooks already applied to mounted children capture stale values when
+      // reactive transition props change. Mirror Transition's re-resolve by
+      // re-applying group hooks onto the current children. Children mid-leave
+      // are no longer collected and keep the hooks their leave started with.
+      if (isMounted) {
+        applyGroupTransitionHooks(
+          slottedBlock,
+          propsProxy,
+          state,
+          instance,
+          onUpdateOwner,
+        )
+      }
+    }, true)
+
+    const renderChildren = (
+      slot: BlockFn | undefined,
+      // the dynamic slot path renders through its fragment
+      run: (render: BlockFn) => void = render => render(),
+    ): Block => {
+      let container: HTMLElement | undefined
+      run(() => {
+        // adopted inside the render: a wrapper mismatch is owned by the
+        // render's hydrateBlock (the fragment's, or the group's setup), and
+        // turns the rest of this callback into a client render
+        container = tag
+          ? isHydrating
+            ? (adoptTemplate(currentHydrationNode!, `<${tag}/>`) as HTMLElement)
+            : createElement(tag)
+          : undefined
+        let nextNode: Node | null = null
+        if (isHydrating && container) {
+          // the cursor sits on the container itself when it is empty
+          nextNode = nextLogicalSibling(container)
+          setCurrentHydrationNode(container.firstChild || container)
+        }
+        try {
+          const block =
+            (slot && (isHydrating ? hydrateBlock(slot) : slot())) || []
+          applyGroupTransitionHooks(
+            block,
+            propsProxy,
+            state,
+            instance,
+            onUpdateOwner,
+          )
+          slottedBlock = block
+          if (container) {
+            if (!isHydrating) insert(block, container)
+            registerNestedVDOMCleanup(block)
+            return container
+          }
+          return block
+        } finally {
+          if (isHydrating && container) {
+            // server children the slot did not take are the container's to drop
+            const cur = currentHydrationNode
+            if (cur && cur.parentNode === container) {
+              cleanupHydrationTail(cur, container)
+            }
+            setCurrentHydrationNode(nextNode)
+          }
+        }
+      })
+      if (isHydrating && close) {
+        trimHydrationBoundary(close)
+        if (currentHydrationNode === close) advanceHydrationNode(close)
+        close = null
+      }
+      isMounted = true
+      return container || slottedBlock
     }
+
+    if (!instance.rawSlots.$) return renderChildren(slots.default)
+
+    // Dynamic slot sources can add/remove the default slot after setup, so
+    // the group re-renders it through a DynamicFragment (as Transition does).
+    const frag = new DynamicFragment(
+      0,
+      __DEV__ ? 'transition-group' : undefined,
+    )
+    let currentSlot: BlockFn | undefined
+    renderEffect(() => {
+      const slot = slots.default
+      if (isMounted && slot === currentSlot) return
+      renderChildren(slot, render => frag.update(render))
+      currentSlot = slot
+    })
+    return frag
   },
 })
 
@@ -180,49 +390,320 @@ export const VaporTransitionGroup: DefineVaporComponent<
   TransitionGroupProps
 > = /*@__PURE__*/ decorate(VaporTransitionGroupImpl)
 
-function getTransitionBlocks(block: Block) {
-  let children: TransitionBlock[] = []
-  if (block instanceof Node) {
-    children.push(block)
-  } else if (isVaporComponent(block)) {
-    children.push(...getTransitionBlocks(block.block))
-  } else if (isArray(block)) {
-    for (let i = 0; i < block.length; i++) {
-      const b = block[i]
-      const blocks = getTransitionBlocks(b)
-      if (isForBlock(b)) blocks.forEach(block => (block.$key = b.key))
-      children.push(...blocks)
-    }
-  } else if (isFragment(block)) {
-    if (block.insert) {
-      // vdom component
-      children.push(block)
-    } else {
-      children.push(...getTransitionBlocks(block.nodes))
-    }
-  }
+// Composed keys of the current resolution pass. Owners compose bottom-up, so
+// a child under nested keyed owners reads its inner composition here first.
+type ComposedKeys = Map<ResolvedTransitionBlock, any>
 
+export function resolveTransitionBlocks(
+  block: Block,
+  // called with the key context the fragment resolves in
+  onFragment?: (frag: VaporFragment, ctx?: KeyContext) => void,
+  onUpdateOwner?: (owner: TransitionGroupUpdateOwner) => void,
+  // collect elements only, skipping key/type inheritance side effects
+  collectOnly = false,
+  // the key context `block` resolves in: a composing one keys the roots
+  // under its key, as vdom's keys compose under their slot fragment's
+  ctx: KeyContext = ROOT_KEY_CONTEXT,
+): ResolvedTransitionBlock[] {
+  const children: ResolvedTransitionBlock[] = []
+  if (collectOnly) {
+    collectTransitionBlocks(block, children, onFragment, onUpdateOwner)
+    return children
+  }
+  const keys: ComposedKeys = new Map()
+  collectTransitionBlocks(block, children, onFragment, onUpdateOwner, keys, ctx)
+  if (ctx.slot) composeOwnerKey(children, 0, ctx.key, keys)
+  for (let i = 0; i < children.length; i++) {
+    children[i].$tkey = keys.get(children[i])
+  }
   return children
 }
 
-function isValidTransitionBlock(block: Block): boolean {
-  return !!(block instanceof Element || (isFragment(block) && block.insert))
+// `ctx` only records the per-fragment key context, read back by branch
+// re-renders (applyTransitionHooksImpl's single-child path) and by the group's
+// applyGroup closures; list keys are composed bottom-up below. Both are
+// skipped by the collect-only pass.
+function collectTransitionBlocks(
+  block: Block,
+  children: ResolvedTransitionBlock[],
+  onFragment?: (frag: VaporFragment, ctx?: KeyContext) => void,
+  onUpdateOwner?: (owner: TransitionGroupUpdateOwner) => void,
+  keys?: ComposedKeys,
+  ctx?: KeyContext,
+): void {
+  if (block instanceof Node) {
+    if (block instanceof Element) {
+      children.push(block)
+      if (keys) keys.set(block, (block as ResolvedTransitionBlock).$key)
+    }
+  } else if (isVaporComponent(block)) {
+    const isRootSlot = block.block && isVaporSlotOutlet(block.block)
+    if (onUpdateOwner && !isRootSlot) onUpdateOwner(block)
+
+    const start = children.length
+    collectTransitionBlocks(
+      block.block,
+      children,
+      onFragment,
+      isRootSlot ? onUpdateOwner : undefined,
+      keys,
+      ctx &&
+        (isRootSlot
+          ? withDefaultKey(ctx, block.$key)
+          : enterComponentKeyContext(ctx, block)),
+    )
+    if (keys) {
+      if (!isRootSlot) {
+        const t = transitionTypeOf(block)
+        for (let i = start; i < children.length; i++) {
+          children[i].$ttype = t
+        }
+      }
+      // a root-slot component is transparent, like the slot outlet it wraps
+      resolveOwnerKey(
+        children,
+        start,
+        block.$key,
+        keys,
+        !isRootSlot,
+        ctx && ctx.slot,
+      )
+    }
+  } else if (isArray(block)) {
+    // under a composing key an unkeyed root takes its position, as on a
+    // branch re-render inside it (ownKey)
+    const roots =
+      keys && ctx && ctx.slot ? enterRootsKeyContext(ctx, block) : undefined
+    for (let i = 0; i < block.length; i++) {
+      const start = children.length
+      collectTransitionBlocks(
+        block[i],
+        children,
+        onFragment,
+        onUpdateOwner,
+        keys,
+        roots ? rootKeyContext(roots, i) : ctx,
+      )
+      if (roots) {
+        for (let j = start; j < children.length; j++) {
+          if (keys!.get(children[j]) == null) keys!.set(children[j], '.' + i)
+        }
+      }
+    }
+  } else if (isFragment(block)) {
+    // ForBlock wrappers have no transition consumers of their own: they
+    // override neither insert nor remove (the only readers of fragment
+    // $transition) and their update hook arrays are never invoked. Skip the
+    // per-item hook/owner bookkeeping and only collect their contents.
+    const isItem = isForBlock(block)
+    if (!isItem) {
+      if (onFragment) onFragment(block, ctx)
+      if (onUpdateOwner) onUpdateOwner(block)
+    }
+    if (isInteropEnabled && block.hasVDOMContent && block.hasVDOMContent()) {
+      children.push(block)
+      if (keys) keys.set(block, block.$key)
+    } else {
+      const key = isItem ? block.key : getFragmentKey(block)
+      const start = children.length
+      const contentCtx =
+        ctx &&
+        (isItem ? enterRowKeyContext(ctx, key) : contentKeyContext(block, ctx))
+      if (isForFragment(block)) {
+        // `nodes` wraps the rows beside the parent anchor
+        const nodes = block.nodes
+        for (let i = 0; i < nodes.length; i++) {
+          collectTransitionBlocks(
+            nodes[i],
+            children,
+            onFragment,
+            onUpdateOwner,
+            keys,
+            contentCtx,
+          )
+        }
+      } else {
+        collectTransitionBlocks(
+          block.nodes,
+          children,
+          onFragment,
+          onUpdateOwner,
+          keys,
+          contentCtx,
+        )
+      }
+      if (!keys) return
+      if (!isItem) {
+        resolveOwnerKey(children, start, key, keys, false, ctx && ctx.slot)
+      } else if (key != null) {
+        // a keyed row composes the keys under it (enterRowKeyContext); an
+        // unkeyed row composes nothing: its roots keep their own keys
+        for (let i = start; i < children.length; i++) {
+          const child = children[i]
+          const inner = keys.get(child)
+          keys.set(child, inner != null ? String(key) + String(inner) : key)
+        }
+      }
+    }
+  }
 }
 
-function getTransitionElement(c: TransitionBlock): Element {
-  return (isFragment(c) ? (c.nodes as Element) : c) as Element
+// The key context a fragment's content resolves in, on the collect and when
+// the fragment renders more later (createFor's insert, a branch switch): a
+// branch takes the branch key of that render. A list's rows ignore the
+// position of the list and of the `[rows, anchor]` wrapper in its `nodes`, as
+// a row inserted later resolves alone (createFor's applyGroup).
+function contentKeyContext(frag: VaporFragment, ctx: KeyContext): KeyContext {
+  if (isForFragment(frag)) {
+    return ctx.type || ctx.index === undefined
+      ? ctx
+      : { key: ctx.key, slot: ctx.slot, siblings: ctx.siblings }
+  }
+  return enterFragmentKeyContext(frag, ctx)
 }
 
-function recordPosition(c: TransitionBlock) {
-  newPositionMap.set(c, getTransitionElement(c).getBoundingClientRect())
+// vdom key semantics for the block owning the collected roots: a component
+// is the child vnode, so its key is final for a single root; a fragment only
+// supplies the default key of its single root. Multiple roots compose the
+// owner key with each root's key, as vdom does for fragment children. Under
+// a composing key a fragment composes its single root's key too, as the key
+// context folds it on a branch re-render.
+function resolveOwnerKey(
+  children: ResolvedTransitionBlock[],
+  start: number,
+  key: any,
+  keys: ComposedKeys,
+  final: boolean,
+  slot?: boolean,
+): void {
+  if (children.length - start === 1) {
+    const child = children[start]
+    const inner = keys.get(child)
+    if (final || inner == null) keys.set(child, key)
+    else if (slot && key != null) keys.set(child, String(key) + String(inner))
+    return
+  }
+  composeOwnerKey(children, start, key, keys)
 }
 
-function applyTranslation(c: TransitionBlock): TransitionBlock | undefined {
+function composeOwnerKey(
+  children: ResolvedTransitionBlock[],
+  start: number,
+  key: any,
+  keys: ComposedKeys,
+): void {
+  if (key == null) return
+  for (let i = start; i < children.length; i++) {
+    const child = children[i]
+    const inner = keys.get(child)
+    keys.set(child, String(key) + String(inner != null ? inner : i - start))
+  }
+}
+
+// `onUpdateOwner` tracks the owners' updates for a vapor group: a vdom group's
+// own render and updated hook cover what that tracking reports (the rows' input
+// effects, created under the vdom owner, re-render it). `ctx` keys the rows
+// under its slot's key.
+export function applyGroupTransitionHooks(
+  block: Block,
+  props: TransitionProps,
+  state: TransitionState,
+  instance: GenericComponentInstance,
+  onUpdateOwner?: (owner: TransitionGroupUpdateOwner) => void,
+  ctx?: KeyContext,
+): ResolvedTransitionBlock[] {
+  const fragments: [VaporFragment, KeyContext][] = []
+  const children = resolveTransitionBlocks(
+    block,
+    (frag, ctx) => fragments.push([frag, ctx!]),
+    onUpdateOwner,
+    false,
+    ctx,
+  )
+  for (let i = 0; i < children.length; i++) {
+    const child = children[i]
+    if (isValidTransitionBlock(child)) {
+      if (child.$tkey != null) {
+        child.$transition = resolveTransitionHooks(
+          child,
+          props,
+          state,
+          instance,
+        )
+      } else if (__DEV__) {
+        warn(`<transition-group> children must be keyed`)
+      }
+    }
+  }
+
+  // propagate hooks to inner fragments for reusing during insert new items:
+  // what a fragment renders later resolves in its content's context
+  fragments.forEach(([frag, ctx]) => {
+    const hooks = resolveTransitionHooks(frag, props, state, instance)
+    hooks.applyGroup = (block, props, state, instance) =>
+      applyGroupTransitionHooks(
+        block,
+        props,
+        state,
+        instance,
+        onUpdateOwner,
+        contentKeyContext(frag, ctx),
+      )
+    frag.$transition = hooks
+  })
+  return children
+}
+
+function trackTransitionGroupUpdate(
+  owner: TransitionGroupUpdateOwner,
+  instance: GenericComponentInstance,
+  updateHooks: TransitionGroupUpdateHooks,
+): void {
+  if (trackedTransitionGroupOwners.has(owner)) return
+
+  if (isFragment(owner)) {
+    trackedTransitionGroupOwners.add(owner)
+    ;(owner.bu ||= []).push(updateHooks.beforeUpdate)
+    ;(owner.u ||= []).push(updateHooks.updated)
+    return
+  }
+
+  // Inputs that cannot change never notify - skip the tracking effect.
+  if (!owner.hasDynamicProps) return
+  trackedTransitionGroupOwners.add(owner)
+
+  // A component child can update from parent-driven props without re-running
+  // the surrounding v-for fragment. Track delivered parent inputs instead of
+  // using component updated hooks, because child-local state updates should
+  // not trigger TransitionGroup move bookkeeping. This matches VDOM behavior.
+  // The effect belongs to the group instance, so its runs report through the
+  // group's own beforeUpdate/updated hooks and the scheduler orders it ahead
+  // of the child's effects; it lives in the child's scope to die with the row.
+  const prevGroup = setCurrentInstance(instance, owner.scope)
+  try {
+    renderEffect(() => {
+      trackRawValues(owner)
+    })
+  } finally {
+    restoreCurrentInstance(prevGroup)
+  }
+}
+
+function recordPosition(c: ResolvedTransitionBlock, shift?: Position) {
+  const el = getTransitionElement(c)
+  if (el) newPositionMap.set(c, getTransitionGroupPosition(el, shift))
+}
+
+function applyTranslation(
+  c: ResolvedTransitionBlock,
+): ResolvedTransitionBlock | undefined {
+  const el = getTransitionElement(c)
   if (
+    el &&
     baseApplyTranslation(
       positionMap.get(c)!,
       newPositionMap.get(c)!,
-      getTransitionElement(c) as ElementWithTransition,
+      el as ElementWithTransition,
     )
   ) {
     return c
@@ -230,11 +711,11 @@ function applyTranslation(c: TransitionBlock): TransitionBlock | undefined {
 }
 
 function getFirstConnectedChild(
-  children: TransitionBlock[],
+  children: ResolvedTransitionBlock[],
 ): Element | undefined {
   for (let i = 0; i < children.length; i++) {
     const child = children[i]
     const el = getTransitionElement(child)
-    if (el.isConnected) return el
+    if (el && el.isConnected) return el
   }
 }

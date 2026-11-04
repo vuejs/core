@@ -1,6 +1,11 @@
-import { createApp, h, mergeProps, withCtx } from 'vue'
+import { createApp, createVNode, h, mergeProps, withCtx } from 'vue'
 import { renderToString } from '../src/renderToString'
-import { ssrRenderAttrs, ssrRenderComponent, ssrRenderSlot } from '../src'
+import {
+  ssrRenderAttrs,
+  ssrRenderComponent,
+  ssrRenderSlot,
+  ssrRenderVNode,
+} from '../src'
 
 describe('ssr: scopedId runtime behavior', () => {
   test('id on component root', async () => {
@@ -268,5 +273,38 @@ describe('ssr: scopedId runtime behavior', () => {
         `<!--[--><!--[--><div root slotted-s wrapper-s></div><!--]--><!--]-->` +
         `</div>`,
     )
+  })
+
+  // #12159
+  test('avoid duplicate scopeId through recursive ssr vnode roots', async () => {
+    let count = 2
+
+    const Comp = {
+      __scopeId: 'comp',
+      ssrRender: (ctx: any, push: any, parent: any, attrs: any) => {
+        if (--count) {
+          push(ssrRenderComponent(Comp, attrs, null, parent))
+        } else {
+          ssrRenderVNode(push, createVNode('div', attrs, 'vuejs'), parent)
+        }
+      },
+    }
+
+    const result = await renderToString(createApp(Comp))
+    expect(result).toBe(`<div comp>vuejs</div>`)
+  })
+
+  test('avoid duplicate scopeId through recursive render roots', async () => {
+    let count = 2
+
+    const Comp = {
+      __scopeId: 'comp',
+      render(this: any) {
+        return --count ? h(Comp, this.$attrs) : h('div', this.$attrs, 'vuejs')
+      },
+    }
+
+    const result = await renderToString(createApp(Comp))
+    expect(result).toBe(`<div comp>vuejs</div>`)
   })
 })

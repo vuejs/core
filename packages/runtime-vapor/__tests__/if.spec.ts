@@ -1,6 +1,9 @@
 import {
-  child,
+  VaporKeepAlive,
+  VaporTransition,
+  createComponent,
   createIf,
+  defineVaporComponent,
   insert,
   renderEffect,
   template,
@@ -8,12 +11,20 @@ import {
   withDirectives,
 } from '../src'
 import { nextTick, ref } from '@vue/runtime-dom'
-import type { Mock } from 'vitest'
-import { makeRender } from './_utils'
-import { unmountComponent } from '../src/component'
+import { VaporBlockShape, VaporIfFlags } from '@vue/shared'
+import type { Mock } from 'vite-plus/test'
+import { compile, ifChain, ifFlags, makeRender, renderParity } from './_utils'
 import { setElementText } from '../src/dom/prop'
+import type { DynamicFragment } from '../src/fragment'
+import type { TransitionBlock } from '../src/block'
 
 const define = makeRender()
+const singleRootIfElse =
+  VaporBlockShape.SINGLE_ROOT | (VaporBlockShape.SINGLE_ROOT << 2)
+const singleRootNoScope =
+  VaporBlockShape.SINGLE_ROOT | VaporIfFlags.TRUE_NO_SCOPE
+const singleRootNoScopeIfElse =
+  singleRootIfElse | VaporIfFlags.TRUE_NO_SCOPE | VaporIfFlags.FALSE_NO_SCOPE
 
 describe('createIf', () => {
   test('basic', async () => {
@@ -134,6 +145,53 @@ describe('createIf', () => {
     expect(host.innerHTML).toBe('<!--if-->')
   })
 
+  test('should not mount stale nested branch when parent if becomes false', async () => {
+    const data = ref<{
+      nodes: string[] | null
+      plainText: string | null
+    }>({
+      nodes: ['foo'],
+      plainText: 'foo',
+    })
+    const childSetup = vi.fn()
+    const Child = defineVaporComponent({
+      props: {
+        nodes: { type: Array, required: true },
+      },
+      setup() {
+        childSetup()
+        return template('<div>child</div>')()
+      },
+    })
+    const App = compile(
+      `<script setup vapor>
+        const data = _data
+        const Child = _components.Child
+      </script>
+      <template>
+        <template v-if="data.nodes">
+          <span v-if="data.plainText !== null">{{ data.plainText }}</span>
+          <Child v-else :nodes="data.nodes" />
+        </template>
+      </template>`,
+      data,
+      { Child },
+    )
+
+    const { host } = define(App).render()
+
+    expect(host.innerHTML).toBe('<span>foo</span><!--if--><!--if-->')
+    expect(childSetup).not.toHaveBeenCalled()
+
+    data.value.plainText = null
+    data.value.nodes = null
+    await nextTick()
+
+    expect(host.innerHTML).toBe('<!--if-->')
+    expect(childSetup).not.toHaveBeenCalled()
+    expect(`type check failed for prop "nodes"`).not.toHaveBeenWarned()
+  })
+
   test('with v-once', async () => {
     const toggle = ref(false)
     const { html } = define({
@@ -142,7 +200,7 @@ describe('createIf', () => {
           () => toggle.value,
           () => template('<p>foo</p>')(),
           () => template('<p>bar</p>')(),
-          true,
+          ifFlags(singleRootIfElse, true),
         )
       },
     }).render()
@@ -155,111 +213,545 @@ describe('createIf', () => {
     expect(html()).toBe('<p>bar</p>')
   })
 
-  // vapor custom directives have no lifecycle hooks.
-  test.todo('should work with directive hooks', async () => {
-    const calls: string[] = []
-    const show1 = ref(true)
-    const show2 = ref(true)
-    const update = ref(0)
+  test('should trigger fragment updated hook when branch becomes empty', async () => {
+    const show = ref(true)
+    const onUpdated = vi.fn()
+    let frag!: DynamicFragment
 
-    const spyConditionFn1 = vi.fn(() => show1.value)
-    const spyConditionFn2 = vi.fn(() => show2.value)
-
-    const vDirective: any = {
-      created: (el: any, { value }: any) => calls.push(`${value} created`),
-      beforeMount: (el: any, { value }: any) =>
-        calls.push(`${value} beforeMount`),
-      mounted: (el: any, { value }: any) => calls.push(`${value} mounted`),
-      beforeUpdate: (el: any, { value }: any) =>
-        calls.push(`${value} beforeUpdate`),
-      updated: (el: any, { value }: any) => calls.push(`${value} updated`),
-      beforeUnmount: (el: any, { value }: any) =>
-        calls.push(`${value} beforeUnmount`),
-      unmounted: (el: any, { value }: any) => calls.push(`${value} unmounted`),
-    }
-
-    const t0 = template('<p></p>')
-    const { instance } = define(() => {
-      const n1 = createIf(
-        spyConditionFn1,
-        () => {
-          const n2 = t0() as ParentNode
-          withDirectives(child(n2), [[vDirective, () => (update.value, '1')]])
-          return n2
-        },
-        () =>
-          createIf(
-            spyConditionFn2,
-            () => {
-              const n2 = t0() as ParentNode
-              withDirectives(child(n2), [[vDirective, () => '2']])
-              return n2
-            },
-            () => {
-              const n2 = t0() as ParentNode
-              withDirectives(child(n2), [[vDirective, () => '3']])
-              return n2
-            },
-          ),
-      )
-      return [n1]
+    const { host } = define(() => {
+      frag = createIf(
+        () => show.value,
+        () => template('<div>foo</div>')(),
+      ) as DynamicFragment
+      frag.u = [onUpdated]
+      return frag
     }).render()
 
-    await nextTick()
-    expect(calls).toEqual(['1 created', '1 beforeMount', '1 mounted'])
-    calls.length = 0
-    expect(spyConditionFn1).toHaveBeenCalledTimes(1)
-    expect(spyConditionFn2).toHaveBeenCalledTimes(0)
+    expect(host.innerHTML).toBe('<div>foo</div><!--if-->')
 
-    show1.value = false
+    show.value = false
     await nextTick()
-    expect(calls).toEqual([
-      '1 beforeUnmount',
-      '2 created',
-      '2 beforeMount',
-      '1 unmounted',
-      '2 mounted',
+    expect(host.innerHTML).toBe('<!--if-->')
+    expect(onUpdated).toHaveBeenCalledTimes(1)
+    expect(onUpdated).toHaveBeenLastCalledWith([])
+
+    show.value = true
+    await nextTick()
+    expect(host.innerHTML).toBe('<div>foo</div><!--if-->')
+    expect(onUpdated).toHaveBeenCalledTimes(2)
+  })
+
+  test('should skip branch scope for compiler-proven static single-root branch', async () => {
+    const show = ref(true)
+    const t0 = template('<div>foo</div>')
+    let frag!: DynamicFragment
+
+    const { host } = define(() => {
+      frag = createIf(
+        () => show.value,
+        () => t0(),
+        undefined,
+        singleRootNoScope,
+      ) as DynamicFragment
+      return frag
+    }).render()
+
+    expect(host.innerHTML).toBe('<div>foo</div><!--if-->')
+    expect(frag.scope).toBeUndefined()
+
+    show.value = false
+    await nextTick()
+    expect(host.innerHTML).toBe('<!--if-->')
+    expect(frag.scope).toBeUndefined()
+
+    show.value = true
+    await nextTick()
+    expect(host.innerHTML).toBe('<div>foo</div><!--if-->')
+    expect(frag.scope).toBeUndefined()
+  })
+
+  test('should keep branch scope for no-scope branch with fallthrough attrs', async () => {
+    const show = ref(true)
+    const id = ref('a')
+    const t0 = template('<div>foo</div>')
+    let frag!: DynamicFragment
+    const Child = defineVaporComponent({
+      setup() {
+        return (frag = createIf(
+          () => show.value,
+          () => t0(),
+          undefined,
+          singleRootNoScope,
+        ) as DynamicFragment)
+      },
+    })
+
+    const { host } = define(() =>
+      createComponent(Child, { id: () => id.value }, null, true),
+    ).render()
+
+    expect(host.innerHTML).toBe('<div id="a">foo</div><!--if-->')
+    // branch-owned from the first render on: the no-scope branch gets a
+    // retrofitted scope so the fallthrough effect dies with the branch
+    expect(frag.scope).toBeDefined()
+    expect((frag as any).attrs).toBeUndefined()
+    expect((frag as any).fallthrough).toBeTruthy()
+
+    id.value = 'b'
+    await nextTick()
+    expect(host.innerHTML).toBe('<div id="b">foo</div><!--if-->')
+
+    show.value = false
+    await nextTick()
+    expect(host.innerHTML).toBe('<!--if-->')
+
+    show.value = true
+    await nextTick()
+    expect(host.innerHTML).toBe('<div id="b">foo</div><!--if-->')
+    expect(frag.scope).toBeDefined()
+  })
+
+  test('should skip branch scope for compiler-proven static multi-root branch', async () => {
+    const show = ref(true)
+    const t0 = template('<div>foo</div>')
+    const t1 = template('<p>bar</p>')
+    let frag!: DynamicFragment
+
+    const { host } = define(() => {
+      frag = createIf(
+        () => show.value,
+        () => [t0(), t1()],
+        undefined,
+        VaporBlockShape.MULTI_ROOT | VaporIfFlags.TRUE_NO_SCOPE,
+      ) as DynamicFragment
+      return frag
+    }).render()
+
+    expect(host.innerHTML).toBe('<div>foo</div><p>bar</p><!--if-->')
+    expect(frag.scope).toBeUndefined()
+
+    show.value = false
+    await nextTick()
+    expect(host.innerHTML).toBe('<!--if-->')
+    expect(frag.scope).toBeUndefined()
+  })
+
+  test('should replace no-scope static if and else branches', async () => {
+    const show = ref(true)
+    const t0 = template('<div>foo</div>')
+    const t1 = template('<p>bar</p>')
+    let frag!: DynamicFragment
+
+    const { host } = define(() => {
+      frag = createIf(
+        () => show.value,
+        () => t0(),
+        () => t1(),
+        singleRootNoScopeIfElse,
+      ) as DynamicFragment
+      return frag
+    }).render()
+
+    expect(host.innerHTML).toBe('<div>foo</div><!--if-->')
+    expect(frag.scope).toBeUndefined()
+
+    show.value = false
+    await nextTick()
+    expect(host.innerHTML).toBe('<p>bar</p><!--if-->')
+    expect(frag.scope).toBeUndefined()
+  })
+
+  test('should preserve no-scope pending branch during out-in transition', async () => {
+    const show = ref(true)
+    const onLeave = vi.fn((_: Element, done: () => void) => setTimeout(done, 0))
+    const t0 = template('<div>foo</div>')
+    const t1 = template('<p>bar</p>')
+    let frag!: DynamicFragment
+
+    const { host } = define(() =>
+      createComponent(
+        VaporTransition,
+        { mode: () => 'out-in', onLeave: () => onLeave },
+        {
+          default: () =>
+            (frag = createIf(
+              () => show.value,
+              () => t0(),
+              () => t1(),
+              ifFlags(singleRootNoScopeIfElse, false, 0),
+            ) as DynamicFragment),
+        },
+        true,
+      ),
+    ).render()
+
+    expect(host.innerHTML).toBe('<div>foo</div><!--if-->')
+    expect(frag.scope).toBeUndefined()
+
+    show.value = false
+    await nextTick()
+    expect(host.textContent).toContain('foo')
+    expect(host.textContent).not.toContain('bar')
+    expect(onLeave).toHaveBeenCalledTimes(1)
+
+    await new Promise(r => setTimeout(r, 0))
+    await nextTick()
+    expect(host.innerHTML).toContain('bar')
+    expect(host.innerHTML).not.toContain('foo')
+    expect(frag.scope).toBeUndefined()
+  })
+
+  test('should skip no-scope static branch under KeepAlive', async () => {
+    const show = ref(false)
+    const childSetup = vi.fn()
+    const t0 = template('<p>static</p>')
+    const t1 = template('<div>child</div>')
+    const Child = defineVaporComponent({
+      name: 'Child',
+      setup() {
+        childSetup()
+        return t1()
+      },
+    })
+    let frag!: DynamicFragment
+    const flags = ifFlags(
+      singleRootIfElse | VaporIfFlags.FALSE_NO_SCOPE,
+      false,
+      0,
+    )
+
+    const { host } = define(() =>
+      createComponent(VaporKeepAlive, null, {
+        default: () =>
+          (frag = createIf(
+            () => show.value,
+            () => createComponent(Child),
+            () => t0(),
+            flags,
+          ) as DynamicFragment),
+      }),
+    ).render()
+
+    expect(host.innerHTML).toBe('<p>static</p><!--if-->')
+    expect(frag.scope).toBeUndefined()
+
+    show.value = true
+    await nextTick()
+    expect(host.innerHTML).toBe('<div>child</div><!--if-->')
+    expect(frag.scope).toBeDefined()
+    expect(childSetup).toHaveBeenCalledTimes(1)
+    const componentScope = frag.scope
+
+    show.value = false
+    await nextTick()
+    expect(host.innerHTML).toBe('<p>static</p><!--if-->')
+    expect(frag.scope).toBeUndefined()
+
+    show.value = true
+    await nextTick()
+    expect(host.innerHTML).toBe('<div>child</div><!--if-->')
+    expect(frag.scope).toBe(componentScope)
+    expect(childSetup).toHaveBeenCalledTimes(1)
+  })
+
+  test('should not set branch block key without Transition or KeepAlive', async () => {
+    const show = ref(true)
+    const t0 = template('<div>foo</div>')
+    const t1 = template('<div>bar</div>')
+    let branch!: any
+
+    const { host } = define(() =>
+      createIf(
+        () => show.value,
+        () => (branch = t0()),
+        () => (branch = t1()),
+        ifFlags(singleRootIfElse, false, 0),
+      ),
+    ).render()
+
+    expect(host.innerHTML).toBe('<div>foo</div><!--if-->')
+    expect(branch.$key).toBeUndefined()
+
+    show.value = false
+    await nextTick()
+
+    expect(host.innerHTML).toBe('<div>bar</div><!--if-->')
+    expect(branch.$key).toBeUndefined()
+  })
+
+  test('should not set branch block key outside Transition after Transition is used', async () => {
+    const show = ref(true)
+    const transitionChild = template('<span>transition</span>')
+    const t0 = template('<div>foo</div>')
+    const t1 = template('<div>bar</div>')
+    let branch!: any
+
+    const { host } = define(() => [
+      createComponent(
+        VaporTransition,
+        null,
+        {
+          default: () => transitionChild(),
+        },
+        true,
+      ),
+      createIf(
+        () => show.value,
+        () => (branch = t0()),
+        () => (branch = t1()),
+        ifFlags(singleRootIfElse, false, 0),
+      ),
+    ]).render()
+
+    expect(host.innerHTML).toBe(
+      '<span>transition</span><div>foo</div><!--if-->',
+    )
+    expect(branch.$key).toBeUndefined()
+
+    show.value = false
+    await nextTick()
+
+    expect(host.innerHTML).toBe(
+      '<span>transition</span><div>bar</div><!--if-->',
+    )
+    expect(branch.$key).toBeUndefined()
+  })
+
+  test('should resolve the branch index as the transition key', () => {
+    const show = ref(true)
+    const t0 = template('<div>foo</div>')
+    const t1 = template('<div>bar</div>')
+    let branch!: any
+
+    define(() =>
+      createComponent(
+        VaporTransition,
+        null,
+        {
+          default: () =>
+            createIf(
+              () => show.value,
+              () => (branch = t0()),
+              () => (branch = t1()),
+              ifFlags(singleRootIfElse, false, 0),
+            ),
+        },
+        true,
+      ),
+    ).render()
+
+    expect(branch.$key).toBeUndefined()
+    expect((branch as TransitionBlock).$tkey).toBe(0)
+  })
+
+  test('should ignore key on <template v-if> like vdom', async () => {
+    const reused: boolean[] = []
+    const { vdom, vapor } = await renderParity(
+      {
+        App: `<template><template v-if="data.ok" :key="data.id"><input /><p>{{ data.id }}</p></template></template>`,
+      },
+      () => ref({ ok: true, id: 1 }),
+      async (data, root) => {
+        const input = root.querySelector('input')
+        data.value.id = 2
+        await nextTick()
+        reused.push(root.querySelector('input') === input)
+      },
+    )
+    // the branch is patched in place, not remounted
+    expect(reused).toEqual([true, true])
+    expect(vapor.text).toBe(vdom.text)
+  })
+
+  describe.each(['condense', 'preserve'] as const)(
+    'branch whitespace with whitespace: %s',
+    whitespace => {
+      test.each([
+        [
+          'elements',
+          '<p><b v-if="data.ok">a</b> <i v-else>b</i>{{ data.n }}</p>',
+          'b1',
+          'a2',
+        ],
+        [
+          'else-if',
+          '<p><b v-if="data.ok">a</b> <i v-else-if="data.n === 1">b</i> <u v-else>c</u>{{ data.n }}</p>',
+          'b1',
+          'a2',
+        ],
+        [
+          'templates',
+          '<p><template v-if="data.ok"><b>a</b></template> <template v-else><i>b</i></template>{{ data.n }}</p>',
+          'b1',
+          'a2',
+        ],
+        [
+          'comments',
+          '<p><b v-if="data.ok">a</b> <!-- branch --> <i v-else>b</i>{{ data.n }}</p>',
+          'b1',
+          'a2',
+        ],
+        [
+          'pre',
+          '<pre><b v-if="data.ok">a</b> <i v-else>b</i>{{ data.n }}</pre>',
+          'b1',
+          'a2',
+        ],
+        [
+          'whitespace after the chain',
+          '<p><b v-if="data.ok">a</b> <i v-else>b</i> <em>{{ data.n }}</em></p>',
+          'b 1',
+          'a 2',
+        ],
+        [
+          'components with v-slot',
+          '<p><components.Comp v-if="data.ok" v-slot>a</components.Comp> <components.Comp v-else v-slot>b</components.Comp>{{ data.n }}</p>',
+          'b1',
+          'a2',
+        ],
+      ])('matches vdom for %s', async (_, template, initial, updated) => {
+        const mounted: string[] = []
+        const { vdom, vapor } = await renderParity(
+          {
+            Comp: '<template><slot /></template>',
+            App: `<template>${template}</template>`,
+          },
+          () => ref({ ok: false, n: 1 }),
+          (data, root) => {
+            expect(root.textContent).toBe(initial)
+            mounted.push(root.innerHTML.replace(/<!--.*?-->/g, ''))
+            data.value.ok = true
+            data.value.n = 2
+          },
+          {},
+          { whitespace },
+        )
+        expect(mounted[1]).toBe(mounted[0])
+        expect(vapor.text).toBe(updated)
+        expect(vapor.text).toBe(vdom.text)
+        expect(vapor.after.replace(/<!--.*?-->/g, '')).toBe(
+          vdom.after.replace(/<!--.*?-->/g, ''),
+        )
+      })
+    },
+  )
+})
+
+describe('createIfChain', () => {
+  // the text after every step, vapor against vdom
+  async function parity(
+    App: string,
+    init: Record<string, any>,
+    steps: Record<string, any>[],
+    extra: Record<string, string> = {},
+  ) {
+    const out = {} as Record<'vdom' | 'vapor', string[]>
+    const html = {} as Record<'vdom' | 'vapor', string>
+    await renderParity(
+      { ...extra, App },
+      () => ref({ ...init }),
+      async (data, root, mode) => {
+        const log = (out[mode] = [root.textContent!])
+        for (const step of steps) {
+          Object.assign(data.value, step)
+          await nextTick()
+          log.push(root.textContent!)
+        }
+        html[mode] = root.innerHTML
+      },
+    )
+    expect(out.vapor).toEqual(out.vdom)
+    return { out: out.vapor, html }
+  }
+
+  test('switches between the branches', async () => {
+    const { out, html } = await parity(
+      `<template><section>${ifChain(
+        (i, dir) => `<div ${dir}>${i}</div>`,
+      )}</section></template>`,
+      { k: 0 },
+      [{ k: 11 }, { k: 12 }, { k: 5 }, { k: 0 }, { k: -1 }],
+    )
+    expect(out).toEqual(['0', '11', '12', '5', '0', '12'])
+    // one fragment for the whole chain
+    expect(html.vapor).toBe('<section><div>12</div><!--if--></section>')
+  })
+
+  test('renders nothing past the last branch without v-else', async () => {
+    const { out, html } = await parity(
+      `<template><section>${ifChain((i, dir) => `<div ${dir}>${i}</div>`, {
+        withElse: false,
+      })}</section></template>`,
+      { k: -1 },
+      [{ k: 11 }, { k: 12 }, { k: 0 }],
+    )
+    expect(out).toEqual(['', '11', '', '0'])
+    expect(html.vapor).toBe('<section><div>0</div><!--if--></section>')
+  })
+
+  test('evaluates the conditions past a static false head', async () => {
+    const { out } = await parity(
+      `<template>${ifChain((i, dir) => `<div ${dir}>${i}</div>`, {
+        cond: i => (i === 0 ? 'false' : `data.k === ${i}`),
+      })}</template>`,
+      { k: 0 },
+      [{ k: 11 }, { k: 1 }],
+    )
+    expect(out).toEqual(['12', '11', '1'])
+  })
+
+  test('keeps dynamic content in every branch live', async () => {
+    const { out } = await parity(
+      `<template>${ifChain(
+        (i, dir) => `<div ${dir}>${i}:{{ data.msg }}</div>`,
+      )}</template>`,
+      { k: 11, msg: 'a' },
+      [{ msg: 'b' }, { k: 3 }, { msg: 'c' }],
+    )
+    expect(out).toEqual(['11:a', '11:b', '3:b', '3:c'])
+  })
+
+  test('comments between branches belong to the next branch', async () => {
+    const out = {} as Record<'vdom' | 'vapor', string[]>
+    await renderParity(
+      {
+        App: `<template><section>${ifChain(
+          (i, dir) => `<!-- c${i} --><div ${dir}>${i}</div>`,
+        )}</section></template>`,
+      },
+      () => ref({ k: 0 }),
+      async (data, root, mode) => {
+        // the comment ahead of the head is a plain sibling, the others
+        // belong to their branch; drop only the fragment anchor
+        const dom = () => root.innerHTML.replace(/<!--if-->/g, '')
+        const log = (out[mode] = [dom()])
+        for (const k of [11, 12]) {
+          data.value.k = k
+          await nextTick()
+          log.push(dom())
+        }
+      },
+    )
+    expect(out.vdom).toEqual([
+      '<section><!-- c0 --><div>0</div></section>',
+      '<section><!-- c0 --><!-- c11 --><div>11</div></section>',
+      '<section><!-- c0 --><!-- c12 --><div>12</div></section>',
     ])
-    calls.length = 0
-    expect(spyConditionFn1).toHaveBeenCalledTimes(2)
-    expect(spyConditionFn2).toHaveBeenCalledTimes(1)
+    expect(out.vapor).toEqual(out.vdom)
+  })
 
-    show2.value = false
-    await nextTick()
-    expect(calls).toEqual([
-      '2 beforeUnmount',
-      '3 created',
-      '3 beforeMount',
-      '2 unmounted',
-      '3 mounted',
-    ])
-    calls.length = 0
-    expect(spyConditionFn1).toHaveBeenCalledTimes(2)
-    expect(spyConditionFn2).toHaveBeenCalledTimes(2)
-
-    show1.value = true
-    await nextTick()
-    expect(calls).toEqual([
-      '3 beforeUnmount',
-      '1 created',
-      '1 beforeMount',
-      '3 unmounted',
-      '1 mounted',
-    ])
-    calls.length = 0
-    expect(spyConditionFn1).toHaveBeenCalledTimes(3)
-    expect(spyConditionFn2).toHaveBeenCalledTimes(2)
-
-    update.value++
-    await nextTick()
-    expect(calls).toEqual(['1 beforeUpdate', '1 updated'])
-    calls.length = 0
-    expect(spyConditionFn1).toHaveBeenCalledTimes(3)
-    expect(spyConditionFn2).toHaveBeenCalledTimes(2)
-
-    unmountComponent(instance!)
-    expect(calls).toEqual(['1 beforeUnmount', '1 unmounted'])
-    expect(spyConditionFn1).toHaveBeenCalledTimes(3)
-    expect(spyConditionFn2).toHaveBeenCalledTimes(2)
+  test('switches between component branches of one type', async () => {
+    const { out } = await parity(
+      `<template>${ifChain(
+        (i, dir) => `<components.Leaf ${dir} id="${i}" />`,
+      )}</template>`,
+      { k: 0 },
+      [{ k: 11 }, { k: 12 }, { k: 0 }],
+      {
+        Leaf: `<script setup>const props = defineProps(['id'])</script>
+        <template><i>{{ props.id }}</i></template>`,
+      },
+    )
+    expect(out).toEqual(['0', '11', '12', '0'])
   })
 })

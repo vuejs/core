@@ -2,10 +2,8 @@ import {
   type AttributeNode,
   type ElementNode,
   ElementTypes,
-  ErrorCodes,
   NodeTypes,
   type SimpleExpressionNode,
-  createCompilerError,
   createSimpleExpression,
   isStaticArgOf,
   isStaticExp,
@@ -13,13 +11,12 @@ import {
 import type { NodeTransform, TransformContext } from '../transform'
 import {
   type BlockIRNode,
-  type DirectiveIRNode,
   DynamicFlag,
   IRNodeTypes,
   type IRProps,
   type VaporDirectiveNode,
 } from '../ir'
-import { camelize, extend } from '@vue/shared'
+import { VaporSlotFlags, camelize, extend } from '@vue/shared'
 import { newBlock } from './utils'
 import { buildProps } from './transformElement'
 
@@ -83,31 +80,46 @@ export const transformSlotOutlet: NodeTransform = (node, context) => {
       true,
     )
     irProps = isDynamic ? props : [props]
-
-    const runtimeDirective = context.block.operation.find(
-      (oper): oper is DirectiveIRNode =>
-        oper.type === IRNodeTypes.DIRECTIVE && oper.element === id,
-    )
-    if (runtimeDirective) {
-      context.options.onError(
-        createCompilerError(
-          ErrorCodes.X_V_SLOT_UNEXPECTED_DIRECTIVE_ON_SLOT_OUTLET,
-          runtimeDirective.dir.loc,
-        ),
-      )
+    if (!isDynamic) {
+      for (const prop of props) {
+        const name = prop.key.content
+        if (
+          prop.key.isStatic &&
+          !prop.handler &&
+          !prop.modifier &&
+          (name === 'class' || name === 'style')
+        ) {
+          const value = prop.values[0]
+          if (prop.values.length === 1 && value.isStatic) {
+            if (name === 'class') value.content = value.content.trim()
+          } else {
+            prop.normalize = name
+          }
+        }
+      }
     }
   }
 
   return () => {
     exitBlock && exitBlock()
+    let flags = 0
+    // `slotted` defaults to true: compileTemplate forwards it as undefined
+    // when the caller leaves it out
+    if (context.options.scopeId && context.options.slotted === false) {
+      flags |= VaporSlotFlags.NO_SLOTTED
+    }
+    if (context.inVOnce) {
+      flags |= VaporSlotFlags.ONCE
+    }
+
     context.dynamic.operation = {
       type: IRNodeTypes.SLOT_OUTLET_NODE,
       id,
+      ...context.effectBoundary(),
       name: slotName,
       props: irProps,
       fallback,
-      noSlotted: !!(context.options.scopeId && !context.options.slotted),
-      once: context.inVOnce,
+      flags,
     }
   }
 }
@@ -119,6 +131,12 @@ function createFallback(
   if (!node.children.length) {
     return []
   }
+
+  // the outlet is a fragment boundary: the component or slot root must not
+  // propagate into the fallback through the transparent `<template>` wrapper
+  // below
+  context.isSingleRoot = false
+  context.isSlotRoot = false
 
   context.node = node = extend({}, node, {
     type: NodeTypes.ELEMENT,

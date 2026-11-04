@@ -1,0 +1,1382 @@
+import {
+  createSSRApp,
+  defineComponent,
+  h,
+  nextTick,
+  reactive,
+  ref,
+  withDirectives,
+} from '@vue/runtime-dom'
+import { VueServerRenderer, compile, runtimeVapor } from '../_utils'
+import { setIsHydratingEnabled } from '../../src/dom/hydration'
+import {
+  formatHtml,
+  formatNodeList,
+  setupHydrationTest,
+  testHydration,
+  testWithVDOMApp,
+  testWithVaporApp,
+} from './_helpers'
+
+setupHydrationTest()
+
+describe('VDOM interop', () => {
+  // Previous tests (e.g. createVaporSSRApp) leave isHydratingEnabled = true.
+  beforeEach(() => {
+    setIsHydratingEnabled(false)
+  })
+
+  test('hydrate VDOM -> Vapor component should invoke vnode and directive mount hooks in VDOM order', async () => {
+    const calls: string[] = []
+    const dir = {
+      created: vi.fn(() => calls.push('directive created')),
+      beforeMount: vi.fn(() => calls.push('directive beforeMount')),
+      mounted: vi.fn(() => calls.push('directive mounted')),
+    }
+    const serverVaporChild = compile(
+      `<template><div>child</div></template>`,
+      ref({}),
+      {},
+      {
+        vapor: true,
+        ssr: true,
+      },
+    )
+    const clientVaporChild = compile(
+      `<template><div>child</div></template>`,
+      ref({}),
+      {},
+      {
+        vapor: true,
+        ssr: false,
+      },
+    )
+    const ServerApp = defineComponent({
+      setup() {
+        return () =>
+          withDirectives(
+            h(serverVaporChild as any, {
+              onVnodeBeforeMount: () => calls.push('vnode beforeMount'),
+              onVnodeMounted: () => calls.push('vnode mounted'),
+            }),
+            [[dir]],
+          )
+      },
+    })
+    const ClientApp = defineComponent({
+      setup() {
+        return () =>
+          withDirectives(
+            h(clientVaporChild as any, {
+              onVnodeBeforeMount: () => calls.push('vnode beforeMount'),
+              onVnodeMounted: () => calls.push('vnode mounted'),
+            }),
+            [[dir]],
+          )
+      },
+    })
+
+    const html = await VueServerRenderer.renderToString(createSSRApp(ServerApp))
+    const container = document.createElement('div')
+    document.body.appendChild(container)
+    container.innerHTML = html
+
+    const app = createSSRApp(ClientApp)
+    app.use(runtimeVapor.vaporInteropPlugin)
+    app.mount(container)
+
+    await nextTick()
+
+    expect(calls).toEqual([
+      'vnode beforeMount',
+      'directive created',
+      'directive beforeMount',
+      'directive mounted',
+      'vnode mounted',
+    ])
+  })
+
+  test('basic render vapor component', async () => {
+    const data = ref(true)
+    const { container } = await testWithVDOMApp(
+      `<script setup>const data = _data; const components = _components;</script>
+      <template>
+        <components.VaporChild/>
+      </template>`,
+      {
+        VaporChild: {
+          code: `<template>{{ data }}</template>`,
+          vapor: true,
+        },
+      },
+      data,
+    )
+
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`"true"`)
+
+    data.value = false
+    await nextTick()
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`"false"`)
+  })
+
+  test('nested components (VDOM -> Vapor -> VDOM)', async () => {
+    const data = ref(true)
+    const { container } = await testWithVDOMApp(
+      `<script setup>const data = _data; const components = _components;</script>
+      <template>
+        <components.VaporChild/>
+      </template>`,
+      {
+        VaporChild: {
+          code: `<template><components.VdomChild/></template>`,
+          vapor: true,
+        },
+        VdomChild: {
+          code: `<script setup>const data = _data;</script>
+            <template>{{ data }}</template>`,
+          vapor: false,
+        },
+      },
+      data,
+    )
+
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
+      "
+      <!--{-->true<!--}-->
+      "
+    `)
+
+    data.value = false
+    await nextTick()
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
+      "
+      <!--{-->false<!--}-->
+      "
+    `)
+  })
+
+  test('nested components (VDOM -> Vapor(multi-root) -> VDOM)', async () => {
+    const data = ref('foo')
+    const { container } = await testWithVDOMApp(
+      `<script setup>const data = _data; const components = _components;</script>
+      <template>
+        <components.VaporChild/>
+      </template>`,
+      {
+        // Vapor component with multiple root nodes, VDOM child as first element
+        // This ensures hydration starts at <!--[--> and tests skipFragmentAnchor
+        VaporChild: {
+          code: `<template><components.VdomChild/><div>second</div></template>`,
+          vapor: true,
+        },
+        VdomChild: {
+          code: `<script setup>const data = _data;</script>
+            <template><span>{{ data }}</span></template>`,
+          vapor: false,
+        },
+      },
+      data,
+    )
+
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+      `
+      "
+      <!--{--><span>foo</span><div>second</div><!--}-->
+      "
+    `,
+    )
+
+    expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+
+    data.value = 'bar'
+    await nextTick()
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+      `
+      "
+      <!--{--><span>bar</span><div>second</div><!--}-->
+      "
+    `,
+    )
+  })
+
+  test('nested components (VDOM -> Vapor(multi-root) -> VDOM) with preceding sibling', async () => {
+    const data = ref('foo')
+    const { container } = await testWithVDOMApp(
+      `<script setup>const data = _data; const components = _components;</script>
+      <template>
+        <p>before</p>
+        <components.VaporChild/>
+      </template>`,
+      {
+        VaporChild: {
+          code: `<template><components.VdomChild/><div>second</div></template>`,
+          vapor: true,
+        },
+        VdomChild: {
+          code: `<script setup>const data = _data;</script>
+            <template><span>{{ data }}</span></template>`,
+          vapor: false,
+        },
+      },
+      data,
+    )
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+      `
+      "
+      <!--[--><p>before</p>
+      <!--{--><span>foo</span><div>second</div><!--}-->
+      <!--]-->
+      "
+    `,
+    )
+    expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+
+    data.value = 'bar'
+    await nextTick()
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+      `
+      "
+      <!--[--><p>before</p>
+      <!--{--><span>bar</span><div>second</div><!--}-->
+      <!--]-->
+      "
+    `,
+    )
+  })
+
+  // the vdom parent finds the sibling by looking ahead past the vapor
+  // component's range, not from what the component renders
+  test('nested components (VDOM -> Vapor(multi-root) -> VDOM) with following sibling', async () => {
+    const data = ref('foo')
+    const { container } = await testWithVDOMApp(
+      `<script setup>const data = _data; const components = _components;</script>
+      <template>
+        <components.VaporChild/>
+        <p>{{ data }}</p>
+      </template>`,
+      {
+        VaporChild: {
+          code: `<template><components.VdomChild/><div>second</div></template>`,
+          vapor: true,
+        },
+        VdomChild: {
+          code: `<script setup>const data = _data;</script>
+            <template><span>{{ data }}</span></template>`,
+          vapor: false,
+        },
+      },
+      data,
+    )
+    const after = container.querySelector('p')
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+      `
+      "
+      <!--[-->
+      <!--{--><span>foo</span><div>second</div><!--}-->
+      <p>foo</p><!--]-->
+      "
+    `,
+    )
+    expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+
+    data.value = 'bar'
+    await nextTick()
+    expect(container.querySelector('p')).toBe(after)
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+      `
+      "
+      <!--[-->
+      <!--{--><span>bar</span><div>second</div><!--}-->
+      <p>bar</p><!--]-->
+      "
+    `,
+    )
+  })
+
+  // the vdom wrapper is the vapor app's sole root: the vapor child's range
+  // at the cursor is handed through the wrapper to the vdom bridge
+  test('nested components (Vapor -> VDOM -> Vapor(multi-root)) as sole roots', async () => {
+    const data = ref('foo')
+    const { container, html } = await testWithVaporApp(
+      `<template><components.Host /></template>`,
+      {
+        Host: {
+          code: `<script setup>const components = _components</script>
+            <template><components.Child /></template>`,
+          vapor: false,
+        },
+        Child: {
+          code: `<template><p>one</p><b>{{ data }}</b></template>`,
+          vapor: true,
+        },
+      },
+      data,
+    )
+    const b = container.querySelector('b')
+    expect(container.innerHTML).toBe(html)
+    expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+    expect(`Hydration children mismatch`).not.toHaveBeenWarned()
+
+    data.value = 'bar'
+    await nextTick()
+    expect(container.querySelector('b')).toBe(b)
+    expect(b!.textContent).toBe('bar')
+  })
+
+  test('raw VNode of a multi-root vapor component as the sole root', async () => {
+    const data = ref('foo')
+    const { container, html } = await testWithVaporApp(
+      `<script setup>
+        import { h } from 'vue'
+        const data = _data
+        const components = _components
+        const vnode = h(components.Child)
+      </script>
+      <template><component :is="vnode" /></template>`,
+      {
+        D: `<template><p>d1</p><p>d2</p></template>`,
+        Child: `<template><components.D /><b>{{ data }}</b></template>`,
+      },
+      data,
+    )
+    const b = container.querySelector('b')
+    expect(container.innerHTML).toBe(html)
+    expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+    expect(`Hydration children mismatch`).not.toHaveBeenWarned()
+
+    data.value = 'bar'
+    await nextTick()
+    expect(container.querySelector('b')).toBe(b)
+    expect(b!.textContent).toBe('bar')
+  })
+
+  test('nested components (VDOM -> Vapor) should not duplicate', async () => {
+    const { container } = await testWithVDOMApp(
+      `<script setup>const components = _components;</script>
+          <template>
+            <components.VaporChild/>
+          </template>`,
+      {
+        VaporChild: {
+          code: `<script vapor>
+                import { ref } from 'vue'
+                const show = ref(true)
+              </script>
+              <template>
+                <template v-if="show">
+                  <div>1</div>
+                  <div>2</div>
+                </template>
+              </template>`,
+          vapor: true,
+        },
+      },
+    )
+
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+      `
+      "
+      <!--[--><div>1</div><div>2</div><!--]-->
+      "
+    `,
+    )
+
+    expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+  })
+
+  test('nested components (VDOM -> Vapor -> VDOM (with slot fallback))', async () => {
+    const data = ref(true)
+    const { container } = await testWithVDOMApp(
+      `<script setup>const data = _data; const components = _components;</script>
+      <template>
+        <components.VaporChild/>
+      </template>`,
+      {
+        VaporChild: {
+          code: `<template><components.VdomChild/></template>`,
+          vapor: true,
+        },
+        VdomChild: {
+          code: `<script setup>const data = _data;</script>
+            <template><slot><span>{{data}}</span></slot></template>`,
+          vapor: false,
+        },
+      },
+      data,
+    )
+
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+      `
+      "
+      <!--{-->
+      <!--(--><span>true</span><!--)-->
+      <!--}-->
+      "
+    `,
+    )
+
+    data.value = false
+    await nextTick()
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+      `
+      "
+      <!--{-->
+      <!--(--><span>false</span><!--)-->
+      <!--}-->
+      "
+    `,
+    )
+  })
+
+  test('nested components (VDOM -> Vapor(with slot content) -> VDOM)', async () => {
+    const data = ref(true)
+    const { container } = await testWithVDOMApp(
+      `<script setup>const data = _data; const components = _components;</script>
+          <template>
+            <components.VaporChild/>
+          </template>`,
+      {
+        VaporChild: {
+          code: `<template>
+            <components.VdomChild>
+              <template #default>
+                <span>{{data}} vapor fallback</span>
+              </template>
+            </components.VdomChild>
+          </template>`,
+          vapor: true,
+        },
+        VdomChild: {
+          code: `<script setup>const data = _data;</script>
+            <template><slot><span>vdom fallback</span></slot></template>`,
+          vapor: false,
+        },
+      },
+      data,
+    )
+
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+      `
+      "
+      <!--{-->
+      <!--[--><span>true vapor fallback</span><!--]-->
+      <!--}-->
+      "
+    `,
+    )
+
+    data.value = false
+    await nextTick()
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+      `
+      "
+      <!--{-->
+      <!--[--><span>false vapor fallback</span><!--]-->
+      <!--}-->
+      "
+    `,
+    )
+  })
+
+  test('nested components (VDOM -> Vapor(with slot content) -> Vapor)', async () => {
+    const data = ref(true)
+    const { container } = await testWithVDOMApp(
+      `<script setup>const data = _data; const components = _components;</script>
+          <template>
+            <components.VaporChild/>
+          </template>`,
+      {
+        VaporChild: {
+          code: `<template>
+            <components.VaporChild2>
+              <template #default>
+                <span>{{data}} vapor fallback</span>
+              </template>
+            </components.VaporChild2>
+          </template>`,
+          vapor: true,
+        },
+        VaporChild2: {
+          code: `<template><slot><span>vapor fallback2</span></slot></template>`,
+          vapor: true,
+        },
+      },
+      data,
+    )
+
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+      `
+      "
+      <!--{-->
+      <!--[--><span>true vapor fallback</span><!--]-->
+      <!--}-->
+      "
+    `,
+    )
+
+    data.value = false
+    await nextTick()
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+      `
+      "
+      <!--{-->
+      <!--[--><span>false vapor fallback</span><!--]-->
+      <!--}-->
+      "
+    `,
+    )
+  })
+
+  test('vapor slot render vdom component', async () => {
+    const data = ref(true)
+    const { container } = await testWithVDOMApp(
+      `<script setup>const data = _data; const components = _components;</script>
+      <template>
+        <components.VaporChild>
+          <components.VdomChild/>
+        </components.VaporChild>
+      </template>`,
+      {
+        VaporChild: {
+          code: `<template><div><slot/></div></template>`,
+          vapor: true,
+        },
+        VdomChild: {
+          code: `<script setup>const data = _data;</script>
+            <template>{{ data }}</template>`,
+          vapor: false,
+        },
+      },
+      data,
+    )
+
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+      `
+      "<div>
+      <!--[-->true<!--]-->
+      </div>"
+    `,
+    )
+
+    data.value = false
+    await nextTick()
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+      `
+      "<div>
+      <!--[-->false<!--]-->
+      </div>"
+    `,
+    )
+  })
+
+  test('vapor slot render vdom component (multi-root slot content)', async () => {
+    const data = ref('foo')
+    const { container } = await testWithVaporApp(
+      `<script setup>const data = _data; const components = _components;</script>
+      <template>
+        <components.VaporChild>
+          <components.VdomChild/>
+          <div>vapor content</div>
+        </components.VaporChild>
+      </template>`,
+      {
+        VaporChild: {
+          code: `<template><div><slot/></div></template>`,
+          vapor: true,
+        },
+        VdomChild: {
+          code: `<script setup>const data = _data;</script>
+            <template><span>{{ data }}</span></template>`,
+          vapor: false,
+        },
+      },
+      data,
+    )
+
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+      `
+      "
+      <!--{--><div>
+      <!--[--><span>foo</span><div>vapor content</div><!--]-->
+      </div><!--}-->
+      "
+    `,
+    )
+
+    expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+
+    data.value = 'bar'
+    await nextTick()
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+      `
+      "
+      <!--{--><div>
+      <!--[--><span>bar</span><div>vapor content</div><!--]-->
+      </div><!--}-->
+      "
+    `,
+    )
+  })
+
+  test('vapor slot render vdom component (render function)', async () => {
+    const data = ref(true)
+    const { container } = await testWithVaporApp(
+      `<script setup>
+        import { h } from 'vue'
+        const data = _data; const components = _components;
+        const VdomChild = {
+          setup() {
+            return () => h('div', null, [h('div', [String(data.value)])])
+          }
+        }
+      </script>
+      <template>
+        <components.VaporChild>
+          <VdomChild/>
+        </components.VaporChild>
+      </template>`,
+      {
+        VaporChild: {
+          code: `<template><div><slot/></div></template>`,
+          vapor: true,
+        },
+      },
+      data,
+    )
+
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+      `
+      "
+      <!--{--><div>
+      <!--[--><div><div>true</div></div><!--]-->
+      </div><!--}-->
+      "
+    `,
+    )
+
+    expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+
+    data.value = false
+    await nextTick()
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+      `
+      "
+      <!--{--><div>
+      <!--[--><div><div>false</div></div><!--]-->
+      </div><!--}-->
+      "
+    `,
+    )
+  })
+
+  test('hydrate VNode rendered via createDynamicComponent', async () => {
+    const data = ref('foo')
+    const { container } = await testWithVaporApp(
+      `<script setup>
+        import { h } from 'vue'
+        const data = _data; const components = _components;
+
+        // Simulating RouterView pattern: VDOM component passes VNode through slot
+        const RouterView = {
+          setup(_, { slots }) {
+            return () => {
+              const component = h(components.VaporChild)
+              return slots.default({ Component: component })
+            }
+          }
+        }
+      </script>
+      <template>
+        <RouterView v-slot="{ Component }">
+          <component :is="Component" />
+        </RouterView>
+      </template>`,
+      {
+        VaporChild: {
+          code: `<template><div>{{ data }}</div></template>`,
+          vapor: true,
+        },
+      },
+      data,
+    )
+
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+      `
+      "
+      <!--{-->
+      <!--[-->
+      <!--[--><div>foo</div><!--dynamic-component--><!--]-->
+      <!--]-->
+      <!--}-->
+      "
+    `,
+    )
+
+    // The dynamic component's own anchor sits directly after its content and
+    // before the enclosing slot's anchor, so a branch switch inserts inside
+    // the slot range rather than after it.
+    expect(formatNodeList(container.childNodes)).toEqual([
+      '<!--{-->',
+      '<!--[-->',
+      '<!--[-->',
+      '<div>foo</div>',
+      'text("")',
+      '<!--dynamic-component-->',
+      '<!--]-->',
+      '<!--]-->',
+      '<!--}-->',
+    ])
+
+    expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+
+    data.value = 'bar'
+    await nextTick()
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+      `
+      "
+      <!--{-->
+      <!--[-->
+      <!--[--><div>bar</div><!--dynamic-component--><!--]-->
+      <!--]-->
+      <!--}-->
+      "
+    `,
+    )
+  })
+
+  test('hydrate static VNode chunk rendered via createDynamicComponent', async () => {
+    const data = ref('foo')
+    const { container } = await testWithVaporApp(
+      `<script setup>
+        import { createStaticVNode } from 'vue'
+        const data = _data
+        const StaticChunk = createStaticVNode(
+          '<div>first static</div><div>second static</div>',
+          2,
+        )
+      </script>
+      <template>
+        <div>
+          <component :is="StaticChunk" />
+        </div>
+        <span>{{ data }}</span>
+      </template>`,
+      undefined,
+      data,
+    )
+
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+      `
+      "
+      <!--{--><div><div>first static</div><div>second static</div><!--dynamic-component--></div><span>foo</span><!--}-->
+      "
+    `,
+    )
+
+    expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+
+    data.value = 'bar'
+    await nextTick()
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+      `
+      "
+      <!--{--><div><div>first static</div><div>second static</div><!--dynamic-component--></div><span>bar</span><!--}-->
+      "
+    `,
+    )
+  })
+
+  test('hydrate Fragment VNode rendered via createDynamicComponent', async () => {
+    const data = ref('foo')
+    const { container } = await testWithVaporApp(
+      `<script setup>
+        import { Fragment, h } from 'vue'
+        const data = _data
+        const FragmentChunk = h(Fragment, null, [
+          h('div', null, 'first fragment'),
+          h('div', null, 'second fragment'),
+        ])
+      </script>
+      <template>
+        <div>
+          <component :is="FragmentChunk" />
+        </div>
+        <span>{{ data }}</span>
+      </template>`,
+      undefined,
+      data,
+    )
+
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+      `
+      "
+      <!--{--><div>
+      <!--[--><div>first fragment</div><div>second fragment</div><!--]-->
+      <!--dynamic-component--></div><span>foo</span><!--}-->
+      "
+    `,
+    )
+
+    expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+
+    data.value = 'bar'
+    await nextTick()
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+      `
+      "
+      <!--{--><div>
+      <!--[--><div>first fragment</div><div>second fragment</div><!--]-->
+      <!--dynamic-component--></div><span>bar</span><!--}-->
+      "
+    `,
+    )
+  })
+
+  test('hydrate vapor slot in vdom component with sibling nodes', async () => {
+    const msg = ref('Hello World!')
+    const { container } = await testWithVaporApp(
+      `<script setup vapor>
+        const msg = _data
+        const components = _components
+      </script>
+      <template>
+        <components.Comp>
+          <h1>{{ msg }}</h1>
+        </components.Comp>
+        <h1>{{ msg }}</h1>
+      </template>`,
+      {
+        Comp: {
+          code: `
+          <template>
+            <div>
+              <slot />
+            </div>
+          </template>`,
+          vapor: false,
+        },
+      },
+      msg,
+    )
+
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+      `
+      "
+      <!--{--><div>
+      <!--[--><h1>Hello World!</h1><!--]-->
+      </div><h1>Hello World!</h1><!--}-->
+      "
+    `,
+    )
+
+    expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+
+    msg.value = 'Hi Vapor'
+    await nextTick()
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+      `
+      "
+      <!--{--><div>
+      <!--[--><h1>Hi Vapor</h1><!--]-->
+      </div><h1>Hi Vapor</h1><!--}-->
+      "
+    `,
+    )
+  })
+
+  test('hydrate dynamic vapor slot re-mount should stop stale effects from previous slot function', async () => {
+    const staleState = reactive({ id: 0, text: 'zero' })
+    const activeState = reactive({ id: 1, text: 'one' })
+    const nextState = reactive({ id: 2, text: 'two' })
+    const data = reactive({
+      items: [staleState, activeState],
+      track: vi.fn((_: number, text: string) => text),
+    })
+
+    const { container } = await testWithVaporApp(
+      `<script setup vapor>
+        const data = _data
+        const components = _components
+      </script>
+      <template>
+        <components.Comp>
+          <template v-for="item in data.items" #default>
+            <span>{{ data.track(item.id, item.text) }}</span>
+          </template>
+        </components.Comp>
+      </template>`,
+      {
+        Comp: {
+          code: `
+          <template>
+            <div>
+              <slot />
+            </div>
+          </template>`,
+          vapor: false,
+        },
+      },
+      data,
+    )
+
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
+      "
+      <!--{--><div>
+      <!--[--><span>one</span><!--]-->
+      </div><!--}-->
+      "
+    `)
+
+    expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+
+    data.items.push(nextState)
+    await nextTick()
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
+      "
+      <!--{--><div>
+      <!--[--><span>two</span><!--]-->
+      </div><!--}-->
+      "
+    `)
+
+    data.track.mockClear()
+    activeState.text = 'stale-one'
+    await nextTick()
+
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
+      "
+      <!--{--><div>
+      <!--[--><span>two</span><!--]-->
+      </div><!--}-->
+      "
+    `)
+    expect(data.track).not.toHaveBeenCalled()
+  })
+
+  test('hydrate multi-root VNode component via createDynamicComponent and switch branch', async () => {
+    const data = ref({
+      showMulti: true,
+      tail: 'tail',
+    })
+    const { container } = await testWithVaporApp(
+      `<script setup>
+        import { computed, h } from 'vue'
+        const data = _data
+        const components = _components
+        const vnode = computed(() =>
+          data.value.showMulti
+            ? h(components.VdomMultiRoot)
+            : h('p', null, 'fallback')
+        )
+      </script>
+      <template>
+        <component :is="vnode" />
+        <span>{{ data.tail }}</span>
+      </template>`,
+      {
+        VdomMultiRoot: {
+          code: `<template><div>first</div><div>second</div></template>`,
+          vapor: false,
+        },
+      },
+      data,
+    )
+
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+      `
+      "
+      <!--{-->
+      <!--{--><div>first</div><div>second</div><!--}-->
+      <!--dynamic-component--><span>tail</span><!--}-->
+      "
+    `,
+    )
+
+    expect(formatNodeList(container.childNodes)).toEqual([
+      '<!--{-->',
+      '<!--{-->',
+      '<div>first</div>',
+      '<div>second</div>',
+      '<!--}-->',
+      'text("")',
+      '<!--dynamic-component-->',
+      '<span>tail</span>',
+      '<!--}-->',
+    ])
+
+    expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+
+    data.value.showMulti = false
+    await nextTick()
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+      `
+      "
+      <!--{-->
+      <!--{--><!--}-->
+      <p>fallback</p><!--dynamic-component--><span>tail</span><!--}-->
+      "
+    `,
+    )
+
+    data.value.showMulti = true
+    await nextTick()
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+      `
+      "
+      <!--{-->
+      <!--{--><!--}-->
+      <div>first</div><div>second</div><!--dynamic-component--><span>tail</span><!--}-->
+      "
+    `,
+    )
+
+    data.value.tail = 'tail-updated'
+    await nextTick()
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
+      "
+      <!--{-->
+      <!--{--><!--}-->
+      <div>first</div><div>second</div><!--dynamic-component--><span>tail-updated</span><!--}-->
+      "
+    `)
+  })
+
+  test('hydrate a functional child injecting from a vdom parent under vapor', async () => {
+    const data = ref(0)
+    const { container } = await testWithVaporApp(
+      `<template><div><components.G :n="data" /></div></template>`,
+      {
+        G: {
+          code: `<script setup>
+            import { h, inject, provide } from 'vue'
+            defineProps(['n'])
+            provide('k', 'G')
+            const F = props => h('i', inject('k', 'none') + ':' + props.n)
+          </script>
+          <template><F :n="n" /></template>`,
+          vapor: false,
+        },
+      },
+      data,
+    )
+    expect(formatHtml(container.innerHTML)).toBe('<div><i>G:0</i></div>')
+    expect(`Hydration text content mismatch`).not.toHaveBeenWarned()
+
+    data.value++
+    await nextTick()
+    expect(formatHtml(container.innerHTML)).toBe('<div><i>G:1</i></div>')
+  })
+
+  test('hydrate VDOM prop defaults injecting from a Vapor parent', async () => {
+    const { container, html } = await testWithVaporApp(
+      `<script setup vapor>
+        import { provide } from 'vue'
+        const components = _components
+        provide('k', 'parent')
+      </script>
+      <template><components.Child /></template>`,
+      {
+        Child: {
+          code: `<script setup>
+            import { inject } from 'vue'
+            defineProps({
+              value: {
+                default: () => inject('k', 'missing'),
+              },
+            })
+          </script>
+          <template><i>{{ value }}</i></template>`,
+          vapor: false,
+        },
+      },
+    )
+
+    expect(html).toBe('<!--{--><i>parent</i><!--}-->')
+    expect(container.innerHTML).toBe(html)
+    expect('Hydration text content mismatch').not.toHaveBeenWarned()
+  })
+
+  test('hydrate vapor component root with css variables in style', async () => {
+    const data = ref('red')
+    const { container } = await testWithVDOMApp(
+      `<script setup>const data = _data; const components = _components;</script>
+      <template>
+        <components.VaporChild :style="{ '--color': data }" />
+      </template>`,
+      {
+        VaporChild: {
+          code: `<template><div :style="{ '--size': '1px' }">child</div></template>`,
+          vapor: true,
+        },
+      },
+      data,
+    )
+    await nextTick()
+    const el = container.firstElementChild as HTMLElement
+    expect(el.style.getPropertyValue('--size')).toBe('1px')
+    expect(el.style.getPropertyValue('--color')).toBe('red')
+
+    data.value = 'blue'
+    await nextTick()
+    expect(el.style.getPropertyValue('--color')).toBe('blue')
+  })
+
+  test('hydrate vapor component root with css vars of vdom parent', async () => {
+    const code = `<script setup>const data = _data; const components = _components;</script>
+      <template><components.VaporChild /></template>
+      <style>.a { color: v-bind(data) }</style>`
+    const components = {
+      VaporChild: {
+        code: `<script setup>import { ref } from 'vue'; const p = ref('4px')</script>
+          <template><div :style="{ padding: p }">child</div></template>`,
+        vapor: true,
+      },
+    }
+    const { container } = await testHydration(code, components, ref('red'), {
+      isVaporApp: false,
+      interop: true,
+    })
+    expect(container.innerHTML).toContain(':red;')
+    expect(`Hydration style mismatch`).not.toHaveBeenWarned()
+
+    // the vdom parent's css var differs between server and client
+    await testHydration(code, components, ref('red'), {
+      isVaporApp: false,
+      interop: true,
+      serverData: ref('blue'),
+    })
+    expect(`Hydration style mismatch`).toHaveBeenWarned()
+  })
+
+  test('updates a hydrated v-show VDOM root with an existing directive', async () => {
+    const updated = vi.fn()
+    const data = ref({ count: 0, show: true, updated })
+    const { container, app } = await testWithVaporApp(
+      `<template><components.Child v-show="data.show" /></template>`,
+      {
+        Child: {
+          code: `<script setup>
+            const data = _data
+            const vCustom = { updated: () => data.value.updated() }
+          </script>
+          <template><div v-custom>{{ data.count }}</div></template>`,
+          vapor: false,
+        },
+      },
+      data,
+    )
+    try {
+      expect(container.textContent).toBe('0')
+      data.value.count++
+      await nextTick()
+      expect(container.textContent).toBe('1')
+      expect(updated).toHaveBeenCalledTimes(1)
+
+      data.value.show = false
+      await nextTick()
+      expect((container.firstElementChild as HTMLElement).style.display).toBe(
+        'none',
+      )
+    } finally {
+      app.unmount()
+    }
+  })
+
+  test('preserves hydrated v-once roots when an interop child updates', async () => {
+    const data = ref({ msg: 'one', show: true })
+    const { container, app } = await testWithVaporApp(
+      `<template><section><components.Child :msg="data.msg" v-show="data.show" /></section></template>`,
+      {
+        Child: {
+          code: `<script setup>const props = defineProps(['msg'])</script>
+          <template><div v-once>{{ props.msg }}</div></template>`,
+          vapor: false,
+        },
+      },
+      data,
+    )
+    try {
+      expect(container.textContent).toBe('one')
+      data.value.msg = 'two'
+      await nextTick()
+      expect(container.textContent).toBe('one')
+
+      data.value.show = false
+      await nextTick()
+      expect(
+        (container.querySelector('section > div') as HTMLElement).style.display,
+      ).toBe('none')
+    } finally {
+      app.unmount()
+    }
+  })
+})
+
+// a vapor v-if chain renders its branch in a `<!--[i-->` range: a vdom parent
+// steps over it, at the root of the vapor component and inside a fragment
+describe('vapor v-if chain under a vdom parent', () => {
+  const VaporChild = {
+    code: `<template>
+      <div v-if="data.a"><p>a</p></div>
+      <div v-else><span>b</span></div>
+    </template>`,
+    vapor: true,
+  }
+
+  test.each([
+    ['at the root of the vapor component', '<components.VaporChild />'],
+    [
+      'inside a vdom fragment',
+      '<template v-for="i in 1"><components.VaporChild /><b>row</b></template>',
+    ],
+  ])('%s', async (_, child) => {
+    const data = ref({ a: true })
+    const { container } = await testWithVDOMApp(
+      `<script setup>const data = _data; const components = _components;</script>
+      <template>
+        <div>
+          ${child}
+          <i>tail</i>
+        </div>
+      </template>`,
+      { VaporChild },
+      data,
+    )
+    const tail = container.querySelector('i')!
+    expect(tail.textContent).toBe('tail')
+    expect('Hydration').not.toHaveBeenWarned()
+
+    data.value.a = false
+    await nextTick()
+    expect(container.querySelector('span')!.textContent).toBe('b')
+    expect(container.querySelector('p')).toBeNull()
+    expect(container.querySelector('i')).toBe(tail)
+  })
+
+  // a render function calling a vapor slot gets a vapor slot on the server
+  // too, rendered through its ssr branch rather than the vnode fallback: the
+  // branch range the chain checks is there
+  test('in a vapor slot a vdom render function renders', async () => {
+    const data = ref({ a: false, tail: 'T' })
+    const { container } = await testWithVaporApp(
+      `<script setup>
+        import { h } from 'vue'
+        const data = _data
+        const Wrap = {
+          setup(_, { slots }) {
+            return () => h('section', null, slots.default())
+          },
+        }
+      </script>
+      <template>
+        <Wrap>
+          <div v-if="data.a"><p>a</p></div>
+          <div v-else><span>b</span></div>
+        </Wrap>
+        <u>{{ data.tail }}</u>
+      </template>`,
+      {},
+      data,
+      ref({ a: true, tail: 'T' }),
+    )
+    expect(container.querySelector('section')!.innerHTML).toBe(
+      '<!--[--><!--[0--><div><span>b</span></div><!--]--><!--]-->',
+    )
+    expect('Hydration node mismatch').toHaveBeenWarnedTimes(1)
+
+    const u = container.querySelector('u')!
+    data.value.tail = 'U'
+    data.value.a = true
+    await nextTick()
+    expect(container.querySelector('u')).toBe(u)
+    expect(u.textContent).toBe('U')
+    expect(container.querySelector('section')!.innerHTML).toBe(
+      '<!--[--><!--[0--><div><p>a</p></div><!--]--><!--]-->',
+    )
+  })
+
+  // the server rendered a vapor multi-root component where the client renders
+  // a vdom fragment of the same children: the fragment adopts the component's
+  // range, as it adopted the `[` range of a multi-root component before
+  test('a vdom fragment adopts the range of a vapor component with the same children', async () => {
+    const appCode = `<script setup>const data = _data; const components = _components</script>
+      <template>
+        <div>
+          <template v-if="data.flag"><b>A</b><b>B</b></template>
+          <components.Pair v-else />
+          <input />
+        </div>
+      </template>`
+    const pairCode = `<template><b>A</b><b>B</b></template>`
+    const serverData = ref({ flag: false })
+    const html = await VueServerRenderer.renderToString(
+      createSSRApp(
+        compile(
+          appCode,
+          serverData,
+          {
+            Pair: compile(pairCode, serverData, {}, { vapor: true, ssr: true }),
+          },
+          { vapor: false, ssr: true },
+        ),
+      ),
+    )
+    const container = document.createElement('div')
+    container.innerHTML = html
+    document.body.appendChild(container)
+    const input = container.querySelector('input')!
+    input.value = 'typed'
+
+    const clientData = ref({ flag: true })
+    createSSRApp(
+      compile(
+        appCode,
+        clientData,
+        { Pair: compile(pairCode, clientData, {}, { vapor: true }) },
+        { vapor: false },
+      ),
+    )
+      .use(runtimeVapor.vaporInteropPlugin)
+      .mount(container)
+    expect(container.querySelector('input')).toBe(input)
+    expect(input.value).toBe('typed')
+  })
+
+  // the client renders more children than the server's vapor component:
+  // recovery closes the adopted range with the component's own close
+  test('a vdom fragment recovering inside the range of a vapor component keeps the vapor nodes after it', async () => {
+    const data = reactive({ flag: true, id: 'a' })
+    const { container } = await testWithVaporApp(
+      `<template>
+        <div>
+          <components.Host />
+          <components.Tail />
+        </div>
+      </template>`,
+      {
+        Host: {
+          code: `<script setup>const data = _data; const components = _components</script>
+            <template>
+              <template v-if="data.flag"><b>A</b><b>B</b><b>C</b></template>
+              <components.Pair v-else />
+            </template>`,
+          vapor: false,
+        },
+        Pair: `<template><b>A</b><b>B</b></template>`,
+        Tail: `<template><input :id="data.id" /></template>`,
+      },
+      data,
+      reactive({ flag: false, id: 'a' }),
+    )
+    expect(`Hydration node mismatch`).toHaveBeenWarned()
+    expect(container.innerHTML).toBe(
+      '<div><!--{--><b>A</b><b>B</b><b>C</b><!--}--><input id="a"></div>',
+    )
+
+    const input = container.querySelector('input')!
+    data.id = 'b'
+    await nextTick()
+    expect(container.querySelector('input')).toBe(input)
+    expect(input.id).toBe('b')
+  })
+})

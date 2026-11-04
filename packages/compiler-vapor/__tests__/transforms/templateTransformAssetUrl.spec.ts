@@ -1,4 +1,4 @@
-import type { TransformOptions } from '@vue/compiler-core'
+import { BindingTypes, type TransformOptions } from '@vue/compiler-core'
 import type { AssetURLOptions } from '../../../compiler-sfc/src/template/transformAssetUrl'
 import { stringifyStatic } from '../../../compiler-dom/src/transforms/stringifyStatic'
 import { compileTemplate } from '../../../compiler-sfc/src'
@@ -179,5 +179,37 @@ describe('compiler sfc: transform asset url', () => {
       },
     )
     expect(code).toContain(`import _imports_0 from './foo bar.png'`)
+  })
+
+  test('transform assetUrls alongside v-bind object', () => {
+    const { code } = compileWithAssetUrls(
+      `<img v-bind="attrs" src="./logo.png"/>`,
+    )
+    expect(code).toContain(`import _imports_0 from './logo.png'`)
+    expect(code).toContain('{ src: _imports_0 }')
+  })
+
+  test('transform assetUrls on a component', () => {
+    const { code } = compileWithAssetUrls(`<VImg src="./logo.png"/>`, {
+      tags: { VImg: ['src'] },
+    })
+    expect(code).toContain(`import _imports_0 from './logo.png'`)
+    expect(code).toContain('src: () => (_imports_0)')
+  })
+
+  test('transform assetUrls on a setup component named like a known global', () => {
+    const { code } = compileTemplate({
+      vapor: true,
+      id: 'test',
+      filename: 'test.vue',
+      source: `<Number src="./logo.png"/>`,
+      transformAssetUrls: { tags: { Number: ['src'] } },
+      compilerOptions: {
+        bindingMetadata: { Number: BindingTypes.SETUP_MAYBE_REF },
+      },
+    })
+    expect(code).toContain(`import _imports_0 from './logo.png'`)
+    expect(code).toContain('_createComponent(_ctx.Number')
+    expect(code).toContain('src: () => (_imports_0)')
   })
 })

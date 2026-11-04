@@ -5,12 +5,18 @@ import {
   transformNode,
 } from '../transform'
 import {
+  DynamicAccess,
   DynamicFlag,
+  type IRDynamicAccess,
   type IRDynamicInfo,
   IRNodeTypes,
-  type InsertionStateTypes,
   isBlockOperation,
 } from '../ir'
+import { OpenScope, enterOpenScope, keepsInTemplate } from '../htmlNesting'
+import {
+  getChildTemplateCloseState,
+  shouldUseCreateElement,
+} from './transformElement'
 
 export const transformChildren: NodeTransform = (node, context) => {
   const isFragment =
@@ -21,11 +27,56 @@ export const transformChildren: NodeTransform = (node, context) => {
 
   if (!isFragment && node.type !== NodeTypes.ELEMENT) return
 
+  const useCreateElement =
+    node.type === NodeTypes.ELEMENT &&
+    shouldUseCreateElement(node, context as TransformContext<ElementNode>)
+  // a plain element writes its children into its template string, unless the
+  // html parser would not place one there (`keepsInTemplate`)
+  const hostsTemplate =
+    node.type === NodeTypes.ELEMENT &&
+    node.tagType === ElementTypes.ELEMENT &&
+    !useCreateElement
+  const childTemplateCloseState = hostsTemplate
+    ? getChildTemplateCloseState(context as TransformContext<ElementNode>)
+    : undefined
+  const childScope = hostsTemplate
+    ? enterOpenScope(context.templateScope, node.tag, node.ns)
+    : 0
+
   for (const [i, child] of node.children.entries()) {
     const childContext = context.create(child, i)
+    const isInSameTemplate =
+      hostsTemplate &&
+      child.type === NodeTypes.ELEMENT &&
+      child.tagType === ElementTypes.ELEMENT &&
+      keepsInTemplate(
+        child.tag,
+        child.ns,
+        (node as ElementNode).tag,
+        childScope,
+      )
+    const closeState = isInSameTemplate ? childTemplateCloseState : undefined
+    childContext.templateScope = isInSameTemplate
+      ? childScope | OpenScope.SHARED
+      : 0
+    childContext.templateCloseTags = closeState && closeState.tags
+    childContext.templateCloseBlocks = !!closeState && closeState.blocks
     transformNode(childContext)
 
     const childDynamic = childContext.dynamic
+    // Whether the child materializes a node of its own. Its contrapositive is
+    // the contract the consumers below rely on: a child that creates no node
+    // occupies no position in the parent's template - neither a child index to
+    // navigate to, nor an SSR logical unit. Fragment children are referenced
+    // unconditionally right below, so the predicate is only computed for the
+    // parents that actually consult it.
+    const createsNode =
+      isFragment ||
+      childContext.template !== '' ||
+      childDynamic.template != null ||
+      childDynamic.id !== undefined ||
+      childDynamic.operation !== undefined ||
+      childDynamic.hasDynamicChild === true
 
     if (isFragment) {
       childContext.reference()
@@ -36,6 +87,14 @@ export const transformChildren: NodeTransform = (node, context) => {
         childDynamic.flags & DynamicFlag.INSERT
       ) {
         context.block.returns.push(childContext.dynamic.id!)
+      }
+    } else if (useCreateElement) {
+      if (createsNode) {
+        // createElement-backed parents don't materialize childNodes from a
+        // static HTML string, so every real child node must be inserted.
+        childContext.reference()
+        childContext.registerTemplate()
+        childDynamic.flags |= DynamicFlag.INSERT | DynamicFlag.NON_TEMPLATE
       }
     } else {
       context.childrenTemplate.push(childContext.template)
@@ -50,90 +109,148 @@ export const transformChildren: NodeTransform = (node, context) => {
       context.dynamic.hasDynamicChild = true
     }
 
+    // Set this after the check above: absent children must not make their
+    // parent dynamic.
+    if (!createsNode) {
+      childDynamic.flags |= DynamicFlag.NON_TEMPLATE
+    }
+
     context.dynamic.children[i] = childDynamic
   }
 
   if (!isFragment) {
-    processDynamicChildren(context as TransformContext<ElementNode>)
+    processDynamicChildren(
+      context as TransformContext<ElementNode>,
+      useCreateElement,
+    )
   }
 }
 
-function processDynamicChildren(context: TransformContext<ElementNode>) {
-  let prevDynamics: IRDynamicInfo[] = []
-  let staticCount = 0
-  let dynamicCount = 0
-  let lastInsertionChild: IRDynamicInfo | undefined
+function processDynamicChildren(
+  context: TransformContext<ElementNode>,
+  useCreateElement: boolean,
+) {
   const children = context.dynamic.children
 
-  // Track logical index for each child.
-  // logicalIndex represents the position in SSR DOM, used during hydration
-  // to locate the correct DOM node. Each child (static element, component,
-  // v-if/v-else-if/v-else chain, v-for, slot) counts as one logical unit.
-  let logicalIndex = 0
+  // The index of the last child that materializes in the parent template.
+  // Dynamic children before it are anchored by their own `<!>` placeholder;
+  // dynamic children after it are appends and need no placeholder.
+  let lastTemplateIndex = -1
+  for (let i = children.length - 1; i >= 0; i--) {
+    if (!(children[i].flags & DynamicFlag.NON_TEMPLATE)) {
+      lastTemplateIndex = i
+      break
+    }
+  }
+
+  // Logical unit counter. Each template child (placeholders included) and
+  // each trailing dynamic block occupies one SSR logical unit; for template
+  // children the unit index equals the CSR element index by construction,
+  // which is what lets hydration reuse the CSR locators unchanged.
+  let unitIndex = 0
 
   for (const [index, child] of children.entries()) {
     if (child.flags & DynamicFlag.INSERT) {
-      child.logicalIndex = logicalIndex
-      prevDynamics.push((lastInsertionChild = child))
-      logicalIndex++
-    }
-
-    if (!(child.flags & DynamicFlag.NON_TEMPLATE)) {
-      child.logicalIndex = logicalIndex
-      if (prevDynamics.length) {
-        if (staticCount) {
-          context.childrenTemplate[index - prevDynamics.length] = `<!>`
-          prevDynamics[0].flags -= DynamicFlag.NON_TEMPLATE
-          const anchor = (prevDynamics[0].anchor = context.increaseId())
-          registerInsertion(prevDynamics, context, anchor)
-        } else {
-          registerInsertion(prevDynamics, context, -1 /* prepend */)
-        }
-        dynamicCount += prevDynamics.length
-        prevDynamics = []
+      let anchor: number | undefined
+      if (index < lastTemplateIndex) {
+        // anchored insert: own `<!>` placeholder in the parent template,
+        // located at runtime and passed as the insertion anchor
+        context.childrenTemplate[index] = `<!>`
+        child.flags =
+          (child.flags - DynamicFlag.NON_TEMPLATE) | DynamicFlag.REFERENCED
+        anchor = child.anchor = context.increaseId()
       }
-      staticCount++
-      logicalIndex++
+      if (child.template != null) {
+        // template node due to invalid nesting or a createElement-backed
+        // parent (which never anchors) - generate actual insertion, appended
+        // when no anchor was assigned, with the unit index for hydration
+        child.operation = {
+          type: IRNodeTypes.INSERT_NODE,
+          elements: [child.id!],
+          parent: context.reference(),
+          anchor,
+          appendIndex: useCreateElement ? unitIndex : undefined,
+        }
+      } else if (child.operation && isBlockOperation(child.operation)) {
+        child.operation.parent = context.reference()
+        if (anchor !== undefined) {
+          child.operation.anchor = anchor
+        } else {
+          // append: the block's SSR output starts at logical unit `unitIndex`
+          child.operation.appendIndex = unitIndex
+        }
+      }
+      unitIndex++
+    } else if (!(child.flags & DynamicFlag.NON_TEMPLATE)) {
+      unitIndex++
     }
   }
 
-  if (prevDynamics.length) {
-    registerInsertion(
-      prevDynamics,
-      context,
-      // the logical index of append child
-      dynamicCount + staticCount,
-      true,
-    )
-  }
-
-  if (lastInsertionChild && lastInsertionChild.operation) {
-    ;(lastInsertionChild.operation! as InsertionStateTypes).last = true
+  if (context.dynamic.hasDynamicChild) {
+    planAccess(children)
   }
 }
 
-function registerInsertion(
-  dynamics: IRDynamicInfo[],
-  context: TransformContext,
-  anchor: number,
-  append?: boolean,
-) {
-  for (const child of dynamics) {
-    const logicalIndex = child.logicalIndex
-    if (child.template != null) {
-      // template node due to invalid nesting - generate actual insertion
-      context.registerOperation({
-        type: IRNodeTypes.INSERT_NODE,
-        elements: dynamics.map(child => child.id!),
-        parent: context.reference(),
-        anchor: append ? undefined : anchor,
-      })
-    } else if (child.operation && isBlockOperation(child.operation)) {
-      // block types
-      child.operation.parent = context.reference()
-      child.operation.anchor = anchor
-      child.operation.logicalIndex = logicalIndex
-      child.operation.append = append
+/**
+ * Decide how codegen reaches each child it has to hold on to, now that the
+ * children's flags, anchors and own plans are final. Static, absent and
+ * appended children need no lookup; a child created by its own operation is
+ * reached through its anchor at most. Adjacent lookups chain off the previous
+ * one with `next()`; a placeholder gets a variable only when a lookup chains
+ * off it, otherwise it is written inline into its single descendant lookup.
+ */
+function planAccess(children: IRDynamicInfo[]) {
+  let index = 0
+  let prev: IRDynamicAccess | undefined
+  // a placeholder nothing has chained off yet: open until the next template
+  // sibling shows whether it needs a lookup
+  let pending: IRDynamicAccess | undefined
+
+  for (const child of children) {
+    if (child.flags & DynamicFlag.NON_TEMPLATE) continue
+
+    const id = child.anchor !== undefined ? child.anchor : child.id
+    // lookups the child's own children make from it rather than from a sibling
+    let uses = 0
+    if (id === undefined && child.hasDynamicChild) {
+      for (const c of child.children) {
+        if (c.access && !c.access.adjacent) uses++
+      }
     }
+
+    if (id === undefined && uses === 0) {
+      // static: nothing will chain off a pending placeholder
+      pending = undefined
+      index++
+      continue
+    }
+
+    if (pending) {
+      // this lookup chains off the placeholder, so it is worth a variable
+      pending.kind = DynamicAccess.PLACEHOLDER
+      prev = pending
+      pending = undefined
+    }
+    const reusable = prev !== undefined && prev.kind !== DynamicAccess.REFERENCE
+    let kind: DynamicAccess
+    if (id !== undefined) {
+      kind = DynamicAccess.REFERENCE
+    } else if (uses > 1) {
+      kind = reusable ? DynamicAccess.REUSE : DynamicAccess.PLACEHOLDER
+    } else {
+      kind = reusable ? DynamicAccess.INLINE_REUSE : DynamicAccess.INLINE
+    }
+    const access = (child.access = {
+      kind,
+      index,
+      adjacent: prev !== undefined && index === prev.index + 1,
+      id,
+    })
+    if (kind === DynamicAccess.INLINE) {
+      pending = access
+    } else {
+      prev = access
+    }
+    index++
   }
 }

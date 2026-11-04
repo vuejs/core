@@ -1,5 +1,4 @@
 /* oxlint-disable no-console */
-/* oxlint-disable no-restricted-syntax */
 /* oxlint-disable no-restricted-globals */
 import { nextTick } from 'vue'
 

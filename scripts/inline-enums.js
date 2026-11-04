@@ -244,10 +244,16 @@ export function inlineEnums() {
    * @type {EnumData}
    */
   const enumData = JSON.parse(readFileSync(ENUM_CACHE_PATH, 'utf-8'))
+  const enumIds = new Set(
+    Object.keys(enumData.defines).map(key => key.slice(0, key.indexOf('.'))),
+  )
+  const aliasImportRE = new RegExp(`\\b(?:${[...enumIds].join('|')})\\s+as\\s+`)
 
   // 3. during transform:
   //    3.1 files w/ enum declaration: rewrite declaration as object literal
   //    3.2 files using enum: inject into rolldown define
+  //    3.3 files importing an enum under an alias: the define only matches the
+  //        declared name, so rewrite `Alias.member` here
   /**
    * @type {import('rolldown').Plugin}
    */
@@ -297,6 +303,29 @@ export function inlineEnums() {
         }
       }
 
+      if (aliasImportRE.test(code)) {
+        for (const [alias, enumId] of collectEnumAliases(id, code, enumIds)) {
+          s = s || meta.magicString
+          const memberRE = new RegExp(
+            `(?<![.\\w$])${alias}\\.([A-Za-z_$][\\w$]*)`,
+            'g',
+          )
+          let match
+          while ((match = memberRE.exec(code))) {
+            const key = /** @type {`${string}.${string}`} */ (
+              `${enumId}.${match[1]}`
+            )
+            if (key in enumData.defines) {
+              s.update(
+                match.index,
+                match.index + match[0].length,
+                enumData.defines[key],
+              )
+            }
+          }
+        }
+      }
+
       if (s) {
         return {
           code: s,
@@ -306,4 +335,33 @@ export function inlineEnums() {
   }
 
   return [plugin, enumData.defines]
+}
+
+/**
+ * Enum ids imported under a local alias (`import { E as A }`), keyed by alias.
+ *
+ * @param {string} file
+ * @param {string} code
+ * @param {Set<string>} enumIds
+ * @returns {Map<string, string>}
+ */
+function collectEnumAliases(file, code, enumIds) {
+  const aliases = new Map()
+  const { program } = parseSync(file, code, { sourceType: 'module' })
+  for (const node of program.body) {
+    if (node.type !== 'ImportDeclaration' || node.importKind === 'type')
+      continue
+    for (const spec of node.specifiers) {
+      if (
+        spec.type === 'ImportSpecifier' &&
+        spec.importKind !== 'type' &&
+        spec.imported.type === 'Identifier' &&
+        spec.imported.name !== spec.local.name &&
+        enumIds.has(spec.imported.name)
+      ) {
+        aliases.set(spec.local.name, spec.imported.name)
+      }
+    }
+  }
+  return aliases
 }

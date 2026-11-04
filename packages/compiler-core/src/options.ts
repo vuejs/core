@@ -341,4 +341,8 @@ export interface CodegenOptions extends SharedTransformCodegenOptions {
   runtimeGlobalName?: string
 }
 
-export type CompilerOptions = ParserOptions & TransformOptions & CodegenOptions
+export type CompilerOptions = ParserOptions &
+  TransformOptions &
+  CodegenOptions & {
+    vapor?: boolean
+  }

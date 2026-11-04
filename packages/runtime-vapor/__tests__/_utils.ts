@@ -6,7 +6,12 @@ import type {
   VaporComponentOptions,
 } from '../src/component'
 import type { RawProps } from '../src/componentProps'
-import { compileScript, parse } from '@vue/compiler-sfc'
+import {
+  type SFCTemplateCompileOptions,
+  compileScript,
+  compileTemplate,
+  parse,
+} from '@vue/compiler-sfc'
 import * as runtimeVapor from '../src'
 import * as runtimeDom from '@vue/runtime-dom'
 import * as VueServerRenderer from '@vue/server-renderer'
@@ -14,6 +19,7 @@ import {
   type CompilerOptions,
   compile as compileVapor,
 } from '@vue/compiler-vapor'
+import { VaporIfFlags } from '@vue/shared'
 
 export interface RenderContext {
   component: VaporComponent
@@ -101,6 +107,7 @@ export interface InteropRenderContext {
     props?: RawProps,
     container?: string | ParentNode,
   ) => InteropRenderContext
+  app: App
   host: HTMLElement
   html: () => string
 }
@@ -136,6 +143,7 @@ export function makeInteropRender(): (comp: Component) => InteropRenderContext {
     }
 
     const res = () => ({
+      app,
       host,
       mount,
       render,
@@ -149,6 +157,19 @@ export function makeInteropRender(): (comp: Component) => InteropRenderContext {
 }
 
 export { runtimeDom, runtimeVapor, VueServerRenderer }
+
+export function ifFlags(
+  blockShape: number,
+  once = false,
+  index?: number,
+): number {
+  return (
+    blockShape |
+    (once ? VaporIfFlags.ONCE : 0) |
+    (index === undefined ? 0 : (index + 1) << VaporIfFlags.INDEX_SHIFT)
+  )
+}
+
 export function compile(
   sfc: string,
   data: runtimeDom.Ref<any>,
@@ -156,9 +177,17 @@ export function compile(
   {
     vapor = true,
     ssr = false,
+    id = 'x',
+    compilerOptions,
+    inlineTemplate = true,
   }: {
     vapor?: boolean | undefined
     ssr?: boolean | undefined
+    // scope id for `<style scoped>` sources; distinct ids tell components apart
+    id?: string
+    compilerOptions?: SFCTemplateCompileOptions['compilerOptions'] | undefined
+    // false compiles like a dev build: script bindings + a separate render
+    inlineTemplate?: boolean
   } = {},
 ): any {
   if (!sfc.includes(`<script`)) {
@@ -166,21 +195,43 @@ export function compile(
       `<script vapor>const data = _data; const components = _components;</script>` +
       sfc
   }
-  const descriptor = parse(sfc).descriptor
+  // the template ast is parsed once here and reused by `compileScript`, so the
+  // parse has to see the same options the compile does (`isCustomElement`
+  // decides whether a tag is a component already at parse time)
+  const descriptor = parse(sfc, {
+    templateParseOptions: compilerOptions,
+  }).descriptor
 
   const script = compileScript(descriptor, {
-    id: 'x',
-    isProd: true,
-    inlineTemplate: true,
+    id,
+    isProd: inlineTemplate,
+    inlineTemplate,
     genDefaultAs: '__sfc__',
     vapor,
     templateOptions: {
       ssr,
+      compilerOptions,
     },
   })
 
-  const code =
-    script.content
+  let code = script.content
+  if (!inlineTemplate) {
+    code +=
+      '\n' +
+      compileTemplate({
+        source: descriptor.template!.content,
+        filename: 'x.vue',
+        id,
+        vapor,
+        compilerOptions: {
+          ...compilerOptions,
+          bindingMetadata: script.bindings,
+        },
+      }).code.replace('export function render', 'function render') +
+      '\n__sfc__.render = render'
+  }
+  code =
+    code
       .replace(/\bimport {/g, 'const {')
       .replace(/ as _/g, ': _')
       .replace(/} from ['"]vue['"]/g, `} = Vue`)
@@ -193,6 +244,67 @@ export function compile(
     data,
     components,
   )
+}
+
+export interface ParityResult {
+  after: string
+  text: string
+}
+
+/**
+ * Mount the same SFC sources as a vdom app and as a vapor app in turn
+ * (`srcs.App` is the root; the rest register on `_components` in order),
+ * run `act`, and return each mode's final html and text. Sources without a
+ * `<script>` get a plain `<script setup>` so the mode comes from the compile
+ * option (`compile()` would inject `<script vapor>`, which forces vapor).
+ * `extra` components are shared by both modes as given. `act` is told which
+ * mode it is running in, so it can collect its own per-mode results without
+ * depending on the order the modes are rendered in.
+ */
+export async function renderParity(
+  srcs: Record<string, string>,
+  makeData: () => runtimeDom.Ref<any>,
+  act: (
+    data: runtimeDom.Ref<any>,
+    root: HTMLElement,
+    mode: 'vdom' | 'vapor',
+  ) => void | Promise<void>,
+  extra: Record<string, any> = {},
+  compilerOptions?: SFCTemplateCompileOptions['compilerOptions'],
+): Promise<{ vdom: ParityResult; vapor: ParityResult }> {
+  const results = {} as { vdom: ParityResult; vapor: ParityResult }
+  for (const vapor of [false, true]) {
+    const data = makeData()
+    const components: Record<string, any> = { ...extra }
+    const withScript = (src: string) =>
+      src.includes('<script')
+        ? src
+        : `<script setup>const data = _data; const components = _components;</script>` +
+          src
+    for (const name in srcs) {
+      if (name !== 'App') {
+        components[name] = compile(withScript(srcs[name]), data, components, {
+          vapor,
+          compilerOptions,
+        })
+      }
+    }
+    const App = compile(withScript(srcs.App), data, components, {
+      vapor,
+      compilerOptions,
+    })
+    const root = document.createElement('div')
+    const app = vapor ? createVaporApp(App) : createApp(App)
+    app.use(vaporInteropPlugin).mount(root)
+    await act(data, root, vapor ? 'vapor' : 'vdom')
+    await runtimeDom.nextTick()
+    results[vapor ? 'vapor' : 'vdom'] = {
+      after: root.innerHTML,
+      text: root.textContent!,
+    }
+    app.unmount()
+  }
+  return results
 }
 
 export function compileToVaporRender(
@@ -234,4 +346,30 @@ export function shuffle(array: Array<any>): any[] {
     array[randomIndex] = temporaryValue
   }
   return array
+}
+
+export function stripAnchors(html: string): string {
+  return html.replace(/<!--[^>]*-->/g, '')
+}
+
+// A `v-if` + `elseIfs` × `v-else-if` (+ `v-else`) chain; the default length
+// is past the compiler's threshold, so it compiles to one `createIfChain`.
+export function ifChain(
+  branch: (i: number, dir: string) => string,
+  {
+    elseIfs = 11,
+    withElse = true,
+    cond = (i: number) => `data.k === ${i}`,
+  }: {
+    elseIfs?: number
+    withElse?: boolean
+    cond?: (i: number) => string
+  } = {},
+): string {
+  let src = ''
+  for (let i = 0; i <= elseIfs; i++) {
+    src += branch(i, `${i === 0 ? 'v-if' : 'v-else-if'}="${cond(i)}"`) + '\n'
+  }
+  if (withElse) src += branch(elseIfs + 1, 'v-else')
+  return src
 }

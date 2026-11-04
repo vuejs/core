@@ -105,7 +105,28 @@ import { markAsyncBoundary } from './helpers/useId'
  */
 export interface ComponentCustomOptions {}
 
-export type RenderFunction = () => VNodeChild
+/**
+ * Registry for additional render result types.
+ *
+ * @example
+ * ```ts
+ * import type { VaporRenderResult } from 'vue'
+ *
+ * declare module 'vue' {
+ *   interface RenderResultExtensions {
+ *     vapor: VaporRenderResult
+ *   }
+ * }
+ * ```
+ */
+export interface RenderResultExtensions {}
+
+type RenderResult =
+  | VNodeChild
+  | RenderResultExtensions[keyof RenderResultExtensions]
+  | RenderResult[]
+
+export type RenderFunction = () => RenderResult
 
 export interface ComponentOptionsBase<
   Props,

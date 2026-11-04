@@ -3,6 +3,7 @@ import {
   Fragment,
   Text,
   type VNode,
+  VaporSlot,
   cloneVNode,
   createBlock,
   createVNode,
@@ -14,7 +15,16 @@ import {
 } from '../src/vnode'
 import { PatchFlags, ShapeFlags } from '@vue/shared'
 import type { Data } from '../src/component'
-import { h, isReactive, reactive, ref, setBlockTracking, withCtx } from '../src'
+import {
+  Teleport,
+  h,
+  isReactive,
+  reactive,
+  ref,
+  setBlockTracking,
+  setVaporInteropEnabled,
+  withCtx,
+} from '../src'
 import { createApp, nodeOps, serializeInner } from '@vue/runtime-test'
 import { setCurrentRenderingInstance } from '../src/componentRenderContext'
 
@@ -84,6 +94,50 @@ describe('vnode', () => {
     expect(`VNode created with invalid key (NaN)`).toHaveBeenWarned()
   })
 
+  // #5081
+  describe('children overridden by innerHTML / textContent', () => {
+    test('warn on text children', () => {
+      createVNode('div', { innerHTML: '<span/>' }, 'hello')
+      expect(
+        `The \`innerHTML\` prop on <div> will override its children`,
+      ).toHaveBeenWarned()
+    })
+
+    test('warn on array children', () => {
+      createVNode('div', { innerHTML: '<span/>' }, [createVNode('span')])
+      expect(
+        `The \`innerHTML\` prop on <div> will override its children`,
+      ).toHaveBeenWarned()
+    })
+
+    test('warn on textContent', () => {
+      createVNode('div', { textContent: 'text' }, 'hello')
+      expect(
+        `The \`textContent\` prop on <div> will override its children`,
+      ).toHaveBeenWarned()
+    })
+
+    test('no warning when the prop is nullish', () => {
+      createVNode('div', { innerHTML: undefined }, 'hello')
+      createVNode('div', { innerHTML: null }, 'hello')
+      createVNode('div', { textContent: undefined }, 'hello')
+      expect(`will override its children`).not.toHaveBeenWarned()
+    })
+
+    test('no warning without renderable children', () => {
+      createVNode('div', { innerHTML: '<span/>' })
+      createVNode('div', { innerHTML: '<span/>' }, '')
+      createVNode('div', { innerHTML: '<span/>' }, [])
+      expect(`will override its children`).not.toHaveBeenWarned()
+    })
+
+    test('no warning for component vnodes', () => {
+      const Comp = { props: ['innerHTML'], render: () => null }
+      createVNode(Comp, { innerHTML: '<span/>' }, { default: () => 'slot' })
+      expect(`will override its children`).not.toHaveBeenWarned()
+    })
+  })
+
   test('create with class component', () => {
     class Component {
       $props: any
@@ -132,8 +186,6 @@ describe('vnode', () => {
   })
 
   describe('children normalization', () => {
-    const nop = vi.fn
-
     test('null', () => {
       const vnode = createVNode('p', null, null)
       expect(vnode.children).toBe(null)
@@ -156,11 +208,28 @@ describe('vnode', () => {
       )
     })
 
-    test('function', () => {
-      const vnode = createVNode('p', null, nop)
-      expect(vnode.children).toMatchObject({ default: nop })
+    test('function on component', () => {
+      const slot = vi.fn()
+      const vnode = createVNode({}, null, slot)
+      expect(vnode.children).toMatchObject({ default: slot })
       expect(vnode.shapeFlag).toBe(
-        ShapeFlags.ELEMENT | ShapeFlags.SLOTS_CHILDREN,
+        ShapeFlags.STATEFUL_COMPONENT | ShapeFlags.SLOTS_CHILDREN,
+      )
+    })
+
+    test('function on element', () => {
+      const vnode = createVNode('p', null, () => 'foo')
+      expect(vnode.children).toBe('foo')
+      expect(vnode.shapeFlag).toBe(
+        ShapeFlags.ELEMENT | ShapeFlags.TEXT_CHILDREN,
+      )
+    })
+
+    test('function on Teleport', () => {
+      const vnode = createVNode(Teleport, { to: '#target' }, () => 'foo')
+      expect(vnode.children).toMatchObject([{ type: Text, children: 'foo' }])
+      expect(vnode.shapeFlag).toBe(
+        ShapeFlags.TELEPORT | ShapeFlags.ARRAY_CHILDREN,
       )
     })
 
@@ -232,6 +301,62 @@ describe('vnode', () => {
     const cloned2 = cloneVNode(node2)
     expect(cloned2).toEqual(node2)
     expect(cloneVNode(node2)).toEqual(cloned2)
+  })
+
+  test('cloneVNode preserves vapor slot metadata', () => {
+    setVaporInteropEnabled()
+    const node = createVNode(VaporSlot as any)
+    const viHook = vi.fn()
+    const outlets = [{ fallback: () => [], owner: null, vdom: true }]
+    const slotRef = {} as any
+    const slotScope = {} as any
+    const slotMeta = {
+      slot: () => [],
+      outlets,
+      state: { localFallback: 'fallback state' },
+      ref: slotRef,
+      scope: slotScope,
+    }
+    const slotBlock = { block: true }
+
+    node.vi = viHook
+    node.vs = slotMeta as any
+    node.vb = slotBlock as any
+
+    const cloned = cloneVNode(node)
+
+    expect(cloned.vi).toBe(viHook)
+    expect(cloned.vs).not.toBe(slotMeta)
+    expect(cloned.vs!.slot).toBe(slotMeta.slot)
+    expect(cloned.vs!.outlets).toBe(outlets)
+    expect(cloned.vs!.state).toBeUndefined()
+    expect(cloned.vs!.ref).toBeUndefined()
+    expect(cloned.vs!.scope).toBeUndefined()
+    expect(cloned.vb).toBe(slotBlock)
+  })
+
+  test('cloneVNode keeps mounted vapor slot runtime state', () => {
+    setVaporInteropEnabled()
+    const node = createVNode(VaporSlot as any)
+    const slotRef = {} as any
+    const slotScope = {} as any
+    const slotState = { localFallback: 'fallback state' }
+
+    node.el = {} as any
+    node.vs = {
+      slot: () => [],
+      fallback: () => [],
+      state: slotState,
+      ref: slotRef,
+      scope: slotScope,
+    } as any
+
+    const cloned = cloneVNode(node)
+
+    expect(cloned.vs).not.toBe(node.vs)
+    expect(cloned.vs!.state).toBe(slotState)
+    expect(cloned.vs!.ref).toBe(slotRef)
+    expect(cloned.vs!.scope).toBe(slotScope)
   })
 
   test('cloneVNode key normalization', () => {
@@ -472,6 +597,17 @@ describe('vnode', () => {
       expect(mergeProps(props1, props3)).toMatchObject({
         onClick: clickHandler1,
       })
+      const props4: Data = { onClick: undefined }
+      expect(mergeProps(props4)).toHaveProperty('onClick', undefined)
+      expect(mergeProps({ onClick: null })).toMatchObject({
+        onClick: null,
+      })
+      expect(
+        mergeProps({ 'onUpdate:modelValue': undefined }),
+      ).not.toHaveProperty('onUpdate:modelValue')
+      expect(mergeProps({ 'onUpdate:modelValue': null })).not.toHaveProperty(
+        'onUpdate:modelValue',
+      )
     })
 
     test('default', () => {

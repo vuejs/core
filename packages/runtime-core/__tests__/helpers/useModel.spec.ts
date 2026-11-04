@@ -613,6 +613,78 @@ describe('useModel', () => {
     expect(compRender).toHaveBeenCalledTimes(3)
   })
 
+  // #13524
+  test('force local update when an intermediate model value is reverted before parent update', async () => {
+    let childMsg: Ref<string>
+
+    const compRender = vi.fn()
+    const parentRender = vi.fn()
+
+    const Comp = defineComponent({
+      props: ['msg'],
+      emits: ['update:msg'],
+      setup(props) {
+        childMsg = useModel(props, 'msg')
+        return () => {
+          compRender()
+          return h('input', {
+            // simulate how v-model works
+            onVnodeBeforeMount(vnode) {
+              ;(vnode.el as TestElement).props.value = childMsg.value
+            },
+            onVnodeBeforeUpdate(vnode) {
+              ;(vnode.el as TestElement).props.value = childMsg.value
+            },
+            onModelInput(value: any) {
+              childMsg.value = value
+            },
+            onInput() {
+              childMsg.value = 'a'
+            },
+          })
+        }
+      },
+    })
+
+    const msg = ref('a')
+    const Parent = defineComponent({
+      setup() {
+        return () => {
+          parentRender()
+          return h(Comp, {
+            msg: msg.value,
+            'onUpdate:msg': val => {
+              msg.value = val
+            },
+          })
+        }
+      },
+    })
+
+    const root = nodeOps.createElement('div')
+    render(h(Parent), root)
+
+    expect(parentRender).toHaveBeenCalledTimes(1)
+    expect(compRender).toHaveBeenCalledTimes(1)
+    expect(serializeInner(root)).toBe('<input value="a"></input>')
+
+    const input = root.children[0] as TestElement
+
+    // simulate a browser that does not flush microtasks between event listeners
+    ;['ab', 'ac', 'ad'].forEach(value => {
+      input.props.onModelInput((input.props.value = value))
+      input.props.onInput()
+    })
+    await nextTick()
+
+    expect(msg.value).toBe('a')
+    // parent render can be deduped entirely, but the child still needs to
+    // force a local update to sync the DOM state back to the model value.
+    expect(parentRender).toHaveBeenCalledTimes(1)
+    expect(compRender).toHaveBeenCalledTimes(2)
+    expect(serializeInner(root)).toBe('<input value="a"></input>')
+  })
+
   test('set no change value', async () => {
     let changeChildMsg!: (val: string) => void
 

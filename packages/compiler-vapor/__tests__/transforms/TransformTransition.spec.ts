@@ -1,5 +1,6 @@
 import { makeCompile } from './_utils'
 import {
+  compile,
   transformChildren,
   transformElement,
   transformKey,
@@ -119,6 +120,46 @@ describe('compiler: transition', () => {
     )
   })
 
+  test('does not warn with template v-if containing one child', () => {
+    checkWarning(
+      `
+      <transition>
+        <template v-if="ok">
+          <div>hey</div>
+        </template>
+      </transition>
+      `,
+      false,
+    )
+  })
+
+  test('warns with template v-if containing multiple children', () => {
+    checkWarning(
+      `
+      <transition>
+        <template v-if="ok">
+          <div>hey</div>
+          <div>there</div>
+        </template>
+      </transition>
+      `,
+      true,
+    )
+  })
+
+  test('warns with template v-if containing v-for', () => {
+    checkWarning(
+      `
+      <transition>
+        <template v-if="ok">
+          <div v-for="i in items">hey</div>
+        </template>
+      </transition>
+      `,
+      true,
+    )
+  })
+
   test('warns with multiple templates', () => {
     checkWarning(
       `
@@ -128,6 +169,18 @@ describe('compiler: transition', () => {
       </transition>
       `,
       true,
+    )
+  })
+
+  test('does not warn with multiple templates containing one child each', () => {
+    checkWarning(
+      `
+      <transition>
+        <template v-if="a"><div>hey</div></template>
+        <template v-else><div>there</div></template>
+      </transition>
+      `,
+      false,
     )
   })
 
@@ -215,9 +268,45 @@ describe('compiler: transition', () => {
     ).toMatchSnapshot()
   })
 
+  test('does not inject persisted when v-if owns a v-show child', () => {
+    const { code } = compileWithElementTransform(
+      `<Transition><div v-if="show" v-show="true" /></Transition>`,
+    )
+
+    expect(code).toContain('_createIf')
+    expect(code).toContain('_applyVShow')
+    expect(code).not.toContain('persisted')
+  })
+
+  // #15372
+  test('should drop comment children to match vdom runtime and SSR behavior', () => {
+    // vdom runtime filters comment children of Transition/TransitionGroup and
+    // SSR omits them (#5351, #11961) - vapor drops them at compile time
+    const { code } = compile(
+      `<transition>
+        <!-- comment -->
+        <div>foo</div>
+      </transition>`,
+      { prefixIdentifiers: true },
+    )
+    expect(code).not.toContain('comment')
+    expect(code).toMatchSnapshot()
+
+    const { code: groupCode } = compile(
+      `<transition-group tag="ul">
+        <!-- comment -->
+        <li key="a">a</li>
+        <li key="b">b</li>
+      </transition-group>`,
+      { prefixIdentifiers: true },
+    )
+    expect(groupCode).not.toContain('comment')
+    expect(groupCode).toMatchSnapshot()
+  })
+
   test('the v-if/else-if/else branches in Transition should ignore comments', () => {
-    expect(
-      compileWithElementTransform(`
+    const { code } = compile(
+      `
     <transition>
       <div v-if="a">hey</div>
       <!-- this should be ignored -->
@@ -229,7 +318,38 @@ describe('compiler: transition', () => {
         <p v-else/>
       </div>
     </transition>
-    `).code,
-    ).toMatchSnapshot()
+    `,
+      { prefixIdentifiers: true },
+    )
+    expect(code).toMatchSnapshot()
+    expect(code).not.toContain('this should be ignored')
+    expect(code).toContain('this should not be ignored')
+  })
+
+  test('child of a non-root transition is a root template', () => {
+    const { code } = compileWithElementTransform(
+      `<div><Transition><p class="y">z</p></Transition></div>`,
+    )
+    expect(code).toMatchSnapshot()
+    // the child inherits the transition's fallthrough attrs, so its template
+    // is a root one (class / style layered, not overwritten)
+    expect(code).contains('_template("<p class=y>z", 3)')
+  })
+
+  test('child of a transition under a v-for is a root template', () => {
+    // a v-for only cuts the chain between a host and its root; the
+    // transition's fallthrough reaches its child wherever the transition sits
+    const { code } = compile(
+      `<div v-for="i in l">
+        <Transition>
+          <p v-if="ok" class="y">y</p>
+          <p v-else class="n">n</p>
+        </Transition>
+      </div>`,
+      { prefixIdentifiers: true },
+    )
+    expect(code).toMatchSnapshot()
+    expect(code).contains('_template("<p class=y>y", 1)')
+    expect(code).contains('_template("<p class=n>n", 1)')
   })
 })

@@ -1,5 +1,37 @@
-import { nextTick, reactive } from 'vue'
-import { compile, runtimeDom, runtimeVapor } from '../_utils'
+import {
+  KeepAlive,
+  type Ref,
+  Suspense,
+  createApp,
+  createSSRApp,
+  defineComponent,
+  h,
+  nextTick,
+  onActivated,
+  onDeactivated,
+  onMounted,
+  onUnmounted,
+  onUpdated,
+  reactive,
+  ref,
+} from '@vue/runtime-dom'
+import type { Block } from '../../src/block'
+import {
+  VaporKeepAlive,
+  VaporTeleport,
+  VaporTransitionGroup,
+  createComponent,
+  createDynamicComponent,
+  createFor,
+  createIf,
+  createSlot,
+  createTemplateRefSetter,
+  defineVaporComponent,
+  renderEffect,
+  template,
+  vaporInteropPlugin,
+} from '../../src'
+import { VueServerRenderer, compile, runtimeDom, runtimeVapor } from '../_utils'
 
 describe.todo('VaporSuspense', () => {})
 
@@ -110,6 +142,84 @@ describe('vdom interop', () => {
     await data.deps[0]
     await nextTick()
     expect(container.innerHTML).toBe(`<span>fallback</span>`)
+
+    await Promise.all(data.deps)
+    await nextTick()
+    expect(container.innerHTML).toBe(`<div>inner</div>`)
+  })
+
+  test('vdom suspense: v-show on a vapor component with pending async setup', async () => {
+    const data = reactive({ deps: [] as Promise<void>[], show: false })
+    const { container } = await testSuspense(
+      `<script setup>
+        const components = _components;
+      </script>
+      <template>
+        <Suspense>
+          <components.Wrapper/>
+          <template #fallback>
+            <span>fallback</span>
+          </template>
+        </Suspense>
+      </template>`,
+      {
+        Wrapper: {
+          code: `<template><div><components.AsyncChild v-show="data.show"/></div></template>`,
+          vapor: true,
+        },
+        AsyncChild: withAsyncScript(`<template><p>hi</p></template>`),
+      },
+      data,
+    )
+
+    expect(container.innerHTML).toBe(`<span>fallback</span>`)
+
+    await Promise.all(data.deps)
+    await nextTick()
+    expect(container.innerHTML).toBe(
+      `<div><p style="display: none;">hi</p></div>`,
+    )
+
+    data.show = true
+    await nextTick()
+    expect(container.innerHTML).toBe(`<div><p style="">hi</p></div>`)
+  })
+
+  test('vdom suspense: nested boundaries register vapor async setup with the inner one', async () => {
+    const data = { deps: [] }
+    const { container } = await testSuspense(
+      `<script setup>
+        const components = _components;
+      </script>
+      <template>
+        <Suspense>
+          <components.Mid/>
+          <template #fallback>
+            <span>outer fallback</span>
+          </template>
+        </Suspense>
+      </template>`,
+      {
+        Inner: withAsyncScript(`<template><div>inner</div></template>`),
+        Mid: {
+          code: `<script setup>
+            const components = _components;
+          </script>
+          <template>
+            <Suspense>
+              <components.Inner/>
+              <template #fallback>
+                <span>inner fallback</span>
+              </template>
+            </Suspense>
+          </template>`,
+          vapor: false,
+        },
+      },
+      data,
+    )
+
+    expect(container.innerHTML).toBe(`<span>inner fallback</span>`)
 
     await Promise.all(data.deps)
     await nextTick()
@@ -244,5 +354,1155 @@ describe('vdom interop', () => {
     await Promise.all(data.deps)
     await nextTick()
     expect(container.innerHTML).toBe(`<!--v-if-->`)
+  })
+})
+
+function deferred() {
+  let resolve!: () => void
+  const promise = new Promise<void>(r => (resolve = r))
+  return { promise, resolve }
+}
+
+async function flushResolution(promise: Promise<void>) {
+  await promise
+  await Promise.resolve()
+  await nextTick()
+  await nextTick()
+}
+
+describe('effects in pending branches', () => {
+  const Pending = defineComponent({
+    async setup() {
+      await new Promise(() => {})
+    },
+  })
+
+  test('updated hook waits for the branch to resolve', async () => {
+    const asyncSetup = deferred()
+    const value = ref(0)
+    const order: string[] = []
+    const VaporChild = defineVaporComponent({
+      setup() {
+        const el = template('<div></div>')() as Element
+        onMounted(() => order.push('mounted'))
+        onUpdated(() => order.push('updated'))
+        renderEffect(() => (el.textContent = String(value.value)))
+        return el
+      },
+    })
+    const AsyncSibling = defineComponent({
+      async setup() {
+        await asyncSetup.promise
+        return () => h('span', 'async')
+      },
+    })
+    const Root = defineComponent({
+      setup: () => () =>
+        h(
+          Suspense,
+          { onResolve: () => order.push('resolved') },
+          {
+            default: () => h('div', [h(VaporChild as any), h(AsyncSibling)]),
+            fallback: () => h('span', 'loading'),
+          },
+        ),
+    })
+    const host = document.createElement('div')
+    const app = createApp(Root)
+    app.use(vaporInteropPlugin)
+    app.mount(host)
+
+    await nextTick()
+    value.value++
+    await nextTick()
+    expect(order).toEqual([])
+
+    asyncSetup.resolve()
+    await flushResolution(asyncSetup.promise)
+    expect(order).toEqual(['resolved', 'mounted', 'updated'])
+    app.unmount()
+  })
+
+  test('non-null template ref waits for the branch to resolve', async () => {
+    const asyncSetup = deferred()
+    const elementRef = ref<Element | null>(null)
+    const VaporChild = defineVaporComponent({
+      setup() {
+        const el = template('<div>vapor</div>')() as Element
+        createTemplateRefSetter()(el, elementRef)
+        return el
+      },
+    })
+    const AsyncSibling = defineComponent({
+      async setup() {
+        await asyncSetup.promise
+        return () => h('span', 'async')
+      },
+    })
+    const Root = defineComponent({
+      setup: () => () =>
+        h(Suspense, null, {
+          default: () => h('div', [h(VaporChild as any), h(AsyncSibling)]),
+          fallback: () => h('span', 'loading'),
+        }),
+    })
+    const host = document.createElement('div')
+    const app = createApp(Root)
+    app.use(vaporInteropPlugin)
+    app.mount(host)
+
+    await nextTick()
+    expect(elementRef.value).toBe(null)
+    asyncSetup.resolve()
+    await flushResolution(asyncSetup.promise)
+    expect(elementRef.value).toBeInstanceOf(HTMLDivElement)
+    app.unmount()
+  })
+
+  test('slotted template ref uses the rendering suspense boundary', async () => {
+    const asyncSetup = deferred()
+    const elementRef = ref<Element | null>(null)
+    const AsyncSibling = defineComponent({
+      async setup() {
+        await asyncSetup.promise
+        return () => h('span', 'async')
+      },
+    })
+    const VDomHost = defineComponent({
+      setup(_, { slots }) {
+        return () =>
+          h(Suspense, null, {
+            default: () => h('div', [slots.default!(), h(AsyncSibling)]),
+            fallback: () => h('span', 'loading'),
+          })
+      },
+    })
+    const VaporOwner = defineVaporComponent({
+      setup() {
+        const setRef = createTemplateRefSetter()
+        return createComponent(VDomHost as any, null, {
+          default: () => {
+            const el = template('<div>slotted</div>')() as Element
+            setRef(el, elementRef)
+            return el
+          },
+        })
+      },
+    })
+    const host = document.createElement('div')
+    const app = createApp({ render: () => h(VaporOwner as any) })
+    app.use(vaporInteropPlugin)
+    app.mount(host)
+
+    await nextTick()
+    expect(elementRef.value).toBe(null)
+    asyncSetup.resolve()
+    await flushResolution(asyncSetup.promise)
+    expect(elementRef.value).toBeInstanceOf(HTMLDivElement)
+    app.unmount()
+  })
+
+  // A branch that first renders during an update goes through
+  // runWithRenderCtx(), which has to restore the Suspense boundary the
+  // fragment renders into - otherwise the branch's post-render effects land on
+  // the global queue and the ref is applied while the boundary is still
+  // pending. VDOM defers it; Vapor must too.
+  test('late branch template ref uses the rendering suspense boundary', async () => {
+    const asyncSetup = deferred()
+    const show = ref(false)
+    const elementRef = ref<Element | null>(null)
+    const AsyncSibling = defineComponent({
+      async setup() {
+        await asyncSetup.promise
+        return () => h('span', 'async')
+      },
+    })
+    const VaporChild = defineVaporComponent({
+      setup() {
+        const setRef = createTemplateRefSetter()
+        return createIf(
+          () => show.value,
+          () => {
+            const el = template('<div>branch</div>')() as Element
+            setRef(el, elementRef)
+            return el
+          },
+        )
+      },
+    })
+    const Root = defineComponent({
+      setup: () => () =>
+        h(Suspense, null, {
+          default: () => h('div', [h(VaporChild as any), h(AsyncSibling)]),
+          fallback: () => h('span', 'loading'),
+        }),
+    })
+    const host = document.createElement('div')
+    const app = createApp(Root)
+    app.use(vaporInteropPlugin)
+    app.mount(host)
+
+    await nextTick()
+    // the boundary has never resolved: flipping the branch on renders it
+    // inside the still-pending boundary
+    show.value = true
+    await nextTick()
+    await nextTick()
+    expect(elementRef.value).toBe(null)
+
+    asyncSetup.resolve()
+    await flushResolution(asyncSetup.promise)
+    expect(elementRef.value).toBeInstanceOf(HTMLDivElement)
+    app.unmount()
+  })
+
+  function lateBranchRef(
+    show: Ref<boolean>,
+    elementRef: Ref<Element | null>,
+  ): Block {
+    const setRef = createTemplateRefSetter()
+    return createIf(
+      () => show.value,
+      () => {
+        const el = template('<div>branch</div>')() as Element
+        setRef(el, elementRef)
+        return el
+      },
+    )
+  }
+
+  test('late branch in slot content rendered inside a vdom suspense', async () => {
+    const asyncSetup = deferred()
+    const show = ref(false)
+    const elementRef = ref<Element | null>(null)
+    const AsyncSibling = defineComponent({
+      async setup() {
+        await asyncSetup.promise
+        return () => h('span', 'async')
+      },
+    })
+    // the boundary lives in the child; the slot content is declared by the
+    // vapor owner *outside* it
+    const VDomHost = defineComponent({
+      setup(_, { slots }) {
+        return () =>
+          h(Suspense, null, {
+            default: () => h('div', [slots.default!(), h(AsyncSibling)]),
+            fallback: () => h('span', 'loading'),
+          })
+      },
+    })
+    const VaporOwner = defineVaporComponent({
+      setup() {
+        return createComponent(VDomHost as any, null, {
+          default: () => lateBranchRef(show, elementRef),
+        })
+      },
+    })
+
+    const host = document.createElement('div')
+    const app = createApp({ render: () => h(VaporOwner as any) })
+    app.use(vaporInteropPlugin)
+    app.mount(host)
+
+    await nextTick()
+    show.value = true
+    await nextTick()
+    await nextTick()
+    expect(elementRef.value).toBe(null)
+
+    asyncSetup.resolve()
+    await flushResolution(asyncSetup.promise)
+    expect(elementRef.value).toBeInstanceOf(HTMLDivElement)
+    app.unmount()
+  })
+
+  test('late branch under a vdom suspense hosted by a vapor app', async () => {
+    const asyncSetup = deferred()
+    const show = ref(false)
+    const elementRef = ref<Element | null>(null)
+    const AsyncSibling = defineComponent({
+      async setup() {
+        await asyncSetup.promise
+        return () => h('span', 'async')
+      },
+    })
+    const VaporInner = defineVaporComponent({
+      setup: () => lateBranchRef(show, elementRef),
+    })
+    const VDomBridge = defineComponent({
+      setup: () => () =>
+        h(Suspense, null, {
+          default: () => h('div', [h(VaporInner as any), h(AsyncSibling)]),
+          fallback: () => h('span', 'loading'),
+        }),
+    })
+    const VaporRoot = defineVaporComponent({
+      setup: () => createComponent(VDomBridge as any),
+    })
+
+    const host = document.createElement('div')
+    const app = runtimeVapor.createVaporApp(VaporRoot)
+    app.use(vaporInteropPlugin)
+    app.mount(host)
+
+    await nextTick()
+    show.value = true
+    await nextTick()
+    await nextTick()
+    expect(elementRef.value).toBe(null)
+
+    asyncSetup.resolve()
+    await flushResolution(asyncSetup.promise)
+    expect(elementRef.value).toBeInstanceOf(HTMLDivElement)
+    app.unmount()
+  })
+
+  test('late branch in a vapor child rendering vdom slot content', async () => {
+    const asyncSetup = deferred()
+    const show = ref(false)
+    const elementRef = ref<Element | null>(null)
+    const AsyncSibling = defineComponent({
+      async setup() {
+        await asyncSetup.promise
+        return () => h('span', 'async')
+      },
+    })
+    const VaporChild = defineVaporComponent({
+      setup: () => [createSlot('default'), lateBranchRef(show, elementRef)],
+    })
+    const Root = defineComponent({
+      setup: () => () =>
+        h(Suspense, null, {
+          default: () =>
+            h('div', [
+              h(VaporChild as any, null, {
+                default: () => h('em', 'from vdom owner'),
+              }),
+              h(AsyncSibling),
+            ]),
+          fallback: () => h('span', 'loading'),
+        }),
+    })
+
+    const host = document.createElement('div')
+    const app = createApp(Root)
+    app.use(vaporInteropPlugin)
+    app.mount(host)
+
+    await nextTick()
+    show.value = true
+    await nextTick()
+    await nextTick()
+    expect(elementRef.value).toBe(null)
+
+    asyncSetup.resolve()
+    await flushResolution(asyncSetup.promise)
+    expect(elementRef.value).toBeInstanceOf(HTMLDivElement)
+    app.unmount()
+  })
+
+  test('dynamic VDOM component ref uses the rendering suspense boundary', async () => {
+    const asyncSetup = deferred()
+    const useSecondRef = ref(false)
+    const firstRef = ref<unknown>(null)
+    const secondRef = ref<unknown>(null)
+    const VDomChild = defineComponent({
+      setup: () => () => h('div', 'child'),
+    })
+    const AsyncSibling = defineComponent({
+      async setup() {
+        await asyncSetup.promise
+        return () => h('span', 'async')
+      },
+    })
+    const VDomHost = defineComponent({
+      setup(_, { slots }) {
+        return () =>
+          h(Suspense, null, {
+            default: () => h('div', [slots.default!(), h(AsyncSibling)]),
+            fallback: () => h('span', 'loading'),
+          })
+      },
+    })
+    const VaporOwner = defineVaporComponent({
+      setup() {
+        const child = createComponent(VDomChild as any)
+        const setRef = createTemplateRefSetter()
+        renderEffect(() =>
+          setRef(child, useSecondRef.value ? secondRef : firstRef),
+        )
+        return createComponent(VDomHost as any, null, {
+          default: () => child,
+        })
+      },
+    })
+    const host = document.createElement('div')
+    const app = createApp({ render: () => h(VaporOwner as any) })
+    app.use(vaporInteropPlugin)
+    app.mount(host)
+
+    await nextTick()
+    expect(firstRef.value === null).toBe(true)
+
+    useSecondRef.value = true
+    await nextTick()
+    expect(secondRef.value === null).toBe(true)
+
+    asyncSetup.resolve()
+    await flushResolution(asyncSetup.promise)
+    expect(firstRef.value === null).toBe(true)
+    expect(secondRef.value === null).toBe(false)
+    app.unmount()
+  })
+
+  test('teleport target mount waits for the branch to resolve', async () => {
+    const asyncSetup = deferred()
+    const target = document.createElement('div')
+    document.body.appendChild(target)
+    const VaporChild = defineVaporComponent({
+      setup() {
+        return createComponent(
+          VaporTeleport,
+          { to: () => target },
+          { default: () => template('<div>teleported</div>')() },
+        )
+      },
+    })
+    const AsyncSibling = defineComponent({
+      async setup() {
+        await asyncSetup.promise
+        return () => h('span', 'async')
+      },
+    })
+    const Root = defineComponent({
+      setup: () => () =>
+        h(Suspense, null, {
+          default: () => h('div', [h(VaporChild as any), h(AsyncSibling)]),
+          fallback: () => h('span', 'loading'),
+        }),
+    })
+    const host = document.createElement('div')
+    const app = createApp(Root)
+    app.use(vaporInteropPlugin)
+    app.mount(host)
+
+    await nextTick()
+    expect(target.textContent).toBe('')
+    asyncSetup.resolve()
+    await flushResolution(asyncSetup.promise)
+    expect(target.textContent).toBe('teleported')
+    app.unmount()
+    target.remove()
+  })
+
+  test('slotted teleport uses the rendering suspense boundary', async () => {
+    const asyncSetup = deferred()
+    const target = document.createElement('div')
+    document.body.appendChild(target)
+    const AsyncSibling = defineComponent({
+      async setup() {
+        await asyncSetup.promise
+        return () => h('span', 'async')
+      },
+    })
+    const VDomHost = defineComponent({
+      setup(_, { slots }) {
+        return () =>
+          h(Suspense, null, {
+            default: () => h('div', [slots.default!(), h(AsyncSibling)]),
+            fallback: () => h('span', 'loading'),
+          })
+      },
+    })
+    const VaporOwner = defineVaporComponent({
+      setup() {
+        return createComponent(VDomHost as any, null, {
+          default: () =>
+            createComponent(
+              VaporTeleport,
+              { to: () => target },
+              { default: () => template('<div>teleported</div>')() },
+            ),
+        })
+      },
+    })
+    const host = document.createElement('div')
+    const app = createApp({ render: () => h(VaporOwner as any) })
+    app.use(vaporInteropPlugin)
+    app.mount(host)
+
+    await nextTick()
+    expect(target.textContent).toBe('')
+    asyncSetup.resolve()
+    await flushResolution(asyncSetup.promise)
+    expect(target.textContent).toBe('teleported')
+    app.unmount()
+    target.remove()
+  })
+
+  test('teleport revealed by a branch update inside a pending boundary waits for resolve', async () => {
+    const asyncSetup = deferred()
+    const target = document.createElement('div')
+    document.body.appendChild(target)
+    const data = ref({ show: false, target })
+
+    const VaporChild = compile(
+      `<template>
+        <Teleport v-if="data.show" :to="data.target">
+          <div>teleported</div>
+        </Teleport>
+      </template>`,
+      data,
+    )
+    const AsyncSibling = defineComponent({
+      async setup() {
+        await asyncSetup.promise
+        return () => h('span', 'async')
+      },
+    })
+    const Root = defineComponent({
+      setup: () => () =>
+        h(Suspense, null, {
+          default: () => h('div', [h(VaporChild as any), h(AsyncSibling)]),
+          fallback: () => h('span', 'loading'),
+        }),
+    })
+    const host = document.createElement('div')
+    const app = createApp(Root)
+    app.use(vaporInteropPlugin)
+    app.mount(host)
+
+    await nextTick()
+    expect(target.textContent).toBe('')
+
+    // reveal the teleport while the boundary is still pending: the deferred
+    // target mount must buffer on the boundary, not the global queue
+    data.value.show = true
+    await nextTick()
+    expect(target.textContent).toBe('')
+
+    asyncSetup.resolve()
+    await flushResolution(asyncSetup.promise)
+    expect(target.textContent).toBe('teleported')
+    app.unmount()
+    target.remove()
+  })
+
+  test('unmounted hook waits when a child is removed from the pending branch', async () => {
+    const asyncSetup = deferred()
+    const show = ref(true)
+    const order: string[] = []
+    const VaporChild = defineVaporComponent({
+      setup() {
+        onMounted(() => order.push('mounted'))
+        onUnmounted(() => order.push('unmounted'))
+        return template('<div>vapor</div>')()
+      },
+    })
+    const AsyncSibling = defineComponent({
+      async setup() {
+        await asyncSetup.promise
+        return () => h('span', 'async')
+      },
+    })
+    const Root = defineComponent({
+      setup: () => () =>
+        h(
+          Suspense,
+          { onResolve: () => order.push('resolved') },
+          {
+            default: () =>
+              h('div', [
+                show.value ? h(VaporChild as any) : h('span', 'gone'),
+                h(AsyncSibling),
+              ]),
+            fallback: () => h('span', 'loading'),
+          },
+        ),
+    })
+    const host = document.createElement('div')
+    const app = createApp(Root)
+    app.use(vaporInteropPlugin)
+    app.mount(host)
+
+    await nextTick()
+    show.value = false
+    await nextTick()
+    expect(order).toEqual([])
+
+    asyncSetup.resolve()
+    await flushResolution(asyncSetup.promise)
+    expect(order).toEqual(['resolved', 'unmounted'])
+    app.unmount()
+  })
+
+  test.each(['vdom', 'vapor'] as const)(
+    '%s unmounted hook runs when the whole pending boundary is removed',
+    async kind => {
+      const asyncSetup = deferred()
+      const showBoundary = ref(true)
+      const order: string[] = []
+      const Child =
+        kind === 'vdom'
+          ? defineComponent({
+              setup() {
+                onUnmounted(() => order.push('unmounted'))
+                return () => h('div', 'vdom')
+              },
+            })
+          : defineVaporComponent({
+              setup() {
+                onUnmounted(() => order.push('unmounted'))
+                return template('<div>vapor</div>')()
+              },
+            })
+      const AsyncSibling = defineComponent({
+        async setup() {
+          await asyncSetup.promise
+          return () => h('span', 'async')
+        },
+      })
+      const Root = defineComponent({
+        setup: () => () =>
+          showBoundary.value
+            ? h(Suspense, null, {
+                default: () => h('div', [h(Child as any), h(AsyncSibling)]),
+                fallback: () => h('span', 'loading'),
+              })
+            : h('span', 'gone'),
+      })
+      const host = document.createElement('div')
+      const app = createApp(Root)
+      app.use(vaporInteropPlugin)
+      app.mount(host)
+
+      await nextTick()
+      showBoundary.value = false
+      await nextTick()
+      expect(order).toEqual(['unmounted'])
+      app.unmount()
+    },
+  )
+
+  test.each(['vdom', 'vapor', 'vapor-slot'] as const)(
+    '%s nested unmount hooks run when a pending boundary is removed by app unmount',
+    kind => {
+      const order: string[] = []
+      const vapor = kind !== 'vdom'
+      const script = vapor ? '<script vapor>' : '<script setup>'
+      const data = ref({ order })
+      const Child = compile(
+        `${script}
+          import { onBeforeUnmount, onScopeDispose, onUnmounted } from 'vue'
+          const data = _data
+          onBeforeUnmount(() => data.value.order.push('child before'))
+          onScopeDispose(() => data.value.order.push('child scope'))
+          onUnmounted(() => data.value.order.push('child'))
+        </script>
+        <template><span>child</span></template>`,
+        data,
+        {},
+        { vapor },
+      )
+      const Parent = compile(
+        `${script}
+          import { onBeforeUnmount, onScopeDispose, onUnmounted } from 'vue'
+          const data = _data
+          const components = _components
+          onBeforeUnmount(() => data.value.order.push('parent before'))
+          onScopeDispose(() => data.value.order.push('parent scope'))
+          onUnmounted(() => data.value.order.push('parent'))
+        </script>
+        <template><components.Child /></template>`,
+        data,
+        { Child },
+        { vapor },
+      )
+      const VDomHost = compile(
+        `<script setup>
+          const components = _components
+        </script>
+        <template>
+          <Suspense>
+            <div>
+              ${kind === 'vapor-slot' ? '<slot />' : '<components.Parent />'}
+              <components.Pending />
+            </div>
+            <template #fallback><span>loading</span></template>
+          </Suspense>
+        </template>`,
+        data,
+        { Parent, Pending },
+        { vapor: false },
+      )
+      const VaporRoot = compile(
+        kind === 'vapor-slot'
+          ? `<script vapor>
+              const components = _components
+            </script>
+            <template>
+              <components.VDomHost><components.Parent /></components.VDomHost>
+            </template>`
+          : `<script vapor>
+              const components = _components
+            </script>
+            <template><components.VDomHost /></template>`,
+        data,
+        { Parent, VDomHost },
+      )
+      const container = document.createElement('div')
+      const app = runtimeVapor.createVaporApp(VaporRoot)
+      app.use(vaporInteropPlugin)
+      app.mount(container)
+
+      expect(container.textContent).toBe('loading')
+      app.unmount()
+      expect(order).toEqual([
+        'parent before',
+        'parent scope',
+        'child before',
+        'child scope',
+        'child',
+        'parent',
+      ])
+    },
+  )
+
+  test('pending unmount context does not leak through another app', async () => {
+    const outerAsyncSetup = deferred()
+    const showInner = ref(true)
+    const afterUnmounted = vi.fn()
+    const otherUnmounted = vi.fn()
+    const data = ref<{
+      otherApp?: { unmount(): void }
+      afterUnmounted: () => void
+      otherUnmounted: () => void
+    }>({ afterUnmounted, otherUnmounted })
+    const OtherChild = compile(
+      `<script vapor>
+        import { onUnmounted } from 'vue'
+        const data = _data
+        onUnmounted(data.value.otherUnmounted)
+      </script>
+      <template><span>other child</span></template>`,
+      data,
+    )
+    const OtherRoot = compile(
+      `<script vapor>
+        const components = _components
+      </script>
+      <template><components.OtherChild /></template>`,
+      data,
+      { OtherChild },
+    )
+    const otherApp = runtimeVapor.createVaporApp(OtherRoot)
+    data.value.otherApp = otherApp
+    otherApp.mount(document.createElement('div'))
+
+    const After = compile(
+      `<script vapor>
+        import { onUnmounted } from 'vue'
+        const data = _data
+        onUnmounted(data.value.afterUnmounted)
+      </script>
+      <template><span>after</span></template>`,
+      data,
+    )
+    const Trigger = compile(
+      `<script vapor>
+        import { onScopeDispose } from 'vue'
+        const data = _data
+        const components = _components
+        onScopeDispose(() => data.value.otherApp.unmount())
+      </script>
+      <template><components.After /></template>`,
+      data,
+      { After },
+    )
+    const OuterPending = defineComponent({
+      async setup() {
+        await outerAsyncSetup.promise
+        return () => h('span', 'outer content')
+      },
+    })
+    const Root = defineComponent({
+      setup: () => () =>
+        h(Suspense, null, {
+          default: () =>
+            h('div', [
+              showInner.value
+                ? h(Suspense, null, {
+                    default: () => h('div', [h(Trigger as any), h(Pending)]),
+                    fallback: () => h('span', 'inner loading'),
+                  })
+                : h('span', 'gone'),
+              h(OuterPending),
+            ]),
+          fallback: () => h('span', 'outer loading'),
+        }),
+    })
+    const app = createApp(Root)
+    app.use(vaporInteropPlugin)
+    app.mount(document.createElement('div'))
+
+    await nextTick()
+    showInner.value = false
+    await nextTick()
+
+    expect(otherUnmounted).toHaveBeenCalledOnce()
+    expect(afterUnmounted).not.toHaveBeenCalled()
+    outerAsyncSetup.resolve()
+    await flushResolution(outerAsyncSetup.promise)
+    expect(afterUnmounted).toHaveBeenCalledOnce()
+    app.unmount()
+  })
+
+  test.each(['branch removal', 'app unmount'] as const)(
+    'Vapor-owned VDOM hooks use the %s context',
+    async operation => {
+      const asyncSetup = deferred()
+      const show = ref(true)
+      const order: string[] = []
+      const data = ref({ order })
+      const Child = compile(
+        `<script setup>
+          import { onUnmounted } from 'vue'
+          const data = _data
+          onUnmounted(() => data.value.order.push('child'))
+        </script>
+        <template><span>child</span></template>`,
+        data,
+        {},
+        { vapor: false },
+      )
+      const Parent = compile(
+        `<script vapor>
+          const components = _components
+        </script>
+        <template><components.Child /></template>`,
+        data,
+        { Child },
+      )
+      const AsyncSibling = defineComponent({
+        async setup() {
+          await asyncSetup.promise
+          return () => h('span', 'async')
+        },
+      })
+      const Root = defineComponent({
+        setup: () => () =>
+          h(Suspense, null, {
+            default: () =>
+              h('div', [
+                show.value ? h(Parent as any) : h('span', 'gone'),
+                h(AsyncSibling),
+              ]),
+            fallback: () => h('span', 'loading'),
+          }),
+      })
+      const app = createApp(Root)
+      app.use(vaporInteropPlugin)
+      const container = document.createElement('div')
+      app.mount(container)
+
+      await nextTick()
+      expect(container.textContent).toBe('loading')
+      if (operation === 'app unmount') {
+        app.unmount()
+        expect(order).toEqual(['child'])
+        return
+      }
+
+      show.value = false
+      await nextTick()
+      expect(order).toEqual([])
+
+      asyncSetup.resolve()
+      await flushResolution(asyncSetup.promise)
+      expect(order).toEqual(['child'])
+      app.unmount()
+    },
+  )
+
+  test('keep-alive lifecycle and vnode hooks wait for the branch to resolve', async () => {
+    const asyncSetup = deferred()
+    const current = ref<'A' | 'B'>('A')
+    const order: string[] = []
+    const makeChild = (name: string) =>
+      defineVaporComponent({
+        name,
+        setup() {
+          onMounted(() => order.push(`${name} mounted`))
+          onActivated(() => order.push(`${name} activated`))
+          onDeactivated(() => order.push(`${name} deactivated`))
+          return template(`<div>${name}</div>`)()
+        },
+      })
+    const A = makeChild('A')
+    const B = makeChild('B')
+    const AsyncSibling = defineComponent({
+      async setup() {
+        await asyncSetup.promise
+        return () => h('span', 'async')
+      },
+    })
+    const Root = defineComponent({
+      setup: () => () => {
+        const Child = current.value === 'A' ? A : B
+        return h(
+          Suspense,
+          { onResolve: () => order.push('resolved') },
+          {
+            default: () =>
+              h('div', [
+                h(KeepAlive, null, {
+                  default: () =>
+                    h(Child as any, {
+                      onVnodeMounted: () => order.push('vnode mounted'),
+                      onVnodeUnmounted: () => order.push('vnode unmounted'),
+                    }),
+                }),
+                h(AsyncSibling),
+              ]),
+            fallback: () => h('span', 'loading'),
+          },
+        )
+      },
+    })
+    const host = document.createElement('div')
+    const app = createApp(Root)
+    app.use(vaporInteropPlugin)
+    app.mount(host)
+
+    await nextTick()
+    current.value = 'B'
+    await nextTick()
+    expect(order).toEqual([])
+
+    asyncSetup.resolve()
+    await flushResolution(asyncSetup.promise)
+    expect(order[0]).toBe('resolved')
+    app.unmount()
+  })
+
+  test.each(['vdom', 'vapor'] as const)(
+    '%s current keep-alive entry deactivates after the branch resolves',
+    async kind => {
+      const asyncSetup = deferred()
+      const showKeepAlive = ref(true)
+      const order: string[] = []
+      const VDomChild = defineComponent({
+        setup() {
+          onDeactivated(() => order.push('deactivated'))
+          return () => h('div', 'vdom')
+        },
+      })
+      const VaporChild = defineVaporComponent({
+        setup() {
+          onDeactivated(() => order.push('deactivated'))
+          return template('<div>vapor</div>')()
+        },
+      })
+      const VaporTree = defineVaporComponent({
+        setup() {
+          return createComponent(VaporKeepAlive, null, {
+            default: () => createDynamicComponent(() => VaporChild),
+          })
+        },
+      })
+      const AsyncSibling = defineComponent({
+        async setup() {
+          await asyncSetup.promise
+          return () => h('span', 'async')
+        },
+      })
+      const Root = defineComponent({
+        setup: () => () =>
+          h(Suspense, null, {
+            default: () =>
+              h('div', [
+                showKeepAlive.value
+                  ? kind === 'vdom'
+                    ? h(KeepAlive, null, { default: () => h(VDomChild) })
+                    : h(VaporTree as any)
+                  : h('span', 'gone'),
+                h(AsyncSibling),
+              ]),
+            fallback: () => h('span', 'loading'),
+          }),
+      })
+      const host = document.createElement('div')
+      const app = createApp(Root)
+      app.use(vaporInteropPlugin)
+      app.mount(host)
+
+      await nextTick()
+      showKeepAlive.value = false
+      await nextTick()
+      expect(order).toEqual([])
+
+      asyncSetup.resolve()
+      await flushResolution(asyncSetup.promise)
+      expect(order).toEqual(['deactivated'])
+      app.unmount()
+    },
+  )
+
+  test('initial v-show appear enter waits for the branch to resolve', async () => {
+    const asyncSetup = deferred()
+    const calls: string[] = []
+    const data = ref({
+      show: true,
+      onBeforeAppear: () => calls.push('before appear'),
+      onAppear: () => calls.push('appear'),
+    })
+    const VaporChild = compile(
+      `<template>
+        <Transition
+          appear
+          :css="false"
+          @before-appear="data.onBeforeAppear"
+          @appear="data.onAppear"
+        >
+          <div v-show="data.show">vapor</div>
+        </Transition>
+      </template>`,
+      data,
+    )
+    const AsyncSibling = defineComponent({
+      async setup() {
+        await asyncSetup.promise
+        return () => h('span', 'async')
+      },
+    })
+    const Root = defineComponent({
+      setup: () => () =>
+        h(Suspense, null, {
+          default: () => h('div', [h(VaporChild as any), h(AsyncSibling)]),
+          fallback: () => h('span', 'loading'),
+        }),
+    })
+    const host = document.createElement('div')
+    const app = createApp(Root)
+    app.use(vaporInteropPlugin)
+    app.mount(host)
+
+    await nextTick()
+    expect(calls).toEqual(['before appear'])
+    asyncSetup.resolve()
+    await flushResolution(asyncSetup.promise)
+    expect(calls).toEqual(['before appear', 'appear'])
+    app.unmount()
+  })
+
+  test('transition-group move processing waits for the branch to resolve', async () => {
+    const asyncSetup = deferred()
+    const items = ref([1, 2])
+    const VaporChild = defineVaporComponent({
+      setup() {
+        const list = createFor(
+          () => items.value,
+          item => {
+            const el = template('<div></div>')()
+            el.textContent = String(item.value)
+            return el
+          },
+          item => item,
+        )
+        return createComponent(VaporTransitionGroup, null, {
+          default: () => list,
+        })
+      },
+    })
+    const AsyncSibling = defineComponent({
+      async setup() {
+        await asyncSetup.promise
+        return () => h('span', 'async')
+      },
+    })
+    const Root = defineComponent({
+      setup: () => () =>
+        h(Suspense, null, {
+          default: () => h('div', [h(VaporChild as any), h(AsyncSibling)]),
+          fallback: () => h('span', 'loading'),
+        }),
+    })
+    const host = document.createElement('div')
+    const app = createApp(Root)
+    app.use(vaporInteropPlugin)
+    app.mount(host)
+
+    await nextTick()
+    // The position snapshot stays pending until the deferred flush runs, so a
+    // second update while the boundary is pending must not measure again.
+    const measure = vi.spyOn(Element.prototype, 'getBoundingClientRect')
+    items.value = [2, 1]
+    await nextTick()
+    expect(measure).toHaveBeenCalledTimes(2)
+    items.value = [1, 2]
+    await nextTick()
+    expect(measure).toHaveBeenCalledTimes(2)
+
+    asyncSetup.resolve()
+    await flushResolution(asyncSetup.promise)
+    items.value = [2, 1]
+    await nextTick()
+    expect(measure).toHaveBeenCalledTimes(4)
+    measure.mockRestore()
+    app.unmount()
+  })
+
+  test('hydrated transition appear enter waits for the branch to resolve', async () => {
+    const asyncSetup = deferred()
+    const calls: string[] = []
+    const data = ref({
+      onBeforeAppear: () => calls.push('before appear'),
+      onAppear: () => calls.push('appear'),
+    })
+    const source = `<template>
+      <Transition
+        appear
+        :css="false"
+        @before-appear="data.onBeforeAppear"
+        @appear="data.onAppear"
+      >
+        <div>vapor</div>
+      </Transition>
+    </template>`
+    const ServerVaporChild = compile(source, data, {}, { ssr: true })
+    const ClientVaporChild = compile(source, data)
+    let isClient = false
+    const AsyncSibling = defineComponent({
+      async setup() {
+        if (isClient) await asyncSetup.promise
+        return () => h('span', 'async')
+      },
+    })
+    const createRoot = (VaporChild: any) =>
+      defineComponent({
+        setup: () => () =>
+          h(Suspense, null, {
+            default: () => h('div', [h(VaporChild), h(AsyncSibling)]),
+            fallback: () => h('span', 'loading'),
+          }),
+      })
+
+    const html = await VueServerRenderer.renderToString(
+      createSSRApp(createRoot(ServerVaporChild)),
+    )
+    const host = document.createElement('div')
+    host.innerHTML = html
+    isClient = true
+    const app = createSSRApp(createRoot(ClientVaporChild))
+    app.use(vaporInteropPlugin)
+    app.mount(host)
+
+    await nextTick()
+    expect(calls).toEqual(['before appear'])
+    asyncSetup.resolve()
+    await flushResolution(asyncSetup.promise)
+    expect(calls).toEqual(['before appear', 'appear'])
+    app.unmount()
   })
 })
