@@ -155,10 +155,12 @@ export class ComputedRefImpl<T = any> implements ReactiveNode {
         // a stopped scope never unlinks it, so nothing would release the deps
         // this read tracked and they would keep the computed alive
         let dep = this.deps
-        while (dep !== undefined) {
-          dep = unlink(dep, this)
+        if (dep !== undefined) {
+          do {
+            dep = unlink(dep, this)
+          } while (dep !== undefined)
+          this.flags |= SystemReactiveFlags.Dirty
         }
-        this.flags |= SystemReactiveFlags.Dirty
       }
     }
     return this._value!

@@ -12,6 +12,7 @@ import {
   reactive,
   ref,
   setCurrentScope,
+  stop,
   toRaw,
 } from '../src'
 import { getDepFromReactive } from '../src/dep'
@@ -524,6 +525,13 @@ describe('reactivity/effect/scope', () => {
     expect(scope.run(() => c.value)).toBe(2)
     expect(getDepFromReactive(toRaw(src), 'foo')).toBeUndefined()
     expect((c as unknown as ComputedRefImpl).subs).toBeUndefined()
+    expect(scope.deps).toBeUndefined()
+
+    src.foo = 3
+    expect(scope.run(() => c.value)).toBe(3)
+    expect(getDepFromReactive(toRaw(src), 'foo')).toBeUndefined()
+    expect((c as unknown as ComputedRefImpl).subs).toBeUndefined()
+    expect(scope.deps).toBeUndefined()
   })
 
   it('should keep a computed read in a stopped scope subscribed while an effect uses it', () => {
@@ -531,12 +539,29 @@ describe('reactivity/effect/scope', () => {
     const scope = effectScope()
     const c = scope.run(() => computed(() => src.foo))!
     let dummy
-    effect(() => (dummy = c.value))
+    const runner = effect(() => (dummy = c.value))
 
     scope.stop()
     expect(scope.run(() => c.value)).toBe(1)
+    expect(scope.deps).toBeUndefined()
     src.foo = 2
     expect(dummy).toBe(2)
+
+    stop(runner)
+    expect(getDepFromReactive(toRaw(src), 'foo')).toBeUndefined()
+    expect((c as unknown as ComputedRefImpl).subs).toBeUndefined()
+  })
+
+  it('should preserve the cache of a computed without dependencies read in a stopped scope', () => {
+    const scope = effectScope()
+    const getter = vi.fn(() => ({}))
+    const c = computed(getter)
+    const value = scope.run(() => c.value)
+
+    scope.stop()
+    expect(scope.run(() => c.value)).toBe(value)
+    expect(scope.run(() => c.value)).toBe(value)
+    expect(getter).toHaveBeenCalledTimes(1)
   })
 })
 
