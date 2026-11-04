@@ -64,6 +64,24 @@ body
   expect(result.errors.length).toBe(0)
 })
 
+test('preprocessed template has no source map', () => {
+  const template = parse(`<template lang="pug">\np {{ foobar }}\n</template>`, {
+    filename: 'example.vue',
+    sourceMap: true,
+  }).descriptor.template as SFCTemplateBlock
+
+  for (const inMap of [template.map, undefined]) {
+    const result = compile({
+      filename: 'example.vue',
+      source: template.content,
+      inMap,
+      preprocessLang: template.lang,
+    })
+    expect(result.code).toMatch(`foobar`)
+    expect(result.map).toBeUndefined()
+  }
+})
+
 test('preprocess pug with indents and blank lines', () => {
   const template = parse(
     `
@@ -187,6 +205,29 @@ const foobar = 1
   expect(
     consumer.originalPositionFor(getPositionInCode(code, 'foobar')),
   ).toMatchObject({ source: `src/example.vue`, line: 6, column: 13 })
+})
+
+test('source map: inMap without AST, on the line of the tag', () => {
+  const source = `<script setup>
+const foobar = 1
+</script>
+<template><p>{{ foobar }}</p></template>
+`
+  const template = parse(source, {
+    filename: 'example.vue',
+    sourceMap: true,
+  }).descriptor.template!
+
+  const { code, map } = compile({
+    filename: 'example.vue',
+    source: template.content,
+    inMap: template.map,
+  })
+
+  const consumer = new SourceMapConsumer(map as RawSourceMap)
+  expect(
+    consumer.originalPositionFor(getPositionInCode(code, 'foobar')),
+  ).toMatchObject({ line: 4, column: 16 })
 })
 
 test('source map: v-if generated comment should not have original position', () => {

@@ -147,7 +147,8 @@ export function codeFragmentToString(
   code: CodeFragment[],
   context: CodegenContext,
 ): string {
-  const source = { content: context.ir.source }
+  const offset = context.options.pieceOffset || 0
+  const source = context.options.pieceSource || { content: context.ir.source }
   const pieces =
     !__BROWSER__ && context.options.sourceMap
       ? (context.pieces = [createSourcePiece(source)])
@@ -191,8 +192,14 @@ export function codeFragmentToString(
 
       if (pieces) {
         if (loc && loc !== locStub) {
-          addPiece(pieces, code, source, loc.start.offset, loc.end.offset)
-          mappedEnd = loc.end.offset
+          addPiece(
+            pieces,
+            code,
+            source,
+            loc.start.offset + offset,
+            loc.end.offset + offset,
+          )
+          mappedEnd = loc.end.offset + offset
         } else {
           addPiece(
             pieces,

@@ -30,7 +30,6 @@ import { walk } from 'estree-walker'
 import {
   type Piece,
   type Source,
-  decodeMappings,
   renderWithSourceMap,
   rewritePieceText,
 } from 'muggle-string'
@@ -1012,7 +1011,6 @@ export function compileScript(
     args += `, { ${destructureElements.join(', ')} }`
   }
 
-  let templateMap: RawSourceMap | undefined
   let templatePieces: Piece<{ source: Source }>[] | undefined
   let templateCode: string | undefined
   let templatePreamble = ''
@@ -1065,8 +1063,8 @@ export function compileScript(
       }
       // inline render function mode - we are going to compile the template and
       // inline it right here
-      const { code, preamble, tips, errors, helpers, map, pieces } =
-        compileTemplate({
+      const { code, preamble, tips, errors, helpers, pieces } = compileTemplate(
+        {
           filename,
           ast: sfc.template.ast,
           source: sfc.template.content,
@@ -1083,10 +1081,12 @@ export function compileScript(
             inline: true,
             isTS: ctx.isTS,
             bindingMetadata: ctx.bindingMetadata,
-            ...(options.sourceMap === false && { sourceMap: false }),
+            ...(options.sourceMap === false
+              ? { sourceMap: false }
+              : { pieceSource: ctx.s.source }),
           },
-        })
-      templateMap = map
+        },
+      )
       templatePieces = pieces
       templateCode = code
       if (tips.length) {
@@ -1272,9 +1272,8 @@ export function compileScript(
       content += rewritePieceText(piece)
     })
   } else {
-    // in inline mode, the render function maps by the pieces of its map
-    const pieces =
-      templateMap && (templatePieces || mapToPieces(templateCode!, templateMap))
+    // in inline mode, the render function maps by its pieces
+    const pieces = templatePieces
     const script = renderWithSourceMap(
       pieces
         ? sink =>
@@ -1516,8 +1515,7 @@ type InlinePiece = Piece<{ source: Source; name?: string }>
 
 /**
  * `sink` with the inserted text that holds the render function `code`
- * passed as `pieces`, those of the content of `source` with it and the
- * others as text
+ * passed as `pieces`, those of `source` with it and the others as text
  */
 function inlinePieces(
   sink: (piece: InlinePiece) => void,
@@ -1533,54 +1531,9 @@ function inlinePieces(
     sink(piece.slice(0, at))
     for (const p of pieces) {
       if (typeof p === 'string') sink(p)
-      else if (p.source.content === source.content) sink({ ...p, source })
+      else if (p.source === source) sink(p)
       else sink(rewritePieceText(p))
     }
     sink(piece.slice(at + code.length))
   }
-}
-
-/** Each run of `code` from a segment of `map` as a piece at its original */
-function mapToPieces(
-  code: string,
-  map: RawSourceMap,
-): Piece<{ source: Source }>[] {
-  const sources = map.sources.map((_, i) => {
-    const content = map.sourcesContent && map.sourcesContent[i]
-    if (content == null) return
-    const lineStarts = [0]
-    for (
-      let i = content.indexOf('\n');
-      i >= 0;
-      i = content.indexOf('\n', i + 1)
-    )
-      lineStarts.push(i + 1)
-    return { source: { content }, lineStarts }
-  })
-  const pieces: Piece<{ source: Source }>[] = []
-  const mappings = decodeMappings(map.mappings)
-  const lines = code.split('\n')
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i] + (i < lines.length - 1 ? '\n' : '')
-    const segments = mappings[i] || []
-    let column = 0
-    for (let j = 0; j <= segments.length; j++) {
-      const next = j < segments.length ? segments[j][0] : line.length
-      const text = line.slice(column, next)
-      const s = segments[j - 1]
-      const original = s && s.length !== 1 && sources[s[1]]
-      if (text && original) {
-        const { source, lineStarts } = original
-        const start = Math.min(
-          (lineStarts[s[2]] ?? source.content.length) + s[3],
-          source.content.length,
-        )
-        pieces.push({ source, start, end: start, text })
-      } else if (text) {
-        pieces.push(text)
-      }
-      column = Math.max(column, next)
-    }
-  }
-  return pieces
 }

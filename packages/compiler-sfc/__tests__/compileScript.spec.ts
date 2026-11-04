@@ -840,6 +840,35 @@ describe('SFC compile <script setup>', () => {
       ).toMatchObject(getPositionInCode(source, `Error`))
     })
 
+    test('source map of a custom template compiler', () => {
+      const source = `
+      <script setup>
+        const count = ref(0)
+      </script>
+      <template><p>{{ total }}</p>
+        <button @click="throw new Error(\`msg\`);"></button>
+      </template>
+      `
+      const compiler = {
+        parse: CompilerDOM.parse,
+        compile: CompilerDOM.compile,
+      }
+      const { content, map } = compile(source, {
+        inlineTemplate: true,
+        templateOptions: { compiler },
+      })
+      const consumer = new SourceMapConsumer(map as RawSourceMap)
+      expect(
+        consumer.originalPositionFor(getPositionInCode(content, 'count')),
+      ).toMatchObject(getPositionInCode(source, `count`))
+      expect(
+        consumer.originalPositionFor(getPositionInCode(content, 'total')),
+      ).toMatchObject(getPositionInCode(source, `total`))
+      expect(
+        consumer.originalPositionFor(getPositionInCode(content, 'Error')),
+      ).toMatchObject(getPositionInCode(source, `Error`))
+    })
+
     test('source map of a template compiler without pieces', () => {
       const source = `
       <script setup>
@@ -866,7 +895,29 @@ describe('SFC compile <script setup>', () => {
       ).toMatchObject(getPositionInCode(source, `count`))
       expect(
         consumer.originalPositionFor(getPositionInCode(content, 'Error')),
-      ).toMatchObject(getPositionInCode(source, `Error`))
+      ).toMatchObject({ source: null, line: null, column: null })
+    })
+
+    test('source map of a preprocessed template', () => {
+      const source = `
+      <script setup>
+        const count = ref(0)
+      </script>
+      <template lang="pug">
+      button(@click="throw new Error(\`msg\`);")
+      </template>
+      `
+      const { content, map } = compile(source, {
+        inlineTemplate: true,
+        templateOptions: { preprocessLang: 'pug' },
+      })
+      const consumer = new SourceMapConsumer(map as RawSourceMap)
+      expect(
+        consumer.originalPositionFor(getPositionInCode(content, 'count')),
+      ).toMatchObject(getPositionInCode(source, `count`))
+      expect(
+        consumer.originalPositionFor(getPositionInCode(content, 'Error')),
+      ).toMatchObject({ source: null, line: null, column: null })
     })
 
     test('inline source map names the file as given', () => {

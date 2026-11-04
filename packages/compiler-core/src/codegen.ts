@@ -97,7 +97,12 @@ export enum NewlineType {
 
 export interface CodegenContext extends Omit<
   Required<CodegenOptions>,
-  'bindingMetadata' | 'inline' | 'vaporRuntimeModuleName' | 'expressionPlugins'
+  | 'bindingMetadata'
+  | 'inline'
+  | 'vaporRuntimeModuleName'
+  | 'expressionPlugins'
+  | 'pieceSource'
+  | 'pieceOffset'
 > {
   source: string
   code: string
@@ -118,6 +123,8 @@ function createCodegenContext(
     mode = 'function',
     prefixIdentifiers = mode === 'module',
     sourceMap = false,
+    pieceSource,
+    pieceOffset = 0,
     filename = `template.vue.html`,
     scopeId = null,
     optimizeImports = false,
@@ -154,8 +161,14 @@ function createCodegenContext(
       if (!__BROWSER__ && context.pieces) {
         if (node && node.loc.source) {
           const { start, end } = node.loc
-          addPiece(context.pieces, code, source, start.offset, end.offset)
-          mappedEnd = end.offset
+          addPiece(
+            context.pieces,
+            code,
+            source,
+            start.offset + pieceOffset,
+            end.offset + pieceOffset,
+          )
+          mappedEnd = end.offset + pieceOffset
         } else {
           addPiece(
             context.pieces,
@@ -183,7 +196,7 @@ function createCodegenContext(
 
   // text without a node maps to the end of the last node on its line
   let mappedEnd = -1
-  const source = { content: ast.source }
+  const source = pieceSource || { content: ast.source }
 
   function newline(n: number) {
     mappedEnd = -1

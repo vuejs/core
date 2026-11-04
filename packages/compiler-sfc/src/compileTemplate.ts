@@ -8,11 +8,7 @@ import type {
   RawSourceMap,
   RootNode,
 } from '@vue/compiler-core'
-import {
-  type SourceMapSegment,
-  decodeMappings,
-  encodeMappings,
-} from 'muggle-string'
+import { type Source, decodeMappings } from 'muggle-string'
 import {
   type AssetURLOptions,
   type AssetURLTagConfig,
@@ -141,11 +137,14 @@ export function compileTemplate(
     : false
   if (preprocessor) {
     try {
-      return doCompileTemplate({
-        ...options,
-        source: preprocess(options, preprocessor),
-        ast: undefined, // invalidate AST if template goes through preprocessor
-      })
+      return doCompileTemplate(
+        {
+          ...options,
+          source: preprocess(options, preprocessor),
+          ast: undefined, // invalidate AST if template goes through preprocessor
+        },
+        true,
+      )
     } catch (e: any) {
       return {
         code: `export default function render() {}`,
@@ -170,22 +169,25 @@ export function compileTemplate(
   }
 }
 
-function doCompileTemplate({
-  filename,
-  id,
-  scoped,
-  slotted,
-  inMap,
-  source,
-  ast: inAST,
-  ssr = false,
-  vapor = false,
-  ssrCssVars,
-  isProd = false,
-  compiler,
-  compilerOptions = {},
-  transformAssetUrls,
-}: SFCTemplateCompileOptions): SFCTemplateCompileResults {
+function doCompileTemplate(
+  {
+    filename,
+    id,
+    scoped,
+    slotted,
+    inMap,
+    source,
+    ast: inAST,
+    ssr = false,
+    vapor = false,
+    ssrCssVars,
+    isProd = false,
+    compiler,
+    compilerOptions = {},
+    transformAssetUrls,
+  }: SFCTemplateCompileOptions,
+  preprocessed = false,
+): SFCTemplateCompileResults {
   const errors: CompilerError[] = []
   const warnings: CompilerError[] = []
 
@@ -220,6 +222,7 @@ function doCompileTemplate({
       ? (CompilerVapor as TemplateCompiler)
       : CompilerDOM
   compiler = compiler || defaultCompiler
+  const { pieceSource } = compilerOptions
 
   if (compiler !== defaultCompiler) {
     // user using custom compiler, this means we cannot reuse the AST from
@@ -233,6 +236,13 @@ function doCompileTemplate({
     ssr,
     onError: e => errors.push(e),
   })
+
+  // inMap should be the map produced by ./parse.ts, which places `source` in
+  // the SFC, so that the pieces of `source` are those of the SFC
+  const inSFC =
+    inMap && !inAST && !preprocessed
+      ? locateInSFC(inMap, source, pieceSource)
+      : undefined
 
   let { code, ast, preamble, map, pieces, helpers } = compiler.compile(
     inAST || source,
@@ -263,17 +273,28 @@ function doCompileTemplate({
       filename,
       onError: e => errors.push(e),
       onWarn: w => warnings.push(w),
+      pieceSource: inSFC
+        ? inSFC.source
+        : inAST && pieceSource && pieceSource.content === inAST.source
+          ? pieceSource
+          : undefined,
+      pieceOffset: inSFC && inSFC.offset,
     },
   )
 
-  // inMap should be the map produced by ./parse.ts which is a simple line-only
-  // mapping. If it is present, we need to adjust the final map and errors to
-  // reflect the original line numbers.
-  if (inMap && !inAST) {
-    if (map) {
-      map = shiftMap(inMap, map)
-      pieces = undefined
+  if (preprocessed) {
+    // the preprocessor gives no positions of its output in the template
+    map = pieces = undefined
+  } else if (inMap && !inAST) {
+    // a compiler that gives pieces takes `pieceSource` and `pieceOffset`, so
+    // its map is of the SFC; one that gives none has a map of `source` only
+    if (map && pieces && inSFC) {
+      if (inMap.file != null) map.file = inMap.file
+      if (inMap.sourceRoot != null) map.sourceRoot = inMap.sourceRoot
+    } else {
+      map = pieces = undefined
     }
+    // adjust errors to reflect the original line numbers
     if (errors.length) {
       patchErrors(errors, source, inMap)
     }
@@ -304,44 +325,34 @@ function doCompileTemplate({
   }
 }
 
-// `inMap` maps `source` by a shift of lines and columns, which its first
-// segment with a source gives
-function shiftMap(inMap: RawSourceMap, map: RawSourceMap): RawSourceMap {
-  // decode only up to the first segment, unless it has no source
-  let lines = decodeMappings(/^;*[^,;]*/.exec(inMap.mappings)![0])
-  if (lines[lines.length - 1].every(s => s.length === 1)) {
-    lines = decodeMappings(inMap.mappings)
-  }
-  const line = lines.findIndex(segments => segments.some(s => s.length !== 1))
-  if (line < 0) return map
-  const first = lines[line].find(s => s.length !== 1)!
+interface SFCLocation {
+  source: Source
+  offset: number
+}
 
-  const lineShift = first[2] - line
-  const columnShift = first[3] - first[0]
-  const shifted: Omit<RawSourceMap, 'version'> & { version: number } = {
-    version: 3,
-    sources: inMap.sources,
-    names: map.names,
-    mappings: encodeMappings(
-      decodeMappings(map.mappings).map(segments =>
-        segments.map(s => {
-          if (s.length === 1) return s
-          const shiftedSegment: SourceMapSegment = [
-            s[0],
-            0,
-            Math.max(0, s[2] + lineShift),
-            Math.max(0, s[3] + columnShift),
-          ]
-          if (s.length === 5) shiftedSegment.push(s[4])
-          return shiftedSegment
-        }),
-      ),
-    ),
+/** The SFC that `inMap` places `source` in, as `into` if it is that SFC */
+function locateInSFC(
+  inMap: RawSourceMap,
+  source: string,
+  into: Source | null | undefined,
+): SFCLocation | undefined {
+  const sfc = inMap.sourcesContent && inMap.sourcesContent[0]
+  if (sfc == null) return
+  // `source` starts on the line its first segment is shifted to
+  const lines = decodeMappings(/^;*[^,;]*/.exec(inMap.mappings)![0])
+  const first = lines[lines.length - 1][0]
+  let lineStart = 0
+  if (first && first.length !== 1) {
+    for (let line = first[2] - (lines.length - 1); line > 0; line--) {
+      lineStart = sfc.indexOf('\n', lineStart) + 1
+    }
   }
-  if (inMap.file != null) shifted.file = inMap.file
-  if (inMap.sourceRoot != null) shifted.sourceRoot = inMap.sourceRoot
-  if (inMap.sourcesContent) shifted.sourcesContent = inMap.sourcesContent
-  return shifted as unknown as RawSourceMap
+  const offset = sfc.indexOf(source, lineStart)
+  if (offset < 0) return
+  return {
+    source: into && into.content === sfc ? into : { content: sfc },
+    offset,
+  }
 }
 
 function patchErrors(

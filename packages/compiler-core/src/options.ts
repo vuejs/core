@@ -8,6 +8,7 @@ import type {
 } from './transform'
 import type { CompilerCompatOptions } from './compat/compatConfig'
 import type { ParserPlugin } from '@babel/parser'
+import type { Source } from 'muggle-string'
 
 export interface ErrorHandlingOptions {
   onWarn?: (warning: CompilerError) => void
@@ -313,6 +314,16 @@ export interface CodegenOptions extends SharedTransformCodegenOptions {
    * @default false
    */
   sourceMap?: boolean
+  /**
+   * @internal The source the pieces of the map refer to, whose content must
+   * be the source of the AST
+   */
+  pieceSource?: Source | null
+  /**
+   * @internal Where the source of the AST starts in the content of
+   * `pieceSource`, which the offsets of the pieces are shifted by
+   */
+  pieceOffset?: number
   /**
    * SFC scoped styles ID
    */
