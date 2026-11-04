@@ -36,17 +36,6 @@ export interface DirectiveBinding<
   arg?: Arg
   modifiers: DirectiveModifiers<Modifiers>
   dir: ObjectDirective<any, Value, Modifiers, Arg>
-  /**
-   * the binding of the mount while its mounted hook is still queued
-   * @internal
-   */
-  _mount?: DirectiveBinding
-  /**
-   * on the binding of the mount: the vnode of the last update that ran
-   * before its mounted hook
-   * @internal
-   */
-  _latest?: VNode
 }
 
 export type DirectiveHook<
@@ -178,41 +167,46 @@ export function withDirectives<T extends VNode>(
   return vnode
 }
 
+type DirectiveVNode = VNode & {
+  _mount?: DirectiveVNode
+  _latest?: DirectiveVNode
+}
+
 export function invokeDirectiveHook(
-  vnode: VNode,
-  prevVNode: VNode | null,
+  vnode: DirectiveVNode,
+  prevVNode: DirectiveVNode | null,
   instance: ComponentInternalInstance | null,
   name: keyof ObjectDirective,
 ): void {
-  const bindings = vnode.dirs!
+  // Inherited bindings can be shared by different component roots, so track
+  // pending mounts on the vnodes in the same element's update chain.
+  let hookVNode = vnode
+  if (name === 'beforeMount') {
+    vnode._mount = vnode
+  } else if (name === 'beforeUpdate') {
+    const mount = prevVNode && prevVNode._mount
+    if (mount) {
+      mount._latest = vnode
+      vnode._mount = mount
+    }
+  } else if (name === 'mounted') {
+    const latest = vnode._latest
+    vnode._mount = vnode._latest = undefined
+    if (latest) {
+      hookVNode = latest
+      latest._mount = undefined
+    }
+  }
+
+  const bindings = hookVNode.dirs!
   const oldBindings = prevVNode && prevVNode.dirs!
   for (let i = 0; i < bindings.length; i++) {
     let binding = bindings[i]
-    let hookVNode = vnode
     if (oldBindings) {
-      const oldBinding = oldBindings[i]
-      binding.oldValue = oldBinding.value
-      // the element is updated before its queued mounted hook ran (an update
-      // in the same flush, or while a Suspense boundary is pending): point
-      // the mount binding at the latest vnode
-      const mount = name === 'beforeUpdate' && oldBinding._mount
-      if (mount) {
-        mount._latest = vnode
-        binding._mount = mount
-      }
-    } else if (name === 'beforeMount') {
-      binding._mount = binding
-    } else if (name === 'mounted') {
-      // the mounted hook gets the binding of the latest update, not the one
-      // from mount time. #12460
-      const latest = binding._latest
-      binding._mount = binding._latest = undefined
-      if (latest) {
-        hookVNode = latest
-        binding = latest.dirs![i]
-        binding._mount = undefined
-        binding = extend({}, binding, { oldValue: undefined })
-      }
+      binding.oldValue = oldBindings[i].value
+    } else if (name === 'mounted' && binding.oldValue !== undefined) {
+      // Do not mutate bindings that may also be used by queued updated hooks.
+      binding = extend({}, binding, { oldValue: undefined })
     }
     let hook = binding.dir[name] as DirectiveHook | DirectiveHook[] | undefined
     if (__COMPAT__ && !hook) {

@@ -2113,4 +2113,51 @@ describe('vModel', () => {
     await new Promise(r => setTimeout(r))
     expect(root.querySelector('input').value).toBe('b')
   })
+
+  it('handles inherited directives when a pending Suspense component changes its root', async () => {
+    const editing = ref(true)
+    const text = ref('a')
+    const editorMounted = vi.fn()
+    const asyncMounted = vi.fn()
+    const { code: editorCode } = compile(
+      `<input v-if="editing" v-model="text"><span v-else>{{ text }}</span>`,
+      { prefixIdentifiers: true },
+    )
+    const Editor = {
+      setup: () => ({ editing, text }),
+      render: new Function('Vue', editorCode)(runtimeDom),
+      mounted: editorMounted,
+    }
+    let resolve: () => void
+    const Async = {
+      async setup() {
+        await new Promise<void>(r => (resolve = r))
+        return () => h('p', 'async')
+      },
+      mounted: asyncMounted,
+    }
+    const { code } = compile(
+      `<Suspense><div><Editor v-show="true" /><Async /></div></Suspense>`,
+      { prefixIdentifiers: true },
+    )
+    render(
+      h({
+        components: { Editor, Async },
+        render: new Function('Vue', code)(runtimeDom),
+      }),
+      root,
+    )
+
+    editing.value = false
+    await nextTick()
+    text.value = 'b'
+    await nextTick()
+    resolve!()
+    await new Promise(r => setTimeout(r))
+
+    expect(editorMounted).toHaveBeenCalledTimes(1)
+    expect(asyncMounted).toHaveBeenCalledTimes(1)
+    expect(root.querySelector('input')).toBe(null)
+    expect(root.querySelector('span').textContent).toBe('b')
+  })
 })
