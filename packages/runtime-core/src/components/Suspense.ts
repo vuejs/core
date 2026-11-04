@@ -975,12 +975,10 @@ function createSuspenseBoundary(
         )
       }
       if (suspense.pendingBranch) {
-        unmount(
-          suspense.pendingBranch,
-          parentComponent,
-          parentSuspense,
-          doRemove,
-        )
+        // the branch was never revealed: its unmount post jobs are discarded
+        // with the buffered mount ones, as on a discard before resolve
+        unmount(suspense.pendingBranch, parentComponent, suspense, doRemove)
+        suspense.effects.length = 0
       }
     },
   }
