@@ -12,6 +12,11 @@ export interface ModelDecl {
   options: Code | undefined
   identifier: string | undefined
   runtimeOptionNodes: Node[]
+  /**
+   * the module-level declaration of options that are both prop options and
+   * runtime options
+   */
+  hoisted: Code | undefined
 }
 
 export function processDefineModel(
@@ -47,7 +52,8 @@ export function processDefineModel(
     ctx.error(`duplicate model name ${JSON.stringify(modelName)}`, node)
   }
 
-  let propOptions = options && ctx.copy(options.start!, options.end!)
+  let propOptions: Code | undefined
+  let hoisted: Code | undefined
   let optionsRemoved = !options
   const runtimeOptionNodes: Node[] = []
 
@@ -96,12 +102,27 @@ export function processDefineModel(
         '',
       )
     }
+  } else if (options) {
+    // the prop options can't be told apart from the runtime options, so the
+    // options are evaluated once, outside of setup(), for both
+    const id = `__modelOptions${Object.keys(ctx.modelDecls).length}`
+    const start = ctx.startOffset! + options.start!
+    const end = ctx.startOffset! + options.end!
+    propOptions = id
+    hoisted = [
+      `\nconst ${id} = `,
+      ctx.s.cut(start, end, {
+        placeholder: { source: ctx.s.source, start, end, text: id },
+      }),
+    ]
+    runtimeOptionNodes.push(options)
   }
 
   ctx.modelDecls[modelName] = {
     type,
     options: propOptions,
     runtimeOptionNodes,
+    hoisted,
     identifier:
       declId && declId.type === 'Identifier' ? declId.name : undefined,
   }

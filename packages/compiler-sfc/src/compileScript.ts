@@ -1304,7 +1304,10 @@ export function compileScript(
   }
 
   const setup = ctx.s.writer(SetupRank.Setup)
-  setup.insertAfter(startOffset, setupHead)
+  setup.insertAfter(startOffset, [
+    Object.values(ctx.modelDecls).map(({ hoisted }) => hoisted ?? ''),
+    setupHead,
+  ])
   setup.insertBefore(endOffset, `\n}\n\n${setupEnd}`)
 
   // 11. finalize Vue helper imports

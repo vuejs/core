@@ -989,6 +989,13 @@ const { da = ['daDefault'] } = defineProps(['da'])
 </script>`,
           [`'daDefault'`],
         ],
+        [
+          `<script setup>
+import { makeOptions } from './m'
+const n = defineModel('n', makeOptions(1))
+</script>`,
+          [`makeOptions(1)`],
+        ],
       ] as const
       for (const [source, tokens] of sources) {
         const { descriptor } = parse(source, { filename: 'App.vue' })
