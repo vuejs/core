@@ -1,4 +1,3 @@
-import { extend } from '@vue/shared'
 import type { TrackOpTypes, TriggerOpTypes } from './constants'
 import { setupOnTrigger } from './debug'
 import { activeEffectScope } from './effectScope'
@@ -185,7 +184,6 @@ export function effect<T = any>(
   if (options) {
     const { onStop, scheduler } = options
     if (onStop) {
-      options.onStop = undefined
       const stop = e.stop.bind(e)
       e.stop = () => {
         stop()
@@ -193,14 +191,16 @@ export function effect<T = any>(
       }
     }
     if (scheduler) {
-      options.scheduler = undefined
       e.notify = () => {
         if (!(e.flags & EffectFlags.PAUSED)) {
           scheduler()
         }
       }
     }
-    extend(e, options)
+    if (__DEV__) {
+      e.onTrack = options.onTrack
+      e.onTrigger = options.onTrigger
+    }
   }
   try {
     e.run()
