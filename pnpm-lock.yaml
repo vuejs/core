@@ -408,8 +408,8 @@ importers:
   packages-private/sfc-playground:
     dependencies:
       '@vue/repl':
-        specifier: ^4.7.2
-        version: 4.7.2
+        specifier: https://pkg.pr.new/vuejs/repl/@vue/repl@59212b9
+        version: https://pkg.pr.new/vuejs/repl/@vue/repl@59212b9
       file-saver:
         specifier: ^2.0.5
         version: 2.0.5
@@ -2138,8 +2138,9 @@ packages:
   '@vue/reactivity@3.6.0-rc.11':
     resolution: {integrity: sha512-JkIptRqOw4tQgRBh42wp+ZypiedOusxqO/awTFxetwtfBIZf5zLMaSkKNlRLzp2wxxjyUKCVx6GOMHkpmLWDqQ==}
 
-  '@vue/repl@4.7.2':
-    resolution: {integrity: sha512-6x0hisEd5XRYxhLit3fvPCfeUfXEjB3a8Z2Pl3scVa3kZjck4+ERQF4XCahC7PTabWb3He04u+j8q3MK4WZHrQ==}
+  '@vue/repl@https://pkg.pr.new/vuejs/repl/@vue/repl@59212b9':
+    resolution: {integrity: sha512-Qa2wv2X8+cjZfubttVDpoBs98buhJdr/9hWeOvmXxm/S9oCVf2b7RkEtDWXrEMHQrxMnugAPu2/Ryz5eTpgxnw==, tarball: https://pkg.pr.new/vuejs/repl/@vue/repl@59212b9}
+    version: 4.7.2
 
   '@vue/runtime-core@3.6.0-rc.11':
     resolution: {integrity: sha512-oeUUAWdU/vxMExvfUnUAAQ6hX9bhfY3NZcJ5dsDKz+DrOkG83zbIqfce+8USUEgeTgdITlUKkrZ9oSkgltkxyg==}
@@ -5024,7 +5025,7 @@ snapshots:
     dependencies:
       '@vue/shared': 3.6.0-rc.11
 
-  '@vue/repl@4.7.2': {}
+  '@vue/repl@https://pkg.pr.new/vuejs/repl/@vue/repl@59212b9': {}
 
   '@vue/runtime-core@3.6.0-rc.11':
     dependencies:
