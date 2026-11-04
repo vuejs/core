@@ -63,6 +63,7 @@ import { setRef } from './rendererTemplateRef'
 import {
   type SuspenseBoundary,
   type SuspenseImpl,
+  deferredEnterKey,
   isSuspense,
   queueEffectWithSuspense,
 } from './components/Suspense'
@@ -749,6 +750,9 @@ function baseCreateRenderer(
     const needCallTransitionHooks = needTransition(parentSuspense, transition)
     if (needCallTransitionHooks) {
       transition!.beforeEnter(el)
+    } else if (transition && !transition.persisted) {
+      // mounted off-dom while the boundary is pending: it enters on reveal
+      el[deferredEnterKey] = true
     }
     hostInsert(el, container, anchor)
     if (
