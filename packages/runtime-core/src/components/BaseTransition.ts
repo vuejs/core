@@ -21,7 +21,7 @@ import { PatchFlags, ShapeFlags, isArray, isFunction } from '@vue/shared'
 import { onBeforeUnmount, onMounted } from '../apiLifecycle'
 import { isTeleport } from './Teleport'
 import type { RendererElement } from '../renderer'
-import { SchedulerJobFlags, queueJob } from '../scheduler'
+import { SchedulerJobFlags, SchedulerJob, queueJob } from '../scheduler'
 import { isHmrUpdating } from '../hmr'
 import { filterSingleRoot } from '../componentRenderUtils'
 
