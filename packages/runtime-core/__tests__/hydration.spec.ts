@@ -2910,7 +2910,13 @@ describe('SSR hydration', () => {
   })
 
   test('SVG as a mount container', () => {
-    const svgContainer = document.createElement('svg')
+    // createElement('svg') yields an HTMLUnknownElement in the XHTML
+    // namespace, so the container has to be created in the SVG namespace for
+    // this test to be about SVG at all.
+    const svgContainer = document.createElementNS(
+      'http://www.w3.org/2000/svg',
+      'svg',
+    )
     svgContainer.innerHTML = '<g></g>'
     const app = createSSRApp({
       render: () => h('g'),
@@ -2922,7 +2928,7 @@ describe('SSR hydration', () => {
           el: Element
         }
       ).el instanceof SVGElement,
-    )
+    ).toBe(true)
   })
 
   test('force hydrate prop with `.prop` modifier', () => {
