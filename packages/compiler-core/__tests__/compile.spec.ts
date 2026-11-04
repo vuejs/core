@@ -299,4 +299,26 @@ describe('compiler: integration tests', () => {
       ),
     ).toMatchObject(getPositionInCode(template, `hello`))
   })
+
+  test('source map of closing lines', () => {
+    const template = `<Comp>\n  <p v-for="i in list" :key="i">{{ i }}</p>\n  <span v-if="ok">x</span>\n</Comp>`
+    const { code, map } = compile(template, {
+      sourceMap: true,
+      filename: `foo.vue`,
+      mode: 'module',
+      prefixIdentifiers: true,
+    })
+    const consumer = new SourceMapConsumer(map as RawSourceMap)
+    for (const [generated, end] of [
+      [`}), 128`, `</p>`],
+      [`(_ctx.ok)`, `</span>`],
+      [`]),`, `</Comp>`],
+      [`_: 1`, `</Comp>`],
+    ]) {
+      const { line, column } = getPositionInCode(template, end)
+      expect(
+        consumer.originalPositionFor(getPositionInCode(code, generated)),
+      ).toMatchObject({ line, column: column + end.length })
+    }
+  })
 })

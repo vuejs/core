@@ -110,6 +110,8 @@ export interface CodegenContext extends Omit<
   pure: boolean
   /** The pieces of the code, when a source map is generated */
   pieces?: CodegenPiece[]
+  /** @internal The end of the innermost node with a source being generated */
+  openEnd?: number
   helper(key: symbol): string
   push(code: string, newlineIndex?: number, node?: CodegenNode): void
   indent(): void
@@ -170,6 +172,14 @@ function createCodegenContext(
           )
           mappedEnd = end.offset + pieceOffset
         } else {
+          // a newline ends the line before it, so it maps nowhere
+          if (
+            mappedEnd === -1 &&
+            newlineIndex !== NewlineType.Start &&
+            context.openEnd !== undefined
+          ) {
+            mappedEnd = context.openEnd + pieceOffset
+          }
           addPiece(
             context.pieces,
             code,
@@ -194,7 +204,8 @@ function createCodegenContext(
     },
   }
 
-  // text without a node maps to the end of the last node on its line
+  // text without a node maps to the end of the last node on its line, or else
+  // of the node it is generated in
   let mappedEnd = -1
   const source = pieceSource || { content: ast.source }
 
@@ -647,6 +658,16 @@ function genNode(node: CodegenNode | symbol | string, context: CodegenContext) {
     context.push(context.helper(node))
     return
   }
+  const pieces = !__BROWSER__ && context.pieces
+  const openEnd = pieces ? context.openEnd : undefined
+  // the loc of a function is that of its first child, not its own
+  if (
+    pieces &&
+    node.loc.source &&
+    node.type !== NodeTypes.JS_FUNCTION_EXPRESSION
+  ) {
+    context.openEnd = node.loc.end.offset
+  }
   switch (node.type) {
     case NodeTypes.ELEMENT:
     case NodeTypes.IF:
@@ -732,6 +753,9 @@ function genNode(node: CodegenNode | symbol | string, context: CodegenContext) {
         return exhaustiveCheck
       }
     /* v8 ignore stop */
+  }
+  if (pieces) {
+    context.openEnd = openEnd
   }
 }
 
@@ -993,6 +1017,13 @@ function genConditionalExpression(
   push(`? `)
   genNode(consequent, context)
   context.indentLevel--
+  // the alternate starts its line, so the comment the compiler adds for a
+  // v-if without v-else maps nowhere
+  if (!__BROWSER__ && context.pieces) {
+    context.openEnd = alternate.loc.source
+      ? alternate.loc.end.offset
+      : undefined
+  }
   needNewline && newline()
   needNewline || push(` `)
   push(`: `)
