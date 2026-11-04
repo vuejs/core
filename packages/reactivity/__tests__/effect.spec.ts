@@ -934,41 +934,37 @@ describe('reactivity/effect', () => {
 
   it('should not mutate the provided options object', () => {
     const obj = reactive({ foo: 1 })
-    let schedulerCalls = 0
-    let onStopCalls = 0
-    const options = {
-      scheduler: () => {
-        schedulerCalls++
-      },
-      onStop: () => {
-        onStopCalls++
-      },
-    }
+    const fn = vi.fn(() => obj.foo)
+    const scheduler = vi.fn()
+    const onStop = vi.fn()
+    const options = { scheduler, onStop }
 
-    const runner1 = effect(() => obj.foo, options)
-    const runner2 = effect(() => obj.foo, options)
+    const runner1 = effect(fn, options)
+    const runner2 = effect(fn, options)
 
-    // the caller's object must be left untouched
-    expect(typeof options.scheduler).toBe('function')
-    expect(typeof options.onStop).toBe('function')
+    expect(options.scheduler).toBe(scheduler)
+    expect(options.onStop).toBe(onStop)
 
     obj.foo++
-    expect(schedulerCalls).toBe(2)
+    expect(scheduler).toHaveBeenCalledTimes(2)
+    expect(fn).toHaveBeenCalledTimes(2)
 
     stop(runner1)
     stop(runner2)
-    expect(onStopCalls).toBe(2)
+    expect(onStop).toHaveBeenCalledTimes(2)
   })
 
   it('should accept frozen options', () => {
     const obj = reactive({ foo: 1 })
     const scheduler = vi.fn()
-    const options = Object.freeze({ scheduler })
+    const onStop = vi.fn()
+    const options = Object.freeze({ scheduler, onStop })
 
     const runner = effect(() => obj.foo, options)
     obj.foo++
     expect(scheduler).toHaveBeenCalledTimes(1)
     stop(runner)
+    expect(onStop).toHaveBeenCalledTimes(1)
   })
 
   it('events: onStop', () => {
@@ -1416,5 +1412,22 @@ describe('reactivity/effect', () => {
     other.value++
     expect(otherSeen).toEqual([0, 1])
     expect(seen).toEqual(['set', 'undefined'])
+  })
+
+  it('should only access debug options in development', () => {
+    const reads: string[] = []
+    const runner = effect(() => {}, {
+      get onTrack() {
+        reads.push('onTrack')
+        return undefined
+      },
+      get onTrigger() {
+        reads.push('onTrigger')
+        return undefined
+      },
+    })
+
+    expect(reads).toEqual(__DEV__ ? ['onTrack', 'onTrigger'] : [])
+    stop(runner)
   })
 })

@@ -182,7 +182,7 @@ export function effect<T = any>(
 
   const e = new ReactiveEffect(fn)
   if (options) {
-    const { onStop, scheduler, onTrack, onTrigger } = options
+    const { onStop, scheduler } = options
     if (onStop) {
       const stop = e.stop.bind(e)
       e.stop = () => {
@@ -197,10 +197,9 @@ export function effect<T = any>(
         }
       }
     }
-    // copy the remaining options without mutating the caller's object
     if (__DEV__) {
-      e.onTrack = onTrack
-      e.onTrigger = onTrigger
+      e.onTrack = options.onTrack
+      e.onTrigger = options.onTrigger
     }
   }
   try {
