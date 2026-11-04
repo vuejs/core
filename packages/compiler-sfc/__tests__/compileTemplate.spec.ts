@@ -6,6 +6,7 @@ import {
 } from '../src/compileTemplate'
 import { type SFCTemplateBlock, parse } from '../src/parse'
 import { compileScript } from '../src'
+import * as CompilerDOM from '@vue/compiler-dom'
 import { getPositionInCode } from './utils'
 
 function compile(opts: Omit<SFCTemplateCompileOptions, 'id'>) {
@@ -70,11 +71,11 @@ test('preprocessed template has no source map', () => {
     sourceMap: true,
   }).descriptor.template as SFCTemplateBlock
 
-  for (const inMap of [template.map, undefined]) {
+  for (const ast of [template.ast, undefined]) {
     const result = compile({
       filename: 'example.vue',
       source: template.content,
-      inMap,
+      ast,
       preprocessLang: template.lang,
     })
     expect(result.code).toMatch(`foobar`)
@@ -176,7 +177,12 @@ test('source map', () => {
   ).toMatchObject(getPositionInCode(template.content, `foobar`))
 })
 
-test('source map: inMap without AST', () => {
+const customCompiler = {
+  parse: CompilerDOM.parse,
+  compile: CompilerDOM.compile,
+}
+
+test('source map: custom compiler with the AST of the descriptor', () => {
   const source = `<script setup>
 const foobar = 1
 </script>
@@ -194,20 +200,74 @@ const foobar = 1
   const { code, map } = compile({
     filename: 'example.vue',
     source: template.content,
-    inMap: template.map,
+    ast: template.ast,
+    compiler: customCompiler,
   })
 
   expect(map!.sources).toEqual([`example.vue`])
-  expect(map!.sourceRoot).toBe(`src`)
   expect(map!.sourcesContent).toEqual([source])
 
   const consumer = new SourceMapConsumer(map as RawSourceMap)
   expect(
     consumer.originalPositionFor(getPositionInCode(code, 'foobar')),
-  ).toMatchObject({ source: `src/example.vue`, line: 6, column: 13 })
+  ).toMatchObject({ source: `example.vue`, line: 6, column: 13 })
 })
 
-test('source map: inMap without AST, on the line of the tag', () => {
+test('source map: inMap without AST is of the source', () => {
+  const template = parse(
+    `<script setup>
+</script>
+<template><p>{{ foobar }}</p></template>`,
+    {
+      filename: 'example.vue',
+      sourceMap: true,
+    },
+  ).descriptor.template!
+
+  const { code, map } = compile({
+    filename: 'example.vue',
+    source: template.content,
+    inMap: template.map,
+  })
+
+  expect(map!.sourcesContent).toEqual([template.content])
+  const consumer = new SourceMapConsumer(map as RawSourceMap)
+  expect(
+    consumer.originalPositionFor(getPositionInCode(code, 'foobar')),
+  ).toMatchObject(getPositionInCode(template.content, 'foobar'))
+})
+
+test('custom compiler errors are positioned in the SFC', () => {
+  for (const [source, line, column] of [
+    [
+      `<script setup>\nconst html = \`\n  <p v-if="a +"></p>\n\`\n</script>\n<template>\n  <p v-if="a +"></p>\n</template>\n`,
+      7,
+      12,
+    ],
+    [
+      `<script setup>\n</script>\n<template><p v-if="a +"></p></template>\n`,
+      3,
+      20,
+    ],
+  ] as const) {
+    const template = parse(source, { filename: 'example.vue' }).descriptor
+      .template!
+
+    const { errors } = compile({
+      filename: 'example.vue',
+      source: template.content,
+      ast: template.ast,
+      compiler: customCompiler,
+    })
+
+    const offset = source.indexOf('a +', source.indexOf('<template>'))
+    expect(errors[0]).toMatchObject({
+      loc: { start: { offset, line, column } },
+    })
+  }
+})
+
+test('source map: custom compiler, on the line of the tag', () => {
   const source = `<script setup>
 const foobar = 1
 </script>
@@ -221,7 +281,8 @@ const foobar = 1
   const { code, map } = compile({
     filename: 'example.vue',
     source: template.content,
-    inMap: template.map,
+    ast: template.ast,
+    compiler: customCompiler,
   })
 
   const consumer = new SourceMapConsumer(map as RawSourceMap)

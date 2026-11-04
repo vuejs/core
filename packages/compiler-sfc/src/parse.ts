@@ -185,6 +185,7 @@ export function parse(
 
           if (!templateBlock.attrs.src) {
             templateBlock.ast = createRoot(node.children, source)
+            templateBlock.ast.loc = templateBlock.loc
           }
 
           // warn against 2.x <template functional>

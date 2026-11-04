@@ -1068,7 +1068,6 @@ export function compileScript(
           filename,
           ast: sfc.template.ast,
           source: sfc.template.content,
-          inMap: sfc.template.map,
           ...options.templateOptions,
           id: scopeId,
           scoped: sfc.styles.some(s => s.scoped),

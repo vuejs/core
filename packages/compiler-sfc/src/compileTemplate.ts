@@ -5,10 +5,10 @@ import type {
   CompilerOptions,
   NodeTransform,
   ParserOptions,
+  Position,
   RawSourceMap,
   RootNode,
 } from '@vue/compiler-core'
-import { type Source, decodeMappings } from 'muggle-string'
 import {
   type AssetURLOptions,
   type AssetURLTagConfig,
@@ -61,6 +61,7 @@ export interface SFCTemplateCompileOptions {
   vapor?: boolean
   ssr?: boolean
   ssrCssVars?: string[]
+  /** @deprecated `ast` gives where `source` is in the SFC */
   inMap?: RawSourceMap
   compiler?: TemplateCompiler
   compilerOptions?: CompilerOptions
@@ -175,7 +176,6 @@ function doCompileTemplate(
     id,
     scoped,
     slotted,
-    inMap,
     source,
     ast: inAST,
     ssr = false,
@@ -223,6 +223,8 @@ function doCompileTemplate(
       : CompilerDOM
   compiler = compiler || defaultCompiler
   const { pieceSource } = compilerOptions
+  // the AST of the descriptor is of the SFC, and its loc is that of `source`
+  const block = inAST && inAST.loc.source === source ? inAST : undefined
 
   if (compiler !== defaultCompiler) {
     // user using custom compiler, this means we cannot reuse the AST from
@@ -237,12 +239,8 @@ function doCompileTemplate(
     onError: e => errors.push(e),
   })
 
-  // inMap should be the map produced by ./parse.ts, which places `source` in
-  // the SFC, so that the pieces of `source` are those of the SFC
-  const inSFC =
-    inMap && !inAST && !preprocessed
-      ? locateInSFC(inMap, source, pieceSource)
-      : undefined
+  const sfc = inAST || block
+  const start = !inAST && block ? block.loc.start : undefined
 
   let { code, ast, preamble, map, pieces, helpers } = compiler.compile(
     inAST || source,
@@ -273,30 +271,26 @@ function doCompileTemplate(
       filename,
       onError: e => errors.push(e),
       onWarn: w => warnings.push(w),
-      pieceSource: inSFC
-        ? inSFC.source
-        : inAST && pieceSource && pieceSource.content === inAST.source
+      pieceSource:
+        sfc && pieceSource && pieceSource.content === sfc.source
           ? pieceSource
-          : undefined,
-      pieceOffset: inSFC && inSFC.offset,
+          : start && { content: sfc!.source },
+      pieceOffset: start && start.offset,
     },
   )
 
   if (preprocessed) {
     // the preprocessor gives no positions of its output in the template
     map = pieces = undefined
-  } else if (inMap && !inAST) {
+  } else if (start) {
     // a compiler that gives pieces takes `pieceSource` and `pieceOffset`, so
     // its map is of the SFC; one that gives none has a map of `source` only
-    if (map && pieces && inSFC) {
-      if (inMap.file != null) map.file = inMap.file
-      if (inMap.sourceRoot != null) map.sourceRoot = inMap.sourceRoot
-    } else {
-      map = pieces = undefined
-    }
-    // adjust errors to reflect the original line numbers
-    if (errors.length) {
-      patchErrors(errors, source, inMap)
+    if (!pieces) map = undefined
+    for (const { loc } of errors) {
+      if (loc) {
+        shiftPosition(loc.start, start)
+        if (loc.end !== loc.start) shiftPosition(loc.end, start)
+      }
     }
   }
 
@@ -325,52 +319,9 @@ function doCompileTemplate(
   }
 }
 
-interface SFCLocation {
-  source: Source
-  offset: number
-}
-
-/** The SFC that `inMap` places `source` in, as `into` if it is that SFC */
-function locateInSFC(
-  inMap: RawSourceMap,
-  source: string,
-  into: Source | null | undefined,
-): SFCLocation | undefined {
-  const sfc = inMap.sourcesContent && inMap.sourcesContent[0]
-  if (sfc == null) return
-  // `source` starts on the line its first segment is shifted to
-  const lines = decodeMappings(/^;*[^,;]*/.exec(inMap.mappings)![0])
-  const first = lines[lines.length - 1][0]
-  let lineStart = 0
-  if (first && first.length !== 1) {
-    for (let line = first[2] - (lines.length - 1); line > 0; line--) {
-      lineStart = sfc.indexOf('\n', lineStart) + 1
-    }
-  }
-  const offset = sfc.indexOf(source, lineStart)
-  if (offset < 0) return
-  return {
-    source: into && into.content === sfc ? into : { content: sfc },
-    offset,
-  }
-}
-
-function patchErrors(
-  errors: CompilerError[],
-  source: string,
-  inMap: RawSourceMap,
-) {
-  const originalSource = inMap.sourcesContent![0]
-  const offset = originalSource.indexOf(source)
-  const lineOffset = originalSource.slice(0, offset).split(/\r?\n/).length - 1
-  errors.forEach(err => {
-    if (err.loc) {
-      err.loc.start.line += lineOffset
-      err.loc.start.offset += offset
-      if (err.loc.end !== err.loc.start) {
-        err.loc.end.line += lineOffset
-        err.loc.end.offset += offset
-      }
-    }
-  })
+/** Moves `position` of `source` to where it is in the SFC, `source` starting at `start` */
+function shiftPosition(position: Position, start: Position) {
+  if (position.line === 1) position.column += start.column - 1
+  position.line += start.line - 1
+  position.offset += start.offset
 }
