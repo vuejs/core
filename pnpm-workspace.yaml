@@ -45,6 +45,7 @@ minimumReleaseAge: 1440
 minimumReleaseAgeExclude:
   # Renovate security update: postcss@8.5.23
   - postcss@8.5.23
+  - muggle-string@1.0.2
 overrides:
   vite@*: 'catalog:'
   vitest@*: 'catalog:'

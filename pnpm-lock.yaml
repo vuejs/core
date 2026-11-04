@@ -532,6 +532,9 @@ importers:
       magic-string:
         specifier: 'catalog:'
         version: 0.30.21
+      muggle-string:
+        specifier: ^1.0.2
+        version: 1.0.2
       postcss:
         specifier: ^8.5.29
         version: 8.5.29
@@ -3342,6 +3345,10 @@ packages:
   ms@2.1.3:
     resolution: {integrity: sha512-6FlzubTLZG3J2a/NVCAleEhjzq5oxgHyaCU9yYXvcLsvoVaHJq/s5xXI6/XXP6tz7R9xAOtHnSO/tXtF3WRTlA==}
 
+  muggle-string@1.0.2:
+    resolution: {integrity: sha512-ZUkzn39oWE7w5KezE0zh2AlW54BjRo0CUo765HoQBd4JCW0tnFUHeF9gPgILnns/5Uu6fAsc/pRuMua1fGhbIg==}
+    engines: {node: '>=12'}
+
   nanoid@3.3.19:
     resolution: {integrity: sha512-Y2tUNy4ouw6tq5oDSKeQYGOyhkUBhNOcGV/02KC+6kd9eDGqdZd++mjMiIDilrBYvjEnCYvVtsuHCuP+okSfug==}
     engines: {node: ^10 || ^12 || ^13.7 || ^14 || >=15.0.1}
@@ -5977,6 +5984,8 @@ snapshots:
   ms@2.0.0: {}
 
   ms@2.1.3: {}
+
+  muggle-string@1.0.2: {}
 
   nanoid@3.3.19: {}
 
