@@ -1501,10 +1501,10 @@ const n = defineModel('n', makeOptions(1))
       const code = assertAwaitDetection(`await await foo`)
       expect(code).toMatch(
         `_withAsyncContext(() => foo)),\n` +
-          `  __temp = await __temp,\n` +
-          `  __restore(),\n` +
-          `  __temp\n` +
-          `))),\n` +
+          `    __temp = await __temp,\n` +
+          `    __restore(),\n` +
+          `    __temp\n` +
+          `  ))),\n` +
           `  await __temp,\n` +
           `  __restore()\n` +
           `)`,

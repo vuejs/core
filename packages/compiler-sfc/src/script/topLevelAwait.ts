@@ -42,6 +42,7 @@ export function processAwait(
   // higher than the rank of every await in it, so that its code after it sits
   // outside theirs where they end together, as in `await await foo`
   rank: number,
+  enclosingAwaits: number,
 ): void {
   const argumentStart =
     node.argument.extra && node.argument.extra.parenthesized
@@ -55,11 +56,13 @@ export function processAwait(
   )
 
   const containsNestedAwait = /\bawait\b/.test(argumentStr)
+  const outer = `\n${`  `.repeat(enclosingAwaits)}`
+  const inner = `${outer}  `
 
   ctx.replace(
     node.start! + startOffset,
     argumentStart + startOffset,
-    `${needSemi ? `;` : ``}(\n  ([__temp,__restore] = ${ctx.helper(
+    `${needSemi ? `;` : ``}(${inner}([__temp,__restore] = ${ctx.helper(
       `withAsyncContext`,
     )}(${containsNestedAwait ? `async ` : ``}() => `,
   )
@@ -67,8 +70,8 @@ export function processAwait(
     .writer(rank)
     .insertAfter(
       node.end! + startOffset,
-      `)),\n  ${isStatement ? `` : `__temp = `}await __temp,\n  __restore()${
-        isStatement ? `` : `,\n  __temp`
-      }\n)`,
+      `)),${inner}${isStatement ? `` : `__temp = `}await __temp,${inner}__restore()${
+        isStatement ? `` : `,${inner}__temp`
+      }${outer})`,
     )
 }

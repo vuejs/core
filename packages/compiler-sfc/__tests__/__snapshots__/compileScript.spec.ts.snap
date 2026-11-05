@@ -552,11 +552,11 @@ export default {
 let __temp, __restore
 ;(
   ([__temp,__restore] = _withAsyncContext(async () => ((
-  ([__temp,__restore] = _withAsyncContext(() => foo)),
-  __temp = await __temp,
-  __restore(),
-  __temp
-)))),
+    ([__temp,__restore] = _withAsyncContext(() => foo)),
+    __temp = await __temp,
+    __restore(),
+    __temp
+  )))),
   await __temp,
   __restore()
 )
@@ -576,11 +576,11 @@ export default {
 let __temp, __restore
 ;(
   ([__temp,__restore] = _withAsyncContext(async () => (((
-  ([__temp,__restore] = _withAsyncContext(() => foo)),
-  __temp = await __temp,
-  __restore(),
-  __temp
-))))),
+    ([__temp,__restore] = _withAsyncContext(() => foo)),
+    __temp = await __temp,
+    __restore(),
+    __temp
+  ))))),
   await __temp,
   __restore()
 )
@@ -600,16 +600,16 @@ export default {
 let __temp, __restore
 ;(
   ([__temp,__restore] = _withAsyncContext(async () => ((
-  ([__temp,__restore] = _withAsyncContext(async () => ((
-  ([__temp,__restore] = _withAsyncContext(() => foo)),
-  __temp = await __temp,
-  __restore(),
-  __temp
-)))),
-  __temp = await __temp,
-  __restore(),
-  __temp
-)))),
+    ([__temp,__restore] = _withAsyncContext(async () => ((
+      ([__temp,__restore] = _withAsyncContext(() => foo)),
+      __temp = await __temp,
+      __restore(),
+      __temp
+    )))),
+    __temp = await __temp,
+    __restore(),
+    __temp
+  )))),
   await __temp,
   __restore()
 )
@@ -629,11 +629,11 @@ export default {
 let __temp, __restore
 ;(
   ([__temp,__restore] = _withAsyncContext(async () => (
-  ([__temp,__restore] = _withAsyncContext(() => foo)),
-  __temp = await __temp,
-  __restore(),
-  __temp
-))),
+    ([__temp,__restore] = _withAsyncContext(() => foo)),
+    __temp = await __temp,
+    __restore(),
+    __temp
+  ))),
   await __temp,
   __restore()
 )

@@ -841,7 +841,7 @@ export function compileScript(
             scope.pop()
           } else if (node.type === 'AwaitExpression') {
             const { needsSemi, isStatement, rank } = awaits.pop()!
-            processAwait(ctx, node, needsSemi, isStatement, rank)
+            processAwait(ctx, node, needsSemi, isStatement, rank, awaits.length)
             const outer = awaits[awaits.length - 1]
             if (outer && outer.rank <= rank) {
               outer.rank = rank + 1
