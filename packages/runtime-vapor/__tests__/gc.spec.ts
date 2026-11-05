@@ -4,10 +4,12 @@ import {
   createApp,
   currentInstance,
   nextTick,
+  ref,
   shallowRef,
 } from '@vue/runtime-dom'
 import { createVaporApp, vaporInteropPlugin } from '../src'
 import { compile } from './_utils'
+import { setupHydrationTest, testHydration } from './hydration/_helpers'
 
 describe.skipIf(!global.gc)('component props gc', () => {
   const gc = () => {
@@ -129,6 +131,126 @@ describe.skipIf(!global.gc)('component props gc', () => {
       expect(child!.deref()).toBeUndefined()
     } finally {
       app.unmount()
+    }
+  })
+})
+
+describe.skipIf(!global.gc)('hydration gc', () => {
+  setupHydrationTest()
+
+  const gc = () => {
+    return new Promise<void>(resolve => {
+      setTimeout(() => {
+        global.gc!()
+        resolve()
+      })
+    })
+  }
+
+  // WeakRef the node without querySelector: a selector match would be
+  // retained by jsdom's selector cache.
+  function refOf(root: ParentNode, id: string) {
+    const walk = (n: ParentNode): Element | undefined => {
+      for (let el = n.firstElementChild; el; el = el.nextElementSibling) {
+        if (el.id === id) return el
+        const found = walk(el)
+        if (found) return found
+      }
+    }
+    // @ts-expect-error ES2021 API
+    return new WeakRef(walk(root)!) as { deref(): Element | undefined }
+  }
+
+  function refOfFirstChild(parent: Node) {
+    // @ts-expect-error ES2021 API
+    return new WeakRef(parent.firstChild!) as { deref(): Node | undefined }
+  }
+
+  test('releases a client-rendered v-if root that left', async () => {
+    const data = ref({ show: true })
+    const App = compile(
+      `<template><div><div v-if="data.show" id="a">a</div></div></template>`,
+      data,
+    )
+    const container = document.createElement('div')
+    document.body.appendChild(container)
+    const app = createVaporApp(App)
+    app.mount(container)
+    const removed = refOf(container, 'a')
+    try {
+      data.value.show = false
+      await nextTick()
+      await gc()
+      await gc()
+      expect(removed.deref()).toBeUndefined()
+    } finally {
+      app.unmount()
+      container.remove()
+    }
+  })
+
+  test('releases a hydrated v-if root that left', async () => {
+    const data = ref({ show: true })
+    const { container, app } = await testHydration(
+      `<template><div><div v-if="data.show" id="a">a</div></div></template>`,
+      {},
+      data,
+    )
+    const removed = refOf(container, 'a')
+    try {
+      data.value.show = false
+      await nextTick()
+      await gc()
+      await gc()
+      expect(removed.deref()).toBeUndefined()
+    } finally {
+      app.unmount()
+      container.remove()
+    }
+  })
+
+  test('releases the open marker of a hydrated v-for that emptied', async () => {
+    const data = ref({ list: [1, 2] })
+    const { container, app } = await testHydration(
+      `<template><div><span v-for="i in data.list">{{ i }}</span></div></template>`,
+      {},
+      data,
+    )
+    const removed = refOfFirstChild(container.firstChild!)
+    try {
+      data.value.list = []
+      await nextTick()
+      expect(container.innerHTML).toBe('<div><!--]--></div>')
+      await gc()
+      await gc()
+      expect(removed.deref()).toBeUndefined()
+    } finally {
+      app.unmount()
+      container.remove()
+    }
+  })
+
+  test('releases a hydrated v-if root under <Transition appear> that left', async () => {
+    const data = ref({ show: true })
+    const { container, app } = await testHydration(
+      `<template><div>
+        <Transition appear :css="false">
+          <div v-if="data.show" id="a">a</div>
+        </Transition>
+      </div></template>`,
+      {},
+      data,
+    )
+    const removed = refOf(container, 'a')
+    try {
+      data.value.show = false
+      await nextTick()
+      await gc()
+      await gc()
+      expect(removed.deref()).toBeUndefined()
+    } finally {
+      app.unmount()
+      container.remove()
     }
   })
 })
