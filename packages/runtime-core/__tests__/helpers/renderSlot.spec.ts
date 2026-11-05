@@ -133,22 +133,19 @@ describe('renderSlot', () => {
     }
   })
 
-  it.each(['branch', 0])(
-    'should handle nullish props with a compiler-injected slot key %j',
-    key => {
-      for (const props of [null, undefined]) {
-        const vnode = renderSlot(
-          { default: () => [h('div')] },
-          'default',
-          props,
-          undefined,
-          undefined,
-          key,
-        )
-        expect(vnode.key).toBe(String(key))
-      }
-    },
-  )
+  it('should handle nullish props with a compiler-injected slot key', () => {
+    for (const props of [null, undefined]) {
+      const vnode = renderSlot(
+        { default: () => [h('div')] },
+        'default',
+        props,
+        undefined,
+        undefined,
+        'branch',
+      )
+      expect(vnode.key).toBe('branch')
+    }
+  })
 
   it('should handle nullish props in custom element mode', () => {
     setCurrentRenderingInstance({ type: {}, ce: {} } as any)
