@@ -9,7 +9,7 @@ catalog:
   'estree-walker': ^2.0.2
   'vite': npm:@voidzero-dev/vite-plus-core@1.1.0
   '@vitejs/plugin-vue': ^6.0.10
-  'muggle-string': ^1.0.3
+  'muggle-string': ^1.0.2
   'source-map-js': ^1.2.2
   vitest: 5.0.3
   vite-plus: 1.1.0
@@ -45,7 +45,6 @@ minimumReleaseAge: 1440
 minimumReleaseAgeExclude:
   # Renovate security update: postcss@8.5.23
   - postcss@8.5.23
-  - muggle-string@1.0.3
 overrides:
   vite@*: 'catalog:'
   vitest@*: 'catalog:'
