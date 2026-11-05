@@ -57,5 +57,12 @@ describe('decodeInterpolationEntities w/ decodeHtmlBrowser', () => {
     )
     expect(decode('a &amp;&amp; b')).toBe('a && b')
     expect(decode('&lt;&#60;&#x3C;')).toBe('<<<')
+    expect(decode('(() => { let curren = "x"; return true&&curren; })()')).toBe(
+      '(() => { let curren = "x"; return true&&curren; })()',
+    )
+    expect(decode('true&&currentDomain;')).toBe('true&&currentDomain;')
+    // must match decodeHTMLStrict: only complete entities are decoded
+    expect(decode('a &notit; b')).toBe('a &notit; b')
+    expect(decode('&semi;&#59;')).toBe(';;')
   })
 })

@@ -922,18 +922,27 @@ function getLoc(start: number, end?: number): SourceLocation {
   }
 }
 
-const terminatedEntityRE = /&(?:#x[\da-f]+|#\d+|[a-z][a-z\d]*);/gi
+// an optional leading `&` is captured so the second `&` of `&&` never starts
+// an entity, e.g. `true&&curren;` must stay valid JS
+const terminatedEntityRE = /(&)?&(?:#x[\da-f]+|#\d+|[a-z][a-z\d]*);/gi
 
 /**
- * Only decode entities terminated by `;` inside interpolations, otherwise
- * valid JS like `a&&currentDomain` would turn `&curren` into `¤`.
+ * Only decode complete entities terminated by `;` inside interpolations,
+ * otherwise valid JS like `a&&currentDomain` would turn `&curren` into `¤`.
  * @internal
  */
 export function decodeInterpolationEntities(
   exp: string,
   decode: (raw: string, asAttr: boolean) => string,
 ): string {
-  return exp.replace(terminatedEntityRE, m => decode(m, false))
+  return exp.replace(terminatedEntityRE, (m, amp) => {
+    if (amp) return m
+    const decoded = decode(m, false)
+    // the browser decoder (innerHTML) also decodes legacy prefixes, e.g.
+    // `&notit;` -> `¬it;`. Only accept the result if the `;` was consumed as
+    // part of the entity, which keeps it in line with decodeHTMLStrict.
+    return decoded === decode(m.slice(0, -1), false) + ';' ? m : decoded
+  })
 }
 
 export function cloneLoc(loc: SourceLocation): SourceLocation {
