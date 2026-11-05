@@ -187,9 +187,12 @@ export const VaporTransition: FunctionalVaporComponent<TransitionProps> =
     ensureTransitionHooksRegistered()
 
     const instance = currentInstance! as VaporComponentInstance
-    const performAppear = isHydrating
+    // Runs on the first render only, then is dropped: it holds the element
+    // the server rendered, and the effects below hold this scope.
+    let performAppear = isHydrating
       ? hydrateTransitionImpl(instance.suspense)
       : undefined
+    if (!props.appear) performAppear = undefined
     const state: VaporTransitionState = useTransitionState()
     const { mode } = props
     __DEV__ && checkTransitionMode(mode)
@@ -206,7 +209,6 @@ export const VaporTransition: FunctionalVaporComponent<TransitionProps> =
         applyTransitionHooksImpl(state.root!, hooks, undefined, true)
     }
 
-    const shouldPerformAppear = !!props.appear && !!performAppear
     // Dynamic slot sources can add/remove the default slot after setup, so
     // Transition needs a DynamicFragment to drive enter/leave on updates.
     if (instance.rawSlots.$) {
@@ -240,8 +242,9 @@ export const VaporTransition: FunctionalVaporComponent<TransitionProps> =
             true,
           )
         }
-        if (!isMounted && shouldPerformAppear) {
+        if (performAppear) {
           performAppear(frag, frag.$transition!)
+          performAppear = undefined
         }
         isMounted = true
       })
@@ -279,7 +282,10 @@ export const VaporTransition: FunctionalVaporComponent<TransitionProps> =
       )
       if (!isMounted) {
         isMounted = true
-        if (shouldPerformAppear) performAppear(children, appliedHooks)
+        if (performAppear) {
+          performAppear(children, appliedHooks)
+          performAppear = undefined
+        }
       }
     })
     return children

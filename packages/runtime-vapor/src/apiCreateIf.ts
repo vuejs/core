@@ -179,6 +179,9 @@ export function createIf(
     _insertionParent,
     _insertionAnchor,
   )
+  // the effect assigns the cursor, so it lives in the context the effect
+  // keeps: drop it, or its start node outlives the branch it hydrated
+  hydrationCursor = null
 
   return frag
 }
