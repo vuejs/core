@@ -1067,10 +1067,8 @@ export function compileScript(
     args += `, { ${destructureElements.join(', ')} }`
   }
 
-  let templatePieces: Piece<{ source: Source }>[] | undefined
-  let templateCode: string | undefined
   // 9. generate return statement
-  let returned
+  let returned: Code
   // ensure props bindings register before compile template in inline mode
   const propsDecl = genRuntimeProps(ctx)
   if (!inlineMode || (!sfc.template && ctx.hasDefaultExportRender)) {
@@ -1141,8 +1139,6 @@ export function compileScript(
           },
         },
       )
-      templatePieces = pieces
-      templateCode = code
       if (tips.length) {
         tips.forEach(warnOnce)
       }
@@ -1181,10 +1177,19 @@ export function compileScript(
       // An async setup resumes in a microtask with no ambient insertion or
       // hydration state, so it must not render there. Return the template as
       // a render closure; the runtime invokes it once setup has settled.
-      returned = vapor && !ssr && hasAwait ? `return () => {${code}}` : code
+      // the pieces of the SFC map the render function where it is inlined
+      const render: Code = pieces
+        ? pieces.map(p =>
+            typeof p === 'string' || p.source === ctx.s.source
+              ? p
+              : rewritePieceText(p),
+          )
+        : code
+      returned =
+        vapor && !ssr && hasAwait ? [`return () => {`, render, `}`] : render
       if (cssModuleBindings.length) {
         // Keep implicit template bindings out of the user's script scope.
-        returned = `{\n${cssModuleBindings.join('\n')}\n${returned}\n}`
+        returned = [`{\n${cssModuleBindings.join('\n')}\n`, returned, `\n}`]
       }
     } else {
       returned = `() => {}`
@@ -1196,15 +1201,14 @@ export function compileScript(
     // componentPublicInstance proxy to allow properties that start with $ or _
     ctx.s
       .writer(SetupRank.Return)
-      .insertBefore(
-        endOffset,
-        `\nconst __returned__ = ${returned}\n` +
-          `Object.defineProperty(__returned__, '__isScriptSetup', { enumerable: false, value: true })\n` +
+      .insertBefore(endOffset, [
+        `\nconst __returned__ = `,
+        returned,
+        `\nObject.defineProperty(__returned__, '__isScriptSetup', { enumerable: false, value: true })\n` +
           `return __returned__`,
-      )
+      ])
   } else {
-    ctx.s.writer(SetupRank.Return).insertBefore(
-      endOffset,
+    ctx.s.writer(SetupRank.Return).insertBefore(endOffset, [
       // vapor mode generates its own return when inlined
       // (except with a render in normal <script> and no template, where
       // the bindings object is returned instead, see #4980)
@@ -1215,8 +1219,9 @@ export function compileScript(
         !(!sfc.template && ctx.hasDefaultExportRender)
           ? ``
           : `return `
-      }${returned}`,
-    )
+      }`,
+      returned,
+    ])
   }
 
   // 10. finalize default export
@@ -1338,15 +1343,7 @@ export function compileScript(
       content += rewritePieceText(piece)
     })
   } else {
-    // in inline mode, the render function maps by its pieces
-    const pieces = templatePieces
-    const script = renderWithSourceMap(
-      pieces
-        ? sink =>
-            render(inlinePieces(sink, ctx.s.source, templateCode!, pieces))
-        : render,
-      () => filename,
-    )
+    const script = renderWithSourceMap(render, () => filename)
     content = script.text
     map = script.map as unknown as RawSourceMap
   }
@@ -1574,32 +1571,5 @@ function canNeverBeRef(node: Node, userReactiveImport?: string): boolean {
         return true
       }
       return false
-  }
-}
-
-type InlinePiece = Piece<{ source: Source; name?: string }>
-
-/**
- * `sink` with the inserted text that holds the render function `code`
- * passed as `pieces`, those of `source` with it and the others as text
- */
-function inlinePieces(
-  sink: (piece: InlinePiece) => void,
-  source: Source,
-  code: string,
-  pieces: Piece<{ source: Source }>[],
-): (piece: InlinePiece) => void {
-  let inlined = false
-  return piece => {
-    const at = inlined || typeof piece !== 'string' ? -1 : piece.indexOf(code)
-    if (at < 0 || typeof piece !== 'string') return sink(piece)
-    inlined = true
-    sink(piece.slice(0, at))
-    for (const p of pieces) {
-      if (typeof p === 'string') sink(p)
-      else if (p.source === source) sink(p)
-      else sink(rewritePieceText(p))
-    }
-    sink(piece.slice(at + code.length))
   }
 }
