@@ -157,6 +157,7 @@ import {
   isVaporTeleport,
 } from './teleport'
 import type { KeepAliveInstance } from './components/KeepAlive'
+import type { TeleportFragment } from './components/Teleport'
 import {
   type VaporKeepAliveContext,
   getKeepAliveContext,
@@ -506,15 +507,26 @@ export function createComponent(
         _insertionAnchor,
       )
       if (key !== undefined) frag.$key = key
+      if (__DEV__ || __FEATURE_PROD_DEVTOOLS__) {
+        trackDevtoolsTeleport(frag)
+      }
       if (_insertionParent) {
         // Teleports mounted via insertion state are not part of the returned
         // block tree, so scope disposal must tear down their target-side state.
-        onScopeDispose(() => frag.disposeTarget(), true)
+        onScopeDispose(() => {
+          if (__DEV__ || __FEATURE_PROD_DEVTOOLS__)
+            untrackDevtoolsTeleport(frag)
+          frag.disposeTarget()
+        }, true)
         registerNestedVDOMCleanup(frag)
       } else {
         // Give normal block removal (and Transition leave preparation) the
         // current stack before falling back to target-side cleanup.
-        onScopeDispose(() => frag.scheduleTargetDispose(), true)
+        onScopeDispose(() => {
+          if (__DEV__ || __FEATURE_PROD_DEVTOOLS__)
+            untrackDevtoolsTeleport(frag)
+          frag.scheduleTargetDispose()
+        }, true)
       }
       if (!isHydrating) {
         if (_insertionParent) {
@@ -1015,6 +1027,11 @@ export class VaporComponentInstance<
   appContext: GenericAppContext
 
   block: TypeBlock
+  /**
+   * @internal
+   * Dev / devtools only: teleports rendered by this instance.
+   */
+  teleports?: Set<TeleportFragment>
   // VDOM can identify adopted SSR DOM with a placeholder VNode. Vapor adopts
   // raw nodes, so storing them in `block` would make logical consumers treat
   // them as rendered output. Keep temporary hydration ownership separate.
@@ -1691,6 +1708,18 @@ export function mountComponent(
   if (__DEV__ || __FEATURE_PROD_DEVTOOLS__) {
     devtoolsComponentAdded(instance)
   }
+}
+
+function trackDevtoolsTeleport(frag: TeleportFragment): void {
+  const owner = frag.renderInstance
+  if (!owner || !owner.vapor) return
+  const teleports = ((owner as VaporComponentInstance).teleports ||= new Set())
+  teleports.add(frag)
+}
+
+function untrackDevtoolsTeleport(frag: TeleportFragment): void {
+  const owner = frag.renderInstance as VaporComponentInstance | null
+  if (owner && owner.teleports) owner.teleports.delete(frag)
 }
 
 function registerUnmount(instance: VaporComponentInstance): void {
