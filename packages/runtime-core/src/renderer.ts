@@ -1519,7 +1519,7 @@ function baseCreateRenderer(
             // and continue the rest of operations once the deps are resolved
             unresolvedAsyncRoot.asyncDep!.then(() => {
               // the instance may be unmounted in the meantime. Its isUnmounted
-              // flag is set by an effect a discarded pending branch drops
+              // flag is set by a post job that may not have run yet
               const retry: SchedulerJob = () => {
                 if (instance.job.flags! & SchedulerJobFlags.DISPOSED) return
                 // wait out a newer pending cycle of the boundary
@@ -1530,7 +1530,9 @@ function baseCreateRenderer(
                 }
               }
               // the retry must survive a discarded pending cycle
-              retry.flags = SchedulerJobFlags.REQUEUE_ON_SUSPENSE_DISCARD
+              retry.flags =
+                SchedulerJobFlags.REQUEUE_ON_SUSPENSE_DISCARD |
+                SchedulerJobFlags.FLUSH_ON_SUSPENSE_RESOLVE
               queuePostRenderEffect(retry, parentSuspense)
             })
             return
@@ -2437,9 +2439,13 @@ function baseCreateRenderer(
         parentSuspense,
       )
     }
-    queuePostRenderEffect(() => {
+    // the flag must outlive a discarded pending branch, which drops the
+    // unmount hooks
+    const markUnmounted: SchedulerJob = () => {
       instance.isUnmounted = true
-    }, parentSuspense)
+    }
+    markUnmounted.flags = SchedulerJobFlags.REQUEUE_ON_SUSPENSE_DISCARD
+    queuePostRenderEffect(markUnmounted, parentSuspense)
 
     if (__DEV__ || __FEATURE_PROD_DEVTOOLS__) {
       devtoolsComponentRemoved(instance)

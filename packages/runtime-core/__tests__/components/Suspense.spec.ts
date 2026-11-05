@@ -581,7 +581,7 @@ describe('Suspense', () => {
 
   test('unmount suspense before resolve: no unmounted hook for a component still in setup', async () => {
     const log: string[] = []
-    let resolveSetup!: (v?: unknown) => void
+    let resolveSetup!: () => void
 
     const Slow = {
       async setup() {
@@ -589,9 +589,7 @@ describe('Suspense', () => {
         onMounted(() => log.push('m'))
         onBeforeUnmount(() => log.push('bum'))
         onUnmounted(() => log.push('um'))
-        await new Promise(r => {
-          resolveSetup = r
-        })
+        await new Promise<void>(r => (resolveSetup = r))
         return () => h('div', 'slow')
       },
     }
@@ -618,22 +616,12 @@ describe('Suspense', () => {
 
     resolveSetup()
     await new Promise(r => setTimeout(r))
-    await nextTick()
     expect(log).toEqual(['bum'])
   })
 
   test('unmount suspense before resolve: no unmounted hook for a built but unrevealed component', async () => {
     const log: string[] = []
-    let resolveSetup!: (v?: unknown) => void
-
-    const Slow = {
-      async setup() {
-        await new Promise(r => {
-          resolveSetup = r
-        })
-        return () => h('div', 'slow')
-      },
-    }
+    const Slow = defineAsyncComponent({ render: () => h('div', 'slow') })
     const Sync = {
       setup() {
         onBeforeMount(() => log.push('bm'))
@@ -665,10 +653,184 @@ describe('Suspense', () => {
     expect(serializeInner(root)).toBe(`<!---->`)
     expect(log).toEqual(['bm', 'bum'])
 
-    resolveSetup()
-    await new Promise(r => setTimeout(r))
+    await Promise.all(deps)
     await nextTick()
     expect(log).toEqual(['bm', 'bum'])
+  })
+
+  // coverage guard: the instance is still marked unmounted once its unmount
+  // hooks are discarded
+  test('unmount suspense before resolve: emit from a component still in setup is dropped', async () => {
+    const onLoaded = vi.fn()
+    let resolveSetup!: () => void
+
+    const Slow = {
+      emits: ['loaded'],
+      async setup(_: any, { emit }: any) {
+        await new Promise<void>(r => (resolveSetup = r))
+        emit('loaded')
+        return () => h('div', 'slow')
+      },
+    }
+
+    const toggle = ref(true)
+    const root = nodeOps.createElement('div')
+    render(
+      h(() =>
+        toggle.value
+          ? h(Suspense, null, {
+              default: h(Slow, { onLoaded }),
+              fallback: h('div', 'fallback'),
+            })
+          : null,
+      ),
+      root,
+    )
+    expect(serializeInner(root)).toBe(`<div>fallback</div>`)
+
+    toggle.value = false
+    await nextTick()
+    expect(serializeInner(root)).toBe(`<!---->`)
+
+    resolveSetup()
+    await new Promise(r => setTimeout(r))
+    expect(onLoaded).not.toHaveBeenCalled()
+  })
+
+  test('discard before resolve: emit from a component still in setup is dropped', async () => {
+    const onLoaded = vi.fn()
+    let resolveSetup!: () => void
+
+    const Slow = {
+      emits: ['loaded'],
+      async setup(_: any, { emit }: any) {
+        await new Promise<void>(r => (resolveSetup = r))
+        emit('loaded')
+        return () => h('div', 'slow')
+      },
+    }
+
+    const toggle = ref(true)
+    const root = nodeOps.createElement('div')
+    render(
+      h(() =>
+        h(Suspense, null, {
+          default: toggle.value ? h(Slow, { onLoaded }) : h('div', 'other'),
+          fallback: h('div', 'fallback'),
+        }),
+      ),
+      root,
+    )
+    expect(serializeInner(root)).toBe(`<div>fallback</div>`)
+
+    toggle.value = false
+    await nextTick()
+    expect(serializeInner(root)).toBe(`<div>other</div>`)
+
+    resolveSetup()
+    await new Promise(r => setTimeout(r))
+    expect(onLoaded).not.toHaveBeenCalled()
+  })
+
+  // coverage guard: the shown fallback was mounted, so it is unmounted as usual
+  test('unmount suspense before resolve: unmounted hook of the shown component fallback', async () => {
+    const unmounted = vi.fn()
+    const Slow = defineAsyncComponent({ render: () => h('div', 'slow') })
+    const Fallback = {
+      setup() {
+        onUnmounted(unmounted)
+        return () => h('div', 'fallback')
+      },
+    }
+
+    const toggle = ref(true)
+    const root = nodeOps.createElement('div')
+    render(
+      h(() =>
+        toggle.value
+          ? h(Suspense, null, {
+              default: h(Slow),
+              fallback: h(Fallback),
+            })
+          : null,
+      ),
+      root,
+    )
+    expect(serializeInner(root)).toBe(`<div>fallback</div>`)
+
+    toggle.value = false
+    await nextTick()
+    expect(serializeInner(root)).toBe(`<!---->`)
+    expect(unmounted).toHaveBeenCalledTimes(1)
+
+    await Promise.all(deps)
+    await nextTick()
+    expect(unmounted).toHaveBeenCalledTimes(1)
+  })
+
+  // coverage guard: a deferred unmounted hook still runs before the instance
+  // is marked unmounted when the boundary resolves under a pending ancestor
+  test('deferred unmounted hook under a pending ancestor can still emit', async () => {
+    const cleanup = vi.fn()
+    let resolveInner!: () => void
+    let resolveOuter!: () => void
+
+    const Child = {
+      emits: ['cleanup'],
+      setup(_: any, { emit }: any) {
+        onUnmounted(() => emit('cleanup'))
+        return () => h('div', 'child')
+      },
+    }
+    const InnerSlow = {
+      async setup() {
+        await new Promise<void>(r => (resolveInner = r))
+        return () => h('div', 'inner')
+      },
+    }
+    const OuterSlow = {
+      async setup() {
+        await new Promise<void>(r => (resolveOuter = r))
+        return () => h('div', 'outer')
+      },
+    }
+    const show = ref(true)
+    const Inner = {
+      render: () =>
+        h(Suspense, null, {
+          default: h('div', [
+            show.value ? h(Child, { onCleanup: cleanup }) : null,
+            h(InnerSlow),
+          ]),
+        }),
+    }
+
+    const root = nodeOps.createElement('div')
+    render(
+      h(() =>
+        h(Suspense, null, {
+          default: h('div', [h(Inner), h(OuterSlow)]),
+          fallback: h('div', 'loading'),
+        }),
+      ),
+      root,
+    )
+    expect(serializeInner(root)).toBe(`<div>loading</div>`)
+
+    // Child is removed inside the pending inner branch
+    show.value = false
+    await nextTick()
+    resolveInner()
+    await new Promise(r => setTimeout(r))
+    expect(serializeInner(root)).toBe(`<div>loading</div>`)
+    expect(cleanup).not.toHaveBeenCalled()
+
+    resolveOuter()
+    await new Promise(r => setTimeout(r))
+    expect(serializeInner(root)).toBe(
+      `<div><div><!----><div>inner</div></div><div>outer</div></div>`,
+    )
+    expect(cleanup).toHaveBeenCalledTimes(1)
   })
 
   // vuetifyjs/vuetify#15207
