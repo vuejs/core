@@ -227,6 +227,7 @@ import {
   markLeavingBlock,
   queuePendingLeave,
   relayTransitionHooks,
+  resolveTransitionHooks,
 } from './components/Transition'
 import { isTransitionEnabled, isVaporTransitionHooks } from './transition'
 import {
@@ -1829,7 +1830,10 @@ function mountVNode(
     // Like a vdom parent re-rendering it, the fresh vnode gets what vapor set
     // on the mounted one after creation; every such writer belongs here.
     if (isTransitionEnabled && frag.$transition) {
-      setVNodeTransitionHooks(next, frag.$transition)
+      setVNodeTransitionHooks(
+        next,
+        contentTransitionHooks(frag, previous, next),
+      )
     }
     if (previous.vaporScopeIds) {
       setVNodeVaporScopeIds(next, previous.vaporScopeIds)
@@ -1881,6 +1885,36 @@ function mountVNode(
 
   frag.remove = unmount
   return frag
+}
+
+// The hooks of a vnode fragment are keyed by its content's type (a raw
+// fragment's single child, as vdom flattens it): content of another type takes
+// that identity and resolves its own, as vdom's Transition does per render.
+function contentTransitionHooks(
+  frag: VaporFragment,
+  previous: VNode,
+  next: VNode,
+): TransitionHooks {
+  const hooks = frag.$transition!
+  // only a fragment's content can change type under the vnode type the patch
+  // keeps; relayed vdom hooks resolve nothing
+  if (!isVaporTransitionHooks(hooks) || previous.type !== Fragment) return hooks
+  const type = getInteropTransitionType(previous)
+  const nextType = getInteropTransitionType(next)
+  if (type !== nextType) {
+    // the identity resolved from the content, not from a component root
+    if (frag.$ttype === type) frag.$ttype = nextType
+    frag.vnode = next
+    const fresh = resolveTransitionHooks(
+      frag,
+      hooks.props,
+      hooks.state,
+      hooks.instance,
+    )
+    fresh.delayedLeave = hooks.delayedLeave
+    return (frag.$transition = fresh)
+  }
+  return hooks
 }
 
 /**
