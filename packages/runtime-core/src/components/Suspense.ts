@@ -379,14 +379,7 @@ function patchSuspense(
       }
       // reset suspense state
       suspense.deps = 0
-      // discard effects from the pending branch, except retained recovery jobs
-      for (let i = 0; i < suspense.effects.length; i++) {
-        const effect = suspense.effects[i] as SchedulerJob
-        if (effect.flags! & SchedulerJobFlags.REQUEUE_ON_SUSPENSE_DISCARD) {
-          queuePostFlushCb(effect)
-        }
-      }
-      suspense.effects.length = 0
+      discardEffects(suspense)
       // discard previous container
       suspense.hiddenContainer = createElement('div')
 
@@ -711,7 +704,7 @@ function createSuspenseBoundary(
       let kept = 0
       for (let i = 0; i < effects.length; i++) {
         const effect = effects[i] as SchedulerJob
-        if (effect.flags! & SchedulerJobFlags.REQUEUE_ON_SUSPENSE_DISCARD) {
+        if (effect.flags! & SchedulerJobFlags.FLUSH_ON_SUSPENSE_RESOLVE) {
           queuePostFlushCb(effect)
         } else {
           effects[kept++] = effect
@@ -930,7 +923,9 @@ function createSuspenseBoundary(
                 render(asyncSetupResult)
               }
             }
-            job.flags = SchedulerJobFlags.REQUEUE_ON_SUSPENSE_DISCARD
+            job.flags =
+              SchedulerJobFlags.REQUEUE_ON_SUSPENSE_DISCARD |
+              SchedulerJobFlags.FLUSH_ON_SUSPENSE_RESOLVE
             queueEffectWithSuspense(job, suspense)
             return
           }
@@ -971,7 +966,7 @@ function createSuspenseBoundary(
         // the branch was never revealed: its unmount post jobs are discarded
         // with the buffered mount ones, as on a discard before resolve
         unmount(suspense.pendingBranch, parentComponent, suspense, doRemove)
-        suspense.effects.length = 0
+        discardEffects(suspense)
       }
     },
   }
@@ -1076,6 +1071,17 @@ function normalizeSuspenseSlot(s: any) {
     s.dynamicChildren = block.filter(c => c !== s)
   }
   return s
+}
+
+function discardEffects(suspense: SuspenseBoundary) {
+  const { effects } = suspense
+  for (let i = 0; i < effects.length; i++) {
+    const effect = effects[i] as SchedulerJob
+    if (effect.flags! & SchedulerJobFlags.REQUEUE_ON_SUSPENSE_DISCARD) {
+      queuePostFlushCb(effect)
+    }
+  }
+  effects.length = 0
 }
 
 export function queueEffectWithSuspense(
