@@ -71,7 +71,7 @@
     "@rollup/plugin-replace": "5.0.4",
     "@swc/core": "^1.16.21",
     "@types/hash-sum": "^1.0.2",
-    "@types/node": "^24.19.2",
+    "@types/node": "^26.6.6",
     "@types/serve-handler": "^6.1.4",
     "@vitest/browser-playwright": "4.1.11",
     "@vitest/coverage-v8": "^4.1.11",
