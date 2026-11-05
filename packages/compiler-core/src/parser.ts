@@ -123,13 +123,10 @@ const tokenizer = new Tokenizer(stack, {
     let exp = getSlice(innerStart, innerEnd)
     // decode entities for backwards compat
     if (exp.includes('&')) {
-      if (__BROWSER__) {
-        exp = currentOptions.decodeEntities!(exp, false)
-      } else {
-        // only decode entities terminated by `;`, otherwise valid JS like
-        // `a&&currentDomain` would turn `&curren` into `¤`
-        exp = decodeHTMLStrict(exp)
-      }
+      exp = decodeInterpolationEntities(
+        exp,
+        __BROWSER__ ? currentOptions.decodeEntities! : decodeHTMLStrict,
+      )
     }
     addNode({
       type: NodeTypes.INTERPOLATION,
@@ -923,6 +920,20 @@ function getLoc(start: number, end?: number): SourceLocation {
     // @ts-expect-error allow late attachment
     source: end == null ? end : getSlice(start, end),
   }
+}
+
+const terminatedEntityRE = /&(?:#x[\da-f]+|#\d+|[a-z][a-z\d]*);/gi
+
+/**
+ * Only decode entities terminated by `;` inside interpolations, otherwise
+ * valid JS like `a&&currentDomain` would turn `&curren` into `¤`.
+ * @internal
+ */
+export function decodeInterpolationEntities(
+  exp: string,
+  decode: (raw: string, asAttr: boolean) => string,
+): string {
+  return exp.replace(terminatedEntityRE, m => decode(m, false))
 }
 
 export function cloneLoc(loc: SourceLocation): SourceLocation {

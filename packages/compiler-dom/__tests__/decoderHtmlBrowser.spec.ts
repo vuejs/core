@@ -2,6 +2,7 @@
  * @vitest-environment jsdom
  */
 import { decodeHtmlBrowser } from '../src/decodeHtmlBrowser'
+import { decodeInterpolationEntities } from '../../compiler-core/src/parser'
 
 describe('decodeHtmlBrowser', () => {
   it('should decode HTML correctly', () => {
@@ -42,5 +43,19 @@ describe('decodeHtmlBrowser', () => {
     ).toBe('<strong><strong>&</strong></strong>')
     expect(decodeHtmlBrowser('"', true)).toBe('"')
     expect(decodeHtmlBrowser("'", true)).toBe("'")
+  })
+})
+
+describe('decodeInterpolationEntities w/ decodeHtmlBrowser', () => {
+  // #16130
+  it('should not decode legacy entities without a semicolon', () => {
+    const decode = (exp: string) =>
+      decodeInterpolationEntities(exp, decodeHtmlBrowser)
+    expect(decode('a&&currentDomain')).toBe('a&&currentDomain')
+    expect(decode('(() => { let curren = "x"; return true&&curren })()')).toBe(
+      '(() => { let curren = "x"; return true&&curren })()',
+    )
+    expect(decode('a &amp;&amp; b')).toBe('a && b')
+    expect(decode('&lt;&#60;&#x3C;')).toBe('<<<')
   })
 })

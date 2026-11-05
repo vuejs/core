@@ -214,6 +214,10 @@ describe('compiler: parse', () => {
         'a&&currentDomain',
       )
       expect((second.content as SimpleExpressionNode).content).toBe('a && b')
+
+      const iife = '(() => { let curren = "x"; return true&&curren })()'
+      const [third] = baseParse(`{{${iife}}}`).children as InterpolationNode[]
+      expect((third.content as SimpleExpressionNode).content).toBe(iife)
     })
 
     test('it can have tag-like notation', () => {
