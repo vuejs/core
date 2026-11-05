@@ -8,7 +8,7 @@ import {
   getPositionInCode,
   mockId,
 } from './utils'
-import { SourceMapConsumer } from 'source-map-js'
+import { TraceMap, originalPositionFor } from '@jridgewell/trace-mapping'
 import { compileScript, compileTemplate, parse } from '../src'
 import { templateAnalysisCache } from '../src/script/importUsageCheck'
 
@@ -831,12 +831,12 @@ describe('SFC compile <script setup>', () => {
       `
       const { content, map } = compile(source, { inlineTemplate: true })
       expect(map).not.toBeUndefined()
-      const consumer = new SourceMapConsumer(map as any)
+      const consumer = new TraceMap(map as any)
       expect(
-        consumer.originalPositionFor(getPositionInCode(content, 'count')),
+        originalPositionFor(consumer, getPositionInCode(content, 'count')),
       ).toMatchObject(getPositionInCode(source, `count`))
       expect(
-        consumer.originalPositionFor(getPositionInCode(content, 'Error')),
+        originalPositionFor(consumer, getPositionInCode(content, 'Error')),
       ).toMatchObject(getPositionInCode(source, `Error`))
     })
 
@@ -857,15 +857,15 @@ describe('SFC compile <script setup>', () => {
         inlineTemplate: true,
         templateOptions: { compiler },
       })
-      const consumer = new SourceMapConsumer(map as any)
+      const consumer = new TraceMap(map as any)
       expect(
-        consumer.originalPositionFor(getPositionInCode(content, 'count')),
+        originalPositionFor(consumer, getPositionInCode(content, 'count')),
       ).toMatchObject(getPositionInCode(source, `count`))
       expect(
-        consumer.originalPositionFor(getPositionInCode(content, 'total')),
+        originalPositionFor(consumer, getPositionInCode(content, 'total')),
       ).toMatchObject(getPositionInCode(source, `total`))
       expect(
-        consumer.originalPositionFor(getPositionInCode(content, 'Error')),
+        originalPositionFor(consumer, getPositionInCode(content, 'Error')),
       ).toMatchObject(getPositionInCode(source, `Error`))
     })
 
@@ -893,12 +893,12 @@ describe('SFC compile <script setup>', () => {
         inlineTemplate: true,
         templateOptions: { compiler },
       })
-      const consumer = new SourceMapConsumer(map as any)
+      const consumer = new TraceMap(map as any)
       expect(
-        consumer.originalPositionFor(getPositionInCode(content, 'count')),
+        originalPositionFor(consumer, getPositionInCode(content, 'count')),
       ).toMatchObject(getPositionInCode(source, `count`))
       expect(
-        consumer.originalPositionFor(getPositionInCode(content, 'Error')),
+        originalPositionFor(consumer, getPositionInCode(content, 'Error')),
       ).toMatchObject(getPositionInCode(source, `Error`))
     })
 
@@ -915,12 +915,12 @@ describe('SFC compile <script setup>', () => {
         inlineTemplate: true,
         templateOptions: { preprocessLang: 'pug' },
       })
-      const consumer = new SourceMapConsumer(map as any)
+      const consumer = new TraceMap(map as any)
       expect(
-        consumer.originalPositionFor(getPositionInCode(content, 'count')),
+        originalPositionFor(consumer, getPositionInCode(content, 'count')),
       ).toMatchObject(getPositionInCode(source, `count`))
       expect(
-        consumer.originalPositionFor(getPositionInCode(content, 'Error')),
+        originalPositionFor(consumer, getPositionInCode(content, 'Error')),
       ).toMatchObject({ source: null, line: null, column: null })
     })
 
@@ -956,9 +956,12 @@ const c = 1
           vapor,
         })
         expect(map!.names).toEqual(['p', 'r'])
-        const consumer = new SourceMapConsumer(map as any)
+        const consumer = new TraceMap(map as any)
         expect(
-          consumer.originalPositionFor(getPositionInCode(content, '__props.p')),
+          originalPositionFor(
+            consumer,
+            getPositionInCode(content, '__props.p'),
+          ),
         ).toMatchObject({ ...getPositionInCode(source, 'p }}'), name: 'p' })
       }
     })
@@ -1004,10 +1007,10 @@ const n = defineModel('n', makeOptions(1))
       for (const [source, tokens] of sources) {
         const { descriptor } = parse(source, { filename: 'App.vue' })
         const { content, map } = compileScript(descriptor, { id: mockId })
-        const consumer = new SourceMapConsumer(map as any)
+        const consumer = new TraceMap(map as any)
         for (const token of tokens) {
           expect(
-            consumer.originalPositionFor(getPositionInCode(content, token)),
+            originalPositionFor(consumer, getPositionInCode(content, token)),
           ).toMatchObject(getPositionInCode(source, token))
         }
       }
@@ -1237,9 +1240,10 @@ const n = defineModel('n', makeOptions(1))
           <template><div :class="$style.red" /></template>
           <style module>.red { color: red }</style>`
         const { content, map } = compile(source, { inlineTemplate: true })
-        const consumer = new SourceMapConsumer(map as any)
+        const consumer = new TraceMap(map as any)
         expect(
-          consumer.originalPositionFor(
+          originalPositionFor(
+            consumer,
             getPositionInCode(content, '$style.red'),
           ),
         ).toMatchObject(getPositionInCode(source, '$style.red'))

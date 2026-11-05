@@ -5,7 +5,7 @@ import {
   baseCompile,
   createRoot,
 } from '@vue/compiler-core'
-import { SourceMapConsumer } from 'source-map-js'
+import { TraceMap, eachMapping } from '@jridgewell/trace-mapping'
 
 describe('compiler:sfc', () => {
   describe('source map', () => {
@@ -46,26 +46,26 @@ font-weight: bold;
       } = parse(src)
 
       expect(styles[0].map).not.toBeUndefined()
-      const consumer = new SourceMapConsumer(styles[0].map as any)
+      const consumer = new TraceMap(styles[0].map as any)
       const lineOffset =
         src.slice(0, src.indexOf(`<style>`)).split('\n').length - 1
-      consumer.eachMapping(mapping => {
+      eachMapping(consumer, mapping => {
         expect(mapping.generatedLine + lineOffset).toBe(mapping.originalLine)
       })
 
       expect(styles[1].map).not.toBeUndefined()
-      const consumer1 = new SourceMapConsumer(styles[1].map as any)
+      const consumer1 = new TraceMap(styles[1].map as any)
       const lineOffset1 =
         src.slice(0, src.indexOf(`<style module>`)).split('\n').length - 1
-      consumer1.eachMapping(mapping => {
+      eachMapping(consumer1, mapping => {
         expect(mapping.generatedLine + lineOffset1).toBe(mapping.originalLine)
       })
 
       expect(styles[2].map).not.toBeUndefined()
-      const consumer2 = new SourceMapConsumer(styles[2].map as any)
+      const consumer2 = new TraceMap(styles[2].map as any)
       const lineOffset2 =
         src.slice(0, src.indexOf(`<style scoped>`)).split('\n').length - 1
-      consumer2.eachMapping(mapping => {
+      eachMapping(consumer2, mapping => {
         expect(mapping.generatedLine + lineOffset2).toBe(mapping.originalLine)
       })
     })
@@ -79,8 +79,8 @@ font-weight: bold;
 
       expect(script!.map).not.toBeUndefined()
 
-      const consumer = new SourceMapConsumer(script!.map as any)
-      consumer.eachMapping(mapping => {
+      const consumer = new TraceMap(script!.map as any)
+      eachMapping(consumer, mapping => {
         expect(mapping.originalLine! - mapping.generatedLine).toBe(padding)
       })
     })
@@ -98,8 +98,8 @@ font-weight: bold;
 
       expect(template.map).not.toBeUndefined()
 
-      const consumer = new SourceMapConsumer(template.map as any)
-      consumer.eachMapping(mapping => {
+      const consumer = new TraceMap(template.map as any)
+      eachMapping(consumer, mapping => {
         expect(mapping.originalLine! - mapping.generatedLine).toBe(padding)
         expect(mapping.originalColumn! - mapping.generatedColumn).toBe(2)
       })
@@ -113,8 +113,8 @@ font-weight: bold;
 
       expect(custom!.map).not.toBeUndefined()
 
-      const consumer = new SourceMapConsumer(custom!.map as any)
-      consumer.eachMapping(mapping => {
+      const consumer = new TraceMap(custom!.map as any)
+      eachMapping(consumer, mapping => {
         expect(mapping.originalLine! - mapping.generatedLine).toBe(padding)
       })
     })

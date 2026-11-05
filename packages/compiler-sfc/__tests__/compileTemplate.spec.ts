@@ -1,4 +1,4 @@
-import { SourceMapConsumer } from 'source-map-js'
+import { TraceMap, originalPositionFor } from '@jridgewell/trace-mapping'
 import { parse as babelParse } from '@babel/parser'
 import {
   type SFCTemplateCompileOptions,
@@ -97,9 +97,9 @@ test.fails('source map of a preprocessed template', () => {
     preprocessLang: template.lang,
   })
   expect(result.map).toBeDefined()
-  const consumer = new SourceMapConsumer(result.map as any)
+  const consumer = new TraceMap(result.map as any)
   expect(
-    consumer.originalPositionFor(getPositionInCode(result.code, 'foobar')),
+    originalPositionFor(consumer, getPositionInCode(result.code, 'foobar')),
   ).toMatchObject(getPositionInCode(template.content, 'foobar'))
 })
 
@@ -191,9 +191,9 @@ test('source map', () => {
   expect(map!.sources).toEqual([`example.vue`])
   expect(map!.sourcesContent).toEqual([template.content])
 
-  const consumer = new SourceMapConsumer(map as any)
+  const consumer = new TraceMap(map as any)
   expect(
-    consumer.originalPositionFor(getPositionInCode(code, 'foobar')),
+    originalPositionFor(consumer, getPositionInCode(code, 'foobar')),
   ).toMatchObject(getPositionInCode(template.content, `foobar`))
 })
 
@@ -227,9 +227,9 @@ const foobar = 1
   expect(map!.sources).toEqual([`example.vue`])
   expect(map!.sourcesContent).toEqual([source])
 
-  const consumer = new SourceMapConsumer(map as any)
+  const consumer = new TraceMap(map as any)
   expect(
-    consumer.originalPositionFor(getPositionInCode(code, 'foobar')),
+    originalPositionFor(consumer, getPositionInCode(code, 'foobar')),
   ).toMatchObject({ source: `example.vue`, line: 6, column: 13 })
 })
 
@@ -251,9 +251,9 @@ test('source map: inMap without AST is of the source', () => {
   })
 
   expect(map!.sourcesContent).toEqual([template.content])
-  const consumer = new SourceMapConsumer(map as any)
+  const consumer = new TraceMap(map as any)
   expect(
-    consumer.originalPositionFor(getPositionInCode(code, 'foobar')),
+    originalPositionFor(consumer, getPositionInCode(code, 'foobar')),
   ).toMatchObject(getPositionInCode(template.content, 'foobar'))
 })
 
@@ -305,9 +305,9 @@ const foobar = 1
     compiler: customCompiler,
   })
 
-  const consumer = new SourceMapConsumer(map as any)
+  const consumer = new TraceMap(map as any)
   expect(
-    consumer.originalPositionFor(getPositionInCode(code, 'foobar')),
+    originalPositionFor(consumer, getPositionInCode(code, 'foobar')),
   ).toMatchObject({ line: 4, column: 16 })
 })
 
@@ -329,11 +329,11 @@ test('source map: v-if generated comment should not have original position', () 
   expect(map!.sources).toEqual([`example.vue`])
   expect(map!.sourcesContent).toEqual([template.content])
 
-  const consumer = new SourceMapConsumer(map as any)
+  const consumer = new TraceMap(map as any)
   const commentNode = code.match(/_createCommentVNode\("v-if", true\)/)
   expect(commentNode).not.toBeNull()
   const commentPosition = getPositionInCode(code, commentNode![0])
-  const originalPosition = consumer.originalPositionFor(commentPosition)
+  const originalPosition = originalPositionFor(consumer, commentPosition)
   // the comment node should not be mapped to the original source
   expect(originalPosition.column).toBeNull()
   expect(originalPosition.line).toBeNull()
@@ -364,9 +364,9 @@ test('should work w/ AST from descriptor', () => {
   // the source corresponds to the entire SFC
   expect(map!.sourcesContent).toEqual([source])
 
-  const consumer = new SourceMapConsumer(map as any)
+  const consumer = new TraceMap(map as any)
   expect(
-    consumer.originalPositionFor(getPositionInCode(code, 'foobar')),
+    originalPositionFor(consumer, getPositionInCode(code, 'foobar')),
   ).toMatchObject(getPositionInCode(source, `foobar`))
 
   expect(code).toBe(
@@ -402,9 +402,9 @@ test('should work w/ AST from descriptor in SSR mode', () => {
   // the source corresponds to the entire SFC
   expect(map!.sourcesContent).toEqual([source])
 
-  const consumer = new SourceMapConsumer(map as any)
+  const consumer = new TraceMap(map as any)
   expect(
-    consumer.originalPositionFor(getPositionInCode(code, 'foobar')),
+    originalPositionFor(consumer, getPositionInCode(code, 'foobar')),
   ).toMatchObject(getPositionInCode(source, `foobar`))
 
   expect(code).toBe(
