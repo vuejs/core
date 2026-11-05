@@ -301,3 +301,50 @@ describe.skipIf(!global.gc)('Transition/gc', () => {
     await expectBranchReleased(App, data, true)
   })
 })
+
+describe.skipIf(!global.gc)('TransitionGroup/gc', () => {
+  // the rows' elements, walked synchronously: a querySelectorAll result would
+  // keep them reachable
+  function rowRefs(host: Element) {
+    const refs: { deref(): Element | undefined }[] = []
+    for (let el = host.firstElementChild; el; el = el.nextElementSibling) {
+      // @ts-expect-error ES2021 API
+      refs.push(new WeakRef(el))
+    }
+    return refs
+  }
+
+  test('removed rows rendered as fragments release their elements', async () => {
+    const data = ref({ list: [1, 2, 3], show: true })
+    const Row = compile(
+      `<template>
+        <div v-if="data.show" class="row">row</div>
+      </template>`,
+      data,
+    )
+    const App = compile(
+      `<template>
+        <TransitionGroup :css="false">
+          <components.Row v-for="i in data.list" :key="i" />
+        </TransitionGroup>
+      </template>`,
+      data,
+      { Row },
+    )
+    const { app, host } = define(App).render()
+    const refs = rowRefs(host)
+    expect(refs).toHaveLength(3)
+    try {
+      data.value.list = []
+      await nextTick()
+      await gc()
+      expect(refs.map(r => r.deref())).toEqual([
+        undefined,
+        undefined,
+        undefined,
+      ])
+    } finally {
+      app.unmount()
+    }
+  })
+})

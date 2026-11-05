@@ -32,6 +32,7 @@ import {
   type Block,
   type BlockFn,
   type TransitionBlock,
+  type VaporTransitionHooks,
   type VaporTransitionState,
   insert,
   registerNestedVDOMCleanup,
@@ -640,18 +641,29 @@ export function applyGroupTransitionHooks(
   // what a fragment renders later resolves in its content's context
   fragments.forEach(([frag, ctx]) => {
     const hooks = resolveTransitionHooks(frag, props, state, instance)
-    hooks.applyGroup = (block, props, state, instance) =>
-      applyGroupTransitionHooks(
-        block,
-        props,
-        state,
-        instance,
-        onUpdateOwner,
-        contentKeyContext(frag, ctx),
-      )
+    hooks.applyGroup = groupApplier(frag, ctx, onUpdateOwner)
     frag.$transition = hooks
   })
   return children
+}
+
+// A separate function: a closure created in `applyGroupTransitionHooks` chains
+// to its context, which holds every fragment collected there, removed rows
+// included.
+function groupApplier(
+  frag: VaporFragment,
+  ctx: KeyContext,
+  onUpdateOwner?: (owner: TransitionGroupUpdateOwner) => void,
+): VaporTransitionHooks['applyGroup'] {
+  return (block, props, state, instance) =>
+    applyGroupTransitionHooks(
+      block,
+      props,
+      state,
+      instance,
+      onUpdateOwner,
+      contentKeyContext(frag, ctx),
+    )
 }
 
 function trackTransitionGroupUpdate(
