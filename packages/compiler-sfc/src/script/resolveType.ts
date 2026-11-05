@@ -1185,15 +1185,14 @@ function loadTSConfig(
   visited = new Set<string>(),
 ): TS.ParsedCommandLine[] {
   // The only case where `fs` is NOT `ts.sys` is during tests.
-  // parse config host requires an extra `readDirectory` method
-  // during tests, which is stubbed.
-  const parseConfigHost = __TEST__
-    ? {
-        ...fs,
-        useCaseSensitiveFileNames: true,
-        readDirectory: () => [],
-      }
-    : ts.sys
+  // `readDirectory` is only used to expand the `include` globs into
+  // `config.fileNames`, which is never read here - only `options`,
+  // `raw.include` / `raw.exclude` and `projectReferences` are. Stub it out so
+  // that loading a config does not synchronously walk the whole workspace.
+  const parseConfigHost: TS.ParseConfigHost = {
+    ...(__TEST__ ? { ...fs, useCaseSensitiveFileNames: true } : ts.sys),
+    readDirectory: () => [],
+  }
   const config = ts.parseJsonConfigFileContent(
     ts.readConfigFile(configPath, fs.readFile).config,
     parseConfigHost,
