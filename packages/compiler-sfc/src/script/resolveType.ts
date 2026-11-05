@@ -125,6 +125,13 @@ export class TypeScope {
   resolvedImportSources: Record<string, string> = Object.create(null)
   exportedTypes: Record<string, ScopeTypeNode> = Object.create(null)
   exportedDeclares: Record<string, ScopeTypeNode> = Object.create(null)
+  /**
+   * imported bindings that are exported without a source, e.g.
+   * `import { X } from './x'; export { X as Y }`: exported name -> the local
+   * import name and the scope that owns the import
+   */
+  exportedImports: Record<string, { local: string; scope: TypeScope }> =
+    Object.create(null)
 }
 
 export interface MaybeWithScope {
@@ -794,7 +801,15 @@ function innerResolveTypeReference(
   onlyExported: boolean,
 ): ScopeTypeNode | undefined {
   if (typeof name === 'string') {
-    if (scope.imports[name]) {
+    if (onlyExported && scope.exportedImports[name]) {
+      // imported binding exported from the module (possibly under another
+      // name), resolve it from the original import in its owner scope. This
+      // comes before `scope.imports`, which may hold a private import with
+      // the same name.
+      const { local, scope: importScope } = scope.exportedImports[name]
+      recordScopeDep(ctx, importScope)
+      return resolveTypeFromImport(ctx, node, local, importScope)
+    } else if (scope.imports[name]) {
       return resolveTypeFromImport(ctx, node, name, scope)
     } else {
       const lookupSource =
@@ -951,6 +966,30 @@ function resolveTypeFromImport(
   const { source, imported } = scope.imports[name]
   const sourceScope = importSourceToScope(ctx, node, scope, source)
   return resolveTypeReference(ctx, node, sourceScope, imported, true)
+}
+
+/**
+ * Resolve an imported binding that a module exports (see `exportedImports`)
+ * to its declaration, following further re-exports of imports. Used where
+ * there is no type reference to resolve, e.g. re-exports in `declare global`.
+ */
+function resolveExportedImport(
+  ctx: TypeResolveContext,
+  node: Node,
+  { local, scope }: { local: string; scope: TypeScope },
+  seen: Set<TypeScope> = new Set(),
+): { type?: ScopeTypeNode; declare?: ScopeTypeNode } {
+  if (seen.has(scope)) return {}
+  seen.add(scope)
+  const { source, imported } = scope.imports[local]
+  const sourceScope = importSourceToScope(ctx, node, scope, source, false)
+  const nested = sourceScope.exportedImports[imported]
+  return nested
+    ? resolveExportedImport(ctx, node, nested, seen)
+    : {
+        type: sourceScope.exportedTypes[imported],
+        declare: sourceScope.exportedDeclares[imported],
+      }
 }
 
 function importSourceToScope(
@@ -1400,7 +1439,14 @@ function recordTypes(
   scope: TypeScope,
   asGlobal = false,
 ) {
-  const { types, declares, exportedTypes, exportedDeclares, imports } = scope
+  const {
+    types,
+    declares,
+    exportedTypes,
+    exportedDeclares,
+    exportedImports,
+    imports,
+  } = scope
   const isAmbient = asGlobal
     ? !body.some(s => importExportRE.test(s.type))
     : false
@@ -1437,6 +1483,15 @@ function recordTypes(
                   if (sourceScope.exportedDeclares[local]) {
                     declares[exported] = sourceScope.exportedDeclares[local]
                   }
+                  if (sourceScope.exportedImports[local]) {
+                    const resolved = resolveExportedImport(
+                      ctx,
+                      s.source,
+                      sourceScope.exportedImports[local],
+                    )
+                    if (resolved.type) types[exported] = resolved.type
+                    if (resolved.declare) declares[exported] = resolved.declare
+                  }
                 }
               }
             }
@@ -1451,6 +1506,15 @@ function recordTypes(
             )
             Object.assign(types, sourceScope.exportedTypes)
             Object.assign(declares, sourceScope.exportedDeclares)
+            for (const name in sourceScope.exportedImports) {
+              const resolved = resolveExportedImport(
+                ctx,
+                s.source,
+                sourceScope.exportedImports[name],
+              )
+              if (resolved.type) types[name] = resolved.type
+              if (resolved.declare) declares[name] = resolved.declare
+            }
           } else {
             recordType(s, types, declares)
           }
@@ -1488,6 +1552,9 @@ function recordTypes(
               } else if (types[local]) {
                 // exporting local defined type
                 exportedTypes[exported] = types[local]
+              } else if (imports[local]) {
+                // exporting an imported type, possibly under another name
+                exportedImports[exported] = { local, scope }
               }
             }
           }
@@ -1500,6 +1567,7 @@ function recordTypes(
           stmt.source.value,
         )
         Object.assign(scope.exportedTypes, sourceScope.exportedTypes)
+        Object.assign(scope.exportedImports, sourceScope.exportedImports)
       } else if (stmt.type === 'ExportDefaultDeclaration' && stmt.declaration) {
         if (stmt.declaration.type !== 'Identifier') {
           recordType(stmt.declaration, types, declares, 'default')
