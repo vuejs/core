@@ -1,5 +1,8 @@
 import { BindingTypes } from '@vue/compiler-dom'
-import { SourceMapConsumer } from 'source-map-js'
+import {
+  decodeSourceMap,
+  originalPositionFor,
+} from '../../../compiler-core/__tests__/testUtils'
 import {
   compile,
   transformChildren,
@@ -914,9 +917,9 @@ test('source map of an identifier after a newline in the expression', () => {
   })
   const lines = code.split('\n')
   const line = lines.findIndex(l => l.includes('_ctx.bar'))
-  const consumer = new SourceMapConsumer(map as any)
+  const mappings = decodeSourceMap(map as any)
   expect(
-    consumer.originalPositionFor({
+    originalPositionFor(mappings, {
       line: line + 1,
       column: lines[line].indexOf('_ctx.bar'),
     }),
@@ -932,9 +935,9 @@ test('source map names the identifiers it renames', () => {
   expect(map!.names).toEqual(['foo', 'bar', 'baz'])
   const lines = code.split('\n')
   const line = lines.findIndex(l => l.includes('_ctx.foo'))
-  const consumer = new SourceMapConsumer(map as any)
+  const mappings = decodeSourceMap(map as any)
   expect(
-    consumer.originalPositionFor({
+    originalPositionFor(mappings, {
       line: line + 1,
       column: lines[line].indexOf('_ctx.foo'),
     }),
@@ -948,9 +951,9 @@ test('source map of the display string call of an interpolation', () => {
   })
   const lines = code.split('\n')
   const line = lines.findIndex(l => l.includes('_toDisplayString('))
-  const consumer = new SourceMapConsumer(map as any)
+  const mappings = decodeSourceMap(map as any)
   expect(
-    consumer.originalPositionFor({
+    originalPositionFor(mappings, {
       line: line + 1,
       column: lines[line].indexOf('_toDisplayString('),
     }),
@@ -965,9 +968,9 @@ test('source map of the display string call of v-text', () => {
     })
     const lines = code.split('\n')
     const line = lines.findIndex(l => l.includes('_toDisplayString('))
-    const consumer = new SourceMapConsumer(map as any)
+    const mappings = decodeSourceMap(map as any)
     expect(
-      consumer.originalPositionFor({
+      originalPositionFor(mappings, {
         line: line + 1,
         column: lines[line].indexOf('_toDisplayString('),
       }),
@@ -983,9 +986,9 @@ test('source map of the text of an expression with nothing mapped before it on i
   })
   const lines = code.split('\n')
   const line = lines.findIndex(l => l.includes('const __ok = !'))
-  const consumer = new SourceMapConsumer(map as any)
+  const mappings = decodeSourceMap(map as any)
   expect(
-    consumer.originalPositionFor({
+    originalPositionFor(mappings, {
       line: line + 1,
       column: lines[line].indexOf('!'),
     }),

@@ -1,4 +1,7 @@
-import { SourceMapConsumer } from 'source-map-js'
+import {
+  decodeSourceMap,
+  originalPositionFor,
+} from '../../../compiler-core/__tests__/testUtils'
 import { makeCompile } from './_utils'
 import {
   type ForIRNode,
@@ -855,9 +858,9 @@ test('source map of a v-for selector', () => {
   })
   const lines = code.split('\n')
   const line = lines.findIndex(l => l.includes('_createSelector('))
-  const consumer = new SourceMapConsumer(map as any)
+  const mappings = decodeSourceMap(map as any)
   expect(
-    consumer.originalPositionFor({
+    originalPositionFor(mappings, {
       line: line + 1,
       column: lines[line].indexOf('_ctx.selected'),
     }),

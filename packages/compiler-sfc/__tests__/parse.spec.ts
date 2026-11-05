@@ -5,7 +5,7 @@ import {
   baseCompile,
   createRoot,
 } from '@vue/compiler-core'
-import { SourceMapConsumer } from 'source-map-js'
+import { decodeSourceMap } from '../../compiler-core/__tests__/testUtils'
 
 describe('compiler:sfc', () => {
   describe('source map', () => {
@@ -46,28 +46,25 @@ font-weight: bold;
       } = parse(src)
 
       expect(styles[0].map).not.toBeUndefined()
-      const consumer = new SourceMapConsumer(styles[0].map as any)
       const lineOffset =
         src.slice(0, src.indexOf(`<style>`)).split('\n').length - 1
-      consumer.eachMapping(mapping => {
+      for (const mapping of decodeSourceMap(styles[0].map!)) {
         expect(mapping.generatedLine + lineOffset).toBe(mapping.originalLine)
-      })
+      }
 
       expect(styles[1].map).not.toBeUndefined()
-      const consumer1 = new SourceMapConsumer(styles[1].map as any)
       const lineOffset1 =
         src.slice(0, src.indexOf(`<style module>`)).split('\n').length - 1
-      consumer1.eachMapping(mapping => {
+      for (const mapping of decodeSourceMap(styles[1].map!)) {
         expect(mapping.generatedLine + lineOffset1).toBe(mapping.originalLine)
-      })
+      }
 
       expect(styles[2].map).not.toBeUndefined()
-      const consumer2 = new SourceMapConsumer(styles[2].map as any)
       const lineOffset2 =
         src.slice(0, src.indexOf(`<style scoped>`)).split('\n').length - 1
-      consumer2.eachMapping(mapping => {
+      for (const mapping of decodeSourceMap(styles[2].map!)) {
         expect(mapping.generatedLine + lineOffset2).toBe(mapping.originalLine)
-      })
+      }
     })
 
     test('script block', () => {
@@ -79,10 +76,9 @@ font-weight: bold;
 
       expect(script!.map).not.toBeUndefined()
 
-      const consumer = new SourceMapConsumer(script!.map as any)
-      consumer.eachMapping(mapping => {
+      for (const mapping of decodeSourceMap(script!.map!)) {
         expect(mapping.originalLine! - mapping.generatedLine).toBe(padding)
-      })
+      }
     })
 
     test('template block with lang + indent', () => {
@@ -98,11 +94,10 @@ font-weight: bold;
 
       expect(template.map).not.toBeUndefined()
 
-      const consumer = new SourceMapConsumer(template.map as any)
-      consumer.eachMapping(mapping => {
+      for (const mapping of decodeSourceMap(template.map!)) {
         expect(mapping.originalLine! - mapping.generatedLine).toBe(padding)
         expect(mapping.originalColumn! - mapping.generatedColumn).toBe(2)
-      })
+      }
     })
 
     test('custom block', () => {
@@ -113,10 +108,9 @@ font-weight: bold;
 
       expect(custom!.map).not.toBeUndefined()
 
-      const consumer = new SourceMapConsumer(custom!.map as any)
-      consumer.eachMapping(mapping => {
+      for (const mapping of decodeSourceMap(custom!.map!)) {
         expect(mapping.originalLine! - mapping.generatedLine).toBe(padding)
-      })
+      }
     })
   })
 
