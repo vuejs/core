@@ -316,44 +316,51 @@ export function markLeavingBlock(
   block: ResolvedTransitionBlock,
   state: TransitionState,
 ): void {
-  getLeavingNodesForType(state, block)[String(block.$tkey)] = block
+  markLeaving(getLeavingNodesForType(state, block), block, block.$tkey)
 }
 
-const getTransitionHooksContext = (
-  block: ResolvedTransitionBlock,
-  state: TransitionState,
-) => {
-  const key = String(block.$tkey)
-  const leavingNodes = getLeavingNodesForType(state, block)
-  const context: TransitionHooksContext = {
-    isLeaving: () => leavingNodes[key] === block,
-    setLeavingNodeCache: () => {
-      leavingNodes[key] = block
-    },
-    unsetLeavingNodeCache: () => {
-      if (leavingNodes[key] === block) {
+// Hooks hold no block: the identity is the element each hook receives (vdom
+// runs an interop root's hooks on its vnode's element), under the bucket and
+// key resolved here, so a fragment keeping the hooks of a branch that left
+// retains nothing of it. A separate function: closures share the context of
+// the call creating them.
+function hooksContext(
+  leavingNodes: Record<string, ResolvedTransitionBlock>,
+  rawKey: any,
+): TransitionHooksContext {
+  const key = String(rawKey)
+  return {
+    isLeaving: el => leavingNodes[key] === el,
+    setLeavingNodeCache: el => markLeaving(leavingNodes, el, rawKey),
+    unsetLeavingNodeCache: el => {
+      if (leavingNodes[key] === el) {
         delete leavingNodes[key]
       }
     },
     earlyRemove: () => {
-      const leavingNode = leavingNodes[key]
+      const leavingEl = leavingNodes[key] as
+        | (ResolvedTransitionBlock & TransitionElement)
+        | undefined
       // Mirror VDOM's isSameVNodeType raw-key guard. The type dimension is
       // already isolated by the leaving-cache bucket, but the slot index is
       // String($key), which coerces e.g. 1 and '1' into the same slot. Compare
       // the raw keys so a number-keyed leaving node isn't force-removed by a
       // string-keyed entering node (and vice versa).
-      if (leavingNode && leavingNode.$tkey === block.$tkey) {
-        const el = getTransitionElement(leavingNode) as
-          | TransitionElement
-          | undefined
-        if (el && el[leaveCbKey]) {
-          // force early removal (not cancelled)
-          el[leaveCbKey]!()
-        }
+      if (leavingEl && leavingEl.$lkey === rawKey && leavingEl[leaveCbKey]) {
+        // force early removal (not cancelled)
+        leavingEl[leaveCbKey]!()
       }
     },
   }
-  return context
+}
+
+function markLeaving(
+  leavingNodes: Record<string, ResolvedTransitionBlock>,
+  el: ResolvedTransitionBlock,
+  rawKey: any,
+): void {
+  leavingNodes[String(rawKey)] = el
+  el.$lkey = rawKey
 }
 
 export function resolveTransitionHooks(
@@ -362,9 +369,8 @@ export function resolveTransitionHooks(
   state: VaporTransitionState,
   instance: GenericComponentInstance,
 ): VaporTransitionHooks {
-  const context = getTransitionHooksContext(block, state)
   const hooks = baseResolveTransitionHooks(
-    context,
+    hooksContext(getLeavingNodesForType(state, block), block.$tkey),
     props,
     state,
     instance,
@@ -615,13 +621,13 @@ export function applyTransitionLeaveHooksImpl(
     )
   } else if (mode === 'in-out') {
     leavingHooks.delayLeave = (
-      block: TransitionElement,
+      block: ResolvedTransitionBlock & TransitionElement,
       earlyRemove,
       delayedLeave,
     ) => {
       const leavingNodes = getLeavingNodesForType(state, leavingBlock)
       const leavingKey = String(leavingBlock.$tkey)
-      leavingNodes[leavingKey] = leavingBlock
+      markLeaving(leavingNodes, block, leavingBlock.$tkey)
       const delayedLeaveCb = createDelayedLeave(leavingBlock, delayedLeave)
       // early removal callback
       block[leaveCbKey] = () => {
@@ -631,7 +637,7 @@ export function applyTransitionLeaveHooksImpl(
         leavingBlock.$transition = undefined
         // Same-key in-out switches early-remove the previous leaving block.
         // Clear the cache entry so the next enter isn't skipped as "still leaving".
-        if (leavingNodes[leavingKey] === leavingBlock) {
+        if (leavingNodes[leavingKey] === block) {
           delete leavingNodes[leavingKey]
         }
       }

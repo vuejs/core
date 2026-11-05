@@ -291,7 +291,7 @@ function getLeavingNodesForType(
 }
 
 export interface TransitionHooksContext {
-  isLeaving: () => boolean
+  isLeaving: (node: any) => boolean
   setLeavingNodeCache: (node: any) => void
   unsetLeavingNodeCache: (node: any) => void
   earlyRemove: () => void
@@ -438,7 +438,7 @@ export function baseResolveTransitionHooks(
 
     enter(el) {
       // prevent enter if leave is in progress
-      if (!isHmrUpdating && isLeaving()) return
+      if (!isHmrUpdating && isLeaving(el)) return
       let hook = onEnter
       let afterHook = onAfterEnter
       let cancelHook = onEnterCancelled
