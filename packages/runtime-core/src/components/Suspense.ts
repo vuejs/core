@@ -491,12 +491,13 @@ function patchSuspense(
         // incoming branch has no async deps, resolve now.
         suspense.resolve()
       } else {
-        const { timeout, pendingId } = suspense
+        const { timeout } = suspense
         if (timeout > 0) {
-          setTimeout(() => {
-            if (suspense.pendingId === pendingId) {
-              suspense.fallback(newFallback)
-            }
+          // the timer belongs to the pending round, not to the pending branch:
+          // another root switch while pending keeps it counting
+          suspense.timeoutTimer = setTimeout(() => {
+            suspense.timeoutTimer = undefined
+            suspense.fallback(suspense.vnode.ssFallback!)
           }, timeout)
         } else if (timeout === 0) {
           suspense.fallback(newFallback)
@@ -519,6 +520,7 @@ export interface SuspenseBoundary {
   deps: number
   pendingId: number
   timeout: number
+  timeoutTimer: ReturnType<typeof setTimeout> | undefined
   isInFallback: boolean
   isHydrating: boolean
   isUnmounted: boolean
@@ -600,6 +602,7 @@ function createSuspenseBoundary(
     deps: 0,
     pendingId: suspenseId++,
     timeout: typeof timeout === 'number' ? timeout : -1,
+    timeoutTimer: undefined,
     activeBranch: null,
     isFallbackMountPending: false,
     pendingBranch: null,
@@ -701,6 +704,8 @@ function createSuspenseBoundary(
         }
       }
 
+      clearTimeout(suspense.timeoutTimer)
+      suspense.timeoutTimer = undefined
       suspense.isFallbackMountPending = false
       setActiveBranch(suspense, pendingBranch!)
       suspense.pendingBranch = null
@@ -943,6 +948,8 @@ function createSuspenseBoundary(
 
     unmount(parentSuspense, doRemove) {
       suspense.isUnmounted = true
+      clearTimeout(suspense.timeoutTimer)
+      suspense.timeoutTimer = undefined
       // release the dep on the pending parent, after the flush so that async
       // deps patched in by the same update are registered first
       if (parentSuspenseId !== undefined) {

@@ -4732,6 +4732,100 @@ describe('Suspense', () => {
     expect(unmounted).toHaveBeenCalledTimes(1)
   })
 
+  test('clears the timeout when the boundary is unmounted while pending', async () => {
+    vi.useFakeTimers()
+    const Async = {
+      async setup() {
+        await new Promise(() => {})
+        return () => h('div', 'async')
+      },
+    }
+    const toggleChild = ref(false)
+    const toggleSuspense = ref(true)
+    const Comp = {
+      render: () =>
+        toggleSuspense.value
+          ? h(
+              Suspense,
+              { timeout: 100 },
+              {
+                default: () =>
+                  toggleChild.value ? h(Async) : h('div', 'sync'),
+                fallback: () => h('i', 'loading'),
+              },
+            )
+          : h('div', 'gone'),
+    }
+
+    const root = nodeOps.createElement('div')
+    render(h(Comp), root)
+    toggleChild.value = true
+    await nextTick()
+    expect(vi.getTimerCount()).toBe(1)
+
+    toggleSuspense.value = false
+    await nextTick()
+    const timers = vi.getTimerCount()
+    vi.useRealTimers()
+    expect(timers).toBe(0)
+  })
+
+  test('keeps the timeout counting when the root is switched again while pending', async () => {
+    const A = { render: () => h('div', 'A') }
+    const B = {
+      async setup() {
+        await new Promise(() => {})
+        return () => h('div', 'B')
+      },
+    }
+    let resolveC!: () => void
+    const C = {
+      async setup() {
+        await new Promise<void>(r => (resolveC = r))
+        return () => h('div', 'C')
+      },
+    }
+    const page = shallowRef<any>(A)
+    const events: string[] = []
+    const Comp = {
+      render: () =>
+        h(
+          Suspense,
+          {
+            timeout: 100,
+            onFallback: () => events.push('fallback'),
+            onResolve: () => events.push('resolve'),
+          },
+          {
+            default: () => h(page.value),
+            fallback: () => h('i', 'loading'),
+          },
+        ),
+    }
+
+    const root = nodeOps.createElement('div')
+    render(h(Comp), root)
+    expect(serializeInner(root)).toBe('<div>A</div>')
+    events.length = 0
+
+    page.value = B
+    await nextTick()
+    await new Promise(r => setTimeout(r, 50))
+    page.value = C
+    await nextTick()
+    expect(serializeInner(root)).toBe('<div>A</div>')
+
+    // counted from the first switch, not restarted by the second
+    await new Promise(r => setTimeout(r, 80))
+    expect(serializeInner(root)).toBe('<i>loading</i>')
+    expect(events).toEqual(['fallback'])
+
+    resolveC()
+    await new Promise(r => setTimeout(r))
+    expect(serializeInner(root)).toBe('<div>C</div>')
+    expect(events).toEqual(['fallback', 'resolve'])
+  })
+
   test('resolves after an async setup rejects without any error handler', async () => {
     const Async = {
       async setup() {
