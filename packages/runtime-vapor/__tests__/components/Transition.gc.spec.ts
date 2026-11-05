@@ -347,4 +347,49 @@ describe.skipIf(!global.gc)('TransitionGroup/gc', () => {
       app.unmount()
     }
   })
+
+  test('vapor slot rows under a vdom TransitionGroup wrapper are released', async () => {
+    const data = ref({ list: [1, 2], show: true })
+    const Row = compile(
+      `<template>
+        <div v-if="data.show" class="row">row</div>
+      </template>`,
+      data,
+    )
+    const Wrapper = compile(
+      `<script setup>
+        const data = _data
+      </script>
+      <template>
+        <TransitionGroup :css="false"><slot /></TransitionGroup>
+      </template>`,
+      data,
+      {},
+      { vapor: false },
+    )
+    const App = compile(
+      `<template>
+        <components.Wrapper>
+          <components.Row v-for="i in data.list" :key="i" />
+        </components.Wrapper>
+      </template>`,
+      data,
+      { Row, Wrapper },
+    )
+    const { app, mount } = define(App).create()
+    app.use(vaporInteropPlugin)
+    const { host } = mount()
+    const refs = rowRefs(host)
+    expect(refs).toHaveLength(2)
+    try {
+      data.value.list = []
+      await nextTick()
+      expect(host.children).toHaveLength(0)
+      await gc()
+      await gc()
+      expect(refs.map(r => r.deref())).toEqual([undefined, undefined])
+    } finally {
+      app.unmount()
+    }
+  })
 })

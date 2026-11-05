@@ -1249,7 +1249,6 @@ const vaporSlotsProxyHandler: ProxyHandler<any> = {
 let vdomHydrateNode: HydrationRenderer['hydrateNode'] | undefined
 
 // Static/Fragment/Teleport vnodes represent a root range [el..anchor].
-// Component roots can update internally, so resolve through the current subtree.
 function resolveVNodeRange(vnode: VNode): [Node, Node] | undefined {
   const { type, shapeFlag, el, anchor } = vnode
   if (shapeFlag & ShapeFlags.TELEPORT && el && anchor && anchor !== el) {
@@ -1262,12 +1261,6 @@ function resolveVNodeRange(vnode: VNode): [Node, Node] | undefined {
     return el && anchor !== el
       ? [el as Node, anchor as Node]
       : [anchor as Node, anchor as Node]
-  }
-  if (shapeFlag & ShapeFlags.COMPONENT) {
-    const subTree = vnode.component && vnode.component.subTree
-    if (subTree) {
-      return resolveVNodeRange(subTree)
-    }
   }
 }
 
@@ -1292,6 +1285,15 @@ function resolveVNodeNodes(vnode: VNode, liveSlot?: boolean): Block {
     return el && el !== anchor
       ? [el as Node, vb, anchor as Node]
       : [vb, anchor as Node]
+  }
+  // Component roots can update internally, so resolve through the current
+  // subtree: a root fragment holding a vapor slot resolves live like a
+  // top-level one.
+  if (vnode.shapeFlag & ShapeFlags.COMPONENT) {
+    const subTree = vnode.component && vnode.component.subTree
+    if (subTree) {
+      return resolveVNodeNodes(subTree)
+    }
   }
   const vnodeRange = resolveVNodeRange(vnode)
   if (vnodeRange) {
@@ -1319,12 +1321,6 @@ function resolveVNodeNodes(vnode: VNode, liveSlot?: boolean): Block {
       n = n.nextSibling
     }
     return nodeRange
-  }
-  if (vnode.shapeFlag & ShapeFlags.COMPONENT) {
-    const subTree = vnode.component && vnode.component.subTree
-    if (subTree) {
-      return resolveVNodeNodes(subTree)
-    }
   }
   return vnode.el as Block
 }
