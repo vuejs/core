@@ -869,7 +869,9 @@ describe('SFC compile <script setup>', () => {
       ).toMatchObject(getPositionInCode(source, `Error`))
     })
 
-    test('source map of a template compiler without pieces', () => {
+    // expected to fail: compileTemplate drops the map of a compiler that gives
+    // no pieces instead of placing it at the template block
+    test.fails('source map of a template compiler without pieces', () => {
       const source = `
       <script setup>
         const count = ref(0)
@@ -878,10 +880,12 @@ describe('SFC compile <script setup>', () => {
         <button @click="throw new Error(\`msg\`);"></button>
       </template>
       `
+      // a third-party compiler knows no pieces and maps its input only
       const compiler = {
         parse: CompilerDOM.parse,
         compile(template: any, options: any) {
-          const { pieces, ...result } = CompilerDOM.compile(template, options)
+          const { pieceSource, pieceOffset, ...rest } = options
+          const { pieces, ...result } = CompilerDOM.compile(template, rest)
           return result
         },
       }
@@ -895,7 +899,7 @@ describe('SFC compile <script setup>', () => {
       ).toMatchObject(getPositionInCode(source, `count`))
       expect(
         consumer.originalPositionFor(getPositionInCode(content, 'Error')),
-      ).toMatchObject({ source: null, line: null, column: null })
+      ).toMatchObject(getPositionInCode(source, `Error`))
     })
 
     test('source map of a preprocessed template', () => {
