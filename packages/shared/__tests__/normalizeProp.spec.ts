@@ -208,6 +208,53 @@ describe('stringifyStyle', () => {
     const expected = 'color:blue;font-size:14px;'
     expect(stringifyStyle(style)).toBe(expected)
   })
+
+  test('should render array values as CSS fallbacks', () => {
+    const style = {
+      display: ['-webkit-box', '-ms-flexbox', 'flex'],
+      width: ['100px', 200],
+      opacity: [0.5, null as any, 'calc(1 / 2)'],
+      '--custom-display': ['-webkit-box', 'flex'],
+    }
+
+    expect(stringifyStyle(style)).toBe(
+      'display:-webkit-box;display:-ms-flexbox;display:flex;' +
+        'width:100px;width:200;' +
+        'opacity:calc(1 / 2);' +
+        '--custom-display:-webkit-box;--custom-display:flex;',
+    )
+  })
+
+  test.each(['', null, undefined])(
+    'should clear earlier array values with %s',
+    value => {
+      expect(
+        stringifyStyle({
+          color: 'red',
+          display: ['none', value as any],
+          '--custom-color': ['blue', value as any],
+          opacity: 0,
+        }),
+      ).toBe('color:red;opacity:0;')
+    },
+  )
+
+  test('should preserve only array values after clearing', () => {
+    expect(
+      stringifyStyle({
+        display: ['none', '', '-ms-flexbox'],
+        opacity: [1, undefined as any, 0],
+        '--custom-color': ['red', null as any, 'blue'],
+      }),
+    ).toBe('display:-ms-flexbox;opacity:0;--custom-color:blue;')
+  })
+
+  test('should skip array holes without clearing earlier values', () => {
+    const display = ['none']
+    display.length = 2
+
+    expect(stringifyStyle({ display })).toBe('display:none;')
+  })
 })
 
 describe('normalizeProps', () => {

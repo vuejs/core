@@ -628,6 +628,18 @@ function testRender(type: string, render: typeof renderToString) {
         ).toBe(`<div id="foo&amp;" class="bar baz">hello</div>`)
       })
 
+      test('style array values as fallbacks', async () => {
+        expect(
+          await render(
+            h('div', {
+              style: { display: ['-webkit-box', '-ms-flexbox', 'flex'] },
+            }),
+          ),
+        ).toBe(
+          `<div style="display:-webkit-box;display:-ms-flexbox;display:flex;"></div>`,
+        )
+      })
+
       test('text children', async () => {
         expect(await render(h('div', 'hello'))).toBe(`<div>hello</div>`)
       })

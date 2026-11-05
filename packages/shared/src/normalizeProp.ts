@@ -1,6 +1,9 @@
 import { hyphenate, isArray, isObject, isString } from './general'
 
-export type NormalizedStyle = Record<string, string | number>
+export type NormalizedStyle = Record<
+  string,
+  string | number | (string | number)[]
+>
 
 export function normalizeStyle(
   value: unknown,
@@ -53,8 +56,21 @@ export function stringifyStyle(
   let ret = ''
   for (const key in styles) {
     const value = styles[key]
-    if (isString(value) || typeof value === 'number') {
-      const normalizedKey = key.startsWith(`--`) ? key : hyphenate(key)
+    const normalizedKey = key.startsWith(`--`) ? key : hyphenate(key)
+    if (isArray(value)) {
+      // array values are CSS fallbacks, e.g.
+      // { display: ['-webkit-box', 'flex'] }
+      const start = ret.length
+      for (let i = 0; i < value.length; i++) {
+        const v = value[i]
+        if (v === '' || (v == null && i in value)) {
+          // Empty CSS declarations cannot clear preceding fallbacks.
+          ret = ret.slice(0, start)
+        } else if (isString(v) || typeof v === 'number') {
+          ret += `${normalizedKey}:${v};`
+        }
+      }
+    } else if (isString(value) || typeof value === 'number') {
       // only render valid values
       ret += `${normalizedKey}:${value};`
     }
