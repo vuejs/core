@@ -1345,7 +1345,7 @@ export function compileScript(
   } else {
     const script = renderWithSourceMap(render, () => filename)
     content = script.text
-    map = script.map as unknown as RawSourceMap
+    map = script.map
   }
   return {
     ...scriptSetup,

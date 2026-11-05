@@ -1,4 +1,4 @@
-import { type RawSourceMap, SourceMapConsumer } from 'source-map-js'
+import { SourceMapConsumer } from 'source-map-js'
 import { parse as babelParse } from '@babel/parser'
 import {
   type SFCTemplateCompileOptions,
@@ -171,7 +171,7 @@ test('source map', () => {
   expect(map!.sources).toEqual([`example.vue`])
   expect(map!.sourcesContent).toEqual([template.content])
 
-  const consumer = new SourceMapConsumer(map as RawSourceMap)
+  const consumer = new SourceMapConsumer(map as any)
   expect(
     consumer.originalPositionFor(getPositionInCode(code, 'foobar')),
   ).toMatchObject(getPositionInCode(template.content, `foobar`))
@@ -207,7 +207,7 @@ const foobar = 1
   expect(map!.sources).toEqual([`example.vue`])
   expect(map!.sourcesContent).toEqual([source])
 
-  const consumer = new SourceMapConsumer(map as RawSourceMap)
+  const consumer = new SourceMapConsumer(map as any)
   expect(
     consumer.originalPositionFor(getPositionInCode(code, 'foobar')),
   ).toMatchObject({ source: `example.vue`, line: 6, column: 13 })
@@ -231,7 +231,7 @@ test('source map: inMap without AST is of the source', () => {
   })
 
   expect(map!.sourcesContent).toEqual([template.content])
-  const consumer = new SourceMapConsumer(map as RawSourceMap)
+  const consumer = new SourceMapConsumer(map as any)
   expect(
     consumer.originalPositionFor(getPositionInCode(code, 'foobar')),
   ).toMatchObject(getPositionInCode(template.content, 'foobar'))
@@ -285,7 +285,7 @@ const foobar = 1
     compiler: customCompiler,
   })
 
-  const consumer = new SourceMapConsumer(map as RawSourceMap)
+  const consumer = new SourceMapConsumer(map as any)
   expect(
     consumer.originalPositionFor(getPositionInCode(code, 'foobar')),
   ).toMatchObject({ line: 4, column: 16 })
@@ -309,7 +309,7 @@ test('source map: v-if generated comment should not have original position', () 
   expect(map!.sources).toEqual([`example.vue`])
   expect(map!.sourcesContent).toEqual([template.content])
 
-  const consumer = new SourceMapConsumer(map as RawSourceMap)
+  const consumer = new SourceMapConsumer(map as any)
   const commentNode = code.match(/_createCommentVNode\("v-if", true\)/)
   expect(commentNode).not.toBeNull()
   const commentPosition = getPositionInCode(code, commentNode![0])
@@ -344,7 +344,7 @@ test('should work w/ AST from descriptor', () => {
   // the source corresponds to the entire SFC
   expect(map!.sourcesContent).toEqual([source])
 
-  const consumer = new SourceMapConsumer(map as RawSourceMap)
+  const consumer = new SourceMapConsumer(map as any)
   expect(
     consumer.originalPositionFor(getPositionInCode(code, 'foobar')),
   ).toMatchObject(getPositionInCode(source, `foobar`))
@@ -382,7 +382,7 @@ test('should work w/ AST from descriptor in SSR mode', () => {
   // the source corresponds to the entire SFC
   expect(map!.sourcesContent).toEqual([source])
 
-  const consumer = new SourceMapConsumer(map as RawSourceMap)
+  const consumer = new SourceMapConsumer(map as any)
   expect(
     consumer.originalPositionFor(getPositionInCode(code, 'foobar')),
   ).toMatchObject(getPositionInCode(source, `foobar`))

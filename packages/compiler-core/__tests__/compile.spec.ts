@@ -1,5 +1,5 @@
 import { baseCompile as compile } from '../src'
-import { type RawSourceMap, SourceMapConsumer } from 'source-map-js'
+import { SourceMapConsumer } from 'source-map-js'
 
 describe('compiler: integration tests', () => {
   const source = `
@@ -54,7 +54,7 @@ describe('compiler: integration tests', () => {
     expect(map!.sources).toEqual([`foo.vue`])
     expect(map!.sourcesContent).toEqual([source])
 
-    const consumer = new SourceMapConsumer(map as RawSourceMap)
+    const consumer = new SourceMapConsumer(map as any)
 
     expect(
       consumer.originalPositionFor(getPositionInCode(code, `id`)),
@@ -120,7 +120,7 @@ describe('compiler: integration tests', () => {
     expect(map!.sources).toEqual([`foo.vue`])
     expect(map!.sourcesContent).toEqual([source])
 
-    const consumer = new SourceMapConsumer(map as RawSourceMap)
+    const consumer = new SourceMapConsumer(map as any)
 
     expect(
       consumer.originalPositionFor(getPositionInCode(code, `id`)),
@@ -197,7 +197,7 @@ describe('compiler: integration tests', () => {
     expect(map!.sources).toEqual([`foo.vue`])
     expect(map!.sourcesContent).toEqual([source])
 
-    const consumer = new SourceMapConsumer(map as RawSourceMap)
+    const consumer = new SourceMapConsumer(map as any)
 
     expect(
       consumer.originalPositionFor(getPositionInCode(code, `id`)),
@@ -271,7 +271,7 @@ describe('compiler: integration tests', () => {
       mode: 'module',
     })
     expect(map!.names).toEqual([`foo`])
-    const consumer = new SourceMapConsumer(map as RawSourceMap)
+    const consumer = new SourceMapConsumer(map as any)
     for (const [generated, original] of [
       [`_withDirectives(`, `<div`],
       [`(_openBlock()`, `<div`],
@@ -301,7 +301,7 @@ describe('compiler: integration tests', () => {
       filename: `foo.vue`,
       mode: 'module',
     })
-    const consumer = new SourceMapConsumer(map as RawSourceMap)
+    const consumer = new SourceMapConsumer(map as any)
     expect(
       consumer.originalPositionFor(
         getPositionInCode(code, `_createTextVNode(`),
@@ -317,7 +317,7 @@ describe('compiler: integration tests', () => {
       mode: 'module',
       prefixIdentifiers: true,
     })
-    const consumer = new SourceMapConsumer(map as RawSourceMap)
+    const consumer = new SourceMapConsumer(map as any)
     for (const [generated, end] of [
       [`}), 128`, `</p>`],
       [`(_ctx.ok)`, `</span>`],
@@ -339,7 +339,7 @@ describe('compiler: integration tests', () => {
       mode: 'module',
       prefixIdentifiers: true,
     })
-    const consumer = new SourceMapConsumer(map as RawSourceMap)
+    const consumer = new SourceMapConsumer(map as any)
     expect(
       consumer.originalPositionFor(getPositionInCode(code, `_withCtx(`)),
     ).toMatchObject(getPositionInCode(template, `<template`))

@@ -58,7 +58,7 @@ import type { ImportItem } from './transform'
 export interface RawSourceMap {
   file?: string
   sourceRoot?: string
-  version: string
+  version: number
   sources: string[]
   names: string[]
   sourcesContent?: string[]
@@ -333,7 +333,7 @@ export const createSourceMap: (
           for (const piece of pieces) sink(piece)
         },
         () => filename,
-      ).map as unknown as RawSourceMap
+      ).map
 
 export function generate(
   ast: RootNode,

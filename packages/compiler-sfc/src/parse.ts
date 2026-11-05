@@ -410,7 +410,7 @@ function generateSourceMap(
     file: filename.replace(/\\/g, '/'),
     sourceRoot: sourceRoot.replace(/\\/g, '/'),
     sourcesContent: [source],
-  } as unknown as RawSourceMap
+  }
 }
 
 function padContent(

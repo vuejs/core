@@ -46,7 +46,7 @@ font-weight: bold;
       } = parse(src)
 
       expect(styles[0].map).not.toBeUndefined()
-      const consumer = new SourceMapConsumer(styles[0].map!)
+      const consumer = new SourceMapConsumer(styles[0].map as any)
       const lineOffset =
         src.slice(0, src.indexOf(`<style>`)).split('\n').length - 1
       consumer.eachMapping(mapping => {
@@ -54,7 +54,7 @@ font-weight: bold;
       })
 
       expect(styles[1].map).not.toBeUndefined()
-      const consumer1 = new SourceMapConsumer(styles[1].map!)
+      const consumer1 = new SourceMapConsumer(styles[1].map as any)
       const lineOffset1 =
         src.slice(0, src.indexOf(`<style module>`)).split('\n').length - 1
       consumer1.eachMapping(mapping => {
@@ -62,7 +62,7 @@ font-weight: bold;
       })
 
       expect(styles[2].map).not.toBeUndefined()
-      const consumer2 = new SourceMapConsumer(styles[2].map!)
+      const consumer2 = new SourceMapConsumer(styles[2].map as any)
       const lineOffset2 =
         src.slice(0, src.indexOf(`<style scoped>`)).split('\n').length - 1
       consumer2.eachMapping(mapping => {
@@ -79,7 +79,7 @@ font-weight: bold;
 
       expect(script!.map).not.toBeUndefined()
 
-      const consumer = new SourceMapConsumer(script!.map!)
+      const consumer = new SourceMapConsumer(script!.map as any)
       consumer.eachMapping(mapping => {
         expect(mapping.originalLine! - mapping.generatedLine).toBe(padding)
       })
@@ -98,7 +98,7 @@ font-weight: bold;
 
       expect(template.map).not.toBeUndefined()
 
-      const consumer = new SourceMapConsumer(template.map!)
+      const consumer = new SourceMapConsumer(template.map as any)
       consumer.eachMapping(mapping => {
         expect(mapping.originalLine! - mapping.generatedLine).toBe(padding)
         expect(mapping.originalColumn! - mapping.generatedColumn).toBe(2)
@@ -113,7 +113,7 @@ font-weight: bold;
 
       expect(custom!.map).not.toBeUndefined()
 
-      const consumer = new SourceMapConsumer(custom!.map!)
+      const consumer = new SourceMapConsumer(custom!.map as any)
       consumer.eachMapping(mapping => {
         expect(mapping.originalLine! - mapping.generatedLine).toBe(padding)
       })
