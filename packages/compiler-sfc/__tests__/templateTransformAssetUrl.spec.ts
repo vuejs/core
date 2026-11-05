@@ -255,4 +255,40 @@ describe('compiler sfc: transform asset url', () => {
     expect(code).toMatch(`_createElementVNode`)
     expect(code).toContain(`import _imports_0 from './foo bar.png'`)
   })
+
+  test.each([
+    [
+      'base query',
+      'https://cdn.example.com/assets/?token=abc',
+      './logo.png',
+      'https://cdn.example.com/assets/logo.png',
+    ],
+    [
+      'candidate query',
+      'https://cdn.example.com/assets/',
+      './logo.svg?url=https://other.example/image',
+      'https://cdn.example.com/assets/logo.svg?url=https://other.example/image',
+    ],
+    [
+      'candidate fragment',
+      'https://cdn.example.com/assets/',
+      './logo.svg#//icon/../view',
+      'https://cdn.example.com/assets/logo.svg#//icon/../view',
+    ],
+  ])(
+    'should keep the %s out of path normalization',
+    (_, base, url, expected) => {
+      const { code } = compileWithAssetUrls(`<img src="${url}" />`, { base })
+
+      expect(code).toContain(`src: ${JSON.stringify(expected)}`)
+    },
+  )
+
+  test('should retain tilde base normalization', () => {
+    const { code } = compileWithAssetUrls(`<img src="./logo.png" />`, {
+      base: '~/assets/',
+    })
+
+    expect(code).toContain(`src: "assets/logo.png"`)
+  })
 })
