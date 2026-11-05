@@ -489,6 +489,38 @@ describe('compiler + runtime integration', () => {
     )
   })
 
+  test('conditional slot branches remount inside a conditional slot outlet', async () => {
+    const container = document.createElement('div')
+    const toggle = ref(true)
+    const Child = {
+      template: `<slot v-if="$slots.default" />`,
+    }
+    const app = createApp({
+      components: { Child },
+      setup: () => ({ toggle }),
+      template: `
+        <Child>
+          <template v-if="toggle" #default><input /></template>
+          <template v-else #default><input /></template>
+        </Child>
+      `,
+    })
+    app.mount(container)
+
+    try {
+      for (const value of [false, true]) {
+        const input = container.querySelector('input')!
+        input.value = 'typed'
+        toggle.value = value
+        await nextTick()
+        expect(container.querySelector('input')).not.toBe(input)
+        expect(container.querySelector('input')!.value).toBe('')
+      }
+    } finally {
+      app.unmount()
+    }
+  })
+
   test.each([0, ''])('slot outlet respects key %j', async key => {
     const slotKey = ref<number | string>()
     const Child = {
