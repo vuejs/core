@@ -176,7 +176,11 @@ export function flushPreFlushCbs(
       if (cb.flags! & SchedulerJobFlags.ALLOW_RECURSE) {
         cb.flags! &= ~SchedulerJobFlags.QUEUED
       }
-      cb()
+      callWithErrorHandling(
+        cb,
+        cb.i,
+        cb.i ? ErrorCodes.COMPONENT_UPDATE : ErrorCodes.SCHEDULER,
+      )
       if (!(cb.flags! & SchedulerJobFlags.ALLOW_RECURSE)) {
         cb.flags! &= ~SchedulerJobFlags.QUEUED
       }
@@ -234,7 +238,13 @@ export function flushPostFlushCbs(
       if (cb.flags! & SchedulerJobFlags.ALLOW_RECURSE) {
         cb.flags! &= ~SchedulerJobFlags.QUEUED
       }
-      if (!(cb.flags! & SchedulerJobFlags.DISPOSED)) cb()
+      if (!(cb.flags! & SchedulerJobFlags.DISPOSED)) {
+        callWithErrorHandling(
+          cb,
+          cb.i,
+          cb.i ? ErrorCodes.COMPONENT_UPDATE : ErrorCodes.SCHEDULER,
+        )
+      }
       cb.flags! &= ~SchedulerJobFlags.QUEUED
     }
     activePostFlushCbs = null
