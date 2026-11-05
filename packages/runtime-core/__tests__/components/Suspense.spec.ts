@@ -19,6 +19,7 @@ import {
   h,
   nextTick,
   nodeOps,
+  onActivated,
   onBeforeMount,
   onBeforeUnmount,
   onDeactivated,
@@ -832,6 +833,116 @@ describe('Suspense', () => {
     )
     expect(cleanup).toHaveBeenCalledTimes(1)
   })
+
+  test.each([
+    ['unmount suspense before resolve', true],
+    ['discard before resolve', false],
+  ])(
+    '%s: keep-alive hooks of a discarded component are deregistered',
+    async (_, unmountBoundary) => {
+      const activated = vi.fn()
+      const deactivated = vi.fn()
+      const Slow = defineAsyncComponent({ render: () => h('div', 'slow') })
+      const Sync = {
+        setup() {
+          onActivated(activated)
+          onDeactivated(deactivated)
+          return () => h('div', 'sync')
+        },
+      }
+      const show = ref(false)
+      const pending = () => h('div', [h(Slow), h(Sync)])
+      const Page = {
+        name: 'Page',
+        render: () =>
+          h('div', [
+            unmountBoundary
+              ? show.value
+                ? h(Suspense, null, { default: pending() })
+                : null
+              : h(Suspense, null, {
+                  default: show.value ? pending() : h('span', 'page'),
+                }),
+          ]),
+      }
+      const idle = unmountBoundary
+        ? `<div><!----></div>`
+        : `<div><span>page</span></div>`
+      const Other = { name: 'Other', render: () => h('div', 'other') }
+      const view = shallowRef<ComponentOptions>(Page)
+      const root = nodeOps.createElement('div')
+      render(
+        h(() => h(KeepAlive, null, { default: () => h(view.value) })),
+        root,
+      )
+      expect(serializeInner(root)).toBe(idle)
+
+      // Sync is built in the pending branch, then dropped with it
+      show.value = true
+      await nextTick()
+      show.value = false
+      await nextTick()
+      expect(serializeInner(root)).toBe(idle)
+      await Promise.all(deps)
+      await nextTick()
+
+      view.value = Other
+      await nextTick()
+      view.value = Page
+      await nextTick()
+      expect(serializeInner(root)).toBe(idle)
+      expect(deactivated).not.toHaveBeenCalled()
+      expect(activated).not.toHaveBeenCalled()
+    },
+  )
+
+  test.each([
+    ['unmount suspense before resolve', true],
+    ['discard before resolve', false],
+  ])(
+    '%s: timers of a discarded non-suspensible async component are cleared',
+    async (_, unmountBoundary) => {
+      vi.useFakeTimers()
+      try {
+        let resolveSlow!: () => void
+        const Slow = {
+          async setup() {
+            await new Promise<void>(r => (resolveSlow = r))
+            return () => h('div', 'slow')
+          },
+        }
+        const Wrapper = defineAsyncComp({
+          loader: () => new Promise(() => {}),
+          suspensible: false,
+          delay: 200,
+          timeout: 1000,
+        })
+        const show = ref(true)
+        const pending = () => h('div', [h(Slow), h(Wrapper)])
+        const root = nodeOps.createElement('div')
+        render(
+          h(() =>
+            unmountBoundary
+              ? show.value
+                ? h(Suspense, null, { default: pending() })
+                : null
+              : h(Suspense, null, {
+                  default: show.value ? pending() : h('span', 'other'),
+                }),
+          ),
+          root,
+        )
+        expect(vi.getTimerCount()).toBe(2)
+
+        show.value = false
+        await nextTick()
+        expect(vi.getTimerCount()).toBe(0)
+        void resolveSlow
+      } finally {
+        vi.useRealTimers()
+      }
+    },
+  )
 
   // vuetifyjs/vuetify#15207
   test('update prop of async element before suspense resolve', async () => {

@@ -21,7 +21,6 @@ import {
   injectHook,
   onBeforeUnmount,
   onMounted,
-  onUnmounted,
   onUpdated,
 } from '../apiLifecycle'
 import {
@@ -48,6 +47,7 @@ import { devtoolsComponentAdded } from '../devtools'
 import { isAsyncWrapper } from '../apiAsyncComponent'
 import { isSuspense } from './Suspense'
 import { LifecycleHooks } from '../enums'
+import { type SchedulerJob, SchedulerJobFlags } from '../scheduler'
 
 type MatchPattern = string | RegExp | (string | RegExp)[]
 
@@ -489,9 +489,14 @@ function injectToKeepAliveRoot(
   // injectHook wraps the original for error handling, so make sure to remove
   // the wrapped version.
   const injected = injectHook(type, hook, keepAliveRoot, true /* prepend */)
-  onUnmounted(() => {
-    remove(keepAliveRoot[type]!, injected)
-  }, target)
+  // the removal must outlive a discarded pending branch, which drops the
+  // unmount hooks
+  const removal = injectHook(
+    LifecycleHooks.UNMOUNTED,
+    () => remove(keepAliveRoot[type]!, injected),
+    target,
+  ) as SchedulerJob
+  removal.flags = SchedulerJobFlags.REQUEUE_ON_SUSPENSE_DISCARD
 }
 
 function resetShapeFlag(vnode: VNode) {
