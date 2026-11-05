@@ -84,6 +84,11 @@ export interface CodegenResult extends BaseCodegenResult {
   ast: RootNode
 }
 
+/**
+ * @deprecated The code pushed to a `CodegenContext` is no longer tracked by
+ * position, so its newlines need not be described. To be removed in a later
+ * minor.
+ */
 export enum NewlineType {
   /** Start with `\n` */
   Start = 0,
@@ -113,7 +118,16 @@ export interface CodegenContext extends Omit<
   /** @internal The end of the innermost node with a source being generated */
   openEnd?: number
   helper(key: symbol): string
-  push(code: string, newlineIndex?: number, node?: CodegenNode): void
+  /**
+   * @param newlineIndex - Deprecated and ignored; to be removed in a later
+   * minor.
+   */
+  push(
+    code: string,
+    /** @deprecated ignored */
+    newlineIndex?: number,
+    node?: CodegenNode,
+  ): void
   indent(): void
   deindent(withoutNewLine?: boolean): void
   newline(): void
@@ -158,7 +172,7 @@ function createCodegenContext(
     helper(key) {
       return `_${helperNameMap[key]}`
     },
-    push(code, newlineIndex, node) {
+    push(code, _newlineIndex, node) {
       context.code += code
       if (!__BROWSER__ && context.pieces) {
         if (node && node.loc.source) {
@@ -175,12 +189,7 @@ function createCodegenContext(
           )
           mappedEnd = end.offset + pieceOffset
         } else {
-          // a newline ends the line before it, so it maps nowhere
-          if (
-            mappedEnd === -1 &&
-            newlineIndex !== NewlineType.Start &&
-            context.openEnd !== undefined
-          ) {
+          if (mappedEnd === -1 && context.openEnd !== undefined) {
             mappedEnd = context.openEnd + pieceOffset
           }
           addPiece(
@@ -212,9 +221,12 @@ function createCodegenContext(
   let mappedEnd = -1
   const source = pieceSource || { content: ast.source }
 
+  // a newline ends the line before it, so it maps nowhere
   function newline(n: number) {
     mappedEnd = -1
-    context.push('\n' + `  `.repeat(n), NewlineType.Start)
+    const code = '\n' + `  `.repeat(n)
+    context.code += code
+    if (!__BROWSER__ && context.pieces) addPiece(context.pieces, code)
   }
 
   if (!__BROWSER__ && sourceMap) {
@@ -395,7 +407,7 @@ export function generate(
     }
   }
   if (ast.components.length || ast.directives.length || ast.temps) {
-    push(`\n`, NewlineType.Start)
+    push(`\n`)
     newline()
   }
 
