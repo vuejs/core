@@ -489,6 +489,30 @@ describe('compiler + runtime integration', () => {
     )
   })
 
+  test.each([0, ''])('slot outlet respects key %j', async key => {
+    const slotKey = ref<number | string>()
+    const Child = {
+      props: ['slotKey'],
+      template: `<slot :key="slotKey" />`,
+    }
+    const container = document.createElement('div')
+    const app = createApp({
+      components: { Child },
+      setup: () => ({ slotKey }),
+      template: `<Child :slot-key="slotKey"><input /></Child>`,
+    })
+    app.mount(container)
+
+    try {
+      container.querySelector('input')!.value = 'typed'
+      slotKey.value = key
+      await nextTick()
+      expect(container.querySelector('input')!.value).toBe('')
+    } finally {
+      app.unmount()
+    }
+  })
+
   test('nullish v-bind on <slot>', async () => {
     const Child = {
       props: ['error', 'value'],
