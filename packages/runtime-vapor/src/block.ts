@@ -86,6 +86,8 @@ export interface TransitionOptions {
   // `vnode.key` and `vnode.type` as they see them
   $tkey?: any
   $ttype?: any
+  // the raw key an element is leaving under: a vdom element has no `$tkey`
+  $lkey?: any
   // the key context the content of a fragment, or the root of a component
   // whose async setup has not resolved, resolves its identity in
   $keyCtx?: KeyContext

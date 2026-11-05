@@ -777,4 +777,60 @@ describe('TransitionGroup', () => {
     await nextTick()
     expect(texts()).toBe('fallback')
   })
+
+  test('a root rekeyed while it leaves in place enters again later', async () => {
+    const log: string[] = []
+    const dones: Record<string, () => void> = {}
+    const data = ref<any>({
+      visible: true,
+      more: true,
+      afterEnter: () => {},
+      onEnter: (el: Element) => log.push('enter:' + el.id),
+      onLeave: (el: Element, done: () => void) => {
+        log.push('leave:' + el.id)
+        dones[el.id] = done
+      },
+    })
+    const Item = compile(
+      `<template>
+        <div id="a" v-show="data.visible">a</div>
+        <span v-if="data.more" id="more">more</span>
+      </template>`,
+      data,
+    )
+    const App = compile(
+      `<template>
+        <TransitionGroup :css="false" @after-enter="data.afterEnter" @enter="data.onEnter" @leave="data.onLeave">
+          <components.Item key="item" />
+        </TransitionGroup>
+      </template>`,
+      data,
+      { Item },
+    )
+    define(App as any).render()
+
+    data.value.visible = false
+    await nextTick()
+
+    data.value.more = false
+    await nextTick()
+    dones.more()
+    await nextTick()
+    // a new handler makes the group resolve its hooks again, under the key
+    // the surviving root has now
+    data.value.afterEnter = () => {}
+    await nextTick()
+
+    dones.a()
+    await nextTick()
+
+    data.value.more = true
+    await nextTick()
+    data.value.afterEnter = () => {}
+    await nextTick()
+
+    data.value.visible = true
+    await nextTick()
+    expect(log).toEqual(['leave:a', 'leave:more', 'enter:more', 'enter:a'])
+  })
 })

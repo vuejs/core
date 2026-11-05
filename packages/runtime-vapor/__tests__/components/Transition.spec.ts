@@ -1217,6 +1217,98 @@ describe('Transition', () => {
     leaveDone && leaveDone()
   })
 
+  test.each([
+    ['a vapor element to a vdom child', true],
+    ['a vdom child to a vapor element', false],
+  ])(
+    'a keyed root switching from %s early-removes the leaving one',
+    async (_, native) => {
+      const data = ref({
+        native,
+        onLeave: (_el: Element, _done: () => void) => {},
+      })
+      const Child = compile(
+        `<script setup>
+          const data = _data
+        </script>
+        <template>
+          <p>vdom</p>
+        </template>`,
+        data,
+        {},
+        { vapor: false },
+      )
+      const Wrapper = compile(
+        `<template>
+          <div v-if="data.native">vapor</div>
+          <components.Child v-else />
+        </template>`,
+        data,
+        { Child },
+      )
+      const App = compile(
+        `<template>
+          <Transition :css="false" @leave="data.onLeave">
+            <components.Wrapper key="owner" />
+          </Transition>
+        </template>`,
+        data,
+        { Wrapper },
+      )
+      const { app, mount } = define(App).create()
+      app.use(vaporInteropPlugin)
+      const { host } = mount()
+      try {
+        data.value.native = !native
+        await nextTick()
+        expect(host.children).toHaveLength(1)
+      } finally {
+        app.unmount()
+      }
+    },
+  )
+
+  test('does not early-remove a vdom child across mixed number/string keys of equal value', async () => {
+    let leaveDone: (() => void) | undefined
+    const data = ref<any>({
+      k: 1,
+      onLeave: (_el: Element, done: () => void) => {
+        leaveDone = done
+      },
+    })
+    const Child = compile(
+      `<script setup>
+        const data = _data
+      </script>
+      <template>
+        <div>{{ data.k }}</div>
+      </template>`,
+      data,
+      {},
+      { vapor: false },
+    )
+    const App = compile(
+      `<template>
+        <Transition :css="false" @leave="data.onLeave">
+          <components.Child :key="data.k" />
+        </Transition>
+      </template>`,
+      data,
+      { Child },
+    )
+    const { app, mount } = define(App).create()
+    app.use(vaporInteropPlugin)
+    const { host } = mount()
+    try {
+      data.value.k = '1'
+      await nextTick()
+      expect(host.querySelectorAll('div').length).toBe(2)
+      leaveDone && leaveDone()
+    } finally {
+      app.unmount()
+    }
+  })
+
   test('vdom slot content should wait for fallback leave in out-in mode', async () => {
     let leaveDone: (() => void) | undefined
     const onEnter = vi.fn((_el: Element, done: () => void) => done())
