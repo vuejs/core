@@ -429,15 +429,15 @@ importers:
 
   packages-private/template-explorer:
     dependencies:
+      '@jridgewell/trace-mapping':
+        specifier: 'catalog:'
+        version: 0.3.31
       '@vue/compiler-vapor':
         specifier: workspace:^
         version: link:../../packages/compiler-vapor
       monaco-editor:
         specifier: ^0.57.0
         version: 0.57.0
-      source-map-js:
-        specifier: ^1.2.2
-        version: 1.2.2
 
   packages-private/vapor-e2e-test:
     devDependencies:

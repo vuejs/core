@@ -11,8 +11,8 @@
     "enableNonBrowserBranches": true
   },
   "dependencies": {
+    "@jridgewell/trace-mapping": "catalog:",
     "@vue/compiler-vapor": "workspace:^",
-    "monaco-editor": "^0.57.0",
-    "source-map-js": "^1.2.2"
+    "monaco-editor": "^0.57.0"
   }
 }
