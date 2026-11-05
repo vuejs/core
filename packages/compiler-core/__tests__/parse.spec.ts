@@ -205,6 +205,17 @@ describe('compiler: parse', () => {
       })
     })
 
+    // #8494
+    test('it keeps the newline that terminates a trailing line comment', () => {
+      const ast = baseParse('{{ msg // comment\n}}')
+      const interpolation = ast.children[0] as InterpolationNode
+
+      expect(interpolation.content).toMatchObject({
+        type: NodeTypes.SIMPLE_EXPRESSION,
+        content: 'msg // comment\n',
+      })
+    })
+
     test('it can have tag-like notation', () => {
       const ast = baseParse('{{ a<b }}')
       const interpolation = ast.children[0] as InterpolationNode

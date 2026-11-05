@@ -117,10 +117,20 @@ const tokenizer = new Tokenizer(stack, {
     while (isWhitespace(currentInput.charCodeAt(innerStart))) {
       innerStart++
     }
-    while (isWhitespace(currentInput.charCodeAt(innerEnd - 1))) {
+    let endsWithNewline = false
+    while (true) {
+      const char = currentInput.charCodeAt(innerEnd - 1)
+      if (!isWhitespace(char)) break
+      endsWithNewline ||=
+        char === CharCodes.NewLine || char === CharCodes.CarriageReturn
       innerEnd--
     }
     let exp = getSlice(innerStart, innerEnd)
+    // #8494 a trailing line comment would swallow whatever codegen emits after
+    // the expression, so put back the newline that terminated it
+    if (endsWithNewline) {
+      exp += '\n'
+    }
     // decode entities for backwards compat
     if (exp.includes('&')) {
       if (__BROWSER__) {
