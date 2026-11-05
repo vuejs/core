@@ -15,13 +15,7 @@ import {
   vaporMode,
 } from './options'
 import { toRaw, watchEffect } from '@vue/runtime-dom'
-import {
-  type EncodedSourceMap,
-  TraceMap,
-  decodedMappings,
-  generatedPositionFor,
-  originalPositionFor,
-} from '@jridgewell/trace-mapping'
+import { SourceMapConsumer } from 'source-map-js'
 import theme from './theme'
 
 declare global {
@@ -81,7 +75,7 @@ window.init = () => {
   }
 
   let lastSuccessfulCode: string
-  let lastSuccessfulMap: TraceMap | undefined = undefined
+  let lastSuccessfulMap: SourceMapConsumer | undefined = undefined
   function compileCode(source: string): string {
     console.clear()
     try {
@@ -111,7 +105,8 @@ window.init = () => {
       console.log(`AST: `, ast)
       console.log(`Options: `, toRaw(compilerOptions))
       lastSuccessfulCode = code + `\n\n// Check the console for the AST`
-      lastSuccessfulMap = new TraceMap(map as EncodedSourceMap)
+      lastSuccessfulMap = new SourceMapConsumer(map!)
+      lastSuccessfulMap!.computeColumnSpans()
     } catch (e: any) {
       lastSuccessfulCode = `/* ERROR: ${e.message} (see console for more info) */`
       console.error(e)
@@ -199,23 +194,19 @@ window.init = () => {
     debounce(e => {
       clearEditorDecos()
       if (lastSuccessfulMap) {
-        const pos = generatedPositionFor(lastSuccessfulMap, {
+        const pos = lastSuccessfulMap.generatedPositionFor({
           source: 'ExampleTemplate.vue',
           line: e.position.lineNumber,
           column: e.position.column - 1,
         })
         if (pos.line != null && pos.column != null) {
-          // the mapping spans up to the next one on its line
-          const next = decodedMappings(lastSuccessfulMap)[pos.line - 1].find(
-            segment => segment[0] > pos.column!,
-          )
           prevOutputDecos = output.deltaDecorations(prevOutputDecos, [
             {
               range: new monaco.Range(
                 pos.line,
                 pos.column + 1,
                 pos.line,
-                next ? next[0] + 1 : Infinity,
+                pos.lastColumn ? pos.lastColumn + 2 : pos.column + 2,
               ),
               options: {
                 inlineClassName: `highlight`,
@@ -242,7 +233,7 @@ window.init = () => {
     debounce(e => {
       clearOutputDecos()
       if (lastSuccessfulMap) {
-        const pos = originalPositionFor(lastSuccessfulMap, {
+        const pos = lastSuccessfulMap.originalPositionFor({
           line: e.position.lineNumber,
           column: e.position.column - 1,
         })
