@@ -293,7 +293,8 @@ function getTransitionType(block: ResolvedTransitionBlock): any {
     const type = block.getTransitionType()
     if (type !== undefined) return type
   }
-  return block
+  // a fragment with no type of its own only carries hooks for its content:
+  // a cache keyed by the fragment would hold it after its removal
 }
 
 function getLeavingNodesForType(
