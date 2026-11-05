@@ -1217,7 +1217,10 @@ function loadTSConfig(
         useCaseSensitiveFileNames: true,
         readDirectory: () => [],
       }
-    : ts.sys
+    : {
+        ...ts.sys,
+        readDirectory: () => [],
+      }
   const config = ts.parseJsonConfigFileContent(
     ts.readConfigFile(configPath, fs.readFile).config,
     parseConfigHost,
