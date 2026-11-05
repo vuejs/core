@@ -429,9 +429,9 @@ importers:
       monaco-editor:
         specifier: ^0.57.0
         version: 0.57.0
-      source-map-js:
-        specifier: ^1.2.2
-        version: 1.2.2
+      muggle-string:
+        specifier: 'catalog:'
+        version: 1.0.3
 
   packages-private/vapor-e2e-test:
     devDependencies:
