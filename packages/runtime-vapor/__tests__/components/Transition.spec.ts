@@ -1309,6 +1309,89 @@ describe('Transition', () => {
     }
   })
 
+  test.each([
+    ['mounted with it', false],
+    ['mounted empty', true],
+  ])(
+    'a raw fragment %s keeps its leaving root when its root changes type',
+    async (_, empty) => {
+      const afterLeave = vi.fn()
+      const data = ref<any>({
+        vnode: h(Fragment, { key: 'same' }, empty ? [] : [h('div', 'a')]),
+        leave: (_el: Element, _done: () => void) => {},
+        afterLeave,
+      })
+      const App = compile(
+        `<template>
+          <Transition
+            :css="false"
+            @leave="data.leave"
+            @after-leave="data.afterLeave"
+          >
+            <component :is="data.vnode" />
+          </Transition>
+        </template>`,
+        data,
+      )
+      const { app, mount } = define(App).create()
+      app.use(vaporInteropPlugin)
+      const { host } = mount()
+      try {
+        if (empty) {
+          data.value.vnode = h(Fragment, { key: 'same' }, [h('div', 'a')])
+          await nextTick()
+        }
+        data.value.vnode = h(Fragment, { key: 'same' }, [h('span', 'b')])
+        await nextTick()
+        expect(host.children).toHaveLength(2)
+        expect(afterLeave).not.toHaveBeenCalled()
+      } finally {
+        app.unmount()
+      }
+    },
+  )
+
+  test('a row re-added as a raw fragment of another root type keeps the leaving one', async () => {
+    const log: string[] = []
+    const data = ref<any>({
+      rows: [{ id: 'a', vnode: h(Fragment, []) }],
+      leave: (el: Element, _done: () => void) =>
+        log.push('leave:' + el.tagName),
+      afterLeave: (el: Element) => log.push('afterLeave:' + el.tagName),
+    })
+    const App = compile(
+      `<template>
+        <TransitionGroup
+          :css="false"
+          @leave="data.leave"
+          @after-leave="data.afterLeave"
+        >
+          <component v-for="row in data.rows" :key="row.id" :is="row.vnode" />
+        </TransitionGroup>
+      </template>`,
+      data,
+    )
+    const { app, mount } = define(App).create()
+    app.use(vaporInteropPlugin)
+    const { host } = mount()
+    try {
+      data.value.rows[0].vnode = h(Fragment, [h('div', 'a')])
+      await nextTick()
+      expect(host.children).toHaveLength(1)
+      data.value.rows = []
+      await nextTick()
+      expect(host.children).toHaveLength(1)
+      data.value.rows = [{ id: 'a', vnode: h(Fragment, []) }]
+      await nextTick()
+      data.value.rows[0].vnode = h(Fragment, [h('span', 'b')])
+      await nextTick()
+      expect(host.children).toHaveLength(2)
+      expect(log).toEqual(['leave:DIV'])
+    } finally {
+      app.unmount()
+    }
+  })
+
   test('vdom slot content should wait for fallback leave in out-in mode', async () => {
     let leaveDone: (() => void) | undefined
     const onEnter = vi.fn((_el: Element, done: () => void) => done())
