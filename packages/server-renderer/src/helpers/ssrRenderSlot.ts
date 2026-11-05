@@ -88,11 +88,19 @@ export function ssrRenderSlotInner(
       // ssr slot.
       // check if the slot renders all comments, in which case use the fallback
       let isEmptySlot = true
-      if (transition) {
+      // #13394 a transition needs a node to render when its only child renders
+      // nothing, but a slot fallback still takes precedence over that
+      // placeholder, as it does on the client (`renderSlot`)
+      if (transition && !fallbackRenderFn) {
         isEmptySlot = false
       } else {
         for (let i = 0; i < slotBuffer.length; i++) {
-          if (!isComment(slotBuffer[i])) {
+          const item = slotBuffer[i]
+          // a teleport renders its content into the target buffer and only
+          // leaves its anchors behind here, but the client still treats the
+          // teleport vnode as content (`ensureValidVNode`), so the anchors must
+          // be kept instead of being replaced by the fallback
+          if (isTeleportMarker(item) || !isComment(item)) {
             isEmptySlot = false
             break
           }
@@ -142,4 +150,9 @@ function isComment(item: SSRBufferItem) {
   // if item is '<!---->' or '<!--[-->' or '<!--]-->', return true directly
   if (item.length <= 8) return true
   return !item.replace(commentRE, '').trim()
+}
+
+const teleportMarkerRE = /^<!--teleport (?:start|end)-->$/
+function isTeleportMarker(item: SSRBufferItem) {
+  return typeof item === 'string' && teleportMarkerRE.test(item)
 }
