@@ -91,16 +91,16 @@ export function renderSlot(
   try {
     const validSlotContent = slot && ensureValidVNode(slot(props))
     const slotKey =
-      props.key ||
-      branchKey ||
-      // slot content array of a dynamic conditional slot may have a branch
-      // key attached in the `createSlots` helper, respect that
-      (validSlotContent && (validSlotContent as any).key)
+      props.key ??
+      (branchKey ||
+        // slot content array of a dynamic conditional slot may have a branch
+        // key attached in the `createSlots` helper, respect that
+        (validSlotContent && (validSlotContent as any).key))
     rendered = createBlock(
       Fragment,
       {
         key:
-          (slotKey && !isSymbol(slotKey) ? slotKey : `_${name}`) +
+          (slotKey != null && !isSymbol(slotKey) ? slotKey : `_${name}`) +
           // #7256 force differentiate fallback content from actual content
           (!validSlotContent && fallback ? '_fb' : ''),
       },
