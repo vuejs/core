@@ -282,6 +282,8 @@ export type {
   ComponentProvideOptions,
   RenderFunction,
   MethodOptions,
+  ComponentComputedGetter,
+  ComponentComputedOptions,
   ComputedOptions,
   RuntimeCompilerOptions,
   ComponentInjectOptions,
