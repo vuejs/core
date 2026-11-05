@@ -15,6 +15,7 @@ import {
   normalizeOptions,
 } from '../src/template/transformAssetUrl'
 import { stringifyStatic } from '../../compiler-dom/src/transforms/stringifyStatic'
+import { compileTemplate } from '../src/compileTemplate'
 
 function compileWithSrcset(
   template: string,
@@ -54,6 +55,34 @@ const src = `
 describe('compiler sfc: transform srcset', () => {
   test('transform srcset', () => {
     expect(compileWithSrcset(src).code).toMatchSnapshot()
+  })
+
+  test.each([' ', '\t', '\n', '\f', '\r', '\r\n\t '])(
+    'separates srcset descriptors with ASCII whitespace %j',
+    whitespace => {
+      const template = `<img srcset="./small.png${whitespace}1x, ./large.png${whitespace}2x" />`
+      const code = compileWithSrcset(template).code
+
+      expect(code).toContain(`import _imports_0 from './small.png'`)
+      expect(code).toContain(`import _imports_1 from './large.png'`)
+      expect(code).toContain(`_imports_0 + ' 1x, ' + _imports_1 + ' 2x'`)
+      expect(compileWithSrcset(template, { base: '/assets/' }).code).toContain(
+        `srcset: "/assets/small.png 1x, /assets/large.png 2x"`,
+      )
+    },
+  )
+
+  test('preserves width descriptors in a multiline source srcset', () => {
+    const { code, errors } = compileTemplate({
+      source: `<picture><source srcset="./small.png\t480w, ./large.png\n800w" /></picture>`,
+      filename: 'App.vue',
+      id: 'test',
+    })
+
+    expect(errors).toEqual([])
+    expect(code).toContain(`import _imports_0 from './small.png'`)
+    expect(code).toContain(`import _imports_1 from './large.png'`)
+    expect(code).toContain(`_imports_0 + ' 480w, ' + _imports_1 + ' 800w'`)
   })
 
   test('transform srcset w/ base', () => {
