@@ -1,4 +1,4 @@
-import { TraceMap, originalPositionFor } from '@jridgewell/trace-mapping'
+import { SourceMapConsumer } from 'source-map-js'
 import { makeCompile } from './_utils'
 import {
   type ForIRNode,
@@ -855,9 +855,9 @@ test('source map of a v-for selector', () => {
   })
   const lines = code.split('\n')
   const line = lines.findIndex(l => l.includes('_createSelector('))
-  const consumer = new TraceMap(map as any)
+  const consumer = new SourceMapConsumer(map as any)
   expect(
-    originalPositionFor(consumer, {
+    consumer.originalPositionFor({
       line: line + 1,
       column: lines[line].indexOf('_ctx.selected'),
     }),
