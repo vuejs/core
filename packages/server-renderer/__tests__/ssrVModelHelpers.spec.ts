@@ -55,7 +55,7 @@ describe('ssr: v-model helpers', () => {
         },
         false,
       ),
-    ).toBe(null)
+    ).toEqual({ checked: false })
     expect(
       ssrGetDynamicModelProps(
         {
@@ -82,7 +82,7 @@ describe('ssr: v-model helpers', () => {
         },
         [1],
       ),
-    ).toBe(null)
+    ).toEqual({ checked: false })
 
     expect(
       ssrGetDynamicModelProps(
@@ -111,5 +111,19 @@ describe('ssr: v-model helpers', () => {
         1,
       ),
     ).toBe(null)
+  })
+
+  test('checkbox distinguishes an omitted true-value from undefined', () => {
+    expect(ssrRenderDynamicModel('checkbox', true, null)).toBe(' checked')
+    expect(ssrRenderDynamicModel('checkbox', true, null, undefined)).toBe('')
+    expect(ssrRenderDynamicModel('checkbox', undefined, null, undefined)).toBe(
+      ' checked',
+    )
+    expect(
+      ssrGetDynamicModelProps(
+        { type: 'checkbox', 'true-value': undefined },
+        undefined,
+      ),
+    ).toEqual({ checked: true })
   })
 })
