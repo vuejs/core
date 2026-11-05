@@ -799,6 +799,24 @@ const props = defineProps({ foo: String })
     })
   })
 
+  // #16082
+  test('should escape names starting with a digit', () => {
+    const { content, bindings } = compile(`
+    <script setup lang="ts">
+    defineProps<{
+      '2xl': boolean
+      '3d'?: string
+    }>()
+    </script>`)
+    assertCode(content)
+    expect(content).toMatch(`"2xl": { type: Boolean, required: true }`)
+    expect(content).toMatch(`"3d": { type: String, required: false }`)
+    expect(bindings).toStrictEqual({
+      '2xl': BindingTypes.PROPS,
+      '3d': BindingTypes.PROPS,
+    })
+  })
+
   // #8989
   test('custom element retains the props type & production mode', () => {
     const { content } = compile(
