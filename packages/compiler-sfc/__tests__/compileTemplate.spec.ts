@@ -83,6 +83,26 @@ test('preprocessed template has no source map', () => {
   }
 })
 
+// expected to fail: the preprocessor gives no positions of its output in the
+// template
+test.fails('source map of a preprocessed template', () => {
+  const template = parse(`<template lang="pug">\np {{ foobar }}\n</template>`, {
+    filename: 'example.vue',
+    sourceMap: true,
+  }).descriptor.template as SFCTemplateBlock
+
+  const result = compile({
+    filename: 'example.vue',
+    source: template.content,
+    preprocessLang: template.lang,
+  })
+  expect(result.map).toBeDefined()
+  const consumer = new SourceMapConsumer(result.map as any)
+  expect(
+    consumer.originalPositionFor(getPositionInCode(result.code, 'foobar')),
+  ).toMatchObject(getPositionInCode(template.content, 'foobar'))
+})
+
 test('preprocess pug with indents and blank lines', () => {
   const template = parse(
     `
