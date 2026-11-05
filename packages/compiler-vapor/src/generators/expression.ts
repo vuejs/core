@@ -159,7 +159,7 @@ export function genExpression(
       }
       push(` = ${assignment}`)
     }
-    return frag
+    return [{ loc: node.loc, code: frag }]
   } else {
     return [[content, NewlineType.Unknown, loc]]
   }

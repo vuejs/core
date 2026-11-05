@@ -19,6 +19,7 @@ import {
   type SSRCodegenNode,
   type SequenceExpression,
   type SimpleExpressionNode,
+  type SourceLocation,
   type TemplateChildNode,
   type TemplateLiteral,
   type TextNode,
@@ -113,10 +114,8 @@ export interface CodegenContext extends Omit<
   code: string
   indentLevel: number
   pure: boolean
-  /** @internal The pieces of the code, when a source map is generated */
-  pieces?: CodegenPiece[]
-  /** @internal The end of the innermost node with a source being generated */
-  openEnd?: number
+  /** @internal Writes the pieces of the code, when a source map is generated */
+  writer?: PieceWriter
   helper(key: symbol): string
   /**
    * @param newlineIndex - Deprecated and ignored; to be removed in a later
@@ -174,31 +173,14 @@ function createCodegenContext(
     },
     push(code, _newlineIndex, node) {
       context.code += code
-      if (!__BROWSER__ && context.pieces) {
-        if (node && node.loc.source) {
-          const { start, end } = node.loc
-          addPiece(
-            context.pieces,
-            code,
-            source,
-            start.offset + pieceOffset,
-            end.offset + pieceOffset,
-            node.type === NodeTypes.SIMPLE_EXPRESSION && !node.isStatic
-              ? renamedIdentifier(node, code)
-              : undefined,
-          )
-          mappedEnd = end.offset + pieceOffset
-        } else {
-          if (mappedEnd === -1 && context.openEnd !== undefined) {
-            mappedEnd = context.openEnd + pieceOffset
-          }
-          addPiece(
-            context.pieces,
-            code,
-            mappedEnd === -1 ? undefined : source,
-            mappedEnd,
-          )
-        }
+      if (!__BROWSER__ && context.writer) {
+        context.writer.write(
+          code,
+          node && node.loc,
+          node && node.type === NodeTypes.SIMPLE_EXPRESSION && !node.isStatic
+            ? renamedIdentifier(node, code)
+            : undefined,
+        )
       }
     },
     indent() {
@@ -216,21 +198,17 @@ function createCodegenContext(
     },
   }
 
-  // text without a node maps to the end of the last node on its line, or else
-  // of the node it is generated in
-  let mappedEnd = -1
-  const source = pieceSource || { content: ast.source }
-
-  // a newline ends the line before it, so it maps nowhere
   function newline(n: number) {
-    mappedEnd = -1
     const code = '\n' + `  `.repeat(n)
     context.code += code
-    if (!__BROWSER__ && context.pieces) addPiece(context.pieces, code)
+    if (!__BROWSER__ && context.writer) context.writer.newline(code)
   }
 
   if (!__BROWSER__ && sourceMap) {
-    context.pieces = [createSourcePiece(source)]
+    context.writer = createPieceWriter(
+      pieceSource || { content: ast.source },
+      pieceOffset,
+    )
   }
 
   return context
@@ -253,18 +231,63 @@ function renamedIdentifier(
 }
 
 /**
- * @internal An empty piece of `source`, so that the map names it even if no
- * code maps to it
+ * @internal Writes generated code as pieces of `source`, whose offsets are
+ * those of the AST shifted by `offset`
  */
-export function createSourcePiece(source: Source): CodegenPiece {
-  return { source, start: 0, end: 0, text: '' }
+export interface PieceWriter {
+  /** starts with an empty piece of the source, so that the map names it even if no code maps to it */
+  readonly pieces: CodegenPiece[]
+  /**
+   * The innermost node with a source being generated: text without one on a
+   * line with none maps to its end
+   */
+  enclosing: SourceLocation | undefined
+  /**
+   * Writes `code` as the text of `loc` if it has a source, named `name`;
+   * otherwise as the end of the last such text on its line, or of `enclosing`
+   */
+  write(code: string, loc?: SourceLocation, name?: string): void
+  /** Writes a newline, which ends the line before it, so it maps nowhere */
+  newline(code: string): void
 }
 
-/**
- * @internal Adds `code` to `pieces`, as the text of `start`..`end` of `source`
- * if given, named `name`, joined to the last piece when that maps the same way
- */
-export function addPiece(
+/** @internal */
+export function createPieceWriter(source: Source, offset: number): PieceWriter {
+  const pieces: CodegenPiece[] = [{ source, start: 0, end: 0, text: '' }]
+  let mappedEnd = -1
+  const writer: PieceWriter = {
+    pieces,
+    enclosing: undefined,
+    write(code, loc, name) {
+      if (loc && loc.source) {
+        mappedEnd = loc.end.offset + offset
+        addPiece(
+          pieces,
+          code,
+          source,
+          loc.start.offset + offset,
+          mappedEnd,
+          name,
+        )
+        return
+      }
+      const { enclosing } = writer
+      if (mappedEnd === -1 && enclosing && enclosing.source) {
+        mappedEnd = enclosing.end.offset + offset
+      }
+      addPiece(pieces, code, mappedEnd === -1 ? undefined : source, mappedEnd)
+    },
+    newline(code) {
+      mappedEnd = -1
+      addPiece(pieces, code)
+    },
+  }
+  return writer
+}
+
+// adds `code` to `pieces`, as the text of `start`..`end` of `source` if given,
+// named `name`, joined to the last piece when that maps the same way
+function addPiece(
   pieces: CodegenPiece[],
   code: string,
   source?: Source,
@@ -434,10 +457,10 @@ export function generate(
     code: context.code,
     preamble: isSetupInlined ? preambleContext.code : ``,
     map:
-      !__BROWSER__ && context.pieces && !options.pieceSource
-        ? createSourceMap(context.filename, context.pieces)
+      !__BROWSER__ && context.writer && !options.pieceSource
+        ? createSourceMap(context.filename, context.writer.pieces)
         : undefined,
-    pieces: context.pieces,
+    pieces: !__BROWSER__ && context.writer ? context.writer.pieces : undefined,
     helpers: ast.helpers,
   }
 }
@@ -693,11 +716,9 @@ function genNode(node: CodegenNode | symbol | string, context: CodegenContext) {
     context.push(context.helper(node))
     return
   }
-  const pieces = !__BROWSER__ && context.pieces
-  const openEnd = pieces ? context.openEnd : undefined
-  if (pieces && node.loc.source) {
-    context.openEnd = node.loc.end.offset
-  }
+  const writer = !__BROWSER__ && context.writer
+  const enclosing = writer ? writer.enclosing : undefined
+  if (writer && node.loc.source) writer.enclosing = node.loc
   switch (node.type) {
     case NodeTypes.ELEMENT:
     case NodeTypes.IF:
@@ -784,9 +805,7 @@ function genNode(node: CodegenNode | symbol | string, context: CodegenContext) {
       }
     /* v8 ignore stop */
   }
-  if (pieces) {
-    context.openEnd = openEnd
-  }
+  if (writer) writer.enclosing = enclosing
 }
 
 function genText(
@@ -1049,11 +1068,7 @@ function genConditionalExpression(
   context.indentLevel--
   // the alternate starts its line, so the comment the compiler adds for a
   // v-if without v-else maps nowhere
-  if (!__BROWSER__ && context.pieces) {
-    context.openEnd = alternate.loc.source
-      ? alternate.loc.end.offset
-      : undefined
-  }
+  if (!__BROWSER__ && context.writer) context.writer.enclosing = alternate.loc
   needNewline && newline()
   needNewline || push(` `)
   push(`: `)

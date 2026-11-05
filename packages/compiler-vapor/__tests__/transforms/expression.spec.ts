@@ -974,3 +974,20 @@ test('source map of the display string call of v-text', () => {
     ).toMatchObject({ line: 1, column: template.indexOf('v-text') })
   }
 })
+
+test('source map of the text of an expression with nothing mapped before it on its line', () => {
+  const template = `<div :title="!ok">{{ !ok }}</div>`
+  const { code, map } = compile(template, {
+    prefixIdentifiers: true,
+    sourceMap: true,
+  })
+  const lines = code.split('\n')
+  const line = lines.findIndex(l => l.includes('const __ok = !'))
+  const consumer = new SourceMapConsumer(map as any)
+  expect(
+    consumer.originalPositionFor({
+      line: line + 1,
+      column: lines[line].indexOf('!'),
+    }),
+  ).toMatchObject({ line: 1, column: template.indexOf('">') })
+})

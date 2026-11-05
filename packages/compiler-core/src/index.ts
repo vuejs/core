@@ -33,10 +33,10 @@ export {
 } from './codegen'
 /** @internal for the codegen of compiler-vapor and compiler-sfc */
 export {
-  addPiece,
-  createSourcePiece,
+  createPieceWriter,
   createSourceMap,
   type CodegenPiece,
+  type PieceWriter,
 } from './codegen'
 export {
   ErrorCodes,

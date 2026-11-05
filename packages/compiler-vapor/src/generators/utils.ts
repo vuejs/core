@@ -1,9 +1,4 @@
-import {
-  type SourceLocation,
-  addPiece,
-  createSourcePiece,
-  locStub,
-} from '@vue/compiler-dom'
+import { type SourceLocation, createPieceWriter } from '@vue/compiler-dom'
 import { isArray, isString } from '@vue/shared'
 import type { CodegenContext } from '../generate'
 import type { ParserOptions } from '@babel/parser'
@@ -39,18 +34,37 @@ export type MappedFragment = [
   /** the identifier of the source that `code` renames */
   name?: string,
 ]
+/** the code generated for a node with a source, which the piece writer takes as its `enclosing` */
+export interface NodeFragments {
+  loc: SourceLocation
+  code: CodeFragment[]
+}
 export type CodeFragment =
   | typeof NEWLINE
   | typeof INDENT_START
   | typeof INDENT_END
   | string
   | MappedFragment
+  | NodeFragments
   // a generator's output, pushed as one item instead of being spread
   | CodeFragment[]
   | FalsyValue
 
 export function isNestedFragments(frag: CodeFragment): frag is CodeFragment[] {
   return isArray(frag) && typeof frag[1] !== 'number'
+}
+
+/** the fragments nested in `frag`, if it nests any */
+export function innerFragments(frag: CodeFragment): CodeFragment[] | undefined {
+  return isNestedFragments(frag)
+    ? frag
+    : isNodeFragments(frag)
+      ? frag.code
+      : undefined
+}
+
+export function isNodeFragments(frag: CodeFragment): frag is NodeFragments {
+  return !!frag && typeof frag === 'object' && !isArray(frag)
 }
 export type CodeFragments = Exclude<CodeFragment, any[]> | CodeFragment[]
 
@@ -149,70 +163,47 @@ export function codeFragmentToString(
   code: CodeFragment[],
   context: CodegenContext,
 ): string {
-  const offset = context.options.pieceOffset || 0
-  const source = context.options.pieceSource || { content: context.ir.source }
-  const pieces =
+  const writer =
     !__BROWSER__ && context.options.sourceMap
-      ? (context.pieces = [createSourcePiece(source)])
+      ? createPieceWriter(
+          context.options.pieceSource || { content: context.ir.source },
+          context.options.pieceOffset || 0,
+        )
       : undefined
+  if (writer) context.pieces = writer.pieces
 
   let codegen = ''
   let indentLevel = 0
-  // text without a location maps to the end of the last located text on its line
-  let mappedEnd = -1
 
   emit(code)
 
   return codegen
 
   function emit(code: CodeFragment[]) {
-    for (let frag of code) {
+    for (const frag of code) {
       if (!frag) continue
       if (isNestedFragments(frag)) {
         emit(frag)
-        continue
-      }
-
-      let code: string
-      let loc: SourceLocation | undefined
-      let name: string | undefined
-      if (frag === NEWLINE) {
-        code = `\n${`  `.repeat(indentLevel)}`
-        mappedEnd = -1
+      } else if (isNodeFragments(frag)) {
+        const enclosing = writer && writer.enclosing
+        if (writer) writer.enclosing = frag.loc
+        emit(frag.code)
+        if (writer) writer.enclosing = enclosing
+      } else if (frag === NEWLINE) {
+        const code = `\n${`  `.repeat(indentLevel)}`
+        codegen += code
+        if (writer) writer.newline(code)
       } else if (frag === INDENT_START) {
         indentLevel++
-        continue
       } else if (frag === INDENT_END) {
         indentLevel--
-        continue
       } else if (isString(frag)) {
-        code = frag
+        codegen += frag
+        if (writer) writer.write(frag)
       } else {
-        code = frag[0]
-        loc = frag[2]
-        name = frag[3]
-      }
-      codegen += code
-
-      if (pieces) {
-        if (loc && loc !== locStub) {
-          addPiece(
-            pieces,
-            code,
-            source,
-            loc.start.offset + offset,
-            loc.end.offset + offset,
-            name,
-          )
-          mappedEnd = loc.end.offset + offset
-        } else {
-          addPiece(
-            pieces,
-            code,
-            mappedEnd === -1 ? undefined : source,
-            mappedEnd,
-          )
-        }
+        const [code, , loc, name] = frag
+        codegen += code
+        if (writer) writer.write(code, loc, name)
       }
     }
   }

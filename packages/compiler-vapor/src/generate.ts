@@ -1,7 +1,7 @@
 import {
-  type CodegenContext as BaseCodegenContext,
   type CodegenOptions as BaseCodegenOptions,
   type BaseCodegenResult,
+  type CodegenPiece,
   type SimpleExpressionNode,
   createSourceMap,
 } from '@vue/compiler-dom'
@@ -37,7 +37,7 @@ export class CodegenContext {
   options: Required<CodegenOptions>
 
   /** @internal */
-  pieces?: BaseCodegenContext['pieces']
+  pieces?: CodegenPiece[]
 
   bindingNames: Set<string>
 
