@@ -216,6 +216,37 @@ interface SharedTransformCodegenOptions {
   filename?: string
 }
 
+export interface ResolveComponentContext {
+  node: ElementNode
+  /**
+   * Whether the template is compiled for SSR, including the vnode-based
+   * fallback branches of SSR output.
+   */
+  ssr: boolean
+  /**
+   * Component name inferred from `filename`, used for self references.
+   */
+  selfName: string | null
+  filename: string
+}
+
+export interface ResolvedComponent {
+  /**
+   * Module specifier to import the component from.
+   */
+  from: string
+  /**
+   * Name of the export to import.
+   * @default 'default'
+   */
+  import?: string
+  /**
+   * Local identifier the import is bound to and the element references.
+   * Defaults to an identifier derived from the tag.
+   */
+  id?: string
+}
+
 export interface TransformOptions
   extends
     SharedTransformCodegenOptions,
@@ -246,6 +277,18 @@ export interface TransformOptions
    * Used by some transforms that expects only native elements
    */
   isCustomElement?: (tag: string) => boolean | void
+  /**
+   * Resolve a component tag to a module import at compile time instead of
+   * resolving it at runtime with `resolveComponent()`. Called for each
+   * component element that is not a built-in component or a slot / setup
+   * binding. Returning nothing falls back to runtime resolution.
+   * Imports are only generated in module mode. In browser builds, this option
+   * is ignored.
+   */
+  resolveComponent?: (
+    tag: string,
+    context: ResolveComponentContext,
+  ) => ResolvedComponent | void
   /**
    * Transform expressions like {{ foo }} to `_ctx.foo`.
    * If this option is false, the generated code will be wrapped in a

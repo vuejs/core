@@ -1,5 +1,21 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
+exports[`compiler: element transform > resolveComponent option > default import 1`] = `
+"import { createVNode as _createVNode, resolveComponent as _resolveComponent, openBlock as _openBlock, createElementBlock as _createElementBlock } from "vue"
+import _resolved_component_Foo from '~/components/Foo.vue'
+
+
+export function render(_ctx, _cache) {
+  const _component_Bar = _resolveComponent("Bar")
+
+  return (_openBlock(), _createElementBlock("div", null, [
+    _createVNode(_resolved_component_Foo),
+    _createVNode(_resolved_component_Foo),
+    _createVNode(_component_Bar)
+  ]))
+}"
+`;
+
 exports[`compiler: v-for > codegen > basic v-for 1`] = `
 "const _Vue = Vue
 

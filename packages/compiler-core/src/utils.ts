@@ -25,8 +25,10 @@ import {
   type VNodeCall,
   createCallExpression,
   createObjectExpression,
+  createSimpleExpression,
 } from './ast'
-import type { TransformContext } from './transform'
+import type { ImportItem, TransformContext } from './transform'
+import type { TransformOptions } from './options'
 import {
   BASE_TRANSITION,
   GUARD_REACTIVE_PROPS,
@@ -552,6 +554,49 @@ export function toValidAssetId(
   return `_${type}_${name.replace(/[^\w]/g, (searchValue, replaceValue) => {
     return searchValue === '-' ? '_' : name.charCodeAt(replaceValue).toString()
   })}`
+}
+
+export function resolveComponentImport(
+  tag: string,
+  node: ElementNode,
+  imports: ImportItem[],
+  selfName: string | null,
+  {
+    resolveComponent,
+    inSSR,
+    filename,
+  }: Pick<TransformOptions, 'resolveComponent' | 'inSSR' | 'filename'>,
+): string | undefined {
+  const resolved =
+    resolveComponent &&
+    resolveComponent(tag, {
+      node,
+      ssr: !!inSSR,
+      selfName,
+      filename: filename || '',
+    })
+  if (!resolved) return
+
+  const id = resolved.id || `_resolved${toValidAssetId(tag, 'component')}`
+  const imported =
+    resolved.import && resolved.import !== 'default'
+      ? resolved.import
+      : undefined
+  if (
+    !imports.some(
+      item =>
+        item.exp.content === id &&
+        item.path === resolved.from &&
+        item.imported === imported,
+    )
+  ) {
+    imports.push({
+      exp: createSimpleExpression(id, false, node.loc),
+      path: resolved.from,
+      imported,
+    })
+  }
+  return id
 }
 
 // Check if a node contains expressions that reference current context scope ids

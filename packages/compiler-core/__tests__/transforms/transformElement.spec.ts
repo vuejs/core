@@ -1618,4 +1618,103 @@ describe('compiler: element transform', () => {
       ],
     })
   })
+
+  describe('resolveComponent option', () => {
+    function compileModule(template: string, options: CompilerOptions) {
+      return baseCompile(template, {
+        mode: 'module',
+        prefixIdentifiers: true,
+        ...options,
+      })
+    }
+
+    test('default import', () => {
+      const resolveComponent = vi.fn((tag: string) =>
+        tag === 'Foo' ? { from: '~/components/Foo.vue' } : undefined,
+      )
+      const { code, ast } = compileModule(`<div><Foo/><Foo/><Bar/></div>`, {
+        resolveComponent,
+      })
+      expect(ast.components).toEqual(['Bar'])
+      expect(code).toMatch(
+        `import _resolved_component_Foo from '~/components/Foo.vue'`,
+      )
+      expect(code.match(/import _resolved_component_Foo/g)).toHaveLength(1)
+      expect(code).toMatch(`_createVNode(_resolved_component_Foo)`)
+      expect(code).not.toMatch(`_resolveComponent("Foo")`)
+      expect(code).toMatch(`_resolveComponent("Bar")`)
+      expect(code).toMatchSnapshot()
+      expect(resolveComponent).toHaveBeenCalledWith('Foo', {
+        node: expect.objectContaining({ tag: 'Foo' }),
+        ssr: false,
+        selfName: null,
+        filename: '',
+      })
+    })
+
+    test('named import', () => {
+      const { code } = compileModule(`<Foo/>`, {
+        resolveComponent: () => ({
+          from: 'some-lib',
+          import: 'Foo',
+          id: '_Foo',
+        }),
+      })
+      expect(code).toMatch(`import { Foo as _Foo } from 'some-lib'`)
+      expect(code).toMatch(`_createBlock(_Foo)`)
+      expect(code).not.toMatch(`_resolveComponent`)
+    })
+
+    test('per-element id', () => {
+      const { code } = compileModule(
+        `<div><Foo/><Foo lazy/><Foo lazy/><Foo-bar/></div>`,
+        {
+          resolveComponent: (tag, { node }) =>
+            node.props.some(p => p.name === 'lazy')
+              ? { from: 'lazy-wrapper', import: 'lazy', id: `_Lazy${tag}` }
+              : { from: `./${tag}.vue` },
+        },
+      )
+      expect(code).toMatch(`import _resolved_component_Foo from './Foo.vue'`)
+      expect(code).toMatch(`import { lazy as _LazyFoo } from 'lazy-wrapper'`)
+      expect(code.match(/import \{ lazy as _LazyFoo \}/g)).toHaveLength(1)
+      expect(code).toMatch(
+        `import _resolved_component_Foo_bar from './Foo-bar.vue'`,
+      )
+      expect(code).toMatch(`_createVNode(_resolved_component_Foo)`)
+      expect(code).toMatch(`_createVNode(_LazyFoo, { lazy: "" })`)
+      expect(code).toMatch(`_createVNode(_resolved_component_Foo_bar)`)
+    })
+
+    test('setup bindings take precedence', () => {
+      const resolveComponent = vi.fn(() => ({ from: './Foo.vue' }))
+      const { code } = compileModule(`<Foo/>`, {
+        inline: true,
+        bindingMetadata: { Foo: BindingTypes.SETUP_CONST },
+        resolveComponent,
+      })
+      expect(resolveComponent).not.toHaveBeenCalled()
+      expect(code).toMatch(`_createBlock(Foo)`)
+      expect(code).not.toMatch(`import`)
+    })
+
+    test('self reference', () => {
+      const filename = `/foo/bar/Example.vue?vue&type=template`
+      const resolveComponent = vi.fn(
+        (tag: string, { selfName }: { selfName: string | null }) =>
+          tag === selfName ? undefined : { from: `./${tag}.vue` },
+      )
+      const { code, ast } = compileModule(`<div><Example/><Foo/></div>`, {
+        filename,
+        resolveComponent,
+      })
+      expect(resolveComponent).toHaveBeenCalledWith(
+        'Example',
+        expect.objectContaining({ selfName: 'Example', filename }),
+      )
+      expect(ast.components).toEqual(['Example__self'])
+      expect(code).toMatch(`_resolveComponent("Example", true)`)
+      expect(code).toMatch(`import _resolved_component_Foo from './Foo.vue'`)
+    })
+  })
 })
