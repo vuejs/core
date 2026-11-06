@@ -1519,6 +1519,36 @@ describe('SFC analyze <script> bindings', () => {
       expect(content).toMatch(`name: 'Baz'`)
       assertCode(content)
     })
+
+    // #6704 KeepAlive's include/exclude and devtools rely on the component name
+    // being inferred for components that only have an empty <script setup>
+    test('empty <script setup> block', () => {
+      const { content } = compile(
+        `<script setup>
+        </script>
+        <template><div/></template>`,
+        undefined,
+        {
+          filename: 'FooBar.vue',
+        },
+      )
+      expect(content).toMatch(`__name: 'FooBar'`)
+      assertCode(content)
+    })
+
+    test('empty <script setup> block alongside an empty <script> block', () => {
+      const { content } = compile(
+        `<script></script>
+        <script setup></script>
+        <template><div/></template>`,
+        undefined,
+        {
+          filename: 'FooBar.vue',
+        },
+      )
+      expect(content).toMatch(`__name: 'FooBar'`)
+      assertCode(content)
+    })
   })
 })
 
