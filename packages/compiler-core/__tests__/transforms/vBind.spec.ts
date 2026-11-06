@@ -5,6 +5,7 @@ import {
   ErrorCodes,
   NodeTypes,
   type ObjectExpression,
+  type SimpleExpressionNode,
   type VNodeCall,
   baseParse as parse,
   transform,
@@ -145,7 +146,7 @@ describe('compiler: transform v-bind', () => {
           properties: [
             {
               key: {
-                content: `id || ""`,
+                content: `(id) || ""`,
                 isStatic: false,
               },
               value: {
@@ -157,6 +158,25 @@ describe('compiler: transform v-bind', () => {
         },
       ],
     })
+  })
+
+  // #15975
+  test('dynamic arg w/ low-precedence operators', () => {
+    const getKey = (template: string) => {
+      const node = parseWithVBind(template)
+      const props = (node.codegenNode as VNodeCall).props as CallExpression
+      const obj = props.arguments[0] as ObjectExpression
+      return (obj.properties[0].key as SimpleExpressionNode).content
+    }
+
+    // `??` cannot be mixed with `||` without parens - it would be a
+    // SyntaxError in the generated code
+    expect(getKey(`<div v-bind:[foo??"id"]="x"/>`)).toBe(`(foo??"id") || ""`)
+    // `||` must not bind to the last branch of the ternary
+    expect(getKey(`<div v-bind:[cond?name:"title"]="x"/>`)).toBe(
+      `(cond?name:"title") || ""`,
+    )
+    expect(getKey(`<div v-bind:[a||b]="x"/>`)).toBe(`(a||b) || ""`)
   })
 
   test('should error if empty expression', () => {
@@ -230,7 +250,7 @@ describe('compiler: transform v-bind', () => {
           properties: [
             {
               key: {
-                content: `_${helperNameMap[CAMELIZE]}(foo || "")`,
+                content: `_${helperNameMap[CAMELIZE]}((foo) || "")`,
                 isStatic: false,
               },
               value: {
@@ -322,7 +342,7 @@ describe('compiler: transform v-bind', () => {
           properties: [
             {
               key: {
-                content: '`.${fooBar || ""}`',
+                content: '`.${(fooBar) || ""}`',
                 isStatic: false,
               },
               value: {
