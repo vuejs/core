@@ -1,4 +1,4 @@
-import { reactive, ref } from '@vue/reactivity'
+import { isProxy, reactive, ref, toRaw } from '@vue/reactivity'
 import {
   type TestElement,
   defineComponent,
@@ -98,6 +98,31 @@ describe('api: setup context', () => {
     toggle.value = false
     await nextTick()
     expect(serializeInner(root)).toMatch(`<div class="baz"></div>`)
+  })
+
+  it('context.attrs passed as vnode props', () => {
+    let attrs: any
+    let vnode: any
+
+    const Child = {
+      inheritAttrs: false,
+      setup(_: any, ctx: any) {
+        attrs = ctx.attrs
+        return () => (vnode = h('div', attrs))
+      },
+    }
+
+    const root = nodeOps.createElement('div')
+    render(h(Child, { id: 'foo', class: 'bar' }), root)
+    expect(serializeInner(root)).toBe(`<div id="foo" class="bar"></div>`)
+    expect(vnode.props).toEqual({ id: 'foo', class: 'bar' })
+
+    vnode.props.id = 'baz'
+    expect(attrs.id).toBe('foo')
+    expect(isProxy(attrs)).toBe(false)
+    expect(toRaw(attrs)).toBe(attrs)
+    expect(Reflect.ownKeys(attrs)).toEqual(['id', 'class'])
+    expect({ ...attrs }).toEqual({ id: 'foo', class: 'bar' })
   })
 
   // #4161
