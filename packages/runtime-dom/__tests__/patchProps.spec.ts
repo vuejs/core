@@ -7,6 +7,8 @@ import {
   vModelCheckbox,
   withDirectives,
 } from '../src'
+import { defineComponent } from '@vue/runtime-test'
+import { render as domRender } from 'vue'
 
 describe('runtime-dom: props patching', () => {
   test('basic', () => {
@@ -394,4 +396,115 @@ describe('runtime-dom: props patching', () => {
 
     expect(fn).toBeCalledTimes(0)
   })
+})
+
+// #13055
+test('should lookup camelCase keys in element properties', async () => {
+  class TestElement extends HTMLElement {
+    _complexData = {}
+
+    get primitiveValue(): string | null {
+      return this.getAttribute('primitive-value')
+    }
+
+    set primitiveValue(value: string | undefined) {
+      if (value) {
+        this.setAttribute('primitive-value', value)
+      } else {
+        this.removeAttribute('primitive-value')
+      }
+    }
+
+    get complexData() {
+      return this._complexData
+    }
+
+    set complexData(data) {
+      this._complexData = data
+    }
+  }
+
+  window.customElements.define('test-element', TestElement)
+  const el = document.createElement('test-element') as TestElement
+
+  patchProp(el, 'primitive-value', null, 'foo')
+  expect(el.primitiveValue).toBe('foo')
+
+  patchProp(el, 'complex-data', null, { foo: 'bar' })
+  expect(el.hasAttribute('complex-data')).toBe(false)
+  expect(el.getAttribute('complex-data')).not.toBe('[object Object]')
+  expect(el.complexData).toStrictEqual({ foo: 'bar' })
+})
+
+// #13055
+test('should handle kebab-case prop bindings', async () => {
+  class HelloWorld extends HTMLElement {
+    #testProp = ''
+    #output: HTMLDivElement
+
+    get testProp() {
+      return this.#testProp
+    }
+
+    set testProp(value: string) {
+      this.#testProp = value
+      this.#update()
+    }
+
+    constructor() {
+      super()
+
+      this.attachShadow({ mode: 'open' })
+      this.shadowRoot!.innerHTML = `<div class="output"></div>`
+      this.#output = this.shadowRoot?.querySelector('.output') as HTMLDivElement
+    }
+
+    connectedCallback() {
+      console.log('UPDATING!')
+      this.#update()
+    }
+
+    #update() {
+      this.#output.innerHTML = `this.testProp = ${this.#testProp}`
+    }
+  }
+
+  window.customElements.define('hello-world', HelloWorld)
+
+  const Comp = defineComponent({
+    setup() {
+      const testProp = ref('Hello, world! from App.vue')
+      return {
+        testProp,
+      }
+    },
+    template: `
+      <hello-world .testProp="testProp" />
+      <hello-world .test-prop="testProp" />
+      <hello-world .test-prop.camel="testProp" />
+    `,
+  })
+
+  const root = document.createElement('div')
+
+  // Note this one is using the main Vue render so it can compile template
+  // on the fly
+  domRender(h(Comp), root)
+
+  expect(root.innerHTML).toBe(
+    `<hello-world></hello-world><hello-world></hello-world><hello-world></hello-world>`,
+  )
+
+  const [child1, child2, child3] = Array.from(
+    root.querySelectorAll('hello-world'),
+  )
+  expect(child3.shadowRoot?.innerHTML).toBe(
+    '<div class="output">this.testProp = Hello, world! from App.vue</div>',
+  )
+  expect(child2.shadowRoot?.innerHTML).toBe(
+    '<div class="output">this.testProp = Hello, world! from App.vue</div>',
+  )
+  expect(child1.shadowRoot?.innerHTML).toBe(
+    '<div class="output">this.testProp = Hello, world! from App.vue</div>',
+  )
 })
