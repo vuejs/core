@@ -727,6 +727,26 @@ describe('vnode', () => {
       createApp(vnode).mount(nodeOps.createElement('div'))
       expect(isBlockTreeEnabled).toStrictEqual(1)
     })
+
+    test('should track a component vnode cloned from a vnode created outside the block', () => {
+      const unmounted = vi.fn()
+      const Child = { unmounted, render: () => h('span') }
+      // e.g. `const Demo = h(Child)` in setup + `<Demo />` in the template
+      const demo = createVNode(Child)
+      let vnode: VNode
+      let cloned: VNode
+      const Parent = {
+        render: () =>
+          (vnode =
+            (openBlock(),
+            createBlock('div', null, [(cloned = createVNode(demo))]))),
+      }
+      const app = createApp(Parent)
+      app.mount(nodeOps.createElement('div'))
+      expect(vnode!.dynamicChildren).toStrictEqual([cloned!])
+      app.unmount()
+      expect(unmounted).toHaveBeenCalledTimes(1)
+    })
   })
 
   describe('transformVNodeArgs', () => {
