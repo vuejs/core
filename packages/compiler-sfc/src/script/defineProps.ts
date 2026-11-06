@@ -1,4 +1,5 @@
 import type {
+  ArrayExpression,
   Expression,
   LVal,
   Node,
@@ -35,6 +36,15 @@ export interface PropTypeData {
   required: boolean
   skipCheck: boolean
 }
+
+interface PropExtraData {
+  // the object property node in the extra argument, for error reporting
+  node: ObjectProperty
+  values?: ArrayExpression
+  validator?: ObjectProperty | ObjectMethod
+}
+
+type PropExtras = Record<string, PropExtraData>
 
 export type PropsDestructureBindings = Record<
   string, // public prop key
@@ -133,9 +143,141 @@ function processWithDefaults(
   if (!ctx.propsRuntimeDefaults) {
     ctx.error(`The 2nd argument of ${WITH_DEFAULTS} is required.`, node)
   }
+  const extra = node.arguments[2]
+  if (extra) {
+    ctx.propsRuntimeExtra = extra
+    validateWithDefaultsExtra(ctx, unwrapTSNode(extra))
+  }
   ctx.propsCall = node
 
   return true
+}
+
+function validateWithDefaultsExtra(
+  ctx: ScriptCompileContext,
+  extra: Node,
+): void {
+  if (extra.type !== 'ObjectExpression') {
+    ctx.error(
+      `The 3rd argument of ${WITH_DEFAULTS} must be an object literal ` +
+        `mapping props to "values" / "validator" options.`,
+      extra,
+    )
+  }
+  for (const prop of (extra as ObjectExpression).properties) {
+    if (prop.type === 'SpreadElement') {
+      ctx.error(
+        `Spread elements are not allowed in the 3rd argument of ${WITH_DEFAULTS}.`,
+        prop,
+      )
+    }
+    const key = resolveObjectKey(prop.key, prop.computed)
+    if (!key) {
+      ctx.error(
+        `Dynamic keys are not allowed in the 3rd argument of ${WITH_DEFAULTS}.`,
+        prop,
+      )
+    }
+    if (prop.type !== 'ObjectProperty') {
+      ctx.error(
+        `The extra option for prop "${key}" must be an object literal ` +
+          `with "values" and/or "validator".`,
+        prop,
+      )
+    }
+    const value = unwrapTSNode(prop.value)
+    if (value.type !== 'ObjectExpression') {
+      ctx.error(
+        `The extra option for prop "${key}" must be an object literal ` +
+          `with "values" and/or "validator".`,
+        value,
+      )
+    }
+    for (const option of (value as ObjectExpression).properties) {
+      if (option.type === 'SpreadElement') {
+        ctx.error(
+          `Spread elements are not allowed in extra options for prop "${key}".`,
+          option,
+        )
+      }
+      const optionKey = resolveObjectKey(option.key, option.computed)
+      if (!optionKey) {
+        ctx.error(
+          `Dynamic keys are not allowed in extra options for prop "${key}".`,
+          option,
+        )
+      }
+      if (optionKey === 'values') {
+        if (option.type !== 'ObjectProperty') {
+          ctx.error(
+            `"values" for prop "${key}" must be an array literal of literals.`,
+            option,
+          )
+        }
+        const values = unwrapTSNode(option.value)
+        if (values.type !== 'ArrayExpression') {
+          ctx.error(
+            `"values" for prop "${key}" must be an array literal of literals.`,
+            option.value,
+          )
+        }
+        for (const el of values.elements) {
+          const element = el && unwrapTSNode(el)
+          if (
+            !element ||
+            !isLiteralNode(element) ||
+            (element.type === 'TemplateLiteral' &&
+              element.expressions.length > 0)
+          ) {
+            ctx.error(
+              `"values" for prop "${key}" must only contain literal values.`,
+              el || option.value,
+            )
+          }
+        }
+      } else if (optionKey === 'validator') {
+        if (option.type === 'ObjectMethod') {
+          if (option.kind !== 'method' || option.async || option.generator) {
+            ctx.error(
+              `"validator" for prop "${key}" must be a synchronous function ` +
+                `or method shorthand.`,
+              option,
+            )
+          }
+        } else {
+          const fn = unwrapTSNode(option.value)
+          if (
+            fn.type !== 'ArrowFunctionExpression' &&
+            fn.type !== 'FunctionExpression'
+          ) {
+            ctx.error(
+              `"validator" for prop "${key}" must be an inline function.`,
+              option.value,
+            )
+          }
+          // the runtime checks validators synchronously via truthiness, so
+          // async / generator validators (always-truthy return values) would
+          // silently suppress the warning
+          if (
+            (fn.type === 'ArrowFunctionExpression' && fn.async) ||
+            (fn.type === 'FunctionExpression' && (fn.async || fn.generator))
+          ) {
+            ctx.error(
+              `"validator" for prop "${key}" must be a synchronous inline ` +
+                `function.`,
+              option.value,
+            )
+          }
+        }
+      } else {
+        ctx.error(
+          `Unknown option "${optionKey}" in extra options for prop "${key}". ` +
+            `Only "values" and "validator" are allowed.`,
+          option,
+        )
+      }
+    }
+  }
 }
 
 export function genRuntimeProps(ctx: ScriptCompileContext): string | undefined {
@@ -187,9 +329,23 @@ export function extractRuntimeProps(
 
   const propStrings: string[] = []
   const hasStaticDefaults = hasStaticWithDefaults(ctx)
+  const extras = getPropExtras(ctx)
+  if (extras) {
+    const knownKeys = new Set(props.map(p => p.key))
+    for (const key in extras) {
+      if (!knownKeys.has(key)) {
+        ctx.error(
+          `Extra option key "${key}" has no corresponding prop declaration.`,
+          extras[key].node,
+        )
+      }
+    }
+  }
 
   for (const prop of props) {
-    propStrings.push(genRuntimePropFromType(ctx, prop, hasStaticDefaults))
+    propStrings.push(
+      genRuntimePropFromType(ctx, prop, hasStaticDefaults, extras),
+    )
     // register bindings
     if ('bindingMetadata' in ctx && !(prop.key in ctx.bindingMetadata)) {
       ctx.bindingMetadata[prop.key] = BindingTypes.PROPS
@@ -241,6 +397,7 @@ function genRuntimePropFromType(
   ctx: TypeResolveContext,
   { key, required, type, skipCheck }: PropTypeData,
   hasStaticDefaults: boolean,
+  extras?: PropExtras,
 ): string {
   let defaultString: string | undefined
   const destructured = genDestructuredDefaultValue(ctx, key, type)
@@ -260,18 +417,17 @@ function genRuntimePropFromType(
         // prop has corresponding static default value
         defaultString = `default: ${ctx.getString(prop.value)}`
       } else {
-        let paramsString = ''
-        if (prop.params.length) {
-          const start = prop.params[0].start
-          const end = prop.params[prop.params.length - 1].end
-          paramsString = ctx.getString({ start, end } as Node)
-        }
         defaultString = `${prop.async ? 'async ' : ''}${
           prop.kind !== 'method' ? `${prop.kind} ` : ''
-        }default(${paramsString}) ${ctx.getString(prop.body)}`
+        }default(${getFunctionParamsSource(ctx, prop)}) ${ctx.getString(prop.body)}`
       }
     }
   }
+
+  // validators are dev-only runtime checks - stripped in production
+  const extra = extras && extras[key]
+  const validatorString =
+    extra && !ctx.options.isProd ? genValidatorString(ctx, extra) : undefined
 
   const finalKey = getEscapedPropName(key)
   if (!ctx.options.isProd) {
@@ -280,6 +436,7 @@ function genRuntimePropFromType(
       `required: ${required}`,
       skipCheck && 'skipCheck: true',
       defaultString,
+      validatorString,
     ])} }`
   } else if (
     type.some(
@@ -327,6 +484,88 @@ function hasStaticWithDefaults(ctx: TypeResolveContext) {
         (!node.computed || node.key.type.endsWith('Literal')),
     )
   )
+}
+
+/**
+ * Collect validated `values` / `validator` options per prop key from the
+ * 3rd argument of `withDefaults`. The structure has already been validated by
+ * `validateWithDefaultsExtra`; invalid shapes are skipped defensively for
+ * non-SFC callers of `extractRuntimeProps`.
+ */
+function getPropExtras(ctx: TypeResolveContext): PropExtras | undefined {
+  if (!ctx.propsRuntimeExtra) return
+  const extras: PropExtras = Object.create(null)
+  for (const prop of (unwrapTSNode(ctx.propsRuntimeExtra) as ObjectExpression)
+    .properties) {
+    if (prop.type !== 'ObjectProperty') continue
+    const key = resolveObjectKey(prop.key, prop.computed)
+    if (!key) continue
+    const value = unwrapTSNode(prop.value)
+    if (value.type !== 'ObjectExpression') continue
+    const entry: PropExtraData = { node: prop }
+    for (const option of value.properties) {
+      if (option.type === 'SpreadElement') continue
+      const optionKey = resolveObjectKey(option.key, option.computed)
+      if (optionKey === 'values' && option.type === 'ObjectProperty') {
+        const values = unwrapTSNode(option.value)
+        if (values.type === 'ArrayExpression') {
+          entry.values = values
+        }
+      } else if (optionKey === 'validator') {
+        entry.validator = option as ObjectProperty | ObjectMethod
+      }
+    }
+    extras[key] = entry
+  }
+  return extras
+}
+
+/**
+ * Generate the `validator` runtime option for a prop from its extra options.
+ *
+ * - `values` only: `validator: v => [...values].includes(v)`
+ * - `validator` only: inlined as-is (method shorthand becomes a method)
+ * - both: AND-merged via `&& (fn)(v, p)`, forwarding the `props` argument
+ *   the runtime passes as the validator's second argument
+ */
+function genValidatorString(
+  ctx: TypeResolveContext,
+  extra: PropExtraData,
+): string | undefined {
+  const { values, validator } = extra
+  if (!values && !validator) return
+
+  const valuesString = values ? ctx.getString(values) : undefined
+
+  if (validator) {
+    if (validator.type === 'ObjectMethod') {
+      const paramsString = getFunctionParamsSource(ctx, validator)
+      if (valuesString) {
+        const fnString = `${validator.async ? 'async ' : ''}(${paramsString}) => ${ctx.getString(validator.body)}`
+        return `validator: (v, p) => ${valuesString}.includes(v) && (${fnString})(v, p)`
+      }
+      return `${validator.async ? 'async ' : ''}validator(${paramsString}) ${ctx.getString(validator.body)}`
+    }
+    const fnString = ctx.getString(unwrapTSNode(validator.value))
+    if (valuesString) {
+      return `validator: (v, p) => ${valuesString}.includes(v) && (${fnString})(v, p)`
+    }
+    return `validator: ${fnString}`
+  }
+
+  return `validator: v => ${valuesString}.includes(v)`
+}
+
+function getFunctionParamsSource(
+  ctx: TypeResolveContext,
+  fn: ObjectMethod,
+): string {
+  if (fn.params.length) {
+    const start = fn.params[0].start
+    const end = fn.params[fn.params.length - 1].end
+    return ctx.getString({ start, end } as Node)
+  }
+  return ''
 }
 
 function genDestructuredDefaultValue(
