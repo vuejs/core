@@ -186,15 +186,15 @@ export class ComputedRefImpl<T = any> implements Subscriber {
  * @param debugOptions - For debugging. See {@link https://vuejs.org/guide/extras/reactivity-in-depth.html#computed-debugging}.
  * @see {@link https://vuejs.org/api/reactivity-core.html#computed}
  */
-export function computed<T>(
-  getter: ComputedGetter<T>,
-  debugOptions?: DebuggerOptions,
-): ComputedRef<T>
 export function computed<T, S = T>(
   options: WritableComputedOptions<T, S>,
   debugOptions?: DebuggerOptions,
 ): WritableComputedRef<T, S>
 /*@__NO_SIDE_EFFECTS__*/
+export function computed<T>(
+  getter: ComputedGetter<T>,
+  debugOptions?: DebuggerOptions,
+): ComputedRef<T>
 export function computed<T>(
   getterOrOptions: ComputedGetter<T> | WritableComputedOptions<T>,
   debugOptions?: DebuggerOptions,
