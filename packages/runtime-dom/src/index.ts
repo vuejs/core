@@ -121,6 +121,9 @@ export const createApp = ((...args) => {
       // The user must make sure the in-DOM template is trusted. If it's
       // rendered by the server, the template should not contain any user data.
       component.template = container.innerHTML
+      if (__DEV__ && container.nodeType === 1) {
+        warnShadowRootLoss(container as Element)
+      }
       // 2.x compat check
       if (__COMPAT__ && __DEV__ && container.nodeType === 1) {
         for (let i = 0; i < (container as Element).attributes.length; i++) {
@@ -181,6 +184,30 @@ function resolveRootNamespace(
     container instanceof MathMLElement
   ) {
     return 'mathml'
+  }
+}
+
+// dev only
+// `innerHTML` does not serialize shadow roots, so shadow DOM inside the mount
+// container - most notably declarative shadow DOM parsed by the browser from
+// `<template shadowrootmode>` - is absent from the in-DOM template and is
+// destroyed when the container is cleared before mounting.
+// https://github.com/vuejs/core/issues/12813
+function warnShadowRootLoss(container: Element) {
+  const descendants = container.querySelectorAll('*')
+  for (let i = 0; i < descendants.length; i++) {
+    const el = descendants[i]
+    if (el.shadowRoot) {
+      warn(
+        `Mount container contains <${el.tagName.toLowerCase()}> with a shadow ` +
+          `root. Shadow roots are not serialized by \`innerHTML\`, so they are ` +
+          `not part of the in-DOM template and are discarded when the ` +
+          `container is cleared before mounting. Use the \`template\` or ` +
+          `\`render\` option instead of relying on the in-DOM template, or ` +
+          `mount into a container that has no shadow roots inside it.`,
+      )
+      break
+    }
   }
 }
 
