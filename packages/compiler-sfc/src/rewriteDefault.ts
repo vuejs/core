@@ -62,7 +62,7 @@ export function rewriteDefaultAST(
               s.prepend(
                 `import { default as __VUE_DEFAULT__ } from '${node.source.value}'\n`,
               )
-              const end = specifierEnd(s, specifier.local.end!, node.end!)
+              const end = specifierEnd(s, specifier.end!, node.end!)
               s.remove(specifier.start!, end)
               s.append(`\nconst ${as} = __VUE_DEFAULT__`)
               continue
@@ -73,7 +73,7 @@ export function rewriteDefaultAST(
                   specifier.local.end!,
                 )} as __VUE_DEFAULT__ } from '${node.source.value}'\n`,
               )
-              const end = specifierEnd(s, specifier.exported.end!, node.end!)
+              const end = specifierEnd(s, specifier.end!, node.end!)
               s.remove(specifier.start!, end)
               s.append(`\nconst ${as} = __VUE_DEFAULT__`)
               continue
@@ -112,11 +112,19 @@ function specifierEnd(s: MagicString, end: number, nodeEnd: number | null) {
   while (end < nodeEnd!) {
     if (/\s/.test(s.slice(end, end + 1))) {
       end++
+    } else if (s.slice(end, end + 2) === '/*') {
+      const commentEnd = s.original.indexOf('*/', end + 2)
+      end = commentEnd === -1 ? nodeEnd! : commentEnd + 2
+    } else if (s.slice(end, end + 2) === '//') {
+      end += 2
+      while (end < nodeEnd! && !/[\r\n\u2028\u2029]/.test(s.original[end])) {
+        end++
+      }
     } else if (s.slice(end, end + 1) === ',') {
       end++
       hasCommas = true
       break
-    } else if (s.slice(end, end + 1) === '}') {
+    } else {
       break
     }
   }
