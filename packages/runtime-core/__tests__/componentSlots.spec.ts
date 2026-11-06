@@ -4,10 +4,14 @@ import {
   h,
   nextTick,
   nodeOps,
+  onMounted,
   ref,
   render,
+  renderSlot,
+  resolveComponent,
   serializeInner,
   useSlots,
+  withCtx,
 } from '@vue/runtime-test'
 import { createBlock, normalizeVNode } from '../src/vnode'
 import { createSlots } from '../src/helpers/createSlots'
@@ -454,6 +458,78 @@ describe('component: slots', () => {
     const App = {
       setup() {
         return () => h(Comp, null, { _foo: () => 'foo' })
+      },
+    }
+
+    const root = nodeOps.createElement('div')
+    createApp(App).mount(root)
+    expect(serializeInner(root)).toBe('foo')
+  })
+
+  test('conditional slot handed on in a new object keeps its branch key', async () => {
+    const toggle = ref(true)
+    let mounts = 0
+    const Stateful = {
+      setup() {
+        onMounted(() => mounts++)
+        return () => 'stateful'
+      },
+    }
+    const Inner = {
+      setup(_: any, { slots }: any) {
+        return () => renderSlot(slots, 'default')
+      },
+    }
+    const Wrapper = {
+      setup(_: any, { slots }: any) {
+        return () => h(Inner, null, { ...slots })
+      },
+    }
+    const App = {
+      render() {
+        return h(
+          Wrapper,
+          null,
+          createSlots({ _: 2 as any }, [
+            {
+              name: 'default',
+              fn: withCtx(() => [h(Stateful)]) as any,
+              key: toggle.value ? '0' : '1',
+            },
+          ]),
+        )
+      },
+    }
+
+    createApp(App).mount(nodeOps.createElement('div'))
+    expect(mounts).toBe(1)
+
+    toggle.value = false
+    await nextTick()
+    expect(mounts).toBe(2)
+  })
+
+  test('keyed slot from createSlots without withCtx keeps the owner context', () => {
+    const Foo = { render: () => 'foo' }
+    const Child = {
+      setup(_: any, { slots }: any) {
+        return () => slots.default()
+      },
+    }
+    const App = {
+      components: { Foo },
+      render() {
+        return h(
+          Child,
+          null,
+          createSlots({}, [
+            {
+              name: 'default',
+              fn: () => [h(resolveComponent('Foo') as any)],
+              key: 'default',
+            },
+          ]),
+        )
       },
     }
 

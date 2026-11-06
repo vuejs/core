@@ -38,11 +38,15 @@ export function createSlots(
           if (res) (res as any).key = slot.key
           return res
         }
-        // the wrapped compiled slot is already normalized. Without this mark,
+        // keep the normalized mark of a compiled (withCtx) slot. Without it,
         // slots handed on in a new object, e.g. `h(Comp, null, { ...slots })`,
         // are normalized again, which turns the `undefined` returned in SSR
-        // push mode into a vnode array and drops the pushed content.
-        ;(fn as ContextualRenderFn)._n = true
+        // push mode into a vnode array and drops the pushed content. A slot
+        // without the mark (e.g. compat scoped slots) is left for
+        // normalizeSlot to bind to its owner.
+        if ((slot.fn as ContextualRenderFn)._n) {
+          ;(fn as ContextualRenderFn)._n = true
+        }
         slots[slot.name] = fn
       } else {
         slots[slot.name] = slot.fn
