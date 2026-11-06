@@ -125,6 +125,28 @@ describe('ssr: directives', () => {
       expect(
         await renderToString(
           createApp({
+            data: () => ({ model: 'f0o', zero: 0 }),
+            template: `<select v-model="model"><option>f{{ zero }}o</option><option>bar</option></select>`,
+          }),
+        ),
+      ).toBe(
+        `<select><option selected>f0o</option><option>bar</option></select>`,
+      )
+
+      expect(
+        await renderToString(
+          createApp({
+            data: () => ({ model: 'foo', opt1Val: 'foo', opt2Val: 'bar' }),
+            template: `<select v-model="model"><option v-text="opt1Val"></option><option v-text="opt2Val"></option></select>`,
+          }),
+        ),
+      ).toBe(
+        `<select><option selected>foo</option><option>bar</option></select>`,
+      )
+
+      expect(
+        await renderToString(
+          createApp({
             data: () => ({ model: [0, 1] }),
             template: `<select multiple v-model="model"><option value="0"></option><option value="1"></option></select>`,
           }),
