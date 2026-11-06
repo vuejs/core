@@ -25,7 +25,7 @@ describe('with object props', () => {
     aaaa: number | undefined
     b: string
     e?: Function
-    h: boolean
+    h?: boolean
     j: undefined | (() => string | undefined)
     bb: string
     bbb: string

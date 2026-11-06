@@ -84,7 +84,6 @@ export {
   defineSlots,
   defineModel,
   withDefaults,
-  type DefineProps,
   type ModelRef,
   type ComponentTypeEmits,
 } from './apiSetupHelpers'
