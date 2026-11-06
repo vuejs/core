@@ -1502,7 +1502,13 @@ export interface ReservedProps {
   ref_key?: string | undefined
 }
 
+type NativeElementProps<T> = {
+  [K in keyof T]: T[K] | null
+}
+
 export type NativeElements = {
-  [K in keyof IntrinsicElementAttributes]: IntrinsicElementAttributes[K] &
+  [K in keyof IntrinsicElementAttributes]: NativeElementProps<
+    IntrinsicElementAttributes[K]
+  > &
     ReservedProps
 }
