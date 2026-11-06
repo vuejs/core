@@ -965,8 +965,9 @@ function baseCreateRenderer(
             const key = propsToUpdate[i]
             const prev = oldProps[key]
             const next = newProps[key]
-            // #1471 force patch value
-            if (next !== prev || key === 'value') {
+            // #1471 #10929 force patch value and checked, as user input may
+            // have changed them on the element
+            if (next !== prev || key === 'value' || key === 'checked') {
               hostPatchProp(el, key, prev, next, namespace, parentComponent)
             }
           }
@@ -1067,8 +1068,8 @@ function baseCreateRenderer(
         if (isReservedProp(key)) continue
         const next = newProps[key]
         const prev = oldProps[key]
-        // defer patching value
-        if (next !== prev && key !== 'value') {
+        // defer patching value, force patch checked (#10929)
+        if (key !== 'value' && (next !== prev || key === 'checked')) {
           hostPatchProp(el, key, prev, next, namespace, parentComponent)
         }
       }
