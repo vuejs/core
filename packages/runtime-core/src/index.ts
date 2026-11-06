@@ -695,6 +695,10 @@ export {
 /**
  * @internal
  */
+export { collectDeferredEnters } from './components/Suspense'
+/**
+ * @internal
+ */
 export { createInternalObject } from './internalObject'
 /**
  * @internal

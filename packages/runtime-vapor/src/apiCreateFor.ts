@@ -429,16 +429,24 @@ export const createFor = (
   const needKey = renderItem.length > 1
   const needIndex = renderItem.length > 2
 
+  // rows added under a pending boundary enter on its reveal
+  const suspense = ctx.suspense
   type InsertForBlock = (block: ForBlock, anchor: Node | undefined) => void
   // IS_COMPONENT requires component teardown ordering but does not guarantee
   // that block.nodes is a VaporComponentInstance. Component fallback may
   // produce a plain DOM node, so these blocks still use the generic block path.
   const insertForBlock: InsertForBlock = isSingleNode
-    ? (block, anchor) => insertNode(block.nodes as Node, parent!, anchor)
+    ? (block, anchor) =>
+        insertNode(block.nodes as Node, parent!, anchor, suspense)
     : isFragment
       ? (block, anchor) =>
-          insertFragment(block.nodes as VaporFragment, parent!, anchor)
-      : (block, anchor) => insert(block.nodes, parent!, anchor)
+          insertFragment(
+            block.nodes as VaporFragment,
+            parent!,
+            anchor,
+            suspense,
+          )
+      : (block, anchor) => insert(block.nodes, parent!, anchor, suspense)
 
   type RemoveForBlock = (block: ForBlock) => void
   const removeForBlock: RemoveForBlock = isSingleNode

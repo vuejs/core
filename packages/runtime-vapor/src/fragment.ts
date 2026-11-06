@@ -557,7 +557,8 @@ export class DynamicFragment extends RenderContextFragment {
       if (this.scopeIdOwners) applyScopeIdOwners(this.scopeIdOwners)
 
       if (parent) {
-        insert(this.nodes, parent, this.anchor)
+        // a branch rendered under a pending boundary enters on its reveal
+        insert(this.nodes, parent, this.anchor, this.ctx.suspense)
         if (removePrevious && keepAliveCtx) {
           // Publish the new cache entry only after it has been mounted.
           keepAliveCtx.cacheBlock(this)

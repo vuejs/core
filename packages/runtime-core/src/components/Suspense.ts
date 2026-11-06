@@ -35,6 +35,7 @@ import { filterSingleRoot, updateHOCHostEl } from '../componentRenderUtils'
 import { assertNumber, warn } from '../warning'
 import { ErrorCodes, handleError } from '../errorHandling'
 import { NULL_DYNAMIC_COMPONENT } from '../helpers/resolveAssets'
+import { isVaporInteropEnabled } from '../vaporInteropState'
 
 export interface SuspenseProps {
   onResolve?: () => void
@@ -192,15 +193,20 @@ function triggerEvent(
 // entered here: beforeEnter right before the branch moves into the document,
 // enter in the post flush ahead of the buffered jobs, so the transition still
 // sees the mount as its appear
-function enterDeferred(branch: VNode): void {
+function enterDeferred(suspense: SuspenseBoundary, branch: VNode): void {
   const enters: Function[] = []
   collectDeferredEnters(branch, enters, true)
+  if (isVaporInteropEnabled) {
+    const { parentComponent } = suspense
+    const vapor = parentComponent && parentComponent.appContext.vapor
+    if (vapor) vapor.enterDeferred(suspense, enters)
+  }
   if (enters.length) {
     queuePostFlushCb(enters)
   }
 }
 
-function collectDeferredEnters(
+export function collectDeferredEnters(
   vnode: VNode,
   enters: Function[],
   isRoot: boolean,
@@ -645,7 +651,7 @@ function createSuspenseBoundary(
             // the leave is not cancelled when the boundary gets unmounted in
             // the meantime: the branch is gone, don't bring its DOM back
             if (pendingId === suspense.pendingId && !suspense.isUnmounted) {
-              enterDeferred(pendingBranch!)
+              enterDeferred(suspense, pendingBranch!)
               move(
                 pendingBranch!,
                 container,
@@ -699,7 +705,7 @@ function createSuspenseBoundary(
         }
         if (!delayEnter) {
           // move content from off-dom container to actual container
-          enterDeferred(pendingBranch!)
+          enterDeferred(suspense, pendingBranch!)
           move(
             pendingBranch!,
             container,

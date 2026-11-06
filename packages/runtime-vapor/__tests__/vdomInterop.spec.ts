@@ -10080,6 +10080,267 @@ describe('vdomInterop', () => {
       expect(html()).toContain('<div>vapor</div>')
       expect(order).toEqual(['suspense resolved', 'vapor mounted'])
     })
+
+    // a page logging its mount, the hooks of a transition it nests, and the
+    // async child keeping the boundary pending
+    const HEAD = `<script setup>
+      import { onMounted } from 'vue'
+      const data = _data
+      const components = _components
+      onMounted(() => data.value.log('page mounted'))
+    </script>`
+    const hooks = `appear :css="false"
+      @before-appear="data.log('nested beforeAppear')"
+      @appear="data.log('nested appear')"`
+    const ASYNC_CHILD = `<script setup>
+      const data = _data
+      await data.value.wait
+      </script>
+      <template><span>async</span></template>`
+
+    // mounts `template` as the page of a pending boundary, applies `change`
+    // while it pends, then reveals it
+    const runWhilePending = async (
+      vapor: boolean,
+      template: string,
+      data: Ref<any>,
+      change: () => void,
+      components: Record<string, any> = {},
+    ) => {
+      const calls: string[] = []
+      const pending = deferred()
+      data.value.wait = pending.promise
+      data.value.log = (s: string) => calls.push(s)
+      const AsyncChild = compile(ASYNC_CHILD, data, {}, { vapor })
+      const Page = compile(
+        HEAD + template,
+        data,
+        { AsyncChild, ...components },
+        { vapor },
+      )
+      const host = document.createElement('div')
+      document.body.appendChild(host)
+      const app = createApp({
+        setup: () => () => h(Suspense, null, { default: () => h(Page) }),
+      })
+      app.use(vaporInteropPlugin)
+      try {
+        app.mount(host)
+        change()
+        await nextTick()
+        const whilePending = calls.slice()
+        pending.resolve()
+        await flushResolution(pending.promise)
+        return { whilePending, calls: calls.slice(), host: host.innerHTML }
+      } finally {
+        app.unmount()
+        host.remove()
+      }
+    }
+
+    test('enters a transition nested in the pending branch on reveal', async () => {
+      const nested = `<Transition ${hooks}><p>p</p></Transition>`
+      const rows: {
+        label: string
+        vapor: boolean
+        first: string
+        components?: (data: Ref<any>) => Record<string, any>
+      }[] = [
+        { label: 'vdom', vapor: false, first: nested },
+        { label: 'vapor', vapor: true, first: nested },
+        {
+          label: 'vdom Transition under a vapor parent',
+          vapor: true,
+          first: `<components.VdomTransition ${hooks}>
+            <p>p</p>
+          </components.VdomTransition>`,
+          components: () => ({ VdomTransition: Transition }),
+        },
+        {
+          label:
+            'vdom component nesting its own Transition, under a vapor parent',
+          vapor: true,
+          first: `<components.VdomCard />`,
+          components: data => ({
+            VdomCard: compile(
+              `<script setup>const data = _data</script>
+              <template>
+                <div>${nested}</div>
+              </template>`,
+              data,
+              {},
+              { vapor: false },
+            ),
+          }),
+        },
+        {
+          label: 'vapor Transition under a vdom parent',
+          vapor: false,
+          first: `<components.VaporT />`,
+          components: data => ({
+            VaporT: compile(`<template>${nested}</template>`, data),
+          }),
+        },
+      ]
+      for (const { label, vapor, first, components } of rows) {
+        const data = ref<any>({})
+        const out = await runWhilePending(
+          vapor,
+          `<template>
+            <div>
+              ${first}
+              <components.AsyncChild />
+            </div>
+          </template>`,
+          data,
+          () => {},
+          components && components(data),
+        )
+        expect(out.whilePending, label).toEqual([])
+        expect(out.calls, label).toEqual([
+          'nested beforeAppear',
+          'nested appear',
+          'page mounted',
+        ])
+        expect(out.host, label).toContain('<p>p</p>')
+      }
+    })
+
+    test('mounts a teleport of the pending branch on reveal with its transition', async () => {
+      const run = async (vapor: boolean, disabled: boolean) => {
+        const calls: string[] = []
+        const pending = deferred()
+        const data = ref<any>({
+          wait: pending.promise,
+          log: (s: string) => calls.push(s),
+        })
+        const AsyncChild = compile(ASYNC_CHILD, data, {}, { vapor })
+        const Page = compile(
+          HEAD +
+            `<template>
+            <div>
+              <Teleport to="#tele-reveal" ${disabled ? 'disabled' : ''}>
+                <Transition ${hooks}><p>p</p></Transition>
+              </Teleport>
+              <components.AsyncChild />
+            </div>
+          </template>`,
+          data,
+          { AsyncChild },
+          { vapor },
+        )
+        const host = document.createElement('div')
+        const target = document.createElement('div')
+        target.id = 'tele-reveal'
+        document.body.appendChild(host)
+        document.body.appendChild(target)
+        const app = createApp({
+          setup: () => () => h(Suspense, null, { default: () => h(Page) }),
+        })
+        app.use(vaporInteropPlugin)
+        try {
+          app.mount(host)
+          await nextTick()
+          const whilePending = {
+            calls: calls.slice(),
+            target: target.innerHTML,
+          }
+          pending.resolve()
+          await flushResolution(pending.promise)
+          return {
+            whilePending,
+            calls: calls.slice(),
+            target: target.innerHTML,
+            host: host.innerHTML,
+          }
+        } finally {
+          app.unmount()
+          host.remove()
+          target.remove()
+        }
+      }
+
+      for (const disabled of [false, true]) {
+        for (const vapor of [false, true]) {
+          const label = `${vapor ? 'vapor' : 'vdom'} ${disabled ? 'disabled' : 'enabled'}`
+          const out = await run(vapor, disabled)
+          expect(out.whilePending, label).toEqual({ calls: [], target: '' })
+          // the mount waits for the reveal: the content enters in the document
+          expect(out.calls, label).toEqual([
+            'nested beforeAppear',
+            'page mounted',
+            'nested appear',
+          ])
+          expect(out.target, label).toBe(disabled ? '' : '<p>p</p>')
+          expect(out.host, label).toBe(
+            disabled
+              ? '<div><!--teleport start--><p>p</p><!--teleport end--><span>async</span></div>'
+              : '<div><!--teleport start--><!--teleport end--><span>async</span></div>',
+          )
+        }
+      }
+    })
+
+    test('enters a branch toggled into the pending branch on reveal', async () => {
+      for (const vapor of [false, true]) {
+        const label = vapor ? 'vapor' : 'vdom'
+        const data = ref<any>({ show: false })
+        const out = await runWhilePending(
+          vapor,
+          `<template>
+            <div>
+              <Transition ${hooks}><p v-if="data.show">p</p></Transition>
+              <components.AsyncChild />
+            </div>
+          </template>`,
+          data,
+          () => (data.value.show = true),
+        )
+        expect(out.whilePending, label).toEqual([])
+        expect(out.calls, label).toEqual([
+          'nested beforeAppear',
+          'nested appear',
+          'page mounted',
+        ])
+        expect(out.host, label).toContain('<p>p</p>')
+      }
+    })
+
+    test('enters rows added to the pending branch on reveal', async () => {
+      const groupHooks = `appear :css="false"
+        @before-appear="el => data.log('beforeAppear ' + el.textContent)"
+        @appear="el => data.log('appear ' + el.textContent)"`
+      // the rows of a fragment group are inserted by the list, those of a
+      // tag group by the group into its element
+      for (const tag of ['', 'tag="ul"']) {
+        for (const vapor of [false, true]) {
+          const label = `${vapor ? 'vapor' : 'vdom'} ${tag || 'fragment'}`
+          const data = ref<any>({ items: [1] })
+          const out = await runWhilePending(
+            vapor,
+            `<template>
+              <div>
+                <TransitionGroup ${tag} ${groupHooks}>
+                  <li v-for="i in data.items" :key="i">{{ i }}</li>
+                </TransitionGroup>
+                <components.AsyncChild />
+              </div>
+            </template>`,
+            data,
+            () => data.value.items.push(2),
+          )
+          expect(out.whilePending, label).toEqual([])
+          expect(out.calls, label).toEqual([
+            'beforeAppear 1',
+            'beforeAppear 2',
+            'appear 1',
+            'appear 2',
+            'page mounted',
+          ])
+          expect(out.host, label).toContain('<li>1</li><li>2</li>')
+        }
+      }
+    })
   })
 
   describe('current scope', () => {

@@ -341,7 +341,8 @@ const VaporTransitionGroupImpl = /*@__PURE__*/ defineVaporComponent({
           )
           slottedBlock = block
           if (container) {
-            if (!isHydrating) insert(block, container)
+            // the rows of a pending boundary enter on its reveal
+            if (!isHydrating) insert(block, container, null, instance.suspense)
             registerNestedVDOMCleanup(block)
             return container
           }

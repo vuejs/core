@@ -33,6 +33,7 @@ import {
   type VdomSlotOptions,
   type VdomSlotOutlet,
   cloneVNode,
+  collectDeferredEnters,
   createCommentVNode,
   createInternalObject,
   createVNode,
@@ -115,6 +116,7 @@ import {
   type Block,
   type BlockFn,
   EMPTY_BLOCK,
+  type TransitionBlock,
   type VaporTransitionHooks,
   insert,
   isValidBlock,
@@ -255,6 +257,7 @@ import {
   isSuspenseEnabled,
   resolveUnmountSuspense,
   runWithUnmountSuspense,
+  takeDeferredEnters,
 } from './suspense'
 import { isAsyncComponentEnabled } from './asyncComponentState'
 import {
@@ -1117,6 +1120,37 @@ const vaporInteropImpl = {
       isTransitionEnabled &&
       !!findTransitionBlock(vnode.vb || getVaporInstance(vnode).block)
     )
+  },
+
+  // only vdom's Suspense calls it: dead under the flag its export sets
+  enterDeferred(suspense, enters) {
+    if (!isVdomSuspenseEnabled) return
+    const targets = takeDeferredEnters(suspense)
+    if (!targets) return
+    // the pending branch sits in the hidden container until the move; what
+    // left it was unmounted, what sits right under it is a root the move
+    // enters itself (vdom's isRoot)
+    const container = suspense.hiddenContainer as ParentNode
+    for (const target of targets) {
+      if (target instanceof Element) {
+        const transition = (target as TransitionBlock).$transition
+        if (
+          transition &&
+          !transition.persisted &&
+          target.parentNode !== container &&
+          container.contains(target)
+        ) {
+          transition.beforeEnter(target)
+          enters.push(() => transition.enter(target))
+        }
+      } else {
+        const vnode = target.vnode
+        const el = vnode && (vnode.el as Node | null)
+        if (el && container.contains(el)) {
+          collectDeferredEnters(vnode, enters, el.parentNode === container)
+        }
+      }
+    }
   },
 
   // only vdom's KeepAlive calls these: dead under the flag its export sets
