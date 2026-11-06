@@ -4007,8 +4007,10 @@ function invokeInteropDirsHook(
 ): void {
   if (!vnode.dirs) return
   invokeDirectiveHook(
-    // hooks are handed `vnode.el`, which moves on with the root
-    vnode.el === el ? vnode : extend({}, vnode, { el }),
+    // hooks are handed `vnode.el`, which moves on with the root; a fresh copy
+    // also keeps the pending-mount chain the helper records on the vnode off
+    // the component vnode, which several roots mount with
+    extend({}, vnode, { el }),
     prevVNode,
     instance.parent as ComponentInternalInstance | null,
     name,

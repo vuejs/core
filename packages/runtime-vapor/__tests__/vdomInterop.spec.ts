@@ -2774,6 +2774,177 @@ describe('vdomInterop', () => {
           'unmounted P[p] (detached) v',
         ])
       })
+
+      // the bindings a deferred `mounted` runs with
+      const traceMount = (calls: string[]) => ({
+        beforeUpdate: (_: Element, { value, oldValue }: any) =>
+          calls.push(`beforeUpdate ${value} ${oldValue}`),
+        mounted: (el: Element, { value, oldValue }: any, vnode: VNode) =>
+          calls.push(
+            `mounted ${el.tagName} ${value} ${oldValue} ${vnode.props!.id}`,
+          ),
+        updated: (_: Element, { value, oldValue }: any) =>
+          calls.push(`updated ${value} ${oldValue}`),
+      })
+
+      test('mounted hook receives the latest binding after an update in the same flush', async () => {
+        const run = async (vapor: boolean) => {
+          const data = ref({ count: 0 })
+          // an event emitted from setup updates the parent while it is mounting
+          const Child = compile(
+            `<script setup>
+            const data = _data
+            const emit = defineEmits(['setup'])
+            emit('setup')
+            </script>
+            <template><div :id="data.count">d</div></template>`,
+            data,
+            {},
+            { vapor },
+          )
+          const calls: string[] = []
+          const dir = traceMount(calls)
+          const show = ref(false)
+          const { done } = mountInBody(() =>
+            show.value
+              ? withDirectives(
+                  h(Child, {
+                    id: data.value.count,
+                    onSetup: () => data.value.count++,
+                  }),
+                  [[dir, data.value.count]],
+                )
+              : null,
+          )
+          show.value = true
+          await nextTick()
+          done()
+          return calls
+        }
+
+        await expectParity(run, [
+          'beforeUpdate 1 0',
+          'mounted DIV 1 undefined 1',
+          'updated 1 0',
+        ])
+      })
+
+      test('mounted hook deferred by a pending Suspense receives the latest binding', async () => {
+        const run = async (vapor: boolean) => {
+          let resolve!: () => void
+          const data = ref({
+            count: 0,
+            p: new Promise<void>(r => (resolve = r)),
+          })
+          const Child = compile(
+            `<script setup>const data = _data</script>` +
+              `<template><p :id="data.count">p</p></template>`,
+            data,
+            {},
+            { vapor },
+          )
+          const Pending = compile(
+            `<script setup>const data = _data; await data.value.p</script>` +
+              `<template><i>p</i></template>`,
+            data,
+            {},
+            { vapor },
+          )
+          const calls: string[] = []
+          const dir = traceMount(calls)
+          const { done } = mountInBody(() =>
+            h(Suspense, null, {
+              default: () =>
+                h('div', [
+                  withDirectives(h(Child, { id: data.value.count }), [
+                    [dir, data.value.count],
+                  ]),
+                  h(Pending),
+                ]),
+              fallback: () => h('span', 'loading'),
+            }),
+          )
+          // the pending branch re-renders before it is revealed
+          data.value.count++
+          await nextTick()
+          expect(calls).toEqual(['beforeUpdate 1 0'])
+          data.value.count++
+          await nextTick()
+          expect(calls).toEqual(['beforeUpdate 1 0', 'beforeUpdate 2 1'])
+          await settle(resolve)
+          done()
+          return calls
+        }
+
+        await expectParity(run, [
+          'beforeUpdate 1 0',
+          'beforeUpdate 2 1',
+          'mounted P 2 undefined 2',
+          'updated 1 0',
+          'updated 2 1',
+        ])
+      })
+
+      test('pending mounted hooks use the bindings of their own root', async () => {
+        const run = async (vapor: boolean) => {
+          let resolve!: () => void
+          const data = ref({
+            editing: true,
+            count: 0,
+            p: new Promise<void>(r => (resolve = r)),
+          })
+          const Child = compile(
+            `<script setup>const data = _data</script>
+            <template>
+              <div v-if="data.editing" :id="data.count">d</div>
+              <p v-else :id="data.count">p</p>
+            </template>`,
+            data,
+            {},
+            { vapor },
+          )
+          const Pending = compile(
+            `<script setup>const data = _data; await data.value.p</script>` +
+              `<template><i>p</i></template>`,
+            data,
+            {},
+            { vapor },
+          )
+          const calls: string[] = []
+          const dir = traceMount(calls)
+          const { done } = mountInBody(() =>
+            h(Suspense, null, {
+              default: () =>
+                h('div', [
+                  withDirectives(h(Child, { id: data.value.count }), [
+                    [dir, data.value.count],
+                  ]),
+                  h(Pending),
+                ]),
+              fallback: () => h('span', 'loading'),
+            }),
+          )
+          // the root is replaced, then the bindings the new root carries change
+          data.value.editing = false
+          await nextTick()
+          data.value.count++
+          await nextTick()
+          await settle(resolve)
+          done()
+          return calls
+        }
+
+        await expectParity(
+          run,
+          [
+            'beforeUpdate 1 0',
+            'mounted DIV 0 undefined 0',
+            'mounted P 1 undefined 1',
+            'updated 1 0',
+          ],
+          'beforeUpdate 0 0',
+        )
+      })
     })
 
     test('should expose the latest vapor root element in updated hooks', async () => {
