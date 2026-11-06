@@ -598,7 +598,7 @@ describe('compiler: v-for', () => {
         ],
       })
       const div = node.children[0] as ElementNode
-      expect((div.children[0] as InterpolationNode).content).toMatchObject({
+      expect((div.children[1] as InterpolationNode).content).toMatchObject({
         type: NodeTypes.COMPOUND_EXPRESSION,
         children: [
           { content: `foo` },

@@ -2310,6 +2310,33 @@ describe('compiler: parse', () => {
       expect((ast.children[0] as ElementNode).children.length).toBe(1)
     })
 
+    // #7542
+    test('should preserve whitespaces around an interpolation inside an element', () => {
+      const ast = parse(`<div> \n {{ foo }} \n </div>`)
+      expect((ast.children[0] as ElementNode).children).toMatchObject([
+        {
+          type: NodeTypes.TEXT,
+          content: ' ',
+        },
+        {
+          type: NodeTypes.INTERPOLATION,
+        },
+        {
+          type: NodeTypes.TEXT,
+          content: ' ',
+        },
+      ])
+    })
+
+    test('should remove whitespaces around an interpolation at the root', () => {
+      const ast = parse(` \n {{ foo }} \n `)
+      expect(ast.children).toMatchObject([
+        {
+          type: NodeTypes.INTERPOLATION,
+        },
+      ])
+    })
+
     test('should remove whitespaces w/ newline between elements', () => {
       const ast = parse(`<div/> \n <div/> \n <div/>`)
       expect(ast.children.length).toBe(3)
@@ -2422,6 +2449,15 @@ describe('compiler: parse', () => {
     test('should still remove whitespaces at start/end inside an element', () => {
       const ast = parse(`<div>   <span/>    </div>`)
       expect((ast.children[0] as ElementNode).children.length).toBe(1)
+    })
+
+    test('should still remove whitespaces around an interpolation inside an element', () => {
+      const ast = parse(`<div> \n {{ foo }} \n </div>`)
+      expect((ast.children[0] as ElementNode).children).toMatchObject([
+        {
+          type: NodeTypes.INTERPOLATION,
+        },
+      ])
     })
 
     test('should preserve whitespaces w/ newline between elements', () => {
