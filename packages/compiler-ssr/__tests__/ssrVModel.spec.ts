@@ -39,7 +39,7 @@ describe('ssr: v-model', () => {
         `<select v-model="model"><option value="1"></option></select>`,
       ).code,
     ).toMatchInlineSnapshot(`
-      "const { ssrIncludeBooleanAttr: _ssrIncludeBooleanAttr, ssrLooseContain: _ssrLooseContain, ssrLooseEqual: _ssrLooseEqual, ssrRenderAttrs: _ssrRenderAttrs } = require("vue/server-renderer")
+      "const { ssrIncludeBooleanAttr: _ssrIncludeBooleanAttr, ssrLooseContain: _ssrLooseContain, ssrIsSet: _ssrIsSet, ssrLooseEqual: _ssrLooseEqual, ssrRenderAttrs: _ssrRenderAttrs } = require("vue/server-renderer")
 
       return function ssrRender(_ctx, _push, _parent, _attrs) {
         _push(\`<div\${
@@ -47,7 +47,9 @@ describe('ssr: v-model', () => {
         }><select><option value="1"\${
           (_ssrIncludeBooleanAttr((Array.isArray(_ctx.model))
             ? _ssrLooseContain(_ctx.model, "1")
-            : _ssrLooseEqual(_ctx.model, "1"))) ? " selected" : ""
+            : (_ssrIsSet(_ctx.model))
+              ? _ctx.model.has("1")
+              : _ssrLooseEqual(_ctx.model, "1"))) ? " selected" : ""
         }></option></select></div>\`)
       }"
     `)
@@ -57,7 +59,7 @@ describe('ssr: v-model', () => {
         `<select v-model="model"><option v-for="i in items" :value="i"></option></select>`,
       ).code,
     ).toMatchInlineSnapshot(`
-      "const { ssrRenderAttr: _ssrRenderAttr, ssrIncludeBooleanAttr: _ssrIncludeBooleanAttr, ssrLooseContain: _ssrLooseContain, ssrLooseEqual: _ssrLooseEqual, ssrRenderAttrs: _ssrRenderAttrs, ssrRenderList: _ssrRenderList } = require("vue/server-renderer")
+      "const { ssrRenderAttr: _ssrRenderAttr, ssrIncludeBooleanAttr: _ssrIncludeBooleanAttr, ssrLooseContain: _ssrLooseContain, ssrIsSet: _ssrIsSet, ssrLooseEqual: _ssrLooseEqual, ssrRenderAttrs: _ssrRenderAttrs, ssrRenderList: _ssrRenderList } = require("vue/server-renderer")
 
       return function ssrRender(_ctx, _push, _parent, _attrs) {
         _push(\`<div\${_ssrRenderAttrs(_attrs)}><select><!--[-->\`)
@@ -67,7 +69,9 @@ describe('ssr: v-model', () => {
           }\${
             (_ssrIncludeBooleanAttr((Array.isArray(_ctx.model))
               ? _ssrLooseContain(_ctx.model, i)
-              : _ssrLooseEqual(_ctx.model, i))) ? " selected" : ""
+              : (_ssrIsSet(_ctx.model))
+                ? _ctx.model.has(i)
+                : _ssrLooseEqual(_ctx.model, i))) ? " selected" : ""
           }></option>\`)
         })
         _push(\`<!--]--></select></div>\`)
@@ -79,7 +83,7 @@ describe('ssr: v-model', () => {
         `<select v-model="model"><option v-if="true" :value="i"></option></select>`,
       ).code,
     ).toMatchInlineSnapshot(`
-      "const { ssrRenderAttr: _ssrRenderAttr, ssrIncludeBooleanAttr: _ssrIncludeBooleanAttr, ssrLooseContain: _ssrLooseContain, ssrLooseEqual: _ssrLooseEqual, ssrRenderAttrs: _ssrRenderAttrs } = require("vue/server-renderer")
+      "const { ssrRenderAttr: _ssrRenderAttr, ssrIncludeBooleanAttr: _ssrIncludeBooleanAttr, ssrLooseContain: _ssrLooseContain, ssrIsSet: _ssrIsSet, ssrLooseEqual: _ssrLooseEqual, ssrRenderAttrs: _ssrRenderAttrs } = require("vue/server-renderer")
 
       return function ssrRender(_ctx, _push, _parent, _attrs) {
         _push(\`<div\${_ssrRenderAttrs(_attrs)}><select>\`)
@@ -89,7 +93,9 @@ describe('ssr: v-model', () => {
           }\${
             (_ssrIncludeBooleanAttr((Array.isArray(_ctx.model))
               ? _ssrLooseContain(_ctx.model, _ctx.i)
-              : _ssrLooseEqual(_ctx.model, _ctx.i))) ? " selected" : ""
+              : (_ssrIsSet(_ctx.model))
+                ? _ctx.model.has(_ctx.i)
+                : _ssrLooseEqual(_ctx.model, _ctx.i))) ? " selected" : ""
           }></option>\`)
         } else {
           _push(\`<!---->\`)
@@ -103,7 +109,7 @@ describe('ssr: v-model', () => {
         `<select multiple v-model="model"><option value="1" selected></option><option value="2"></option></select>`,
       ).code,
     ).toMatchInlineSnapshot(`
-      "const { ssrIncludeBooleanAttr: _ssrIncludeBooleanAttr, ssrLooseContain: _ssrLooseContain, ssrLooseEqual: _ssrLooseEqual, ssrRenderAttrs: _ssrRenderAttrs } = require("vue/server-renderer")
+      "const { ssrIncludeBooleanAttr: _ssrIncludeBooleanAttr, ssrLooseContain: _ssrLooseContain, ssrIsSet: _ssrIsSet, ssrLooseEqual: _ssrLooseEqual, ssrRenderAttrs: _ssrRenderAttrs } = require("vue/server-renderer")
 
       return function ssrRender(_ctx, _push, _parent, _attrs) {
         _push(\`<div\${
@@ -111,7 +117,9 @@ describe('ssr: v-model', () => {
         }><select multiple><option value="1" selected></option><option value="2"\${
           (_ssrIncludeBooleanAttr((Array.isArray(_ctx.model))
             ? _ssrLooseContain(_ctx.model, "2")
-            : _ssrLooseEqual(_ctx.model, "2"))) ? " selected" : ""
+            : (_ssrIsSet(_ctx.model))
+              ? _ctx.model.has("2")
+              : _ssrLooseEqual(_ctx.model, "2"))) ? " selected" : ""
         }></option></select></div>\`)
       }"
     `)
@@ -137,7 +145,7 @@ describe('ssr: v-model', () => {
           </optgroup>
         </select>`).code,
     ).toMatchInlineSnapshot(`
-      "const { ssrIncludeBooleanAttr: _ssrIncludeBooleanAttr, ssrLooseContain: _ssrLooseContain, ssrLooseEqual: _ssrLooseEqual, ssrRenderAttrs: _ssrRenderAttrs } = require("vue/server-renderer")
+      "const { ssrIncludeBooleanAttr: _ssrIncludeBooleanAttr, ssrLooseContain: _ssrLooseContain, ssrIsSet: _ssrIsSet, ssrLooseEqual: _ssrLooseEqual, ssrRenderAttrs: _ssrRenderAttrs } = require("vue/server-renderer")
 
       return function ssrRender(_ctx, _push, _parent, _attrs) {
         _push(\`<div\${
@@ -145,7 +153,9 @@ describe('ssr: v-model', () => {
         }><select multiple><optgroup label="foo"><option value="bar"\${
           (_ssrIncludeBooleanAttr((Array.isArray(_ctx.model))
             ? _ssrLooseContain(_ctx.model, "bar")
-            : _ssrLooseEqual(_ctx.model, "bar"))) ? " selected" : ""
+            : (_ssrIsSet(_ctx.model))
+              ? _ctx.model.has("bar")
+              : _ssrLooseEqual(_ctx.model, "bar"))) ? " selected" : ""
         }>bar</option></optgroup></select></div>\`)
       }"
     `)
@@ -175,7 +185,7 @@ describe('ssr: v-model', () => {
           </optgroup>
         </select>`).code,
     ).toMatchInlineSnapshot(`
-      "const { ssrRenderAttr: _ssrRenderAttr, ssrIncludeBooleanAttr: _ssrIncludeBooleanAttr, ssrLooseContain: _ssrLooseContain, ssrLooseEqual: _ssrLooseEqual, ssrRenderAttrs: _ssrRenderAttrs, ssrInterpolate: _ssrInterpolate, ssrRenderList: _ssrRenderList } = require("vue/server-renderer")
+      "const { ssrRenderAttr: _ssrRenderAttr, ssrIncludeBooleanAttr: _ssrIncludeBooleanAttr, ssrLooseContain: _ssrLooseContain, ssrIsSet: _ssrIsSet, ssrLooseEqual: _ssrLooseEqual, ssrRenderAttrs: _ssrRenderAttrs, ssrInterpolate: _ssrInterpolate, ssrRenderList: _ssrRenderList } = require("vue/server-renderer")
 
       return function ssrRender(_ctx, _push, _parent, _attrs) {
         _push(\`<div\${_ssrRenderAttrs(_attrs)}><select multiple><optgroup><!--[-->\`)
@@ -185,7 +195,9 @@ describe('ssr: v-model', () => {
           }\${
             (_ssrIncludeBooleanAttr((Array.isArray(_ctx.model))
               ? _ssrLooseContain(_ctx.model, item)
-              : _ssrLooseEqual(_ctx.model, item))) ? " selected" : ""
+              : (_ssrIsSet(_ctx.model))
+                ? _ctx.model.has(item)
+                : _ssrLooseEqual(_ctx.model, item))) ? " selected" : ""
           }>\${
             _ssrInterpolate(item)
           }</option>\`)
@@ -202,7 +214,7 @@ describe('ssr: v-model', () => {
           </optgroup>
         </select>`).code,
     ).toMatchInlineSnapshot(`
-      "const { ssrRenderAttr: _ssrRenderAttr, ssrIncludeBooleanAttr: _ssrIncludeBooleanAttr, ssrLooseContain: _ssrLooseContain, ssrLooseEqual: _ssrLooseEqual, ssrRenderAttrs: _ssrRenderAttrs, ssrInterpolate: _ssrInterpolate } = require("vue/server-renderer")
+      "const { ssrRenderAttr: _ssrRenderAttr, ssrIncludeBooleanAttr: _ssrIncludeBooleanAttr, ssrLooseContain: _ssrLooseContain, ssrIsSet: _ssrIsSet, ssrLooseEqual: _ssrLooseEqual, ssrRenderAttrs: _ssrRenderAttrs, ssrInterpolate: _ssrInterpolate } = require("vue/server-renderer")
 
       return function ssrRender(_ctx, _push, _parent, _attrs) {
         _push(\`<div\${_ssrRenderAttrs(_attrs)}><select multiple><optgroup>\`)
@@ -212,7 +224,9 @@ describe('ssr: v-model', () => {
           }\${
             (_ssrIncludeBooleanAttr((Array.isArray(_ctx.model))
               ? _ssrLooseContain(_ctx.model, _ctx.item)
-              : _ssrLooseEqual(_ctx.model, _ctx.item))) ? " selected" : ""
+              : (_ssrIsSet(_ctx.model))
+                ? _ctx.model.has(_ctx.item)
+                : _ssrLooseEqual(_ctx.model, _ctx.item))) ? " selected" : ""
           }>\${
             _ssrInterpolate(_ctx.item)
           }</option>\`)
@@ -233,7 +247,7 @@ describe('ssr: v-model', () => {
           </optgroup>
         </select>`).code,
     ).toMatchInlineSnapshot(`
-      "const { ssrRenderAttr: _ssrRenderAttr, ssrIncludeBooleanAttr: _ssrIncludeBooleanAttr, ssrLooseContain: _ssrLooseContain, ssrLooseEqual: _ssrLooseEqual, ssrRenderAttrs: _ssrRenderAttrs, ssrInterpolate: _ssrInterpolate, ssrRenderList: _ssrRenderList } = require("vue/server-renderer")
+      "const { ssrRenderAttr: _ssrRenderAttr, ssrIncludeBooleanAttr: _ssrIncludeBooleanAttr, ssrLooseContain: _ssrLooseContain, ssrIsSet: _ssrIsSet, ssrLooseEqual: _ssrLooseEqual, ssrRenderAttrs: _ssrRenderAttrs, ssrInterpolate: _ssrInterpolate, ssrRenderList: _ssrRenderList } = require("vue/server-renderer")
 
       return function ssrRender(_ctx, _push, _parent, _attrs) {
         _push(\`<div\${_ssrRenderAttrs(_attrs)}><select multiple><optgroup>\`)
@@ -245,7 +259,9 @@ describe('ssr: v-model', () => {
             }\${
               (_ssrIncludeBooleanAttr((Array.isArray(_ctx.model))
                 ? _ssrLooseContain(_ctx.model, item)
-                : _ssrLooseEqual(_ctx.model, item))) ? " selected" : ""
+                : (_ssrIsSet(_ctx.model))
+                  ? _ctx.model.has(item)
+                  : _ssrLooseEqual(_ctx.model, item))) ? " selected" : ""
             }>\${
               _ssrInterpolate(item)
             }</option>\`)
@@ -268,7 +284,7 @@ describe('ssr: v-model', () => {
           </optgroup>
         </select>`).code,
     ).toMatchInlineSnapshot(`
-      "const { ssrRenderAttr: _ssrRenderAttr, ssrIncludeBooleanAttr: _ssrIncludeBooleanAttr, ssrLooseContain: _ssrLooseContain, ssrLooseEqual: _ssrLooseEqual, ssrRenderAttrs: _ssrRenderAttrs, ssrInterpolate: _ssrInterpolate, ssrRenderList: _ssrRenderList } = require("vue/server-renderer")
+      "const { ssrRenderAttr: _ssrRenderAttr, ssrIncludeBooleanAttr: _ssrIncludeBooleanAttr, ssrLooseContain: _ssrLooseContain, ssrIsSet: _ssrIsSet, ssrLooseEqual: _ssrLooseEqual, ssrRenderAttrs: _ssrRenderAttrs, ssrInterpolate: _ssrInterpolate, ssrRenderList: _ssrRenderList } = require("vue/server-renderer")
 
       return function ssrRender(_ctx, _push, _parent, _attrs) {
         _push(\`<div\${_ssrRenderAttrs(_attrs)}><select multiple><optgroup><!--[-->\`)
@@ -280,7 +296,9 @@ describe('ssr: v-model', () => {
             }\${
               (_ssrIncludeBooleanAttr((Array.isArray(_ctx.model))
                 ? _ssrLooseContain(_ctx.model, item)
-                : _ssrLooseEqual(_ctx.model, item))) ? " selected" : ""
+                : (_ssrIsSet(_ctx.model))
+                  ? _ctx.model.has(item)
+                  : _ssrLooseEqual(_ctx.model, item))) ? " selected" : ""
             }>\${
               _ssrInterpolate(item)
             }</option>\`)
@@ -313,7 +331,7 @@ describe('ssr: v-model', () => {
   test('<input type="checkbox">', () => {
     expect(compileWithWrapper(`<input type="checkbox" v-model="bar">`).code)
       .toMatchInlineSnapshot(`
-        "const { ssrLooseContain: _ssrLooseContain, ssrIncludeBooleanAttr: _ssrIncludeBooleanAttr, ssrRenderAttrs: _ssrRenderAttrs } = require("vue/server-renderer")
+        "const { ssrLooseContain: _ssrLooseContain, ssrIsSet: _ssrIsSet, ssrIncludeBooleanAttr: _ssrIncludeBooleanAttr, ssrRenderAttrs: _ssrRenderAttrs } = require("vue/server-renderer")
 
         return function ssrRender(_ctx, _push, _parent, _attrs) {
           _push(\`<div\${
@@ -321,7 +339,9 @@ describe('ssr: v-model', () => {
           }><input type="checkbox"\${
             (_ssrIncludeBooleanAttr((Array.isArray(_ctx.bar))
               ? _ssrLooseContain(_ctx.bar, null)
-              : _ctx.bar)) ? " checked" : ""
+              : (_ssrIsSet(_ctx.bar))
+                ? _ctx.bar.has(null)
+                : _ctx.bar)) ? " checked" : ""
           }></div>\`)
         }"
       `)
@@ -330,7 +350,7 @@ describe('ssr: v-model', () => {
       compileWithWrapper(`<input type="checkbox" value="foo" v-model="bar">`)
         .code,
     ).toMatchInlineSnapshot(`
-      "const { ssrLooseContain: _ssrLooseContain, ssrIncludeBooleanAttr: _ssrIncludeBooleanAttr, ssrRenderAttrs: _ssrRenderAttrs } = require("vue/server-renderer")
+      "const { ssrLooseContain: _ssrLooseContain, ssrIsSet: _ssrIsSet, ssrIncludeBooleanAttr: _ssrIncludeBooleanAttr, ssrRenderAttrs: _ssrRenderAttrs } = require("vue/server-renderer")
 
       return function ssrRender(_ctx, _push, _parent, _attrs) {
         _push(\`<div\${
@@ -338,7 +358,9 @@ describe('ssr: v-model', () => {
         }><input type="checkbox" value="foo"\${
           (_ssrIncludeBooleanAttr((Array.isArray(_ctx.bar))
             ? _ssrLooseContain(_ctx.bar, "foo")
-            : _ctx.bar)) ? " checked" : ""
+            : (_ssrIsSet(_ctx.bar))
+              ? _ctx.bar.has("foo")
+              : _ctx.bar)) ? " checked" : ""
         }></div>\`)
       }"
     `)
