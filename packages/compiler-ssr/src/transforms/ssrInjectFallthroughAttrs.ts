@@ -1,5 +1,6 @@
 import {
   ElementTypes,
+  type IfBranchNode,
   type NodeTransform,
   NodeTypes,
   type ParentNode,
@@ -8,6 +9,7 @@ import {
   createSimpleExpression,
   findDir,
   isCommentOrWhitespace,
+  isWhitespaceText,
   locStub,
 } from '@vue/compiler-dom'
 
@@ -16,6 +18,33 @@ const filterChild = (node: ParentNode) =>
 
 const hasSingleChild = (node: ParentNode): boolean =>
   filterChild(node).length === 1
+
+// whether the nodes are a single v-if chain, e.g. a v-if + v-else pair
+function isSingleIfChain(nodes: TemplateChildNode[]): boolean {
+  let hasEncounteredIf = false
+  for (const c of nodes) {
+    if (
+      c.type === NodeTypes.IF ||
+      (c.type === NodeTypes.ELEMENT && findDir(c, 'if'))
+    ) {
+      // multiple v-if
+      if (hasEncounteredIf) return false
+      hasEncounteredIf = true
+    } else if (
+      // node before v-if
+      !hasEncounteredIf ||
+      // non else nodes
+      !(c.type === NodeTypes.ELEMENT && findDir(c, /else/, true))
+    ) {
+      return false
+    }
+  }
+  return hasEncounteredIf
+}
+
+// root v-if branches whose only content is a nested v-if chain, which then
+// renders the root in their place
+const rootIfBranches = new WeakSet<IfBranchNode>()
 
 export const ssrInjectFallthroughAttrs: NodeTransform = (node, context) => {
   // _attrs is provided as a function argument.
@@ -43,31 +72,35 @@ export const ssrInjectFallthroughAttrs: NodeTransform = (node, context) => {
   }
 
   const parent = context.parent
-  if (!parent || parent.type !== NodeTypes.ROOT) {
+  if (
+    !parent ||
+    (parent.type !== NodeTypes.ROOT &&
+      !(parent.type === NodeTypes.IF_BRANCH && rootIfBranches.has(parent)))
+  ) {
     return
   }
 
-  if (node.type === NodeTypes.IF_BRANCH && hasSingleChild(node)) {
+  if (node.type === NodeTypes.IF_BRANCH) {
     // detect cases where the parent v-if is not the only root level node
-    let hasEncounteredIf = false
-    for (const c of filterChild(parent)) {
-      if (
-        c.type === NodeTypes.IF ||
-        (c.type === NodeTypes.ELEMENT && findDir(c, 'if'))
-      ) {
-        // multiple root v-if
-        if (hasEncounteredIf) return
-        hasEncounteredIf = true
-      } else if (
-        // node before v-if
-        !hasEncounteredIf ||
-        // non else nodes
-        !(c.type === NodeTypes.ELEMENT && findDir(c, /else/, true))
-      ) {
-        return
-      }
+    if (!isSingleIfChain(filterChild(parent))) return
+    // whitespace kept next to a comment at the edges of the branch (with
+    // whitespace: 'preserve') makes the client render a fragment root, unlike
+    // whitespace between v-if/v-else siblings, which v-if removes
+    const content = node.children.filter(c => c.type !== NodeTypes.COMMENT)
+    if (
+      content.length &&
+      (isWhitespaceText(content[0]) ||
+        isWhitespaceText(content[content.length - 1]))
+    ) {
+      return
     }
-    injectFallthroughAttrs(node.children[0])
+    const children = filterChild(node)
+    // checked first, as a sole <template v-if> child can't take the attrs
+    if (isSingleIfChain(children)) {
+      rootIfBranches.add(node)
+    } else if (children.length === 1) {
+      injectFallthroughAttrs(children[0])
+    }
   } else if (hasSingleChild(parent)) {
     injectFallthroughAttrs(node)
   }

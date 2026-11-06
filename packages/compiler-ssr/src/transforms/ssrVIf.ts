@@ -72,7 +72,11 @@ function processIfBranch(
   const needFragmentWrapper =
     !disableNestedFragments &&
     (children.length !== 1 || children[0].type !== NodeTypes.ELEMENT) &&
-    // optimize away nested fragments when the only child is a ForNode
-    !(children.length === 1 && children[0].type === NodeTypes.FOR)
+    // optimize away nested fragments when the only child is a ForNode or a
+    // nested v-if chain, which the client renders without a fragment too
+    !(
+      children.length === 1 &&
+      (children[0].type === NodeTypes.FOR || children[0].type === NodeTypes.IF)
+    )
   return processChildrenAsStatement(branch, context, needFragmentWrapper)
 }
