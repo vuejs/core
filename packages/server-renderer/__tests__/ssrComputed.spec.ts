@@ -1,5 +1,14 @@
-import { computed, createSSRApp, defineComponent, h, reactive, ref } from 'vue'
+import {
+  computed,
+  createSSRApp,
+  defineComponent,
+  h,
+  reactive,
+  ref,
+  toRaw,
+} from 'vue'
 import { renderToString } from '../src/renderToString'
+import { getDepFromReactive } from '../../reactivity/src/dep'
 
 // #5208 reported memory leak of keeping computed alive during SSR
 // so we made computed properties created during SSR non-reactive in
@@ -64,4 +73,16 @@ test('computed mutation during render', async () => {
   const app = createSSRApp(App)
   const html = await renderToString(app)
   expect(html).toMatch('value: 2')
+})
+
+test('computed created in setup is released after render', async () => {
+  const store = reactive({ count: 1 })
+  const App = defineComponent(() => {
+    const double = computed(() => store.count * 2)
+    return () => h('div', null, double.value)
+  })
+
+  const html = await renderToString(createSSRApp(App))
+  expect(html).toBe('<div>2</div>')
+  expect(getDepFromReactive(toRaw(store), 'count')?.subs).toBeUndefined()
 })
