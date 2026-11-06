@@ -161,4 +161,15 @@ export const withKeys = <T extends (event: KeyboardEvent) => any>(
   )
 }
 
+/**
+ * @private
+ */
+export function withDynamicEventModifiers(
+  eventName: string,
+  modifierPostfix: string,
+): string {
+  if (eventName !== '') return eventName + modifierPostfix
+  return ''
+}
+
 export type VOnDirective = Directive<any, any, VOnModifiers>

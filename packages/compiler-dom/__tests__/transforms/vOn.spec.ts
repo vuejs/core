@@ -6,6 +6,7 @@ import {
   type ObjectExpression,
   TO_HANDLER_KEY,
   type VNodeCall,
+  generate,
   helperNameMap,
   baseParse as parse,
   transform,
@@ -166,6 +167,14 @@ describe('compiler-dom: transform v-on', () => {
         ],
       },
     })
+  })
+
+  it('should wrap both for dynamic key event w/ event modifiers', () => {
+    const { root: ast } = parseWithVOn(
+      `<div @[e].once="test"/><div @[e].passive="test"/><div @[e].capture="test"/>`,
+    )
+
+    expect(generate(ast).code).toMatchSnapshot()
   })
 
   it('should not wrap normal guard if there is only keys guard', () => {
