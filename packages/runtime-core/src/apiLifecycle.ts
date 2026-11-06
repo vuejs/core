@@ -77,7 +77,7 @@ const createHook =
       injectHook(lifecycle, (...args: unknown[]) => hook(...args), target)
     }
   }
-type CreateHook<T = any> = (
+type CreateHook<T = () => any> = (
   hook: T,
   target?: ComponentInternalInstance | null,
 ) => void
