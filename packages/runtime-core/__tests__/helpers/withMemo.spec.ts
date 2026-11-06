@@ -19,7 +19,7 @@ describe('v-memo', () => {
       template: `<div v-memo="arr">{{ arr[0] }} {{ arr[1] }} {{arr[2] ?? '_' }} ({{c}})</div>{{c}}`,
       data: () => ({ arr: [0, 0], c: 0 }),
     })
-    expect(el.innerHTML).toBe(`<div>0 0 _ (0)</div>0`)
+    expect(el.innerHTML).toBe(`<!----><div>0 0 _ (0)</div>0<!---->`)
 
     let [x, y, z] = [0, 1, 2]
 
@@ -27,32 +27,32 @@ describe('v-memo', () => {
     vm.arr[x]++
     vm.c++
     await nextTick()
-    expect(el.innerHTML).toBe(`<div>1 0 _ (1)</div>1`)
+    expect(el.innerHTML).toBe(`<!----><div>1 0 _ (1)</div>1<!---->`)
 
     // change at index y - should update
     vm.arr[y]++
     vm.c++
     await nextTick()
-    expect(el.innerHTML).toBe(`<div>1 1 _ (2)</div>2`)
+    expect(el.innerHTML).toBe(`<!----><div>1 1 _ (2)</div>2<!---->`)
 
     // noop change - should NOT update
     vm.arr[x] = vm.arr[0]
     vm.arr[y] = vm.arr[1]
     vm.c++
     await nextTick()
-    expect(el.innerHTML).toBe(`<div>1 1 _ (2)</div>3`)
+    expect(el.innerHTML).toBe(`<!----><div>1 1 _ (2)</div>3<!---->`)
 
     // add item  3rd item - should update
     vm.arr[z] = 0
     vm.c++
     await nextTick()
-    expect(el.innerHTML).toBe(`<div>1 1 0 (4)</div>4`)
+    expect(el.innerHTML).toBe(`<!----><div>1 1 0 (4)</div>4<!---->`)
 
     // remove 3rd item - should update
     vm.arr = vm.arr.slice(0, vm.arr.length - 1)
     vm.c++
     await nextTick()
-    expect(el.innerHTML).toBe(`<div>1 1 _ (5)</div>5`)
+    expect(el.innerHTML).toBe(`<!----><div>1 1 _ (5)</div>5<!---->`)
   })
 
   test('on normal element', async () => {
@@ -174,33 +174,33 @@ describe('v-memo', () => {
       }),
     })
     expect(el.innerHTML).toBe(
-      `<div>1 yes z</div><div>2 no z</div><div>3 no z</div>`,
+      `<!----><div>1 yes z</div><div>2 no z</div><div>3 no z</div><!---->`,
     )
 
     vm.y = 2
     await nextTick()
     expect(el.innerHTML).toBe(
-      `<div>1 no z</div><div>2 yes z</div><div>3 no z</div>`,
+      `<!----><div>1 no z</div><div>2 yes z</div><div>3 no z</div><!---->`,
     )
 
     vm.list[0].x = 4
     await nextTick()
     expect(el.innerHTML).toBe(
-      `<div>4 no z</div><div>2 yes z</div><div>3 no z</div>`,
+      `<!----><div>4 no z</div><div>2 yes z</div><div>3 no z</div><!---->`,
     )
 
     vm.list[0].x = 5
     vm.y = 5
     await nextTick()
     expect(el.innerHTML).toBe(
-      `<div>5 yes z</div><div>2 no z</div><div>3 no z</div>`,
+      `<!----><div>5 yes z</div><div>2 no z</div><div>3 no z</div><!---->`,
     )
 
     vm.z = 'zz'
     await nextTick()
     // should not update
     expect(el.innerHTML).toBe(
-      `<div>5 yes z</div><div>2 no z</div><div>3 no z</div>`,
+      `<!----><div>5 yes z</div><div>2 no z</div><div>3 no z</div><!---->`,
     )
   })
 
@@ -215,7 +215,7 @@ describe('v-memo', () => {
       }),
     })
 
-    expect(el.innerHTML).toBe(`<span><span>0</span></span>`)
+    expect(el.innerHTML).toBe(`<span><!----><span>0</span><!----></span>`)
 
     vm.show = false
     await nextTick()
@@ -223,15 +223,15 @@ describe('v-memo', () => {
 
     vm.show = true
     await nextTick()
-    expect(el.innerHTML).toBe(`<span><span>0</span></span>`)
+    expect(el.innerHTML).toBe(`<span><!----><span>0</span><!----></span>`)
 
     vm.count++
     await nextTick()
-    expect(el.innerHTML).toBe(`<span><span>1</span></span>`)
+    expect(el.innerHTML).toBe(`<span><!----><span>1</span><!----></span>`)
 
     vm.count++
     await nextTick()
-    expect(el.innerHTML).toBe(`<span><span>2</span></span>`)
+    expect(el.innerHTML).toBe(`<span><!----><span>2</span><!----></span>`)
   })
 
   test('on v-if + v-for in production mode', async () => {
@@ -247,7 +247,7 @@ describe('v-memo', () => {
         }),
       })
 
-      expect(el.innerHTML).toBe(`<span><span>0</span></span>`)
+      expect(el.innerHTML).toBe(`<span><!----><span>0</span><!----></span>`)
 
       vm.show = false
       await nextTick()
@@ -255,15 +255,15 @@ describe('v-memo', () => {
 
       vm.show = true
       await nextTick()
-      expect(el.innerHTML).toBe(`<span><span>0</span></span>`)
+      expect(el.innerHTML).toBe(`<span><!----><span>0</span><!----></span>`)
 
       vm.count++
       await nextTick()
-      expect(el.innerHTML).toBe(`<span><span>1</span></span>`)
+      expect(el.innerHTML).toBe(`<span><!----><span>1</span><!----></span>`)
 
       vm.count++
       await nextTick()
-      expect(el.innerHTML).toBe(`<span><span>2</span></span>`)
+      expect(el.innerHTML).toBe(`<span><!----><span>2</span><!----></span>`)
     } finally {
       __DEV__ = true
     }
@@ -278,17 +278,23 @@ describe('v-memo', () => {
         count: 0,
       }),
     })
-    expect(el.innerHTML).toBe(`<div>0</div><div>0</div><div>0</div>`)
+    expect(el.innerHTML).toBe(
+      `<!----><div>0</div><div>0</div><div>0</div><!---->`,
+    )
 
     vm.count = 1
     await nextTick()
     // should not update
-    expect(el.innerHTML).toBe(`<div>0</div><div>0</div><div>0</div>`)
+    expect(el.innerHTML).toBe(
+      `<!----><div>0</div><div>0</div><div>0</div><!---->`,
+    )
 
     vm.count = 2
     await nextTick()
     // should update
-    expect(el.innerHTML).toBe(`<div>2</div><div>2</div><div>2</div>`)
+    expect(el.innerHTML).toBe(
+      `<!----><div>2</div><div>2</div><div>2</div><!---->`,
+    )
   })
 
   test('v-memo dependency is NaN should be equal', async () => {

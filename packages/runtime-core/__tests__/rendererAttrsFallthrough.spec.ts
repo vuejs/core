@@ -472,7 +472,9 @@ describe('attribute fallthrough', () => {
     expect(`Extraneous non-props attributes`).not.toHaveBeenWarned()
     expect(`Extraneous non-emits event listeners`).not.toHaveBeenWarned()
 
-    expect(root.innerHTML).toBe(`<div></div><div class="parent"></div>`)
+    expect(root.innerHTML).toBe(
+      `<!----><div></div><div class="parent"></div><!---->`,
+    )
   })
 
   it('should not warn when context.attrs is used during render', () => {
@@ -496,7 +498,9 @@ describe('attribute fallthrough', () => {
     expect(`Extraneous non-props attributes`).not.toHaveBeenWarned()
     expect(`Extraneous non-emits event listeners`).not.toHaveBeenWarned()
 
-    expect(root.innerHTML).toBe(`<div></div><div class="parent"></div>`)
+    expect(root.innerHTML).toBe(
+      `<!----><div></div><div class="parent"></div><!---->`,
+    )
   })
 
   it('should not warn when context.attrs is used during render (functional)', () => {
@@ -519,7 +523,9 @@ describe('attribute fallthrough', () => {
 
     expect(`Extraneous non-props attributes`).not.toHaveBeenWarned()
     expect(`Extraneous non-emits event listeners`).not.toHaveBeenWarned()
-    expect(root.innerHTML).toBe(`<div></div><div class="parent"></div>`)
+    expect(root.innerHTML).toBe(
+      `<!----><div></div><div class="parent"></div><!---->`,
+    )
   })
 
   it('should not warn when functional component has optional props', () => {
@@ -537,7 +543,9 @@ describe('attribute fallthrough', () => {
 
     expect(`Extraneous non-props attributes`).not.toHaveBeenWarned()
     expect(`Extraneous non-emits event listeners`).not.toHaveBeenWarned()
-    expect(root.innerHTML).toBe(`<div></div><div class="parent"></div>`)
+    expect(root.innerHTML).toBe(
+      `<!----><div></div><div class="parent"></div><!---->`,
+    )
   })
 
   it('should warn when functional component has props and does not use attrs', () => {
@@ -557,7 +565,7 @@ describe('attribute fallthrough', () => {
 
     expect(`Extraneous non-props attributes`).toHaveBeenWarned()
     expect(`Extraneous non-emits event listeners`).toHaveBeenWarned()
-    expect(root.innerHTML).toBe(`<div></div><div></div>`)
+    expect(root.innerHTML).toBe(`<!----><div></div><div></div><!---->`)
   })
 
   // #677
@@ -690,7 +698,7 @@ describe('attribute fallthrough', () => {
     render(h(Hello), root)
 
     expect(root.innerHTML).toBe(
-      `<!--hello--><button class="foo"></button><!--world-->`,
+      `<!----><!--hello--><button class="foo"></button><!--world--><!---->`,
     )
     const button = root.children[0] as HTMLElement
     button.dispatchEvent(new CustomEvent('click'))
@@ -739,13 +747,13 @@ describe('attribute fallthrough', () => {
     render(h(Root), root)
 
     expect(root.innerHTML).toBe(
-      `<!-- comment A --><!-- comment B --><div class="red">Bar</div>`,
+      `<!----><!-- comment A --><!----><!-- comment B --><div class="red">Bar</div><!----><!---->`,
     )
 
     toggle.value = true
     await nextTick()
     expect(root.innerHTML).toBe(
-      `<!-- comment A --><span class=\"red\">Foo</span>`,
+      `<!----><!-- comment A --><span class=\"red\">Foo</span><!---->`,
     )
   })
 
@@ -826,10 +834,10 @@ describe('attribute fallthrough', () => {
     const root = document.createElement('div')
     createApp(App).mount(root)
 
-    expect(root.innerHTML).toBe('<div foo="1">1</div>')
+    expect(root.innerHTML).toBe('<div foo="1"><!---->1<!----></div>')
 
     obj.value = 2
     await nextTick()
-    expect(root.innerHTML).toBe('<div foo="2">2</div>')
+    expect(root.innerHTML).toBe('<div foo="2"><!---->2<!----></div>')
   })
 })

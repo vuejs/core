@@ -429,7 +429,7 @@ describe('api: options', () => {
         from: symbolKey,
       },
     })
-    expect(renderToString(h(Root))).toBe(`1111234522`)
+    expect(renderToString(h(Root))).toBe(`<!---->1111234522<!---->`)
   })
 
   test('provide/inject refs', async () => {
@@ -1183,7 +1183,7 @@ describe('api: options', () => {
     } as any
 
     expect(renderToString(h(Root))).toBe(
-      'root midWithProvide midWithMixinProvide',
+      '<!---->root midWithProvide midWithMixinProvide<!---->',
     )
   })
 

@@ -447,7 +447,7 @@ describe('useModel', () => {
     expect(setValue).not.toBeCalled()
     expect(childRender).toBeCalledTimes(1)
     expect(slotRender).toBeCalledTimes(1)
-    expect(serializeInner(root)).toBe('<div></div>')
+    expect(serializeInner(root)).toBe('<!----><div></div><!---->')
 
     // update from child
     update()
@@ -458,7 +458,7 @@ describe('useModel', () => {
     expect(setValue).toBeCalledTimes(1)
     expect(childRender).toBeCalledTimes(2)
     expect(slotRender).toBeCalledTimes(2)
-    expect(serializeInner(root)).toBe('<div>bar</div>')
+    expect(serializeInner(root)).toBe('<!----><div>bar</div><!---->')
   })
 
   test('with modifiers & transformers', async () => {

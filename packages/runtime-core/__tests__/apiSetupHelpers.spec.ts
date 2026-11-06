@@ -391,7 +391,9 @@ describe('SFC <script setup> helpers', () => {
       ).not.toHaveBeenWarned()
       expect(innerRenderUid).toBe(innerUid)
       await Promise.resolve()
-      expect(serializeInner(root)).toBe(`<div><div>A</div><div>B</div></div>`)
+      expect(serializeInner(root)).toBe(
+        `<div><div>A</div><div><!---->B<!----></div></div>`,
+      )
     })
 
     test('error handling', async () => {

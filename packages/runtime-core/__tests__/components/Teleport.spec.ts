@@ -58,7 +58,7 @@ describe('renderer: teleport', () => {
       }).mount(root)
 
       expect(root.innerHTML).toMatchInlineSnapshot(
-        `"<!--teleport start--><!--teleport end--><div id="target"><div>teleported</div></div>"`,
+        `"<!----><!--teleport start--><!--teleport end--><div id="target"><div>teleported</div></div><!---->"`,
       )
     })
 
@@ -137,12 +137,14 @@ describe('renderer: teleport', () => {
         },
       }).mount(root)
 
-      expect(root.innerHTML).toMatchInlineSnapshot(`"<div></div>"`)
+      expect(root.innerHTML).toMatchInlineSnapshot(
+        `"<!----><div></div><!---->"`,
+      )
 
       show.value = true
       await nextTick()
       expect(root.innerHTML).toMatchInlineSnapshot(
-        `"<!--teleport start--><!--teleport end--><div>Footer</div><div id="targetId"><div>bar</div></div>"`,
+        `"<!----><!--teleport start--><!--teleport end--><div>Footer</div><div id="targetId"><div>bar</div></div><!---->"`,
       )
     })
 
@@ -192,7 +194,7 @@ describe('renderer: teleport', () => {
       await nextTick()
 
       expect(root.innerHTML).toMatchInlineSnapshot(
-        `"<!--teleport start--><!--teleport end--><div>step2</div><div id="targetId2"><div>C</div></div>"`,
+        `"<!----><!--teleport start--><!--teleport end--><div>step2</div><div id="targetId2"><div>C</div></div><!---->"`,
       )
     })
 
@@ -228,14 +230,16 @@ describe('renderer: teleport', () => {
         },
       }).mount(root)
 
-      expect(root.innerHTML).toMatchInlineSnapshot(`"<div></div>"`)
+      expect(root.innerHTML).toMatchInlineSnapshot(
+        `"<!----><div></div><!---->"`,
+      )
       expect(target.innerHTML).toBe(``)
 
       showTeleport.value = true
       await nextTick()
 
       expect(root.innerHTML).toMatchInlineSnapshot(
-        `"<!--teleport start--><div>teleported</div><!--teleport end--><div>step</div>"`,
+        `"<!----><!--teleport start--><div>teleported</div><!--teleport end--><div>step</div><!---->"`,
       )
       expect(target.innerHTML).toBe(``)
     })
@@ -279,13 +283,17 @@ describe('renderer: teleport', () => {
         },
       }).mount(root)
 
-      expect(root.innerHTML).toMatchInlineSnapshot(`"<div>done</div>"`)
+      expect(root.innerHTML).toMatchInlineSnapshot(
+        `"<!----><div>done</div><!---->"`,
+      )
       expect(target.innerHTML).toBe(``)
 
       showTeleport.value = true
       await nextTick()
 
-      expect(root.innerHTML).toMatchInlineSnapshot(`"<div>done</div>"`)
+      expect(root.innerHTML).toMatchInlineSnapshot(
+        `"<!----><div>done</div><!---->"`,
+      )
       expect(target.innerHTML).toBe(``)
     })
 
@@ -333,13 +341,17 @@ describe('renderer: teleport', () => {
         },
       }).mount(root)
 
-      expect(root.innerHTML).toMatchInlineSnapshot(`"<div>done</div>"`)
+      expect(root.innerHTML).toMatchInlineSnapshot(
+        `"<!----><div>done</div><!---->"`,
+      )
       expect(target.innerHTML).toBe(``)
 
       showTeleport.value = true
       await nextTick()
 
-      expect(root.innerHTML).toMatchInlineSnapshot(`"<div>done</div>"`)
+      expect(root.innerHTML).toMatchInlineSnapshot(
+        `"<!----><div>done</div><!---->"`,
+      )
       expect(target.innerHTML).toBe(``)
     })
 
@@ -384,13 +396,17 @@ describe('renderer: teleport', () => {
         },
       }).mount(root)
 
-      expect(root.innerHTML).toMatchInlineSnapshot(`"<div>done</div>"`)
+      expect(root.innerHTML).toMatchInlineSnapshot(
+        `"<!----><div>done</div><!---->"`,
+      )
       expect(target.innerHTML).toBe(``)
 
       showTeleport.value = true
       await nextTick()
 
-      expect(root.innerHTML).toMatchInlineSnapshot(`"<div>done</div>"`)
+      expect(root.innerHTML).toMatchInlineSnapshot(
+        `"<!----><div>done</div><!---->"`,
+      )
       expect(target.innerHTML).toBe(``)
     })
 
@@ -441,12 +457,12 @@ describe('renderer: teleport', () => {
       }).mount(root)
 
       expect(root.innerHTML).toMatchInlineSnapshot(
-        `"<span id="targetId001"></span><!--v-if-->"`,
+        `"<!----><span id="targetId001"></span><!--v-if--><!---->"`,
       )
 
       await new Promise(r => setTimeout(r, 10))
       expect(root.innerHTML).toMatchInlineSnapshot(
-        `"<span id="targetId001">3+</span><!--teleport start--><!--teleport end--><span></span>"`,
+        `"<!----><span id="targetId001">3+</span><!----><!--teleport start--><!--teleport end--><span></span><!----><!---->"`,
       )
     })
   })
@@ -474,7 +490,7 @@ describe('renderer: teleport', () => {
       )
 
       expect(serializeInner(root)).toBe(
-        `<!--teleport start--><!--teleport end--><div>root</div>`,
+        `<!----><!--teleport start--><!--teleport end--><div>root</div><!---->`,
       )
       expect(serializeInner(target)).toBe(`<div>teleported</div>`)
     })
@@ -503,7 +519,7 @@ describe('renderer: teleport', () => {
       await nextTick()
 
       expect(root.innerHTML).toBe(
-        `<svg><circle></circle></svg><!--teleport start--><!--teleport end-->`,
+        `<!----><svg><circle></circle></svg><!--teleport start--><!--teleport end--><!---->`,
       )
 
       expect(svg.value.namespaceURI).toBe('http://www.w3.org/2000/svg')
@@ -525,7 +541,7 @@ describe('renderer: teleport', () => {
       )
 
       expect(serializeInner(root)).toBe(
-        `<!--teleport start--><!--teleport end--><div>root</div>`,
+        `<!----><!--teleport start--><!--teleport end--><div>root</div><!---->`,
       )
       expect(serializeInner(targetA)).toBe(`<div>teleported</div>`)
       expect(serializeInner(targetB)).toBe(``)
@@ -534,7 +550,7 @@ describe('renderer: teleport', () => {
       await nextTick()
 
       expect(serializeInner(root)).toBe(
-        `<!--teleport start--><!--teleport end--><div>root</div>`,
+        `<!----><!--teleport start--><!--teleport end--><div>root</div><!---->`,
       )
       expect(serializeInner(targetA)).toBe(``)
       expect(serializeInner(targetB)).toBe(`<div>teleported</div>`)
@@ -783,7 +799,7 @@ describe('renderer: teleport', () => {
         h(() => [h(Teleport, { to: target }, h(Comp)), h('div', 'root')]),
         root,
       )
-      expect(serializeInner(target)).toBe(`<p></p><p></p>`)
+      expect(serializeInner(target)).toBe(`<!----><p></p><p></p><!---->`)
 
       render(null, root)
       expect(serializeInner(target)).toBe('')
@@ -896,13 +912,13 @@ describe('renderer: teleport', () => {
       }
       render(h(App), root)
       expect(serializeInner(root)).toBe(
-        `<div></div><!--teleport start--><div>teleported</div><!--teleport end-->`,
+        `<!----><div></div><!--teleport start--><div>teleported</div><!--teleport end--><!---->`,
       )
 
       disabled.value = false
       await nextTick()
       expect(serializeInner(root)).toBe(
-        `<div><div>teleported</div></div><!--teleport start--><!--teleport end-->`,
+        `<!----><div><div>teleported</div></div><!--teleport start--><!--teleport end--><!---->`,
       )
     })
 
@@ -919,20 +935,20 @@ describe('renderer: teleport', () => {
 
       render(renderWithDisabled(false), root)
       expect(serializeInner(root)).toBe(
-        `<!--teleport start--><!--teleport end--><div>root</div>`,
+        `<!----><!--teleport start--><!--teleport end--><div>root</div><!---->`,
       )
       expect(serializeInner(target)).toBe(`<div>teleported</div>`)
 
       render(renderWithDisabled(true), root)
       expect(serializeInner(root)).toBe(
-        `<!--teleport start--><div>teleported</div><!--teleport end--><div>root</div>`,
+        `<!----><!--teleport start--><div>teleported</div><!--teleport end--><div>root</div><!---->`,
       )
       expect(serializeInner(target)).toBe(``)
 
       // toggle back
       render(renderWithDisabled(false), root)
       expect(serializeInner(root)).toBe(
-        `<!--teleport start--><!--teleport end--><div>root</div>`,
+        `<!----><!--teleport start--><!--teleport end--><div>root</div><!---->`,
       )
       expect(serializeInner(target)).toBe(`<div>teleported</div>`)
     })
@@ -949,7 +965,7 @@ describe('renderer: teleport', () => {
         root,
       )
       expect(serializeInner(root)).toBe(
-        `<!--teleport start--><!--teleport end--><div>root</div>`,
+        `<!----><!--teleport start--><!--teleport end--><div>root</div><!---->`,
       )
       expect(serializeInner(target)).toBe(`<div>teleported</div>`)
 
@@ -961,7 +977,7 @@ describe('renderer: teleport', () => {
         root,
       )
       expect(serializeInner(root)).toBe(
-        `<div>root</div><!--teleport start--><!--teleport end-->`,
+        `<!----><div>root</div><!--teleport start--><!--teleport end--><!---->`,
       )
       expect(serializeInner(target)).toBe(`<div>teleported</div>`)
 
@@ -973,7 +989,7 @@ describe('renderer: teleport', () => {
         root,
       )
       expect(serializeInner(root)).toBe(
-        `<!--teleport start--><!--teleport end--><div>root</div>`,
+        `<!----><!--teleport start--><!--teleport end--><div>root</div><!---->`,
       )
       expect(serializeInner(target)).toBe(`<div>teleported</div>`)
     })
@@ -990,7 +1006,7 @@ describe('renderer: teleport', () => {
         root,
       )
       expect(serializeInner(root)).toBe(
-        `<!--teleport start--><div>teleported</div><!--teleport end--><div>root</div>`,
+        `<!----><!--teleport start--><div>teleported</div><!--teleport end--><div>root</div><!---->`,
       )
       expect(serializeInner(target)).toBe('')
 
@@ -1002,7 +1018,7 @@ describe('renderer: teleport', () => {
         root,
       )
       expect(serializeInner(root)).toBe(
-        `<div>root</div><!--teleport start--><div>teleported</div><!--teleport end-->`,
+        `<!----><div>root</div><!--teleport start--><div>teleported</div><!--teleport end--><!---->`,
       )
       expect(serializeInner(target)).toBe('')
 
@@ -1014,7 +1030,7 @@ describe('renderer: teleport', () => {
         root,
       )
       expect(serializeInner(root)).toBe(
-        `<!--teleport start--><div>teleported</div><!--teleport end--><div>root</div>`,
+        `<!----><!--teleport start--><div>teleported</div><!--teleport end--><div>root</div><!---->`,
       )
       expect(serializeInner(target)).toBe('')
     })
@@ -1040,7 +1056,7 @@ describe('renderer: teleport', () => {
       }
       render(h(App), root)
       expect(serializeInner(root)).toBe(
-        `<!--teleport start--><!--teleport end--><div>root</div>`,
+        `<!----><!--teleport start--><!--teleport end--><div>root</div><!---->`,
       )
       expect(serializeInner(target)).toBe(
         `<div>teleported</div><span>false</span><!--v-if-->`,
@@ -1049,7 +1065,7 @@ describe('renderer: teleport', () => {
       disabled.value = true
       await nextTick()
       expect(serializeInner(root)).toBe(
-        `<!--teleport start--><div>teleported</div><span>true</span><span></span><!--teleport end--><div>root</div>`,
+        `<!----><!--teleport start--><div>teleported</div><span>true</span><span></span><!--teleport end--><div>root</div><!---->`,
       )
       expect(serializeInner(target)).toBe(``)
 
@@ -1057,7 +1073,7 @@ describe('renderer: teleport', () => {
       disabled.value = false
       await nextTick()
       expect(serializeInner(root)).toBe(
-        `<!--teleport start--><!--teleport end--><div>root</div>`,
+        `<!----><!--teleport start--><!--teleport end--><div>root</div><!---->`,
       )
       expect(serializeInner(target)).toBe(
         `<div>teleported</div><span>false</span><!--v-if-->`,
@@ -1211,7 +1227,7 @@ describe('renderer: teleport', () => {
       parentShow.value = true
       await nextTick()
       expect(root.innerHTML).toBe(
-        '<!--teleport start--><!--teleport end--><div>foo</div>',
+        '<!----><!--teleport start--><!--teleport end--><!----><div>foo</div>',
       )
 
       parentShow.value = false
@@ -1242,11 +1258,13 @@ describe('renderer: teleport', () => {
       domRender(h(App), root)
       expect('Invalid Teleport target: null').toHaveBeenWarned()
       expect('Invalid Teleport target on mount').toHaveBeenWarned()
-      expect(root.innerHTML).toBe('<!--teleport start--><!--teleport end-->')
+      expect(root.innerHTML).toBe(
+        '<!----><!--teleport start--><!--teleport end--><!---->',
+      )
 
       childShow.value = false
       await nextTick()
-      expect(root.innerHTML).toBe('<!--v-if-->')
+      expect(root.innerHTML).toBe('<!----><!--v-if--><!---->')
     })
 
     test('unmount mounted children after target becomes missing', async () => {
@@ -1273,7 +1291,9 @@ describe('renderer: teleport', () => {
       })
 
       domRender(h(App), root)
-      expect(root.innerHTML).toBe('<!--teleport start--><!--teleport end-->')
+      expect(root.innerHTML).toBe(
+        '<!----><!--teleport start--><!--teleport end--><!---->',
+      )
       expect(target.innerHTML).toBe('<div>foo</div>')
 
       teleportTarget.value = null
@@ -1284,7 +1304,7 @@ describe('renderer: teleport', () => {
 
       childShow.value = false
       await nextTick()
-      expect(root.innerHTML).toBe('<!--v-if-->')
+      expect(root.innerHTML).toBe('<!----><!--v-if--><!---->')
       expect(target.innerHTML).toBe('')
       expect(target.childNodes.length).toBe(0)
     })
@@ -1348,11 +1368,11 @@ describe('renderer: teleport', () => {
 
     domRender(originalH(App), root)
     expect(target.innerHTML).toBe(
-      '<div class="foo"><div><div>foo</div></div></div>',
+      '<div class="foo"><div><!----><div>foo</div><!----></div></div>',
     )
     await nextTick()
     expect(target.innerHTML).toBe(
-      '<div class="bar"><div><div>foo</div></div></div>',
+      '<div class="bar"><div><!----><div>foo</div><!----></div></div>',
     )
 
     rerender(appId, () =>
@@ -1360,7 +1380,7 @@ describe('renderer: teleport', () => {
     )
     await nextTick()
     expect(target.innerHTML).toBe(
-      '<div class="bar"><div><div>bar</div></div></div>',
+      '<div class="bar"><div><!----><div>bar</div><!----></div></div>',
     )
   })
 })

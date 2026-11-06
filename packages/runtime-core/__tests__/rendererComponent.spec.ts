@@ -136,9 +136,9 @@ describe('renderer: component', () => {
 
     const root = nodeOps.createElement('div')
     render(h(App), root)
-    expect(serializeInner(root)).toBe(`<div>0</div><div>1</div>`)
+    expect(serializeInner(root)).toBe(`<!----><div>0</div><div>1</div><!---->`)
     await nextTick()
-    expect(serializeInner(root)).toBe(`<div>1</div><div>1</div>`)
+    expect(serializeInner(root)).toBe(`<!----><div>1</div><div>1</div><!---->`)
   })
 
   // #2170
@@ -230,11 +230,11 @@ describe('renderer: component', () => {
 
     const root = nodeOps.createElement('div')
     render(h(App), root)
-    expect(serializeInner(root)).toBe(`<div>0</div><div>0</div>`)
+    expect(serializeInner(root)).toBe(`<!----><div>0</div><div>0</div><!---->`)
 
     outer.value++
     await nextTick()
-    expect(serializeInner(root)).toBe(`<div>1</div><div>1</div>`)
+    expect(serializeInner(root)).toBe(`<!----><div>1</div><div>1</div><!---->`)
   })
 
   test('child only updates once when triggered in multiple ways', async () => {
@@ -418,7 +418,9 @@ describe('renderer: component', () => {
 
     const root = nodeOps.createElement('div')
     render(h(App), root)
-    expect(serializeInner(root)).toBe(`<h1></h1><h1></h1><h1></h1>`)
+    expect(serializeInner(root)).toBe(
+      `<!----><!----><h1></h1><!----><!----><h1></h1><!----><!----><h1></h1><!----><!---->`,
+    )
 
     render(null, root)
     expect(serializeInner(root)).toBe(``)
@@ -517,12 +519,12 @@ describe('renderer: component', () => {
     expect(serializeInner(root)).toBe(`<!---->`)
     await nextTick()
 
-    expect(serializeInner(root)).toBe(`<span>0</span><!---->`)
+    expect(serializeInner(root)).toBe(`<!----><span>0</span><!----><!---->`)
     expect(spy).toHaveBeenCalledTimes(1)
 
     text.value++
     await nextTick()
-    expect(serializeInner(root)).toBe(`<span>1</span><!---->`)
+    expect(serializeInner(root)).toBe(`<!----><span>1</span><!----><!---->`)
     // expect Comp to not be re-rendered
     expect(spy).toHaveBeenCalledTimes(1)
   })

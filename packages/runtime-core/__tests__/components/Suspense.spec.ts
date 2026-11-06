@@ -2082,7 +2082,7 @@ describe('Suspense', () => {
     // mount inner component
     await Promise.all(deps)
     await nextTick()
-    expected = `<div>outerA</div><div>innerA</div>`
+    expected = `<!----><div>outerA</div><!----><div>innerA</div><!----><!---->`
     expect(serializeInner(root)).toBe(expected)
 
     expect(calls).toEqual([
@@ -2104,7 +2104,7 @@ describe('Suspense', () => {
 
     await Promise.all(deps)
     await nextTick()
-    expected = `<div>outerB</div><div>innerA</div>`
+    expected = `<!----><div>outerB</div><!----><div>innerA</div><!----><!---->`
     expect(serializeInner(root)).toBe(expected)
     expect(calls).toContain('outerB mounted')
     expect(calls).toContain('innerA mounted')
@@ -2118,7 +2118,7 @@ describe('Suspense', () => {
 
     await Promise.all(deps)
     await nextTick()
-    expected = `<div>outerB</div><div>innerB</div>`
+    expected = `<!----><div>outerB</div><!----><div>innerB</div><!----><!---->`
     expect(serializeInner(root)).toBe(expected)
     expect(calls).toContain('innerB mounted')
   })
@@ -2359,7 +2359,7 @@ describe('Suspense', () => {
       },
     })
 
-    expected = `<div>outerA</div><div>innerA</div>`
+    expected = `<!----><div>outerA</div><!----><div>innerA</div><!----><!---->`
     const root = nodeOps.createElement('div')
     render(h(Comp), root)
     expect(serializeInner(root)).toBe(expected)
@@ -2384,7 +2384,7 @@ describe('Suspense', () => {
 
     await Promise.all(deps)
     await nextTick()
-    expected = `<div>outerB</div><div>innerA</div>`
+    expected = `<!----><div>outerB</div><!----><div>innerA</div><!----><!---->`
     expect(serializeInner(root)).toBe(expected)
     expect(calls).toContain('outerB mounted')
     expect(calls).toContain('innerA mounted')
@@ -2395,7 +2395,7 @@ describe('Suspense', () => {
     innerToggle.value = true
     await Promise.all(deps)
     await nextTick()
-    expected = `<div>outerB</div><div>innerB</div>`
+    expected = `<!----><div>outerB</div><!----><div>innerB</div><!----><!---->`
     expect(serializeInner(root)).toBe(expected)
   })
 
@@ -2494,13 +2494,17 @@ describe('Suspense', () => {
     await Promise.all(deps)
     await nextTick()
 
-    expect(serializeInner(root)).toBe(`<div>outerA</div><!---->`)
+    expect(serializeInner(root)).toBe(
+      `<!----><div>outerA</div><!----><!----><!----><!---->`,
+    )
     expect(calls).toEqual([`outerA created`, `outerA mounted`])
 
     // mount inner component
     await Promise.all(deps)
     await nextTick()
-    expect(serializeInner(root)).toBe(`<div>outerA</div><div>innerA</div>`)
+    expect(serializeInner(root)).toBe(
+      `<!----><div>outerA</div><!----><div>innerA</div><!----><!---->`,
+    )
 
     expect(calls).toEqual([
       'outerA created',
@@ -2519,11 +2523,15 @@ describe('Suspense', () => {
 
     await Promise.all(deps)
     await nextTick()
-    expect(serializeInner(root)).toBe(`<div>outerB</div><!---->`)
+    expect(serializeInner(root)).toBe(
+      `<!----><div>outerB</div><!----><!----><!----><!---->`,
+    )
 
     await Promise.all(deps)
     await nextTick()
-    expect(serializeInner(root)).toBe(`<div>outerB</div><div>innerB</div>`)
+    expect(serializeInner(root)).toBe(
+      `<!----><div>outerB</div><!----><div>innerB</div><!----><!---->`,
+    )
 
     // innerB only mount once
     expect(calls).toEqual([
@@ -3414,21 +3422,25 @@ describe('Suspense', () => {
       },
     }
     render(h(App), root)
-    expect(serializeInner(root)).toBe(`<h1>true</h1><!---->`)
+    expect(serializeInner(root)).toBe(`<!----><h1>true</h1><!----><!---->`)
 
     await Promise.all(deps)
     await nextTick()
     await nextTick()
-    expect(serializeInner(root)).toBe(`<h1>true</h1><div>show</div>`)
+    expect(serializeInner(root)).toBe(
+      `<!----><h1>true</h1><div>show</div><!---->`,
+    )
 
     await nextTick()
-    expect(serializeInner(root)).toBe(`<h1>true</h1><div>hidden</div>`)
+    expect(serializeInner(root)).toBe(
+      `<!----><h1>true</h1><div>hidden</div><!---->`,
+    )
 
     // unmount suspense
     toggle.value = false
     await Promise.all(deps)
     await nextTick()
-    expect(serializeInner(root)).toBe(`<h1>true</h1><!--v-if-->`)
+    expect(serializeInner(root)).toBe(`<!----><h1>true</h1><!--v-if--><!---->`)
   })
 
   test('unmount Suspense after async child (with async setup) self-triggered update', async () => {
@@ -3477,17 +3489,19 @@ describe('Suspense', () => {
       },
     }
     render(h(App), root)
-    expect(serializeInner(root)).toBe(`<h1>true</h1><!---->`)
+    expect(serializeInner(root)).toBe(`<!----><h1>true</h1><!----><!---->`)
 
     await Promise.all(deps)
     await nextTick()
-    expect(serializeInner(root)).toBe(`<h1>true</h1><div>hidden</div>`)
+    expect(serializeInner(root)).toBe(
+      `<!----><h1>true</h1><div>hidden</div><!---->`,
+    )
 
     // unmount suspense
     toggle.value = false
     await Promise.all(deps)
     await nextTick()
-    expect(serializeInner(root)).toBe(`<h1>true</h1><!--v-if-->`)
+    expect(serializeInner(root)).toBe(`<!----><h1>true</h1><!--v-if--><!---->`)
   })
 
   test('propagates host el through wrapper components above Suspense after async child self-triggered update', async () => {
@@ -3837,7 +3851,7 @@ describe('Suspense', () => {
     await nextTick()
     await nextTick()
     expect(serializeInner(root)).toBe(
-      `<div>content</div><!--teleport start--><div>comp</div><!--teleport end-->`,
+      `<!----><div>content</div><!--teleport start--><div>comp</div><!--teleport end--><!---->`,
     )
   })
 
@@ -3976,10 +3990,12 @@ describe('Suspense', () => {
 
     const root = nodeOps.createElement('div')
     render(h(App), root)
-    expect(serializeInner(root)).toBe(`<!---->`)
+    expect(serializeInner(root)).toBe(`<!----><!----><!----><!----><!---->`)
 
     await Promise.all(deps)
-    expect(serializeInner(root)).toBe(`<div>A</div>`)
+    expect(serializeInner(root)).toBe(
+      `<!----><!----><!----><div>A</div><!----><!----><!---->`,
+    )
 
     update()
     await nextTick()
@@ -3987,7 +4003,9 @@ describe('Suspense', () => {
     await Promise.all(deps)
     // wait for new B to resolve
     await Promise.all(deps)
-    expect(serializeInner(root)).toBe(`<div>B</div>`)
+    expect(serializeInner(root)).toBe(
+      `<!----><!----><!----><div>B</div><!----><!----><!---->`,
+    )
   })
 
   describe('warnings', () => {
@@ -4097,7 +4115,7 @@ describe('Suspense', () => {
       await Promise.all(deps)
 
       expect(serializeInner(root)).toBe(
-        `<div>111</div><div>222</div><div>333</div>`,
+        `<!----><div>111</div><div>222</div><div>333</div><!---->`,
       )
 
       items.value = [
@@ -4108,7 +4126,7 @@ describe('Suspense', () => {
       await nextTick()
       await Promise.all(deps)
       expect(serializeInner(root)).toBe(
-        `<div>444</div><div>555</div><div>666</div>`,
+        `<!----><div>444</div><div>555</div><div>666</div><!---->`,
       )
     })
 
@@ -4183,7 +4201,7 @@ describe('Suspense', () => {
       await Promise.all(deps)
 
       expect(serializeInner(root)).toBe(
-        `<div>1-a</div><div>1-b</div><div>1-c</div><div>2-a</div><div>2-b</div><div>2-c</div><div>3-a</div><div>3-b</div><div>3-c</div>`,
+        `<!----><!----><div>1-a</div><div>1-b</div><div>1-c</div><!----><!----><div>2-a</div><div>2-b</div><div>2-c</div><!----><!----><div>3-a</div><div>3-b</div><div>3-c</div><!----><!---->`,
       )
 
       list.value = [{ id: 4 }, { id: 5 }, { id: 6 }]
@@ -4191,7 +4209,7 @@ describe('Suspense', () => {
       await Promise.all(deps)
       await Promise.all(deps)
       expect(serializeInner(root)).toBe(
-        `<div>4-a</div><div>4-b</div><div>4-c</div><div>5-a</div><div>5-b</div><div>5-c</div><div>6-a</div><div>6-b</div><div>6-c</div>`,
+        `<!----><!----><div>4-a</div><div>4-b</div><div>4-c</div><!----><!----><div>5-a</div><div>5-b</div><div>5-c</div><!----><!----><div>6-a</div><div>6-b</div><div>6-c</div><!----><!---->`,
       )
 
       items.value = [
@@ -4203,7 +4221,7 @@ describe('Suspense', () => {
       await Promise.all(deps)
       await Promise.all(deps)
       expect(serializeInner(root)).toBe(
-        `<div>4-d</div><div>4-f</div><div>4-g</div><div>5-d</div><div>5-f</div><div>5-g</div><div>6-d</div><div>6-f</div><div>6-g</div>`,
+        `<!----><!----><div>4-d</div><div>4-f</div><div>4-g</div><!----><!----><div>5-d</div><div>5-f</div><div>5-g</div><!----><!----><div>6-d</div><div>6-f</div><div>6-g</div><!----><!---->`,
       )
     })
 
