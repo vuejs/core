@@ -238,7 +238,7 @@ export function createHydrationFunctions(
           }
           return isFragmentStart ? nextSibling(nextNode) : nextNode
         } else {
-          onMismatch()
+          nextNode = onMismatch()
         }
         break
       case Fragment:
