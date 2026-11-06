@@ -13,9 +13,8 @@ import { isFunction, isObject } from '@vue/shared'
 import type { ComponentPublicInstance } from './componentPublicInstance'
 import { type VNode, createVNode } from './vnode'
 import { defineComponent } from './apiDefineComponent'
-import { onUnmounted } from './apiLifecycle'
 import { warn } from './warning'
-import { type Ref, ref } from '@vue/reactivity'
+import { type Ref, onScopeDispose, ref } from '@vue/reactivity'
 import { ErrorCodes, handleError } from './errorHandling'
 import { isKeepAlive } from './components/KeepAlive'
 import { markAsyncBoundary } from './helpers/useId'
@@ -102,6 +101,7 @@ export function defineAsyncComponent<
           instance,
           ErrorCodes.ASYNC_COMPONENT_LOADER,
           !errorComponent /* do not throw in dev if user provided error component */,
+          true,
         )
       }
 
@@ -287,10 +287,12 @@ export const useAsyncComponentState = (
   let delayTimer: ReturnType<typeof setTimeout> | undefined
 
   if (instance) {
-    onUnmounted(() => {
-      if (timeoutTimer != null) clearTimeout(timeoutTimer)
-      if (delayTimer != null) clearTimeout(delayTimer)
-    }, instance)
+    instance.scope.run(() => {
+      onScopeDispose(() => {
+        if (timeoutTimer != null) clearTimeout(timeoutTimer)
+        if (delayTimer != null) clearTimeout(delayTimer)
+      })
+    })
   }
 
   if (delay) {

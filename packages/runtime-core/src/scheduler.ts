@@ -26,6 +26,11 @@ export enum SchedulerJobFlags {
    * @internal
    */
   REQUEUE_ON_SUSPENSE_DISCARD = 1 << 3,
+  /**
+   * A post job buffered by a suspense boundary is queued as soon as that
+   * boundary resolves.
+   */
+  FLUSH_ON_SUSPENSE_RESOLVE = 1 << 4,
 }
 
 export interface SchedulerJob extends Function {

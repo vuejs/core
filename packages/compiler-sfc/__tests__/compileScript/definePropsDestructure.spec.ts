@@ -644,4 +644,283 @@ init();
       ).not.toThrowError()
     })
   })
+
+  test('reactive props keep catch pattern bindings local', () => {
+    const { content } = compile(
+      `<script setup>
+      const { message } = defineProps(['message'])
+      function inspect() {
+        try {
+          throw { message: 'caught' }
+        } catch ({ message }) {
+          return message
+        }
+      }
+      function readProp() { return message }
+      </script>`,
+      { inlineTemplate: false, genDefaultAs: '_sfc_' },
+    )
+    const component = new Function(`${content}; return _sfc_`)()
+    const bindings = component.setup({ message: 'prop' }, { expose: () => {} })
+    expect(bindings.readProp()).toBe('prop')
+    expect(bindings.inspect()).toBe('caught')
+  })
+
+  test('reactive props keep switch case bindings local', () => {
+    const { content } = compile(
+      `<script setup>
+      const { message } = defineProps(['message'])
+      function inspect() {
+        switch (0) {
+          case 0:
+            const message = 'case'
+            return message
+        }
+      }
+      function readProp() { return message }
+      </script>`,
+      { inlineTemplate: false, genDefaultAs: '_sfc_' },
+    )
+    const component = new Function(`${content}; return _sfc_`)()
+    const bindings = component.setup({ message: 'prop' }, { expose: () => {} })
+    expect(bindings.readProp()).toBe('prop')
+    expect(bindings.inspect()).toBe('case')
+  })
+
+  test('reactive props keep nested catch pattern bindings local', () => {
+    const { content } = compile(
+      `<script setup>
+      const { message, fallback } = defineProps(['message', 'fallback'])
+      function inspect() {
+        try {
+          throw { entries: [], extra: 'caught' }
+        } catch ({ entries: [message = fallback], ...rest }) {
+          message += '!'
+          return [message, rest.extra, fallback]
+        }
+      }
+      </script>`,
+      { inlineTemplate: false, genDefaultAs: '_sfc_' },
+    )
+    const component = new Function(`${content}; return _sfc_`)()
+    const bindings = component.setup(
+      { message: 'prop', fallback: 'default' },
+      { expose: () => {} },
+    )
+    expect(bindings.inspect()).toEqual(['default!', 'caught', 'default'])
+  })
+
+  test('reactive props keep catch body bindings out of pattern defaults', () => {
+    const { content } = compile(
+      `<script setup>
+      const { fallback } = defineProps(['fallback'])
+      function inspect() {
+        try { throw [] } catch ([value = fallback]) {
+          const fallback = 'local'
+          return [value, fallback]
+        }
+      }
+      </script>`,
+      { inlineTemplate: false, genDefaultAs: '_sfc_' },
+    )
+    const component = new Function(`${content}; return _sfc_`)()
+    const bindings = component.setup({ fallback: 'prop' }, { expose: () => {} })
+    expect(bindings.inspect()).toEqual(['prop', 'local'])
+  })
+
+  test('reactive props keep switch bindings local to all cases', () => {
+    const { content } = compile(
+      `<script setup>
+      const { message } = defineProps(['message'])
+      function inspect() {
+        let result = message
+        switch (message) {
+          case 'prop':
+            let message = 'case'
+          case 'other':
+            result += ':' + message
+            break
+        }
+        return [result, message]
+      }
+      </script>`,
+      { inlineTemplate: false, genDefaultAs: '_sfc_' },
+    )
+    const component = new Function(`${content}; return _sfc_`)()
+    const bindings = component.setup({ message: 'prop' }, { expose: () => {} })
+    expect(bindings.inspect()).toEqual(['prop:case', 'prop'])
+  })
+
+  test('reactive props keep switch case bindings in their temporal dead zone', () => {
+    const { content } = compile(
+      `<script setup>
+      const { message } = defineProps(['message'])
+      function inspectBody() {
+        switch ('first') {
+          case 'first': return message
+          case 'second': let message = 'case'
+        }
+      }
+      function inspectTest() {
+        switch ('first') {
+          case message: return 'matched'
+          case 'second': let message = 'case'
+        }
+      }
+      </script>`,
+      { inlineTemplate: false, genDefaultAs: '_sfc_' },
+    )
+    const component = new Function(`${content}; return _sfc_`)()
+    const bindings = component.setup({ message: 'prop' }, { expose: () => {} })
+    expect(bindings.inspectBody).toThrow(ReferenceError)
+    expect(bindings.inspectTest).toThrow(ReferenceError)
+  })
+
+  test('reactive props stay outside switch var bindings in class static blocks', () => {
+    const statements = `
+      let local
+      class Example {
+        static {
+          switch (0) {
+            case 0:
+              var message = 'local'
+              local = message
+          }
+        }
+      }
+      function inspect() { return [local, message] }
+    `
+    const native = new Function('message', `${statements}; return inspect()`)
+    expect(native('prop')).toEqual(['local', 'prop'])
+
+    const { content } = compile(
+      `<script setup>
+      const { message } = defineProps(['message'])
+      ${statements}
+      </script>`,
+      { inlineTemplate: false, genDefaultAs: '_sfc_' },
+    )
+    const component = new Function(`${content}; return _sfc_`)()
+    const props = { message: 'prop' }
+    const bindings = component.setup(props, { expose: () => {} })
+    expect(bindings.inspect()).toEqual(native(props.message))
+    props.message = 'updated'
+    expect(bindings.inspect()).toEqual(native(props.message))
+  })
+
+  test('reactive props respect catch defaults and var scope in class static blocks', () => {
+    const statements = `
+      let caught, local
+      class Example {
+        static {
+          try { throw [] } catch ([value = message]) {
+            caught = value
+            var message = 'local'
+            local = message
+          }
+        }
+      }
+      function inspect() { return [caught, local] }
+      function readProp() { return message }
+    `
+    const native = new Function(
+      'message',
+      `${statements}; return [inspect(), readProp()]`,
+    )
+    const expected = native('prop')
+    expect(expected).toEqual([[undefined, 'local'], 'prop'])
+
+    const { content } = compile(
+      `<script setup>
+      const { message } = defineProps(['message'])
+      ${statements}
+      </script>`,
+      { inlineTemplate: false, genDefaultAs: '_sfc_' },
+    )
+    const component = new Function(`${content}; return _sfc_`)()
+    const bindings = component.setup({ message: 'prop' }, { expose: () => {} })
+    expect(bindings.inspect()).toEqual(expected[0])
+    expect(bindings.readProp()).toBe(expected[1])
+  })
+
+  test('reactive props keep nested and sibling class static block scopes separate', () => {
+    const statements = `
+      let before, inside, after, fromFunction, sibling
+      class Example {
+        static {
+          function nested() { var message = 'function'; return message }
+          before = message
+          class Inner { static { var message = 'inner'; inside = message } }
+          after = message
+          fromFunction = nested()
+        }
+        static { sibling = message }
+      }
+      function inspect() { return [before, inside, after, fromFunction, sibling, message] }
+    `
+    const native = new Function('message', `${statements}; return inspect()`)
+    expect(native('prop')).toEqual([
+      'prop',
+      'inner',
+      'prop',
+      'function',
+      'prop',
+      'prop',
+    ])
+
+    const { content } = compile(
+      `<script setup>
+      const { message } = defineProps(['message'])
+      ${statements}
+      </script>`,
+      { inlineTemplate: false, genDefaultAs: '_sfc_' },
+    )
+    const component = new Function(`${content}; return _sfc_`)()
+    const bindings = component.setup({ message: 'prop' }, { expose: () => {} })
+    expect(bindings.inspect()).toEqual(native('prop'))
+  })
+
+  test('reactive props preserve var hoisting and lexical TDZ in class static blocks', () => {
+    const statements = `
+      let result
+      class Example {
+        static {
+          let beforeVar = message
+          let beforeLet
+          try { beforeLet = fallback } catch (error) {
+            beforeLet = error instanceof ReferenceError ? 'tdz' : 'other'
+          }
+          var message = 'local'
+          let fallback = 'lexical'
+          result = [beforeVar, beforeLet, message, fallback]
+        }
+      }
+      function inspect() { return [result, message, fallback] }
+    `
+    const native = new Function(
+      'message',
+      'fallback',
+      `${statements}; return inspect()`,
+    )
+    const expected = native('prop', 'default')
+    expect(expected).toEqual([
+      [undefined, 'tdz', 'local', 'lexical'],
+      'prop',
+      'default',
+    ])
+
+    const { content } = compile(
+      `<script setup>
+      const { message, fallback } = defineProps(['message', 'fallback'])
+      ${statements}
+      </script>`,
+      { inlineTemplate: false, genDefaultAs: '_sfc_' },
+    )
+    const component = new Function(`${content}; return _sfc_`)()
+    const bindings = component.setup(
+      { message: 'prop', fallback: 'default' },
+      { expose: () => {} },
+    )
+    expect(bindings.inspect()).toEqual(expected)
+  })
 })

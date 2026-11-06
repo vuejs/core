@@ -1,6 +1,7 @@
 import {
   BaseTransition,
   type BaseTransitionProps,
+  type ComponentOptions,
   KeepAlive,
   Teleport,
   type TestElement,
@@ -12,6 +13,7 @@ import {
   render,
   serialize,
   serializeInner,
+  shallowRef,
 } from '@vue/runtime-test'
 import * as runtime from '@vue/runtime-test'
 import { compile } from '@vue/compiler-dom'
@@ -1649,6 +1651,103 @@ describe('BaseTransition', () => {
         onAfterLeave: withKeepAlive ? 0 : 1,
         onLeaveCancelled: 0,
       })
+    }
+
+    test('w/ elements', async () => {
+      await runTestWithElements(testOutIn)
+    })
+
+    test('w/ components', async () => {
+      await runTestWithComponents(testOutIn)
+    })
+
+    test('w/ KeepAlive', async () => {
+      await runTestWithKeepAlive(testOutIn)
+    })
+  })
+
+  // #11061
+  test('in-out with fallthrough attrs on the component roots', async () => {
+    const One = { render: () => h('div', 'one') }
+    const Two = { render: () => h('div', 'two') }
+    const view = shallowRef<ComponentOptions>(One)
+    const enters: (() => void)[] = []
+    const leaves: (() => void)[] = []
+    const App = {
+      render: () =>
+        h(
+          BaseTransition,
+          {
+            mode: 'in-out',
+            onEnter: (_: any, done: () => void) => {
+              enters.push(done)
+            },
+            onLeave: (_: any, done: () => void) => {
+              leaves.push(done)
+            },
+          },
+          // the attr is passed through to the root, which gets cloned
+          () => h(view.value, { foo: '1' }),
+        ),
+    }
+    const root = nodeOps.createElement('div')
+    render(h(App), root)
+    expect(serializeInner(root)).toBe('<div foo="1">one</div>')
+
+    view.value = Two
+    await nextTick()
+    expect(serializeInner(root)).toBe(
+      '<div foo="1">one</div><div foo="1">two</div>',
+    )
+    expect(leaves.length).toBe(0)
+
+    enters[0]()
+    await nextTick()
+    expect(leaves.length).toBe(1)
+    leaves[0]()
+    await nextTick()
+    expect(serializeInner(root)).toBe('<div foo="1">two</div>')
+  })
+
+  // #15727
+  describe('mode: "out-in" leave done synchronously', () => {
+    async function testOutIn(
+      {
+        trueBranch,
+        falseBranch,
+        trueSerialized,
+        falseSerialized,
+      }: ToggleOptions,
+      withKeepAlive = false,
+    ) {
+      const toggle = ref(true)
+      const { props, cbs } = mockProps(
+        { mode: 'out-in', onLeave: vi.fn((_el, done) => done()) },
+        withKeepAlive,
+      )
+      const { root } = mount(
+        props,
+        () => (toggle.value ? trueBranch() : falseBranch()),
+        withKeepAlive,
+      )
+      expect(serializeInner(root)).toBe(trueSerialized)
+
+      // the leave finishes inside the patch that starts it
+      toggle.value = false
+      await nextTick()
+      expect(props.onAfterLeave).toHaveBeenCalledTimes(1)
+      assertCalledWithEl(props.onAfterLeave, trueSerialized)
+      expect(serializeInner(root)).toBe(falseSerialized)
+      expect(props.onEnter).toHaveBeenCalledTimes(1)
+      assertCalledWithEl(props.onEnter, falseSerialized)
+      cbs.doneEnter[falseSerialized]()
+      expect(props.onAfterEnter).toHaveBeenCalledTimes(1)
+
+      toggle.value = true
+      await nextTick()
+      expect(props.onAfterLeave).toHaveBeenCalledTimes(2)
+      assertCalledWithEl(props.onAfterLeave, falseSerialized, 1)
+      expect(serializeInner(root)).toBe(trueSerialized)
     }
 
     test('w/ elements', async () => {

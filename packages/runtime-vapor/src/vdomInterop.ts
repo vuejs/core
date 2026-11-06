@@ -4171,7 +4171,12 @@ function mountInteropDirsRoot(
   invokeInteropDirsHook(instance, el, vnode, 'created')
   invokeInteropDirsHook(instance, el, vnode, 'beforeMount')
   queueInteropDirsJob(instance, () =>
-    invokeInteropDirsHook(instance, el, vnode, 'mounted'),
+    invokeInteropDirsHook(
+      instance,
+      el,
+      owner.el === el ? owner.vnode : vnode,
+      'mounted',
+    ),
   )
 }
 

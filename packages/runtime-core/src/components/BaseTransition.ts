@@ -38,6 +38,7 @@ import {
 } from '../renderer'
 import { isHmrUpdating } from '../hmr'
 import { filterSingleRoot } from '../componentRenderUtils'
+import { type SchedulerJob, queueJob } from '../scheduler'
 
 type Hook<T = () => void> = T | T[]
 
@@ -227,7 +228,19 @@ const BaseTransitionImpl: ComponentOptions = {
           ? (resumeAfterLeave ||= () => {
               // #6835: update even when the active branch is undefined.
               if (!(instance.effect.flags & EffectFlags.STOP)) {
-                instance.update()
+                // A synchronous leave finishes before its patch has mounted
+                // the placeholder, so resume after that patch completes.
+                if (instance.effect.running) {
+                  const job: SchedulerJob = () => {
+                    if (!(instance.effect.flags & EffectFlags.STOP)) {
+                      instance.update()
+                    }
+                  }
+                  job.i = instance
+                  queueJob(job)
+                } else {
+                  instance.update()
+                }
               }
             })
           : NOOP,
@@ -306,7 +319,6 @@ export function resolveTransitionHooks(
   props: BaseTransitionProps<any>,
   state: TransitionState,
   instance: GenericComponentInstance,
-  postClone?: (hooks: TransitionHooks) => void,
 ): TransitionHooks {
   const key = String(vnode.key)
   const leavingVNodesCache = getLeavingNodesForType(state, vnode)
@@ -337,15 +349,7 @@ export function resolveTransitionHooks(
       }
     },
     cloneHooks: vnode => {
-      const hooks = resolveTransitionHooks(
-        vnode,
-        props,
-        state,
-        instance,
-        postClone,
-      )
-      if (postClone) postClone(hooks)
-      return hooks
+      return resolveTransitionHooks(vnode, props, state, instance)
     },
   }
 
@@ -505,7 +509,20 @@ export function baseResolveTransitionHooks(
     },
 
     clone(node) {
-      return cloneHooks ? cloneHooks(node) : hooks
+      if (!cloneHooks) return hooks
+      const cloned = cloneHooks(node)
+      // Mode callbacks can be installed after a Suspense branch is cloned.
+      cloned.afterLeave = () => {
+        if (hooks.afterLeave) hooks.afterLeave()
+      }
+      cloned.delayLeave = (el, earlyRemove, delayedLeave) => {
+        if (hooks.delayLeave) hooks.delayLeave(el, earlyRemove, delayedLeave)
+        else delayedLeave()
+      }
+      cloned.delayedLeave = () => {
+        if (hooks.delayedLeave) hooks.delayedLeave()
+      }
+      return cloned
     },
   }
 
@@ -587,19 +604,7 @@ export function prepareTransitionSwitch(
   if (!nextInner) {
     return emptyPlaceholder(next)
   }
-  let enterHooks = resolveTransitionHooks(
-    nextInner,
-    props,
-    state,
-    instance,
-    // #11061: keep enter hooks in sync when the incoming VNode is cloned.
-    hooks => {
-      if (delayedLeaveSource) {
-        forwardDelayedLeave(hooks, delayedLeaveSource)
-      }
-      enterHooks = hooks
-    },
-  )
+  const enterHooks = resolveTransitionHooks(nextInner, props, state, instance)
   if (delayedLeaveSource) {
     forwardDelayedLeave(enterHooks, delayedLeaveSource)
   }
@@ -781,15 +786,17 @@ export function setTransitionHooks(
       )
     }
   } else if (__FEATURE_SUSPENSE__ && vnode.shapeFlag & ShapeFlags.SUSPENSE) {
-    const contentHooks = (vnode.ssContent!.transition = hooks.clone(
-      vnode.ssContent!,
-    ))
-    const fallbackHooks = (vnode.ssFallback!.transition = hooks.clone(
-      vnode.ssFallback!,
-    ))
-    return vnode.suspense && vnode.suspense.activeBranch === vnode.ssFallback
-      ? fallbackHooks
-      : contentHooks
+    const suspense = vnode.suspense
+    if (suspense) {
+      // Only the visible branch participates in this mode switch.
+      const branch = suspense.isHydrating
+        ? suspense.pendingBranch
+        : suspense.activeBranch
+      if (branch) return setTransitionHooks(branch, hooks.clone(branch))
+    } else {
+      vnode.ssContent!.transition = hooks.clone(vnode.ssContent!)
+      vnode.ssFallback!.transition = hooks.clone(vnode.ssFallback!)
+    }
   } else {
     vnode.transition = hooks
     if (vnode.type === Fragment && isArray(vnode.children)) {

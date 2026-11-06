@@ -9,7 +9,8 @@ import {
   isClassComponent,
 } from './component'
 import { nextTick, queueJob, queuePostFlushCb } from './scheduler'
-import { extend, getGlobalThis } from '@vue/shared'
+import { NOOP, extend, getGlobalThis } from '@vue/shared'
+import { locateUnresolvedAsyncRoot } from './renderer'
 
 type HMRComponent = ComponentOptions | ClassComponent
 
@@ -270,7 +271,42 @@ function reload(id: string, newComp: HMRComponent): void {
       }
     }
     parents.forEach(parent => {
-      queueJob(() => {
+      const children = instances.filter(instance => instance.parent === parent)
+      const update = () => {
+        if (!parent.scope.active) return
+        const activeChildren = children.filter(
+          instance => instance.scope.active,
+        )
+        if (!activeChildren.length) return
+        const pending =
+          __FEATURE_SUSPENSE__ &&
+          (activeChildren.find(
+            instance => instance.asyncDep && !instance.asyncResolved,
+          ) ||
+            locateUnresolvedAsyncRoot(parent))
+        if (pending) {
+          // An async root may reveal another async root after setup resolves.
+          pending.asyncDep!.catch(NOOP).then(() => {
+            if (
+              parent.scope.active &&
+              (pending.asyncResolved || !pending.scope.active)
+            ) {
+              queueJob(update)
+            }
+          })
+          return
+        }
+
+        // A previous flush may have cleared these while setup was pending.
+        for (const instance of activeChildren) {
+          const oldComp = normalizeClassComponent(instance.type as HMRComponent)
+          let dirtyInstances = hmrDirtyComponents.get(oldComp)
+          if (!dirtyInstances) {
+            hmrDirtyComponents.set(oldComp, (dirtyInstances = new Set()))
+          }
+          dirtyInstances.add(instance)
+          hmrDirtyComponentsMode.set(oldComp, !!isVapor)
+        }
         runWithHmrUpdating(() => {
           if (parent.vapor) {
             parent.hmrRerender!()
@@ -282,7 +318,12 @@ function reload(id: string, newComp: HMRComponent): void {
             }
           }
         })
-      })
+        queuePostFlushCb(() => {
+          hmrDirtyComponents.clear()
+          hmrDirtyComponentsMode.clear()
+        })
+      }
+      queueJob(update)
     })
   }
   // 5. make sure to cleanup dirty hmr components after update. They stay

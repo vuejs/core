@@ -23,6 +23,7 @@ import {
   type Data,
   type GenericComponentInstance,
   isClassComponent,
+  rawAttrsKey,
 } from './component'
 import type { RawSlots } from './componentSlots'
 import {
@@ -762,7 +763,10 @@ export function guardReactiveProps(
   props: (Data & VNodeProps) | null,
 ): (Data & VNodeProps) | null {
   if (!props) return null
-  return isProxy(props) || isInternalObject(props) ? extend({}, props) : props
+  if (isProxy(props)) return extend({}, props)
+  return isInternalObject(props)
+    ? extend({}, (props as any)[rawAttrsKey] || props)
+    : props
 }
 
 export function cloneVNode<T, U>(

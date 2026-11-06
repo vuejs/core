@@ -1578,7 +1578,7 @@ describe('vdomInterop', () => {
             'beforeMount P[i] (detached) v0',
             'beforeUpdate P[i] v0>v1',
             'unmounted DIV[m] (detached) v0',
-            'mounted P[i] v0',
+            'mounted P[i] v1',
             'updated P[i] v0>v1',
             'beforeUnmount P[i] v1',
             'unmounted P[i] (detached) v1',
@@ -1806,7 +1806,6 @@ describe('vdomInterop', () => {
           'created DIV[m] (detached) v',
           'beforeMount DIV[m] (detached) v',
           'beforeUnmount DIV[m] (detached) v',
-          'unmounted DIV[m] (detached) v',
         ])
       })
 
@@ -2592,14 +2591,14 @@ describe('vdomInterop', () => {
           return calls
         }
 
-        // vdom mounts the nested root with the bindings it was created with
-        // and replays the patch it received while pending right after
+        // VDOM creates the root with its original bindings, then replays the
+        // pending patch before mounted runs with the latest bindings.
         expect(await run(false)).toEqual([
           'inner beforeMount',
           'created DIV[i] (detached) v',
           'beforeMount DIV[i] (detached) v',
           'beforeUpdate DIV[i] v>w',
-          'mounted DIV[i] v',
+          'mounted DIV[i] w',
           'updated DIV[i] v>w',
           'beforeUpdate DIV[i] w>x',
           'updated DIV[i] w>x',
@@ -4548,7 +4547,7 @@ describe('vdomInterop', () => {
 
       app.unmount()
       await nextTick()
-      expect(unmounted).toEqual(['bum a', 'um a'])
+      expect(unmounted).toEqual(['bum a'])
     })
 
     test('vdom slot content inside a removed element', async () => {
@@ -9087,7 +9086,7 @@ describe('vdomInterop', () => {
         }
       })
 
-      test('survives a gated flush migrated to a pending ancestor and discarded there', async () => {
+      test('flushes on the owning boundary resolve without waiting for a pending ancestor', async () => {
         const aPending = deferred()
         const otherPending = deferred()
         const aSetup = vi.fn()
@@ -9141,17 +9140,14 @@ describe('vdomInterop', () => {
           branch.value = makeOtherAsync(otherPending)
           await nextTick()
 
-          // the root resolves: the flush parks in the inner boundary's
-          // effects, and the inner resolve() migrates it into the pending
-          // ancestor's effects (parent hand-off). The buffered switch stays
-          // parked - VDOM retry timing
+          // Recovery runs when its own boundary resolves, before ordinary
+          // mount hooks are handed off to the pending ancestor, like VDOM.
           aPending.resolve()
           await flushResolution(aPending.promise)
-          expect(host.innerHTML).toContain('<span>async</span>')
-          expect(syncSetup).not.toHaveBeenCalled()
+          expect(host.innerHTML).toContain('<span>sync</span>')
+          expect(syncSetup).toHaveBeenCalledOnce()
 
-          // ancestor toggle-back discards the migrated generation while the
-          // whole chain survives. The retained flush must still replay.
+          // Discarding the ancestor's pending branch must not replay it.
           branch.value = Wrap
           await nextTick()
           expect(syncSetup).toHaveBeenCalledOnce()

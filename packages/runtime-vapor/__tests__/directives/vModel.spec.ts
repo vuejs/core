@@ -2135,6 +2135,29 @@ describe('directive: v-model', () => {
     })
   })
 
+  test.each(['', 'v-once'])(
+    'multiple select .number with a Set model %s',
+    async once => {
+      await renderParity(
+        {
+          App: `<template><select multiple v-model.number="data" ${once}><option value="1">one</option><option value="2">two</option></select></template>`,
+        },
+        () => ref(new Set([1])),
+        async (data, root) => {
+          const select = root.querySelector('select')!
+          const selected = () =>
+            Array.from(select.options, option => option.selected)
+          expect(selected()).toEqual([true, false])
+          if (!once) {
+            data.value = new Set([2])
+            await nextTick()
+            expect(selected()).toEqual([false, true])
+          }
+        },
+      )
+    },
+  )
+
   test.each(['text', 'checkbox', 'radio', 'select'])(
     'stops %s model effects when their conditional branch is removed',
     async type => {

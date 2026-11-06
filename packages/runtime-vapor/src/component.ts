@@ -2304,7 +2304,9 @@ function deferRootChainRenderEffects(
       }
       settleDeferredRootUpdates(state)
     }
-    flushJob.flags = SchedulerJobFlags.REQUEUE_ON_SUSPENSE_DISCARD
+    flushJob.flags =
+      SchedulerJobFlags.REQUEUE_ON_SUSPENSE_DISCARD |
+      SchedulerJobFlags.FLUSH_ON_SUSPENSE_RESOLVE
     const state: DeferredRootUpdates = {
       effects: [],
       owners: [],

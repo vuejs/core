@@ -938,7 +938,7 @@ describe('effects in pending branches', () => {
   })
 
   test.each(['vdom', 'vapor'] as const)(
-    '%s unmounted hook runs when the whole pending boundary is removed',
+    '%s unmounted hook is discarded when the whole pending boundary is removed',
     async kind => {
       const asyncSetup = deferred()
       const showBoundary = ref(true)
@@ -980,13 +980,13 @@ describe('effects in pending branches', () => {
       await nextTick()
       showBoundary.value = false
       await nextTick()
-      expect(order).toEqual(['unmounted'])
+      expect(order).toEqual([])
       app.unmount()
     },
   )
 
   test.each(['vdom', 'vapor', 'vapor-slot'] as const)(
-    '%s nested unmount hooks run when a pending boundary is removed by app unmount',
+    '%s nested cleanup runs but unmounted hooks are discarded on pending app unmount',
     kind => {
       const order: string[] = []
       const vapor = kind !== 'vdom'
@@ -1063,8 +1063,6 @@ describe('effects in pending branches', () => {
         'parent scope',
         'child before',
         'child scope',
-        'child',
-        'parent',
       ])
     },
   )
@@ -1154,7 +1152,7 @@ describe('effects in pending branches', () => {
     expect(afterUnmounted).not.toHaveBeenCalled()
     outerAsyncSetup.resolve()
     await flushResolution(outerAsyncSetup.promise)
-    expect(afterUnmounted).toHaveBeenCalledOnce()
+    expect(afterUnmounted).not.toHaveBeenCalled()
     app.unmount()
   })
 
@@ -1210,7 +1208,7 @@ describe('effects in pending branches', () => {
       expect(container.textContent).toBe('loading')
       if (operation === 'app unmount') {
         app.unmount()
-        expect(order).toEqual(['child'])
+        expect(order).toEqual([])
         return
       }
 
@@ -1287,7 +1285,7 @@ describe('effects in pending branches', () => {
   })
 
   test.each(['vdom', 'vapor'] as const)(
-    '%s current keep-alive entry deactivates after the branch resolves',
+    '%s uncached keep-alive entry unmounts after the branch resolves',
     async kind => {
       const asyncSetup = deferred()
       const showKeepAlive = ref(true)
@@ -1295,12 +1293,14 @@ describe('effects in pending branches', () => {
       const VDomChild = defineComponent({
         setup() {
           onDeactivated(() => order.push('deactivated'))
+          onUnmounted(() => order.push('unmounted'))
           return () => h('div', 'vdom')
         },
       })
       const VaporChild = defineVaporComponent({
         setup() {
           onDeactivated(() => order.push('deactivated'))
+          onUnmounted(() => order.push('unmounted'))
           return template('<div>vapor</div>')()
         },
       })
@@ -1344,7 +1344,7 @@ describe('effects in pending branches', () => {
 
       asyncSetup.resolve()
       await flushResolution(asyncSetup.promise)
-      expect(order).toEqual(['deactivated'])
+      expect(order).toEqual(['unmounted'])
       app.unmount()
     },
   )

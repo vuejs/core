@@ -204,6 +204,20 @@ describe('reactivity/effect/scope', () => {
     expect(dummy).toBe(7)
   })
 
+  it('should run onScopeDispose callback immediately when scope is stopped', () => {
+    const before = vi.fn()
+    const after = vi.fn()
+    const scope = effectScope()
+    scope.run(() => {
+      onScopeDispose(before)
+      scope.stop()
+      onScopeDispose(after)
+    })
+
+    expect(before).toHaveBeenCalledTimes(1)
+    expect(after).toHaveBeenCalledTimes(1)
+  })
+
   it('should warn onScopeDispose() is called when there is no active effect scope', () => {
     const spy = vi.fn()
     const scope = effectScope()

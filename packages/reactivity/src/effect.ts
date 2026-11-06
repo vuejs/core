@@ -95,6 +95,11 @@ export class ReactiveEffect<T = any>
     return !(this.flags & EffectFlags.STOP)
   }
 
+  /** @internal */
+  get running(): boolean {
+    return !!(this.flags & ReactiveFlags.RecursedCheck)
+  }
+
   pause(): void {
     this.flags |= EffectFlags.PAUSED
   }
