@@ -76,6 +76,7 @@ import { setRef } from './rendererTemplateRef'
 import {
   type SuspenseBoundary,
   type SuspenseImpl,
+  deferredEnterKey,
   isSuspense,
   queueEffectWithSuspense,
 } from './components/Suspense'
@@ -789,6 +790,13 @@ function baseCreateRenderer(
     // #1583 For inside suspense + suspense not resolved case, enter hook should call when suspense resolved
     // #1689 For inside suspense + suspense resolved case, just call it
     if (transition) {
+      if (
+        __FEATURE_SUSPENSE__ &&
+        !needTransition(parentSuspense, transition) &&
+        !transition.persisted
+      ) {
+        el[deferredEnterKey] = true
+      }
       performTransitionEnter(
         el,
         transition,
@@ -1651,25 +1659,30 @@ function baseCreateRenderer(
         let { next, bu, u, parent, vnode } = instance
 
         if (__FEATURE_SUSPENSE__) {
-          const nonHydratedAsyncRoot = locateNonHydratedAsyncRoot(instance)
-          // we are trying to update some async comp before hydration
-          // this will cause crash because we don't know the root node yet
-          if (nonHydratedAsyncRoot) {
+          const unresolvedAsyncRoot = locateUnresolvedAsyncRoot(instance)
+          // the root is an async component whose setup has not resolved, so
+          // there is no subtree to patch yet
+          if (unresolvedAsyncRoot) {
             // only sync the properties and abort the rest of operations
             if (next) {
               next.el = vnode.el
               updateComponentPreRender(instance, next, optimized)
             }
             // and continue the rest of operations once the deps are resolved
-            nonHydratedAsyncRoot.asyncDep!.then(() => {
+            unresolvedAsyncRoot.asyncDep!.then(() => {
               // the instance may be destroyed during the time period
-              queuePostRenderEffect(
-                () => {
-                  if (!instance.isUnmounted) instance.update!()
-                },
-                undefined,
-                parentSuspense,
-              )
+              const retry: SchedulerJob = () => {
+                if (instance.effect.flags & EffectFlags.STOP) return
+                if (parentSuspense && parentSuspense.pendingBranch) {
+                  queuePostRenderEffect(retry, undefined, parentSuspense)
+                } else {
+                  instance.update()
+                }
+              }
+              retry.flags =
+                SchedulerJobFlags.REQUEUE_ON_SUSPENSE_DISCARD |
+                SchedulerJobFlags.FLUSH_ON_SUSPENSE_RESOLVE
+              queuePostRenderEffect(retry, undefined, parentSuspense)
             })
             return
           }
@@ -1727,8 +1740,11 @@ function baseCreateRenderer(
         patch(
           prevTree,
           nextTree,
-          // parent may have changed if it's in a teleport
-          hostParentNode(prevTree.el!)!,
+          // parent may have changed if it's in a teleport. a root that is a
+          // pending async component only has its placeholder comment
+          hostParentNode(
+            prevTree.el || resolveAsyncComponentPlaceholder(prevTree)!,
+          )!,
           // anchor may have changed if it's in a fragment
           getNextHostNode(prevTree),
           instance,
@@ -2390,19 +2406,7 @@ function baseCreateRenderer(
     }
 
     if (shapeFlag & ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE) {
-      if (
-        isVaporInteropEnabled &&
-        isVaporComponent(vnode.type as ConcreteComponent)
-      ) {
-        getVaporInterface(parentComponent!, vnode).deactivate(
-          vnode,
-          (parentComponent!.ctx as KeepAliveContext).getStorageContainer(),
-          parentSuspense,
-        )
-      } else {
-        ;(parentComponent!.ctx as KeepAliveContext).deactivate(vnode)
-      }
-      return
+      if ((parentComponent!.ctx as KeepAliveContext).deactivate(vnode)) return
     }
 
     // the vapor interop owns the vnode and directive hooks of its component
@@ -2623,10 +2627,10 @@ function baseCreateRenderer(
       // so that scheduler will no longer invoke it
       effect.stop()
       unmount(subTree, instance, parentSuspense, doRemove)
-    } else if (instance.vnode.el && subTree) {
-      // hydration was interrupted before this component rendered (`vnode.el`
-      // is only set this early when hydrating) - unmount the placeholder
-      // covering the claimed DOM, carrying the root's transition hooks
+    } else if (subTree) {
+      // the component never rendered: unmount the placeholder standing in for
+      // it (the comment holding its position, or the DOM claimed by an
+      // interrupted hydration), carrying the root's transition hooks
       subTree.transition = instance.vnode.transition
       unmount(subTree, instance, parentSuspense, doRemove)
     }
@@ -2644,11 +2648,9 @@ function baseCreateRenderer(
         parentSuspense,
       )
     }
-    queuePostRenderEffect(
-      () => (instance.isUnmounted = true),
-      undefined,
-      parentSuspense,
-    )
+    const markUnmounted: SchedulerJob = () => (instance.isUnmounted = true)
+    markUnmounted.flags = SchedulerJobFlags.REQUEUE_ON_SUSPENSE_DISCARD
+    queuePostRenderEffect(markUnmounted, undefined, parentSuspense)
 
     if (__DEV__ || __FEATURE_PROD_DEVTOOLS__) {
       devtoolsComponentRemoved(instance)
@@ -2890,7 +2892,7 @@ export function traverseStaticChildren(
   }
 }
 
-function locateNonHydratedAsyncRoot(
+export function locateUnresolvedAsyncRoot(
   instance: GenericComponentInstance,
 ): ComponentInternalInstance | undefined {
   const subComponent = instance.subTree && instance.subTree.component
@@ -2898,7 +2900,7 @@ function locateNonHydratedAsyncRoot(
     if (subComponent.asyncDep && !subComponent.asyncResolved) {
       return subComponent
     } else {
-      return locateNonHydratedAsyncRoot(subComponent)
+      return locateUnresolvedAsyncRoot(subComponent)
     }
   }
 }
@@ -3066,15 +3068,23 @@ export function getInheritedScopeIds(
   return inheritedScopeIds
 }
 
-function resolveAsyncComponentPlaceholder(anchorVnode: VNode) {
+export function resolveAsyncComponentPlaceholder(
+  anchorVnode: VNode,
+): RendererNode | null {
   if (anchorVnode.placeholder) {
     return anchorVnode.placeholder
   }
 
   // anchor vnode maybe is a wrapper component has single unresolved async component
   const instance = anchorVnode.component
-  if (instance) {
+  if (instance && instance.subTree) {
     return resolveAsyncComponentPlaceholder(instance.subTree)
+  }
+
+  // or a boundary whose active branch is rooted in one
+  const suspense = anchorVnode.suspense
+  if (__FEATURE_SUSPENSE__ && suspense && suspense.activeBranch) {
+    return resolveAsyncComponentPlaceholder(suspense.activeBranch)
   }
 
   return null

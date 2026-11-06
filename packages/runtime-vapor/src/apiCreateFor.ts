@@ -656,6 +656,9 @@ export const createFor = (
     _insertionParent,
     _insertionAnchor,
   )
+  // hydrateList reads the claim, so it lives in the context the effect
+  // keeps: drop it, or its open marker outlives the list it hydrated
+  hydrationClaim = undefined
 
   return frag
 }

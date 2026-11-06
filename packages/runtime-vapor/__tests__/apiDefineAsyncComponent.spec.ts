@@ -1,9 +1,12 @@
 import {
+  Suspense,
   createApp,
   defineAsyncComponent,
+  h,
   markRaw,
   nextTick,
   onActivated,
+  onErrorCaptured,
   onMounted,
   ref,
   useId,
@@ -34,6 +37,56 @@ const timeout = (n: number = 0) => new Promise(r => setTimeout(r, n))
 const define = makeRender()
 
 describe('api: defineAsyncComponent', () => {
+  test.each(['vdom', 'vapor'] as const)(
+    '%s loader rejection skips a stopped parent in a pending branch',
+    async mode => {
+      let reject!: (error: Error) => void
+      const loader = () => new Promise<any>((_, r) => (reject = r))
+      const Async =
+        mode === 'vapor'
+          ? defineVaporAsyncComponent(loader)
+          : defineAsyncComponent(loader)
+      const innerHandler = vi.fn(() => false)
+      const outerHandler = vi.fn(() => false)
+      const show = ref(true)
+      const Parent = {
+        setup() {
+          onErrorCaptured(innerHandler)
+          return () => h(Async as any)
+        },
+      }
+      const Pending = { setup: () => new Promise(() => {}) }
+      const app = createApp({
+        setup() {
+          onErrorCaptured(outerHandler)
+          return () =>
+            h(Suspense, null, {
+              default: () =>
+                h('div', [show.value ? h(Parent) : null, h(Pending)]),
+              fallback: () => h('p', 'loading'),
+            })
+        },
+      })
+      app.use(vaporInteropPlugin)
+      app.mount(document.createElement('div'))
+      try {
+        show.value = false
+        await nextTick()
+        const error = new Error('loader failed')
+        reject(error)
+        await timeout()
+        expect(innerHandler).not.toHaveBeenCalled()
+        expect(outerHandler).toHaveBeenCalledExactlyOnceWith(
+          error,
+          expect.any(Object),
+          'async component loader',
+        )
+      } finally {
+        app.unmount()
+      }
+    },
+  )
+
   test('simple usage', async () => {
     let resolve: (comp: VaporComponent) => void
     const Foo = defineVaporAsyncComponent(

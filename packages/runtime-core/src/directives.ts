@@ -12,7 +12,7 @@ return withDirectives(h(comp), [
 */
 
 import type { VNode } from './vnode'
-import { EMPTY_OBJ, isBuiltInDirective, isFunction } from '@vue/shared'
+import { EMPTY_OBJ, extend, isBuiltInDirective, isFunction } from '@vue/shared'
 import { warn } from './warning'
 import {
   type ComponentInternalInstance,
@@ -167,18 +167,46 @@ export function withDirectives<T extends VNode>(
   return vnode
 }
 
+type DirectiveVNode = VNode & {
+  _mount?: DirectiveVNode
+  _latest?: DirectiveVNode
+}
+
 export function invokeDirectiveHook(
-  vnode: VNode,
-  prevVNode: VNode | null,
+  vnode: DirectiveVNode,
+  prevVNode: DirectiveVNode | null,
   instance: ComponentInternalInstance | null,
   name: keyof ObjectDirective,
 ): void {
-  const bindings = vnode.dirs!
+  // Inherited bindings can be shared by different component roots, so track
+  // pending mounts on the vnodes in the same element's update chain.
+  let hookVNode = vnode
+  if (name === 'beforeMount') {
+    vnode._mount = vnode
+  } else if (name === 'beforeUpdate') {
+    const mount = prevVNode && prevVNode._mount
+    if (mount) {
+      mount._latest = vnode
+      vnode._mount = mount
+    }
+  } else if (name === 'mounted') {
+    const latest = vnode._latest
+    vnode._mount = vnode._latest = undefined
+    if (latest) {
+      hookVNode = latest
+      latest._mount = undefined
+    }
+  }
+
+  const bindings = hookVNode.dirs!
   const oldBindings = prevVNode && prevVNode.dirs!
   for (let i = 0; i < bindings.length; i++) {
-    const binding = bindings[i]
+    let binding = bindings[i]
     if (oldBindings) {
       binding.oldValue = oldBindings[i].value
+    } else if (name === 'mounted' && binding.oldValue !== undefined) {
+      // Do not mutate bindings that may also be used by queued updated hooks.
+      binding = extend({}, binding, { oldValue: undefined })
     }
     let hook = binding.dir[name] as DirectiveHook | DirectiveHook[] | undefined
     if (__COMPAT__ && !hook) {
@@ -191,7 +219,7 @@ export function invokeDirectiveHook(
       callWithAsyncErrorHandling(hook, instance, ErrorCodes.DIRECTIVE_HOOK, [
         vnode.el,
         binding,
-        vnode,
+        hookVNode,
         prevVNode,
       ])
       setActiveSub(prevSub)

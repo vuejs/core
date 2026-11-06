@@ -107,14 +107,15 @@ export const applySelectModel: VaporModelDirective<
   HTMLSelectElement,
   'number'
 > = (el, get, set, modifiers) => {
-  vModelSelectInit(el, get(), modifiers && modifiers.number, set)
+  const number = modifiers && modifiers.number
+  vModelSelectInit(el, get(), number, set)
   if (inOnce) {
-    ensureMounted(() => vModelSetSelected(el, get()))
+    ensureMounted(() => vModelSetSelected(el, get(), number))
     return
   }
   // The owner's effects can update options directly or through child inputs
   // without touching the model. Apply selection after their DOM updates.
-  const update = () => vModelSetSelected(el, get())
+  const update = () => vModelSetSelected(el, get(), number)
   registerSelectUpdate(update)
   ensureMounted(() => {
     update()

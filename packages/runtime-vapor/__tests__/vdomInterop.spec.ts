@@ -1578,7 +1578,7 @@ describe('vdomInterop', () => {
             'beforeMount P[i] (detached) v0',
             'beforeUpdate P[i] v0>v1',
             'unmounted DIV[m] (detached) v0',
-            'mounted P[i] v0',
+            'mounted P[i] v1',
             'updated P[i] v0>v1',
             'beforeUnmount P[i] v1',
             'unmounted P[i] (detached) v1',
@@ -1806,7 +1806,6 @@ describe('vdomInterop', () => {
           'created DIV[m] (detached) v',
           'beforeMount DIV[m] (detached) v',
           'beforeUnmount DIV[m] (detached) v',
-          'unmounted DIV[m] (detached) v',
         ])
       })
 
@@ -2592,14 +2591,14 @@ describe('vdomInterop', () => {
           return calls
         }
 
-        // vdom mounts the nested root with the bindings it was created with
-        // and replays the patch it received while pending right after
+        // VDOM creates the root with its original bindings, then replays the
+        // pending patch before mounted runs with the latest bindings.
         expect(await run(false)).toEqual([
           'inner beforeMount',
           'created DIV[i] (detached) v',
           'beforeMount DIV[i] (detached) v',
           'beforeUpdate DIV[i] v>w',
-          'mounted DIV[i] v',
+          'mounted DIV[i] w',
           'updated DIV[i] v>w',
           'beforeUpdate DIV[i] w>x',
           'updated DIV[i] w>x',
@@ -2774,6 +2773,177 @@ describe('vdomInterop', () => {
           'beforeUnmount P[p] v',
           'unmounted P[p] (detached) v',
         ])
+      })
+
+      // the bindings a deferred `mounted` runs with
+      const traceMount = (calls: string[]) => ({
+        beforeUpdate: (_: Element, { value, oldValue }: any) =>
+          calls.push(`beforeUpdate ${value} ${oldValue}`),
+        mounted: (el: Element, { value, oldValue }: any, vnode: VNode) =>
+          calls.push(
+            `mounted ${el.tagName} ${value} ${oldValue} ${vnode.props!.id}`,
+          ),
+        updated: (_: Element, { value, oldValue }: any) =>
+          calls.push(`updated ${value} ${oldValue}`),
+      })
+
+      test('mounted hook receives the latest binding after an update in the same flush', async () => {
+        const run = async (vapor: boolean) => {
+          const data = ref({ count: 0 })
+          // an event emitted from setup updates the parent while it is mounting
+          const Child = compile(
+            `<script setup>
+            const data = _data
+            const emit = defineEmits(['setup'])
+            emit('setup')
+            </script>
+            <template><div :id="data.count">d</div></template>`,
+            data,
+            {},
+            { vapor },
+          )
+          const calls: string[] = []
+          const dir = traceMount(calls)
+          const show = ref(false)
+          const { done } = mountInBody(() =>
+            show.value
+              ? withDirectives(
+                  h(Child, {
+                    id: data.value.count,
+                    onSetup: () => data.value.count++,
+                  }),
+                  [[dir, data.value.count]],
+                )
+              : null,
+          )
+          show.value = true
+          await nextTick()
+          done()
+          return calls
+        }
+
+        await expectParity(run, [
+          'beforeUpdate 1 0',
+          'mounted DIV 1 undefined 1',
+          'updated 1 0',
+        ])
+      })
+
+      test('mounted hook deferred by a pending Suspense receives the latest binding', async () => {
+        const run = async (vapor: boolean) => {
+          let resolve!: () => void
+          const data = ref({
+            count: 0,
+            p: new Promise<void>(r => (resolve = r)),
+          })
+          const Child = compile(
+            `<script setup>const data = _data</script>` +
+              `<template><p :id="data.count">p</p></template>`,
+            data,
+            {},
+            { vapor },
+          )
+          const Pending = compile(
+            `<script setup>const data = _data; await data.value.p</script>` +
+              `<template><i>p</i></template>`,
+            data,
+            {},
+            { vapor },
+          )
+          const calls: string[] = []
+          const dir = traceMount(calls)
+          const { done } = mountInBody(() =>
+            h(Suspense, null, {
+              default: () =>
+                h('div', [
+                  withDirectives(h(Child, { id: data.value.count }), [
+                    [dir, data.value.count],
+                  ]),
+                  h(Pending),
+                ]),
+              fallback: () => h('span', 'loading'),
+            }),
+          )
+          // the pending branch re-renders before it is revealed
+          data.value.count++
+          await nextTick()
+          expect(calls).toEqual(['beforeUpdate 1 0'])
+          data.value.count++
+          await nextTick()
+          expect(calls).toEqual(['beforeUpdate 1 0', 'beforeUpdate 2 1'])
+          await settle(resolve)
+          done()
+          return calls
+        }
+
+        await expectParity(run, [
+          'beforeUpdate 1 0',
+          'beforeUpdate 2 1',
+          'mounted P 2 undefined 2',
+          'updated 1 0',
+          'updated 2 1',
+        ])
+      })
+
+      test('pending mounted hooks use the bindings of their own root', async () => {
+        const run = async (vapor: boolean) => {
+          let resolve!: () => void
+          const data = ref({
+            editing: true,
+            count: 0,
+            p: new Promise<void>(r => (resolve = r)),
+          })
+          const Child = compile(
+            `<script setup>const data = _data</script>
+            <template>
+              <div v-if="data.editing" :id="data.count">d</div>
+              <p v-else :id="data.count">p</p>
+            </template>`,
+            data,
+            {},
+            { vapor },
+          )
+          const Pending = compile(
+            `<script setup>const data = _data; await data.value.p</script>` +
+              `<template><i>p</i></template>`,
+            data,
+            {},
+            { vapor },
+          )
+          const calls: string[] = []
+          const dir = traceMount(calls)
+          const { done } = mountInBody(() =>
+            h(Suspense, null, {
+              default: () =>
+                h('div', [
+                  withDirectives(h(Child, { id: data.value.count }), [
+                    [dir, data.value.count],
+                  ]),
+                  h(Pending),
+                ]),
+              fallback: () => h('span', 'loading'),
+            }),
+          )
+          // the root is replaced, then the bindings the new root carries change
+          data.value.editing = false
+          await nextTick()
+          data.value.count++
+          await nextTick()
+          await settle(resolve)
+          done()
+          return calls
+        }
+
+        await expectParity(
+          run,
+          [
+            'beforeUpdate 1 0',
+            'mounted DIV 0 undefined 0',
+            'mounted P 1 undefined 1',
+            'updated 1 0',
+          ],
+          'beforeUpdate 0 0',
+        )
       })
     })
 
@@ -4548,7 +4718,7 @@ describe('vdomInterop', () => {
 
       app.unmount()
       await nextTick()
-      expect(unmounted).toEqual(['bum a', 'um a'])
+      expect(unmounted).toEqual(['bum a'])
     })
 
     test('vdom slot content inside a removed element', async () => {
@@ -9087,7 +9257,7 @@ describe('vdomInterop', () => {
         }
       })
 
-      test('survives a gated flush migrated to a pending ancestor and discarded there', async () => {
+      test('flushes on the owning boundary resolve without waiting for a pending ancestor', async () => {
         const aPending = deferred()
         const otherPending = deferred()
         const aSetup = vi.fn()
@@ -9141,17 +9311,14 @@ describe('vdomInterop', () => {
           branch.value = makeOtherAsync(otherPending)
           await nextTick()
 
-          // the root resolves: the flush parks in the inner boundary's
-          // effects, and the inner resolve() migrates it into the pending
-          // ancestor's effects (parent hand-off). The buffered switch stays
-          // parked - VDOM retry timing
+          // Recovery runs when its own boundary resolves, before ordinary
+          // mount hooks are handed off to the pending ancestor, like VDOM.
           aPending.resolve()
           await flushResolution(aPending.promise)
-          expect(host.innerHTML).toContain('<span>async</span>')
-          expect(syncSetup).not.toHaveBeenCalled()
+          expect(host.innerHTML).toContain('<span>sync</span>')
+          expect(syncSetup).toHaveBeenCalledOnce()
 
-          // ancestor toggle-back discards the migrated generation while the
-          // whole chain survives. The retained flush must still replay.
+          // Discarding the ancestor's pending branch must not replay it.
           branch.value = Wrap
           await nextTick()
           expect(syncSetup).toHaveBeenCalledOnce()

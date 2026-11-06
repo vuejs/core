@@ -23,6 +23,7 @@ import {
   type Data,
   type GenericComponentInstance,
   isClassComponent,
+  rawAttrsKey,
 } from './component'
 import type { RawSlots } from './componentSlots'
 import {
@@ -762,7 +763,10 @@ export function guardReactiveProps(
   props: (Data & VNodeProps) | null,
 ): (Data & VNodeProps) | null {
   if (!props) return null
-  return isProxy(props) || isInternalObject(props) ? extend({}, props) : props
+  if (isProxy(props)) return extend({}, props)
+  return isInternalObject(props)
+    ? extend({}, (props as any)[rawAttrsKey] || props)
+    : props
 }
 
 export function cloneVNode<T, U>(
@@ -992,6 +996,19 @@ export function cloneIfMounted(child: VNode): VNode {
     : cloneVNode(child)
 }
 
+let deferElementSlots = false
+
+/**
+ * While enabled, compiled default slots passed as children of plain elements
+ * are kept on the vnode so the server renderer can render them in push mode.
+ * @internal
+ */
+export function setDeferElementSlots(value: boolean): boolean {
+  const prev = deferElementSlots
+  deferElementSlots = value
+  return prev
+}
+
 export function normalizeChildren(vnode: VNode, children: unknown): void {
   let type = 0
   const { shapeFlag } = vnode
@@ -1003,6 +1020,17 @@ export function normalizeChildren(vnode: VNode, children: unknown): void {
     if (shapeFlag & (ShapeFlags.ELEMENT | ShapeFlags.TELEPORT)) {
       // Normalize slot to plain children for plain element and Teleport
       const slot = (children as any).default
+      if (
+        __SSR__ &&
+        deferElementSlots &&
+        slot &&
+        slot._c &&
+        shapeFlag & ShapeFlags.ELEMENT
+      ) {
+        vnode.children = children as VNodeNormalizedChildren
+        vnode.shapeFlag |= ShapeFlags.SLOTS_CHILDREN
+        return
+      }
       if (slot) {
         // _c marker is added by withCtx() indicating this is a compiled slot
         slot._c && (slot._d = false)

@@ -137,7 +137,13 @@ export function setCurrentScope(scope?: EffectScope): EffectScope | undefined {
  */
 export function onScopeDispose(fn: () => void, failSilently = false): void {
   if (activeEffectScope !== undefined) {
-    activeEffectScope.cleanups[activeEffectScope.cleanupsLength++] = fn
+    if (activeEffectScope.active) {
+      activeEffectScope.cleanups[activeEffectScope.cleanupsLength++] = fn
+    } else {
+      // The scope has already been stopped and will not run its cleanups
+      // again, e.g. a component's async setup resumed after it was unmounted.
+      fn()
+    }
   } else if (__DEV__ && !failSilently) {
     warn(
       `onScopeDispose() is called when there is no active effect scope` +

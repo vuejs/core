@@ -227,6 +227,7 @@ import {
   markLeavingBlock,
   queuePendingLeave,
   relayTransitionHooks,
+  resolveTransitionHooks,
 } from './components/Transition'
 import { isTransitionEnabled, isVaporTransitionHooks } from './transition'
 import {
@@ -1248,7 +1249,6 @@ const vaporSlotsProxyHandler: ProxyHandler<any> = {
 let vdomHydrateNode: HydrationRenderer['hydrateNode'] | undefined
 
 // Static/Fragment/Teleport vnodes represent a root range [el..anchor].
-// Component roots can update internally, so resolve through the current subtree.
 function resolveVNodeRange(vnode: VNode): [Node, Node] | undefined {
   const { type, shapeFlag, el, anchor } = vnode
   if (shapeFlag & ShapeFlags.TELEPORT && el && anchor && anchor !== el) {
@@ -1261,12 +1261,6 @@ function resolveVNodeRange(vnode: VNode): [Node, Node] | undefined {
     return el && anchor !== el
       ? [el as Node, anchor as Node]
       : [anchor as Node, anchor as Node]
-  }
-  if (shapeFlag & ShapeFlags.COMPONENT) {
-    const subTree = vnode.component && vnode.component.subTree
-    if (subTree) {
-      return resolveVNodeRange(subTree)
-    }
   }
 }
 
@@ -1291,6 +1285,15 @@ function resolveVNodeNodes(vnode: VNode, liveSlot?: boolean): Block {
     return el && el !== anchor
       ? [el as Node, vb, anchor as Node]
       : [vb, anchor as Node]
+  }
+  // Component roots can update internally, so resolve through the current
+  // subtree: a root fragment holding a vapor slot resolves live like a
+  // top-level one.
+  if (vnode.shapeFlag & ShapeFlags.COMPONENT) {
+    const subTree = vnode.component && vnode.component.subTree
+    if (subTree) {
+      return resolveVNodeNodes(subTree)
+    }
   }
   const vnodeRange = resolveVNodeRange(vnode)
   if (vnodeRange) {
@@ -1318,12 +1321,6 @@ function resolveVNodeNodes(vnode: VNode, liveSlot?: boolean): Block {
       n = n.nextSibling
     }
     return nodeRange
-  }
-  if (vnode.shapeFlag & ShapeFlags.COMPONENT) {
-    const subTree = vnode.component && vnode.component.subTree
-    if (subTree) {
-      return resolveVNodeNodes(subTree)
-    }
   }
   return vnode.el as Block
 }
@@ -1829,7 +1826,10 @@ function mountVNode(
     // Like a vdom parent re-rendering it, the fresh vnode gets what vapor set
     // on the mounted one after creation; every such writer belongs here.
     if (isTransitionEnabled && frag.$transition) {
-      setVNodeTransitionHooks(next, frag.$transition)
+      setVNodeTransitionHooks(
+        next,
+        contentTransitionHooks(frag, previous, next),
+      )
     }
     if (previous.vaporScopeIds) {
       setVNodeVaporScopeIds(next, previous.vaporScopeIds)
@@ -1881,6 +1881,36 @@ function mountVNode(
 
   frag.remove = unmount
   return frag
+}
+
+// The hooks of a vnode fragment are keyed by its content's type (a raw
+// fragment's single child, as vdom flattens it): content of another type takes
+// that identity and resolves its own, as vdom's Transition does per render.
+function contentTransitionHooks(
+  frag: VaporFragment,
+  previous: VNode,
+  next: VNode,
+): TransitionHooks {
+  const hooks = frag.$transition!
+  // only a fragment's content can change type under the vnode type the patch
+  // keeps; relayed vdom hooks resolve nothing
+  if (!isVaporTransitionHooks(hooks) || previous.type !== Fragment) return hooks
+  const type = getInteropTransitionType(previous)
+  const nextType = getInteropTransitionType(next)
+  if (type !== nextType) {
+    // the identity resolved from the content, not from a component root
+    if (frag.$ttype === type) frag.$ttype = nextType
+    frag.vnode = next
+    const fresh = resolveTransitionHooks(
+      frag,
+      hooks.props,
+      hooks.state,
+      hooks.instance,
+    )
+    fresh.delayedLeave = hooks.delayedLeave
+    return (frag.$transition = fresh)
+  }
+  return hooks
 }
 
 /**
@@ -3977,8 +4007,10 @@ function invokeInteropDirsHook(
 ): void {
   if (!vnode.dirs) return
   invokeDirectiveHook(
-    // hooks are handed `vnode.el`, which moves on with the root
-    vnode.el === el ? vnode : extend({}, vnode, { el }),
+    // hooks are handed `vnode.el`, which moves on with the root; a fresh copy
+    // also keeps the pending-mount chain the helper records on the vnode off
+    // the component vnode, which several roots mount with
+    extend({}, vnode, { el }),
     prevVNode,
     instance.parent as ComponentInternalInstance | null,
     name,
@@ -4141,7 +4173,12 @@ function mountInteropDirsRoot(
   invokeInteropDirsHook(instance, el, vnode, 'created')
   invokeInteropDirsHook(instance, el, vnode, 'beforeMount')
   queueInteropDirsJob(instance, () =>
-    invokeInteropDirsHook(instance, el, vnode, 'mounted'),
+    invokeInteropDirsHook(
+      instance,
+      el,
+      owner.el === el ? owner.vnode : vnode,
+      'mounted',
+    ),
   )
 }
 

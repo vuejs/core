@@ -6,6 +6,8 @@ import {
   ErrorCodes,
   Fragment,
   type FunctionalComponent,
+  type Slot,
+  type Slots,
   Static,
   Text,
   type VNode,
@@ -53,7 +55,17 @@ const {
   VaporSlot,
   rawVaporSlotKey,
   invokeSlotFallback,
+  setDeferElementSlots,
 } = ssrUtils
+
+function renderRoot(instance: ComponentInternalInstance): VNode {
+  const prev = setDeferElementSlots(true)
+  try {
+    return renderComponentRoot(instance)
+  } finally {
+    setDeferElementSlots(prev)
+  }
+}
 
 export type SSRBuffer = SSRBufferItem[] & { hasAsync?: boolean }
 export type SSRBufferItem = string | SSRBuffer | Promise<SSRBuffer>
@@ -281,7 +293,7 @@ function renderComponentSubTree(
   const comp = instance.type as Component
   const { getBuffer, push } = createBuffer()
   if (isFunction(comp)) {
-    let root = renderComponentRoot(instance)
+    let root = renderRoot(instance)
     // #5817 scope ID attrs not falling through if functional component doesn't
     // have props
     if (!(comp as FunctionalComponent).props) {
@@ -359,7 +371,7 @@ function renderComponentSubTree(
     } else if (instance.render && instance.render !== NOOP) {
       renderVNode(
         push,
-        (instance.subTree = renderComponentRoot(instance)),
+        (instance.subTree = renderRoot(instance)),
         instance,
         slotScopeId,
       )
@@ -620,9 +632,42 @@ function renderElementVNode(
           parentComponent,
           slotScopeId,
         )
+      } else if (shapeFlag & ShapeFlags.SLOTS_CHILDREN) {
+        renderElementSlot(
+          push,
+          (children as Slots).default!,
+          parentComponent,
+          slotScopeId,
+        )
       }
     }
     push(`</${tag}>`)
+  }
+}
+
+// a compiled slot renders into the buffer when given `push`; one compiled for
+// the client returns vnodes instead
+function renderElementSlot(
+  push: PushFn,
+  slot: Slot,
+  parentComponent: ComponentInternalInstance,
+  slotScopeId?: string,
+) {
+  let ret
+  try {
+    ret = (slot as any)(
+      undefined,
+      push,
+      parentComponent,
+      slotScopeId ? ' ' + slotScopeId.trim() : '',
+    )
+  } catch (err) {
+    handleError(err, parentComponent, ErrorCodes.RENDER_FUNCTION)
+  }
+  if (isArray(ret)) {
+    renderVNodeChildren(push, ret, parentComponent, slotScopeId)
+  } else if (ret != null) {
+    renderVNode(push, normalizeVNode(ret), parentComponent, slotScopeId)
   }
 }
 

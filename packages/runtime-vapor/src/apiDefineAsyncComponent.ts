@@ -180,6 +180,7 @@ export function defineVaporAsyncComponent<T extends VaporComponent>(
           instance,
           ErrorCodes.ASYNC_COMPONENT_LOADER,
           !errorComponent /* do not throw in dev if user provided error component */,
+          true,
         )
       }
 

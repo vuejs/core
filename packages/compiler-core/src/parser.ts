@@ -924,7 +924,14 @@ function getLoc(start: number, end?: number): SourceLocation {
 }
 
 export function cloneLoc(loc: SourceLocation): SourceLocation {
-  return getLoc(loc.start.offset, loc.end.offset)
+  // copy instead of recomputing via getLoc: the tokenizer and currentInput are
+  // module-level and hold the state of the last parse, while callers can run
+  // long after it (compiler-sfc reuses descriptor.template.ast)
+  return {
+    start: extend({}, loc.start),
+    end: extend({}, loc.end),
+    source: loc.source,
+  }
 }
 
 function setLocEnd(loc: SourceLocation, end: number) {

@@ -22,7 +22,6 @@ import {
   injectHook,
   onBeforeUnmount,
   onMounted,
-  onUnmounted,
   onUpdated,
 } from '../apiLifecycle'
 import {
@@ -40,7 +39,9 @@ import {
   type RendererElement,
   type RendererInternals,
   type RendererNode,
+  getVaporInterface,
   invalidateMount,
+  isVaporComponent,
   queuePostRenderEffect,
 } from '../renderer'
 import { setTransitionHooks } from './BaseTransition'
@@ -49,6 +50,8 @@ import { devtoolsComponentAdded } from '../devtools'
 import { isAsyncWrapper } from '../apiAsyncComponent'
 import { type SuspenseBoundary, isSuspense } from './Suspense'
 import { LifecycleHooks } from '../enums'
+import { type SchedulerJob, SchedulerJobFlags } from '../scheduler'
+import { isVaporInteropEnabled } from '../vaporInteropState'
 
 type MatchPattern = string | RegExp | (string | RegExp)[]
 
@@ -71,7 +74,7 @@ export interface KeepAliveContext extends ComponentRenderContext {
     namespace: ElementNamespace,
     optimized: boolean,
   ) => void
-  deactivate: (vnode: VNode) => void
+  deactivate: (vnode: VNode) => boolean
   getCachedComponent: (vnode: VNode) => VNode
   getStorageContainer: () => RendererElement
 }
@@ -165,13 +168,27 @@ const KeepAliveImpl: ComponentOptions = {
     }
 
     sharedContext.deactivate = (vnode: VNode) => {
-      deactivate(
-        vnode,
-        storageContainer,
-        renderer,
-        keepAliveInstance,
-        parentSuspense,
-      )
+      const cached = sharedContext.getCachedComponent(vnode)
+      if (!cached || cached.component !== vnode.component) return false
+      if (
+        isVaporInteropEnabled &&
+        isVaporComponent(vnode.type as ConcreteComponent)
+      ) {
+        getVaporInterface(keepAliveInstance, vnode).deactivate(
+          vnode,
+          storageContainer,
+          parentSuspense,
+        )
+      } else {
+        deactivate(
+          vnode,
+          storageContainer,
+          renderer,
+          keepAliveInstance,
+          parentSuspense,
+        )
+      }
+      return true
     }
 
     function unmount(vnode: VNode) {
@@ -228,16 +245,18 @@ const KeepAliveImpl: ComponentOptions = {
         // if KeepAlive child is a Suspense, it needs to be cached after Suspense resolves
         // avoid caching vnode that not been mounted
         if (isSuspense(keepAliveInstance.subTree.type)) {
-          queuePostRenderEffect(
-            () => {
-              const vnode = getInnerChild(keepAliveInstance.subTree)
-              if (vnode.component) {
-                cache.set(pendingCacheKey!, vnode)
-              }
-            },
-            undefined,
-            keepAliveInstance.subTree.suspense,
-          )
+          const cacheInnerChild = () => {
+            const vnode = getInnerChild(keepAliveInstance.subTree)
+            if (vnode.component) {
+              cache.set(pendingCacheKey!, vnode)
+            }
+          }
+          const suspense = keepAliveInstance.subTree.suspense!
+          if (suspense.pendingBranch) {
+            queuePostRenderEffect(cacheInnerChild, undefined, suspense)
+          } else {
+            cacheInnerChild()
+          }
         } else {
           cache.set(pendingCacheKey, getInnerChild(keepAliveInstance.subTree))
         }
@@ -455,9 +474,14 @@ function injectToKeepAliveRoot(
   // injectHook wraps the original for error handling, so make sure to remove
   // the wrapped version.
   const injected = injectHook(type, hook, keepAliveRoot, true /* prepend */)
-  onUnmounted(() => {
-    remove(keepAliveRoot[type]!, injected)
-  }, target)
+  // the removal must outlive a discarded pending branch, which drops the
+  // unmount hooks
+  const removal = injectHook(
+    LifecycleHooks.UNMOUNTED,
+    () => remove(keepAliveRoot[type]!, injected),
+    target,
+  ) as SchedulerJob
+  removal.flags = SchedulerJobFlags.REQUEUE_ON_SUSPENSE_DISCARD
 }
 
 export function resetShapeFlag(vnode: any): void {

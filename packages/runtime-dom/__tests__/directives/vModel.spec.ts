@@ -1,4 +1,5 @@
 import {
+  Suspense,
   type VNode,
   defineComponent,
   h,
@@ -9,6 +10,8 @@ import {
   vModelDynamic,
   withDirectives,
 } from '@vue/runtime-dom'
+import { compile } from '@vue/compiler-dom'
+import * as runtimeDom from '@vue/runtime-dom'
 
 const triggerEvent = (type: string, el: Element) => {
   const event = new Event(type)
@@ -1901,5 +1904,260 @@ describe('vModel', () => {
     render(h(component), root)
 
     expect(root.querySelector('select').selectedIndex).toBe(1)
+  })
+
+  it('v-model.number should sync Set select values on mount and updates', async () => {
+    const value = ref(new Set<string | number>(['1', 2]))
+    const options = ref(['1', '2.0'])
+    const { code } = compile(
+      `<select multiple v-model.number="value">
+        <option v-for="option in options" :key="option" :value="option" />
+      </select>`,
+      { prefixIdentifiers: true },
+    )
+    render(
+      h({
+        setup: () => ({ value, options }),
+        render: new Function('Vue', code)(runtimeDom),
+      }),
+      root,
+    )
+    const select = root.querySelector('select') as HTMLSelectElement
+    const [one, two] = select.options
+
+    expect(one.selected).toBe(true)
+    expect(two.selected).toBe(true)
+
+    value.value = new Set([1])
+    await nextTick()
+    expect(one.selected).toBe(true)
+    expect(two.selected).toBe(false)
+
+    value.value.add(2)
+    await nextTick()
+    expect(two.selected).toBe(true)
+
+    value.value.delete(1)
+    await nextTick()
+    expect(one.selected).toBe(false)
+
+    value.value.add(3)
+    await nextTick()
+    options.value.push('3.0')
+    await nextTick()
+    expect(select.options[2].selected).toBe(true)
+  })
+
+  it.each(['1', '1.0', '01'])(
+    'v-model.number should retain Set selection for "%s" after an unrelated update',
+    async optionValue => {
+      const value = ref(new Set<number>())
+      const count = ref(0)
+      const { code } = compile(
+        `<select multiple v-model.number="value">
+          <option value="${optionValue}" />
+          <option value="2" />
+        </select>
+        <span>{{ count }}</span>`,
+        { prefixIdentifiers: true },
+      )
+      render(
+        h({
+          setup: () => ({ value, count }),
+          render: new Function('Vue', code)(runtimeDom),
+        }),
+        root,
+      )
+      const select = root.querySelector('select') as HTMLSelectElement
+      const [one, two] = select.options
+
+      one.selected = true
+      triggerEvent('change', select)
+      await nextTick()
+      expect(value.value).toEqual(new Set([1]))
+      expect(one.selected).toBe(true)
+
+      count.value++
+      await nextTick()
+      expect(root.querySelector('span').textContent).toBe('1')
+      expect(value.value).toEqual(new Set([1]))
+      expect(one.selected).toBe(true)
+      expect(two.selected).toBe(false)
+    },
+  )
+
+  it('should preserve exact Set select matching without .number', async () => {
+    const value = ref(new Set<string | number>([1]))
+    const { code } = compile(
+      `<select multiple v-model="value">
+        <option :value="1" />
+        <option value="1" />
+      </select>`,
+      { prefixIdentifiers: true },
+    )
+    render(
+      h({
+        setup: () => ({ value }),
+        render: new Function('Vue', code)(runtimeDom),
+      }),
+      root,
+    )
+    const [number, string] = root.querySelectorAll('option')
+
+    expect(number.selected).toBe(true)
+    expect(string.selected).toBe(false)
+
+    value.value = new Set(['1'])
+    await nextTick()
+    expect(number.selected).toBe(false)
+    expect(string.selected).toBe(true)
+  })
+
+  // #12460
+  it('keeps a value updated in the same flush as the mount', async () => {
+    const show = ref(false)
+    const text = ref('a')
+    // an event emitted from setup updates the parent while it is mounting
+    const Child = defineComponent({
+      emits: ['setup'],
+      setup(_, { emit }) {
+        emit('setup')
+        return () => null
+      },
+    })
+    const App = defineComponent({
+      setup() {
+        return () =>
+          show.value
+            ? [
+                withVModel(
+                  h('input', {
+                    'onUpdate:modelValue': (v: any) => (text.value = v),
+                  }),
+                  text.value,
+                ),
+                h(Child, { onSetup: () => (text.value = 'b') }),
+              ]
+            : null
+      },
+    })
+    render(h(App), root)
+    show.value = true
+    await nextTick()
+    expect(root.querySelector('input').value).toBe('b')
+  })
+
+  it('keeps a checkbox unchecked in the same flush as the mount', async () => {
+    const show = ref(false)
+    const checked = ref(true)
+    const Child = defineComponent({
+      emits: ['setup'],
+      setup(_, { emit }) {
+        emit('setup')
+        return () => null
+      },
+    })
+    const App = defineComponent({
+      setup() {
+        return () =>
+          show.value
+            ? [
+                withDirectives(
+                  h('input', {
+                    type: 'checkbox',
+                    'onUpdate:modelValue': (v: any) => (checked.value = v),
+                  }),
+                  [[vModelCheckbox, checked.value]],
+                ),
+                h(Child, { onSetup: () => (checked.value = false) }),
+              ]
+            : null
+      },
+    })
+    render(h(App), root)
+    show.value = true
+    await nextTick()
+    expect(root.querySelector('input').checked).toBe(false)
+  })
+
+  it('keeps a value updated while the Suspense boundary is pending', async () => {
+    const text = ref('a')
+    let resolve: () => void
+    const Async = defineComponent({
+      async setup() {
+        await new Promise<void>(r => (resolve = r))
+        return () => h('span')
+      },
+    })
+    const App = defineComponent({
+      setup() {
+        return () =>
+          h(Suspense, null, {
+            default: () =>
+              h('div', [
+                withVModel(
+                  h('input', {
+                    'onUpdate:modelValue': (v: any) => (text.value = v),
+                  }),
+                  text.value,
+                ),
+                h(Async),
+              ]),
+          })
+      },
+    })
+    render(h(App), root)
+    text.value = 'b'
+    await nextTick()
+    resolve!()
+    await new Promise(r => setTimeout(r))
+    expect(root.querySelector('input').value).toBe('b')
+  })
+
+  it('handles inherited directives when a pending Suspense component changes its root', async () => {
+    const editing = ref(true)
+    const text = ref('a')
+    const editorMounted = vi.fn()
+    const asyncMounted = vi.fn()
+    const { code: editorCode } = compile(
+      `<input v-if="editing" v-model="text"><span v-else>{{ text }}</span>`,
+      { prefixIdentifiers: true },
+    )
+    const Editor = {
+      setup: () => ({ editing, text }),
+      render: new Function('Vue', editorCode)(runtimeDom),
+      mounted: editorMounted,
+    }
+    let resolve: () => void
+    const Async = {
+      async setup() {
+        await new Promise<void>(r => (resolve = r))
+        return () => h('p', 'async')
+      },
+      mounted: asyncMounted,
+    }
+    const { code } = compile(
+      `<Suspense><div><Editor v-show="true" /><Async /></div></Suspense>`,
+      { prefixIdentifiers: true },
+    )
+    render(
+      h({
+        components: { Editor, Async },
+        render: new Function('Vue', code)(runtimeDom),
+      }),
+      root,
+    )
+
+    editing.value = false
+    await nextTick()
+    text.value = 'b'
+    await nextTick()
+    resolve!()
+    await new Promise(r => setTimeout(r))
+
+    expect(editorMounted).toHaveBeenCalledTimes(1)
+    expect(asyncMounted).toHaveBeenCalledTimes(1)
+    expect(root.querySelector('input')).toBe(null)
+    expect(root.querySelector('span').textContent).toBe('b')
   })
 })

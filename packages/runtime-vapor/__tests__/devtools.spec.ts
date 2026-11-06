@@ -1,14 +1,18 @@
 import {
   VaporKeepAlive,
+  VaporTeleport,
   createComponent,
   createIf,
+  createSlot,
   createVaporApp,
   createVaporSSRApp,
   defineVaporAsyncComponent,
   defineVaporComponent,
+  insert,
   template,
   vaporInteropPlugin,
 } from '../src'
+import type { VaporComponentInstance } from '../src/component'
 import {
   Suspense,
   createApp,
@@ -183,5 +187,150 @@ describe('vapor devtools component hooks', () => {
     expect(removed.map(c => c.replace('removed', 'added')).sort()).toEqual(
       added.sort(),
     )
+  })
+})
+
+describe('vapor devtools teleports', () => {
+  let host: HTMLElement
+  let target: HTMLElement
+  beforeEach(() => {
+    host = document.createElement('div')
+    target = document.createElement('div')
+    document.body.append(host, target)
+  })
+  afterEach(() => {
+    host.remove()
+    target.remove()
+  })
+
+  const teleport = () =>
+    createComponent(
+      VaporTeleport,
+      { to: () => target },
+      { default: () => template('<span>moved</span>')() },
+    )
+
+  test('tracks a teleport inserted into an element on its owner', async () => {
+    const show = ref(true)
+    const Root = defineVaporComponent({
+      name: 'Root',
+      setup() {
+        const div = template('<div></div>')() as ParentNode
+        insert(
+          createIf(
+            () => show.value,
+            () => teleport(),
+          ),
+          div,
+        )
+        return div
+      },
+    })
+    const app = createVaporApp(Root)
+    app.mount(host)
+    const root = app._instance as VaporComponentInstance
+    const [frag] = [...root.teleports!]
+    expect((frag.nodes as Node).parentNode).toBe(target)
+
+    show.value = false
+    await nextTick()
+    expect(root.teleports!.size).toBe(0)
+
+    show.value = true
+    await nextTick()
+    expect(root.teleports!.size).toBe(1)
+
+    app.unmount()
+    expect(root.teleports!.size).toBe(0)
+  })
+
+  test('keeps a teleport tracked while toggling disabled', async () => {
+    const disabled = ref(false)
+    const Root = defineVaporComponent({
+      name: 'Root',
+      setup() {
+        const div = template('<div></div>')() as ParentNode
+        insert(
+          createComponent(
+            VaporTeleport,
+            { to: () => target, disabled: () => disabled.value },
+            { default: () => template('<span>moved</span>')() },
+          ),
+          div,
+        )
+        return div
+      },
+    })
+    const app = createVaporApp(Root)
+    app.mount(host)
+    const root = app._instance as VaporComponentInstance
+    const [frag] = [...root.teleports!]
+
+    disabled.value = true
+    await nextTick()
+    expect((frag.nodes as Node).parentNode).not.toBe(target)
+    expect([...root.teleports!]).toEqual([frag])
+
+    disabled.value = false
+    await nextTick()
+    expect((frag.nodes as Node).parentNode).toBe(target)
+    expect([...root.teleports!]).toEqual([frag])
+    app.unmount()
+  })
+
+  test('tracks a teleport in slot content on the slot outlet owner', () => {
+    const Frame = defineVaporComponent({
+      name: 'Frame',
+      setup() {
+        const section = template('<section></section>')() as ParentNode
+        insert(createSlot('default'), section)
+        return section
+      },
+    })
+    const Root = defineVaporComponent({
+      name: 'Root',
+      setup: () => createComponent(Frame, null, { default: () => teleport() }),
+    })
+    const app = createVaporApp(Root)
+    app.mount(host)
+    const root = app._instance as VaporComponentInstance
+    const frame = root.block as VaporComponentInstance
+    // Same as VDOM, where teleported slot content's `__vueParentComponent` is Frame.
+    expect(frame.teleports!.size).toBe(1)
+    expect(root.teleports).toBeUndefined()
+    app.unmount()
+    expect(frame.teleports!.size).toBe(0)
+  })
+
+  test('tracks a hydrated teleport', async () => {
+    target.id = 'tp-target'
+    const code = `<div><teleport to="#tp-target"><span>moved</span></teleport></div>`
+    const ctx: any = {}
+    const html = await VueServerRenderer.renderToString(
+      runtimeDom.createSSRApp(
+        compileVaporComponent(code, undefined, undefined, true),
+      ),
+      ctx,
+    )
+    target.innerHTML = ctx.teleports['#tp-target']
+    host.innerHTML = html
+
+    const app = createVaporSSRApp(compileVaporComponent(code))
+    app.mount(host)
+    const root = app._instance as VaporComponentInstance
+    const [frag] = [...root.teleports!]
+    expect(frag.nodes).toBe(target.querySelector('span'))
+    app.unmount()
+    expect(root.teleports!.size).toBe(0)
+  })
+
+  test('tracks a teleport returned as the block', () => {
+    const Root = defineVaporComponent({ name: 'Root', setup: () => teleport() })
+    const app = createVaporApp(Root)
+    app.mount(host)
+    const root = app._instance as VaporComponentInstance
+    expect([...root.teleports!]).toEqual([root.block])
+    app.unmount()
+    expect(root.teleports!.size).toBe(0)
   })
 })
