@@ -29,7 +29,11 @@ import {
 import { isTeleportEnabled, isTeleportFragment } from './teleport'
 import { isTransitionEnabled } from './transition'
 import { isInteropEnabled } from './vdomInteropState'
-import { isSuspenseEnabled, resolveUnmountSuspense } from './suspense'
+import {
+  deferEnter,
+  isSuspenseEnabled,
+  resolveUnmountSuspense,
+} from './suspense'
 import type { KeyContext } from './components/Transition'
 import type { SlotBoundaryContext } from './slotBoundary'
 
@@ -218,6 +222,17 @@ export function insertNode(
           parentSuspense,
         )
       } else {
+        // mounted off-dom while the boundary is pending: the enter is held
+        // back, the boundary enters it on reveal
+        if (
+          __FEATURE_SUSPENSE__ &&
+          isSuspenseEnabled &&
+          parentSuspense &&
+          parentSuspense.pendingBranch &&
+          !transition.persisted
+        ) {
+          deferEnter(parentSuspense, block as Element)
+        }
         performTransitionEnter(
           block,
           transition as TransitionHooks,
@@ -278,6 +293,17 @@ export function insertFragment(
   // fragment goes on from its anchor
   if (isTransitionEnabled && (block as DynamicFragment).leaving) return
   if (block.insert) {
+    // vdom content under a pending boundary: the reveal walks it from here
+    if (
+      __FEATURE_SUSPENSE__ &&
+      isSuspenseEnabled &&
+      isInteropEnabled &&
+      parentSuspense &&
+      parentSuspense.pendingBranch &&
+      isInteropFragment(block)
+    ) {
+      deferEnter(parentSuspense, block)
+    }
     block.insert(
       parent,
       anchor,

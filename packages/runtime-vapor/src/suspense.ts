@@ -1,4 +1,5 @@
 import type { SuspenseBoundary } from '@vue/runtime-dom'
+import type { VaporFragment } from './fragment'
 
 export let isSuspenseEnabled = false
 // `instance.suspense` is the boundary a component was mounted in, but an
@@ -56,4 +57,39 @@ export function resolveUnmountSuspense(
   return currentUnmountSuspense === undefined
     ? fallback
     : currentUnmountSuspense
+}
+
+export type DeferredEnterTarget = Element | VaporFragment
+
+// What vapor mounted under a boundary while it was pending, for its reveal to
+// enter: elements whose enter the boundary held back, and the vdom content
+// nested in vapor elements (the boundary's own walk stops at a vapor
+// component). Keyed by the container the pending branch sits in: a replaced
+// branch takes its container, and these entries, with it. A set: a mounted
+// block re-inserted while pending registers again. Drained on the reveal.
+const deferredEnters: WeakMap<
+  ParentNode,
+  Set<DeferredEnterTarget>
+> = new WeakMap()
+
+export function deferEnter(
+  suspense: SuspenseBoundary,
+  target: DeferredEnterTarget,
+): void {
+  const container = suspense.hiddenContainer as ParentNode
+  const targets = deferredEnters.get(container)
+  if (targets) {
+    targets.add(target)
+  } else {
+    deferredEnters.set(container, new Set([target]))
+  }
+}
+
+export function takeDeferredEnters(
+  suspense: SuspenseBoundary,
+): Set<DeferredEnterTarget> | undefined {
+  const container = suspense.hiddenContainer as ParentNode
+  const targets = deferredEnters.get(container)
+  if (targets) deferredEnters.delete(container)
+  return targets
 }

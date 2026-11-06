@@ -259,6 +259,12 @@ export interface VaporInVdomInterface {
   hasTransitionChild(vnode: VNode): boolean
   getTransitionElement(vnode: VNode): RendererElement | undefined
   /**
+   * Enters what vapor mounted under `suspense` while it was pending, right
+   * before the boundary reveals its branch: the boundary's own walk stops
+   * at a vapor component.
+   */
+  enterDeferred(suspense: SuspenseBoundary, enters: Function[]): void
+  /**
    * Re-resolves the hooks of the rows a mounted vapor slot renders under a
    * TransitionGroup (`vnode.vs.group`) and hands over their elements.
    */

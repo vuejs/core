@@ -279,6 +279,15 @@ export class TeleportFragment extends RenderContextFragment {
         // State may have changed before the post-flush job runs.
         if (!this.anchor) return
         if (this.isDisabled) {
+          // a mount a pending boundary held back
+          if (
+            __FEATURE_SUSPENSE__ &&
+            isSuspenseEnabled &&
+            this.mountState.location === TeleportMountLocation.None
+          ) {
+            this.ensureChildrenInitialized()
+            this.mount(this.parent!, this.anchor, TeleportMountLocation.Main)
+          }
           if (!this.targetAnchor) {
             this.prepareTarget()
           }
@@ -317,6 +326,23 @@ export class TeleportFragment extends RenderContextFragment {
   private handlePropsUpdate(): void {
     // not mounted yet
     if (!this.parent || isHydrating) return
+
+    // mounting under a pending boundary waits for its reveal, as vdom's
+    // pending mount: the content then enters in the document
+    if (
+      __FEATURE_SUSPENSE__ &&
+      isSuspenseEnabled &&
+      this.mountState.location === TeleportMountLocation.None
+    ) {
+      const suspense =
+        this.parentSuspense !== undefined
+          ? this.parentSuspense
+          : this.ctx.suspense
+      if (suspense && suspense.pendingBranch) {
+        this.queueTargetUpdate()
+        return
+      }
+    }
 
     // mount into main container
     if (this.isDisabled) {
