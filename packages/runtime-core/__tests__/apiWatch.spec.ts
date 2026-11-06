@@ -366,6 +366,31 @@ describe('api: watch', () => {
     expect(`Invalid watch source`).toHaveBeenWarned()
   })
 
+  it('warn invalid watch source includes ref/getter suggestion', () => {
+    // @ts-expect-error
+    watch('foo', () => {})
+    expect(`Invalid watch source`).toHaveBeenWarned()
+    // The suggestion lands as the trailing console.warn argument on its
+    // own line so the user sees a hint after the existing message.
+    const calls = vi.mocked(console.warn).mock.calls
+    const lastCall = calls[calls.length - 1]
+    expect(lastCall[lastCall.length - 1]).toBe(
+      '\nDid you mean to use a ref or a getter? For example: ' +
+        '`watch(() => value, cb)` or `watch(someRef, cb)`.',
+    )
+  })
+
+  it('warn invalid watch source includes ref/getter suggestion for array sources', () => {
+    watch(['foo'], () => {})
+    expect(`Invalid watch source`).toHaveBeenWarned()
+    const calls = vi.mocked(console.warn).mock.calls
+    const lastCall = calls[calls.length - 1]
+    expect(lastCall[lastCall.length - 1]).toBe(
+      '\nDid you mean to use a ref or a getter? For example: ' +
+        '`watch(() => value, cb)` or `watch(someRef, cb)`.',
+    )
+  })
+
   it('stopping the watcher (effect)', async () => {
     const state = reactive({ count: 0 })
     let dummy

@@ -125,6 +125,71 @@ describe('resolveAssets', () => {
       expect('Failed to resolve directive: bar').toHaveBeenWarned()
     })
 
+    test('suggests the closest registered component name on typo', () => {
+      // "Buttn" is one edit from "Button" (insert 'o') — should
+      // qualify via the distance gate.
+      const Button = () => null
+      const Footer = () => null
+      const Root = {
+        components: { Button, Footer },
+        setup() {
+          resolveComponent('Buttn')
+          return () => null
+        },
+      }
+      const app = createApp(Root)
+      app.mount(nodeOps.createElement('div'))
+      expect('Failed to resolve component: Buttn').toHaveBeenWarned()
+      // the trailing suggestion argument carries the "Did you mean ..."
+      // line followed by the existing native-element hint
+      const calls = vi.mocked(console.warn).mock.calls
+      const lastCall = calls[calls.length - 1]
+      expect(lastCall[lastCall.length - 1]).toContain('Did you mean `Button`?')
+      expect(lastCall[lastCall.length - 1]).toContain(
+        'compilerOptions.isCustomElement',
+      )
+    })
+
+    test('no "Did you mean" suggestion when no registered name is close', () => {
+      // "xyz" is far from every candidate by edit distance AND
+      // similarity — only the native-element hint should appear.
+      const Root = {
+        components: { Button: () => null, Footer: () => null },
+        setup() {
+          resolveComponent('xyz')
+          return () => null
+        },
+      }
+      const app = createApp(Root)
+      app.mount(nodeOps.createElement('div'))
+      expect('Failed to resolve component: xyz').toHaveBeenWarned()
+      const calls = vi.mocked(console.warn).mock.calls
+      const lastCall = calls[calls.length - 1]
+      // suggestion is the native-element hint, NOT a "Did you mean" line
+      expect(lastCall[lastCall.length - 1]).not.toContain('Did you mean')
+      expect(lastCall[lastCall.length - 1]).toContain(
+        'compilerOptions.isCustomElement',
+      )
+    })
+
+    test('does not add a "Did you mean" suggestion for directives', () => {
+      // directives are out of scope for R4c — only components get
+      // the closest-match scan
+      const Root = {
+        directives: { MyDir: () => null },
+        setup() {
+          resolveDirective('Mydir')
+          return () => null
+        },
+      }
+      const app = createApp(Root)
+      app.mount(nodeOps.createElement('div'))
+      expect('Failed to resolve directive: Mydir').toHaveBeenWarned()
+      const calls = vi.mocked(console.warn).mock.calls
+      const lastCall = calls[calls.length - 1]
+      expect(lastCall[lastCall.length - 1]).not.toContain('Did you mean')
+    })
+
     test('resolve dynamic component', () => {
       const dynamicComponents = {
         foo: () => 'foo',

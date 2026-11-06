@@ -13,7 +13,7 @@ import {
 } from './collectionHandlers'
 import type { RawSymbol, Ref, UnwrapRefSimple } from './ref'
 import { ReactiveFlags } from './constants'
-import { warn } from './warning'
+import { warnWithSuggestion } from './warning'
 
 export interface Target {
   [ReactiveFlags.SKIP]?: boolean
@@ -268,10 +268,11 @@ function createReactiveObject(
 ) {
   if (!isObject(target)) {
     if (__DEV__) {
-      warn(
+      warnWithSuggestion(
         `value cannot be made ${isReadonly ? 'readonly' : 'reactive'}: ${String(
           target,
         )}`,
+        'Did you mean `ref()` instead? `ref()` wraps primitives and exposes reactivity via `.value`.',
       )
     }
     return target

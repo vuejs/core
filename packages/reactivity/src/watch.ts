@@ -125,11 +125,21 @@ export function watch(
   const { immediate, deep, once, scheduler, augmentJob, call } = options
 
   const warnInvalidSource = (s: unknown) => {
+    // Route through `options.onWarn` (set by runtime-core's apiWatch.ts to
+    // the runtime-core `warn`) so app.config.warnHandler still receives
+    // invalid-source warnings along with the component trace. The
+    // suggestion is passed as the trailing arg so it stays visually
+    // separated in console output and survives the runtime-core `warn`'s
+    // `msg + args.join('')` formatting before reaching warnHandler.
     ;(options.onWarn || warn)(
       `Invalid watch source: `,
       s,
-      `A watch source can only be a getter/effect function, a ref, ` +
+      // leading space keeps the explanation readable when the runtime-core
+      // `warn` joins args without separators before reaching warnHandler
+      ` A watch source can only be a getter/effect function, a ref, ` +
         `a reactive object, or an array of these types.`,
+      `\nDid you mean to use a ref or a getter? For example: ` +
+        `\`watch(() => value, cb)\` or \`watch(someRef, cb)\`.`,
     )
   }
 
