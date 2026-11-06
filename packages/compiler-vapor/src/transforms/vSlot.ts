@@ -7,6 +7,7 @@ import {
   type TemplateChildNode,
   createCompilerError,
   createSimpleExpression,
+  isAllWhitespace,
   isTemplateNode,
 } from '@vue/compiler-dom'
 import type { NodeTransform, TransformContext } from '../transform'
@@ -283,5 +284,5 @@ function createSlotBlock(
 
 function isNonWhitespaceContent(node: TemplateChildNode): boolean {
   if (node.type !== NodeTypes.TEXT) return true
-  return !!node.content.trim()
+  return !isAllWhitespace(node.content)
 }
