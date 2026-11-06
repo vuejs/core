@@ -130,7 +130,7 @@ export const transformOn: DirectiveTransform = (
         exp as SimpleExpressionNode,
         context,
         false,
-        hasMultipleStatements,
+        isInlineStatement && hasMultipleStatements,
       )
     }
 
