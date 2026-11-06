@@ -1,6 +1,7 @@
 import {
   KeepAlive,
   TrackOpTypes,
+  computed,
   h,
   nextTick,
   nodeOps,
@@ -19,6 +20,7 @@ import {
   serializeInner,
 } from '@vue/runtime-test'
 import {
+  type ComputedRefImpl,
   type DebuggerEvent,
   ITERATE_KEY,
   TriggerOpTypes,
@@ -462,5 +464,25 @@ describe('api: lifecycle hooks', () => {
     await nextTick()
     expect(mountedSpy).toHaveBeenCalledTimes(0)
     expect(activeSpy).toHaveBeenCalledTimes(0)
+  })
+
+  it('does not keep a computed read in onUnmounted subscribed', () => {
+    const store = reactive({ n: 0 })
+    let double!: ComputedRefImpl
+
+    const Comp = {
+      setup() {
+        double = computed(() => store.n * 2) as unknown as ComputedRefImpl
+        onUnmounted(() => double.value)
+        return () => h('div', double.value)
+      },
+    }
+
+    const root = nodeOps.createElement('div')
+    render(h(Comp), root)
+    expect(double.deps).toBeDefined()
+
+    render(null, root)
+    expect(double.deps).toBeUndefined()
   })
 })

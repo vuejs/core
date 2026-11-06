@@ -1,6 +1,7 @@
 import { nextTick, watch, watchEffect } from '@vue/runtime-core'
 import {
   type ComputedRef,
+  type ComputedRefImpl,
   EffectScope,
   ReactiveEffect,
   computed,
@@ -11,7 +12,10 @@ import {
   reactive,
   ref,
   setCurrentScope,
+  stop,
+  toRaw,
 } from '../src'
+import { getDepFromReactive } from '../src/dep'
 
 describe('reactivity/effect/scope', () => {
   it('should run', () => {
@@ -506,6 +510,58 @@ describe('reactivity/effect/scope', () => {
     expect(firstSpy).toHaveBeenCalledTimes(1)
     expect(secondSpy).not.toHaveBeenCalled()
     expect(getEffectsCount(scope)).toBe(1)
+  })
+
+  it('should not keep a computed read in a stopped scope subscribed', () => {
+    const src = reactive({ foo: 1 })
+    const scope = effectScope()
+    const c = scope.run(() => computed(() => src.foo))!
+
+    scope.run(() => c.value)
+    expect(getDepFromReactive(toRaw(src), 'foo')).toBeDefined()
+
+    scope.stop()
+    src.foo = 2
+    expect(scope.run(() => c.value)).toBe(2)
+    expect(getDepFromReactive(toRaw(src), 'foo')).toBeUndefined()
+    expect((c as unknown as ComputedRefImpl).subs).toBeUndefined()
+    expect(scope.deps).toBeUndefined()
+
+    src.foo = 3
+    expect(scope.run(() => c.value)).toBe(3)
+    expect(getDepFromReactive(toRaw(src), 'foo')).toBeUndefined()
+    expect((c as unknown as ComputedRefImpl).subs).toBeUndefined()
+    expect(scope.deps).toBeUndefined()
+  })
+
+  it('should keep a computed read in a stopped scope subscribed while an effect uses it', () => {
+    const src = reactive({ foo: 1 })
+    const scope = effectScope()
+    const c = scope.run(() => computed(() => src.foo))!
+    let dummy
+    const runner = effect(() => (dummy = c.value))
+
+    scope.stop()
+    expect(scope.run(() => c.value)).toBe(1)
+    expect(scope.deps).toBeUndefined()
+    src.foo = 2
+    expect(dummy).toBe(2)
+
+    stop(runner)
+    expect(getDepFromReactive(toRaw(src), 'foo')).toBeUndefined()
+    expect((c as unknown as ComputedRefImpl).subs).toBeUndefined()
+  })
+
+  it('should preserve the cache of a computed without dependencies read in a stopped scope', () => {
+    const scope = effectScope()
+    const getter = vi.fn(() => ({}))
+    const c = computed(getter)
+    const value = scope.run(() => c.value)
+
+    scope.stop()
+    expect(scope.run(() => c.value)).toBe(value)
+    expect(scope.run(() => c.value)).toBe(value)
+    expect(getter).toHaveBeenCalledTimes(1)
   })
 })
 
