@@ -137,7 +137,7 @@ describe('ssr: <slot>', () => {
       "const { ssrRenderSlotInner: _ssrRenderSlotInner, ssrRenderAttrs: _ssrRenderAttrs } = require("vue/server-renderer")
 
       return function ssrRender(_ctx, _push, _parent, _attrs) {
-        _push(\`<div\${_ssrRenderAttrs(_attrs)}>\`)
+        _push(\`<div\${_ssrRenderAttrs(_attrs, "div", true)}>\`)
         _ssrRenderSlotInner(_ctx.$slots, "default", {}, null, _push, _parent, null, true)
         _push(\`</div>\`)
       }"

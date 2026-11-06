@@ -1,4 +1,5 @@
 import {
+  camelize,
   escapeHtml,
   isArray,
   isObject,
@@ -24,9 +25,20 @@ const shouldIgnoreProp = /*@__PURE__*/ makeMap(
   `,key,ref,innerHTML,textContent,ref_key,ref_for`,
 )
 
+// Non-event props declared by runtime-dom's TransitionGroup. Keep in sync with
+// its props declaration; ssrTransitionGroup.spec.ts derives cases from it.
+// `mode` is not declared by TransitionGroup and must remain a fallthrough attr.
+const isTransitionGroupProp = /*@__PURE__*/ makeMap(
+  'tag,moveClass,name,appear,persisted,css,type,duration,' +
+    'enterFromClass,enterActiveClass,enterToClass,' +
+    'appearFromClass,appearActiveClass,appearToClass,' +
+    'leaveFromClass,leaveActiveClass,leaveToClass',
+)
+
 export function ssrRenderAttrs(
   props: Record<string, unknown>,
   tag?: string,
+  isTransitionGroup?: boolean,
 ): string {
   let ret = ''
   for (let key in props) {
@@ -34,6 +46,7 @@ export function ssrRenderAttrs(
       shouldIgnoreProp(key) ||
       isOn(key) ||
       (tag === 'textarea' && key === 'value') ||
+      (isTransitionGroup && isTransitionGroupProp(camelize(key))) ||
       // force as property (not rendered in SSR)
       key.startsWith('.')
     ) {
