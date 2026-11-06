@@ -10989,3 +10989,26 @@ describe('normalized slot props', () => {
     app.unmount()
   })
 })
+
+describe('implicit default slot that only holds a unicode space', () => {
+  test.each([
+    ['&nbsp;', 0xa0],
+    ['&emsp;', 0x2003],
+    ['&#x3000;', 0x3000],
+    ['&#xFEFF;', 0xfeff],
+  ])(
+    'renders %s instead of the slot fallback like vdom',
+    async (entity, code) => {
+      const { vdom, vapor } = await renderParity(
+        {
+          Child: `<template><b><slot>fallback</slot></b></template>`,
+          App: `<template><components.Child>${entity}</components.Child></template>`,
+        },
+        () => ref({}),
+        () => {},
+      )
+      expect(vdom.text).toBe(String.fromCodePoint(code))
+      expect(vapor.text).toBe(vdom.text)
+    },
+  )
+})
