@@ -1,13 +1,17 @@
 import { vi } from 'vite-plus/test'
 import { parse as babelParse } from '@babel/parser'
 import { BindingTypes } from '@vue/compiler-core'
+import * as CompilerDOM from '@vue/compiler-dom'
 import {
   assertCode,
   compileSFCScript as compile,
   getPositionInCode,
   mockId,
 } from './utils'
-import { type RawSourceMap, SourceMapConsumer } from 'source-map-js'
+import {
+  decodeSourceMap,
+  originalPositionFor,
+} from '../../compiler-core/__tests__/testUtils'
 import { compileScript, compileTemplate, parse } from '../src'
 import { templateAnalysisCache } from '../src/script/importUsageCheck'
 
@@ -830,13 +834,189 @@ describe('SFC compile <script setup>', () => {
       `
       const { content, map } = compile(source, { inlineTemplate: true })
       expect(map).not.toBeUndefined()
-      const consumer = new SourceMapConsumer(map as RawSourceMap)
+      const mappings = decodeSourceMap(map as any)
       expect(
-        consumer.originalPositionFor(getPositionInCode(content, 'count')),
+        originalPositionFor(mappings, getPositionInCode(content, 'count')),
       ).toMatchObject(getPositionInCode(source, `count`))
       expect(
-        consumer.originalPositionFor(getPositionInCode(content, 'Error')),
+        originalPositionFor(mappings, getPositionInCode(content, 'Error')),
       ).toMatchObject(getPositionInCode(source, `Error`))
+    })
+
+    test('source map of a custom template compiler', () => {
+      const source = `
+      <script setup>
+        const count = ref(0)
+      </script>
+      <template><p>{{ total }}</p>
+        <button @click="throw new Error(\`msg\`);"></button>
+      </template>
+      `
+      const compiler = {
+        parse: CompilerDOM.parse,
+        compile: CompilerDOM.compile,
+      }
+      const { content, map } = compile(source, {
+        inlineTemplate: true,
+        templateOptions: { compiler },
+      })
+      const mappings = decodeSourceMap(map as any)
+      expect(
+        originalPositionFor(mappings, getPositionInCode(content, 'count')),
+      ).toMatchObject(getPositionInCode(source, `count`))
+      expect(
+        originalPositionFor(mappings, getPositionInCode(content, 'total')),
+      ).toMatchObject(getPositionInCode(source, `total`))
+      expect(
+        originalPositionFor(mappings, getPositionInCode(content, 'Error')),
+      ).toMatchObject(getPositionInCode(source, `Error`))
+    })
+
+    // expected to fail: compileTemplate drops the map of a compiler that gives
+    // no pieces instead of placing it at the template block
+    test.fails('source map of a template compiler without pieces', () => {
+      const source = `
+      <script setup>
+        const count = ref(0)
+      </script>
+      <template>
+        <button @click="throw new Error(\`msg\`);"></button>
+      </template>
+      `
+      // a third-party compiler knows no pieces and maps its input only
+      const compiler = {
+        parse: CompilerDOM.parse,
+        compile(template: any, options: any) {
+          const { pieceSource, pieceOffset, ...rest } = options
+          const { pieces, ...result } = CompilerDOM.compile(template, rest)
+          return result
+        },
+      }
+      const { content, map } = compile(source, {
+        inlineTemplate: true,
+        templateOptions: { compiler },
+      })
+      const mappings = decodeSourceMap(map as any)
+      expect(
+        originalPositionFor(mappings, getPositionInCode(content, 'count')),
+      ).toMatchObject(getPositionInCode(source, `count`))
+      expect(
+        originalPositionFor(mappings, getPositionInCode(content, 'Error')),
+      ).toMatchObject(getPositionInCode(source, `Error`))
+    })
+
+    test('source map of a preprocessed template', () => {
+      const source = `
+      <script setup>
+        const count = ref(0)
+      </script>
+      <template lang="pug">
+      button(@click="throw new Error(\`msg\`);")
+      </template>
+      `
+      const { content, map } = compile(source, {
+        inlineTemplate: true,
+        templateOptions: { preprocessLang: 'pug' },
+      })
+      const mappings = decodeSourceMap(map as any)
+      expect(
+        originalPositionFor(mappings, getPositionInCode(content, 'count')),
+      ).toMatchObject(getPositionInCode(source, `count`))
+      expect(
+        originalPositionFor(mappings, getPositionInCode(content, 'Error')),
+      ).toMatchObject({ source: null, line: null, column: null })
+    })
+
+    test('inline source map names the file as given', () => {
+      for (const filename of ['src/./App.vue', 'C:\\src\\App.vue']) {
+        const { descriptor } = parse(
+          `<script setup>const a = 1</script><template>{{ a }}</template>`,
+          { filename },
+        )
+        for (const inlineTemplate of [false, true]) {
+          const { map } = compileScript(descriptor, {
+            id: mockId,
+            inlineTemplate,
+          })
+          expect(map!.sources).toEqual([filename])
+        }
+      }
+    })
+
+    test('inline source map names the identifiers the template renames', () => {
+      const source = `<script setup>
+import { ref } from 'vue'
+defineProps(['p'])
+const r = ref(1)
+const c = 1
+</script>
+<template>{{ p }}{{ r }}{{ c }}</template>`
+      for (const vapor of [false, true]) {
+        const { descriptor } = parse(source, { filename: 'App.vue' })
+        const { content, map } = compileScript(descriptor, {
+          id: mockId,
+          inlineTemplate: true,
+          vapor,
+        })
+        expect(map!.names).toEqual(['p', 'r'])
+        const mappings = decodeSourceMap(map as any)
+        expect(
+          originalPositionFor(
+            mappings,
+            getPositionInCode(content, '__props.p'),
+          ),
+        ).toMatchObject({ ...getPositionInCode(source, 'p }}'), name: 'p' })
+      }
+    })
+
+    test('source map of macro arguments hoisted outside of setup()', () => {
+      const sources = [
+        [
+          `<script setup>
+const props = defineProps({ propA: Number })
+const emit = defineEmits(['emitA'])
+defineOptions({ name: 'OptName' })
+const m = defineModel('m', { default: 'mDefault', get: v => v })
+</script>`,
+          ['propA', `'emitA'`, `'OptName'`, `'mDefault'`],
+        ],
+        [
+          `<script setup lang="ts">
+const props = withDefaults(defineProps<{ wa?: string }>(), { wa: 'waDefault' })
+</script>`,
+          [`'waDefault'`],
+        ],
+        [
+          `<script setup lang="ts">
+import { wbDefaults } from './wb'
+const props = withDefaults(defineProps<{ wb?: string }>(), { ...wbDefaults })
+</script>`,
+          [`...wbDefaults`],
+        ],
+        [
+          `<script setup>
+const { da = ['daDefault'] } = defineProps(['da'])
+</script>`,
+          [`'daDefault'`],
+        ],
+        [
+          `<script setup>
+import { makeOptions } from './m'
+const n = defineModel('n', makeOptions(1))
+</script>`,
+          [`makeOptions(1)`],
+        ],
+      ] as const
+      for (const [source, tokens] of sources) {
+        const { descriptor } = parse(source, { filename: 'App.vue' })
+        const { content, map } = compileScript(descriptor, { id: mockId })
+        const mappings = decodeSourceMap(map as any)
+        for (const token of tokens) {
+          expect(
+            originalPositionFor(mappings, getPositionInCode(content, token)),
+          ).toMatchObject(getPositionInCode(source, token))
+        }
+      }
     })
 
     describe('destructure setup context for built-in properties', () => {
@@ -1063,9 +1243,10 @@ describe('SFC compile <script setup>', () => {
           <template><div :class="$style.red" /></template>
           <style module>.red { color: red }</style>`
         const { content, map } = compile(source, { inlineTemplate: true })
-        const consumer = new SourceMapConsumer(map as RawSourceMap)
+        const mappings = decodeSourceMap(map as any)
         expect(
-          consumer.originalPositionFor(
+          originalPositionFor(
+            mappings,
             getPositionInCode(content, '$style.red'),
           ),
         ).toMatchObject(getPositionInCode(source, '$style.red'))
@@ -1314,6 +1495,60 @@ describe('SFC compile <script setup>', () => {
       assertAwaitDetection(`await (await foo)`)
       assertAwaitDetection(`await ((await foo))`)
       assertAwaitDetection(`await (await (await foo))`)
+    })
+
+    test('nested await that ends with the outer one', () => {
+      const code = assertAwaitDetection(`await await foo`)
+      expect(code).toMatch(
+        `_withAsyncContext(() => foo)),\n` +
+          `    __temp = await __temp,\n` +
+          `    __restore(),\n` +
+          `    __temp\n` +
+          `  ))),\n` +
+          `  await __temp,\n` +
+          `  __restore()\n` +
+          `)`,
+      )
+    })
+
+    test('await in macro arguments hoisted outside of setup()', () => {
+      const assertHoisted = (code: string, lang = '') => {
+        const { content } = compile(
+          `<script setup${lang && ` lang="${lang}"`}>\n${code}\n</script>`,
+        )
+        expect(content).not.toMatch(`withAsyncContext`)
+        expect(content).not.toMatch(`async setup(`)
+        assertCode(content)
+        return content
+      }
+      let content = assertHoisted(
+        `const n = defineModel('n', { default: await foo() })`,
+      )
+      expect(content).toMatch(`"n": { default: await foo() },`)
+      expect(content).toMatch(`const n = _useModel(__props, 'n')`)
+      content = assertHoisted(
+        `const n = defineModel('n', { get: v => v, default: await foo() })`,
+      )
+      expect(content).toMatch(`"n": { default: await foo() },`)
+      expect(content).toMatch(
+        `const n = _useModel(__props, 'n', { get: v => v, })`,
+      )
+      content = assertHoisted(
+        `const p = defineProps({ a: { default: await foo() } })`,
+      )
+      expect(content).toMatch(`props: { a: { default: await foo() } },`)
+      expect(content).toMatch(`const p = __props\n`)
+      content = assertHoisted(
+        `const p = withDefaults(defineProps<{ a?: number }>(), { a: await foo() })`,
+        'ts',
+      )
+      expect(content).toMatch(`default: await foo() }`)
+      expect(content).toMatch(`const p = __props\n`)
+      content = assertHoisted(`const e = defineEmits(await foo())`)
+      expect(content).toMatch(`emits: await foo(),`)
+      expect(content).toMatch(`const e = __emit\n`)
+      content = assertHoisted(`defineOptions({ name: await foo() })`)
+      expect(content).toMatch(`Object.assign({ name: await foo() }, {`)
     })
 
     // should prepend semicolon

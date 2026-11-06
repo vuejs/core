@@ -25,8 +25,6 @@ export const errorMessages: Record<number, string> = {
 
 // Utilities
 export { parse as babelParse } from '@babel/parser'
-import MagicString from 'magic-string'
-export { MagicString }
 // technically internal but we want it in @vue/repl, cast it as any to avoid
 // relying on estree types
 import { walk as _walk } from 'estree-walker'

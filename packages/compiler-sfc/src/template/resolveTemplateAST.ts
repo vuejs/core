@@ -36,5 +36,7 @@ export function resolveTemplateAST(
   const template = newAST.children.find(
     node => node.type === NodeTypes.ELEMENT && node.tag === 'template',
   ) as ElementNode
-  return createRoot(template.children, inAST.source)
+  const ast = createRoot(template.children, inAST.source)
+  ast.loc = inAST.loc
+  return ast
 }

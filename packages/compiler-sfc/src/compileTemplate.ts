@@ -1,13 +1,15 @@
 import type {
   BaseCodegenResult,
+  CodegenPiece,
   CompilerError,
   CompilerOptions,
   NodeTransform,
   ParserOptions,
+  Position,
   RawSourceMap,
   RootNode,
 } from '@vue/compiler-core'
-import { SourceMapConsumer, SourceMapGenerator } from 'source-map-js'
+import { createSourceMap } from '@vue/compiler-core'
 import {
   type AssetURLOptions,
   type AssetURLTagConfig,
@@ -44,6 +46,8 @@ export interface SFCTemplateCompileResults {
   tips: string[]
   errors: (string | CompilerError)[]
   map?: RawSourceMap
+  /** @internal The pieces the map is rendered from, if its sources are the compiled ones */
+  pieces?: CodegenPiece[]
   helpers?: Set<string | symbol>
 }
 
@@ -58,6 +62,7 @@ export interface SFCTemplateCompileOptions {
   vapor?: boolean
   ssr?: boolean
   ssrCssVars?: string[]
+  /** @deprecated `ast` gives where `source` is in the SFC */
   inMap?: RawSourceMap
   compiler?: TemplateCompiler
   compilerOptions?: CompilerOptions
@@ -134,11 +139,14 @@ export function compileTemplate(
     : false
   if (preprocessor) {
     try {
-      return doCompileTemplate({
-        ...options,
-        source: preprocess(options, preprocessor),
-        ast: undefined, // invalidate AST if template goes through preprocessor
-      })
+      return doCompileTemplate(
+        {
+          ...options,
+          source: preprocess(options, preprocessor),
+          ast: undefined, // invalidate AST if template goes through preprocessor
+        },
+        true,
+      )
     } catch (e: any) {
       return {
         code: `export default function render() {}`,
@@ -163,22 +171,24 @@ export function compileTemplate(
   }
 }
 
-function doCompileTemplate({
-  filename,
-  id,
-  scoped,
-  slotted,
-  inMap,
-  source,
-  ast: inAST,
-  ssr = false,
-  vapor = false,
-  ssrCssVars,
-  isProd = false,
-  compiler,
-  compilerOptions = {},
-  transformAssetUrls,
-}: SFCTemplateCompileOptions): SFCTemplateCompileResults {
+function doCompileTemplate(
+  {
+    filename,
+    id,
+    scoped,
+    slotted,
+    source,
+    ast: inAST,
+    ssr = false,
+    vapor = false,
+    ssrCssVars,
+    isProd = false,
+    compiler,
+    compilerOptions = {},
+    transformAssetUrls,
+  }: SFCTemplateCompileOptions,
+  preprocessed = false,
+): SFCTemplateCompileResults {
   const errors: CompilerError[] = []
   const warnings: CompilerError[] = []
 
@@ -213,6 +223,9 @@ function doCompileTemplate({
       ? (CompilerVapor as TemplateCompiler)
       : CompilerDOM
   compiler = compiler || defaultCompiler
+  const { pieceSource } = compilerOptions
+  // the AST of the descriptor is of the SFC, and its loc is that of `source`
+  const block = inAST && inAST.loc.source === source ? inAST : undefined
 
   if (compiler !== defaultCompiler) {
     // user using custom compiler, this means we cannot reuse the AST from
@@ -227,7 +240,15 @@ function doCompileTemplate({
     onError: e => errors.push(e),
   })
 
-  let { code, ast, preamble, map, helpers } = compiler.compile(
+  const sfc = inAST || block
+  const start = !inAST && block ? block.loc.start : undefined
+  // a caller that gives the source of the pieces renders them itself
+  const callerSource =
+    sfc && pieceSource && pieceSource.content === sfc.source
+      ? pieceSource
+      : undefined
+
+  let { code, ast, preamble, map, pieces, helpers } = compiler.compile(
     inAST || source,
     {
       mode: 'module',
@@ -256,18 +277,24 @@ function doCompileTemplate({
       filename,
       onError: e => errors.push(e),
       onWarn: w => warnings.push(w),
+      pieceSource: callerSource || (start && { content: block!.source }),
+      pieceOffset: start && start.offset,
     },
   )
 
-  // inMap should be the map produced by ./parse.ts which is a simple line-only
-  // mapping. If it is present, we need to adjust the final map and errors to
-  // reflect the original line numbers.
-  if (inMap && !inAST) {
-    if (map) {
-      map = mapLines(inMap, map)
-    }
-    if (errors.length) {
-      patchErrors(errors, source, inMap)
+  if (preprocessed) {
+    // the preprocessor gives no positions of its output in the template
+    map = pieces = undefined
+  } else if (start) {
+    // a compiler that gives pieces takes `pieceSource` and `pieceOffset`, so
+    // its map is of the SFC; one that gives none has a map of `source` only
+    if (!pieces) map = undefined
+    else if (!callerSource) map = createSourceMap(filename, pieces)
+    for (const { loc } of errors) {
+      if (loc) {
+        shiftPosition(loc.start, start)
+        if (loc.end !== loc.start) shiftPosition(loc.end, start)
+      }
     }
   }
 
@@ -291,79 +318,14 @@ function doCompileTemplate({
     errors,
     tips,
     map,
+    pieces,
     helpers,
   }
 }
 
-function mapLines(oldMap: RawSourceMap, newMap: RawSourceMap): RawSourceMap {
-  if (!oldMap) return newMap
-  if (!newMap) return oldMap
-
-  const oldMapConsumer = new SourceMapConsumer(oldMap)
-  const newMapConsumer = new SourceMapConsumer(newMap)
-  const mergedMapGenerator = new SourceMapGenerator()
-
-  newMapConsumer.eachMapping(m => {
-    if (m.originalLine == null) {
-      return
-    }
-
-    const origPosInOldMap = oldMapConsumer.originalPositionFor({
-      line: m.originalLine,
-      column: m.originalColumn!,
-    })
-
-    if (origPosInOldMap.source == null) {
-      return
-    }
-
-    mergedMapGenerator.addMapping({
-      generated: {
-        line: m.generatedLine,
-        column: m.generatedColumn,
-      },
-      original: {
-        line: origPosInOldMap.line, // map line
-        // use current column, since the oldMap produced by @vue/compiler-sfc
-        // does not
-        column: m.originalColumn!,
-      },
-      source: origPosInOldMap.source,
-      name: origPosInOldMap.name,
-    })
-  })
-
-  // source-map's type definition is incomplete
-  const generator = mergedMapGenerator as any
-  ;(oldMapConsumer as any).sources.forEach((sourceFile: string) => {
-    generator._sources.add(sourceFile)
-    const sourceContent = oldMapConsumer.sourceContentFor(sourceFile)
-    if (sourceContent != null) {
-      mergedMapGenerator.setSourceContent(sourceFile, sourceContent)
-    }
-  })
-
-  generator._sourceRoot = oldMap.sourceRoot
-  generator._file = oldMap.file
-  return generator.toJSON()
-}
-
-function patchErrors(
-  errors: CompilerError[],
-  source: string,
-  inMap: RawSourceMap,
-) {
-  const originalSource = inMap.sourcesContent![0]
-  const offset = originalSource.indexOf(source)
-  const lineOffset = originalSource.slice(0, offset).split(/\r?\n/).length - 1
-  errors.forEach(err => {
-    if (err.loc) {
-      err.loc.start.line += lineOffset
-      err.loc.start.offset += offset
-      if (err.loc.end !== err.loc.start) {
-        err.loc.end.line += lineOffset
-        err.loc.end.offset += offset
-      }
-    }
-  })
+/** Moves `position` of `source` to where it is in the SFC, `source` starting at `start` */
+function shiftPosition(position: Position, start: Position) {
+  if (position.line === 1) position.column += start.column - 1
+  position.line += start.line - 1
+  position.offset += start.offset
 }

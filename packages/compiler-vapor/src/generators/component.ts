@@ -46,6 +46,7 @@ import {
   isListenerProp,
 } from './prop'
 import {
+  NewlineType,
   type SimpleExpressionNode,
   createSimpleExpression,
   isMemberExpression,
@@ -491,7 +492,15 @@ function genProp(
     )
   }
   if (prop.toDisplayString) {
-    values = genCall(context.helper('toDisplayString'), values)
+    values = [
+      [
+        `${context.helper('toDisplayString')}(`,
+        NewlineType.None,
+        prop.toDisplayString,
+      ],
+      ...values,
+      ')',
+    ]
   }
   return [
     genPropKey(prop, context),

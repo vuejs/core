@@ -524,6 +524,26 @@ init();
       ).toThrow(`destructure cannot use computed key`)
     })
 
+    test('should error on await in a default value wrapped in a factory', () => {
+      expect(() =>
+        compile(
+          `<script setup>const { foo = await bar() } = defineProps(['foo'])</script>`,
+        ),
+      ).toThrow(`Default value of prop "foo" cannot contain await`)
+
+      expect(() =>
+        compile(
+          `<script setup lang="ts">const { foo = { a: await bar() } } = defineProps<{ foo?: object }>()</script>`,
+        ),
+      ).toThrow(`Default value of prop "foo" cannot contain await`)
+
+      const { content } = compile(
+        `<script setup>const { foo = async () => await bar() } = defineProps(['foo'])</script>`,
+      )
+      expect(content).toMatch(`foo: async () => await bar()`)
+      assertCode(content)
+    })
+
     test('should warn when used with withDefaults', () => {
       compile(
         `<script setup lang="ts">

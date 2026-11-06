@@ -24,6 +24,23 @@ export default defineConfig({
   resolve: {
     alias: entries,
   },
+  optimizeDeps: {
+    rolldownOptions: {
+      plugins: [
+        {
+          // Interim: Vitest browser mode makes the dependency scan resolve
+          // `@vue/compiler-core` to its CJS entry (meant for @vue/test-utils),
+          // so the scan misses the source's dependencies and Vite reloads the
+          // test page when it optimizes them late. Remove once Vitest applies
+          // that rewrite only where the project doesn't alias the package.
+          name: 'scan-compiler-core-source',
+          resolveId(id) {
+            if (id === '@vue/compiler-core') return entries[id]
+          },
+        },
+      ],
+    },
+  },
   test: {
     globals: true,
     pool: 'threads',
@@ -115,10 +132,6 @@ export default defineConfig({
       },
       {
         extends: true,
-        optimizeDeps: {
-          // Native ESM: avoid late optimization reloading benchmark iframes.
-          exclude: ['entities/decode'],
-        },
         test: {
           name: 'bench-browser',
           include: [],
@@ -182,10 +195,6 @@ export default defineConfig({
       },
       {
         extends: true,
-        optimizeDeps: {
-          // Native ESM: avoid late optimization reloading the test iframe.
-          exclude: ['entities/decode'],
-        },
         test: {
           name: 'e2e-browser-vapor',
           setupFiles: 'scripts/setup-vitest.ts',

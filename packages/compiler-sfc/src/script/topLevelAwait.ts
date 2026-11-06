@@ -39,6 +39,10 @@ export function processAwait(
   node: AwaitExpression,
   needSemi: boolean,
   isStatement: boolean,
+  // higher than the rank of every await in it, so that its code after it sits
+  // outside theirs where they end together, as in `await await foo`
+  rank: number,
+  enclosingAwaits: number,
 ): void {
   const argumentStart =
     node.argument.extra && node.argument.extra.parenthesized
@@ -52,18 +56,22 @@ export function processAwait(
   )
 
   const containsNestedAwait = /\bawait\b/.test(argumentStr)
+  const outer = `\n${`  `.repeat(enclosingAwaits)}`
+  const inner = `${outer}  `
 
-  ctx.s.overwrite(
+  ctx.replace(
     node.start! + startOffset,
     argumentStart + startOffset,
-    `${needSemi ? `;` : ``}(\n  ([__temp,__restore] = ${ctx.helper(
+    `${needSemi ? `;` : ``}(${inner}([__temp,__restore] = ${ctx.helper(
       `withAsyncContext`,
     )}(${containsNestedAwait ? `async ` : ``}() => `,
   )
-  ctx.s.appendLeft(
-    node.end! + startOffset,
-    `)),\n  ${isStatement ? `` : `__temp = `}await __temp,\n  __restore()${
-      isStatement ? `` : `,\n  __temp`
-    }\n)`,
-  )
+  ctx.s
+    .writer(rank)
+    .insertAfter(
+      node.end! + startOffset,
+      `)),${inner}${isStatement ? `` : `__temp = `}await __temp,${inner}__restore()${
+        isStatement ? `` : `,${inner}__temp`
+      }${outer})`,
+    )
 }

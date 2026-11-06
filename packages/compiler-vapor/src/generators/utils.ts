@@ -1,12 +1,4 @@
-import { SourceMapGenerator } from 'source-map-js'
-import {
-  type CodegenSourceMapGenerator,
-  NewlineType,
-  type Position,
-  type SourceLocation,
-  advancePositionWithMutation,
-  locStub,
-} from '@vue/compiler-dom'
+import { type SourceLocation, createPieceWriter } from '@vue/compiler-dom'
 import { isArray, isString } from '@vue/shared'
 import type { CodegenContext } from '../generate'
 import type { ParserOptions } from '@babel/parser'
@@ -30,8 +22,6 @@ export const IMPORT_EXPR_RE: RegExp = new RegExp(
 )
 
 export const NEWLINE: unique symbol = Symbol(__DEV__ ? `newline` : ``)
-/** increase offset but don't push actual code */
-export const LF: unique symbol = Symbol(__DEV__ ? `line feed` : ``)
 export const INDENT_START: unique symbol = Symbol(__DEV__ ? `indent start` : ``)
 export const INDENT_END: unique symbol = Symbol(__DEV__ ? `indent end` : ``)
 
@@ -41,21 +31,40 @@ export type MappedFragment = [
   code: string,
   newlineIndex: number,
   loc?: SourceLocation,
+  /** the identifier of the source that `code` renames */
   name?: string,
 ]
+/** the code generated for a node with a source, which the piece writer takes as its `enclosing` */
+export interface NodeFragments {
+  loc: SourceLocation
+  code: CodeFragment[]
+}
 export type CodeFragment =
   | typeof NEWLINE
-  | typeof LF
   | typeof INDENT_START
   | typeof INDENT_END
   | string
   | MappedFragment
+  | NodeFragments
   // a generator's output, pushed as one item instead of being spread
   | CodeFragment[]
   | FalsyValue
 
 export function isNestedFragments(frag: CodeFragment): frag is CodeFragment[] {
   return isArray(frag) && typeof frag[1] !== 'number'
+}
+
+/** the fragments nested in `frag`, if it nests any */
+export function innerFragments(frag: CodeFragment): CodeFragment[] | undefined {
+  return isNestedFragments(frag)
+    ? frag
+    : isNodeFragments(frag)
+      ? frag.code
+      : undefined
+}
+
+export function isNodeFragments(frag: CodeFragment): frag is NodeFragments {
+  return !!frag && typeof frag === 'object' && !isArray(frag)
 }
 export type CodeFragments = Exclude<CodeFragment, any[]> | CodeFragment[]
 
@@ -153,122 +162,50 @@ export function getParserOptions(
 export function codeFragmentToString(
   code: CodeFragment[],
   context: CodegenContext,
-): [code: string, map: CodegenSourceMapGenerator | undefined] {
-  const {
-    options: { filename, sourceMap },
-  } = context
-
-  let map: CodegenSourceMapGenerator | undefined
-  if (sourceMap) {
-    // lazy require source-map implementation, only in non-browser builds
-    map = new SourceMapGenerator() as unknown as CodegenSourceMapGenerator
-    map.setSourceContent(filename, context.ir.source)
-    map._sources.add(filename)
-  }
+): string {
+  const writer =
+    !__BROWSER__ && context.options.sourceMap
+      ? createPieceWriter(
+          context.options.pieceSource || { content: context.ir.source },
+          context.options.pieceOffset || 0,
+        )
+      : undefined
+  if (writer) context.pieces = writer.pieces
 
   let codegen = ''
-  const pos = { line: 1, column: 1, offset: 0 }
   let indentLevel = 0
 
   emit(code)
 
-  return [codegen, map]
+  return codegen
 
   function emit(code: CodeFragment[]) {
-    for (let frag of code) {
+    for (const frag of code) {
       if (!frag) continue
       if (isNestedFragments(frag)) {
         emit(frag)
-        continue
-      }
-
-      let code: string
-      let newlineIndex: number = NewlineType.None
-      let loc: SourceLocation | undefined
-      let name: string | undefined
-      if (frag === NEWLINE) {
-        code = `\n${`  `.repeat(indentLevel)}`
-        newlineIndex = NewlineType.Start
+      } else if (isNodeFragments(frag)) {
+        const enclosing = writer && writer.enclosing
+        if (writer) writer.enclosing = frag.loc
+        emit(frag.code)
+        if (writer) writer.enclosing = enclosing
+      } else if (frag === NEWLINE) {
+        const code = `\n${`  `.repeat(indentLevel)}`
+        codegen += code
+        if (writer) writer.newline(code)
       } else if (frag === INDENT_START) {
         indentLevel++
-        continue
       } else if (frag === INDENT_END) {
         indentLevel--
-        continue
-      } else if (frag === LF) {
-        pos.line++
-        pos.column = 0
-        pos.offset++
-        continue
       } else if (isString(frag)) {
-        code = frag
+        codegen += frag
+        if (writer) writer.write(frag)
       } else {
-        const mapped = frag as MappedFragment
-        code = mapped[0]
-        newlineIndex = mapped[1]
-        loc = mapped[2]
-        name = mapped[3]
-      }
-      codegen += code
-
-      if (map) {
-        if (loc) addMapping(loc.start, name)
-        if (newlineIndex === NewlineType.Unknown) {
-          // multiple newlines, full iteration
-          advancePositionWithMutation(pos, code)
-        } else {
-          // fast paths
-          pos.offset += code.length
-          if (newlineIndex === NewlineType.None) {
-            // no newlines; fast path to avoid newline detection
-            if (__TEST__ && code.includes('\n')) {
-              throw new Error(
-                `CodegenContext.push() called newlineIndex: none, but contains` +
-                  `newlines: ${code.replace(/\n/g, '\\n')}`,
-              )
-            }
-            pos.column += code.length
-          } else {
-            // single newline at known index
-            if (newlineIndex === NewlineType.End) {
-              newlineIndex = code.length - 1
-            }
-            if (
-              __TEST__ &&
-              (code.charAt(newlineIndex) !== '\n' ||
-                code.slice(0, newlineIndex).includes('\n') ||
-                code.slice(newlineIndex + 1).includes('\n'))
-            ) {
-              throw new Error(
-                `CodegenContext.push() called with newlineIndex: ${newlineIndex} ` +
-                  `but does not conform: ${code.replace(/\n/g, '\\n')}`,
-              )
-            }
-            pos.line++
-            pos.column = code.length - newlineIndex
-          }
-        }
-        if (loc && loc !== locStub) {
-          addMapping(loc.end)
-        }
+        const [code, , loc, name] = frag
+        codegen += code
+        if (writer) writer.write(code, loc, name)
       }
     }
-  }
-
-  function addMapping(loc: Position, name: string | null = null) {
-    // we use the private property to directly add the mapping
-    // because the addMapping() implementation in source-map-js has a bunch of
-    // unnecessary arg and validation checks that are pure overhead in our case.
-    const { _names, _mappings } = map!
-    if (name !== null && !_names.has(name)) _names.add(name)
-    _mappings.add({
-      originalLine: loc.line,
-      originalColumn: loc.column - 1, // source-map column is 0 based
-      generatedLine: pos.line,
-      generatedColumn: pos.column - 1,
-      source: filename,
-      name,
-    })
   }
 }
 

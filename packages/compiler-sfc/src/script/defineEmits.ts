@@ -6,7 +6,7 @@ import type {
   ObjectPattern,
   RestElement,
 } from '@babel/types'
-import { isCallOf } from './utils'
+import { type Code, isCallOf } from './utils'
 import type { ScriptCompileContext } from './context'
 import {
   type TypeResolveContext,
@@ -45,26 +45,28 @@ export function processDefineEmits(
   return true
 }
 
-export function genRuntimeEmits(ctx: ScriptCompileContext): string | undefined {
-  let emitsDecl = ''
+export function genRuntimeEmits(ctx: ScriptCompileContext): Code | undefined {
+  let emitsDecl: Code | undefined
   if (ctx.emitsRuntimeDecl) {
-    emitsDecl = ctx.getString(ctx.emitsRuntimeDecl).trim()
+    emitsDecl = ctx.copy(ctx.emitsRuntimeDecl.start!, ctx.emitsRuntimeDecl.end!)
   } else if (ctx.emitsTypeDecl) {
     const typeDeclaredEmits = extractRuntimeEmits(ctx)
-    emitsDecl = typeDeclaredEmits.size
-      ? `[${Array.from(typeDeclaredEmits)
-          .map(k => JSON.stringify(k))
-          .join(', ')}]`
-      : ``
+    if (typeDeclaredEmits.size) {
+      emitsDecl = `[${Array.from(typeDeclaredEmits)
+        .map(k => JSON.stringify(k))
+        .join(', ')}]`
+    }
   }
   if (ctx.hasDefineModelCall) {
     let modelEmitsDecl = `[${Object.keys(ctx.modelDecls)
       .map(n => JSON.stringify(`update:${n}`))
       .join(', ')}]`
     emitsDecl = emitsDecl
-      ? `/*@__PURE__*/${ctx.helper(
-          'mergeModels',
-        )}(${emitsDecl}, ${modelEmitsDecl})`
+      ? [
+          `/*@__PURE__*/${ctx.helper('mergeModels')}(`,
+          emitsDecl,
+          `, ${modelEmitsDecl})`,
+        ]
       : modelEmitsDecl
   }
   return emitsDecl
