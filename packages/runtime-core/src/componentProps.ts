@@ -197,12 +197,13 @@ type NormalizedProp = PropOptions & {
 }
 
 /**
- * normalized value is a tuple of the actual normalized options
- * and an array of prop keys that need value casting (booleans and defaults)
+ * normalized value is a tuple of the actual normalized options,
+ * an array of prop keys that need value casting (booleans and defaults)
+ * and the declared prop keys in declaration order
  */
 export type NormalizedProps = Record<string, NormalizedProp>
 
-export type NormalizedPropsOptions = [NormalizedProps, string[]] | []
+export type NormalizedPropsOptions = [NormalizedProps, string[], string[]] | []
 
 export function initProps(
   instance: ComponentInternalInstance,
@@ -215,14 +216,15 @@ export function initProps(
 
   instance.propsDefaults = Object.create(null)
 
-  setFullProps(instance, rawProps, props, attrs)
-
-  // ensure all declared prop keys are present
-  for (const key in instance.propsOptions[0]) {
-    if (!(key in props)) {
-      props[key] = undefined
+  // ensure all declared prop keys are present, in declaration order
+  const keys = instance.propsOptions[2]
+  if (keys) {
+    for (let i = 0; i < keys.length; i++) {
+      props[keys[i]] = undefined
     }
   }
+
+  setFullProps(instance, rawProps, props, attrs)
 
   // validation
   if (__DEV__) {
@@ -595,7 +597,11 @@ export function normalizePropsOptions(
   }
 
   baseNormalizePropsOptions(raw, normalized, needCastKeys)
-  const res: NormalizedPropsOptions = [normalized, needCastKeys]
+  const res: NormalizedPropsOptions = [
+    normalized,
+    needCastKeys,
+    Object.keys(normalized),
+  ]
   if (isObject(comp)) {
     cache.set(comp, res)
   }

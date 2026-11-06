@@ -908,4 +908,100 @@ describe('component props', () => {
     await nextTick()
     expect(props).not.toHaveProperty('onEvent')
   })
+
+  test('props keys should follow declaration order', async () => {
+    const keys: string[][] = []
+    const Comp = defineComponent({
+      props: {
+        foo: String,
+        bar: { type: String, default: 'bar' },
+        baz: Boolean,
+        qux: Number,
+      },
+      render() {
+        keys.push(Object.keys(this.$props))
+      },
+    })
+    const ArrayComp = defineComponent({
+      props: ['foo', 'bar-baz', 'qux'],
+      render() {
+        keys.push(Object.keys(this.$props))
+      },
+    })
+
+    const passQux = ref(true)
+    const root = nodeOps.createElement('div')
+    render(
+      h(() => [
+        h(Comp, passQux.value ? { qux: 1, baz: true, foo: 'foo' } : {}),
+        h(ArrayComp, { qux: 1, barBaz: 2 }),
+      ]),
+      root,
+    )
+    expect(keys).toEqual([
+      ['foo', 'bar', 'baz', 'qux'],
+      ['foo', 'barBaz', 'qux'],
+    ])
+
+    passQux.value = false
+    await nextTick()
+    expect(keys[2]).toEqual(['foo', 'bar', 'baz', 'qux'])
+  })
+
+  test('props keys should follow declaration order with mixins and extends', () => {
+    let keys: string[] = []
+    const Comp = {
+      props: ['self'],
+      mixins: [{ props: ['m1'] }, { props: { m2: null } }],
+      extends: { props: ['base'] },
+      render(this: any) {
+        keys = Object.keys(this.$props)
+      },
+    }
+
+    const root = nodeOps.createElement('div')
+    const app = createApp({
+      render: () => h(Comp, { self: 1, m2: 2, global: 3 }),
+    })
+    app.mixin({ props: ['global'] })
+    app.mount(root)
+    expect(keys).toEqual(['global', 'base', 'm1', 'm2', 'self'])
+  })
+
+  test('functional props keys should follow declaration order', () => {
+    let keys: string[] = []
+    const Comp: FunctionalComponent = props => {
+      keys = Object.keys(props)
+    }
+    Comp.props = ['foo', 'bar']
+
+    render(h(Comp, { bar: 1, baz: 2 }), nodeOps.createElement('div'))
+    expect(keys).toEqual(['foo', 'bar'])
+  })
+
+  test('default factory should receive all declared prop keys', () => {
+    let factoryProps: any
+    const Comp = defineComponent({
+      props: {
+        foo: {
+          type: String,
+          default: (props: any) => {
+            factoryProps = { ...props }
+            return 'foo'
+          },
+        },
+        bar: String,
+        baz: { type: String, default: 'baz' },
+      },
+      render() {},
+    })
+
+    render(h(Comp, { bar: 'bar' }), nodeOps.createElement('div'))
+    expect(factoryProps).toStrictEqual({
+      foo: undefined,
+      bar: 'bar',
+      baz: undefined,
+    })
+    expect(Object.keys(factoryProps)).toEqual(['foo', 'bar', 'baz'])
+  })
 })
