@@ -1,6 +1,10 @@
 import { vi } from 'vite-plus/test'
 import { parse as babelParse } from '@babel/parser'
-import { BindingTypes } from '@vue/compiler-core'
+import {
+  BindingTypes,
+  NodeTypes,
+  createCompilerError,
+} from '@vue/compiler-core'
 import {
   assertCode,
   compileSFCScript as compile,
@@ -2219,5 +2223,39 @@ describe('compileScript', () => {
       expect(component.__vapor).toBe(true)
       expect(component.name).toBe('Comp')
     })
+  })
+
+  test('should return inline template tips', () => {
+    const { tips } = compile(
+      `
+      <script setup>
+      const msg = 'hello'
+      </script>
+      <template>
+        <div>{{ msg }}</div>
+      </template>
+      `,
+      {
+        inlineTemplate: true,
+        templateOptions: {
+          compilerOptions: {
+            nodeTransforms: [
+              (node, ctx) => {
+                if (node.type === NodeTypes.ROOT) {
+                  ctx.onWarn(
+                    createCompilerError(-1, node.loc, {
+                      [-1]: 'custom warning',
+                    }),
+                  )
+                }
+              },
+            ],
+          },
+        },
+      },
+    )
+
+    expect(tips).toHaveLength(1)
+    expect(tips![0]).toContain('custom warning')
   })
 })

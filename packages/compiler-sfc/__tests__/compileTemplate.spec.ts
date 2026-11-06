@@ -1,6 +1,11 @@
 import { type RawSourceMap, SourceMapConsumer } from 'source-map-js'
 import { parse as babelParse } from '@babel/parser'
 import {
+  type CompilerError,
+  NodeTypes,
+  createCompilerError,
+} from '@vue/compiler-core'
+import {
   type SFCTemplateCompileOptions,
   compileTemplate,
 } from '../src/compileTemplate'
@@ -612,4 +617,29 @@ test('marks the vapor template AST as transformed so a reuse re-parses it', () =
   // the asset transform rewrote the AST in place; a second compile must not
   // reuse it and lose the import
   expect(compile(options).code).toBe(code)
+})
+
+test('calls user onWarn for warnings emitted by nodeTransforms', () => {
+  const warnings: CompilerError[] = []
+  const result = compile({
+    filename: 'example.vue',
+    source: `<div></div>`,
+    compilerOptions: {
+      onWarn: w => warnings.push(w),
+      nodeTransforms: [
+        (node, ctx) => {
+          if (node.type === NodeTypes.ROOT) {
+            ctx.onWarn(
+              createCompilerError(-1, node.loc, { [-1]: 'custom warning' }),
+            )
+          }
+        },
+      ],
+    },
+  })
+
+  expect(warnings).toHaveLength(1)
+  expect(warnings[0].message).toContain('custom warning')
+  expect(result.tips).toHaveLength(1)
+  expect(result.tips[0]).toContain('custom warning')
 })
