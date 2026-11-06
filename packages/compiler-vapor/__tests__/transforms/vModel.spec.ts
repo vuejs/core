@@ -262,6 +262,17 @@ describe('compiler: vModel transform', () => {
     expect(code).toMatchSnapshot()
   })
 
+  test('should support setup computed binding w/ inline', () => {
+    const onError = vi.fn()
+    const { code } = compileWithVModel('<input v-model="foo" />', {
+      onError,
+      inline: true,
+      bindingMetadata: { foo: BindingTypes.SETUP_COMPUTED },
+    })
+    expect(onError).not.toHaveBeenCalled()
+    expect(code).contains('_value => (foo.value = _value)')
+  })
+
   describe('component', () => {
     test('v-model for component should work', () => {
       const { code, ir } = compileWithVModel('<Comp v-model="foo" />')
