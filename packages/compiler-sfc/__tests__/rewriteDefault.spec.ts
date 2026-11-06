@@ -1,4 +1,5 @@
-import { rewriteDefault } from '../src'
+import { parse } from '@babel/parser'
+import { compileScript, parse as parseSFC, rewriteDefault } from '../src'
 
 describe('compiler sfc: rewriteDefault', () => {
   test('without export default', () => {
@@ -77,6 +78,83 @@ describe('compiler sfc: rewriteDefault', () => {
       }
       const _sfc_main = App"
     `)
+  })
+
+  describe.each([
+    '/* comma, brace } */',
+    '// comma, brace }\n',
+    '// comma, brace }\r',
+    '// comma, brace }\r\n',
+    '// comma, brace }\u2028',
+    '// comma, brace }\u2029',
+  ])('trailing export specifier comment %s', comment => {
+    test.each([
+      [`a as default ${comment}`, []],
+      [`a as default ${comment}, a as b`, ['b']],
+      [`a as b, a as default ${comment}, a as c`, ['b', 'c']],
+      [`a as b, a as default ${comment}`, ['b']],
+    ] as const)('rewrite local exports: %s', (specifiers, names) => {
+      const output = rewriteDefault(
+        `const a = 1\nexport { ${specifiers} }`,
+        'script',
+      )
+      const ast = parse(output, { sourceType: 'module' })
+      const exports = ast.program.body.find(
+        node => node.type === 'ExportNamedDeclaration',
+      )!
+
+      expect(exports.specifiers.map(specifier => specifier.exported)).toEqual(
+        names.map(name => expect.objectContaining({ name })),
+      )
+      expect(output).toContain('const script = a')
+    })
+
+    test.each(['default', 'default as default', 'foo as default'])(
+      'rewrite re-exports: %s',
+      specifier => {
+        const output = rewriteDefault(
+          `export { ${specifier} ${comment}, bar } from './index.js'`,
+          'script',
+        )
+        const ast = parse(output, { sourceType: 'module' })
+        const exports = ast.program.body.find(
+          node => node.type === 'ExportNamedDeclaration',
+        )!
+
+        expect(exports.specifiers).toHaveLength(1)
+        expect(exports.specifiers[0].exported).toMatchObject({ name: 'bar' })
+        expect(exports.source).toMatchObject({ value: './index.js' })
+        expect(output).toContain('const script = __VUE_DEFAULT__')
+      },
+    )
+  })
+
+  test('rewrite an explicitly aliased default re-export', () => {
+    expect(
+      rewriteDefault(
+        `export { default as default } from './index.js'`,
+        'script',
+      ),
+    ).toBe(
+      `import { default as __VUE_DEFAULT__ } from './index.js'\n` +
+        `export {  } from './index.js'\nconst script = __VUE_DEFAULT__`,
+    )
+  })
+
+  test('compile a normal script with a trailing export specifier comment', () => {
+    const { descriptor } = parseSFC(
+      `<script>const App = {}; export { App as default /* comma, brace } */ }</script>`,
+    )
+    const compiled = compileScript(descriptor, {
+      id: 'test',
+      genDefaultAs: '_sfc_main',
+    })
+    const ast = parse(compiled.content, { sourceType: 'module' })
+
+    expect(ast.program.body[ast.program.body.length - 1]).toMatchObject({
+      type: 'VariableDeclaration',
+      declarations: [{ id: { name: '_sfc_main' }, init: { name: 'App' } }],
+    })
   })
 
   test('export named default multiline /w comments', () => {
