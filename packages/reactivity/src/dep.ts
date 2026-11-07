@@ -77,7 +77,10 @@ export function triggerDep(
       })
     }
     propagate(subs)
-    shallowPropagate(subs)
+    const currentSubs = dep.subs
+    if (currentSubs !== undefined) {
+      shallowPropagate(currentSubs)
+    }
     if (!batchDepth) {
       flush()
     }

@@ -7,7 +7,13 @@ import {
   render,
   serializeInner,
 } from '@vue/runtime-test'
-import { ITERATE_KEY, getDepFromReactive } from '../src/dep'
+import {
+  Dep,
+  ITERATE_KEY,
+  getDepFromReactive,
+  trackDep,
+  triggerDep,
+} from '../src/dep'
 import { onEffectCleanup, pauseTracking, resetTracking } from '../src/effect'
 import {
   type DebuggerEvent,
@@ -1429,6 +1435,38 @@ describe('reactivity/effect', () => {
 
     expect(reads).toEqual(__DEV__ ? ['onTrack', 'onTrigger'] : [])
     stop(runner)
+  })
+
+  it('should notify remaining Dep subscribers when onTrigger removes the saved head', () => {
+    const dep = new Dep()
+    const seen: string[] = []
+    let value = 0
+    const first = effect(() => {
+      trackDep(dep)
+      seen.push(`first ${value}`)
+    })
+    const second = effect(
+      () => {
+        trackDep(dep)
+        seen.push(`second ${value}`)
+      },
+      { onTrigger: () => stop(first) },
+    )
+    const third = effect(() => {
+      trackDep(dep)
+      seen.push(`third ${value}`)
+    })
+
+    value = 1
+    triggerDep(dep)
+    expect(seen).toEqual([
+      'first 0',
+      'second 0',
+      'third 0',
+      'second 1',
+      'third 1',
+    ])
+    ;[first, second, third].forEach(stop)
   })
 
   it('should notify remaining computed subscribers when evaluation stops the first', () => {
