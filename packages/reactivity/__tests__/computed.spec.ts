@@ -22,6 +22,7 @@ import {
   reactive,
   ref,
   shallowRef,
+  stop,
   toRaw,
   triggerRef,
 } from '../src'
@@ -1151,4 +1152,135 @@ describe('reactivity/computed', () => {
     const t2 = performance.now()
     expect(t2 - t1).toBeLessThan(process.env.CI ? 100 : 30)
   })
+
+  // #16174
+  test('should not lose a push through a computed that reads a dep twice apart', () => {
+    const a = ref(2)
+    const b = ref(1)
+    // reads a, then b, then a again when a is odd
+    const c = computed(() => (a.value & 1 ? (b.value + a.value) % 97 : b.value))
+    // writes a dependency of the computed it reads, in its own run
+    effect(() => {
+      a.value = c.value
+    })
+    const seen: number[] = []
+    effect(() => seen.push(a.value))
+
+    b.value = 3
+    expect(seen).toEqual([1, 4])
+
+    b.value = 0
+    expect(seen).toEqual([1, 4, 0]) // minor: [1, 4]
+  })
+
+  test.each([1, 64])(
+    'should preserve pushes across %i intervening dependency reads',
+    gap => {
+      const a = ref(2)
+      const b = ref(1)
+      const between = Array.from({ length: gap }, () => ref(0))
+      const c = computed(() => {
+        const odd = a.value & 1
+        let value = b.value
+        for (const dep of between) value += dep.value
+        return odd ? (value + a.value) % 97 : value
+      })
+      const writer = effect(() => {
+        a.value = c.value
+      })
+      const seen: number[] = []
+      const observer = effect(() => seen.push(a.value))
+
+      for (const value of [3, 0, 5, 2]) b.value = value
+      expect(seen).toEqual([1, 4, 0, 5, 7])
+
+      stop(writer)
+      expect((c as unknown as ComputedRefImpl).deps).toBeUndefined()
+      stop(observer)
+    },
+  )
+
+  test('should clean up repeated dependencies after changing read order', () => {
+    const a = ref(2)
+    const b = ref(1)
+    const enabled = ref(true)
+    const reverse = ref(false)
+    const left = ref(0)
+    const right = ref(0)
+    const c = computed(() => {
+      if (!enabled.value) return b.value
+      const odd = a.value & 1
+      const value = reverse.value
+        ? right.value + b.value + left.value
+        : left.value + b.value + right.value
+      return odd ? (value + a.value) % 97 : value
+    })
+    const writer = effect(() => {
+      a.value = c.value
+    })
+    const seen: number[] = []
+    const observer = effect(() => seen.push(a.value))
+
+    b.value = 3
+    reverse.value = true
+    b.value = 0
+    expect(seen).toEqual([1, 4, 3])
+
+    enabled.value = false
+    expect(seen[seen.length - 1]).toBe(0)
+    const node = c as unknown as ComputedRefImpl
+    expect(node.deps!.dep).toBe(enabled)
+    expect(node.deps!.prevDep).toBeUndefined()
+    expect(node.deps!.nextDep).toBe(node.depsTail)
+    expect(node.depsTail!.dep).toBe(b)
+    expect(node.depsTail!.prevDep).toBe(node.deps)
+    expect(node.depsTail!.nextDep).toBeUndefined()
+
+    const length = seen.length
+    left.value++
+    right.value++
+    reverse.value = false
+    expect(seen).toHaveLength(length)
+    b.value = 5
+    expect(seen[seen.length - 1]).toBe(5)
+
+    stop(writer)
+    expect(node.deps).toBeUndefined()
+    expect(node.depsTail).toBeUndefined()
+    stop(observer)
+  })
+
+  test.each([false, true])(
+    'should preserve newer nested notifications (repeat: %s)',
+    repeat => {
+      const input = ref(0)
+      const a = ref(0)
+      const b = ref(0)
+      const c = computed(() => {
+        const value = a.value
+        return value + b.value + (repeat ? a.value : value)
+      })
+      const seen: number[] = []
+      const reader = effect(() => seen.push(c.value), {
+        scheduler: () => reader(),
+      })
+      const observer = effect(() => a.value, {
+        onTrigger: () => {
+          b.value++
+        },
+      })
+      const writer = effect(() => {
+        a.value = input.value
+      })
+
+      input.value = 1
+      input.value = 2
+      input.value = 3
+      expect(seen).toEqual([0, 3, 3, 6, 6, 9, 9])
+      stop(writer)
+      stop(observer)
+      stop(reader)
+      expect((c as unknown as ComputedRefImpl).deps).toBeUndefined()
+    },
+  )
 })
