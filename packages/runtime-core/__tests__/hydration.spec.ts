@@ -3328,6 +3328,42 @@ describe('SSR hydration', () => {
     expect(vnode.el).toBe(container.firstChild)
   })
 
+  // #16167
+  describe('native <template>', () => {
+    test('with children', async () => {
+      const template = `<div><template><p>hidden</p></template></div>`
+      const html = await renderToString(createSSRApp({ template }))
+      const container = document.createElement('div')
+      container.innerHTML = html
+      createSSRApp({ template }).mount(container)
+
+      expect(container.innerHTML).toBe(template)
+      const tpl = container.querySelector('template')!
+      expect(tpl.content.firstChild!.nodeName).toBe('P')
+      expect(`mismatch`).not.toHaveBeenWarned()
+    })
+
+    test('empty', async () => {
+      const template = `<div><template></template></div>`
+      const html = await renderToString(createSSRApp({ template }))
+      const container = document.createElement('div')
+      container.innerHTML = html
+
+      expect(() => createSSRApp({ template }).mount(container)).not.toThrow()
+      expect(container.innerHTML).toBe(template)
+      expect(`mismatch`).not.toHaveBeenWarned()
+    })
+
+    test('render function', () => {
+      const { container } = mountWithHydration(
+        `<template><p>x</p></template>`,
+        () => h('template', [h('p', 'x')]),
+      )
+      expect(container.innerHTML).toBe(`<template><p>x</p></template>`)
+      expect(`mismatch`).not.toHaveBeenWarned()
+    })
+  })
+
   // #10607
   test('update component stable slot (prod + optimized mode)', async () => {
     __DEV__ = false

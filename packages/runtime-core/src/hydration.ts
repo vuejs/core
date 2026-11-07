@@ -418,7 +418,10 @@ export function createHydrationFunctions(
 
       // handle appear transition
       let needCallTransitionHooks = false
-      if (isTemplateNode(el)) {
+      // a <template> in the SSR output is the wrapper emitted for the child of
+      // a <Transition appear> - but only when the client vnode isn't itself a
+      // native <template> element (#16167)
+      if (isTemplateNode(el) && (type as string) !== 'template') {
         needCallTransitionHooks =
           needTransition(
             null, // no need check parentSuspense in hydration
@@ -448,8 +451,10 @@ export function createHydrationFunctions(
         // skip if element has innerHTML / textContent
         !(props && (props.innerHTML || props.textContent))
       ) {
+        // a native <template> parses its children into the inert content
+        // fragment instead of the element itself
         let next = hydrateChildren(
-          el.firstChild,
+          isTemplateNode(el) ? el.content.firstChild : el.firstChild,
           vnode,
           el,
           parentComponent,
