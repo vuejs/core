@@ -3061,6 +3061,22 @@ describe('SSR hydration', () => {
     expect((vnode as any).component?.subTree.children[0].el).toBe(text)
   })
 
+  // #16168
+  test('whitespace-only fragment in slot', async () => {
+    const Comp = {
+      template: `<div><slot>fallback</slot></div>`,
+    }
+    const App = {
+      components: { Comp },
+      template: `<Comp><template v-if="true">&nbsp;</template></Comp>`,
+    }
+    const container = document.createElement('div')
+    container.innerHTML = await renderToString(h(App))
+    createSSRApp(App).mount(container)
+    expect(container.textContent).toBe(' ')
+    expect(`mismatch`).not.toHaveBeenWarned()
+  })
+
   // #7215
   test('empty text node', () => {
     const Comp = {
