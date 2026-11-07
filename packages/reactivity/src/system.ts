@@ -290,67 +290,84 @@ export function checkDirty(link: Link, sub: ReactiveNode): boolean {
   let stack: Stack<Link> | undefined
   let checkDepth = 0
 
-  top: do {
-    const dep = link.dep
-    const depFlags = dep.flags
+  try {
+    top: do {
+      const dep = link.dep
+      const depFlags = dep.flags
 
-    let dirty = false
+      let dirty = false
 
-    if (sub.flags & ReactiveFlags.Dirty) {
-      dirty = true
-    } else if (
-      (depFlags & (ReactiveFlags.Mutable | ReactiveFlags.Dirty)) ===
-      (ReactiveFlags.Mutable | ReactiveFlags.Dirty)
-    ) {
-      const subs = dep.subs!
-      if ((dep as Computed).update()) {
-        if (subs.nextSub !== undefined) {
-          shallowPropagate(subs)
-        }
+      if (sub.flags & ReactiveFlags.Dirty) {
         dirty = true
-      }
-    } else if (
-      (depFlags & (ReactiveFlags.Mutable | ReactiveFlags.Pending)) ===
-      (ReactiveFlags.Mutable | ReactiveFlags.Pending)
-    ) {
-      stack = { value: link, prev: stack }
-      link = dep.deps!
-      sub = dep
-      ++checkDepth
-      continue
-    }
-
-    if (!dirty && link.nextDep !== undefined) {
-      link = link.nextDep
-      continue
-    }
-
-    while (checkDepth) {
-      --checkDepth
-      link = stack!.value
-      stack = stack!.prev
-      if (dirty) {
-        const subs = sub.subs!
-        if ((sub as Computed).update()) {
+      } else if (
+        (depFlags & (ReactiveFlags.Mutable | ReactiveFlags.Dirty)) ===
+        (ReactiveFlags.Mutable | ReactiveFlags.Dirty)
+      ) {
+        const subs = dep.subs!
+        if ((dep as Computed).update()) {
           if (subs.nextSub !== undefined) {
             shallowPropagate(subs)
           }
-          sub = link.sub
-          continue
+          dirty = true
         }
-      } else {
-        sub.flags &= ~ReactiveFlags.Pending
+      } else if (
+        (depFlags & (ReactiveFlags.Mutable | ReactiveFlags.Pending)) ===
+        (ReactiveFlags.Mutable | ReactiveFlags.Pending)
+      ) {
+        stack = { value: link, prev: stack }
+        link = dep.deps!
+        sub = dep
+        ++checkDepth
+        continue
       }
-      sub = link.sub
-      if (link.nextDep !== undefined) {
-        link = link.nextDep
-        continue top
-      }
-      dirty = false
-    }
 
-    return dirty && !!sub.flags
-  } while (true)
+      if (!dirty && link.nextDep !== undefined) {
+        link = link.nextDep
+        continue
+      }
+
+      while (checkDepth) {
+        --checkDepth
+        link = stack!.value
+        stack = stack!.prev
+        if (dirty) {
+          const subs = sub.subs!
+          if ((sub as Computed).update()) {
+            if (subs.nextSub !== undefined) {
+              shallowPropagate(subs)
+            }
+            sub = link.sub
+            continue
+          }
+        } else {
+          sub.flags &= ~ReactiveFlags.Pending
+        }
+        sub = link.sub
+        if (link.nextDep !== undefined) {
+          link = link.nextDep
+          continue top
+        }
+        dirty = false
+      }
+
+      return dirty && !!sub.flags
+    } while (true)
+  } catch (err) {
+    // a computed threw while being refreshed: every subscriber on the current
+    // check chain still carries the Pending flag set by propagate(), which
+    // makes later propagate() calls treat it as already queued and skip it for
+    // good. Clear the flag so the next change can notify them again. The throw
+    // can come from either dep.update() (sub is the current subscriber) or from
+    // sub.update() while unwinding (link.sub is its parent, already popped off
+    // the stack), so all three have to be walked.
+    sub.flags &= ~ReactiveFlags.Pending
+    link.sub.flags &= ~ReactiveFlags.Pending
+    while (stack !== undefined) {
+      stack.value.sub.flags &= ~ReactiveFlags.Pending
+      stack = stack.prev
+    }
+    throw err
+  }
 }
 
 export function shallowPropagate(link: Link): void {
