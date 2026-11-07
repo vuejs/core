@@ -110,6 +110,21 @@ describe('ssr: slot', () => {
     )
   })
 
+  test('fragment slot (template v-if + whitespace text)', async () => {
+    expect(
+      await renderToString(
+        createApp({
+          components: {
+            one: {
+              template: `<div><slot>fallback</slot></div>`,
+            },
+          },
+          template: `<one><template v-if="true">&nbsp;</template></one>`,
+        }),
+      ),
+    ).toBe(`<div><!--[--><!--[--> <!--]--><!--]--></div>`)
+  })
+
   test('nullish slot props', async () => {
     const nullishBind = {
       one: {
