@@ -1430,4 +1430,70 @@ describe('reactivity/effect', () => {
     expect(reads).toEqual(__DEV__ ? ['onTrack', 'onTrigger'] : [])
     stop(runner)
   })
+
+  describe.each([
+    ['first', 0, 3],
+    ['middle', 1, 3],
+    ['last', 2, 3],
+    ['only', 0, 1],
+  ] as const)('removing the %s subscriber', (_, index, count) => {
+    it('should detach stopped effects and keep remaining effects subscribed', () => {
+      const source = ref(0)
+      const other = ref(0)
+      const spies = Array.from({ length: count }, () =>
+        vi.fn(() => source.value + other.value),
+      )
+      const runners = spies.map(spy => effect(spy))
+      const removed = runners[index].effect.deps!
+
+      stop(runners[index])
+
+      source.value++
+      other.value++
+      spies.forEach((spy, i) => {
+        expect(spy).toHaveBeenCalledTimes(i === index ? 1 : 3)
+        expect(spy).toHaveLastReturnedWith(i === index ? 0 : 2)
+      })
+      expect(removed.prevSub).toBeUndefined()
+      expect(removed.nextSub).toBeUndefined()
+      expect(removed.nextDep!.prevSub).toBeUndefined()
+      expect(removed.nextDep!.nextSub).toBeUndefined()
+
+      const appended = vi.fn(() => source.value)
+      const runner = effect(appended)
+      source.value++
+      expect(appended).toHaveLastReturnedWith(2)
+      expect(appended).toHaveBeenCalledTimes(2)
+      runners.forEach(stop)
+      stop(runner)
+    })
+
+    it('should detach stale dependencies and keep remaining effects subscribed', () => {
+      const source = ref(0)
+      const enabled = Array.from({ length: count }, () => ref(true))
+      const spies = enabled.map(flag =>
+        vi.fn(() => (flag.value ? source.value : -1)),
+      )
+      const runners = spies.map(spy => effect(spy))
+      const removed = runners[index].effect.deps!.nextDep!
+
+      enabled[index].value = false
+      source.value++
+
+      spies.forEach((spy, i) => {
+        expect(spy).toHaveBeenCalledTimes(2)
+        expect(spy).toHaveLastReturnedWith(i === index ? -1 : 1)
+      })
+      expect(removed.prevSub).toBeUndefined()
+      expect(removed.nextSub).toBeUndefined()
+
+      enabled[index].value = true
+      source.value++
+      spies.forEach((spy, i) => {
+        expect(spy).toHaveBeenCalledTimes(i === index ? 4 : 3)
+        expect(spy).toHaveLastReturnedWith(2)
+      })
+      runners.forEach(stop)
+    })
+  })
 })

@@ -156,6 +156,8 @@ export function unlink(
       dep.flags |= ReactiveFlags.Dirty
     }
   }
+  // Removed links must not retain younger subscribers across minor GCs.
+  link.prevSub = link.nextSub = undefined
   return nextDep
 }
 
