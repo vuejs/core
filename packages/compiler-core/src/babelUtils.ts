@@ -72,6 +72,9 @@ export function walkIdentifiers(
           walkFunctionParams(node, id =>
             markScopeIdentifier(node, id, knownIds),
           )
+          walkVarDeclarations(node, id =>
+            markScopeIdentifier(node, id, knownIds),
+          )
         }
       } else if (node.type === 'BlockStatement') {
         if (node.scopeIds) {
@@ -203,6 +206,31 @@ export function walkFunctionParams(
       onIdent(id)
     }
   }
+}
+
+function walkVarDeclarations(
+  node: Function,
+  onIdent: (id: Identifier) => void,
+) {
+  if (node.body.type !== 'BlockStatement') return
+  walk(node.body, {
+    enter(child: Node) {
+      if (isFunctionType(child) || child.type === 'StaticBlock') {
+        return this.skip()
+      }
+      if (
+        child.type === 'VariableDeclaration' &&
+        child.kind === 'var' &&
+        !child.declare
+      ) {
+        for (const decl of child.declarations) {
+          for (const id of extractIdentifiers(decl.id)) {
+            onIdent(id)
+          }
+        }
+      }
+    },
+  })
 }
 
 export function walkBlockDeclarations(

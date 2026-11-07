@@ -29,6 +29,28 @@ return function render(_ctx, _cache) {
 }"
 `;
 
+exports[`compiler: expression transform > should allow leak of var declarations in nested blocks 1`] = `
+"const { openBlock: _openBlock, createElementBlock: _createElementBlock } = Vue
+
+return function render(_ctx, _cache) {
+  return (_openBlock(), _createElementBlock("div", {
+    onClick: () => {
+        if (_ctx.ok) {
+          var x = 1
+        }
+        try {
+          var y = 2
+        } finally {}
+        _ctx.log(x, y)
+        ;(() => {
+          var z = 3
+        })()
+        _ctx.error(_ctx.z)
+      }
+  }, null, 8 /* PROPS */, ["onClick"]))
+}"
+`;
+
 exports[`compiler: expression transform > should not prefix catch block param 1`] = `
 "const { openBlock: _openBlock, createElementBlock: _createElementBlock } = Vue
 
