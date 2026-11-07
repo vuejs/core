@@ -489,6 +489,99 @@ describe('compiler + runtime integration', () => {
     )
   })
 
+  test.each([
+    {
+      label: 'numeric zero and string zero',
+      from: 0,
+      to: '0',
+      startFallback: false,
+      endFallback: false,
+    },
+    {
+      label: 'numeric zero and string zero in fallback',
+      from: 0,
+      to: '0',
+      startFallback: true,
+      endFallback: true,
+    },
+    {
+      label: 'numeric and string keys',
+      from: 1,
+      to: '1',
+      startFallback: false,
+      endFallback: false,
+    },
+    {
+      label: 'numeric and string keys in fallback',
+      from: 1,
+      to: '1',
+      startFallback: true,
+      endFallback: true,
+    },
+    {
+      label: 'content and fallback with the same key',
+      from: 'same',
+      to: 'same',
+      startFallback: false,
+      endFallback: true,
+    },
+    {
+      label: 'content key with a fallback suffix',
+      from: 'x_fb',
+      to: 'x',
+      startFallback: false,
+      endFallback: true,
+    },
+    {
+      label: 'empty content key and fallback suffix',
+      from: '_fb',
+      to: '',
+      startFallback: false,
+      endFallback: true,
+    },
+  ])(
+    'slot outlet distinguishes $label',
+    async ({ from, to, startFallback, endFallback }) => {
+      const slotKey = ref<string | number>(from)
+      const fallback = ref(startFallback)
+      const tick = ref(0)
+      const Child = {
+        props: ['slotKey', 'tick'],
+        template: `<slot :key="slotKey"><input /></slot>`,
+      }
+      const container = document.createElement('div')
+      const app = createApp({
+        components: { Child },
+        setup: () => ({ slotKey, fallback, tick }),
+        template: `<Child :slot-key="slotKey" :tick="tick"><template v-if="!fallback" #default><input /></template></Child>`,
+      })
+      app.mount(container)
+      try {
+        const initial = container.querySelector('input')!
+        initial.value = 'retained'
+        tick.value++
+        await nextTick()
+        expect(container.querySelector('input')).toBe(initial)
+        expect(initial.value).toBe('retained')
+
+        for (const [key, useFallback] of [
+          [to, endFallback],
+          [from, startFallback],
+        ] as const) {
+          const input = container.querySelector('input')!
+          input.value = 'typed'
+          slotKey.value = key
+          fallback.value = useFallback
+          await nextTick()
+          expect(container.querySelector('input')).not.toBe(input)
+          expect(container.querySelector('input')!.value).toBe('')
+        }
+      } finally {
+        app.unmount()
+      }
+    },
+  )
+
   test('conditional slot branches remount inside a conditional slot outlet', async () => {
     const container = document.createElement('div')
     const toggle = ref(true)
