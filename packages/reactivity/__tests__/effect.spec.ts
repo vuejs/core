@@ -1414,6 +1414,79 @@ describe('reactivity/effect', () => {
     expect(seen).toEqual(['set', 'undefined'])
   })
 
+  test('should keep running after a watched computed throws once', () => {
+    const s = ref(0)
+    const c = computed(() => {
+      if (s.value === 1) throw new Error('boom')
+      return s.value
+    })
+
+    const seen: number[] = []
+    effect(() => {
+      seen.push(c.value)
+    })
+    expect(seen).toEqual([0])
+
+    expect(() => (s.value = 1)).toThrow('boom')
+
+    s.value = 2
+    s.value = 3
+    expect(seen).toEqual([0, 2, 3])
+  })
+
+  test('should keep notifying through a chain after an inner computed throws once', () => {
+    const s = ref(0)
+    const c = computed(() => {
+      if (s.value === 1) throw new Error('boom')
+      return s.value
+    })
+    const c2 = computed(() => c.value + 1)
+
+    const seen: number[] = []
+    effect(() => {
+      seen.push(c2.value)
+    })
+    expect(seen).toEqual([1])
+
+    expect(() => (s.value = 1)).toThrow('boom')
+
+    s.value = 2
+    s.value = 3
+    expect(seen).toEqual([1, 3, 4])
+  })
+
+  test('should keep the dep on a computed that throws while being read', () => {
+    const s = ref(0)
+    const c = computed(() => {
+      if (s.value === 1) throw new Error('boom')
+      return s.value
+    })
+
+    const seen: number[] = []
+    // a custom scheduler re-runs the effect directly, so the getter throws
+    // during run() instead of during the dirty check
+    const runner = effect(
+      () => {
+        seen.push(c.value)
+      },
+      {
+        scheduler: () => {
+          try {
+            runner()
+          } catch {}
+        },
+      },
+    )
+    expect(seen).toEqual([0])
+
+    for (const x of [1, 2, 3]) {
+      try {
+        s.value = x
+      } catch {}
+    }
+    expect(seen).toEqual([0, 2, 3])
+  })
+
   it('should only access debug options in development', () => {
     const reads: string[] = []
     const runner = effect(() => {}, {

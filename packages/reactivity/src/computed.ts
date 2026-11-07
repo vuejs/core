@@ -125,30 +125,36 @@ export class ComputedRefImpl<T = any> implements ReactiveNode {
 
   get value(): T {
     const flags = this.flags
-    if (
-      flags & SystemReactiveFlags.Dirty ||
-      (flags & SystemReactiveFlags.Pending && checkDirty(this.deps!, this))
-    ) {
-      if (this.update()) {
-        const subs = this.subs
-        if (subs !== undefined) {
-          shallowPropagate(subs)
+    try {
+      if (
+        flags & SystemReactiveFlags.Dirty ||
+        (flags & SystemReactiveFlags.Pending && checkDirty(this.deps!, this))
+      ) {
+        if (this.update()) {
+          const subs = this.subs
+          if (subs !== undefined) {
+            shallowPropagate(subs)
+          }
         }
+      } else if (flags & SystemReactiveFlags.Pending) {
+        this.flags = flags & ~SystemReactiveFlags.Pending
       }
-    } else if (flags & SystemReactiveFlags.Pending) {
-      this.flags = flags & ~SystemReactiveFlags.Pending
-    }
-    if (activeSub !== undefined) {
-      if (__DEV__) {
-        onTrack(activeSub!, {
-          target: this,
-          type: TrackOpTypes.GET,
-          key: 'value',
-        })
+    } finally {
+      // link in a finally block so that a getter that throws still leaves the
+      // subscriber depending on this computed - otherwise endTracking() drops
+      // the link and the subscriber is never notified again
+      if (activeSub !== undefined) {
+        if (__DEV__) {
+          onTrack(activeSub!, {
+            target: this,
+            type: TrackOpTypes.GET,
+            key: 'value',
+          })
+        }
+        link(this, activeSub)
+      } else if (activeEffectScope !== undefined) {
+        link(this, activeEffectScope)
       }
-      link(this, activeSub)
-    } else if (activeEffectScope !== undefined) {
-      link(this, activeEffectScope)
     }
     return this._value!
   }
