@@ -170,11 +170,14 @@ export function propagate(link: Link): void {
     const sub: ReactiveNode = link.sub
     let flags = sub.flags
 
-    // A subscriber may have multiple links to the same dependency. A newer
-    // nested propagation also supersedes this traversal's notification.
+    // Do not advance recursion state twice for one push, even after a nested
+    // push. A clean sub still needs invalidation from a dirty or pending dep
+    // that the nested push did not cover.
     if (
       (sub.propagationVersion === undefined ||
-        sub.propagationVersion < version) &&
+        sub.propagationVersion < version ||
+        (!(flags & (ReactiveFlags.Dirty | ReactiveFlags.Pending)) &&
+          link.dep.flags & (ReactiveFlags.Dirty | ReactiveFlags.Pending))) &&
       flags & (ReactiveFlags.Mutable | ReactiveFlags.Watching)
     ) {
       if (

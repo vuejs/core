@@ -1283,4 +1283,26 @@ describe('reactivity/computed', () => {
       expect((c as unknown as ComputedRefImpl).deps).toBeUndefined()
     },
   )
+
+  test.each([false, true])(
+    'should invalidate an unvisited computed branch after a nested push (repeat: %s)',
+    repeat => {
+      const a = ref(0)
+      const b = ref(0)
+      effect(() => a.value, {
+        onTrigger: () => {
+          b.value++
+        },
+      })
+      const d = computed(() => a.value * 10)
+      const c = computed(() => d.value + b.value + (repeat ? d.value : 0))
+      const seen: number[] = []
+      effect(() => seen.push(c.value))
+
+      a.value = 1
+      const value = repeat ? 21 : 11
+      expect(c.value).toBe(value)
+      expect(seen).toEqual([0, 1, value])
+    },
+  )
 })
