@@ -1029,6 +1029,9 @@ function reset() {
   currentAttrValue = ''
   currentAttrStartIndex = -1
   currentAttrEndIndex = -1
+  inPre = 0
+  inVPre = false
+  currentVPreBoundary = null
   stack.length = 0
 }
 
