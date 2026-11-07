@@ -1431,6 +1431,49 @@ describe('reactivity/effect', () => {
     stop(runner)
   })
 
+  it('should notify remaining computed subscribers when evaluation stops the first', () => {
+    const source = ref(0)
+    const seen: string[] = []
+    const value = computed(() => {
+      if (source.value) stop(first)
+      return source.value
+    })
+    const first = effect(() => seen.push(`first ${value.value}`))
+    const second = effect(() => seen.push(`second ${value.value}`))
+    source.value++
+    expect(seen).toEqual(['first 0', 'second 0', 'first 1', 'second 1'])
+    stop(second)
+  })
+
+  it.each([false, true])(
+    'should notify remaining subscribers when onTrigger stops the next effect (nested: %s)',
+    nested => {
+      const source = ref(0)
+      const other = ref(0)
+      const seen: string[] = []
+      const nestedRunner = effect(() => other.value)
+      const first = effect(() => seen.push(`first ${source.value}`), {
+        onTrigger() {
+          stop(second)
+          if (nested) other.value++
+        },
+      })
+      const second = effect(() => seen.push(`second ${source.value}`))
+      const third = effect(() => seen.push(`third ${source.value}`))
+
+      source.value++
+
+      expect(seen).toEqual([
+        'first 0',
+        'second 0',
+        'third 0',
+        'first 1',
+        'third 1',
+      ])
+      ;[first, second, third, nestedRunner].forEach(stop)
+    },
+  )
+
   describe.each([
     ['first', 0, 3],
     ['middle', 1, 3],

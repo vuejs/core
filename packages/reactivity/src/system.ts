@@ -56,6 +56,8 @@ export function decRunDepth(): void {
 let globalVersion = 0
 let notifyIndex = 0
 let notifyBufferLength = 0
+let propagationDepth = 0
+const unlinkedDuringPropagation: Link[] = []
 
 export function setActiveSub(sub?: ReactiveNode): ReactiveNode | undefined {
   try {
@@ -156,12 +158,31 @@ export function unlink(
       dep.flags |= ReactiveFlags.Dirty
     }
   }
-  // Removed links must not retain younger subscribers across minor GCs.
-  link.prevSub = link.nextSub = undefined
+  // An active traversal may still hold this link as its saved successor.
+  if (propagationDepth) {
+    unlinkedDuringPropagation.push(link)
+  } else {
+    link.prevSub = link.nextSub = undefined
+  }
   return nextDep
 }
 
 export function propagate(link: Link): void {
+  ++propagationDepth
+  try {
+    propagateLinks(link)
+  } finally {
+    if (!--propagationDepth) {
+      // Removed links must not retain younger subscribers across minor GCs.
+      for (const removed of unlinkedDuringPropagation) {
+        removed.prevSub = removed.nextSub = undefined
+      }
+      unlinkedDuringPropagation.length = 0
+    }
+  }
+}
+
+function propagateLinks(link: Link): void {
   let next = link.nextSub
   let stack: Stack<Link | undefined> | undefined
 
@@ -304,10 +325,14 @@ export function checkDirty(link: Link, sub: ReactiveNode): boolean {
       (depFlags & (ReactiveFlags.Mutable | ReactiveFlags.Dirty)) ===
       (ReactiveFlags.Mutable | ReactiveFlags.Dirty)
     ) {
-      const subs = dep.subs!
+      const subs = dep.subs
       if ((dep as Computed).update()) {
-        if (subs.nextSub !== undefined) {
-          shallowPropagate(subs)
+        const currentSubs = dep.subs
+        if (
+          currentSubs !== undefined &&
+          (currentSubs !== subs || currentSubs.nextSub !== undefined)
+        ) {
+          shallowPropagate(currentSubs)
         }
         dirty = true
       }
@@ -332,10 +357,14 @@ export function checkDirty(link: Link, sub: ReactiveNode): boolean {
       link = stack!.value
       stack = stack!.prev
       if (dirty) {
-        const subs = sub.subs!
+        const subs = sub.subs
         if ((sub as Computed).update()) {
-          if (subs.nextSub !== undefined) {
-            shallowPropagate(subs)
+          const currentSubs = sub.subs
+          if (
+            currentSubs !== undefined &&
+            (currentSubs !== subs || currentSubs.nextSub !== undefined)
+          ) {
+            shallowPropagate(currentSubs)
           }
           sub = link.sub
           continue
