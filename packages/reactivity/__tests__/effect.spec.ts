@@ -7,7 +7,13 @@ import {
   render,
   serializeInner,
 } from '@vue/runtime-test'
-import { ITERATE_KEY, getDepFromReactive } from '../src/dep'
+import {
+  Dep,
+  ITERATE_KEY,
+  getDepFromReactive,
+  trackDep,
+  triggerDep,
+} from '../src/dep'
 import { onEffectCleanup, pauseTracking, resetTracking } from '../src/effect'
 import {
   type DebuggerEvent,
@@ -1429,5 +1435,146 @@ describe('reactivity/effect', () => {
 
     expect(reads).toEqual(__DEV__ ? ['onTrack', 'onTrigger'] : [])
     stop(runner)
+  })
+
+  it('should notify remaining Dep subscribers when onTrigger removes the saved head', () => {
+    const dep = new Dep()
+    const seen: string[] = []
+    let value = 0
+    const first = effect(() => {
+      trackDep(dep)
+      seen.push(`first ${value}`)
+    })
+    const second = effect(
+      () => {
+        trackDep(dep)
+        seen.push(`second ${value}`)
+      },
+      { onTrigger: () => stop(first) },
+    )
+    const third = effect(() => {
+      trackDep(dep)
+      seen.push(`third ${value}`)
+    })
+
+    value = 1
+    triggerDep(dep)
+    expect(seen).toEqual([
+      'first 0',
+      'second 0',
+      'third 0',
+      'second 1',
+      'third 1',
+    ])
+    ;[first, second, third].forEach(stop)
+  })
+
+  it('should notify remaining computed subscribers when evaluation stops the first', () => {
+    const source = ref(0)
+    const seen: string[] = []
+    const value = computed(() => {
+      if (source.value) stop(first)
+      return source.value
+    })
+    const first = effect(() => seen.push(`first ${value.value}`))
+    const second = effect(() => seen.push(`second ${value.value}`))
+    source.value++
+    expect(seen).toEqual(['first 0', 'second 0', 'first 1', 'second 1'])
+    stop(second)
+  })
+
+  it.each([false, true])(
+    'should notify remaining subscribers when onTrigger stops the next effect (nested: %s)',
+    nested => {
+      const source = ref(0)
+      const other = ref(0)
+      const seen: string[] = []
+      const nestedRunner = effect(() => other.value)
+      const first = effect(() => seen.push(`first ${source.value}`), {
+        onTrigger() {
+          stop(second)
+          if (nested) other.value++
+        },
+      })
+      const second = effect(() => seen.push(`second ${source.value}`))
+      const third = effect(() => seen.push(`third ${source.value}`))
+
+      source.value++
+
+      expect(seen).toEqual([
+        'first 0',
+        'second 0',
+        'third 0',
+        'first 1',
+        'third 1',
+      ])
+      ;[first, second, third, nestedRunner].forEach(stop)
+    },
+  )
+
+  describe.each([
+    ['first', 0, 3],
+    ['middle', 1, 3],
+    ['last', 2, 3],
+    ['only', 0, 1],
+  ] as const)('removing the %s subscriber', (_, index, count) => {
+    it('should detach stopped effects and keep remaining effects subscribed', () => {
+      const source = ref(0)
+      const other = ref(0)
+      const spies = Array.from({ length: count }, () =>
+        vi.fn(() => source.value + other.value),
+      )
+      const runners = spies.map(spy => effect(spy))
+      const removed = runners[index].effect.deps!
+
+      stop(runners[index])
+
+      source.value++
+      other.value++
+      spies.forEach((spy, i) => {
+        expect(spy).toHaveBeenCalledTimes(i === index ? 1 : 3)
+        expect(spy).toHaveLastReturnedWith(i === index ? 0 : 2)
+      })
+      expect(removed.prevSub).toBeUndefined()
+      expect(removed.nextSub).toBeUndefined()
+      expect(removed.nextDep!.prevSub).toBeUndefined()
+      expect(removed.nextDep!.nextSub).toBeUndefined()
+
+      const appended = vi.fn(() => source.value)
+      const runner = effect(appended)
+      source.value++
+      expect(appended).toHaveLastReturnedWith(2)
+      expect(appended).toHaveBeenCalledTimes(2)
+      runners.forEach(stop)
+      stop(runner)
+    })
+
+    it('should detach stale dependencies and keep remaining effects subscribed', () => {
+      const source = ref(0)
+      const enabled = Array.from({ length: count }, () => ref(true))
+      const spies = enabled.map(flag =>
+        vi.fn(() => (flag.value ? source.value : -1)),
+      )
+      const runners = spies.map(spy => effect(spy))
+      const removed = runners[index].effect.deps!.nextDep!
+
+      enabled[index].value = false
+      source.value++
+
+      spies.forEach((spy, i) => {
+        expect(spy).toHaveBeenCalledTimes(2)
+        expect(spy).toHaveLastReturnedWith(i === index ? -1 : 1)
+      })
+      expect(removed.prevSub).toBeUndefined()
+      expect(removed.nextSub).toBeUndefined()
+
+      enabled[index].value = true
+      source.value++
+      spies.forEach((spy, i) => {
+        expect(spy).toHaveBeenCalledTimes(i === index ? 4 : 3)
+        expect(spy).toHaveLastReturnedWith(2)
+      })
+      runners.forEach(stop)
+    })
   })
 })

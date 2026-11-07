@@ -112,4 +112,50 @@ describe.skipIf(!global.gc)('reactivity/gc', () => {
     await gc()
     expect(c.deref()).toBeUndefined()
   })
+
+  it('should release stopped effects across minor collections during subscriber churn', async ({
+    skip,
+  }) => {
+    const minorGC = () =>
+      new Promise<void>(resolve => {
+        setTimeout(() => {
+          global.gc!({ type: 'minor' })
+          resolve()
+        })
+      })
+    // Some V8 versions treat WeakRef targets as strong during minor GC.
+    // @ts-expect-error ES2021 API
+    const probe = new WeakRef({})
+    await minorGC()
+    if (probe.deref() !== undefined) {
+      skip('This runtime keeps WeakRef targets alive during minor GC')
+    }
+
+    const source = ref(0)
+    const live = Array.from({ length: 32 }, () => effect(() => source.value))
+    // Promote the initial links so stale pointers from them would keep younger
+    // effects alive even after those effects are stopped.
+    await gc()
+
+    const payloads = Array.from({ length: 256 }, (_, value) => {
+      const payload = { value }
+      live.push(effect(() => source.value + payload.value))
+      live.shift()!.effect.stop()
+      // @ts-expect-error ES2021 API
+      return new WeakRef(payload)
+    })
+
+    // WeakRef targets are kept alive until the end of the current job. Collect
+    // in a new task, without a major GC that would also reclaim the old links.
+    await minorGC()
+
+    payloads.forEach((payload, index) => {
+      if (index < payloads.length - live.length) {
+        expect(payload.deref()).toBeUndefined()
+      } else {
+        expect(payload.deref()).toBeDefined()
+      }
+    })
+    live.forEach(runner => runner.effect.stop())
+  })
 })
