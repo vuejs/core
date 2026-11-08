@@ -116,6 +116,7 @@ function createInvoker(
     }
     const value = invoker.value
     if (isArray(value)) {
+      ;(e as any)._stopped = false
       const originalStop = e.stopImmediatePropagation
       e.stopImmediatePropagation = () => {
         originalStop.call(e)

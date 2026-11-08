@@ -135,6 +135,39 @@ describe(`runtime-dom: events patching`, () => {
     expect(fn2).toHaveBeenCalledTimes(0)
   })
 
+  it.each([true, false])(
+    'should reset stopImmediatePropagation when reusing an event (always stop: %s)',
+    async alwaysStop => {
+      const parent = document.createElement('div')
+      const el = document.createElement('div')
+      parent.appendChild(el)
+      const first = vi.fn((e: Event) => {
+        if (alwaysStop || first.mock.calls.length === 1) {
+          e.stopImmediatePropagation()
+        }
+      })
+      const second = vi.fn()
+      const parentFn = vi.fn()
+      const nativeFn = vi.fn()
+      patchProp(el, 'onClick', null, [first, second])
+      patchProp(parent, 'onClick', null, [parentFn])
+      el.addEventListener('click', nativeFn)
+      await timeout()
+
+      const event = new Event('click', { bubbles: true })
+      el.dispatchEvent(event)
+      expect(second).not.toHaveBeenCalled()
+      expect(parentFn).not.toHaveBeenCalled()
+      expect(nativeFn).not.toHaveBeenCalled()
+
+      el.dispatchEvent(event)
+      expect(first).toHaveBeenCalledTimes(2)
+      expect(second).toHaveBeenCalledTimes(alwaysStop ? 0 : 1)
+      expect(parentFn).toHaveBeenCalledTimes(alwaysStop ? 0 : 1)
+      expect(nativeFn).toHaveBeenCalledTimes(alwaysStop ? 0 : 1)
+    },
+  )
+
   // #1747
   it('should handle same computed handler function being bound on multiple targets', async () => {
     const el1 = document.createElement('div')
