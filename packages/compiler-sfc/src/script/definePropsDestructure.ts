@@ -332,10 +332,25 @@ export function transformDestructuredProps(
       // function scopes
       if (isFunctionType(node)) {
         pushScope(true)
+        // the name of a named function expression is a binding local to the
+        // function itself
+        if (node.type === 'FunctionExpression' && node.id) {
+          registerLocalBinding(node.id)
+        }
         walkFunctionParams(node, registerLocalBinding)
         if (node.body.type === 'BlockStatement') {
           walkFunctionScopeVarDeclarations(node.body)
           walkScope(node.body)
+        }
+        return
+      }
+
+      // same for the name of a named class expression, which is local to the
+      // class body
+      if (node.type === 'ClassExpression') {
+        pushScope()
+        if (node.id) {
+          registerLocalBinding(node.id)
         }
         return
       }
@@ -404,6 +419,7 @@ export function transformDestructuredProps(
       } else if (node.type === 'BlockStatement' && !isFunctionType(parent!)) {
         popScope()
       } else if (
+        node.type === 'ClassExpression' ||
         node.type === 'CatchClause' ||
         node.type === 'SwitchStatement' ||
         node.type === 'ForOfStatement' ||

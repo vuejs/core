@@ -20,6 +20,24 @@ return (_ctx, _cache) => {
 }"
 `;
 
+exports[`sfc reactive props destructure > anonymous class expression does not shadow destructured props 1`] = `
+"import { mergeDefaults as _mergeDefaults } from 'vue'
+
+export default {
+  props: /*@__PURE__*/_mergeDefaults({ items: Array }, {
+  items: () => ([])
+}),
+  setup(__props) {
+
+      
+      const K = class extends __props.items.Base { m() { return __props.items.length } }
+      
+return () => {}
+}
+
+}"
+`;
+
 exports[`sfc reactive props destructure > basic usage 1`] = `
 "import { toDisplayString as _toDisplayString } from "vue"
 
@@ -293,6 +311,44 @@ export default {
 return (_ctx, _cache) => {
   return (_openBlock(), _createElementBlock("div", null, _toDisplayString(__props.foo) + " " + _toDisplayString(hello) + " " + _toDisplayString(bar), 1 /* TEXT */))
 }
+}
+
+}"
+`;
+
+exports[`sfc reactive props destructure > named class expression name shadowing 1`] = `
+"import { mergeDefaults as _mergeDefaults } from 'vue'
+
+export default {
+  props: /*@__PURE__*/_mergeDefaults({ items: Array }, {
+  items: () => ([])
+}),
+  setup(__props) {
+
+      
+      const K = class items { static self() { return typeof items } }
+      const outer = () => __props.items.length
+      
+return () => {}
+}
+
+}"
+`;
+
+exports[`sfc reactive props destructure > named function expression name shadowing 1`] = `
+"import { mergeDefaults as _mergeDefaults } from 'vue'
+
+export default {
+  props: /*@__PURE__*/_mergeDefaults({ items: Array }, {
+  items: () => ([])
+}),
+  setup(__props) {
+
+      
+      const count = function items(n) { return n <= 0 ? 0 : 1 + items(n - 1) }
+      const outer = () => __props.items.length
+      
+return () => {}
 }
 
 }"

@@ -181,6 +181,46 @@ init();
     assertCode(content)
   })
 
+  test('named function expression name shadowing', () => {
+    const { content } = compile(`
+      <script setup>
+      const { items = [] } = defineProps({ items: Array })
+      const count = function items(n) { return n <= 0 ? 0 : 1 + items(n - 1) }
+      const outer = () => items.length
+      </script>
+    `)
+    expect(content).toMatch(`1 + items(n - 1)`)
+    expect(content).not.toMatch(`__props.items(n - 1)`)
+    expect(content).toMatch(`() => __props.items.length`)
+    assertCode(content)
+  })
+
+  test('named class expression name shadowing', () => {
+    const { content } = compile(`
+      <script setup>
+      const { items = [] } = defineProps({ items: Array })
+      const K = class items { static self() { return typeof items } }
+      const outer = () => items.length
+      </script>
+    `)
+    expect(content).toMatch(`return typeof items }`)
+    expect(content).not.toMatch(`typeof __props.items`)
+    expect(content).toMatch(`() => __props.items.length`)
+    assertCode(content)
+  })
+
+  test('anonymous class expression does not shadow destructured props', () => {
+    const { content } = compile(`
+      <script setup>
+      const { items = [] } = defineProps({ items: Array })
+      const K = class extends items.Base { m() { return items.length } }
+      </script>
+    `)
+    expect(content).toMatch(`extends __props.items.Base`)
+    expect(content).toMatch(`return __props.items.length`)
+    assertCode(content)
+  })
+
   test('default values w/ array runtime declaration', () => {
     const { content } = compile(`
       <script setup>
