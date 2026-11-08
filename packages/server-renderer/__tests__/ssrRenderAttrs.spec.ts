@@ -28,6 +28,18 @@ describe('ssr: renderAttrs', () => {
     ).toBe(` id="foo" title="bar"`)
   })
 
+  test('bigint attrs', () => {
+    expect(
+      ssrRenderAttrs({
+        'data-id': BigInt(10),
+        title: BigInt(10),
+      }),
+    ).toBe(` data-id="10" title="10"`)
+    // boolean attrs follow the same truthiness check as the client
+    expect(ssrRenderAttrs({ disabled: BigInt(10) })).toBe(` disabled`)
+    expect(ssrRenderAttrs({ disabled: BigInt(0) })).toBe(``)
+  })
+
   test('empty value attrs', () => {
     expect(
       ssrRenderAttrs({
@@ -159,6 +171,10 @@ describe('ssr: renderAttr', () => {
   test('null and undefined', () => {
     expect(ssrRenderAttr('foo', null)).toBe(``)
     expect(ssrRenderAttr('foo', undefined)).toBe(``)
+  })
+
+  test('bigint', () => {
+    expect(ssrRenderAttr('data-id', BigInt(10))).toBe(` data-id="10"`)
   })
 
   test('escape', () => {

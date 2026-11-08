@@ -155,5 +155,12 @@ export function isRenderableAttrValue(value: unknown): boolean {
     return false
   }
   const type = typeof value
-  return type === 'string' || type === 'number' || type === 'boolean'
+  return (
+    type === 'string' ||
+    type === 'number' ||
+    type === 'boolean' ||
+    // bigint stringifies the same way on both sides (`setAttribute`/property
+    // assignment on the client, `escapeHtml` during SSR)
+    type === 'bigint'
+  )
 }

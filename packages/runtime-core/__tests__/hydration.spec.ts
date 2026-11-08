@@ -3709,6 +3709,18 @@ describe('SSR hydration', () => {
       expect(`Hydration attribute mismatch`).toHaveBeenWarnedTimes(2)
     })
 
+    test('bigint attr handling', () => {
+      mountWithHydration(`<div title="10">x</div>`, () =>
+        h('div', { title: BigInt(10) }, 'x'),
+      )
+      expect(`Hydration attribute mismatch`).not.toHaveBeenWarned()
+
+      mountWithHydration(`<div>x</div>`, () =>
+        h('div', { title: BigInt(10) }, 'x'),
+      )
+      expect(`Hydration attribute mismatch`).toHaveBeenWarnedTimes(1)
+    })
+
     test('attr special case: textarea value', () => {
       mountWithHydration(`<textarea>foo</textarea>`, () =>
         h('textarea', { value: 'foo' }),
