@@ -155,5 +155,12 @@ export function isRenderableAttrValue(value: unknown): boolean {
     return false
   }
   const type = typeof value
-  return type === 'string' || type === 'number' || type === 'boolean'
+  return (
+    type === 'string' ||
+    type === 'number' ||
+    type === 'boolean' ||
+    // setAttribute() stringifies a bigint just like the other primitives, so
+    // SSR has to render it too or the attribute silently disappears
+    type === 'bigint'
+  )
 }

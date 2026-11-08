@@ -108,6 +108,12 @@ describe('ssr: renderAttrs', () => {
     ).toBe(``)
   })
 
+  test('bigint values', () => {
+    // setAttribute() stringifies bigints, so the client renders these
+    expect(ssrRenderAttrs({ 'data-id': BigInt(10) })).toBe(` data-id="10"`)
+    expect(ssrRenderAttr('data-id', BigInt(10))).toBe(` data-id="10"`)
+  })
+
   test('props to attrs', () => {
     expect(
       ssrRenderAttrs({
