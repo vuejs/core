@@ -265,3 +265,16 @@ test('shorthand binding w/ kebab-case', () => {
   )
   expect(content).toMatch('return { get fooBar() { return fooBar }')
 })
+
+test('function and class expression names shadow imports', () => {
+  const { content } = compile(`
+    <script setup lang="ts">
+    import { f, C } from './x'
+    </script>
+    <template>
+      {{ [function f(n) { return f(n) }, class C { m() { return C } }] }}
+    </template>
+    `)
+  expect(content).toMatch(`return {  }`)
+  assertCode(content)
+})
