@@ -207,6 +207,50 @@ describe('compiler: expression transform', () => {
     })
   })
 
+  test('should not prefix the name of a function expression inside it', () => {
+    const node = parseWithExpressionTransform(
+      `{{ [function foo(n) { return n && foo(n - 1) }, foo] }}`,
+    ) as InterpolationNode
+    expect(node.content).toMatchObject({
+      type: NodeTypes.COMPOUND_EXPRESSION,
+      children: [
+        `[function `,
+        { content: `foo` },
+        `(`,
+        { content: `n` },
+        `) { return `,
+        { content: `n` },
+        ` && `,
+        { content: `foo` },
+        `(`,
+        { content: `n` },
+        ` - 1) }, `,
+        { content: `_ctx.foo` },
+        `]`,
+      ],
+    })
+  })
+
+  test('should not prefix the name of a class expression inside it', () => {
+    const node = parseWithExpressionTransform(
+      `{{ [class Foo { static create() { return new Foo() } }, Foo] }}`,
+    ) as InterpolationNode
+    expect(node.content).toMatchObject({
+      type: NodeTypes.COMPOUND_EXPRESSION,
+      children: [
+        `[class `,
+        { content: `Foo` },
+        ` { static `,
+        { content: `create` },
+        `() { return new `,
+        { content: `Foo` },
+        `() } }, `,
+        { content: `_ctx.Foo` },
+        `]`,
+      ],
+    })
+  })
+
   test('should not prefix params of a function expression', () => {
     const node = parseWithExpressionTransform(
       `{{ foo => foo + bar }}`,

@@ -72,6 +72,17 @@ export function walkIdentifiers(
           walkFunctionParams(node, id =>
             markScopeIdentifier(node, id, knownIds),
           )
+          // the name of a function expression is only bound inside it
+          if (node.type === 'FunctionExpression' && node.id) {
+            markScopeIdentifier(node, node.id, knownIds)
+          }
+        }
+      } else if (node.type === 'ClassExpression' && node.id) {
+        // the name of a class expression is only bound inside it
+        if (node.scopeIds) {
+          node.scopeIds.forEach(id => markKnownIds(id, knownIds))
+        } else {
+          markScopeIdentifier(node, node.id, knownIds)
         }
       } else if (node.type === 'BlockStatement') {
         if (node.scopeIds) {
