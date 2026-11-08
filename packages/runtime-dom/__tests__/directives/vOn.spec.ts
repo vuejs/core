@@ -136,6 +136,34 @@ describe('runtime-dom: v-on directive', () => {
     expect(fn).toBeCalledWith(event, 'value', true)
   })
 
+  it('should support mouse modifiers with a dynamic event name', () => {
+    // <div @[event].left="fn" /> — the event name is unknown at compile time,
+    // so `left` / `right` are guarded by both withModifiers and withKeys
+    const buttons = [
+      ['left', 0],
+      ['right', 2],
+    ] as const
+    buttons.forEach(([button, code]) => {
+      const el = document.createElement('div')
+      const fn = vi.fn()
+      const handler = withKeys(withModifiers(fn, [button]), [button])
+      patchEvent(el, 'onClick', null, handler, null)
+      triggerEvent(el, 'click', e => (e.button = code === 0 ? 2 : 0))
+      expect(fn).not.toBeCalled()
+      triggerEvent(el, 'click', e => (e.button = code))
+      expect(fn).toBeCalledTimes(1)
+    })
+  })
+
+  it('should not fire a keyboard-only handler for a non-keyboard event', () => {
+    const el = document.createElement('div')
+    const fn = vi.fn()
+    const handler = withKeys(withModifiers(fn, ['left']), ['left', 'up'])
+    patchEvent(el, 'onClick', null, handler, null)
+    triggerEvent(el, 'click', e => (e.button = 0))
+    expect(fn).not.toBeCalled()
+  })
+
   it('withKeys cache wrapped listener separately for different modifiers', () => {
     const el1 = document.createElement('button')
     const el2 = document.createElement('button')

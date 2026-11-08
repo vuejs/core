@@ -118,6 +118,15 @@ export const withKeys = <T extends (event: KeyboardEvent) => any>(
     cache[cacheKey] ||
     (cache[cacheKey] = (event => {
       if (!('key' in event)) {
+        // #16182 the event name of a dynamic handler is unknown at compile
+        // time, so `left` / `right` are guarded by both withModifiers and
+        // withKeys. on a mouse event only the button check applies.
+        if (
+          'button' in event &&
+          modifiers.every(m => m === 'left' || m === 'right')
+        ) {
+          return fn(event as unknown as KeyboardEvent)
+        }
         return
       }
 
