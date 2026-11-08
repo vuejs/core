@@ -113,11 +113,18 @@ export const withKeys = <T extends (event: KeyboardEvent) => any>(
 
   const cache: { [k: string]: T } = fn._withKeys || (fn._withKeys = {})
   const cacheKey = modifiers.join('.')
+  // for a dynamic event name the compiler cannot tell whether `left`/`right`
+  // mean a mouse button or an arrow key, so it applies both wrappers
+  const hasButtonModifier = modifiers.some(m => m === 'left' || m === 'right')
 
   return (
     cache[cacheKey] ||
     (cache[cacheKey] = (event => {
       if (!('key' in event)) {
+        // the button check is left to the inner withModifiers
+        if (hasButtonModifier) {
+          return fn(event)
+        }
         return
       }
 

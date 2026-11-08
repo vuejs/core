@@ -127,6 +127,35 @@ describe('runtime-dom: v-on directive', () => {
     })
   })
 
+  // #16182
+  it('should support left/right modifiers on mouse events with dynamic event names', () => {
+    const cases = [
+      { modifier: 'left', button: 0, otherButton: 2, key: 'ArrowLeft' },
+      { modifier: 'right', button: 2, otherButton: 0, key: 'ArrowRight' },
+    ] as const
+
+    cases.forEach(({ modifier, button, otherButton, key }) => {
+      const el = document.createElement('button')
+      const fn = vi.fn()
+      // <button @[evt].left="fn"/> gets both wrappers
+      const handler = withKeys(withModifiers(fn, [modifier]), [modifier])
+      patchEvent(el, 'onMousedown', null, handler, null)
+      patchEvent(el, 'onKeydown', null, handler, null)
+
+      triggerEvent(el, 'mousedown', e => (e.button = otherButton))
+      expect(fn).not.toBeCalled()
+
+      triggerEvent(el, 'mousedown', e => (e.button = button))
+      expect(fn).toBeCalledTimes(1)
+
+      triggerEvent(el, 'keydown', e => (e.key = key))
+      expect(fn).toBeCalledTimes(2)
+
+      triggerEvent(el, 'keydown', e => (e.key = 'a'))
+      expect(fn).toBeCalledTimes(2)
+    })
+  })
+
   it('should handle multiple arguments when using modifiers', () => {
     const el = document.createElement('div')
     const fn = vi.fn()
