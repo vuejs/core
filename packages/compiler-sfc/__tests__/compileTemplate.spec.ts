@@ -483,6 +483,29 @@ test('prefixing edge case for reused AST ssr mode', () => {
   ).not.toThrowError()
 })
 
+test('function and class expression names for reused AST', () => {
+  const src = `
+  <script setup lang="ts">
+    import { Foo } from './foo'
+  </script>
+  <template>
+    {{ [function f(n) { return f(n) }, class C { m() { return new C() } }, f, C] }}
+  </template>
+  `
+  const { descriptor } = parse(src)
+  // compileScript triggers importUsageCheck
+  compileScript(descriptor, { id: 'xxx' })
+  const { code } = compileTemplate({
+    id: 'xxx',
+    filename: 'test.vue',
+    ast: descriptor.template!.ast,
+    source: descriptor.template!.content,
+  })
+  expect(code).toMatch(`function f(n) { return f(n) }`)
+  expect(code).toMatch(`class C { m() { return new C() } }`)
+  expect(code).toMatch(`_ctx.f, _ctx.C]`)
+})
+
 // #10852
 test('non-identifier expression in legacy filter syntax', () => {
   const src = `
