@@ -6,6 +6,7 @@ import {
   type Component,
   type ComponentPublicInstance,
   Fragment,
+  KeepAlive,
   type ObjectDirective,
   Suspense,
   Teleport,
@@ -2500,6 +2501,57 @@ describe('SSR hydration', () => {
       globalThis.IntersectionObserver = originalIntersectionObserver
     }
   })
+
+  // KeepAlive parks a hidden branch in its storage container: the
+  // server-rendered DOM is disconnected but kept for reactivation
+  test.each([
+    ['the cached component', false],
+    ['inside the cached component', true],
+  ])(
+    'hydrate an async component hidden by KeepAlive before its loader resolved (%s)',
+    async (_, nested) => {
+      const spy = vi.fn()
+      const Comp = {
+        render: () => h('button', { onClick: spy }, 'hello'),
+      }
+      const child = (comp: Component): Component =>
+        nested ? { render: () => h('div', h(comp)) } : comp
+      const container = document.createElement('div')
+      container.innerHTML = await renderToString(
+        h(KeepAlive, () => h(child(Comp))),
+      )
+      document.body.appendChild(container)
+
+      let resolve: any
+      const AsyncComp = defineAsyncComponent(
+        () =>
+          new Promise(r => {
+            resolve = r
+          }),
+      )
+      const Child = child(AsyncComp)
+      const show = ref(true)
+      const App = {
+        render: () => h(KeepAlive, () => (show.value ? h(Child) : null)),
+      }
+      createSSRApp(App).mount(container)
+
+      const button = container.querySelector('button')!
+      show.value = false
+      await nextTick()
+      expect(container.querySelector('button')).toBeNull()
+
+      // the loader resolves while parked
+      resolve(Comp)
+      await new Promise(r => setTimeout(r))
+
+      show.value = true
+      await nextTick()
+      expect(container.querySelector('button')).toBe(button)
+      button.click()
+      expect(spy).toHaveBeenCalledTimes(1)
+    },
+  )
 
   test('update async wrapper before resolve', async () => {
     const Comp = {
