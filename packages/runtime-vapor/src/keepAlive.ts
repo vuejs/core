@@ -16,8 +16,9 @@ export interface VaporKeepAliveContext {
     scope: EffectScope,
     prevKey: any,
   ): boolean
-  // acquires the incoming branch scope, sets up the keyed cache-key context,
-  // marks shape flags, then runs any deferred outgoing removal
+  // renders the incoming branch in a new scope (stopping the one it left
+  // cached), sets up the keyed cache-key context, marks shape flags, then
+  // runs any deferred outgoing removal
   runBranchRender(
     frag: DynamicFragment,
     fn: () => void,

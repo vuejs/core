@@ -276,9 +276,8 @@ const VaporKeepAliveImpl = defineVaporComponent({
       })
     }
 
-    // delete scope from keptAliveScopes by one key,
-    // also removes the paired entry (cache key ↔ scope lookup key)
-    const deleteScope = (key: any): EffectScope | undefined => {
+    // also drops the scope's paired entry (cache key ↔ scope lookup key)
+    const stopScope = (key: any): void => {
       const scope = keptAliveScopes.get(key)
       if (scope) {
         keptAliveScopes.delete(key)
@@ -288,8 +287,8 @@ const VaporKeepAliveImpl = defineVaporComponent({
             break
           }
         }
+        scope.stop()
       }
-      return scope
     }
 
     const cacheScope = (
@@ -298,10 +297,7 @@ const VaporKeepAliveImpl = defineVaporComponent({
       scope: EffectScope,
     ): void => {
       const prevScope = keptAliveScopes.get(cacheKey)
-      if (prevScope && prevScope !== scope) {
-        const staleScope = deleteScope(cacheKey)
-        if (staleScope) staleScope.stop()
-      }
+      if (prevScope && prevScope !== scope) stopScope(cacheKey)
 
       keptAliveScopes.set(cacheKey, scope)
       // Keep the branch key as a lookup alias until its block exists and the
@@ -325,8 +321,7 @@ const VaporKeepAliveImpl = defineVaporComponent({
       }
       cache.delete(key)
       keys.delete(key)
-      const scope = deleteScope(key)
-      if (scope) scope.stop()
+      stopScope(key)
     }
 
     // prune cache on include/exclude prop change
@@ -440,29 +435,30 @@ const VaporKeepAliveImpl = defineVaporComponent({
           return false
         }
         if (isDynamicFragment(frag.nodes)) {
-          // The rest of a v-else-if chain: re-entering the branch renders a
-          // new nested fragment, so the old one's effects must not resume.
+          // The branch root is a fragment itself (the rest of a v-else-if
+          // chain, `<component :is>`): what the branch bound on it (`:ref`)
+          // is out of deactivate()'s reach, so its effects go with it now.
           // The cached component is kept alive by its shape flag.
           scope.stop()
           return true
         }
         // Component and KeepAlive input scopes are detached from this
         // DynamicFragment scope, so this only pauses branch-owned effects.
+        // Their cleanups (directives) wait until the branch is re-entered,
+        // pruned or unmounted.
         scope.pause()
         cacheScope(cacheKey, fragKey ?? prevKey, scope)
         return true
       },
       runBranchRender(frag, fn, useScope, removePrevious) {
-        // a branch with a user key is cached and its scope aliased under that
-        // key, so re-entering the key finds them whatever the branch identity;
-        // only the root fragment's branches are cached (prepareBranchRemoval)
         const fragKey = getFragmentKey(frag)
-        const cachedScope =
-          useScope && frag === rootFragment
-            ? deleteScope(fragKey ?? frag.current)
-            : undefined
-        frag.scope = useScope ? cachedScope || new EffectScope() : undefined
-        if (cachedScope) cachedScope.resume()
+        // the render recreates every branch-owned effect: stop the scope
+        // cached when this branch last left before the render sets its refs;
+        // only the root fragment's branches are cached (prepareBranchRemoval)
+        if (useScope && frag === rootFragment) {
+          stopScope(fragKey ?? frag.current)
+        }
+        frag.scope = useScope ? new EffectScope() : undefined
         let incomingCacheKey: CacheKey | false = false
         const run = () => {
           try {

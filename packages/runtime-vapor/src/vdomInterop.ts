@@ -1727,6 +1727,7 @@ function mountVNode(
     ) {
       const keepAliveCtx = (parentComponent as KeepAliveInstance).ctx
       keepAliveCtx.clearCurrent!(frag)
+      if (frag.inputScope) frag.inputScope.pause()
       const storageContainer = keepAliveCtx.getStorageContainer()
       if ((vnode.type as any).__vapor) {
         deactivate(vnode.component as any, storageContainer, parentSuspense)
@@ -1743,6 +1744,7 @@ function mountVNode(
       }
     } else {
       isUnmounted = true
+      if (frag.inputScope) frag.inputScope.stop()
       internals.um(vnode, parentComponent as any, parentSuspense, !!parentNode)
     }
 
@@ -1784,6 +1786,7 @@ function mountVNode(
       if (isTransitionEnabled && transition) {
         setVNodeTransitionHooks(vnode, transition)
       }
+      if (frag.inputScope) frag.inputScope.resume()
       if ((vnode.type as any).__vapor) {
         activate(vnode.component as any, parentNode, anchor, operationSuspense)
         insert(vnode.anchor as Node, parentNode, anchor)
@@ -1915,7 +1918,13 @@ function mountVNode(
     // Re-clone and let VDOM patch the change through, mirroring how a VDOM
     // parent re-renders with fresh props and fallthrough attrs. The first run
     // happens before the mount and only establishes the dependency.
-    renderEffect(update)
+    // A KeepAlive hit reuses this fragment without rebinding, so the effect
+    // is detached from the branch render; unmount() stops it once mounted.
+    const inputScope = (frag.inputScope = effectScope(true))
+    inputScope.run(() => renderEffect(update))
+    onScopeDispose(() => {
+      if (!isMounted) inputScope.stop()
+    }, true)
   }
 
   frag.remove = unmount
@@ -1975,6 +1984,7 @@ function createVDOMComponent(
   let shouldRefreshRef = false
   let refreshRefJob: SchedulerJob | undefined
   let isMounted = false
+  let isUnmounted = false
   let cells: SlotSourceCell[] | undefined
   const isolated = rawSlots && isolateSlotSources(rawSlots as RawSlots)
   if (isolated) {
@@ -2058,13 +2068,12 @@ function createVDOMComponent(
 
   // for VDOM async components, trigger cacheBlock after resolution
   if (keepAliveCtx && (component as any).__asyncLoader) {
-    // guard against stale resolution after unmount or branch switch
-    let disposed = false
-    onScopeDispose(() => (disposed = true))
+    // a deactivated child still resolves into the cache; one torn down
+    // without being kept alive, or pruned, is unmounted and stays out
     ;(component as any)
       .__asyncLoader()
       .then(() => {
-        if (!disposed) keepAliveCtx.cacheBlock(frag)
+        if (!isUnmounted) keepAliveCtx.cacheBlock(frag)
       })
       .catch(NOOP)
   }
@@ -2154,7 +2163,6 @@ function createVDOMComponent(
     }
   }
 
-  let isUnmounted = false
   let isDomRemoved = false
   const removeDom = (parentNode?: ParentNode): void => {
     if (!parentNode || isDomRemoved) {

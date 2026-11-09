@@ -3992,90 +3992,95 @@ describe('VaporKeepAlive', () => {
       expect(loader).toHaveBeenCalledTimes(1)
     })
 
-    test('should not keep interop async component when it resolves to an excluded name while deactivated', async () => {
-      const timeout = (n: number = 0) => new Promise(r => setTimeout(r, n))
+    test.each([false, true])(
+      'should not keep interop async component when it resolves to an excluded name while deactivated (re-entered while pending: %s)',
+      async reenter => {
+        let resolve: (comp: any) => void
+        const loader = vi.fn(
+          () =>
+            new Promise(r => {
+              resolve = r
+            }),
+        ) as any
+        const AsyncComp = defineAsyncComponent(loader)
 
-      let resolve: (comp: any) => void
-      const loader = vi.fn(
-        () =>
-          new Promise(r => {
-            resolve = r
-          }),
-      ) as any
-      const AsyncComp = defineAsyncComponent(loader)
+        const activated = vi.fn()
+        const deactivated = vi.fn()
+        let instance: any
 
-      const activated = vi.fn()
-      const deactivated = vi.fn()
-      let instance: any
+        const InnerComp = {
+          name: 'Foo',
+          data: () => ({ count: 0 }),
+          mounted(this: any) {
+            instance = this
+          },
+          activated,
+          deactivated,
+          render(this: any) {
+            return h('div', this.count)
+          },
+        }
 
-      const InnerComp = {
-        name: 'Foo',
-        data: () => ({ count: 0 }),
-        mounted(this: any) {
-          instance = this
-        },
-        activated,
-        deactivated,
-        render(this: any) {
-          return h('div', this.count)
-        },
-      }
+        const toggle = ref(true)
 
-      const toggle = ref(true)
+        const App = defineVaporComponent({
+          setup() {
+            return createComponent(
+              VaporKeepAlive,
+              { exclude: () => 'Foo' },
+              {
+                default: () =>
+                  createIf(
+                    () => toggle.value,
+                    () => createComponent(AsyncComp as any),
+                  ),
+              },
+            )
+          },
+        })
 
-      const App = defineVaporComponent({
-        setup() {
-          const ka = createComponent(
-            VaporKeepAlive,
-            { exclude: () => 'Foo' },
-            {
-              default: () =>
-                createIf(
-                  () => toggle.value,
-                  () => createComponent(AsyncComp as any),
-                ),
-            },
-          )
-          return ka
-        },
-      })
+        const container = document.createElement('div')
+        const app = createVaporApp(App)
+        app.use(vaporInteropPlugin)
+        app.mount(container)
 
-      const container = document.createElement('div')
-      document.body.appendChild(container)
-      const app = createVaporApp(App)
-      app.use(vaporInteropPlugin)
-      app.mount(container)
+        expect(loader).toHaveBeenCalledTimes(1)
 
-      expect(loader).toHaveBeenCalledTimes(1)
+        toggle.value = false
+        await nextTick()
+        if (reenter) {
+          toggle.value = true
+          await nextTick()
+        }
 
-      toggle.value = false
-      await nextTick()
+        resolve!(InnerComp)
+        await timeout()
+        await nextTick()
+        await nextTick()
 
-      resolve!(InnerComp)
-      await timeout()
-      await nextTick()
-      await nextTick()
+        if (!reenter) {
+          toggle.value = true
+          await nextTick()
+          await nextTick()
+        }
+        expect(container.innerHTML).toContain('<div>0</div>')
+        expect(activated).toHaveBeenCalledTimes(0)
 
-      toggle.value = true
-      await nextTick()
-      await nextTick()
-      expect(container.innerHTML).toContain('<div>0</div>')
-      expect(activated).toHaveBeenCalledTimes(0)
+        instance.count++
+        await nextTick()
+        expect(container.innerHTML).toContain('<div>1</div>')
 
-      instance.count++
-      await nextTick()
-      expect(container.innerHTML).toContain('<div>1</div>')
+        toggle.value = false
+        await nextTick()
+        expect(deactivated).toHaveBeenCalledTimes(0)
 
-      toggle.value = false
-      await nextTick()
-      expect(deactivated).toHaveBeenCalledTimes(0)
-
-      toggle.value = true
-      await nextTick()
-      await nextTick()
-      expect(container.innerHTML).toContain('<div>0</div>')
-      expect(loader).toHaveBeenCalledTimes(1)
-    })
+        toggle.value = true
+        await nextTick()
+        await nextTick()
+        expect(container.innerHTML).toContain('<div>0</div>')
+        expect(loader).toHaveBeenCalledTimes(1)
+      },
+    )
 
     test('should not crash when toggling off interop async before resolve', async () => {
       const timeout = (n: number = 0) => new Promise(r => setTimeout(r, n))
@@ -5608,20 +5613,23 @@ describe('VaporKeepAlive', () => {
   // the same key: the deactivated root's branch scope stays paused
   test('a keyed fragment below an element does not resume a cached root scope', async () => {
     const calls: string[] = []
+    let cleanups = 0
     const data = ref<any>({
       root: true,
       innerKey: 'shared',
       setRef: (el: any) => calls.push(`ref1:${el ? 'set' : 'null'}`),
+      onCleanup: () => cleanups++,
     })
     const Child = compile(`<template><span>child</span></template>`, data)
     const App = compile(
       `<script setup vapor>
         const data = _data
         const Child = _components.Child
+        const vTrack = () => () => data.value.onCleanup()
       </script>
       <template>
         <KeepAlive>
-          <Child v-if="data.root" key="shared" :ref="data.setRef" />
+          <Child v-if="data.root" key="shared" :ref="data.setRef" v-track />
           <div v-else><span :key="data.innerKey">nested</span></div>
         </KeepAlive>
       </template>`,
@@ -5635,6 +5643,8 @@ describe('VaporKeepAlive', () => {
     await nextTick()
     expect(stripAnchors(html())).toBe(`<div><span>nested</span></div>`)
     expect(calls.splice(0)).toEqual(['ref1:null'])
+    // as in vdom, a cached root keeps its directives
+    expect(cleanups).toBe(0)
 
     // the root's ref effect is paused with its branch
     data.value.setRef = (el: any) => calls.push(`ref2:${el ? 'set' : 'null'}`)
@@ -5644,8 +5654,110 @@ describe('VaporKeepAlive', () => {
     data.value.root = true
     await nextTick()
     expect(stripAnchors(html())).toBe(`<span>child</span>`)
-    expect(calls.splice(0)).toContain('ref2:set')
+    expect(calls.splice(0)).toEqual(['ref2:set'])
   })
+
+  // not a parity cell: vdom calls a function ref twice on reactivation
+  test('sets a ref changed while deactivated once per reactivation', async () => {
+    const calls: string[] = []
+    const refFn = (id: string) => (el: any) =>
+      calls.push(`${id}:${el ? 'set' : 'null'}`)
+    const data = ref<any>({ root: true, setRef: refFn('ref1') })
+    const Child = compile(`<template><span>child</span></template>`, data)
+    const App = compile(
+      `<script setup vapor>
+        const data = _data
+        const Child = _components.Child
+      </script>
+      <template>
+        <KeepAlive>
+          <Child v-if="data.root" :ref="data.setRef" />
+          <div v-else>plain</div>
+        </KeepAlive>
+      </template>`,
+      data,
+      { Child },
+    )
+    const { html } = define(App).render()
+    expect(calls.splice(0)).toEqual(['ref1:set'])
+
+    for (const [prev, id] of [
+      ['ref1', 'ref2'],
+      ['ref2', 'ref3'],
+    ]) {
+      data.value.root = false
+      await nextTick()
+      expect(calls.splice(0)).toEqual([`${prev}:null`])
+
+      data.value.setRef = refFn(id)
+      await nextTick()
+      expect(calls.splice(0)).toEqual([])
+
+      data.value.root = true
+      await nextTick()
+      expect(stripAnchors(html())).toBe('<span>child</span>')
+      expect(calls.splice(0)).toEqual([`${id}:set`])
+    }
+  })
+
+  // a ref inside v-for goes through the shared setter, whose state outlives
+  // the branch render, unlike a binding's own
+  test.each([
+    [
+      'binding',
+      `<KeepAlive>
+        <AsyncChild v-if="data.show" :ref="data.setRef" />
+        <div v-else>plain</div>
+      </KeepAlive>`,
+    ],
+    [
+      'shared setter',
+      `<div v-for="i in 1" :key="i">
+        <KeepAlive>
+          <AsyncChild v-if="data.show" :ref="data.setRef" />
+          <div v-else>plain</div>
+        </KeepAlive>
+      </div>`,
+    ],
+  ])(
+    'sets only the current ref when an async component re-entered while pending resolves (%s)',
+    async (_, template) => {
+      const calls: string[] = []
+      const refFn = (id: string) => (el: any) =>
+        calls.push(`${id}:${el ? 'set' : 'null'}`)
+      const data = ref<any>({ show: true, setRef: refFn('ref1') })
+      let resolve!: (comp: any) => void
+      const AsyncChild = defineVaporAsyncComponent(
+        () => new Promise<any>(r => (resolve = r)),
+      )
+      const App = compile(
+        `<script setup vapor>
+          const data = _data
+          const AsyncChild = _components.AsyncChild
+        </script>
+        <template>${template}</template>`,
+        data,
+        { AsyncChild },
+      )
+      const { app } = define(App).render()
+
+      data.value.show = false
+      await nextTick()
+      data.value.setRef = refFn('ref2')
+      await nextTick()
+      data.value.show = true
+      await nextTick()
+      calls.length = 0
+
+      resolve(compile(`<template><span>inner</span></template>`, data))
+      await timeout()
+      await nextTick()
+      expect(calls.splice(0)).toEqual(['ref2:set'])
+
+      app.unmount()
+      expect(calls).toEqual(['ref2:null'])
+    },
+  )
 })
 
 describe('Transition inside a kept-alive component', () => {
