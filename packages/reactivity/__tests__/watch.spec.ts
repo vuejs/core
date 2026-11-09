@@ -428,4 +428,21 @@ describe('watch', () => {
     dep.value++
     expect(dummy).toBe(1)
   })
+
+  test('should keep firing after the watched computed throws', () => {
+    const s = ref(0)
+    const c = computed(() => {
+      if (s.value === 1) throw new Error('boom')
+      return s.value
+    })
+    const calls: number[] = []
+    watch(c, v => {
+      calls.push(v)
+    })
+
+    expect(() => (s.value = 1)).toThrow('boom')
+    s.value = 2
+    s.value = 3
+    expect(calls).toEqual([2, 3])
+  })
 })
