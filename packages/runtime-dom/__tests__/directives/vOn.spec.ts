@@ -172,6 +172,7 @@ describe('runtime-dom: v-on directive', () => {
     const handler1 = withKeys(fn, ['a'])
     const handler2 = withKeys(fn, ['b'])
     expect(handler1 === handler2).toBe(false)
+    expect(withKeys(fn, ['a'])).toBe(handler1)
     patchEvent(el1, 'onKeyup', null, handler1, null)
     patchEvent(el2, 'onKeyup', null, handler2, null)
     triggerEvent(el1, 'keyup', e => (e.key = 'a'))
@@ -203,5 +204,45 @@ describe('runtime-dom: v-on directive', () => {
       const handler2 = withModifiers(undefined as any, ['shift'])
       expect(handler2).toBe(undefined)
     }).not.toThrow()
+  })
+
+  it('should support mixed mouse and key modifiers on dynamic event names', () => {
+    const el = document.createElement('button')
+    const fn = vi.fn()
+    // <button @[evt].left.enter="fn"/>
+    const handler = withKeys(withModifiers(fn, ['left']), ['left', 'enter'])
+    patchEvent(el, 'onMousedown', null, handler, null)
+    patchEvent(el, 'onKeydown', null, handler, null)
+
+    el.dispatchEvent(new MouseEvent('mousedown', { button: 2 }))
+    expect(fn).not.toBeCalled()
+
+    el.dispatchEvent(new MouseEvent('mousedown', { button: 0 }))
+    expect(fn).toBeCalledTimes(1)
+
+    el.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft' }))
+    expect(fn).toBeCalledTimes(2)
+
+    el.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter' }))
+    expect(fn).toBeCalledTimes(3)
+
+    el.dispatchEvent(new KeyboardEvent('keydown', { key: 'a' }))
+    expect(fn).toBeCalledTimes(3)
+  })
+
+  it('should reject mouse events with only key modifiers on dynamic event names', () => {
+    const el = document.createElement('button')
+    const fn = vi.fn()
+    // <button @[evt].enter="fn"/>
+    const handler = withKeys(fn, ['enter'])
+    patchEvent(el, 'onClick', null, handler, null)
+    patchEvent(el, 'onKeydown', null, handler, null)
+
+    el.dispatchEvent(new MouseEvent('click'))
+    el.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft' }))
+    expect(fn).not.toBeCalled()
+
+    el.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter' }))
+    expect(fn).toBeCalledTimes(1)
   })
 })

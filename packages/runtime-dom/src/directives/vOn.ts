@@ -113,59 +113,59 @@ export const withKeys = <T extends (event: KeyboardEvent) => any>(
 
   const cache: { [k: string]: T } = fn._withKeys || (fn._withKeys = {})
   const cacheKey = modifiers.join('.')
+  const cached = cache[cacheKey]
+  if (cached) return cached
+
   // for a dynamic event name the compiler cannot tell whether `left`/`right`
   // mean a mouse button or an arrow key, so it applies both wrappers
   const hasButtonModifier = modifiers.some(m => m === 'left' || m === 'right')
 
-  return (
-    cache[cacheKey] ||
-    (cache[cacheKey] = (event => {
-      if (!('key' in event)) {
-        // the button check is left to the inner withModifiers
-        if (hasButtonModifier) {
-          return fn(event)
-        }
-        return
+  return (cache[cacheKey] = (event => {
+    if (!('key' in event)) {
+      // the button check is left to the inner withModifiers
+      if (hasButtonModifier) {
+        return fn(event)
       }
+      return
+    }
 
-      const eventKey = hyphenate(event.key)
+    const eventKey = hyphenate(event.key)
+    if (
+      modifiers.some(
+        k =>
+          k === eventKey ||
+          keyNames[k as unknown as CompatModifiers] === eventKey,
+      )
+    ) {
+      return fn(event)
+    }
+
+    if (__COMPAT__) {
+      const keyCode = String(event.keyCode)
       if (
-        modifiers.some(
-          k =>
-            k === eventKey ||
-            keyNames[k as unknown as CompatModifiers] === eventKey,
-        )
+        compatUtils.isCompatEnabled(
+          DeprecationTypes.V_ON_KEYCODE_MODIFIER,
+          instance,
+        ) &&
+        modifiers.some(mod => mod == keyCode)
       ) {
         return fn(event)
       }
-
-      if (__COMPAT__) {
-        const keyCode = String(event.keyCode)
-        if (
-          compatUtils.isCompatEnabled(
-            DeprecationTypes.V_ON_KEYCODE_MODIFIER,
-            instance,
-          ) &&
-          modifiers.some(mod => mod == keyCode)
-        ) {
-          return fn(event)
-        }
-        if (globalKeyCodes) {
-          for (const mod of modifiers) {
-            const codes = globalKeyCodes[mod]
-            if (codes) {
-              const matches = isArray(codes)
-                ? codes.some(code => String(code) === keyCode)
-                : String(codes) === keyCode
-              if (matches) {
-                return fn(event)
-              }
+      if (globalKeyCodes) {
+        for (const mod of modifiers) {
+          const codes = globalKeyCodes[mod]
+          if (codes) {
+            const matches = isArray(codes)
+              ? codes.some(code => String(code) === keyCode)
+              : String(codes) === keyCode
+            if (matches) {
+              return fn(event)
             }
           }
         }
       }
-    }) as T)
-  )
+    }
+  }) as T)
 }
 
 export type VOnDirective = Directive<any, any, VOnModifiers>
