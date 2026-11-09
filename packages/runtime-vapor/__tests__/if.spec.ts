@@ -450,7 +450,8 @@ describe('createIf', () => {
     show.value = true
     await nextTick()
     expect(host.innerHTML).toBe('<div>child</div><!--if-->')
-    expect(frag.scope).toBe(componentScope)
+    expect(frag.scope).toBeDefined()
+    expect(frag.scope).not.toBe(componentScope)
     expect(childSetup).toHaveBeenCalledTimes(1)
   })
 

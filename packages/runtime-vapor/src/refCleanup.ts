@@ -1,5 +1,6 @@
 import type { Block } from './block'
 import { type SchedulerJob, SchedulerJobFlags } from '@vue/runtime-dom'
+import { NOOP } from '@vue/shared'
 
 export interface RefCleanupState {
   fn: () => void
@@ -23,11 +24,14 @@ export function invalidatePendingRef(el: Block): void {
 /**
  * Synchronously clear the ref for an element being deactivated by KeepAlive.
  * In VDOM core, refs are cleared during unmount before the deactivation check.
- * Since Vapor's KeepAlive retains scopes (skipping onScopeDispose), we need
- * this explicit sync cleanup path.
+ * Vapor's KeepAlive pauses the branch scope instead, so this is the explicit
+ * sync path; the scope's disposer runs later and must not clear it again.
  */
 export function unsetRef(el: Block): void {
   invalidatePendingRef(el)
   const c = refCleanups.get(el)
-  if (c) c.fn()
+  if (c) {
+    c.fn()
+    c.fn = NOOP
+  }
 }
