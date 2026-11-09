@@ -3798,6 +3798,16 @@ describe('SSR hydration', () => {
       expect(`Hydration attribute mismatch`).not.toHaveBeenWarned()
     })
 
+    test('hidden bigint values', () => {
+      mountWithHydration(`<div></div>`, () => h('div', { hidden: BigInt(0) }))
+      expect(`Hydration attribute mismatch`).not.toHaveBeenWarned()
+
+      mountWithHydration(`<div hidden></div>`, () =>
+        h('div', { hidden: BigInt(1) }),
+      )
+      expect(`Hydration attribute mismatch`).not.toHaveBeenWarned()
+    })
+
     test('hidden state mismatch', () => {
       mountWithHydration(`<div hidden="until-found"></div>`, () =>
         h('div', { hidden: true }),

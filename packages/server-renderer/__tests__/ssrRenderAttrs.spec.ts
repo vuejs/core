@@ -114,6 +114,13 @@ describe('ssr: renderAttrs', () => {
     expect(ssrRenderAttr('data-id', BigInt(10))).toBe(` data-id="10"`)
   })
 
+  test('bigint values on the hidden attribute', () => {
+    // `hidden` is a property on the client, so truthiness decides presence
+    // instead of stringification: BigInt(0) must not render the attribute.
+    expect(ssrRenderAttrs({ hidden: BigInt(0) })).toBe(``)
+    expect(ssrRenderAttrs({ hidden: BigInt(1) })).toBe(` hidden`)
+  })
+
   test('props to attrs', () => {
     expect(
       ssrRenderAttrs({

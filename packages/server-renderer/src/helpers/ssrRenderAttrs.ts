@@ -75,7 +75,11 @@ export function ssrRenderDynamicAttr(
   if (
     isBooleanAttr(attrKey) ||
     (attrKey === 'hidden' &&
-      (typeof value === 'boolean' || typeof value === 'number'))
+      (typeof value === 'boolean' ||
+        typeof value === 'number' ||
+        // the hidden property is coerced with the same truthiness on the
+        // client, so a bigint has to decide presence here as well
+        typeof value === 'bigint'))
   ) {
     return includeBooleanAttr(value) ? ` ${attrKey}` : ``
   } else if (isSSRSafeAttrName(attrKey)) {
