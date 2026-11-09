@@ -2707,14 +2707,16 @@ describe('VaporKeepAlive', () => {
     await timeout()
     await nextTick()
 
+    // the offscreen wrapper was pruned when it resolved to an excluded name:
+    // re-entering creates the resolved component itself
     toggle.value = true
     await nextTick()
-    expect(html()).toBe('<p>0</p><!--async component--><!--if-->')
+    expect(html()).toBe('<p>0</p><!--if-->')
     expect(loader).toHaveBeenCalledTimes(1)
 
     instanceRef.value.inc()
     await nextTick()
-    expect(html()).toBe('<p>1</p><!--async component--><!--if-->')
+    expect(html()).toBe('<p>1</p><!--if-->')
 
     toggle.value = false
     await nextTick()
@@ -2809,14 +2811,16 @@ describe('VaporKeepAlive', () => {
     await timeout()
     await nextTick()
 
+    // the offscreen wrapper was pruned when it resolved to an excluded name:
+    // re-entering creates the resolved component itself
     toggle.value = true
     await nextTick()
-    expect(html()).toBe('<p>0</p><!--async component--><!--if-->')
+    expect(html()).toBe('<p>0</p><!--if-->')
     expect(loaderCallCount).toBe(2)
 
     instanceRef.value.inc()
     await nextTick()
-    expect(html()).toBe('<p>1</p><!--async component--><!--if-->')
+    expect(html()).toBe('<p>1</p><!--if-->')
 
     toggle.value = false
     await nextTick()
@@ -5484,6 +5488,163 @@ describe('VaporKeepAlive', () => {
 
     app.unmount()
     expect(container.innerHTML).toBe('')
+  })
+
+  const childSrc = `<script setup vapor>
+    import { onActivated, onDeactivated, onMounted, onUnmounted } from 'vue'
+    const data = _data
+    onMounted(() => data.value.log('mounted'))
+    onActivated(() => data.value.log('activated'))
+    onDeactivated(() => data.value.log('deactivated'))
+    onUnmounted(() => data.value.log('unmounted'))
+  </script>
+  <template><span>child</span></template>`
+
+  // vdom keeps a component (or Suspense) root alive only: a component below an
+  // element root, or in a v-for, is mounted and unmounted as usual and never
+  // sees activated / deactivated
+  describe('content below an element root is not kept alive', () => {
+    test.each([
+      ['v-if below an element', `<div><Child v-if="data.show" /></div>`],
+      [
+        'dynamic component below an element',
+        `<div><component :is="data.show ? Child : null" /></div>`,
+      ],
+      [
+        'v-for below an element',
+        `<div><Child v-for="i in (data.show ? [1] : [])" :key="i" /></div>`,
+      ],
+      ['v-for root', `<Child v-for="i in (data.show ? [1] : [])" :key="i" />`],
+    ])('%s', async (_, inner) => {
+      const calls: string[] = []
+      const data = ref<any>({
+        show: true,
+        log: (s: string) => calls.push(s),
+      })
+      const Child = compile(childSrc, data)
+      const App = compile(
+        `<script setup vapor>
+          const data = _data
+          const Child = _components.Child
+        </script>
+        <template><KeepAlive>${inner}</KeepAlive></template>`,
+        data,
+        { Child },
+      )
+      const { html, app } = define(App).render()
+      expect(stripAnchors(html())).toContain(`<span>child</span>`)
+      expect(calls.splice(0)).toEqual(['mounted'])
+
+      data.value.show = false
+      await nextTick()
+      expect(stripAnchors(html())).not.toContain(`<span>child</span>`)
+      expect(calls.splice(0)).toEqual(['unmounted'])
+
+      data.value.show = true
+      await nextTick()
+      expect(stripAnchors(html())).toContain(`<span>child</span>`)
+      expect(calls.splice(0)).toEqual(['mounted'])
+
+      app.unmount()
+      expect(calls.splice(0)).toEqual(['unmounted'])
+    })
+  })
+
+  // the fallback of a slot outlet on the cache-root chain is a cache root
+  // rendered outside any branch render: it is marked (and re-activated)
+  // before it is exposed
+  test.each([
+    ['root slot', `<slot><Counter /></slot>`],
+    ['slot below a root v-if', `<slot v-if="data.outer"><Counter /></slot>`],
+  ])('%s fallback is kept alive', async (_, outlet) => {
+    const calls: string[] = []
+    const data = ref<any>({
+      outer: true,
+      show: true,
+      log: (s: string) => calls.push(s),
+    })
+    const Counter = compile(childSrc, data)
+    const Wrapper = compile(
+      `<script setup vapor>
+        const data = _data
+        const Counter = _components.Counter
+      </script>
+      <template><KeepAlive>${outlet}</KeepAlive></template>`,
+      data,
+      { Counter },
+    )
+    const App = compile(
+      `<script setup vapor>
+        const data = _data
+        const Wrapper = _components.Wrapper
+      </script>
+      <template>
+        <Wrapper><span v-if="data.show">content</span></Wrapper>
+      </template>`,
+      data,
+      { Wrapper },
+    )
+    const { html } = define(App).render()
+    expect(stripAnchors(html())).toBe(`<span>content</span>`)
+    expect(calls.splice(0)).toEqual([])
+
+    data.value.show = false
+    await nextTick()
+    expect(stripAnchors(html())).toBe(`<span>child</span>`)
+    expect(calls.splice(0)).toEqual(['mounted', 'activated'])
+
+    data.value.show = true
+    await nextTick()
+    expect(stripAnchors(html())).toBe(`<span>content</span>`)
+    expect(calls.splice(0)).toEqual(['deactivated'])
+
+    data.value.show = false
+    await nextTick()
+    expect(stripAnchors(html())).toBe(`<span>child</span>`)
+    expect(calls.splice(0)).toEqual(['activated'])
+  })
+
+  // a keyed fragment below an element shares no cache state with a root of
+  // the same key: the deactivated root's branch scope stays paused
+  test('a keyed fragment below an element does not resume a cached root scope', async () => {
+    const calls: string[] = []
+    const data = ref<any>({
+      root: true,
+      innerKey: 'shared',
+      setRef: (el: any) => calls.push(`ref1:${el ? 'set' : 'null'}`),
+    })
+    const Child = compile(`<template><span>child</span></template>`, data)
+    const App = compile(
+      `<script setup vapor>
+        const data = _data
+        const Child = _components.Child
+      </script>
+      <template>
+        <KeepAlive>
+          <Child v-if="data.root" key="shared" :ref="data.setRef" />
+          <div v-else><span :key="data.innerKey">nested</span></div>
+        </KeepAlive>
+      </template>`,
+      data,
+      { Child },
+    )
+    const { html } = define(App).render()
+    expect(calls.splice(0)).toEqual(['ref1:set'])
+
+    data.value.root = false
+    await nextTick()
+    expect(stripAnchors(html())).toBe(`<div><span>nested</span></div>`)
+    expect(calls.splice(0)).toEqual(['ref1:null'])
+
+    // the root's ref effect is paused with its branch
+    data.value.setRef = (el: any) => calls.push(`ref2:${el ? 'set' : 'null'}`)
+    await nextTick()
+    expect(calls.splice(0)).toEqual([])
+
+    data.value.root = true
+    await nextTick()
+    expect(stripAnchors(html())).toBe(`<span>child</span>`)
+    expect(calls.splice(0)).toContain('ref2:set')
   })
 })
 

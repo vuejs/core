@@ -2098,7 +2098,9 @@ test('should not call update hooks when mounting teleport inside an element', as
   expect(updated).toHaveBeenCalledTimes(1)
 })
 
-test('should cache delayed teleported child under KeepAlive once target becomes available', async () => {
+// a Teleport root is not kept alive (vdom): the delayed child mounts once the
+// target is available and is unmounted with its branch
+test('does not keep a delayed teleported child alive under KeepAlive', async () => {
   const show = ref(true)
   const target = ref<any>('#missing-teleport-target-keepalive')
   const hooks = {
@@ -2154,21 +2156,21 @@ test('should cache delayed teleported child under KeepAlive once target becomes 
 
   expect(targetEl.innerHTML).toBe('<div>child</div>')
   expect(hooks.mounted).toHaveBeenCalledTimes(1)
-  expect(hooks.activated).toHaveBeenCalledTimes(1)
+  expect(hooks.activated).toHaveBeenCalledTimes(0)
 
   show.value = false
   await nextTick()
 
   expect(targetEl.innerHTML).toBe('')
-  expect(hooks.deactivated).toHaveBeenCalledTimes(1)
-  expect(hooks.unmounted).toHaveBeenCalledTimes(0)
+  expect(hooks.deactivated).toHaveBeenCalledTimes(0)
+  expect(hooks.unmounted).toHaveBeenCalledTimes(1)
 
   show.value = true
   await nextTick()
 
   expect(targetEl.innerHTML).toBe('<div>child</div>')
-  expect(hooks.mounted).toHaveBeenCalledTimes(1)
-  expect(hooks.activated).toHaveBeenCalledTimes(2)
+  expect(hooks.mounted).toHaveBeenCalledTimes(2)
+  expect(hooks.activated).toHaveBeenCalledTimes(0)
 })
 
 test('should reapply css vars when teleport root children are replaced', async () => {

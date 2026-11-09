@@ -105,6 +105,8 @@ export class VaporFragment<
   isBlockValid?: (componentAsValid?: boolean) => boolean
   // a slot host: its content, in the DOM ahead of the fallback it exposes
   getContent?(): Block
+  // a vdom-fed slot outlet (renderVDOMSlot): its resolution state
+  slotState?: SlotResolutionState
   // a slot host patching vnode content: `cb` follows the leave its content
   // root is running on its own, if any
   awaitLeavingRoot?(cb: () => void): boolean
@@ -181,15 +183,27 @@ export class RenderContextFragment<
 > extends VaporFragment<T> {
   readonly renderInstance: GenericComponentInstance | null = currentInstance
   readonly keepAliveCtx?: VaporKeepAliveContext | null
+  // Content that is no cache position: below an element in KeepAlive content
+  // (or in such a branch), or Teleport children. Nothing it renders is looked
+  // up in the cache.
+  uncached?: boolean
   // The context this fragment's content renders under. A slot outlet is built
   // under its own cell (see createSlot), so late renders create their DOM
   // under the outlet's context.
   ctx: RenderContext = currentRenderContext
 
-  constructor(nodes: T, flags: number = FRAGMENT) {
+  constructor(
+    nodes: T,
+    flags: number = FRAGMENT,
+    insertionParent?: ParentNode,
+  ) {
     super(nodes, flags)
     if (isKeepAliveEnabled) {
-      this.keepAliveCtx = getKeepAliveContext(currentInstance)
+      const keepAliveCtx = (this.keepAliveCtx =
+        getKeepAliveContext(currentInstance))
+      if (keepAliveCtx && (insertionParent || keepAliveCtx.inUncachedBranch)) {
+        this.uncached = true
+      }
     }
   }
 
@@ -211,6 +225,18 @@ export function runWithRenderCtx<R>(
   fn: () => R,
   scope?: EffectScope,
 ): R {
+  // content that is no cache position renders with the flag set
+  if (isKeepAliveEnabled && fragment.uncached) {
+    const keepAliveCtx = fragment.keepAliveCtx!
+    if (!keepAliveCtx.inUncachedBranch) {
+      keepAliveCtx.inUncachedBranch = true
+      try {
+        return runWithRenderCtx(fragment, fn, scope)
+      } finally {
+        keepAliveCtx.inUncachedBranch = false
+      }
+    }
+  }
   // Renders driven by the fragment's own render effect already run under its
   // instance; only out-of-effect renders (slot fallbacks, deferred branches,
   // async resolution) switch it.
@@ -374,12 +400,14 @@ export class DynamicFragment extends RenderContextFragment {
     keyed: boolean = false,
     slotRoot: boolean = false,
     adoptAnchor?: Node,
+    insertionParent?: ParentNode,
   ) {
     super(
       EMPTY_BLOCK,
       DYNAMIC |
         flags |
         (slotRoot && currentRenderContext.slotBoundary ? SLOT_ROOT : 0),
+      insertionParent,
     )
     if (keyed) this.keyed = true
     if (__DEV__) this.anchorLabel = anchorLabel
@@ -644,13 +672,18 @@ export class SlotFragment
   // validity to the enclosing boundary (unless once, whose content never
   // changes validity).
   private readonly notifyParentBoundary: boolean
-  constructor(flags: number = 0, adoptAnchor?: Node) {
+  constructor(
+    flags: number = 0,
+    adoptAnchor?: Node,
+    insertionParent?: ParentNode,
+  ) {
     super(
       SLOT_FRAGMENT | SLOT_RESOLVER,
       __DEV__ ? 'slot' : undefined,
       false,
       false,
       adoptAnchor,
+      insertionParent,
     )
     // Fallback scopes are detached from content updates, but still belong
     // to the outlet's owner scope.

@@ -422,6 +422,7 @@ export function createSlot(
           fallback,
           flags,
           adoptAnchor: _insertionAnchor,
+          insertionParent: _insertionParent,
         },
       ),
     )
@@ -459,13 +460,14 @@ export function createSlot(
       isCustomElementSlot ? deriveSlotBoundary(outletCtx, null) : outletCtx,
       () =>
         needsSlotFragment
-          ? new SlotFragment(flags, _insertionAnchor)
+          ? new SlotFragment(flags, _insertionAnchor, _insertionParent)
           : new DynamicFragment(
               SLOT_FRAGMENT,
               __DEV__ ? 'slot' : undefined,
               false,
               false,
               _insertionAnchor,
+              _insertionParent,
             ),
     )
     const slotFragment = needsSlotFragment

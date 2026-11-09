@@ -129,6 +129,7 @@ export function createIf(
       keyed,
       trackSlotBoundary,
       _insertionAnchor,
+      _insertionParent,
     )
     anchor = dynamicFragment.anchor
     frag = dynamicFragment

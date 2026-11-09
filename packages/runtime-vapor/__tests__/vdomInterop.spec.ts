@@ -6397,6 +6397,19 @@ describe('vdomInterop', () => {
   })
 
   describe('KeepAlive', () => {
+    const withSetup = (template: string) =>
+      `<script setup>const data = _data; const components = _components;</script>` +
+      template
+    const childSrc = `<script setup>
+      import { onActivated, onDeactivated, onMounted, onUnmounted } from 'vue'
+      const data = _data
+      onMounted(() => data.value.log('mounted'))
+      onActivated(() => data.value.log('activated'))
+      onDeactivated(() => data.value.log('deactivated'))
+      onUnmounted(() => data.value.log('unmounted'))
+    </script>
+    <template><span>child</span></template>`
+
     const VDomCommentWrapper = defineComponent({
       setup(_, { slots }) {
         return () => [
@@ -6608,6 +6621,50 @@ describe('vdomInterop', () => {
       await nextTick()
       expect(html()).toBe('<div>fallback</div><!--if-->')
       assertHookCalls(hooks, [1, 1, 2, 1, 0])
+    })
+
+    // the fallback of a root outlet fed by a vdom parent is a cache root as
+    // well: marked (and re-activated) when it is exposed
+    test('vdom-fed root slot fallback is kept alive', async () => {
+      const calls: string[] = []
+      const data = ref<any>({ show: true, log: (s: string) => calls.push(s) })
+      const Counter = compile(childSrc, data, {}, { vapor: true })
+      const Wrapper = compile(
+        withSetup(`<template>
+          <KeepAlive><slot><components.Counter /></slot></KeepAlive>
+        </template>`),
+        data,
+        { Counter },
+        { vapor: true },
+      )
+      const App = compile(
+        withSetup(`<template>
+          <components.Wrapper>
+            <span v-if="data.show">content</span>
+          </components.Wrapper>
+        </template>`),
+        data,
+        { Wrapper },
+        { vapor: false },
+      )
+      const { html } = define({ render: () => h(App) }).render()
+      expect(stripAnchors(html())).toBe(`<span>content</span>`)
+      expect(calls.splice(0)).toEqual([])
+
+      data.value.show = false
+      await nextTick()
+      expect(stripAnchors(html())).toBe(`<span>child</span>`)
+      expect(calls.splice(0)).toEqual(['mounted', 'activated'])
+
+      data.value.show = true
+      await nextTick()
+      expect(stripAnchors(html())).toBe(`<span>content</span>`)
+      expect(calls.splice(0)).toEqual(['deactivated'])
+
+      data.value.show = false
+      await nextTick()
+      expect(stripAnchors(html())).toBe(`<span>child</span>`)
+      expect(calls.splice(0)).toEqual(['activated'])
     })
 
     test('unmounting vapor slot should remove vnode slot content', async () => {
@@ -7655,6 +7712,293 @@ describe('vdomInterop', () => {
       await nextTick()
       expect(html()).toBe(`<span>3</span><!--dynamic-component-->`)
       expect(calls).toEqual([`inner 1 -> 3`])
+    })
+
+    // vdom KeepAlive only keeps a component (or Suspense) root alive: content
+    // whose root is an element is mounted and unmounted as usual, so a
+    // component below that element never sees activated / deactivated
+    describe('element root content is not kept alive', () => {
+      test.each([
+        ['direct vapor', true, true, false],
+        ['direct vdom', false, false, false],
+        ['direct vapor host, vdom child', true, false, false],
+        ['suspense vapor', true, true, true],
+        ['suspense vdom', false, false, true],
+        ['suspense vapor host, vdom child', true, false, true],
+      ])('%s', async (_, vapor, vaporChild, suspense) => {
+        const calls: string[] = []
+        const data = ref<any>({
+          show: true,
+          outer: true,
+          log: (s: string) => calls.push(s),
+        })
+        const Child = compile(childSrc, data, {}, { vapor: vaporChild })
+        const inner = suspense
+          ? `<Suspense v-if="data.show"><div><components.Child /></div></Suspense>`
+          : `<div v-if="data.show"><components.Child /></div>`
+        const App = compile(
+          withSetup(`<template>
+            <KeepAlive v-if="data.outer">${inner}</KeepAlive>
+          </template>`),
+          data,
+          { Child },
+          { vapor },
+        )
+        const { html } = define({ render: () => h(App) }).render()
+        expect(stripAnchors(html())).toBe(`<div><span>child</span></div>`)
+        expect(calls.splice(0)).toEqual(['mounted'])
+
+        data.value.show = false
+        await nextTick()
+        expect(stripAnchors(html())).toBe(``)
+        expect(calls.splice(0)).toEqual(['unmounted'])
+
+        data.value.show = true
+        await nextTick()
+        expect(stripAnchors(html())).toBe(`<div><span>child</span></div>`)
+        expect(calls.splice(0)).toEqual(['mounted'])
+
+        data.value.outer = false
+        await nextTick()
+        expect(stripAnchors(html())).toBe(``)
+        expect(calls.splice(0)).toEqual(['unmounted'])
+      })
+
+      // a cached root is only reused at the root position: the same type and
+      // key below an element root is a fresh instance (vdom)
+      test.each([
+        ['vapor', true],
+        ['vdom', false],
+      ])(
+        '%s: a cached root is not reused below an element',
+        async (_, vapor) => {
+          const calls: string[] = []
+          const data = ref<any>({
+            root: true,
+            nested: true,
+            log: (s: string) => calls.push(s),
+          })
+          const Child = compile(childSrc, data, {}, { vapor })
+          const App = compile(
+            withSetup(`<template>
+            <KeepAlive>
+              <components.Child v-if="data.root" key="shared" />
+              <div v-else>
+                <components.Child v-if="data.nested" key="shared" />
+              </div>
+            </KeepAlive>
+          </template>`),
+            data,
+            { Child },
+            { vapor },
+          )
+          const { html } = define({ render: () => h(App) }).render()
+          expect(stripAnchors(html())).toBe(`<span>child</span>`)
+          expect(calls.splice(0).sort()).toEqual(['activated', 'mounted'])
+
+          data.value.root = false
+          await nextTick()
+          expect(stripAnchors(html())).toBe(`<div><span>child</span></div>`)
+          expect(calls.splice(0).sort()).toEqual(['deactivated', 'mounted'])
+
+          data.value.root = true
+          await nextTick()
+          expect(stripAnchors(html())).toBe(`<span>child</span>`)
+          expect(calls.splice(0).sort()).toEqual(['activated', 'unmounted'])
+        },
+      )
+
+      // the fallback of a slot outlet below an element is plain content as
+      // well: it mounts a fresh instance instead of taking over a cached root
+      // of the same key (vdom)
+      test.each([
+        ['vapor', true, true],
+        ['vdom', false, false],
+        ['vapor wrapper in a vdom parent', true, false],
+      ])(
+        '%s: a cached root is not reused by a slot fallback below an element',
+        async (_, vapor, vaporParent) => {
+          const calls: string[] = []
+          const data = ref<any>({
+            root: true,
+            provided: true,
+            log: (s: string) => calls.push(s),
+          })
+          const Child = compile(childSrc, data, {}, { vapor })
+          const Wrapper = compile(
+            withSetup(`<template>
+            <KeepAlive>
+              <components.Child v-if="data.root" key="shared" />
+              <div v-else>
+                <slot><components.Child key="shared" /></slot>
+              </div>
+            </KeepAlive>
+          </template>`),
+            data,
+            { Child },
+            { vapor },
+          )
+          const App = compile(
+            withSetup(`<template>
+            <components.Wrapper>
+              <span v-if="data.provided">content</span>
+            </components.Wrapper>
+          </template>`),
+            data,
+            { Wrapper },
+            { vapor: vaporParent },
+          )
+          const { html } = define({ render: () => h(App) }).render()
+          expect(stripAnchors(html())).toBe(`<span>child</span>`)
+          expect(calls.splice(0).sort()).toEqual(['activated', 'mounted'])
+
+          data.value.provided = false
+          await nextTick()
+          data.value.root = false
+          await nextTick()
+          expect(stripAnchors(html())).toBe(`<div><span>child</span></div>`)
+          expect(calls.splice(0).sort()).toEqual(['deactivated', 'mounted'])
+
+          data.value.provided = true
+          await nextTick()
+          expect(stripAnchors(html())).toBe(`<div><span>content</span></div>`)
+          expect(calls.splice(0)).toEqual(['unmounted'])
+
+          data.value.root = true
+          await nextTick()
+          expect(stripAnchors(html())).toBe(`<span>child</span>`)
+          expect(calls.splice(0)).toEqual(['activated'])
+        },
+      )
+
+      // a Teleport's children are not a cache position either: one with the
+      // key of a cached root mounts a fresh instance (vdom)
+      test.each([
+        ['vapor', true],
+        ['vdom', false],
+      ])(
+        '%s: a cached root is not reused by a Teleport child',
+        async (_, vapor) => {
+          const calls: string[] = []
+          const data = ref<any>({
+            root: true,
+            to: document.createElement('div'),
+            log: (s: string) => calls.push(s),
+          })
+          const Child = compile(childSrc, data, {}, { vapor })
+          const App = compile(
+            withSetup(`<template>
+            <KeepAlive>
+              <components.Child v-if="data.root" key="shared" />
+              <Teleport v-else :to="data.to">
+                <components.Child key="shared" />
+              </Teleport>
+            </KeepAlive>
+          </template>`),
+            data,
+            { Child },
+            { vapor },
+          )
+          const { html } = define({ render: () => h(App) }).render()
+          const target = () => stripAnchors(data.value.to.innerHTML)
+          expect(stripAnchors(html())).toBe(`<span>child</span>`)
+          expect(calls.splice(0).sort()).toEqual(['activated', 'mounted'])
+
+          data.value.root = false
+          await nextTick()
+          expect(stripAnchors(html())).toBe('')
+          expect(target()).toBe(`<span>child</span>`)
+          expect(calls.splice(0).sort()).toEqual(['deactivated', 'mounted'])
+
+          data.value.root = true
+          await nextTick()
+          expect(stripAnchors(html())).toBe(`<span>child</span>`)
+          expect(target()).toBe('')
+          expect(calls.splice(0).sort()).toEqual(['activated', 'unmounted'])
+        },
+      )
+
+      // an async root cached while pending, deactivated, then resolved to an
+      // excluded name is not reused: re-entering the branch mounts a fresh
+      // instance and leaving it unmounts (vdom)
+      test.each([
+        ['vapor host, vdom async', true, false],
+        ['vapor host, vapor async', true, true],
+        ['vdom', false, false],
+      ])(
+        '%s: pending async root resolved to an excluded name while deactivated',
+        async (_, vapor, vaporAsync) => {
+          const timeout = () => new Promise(r => setTimeout(r))
+          let resolve!: (comp: any) => void
+          const loader = () =>
+            new Promise<any>(r => {
+              resolve = r
+            })
+          const AsyncComp = vaporAsync
+            ? defineVaporAsyncComponent(loader)
+            : defineAsyncComponent(loader)
+          const calls: string[] = []
+          const data = ref<any>({
+            show: true,
+            log: (s: string) => calls.push(s),
+          })
+          const Foo = compile(
+            `<script setup>
+              import { ref, onActivated, onDeactivated, onUnmounted } from 'vue'
+              defineOptions({ name: 'Foo' })
+              const data = _data
+              const count = ref(0)
+              onActivated(() => data.value.log('activated'))
+              onDeactivated(() => data.value.log('deactivated'))
+              onUnmounted(() => data.value.log('unmounted'))
+            </script>
+            <template><button @click="count++">{{ count }}</button></template>`,
+            data,
+            {},
+            { vapor },
+          )
+          const App = compile(
+            withSetup(`<template>
+              <KeepAlive exclude="Foo">
+                <components.AsyncComp v-if="data.show" />
+                <span v-else>off</span>
+              </KeepAlive>
+            </template>`),
+            data,
+            { AsyncComp },
+            { vapor },
+          )
+          const { html, host } = define({ render: () => h(App) }).render()
+          const button = () => host.querySelector('button')!
+
+          data.value.show = false
+          await nextTick()
+          resolve(Foo)
+          await timeout()
+          await nextTick()
+
+          data.value.show = true
+          await nextTick()
+          await nextTick()
+          expect(stripAnchors(html())).toBe(`<button>0</button>`)
+          expect(calls.splice(0)).toEqual([])
+
+          button().click()
+          await nextTick()
+          expect(stripAnchors(html())).toBe(`<button>1</button>`)
+
+          data.value.show = false
+          await nextTick()
+          expect(stripAnchors(html())).toBe(`<span>off</span>`)
+          expect(calls.splice(0)).toEqual(['unmounted'])
+
+          data.value.show = true
+          await nextTick()
+          await nextTick()
+          expect(stripAnchors(html())).toBe(`<button>0</button>`)
+          expect(calls.splice(0)).toEqual([])
+        },
+      )
     })
   })
 
