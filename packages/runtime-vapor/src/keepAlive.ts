@@ -24,10 +24,11 @@ export interface VaporKeepAliveContext {
     useScope: boolean,
     removePrevious?: () => void,
   ): void
-  // marks shape flags at component / interop boundaries
-  processShapeFlag(block: Block): any | false
   cacheBlock(block?: Block): void
   getStorageContainer(): ParentNode
+  // set while content that is no cache position renders (below an element,
+  // Teleport children): nothing created in it is looked up in the cache
+  inUncachedBranch: boolean
 }
 
 import { isAsyncComponentEnabled } from './asyncComponentState'

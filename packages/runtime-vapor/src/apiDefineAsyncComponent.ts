@@ -222,7 +222,12 @@ export function defineVaporAsyncComponent<T extends VaporComponent>(
       load()
         .then(() => {
           if (instance.isUnmounted) return
-          loaded.value = true
+          // A KeepAlive entry is re-validated under the resolved name: one
+          // deactivated while pending is pruned (unmounted) if excluded now.
+          if (isKeepAliveEnabled && frag.keepAliveCtx) {
+            frag.keepAliveCtx.cacheBlock(instance)
+          }
+          if (!instance.isUnmounted) loaded.value = true
         })
         .catch(err => {
           if (instance.isUnmounted) {
@@ -252,10 +257,6 @@ export function defineVaporAsyncComponent<T extends VaporComponent>(
         // Keyed by branch so a state change that lands on the same branch
         // updates in place instead of recreating it.
         frag.update(render, key)
-        // Manually trigger cacheBlock for KeepAlive
-        if (isKeepAliveEnabled && frag.keepAliveCtx) {
-          frag.keepAliveCtx.cacheBlock()
-        }
       })
 
       return frag

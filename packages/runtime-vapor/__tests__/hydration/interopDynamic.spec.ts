@@ -1438,6 +1438,63 @@ describe('VDOM interop', () => {
     `)
   })
 
+  test('hydrated vapor vnode under KeepAlive is kept alive', async () => {
+    const calls: string[] = []
+    const data = ref<any>({ show: true, log: (s: string) => calls.push(s) })
+    const { container } = await testWithVaporApp(
+      `<script setup>
+        import { KeepAlive, computed, h } from 'vue'
+        const data = _data
+        const components = _components
+        const vnode = computed(() => h(components.Counter))
+      </script>
+      <template>
+        <KeepAlive>
+          <component v-if="data.show" :is="vnode" />
+        </KeepAlive>
+      </template>`,
+      {
+        Counter: {
+          code: `<script setup>
+            import { ref, onActivated, onDeactivated, onMounted, onUnmounted } from 'vue'
+            const data = _data
+            const count = ref(0)
+            onMounted(() => data.value.log('mounted'))
+            onActivated(() => data.value.log('activated'))
+            onDeactivated(() => data.value.log('deactivated'))
+            onUnmounted(() => data.value.log('unmounted'))
+          </script>
+          <template><button @click="count++">{{ count }}</button></template>`,
+          vapor: true,
+        },
+      },
+      data,
+    )
+    const getButton = () =>
+      container.querySelector('button') as HTMLButtonElement
+    await nextTick()
+    expect(getButton().textContent).toBe('0')
+    expect(calls.splice(0)).toEqual(['mounted', 'activated'])
+
+    triggerEvent('click', getButton())
+    await nextTick()
+    expect(getButton().textContent).toBe('1')
+
+    data.value.show = false
+    await nextTick()
+    expect(container.querySelector('button')).toBeNull()
+    expect(calls.splice(0)).toEqual(['deactivated'])
+
+    data.value.show = true
+    await nextTick()
+    expect(getButton().textContent).toBe('1')
+    expect(calls.splice(0)).toEqual(['activated'])
+
+    triggerEvent('click', getButton())
+    await nextTick()
+    expect(getButton().textContent).toBe('2')
+  })
+
   test('hydrated VNode dynamic component should complete out-in leave', async () => {
     const A = { render: () => h('div', 'A') }
     const B = { render: () => h('div', 'B') }

@@ -41,6 +41,7 @@ export function createKeyedFragment(
     true,
     trackSlotBoundary,
     _insertionAnchor,
+    _insertionParent,
   )
   if (isHydrating) locateHydrationNode()
 

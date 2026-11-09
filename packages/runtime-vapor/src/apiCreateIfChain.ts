@@ -120,6 +120,7 @@ export function createIfChain(
       true,
       !!(flags & VaporIfFlags.SLOT_ROOT),
       _insertionAnchor,
+      _insertionParent,
     )
     anchor = dynamicFragment.anchor
     frag = dynamicFragment

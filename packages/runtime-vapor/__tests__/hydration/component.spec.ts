@@ -1026,6 +1026,45 @@ describe('Vapor Mode hydration', () => {
       )
     })
 
+    // the keep-alive root hydrates before the KeepAlive marks it, so its
+    // activated hooks are queued by the mark; content below an element root is
+    // not kept alive and never sees them (vdom)
+    test.each([
+      [
+        'component root',
+        `<KeepAlive><components.Child v-if="data.ok" /></KeepAlive>`,
+        ['mounted', 'activated'],
+      ],
+      [
+        'direct component',
+        `<KeepAlive><components.Child /></KeepAlive>`,
+        ['mounted', 'activated'],
+      ],
+      [
+        'element root',
+        `<KeepAlive><div><components.Child v-if="data.ok" /></div></KeepAlive>`,
+        ['mounted'],
+      ],
+    ])('activated on hydration: %s', async (_, inner, expected) => {
+      const calls: string[] = []
+      const data = ref<any>({ ok: true, log: (s: string) => calls.push(s) })
+      await testHydration(
+        `<template>${inner}</template>`,
+        {
+          Child: `<script setup>
+            import { onActivated, onMounted } from 'vue'
+            const data = _data
+            onMounted(() => data.value.log('mounted'))
+            onActivated(() => data.value.log('activated'))
+          </script>
+          <template><span>child</span></template>`,
+        },
+        data,
+      )
+      await nextTick()
+      expect(calls).toEqual(expected)
+    })
+
     test('fallthrough attrs through a KeepAlive root', async () => {
       const data = ref({ ok: true, title: 'one' })
       const { container, html } = await testHydration(

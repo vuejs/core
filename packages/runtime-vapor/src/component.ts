@@ -158,11 +158,7 @@ import {
 } from './teleport'
 import type { KeepAliveInstance } from './components/KeepAlive'
 import type { TeleportFragment } from './components/Teleport'
-import {
-  type VaporKeepAliveContext,
-  getKeepAliveContext,
-  isKeepAliveEnabled,
-} from './keepAlive'
+import { getKeepAliveContext, isKeepAliveEnabled } from './keepAlive'
 import { isAsyncComponentEnabled } from './asyncComponentState'
 import {
   insertionAnchor,
@@ -451,17 +447,21 @@ export function createComponent(
         ? resolveSource(rawProps.key)
         : undefined
 
-    let keepAliveCtx: VaporKeepAliveContext | null = null
-    // keep-alive
-    if (
+    // keep-alive: only a root position of the KeepAlive content is a cache
+    // position; below an element a component is created as usual (vdom
+    // caches the direct child vnode only)
+    const keepAliveCtx =
       isKeepAliveEnabled &&
+      !_insertionParent &&
       currentInstance &&
       currentInstance.vapor &&
-      isKeepAlive(currentInstance)
-    ) {
-      const ctx = (currentInstance as KeepAliveInstance).ctx
-      keepAliveCtx = ctx
-      const cached = !managedMount && ctx.getCachedComponent(component, key)
+      isKeepAlive(currentInstance) &&
+      !(currentInstance as KeepAliveInstance).ctx.inUncachedBranch
+        ? (currentInstance as KeepAliveInstance).ctx
+        : null
+    if (keepAliveCtx) {
+      const cached =
+        !managedMount && keepAliveCtx.getCachedComponent(component, key)
       if (cached) {
         // Rebind cache-owned inputs to the current call site's getters.
         if (isVaporComponent(cached) && cached.inputScope) {
@@ -595,16 +595,6 @@ export function createComponent(
     }
     if (asyncBoundary) markAsyncBoundary(instance)
 
-    // Async wrappers are skipped here: their DynamicFragment resolves the outer
-    // KeepAlive context from the wrapper's parent chain during setup.
-    if (
-      isKeepAliveEnabled &&
-      !(isAsyncComponentEnabled && isAsyncWrapper(instance))
-    ) {
-      keepAliveCtx ||= getKeepAliveContext(currentInstance)
-      if (keepAliveCtx) keepAliveCtx.processShapeFlag(instance)
-    }
-
     // The slot owner and slot scope ids stop at component boundaries: setup
     // must not see the parent's slot context (the instance captured the ids
     // above for root-only application).
@@ -703,7 +693,11 @@ export function createComponent(
         }
       }
     }
-    if (keepAliveCtx) instance.unmountScope = getCurrentScope()
+    // under a KeepAlive (through async wrappers): a cache hit re-entering a
+    // torn-down branch takes over the scope that unmounts the instance
+    if (isKeepAliveEnabled && getKeepAliveContext(currentInstance)) {
+      instance.unmountScope = getCurrentScope()
+    }
     registerUnmount(instance)
     if (_insertionParent) registerNestedVDOMCleanup(instance)
 

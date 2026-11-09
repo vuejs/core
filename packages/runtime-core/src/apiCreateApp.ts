@@ -295,6 +295,7 @@ export interface VdomSlotOptions {
   fallback?: (...args: any[]) => any // VaporSlot
   flags?: number
   adoptAnchor?: Node
+  insertionParent?: ParentNode
 }
 
 /**

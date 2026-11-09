@@ -33,6 +33,7 @@ import {
 import type { VaporComponentInstance } from './component'
 import { type VaporFragment, isInteropFragment } from './fragment'
 import { isInteropEnabled } from './vdomInteropState'
+import { type VaporKeepAliveContext, isKeepAliveEnabled } from './keepAlive'
 
 // Slot resolution.
 //
@@ -135,6 +136,8 @@ export interface SlotResolutionState {
   boundary: SlotBoundaryContext
   // The committed fallback block, or null while content is exposed.
   activeFallback: Block | null
+  // The KeepAlive the host renders directly under, if any.
+  keepAliveCtx?: VaporKeepAliveContext | null
   // Every fallback rendered on the way to the active one, nearest first; the
   // active one is the last.
   renderedFallbacks?: RenderedSlotFallback[]
@@ -390,6 +393,11 @@ function commitSlotFallback(
 }
 
 function exposeSlotFallback(state: SlotResolutionState, block: Block): void {
+  // rendered outside any branch render: the KeepAlive marks a fallback that
+  // is its cache root before it mounts, as it marks a branch root
+  if (isKeepAliveEnabled && state.keepAliveCtx) {
+    state.keepAliveCtx.cacheBlock(block)
+  }
   beforeExpose(state, block)
   insertActiveSlotFallback(
     state,

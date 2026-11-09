@@ -43,9 +43,13 @@ import {
   isDynamicFragment,
   isFragment,
   isInteropFragment,
+  isSlotResolver,
 } from '../fragment'
+import { resolveExposedSlotNodes } from '../slotFragment'
 import { EffectScope } from '@vue/reactivity'
 import { isInteropEnabled } from '../vdomInteropState'
+import { isHydrating } from '../dom/hydrationState'
+import { isTeleportEnabled, isTeleportFragment } from '../teleport'
 import {
   type VaporKeepAliveContext,
   currentCacheKey,
@@ -161,6 +165,26 @@ const VaporKeepAliveImpl = defineVaporComponent({
       if (isCurrent) current = block
     }
 
+    // Whether `block` is on the chain from the KeepAlive block down to the
+    // cache root: through fragments (rootChainChild), and on
+    // through an async wrapper (the cache entry) into its block, so the
+    // wrapper's own fragment renders a marked inner. Content below an
+    // element, a v-for or another component is never cached: vdom caches a
+    // component or Suspense root vnode only.
+    const isOnCacheRootChain = (block: Block): boolean => {
+      let node: Block | undefined = keepAliveInstance.block
+      while (node && node !== block) {
+        node = isFragment(node)
+          ? rootChainChild(node)
+          : isAsyncComponentEnabled &&
+              isVaporComponent(node) &&
+              isAsyncWrapper(node)
+            ? node.block
+            : undefined
+      }
+      return !!node
+    }
+
     const cacheBlock = (block: Block = keepAliveInstance.block!) => {
       // TODO suspense
       // Skip caching during out-in transition leaving phase.
@@ -177,10 +201,17 @@ const VaporKeepAliveImpl = defineVaporComponent({
           return
         }
       }
-      const [innerBlock, interop, branchKey] = getInnerBlock(block)
+      const [innerBlock, interop] = getInnerBlock(block)
       if (!innerBlock) return
 
-      const cacheKey = resolveCacheKeyFromBlock(innerBlock, interop, branchKey)
+      // The key an entry sits under belongs to the cache: the current root's
+      // is resolved below the KeepAlive block (its branch key), an offscreen
+      // entry's (an async component resolving in the background) by identity;
+      // anything else, e.g. a block below an element, is not cached.
+      const { currentBlock, currentKey } = getCurrentBlockState()
+      const cacheKey =
+        currentBlock === innerBlock ? currentKey : cacheKeyOf(innerBlock)
+      if (cacheKey === false) return
       // Align with VDOM KeepAlive behavior: async wrappers can enter the cache
       // before they resolve, and a later async update may resolve the same
       // branch to a component name that no longer matches include/exclude.
@@ -191,12 +222,16 @@ const VaporKeepAliveImpl = defineVaporComponent({
       }
 
       setShapeFlag(innerBlock, interop, cache.has(cacheKey))
-      const { currentBlock, currentKey } = getCurrentBlockState()
-      innerCacheBlock(
-        cacheKey,
-        innerBlock,
-        currentBlock === innerBlock || currentKey === cacheKey,
-      )
+      innerCacheBlock(cacheKey, innerBlock, currentKey === cacheKey)
+    }
+
+    const cacheKeyOf = (
+      block: VaporComponentInstance | VaporFragment,
+    ): CacheKey | false => {
+      for (const [key, cached] of cache) {
+        if (cached === block) return key
+      }
+      return false
     }
 
     const processShapeFlag = (
@@ -213,7 +248,16 @@ const VaporKeepAliveImpl = defineVaporComponent({
       }
 
       const cacheKey = resolveCacheKeyFromBlock(innerBlock, interop, branchKey)
+      // Hydration mounts the root before the KeepAlive marks it, so its
+      // activated hooks are queued here instead of by the mount.
+      const hydrated =
+        isHydrating && !isKeptAlive(innerBlock, interop)
+          ? getInstanceFromCache(innerBlock)
+          : undefined
       setShapeFlag(innerBlock, interop, cache.has(cacheKey))
+      if (hydrated && hydrated.isMounted && hydrated.a) {
+        queuePostRenderEffect(hydrated.a, undefined, hydrated.suspense)
+      }
       return cacheKey
     }
 
@@ -356,6 +400,7 @@ const VaporKeepAliveImpl = defineVaporComponent({
     })
 
     const keepAliveCtx: KeepAliveInstance['ctx'] = {
+      inUncachedBranch: false,
       getStorageContainer: () => storageContainer,
       getCachedComponent: (comp, key) => {
         if (isInteropEnabled && isVNode(comp)) {
@@ -409,11 +454,13 @@ const VaporKeepAliveImpl = defineVaporComponent({
       },
       runBranchRender(frag, fn, useScope, removePrevious) {
         // a branch with a user key is cached and its scope aliased under that
-        // key, so re-entering the key finds them whatever the branch identity
+        // key, so re-entering the key finds them whatever the branch identity;
+        // only the root fragment's branches are cached (prepareBranchRemoval)
         const fragKey = getFragmentKey(frag)
-        const cachedScope = useScope
-          ? deleteScope(fragKey ?? frag.current)
-          : undefined
+        const cachedScope =
+          useScope && frag === rootFragment
+            ? deleteScope(fragKey ?? frag.current)
+            : undefined
         frag.scope = useScope ? cachedScope || new EffectScope() : undefined
         if (cachedScope) cachedScope.resume()
         let incomingCacheKey: CacheKey | false = false
@@ -421,11 +468,12 @@ const VaporKeepAliveImpl = defineVaporComponent({
           try {
             fn()
           } finally {
-            // mark shapeFlag before mounting.
-            // This must run before leaving the keyed cache-key context so
-            // creating components inside the branch can still resolve the
-            // same cache key during initial mount.
-            incomingCacheKey = processShapeFlag(frag.nodes)
+            // Mark the rendered root before it mounts, inside the keyed
+            // cache-key context so its key resolves as on a cache lookup. A
+            // fragment off the cache-root chain renders plain content.
+            incomingCacheKey = isOnCacheRootChain(frag)
+              ? processShapeFlag(frag.nodes)
+              : false
           }
         }
         // Unlike VDOM, Vapor has no incoming VNode to identify the cache entry
@@ -446,7 +494,6 @@ const VaporKeepAliveImpl = defineVaporComponent({
           if (removePrevious) removePrevious()
         }
       },
-      processShapeFlag,
       cacheBlock,
     }
 
@@ -474,6 +521,9 @@ const VaporKeepAliveImpl = defineVaporComponent({
       }
     }
 
+    // The root rendered here mounts after setup: mark it now, as the vdom
+    // render marks the child vnode before the renderer mounts it.
+    processShapeFlag(children)
     return children
   },
 })
@@ -532,12 +582,15 @@ function setShapeFlag(
   cached: boolean,
 ): void {
   if (interop && isInteropEnabled) {
+    const vnode = (block as VaporFragment).vnode!
     if (cached) {
-      ;(block as VaporFragment).vnode!.shapeFlag! |=
-        ShapeFlags.COMPONENT_KEPT_ALIVE
+      vnode.shapeFlag! |= ShapeFlags.COMPONENT_KEPT_ALIVE
     }
-    ;(block as VaporFragment).vnode!.shapeFlag! |=
-      ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE
+    vnode.shapeFlag! |= ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE
+    // A vapor vnode's instance reads the flags itself (unmountComponent); the
+    // interop copies them when it mounts, which hydration does before the mark.
+    const inner = vnode.component
+    if (isVaporComponent(inner)) setShapeFlag(inner, false, cached)
   } else {
     if (cached) {
       ;(block as VaporComponentInstance).shapeFlag! |=
@@ -596,18 +649,40 @@ function getInnerBlock(
 ): InnerBlockResult {
   if (isVaporComponent(block)) {
     return [block, false, branchKey]
-  } else if (isInteropEnabled && isInteropFragment(block)) {
+  } else if (isFragment(block)) {
+    const next = rootChainChild(block)
+    if (next) return getInnerBlock(next, getFragmentKey(block) ?? branchKey)
     // as vdom: only a component (or Suspense) vnode is kept alive; a vdom
     // slot's element content is not, and its type is no cache key
-    const vnode = block.vnode
-    return vnode &&
-      vnode.shapeFlag & (ShapeFlags.STATEFUL_COMPONENT | ShapeFlags.SUSPENSE)
-      ? [block, true, branchKey]
-      : [undefined, false, branchKey]
-  } else if (isFragment(block)) {
-    return getInnerBlock(block.nodes, getFragmentKey(block) ?? branchKey)
+    if (isInteropEnabled && isInteropFragment(block)) {
+      const vnode = block.vnode
+      if (
+        vnode &&
+        vnode.shapeFlag & (ShapeFlags.STATEFUL_COMPONENT | ShapeFlags.SUSPENSE)
+      ) {
+        return [block, true, branchKey]
+      }
+    }
   }
   return [undefined, false, branchKey]
+}
+
+// The step a fragment takes down the cache-root chain. None for a Teleport
+// (as vdom, its root is not kept alive) and for vdom content, a leaf its
+// vnode decides. A slot outlet steps into the branch it exposes: its `nodes`
+// follow only after a recheck, and a vdom-fed one exposes a vapor fallback.
+function rootChainChild(frag: VaporFragment): Block | undefined {
+  if (isTeleportEnabled && isTeleportFragment(frag)) return undefined
+  if (isSlotResolver(frag)) return resolveExposedSlotNodes(frag)
+  if (isInteropEnabled && isInteropFragment(frag)) {
+    const state = frag.slotState
+    if (state) {
+      const exposed = resolveExposedSlotNodes(state)
+      if (exposed === state.activeFallback) return exposed
+    }
+    return undefined
+  }
+  return frag.nodes
 }
 
 function getInstanceFromCache(

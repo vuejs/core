@@ -1558,10 +1558,15 @@ function mountDynamicVNode(
   rawProps?: RawProps | null,
   once?: boolean,
 ): VaporFragment {
-  if (isKeepAliveEnabled && parentComponent && isKeepAlive(parentComponent)) {
-    const cached = (
-      parentComponent as KeepAliveInstance
-    ).ctx.getCachedComponent(vnode.type, vnode.key) as VaporFragment
+  const keepAliveCtx =
+    isKeepAliveEnabled && parentComponent && isKeepAlive(parentComponent)
+      ? (parentComponent as KeepAliveInstance).ctx
+      : null
+  if (keepAliveCtx && !keepAliveCtx.inUncachedBranch) {
+    const cached = keepAliveCtx.getCachedComponent(
+      vnode.type,
+      vnode.key,
+    ) as VaporFragment
     if (cached) {
       if (cached.patchVNode) cached.patchVNode(vnode)
       return cached
@@ -2017,20 +2022,17 @@ function createVDOMComponent(
     ? (getKeepAliveContext(parentComponent) as KeepAliveInstance['ctx'] | null)
     : null
 
-  if (keepAliveCtx) {
-    keepAliveCtx.processShapeFlag(frag)
-    // for VDOM async components, trigger cacheBlock after resolution
-    if ((component as any).__asyncLoader) {
-      // guard against stale resolution after unmount or branch switch
-      let disposed = false
-      onScopeDispose(() => (disposed = true))
-      ;(component as any)
-        .__asyncLoader()
-        .then(() => {
-          if (!disposed) keepAliveCtx.cacheBlock(frag)
-        })
-        .catch(NOOP)
-    }
+  // for VDOM async components, trigger cacheBlock after resolution
+  if (keepAliveCtx && (component as any).__asyncLoader) {
+    // guard against stale resolution after unmount or branch switch
+    let disposed = false
+    onScopeDispose(() => (disposed = true))
+    ;(component as any)
+      .__asyncLoader()
+      .then(() => {
+        if (!disposed) keepAliveCtx.cacheBlock(frag)
+      })
+      .catch(NOOP)
   }
 
   // overwrite how the vdom instance handles props
@@ -2484,7 +2486,7 @@ function renderVDOMSlot(
   parentComponent: VaporComponentInstance,
   options: VaporVdomSlotOptions = EMPTY_OBJ,
 ): VaporFragment {
-  const { fallback, flags = 0, adoptAnchor } = options
+  const { fallback, flags = 0, adoptAnchor, insertionParent } = options
   const once = !!(flags & VaporSlotFlags.ONCE)
   const forwarded = isForwardedSlot(flags)
   let suspense = currentRenderContext.suspense || parentComponent.suspense
@@ -2493,7 +2495,12 @@ function renderVDOMSlot(
   // frag.slotScopeIds is the outlet's id cell (the ambient createSlot
   // establishes around this call) — the base patch context for content
   // patches.
-  const frag = createInteropFragment(EMPTY_BLOCK, null, SLOT_OUTLET)
+  const frag = createInteropFragment(
+    EMPTY_BLOCK,
+    null,
+    SLOT_OUTLET,
+    insertionParent,
+  )
   const slotBoundary = frag.slotBoundary
   const content = new InteropContentState()
   const scope = effectScope()
@@ -2594,6 +2601,8 @@ function renderVDOMSlot(
     },
   })
   installInteropTransitionAccessor(slotResolutionState, frag)
+  frag.slotState = slotResolutionState
+  slotResolutionState.keepAliveCtx = frag.keepAliveCtx
   localFallback = fallback
     ? once
       ? () => withOnce(() => fallback(internals, parentComponent))
@@ -5209,8 +5218,13 @@ function createInteropFragment(
   nodes: Block = EMPTY_BLOCK,
   vnode: VNode | null = null,
   extraFlags = 0,
+  insertionParent?: ParentNode,
 ): RenderContextFragment<Block> {
-  const frag = new RenderContextFragment<Block>(nodes, VDOM | extraFlags)
+  const frag = new RenderContextFragment<Block>(
+    nodes,
+    VDOM | extraFlags,
+    insertionParent,
+  )
   frag.vnode = vnode
   frag.hasVDOMContent = interopHasVDOMContent
   frag.setKey = interopSetKey

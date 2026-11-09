@@ -140,6 +140,7 @@ export function createDynamicComponent(
     false,
     slotRoot,
     _insertionAnchor,
+    _insertionParent,
   )
   if (isHydrating) locateHydrationNode()
 

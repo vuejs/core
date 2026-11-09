@@ -31,7 +31,6 @@ import { rawPropsProxyHandlers } from '../componentProps'
 import { renderEffect } from '../renderEffect'
 import { extend } from '@vue/shared'
 import { RenderContextFragment, resolveFragmentAnchor } from '../fragment'
-import { withRenderContext } from '../renderContext'
 import {
   advanceHydrationNode,
   claimAnchor,
@@ -50,6 +49,7 @@ import { enableTeleport } from '../teleport'
 import { registerCssVarOutlet } from '../helpers/useCssVars'
 import { TELEPORT } from '../fragmentFlags'
 import { isSuspenseEnabled } from '../suspense'
+import { isKeepAliveEnabled } from '../keepAlive'
 
 const VaporTeleportImpl = {
   name: 'VaporTeleport',
@@ -111,6 +111,8 @@ export class TeleportFragment extends RenderContextFragment {
   ) {
     super([], TELEPORT)
     this.rawSlots = slots
+    // as vdom: teleported children are no KeepAlive cache position
+    if (isKeepAliveEnabled && this.keepAliveCtx) this.uncached = true
     // the main-view end anchor can adopt the template `<!>` placeholder the
     // teleport was anchored to, saving a runtime node
     this.anchor = isHydrating
@@ -158,10 +160,11 @@ export class TeleportFragment extends RenderContextFragment {
       this.childrenInitialized = true
       // RenderEffect restores (renderInstance, childrenScope) on every run,
       // so only the fragment context may need restoring here — on deferred
-      // init and slot re-runs, where new nodes capture the ambient context.
+      // init and slot re-runs, where new nodes capture the ambient context —
+      // plus, under a KeepAlive, the uncached flag.
       // The equality fast path keeps the synchronous first run free.
       renderEffect(() =>
-        withRenderContext(this.ctx, () => {
+        this.runWithRenderCtx(() => {
           // Stop the previous run's effects before tearing down its nodes;
           // components unmount here, handleChildrenUpdate detaches the DOM.
           const prevScope = this.scope
