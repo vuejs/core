@@ -5613,20 +5613,23 @@ describe('VaporKeepAlive', () => {
   // the same key: the deactivated root's branch scope stays paused
   test('a keyed fragment below an element does not resume a cached root scope', async () => {
     const calls: string[] = []
+    let cleanups = 0
     const data = ref<any>({
       root: true,
       innerKey: 'shared',
       setRef: (el: any) => calls.push(`ref1:${el ? 'set' : 'null'}`),
+      onCleanup: () => cleanups++,
     })
     const Child = compile(`<template><span>child</span></template>`, data)
     const App = compile(
       `<script setup vapor>
         const data = _data
         const Child = _components.Child
+        const vTrack = () => () => data.value.onCleanup()
       </script>
       <template>
         <KeepAlive>
-          <Child v-if="data.root" key="shared" :ref="data.setRef" />
+          <Child v-if="data.root" key="shared" :ref="data.setRef" v-track />
           <div v-else><span :key="data.innerKey">nested</span></div>
         </KeepAlive>
       </template>`,
@@ -5640,6 +5643,8 @@ describe('VaporKeepAlive', () => {
     await nextTick()
     expect(stripAnchors(html())).toBe(`<div><span>nested</span></div>`)
     expect(calls.splice(0)).toEqual(['ref1:null'])
+    // as in vdom, a cached root keeps its directives
+    expect(cleanups).toBe(0)
 
     // the root's ref effect is paused with its branch
     data.value.setRef = (el: any) => calls.push(`ref2:${el ? 'set' : 'null'}`)
