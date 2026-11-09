@@ -1194,4 +1194,75 @@ describe('reactivity/computed', () => {
     s.value = 2
     expect(tracked).toEqual([0, 1, 2])
   })
+
+  test('should recompute a computed that failed with its dep once the dep recovers', () => {
+    const s = ref(0)
+    const recover = ref(false)
+    const inner = computed(() => {
+      if (s.value === 1 && !recover.value) throw new Error('boom')
+      return 0
+    })
+    const outer = computed(() => s.value + inner.value)
+    const seen: number[] = []
+    effect(() => {
+      seen.push(outer.value)
+    })
+
+    // outer fails together with inner
+    expect(() => (s.value = 1)).toThrow('boom')
+    // inner recovers to its last good value
+    recover.value = true
+    expect(outer.value).toBe(1)
+    expect(seen).toEqual([0, 1])
+  })
+
+  test('should recompute a computed that lost a dep to a throw once the thrower recovers', () => {
+    const s = ref(0)
+    const c = computed(() => {
+      if (s.value === 1) throw new Error('boom')
+      return 0
+    })
+    // c throws before b reads s, so b drops its dep on s
+    const b = computed(() => c.value + s.value)
+    const seen: number[][] = []
+    effect(() => {
+      seen.push([s.value, b.value])
+    })
+
+    expect(() => (s.value = 1)).toThrow('boom')
+    s.value = 2
+    s.value = 3
+    expect(seen).toEqual([
+      [0, 0],
+      [2, 2],
+      [3, 3],
+    ])
+  })
+
+  test('should keep the fallback of a getter that caught a throw until the thrower recovers', () => {
+    const s = ref(0)
+    const c = computed(() => {
+      if (s.value === 1) throw new Error('boom')
+      return 0
+    })
+    const b = computed(() => {
+      try {
+        return c.value + s.value
+      } catch {
+        return -1
+      }
+    })
+    const seen: number[][] = []
+    effect(() => {
+      seen.push([s.value, b.value, b.value])
+    })
+
+    s.value = 1
+    s.value = 2
+    expect(seen).toEqual([
+      [0, 0, 0],
+      [1, -1, -1],
+      [2, 2, 2],
+    ])
+  })
 })
