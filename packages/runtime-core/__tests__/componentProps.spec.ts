@@ -990,9 +990,7 @@ describe('component props', () => {
 
       const root = document.createElement('div')
       domRender(h(Comp), root)
-      expect(
-        CompilerDeprecationTypes.COMPILER_V_ON_NATIVE,
-      ).toHaveBeenWarned()
+      expect(CompilerDeprecationTypes.COMPILER_V_ON_NATIVE).toHaveBeenWarned()
       expect(childProps.onChange).toBeUndefined()
       expect(childProps.onChangeNative).toBeUndefined()
       expect(childAttrs.onChange).toBe(onChange)
