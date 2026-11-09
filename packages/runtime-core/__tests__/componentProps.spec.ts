@@ -7,12 +7,14 @@ import {
   type FunctionalComponent,
   type SetupContext,
   createApp,
+  createBlock,
   defineComponent,
   getCurrentInstance,
   h,
   inject,
   nextTick,
   nodeOps,
+  openBlock,
   provide,
   ref,
   render,
@@ -22,6 +24,7 @@ import {
 } from '@vue/runtime-test'
 import { render as domRender } from 'vue'
 import { CompilerDeprecationTypes } from '@vue/compiler-core'
+import { PatchFlags } from '@vue/shared'
 import {
   DeprecationTypes,
   configureCompat,
@@ -1000,6 +1003,68 @@ describe('component props', () => {
       expect(childProps.onChange).toBeUndefined()
       expect(childProps.onChangeNative).toBeUndefined()
       expect(childAttrs.onChange).toBe(onChange)
+    } finally {
+      configureCompat({ MODE: 3 })
+    }
+  })
+
+  test('compat Native listeners with undefined value should still enter $attrs on PROPS fast path update (#16202)', async () => {
+    // Follow-up to #16202: the PROPS fast path Native branch checked only
+    // `value !== attrs[key]`, so a Native listener that was absent at mount
+    // and arrives with an `undefined` value on update was never written to
+    // $attrs — unlike setFullProps on mount, which writes it whenever the
+    // key is absent (`!(key in attrs) || value !== attrs[key]`). A legacy
+    // render function can omit an undefined native listener at mount (e.g.
+    // a conditional nativeOn object) and introduce it on update.
+    configureCompat({ MODE: 2 })
+    try {
+      let childProps: any
+      let childAttrs: any
+      const options = ref([1])
+      const hasNative = ref(false)
+
+      const Child = defineComponent({
+        props: { options: Array },
+        setup(props, { attrs }) {
+          childProps = props
+          childAttrs = attrs
+          return () => h('div')
+        },
+      })
+
+      const Comp = defineComponent({
+        setup() {
+          return () => (
+            openBlock(),
+            createBlock(
+              Child,
+              {
+                options: options.value,
+                ...(hasNative.value ? { onChangeNative: undefined } : {}),
+              },
+              null,
+              PatchFlags.PROPS,
+              ['options', 'onChangeNative'],
+            )
+          )
+        },
+      })
+
+      const root = nodeOps.createElement('div')
+      render(h(Comp), root)
+      expect(childProps.onChange).toBeUndefined()
+      expect(childProps.onChangeNative).toBeUndefined()
+      expect('onChange' in childAttrs).toBe(false)
+
+      options.value = [2]
+      hasNative.value = true
+      await nextTick()
+      expect(childProps.onChange).toBeUndefined()
+      expect(childProps.onChangeNative).toBeUndefined()
+      // mount semantics (setFullProps) record the key in $attrs even when
+      // the value is undefined; the fast path must do the same
+      expect('onChange' in childAttrs).toBe(true)
+      expect(childAttrs.onChange).toBeUndefined()
     } finally {
       configureCompat({ MODE: 3 })
     }

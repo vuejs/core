@@ -296,7 +296,11 @@ export function updateProps(
               // leaking them into props.
               if (isOn(key) && key.endsWith('Native')) {
                 key = key.slice(0, -6) // remove Native postfix
-                if (value !== attrs[key]) {
+                // #16202 mirror setFullProps: the key may be absent from
+                // attrs (it was not in rawProps on mount), in which case
+                // it must still be written even when the value is
+                // undefined (`value !== attrs[key]` alone is false then)
+                if (!(key in attrs) || value !== attrs[key]) {
                   attrs[key] = value
                   hasAttrsChanged = true
                 }
