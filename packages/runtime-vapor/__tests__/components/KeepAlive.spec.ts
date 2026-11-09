@@ -5699,6 +5699,65 @@ describe('VaporKeepAlive', () => {
       expect(calls.splice(0)).toEqual([`${id}:set`])
     }
   })
+
+  // a ref inside v-for goes through the shared setter, whose state outlives
+  // the branch render, unlike a binding's own
+  test.each([
+    [
+      'binding',
+      `<KeepAlive>
+        <AsyncChild v-if="data.show" :ref="data.setRef" />
+        <div v-else>plain</div>
+      </KeepAlive>`,
+    ],
+    [
+      'shared setter',
+      `<div v-for="i in 1" :key="i">
+        <KeepAlive>
+          <AsyncChild v-if="data.show" :ref="data.setRef" />
+          <div v-else>plain</div>
+        </KeepAlive>
+      </div>`,
+    ],
+  ])(
+    'sets only the current ref when an async component re-entered while pending resolves (%s)',
+    async (_, template) => {
+      const calls: string[] = []
+      const refFn = (id: string) => (el: any) =>
+        calls.push(`${id}:${el ? 'set' : 'null'}`)
+      const data = ref<any>({ show: true, setRef: refFn('ref1') })
+      let resolve!: (comp: any) => void
+      const AsyncChild = defineVaporAsyncComponent(
+        () => new Promise<any>(r => (resolve = r)),
+      )
+      const App = compile(
+        `<script setup vapor>
+          const data = _data
+          const AsyncChild = _components.AsyncChild
+        </script>
+        <template>${template}</template>`,
+        data,
+        { AsyncChild },
+      )
+      const { app } = define(App).render()
+
+      data.value.show = false
+      await nextTick()
+      data.value.setRef = refFn('ref2')
+      await nextTick()
+      data.value.show = true
+      await nextTick()
+      calls.length = 0
+
+      resolve(compile(`<template><span>inner</span></template>`, data))
+      await timeout()
+      await nextTick()
+      expect(calls.splice(0)).toEqual(['ref2:set'])
+
+      app.unmount()
+      expect(calls).toEqual(['ref2:null'])
+    },
+  )
 })
 
 describe('Transition inside a kept-alive component', () => {

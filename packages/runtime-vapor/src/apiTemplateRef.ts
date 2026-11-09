@@ -88,10 +88,11 @@ function getTemplateRefUpdateFragment(el: RefEl): DynamicFragment | undefined {
  */
 function registerFragmentRefUpdate(
   el: RefEl,
-  registeredFrag: DynamicFragment | undefined,
+  state: TemplateRefState | undefined,
   reapply: () => void,
 ): DynamicFragment | undefined {
   const frag = getTemplateRefUpdateFragment(el)
+  const registeredFrag = state && state.registeredFrag
   if (frag && registeredFrag !== frag) {
     if (isDynamicFragment(el)) {
       let nestedFrag: DynamicFragment | undefined
@@ -125,17 +126,25 @@ function registerFragmentRefUpdate(
           remove(nestedFrag.u!, onAsyncUpdate)
           nestedFrag = undefined
         }
+        if (state) state.registeredFrag = undefined
       })
 
       // Initial ref application is handled by the caller.
       nestedFrag = syncNestedAsyncRefUpdate(frag, undefined, onAsyncUpdate)
     } else {
-      ;(frag.u ||= []).push(() => {
+      const onUpdate = () => {
         // KeepAlive clears refs on deactivation but keeps this fragment update
         // callback alive. Skip re-applying refs for async/offscreen updates
         // until the component is activated again.
         if (isVaporComponent(el) && el.isDeactivated) return
         reapply()
+      }
+      ;(frag.u ||= []).push(onUpdate)
+      // a shared setter's state outlives the declaring scope: the next
+      // declaration of this ref registers again
+      onScopeDispose(() => {
+        remove(frag.u!, onUpdate)
+        if (state) state.registeredFrag = undefined
       })
     }
     return frag
@@ -212,24 +221,20 @@ function setTemplateRefWithState(
   state.refFor = refFor
   state.refKey = refKey
 
-  state.registeredFrag = registerFragmentRefUpdate(
-    el,
-    state.registeredFrag,
-    () => {
-      setRef(
-        instance,
-        state.suspense,
-        el,
-        state.ref,
-        state.oldRef,
-        state.refFor,
-        state.refKey,
-        state.oldRefKey,
-      )
-      state.oldRef = state.ref
-      state.oldRefKey = state.ref != null ? state.refKey : undefined
-    },
-  )
+  state.registeredFrag = registerFragmentRefUpdate(el, state, () => {
+    setRef(
+      instance,
+      state.suspense,
+      el,
+      state.ref,
+      state.oldRef,
+      state.refFor,
+      state.refKey,
+      state.oldRefKey,
+    )
+    state.oldRef = state.ref
+    state.oldRefKey = state.ref != null ? state.refKey : undefined
+  })
 
   setRef(
     instance,
