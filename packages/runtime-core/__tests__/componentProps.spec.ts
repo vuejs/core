@@ -21,6 +21,7 @@ import {
   watch,
 } from '@vue/runtime-test'
 import { render as domRender } from 'vue'
+import { CompilerDeprecationTypes } from '@vue/compiler-core'
 import {
   DeprecationTypes,
   configureCompat,
@@ -953,6 +954,54 @@ describe('component props', () => {
       await nextTick()
       expect(childProps.onChange).toBeUndefined()
       expect(childListeners.change).toBe(onChange)
+    } finally {
+      configureCompat({ MODE: 3 })
+    }
+  })
+
+  test('compat Native listeners should not leak into $props on PROPS fast path update (#16202)', async () => {
+    // .native compiles to onChangeNative in compat MODE 2 (the runtime
+    // compat config is passed into the compiler), and setFullProps strips
+    // the Native postfix into $attrs on mount. The PROPS fast path must
+    // do the same on update instead of leaking it into $props.
+    configureCompat({ MODE: 2 })
+    try {
+      let childProps: any
+      let childAttrs: any
+      const onChange = () => {}
+      const options = ref([1])
+
+      const Child = defineComponent({
+        props: { options: Array },
+        mounted(this: any) {
+          childProps = this.$props
+          childAttrs = this.$attrs
+        },
+        template: `<div>{{ options }}</div>`,
+      })
+
+      const Comp = defineComponent({
+        setup() {
+          return { options, onChange }
+        },
+        components: { Child },
+        template: `<Child :options="options" @change.native="onChange" />`,
+      })
+
+      const root = document.createElement('div')
+      domRender(h(Comp), root)
+      expect(
+        CompilerDeprecationTypes.COMPILER_V_ON_NATIVE,
+      ).toHaveBeenWarned()
+      expect(childProps.onChange).toBeUndefined()
+      expect(childProps.onChangeNative).toBeUndefined()
+      expect(childAttrs.onChange).toBe(onChange)
+
+      options.value = [2]
+      await nextTick()
+      expect(childProps.onChange).toBeUndefined()
+      expect(childProps.onChangeNative).toBeUndefined()
+      expect(childAttrs.onChange).toBe(onChange)
     } finally {
       configureCompat({ MODE: 3 })
     }
