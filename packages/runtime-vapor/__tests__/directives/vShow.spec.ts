@@ -1027,4 +1027,76 @@ await data.value.ready
 
     app.unmount()
   })
+
+  test('a disposed binding gives up a vdom child a nested KeepAlive cached while it was live', async () => {
+    const data = ref({ root: true, cached: true, inner: true, shown: false })
+    const Inner = compile(
+      `<script setup>
+        const data = _data
+      </script>
+      <template>
+        <Transition :css="false">
+          <div v-if="data.inner">a</div>
+          <p v-else>b</p>
+        </Transition>
+      </template>`,
+      data,
+      {},
+      { vapor: false },
+    )
+    const Child = compile(
+      `<script setup vapor>
+        const data = _data
+        const Inner = _components.Inner
+      </script>
+      <template>
+        <KeepAlive>
+          <Inner v-if="data.cached" />
+          <i v-else>other</i>
+        </KeepAlive>
+      </template>`,
+      data,
+      { Inner },
+    )
+    const App = compile(
+      `<script setup vapor>
+        const data = _data
+        const Child = _components.Child
+      </script>
+      <template>
+        <KeepAlive>
+          <Child v-if="data.root" v-show="data.shown" />
+          <span v-else>plain</span>
+        </KeepAlive>
+      </template>`,
+      data,
+      { Child },
+    )
+    const { app, mount } = define(App).create()
+    app.use(vaporInteropPlugin)
+    const { host } = mount()
+
+    // Inner leaves the root chain before the outer branch is re-entered
+    data.value.cached = false
+    await nextTick()
+    data.value.root = false
+    await nextTick()
+    data.value.shown = true
+    await nextTick()
+    data.value.root = true
+    await nextTick()
+    data.value.cached = true
+    await nextTick()
+    data.value.inner = false
+    await nextTick()
+    expect(host.querySelector('p')!.style.display).toBe('')
+
+    data.value.shown = false
+    await nextTick()
+    data.value.inner = true
+    await nextTick()
+    expect(host.querySelector('div')!.style.display).toBe('none')
+
+    app.unmount()
+  })
 })

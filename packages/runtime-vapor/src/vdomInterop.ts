@@ -1486,8 +1486,9 @@ export function setInteropVShow(
       binding => binding.dir === interopVShow && binding.value.frag === frag,
     )
   if (owner) {
-    // released by a disposed binding: the next one takes the slot over
-    if (owner.value.apply === NOOP) owner.value.apply = apply
+    // every copy of the vnode shares this binding: the next v-show to resolve
+    // through a slot whose owner was disposed takes it over
+    if (releasedVShow.has(owner.value.apply)) owner.value.apply = apply
     return
   }
   const binding = {
@@ -1506,18 +1507,12 @@ export function setInteropVShow(
   }
 }
 
-export function releaseInteropVShow(
-  frag: VaporFragment,
-  apply: (nodes: Block) => void,
-): void {
-  const dirs = frag.vnode!.dirs
-  const owner =
-    dirs &&
-    dirs.find(
-      binding => binding.dir === interopVShow && binding.value.apply === apply,
-    )
-  // every copy of the vnode shares this binding
-  if (owner) owner.value.apply = NOOP
+const releasedVShow = new WeakSet<(nodes: Block) => void>()
+
+// A disposed binding cannot reach every slot it owns (a vdom child cached off
+// its root chain), so the slot is given up by identity, not by walking to it.
+export function releaseInteropVShow(apply: (nodes: Block) => void): void {
+  releasedVShow.add(apply)
 }
 
 function cloneVShowRoot(vnode: VNode, binding: DirectiveBinding): VNode {

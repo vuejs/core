@@ -130,6 +130,7 @@ export function applyVShow(target: Block, source: () => any): void {
     onScopeDispose(() => {
       // hooks left where the walk cannot reach must not apply a frozen value
       disposed = true
+      if (isInteropEnabled) releaseInteropVShow(apply)
       const unregister = (hooks: unknown[] | undefined) => {
         if (hooks) {
           remove(hooks, apply)
@@ -141,10 +142,7 @@ export function applyVShow(target: Block, source: () => any): void {
           if (__DEV__) unregister(instance.hmrRootHooks)
         },
         onDynamicFragment: frag => unregister(frag.bm),
-        onInteropFragment(frag) {
-          unregister(frag.u)
-          if (isInteropEnabled && frag.vnode) releaseInteropVShow(frag, apply)
-        },
+        onInteropFragment: frag => unregister(frag.u),
       })
     }, true)
   }
