@@ -4,9 +4,11 @@ import {
   template,
 } from '../../src'
 import {
+  type HydrationStrategy,
   defineAsyncComponent,
   defineComponent,
   h,
+  hydrateOnIdle,
   hydrateOnInteraction,
   nextTick,
   ref,
@@ -1573,6 +1575,154 @@ describe('Vapor Mode hydration', () => {
       data.value.count = 0
       await nextTick()
       expect(container.textContent).toBe('falsestatic')
+    })
+
+    // KeepAlive parks a hidden branch in its storage container: the
+    // server-rendered DOM is disconnected but kept for reactivation
+    describe('under KeepAlive', () => {
+      const setup = async (
+        exclude?: string,
+        hydrate?: HydrationStrategy,
+        nested = false,
+      ) => {
+        const data = ref({
+          show: true,
+          exclude,
+          spy: vi.fn(),
+          deactivated: vi.fn(),
+          unmounted: vi.fn(),
+        })
+        const compCode = `
+          <script setup vapor>
+            import { onDeactivated, onUnmounted } from 'vue'
+            defineOptions({ name: 'Inner' })
+            const data = _data
+            onDeactivated(() => data.value.deactivated())
+            onUnmounted(() => data.value.unmounted())
+          </script>
+          <template>
+            <button @click="data.spy">hello!</button>
+          </template>`
+        const appCode = `
+          <KeepAlive :exclude="data.exclude">
+            <components.Child v-if="data.show" />
+          </KeepAlive>`
+        // the async component is the cached component, or sits inside it
+        const child = (AsyncComp: any, ssr: boolean) =>
+          nested
+            ? compileVaporComponent(
+                `<div><components.AsyncComp /></div>`,
+                data,
+                { AsyncComp },
+                ssr,
+              )
+            : AsyncComp
+
+        const SSRAsync = defineAsyncComponent(() =>
+          Promise.resolve(
+            compileVaporComponent(compCode, data, undefined, true),
+          ),
+        )
+        const html = await VueServerRenderer.renderToString(
+          runtimeDom.createSSRApp(
+            compileVaporComponent(
+              appCode,
+              data,
+              { Child: child(SSRAsync, true) },
+              true,
+            ),
+          ),
+        )
+
+        let resolve!: () => void
+        const Comp = compileVaporComponent(compCode, data)
+        const AsyncComp = defineVaporAsyncComponent({
+          loader: () =>
+            new Promise(r => {
+              resolve = () => r(Comp)
+            }),
+          hydrate,
+        })
+        const { container } = await mountWithHydration(html, appCode, data, {
+          Child: child(AsyncComp, false),
+        })
+        const button = container.querySelector('button')!
+        return { data, container, button, resolve }
+      }
+
+      test.each([
+        ['no strategy', undefined, false],
+        ['hydrateOnIdle', hydrateOnIdle(), false],
+        ['inside the cached component', undefined, true],
+      ])(
+        'hydrates after being hidden before the loader resolved (%s)',
+        async (_, hydrate, nested) => {
+          const { data, container, button, resolve } = await setup(
+            undefined,
+            hydrate,
+            nested,
+          )
+
+          data.value.show = false
+          await nextTick()
+          expect(container.querySelector('button')).toBeNull()
+
+          // the loader resolves (and an idle strategy fires) while parked
+          resolve()
+          await new Promise(r => setTimeout(r, 10))
+
+          data.value.show = true
+          await nextTick()
+          expect(container.querySelector('button')).toBe(button)
+          triggerEvent('click', button)
+          expect(data.value.spy).toHaveBeenCalledTimes(1)
+        },
+      )
+
+      // the wrapper enters the cache unresolved; the resolved name decides
+      // whether it stays, and re-entering mounts the resolved component itself
+      test('prunes the entry hidden before the loader resolved to an excluded name', async () => {
+        const { data, container, button, resolve } = await setup('Inner')
+
+        data.value.show = false
+        await nextTick()
+        resolve()
+        await new Promise(r => setTimeout(r))
+
+        data.value.show = true
+        await nextTick()
+        const fresh = container.querySelector('button')!
+        expect(fresh).not.toBe(button)
+        expect(container.innerHTML).toBe(
+          '<!--{--><button>hello!</button><!--if--><!--}-->',
+        )
+        triggerEvent('click', fresh)
+        expect(data.value.spy).toHaveBeenCalledTimes(1)
+      })
+
+      test('unmounts the component hydrated under an excluded name when hidden', async () => {
+        const { data, container, button, resolve } = await setup('Inner')
+
+        resolve()
+        await new Promise(r => setTimeout(r))
+        triggerEvent('click', button)
+        expect(data.value.spy).toHaveBeenCalledTimes(1)
+
+        data.value.show = false
+        await nextTick()
+        expect(data.value.deactivated).not.toHaveBeenCalled()
+        expect(data.value.unmounted).toHaveBeenCalledTimes(1)
+
+        data.value.show = true
+        await nextTick()
+        const fresh = container.querySelector('button')!
+        expect(fresh).not.toBe(button)
+        expect(container.innerHTML).toBe(
+          '<!--{--><button>hello!</button><!--if--><!--}-->',
+        )
+        triggerEvent('click', fresh)
+        expect(data.value.spy).toHaveBeenCalledTimes(2)
+      })
     })
   })
 })

@@ -349,7 +349,13 @@ export function performAsyncHydrate(
       }
       return
     }
-    if (!el.parentNode || (wasConnected && !el.isConnected)) return
+    if (!el.parentNode) return
+    if (wasConnected && !el.isConnected) {
+      // a deactivated KeepAlive branch is detached but kept for reactivation
+      let current: GenericComponentInstance | null = instance
+      while (current && !current.isDeactivated) current = current.parent
+      if (!current) return
+    }
     hydrate()
   }
   const doHydrate = hydrateStrategy

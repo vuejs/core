@@ -99,11 +99,9 @@ export function defineVaporAsyncComponent<T extends VaporComponent>(
         nodes = el
       }
       const prev = setCurrentInstance(instance)
+      let frag: DynamicFragment
       try {
-        const frag = new DynamicFragment(
-          0,
-          __DEV__ ? 'async component' : undefined,
-        )
+        frag = new DynamicFragment(0, __DEV__ ? 'async component' : undefined)
         frag.nodes = nodes
         instance.block = frag
       } finally {
@@ -117,6 +115,7 @@ export function defineVaporAsyncComponent<T extends VaporComponent>(
       // Advance current hydration node past the adopted nodes
       setCurrentHydrationNode(nextLogicalSibling(el))
 
+      const keepAliveCtx = isKeepAliveEnabled && frag.keepAliveCtx
       performAsyncHydrate(
         el,
         instance,
@@ -129,7 +128,15 @@ export function defineVaporAsyncComponent<T extends VaporComponent>(
               : null,
           ),
         getResolvedComp,
-        load,
+        // Setup is deferred past the resolve, so its KeepAlive re-validation
+        // (see setup) runs here: a pruned wrapper is not hydrated.
+        keepAliveCtx
+          ? () =>
+              load().then(comp => {
+                if (!instance.isUnmounted) keepAliveCtx.cacheBlock(instance)
+                return comp
+              })
+          : load,
         hydrateStrategy,
         false,
       )
