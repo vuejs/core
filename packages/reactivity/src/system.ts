@@ -94,6 +94,29 @@ export function link(dep: ReactiveNode, sub: ReactiveNode): void {
   ) {
     return
   }
+  // A dependency read again non-adjacently in the same run is not recognized
+  // by the fast paths above, so without this check the second read creates a
+  // duplicate link. One push can then pass through the subscriber twice and
+  // clear its Recursed state, losing later updates (#16174). Reuse the
+  // existing link instead: first look among the links read so far in this
+  // run, then among the stale links left from the previous run. Reusing a
+  // stale link also keeps a later repeat from reusing it again through the
+  // next-link fast path above.
+  let reused = prevDep
+  while (reused !== undefined && reused.version === globalVersion) {
+    if (reused.dep === dep) {
+      return
+    }
+    reused = reused.prevDep
+  }
+  reused = nextDep
+  while (reused !== undefined) {
+    if (reused.dep === dep) {
+      moveDepToTail(reused, sub)
+      return
+    }
+    reused = reused.nextDep
+  }
   const newLink =
     (sub.depsTail =
     dep.subsTail =
@@ -119,6 +142,33 @@ export function link(dep: ReactiveNode, sub: ReactiveNode): void {
   } else {
     dep.subs = newLink
   }
+}
+
+// Move a stale link from a previous run to the tail of the subscriber's deps
+// list, so it stays live when the run ends instead of being unlinked.
+function moveDepToTail(link: Link, sub: ReactiveNode): void {
+  const prevDep = sub.depsTail
+  if (link.prevDep !== undefined) {
+    link.prevDep.nextDep = link.nextDep
+  } else {
+    sub.deps = link.nextDep
+  }
+  if (link.nextDep !== undefined) {
+    link.nextDep.prevDep = link.prevDep
+  }
+  const nextDep = prevDep !== undefined ? prevDep.nextDep : sub.deps
+  link.prevDep = prevDep
+  link.nextDep = nextDep
+  if (nextDep !== undefined) {
+    nextDep.prevDep = link
+  }
+  if (prevDep !== undefined) {
+    prevDep.nextDep = link
+  } else {
+    sub.deps = link
+  }
+  link.version = globalVersion
+  sub.depsTail = link
 }
 
 export function unlink(
