@@ -177,6 +177,7 @@ export interface RendererInternals<
   r: RemoveFn
   m: MoveFn
   mt: MountComponentFn
+  uc: UpdateComponentFn
   mc: MountChildrenFn
   pc: PatchChildrenFn
   pbc: PatchBlockChildrenFn
@@ -271,6 +272,8 @@ export type MountComponentFn = (
   namespace: ElementNamespace,
   optimized: boolean,
 ) => void
+
+type UpdateComponentFn = (n1: VNode, n2: VNode, optimized: boolean) => void
 
 type ProcessTextOrCommentFn = (
   n1: VNode | null,
@@ -1204,7 +1207,6 @@ function baseCreateRenderer(
           n2,
           container,
           anchor,
-          namespace,
           optimized,
         )
       } else {
@@ -1308,7 +1310,7 @@ function baseCreateRenderer(
     }
   }
 
-  const updateComponent = (n1: VNode, n2: VNode, optimized: boolean) => {
+  const updateComponent: UpdateComponentFn = (n1, n2, optimized) => {
     const instance = (n2.component = n1.component)!
     if (shouldUpdateComponent(n1, n2, optimized)) {
       if (
@@ -2516,6 +2518,7 @@ function baseCreateRenderer(
     m: move,
     r: remove,
     mt: mountComponent,
+    uc: updateComponent,
     mc: mountChildren,
     pc: patchChildren,
     pbc: patchBlockChildren,
