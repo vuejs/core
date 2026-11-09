@@ -11,6 +11,7 @@ export interface ReactiveNode {
   subs?: Link
   subsTail?: Link
   flags: ReactiveFlags
+  propagationVersion?: number
 }
 
 export interface Link {
@@ -54,6 +55,7 @@ export function decRunDepth(): void {
 }
 
 let globalVersion = 0
+let propagationVersion = 0
 let notifyIndex = 0
 let notifyBufferLength = 0
 
@@ -160,14 +162,24 @@ export function unlink(
 }
 
 export function propagate(link: Link): void {
+  const version = ++propagationVersion
   let next = link.nextSub
   let stack: Stack<Link | undefined> | undefined
 
   top: do {
-    const sub = link.sub
+    const sub: ReactiveNode = link.sub
     let flags = sub.flags
 
-    if (flags & (ReactiveFlags.Mutable | ReactiveFlags.Watching)) {
+    // Do not advance recursion state twice for one push, even after a nested
+    // push. A clean sub still needs invalidation from a dirty or pending dep
+    // that the nested push did not cover.
+    if (
+      (sub.propagationVersion === undefined ||
+        sub.propagationVersion < version ||
+        (!(flags & (ReactiveFlags.Dirty | ReactiveFlags.Pending)) &&
+          link.dep.flags & (ReactiveFlags.Dirty | ReactiveFlags.Pending))) &&
+      flags & (ReactiveFlags.Mutable | ReactiveFlags.Watching)
+    ) {
       if (
         !(
           flags &
@@ -177,6 +189,7 @@ export function propagate(link: Link): void {
             ReactiveFlags.Pending)
         )
       ) {
+        sub.propagationVersion = version
         sub.flags = flags | ReactiveFlags.Pending
         if (runDepth) {
           sub.flags |= ReactiveFlags.Recursed
@@ -186,11 +199,13 @@ export function propagate(link: Link): void {
       ) {
         flags = ReactiveFlags.None
       } else if (!(flags & ReactiveFlags.RecursedCheck)) {
+        sub.propagationVersion = version
         sub.flags = (flags & ~ReactiveFlags.Recursed) | ReactiveFlags.Pending
       } else if (
         !(flags & (ReactiveFlags.Dirty | ReactiveFlags.Pending)) &&
         isValidLink(link, sub)
       ) {
+        sub.propagationVersion = version
         sub.flags = flags | ReactiveFlags.Recursed | ReactiveFlags.Pending
         flags &= ReactiveFlags.Mutable
       } else {
