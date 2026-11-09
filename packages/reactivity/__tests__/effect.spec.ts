@@ -1572,6 +1572,29 @@ describe('reactivity/effect', () => {
     ])
   })
 
+  test('should re-run an effect that hit a throw once the computed recovers to its last value', () => {
+    const s = ref(0)
+    const recover = ref(false)
+    const c = computed(() => {
+      if (s.value === 1 && !recover.value) throw new Error('boom')
+      return 0
+    })
+    const seen: (number | string)[] = []
+    effect(() => {
+      s.value
+      try {
+        seen.push(c.value)
+      } catch {
+        seen.push('error')
+      }
+    })
+
+    // s makes the effect run, and c throws inside that run
+    s.value = 1
+    recover.value = true
+    expect(seen).toEqual([0, 'error', 0])
+  })
+
   it('should only access debug options in development', () => {
     const reads: string[] = []
     const runner = effect(() => {}, {

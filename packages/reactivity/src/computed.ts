@@ -17,6 +17,10 @@ import {
 } from './system'
 import { warn } from './warning'
 
+// the last evaluation threw: the next successful one counts as a change, so
+// readers that saw the error re-evaluate even if the value is the same as before
+const FAILED = 1 << 6
+
 declare const ComputedRefSymbol: unique symbol
 declare const WritableComputedRefSymbol: unique symbol
 
@@ -183,11 +187,15 @@ export class ComputedRefImpl<T = any> implements ReactiveNode {
     try {
       const oldValue = this._value
       const newValue = this.fn(oldValue)
-      if (hasChanged(oldValue, newValue)) {
+      if (hasChanged(oldValue, newValue) || this.flags & FAILED) {
         this._value = newValue
+        this.flags &= ~FAILED
         return true
       }
       return false
+    } catch (err) {
+      this.flags |= FAILED
+      throw err
     } finally {
       endTracking(this, prevSub)
     }
