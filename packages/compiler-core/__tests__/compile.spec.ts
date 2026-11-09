@@ -44,9 +44,15 @@ describe('compiler: integration tests', () => {
     return res
   }
 
-  describe.each([false, true])(
-    'expression source maps (inline: %s)',
-    inline => {
+  describe.each([
+    { mode: 'function', inline: false, cacheHandlers: false },
+    { mode: 'module', inline: false, cacheHandlers: false },
+    { mode: 'module', inline: false, cacheHandlers: true },
+    { mode: 'module', inline: true, cacheHandlers: false },
+    { mode: 'module', inline: true, cacheHandlers: true },
+  ] as const)(
+    'expression source maps (mode: $mode, inline: $inline, cacheHandlers: $cacheHandlers)',
+    ({ mode, inline, cacheHandlers }) => {
       const cases = [
         {
           name: 'event arrow function',
@@ -82,37 +88,35 @@ describe('compiler: integration tests', () => {
         },
       ]
 
-      describe.each([false, true])('cacheHandlers: %s', cacheHandlers => {
-        test.each(cases)('$name', ({ source: input, tokens }) => {
-          const options = {
-            mode: 'module' as const,
-            filename: 'template.vue',
-            inline,
-            cacheHandlers,
-            bindingMetadata: { count: BindingTypes.SETUP_REF },
-          }
-          for (const newline of ['\n', '\r\n']) {
-            const source = input.replace(/\n/g, newline)
-            const { code, map } = compile(source, {
-              ...options,
-              sourceMap: true,
-            })
-            const consumer = new SourceMapConsumer(map as RawSourceMap)
+      test.each(cases)('$name', ({ source: input, tokens }) => {
+        const options = {
+          mode,
+          filename: 'template.vue',
+          inline,
+          cacheHandlers,
+          bindingMetadata: { count: BindingTypes.SETUP_REF },
+        }
+        for (const newline of ['\n', '\r\n']) {
+          const source = input.replace(/\n/g, newline)
+          const { code, map } = compile(source, {
+            ...options,
+            sourceMap: true,
+          })
+          const consumer = new SourceMapConsumer(map as RawSourceMap)
 
-            for (const token of tokens) {
-              expect(code).toContain(token)
-              expect(
-                consumer.originalPositionFor(getPositionInCode(code, token)),
-              ).toMatchObject({
-                source: 'template.vue',
-                ...getPositionInCode(source, token),
-              })
-            }
-            expect(compile(source, { ...options, sourceMap: false }).code).toBe(
-              code,
-            )
+          for (const token of tokens) {
+            expect(code).toContain(token)
+            expect(
+              consumer.originalPositionFor(getPositionInCode(code, token)),
+            ).toMatchObject({
+              source: 'template.vue',
+              ...getPositionInCode(source, token),
+            })
           }
-        })
+          expect(compile(source, { ...options, sourceMap: false }).code).toBe(
+            code,
+          )
+        }
       })
     },
   )
@@ -145,21 +149,17 @@ describe('compiler: integration tests', () => {
       consumer.originalPositionFor(getPositionInCode(code, `bar`)),
     ).toMatchObject(getPositionInCode(source, `bar`))
 
-    // without prefixIdentifiers: true, identifiers inside compound expressions
-    // are mapped to closest parent expression.
     expect(
       consumer.originalPositionFor(getPositionInCode(code, `baz`)),
-    ).toMatchObject(getPositionInCode(source, `bar`))
+    ).toMatchObject(getPositionInCode(source, `baz`))
 
     expect(
       consumer.originalPositionFor(getPositionInCode(code, `world`)),
     ).toMatchObject(getPositionInCode(source, `world`))
 
-    // without prefixIdentifiers: true, identifiers inside compound expressions
-    // are mapped to closest parent expression.
     expect(
       consumer.originalPositionFor(getPositionInCode(code, `burn()`)),
-    ).toMatchObject(getPositionInCode(source, `world`))
+    ).toMatchObject(getPositionInCode(source, `burn()`))
 
     expect(
       consumer.originalPositionFor(getPositionInCode(code, `ok`)),

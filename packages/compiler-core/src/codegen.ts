@@ -752,20 +752,21 @@ function genText(
   context.push(JSON.stringify(node.content), NewlineType.Unknown, node)
 }
 
+/**
+ * Emit an expression, preserving lexical boundaries in authored raw text so
+ * nested functions and literal-only statements keep their source positions.
+ */
 function genExpression(node: SimpleExpressionNode, context: CodegenContext) {
   const { content, isStatic } = node
   const source = node.loc.source
   if (
     !__BROWSER__ &&
     context.map &&
-    context.prefixIdentifiers &&
     !isStatic &&
     source &&
     !isSimpleIdentifier(source) &&
     content.startsWith(source)
   ) {
-    // Raw fragments can contain statements and nested functions without any
-    // identifier mappings. Preserve their lexical boundaries across newlines.
     let line = context.line
     let column = context.column
     let originalLine = node.loc.start.line
@@ -813,6 +814,10 @@ function genInterpolation(node: InterpolationNode, context: CodegenContext) {
   push(`)`)
 }
 
+/**
+ * Recover raw fragment ranges from adjacent located children. Only fragments
+ * matching the original source are treated as authored code.
+ */
 function genCompoundExpression(
   node: CompoundExpressionNode,
   context: CodegenContext,
@@ -821,12 +826,7 @@ function genCompoundExpression(
   for (let i = 0; i < node.children!.length; i++) {
     const child = node.children![i]
     if (isString(child)) {
-      if (
-        !__BROWSER__ &&
-        context.map &&
-        context.prefixIdentifiers &&
-        node.loc.source
-      ) {
+      if (!__BROWSER__ && context.map && node.loc.source) {
         const next = node.children[i + 1]
         const end =
           next && !isString(next) && !isSymbol(next)
