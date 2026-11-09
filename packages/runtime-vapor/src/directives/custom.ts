@@ -23,7 +23,8 @@ import { type VaporFragment, isDynamicFragment, isFragment } from '../fragment'
 import { inOnce, withOnce } from '../once'
 import { isInteropEnabled } from '../vdomInteropState'
 import { isSuspenseEnabled } from '../suspense'
-import { isFunction, isObject } from '@vue/shared'
+import { isKeepAliveEnabled } from '../keepAlive'
+import { isFunction, isObject, remove } from '@vue/shared'
 
 // !! vapor directive is different from vdom directives
 export type VaporDirective<
@@ -75,6 +76,7 @@ export function withVaporDirectives(
   // Set by a descent that met a root which cannot resolve yet.
   let pending = false
   let pendingSetups: WeakSet<VaporComponentInstance> | undefined
+  let releases: WeakMap<VaporFragment, () => void> | undefined
 
   const visitor: RootChainVisitor = {
     onDynamicFragment: track,
@@ -130,14 +132,22 @@ export function withVaporDirectives(
     // DOM (vdom beforeUnmount). Interop fragments update on every vdom
     // re-render and usually keep their root, so they only re-resolve.
     if (isDynamicFragment(frag)) {
-      ;(frag.bu ||= []).push(() => {
+      const release = () => {
         // Fragments off the chain (a deactivated KeepAlive branch) keep it
         if (currentElement && getRootElement(frag.nodes) === currentElement) {
           currentElement = null
           stopDirectiveScope()
         }
-      })
+      }
+      ;(frag.bu ||= []).push(release)
+      if (isKeepAliveEnabled) (releases ||= new WeakMap()).set(frag, release)
     }
+  }
+
+  function untrack(frag: VaporFragment): void {
+    if (frag.u) remove(frag.u, applyDirectives)
+    const release = releases && releases.get(frag)
+    if (release) remove(frag.bu!, release)
   }
 
   function applyDirectives() {
@@ -191,6 +201,20 @@ export function withVaporDirectives(
     disposed = true
     // Stop the detached scope when the calling scope is disposed
     stopDirectiveScope()
+    // A kept-alive root chain outlives the branch render that bound it:
+    // walk it once more to take this binding's hooks back out.
+    if (isKeepAliveEnabled) {
+      getRootElement(node, {
+        onComponent(block) {
+          if (__DEV__ && block.hmrRootHooks) {
+            remove(block.hmrRootHooks, applyDirectives)
+          }
+        },
+        onDynamicFragment: untrack,
+        onInteropFragment: untrack,
+        excludeSlotOutlets: true,
+      })
+    }
   }, true)
 
   applyDirectives()

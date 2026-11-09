@@ -7,7 +7,8 @@ import {
   warn,
   warnPropMismatch,
 } from '@vue/runtime-dom'
-import { setActiveSub } from '@vue/reactivity'
+import { onScopeDispose, setActiveSub } from '@vue/reactivity'
+import { remove } from '@vue/shared'
 import { renderEffect } from '../renderEffect'
 import {
   type RootChainVisitor,
@@ -27,6 +28,7 @@ import { isInteropEnabled } from '../vdomInteropState'
 import { isInteropVShowPending, setInteropVShow } from '../vdomInterop'
 import { isTransitionEnabled, isVaporTransition } from '../transition'
 import { isSuspenseEnabled } from '../suspense'
+import { isKeepAliveEnabled } from '../keepAlive'
 
 /**
  * v-show is root-inherited state: it lands on the effective root element of
@@ -116,6 +118,25 @@ export function applyVShow(target: Block, source: () => any): void {
   }
 
   ;(target as TransitionBlock).$vshow! |= VShowFlags.TARGET
+  if (isKeepAliveEnabled && !(target instanceof Element)) {
+    // A kept-alive root chain outlives the branch render that bound it:
+    // walk it once more to take this binding's hooks back out.
+    onScopeDispose(() => {
+      const unregister = (hooks: unknown[] | undefined) => {
+        if (hooks) {
+          remove(hooks, apply)
+          remove(hooks, applyInTransition)
+        }
+      }
+      getRootElement(target, {
+        onComponent(instance) {
+          if (__DEV__) unregister(instance.hmrRootHooks)
+        },
+        onDynamicFragment: frag => unregister(frag.bm),
+        onInteropFragment: frag => unregister(frag.u),
+      })
+    }, true)
+  }
   renderEffect(() => {
     value = source()
     apply(target, ran)

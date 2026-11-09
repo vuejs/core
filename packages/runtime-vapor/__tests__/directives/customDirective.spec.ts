@@ -17,6 +17,8 @@ import {
 } from '@vue/runtime-dom'
 import type { Mock } from 'vite-plus/test'
 import { compile, makeRender } from '../_utils'
+import type { VaporComponentInstance } from '../../src/component'
+import type { DynamicFragment } from '../../src/fragment'
 
 const define = makeRender()
 
@@ -628,6 +630,72 @@ describe('custom directive', () => {
     data.value.extra = true
     await nextTick()
     expect(states).toEqual(['DIV:true', 'P:true', 'SPAN:true'])
+
+    app.unmount()
+  })
+  it('should take its hooks back off a kept-alive root chain when the binding is disposed', async () => {
+    const data = ref({ root: true, inner: true })
+    const teardown = vi.fn()
+    const dir: VaporDirective = vi.fn(() => teardown)
+    let childInstance!: VaporComponentInstance
+    const Child = compile(
+      `<script setup vapor>
+        const data = _data
+        _components.capture()
+      </script>
+      <template>
+        <div v-if="data.inner">a</div>
+        <p v-else>b</p>
+      </template>`,
+      data,
+      {
+        capture: () =>
+          (childInstance = currentInstance as VaporComponentInstance),
+      },
+    )
+    const App = compile(
+      `<script setup vapor>
+        const data = _data
+        const Child = _components.Child
+      </script>
+      <template>
+        <KeepAlive>
+          <Child v-if="data.root" v-custom />
+          <span v-else>plain</span>
+        </KeepAlive>
+      </template>`,
+      data,
+      { Child },
+    )
+    App.directives = { custom: dir }
+
+    const { host, app } = define(App).render()
+    const frag = childInstance.block as DynamicFragment
+    const hookCounts = () => [
+      frag.u!.length,
+      frag.bu!.length,
+      childInstance.hmrRootHooks!.length,
+    ]
+    expect(hookCounts()).toEqual([1, 1, 1])
+
+    for (let i = 0; i < 3; i++) {
+      data.value.root = false
+      await nextTick()
+      data.value.root = true
+      await nextTick()
+    }
+    // the binding of each re-entered branch render replaces the previous one
+    expect(hookCounts()).toEqual([1, 1, 1])
+    const calls = (dir as unknown as Mock).mock.calls.length
+    const teardowns = teardown.mock.calls.length
+
+    data.value.inner = false
+    await nextTick()
+    expect(teardown).toHaveBeenCalledTimes(teardowns + 1)
+    expect(dir).toHaveBeenCalledTimes(calls + 1)
+    expect((dir as unknown as Mock).mock.calls[calls][0]).toBe(
+      host.querySelector('p'),
+    )
 
     app.unmount()
   })
