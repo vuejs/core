@@ -1414,6 +1414,164 @@ describe('reactivity/effect', () => {
     expect(seen).toEqual(['set', 'undefined'])
   })
 
+  test('should keep notifying an effect after a computed throws during its dirty check', () => {
+    const s = ref(0)
+    const c = computed(() => {
+      if (s.value === 1) throw new Error('boom')
+      return s.value
+    })
+    const seen: number[] = []
+    effect(() => {
+      seen.push(c.value)
+    })
+
+    expect(() => (s.value = 1)).toThrow('boom')
+    s.value = 2
+    s.value = 3
+    expect(seen).toEqual([0, 2, 3])
+  })
+
+  test('should keep notifying an effect through a computed chain after a dep throws', () => {
+    const s = ref(0)
+    const c = computed(() => {
+      if (s.value === 1) throw new Error('boom')
+      return s.value
+    })
+    const c2 = computed(() => c.value + 1)
+    const seen: number[] = []
+    effect(() => {
+      seen.push(c2.value)
+    })
+
+    expect(() => (s.value = 1)).toThrow('boom')
+    s.value = 2
+    s.value = 3
+    expect(seen).toEqual([1, 3, 4])
+  })
+
+  test('should keep notifying an effect whose own dep changed before a computed threw', () => {
+    const s = ref(0)
+    const z = computed(() => s.value + 100)
+    const c = computed(() => {
+      if (s.value === 1) throw new Error('boom')
+      return s.value
+    })
+    const c2 = computed(() => z.value + c.value)
+    const seen: number[][] = []
+    effect(() => {
+      seen.push([c2.value, z.value])
+    })
+
+    // z is refreshed (and the effect marked dirty) before c throws
+    expect(() => (s.value = 1)).toThrow('boom')
+    s.value = 2
+    expect(seen).toEqual([
+      [100, 100],
+      [104, 102],
+    ])
+  })
+
+  test('should keep notifying an effect through a sibling computed after a throw', () => {
+    const s = ref(0)
+    const t = ref(0)
+    const c = computed(() => {
+      if (s.value === 1) throw new Error('boom')
+      return s.value
+    })
+    const d = computed(() => s.value * 10 + t.value)
+    const seen: number[][] = []
+    effect(() => {
+      seen.push([c.value, d.value])
+    })
+
+    // d is left unchecked when c throws
+    expect(() => (s.value = 1)).toThrow('boom')
+    t.value = 1
+    expect(seen).toEqual([
+      [0, 0],
+      [0, 11],
+    ])
+  })
+
+  test('should keep the dep on a computed that throws while the effect runs', () => {
+    const s = ref(0)
+    const c = computed(() => {
+      if (s.value === 1) throw new Error('boom')
+      return s.value
+    })
+    const seen: number[] = []
+    const runner = effect(
+      () => {
+        seen.push(c.value)
+      },
+      {
+        // re-run directly, so the getter throws inside run()
+        scheduler: () => {
+          try {
+            runner()
+          } catch {}
+        },
+      },
+    )
+
+    s.value = 1
+    s.value = 2
+    s.value = 3
+    expect(seen).toEqual([0, 2, 3])
+  })
+
+  test('should keep the dep on a computed chain that throws while the effect runs', () => {
+    const s = ref(0)
+    const c = computed(() => {
+      if (s.value === 1) throw new Error('boom')
+      return s.value
+    })
+    const c2 = computed(() => c.value + 1)
+    const seen: number[] = []
+    const runner = effect(
+      () => {
+        seen.push(c2.value)
+      },
+      {
+        scheduler: () => {
+          try {
+            runner()
+          } catch {}
+        },
+      },
+    )
+
+    s.value = 1
+    s.value = 2
+    s.value = 3
+    expect(seen).toEqual([1, 3, 4])
+  })
+
+  test('should not lose a batched write to a sibling computed after a throw', () => {
+    const s = ref(0)
+    const t = ref(0)
+    const c = computed(() => {
+      if (s.value === 1) throw new Error('boom')
+      return s.value
+    })
+    const d = computed(() => t.value)
+    const seen: number[][] = []
+    effect(() => {
+      seen.push([c.value, d.value])
+    })
+
+    startBatch()
+    s.value = 1
+    t.value = 1
+    // c throws before d is checked, so the write to t is still unconsumed
+    expect(() => endBatch()).toThrow('boom')
+    s.value = 2
+    expect(seen).toEqual([
+      [0, 0],
+      [2, 1],
+    ])
+  })
+
   it('should only access debug options in development', () => {
     const reads: string[] = []
     const runner = effect(() => {}, {

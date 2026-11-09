@@ -1151,4 +1151,47 @@ describe('reactivity/computed', () => {
     const t2 = performance.now()
     expect(t2 - t1).toBeLessThan(process.env.CI ? 100 : 30)
   })
+
+  test('should keep notifying subscribers after _dirty is set', () => {
+    const s = ref(0)
+    const c = computed(() => s.value)
+    const seen: number[] = []
+    effect(() => {
+      seen.push(c.value)
+    })
+
+    // backwards-compat flag that libraries set to force a re-evaluation
+    ;(c as unknown as ComputedRefImpl)._dirty = true
+    s.value = 1
+    s.value = 2
+    expect(seen).toEqual([0, 1, 2])
+  })
+
+  test('should call onTrack for a computed whose getter throws', () => {
+    const s = ref(0)
+    const c = computed(() => {
+      if (s.value === 1) throw new Error('boom')
+      return s.value
+    })
+    const tracked: number[] = []
+    const runner = effect(
+      () => {
+        c.value
+      },
+      {
+        onTrack: e => {
+          if (e.target === c) tracked.push(s.value)
+        },
+        scheduler: () => {
+          try {
+            runner()
+          } catch {}
+        },
+      },
+    )
+
+    s.value = 1
+    s.value = 2
+    expect(tracked).toEqual([0, 1, 2])
+  })
 })

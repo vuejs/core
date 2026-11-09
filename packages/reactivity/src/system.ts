@@ -168,12 +168,13 @@ export function propagate(link: Link): void {
     let flags = sub.flags
 
     if (flags & (ReactiveFlags.Mutable | ReactiveFlags.Watching)) {
+      // Dirty without Pending means stale but not yet notified (see
+      // markStale), so it still passes the notification on.
       if (
         !(
           flags &
           (ReactiveFlags.RecursedCheck |
             ReactiveFlags.Recursed |
-            ReactiveFlags.Dirty |
             ReactiveFlags.Pending)
         )
       ) {
@@ -287,6 +288,15 @@ export function flush(): void {
 }
 
 export function checkDirty(link: Link, sub: ReactiveNode): boolean {
+  try {
+    return walkDirty(link, sub)
+  } catch (err) {
+    markStale(sub)
+    throw err
+  }
+}
+
+function walkDirty(link: Link, sub: ReactiveNode): boolean {
   let stack: Stack<Link> | undefined
   let checkDepth = 0
 
@@ -351,6 +361,22 @@ export function checkDirty(link: Link, sub: ReactiveNode): boolean {
 
     return dirty && !!sub.flags
   } while (true)
+}
+
+// A getter threw while checking `sub`, leaving the walk's nodes Pending, which
+// later writes would take as already notified. Mark `sub` and every pending node
+// below it stale instead: they re-evaluate on next read and still get notified.
+function markStale(sub: ReactiveNode): void {
+  const nodes = [sub]
+  do {
+    sub = nodes.pop()!
+    sub.flags = (sub.flags & ~ReactiveFlags.Pending) | ReactiveFlags.Dirty
+    for (let link = sub.deps; link !== undefined; link = link.nextDep) {
+      if (link.dep.flags & ReactiveFlags.Pending) {
+        nodes.push(link.dep)
+      }
+    }
+  } while (nodes.length)
 }
 
 export function shallowPropagate(link: Link): void {

@@ -125,18 +125,35 @@ export class ComputedRefImpl<T = any> implements ReactiveNode {
 
   get value(): T {
     const flags = this.flags
-    if (
-      flags & SystemReactiveFlags.Dirty ||
-      (flags & SystemReactiveFlags.Pending && checkDirty(this.deps!, this))
-    ) {
-      if (this.update()) {
-        const subs = this.subs
-        if (subs !== undefined) {
-          shallowPropagate(subs)
+    try {
+      if (
+        flags & SystemReactiveFlags.Dirty ||
+        (flags & SystemReactiveFlags.Pending && checkDirty(this.deps!, this))
+      ) {
+        if (this.update()) {
+          const subs = this.subs
+          if (subs !== undefined) {
+            shallowPropagate(subs)
+          }
         }
+      } else if (flags & SystemReactiveFlags.Pending) {
+        this.flags = flags & ~SystemReactiveFlags.Pending
       }
-    } else if (flags & SystemReactiveFlags.Pending) {
-      this.flags = flags & ~SystemReactiveFlags.Pending
+    } catch (err) {
+      // still link, so the reader hears about the next change
+      if (activeSub !== undefined) {
+        if (__DEV__) {
+          onTrack(activeSub!, {
+            target: this,
+            type: TrackOpTypes.GET,
+            key: 'value',
+          })
+        }
+        link(this, activeSub)
+      } else if (activeEffectScope !== undefined) {
+        link(this, activeEffectScope)
+      }
+      throw err
     }
     if (activeSub !== undefined) {
       if (__DEV__) {
