@@ -2977,6 +2977,221 @@ describe('SSR hydration', () => {
     expect(state.text).toBe('user value')
   })
 
+  test('preserves checkbox ticked before v-model hydration', async () => {
+    const state = reactive({ checked: false })
+    const App = {
+      setup: () => state,
+      template: `<input type="checkbox" v-model="checked">`,
+    }
+    const container = document.createElement('div')
+    container.innerHTML = await renderToString(h(App))
+    const input = container.firstChild as HTMLInputElement
+    input.checked = true
+
+    createSSRApp(App).mount(container)
+    await nextTick()
+
+    expect(input.checked).toBe(true)
+    expect(state.checked).toBe(true)
+  })
+
+  test('preserves checkbox ticked before hydration when model is undefined', async () => {
+    const state = reactive({ checked: undefined as boolean | undefined })
+    const App = {
+      setup: () => state,
+      template: `<input type="checkbox" v-model="checked">`,
+    }
+    const container = document.createElement('div')
+    container.innerHTML = await renderToString(h(App))
+    const input = container.firstChild as HTMLInputElement
+    input.checked = true
+
+    createSSRApp(App).mount(container)
+    await nextTick()
+
+    expect(input.checked).toBe(true)
+    expect(state.checked).toBe(true)
+  })
+
+  test('preserves checkbox unticked before v-model hydration', async () => {
+    const state = reactive({ checked: true })
+    const App = {
+      setup: () => state,
+      template: `<input type="checkbox" v-model="checked">`,
+    }
+    const container = document.createElement('div')
+    container.innerHTML = await renderToString(h(App))
+    const input = container.firstChild as HTMLInputElement
+    expect(input.defaultChecked).toBe(true)
+    input.checked = false
+
+    createSSRApp(App).mount(container)
+    await nextTick()
+
+    expect(input.checked).toBe(false)
+    expect(state.checked).toBe(false)
+  })
+
+  test('preserves array checkbox ticked before v-model hydration', async () => {
+    const state = reactive({ list: ['a'] })
+    const App = {
+      setup: () => state,
+      template:
+        `<div>` +
+        `<input type="checkbox" value="a" v-model="list">` +
+        `<input type="checkbox" value="b" v-model="list">` +
+        `</div>`,
+    }
+    const container = document.createElement('div')
+    container.innerHTML = await renderToString(h(App))
+    const [a, b] = Array.from(container.querySelectorAll('input'))
+    b.checked = true
+
+    createSSRApp(App).mount(container)
+    await nextTick()
+
+    expect(a.checked).toBe(true)
+    expect(b.checked).toBe(true)
+    expect(state.list).toEqual(['a', 'b'])
+  })
+
+  test('preserves radio picked before v-model hydration', async () => {
+    const state = reactive({ pick: 'a' })
+    const App = {
+      setup: () => state,
+      template:
+        `<div>` +
+        `<input type="radio" name="picked" value="a" v-model="pick">` +
+        `<input type="radio" name="picked" value="b" v-model="pick">` +
+        `</div>`,
+    }
+    // radio groups only exclude each other inside a document
+    const container = document.createElement('div')
+    document.body.appendChild(container)
+    container.innerHTML = await renderToString(h(App))
+    const [a, b] = Array.from(container.querySelectorAll('input'))
+    b.checked = true
+
+    createSSRApp(App).mount(container)
+    await nextTick()
+
+    expect(a.checked).toBe(false)
+    expect(b.checked).toBe(true)
+    expect(state.pick).toBe('b')
+    container.remove()
+  })
+
+  test('preserves select changed before v-model hydration', async () => {
+    const state = reactive({ sel: 'a' })
+    const App = {
+      setup: () => state,
+      template: `<select v-model="sel"><option value="a">A</option><option value="b">B</option></select>`,
+    }
+    const container = document.createElement('div')
+    container.innerHTML = await renderToString(h(App))
+    const select = container.firstChild as HTMLSelectElement
+    select.value = 'b'
+
+    createSSRApp(App).mount(container)
+    await nextTick()
+
+    expect(select.value).toBe('b')
+    expect(state.sel).toBe('b')
+
+    // the model update re-renders the select, which must not reset it
+    await nextTick()
+    expect(select.value).toBe('b')
+  })
+
+  test('preserves multi select changed before v-model hydration', async () => {
+    const state = reactive({ sel: ['a'] })
+    const App = {
+      setup: () => state,
+      template: `<select multiple v-model="sel"><option value="a">A</option><option value="b">B</option></select>`,
+    }
+    const container = document.createElement('div')
+    container.innerHTML = await renderToString(h(App))
+    const select = container.firstChild as HTMLSelectElement
+    select.options[1].selected = true
+
+    createSSRApp(App).mount(container)
+    await nextTick()
+
+    expect(select.options[0].selected).toBe(true)
+    expect(select.options[1].selected).toBe(true)
+    expect(state.sel).toEqual(['a', 'b'])
+  })
+
+  // a select whose model matches no option is reset to selectedIndex -1, and
+  // the browser's own fallback to the first option must not read as a change
+  test('select v-model with no matching option keeps selectedIndex -1 after hydration', async () => {
+    const state = reactive({ sel: 'zzz' })
+    const App = {
+      setup: () => state,
+      template: `<select v-model="sel"><option value="a">A</option><option value="b">B</option></select>`,
+    }
+    const container = document.createElement('div')
+    container.innerHTML = await renderToString(h(App))
+    const select = container.firstChild as HTMLSelectElement
+
+    createSSRApp(App).mount(container)
+    await nextTick()
+
+    expect(select.selectedIndex).toBe(-1)
+    expect(state.sel).toBe('zzz')
+  })
+
+  // a list box is never reset to the first option, so an empty selection is
+  // its server state, not a user change
+  test('list box v-model with no matching option keeps selectedIndex -1 after hydration', async () => {
+    const state = reactive({ sel: 'zzz' })
+    const App = {
+      setup: () => state,
+      template: `<select size="3" v-model="sel"><option value="a">A</option><option value="b">B</option></select>`,
+    }
+    const container = document.createElement('div')
+    container.innerHTML = await renderToString(h(App))
+    const select = container.firstChild as HTMLSelectElement
+    expect(select.selectedIndex).toBe(-1)
+
+    createSSRApp(App).mount(container)
+    await nextTick()
+
+    expect(select.selectedIndex).toBe(-1)
+    expect(state.sel).toBe('zzz')
+  })
+
+  test('applies v-model state to untouched controls during hydration', async () => {
+    const state = reactive({ checked: true, pick: 'b', sel: 'b' })
+    const App = {
+      setup: () => state,
+      template:
+        `<div>` +
+        `<input type="checkbox" v-model="checked">` +
+        `<input type="radio" name="untouched" value="a" v-model="pick">` +
+        `<input type="radio" name="untouched" value="b" v-model="pick">` +
+        `<select v-model="sel"><option value="a">A</option><option value="b">B</option></select>` +
+        `</div>`,
+    }
+    const container = document.createElement('div')
+    document.body.appendChild(container)
+    container.innerHTML = await renderToString(h(App))
+    const [checkbox, a, b] = Array.from(container.querySelectorAll('input'))
+    const select = container.querySelector('select')!
+
+    createSSRApp(App).mount(container)
+    await nextTick()
+
+    expect(checkbox.checked).toBe(true)
+    expect(a.checked).toBe(false)
+    expect(b.checked).toBe(true)
+    expect(select.value).toBe('b')
+    expect(state.checked).toBe(true)
+    expect(state.pick).toBe('b')
+    expect(state.sel).toBe('b')
+    container.remove()
+  })
+
   test('force hydrate checkbox with indeterminate', () => {
     const { container } = mountWithHydration(
       '<input type="checkbox" indeterminate>',
