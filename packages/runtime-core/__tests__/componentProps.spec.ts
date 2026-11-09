@@ -21,6 +21,11 @@ import {
   watch,
 } from '@vue/runtime-test'
 import { render as domRender } from 'vue'
+import {
+  DeprecationTypes,
+  configureCompat,
+  deprecationData,
+} from '../src/compat/compatConfig'
 
 describe('component props', () => {
   test('stateful', () => {
@@ -907,5 +912,49 @@ describe('component props', () => {
     foo.value++
     await nextTick()
     expect(props).not.toHaveProperty('onEvent')
+  })
+
+  test('compat on* listeners should not leak into $props on PROPS fast path update (#16202)', async () => {
+    // tests run in MODE 3 by default; the leak only happens in compat MODE 2
+    // where INSTANCE_LISTENERS keeps on* keys out of attrs on mount
+    configureCompat({ MODE: 2 })
+    try {
+      let childProps: any
+      let childListeners: any
+      const onChange = () => {}
+      const options = ref([1])
+
+      const Child = defineComponent({
+        props: { options: Array },
+        mounted(this: any) {
+          childProps = this.$props
+          childListeners = this.$listeners
+        },
+        template: `<div>{{ options }}</div>`,
+      })
+
+      const Comp = defineComponent({
+        setup() {
+          return { options, onChange }
+        },
+        components: { Child },
+        template: `<Child :options="options" @change="onChange" />`,
+      })
+
+      const root = document.createElement('div')
+      domRender(h(Comp), root)
+      expect(childProps.onChange).toBeUndefined()
+      expect(childListeners.change).toBe(onChange)
+      expect(
+        deprecationData[DeprecationTypes.INSTANCE_LISTENERS].message,
+      ).toHaveBeenWarned()
+
+      options.value = [2]
+      await nextTick()
+      expect(childProps.onChange).toBeUndefined()
+      expect(childListeners.change).toBe(onChange)
+    } finally {
+      configureCompat({ MODE: 3 })
+    }
   })
 })

@@ -288,6 +288,23 @@ export function updateProps(
             }
           } else {
             const camelizedKey = camelize(key)
+            if (__COMPAT__ && !hasOwn(options, camelizedKey)) {
+              // #16202 in compat mode, setFullProps skips some keys on
+              // mount (e.g. on* listeners when INSTANCE_LISTENERS is
+              // enabled), so they never enter attrs and the check above
+              // cannot catch them. Mirror setFullProps here instead of
+              // leaking them into props.
+              if (isOn(key) && key.endsWith('Native')) {
+                key = key.slice(0, -6) // remove Native postfix
+                if (value !== attrs[key]) {
+                  attrs[key] = value
+                  hasAttrsChanged = true
+                }
+                continue
+              } else if (shouldSkipAttr(key, instance)) {
+                continue
+              }
+            }
             props[camelizedKey] = resolvePropValue(
               options,
               rawCurrentProps,
