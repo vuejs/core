@@ -24,6 +24,7 @@ import {
   type TemplateLiteral,
   type TextNode,
   type VNodeCall,
+  createSimpleExpression,
   getVNodeBlockHelper,
   getVNodeHelper,
   locStub,
@@ -753,6 +754,50 @@ function genText(
 
 function genExpression(node: SimpleExpressionNode, context: CodegenContext) {
   const { content, isStatic } = node
+  const source = node.loc.source
+  if (
+    !__BROWSER__ &&
+    context.map &&
+    context.prefixIdentifiers &&
+    !isStatic &&
+    source &&
+    !isSimpleIdentifier(source) &&
+    content.startsWith(source)
+  ) {
+    // Raw fragments can contain statements and nested functions without any
+    // identifier mappings. Preserve their lexical boundaries across newlines.
+    let line = context.line
+    let column = context.column
+    let originalLine = node.loc.start.line
+    let originalColumn = node.loc.start.column
+    let previousWord = false
+    let previousPunctuation = false
+    for (let i = 0; i <= source.length; i++) {
+      const char = source[i]
+      const word = char !== undefined && /[\w$]/.test(char)
+      const punctuation = char !== undefined && !word && !/\s/.test(char)
+      if (word !== previousWord || punctuation || previousPunctuation) {
+        context.map._mappings.add({
+          generatedLine: line,
+          generatedColumn: column - 1,
+          originalLine,
+          originalColumn: originalColumn - 1,
+          source: context.filename,
+          name: null,
+        })
+      }
+      previousWord = word
+      previousPunctuation = punctuation
+      if (char === '\n') {
+        line++
+        originalLine++
+        column = originalColumn = 1
+      } else {
+        column++
+        originalColumn++
+      }
+    }
+  }
   context.push(
     isStatic ? JSON.stringify(content) : content,
     NewlineType.Unknown,
@@ -772,12 +817,48 @@ function genCompoundExpression(
   node: CompoundExpressionNode,
   context: CodegenContext,
 ) {
+  let sourceStart = node.loc.start
   for (let i = 0; i < node.children!.length; i++) {
     const child = node.children![i]
     if (isString(child)) {
+      if (
+        !__BROWSER__ &&
+        context.map &&
+        context.prefixIdentifiers &&
+        node.loc.source
+      ) {
+        const next = node.children[i + 1]
+        const end =
+          next && !isString(next) && !isSymbol(next)
+            ? next.loc.start
+            : node.loc.end
+        const start = sourceStart.offset - node.loc.start.offset
+        const length = end.offset - sourceStart.offset
+        const source = node.loc.source.slice(start, start + length)
+        if (
+          length > 0 &&
+          start >= 0 &&
+          end.offset <= node.loc.end.offset &&
+          child.startsWith(source)
+        ) {
+          genExpression(
+            createSimpleExpression(child, false, {
+              start: sourceStart,
+              end,
+              source,
+            }),
+            context,
+          )
+          sourceStart = end
+          continue
+        }
+      }
       context.push(child, NewlineType.Unknown)
     } else {
       genNode(child, context)
+      if (!isSymbol(child) && child.loc.source) {
+        sourceStart = child.loc.end
+      }
     }
   }
 }

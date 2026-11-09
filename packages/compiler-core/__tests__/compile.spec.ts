@@ -1,4 +1,4 @@
-import { baseCompile as compile } from '../src'
+import { BindingTypes, baseCompile as compile } from '../src'
 import { type RawSourceMap, SourceMapConsumer } from 'source-map-js'
 
 describe('compiler: integration tests', () => {
@@ -43,6 +43,79 @@ describe('compiler: integration tests', () => {
     }
     return res
   }
+
+  describe.each([false, true])(
+    'expression source maps (inline: %s)',
+    inline => {
+      const cases = [
+        {
+          name: 'event arrow function',
+          source: `<button @click="() => {
+  count++;
+}">click</button>`,
+          tokens: ['() => {'],
+        },
+        {
+          name: 'nested function declaration',
+          source: `<button @click="() => {
+  const inner = () => {
+    count++;
+  };
+  inner();
+}">click</button>`,
+          tokens: ['const inner = () => {', 'inner();'],
+        },
+        {
+          name: 'literal-only statement',
+          source: `<button @click="() => {
+  return true ? 1 : 2;
+}">click</button>`,
+          tokens: ['return true', 'true ?', '1 : 2', '2;'],
+        },
+        {
+          name: 'shorthand property and Unicode literals',
+          source: `<button @click="() => {
+  const obj = { count };
+  return obj.count ? '是' : '否';
+}">click</button>`,
+          tokens: ['const obj =', 'return obj', "'是'", "'否'"],
+        },
+      ]
+
+      describe.each([false, true])('cacheHandlers: %s', cacheHandlers => {
+        test.each(cases)('$name', ({ source: input, tokens }) => {
+          const options = {
+            mode: 'module' as const,
+            filename: 'template.vue',
+            inline,
+            cacheHandlers,
+            bindingMetadata: { count: BindingTypes.SETUP_REF },
+          }
+          for (const newline of ['\n', '\r\n']) {
+            const source = input.replace(/\n/g, newline)
+            const { code, map } = compile(source, {
+              ...options,
+              sourceMap: true,
+            })
+            const consumer = new SourceMapConsumer(map as RawSourceMap)
+
+            for (const token of tokens) {
+              expect(code).toContain(token)
+              expect(
+                consumer.originalPositionFor(getPositionInCode(code, token)),
+              ).toMatchObject({
+                source: 'template.vue',
+                ...getPositionInCode(source, token),
+              })
+            }
+            expect(compile(source, { ...options, sourceMap: false }).code).toBe(
+              code,
+            )
+          }
+        })
+      })
+    },
+  )
 
   test('function mode', () => {
     const { code, map } = compile(source, {
