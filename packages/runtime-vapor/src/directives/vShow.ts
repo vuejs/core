@@ -25,7 +25,11 @@ import {
 import { isSlotOutletFragment } from '../fragment'
 import { isHydrating } from '../dom/hydration'
 import { isInteropEnabled } from '../vdomInteropState'
-import { isInteropVShowPending, setInteropVShow } from '../vdomInterop'
+import {
+  isInteropVShowPending,
+  releaseInteropVShow,
+  setInteropVShow,
+} from '../vdomInterop'
 import { isTransitionEnabled, isVaporTransition } from '../transition'
 import { isSuspenseEnabled } from '../suspense'
 import { isKeepAliveEnabled } from '../keepAlive'
@@ -57,6 +61,7 @@ export function applyVShow(target: Block, source: () => any): void {
   // pending async setups this binding already waits on
   let pendingSetups: WeakSet<VaporComponentInstance> | undefined
   let applyInTransition: ((nodes: Block) => void) | undefined
+  let disposed = false
 
   const visitor: RootChainVisitor = {
     onComponent(instance) {
@@ -102,6 +107,7 @@ export function applyVShow(target: Block, source: () => any): void {
   }
 
   const apply = (nodes: Block, update?: boolean, transitionSlot?: boolean) => {
+    if (disposed) return
     transition = undefined
     unresolved = slotRoot = false
     updating = update
@@ -122,6 +128,8 @@ export function applyVShow(target: Block, source: () => any): void {
     // A kept-alive root chain outlives the branch render that bound it:
     // walk it once more to take this binding's hooks back out.
     onScopeDispose(() => {
+      // hooks left where the walk cannot reach must not apply a frozen value
+      disposed = true
       const unregister = (hooks: unknown[] | undefined) => {
         if (hooks) {
           remove(hooks, apply)
@@ -133,7 +141,10 @@ export function applyVShow(target: Block, source: () => any): void {
           if (__DEV__) unregister(instance.hmrRootHooks)
         },
         onDynamicFragment: frag => unregister(frag.bm),
-        onInteropFragment: frag => unregister(frag.u),
+        onInteropFragment(frag) {
+          unregister(frag.u)
+          if (isInteropEnabled && frag.vnode) releaseInteropVShow(frag, apply)
+        },
       })
     }, true)
   }

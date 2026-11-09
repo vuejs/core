@@ -201,6 +201,8 @@ export function withVaporDirectives(
     disposed = true
     // Stop the detached scope when the calling scope is disposed
     stopDirectiveScope()
+    // hooks left where the walk below cannot reach must not pin the root
+    currentElement = null
     // A kept-alive root chain outlives the branch render that bound it:
     // walk it once more to take this binding's hooks back out.
     if (isKeepAliveEnabled) {

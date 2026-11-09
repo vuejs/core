@@ -254,3 +254,75 @@ describe.skipIf(!global.gc)('hydration gc', () => {
     }
   })
 })
+
+describe.skipIf(!global.gc)('directive gc', () => {
+  const gc = () =>
+    new Promise<void>(resolve => {
+      setTimeout(() => {
+        global.gc!()
+        resolve()
+      })
+    })
+
+  test('releases the root a disposed binding last resolved on a kept-alive chain', async () => {
+    const data = ref({ root: true, cached: true, inner: true })
+    const Inner = compile(
+      `<template>
+        <div v-if="data.inner">a</div>
+        <p v-else>b</p>
+      </template>`,
+      data,
+    )
+    const Child = compile(
+      `<script setup vapor>
+        const data = _data
+        const Inner = _components.Inner
+      </script>
+      <template>
+        <KeepAlive>
+          <Inner v-if="data.cached" />
+          <i v-else>other</i>
+        </KeepAlive>
+      </template>`,
+      data,
+      { Inner },
+    )
+    const App = compile(
+      `<script setup vapor>
+        const data = _data
+        const Child = _components.Child
+        const vCustom = () => {}
+      </script>
+      <template>
+        <KeepAlive>
+          <Child v-if="data.root" v-custom />
+          <span v-else>plain</span>
+        </KeepAlive>
+      </template>`,
+      data,
+      { Child },
+    )
+    const root = document.createElement('div')
+    const app = createVaporApp(App)
+    app.mount(root)
+    try {
+      // Inner leaves the root chain with the binding's hooks still on it
+      data.value.cached = false
+      await nextTick()
+      expect(root.firstElementChild!.tagName).toBe('I')
+      // @ts-expect-error ES2021 API
+      const discarded = new WeakRef(root.firstElementChild!)
+      // re-entering the outer branch disposes that binding
+      data.value.root = false
+      await nextTick()
+      data.value.root = true
+      await nextTick()
+      data.value.cached = true
+      await nextTick()
+      await gc()
+      expect(discarded.deref()).toBeUndefined()
+    } finally {
+      app.unmount()
+    }
+  })
+})

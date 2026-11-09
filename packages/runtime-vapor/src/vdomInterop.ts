@@ -1480,12 +1480,14 @@ export function setInteropVShow(
 ): void {
   const vnode = frag.vnode!
   const dirs = vnode.dirs
-  if (
+  const owner =
     dirs &&
-    dirs.some(
+    dirs.find(
       binding => binding.dir === interopVShow && binding.value.frag === frag,
     )
-  ) {
+  if (owner) {
+    // released by a disposed binding: the next one takes the slot over
+    if (owner.value.apply === NOOP) owner.value.apply = apply
     return
   }
   const binding = {
@@ -1502,6 +1504,20 @@ export function setInteropVShow(
   if (instance && !isVaporComponent(instance)) {
     instance.subTree = cloneVShowRoot(instance.subTree, binding)
   }
+}
+
+export function releaseInteropVShow(
+  frag: VaporFragment,
+  apply: (nodes: Block) => void,
+): void {
+  const dirs = frag.vnode!.dirs
+  const owner =
+    dirs &&
+    dirs.find(
+      binding => binding.dir === interopVShow && binding.value.apply === apply,
+    )
+  // every copy of the vnode shares this binding
+  if (owner) owner.value.apply = NOOP
 }
 
 function cloneVShowRoot(vnode: VNode, binding: DirectiveBinding): VNode {
