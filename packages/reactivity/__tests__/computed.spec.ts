@@ -1313,4 +1313,94 @@ describe('reactivity/computed', () => {
     src.value = 2
     expect(seen).toBe(2)
   })
+
+  test('should return when a self-referencing computed is read after a later dep changed', () => {
+    const s = ref(0)
+    const flag = ref(1)
+    // reads itself between a dep that stays the same and the one that changes
+    const c: ComputedRef<number> = computed(
+      () => flag.value + (c.value | 0) * 0 + s.value,
+    )
+
+    expect(c.value).toBe(1)
+    s.value++
+    expect(c.value).toBe(2)
+  })
+
+  test('should return when computeds that read each other are read after a dep changed', () => {
+    const s = ref(0)
+    const a: ComputedRef<number> = computed(() => (b.value | 0) * 0 + s.value)
+    const b: ComputedRef<number> = computed(() => (a.value | 0) + 1)
+
+    expect(a.value).toBe(0)
+    s.value++
+    expect(a.value).toBe(1)
+  })
+
+  test('should re-run an effect that reads computeds reading each other', () => {
+    const s = ref(0)
+    const a: ComputedRef<number> = computed(() => (b.value | 0) * 0 + s.value)
+    const b: ComputedRef<number> = computed(() => (a.value | 0) + 1)
+    const seen: number[] = []
+    effect(() => {
+      seen.push(a.value)
+    })
+
+    s.value++
+    s.value++
+    expect(seen).toEqual([0, 1, 2])
+  })
+
+  test('should keep checking computeds that read each other after one of them threw', () => {
+    const s = ref(0)
+    const fail = ref(false)
+    const k: ComputedRef<number> = computed(() => {
+      m.value
+      if (fail.value) throw new Error('boom')
+      return s.value
+    })
+    const m: ComputedRef<number> = computed(() => k.value)
+    const top = computed(() => m.value)
+    const other = computed(() => m.value)
+    top.value
+    other.value
+
+    // k throws while the check of `top` is still inside `m`
+    fail.value = true
+    expect(() => top.value).toThrow('boom')
+    fail.value = false
+    s.value = 5
+    expect(other.value).toBe(5)
+    expect(top.value).toBe(5)
+  })
+
+  test('should not leave a computed stale that reads back the one checking it', () => {
+    const s = ref(0)
+    const a: ComputedRef<number> = computed(() => (b.value | 0) * 0 + s.value)
+    const b: ComputedRef<number> = computed(() => (a.value | 0) + 1)
+    expect([a.value, b.value]).toEqual([0, 1])
+
+    // b is only checked through a and sees the value a had before the write
+    s.value++
+    expect([a.value, b.value]).toEqual([1, 1])
+    s.value++
+    expect([a.value, b.value]).toEqual([2, 2])
+    s.value++
+    expect([a.value, b.value]).toEqual([3, 3])
+  })
+
+  test('should not leave computeds stale on the way back to the one checking them', () => {
+    const s = ref(0)
+    const m: ComputedRef<number> = computed(() => (x.value | 0) * 0 + s.value)
+    const x: ComputedRef<number> = computed(() => y.value)
+    const y: ComputedRef<number> = computed(() => (m.value | 0) + 1)
+    expect([m.value, x.value, y.value]).toEqual([0, 1, 1])
+
+    s.value++
+    expect([m.value, x.value, y.value]).toEqual([1, 1, 1])
+    s.value++
+    expect([m.value, x.value, y.value]).toEqual([2, 2, 2])
+    s.value++
+    expect([m.value, x.value, y.value]).toEqual([3, 3, 3])
+  })
 })

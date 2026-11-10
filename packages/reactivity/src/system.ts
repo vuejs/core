@@ -43,6 +43,11 @@ const notifyBuffer: (Effect | undefined)[] = []
 export let batchDepth = 0
 export let activeSub: ReactiveNode | undefined = undefined
 
+// Hints that a computed may be on the stack of a dirty check. Only the stack
+// tells for sure, so a walk that throws can leave the hint behind. The bit is
+// used by neither ReactiveFlags, EffectFlags nor computed's FAILED.
+const CHECKING = 1 << 9
+
 let globalVersion = 0
 let notifyIndex = 0
 let notifyBufferLength = 0
@@ -233,7 +238,12 @@ export function startTracking(sub: ReactiveNode): ReactiveNode | undefined {
   sub.depsTail = undefined
   sub.flags =
     (sub.flags &
-      ~(ReactiveFlags.Recursed | ReactiveFlags.Dirty | ReactiveFlags.Pending)) |
+      ~(
+        ReactiveFlags.Recursed |
+        ReactiveFlags.Dirty |
+        ReactiveFlags.Pending |
+        CHECKING
+      )) |
     ReactiveFlags.RecursedCheck
   return setActiveSub(sub)
 }
@@ -297,8 +307,13 @@ export function checkDirty(link: Link, sub: ReactiveNode): boolean {
 }
 
 function walkDirty(link: Link, sub: ReactiveNode): boolean {
+  const root = sub
   let stack: Stack<Link> | undefined
   let checkDepth = 0
+  // the computeds from depth `staleFloor + 1` to `staleDepth` passed over one
+  // that a shallower depth is still checking
+  let staleDepth = 0
+  let staleFloor = 0
 
   top: do {
     const dep = link.dep
@@ -327,11 +342,31 @@ function walkDirty(link: Link, sub: ReactiveNode): boolean {
       (depFlags & (ReactiveFlags.Mutable | ReactiveFlags.Pending)) ===
       (ReactiveFlags.Mutable | ReactiveFlags.Pending)
     ) {
-      stack = { value: link, prev: stack }
-      link = dep.deps!
-      sub = dep
-      ++checkDepth
-      continue
+      // computeds that read themselves or each other lead back to one this
+      // walk is still checking: it counts as unchanged, as entering it again
+      // would never end
+      const depth =
+        dep === root
+          ? 0
+          : depFlags & CHECKING
+            ? checkingDepth(dep, stack, checkDepth)
+            : -1
+      if (depth < 0) {
+        // a dep that only `sub` subscribes to comes up again only after `sub`
+        // does, so it needs no hint
+        if (link.nextSub !== undefined || link.prevSub !== undefined) {
+          dep.flags = depFlags | CHECKING
+        }
+        stack = { value: link, prev: stack }
+        link = dep.deps!
+        sub = dep
+        ++checkDepth
+        continue
+      }
+      if (depth < checkDepth) {
+        staleFloor = staleDepth && staleFloor < depth ? staleFloor : depth
+        staleDepth = checkDepth
+      }
     }
 
     if (!dirty && link.nextDep !== undefined) {
@@ -340,6 +375,10 @@ function walkDirty(link: Link, sub: ReactiveNode): boolean {
     }
 
     while (checkDepth) {
+      const stale = checkDepth === staleDepth
+      if (stale && --staleDepth === staleFloor) {
+        staleDepth = 0
+      }
       --checkDepth
       link = stack!.value
       stack = stack!.prev
@@ -355,8 +394,14 @@ function walkDirty(link: Link, sub: ReactiveNode): boolean {
           sub = link.sub
           continue
         }
+      } else if (stale) {
+        // unchanged only if the computed it passed over does not change, so
+        // it re-evaluates on next read and, without Pending, still gets notified
+        sub.flags =
+          (sub.flags & ~(ReactiveFlags.Pending | CHECKING)) |
+          ReactiveFlags.Dirty
       } else {
-        sub.flags &= ~ReactiveFlags.Pending
+        sub.flags &= ~(ReactiveFlags.Pending | CHECKING)
       }
       sub = link.sub
       if (link.nextDep !== undefined) {
@@ -370,6 +415,20 @@ function walkDirty(link: Link, sub: ReactiveNode): boolean {
     // before the walk could reach them
     return (dirty || !!(sub.flags & ReactiveFlags.Dirty)) && !!sub.flags
   } while (true)
+}
+
+// the depth at which the walk is checking `dep`, -1 if it is not
+function checkingDepth(
+  dep: ReactiveNode,
+  stack: Stack<Link> | undefined,
+  depth: number,
+): number {
+  for (; stack !== undefined; stack = stack.prev, --depth) {
+    if (stack.value.dep === dep) {
+      return depth
+    }
+  }
+  return -1
 }
 
 // A getter threw while checking `sub`, leaving the walk's nodes Pending, which
