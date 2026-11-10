@@ -197,7 +197,7 @@ export function effect<T = any>(
     }
     if (scheduler) {
       e.notify = () => {
-        if (!(e.flags & EffectFlags.PAUSED)) {
+        if (!(e.flags & (EffectFlags.PAUSED | EffectFlags.STOP))) {
           scheduler()
         }
       }

@@ -1941,4 +1941,52 @@ describe('reactivity/effect', () => {
       expect(onTrigger.mock.calls[0][0].key).toBe('length')
     })
   })
+
+  it('should not call the scheduler of an effect stopped before the flush', () => {
+    const source = ref(0)
+    const calls: string[] = []
+    effect(() => {
+      if (source.value) stop(second)
+    })
+    const second: ReactiveEffectRunner = effect(
+      () => {
+        source.value
+        calls.push('run')
+      },
+      {
+        scheduler() {
+          calls.push('scheduler')
+          second()
+        },
+      },
+    )
+
+    source.value++
+    expect(calls).toEqual(['run'])
+  })
+
+  it('should not call the scheduler of an effect stopped by an onTrigger hook', () => {
+    const source = ref(0)
+    const calls: string[] = []
+    effect(() => source.value, {
+      onTrigger() {
+        stop(second)
+      },
+    })
+    const second: ReactiveEffectRunner = effect(
+      () => {
+        source.value
+        calls.push('run')
+      },
+      {
+        scheduler() {
+          calls.push('scheduler')
+          second()
+        },
+      },
+    )
+
+    source.value++
+    expect(calls).toEqual(['run'])
+  })
 })
