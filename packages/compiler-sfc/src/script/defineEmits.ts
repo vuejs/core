@@ -16,6 +16,36 @@ import {
 
 export const DEFINE_EMITS = 'defineEmits'
 
+/**
+ * Detects if this node recursively contains a call to `defineEmits()`.
+ *
+ * @returns true If the given node itself is a call to `defineEmits()` and should be removed, false otherwise.
+ */
+export function processNestedDefineEmits(
+  ctx: ScriptCompileContext,
+  node: Node,
+  declId?: LVal,
+): boolean {
+  if (node.type !== 'CallExpression') {
+    return false
+  }
+  if (processDefineEmits(ctx, node, declId)) {
+    return true
+  }
+  for (const arg of node.arguments) {
+    if (processNestedDefineEmits(ctx, arg, declId)) {
+      replaceDefineEmits(ctx, arg)
+    }
+  }
+
+  return false
+}
+
+/**
+ * Detects if the node is a call to `defineEmits()`.
+ *
+ * @returns true If the given node itself is a call to `defineEmits()` and should be removed, false otherwise.
+ */
 export function processDefineEmits(
   ctx: ScriptCompileContext,
   node: Node,
@@ -43,6 +73,17 @@ export function processDefineEmits(
   ctx.emitDecl = declId
 
   return true
+}
+
+export function replaceDefineEmits(
+  ctx: ScriptCompileContext,
+  node: Node,
+): void {
+  ctx.s.overwrite(
+    ctx.startOffset! + node.start!,
+    ctx.startOffset! + node.end!,
+    '__emit',
+  )
 }
 
 export function genRuntimeEmits(ctx: ScriptCompileContext): string | undefined {
