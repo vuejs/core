@@ -245,11 +245,13 @@ function isInHmrContext(instance: ComponentInternalInstance | null) {
 
 /**
  * Update a component instance's props and attrs in place after a re-render.
- * When the vnode carries the `PROPS` patch flag, only the compiler-listed
- * dynamic props are diffed (fast path); otherwise a full props diff runs.
- * In compat mode the fast path mirrors `setFullProps` so keys skipped on
- * mount (e.g. `on*` listeners, `.native` listeners) are not leaked into
- * `$props` (#16202).
+ * The optimized path diffs only the compiler-listed dynamic props when the
+ * vnode carries the `PROPS` patch flag, and updates no props for any other
+ * patch flag. A full props diff runs instead whenever the optimized path is
+ * not taken — HMR in dev and the `FULL_PROPS` patch flag force a full diff
+ * even when `PROPS` is set. In compat mode the fast path mirrors
+ * `setFullProps` so keys skipped on mount (e.g. `on*` listeners,
+ * `.native` listeners) are not leaked into `$props` (#16202).
  */
 export function updateProps(
   instance: ComponentInternalInstance,
