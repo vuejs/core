@@ -140,17 +140,19 @@ export function setAttr(
     ;(el as any)._falseValue = value
   }
 
+  // prefixed so an attribute cannot take an internal slot, e.g. `$transition`
+  const cacheKey = `$a$${key}`
   if (isHydrating && !isRecreatedNode(el)) {
     ;(__DEV__ || __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__) &&
       attributeHasMismatch(el, key, value)
     if (skipHydratedWrite(el, key, value, forceHydrate)) {
-      el[`$${key}`] = value
+      el[cacheKey] = value
       return
     }
   }
 
-  if (value !== el[`$${key}`]) {
-    el[`$${key}`] = value
+  if (value !== el[cacheKey]) {
+    el[cacheKey] = value
     if (isSVG && key.startsWith('xlink:')) {
       if (value != null) {
         el.setAttributeNS(xlinkNS, key, value)
@@ -780,7 +782,7 @@ export function setDynamicProp(
     } else {
       // Native handlers share one DOM slot across the prop and attr setters.
       if (isNativeOn(rawKey)) {
-        ;(el as any)[`$${key}`] = value
+        ;(el as any)[`$a$${key}`] = value
       }
       setDOMProp(el, key, value, forceHydrate)
     }
