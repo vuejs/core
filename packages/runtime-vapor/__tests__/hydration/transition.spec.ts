@@ -592,6 +592,26 @@ describe('Vapor Mode hydration', () => {
       expect(container.querySelectorAll('i')).toHaveLength(1)
       expect('Hydration node mismatch').toHaveBeenWarnedTimes(1)
     })
+
+    test('hydrates a transition attribute without taking it as hooks', async () => {
+      const data = ref({ show: true, name: 'all duration-200' })
+      const { container } = await testHydration(
+        // the <Transition> turns on the transition hooks that read `$transition`
+        `<template>
+          <Transition :css="false"><p v-if="data.show">a</p></Transition>
+          <components.Child v-if="data.show" :transition="data.name" />
+        </template>`,
+        { Child: `<template><div>b</div></template>` },
+        data,
+      )
+      expect(stripAnchors(container.innerHTML)).toBe(
+        '<p>a</p><div transition="all duration-200">b</div>',
+      )
+
+      data.value.show = false
+      await nextTick()
+      expect(stripAnchors(container.innerHTML)).toBe('')
+    })
   })
 
   describe('transition-group', () => {

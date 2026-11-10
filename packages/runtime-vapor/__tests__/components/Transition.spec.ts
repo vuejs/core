@@ -5598,3 +5598,34 @@ describe('non-root transition fallthrough', () => {
     )
   })
 })
+
+describe('transition attribute', () => {
+  test('should set a transition attribute without taking it as hooks', async () => {
+    const data = ref({ show: true, name: 'all duration-200' })
+    const Child = compile(`<template><div>child</div></template>`, data)
+    // the <Transition> turns on the transition hooks that read `$transition`
+    const App = compile(
+      `<template>
+        <Transition :css="false"><p v-if="data.show">a</p></Transition>
+        <components.Child v-if="data.show" transition="all duration-200" />
+        <div v-if="data.show" :transition="data.name">b</div>
+      </template>`,
+      data,
+      { Child },
+    )
+    const { host } = define(App).render()
+    expect(stripAnchors(host.innerHTML)).toBe(
+      '<p>a</p><div transition="all duration-200">child</div><div transition="all duration-200">b</div>',
+    )
+
+    data.value.name = 'all duration-500'
+    await nextTick()
+    expect(stripAnchors(host.innerHTML)).toBe(
+      '<p>a</p><div transition="all duration-200">child</div><div transition="all duration-500">b</div>',
+    )
+
+    data.value.show = false
+    await nextTick()
+    expect(stripAnchors(host.innerHTML)).toBe('')
+  })
+})
