@@ -1,3 +1,4 @@
+import { getHeapSpaceStatistics } from 'node:v8'
 import {
   type ComputedRef,
   computed,
@@ -111,5 +112,48 @@ describe.skipIf(!global.gc)('reactivity/gc', () => {
     scope.stop()
     await gc()
     expect(c.deref()).toBeUndefined()
+  })
+
+  // bytes that reach old space per step with only scavenges running: a major
+  // GC would also free what a removed link keeps alive
+  async function promotedPerStep(step: (i: number) => void) {
+    const oldSpace = () =>
+      getHeapSpaceStatistics().find(s => s.space_name === 'old_space')!
+        .space_used_size
+    const steps = 20_000
+    await gc()
+    const before = oldSpace()
+    for (let i = 0; i < steps; i++) {
+      step(i)
+      if ((i & 127) === 127) global.gc!({ type: 'minor' })
+    }
+    global.gc!({ type: 'minor' })
+    return (oldSpace() - before) / steps
+  }
+
+  // #16176
+  it('should not promote stopped effects through a removed subscriber link', async () => {
+    const src = ref(0)
+    const live = Array.from({ length: 32 }, () => effect(() => src.value))
+
+    const promoted = await promotedPerStep(i => {
+      const payload = { a: i, b: [i, i, i, i] }
+      live.push(effect(() => src.value + payload.a))
+      live.shift()!.effect.stop()
+    })
+    expect(promoted).toBeLessThan(40)
+  })
+
+  it('should not promote stopped effects through a removed scope link', async () => {
+    const scope = effectScope()
+    const create = (payload: { a: number; b?: number[] }) =>
+      scope.run(() => effect(() => payload.a))!
+    const live = Array.from({ length: 32 }, () => create({ a: 0 }))
+
+    const promoted = await promotedPerStep(i => {
+      live.push(create({ a: i, b: [i, i, i, i] }))
+      live.shift()!.effect.stop()
+    })
+    expect(promoted).toBeLessThan(40)
   })
 })

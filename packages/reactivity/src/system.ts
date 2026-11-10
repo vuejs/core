@@ -120,6 +120,9 @@ export function unlink(
   const nextDep = link.nextDep
   const nextSub = link.nextSub
   const prevSub = link.prevSub
+  // once in old space, a removed link that still points into its lists would
+  // keep younger links, and the effects behind them, alive across scavenges
+  link.prevDep = link.nextDep = link.prevSub = link.nextSub = undefined
   if (nextDep !== undefined) {
     nextDep.prevDep = prevDep
   } else {
@@ -137,7 +140,12 @@ export function unlink(
   }
   if (prevSub !== undefined) {
     prevSub.nextSub = nextSub
-  } else if ((dep.subs = nextSub) === undefined) {
+  } else if (
+    (dep.subs = nextSub) === undefined &&
+    dep.flags & ReactiveFlags.Mutable
+  ) {
+    // an unwatched computed releases its deps. An effect or a scope keeps
+    // them until it stops: a scope may get here while its deps are stopping
     let toRemove = dep.deps
     if (toRemove !== undefined) {
       do {
@@ -245,7 +253,9 @@ export function endTracking(
   const depsTail = sub.depsTail
   let toRemove = depsTail !== undefined ? depsTail.nextDep : sub.deps
   while (toRemove !== undefined) {
-    toRemove = unlink(toRemove, sub)
+    unlink(toRemove, sub)
+    // read anew: an unlink that leaves `sub` unwatched unlinks all of its deps
+    toRemove = depsTail !== undefined ? depsTail.nextDep : sub.deps
   }
   const flags = (sub.flags &= ~ReactiveFlags.RecursedCheck)
   if (flags & ReactiveFlags.Recursed) {
@@ -302,9 +312,13 @@ function walkDirty(link: Link, sub: ReactiveNode): boolean {
       (depFlags & (ReactiveFlags.Mutable | ReactiveFlags.Dirty)) ===
       (ReactiveFlags.Mutable | ReactiveFlags.Dirty)
     ) {
-      const subs = dep.subs!
       if ((dep as Computed).update()) {
-        if (subs.nextSub !== undefined) {
+        // read after the update, which may unlink subscribers, `link` included
+        const subs = dep.subs
+        if (
+          subs !== undefined &&
+          (subs !== link || subs.nextSub !== undefined)
+        ) {
           shallowPropagate(subs)
         }
         dirty = true
@@ -330,9 +344,12 @@ function walkDirty(link: Link, sub: ReactiveNode): boolean {
       link = stack!.value
       stack = stack!.prev
       if (dirty) {
-        const subs = sub.subs!
         if ((sub as Computed).update()) {
-          if (subs.nextSub !== undefined) {
+          const subs = sub.subs
+          if (
+            subs !== undefined &&
+            (subs !== link || subs.nextSub !== undefined)
+          ) {
             shallowPropagate(subs)
           }
           sub = link.sub
@@ -349,7 +366,9 @@ function walkDirty(link: Link, sub: ReactiveNode): boolean {
       dirty = false
     }
 
-    return dirty && !!sub.flags
+    // a sub unwatched during the walk is dirty, though its deps were unlinked
+    // before the walk could reach them
+    return (dirty || !!(sub.flags & ReactiveFlags.Dirty)) && !!sub.flags
   } while (true)
 }
 
