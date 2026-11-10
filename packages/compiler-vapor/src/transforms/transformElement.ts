@@ -64,7 +64,9 @@ import {
   type IRProps,
   type IRPropsDynamicAttribute,
   type IRPropsStatic,
+  IRSlotType,
   type IRSlots,
+  type IRSlotsStatic,
   type SetBlockKeyIRNode,
   type SetPropIRNode,
   type VaporDirectiveNode,
@@ -420,6 +422,24 @@ function transformComponentElement(
     if (builtInTag) {
       tag = builtInTag
       asset = false
+    }
+
+    if (__DEV__ && builtInTag === 'VaporKeepAlive') {
+      // a default slot returning more than one node is never kept alive
+      const slots = context.slots.find(
+        (slots): slots is IRSlotsStatic => slots.slotType === IRSlotType.STATIC,
+      )
+      const block = slots && slots.slots.default
+      if (block && block.returns.length > 1) {
+        const { children } = node
+        context.options.onError(
+          createCompilerError(ErrorCodes.X_KEEP_ALIVE_INVALID_CHILDREN, {
+            start: children[0].loc.start,
+            end: children[children.length - 1].loc.end,
+            source: '',
+          }),
+        )
+      }
     }
 
     let slotScopeNamespace: string | undefined

@@ -2,6 +2,7 @@ import { makeCompile } from './_utils'
 import {
   IRDynamicPropsKind,
   IRNodeTypes,
+  compile,
   transformChildren,
   transformElement,
   transformText,
@@ -14,7 +15,9 @@ import {
 import {
   type BindingMetadata,
   BindingTypes,
+  ErrorCodes,
   NodeTypes,
+  compile as compileDom,
 } from '@vue/compiler-dom'
 
 const compileWithElementTransform = makeCompile({
@@ -2279,5 +2282,43 @@ describe('compiler: element transform', () => {
       bindingMetadata: { Number: BindingTypes.SETUP_MAYBE_REF },
     })
     expect(code).contains('_createComponent(_ctx.Number')
+  })
+
+  describe('<KeepAlive> children', () => {
+    function errors(
+      compileTemplate: typeof compile | typeof compileDom,
+      template: string,
+    ) {
+      const onError = vi.fn()
+      compileTemplate(template, { onError })
+      return onError.mock.calls.map(([{ code, loc }]) => ({ code, loc }))
+    }
+
+    test.each([
+      // comments are kept in dev, where one makes a second child
+      `<KeepAlive><!-- c --><Child v-if="ok" /></KeepAlive>`,
+      `<KeepAlive><Child /><!-- c --></KeepAlive>`,
+      `<KeepAlive><A /><B /></KeepAlive>`,
+      `<KeepAlive><A v-if="a" /><B v-if="b" /></KeepAlive>`,
+      `<KeepAlive>text<A /></KeepAlive>`,
+      `<keep-alive><A /><B /></keep-alive>`,
+    ])('errors on more than one child, as vdom does: %s', template => {
+      const vdom = errors(compileDom, template)
+      expect(vdom).toMatchObject([
+        { code: ErrorCodes.X_KEEP_ALIVE_INVALID_CHILDREN },
+      ])
+      expect(errors(compile, template)).toEqual(vdom)
+    })
+
+    test.each([
+      `<KeepAlive><Child /></KeepAlive>`,
+      `<KeepAlive><A v-if="ok" /><B v-else /></KeepAlive>`,
+      `<KeepAlive><A v-if="ok" /><!-- c --><B v-else /></KeepAlive>`,
+      `<KeepAlive><A v-for="i in 2" :key="i" /></KeepAlive>`,
+      `<KeepAlive><template v-if="ok"><A /><B /></template></KeepAlive>`,
+    ])('accepts a single child, as vdom does: %s', template => {
+      expect(errors(compileDom, template)).toEqual([])
+      expect(errors(compile, template)).toEqual([])
+    })
   })
 })
