@@ -254,3 +254,154 @@ describe.skipIf(!global.gc)('hydration gc', () => {
     }
   })
 })
+
+describe.skipIf(!global.gc)('directive gc', () => {
+  const gc = () =>
+    new Promise<void>(resolve => {
+      setTimeout(() => {
+        global.gc!()
+        resolve()
+      })
+    })
+
+  test('releases the root a disposed binding last resolved on a kept-alive chain', async () => {
+    const data = ref({ root: true, view: 'inner', inner: true })
+    const Inner = compile(
+      `<template>
+        <div v-if="data.inner">a</div>
+        <p v-else>b</p>
+      </template>`,
+      data,
+    )
+    const Child = compile(
+      `<script setup vapor>
+        const data = _data
+        const Inner = _components.Inner
+      </script>
+      <template>
+        <KeepAlive>
+          <Inner v-if="data.view === 'inner'" />
+          <b v-else-if="data.view === 'b'">b</b>
+          <i v-else>other</i>
+        </KeepAlive>
+      </template>`,
+      data,
+      { Inner },
+    )
+    const App = compile(
+      `<script setup vapor>
+        const data = _data
+        const Child = _components.Child
+        const vCustom = () => {}
+      </script>
+      <template>
+        <KeepAlive>
+          <Child v-if="data.root" v-custom />
+          <span v-else>plain</span>
+        </KeepAlive>
+      </template>`,
+      data,
+      { Child },
+    )
+    const root = document.createElement('div')
+    const app = createVaporApp(App)
+    app.mount(root)
+    try {
+      // Inner leaves the root chain with the binding's hooks still on it
+      data.value.view = 'i'
+      await nextTick()
+      expect(root.firstElementChild!.tagName).toBe('I')
+      // @ts-expect-error ES2021 API
+      const discarded = new WeakRef(root.firstElementChild!)
+      // re-entering the outer branch disposes that binding
+      data.value.root = false
+      await nextTick()
+      data.value.root = true
+      await nextTick()
+      // the root goes while Inner still holds those hooks in the cache
+      data.value.view = 'b'
+      await nextTick()
+      expect(root.firstElementChild!.tagName).toBe('B')
+      await gc()
+      expect(discarded.deref()).toBeUndefined()
+    } finally {
+      app.unmount()
+    }
+  })
+
+  // re-enters the outer branch after its v-show value was replaced and
+  // returns the previous value if anything still holds it
+  const disposedVShowValue = async (offChain: boolean) => {
+    const data = ref<any>({
+      root: true,
+      cached: true,
+      inner: true,
+      shown: { label: 'previous' },
+    })
+    // @ts-expect-error ES2021 API
+    const previous = new WeakRef(data.value.shown)
+    const Inner = compile(
+      `<template>
+        <div v-if="data.inner">a</div>
+        <p v-else>b</p>
+      </template>`,
+      data,
+    )
+    const Child = compile(
+      `<script setup vapor>
+        const data = _data
+        const Inner = _components.Inner
+      </script>
+      <template>
+        <KeepAlive>
+          <Inner v-if="data.cached" />
+          <i v-else>other</i>
+        </KeepAlive>
+      </template>`,
+      data,
+      { Inner },
+    )
+    const App = compile(
+      `<script setup vapor>
+        const data = _data
+        const Child = _components.Child
+      </script>
+      <template>
+        <KeepAlive>
+          <Child v-if="data.root" v-show="data.shown" />
+          <span v-else>plain</span>
+        </KeepAlive>
+      </template>`,
+      data,
+      { Child },
+    )
+    const root = document.createElement('div')
+    const app = createVaporApp(App)
+    app.mount(root)
+    try {
+      if (offChain) {
+        // Inner leaves the root chain with the binding's hook still on it
+        data.value.cached = false
+        await nextTick()
+      }
+      data.value.root = false
+      await nextTick()
+      data.value.shown = null
+      await nextTick()
+      data.value.root = true
+      await nextTick()
+      await gc()
+      return previous.deref()
+    } finally {
+      app.unmount()
+    }
+  }
+
+  test('releases the value of a v-show binding disposed on a kept-alive chain', async () => {
+    expect(await disposedVShowValue(false)).toBeUndefined()
+  })
+
+  test('releases the value of a v-show binding disposed while a nested KeepAlive holds its hook', async () => {
+    expect(await disposedVShowValue(true)).toBeUndefined()
+  })
+})

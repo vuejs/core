@@ -7,12 +7,14 @@ import {
   warn,
   warnPropMismatch,
 } from '@vue/runtime-dom'
-import { setActiveSub } from '@vue/reactivity'
+import { onScopeDispose, setActiveSub } from '@vue/reactivity'
 import { renderEffect } from '../renderEffect'
 import {
   type RootChainVisitor,
   type VaporComponentInstance,
   getRootElement,
+  registerRootHook,
+  staleRootHooks,
 } from '../component'
 import {
   type Block,
@@ -27,6 +29,7 @@ import { isInteropEnabled } from '../vdomInteropState'
 import { isInteropVShowPending, setInteropVShow } from '../vdomInterop'
 import { isTransitionEnabled, isVaporTransition } from '../transition'
 import { isSuspenseEnabled } from '../suspense'
+import { isKeepAliveEnabled } from '../keepAlive'
 
 /**
  * v-show is root-inherited state: it lands on the effective root element of
@@ -55,10 +58,11 @@ export function applyVShow(target: Block, source: () => any): void {
   // pending async setups this binding already waits on
   let pendingSetups: WeakSet<VaporComponentInstance> | undefined
   let applyInTransition: ((nodes: Block) => void) | undefined
+  let disposed = false
 
   const visitor: RootChainVisitor = {
     onComponent(instance) {
-      if (__DEV__) register((instance.hmrRootHooks ||= []), apply)
+      if (__DEV__) registerRootHook((instance.hmrRootHooks ||= []), apply)
       if (
         __FEATURE_SUSPENSE__ &&
         isSuspenseEnabled &&
@@ -80,7 +84,7 @@ export function applyVShow(target: Block, source: () => any): void {
     onDynamicFragment(frag) {
       if (!inTransition && isSlotOutletFragment(frag)) return (slotRoot = true)
       // a branch swapped on Transition's root chain re-enters with that context
-      register(
+      registerRootHook(
         (frag.bm ||= []),
         inTransition
           ? (applyInTransition ||= nodes => apply(nodes, false, true))
@@ -94,12 +98,13 @@ export function applyVShow(target: Block, source: () => any): void {
       if (frag.vnode) setInteropVShow(frag, apply)
       if (isTransitionEnabled && frag.$transition) transition = frag.$transition
       // vdom patches the content first, then notifies through `u`
-      register((frag.u ||= []), apply)
+      registerRootHook((frag.u ||= []), apply)
       if (!isValidBlock(frag.nodes)) unresolved = true
     }
   }
 
   const apply = (nodes: Block, update?: boolean, transitionSlot?: boolean) => {
+    if (disposed) return
     transition = undefined
     unresolved = slotRoot = false
     updating = update
@@ -116,15 +121,21 @@ export function applyVShow(target: Block, source: () => any): void {
   }
 
   ;(target as TransitionBlock).$vshow! |= VShowFlags.TARGET
+  if (isKeepAliveEnabled && !(target instanceof Element)) {
+    // A kept-alive root chain outlives the branch render that bound it: the
+    // hooks left there neither apply nor hold a frozen value.
+    onScopeDispose(() => {
+      disposed = true
+      value = undefined
+      staleRootHooks.add(apply)
+      if (applyInTransition) staleRootHooks.add(applyInTransition)
+    }, true)
+  }
   renderEffect(() => {
     value = source()
     apply(target, ran)
     ran = true
   })
-}
-
-function register<T>(hooks: T[], hook: T): void {
-  if (!hooks.includes(hook)) hooks.push(hook)
 }
 
 function setDisplay(

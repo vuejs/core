@@ -8,9 +8,17 @@ import {
   template,
   vaporInteropPlugin,
 } from '../../src'
-import { type VShowElement, createApp, nextTick, ref } from 'vue'
+import {
+  type VShowElement,
+  createApp,
+  currentInstance,
+  nextTick,
+  ref,
+} from 'vue'
 import { describe, expect, test, vi } from 'vite-plus/test'
 import { compile, makeRender, renderParity } from '../_utils'
+import type { VaporComponentInstance } from '../../src/component'
+import type { DynamicFragment } from '../../src/fragment'
 
 const define = makeRender()
 
@@ -786,5 +794,386 @@ await data.value.ready
     )
     expect(seen.vdom).toEqual(['none', 1, 1])
     expect(seen.vapor).toEqual(seen.vdom)
+  })
+  test('takes over the hooks of the binding it replaces on a kept-alive root chain', async () => {
+    const data = ref({ root: true, inner: true, shown: true })
+    let childInstance!: VaporComponentInstance
+    const Child = compile(
+      `<script setup vapor>
+        const data = _data
+        _components.capture()
+      </script>
+      <template>
+        <div v-if="data.inner">a</div>
+        <p v-else>b</p>
+      </template>`,
+      data,
+      {
+        capture: () =>
+          (childInstance = currentInstance as VaporComponentInstance),
+      },
+    )
+    const App = compile(
+      `<script setup vapor>
+        const data = _data
+        const Child = _components.Child
+      </script>
+      <template>
+        <KeepAlive>
+          <Child v-if="data.root" v-show="data.shown" />
+          <span v-else>plain</span>
+        </KeepAlive>
+      </template>`,
+      data,
+      { Child },
+    )
+    const { host, app } = define(App).render()
+    const frag = childInstance.block as DynamicFragment
+    const hookCounts = () => [
+      frag.bm!.length,
+      childInstance.hmrRootHooks!.length,
+    ]
+    expect(hookCounts()).toEqual([1, 1])
+
+    for (let i = 0; i < 3; i++) {
+      data.value.root = false
+      await nextTick()
+      data.value.root = true
+      await nextTick()
+    }
+    // the binding of each re-entered branch render replaces the previous one
+    expect(hookCounts()).toEqual([1, 1])
+
+    data.value.shown = false
+    await nextTick()
+    expect(host.querySelector('div')!.style.display).toBe('none')
+    data.value.inner = false
+    await nextTick()
+    expect(host.querySelector('p')!.style.display).toBe('none')
+
+    app.unmount()
+  })
+
+  test('a disposed binding does not hide the root a kept-alive Transition renders later', async () => {
+    const data = ref({ root: true, inner: true, shown: false })
+    let childInstance!: VaporComponentInstance
+    const Child = compile(
+      `<script setup vapor>
+        const data = _data
+        _components.capture()
+      </script>
+      <template>
+        <Transition :css="false">
+          <div v-if="data.inner">a</div>
+          <p v-else>b</p>
+        </Transition>
+      </template>`,
+      data,
+      {
+        capture: () =>
+          (childInstance = currentInstance as VaporComponentInstance),
+      },
+    )
+    const App = compile(
+      `<script setup vapor>
+        const data = _data
+        const Child = _components.Child
+      </script>
+      <template>
+        <KeepAlive>
+          <Child v-if="data.root" v-show="data.shown" />
+          <span v-else>plain</span>
+        </KeepAlive>
+      </template>`,
+      data,
+      { Child },
+    )
+    const { host, app } = define(App).render()
+    const frag = (childInstance.block as VaporComponentInstance)
+      .block as DynamicFragment
+    const hooks = frag.bm!.length
+    expect(host.querySelector('div')!.style.display).toBe('none')
+
+    data.value.root = false
+    await nextTick()
+    data.value.shown = true
+    await nextTick()
+    data.value.root = true
+    await nextTick()
+    expect(frag.bm!.length).toBe(hooks)
+    expect(host.querySelector('div')!.style.display).toBe('')
+
+    data.value.inner = false
+    await nextTick()
+    expect(host.querySelector('p')!.style.display).toBe('')
+
+    app.unmount()
+  })
+
+  test('a disposed binding stays off a branch a nested KeepAlive cached while it was live', async () => {
+    const data = ref({ root: true, cached: true, inner: true, shown: false })
+    const Inner = compile(
+      `<template>
+        <Transition :css="false">
+          <div v-if="data.inner">a</div>
+          <p v-else>b</p>
+        </Transition>
+      </template>`,
+      data,
+    )
+    const Child = compile(
+      `<script setup vapor>
+        const data = _data
+        const Inner = _components.Inner
+      </script>
+      <template>
+        <KeepAlive>
+          <Inner v-if="data.cached" />
+          <i v-else>other</i>
+        </KeepAlive>
+      </template>`,
+      data,
+      { Inner },
+    )
+    const App = compile(
+      `<script setup vapor>
+        const data = _data
+        const Child = _components.Child
+      </script>
+      <template>
+        <KeepAlive>
+          <Child v-if="data.root" v-show="data.shown" />
+          <span v-else>plain</span>
+        </KeepAlive>
+      </template>`,
+      data,
+      { Child },
+    )
+    const { host, app } = define(App).render()
+
+    // Inner leaves the root chain before the outer branch is re-entered
+    data.value.cached = false
+    await nextTick()
+    data.value.root = false
+    await nextTick()
+    data.value.shown = true
+    await nextTick()
+    data.value.root = true
+    await nextTick()
+    data.value.cached = true
+    await nextTick()
+    expect(host.querySelector('div')!.style.display).toBe('')
+
+    data.value.inner = false
+    await nextTick()
+    expect(host.querySelector('p')!.style.display).toBe('')
+
+    app.unmount()
+  })
+
+  test('a disposed binding does not hide the root a kept-alive vdom child renders later', async () => {
+    const data = ref({ root: true, inner: true, shown: false })
+    const Child = compile(
+      `<script setup>
+        const data = _data
+      </script>
+      <template>
+        <Transition :css="false">
+          <div v-if="data.inner">a</div>
+          <p v-else>b</p>
+        </Transition>
+      </template>`,
+      data,
+      {},
+      { vapor: false },
+    )
+    const App = compile(
+      `<script setup vapor>
+        const data = _data
+        const Child = _components.Child
+      </script>
+      <template>
+        <KeepAlive>
+          <Child v-if="data.root" v-show="data.shown" />
+          <span v-else>plain</span>
+        </KeepAlive>
+      </template>`,
+      data,
+      { Child },
+    )
+    const { app, mount } = define(App).create()
+    app.use(vaporInteropPlugin)
+    const { host } = mount()
+    expect(host.querySelector('div')!.style.display).toBe('none')
+
+    data.value.root = false
+    await nextTick()
+    data.value.shown = true
+    await nextTick()
+    data.value.root = true
+    await nextTick()
+    expect(host.querySelector('div')!.style.display).toBe('')
+
+    data.value.inner = false
+    await nextTick()
+    expect(host.querySelector('p')!.style.display).toBe('')
+
+    // the live binding is the one a root mounted by the vdom child goes through
+    data.value.shown = false
+    await nextTick()
+    data.value.inner = true
+    await nextTick()
+    expect(host.querySelector('div')!.style.display).toBe('none')
+
+    app.unmount()
+  })
+
+  test('a disposed binding gives up a vdom child a nested KeepAlive cached while it was live', async () => {
+    const data = ref({ root: true, cached: true, inner: true, shown: false })
+    const Inner = compile(
+      `<script setup>
+        const data = _data
+      </script>
+      <template>
+        <Transition :css="false">
+          <div v-if="data.inner">a</div>
+          <p v-else>b</p>
+        </Transition>
+      </template>`,
+      data,
+      {},
+      { vapor: false },
+    )
+    const Child = compile(
+      `<script setup vapor>
+        const data = _data
+        const Inner = _components.Inner
+      </script>
+      <template>
+        <KeepAlive>
+          <Inner v-if="data.cached" />
+          <i v-else>other</i>
+        </KeepAlive>
+      </template>`,
+      data,
+      { Inner },
+    )
+    const App = compile(
+      `<script setup vapor>
+        const data = _data
+        const Child = _components.Child
+      </script>
+      <template>
+        <KeepAlive>
+          <Child v-if="data.root" v-show="data.shown" />
+          <span v-else>plain</span>
+        </KeepAlive>
+      </template>`,
+      data,
+      { Child },
+    )
+    const { app, mount } = define(App).create()
+    app.use(vaporInteropPlugin)
+    const { host } = mount()
+
+    // Inner leaves the root chain before the outer branch is re-entered
+    data.value.cached = false
+    await nextTick()
+    data.value.root = false
+    await nextTick()
+    data.value.shown = true
+    await nextTick()
+    data.value.root = true
+    await nextTick()
+    data.value.cached = true
+    await nextTick()
+    data.value.inner = false
+    await nextTick()
+    expect(host.querySelector('p')!.style.display).toBe('')
+
+    data.value.shown = false
+    await nextTick()
+    data.value.inner = true
+    await nextTick()
+    expect(host.querySelector('div')!.style.display).toBe('none')
+
+    app.unmount()
+  })
+
+  test('a branch a nested KeepAlive cached gains no hook from the bindings disposed meanwhile', async () => {
+    const data = ref({ root: true, cached: true, inner: true, shown: true })
+    let innerInstance!: VaporComponentInstance
+    const Inner = compile(
+      `<script setup vapor>
+        const data = _data
+        _components.capture()
+      </script>
+      <template>
+        <div v-if="data.inner">a</div>
+        <p v-else>b</p>
+      </template>`,
+      data,
+      {
+        capture: () =>
+          (innerInstance = currentInstance as VaporComponentInstance),
+      },
+    )
+    const Child = compile(
+      `<script setup vapor>
+        const data = _data
+        const Inner = _components.Inner
+      </script>
+      <template>
+        <KeepAlive>
+          <Inner v-if="data.cached" />
+          <i v-else>other</i>
+        </KeepAlive>
+      </template>`,
+      data,
+      { Inner },
+    )
+    const App = compile(
+      `<script setup vapor>
+        const data = _data
+        const Child = _components.Child
+      </script>
+      <template>
+        <KeepAlive>
+          <Child v-if="data.root" v-show="data.shown" />
+          <span v-else>plain</span>
+        </KeepAlive>
+      </template>`,
+      data,
+      { Child },
+    )
+    const { host, app } = define(App).render()
+    const frag = innerInstance.block as DynamicFragment
+    const hookCounts = () => [
+      frag.bm!.length,
+      innerInstance.hmrRootHooks!.length,
+    ]
+    expect(hookCounts()).toEqual([1, 1])
+
+    for (let i = 0; i < 3; i++) {
+      // Inner is off the root chain while the outer branch is re-entered
+      data.value.cached = false
+      await nextTick()
+      data.value.root = false
+      await nextTick()
+      data.value.root = true
+      await nextTick()
+      data.value.cached = true
+      await nextTick()
+    }
+    expect(hookCounts()).toEqual([1, 1])
+
+    data.value.shown = false
+    await nextTick()
+    expect(host.querySelector('div')!.style.display).toBe('none')
+    data.value.inner = false
+    await nextTick()
+    expect(host.querySelector('p')!.style.display).toBe('none')
+
+    app.unmount()
   })
 })

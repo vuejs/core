@@ -1923,6 +1923,23 @@ export function getRootElement(
   }
 }
 
+/**
+ * Hooks a disposed binding left on its root chain. A kept-alive chain outlives
+ * the branch render that bound it, so the next binding to register takes
+ * their place.
+ */
+export const staleRootHooks: WeakSet<object> = new WeakSet()
+
+export function registerRootHook<T extends object>(hooks: T[], hook: T): void {
+  if (hooks.includes(hook)) return
+  // replaced in place: the array may be running its hooks
+  const i = isKeepAliveEnabled
+    ? hooks.findIndex(h => staleRootHooks.has(h))
+    : -1
+  if (i < 0) hooks.push(hook)
+  else hooks[i] = hook
+}
+
 // A multi-root array has no effective root; only a lone eligible branch
 // alongside comments can hold one (vdom comment-filtering alignment).
 function singleRootOf(nodes: Block[]): Block | undefined {

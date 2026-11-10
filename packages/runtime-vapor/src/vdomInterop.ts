@@ -102,6 +102,7 @@ import {
   mountComponent,
   resolveFallthroughAttrs,
   resolveFallthroughOwner,
+  staleRootHooks,
   unmountComponent,
 } from './component'
 import { normalizeEmitsOptions } from './componentEmits'
@@ -1395,7 +1396,7 @@ function trackFragmentVNodeUpdates(
   // of accumulating, and user props stay untouched.
   vnode.ibu = () => {
     if (frag.bu) {
-      frag.bu.forEach(hook => hook())
+      frag.bu.forEach(hook => hook(frag.nodes))
     }
   }
   vnode.iu = () => {
@@ -1480,12 +1481,15 @@ export function setInteropVShow(
 ): void {
   const vnode = frag.vnode!
   const dirs = vnode.dirs
-  if (
+  const owner =
     dirs &&
-    dirs.some(
+    dirs.find(
       binding => binding.dir === interopVShow && binding.value.frag === frag,
     )
-  ) {
+  if (owner) {
+    // every copy of the vnode shares this binding: the next v-show to resolve
+    // through a slot whose owner was disposed takes it over
+    if (staleRootHooks.has(owner.value.apply)) owner.value.apply = apply
     return
   }
   const binding = {
@@ -2811,7 +2815,7 @@ function renderVDOMSlot(
   function notifyBeforeUpdate(): void {
     if (isMounted) {
       if (reportsValidity) wasExposedValid = isValidSlot(frag)
-      if (frag.bu) frag.bu.forEach(hook => hook())
+      if (frag.bu) frag.bu.forEach(hook => hook(frag.nodes))
     }
   }
 
@@ -4603,7 +4607,7 @@ function createVNodeChildrenFragment(
   }
   const notifyBeforeUpdate = (): void => {
     if (isMounted && frag.bu) {
-      frag.bu.forEach(hook => hook())
+      frag.bu.forEach(hook => hook(frag.nodes))
     }
   }
 
