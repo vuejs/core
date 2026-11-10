@@ -1715,4 +1715,48 @@ describe('reactivity/effect', () => {
     source.value = 1
     expect(maxDepth).toBe(1)
   })
+
+  it('should not revive an effect stopped by a computed getter while it is being checked', () => {
+    const s = ref(0)
+    let runner!: ReactiveEffectRunner
+    let runs = 0
+    const a = computed(() => {
+      if (s.value === 1) stop(runner)
+      return s.value
+    })
+    runner = effect(() => {
+      a.value
+      runs++
+    })
+    // second subscriber keeps `a` watched
+    effect(() => {
+      a.value
+    })
+
+    s.value = 1
+    expect(runs).toBe(2)
+    s.value = 2
+    s.value = 3
+    expect(runs).toBe(2)
+    expect(runner.effect.active).toBe(false)
+    expect(runner.effect.deps).toBeUndefined()
+  })
+
+  it('should keep an effect stopped by a computed getter that returned the same value', () => {
+    const s = ref(0)
+    let runner!: ReactiveEffectRunner
+    let runs = 0
+    const a = computed(() => {
+      if (s.value === 1) stop(runner)
+      return 0
+    })
+    runner = effect(() => {
+      a.value
+      runs++
+    })
+
+    s.value = 1
+    expect(runs).toBe(1)
+    expect(runner.effect.active).toBe(false)
+  })
 })
