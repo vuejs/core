@@ -1691,6 +1691,8 @@ function mountVNode(
       cloned.key = base.key
       cloned.props!.key = base.key ?? undefined
     }
+    // a spread `ref` has no owner here either (see createVDOMComponent)
+    cloned.ref = base.ref
     return cloned
   }
   // The caller can reuse this VNode; interop hooks belong to this mount only.
@@ -2054,6 +2056,9 @@ function createVDOMComponent(
       }
     }
     vnode = createVNode(comp, rawValues)
+    // a `ref` in a `v-bind` object is not a template ref in Vapor, and has no
+    // rendering instance to own it here; only `frag.setRef` sets one
+    vnode.ref = null
   } catch (error) {
     if (inputScope) inputScope.stop()
     throw error
