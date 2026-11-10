@@ -924,15 +924,22 @@ describe('component props', () => {
     configureCompat({ MODE: 2 })
     try {
       let childProps: any
-      let childListeners: any
-      const onChange = () => {}
+      let childInstance: any
+      const calls: any[][] = []
+      const handler1 = (...args: any[]) => {
+        calls.push(['first', ...args])
+      }
+      const handler2 = (...args: any[]) => {
+        calls.push(['second', ...args])
+      }
+      const onChange = ref(handler1)
       const options = ref([1])
 
       const Child = defineComponent({
         props: { options: Array },
         mounted(this: any) {
           childProps = this.$props
-          childListeners = this.$listeners
+          childInstance = this
         },
         template: `<div>{{ options }}</div>`,
       })
@@ -948,15 +955,21 @@ describe('component props', () => {
       const root = document.createElement('div')
       domRender(h(Comp), root)
       expect(childProps.onChange).toBeUndefined()
-      expect(childListeners.change).toBe(onChange)
+      expect(childInstance.$listeners.change).toBe(handler1)
       expect(
         deprecationData[DeprecationTypes.INSTANCE_LISTENERS].message,
       ).toHaveBeenWarned()
 
+      onChange.value = handler2
       options.value = [2]
       await nextTick()
       expect(childProps.onChange).toBeUndefined()
-      expect(childListeners.change).toBe(onChange)
+      // $listeners is a getter that builds a new object from the current
+      // vnode props on every access, so re-read it after the update instead
+      // of relying on an object captured in mounted()
+      expect(childInstance.$listeners.change).toBe(handler2)
+      childInstance.$emit('change', 'payload')
+      expect(calls).toEqual([['second', 'payload']])
     } finally {
       configureCompat({ MODE: 3 })
     }
@@ -971,7 +984,14 @@ describe('component props', () => {
     try {
       let childProps: any
       let childAttrs: any
-      const onChange = () => {}
+      const calls: string[] = []
+      const handler1 = () => {
+        calls.push('first')
+      }
+      const handler2 = () => {
+        calls.push('second')
+      }
+      const onChange = ref(handler1)
       const options = ref([1])
 
       const Child = defineComponent({
@@ -996,13 +1016,20 @@ describe('component props', () => {
       expect(CompilerDeprecationTypes.COMPILER_V_ON_NATIVE).toHaveBeenWarned()
       expect(childProps.onChange).toBeUndefined()
       expect(childProps.onChangeNative).toBeUndefined()
-      expect(childAttrs.onChange).toBe(onChange)
+      expect(childAttrs.onChange).toBe(handler1)
 
+      onChange.value = handler2
       options.value = [2]
       await nextTick()
       expect(childProps.onChange).toBeUndefined()
       expect(childProps.onChangeNative).toBeUndefined()
-      expect(childAttrs.onChange).toBe(onChange)
+      expect(childAttrs.onChange).toBe(handler2)
+      expect(childAttrs).not.toHaveProperty('onChangeNative')
+      // the normalized listener falls through to the child root element,
+      // so the corresponding DOM event must invoke the replacement handler
+      const childRoot = root.firstChild as Element
+      childRoot.dispatchEvent(new Event('change'))
+      expect(calls).toEqual(['second'])
     } finally {
       configureCompat({ MODE: 3 })
     }
