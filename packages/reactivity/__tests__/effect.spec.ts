@@ -1611,4 +1611,108 @@ describe('reactivity/effect', () => {
     expect(reads).toEqual(__DEV__ ? ['onTrack', 'onTrigger'] : [])
     stop(runner)
   })
+
+  test('should keep notifying an effect that wrote a dep of a computed it reads', () => {
+    const a = ref(0)
+    const b = ref(0)
+    const c = computed(() => a.value + b.value)
+    const seen: number[] = []
+    effect(() => {
+      seen.push(c.value)
+      a.value = 1
+    })
+    expect(seen).toEqual([0])
+
+    b.value = 5
+    expect(seen).toEqual([0, 6])
+  })
+
+  test('should keep notifying an effect that wrote two deps of a computed it reads', () => {
+    const a = ref(0)
+    const b = ref(0)
+    const c = computed(() => a.value + b.value)
+    const seen: number[] = []
+    effect(() => {
+      seen.push(c.value)
+      a.value = 1
+      b.value = 1
+    })
+    expect(seen).toEqual([0])
+
+    a.value = 5
+    expect(seen).toEqual([0, 6])
+  })
+
+  test('should keep notifying an effect that wrote a dep reaching its computed twice', () => {
+    const a = ref(1)
+    const b = ref(0)
+    const c1 = computed(() => a.value)
+    const c2 = computed(() => a.value)
+    const c = computed(() => c1.value + c2.value + b.value)
+    const seen: number[] = []
+    effect(() => {
+      seen.push(c.value)
+      a.value = 0
+    })
+    expect(seen).toEqual([2])
+
+    b.value = 5
+    expect(seen).toEqual([2, 5])
+  })
+
+  // #16174
+  test('should keep notifying an effect through a computed that reads a dep twice apart', () => {
+    const a = ref(2)
+    const b = ref(1)
+    const c = computed(() => (a.value & 1 ? (b.value + a.value) % 97 : b.value))
+    effect(() => {
+      a.value = c.value
+    })
+    const seen: number[] = []
+    effect(() => seen.push(a.value))
+
+    b.value = 3
+    expect(seen).toEqual([1, 4])
+
+    b.value = 0
+    expect(seen).toEqual([1, 4, 0])
+  })
+
+  test('should keep notifying through a computed that wrote its own dep', () => {
+    const a = ref(1)
+    const b = ref(0)
+    const inner = computed(() => a.value + b.value)
+    const c = computed(() => {
+      const value = inner.value
+      if (value === 1) a.value = 0
+      return value
+    })
+    const seen: number[] = []
+    effect(() => seen.push(c.value))
+    expect(seen).toEqual([1])
+
+    b.value = 5
+    expect(seen).toEqual([1, 5])
+  })
+
+  test('should not re-enter a running effect', () => {
+    const source = ref(0)
+    const a = ref(0)
+    const double = computed(() => a.value * 2)
+    // a reaches sum twice: directly and through double
+    const sum = computed(() => a.value + double.value)
+    let depth = 0
+    let maxDepth = 0
+    effect(() => {
+      maxDepth = Math.max(maxDepth, ++depth)
+      if (sum.value === 3) a.value = 2
+      depth--
+    })
+    effect(() => {
+      a.value = source.value
+    })
+
+    source.value = 1
+    expect(maxDepth).toBe(1)
+  })
 })

@@ -43,16 +43,6 @@ const notifyBuffer: (Effect | undefined)[] = []
 export let batchDepth = 0
 export let activeSub: ReactiveNode | undefined = undefined
 
-let runDepth = 0
-
-export function incRunDepth(): void {
-  ++runDepth
-}
-
-export function decRunDepth(): void {
-  --runDepth
-}
-
 let globalVersion = 0
 let notifyIndex = 0
 let notifyBufferLength = 0
@@ -179,9 +169,6 @@ export function propagate(link: Link): void {
         )
       ) {
         sub.flags = flags | ReactiveFlags.Pending
-        if (runDepth) {
-          sub.flags |= ReactiveFlags.Recursed
-        }
       } else if (
         !(flags & (ReactiveFlags.RecursedCheck | ReactiveFlags.Recursed))
       ) {
@@ -260,7 +247,10 @@ export function endTracking(
   while (toRemove !== undefined) {
     toRemove = unlink(toRemove, sub)
   }
-  sub.flags &= ~ReactiveFlags.RecursedCheck
+  const flags = (sub.flags &= ~ReactiveFlags.RecursedCheck)
+  if (flags & ReactiveFlags.Recursed) {
+    markRecursed(sub)
+  }
 }
 
 export function flush(): void {
@@ -403,4 +393,24 @@ function isValidLink(checkLink: Link, sub: ReactiveNode): boolean {
     link = link.prevDep
   }
   return false
+}
+
+// A sub invalidated by its own run stays Pending | Recursed: it was not
+// notified, and Recursed lets the next write through to it. The pending nodes
+// below it would take that write as already notified, so mark them as well.
+function markRecursed(sub: ReactiveNode): void {
+  const nodes = [sub]
+  do {
+    sub = nodes.pop()!
+    for (let link = sub.deps; link !== undefined; link = link.nextDep) {
+      const dep = link.dep
+      if (
+        (dep.flags & (ReactiveFlags.Recursed | ReactiveFlags.Pending)) ===
+        ReactiveFlags.Pending
+      ) {
+        dep.flags |= ReactiveFlags.Recursed
+        nodes.push(dep)
+      }
+    }
+  } while (nodes.length)
 }
