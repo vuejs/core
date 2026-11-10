@@ -158,11 +158,15 @@ export class ReactiveEffect<T = any>
       return true
     }
     if (flags & ReactiveFlags.Pending) {
+      // a getter can stop or pause this effect during the check, so update
+      // the current flags instead of writing back the ones read above
       if (checkDirty(this.deps!, this)) {
-        this.flags = flags | ReactiveFlags.Dirty
+        if (this.active) {
+          this.flags |= ReactiveFlags.Dirty
+        }
         return true
       } else {
-        this.flags = flags & ~ReactiveFlags.Pending
+        this.flags &= ~ReactiveFlags.Pending
       }
     }
     return false
