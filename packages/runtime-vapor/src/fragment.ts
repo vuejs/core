@@ -162,7 +162,7 @@ export class VaporFragment<
   /** beforeUnmount */
   bum?: (() => void)[]
   /** beforeUpdate */
-  bu?: (() => void)[]
+  bu?: ((nodes: Block) => void)[]
   /** updated */
   u?: ((nodes: Block) => void)[]
 
@@ -460,7 +460,7 @@ export class DynamicFragment extends RenderContextFragment {
         const bu = this.bu
         if (bu) {
           for (let i = 0; i < bu.length; i++) {
-            bu[i]()
+            bu[i](this.nodes)
           }
         }
       }

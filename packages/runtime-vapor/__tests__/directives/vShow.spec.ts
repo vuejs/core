@@ -795,7 +795,7 @@ await data.value.ready
     expect(seen.vdom).toEqual(['none', 1, 1])
     expect(seen.vapor).toEqual(seen.vdom)
   })
-  test('takes its hooks back off a kept-alive root chain when the binding is disposed', async () => {
+  test('takes over the hooks of the binding it replaces on a kept-alive root chain', async () => {
     const data = ref({ root: true, inner: true, shown: true })
     let childInstance!: VaporComponentInstance
     const Child = compile(
@@ -1096,6 +1096,83 @@ await data.value.ready
     data.value.inner = true
     await nextTick()
     expect(host.querySelector('div')!.style.display).toBe('none')
+
+    app.unmount()
+  })
+
+  test('a branch a nested KeepAlive cached gains no hook from the bindings disposed meanwhile', async () => {
+    const data = ref({ root: true, cached: true, inner: true, shown: true })
+    let innerInstance!: VaporComponentInstance
+    const Inner = compile(
+      `<script setup vapor>
+        const data = _data
+        _components.capture()
+      </script>
+      <template>
+        <div v-if="data.inner">a</div>
+        <p v-else>b</p>
+      </template>`,
+      data,
+      {
+        capture: () =>
+          (innerInstance = currentInstance as VaporComponentInstance),
+      },
+    )
+    const Child = compile(
+      `<script setup vapor>
+        const data = _data
+        const Inner = _components.Inner
+      </script>
+      <template>
+        <KeepAlive>
+          <Inner v-if="data.cached" />
+          <i v-else>other</i>
+        </KeepAlive>
+      </template>`,
+      data,
+      { Inner },
+    )
+    const App = compile(
+      `<script setup vapor>
+        const data = _data
+        const Child = _components.Child
+      </script>
+      <template>
+        <KeepAlive>
+          <Child v-if="data.root" v-show="data.shown" />
+          <span v-else>plain</span>
+        </KeepAlive>
+      </template>`,
+      data,
+      { Child },
+    )
+    const { host, app } = define(App).render()
+    const frag = innerInstance.block as DynamicFragment
+    const hookCounts = () => [
+      frag.bm!.length,
+      innerInstance.hmrRootHooks!.length,
+    ]
+    expect(hookCounts()).toEqual([1, 1])
+
+    for (let i = 0; i < 3; i++) {
+      // Inner is off the root chain while the outer branch is re-entered
+      data.value.cached = false
+      await nextTick()
+      data.value.root = false
+      await nextTick()
+      data.value.root = true
+      await nextTick()
+      data.value.cached = true
+      await nextTick()
+    }
+    expect(hookCounts()).toEqual([1, 1])
+
+    data.value.shown = false
+    await nextTick()
+    expect(host.querySelector('div')!.style.display).toBe('none')
+    data.value.inner = false
+    await nextTick()
+    expect(host.querySelector('p')!.style.display).toBe('none')
 
     app.unmount()
   })

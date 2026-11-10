@@ -12,11 +12,13 @@ import {
   setCurrentInstance,
   warn,
 } from '@vue/runtime-dom'
-import { EMPTY_BLOCK } from '../block'
+import { type Block, EMPTY_BLOCK } from '../block'
 import {
   type RootChainVisitor,
   type VaporComponentInstance,
   getRootElement,
+  registerRootHook,
+  staleRootHooks,
 } from '../component'
 import { isAsyncComponentEnabled } from '../asyncComponentState'
 import { type VaporFragment, isDynamicFragment, isFragment } from '../fragment'
@@ -24,7 +26,7 @@ import { inOnce, withOnce } from '../once'
 import { isInteropEnabled } from '../vdomInteropState'
 import { isSuspenseEnabled } from '../suspense'
 import { isKeepAliveEnabled } from '../keepAlive'
-import { isFunction, isObject, remove } from '@vue/shared'
+import { isFunction, isObject } from '@vue/shared'
 
 // !! vapor directive is different from vdom directives
 export type VaporDirective<
@@ -76,14 +78,12 @@ export function withVaporDirectives(
   // Set by a descent that met a root which cannot resolve yet.
   let pending = false
   let pendingSetups: WeakSet<VaporComponentInstance> | undefined
-  let releases: WeakMap<VaporFragment, () => void> | undefined
 
   const visitor: RootChainVisitor = {
     onDynamicFragment: track,
     onComponent(block) {
       if (__DEV__) {
-        const hooks = (block.hmrRootHooks ||= [])
-        if (!hooks.includes(applyDirectives)) hooks.push(applyDirectives)
+        registerRootHook((block.hmrRootHooks ||= []), applyDirectives)
       }
       if (
         __FEATURE_SUSPENSE__ &&
@@ -124,30 +124,20 @@ export function withVaporDirectives(
   }
 
   function track(frag: VaporFragment): void {
-    const u = (frag.u ||= [])
-    if (u.includes(applyDirectives)) return
     // Re-resolve the root element when the fragment updates
-    u.push(applyDirectives)
+    registerRootHook((frag.u ||= []), applyDirectives)
     // A branch switch discards its root: release it while it is still in the
     // DOM (vdom beforeUnmount). Interop fragments update on every vdom
     // re-render and usually keep their root, so they only re-resolve.
-    if (isDynamicFragment(frag)) {
-      const release = () => {
-        // Fragments off the chain (a deactivated KeepAlive branch) keep it
-        if (currentElement && getRootElement(frag.nodes) === currentElement) {
-          currentElement = null
-          stopDirectiveScope()
-        }
-      }
-      ;(frag.bu ||= []).push(release)
-      if (isKeepAliveEnabled) (releases ||= new WeakMap()).set(frag, release)
-    }
+    if (isDynamicFragment(frag)) registerRootHook((frag.bu ||= []), release)
   }
 
-  function untrack(frag: VaporFragment): void {
-    if (frag.u) remove(frag.u, applyDirectives)
-    const release = releases && releases.get(frag)
-    if (release) remove(frag.bu!, release)
+  function release(nodes: Block): void {
+    // Fragments off the chain (a deactivated KeepAlive branch) keep it
+    if (currentElement && getRootElement(nodes) === currentElement) {
+      currentElement = null
+      stopDirectiveScope()
+    }
   }
 
   function applyDirectives() {
@@ -201,21 +191,12 @@ export function withVaporDirectives(
     disposed = true
     // Stop the detached scope when the calling scope is disposed
     stopDirectiveScope()
-    // hooks left where the walk below cannot reach must not pin the root
+    // A kept-alive root chain outlives the branch render that bound it: the
+    // hooks left there must not pin the root.
     currentElement = null
-    // A kept-alive root chain outlives the branch render that bound it:
-    // walk it once more to take this binding's hooks back out.
     if (isKeepAliveEnabled) {
-      getRootElement(node, {
-        onComponent(block) {
-          if (__DEV__ && block.hmrRootHooks) {
-            remove(block.hmrRootHooks, applyDirectives)
-          }
-        },
-        onDynamicFragment: untrack,
-        onInteropFragment: untrack,
-        excludeSlotOutlets: true,
-      })
+      staleRootHooks.add(applyDirectives)
+      staleRootHooks.add(release)
     }
   }, true)
 

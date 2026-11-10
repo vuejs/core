@@ -176,7 +176,7 @@ export const createFor = (
     if (wasMounted && slotBoundary) wasValid = isValidSlot(frag)
     if (wasMounted && frag.bu) {
       for (let i = 0; i < frag.bu.length; i++) {
-        frag.bu[i]()
+        frag.bu[i](frag.nodes)
       }
     }
     if (!wasMounted) {

@@ -102,6 +102,7 @@ import {
   mountComponent,
   resolveFallthroughAttrs,
   resolveFallthroughOwner,
+  staleRootHooks,
   unmountComponent,
 } from './component'
 import { normalizeEmitsOptions } from './componentEmits'
@@ -1395,7 +1396,7 @@ function trackFragmentVNodeUpdates(
   // of accumulating, and user props stay untouched.
   vnode.ibu = () => {
     if (frag.bu) {
-      frag.bu.forEach(hook => hook())
+      frag.bu.forEach(hook => hook(frag.nodes))
     }
   }
   vnode.iu = () => {
@@ -1488,7 +1489,7 @@ export function setInteropVShow(
   if (owner) {
     // every copy of the vnode shares this binding: the next v-show to resolve
     // through a slot whose owner was disposed takes it over
-    if (releasedVShow.has(owner.value.apply)) owner.value.apply = apply
+    if (staleRootHooks.has(owner.value.apply)) owner.value.apply = apply
     return
   }
   const binding = {
@@ -1505,14 +1506,6 @@ export function setInteropVShow(
   if (instance && !isVaporComponent(instance)) {
     instance.subTree = cloneVShowRoot(instance.subTree, binding)
   }
-}
-
-const releasedVShow = new WeakSet<(nodes: Block) => void>()
-
-// A disposed binding cannot reach every slot it owns (a vdom child cached off
-// its root chain), so the slot is given up by identity, not by walking to it.
-export function releaseInteropVShow(apply: (nodes: Block) => void): void {
-  releasedVShow.add(apply)
 }
 
 function cloneVShowRoot(vnode: VNode, binding: DirectiveBinding): VNode {
@@ -2822,7 +2815,7 @@ function renderVDOMSlot(
   function notifyBeforeUpdate(): void {
     if (isMounted) {
       if (reportsValidity) wasExposedValid = isValidSlot(frag)
-      if (frag.bu) frag.bu.forEach(hook => hook())
+      if (frag.bu) frag.bu.forEach(hook => hook(frag.nodes))
     }
   }
 
@@ -4614,7 +4607,7 @@ function createVNodeChildrenFragment(
   }
   const notifyBeforeUpdate = (): void => {
     if (isMounted && frag.bu) {
-      frag.bu.forEach(hook => hook())
+      frag.bu.forEach(hook => hook(frag.nodes))
     }
   }
 
