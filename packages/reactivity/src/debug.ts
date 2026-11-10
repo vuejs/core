@@ -1,8 +1,15 @@
 import { extend } from '@vue/shared'
 import type { DebuggerEventExtraInfo, ReactiveEffectOptions } from './effect'
-import { type Link, ReactiveFlags, type ReactiveNode } from './system'
+import {
+  type Link,
+  ReactiveFlags,
+  type ReactiveNode,
+  endBatch,
+  startBatch,
+} from './system'
 
-export const triggerEventInfos: DebuggerEventExtraInfo[] = []
+// the subs triggered by each propagation in progress, innermost last
+const triggered: Link['sub'][][] = []
 
 export function onTrack(
   sub: Link['sub'],
@@ -25,14 +32,16 @@ export function onTrack(
   }
 }
 
-export function onTrigger(sub: Link['sub']): void {
+export function onTrigger(
+  sub: Link['sub'],
+  debugInfo?: DebuggerEventExtraInfo,
+): void {
   if (!__DEV__) {
     throw new Error(
       `Internal error: onTrigger should be called only in development.`,
     )
   }
   if ((sub as ReactiveEffectOptions).onTrigger) {
-    const debugInfo = triggerEventInfos[triggerEventInfos.length - 1]
     ;(sub as ReactiveEffectOptions).onTrigger!(
       extend(
         {
@@ -41,6 +50,41 @@ export function onTrigger(sub: Link['sub']): void {
         debugInfo,
       ),
     )
+  }
+}
+
+// onTrigger hooks are user code, which may unlink or trigger any subscriber,
+// so the ones a propagation raises are held back until it is over.
+export function startTrigger(): void {
+  if (!__DEV__) {
+    throw new Error(
+      `Internal error: startTrigger should be called only in development.`,
+    )
+  }
+  triggered.push([])
+}
+
+export function endTrigger(debugInfo?: DebuggerEventExtraInfo): void {
+  if (!__DEV__) {
+    throw new Error(
+      `Internal error: endTrigger should be called only in development.`,
+    )
+  }
+  const subs = triggered.pop()!
+  if (subs.length) {
+    // the effects a hook triggers wait until every hook has run
+    startBatch()
+    try {
+      for (let i = 0; i < subs.length; i++) {
+        const sub = subs[i]
+        // an earlier hook may have stopped it
+        if (sub.flags & (ReactiveFlags.Mutable | ReactiveFlags.Watching)) {
+          onTrigger(sub, debugInfo)
+        }
+      }
+    } finally {
+      endBatch()
+    }
   }
 }
 
@@ -75,7 +119,11 @@ function setupFlagsHandler(target: ReactiveNode): void {
         ) &&
         !!(value & (ReactiveFlags.Dirty | ReactiveFlags.Pending))
       ) {
-        onTrigger(this)
+        if (triggered.length) {
+          triggered[triggered.length - 1].push(this)
+        } else {
+          onTrigger(this)
+        }
       }
       ;(target as any)._flags = value
     },

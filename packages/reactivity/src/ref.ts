@@ -9,7 +9,7 @@ import {
 } from '@vue/shared'
 import type { ComputedRef, WritableComputedRef } from './computed'
 import { ReactiveFlags, TrackOpTypes, TriggerOpTypes } from './constants'
-import { onTrack, triggerEventInfos } from './debug'
+import { endTrigger, onTrack, startTrigger } from './debug'
 import { getDepFromReactive } from './dep'
 import {
   type Builtin,
@@ -180,7 +180,11 @@ class RefImpl<T = any> implements ReactiveNode {
       const subs = this.subs
       if (subs !== undefined) {
         if (__DEV__) {
-          triggerEventInfos.push({
+          startTrigger()
+        }
+        propagate(subs)
+        if (__DEV__) {
+          endTrigger({
             target: this,
             type: TriggerOpTypes.SET,
             key: 'value',
@@ -188,12 +192,8 @@ class RefImpl<T = any> implements ReactiveNode {
             oldValue,
           })
         }
-        propagate(subs)
         if (!batchDepth) {
           flush()
-        }
-        if (__DEV__) {
-          triggerEventInfos.pop()
         }
       }
     }
@@ -234,8 +234,14 @@ export function triggerRef(ref: Ref): void {
   // ref may be an instance of ObjectRefImpl
   const dep = (ref as unknown as RefImpl).dep
   if (dep !== undefined && dep.subs !== undefined) {
+    if (__DEV__) {
+      startTrigger()
+    }
     propagate(dep.subs)
     shallowPropagate(dep.subs)
+    if (__DEV__) {
+      endTrigger()
+    }
     if (!batchDepth) {
       flush()
     }
