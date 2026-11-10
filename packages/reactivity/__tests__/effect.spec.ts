@@ -7,7 +7,13 @@ import {
   render,
   serializeInner,
 } from '@vue/runtime-test'
-import { ITERATE_KEY, getDepFromReactive } from '../src/dep'
+import {
+  Dep,
+  ITERATE_KEY,
+  getDepFromReactive,
+  trackDep,
+  triggerDep,
+} from '../src/dep'
 import { onEffectCleanup, pauseTracking, resetTracking } from '../src/effect'
 import {
   type DebuggerEvent,
@@ -19,8 +25,10 @@ import {
   reactive,
   readonly,
   shallowReactive,
+  shallowRef,
   stop,
   toRaw,
+  triggerRef,
   watch,
 } from '../src/index'
 import { type ReactiveNode, endBatch, startBatch } from '../src/system'
@@ -1758,5 +1766,179 @@ describe('reactivity/effect', () => {
     s.value = 1
     expect(runs).toBe(1)
     expect(runner.effect.active).toBe(false)
+  })
+
+  describe('onTrigger hooks', () => {
+    test('should keep notifying the subscribers of a ref when a hook stops one', () => {
+      const source = ref(0)
+      const seen: string[] = []
+      effect(() => seen.push(`first ${source.value}`), {
+        onTrigger() {
+          stop(second)
+        },
+      })
+      const second = effect(() => seen.push(`second ${source.value}`))
+      effect(() => seen.push(`third ${source.value}`))
+
+      source.value++
+      expect(seen).toEqual([
+        'first 0',
+        'second 0',
+        'third 0',
+        'first 1',
+        'third 1',
+      ])
+    })
+
+    test('should keep notifying the subscribers of a Dep when a hook stops one', () => {
+      const dep = new Dep()
+      const seen: string[] = []
+      let value = 0
+      const first = effect(() => {
+        trackDep(dep)
+        seen.push(`first ${value}`)
+      })
+      effect(
+        () => {
+          trackDep(dep)
+          seen.push(`second ${value}`)
+        },
+        { onTrigger: () => stop(first) },
+      )
+      effect(() => {
+        trackDep(dep)
+        seen.push(`third ${value}`)
+      })
+
+      value = 1
+      triggerDep(dep)
+      expect(seen).toEqual([
+        'first 0',
+        'second 0',
+        'third 0',
+        'second 1',
+        'third 1',
+      ])
+    })
+
+    test('should not call the hook of a subscriber stopped by an earlier hook', () => {
+      const source = ref(0)
+      const onTrigger = vi.fn()
+      effect(() => source.value, {
+        onTrigger() {
+          stop(second)
+        },
+      })
+      const second = effect(() => source.value, { onTrigger })
+
+      source.value++
+      expect(onTrigger).not.toHaveBeenCalled()
+    })
+
+    test('should run the hooks once every dep of the trigger has propagated', () => {
+      const obj = reactive<Record<string, number>>({ a: 1 })
+      const count = computed(() => Object.keys(obj).length)
+      let seen = 0
+      effect(() => obj.b, {
+        onTrigger() {
+          seen = count.value
+        },
+      })
+      effect(() => count.value)
+
+      // adding a key triggers its own dep before the iteration dep
+      obj.b = 2
+      expect(seen).toBe(2)
+    })
+
+    test('should keep notifying when a hook writes to another ref', () => {
+      const source = ref(0)
+      const other = ref(0)
+      const onTrigger = vi.fn()
+      let first = -1
+      let second = ''
+      effect(() => (first = source.value), {
+        onTrigger() {
+          other.value++
+        },
+      })
+      effect(() => (second = `${source.value} ${other.value}`), { onTrigger })
+
+      source.value++
+      expect(first).toBe(1)
+      expect(second).toBe('1 1')
+      expect(onTrigger).toHaveBeenCalledTimes(1)
+    })
+
+    test('should run every hook before the effects a hook triggers', () => {
+      const source = ref(0)
+      const other = ref(0)
+      const events: string[] = []
+      effect(() => other.value)
+      effect(() => source.value, {
+        onTrigger() {
+          events.push('first hook')
+          other.value++
+        },
+      })
+      watch(source, () => events.push('watcher'), {
+        once: true,
+        onTrigger: () => events.push('second hook'),
+      })
+
+      source.value++
+      expect(events).toEqual(['first hook', 'second hook', 'watcher'])
+    })
+
+    test('should not throw when a hook stops the only subscriber of a triggered ref', () => {
+      const source = shallowRef({ a: 0 })
+      const runner = effect(() => source.value.a, {
+        onTrigger() {
+          stop(runner)
+        },
+      })
+
+      expect(() => triggerRef(source)).not.toThrow()
+    })
+
+    test('should not throw when a hook stops the only subscriber of a reactive property', () => {
+      const obj = reactive({ a: 0 })
+      const other = ref(0)
+      let seen = -1
+      effect(() => {
+        seen = other.value
+      })
+      const runner = effect(() => obj.a, {
+        onTrigger() {
+          stop(runner)
+        },
+      })
+
+      expect(() => obj.a++).not.toThrow()
+      other.value = 1
+      expect(seen).toBe(1)
+    })
+
+    test('should not lose the hooks of a trigger when another one runs inside it', () => {
+      const arr = reactive([1, 2, 3])
+      const other = ref(0)
+      const onTrigger = vi.fn()
+      let length = -1
+      effect(() => other.value)
+      effect(() => (length = arr.length), { onTrigger })
+
+      // the new length is coerced again while the array is being triggered
+      expect(() => {
+        arr.length = {
+          valueOf() {
+            other.value++
+            return 1
+          },
+        } as any
+      }).not.toThrow()
+      expect(length).toBe(1)
+      expect(onTrigger).toHaveBeenCalledTimes(1)
+      expect(onTrigger.mock.calls[0][0].key).toBe('length')
+    })
   })
 })

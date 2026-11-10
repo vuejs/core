@@ -1,6 +1,6 @@
 import { isArray, isIntegerKey, isMap, isSymbol } from '@vue/shared'
 import { TrackOpTypes, TriggerOpTypes } from './constants'
-import { onTrack, triggerEventInfos } from './debug'
+import { endTrigger, onTrack, startTrigger } from './debug'
 import {
   type Link,
   ReactiveFlags,
@@ -68,7 +68,12 @@ export function triggerDep(
   const subs = dep.subs
   if (subs !== undefined) {
     if (__DEV__) {
-      triggerEventInfos.push({
+      startTrigger()
+    }
+    propagate(subs)
+    shallowPropagate(subs)
+    if (__DEV__) {
+      endTrigger({
         target,
         type: TriggerOpTypes.SET,
         key,
@@ -76,13 +81,8 @@ export function triggerDep(
         oldValue,
       })
     }
-    propagate(subs)
-    shallowPropagate(subs)
     if (!batchDepth) {
       flush()
-    }
-    if (__DEV__) {
-      triggerEventInfos.pop()
     }
   }
 }
@@ -160,25 +160,15 @@ export function trigger(
 
   const run = (dep: ReactiveNode | undefined) => {
     if (dep !== undefined && dep.subs !== undefined) {
-      if (__DEV__) {
-        triggerEventInfos.push({
-          target,
-          type,
-          key,
-          newValue,
-          oldValue,
-          oldTarget,
-        })
-      }
       propagate(dep.subs)
       shallowPropagate(dep.subs)
-      if (__DEV__) {
-        triggerEventInfos.pop()
-      }
     }
   }
 
   startBatch()
+  if (__DEV__) {
+    startTrigger()
+  }
 
   if (type === TriggerOpTypes.CLEAR) {
     // collection being cleared
@@ -240,6 +230,16 @@ export function trigger(
     }
   }
 
+  if (__DEV__) {
+    endTrigger({
+      target,
+      type,
+      key,
+      newValue,
+      oldValue,
+      oldTarget,
+    })
+  }
   endBatch()
 }
 
