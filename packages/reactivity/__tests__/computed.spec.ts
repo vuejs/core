@@ -1265,4 +1265,52 @@ describe('reactivity/computed', () => {
       [2, 2, 2],
     ])
   })
+
+  test('should mark the other subscribers dirty when the one checking is unlinked during the update', () => {
+    const flip = ref(false)
+    const a = computed((): number => (flip.value ? holder.value + 1 : 0))
+    // subscribes `a` first and checks it below, kept linked by `holder` alone
+    const first = computed(() => a.value)
+    const holder = computed(() => (flip.value ? 0 : first.value))
+    effect(() => holder.value, { scheduler() {} })
+    const second = effect(() => a.value, { scheduler() {} })
+
+    flip.value = true
+    expect(first.value).toBe(1)
+    expect(second.effect.dirty).toBe(true)
+  })
+
+  test('should recompute a computed that is unwatched while being checked', () => {
+    const flip = ref(false)
+    const other = ref(1)
+    const a = computed((): number => (flip.value ? holder.value : 1))
+    const c = computed(() => a.value)
+    // the only subscriber of `c`, re-evaluated by the getter of `a`
+    const holder = computed(() => (flip.value ? other.value : c.value))
+    effect(() => holder.value, { scheduler() {} })
+
+    flip.value = true
+    expect(c.value).toBe(1)
+    other.value = 2
+    expect(c.value).toBe(2)
+  })
+
+  test('should keep the other subscribers of a dep that a self-referencing computed drops', () => {
+    const toggle = ref(true)
+    const src = ref(1)
+    const c: ComputedRef<number> = computed(() =>
+      toggle.value ? c.value + src.value : 0,
+    )
+    let seen = 0
+    effect(() => {
+      seen = src.value
+    })
+
+    c.value
+    toggle.value = false
+    // dropping its link to itself leaves `c` unwatched while it untracks
+    c.value
+    src.value = 2
+    expect(seen).toBe(2)
+  })
 })

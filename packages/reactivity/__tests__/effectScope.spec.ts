@@ -3,10 +3,12 @@ import {
   type ComputedRef,
   EffectScope,
   ReactiveEffect,
+  type ReactiveEffectRunner,
   computed,
   effect,
   effectScope,
   getCurrentScope,
+  onEffectCleanup,
   onScopeDispose,
   reactive,
   ref,
@@ -489,16 +491,19 @@ describe('reactivity/effect/scope', () => {
   it('should stop child scopes when cleanup stops a sibling scope', () => {
     const parent = effectScope()
     let sibling!: EffectScope
+    let last!: EffectScope
 
     parent.run(() => {
       effectScope().run(() => {
         onScopeDispose(() => sibling.stop())
       })
       sibling = effectScope()
+      last = effectScope()
     })
 
     expect(() => parent.stop()).not.toThrow()
     expect(sibling.active).toBe(false)
+    expect(last.active).toBe(false)
   })
 
   it('should resume effects when a watcher stops a sibling watcher', () => {
@@ -507,10 +512,12 @@ describe('reactivity/effect/scope', () => {
     let stopSecond = () => {}
     const firstSpy = vi.fn(() => stopSecond())
     const secondSpy = vi.fn()
+    const lastSpy = vi.fn()
 
     scope.run(() => {
       watch(count, firstSpy, { flush: 'sync' })
       stopSecond = watch(count, secondSpy, { flush: 'sync' })
+      watch(count, lastSpy, { flush: 'sync' })
     })
 
     scope.pause()
@@ -519,7 +526,48 @@ describe('reactivity/effect/scope', () => {
     expect(() => scope.resume()).not.toThrow()
     expect(firstSpy).toHaveBeenCalledTimes(1)
     expect(secondSpy).not.toHaveBeenCalled()
-    expect(getEffectsCount(scope)).toBe(1)
+    expect(lastSpy).toHaveBeenCalledTimes(1)
+    expect(getEffectsCount(scope)).toBe(2)
+  })
+
+  it('should resume every effect when one stops itself as it resumes', () => {
+    const scope = effectScope()
+    const src = ref(0)
+    const seen: string[] = []
+
+    scope.run(() => {
+      const first = effect(() => {
+        seen.push(`first ${src.value}`)
+        if (src.value > 0) first.effect.stop()
+      })
+      effect(() => seen.push(`second ${src.value}`))
+    })
+
+    scope.pause()
+    src.value = 1
+    scope.resume()
+    expect(seen).toEqual(['first 0', 'second 0', 'first 1', 'second 1'])
+  })
+
+  it('should stop every effect of a scope when a cleanup stops its parent', () => {
+    const root = effectScope()
+    const parent = root.run(() => effectScope())!
+    const child = parent.run(() => effectScope())!
+    let last!: ReactiveEffectRunner
+    let nested!: ReactiveEffectRunner
+
+    child.run(() => {
+      effect(() => onEffectCleanup(() => parent.stop()))
+      last = effect(() => {})
+      effectScope().run(() => {
+        nested = effect(() => {})
+      })
+    })
+
+    child.stop()
+    expect(parent.active).toBe(false)
+    expect(last.effect.active).toBe(false)
+    expect(nested.effect.active).toBe(false)
   })
 })
 

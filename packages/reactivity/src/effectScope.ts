@@ -49,8 +49,13 @@ export class EffectScope implements ReactiveNode {
     const flags = this.flags
     if (flags & EffectFlags.PAUSED) {
       this.flags = flags & ~EffectFlags.PAUSED
+      // from a snapshot: a resumed effect may run and unlink any dep
+      const deps: Link['dep'][] = []
       for (let link = this.deps; link !== undefined; link = link.nextDep) {
-        const dep = link.dep
+        deps.push(link.dep)
+      }
+      for (let i = 0; i < deps.length; i++) {
+        const dep = deps[i]
         if ('resume' in dep) {
           dep.resume()
         }
@@ -88,8 +93,13 @@ export class EffectScope implements ReactiveNode {
     while (dep !== undefined) {
       const node = dep.dep
       if ('stop' in node) {
-        dep = dep.nextDep
+        const prev = dep.prevDep
         node.stop()
+        // stopping may unlink any other dep, so read on from the one before.
+        // a node that had already stopped, or is stopping, stays linked
+        const next: Link | undefined =
+          prev !== undefined ? prev.nextDep : this.deps
+        dep = next === dep ? dep.nextDep : next
       } else {
         dep = unlink(dep, this)
       }
