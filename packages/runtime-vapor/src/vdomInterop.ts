@@ -1256,10 +1256,16 @@ const vaporSlotsProxyHandler: ProxyHandler<any> = {
       // This ensures that calling slots.default() works the same as renderSlot(slots, 'default')
       const wrapped = (props?: Record<string, any>) => {
         const vnode = renderSlot({ [key]: slot }, key as string, props)
-        // content rather than an outlet: what `cloneVNode` adds to it falls
-        // through to the content root, and the slot props stay as given
-        vnode.vs!.props = vnode.props!
-        vnode.vs!.attrs = EMPTY_OBJ
+        const vs = vnode.vs!
+        // content rather than an outlet (as `renderSlot` hands it out to a
+        // slot called by hand): what `cloneVNode` adds to it falls through to
+        // the content root, and the slot props stay as given, not as props of
+        // the root a clone merges in
+        if (!vs.attrs) {
+          vs.props = vnode.props!
+          vnode.props = vnode.key != null ? { key: vnode.key } : null
+          vs.attrs = EMPTY_OBJ
+        }
         return [vnode]
       }
       ;(wrapped as any)[rawVaporSlotKey] = slot

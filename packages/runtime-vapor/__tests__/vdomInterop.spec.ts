@@ -1,6 +1,7 @@
 import {
   Comment as CommentVNode,
   type ComponentInternalInstance,
+  Fragment,
   type FunctionalComponent,
   type HMRRuntime,
   KeepAlive,
@@ -15827,6 +15828,107 @@ describe('cloneVNode extras fall through to vapor slot content', () => {
     createVaporApp(App).mount(root)
     expect(stripAnchors(root.innerHTML)).toBe(
       '<div id="x"><span id="y">t</span></div>',
+    )
+  })
+
+  test('reach the content of a vapor slot a vdom component forwards', async () => {
+    // Reka UI triggers: `<Primitive as-child><slot /></Primitive>`, whose
+    // `Slot` flattens the forwarded slot fragment before cloning (n8n wraps
+    // one with `<slot v-if="slots.trigger" name="trigger" />`)
+    const flatten = (children: VNode[]): VNode[] =>
+      children.flatMap(c =>
+        c.type === Fragment ? flatten(c.children as VNode[]) : [c],
+      )
+    const FlatAsChild = defineComponent({
+      inheritAttrs: false,
+      setup(_, { attrs, slots }) {
+        return () => {
+          const [child] = flatten(slots.default!())
+          return cloneVNode(
+            { ...child, props: {} } as VNode,
+            child.props ? mergeProps(attrs, child.props) : attrs,
+          )
+        }
+      },
+    })
+    const Trigger = compile(
+      `<script setup>const p = defineProps(['open']); const components = _components</script>
+      <template>
+        <components.FlatAsChild data-state="x" :aria-expanded="p.open">
+          <slot v-if="$slots.default" :open="p.open" />
+        </components.FlatAsChild>
+      </template>`,
+      ref(),
+      { FlatAsChild },
+      { vapor: false },
+    )
+    const clicks: string[] = []
+    await renderParity(
+      {
+        App: `<template>
+          <components.Trigger :open="data.open" class="t" @click="data.onClick" v-slot="p">
+            <button class="b">{{ p.open }}:{{ Object.keys(p).join() }}</button>
+          </components.Trigger>
+        </template>`,
+      },
+      () => ref({ open: false, onClick: () => {} }),
+      async (data, root, mode) => {
+        data.value.onClick = () => clicks.push(mode)
+        const btn = root.querySelector('button')!
+        expect(btn.getAttribute('data-state')).toBe('x')
+        expect(btn.getAttribute('aria-expanded')).toBe('false')
+        expect(classes(btn)).toEqual(['b', 't'])
+        // the slot props stay in the slot
+        expect(btn.hasAttribute('open')).toBe(false)
+        data.value.open = true
+        await nextTick()
+        expect(btn.getAttribute('aria-expanded')).toBe('true')
+        expect(btn.textContent).toBe('true:open')
+        btn.click()
+      },
+      { Trigger },
+    )
+    expect(clicks).toEqual(['vdom', 'vapor'])
+  })
+
+  test('keep the slot props a consumer passes off the content root', async () => {
+    // Headless UI `as="template"`: passes slot props, merges the child props
+    const PropsAsChild = defineComponent({
+      inheritAttrs: false,
+      setup(_, { attrs, slots }) {
+        return () => {
+          const [child] = slots.default!({ open: true }) as VNode[]
+          return cloneVNode(child, mergeProps(child.props || {}, attrs))
+        }
+      },
+    })
+    // forwards its slot from a slot function, which runs as a slot called by hand
+    const Fwd = defineComponent({
+      setup(_, { slots }) {
+        return () =>
+          h(
+            PropsAsChild,
+            { 'data-x': '1' },
+            { default: (p: any) => slots.default!(p) },
+          )
+      },
+    })
+    await renderParity(
+      {
+        App: `<template>
+          <components.PropsAsChild data-x="1" v-slot="p"><i>{{ p.open }}</i></components.PropsAsChild>
+          <components.Fwd v-slot="p"><b>{{ p.open }}</b></components.Fwd>
+        </template>`,
+      },
+      () => ref({}),
+      (_, root) => {
+        for (const el of root.querySelectorAll('i, b')) {
+          expect(el.getAttribute('data-x')).toBe('1')
+          expect(el.hasAttribute('open')).toBe(false)
+          expect(el.textContent).toBe('true')
+        }
+      },
+      { PropsAsChild, Fwd },
     )
   })
 })

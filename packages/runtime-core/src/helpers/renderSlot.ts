@@ -14,10 +14,12 @@ import {
   closeBlock,
   createBlock,
   createVNode,
+  isBlockTreeEnabled,
   isVNode,
   openBlock,
 } from '../vnode'
 import {
+  EMPTY_OBJ,
   PatchFlags,
   ShapeFlags,
   SlotFlags,
@@ -101,6 +103,16 @@ export function renderSlot(
       ret.vs.props = ret.props!
       ret.props = extend({}, ret.props, { key: branchKey })
       ret.key = branchKey
+    }
+    // forwarded in a compiled slot called by hand (block tracking off, see
+    // `withCtx`): content to that caller, as the slot fragment of a vdom
+    // parent is to one flattening it, so what `cloneVNode` adds falls through
+    // to the content root (Reka UI `asChild` triggers)
+    if (isBlockTreeEnabled <= 0) {
+      if (!ret.vs.props) ret.vs.props = ret.props!
+      // the slot props are not props of the content root a clone merges in
+      ret.props = ret.key != null ? { key: ret.key } : null
+      ret.vs.attrs = EMPTY_OBJ
     }
     if (!noSlotted && ret.scopeId) {
       ret.slotScopeIds = [ret.scopeId + '-s']
