@@ -1,4 +1,4 @@
-import { Teleport, createApp, defineAsyncComponent, h } from 'vue'
+import { Teleport, createApp, createVNode, defineAsyncComponent, h } from 'vue'
 import { renderToString } from '../src/renderToString'
 import { renderToSimpleStream } from '../src/renderToStream'
 import type { SSRContext } from '../src/render'
@@ -98,6 +98,36 @@ describe('ssrRenderTeleport', () => {
     expect(ctx.teleports!['#target']).toBe(
       `<!--teleport start anchor--><!--teleport anchor-->`,
     )
+  })
+
+  test.each([true, ''])(
+    'teleport rendering (vnode + disabled: %j + no target)',
+    async disabled => {
+      const ctx: SSRContext = {}
+      const html = await renderToString(
+        h(
+          Teleport,
+          { to: undefined, disabled: disabled as boolean },
+          h('span', 'hello'),
+        ),
+        ctx,
+      )
+      expect(html).toBe(
+        '<!--teleport start--><span>hello</span><!--teleport end-->',
+      )
+      expect(ctx.teleports).toBeUndefined()
+      expect('Teleport is missing target prop').not.toHaveBeenWarned()
+    },
+  )
+
+  test('teleport rendering (vnode + disabled + no target + no children)', async () => {
+    const ctx: SSRContext = {}
+    const html = await renderToString(
+      createVNode(Teleport, { to: undefined, disabled: true }),
+      ctx,
+    )
+    expect(html).toBe('<!--teleport start--><!--teleport end-->')
+    expect(ctx.teleports).toBeUndefined()
   })
 
   test('multiple teleports with same target', async () => {
