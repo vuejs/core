@@ -2669,4 +2669,84 @@ describe('hot module replacement', () => {
       `<!--{--><!--{--><p>a1</p><p>b1</p><!--}--><b>after</b><!--}-->`,
     )
   })
+
+  describe('rerender around a component that renders no node', () => {
+    let count = 0
+    const record = (tpl: string, components?: Record<string, any>) => {
+      const id = `no-node-${count++}`
+      const comp = defineVaporComponent({
+        __hmrId: id,
+        components,
+        render: compileToFunction(tpl),
+      })
+      createRecord(id, comp as any)
+      return { id, comp }
+    }
+    const html = (root: Element) => root.innerHTML.replace(/<!--.*?-->/g, '')
+    const mountVapor = (comp: any) => {
+      const root = document.createElement('div')
+      document.body.appendChild(root)
+      createVaporApp(comp).mount(root)
+      return root
+    }
+    // from nothing to content, back to nothing, to content again
+    const fill = (id: string, root: Element, wrap = (s: string) => s) => {
+      rerender(id, compileToFunction('<p>new</p>'))
+      expect(html(root)).toBe(wrap('<p>new</p>'))
+      rerender(id, compileToFunction(''))
+      expect(html(root)).toBe(wrap(''))
+      rerender(id, compileToFunction('<p>again</p>'))
+      expect(html(root)).toBe(wrap('<p>again</p>'))
+    }
+
+    test('the root itself', () => {
+      const { id, comp } = record('')
+      const root = mountVapor(comp)
+      expect(html(root)).toBe('')
+      fill(id, root)
+    })
+
+    test('reloading the root itself', () => {
+      const { id, comp } = record('')
+      const root = mountVapor(comp)
+      reload(id, {
+        __vapor: true,
+        __hmrId: id,
+        render: compileToFunction('<p>new</p>'),
+      })
+      expect(html(root)).toBe('<p>new</p>')
+    })
+
+    test.each([
+      ['<p>a</p><Child /><p>b</p>', '<p>a</p>', '<p>b</p>'],
+      ['<div><Child /></div>', '<div>', '</div>'],
+      ['<Child />', '', ''],
+    ])('a child in %s', (tpl, before, after) => {
+      const { id, comp: Child } = record('')
+      const root = mountVapor(record(tpl, { Child }).comp)
+      expect(html(root)).toBe(before + after)
+      fill(id, root, s => before + s + after)
+    })
+
+    test('a vapor child of a vdom parent', () => {
+      const { id, comp: Child } = record('')
+      const root = document.createElement('div')
+      document.body.appendChild(root)
+      createApp({
+        render: () => [h('p', 'a'), h(Child as any), h('p', 'b')],
+      })
+        .use(vaporInteropPlugin)
+        .mount(root)
+      expect(html(root)).toBe('<p>a</p><p>b</p>')
+      fill(id, root, s => `<p>a</p>${s}<p>b</p>`)
+    })
+
+    test('the parent ending with it', () => {
+      const { comp: Child } = record('')
+      const { id, comp } = record('<p>a</p><Child />', { Child })
+      const root = mountVapor(comp)
+      rerender(id, compileToFunction('<p>b</p><Child />'))
+      expect(html(root)).toBe('<p>b</p>')
+    })
+  })
 })

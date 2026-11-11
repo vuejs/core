@@ -311,7 +311,7 @@ const VaporKeepAliveImpl = defineVaporComponent({
         unsetShapeFlag(cached)
         // A pruned branch may still be leaving and not yet be in storageContainer.
         const parentNode = findBlockBoundary(cached).parentNode
-        if (parentNode) remove(cached, parentNode as ParentNode)
+        remove(cached, (parentNode as ParentNode | null) || undefined)
       } else if (current) {
         unsetShapeFlag(current)
       }

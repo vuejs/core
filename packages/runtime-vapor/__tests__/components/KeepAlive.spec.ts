@@ -6020,3 +6020,90 @@ describe('KeepAlive with a long v-else-if chain', () => {
     )
   })
 })
+
+describe('KeepAlive caching a component that ends without a node', () => {
+  const named = (name: string, body: string) => `<script setup>
+      import { onUnmounted } from 'vue'
+      const data = _data
+      const components = _components
+      defineOptions({ name: '${name}' })
+      onUnmounted(() => data.value.box.log.push('${name}'))
+    </script>
+    <template>
+      ${body}
+    </template>`
+  const shapes: Record<string, string> = {
+    'renders nothing': '',
+    'ends with a component rendering nothing': `<p>e</p>
+      <components.Nothing />`,
+  }
+
+  // text and the components unmounted by each step
+  async function run(shape: string, steps: Record<string, any>[]) {
+    const out = {} as Record<'vdom' | 'vapor', string[]>
+    await renderParity(
+      {
+        Nothing: named('Nothing', ''),
+        E: named('E', shapes[shape]),
+        A: named('A', '<p>a</p>'),
+        B: named('B', '<p>b</p>'),
+        App: `<template>
+          <KeepAlive v-if="data.alive" :include="data.include" :max="data.max">
+            <components.A v-if="data.view === 'A'" />
+            <components.E v-else-if="data.view === 'E'" />
+            <components.B v-else />
+          </KeepAlive>
+        </template>`,
+      },
+      () => {
+        const box = markRaw({ log: [] as string[] })
+        return ref<any>({ alive: true, view: 'E', box })
+      },
+      async (data, root, mode) => {
+        out[mode] = []
+        for (const step of steps) {
+          Object.assign(data.value, step)
+          await nextTick()
+          const unmounted = data.value.box.log.splice(0).sort()
+          out[mode].push(`${root.textContent} [${unmounted}]`)
+        }
+      },
+    )
+    expect(out.vapor).toEqual(out.vdom)
+    return out.vapor
+  }
+
+  describe.each(Object.keys(shapes))('one that %s', shape => {
+    const e = shape === 'renders nothing' ? '' : 'e'
+    const unmountedE = shape === 'renders nothing' ? 'E' : 'E,Nothing'
+
+    test('is unmounted with the KeepAlive', async () => {
+      expect(await run(shape, [{ view: 'A' }, { alive: false }])).toEqual([
+        'a []',
+        ` [A,${unmountedE}]`,
+      ])
+    })
+
+    test('is pruned when include stops matching it', async () => {
+      expect(
+        await run(shape, [
+          { include: 'A,E' },
+          { view: 'A' },
+          { include: 'A' },
+          { view: 'E' },
+        ]),
+      ).toEqual([`${e} []`, 'a []', `a [${unmountedE}]`, `${e} []`])
+    })
+
+    test('is pruned when the cache exceeds max', async () => {
+      expect(
+        await run(shape, [
+          { max: 2 },
+          { view: 'A' },
+          { view: 'B' },
+          { view: 'E' },
+        ]),
+      ).toEqual([`${e} []`, 'a []', `b [${unmountedE}]`, `${e} [A]`])
+    })
+  })
+})
