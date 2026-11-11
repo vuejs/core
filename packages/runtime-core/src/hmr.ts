@@ -192,6 +192,12 @@ function reload(id: string, newComp: HMRComponent): void {
       if (instance.root && instance.root.ce && instance !== instance.root) {
         instance.root.ce._removeChildStyle(instance.type)
       }
+      // A parent module updated after this one imports a later definition
+      // than the initial one, and rerenders its children from that.
+      const oldComp = normalizeClassComponent(instance.type as HMRComponent)
+      if (oldComp !== record.initialDef) {
+        updateComponentDef(oldComp, newComp)
+      }
     }
     const dirtyInstances = new Set(instances)
     const rerenderedParents = new Set<GenericComponentInstance>()
