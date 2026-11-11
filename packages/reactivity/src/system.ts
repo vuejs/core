@@ -193,7 +193,13 @@ export function propagate(link: Link): void {
         isValidLink(link, sub)
       ) {
         sub.flags = flags | ReactiveFlags.Recursed | ReactiveFlags.Pending
-        flags &= ReactiveFlags.Mutable
+        // a computed that writes a dep in its own run is re-evaluated on its
+        // next read, without notifying its readers. An untracked write (e.g.
+        // an array push) leaves no active sub
+        flags =
+          sub === activeSub || activeSub === undefined
+            ? ReactiveFlags.None
+            : flags & ReactiveFlags.Mutable
       } else {
         flags = ReactiveFlags.None
       }

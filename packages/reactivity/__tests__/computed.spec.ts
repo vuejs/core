@@ -1403,4 +1403,53 @@ describe('reactivity/computed', () => {
     s.value++
     expect([m.value, x.value, y.value]).toEqual([3, 3, 3])
   })
+
+  test('should not re-render a reader when a computed writes state created in its own run', async () => {
+    // e.g. a computed that builds a store and initializes it
+    const c = computed(() => {
+      const s = shallowRef('')
+      if (s.value !== 'en') s.value = 'en'
+      return {}
+    })
+    const n = ref(0)
+    let renders = 0
+    const Comp = {
+      setup: () => () => {
+        renders++
+        return [n.value, c.value && 'a', c.value && 'b']
+      },
+    }
+    const root = nodeOps.createElement('div')
+    render(h(Comp), root)
+    expect(serializeInner(root)).toBe('0ab')
+
+    n.value++
+    await nextTick()
+    expect(serializeInner(root)).toBe('1ab')
+    expect(renders).toBe(2)
+  })
+
+  test('should not re-render a reader when a computed pushes to an array created in its own run', async () => {
+    const c = computed(() => {
+      const list = reactive<string[]>([])
+      if (!list.length) list.push('en')
+      return {}
+    })
+    const n = ref(0)
+    let renders = 0
+    const Comp = {
+      setup: () => () => {
+        renders++
+        return [n.value, c.value && 'a', c.value && 'b']
+      },
+    }
+    const root = nodeOps.createElement('div')
+    render(h(Comp), root)
+    expect(serializeInner(root)).toBe('0ab')
+
+    n.value++
+    await nextTick()
+    expect(serializeInner(root)).toBe('1ab')
+    expect(renders).toBe(2)
+  })
 })
