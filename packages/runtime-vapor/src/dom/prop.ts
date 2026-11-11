@@ -689,6 +689,26 @@ export function patchDynamicProps(
   isSVG?: boolean,
   staticKeys?: string[],
 ): void {
+  if (el._isVueCE) {
+    // a Vue custom element updates once for the whole patch, like vdom's
+    // patchElement
+    el._beginPatch()
+    try {
+      doPatchDynamicProps(el, props, isSVG, staticKeys)
+    } finally {
+      el._endPatch()
+    }
+  } else {
+    doPatchDynamicProps(el, props, isSVG, staticKeys)
+  }
+}
+
+function doPatchDynamicProps(
+  el: any,
+  props: Record<string, any>,
+  isSVG?: boolean,
+  staticKeys?: string[],
+): void {
   const cacheKey = `$dprops${isApplyingFallthroughProps ? '$' : ''}`
   const prevProps = el[cacheKey] as Record<string, any> | undefined
   const nextProps: Record<string, any> = Object.create(null)
