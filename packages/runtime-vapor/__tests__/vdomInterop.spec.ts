@@ -17443,3 +17443,143 @@ describe('vdom component given a ref in a v-bind object', () => {
     expect(stripAnchors(vapor.after)).toBe(vdom.after)
   })
 })
+
+describe('moving an interop child that is active in a vapor KeepAlive', () => {
+  let calls: string[] = []
+  const leaf = (name: string) =>
+    defineComponent({
+      props: ['n'],
+      setup(props) {
+        onActivated(() => calls.push(`${name}:activated`))
+        onDeactivated(() => calls.push(`${name}:deactivated`))
+        return () => h('div', `${name}${props.n}`)
+      },
+    })
+  const V = leaf('V')
+  const W = leaf('W')
+  const vaporLeaf = (name: string) =>
+    compile(
+      `<script setup vapor>
+        import { onActivated, onDeactivated } from 'vue'
+        const log = _data.value
+        defineProps(['n'])
+        onActivated(() => log('${name}:activated'))
+        onDeactivated(() => log('${name}:deactivated'))
+      </script>
+      <template>
+        <div>${name}{{ n }}</div>
+      </template>`,
+      ref((s: string) => calls.push(s)),
+    )
+
+  // text and keep-alive hooks after each step, in a vdom app and a vapor app
+  async function run(
+    srcs: Record<string, string>,
+    makeData: () => Record<string, any>,
+    steps: Record<string, any>[],
+  ) {
+    const logs: Record<string, string[]> = { vdom: [], vapor: [] }
+    await renderParity(
+      srcs,
+      () => ref(makeData()),
+      async (data, root, mode) => {
+        await nextTick()
+        calls = []
+        for (const step of steps) {
+          Object.assign(data.value, step)
+          await nextTick()
+          logs[mode].push(`${root.textContent} [${calls.splice(0)}]`)
+        }
+      },
+      { V, W },
+    )
+    return logs
+  }
+
+  const nested = `<template>
+    <KeepAlive>
+      <components.Outer v-if="data.outer" />
+      <i v-else>off</i>
+    </KeepAlive>
+  </template>`
+  const roundTripThenOuter = [
+    { on: false },
+    { on: true, n: 2 },
+    { outer: false },
+    { outer: true },
+  ]
+
+  test('an outer KeepAlive deactivating it does not activate it first', async () => {
+    const { vdom, vapor } = await run(
+      {
+        Outer: `<template>
+          <KeepAlive>
+            <components.V v-if="data.on" :n="data.n" />
+            <components.W v-else :n="data.n" />
+          </KeepAlive>
+        </template>`,
+        App: nested,
+      },
+      () => ({ outer: true, on: true, n: 1 }),
+      roundTripThenOuter,
+    )
+    expect(vdom).toEqual([
+      'W1 [V:deactivated,W:activated]',
+      'V2 [W:deactivated,V:activated]',
+      'off [V:deactivated]',
+      'V2 [V:activated]',
+    ])
+    expect(vapor).toEqual(vdom)
+  })
+
+  test.each([
+    ['vdom', V, W],
+    ['vapor', vaporLeaf('V'), vaporLeaf('W')],
+  ])(
+    'an outer KeepAlive deactivating it as a vnode of a %s component does not activate it first',
+    async (_, v, w) => {
+      const { vdom, vapor } = await run(
+        {
+          Outer: `<template>
+          <KeepAlive>
+            <component :is="data.on ? data.v : data.w" :n="data.n" />
+          </KeepAlive>
+        </template>`,
+          App: nested,
+        },
+        () => ({ outer: true, on: true, n: 1, v: h(v), w: h(w) }),
+        roundTripThenOuter,
+      )
+      expect(vdom).toEqual([
+        'W1 [V:deactivated,W:activated]',
+        'V2 [W:deactivated,V:activated]',
+        'off [V:deactivated]',
+        'V2 [V:activated]',
+      ])
+      expect(vapor).toEqual(vdom)
+    },
+  )
+
+  test('reordering the rows it is the KeepAlive root of does not activate it', async () => {
+    const { vdom, vapor } = await run(
+      {
+        App: `<template>
+          <template v-for="i in data.list" :key="i">
+            <KeepAlive>
+              <components.V v-if="data.on" :n="i" />
+              <components.W v-else :n="i" />
+            </KeepAlive>
+          </template>
+        </template>`,
+      },
+      () => ({ list: [1, 2], on: true }),
+      [{ on: false }, { on: true }, { list: [2, 1] }],
+    )
+    expect(vdom).toEqual([
+      'W1W2 [V:deactivated,W:activated,V:deactivated,W:activated]',
+      'V1V2 [W:deactivated,V:activated,W:deactivated,V:activated]',
+      'V2V1 []',
+    ])
+    expect(vapor).toEqual(vdom)
+  })
+})
