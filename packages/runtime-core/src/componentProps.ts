@@ -278,25 +278,34 @@ export function updateProps(
         }
         // PROPS flag guarantees rawProps to be non-null
         const value = rawProps![key]
-        if (options) {
-          // attr / props separation was done on init and will be consistent
-          // in this code path, so just check if attrs have it.
-          if (hasOwn(attrs, key)) {
-            if (value !== attrs[key]) {
-              attrs[key] = value
-              hasAttrsChanged = true
-            }
-          } else {
-            const camelizedKey = camelize(key)
-            props[camelizedKey] = resolvePropValue(
-              options,
-              rawCurrentProps,
-              camelizedKey,
-              value,
-              instance,
-              false /* isAbsent */,
-            )
-          }
+  if (options) {
+  if (__COMPAT__) {
+    if (isOn(key) && key.endsWith('Native')) {
+      key = key.slice(0, -6)
+    } else if (shouldSkipAttr(key, instance)) {
+      continue
+    }
+  }
+
+  if (hasOwn(attrs, key)) {
+    if (value !== attrs[key]) {
+      attrs[key] = value
+      hasAttrsChanged = true
+    }
+  } else {
+    const camelizedKey = camelize(key)
+    if (hasOwn(options, camelizedKey)) {
+      props[camelizedKey] = resolvePropValue(
+        options,
+        rawCurrentProps,
+        camelizedKey,
+        value,
+        instance,
+        false,
+      )
+    }
+  }
+}
         } else {
           if (__COMPAT__) {
             if (isOn(key) && key.endsWith('Native')) {
