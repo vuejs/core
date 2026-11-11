@@ -2,10 +2,11 @@
 
 exports[`compiler: vModel transform > component > component v-model should merge with explicit @update:modelValue 1`] = `
 "
+  const _on_update_modelValue = _value => (counter.value = _value)
   const n0 = _createAssetComponent("Comp", {
     modelValue: () => (counter.value),
     "onUpdate:modelValue": () => [
-      _value => (counter.value = _value),
+      _on_update_modelValue,
       onUpdate
     ]
   }, null, true)
@@ -17,9 +18,10 @@ exports[`compiler: vModel transform > component > object literal v-bind after v-
 "import { createAssetComponent as _createAssetComponent } from 'vue';
 
 export function render(_ctx) {
+  const _on_update_foo = _value => (_ctx.foo = _value)
   const n0 = _createAssetComponent("Comp", {
     foo: () => (_ctx.foo),
-    "onUpdate:foo": () => _value => (_ctx.foo = _value),
+    "onUpdate:foo": () => _on_update_foo,
     $: [
       () => ({ foo: _ctx.bar })
     ]
@@ -32,11 +34,12 @@ exports[`compiler: vModel transform > component > v-model after dynamic bind kee
 "import { createAssetComponent as _createAssetComponent } from 'vue';
 
 export function render(_ctx) {
+  const _on_update_modelValue = _value => (_ctx.foo = _value)
   const n0 = _createAssetComponent("Comp", { $: [
     () => (_ctx.obj),
     {
       modelValue: () => (_ctx.foo),
-      "onUpdate:modelValue": () => _value => (_ctx.foo = _value),
+      "onUpdate:modelValue": () => _on_update_modelValue,
       modelModifiers: { trim: true }
     }
   ] }, null, true)
@@ -48,11 +51,12 @@ exports[`compiler: vModel transform > component > v-model after object literal v
 "import { createAssetComponent as _createAssetComponent } from 'vue';
 
 export function render(_ctx) {
+  const _on_update_foo = _value => (_ctx.foo = _value)
   const n0 = _createAssetComponent("Comp", { $: [
     () => ({ foo: _ctx.bar }),
     {
       foo: () => (_ctx.foo),
-      "onUpdate:foo": () => _value => (_ctx.foo = _value)
+      "onUpdate:foo": () => _on_update_foo
     }
   ] }, null, true)
   return n0
@@ -63,9 +67,10 @@ exports[`compiler: vModel transform > component > v-model for component should g
 "import { createAssetComponent as _createAssetComponent } from 'vue';
 
 export function render(_ctx) {
+  const _on_update_modelValue = _value => (_ctx.foo = _value)
   const n0 = _createAssetComponent("Comp", {
     modelValue: () => (_ctx.foo),
-    "onUpdate:modelValue": () => _value => (_ctx.foo = _value),
+    "onUpdate:modelValue": () => _on_update_modelValue,
     modelModifiers: { trim: true, "bar-baz": true }
   }, null, true)
   return n0
@@ -76,9 +81,10 @@ exports[`compiler: vModel transform > component > v-model for component should w
 "import { createAssetComponent as _createAssetComponent } from 'vue';
 
 export function render(_ctx) {
+  const _on_update_modelValue = _value => (_ctx.foo = _value)
   const n0 = _createAssetComponent("Comp", {
     modelValue: () => (_ctx.foo),
-    "onUpdate:modelValue": () => _value => (_ctx.foo = _value)
+    "onUpdate:modelValue": () => _on_update_modelValue
   }, null, true)
   return n0
 }"
@@ -88,12 +94,14 @@ exports[`compiler: vModel transform > component > v-model with arguments for com
 "import { createAssetComponent as _createAssetComponent } from 'vue';
 
 export function render(_ctx) {
+  const _on_update_foo = _value => (_ctx.foo = _value)
+  const _on_update_bar = _value => (_ctx.bar = _value)
   const n0 = _createAssetComponent("Comp", {
     foo: () => (_ctx.foo),
-    "onUpdate:foo": () => _value => (_ctx.foo = _value),
+    "onUpdate:foo": () => _on_update_foo,
     fooModifiers: { trim: true },
     bar: () => (_ctx.bar),
-    "onUpdate:bar": () => _value => (_ctx.bar = _value),
+    "onUpdate:bar": () => _on_update_bar,
     barModifiers: { number: true }
   }, null, true)
   return n0
@@ -104,9 +112,10 @@ exports[`compiler: vModel transform > component > v-model with arguments for com
 "import { createAssetComponent as _createAssetComponent } from 'vue';
 
 export function render(_ctx) {
+  const _on_update_bar = _value => (_ctx.foo = _value)
   const n0 = _createAssetComponent("Comp", {
     bar: () => (_ctx.foo),
-    "onUpdate:bar": () => _value => (_ctx.foo = _value)
+    "onUpdate:bar": () => _on_update_bar
   }, null, true)
   return n0
 }"
@@ -150,12 +159,73 @@ exports[`compiler: vModel transform > component > v-model:model with arguments f
 "import { createAssetComponent as _createAssetComponent } from 'vue';
 
 export function render(_ctx) {
+  const _on_update_model = _value => (_ctx.foo = _value)
   const n0 = _createAssetComponent("Comp", {
     model: () => (_ctx.foo),
-    "onUpdate:model": () => _value => (_ctx.foo = _value),
+    "onUpdate:model": () => _on_update_model,
     modelModifiers$: { trim: true }
   }, null, true)
   return n0
+}"
+`;
+
+exports[`compiler: vModel transform > component v-model handler is declared in the scope of <Comp v-for="row in rows" v-model="row.text" /> 1`] = `
+"import { resolveComponent as _resolveComponent, createComponentWithFallback as _createComponentWithFallback, createFor as _createFor } from 'vue';
+
+export function render(_ctx) {
+  const _component_Comp = _resolveComponent("Comp")
+  const n0 = _createFor(() => (_ctx.rows), (_for_item0) => {
+    const _on_update_modelValue = _value => (_for_item0.value.text = _value)
+    const n2 = _createComponentWithFallback(_component_Comp, {
+      modelValue: () => (_for_item0.value.text),
+      "onUpdate:modelValue": () => _on_update_modelValue
+    })
+    return n2
+  }, undefined, 2 /* IS_COMPONENT */)
+  return n0
+}"
+`;
+
+exports[`compiler: vModel transform > component v-model handler is declared in the scope of <Outer v-slot="{ row }"><Comp v-model="row.text" /></Outer> 1`] = `
+"import { resolveComponent as _resolveComponent, createComponentWithFallback as _createComponentWithFallback, createAssetComponent as _createAssetComponent } from 'vue';
+
+export function render(_ctx) {
+  const _component_Comp = _resolveComponent("Comp")
+  const n1 = _createAssetComponent("Outer", null, (_slotProps0) => {
+    const _on_update_modelValue = _value => (_slotProps0.row.text = _value)
+    const n0 = _createComponentWithFallback(_component_Comp, {
+      modelValue: () => (_slotProps0.row.text),
+      "onUpdate:modelValue": () => _on_update_modelValue
+    }, null, 2 /* SLOT */)
+    return n0
+  }, true)
+  return n1
+}"
+`;
+
+exports[`compiler: vModel transform > component v-model handlers are declared once per component 1`] = `
+"import { resolveComponent as _resolveComponent, createComponentWithFallback as _createComponentWithFallback } from 'vue';
+
+export function render(_ctx) {
+  const _component_Comp = _resolveComponent("Comp")
+  const _on_update_bar = v => _ctx.log(v)
+  const _on_update_modelValue = _value => (_ctx.foo = _value)
+  const _on_update_bar1 = _value => (_ctx.bar = _value)
+  const n0 = _createComponentWithFallback(_component_Comp, {
+    modelValue: () => (_ctx.foo),
+    "onUpdate:modelValue": () => _on_update_modelValue,
+    bar: () => (_ctx.bar),
+    "onUpdate:bar": () => [
+      _on_update_bar1,
+      _on_update_bar
+    ]
+  })
+  const _on_update_modelValue1 = _value => (_ctx.baz = _value)
+  const n1 = _createComponentWithFallback(_component_Comp, {
+    modelValue: () => (_ctx.baz),
+    "onUpdate:modelValue": () => _on_update_modelValue1
+  })
+  return [n0, n1]
 }"
 `;
 

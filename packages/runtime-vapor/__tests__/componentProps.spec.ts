@@ -2795,3 +2795,39 @@ test('props object supports hasOwnProperty like vdom', async () => {
   expect(vdom.text).toBe('true-true-false-true-true')
   expect(vapor.after).toBe(vdom.after)
 })
+
+test('a component v-model listener is the same function on every delivery', async () => {
+  const { vdom, vapor } = await renderParity(
+    {
+      Child: `<script setup>
+        import { ref, watch } from 'vue'
+        const props = defineProps({
+          modelValue: String,
+          'onUpdate:modelValue': Function,
+          label: String,
+        })
+        const changes = ref(0)
+        watch(
+          () => props['onUpdate:modelValue'],
+          () => changes.value++,
+          { flush: 'sync' },
+        )
+      </script>
+      <template>
+        <span>{{ modelValue }}|{{ label }}|{{ changes }}</span>
+      </template>`,
+      App: `<template>
+        <components.Child v-model="data.text" :label="data.label" />
+      </template>`,
+    },
+    () => ref({ text: 'a', label: 'l' }),
+    async data => {
+      data.value.text = 'b'
+      await nextTick()
+      data.value.label = 'm'
+      await nextTick()
+    },
+  )
+  expect(vdom.text).toBe('b|m|0')
+  expect(vapor.text).toBe(vdom.text)
+})
