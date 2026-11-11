@@ -12171,6 +12171,124 @@ describe('vdomInterop', () => {
     }
   })
 
+  test('vdom template ref to a vapor child without defineExpose is a closed object', () => {
+    const data = ref<any>(null)
+    const Child = compile(`<template><div /></template>`, data)
+    const App = compile(
+      `<script setup>
+        import { ref } from 'vue'
+        const Child = _components.Child
+        const child = ref()
+        _data.value = () => child.value
+      </script>
+      <template>
+        <Child ref="child" />
+      </template>`,
+      data,
+      { Child },
+      { vapor: false },
+    )
+    define(App).render()
+    expect(Object.keys(data.value())).toEqual([])
+  })
+
+  test.each([
+    ['sees what it exposes after an await', 'defineExpose({ foo })', ['foo']],
+    ['without defineExpose is a closed object', '', []],
+  ])(
+    'vdom template ref to an async setup vapor child %s',
+    async (_, expose, keys) => {
+      const data = ref<any>({})
+      const Child = compile(
+        `<script setup vapor>
+          const foo = await Promise.resolve('foo')
+          ${expose}
+        </script>
+        <template>
+          <div>{{ foo }}</div>
+        </template>`,
+        data,
+      )
+      const App = compile(
+        `<script setup>
+          import { ref } from 'vue'
+          const Child = _components.Child
+          const child = ref()
+          const n = ref(0)
+          _data.value.child = () => child.value
+          _data.value.update = () => n.value++
+        </script>
+        <template>
+          <Suspense>
+            <Child ref="child" :data-n="n" />
+          </Suspense>
+        </template>`,
+        data,
+        { Child },
+        { vapor: false },
+      )
+      const { html } = define(App).render()
+      await new Promise(r => setTimeout(r))
+      expect(html()).toBe('<div data-n="0">foo</div>')
+
+      data.value.update()
+      await nextTick()
+      expect(html()).toBe('<div data-n="1">foo</div>')
+      expect(Object.keys(data.value.child())).toEqual(keys)
+    },
+  )
+
+  test('vapor template ref set again after an async setup child exposed sees what it exposes', async () => {
+    const data = ref<any>({})
+    const Child = compile(
+      `<script setup vapor>
+        const foo = await Promise.resolve('foo')
+        defineExpose({ foo })
+      </script>
+      <template>
+        <div>{{ foo }}</div>
+      </template>`,
+      data,
+    )
+    const Parent = compile(
+      `<script setup vapor>
+        import { ref } from 'vue'
+        const Child = _components.Child
+        const again = ref(false)
+        let child
+        const setFirst = () => {}
+        const setAgain = el => (child = el)
+        _data.value.child = () => child
+        _data.value.update = () => (again.value = true)
+      </script>
+      <template>
+        <Child :ref="again ? setAgain : setFirst" />
+      </template>`,
+      data,
+      { Child },
+    )
+    const App = compile(
+      `<script setup>
+        const Parent = _components.Parent
+      </script>
+      <template>
+        <Suspense>
+          <Parent />
+        </Suspense>
+      </template>`,
+      data,
+      { Parent },
+      { vapor: false },
+    )
+    const { html } = define(App).render()
+    await new Promise(r => setTimeout(r))
+    expect(html()).toBe('<div>foo</div>')
+
+    data.value.update()
+    await nextTick()
+    expect(data.value.child().foo).toBe('foo')
+  })
+
   test('KeepAlive caches a vdom child by its explicit key over a spread one', async () => {
     const setups: string[] = []
     const child = (name: string) =>

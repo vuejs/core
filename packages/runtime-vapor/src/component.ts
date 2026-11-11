@@ -1177,7 +1177,7 @@ export class VaporComponentInstance<
     this.scope = new EffectScope(true)
 
     this.emit = emit.bind(null, this) as EmitFn<Emits>
-    this.expose = expose.bind(null, this) as any
+    this.expose = exposeVapor.bind(null, this) as any
     this.refs = EMPTY_OBJ as TypeRefs
     this.emitted = this.exposed = this.exposeProxy = this.propsDefaults = null
 
@@ -1828,26 +1828,39 @@ export function unmountComponent(
   }
 }
 
+function exposeVapor(
+  instance: VaporComponentInstance,
+  exposed: Record<string, any>,
+): void {
+  // a ref resolved while an async setup was pending cached the empty fallback
+  instance.exposeProxy = null
+  expose(instance, exposed)
+}
+
+const exposeProxyHandlers: ProxyHandler<Record<string, any>> = {
+  get: (target, key) => unref(target[key as any]),
+  // same as proxyRefs in vdom: assigning to an exposed ref sets its value
+  set: (target, key, value, receiver) => {
+    const oldValue = target[key as any]
+    if (isRef(oldValue) && !isRef(value)) {
+      oldValue.value = value
+      return true
+    }
+    return Reflect.set(target, key, value, receiver)
+  },
+}
+
 export function getExposed(
   instance: GenericComponentInstance,
-): Record<string, any> | undefined {
-  if (instance.exposed) {
-    return (
-      instance.exposeProxy ||
-      (instance.exposeProxy = new Proxy(markRaw(instance.exposed), {
-        get: (target, key) => unref(target[key as any]),
-        // same as proxyRefs in vdom: assigning to an exposed ref sets its value
-        set: (target, key, value, receiver) => {
-          const oldValue = target[key as any]
-          if (isRef(oldValue) && !isRef(value)) {
-            oldValue.value = value
-            return true
-          }
-          return Reflect.set(target, key, value, receiver)
-        },
-      }))
-    )
-  }
+): Record<string, any> {
+  return (
+    instance.exposeProxy ||
+    // nothing exposed: never hand out the instance itself
+    (instance.exposeProxy = new Proxy(
+      markRaw(instance.exposed || {}),
+      exposeProxyHandlers,
+    ))
+  )
 }
 
 /**

@@ -194,13 +194,11 @@ describe('createFor', () => {
       </template>`,
       state,
     )
-    const App = compile(
-      `<template><components.Wrapper ref="wrapper" /></template>`,
-      state,
-      { Wrapper },
-    )
+    const App = compile(`<template><components.Wrapper /></template>`, state, {
+      Wrapper,
+    })
     const { app, host, instance } = define(App).render()
-    const wrapper = instance!.refs.wrapper as VaporComponentInstance
+    const wrapper = instance!.block as VaporComponentInstance
     const cleanupBaseline = wrapper.scope.cleanupsLength
     const effectBaseline = getEffectsCount(wrapper.scope)
     const expectStableResources = () => {
@@ -264,16 +262,11 @@ describe('createFor', () => {
 
   test('removes component items before stopping their scope', async () => {
     const state = ref({ items: [] as number[] })
-    let child!: VaporComponentInstance
     const cleanup = vi.fn(() => {
-      expect((child.block as Node).isConnected).toBe(false)
+      expect(host.querySelector('span')).toBeNull()
     })
-    const refFn = (value: VaporComponentInstance | null) => {
-      if (value) {
-        child = value
-      } else {
-        cleanup()
-      }
+    const refFn = (value: unknown) => {
+      if (!value) cleanup()
     }
     const Child = compile(`<template><span /></template>`, state)
     const App = compile(
@@ -287,12 +280,13 @@ describe('createFor', () => {
       state,
       { Child, refFn },
     )
-    const { app, instance } = define(App).render()
+    const { app, instance, host } = define(App).render()
     const effectBaseline = getEffectsCount(instance!.scope)
 
     state.value.items = [0]
     await nextTick()
 
+    expect(host.querySelector('span')).not.toBeNull()
     expect(getEffectsCount(instance!.scope)).toBe(effectBaseline)
 
     state.value.items = []

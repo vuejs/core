@@ -19,6 +19,7 @@ import {
   setIsHydratingEnabled,
   withDeferredHydrationBoundary,
 } from '../../src/dom/hydration'
+import { getAsyncWrapperInner } from '../../src/apiDefineAsyncComponent'
 import { DynamicFragment } from '../../src/fragment'
 import { IF } from '../../src/fragmentFlags'
 import {
@@ -1315,8 +1316,10 @@ describe('Vapor Mode hydration', () => {
 
       doHydrate!()
       await new Promise(r => setTimeout(r))
+      const inner = getAsyncWrapperInner((app._instance as any).block) as any
+      expect(inner.type).toBe(Comp)
       expect(refs.comp).toBeTruthy()
-      expect(refs.comp.type).toBe(Comp)
+      expect(refs.comp).toBe(inner.exposeProxy)
       // vapor props flow reactively, so the wrapper never needs the vdom-only
       // "patched before lazy hydration" update hook
       expect((app._instance as any).block.bu).toBeUndefined()
@@ -1355,6 +1358,8 @@ describe('Vapor Mode hydration', () => {
       const app = createVaporSSRApp(App)
       app.mount(container)
       const refs = (app._instance as any).refs
+      const inner = (i: number) =>
+        getAsyncWrapperInner((app._instance as any).block[i]) as any
 
       resolve(Comp)
       await new Promise(r => setTimeout(r))
@@ -1362,14 +1367,18 @@ describe('Vapor Mode hydration', () => {
 
       hydrates[0]()
       await new Promise(r => setTimeout(r))
-      expect(refs.a.type).toBe(Comp)
+      expect(inner(0).type).toBe(Comp)
+      expect(refs.a).toBeTruthy()
+      expect(refs.a).toBe(inner(0).exposeProxy)
       // b's loader is resolved but its own hydration has not run: no ref yet,
       // and never the raw SSR node
       expect(refs.b == null).toBe(true)
 
       hydrates[1]()
       await new Promise(r => setTimeout(r))
-      expect(refs.b.type).toBe(Comp)
+      expect(inner(1).type).toBe(Comp)
+      expect(refs.b).toBeTruthy()
+      expect(refs.b).toBe(inner(1).exposeProxy)
       expect(container.innerHTML).toBe(
         '<!--{--><span>inner</span><!--async component--><span>inner</span><!--async component--><!--}-->',
       )
