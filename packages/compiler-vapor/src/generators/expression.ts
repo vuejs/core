@@ -81,9 +81,13 @@ export function genExpression(
   const ids: Identifier[] = []
   const parentStackMap = new Map<Identifier, Node[]>()
   const parentStack: Node[] = []
+  const knownIds: Record<string, number> = Object.create(null)
+  // the names in scope at an assignment: its right side is generated on its
+  // own for a setup let binding, out of the functions declaring them
+  let localsMap: Map<Identifier, Record<string, null>> | undefined
   walkIdentifiers(
     ast!,
-    (id, _, __, isReference, isLocal) => {
+    (id, parent, __, isReference, isLocal) => {
       if (isLocal) {
         if (!id.typeAnnotation && !id.optional) return
       } else if (!isReference) {
@@ -91,9 +95,20 @@ export function genExpression(
       }
       ids.push(id)
       parentStackMap.set(id, parentStack.slice())
+      if (
+        inline &&
+        parent &&
+        parent.type === 'AssignmentExpression' &&
+        parent.left === id
+      ) {
+        const locals: Record<string, null> = {}
+        for (const name in knownIds) locals[name] = null
+        ;(localsMap ||= new Map()).set(id, locals)
+      }
     },
     asParams,
     parentStack,
+    knownIds,
   )
 
   if (ids.length) {
@@ -142,6 +157,7 @@ export function genExpression(
             parent,
             parentStack,
             node,
+            localsMap && localsMap.get(id),
           ),
         )
 
@@ -174,6 +190,7 @@ function genIdentifier(
   parent?: Node,
   parentStack?: Node[],
   sourceNode?: SimpleExpressionNode,
+  locals?: Record<string, null>,
 ): CodeFragment[] {
   const { options, helper, identifiers } = context
   const { inline, bindingMetadata } = options
@@ -266,7 +283,7 @@ function genIdentifier(
           return [
             prefix,
             `${helper('isRef')}(${raw}) ? ${raw}.value ${operator} `,
-            genExpression(rightExp, context),
+            context.withId(() => genExpression(rightExp, context), locals!),
             ` : `,
             [raw, NewlineType.None, loc, name],
           ]

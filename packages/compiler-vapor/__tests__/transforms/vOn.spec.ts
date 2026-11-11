@@ -995,4 +995,42 @@ describe('v-on', () => {
       `async () => { _isRef(x) ? x.value = await bar() : x = await bar() }`,
     )
   })
+
+  test.each([
+    ['e => x = e', 'e => _isRef(x) ? x.value = e : x = e'],
+    ['e => x += e', 'e => _isRef(x) ? x.value += e : x += e'],
+    [
+      '({ a }, [b]) => x = a + b',
+      '({ a }, [b]) => _isRef(x) ? x.value = a + b : x = a + b',
+    ],
+    [
+      '() => { let a = 1; x = a }',
+      '() => { let a = 1; _isRef(x) ? x.value = a : x = a }',
+    ],
+    ['a => () => x = a', 'a => () => _isRef(x) ? x.value = a : x = a'],
+    // shadowing a setup binding
+    ['y => x = y', 'y => _isRef(x) ? x.value = y : x = y'],
+    // a function on the right side has locals of its own
+    [
+      'a => x = b => a + b + y',
+      'a => _isRef(x) ? x.value = b => a + b + _unref(y) : x = b => a + b + _unref(y)',
+    ],
+    // out of the scope again
+    [
+      '() => { (a => x = a); x = a }',
+      '() => { (a => _isRef(x) ? x.value = a : x = a); _isRef(x) ? x.value = __props.a : x = __props.a }',
+    ],
+  ])(
+    'locals in the right side of setup let assignment: %s',
+    (handler, expected) => {
+      const { code } = compileWithVOn(`<div @click="${handler}"/>`, {
+        inline: true,
+        bindingMetadata: {
+          x: BindingTypes.SETUP_LET,
+          y: BindingTypes.SETUP_MAYBE_REF,
+        },
+      })
+      expect(code).contains(`_on(n0, "click", ${expected})`)
+    },
+  )
 })

@@ -315,4 +315,14 @@ describe('compiler: template ref transform', () => {
     })
     expect(code).contains('_setTemplateRefBinding(n0, () => _ctx.isNaN)')
   })
+
+  test('function ref assigning its element to a setup let binding', () => {
+    const { code } = compileWithTransformRef(`<div :ref="el => foo = el" />`, {
+      inline: true,
+      bindingMetadata: { foo: BindingTypes.SETUP_LET },
+    })
+    expect(code).contains(
+      '_setTemplateRefBinding(n0, () => el => _isRef(foo) ? foo.value = el : foo = el)',
+    )
+  })
 })
