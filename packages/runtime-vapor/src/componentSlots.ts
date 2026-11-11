@@ -105,6 +105,10 @@ export function normalizeRawSlots(
   rawSlots?: LooseRawSlots | null,
 ): RawSlots | null | undefined {
   if (!rawSlots) return rawSlots
+  // An instance without slots holds the shared empty object and may hand it
+  // on (an async wrapper to its inner component). It is no one's slots: an
+  // owner registered for it would never be released.
+  if (rawSlots === EMPTY_OBJ) return
   const normalized = isFunction(rawSlots)
     ? ({ default: rawSlots } as RawSlots)
     : (rawSlots as RawSlots)

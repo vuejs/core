@@ -7,7 +7,11 @@ import {
   ref,
   shallowRef,
 } from '@vue/runtime-dom'
-import { createVaporApp, vaporInteropPlugin } from '../src'
+import {
+  createVaporApp,
+  defineVaporAsyncComponent,
+  vaporInteropPlugin,
+} from '../src'
 import { compile } from './_utils'
 import { setupHydrationTest, testHydration } from './hydration/_helpers'
 
@@ -403,5 +407,68 @@ describe.skipIf(!global.gc)('directive gc', () => {
 
   test('releases the value of a v-show binding disposed while a nested KeepAlive holds its hook', async () => {
     expect(await disposedVShowValue(true)).toBeUndefined()
+  })
+})
+
+describe.skipIf(!global.gc)('async component gc', () => {
+  const gc = () =>
+    new Promise<void>(resolve => {
+      setTimeout(() => {
+        global.gc!()
+        resolve()
+      })
+    })
+
+  const firstElementRef = (root: Element) =>
+    // @ts-expect-error ES2021 API
+    new WeakRef(root.firstElementChild!)
+
+  // the root element of a child a v-if removed
+  async function removedChildRoot(wrap: (comp: any) => any) {
+    const data = ref({ show: true })
+    const Inner = compile(
+      `<template>
+        <div>inner</div>
+      </template>`,
+      data,
+    )
+    const App = compile(
+      `<template>
+        <components.Child v-if="data.show" />
+      </template>`,
+      data,
+      { Child: wrap(Inner) },
+    )
+    const root = document.createElement('div')
+    const app = createVaporApp(App)
+    app.mount(root)
+    try {
+      await new Promise(r => setTimeout(r))
+      await nextTick()
+      expect(root.textContent).toBe('inner')
+      const el = firstElementRef(root)
+      data.value.show = false
+      await nextTick()
+      expect(root.textContent).toBe('')
+      await gc()
+      return el.deref()
+    } finally {
+      app.unmount()
+    }
+  }
+
+  // guard: passes before and after the fix below
+  test('releases a removed component', async () => {
+    expect(await removedChildRoot(comp => comp)).toBeUndefined()
+  })
+
+  // An owner of raw slots is registered once: this has to stay the first
+  // async component without slots that this file mounts.
+  test('releases the first removed async component that was given no slots', async () => {
+    expect(
+      await removedChildRoot(comp =>
+        defineVaporAsyncComponent(() => Promise.resolve(comp)),
+      ),
+    ).toBeUndefined()
   })
 })
