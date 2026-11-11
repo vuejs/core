@@ -9,6 +9,19 @@ import {
 } from '../src'
 
 describe('runtime-dom: props patching', () => {
+  test('attrs named after Object.prototype members', () => {
+    const root = document.createElement('div')
+    render(h('div', { hasOwnProperty: 'a', toString: 'b' }), root)
+    const el = root.children[0] as HTMLElement
+    // must be reflected as attributes instead of shadowing the inherited
+    // method on the element instance
+    expect(el.getAttribute('hasownproperty')).toBe('a')
+    expect(el.getAttribute('tostring')).toBe('b')
+    expect(typeof el.hasOwnProperty).toBe('function')
+    expect(typeof el.toString).toBe('function')
+    expect(el.hasOwnProperty('hasOwnProperty')).toBe(false)
+  })
+
   test('basic', () => {
     const el = document.createElement('div')
     patchProp(el, 'id', null, 'foo')

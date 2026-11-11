@@ -7,6 +7,7 @@ import {
   stringifyStyle,
 } from '@vue/shared'
 import {
+  hasOwn,
   includeBooleanAttr,
   isBooleanAttr,
   isOn,
@@ -71,7 +72,13 @@ export function ssrRenderDynamicAttr(
   const attrKey =
     tag && (tag.indexOf('-') > 0 || isSVGTag(tag))
       ? key // preserve raw name on custom elements and svg
-      : propsToAttrMap[key] || key.toLowerCase()
+      : // `propsToAttrMap` is a plain object, so a key that happens to be an
+        // `Object.prototype` member (e.g. `hasOwnProperty`, `toString`) would
+        // resolve to the inherited function and the attribute would be
+        // dropped as an "unsafe attribute name". only honor own entries.
+        hasOwn(propsToAttrMap, key)
+        ? propsToAttrMap[key]!
+        : key.toLowerCase()
   if (
     isBooleanAttr(attrKey) ||
     (attrKey === 'hidden' &&

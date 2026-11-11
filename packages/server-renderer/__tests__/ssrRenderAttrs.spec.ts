@@ -117,6 +117,27 @@ describe('ssr: renderAttrs', () => {
     ).toBe(` readonly for="foobar"`)
   })
 
+  test('attributes named after Object.prototype members', () => {
+    // `propsToAttrMap` is a plain object: an inherited member such as
+    // `hasOwnProperty` must not be resolved as an attribute name, otherwise
+    // the attribute is dropped as an "unsafe attribute name".
+    expect(ssrRenderAttrs({ hasOwnProperty: 'a' })).toBe(` hasownproperty="a"`)
+    expect(ssrRenderAttrs({ toString: 'b' })).toBe(` tostring="b"`)
+    expect(ssrRenderAttrs({ valueOf: 'c' })).toBe(` valueof="c"`)
+    expect(ssrRenderAttrs({ constructor: 'd' })).toBe(` constructor="d"`)
+    // the `^` prefix forces rendering as an attribute
+    expect(ssrRenderAttrs({ '^hasOwnProperty': 'a' })).toBe(
+      ` hasownproperty="a"`,
+    )
+    // own entries of the map are still honored
+    expect(ssrRenderAttrs({ className: 'e' })).toBe(` class="e"`)
+    expect(ssrRenderAttrs({ acceptCharset: 'f' })).toBe(` accept-charset="f"`)
+    // custom elements and svg preserve the raw name
+    expect(ssrRenderAttrs({ hasOwnProperty: 'a' }, 'x-el')).toBe(
+      ` hasOwnProperty="a"`,
+    )
+  })
+
   test('preserve name on custom element', () => {
     expect(
       ssrRenderAttrs(

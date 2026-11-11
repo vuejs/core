@@ -156,7 +156,11 @@ function shouldSetAsProp(
     return false
   }
 
-  return key in el
+  // keys that only exist on `Object.prototype` (e.g. `hasOwnProperty`,
+  // `toString`) are not DOM props: assigning them would shadow the method on
+  // the element instance instead of reflecting an attribute, and would make
+  // the client disagree with SSR, which renders them as attributes.
+  return key in el && !(key in Object.prototype)
 }
 
 function shouldSetAsPropForVueCE(el: VueElement, key: string) {
