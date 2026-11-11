@@ -637,7 +637,9 @@ export function findBlockBoundary(block: Block): {
   const boundaryBlock = isVaporComponent(block)
     ? getComponentPhysicalBlock(block)
     : block
-  const lastChild = findLastChild(boundaryBlock)!
+  const lastChild = findLastChild(boundaryBlock)
+  // a block without a node, e.g. the empty array an empty template renders
+  if (!lastChild) return { parentNode: null, nextNode: null }
   let { parentNode, nextSibling: nextNode } = lastChild
 
   // if nodes render as a fragment and the current nextNode is fragment
@@ -666,7 +668,10 @@ function findLastChild(node: Block): Node | undefined | null {
   if (node && node instanceof Node) {
     return node
   } else if (isArray(node)) {
-    return findLastChild(node[node.length - 1])
+    for (let i = node.length - 1; i >= 0; i--) {
+      const last = findLastChild(node[i])
+      if (last) return last
+    }
   } else if (isVaporComponent(node)) {
     return findLastChild(getComponentPhysicalBlock(node))
   } else {

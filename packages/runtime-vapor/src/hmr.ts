@@ -27,6 +27,7 @@ import {
 import { applyComponentScopeIds } from './scopeId'
 import { applyComponentCssVars } from './helpers/useCssVars'
 import { isTransitionEnabled } from './transition'
+import { isInteropEnabled } from './vdomInteropState'
 import { isFragment } from './fragment'
 import { isArray } from '@vue/shared'
 import {
@@ -52,8 +53,13 @@ export function hmrRerender(instance: VaporComponentInstance): void {
       return instance.hmrReload!(instance.type)
     }
   }
-  const { parentNode, nextNode: anchor } = findBlockBoundary(instance.block)
-  const parent = parentNode as ParentNode
+  const [parent, anchor] = findPlace(instance)
+  if (!parent) {
+    // rendered no node to find its place by: a vapor parent renders it again
+    let owner = instance.parent
+    while (owner && !owner.vapor) owner = owner.parent
+    return owner!.hmrRerender!()
+  }
   if (instance.renderScope) {
     instance.renderScope.stop()
   }
@@ -102,6 +108,19 @@ export function hmrRerender(instance: VaporComponentInstance): void {
   }
 }
 
+// Where the block of a mounted instance sits. One that rendered no node has no
+// boundary of its own: a vdom parent kept an anchor behind it, and a root is
+// all its app container holds.
+function findPlace(
+  instance: VaporComponentInstance,
+): [parent: ParentNode | null, anchor: Node | null] {
+  const { parentNode, nextNode } = findBlockBoundary(instance.block)
+  if (parentNode) return [parentNode as ParentNode, nextNode]
+  const vnode = isInteropEnabled && instance.interopVNode
+  if (vnode) return [vnode.anchor!.parentNode, vnode.anchor as Node]
+  return [instance.parent ? null : instance.appContext.app!._container, null]
+}
+
 // keyed by the state of the Transition that applied them; vdom hooks have none
 type TakenTransitions = Map<
   VaporTransitionState | undefined,
@@ -140,8 +159,8 @@ export function hmrReload(
     return
   }
 
-  const { parentNode, nextNode: anchor } = findBlockBoundary(instance.block)
-  const parent = parentNode as ParentNode
+  const [parentNode, anchor] = findPlace(instance)
+  const parent = parentNode!
   unmountComponent(instance, parent)
   const prev = setCurrentInstance(parentInstance)
   let newInstance: VaporComponentInstance
