@@ -14,6 +14,7 @@ import { inOnce, withOnce } from '../once'
 import { isHydrating, isRecreatedNode } from '../dom/hydration'
 import { isArray, isSet, looseEqual } from '@vue/shared'
 import { Dep, getCurrentScope, trackDep, traverse } from '@vue/reactivity'
+import type { VaporComponentInstance } from '../component'
 
 type VaporModelDirective<
   T extends HTMLElement =
@@ -29,7 +30,8 @@ type VaporModelDirective<
 ) => void
 
 function ensureMounted(cb: () => void) {
-  if (currentInstance!.isMounted) {
+  const instance = currentInstance as VaporComponentInstance
+  if (instance.isMounted) {
     cb()
   } else {
     // Deferred work keeps the branch scope and once ambient it was created under.
@@ -38,7 +40,17 @@ function ensureMounted(cb: () => void) {
     onMounted(() => {
       const currentScope = scope!
       scope = undefined
-      if (currentScope.active) currentScope.run(run)
+      if (currentScope.active) {
+        // the effects created here first run as part of the mount, which
+        // has no update hooks
+        const prevUpdating = instance.isUpdating
+        instance.isUpdating = true
+        try {
+          currentScope.run(run)
+        } finally {
+          instance.isUpdating = prevUpdating
+        }
+      }
     })
   }
 }
