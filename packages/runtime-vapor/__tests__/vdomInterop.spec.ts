@@ -15405,6 +15405,26 @@ describe('cloneVNode extras fall through to vapor slot content', () => {
       }
     },
   })
+  const flatten = (children: VNode[]): VNode[] =>
+    children.flatMap(c =>
+      c.type === Fragment ? flatten(c.children as VNode[]) : [c],
+    )
+  // the same over the flattened slot fragments, as it reaches a forwarded slot
+  const FlatAsChild = defineComponent({
+    inheritAttrs: false,
+    setup(_, { attrs, slots }) {
+      return () => {
+        const children = flatten(slots.default!())
+        const i = children.findIndex(c => c.type !== CommentVNode)
+        const child = children[i]
+        children[i] = cloneVNode(
+          { ...child, props: {} } as VNode,
+          child.props ? mergeProps(attrs, child.props) : attrs,
+        )
+        return children
+      }
+    },
+  })
   const vdomScript = `<script setup>const data = _data; const components = _components</script>`
   // vdom `mergeProps` repeats a class both sides carry; the DOM does not
   const classes = (el: Element) => Array.from(el.classList).sort()
@@ -15835,22 +15855,6 @@ describe('cloneVNode extras fall through to vapor slot content', () => {
     // Reka UI triggers: `<Primitive as-child><slot /></Primitive>`, whose
     // `Slot` flattens the forwarded slot fragment before cloning (n8n wraps
     // one with `<slot v-if="slots.trigger" name="trigger" />`)
-    const flatten = (children: VNode[]): VNode[] =>
-      children.flatMap(c =>
-        c.type === Fragment ? flatten(c.children as VNode[]) : [c],
-      )
-    const FlatAsChild = defineComponent({
-      inheritAttrs: false,
-      setup(_, { attrs, slots }) {
-        return () => {
-          const [child] = flatten(slots.default!())
-          return cloneVNode(
-            { ...child, props: {} } as VNode,
-            child.props ? mergeProps(attrs, child.props) : attrs,
-          )
-        }
-      },
-    })
     const Trigger = compile(
       `<script setup>const p = defineProps(['open']); const components = _components</script>
       <template>
@@ -15930,6 +15934,130 @@ describe('cloneVNode extras fall through to vapor slot content', () => {
       },
       { PropsAsChild, Fwd },
     )
+  })
+
+  test('reach the fallback of a vapor slot a vdom component forwards', async () => {
+    const Wrapper = compile(
+      `<script setup>
+        const p = defineProps(['clicked'])
+        const components = _components
+      </script>
+      <template>
+        <components.FlatAsChild data-x="x" @click="p.clicked">
+          <slot>
+            <button>default</button>
+          </slot>
+        </components.FlatAsChild>
+      </template>`,
+      ref(),
+      { FlatAsChild },
+      { vapor: false },
+    )
+    const log: Record<string, any[]> = { vdom: [], vapor: [] }
+    await renderParity(
+      {
+        App: `<template>
+          <components.Wrapper :clicked="data.onClick">
+            <button v-if="data.show">custom</button>
+          </components.Wrapper>
+        </template>`,
+      },
+      () => ref({ show: false, onClick: () => {} }),
+      async (data, root, mode) => {
+        let n = 0
+        data.value.onClick = () => n++
+        for (const show of [false, true, false, true]) {
+          data.value.show = show
+          await nextTick()
+          const btn = root.querySelector('button')!
+          btn.click()
+          log[mode].push([btn.textContent, btn.getAttribute('data-x'), n])
+        }
+      },
+      { Wrapper },
+    )
+    expect(log.vdom).toEqual([
+      ['default', 'x', 1],
+      ['custom', 'x', 2],
+      ['default', 'x', 3],
+      ['custom', 'x', 4],
+    ])
+    expect(log.vapor).toEqual(log.vdom)
+  })
+
+  test('follow the attrs on the single root of a forwarded fallback', async () => {
+    const Btn = compile(
+      `<template>
+        <button class="btn">x</button>
+      </template>`,
+      ref(),
+      {},
+      { vapor: false },
+    )
+    const run = async (fallback: string) => {
+      const Wrapper = compile(
+        `<script setup>
+          const p = defineProps(['attrs'])
+          const components = _components
+        </script>
+        <template>
+          <components.FlatAsChild v-bind="p.attrs">
+            <slot>${fallback}</slot>
+          </components.FlatAsChild>
+        </template>`,
+        ref(),
+        { FlatAsChild, Btn },
+        { vapor: false, compilerOptions: { comments: true } },
+      )
+      const log: Record<string, any[]> = { vdom: [], vapor: [] }
+      await renderParity(
+        {
+          App: `<template>
+            <components.Wrapper :attrs="data.attrs">
+              <i v-if="data.show" />
+            </components.Wrapper>
+          </template>`,
+        },
+        () => ref({ show: false, attrs: {} as Record<string, any> }),
+        async (data, root, mode) => {
+          let n = 0
+          for (const attrs of [
+            {},
+            { 'data-x': 'x', class: 'extra', onClick: () => n++ },
+            { 'data-x': 'y' },
+            {},
+          ]) {
+            data.value.attrs = attrs
+            await nextTick()
+            const btn = root.querySelector('button')!
+            btn.click()
+            log[mode].push([btn.getAttribute('data-x'), classes(btn), n])
+          }
+        },
+        { Wrapper },
+      )
+      return log
+    }
+
+    const el = await run(`<!-- c --><button class="own">default</button>`)
+    expect(el.vdom).toEqual([
+      [null, ['own'], 0],
+      ['x', ['extra', 'own'], 1],
+      ['y', ['own'], 1],
+      [null, ['own'], 1],
+    ])
+    expect(el.vapor).toEqual(el.vdom)
+
+    const comp = await run(`<components.Btn class="own" />`)
+    expect(comp.vdom[1]).toEqual(['x', ['btn', 'extra', 'own'], 1])
+    expect(comp.vapor).toEqual(comp.vdom)
+
+    // coverage guard: vdom fallback is a vnode list the consumer picks from;
+    // through the interop it inherits like a component root, single root or
+    // nothing (as 'multi-root content takes nothing')
+    const multi = await run(`<button>a</button><span>b</span>`)
+    expect(multi.vdom.map(r => r[0])).toEqual([null, 'x', 'y', null])
+    expect(multi.vapor.map(r => r[0])).toEqual([null, null, null, null])
   })
 })
 
