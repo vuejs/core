@@ -344,6 +344,44 @@ test('INSTANCE_LISTENERS', () => {
   ).toHaveBeenWarned()
 })
 
+test('INSTANCE_LISTENERS should not leak into $props during optimized updates', async () => {
+  const options = ref(['a'])
+  const onChange = vi.fn()
+  let childProps: any
+
+  const Child = {
+    props: {
+      options: Array,
+    },
+    render(this: any) {
+      childProps = this.$props
+      return null
+    },
+  }
+
+  const vm = new Vue({
+    data() {
+      return {
+        options,
+        onChange,
+      }
+    },
+    render(this: any, h: any) {
+      return h(Child, {
+        options: this.options,
+        onChange: this.onChange,
+      })
+    },
+  }).$mount()
+
+  expect(childProps.onChange).toBeUndefined()
+
+  options.value = ['b']
+  await nextTick()
+
+  expect(childProps.onChange).toBeUndefined()
+})
+
 describe('INSTANCE_SCOPED_SLOTS', () => {
   test('explicit usage', () => {
     let slots: Slots
