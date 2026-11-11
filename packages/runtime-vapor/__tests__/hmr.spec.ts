@@ -2749,4 +2749,40 @@ describe('hot module replacement', () => {
       expect(html(root)).toBe('<p>b</p>')
     })
   })
+
+  test('reload a child again after its parent was reloaded with the new definition', () => {
+    const childId = 'test-child-new-definition'
+    const parentId = 'test-parent-new-definition'
+    const child = (msg: string): any => ({
+      __hmrId: childId,
+      __vapor: true,
+      render: compileToFunction(`<div>${msg}</div>`),
+    })
+    const parent = (Child: any): any => ({
+      __hmrId: parentId,
+      __vapor: true,
+      components: { Child },
+      render: compileToFunction(`<Child />`),
+    })
+    const ChildA = child('A')
+    createRecord(childId, ChildA)
+    const Parent = parent(ChildA)
+    createRecord(parentId, Parent)
+    const root = document.createElement('div')
+    document.body.appendChild(root)
+    createVaporApp(Parent).mount(root)
+    expect(root.innerHTML).toBe('<div>A</div>')
+
+    // every update of a module exports a new definition object
+    const ChildB = child('B')
+    reload(childId, ChildB)
+    expect(root.innerHTML).toBe('<div>B</div>')
+
+    // the parent's updated module imports the child's latest one
+    reload(parentId, parent(ChildB))
+    expect(root.innerHTML).toBe('<div>B</div>')
+
+    reload(childId, child('C'))
+    expect(root.innerHTML).toBe('<div>C</div>')
+  })
 })
