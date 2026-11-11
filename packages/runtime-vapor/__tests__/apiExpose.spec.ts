@@ -1,7 +1,11 @@
 import { computed, ref, shallowRef } from '@vue/reactivity'
-import { type VaporComponentInstance, createComponent } from '../src/component'
+import {
+  type VaporComponentInstance,
+  createComponent,
+  isVaporComponent,
+} from '../src/component'
 import { createTemplateRefSetter } from '../src/apiTemplateRef'
-import { makeRender } from './_utils'
+import { compile, makeRender } from './_utils'
 import { currentInstance } from '@vue/runtime-dom'
 import { defineVaporComponent } from '../src/apiDefineComponent'
 
@@ -98,7 +102,8 @@ describe('api: expose', () => {
     }).render()
 
     expect(childInstance!.exposed).toBeNull()
-    expect(childRef.value).toBe(childInstance!)
+    expect(childRef.value).toBe(childInstance!.exposeProxy)
+    expect(Object.keys(childRef.value)).toEqual([])
   })
 
   test('with mount', () => {
@@ -152,5 +157,34 @@ describe('api: expose', () => {
     expect(
       'expose() should be passed a plain object, received function',
     ).toHaveBeenWarned()
+  })
+
+  test('template ref to a child without defineExpose is a closed object', () => {
+    const data = ref<any>(null)
+    const Child = compile(`<template><div /></template>`, data)
+    const App = compile(
+      `<script setup vapor>
+        import { ref } from 'vue'
+        const Child = _components.Child
+        const child = ref()
+        _data.value = () => child.value
+      </script>
+      <template>
+        <Child ref="child" />
+      </template>`,
+      data,
+      { Child },
+    )
+    define(App).render()
+
+    const child = data.value()
+    expect(isVaporComponent(child)).toBe(false)
+    expect(Object.keys(child)).toEqual([])
+  })
+
+  test('mount returns a closed object for a root without defineExpose', () => {
+    const App = compile(`<template><div /></template>`, ref())
+    const { app, host } = define(App).create()
+    expect(Object.keys(app.mount(host) as any)).toEqual([])
   })
 })

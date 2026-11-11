@@ -474,7 +474,7 @@ const getRefValue = (el: RefEl) => {
       if (inner === undefined) return null
       return getRefValue(inner as RefEl)
     }
-    return getExposed(el) || el
+    return getExposed(el)
   } else if (isTeleportEnabled && isTeleportFragment(el)) {
     return null
   } else if (isDynamicFragment(el)) {

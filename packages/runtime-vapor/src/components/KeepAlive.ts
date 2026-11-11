@@ -90,14 +90,10 @@ const VaporKeepAliveImpl = defineVaporComponent({
     max: [String, Number],
   },
   setup(props: KeepAliveProps, { slots, expose }) {
-    let exposed!: Record<string, any>
     // for e2e test
     if (__E2E_TEST__) {
-      exposed = {
-        getStorageContainer: () => storageContainer,
-      }
+      expose({ getStorageContainer: () => storageContainer })
     }
-    expose(exposed)
 
     if (!slots.default) {
       return undefined

@@ -540,6 +540,12 @@ const vaporInteropImpl = {
     // a pending async setup mounts once it settles, with whatever the parent
     // handed it meanwhile
     const pendingSetup = isPendingInteropSetup(instance)
+    // vdom resolves a template ref through `exposed` and otherwise falls back
+    // to the public proxy, which a vapor instance does not have. An async
+    // setup may still call `expose()` until it settles.
+    registerAfterInteropSetup(instance, pendingSetup, () => {
+      if (!instance.exposed) instance.exposed = {}
+    })
     const rootEl = !pendingSetup && resolveInteropRootEl(instance)
     if (rootEl) {
       vnode.el = rootEl
