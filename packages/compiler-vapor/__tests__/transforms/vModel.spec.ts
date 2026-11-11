@@ -268,7 +268,10 @@ describe('compiler: vModel transform', () => {
       expect(code).toMatchSnapshot()
       expect(code).contains(`modelValue: () => (_ctx.foo),`)
       expect(code).contains(
-        `"onUpdate:modelValue": () => _value => (_ctx.foo = _value)`,
+        `const _on_update_modelValue = _value => (_ctx.foo = _value)`,
+      )
+      expect(code).contains(
+        `"onUpdate:modelValue": () => _on_update_modelValue`,
       )
       expect(ir.block.dynamic.children[0].operation).toMatchObject({
         type: IRNodeTypes.CREATE_COMPONENT_NODE,
@@ -291,8 +294,9 @@ describe('compiler: vModel transform', () => {
       expect(code).toMatchSnapshot()
       expect(code).contains(`bar: () => (_ctx.foo),`)
       expect(code).contains(
-        `"onUpdate:bar": () => _value => (_ctx.foo = _value)`,
+        `const _on_update_bar = _value => (_ctx.foo = _value)`,
       )
+      expect(code).contains(`"onUpdate:bar": () => _on_update_bar`)
       expect(ir.block.dynamic.children[0].operation).toMatchObject({
         type: IRNodeTypes.CREATE_COMPONENT_NODE,
         tag: 'Comp',
@@ -365,7 +369,10 @@ describe('compiler: vModel transform', () => {
       expect(code).contains(`() => (_ctx.obj)`)
       expect(code).contains(`modelValue: () => (_ctx.foo)`)
       expect(code).contains(
-        `"onUpdate:modelValue": () => _value => (_ctx.foo = _value)`,
+        `const _on_update_modelValue = _value => (_ctx.foo = _value)`,
+      )
+      expect(code).contains(
+        `"onUpdate:modelValue": () => _on_update_modelValue`,
       )
       expect(code).contains(`modelModifiers: { trim: true }`)
       expect(code).not.contains(`modelModifiers: () => ({ trim: true })`)
@@ -379,8 +386,9 @@ describe('compiler: vModel transform', () => {
       expect(code).contains(`() => ({ foo: _ctx.bar })`)
       expect(code).contains(`foo: () => (_ctx.foo)`)
       expect(code).contains(
-        `"onUpdate:foo": () => _value => (_ctx.foo = _value)`,
+        `const _on_update_foo = _value => (_ctx.foo = _value)`,
       )
+      expect(code).contains(`"onUpdate:foo": () => _on_update_foo`)
       expect(code).toMatchSnapshot()
     })
 
@@ -391,8 +399,9 @@ describe('compiler: vModel transform', () => {
 
       expect(code).contains(`foo: () => (_ctx.foo)`)
       expect(code).contains(
-        `"onUpdate:foo": () => _value => (_ctx.foo = _value)`,
+        `const _on_update_foo = _value => (_ctx.foo = _value)`,
       )
+      expect(code).contains(`"onUpdate:foo": () => _on_update_foo`)
       expect(code).contains(`() => ({ foo: _ctx.bar })`)
       expect(code).toMatchSnapshot()
     })
@@ -510,8 +519,11 @@ describe('compiler: vModel transform', () => {
 
       expect(code).toMatchSnapshot()
       expect(code).toContain(
+        `const _on_update_modelValue = _value => (counter.value = _value)`,
+      )
+      expect(code).toContain(
         `"onUpdate:modelValue": () => [
-      _value => (counter.value = _value),
+      _on_update_modelValue,
       onUpdate
     ]`,
       )
@@ -690,6 +702,52 @@ describe('compiler: vModel transform', () => {
           allowReturnOutsideFunction: true,
         }),
       ).not.toThrow()
+    },
+  )
+
+  test('component v-model handlers are declared once per component', () => {
+    const { code } = compileVapor(
+      '<Comp v-model="foo" v-model:bar="bar" @update:bar="v => log(v)" />' +
+        '<Comp v-model="baz" />',
+      { prefixIdentifiers: true },
+    )
+    expect(code).toMatchSnapshot()
+    expect(code).toContain(
+      'const _on_update_modelValue = _value => (_ctx.foo = _value)',
+    )
+    expect(code).toContain('const _on_update_bar = v => _ctx.log(v)')
+    expect(code).toContain(
+      'const _on_update_bar1 = _value => (_ctx.bar = _value)',
+    )
+    expect(code).toContain(
+      'const _on_update_modelValue1 = _value => (_ctx.baz = _value)',
+    )
+    expect(code).toContain(
+      '"onUpdate:modelValue": () => _on_update_modelValue,',
+    )
+    expect(code).toContain(
+      '"onUpdate:modelValue": () => _on_update_modelValue1',
+    )
+    expect(code).not.toContain('() => _value =>')
+  })
+
+  test.each([
+    ['<Comp v-for="row in rows" v-model="row.text" />', '(_for_item0) => {'],
+    [
+      '<Outer v-slot="{ row }"><Comp v-model="row.text" /></Outer>',
+      '(_slotProps0) => {',
+    ],
+  ])(
+    'component v-model handler is declared in the scope of %s',
+    (source, scope) => {
+      const { code } = compileVapor(source, { prefixIdentifiers: true })
+      expect(code).toMatchSnapshot()
+      const declared = code.indexOf('const _on_update_modelValue = _value => (')
+      expect(declared).toBeGreaterThan(code.indexOf(scope))
+      expect(code.indexOf('(_component_Comp, {')).toBeGreaterThan(declared)
+      expect(code).toContain(
+        '"onUpdate:modelValue": () => _on_update_modelValue',
+      )
     },
   )
 })

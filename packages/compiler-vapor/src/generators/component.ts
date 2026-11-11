@@ -104,7 +104,11 @@ export function genCreateComponent(
   const slotDeclarations: string[] = []
   const rawSlots = genRawSlots(slots, context, slotDeclarations)
   const [ids, handlers] = processInlineHandlers(props, context)
-  const rawProps = context.withId(() => genRawProps(props, context, true), ids)
+  const modelHandlers: CodeFragment[] = []
+  const rawProps = context.withId(
+    () => genRawProps(props, context, true, modelHandlers),
+    ids,
+  )
 
   const inlineHandlers: CodeFragment[] = handlers.reduce<CodeFragment[]>(
     (acc, { name, value }: InlineHandler) => {
@@ -116,6 +120,7 @@ export function genCreateComponent(
   return [
     NEWLINE,
     inlineHandlers,
+    modelHandlers,
     slotDeclarations.length
       ? genMulti(['let ', NEWLINE, ', '], ...slotDeclarations)
       : [],
@@ -261,6 +266,8 @@ export function genRawProps(
   props: IRProps[],
   context: CodegenContext,
   directStaticLiteralProps = false,
+  // collects the declarations of a component's v-model handlers
+  modelHandlers?: CodeFragment[],
 ): CodeFragment[] | undefined {
   const staticProps = props[0]
   if (isArray(staticProps)) {
@@ -270,15 +277,21 @@ export function genRawProps(
     return genStaticProps(
       staticProps,
       context,
-      genDynamicProps(props.slice(1), context, directStaticLiteralProps),
+      genDynamicProps(
+        props.slice(1),
+        context,
+        directStaticLiteralProps,
+        modelHandlers,
+      ),
       directStaticLiteralProps,
+      modelHandlers,
     )
   } else if (props.length) {
     // all dynamic
     return genStaticProps(
       [],
       context,
-      genDynamicProps(props, context, directStaticLiteralProps),
+      genDynamicProps(props, context, directStaticLiteralProps, modelHandlers),
       directStaticLiteralProps,
     )
   }
@@ -289,6 +302,7 @@ function genStaticProps(
   context: CodegenContext,
   dynamicProps?: CodeFragment[],
   directStaticLiteralProps = false,
+  modelHandlers?: CodeFragment[],
 ): CodeFragment[] {
   const args: CodeFragment[][] = []
 
@@ -360,13 +374,21 @@ function genStaticProps(
     if (prop.model) {
       // onUpdate:* handler
       if (prop.key.isStatic) {
-        const keyName = `onUpdate:${camelize(prop.key.content)}`
+        const name = camelize(prop.key.content)
+        const keyName = `onUpdate:${name}`
         const keyFrag: CodeFragment[] = [JSON.stringify(keyName)]
-        handlerGroups.add(
-          keyName,
-          keyFrag,
-          genModelHandler(prop.values[0], context),
-        )
+        let handler = genModelHandler(prop.values[0], context)
+        if (modelHandlers) {
+          // declared ahead of the component like an inline event handler, so
+          // the prop is the same function every time its getter runs
+          const handlerName = getUniqueHandlerName(
+            context,
+            `_on_update_${name}`,
+          )
+          modelHandlers.push(`const ${handlerName} = `, handler, NEWLINE)
+          handler = [handlerName]
+        }
+        handlerGroups.add(keyName, keyFrag, handler)
       } else {
         const keyFrag: CodeFragment[] = [
           '["onUpdate:" + ',
@@ -412,6 +434,7 @@ function genDynamicProps(
   props: IRProps[],
   context: CodegenContext,
   directStaticLiteralProps = false,
+  modelHandlers?: CodeFragment[],
 ): CodeFragment[] | undefined {
   const { helper } = context
   const frags: CodeFragment[][] = []
@@ -420,7 +443,13 @@ function genDynamicProps(
     if (isArray(p)) {
       if (p.length) {
         frags.push(
-          genStaticProps(p, context, undefined, directStaticLiteralProps),
+          genStaticProps(
+            p,
+            context,
+            undefined,
+            directStaticLiteralProps,
+            modelHandlers,
+          ),
         )
       }
       continue
