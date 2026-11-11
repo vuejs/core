@@ -1,4 +1,7 @@
-import type { ComponentInternalInstance } from '../component'
+import type {
+  ComponentInternalInstance,
+  GenericComponentInstance,
+} from '../component'
 import type { SuspenseBoundary } from './Suspense'
 import {
   type ElementNamespace,
@@ -10,11 +13,18 @@ import {
   queuePostRenderEffect,
   traverseStaticChildren,
 } from '../renderer'
-import type { VNode, VNodeArrayChildren, VNodeProps } from '../vnode'
-import { ShapeFlags, isString } from '@vue/shared'
+import {
+  Fragment,
+  type VNode,
+  type VNodeArrayChildren,
+  type VNodeProps,
+} from '../vnode'
+import { ShapeFlags, isArray, isString } from '@vue/shared'
 import { warn } from '../warning'
 import { isHmrUpdating } from '../hmr'
 import { type SchedulerJob, SchedulerJobFlags } from '../scheduler'
+import { onUpdated } from '../apiLifecycle'
+import { isVaporInteropEnabled } from '../vaporInteropState'
 
 export type TeleportVNode = VNode<RendererNode, RendererElement, TeleportProps>
 
@@ -25,6 +35,11 @@ export interface TeleportProps {
 }
 
 const pendingMounts = new WeakMap<VNode, SchedulerJob>()
+type CssVarsRoots = RendererNode | (RendererNode | null)[] | null
+const cssVarsUpdates = new WeakMap<
+  ComponentInternalInstance,
+  { update: () => void; roots: CssVarsRoots }
+>()
 
 export const TeleportEndKey: unique symbol = Symbol('_vte')
 
@@ -577,7 +592,82 @@ function updateCssVars(vnode: VNode, isDisabled: boolean) {
       node = node.nextSibling
     }
     ctx.ut()
+    // A component can replace a teleported root without patching the teleport.
+    if (vnode.shapeFlag & ShapeFlags.ARRAY_CHILDREN) {
+      const update = () => {
+        if (!ctx.isUnmounted) updateCssVars(vnode, isDisabled)
+      }
+      ;(vnode.children as VNode[]).forEach(child =>
+        setCssVarsUpdateHooks(child, update),
+      )
+    }
   }
+}
+
+function getVdomComponent(vnode: VNode): ComponentInternalInstance | null {
+  const instance = vnode.component
+  // Vapor interop vnodes can have an instance without a VDOM subTree.
+  return isVaporInteropEnabled &&
+    instance &&
+    (instance as GenericComponentInstance).vapor
+    ? null
+    : instance
+}
+
+function setCssVarsUpdateHooks(vnode: VNode, update: () => void) {
+  const instance = getVdomComponent(vnode)
+  if (instance) {
+    const roots = getCssVarsRoots(instance.subTree)
+    const existing = cssVarsUpdates.get(instance)
+    if (existing) {
+      existing.update = update
+      existing.roots = roots
+    } else {
+      const state = { update, roots }
+      cssVarsUpdates.set(instance, state)
+      onUpdated(() => {
+        // Updating an existing element does not require marking it again.
+        const roots = getCssVarsRoots(instance.subTree)
+        const prev = state.roots
+        const changed =
+          isArray(prev) && isArray(roots)
+            ? prev.length !== roots.length ||
+              prev.some((node, i) => node !== roots[i])
+            : prev !== roots
+        if (changed) {
+          state.roots = roots
+          queuePostRenderEffect(state.update, undefined, instance.suspense)
+        }
+      }, instance)
+    }
+    setCssVarsUpdateHooks(instance.subTree, update)
+  } else if (vnode.type === Fragment) {
+    ;(vnode.children as VNode[]).forEach(child =>
+      setCssVarsUpdateHooks(child, update),
+    )
+  } else if (__FEATURE_SUSPENSE__ && vnode.suspense) {
+    const { activeBranch, pendingBranch } = vnode.suspense
+    if (activeBranch) setCssVarsUpdateHooks(activeBranch, update)
+    if (pendingBranch) {
+      queuePostRenderEffect(update, undefined, vnode.suspense)
+    }
+  }
+}
+
+function getCssVarsRoots(vnode: VNode): CssVarsRoots {
+  while (true) {
+    const instance = getVdomComponent(vnode)
+    const child = instance
+      ? instance.subTree
+      : __FEATURE_SUSPENSE__ && vnode.suspense
+        ? vnode.suspense.activeBranch
+        : null
+    if (!child) break
+    vnode = child
+  }
+  return vnode.type === Fragment
+    ? (vnode.children as VNode[]).flatMap(getCssVarsRoots)
+    : vnode.el
 }
 
 function prepareAnchor(

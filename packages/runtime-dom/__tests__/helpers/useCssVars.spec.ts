@@ -3,7 +3,9 @@ import {
   type FunctionalComponent,
   Suspense,
   Teleport,
+  Transition,
   createStaticVNode,
+  defineComponent,
   defineCustomElement,
   h,
   nextTick,
@@ -46,6 +48,88 @@ describe('useCssVars', () => {
         return h('div')
       },
     }))
+  })
+
+  test('applies css vars when a transition inside a teleport replaces its root', async () => {
+    const target = document.createElement('div')
+    const root = document.createElement('div')
+    document.body.appendChild(target)
+    const open = ref(false)
+    const App = {
+      setup() {
+        useCssVars(() => ({ width: '375px' }))
+        return () =>
+          h(Teleport, { to: target }, [
+            h(Transition, { css: false }, () => (open.value ? h('div') : null)),
+          ])
+      },
+    }
+
+    try {
+      render(h(App), root)
+      expect(target.children).toHaveLength(0)
+
+      for (let i = 0; i < 2; i++) {
+        open.value = true
+        await nextTick()
+        expect(
+          target.querySelector('div')!.style.getPropertyValue('--width'),
+        ).toBe('375px')
+
+        open.value = false
+        await nextTick()
+        expect(target.children).toHaveLength(0)
+      }
+    } finally {
+      render(null, root)
+      target.remove()
+    }
+  })
+
+  test('does not refresh css vars again after teleport patches a new root', async () => {
+    const root = document.createElement('div')
+    const target = document.body.appendChild(document.createElement('div'))
+    const text = ref('before')
+    const tag = ref('div')
+    const Child = defineComponent({
+      props: { text: String },
+      setup(props) {
+        return () => h(tag.value, props.text)
+      },
+    })
+    const App = {
+      setup() {
+        useCssVars(() => ({ width: '375px' }))
+        return () =>
+          h('div', [
+            h(Teleport, { to: target }, [h(Child, { text: text.value })]),
+          ])
+      },
+    }
+
+    render(h(App), root)
+    await nextTick()
+    const oldRoot = target.querySelector('div')!
+    const owner = oldRoot.getAttribute('data-v-owner')
+    const query = vi.spyOn(document, 'querySelectorAll')
+    try {
+      text.value = 'after'
+      tag.value = 'span'
+      await nextTick()
+
+      const newRoot = target.querySelector('span')!
+      expect(newRoot.textContent).toBe('after')
+      expect(newRoot.style.getPropertyValue('--width')).toBe('375px')
+      // Teleport's patch and the owner's post-update refresh each query once.
+      const ownerQueries = query.mock.calls.filter(
+        ([selector]) => selector === `[data-v-owner="${owner}"]`,
+      )
+      expect(ownerQueries).toHaveLength(2)
+    } finally {
+      query.mockRestore()
+      render(null, root)
+      target.remove()
+    }
   })
 
   test('on fragment root', async () => {

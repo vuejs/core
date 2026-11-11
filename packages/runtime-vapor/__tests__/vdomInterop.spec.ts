@@ -43,6 +43,7 @@ import {
   resolveDynamicComponent,
   shallowRef,
   toDisplayString,
+  useCssVars,
   useModel,
   useSlots,
   useTemplateRef,
@@ -8004,6 +8005,38 @@ describe('vdomInterop', () => {
   })
 
   describe('Teleport', () => {
+    test('applies vdom teleport css vars when a transition mounts a vapor child', async () => {
+      const target = document.createElement('div')
+      document.body.appendChild(target)
+      const open = ref(false)
+      const Panel = defineVaporComponent(() => template('<div></div>')())
+      const app = createApp({
+        setup() {
+          useCssVars(() => ({ width: '375px' }))
+          return () =>
+            h(Teleport, { to: target }, [
+              h(Transition, { css: false }, () =>
+                open.value ? h(Panel) : null,
+              ),
+            ])
+        },
+      }).use(vaporInteropPlugin)
+
+      try {
+        app.mount(document.createElement('div'))
+        expect(target.children).toHaveLength(0)
+
+        open.value = true
+        await nextTick()
+        expect(
+          target.querySelector('div')!.style.getPropertyValue('--width'),
+        ).toBe('375px')
+      } finally {
+        app.unmount()
+        target.remove()
+      }
+    })
+
     test('mounts VDOM Teleport from createDynamicComponent', async () => {
       const target = document.createElement('div')
       target.id = 'interop-teleport-target'
