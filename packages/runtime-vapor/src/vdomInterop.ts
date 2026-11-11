@@ -3487,6 +3487,18 @@ function createFallback(
           outlet && invokeSlotFallback(outlet.fallback, outlet.owner)
         if (children == null) return EMPTY_VNODES
         const rows = normalizeInteropSlotValue(children)
+        // the clone attrs of the slot's vnode reach the fallback showing in
+        // place of its content, inherited as by the root of a vdom component
+        const fallthrough = state.fallthrough
+        const attrs = fallthrough && fallthrough.attrs
+        const root =
+          attrs && Object.keys(attrs).length && filterSingleRoot(rows, false)
+        if (
+          root &&
+          root.shapeFlag & (ShapeFlags.ELEMENT | ShapeFlags.COMPONENT)
+        ) {
+          rows[rows.indexOf(root)] = cloneVNode(root, attrs)
+        }
         return group ? getTransitionRawChildren(rows, false, fallbackKey) : rows
       },
       parentComponent,
