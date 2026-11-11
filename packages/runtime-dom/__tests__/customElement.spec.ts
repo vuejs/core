@@ -174,17 +174,21 @@ describe('defineCustomElement', () => {
       // bazQux should map to `baz-qux` attribute
       container.innerHTML = `<my-el-props foo="hello" baz-qux="bye"></my-el-props>`
       const e = container.childNodes[0] as VueElement
-      expect(e.shadowRoot!.innerHTML).toBe('<div>hello</div><div>bye</div>')
+      expect(e.shadowRoot!.innerHTML).toBe(
+        '<!----><div>hello</div><div>bye</div><!---->',
+      )
 
       // change attr
       e.setAttribute('foo', 'changed')
       await nextTick()
-      expect(e.shadowRoot!.innerHTML).toBe('<div>changed</div><div>bye</div>')
+      expect(e.shadowRoot!.innerHTML).toBe(
+        '<!----><div>changed</div><div>bye</div><!---->',
+      )
 
       e.setAttribute('baz-qux', 'changed')
       await nextTick()
       expect(e.shadowRoot!.innerHTML).toBe(
-        '<div>changed</div><div>changed</div>',
+        '<!----><div>changed</div><div>changed</div><!---->',
       )
     })
 
@@ -193,7 +197,9 @@ describe('defineCustomElement', () => {
       e.foo = 'one'
       e.bar = { x: 'two' }
       container.appendChild(e)
-      expect(e.shadowRoot!.innerHTML).toBe('<div>one</div><div>two</div>')
+      expect(e.shadowRoot!.innerHTML).toBe(
+        '<!----><div>one</div><div>two</div><!---->',
+      )
 
       // reflect
       // should reflect primitive value
@@ -203,23 +209,31 @@ describe('defineCustomElement', () => {
 
       e.foo = 'three'
       await nextTick()
-      expect(e.shadowRoot!.innerHTML).toBe('<div>three</div><div>two</div>')
+      expect(e.shadowRoot!.innerHTML).toBe(
+        '<!----><div>three</div><div>two</div><!---->',
+      )
       expect(e.getAttribute('foo')).toBe('three')
 
       e.foo = null
       await nextTick()
-      expect(e.shadowRoot!.innerHTML).toBe('<div></div><div>two</div>')
+      expect(e.shadowRoot!.innerHTML).toBe(
+        '<!----><div></div><div>two</div><!---->',
+      )
       expect(e.hasAttribute('foo')).toBe(false)
 
       e.foo = undefined
       await nextTick()
-      expect(e.shadowRoot!.innerHTML).toBe('<div></div><div>two</div>')
+      expect(e.shadowRoot!.innerHTML).toBe(
+        '<!----><div></div><div>two</div><!---->',
+      )
       expect(e.hasAttribute('foo')).toBe(false)
       expect(e.foo).toBe(undefined)
 
       e.bazQux = 'four'
       await nextTick()
-      expect(e.shadowRoot!.innerHTML).toBe('<div></div><div>four</div>')
+      expect(e.shadowRoot!.innerHTML).toBe(
+        '<!----><div></div><div>four</div><!---->',
+      )
       expect(e.getAttribute('baz-qux')).toBe('four')
     })
 
@@ -229,13 +243,17 @@ describe('defineCustomElement', () => {
       e.bar = { x: 'bar1' }
       container.appendChild(e)
       await nextTick()
-      expect(e.shadowRoot!.innerHTML).toBe('<div>foo1</div><div>bar1</div>')
+      expect(e.shadowRoot!.innerHTML).toBe(
+        '<!----><div>foo1</div><div>bar1</div><!---->',
+      )
 
       // change attr then property
       e.setAttribute('foo', 'foo2')
       e.bar = { x: 'bar2' }
       await nextTick()
-      expect(e.shadowRoot!.innerHTML).toBe('<div>foo2</div><div>bar2</div>')
+      expect(e.shadowRoot!.innerHTML).toBe(
+        '<!----><div>foo2</div><div>bar2</div><!---->',
+      )
       expect(e.getAttribute('foo')).toBe('foo2')
       expect(e.foo).toBe('foo2')
       expect(e.hasAttribute('bar')).toBe(false)
@@ -244,7 +262,9 @@ describe('defineCustomElement', () => {
       e.bar = { x: 'bar3' }
       e.setAttribute('foo', 'foo3')
       await nextTick()
-      expect(e.shadowRoot!.innerHTML).toBe('<div>foo3</div><div>bar3</div>')
+      expect(e.shadowRoot!.innerHTML).toBe(
+        '<!----><div>foo3</div><div>bar3</div><!---->',
+      )
       expect(e.getAttribute('foo')).toBe('foo3')
       expect(e.hasAttribute('bar')).toBe(false)
     })
@@ -697,11 +717,11 @@ describe('defineCustomElement', () => {
     test('attrs via attribute', async () => {
       container.innerHTML = `<my-el-attrs foo="hello"></my-el-attrs>`
       const e = container.childNodes[0] as VueElement
-      expect(e.shadowRoot!.innerHTML).toBe('<div>hello</div>')
+      expect(e.shadowRoot!.innerHTML).toBe('<!----><div>hello</div><!---->')
 
       e.setAttribute('foo', 'changed')
       await nextTick()
-      expect(e.shadowRoot!.innerHTML).toBe('<div>changed</div>')
+      expect(e.shadowRoot!.innerHTML).toBe('<!----><div>changed</div><!---->')
     })
 
     test('non-declared properties should not show up in $attrs', () => {
@@ -709,7 +729,7 @@ describe('defineCustomElement', () => {
       // @ts-expect-error
       e.foo = '123'
       container.appendChild(e)
-      expect(e.shadowRoot!.innerHTML).toBe('<div></div>')
+      expect(e.shadowRoot!.innerHTML).toBe('<!----><div></div><!---->')
     })
 
     // #12408
@@ -886,7 +906,7 @@ describe('defineCustomElement', () => {
       // native slots allocation does not affect innerHTML, so we just
       // verify that we've rendered the correct native slots here...
       expect(e.shadowRoot!.innerHTML).toBe(
-        `<div><slot><div>fallback</div></slot></div><div><slot name="named"></slot></div>`,
+        `<!----><div><!----><slot><div>fallback</div></slot><!----></div><div><!----><slot name="named"></slot><!----></div><!---->`,
       )
     })
 
@@ -907,13 +927,13 @@ describe('defineCustomElement', () => {
       container.innerHTML = `<my-el-slot-props><span>hi</span></my-el-slot-props>`
       const e = container.childNodes[0] as VueElement
       expect(e.shadowRoot!.innerHTML).toBe(
-        `<div><slot class="foo"></slot></div>`,
+        `<!----><div><!----><slot class="foo"></slot><!----></div><!---->`,
       )
 
       foo.value = 'bar'
       await nextTick()
       expect(e.shadowRoot!.innerHTML).toBe(
-        `<div><slot class="bar"></slot></div>`,
+        `<!----><div><!----><slot class="bar"></slot><!----></div><!---->`,
       )
     })
   })
@@ -1118,7 +1138,9 @@ describe('defineCustomElement', () => {
         '</provide-from-app-outer>'
 
       const outer = container.childNodes[0] as VueElement
-      expect(outer.shadowRoot!.innerHTML).toBe('<div><slot></slot></div>')
+      expect(outer.shadowRoot!.innerHTML).toBe(
+        '<div><!----><slot></slot><!----></div>',
+      )
 
       expect('[Vue warn]: injection "inner" not found.').toHaveBeenWarnedTimes(
         1,
@@ -1622,7 +1644,7 @@ describe('defineCustomElement', () => {
 
       const e = container.childNodes[0] as VueElement
       expect(e.shadowRoot!.innerHTML).toBe(
-        `<div><slot><div>fallback</div></slot></div><div><slot name="named"></slot></div>`,
+        `<!----><div><!----><slot><div>fallback</div></slot><!----></div><div><!----><slot name="named"></slot><!----></div><!---->`,
       )
     })
   })
@@ -1685,15 +1707,16 @@ describe('defineCustomElement', () => {
       // native slots allocation does not affect innerHTML, so we just
       // verify that we've rendered the correct native slots here...
       expect(e.innerHTML).toBe(
-        `<span>default</span>text` +
-          `<div slot="named">named</div>` +
-          `<div>fallback</div>`,
+        `<!----><!----><span>default</span>text<!----><!---->` +
+          `<div slot="named">named</div><!----><!---->` +
+          `<div>fallback</div><!----><!---->`,
       )
 
       toggle.value = false
       await nextTick()
       expect(e.innerHTML).toBe(
-        `<span>default</span>text` + `<!---->` + `<div>fallback</div>`,
+        `<!----><!----><span>default</span>text<!----><!---->` +
+          `<!----><div>fallback</div><!----><!---->`,
       )
     })
 
@@ -1748,7 +1771,7 @@ describe('defineCustomElement', () => {
       await nextTick()
       const e = container.childNodes[0] as VueElement
       expect(e.innerHTML).toBe(
-        `<my-child data-v-app=""><span>default</span></my-child>`,
+        `<!----><my-child data-v-app=""><!----><span>default</span><!----></my-child><!---->`,
       )
       expect(calls).toEqual([
         'parent rendering',
@@ -1800,7 +1823,7 @@ describe('defineCustomElement', () => {
       const app = createApp(App)
       app.mount(container)
       await nextTick()
-      expect(target.innerHTML).toBe(`<span>default</span>`)
+      expect(target.innerHTML).toBe(`<!----><span>default</span><!---->`)
       app.unmount()
     })
 
@@ -1834,10 +1857,10 @@ describe('defineCustomElement', () => {
       app.mount(container)
       await nextTick()
       expect(target1.outerHTML).toBe(
-        `<div><div slot="header">header</div></div>`,
+        `<div><!----><div slot="header">header</div><!----></div>`,
       )
       expect(target2.outerHTML).toBe(
-        `<span><span slot="body">body</span></span>`,
+        `<span><!----><span slot="body">body</span><!----></span>`,
       )
       app.unmount()
     })
@@ -1876,7 +1899,7 @@ describe('defineCustomElement', () => {
       await nextTick()
       expect(target1.outerHTML).toBe(`<div></div>`)
       expect(target2.outerHTML).toBe(
-        `<span><span slot="body">body</span></span>`,
+        `<span><!----><span slot="body">body</span><!----></span>`,
       )
       app.unmount()
     })
@@ -1909,10 +1932,10 @@ describe('defineCustomElement', () => {
       const target1 = document.getElementById('t1')!
       expect(target1.outerHTML).toBe(
         `<div id="t1">` +
-          `<my-el-teleport-child-target data-v-app="">` +
-          `<!--teleport start--><!--teleport end-->` +
-          `</my-el-teleport-child-target>` +
-          `<div slot="header">header</div>` +
+          `<my-el-teleport-child-target data-v-app=""><!---->` +
+          `<!--teleport start--><!--teleport end--><!---->` +
+          `</my-el-teleport-child-target><!---->` +
+          `<div slot="header">header</div><!---->` +
           `</div>`,
       )
 
@@ -1978,10 +2001,10 @@ describe('defineCustomElement', () => {
       app.mount(container)
       expect(container.innerHTML).toBe(
         `<my-el-parent-shadow-false is-shown="" data-v-app="">` +
-          `<div>` +
+          `<div><!----><!---->` +
           `<my-el-child-shadow-false data-v-app="">` +
-          `<div>child</div>` +
-          `</my-el-child-shadow-false>` +
+          `<div><!---->child<!----></div>` +
+          `</my-el-child-shadow-false><!----><!---->` +
           `</div>` +
           `</my-el-parent-shadow-false>`,
       )
@@ -1996,10 +2019,10 @@ describe('defineCustomElement', () => {
       await nextTick()
       expect(container.innerHTML).toBe(
         `<my-el-parent-shadow-false data-v-app="" is-shown="">` +
-          `<div>` +
+          `<div><!----><!---->` +
           `<my-el-child-shadow-false data-v-app="">` +
-          `<div>child</div>` +
-          `</my-el-child-shadow-false>` +
+          `<div><!---->child<!----></div>` +
+          `</my-el-child-shadow-false><!----><!---->` +
           `</div>` +
           `</my-el-parent-shadow-false>`,
       )
@@ -2156,7 +2179,9 @@ describe('defineCustomElement', () => {
 
     await new Promise(r => setTimeout(r))
     const e = container.childNodes[0] as VueElement
-    expect(e.shadowRoot!.innerHTML).toBe(`<div><slot></slot></div>`)
+    expect(e.shadowRoot!.innerHTML).toBe(
+      `<div><!----><slot></slot><!----></div>`,
+    )
     expect(fooVal).toBe('foo')
   })
 
@@ -2206,7 +2231,9 @@ describe('defineCustomElement', () => {
 
     await new Promise(r => setTimeout(r))
     const e = container.childNodes[0] as VueElement
-    expect(e.shadowRoot!.innerHTML).toBe(`<div><slot></slot></div>`)
+    expect(e.shadowRoot!.innerHTML).toBe(
+      `<div><!----><slot></slot><!----></div>`,
+    )
     expect(fooVal).toBe('foo')
     expect(barVal).toBe('bar')
   })

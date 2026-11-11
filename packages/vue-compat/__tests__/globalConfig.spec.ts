@@ -66,7 +66,7 @@ test('GLOBAL_IGNORED_ELEMENTS', () => {
     el,
     template: `<v-foo/><foo/>`,
   })
-  expect(el.innerHTML).toBe(`<v-foo></v-foo><foo></foo>`)
+  expect(el.innerHTML).toBe(`<!----><v-foo></v-foo><foo></foo><!---->`)
 })
 
 test('singleton config should affect apps created with createApp()', () => {
@@ -75,7 +75,7 @@ test('singleton config should affect apps created with createApp()', () => {
   createApp({
     template: `<v-foo/><foo/>`,
   }).mount(el)
-  expect(el.innerHTML).toBe(`<v-foo></v-foo><foo></foo>`)
+  expect(el.innerHTML).toBe(`<!----><v-foo></v-foo><foo></foo><!---->`)
 })
 
 test('config.optionMergeStrategies', () => {

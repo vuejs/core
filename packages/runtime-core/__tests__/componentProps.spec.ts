@@ -794,7 +794,7 @@ describe('component props', () => {
     const root = nodeOps.createElement('div')
     render(h(App), root)
     await nextTick()
-    expect(serializeInner(root)).toBe(`foo`)
+    expect(serializeInner(root)).toBe(`<!---->foo<!---->`)
   })
 
   test('support null in required + multiple-type declarations', () => {
