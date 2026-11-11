@@ -10,11 +10,17 @@ import {
   queuePostRenderEffect,
   traverseStaticChildren,
 } from '../renderer'
-import type { VNode, VNodeArrayChildren, VNodeProps } from '../vnode'
-import { ShapeFlags, isString } from '@vue/shared'
+import {
+  Fragment,
+  type VNode,
+  type VNodeArrayChildren,
+  type VNodeProps,
+} from '../vnode'
+import { ShapeFlags, isArray, isString } from '@vue/shared'
 import { warn } from '../warning'
 import { isHmrUpdating } from '../hmr'
 import { type SchedulerJob, SchedulerJobFlags } from '../scheduler'
+import { onUpdated } from '../apiLifecycle'
 
 export type TeleportVNode = VNode<RendererNode, RendererElement, TeleportProps>
 
@@ -25,6 +31,10 @@ export interface TeleportProps {
 }
 
 const pendingMounts = new WeakMap<VNode, SchedulerJob>()
+const cssVarsUpdates = new WeakMap<
+  ComponentInternalInstance,
+  { update: () => void; roots: RendererNode | RendererNode[] }
+>()
 
 export const TeleportEndKey: unique symbol = Symbol('_vte')
 
@@ -570,7 +580,66 @@ function updateCssVars(vnode: VNode, isDisabled: boolean) {
       node = node.nextSibling
     }
     ctx.ut()
+    // Component updates can replace teleport roots without patching the teleport.
+    if (vnode.shapeFlag & ShapeFlags.ARRAY_CHILDREN) {
+      const update = () => {
+        if (!ctx.isUnmounted) updateCssVars(vnode, isDisabled)
+      }
+      ;(vnode.children as VNode[]).forEach(child =>
+        setCssVarsUpdateHooks(child, update),
+      )
+    }
   }
+}
+
+function setCssVarsUpdateHooks(vnode: VNode, update: () => void) {
+  if (vnode.component) {
+    const instance = vnode.component
+    const existing = cssVarsUpdates.get(instance)
+    const roots = getCssVarsRoots(instance.subTree)
+    if (existing) {
+      existing.update = update
+      existing.roots = roots
+    } else {
+      const state = { update, roots }
+      cssVarsUpdates.set(instance, state)
+      onUpdated(() => {
+        // Text and prop updates do not require CSS vars to be reapplied.
+        const roots = getCssVarsRoots(instance.subTree)
+        const prev = state.roots
+        const changed =
+          isArray(prev) && isArray(roots)
+            ? prev.length !== roots.length ||
+              prev.some((node, i) => node !== roots[i])
+            : prev !== roots
+        if (changed) {
+          state.roots = roots
+          queuePostRenderEffect(state.update, instance.suspense)
+        }
+      }, instance)
+    }
+    setCssVarsUpdateHooks(instance.subTree, update)
+  } else if (vnode.type === Fragment) {
+    ;(vnode.children as VNode[]).forEach(child =>
+      setCssVarsUpdateHooks(child, update),
+    )
+  } else if (__FEATURE_SUSPENSE__ && vnode.suspense) {
+    setCssVarsUpdateHooks(vnode.suspense.activeBranch!, update)
+    if (vnode.suspense.pendingBranch) {
+      queuePostRenderEffect(update, vnode.suspense)
+    }
+  }
+}
+
+function getCssVarsRoots(vnode: VNode): RendererNode | RendererNode[] {
+  while (vnode.component || (__FEATURE_SUSPENSE__ && vnode.suspense)) {
+    vnode = vnode.component
+      ? vnode.component.subTree
+      : vnode.suspense!.activeBranch!
+  }
+  return vnode.type === Fragment
+    ? (vnode.children as VNode[]).flatMap(getCssVarsRoots)
+    : vnode.el!
 }
 
 function prepareAnchor(
