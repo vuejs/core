@@ -19,6 +19,8 @@ import {
   type VaporComponentInstance,
   type VaporComponentOptions,
   createComponent,
+  mountComponent,
+  unmountComponent,
 } from './component'
 import { withHydration } from './dom/hydration'
 import type {
@@ -251,6 +253,16 @@ export class VaporElement extends VueElementBase<
     // in the next scheduler flush. Attribute writes are delivered by
     // MutationObserver first; compared with VDOM CE, which patches inside
     // _update(), they become visible one tick later.
+    if (__DEV__ && !this._instance) {
+      // HMR reload dropped the instance: no patch replaces a vapor root, so
+      // its component is created again in the app it is mounted in
+      const app = this._app!
+      unmountComponent(app._ceComponent as VaporComponentInstance, this._root)
+      this._createComponent()
+      mountComponent(app._ceComponent as VaporComponentInstance, this._root)
+      // the root that unmounting the app tears down
+      app._instance = app._ceComponent!
+    }
   }
 
   protected _unmount(): void {

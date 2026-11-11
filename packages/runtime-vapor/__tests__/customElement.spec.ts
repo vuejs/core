@@ -3162,3 +3162,79 @@ describe('defineVaporCustomElement', () => {
     app.unmount()
   })
 })
+
+describe('HMR reload of a vapor custom element root', () => {
+  let container: HTMLElement
+
+  beforeEach(() => {
+    container = document.createElement('div')
+    document.body.appendChild(container)
+  })
+
+  // a disconnected element unmounts a tick later
+  afterEach(async () => {
+    container.remove()
+    await nextTick()
+    await nextTick()
+  })
+
+  // the shape a dev build compiles to: setup bindings and a separate render
+  const def = (id: string, msg: string, tpl: string, extra?: any): any => ({
+    __hmrId: id,
+    __vapor: true,
+    props: { label: String },
+    emits: ['ready'],
+    setup(_: any, { emit }: any) {
+      onMounted(() => emit('ready', msg))
+      return { msg: ref(msg) }
+    },
+    render: compileToVaporRender(tpl),
+    ...extra,
+  })
+
+  test('mounts the new definition with the props set on the host', async () => {
+    const id = 'my-el-hmr-reload'
+    const tpl = `<div>{{ msg }} {{ label }}</div>`
+    customElements.define(id, defineVaporCustomElement(def(id, 'hello', tpl)))
+    container.innerHTML = `<my-el-hmr-reload label="a"></my-el-hmr-reload>`
+    const el = container.childNodes[0] as VaporElement & { label: string }
+    await nextTick()
+    expect(el.shadowRoot!.innerHTML).toBe(`<div>hello a</div>`)
+
+    const ready = vi.fn()
+    el.addEventListener('ready', e => ready((e as CustomEvent).detail))
+    __VUE_HMR_RUNTIME__.reload(id, def(id, 'changed', tpl))
+    await nextTick()
+    expect(el.shadowRoot!.innerHTML).toBe(`<div>changed a</div>`)
+    // the new root is the host's component: it emits and takes props through it
+    expect(ready).toHaveBeenCalledTimes(1)
+    expect(ready).toHaveBeenCalledWith(['changed'])
+    el.label = 'b'
+    await nextTick()
+    expect(el.shadowRoot!.innerHTML).toBe(`<div>changed b</div>`)
+
+    // and the one a disconnect unmounts
+    container.removeChild(el)
+    await nextTick()
+    await nextTick()
+    expect(el.shadowRoot!.innerHTML).toBe('')
+  })
+
+  test('renders the slotted children of a shadowRoot: false host again', async () => {
+    const id = 'my-el-hmr-reload-slots'
+    const tpl = `<div>{{ msg }}<slot /></div>`
+    customElements.define(
+      id,
+      defineVaporCustomElement(def(id, 'hello', tpl), { shadowRoot: false }),
+    )
+    container.innerHTML = `<my-el-hmr-reload-slots><span>slotted</span></my-el-hmr-reload-slots>`
+    const el = container.childNodes[0] as VaporElement
+    await nextTick()
+    const html = () => el.innerHTML.replace(/<!--.*?-->/g, '')
+    expect(html()).toBe(`<div>hello<span>slotted</span></div>`)
+
+    __VUE_HMR_RUNTIME__.reload(id, def(id, 'changed', tpl))
+    await nextTick()
+    expect(html()).toBe(`<div>changed<span>slotted</span></div>`)
+  })
+})
