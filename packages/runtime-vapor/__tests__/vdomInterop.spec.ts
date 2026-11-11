@@ -17156,3 +17156,44 @@ describe('vdom component passing its slots on to a child', () => {
     expect(hasCtx).toEqual({ vdom: false, vapor: false })
   })
 })
+
+describe('vdom component given a ref in a v-bind object', () => {
+  const Btn = defineComponent({
+    setup: () => () => h('button', 'open'),
+  })
+
+  test('unmounts without a ref owner', async () => {
+    // the activator pattern of UI libraries: slot props carrying a function ref
+    const Overlay = defineComponent({
+      setup(_, { slots }) {
+        const activatorRef = () => {}
+        return () => slots.activator!({ props: { ref: activatorRef } })
+      },
+    })
+    const { vdom, vapor } = await renderParity(
+      {
+        App:
+          '<template><components.Overlay><template #activator="{ props }">' +
+          '<components.Btn v-bind="props" />' +
+          '</template></components.Overlay></template>',
+      },
+      () => ref({}),
+      () => {},
+      { Overlay, Btn },
+    )
+    expect(vdom.after).toBe('<button>open</button>')
+    expect(vapor.after).toBe(vdom.after)
+  })
+
+  test('mounts as a vnode of a dynamic component without a ref owner', async () => {
+    const { vdom, vapor } = await renderParity(
+      {
+        App: '<template><component :is="data.vnode" v-bind="data.props" /></template>',
+      },
+      () => ref({ vnode: h(Btn), props: { ref: () => {} } }),
+      () => {},
+    )
+    expect(vdom.after).toBe('<button>open</button>')
+    expect(stripAnchors(vapor.after)).toBe(vdom.after)
+  })
+})
