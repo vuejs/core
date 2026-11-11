@@ -108,11 +108,19 @@ export const isBuiltInDirective: (key: string) => boolean =
     'bind,cloak,else-if,else,for,html,if,model,on,once,pre,show,slot,text,memo',
   )
 
+const STRING_CACHE_MAX_SIZE = 10000
+
 const cacheStringFunction = <T extends (str: string) => string>(fn: T): T => {
-  const cache: Record<string, string> = Object.create(null)
+  let cache: Record<string, string> = Object.create(null)
+  let size = 0
   return ((str: string) => {
     const hit = cache[str]
-    return hit || (cache[str] = fn(str))
+    if (hit !== undefined) return hit
+    if (++size > STRING_CACHE_MAX_SIZE) {
+      cache = Object.create(null)
+      size = 1
+    }
+    return (cache[str] = fn(str))
   }) as T
 }
 

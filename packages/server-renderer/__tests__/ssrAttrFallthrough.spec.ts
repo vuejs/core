@@ -1,4 +1,4 @@
-import { createApp } from 'vue'
+import { createApp, h } from 'vue'
 import { renderToString } from '../src/renderToString'
 
 describe('ssr: attr fallthrough', () => {
@@ -95,5 +95,19 @@ describe('ssr: attr fallthrough', () => {
     expect(await renderToString(app)).toBe(
       `<div id="foo" class="bar baz"></div>`,
     )
+  })
+
+  test('Object.prototype method names on custom element root', async () => {
+    const Child = { render: () => h('x-panel') }
+    const render = (attrs: Record<string, unknown>) =>
+      renderToString(createApp({ render: () => h(Child, attrs) }))
+
+    expect(await render({ hasOwnProperty: 'a' })).toBe(
+      `<x-panel hasOwnProperty="a"></x-panel>`,
+    )
+    expect(await render({ '^hasOwnProperty': 'b' })).toBe(
+      `<x-panel hasOwnProperty="b"></x-panel>`,
+    )
+    expect(await render({ title: 'c' })).toBe(`<x-panel title="c"></x-panel>`)
   })
 })
