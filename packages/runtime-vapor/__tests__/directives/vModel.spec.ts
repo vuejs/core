@@ -2462,4 +2462,48 @@ describe('directive: v-model', () => {
       },
     )
   })
+
+  test.each([
+    ['text input', `<input v-model="data.text">`],
+    ['checkbox', `<input type="checkbox" v-model="data.on">`],
+    ['radio', `<input type="radio" value="a" v-model="data.text">`],
+    [
+      'select',
+      `<select v-model="data.text">
+        <option value="a">a</option>
+      </select>`,
+    ],
+    ['textarea', `<textarea v-model="data.text"></textarea>`],
+  ])('mounting a %s model runs no update hooks', async (_, control) => {
+    const logs: Record<string, string[][]> = { vdom: [], vapor: [] }
+    await renderParity(
+      {
+        App: `<script setup>
+          import { onBeforeUpdate, onMounted, onUpdated } from 'vue'
+          const data = _data
+          const log = data.value.log
+          onMounted(() => log.push('mounted'))
+          onBeforeUpdate(() => log.push('beforeUpdate'))
+          onUpdated(() => log.push('updated'))
+        </script>
+        <template>
+          ${control}
+        </template>`,
+      },
+      () => ref({ text: 'a', on: true, log: [] as string[] }),
+      async (data, _root, mode) => {
+        await nextTick()
+        logs[mode].push(data.value.log.slice())
+        data.value.text = 'b'
+        data.value.on = false
+        await nextTick()
+        logs[mode].push(data.value.log.slice())
+      },
+    )
+    expect(logs.vdom).toEqual([
+      ['mounted'],
+      ['mounted', 'beforeUpdate', 'updated'],
+    ])
+    expect(logs.vapor).toEqual(logs.vdom)
+  })
 })
