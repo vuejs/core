@@ -494,9 +494,7 @@ export abstract class VueElementBase<
         }
         this._styleAnchors.delete(this._def)
         this._applyStyles(newStyles)
-        if (!this._instance!.vapor) {
-          this._instance = null
-        }
+        this._instance = null
         this._update()
       }
     }
