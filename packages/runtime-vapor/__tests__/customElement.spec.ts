@@ -1,11 +1,14 @@
 import type { MockedFunction } from 'vite-plus/test'
 import type { VaporElement } from '../src/apiDefineCustomElement'
-import { compileToVaporRender } from './_utils'
+import { compile, compileToVaporRender } from './_utils'
 import { DynamicFragment, SlotFragment } from '../src/fragment'
 import { VaporSlotFlags } from '@vue/shared'
 import {
   type HMRRuntime,
   type Ref,
+  type VueElement,
+  defineCustomElement,
+  h,
   inject,
   nextTick,
   onBeforeMount,
@@ -3082,5 +3085,80 @@ describe('defineVaporCustomElement', () => {
   afterAll(async () => {
     document.body.innerHTML = ''
     await nextTick()
+  })
+
+  test('patches all props of a Vue custom element together', async () => {
+    let prop1Calls = 0
+    let prop2Calls = 0
+    const E = defineCustomElement({
+      props: {
+        prop1: { type: String, default: 'default1' },
+        prop2: { type: String, default: 'default2' },
+      },
+      data() {
+        return { data1: 'defaultData1', data2: 'defaultData2' }
+      },
+      watch: {
+        prop1() {
+          prop1Calls++
+          this.data2 = this.prop2
+        },
+        prop2() {
+          prop2Calls++
+          this.data1 = this.prop1
+        },
+      },
+      render() {
+        return h('div', [
+          h('h1', this.prop1),
+          h('h1', this.prop2),
+          h('h2', this.data1),
+          h('h2', this.data2),
+        ])
+      },
+    })
+    customElements.define('my-vdom-watch-element', E)
+
+    const data = ref({ prop1: 'default1', prop2: 'default2' })
+    const App = compile(
+      `<template>
+        <my-vdom-watch-element
+          :prop1="data.prop1"
+          :prop2="data.prop2"
+        />
+      </template>`,
+      data,
+      {},
+      {
+        compilerOptions: {
+          isCustomElement: tag => tag === 'my-vdom-watch-element',
+        },
+      },
+    )
+    const app = createVaporApp(App)
+    app.mount(container)
+    const e = container.childNodes[0] as VueElement
+    expect(e).toBeInstanceOf(E)
+    expect(e.shadowRoot!.innerHTML).toBe(
+      `<div><h1>default1</h1><h1>default2</h1><h2>defaultData1</h2><h2>defaultData2</h2></div>`,
+    )
+
+    data.value.prop1 = 'newValue1'
+    data.value.prop2 = 'newValue2'
+    await nextTick()
+    expect(e.shadowRoot!.innerHTML).toBe(
+      `<div><h1>newValue1</h1><h1>newValue2</h1><h2>newValue1</h2><h2>newValue2</h2></div>`,
+    )
+    expect(prop1Calls).toBe(1)
+    expect(prop2Calls).toBe(1)
+
+    data.value.prop1 = 'newValue3'
+    await nextTick()
+    expect(e.shadowRoot!.innerHTML).toBe(
+      `<div><h1>newValue3</h1><h1>newValue2</h1><h2>newValue1</h2><h2>newValue2</h2></div>`,
+    )
+    expect(prop1Calls).toBe(2)
+    expect(prop2Calls).toBe(1)
+    app.unmount()
   })
 })
