@@ -446,4 +446,27 @@ describe('ssr: element', () => {
       `)
     })
   })
+
+  test.each(['', '.attr'])(
+    'v-bind%s with Object.prototype member names',
+    modifier => {
+      expect(
+        getCompiledString(
+          `<span :hasOwnProperty${modifier}="a" :toString${modifier}="b" :valueOf${modifier}="c" :constructor${modifier}="d" :__proto__${modifier}="e" />`,
+        ),
+      ).toMatchInlineSnapshot(`
+        "\`<span\${
+            _ssrRenderAttr("hasOwnProperty", _ctx.a)
+          }\${
+            _ssrRenderAttr("toString", _ctx.b)
+          }\${
+            _ssrRenderAttr("valueOf", _ctx.c)
+          }\${
+            _ssrRenderAttr("constructor", _ctx.d)
+          }\${
+            _ssrRenderAttr("__proto__", _ctx.e)
+          }></span>\`"
+      `)
+    },
+  )
 })

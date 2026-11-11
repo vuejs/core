@@ -1,4 +1,5 @@
 import { makeMap } from './makeMap'
+import { extend } from './general'
 
 /**
  * On the client we only need to offer special cases for boolean attributes that
@@ -48,12 +49,13 @@ export function isSSRSafeAttrName(name: string): boolean {
   return !isUnsafe
 }
 
-export const propsToAttrMap: Record<string, string | undefined> = {
-  acceptCharset: 'accept-charset',
-  className: 'class',
-  htmlFor: 'for',
-  httpEquiv: 'http-equiv',
-}
+export const propsToAttrMap: Record<string, string | undefined> =
+  /*@__PURE__*/ extend(Object.create(null), {
+    acceptCharset: 'accept-charset',
+    className: 'class',
+    htmlFor: 'for',
+    httpEquiv: 'http-equiv',
+  })
 
 /**
  * Known attributes, this is used for stringification of runtime static nodes
