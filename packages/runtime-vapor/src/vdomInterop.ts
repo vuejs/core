@@ -1724,6 +1724,8 @@ function mountVNode(
   // namespace over a component's render effect.
   let namespace: ElementNamespace
   let isUnmounted = false
+  // the vnode's keep-alive flag outlives the activation, and place() also moves
+  let isDeactivated = false
   const unmount = (parentNode?: ParentNode, transition?: TransitionHooks) => {
     // scope disposal and block removal can both reach this
     if (isUnmounted) {
@@ -1745,6 +1747,7 @@ function mountVNode(
     ) {
       const keepAliveCtx = (parentComponent as KeepAliveInstance).ctx
       keepAliveCtx.clearCurrent!(frag)
+      isDeactivated = true
       if (frag.inputScope) frag.inputScope.pause()
       const storageContainer = keepAliveCtx.getStorageContainer()
       if ((vnode.type as any).__vapor) {
@@ -1795,10 +1798,8 @@ function mountVNode(
     if (isHydrating) return
     if (parentSuspense !== undefined) suspense = parentSuspense
     const operationSuspense = suspense
-    if (
-      isKeepAliveEnabled &&
-      vnode.shapeFlag & ShapeFlags.COMPONENT_KEPT_ALIVE
-    ) {
+    if (isKeepAliveEnabled && isDeactivated) {
+      isDeactivated = false
       // entering under the hooks resolved for this switch, as vdom sets them
       // on every render: an in-out leave handed to them runs after the enter
       if (isTransitionEnabled && transition) {
@@ -2003,6 +2004,8 @@ function createVDOMComponent(
   let refreshRefJob: SchedulerJob | undefined
   let isMounted = false
   let isUnmounted = false
+  // the vnode's keep-alive flag outlives the activation, and place() also moves
+  let isDeactivated = false
   let cells: SlotSourceCell[] | undefined
   const isolated = rawSlots && isolateSlotSources(rawSlots as RawSlots)
   if (isolated) {
@@ -2212,6 +2215,7 @@ function createVDOMComponent(
       // pause the commit of the raw sources it reads from this Vapor parent.
       if (frag.inputScope) frag.inputScope.pause()
       keepAliveCtx!.clearCurrent!(frag)
+      isDeactivated = true
       vdomDeactivate(
         vnode,
         keepAliveCtx!.getStorageContainer(),
@@ -2253,10 +2257,8 @@ function createVDOMComponent(
     if (isHydrating) return
     if (parentSuspense !== undefined) suspense = parentSuspense
     const operationSuspense = suspense
-    if (
-      isKeepAliveEnabled &&
-      vnode.shapeFlag & ShapeFlags.COMPONENT_KEPT_ALIVE
-    ) {
+    if (isKeepAliveEnabled && isDeactivated) {
+      isDeactivated = false
       // An activated child re-enters with the inputs its parent holds now, so
       // catch the commit up with the sources before activating.
       if (frag.inputScope) frag.inputScope.resume()
