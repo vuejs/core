@@ -575,3 +575,23 @@ test('calls user onError for compiler errors', () => {
   expect(errors).toHaveLength(1)
   expect(result.errors).toEqual(errors)
 })
+
+test('calls user onError for errors when re-parsing a transformed AST', () => {
+  const template = parse(`<template><div id="a" id="b" /></template>`, {
+    filename: 'example.vue',
+  }).descriptor.template!
+  template.ast!.transformed = true
+
+  const errors: CompilerError[] = []
+  const result = compile({
+    filename: 'example.vue',
+    source: template.content,
+    ast: template.ast,
+    compilerOptions: {
+      onError: e => errors.push(e),
+    },
+  })
+
+  expect(errors).toHaveLength(1)
+  expect(result.errors).toEqual(errors)
+})
