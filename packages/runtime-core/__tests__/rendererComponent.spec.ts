@@ -527,6 +527,33 @@ describe('renderer: component', () => {
     expect(spy).toHaveBeenCalledTimes(1)
   })
 
+  test('should not crash when updating a style prop with objects without a prototype', async () => {
+    const color = ref('red')
+
+    const Comp = {
+      render: () => h('div', 'child'),
+    }
+
+    const App = {
+      render() {
+        // e.g. style objects produced by a library that uses Object.create(null)
+        return h(Comp, {
+          style: Object.assign(Object.create(null), { color: color.value }),
+        })
+      },
+    }
+
+    const root = nodeOps.createElement('div')
+    render(h(App), root)
+    expect(serializeInner(root)).toBe(`<div style={"color":"red"}>child</div>`)
+
+    color.value = 'green'
+    await nextTick()
+    expect(serializeInner(root)).toBe(
+      `<div style={"color":"green"}>child</div>`,
+    )
+  })
+
   test('should update child component when a prop is replaced by a new undefined prop', async () => {
     const props = ref<Record<string, any>>({ foo: 'foo' })
 

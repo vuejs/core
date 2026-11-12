@@ -168,6 +168,47 @@ describe('utils/looseEqual', () => {
     expect(looseEqual(nestedObj1, nestedObj2)).toBe(false)
   })
 
+  test('compares objects without a prototype correctly', () => {
+    const nullProto = (props: Record<string, any>) =>
+      Object.assign(Object.create(null), props)
+
+    expect(looseEqual(nullProto({ foo: 1 }), { foo: 1 })).toBe(true)
+    expect(looseEqual({ foo: 1 }, nullProto({ foo: 1 }))).toBe(true)
+    expect(looseEqual(nullProto({ foo: 1 }), nullProto({ foo: 1 }))).toBe(true)
+    expect(looseEqual(nullProto({ foo: 1 }), { foo: 2 })).toBe(false)
+    expect(looseEqual(nullProto({ foo: 1 }), { bar: 1 })).toBe(false)
+    expect(looseEqual(nullProto({ foo: 1 }), nullProto({ foo: 2 }))).toBe(false)
+    // nested inside arrays / plain objects
+    expect(looseEqual([nullProto({ foo: 1 })], [{ foo: 1 }])).toBe(true)
+    expect(
+      looseEqual(
+        { style: nullProto({ color: 'red' }) },
+        { style: nullProto({ color: 'red' }) },
+      ),
+    ).toBe(true)
+  })
+
+  test('compares objects with a shadowed hasOwnProperty correctly', () => {
+    expect(
+      looseEqual(
+        { hasOwnProperty: () => true, foo: 1 },
+        { hasOwnProperty: () => true, foo: 1 },
+      ),
+    ).toBe(true)
+    expect(
+      looseEqual(
+        { hasOwnProperty: () => true, foo: 1 },
+        { hasOwnProperty: () => true, foo: 2 },
+      ),
+    ).toBe(false)
+    expect(
+      looseEqual(
+        { hasOwnProperty: 'not a function', foo: 1 } as any,
+        { hasOwnProperty: 'not a function', foo: 1 } as any,
+      ),
+    ).toBe(true)
+  })
+
   test('compares different types correctly', () => {
     const obj1 = {}
     const obj2 = { a: 1 }

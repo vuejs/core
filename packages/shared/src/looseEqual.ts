@@ -1,4 +1,13 @@
-import { isArray, isDate, isMap, isObject, isSet, isSymbol } from './general'
+import {
+  hasOwn,
+  isArray,
+  isDate,
+  isMap,
+  isObject,
+  isPlainObject,
+  isSet,
+  isSymbol,
+} from './general'
 
 type ComparisonState = [Map<any, any>, Map<any, any>]
 
@@ -54,8 +63,8 @@ function looseCompareObjects(a: any, b: any, seen: ComparisonState) {
     return false
   }
   for (const key in a) {
-    const aHasKey = a.hasOwnProperty(key)
-    const bHasKey = b.hasOwnProperty(key)
+    const aHasKey = hasOwn(a, key)
+    const bHasKey = hasOwn(b, key)
     if (
       (aHasKey && !bHasKey) ||
       (!aHasKey && bHasKey) ||
@@ -63,6 +72,12 @@ function looseCompareObjects(a: any, b: any, seen: ComparisonState) {
     ) {
       return false
     }
+  }
+  // plain (or prototype-less) objects with equal own enumerable keys and
+  // values are considered equal - String() would throw for prototype-less
+  // objects and is a no-op comparison for plain ones
+  if (isPlainObject(a) && isPlainObject(b)) {
+    return true
   }
   return String(a) === String(b)
 }
