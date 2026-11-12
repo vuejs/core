@@ -637,6 +637,8 @@ export interface InputHTMLAttributes extends HTMLAttributes {
   src?: string | undefined
   step?: Numberish | undefined
   type?: InputTypeHTMLAttribute | undefined
+  'true-value'?: any // for v-model checkbox support
+  'false-value'?: any // for v-model checkbox support
   value?: any // we support :value to be bound to anything w/ v-model
   width?: Numberish | undefined
   onCancel?: ((payload: Event) => void) | undefined
@@ -1157,6 +1159,13 @@ export interface SVGAttributes extends AriaAttributes, EventHandlers<Events> {
   x?: Numberish | undefined
   xChannelSelector?: string | undefined
   'x-height'?: Numberish | undefined
+  'xlink:actuate'?: string | undefined
+  'xlink:arcrole'?: string | undefined
+  'xlink:href'?: string | undefined
+  'xlink:role'?: string | undefined
+  'xlink:show'?: string | undefined
+  'xlink:title'?: string | undefined
+  'xlink:type'?: string | undefined
   xlinkActuate?: string | undefined
   xlinkArcrole?: string | undefined
   xlinkHref?: string | undefined
@@ -1165,6 +1174,7 @@ export interface SVGAttributes extends AriaAttributes, EventHandlers<Events> {
   xlinkTitle?: string | undefined
   xlinkType?: string | undefined
   xmlns?: string | undefined
+  'xmlns:xlink'?: string | undefined
   xmlnsXlink?: string | undefined
   y1?: Numberish | undefined
   y2?: Numberish | undefined

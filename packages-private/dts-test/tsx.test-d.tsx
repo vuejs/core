@@ -16,6 +16,11 @@ expectType<JSX.Element>(<div>hello</div>)
 expectType<JSX.Element>(<input value="foo" />)
 expectType<JSX.Element>(<textarea value={null} />)
 
+// checkbox v-model true-value / false-value (#16246)
+expectType<JSX.Element>(
+  <input type="checkbox" true-value="yes" false-value="no" />,
+)
+
 // @ts-expect-error style css property validation
 ;<div style={{ unknown: 123 }} />
 
@@ -135,6 +140,12 @@ expectType<JSX.Element>(
     xmlnsXlink="http://www.w3.org/1999/xlink"
     xmlns="http://www.w3.org/2000/svg"
   />,
+)
+// namespaced svg attributes (#16246)
+expectType<JSX.Element>(
+  <svg xmlns:xlink="http://www.w3.org/1999/xlink">
+    <use xlink:href="#a" />
+  </svg>,
 )
 // details
 expectType<JSX.Element>(<details name="details" />)
