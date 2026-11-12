@@ -133,4 +133,52 @@ describe('ssr: inject <style vars>', () => {
       }
     `)
   })
+
+  test('v-for', () => {
+    expect(
+      compile(`<div v-for="i in list" :key="i">{{ i }}</div>`, {
+        ssrCssVars: `{ color }`,
+      }).code,
+    ).toMatchInlineSnapshot(`
+      "const { mergeProps: _mergeProps } = require("vue")
+      const { ssrRenderAttrs: _ssrRenderAttrs, ssrInterpolate: _ssrInterpolate, ssrRenderList: _ssrRenderList } = require("vue/server-renderer")
+
+      return function ssrRender(_ctx, _push, _parent, _attrs) {
+        const _cssVars = { style: { color: _ctx.color }}
+        _push(\`<!--[-->\`)
+        _ssrRenderList(_ctx.list, (i) => {
+          _push(\`<div\${
+            _ssrRenderAttrs(_mergeProps({ key: i }, { ref_for: true }, _cssVars))
+          }>\${
+            _ssrInterpolate(i)
+          }</div>\`)
+        })
+        _push(\`<!--]-->\`)
+      }"
+    `)
+  })
+
+  test('template v-for', () => {
+    expect(
+      compile(`<template v-for="i in list"><div/><div/></template>`, {
+        ssrCssVars: `{ color }`,
+      }).code,
+    ).toMatchInlineSnapshot(`
+      "const { mergeProps: _mergeProps } = require("vue")
+      const { ssrRenderAttrs: _ssrRenderAttrs, ssrRenderList: _ssrRenderList } = require("vue/server-renderer")
+
+      return function ssrRender(_ctx, _push, _parent, _attrs) {
+        const _cssVars = { style: { color: _ctx.color }}
+        _push(\`<!--[-->\`)
+        _ssrRenderList(_ctx.list, (i) => {
+          _push(\`<!--[--><div\${
+            _ssrRenderAttrs(_mergeProps({ ref_for: true }, _cssVars))
+          }></div><div\${
+            _ssrRenderAttrs(_mergeProps({ ref_for: true }, _cssVars))
+          }></div><!--]-->\`)
+        })
+        _push(\`<!--]-->\`)
+      }"
+    `)
+  })
 })
