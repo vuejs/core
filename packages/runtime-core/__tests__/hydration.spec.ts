@@ -45,7 +45,9 @@ import * as runtimeDom from '@vue/runtime-dom'
 import type { HMRRuntime } from '../src/hmr'
 import type { InternalRenderFunction } from '../src/component'
 import { type SSRContext, renderToString } from '@vue/server-renderer'
+import * as serverRenderer from '@vue/server-renderer'
 import { type CompilerOptions, compile } from '@vue/compiler-dom'
+import { compile as compileSSR } from '@vue/compiler-ssr'
 import { PatchFlags, normalizeStyle } from '@vue/shared'
 import { vShowOriginalDisplay } from '../../runtime-dom/src/directives/vShow'
 
@@ -4539,5 +4541,107 @@ describe('SSR hydration', () => {
     await new Promise(r => setTimeout(r))
     expect(errorHandler).toHaveBeenCalledTimes(1)
     expect(container.innerHTML).toBe('<div><!----></div>')
+  })
+
+  test.each([
+    {
+      name: 'root v-for',
+      template: `<div v-for="i in 2" :key="i" :style="{ opacity }">
+        <i :style="{ opacity }">{{ i }}</i>
+      </div>`,
+    },
+    {
+      name: 'root template v-for with multiple children',
+      template: `<template v-for="i in 2" :key="i">
+        <div :style="{ opacity }"><i :style="{ opacity }">{{ i }}</i></div>
+        <span :style="{ opacity }">{{ i }}</span>
+      </template>`,
+    },
+    {
+      name: 'template v-if nested in v-for',
+      template: `<template v-for="i in 2" :key="i">
+        <template v-if="i === 1">
+          <div :style="{ opacity }">{{ i }}</div>
+        </template>
+        <template v-else>
+          <span :style="{ opacity }">{{ i }}</span>
+        </template>
+      </template>`,
+    },
+    {
+      name: 'template v-for nested in v-for',
+      template: `<template v-for="i in 2" :key="i">
+        <template v-for="j in 2" :key="j">
+          <div :style="{ opacity }">{{ i }}-{{ j }}</div>
+        </template>
+      </template>`,
+    },
+    {
+      name: 'v-for nested in template v-if',
+      template: `<template v-if="color">
+        <div v-for="i in 2" :key="i" :style="{ opacity }">{{ i }}</div>
+      </template>`,
+    },
+    {
+      name: 'component roots nested in fragments',
+      template: `<template v-for="i in 2" :key="i">
+        <Child :style="{ opacity }" />
+        <span :style="{ opacity }">{{ i }}</span>
+      </template>`,
+    },
+  ])('hydrates css vars on $name', async ({ template }) => {
+    const { code } = compileSSR(template, {
+      ssrCssVars: `{ "--color": color }`,
+    })
+    const App = {
+      components: { Child: { template: '<div />' } },
+      setup() {
+        useCssVars(() => ({ color: 'red' }))
+        return { color: 'red', opacity: 0.5 }
+      },
+      render: compileToFunction(template),
+      ssrRender: new Function('require', code)((id: string) =>
+        id === 'vue' ? runtimeDom : serverRenderer,
+      ),
+    }
+    const container = document.createElement('div')
+    container.innerHTML = await renderToString(h(App))
+    const roots = Array.from(container.children) as HTMLElement[]
+    expect(roots.length).toBeGreaterThan(0)
+    for (const root of roots) {
+      expect(root.style.getPropertyValue('--color')).toBe('red')
+    }
+    for (const child of container.querySelectorAll('i')) {
+      expect(child.style.getPropertyValue('--color')).toBe('')
+    }
+
+    const app = createSSRApp(App)
+    app.mount(container)
+    expect(`Hydration style mismatch`).not.toHaveBeenWarned()
+    expect(container.children).toHaveLength(roots.length)
+    for (const [i, root] of roots.entries()) {
+      expect(container.children[i]).toBe(root)
+      expect(root.style.getPropertyValue('--color')).toBe('red')
+    }
+    app.unmount()
+  })
+
+  test('css vars on nested fragment roots do not suppress style mismatches', () => {
+    const container = document.createElement('div')
+    container.innerHTML =
+      '<!--[--><!--[--><div style="opacity:0.5;--color:red;"></div>' +
+      '<span style="--color:red;"></span><!--]--><!--]-->'
+    const app = createSSRApp({
+      setup() {
+        useCssVars(() => ({ color: 'red' }))
+        return { opacity: 0.75 }
+      },
+      render: compileToFunction(`<template v-for="i in 1" :key="i">
+        <div :style="{ opacity }" /><span />
+      </template>`),
+    })
+    app.mount(container)
+    expect(`Hydration style mismatch`).toHaveBeenWarnedTimes(1)
+    app.unmount()
   })
 })
