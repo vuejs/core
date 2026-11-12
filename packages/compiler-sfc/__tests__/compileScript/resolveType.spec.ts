@@ -949,6 +949,76 @@ describe('resolveType', () => {
       })
     })
 
+    test('generic type /w default type parameters', () => {
+      expect(
+        resolve(`
+        type A<T = boolean> = { a?: T }
+        interface B<T = boolean> { b?: T }
+        interface CBase<T = boolean> { c?: T }
+        interface C extends CBase {}
+        type D<X, Y = X> = { d1?: X; d2?: Y }
+        type E<T = boolean> = T
+        defineProps<A & B & C & D<number> & { e?: E }>()
+      `).props,
+      ).toStrictEqual({
+        a: ['Boolean'],
+        b: ['Boolean'],
+        c: ['Boolean'],
+        d1: ['Number'],
+        d2: ['Number'],
+        e: ['Boolean'],
+      })
+    })
+
+    test('generic type /w explicit type argument and same-named outer parameter', () => {
+      expect(
+        resolve(`
+        type Inner<T> = { foo?: T }
+        interface Base<T> { baz?: T }
+        interface Props<T> extends Base<boolean> { qux?: T }
+        type Wrapper<T> = Inner<boolean> & Props<T> & { bar?: T }
+        defineProps<Wrapper<string>>()
+      `).props,
+      ).toStrictEqual({
+        foo: ['Boolean'],
+        baz: ['Boolean'],
+        qux: ['String'],
+        bar: ['String'],
+      })
+    })
+
+    test('generic type /w type parameter forwarded under another name', () => {
+      expect(
+        resolve(`
+        type Box<V> = V
+        type Inner<U> = { foo?: U; bar?: Box<U>; baz?: Box<U | string> }
+        interface Base<U> { qux?: U }
+        interface Props<T> extends Base<T> {}
+        type Wrapper<T> = Inner<T> & Props<T> & Box<{ quux?: T[] | T }>
+        defineProps<Wrapper<boolean>>()
+      `).props,
+      ).toStrictEqual({
+        foo: ['Boolean'],
+        bar: ['Boolean'],
+        baz: ['Boolean', 'String'],
+        qux: ['Boolean'],
+        quux: ['Array', 'Boolean'],
+      })
+    })
+
+    test('generic type /w mapped type over type parameter', () => {
+      expect(
+        resolve(`
+        type Flags<K extends string, V = boolean> = { [P in K]?: V }
+        defineProps<Flags<'a' | 'b'> & Partial<Flags<'c', string>>>()
+      `).props,
+      ).toStrictEqual({
+        a: ['Boolean'],
+        b: ['Boolean'],
+        c: ['String'],
+      })
+    })
+
     test('generic from external-file', () => {
       const files = {
         '/foo.ts': 'export type P<T> = { foo: T }',
@@ -1213,6 +1283,26 @@ describe('resolveType', () => {
         bar: ['Number'],
       })
       expect(deps && [...deps]).toStrictEqual(Object.keys(files))
+    })
+
+    test('relative (dynamic import) /w type arguments', () => {
+      const files = {
+        '/foo.ts': `
+          export type P<T, U = boolean> = { foo?: T; bar?: U }
+          export type Flag<T = boolean> = T
+        `,
+      }
+      const { props } = resolve(
+        `
+        defineProps<import('./foo').P<string> & { baz?: import('./foo').Flag }>()
+      `,
+        files,
+      )
+      expect(props).toStrictEqual({
+        foo: ['String'],
+        bar: ['Boolean'],
+        baz: ['Boolean'],
+      })
     })
 
     test('relative import with indexed access type', () => {

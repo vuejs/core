@@ -35,7 +35,7 @@ import {
 } from './utils'
 import { type ScriptCompileContext, resolveParserPlugins } from './context'
 import type { ImportBinding, SFCScriptCompileOptions } from '../compileScript'
-import { capitalize, hasOwn } from '@vue/shared'
+import { capitalize, hasOwn, isArray, isObject } from '@vue/shared'
 import { parse as babelParse } from '@babel/parser'
 import { parse } from '../parse'
 import { createCache } from '../cache'
@@ -262,25 +262,11 @@ function innerResolveTypeElements(
       }
       const resolved = resolveTypeReference(ctx, node, scope)
       if (resolved) {
-        let typeParams: Record<string, Node> | undefined
-        if (
-          (resolved.type === 'TSTypeAliasDeclaration' ||
-            resolved.type === 'TSInterfaceDeclaration') &&
-          resolved.typeParameters &&
-          node.typeParameters
-        ) {
-          typeParams = Object.create(null)
-          resolved.typeParameters.params.forEach((p, i) => {
-            let param = typeParameters && typeParameters[p.name]
-            if (!param) param = node.typeParameters!.params[i]
-            typeParams![p.name] = param
-          })
-        }
         return resolveTypeElements(
           ctx,
           resolved,
           resolved._ownerScope,
-          typeParams,
+          resolveTypeArguments(resolved, node, scope, typeParameters),
         )
       } else {
         if (typeof typeName === 'string') {
@@ -342,7 +328,12 @@ function innerResolveTypeElements(
       )
       const resolved = resolveTypeReference(ctx, node, sourceScope)
       if (resolved) {
-        return resolveTypeElements(ctx, resolved, resolved._ownerScope)
+        return resolveTypeElements(
+          ctx,
+          resolved,
+          resolved._ownerScope,
+          resolveTypeArguments(resolved, node, scope, typeParameters),
+        )
       }
       break
     }
@@ -463,7 +454,12 @@ function resolveInterfaceMembers(
   if (node.extends) {
     for (const ext of node.extends) {
       try {
-        const { props, calls } = resolveTypeElements(ctx, ext, scope)
+        const { props, calls } = resolveTypeElements(
+          ctx,
+          ext,
+          scope,
+          typeParameters,
+        )
         for (const key in props) {
           if (!hasOwn(base.props, key)) {
             base.props[key] = props[key]
@@ -494,6 +490,68 @@ function resolveInterfaceMembers(
   return base
 }
 
+function resolveTypeArguments(
+  decl: ScopeTypeNode,
+  node: ReferenceTypes,
+  scope: TypeScope,
+  typeParameters?: Record<string, Node>,
+): Record<string, Node> | undefined {
+  if (
+    (decl.type !== 'TSTypeAliasDeclaration' &&
+      decl.type !== 'TSInterfaceDeclaration') ||
+    !decl.typeParameters
+  ) {
+    return
+  }
+  const outer =
+    typeParameters || (scope.isGenericScope ? scope.types : undefined)
+  const args = node.typeParameters && node.typeParameters.params
+  const res: Record<string, Node> = Object.create(null)
+  decl.typeParameters.params.forEach((p, i) => {
+    const arg = args && args[i]
+    if (arg) {
+      res[p.name] = outer ? substituteTypeParameters(arg, outer) : arg
+    } else if (p.default) {
+      res[p.name] = substituteTypeParameters(p.default, res)
+    }
+  })
+  return res
+}
+
+function substituteTypeParameters(
+  node: Node,
+  typeParameters: Record<string, Node>,
+): Node {
+  if (
+    node.type === 'TSTypeReference' &&
+    node.typeName.type === 'Identifier' &&
+    hasOwn(typeParameters, node.typeName.name)
+  ) {
+    return typeParameters[node.typeName.name]
+  }
+  if (
+    node.type === 'TSMappedType' &&
+    hasOwn(typeParameters, node.typeParameter.name)
+  ) {
+    return node
+  }
+  let changed = false
+  const visit = (child: unknown): unknown => {
+    if (!isObject(child) || typeof child.type !== 'string') return child
+    const res = substituteTypeParameters(child as Node, typeParameters)
+    if (res !== child) changed = true
+    return res
+  }
+  const res: Record<string, unknown> = {}
+  for (const key in node) {
+    if (key[0] !== '_') {
+      const value = (node as any)[key]
+      res[key] = isArray(value) ? value.map(visit) : visit(value)
+    }
+  }
+  return changed ? (res as unknown as Node) : node
+}
+
 function resolveMappedType(
   ctx: TypeResolveContext,
   node: TSMappedType,
@@ -501,6 +559,11 @@ function resolveMappedType(
   typeParameters?: Record<string, Node>,
 ): ResolvedElements {
   const res: ResolvedElements = { props: {} }
+  if (typeParameters) {
+    scope = createChildScope(scope)
+    scope.isGenericScope = true
+    Object.assign(scope.types, typeParameters)
+  }
   let keys: string[]
   if (node.nameType) {
     const { name, constraint } = node.typeParameter
@@ -1782,21 +1845,13 @@ export function inferRuntimeType(
               return ['Function']
             }
 
-            if (node.typeParameters) {
-              const typeParams: Record<string, Node> = Object.create(null)
-              if (resolved.typeParameters) {
-                resolved.typeParameters.params.forEach((p, i) => {
-                  typeParams![p.name] = node.typeParameters!.params[i]
-                })
-              }
-              return inferRuntimeType(
-                ctx,
-                resolved.typeAnnotation,
-                resolved._ownerScope,
-                isKeyOf,
-                typeParams,
-              )
-            }
+            return inferRuntimeType(
+              ctx,
+              resolved.typeAnnotation,
+              resolved._ownerScope,
+              isKeyOf,
+              resolveTypeArguments(resolved, node, scope, typeParameters),
+            )
           }
 
           return inferRuntimeType(ctx, resolved, resolved._ownerScope, isKeyOf)
@@ -2046,6 +2101,15 @@ export function inferRuntimeType(
         )
         const resolved = resolveTypeReference(ctx, node, sourceScope)
         if (resolved) {
+          if (resolved.type === 'TSTypeAliasDeclaration') {
+            return inferRuntimeType(
+              ctx,
+              resolved.typeAnnotation,
+              resolved._ownerScope,
+              isKeyOf,
+              resolveTypeArguments(resolved, node, scope, typeParameters),
+            )
+          }
           return inferRuntimeType(ctx, resolved, resolved._ownerScope)
         }
         break

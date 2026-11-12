@@ -211,6 +211,23 @@ describe('defineModel()', () => {
     expect(content).toMatch('"modelValue": { type: [Boolean, String, Object] }')
   })
 
+  test('w/ types, production mode, generic type alias w/ default type parameter', () => {
+    const { content } = compile(
+      `
+      <script setup lang="ts">
+      type Flag<T = boolean> = T
+      type Model<T = boolean> = { value: T }
+      const flag = defineModel<Flag>('flag')
+      const checked = defineModel<Model['value']>('checked')
+      </script>
+      `,
+      { isProd: true },
+    )
+    assertCode(content)
+    expect(content).toMatch('"flag": { type: Boolean }')
+    expect(content).toMatch('"checked": { type: Boolean }')
+  })
+
   test('w/ types, production mode, function + runtime opts + multiple types', () => {
     const { content } = compile(
       `
