@@ -21,6 +21,7 @@ import {
   watch,
 } from '@vue/runtime-test'
 import { render as domRender } from 'vue'
+import { hasOwn } from '@vue/shared'
 
 describe('component props', () => {
   test('stateful', () => {
@@ -909,46 +910,7 @@ describe('component props', () => {
     expect(props).not.toHaveProperty('onEvent')
   })
 
-  test('props keys should follow declaration order', async () => {
-    const keys: string[][] = []
-    const Comp = defineComponent({
-      props: {
-        foo: String,
-        bar: { type: String, default: 'bar' },
-        baz: Boolean,
-        qux: Number,
-      },
-      render() {
-        keys.push(Object.keys(this.$props))
-      },
-    })
-    const ArrayComp = defineComponent({
-      props: ['foo', 'bar-baz', 'qux'],
-      render() {
-        keys.push(Object.keys(this.$props))
-      },
-    })
-
-    const passQux = ref(true)
-    const root = nodeOps.createElement('div')
-    render(
-      h(() => [
-        h(Comp, passQux.value ? { qux: 1, baz: true, foo: 'foo' } : {}),
-        h(ArrayComp, { qux: 1, barBaz: 2 }),
-      ]),
-      root,
-    )
-    expect(keys).toEqual([
-      ['foo', 'bar', 'baz', 'qux'],
-      ['foo', 'barBaz', 'qux'],
-    ])
-
-    passQux.value = false
-    await nextTick()
-    expect(keys[2]).toEqual(['foo', 'bar', 'baz', 'qux'])
-  })
-
-  test('props keys should follow declaration order with mixins and extends', () => {
+  test('declared prop keys from mixins and extends should be present even if not passed', () => {
     let keys: string[] = []
     const Comp = {
       props: ['self'],
@@ -961,14 +923,14 @@ describe('component props', () => {
 
     const root = nodeOps.createElement('div')
     const app = createApp({
-      render: () => h(Comp, { self: 1, m2: 2, global: 3 }),
+      render: () => h(Comp, { m2: 2 }),
     })
     app.mixin({ props: ['global'] })
     app.mount(root)
-    expect(keys).toEqual(['global', 'base', 'm1', 'm2', 'self'])
+    expect(keys.sort()).toEqual(['base', 'global', 'm1', 'm2', 'self'])
   })
 
-  test('functional props keys should follow declaration order', () => {
+  test('declared functional prop keys should be present even if not passed', () => {
     let keys: string[] = []
     const Comp: FunctionalComponent = props => {
       keys = Object.keys(props)
@@ -976,32 +938,27 @@ describe('component props', () => {
     Comp.props = ['foo', 'bar']
 
     render(h(Comp, { bar: 1, baz: 2 }), nodeOps.createElement('div'))
-    expect(keys).toEqual(['foo', 'bar'])
+    expect(keys.sort()).toEqual(['bar', 'foo'])
   })
 
-  test('default factory should receive all declared prop keys', () => {
-    let factoryProps: any
+  test('default factory should distinguish omitted props from explicit undefined', () => {
+    const hasValue: boolean[] = []
     const Comp = defineComponent({
       props: {
-        foo: {
+        value: String,
+        other: {
           type: String,
           default: (props: any) => {
-            factoryProps = { ...props }
-            return 'foo'
+            hasValue.push(hasOwn(props, 'value'))
+            return 'other'
           },
         },
-        bar: String,
-        baz: { type: String, default: 'baz' },
       },
       render() {},
     })
 
-    render(h(Comp, { bar: 'bar' }), nodeOps.createElement('div'))
-    expect(factoryProps).toStrictEqual({
-      foo: undefined,
-      bar: 'bar',
-      baz: undefined,
-    })
-    expect(Object.keys(factoryProps)).toEqual(['foo', 'bar', 'baz'])
+    render(h(Comp), nodeOps.createElement('div'))
+    render(h(Comp, { value: undefined }), nodeOps.createElement('div'))
+    expect(hasValue).toEqual([false, true])
   })
 })

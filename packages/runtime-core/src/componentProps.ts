@@ -216,15 +216,18 @@ export function initProps(
 
   instance.propsDefaults = Object.create(null)
 
-  // ensure all declared prop keys are present, in declaration order
+  setFullProps(instance, rawProps, props, attrs)
+
+  // ensure all declared prop keys are present
   const keys = instance.propsOptions[2]
   if (keys) {
     for (let i = 0; i < keys.length; i++) {
-      props[keys[i]] = undefined
+      const key = keys[i]
+      if (!(key in props)) {
+        props[key] = undefined
+      }
     }
   }
-
-  setFullProps(instance, rawProps, props, attrs)
 
   // validation
   if (__DEV__) {
