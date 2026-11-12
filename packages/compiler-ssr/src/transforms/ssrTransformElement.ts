@@ -32,6 +32,7 @@ import {
   hasDynamicKeyVBind,
   isStaticArgOf,
   isStaticExp,
+  transformStyle,
 } from '@vue/compiler-dom'
 import {
   NO,
@@ -39,7 +40,9 @@ import {
   isBooleanAttr,
   isBuiltInDirective,
   isSSRSafeAttrName,
+  parseStringStyle,
   propsToAttrMap,
+  stringifyStyle,
 } from '@vue/shared'
 import { SSRErrorCodes, createSSRCompilerError } from '../errors'
 import {
@@ -64,6 +67,16 @@ const rawChildrenMap = new WeakMap<
   PlainElementNode,
   TemplateLiteral['elements'][0]
 >()
+
+// static styles on plain elements are rendered by ssrTransformElement
+export const ssrTransformStyle: NodeTransform = (node, context) => {
+  if (
+    node.type === NodeTypes.ELEMENT &&
+    node.tagType !== ElementTypes.ELEMENT
+  ) {
+    transformStyle(node, context)
+  }
+}
 
 export const ssrTransformElement: NodeTransform = (node, context) => {
   if (
@@ -101,6 +114,7 @@ export const ssrTransformElement: NodeTransform = (node, context) => {
 
     const needMergeProps = hasDynamicVBind || hasCustomDir
     if (needMergeProps) {
+      transformStyle(node, context)
       const { props, directives } = buildProps(
         node,
         context,
@@ -213,9 +227,9 @@ export const ssrTransformElement: NodeTransform = (node, context) => {
     // book keeping static/dynamic class merging.
     let dynamicClassBinding: CallExpression | undefined = undefined
     let staticClassBinding: string | undefined = undefined
-    // all style bindings are converted to dynamic by transformStyle.
-    // but we need to make sure to merge them.
     let dynamicStyleBinding: CallExpression | undefined = undefined
+    let staticStyleBinding: string | undefined = undefined
+    let staticStyleIndex = -1
 
     for (let i = 0; i < node.props.length; i++) {
       const prop = node.props[i]
@@ -274,14 +288,20 @@ export const ssrTransformElement: NodeTransform = (node, context) => {
                     // already has style binding, merge into it.
                     mergeCall(dynamicStyleBinding, value)
                   } else {
-                    openTag.push(
-                      ` style="`,
-                      (dynamicStyleBinding = createCallExpression(
-                        context.helper(SSR_RENDER_STYLE),
-                        [value],
-                      )),
-                      `"`,
+                    dynamicStyleBinding = createCallExpression(
+                      context.helper(SSR_RENDER_STYLE),
+                      [
+                        staticStyleBinding
+                          ? createArrayExpression([staticStyleBinding, value])
+                          : value,
+                      ],
                     )
+                    const parts = [` style="`, dynamicStyleBinding, `"`]
+                    if (staticStyleBinding) {
+                      openTag.splice(staticStyleIndex, 1, ...parts)
+                    } else {
+                      openTag.push(...parts)
+                    }
                   }
                 } else {
                   attrName =
@@ -353,6 +373,17 @@ export const ssrTransformElement: NodeTransform = (node, context) => {
           // static prop
           if (name === 'class' && prop.value) {
             staticClassBinding = JSON.stringify(prop.value.content)
+          }
+          if (name === 'style' && prop.value) {
+            const style = parseStringStyle(prop.value.content)
+            if (dynamicStyleBinding) {
+              mergeCall(dynamicStyleBinding, JSON.stringify(style))
+            } else {
+              staticStyleBinding = JSON.stringify(style)
+              staticStyleIndex = openTag.length
+              openTag.push(` style="${escapeHtml(stringifyStyle(style))}"`)
+            }
+            continue
           }
           openTag.push(
             ` ${prop.name}` +

@@ -94,7 +94,7 @@ import type { BaseTransitionProps } from './components/BaseTransition'
 import type { DefineComponent } from './apiDefineComponent'
 import { markAsyncBoundary } from './helpers/useId'
 import { isAsyncWrapper } from './apiAsyncComponent'
-import type { RendererElement } from './renderer'
+import type { RendererElement, RendererNode } from './renderer'
 
 export type Data = Record<string, unknown>
 
@@ -592,7 +592,7 @@ export interface ComponentInternalInstance {
    * For updating css vars on contained teleports
    * @internal
    */
-  ut?: (vars?: Record<string, unknown>) => void
+  ut?: (start: RendererNode | null, end: RendererNode | null) => void
 
   /**
    * dev only. For style v-bind hydration mismatch checks
@@ -607,7 +607,7 @@ export interface ComponentInternalInstance {
   resolvedOptions?: MergedComponentOptions
 }
 
-const emptyAppContext = createAppContext()
+const emptyAppContext = /*@__PURE__*/ createAppContext()
 
 let uid = 0
 
@@ -906,7 +906,10 @@ function setupStatefulComponent(
             }
           })
           .catch(e => {
-            handleError(e, instance, ErrorCodes.SETUP_FUNCTION)
+            handleError(e, instance, ErrorCodes.SETUP_FUNCTION, undefined, true)
+            // a failed setup renders nothing instead of its template
+            instance.ssrRender = (_: unknown, push: (item: string) => void) =>
+              push('<!---->')
           })
       } else if (__FEATURE_SUSPENSE__) {
         // async setup returned Promise.
@@ -1103,12 +1106,18 @@ export function finishComponentSetup(
   }
 }
 
+/**
+ * Read through the setup context `attrs` proxy to get the raw attrs object.
+ * @internal
+ */
+export const rawAttrsKey: unique symbol = Symbol()
+
 const attrsProxyHandlers = __DEV__
   ? {
-      get(target: Data, key: string) {
+      get(target: Data, key: string | symbol) {
         markAttrsAccessed()
         track(target, TrackOpTypes.GET, '')
-        return target[key]
+        return key === rawAttrsKey ? target : target[key as string]
       },
       set() {
         warn(`setupContext.attrs is readonly.`)
@@ -1120,9 +1129,9 @@ const attrsProxyHandlers = __DEV__
       },
     }
   : {
-      get(target: Data, key: string) {
+      get(target: Data, key: string | symbol) {
         track(target, TrackOpTypes.GET, '')
-        return target[key]
+        return key === rawAttrsKey ? target : target[key as string]
       },
     }
 

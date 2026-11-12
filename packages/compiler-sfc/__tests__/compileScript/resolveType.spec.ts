@@ -1580,6 +1580,52 @@ describe('resolveType', () => {
       expect(deps && [...deps]).toStrictEqual(['/src/Foo.vue'])
     })
 
+    test('ts module resolve does not expand tsconfig include globs', () => {
+      const files: Record<string, string> = {
+        '/tsconfig.json': JSON.stringify({
+          compilerOptions: {
+            baseUrl: '.',
+            paths: {
+              props: ['./types/props.ts'],
+            },
+          },
+          include: ['packages/**/*', 'apps/**/*'],
+        }),
+        '/types/props.ts': 'export interface Props { title: string }',
+      }
+
+      // Expanding `include` is what makes this test able to fail: the resulting
+      // `fileNames` is never read, but the walk is synchronous and proportional
+      // to the whole workspace, so the parse config host must not do it.
+      let enumerations = 0
+      const fs = {
+        fileExists(file: string) {
+          return !!(files[file] ?? files[normalize(file)])
+        },
+        readFile(file: string) {
+          return files[file] ?? files[normalize(file)]
+        },
+        readDirectory() {
+          enumerations++
+          return []
+        },
+      }
+
+      const { props } = resolve(
+        `
+        import { Props } from 'props'
+        defineProps<Props>()
+        `,
+        files,
+        { fs },
+      )
+
+      expect(props).toStrictEqual({
+        title: ['String'],
+      })
+      expect(enumerations).toBe(0)
+    })
+
     test('global types', () => {
       const files = {
         // ambient

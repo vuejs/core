@@ -93,11 +93,19 @@ export const isBuiltInDirective: (key: string) => boolean =
     'bind,cloak,else-if,else,for,html,if,model,on,once,pre,show,slot,text,memo',
   )
 
+const STRING_CACHE_MAX_SIZE = 10000
+
 const cacheStringFunction = <T extends (str: string) => string>(fn: T): T => {
-  const cache: Record<string, string> = Object.create(null)
+  let cache: Record<string, string> = Object.create(null)
+  let size = 0
   return ((str: string) => {
     const hit = cache[str]
-    return hit || (cache[str] = fn(str))
+    if (hit !== undefined) return hit
+    if (++size > STRING_CACHE_MAX_SIZE) {
+      cache = Object.create(null)
+      size = 1
+    }
+    return (cache[str] = fn(str))
   }) as T
 }
 
@@ -105,25 +113,25 @@ const camelizeRE = /-\w/g
 /**
  * @private
  */
-export const camelize: (str: string) => string = cacheStringFunction(
-  (str: string): string => {
+export const camelize: (str: string) => string =
+  /*@__PURE__*/ cacheStringFunction((str: string): string => {
     return str.replace(camelizeRE, c => c.slice(1).toUpperCase())
-  },
-)
+  })
 
 const hyphenateRE = /\B([A-Z])/g
 /**
  * @private
  */
-export const hyphenate: (str: string) => string = cacheStringFunction(
-  (str: string) => str.replace(hyphenateRE, '-$1').toLowerCase(),
-)
+export const hyphenate: (str: string) => string =
+  /*@__PURE__*/ cacheStringFunction((str: string) =>
+    str.replace(hyphenateRE, '-$1').toLowerCase(),
+  )
 
 /**
  * @private
  */
 export const capitalize: <T extends string>(str: T) => Capitalize<T> =
-  cacheStringFunction(<T extends string>(str: T) => {
+  /*@__PURE__*/ cacheStringFunction(<T extends string>(str: T) => {
     return (str.charAt(0).toUpperCase() + str.slice(1)) as Capitalize<T>
   })
 
@@ -132,12 +140,11 @@ export const capitalize: <T extends string>(str: T) => Capitalize<T> =
  */
 export const toHandlerKey: <T extends string>(
   str: T,
-) => T extends '' ? '' : `on${Capitalize<T>}` = cacheStringFunction(
-  <T extends string>(str: T) => {
+) => T extends '' ? '' : `on${Capitalize<T>}` =
+  /*@__PURE__*/ cacheStringFunction(<T extends string>(str: T) => {
     const s = str ? `on${capitalize(str)}` : ``
     return s as T extends '' ? '' : `on${Capitalize<T>}`
-  },
-)
+  })
 
 // compare whether a value has changed, accounting for NaN.
 export const hasChanged = (value: any, oldValue: any): boolean =>

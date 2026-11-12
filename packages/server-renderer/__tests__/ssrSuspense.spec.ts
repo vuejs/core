@@ -43,7 +43,6 @@ describe('SSR Suspense', () => {
     expect(await renderToString(createApp(Comp))).toBe(`<!---->`)
 
     expect(Comp.errorCaptured).toHaveBeenCalledTimes(1)
-    expect('missing template').toHaveBeenWarned()
   })
 
   test('2 components', async () => {
@@ -77,7 +76,6 @@ describe('SSR Suspense', () => {
     )
 
     expect(Comp.errorCaptured).toHaveBeenCalledTimes(1)
-    expect('missing template or render function').toHaveBeenWarned()
   })
 
   test('failing suspense in passing suspense', async () => {
@@ -102,7 +100,6 @@ describe('SSR Suspense', () => {
     )
 
     expect(Comp.errorCaptured).toHaveBeenCalledTimes(1)
-    expect('missing template').toHaveBeenWarned()
   })
 
   // nuxt/nuxt#28162
@@ -152,6 +149,5 @@ describe('SSR Suspense', () => {
       `<div><!----><div><div>async</div></div></div>`,
     )
     expect(Comp.errorCaptured).toHaveBeenCalledTimes(1)
-    expect('missing template').toHaveBeenWarned()
   })
 })

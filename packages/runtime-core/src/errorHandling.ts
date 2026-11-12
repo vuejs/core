@@ -90,7 +90,7 @@ export function callWithAsyncErrorHandling(
     const res = callWithErrorHandling(fn, instance, type, args)
     if (res && isPromise(res)) {
       res.catch(err => {
-        handleError(err, instance, type)
+        handleError(err, instance, type, undefined, true)
       })
     }
     return res
@@ -114,6 +114,7 @@ export function handleError(
   instance: ComponentInternalInstance | null | undefined,
   type: ErrorTypes,
   throwInDev = true,
+  isAsyncError = false,
 ): void {
   const contextVNode = instance ? instance.vnode : null
   const { errorHandler, throwUnhandledErrorInProduction } =
@@ -128,7 +129,13 @@ export function handleError(
       : `https://vuejs.org/error-reference/#runtime-${type}`
     while (cur) {
       const errorCapturedHooks = cur.ec
-      if (errorCapturedHooks) {
+      if (
+        errorCapturedHooks &&
+        !cur.isUnmounted &&
+        // Async failures may outlive stopped scopes whose unmount effects
+        // are deferred or discarded by Suspense.
+        (!isAsyncError || cur.scope.active)
+      ) {
         for (let i = 0; i < errorCapturedHooks.length; i++) {
           if (
             errorCapturedHooks[i](err, exposedInstance, errorInfo) === false

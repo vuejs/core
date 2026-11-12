@@ -5,6 +5,8 @@ import type {
   Node,
   ObjectPattern,
   Program,
+  StaticBlock,
+  SwitchCase,
   VariableDeclaration,
 } from '@babel/types'
 import { walk } from 'estree-walker'
@@ -154,8 +156,12 @@ export function transformDestructuredProps(
     }
   }
 
-  function walkScope(node: Program | BlockStatement, isRoot = false) {
-    for (const stmt of node.body) {
+  function walkScope(
+    node: Program | BlockStatement | StaticBlock | SwitchCase,
+    isRoot = false,
+  ) {
+    const body = node.type === 'SwitchCase' ? node.consequent : node.body
+    for (const stmt of body) {
       if (stmt.type === 'VariableDeclaration') {
         walkVariableDeclaration(stmt, isRoot)
       } else if (
@@ -205,7 +211,7 @@ export function transformDestructuredProps(
   }
 
   function walkFunctionScopeVarDeclarations(
-    scopeNode: Program | BlockStatement,
+    scopeNode: Program | BlockStatement | StaticBlock,
     isRoot = false,
   ) {
     const scope = functionScopeStack[functionScopeStack.length - 1]
@@ -334,13 +340,22 @@ export function transformDestructuredProps(
         return
       }
 
+      // Class static blocks have their own var scope.
+      if (node.type === 'StaticBlock') {
+        pushScope(true)
+        walkFunctionScopeVarDeclarations(node)
+        walkScope(node)
+        return
+      }
+
       // catch param
       if (node.type === 'CatchClause') {
         pushScope()
-        if (node.param && node.param.type === 'Identifier') {
-          registerLocalBinding(node.param)
+        if (node.param) {
+          for (const id of extractIdentifiers(node.param)) {
+            registerLocalBinding(id)
+          }
         }
-        walkScope(node.body)
         return
       }
 
@@ -384,17 +399,29 @@ export function transformDestructuredProps(
       if (node === currentModelOption) {
         currentModelOption = null
       }
-      if (isFunctionType(node)) {
+      if (isFunctionType(node) || node.type === 'StaticBlock') {
         popScope(true)
       } else if (node.type === 'BlockStatement' && !isFunctionType(parent!)) {
         popScope()
       } else if (
         node.type === 'CatchClause' ||
+        node.type === 'SwitchStatement' ||
         node.type === 'ForOfStatement' ||
         node.type === 'ForInStatement' ||
         node.type === 'ForStatement'
       ) {
         popScope()
+      }
+      // Case bindings do not apply to the switch discriminant.
+      if (
+        parent &&
+        parent.type === 'SwitchStatement' &&
+        node === parent.discriminant
+      ) {
+        pushScope()
+        for (const switchCase of parent.cases) {
+          walkScope(switchCase)
+        }
       }
     },
   })

@@ -22,6 +22,16 @@ export enum SchedulerJobFlags {
    */
   ALLOW_RECURSE = 1 << 2,
   DISPOSED = 1 << 3,
+  /**
+   * A post job buffered by a suspense boundary is queued, not dropped, when
+   * the pending branch is discarded.
+   */
+  REQUEUE_ON_SUSPENSE_DISCARD = 1 << 4,
+  /**
+   * A post job buffered by a suspense boundary is queued as soon as that
+   * boundary resolves.
+   */
+  FLUSH_ON_SUSPENSE_RESOLVE = 1 << 5,
 }
 
 export interface SchedulerJob extends Function {

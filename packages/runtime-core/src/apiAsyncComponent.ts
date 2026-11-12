@@ -11,9 +11,8 @@ import { isFunction, isObject } from '@vue/shared'
 import type { ComponentPublicInstance } from './componentPublicInstance'
 import { type VNode, createVNode } from './vnode'
 import { defineComponent } from './apiDefineComponent'
-import { onUnmounted } from './apiLifecycle'
 import { warn } from './warning'
-import { ref } from '@vue/reactivity'
+import { onScopeDispose, ref } from '@vue/reactivity'
 import { ErrorCodes, handleError } from './errorHandling'
 import { isKeepAlive } from './components/KeepAlive'
 import { markAsyncBoundary } from './helpers/useId'
@@ -177,6 +176,7 @@ export function defineAsyncComponent<
           instance,
           ErrorCodes.ASYNC_COMPONENT_LOADER,
           !errorComponent /* do not throw in dev if user provided error component */,
+          true,
         )
       }
 
@@ -207,7 +207,9 @@ export function defineAsyncComponent<
       let timeoutTimer: ReturnType<typeof setTimeout> | undefined
       let delayTimer: ReturnType<typeof setTimeout> | undefined
 
-      onUnmounted(() => {
+      // a setup resource: released with the scope, which a discarded
+      // suspense branch stops without running the unmount hooks
+      onScopeDispose(() => {
         if (timeoutTimer != null) clearTimeout(timeoutTimer)
         if (delayTimer != null) clearTimeout(delayTimer)
       })
