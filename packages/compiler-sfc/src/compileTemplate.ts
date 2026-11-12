@@ -232,8 +232,14 @@ function doCompileTemplate({
     hmr: !isProd,
     nodeTransforms: nodeTransforms.concat(compilerOptions.nodeTransforms || []),
     filename,
-    onError: e => errors.push(e),
-    onWarn: w => warnings.push(w),
+    onError: e => {
+      errors.push(e)
+      compilerOptions.onError?.(e)
+    },
+    onWarn: w => {
+      warnings.push(w)
+      compilerOptions.onWarn?.(w)
+    },
   })
 
   // inMap should be the map produced by ./parse.ts which is a simple line-only
