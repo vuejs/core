@@ -74,20 +74,36 @@ function createIterableMethod(
   }
 }
 
-function createReadonlyMethod(type: TriggerOpTypes): Function {
+function createReadonlyMethod(type: TriggerOpTypes, method?: string): Function {
+  const isGetOrInsertOp =
+    method === 'getOrInsert' || method === 'getOrInsertComputed'
+
   return function (this: CollectionTypes, ...args: unknown[]) {
+    const target = toRaw(this)
+    const key = args[0]
+    if (isGetOrInsertOp) {
+      const { has } = getProto(target)
+      const hadKey = has.call(target, key) || has.call(target, toRaw(key))
+      if (hadKey) {
+        return (this as MapTypes).get(key)
+      }
+    }
+
     if (__DEV__) {
-      const key = args[0] ? `on key "${args[0]}" ` : ``
+      const keyInfo = key ? `on key "${key}" ` : ``
+      const methodInfo = isGetOrInsertOp ? `(method: ${method}()) ` : ''
       warn(
-        `${capitalize(type)} operation ${key}failed: target is readonly.`,
-        toRaw(this),
+        `${capitalize(type)} operation ${methodInfo}${keyInfo}failed: target is readonly.`,
+        target,
       )
     }
-    return type === TriggerOpTypes.DELETE
-      ? false
-      : type === TriggerOpTypes.CLEAR
-        ? undefined
-        : this
+    return isGetOrInsertOp
+      ? undefined
+      : type === TriggerOpTypes.DELETE
+        ? false
+        : type === TriggerOpTypes.CLEAR
+          ? undefined
+          : this
   }
 }
 
@@ -162,6 +178,11 @@ function createInstrumentations(
       ? {
           add: createReadonlyMethod(TriggerOpTypes.ADD),
           set: createReadonlyMethod(TriggerOpTypes.SET),
+          getOrInsert: createReadonlyMethod(TriggerOpTypes.SET, 'getOrInsert'),
+          getOrInsertComputed: createReadonlyMethod(
+            TriggerOpTypes.SET,
+            'getOrInsertComputed',
+          ),
           delete: createReadonlyMethod(TriggerOpTypes.DELETE),
           clear: createReadonlyMethod(TriggerOpTypes.CLEAR),
         }
@@ -209,6 +230,28 @@ function createInstrumentations(
               trigger(target, TriggerOpTypes.SET, key, value, oldValue)
             }
             return this
+          },
+          getOrInsert(this: MapTypes, key: unknown, defaultValue: unknown) {
+            const target = toRaw(this)
+            const { has } = getProto(target)
+            const hadKey = has.call(target, key) || has.call(target, toRaw(key))
+            if (!hadKey) {
+              this.set(key, defaultValue)
+            }
+            return this.get(key)
+          },
+          getOrInsertComputed(
+            this: MapTypes,
+            key: unknown,
+            callback: (key: unknown) => unknown,
+          ) {
+            const target = toRaw(this)
+            const { has } = getProto(target)
+            const hadKey = has.call(target, key) || has.call(target, toRaw(key))
+            if (!hadKey) {
+              this.set(key, callback(key))
+            }
+            return this.get(key)
           },
           delete(this: CollectionTypes, key: unknown) {
             const target = toRaw(this)

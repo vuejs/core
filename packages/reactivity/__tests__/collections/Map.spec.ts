@@ -1,4 +1,4 @@
-import { effect, isReactive, reactive, toRaw } from '../../src'
+import { effect, isReactive, reactive, readonly, toRaw } from '../../src'
 
 describe('reactivity/collections', () => {
   function coverCollectionFn(collection: Map<any, any>, fnName: string) {
@@ -495,6 +495,104 @@ describe('reactivity/collections', () => {
       )) {
         expect(key in wrappedIterator).toBe(true)
       }
+    })
+
+    it('Map.getOrInsert', () => {
+      // @ts-expect-error
+      if (!Map.prototype.getOrInsert) {
+        // @ts-expect-error
+        Map.prototype.getOrInsert = undefined
+      }
+
+      const map = reactive(new Map([[1, 1]]))
+      const log: any[] = []
+
+      effect(() => {
+        // @ts-expect-error
+        log.push('get 1', map.getOrInsert(1, NaN))
+      })
+
+      effect(() => {
+        // @ts-expect-error
+        log.push('get 2', map.getOrInsert(2, 2))
+      })
+
+      effect(() => {
+        log.push('get 3', map.get(3))
+      })
+
+      expect(log).toEqual(['get 1', 1, 'get 2', 2, 'get 3', undefined])
+
+      log.length = 0
+      map.delete(2)
+      expect(log).toEqual(['get 2', 2])
+
+      log.length = 0
+      map.set(2, 2)
+      expect(log).toEqual([])
+      // @ts-expect-error
+      expect(map.getOrInsert(3, 3)).toBe(3)
+      expect(log).toEqual(['get 3', 3])
+
+      const readonlyMap = readonly(reactive(new Map([[1, 1]])))
+      // @ts-expect-error
+      expect(readonlyMap.getOrInsert(1, 1)).toBe(1)
+      expect('target is readonly').not.toHaveBeenWarned()
+      // @ts-expect-error
+      expect(readonlyMap.getOrInsert(2, 2)).toBe(undefined)
+      expect('target is readonly').toHaveBeenWarned()
+    })
+
+    it('Map.getOrInsertComputed', () => {
+      // @ts-expect-error
+      if (!Map.prototype.getOrInsertComputed) {
+        // @ts-expect-error
+        Map.prototype.getOrInsertComputed = undefined
+      }
+
+      const map = reactive(new Map([[1, 1]]))
+      const log: any[] = []
+
+      effect(() => {
+        log.push(
+          'get 1',
+          // @ts-expect-error
+          map.getOrInsertComputed(1, () => NaN),
+        )
+      })
+
+      effect(() => {
+        log.push(
+          'get 2',
+          // @ts-expect-error
+          map.getOrInsertComputed(2, x => x),
+        )
+      })
+
+      effect(() => {
+        log.push('get 3', map.get(3))
+      })
+
+      expect(log).toEqual(['get 1', 1, 'get 2', 2, 'get 3', undefined])
+
+      log.length = 0
+      map.delete(2)
+      expect(log).toEqual(['get 2', 2])
+
+      log.length = 0
+      map.set(2, 2)
+      expect(log).toEqual([])
+      // @ts-expect-error
+      expect(map.getOrInsertComputed(3, x => x)).toBe(3)
+      expect(log).toEqual(['get 3', 3])
+
+      const readonlyMap = readonly(reactive(new Map([[1, 1]])))
+      // @ts-expect-error
+      expect(readonlyMap.getOrInsertComputed(1, x => x)).toBe(1)
+      expect('target is readonly').not.toHaveBeenWarned()
+      // @ts-expect-error
+      expect(readonlyMap.getOrInsertComputed(2, x => x)).toBe(undefined)
+      expect('target is readonly').toHaveBeenWarned()
     })
   })
 })
