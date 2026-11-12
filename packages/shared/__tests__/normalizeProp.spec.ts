@@ -208,6 +208,21 @@ describe('stringifyStyle', () => {
     const expected = 'color:blue;font-size:14px;'
     expect(stringifyStyle(style)).toBe(expected)
   })
+
+  test('should keep the leading dash for vendor-prefixed keys', () => {
+    const style = {
+      WebkitLineClamp: 2,
+      webkitBoxOrient: 'vertical',
+      MozAppearance: 'none',
+      msTransform: 'none',
+      '-webkit-transition': 'none',
+      '--webkit-x': 1,
+    }
+
+    expect(stringifyStyle(style)).toBe(
+      '-webkit-line-clamp:2;-webkit-box-orient:vertical;-moz-appearance:none;-ms-transform:none;-webkit-transition:none;--webkit-x:1;',
+    )
+  })
 })
 
 describe('normalizeProps', () => {
