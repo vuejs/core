@@ -181,4 +181,44 @@ describe('ssr: inject <style vars>', () => {
       }"
     `)
   })
+
+  test('w/ keep-alive', () => {
+    expect(
+      compile(`<KeepAlive><component :is="view" /></KeepAlive>`, {
+        ssrCssVars: `{ color }`,
+      }).code,
+    ).toMatchInlineSnapshot(`
+      "const { resolveDynamicComponent: _resolveDynamicComponent, mergeProps: _mergeProps, createVNode: _createVNode } = require("vue")
+      const { ssrRenderVNode: _ssrRenderVNode } = require("vue/server-renderer")
+
+      return function ssrRender(_ctx, _push, _parent, _attrs) {
+        const _cssVars = { style: { color: _ctx.color }}
+        _ssrRenderVNode(_push, _createVNode(_resolveDynamicComponent(_ctx.view), _mergeProps(_attrs, _cssVars), null), _parent)
+      }"
+    `)
+  })
+
+  test('w/ teleport', () => {
+    expect(
+      compile(
+        `<Teleport to="#target"><div v-if="ok" /><span v-else /></Teleport>`,
+        {
+          ssrCssVars: `{ color }`,
+        },
+      ).code,
+    ).toMatchInlineSnapshot(`
+      "const { ssrRenderAttrs: _ssrRenderAttrs, ssrRenderTeleport: _ssrRenderTeleport } = require("vue/server-renderer")
+
+      return function ssrRender(_ctx, _push, _parent, _attrs) {
+        const _cssVars = { style: { color: _ctx.color }}
+        _ssrRenderTeleport(_push, (_push) => {
+          if (_ctx.ok) {
+            _push(\`<div\${_ssrRenderAttrs(_cssVars)}></div>\`)
+          } else {
+            _push(\`<span\${_ssrRenderAttrs(_cssVars)}></span>\`)
+          }
+        }, "#target", false, _parent)
+      }"
+    `)
+  })
 })

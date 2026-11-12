@@ -34,6 +34,17 @@ export const ssrInjectCssVars: NodeTransform = (node, context) => {
   }
 }
 
+// Builtins that render their children without an element of their own, so
+// props bound to them never reach the output and css vars have to be injected
+// into the children instead.
+const isTransparentBuiltin = (tag: string): boolean =>
+  tag === 'suspense' ||
+  tag === 'Suspense' ||
+  tag === 'keep-alive' ||
+  tag === 'KeepAlive' ||
+  tag === 'teleport' ||
+  tag === 'Teleport'
+
 function injectCssVars(node: RootNode | TemplateChildNode) {
   if (
     node.type === NodeTypes.ELEMENT &&
@@ -48,13 +59,13 @@ function injectCssVars(node: RootNode | TemplateChildNode) {
     (node.tagType === ElementTypes.ELEMENT ||
       node.tagType === ElementTypes.COMPONENT)
   ) {
-    if (node.tag === 'suspense' || node.tag === 'Suspense') {
+    if (isTransparentBuiltin(node.tag)) {
       for (const child of node.children) {
         if (
           child.type === NodeTypes.ELEMENT &&
           child.tagType === ElementTypes.TEMPLATE
         ) {
-          // suspense slot
+          // slot content
           child.children.forEach(injectCssVars)
         } else {
           injectCssVars(child)
