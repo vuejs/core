@@ -129,6 +129,60 @@ describe('ssr: inject <style vars>', () => {
     `)
   })
 
+  test('nested template v-for', () => {
+    expect(
+      compile(
+        `<template v-for="i in list"><template v-for="j in i"><div/></template></template>`,
+        {
+          ssrCssVars: `{ color }`,
+        },
+      ).code,
+    ).toMatchInlineSnapshot(`
+      "const { mergeProps: _mergeProps } = require("vue")
+      const { ssrRenderAttrs: _ssrRenderAttrs, ssrRenderList: _ssrRenderList } = require("vue/server-renderer")
+
+      return function ssrRender(_ctx, _push, _parent, _attrs) {
+        const _cssVars = { style: { color: _ctx.color }}
+        _push(\`<!--[-->\`)
+        _ssrRenderList(_ctx.list, (i) => {
+          _push(\`<!--[--><!--[-->\`)
+          _ssrRenderList(i, (j) => {
+            _push(\`<div\${_ssrRenderAttrs(_mergeProps({ ref_for: true }, _cssVars))}></div>\`)
+          })
+          _push(\`<!--]--><!--]-->\`)
+        })
+        _push(\`<!--]-->\`)
+      }"
+    `)
+  })
+
+  test('template v-if with template v-for', () => {
+    expect(
+      compile(
+        `<template v-if="ok"><template v-for="i in list"><div/></template></template>`,
+        {
+          ssrCssVars: `{ color }`,
+        },
+      ).code,
+    ).toMatchInlineSnapshot(`
+      "const { mergeProps: _mergeProps } = require("vue")
+      const { ssrRenderAttrs: _ssrRenderAttrs, ssrRenderList: _ssrRenderList } = require("vue/server-renderer")
+
+      return function ssrRender(_ctx, _push, _parent, _attrs) {
+        const _cssVars = { style: { color: _ctx.color }}
+        if (_ctx.ok) {
+          _push(\`<!--[-->\`)
+          _ssrRenderList(_ctx.list, (i) => {
+            _push(\`<div\${_ssrRenderAttrs(_mergeProps({ ref_for: true }, _cssVars))}></div>\`)
+          })
+          _push(\`<!--]-->\`)
+        } else {
+          _push(\`<!---->\`)
+        }
+      }"
+    `)
+  })
+
   test('w/ suspense', () => {
     expect(
       compile(

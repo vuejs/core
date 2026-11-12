@@ -62,5 +62,10 @@ function injectCssVars(node: RootNode | TemplateChildNode) {
         loc: locStub,
       })
     }
+  } else if (
+    node.type === NodeTypes.ELEMENT &&
+    node.tagType === ElementTypes.TEMPLATE
+  ) {
+    node.children.forEach(injectCssVars)
   }
 }
