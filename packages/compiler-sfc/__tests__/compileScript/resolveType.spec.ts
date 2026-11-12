@@ -1019,6 +1019,42 @@ describe('resolveType', () => {
       })
     })
 
+    test('generic type /w key remapping over type parameter', () => {
+      expect(
+        resolve(`
+        type Remap<K extends string> = { [P in K as Uppercase<P>]?: boolean }
+        defineProps<Remap<'a'> & Remap<'b'>>()
+      `).props,
+      ).toStrictEqual({
+        A: ['Boolean'],
+        B: ['Boolean'],
+      })
+    })
+
+    test('generic type /w mapped type key shadowing a type parameter', () => {
+      expect(
+        resolve(`
+        type Flags<T> = { [T in 'on']?: T }
+        defineProps<Flags<boolean>>()
+      `).props,
+      ).toStrictEqual({
+        on: [UNKNOWN_TYPE],
+      })
+    })
+
+    test('generic type /w parenthesized type', () => {
+      expect(
+        resolve(`
+        type A<T> = (T)
+        type B<T = boolean> = (T) | null
+        defineProps<{ a?: A<boolean>; b?: B }>()
+      `).props,
+      ).toStrictEqual({
+        a: ['Boolean'],
+        b: ['Boolean', 'null'],
+      })
+    })
+
     test('generic from external-file', () => {
       const files = {
         '/foo.ts': 'export type P<T> = { foo: T }',
@@ -1032,6 +1068,26 @@ describe('resolveType', () => {
       )
       expect(props).toStrictEqual({
         foo: ['String'],
+      })
+    })
+
+    test('generic default type parameter from external-file', () => {
+      const files = {
+        '/foo.ts': `
+          type Local = boolean
+          export type P<T = Local> = { foo?: T }
+        `,
+      }
+      const { props } = resolve(
+        `
+        import { P } from './foo'
+        type Local = string
+        defineProps<P>()
+      `,
+        files,
+      )
+      expect(props).toStrictEqual({
+        foo: ['Boolean'],
       })
     })
   })

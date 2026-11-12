@@ -512,6 +512,7 @@ function resolveTypeArguments(
     if (arg) {
       res[p.name] = outer ? substituteTypeParameters(arg, outer) : arg
     } else if (p.default) {
+      ;(p.default as TSType & MaybeWithScope)._ownerScope = decl._ownerScope
       res[p.name] = substituteTypeParameters(p.default, res)
     }
   })
@@ -563,11 +564,13 @@ function resolveMappedType(
     scope = createChildScope(scope)
     scope.isGenericScope = true
     Object.assign(scope.types, typeParameters)
+    delete scope.types[node.typeParameter.name]
   }
   let keys: string[]
   if (node.nameType) {
     const { name, constraint } = node.typeParameter
     scope = createChildScope(scope)
+    scope.isGenericScope = true
     Object.assign(scope.types, { ...typeParameters, [name]: constraint })
     keys = resolveStringType(ctx, node.nameType, scope)
   } else {
@@ -2023,7 +2026,13 @@ export function inferRuntimeType(
       }
 
       case 'TSParenthesizedType':
-        return inferRuntimeType(ctx, node.typeAnnotation, scope)
+        return inferRuntimeType(
+          ctx,
+          node.typeAnnotation,
+          scope,
+          isKeyOf,
+          typeParameters,
+        )
 
       case 'TSUnionType':
         return flattenTypes(ctx, node.types, scope, isKeyOf, typeParameters)
