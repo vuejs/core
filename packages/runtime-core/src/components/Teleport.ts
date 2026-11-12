@@ -554,22 +554,13 @@ export const Teleport = TeleportImpl as unknown as {
 
 function updateCssVars(vnode: VNode, isDisabled: boolean) {
   // presence of .ut method indicates owner component uses css vars.
-  // code path here can assume browser environment.
   const ctx = vnode.ctx
   if (ctx && ctx.ut) {
-    let node, anchor
     if (isDisabled) {
-      node = vnode.el
-      anchor = vnode.anchor
+      ctx.ut(vnode.el, vnode.anchor)
     } else {
-      node = vnode.targetStart
-      anchor = vnode.targetAnchor
+      ctx.ut(vnode.targetStart, vnode.targetAnchor)
     }
-    while (node && node !== anchor) {
-      if (node.nodeType === 1) node.setAttribute('data-v-owner', ctx.uid)
-      node = node.nextSibling
-    }
-    ctx.ut()
   }
 }
 
