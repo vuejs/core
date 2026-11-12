@@ -975,8 +975,10 @@ function baseCreateRenderer(
           hostSetElementText(el, n2.children as string)
         }
       }
-    } else if (!optimized && dynamicChildren == null) {
-      // unoptimized, full diff
+    } else if (!optimized) {
+      // unoptimized, full diff. This also covers blocks that still carry
+      // dynamicChildren (e.g. a compiled v-if branch rendered from a manually
+      // invoked slot): their props cannot be trusted to share a shape.
       patchProps(el, oldProps, newProps, parentComponent, namespace)
     }
 
