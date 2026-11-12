@@ -283,5 +283,9 @@ export function computed<T>(
     cRef.onTrigger = debugOptions.onTrigger
   }
 
+  if (isSSR && activeEffectScope !== undefined) {
+    link(cRef, activeEffectScope)
+  }
+
   return cRef as any
 }
