@@ -50,6 +50,7 @@ export class ScriptCompileContext {
   propsDestructuredBindings: PropsDestructureBindings = Object.create(null)
   propsDestructureRestId: string | undefined
   propsRuntimeDefaults: Node | undefined
+  propsRuntimeExtra: Node | undefined
 
   // defineEmits
   emitsRuntimeDecl: Node | undefined
