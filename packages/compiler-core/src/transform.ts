@@ -129,6 +129,7 @@ export function createTransformContext(
   root: RootNode,
   {
     filename = '',
+    allowSideEffectTags = false,
     prefixIdentifiers = false,
     hoistStatic = false,
     hmr = false,
@@ -157,6 +158,7 @@ export function createTransformContext(
     // options
     filename,
     selfName: nameMatch && capitalize(camelize(nameMatch[1])),
+    allowSideEffectTags,
     prefixIdentifiers,
     hoistStatic,
     hmr,
