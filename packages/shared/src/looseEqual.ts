@@ -4,9 +4,9 @@ import {
   isDate,
   isMap,
   isObject,
-  isPlainObject,
   isSet,
   isSymbol,
+  toTypeString,
 } from './general'
 
 type ComparisonState = [Map<any, any>, Map<any, any>]
@@ -73,13 +73,7 @@ function looseCompareObjects(a: any, b: any, seen: ComparisonState) {
       return false
     }
   }
-  // plain (or prototype-less) objects with equal own enumerable keys and
-  // values are considered equal - String() would throw for prototype-less
-  // objects and is a no-op comparison for plain ones
-  if (isPlainObject(a) && isPlainObject(b)) {
-    return true
-  }
-  return String(a) === String(b)
+  return toComparableString(a) === toComparableString(b)
 }
 
 function looseCompareNested(
@@ -135,4 +129,14 @@ export function looseEqual(a: any, b: any, seen?: ComparisonState): boolean {
 
 export function looseIndexOf(arr: any[], val: any): number {
   return arr.findIndex(item => looseEqual(item, val))
+}
+
+function toComparableString(value: any): string {
+  // Only supply a default for prototype-less objects without conversion methods.
+  return Object.getPrototypeOf(value) === null &&
+    value[Symbol.toPrimitive] == null &&
+    typeof value.toString !== 'function' &&
+    typeof value.valueOf !== 'function'
+    ? toTypeString(value)
+    : String(value)
 }
