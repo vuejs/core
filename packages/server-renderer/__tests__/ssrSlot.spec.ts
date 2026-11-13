@@ -342,4 +342,20 @@ describe('ssr: slot', () => {
       ),
     ).toBe(`<button><!--[--><!--]--></button>`)
   })
+
+  test('conditional slot handed on in a new object', async () => {
+    const Wrapper = {
+      setup(_: any, { slots }: any) {
+        return () => h(components.one, null, { ...slots })
+      },
+    }
+    expect(
+      await renderToString(
+        createApp({
+          components: { Wrapper },
+          template: `<Wrapper><template v-if="true" #default>hello</template></Wrapper>`,
+        }),
+      ),
+    ).toBe(`<div><!--[-->hello<!--]--></div>`)
+  })
 })
