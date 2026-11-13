@@ -8,6 +8,7 @@ import {
   Comment,
   type VNode,
   type VNodeArrayChildren,
+  VaporSlot,
   blockStack,
   cloneVNode,
   createVNode,
@@ -212,7 +213,12 @@ export function renderComponentRoot(
 
   // inherit directives
   if (vnode.dirs) {
-    if (__DEV__ && !isElementRoot(root)) {
+    if (
+      __DEV__ &&
+      !isElementRoot(root) &&
+      // vapor slot content: the interop runs them on its root
+      !(root.type === VaporSlot && root.vs!.attrs)
+    ) {
       warn(
         `Runtime directive used on component with non-element root node. ` +
           `The directives will not function as intended.`,
