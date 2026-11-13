@@ -1332,22 +1332,18 @@ describe('compiler v-bind', () => {
     [
       `<video :playbackRate="2"/>`,
       `<video>`,
-      `_setProp(n0, "playbackRate", "2")`,
+      `_setProp(n0, "playbackRate", 2)`,
     ],
     [
       `<video :defaultPlaybackRate="2"/>`,
       `<video>`,
-      `_setProp(n0, "defaultPlaybackRate", "2")`,
+      `_setProp(n0, "defaultPlaybackRate", 2)`,
     ],
-    [
-      `<video :currentTime="3"/>`,
-      `<video>`,
-      `_setProp(n0, "currentTime", "3")`,
-    ],
+    [`<video :currentTime="3"/>`, `<video>`, `_setProp(n0, "currentTime", 3)`],
     [
       `<input :valueAsNumber="5"/>`,
       `<input>`,
-      `_setProp(n0, "valueAsNumber", "5")`,
+      `_setProp(n0, "valueAsNumber", 5)`,
     ],
   ])(
     'constant props with no content attribute behind them: %s',
@@ -1392,7 +1388,7 @@ describe('compiler v-bind', () => {
     expect(code).toMatchSnapshot()
     expect(code).toContain(
       `_renderEffect(() => _setProp(n0, "max", _ctx.max))\n` +
-        `  _setProp(n0, "valueAsNumber", "500")\n` +
+        `  _setProp(n0, "valueAsNumber", 500)\n` +
         `  _renderEffect(() => _setProp(n0, "title", _ctx.title))`,
     )
   })
@@ -1661,5 +1657,66 @@ describe('compiler v-bind', () => {
     const value = code.indexOf('_syncSelectValue(n1)')
     expect(value).toBeGreaterThan(-1)
     expect(code.indexOf('_applySelectModel(n1,')).toBeGreaterThan(value)
+  })
+
+  // The parser lowercases attribute names on html elements, so a camelCase
+  // dom property would only leave a dead `defaultvalue` attribute behind.
+  test.each([
+    [
+      `<textarea defaultValue="hi"/>`,
+      `<textarea>`,
+      `_setProp(n0, "defaultValue", "hi")`,
+    ],
+    [`<div className="foo"/>`, `<div>`, `_setProp(n0, "className", "foo")`],
+    [`<div ariaLabel="x"/>`, `<div>`, `_setDOMProp(n0, "ariaLabel", "x")`],
+  ])(
+    'camelCase dom props on an html element: %s',
+    (template, expectedTemplate, expected) => {
+      const { code } = compileWithVBind(template)
+
+      expect(code).toContain(`_template("${expectedTemplate}"`)
+      expect(code).toContain(expected)
+    },
+  )
+
+  // A lowercased name that is the attribute behind the property, hyphenated
+  // names and foreign elements, where the parser keeps or adjusts the case.
+  test.each([
+    [`<div tabIndex="0"/>`, `_template("<div tabIndex=0>"`],
+    [`<div data-fooBar="x"/>`, `_template("<div data-fooBar=x>"`],
+    [`<svg viewBox="0 0 1 1"/>`, `_template("<svg viewBox=\\"0 0 1 1\\">"`],
+  ])(
+    'camelCase attributes the template string does carry: %s',
+    (template, expected) => {
+      const { code } = compileWithVBind(template)
+
+      expect(code).toContain(expected)
+      expect(code).not.toContain('_setProp')
+    },
+  )
+
+  // A camelCase dom property only reaches a runtime setter, so a number has
+  // to keep its type: `"0"` would turn a boolean property on.
+  test.each([
+    [
+      `<input type="checkbox" :defaultChecked="0">`,
+      `_setProp(n0, "defaultChecked", 0)`,
+    ],
+    [
+      `<input type="checkbox" :default-checked.camel="0">`,
+      `_setProp(n0, "defaultChecked", 0)`,
+    ],
+    [
+      `<option :defaultSelected="0"></option>`,
+      `_setProp(n0, "defaultSelected", 0)`,
+    ],
+    [
+      `<option :default-selected.camel="0"></option>`,
+      `_setProp(n0, "defaultSelected", 0)`,
+    ],
+  ])('camelCase dom prop number literals: %s', (template, expected) => {
+    const { code } = compileWithVBind(template)
+
+    expect(code).toContain(expected)
   })
 })

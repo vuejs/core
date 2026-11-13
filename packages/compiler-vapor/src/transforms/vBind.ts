@@ -14,6 +14,7 @@ import {
   isFoldableBooleanAttr,
   isModelValueProp,
   isReservedProp,
+  isRuntimeOnlyProp,
 } from './transformElement'
 
 // same-name shorthand - :arg is expanded to :arg="arg"
@@ -55,15 +56,24 @@ export const transformVBind: DirectiveTransform = (dir, node, context) => {
   // A slot's computed key must retain object overwrite / normalization semantics.
   if (node.tagType !== ElementTypes.SLOT) arg = resolveExpression(arg)
 
+  let camel = false
+  if (modifiersString.includes('camel')) {
+    if (arg.isStatic) {
+      arg = extend({}, arg, { content: camelize(arg.content) })
+    } else {
+      camel = true
+    }
+  }
+
   // A number literal loses its type as soon as it is stringified into the
   // template, so hold it back wherever the value does not end up there as a
   // string: component, slot outlet and custom element props are passed as raw
   // values, a `.prop` binding sets a dom property from the raw value, a
   // dynamic key is always applied at runtime, boolean attributes are folded
-  // from the type of the value itself, and v-model reads its value props back
-  // off the element. With `.attr`, `setAttr` still checks special boolean
-  // attributes and stores raw checkbox true/false values before calling
-  // `setAttribute`.
+  // from the type of the value itself, v-model reads its value props back off
+  // the element, and runtime-only props never reach the template. With
+  // `.attr`, `setAttr` still checks special boolean attributes and stores raw
+  // checkbox true/false values before calling `setAttribute`.
   const excludeNumber =
     node.tagType === ElementTypes.COMPONENT ||
     node.tagType === ElementTypes.SLOT ||
@@ -74,7 +84,8 @@ export const transformVBind: DirectiveTransform = (dir, node, context) => {
     isCheckboxValueProp(node, arg.content) ||
     (!modifiersString.includes('attr') &&
       (isFoldableBooleanAttr(arg.content) ||
-        isModelValueProp(node, arg.content)))
+        isModelValueProp(node, arg.content) ||
+        isRuntimeOnlyProp(node, arg.content)))
   exp = resolveExpression(exp, excludeNumber)
 
   if (
@@ -84,15 +95,6 @@ export const transformVBind: DirectiveTransform = (dir, node, context) => {
     !(arg.content === 'key' && node.tagType === ElementTypes.SLOT)
   )
     return
-
-  let camel = false
-  if (modifiersString.includes('camel')) {
-    if (arg.isStatic) {
-      arg = extend({}, arg, { content: camelize(arg.content) })
-    } else {
-      camel = true
-    }
-  }
 
   return {
     key: arg,
