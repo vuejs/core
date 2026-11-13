@@ -1023,7 +1023,7 @@ function isCssVarsRoot(root: VNode | undefined, vnode: VNode): boolean {
     root === vnode ||
     !!(
       root &&
-      root.type === Fragment &&
+      (root.type === Fragment || root.shapeFlag & ShapeFlags.TELEPORT) &&
       (root.children as VNode[]).some(child => isCssVarsRoot(child, vnode))
     )
   )

@@ -4644,4 +4644,62 @@ describe('SSR hydration', () => {
     expect(`Hydration style mismatch`).toHaveBeenWarnedTimes(1)
     app.unmount()
   })
+
+  test.each([
+    { disabled: false, clientOpacity: 0.5, mismatches: 0 },
+    { disabled: true, clientOpacity: 0.5, mismatches: 0 },
+    { disabled: false, clientOpacity: 0.75, mismatches: 1 },
+    { disabled: true, clientOpacity: 0.75, mismatches: 1 },
+  ])(
+    'hydrates css vars on Teleport roots (disabled: $disabled, mismatches: $mismatches)',
+    async ({ disabled, clientOpacity, mismatches }) => {
+      const template = `<Teleport to="#css-vars-target" :disabled="disabled">
+        <div :style="{ opacity }"><i :style="{ opacity: 0.5 }" /></div>
+      </Teleport>`
+      const { code } = compileSSR(template, {
+        ssrCssVars: `{ "--color": color }`,
+      })
+      const color = ref('red')
+      const opacity = ref(0.5)
+      const App = {
+        setup() {
+          useCssVars(() => ({ color: color.value }))
+          return { color, opacity, disabled }
+        },
+        render: compileToFunction(template),
+        ssrRender: new Function('require', code)((id: string) =>
+          id === 'vue' ? runtimeDom : serverRenderer,
+        ),
+      }
+      const container = document.createElement('div')
+      const target = document.createElement('div')
+      target.id = 'css-vars-target'
+      const ctx: SSRContext = {}
+      container.innerHTML = await renderToString(h(App), ctx)
+      target.innerHTML = ctx.teleports!['#css-vars-target']
+      document.body.append(container, target)
+
+      const content = disabled ? container : target
+      const root = content.firstElementChild as HTMLElement
+      const child = root.firstElementChild as HTMLElement
+      expect(root.style.getPropertyValue('--color')).toBe('red')
+      expect(child.style.getPropertyValue('--color')).toBe('')
+
+      opacity.value = clientOpacity
+      const app = createSSRApp(App)
+      app.mount(container)
+      expect(`Hydration style mismatch`).toHaveBeenWarnedTimes(mismatches)
+      expect(content.firstElementChild).toBe(root)
+      expect(root.style.getPropertyValue('--color')).toBe('red')
+
+      color.value = 'blue'
+      await nextTick()
+      expect(content.firstElementChild).toBe(root)
+      expect(root.style.getPropertyValue('--color')).toBe('blue')
+      expect(child.style.getPropertyValue('--color')).toBe('')
+      app.unmount()
+      container.remove()
+      target.remove()
+    },
+  )
 })
