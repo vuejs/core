@@ -704,8 +704,8 @@ export function activate(
     () => {
       instance.isDeactivated = false
       if (instance.a) invokeArrayFns(instance.a)
-      if (instance.hasVNodeHooks)
-        invokeComponentVNodeHook(instance, 'onVnodeMounted')
+      // the cached component fires, an async wrapper included
+      invokeComponentVNodeHook(instance, 'onVnodeMounted')
     },
     undefined,
     parentSuspense,
@@ -735,8 +735,7 @@ export function deactivate(
   queuePostRenderEffect(
     () => {
       if (instance.da) invokeArrayFns(instance.da)
-      if (instance.hasVNodeHooks)
-        invokeComponentVNodeHook(instance, 'onVnodeUnmounted')
+      invokeComponentVNodeHook(instance, 'onVnodeUnmounted')
       instance.isDeactivated = true
     },
     undefined,

@@ -427,6 +427,59 @@ describe('component: @vue:xxx lifecycle events', () => {
     app.unmount()
   })
 
+  // the cached component fires, an async wrapper included
+  test('KeepAlive: async component', async () => {
+    const run = async (vapor: boolean) => {
+      const data = makeData()
+      const log: string[] = data.value.log
+      const Inner = compile(lifecycleChild('inner'), data, {}, { vapor })
+      let resolve!: (comp: any) => void
+      const loader = () => new Promise<any>(r => (resolve = r))
+      const Async = vapor
+        ? defineVaporAsyncComponent(loader)
+        : defineAsyncComponent(loader)
+      const App = compile(
+        `${appScript}
+        <template>
+          <KeepAlive>
+            <components.Async
+              v-if="data.show"
+              @vue:before-mount="data.bm"
+              @vue:mounted="data.m"
+              @vue:before-unmount="data.bum"
+              @vue:unmounted="data.um"
+            />
+          </KeepAlive>
+        </template>`,
+        data,
+        { Async },
+        { vapor },
+      )
+      const { app } = mountApp(App, vapor)
+      const logs: Logs = {}
+      resolve(Inner)
+      await new Promise(r => setTimeout(r))
+      await nextTick()
+      logs.resolve = log.splice(0)
+      data.value.show = false
+      await nextTick()
+      logs.deactivate = log.splice(0)
+      data.value.show = true
+      await nextTick()
+      logs.activate = log.splice(0)
+      app.unmount()
+      return logs
+    }
+
+    const vdom = await run(false)
+    expect(vdom).toEqual({
+      resolve: ['inner:bm', 'vnode:bm', 'inner:m', 'vnode:m', 'inner:a'],
+      deactivate: ['inner:da', 'vnode:um'],
+      activate: ['inner:a', 'vnode:m'],
+    })
+    expect(await run(true)).toEqual(vdom)
+  })
+
   test('hooks are called without arguments', async () => {
     const data = makeData()
     const spies: Record<string, any> = {}

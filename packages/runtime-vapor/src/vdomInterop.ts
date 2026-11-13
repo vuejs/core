@@ -455,16 +455,19 @@ function getInteropTransitionElement(
 
 // The vnode's evaluated props as the child's raw props: marked for
 // initInputs, and replaced on every patch so no first frame is retained.
-// The hooks kept here are the ones the component fires itself.
+// The hooks kept here are the ones the component fires itself; an async
+// wrapper hands all its mount hooks to the component it renders.
 function interopRawProps(vnode: VNode): RawProps {
   const rawProps: RawProps = {}
   const props = vnode.props
+  const asyncWrapper = isAsyncWrapper(vnode)
   for (const key in props) {
     if (
       !isReservedProp(key) ||
       key === 'onVnodeMounted' ||
       key === 'onVnodeBeforeUnmount' ||
-      key === 'onVnodeUnmounted'
+      key === 'onVnodeUnmounted' ||
+      (asyncWrapper && key === 'onVnodeBeforeMount')
     ) {
       rawProps[key] = props[key]
     }

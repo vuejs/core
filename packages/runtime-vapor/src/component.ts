@@ -1715,11 +1715,12 @@ export function mountComponent(
     )
   }
   if (
-    isKeepAliveEnabled &&
-    instance.shapeFlag! & ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE &&
-    instance.a
+    (isKeepAliveEnabled &&
+      instance.shapeFlag! & ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE) ||
+    (isInteropEnabled && isKeptAliveAsyncWrapper(instance.parent))
   ) {
-    queuePostRenderEffect(instance.a!, undefined, instance.suspense)
+    instance.a &&
+      queuePostRenderEffect(instance.a, undefined, instance.suspense)
   }
   instance.isMounted = true
   if (__DEV__) {
@@ -1728,6 +1729,21 @@ export function mountComponent(
   if (__DEV__ || __FEATURE_PROD_DEVTOOLS__) {
     devtoolsComponentAdded(instance)
   }
+}
+
+// A vdom KeepAlive marks the async wrapper it renders, of either mode, not
+// the component the wrapper resolves to, whose activated hooks are still due
+// on its first mount.
+function isKeptAliveAsyncWrapper(
+  parent: GenericComponentInstance | null,
+): boolean {
+  return !!(
+    parent &&
+    isAsyncWrapper(parent) &&
+    (parent.vapor
+      ? (parent as VaporComponentInstance).shapeFlag!
+      : parent.vnode!.shapeFlag) & ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE
+  )
 }
 
 /**
@@ -1741,13 +1757,19 @@ export function invokeComponentVNodeHook(
 ): void {
   const hook = instance.rawValues[name]
   if (hook) {
+    let vnode = isInteropEnabled && instance.interopVNode
+    if (isInteropEnabled && !vnode && isAsyncComponentEnabled) {
+      // the component an async wrapper renders stands for the wrapper's vnode
+      const parent = instance.parent
+      if (parent && parent.vapor && isAsyncWrapper(parent)) {
+        vnode = (parent as VaporComponentInstance).interopVNode
+      }
+    }
     callWithAsyncErrorHandling(
       hook,
       instance.parent,
       ErrorCodes.VNODE_HOOK,
-      isInteropEnabled && instance.interopVNode
-        ? [instance.interopVNode]
-        : undefined,
+      vnode ? [vnode] : undefined,
     )
   }
 }
