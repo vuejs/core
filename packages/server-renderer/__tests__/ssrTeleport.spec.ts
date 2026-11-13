@@ -3,6 +3,9 @@ import { renderToString } from '../src/renderToString'
 import { renderToSimpleStream } from '../src/renderToStream'
 import type { SSRContext } from '../src/render'
 import { ssrRenderTeleport } from '../src/helpers/ssrRenderTeleport'
+import * as runtimeDom from '@vue/runtime-dom'
+import * as serverRenderer from '@vue/server-renderer'
+import { compile as compileSSR } from '@vue/compiler-ssr'
 
 describe('ssrRenderTeleport', () => {
   test('teleport rendering (compiled)', async () => {
@@ -205,6 +208,26 @@ describe('ssrRenderTeleport', () => {
     expect(html).toBe('<!--teleport start--><!--teleport end-->')
     expect(ctx.teleports!['#target']).toBe(
       `<!--teleport start anchor--><div><span>async</span></div><!--teleport anchor-->`,
+    )
+  })
+  test('css vars of the owner reach the teleported content (compiled)', async () => {
+    const { code } = compileSSR(
+      `<Teleport to="#target"><div>content</div></Teleport>`,
+      { ssrCssVars: `{ "--color": color }` },
+    )
+    const ctx: SSRContext = {}
+    const html = await renderToString(
+      createApp({
+        data: () => ({ color: 'red' }),
+        ssrRender: new Function('require', code)((id: string) =>
+          id === 'vue' ? runtimeDom : serverRenderer,
+        ),
+      }),
+      ctx,
+    )
+    expect(html).toBe('<!--teleport start--><!--teleport end-->')
+    expect(ctx.teleports!['#target']).toBe(
+      `<!--teleport start anchor--><div style="--color:red;">content</div><!--teleport anchor-->`,
     )
   })
 })
