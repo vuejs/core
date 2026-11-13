@@ -14144,11 +14144,9 @@ describe('vdomInterop', () => {
       try {
         expect(beforeEnter).toHaveBeenCalledTimes(1)
         expect(enter).toHaveBeenCalledTimes(1)
-        if (__DEV__) {
-          expect(
-            'v-show used on component with non-single-element root node',
-          ).toHaveBeenWarned()
-        }
+        expect(
+          'v-show used on component with non-single-element root node',
+        ).not.toHaveBeenWarned()
       } finally {
         app.unmount()
       }
@@ -18014,4 +18012,83 @@ describe('async component of the other mode in a vdom KeepAlive', () => {
       expect(await run(wrapper, inner)).toEqual(vdom)
     },
   )
+})
+
+describe('vapor root of a vdom component in a vapor parent', () => {
+  // Vapor parent -> vdom component (or async wrapper) -> vapor component
+  const mount = async (
+    wrapper: 'sfc' | 'async',
+    vaporApp: boolean,
+    data: Ref<any>,
+    attrs: string,
+  ) => {
+    const Leaf = compile(
+      `<template><b v-if="data.ok">b</b><i v-else>i</i></template>`,
+      data,
+    )
+    const Wrapper =
+      wrapper === 'sfc'
+        ? compile(
+            `<script setup>const components = _components</script>
+            <template><components.Leaf /></template>`,
+            data,
+            { Leaf },
+            { vapor: false },
+          )
+        : defineAsyncComponent(() => Promise.resolve(Leaf))
+    const App = compile(
+      `<script setup vapor>
+        const data = _data
+        const components = _components
+        const vDir = el => void data.value.seen.push(el.tagName)
+      </script>
+      <template><components.Wrapper ${attrs} /></template>`,
+      data,
+      { Wrapper },
+    )
+    const root = document.createElement('div')
+    const app = (vaporApp ? createVaporApp(App) : createApp(App)).use(
+      vaporInteropPlugin,
+    )
+    app.mount(root)
+    await new Promise(r => setTimeout(r))
+    await nextTick()
+    return { root, app }
+  }
+
+  // in a vdom app the root chain holds the roots of two interop-mounted
+  // vapor components
+  test.each([
+    ['sfc', false],
+    ['async', false],
+    ['async', true],
+  ] as const)(
+    'v-show reaches it (%s wrapper, vapor app: %s)',
+    async (wrapper, vaporApp) => {
+      const data = ref({ show: true, ok: true })
+      const { root, app } = await mount(
+        wrapper,
+        vaporApp,
+        data,
+        'v-show="data.show"',
+      )
+      data.value.show = false
+      await nextTick()
+      expect(root.innerHTML).toBe('<b style="display: none;">b</b><!--if-->')
+      data.value.ok = false
+      await nextTick()
+      expect(root.innerHTML).toBe('<i style="display: none;">i</i><!--if-->')
+      data.value.show = true
+      await nextTick()
+      expect(root.innerHTML).toBe('<i style="">i</i><!--if-->')
+      app.unmount()
+    },
+  )
+
+  test('directives reach it', async () => {
+    const data = ref({ ok: true, seen: [] as string[] })
+    const { app } = await mount('sfc', true, data, 'v-dir')
+    expect(data.value.seen).toEqual(['B'])
+    app.unmount()
+  })
 })

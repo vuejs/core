@@ -488,7 +488,9 @@ const vaporInteropImpl = {
     parentComponent,
     parentSuspense,
   ) {
-    const selfAnchor = (vnode.anchor = createTextNode())
+    // trails the block in the nodes resolved for the vnode, but is not content:
+    // root resolution and validity skip it, as they do once hydration claims it
+    const selfAnchor = (vnode.anchor = claimAnchor(createTextNode()))
     vnode.el = selfAnchor
     container.insertBefore(selfAnchor, anchor)
     const prev = currentInstance
@@ -4958,18 +4960,29 @@ function createInteropRawSlots(slotsRef: ShallowRef<Slots>): RawSlots {
 }
 
 // vnode.el of an interop-mounted vapor component must follow its dynamic
-// root across branch switches.
+// root across branch switches. A root chain that crosses vdom content can
+// hold the root of several of them.
 const interopRootSyncProducers = new WeakMap<
   DynamicFragment | VaporComponentInstance,
-  VaporComponentInstance
+  WeakSet<VaporComponentInstance>
 >()
+
+function isInteropRootSynced(
+  producer: DynamicFragment | VaporComponentInstance,
+  instance: VaporComponentInstance,
+): boolean {
+  let synced = interopRootSyncProducers.get(producer)
+  if (!synced) interopRootSyncProducers.set(producer, (synced = new WeakSet()))
+  if (synced.has(instance)) return true
+  synced.add(instance)
+  return false
+}
 
 function registerInteropRootSync(
   instance: VaporComponentInstance,
   frag: DynamicFragment,
 ): void {
-  if (interopRootSyncProducers.get(frag) === instance) return
-  interopRootSyncProducers.set(frag, instance)
+  if (isInteropRootSynced(frag, instance)) return
   ;(frag.u ||= []).push(() => syncInteropRoot(instance))
   // A slot outlet is vdom's fragment root, whose transition root is the
   // branch entering: a relayed vdom Transition's early removal reads it
@@ -4990,8 +5003,7 @@ function registerInteropRootRerenderSync(
   instance: VaporComponentInstance,
   comp: VaporComponentInstance,
 ): void {
-  if (interopRootSyncProducers.get(comp) === instance) return
-  interopRootSyncProducers.set(comp, instance)
+  if (isInteropRootSynced(comp, instance)) return
   ;(comp.hmrRootHooks ||= []).push(() => syncInteropRoot(instance))
 }
 
