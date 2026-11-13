@@ -10901,6 +10901,55 @@ describe('vdomInterop', () => {
         'vnode updated',
       ])
     })
+
+    test('vnode mounted runs before the activated hooks of a kept-alive child', async () => {
+      const run = async (vapor: boolean) => {
+        const calls: string[] = []
+        const data = ref({ log: (hook: string) => calls.push(hook) })
+        const Child = compile(
+          `<script setup>
+          import { onActivated, onMounted } from 'vue'
+          const data = _data
+          onMounted(() => data.value.log('child mounted'))
+          onActivated(() => data.value.log('child activated'))
+          </script>
+          <template>
+            <div>child</div>
+          </template>`,
+          data,
+          {},
+          { vapor },
+        )
+        const App = compile(
+          `<script setup>
+          const data = _data
+          const components = _components
+          </script>
+          <template>
+            <KeepAlive>
+              <components.Child @vue:mounted="data.log('vnode mounted')" />
+            </KeepAlive>
+          </template>`,
+          data,
+          { Child },
+          { vapor: false },
+        )
+        const app = createApp(App)
+        app.use(vaporInteropPlugin)
+        app.mount(document.createElement('div'))
+        await nextTick()
+        app.unmount()
+        return calls
+      }
+
+      const vdom = await run(false)
+      expect(vdom).toEqual([
+        'child mounted',
+        'vnode mounted',
+        'child activated',
+      ])
+      expect(await run(true)).toEqual(vdom)
+    })
   })
 
   describe('transition', () => {

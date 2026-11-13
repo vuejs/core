@@ -1732,7 +1732,8 @@ export function mountComponent(
 
 /**
  * Fires a `@vue:xxx` listener of the component. It is read on firing, like
- * an emit listener, and there is no vnode to pass.
+ * an emit listener. A vapor parent has no vnode to pass; a vdom parent's
+ * hooks get the vnode it rendered.
  */
 export function invokeComponentVNodeHook(
   instance: VaporComponentInstance,
@@ -1740,7 +1741,14 @@ export function invokeComponentVNodeHook(
 ): void {
   const hook = instance.rawValues[name]
   if (hook) {
-    callWithAsyncErrorHandling(hook, instance.parent, ErrorCodes.VNODE_HOOK)
+    callWithAsyncErrorHandling(
+      hook,
+      instance.parent,
+      ErrorCodes.VNODE_HOOK,
+      isInteropEnabled && instance.interopVNode
+        ? [instance.interopVNode]
+        : undefined,
+    )
   }
 }
 
