@@ -170,17 +170,16 @@ export function resolveTypeElements(
   scope?: TypeScope,
   typeParameters?: Record<string, Node>,
 ): ResolvedElements {
-  const canCache = !typeParameters
+  scope = node._ownerScope || scope || ctxToScope(ctx)
+  if (typeParameters) {
+    scope = createGenericScope(scope, typeParameters)
+  }
+  const canCache = !scope.isGenericScope
   if (canCache && node._resolvedElements) {
     recordResolvedElementDeps(ctx, node._resolvedElements)
     return node._resolvedElements
   }
-  const resolved = innerResolveTypeElements(
-    ctx,
-    node,
-    node._ownerScope || scope || ctxToScope(ctx),
-    typeParameters,
-  )
+  const resolved = innerResolveTypeElements(ctx, node, scope)
   return canCache ? (node._resolvedElements = resolved) : resolved
 }
 
@@ -188,7 +187,6 @@ function innerResolveTypeElements(
   ctx: TypeResolveContext,
   node: Node,
   scope: TypeScope,
-  typeParameters?: Record<string, Node>,
 ): ResolvedElements {
   if (hasVueIgnore(node)) {
     if (
@@ -200,9 +198,7 @@ function innerResolveTypeElements(
       return mergeElements(
         [
           { props: {} },
-          ...node.types
-            .slice(1)
-            .map(t => resolveTypeElements(ctx, t, scope, typeParameters)),
+          ...node.types.slice(1).map(t => resolveTypeElements(ctx, t, scope)),
         ],
         node.type,
       )
@@ -211,29 +207,24 @@ function innerResolveTypeElements(
   }
   switch (node.type) {
     case 'TSTypeLiteral':
-      return typeElementsToMap(ctx, node.members, scope, typeParameters)
+      return typeElementsToMap(ctx, node.members, scope)
     case 'TSInterfaceDeclaration':
-      return resolveInterfaceMembers(ctx, node, scope, typeParameters)
+      return resolveInterfaceMembers(ctx, node, scope)
     case 'TSTypeAliasDeclaration':
     case 'TSTypeAnnotation':
     case 'TSParenthesizedType':
-      return resolveTypeElements(
-        ctx,
-        node.typeAnnotation,
-        scope,
-        typeParameters,
-      )
+      return resolveTypeElements(ctx, node.typeAnnotation, scope)
     case 'TSFunctionType': {
       return { props: {}, calls: [node] }
     }
     case 'TSUnionType':
     case 'TSIntersectionType':
       return mergeElements(
-        node.types.map(t => resolveTypeElements(ctx, t, scope, typeParameters)),
+        node.types.map(t => resolveTypeElements(ctx, t, scope)),
         node.type,
       )
     case 'TSMappedType':
-      return resolveMappedType(ctx, node, scope, typeParameters)
+      return resolveMappedType(ctx, node, scope)
     case 'TSIndexedAccessType': {
       const types = resolveIndexType(ctx, node, scope)
       return mergeElements(
@@ -251,58 +242,25 @@ function innerResolveTypeElements(
         scope.imports[typeName]?.source === 'vue'
       ) {
         return resolveExtractPropTypes(
-          resolveTypeElements(
-            ctx,
-            node.typeParameters.params[0],
-            scope,
-            typeParameters,
-          ),
+          resolveTypeElements(ctx, node.typeParameters.params[0], scope),
           scope,
         )
       }
       const resolved = resolveTypeReference(ctx, node, scope)
       if (resolved) {
-        let typeParams: Record<string, Node> | undefined
-        if (
-          (resolved.type === 'TSTypeAliasDeclaration' ||
-            resolved.type === 'TSInterfaceDeclaration') &&
-          resolved.typeParameters &&
-          node.typeParameters
-        ) {
-          typeParams = Object.create(null)
-          resolved.typeParameters.params.forEach((p, i) => {
-            let param = typeParameters && typeParameters[p.name]
-            if (!param) param = node.typeParameters!.params[i]
-            typeParams![p.name] = param
-          })
-        }
         return resolveTypeElements(
           ctx,
           resolved,
           resolved._ownerScope,
-          typeParams,
+          resolveTypeArguments(resolved, node, scope),
         )
       } else {
         if (typeof typeName === 'string') {
-          if (typeParameters && typeParameters[typeName]) {
-            return resolveTypeElements(
-              ctx,
-              typeParameters[typeName],
-              scope,
-              typeParameters,
-            )
-          }
           if (
             // @ts-expect-error
             SupportedBuiltinsSet.has(typeName)
           ) {
-            return resolveBuiltin(
-              ctx,
-              node,
-              typeName as any,
-              scope,
-              typeParameters,
-            )
+            return resolveBuiltin(ctx, node, typeName as any, scope)
           } else if (typeName === 'ReturnType' && node.typeParameters) {
             // limited support, only reference types
             const ret = resolveReturnType(
@@ -342,7 +300,12 @@ function innerResolveTypeElements(
       )
       const resolved = resolveTypeReference(ctx, node, sourceScope)
       if (resolved) {
-        return resolveTypeElements(ctx, resolved, resolved._ownerScope)
+        return resolveTypeElements(
+          ctx,
+          resolved,
+          resolved._ownerScope,
+          resolveTypeArguments(resolved, node, scope),
+        )
       }
       break
     }
@@ -362,21 +325,18 @@ function typeElementsToMap(
   ctx: TypeResolveContext,
   elements: TSTypeElement[],
   scope = ctxToScope(ctx),
-  typeParameters?: Record<string, Node>,
 ): ResolvedElements {
   const res: ResolvedElements = { props: {} }
   for (const e of elements) {
     if (e.type === 'TSPropertySignature' || e.type === 'TSMethodSignature') {
-      // capture generic parameters on node's scope
-      if (typeParameters) {
-        scope = createChildScope(scope)
-        scope.isGenericScope = true
-        Object.assign(scope.types, typeParameters)
-      }
-      ;(e as MaybeWithScope)._ownerScope = scope
+      // Generic members must retain the scope of their own instantiation.
+      const property = (
+        scope.isGenericScope ? { ...e } : e
+      ) as ResolvedElements['props'][string]
+      property._ownerScope = scope
       const name = getStringLiteralKey(e)
       if (name !== null) {
-        res.props[name] = e as ResolvedElements['props'][string]
+        res.props[name] = property
       } else {
         ctx.error(
           `Unsupported computed key in type referenced by a macro`,
@@ -452,14 +412,8 @@ function resolveInterfaceMembers(
   ctx: TypeResolveContext,
   node: TSInterfaceDeclaration & MaybeWithScope,
   scope: TypeScope,
-  typeParameters?: Record<string, Node>,
 ): ResolvedElements {
-  const base = typeElementsToMap(
-    ctx,
-    node.body.body,
-    node._ownerScope,
-    typeParameters,
-  )
+  const base = typeElementsToMap(ctx, node.body.body, scope)
   if (node.extends) {
     for (const ext of node.extends) {
       try {
@@ -494,30 +448,78 @@ function resolveInterfaceMembers(
   return base
 }
 
+function resolveTypeArguments(
+  decl: ScopeTypeNode,
+  node: ReferenceTypes,
+  scope: TypeScope,
+): Record<string, Node> | undefined {
+  if (
+    (decl.type !== 'TSTypeAliasDeclaration' &&
+      decl.type !== 'TSInterfaceDeclaration') ||
+    !decl.typeParameters
+  ) {
+    return
+  }
+  const args = node.typeParameters && node.typeParameters.params
+  const res: Record<string, Node> = Object.create(null)
+  const defaultScope = createGenericScope(decl._ownerScope, res)
+  decl.typeParameters.params.forEach((p, i) => {
+    const arg = args && args[i]
+    if (arg) {
+      res[p.name] = { ...arg, _ownerScope: scope } as ScopeTypeNode
+    } else if (p.default) {
+      res[p.name] = {
+        ...p.default,
+        _ownerScope: defaultScope,
+      } as ScopeTypeNode
+    }
+  })
+  Object.assign(defaultScope.types, res)
+  return res
+}
+
+function createGenericScope(
+  parentScope: TypeScope,
+  typeParameters: Record<string, Node>,
+): TypeScope {
+  const scope = createChildScope(parentScope)
+  scope.isGenericScope = true
+  Object.assign(scope.types, typeParameters)
+  return scope
+}
+
 function resolveMappedType(
   ctx: TypeResolveContext,
   node: TSMappedType,
   scope: TypeScope,
-  typeParameters?: Record<string, Node>,
 ): ResolvedElements {
   const res: ResolvedElements = { props: {} }
+  const { name, constraint } = node.typeParameter
   let keys: string[]
   if (node.nameType) {
-    const { name, constraint } = node.typeParameter
-    scope = createChildScope(scope)
-    Object.assign(scope.types, { ...typeParameters, [name]: constraint })
+    scope = createGenericScope(scope, {
+      [name]: { ...constraint!, _ownerScope: scope } as ScopeTypeNode,
+    })
     keys = resolveStringType(ctx, node.nameType, scope)
   } else {
-    keys = resolveStringType(ctx, node.typeParameter.constraint!, scope)
+    keys = resolveStringType(ctx, constraint!, scope)
   }
   for (const key of keys) {
+    const propertyScope = node.nameType
+      ? scope
+      : createGenericScope(scope, {
+          [name]: {
+            type: 'TSLiteralType',
+            literal: { type: 'StringLiteral', value: key },
+          },
+        })
     res.props[key] = createProperty(
       {
         type: 'Identifier',
         name: key,
       },
       node.typeAnnotation!,
-      scope,
+      propertyScope,
       !!node.optional,
     )
   }
@@ -547,9 +549,12 @@ function resolveIndexType(
   for (const key of keys) {
     const targetType = resolved.props[key]?.typeAnnotation?.typeAnnotation
     if (targetType) {
-      ;(targetType as TSType & MaybeWithScope)._ownerScope =
-        resolved.props[key]._ownerScope
-      types.push(targetType)
+      const ownerScope = resolved.props[key]._ownerScope
+      const type = (
+        ownerScope.isGenericScope ? { ...targetType } : targetType
+      ) as TSType & MaybeWithScope
+      type._ownerScope = ownerScope
+      types.push(type)
     }
   }
   return types
@@ -557,23 +562,28 @@ function resolveIndexType(
 
 function resolveArrayElementType(
   ctx: TypeResolveContext,
-  node: Node,
+  node: Node & MaybeWithScope,
   scope: TypeScope,
-): TSType[] {
+): (TSType & MaybeWithScope)[] {
+  scope = node._ownerScope || scope
+  const withScope = (type: TSType): TSType & MaybeWithScope => ({
+    ...type,
+    _ownerScope: scope,
+  })
   // type[]
   if (node.type === 'TSArrayType') {
-    return [node.elementType]
+    return [withScope(node.elementType)]
   }
   // tuple
   if (node.type === 'TSTupleType') {
     return node.elementTypes.map(t =>
-      t.type === 'TSNamedTupleMember' ? t.elementType : t,
+      withScope(t.type === 'TSNamedTupleMember' ? t.elementType : t),
     )
   }
   if (node.type === 'TSTypeReference') {
     // Array<type>
     if (getReferenceName(node) === 'Array' && node.typeParameters) {
-      return node.typeParameters.params
+      return node.typeParameters.params.map(withScope)
     } else {
       const resolved = resolveTypeReference(ctx, node, scope)
       if (resolved) {
@@ -590,44 +600,29 @@ function resolveArrayElementType(
 
 function resolveStringType(
   ctx: TypeResolveContext,
-  node: Node,
+  node: Node & MaybeWithScope,
   scope: TypeScope,
-  typeParameters?: Record<string, Node>,
 ): string[] {
+  scope = node._ownerScope || scope
   switch (node.type) {
     case 'StringLiteral':
       return [node.value]
     case 'TSLiteralType':
-      return resolveStringType(ctx, node.literal, scope, typeParameters)
+      return resolveStringType(ctx, node.literal, scope)
     case 'TSUnionType':
-      return node.types
-        .map(t => resolveStringType(ctx, t, scope, typeParameters))
-        .flat()
+      return node.types.map(t => resolveStringType(ctx, t, scope)).flat()
     case 'TemplateLiteral': {
       return resolveTemplateKeys(ctx, node, scope)
     }
     case 'TSTypeReference': {
       const resolved = resolveTypeReference(ctx, node, scope)
       if (resolved) {
-        return resolveStringType(ctx, resolved, scope, typeParameters)
+        return resolveStringType(ctx, resolved, scope)
       }
       if (node.typeName.type === 'Identifier') {
         const name = node.typeName.name
-        if (typeParameters && typeParameters[name]) {
-          return resolveStringType(
-            ctx,
-            typeParameters[name],
-            scope,
-            typeParameters,
-          )
-        }
         const getParam = (index = 0) =>
-          resolveStringType(
-            ctx,
-            node.typeParameters!.params[index],
-            scope,
-            typeParameters,
-          )
+          resolveStringType(ctx, node.typeParameters!.params[index], scope)
         switch (name) {
           case 'Extract':
             return getParam(1)
@@ -704,14 +699,8 @@ function resolveBuiltin(
   node: TSTypeReference | TSExpressionWithTypeArguments,
   name: GetSetType<typeof SupportedBuiltinsSet>,
   scope: TypeScope,
-  typeParameters?: Record<string, Node>,
 ): ResolvedElements {
-  const t = resolveTypeElements(
-    ctx,
-    node.typeParameters!.params[0],
-    scope,
-    typeParameters,
-  )
+  const t = resolveTypeElements(ctx, node.typeParameters!.params[0], scope)
   switch (name) {
     case 'Partial': {
       const res: ResolvedElements = { props: {}, calls: t.calls }
@@ -734,7 +723,6 @@ function resolveBuiltin(
         ctx,
         node.typeParameters!.params[1],
         scope,
-        typeParameters,
       )
       const res: ResolvedElements = { props: {}, calls: t.calls }
       for (const key of picked) {
@@ -747,7 +735,6 @@ function resolveBuiltin(
         ctx,
         node.typeParameters!.params[1],
         scope,
-        typeParameters,
       )
       const res: ResolvedElements = { props: {}, calls: t.calls }
       for (const key in t.props) {
@@ -794,6 +781,14 @@ function innerResolveTypeReference(
   onlyExported: boolean,
 ): ScopeTypeNode | undefined {
   if (typeof name === 'string') {
+    if (
+      scope.isGenericScope &&
+      !onlyExported &&
+      node.type !== 'TSTypeQuery' &&
+      scope.types[name]
+    ) {
+      return scope.types[name]
+    }
     if (scope.imports[name]) {
       return resolveTypeFromImport(ctx, node, name, scope)
     } else {
@@ -1381,7 +1376,7 @@ function moduleDeclToScope(
 }
 
 function createChildScope(parentScope: TypeScope) {
-  return new TypeScope(
+  const scope = new TypeScope(
     parentScope.filename,
     parentScope.source,
     parentScope.offset,
@@ -1389,6 +1384,8 @@ function createChildScope(parentScope: TypeScope) {
     Object.create(parentScope.types),
     Object.create(parentScope.declares),
   )
+  scope.isGenericScope = parentScope.isGenericScope
+  return scope
 }
 
 const importExportRE = /^Import|^Export/
@@ -1670,6 +1667,10 @@ export function inferRuntimeType(
   isKeyOf = false,
   typeParameters?: Record<string, Node>,
 ): string[] {
+  scope = node._ownerScope || scope
+  if (typeParameters) {
+    scope = createGenericScope(scope, typeParameters)
+  }
   if (
     node.leadingComments &&
     node.leadingComments.some(c => c.value.includes('@vue-ignore'))
@@ -1782,35 +1783,18 @@ export function inferRuntimeType(
               return ['Function']
             }
 
-            if (node.typeParameters) {
-              const typeParams: Record<string, Node> = Object.create(null)
-              if (resolved.typeParameters) {
-                resolved.typeParameters.params.forEach((p, i) => {
-                  typeParams![p.name] = node.typeParameters!.params[i]
-                })
-              }
-              return inferRuntimeType(
-                ctx,
-                resolved.typeAnnotation,
-                resolved._ownerScope,
-                isKeyOf,
-                typeParams,
-              )
-            }
+            return inferRuntimeType(
+              ctx,
+              resolved.typeAnnotation,
+              resolved._ownerScope,
+              isKeyOf,
+              resolveTypeArguments(resolved, node, scope),
+            )
           }
 
           return inferRuntimeType(ctx, resolved, resolved._ownerScope, isKeyOf)
         }
         if (node.typeName.type === 'Identifier') {
-          if (typeParameters && typeParameters[node.typeName.name]) {
-            return inferRuntimeType(
-              ctx,
-              typeParameters[node.typeName.name],
-              scope,
-              isKeyOf,
-              typeParameters,
-            )
-          }
           if (isKeyOf) {
             switch (node.typeName.name) {
               case 'String':
@@ -1923,8 +1907,6 @@ export function inferRuntimeType(
                     ctx,
                     node.typeParameters.params[0],
                     scope,
-                    false,
-                    typeParameters,
                   )) {
                     types.add(t)
                   }
@@ -1968,18 +1950,14 @@ export function inferRuntimeType(
       }
 
       case 'TSParenthesizedType':
-        return inferRuntimeType(ctx, node.typeAnnotation, scope)
+        return inferRuntimeType(ctx, node.typeAnnotation, scope, isKeyOf)
 
       case 'TSUnionType':
-        return flattenTypes(ctx, node.types, scope, isKeyOf, typeParameters)
+        return flattenTypes(ctx, node.types, scope, isKeyOf)
       case 'TSIntersectionType': {
-        return flattenTypes(
-          ctx,
-          node.types,
-          scope,
-          isKeyOf,
-          typeParameters,
-        ).filter(t => t !== UNKNOWN_TYPE)
+        return flattenTypes(ctx, node.types, scope, isKeyOf).filter(
+          t => t !== UNKNOWN_TYPE,
+        )
       }
       case 'TSMappedType': {
         // only support { [K in keyof T]: T[K] }
@@ -1989,7 +1967,7 @@ export function inferRuntimeType(
           typeAnnotation.type === 'TSIndexedAccessType' &&
           typeParameter &&
           typeParameter.constraint &&
-          typeParameters
+          scope.isGenericScope
         ) {
           const constraint = typeParameter.constraint
           if (
@@ -2012,7 +1990,7 @@ export function inferRuntimeType(
               index.typeName.type === 'Identifier' &&
               index.typeName.name === typeParameter.name
             ) {
-              const targetType = typeParameters[typeName]
+              const targetType = scope.types[typeName]
               if (targetType) {
                 return inferRuntimeType(ctx, targetType, scope)
               }
@@ -2046,6 +2024,15 @@ export function inferRuntimeType(
         )
         const resolved = resolveTypeReference(ctx, node, sourceScope)
         if (resolved) {
+          if (resolved.type === 'TSTypeAliasDeclaration') {
+            return inferRuntimeType(
+              ctx,
+              resolved.typeAnnotation,
+              resolved._ownerScope,
+              isKeyOf,
+              resolveTypeArguments(resolved, node, scope),
+            )
+          }
           return inferRuntimeType(ctx, resolved, resolved._ownerScope)
         }
         break
@@ -2093,7 +2080,6 @@ function flattenTypes(
   types: TSType[],
   scope: TypeScope,
   isKeyOf: boolean = false,
-  typeParameters: Record<string, Node> | undefined = undefined,
 ): string[] {
   if (types.length === 1) {
     return inferRuntimeType(
@@ -2101,7 +2087,6 @@ function flattenTypes(
       types[0],
       (types[0] as MaybeWithScope)._ownerScope || scope,
       isKeyOf,
-      typeParameters,
     )
   }
   return [
@@ -2113,7 +2098,6 @@ function flattenTypes(
             t,
             (t as MaybeWithScope)._ownerScope || scope,
             isKeyOf,
-            typeParameters,
           ),
         ),
       ),

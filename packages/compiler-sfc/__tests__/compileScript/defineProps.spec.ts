@@ -1,5 +1,6 @@
 import { BindingTypes } from '@vue/compiler-core'
 import { assertCode, compileSFCScript as compile } from '../utils'
+import { invalidateTypeCache } from '../../src/script/resolveType'
 
 describe('defineProps', () => {
   test('basic usage', () => {
@@ -829,4 +830,97 @@ const props = defineProps({ foo: String })
     expect(content).toMatch(`foo: { default: 5.5, type: Number }`)
     assertCode(content)
   })
+
+  test.each([false, true])(
+    'keeps imported composite defaults from adding Boolean casting (isProd: %s)',
+    isProd => {
+      const files: Record<string, string> = {
+        '/composite-props.ts': `
+          type Local = string
+          export type Props<T, U = T | Local> = { flag?: U }
+        `,
+      }
+      invalidateTypeCache('/composite-props.ts')
+      const { content } = compile(
+        `<script setup lang="ts">
+        import type { Props } from './composite-props'
+        type Local = boolean
+        defineProps<Props<number>>()
+        </script>`,
+        {
+          isProd,
+          fs: {
+            fileExists: file => file in files,
+            readFile: file => files[file],
+          },
+        },
+        { filename: '/Consumer.vue' },
+      )
+      expect(content).toContain(
+        isProd
+          ? 'flag: {}'
+          : 'flag: { type: [Number, String], required: false }',
+      )
+    },
+  )
+
+  test.each([false, true])(
+    'infers mapped values for each property key (isProd: %s)',
+    isProd => {
+      const { content } = compile(
+        `<script setup lang="ts">
+        type Values = { enabled: boolean; label: string }
+        type Props = { [K in 'enabled' | 'label']?: Values[K] }
+        defineProps<Props>()
+        </script>`,
+        { isProd },
+      )
+      expect(content).toContain(
+        isProd
+          ? 'enabled: { type: Boolean }'
+          : 'enabled: { type: Boolean, required: false }',
+      )
+      expect(content).toContain(
+        isProd ? 'label: {}' : 'label: { type: String, required: false }',
+      )
+    },
+  )
+
+  test.each([false, true])(
+    'preserves caller scope when extracting array elements (isProd: %s)',
+    isProd => {
+      const files: Record<string, string> = {
+        '/array-helpers.ts': `
+          type Local = boolean
+          export type Element<T extends readonly unknown[]> = T[number]
+        `,
+      }
+      invalidateTypeCache('/array-helpers.ts')
+      const { content } = compile(
+        `<script setup lang="ts">
+        import type { Element } from './array-helpers'
+        type Local = string
+        defineProps<{
+          array?: Element<Local[]>
+          tuple?: Element<[Local]>
+          namedTuple?: Element<[value: Local]>
+          reference?: Element<Array<Local>>
+        }>()
+        </script>`,
+        {
+          isProd,
+          fs: {
+            fileExists: file => file in files,
+            readFile: file => files[file],
+          },
+        },
+        { filename: '/ArrayConsumer.vue' },
+      )
+      for (const key of ['array', 'tuple', 'namedTuple', 'reference']) {
+        expect(content).toContain(
+          isProd ? `${key}: {}` : `${key}: { type: String, required: false }`,
+        )
+      }
+    },
+  )
 })
