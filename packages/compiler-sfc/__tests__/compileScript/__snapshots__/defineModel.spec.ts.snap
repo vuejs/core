@@ -390,3 +390,28 @@ return { modelValue }
 
 })"
 `;
+
+exports[`defineModel() > w/ types, production mode, generic type alias w/ default type parameter 1`] = `
+"import { useModel as _useModel, defineComponent as _defineComponent } from 'vue'
+type Flag<T = boolean> = T
+type Model<T = boolean> = { value: T }
+
+export default /*@__PURE__*/_defineComponent({
+  props: {
+    "flag": { type: Boolean },
+    "flagModifiers": {},
+    "checked": { type: Boolean },
+    "checkedModifiers": {},
+  },
+  emits: ["update:flag", "update:checked"],
+  setup(__props, { expose: __expose }) {
+  __expose();
+
+const flag = _useModel<Flag>(__props, 'flag')
+const checked = _useModel<Model['value']>(__props, 'checked')
+
+return { flag, checked }
+}
+
+})"
+`;

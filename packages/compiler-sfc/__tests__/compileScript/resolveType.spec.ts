@@ -949,6 +949,112 @@ describe('resolveType', () => {
       })
     })
 
+    test('generic type /w default type parameters', () => {
+      expect(
+        resolve(`
+        type A<T = boolean> = { a?: T }
+        interface B<T = boolean> { b?: T }
+        interface CBase<T = boolean> { c?: T }
+        interface C extends CBase {}
+        type D<X, Y = X> = { d1?: X; d2?: Y }
+        type E<T = boolean> = T
+        defineProps<A & B & C & D<number> & { e?: E }>()
+      `).props,
+      ).toStrictEqual({
+        a: ['Boolean'],
+        b: ['Boolean'],
+        c: ['Boolean'],
+        d1: ['Number'],
+        d2: ['Number'],
+        e: ['Boolean'],
+      })
+    })
+
+    test('generic type /w explicit type argument and same-named outer parameter', () => {
+      expect(
+        resolve(`
+        type Inner<T> = { foo?: T }
+        interface Base<T> { baz?: T }
+        interface Props<T> extends Base<boolean> { qux?: T }
+        type Wrapper<T> = Inner<boolean> & Props<T> & { bar?: T }
+        defineProps<Wrapper<string>>()
+      `).props,
+      ).toStrictEqual({
+        foo: ['Boolean'],
+        baz: ['Boolean'],
+        qux: ['String'],
+        bar: ['String'],
+      })
+    })
+
+    test('generic type /w type parameter forwarded under another name', () => {
+      expect(
+        resolve(`
+        type Box<V> = V
+        type Inner<U> = { foo?: U; bar?: Box<U>; baz?: Box<U | string> }
+        interface Base<U> { qux?: U }
+        interface Props<T> extends Base<T> {}
+        type Wrapper<T> = Inner<T> & Props<T> & Box<{ quux?: T[] | T }>
+        defineProps<Wrapper<boolean>>()
+      `).props,
+      ).toStrictEqual({
+        foo: ['Boolean'],
+        bar: ['Boolean'],
+        baz: ['Boolean', 'String'],
+        qux: ['Boolean'],
+        quux: ['Array', 'Boolean'],
+      })
+    })
+
+    test('generic type /w mapped type over type parameter', () => {
+      expect(
+        resolve(`
+        type Flags<K extends string, V = boolean> = { [P in K]?: V }
+        defineProps<Flags<'a' | 'b'> & Partial<Flags<'c', string>>>()
+      `).props,
+      ).toStrictEqual({
+        a: ['Boolean'],
+        b: ['Boolean'],
+        c: ['String'],
+      })
+    })
+
+    test('generic type /w key remapping over type parameter', () => {
+      expect(
+        resolve(`
+        type Remap<K extends string> = { [P in K as Uppercase<P>]?: boolean }
+        defineProps<Remap<'a'> & Remap<'b'>>()
+      `).props,
+      ).toStrictEqual({
+        A: ['Boolean'],
+        B: ['Boolean'],
+      })
+    })
+
+    test('generic type /w mapped type key shadowing a type parameter', () => {
+      expect(
+        resolve(`
+        type Flags<T> = { [T in 'on']?: T }
+        defineProps<Flags<boolean>>()
+      `).props,
+      ).toStrictEqual({
+        on: ['String'],
+      })
+    })
+
+    test('generic type /w parenthesized type', () => {
+      expect(
+        resolve(`
+        type A<T> = (T)
+        type B<T = boolean> = (T) | null
+        defineProps<{ a?: A<boolean>; b?: B }>()
+      `).props,
+      ).toStrictEqual({
+        a: ['Boolean'],
+        b: ['Boolean', 'null'],
+      })
+    })
+
     test('generic from external-file', () => {
       const files = {
         '/foo.ts': 'export type P<T> = { foo: T }',
@@ -962,6 +1068,26 @@ describe('resolveType', () => {
       )
       expect(props).toStrictEqual({
         foo: ['String'],
+      })
+    })
+
+    test('generic default type parameter from external-file', () => {
+      const files = {
+        '/foo.ts': `
+          type Local = boolean
+          export type P<T = Local> = { foo?: T }
+        `,
+      }
+      const { props } = resolve(
+        `
+        import { P } from './foo'
+        type Local = string
+        defineProps<P>()
+      `,
+        files,
+      )
+      expect(props).toStrictEqual({
+        foo: ['Boolean'],
       })
     })
   })
@@ -1213,6 +1339,26 @@ describe('resolveType', () => {
         bar: ['Number'],
       })
       expect(deps && [...deps]).toStrictEqual(Object.keys(files))
+    })
+
+    test('relative (dynamic import) /w type arguments', () => {
+      const files = {
+        '/foo.ts': `
+          export type P<T, U = boolean> = { foo?: T; bar?: U }
+          export type Flag<T = boolean> = T
+        `,
+      }
+      const { props } = resolve(
+        `
+        defineProps<import('./foo').P<string> & { baz?: import('./foo').Flag }>()
+      `,
+        files,
+      )
+      expect(props).toStrictEqual({
+        foo: ['String'],
+        bar: ['Boolean'],
+        baz: ['Boolean'],
+      })
     })
 
     test('relative import with indexed access type', () => {
@@ -2161,6 +2307,195 @@ describe('resolveType', () => {
         value: ['Boolean'],
       })
     })
+  })
+})
+
+describe('generic parameter scope regressions', () => {
+  test('keeps imported defaults independent of consumer compilation order', () => {
+    const files = {
+      '/defaults.ts': `
+        type Local = string
+        export type Props<T = Local> = { flag?: T }
+      `,
+    }
+    for (const [index, local] of ['boolean', 'number', undefined].entries()) {
+      expect(
+        resolve(
+          `
+          import type { Props } from './defaults'
+          ${local ? `type Local = ${local}` : ''}
+          defineProps<Props>()
+          `,
+          files,
+          undefined,
+          `/Consumer${index}.vue`,
+          index === 0,
+        ).props,
+      ).toStrictEqual({ flag: ['String'] })
+    }
+  })
+
+  test('preserves declaration scope when substituting a composite default', () => {
+    expect(
+      resolve(
+        `
+        import type { Props } from './composite'
+        type Local = boolean
+        defineProps<Props<number>>()
+        `,
+        {
+          '/composite.ts': `
+            type Local = string
+            export type Props<T, U = T | Local> = { flag?: U }
+          `,
+        },
+      ).props,
+    ).toStrictEqual({ flag: ['Number', 'String'] })
+  })
+
+  test('keeps composite defaults independent of consumer compilation order', () => {
+    const files = {
+      '/cached-defaults.ts': `
+        type Local = string
+        export type Props<T, U = T | Local> = { flag?: U }
+      `,
+    }
+    resolve(
+      `
+      import type { Props } from './cached-defaults'
+      type Local = boolean
+      defineProps<Props<number>>()
+      `,
+      files,
+      undefined,
+      '/First.vue',
+    )
+    expect(
+      resolve(
+        `
+        import type { Props } from './cached-defaults'
+        defineProps<Props<number>>()
+        `,
+        files,
+        undefined,
+        '/Second.vue',
+        false,
+      ).props,
+    ).toStrictEqual({ flag: ['Number', 'String'] })
+  })
+
+  test('default alias parameters shadow module types', () => {
+    expect(
+      resolve(`
+      type T = boolean
+      type Flag<T = string> = T
+      defineProps<{ flag?: Flag }>()
+      `).props,
+    ).toStrictEqual({ flag: ['String'] })
+  })
+
+  test('carries default parameters through utility and indexed access types', () => {
+    expect(
+      resolve(`
+      type Flag<T = boolean> = NonNullable<T>
+      type Value<T = { checked: boolean }> = T['checked']
+      defineProps<{ flag?: Flag; checked?: Value }>()
+      `).props,
+    ).toStrictEqual({ flag: ['Boolean'], checked: ['Boolean'] })
+  })
+
+  test('isolates remapped keys and values for each instantiation', () => {
+    expect(
+      resolve(`
+      type Flags<K extends string, T = boolean> = {
+        [P in K as \`is\${Capitalize<P>}\`]?: T
+      }
+      defineProps<Flags<'a'> & Flags<'b', string>>()
+      `).props,
+    ).toStrictEqual({ isA: ['Boolean'], isB: ['String'] })
+  })
+
+  test('substitutes unshadowed parameters inside forwarded mapped arguments', () => {
+    expect(
+      resolve(`
+      type Box<U> = U
+      type Flags<T, K extends string> = Box<{ [T in K]?: boolean }>
+      defineProps<Flags<number, 'flag'>>()
+      `).props,
+    ).toStrictEqual({ flag: ['Boolean'] })
+  })
+
+  test('preserves caller scope in defaults that use earlier arguments', () => {
+    expect(
+      resolve(
+        `
+        import type { Props } from './argument-scopes'
+        type Local = boolean
+        defineProps<Props<Local>>()
+        `,
+        {
+          '/argument-scopes.ts': `
+            type Local = string
+            type Box<T> = T
+            export type Props<T, U = T, V = Box<T | Local>> = {
+              explicit?: T
+              direct?: U
+              composite?: V
+            }
+          `,
+        },
+      ).props,
+    ).toStrictEqual({
+      explicit: ['Boolean'],
+      direct: ['Boolean'],
+      composite: ['Boolean', 'String'],
+    })
+  })
+
+  test('generic parameters shadow imported types', () => {
+    expect(
+      resolve(
+        `
+        import type { T } from './shadowed'
+        type Box<T> = T
+        type Flag<T = string> = T
+        interface Props<T> { flag?: T }
+        defineProps<Box<Props<string>> & { value?: Flag }>()
+        `,
+        { '/shadowed.ts': 'export type T = boolean' },
+      ).props,
+    ).toStrictEqual({ flag: ['String'], value: ['String'] })
+  })
+
+  test('keeps member scopes separate across instantiations', () => {
+    expect(
+      resolve(`
+      type Props<T> = { flag?: T }
+      defineProps<Props<string> | Props<boolean>>()
+      `).props,
+    ).toStrictEqual({ flag: ['String', 'Boolean'] })
+  })
+
+  test('keeps indexed access caches separate across instantiations', () => {
+    expect(
+      resolve(`
+      type Box<T> = { value: T }
+      type Unbox<T> = Box<T>['value']
+      defineProps<{
+        a?: Unbox<string>
+        b?: Unbox<boolean>
+      }>()
+      `).props,
+    ).toStrictEqual({ a: ['String'], b: ['Boolean'] })
+  })
+
+  test('indexed access does not change the scope of a shared member type', () => {
+    expect(
+      resolve(`
+      type Box<T> = { value?: T }
+      defineProps<{ indexed?: Box<boolean>['value'] } & Box<string>>()
+      `).props,
+    ).toStrictEqual({ indexed: ['Boolean'], value: ['String'] })
   })
 })
 
