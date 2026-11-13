@@ -519,8 +519,9 @@ describe('ssr: slot', () => {
       expect(await app(`<Forward><span v-if="false"/></Forward>`)).toBe(
         `<div><!--(--><p>fallback</p><!--)--></div>`,
       )
+      // the outlet called by hand renders in its own fragment, as in vdom
       expect(await app(`<Forward>content</Forward>`)).toBe(
-        `<div><!--[--><!--[-->content<!--]--><!--]--></div>`,
+        `<div><!--[--><!--[--><!--[-->content<!--]--><!--]--><!--]--></div>`,
       )
     })
 

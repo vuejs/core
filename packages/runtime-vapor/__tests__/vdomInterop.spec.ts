@@ -4483,6 +4483,34 @@ describe('vdomInterop', () => {
         },
       )
 
+      test('a cached outlet around the slot rendered by two outlets', async () => {
+        // `v-once` keeps the outlet fragment the slot is forwarded in
+        const t = mountBoth(
+          data => {
+            const Repeat = vdomComponent(
+              data,
+              `<div><slot/></div><div><slot><p>B{{ data.tick }}</p></slot></div>`,
+            )
+            const Mid = vdomComponent(
+              data,
+              `<components.Repeat><slot v-once/></components.Repeat>`,
+              { Repeat },
+            )
+            const Wrapper = vdomComponent(
+              data,
+              `<components.Mid><slot/></components.Mid>`,
+              { Mid },
+            )
+            return { Wrapper }
+          },
+          { tick: 0, show: false },
+        )
+        t.expect(`<div></div><div><p>B0</p></div>`)
+        await t.set({ tick: 1 })
+        t.expect(`<div></div><div><p>B1</p></div>`)
+        t.unmount()
+      })
+
       test('follows an outlet joining and leaving the chain across renders', async () => {
         // a valid sibling makes the outlet content stand on its own, so the
         // outlet only takes part in fallback resolution while the sibling is
@@ -16403,6 +16431,85 @@ describe('cloneVNode extras fall through to vapor slot content', () => {
     const multi = await run(`<button>a</button><span>b</span>`)
     expect(multi.vdom.map(r => r[0])).toEqual([null, 'x', 'y', null])
     expect(multi.vapor.map(r => r[0])).toEqual([null, null, null, null])
+  })
+
+  test('keep them off the content of a forwarded slot cloned unflattened', async () => {
+    // ant-design-vue `Dropdown` trigger: clones `slots.default()[0]`, which a
+    // forwarding component hands out as its slot fragment
+    const FirstAsChild = defineComponent({
+      setup(_, { slots }) {
+        return () =>
+          cloneVNode(slots.default!()[0], { id: 'trigger', class: 'extra' })
+      },
+    })
+    const Trigger = compile(
+      `<script setup>const components = _components</script>
+      <template>
+        <components.FirstAsChild><slot /></components.FirstAsChild>
+      </template>`,
+      ref(),
+      { FirstAsChild },
+      { vapor: false },
+    )
+    await renderParity(
+      {
+        App: `<template>
+          <components.Trigger>
+            <button id="own" class="b">{{ data.n }}</button>
+          </components.Trigger>
+        </template>`,
+      },
+      () => ref({ n: 0 }),
+      async (data, root) => {
+        const btn = root.querySelector('button')!
+        expect(btn.id).toBe('own')
+        expect(classes(btn)).toEqual(['b'])
+        data.value.n++
+        await nextTick()
+        expect(btn.textContent).toBe('1')
+        expect(btn.id).toBe('own')
+        expect(classes(btn)).toEqual(['b'])
+      },
+      { Trigger },
+    )
+  })
+
+  test('keep the key of a forwarded slot on its fragment', async () => {
+    const Div = defineComponent({
+      setup(_, { slots }) {
+        return () => h('div', slots.default!())
+      },
+    })
+    const List = compile(
+      `<script setup>const p = defineProps(['names']); const components = _components</script>
+      <template>
+        <components.Div><slot v-for="n in p.names" :key="n" :name="n" /></components.Div>
+      </template>`,
+      ref(),
+      { Div },
+      { vapor: false },
+    )
+    await renderParity(
+      {
+        App: `<template>
+          <components.List :names="data.names">
+            <template #x><input id="x" /></template>
+            <template #y><input id="y" /></template>
+          </components.List>
+        </template>`,
+      },
+      () => ref({ names: ['x', 'y'] }),
+      async (data, root) => {
+        const x = root.querySelector('#x')
+        data.value.names = ['y', 'x']
+        await nextTick()
+        expect(stripAnchors(root.innerHTML)).toBe(
+          '<div><input id="y"><input id="x"></div>',
+        )
+        expect(root.querySelector('#x')).toBe(x)
+      },
+      { List },
+    )
   })
 })
 

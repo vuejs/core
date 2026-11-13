@@ -117,7 +117,11 @@ export function renderSlot(
     if (!noSlotted && ret.scopeId) {
       ret.slotScopeIds = [ret.scopeId + '-s']
     }
-    return ret
+    // in a fragment, as in vdom: a caller cloning the fragment itself rather
+    // than flattening it adds nothing to the content (ant-design-vue triggers)
+    return isBlockTreeEnabled > 0
+      ? ret
+      : createVNode(Fragment, ret.props, [ret])
   }
 
   if (

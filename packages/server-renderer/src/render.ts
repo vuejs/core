@@ -220,10 +220,12 @@ export function renderComponentVNode(
           push: PushFn | undefined,
           parent: ComponentInternalInstance | null,
           scopeId: string | null,
-        ) =>
-          push
-            ? slot(props, push, parent, scopeId)
-            : [renderSlot({ [name]: slot }, name, props)]
+        ) => {
+          if (push) return slot(props, push, parent, scopeId)
+          const vnode = renderSlot({ [name]: slot }, name, props)
+          // called from a slot called by hand: the content, out of its fragment
+          return vnode.type === Fragment ? vnode.children : [vnode]
+        }
         slot[rawVaporSlotKey] = wrapped[rawVaporSlotKey] = slot
         // already normalized, so slot normalization keeps it as is
         wrapped._n = true

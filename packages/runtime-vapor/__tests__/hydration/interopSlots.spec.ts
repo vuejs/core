@@ -2956,4 +2956,61 @@ describe('VDOM interop', () => {
       expect(div.textContent).toBe('b')
     },
   )
+
+  // called by hand, a forwarded slot comes as its outlet fragment, a direct
+  // one as the content, on the server as on the client
+  test('hydrate vapor slots a vdom component calls by hand', async () => {
+    const data = reactive({ n: 0 })
+    const { container } = await testWithVaporApp(
+      `<script setup>
+        const data = _data; const components = _components
+      </script>
+      <template>
+        <components.Fwd><button id="a">{{ data.n }}</button></components.Fwd>
+        <components.Direct><b>{{ data.n }}</b></components.Direct>
+      </template>`,
+      {
+        First: {
+          code: `<script>
+            import { cloneVNode } from 'vue'
+            export default {
+              setup(_, { slots }) {
+                return () => cloneVNode(slots.default()[0], { id: 'b' })
+              },
+            }
+          </script>`,
+          vapor: false,
+        },
+        Fwd: {
+          code: `<script setup>const components = _components</script>
+            <template><components.First><slot /></components.First></template>`,
+          vapor: false,
+        },
+        Direct: {
+          code: `<script>
+            import { h } from 'vue'
+            const Div = {
+              setup(_, { slots }) {
+                return () => h('div', slots.default())
+              },
+            }
+            export default {
+              setup(_, { slots }) {
+                return () => h(Div, null, { default: () => slots.default() })
+              },
+            }
+          </script>`,
+          vapor: false,
+        },
+      },
+      data,
+    )
+    expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+    expect(`Hydration attribute mismatch`).not.toHaveBeenWarned()
+
+    data.n++
+    await nextTick()
+    expect(container.querySelector('#a')!.textContent).toBe('1')
+    expect(container.querySelector('div > b')!.textContent).toBe('1')
+  })
 })

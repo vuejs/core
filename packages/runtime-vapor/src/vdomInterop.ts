@@ -1233,16 +1233,16 @@ const vaporSlotsProxyHandler: ProxyHandler<any> = {
       // This ensures that calling slots.default() works the same as renderSlot(slots, 'default')
       const wrapped = (props?: Record<string, any>) => {
         const vnode = renderSlot({ [key]: slot }, key as string, props)
+        // called from a slot called by hand: the content, out of its fragment
+        if (vnode.type === Fragment) return vnode.children
         const vs = vnode.vs!
         // content rather than an outlet (as `renderSlot` hands it out to a
         // slot called by hand): what `cloneVNode` adds to it falls through to
         // the content root, and the slot props stay as given, not as props of
         // the root a clone merges in
-        if (!vs.attrs) {
-          vs.props = vnode.props!
-          vnode.props = vnode.key != null ? { key: vnode.key } : null
-          vs.attrs = EMPTY_OBJ
-        }
+        vs.props = vnode.props!
+        vnode.props = vnode.key != null ? { key: vnode.key } : null
+        vs.attrs = EMPTY_OBJ
         return [vnode]
       }
       ;(wrapped as any)[rawVaporSlotKey] = slot
@@ -3620,24 +3620,32 @@ function attachSlotOutlet(
 ): boolean {
   let slot = findLoneSlot(content, 0) ? loneSlot : null
   if (slot) {
-    // a vnode its owner keeps (`<slot v-once/>`) is every placement's: the
-    // record goes on a clone taking its place
-    if (slot.cacheIndex != null) {
-      slot = loneSlotIn![loneSlotAt] = cloneVNode(slot)
-    }
+    slot = copyKeptPath(content)
     // never written in place: clones share the records
     const vs = slot.vs!
     const outlet = { fallback, owner, innerIds: loneSlotInnerIds }
     vs.outlets = vs.outlets ? vs.outlets.concat(outlet) : [outlet]
   }
-  loneSlot = loneSlotIn = null
+  loneSlot = null
   return !!slot
+}
+
+// A vnode its owner keeps (`<slot v-once/>`, the slot or a fragment around
+// it) is every placement's: the record goes on copies taking its place, from
+// the first kept vnode down to the slot, whose copy is returned.
+function copyKeptPath(vnodes: VNodeArrayChildren, kept = false): VNode {
+  const i = (vnodes as VNode[]).findIndex(hasVaporSlot)
+  let child = vnodes[i] as VNode
+  if (kept || child.cacheIndex != null) {
+    kept = true
+    child = vnodes[i] = cloneVNode(child)
+    if (!child.vs) child.children = (child.children as VNode[]).slice()
+  }
+  return child.vs ? child : copyKeptPath(child.children as VNode[], kept)
 }
 
 // scratch of the walk below, which runs no user code and cannot re-enter
 let loneSlot: VNode | null = null
-let loneSlotIn: VNodeArrayChildren | null = null
-let loneSlotAt = 0
 let loneSlotInnerIds = 0
 
 // Looks for the vapor slot in outlet content through fragments (an outlet
@@ -3651,8 +3659,6 @@ function findLoneSlot(vnodes: VNodeArrayChildren, pathIds: number): boolean {
     if (child.vs) {
       if (loneSlot) return false
       loneSlot = child
-      loneSlotIn = vnodes
-      loneSlotAt = i
       loneSlotInnerIds = pathIds
     } else if (child.type === Fragment) {
       if (
