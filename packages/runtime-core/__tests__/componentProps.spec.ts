@@ -21,6 +21,7 @@ import {
   watch,
 } from '@vue/runtime-test'
 import { render as domRender } from 'vue'
+import { hasOwn } from '@vue/shared'
 
 describe('component props', () => {
   test('stateful', () => {
@@ -907,5 +908,57 @@ describe('component props', () => {
     foo.value++
     await nextTick()
     expect(props).not.toHaveProperty('onEvent')
+  })
+
+  test('declared prop keys from mixins and extends should be present even if not passed', () => {
+    let keys: string[] = []
+    const Comp = {
+      props: ['self'],
+      mixins: [{ props: ['m1'] }, { props: { m2: null } }],
+      extends: { props: ['base'] },
+      render(this: any) {
+        keys = Object.keys(this.$props)
+      },
+    }
+
+    const root = nodeOps.createElement('div')
+    const app = createApp({
+      render: () => h(Comp, { m2: 2 }),
+    })
+    app.mixin({ props: ['global'] })
+    app.mount(root)
+    expect(keys.sort()).toEqual(['base', 'global', 'm1', 'm2', 'self'])
+  })
+
+  test('declared functional prop keys should be present even if not passed', () => {
+    let keys: string[] = []
+    const Comp: FunctionalComponent = props => {
+      keys = Object.keys(props)
+    }
+    Comp.props = ['foo', 'bar']
+
+    render(h(Comp, { bar: 1, baz: 2 }), nodeOps.createElement('div'))
+    expect(keys.sort()).toEqual(['bar', 'foo'])
+  })
+
+  test('default factory should distinguish omitted props from explicit undefined', () => {
+    const hasValue: boolean[] = []
+    const Comp = defineComponent({
+      props: {
+        value: String,
+        other: {
+          type: String,
+          default: (props: any) => {
+            hasValue.push(hasOwn(props, 'value'))
+            return 'other'
+          },
+        },
+      },
+      render() {},
+    })
+
+    render(h(Comp), nodeOps.createElement('div'))
+    render(h(Comp, { value: undefined }), nodeOps.createElement('div'))
+    expect(hasValue).toEqual([false, true])
   })
 })

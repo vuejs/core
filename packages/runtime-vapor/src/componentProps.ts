@@ -219,7 +219,7 @@ export function getPropsProxyHandlers(
   if (comp.__propsHandlers) {
     return comp.__propsHandlers
   }
-  const propsOptions = normalizePropsOptions(comp)[0]
+  const [propsOptions, , propsKeys] = normalizePropsOptions(comp)
   const emitsOptions = normalizeEmitsOptions(comp)
   const isProp = (
     propsOptions
@@ -254,7 +254,7 @@ export function getPropsProxyHandlers(
     ? ({
         get: getProp,
         has: (_, key) => isProp(key),
-        ownKeys: () => Object.keys(propsOptions),
+        ownKeys: () => propsKeys!,
         getOwnPropertyDescriptor(target, key) {
           if (isProp(key)) {
             return {
@@ -416,7 +416,11 @@ export function normalizePropsOptions(
   const needCastKeys: NormalizedPropsOptions[1] = []
   baseNormalizePropsOptions(raw, normalized, needCastKeys)
 
-  return (comp.__propsOptions = [normalized, needCastKeys])
+  return (comp.__propsOptions = [
+    normalized,
+    needCastKeys,
+    Object.keys(normalized),
+  ])
 }
 
 function resolveDefault(
