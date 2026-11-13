@@ -3,6 +3,7 @@ import {
   type NodeTransform,
   NodeTypes,
   type RootNode,
+  type SlotOutletNode,
   type TemplateChildNode,
   createSimpleExpression,
   locStub,
@@ -45,11 +46,23 @@ const isTransparentBuiltin = (tag: string): boolean =>
   tag === 'teleport' ||
   tag === 'Teleport'
 
+// `<slot>` has no element of its own: the passed content (and the fallback)
+// is the root, so it has to carry the vars the same way an element root does.
+const slotsWithCssVars = new WeakSet<SlotOutletNode>()
+
+export function slotNeedsCssVars(node: SlotOutletNode): boolean {
+  return slotsWithCssVars.has(node)
+}
+
 function injectCssVars(node: RootNode | TemplateChildNode) {
   if (
     node.type === NodeTypes.ELEMENT &&
-    node.tagType === ElementTypes.TEMPLATE
+    (node.tagType === ElementTypes.TEMPLATE ||
+      node.tagType === ElementTypes.SLOT)
   ) {
+    if (node.tagType === ElementTypes.SLOT) {
+      slotsWithCssVars.add(node)
+    }
     node.children.forEach(injectCssVars)
     return
   }

@@ -198,6 +198,73 @@ describe('ssr: inject <style vars>', () => {
     `)
   })
 
+  test('root slot outlet', () => {
+    expect(
+      compile(`<slot/>`, {
+        ssrCssVars: `{ color }`,
+      }).code,
+    ).toMatchInlineSnapshot(`
+      "const { ssrRenderSlot: _ssrRenderSlot, ssrWithSlotCssVars: _ssrWithSlotCssVars } = require("vue/server-renderer")
+
+      return function ssrRender(_ctx, _push, _parent, _attrs) {
+        const _cssVars = { style: { color: _ctx.color }}
+        _ssrRenderSlot(_ctx.$slots, "default", _ssrWithSlotCssVars({}, _cssVars), null, _push, _parent)
+      }"
+    `)
+  })
+
+  test('root slot with props and fallback', () => {
+    expect(
+      compile(`<slot :foo="bar">fallback <span/></slot>`, {
+        ssrCssVars: `{ color }`,
+      }).code,
+    ).toMatchInlineSnapshot(`
+      "const { ssrRenderSlot: _ssrRenderSlot, ssrRenderAttrs: _ssrRenderAttrs, ssrWithSlotCssVars: _ssrWithSlotCssVars } = require("vue/server-renderer")
+
+      return function ssrRender(_ctx, _push, _parent, _attrs) {
+        const _cssVars = { style: { color: _ctx.color }}
+        _ssrRenderSlot(_ctx.$slots, "default", _ssrWithSlotCssVars({ foo: _ctx.bar }, _cssVars), () => {
+          _push(\`fallback <span\${_ssrRenderAttrs(_cssVars)}></span>\`)
+        }, _push, _parent)
+      }"
+    `)
+  })
+
+  test('root slot inside teleport', () => {
+    expect(
+      compile(`<Teleport to="#target"><slot/></Teleport>`, {
+        ssrCssVars: `{ color }`,
+      }).code,
+    ).toMatchInlineSnapshot(`
+      "const { ssrRenderSlot: _ssrRenderSlot, ssrWithSlotCssVars: _ssrWithSlotCssVars, ssrRenderTeleport: _ssrRenderTeleport } = require("vue/server-renderer")
+
+      return function ssrRender(_ctx, _push, _parent, _attrs) {
+        const _cssVars = { style: { color: _ctx.color }}
+        _ssrRenderTeleport(_push, (_push) => {
+          _ssrRenderSlot(_ctx.$slots, "default", _ssrWithSlotCssVars({}, _cssVars), null, _push, _parent)
+        }, "#target", false, _parent)
+      }"
+    `)
+  })
+
+  test('nested slot is not a css var root', () => {
+    expect(
+      compile(`<div><slot/></div>`, {
+        ssrCssVars: `{ color }`,
+      }).code,
+    ).toMatchInlineSnapshot(`
+      "const { mergeProps: _mergeProps } = require("vue")
+      const { ssrRenderSlot: _ssrRenderSlot, ssrRenderAttrs: _ssrRenderAttrs } = require("vue/server-renderer")
+
+      return function ssrRender(_ctx, _push, _parent, _attrs) {
+        const _cssVars = { style: { color: _ctx.color }}
+        _push(\`<div\${_ssrRenderAttrs(_mergeProps(_attrs, _cssVars))}>\`)
+        _ssrRenderSlot(_ctx.$slots, "default", {}, null, _push, _parent)
+        _push(\`</div>\`)
+      }"
+    `)
+  })
+
   test('w/ teleport', () => {
     expect(
       compile(

@@ -5,6 +5,8 @@ export const SSR_RENDER_VNODE: unique symbol = Symbol(`ssrRenderVNode`)
 export const SSR_RENDER_COMPONENT: unique symbol = Symbol(`ssrRenderComponent`)
 export const SSR_RENDER_SLOT: unique symbol = Symbol(`ssrRenderSlot`)
 export const SSR_RENDER_SLOT_INNER: unique symbol = Symbol(`ssrRenderSlotInner`)
+export const SSR_WITH_SLOT_CSS_VARS: unique symbol =
+  Symbol(`ssrWithSlotCssVars`)
 export const SSR_RENDER_CLASS: unique symbol = Symbol(`ssrRenderClass`)
 export const SSR_RENDER_STYLE: unique symbol = Symbol(`ssrRenderStyle`)
 export const SSR_RENDER_ATTRS: unique symbol = Symbol(`ssrRenderAttrs`)
@@ -34,6 +36,7 @@ export const ssrHelpers: Record<symbol, string> = {
   [SSR_RENDER_COMPONENT]: `ssrRenderComponent`,
   [SSR_RENDER_SLOT]: `ssrRenderSlot`,
   [SSR_RENDER_SLOT_INNER]: `ssrRenderSlotInner`,
+  [SSR_WITH_SLOT_CSS_VARS]: `ssrWithSlotCssVars`,
   [SSR_RENDER_CLASS]: `ssrRenderClass`,
   [SSR_RENDER_STYLE]: `ssrRenderStyle`,
   [SSR_RENDER_ATTRS]: `ssrRenderAttrs`,

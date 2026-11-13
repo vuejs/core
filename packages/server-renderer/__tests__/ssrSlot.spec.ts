@@ -1,5 +1,8 @@
 import { createApp, defineAsyncComponent, h } from 'vue'
 import { renderToString } from '../src/renderToString'
+import * as runtimeDom from '@vue/runtime-dom'
+import * as serverRenderer from '@vue/server-renderer'
+import { compile as compileSSR } from '@vue/compiler-ssr'
 
 const components = {
   one: {
@@ -107,6 +110,60 @@ describe('ssr: slot', () => {
       ),
     ).toBe(
       `<div><!--[--><!--[--><div>one</div><div>two</div><!--]--><!--]--></div>`,
+    )
+  })
+
+  test('css vars on a root slot reach passed content and fallback', async () => {
+    const { code: themedCode } = compileSSR(
+      `<slot>fallback <span class="fb"/></slot>`,
+      {
+        ssrCssVars: `{ "--color": color }`,
+      },
+    )
+    const { code: parentCode } = compileSSR(
+      `<Themed><div class="passed">passed</div><i/></Themed>`,
+    )
+    const Themed = {
+      data: () => ({ color: 'red' }),
+      ssrRender: new Function('require', themedCode)((id: string) =>
+        id === 'vue' ? runtimeDom : serverRenderer,
+      ),
+    }
+    const passed = await renderToString(
+      createApp({
+        components: { Themed },
+        ssrRender: new Function('require', parentCode)((id: string) =>
+          id === 'vue' ? runtimeDom : serverRenderer,
+        ),
+      }),
+    )
+    expect(passed).toBe(
+      `<!--[--><div class="passed" style="--color:red;">passed</div><i style="--color:red;"></i><!--]-->`,
+    )
+
+    const fallback = await renderToString(
+      createApp({
+        components: { Themed },
+        template: `<Themed/>`,
+      }),
+    )
+    expect(fallback).toBe(
+      `<!--[-->fallback <span class="fb" style="--color:red;"></span><!--]-->`,
+    )
+
+    const { code: styledCode } = compileSSR(
+      `<Themed><div style="color:blue">styled</div> text <br><img alt="x"></Themed>`,
+    )
+    const styled = await renderToString(
+      createApp({
+        components: { Themed },
+        ssrRender: new Function('require', styledCode)((id: string) =>
+          id === 'vue' ? runtimeDom : serverRenderer,
+        ),
+      }),
+    )
+    expect(styled).toBe(
+      `<!--[--><div style="color:blue;--color:red;">styled</div> text <br style="--color:red;"><img alt="x" style="--color:red;"><!--]-->`,
     )
   })
 
