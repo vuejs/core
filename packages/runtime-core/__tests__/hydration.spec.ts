@@ -4703,6 +4703,48 @@ describe('SSR hydration', () => {
     },
   )
 
+  test('hydrates css vars on a root slot with nested content', async () => {
+    const childTemplate = `<slot/>`
+    const { code: childCode } = compileSSR(childTemplate, {
+      ssrCssVars: `{ "--color": color }`,
+    })
+    const Themed = {
+      setup() {
+        useCssVars(() => ({ color: 'red' }))
+        return { color: 'red' }
+      },
+      render: compileToFunction(childTemplate),
+      ssrRender: new Function('require', childCode)((id: string) =>
+        id === 'vue' ? runtimeDom : serverRenderer,
+      ),
+    }
+
+    const passedTemplate = `<Themed><div class="passed"><span class="inner"/></div></Themed>`
+    const { code: passedCode } = compileSSR(passedTemplate)
+    const Passed = {
+      components: { Themed },
+      render: compileToFunction(passedTemplate),
+      ssrRender: new Function('require', passedCode)((id: string) =>
+        id === 'vue' ? runtimeDom : serverRenderer,
+      ),
+    }
+
+    const container = document.createElement('div')
+    container.innerHTML = await renderToString(h(Passed))
+    const passed = container.querySelector('.passed') as HTMLElement
+    const inner = container.querySelector('.inner') as HTMLElement
+    expect(passed.style.getPropertyValue('--color')).toBe('red')
+    // the client only sets vars on slot roots
+    expect(inner.getAttribute('style')).toBe(null)
+
+    const app = createSSRApp(Passed)
+    app.mount(container)
+    expect(`Hydration style mismatch`).not.toHaveBeenWarned()
+    expect(container.querySelector('.passed')).toBe(passed)
+    expect(container.querySelector('.inner')).toBe(inner)
+    app.unmount()
+  })
+
   test('hydrates css vars on a root slot', async () => {
     const childTemplate = `<slot>fallback <span class="fb" /></slot>`
     const { code: childCode } = compileSSR(childTemplate, {

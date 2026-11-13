@@ -1,4 +1,5 @@
 import {
+  type ElementNode,
   ElementTypes,
   type NodeTransform,
   NodeTypes,
@@ -6,6 +7,7 @@ import {
   type SlotOutletNode,
   type TemplateChildNode,
   createSimpleExpression,
+  findProp,
   locStub,
 } from '@vue/compiler-dom'
 
@@ -37,14 +39,21 @@ export const ssrInjectCssVars: NodeTransform = (node, context) => {
 
 // Builtins that render their children without an element of their own, so
 // props bound to them never reach the output and css vars have to be injected
-// into the children instead.
-const isTransparentBuiltin = (tag: string): boolean =>
-  tag === 'suspense' ||
-  tag === 'Suspense' ||
-  tag === 'keep-alive' ||
-  tag === 'KeepAlive' ||
-  tag === 'teleport' ||
-  tag === 'Teleport'
+// into the children instead. `<TransitionGroup tag="...">` does render an
+// element, and that element is the root.
+const isTransparentBuiltin = (node: ElementNode): boolean => {
+  // normalize both `<KeepAlive>` and `<keep-alive>`
+  const tag = node.tag.toLowerCase().replace(/-/g, '')
+  if (tag === 'transitiongroup') {
+    return !findProp(node, 'tag')
+  }
+  return (
+    tag === 'suspense' ||
+    tag === 'keepalive' ||
+    tag === 'teleport' ||
+    tag === 'transition'
+  )
+}
 
 // `<slot>` has no element of its own: the passed content (and the fallback)
 // is the root, so it has to carry the vars the same way an element root does.
@@ -72,7 +81,7 @@ function injectCssVars(node: RootNode | TemplateChildNode) {
     (node.tagType === ElementTypes.ELEMENT ||
       node.tagType === ElementTypes.COMPONENT)
   ) {
-    if (isTransparentBuiltin(node.tag)) {
+    if (isTransparentBuiltin(node)) {
       for (const child of node.children) {
         if (
           child.type === NodeTypes.ELEMENT &&

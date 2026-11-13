@@ -1,4 +1,10 @@
-import { createApp, defineAsyncComponent, h } from 'vue'
+import {
+  Suspense,
+  createApp,
+  createStaticVNode,
+  defineAsyncComponent,
+  h,
+} from 'vue'
 import { renderToString } from '../src/renderToString'
 import * as runtimeDom from '@vue/runtime-dom'
 import * as serverRenderer from '@vue/server-renderer'
@@ -165,6 +171,119 @@ describe('ssr: slot', () => {
     expect(styled).toBe(
       `<!--[--><div style="color:blue;--color:red;">styled</div> text <br style="--color:red;"><img alt="x" style="--color:red;"><!--]-->`,
     )
+  })
+
+  describe('css vars on a root slot', () => {
+    const load = (code: string) =>
+      new Function('require', code)((id: string) =>
+        id === 'vue' ? runtimeDom : serverRenderer,
+      )
+    const Themed = {
+      data: () => ({ color: 'red' }),
+      ssrRender: load(
+        compileSSR(`<slot><span class="fb"/></slot>`, {
+          ssrCssVars: `{ "--color": color }`,
+        }).code,
+      ),
+    }
+    const render = (template: string, components: any = {}) =>
+      renderToString(
+        createApp({
+          components: { Themed, ...components },
+          ssrRender: load(compileSSR(template).code),
+        }),
+      )
+
+    test('only reach the roots of compiled slot content', async () => {
+      const Child = { template: `<b class="child">c</b>` }
+      expect(
+        await render(
+          `<Themed><div class="a"><Child/><i/></div><p class="b"/></Themed>`,
+          { Child },
+        ),
+      ).toBe(
+        `<!--[--><div class="a" style="--color:red;"><b class="child">c</b><i></i></div>` +
+          `<p class="b" style="--color:red;"></p><!--]-->`,
+      )
+    })
+
+    test('reach the root of a component passed as slot content', async () => {
+      const Child = { template: `<b class="child"><i/></b>` }
+      expect(await render(`<Themed><Child/></Themed>`, { Child })).toBe(
+        `<!--[--><b class="child" style="--color:red;"><i></i></b><!--]-->`,
+      )
+    })
+
+    test('are not forwarded with the slot props', async () => {
+      const Forwarder = {
+        components: { Themed },
+        ssrRender: load(
+          compileSSR(
+            `<Themed v-slot="p"><div class="wrap"><slot v-bind="p"/></div></Themed>`,
+          ).code,
+        ),
+      }
+      expect(
+        await render(`<Forwarder><i class="leaf"/></Forwarder>`, {
+          Forwarder,
+        }),
+      ).toBe(
+        `<!--[--><div class="wrap" style="--color:red;"><!--[--><i class="leaf"></i><!--]--></div><!--]-->`,
+      )
+    })
+
+    test('reach the roots of render function slot content', async () => {
+      const app = createApp({
+        render: () =>
+          h(Themed, null, {
+            default: () => [
+              h(Suspense, null, { default: () => h('p', { class: 's' }) }),
+              h('div', { class: 'outer' }, [h('b', { class: 'inner' })]),
+            ],
+          }),
+      })
+      expect(await renderToString(app)).toBe(
+        `<!--[--><p class="s" style="--color:red;"></p>` +
+          `<div class="outer" style="--color:red;"><b class="inner"></b></div><!--]-->`,
+      )
+    })
+
+    test('reach the roots of hoisted static slot content', async () => {
+      const app = createApp({
+        render: () =>
+          h(Themed, null, {
+            default: () => [
+              createStaticVNode(
+                `<div class="a"><b class="inner">x</b></div><p class="b"></p>`,
+                2,
+              ),
+            ],
+          }),
+      })
+      expect(await renderToString(app)).toBe(
+        `<!--[--><div class="a" style="--color:red;"><b class="inner">x</b></div>` +
+          `<p class="b" style="--color:red;"></p><!--]-->`,
+      )
+    })
+
+    test('reach the content of a root slot inside Transition', async () => {
+      const ThemedTransition = {
+        data: () => ({ color: 'red' }),
+        ssrRender: load(
+          compileSSR(`<Transition><slot/></Transition>`, {
+            ssrCssVars: `{ "--color": color }`,
+          }).code,
+        ),
+      }
+      expect(
+        await render(
+          `<ThemedTransition><div class="a"><i/></div></ThemedTransition>`,
+          {
+            ThemedTransition,
+          },
+        ),
+      ).toBe(`<div class="a" style="--color:red;"><i></i></div>`)
+    })
   })
 
   test('nullish slot props', async () => {

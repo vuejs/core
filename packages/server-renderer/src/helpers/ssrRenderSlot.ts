@@ -2,6 +2,7 @@ import {
   type ComponentInternalInstance,
   Fragment,
   type Slots,
+  Static,
   type VNode,
   type VNodeArrayChildren,
   cloneVNode,
@@ -11,10 +12,11 @@ import {
 import {
   type Props,
   type PushFn,
+  type SSRBuffer,
   type SSRBufferItem,
   renderVNodeChildren,
 } from '../render'
-import { ShapeFlags, isArray, isPromise, isString } from '@vue/shared'
+import { ShapeFlags, isArray, isString } from '@vue/shared'
 import { ssrRenderStyle } from './ssrRenderAttrs'
 
 const { ensureValidVNode } = ssrUtils
@@ -61,6 +63,13 @@ export function ssrRenderSlotInner(
   slotScopeId?: string,
   transition?: boolean,
 ): void {
+  // take the vars off the props before the slot function sees them: the
+  // props object is also what `v-slot` binds, and forwarding it to a nested
+  // slot (`v-bind="p"`) must not hand it the vars a second time
+  const cssVars = slotCssVars(slotProps)
+  if (cssVars) {
+    slotCssVarsMap.delete(slotProps as Props)
+  }
   const slotFn = slots[slotName]
   if (slotFn) {
     const slotBuffer: SSRBufferItem[] = []
@@ -81,7 +90,7 @@ export function ssrRenderSlotInner(
         // normal slot
         renderVNodeChildren(
           push,
-          applySlotCssVars(validSlotContent, slotProps),
+          applySlotCssVars(validSlotContent, cssVars),
           parentComponent,
           slotScopeId,
         )
@@ -126,8 +135,16 @@ export function ssrRenderSlotInner(
         }
 
         if (start < end) {
-          for (let i = start; i < end; i++) {
-            push(applySlotCssVarsToSSR(slotBuffer[i], slotProps))
+          const style = cssVars && ssrRenderStyleFrom(cssVars)
+          if (style) {
+            const state: CssVarsHtmlState = { style, depth: 0 }
+            for (let i = start; i < end; i++) {
+              push(applySlotCssVarsToBuffer(slotBuffer[i], state))
+            }
+          } else {
+            for (let i = start; i < end; i++) {
+              push(slotBuffer[i])
+            }
           }
         } else if (transition) {
           push(`<!---->`)
@@ -142,140 +159,222 @@ export function ssrRenderSlotInner(
 }
 
 // Mark compiled slot props so css vars bound to a root `<slot>` reach the
-// content that actually renders. A plain props object stays untouched.
-export const slotCssVarsKey: unique symbol = Symbol(
-  __DEV__ ? `slotCssVars` : ``,
-)
+// content that actually renders. Keyed on the props object itself rather than
+// exposed on it: forwarding props into a nested slot (`v-bind="p"`) must not
+// carry the vars along, or they would be applied a second time.
+const slotCssVarsMap = new WeakMap<Props, Props>()
 
 export function ssrWithSlotCssVars(
   props: Props | null | undefined,
   cssVars: Props,
 ): Props {
-  return new Proxy((props || {}) as Props, {
-    get(target, key, receiver) {
-      return key === slotCssVarsKey
-        ? cssVars
-        : Reflect.get(target, key, receiver)
-    },
-    has(target, key) {
-      return key === slotCssVarsKey || Reflect.has(target, key)
-    },
-  })
+  const resolved = props || {}
+  slotCssVarsMap.set(resolved, cssVars)
+  return resolved
 }
 
 function slotCssVars(props: Props | null | undefined): Props | undefined {
-  return props ? (props as any)[slotCssVarsKey] : undefined
+  return props ? slotCssVarsMap.get(props) : undefined
 }
 
-// Render-function slot content is already vnodes. Clone the roots so the
-// vars land on the same nodes the client sets them on.
+// Render-function slot content is already vnodes. Clone the roots so the vars
+// land on the same nodes the client sets them on: element and component roots,
+// the children of a root fragment, suspense branches, teleported content and
+// hoisted static blocks. Children of a root element stay untouched, same as
+// `setVarsOnVNode` does on the client.
 function applySlotCssVars(
   vnodes: VNodeArrayChildren,
-  slotProps: Props | null | undefined,
+  cssVars: Props | undefined,
 ): VNodeArrayChildren {
-  const cssVars = slotCssVars(slotProps)
-  if (!cssVars) {
-    return vnodes
-  }
-  return vnodes.map(child =>
-    isVNode(child) ? withCssVars(child, cssVars) : child,
-  ) as VNodeArrayChildren
+  return cssVars ? mapSlotRoots(vnodes, cssVars) : vnodes
+}
+
+function mapSlotRoots(
+  vnodes: VNodeArrayChildren,
+  cssVars: Props,
+): VNodeArrayChildren {
+  let changed = false
+  const mapped = vnodes.map(child => {
+    if (!isVNode(child)) {
+      return child
+    }
+    const next = withCssVars(child, cssVars)
+    if (next !== child) {
+      changed = true
+    }
+    return next
+  })
+  return changed ? (mapped as VNodeArrayChildren) : vnodes
 }
 
 function withCssVars(vnode: VNode, cssVars: Props): VNode {
-  if (vnode.type === Fragment && isArray(vnode.children)) {
+  const { shapeFlag } = vnode
+
+  if (shapeFlag & ShapeFlags.SUSPENSE) {
+    // the client drills into the branch suspense rendered
+    if (!vnode.ssContent) {
+      return vnode
+    }
     const cloned = cloneVNode(vnode)
-    cloned.children = (vnode.children as VNodeArrayChildren).map(child =>
-      isVNode(child) ? withCssVars(child, cssVars) : child,
-    )
+    cloned.ssContent = withCssVars(vnode.ssContent, cssVars)
     return cloned
   }
-  if (vnode.shapeFlag & (ShapeFlags.ELEMENT | ShapeFlags.COMPONENT)) {
+
+  if (shapeFlag & ShapeFlags.TELEPORT) {
+    // teleported content replaces the component root at the target
+    if (!isArray(vnode.children)) {
+      return vnode
+    }
+    const children = mapSlotRoots(vnode.children as VNodeArrayChildren, cssVars)
+    if (children === vnode.children) {
+      return vnode
+    }
+    const cloned = cloneVNode(vnode)
+    cloned.children = children
+    return cloned
+  }
+
+  if (vnode.type === Fragment) {
+    if (!isArray(vnode.children)) {
+      return vnode
+    }
+    const children = mapSlotRoots(vnode.children as VNodeArrayChildren, cssVars)
+    if (children === vnode.children) {
+      return vnode
+    }
+    const cloned = cloneVNode(vnode)
+    cloned.children = children
+    return cloned
+  }
+
+  if (vnode.type === Static) {
+    // the client sets the vars on every element between the static anchors
+    const style = ssrRenderStyleFrom(cssVars)
+    if (!style || !vnode.children) {
+      return vnode
+    }
+    const children = isArray(vnode.children)
+      ? vnode.children.map(child =>
+          isString(child)
+            ? injectCssVarsIntoHtml(child, { style, depth: 0 })
+            : child,
+        )
+      : isString(vnode.children)
+        ? injectCssVarsIntoHtml(vnode.children, { style, depth: 0 })
+        : vnode.children
+    if (children === vnode.children) {
+      return vnode
+    }
+    const cloned = cloneVNode(vnode)
+    cloned.children = children
+    return cloned
+  }
+
+  if (shapeFlag & (ShapeFlags.ELEMENT | ShapeFlags.COMPONENT)) {
     return cloneVNode(vnode, cssVars)
   }
+
   return vnode
 }
 
-// Compiled slot content is an HTML buffer. Walk its root elements the same
-// way the client walks the slot fragment, and merge the vars into each
-// element's style.
-function applySlotCssVarsToSSR(
+// Compiled slot content is an HTML buffer. One buffer item is not one node:
+// an element's children, a child component's output and its closing tag are
+// separate items. The walker therefore carries element depth across items and
+// only injects into elements at the top of the slot content, which is exactly
+// the set of nodes the client treats as slot roots.
+interface CssVarsHtmlState {
+  style: string
+  depth: number
+}
+
+function applySlotCssVarsToBuffer(
   item: SSRBufferItem,
-  slotProps: Props | null | undefined,
+  state: CssVarsHtmlState,
 ): SSRBufferItem {
-  const cssVars = slotCssVars(slotProps)
-  if (!cssVars) {
-    return item
-  }
-  if (isPromise(item)) {
-    return item.then(buffer =>
-      applySlotCssVarsToSSR(buffer, slotProps),
-    ) as Promise<SSRBufferItem & any[]>
+  if (isString(item)) {
+    return injectCssVarsIntoHtml(item, state)
   }
   if (isArray(item)) {
-    const mapped = item.map(child => applySlotCssVarsToSSR(child, slotProps))
+    // inside an open element nothing in here is a slot root
+    if (state.depth) {
+      return item
+    }
+    const mapped = item.map(child => applySlotCssVarsToBuffer(child, state))
     if (item.hasAsync) {
       ;(mapped as SSRBufferItem[] & { hasAsync?: boolean }).hasAsync = true
     }
     return mapped as SSRBufferItem
   }
-  if (!isString(item)) {
-    return item
-  }
-  return injectCssVarsIntoHtml(item, cssVars)
+  // async output is balanced, so walk it with a snapshot of the depth at the
+  // time it was pushed: later items advance the shared state, and the promise
+  // may resolve after that
+  const snapshot: CssVarsHtmlState = { ...state }
+  return item.then(
+    buffer => applySlotCssVarsToBuffer(buffer, snapshot) as SSRBuffer,
+  )
 }
 
-function injectCssVarsIntoHtml(html: string, cssVars: Props): string {
-  const style = ssrRenderStyleFrom(cssVars)
-  if (!style) {
+function injectCssVarsIntoHtml(html: string, state: CssVarsHtmlState): string {
+  if (!state.style) {
     return html
   }
   let result = ''
   let cursor = 0
   while (cursor < html.length) {
-    if (html.startsWith('<!--', cursor)) {
-      const end = html.indexOf('-->', cursor)
-      if (end === -1) break
-      const comment = html.slice(cursor, end + 3)
-      result += comment
-      cursor = end + 3
-      if (comment === '<!--[-->') {
-        const close = findFragmentEnd(html, cursor)
-        result += injectCssVarsIntoHtml(html.slice(cursor, close), cssVars)
-        cursor = close
-      }
-      continue
+    const open = html.indexOf('<', cursor)
+    if (open === -1) {
+      result += html.slice(cursor)
+      break
     }
-    if (html[cursor] !== '<') {
-      // text (or the fallback string) can sit beside a root element
-      const next = html.indexOf('<', cursor)
-      if (next === -1) {
-        result += html.slice(cursor)
-        cursor = html.length
+    result += html.slice(cursor, open)
+
+    if (html.startsWith('<!--', open)) {
+      const end = html.indexOf('-->', open + 4)
+      if (end === -1) {
+        result += html.slice(open)
         break
       }
-      result += html.slice(cursor, next)
-      cursor = next
+      result += html.slice(open, end + 3)
+      cursor = end + 3
       continue
     }
-    const nameEnd = html.slice(cursor + 1).search(/[\s>/]/)
-    if (nameEnd <= 0) break
-    const tag = html.slice(cursor + 1, cursor + 1 + nameEnd)
-    if (tag[0] === '/' || tag[0] === '!') break
-    const openEnd = html.indexOf('>', cursor)
-    if (openEnd === -1) break
-    result += mergeStyleAttr(html.slice(cursor, openEnd), style)
-    cursor = openEnd
-    if (html[openEnd - 1] === '/' || isVoidHtmlTag(tag)) {
-      result += '>'
-      cursor = openEnd + 1
+
+    // `ssrRenderAttrs` escapes `>` in attribute values, so the first `>`
+    // closes the tag
+    const end = html.indexOf('>', open)
+    if (end === -1) {
+      result += html.slice(open)
+      break
+    }
+    const tag = html.slice(open, end + 1)
+
+    if (tag[1] === '/') {
+      if (state.depth > 0) {
+        state.depth--
+      }
+      result += tag
+      cursor = end + 1
       continue
     }
-    const close = findCloseTag(html, tag, openEnd + 1)
-    result += html.slice(openEnd, close)
-    cursor = close
+
+    const name = /^<([^\s/>]+)/.exec(tag)
+    if (!name) {
+      result += tag
+      cursor = end + 1
+      continue
+    }
+    const tagName = name[1]
+    const selfClosing = tag[tag.length - 2] === '/'
+    result +=
+      state.depth === 0
+        ? mergeStyleAttr(tag.slice(0, -1), state.style) + '>'
+        : tag
+    if (!selfClosing && !voidHtmlTags.has(tagName.toLowerCase())) {
+      state.depth++
+    }
+    cursor = end + 1
   }
-  return result + html.slice(cursor)
+  return result
 }
 
 function mergeStyleAttr(openTag: string, style: string): string {
@@ -298,45 +397,6 @@ function mergeStyleAttr(openTag: string, style: string): string {
   )
 }
 
-function findFragmentEnd(html: string, from: number): number {
-  let depth = 1
-  let cursor = from
-  while (cursor < html.length && depth) {
-    const start = html.indexOf('<!--[-->', cursor)
-    const end = html.indexOf('<!--]-->', cursor)
-    if (end === -1) return html.length
-    if (start !== -1 && start < end) {
-      depth++
-      cursor = start + 8
-    } else {
-      depth--
-      cursor = end + 8
-    }
-  }
-  return cursor
-}
-
-function findCloseTag(html: string, tag: string, from: number): number {
-  const open = new RegExp(`<${tag}(?=[\\s>/])`, 'gi')
-  const close = new RegExp(`</${tag}>`, 'gi')
-  open.lastIndex = from
-  close.lastIndex = from
-  let depth = 1
-  let nextOpen = open.exec(html)
-  let nextClose = close.exec(html)
-  while (depth && nextClose) {
-    if (nextOpen && nextOpen.index < nextClose.index) {
-      depth++
-      nextOpen = open.exec(html)
-    } else {
-      depth--
-      if (!depth) return nextClose.index + nextClose[0].length
-      nextClose = close.exec(html)
-    }
-  }
-  return html.length
-}
-
 const voidHtmlTags = /*@__PURE__*/ new Set([
   'area',
   'base',
@@ -353,10 +413,6 @@ const voidHtmlTags = /*@__PURE__*/ new Set([
   'track',
   'wbr',
 ])
-
-function isVoidHtmlTag(tag: string): boolean {
-  return voidHtmlTags.has(tag.toLowerCase())
-}
 
 function ssrRenderStyleFrom(cssVars: Props): string {
   const style = (cssVars as any).style

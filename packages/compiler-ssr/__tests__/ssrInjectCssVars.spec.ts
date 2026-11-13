@@ -247,6 +247,51 @@ describe('ssr: inject <style vars>', () => {
     `)
   })
 
+  test('root slot inside transition', () => {
+    expect(
+      compile(`<Transition><slot/></Transition>`, {
+        ssrCssVars: `{ color }`,
+      }).code,
+    ).toMatchInlineSnapshot(`
+      "const { ssrRenderSlotInner: _ssrRenderSlotInner, ssrWithSlotCssVars: _ssrWithSlotCssVars } = require("vue/server-renderer")
+
+      return function ssrRender(_ctx, _push, _parent, _attrs) {
+        const _cssVars = { style: { color: _ctx.color }}
+        _ssrRenderSlotInner(_ctx.$slots, "default", _ssrWithSlotCssVars({}, _cssVars), null, _push, _parent, null, true)
+      }"
+    `)
+    expect(
+      compile(`<TransitionGroup><slot/></TransitionGroup>`, {
+        ssrCssVars: `{ color }`,
+      }).code,
+    ).toMatchInlineSnapshot(`
+      "const { ssrRenderSlotInner: _ssrRenderSlotInner, ssrWithSlotCssVars: _ssrWithSlotCssVars } = require("vue/server-renderer")
+
+      return function ssrRender(_ctx, _push, _parent, _attrs) {
+        const _cssVars = { style: { color: _ctx.color }}
+        _push(\`<!--[-->\`)
+        _ssrRenderSlotInner(_ctx.$slots, "default", _ssrWithSlotCssVars({}, _cssVars), null, _push, _parent, null, true)
+        _push(\`<!--]-->\`)
+      }"
+    `)
+    // a tag renders an element of its own, and that element is the root
+    expect(
+      compile(`<TransitionGroup tag="ul"><slot/></TransitionGroup>`, {
+        ssrCssVars: `{ color }`,
+      }).code,
+    ).toMatchInlineSnapshot(`
+      "const { mergeProps: _mergeProps } = require("vue")
+      const { ssrRenderSlotInner: _ssrRenderSlotInner, ssrRenderAttrs: _ssrRenderAttrs } = require("vue/server-renderer")
+
+      return function ssrRender(_ctx, _push, _parent, _attrs) {
+        const _cssVars = { style: { color: _ctx.color }}
+        _push(\`<ul\${_ssrRenderAttrs(_mergeProps(_attrs, _cssVars))}>\`)
+        _ssrRenderSlotInner(_ctx.$slots, "default", {}, null, _push, _parent, null, true)
+        _push(\`</ul>\`)
+      }"
+    `)
+  })
+
   test('nested slot is not a css var root', () => {
     expect(
       compile(`<div><slot/></div>`, {
