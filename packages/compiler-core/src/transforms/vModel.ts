@@ -87,7 +87,7 @@ export const transformModel: DirectiveTransform = (dir, node, context) => {
   const eventName = arg
     ? isStaticExp(arg)
       ? `onUpdate:${camelize(arg.content)}`
-      : createCompoundExpression(['"onUpdate:" + ', arg])
+      : createCompoundExpression(['"onUpdate:" + (', arg, ')'])
     : `onUpdate:modelValue`
 
   let assignmentExp: ExpressionNode
@@ -146,7 +146,7 @@ export const transformModel: DirectiveTransform = (dir, node, context) => {
     const modifiersKey = arg
       ? isStaticExp(arg)
         ? `${arg.content}Modifiers`
-        : createCompoundExpression([arg, ' + "Modifiers"'])
+        : createCompoundExpression(['(', arg, ') + "Modifiers"'])
       : `modelModifiers`
     props.push(
       createObjectProperty(
