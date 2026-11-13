@@ -495,23 +495,31 @@ function resolveMappedType(
 ): ResolvedElements {
   const res: ResolvedElements = { props: {} }
   const { name, constraint } = node.typeParameter
-  const keyScope = createGenericScope(scope, {
-    [name]: { ...constraint!, _ownerScope: scope } as ScopeTypeNode,
-  })
   let keys: string[]
   if (node.nameType) {
-    keys = resolveStringType(ctx, node.nameType, keyScope)
+    scope = createGenericScope(scope, {
+      [name]: { ...constraint!, _ownerScope: scope } as ScopeTypeNode,
+    })
+    keys = resolveStringType(ctx, node.nameType, scope)
   } else {
-    keys = resolveStringType(ctx, node.typeParameter.constraint!, scope)
+    keys = resolveStringType(ctx, constraint!, scope)
   }
   for (const key of keys) {
+    const propertyScope = node.nameType
+      ? scope
+      : createGenericScope(scope, {
+          [name]: {
+            type: 'TSLiteralType',
+            literal: { type: 'StringLiteral', value: key },
+          },
+        })
     res.props[key] = createProperty(
       {
         type: 'Identifier',
         name: key,
       },
       node.typeAnnotation!,
-      keyScope,
+      propertyScope,
       !!node.optional,
     )
   }
@@ -554,23 +562,28 @@ function resolveIndexType(
 
 function resolveArrayElementType(
   ctx: TypeResolveContext,
-  node: Node,
+  node: Node & MaybeWithScope,
   scope: TypeScope,
-): TSType[] {
+): (TSType & MaybeWithScope)[] {
+  scope = node._ownerScope || scope
+  const withScope = (type: TSType): TSType & MaybeWithScope => ({
+    ...type,
+    _ownerScope: scope,
+  })
   // type[]
   if (node.type === 'TSArrayType') {
-    return [node.elementType]
+    return [withScope(node.elementType)]
   }
   // tuple
   if (node.type === 'TSTupleType') {
     return node.elementTypes.map(t =>
-      t.type === 'TSNamedTupleMember' ? t.elementType : t,
+      withScope(t.type === 'TSNamedTupleMember' ? t.elementType : t),
     )
   }
   if (node.type === 'TSTypeReference') {
     // Array<type>
     if (getReferenceName(node) === 'Array' && node.typeParameters) {
-      return node.typeParameters.params
+      return node.typeParameters.params.map(withScope)
     } else {
       const resolved = resolveTypeReference(ctx, node, scope)
       if (resolved) {
