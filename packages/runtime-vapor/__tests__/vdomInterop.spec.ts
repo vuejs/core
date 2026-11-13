@@ -16533,6 +16533,90 @@ describe('cloneVNode extras fall through to vapor slot content', () => {
       { List },
     )
   })
+
+  test('inherit the attrs of a vdom component rooted in the content', async () => {
+    // TDesign `Popup` trigger: the first slot vnode as its own root
+    const First = defineComponent({
+      setup(_, { slots }) {
+        return () => slots.default!()[0]
+      },
+    })
+    const log: Record<string, any[]> = { vdom: [], vapor: [] }
+    await renderParity(
+      {
+        App: `<template>
+          <components.First v-bind="data.attrs">
+            <button class="own">x</button>
+          </components.First>
+        </template>`,
+      },
+      () => ref({ attrs: {} as Record<string, any> }),
+      async (data, root, mode) => {
+        let n = 0
+        for (const attrs of [
+          {},
+          { 'data-x': 'x', class: 'extra', onClick: () => n++ },
+          { 'data-x': 'y' },
+        ]) {
+          data.value.attrs = attrs
+          await nextTick()
+          const btn = root.querySelector('button')!
+          btn.click()
+          log[mode].push([btn.getAttribute('data-x'), classes(btn), n])
+        }
+      },
+      { First },
+    )
+    expect(log.vdom).toEqual([
+      [null, ['own'], 0],
+      ['x', ['extra', 'own'], 1],
+      ['y', ['own'], 1],
+    ])
+    expect(log.vapor).toEqual(log.vdom)
+  })
+
+  test('inherit them through a forwarded slot once flattened', async () => {
+    const FlatFirst = defineComponent({
+      setup(_, { slots }) {
+        return () => flatten(slots.default!())[0]
+      },
+    })
+    const First = defineComponent({
+      setup(_, { slots }) {
+        return () => slots.default!()[0]
+      },
+    })
+    const Mid = compile(
+      `<script setup>const components = _components</script>
+      <template>
+        <components.FlatFirst data-x="x" class="extra"><slot /></components.FlatFirst>
+        <components.First data-x="x" class="extra"><slot /></components.First>
+      </template>`,
+      ref(),
+      { FlatFirst, First },
+      { vapor: false },
+    )
+    await renderParity(
+      {
+        App: `<template>
+          <components.Mid><button class="own">x</button></components.Mid>
+        </template>`,
+      },
+      () => ref(),
+      (_, root) => {
+        const [flat, plain] = root.querySelectorAll('button')
+        expect(flat.getAttribute('data-x')).toBe('x')
+        expect(classes(flat)).toEqual(['extra', 'own'])
+        // unflattened, the forwarded slot is a fragment root, as in vdom
+        expect(plain.hasAttribute('data-x')).toBe(false)
+        expect(classes(plain)).toEqual(['own'])
+      },
+      { Mid },
+    )
+    expect(
+      'Extraneous non-props attributes (data-x, class)',
+    ).toHaveBeenWarnedTimes(2)
+  })
 })
 
 describe('vdom content in a vapor outlet, sequenced by the outlet', () => {

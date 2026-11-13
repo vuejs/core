@@ -37,6 +37,7 @@ import {
 import { shallowReadonly } from '@vue/reactivity'
 import { getInnerChild, setTransitionHooks } from './components/BaseTransition'
 import { isTeleport } from './components/Teleport'
+import { isVaporInteropEnabled } from './vaporInteropState'
 
 /**
  * dev only flag to track whether $attrs was used during render.
@@ -164,8 +165,14 @@ export function renderComponentRoot(
   if (fallthroughAttrs && inheritAttrs !== false) {
     const keys = Object.keys(fallthroughAttrs)
     const { shapeFlag } = root
-    if (keys.length) {
-      if (shapeFlag & (ShapeFlags.ELEMENT | ShapeFlags.COMPONENT)) {
+    // vapor slot content: the interop applies attrs to its root, and sets that
+    // up at creation only for content cloned here, so clone it even without any
+    const isVaporSlotContent = isVaporInteropEnabled && root.vs && root.vs.attrs
+    if (keys.length || isVaporSlotContent) {
+      if (
+        shapeFlag & (ShapeFlags.ELEMENT | ShapeFlags.COMPONENT) ||
+        isVaporSlotContent
+      ) {
         if (propsOptions && keys.some(isModelListener)) {
           // If a v-model listener (onUpdate:xxx) has a corresponding declared
           // prop, it indicates this component expects to handle v-model and
