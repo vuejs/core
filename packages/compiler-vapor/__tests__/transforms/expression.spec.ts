@@ -1,5 +1,10 @@
 import { BindingTypes } from '@vue/compiler-dom'
 import {
+  decodeSourceMap,
+  originalPositionFor,
+} from '../../../compiler-core/__tests__/testUtils'
+import {
+  compile,
   transformChildren,
   transformElement,
   transformText,
@@ -903,4 +908,89 @@ describe('compiler: expression', () => {
       'new (_unref(Foo))()',
     )
   })
+})
+
+test('source map of an identifier after a newline in the expression', () => {
+  const { code, map } = compile(`{{ foo +\n  bar }}`, {
+    prefixIdentifiers: true,
+    sourceMap: true,
+  })
+  const lines = code.split('\n')
+  const line = lines.findIndex(l => l.includes('_ctx.bar'))
+  const mappings = decodeSourceMap(map as any)
+  expect(
+    originalPositionFor(mappings, {
+      line: line + 1,
+      column: lines[line].indexOf('_ctx.bar'),
+    }),
+  ).toMatchObject({ line: 2, column: 2 })
+})
+
+test('source map names the identifiers it renames', () => {
+  const { code, map } = compile(`{{ foo }}{{ bar }}{{ baz }}{{ Math }}`, {
+    prefixIdentifiers: true,
+    sourceMap: true,
+    bindingMetadata: { bar: BindingTypes.PROPS },
+  })
+  expect(map!.names).toEqual(['foo', 'bar', 'baz'])
+  const lines = code.split('\n')
+  const line = lines.findIndex(l => l.includes('_ctx.foo'))
+  const mappings = decodeSourceMap(map as any)
+  expect(
+    originalPositionFor(mappings, {
+      line: line + 1,
+      column: lines[line].indexOf('_ctx.foo'),
+    }),
+  ).toMatchObject({ line: 1, column: 3, name: 'foo' })
+})
+
+test('source map of the display string call of an interpolation', () => {
+  const { code, map } = compile(`<div>{{ foo }}</div>`, {
+    prefixIdentifiers: true,
+    sourceMap: true,
+  })
+  const lines = code.split('\n')
+  const line = lines.findIndex(l => l.includes('_toDisplayString('))
+  const mappings = decodeSourceMap(map as any)
+  expect(
+    originalPositionFor(mappings, {
+      line: line + 1,
+      column: lines[line].indexOf('_toDisplayString('),
+    }),
+  ).toMatchObject({ line: 1, column: 5 })
+})
+
+test('source map of the display string call of v-text', () => {
+  for (const template of [`<div v-text="foo" />`, `<Comp v-text="foo" />`]) {
+    const { code, map } = compile(template, {
+      prefixIdentifiers: true,
+      sourceMap: true,
+    })
+    const lines = code.split('\n')
+    const line = lines.findIndex(l => l.includes('_toDisplayString('))
+    const mappings = decodeSourceMap(map as any)
+    expect(
+      originalPositionFor(mappings, {
+        line: line + 1,
+        column: lines[line].indexOf('_toDisplayString('),
+      }),
+    ).toMatchObject({ line: 1, column: template.indexOf('v-text') })
+  }
+})
+
+test('source map of the text of an expression with nothing mapped before it on its line', () => {
+  const template = `<div :title="!ok">{{ !ok }}</div>`
+  const { code, map } = compile(template, {
+    prefixIdentifiers: true,
+    sourceMap: true,
+  })
+  const lines = code.split('\n')
+  const line = lines.findIndex(l => l.includes('const __ok = !'))
+  const mappings = decodeSourceMap(map as any)
+  expect(
+    originalPositionFor(mappings, {
+      line: line + 1,
+      column: lines[line].indexOf('!'),
+    }),
+  ).toMatchObject({ line: 1, column: template.indexOf('">') })
 })

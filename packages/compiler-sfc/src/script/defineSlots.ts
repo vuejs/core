@@ -22,7 +22,7 @@ export function processDefineSlots(
   }
 
   if (declId) {
-    ctx.s.overwrite(
+    ctx.replace(
       ctx.startOffset! + node.start!,
       ctx.startOffset! + node.end!,
       `${ctx.helper('useSlots')}()`,

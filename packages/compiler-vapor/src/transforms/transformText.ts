@@ -11,7 +11,7 @@ import {
   isAllWhitespace,
 } from '@vue/compiler-dom'
 import type { NodeTransform, TransformContext } from '../transform'
-import { DynamicFlag, IRNodeTypes } from '../ir'
+import { DynamicFlag, IRNodeTypes, type SetTextIRNode } from '../ir'
 import { getLiteralExpressionValue } from '../utils'
 import { Namespaces, escapeHtml } from '@vue/shared'
 import { isFosterParentingTag } from '../htmlNesting'
@@ -19,6 +19,7 @@ import { shouldUseCreateElement } from './transformElement'
 import { getSiblingIf } from './transformComment'
 
 type TextLike = TextNode | InterpolationNode
+type TextValues = Pick<SetTextIRNode, 'values' | 'locs'>
 const seen = new WeakMap<
   TransformContext<RootNode>,
   WeakSet<TemplateChildNode | RootNode>
@@ -138,7 +139,11 @@ export const transformText: NodeTransform = (node, context) => {
 
 function processInterpolation(context: TransformContext<InterpolationNode>) {
   const parentNode = context.parent!.node
-  const values = processTextLikeChildren(collectAdjacentText(context), context)
+  const textValues = processTextLikeChildren(
+    collectAdjacentText(context),
+    context,
+  )
+  const { values } = textValues
 
   if (values.length === 0 && parentNode.type !== NodeTypes.ROOT) {
     return
@@ -187,7 +192,7 @@ function processInterpolation(context: TransformContext<InterpolationNode>) {
   context.registerEffect(values, {
     type: IRNodeTypes.SET_TEXT,
     element: id,
-    values,
+    ...textValues,
   })
 }
 
@@ -214,7 +219,8 @@ function processTextContainer(
   children: TextLike[],
   context: TransformContext<ElementNode>,
 ) {
-  const values = processTextLikeChildren(children, context)
+  const textValues = processTextLikeChildren(children, context)
+  const { values } = textValues
 
   const literals = values.map(value => getLiteralExpressionValue(value))
 
@@ -229,7 +235,7 @@ function processTextContainer(
     context.registerEffect(values, {
       type: IRNodeTypes.SET_TEXT,
       element: context.reference(),
-      values,
+      ...textValues,
       // indicates this node is generated, so prefix should be "x" instead of "n"
       generated: true,
     })
@@ -239,7 +245,7 @@ function processTextContainer(
 export function registerSyntheticTextChild(
   context: TransformContext<ElementNode>,
   template: string,
-  values?: SimpleExpressionNode[],
+  textValues?: TextValues,
 ): number {
   const id = context.increaseId()
   context.dynamic.children[context.node.children.length] = {
@@ -250,11 +256,11 @@ export function registerSyntheticTextChild(
   }
   context.dynamic.hasDynamicChild = true
 
-  if (values && values.length) {
-    context.registerEffect(values, {
+  if (textValues && textValues.values.length) {
+    context.registerEffect(textValues.values, {
       type: IRNodeTypes.SET_TEXT,
       element: id,
-      values,
+      ...textValues,
     })
   }
 
@@ -265,10 +271,10 @@ function processCreateElementTextContainer(
   children: TextLike[],
   context: TransformContext<ElementNode>,
 ) {
-  const values = processTextLikeChildren(children, context)
+  const textValues = processTextLikeChildren(children, context)
   // createElement-backed parents must materialize text nodes imperatively so
   // text that starts with "<" remains text instead of being parsed as HTML.
-  registerSyntheticTextChild(context, '', values)
+  registerSyntheticTextChild(context, '', textValues)
 }
 
 /**
@@ -304,11 +310,15 @@ function materializeLiteralTextNode(
     type: IRNodeTypes.SET_TEXT,
     element: id,
     values: [value],
+    locs: [value.loc],
   })
 }
 
-function processTextLikeChildren(nodes: TextLike[], context: TransformContext) {
-  const exps: SimpleExpressionNode[] = []
+function processTextLikeChildren(
+  nodes: TextLike[],
+  context: TransformContext,
+): TextValues {
+  const textValues: TextValues = { values: [], locs: [] }
   for (const node of nodes) {
     let exp: SimpleExpressionNode
     markNonTemplate(node, context)
@@ -319,10 +329,13 @@ function processTextLikeChildren(nodes: TextLike[], context: TransformContext) {
       exp = node.content as SimpleExpressionNode
     }
 
-    if (exp.content) exps.push(exp)
+    if (exp.content) {
+      textValues.values.push(exp)
+      textValues.locs.push(node.loc)
+    }
   }
 
-  return exps
+  return textValues
 }
 
 function isTextLike(node: TemplateChildNode): node is TextLike {

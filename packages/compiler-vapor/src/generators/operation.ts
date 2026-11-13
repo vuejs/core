@@ -21,7 +21,9 @@ import {
   NEWLINE,
   buildCodeFragment,
   genCall,
+  innerFragments,
   isNestedFragments,
+  isNodeFragments,
 } from './utils'
 import { genCreateComponent } from './component'
 import { genSlotOutlet } from './slotOutlet'
@@ -229,8 +231,9 @@ function firstFragment(
   frags: CodeFragment[],
 ): CodeFragment | typeof NO_FRAGMENT {
   for (const frag of frags) {
-    if (isNestedFragments(frag)) {
-      const inner = firstFragment(frag)
+    const nested = innerFragments(frag)
+    if (nested) {
+      const inner = firstFragment(nested)
       if (inner !== NO_FRAGMENT) return inner
     } else {
       return frag
@@ -243,12 +246,12 @@ function lastFragment(
   frags: CodeFragment[],
 ): CodeFragment | typeof NO_FRAGMENT {
   for (let i = frags.length - 1; i >= 0; i--) {
-    const frag = frags[i]
-    if (isNestedFragments(frag)) {
-      const inner = lastFragment(frag)
+    const nested = innerFragments(frags[i])
+    if (nested) {
+      const inner = lastFragment(nested)
       if (inner !== NO_FRAGMENT) return inner
     } else {
-      return frag
+      return frags[i]
     }
   }
   return NO_FRAGMENT
@@ -258,7 +261,10 @@ function countNewlines(frags: CodeFragment[]): number {
   let count = 0
   for (const frag of frags) {
     if (frag === NEWLINE) count++
-    else if (isNestedFragments(frag)) count += countNewlines(frag)
+    else {
+      const nested = innerFragments(frag)
+      if (nested) count += countNewlines(nested)
+    }
   }
   return count
 }
@@ -270,7 +276,9 @@ function withoutNewlines(
   for (const frag of frags) {
     if (frag === NEWLINE) continue
     if (isNestedFragments(frag)) withoutNewlines(frag, out)
-    else out.push(frag)
+    else if (isNodeFragments(frag)) {
+      out.push({ loc: frag.loc, code: withoutNewlines(frag.code) })
+    } else out.push(frag)
   }
   return out
 }

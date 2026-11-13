@@ -1,5 +1,6 @@
 import {
   BindingTypes,
+  type RawSourceMap,
   UNREF,
   isFunctionType,
   isSimpleIdentifier,
@@ -27,10 +28,11 @@ import type {
 } from '@babel/types'
 import { walk } from 'estree-walker'
 import {
-  type RawSourceMap,
-  SourceMapConsumer,
-  SourceMapGenerator,
-} from 'source-map-js'
+  type Piece,
+  type Source,
+  renderWithSourceMap,
+  rewritePieceText,
+} from 'muggle-string'
 import {
   normalScriptDefaultVar,
   processNormalScript,
@@ -59,6 +61,7 @@ import { DEFINE_OPTIONS, processDefineOptions } from './script/defineOptions'
 import { DEFINE_SLOTS, processDefineSlots } from './script/defineSlots'
 import { DEFINE_MODEL, processDefineModel } from './script/defineModel'
 import {
+  type Code,
   getImportedName,
   isCallOf,
   isJS,
@@ -155,6 +158,22 @@ export interface ImportBinding {
   isFromSetup: boolean
   isUsedInTemplate: boolean
 }
+
+// ranks of the code before all of the output: a higher rank renders first
+const HeadRank = {
+  DefaultImport: 1,
+  Preamble: 2,
+  HelperImports: 3,
+} as const
+
+// ranks of the code at the tags of `<script setup>`: a lower rank sits closer
+// to them, so it renders first after the start tag and last before the end tag
+const SetupRank = {
+  Setup: 1,
+  AsyncContext: 2,
+  Return: 2,
+  CssVars: 3,
+} as const
 
 const MACROS = [
   DEFINE_PROPS,
@@ -261,7 +280,7 @@ export function compileScript(
       }
       end++
     }
-    ctx.s.move(start, end, 0)
+    ctx.s.insertBefore(0, ctx.s.cut(start, end))
   }
 
   function registerUserImport(
@@ -293,6 +312,21 @@ export function compileScript(
       isFromSetup,
       isUsedInTemplate: isImportUsed,
     }
+  }
+
+  // the macro arguments that are hoisted outside of the setup() function, each
+  // with its macro
+  function hoistedMacroArgs(): [Node | undefined, string][] {
+    return [
+      [ctx.propsRuntimeDecl, DEFINE_PROPS],
+      [ctx.propsRuntimeDefaults, DEFINE_PROPS],
+      [ctx.propsDestructureDecl, DEFINE_PROPS],
+      [ctx.emitsRuntimeDecl, DEFINE_EMITS],
+      [ctx.optionsRuntimeDecl, DEFINE_OPTIONS],
+      ...Object.values(ctx.modelDecls).flatMap(({ runtimeOptionNodes }) =>
+        runtimeOptionNodes.map((node): [Node, string] => [node, DEFINE_MODEL]),
+      ),
+    ]
   }
 
   function checkInvalidScopeReference(node: Node | undefined, method: string) {
@@ -442,13 +476,14 @@ export function compileScript(
         removed++
         const current = node.specifiers[i]
         const next = node.specifiers[i + 1]
-        ctx.s.remove(
+        ctx.s.replace(
           removeLeft
             ? node.specifiers[i - 1].end! + startOffset
             : current.start! + startOffset,
           next && !removeLeft
             ? next.start! + startOffset
             : current.end! + startOffset,
+          '',
         )
       }
 
@@ -496,7 +531,7 @@ export function compileScript(
         }
       }
       if (node.specifiers.length && removed === node.specifiers.length) {
-        ctx.s.remove(node.start! + startOffset, node.end! + startOffset)
+        ctx.s.replace(node.start! + startOffset, node.end! + startOffset, '')
       }
     }
   }
@@ -553,7 +588,7 @@ export function compileScript(
         // export default { ... } --> const __default__ = { ... }
         const start = node.start! + scriptStartOffset!
         const end = node.declaration.start! + scriptStartOffset!
-        ctx.s.overwrite(start, end, `const ${normalScriptDefaultVar} = `)
+        ctx.replace(start, end, `const ${normalScriptDefaultVar} = `)
       } else if (node.type === 'ExportNamedDeclaration') {
         const defaultSpecifier = node.specifiers.find(
           s =>
@@ -563,27 +598,32 @@ export function compileScript(
           defaultExport = node
           // 1. remove specifier
           if (node.specifiers.length > 1) {
-            ctx.s.remove(
+            ctx.s.replace(
               defaultSpecifier.start! + scriptStartOffset!,
               defaultSpecifier.end! + scriptStartOffset!,
+              '',
             )
           } else {
-            ctx.s.remove(
+            ctx.s.replace(
               node.start! + scriptStartOffset!,
               node.end! + scriptStartOffset!,
+              '',
             )
           }
           if (node.source) {
             // export { x as default } from './x'
             // rewrite to `import { x as __default__ } from './x'` and
             // add to top
-            ctx.s.prepend(
-              `import { ${defaultSpecifier.local.name} as ${normalScriptDefaultVar} } from '${node.source.value}'\n`,
-            )
+            ctx.s
+              .writer(HeadRank.DefaultImport)
+              .insertAfter(
+                0,
+                `import { ${defaultSpecifier.local.name} as ${normalScriptDefaultVar} } from '${node.source.value}'\n`,
+              )
           } else {
             // export { x as default }
             // rewrite to `const __default__ = x` and move to end
-            ctx.s.appendLeft(
+            ctx.s.insertAfter(
               scriptEndOffset!,
               `\nconst ${normalScriptDefaultVar} = ${defaultSpecifier.local.name}\n`,
             )
@@ -621,9 +661,9 @@ export function compileScript(
     if (scriptStartOffset! > startOffset) {
       // if content doesn't end with newline, add one
       if (!/\n$/.test(script.content.trim())) {
-        ctx.s.appendLeft(scriptEndOffset!, `\n`)
+        ctx.s.insertAfter(scriptEndOffset!, `\n`)
       }
-      ctx.s.move(scriptStartOffset!, scriptEndOffset!, 0)
+      ctx.s.insertBefore(0, ctx.s.cut(scriptStartOffset!, scriptEndOffset!))
     }
   }
 
@@ -638,11 +678,11 @@ export function compileScript(
         processDefineOptions(ctx, expr) ||
         processDefineSlots(ctx, expr)
       ) {
-        ctx.s.remove(node.start! + startOffset, node.end! + startOffset)
+        ctx.s.replace(node.start! + startOffset, node.end! + startOffset, '')
       } else if (processDefineExpose(ctx, expr)) {
         // defineExpose({}) -> expose({})
         const callee = (expr as CallExpression).callee
-        ctx.s.overwrite(
+        ctx.replace(
           callee.start! + startOffset,
           callee.end! + startOffset,
           '__expose',
@@ -688,7 +728,11 @@ export function compileScript(
             ctx.propsDestructureDecl
           ) {
             if (left === 1) {
-              ctx.s.remove(node.start! + startOffset, node.end! + startOffset)
+              ctx.s.replace(
+                node.start! + startOffset,
+                node.end! + startOffset,
+                '',
+              )
             } else {
               let start = decl.start! + startOffset
               let end = decl.end! + startOffset
@@ -701,11 +745,11 @@ export function compileScript(
                 // not the last one, locate the start of the next
                 end = node.declarations[i + 1].start! + startOffset
               }
-              ctx.s.remove(start, end)
+              ctx.s.replace(start, end, '')
               left--
             }
           } else if (isDefineEmits) {
-            ctx.s.overwrite(
+            ctx.replace(
               startOffset + init.start!,
               startOffset + init.end!,
               '__emit',
@@ -748,8 +792,21 @@ export function compileScript(
       node.type.endsWith('Statement')
     ) {
       const scope: Statement[][] = [scriptSetupAst.body]
+      // the awaits being walked, each processed when it is left, with the
+      // rank above those of the awaits in it
+      const awaits: {
+        needsSemi: boolean
+        isStatement: boolean
+        rank: number
+      }[] = []
+      // their code runs outside of setup(), where an await is the module's
+      const hoisted = new Set(hoistedMacroArgs().map(([node]) => node))
       walk(node, {
         enter(child: Node, parent: Node | null) {
+          if (hoisted.has(child)) {
+            this.skip()
+            return
+          }
           if (isFunctionType(child)) {
             this.skip()
           }
@@ -772,17 +829,23 @@ export function compileScript(
                 n.start === child.start
               )
             })
-            processAwait(
-              ctx,
-              child,
+            awaits.push({
               needsSemi,
-              parent!.type === 'ExpressionStatement',
-            )
+              isStatement: parent!.type === 'ExpressionStatement',
+              rank: 0,
+            })
           }
         },
         leave(node: Node) {
           if (node.type === 'BlockStatement' || node.type === 'SwitchCase') {
             scope.pop()
+          } else if (node.type === 'AwaitExpression') {
+            const { needsSemi, isStatement, rank } = awaits.pop()!
+            processAwait(ctx, node, needsSemi, isStatement, rank, awaits.length)
+            const outer = awaits[awaits.length - 1]
+            if (outer && outer.rank <= rank) {
+              outer.rank = rank + 1
+            }
           }
         },
       })
@@ -823,34 +886,27 @@ export function compileScript(
 
   // 4. check macro args to make sure it doesn't reference setup scope
   // variables
-  checkInvalidScopeReference(ctx.propsRuntimeDecl, DEFINE_PROPS)
-  checkInvalidScopeReference(ctx.propsRuntimeDefaults, DEFINE_PROPS)
-  checkInvalidScopeReference(ctx.propsDestructureDecl, DEFINE_PROPS)
-  checkInvalidScopeReference(ctx.emitsRuntimeDecl, DEFINE_EMITS)
-  checkInvalidScopeReference(ctx.optionsRuntimeDecl, DEFINE_OPTIONS)
-  for (const { runtimeOptionNodes } of Object.values(ctx.modelDecls)) {
-    for (const node of runtimeOptionNodes) {
-      checkInvalidScopeReference(node, DEFINE_MODEL)
-    }
+  for (const [node, method] of hoistedMacroArgs()) {
+    checkInvalidScopeReference(node, method)
   }
 
   // 5. remove non-script content
   if (script) {
     if (startOffset < scriptStartOffset!) {
       // <script setup> before <script>
-      ctx.s.remove(0, startOffset)
-      ctx.s.remove(endOffset, scriptStartOffset!)
-      ctx.s.remove(scriptEndOffset!, source.length)
+      ctx.s.replace(0, startOffset, '')
+      ctx.s.replace(endOffset, scriptStartOffset!, '')
+      ctx.s.replace(scriptEndOffset!, source.length, '')
     } else {
       // <script> before <script setup>
-      ctx.s.remove(0, scriptStartOffset!)
-      ctx.s.remove(scriptEndOffset!, startOffset)
-      ctx.s.remove(endOffset, source.length)
+      ctx.s.replace(0, scriptStartOffset!, '')
+      ctx.s.replace(scriptEndOffset!, startOffset, '')
+      ctx.s.replace(endOffset, source.length, '')
     }
   } else {
     // only <script setup>
-    ctx.s.remove(0, startOffset)
-    ctx.s.remove(endOffset, source.length)
+    ctx.s.replace(0, startOffset, '')
+    ctx.s.replace(endOffset, source.length, '')
   }
 
   // 6. analyze binding metadata
@@ -908,7 +964,7 @@ export function compileScript(
               }
             }
             if (demotedInDecl.length) {
-              ctx.s.overwrite(
+              ctx.replace(
                 node.start! + startOffset,
                 node.start! + startOffset + 'const'.length,
                 'let',
@@ -936,16 +992,18 @@ export function compileScript(
   ) {
     ctx.helperImports.add(getCssVarsHelper(vapor))
     ctx.helperImports.add('unref')
-    ctx.s.prependLeft(
-      startOffset,
-      `\n${genCssVarsCode(
-        sfc.cssVars,
-        ctx.bindingMetadata,
-        scopeId,
-        !!options.isProd,
-        vapor,
-      )}\n`,
-    )
+    ctx.s
+      .writer(SetupRank.CssVars)
+      .insertAfter(
+        startOffset,
+        `\n${genCssVarsCode(
+          sfc.cssVars,
+          ctx.bindingMetadata,
+          scopeId,
+          !!options.isProd,
+          vapor,
+        )}\n`,
+      )
   }
 
   // 8. finalize setup() argument signature
@@ -961,20 +1019,20 @@ export function compileScript(
   // can use it directly
   if (ctx.propsDecl) {
     if (ctx.propsDestructureRestId) {
-      ctx.s.overwrite(
+      ctx.replace(
         startOffset + ctx.propsCall!.start!,
         startOffset + ctx.propsCall!.end!,
         `${ctx.helper(`createPropsRestProxy`)}(__props, ${JSON.stringify(
           Object.keys(ctx.propsDestructuredBindings),
         )})`,
       )
-      ctx.s.overwrite(
+      ctx.replace(
         startOffset + ctx.propsDestructureDecl!.start!,
         startOffset + ctx.propsDestructureDecl!.end!,
         ctx.propsDestructureRestId,
       )
     } else if (!ctx.propsDestructureDecl) {
-      ctx.s.overwrite(
+      ctx.replace(
         startOffset + ctx.propsCall!.start!,
         startOffset + ctx.propsCall!.end!,
         '__props',
@@ -985,7 +1043,9 @@ export function compileScript(
   // inject temp variables for async context preservation
   if (hasAwait) {
     const any = ctx.isTS ? `: any` : ``
-    ctx.s.prependLeft(startOffset, `\nlet __temp${any}, __restore${any}\n`)
+    ctx.s
+      .writer(SetupRank.AsyncContext)
+      .insertAfter(startOffset, `\nlet __temp${any}, __restore${any}\n`)
   }
 
   const destructureElements =
@@ -1007,10 +1067,8 @@ export function compileScript(
     args += `, { ${destructureElements.join(', ')} }`
   }
 
-  let templateMap
-  let templateCode
   // 9. generate return statement
-  let returned
+  let returned: Code
   // ensure props bindings register before compile template in inline mode
   const propsDecl = genRuntimeProps(ctx)
   if (!inlineMode || (!sfc.template && ctx.hasDefaultExportRender)) {
@@ -1058,27 +1116,29 @@ export function compileScript(
       }
       // inline render function mode - we are going to compile the template and
       // inline it right here
-      const { code, preamble, tips, errors, helpers, map } = compileTemplate({
-        filename,
-        ast: sfc.template.ast,
-        source: sfc.template.content,
-        inMap: sfc.template.map,
-        ...options.templateOptions,
-        id: scopeId,
-        scoped: sfc.styles.some(s => s.scoped),
-        isProd: options.isProd,
-        ssrCssVars: sfc.cssVars,
-        vapor,
-        compilerOptions: {
-          ...(options.templateOptions &&
-            options.templateOptions.compilerOptions),
-          inline: true,
-          isTS: ctx.isTS,
-          bindingMetadata: ctx.bindingMetadata,
+      const { code, preamble, tips, errors, helpers, pieces } = compileTemplate(
+        {
+          filename,
+          ast: sfc.template.ast,
+          source: sfc.template.content,
+          ...options.templateOptions,
+          id: scopeId,
+          scoped: sfc.styles.some(s => s.scoped),
+          isProd: options.isProd,
+          ssrCssVars: sfc.cssVars,
+          vapor,
+          compilerOptions: {
+            ...(options.templateOptions &&
+              options.templateOptions.compilerOptions),
+            inline: true,
+            isTS: ctx.isTS,
+            bindingMetadata: ctx.bindingMetadata,
+            ...(options.sourceMap === false
+              ? { sourceMap: false }
+              : { pieceSource: ctx.s.source }),
+          },
         },
-      })
-      templateMap = map
-      templateCode = code
+      )
       if (tips.length) {
         tips.forEach(warnOnce)
       }
@@ -1101,7 +1161,7 @@ export function compileScript(
         throw err
       }
       if (preamble) {
-        ctx.s.prepend(preamble)
+        ctx.s.writer(HeadRank.Preamble).insertAfter(0, preamble)
       }
       // avoid duplicated unref import
       // as this may get injected by the render function preamble OR the
@@ -1117,10 +1177,19 @@ export function compileScript(
       // An async setup resumes in a microtask with no ambient insertion or
       // hydration state, so it must not render there. Return the template as
       // a render closure; the runtime invokes it once setup has settled.
-      returned = vapor && !ssr && hasAwait ? `return () => {${code}}` : code
+      // the pieces of the SFC map the render function where it is inlined
+      const render: Code = pieces
+        ? pieces.map(p =>
+            typeof p === 'string' || p.source === ctx.s.source
+              ? p
+              : rewritePieceText(p),
+          )
+        : code
+      returned =
+        vapor && !ssr && hasAwait ? [`return () => {`, render, `}`] : render
       if (cssModuleBindings.length) {
         // Keep implicit template bindings out of the user's script scope.
-        returned = `{\n${cssModuleBindings.join('\n')}\n${returned}\n}`
+        returned = [`{\n${cssModuleBindings.join('\n')}\n`, returned, `\n}`]
       }
     } else {
       returned = `() => {}`
@@ -1130,16 +1199,16 @@ export function compileScript(
   if (!inlineMode && !__TEST__) {
     // in non-inline mode, the `__isScriptSetup: true` flag is used by
     // componentPublicInstance proxy to allow properties that start with $ or _
-    ctx.s.appendRight(
-      endOffset,
-      `\nconst __returned__ = ${returned}\n` +
-        `Object.defineProperty(__returned__, '__isScriptSetup', { enumerable: false, value: true })\n` +
-        `return __returned__` +
-        `\n}\n\n`,
-    )
+    ctx.s
+      .writer(SetupRank.Return)
+      .insertBefore(endOffset, [
+        `\nconst __returned__ = `,
+        returned,
+        `\nObject.defineProperty(__returned__, '__isScriptSetup', { enumerable: false, value: true })\n` +
+          `return __returned__`,
+      ])
   } else {
-    ctx.s.appendRight(
-      endOffset,
+    ctx.s.writer(SetupRank.Return).insertBefore(endOffset, [
       // vapor mode generates its own return when inlined
       // (except with a render in normal <script> and no template, where
       // the bindings object is returned instead, see #4980)
@@ -1150,8 +1219,9 @@ export function compileScript(
         !(!sfc.template && ctx.hasDefaultExportRender)
           ? ``
           : `return `
-      }${returned}\n}\n\n`,
-    )
+      }`,
+      returned,
+    ])
   }
 
   // 10. finalize default export
@@ -1159,28 +1229,25 @@ export function compileScript(
     ? `const ${options.genDefaultAs} =`
     : `export default`
 
-  let runtimeOptions = ``
+  const runtimeOptions: Code[] = []
   if (!ctx.hasDefaultExportName && filename && filename !== DEFAULT_FILENAME) {
     const match = filename.match(/([^/\\]+)\.\w+$/)
     if (match) {
-      runtimeOptions += `\n  __name: '${match[1]}',`
+      runtimeOptions.push(`\n  __name: '${match[1]}',`)
     }
   }
   if (hasInlinedSsrRenderFn) {
-    runtimeOptions += `\n  __ssrInlineRender: true,`
+    runtimeOptions.push(`\n  __ssrInlineRender: true,`)
   }
 
-  if (propsDecl) runtimeOptions += `\n  props: ${propsDecl},`
+  if (propsDecl) runtimeOptions.push(`\n  props: `, propsDecl, `,`)
 
   const emitsDecl = genRuntimeEmits(ctx)
-  if (emitsDecl) runtimeOptions += `\n  emits: ${emitsDecl},`
+  if (emitsDecl) runtimeOptions.push(`\n  emits: `, emitsDecl, `,`)
 
-  let definedOptions = ''
-  if (ctx.optionsRuntimeDecl) {
-    definedOptions = scriptSetup.content
-      .slice(ctx.optionsRuntimeDecl.start!, ctx.optionsRuntimeDecl.end!)
-      .trim()
-  }
+  const definedOptions =
+    ctx.optionsRuntimeDecl &&
+    ctx.copy(ctx.optionsRuntimeDecl.start!, ctx.optionsRuntimeDecl.end!)
 
   // <script setup> components are closed by default. If the user did not
   // explicitly call `defineExpose`, call expose() with no args.
@@ -1191,10 +1258,12 @@ export function compileScript(
     ? `  ${setupPreambleLines.join('\n  ')}\n`
     : ''
   // wrap setup code with function.
+  let setupHead: Code
+  let setupEnd: string
   if (ctx.isTS) {
     // in SSR, always use defineComponent, so __vapor flag is required
     if (ssr && vapor) {
-      runtimeOptions += `\n  __vapor: true,`
+      runtimeOptions.push(`\n  __vapor: true,`)
     }
 
     // for TS, make sure the exported type is still valid type with
@@ -1202,43 +1271,49 @@ export function compileScript(
     // we have to use object spread for types to be merged properly
     // user's TS setting should compile it down to proper targets
     // export default defineComponent({ ...__default__, ... })
-    const def =
-      (defaultExport ? `\n  ...${normalScriptDefaultVar},` : ``) +
-      (definedOptions ? `\n  ...${definedOptions},` : '')
-    ctx.s.prependLeft(
-      startOffset,
+    setupHead = [
       `\n${genDefaultAs} /*@__PURE__*/${ctx.helper(
         vapor && !ssr ? `defineVaporComponent` : `defineComponent`,
-      )}({${def}${runtimeOptions}\n  ${
-        hasAwait ? `async ` : ``
-      }setup(${args}) {\n${setupPreamble}`,
-    )
-    ctx.s.appendRight(endOffset, `})`)
+      )}({`,
+      defaultExport ? `\n  ...${normalScriptDefaultVar},` : ``,
+      definedOptions ? [`\n  ...`, definedOptions, `,`] : ``,
+      runtimeOptions,
+      `\n  ${hasAwait ? `async ` : ``}setup(${args}) {\n${setupPreamble}`,
+    ]
+    setupEnd = `})`
   } else {
     // in TS, defineVaporComponent adds the option already
     if (vapor) {
-      runtimeOptions += `\n  __vapor: true,`
+      runtimeOptions.push(`\n  __vapor: true,`)
     }
     if (defaultExport || definedOptions) {
       // without TS, can't rely on rest spread, so we use Object.assign
       // export default Object.assign(__default__, { ... })
-      ctx.s.prependLeft(
-        startOffset,
-        `\n${genDefaultAs} /*@__PURE__*/Object.assign(${
-          defaultExport ? `${normalScriptDefaultVar}, ` : ''
-        }${definedOptions ? `${definedOptions}, ` : ''}{${runtimeOptions}\n  ` +
-          `${hasAwait ? `async ` : ``}setup(${args}) {\n${setupPreamble}`,
-      )
-      ctx.s.appendRight(endOffset, `})`)
+      setupHead = [
+        `\n${genDefaultAs} /*@__PURE__*/Object.assign(`,
+        defaultExport ? `${normalScriptDefaultVar}, ` : '',
+        definedOptions ? [definedOptions, `, `] : '',
+        `{`,
+        runtimeOptions,
+        `\n  ${hasAwait ? `async ` : ``}setup(${args}) {\n${setupPreamble}`,
+      ]
+      setupEnd = `})`
     } else {
-      ctx.s.prependLeft(
-        startOffset,
-        `\n${genDefaultAs} {${runtimeOptions}\n  ` +
-          `${hasAwait ? `async ` : ``}setup(${args}) {\n${setupPreamble}`,
-      )
-      ctx.s.appendRight(endOffset, `}`)
+      setupHead = [
+        `\n${genDefaultAs} {`,
+        runtimeOptions,
+        `\n  ${hasAwait ? `async ` : ``}setup(${args}) {\n${setupPreamble}`,
+      ]
+      setupEnd = `}`
     }
   }
+
+  const setup = ctx.s.writer(SetupRank.Setup)
+  setup.insertAfter(startOffset, [
+    Object.values(ctx.modelDecls).map(({ hoisted }) => hoisted ?? ''),
+    setupHead,
+  ])
+  setup.insertBefore(endOffset, `\n}\n\n${setupEnd}`)
 
   // 11. finalize Vue helper imports
   if (ctx.helperImports.size > 0) {
@@ -1247,28 +1322,30 @@ export function compileScript(
     const importSrc = runtimeModuleName
       ? JSON.stringify(runtimeModuleName)
       : `'vue'`
-    ctx.s.prepend(
-      `import { ${[...ctx.helperImports]
-        .map(h => `${h} as ${h === 'useCssModule' ? cssModuleHelper : `_${h}`}`)
-        .join(', ')} } from ${importSrc}\n`,
-    )
+    ctx.s
+      .writer(HeadRank.HelperImports)
+      .insertAfter(
+        0,
+        `import { ${[...ctx.helperImports]
+          .map(
+            h => `${h} as ${h === 'useCssModule' ? cssModuleHelper : `_${h}`}`,
+          )
+          .join(', ')} } from ${importSrc}\n`,
+      )
   }
 
-  const content = ctx.s.toString()
-  let map =
-    options.sourceMap !== false
-      ? (ctx.s.generateMap({
-          source: filename,
-          hires: true,
-          includeContent: true,
-        }) as unknown as RawSourceMap)
-      : undefined
-  // merge source maps of the script setup and template in inline mode
-  if (templateMap && map) {
-    const offset = content.indexOf(templateCode!)
-    const templateLineOffset =
-      content.slice(0, offset).split(/\r?\n/).length - 1
-    map = mergeSourceMaps(map, templateMap, templateLineOffset)
+  const render = (sink: (piece: Piece<{ source: Source }>) => void) =>
+    ctx.s.render(0, source.length, sink)
+  let content = ''
+  let map: RawSourceMap | undefined
+  if (options.sourceMap === false) {
+    render(piece => {
+      content += rewritePieceText(piece)
+    })
+  } else {
+    const script = renderWithSourceMap(render, () => filename)
+    content = script.text
+    map = script.map
   }
   return {
     ...scriptSetup,
@@ -1495,43 +1572,4 @@ function canNeverBeRef(node: Node, userReactiveImport?: string): boolean {
       }
       return false
   }
-}
-
-export function mergeSourceMaps(
-  scriptMap: RawSourceMap,
-  templateMap: RawSourceMap,
-  templateLineOffset: number,
-): RawSourceMap {
-  const generator = new SourceMapGenerator()
-  const addMapping = (map: RawSourceMap, lineOffset = 0) => {
-    const consumer = new SourceMapConsumer(map)
-    ;(consumer as any).sources.forEach((sourceFile: string) => {
-      ;(generator as any)._sources.add(sourceFile)
-      const sourceContent = consumer.sourceContentFor(sourceFile)
-      if (sourceContent != null) {
-        generator.setSourceContent(sourceFile, sourceContent)
-      }
-    })
-    consumer.eachMapping(m => {
-      if (m.originalLine == null) return
-      generator.addMapping({
-        generated: {
-          line: m.generatedLine + lineOffset,
-          column: m.generatedColumn,
-        },
-        original: {
-          line: m.originalLine,
-          column: m.originalColumn!,
-        },
-        source: m.source,
-        name: m.name,
-      })
-    })
-  }
-
-  addMapping(scriptMap)
-  addMapping(templateMap, templateLineOffset)
-  ;(generator as any)._sourceRoot = scriptMap.sourceRoot
-  ;(generator as any)._file = scriptMap.file
-  return (generator as any).toJSON()
 }

@@ -29,7 +29,7 @@
     },
     {
       groupName: 'compiler',
-      matchPackageNames: ['magic-string', '@babel{/,}**', 'postcss{/,}**'],
+      matchPackageNames: ['@babel{/,}**', 'postcss{/,}**'],
     },
     {
       groupName: 'build',

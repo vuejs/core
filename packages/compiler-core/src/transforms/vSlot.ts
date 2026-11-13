@@ -110,7 +110,7 @@ const buildClientSlotFn: SlotFnBuilder = (props, _vForExp, children, loc) =>
     children,
     false /* newline */,
     true /* isSlot */,
-    children.length ? children[0].loc : loc,
+    loc,
   )
 
 // Instead of being a DirectiveTransform, v-slot processing is called during

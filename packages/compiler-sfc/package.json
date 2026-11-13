@@ -49,9 +49,8 @@
     "@vue/compiler-vapor": "workspace:*",
     "@vue/shared": "workspace:*",
     "estree-walker": "catalog:",
-    "magic-string": "catalog:",
-    "postcss": "^8.5.32",
-    "source-map-js": "catalog:"
+    "muggle-string": "catalog:",
+    "postcss": "^8.5.32"
   },
   "devDependencies": {
     "@babel/types": "catalog:",

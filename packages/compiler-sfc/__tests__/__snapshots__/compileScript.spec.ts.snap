@@ -206,6 +206,108 @@ return { n, get x() { return x } }
 })"
 `;
 
+exports[`SFC compile <script setup> > async/await detection > await in macro arguments hoisted outside of setup() 1`] = `
+"import { useModel as _useModel } from 'vue'
+
+export default {
+  props: {
+    "n": { default: await foo() },
+    "nModifiers": {},
+  },
+  emits: ["update:n"],
+  setup(__props, { expose: __expose }) {
+  __expose();
+
+const n = _useModel(__props, 'n')
+
+return { n }
+}
+
+}"
+`;
+
+exports[`SFC compile <script setup> > async/await detection > await in macro arguments hoisted outside of setup() 2`] = `
+"import { useModel as _useModel } from 'vue'
+
+export default {
+  props: {
+    "n": { default: await foo() },
+    "nModifiers": {},
+  },
+  emits: ["update:n"],
+  setup(__props, { expose: __expose }) {
+  __expose();
+
+const n = _useModel(__props, 'n', { get: v => v, })
+
+return { n }
+}
+
+}"
+`;
+
+exports[`SFC compile <script setup> > async/await detection > await in macro arguments hoisted outside of setup() 3`] = `
+"
+export default {
+  props: { a: { default: await foo() } },
+  setup(__props, { expose: __expose }) {
+  __expose();
+
+const p = __props
+
+return { p }
+}
+
+}"
+`;
+
+exports[`SFC compile <script setup> > async/await detection > await in macro arguments hoisted outside of setup() 4`] = `
+"import { defineComponent as _defineComponent } from 'vue'
+
+export default /*@__PURE__*/_defineComponent({
+  props: {
+    a: { type: Number, required: false, default: await foo() }
+  },
+  setup(__props: any, { expose: __expose }) {
+  __expose();
+
+const p = __props
+
+return { p }
+}
+
+})"
+`;
+
+exports[`SFC compile <script setup> > async/await detection > await in macro arguments hoisted outside of setup() 5`] = `
+"
+export default {
+  emits: await foo(),
+  setup(__props, { expose: __expose, emit: __emit }) {
+  __expose();
+
+const e = __emit
+
+return { e }
+}
+
+}"
+`;
+
+exports[`SFC compile <script setup> > async/await detection > await in macro arguments hoisted outside of setup() 6`] = `
+"
+export default /*@__PURE__*/Object.assign({ name: await foo() }, {
+  setup(__props, { expose: __expose }) {
+  __expose();
+
+
+
+return {  }
+}
+
+})"
+`;
+
 exports[`SFC compile <script setup> > async/await detection > await in switch case 1`] = `
 "import { withAsyncContext as _withAsyncContext } from 'vue'
 
@@ -450,11 +552,11 @@ export default {
 let __temp, __restore
 ;(
   ([__temp,__restore] = _withAsyncContext(async () => ((
-  ([__temp,__restore] = _withAsyncContext(() => foo)),
-  __temp = await __temp,
-  __restore(),
-  __temp
-)))),
+    ([__temp,__restore] = _withAsyncContext(() => foo)),
+    __temp = await __temp,
+    __restore(),
+    __temp
+  )))),
   await __temp,
   __restore()
 )
@@ -474,11 +576,11 @@ export default {
 let __temp, __restore
 ;(
   ([__temp,__restore] = _withAsyncContext(async () => (((
-  ([__temp,__restore] = _withAsyncContext(() => foo)),
-  __temp = await __temp,
-  __restore(),
-  __temp
-))))),
+    ([__temp,__restore] = _withAsyncContext(() => foo)),
+    __temp = await __temp,
+    __restore(),
+    __temp
+  ))))),
   await __temp,
   __restore()
 )
@@ -498,16 +600,40 @@ export default {
 let __temp, __restore
 ;(
   ([__temp,__restore] = _withAsyncContext(async () => ((
-  ([__temp,__restore] = _withAsyncContext(async () => ((
-  ([__temp,__restore] = _withAsyncContext(() => foo)),
-  __temp = await __temp,
-  __restore(),
-  __temp
-)))),
-  __temp = await __temp,
-  __restore(),
-  __temp
-)))),
+    ([__temp,__restore] = _withAsyncContext(async () => ((
+      ([__temp,__restore] = _withAsyncContext(() => foo)),
+      __temp = await __temp,
+      __restore(),
+      __temp
+    )))),
+    __temp = await __temp,
+    __restore(),
+    __temp
+  )))),
+  await __temp,
+  __restore()
+)
+return {  }
+}
+
+}"
+`;
+
+exports[`SFC compile <script setup> > async/await detection > nested await that ends with the outer one 1`] = `
+"import { withAsyncContext as _withAsyncContext } from 'vue'
+
+export default {
+  async setup(__props, { expose: __expose }) {
+  __expose();
+
+let __temp, __restore
+;(
+  ([__temp,__restore] = _withAsyncContext(async () => (
+    ([__temp,__restore] = _withAsyncContext(() => foo)),
+    __temp = await __temp,
+    __restore(),
+    __temp
+  ))),
   await __temp,
   __restore()
 )

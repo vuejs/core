@@ -11,6 +11,7 @@ import type {
   TSPropertySignature,
 } from '@babel/types'
 import path from 'path'
+import { type RewriteCode, type Source, rewritePieceText } from 'muggle-string'
 
 export const UNKNOWN_TYPE = 'Unknown'
 
@@ -28,10 +29,35 @@ export function resolveObjectKey(
   return undefined
 }
 
-export function concatStrings(
-  strs: Array<string | null | undefined | false>,
-): string {
-  return strs.filter((s): s is string => !!s).join(', ')
+/**
+ * Code written into the output: new text, and copies of ranges of the
+ * source, which map to them
+ */
+export type Code = RewriteCode<Source>
+
+export function joinCode(codes: readonly Code[], separator: string): Code[] {
+  return codes.flatMap((code, i) => (i ? [separator, code] : [code]))
+}
+
+export function concatCode(
+  codes: Array<Code | null | undefined | false>,
+): Code {
+  return joinCode(
+    codes.filter((c): c is Code => !!c),
+    ', ',
+  )
+}
+
+export function codeText(code: Code): string {
+  if (typeof code === 'string' || 'start' in code) {
+    return rewritePieceText(code)
+  }
+  if ('render' in code) {
+    let text = ''
+    code.render(piece => (text += rewritePieceText(piece)))
+    return text
+  }
+  return code.map(codeText).join('')
 }
 
 export function isLiteralNode(node: Node): boolean {
