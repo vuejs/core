@@ -260,6 +260,16 @@ h1 { color: red }
     })
   })
 
+  // #6704 empty <script setup> blocks are kept so that the component name can
+  // still be inferred from the filename
+  test('keep empty <script setup> blocks by default', () => {
+    const { descriptor } = parse(`<script></script>\n<script setup>\n</script>`)
+    // empty <script> blocks are still ignored
+    expect(descriptor.script).toBeNull()
+    expect(descriptor.scriptSetup).toBeTruthy()
+    expect(descriptor.scriptSetup!.content.trim()).toBe('')
+  })
+
   test('nested templates', () => {
     const content = `
     <template v-if="ok">ok</template>
