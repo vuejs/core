@@ -5233,6 +5233,82 @@ describe('vdomInterop', () => {
       await nextTick()
       expect(watched).not.toHaveBeenCalled()
     })
+
+    test.each([
+      [
+        'v-if',
+        `<components.VaporParent v-if="data.show" @vue:unmounted="data.log('vnode um')" />`,
+        true,
+        ['vnode um'],
+      ],
+      [
+        'element (vapor app)',
+        `<div v-if="data.show"><components.VaporParent /></div>`,
+        true,
+        [],
+      ],
+      [
+        'element (vdom app)',
+        `<div v-if="data.show"><components.VaporParent /></div>`,
+        false,
+        [],
+      ],
+      [
+        'vapor wrapper in element (vdom app)',
+        `<div v-if="data.show"><components.VaporWrapper /></div>`,
+        false,
+        [],
+      ],
+    ])(
+      'vdom components at the block root unmount before their vapor parent: %s',
+      async (_, template, vapor, after) => {
+        const calls: string[] = []
+        const data = ref({ show: true, log: (s: string) => calls.push(s) })
+        const hooks = (name: string) =>
+          `import { onBeforeUnmount, onUnmounted } from 'vue'
+          const data = _data
+          onBeforeUnmount(() => data.value.log(${name} + ' bum'))
+          onUnmounted(() => data.value.log(${name} + ' um'))`
+        const VDomChild = compile(
+          `<script setup>${hooks('props.id')}
+          const props = defineProps(['id'])</script>
+          <template><p>{{ id }}</p></template>`,
+          data,
+          {},
+          { vapor: false },
+        )
+        const VaporParent = compile(
+          `<script setup>${hooks(`'parent'`)}
+          const components = _components</script>
+          <template><components.VDomChild id="a" /></template>`,
+          data,
+          { VDomChild },
+        )
+        const VaporWrapper = compile(
+          `<template><components.VaporParent /></template>`,
+          data,
+          { VaporParent },
+        )
+        const App = compile(
+          `<script setup>const data = _data; const components = _components</script>
+          <template>${template}</template>`,
+          data,
+          { VaporParent, VaporWrapper },
+          { vapor },
+        )
+        const { app } = define(App).render()
+        data.value.show = false
+        await nextTick()
+        expect(calls).toEqual([
+          'parent bum',
+          'a bum',
+          'a um',
+          'parent um',
+          ...after,
+        ])
+        app.unmount()
+      },
+    )
   })
 
   describe('template ref', () => {

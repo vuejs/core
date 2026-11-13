@@ -4,6 +4,7 @@ import {
   type VaporComponentInstance,
   isVaporComponent,
   mountComponent,
+  queuePendingUnmounted,
   unmountComponent,
 } from './component'
 import { isClaimedAnchor, isHydrating, isRangeEnd } from './dom/hydration'
@@ -438,7 +439,7 @@ export function remove(block: Block, parent?: ParentNode): void {
     // leaves the block alone, so unmount the vdom components in it here. A
     // kept-alive instance stays mounted.
     if (isInteropEnabled && !parent && block.isUnmounted) {
-      unmountVDOM(block.block)
+      unmountVDOM(block)
     }
   } else if (isArray(block)) {
     for (let i = 0; i < block.length; i++) {
@@ -536,6 +537,7 @@ export function unmountVDOM(block: Block | undefined): void {
   if (!block || block instanceof Node) return
   if (isVaporComponent(block)) {
     unmountVDOM(block.block)
+    queuePendingUnmounted(block)
   } else if (isArray(block)) {
     for (let i = 0; i < block.length; i++) unmountVDOM(block[i])
   } else if (isInteropFragment(block)) {
@@ -543,6 +545,22 @@ export function unmountVDOM(block: Block | undefined): void {
   } else {
     unmountVDOM(block.nodes)
   }
+}
+
+/**
+ * Whether a block tree has vdom components outside elements, which block
+ * removal unmounts.
+ */
+export function containsInteropFragment(block: Block | undefined): boolean {
+  if (!block || block instanceof Node) return false
+  if (isVaporComponent(block)) return containsInteropFragment(block.block)
+  if (isArray(block)) {
+    for (let i = 0; i < block.length; i++) {
+      if (containsInteropFragment(block[i])) return true
+    }
+    return false
+  }
+  return isInteropFragment(block) || containsInteropFragment(block.nodes)
 }
 
 /**

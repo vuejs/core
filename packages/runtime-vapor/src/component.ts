@@ -53,6 +53,7 @@ import {
 } from '@vue/runtime-dom'
 import {
   type Block,
+  containsInteropFragment,
   findBlockBoundary,
   getBlockFirstNode,
   insert,
@@ -1093,6 +1094,9 @@ export class VaporComponentInstance<
   inputScope?: EffectScope
   // The branch scope that unmounts a cached component when disposed.
   unmountScope?: EffectScope
+  // queues `unmounted` once the vdom components at the block root unmount;
+  // any path that removes the block must call `queuePendingUnmounted`
+  pendingUnmounted?: () => void
   $key?: any
   // Updates held back while the component-root chain ends in a pending async
   // setup child, shared by the async roots on the chain, matching VDOM.
@@ -1867,15 +1871,15 @@ export function unmountComponent(
     }
     instance.scope.stop()
 
-    if (hasLifecycle && instance.um) {
-      queuePostRenderEffect(instance.um!, undefined, parentSuspense)
-    }
-    if (hasLifecycle && instance.hasVNodeHooks) {
-      queuePostRenderEffect(
-        () => invokeComponentVNodeHook(instance, 'onVnodeUnmounted'),
-        undefined,
-        parentSuspense,
-      )
+    if (hasLifecycle && (instance.um || instance.hasVNodeHooks)) {
+      // vdom components at the block root are unmounted with the block, after
+      // the scope: queue `unmounted` after theirs, as vdom does
+      if (isInteropEnabled && containsInteropFragment(instance.block)) {
+        instance.pendingUnmounted = () =>
+          queueUnmounted(instance, parentSuspense)
+      } else {
+        queueUnmounted(instance, parentSuspense)
+      }
     }
     instance.isUnmounted = true
 
@@ -1907,6 +1911,31 @@ export function unmountComponent(
     }
   } else if (parentNode) {
     if (instance.block) remove(instance.block, parentNode)
+    if (isInteropEnabled) queuePendingUnmounted(instance)
+  }
+}
+
+function queueUnmounted(
+  instance: VaporComponentInstance,
+  parentSuspense: SuspenseBoundary | null,
+): void {
+  if (instance.um) {
+    queuePostRenderEffect(instance.um, undefined, parentSuspense)
+  }
+  if (instance.hasVNodeHooks) {
+    queuePostRenderEffect(
+      () => invokeComponentVNodeHook(instance, 'onVnodeUnmounted'),
+      undefined,
+      parentSuspense,
+    )
+  }
+}
+
+export function queuePendingUnmounted(instance: VaporComponentInstance): void {
+  const pending = instance.pendingUnmounted
+  if (pending) {
+    instance.pendingUnmounted = undefined
+    pending()
   }
 }
 

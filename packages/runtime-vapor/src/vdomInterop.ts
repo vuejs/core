@@ -100,6 +100,7 @@ import {
   getRootElement,
   isVaporComponent,
   mountComponent,
+  queuePendingUnmounted,
   resolveFallthroughAttrs,
   resolveFallthroughOwner,
   staleRootHooks,
@@ -689,6 +690,7 @@ const vaporInteropImpl = {
               ? ((anchor && anchor.parentNode) as ParentNode)
               : undefined
           remove(instance.block, blockContainer)
+          queuePendingUnmounted(instance)
         }
       } else {
         unmountComponent(instance, container, parentSuspense)
