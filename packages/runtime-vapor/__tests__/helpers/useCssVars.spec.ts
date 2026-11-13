@@ -967,4 +967,33 @@ describe('useVaporCssVars', () => {
     expect(vapor).toEqual(vdom)
     expect(vapor.after).toMatch(/^<i style="--[\w-]+: blue;"><\/i>$/)
   })
+
+  test('v-bind() reads $props, $attrs and $slots', async () => {
+    const { vdom, vapor } = await renderParity(
+      {
+        Child: `<script setup>
+            defineOptions({ inheritAttrs: false })
+            defineProps({ color: String })
+          </script>
+          <template><i /></template>
+          <style>i {
+            color: v-bind('$props.color');
+            background: v-bind('$attrs.bg');
+            content: v-bind("$slots.default ? 'a' : 'b'");
+          }</style>`,
+        App: `<template>
+          <components.Child :color="data.color" :bg="data.bg">x</components.Child>
+        </template>`,
+      },
+      () => ref({ color: 'red', bg: 'white' }),
+      data => {
+        data.value.color = 'blue'
+        data.value.bg = 'black'
+      },
+    )
+    expect(vapor).toEqual(vdom)
+    expect(vapor.after).toMatch(
+      /^<i style="--[\w-]+: blue; --[\w-]+: black; --[\w-]+: a;"><\/i>$/,
+    )
+  })
 })
