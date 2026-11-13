@@ -637,6 +637,8 @@ export interface InputHTMLAttributes extends HTMLAttributes {
   src?: string | undefined
   step?: Numberish | undefined
   type?: InputTypeHTMLAttribute | undefined
+  'true-value'?: any // for v-model checkbox support
+  'false-value'?: any // for v-model checkbox support
   value?: any // we support :value to be bound to anything w/ v-model
   width?: Numberish | undefined
   onCancel?: ((payload: Event) => void) | undefined
