@@ -42,6 +42,7 @@ import { createCache } from '../cache'
 import type TS from 'typescript'
 import { dirname, extname, join } from 'path'
 import { minimatch as isMatch } from 'minimatch'
+import * as nodeFs from 'fs'
 import * as process from 'process'
 
 export type SimpleTypeResolveOptions = Partial<
@@ -914,6 +915,47 @@ export function registerTS(_loadTS: () => typeof TS): void {
 
 type FS = NonNullable<SFCScriptCompileOptions['fs']>
 
+/**
+ * TypeScript 7 removed the legacy synchronous compiler API from its main
+ * entry (only `version` / `versionMajorMinor` remain), so `ts.sys` no longer
+ * exists. Fall back to a minimal `sys` backed by node:fs so that resolving
+ * *relative* type imports keeps working. Resolving non-relative imports still
+ * requires the legacy module-resolution API and is handled in `resolveWithTS`.
+ * https://github.com/vuejs/core/issues/15997
+ */
+let nodeFSSys: FS | undefined
+function getNodeFSSys(): FS | undefined {
+  // In non-CJS (browser) builds this branch is statically eliminated,
+  // so the `fs` import above is dropped from the browser bundle.
+  if (!__CJS__) return undefined
+  if (!nodeFSSys) {
+    nodeFSSys = {
+      fileExists(file: string): boolean {
+        try {
+          return nodeFs.statSync(file).isFile()
+        } catch {
+          return false
+        }
+      },
+      readFile(file: string): string | undefined {
+        try {
+          return nodeFs.readFileSync(file, 'utf8')
+        } catch {
+          return undefined
+        }
+      },
+      realpath(file: string): string {
+        try {
+          return nodeFs.realpathSync(file)
+        } catch {
+          return file
+        }
+      },
+    }
+  }
+  return nodeFSSys
+}
+
 function resolveFS(ctx: TypeResolveContext): FS | undefined {
   if (ctx.fs) {
     return ctx.fs
@@ -921,7 +963,7 @@ function resolveFS(ctx: TypeResolveContext): FS | undefined {
   if (!ts && loadTS) {
     ts = loadTS()
   }
-  const fs = ctx.options.fs || ts?.sys
+  const fs = ctx.options.fs || ts?.sys || getNodeFSSys()
   if (!fs) {
     return
   }
@@ -1094,6 +1136,18 @@ function resolveWithTS(
   fs: FS,
 ): string | undefined {
   if (!__CJS__) return
+
+  // TypeScript 7+ no longer ships the legacy module-resolution API
+  // (findConfigFile / resolveModuleName / ...). Bail out early so the caller
+  // reports a proper "Failed to resolve import source" error instead of
+  // throwing a TypeError.
+  // https://github.com/vuejs/core/issues/15997
+  if (
+    typeof ts.findConfigFile !== 'function' ||
+    typeof ts.resolveModuleName !== 'function'
+  ) {
+    return
+  }
 
   // 1. resolve tsconfig.json
   const configPath = ts.findConfigFile(containingFile, fs.fileExists)
