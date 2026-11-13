@@ -1759,10 +1759,12 @@ export function invokeComponentVNodeHook(
   if (hook) {
     let vnode = isInteropEnabled && instance.interopVNode
     if (isInteropEnabled && !vnode && isAsyncComponentEnabled) {
-      // the component an async wrapper renders stands for the wrapper's vnode
-      const parent = instance.parent
-      if (parent && parent.vapor && isAsyncWrapper(parent)) {
+      // the component async wrappers resolve to stands for the vnode of the
+      // outermost one
+      let parent = instance.parent
+      while (!vnode && parent && parent.vapor && isAsyncWrapper(parent)) {
         vnode = (parent as VaporComponentInstance).interopVNode
+        parent = parent.parent
       }
     }
     callWithAsyncErrorHandling(

@@ -11054,6 +11054,81 @@ describe('vdomInterop', () => {
         expect(await run(true)).toEqual(vdom)
       },
     )
+
+    test('hooks of an async component resolving to an async component get the vnode', async () => {
+      const run = async (vapor: boolean) => {
+        const calls: string[] = []
+        const hook = (name: string) => (vnode: any) =>
+          calls.push(`vnode ${name}: ${vnode ? 'vnode' : 'no vnode'}`)
+        const data = ref({
+          show: true,
+          log: (entry: string) => calls.push(entry),
+          beforeMount: hook('beforeMount'),
+          mounted: hook('mounted'),
+          beforeUnmount: hook('beforeUnmount'),
+          unmounted: hook('unmounted'),
+        })
+        const Leaf = compile(
+          `<script setup>
+          import { onMounted, onUnmounted } from 'vue'
+          const data = _data
+          onMounted(() => data.value.log('leaf mounted'))
+          onUnmounted(() => data.value.log('leaf unmounted'))
+          </script>
+          <template>
+            <div>leaf</div>
+          </template>`,
+          data,
+          {},
+          { vapor },
+        )
+        const define: (loader: () => Promise<any>) => any = vapor
+          ? defineVaporAsyncComponent
+          : defineAsyncComponent
+        const Inner = define(() => Promise.resolve(Leaf))
+        const Outer = define(() => Promise.resolve(Inner))
+        const App = compile(
+          `<script setup>
+          const data = _data
+          const components = _components
+          </script>
+          <template>
+            <components.Outer
+              v-if="data.show"
+              @vue:before-mount="data.beforeMount"
+              @vue:mounted="data.mounted"
+              @vue:before-unmount="data.beforeUnmount"
+              @vue:unmounted="data.unmounted"
+            />
+          </template>`,
+          data,
+          { Outer },
+          { vapor: false },
+        )
+        const app = createApp(App)
+        app.use(vaporInteropPlugin)
+        app.mount(document.createElement('div'))
+
+        await new Promise(r => setTimeout(r))
+        await new Promise(r => setTimeout(r))
+        await nextTick()
+        data.value.show = false
+        await nextTick()
+        app.unmount()
+        return calls
+      }
+
+      const vdom = await run(false)
+      expect(vdom).toEqual([
+        'vnode beforeMount: vnode',
+        'leaf mounted',
+        'vnode mounted: vnode',
+        'vnode beforeUnmount: vnode',
+        'leaf unmounted',
+        'vnode unmounted: vnode',
+      ])
+      expect(await run(true)).toEqual(vdom)
+    })
   })
 
   describe('transition', () => {
