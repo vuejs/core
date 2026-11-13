@@ -455,11 +455,21 @@ function getInteropTransitionElement(
 
 // The vnode's evaluated props as the child's raw props: marked for
 // initInputs, and replaced on every patch so no first frame is retained.
+// The hooks kept here are the ones the component fires itself; an async
+// wrapper hands all its mount hooks to the component it renders.
 function interopRawProps(vnode: VNode): RawProps {
   const rawProps: RawProps = {}
   const props = vnode.props
   for (const key in props) {
-    if (!isReservedProp(key)) rawProps[key] = props[key]
+    if (
+      !isReservedProp(key) ||
+      key === 'onVnodeMounted' ||
+      key === 'onVnodeBeforeUnmount' ||
+      key === 'onVnodeUnmounted' ||
+      (key === 'onVnodeBeforeMount' && isAsyncWrapper(vnode))
+    ) {
+      rawProps[key] = props[key]
+    }
   }
   rawProps[interopKey] = true
   return rawProps
@@ -567,13 +577,6 @@ const vaporInteropImpl = {
           if (pendingSetup) {
             const rootEl = resolveInteropRootEl(instance)
             if (rootEl) mountVNode.el = rootEl
-            // after the component's own mounted hooks, as in VDOM
-            const mountedHook = hooks && hooks.onVnodeMounted
-            if (mountedHook) {
-              ;(instance.m ||= []).push(() =>
-                invokeInteropVNodeHook(instance, mountedHook, mountVNode),
-              )
-            }
           }
           // align with VDOM: vnode beforeMount runs before directive created/beforeMount.
           invokeInteropVNodeHook(
@@ -604,14 +607,6 @@ const vaporInteropImpl = {
     }
 
     mountComponent(instance, container, selfAnchor)
-    if (!pendingSetup) {
-      queueInteropVNodeHook(
-        instance,
-        vnodeHooks && vnodeHooks.onVnodeMounted,
-        vnode,
-        parentSuspense,
-      )
-    }
 
     simpleSetCurrentInstance(prev)
     return instance
@@ -667,12 +662,6 @@ const vaporInteropImpl = {
     let slotStartAnchor: Node | null = null
     if (instance) {
       const anchor = vnode.anchor as Node | null
-      const vnodeHooks = isAsyncWrapper(vnode) ? null : vnode.props
-      invokeInteropVNodeHook(
-        instance,
-        vnodeHooks && vnodeHooks.onVnodeBeforeUnmount,
-        vnode,
-      )
       if (instance.block) {
         if (!doRemove && isTransitionEnabled && vnode.transition) {
           // The enclosing VDOM fragment owns the leave and its DOM range.
@@ -708,12 +697,6 @@ const vaporInteropImpl = {
           instance.pendingBlock = undefined
         }
       }
-      queueInteropVNodeHook(
-        instance,
-        vnodeHooks && vnodeHooks.onVnodeUnmounted,
-        vnode,
-        parentSuspense,
-      )
     } else if (vnode.vb) {
       const anchor = vnode.anchor as Node | null
       // The slot's own start node, or the opening marker `hydrateSlot()`
@@ -1188,12 +1171,6 @@ const vaporInteropImpl = {
     }
     activate(instance, container, anchor, parentSuspense)
     insert(vnode.anchor as any, container, anchor)
-    queueInteropVNodeHook(
-      instance,
-      vnode.props && vnode.props.onVnodeMounted,
-      vnode,
-      parentSuspense,
-    )
   },
 
   deactivate(vnode, container: ParentNode, parentSuspense) {
@@ -1201,12 +1178,6 @@ const vaporInteropImpl = {
     const instance = getVaporInstance(vnode)
     deactivate(instance, container, parentSuspense)
     insert(vnode.anchor as any, container)
-    queueInteropVNodeHook(
-      instance,
-      vnode.props && vnode.props.onVnodeUnmounted,
-      vnode,
-      parentSuspense,
-    )
   },
 } satisfies VaporInVdomInterface
 
@@ -4408,21 +4379,6 @@ function invokeInteropVNodeHook(
   prevVNode: VNode | null = null,
 ): void {
   if (hook) invokeVNodeHook(hook, instance.parent, vnode, prevVNode)
-}
-
-function queueInteropVNodeHook(
-  instance: VaporComponentInstance,
-  hook: VNodeHook | null | undefined,
-  vnode: VNode,
-  suspense: SuspenseBoundary | null,
-): void {
-  if (hook) {
-    queuePostRenderEffect(
-      () => invokeVNodeHook(hook, instance.parent, vnode),
-      undefined,
-      suspense,
-    )
-  }
 }
 
 function invokeInteropVNodeBeforeUpdate(

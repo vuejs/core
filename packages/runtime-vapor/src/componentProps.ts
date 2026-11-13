@@ -22,6 +22,7 @@ import {
   type NormalizedPropsOptions,
   baseNormalizePropsOptions,
   currentInstance,
+  isAsyncWrapper,
   isEmitListener,
   popWarningContext,
   pushWarningContext,
@@ -49,6 +50,7 @@ import { normalizeEmitsOptions } from './componentEmits'
 import { RenderEffect } from './renderEffect'
 import { interopKey, isInteropEnabled } from './vdomInteropState'
 import { isKeepAliveEnabled } from './keepAlive'
+import { isAsyncComponentEnabled } from './asyncComponentState'
 
 export const fallthroughOnlyKey: unique symbol = Symbol(
   __DEV__ ? 'fallthrough only' : '',
@@ -846,7 +848,14 @@ function updateProps(
   const keys = propsToUpdate || Object.keys(rawValues)
   for (let i = 0; i < keys.length; i += propsToUpdate ? 2 : 1) {
     let key = keys[i] as string
-    if (isReservedProp(key)) continue
+    if (isReservedProp(key)) {
+      // the vnode hooks are the reserved listeners; an async wrapper leaves
+      // them to the component it renders
+      if (isOn(key) && !(isAsyncComponentEnabled && isAsyncWrapper(instance))) {
+        instance.hasVNodeHooks = true
+      }
+      continue
+    }
     const value = rawValues[key]
     const camelKey = camelize(key)
     if (options && hasOwn(options, camelKey)) {

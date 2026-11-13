@@ -10901,6 +10901,233 @@ describe('vdomInterop', () => {
         'vnode updated',
       ])
     })
+
+    test('vnode mounted runs before the activated hooks of a kept-alive child', async () => {
+      const run = async (vapor: boolean) => {
+        const calls: string[] = []
+        const data = ref({ log: (hook: string) => calls.push(hook) })
+        const Child = compile(
+          `<script setup>
+          import { onActivated, onMounted } from 'vue'
+          const data = _data
+          onMounted(() => data.value.log('child mounted'))
+          onActivated(() => data.value.log('child activated'))
+          </script>
+          <template>
+            <div>child</div>
+          </template>`,
+          data,
+          {},
+          { vapor },
+        )
+        const App = compile(
+          `<script setup>
+          const data = _data
+          const components = _components
+          </script>
+          <template>
+            <KeepAlive>
+              <components.Child @vue:mounted="data.log('vnode mounted')" />
+            </KeepAlive>
+          </template>`,
+          data,
+          { Child },
+          { vapor: false },
+        )
+        const app = createApp(App)
+        app.use(vaporInteropPlugin)
+        app.mount(document.createElement('div'))
+        await nextTick()
+        app.unmount()
+        return calls
+      }
+
+      const vdom = await run(false)
+      expect(vdom).toEqual([
+        'child mounted',
+        'vnode mounted',
+        'child activated',
+      ])
+      expect(await run(true)).toEqual(vdom)
+    })
+
+    test.each([false, true])(
+      'hooks of an async component fire on the component it resolves to (KeepAlive: %s)',
+      async keepAlive => {
+        const run = async (vapor: boolean) => {
+          const calls: string[] = []
+          const hook = (name: string) => (vnode: any) =>
+            calls.push(`vnode ${name}: ${vnode ? 'vnode' : 'no vnode'}`)
+          const data = ref({
+            show: true,
+            log: (entry: string) => calls.push(entry),
+            beforeMount: hook('beforeMount'),
+            mounted: hook('mounted'),
+            beforeUnmount: hook('beforeUnmount'),
+            unmounted: hook('unmounted'),
+          })
+          const Inner = compile(
+            `<script setup>
+            import {
+              onActivated, onDeactivated, onMounted, onUnmounted,
+            } from 'vue'
+            const data = _data
+            onMounted(() => data.value.log('inner mounted'))
+            onUnmounted(() => data.value.log('inner unmounted'))
+            onActivated(() => data.value.log('inner activated'))
+            onDeactivated(() => data.value.log('inner deactivated'))
+            </script>
+            <template>
+              <div>inner</div>
+            </template>`,
+            data,
+            {},
+            { vapor },
+          )
+          let resolve!: (comp: any) => void
+          const loader = () => new Promise<any>(r => (resolve = r))
+          const Async = vapor
+            ? defineVaporAsyncComponent(loader)
+            : defineAsyncComponent(loader)
+          const child = `<components.Async
+            v-if="data.show"
+            @vue:before-mount="data.beforeMount"
+            @vue:mounted="data.mounted"
+            @vue:before-unmount="data.beforeUnmount"
+            @vue:unmounted="data.unmounted"
+          />`
+          const App = compile(
+            `<script setup>
+            const data = _data
+            const components = _components
+            </script>
+            <template>
+              ${keepAlive ? `<KeepAlive>${child}</KeepAlive>` : child}
+            </template>`,
+            data,
+            { Async },
+            { vapor: false },
+          )
+          const app = createApp(App)
+          app.use(vaporInteropPlugin)
+          app.mount(document.createElement('div'))
+
+          resolve(Inner)
+          await new Promise(r => setTimeout(r))
+          await nextTick()
+          data.value.show = false
+          await nextTick()
+          if (keepAlive) {
+            data.value.show = true
+            await nextTick()
+          }
+          app.unmount()
+          return calls
+        }
+
+        const vdom = await run(false)
+        expect(vdom).toEqual(
+          keepAlive
+            ? [
+                'vnode beforeMount: vnode',
+                'inner mounted',
+                'vnode mounted: vnode',
+                'inner activated',
+                'inner deactivated',
+                'vnode unmounted: vnode',
+                'inner activated',
+                'vnode mounted: vnode',
+                'vnode beforeUnmount: vnode',
+                'inner deactivated',
+                'inner unmounted',
+                'vnode unmounted: vnode',
+              ]
+            : [
+                'vnode beforeMount: vnode',
+                'inner mounted',
+                'vnode mounted: vnode',
+                'vnode beforeUnmount: vnode',
+                'inner unmounted',
+                'vnode unmounted: vnode',
+              ],
+        )
+        expect(await run(true)).toEqual(vdom)
+      },
+    )
+
+    test('hooks of an async component resolving to an async component get the vnode', async () => {
+      const run = async (vapor: boolean) => {
+        const calls: string[] = []
+        const hook = (name: string) => (vnode: any) =>
+          calls.push(`vnode ${name}: ${vnode ? 'vnode' : 'no vnode'}`)
+        const data = ref({
+          show: true,
+          log: (entry: string) => calls.push(entry),
+          beforeMount: hook('beforeMount'),
+          mounted: hook('mounted'),
+          beforeUnmount: hook('beforeUnmount'),
+          unmounted: hook('unmounted'),
+        })
+        const Leaf = compile(
+          `<script setup>
+          import { onMounted, onUnmounted } from 'vue'
+          const data = _data
+          onMounted(() => data.value.log('leaf mounted'))
+          onUnmounted(() => data.value.log('leaf unmounted'))
+          </script>
+          <template>
+            <div>leaf</div>
+          </template>`,
+          data,
+          {},
+          { vapor },
+        )
+        const defineAsync: (loader: () => Promise<any>) => any = vapor
+          ? defineVaporAsyncComponent
+          : defineAsyncComponent
+        const Inner = defineAsync(() => Promise.resolve(Leaf))
+        const Outer = defineAsync(() => Promise.resolve(Inner))
+        const App = compile(
+          `<script setup>
+          const data = _data
+          const components = _components
+          </script>
+          <template>
+            <components.Outer
+              v-if="data.show"
+              @vue:before-mount="data.beforeMount"
+              @vue:mounted="data.mounted"
+              @vue:before-unmount="data.beforeUnmount"
+              @vue:unmounted="data.unmounted"
+            />
+          </template>`,
+          data,
+          { Outer },
+          { vapor: false },
+        )
+        const app = createApp(App)
+        app.use(vaporInteropPlugin)
+        app.mount(document.createElement('div'))
+
+        await new Promise(r => setTimeout(r))
+        await nextTick()
+        data.value.show = false
+        await nextTick()
+        app.unmount()
+        return calls
+      }
+
+      const vdom = await run(false)
+      expect(vdom).toEqual([
+        'vnode beforeMount: vnode',
+        'leaf mounted',
+        'vnode mounted: vnode',
+        'vnode beforeUnmount: vnode',
+        'leaf unmounted',
+        'vnode unmounted: vnode',
+      ])
+      expect(await run(true)).toEqual(vdom)
+    })
   })
 
   describe('transition', () => {
@@ -17582,4 +17809,80 @@ describe('moving an interop child that is active in a vapor KeepAlive', () => {
     ])
     expect(vapor).toEqual(vdom)
   })
+})
+
+describe('async component of the other mode in a vdom KeepAlive', () => {
+  test.each([
+    ['vdom', 'vapor'],
+    ['vapor', 'vdom'],
+  ])(
+    '%s wrapper, %s inner: activated when it first mounts',
+    async (wrapper, inner) => {
+      const run = async (wrapper: string, inner: string) => {
+        const calls: string[] = []
+        const data = ref({
+          show: true,
+          log: (entry: string) => calls.push(entry),
+        })
+        const Inner = compile(
+          `<script setup>
+          import { onActivated, onDeactivated, onMounted } from 'vue'
+          const data = _data
+          onMounted(() => data.value.log('inner mounted'))
+          onActivated(() => data.value.log('inner activated'))
+          onDeactivated(() => data.value.log('inner deactivated'))
+          </script>
+          <template>
+            <div>inner</div>
+          </template>`,
+          data,
+          {},
+          { vapor: inner === 'vapor' },
+        )
+        let resolve!: (comp: any) => void
+        const loader = () => new Promise<any>(r => (resolve = r))
+        const Async =
+          wrapper === 'vapor'
+            ? defineVaporAsyncComponent(loader)
+            : defineAsyncComponent(loader)
+        const App = compile(
+          `<script setup>
+          const data = _data
+          const components = _components
+          </script>
+          <template>
+            <KeepAlive>
+              <components.Async v-if="data.show" />
+            </KeepAlive>
+          </template>`,
+          data,
+          { Async },
+          { vapor: false },
+        )
+        const app = createApp(App)
+        app.use(vaporInteropPlugin)
+        app.mount(document.createElement('div'))
+
+        resolve(Inner)
+        await new Promise(r => setTimeout(r))
+        await nextTick()
+        data.value.show = false
+        await nextTick()
+        data.value.show = true
+        await nextTick()
+        app.unmount()
+        return calls
+      }
+
+      const vdom = await run('vdom', 'vdom')
+      expect(vdom).toEqual([
+        'inner mounted',
+        'inner activated',
+        'inner deactivated',
+        'inner activated',
+        'inner deactivated',
+      ])
+      expect(await run(wrapper, inner)).toEqual(vdom)
+    },
+  )
 })
