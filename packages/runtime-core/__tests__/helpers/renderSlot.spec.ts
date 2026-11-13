@@ -29,13 +29,13 @@ describe('renderSlot', () => {
       { key: 'foo' },
     )
     expect(vnode.children).toEqual([child])
-    expect(vnode.key).toBe('foo')
+    expect(vnode.key).toBe('string:c:foo')
   })
 
   it('should allow symbol values for slot prop key', () => {
     const key = Symbol()
     const vnode = renderSlot({ default: () => [h('div')] }, 'default', { key })
-    expect(vnode.key).toBe('_default')
+    expect(vnode.key).toBe('string:c:_default')
   })
 
   it('should allow symbol values for compiler-injected slot keys', () => {
@@ -48,7 +48,7 @@ describe('renderSlot', () => {
       undefined,
       key,
     )
-    expect(vnode.key).toBe('_default')
+    expect(vnode.key).toBe('string:c:_default')
   })
 
   it('should not expose compiler-injected slot keys to slot props', () => {
@@ -70,7 +70,7 @@ describe('renderSlot', () => {
 
     expect(receivedProps).toBe(props)
     expect(receivedProps).not.toHaveProperty('key')
-    expect(vnode.key).toBe('branch')
+    expect(vnode.key).toBe('string:c:branch')
   })
 
   it('should prefer user-provided slot prop keys over compiler-injected keys', () => {
@@ -91,7 +91,7 @@ describe('renderSlot', () => {
     )
 
     expect(receivedProps).toBe(props)
-    expect(vnode.key).toBe('user')
+    expect(vnode.key).toBe('string:c:user')
   })
 
   it('should preserve compiler-injected slot keys in custom element mode', () => {
@@ -129,7 +129,7 @@ describe('renderSlot', () => {
         props,
       )
       expect(receivedProps).toEqual({})
-      expect(vnode.key).toBe('_default')
+      expect(vnode.key).toBe('string:c:_default')
     }
   })
 
@@ -143,7 +143,7 @@ describe('renderSlot', () => {
         undefined,
         'branch',
       )
-      expect(vnode.key).toBe('branch')
+      expect(vnode.key).toBe('string:c:branch')
     }
   })
 
@@ -162,8 +162,8 @@ describe('renderSlot', () => {
   it('should render slot fallback', () => {
     const vnode = renderSlot({}, 'default', { key: 'foo' }, () => ['fallback'])
     expect(vnode.children).toEqual(['fallback'])
-    // should attach fallback key postfix
-    expect(vnode.key).toBe('foo_fb')
+    // should distinguish fallback content from actual content
+    expect(vnode.key).toBe('string:f:foo')
   })
 
   it('should warn render ssr slot', () => {
