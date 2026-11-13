@@ -213,12 +213,12 @@ function setChecked(
   }
 }
 
-export const vModelRadio: ModelDirective<HTMLInputElement> = {
-  created(el, { value }, vnode) {
+export const vModelRadio: ModelDirective<HTMLInputElement, 'number'> = {
+  created(el, { value, modifiers: { number } }, vnode) {
     el.checked = looseEqual(value, vnode.props!.value)
     el[assignKey] = getModelAssigner(vnode)
     addEventListener(el, 'change', () => {
-      el[assignKey](getValue(el))
+      el[assignKey](number ? looseToNumber(getValue(el)) : getValue(el))
     })
   },
   beforeUpdate(el, { value, oldValue }, vnode) {
