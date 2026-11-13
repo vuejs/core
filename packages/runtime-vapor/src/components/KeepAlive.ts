@@ -26,6 +26,7 @@ import { isVaporTransitionHooks } from '../transition'
 import {
   type VaporComponent,
   type VaporComponentInstance,
+  invokeComponentVNodeHook,
   isVaporComponent,
 } from '../component'
 import { isAsyncComponentEnabled } from '../asyncComponentState'
@@ -703,6 +704,8 @@ export function activate(
     () => {
       instance.isDeactivated = false
       if (instance.a) invokeArrayFns(instance.a)
+      if (instance.hasVNodeHooks)
+        invokeComponentVNodeHook(instance, 'onVnodeMounted')
     },
     undefined,
     parentSuspense,
@@ -732,6 +735,8 @@ export function deactivate(
   queuePostRenderEffect(
     () => {
       if (instance.da) invokeArrayFns(instance.da)
+      if (instance.hasVNodeHooks)
+        invokeComponentVNodeHook(instance, 'onVnodeUnmounted')
       instance.isDeactivated = true
     },
     undefined,

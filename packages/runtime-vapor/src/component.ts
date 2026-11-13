@@ -23,6 +23,7 @@ import {
   type ShallowUnwrapRef,
   type SuspenseBoundary,
   type VNode,
+  callWithAsyncErrorHandling,
   callWithErrorHandling,
   currentInstance,
   devtoolsComponentAdded,
@@ -86,7 +87,9 @@ import {
   isArray,
   isFunction,
   isModelListener,
+  isOn,
   isPromise,
+  isReservedProp,
   isString,
 } from '@vue/shared'
 import {
@@ -1080,6 +1083,8 @@ export class VaporComponentInstance<
   asyncDepRegistered?: boolean
 
   hasFallthrough: boolean
+  // an `onVnodeXxx` listener was delivered
+  hasVNodeHooks: boolean
 
   // for keep-alive
   shapeFlag?: number
@@ -1203,6 +1208,7 @@ export class VaporComponentInstance<
     this.rawValues = INITIAL_RAW_VALUES
     this.propsDeps = undefined
     this.hasDynamicProps = true
+    this.hasVNodeHooks = false
     this.rawProps = rawProps || EMPTY_OBJ
     // a custom element host mutates its props object after creation, so its
     // attrs key set is never static
@@ -1407,6 +1413,17 @@ export function createPlainElement(
   }
 
   if (rawProps) {
+    if (__DEV__) {
+      for (const key in rawProps) {
+        if (isOn(key) && isReservedProp(key)) {
+          warn(
+            `@vue:xxx per-element lifecycle events are not supported in ` +
+              `Vapor mode and will be ignored on <${comp}>.`,
+          )
+          break
+        }
+      }
+    }
     const isSVG = ns === Namespaces.SVG
     const setFn = () =>
       patchDynamicProps(
@@ -1674,6 +1691,8 @@ export function mountComponent(
     startMeasure(instance, `mount`)
   }
   if (instance.bm) invokeArrayFns(instance.bm)
+  if (instance.hasVNodeHooks)
+    invokeComponentVNodeHook(instance, 'onVnodeBeforeMount')
   if (!isHydrating) {
     // Root-only ids (stamp + interop carriers) land before insertion; see
     // applyRootScopeIds for the delegation rule.
@@ -1688,6 +1707,13 @@ export function mountComponent(
   if (instance.m) {
     queuePostRenderEffect(instance.m!, undefined, instance.suspense)
   }
+  if (instance.hasVNodeHooks) {
+    queuePostRenderEffect(
+      () => invokeComponentVNodeHook(instance, 'onVnodeMounted'),
+      undefined,
+      instance.suspense,
+    )
+  }
   if (
     isKeepAliveEnabled &&
     instance.shapeFlag! & ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE &&
@@ -1701,6 +1727,20 @@ export function mountComponent(
   }
   if (__DEV__ || __FEATURE_PROD_DEVTOOLS__) {
     devtoolsComponentAdded(instance)
+  }
+}
+
+/**
+ * Fires a `@vue:xxx` listener of the component. It is read on firing, like
+ * an emit listener, and there is no vnode to pass.
+ */
+export function invokeComponentVNodeHook(
+  instance: VaporComponentInstance,
+  name: string,
+): void {
+  const hook = instance.rawValues[name]
+  if (hook) {
+    callWithAsyncErrorHandling(hook, instance.parent, ErrorCodes.VNODE_HOOK)
   }
 }
 
@@ -1781,6 +1821,9 @@ export function unmountComponent(
     if (hasLifecycle) {
       invalidateMount(instance.m)
       invalidateMount(instance.a)
+      if (instance.hasVNodeHooks) {
+        invokeComponentVNodeHook(instance, 'onVnodeBeforeUnmount')
+      }
       if (instance.bum) {
         invokeArrayFns(instance.bum)
       }
@@ -1794,6 +1837,13 @@ export function unmountComponent(
 
     if (hasLifecycle && instance.um) {
       queuePostRenderEffect(instance.um!, undefined, parentSuspense)
+    }
+    if (hasLifecycle && instance.hasVNodeHooks) {
+      queuePostRenderEffect(
+        () => invokeComponentVNodeHook(instance, 'onVnodeUnmounted'),
+        undefined,
+        parentSuspense,
+      )
     }
     instance.isUnmounted = true
 

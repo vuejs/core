@@ -43,6 +43,33 @@ describe('Vapor Mode hydration', () => {
       expect(beforeMount).toHaveBeenCalledTimes(1)
     })
 
+    test('@vue:xxx lifecycle events of a hydrated child component', async () => {
+      const log: string[] = []
+      const { container } = await testHydration(
+        `<template>
+          <components.Child
+            @vue:before-mount="data.log('vnode:bm')"
+            @vue:mounted="data.log('vnode:m')"
+          />
+        </template>`,
+        {
+          Child: `<script vapor>
+            import { onBeforeMount, onMounted } from 'vue'
+            const data = _data
+            onBeforeMount(() => data.value.log('own:bm'))
+            onMounted(() => data.value.log('own:m'))
+          </script>
+          <template>
+            <div>child</div>
+          </template>`,
+        },
+        ref({ log: (entry: string) => log.push(entry) }),
+      )
+      await nextTick()
+      expect(container.innerHTML).toContain('<div>child</div>')
+      expect(log).toEqual(['own:bm', 'vnode:bm', 'own:m', 'vnode:m'])
+    })
+
     test('dynamic child component root preserves inherited scopeId after hydration update', async () => {
       const showAlt = ref(false)
       const Child = defineVaporComponent({

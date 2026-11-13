@@ -20,6 +20,7 @@ import {
 } from '@vue/runtime-dom'
 import {
   type VaporComponentInstance,
+  invokeComponentVNodeHook,
   isDeferredRootUpdatesLive,
   isVaporComponent,
   settleDeferredRootUpdates,
@@ -121,7 +122,8 @@ export class RenderEffect extends ReactiveEffect {
     const instance = this.i
     const scope = this.subs ? (this.subs.sub as EffectScope) : undefined
     // renderEffect is always called after user has registered all hooks
-    const hasUpdateHooks = instance && (instance.bu || instance.u)
+    const hasUpdateHooks =
+      instance && (instance.bu || instance.u || instance.hasVNodeHooks)
     let measuring = false
     if (__DEV__ && instance) {
       pushWarningContext(instance)
@@ -138,6 +140,8 @@ export class RenderEffect extends ReactiveEffect {
         instance.isUpdating = true
         try {
           instance.bu && invokeArrayFns(instance.bu)
+          instance.hasVNodeHooks &&
+            invokeComponentVNodeHook(instance, 'onVnodeBeforeUpdate')
           this.render()
         } catch (err) {
           instance.isUpdating = false
@@ -148,6 +152,8 @@ export class RenderEffect extends ReactiveEffect {
           updateJob = this.updateJob = () => {
             instance.isUpdating = false
             instance.u && invokeArrayFns(instance.u)
+            instance.hasVNodeHooks &&
+              invokeComponentVNodeHook(instance, 'onVnodeUpdated')
           }
         }
         queuePostRenderEffect(updateJob, undefined, instance.suspense)
