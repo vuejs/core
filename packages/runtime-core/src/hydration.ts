@@ -607,11 +607,15 @@ export function createHydrationFunctions(
         : (children[i] = normalizeVNode(children[i]))
       const isText = vnode.type === Text
       if (node) {
-        if (isText && !optimized) {
-          // #7285 possible consecutive text vnodes from manual render fns or
-          // JSX-compiled fns, but on the client the browser parses only 1 text
-          // node.
-          // look ahead for next possible text vnode
+        // #7285 possible consecutive text vnodes from manual render fns or
+        // JSX-compiled fns, but on the client the browser parses only 1 text
+        // node.
+        // look ahead for next possible text vnode, but only when the DOM node
+        // we are aligned to is actually a text node - it can be an element or a
+        // comment when a preceding child did not match and the mismatch was
+        // allowed (e.g. inside a `data-allow-mismatch="children"` region), in
+        // which case reading `.data` off it would throw.
+        if (isText && !optimized && node.nodeType === DOMNodeTypes.TEXT) {
           if (i + 1 < l && normalizeVNode(children[i + 1]).type === Text) {
             // create an extra TextNode on the client for the next vnode to
             // adopt
