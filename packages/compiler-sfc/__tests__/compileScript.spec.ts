@@ -1,5 +1,10 @@
 import { vi } from 'vitest'
-import { BindingTypes } from '@vue/compiler-core'
+import {
+  BindingTypes,
+  type CompilerError,
+  NodeTypes,
+  createCompilerError,
+} from '@vue/compiler-core'
 import {
   assertCode,
   compileSFCScript as compile,
@@ -1726,4 +1731,40 @@ describe('compileScript', () => {
     expect(lang).toBe('coffee')
     expect(scriptAst).not.toBeDefined()
   })
+})
+
+test('calls user onWarn for inline template warnings', () => {
+  const warnings: CompilerError[] = []
+  compile(
+    `
+    <script setup>
+    const msg = 'hello'
+    </script>
+    <template>
+      <div>{{ msg }}</div>
+    </template>
+    `,
+    {
+      inlineTemplate: true,
+      templateOptions: {
+        compilerOptions: {
+          onWarn: w => warnings.push(w),
+          nodeTransforms: [
+            (node, ctx) => {
+              if (node.type === NodeTypes.ROOT) {
+                ctx.onWarn(
+                  createCompilerError(-1, node.loc, {
+                    [-1]: 'custom warning',
+                  }),
+                )
+              }
+            },
+          ],
+        },
+      },
+    },
+  )
+
+  expect(warnings).toHaveLength(1)
+  expect(warnings[0].message).toContain('custom warning')
 })
