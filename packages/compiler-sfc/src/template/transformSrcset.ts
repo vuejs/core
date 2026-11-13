@@ -28,7 +28,7 @@ interface ImageCandidate {
 }
 
 // http://w3c.github.io/html/semantics-embedded-content.html#ref-for-image-candidate-string-5
-const escapedSpaceCharacters = /( |\\t|\\n|\\f|\\r)+/g
+const spaceCharacters = /[ \t\n\f\r]+/g
 
 export const createSrcsetTransformWithOptions = (
   options: Required<AssetURLOptions>,
@@ -50,10 +50,8 @@ export const transformSrcset: NodeTransform = (
           const value = attr.value.content
           if (!value) return
           const imageCandidates: ImageCandidate[] = value.split(',').map(s => {
-            // The attribute value arrives here with all whitespace, except
-            // normal spaces, represented by escape sequences
             const [url, descriptor] = s
-              .replace(escapedSpaceCharacters, ' ')
+              .replace(spaceCharacters, ' ')
               .trim()
               .split(' ', 2)
             return { url, descriptor }
