@@ -182,6 +182,9 @@ export interface SlotResolutionState {
   notifyExposedValidityChange(): void
   // beforeMount hooks, handed every block about to be exposed
   bm?: ((nodes: Block) => void)[]
+  // a Transition's fallthrough attrs, re-applied to every exposed block (see
+  // DynamicFragment.fallthrough)
+  fallthrough?: (nodes: Block, scope?: EffectScope) => void
   // An interop host patching vnode content: `cb` follows the leave its
   // content root is running on its own, if any. A vapor root is found
   // through the content block instead.
@@ -229,6 +232,14 @@ export function placeSlotContent(
 }
 
 function beforeExpose(state: SlotResolutionState, block: Block): void {
+  // a Transition's attrs move to the exposed branch, a fallback's effects
+  // living in its own scope
+  const fallthrough = state.fallthrough
+  if (fallthrough) {
+    const scope =
+      block === state.activeFallback ? state.fallbackScope : undefined
+    state.boundary.run(() => fallthrough(block, scope))
+  }
   const bm = state.bm
   if (bm) {
     for (let i = 0; i < bm.length; i++) bm[i](block)
