@@ -58,6 +58,14 @@ describe('runtime-dom: attrs patching', () => {
     },
   )
 
+  test('truespeed boolean attribute', () => {
+    const el = document.createElement('marquee')
+    patchProp(el, 'truespeed', null, true)
+    expect(el.getAttribute('truespeed')).toBe('')
+    patchProp(el, 'truespeed', true, false)
+    expect(el.getAttribute('truespeed')).toBe(null)
+  })
+
   test('attributes', () => {
     const el = document.createElement('div')
     patchProp(el, 'foo', null, 'a')

@@ -75,6 +75,11 @@ describe('ssr: renderAttrs', () => {
     ).toBe(``)
   })
 
+  test('truespeed boolean attr', () => {
+    expect(ssrRenderAttrs({ truespeed: true })).toBe(` truespeed`)
+    expect(ssrRenderAttrs({ truespeed: false })).toBe(``)
+  })
+
   test('hidden enumerated attribute', () => {
     expect(ssrRenderAttrs({ hidden: true })).toBe(` hidden`)
     expect(ssrRenderAttrs({ disabled: true, hidden: false })).toBe(` disabled`)

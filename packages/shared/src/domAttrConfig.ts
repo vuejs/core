@@ -14,10 +14,11 @@ import { extend } from './general'
  * - novalidate -> noValidate
  * - playsinline -> playsInline
  * - readonly -> readOnly
+ * - truespeed -> trueSpeed
  */
 const specialBooleanAttrs =
   `itemscope,allowfullscreen,disablepictureinpicture,disableremoteplayback,` +
-  `formnovalidate,ismap,nomodule,novalidate,playsinline,readonly`
+  `formnovalidate,ismap,nomodule,novalidate,playsinline,readonly,truespeed`
 export const isSpecialBooleanAttr: (key: string) => boolean =
   /*@__PURE__*/ makeMap(specialBooleanAttrs)
 
