@@ -10,6 +10,7 @@ import {
   Namespaces,
   NodeTypes,
   type Position,
+  type SimpleExpressionNode,
   type TextNode,
 } from '../src/ast'
 
@@ -203,6 +204,29 @@ describe('compiler: parse', () => {
           source: '{{message}}',
         },
       })
+    })
+
+    test('only decodes entities terminated by a semicolon', () => {
+      const ast = baseParse('{{ a&&currentDomain }}{{ a &amp;&amp; b }}')
+      const [first, second] = ast.children as InterpolationNode[]
+
+      expect((first.content as SimpleExpressionNode).content).toBe(
+        'a&&currentDomain',
+      )
+      expect((second.content as SimpleExpressionNode).content).toBe('a && b')
+
+      const iife = '(() => { let curren = "x"; return true&&curren })()'
+      const [third] = baseParse(`{{${iife}}}`).children as InterpolationNode[]
+      expect((third.content as SimpleExpressionNode).content).toBe(iife)
+
+      for (const exp of [
+        '(() => { let curren = "x"; return true&&curren; })()',
+        'true&&currentDomain;',
+        'a &notit; b',
+      ]) {
+        const [node] = baseParse(`{{${exp}}}`).children as InterpolationNode[]
+        expect((node.content as SimpleExpressionNode).content).toBe(exp)
+      }
     })
 
     test('it can have tag-like notation', () => {

@@ -46,7 +46,7 @@ import {
   isStaticArgOf,
   isVPre,
 } from './utils'
-import { decodeHTML } from 'entities/decode'
+import { decodeHTMLStrict } from 'entities/decode'
 import {
   type ParserOptions as BabelOptions,
   parse,
@@ -123,11 +123,10 @@ const tokenizer = new Tokenizer(stack, {
     let exp = getSlice(innerStart, innerEnd)
     // decode entities for backwards compat
     if (exp.includes('&')) {
-      if (__BROWSER__) {
-        exp = currentOptions.decodeEntities!(exp, false)
-      } else {
-        exp = decodeHTML(exp)
-      }
+      exp = decodeInterpolationEntities(
+        exp,
+        __BROWSER__ ? currentOptions.decodeEntities! : decodeHTMLStrict,
+      )
     }
     addNode({
       type: NodeTypes.INTERPOLATION,
@@ -921,6 +920,29 @@ function getLoc(start: number, end?: number): SourceLocation {
     // @ts-expect-error allow late attachment
     source: end == null ? end : getSlice(start, end),
   }
+}
+
+// an optional leading `&` is captured so the second `&` of `&&` never starts
+// an entity, e.g. `true&&curren;` must stay valid JS
+const terminatedEntityRE = /(&)?&(?:#x[\da-f]+|#\d+|[a-z][a-z\d]*);/gi
+
+/**
+ * Only decode complete entities terminated by `;` inside interpolations,
+ * otherwise valid JS like `a&&currentDomain` would turn `&curren` into `¤`.
+ * @internal
+ */
+export function decodeInterpolationEntities(
+  exp: string,
+  decode: (raw: string, asAttr: boolean) => string,
+): string {
+  return exp.replace(terminatedEntityRE, (m, amp) => {
+    if (amp) return m
+    const decoded = decode(m, false)
+    // the browser decoder (innerHTML) also decodes legacy prefixes, e.g.
+    // `&notit;` -> `¬it;`. Only accept the result if the `;` was consumed as
+    // part of the entity, which keeps it in line with decodeHTMLStrict.
+    return decoded === decode(m.slice(0, -1), false) + ';' ? m : decoded
+  })
 }
 
 export function cloneLoc(loc: SourceLocation): SourceLocation {
