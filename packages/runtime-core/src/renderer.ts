@@ -1630,15 +1630,12 @@ function baseCreateRenderer(
         if (
           initialVNode.shapeFlag & ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE ||
           (parent &&
-            parent.vnode &&
-            isAsyncWrapper(parent.vnode) &&
-            parent.vnode.shapeFlag & ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE) ||
-          // a vapor async wrapper carries the keep-alive flags itself
-          (isVaporInteropEnabled &&
-            parent &&
-            parent.vapor &&
             isAsyncWrapper(parent) &&
-            (parent as any).shapeFlag & ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE)
+            // a vapor async wrapper carries the keep-alive flags itself
+            (isVaporInteropEnabled && parent.vapor
+              ? (parent as any).shapeFlag
+              : parent.vnode!.shapeFlag) &
+              ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE)
         ) {
           instance.a &&
             queuePostRenderEffect(instance.a, undefined, parentSuspense)

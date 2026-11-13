@@ -460,14 +460,13 @@ function getInteropTransitionElement(
 function interopRawProps(vnode: VNode): RawProps {
   const rawProps: RawProps = {}
   const props = vnode.props
-  const asyncWrapper = isAsyncWrapper(vnode)
   for (const key in props) {
     if (
       !isReservedProp(key) ||
       key === 'onVnodeMounted' ||
       key === 'onVnodeBeforeUnmount' ||
       key === 'onVnodeUnmounted' ||
-      (asyncWrapper && key === 'onVnodeBeforeMount')
+      (key === 'onVnodeBeforeMount' && isAsyncWrapper(vnode))
     ) {
       rawProps[key] = props[key]
     }

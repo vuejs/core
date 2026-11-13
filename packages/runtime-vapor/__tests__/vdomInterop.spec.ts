@@ -11082,11 +11082,11 @@ describe('vdomInterop', () => {
           {},
           { vapor },
         )
-        const define: (loader: () => Promise<any>) => any = vapor
+        const defineAsync: (loader: () => Promise<any>) => any = vapor
           ? defineVaporAsyncComponent
           : defineAsyncComponent
-        const Inner = define(() => Promise.resolve(Leaf))
-        const Outer = define(() => Promise.resolve(Inner))
+        const Inner = defineAsync(() => Promise.resolve(Leaf))
+        const Outer = defineAsync(() => Promise.resolve(Inner))
         const App = compile(
           `<script setup>
           const data = _data
@@ -11109,7 +11109,6 @@ describe('vdomInterop', () => {
         app.use(vaporInteropPlugin)
         app.mount(document.createElement('div'))
 
-        await new Promise(r => setTimeout(r))
         await new Promise(r => setTimeout(r))
         await nextTick()
         data.value.show = false

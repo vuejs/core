@@ -1083,7 +1083,8 @@ export class VaporComponentInstance<
   asyncDepRegistered?: boolean
 
   hasFallthrough: boolean
-  // an `onVnodeXxx` listener was delivered
+  // fires the `onVnodeXxx` listeners delivered to it; an async wrapper leaves
+  // them to the component it renders
   hasVNodeHooks: boolean
 
   // for keep-alive
@@ -1717,7 +1718,7 @@ export function mountComponent(
   if (
     (isKeepAliveEnabled &&
       instance.shapeFlag! & ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE) ||
-    (isInteropEnabled && isKeptAliveAsyncWrapper(instance.parent))
+    (isInteropEnabled && instance.a && isKeptAliveAsyncWrapper(instance.parent))
   ) {
     instance.a &&
       queuePostRenderEffect(instance.a, undefined, instance.suspense)
@@ -1758,9 +1759,8 @@ export function invokeComponentVNodeHook(
   const hook = instance.rawValues[name]
   if (hook) {
     let vnode = isInteropEnabled && instance.interopVNode
-    if (isInteropEnabled && !vnode && isAsyncComponentEnabled) {
-      // the component async wrappers resolve to stands for the vnode of the
-      // outermost one
+    if (isInteropEnabled && isAsyncComponentEnabled) {
+      // async wrappers leave their vnode to the component they resolve to
       let parent = instance.parent
       while (!vnode && parent && parent.vapor && isAsyncWrapper(parent)) {
         vnode = (parent as VaporComponentInstance).interopVNode

@@ -427,7 +427,6 @@ describe('component: @vue:xxx lifecycle events', () => {
     app.unmount()
   })
 
-  // the cached component fires, an async wrapper included
   test('KeepAlive: async component', async () => {
     const run = async (vapor: boolean) => {
       const data = makeData()
