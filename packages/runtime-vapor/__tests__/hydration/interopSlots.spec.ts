@@ -2343,6 +2343,54 @@ describe('VDOM interop', () => {
       await update()
       expect(visible(container)).toBe(`<h1>a</h1><p>2</p><footer>f</footer>`)
     })
+
+    // element-plus `ElOnlyChild`: a clone of the slot with a directive
+    test('with directives on a clone of it', async () => {
+      const data = reactive({ value: 1, log: [] as string[] })
+      await testWithVaporApp(
+        `${setup}<template>
+          <components.OnlyChild :value="data.value">
+            <button>b</button>
+          </components.OnlyChild>
+        </template>`,
+        {
+          OnlyChild: {
+            code: `<script>
+              import { cloneVNode, withDirectives } from 'vue'
+              const record = name => (el, { value }) =>
+                _data.log.push(name + ' ' + el.tagName.toLowerCase() + ' ' + value)
+              const dir = {
+                created: record('created'),
+                mounted: record('mounted'),
+                updated: record('updated'),
+              }
+              export default {
+                props: ['value'],
+                setup(props, { slots }) {
+                  return () =>
+                    withDirectives(cloneVNode(slots.default()[0]), [
+                      [dir, props.value],
+                    ])
+                },
+              }
+            </script>`,
+            vapor: false,
+          },
+        },
+        data,
+      )
+      expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+      await nextTick()
+      expect(data.log).toEqual(['created button 1', 'mounted button 1'])
+
+      data.value++
+      await nextTick()
+      expect(data.log).toEqual([
+        'created button 1',
+        'mounted button 1',
+        'updated button 2',
+      ])
+    })
   })
 
   // slots a vapor component hands over with `h()` are vdom slots: the server
