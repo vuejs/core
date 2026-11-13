@@ -1,7 +1,39 @@
-import { compileStyle, parse } from '../src'
+import { compileStyle, compileTemplate, parse } from '../src'
 import { assertCode, compileSFCScript, mockId } from './utils'
 
 describe('CSS vars injection', () => {
+  test.each(['\n', '\r\n'])(
+    'generates matching CSS variables for multiline expressions (%j)',
+    newline => {
+      const style = `div { color: v-bind("color ||${newline}'blue'"); }`
+      const { content } = compileSFCScript(
+        `<script setup>const color = 'red'</script><style>${style}</style>`,
+      )
+      const { code, errors } = compileStyle({
+        source: style,
+        id: mockId,
+        filename: 'test.vue',
+      })
+      const variable = code.match(/var\(--([^)]*)\)/)![1]
+
+      expect(errors).toEqual([])
+      expect(variable).not.toMatch(/[\r\n]/)
+      expect(content).toContain(`"${variable}":`)
+      assertCode(content)
+
+      const ssr = compileTemplate({
+        source: '<div />',
+        id: mockId,
+        filename: 'test.vue',
+        ssr: true,
+        ssrCssVars: [`color ||${newline}'blue'`],
+      })
+      expect(ssr.errors).toEqual([])
+      expect(ssr.code).toContain(`":--${variable}":`)
+      assertCode(ssr.code)
+    },
+  )
+
   test('generating correct code for nested paths', () => {
     const { content } = compileSFCScript(
       `<script>const a = 1</script>\n` +
