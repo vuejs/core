@@ -33,8 +33,14 @@ export function useVaporCssVars(
   if (!__BROWSER__ && !__TEST__) return
   const instance = currentInstance as VaporComponentInstance
   // the compiled getter reads identifiers the compiler couldn't resolve from
-  // `_ctx`, which can only be props
-  const getVars = () => getter(instance.props)
+  // `_ctx`: props, or the instance properties a template can also reference
+  const ctx = {
+    __proto__: instance.props,
+    $props: instance.props,
+    $attrs: instance.attrs,
+    $slots: instance.slots,
+  }
+  const getVars = () => getter(ctx)
   if (__DEV__) (instance as GenericComponentInstance).getCssVars = getVars
 
   let vars: Record<string, string> = EMPTY_OBJ
