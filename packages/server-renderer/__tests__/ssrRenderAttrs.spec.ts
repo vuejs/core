@@ -75,6 +75,12 @@ describe('ssr: renderAttrs', () => {
     ).toBe(``)
   })
 
+  test('webkitdirectory boolean attr', () => {
+    expect(ssrRenderAttrs({ webkitdirectory: false })).toBe(``)
+    expect(ssrRenderAttrs({ webkitdirectory: true })).toBe(` webkitdirectory`)
+    expect(ssrRenderAttrs({ webkitdirectory: '' })).toBe(` webkitdirectory`)
+  })
+
   test('hidden enumerated attribute', () => {
     expect(ssrRenderAttrs({ hidden: true })).toBe(` hidden`)
     expect(ssrRenderAttrs({ disabled: true, hidden: false })).toBe(` disabled`)
