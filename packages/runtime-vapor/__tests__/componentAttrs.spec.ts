@@ -28,7 +28,7 @@ import {
   setStyle,
   template,
 } from '../src'
-import { compile, makeRender, renderParity } from './_utils'
+import { compile, makeRender, renderParity, stripAnchors } from './_utils'
 import {
   VaporBlockShape,
   VaporDynamicComponentFlags,
@@ -3398,6 +3398,70 @@ describe('attribute fallthrough', () => {
       '<div style="width: 200px; color: red;">object</div>'.repeat(2),
     )
     expect(vapor.after).toBe(vdom.after)
+  })
+
+  test('should pass fallthrough attrs through a root Transition into slot content', async () => {
+    const html: Record<string, string[]> = { vdom: [], vapor: [] }
+    await renderParity(
+      {
+        Child: `<template><transition><slot /></transition></template>`,
+        App: `<template>
+          <components.Child :class="data.cls" data-x="1">
+            <div v-if="data.ok" class="a">a</div>
+            <span v-else class="b">b</span>
+          </components.Child>
+        </template>`,
+      },
+      () => ref({ cls: 'w', ok: true }),
+      async (data, root, mode) => {
+        html[mode].push(stripAnchors(root.innerHTML))
+        data.value.cls = 'w2'
+        await nextTick()
+        html[mode].push(stripAnchors(root.innerHTML))
+        data.value.ok = false
+        await nextTick()
+        html[mode].push(stripAnchors(root.innerHTML))
+      },
+    )
+    expect(html.vdom[0]).toBe('<div class="a w" data-x="1">a</div>')
+    expect(html.vapor).toEqual(html.vdom)
+  })
+
+  test('should pass fallthrough attrs through a root Transition into a slot fallback', async () => {
+    const data = ref({ cls: 'w', ok: false })
+    const Child = compile(
+      `<template><transition><slot><i>fb</i></slot></transition></template>`,
+      data,
+    )
+    const App = compile(
+      `<template>
+        <components.Child :class="data.cls"><b v-if="data.ok" /></components.Child>
+      </template>`,
+      data,
+      { Child },
+    )
+    const { host } = define(App).render()
+    const fallbacks = [host.querySelector('i')!]
+    expect(fallbacks[0].className).toBe('w')
+
+    data.value.ok = true
+    await nextTick()
+    expect(host.querySelector('b')!.classList).toContain('w')
+    data.value.ok = false
+    await nextTick()
+    fallbacks.push(host.querySelector('i:last-child')!)
+    expect(fallbacks[1].classList).toContain('w')
+
+    data.value.ok = true
+    await nextTick()
+    data.value.cls = 'w2'
+    await nextTick()
+    expect(host.querySelector('b')!.classList).toContain('w2')
+    // the fallbacks that left keep what they had
+    expect(fallbacks.map(el => el.classList.contains('w2'))).toEqual([
+      false,
+      false,
+    ])
   })
 })
 

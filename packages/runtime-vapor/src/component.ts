@@ -175,6 +175,7 @@ import type {
 import {
   DynamicFragment,
   type InteropFragment,
+  type SlotFragment,
   type VaporFragment,
   finishBlockCreation,
   isDynamicFragment,
@@ -319,6 +320,8 @@ export interface FallthroughOwner {
   accessedAttrs?: boolean
   // interop only
   instance?: GenericComponentInstance | null
+  // layers the attrs over the root's own class / style when that is not a
+  // template root: slot content (a Transition's, a vapor slot vnode clone's)
   adoptRoot?: (el: Element) => void
 }
 
@@ -2175,7 +2178,10 @@ export function applyFallthroughAttrs(
   instance: FallthroughOwner,
   scope?: EffectScope,
 ): void {
-  const state = new FallthroughResolveState(scope)
+  const state = new FallthroughResolveState(
+    scope,
+    isTransitionEnabled && isVaporTransition(instance.type),
+  )
   const root = resolveFallthroughRoot(block, state)
   const { fragments, innermost, hasSlotOutlet } = state
 
@@ -2189,16 +2195,19 @@ export function applyFallthroughAttrs(
   }
 
   if (root && !hasSlotOutlet) {
-    if (isInteropEnabled && instance.adoptRoot) instance.adoptRoot(root)
+    if (instance.adoptRoot) instance.adoptRoot(root)
     let ownerScope = scope
     if (innermost) {
       // A compiler-proven no-scope branch may have rendered without a scope;
       // create one so the effect dies with the branch — parented under the
       // nearest enclosing branch scope so hierarchical pause/resume
-      // (KeepAlive caching) reaches it.
-      ownerScope = innermost.scope ||= state.parentScope
-        ? state.parentScope.run(() => new EffectScope())!
-        : new EffectScope()
+      // (KeepAlive caching) reaches it. A slot fallback has its own scope.
+      ownerScope =
+        innermost.nodes === (innermost as SlotFragment).activeFallback
+          ? (innermost as SlotFragment).fallbackScope
+          : (innermost.scope ||= state.parentScope
+              ? state.parentScope.run(() => new EffectScope())!
+              : new EffectScope())
     }
     const applyEffect = () =>
       renderEffect(() =>
@@ -2237,9 +2246,11 @@ class FallthroughResolveState implements RootChainVisitor {
   hasNonSingleRoot?: boolean
   // attrs fold at a component's own creation boundary
   readonly stopAtComponent = true
+  readonly flattenSlots: boolean
 
-  constructor(parentScope?: EffectScope) {
+  constructor(parentScope: EffectScope | undefined, flattenSlots: boolean) {
     this.parentScope = parentScope
+    this.flattenSlots = flattenSlots
   }
 
   onDynamicFragment(frag: DynamicFragment): boolean | void {
@@ -2247,7 +2258,9 @@ class FallthroughResolveState implements RootChainVisitor {
     // there: slot content is rendered by the parent, so fragments inside it
     // must not register a fallthrough hook — a later branch switch would
     // re-apply from the branch alone, with the slot boundary out of view.
-    if (frag.__vf & SLOT) {
+    // Transition sees through them: it renders its slot content flattened,
+    // as in vdom.
+    if (frag.__vf & SLOT && !this.flattenSlots) {
       this.hasSlotOutlet = true
       return true
     }
@@ -2305,8 +2318,8 @@ function registerDynamicFragmentFallthroughAttrs(
   // only the first registering instance can sit on this fragment's chain
   if (frag.fallthrough) return
 
-  frag.fallthrough = nodes =>
-    applyFallthroughAttrs(nodes, instance, frag.scope!)
+  frag.fallthrough = (nodes, scope = frag.scope!) =>
+    applyFallthroughAttrs(nodes, instance, scope)
 }
 
 export interface DeferredRootUpdates {
