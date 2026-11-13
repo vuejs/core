@@ -828,7 +828,8 @@ export function setDynamicProp(
 // Make an element whose own class and style were set whole a root (see
 // `$root`), so a layer of fallthrough attrs merges over them incrementally.
 // What it holds becomes the base layer: its template class and style, or the
-// value its own binding last set. Vdom interop only, for a slot root.
+// value its own binding last set. Vdom interop and Transition, for a slot
+// content root.
 export function adoptRoot(el: any): void {
   if (el.$root) return
   const meta: { cls?: string[]; sty?: NormalizedStyle } = {}

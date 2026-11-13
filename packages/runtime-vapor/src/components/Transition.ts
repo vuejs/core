@@ -48,10 +48,12 @@ import {
   registerTransitionHooks,
 } from '../transition'
 import {
+  type FallthroughOwner,
   type FunctionalVaporComponent,
   type VaporComponentInstance,
   isVaporComponent,
 } from '../component'
+import { adoptRoot } from '../dom/prop'
 import { getAsyncWrapperInner } from '../apiDefineAsyncComponent'
 import { isAsyncComponentEnabled } from '../asyncComponentState'
 import { extend, isArray } from '@vue/shared'
@@ -184,6 +186,8 @@ export const VaporTransition: FunctionalVaporComponent<TransitionProps> =
     ensureTransitionHooksRegistered()
 
     const instance = currentInstance! as VaporComponentInstance
+    // the slot content is the child: attrs fall through to its root
+    ;(instance as FallthroughOwner).adoptRoot = adoptRoot
     // Runs on the first render only, then is dropped: it holds the element
     // the server rendered, and the effects below hold this scope.
     let performAppear = isHydrating

@@ -381,7 +381,7 @@ export class DynamicFragment extends RenderContextFragment {
   // chain. Invoked inside the branch render ctx so created effects capture
   // the correct instance and land in branch scopes; its presence also forces
   // scopes for compiler-proven no-scope branches.
-  fallthrough?: (nodes: Block) => void
+  fallthrough?: (nodes: Block, scope?: EffectScope) => void
   // Ancestor instances whose root-only scope ids resolve through this
   // fragment; branch switches re-apply them to the new root before insertion.
   scopeIdOwners?: VaporComponentInstance[]
