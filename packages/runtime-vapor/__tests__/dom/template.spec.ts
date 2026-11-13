@@ -433,6 +433,54 @@ describe('constant props with no content attribute behind them', () => {
       `Failed setting prop "valueAsNumber" on <input>`,
     ).toHaveBeenWarnedTimes(2)
   })
+
+  // The parser lowercases a camelCase name like `defaultValue` into a dead
+  // attribute, unless it is the attribute behind the property (`tabIndex`).
+  const camelCase: Array<[string, string, string, Record<string, unknown>]> = [
+    [
+      `<textarea defaultValue="hi"></textarea>`,
+      'defaultValue',
+      'textarea',
+      { prop: 'hi', attr: null },
+    ],
+    [
+      `<div className="foo"></div>`,
+      'className',
+      'div',
+      { prop: 'foo', attr: null },
+    ],
+    [
+      `<label htmlFor="x"></label>`,
+      'htmlFor',
+      'label',
+      { prop: 'x', attr: null },
+    ],
+    [
+      `<input type="checkbox" defaultChecked>`,
+      'defaultChecked',
+      'input',
+      { prop: true, attr: null },
+    ],
+    [
+      `<div ariaLabel="x"></div>`,
+      'ariaLabel',
+      'div',
+      { prop: 'x', attr: null },
+    ],
+    [
+      `<math><mi className="y">x</mi></math>`,
+      'className',
+      'mi',
+      { prop: 'y', attr: null },
+    ],
+    [`<div tabIndex="1"></div>`, 'tabIndex', 'div', { prop: 1, attr: '1' }],
+  ]
+  test.each(camelCase)(
+    '%s sets the camelCase dom property',
+    async (tpl, key, selector, expected) => {
+      expect(await parity(tpl, key, selector)).toEqual(expected)
+    },
+  )
 })
 
 describe('DOM prop initialization order', () => {

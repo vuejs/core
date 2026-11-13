@@ -34,6 +34,7 @@ import {
   isBooleanAttr,
   isBuiltInDirective,
   isFormattingTag,
+  isKnownHtmlAttr,
   isModelListener,
   isNativeOn,
   isOn,
@@ -129,13 +130,18 @@ export function isCheckboxValueProp(node: ElementNode, key: string): boolean {
  *   only takes effect as a dom property - which is where vdom sends it too,
  *   see `shouldSetAsProp`
  * - `true-value` / `false-value`, see `isCheckboxValueProp`
+ * - camelCase dom properties like `defaultValue`, which the parser would
+ *   lowercase into a dead attribute outside svg (but not `tabIndex`)
  */
 function isRuntimeOnlyProp(node: ElementNode, key: string): boolean {
   return (
     key === 'innerHTML' ||
     key === 'textContent' ||
     (key === 'value' && (node.tag === 'textarea' || node.tag === 'select')) ||
-    isCheckboxValueProp(node, key)
+    isCheckboxValueProp(node, key) ||
+    (node.ns !== Namespaces.SVG &&
+      /^[a-z]+[A-Z]/.test(key) &&
+      !isKnownHtmlAttr(key.toLowerCase()))
   )
 }
 

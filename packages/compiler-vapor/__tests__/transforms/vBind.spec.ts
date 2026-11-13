@@ -1662,4 +1662,40 @@ describe('compiler v-bind', () => {
     expect(value).toBeGreaterThan(-1)
     expect(code.indexOf('_applySelectModel(n1,')).toBeGreaterThan(value)
   })
+
+  // The parser lowercases attribute names on html elements, so a camelCase
+  // dom property would only leave a dead `defaultvalue` attribute behind.
+  test.each([
+    [
+      `<textarea defaultValue="hi"/>`,
+      `<textarea>`,
+      `_setProp(n0, "defaultValue", "hi")`,
+    ],
+    [`<div className="foo"/>`, `<div>`, `_setProp(n0, "className", "foo")`],
+    [`<div ariaLabel="x"/>`, `<div>`, `_setDOMProp(n0, "ariaLabel", "x")`],
+  ])(
+    'camelCase dom props on an html element: %s',
+    (template, expectedTemplate, expected) => {
+      const { code } = compileWithVBind(template)
+
+      expect(code).toContain(`_template("${expectedTemplate}"`)
+      expect(code).toContain(expected)
+    },
+  )
+
+  // A lowercased name that is the attribute behind the property, hyphenated
+  // names and foreign elements, where the parser keeps or adjusts the case.
+  test.each([
+    [`<div tabIndex="0"/>`, `_template("<div tabIndex=0>"`],
+    [`<div data-fooBar="x"/>`, `_template("<div data-fooBar=x>"`],
+    [`<svg viewBox="0 0 1 1"/>`, `_template("<svg viewBox=\\"0 0 1 1\\">"`],
+  ])(
+    'camelCase attributes the template string does carry: %s',
+    (template, expected) => {
+      const { code } = compileWithVBind(template)
+
+      expect(code).toContain(expected)
+      expect(code).not.toContain('_setProp')
+    },
+  )
 })
