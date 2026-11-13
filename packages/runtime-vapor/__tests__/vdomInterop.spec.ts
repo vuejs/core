@@ -348,6 +348,28 @@ describe('vdomInterop', () => {
       expect(vdom.text).toBe('31')
       expect(vapor.text).toBe('31')
     })
+
+    test('resolves a vdom component rendering a fragment without children', async () => {
+      const Provider = defineComponent({
+        setup(_, { slots }) {
+          return () => h(Fragment, null, slots.default?.())
+        },
+      })
+
+      const { vdom, vapor } = await renderParity(
+        {
+          App: `<template><div><b>before</b><components.Provider /><i>after</i></div></template>`,
+        },
+        () => ref(null),
+        () => {},
+        { Provider },
+      )
+
+      expect(stripAnchors(vdom.after)).toBe(
+        '<div><b>before</b><i>after</i></div>',
+      )
+      expect(stripAnchors(vapor.after)).toBe(stripAnchors(vdom.after))
+    })
   })
 
   describe('props', () => {

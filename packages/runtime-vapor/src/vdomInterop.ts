@@ -3634,7 +3634,9 @@ function hydrateOutletFallback(
 function hasVaporSlot(vnode: VNode): boolean {
   return (
     !!vnode.vs ||
-    (vnode.type === Fragment && (vnode.children as VNode[]).some(hasVaporSlot))
+    (vnode.type === Fragment &&
+      isArray(vnode.children) &&
+      (vnode.children as VNode[]).some(hasVaporSlot))
   )
 }
 
