@@ -2,6 +2,7 @@ import {
   type AttributeNode,
   BindingTypes,
   type ComponentNode,
+  ConstantTypes,
   type ElementNode,
   ElementTypes,
   ErrorCodes,
@@ -19,6 +20,7 @@ import {
   isStaticExp,
   isValidHTMLNesting,
   parserOptions,
+  resolveComponentImport,
   resolveModifiers,
 } from '@vue/compiler-dom'
 import {
@@ -403,6 +405,7 @@ function transformComponentElement(
   let { tag } = node
   // a createElement-backed element resolves no component asset
   let asset = !useCreateElement
+  let imported = false
 
   if (!dynamicComponent && !useCreateElement) {
     // <button is="vue:xxx">: the parser marks it as a component and the
@@ -470,7 +473,21 @@ function transformComponentElement(
           )
     }
 
-    if (asset) {
+    const fromImport =
+      !__BROWSER__ &&
+      asset &&
+      resolveComponentImport(
+        tag,
+        node,
+        context.imports,
+        context.selfName,
+        context.options,
+      )
+    if (fromImport) {
+      tag = fromImport
+      asset = false
+      imported = true
+    } else if (asset) {
       // self referencing component (inferred from filename)
       if (context.selfName && capitalize(camelize(tag)) === context.selfName) {
         // generators/block.ts has special check for __self postfix when generating
@@ -503,6 +520,7 @@ function transformComponentElement(
     tag,
     props,
     asset,
+    imported,
     root,
     slots: [...context.slots],
     once: context.inVOnce,
@@ -747,6 +765,8 @@ function transformNativeElement(
       } else if (
         // handling asset imports
         canStringifyAttrName &&
+        !values[0].isStatic &&
+        values[0].constType === ConstantTypes.CAN_STRINGIFY &&
         context.imports.some(imported =>
           values[0].content.includes(imported.exp.content),
         )
