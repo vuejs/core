@@ -1332,22 +1332,18 @@ describe('compiler v-bind', () => {
     [
       `<video :playbackRate="2"/>`,
       `<video>`,
-      `_setProp(n0, "playbackRate", "2")`,
+      `_setProp(n0, "playbackRate", 2)`,
     ],
     [
       `<video :defaultPlaybackRate="2"/>`,
       `<video>`,
-      `_setProp(n0, "defaultPlaybackRate", "2")`,
+      `_setProp(n0, "defaultPlaybackRate", 2)`,
     ],
-    [
-      `<video :currentTime="3"/>`,
-      `<video>`,
-      `_setProp(n0, "currentTime", "3")`,
-    ],
+    [`<video :currentTime="3"/>`, `<video>`, `_setProp(n0, "currentTime", 3)`],
     [
       `<input :valueAsNumber="5"/>`,
       `<input>`,
-      `_setProp(n0, "valueAsNumber", "5")`,
+      `_setProp(n0, "valueAsNumber", 5)`,
     ],
   ])(
     'constant props with no content attribute behind them: %s',
@@ -1392,7 +1388,7 @@ describe('compiler v-bind', () => {
     expect(code).toMatchSnapshot()
     expect(code).toContain(
       `_renderEffect(() => _setProp(n0, "max", _ctx.max))\n` +
-        `  _setProp(n0, "valueAsNumber", "500")\n` +
+        `  _setProp(n0, "valueAsNumber", 500)\n` +
         `  _renderEffect(() => _setProp(n0, "title", _ctx.title))`,
     )
   })
@@ -1698,4 +1694,29 @@ describe('compiler v-bind', () => {
       expect(code).not.toContain('_setProp')
     },
   )
+
+  // A camelCase dom property only reaches a runtime setter, so a number has
+  // to keep its type: `"0"` would turn a boolean property on.
+  test.each([
+    [
+      `<input type="checkbox" :defaultChecked="0">`,
+      `_setProp(n0, "defaultChecked", 0)`,
+    ],
+    [
+      `<input type="checkbox" :default-checked.camel="0">`,
+      `_setProp(n0, "defaultChecked", 0)`,
+    ],
+    [
+      `<option :defaultSelected="0"></option>`,
+      `_setProp(n0, "defaultSelected", 0)`,
+    ],
+    [
+      `<option :default-selected.camel="0"></option>`,
+      `_setProp(n0, "defaultSelected", 0)`,
+    ],
+  ])('camelCase dom prop number literals: %s', (template, expected) => {
+    const { code } = compileWithVBind(template)
+
+    expect(code).toContain(expected)
+  })
 })

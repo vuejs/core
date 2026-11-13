@@ -533,7 +533,7 @@ const t0 = _template("<input type=range>", 1)
 export function render(_ctx) {
   const n0 = t0()
   _renderEffect(() => _setProp(n0, "max", _ctx.max))
-  _setProp(n0, "valueAsNumber", "500")
+  _setProp(n0, "valueAsNumber", 500)
   _renderEffect(() => _setProp(n0, "title", _ctx.title))
   return n0
 }"

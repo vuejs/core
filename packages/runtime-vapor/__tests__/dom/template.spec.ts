@@ -481,6 +481,31 @@ describe('constant props with no content attribute behind them', () => {
       expect(await parity(tpl, key, selector)).toEqual(expected)
     },
   )
+
+  // `"0"` would turn the boolean property on, so the number has to survive.
+  const camelCaseNumber: Array<[string, string, string]> = [
+    [`<input type="checkbox" :defaultChecked="0">`, 'checked', 'input'],
+    [`<input type="checkbox" :default-checked.camel="0">`, 'checked', 'input'],
+    [
+      `<select><option>a</option><option :defaultSelected="0">b</option></select>`,
+      'selected',
+      'option + option',
+    ],
+    [
+      `<select><option>a</option><option :default-selected.camel="0">b</option></select>`,
+      'selected',
+      'option + option',
+    ],
+  ]
+  test.each(camelCaseNumber)(
+    '%s keeps the number literal',
+    async (tpl, key, selector) => {
+      expect(await parity(tpl, key, selector)).toEqual({
+        prop: false,
+        attr: null,
+      })
+    },
+  )
 })
 
 describe('DOM prop initialization order', () => {
