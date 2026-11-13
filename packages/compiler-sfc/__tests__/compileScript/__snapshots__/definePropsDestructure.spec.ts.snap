@@ -154,6 +154,27 @@ return () => {}
 })"
 `;
 
+exports[`sfc reactive props destructure > default values w/ type declaration including Function in a union 1`] = `
+"import { defineComponent as _defineComponent } from 'vue'
+import { fallback } from './utils'
+      
+export default /*@__PURE__*/_defineComponent({
+  props: {
+    foo: { type: [Function, String], required: false, default: () => 1, skipFactory: true },
+    bar: { type: [Function, null], required: false, default: fallback, skipFactory: true },
+    baz: { type: [Function, Object], required: false, default: () => ({}) },
+    qux: { type: [Function, String], required: false, default: 'qux' }
+  },
+  setup(__props: any) {
+
+      
+      
+return () => {}
+}
+
+})"
+`;
+
 exports[`sfc reactive props destructure > default values w/ type declaration, prod mode 1`] = `
 "import { defineComponent as _defineComponent } from 'vue'
 
