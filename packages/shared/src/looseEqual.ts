@@ -1,4 +1,13 @@
-import { isArray, isDate, isMap, isObject, isSet, isSymbol } from './general'
+import {
+  hasOwn,
+  isArray,
+  isDate,
+  isMap,
+  isObject,
+  isSet,
+  isSymbol,
+  toTypeString,
+} from './general'
 
 type ComparisonState = [Map<any, any>, Map<any, any>]
 
@@ -54,8 +63,8 @@ function looseCompareObjects(a: any, b: any, seen: ComparisonState) {
     return false
   }
   for (const key in a) {
-    const aHasKey = a.hasOwnProperty(key)
-    const bHasKey = b.hasOwnProperty(key)
+    const aHasKey = hasOwn(a, key)
+    const bHasKey = hasOwn(b, key)
     if (
       (aHasKey && !bHasKey) ||
       (!aHasKey && bHasKey) ||
@@ -64,7 +73,7 @@ function looseCompareObjects(a: any, b: any, seen: ComparisonState) {
       return false
     }
   }
-  return String(a) === String(b)
+  return toComparableString(a) === toComparableString(b)
 }
 
 function looseCompareNested(
@@ -120,4 +129,14 @@ export function looseEqual(a: any, b: any, seen?: ComparisonState): boolean {
 
 export function looseIndexOf(arr: any[], val: any): number {
   return arr.findIndex(item => looseEqual(item, val))
+}
+
+function toComparableString(value: any): string {
+  // Only supply a default for prototype-less objects without conversion methods.
+  return Object.getPrototypeOf(value) === null &&
+    value[Symbol.toPrimitive] == null &&
+    typeof value.toString !== 'function' &&
+    typeof value.valueOf !== 'function'
+    ? toTypeString(value)
+    : String(value)
 }

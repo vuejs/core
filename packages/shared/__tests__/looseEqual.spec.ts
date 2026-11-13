@@ -168,6 +168,47 @@ describe('utils/looseEqual', () => {
     expect(looseEqual(nestedObj1, nestedObj2)).toBe(false)
   })
 
+  test('compares objects without a prototype correctly', () => {
+    const nullProto = (props: Record<string, any>) =>
+      Object.assign(Object.create(null), props)
+
+    expect(looseEqual(nullProto({ foo: 1 }), { foo: 1 })).toBe(true)
+    expect(looseEqual({ foo: 1 }, nullProto({ foo: 1 }))).toBe(true)
+    expect(looseEqual(nullProto({ foo: 1 }), nullProto({ foo: 1 }))).toBe(true)
+    expect(looseEqual(nullProto({ foo: 1 }), { foo: 2 })).toBe(false)
+    expect(looseEqual(nullProto({ foo: 1 }), { bar: 1 })).toBe(false)
+    expect(looseEqual(nullProto({ foo: 1 }), nullProto({ foo: 2 }))).toBe(false)
+    // nested inside arrays / plain objects
+    expect(looseEqual([nullProto({ foo: 1 })], [{ foo: 1 }])).toBe(true)
+    expect(
+      looseEqual(
+        { style: nullProto({ color: 'red' }) },
+        { style: nullProto({ color: 'red' }) },
+      ),
+    ).toBe(true)
+  })
+
+  test('compares objects with a shadowed hasOwnProperty correctly', () => {
+    expect(
+      looseEqual(
+        { hasOwnProperty: () => true, foo: 1 },
+        { hasOwnProperty: () => true, foo: 1 },
+      ),
+    ).toBe(true)
+    expect(
+      looseEqual(
+        { hasOwnProperty: () => true, foo: 1 },
+        { hasOwnProperty: () => true, foo: 2 },
+      ),
+    ).toBe(false)
+    expect(
+      looseEqual(
+        { hasOwnProperty: 'not a function', foo: 1 } as any,
+        { hasOwnProperty: 'not a function', foo: 1 } as any,
+      ),
+    ).toBe(true)
+  })
+
   test('compares different types correctly', () => {
     const obj1 = {}
     const obj2 = { a: 1 }
@@ -329,4 +370,67 @@ describe('utils/looseEqual', () => {
     expect(looseEqual(self, first)).toBe(false)
     expect(looseEqual(first, self)).toBe(false)
   })
+
+  test.each(['toString', Symbol.toPrimitive])(
+    'preserves custom %s comparisons',
+    method => {
+      const makeValue = (value: string) => ({ [method]: () => value })
+      const a = makeValue('a')
+      const b = makeValue('b')
+
+      expect(looseEqual(a, b)).toBe(false)
+      expect(looseEqual(b, a)).toBe(false)
+      expect(looseEqual(a, makeValue('a'))).toBe(true)
+    },
+  )
+
+  test('preserves custom string comparisons for class instances', () => {
+    class Value {
+      #value: string
+      constructor(value: string) {
+        this.#value = value
+      }
+      toString() {
+        return this.#value
+      }
+    }
+
+    expect(looseEqual(new Value('a'), new Value('b'))).toBe(false)
+    expect(looseEqual(new Value('a'), new Value('a'))).toBe(true)
+  })
+
+  test.each(['toString', 'valueOf', Symbol.toPrimitive])(
+    'preserves custom %s comparisons for objects without a prototype',
+    method => {
+      const makeValue = (value: string) =>
+        Object.assign(Object.create(null), { [method]: () => value })
+
+      expect(looseEqual(makeValue('a'), makeValue('b'))).toBe(false)
+      expect(looseEqual(makeValue('a'), makeValue('a'))).toBe(true)
+    },
+  )
+
+  test('compares objects without a prototype against other object types', () => {
+    const value = Object.create(null)
+
+    expect(looseEqual(value, /x/)).toBe(false)
+    expect(looseEqual(/x/, value)).toBe(false)
+    expect(looseEqual(value, new Number(1))).toBe(false)
+    expect(looseEqual(new Number(1), value)).toBe(false)
+  })
+
+  test.each(['toString', 'valueOf', Symbol.toPrimitive])(
+    'preserves errors from custom %s conversion',
+    method => {
+      const error = new Error('conversion failed')
+      const makeValue = () =>
+        Object.assign(Object.create(null), {
+          [method]: () => {
+            throw error
+          },
+        })
+
+      expect(() => looseEqual(makeValue(), makeValue())).toThrow(error)
+    },
+  )
 })
