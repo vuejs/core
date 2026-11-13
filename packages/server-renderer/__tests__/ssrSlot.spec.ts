@@ -266,6 +266,53 @@ describe('ssr: slot', () => {
       )
     })
 
+    test('reach the roots of render function slot content in nested arrays', async () => {
+      const app = createApp({
+        render: () =>
+          h(Themed, null, {
+            default: () => [
+              [h('div', { class: 'a' }), h('p', { class: 'b' })],
+              h('i', { class: 'c' }),
+            ],
+          }),
+      })
+      expect(await renderToString(app)).toBe(
+        `<!--[--><!--[--><div class="a" style="--color:red;"></div>` +
+          `<p class="b" style="--color:red;"></p><!--]-->` +
+          `<i class="c" style="--color:red;"></i><!--]-->`,
+      )
+    })
+
+    test('stop scanning tags at raw text content', async () => {
+      const app = createApp({
+        render: () =>
+          h(Themed, null, {
+            default: () => [
+              createStaticVNode(
+                `<script>if(a<b){}</script><p class="b"></p>`,
+                2,
+              ),
+            ],
+          }),
+      })
+      expect(await renderToString(app)).toBe(
+        `<!--[--><script style="--color:red;">if(a<b){}</script>` +
+          `<p class="b" style="--color:red;"></p><!--]-->`,
+      )
+    })
+
+    test('keep a static self-closing tag self-closing', async () => {
+      const app = createApp({
+        render: () =>
+          h(Themed, null, {
+            default: () => [createStaticVNode(`<svg/>`, 1)],
+          }),
+      })
+      expect(await renderToString(app)).toBe(
+        `<!--[--><svg style="--color:red;"/><!--]-->`,
+      )
+    })
+
     test('reach the content of a root slot inside Transition', async () => {
       const ThemedTransition = {
         data: () => ({ color: 'red' }),

@@ -195,10 +195,12 @@ function mapSlotRoots(
 ): VNodeArrayChildren {
   let changed = false
   const mapped = vnodes.map(child => {
-    if (!isVNode(child)) {
-      return child
-    }
-    const next = withCssVars(child, cssVars)
+    // `VNodeArrayChildren` may nest arrays, their entries are roots too
+    const next = isArray(child)
+      ? mapSlotRoots(child, cssVars)
+      : isVNode(child)
+        ? withCssVars(child, cssVars)
+        : child
     if (next !== child) {
       changed = true
     }
@@ -285,6 +287,10 @@ function withCssVars(vnode: VNode, cssVars: Props): VNode {
 interface CssVarsHtmlState {
   style: string
   depth: number
+  // set while inside a raw text element, whose content may contain `<` that
+  // does not start a tag. Kept on the state since the closing tag can be in a
+  // later buffer item.
+  rawText?: string
 }
 
 function applySlotCssVarsToBuffer(
@@ -321,6 +327,17 @@ function injectCssVarsIntoHtml(html: string, state: CssVarsHtmlState): string {
   let result = ''
   let cursor = 0
   while (cursor < html.length) {
+    if (state.rawText) {
+      const close = html.toLowerCase().indexOf(`</${state.rawText}`, cursor)
+      if (close === -1) {
+        result += html.slice(cursor)
+        break
+      }
+      result += html.slice(cursor, close)
+      cursor = close
+      state.rawText = undefined
+    }
+
     const open = html.indexOf('<', cursor)
     if (open === -1) {
       result += html.slice(cursor)
@@ -363,14 +380,23 @@ function injectCssVarsIntoHtml(html: string, state: CssVarsHtmlState): string {
       cursor = end + 1
       continue
     }
-    const tagName = name[1]
+    const tagName = name[1].toLowerCase()
     const selfClosing = tag[tag.length - 2] === '/'
-    result +=
-      state.depth === 0
-        ? mergeStyleAttr(tag.slice(0, -1), state.style) + '>'
-        : tag
-    if (!selfClosing && !voidHtmlTags.has(tagName.toLowerCase())) {
+    if (state.depth === 0) {
+      // keep `/>` at the end so a self-closing tag stays self-closing
+      const openTag = selfClosing
+        ? tag.slice(0, -2).trimEnd()
+        : tag.slice(0, -1)
+      result +=
+        mergeStyleAttr(openTag, state.style) + (selfClosing ? '/>' : '>')
+    } else {
+      result += tag
+    }
+    if (!selfClosing && !voidHtmlTags.has(tagName)) {
       state.depth++
+      if (rawTextTags.has(tagName)) {
+        state.rawText = tagName
+      }
     }
     cursor = end + 1
   }
@@ -396,6 +422,13 @@ function mergeStyleAttr(openTag: string, style: string): string {
     openTag.slice(match.index + match[0].length)
   )
 }
+
+const rawTextTags = /*@__PURE__*/ new Set([
+  'script',
+  'style',
+  'textarea',
+  'title',
+])
 
 const voidHtmlTags = /*@__PURE__*/ new Set([
   'area',
