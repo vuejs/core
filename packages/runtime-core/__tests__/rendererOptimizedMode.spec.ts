@@ -848,6 +848,32 @@ describe('renderer: optimized mode', () => {
     )
   })
 
+  // #12709
+  test('should patch props of a block with dynamicChildren in unoptimized mode', () => {
+    const renderBlock = (cls: string, title: string, text: string) =>
+      h('section', null, [
+        (openBlock(),
+        createElementBlock(
+          'div',
+          { class: cls, title },
+          [createElementVNode('span', null, text, PatchFlags.TEXT)],
+          PatchFlags.CLASS,
+        )),
+      ])
+
+    render(renderBlock('red', 'a', 'foo'), root)
+    expect(inner(root)).toBe(
+      '<section><div class="red" title="a"><span>foo</span></div></section>',
+    )
+
+    // the parent is a render function, so the block is patched with
+    // optimized === false while still carrying dynamicChildren
+    render(renderBlock('green', 'b', 'bar'), root)
+    expect(inner(root)).toBe(
+      '<section><div class="green" title="b"><span>bar</span></div></section>',
+    )
+  })
+
   // #3828
   test('patch Suspense in optimized mode w/ nested dynamic nodes', async () => {
     const show = ref(false)
