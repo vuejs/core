@@ -493,6 +493,42 @@ const props = defineProps({ foo: String })
     expect(content).toMatch(`qux: { default: 'hi' }`)
   })
 
+  // #15740
+  test('withDefaults w/ callable interface extending a base', () => {
+    const { content } = compile(`
+    <script setup lang="ts">
+    interface Metadata { description?: string }
+    interface Callback extends Metadata { (): string }
+    const props = withDefaults(defineProps<{
+      cb?: Callback
+    }>(), {
+      cb: () => 'ok',
+    })
+    </script>
+    `)
+    assertCode(content)
+    expect(content).toMatch(
+      `cb: { type: Function, required: false, default: () => 'ok' }`,
+    )
+
+    const { content: prodContent } = compile(
+      `
+    <script setup lang="ts">
+    interface Metadata { description?: string }
+    interface Callback extends Metadata { (): string }
+    const props = withDefaults(defineProps<{
+      cb?: Callback
+    }>(), {
+      cb: () => 'ok',
+    })
+    </script>
+    `,
+      { isProd: true },
+    )
+    assertCode(prodContent)
+    expect(prodContent).toMatch(`cb: { type: Function, default: () => 'ok' }`)
+  })
+
   test('withDefaults (dynamic)', () => {
     const { content } = compile(`
     <script setup lang="ts">
