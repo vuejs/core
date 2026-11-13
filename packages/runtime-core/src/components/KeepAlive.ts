@@ -33,7 +33,6 @@ import {
 } from '@vue/shared'
 import { watch } from '../apiWatch'
 import {
-  type ElementNamespace,
   MoveType,
   type RendererElement,
   type RendererInternals,
@@ -67,7 +66,6 @@ export interface KeepAliveContext extends ComponentRenderContext {
     vnode: VNode,
     container: RendererElement,
     anchor: RendererNode | null,
-    namespace: ElementNamespace,
     optimized: boolean,
   ) => void
   // returns false for a child that is not cached: the caller unmounts it
@@ -121,7 +119,7 @@ const KeepAliveImpl: ComponentOptions = {
 
     const {
       renderer: {
-        p: patch,
+        uc: updateComponent,
         m: move,
         um: _unmount,
         o: { createElement },
@@ -129,27 +127,12 @@ const KeepAliveImpl: ComponentOptions = {
     } = sharedContext
     const storageContainer = createElement('div')
 
-    sharedContext.activate = (
-      vnode,
-      container,
-      anchor,
-      namespace,
-      optimized,
-    ) => {
+    sharedContext.activate = (vnode, container, anchor, optimized) => {
       const instance = vnode.component!
       move(vnode, container, anchor, MoveType.ENTER, parentSuspense)
-      // in case props have changed
-      patch(
-        instance.vnode,
-        vnode,
-        container,
-        anchor,
-        instance,
-        parentSuspense,
-        namespace,
-        vnode.slotScopeIds,
-        optimized,
-      )
+      // in case props have changed. Update the instance directly: the outer
+      // patch() that activates sets the ref, as it does on mount
+      updateComponent(instance.vnode, vnode, optimized)
       queuePostRenderEffect(() => {
         instance.isDeactivated = false
         if (instance.a) {
