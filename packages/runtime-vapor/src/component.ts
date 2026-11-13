@@ -142,6 +142,7 @@ import {
   hydrateBlock,
   hydrateBlockWithErrorHandling,
   hydrateNode,
+  isClaimedAnchor,
   isComment,
   isHydrating,
   isRecreatedNode,
@@ -2040,12 +2041,13 @@ export function registerRootHook<T extends object>(hooks: T[], hook: T): void {
 }
 
 // A multi-root array has no effective root; only a lone eligible branch
-// alongside comments can hold one (vdom comment-filtering alignment).
+// alongside comments or claimed anchors can hold one (vdom comment-filtering
+// alignment).
 function singleRootOf(nodes: Block[]): Block | undefined {
   let single: Block | undefined
   let hasComment = false
   for (const b of nodes) {
-    if (b instanceof Comment) {
+    if (b instanceof Comment || isClaimedAnchor(b as Node)) {
       hasComment = true
       continue
     }
