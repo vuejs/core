@@ -243,6 +243,16 @@ function isInHmrContext(instance: ComponentInternalInstance | null) {
   }
 }
 
+/**
+ * Update a component instance's props and attrs in place after a re-render.
+ * The optimized path diffs only the compiler-listed dynamic props when the
+ * vnode carries the `PROPS` patch flag, and updates no props for any other
+ * patch flag. A full props diff runs instead whenever the optimized path is
+ * not taken — HMR in dev and the `FULL_PROPS` patch flag force a full diff
+ * even when `PROPS` is set. In compat mode the fast path mirrors
+ * `setFullProps` so keys skipped on mount (e.g. `on*` listeners,
+ * `.native` listeners) are not leaked into `$props` (#16202).
+ */
 export function updateProps(
   instance: ComponentInternalInstance,
   rawProps: Data | null,
@@ -288,6 +298,27 @@ export function updateProps(
             }
           } else {
             const camelizedKey = camelize(key)
+            if (__COMPAT__ && !hasOwn(options, camelizedKey)) {
+              // #16202 in compat mode, setFullProps skips some keys on
+              // mount (e.g. on* listeners when INSTANCE_LISTENERS is
+              // enabled), so they never enter attrs and the check above
+              // cannot catch them. Mirror setFullProps here instead of
+              // leaking them into props.
+              if (isOn(key) && key.endsWith('Native')) {
+                key = key.slice(0, -6) // remove Native postfix
+                // #16202 mirror setFullProps: the key may be absent from
+                // attrs (it was not in rawProps on mount), in which case
+                // it must still be written even when the value is
+                // undefined (`value !== attrs[key]` alone is false then)
+                if (!(key in attrs) || value !== attrs[key]) {
+                  attrs[key] = value
+                  hasAttrsChanged = true
+                }
+                continue
+              } else if (shouldSkipAttr(key, instance)) {
+                continue
+              }
+            }
             props[camelizedKey] = resolvePropValue(
               options,
               rawCurrentProps,
