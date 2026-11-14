@@ -307,7 +307,9 @@ function createVNodeSlotBranch(
   // important: provide v-slot="props" and v-for="exp" on the wrapper for
   // proper scope analysis
   const wrapperProps: TemplateNode['props'] = []
-  if (slotProps) {
+  // keep v-slot for v-for slots even without props, so the wrapper is
+  // treated as a slot template (like the source) and not as a v-for fragment
+  if (slotProps || vFor) {
     wrapperProps.push({
       type: NodeTypes.DIRECTIVE,
       name: 'slot',
