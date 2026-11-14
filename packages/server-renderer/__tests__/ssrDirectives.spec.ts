@@ -69,6 +69,56 @@ describe('ssr: directives', () => {
   })
 
   describe('template v-model', () => {
+    test.each([
+      ['radio', 'type="radio"'],
+      ['checkbox', 'type="checkbox"'],
+      ['radio', ':type="type"'],
+      ['checkbox', ':type="type"'],
+    ])('input with bare value (%s, %s)', async (type, binding) => {
+      const template = `<div><input ${binding} value v-model="model"></div>`
+      expect(
+        await renderToString(
+          createApp({
+            data: () => ({ type, model: type === 'checkbox' ? [''] : '' }),
+            template,
+          }),
+        ),
+      ).toBe(`<div><input type="${type}" value checked></div>`)
+
+      expect(
+        await renderToString(
+          createApp({
+            data: () => ({ type, model: type === 'checkbox' ? [null] : null }),
+            template,
+          }),
+        ),
+      ).toBe(`<div><input type="${type}" value></div>`)
+    })
+
+    test.each([false, true])(
+      'option with bare value (multiple: %s)',
+      async multiple => {
+        const template = `<select ${multiple ? 'multiple' : ''} v-model="model"><option value>Empty</option></select>`
+        expect(
+          await renderToString(
+            createApp({
+              data: () => ({ model: multiple ? [''] : '' }),
+              template,
+            }),
+          ),
+        ).toContain(`<option value selected>Empty</option>`)
+
+        expect(
+          await renderToString(
+            createApp({
+              data: () => ({ model: multiple ? [null] : null }),
+              template,
+            }),
+          ),
+        ).toContain(`<option value>Empty</option>`)
+      },
+    )
+
     test('text', async () => {
       expect(
         await renderToString(
