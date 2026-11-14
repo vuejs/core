@@ -191,10 +191,13 @@ export const ssrTransformModel: DirectiveTransform = (dir, node, context) => {
 }
 
 function findValueBinding(node: PlainElementNode): ExpressionNode {
-  const valueBinding = findProp(node, 'value')
+  const valueBinding = findProp(node, 'value', false, true)
   return valueBinding
     ? valueBinding.type === NodeTypes.DIRECTIVE
       ? valueBinding.exp!
-      : createSimpleExpression(valueBinding.value!.content, true)
+      : createSimpleExpression(
+          valueBinding.value ? valueBinding.value.content : '',
+          true,
+        )
     : createSimpleExpression(`null`, false)
 }
