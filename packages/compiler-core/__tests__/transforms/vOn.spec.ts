@@ -369,6 +369,21 @@ describe('compiler: transform v-on', () => {
     })
   })
 
+  test('should treat semicolons inside function expressions as expression', () => {
+    const { node } = parseWithVOn(`<div @click="function () { ';' }"/>`)
+    expect((node.codegenNode as VNodeCall).props).toMatchObject({
+      properties: [
+        {
+          key: { content: `onClick` },
+          value: {
+            type: NodeTypes.SIMPLE_EXPRESSION,
+            content: `function () { ';' }`,
+          },
+        },
+      ],
+    })
+  })
+
   test('should NOT wrap as function if expression is complex member expression', () => {
     const { node } = parseWithVOn(`<div @click="a['b' + c]"/>`)
     expect((node.codegenNode as VNodeCall).props).toMatchObject({
