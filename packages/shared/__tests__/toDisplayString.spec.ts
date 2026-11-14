@@ -288,4 +288,29 @@ describe('toDisplayString', () => {
     expect(toDisplayString(nullProtoRegExp)).toBe('"[object RegExp]"')
     expect(toDisplayString(nullProtoError)).toBe('"[object Error]"')
   })
+
+  // the guard must probe the conversion methods via property access only:
+  // string coercion itself never inspects the prototype, so a proxy with a
+  // throwing `getPrototypeOf` trap must not break Map key rendering when
+  // the key provides `Symbol.toPrimitive`
+  test('Map with proxy keys whose getPrototypeOf trap throws', () => {
+    const proxiedKey = new Proxy(
+      {
+        [Symbol.toPrimitive]: () => 'key',
+      },
+      {
+        getPrototypeOf() {
+          throw new Error('getPrototypeOf trap failed')
+        },
+      },
+    )
+
+    // string coercion goes through `Symbol.toPrimitive`, not the prototype
+    expect(proxiedKey + ' =>').toBe('key =>')
+    expect(toDisplayString(new Map([[proxiedKey, 'value']]))).toBe(`{
+  "Map(1)": {
+    "key =>": "value"
+  }
+}`)
+  })
 })

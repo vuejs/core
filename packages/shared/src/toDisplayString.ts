@@ -72,14 +72,17 @@ const stringifySymbol = (v: unknown, i: number | string = ''): any =>
   isSymbol(v) ? `Symbol(${(v as any).description ?? i})` : v
 
 /**
- * Objects without a prototype (e.g. `Object.create(null)` or built-ins with
- * their prototype stripped) may expose none of the conversion methods
- * (`Symbol.toPrimitive`, `toString`, `valueOf`) and throw when coerced to a
- * string. Fall back to their type string, e.g. "[object Date]".
+ * Objects may expose none of the string conversion methods
+ * (`Symbol.toPrimitive`, `toString`, `valueOf`) — e.g. `Object.create(null)`
+ * or built-ins with their prototype stripped — and throw when coerced to a
+ * string. The methods are probed via plain property access, the same
+ * lookups string coercion itself performs, so objects that coerce fine
+ * (e.g. proxies with a throwing `getPrototypeOf` trap but a working
+ * `Symbol.toPrimitive`) are not failed prematurely. Fall back to the type
+ * string, e.g. "[object Date]", when none of them is callable.
  */
 const lacksStringConversion = (val: unknown): boolean =>
   isObject(val) &&
-  Object.getPrototypeOf(val) === null &&
   (val as any)[Symbol.toPrimitive] == null &&
   !isFunction(val.toString) &&
   !isFunction(val.valueOf)
