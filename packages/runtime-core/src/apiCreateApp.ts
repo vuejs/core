@@ -259,6 +259,10 @@ export interface VaporInVdomInterface {
   hasTransitionChild(vnode: VNode): boolean
   getTransitionElement(vnode: VNode): RendererElement | undefined
   /**
+   * What a template ref on a mounted vapor slot vnode resolves to.
+   */
+  getSlotRefValue(vnode: VNode): RendererNode | null
+  /**
    * Enters what vapor mounted under `suspense` while it was pending, right
    * before the boundary reveals its branch: the boundary's own walk stops
    * at a vapor component.

@@ -1,9 +1,10 @@
 import type { SuspenseBoundary } from './components/Suspense'
-import type {
-  VNode,
-  VNodeNormalizedRef,
-  VNodeNormalizedRefAtom,
-  VNodeRef,
+import {
+  type VNode,
+  type VNodeNormalizedRef,
+  type VNodeNormalizedRefAtom,
+  type VNodeRef,
+  VaporSlot,
 } from './vnode'
 import {
   EMPTY_OBJ,
@@ -20,7 +21,8 @@ import { warn } from './warning'
 import { isRef, toRaw } from '@vue/reactivity'
 import { ErrorCodes, callWithErrorHandling } from './errorHandling'
 import { type SchedulerJob, SchedulerJobFlags } from './scheduler'
-import { queuePostRenderEffect } from './renderer'
+import { getVaporInterface, queuePostRenderEffect } from './renderer'
+import { isVaporInteropEnabled } from './vaporInteropState'
 import {
   type ComponentOptions,
   type Data,
@@ -68,12 +70,6 @@ export function setRef(
     return
   }
 
-  const refValue =
-    vnode.shapeFlag & ShapeFlags.STATEFUL_COMPONENT
-      ? getComponentPublicInstance(vnode.component!)
-      : vnode.el
-  const value = isUnmount ? null : refValue
-
   const { i: owner, r: ref } = rawRef
   if (__DEV__ && !owner) {
     warn(
@@ -82,6 +78,14 @@ export function setRef(
     )
     return
   }
+  const refValue =
+    vnode.shapeFlag & ShapeFlags.STATEFUL_COMPONENT
+      ? getComponentPublicInstance(vnode.component!)
+      : isVaporInteropEnabled && vnode.type === VaporSlot
+        ? getVaporInterface(owner, vnode).getSlotRefValue(vnode)
+        : vnode.el
+  const value = isUnmount ? null : refValue
+
   const oldRef = oldRawRef && (oldRawRef as VNodeNormalizedRefAtom).r
   const refs = owner.refs === EMPTY_OBJ ? (owner.refs = {}) : owner.refs
   const setupState = owner.setupState
