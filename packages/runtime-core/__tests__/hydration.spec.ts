@@ -4702,4 +4702,103 @@ describe('SSR hydration', () => {
       target.remove()
     },
   )
+
+  test('hydrates css vars on a root slot with nested content', async () => {
+    const childTemplate = `<slot/>`
+    const { code: childCode } = compileSSR(childTemplate, {
+      ssrCssVars: `{ "--color": color }`,
+    })
+    const Themed = {
+      setup() {
+        useCssVars(() => ({ color: 'red' }))
+        return { color: 'red' }
+      },
+      render: compileToFunction(childTemplate),
+      ssrRender: new Function('require', childCode)((id: string) =>
+        id === 'vue' ? runtimeDom : serverRenderer,
+      ),
+    }
+
+    const passedTemplate = `<Themed><div class="passed"><span class="inner"/></div></Themed>`
+    const { code: passedCode } = compileSSR(passedTemplate)
+    const Passed = {
+      components: { Themed },
+      render: compileToFunction(passedTemplate),
+      ssrRender: new Function('require', passedCode)((id: string) =>
+        id === 'vue' ? runtimeDom : serverRenderer,
+      ),
+    }
+
+    const container = document.createElement('div')
+    container.innerHTML = await renderToString(h(Passed))
+    const passed = container.querySelector('.passed') as HTMLElement
+    const inner = container.querySelector('.inner') as HTMLElement
+    expect(passed.style.getPropertyValue('--color')).toBe('red')
+    // the client only sets vars on slot roots
+    expect(inner.getAttribute('style')).toBe(null)
+
+    const app = createSSRApp(Passed)
+    app.mount(container)
+    expect(`Hydration style mismatch`).not.toHaveBeenWarned()
+    expect(container.querySelector('.passed')).toBe(passed)
+    expect(container.querySelector('.inner')).toBe(inner)
+    app.unmount()
+  })
+
+  test('hydrates css vars on a root slot', async () => {
+    const childTemplate = `<slot>fallback <span class="fb" /></slot>`
+    const { code: childCode } = compileSSR(childTemplate, {
+      ssrCssVars: `{ "--color": color }`,
+    })
+    const Themed = {
+      setup() {
+        useCssVars(() => ({ color: 'red' }))
+        return { color: 'red' }
+      },
+      render: compileToFunction(childTemplate),
+      ssrRender: new Function('require', childCode)((id: string) =>
+        id === 'vue' ? runtimeDom : serverRenderer,
+      ),
+    }
+
+    const passedTemplate = `<Themed><div class="passed">passed</div></Themed>`
+    const { code: passedCode } = compileSSR(passedTemplate)
+    const Passed = {
+      components: { Themed },
+      render: compileToFunction(passedTemplate),
+      ssrRender: new Function('require', passedCode)((id: string) =>
+        id === 'vue' ? runtimeDom : serverRenderer,
+      ),
+    }
+    const passedContainer = document.createElement('div')
+    passedContainer.innerHTML = await renderToString(h(Passed))
+    const passed = passedContainer.querySelector('.passed') as HTMLElement
+    expect(passed.style.getPropertyValue('--color')).toBe('red')
+    const passedApp = createSSRApp(Passed)
+    passedApp.mount(passedContainer)
+    expect(`Hydration style mismatch`).not.toHaveBeenWarned()
+    expect(passedContainer.querySelector('.passed')).toBe(passed)
+    expect(passed.style.getPropertyValue('--color')).toBe('red')
+    passedApp.unmount()
+
+    const fallbackTemplate = `<Themed />`
+    const { code: fallbackCode } = compileSSR(fallbackTemplate)
+    const Fallback = {
+      components: { Themed },
+      render: compileToFunction(fallbackTemplate),
+      ssrRender: new Function('require', fallbackCode)((id: string) =>
+        id === 'vue' ? runtimeDom : serverRenderer,
+      ),
+    }
+    const fallbackContainer = document.createElement('div')
+    fallbackContainer.innerHTML = await renderToString(h(Fallback))
+    const fallback = fallbackContainer.querySelector('.fb') as HTMLElement
+    expect(fallback.style.getPropertyValue('--color')).toBe('red')
+    const fallbackApp = createSSRApp(Fallback)
+    fallbackApp.mount(fallbackContainer)
+    expect(`Hydration style mismatch`).not.toHaveBeenWarned()
+    expect(fallbackContainer.querySelector('.fb')).toBe(fallback)
+    expect(fallback.style.getPropertyValue('--color')).toBe('red')
+    fallbackApp.unmount()
+  })
 })

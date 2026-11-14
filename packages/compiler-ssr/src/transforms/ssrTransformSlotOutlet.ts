@@ -11,11 +11,16 @@ import {
   processSlotOutlet,
   resolveComponentType,
 } from '@vue/compiler-dom'
-import { SSR_RENDER_SLOT, SSR_RENDER_SLOT_INNER } from '../runtimeHelpers'
+import {
+  SSR_RENDER_SLOT,
+  SSR_RENDER_SLOT_INNER,
+  SSR_WITH_SLOT_CSS_VARS,
+} from '../runtimeHelpers'
 import {
   type SSRTransformContext,
   processChildrenAsStatement,
 } from '../ssrCodegenTransform'
+import { slotNeedsCssVars } from './ssrInjectCssVars'
 
 export const ssrTransformSlotOutlet: NodeTransform = (node, context) => {
   if (isSlotOutlet(node)) {
@@ -82,6 +87,15 @@ export function ssrProcessSlotOutlet(
     fallbackRenderFn.body = processChildrenAsStatement(node, context)
     // _renderSlot(slots, name, props, fallback, ...)
     renderCall.arguments[3] = fallbackRenderFn
+  }
+
+  // A root `<slot>` is the component root. Props bound here never reach the
+  // DOM, so the passed content has to carry the css vars at runtime.
+  if (slotNeedsCssVars(node)) {
+    renderCall.arguments[2] = createCallExpression(
+      context.helper(SSR_WITH_SLOT_CSS_VARS),
+      [renderCall.arguments[2] || `{}`, `_cssVars`],
+    )
   }
 
   // Forwarded <slot/>. Merge slot scope ids
