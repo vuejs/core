@@ -18015,3 +18015,75 @@ describe('async component of the other mode in a vdom KeepAlive', () => {
     },
   )
 })
+
+describe('template ref on vapor slot content', () => {
+  // Reka UI `Presence`: renders the first slot vnode with a ref, the element
+  // it reads the animation state from
+  const Presence = defineComponent({
+    props: ['onRef'],
+    setup(props, { slots }) {
+      return () => h(slots.default!()[0], { ref: props.onRef })
+    },
+  })
+  // what each mode's ref received, the vdom run first
+  const track = (record: (v: any) => any) => {
+    const seen: any[][] = []
+    const makeData = () => {
+      const log: any[] = []
+      seen.push(log)
+      return ref({ show: true, onRef: (v: any) => log.push(record(v)) })
+    }
+    return { seen, makeData }
+  }
+
+  test('resolves to the element the content renders', async () => {
+    const { seen, makeData } = track(v =>
+      v == null ? v : v instanceof Element ? v.tagName : typeof v,
+    )
+    await renderParity(
+      {
+        App: `<template>
+          <components.Presence v-if="data.show" :on-ref="data.onRef">
+            <button>x</button>
+          </components.Presence>
+        </template>`,
+      },
+      makeData,
+      async data => {
+        data.value.show = false
+        await nextTick()
+      },
+      { Presence },
+    )
+    expect(seen[0]).toEqual(['BUTTON', null])
+    expect(seen[1]).toEqual(seen[0])
+  })
+
+  test('stays on the fragment of a forwarded slot or a slot outlet', async () => {
+    const Outlet = defineComponent({
+      props: ['onRef'],
+      setup(props, { slots }) {
+        return () => h(renderSlot(slots, 'default'), { ref: props.onRef })
+      },
+    })
+    for (const app of [
+      // a vapor Mid forwards its slot into the content
+      `<components.Mid :on-ref="data.onRef"><button>x</button></components.Mid>`,
+      `<components.Outlet :on-ref="data.onRef"><button>x</button></components.Outlet>`,
+    ]) {
+      const { seen, makeData } = track(v => v && v.nodeName)
+      await renderParity(
+        {
+          Mid: `<script setup>const components = _components; defineProps(['onRef'])</script>
+            <template><components.Presence :on-ref="onRef"><slot /></components.Presence></template>`,
+          App: `<template>${app}</template>`,
+        },
+        makeData,
+        () => {},
+        { Presence, Outlet },
+      )
+      expect(seen[0]).toEqual(['#text', null])
+      expect(seen[1]).toEqual(seen[0])
+    }
+  })
+})
