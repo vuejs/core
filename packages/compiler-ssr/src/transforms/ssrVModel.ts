@@ -90,14 +90,22 @@ export const ssrTransformModel: DirectiveTransform = (dir, node, context) => {
       ]
       const type = findProp(node, 'type')
       if (type) {
-        const value = findValueBinding(node)
+        const value = findValueBinding(node, 'undefined')
+        const modelArgs = [model, value]
+        const trueValueBinding = findProp(node, 'true-value')
+        if (trueValueBinding) {
+          modelArgs.push(
+            trueValueBinding.type === NodeTypes.ATTRIBUTE
+              ? createSimpleExpression(trueValueBinding.value!.content, true)
+              : trueValueBinding.exp!,
+          )
+        }
         if (type.type === NodeTypes.DIRECTIVE) {
           // dynamic type
           res.ssrTagParts = [
             createCallExpression(context.helper(SSR_RENDER_DYNAMIC_MODEL), [
               type.exp!,
-              model,
-              value,
+              ...modelArgs,
             ]),
           ]
         } else if (type.value) {
@@ -115,36 +123,12 @@ export const ssrTransformModel: DirectiveTransform = (dir, node, context) => {
               ]
               break
             case 'checkbox':
-              const trueValueBinding = findProp(node, 'true-value')
-              if (trueValueBinding) {
-                const trueValue =
-                  trueValueBinding.type === NodeTypes.ATTRIBUTE
-                    ? JSON.stringify(trueValueBinding.value!.content)
-                    : trueValueBinding.exp!
-                res.props = [
-                  createObjectProperty(
-                    `checked`,
-                    createCallExpression(context.helper(SSR_LOOSE_EQUAL), [
-                      model,
-                      trueValue,
-                    ]),
-                  ),
-                ]
-              } else {
-                res.props = [
-                  createObjectProperty(
-                    `checked`,
-                    createConditionalExpression(
-                      createCallExpression(`Array.isArray`, [model]),
-                      createCallExpression(context.helper(SSR_LOOSE_CONTAIN), [
-                        model,
-                        value,
-                      ]),
-                      model,
-                    ),
-                  ),
-                ]
-              }
+              res.ssrTagParts = [
+                createCallExpression(context.helper(SSR_RENDER_DYNAMIC_MODEL), [
+                  createSimpleExpression('checkbox', true),
+                  ...modelArgs,
+                ]),
+              ]
               break
             case 'file':
               context.onError(
@@ -190,11 +174,14 @@ export const ssrTransformModel: DirectiveTransform = (dir, node, context) => {
   }
 }
 
-function findValueBinding(node: PlainElementNode): ExpressionNode {
+function findValueBinding(
+  node: PlainElementNode,
+  defaultValue = 'null',
+): ExpressionNode {
   const valueBinding = findProp(node, 'value')
   return valueBinding
     ? valueBinding.type === NodeTypes.DIRECTIVE
       ? valueBinding.exp!
       : createSimpleExpression(valueBinding.value!.content, true)
-    : createSimpleExpression(`null`, false)
+    : createSimpleExpression(defaultValue, false)
 }
