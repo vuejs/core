@@ -1079,6 +1079,19 @@ const vaporInteropImpl = {
 
   getTransitionElement: getInteropTransitionElement,
 
+  // a ref on the content a vdom slot function call returned (reka-ui
+  // `Presence`: `h(slots.default()[0], { ref })`) gets its root element, as
+  // with vdom content; a forwarded slot stays a fragment, as in vdom
+  getSlotRefValue(vnode) {
+    const block = vnode.vb
+    return (
+      (vnode.vs!.attrs &&
+        isFragment(block) &&
+        getRootElement(block.nodes, { excludeSlotOutlets: true })) ||
+      vnode.el
+    )
+  },
+
   // only vdom's TransitionGroup calls it: dead under the flag its export sets
   forEachGroupChild(vnode, cb) {
     if (!isVdomTransitionEnabled) return
