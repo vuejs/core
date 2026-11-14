@@ -328,7 +328,7 @@ function injectCssVarsIntoHtml(html: string, state: CssVarsHtmlState): string {
   let cursor = 0
   while (cursor < html.length) {
     if (state.rawText) {
-      const close = html.toLowerCase().indexOf(`</${state.rawText}`, cursor)
+      const close = findRawTextClose(html, state.rawText, cursor)
       if (close === -1) {
         result += html.slice(cursor)
         break
@@ -401,6 +401,16 @@ function injectCssVarsIntoHtml(html: string, state: CssVarsHtmlState): string {
     cursor = end + 1
   }
   return result
+}
+
+// Matched case-insensitively against the original string: lowercasing a copy
+// can change its length (`İ` becomes two code units), so offsets from it do
+// not line up with the string being sliced.
+function findRawTextClose(html: string, tag: string, from: number): number {
+  const re = new RegExp(`</${tag}`, 'ig')
+  re.lastIndex = from
+  const match = re.exec(html)
+  return match ? match.index : -1
 }
 
 function mergeStyleAttr(openTag: string, style: string): string {

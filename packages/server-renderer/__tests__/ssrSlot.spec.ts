@@ -301,6 +301,23 @@ describe('ssr: slot', () => {
       )
     })
 
+    test('match a raw text closing tag without shifting offsets', async () => {
+      // `İ` lowercases to two code units, so matching a lowercased copy would
+      // return offsets that do not line up with the original string
+      const app = createApp({
+        render: () =>
+          h(Themed, null, {
+            default: () => [
+              createStaticVNode(`<textarea>İ</textarea><p class="b"></p>`, 2),
+            ],
+          }),
+      })
+      expect(await renderToString(app)).toBe(
+        `<!--[--><textarea style="--color:red;">İ</textarea>` +
+          `<p class="b" style="--color:red;"></p><!--]-->`,
+      )
+    })
+
     test('keep a static self-closing tag self-closing', async () => {
       const app = createApp({
         render: () =>
