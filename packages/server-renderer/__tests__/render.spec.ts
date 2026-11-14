@@ -1,5 +1,6 @@
 import {
   type ComponentOptions,
+  Fragment,
   KeepAlive,
   Transition,
   computed,
@@ -782,6 +783,13 @@ function testRender(type: string, render: typeof renderToString) {
       test('Static', async () => {
         const content = `<div id="ok">hello<span>world</span></div>`
         expect(await render(createStaticVNode(content, 1))).toBe(content)
+      })
+
+      // #10007
+      test('empty Fragment', async () => {
+        expect(await render(h('div', [h(Fragment)]))).toBe(
+          `<div><!--[--><!--]--></div>`,
+        )
       })
     })
 

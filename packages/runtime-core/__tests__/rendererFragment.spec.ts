@@ -422,4 +422,20 @@ describe('renderer: fragment', () => {
     render(renderFn(), root)
     expect(serializeInner(root)).toBe('')
   })
+
+  test('move component rendering an empty fragment', () => {
+    const Empty = { render: () => h(Fragment) }
+    const root = nodeOps.createElement('div')
+    const renderFn = (keys: number[]) =>
+      h(
+        'div',
+        keys.map(key =>
+          key === 2 ? h(Empty, { key }) : h('span', { key }, key),
+        ),
+      )
+
+    render(renderFn([1, 2, 3]), root)
+    render(renderFn([3, 2, 1]), root)
+    expect(serializeInner(root)).toBe(`<div><span>3</span><span>1</span></div>`)
+  })
 })
