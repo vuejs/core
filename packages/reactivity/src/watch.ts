@@ -207,7 +207,9 @@ export function watch(
   if (cb && deep) {
     const baseGetter = getter
     const depth = deep === true ? Infinity : deep
-    getter = () => traverse(baseGetter(), depth)
+    // for multiple sources, the depth applies to each source rather than to
+    // the array wrapping them
+    getter = () => traverse(baseGetter(), isMultiSource ? depth + 1 : depth)
   }
 
   const scope = getCurrentScope()
