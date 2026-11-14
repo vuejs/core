@@ -232,4 +232,85 @@ describe('toDisplayString', () => {
       }"
     `)
   })
+
+  // objects created via `Object.create(null)`, or built-ins with their
+  // prototype stripped, provide none of the string conversion methods
+  test('objects without a prototype', () => {
+    const nullProtoObject = Object.create(null)
+    const nullProtoObjectWithProps = Object.assign(Object.create(null), {
+      foo: 1,
+    })
+    const nullProtoDate = new Date()
+    Object.setPrototypeOf(nullProtoDate, null)
+    const nullProtoRegExp = /vue/
+    Object.setPrototypeOf(nullProtoRegExp, null)
+    const nullProtoError = new Error('boom')
+    Object.setPrototypeOf(nullProtoError, null)
+
+    // Map keys fall back to the same output as regular object keys
+    expect(toDisplayString(new Map([[nullProtoObject, 'value']]))).toBe(`{
+  "Map(1)": {
+    "[object Object] =>": "value"
+  }
+}`)
+    expect(toDisplayString(new Map([[nullProtoObjectWithProps, 'value']])))
+      .toBe(`{
+  "Map(1)": {
+    "[object Object] =>": "value"
+  }
+}`)
+
+    // nested Map
+    expect(toDisplayString({ nested: new Map([[nullProtoObject, 'value']]) }))
+      .toBe(`{
+  "nested": {
+    "Map(1)": {
+      "[object Object] =>": "value"
+    }
+  }
+}`)
+
+    // built-ins with internal slots fall back to their type string
+    expect(toDisplayString(nullProtoDate)).toBe('"[object Date]"')
+    expect(toDisplayString([nullProtoDate])).toBe(`[
+  "[object Date]"
+]`)
+    expect(toDisplayString(new Set([nullProtoDate]))).toBe(`{
+  "Set(1)": [
+    "[object Date]"
+  ]
+}`)
+    expect(toDisplayString(new Map([['key', nullProtoDate]]))).toBe(`{
+  "Map(1)": {
+    "key =>": "[object Date]"
+  }
+}`)
+    expect(toDisplayString(nullProtoRegExp)).toBe('"[object RegExp]"')
+    expect(toDisplayString(nullProtoError)).toBe('"[object Error]"')
+  })
+
+  // the guard must probe the conversion methods via property access only:
+  // string coercion itself never inspects the prototype, so a proxy with a
+  // throwing `getPrototypeOf` trap must not break Map key rendering when
+  // the key provides `Symbol.toPrimitive`
+  test('Map with proxy keys whose getPrototypeOf trap throws', () => {
+    const proxiedKey = new Proxy(
+      {
+        [Symbol.toPrimitive]: () => 'key',
+      },
+      {
+        getPrototypeOf() {
+          throw new Error('getPrototypeOf trap failed')
+        },
+      },
+    )
+
+    // string coercion goes through `Symbol.toPrimitive`, not the prototype
+    expect(proxiedKey + ' =>').toBe('key =>')
+    expect(toDisplayString(new Map([[proxiedKey, 'value']]))).toBe(`{
+  "Map(1)": {
+    "key =>": "value"
+  }
+}`)
+  })
 })
