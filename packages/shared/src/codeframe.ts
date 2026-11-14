@@ -24,10 +24,12 @@ export function generateCodeFrame(
   let count = 0
   const res: string[] = []
   for (let i = 0; i < lines.length; i++) {
-    count +=
-      lines[i].length +
-      ((newlineSequences[i] && newlineSequences[i].length) || 0)
-    if (count >= start) {
+    const lineNewLineSeqLength =
+      (newlineSequences[i] && newlineSequences[i].length) || 0
+    count += lines[i].length + lineNewLineSeqLength
+    // `count` is the offset just past this line's newline, so an offset that points at the first
+    // character of the line belongs to this line, not the previous one.
+    if (count - lineNewLineSeqLength >= start) {
       for (let j = i - range; j <= i + range || end > count; j++) {
         if (j < 0 || j >= lines.length) continue
         const line = j + 1

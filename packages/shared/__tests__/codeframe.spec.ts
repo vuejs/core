@@ -44,6 +44,14 @@ attr
     expect(generateCodeFrame(source, attrStart, attrEnd)).toMatchSnapshot()
   })
 
+  test('offset at the first character of a line', () => {
+    // An offset that points at a line's first character belongs to that line, not to the previous
+    // one; the caret used to land on the previous line's newline.
+    expect(generateCodeFrame('abc\ndef', 4, 4)).toBe(
+      ['1  |  abc', '2  |  def', '   |  ^'].join('\n'),
+    )
+  })
+
   test('invalid start and end', () => {
     expect(generateCodeFrame(source, -Infinity, 0)).toMatchSnapshot()
     expect(generateCodeFrame(source, 0, Infinity)).toMatchSnapshot()
