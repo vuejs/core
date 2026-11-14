@@ -318,6 +318,26 @@ describe('ssr: slot', () => {
       )
     })
 
+    test('ignore a raw text close that is only a tag name prefix', async () => {
+      // `</textareax>` has no delimiter after the name, so the HTML parser
+      // keeps it as textarea text; the real close comes later
+      const app = createApp({
+        render: () =>
+          h(Themed, null, {
+            default: () => [
+              createStaticVNode(
+                `<textarea>literal </textareax><b>text</b></textarea><p class="b"></p>`,
+                2,
+              ),
+            ],
+          }),
+      })
+      expect(await renderToString(app)).toBe(
+        `<!--[--><textarea style="--color:red;">literal </textareax><b>text</b></textarea>` +
+          `<p class="b" style="--color:red;"></p><!--]-->`,
+      )
+    })
+
     test('keep a static self-closing tag self-closing', async () => {
       const app = createApp({
         render: () =>

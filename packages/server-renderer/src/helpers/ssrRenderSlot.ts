@@ -409,8 +409,18 @@ function injectCssVarsIntoHtml(html: string, state: CssVarsHtmlState): string {
 function findRawTextClose(html: string, tag: string, from: number): number {
   const re = new RegExp(`</${tag}`, 'ig')
   re.lastIndex = from
-  const match = re.exec(html)
-  return match ? match.index : -1
+  let match: RegExpExecArray | null
+  while ((match = re.exec(html))) {
+    const next = match.index + match[0].length
+    // the name only ends the raw text element when a delimiter follows it:
+    // `</textareax>` and `</textarea!` stay part of the text, as they do in
+    // the HTML parser
+    if (next === html.length || /[\s/>]/.test(html[next])) {
+      return match.index
+    }
+    re.lastIndex = next
+  }
+  return -1
 }
 
 function mergeStyleAttr(openTag: string, style: string): string {
