@@ -4702,4 +4702,16 @@ describe('SSR hydration', () => {
       target.remove()
     },
   )
+
+  // #10007
+  test('empty fragment', async () => {
+    const show = ref(false)
+    const { container } = mountWithHydration(
+      '<div><!--[--><!--]--></div>',
+      () => h('div', [show.value ? h('span') : h(Fragment)]),
+    )
+    show.value = true
+    await nextTick()
+    expect(container.innerHTML).toBe('<div><span></span></div>')
+  })
 })

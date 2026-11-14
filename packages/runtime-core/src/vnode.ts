@@ -842,7 +842,13 @@ export function normalizeChildren(vnode: VNode, children: unknown): void {
   let type = 0
   const { shapeFlag } = vnode
   if (children == null) {
-    children = null
+    // #10007 a fragment always has array children, e.g. JSX `<></>`
+    if (vnode.type === Fragment) {
+      children = []
+      type = ShapeFlags.ARRAY_CHILDREN
+    } else {
+      children = null
+    }
   } else if (isArray(children)) {
     type = ShapeFlags.ARRAY_CHILDREN
   } else if (typeof children === 'object') {

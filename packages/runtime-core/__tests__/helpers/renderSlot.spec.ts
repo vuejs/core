@@ -215,5 +215,16 @@ describe('renderSlot', () => {
       expect(vnode.children).toEqual([fallback])
       expect(vnode.patchFlag).toBe(PatchFlags.BAIL)
     })
+
+    it('should ignore empty fragment slot content', () => {
+      let fallback
+      const vnode = renderSlot(
+        { default: () => [h(Fragment)] },
+        'default',
+        undefined,
+        () => [(fallback = h('fallback'))],
+      )
+      expect(vnode.children).toEqual([fallback])
+    })
   })
 })
