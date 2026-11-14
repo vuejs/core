@@ -1,7 +1,7 @@
 {
   "private": true,
   "version": "3.5.45",
-  "packageManager": "pnpm@12.16.1",
+  "packageManager": "pnpm@12.18.0",
   "type": "module",
   "scripts": {
     "dev": "node scripts/dev.js",
@@ -93,7 +93,7 @@
     "marked": "13.0.3",
     "npm-run-all2": "^9.0.4",
     "picocolors": "^1.1.1",
-    "playwright": "^1.64.1",
+    "playwright": "^1.65.0",
     "prettier": "^3.9.10",
     "pretty-bytes": "^7.2.0",
     "pug": "^3.0.4",
@@ -103,8 +103,8 @@
     "rollup-plugin-dts": "^6.5.1",
     "rollup-plugin-esbuild": "^6.2.1",
     "rollup-plugin-polyfill-node": "^0.13.0",
-    "serve": "^14.2.6",
-    "serve-handler": "^6.1.7",
+    "serve": "^14.2.8",
+    "serve-handler": "^6.1.8",
     "simple-git-hooks": "^2.14.0",
     "todomvc-app-css": "^2.4.3",
     "tslib": "^2.9.1",
