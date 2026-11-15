@@ -465,6 +465,48 @@ describe('reactivity/effect/scope', () => {
     expect(sibling.active).toBe(false)
   })
 
+  it('should report cleanup errors to onError and keep tearing down', () => {
+    const err = new Error('dispose failed')
+    const onError = vi.fn()
+    const laterDispose = vi.fn()
+    const childDispose = vi.fn()
+
+    const scope = effectScope(true)
+    scope.onError = onError
+    scope.run(() => {
+      onScopeDispose(() => {
+        throw err
+      })
+      onScopeDispose(laterDispose)
+      effectScope().run(() => {
+        onScopeDispose(() => {
+          throw err
+        })
+        onScopeDispose(childDispose)
+      })
+    })
+
+    scope.stop()
+
+    expect(onError).toHaveBeenCalledTimes(2)
+    expect(onError).toHaveBeenCalledWith(err)
+    expect(laterDispose).toHaveBeenCalledTimes(1)
+    expect(childDispose).toHaveBeenCalledTimes(1)
+    expect(scope.active).toBe(false)
+    expect(scope.cleanups.length).toBe(0)
+  })
+
+  it('should rethrow cleanup errors when no onError is set', () => {
+    const err = new Error('dispose failed')
+    const scope = effectScope()
+    scope.run(() => {
+      onScopeDispose(() => {
+        throw err
+      })
+    })
+    expect(() => scope.stop()).toThrow(err)
+  })
+
   it('should resume effects when a watcher stops a sibling watcher', () => {
     const count = ref(0)
     const scope = effectScope()

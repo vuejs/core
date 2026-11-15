@@ -710,6 +710,10 @@ export function createComponentInstance(
   }
   instance.root = parent ? parent.root : instance
   instance.emit = emit.bind(null, instance)
+  // report errors thrown by scope dispose callbacks instead of letting them
+  // abort the scope teardown during unmount
+  instance.scope.onError = err =>
+    handleError(err, instance, ErrorCodes.SCOPE_DISPOSE)
 
   // apply custom element special handling
   if (vnode.ce) {

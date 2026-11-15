@@ -29,6 +29,7 @@ export enum ErrorCodes {
   SCHEDULER,
   COMPONENT_UPDATE,
   APP_UNMOUNT_CLEANUP,
+  SCOPE_DISPOSE,
 }
 
 export const ErrorTypeStrings: Record<ErrorTypes, string> = {
@@ -63,6 +64,7 @@ export const ErrorTypeStrings: Record<ErrorTypes, string> = {
   [ErrorCodes.SCHEDULER]: 'scheduler flush',
   [ErrorCodes.COMPONENT_UPDATE]: 'component update',
   [ErrorCodes.APP_UNMOUNT_CLEANUP]: 'app unmount cleanup function',
+  [ErrorCodes.SCOPE_DISPOSE]: 'scope dispose function',
 }
 
 export type ErrorTypes = LifecycleHooks | ErrorCodes | WatchErrorCodes

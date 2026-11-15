@@ -10,9 +10,11 @@ import {
   onBeforeUnmount,
   onErrorCaptured,
   onMounted,
+  onScopeDispose,
   onUnmounted,
   ref,
   render,
+  serializeInner,
   watch,
   watchEffect,
 } from '@vue/runtime-test'
@@ -710,9 +712,72 @@ describe('error handling', () => {
     )
   })
 
-  test.each([onBeforeUnmount, onUnmounted])(
+  test('unmount continues when an onScopeDispose callback throws', async () => {
+    const err = new Error('dispose failed')
+    const handler = vi.fn()
+    const laterDispose = vi.fn()
+    const siblingUnmounted = vi.fn()
+    const siblingEffect = vi.fn()
+    const counter = ref(0)
+    const show = ref(true)
+
+    const Throws = {
+      setup() {
+        onScopeDispose(() => {
+          throw err
+        })
+        onScopeDispose(laterDispose)
+        return () => h('p', 'throws')
+      },
+    }
+
+    const Sibling = {
+      setup() {
+        watchEffect(() => {
+          counter.value
+          siblingEffect()
+        })
+        onUnmounted(siblingUnmounted)
+        return () => h('p', 'sibling')
+      },
+    }
+
+    const app = createApp({
+      setup() {
+        return () => (show.value ? h('div', [h(Throws), h(Sibling)]) : null)
+      },
+    })
+    app.config.errorHandler = handler
+    const root = nodeOps.createElement('div')
+    app.mount(root)
+
+    const effectCalls = siblingEffect.mock.calls.length
+    show.value = false
+    await nextTick()
+
+    expect(serializeInner(root)).toBe('<!---->')
+    expect(handler).toHaveBeenCalledTimes(1)
+    expect(handler).toHaveBeenCalledWith(
+      err,
+      expect.any(Object),
+      ErrorTypeStrings[ErrorCodes.SCOPE_DISPOSE],
+    )
+    // the rest of the throwing scope and the sibling still tear down
+    expect(laterDispose).toHaveBeenCalledTimes(1)
+    expect(siblingUnmounted).toHaveBeenCalledTimes(1)
+
+    counter.value++
+    await nextTick()
+    expect(siblingEffect).toHaveBeenCalledTimes(effectCalls)
+  })
+
+  test.each<[string, (fn: () => void) => void]>([
+    ['onBeforeUnmount', onBeforeUnmount],
+    ['onUnmounted', onUnmounted],
+    ['onScopeDispose', onScopeDispose],
+  ])(
     'captures teardown errors before the ancestor finishes unmounting (%s)',
-    async registerHook => {
+    async (_name, registerHook) => {
       const error = new Error('teardown failed')
       const handler = vi.fn((_: unknown) => false)
       const Child = {

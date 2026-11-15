@@ -41,6 +41,14 @@ export class EffectScope {
    */
   private index: number | undefined
 
+  /**
+   * when set, cleanups are run individually and errors thrown by them are
+   * passed here instead of aborting `stop()`. Inherited by undetached child
+   * scopes so that nested scopes report through the same handler.
+   * @internal
+   */
+  onError?: (err: unknown) => void
+
   readonly __v_skip = true
   // TODO isolatedDeclarations ReactiveFlags.SKIP
 
@@ -48,6 +56,7 @@ export class EffectScope {
     if (!detached && activeEffectScope) {
       if (activeEffectScope.active) {
         this.parent = activeEffectScope
+        this.onError = activeEffectScope.onError
         this.index =
           (activeEffectScope.scopes || (activeEffectScope.scopes = [])).push(
             this,
@@ -168,8 +177,17 @@ export class EffectScope {
       }
       this.effects.length = 0
 
+      const onError = this.onError
       for (i = 0, l = this.cleanups.length; i < l; i++) {
-        this.cleanups[i]()
+        if (onError) {
+          try {
+            this.cleanups[i]()
+          } catch (err) {
+            onError(err)
+          }
+        } else {
+          this.cleanups[i]()
+        }
       }
       this.cleanups.length = 0
 
