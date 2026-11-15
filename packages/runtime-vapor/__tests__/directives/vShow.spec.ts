@@ -605,6 +605,80 @@ onBeforeMount(() => { visible.value = true })
     expect(seen.vapor).toEqual(seen.vdom)
   })
 
+  // vdom marks the element hidden only once the leave ends
+  test('a style patch while a hide animates keeps the element shown like vdom', async () => {
+    const seen: Record<string, string[]> = { vdom: [], vapor: [] }
+    await renderParity(
+      {
+        App: `<template><Transition :css="false" @leave="data.onLeave"><div v-show="data.show" :style="{ zIndex: data.show ? 1 : 2 }">x</div></Transition></template>`,
+      },
+      () => {
+        const dones: (() => void)[] = []
+        return ref({
+          show: true,
+          dones,
+          onLeave: (_el: Element, done: () => void) => dones.push(done),
+        })
+      },
+      async (data, root, mode) => {
+        // vapor's v-show checks isConnected
+        document.body.append(root)
+        try {
+          const div = root.querySelector('div')!
+          data.value.show = false
+          await nextTick()
+          seen[mode].push(div.style.display, div.style.zIndex)
+          data.value.dones.shift()!()
+          seen[mode].push(div.style.display)
+        } finally {
+          root.remove()
+        }
+      },
+    )
+    expect(seen.vdom).toEqual(['', '2', 'none'])
+    expect(seen.vapor).toEqual(seen.vdom)
+  })
+
+  test('shows an element again while its hide animates like vdom', async () => {
+    const seen: Record<string, unknown[]> = { vdom: [], vapor: [] }
+    await renderParity(
+      {
+        App: `<template><Transition :css="false" @leave="data.onLeave" @enter="data.onEnter"><div v-show="data.show" :style="{ zIndex: data.show ? 1 : 2 }">x</div></Transition></template>`,
+      },
+      () =>
+        ref({
+          show: true,
+          onLeave: vi.fn((_el: Element, _done: () => void) => {}),
+          onEnter: vi.fn((_el: Element, done: () => void) => done()),
+        }),
+      async (data, root, mode) => {
+        document.body.append(root)
+        try {
+          const div = root.querySelector('div')!
+          data.value.show = false
+          await nextTick()
+          data.value.show = true
+          await nextTick()
+          seen[mode].push(
+            div.style.display,
+            data.value.onLeave.mock.calls.length,
+            data.value.onEnter.mock.calls.length,
+          )
+          data.value.show = false
+          await nextTick()
+          seen[mode].push(
+            div.style.display,
+            data.value.onLeave.mock.calls.length,
+          )
+        } finally {
+          root.remove()
+        }
+      },
+    )
+    expect(seen.vdom).toEqual(['', 1, 1, '', 2])
+    expect(seen.vapor).toEqual(seen.vdom)
+  })
+
   test('toggles a root carrying hooks relayed from a vdom Transition', async () => {
     const data = ref({ visible: false })
     const VaporChild = compile(
