@@ -26,6 +26,7 @@ import {
   warn,
 } from '@vue/runtime-dom'
 import {
+  EMPTY_OBJ,
   NOOP,
   PatchFlags,
   ShapeFlags,
@@ -224,7 +225,12 @@ export function renderComponentVNode(
           if (push) return slot(props, push, parent, scopeId)
           const vnode = renderSlot({ [name]: slot }, name, props)
           // called from a slot called by hand: the content, out of its fragment
-          return vnode.type === Fragment ? vnode.children : [vnode]
+          if (vnode.type === Fragment) return vnode.children
+          const vs = vnode.vs!
+          vs.props = vnode.props!
+          vnode.props = vnode.key != null ? { key: vnode.key } : null
+          vs.attrs = EMPTY_OBJ
+          return [vnode]
         }
         slot[rawVaporSlotKey] = wrapped[rawVaporSlotKey] = slot
         // already normalized, so slot normalization keeps it as is
@@ -463,6 +469,9 @@ export function renderVNode(
         outlets && outlets[0],
         parentComponent,
         slotScopeId,
+        vnode.vs!.attrs && Object.keys(vnode.vs!.attrs).length
+          ? vnode.vs!.attrs
+          : undefined,
       )
       break
     }
@@ -494,6 +503,7 @@ function renderVaporOutlet(
   outlet: VdomSlotOutlet | undefined,
   parentComponent: ComponentInternalInstance,
   slotScopeId?: string,
+  slotAttrs?: Props,
 ): void {
   // the outlet is written in the component whose tree this is
   const prev = setCurrentRenderingInstance(parentComponent)
@@ -513,6 +523,7 @@ function renderVaporOutlet(
     push,
     parentComponent,
     slotScopeId,
+    slotAttrs,
   )
   setCurrentRenderingInstance(prev)
 }

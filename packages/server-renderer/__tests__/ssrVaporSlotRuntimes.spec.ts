@@ -67,4 +67,34 @@ describe('ssr: vapor slots across runtime copies', () => {
       `<!--{--><!--[--><p>hello</p><!--]--><!--}-->`,
     )
   })
+
+  test('a vdom child renders cloneVNode attrs on vapor slot content', async () => {
+    const { ssr, vue } = await loadRuntimes()
+    const Wrapper = {
+      setup(_: any, { slots }: any) {
+        return () => {
+          const vnode = slots.default()[0]
+          const cloned = vue.cloneVNode(vnode, {
+            class: 'trigger',
+            'aria-expanded': 'false',
+          })
+          return cloned
+        }
+      },
+    }
+    const App = compileVaporSSR(
+      `<script setup vapor>
+      const Wrapper = _components.Wrapper
+      </script>
+      <template>
+        <Wrapper><button>hello</button></Wrapper>
+      </template>`,
+      vue,
+      ssr,
+      { Wrapper },
+    )
+    expect(await ssr.renderToString(vue.createSSRApp(App))).toBe(
+      `<!--{--><!--[--><button class="trigger" aria-expanded="false">hello</button><!--]--><!--}-->`,
+    )
+  })
 })

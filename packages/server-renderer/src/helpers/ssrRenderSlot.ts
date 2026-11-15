@@ -2,6 +2,8 @@ import {
   type ComponentInternalInstance,
   type Slots,
   type VNodeArrayChildren,
+  cloneVNode,
+  filterSingleRoot,
   getCurrentInstance,
   ssrUtils,
 } from '@vue/runtime-dom'
@@ -37,6 +39,7 @@ export function ssrRenderSlot(
   push: PushFn,
   parentComponent: ComponentInternalInstance,
   slotScopeId?: string,
+  slotAttrs?: Props,
 ): void {
   ssrRenderSlotInner(
     slots,
@@ -46,6 +49,8 @@ export function ssrRenderSlot(
     push,
     parentComponent,
     slotScopeId,
+    false,
+    slotAttrs,
   )
 }
 
@@ -61,6 +66,7 @@ export function ssrRenderSlotInner(
   // around the fallback, which a vapor client has to know before it renders
   // anything
   transition?: boolean,
+  slotAttrs?: Props,
 ): void {
   const slotFn = slots[slotName]
   let fallback = false
@@ -75,7 +81,7 @@ export function ssrRenderSlotInner(
       // keep the slot function's contract in sync with `renderSlot`, which also
       // normalizes nullish props before invoking the slot
       slotProps || {},
-      bufferedPush,
+      slotAttrs ? undefined! : bufferedPush,
       parentComponent,
       slotScopeId ? ' ' + slotScopeId : '',
     )
@@ -83,6 +89,13 @@ export function ssrRenderSlotInner(
     let vnodes: VNodeArrayChildren | null | undefined
     if (isArray(ret)) {
       vnodes = ensureValidVNode(ret)
+      if (vnodes && slotAttrs) {
+        const root = filterSingleRoot(vnodes, false)
+        if (root) {
+          vnodes = vnodes.slice()
+          vnodes[vnodes.indexOf(root)] = cloneVNode(root, slotAttrs)
+        }
+      }
       // a forwarded vapor slot is content whatever it renders: what it does
       // render decides, as for an ssr slot
       if (vnodes && isVaporSlotContent(vnodes)) {
