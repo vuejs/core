@@ -2199,6 +2199,15 @@ export function applyFallthroughAttrs(
     }
   }
 
+  const outlet = isInteropEnabled && state.interopOutlet
+  if (outlet) {
+    // a vdom-fed outlet passes them on to its content root
+    const slotState = outlet.slotState!
+    slotState.fallthroughOwner = instance
+    slotState.fallthrough = (nodes, scope) =>
+      applyFallthroughAttrs(nodes, instance, scope)
+  }
+
   if (root && !hasSlotOutlet) {
     // a Transition's child is its slot content, not a template root
     if (flattenSlots) adoptRoot(root)
@@ -2249,6 +2258,8 @@ class FallthroughResolveState implements RootChainVisitor {
   // nearest enclosing branch scope; lifecycle parent for retrofitted scopes
   parentScope?: EffectScope
   hasSlotOutlet?: boolean
+  // a vdom-fed slot outlet a Transition sees through
+  interopOutlet?: InteropFragment
   // dev only: the innermost fragment's current branch is multi-root; fragments
   // stay registered for future branches while the current render warns
   hasNonSingleRoot?: boolean
@@ -2285,7 +2296,13 @@ class FallthroughResolveState implements RootChainVisitor {
   // A vdom-fed slot outlet is a fragment boundary like a vapor one.
   onInteropFragment(frag: InteropFragment): boolean {
     if (isInteropEnabled) {
-      if (isSlotOutletFragment(frag)) return (this.hasSlotOutlet = true)
+      if (isSlotOutletFragment(frag)) {
+        if (isTransitionEnabled && this.flattenSlots) {
+          this.interopOutlet = frag
+          return true
+        }
+        return (this.hasSlotOutlet = true)
+      }
       return !!frag.vnode
     }
     return false

@@ -82,6 +82,7 @@ import {
   deactivate as vdomDeactivate,
   setRef as vdomSetRef,
   warn,
+  warnExtraneousAttributes,
   withCtx,
 } from '@vue/runtime-dom'
 import {
@@ -295,6 +296,7 @@ function prepareInteropSlotTransition(
   previous: VNode | undefined,
   resumeAfterLeave: () => void,
   delayedLeaveSource?: TransitionHooks,
+  attrs: Record<string, any> = EMPTY_OBJ,
 ): VNode | undefined {
   const transition = frag.$transition as TransitionHooks | undefined
   // Hooks inherited from VDOM BaseTransition already belong to its state
@@ -312,7 +314,7 @@ function prepareInteropSlotTransition(
   if (!transition) return
   const branch = resolveTransitionChild([vnode], true)!
 
-  return (
+  const child =
     prepareTransitionSwitch(
       previous,
       branch,
@@ -322,7 +324,15 @@ function prepareInteropSlotTransition(
       resumeAfterLeave,
       delayedLeaveSource || transition,
     ) || createCommentVNode()
-  )
+  // the child takes the fallthrough attrs of a Transition seeing through the
+  // outlet, as vdom's renderComponentRoot passes them on
+  if (attrs !== EMPTY_OBJ) {
+    if (child.shapeFlag & (ShapeFlags.ELEMENT | ShapeFlags.COMPONENT)) {
+      return cloneVNode(child, attrs, false, true)
+    }
+    if (__DEV__ && child.type !== VNodeComment) warnExtraneousAttributes(attrs)
+  }
+  return child
 }
 
 // A vapor slot under a vdom Transition is the Transition's child: its
@@ -2662,6 +2672,9 @@ function renderVDOMSlot(
   // valid content waiting for the enclosing outlet holding this one to place it
   let heldContent: VNode | undefined
   let pendingOutIn: PendingOutIn | undefined
+  // the fallthrough attrs of a Transition seeing through this outlet, read on
+  // every render (see SlotResolutionState.fallthroughOwner)
+  let fallthroughAttrs: Record<string, any> = EMPTY_OBJ
   // out-in: what follows the leave of the content root leaving on its own
   // (it left to a fallback, as vdom's comment child), and the Transition's
   // state once its own branches wait on it (a vdom Transition's re-renders
@@ -3026,8 +3039,14 @@ function renderVDOMSlot(
       const pendingContent = pending.content
       if (isVNode(pendingContent)) {
         const nextVNode =
-          prepareInteropSlotTransition(frag, pendingContent, undefined, NOOP) ||
-          pendingContent
+          prepareInteropSlotTransition(
+            frag,
+            pendingContent,
+            undefined,
+            NOOP,
+            undefined,
+            fallthroughAttrs,
+          ) || pendingContent
         inContentContext(() =>
           patchSlotVNode(
             pending.placeholder,
@@ -3066,6 +3085,8 @@ function renderVDOMSlot(
 
   function renderContent(): void {
     notifyBeforeUpdate()
+    const owner = slotResolutionState.fallthroughOwner
+    if (owner) fallthroughAttrs = resolveFallthroughAttrs(owner, true)
     inContentContext(() => {
       const { content: slotContent, valid: slotContentValid } =
         resolveSlotContent()
@@ -3302,6 +3323,7 @@ function renderVDOMSlot(
           leaving ? undefined : prevVNode || undefined,
           resumeOutIn,
           delayedLeaveSource,
+          fallthroughAttrs,
         )
       : undefined
     const nextVNode = transitionChild || slotContent

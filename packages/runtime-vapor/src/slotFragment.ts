@@ -30,7 +30,7 @@ import {
   ownsTransitionMode,
   resolveOutletLeave,
 } from './transition'
-import type { VaporComponentInstance } from './component'
+import type { FallthroughOwner, VaporComponentInstance } from './component'
 import { type VaporFragment, isInteropFragment } from './fragment'
 import { isInteropEnabled } from './vdomInteropState'
 import { type VaporKeepAliveContext, isKeepAliveEnabled } from './keepAlive'
@@ -185,6 +185,9 @@ export interface SlotResolutionState {
   // a Transition's fallthrough attrs, re-applied to every exposed block (see
   // DynamicFragment.fallthrough)
   fallthrough?: (nodes: Block, scope?: EffectScope) => void
+  // a vdom-fed outlet's: the Transition owning them, its vnode content merges
+  // them as vdom does
+  fallthroughOwner?: FallthroughOwner
   // An interop host patching vnode content: `cb` follows the leave its
   // content root is running on its own, if any. A vapor root is found
   // through the content block instead.

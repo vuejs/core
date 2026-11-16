@@ -1388,3 +1388,81 @@ describe('vapor slot content inside a vdom TransitionGroup', () => {
     )
   })
 })
+
+describe('vdom content inside a vapor Transition', () => {
+  // A vdom App passes `content` and `attrs` to a vapor Wrapper whose template
+  // is `transition` (a `<Transition>` around a `<slot/>`); `init` seeds the
+  // data of each run
+  const parity = (
+    transition: string,
+    attrs: string,
+    content: string,
+    act: (r: Run) => Promise<void>,
+    init: Record<string, any> = {},
+  ) =>
+    compareRuns((vapor, data) => {
+      Object.assign(data.value, init)
+      return sfc(
+        false,
+        data,
+        `<components.Wrapper ${attrs}>${content}</components.Wrapper>`,
+        { Wrapper: sfc(vapor, data, transition) },
+      )
+    }, act)
+
+  test('the content root takes the fallthrough attrs', async () => {
+    const steps = await parity(
+      wrap(`mode="out-in" :css="false" @leave="data.onLeave" :data-y="data.y"`),
+      `:class="data.cls" data-x="1"`,
+      `<div v-if="data.show">a</div><p v-else>b</p>`,
+      async r => {
+        await r.step('swap', () => (r.data.value.show = false))
+        await r.step('update', () => (r.data.value.y = 2))
+        await r.step('leave done', () => r.done.leave())
+        await r.step('update', () => (r.data.value.y = 3))
+        await r.step('update', () => (r.data.value.cls = 'w2'))
+      },
+      { cls: 'w', y: 1 },
+    )
+    expect(steps).toEqual([
+      'mount: <div data-y="1" class="w" data-x="1">a</div> | ',
+      'swap: <div data-y="1" class="w" data-x="1">a</div> | leave:a',
+      'update: <div data-y="1" class="w" data-x="1">a</div> | ',
+      'leave done: <p data-y="2" class="w" data-x="1">b</p> | ',
+      'update: <p data-y="3" class="w" data-x="1">b</p> | ',
+      'update: <p data-y="3" class="w2" data-x="1">b</p> | ',
+    ])
+    expect('Extraneous non-props attributes').not.toHaveBeenWarned()
+  })
+
+  test('the fallback takes them as well', async () => {
+    const steps = await parity(
+      wrap(hooks, '<slot><i>fb</i></slot>'),
+      `:class="data.cls"`,
+      `<b v-if="data.show">b</b>`,
+      async r => {
+        await r.step('update', () => (r.data.value.cls = 'w2'))
+        await r.step('content', () => (r.data.value.show = true))
+      },
+      { cls: 'w', show: false },
+    )
+    expect(steps).toEqual([
+      'mount: <i class="w">fb</i> | ',
+      'update: <i class="w2">fb</i> | ',
+      'content: <i class="w2">fb</i><b class="w2">b</b> | beforeLeave:fb leave:fb beforeEnter:b enter:b',
+    ])
+  })
+
+  test('a text child takes none and warns', async () => {
+    const steps = await parity(
+      wrap(hooks),
+      `class="w"`,
+      `<div v-if="data.show">a</div><template v-else>text</template>`,
+      async r => {
+        await r.step('text', () => (r.data.value.show = false))
+      },
+    )
+    expect(steps[0]).toBe('mount: <div class="w">a</div> | ')
+    expect('Extraneous non-props attributes (class)').toHaveBeenWarnedTimes(2)
+  })
+})
