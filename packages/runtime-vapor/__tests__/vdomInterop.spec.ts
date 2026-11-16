@@ -18693,6 +18693,34 @@ describe('vdom directives on a vapor slot vnode', () => {
     ])
     expect(logs.vapor).toEqual(logs.vdom)
   })
+
+  test('reach the content through a vdom component rooted in it', async () => {
+    const logs = await run(
+      `<components.OnlyChild><i v-if="data.ok">a</i><b v-else>b</b></components.OnlyChild>`,
+      {},
+      async data => {
+        data.value.value = 2
+        await nextTick()
+        data.value.ok = false
+        await nextTick()
+      },
+      false,
+    )
+    expect(mounts(logs.vdom)).toEqual([
+      'created i 1',
+      'beforeMount i 1',
+      'mounted i 1',
+      'updated i 2',
+      'beforeUnmount i 2',
+      'created b 2',
+      'beforeMount b 2',
+      'unmounted i 2',
+      'mounted b 2',
+      'beforeUnmount b 2',
+      'unmounted b 2',
+    ])
+    expect(mounts(logs.vapor)).toEqual(mounts(logs.vdom))
+  })
 })
 
 describe('vapor root of a vdom component in a vapor parent', () => {

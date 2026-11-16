@@ -787,13 +787,15 @@ const vaporInteropImpl = {
         parentSuspense,
         slotScopeIds,
       )
+      // the nodes bounding the slot are not content: root resolution skips
+      // them, as it skips the comment markers of a hydrated slot
       const selfAnchor =
         // use fragment's anchor when possible
         (isFragment(slotBlock) ? slotBlock.anchor : undefined) ||
-        createTextNode()
+        claimAnchor(createTextNode())
       // Like a vdom Fragment, the vnode starts on a node of its own: vdom
       // places a sibling entering ahead of it before `el`.
-      insert((n2.el = createTextNode()), container, anchor)
+      insert((n2.el = claimAnchor(createTextNode())), container, anchor)
       insert((n2.anchor = selfAnchor), container, anchor)
       applyVaporSlotTransition(n2, (n2.vb = slotBlock))
       insert(slotBlock, container, selfAnchor, parentSuspense)
