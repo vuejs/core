@@ -92,8 +92,9 @@ export function resolveFunctionSource<T>(source: FunctionSource<T>): T {
     // execute the source in the parent's context, but collect its cache in the
     // active consumer scope
     const prev = setCurrentInstance(parent, getCurrentScope())
+    let cache: { readonly value: T }
     try {
-      source._cache = computed(oldValue => {
+      cache = source._cache = computed(oldValue => {
         const prevInner = setCurrentInstance(parent)
         try {
           return stabilizeDynamicSourceValue(oldValue, source())
@@ -101,11 +102,12 @@ export function resolveFunctionSource<T>(source: FunctionSource<T>): T {
           restoreCurrentInstance(prevInner)
         }
       })
+      // a stopped scope (a read in an unmounted hook) disposes right away
       onScopeDispose(() => (source._cache = undefined))
     } finally {
       restoreCurrentInstance(prev)
     }
-    return source._cache.value
+    return cache.value
   }
 
   return source()

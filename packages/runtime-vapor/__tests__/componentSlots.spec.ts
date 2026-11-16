@@ -11012,3 +11012,52 @@ describe('implicit default slot that only holds a unicode space', () => {
     },
   )
 })
+
+describe('slot props read after the consumer unmounted', () => {
+  test.each([
+    ['static', `<slot :value="value" />`],
+    ['dynamic', `<slot v-bind="{ value }" />`],
+  ])(
+    '%s slot props stay readable in onUnmounted like vdom',
+    async (_, outlet) => {
+      const logs: Record<string, string[]> = {}
+      await renderParity(
+        {
+          Provider: `
+            <script setup>
+              import { ref } from 'vue'
+              const value = ref('hello')
+            </script>
+            <template>
+              ${outlet}
+            </template>`,
+          Child: `
+            <script setup>
+              import { onBeforeUnmount, onUnmounted } from 'vue'
+              const props = defineProps({ data: Object })
+              const logs = _data.value.logs
+              onBeforeUnmount(() => logs.push('bum:' + props.data.value))
+              onUnmounted(() => logs.push('um:' + props.data.value))
+            </script>
+            <template>
+              <p>child</p>
+            </template>`,
+          App: `
+            <template>
+              <components.Provider v-if="data.visible" v-slot="slotProps">
+                <components.Child :data="slotProps" />
+              </components.Provider>
+            </template>`,
+        },
+        () => ref({ visible: true, logs: markRaw([]) }),
+        async (data, _root, mode) => {
+          logs[mode] = data.value.logs
+          data.value.visible = false
+          await nextTick()
+        },
+      )
+      expect(logs.vdom).toEqual(['bum:hello', 'um:hello'])
+      expect(logs.vapor).toEqual(logs.vdom)
+    },
+  )
+})
