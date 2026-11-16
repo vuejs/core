@@ -1,4 +1,7 @@
-import type { SuspenseBoundary } from '@vue/runtime-dom'
+import type {
+  GenericComponentInstance,
+  SuspenseBoundary,
+} from '@vue/runtime-dom'
 import type { VaporComponentInstance } from './component'
 import type { SlotBoundaryContext } from './slotBoundary'
 
@@ -7,6 +10,9 @@ export interface RenderContext {
   readonly slotBoundary: SlotBoundaryContext | null
   readonly slotScopeIds: string[] | null
   readonly suspense: SuspenseBoundary | null
+  // the Transition rendering this part of its content below an element or in
+  // a Teleport: a component created there is not its child
+  readonly nested: GenericComponentInstance | null
 }
 
 export let currentRenderContext: RenderContext = {
@@ -14,6 +20,7 @@ export let currentRenderContext: RenderContext = {
   slotBoundary: null,
   slotScopeIds: null,
   suspense: null,
+  nested: null,
 }
 
 export function setRenderContext(ctx: RenderContext): RenderContext {
@@ -38,14 +45,16 @@ export function deriveRenderContext(
   slotBoundary: SlotBoundaryContext | null,
   slotScopeIds: string[] | null,
   suspense: SuspenseBoundary | null,
+  nested: GenericComponentInstance | null = base.nested,
 ): RenderContext {
   // returns `base` when nothing changes, so unchanged contexts allocate nothing
   return slotOwner === base.slotOwner &&
     slotBoundary === base.slotBoundary &&
     slotScopeIds === base.slotScopeIds &&
-    suspense === base.suspense
+    suspense === base.suspense &&
+    nested === base.nested
     ? base
-    : { slotOwner, slotBoundary, slotScopeIds, suspense }
+    : { slotOwner, slotBoundary, slotScopeIds, suspense, nested }
 }
 
 export function deriveSlotOwner(
@@ -97,5 +106,19 @@ export function deriveSuspense(
     base.slotBoundary,
     base.slotScopeIds,
     suspense,
+  )
+}
+
+export function deriveNested(
+  base: RenderContext,
+  nested: GenericComponentInstance,
+): RenderContext {
+  return deriveRenderContext(
+    base,
+    base.slotOwner,
+    base.slotBoundary,
+    base.slotScopeIds,
+    base.suspense,
+    nested,
   )
 }

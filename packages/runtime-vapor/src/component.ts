@@ -325,11 +325,13 @@ export interface FallthroughOwner {
 }
 
 // The owner whose fallthrough attrs a block created right now inherits: the
-// instance for its single root, any child of a Transition or the body root of
-// a KeepAlive (which pass attrs through), the slot vnode's clone for the
-// single root of a slot body.
+// instance for its single root, the child of a Transition (whatever its
+// content renders at a root position, not below an element or in a Teleport)
+// or the body root of a KeepAlive (which pass attrs through), the slot vnode's
+// clone for the single root of a slot body.
 export function resolveFallthroughOwner(
   isSingleRoot?: boolean | VaporSingleRoot,
+  insertionParent?: ParentNode,
 ): FallthroughOwner | undefined {
   if (isInteropEnabled && isSingleRoot === VaporSingleRoot.SLOT) {
     const boundary = currentRenderContext.slotBoundary
@@ -342,7 +344,10 @@ export function resolveFallthroughOwner(
   if (
     isVaporComponent(instance) &&
     (isSingleRoot === true ||
-      (isTransitionEnabled && isVaporTransition(instance.type)) ||
+      (isTransitionEnabled &&
+        !insertionParent &&
+        isVaporTransition(instance.type) &&
+        currentRenderContext.nested !== instance) ||
       // the single root of the KeepAlive's own body (a dynamic reference
       // compiles it as SLOT, a literal one as `true`), not content an outlet
       // in that body renders: vdom stops at the slot fragment
@@ -421,7 +426,7 @@ export function createComponent(
     // props delivered by vdom are plain values, not fallthrough sources
     const owner =
       !(isInteropEnabled && rawProps && (rawProps as RawProps)[interopKey]) &&
-      resolveFallthroughOwner(isSingleRoot)
+      resolveFallthroughOwner(isSingleRoot, _insertionParent)
     if (owner) {
       // inject the parent attrs as a dynamic props source; the owner is
       // captured because sources resolve from read paths that do not
