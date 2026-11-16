@@ -1120,8 +1120,7 @@ function resolveWithTS(
       // resolve which config matches the current file
       for (const c of configs) {
         const base = normalizePath(
-          (c.config.options.pathsBasePath as string) ||
-            dirname(c.config.options.configFilePath as string),
+          dirname(c.config.options.configFilePath as string),
         )
         const included: string[] | undefined = c.config.raw?.include
         const excluded: string[] | undefined = c.config.raw?.exclude
