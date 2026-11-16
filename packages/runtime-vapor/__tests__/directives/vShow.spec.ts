@@ -610,7 +610,11 @@ onBeforeMount(() => { visible.value = true })
     const seen: Record<string, string[]> = { vdom: [], vapor: [] }
     await renderParity(
       {
-        App: `<template><Transition :css="false" @leave="data.onLeave"><div v-show="data.show" :style="{ zIndex: data.show ? 1 : 2 }">x</div></Transition></template>`,
+        App: `<template>
+          <Transition :css="false" @leave="data.onLeave">
+            <div v-show="data.show" :style="{ zIndex: data.show ? 1 : 2 }">x</div>
+          </Transition>
+        </template>`,
       },
       () => {
         const dones: (() => void)[] = []
@@ -643,7 +647,11 @@ onBeforeMount(() => { visible.value = true })
     const seen: Record<string, unknown[]> = { vdom: [], vapor: [] }
     await renderParity(
       {
-        App: `<template><Transition :css="false" @leave="data.onLeave" @enter="data.onEnter"><div v-show="data.show" :style="{ zIndex: data.show ? 1 : 2 }">x</div></Transition></template>`,
+        App: `<template>
+          <Transition :css="false" @leave="data.onLeave" @enter="data.onEnter">
+            <div v-show="data.show" :style="{ zIndex: data.show ? 1 : 2 }">x</div>
+          </Transition>
+        </template>`,
       },
       () =>
         ref({
@@ -676,6 +684,62 @@ onBeforeMount(() => { visible.value = true })
       },
     )
     expect(seen.vdom).toEqual(['', 1, 1, '', 2])
+    expect(seen.vapor).toEqual(seen.vdom)
+  })
+
+  // the deactivation leave replaces the hide's, whose end is then never
+  // reported
+  test('hides again after a KeepAlive switch interrupted its hide like vdom', async () => {
+    const seen: Record<string, unknown[]> = { vdom: [], vapor: [] }
+    await renderParity(
+      {
+        App: `<template>
+          <KeepAlive>
+            <components.Child v-if="data.active" />
+          </KeepAlive>
+        </template>`,
+        Child: `<template>
+          <Transition :css="false" @leave="data.onLeave" @enter="data.onEnter">
+            <div v-show="data.show" :style="{ zIndex: data.show ? 1 : 2 }">x</div>
+          </Transition>
+        </template>`,
+      },
+      () =>
+        ref({
+          show: true,
+          active: true,
+          onLeave: vi.fn((_el: Element, _done: () => void) => {}),
+          onEnter: vi.fn((_el: Element, done: () => void) => done()),
+        }),
+      async (data, root, mode) => {
+        document.body.append(root)
+        try {
+          const div = root.querySelector('div')!
+          data.value.show = false
+          await nextTick()
+          data.value.active = false
+          await nextTick()
+          data.value.active = true
+          await nextTick()
+          data.value.show = true
+          await nextTick()
+          seen[mode].push(
+            div.style.display,
+            data.value.onLeave.mock.calls.length,
+            data.value.onEnter.mock.calls.length,
+          )
+          data.value.show = false
+          await nextTick()
+          seen[mode].push(
+            div.style.display,
+            data.value.onLeave.mock.calls.length,
+          )
+        } finally {
+          root.remove()
+        }
+      },
+    )
+    expect(seen.vdom).toEqual(['', 2, 2, '', 3])
     expect(seen.vapor).toEqual(seen.vdom)
   })
 

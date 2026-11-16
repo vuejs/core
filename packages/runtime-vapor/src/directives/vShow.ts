@@ -176,23 +176,16 @@ function setDisplay(
         if (value) {
           // cancels a running hide, whose done callback hides the element
           $transition.beforeEnter(el)
-          ;(el as TransitionBlock).$vshow! &= ~VShowFlags.LEAVING
-          el[vShowHidden] = false
-          el.style.display = el[vShowOriginalDisplay]!
+          writeDisplay(el, true)
           $transition.enter(el)
         } else if (el.isConnected) {
           // like vdom, hidden only once the leave ends: a style patch
           // meanwhile must not write display: none
           ;(el as TransitionBlock).$vshow! |= VShowFlags.LEAVING
-          $transition.leave(el, () => {
-            ;(el as TransitionBlock).$vshow! &= ~VShowFlags.LEAVING
-            el[vShowHidden] = true
-            el.style.display = 'none'
-          })
+          $transition.leave(el, () => writeDisplay(el, false))
         } else {
           // detached (e.g. deactivated): nothing to animate
-          el[vShowHidden] = true
-          el.style.display = 'none'
+          writeDisplay(el, false)
         }
       } finally {
         setActiveSub(prevSub)
@@ -211,9 +204,7 @@ function setDisplay(
 }
 
 function writeDisplay(el: VShowElement, value: unknown): void {
-  if ((el as TransitionBlock).$vshow! & VShowFlags.LEAVING) {
-    ;(el as TransitionBlock).$vshow! &= ~VShowFlags.LEAVING
-  }
+  ;(el as TransitionBlock).$vshow! &= ~VShowFlags.LEAVING
   el[vShowHidden] = !value
   if ((__DEV__ || __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__) && isHydrating) {
     // the SSR display state only counts as a mismatch when it disagrees
