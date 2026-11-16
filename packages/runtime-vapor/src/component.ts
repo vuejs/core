@@ -108,7 +108,7 @@ import {
 } from './componentProps'
 import { type RenderEffect, renderEffect } from './renderEffect'
 import { emit, normalizeEmitsOptions } from './componentEmits'
-import { patchDynamicProps } from './dom/prop'
+import { adoptRoot, patchDynamicProps } from './dom/prop'
 import {
   type LooseRawSlots,
   type RawSlots,
@@ -320,8 +320,6 @@ export interface FallthroughOwner {
   accessedAttrs?: boolean
   // interop only
   instance?: GenericComponentInstance | null
-  // layers the attrs over the root's own class / style when that is not a
-  // template root: slot content (a Transition's, a vapor slot vnode clone's)
   adoptRoot?: (el: Element) => void
 }
 
@@ -2171,17 +2169,16 @@ export function applyComponentFallthrough(
 
 // Attach fallthrough attrs to the single root element. When the root sits
 // under dynamic fragments (e.g. v-if), the attrs are (re-)applied on each
-// branch update via the fragments' fallthrough hook. Slots and teleports
-// warn instead of receiving the attrs, consistent with VDOM behavior.
+// branch update via the fragments' fallthrough hook. Slots (a Transition's
+// aside) and teleports warn instead of receiving the attrs, consistent with
+// VDOM behavior.
 export function applyFallthroughAttrs(
   block: Block,
   instance: FallthroughOwner,
   scope?: EffectScope,
 ): void {
-  const state = new FallthroughResolveState(
-    scope,
-    isTransitionEnabled && isVaporTransition(instance.type),
-  )
+  const flattenSlots = isTransitionEnabled && isVaporTransition(instance.type)
+  const state = new FallthroughResolveState(scope, flattenSlots)
   const root = resolveFallthroughRoot(block, state)
   const { fragments, innermost, hasSlotOutlet } = state
 
@@ -2195,7 +2192,9 @@ export function applyFallthroughAttrs(
   }
 
   if (root && !hasSlotOutlet) {
-    if (instance.adoptRoot) instance.adoptRoot(root)
+    // a Transition's child is its slot content, not a template root
+    if (flattenSlots) adoptRoot(root)
+    else if (isInteropEnabled && instance.adoptRoot) instance.adoptRoot(root)
     let ownerScope = scope
     if (innermost) {
       // A compiler-proven no-scope branch may have rendered without a scope;
@@ -2203,6 +2202,7 @@ export function applyFallthroughAttrs(
       // nearest enclosing branch scope so hierarchical pause/resume
       // (KeepAlive caching) reaches it. A slot fallback has its own scope.
       ownerScope =
+        flattenSlots &&
         innermost.nodes === (innermost as SlotFragment).activeFallback
           ? (innermost as SlotFragment).fallbackScope
           : (innermost.scope ||= state.parentScope
@@ -2234,7 +2234,7 @@ export function applyFallthroughAttrs(
 // The fallthrough resolution state doubles as the descent visitor, so a
 // resolution allocates this one object and no closures.
 class FallthroughResolveState implements RootChainVisitor {
-  // non-slot dynamic fragments on the effective-root path, outermost first
+  // dynamic fragments on the effective-root path, outermost first
   fragments?: DynamicFragment[]
   // the innermost of those — its branch scope owns the fallthrough effect
   innermost?: DynamicFragment
@@ -2260,7 +2260,7 @@ class FallthroughResolveState implements RootChainVisitor {
     // re-apply from the branch alone, with the slot boundary out of view.
     // Transition sees through them: it renders its slot content flattened,
     // as in vdom.
-    if (frag.__vf & SLOT && !this.flattenSlots) {
+    if (frag.__vf & SLOT && !(isTransitionEnabled && this.flattenSlots)) {
       this.hasSlotOutlet = true
       return true
     }
