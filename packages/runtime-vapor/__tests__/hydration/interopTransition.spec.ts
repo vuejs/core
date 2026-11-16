@@ -186,3 +186,58 @@ test('vapor Transition appear on a vdom branch the server did not render', async
   expect(container.querySelectorAll('i')).toHaveLength(1)
   expect('Hydration node mismatch').toHaveBeenWarnedTimes(1)
 })
+
+describe('fallthrough attrs on a vapor component wrapping its slot in a Transition', () => {
+  const hydrate = (parent: string, data: any) =>
+    testWithVDOMApp(
+      `<script setup>const data = _data; const components = _components</script>
+      <template>
+        ${parent}
+      </template>`,
+      {
+        Fade: `<script setup vapor>const data = _data</script>
+          <template>
+            <Transition :css="false" :data-y="data.y">
+              <slot />
+            </Transition>
+          </template>`,
+      },
+      data,
+    )
+
+  test('a listener works on the hydrated content root', async () => {
+    const data = reactive({ n: 0 })
+    const { container } = await hydrate(
+      `<components.Fade @click="data.n++">
+        <button>{{ data.n }}</button>
+      </components.Fade>`,
+      data,
+    )
+    const button = container.querySelector('button')!
+    button.click()
+    await nextTick()
+    expect(button.textContent).toBe('1')
+
+    button.click()
+    await nextTick()
+    expect(button.textContent).toBe('2')
+  })
+
+  // the server renders none of them on the slot content, a vdom one neither
+  test('the hydrated content root takes the attrs and follows their updates', async () => {
+    const data = reactive({ cls: 'w', y: 1 })
+    const { container } = await hydrate(
+      `<components.Fade :class="data.cls" data-x="1">
+        <div>a</div>
+      </components.Fade>`,
+      data,
+    )
+    const div = container.querySelector('div')!
+    expect(div.outerHTML).toBe(`<div data-y="1" class="w" data-x="1">a</div>`)
+
+    data.cls = 'w2'
+    data.y = 2
+    await nextTick()
+    expect(div.outerHTML).toBe(`<div data-y="2" class="w2" data-x="1">a</div>`)
+  })
+})

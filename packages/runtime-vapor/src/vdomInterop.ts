@@ -82,6 +82,7 @@ import {
   deactivate as vdomDeactivate,
   setRef as vdomSetRef,
   warn,
+  warnExtraneousAttributes,
   withCtx,
 } from '@vue/runtime-dom'
 import {
@@ -298,6 +299,7 @@ function prepareInteropSlotTransition(
   vnode: VNode,
   previous: VNode | undefined,
   resumeAfterLeave: () => void,
+  inherit?: (child: VNode) => VNode,
   delayedLeaveSource?: TransitionHooks,
 ): VNode | undefined {
   const transition = frag.$transition as TransitionHooks | undefined
@@ -319,7 +321,8 @@ function prepareInteropSlotTransition(
   return (
     prepareTransitionSwitch(
       previous,
-      branch,
+      // ahead of the hooks, which hold on to the vnode they are set on
+      inherit ? inherit(branch) : branch,
       transition.props,
       transition.state,
       transition.instance,
@@ -2650,6 +2653,12 @@ function renderVDOMSlot(
     flattened ? SLOT_OUTLET | SLOT_FLATTENED : SLOT_OUTLET,
     insertionParent,
   )
+  // the Transition whose fallthrough attrs its child takes, resolved as for a
+  // block created here
+  const attrsOwner = flattened
+    ? resolveFallthroughOwner(undefined, insertionParent)
+    : undefined
+  let rootAttrs: Record<string, any> = EMPTY_OBJ
   const slotBoundary = frag.slotBoundary
   const content = new InteropContentState()
   const scope = effectScope()
@@ -2753,6 +2762,15 @@ function renderVDOMSlot(
   })
   installInteropTransitionAccessor(slotResolutionState, frag)
   frag.slotState = slotResolutionState
+  if (attrsOwner) {
+    // the fallback takes them as a vapor outlet's does, vnode content as
+    // props (inheritRoot)
+    slotResolutionState.fallthrough = (nodes, scope) => {
+      if (nodes === slotResolutionState.activeFallback) {
+        applyFallthroughAttrs(nodes, attrsOwner, scope)
+      }
+    }
+  }
   slotResolutionState.keepAliveCtx = frag.keepAliveCtx
   const renderFallback =
     fallback &&
@@ -3039,8 +3057,13 @@ function renderVDOMSlot(
       const pendingContent = pending.content
       if (isVNode(pendingContent)) {
         const nextVNode =
-          prepareInteropSlotTransition(frag, pendingContent, undefined, NOOP) ||
-          pendingContent
+          prepareInteropSlotTransition(
+            frag,
+            pendingContent,
+            undefined,
+            NOOP,
+            inheritRoot,
+          ) || pendingContent
         inContentContext(() =>
           patchSlotVNode(
             pending.placeholder,
@@ -3077,8 +3100,25 @@ function renderVDOMSlot(
     withRenderContext(contentCtx, fn)
   }
 
+  // What the Transition's child inherits as the root of a vdom component
+  // does (renderComponentRoot).
+  function inheritRoot(child: VNode): VNode {
+    if (rootAttrs !== EMPTY_OBJ) {
+      if (child.shapeFlag & (ShapeFlags.ELEMENT | ShapeFlags.COMPONENT)) {
+        return cloneVNode(child, rootAttrs)
+      }
+      if (__DEV__ && child.type !== VNodeComment) {
+        warnExtraneousAttributes(rootAttrs)
+      }
+    }
+    return child
+  }
+
   function renderContent(): void {
     notifyBeforeUpdate()
+    // tracked on every run: one that only stores content while an out-in
+    // leave runs reads them nowhere else, and the resumed patch is untracked
+    if (attrsOwner) rootAttrs = resolveFallthroughAttrs(attrsOwner, true)
     inContentContext(() => {
       const { content: slotContent, valid: slotContentValid } =
         resolveSlotContent()
@@ -3314,6 +3354,7 @@ function renderVDOMSlot(
           // its leave is prepared already
           leaving ? undefined : prevVNode || undefined,
           resumeOutIn,
+          inheritRoot,
           delayedLeaveSource,
         )
       : undefined
@@ -3503,6 +3544,18 @@ function renderVDOMSlot(
       currentParentNode = hydrationParent
       currentAnchor = internals.n(hydrationVNode) as Node | null
       setRendered(hydrationVNode, slotContentValid)
+      // the content hydrates ahead of the Transition's hooks reaching the
+      // outlet, which `inheritRoot` runs under: its root takes the attrs in a
+      // patch of its own
+      if (rootAttrs !== EMPTY_OBJ) {
+        queuePostFlushCb(() => {
+          if (!disposed && rendered === hydrationVNode) {
+            inContentContext(() =>
+              applyVNodeContent(hydratedContent, slotContentValid),
+            )
+          }
+        })
+      }
     } else if (hydratedContent) {
       setVNode(null)
       setRendered(hydratedContent as Block, slotContentValid)

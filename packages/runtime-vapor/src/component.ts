@@ -187,7 +187,7 @@ import {
   isTransitionChildRoot,
   nestedContentContext,
 } from './fragment'
-import { NATIVE_CHILDREN, SLOT } from './fragmentFlags'
+import { NATIVE_CHILDREN, SLOT, SLOT_FLATTENED } from './fragmentFlags'
 import type { VaporElement } from './apiDefineCustomElement'
 import {
   currentUnmountSuspense,
@@ -2282,10 +2282,16 @@ class FallthroughResolveState implements RootChainVisitor {
   // A vnode-backed child folds like a vapor component: it took the attrs as
   // props at creation, and the vdom renderer owns the element they land on
   // (a KeepAlive reactivation would otherwise re-apply onto cached nodes).
-  // A vdom-fed slot outlet is a fragment boundary like a vapor one.
+  // A vdom-fed slot outlet is a fragment boundary like a vapor one, unless
+  // flattened into a Transition's child: it took the attrs at creation too.
   onInteropFragment(frag: InteropFragment): boolean {
     if (isInteropEnabled) {
-      if (isSlotOutletFragment(frag)) return (this.hasSlotOutlet = true)
+      if (isSlotOutletFragment(frag)) {
+        if (!(isTransitionEnabled && frag.__vf & SLOT_FLATTENED)) {
+          this.hasSlotOutlet = true
+        }
+        return true
+      }
       return !!frag.vnode
     }
     return false

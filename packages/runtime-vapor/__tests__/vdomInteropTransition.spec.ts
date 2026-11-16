@@ -1388,3 +1388,199 @@ describe('vapor slot content inside a vdom TransitionGroup', () => {
     )
   })
 })
+
+// A vdom App uses Fade, whose template is `transition` (a `<Transition>`
+// around a `<slot/>`), as `parent`: vdom flattens the slot fragment into the
+// Transition's child, which inherits the attrs of both. Fade renders as vdom,
+// then as vapor.
+describe('fallthrough attrs through a Transition wrapping a vdom-fed slot', () => {
+  const parity = (
+    transition: string,
+    parent: string,
+    act: (r: Run) => Promise<void>,
+    init: Record<string, any> = {},
+  ) =>
+    compareRuns((vapor, data) => {
+      Object.assign(data.value, { cls: 'w', y: 1, n: 0 }, init)
+      return sfc(false, data, parent, {
+        Fade: sfc(vapor, data, transition),
+        Child: sfc(false, data, `<span>child</span>`),
+      })
+    }, act)
+
+  test('the content root inherits them and follows their updates', async () => {
+    const steps = await parity(
+      wrap(`:css="false" :data-y="data.y"`),
+      `<components.Fade :class="data.cls" data-x="1">
+        <div>a</div>
+      </components.Fade>`,
+      async r => {
+        await r.step('wrapper attr', () => (r.data.value.cls = 'w2'))
+        await r.step('transition attr', () => (r.data.value.y = 2))
+      },
+    )
+    expect(steps).toEqual([
+      'mount: <div data-y="1" class="w" data-x="1">a</div> | ',
+      'wrapper attr: <div data-y="1" class="w2" data-x="1">a</div> | ',
+      'transition attr: <div data-y="2" class="w2" data-x="1">a</div> | ',
+    ])
+    expect('Extraneous non-props attributes').not.toHaveBeenWarned()
+  })
+
+  test('a listener among them fires on the content root', async () => {
+    const steps = await parity(
+      wrap(`:css="false"`),
+      `<components.Fade data-x="1" @click="data.n++">
+        <div>{{ data.n }}</div>
+      </components.Fade>`,
+      async r => {
+        await r.step('click', () =>
+          document.body.querySelector<HTMLElement>('[data-x]')!.click(),
+        )
+      },
+    )
+    expect(steps).toEqual([
+      'mount: <div data-x="1">0</div> | ',
+      'click: <div data-x="1">1</div> | ',
+    ])
+  })
+
+  test('a component content root inherits them', async () => {
+    const steps = await parity(
+      wrap(`:css="false"`),
+      `<components.Fade :class="data.cls">
+        <components.Child />
+      </components.Fade>`,
+      async r => {
+        await r.step('update', () => (r.data.value.cls = 'w2'))
+      },
+    )
+    expect(steps).toEqual([
+      'mount: <span class="w">child</span> | ',
+      'update: <span class="w2">child</span> | ',
+    ])
+  })
+
+  test('a content root switched by v-if inherits them', async () => {
+    const steps = await parity(
+      wrap(hooks),
+      `<components.Fade :class="data.cls">
+        <div v-if="data.show">a</div>
+        <p v-else>b</p>
+      </components.Fade>`,
+      async r => {
+        await r.step('swap', () => (r.data.value.show = false))
+        await r.step('leave done', () => r.done.leave())
+        await r.step('update', () => (r.data.value.cls = 'w2'))
+      },
+    )
+    expect(steps).toEqual([
+      'mount: <div class="w">a</div> | ',
+      'swap: <div class="w">a</div><p class="w">b</p> | beforeLeave:a leave:a beforeEnter:b enter:b',
+      'leave done: <p class="w">b</p> | afterLeave:a',
+      'update: <p class="w2">b</p> | ',
+    ])
+  })
+
+  // the Transition's own attr: no re-render of the vdom parent brings the
+  // outlet its update
+  test('out-in: the root entering after the leave follows the attrs updated since', async () => {
+    const steps = await parity(
+      wrap(`mode="out-in" :css="false" @leave="data.onLeave" :data-y="data.y"`),
+      `<components.Fade class="w">
+        <div v-if="data.show">a</div>
+        <p v-else>b{{ data.n }}</p>
+      </components.Fade>`,
+      async r => {
+        await r.step('swap', () => (r.data.value.show = false))
+        await r.step('attr while leaving', () => (r.data.value.y = 2))
+        await r.step('content while leaving', () => (r.data.value.n = 1))
+        await r.step('leave done', () => r.done.leave())
+        await r.step('attr', () => (r.data.value.y = 3))
+      },
+    )
+    expect(steps).toEqual([
+      'mount: <div data-y="1" class="w">a</div> | ',
+      'swap: <div data-y="1" class="w">a</div> | leave:a',
+      'attr while leaving: <div data-y="1" class="w">a</div> | ',
+      'content while leaving: <div data-y="1" class="w">a</div> | ',
+      'leave done: <p data-y="2" class="w">b1</p> | ',
+      'attr: <p data-y="3" class="w">b1</p> | ',
+    ])
+  })
+
+  test('in-out: the root that entered with them lets the old one leave', async () => {
+    const steps = await parity(
+      wrap(`mode="in-out" ${hooks}`),
+      `<components.Fade :class="data.cls">
+        <div v-if="data.show">a</div>
+        <p v-else>b</p>
+      </components.Fade>`,
+      async r => {
+        await r.step('swap', () => (r.data.value.show = false))
+        await r.step('enter done', () => r.done.enter())
+        await r.step('leave done', () => r.done.leave())
+      },
+    )
+    expect(steps).toEqual([
+      'mount: <div class="w">a</div> | ',
+      'swap: <div class="w">a</div><p class="w">b</p> | beforeEnter:b enter:b',
+      'enter done: <div class="w">a</div><p class="w">b</p> | afterEnter:b beforeLeave:a leave:a',
+      'leave done: <p class="w">b</p> | afterLeave:a',
+    ])
+  })
+
+  test('the fallback root inherits them, then the content replacing it', async () => {
+    const steps = await parity(
+      wrap(hooks, `<slot><i>fb</i></slot>`),
+      `<components.Fade :class="data.cls">
+        <b v-if="data.show">b</b>
+      </components.Fade>`,
+      async r => {
+        await r.step('update', () => (r.data.value.cls = 'w2'))
+        await r.step('content', () => (r.data.value.show = true))
+        await r.step('leave done', () => r.done.leave())
+      },
+      { show: false },
+    )
+    expect(steps).toEqual([
+      'mount: <i class="w">fb</i> | ',
+      'update: <i class="w2">fb</i> | ',
+      'content: <i class="w2">fb</i><b class="w2">b</b> | beforeLeave:fb leave:fb beforeEnter:b enter:b',
+      'leave done: <b class="w2">b</b> | afterLeave:fb',
+    ])
+  })
+
+  test('a fallback root switching on its own keeps them', async () => {
+    const steps = await parity(
+      wrap(
+        `:css="false"`,
+        `<slot>
+          <i v-if="!data.alt">f1</i>
+          <u v-else>f2</u>
+        </slot>`,
+      ),
+      `<components.Fade :class="data.cls" />`,
+      async r => {
+        await r.step('switch', () => (r.data.value.alt = true))
+        await r.step('update', () => (r.data.value.cls = 'w2'))
+      },
+    )
+    expect(steps).toEqual([
+      'mount: <i class="w">f1</i> | ',
+      'switch: <u class="w">f2</u> | ',
+      'update: <u class="w2">f2</u> | ',
+    ])
+  })
+
+  test('a text content root takes none and warns', async () => {
+    const steps = await parity(
+      wrap(`:css="false"`),
+      `<components.Fade class="w">text</components.Fade>`,
+      async () => {},
+    )
+    expect(steps).toEqual(['mount: text | '])
+    // once in each run
+    expect('Extraneous non-props attributes (class)').toHaveBeenWarnedTimes(2)
+  })
+})
