@@ -1103,6 +1103,17 @@ function setActiveBranch(suspense: SuspenseBoundary, branch: VNode) {
   // recursively update the HOC el
   if (parentComponent && parentComponent.subTree === vnode) {
     parentComponent.vnode.el = el
+    if (
+      isVaporInteropEnabled &&
+      parentComponent.isMounted &&
+      parentComponent.vnode.iu
+    ) {
+      queuePostRenderEffect(
+        parentComponent.vnode.iu,
+        undefined,
+        parentComponent.suspense,
+      )
+    }
     updateHOCHostEl(parentComponent, el)
   }
 }

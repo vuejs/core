@@ -19590,3 +19590,167 @@ describe('template ref on vapor slot content', () => {
     )
   })
 })
+
+describe('vdom child root replaced without a parent update', () => {
+  test('re-resolve vapor custom directive', async () => {
+    const teardown = vi.fn()
+    const dir: VaporDirective = vi.fn(() => teardown)
+    const ok = ref(true)
+    const Inner = defineComponent({
+      setup() {
+        return () => (ok.value ? h('div') : h('span'))
+      },
+    })
+    const VDomChild = defineComponent({
+      setup() {
+        return () => h(Inner)
+      },
+    })
+    const App = compile(
+      `<template><components.VDomChild v-custom /></template>`,
+      ref(null),
+      { VDomChild },
+    )
+    App.directives = { custom: dir }
+
+    const { host } = define(App as any).render()
+    expect(dir).toHaveBeenCalledOnce()
+
+    ok.value = false
+    await nextTick()
+    expect(host.innerHTML).toBe('<span></span>')
+    expect(teardown).toHaveBeenCalledOnce()
+    expect(dir).toHaveBeenCalledTimes(2)
+    expect(dir).toHaveBeenLastCalledWith(
+      host.firstElementChild,
+      undefined,
+      undefined,
+      undefined,
+    )
+  })
+
+  test('v-for inserts before a resolved async root', async () => {
+    let resolve!: (comp: any) => void
+    const AsyncChild = defineAsyncComponent(
+      () => new Promise<any>(r => (resolve = r)),
+    )
+    const VDomChild = defineComponent({
+      props: ['id'],
+      setup(props) {
+        return () => h(AsyncChild, { id: props.id })
+      },
+    })
+    const data = ref({ list: ['b', 'a'] })
+    const App = compile(
+      `<template>
+        <components.VDomChild v-for="id in data.list" :key="id" :id="id" />
+      </template>`,
+      data,
+      { VDomChild },
+    )
+
+    const { host } = define(App as any).render()
+    resolve(
+      defineComponent({
+        props: ['id'],
+        setup(props) {
+          return () => h('div', props.id)
+        },
+      }),
+    )
+    await new Promise(r => setTimeout(r))
+    expect(host.innerHTML).toBe('<div>b</div><div>a</div><!--for-->')
+
+    data.value.list = ['c', 'b', 'a']
+    await nextTick()
+    expect(host.innerHTML).toBe(
+      '<div>c</div><div>b</div><div>a</div><!--for-->',
+    )
+  })
+
+  test('v-for moves and inserts around a resolved Suspense root', async () => {
+    const resolvers: (() => void)[] = []
+    const AsyncChild = defineComponent({
+      props: ['id'],
+      async setup(props) {
+        await new Promise<void>(r => resolvers.push(r))
+        return () => h('div', props.id)
+      },
+    })
+    const VDomChild = defineComponent({
+      props: ['id'],
+      setup(props) {
+        return () =>
+          h(Suspense, null, {
+            default: () => h(AsyncChild, { id: props.id }),
+            fallback: () => h('span', props.id),
+          })
+      },
+    })
+    const data = ref({ list: ['a', 'b'] })
+    const App = compile(
+      `<template>
+        <components.VDomChild v-for="id in data.list" :key="id" :id="id" />
+      </template>`,
+      data,
+      { VDomChild },
+    )
+
+    const { host } = define(App as any).render()
+    resolvers.forEach(r => r())
+    await new Promise(r => setTimeout(r))
+    expect(host.innerHTML).toBe('<div>a</div><div>b</div><!--for-->')
+
+    data.value.list = ['b', 'x', 'a']
+    await nextTick()
+    expect(host.innerHTML).toBe(
+      '<div>b</div><span>x</span><div>a</div><!--for-->',
+    )
+  })
+
+  test('v-for inserts while a Suspense root is pending again', async () => {
+    const ok = ref(true)
+    const pending = reactive(new Set<string>())
+    const Never = defineComponent({
+      async setup() {
+        await new Promise(() => {})
+        return () => h('i')
+      },
+    })
+    const Inner = defineComponent({
+      props: ['id'],
+      setup(props) {
+        return () => (ok.value ? h('div', props.id) : h('p', props.id))
+      },
+    })
+    const VDomChild = defineComponent({
+      props: ['id'],
+      setup(props) {
+        return () =>
+          h(Suspense, null, {
+            default: () =>
+              pending.has(props.id) ? h(Never) : h(Inner, { id: props.id }),
+          })
+      },
+    })
+    const data = ref({ list: ['a', 'b'] })
+    const App = compile(
+      `<template>
+        <components.VDomChild v-for="id in data.list" :key="id" :id="id" />
+      </template>`,
+      data,
+      { VDomChild },
+    )
+    const { host } = define(App as any).render()
+    expect(host.innerHTML).toBe('<div>a</div><div>b</div><!--for-->')
+    pending.add('b')
+    await nextTick()
+    expect(host.innerHTML).toBe('<div>a</div><div>b</div><!--for-->')
+    ok.value = false
+    await nextTick()
+    expect(host.innerHTML).toBe('<p>a</p><p>b</p><!--for-->')
+    data.value.list = ['a', 'x', 'b']
+    await nextTick()
+    expect(host.innerHTML).toBe('<p>a</p><p>x</p><p>b</p><!--for-->')
+  })
+})

@@ -38,6 +38,7 @@ import {
 import { shallowReadonly } from '@vue/reactivity'
 import { getInnerChild, setTransitionHooks } from './components/BaseTransition'
 import { isTeleport } from './components/Teleport'
+import { queuePostRenderEffect } from './renderer'
 import { isVaporInteropEnabled } from './vaporInteropState'
 
 /**
@@ -514,6 +515,10 @@ export function updateHOCHostEl(
     }
     if (root === vnode) {
       ;(vnode = parent.vnode!).el = el
+      // a vapor parent tracks this root through the vnode's updated notification
+      if (isVaporInteropEnabled && vnode.iu) {
+        queuePostRenderEffect(vnode.iu, undefined, parent.suspense)
+      }
       parent = parent.parent
     } else {
       break
