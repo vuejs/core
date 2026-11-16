@@ -1025,6 +1025,56 @@ describe('custom directive', () => {
       app.unmount()
     })
 
+    test('stays silent while the slot has nothing to show like vdom', async () => {
+      const log = await directiveLog(
+        {
+          Fade,
+          App: withFoo(`<template>
+            <components.Fade v-foo>
+              <p v-if="data.has">x</p>
+            </components.Fade>
+          </template>`),
+        },
+        () => ref({ has: false }),
+        async data => {
+          data.has = true
+          await nextTick()
+          data.has = false
+        },
+      )
+      expect(log.vdom).toEqual(['P', '-P'])
+      expect(log.vapor).toEqual(log.vdom)
+    })
+
+    test('stays silent until the slot fallback enters after an out-in leave like vdom', async () => {
+      const log = await directiveLog(
+        {
+          Fade: `<template>
+            <Transition
+              :css="false"
+              mode="out-in"
+              @leave="(el, done) => data.dones.push(done)"
+            >
+              <slot><span>fallback</span></slot>
+            </Transition>
+          </template>`,
+          App: withFoo(`<template>
+            <components.Fade v-foo>
+              <p v-if="data.has">x</p>
+            </components.Fade>
+          </template>`),
+        },
+        () => ref({ has: true, dones: [] as (() => void)[] }),
+        async data => {
+          data.has = false
+          await nextTick()
+          data.dones.forEach((done: () => void) => done())
+        },
+      )
+      expect(log.vdom).toEqual(['P', '-P', 'SPAN', '-SPAN'])
+      expect(log.vapor).toEqual(log.vdom)
+    })
+
     test.each([
       [
         'a dynamic slot name',

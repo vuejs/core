@@ -92,6 +92,9 @@ export function withVaporDirectives(
   let inTransition = false
   // The block an outlet hands over, until the descent meets that outlet.
   let exposing: Block | undefined
+  // Set by a descent that met an outlet with nothing valid to show: its
+  // fallback, if any, is exposed next.
+  let empty = false
 
   const visitor: RootChainVisitor = {
     onDynamicFragment(frag) {
@@ -113,6 +116,7 @@ export function withVaporDirectives(
           exposing = undefined
           return true
         }
+        if (!isValidSlot(frag.nodes)) empty = true
       } else {
         track(frag)
       }
@@ -194,12 +198,11 @@ export function withVaporDirectives(
   function apply(block: Block, exposed?: boolean) {
     if (disposed) return
 
-    pending = false
+    pending = empty = false
     inTransition = !!exposed
     const element = getRootElement(block, visitor)
-    // Content the outlet does not hold valid: its fallback, if any, is
-    // exposed instead
-    if (!element && exposed && !isValidSlot(block)) return
+    // Not a root to warn about, nor one that replaces the current root
+    if (!element && (empty || (exposed && !isValidSlot(block)))) return
     if (!element && pending) {
       // Keep null as the pending state so a resolved invalid root still warns
       if (currentElement !== null) {
