@@ -437,12 +437,6 @@ export function remove(block: Block, parent?: ParentNode): void {
         ? resolveUnmountSuspense(block.suspense)
         : block.suspense,
     )
-    // Without a parent an enclosing owner removes the DOM and unmountComponent
-    // leaves the block alone, so unmount the vdom components in it here. A
-    // kept-alive instance stays mounted.
-    if (isInteropEnabled && !parent && block.isUnmounted) {
-      unmountVDOM(block.block)
-    }
   } else if (isArray(block)) {
     for (let i = 0; i < block.length; i++) {
       remove(block[i], parent)
@@ -529,20 +523,24 @@ export function removeFragment(
  * its owner scope is disposed, as vdom does for an element's children.
  */
 export function registerNestedVDOMCleanup(block: Block): void {
-  if (isInteropEnabled && !(block instanceof Node)) {
+  if (
+    isInteropEnabled &&
+    !(block instanceof Node) &&
+    // unmounts the ones in its block itself
+    !isVaporComponent(block)
+  ) {
     onScopeDispose(() => unmountVDOM(block), true)
   }
 }
 
 /**
- * Unmounts the vdom components in a block tree whose DOM goes away without
- * block removal.
+ * Unmounts the vdom components in a block tree, leaving their DOM: an
+ * enclosing owner removes it, or the block's own removal does afterwards.
  */
 export function unmountVDOM(block: Block | undefined): void {
-  if (!block || block instanceof Node) return
-  if (isVaporComponent(block)) {
-    unmountVDOM(block.block)
-  } else if (isArray(block)) {
+  // a vapor component unmounts the ones in its own block
+  if (!block || block instanceof Node || isVaporComponent(block)) return
+  if (isArray(block)) {
     for (let i = 0; i < block.length; i++) unmountVDOM(block[i])
   } else if (isInteropFragment(block)) {
     block.remove!()

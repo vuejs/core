@@ -59,6 +59,7 @@ import {
   isBlock,
   registerNestedVDOMCleanup,
   remove,
+  unmountVDOM,
 } from './block'
 import {
   type Dep,
@@ -702,7 +703,6 @@ export function createComponent(
       instance.unmountScope = getCurrentScope()
     }
     registerUnmount(instance)
-    if (_insertionParent) registerNestedVDOMCleanup(instance)
 
     if (!managedMount && (_insertionParent || isHydrating)) {
       mountComponent(instance, _insertionParent!, _insertionAnchor)
@@ -1866,6 +1866,9 @@ export function unmountComponent(
       if (inputScope) inputScope.stop()
     }
     instance.scope.stop()
+    // vdom components in the block unmount with the vapor ones the scope
+    // just unmounted: block removal only removes their DOM
+    if (isInteropEnabled) unmountVDOM(instance.block)
 
     if (hasLifecycle && instance.um) {
       queuePostRenderEffect(instance.um!, undefined, parentSuspense)

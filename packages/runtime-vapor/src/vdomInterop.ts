@@ -51,6 +51,7 @@ import {
   isAsyncWrapper,
   isEmitListener,
   isKeepAlive,
+  isTeleportDisabled,
   isVNode,
   isHydrating as isVdomHydrating,
   isHydratingEnabled as isVdomHydratingEnabled,
@@ -127,6 +128,7 @@ import {
   keepRenderedHooks,
   move,
   remove,
+  unmountVDOM,
 } from './block'
 import {
   EMPTY_ARR,
@@ -661,45 +663,30 @@ const vaporInteropImpl = {
 
     const container = doRemove ? vnode.anchor!.parentNode : undefined
     const instance = getVaporInstance(vnode)
+    // removed after this, by removeUnmountedVNode
+    const deferred =
+      !doRemove && !!deferredRoots && deferredRoots.includes(vnode)
     let slotStartAnchor: Node | null = null
     if (instance) {
-      const anchor = vnode.anchor as Node | null
-      if (instance.block) {
-        if (!doRemove && isTransitionEnabled && vnode.transition) {
-          // The enclosing VDOM fragment owns the leave and its DOM range.
-          // Dispose the block below without starting the inherited leave again.
-          const child = findTransitionBlock(instance.block, fragment => {
-            if (fragment.$transition === vnode.transition) {
-              fragment.$transition = undefined
-            }
-          })
-          if (child && child.$transition === vnode.transition) {
-            child.$transition = undefined
-          }
-        }
-        unmountComponent(instance, container, parentSuspense)
-        if (!doRemove) {
-          // When the surrounding VDOM fragment owns DOM removal, we still need
-          // to dispose the vapor-returned block tree so nested interop state
-          // (for example forwarded VDOM slots or nested KeepAlive cleanup)
-          // does not stay subscribed.
-          // A transitioning fragment must keep its complete range until leave.
-          const blockContainer =
-            !vnode.transition &&
-            isKeepAliveEnabled &&
-            needsHostParentForRemove(instance.block)
-              ? ((anchor && anchor.parentNode) as ParentNode)
-              : undefined
-          remove(instance.block, blockContainer)
-        }
-      } else {
-        unmountComponent(instance, container, parentSuspense)
-        if (!doRemove) {
-          // VDOM retains the enclosing range through vnode.el and vnode.anchor.
-          instance.pendingBlock = undefined
-        }
+      unmountComponent(instance, container, parentSuspense)
+      if (!doRemove && !instance.block && !deferred) {
+        // VDOM retains the enclosing range through vnode.el and vnode.anchor.
+        instance.pendingBlock = undefined
       }
     } else if (vnode.vb) {
+      if (deferred) {
+        // only the state of what the slot rendered: the outlet itself stays
+        // for the removal, with the leave it runs
+        stopVaporSlotScope(vnode)
+        const vb = vnode.vb
+        if (isFragment(vb)) {
+          // hidden while a fallback shows
+          const content = vb.getContent!()
+          if (content !== vb.nodes) unmountVDOM(content)
+          unmountVDOM(vb.nodes)
+        }
+        return
+      }
       const anchor = vnode.anchor as Node | null
       // The slot's own start node, or the opening marker `hydrateSlot()`
       // records for VDOM SSR slot fragments, while vnode.anchor points at the
@@ -1364,6 +1351,89 @@ function removeAttachedNodes(block: Block, parent: ParentNode): void {
   }
 }
 
+// The removal roots of the vnode unmountVNode is unmounting ahead of its DOM:
+// the vapor slots and components among them keep their DOM, and its leave, for
+// removeUnmountedVNode.
+let deferredRoots: VNode[] | undefined
+
+// The vnodes vdom's removal of `vnode` reaches, through components, suspense
+// boundaries and a disabled Teleport, whose children stay in place.
+function forEachRemovalRoot(vnode: VNode, fn: (root: VNode) => void): void {
+  const { shapeFlag, component, suspense } = vnode
+  if (
+    shapeFlag & ShapeFlags.COMPONENT &&
+    component &&
+    !isVaporComponent(component)
+  ) {
+    forEachRemovalRoot(component.subTree, fn)
+  } else if (__FEATURE_SUSPENSE__ && shapeFlag & ShapeFlags.SUSPENSE) {
+    if (suspense) {
+      const { activeBranch, pendingBranch } = suspense
+      if (activeBranch) forEachRemovalRoot(activeBranch, fn)
+      // in the DOM as well while it hydrates
+      if (pendingBranch) forEachRemovalRoot(pendingBranch, fn)
+    }
+  } else {
+    if (
+      shapeFlag & ShapeFlags.TELEPORT &&
+      shapeFlag & ShapeFlags.ARRAY_CHILDREN &&
+      isTeleportDisabled(vnode.props)
+    ) {
+      const children = vnode.children as VNode[]
+      for (let i = 0; i < children.length; i++) {
+        forEachRemovalRoot(children[i], fn)
+      }
+    }
+    fn(vnode)
+  }
+}
+
+// Without `doRemove` only the state goes, with the vapor component rendering
+// the vnode: its DOM goes with the block, through removeUnmountedVNode.
+function unmountVNode(
+  internals: RendererInternals,
+  vnode: VNode,
+  parentComponent: object | null,
+  parentSuspense: SuspenseBoundary | null,
+  doRemove: boolean,
+): void {
+  const prev = deferredRoots
+  if (!doRemove) {
+    const roots: VNode[] = []
+    forEachRemovalRoot(vnode, root => roots.push(root))
+    deferredRoots = roots
+  }
+  try {
+    internals.um(vnode, parentComponent as any, parentSuspense, doRemove)
+  } finally {
+    deferredRoots = prev
+  }
+}
+
+// What vdom's own removal would do, leave included.
+function removeUnmountedVNode(
+  internals: RendererInternals,
+  vnode: VNode,
+  parentNode: ParentNode,
+  transition?: TransitionHooks,
+): void {
+  if (isTransitionEnabled && transition) {
+    setVNodeTransitionHooks(vnode, transition)
+  }
+  forEachRemovalRoot(vnode, root => {
+    const { shapeFlag } = root
+    if (root.type === VaporSlotVNode || shapeFlag & ShapeFlags.COMPONENT) {
+      if (root.vb || root.component) {
+        vaporInteropImpl.unmount(root, true, resolveUnmountSuspense(null))
+      }
+    } else if (shapeFlag & ShapeFlags.TELEPORT) {
+      removeAttachedNodes([root.el, root.anchor] as Block, parentNode)
+    } else if (root.el) {
+      internals.r(root)
+    }
+  })
+}
+
 function trackFragmentVNodeUpdates(
   frag: VaporFragment,
   vnode: VNode,
@@ -1700,13 +1770,20 @@ function mountVNode(
   // namespace over a component's render effect.
   let namespace: ElementNamespace
   let isUnmounted = false
+  // unmounted with its DOM left for the block's removal
+  let isDomPending = false
   // the vnode's keep-alive flag outlives the activation, and place() also moves
   let isDeactivated = false
   const unmount = (parentNode?: ParentNode, transition?: TransitionHooks) => {
     // scope disposal and block removal can both reach this
     if (isUnmounted) {
       if (parentNode) {
-        removeAttachedNodes(resolveVNodeNodes(vnode), parentNode)
+        if (isDomPending) {
+          isDomPending = false
+          removeUnmountedVNode(internals, vnode, parentNode, transition)
+        } else {
+          removeAttachedNodes(resolveVNodeNodes(vnode), parentNode)
+        }
         if (vnode.anchor && vnode.anchor.parentNode === parentNode) {
           remove(vnode.anchor as Node, parentNode)
         }
@@ -1742,7 +1819,16 @@ function mountVNode(
     } else {
       isUnmounted = true
       if (frag.inputScope) frag.inputScope.stop()
-      internals.um(vnode, parentComponent as any, parentSuspense, !!parentNode)
+      // never placed: its vapor parent was discarded before it mounted
+      if (!isMounted) return
+      isDomPending = !parentNode
+      unmountVNode(
+        internals,
+        vnode,
+        parentComponent,
+        parentSuspense,
+        !!parentNode,
+      )
     }
 
     if (vnode.anchor && parentNode && vnode.anchor.parentNode === parentNode) {
@@ -2164,6 +2250,8 @@ function createVDOMComponent(
   }
 
   let isDomRemoved = false
+  // unmounted with its DOM left for the block's removal
+  let isDomPending = false
   const removeDom = (parentNode?: ParentNode): void => {
     if (!parentNode || isDomRemoved) {
       return
@@ -2174,6 +2262,10 @@ function createVDOMComponent(
   const unmount = (parentNode?: ParentNode, transition?: TransitionHooks) => {
     shouldRefreshRef = false
     if (isUnmounted) {
+      if (isDomPending && parentNode) {
+        isDomPending = false
+        removeUnmountedVNode(internals, vnode, parentNode, transition)
+      }
       if (!transition) removeDom(parentNode)
       return
     }
@@ -2202,9 +2294,18 @@ function createVDOMComponent(
       return
     }
     isUnmounted = true
-    isMounted = false
     if (inputScope) inputScope.stop()
-    internals.um(vnode, parentComponent as any, parentSuspense, !!parentNode)
+    // never placed: its vapor parent was discarded before it mounted
+    if (!isMounted) return
+    isMounted = false
+    isDomPending = !parentNode
+    unmountVNode(
+      internals,
+      vnode,
+      parentComponent,
+      parentSuspense,
+      !!parentNode,
+    )
     // VDOM transitions own their leaving DOM until the leave finishes.
     if (!transition) removeDom(parentNode)
   }
@@ -2553,6 +2654,8 @@ function renderVDOMSlot(
   let slotNamespace: ElementNamespace
   let currentAnchor: Node | null = null
   let disposed = false
+  // disposed with its DOM left for the block's removal
+  let isDomPending = false
   // in-out: receives the leave of the content going invalid, which waits on
   // the Transition for the fallback to enter
   let inOutLeave: TransitionHooks | undefined
@@ -2729,8 +2832,20 @@ function renderVDOMSlot(
   frag.remove = (parentNode, transitionHooks) => {
     if (parentNode) currentParentNode = parentNode
     scope.stop()
+    const wasDisposed = disposed
     disposed = true
     pendingOutIn = undefined
+    if (!parentNode) {
+      // only the state: the block's removal takes the DOM, if it is not an
+      // enclosing element's
+      if (wasDisposed) return
+      isDomPending = true
+      if (rendered) removeRenderedContent(rendered)
+      const { fallbackScope, activeFallback } = slotResolutionState
+      if (fallbackScope) fallbackScope.stop()
+      if (activeFallback) unmountVDOM(activeFallback)
+      return
+    }
     if (rendered) {
       // the enclosing branch leaves with the hooks its Transition resolved
       // for this fragment (an out-in swap waits on their afterLeave), not
@@ -2748,8 +2863,13 @@ function renderVDOMSlot(
             : rendered
         if (branch) setVNodeTransitionHooks(branch, transitionHooks)
       }
-      removeRenderedContent(rendered, parentNode)
+      if (isDomPending && isVNode(rendered)) {
+        removeUnmountedVNode(internals, rendered, parentNode)
+      } else {
+        removeRenderedContent(rendered, parentNode)
+      }
     }
+    isDomPending = false
     disposeSlotResolution(slotResolutionState, parentNode)
   }
 
@@ -2879,14 +2999,17 @@ function renderVDOMSlot(
     parentNode?: ParentNode,
   ): void {
     if (isVNode(renderedContent)) {
-      internals.um(
+      unmountVNode(
+        internals,
         renderedContent,
-        mountParent as any,
+        mountParent,
         resolveUnmountSuspense(suspense),
         !!parentNode,
       )
-    } else {
+    } else if (parentNode) {
       remove(renderedContent, parentNode)
+    } else {
+      unmountVDOM(renderedContent)
     }
   }
 
@@ -4115,12 +4238,13 @@ function stopVaporSlotScope(vnode: VNode): void {
 
 /**
  * Slot functions can create renderEffects while evaluating their block.
- * Those effects live in this dedicated scope so slot re-mount/unmount can
- * dispose them immediately instead of waiting for the parent component.
+ * Those effects live in this detached scope, which only the vnode's re-mount
+ * and unmount stop: after the vapor component passing the slot unmounted, not
+ * with the scope that happens to render the vdom outlet.
  */
 function invokeVaporSlot(vnode: VNode): Block {
   const propsRef = (vnode.vs!.ref = shallowRef(vnode.vs!.props || vnode.props))
-  const scope = effectScope()
+  const scope = effectScope(true)
   vnode.vs!.scope = scope
   try {
     const invoke = () =>
@@ -4668,6 +4792,8 @@ function createVNodeChildrenFragment(
   let childrenNamespace: ElementNamespace
   let currentAnchor: Node | null = null
   let isMounted = false
+  // unmounted with its DOM left for the block's removal
+  let isDomPending = false
   let isRenderEffectStarted = false
   const scope = effectScope()
   const syncResolvedNodes = (
@@ -4908,8 +5034,13 @@ function createVNodeChildrenFragment(
 
   frag.remove = (parentNode, transition) => {
     scope.stop()
-    // never placed (a fallback discarded while it waited to enter)
+    // never placed (a fallback discarded while it waited to enter), or
+    // removed already
     if (!isMounted) return
+    const removeOnly = isDomPending
+    if (removeOnly && !parentNode) return
+    isDomPending = !parentNode
+    if (parentNode) isMounted = false
     const parentSuspense = resolveUnmountSuspense(suspense)
     currentChildren.forEach(vnode => {
       // the mode handoff of a leave the slot's removal drives
@@ -4919,7 +5050,17 @@ function createVNodeChildrenFragment(
           markLeavingVNode(vnode, transition.state),
         )
       }
-      internals.um(vnode, parentComponent, parentSuspense, !!parentNode)
+      if (removeOnly) {
+        removeUnmountedVNode(internals, vnode, parentNode!)
+      } else {
+        unmountVNode(
+          internals,
+          vnode,
+          parentComponent,
+          parentSuspense,
+          !!parentNode,
+        )
+      }
     })
   }
 
