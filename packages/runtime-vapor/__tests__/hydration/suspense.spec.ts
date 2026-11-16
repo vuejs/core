@@ -1,7 +1,13 @@
 import { createVaporSSRApp, defineVaporAsyncComponent } from '../../src'
 import { defineComponent, h, markRaw, nextTick, ref } from '@vue/runtime-dom'
 import type { VaporComponentInstance } from '../../src/component'
-import { VueServerRenderer, compile, runtimeDom, runtimeVapor } from '../_utils'
+import {
+  VueServerRenderer,
+  compile,
+  runtimeDom,
+  runtimeVapor,
+  stripAnchors,
+} from '../_utils'
 import { normalizeBlock } from '../../src/block'
 import {
   compileVaporComponent,
@@ -1855,5 +1861,87 @@ describe('async setup as the lone root of a vapor host under vdom Suspense', () 
       D: `<template><components.E /><b>{{ data.msg }}</b></template>`,
     })
     expect(container.querySelector('b')!.textContent).toBe('two')
+  })
+})
+
+// the vapor host unmounts the vdom component at its root ahead of its DOM,
+// which is then still the server's: nothing was mounted over it yet
+describe('a vdom root removed with its vapor host while still hydrating', () => {
+  const host = `<components.Host v-if="data.show" />
+    <span v-else>gone</span>`
+  const run = async (
+    components: Parameters<typeof testHydration>[1],
+    isVaporApp = true,
+    app = host,
+  ) => {
+    const serverData = ref<any>({ show: true, wait: Promise.resolve() })
+    const data = ref<any>({ show: true, wait: new Promise(() => {}) })
+    const { container } = await testHydration(
+      `<template>${app}</template>`,
+      {
+        ...components,
+        Host: `<script setup>const components = _components</script>
+          <template><components.VDomRoot /></template>`,
+      },
+      data,
+      { isVaporApp, interop: true, serverData },
+    )
+    data.value.show = false
+    await nextTick()
+    return stripAnchors(container.innerHTML)
+  }
+  const asyncSetup = `const data = _data; await data.value.wait`
+  const vdomRoot = (template: string) => ({
+    code: `<script setup>const components = _components</script>
+      <template>${template}</template>`,
+    vapor: false,
+  })
+
+  test.each([true, false])(
+    'a Suspense waiting on a vdom async child (vapor app: %s)',
+    async isVaporApp => {
+      expect(
+        await run(
+          {
+            VDomAsync: {
+              code: `<script setup>${asyncSetup}</script>
+                <template><div>async</div></template>`,
+              vapor: false,
+            },
+            VDomRoot: vdomRoot(`<Suspense><components.VDomAsync /></Suspense>`),
+          },
+          isVaporApp,
+        ),
+      ).toBe(`<span>gone</span>`)
+    },
+  )
+
+  describe.each([
+    ['single root', `<div>async</div>`],
+    ['multi root', `<div>one</div><div>two</div>`],
+  ])('a vapor async child, %s', (_, template) => {
+    const VaporAsync = `<script setup>${asyncSetup}</script>
+      <template>${template}</template>`
+
+    test('waited on by a Suspense at the vdom root', async () => {
+      expect(
+        await run({
+          VaporAsync,
+          VDomRoot: vdomRoot(`<Suspense><components.VaporAsync /></Suspense>`),
+        }),
+      ).toBe(`<span>gone</span>`)
+    })
+
+    test('waited on by a Suspense above the host', async () => {
+      expect(
+        await run(
+          { VaporAsync, VDomRoot: vdomRoot(`<components.VaporAsync />`) },
+          true,
+          `<Suspense>
+            <div>${host}</div>
+          </Suspense>`,
+        ),
+      ).toBe(`<div><span>gone</span></div>`)
+    })
   })
 })

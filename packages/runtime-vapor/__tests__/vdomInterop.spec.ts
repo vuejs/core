@@ -5261,6 +5261,288 @@ describe('vdomInterop', () => {
       await nextTick()
       expect(watched).not.toHaveBeenCalled()
     })
+
+    function createUnmountOrder() {
+      const calls: string[] = []
+      const data = ref<any>({
+        show: true,
+        log: (s: string) => calls.push(s),
+      })
+      const components: Record<string, any> = {}
+      // logs under its `id` prop, or its key
+      const def = (key: string, template: string, vapor = true) =>
+        (components[key] = compile(
+          `<script setup>
+            import { onBeforeUnmount, onUnmounted } from 'vue'
+            const data = _data
+            const components = _components
+            const props = defineProps(['id'])
+            const name = props.id || '${key}'
+            onBeforeUnmount(() => data.value.log(name + ' bum'))
+            onUnmounted(() => data.value.log(name + ' um'))
+          </script>
+          <template>${template}</template>`,
+          data,
+          components,
+          { vapor },
+        ))
+      def('VDomChild', `<p>{{ id }}</p>`, false)
+      def('Parent', `<components.VDomChild id="a" />`)
+      def('Wrapper', `<components.Parent />`)
+      def(
+        'Multi',
+        `<components.VDomChild id="a" />
+        <components.VDomChild id="b" />`,
+      )
+      def('Branch', `<components.VDomChild v-if="data.show" id="a" />`)
+      def('Outlet', `<slot />`)
+      const render = (template: string, vapor: boolean) =>
+        define(
+          compile(
+            `<script setup>const data = _data; const components = _components</script>
+            <template>${template}</template>`,
+            data,
+            components,
+            { vapor },
+          ),
+        ).render()
+      return { calls, data, def, render }
+    }
+
+    const parentOrder = ['Parent bum', 'a bum', 'a um', 'Parent um']
+    const wrapperOrder = [
+      'Wrapper bum',
+      'Parent bum',
+      'a bum',
+      'a um',
+      'Parent um',
+      'Wrapper um',
+    ]
+
+    describe.each([true, false])('vapor app: %s', vapor => {
+      test.each([
+        [
+          'removed by v-if',
+          `<components.Parent
+          v-if="data.show"
+          @vue:unmounted="data.log('vnode um')"
+        />`,
+          [...parentOrder, 'vnode um'],
+        ],
+        [
+          'under another vapor component',
+          `<components.Wrapper v-if="data.show" />`,
+          wrapperOrder,
+        ],
+        [
+          'inside a removed element',
+          `<div v-if="data.show">
+          <components.Wrapper />
+        </div>`,
+          wrapperOrder,
+        ],
+        [
+          'several vdom roots',
+          `<components.Multi v-if="data.show" />`,
+          ['Multi bum', 'a bum', 'b bum', 'a um', 'b um', 'Multi um'],
+        ],
+        [
+          'a vdom root in a branch',
+          `<components.Branch v-if="data.show" />`,
+          ['Branch bum', 'a bum', 'a um', 'Branch um'],
+        ],
+        [
+          'vdom slot content at the root',
+          `<components.Outlet v-if="data.show">
+          <components.VDomChild id="a" />
+        </components.Outlet>`,
+          ['Outlet bum', 'a bum', 'a um', 'Outlet um'],
+        ],
+      ])(
+        'vdom components at the block root unmount before their vapor parent: %s',
+        async (_, template, order) => {
+          const { calls, data, render } = createUnmountOrder()
+          const { app, host } = render(template, vapor)
+          data.value.show = false
+          await nextTick()
+          expect(calls).toEqual(order)
+          expect(host.querySelector('p')).toBeNull()
+          app.unmount()
+        },
+      )
+    })
+
+    test('vdom components at the block root unmount before their kept-alive vapor parent', async () => {
+      const { calls, data, render } = createUnmountOrder()
+      const { app } = render(
+        `<KeepAlive>
+          <components.Parent v-if="data.show" />
+        </KeepAlive>`,
+        true,
+      )
+      data.value.show = false
+      await nextTick()
+      expect(calls).toEqual([])
+      app.unmount()
+      await nextTick()
+      expect(calls).toEqual(parentOrder)
+    })
+
+    test.each([true, false])(
+      'vdom components at the block root leave after they unmount (vapor app: %s)',
+      async vapor => {
+        const { calls, data, render } = createUnmountOrder()
+        let finishLeave: (() => void) | undefined
+        const leaving: Element[] = []
+        data.value.onLeave = (el: Element, done: () => void) => {
+          leaving.push(el)
+          finishLeave = done
+        }
+        const { app, host } = render(
+          `<Transition :css="false" @leave="data.onLeave">
+            <components.Wrapper v-if="data.show" />
+          </Transition>`,
+          vapor,
+        )
+        const el = host.querySelector('p')!
+        data.value.show = false
+        await nextTick()
+        expect(calls).toEqual(wrapperOrder)
+        expect(leaving).toEqual([el])
+        expect(host.contains(el)).toBe(true)
+        finishLeave!()
+        expect(host.contains(el)).toBe(false)
+        app.unmount()
+      },
+    )
+
+    test('a vapor component discarded before it mounts leaves its vdom root alone', async () => {
+      const { calls, data, def, render } = createUnmountOrder()
+      data.value.onLeave = (_: Element, _done: () => void) => {}
+      def(
+        'Held',
+        `<Transition mode="out-in" :css="false" @leave="data.onLeave">
+          <slot><b>fallback</b></slot>
+        </Transition>`,
+      )
+      const { app } = render(
+        `<components.Held>
+          <components.Parent v-if="!data.show" />
+        </components.Held>`,
+        true,
+      )
+      // rendered, and held while the fallback leaves
+      data.value.show = false
+      await nextTick()
+      app.unmount()
+      await nextTick()
+      expect(calls).toEqual(['Held bum', 'Held um'])
+    })
+
+    test.each([true, false])(
+      'a vdom root in a disabled Teleport leaves before the next branch enters (vapor app: %s)',
+      async vapor => {
+        const { data, def, render } = createUnmountOrder()
+        const leaving: Element[] = []
+        data.value.onLeave = (el: Element, done: () => void) => {
+          leaving.push(el)
+          done()
+        }
+        def(
+          'Teleported',
+          `<Teleport to="body" disabled>
+            <p>teleported</p>
+          </Teleport>`,
+          false,
+        )
+        def('Holder', `<components.Teleported />`)
+        const { app, host } = render(
+          `<Transition mode="out-in" :css="false" @leave="data.onLeave">
+            <components.Holder v-if="data.show" />
+            <i v-else>next</i>
+          </Transition>`,
+          vapor,
+        )
+        const el = host.querySelector('p')!
+        data.value.show = false
+        await nextTick()
+        await nextTick()
+        expect(leaving).toEqual([el])
+        expect(host.contains(el)).toBe(false)
+        expect(host.querySelector('i')).not.toBeNull()
+        app.unmount()
+      },
+    )
+
+    test('vapor slot content at the root of a vdom component leaves with its vapor parent', async () => {
+      const { data, def, render } = createUnmountOrder()
+      let finishLeave: (() => void) | undefined
+      const leaving: Element[] = []
+      data.value.onLeave = (el: Element, done: () => void) => {
+        leaving.push(el)
+        finishLeave = done
+      }
+      def('VDomOutlet', `<slot />`, false)
+      def(
+        'Slotted',
+        `<components.VDomOutlet>
+          <b>content</b>
+        </components.VDomOutlet>`,
+      )
+      const { app, host } = render(
+        `<Transition :css="false" @leave="data.onLeave">
+          <components.Slotted v-if="data.show" />
+        </Transition>`,
+        true,
+      )
+      const el = host.querySelector('b')!
+      data.value.show = false
+      await nextTick()
+      expect(leaving).toEqual([el])
+      expect(host.contains(el)).toBe(true)
+      finishLeave!()
+      expect(host.contains(el)).toBe(false)
+      app.unmount()
+      // vdom's, for the component rooted at the slot
+      expect(`renders non-element root node`).toHaveBeenWarned()
+    })
+
+    describe.each([true, false])('vapor app: %s', vapor => {
+      test.each([
+        ['removed by v-if', `<components.Slotting v-if="data.show" />`],
+        [
+          'inside a removed element',
+          `<div v-if="data.show">
+          <components.Slotting />
+        </div>`,
+        ],
+      ])(
+        'vapor slot content of a vdom component unmounts after the vapor parent passing it: %s',
+        async (_, template) => {
+          const { calls, data, def, render } = createUnmountOrder()
+          def('Kid', `<i>kid</i>`)
+          def('VDomOutlet', `<slot />`, false)
+          def(
+            'Slotting',
+            `<components.VDomOutlet>
+            <components.Kid />
+          </components.VDomOutlet>`,
+          )
+          const { app } = render(template, vapor)
+          data.value.show = false
+          await nextTick()
+          expect(calls).toEqual([
+            'Slotting bum',
+            'VDomOutlet bum',
+            'Kid bum',
+            'Kid um',
+            'VDomOutlet um',
+            'Slotting um',
+          ])
+          app.unmount()
+        },
+      )
+    })
   })
 
   describe('template ref', () => {
@@ -12869,19 +13151,11 @@ describe('vdomInterop', () => {
         await r.go(r.PageA, 2)
         r.unmount()
         r.snap()
-        expect(r.steps).toEqual(
-          vdomPages
-            ? [
-                'A2:1:0A2:1:0 [mA,aA,mA,aA,sA2,sA2,dA,dA,uA,uA,mA2,aA2,mA2,aA2]',
-                'A2:2:0A2:2:0 [buA2,buA2,upA2,upA2]',
-                ' [dA2,dA2,uA2,uA2]',
-              ]
-            : [
-                'A2:1:0A2:1:0 [mA,aA,mA,aA,sA2,sA2,dA,uA,dA,uA,mA2,aA2,mA2,aA2]',
-                'A2:2:0A2:2:0 [buA2,buA2,upA2,upA2]',
-                ' [dA2,uA2,dA2,uA2]',
-              ],
-        )
+        expect(r.steps).toEqual([
+          'A2:1:0A2:1:0 [mA,aA,mA,aA,sA2,sA2,dA,uA,dA,uA,mA2,aA2,mA2,aA2]',
+          'A2:2:0A2:2:0 [buA2,buA2,upA2,upA2]',
+          ' [dA2,uA2,dA2,uA2]',
+        ])
       },
     )
 
