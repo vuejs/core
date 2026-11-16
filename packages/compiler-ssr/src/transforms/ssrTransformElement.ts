@@ -9,6 +9,7 @@ import {
   type InterpolationNode,
   type JSChildNode,
   MERGE_PROPS,
+  Namespaces,
   type NodeTransform,
   NodeTypes,
   type PlainElementNode,
@@ -385,8 +386,11 @@ export const ssrTransformElement: NodeTransform = (node, context) => {
             }
             continue
           }
+          // className / htmlFor etc. are props without a same-name attribute
+          const attrName =
+            node.ns === Namespaces.SVG ? name : propsToAttrMap[name] || name
           openTag.push(
-            ` ${prop.name}` +
+            ` ${attrName}` +
               (prop.value ? `="${escapeHtml(prop.value.content)}"` : ``),
           )
         }

@@ -338,6 +338,16 @@ describe('ssr: element', () => {
           }></div>\`"
       `)
     })
+
+    test('static DOM prop names', () => {
+      expect(
+        getCompiledString(
+          `<div className="foo"><label htmlFor="bar"></label><svg className="baz"></svg></div>`,
+        ),
+      ).toMatchInlineSnapshot(
+        `"\`<div class="foo"><label for="bar"></label><svg className="baz"></svg></div>\`"`,
+      )
+    })
   })
 
   describe('custom directives', () => {
