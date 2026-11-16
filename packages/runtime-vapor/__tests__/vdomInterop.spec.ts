@@ -18015,3 +18015,410 @@ describe('async component of the other mode in a vdom KeepAlive', () => {
     },
   )
 })
+
+describe('vdom directives on a vapor slot vnode', () => {
+  // element-plus `ElOnlyChild`: the first child out of the slot fragments,
+  // cloned with the attrs and a directive that forwards its element
+  const flatten = (children: VNode[]): VNode[] =>
+    children.flatMap(c =>
+      c.type === Fragment ? flatten(c.children as VNode[]) : [c],
+    )
+  const OnlyChild = defineComponent({
+    props: ['dir', 'value', 'show'],
+    setup(props, { slots, attrs }) {
+      return () => {
+        const child = flatten(slots.default!()).find(
+          c => c.type !== CommentVNode,
+        )
+        if (!child) return null
+        const cloned = cloneVNode(child, attrs)
+        if (!props.dir) return cloned
+        return withDirectives(
+          cloned,
+          props.show === undefined
+            ? [[props.dir, props.value]]
+            : [
+                [props.dir, props.value],
+                [vShow, props.show],
+              ],
+        )
+      }
+    },
+  })
+  const Fwd = compile(
+    `<script setup>
+      const props = defineProps(['dir', 'value', 'show'])
+      const components = _components
+    </script>
+    <template>
+      <components.OnlyChild :dir="props.dir" :value="props.value" :show="props.show">
+        <slot />
+      </components.OnlyChild>
+    </template>`,
+    ref(),
+    { OnlyChild },
+    { vapor: false },
+  )
+  const VdomRoot = compile(
+    `<script setup>defineProps(['n', 'root'])</script>
+    <template><button v-if="root === 'button'">{{ n }}</button><b v-else-if="root">b</b></template>`,
+    ref(),
+    {},
+    { vapor: false },
+  )
+
+  // records each hook with the element (whether in place yet) and value
+  const run = async (
+    content: string,
+    init: Record<string, any>,
+    act: (data: any, root: HTMLElement) => Promise<void>,
+    connected = true,
+  ) => {
+    const logs: Record<string, string[]> = {}
+    await renderParity(
+      {
+        App: `<template>
+          <components.${init.fwd ? 'Fwd' : 'OnlyChild'}
+            :dir="data.dir" :value="data.value" :show="data.show" data-x="x"
+          >${content}</components.${init.fwd ? 'Fwd' : 'OnlyChild'}>
+        </template>`,
+      },
+      () => {
+        const log: string[] = []
+        const record =
+          (name: string) => (el: Element, binding: { value: any }) =>
+            log.push(
+              `${name} ${el.tagName.toLowerCase()}` +
+                (connected && !el.parentNode ? ' (detached)' : '') +
+                ` ${binding.value}`,
+            )
+        const dir = markRaw({
+          created: record('created'),
+          beforeMount: record('beforeMount'),
+          mounted: record('mounted'),
+          beforeUpdate: record('beforeUpdate'),
+          updated: record('updated'),
+          beforeUnmount: record('beforeUnmount'),
+          unmounted: record('unmounted'),
+        })
+        return ref({ dir, value: 1, n: 0, ok: true, log, ...init })
+      },
+      async (data, root, mode) => {
+        logs[mode] = data.value.log
+        await act(data, root)
+      },
+      { OnlyChild, Fwd, VdomRoot },
+    )
+    await nextTick()
+    return logs
+  }
+  // the vdom host re-renders ahead of a branch switch in the content, so
+  // `beforeUpdate` reaches the old root first, as with a vapor component root
+  const mounts = (log: string[]) =>
+    log.filter(entry => !entry.startsWith('beforeUpdate'))
+
+  test.each([false, true])(
+    'run on the root element of the content (forwarded: %s)',
+    async fwd => {
+      const logs = await run(
+        `<button>{{ data.n }}</button>`,
+        { fwd, show: true },
+        async (data, root) => {
+          data.value.n++
+          await nextTick()
+          data.value.value = 2
+          await nextTick()
+          data.value.show = false
+          await nextTick()
+          expect(root.querySelector('button')!.style.display).toBe('none')
+        },
+      )
+      expect(logs.vdom).toEqual([
+        'created button (detached) 1',
+        'beforeMount button (detached) 1',
+        'mounted button 1',
+        'beforeUpdate button 1',
+        'updated button 1',
+        'beforeUpdate button 2',
+        'updated button 2',
+        'beforeUpdate button 2',
+        'updated button 2',
+        'beforeUnmount button 2',
+        'unmounted button (detached) 2',
+      ])
+      expect(logs.vapor).toEqual(logs.vdom)
+    },
+  )
+
+  test('follow the root across a branch switch in the content', async () => {
+    const logs = await run(
+      `<i v-if="data.ok">a</i><b v-else>b</b>`,
+      {},
+      async data => {
+        // the old root goes with the bindings it was mounted with
+        data.value.ok = false
+        data.value.value = 2
+        await nextTick()
+      },
+    )
+    expect(mounts(logs.vdom)).toEqual([
+      'created i (detached) 1',
+      'beforeMount i (detached) 1',
+      'mounted i 1',
+      'beforeUnmount i 1',
+      'created b (detached) 2',
+      'beforeMount b (detached) 2',
+      'unmounted i (detached) 1',
+      'mounted b 2',
+      'beforeUnmount b 2',
+      'unmounted b (detached) 2',
+    ])
+    expect(mounts(logs.vapor)).toEqual(mounts(logs.vdom))
+  })
+
+  test('wait for a root in the content', async () => {
+    const logs = await run(
+      `<i v-if="data.ok">a</i>`,
+      { ok: false },
+      async data => {
+        data.value.value = 2
+        await nextTick()
+        data.value.ok = true
+        await nextTick()
+        data.value.ok = false
+        await nextTick()
+      },
+    )
+    expect(logs.vdom).toEqual([
+      'created i (detached) 2',
+      'beforeMount i (detached) 2',
+      'mounted i 2',
+      'beforeUnmount i 2',
+      'unmounted i (detached) 2',
+    ])
+    expect(mounts(logs.vapor)).toEqual(logs.vdom)
+  })
+
+  test('follow the root of vdom content once it is mounted', async () => {
+    const logs = await run(
+      `<components.VdomRoot :n="data.n" :root="data.root" />`,
+      { root: 'button' },
+      async data => {
+        data.value.n++
+        await nextTick()
+        data.value.value = 2
+        await nextTick()
+        data.value.root = 'b'
+        await nextTick()
+        data.value.root = ''
+        await nextTick()
+      },
+      false,
+    )
+    // vdom content re-renders after the host's update has settled
+    const mounts = (log: string[]) => log.filter(entry => !/pdate/.test(entry))
+    expect(mounts(logs.vdom)).toEqual([
+      'created button 1',
+      'beforeMount button 1',
+      'mounted button 1',
+      'beforeUnmount button 2',
+      'created b 2',
+      'beforeMount b 2',
+      'unmounted button 2',
+      'mounted b 2',
+      'beforeUnmount b 2',
+      'unmounted b 2',
+    ])
+    expect(mounts(logs.vapor)).toEqual(mounts(logs.vdom))
+  })
+
+  test('move to the content of a slot switched for another', async () => {
+    const logs = await run(
+      `<template v-if="data.ok" #default><i>a</i></template>
+      <template v-else #default><b>b</b></template>`,
+      {},
+      async data => {
+        data.value.ok = false
+        await nextTick()
+      },
+    )
+    expect(logs.vdom).toEqual([
+      'created i (detached) 1',
+      'beforeMount i (detached) 1',
+      'mounted i 1',
+      'beforeUnmount i 1',
+      'created b (detached) 1',
+      'beforeMount b (detached) 1',
+      'unmounted i (detached) 1',
+      'mounted b 1',
+      'beforeUnmount b 1',
+      'unmounted b (detached) 1',
+    ])
+    expect(logs.vapor).toEqual(logs.vdom)
+  })
+
+  test('keep the root while a branch kept alive updates', async () => {
+    await renderParity(
+      {
+        A: `<template><i v-if="data.x">a</i><s v-else>s</s></template>`,
+        B: `<template><b>b</b></template>`,
+        App: `<template>
+          <components.OnlyChild :dir="data.dir">
+            <KeepAlive>
+              <components.A v-if="data.ok" /><components.B v-else />
+            </KeepAlive>
+          </components.OnlyChild>
+        </template>`,
+      },
+      () => {
+        const log: string[] = []
+        const record = (name: string) => (el: Element) =>
+          log.push(`${name} ${el.tagName.toLowerCase()}`)
+        const dir = markRaw({
+          mounted: record('mounted'),
+          unmounted: record('unmounted'),
+        })
+        return ref({ dir, ok: true, x: true, log })
+      },
+      async (data, _root, mode) => {
+        data.value.ok = false
+        await nextTick()
+        const log = data.value.log.slice()
+        data.value.x = false
+        await nextTick()
+        // vdom hands the directives to each cached root; the root of the
+        // content stays the active branch's
+        if (mode === 'vapor') expect(data.value.log).toEqual(log)
+      },
+      { OnlyChild },
+    )
+  })
+
+  // element-plus `ElDropdown`: its `ElOnlyChild` inside the one of the
+  // tooltip trigger, which clones the inner one with its own directive
+  test('run the ones a component rooted in the content inherits', async () => {
+    const Nested = compile(
+      `<script setup>
+        const props = defineProps(['dir', 'value'])
+        const components = _components
+      </script>
+      <template>
+        <components.OnlyChild :dir="props.dir" :value="props.value + 1">
+          <components.OnlyChild :dir="props.dir" :value="props.value">
+            <slot />
+          </components.OnlyChild>
+        </components.OnlyChild>
+      </template>`,
+      ref(),
+      { OnlyChild },
+      { vapor: false },
+    )
+    const logs: Record<string, string[]> = {}
+    await renderParity(
+      {
+        App: `<template>
+          <components.Nested :dir="data.dir" :value="data.value">
+            <button>b</button>
+          </components.Nested>
+        </template>`,
+      },
+      () => {
+        const log: string[] = []
+        const dir = markRaw({
+          mounted: (el: Element, { value }: { value: number }) =>
+            log.push(`mounted ${el.tagName.toLowerCase()} ${value}`),
+        })
+        return ref({ dir, value: 1, log })
+      },
+      (data, _root, mode) => {
+        logs[mode] = data.value.log
+      },
+      { Nested },
+    )
+    expect(logs.vdom).toEqual(['mounted button 1', 'mounted button 2'])
+    expect(logs.vapor).toEqual(logs.vdom)
+    expect(
+      'Runtime directive used on component with non-element root node',
+    ).not.toHaveBeenWarned()
+  })
+
+  test('wait for an async setup in the content to settle', async () => {
+    const logs: Record<string, string[]> = {}
+    await renderParity(
+      {
+        Pending: `<script setup>
+          const data = _data
+          await data.value.settled()
+        </script>
+        <template><i>a</i></template>`,
+        App: `<template>
+          <Suspense>
+            <components.OnlyChild :dir="data.dir">
+              <components.Pending />
+            </components.OnlyChild>
+          </Suspense>
+        </template>`,
+      },
+      () => {
+        const log: string[] = []
+        let settle!: () => void
+        const settled = new Promise<void>(r => (settle = r))
+        const record = (name: string) => (el: Element) =>
+          log.push(`${name} ${el.tagName.toLowerCase()}`)
+        const dir = markRaw({
+          mounted: record('mounted'),
+          unmounted: record('unmounted'),
+        })
+        return ref({ dir, settled: () => settled, settle, log })
+      },
+      async (data, _root, mode) => {
+        logs[mode] = data.value.log
+        data.value.settle()
+        await new Promise(r => setTimeout(r))
+      },
+      { OnlyChild },
+    )
+    expect(logs.vdom).toEqual(['mounted i', 'unmounted i'])
+    expect(logs.vapor).toEqual(logs.vdom)
+  })
+
+  // the interop does not animate a content root: dev keeps saying so
+  test('still warn about a content root under a Transition', async () => {
+    const Root = defineComponent({
+      setup(_, { slots }) {
+        return () => slots.default!()[0]
+      },
+    })
+    const Animated = defineComponent({
+      setup(_, { slots }) {
+        return () => h(Transition, null, () => h(Root, null, slots))
+      },
+    })
+    await renderParity(
+      {
+        App: `<template>
+          <components.Animated><i>a</i></components.Animated>
+        </template>`,
+      },
+      () => ref({}),
+      () => {},
+      { Animated },
+    )
+    expect(
+      'Component inside <Transition> renders non-element root node',
+    ).toHaveBeenWarnedTimes(1)
+  })
+
+  test('stop once a re-render leaves them out', async () => {
+    const logs = await run(`<button>b</button>`, {}, async data => {
+      data.value.dir = null
+      await nextTick()
+    })
+    expect(logs.vdom).toEqual([
+      'created button (detached) 1',
+      'beforeMount button (detached) 1',
+      'mounted button 1',
+    ])
+    expect(logs.vapor).toEqual(logs.vdom)
+  })
+})

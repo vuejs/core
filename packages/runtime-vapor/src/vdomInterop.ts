@@ -93,6 +93,7 @@ import {
 import {
   type FallthroughOwner,
   type LooseRawProps,
+  type RootChainVisitor,
   type VaporComponent,
   VaporComponentInstance,
   applyFallthroughAttrs,
@@ -100,6 +101,7 @@ import {
   getRootElement,
   isVaporComponent,
   mountComponent,
+  registerRootHook,
   resolveFallthroughAttrs,
   resolveFallthroughOwner,
   staleRootHooks,
@@ -747,6 +749,7 @@ const vaporInteropImpl = {
           }
         }
       }
+      unmountVaporSlotDirs(vnode)
       stopVaporSlotScope(vnode)
       remove(vnode.vb, blockContainer)
       // the record vdom's in-out `delayLeave` kept for this vnode: nothing
@@ -824,6 +827,7 @@ const vaporInteropImpl = {
         const oldBlockOwnsAnchor =
           isFragment(n1.vb!) && n1.vb!.anchor === selfAnchor
         // remove old vapor block
+        unmountVaporSlotDirs(n1)
         stopVaporSlotScope(n1)
         remove(n1.vb!, parent)
         const slotBlock = renderVaporSlot(
@@ -855,6 +859,7 @@ const vaporInteropImpl = {
         n2.anchor = n1.anchor
         n2.vb = n1.vb
         vs2.scope = vs1.scope
+        updateVaporSlotDirs(n1, n2)
         patchVdomSlot(parentComponent, () => {
           ;(vs2.ref = vs1.ref)!.value = vs2.props || n2.props
           syncInteropVaporSlotState(n1, n2)
@@ -3690,6 +3695,7 @@ interface InteropVaporSlotState {
   outletsRef: ShallowRef<readonly VdomSlotOutlet[]>
   // the content vnode's clone attrs (see VNode.vs.attrs)
   fallthrough?: SlotFallthroughOwner
+  dirs?: VaporSlotDirs
 }
 
 function resolveInteropVaporSlotState(vnode: VNode): InteropVaporSlotState {
@@ -3714,6 +3720,119 @@ function syncInteropVaporSlotState(n1: VNode, n2: VNode): void {
   if (fallthrough) {
     fallthrough.attrsRef.value = n2.vs!.attrs || EMPTY_OBJ
     applySlotFallthrough(fallthrough)
+  }
+}
+
+// The vdom directives of the slot's vnode (`withDirectives` on a clone of the
+// content, element-plus `ElOnlyChild`) go with the root element of the
+// content, as with the element a vdom slot hands out, and follow its branch
+// switches as that element's unmount and mount.
+interface VaporSlotDirs {
+  el: Element | null
+  vnode: VNode
+  // the bindings `el` was mounted or last updated with
+  carried: VNode
+  parent: ComponentInternalInstance | null
+  suspense: SuspenseBoundary | null
+}
+
+function mountVaporSlotDirs(
+  vnode: VNode,
+  block: Block,
+  parent: ComponentInternalInstance | null,
+  suspense: SuspenseBoundary | null,
+): void {
+  const dirs: VaporSlotDirs = {
+    el: null,
+    vnode,
+    carried: vnode,
+    parent,
+    suspense,
+  }
+  ;(vnode.vs!.state as InteropVaporSlotState).dirs = dirs
+  // a fragment off the chain (a deactivated KeepAlive branch) keeps it
+  const release = (nodes: Block) => {
+    if (getRootElement(nodes) === dirs.el) releaseVaporSlotDirs(dirs)
+  }
+  const mount = () => {
+    const el = getRootElement(block, visitor)
+    if (el === dirs.el) return
+    // vdom content replaced or dropped its root
+    releaseVaporSlotDirs(dirs)
+    if (!el) return
+    dirs.el = el
+    const vnode = (dirs.carried = dirs.vnode)
+    invokeVaporSlotDirsHook(dirs, vnode, el, 'created')
+    invokeVaporSlotDirsHook(dirs, vnode, el, 'beforeMount')
+    queuePostRenderEffect(
+      () => invokeVaporSlotDirsHook(dirs, dirs.vnode, el, 'mounted'),
+      undefined,
+      suspense,
+    )
+  }
+  const visitor: RootChainVisitor = {
+    onDynamicFragment: frag => {
+      registerRootHook((frag.bu ||= []), release)
+      registerRootHook((frag.bm ||= []), mount)
+    },
+    // vdom content mounts once inserted
+    onInteropFragment: frag => registerRootHook((frag.u ||= []), mount),
+    onComponent: comp => {
+      if (__DEV__) registerRootHook((comp.hmrRootHooks ||= []), mount)
+      // an async setup mounts its root once it settles
+      if (isPendingInteropSetup(comp)) registerRootHook((comp.bm ||= []), mount)
+    },
+  }
+  mount()
+}
+
+function updateVaporSlotDirs(n1: VNode, n2: VNode): void {
+  const state = n1.vs!.state as InteropVaporSlotState | undefined
+  const dirs = state && state.dirs
+  if (!dirs) return
+  dirs.vnode = n2
+  const el = dirs.el
+  if (!el) return
+  invokeVaporSlotDirsHook(dirs, n2, el, 'beforeUpdate', n1)
+  queuePostRenderEffect(
+    () => {
+      // a root the update replaced was mounted, not patched
+      if (dirs.el !== el) return
+      dirs.carried = n2
+      invokeVaporSlotDirsHook(dirs, n2, el, 'updated', n1)
+    },
+    undefined,
+    dirs.suspense,
+  )
+}
+
+function unmountVaporSlotDirs(vnode: VNode): void {
+  const state = vnode.vs && (vnode.vs.state as InteropVaporSlotState)
+  if (state && state.dirs) releaseVaporSlotDirs(state.dirs)
+}
+
+function releaseVaporSlotDirs(dirs: VaporSlotDirs): void {
+  const el = dirs.el
+  if (!el) return
+  const vnode = dirs.carried
+  dirs.el = null
+  invokeVaporSlotDirsHook(dirs, vnode, el, 'beforeUnmount')
+  queuePostRenderEffect(
+    () => invokeVaporSlotDirsHook(dirs, vnode, el, 'unmounted'),
+    undefined,
+    dirs.suspense,
+  )
+}
+
+function invokeVaporSlotDirsHook(
+  dirs: VaporSlotDirs,
+  vnode: VNode,
+  el: Element,
+  name: Parameters<typeof invokeDirectiveHook>[3],
+  prevVNode: VNode | null = null,
+): void {
+  if (vnode.dirs) {
+    invokeDirectiveHook(extend({}, vnode, { el }), prevVNode, dirs.parent, name)
   }
 }
 
@@ -3971,6 +4090,9 @@ function renderVaporSlot(
         slotResolutionState.fallbackChainStale = true
         markDirty()
       })
+      if (vnode.dirs) {
+        mountVaporSlotDirs(vnode, frag, parentComponent, parentSuspense)
+      }
 
       return frag
     } catch (e) {

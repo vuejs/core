@@ -1,6 +1,8 @@
 import {
   type HMRRuntime,
   Transition,
+  type VNode,
+  cloneVNode,
   computed,
   createApp,
   currentInstance,
@@ -2784,5 +2786,36 @@ describe('hot module replacement', () => {
 
     reload(childId, child('C'))
     expect(root.innerHTML).toBe('<div>C</div>')
+  })
+
+  test('vdom directives on a vapor slot vnode follow a rerendered root', async () => {
+    const log: string[] = []
+    const record = (name: string) => (el: Element) =>
+      log.push(`${name} ${el.tagName.toLowerCase()}`)
+    const dir = { mounted: record('mounted'), unmounted: record('unmounted') }
+    // element-plus `ElOnlyChild`
+    const OnlyChild = {
+      setup(_: any, { slots }: any) {
+        return () =>
+          withDirectives(cloneVNode(slots.default()[0] as VNode), [[dir]])
+      },
+    }
+    const childId = 'slot-dirs-child'
+    const Child = defineVaporComponent({
+      __hmrId: childId,
+      render: compileToFunction('<i>a</i>'),
+    })
+    createRecord(childId, Child as any)
+    const Parent = defineVaporComponent({
+      components: { OnlyChild, Child },
+      render: compileToFunction('<OnlyChild><Child /></OnlyChild>'),
+    })
+    createVaporApp(Parent)
+      .use(vaporInteropPlugin)
+      .mount(document.createElement('div'))
+    await nextTick()
+    rerender(childId, compileToFunction('<b>b</b>'))
+    await nextTick()
+    expect(log).toEqual(['mounted i', 'unmounted i', 'mounted b'])
   })
 })
