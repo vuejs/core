@@ -21,10 +21,16 @@ import {
   staleRootHooks,
 } from '../component'
 import { isAsyncComponentEnabled } from '../asyncComponentState'
-import { type VaporFragment, isDynamicFragment, isFragment } from '../fragment'
+import {
+  type VaporFragment,
+  isDynamicFragment,
+  isFragment,
+  isSlotOutletFragment,
+} from '../fragment'
 import { inOnce, withOnce } from '../once'
 import { isInteropEnabled } from '../vdomInteropState'
 import { isSuspenseEnabled } from '../suspense'
+import { isTransitionEnabled, isVaporTransition } from '../transition'
 import { isKeepAliveEnabled } from '../keepAlive'
 import { isFunction, isObject } from '@vue/shared'
 
@@ -79,9 +85,18 @@ export function withVaporDirectives(
   let pending = false
   let pendingSetups: WeakSet<VaporComponentInstance> | undefined
 
+  // A slot outlet is a fragment root in vdom: nothing for directives to land
+  // on, except on Transition's own root chain, where vdom flattens the slot
+  // fragment into Transition's child. Any other component ends that chain.
+  let inTransition = false
+
   const visitor: RootChainVisitor = {
-    onDynamicFragment: track,
+    onDynamicFragment(frag) {
+      if (!inTransition && isSlotOutletFragment(frag)) return true
+      track(frag)
+    },
     onComponent(block) {
+      inTransition = isTransitionEnabled && isVaporTransition(block.type)
       if (__DEV__) {
         registerRootHook((block.hmrRootHooks ||= []), applyDirectives)
       }
@@ -105,11 +120,10 @@ export function withVaporDirectives(
         if (isFragment(inner) && inner.nodes === EMPTY_BLOCK) pending = true
       }
     },
-    // directives do not apply through a slot outlet root
-    excludeSlotOutlets: true,
   }
   if (isInteropEnabled) {
     visitor.onInteropFragment = frag => {
+      if (isSlotOutletFragment(frag)) return true
       // Interop content resolves its nodes on `syncNodes`
       if (frag.nodes === EMPTY_BLOCK) pending = true
       track(frag)
@@ -143,7 +157,7 @@ export function withVaporDirectives(
   function applyDirectives() {
     if (disposed) return
 
-    pending = false
+    pending = inTransition = false
     const element = getRootElement(node, visitor)
     if (!element && pending) {
       // Keep null as the pending state so a resolved invalid root still warns
