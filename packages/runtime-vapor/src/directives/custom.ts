@@ -12,7 +12,7 @@ import {
   setCurrentInstance,
   warn,
 } from '@vue/runtime-dom'
-import { type Block, EMPTY_BLOCK } from '../block'
+import { type Block, EMPTY_BLOCK, isValidSlot } from '../block'
 import {
   type RootChainVisitor,
   type VaporComponentInstance,
@@ -21,10 +21,17 @@ import {
   staleRootHooks,
 } from '../component'
 import { isAsyncComponentEnabled } from '../asyncComponentState'
-import { type VaporFragment, isDynamicFragment, isFragment } from '../fragment'
+import {
+  type VaporFragment,
+  isDynamicFragment,
+  isFragment,
+  isSlotOutletFragment,
+  isSlotResolver,
+} from '../fragment'
 import { inOnce, withOnce } from '../once'
 import { isInteropEnabled } from '../vdomInteropState'
 import { isSuspenseEnabled } from '../suspense'
+import { isTransitionEnabled, isVaporTransition } from '../transition'
 import { isKeepAliveEnabled } from '../keepAlive'
 import { isFunction, isObject } from '@vue/shared'
 
@@ -79,9 +86,43 @@ export function withVaporDirectives(
   let pending = false
   let pendingSetups: WeakSet<VaporComponentInstance> | undefined
 
+  // A slot outlet is a fragment root in vdom: nothing for directives to land
+  // on, except on Transition's own root chain, where vdom flattens the slot
+  // fragment into Transition's child. Any other component ends that chain.
+  let inTransition = false
+  // The block an outlet hands over, until the descent meets that outlet.
+  let exposing: Block | undefined
+  // Set by a descent that met an outlet with nothing valid to show: its
+  // fallback, if any, is exposed next.
+  let empty = false
+
   const visitor: RootChainVisitor = {
-    onDynamicFragment: track,
+    onDynamicFragment(frag) {
+      if (isSlotOutletFragment(frag)) {
+        if (!inTransition) return true
+        // An outlet settles the branch it exposes (content or fallback) after
+        // its own update: it hands over each block it is about to expose.
+        registerRootHook((frag.bm ||= []), applyExposed)
+        registerRootHook((frag.bu ||= []), release)
+        // Handed over as it renders (`nodes`), or as its resolution exposes
+        // it, ahead of `nodes` (the fallback, the content).
+        if (
+          exposing &&
+          (frag.nodes === exposing ||
+            (isSlotResolver(frag) &&
+              (frag.activeFallback === exposing ||
+                frag.getContent() === exposing)))
+        ) {
+          exposing = undefined
+          return true
+        }
+        if (!isValidSlot(frag.nodes)) empty = true
+      } else {
+        track(frag)
+      }
+    },
     onComponent(block) {
+      inTransition = isTransitionEnabled && isVaporTransition(block.type)
       if (__DEV__) {
         registerRootHook((block.hmrRootHooks ||= []), applyDirectives)
       }
@@ -105,11 +146,10 @@ export function withVaporDirectives(
         if (isFragment(inner) && inner.nodes === EMPTY_BLOCK) pending = true
       }
     },
-    // directives do not apply through a slot outlet root
-    excludeSlotOutlets: true,
   }
   if (isInteropEnabled) {
     visitor.onInteropFragment = frag => {
+      if (isSlotOutletFragment(frag)) return true
       // Interop content resolves its nodes on `syncNodes`
       if (frag.nodes === EMPTY_BLOCK) pending = true
       track(frag)
@@ -141,10 +181,28 @@ export function withVaporDirectives(
   }
 
   function applyDirectives() {
+    apply(node)
+  }
+
+  function applyExposed(nodes: Block) {
+    if (disposed) return
+    // An outlet off the root chain (a deactivated KeepAlive branch) goes on
+    // exposing out of the DOM: only one on the chain hands its branch over.
+    exposing = nodes
+    inTransition = false
+    getRootElement(node, visitor)
+    if (exposing) exposing = undefined
+    else apply(nodes, true)
+  }
+
+  function apply(block: Block, exposed?: boolean) {
     if (disposed) return
 
-    pending = false
-    const element = getRootElement(node, visitor)
+    pending = empty = false
+    inTransition = !!exposed
+    const element = getRootElement(block, visitor)
+    // Not a root to warn about, nor one that replaces the current root
+    if (!element && (empty || (exposed && !isValidSlot(block)))) return
     if (!element && pending) {
       // Keep null as the pending state so a resolved invalid root still warns
       if (currentElement !== null) {
@@ -196,6 +254,7 @@ export function withVaporDirectives(
     currentElement = null
     if (isKeepAliveEnabled) {
       staleRootHooks.add(applyDirectives)
+      staleRootHooks.add(applyExposed)
       staleRootHooks.add(release)
     }
   }, true)
