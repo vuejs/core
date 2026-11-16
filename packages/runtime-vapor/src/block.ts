@@ -80,6 +80,9 @@ export const enum VShowFlags {
   // one keeps it hidden: the Transition attaching hooks keeps it hidden and
   // the renderer still owes it the directive's mount enter
   MOUNT_SHOWN = 1 << 2,
+  // a hide is animating: like vdom, the element counts as hidden only once
+  // its leave ends
+  LEAVING = 1 << 3,
 }
 
 export interface TransitionOptions {
@@ -476,7 +479,10 @@ export function removeNode(block: Node, parent?: ParentNode): void {
     el.$removing = hooks
     // vdom's v-show beforeUnmount: a root v-show hid leaves hidden, even
     // while the hide still animates
-    if ((block as VShowElement)[vShowHidden]) {
+    const flags = (block as TransitionBlock).$vshow!
+    if ((block as VShowElement)[vShowHidden] || flags & VShowFlags.LEAVING) {
+      ;(block as TransitionBlock).$vshow = flags & ~VShowFlags.LEAVING
+      ;(block as VShowElement)[vShowHidden] = true
       ;(block as VShowElement).style.display = 'none'
     }
     performTransitionLeave(

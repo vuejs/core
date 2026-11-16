@@ -156,7 +156,8 @@ function setDisplay(
     return
   }
 
-  if (el[vShowHidden] === hidden) return
+  const flags = (el as TransitionBlock).$vshow!
+  if ((flags & VShowFlags.LEAVING ? true : el[vShowHidden]) === hidden) return
 
   // The VDOM mounted hook owns enter until Suspense releases the root.
   if (isInteropEnabled && isInteropVShowPending(el)) {
@@ -170,20 +171,21 @@ function setDisplay(
   if (updating) {
     ;(el as TransitionBlock).$vshow! &= ~VShowFlags.MOUNT_SHOWN
     if ($transition) {
-      el[vShowHidden] = hidden
       const prevSub = setActiveSub()
       try {
         if (value) {
+          // cancels a running hide, whose done callback hides the element
           $transition.beforeEnter(el)
-          el.style.display = el[vShowOriginalDisplay]!
+          writeDisplay(el, true)
           $transition.enter(el)
         } else if (el.isConnected) {
-          $transition.leave(el, () => {
-            el.style.display = 'none'
-          })
+          // like vdom, hidden only once the leave ends: a style patch
+          // meanwhile must not write display: none
+          ;(el as TransitionBlock).$vshow! |= VShowFlags.LEAVING
+          $transition.leave(el, () => writeDisplay(el, false))
         } else {
           // detached (e.g. deactivated): nothing to animate
-          el.style.display = 'none'
+          writeDisplay(el, false)
         }
       } finally {
         setActiveSub(prevSub)
@@ -202,6 +204,7 @@ function setDisplay(
 }
 
 function writeDisplay(el: VShowElement, value: unknown): void {
+  ;(el as TransitionBlock).$vshow! &= ~VShowFlags.LEAVING
   el[vShowHidden] = !value
   if ((__DEV__ || __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__) && isHydrating) {
     // the SSR display state only counts as a mismatch when it disagrees
