@@ -27,5 +27,12 @@ export const SLOT_RESOLVER: number = 1 << 10
  */
 export const SLOT_ROOT: number = 1 << 11
 
+/**
+ * A slot outlet at a root position of a Transition's content: vdom flattens
+ * its fragment into the Transition's child, so the effective-root chain
+ * passes through it.
+ */
+export const SLOT_FLATTENED: number = 1 << 12
+
 // Subtype bits only — the DynamicFragment constructor adds DYNAMIC itself.
 export const SLOT_FRAGMENT: number = SLOT | SLOT_OUTLET

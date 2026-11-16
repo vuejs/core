@@ -31,7 +31,11 @@ import {
   isAsyncWrapper,
 } from '@vue/runtime-dom'
 import { Dep, trackDep } from '@vue/reactivity'
-import type { LooseRawProps, VaporComponentInstance } from './component'
+import type {
+  LooseRawProps,
+  VaporComponent,
+  VaporComponentInstance,
+} from './component'
 import { renderEffect } from './renderEffect'
 import {
   insertionAnchor,
@@ -51,8 +55,9 @@ import {
   type VaporFragment,
   finishBlockCreation,
   isInteropFragment,
+  isTransitionContentRoot,
 } from './fragment'
-import { SLOT_FRAGMENT } from './fragmentFlags'
+import { SLOT_FLATTENED, SLOT_FRAGMENT } from './fragmentFlags'
 import {
   currentRenderContext,
   deriveRenderContext,
@@ -63,7 +68,7 @@ import {
 import { createElement } from './dom/node'
 import { setDynamicProps } from './dom/prop'
 import { interopSlotsKey, isInteropEnabled } from './vdomInteropState'
-import { isTransitionEnabled } from './transition'
+import { isTransitionEnabled, isVaporTransition } from './transition'
 import { isAsyncComponentEnabled } from './asyncComponentState'
 import { renderWithSlotScopeIds } from './scopeId'
 import { setElementScopeIds } from './dom/scopeIdStamp'
@@ -375,8 +380,19 @@ export function createSlot(
 
   const instance = getScopeOwner()!
   const rawSlots = instance.rawSlots
+  // vdom flattens the slot fragment at a root position of a Transition's or
+  // TransitionGroup's content into its children: the slotted id is gone with
+  // it, and a Transition's child is its root
+  const contentRoot =
+    isTransitionEnabled && isTransitionContentRoot(_insertionParent)
+  const flattened =
+    contentRoot && isVaporTransition(currentInstance!.type as VaporComponent)
+      ? SLOT_FLATTENED
+      : 0
   const scopeId =
-    !(flags & VaporSlotFlags.NO_SLOTTED) && instance.type.__scopeId
+    !(flags & VaporSlotFlags.NO_SLOTTED) &&
+    !contentRoot &&
+    instance.type.__scopeId
   // The outlet's id cell: its own `-s` id merged onto the outer slot context,
   // so forwarded slot content accumulates every level's ids (VDOM
   // processFragment concat semantics).
@@ -464,9 +480,14 @@ export function createSlot(
       isCustomElementSlot ? deriveSlotBoundary(outletCtx, null) : outletCtx,
       () =>
         needsSlotFragment
-          ? new SlotFragment(flags, _insertionAnchor, _insertionParent)
+          ? new SlotFragment(
+              flags,
+              _insertionAnchor,
+              _insertionParent,
+              flattened,
+            )
           : new DynamicFragment(
-              SLOT_FRAGMENT,
+              SLOT_FRAGMENT | flattened,
               __DEV__ ? 'slot' : undefined,
               false,
               false,

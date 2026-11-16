@@ -246,6 +246,40 @@ export function compile(
   )
 }
 
+/**
+ * Compile `srcs` in order, each one scoped under its lowercased name and
+ * registered on `_components` for the ones after it, and return the last one
+ * (the root). With `vapor`, the `vdomOnly` ones stay vdom.
+ */
+export function compileScoped(
+  srcs: Record<string, string>,
+  data: runtimeDom.Ref<any>,
+  {
+    vapor = true,
+    ssr = false,
+    vdomOnly = [],
+  }: { vapor?: boolean; ssr?: boolean; vdomOnly?: string[] } = {},
+): any {
+  const components: Record<string, any> = {}
+  let root: any
+  for (const name in srcs) {
+    const id = name.toLowerCase()
+    const asVapor = vapor && !vdomOnly.includes(name)
+    root = components[name] = compile(
+      `<script setup${asVapor ? ' vapor' : ''}>
+        const data = _data; const components = _components
+      </script>
+      <template>${srcs[name]}</template>
+      <style scoped>p {}</style>`,
+      data,
+      components,
+      { vapor: asVapor, ssr, id },
+    )
+    root.__scopeId = `data-v-${id}`
+  }
+  return root
+}
+
 export interface ParityResult {
   after: string
   text: string

@@ -3555,6 +3555,23 @@ describe('attribute fallthrough', () => {
       ])
     })
 
+    test('a component nested in a dynamic native element standing as the child gets no attrs', async () => {
+      const seen = await run({
+        Child: `<template>
+          <transition>
+            <component :is="data.tag || 'div'">
+              <components.Foo />
+            </component>
+          </transition>
+        </template>`,
+      })
+      expect(seen).toEqual([
+        '<div class="w"><p class="foo">foo</p></div>',
+        '<div class="x"><p class="foo">foo</p></div>',
+        '<div class="x"><p class="foo">foo</p></div>',
+      ])
+    })
+
     test('a component in a teleport standing as the child gets no attrs', async () => {
       const seen = await run({
         Child: `<template>

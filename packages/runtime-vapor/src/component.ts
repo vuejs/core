@@ -178,11 +178,14 @@ import {
   type InteropFragment,
   type SlotFragment,
   type VaporFragment,
+  endsRootChain,
   finishBlockCreation,
   isDynamicFragment,
   isFragment,
   isInteropFragment,
   isSlotOutletFragment,
+  isTransitionChildRoot,
+  nestedContentContext,
 } from './fragment'
 import { NATIVE_CHILDREN, SLOT } from './fragmentFlags'
 import type { VaporElement } from './apiDefineCustomElement'
@@ -344,10 +347,7 @@ export function resolveFallthroughOwner(
   if (
     isVaporComponent(instance) &&
     (isSingleRoot === true ||
-      (isTransitionEnabled &&
-        !insertionParent &&
-        isVaporTransition(instance.type) &&
-        currentRenderContext.nested !== instance) ||
+      (isTransitionEnabled && isTransitionChildRoot(insertionParent)) ||
       // the single root of the KeepAlive's own body (a dynamic reference
       // compiles it as SLOT, a literal one as `true`), not content an outlet
       // in that body renders: vdom stops at the slot fragment
@@ -1468,9 +1468,13 @@ export function createPlainElement(
 
 function renderPlainElementChildren(el: HTMLElement, rawSlots: RawSlots): void {
   // No outlet renders an element's children: nothing inside reports to,
-  // or is held by, the enclosing outlet.
+  // or is held by, the enclosing outlet. Nor is it a root position of the
+  // Transition rendering the element.
   const outerCtx = setRenderContext(
-    deriveSlotBoundary(currentRenderContext, null),
+    deriveSlotBoundary(
+      isTransitionEnabled ? nestedContentContext() : currentRenderContext,
+      null,
+    ),
   )
   let nextNode: Node | null = null
   if (isHydrating) {
@@ -1973,7 +1977,7 @@ export interface RootChainVisitor {
   // Fired at an interop fragment; a vnode-backed one carries the chain across
   // into vdom. Returning true ends the descent there.
   onInteropFragment?: (frag: InteropFragment) => boolean | void
-  // Slot outlets break the effective-root chain for scope id inheritance.
+  // Slot outlets break the effective-root chain (see endsRootChain).
   excludeSlotOutlets?: boolean
 }
 
@@ -1995,7 +1999,7 @@ export function getRootElement(
 
   if (isFragment(block) && !(isTeleportEnabled && isTeleportFragment(block))) {
     if (visitor) {
-      if (visitor.excludeSlotOutlets && isSlotOutletFragment(block)) {
+      if (visitor.excludeSlotOutlets && endsRootChain(block)) {
         return
       }
       if (
@@ -2075,7 +2079,7 @@ export function getRootChainComponent(
       isFragment(block) &&
       !(isTeleportEnabled && isTeleportFragment(block))
     ) {
-      if (isSlotOutletFragment(block)) return
+      if (endsRootChain(block)) return
       block = block.nodes
       continue
     }

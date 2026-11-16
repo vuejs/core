@@ -29,6 +29,7 @@ import {
 } from '../src'
 import {
   compile,
+  compileScoped,
   compileToVaporRender,
   makeRender,
   renderParity,
@@ -2735,5 +2736,428 @@ describe('vdom interop', () => {
       )
       expect(stripAnchors(vapor.after)).toBe(vdom.after)
     })
+  })
+
+  describe('Transition wrapping a slot', () => {
+    // Renders the sources (see compileScoped) as a vdom app, then as a vapor
+    // app, where the `vdomOnly` components stay vdom.
+    const renderScoped = async (
+      srcs: Record<string, string>,
+      act?: (data: any) => void,
+      vdomOnly: string[] = [],
+    ) => {
+      const out = {} as { vdom: string; vapor: string }
+      for (const vapor of [false, true]) {
+        const data = ref<any>({})
+        const App = compileScoped(srcs, data, { vapor, vdomOnly })
+        const root = document.createElement('div')
+        const app = App.__vapor ? createVaporApp(App) : createApp(App)
+        app.use(vaporInteropPlugin).mount(root)
+        await nextTick()
+        if (act) {
+          act(data)
+          await nextTick()
+        }
+        out[vapor ? 'vapor' : 'vdom'] = stripAnchors(root.innerHTML)
+        app.unmount()
+      }
+      return out
+    }
+
+    const Fade = `
+      <Transition :css="false">
+        <slot />
+      </Transition>`
+    const App = `<components.Mid />`
+    const FadeWithFallback = (fallback: string) => `
+      <Transition :css="false">
+        <slot>${fallback}</slot>
+      </Transition>`
+    const vdomParent = ['Child', 'Mid', 'App']
+    const MidWithDiv = `
+      <components.Fade>
+        <div>x</div>
+      </components.Fade>`
+
+    type Row = [
+      name: string,
+      srcs: Record<string, string>,
+      expected: string,
+      act?: (data: any) => void,
+      vdomOnly?: string[],
+    ]
+    // ...and under a vdom parent, which feeds the outlet vdom slot content
+    const underBothParents = (...row: Row): Row[] => [
+      row,
+      [`${row[0]}, under a vdom parent`, row[1], row[2], row[3], vdomParent],
+    ]
+
+    // vdom flattens the slot fragment into Transition's child: the content
+    // root inherits the root ids of the chain above it, and the fragment's
+    // slotted id is gone with it.
+    test.each<Row>([
+      ...underBothParents(
+        'an element root',
+        {
+          Fade,
+          Mid: `
+            <components.Fade>
+              <div><span>x</span></div>
+            </components.Fade>`,
+          App,
+        },
+        `<div data-v-mid="" data-v-fade="" data-v-app="">` +
+          `<span data-v-mid="">x</span></div>`,
+      ),
+      ...underBothParents(
+        'a component root',
+        {
+          Child: `<div>x</div>`,
+          Fade,
+          Mid: `
+            <components.Fade>
+              <components.Child />
+            </components.Fade>`,
+          App,
+        },
+        `<div data-v-child="" data-v-mid="" data-v-fade="" data-v-app="">x</div>`,
+      ),
+      [
+        'a vdom component root',
+        {
+          Child: `<div>x</div>`,
+          Fade,
+          Mid: `
+            <components.Fade>
+              <components.Child />
+            </components.Fade>`,
+          App,
+        },
+        `<div data-v-child="" data-v-mid="" data-v-fade="" data-v-app="">x</div>`,
+        undefined,
+        ['Child'],
+      ],
+      ...underBothParents(
+        'a root switched by v-if',
+        {
+          Fade,
+          Mid: `
+            <components.Fade>
+              <div v-if="!data.alt">a</div>
+              <p v-else>b</p>
+            </components.Fade>`,
+          App,
+        },
+        `<p data-v-mid="" data-v-fade="" data-v-app="">b</p>`,
+        data => (data.value = { alt: true }),
+      ),
+      [
+        'a forwarded slot',
+        {
+          Fade,
+          Mid: `
+            <components.Fade>
+              <slot />
+            </components.Fade>`,
+          App: `
+            <components.Mid>
+              <div>x</div>
+            </components.Mid>`,
+        },
+        `<div data-v-app="" data-v-fade="" data-v-mid="">x</div>`,
+      ],
+      ...underBothParents(
+        'the fallback',
+        {
+          Fade: FadeWithFallback(`<p>fallback</p>`),
+          Mid: `<components.Fade />`,
+          App,
+        },
+        `<p data-v-fade="" data-v-mid="" data-v-app="">fallback</p>`,
+      ),
+      [
+        'a slot switched by name',
+        {
+          Fade: `
+            <Transition :css="false">
+              <slot :name="data.name || 'default'" />
+            </Transition>`,
+          Mid: `
+            <components.Fade>
+              <div>x</div>
+              <template #other><p>other</p></template>
+            </components.Fade>`,
+          App,
+        },
+        `<p data-v-mid="" data-v-fade="" data-v-app="">other</p>`,
+        data => (data.value = { name: 'other' }),
+      ],
+      [
+        'an outlet in a v-if branch',
+        {
+          Fade: `
+            <Transition :css="false">
+              <slot v-if="!data.alt" />
+              <p v-else>alt</p>
+            </Transition>`,
+          Mid: MidWithDiv,
+          App,
+        },
+        `<div data-v-mid="" data-v-fade="" data-v-app="">x</div>`,
+      ],
+      [
+        // the chain ends at Outer's slot: its slotted id is a root id of Fade
+        'a root under an enclosing slot',
+        {
+          Outer: `<slot />`,
+          Fade,
+          Mid: `
+            <components.Outer>
+              <components.Fade>
+                <div><span>x</span></div>
+              </components.Fade>
+            </components.Outer>`,
+          App,
+        },
+        `<div data-v-mid="" data-v-fade="" data-v-outer-s="">` +
+          `<span data-v-mid="">x</span></div>`,
+      ],
+      ...underBothParents(
+        'the fallback replacing the content',
+        {
+          Fade: FadeWithFallback(`<p>fallback</p>`),
+          Mid: `
+            <components.Fade>
+              <div v-if="!data.alt">a</div>
+            </components.Fade>`,
+          App,
+        },
+        `<p data-v-fade="" data-v-mid="" data-v-app="">fallback</p>`,
+        data => (data.value = { alt: true }),
+      ),
+      [
+        'the content replacing the fallback',
+        {
+          Fade: FadeWithFallback(`<p>fallback</p>`),
+          Mid: `
+            <components.Fade>
+              <div v-if="data.alt">a</div>
+            </components.Fade>`,
+          App,
+        },
+        `<div data-v-mid="" data-v-fade="" data-v-app="">a</div>`,
+        data => (data.value = { alt: true }),
+      ],
+      [
+        'a component fallback replacing the content',
+        {
+          Child: `<i>x</i>`,
+          Fade: FadeWithFallback(`<components.Child />`),
+          Mid: `
+            <components.Fade>
+              <div v-if="!data.alt">a</div>
+            </components.Fade>`,
+          App,
+        },
+        `<i data-v-child="" data-v-fade="" data-v-mid="" data-v-app="">x</i>`,
+        data => (data.value = { alt: true }),
+      ],
+      [
+        'a component fallback rooted in a vdom component',
+        {
+          Leaf: `<i>x</i>`,
+          Child: `<components.Leaf />`,
+          Fade: FadeWithFallback(`<components.Child />`),
+          Mid: `
+            <components.Fade>
+              <div v-if="!data.alt">a</div>
+            </components.Fade>`,
+          App,
+        },
+        `<i data-v-leaf="" data-v-child="" data-v-fade="" data-v-mid="" data-v-app="">x</i>`,
+        data => (data.value = { alt: true }),
+        ['Leaf'],
+      ],
+      [
+        'a component replacing the fallback',
+        {
+          Child: `<i>x</i>`,
+          Fade: FadeWithFallback(`<p>fallback</p>`),
+          Mid: `
+            <components.Fade>
+              <components.Child v-if="data.alt" />
+            </components.Fade>`,
+          App,
+        },
+        `<i data-v-child="" data-v-mid="" data-v-fade="" data-v-app="">x</i>`,
+        data => (data.value = { alt: true }),
+      ],
+      ...underBothParents(
+        'a fallback root switched by v-if',
+        {
+          Fade: FadeWithFallback(`
+            <p v-if="!data.alt">a</p>
+            <b v-else>b</b>`),
+          Mid: `<components.Fade />`,
+          App,
+        },
+        `<b data-v-fade="" data-v-mid="" data-v-app="">b</b>`,
+        data => (data.value = { alt: true }),
+      ),
+    ])(
+      'the content root inherits the root ids for %s',
+      async (_, srcs, expected, act, vdomOnly) => {
+        const { vdom, vapor } = await renderScoped(srcs, act, vdomOnly)
+        expect(vdom).toBe(expected)
+        expect(vapor).toBe(vdom)
+      },
+    )
+
+    const FadeAroundDynamicElement = `
+      <Transition :css="false">
+        <component :is="data.tag || 'section'">
+          <slot />
+        </component>
+      </Transition>`
+
+    // coverage guards: any other outlet stays a fragment root
+    test.each<[string, Record<string, string>, string, string[]?]>([
+      [
+        'below an element of the Transition',
+        {
+          Fade: `
+            <Transition :css="false">
+              <section><slot /></section>
+            </Transition>`,
+          Mid: MidWithDiv,
+          App,
+        },
+        `<section data-v-fade="" data-v-mid="" data-v-app="">` +
+          `<div data-v-mid="" data-v-fade-s="">x</div></section>`,
+      ],
+      [
+        'under a component in the Transition',
+        {
+          Fade: `
+            <Transition :css="false">
+              <KeepAlive><slot /></KeepAlive>
+            </Transition>`,
+          Mid: MidWithDiv,
+          App,
+        },
+        `<div data-v-mid="" data-v-fade-s="">x</div>`,
+      ],
+      [
+        'outside a Transition',
+        {
+          Fade: `<slot />`,
+          Mid: MidWithDiv,
+          App,
+        },
+        `<div data-v-mid="" data-v-fade-s="">x</div>`,
+      ],
+      [
+        'below a dynamic native element of the Transition',
+        {
+          Fade: FadeAroundDynamicElement,
+          Mid: MidWithDiv,
+          App,
+        },
+        `<section data-v-fade="" data-v-mid="" data-v-app="">` +
+          `<div data-v-mid="" data-v-fade-s="">x</div></section>`,
+      ],
+      [
+        'below a dynamic native element of the Transition, under a vdom parent',
+        {
+          Fade: FadeAroundDynamicElement,
+          Mid: MidWithDiv,
+          App,
+        },
+        `<section data-v-fade="" data-v-mid="" data-v-app="">` +
+          `<div data-v-mid="" data-v-fade-s="">x</div></section>`,
+        vdomParent,
+      ],
+      [
+        'below a dynamic native element of a TransitionGroup',
+        {
+          Fade: `
+            <TransitionGroup tag="ul" :css="false">
+              <component :is="data.tag || 'li'" key="a">
+                <slot />
+              </component>
+            </TransitionGroup>`,
+          Mid: MidWithDiv,
+          App,
+        },
+        `<ul data-v-fade="" data-v-mid="" data-v-app=""><li data-v-fade="">` +
+          `<div data-v-mid="" data-v-fade-s="">x</div></li></ul>`,
+      ],
+    ])(
+      'an outlet %s still breaks the chain',
+      async (_, srcs, expected, vdomOnly) => {
+        const { vdom, vapor } = await renderScoped(srcs, undefined, vdomOnly)
+        expect(vdom).toBe(expected)
+        expect(vapor).toBe(vdom)
+      },
+    )
+
+    // vdom's TransitionGroup flattens the slot fragment into its children
+    // the same way; they are not its root
+    test.each([
+      [
+        'with a tag',
+        `<TransitionGroup tag="ul" :css="false">
+          <slot />
+        </TransitionGroup>`,
+        `<li key="a">x</li>`,
+        `<ul data-v-fade="" data-v-mid="" data-v-app="">` +
+          `<li data-v-mid="">x</li></ul>`,
+      ],
+      [
+        'without a tag',
+        `<TransitionGroup :css="false">
+          <slot />
+        </TransitionGroup>`,
+        `<li v-for="i in 2" :key="i">x</li>`,
+        `<li data-v-mid="">x</li><li data-v-mid="">x</li>`,
+      ],
+    ])(
+      'a TransitionGroup child from a slot carries no slotted id, %s',
+      async (_, group, content, expected) => {
+        const { vdom, vapor } = await renderScoped({
+          Fade: group,
+          Mid: `<components.Fade>${content}</components.Fade>`,
+          App,
+        })
+        expect(vdom).toBe(expected)
+        expect(vapor).toBe(vdom)
+      },
+    )
+
+    // coverage guard: content below a child of the group is slot content
+    test.each([
+      ['an outlet', `<slot />`],
+      ['an outlet in a v-if branch', `<slot v-if="!data.alt" />`],
+    ])(
+      '%s below a TransitionGroup child keeps the slotted id',
+      async (_, outlet) => {
+        const { vdom, vapor } = await renderScoped({
+          Fade: `
+          <TransitionGroup tag="ul" :css="false">
+            <li key="a">${outlet}</li>
+          </TransitionGroup>`,
+          Mid: `
+          <components.Fade>
+            <b>x</b>
+          </components.Fade>`,
+          App,
+        })
+        expect(vdom).toBe(
+          `<ul data-v-fade="" data-v-mid="" data-v-app="">` +
+            `<li data-v-fade=""><b data-v-mid="" data-v-fade-s="">x</b></li></ul>`,
+        )
+        expect(vapor).toBe(vdom)
+      },
+    )
   })
 })

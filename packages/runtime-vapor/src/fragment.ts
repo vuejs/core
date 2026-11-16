@@ -73,6 +73,7 @@ import {
   deferSlotRootFlip,
   isTransitionEnabled,
   isVaporTransition,
+  isVaporTransitionGroup,
   removeBranchWithLeave,
 } from './transition'
 import {
@@ -81,6 +82,7 @@ import {
   FOR_ITEM,
   FRAGMENT,
   SLOT,
+  SLOT_FLATTENED,
   SLOT_FRAGMENT,
   SLOT_OUTLET,
   SLOT_RESOLVER,
@@ -109,6 +111,9 @@ export class VaporFragment<
   getContent?(): Block
   // a vdom-fed slot outlet (renderVDOMSlot): its resolution state
   slotState?: SlotResolutionState
+  // ...and, flattened into a Transition's child, the root-only scope ids the
+  // vnode content it patches mounts with
+  rootScopeIds?: string[]
   // a slot host patching vnode content: `cb` follows the leave its content
   // root is running on its own, if any
   awaitLeavingRoot?(cb: () => void): boolean
@@ -226,12 +231,38 @@ export class RenderContextFragment<
   }
 }
 
+// Whether a Transition or TransitionGroup is rendering its content: both take
+// their children out of the fragments at its root, as in vdom.
+function inTransitionContent(): boolean {
+  if (!currentInstance) return false
+  const type = currentInstance.type as VaporComponent
+  return isVaporTransition(type) || isVaporTransitionGroup(type)
+}
+
 // The context of content that is no child of the Transition rendering it.
 export function nestedContentContext(): RenderContext {
-  return currentInstance &&
-    isVaporTransition(currentInstance.type as VaporComponent)
-    ? deriveNested(currentRenderContext, currentInstance)
+  return inTransitionContent()
+    ? deriveNested(currentRenderContext, currentInstance!)
     : currentRenderContext
+}
+
+// A root position of that content: not below an element or in a Teleport.
+export function isTransitionContentRoot(insertionParent?: ParentNode): boolean {
+  return (
+    !insertionParent &&
+    inTransitionContent() &&
+    currentRenderContext.nested !== currentInstance
+  )
+}
+
+// ...of a Transition's: what is created there is its child, or part of it.
+export function isTransitionChildRoot(insertionParent?: ParentNode): boolean {
+  return (
+    !insertionParent &&
+    !!currentInstance &&
+    isVaporTransition(currentInstance.type as VaporComponent) &&
+    currentRenderContext.nested !== currentInstance
+  )
 }
 
 export function runWithRenderCtx<R>(
@@ -690,9 +721,10 @@ export class SlotFragment
     flags: number = 0,
     adoptAnchor?: Node,
     insertionParent?: ParentNode,
+    flattened: number = 0,
   ) {
     super(
-      SLOT_FRAGMENT | SLOT_RESOLVER,
+      SLOT_FRAGMENT | SLOT_RESOLVER | flattened,
       __DEV__ ? 'slot' : undefined,
       false,
       false,
@@ -957,6 +989,17 @@ export function isInteropFragment(val: unknown): val is InteropFragment {
 
 export function isSlotOutletFragment(val: unknown): boolean {
   return !!(val && (val as any).__vf & SLOT_OUTLET)
+}
+
+// A slot outlet ends the effective-root chain, as a fragment root in vdom,
+// unless vdom flattens it into a Transition's child. A vdom-fed one always
+// does: what it renders is vdom's to root.
+export function endsRootChain(frag: VaporFragment): boolean {
+  const vf = frag.__vf
+  return (
+    !!(vf & SLOT_OUTLET) &&
+    (vf & (SLOT | SLOT_FLATTENED)) !== (SLOT | SLOT_FLATTENED)
+  )
 }
 
 export function isDynamicFragment(val: unknown): val is DynamicFragment {

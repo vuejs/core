@@ -89,7 +89,11 @@ import {
   setCurrentHydrationNode,
   trimHydrationBoundary,
 } from '../dom/hydration'
-import { isTransitionEnabled, registerTransitionHooks } from '../transition'
+import {
+  groupName,
+  isTransitionEnabled,
+  registerTransitionHooks,
+} from '../transition'
 import { isInteropEnabled } from '../vdomInteropState'
 
 type Position = ReturnType<typeof getTransitionGroupPosition>
@@ -112,7 +116,7 @@ const decorate = <T extends VaporComponentOptions>(t: T): T => {
 }
 
 const VaporTransitionGroupImpl = /*@__PURE__*/ defineVaporComponent({
-  name: 'VaporTransitionGroup',
+  name: groupName,
 
   props: /*@__PURE__*/ extend({}, TransitionPropsValidators, {
     tag: String,
