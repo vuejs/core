@@ -2693,6 +2693,9 @@ function renderVDOMSlot(
   let disposed = false
   // disposed with its DOM left for the block's removal
   let isDomPending = false
+  // the content is being patched: an out-in leave ending meanwhile resumes
+  // after the patch
+  let isPatching = false
   // in-out: receives the leave of the content going invalid, which waits on
   // the Transition for the fallback to enter
   let inOutLeave: TransitionHooks | undefined
@@ -3066,9 +3069,7 @@ function renderVDOMSlot(
   }
 
   function resumeOutIn(): void {
-    // A user leave hook may finish synchronously while the renderer is still
-    // patching the placeholder. Resume after that patch.
-    queuePostFlushCb(() => {
+    const resume = () => {
       const pending = pendingOutIn
       pendingOutIn = undefined
       if (!pending || disposed || !currentParentNode) {
@@ -3104,7 +3105,16 @@ function renderVDOMSlot(
         setRendered(pendingContent || null, pending.contentValid)
         finishContentUpdate()
       }
-    })
+    }
+    // A user leave hook may finish synchronously while the renderer is still
+    // patching the placeholder: resume after that patch. Otherwise resume at
+    // once, as vdom does: the next branch enters before the afterLeave hook
+    // of the one that left.
+    if (isPatching) {
+      queuePostFlushCb(resume)
+    } else {
+      resume()
+    }
   }
 
   function render(): void {
@@ -3118,7 +3128,12 @@ function renderVDOMSlot(
   }
 
   function inContentContext(fn: () => void): void {
-    withRenderContext(contentCtx, fn)
+    isPatching = true
+    try {
+      withRenderContext(contentCtx, fn)
+    } finally {
+      isPatching = false
+    }
   }
 
   // What the Transition's child inherits as the root of a vdom component

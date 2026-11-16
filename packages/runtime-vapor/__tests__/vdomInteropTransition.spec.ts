@@ -1872,3 +1872,67 @@ describe('vdom directives through a Transition wrapping a vdom-fed slot', () => 
     ).toEqual(names(logs[0]))
   })
 })
+
+describe('vdom slot content inside a vapor Transition', () => {
+  // A vdom App passes `content` to a vapor Wrapper whose template is
+  // `transition` (a `<Transition>` around a `<slot/>`)
+  const parity = (
+    transition: string,
+    content: string,
+    act: (r: Run) => Promise<void>,
+  ) =>
+    compareRuns(
+      (vapor, data) =>
+        sfc(
+          false,
+          data,
+          `<components.Wrapper>${content}</components.Wrapper>`,
+          {
+            Wrapper: sfc(vapor, data, transition),
+          },
+        ),
+      act,
+    )
+
+  test('out-in enters the next branch before the left one runs afterLeave', async () => {
+    const steps = await parity(
+      wrap(`mode="out-in" ${hooks}`),
+      `<div v-if="data.show">a</div><p v-else>b</p>`,
+      async r => {
+        await r.step('swap', () => (r.data.value.show = false))
+        await r.step('leave done', () => r.done.leave())
+        await r.step('enter done', () => r.done.enter())
+      },
+    )
+    expect(steps).toEqual([
+      'mount: <div>a</div> | ',
+      'swap: <div>a</div> | beforeLeave:a leave:a',
+      'leave done: <p>b</p> | beforeEnter:b afterLeave:a enter:b',
+      'enter done: <p>b</p> | afterEnter:b',
+    ])
+  })
+
+  test('out-in enters the content before the left fallback runs afterLeave', async () => {
+    const steps = await parity(
+      wrap(`mode="out-in" ${hooks}`, '<slot><p>b</p></slot>'),
+      `<div v-if="data.show">a</div>`,
+      async r => {
+        await r.step('hide', () => (r.data.value.show = false))
+        await r.step('leave done', () => r.done.leave())
+        await r.step('enter done', () => r.done.enter())
+        await r.step('show', () => (r.data.value.show = true))
+        await r.step('leave done', () => r.done.leave())
+        await r.step('enter done', () => r.done.enter())
+      },
+    )
+    expect(steps).toEqual([
+      'mount: <div>a</div> | ',
+      'hide: <div>a</div> | beforeLeave:a leave:a',
+      'leave done: <p>b</p> | beforeEnter:b afterLeave:a enter:b',
+      'enter done: <p>b</p> | afterEnter:b',
+      'show: <p>b</p> | beforeLeave:b leave:b',
+      'leave done: <div>a</div> | beforeEnter:a afterLeave:b enter:a',
+      'enter done: <div>a</div> | afterEnter:a',
+    ])
+  })
+})
