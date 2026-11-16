@@ -23,11 +23,11 @@ import {
   type VaporTransitionHooks,
   isValidBlock,
 } from '../block'
-import { isSlotOutletFragment } from '../fragment'
+import { endsRootChain, isSlotOutletFragment } from '../fragment'
 import { isHydrating } from '../dom/hydration'
 import { isInteropEnabled } from '../vdomInteropState'
 import { isInteropVShowPending, setInteropVShow } from '../vdomInterop'
-import { isTransitionEnabled, isVaporTransition } from '../transition'
+import { isTransitionEnabled } from '../transition'
 import { isSuspenseEnabled } from '../suspense'
 import { isKeepAliveEnabled } from '../keepAlive'
 
@@ -46,9 +46,6 @@ export function applyVShow(target: Block, source: () => any): void {
   let unresolved = false
   // a slot outlet is a fragment root in vdom: nothing for v-show to land on
   let slotRoot = false
-  // ...except on Transition's own root chain: vdom flattens the slot
-  // fragment into Transition's child. Any other component ends that chain.
-  let inTransition: boolean | undefined
   // the binding has run once: later runs update the root, a producer's
   // re-entry initializes the root it rendered
   let ran = false
@@ -57,7 +54,6 @@ export function applyVShow(target: Block, source: () => any): void {
   let updating: boolean | undefined
   // pending async setups this binding already waits on
   let pendingSetups: WeakSet<VaporComponentInstance> | undefined
-  let applyInTransition: ((nodes: Block) => void) | undefined
   let disposed = false
 
   const visitor: RootChainVisitor = {
@@ -79,17 +75,10 @@ export function applyVShow(target: Block, source: () => any): void {
         return true
       }
       if (instance.isDeactivated) updating = true
-      inTransition = isTransitionEnabled && isVaporTransition(instance.type)
     },
     onDynamicFragment(frag) {
-      if (!inTransition && isSlotOutletFragment(frag)) return (slotRoot = true)
-      // a branch swapped on Transition's root chain re-enters with that context
-      registerRootHook(
-        (frag.bm ||= []),
-        inTransition
-          ? (applyInTransition ||= nodes => apply(nodes, false, true))
-          : apply,
-      )
+      if (endsRootChain(frag)) return (slotRoot = true)
+      registerRootHook((frag.bm ||= []), apply)
     },
   }
   if (isInteropEnabled) {
@@ -103,12 +92,11 @@ export function applyVShow(target: Block, source: () => any): void {
     }
   }
 
-  const apply = (nodes: Block, update?: boolean, transitionSlot?: boolean) => {
+  const apply = (nodes: Block, update?: boolean) => {
     if (disposed) return
     transition = undefined
     unresolved = slotRoot = false
     updating = update
-    inTransition = transitionSlot
     const root = getRootElement(nodes, visitor)
     if (root) {
       setDisplay(root as VShowElement, value, transition, updating)
@@ -128,7 +116,6 @@ export function applyVShow(target: Block, source: () => any): void {
       disposed = true
       value = undefined
       staleRootHooks.add(apply)
-      if (applyInTransition) staleRootHooks.add(applyInTransition)
     }, true)
   }
   renderEffect(() => {

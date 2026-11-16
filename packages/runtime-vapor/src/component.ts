@@ -2190,7 +2190,7 @@ export function applyFallthroughAttrs(
   scope?: EffectScope,
 ): void {
   const flattenSlots = isTransitionEnabled && isVaporTransition(instance.type)
-  const state = new FallthroughResolveState(scope, flattenSlots)
+  const state = new FallthroughResolveState(scope)
   const root = resolveFallthroughRoot(block, state)
   const { fragments, innermost, hasSlotOutlet } = state
 
@@ -2258,11 +2258,9 @@ class FallthroughResolveState implements RootChainVisitor {
   hasNonSingleRoot?: boolean
   // attrs fold at a component's own creation boundary
   readonly stopAtComponent = true
-  readonly flattenSlots: boolean
 
-  constructor(parentScope: EffectScope | undefined, flattenSlots: boolean) {
+  constructor(parentScope?: EffectScope) {
     this.parentScope = parentScope
-    this.flattenSlots = flattenSlots
   }
 
   onDynamicFragment(frag: DynamicFragment): boolean | void {
@@ -2270,9 +2268,7 @@ class FallthroughResolveState implements RootChainVisitor {
     // there: slot content is rendered by the parent, so fragments inside it
     // must not register a fallthrough hook — a later branch switch would
     // re-apply from the branch alone, with the slot boundary out of view.
-    // Transition sees through them: it renders its slot content flattened,
-    // as in vdom.
-    if (frag.__vf & SLOT && !(isTransitionEnabled && this.flattenSlots)) {
+    if (endsRootChain(frag)) {
       this.hasSlotOutlet = true
       return true
     }

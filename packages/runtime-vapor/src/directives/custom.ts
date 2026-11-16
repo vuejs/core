@@ -23,15 +23,14 @@ import {
 import { isAsyncComponentEnabled } from '../asyncComponentState'
 import {
   type VaporFragment,
+  endsRootChain,
   isDynamicFragment,
   isFragment,
   isSlotOutletFragment,
-  isSlotResolver,
 } from '../fragment'
 import { inOnce, withOnce } from '../once'
 import { isInteropEnabled } from '../vdomInteropState'
 import { isSuspenseEnabled } from '../suspense'
-import { isTransitionEnabled, isVaporTransition } from '../transition'
 import { isKeepAliveEnabled } from '../keepAlive'
 import { isFunction, isObject } from '@vue/shared'
 
@@ -86,10 +85,6 @@ export function withVaporDirectives(
   let pending = false
   let pendingSetups: WeakSet<VaporComponentInstance> | undefined
 
-  // A slot outlet is a fragment root in vdom: nothing for directives to land
-  // on, except on Transition's own root chain, where vdom flattens the slot
-  // fragment into Transition's child. Any other component ends that chain.
-  let inTransition = false
   // The block an outlet hands over, until the descent meets that outlet.
   let exposing: Block | undefined
   // Set by a descent that met an outlet with nothing valid to show: its
@@ -99,20 +94,14 @@ export function withVaporDirectives(
   const visitor: RootChainVisitor = {
     onDynamicFragment(frag) {
       if (isSlotOutletFragment(frag)) {
-        if (!inTransition) return true
+        // a fragment root in vdom: nothing for directives to land on
+        if (endsRootChain(frag)) return true
         // An outlet settles the branch it exposes (content or fallback) after
         // its own update: it hands over each block it is about to expose.
         registerRootHook((frag.bm ||= []), applyExposed)
         registerRootHook((frag.bu ||= []), release)
-        // Handed over as it renders (`nodes`), or as its resolution exposes
-        // it, ahead of `nodes` (the fallback, the content).
-        if (
-          exposing &&
-          (frag.nodes === exposing ||
-            (isSlotResolver(frag) &&
-              (frag.activeFallback === exposing ||
-                frag.getContent() === exposing)))
-        ) {
+        // Handed over as it renders or exposes it: its `nodes` by then.
+        if (exposing && frag.nodes === exposing) {
           exposing = undefined
           return true
         }
@@ -122,7 +111,6 @@ export function withVaporDirectives(
       }
     },
     onComponent(block) {
-      inTransition = isTransitionEnabled && isVaporTransition(block.type)
       if (__DEV__) {
         registerRootHook((block.hmrRootHooks ||= []), applyDirectives)
       }
@@ -189,7 +177,6 @@ export function withVaporDirectives(
     // An outlet off the root chain (a deactivated KeepAlive branch) goes on
     // exposing out of the DOM: only one on the chain hands its branch over.
     exposing = nodes
-    inTransition = false
     getRootElement(node, visitor)
     if (exposing) exposing = undefined
     else apply(nodes, true)
@@ -199,7 +186,6 @@ export function withVaporDirectives(
     if (disposed) return
 
     pending = empty = false
-    inTransition = !!exposed
     const element = getRootElement(block, visitor)
     // Not a root to warn about, nor one that replaces the current root
     if (!element && (empty || (exposed && !isValidSlot(block)))) return
