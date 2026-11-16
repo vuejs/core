@@ -234,7 +234,7 @@ export function placeSlotContent(
 function beforeExpose(state: SlotResolutionState, block: Block): void {
   // a Transition's attrs move to the exposed branch, a fallback's effects
   // living in its own scope
-  const fallthrough = state.fallthrough
+  const fallthrough = isTransitionEnabled && state.fallthrough
   if (fallthrough) {
     const scope =
       block === state.activeFallback ? state.fallbackScope : undefined

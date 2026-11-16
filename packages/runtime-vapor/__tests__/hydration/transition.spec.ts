@@ -612,6 +612,146 @@ describe('Vapor Mode hydration', () => {
       await nextTick()
       expect(stripAnchors(container.innerHTML)).toBe('')
     })
+
+    test('transition with a falsy appear leaves the element displayed', async () => {
+      const data = ref({ appear: false })
+      const { container } = await testHydration(
+        `<template>
+          <Transition :appear="data.appear" :css="false">
+            <div>foo</div>
+          </Transition>
+        </template>`,
+        undefined,
+        data,
+      )
+      expect(container.innerHTML).toBe(`<div>foo</div>`)
+      expect(`mismatch`).not.toHaveBeenWarned()
+    })
+
+    test('transition appear with a shown v-show', async () => {
+      const data = ref(true)
+      const { container } = await testHydration(
+        `<template>
+          <Transition appear :css="false">
+            <div v-show="data" style="display: flex">foo</div>
+          </Transition>
+        </template>`,
+        undefined,
+        data,
+      )
+      expect(`mismatch`).not.toHaveBeenWarned()
+
+      // the display v-show restores is the element's own
+      const div = container.querySelector('div')!
+      data.value = false
+      await nextTick()
+      expect(div.style.display).toBe('none')
+      data.value = true
+      await nextTick()
+      expect(div.style.display).toBe('flex')
+    })
+
+    test('transition appear with slot content binding its own style', async () => {
+      const data = ref({ color: 'red' })
+      const { container } = await testHydration(
+        `<template>
+          <components.Child>
+            <div :style="{ color: data.color }">foo</div>
+          </components.Child>
+        </template>`,
+        {
+          Child: `<template>
+            <Transition appear :css="false">
+              <slot />
+            </Transition>
+          </template>`,
+        },
+        data,
+      )
+      expect(`mismatch`).not.toHaveBeenWarned()
+      expect(container.querySelector('div')!.style.cssText).toBe('color: red;')
+    })
+
+    test('attrs falling through a slot leave out what an appear hook wrote', async () => {
+      const data = ref<any>({
+        style: undefined,
+        onBeforeEnter: (el: HTMLElement) => (el.style.height = '0px'),
+        onAfterEnter: (el: HTMLElement) => (el.style.height = ''),
+      })
+      const { container } = await testHydration(
+        `<template>
+          <components.Child :style="data.style">
+            <div style="width: 1px">foo</div>
+          </components.Child>
+        </template>`,
+        {
+          Child: `<template>
+            <Transition
+              appear
+              :css="false"
+              @before-enter="data.onBeforeEnter"
+              @after-enter="data.onAfterEnter"
+            >
+              <slot />
+            </Transition>
+          </template>`,
+        },
+        data,
+      )
+      const div = container.querySelector('div')!
+      await nextTick()
+      expect(div.style.cssText).toBe('width: 1px;')
+
+      data.value.style = { color: 'red' }
+      await nextTick()
+      expect(div.style.cssText).toBe('width: 1px; color: red;')
+      expect(`mismatch`).not.toHaveBeenWarned()
+    })
+
+    // what the server rendered for the content's own bindings is not its
+    // template style
+    test('attrs falling through a slot leave the content its own v-show and style after an appear', async () => {
+      const data = ref<any>({
+        show: false,
+        own: { width: '1px' },
+        style: undefined,
+        onBeforeEnter: (el: HTMLElement) => (el.style.height = '0px'),
+        onAfterEnter: (el: HTMLElement) => (el.style.height = ''),
+      })
+      const { container } = await testHydration(
+        `<template>
+          <components.Child :style="data.style">
+            <div v-show="data.show" :style="data.own">foo</div>
+          </components.Child>
+        </template>`,
+        {
+          Child: `<template>
+            <Transition
+              appear
+              :css="false"
+              @before-enter="data.onBeforeEnter"
+              @after-enter="data.onAfterEnter"
+            >
+              <slot />
+            </Transition>
+          </template>`,
+        },
+        data,
+      )
+      const div = container.querySelector('div')!
+      await nextTick()
+      expect(div.style.cssText).toBe('width: 1px; display: none;')
+
+      data.value.show = true
+      data.value.own = null
+      await nextTick()
+      expect(div.style.cssText).toBe('')
+
+      data.value.style = { color: 'red' }
+      await nextTick()
+      expect(div.style.cssText).toBe('color: red;')
+      expect(`mismatch`).not.toHaveBeenWarned()
+    })
   })
 
   describe('transition-group', () => {

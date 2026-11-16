@@ -48,7 +48,6 @@ import {
   registerTransitionHooks,
 } from '../transition'
 import {
-  type FallthroughOwner,
   type FunctionalVaporComponent,
   type VaporComponentInstance,
   isVaporComponent,
@@ -119,6 +118,7 @@ export const ensureTransitionHooksRegistered = (): void => {
 // returns the appear to perform once the content's hooks are applied.
 export const hydrateTransitionImpl = (
   suspense: SuspenseBoundary | null,
+  hasFallthrough?: boolean,
 ): ((block: Block, hooks: TransitionHooks) => void) | undefined => {
   if (!currentHydrationNode || !isTemplateNode(currentHydrationNode)) return
   // replace <template> node with inner child
@@ -149,23 +149,25 @@ export const hydrateTransitionImpl = (
       transitionEl instanceof HTMLElement ||
       transitionEl instanceof SVGElement
     ) {
-      const originalDisplay = transitionEl.style.display
-      transitionEl.style.display = 'none'
-
       return (block: Block, hooks: TransitionHooks) => {
         // A child rendering its root later (an async setup, an async wrapper
         // loading) hydrates it on screen already: it does not appear, as
         // under vdom's Suspense.
         const child = findTransitionBlock(block)
-        if (!child) {
-          transitionEl.style.display = originalDisplay
-          return
-        }
+        if (!child) return
         // mismatch recovery renders the client's element in place of the
         // server one
         const el = getTransitionElement(child) || transitionEl
+        // its own class and style are the ones it holds before the hook
+        // writes to it
+        if (hasFallthrough) adoptRoot(el)
+        // Not rendered while the hook runs, as in vdom, where it is still in
+        // the <template>. Hidden only now: the content hydrates on the
+        // display the server rendered.
+        const display = transitionEl.style.display
+        transitionEl.style.display = 'none'
         hooks.beforeEnter(el)
-        transitionEl.style.display = originalDisplay
+        transitionEl.style.display = display
         queuePostRenderEffect(() => hooks.enter(el), undefined, suspense)
       }
     }
@@ -186,12 +188,10 @@ export const VaporTransition: FunctionalVaporComponent<TransitionProps> =
     ensureTransitionHooksRegistered()
 
     const instance = currentInstance! as VaporComponentInstance
-    // the slot content is the child: attrs fall through to its root
-    ;(instance as FallthroughOwner).adoptRoot = adoptRoot
     // Runs on the first render only, then is dropped: it holds the element
     // the server rendered, and the effects below hold this scope.
     let performAppear = isHydrating
-      ? hydrateTransitionImpl(instance.suspense)
+      ? hydrateTransitionImpl(instance.suspense, instance.hasFallthrough)
       : undefined
     if (!props.appear) performAppear = undefined
     const state: VaporTransitionState = useTransitionState()
