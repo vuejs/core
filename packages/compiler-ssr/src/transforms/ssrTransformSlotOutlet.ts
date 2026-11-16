@@ -17,6 +17,13 @@ import {
   processChildrenAsStatement,
 } from '../ssrCodegenTransform'
 
+// slot outlets that are rendered as transition content. Their fallback is
+// rendered through `ssrRenderSlotInner`, which does not wrap it in a fragment,
+// and the transition unwraps its children on the client - so the fallback must
+// not emit fragment markers either, or hydration finds markers where it
+// expects an element.
+const transitionSlotOutlets = new WeakSet<SlotOutletNode>()
+
 export const ssrTransformSlotOutlet: NodeTransform = (node, context) => {
   if (isSlotOutlet(node)) {
     const { slotName, slotProps } = processSlotOutlet(node, context)
@@ -63,6 +70,7 @@ export const ssrTransformSlotOutlet: NodeTransform = (node, context) => {
           args.push('null')
         }
         args.push('true')
+        transitionSlotOutlets.add(node)
       }
     }
 
@@ -79,7 +87,13 @@ export function ssrProcessSlotOutlet(
   // has fallback content
   if (node.children.length) {
     const fallbackRenderFn = createFunctionExpression([])
-    fallbackRenderFn.body = processChildrenAsStatement(node, context)
+    fallbackRenderFn.body = processChildrenAsStatement(
+      node,
+      context,
+      false,
+      context.withSlotScopeId,
+      transitionSlotOutlets.has(node),
+    )
     // _renderSlot(slots, name, props, fallback, ...)
     renderCall.arguments[3] = fallbackRenderFn
   }

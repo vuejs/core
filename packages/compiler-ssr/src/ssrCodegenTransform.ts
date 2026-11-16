@@ -244,8 +244,9 @@ export function processChildrenAsStatement(
   parentContext: SSRTransformContext,
   asFragment = false,
   withSlotScopeId: boolean = parentContext.withSlotScopeId,
+  disableNestedFragments = false,
 ): BlockStatement {
   const childContext = createChildContext(parentContext, withSlotScopeId)
-  processChildren(parent, childContext, asFragment)
+  processChildren(parent, childContext, asFragment, disableNestedFragments)
   return createBlockStatement(childContext.body)
 }
