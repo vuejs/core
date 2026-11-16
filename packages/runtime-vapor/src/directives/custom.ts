@@ -12,7 +12,7 @@ import {
   setCurrentInstance,
   warn,
 } from '@vue/runtime-dom'
-import { type Block, EMPTY_BLOCK } from '../block'
+import { type Block, EMPTY_BLOCK, isValidSlot } from '../block'
 import {
   type RootChainVisitor,
   type VaporComponentInstance,
@@ -92,8 +92,15 @@ export function withVaporDirectives(
 
   const visitor: RootChainVisitor = {
     onDynamicFragment(frag) {
-      if (!inTransition && isSlotOutletFragment(frag)) return true
-      track(frag)
+      if (isSlotOutletFragment(frag)) {
+        if (!inTransition) return true
+        // An outlet settles the branch it exposes (content or fallback) after
+        // its own update: it hands over each block it is about to expose.
+        registerRootHook((frag.bm ||= []), applyExposed)
+        registerRootHook((frag.bu ||= []), release)
+      } else {
+        track(frag)
+      }
     },
     onComponent(block) {
       inTransition = isTransitionEnabled && isVaporTransition(block.type)
@@ -155,10 +162,22 @@ export function withVaporDirectives(
   }
 
   function applyDirectives() {
+    apply(node)
+  }
+
+  function applyExposed(nodes: Block) {
+    apply(nodes, true)
+  }
+
+  function apply(block: Block, exposed?: boolean) {
     if (disposed) return
 
-    pending = inTransition = false
-    const element = getRootElement(node, visitor)
+    pending = false
+    inTransition = !!exposed
+    const element = getRootElement(block, visitor)
+    // Content the outlet does not hold valid: its fallback, if any, is
+    // exposed instead
+    if (!element && exposed && !isValidSlot(block)) return
     if (!element && pending) {
       // Keep null as the pending state so a resolved invalid root still warns
       if (currentElement !== null) {
@@ -210,6 +229,7 @@ export function withVaporDirectives(
     currentElement = null
     if (isKeepAliveEnabled) {
       staleRootHooks.add(applyDirectives)
+      staleRootHooks.add(applyExposed)
       staleRootHooks.add(release)
     }
   }, true)

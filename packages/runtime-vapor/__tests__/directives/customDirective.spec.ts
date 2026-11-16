@@ -927,6 +927,104 @@ describe('custom directive', () => {
       expect(log.vapor).toEqual(log.vdom)
     })
 
+    test('follows content shown after an initial slot fallback like vdom', async () => {
+      const log = await directiveLog(
+        {
+          Fade: `<template>
+            <Transition :css="false">
+              <slot><span>fallback</span></slot>
+            </Transition>
+          </template>`,
+          App: withFoo(`<template>
+            <components.Fade v-foo>
+              <p v-if="data.has">x</p>
+            </components.Fade>
+          </template>`),
+        },
+        () => ref({ has: false }),
+        async data => {
+          data.has = true
+          await nextTick()
+          data.has = false
+        },
+      )
+      expect(log.vdom).toEqual(['SPAN', '-SPAN', 'P', '-P', 'SPAN', '-SPAN'])
+      expect(log.vapor).toEqual(log.vdom)
+    })
+
+    test('follows a dynamic slot source over a slot fallback like vdom', async () => {
+      const log = await directiveLog(
+        {
+          Fade: `<template>
+            <Transition :css="false">
+              <slot><span>fallback</span></slot>
+            </Transition>
+          </template>`,
+          App: withFoo(`<template>
+            <components.Fade v-foo>
+              <template v-if="data.has" #default>
+                <p>x</p>
+              </template>
+            </components.Fade>
+          </template>`),
+        },
+        () => ref({ has: false }),
+        async data => {
+          data.has = true
+          await nextTick()
+          data.has = false
+        },
+      )
+      expect(log.vdom).toEqual(['SPAN', '-SPAN', 'P', '-P', 'SPAN', '-SPAN'])
+      expect(log.vapor).toEqual(log.vdom)
+    })
+
+    test('leaves a slot fallback replaced by a component with no root element', async () => {
+      const data = ref({ has: false })
+      const log: string[] = []
+      const dir: VaporDirective = el => {
+        log.push(el.tagName)
+        return () => log.push('-' + el.tagName)
+      }
+      const Fade = compile(
+        `<template>
+          <Transition :css="false">
+            <slot><span>fallback</span></slot>
+          </Transition>
+        </template>`,
+        data,
+      )
+      const Empty = compile(`<template><div v-if="false" /></template>`, data)
+      const App = compile(
+        `<template>
+          <components.Fade v-custom>
+            <template v-if="data.has" #default>
+              <components.Empty />
+            </template>
+          </components.Fade>
+        </template>`,
+        data,
+        { Fade, Empty },
+      )
+      App.directives = { custom: dir }
+
+      const { app, html } = define(App).render()
+      expect(log).toEqual(['SPAN'])
+
+      data.value.has = true
+      await nextTick()
+      expect(html()).not.toContain('fallback')
+      expect(log).toEqual(['SPAN', '-SPAN'])
+      expect(
+        'Runtime directive used on component with non-element root node',
+      ).toHaveBeenWarned()
+      expect(
+        'Transition component has no valid child element',
+      ).toHaveBeenWarned()
+
+      app.unmount()
+    })
+
     test('still warns on the slot outlet root of a component in the slot like vdom', async () => {
       const log = await directiveLog({
         Fade,
