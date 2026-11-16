@@ -27,7 +27,7 @@ import {
   restoreCurrentInstance,
   setCurrentInstance,
 } from '@vue/runtime-dom'
-import type { VaporComponentInstance } from './component'
+import type { VaporComponent, VaporComponentInstance } from './component'
 import type { NodeRef } from './apiTemplateRef'
 import type { KeyContext } from './components/Transition'
 import {
@@ -41,6 +41,7 @@ import {
 import {
   type RenderContext,
   currentRenderContext,
+  deriveNested,
   deriveSlotBoundary,
   withRenderContext,
 } from './renderContext'
@@ -71,6 +72,7 @@ import {
   deferBranchUpdateDuringLeave,
   deferSlotRootFlip,
   isTransitionEnabled,
+  isVaporTransition,
   removeBranchWithLeave,
 } from './transition'
 import {
@@ -190,7 +192,7 @@ export class RenderContextFragment<
   // The context this fragment's content renders under. A slot outlet is built
   // under its own cell (see createSlot), so late renders create their DOM
   // under the outlet's context.
-  ctx: RenderContext = currentRenderContext
+  ctx: RenderContext
 
   constructor(
     nodes: T,
@@ -198,6 +200,10 @@ export class RenderContextFragment<
     insertionParent?: ParentNode,
   ) {
     super(nodes, flags)
+    this.ctx =
+      isTransitionEnabled && insertionParent
+        ? nestedContentContext()
+        : currentRenderContext
     if (isKeepAliveEnabled) {
       const keepAliveCtx = (this.keepAliveCtx =
         getKeepAliveContext(currentInstance))
@@ -218,6 +224,14 @@ export class RenderContextFragment<
   protected runWithRenderCtx<R>(fn: () => R, scope?: EffectScope): R {
     return runWithRenderCtx(this, fn, scope)
   }
+}
+
+// The context of content that is no child of the Transition rendering it.
+export function nestedContentContext(): RenderContext {
+  return currentInstance &&
+    isVaporTransition(currentInstance.type as VaporComponent)
+    ? deriveNested(currentRenderContext, currentInstance)
+    : currentRenderContext
 }
 
 export function runWithRenderCtx<R>(

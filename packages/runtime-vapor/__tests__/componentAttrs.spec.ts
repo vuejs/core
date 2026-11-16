@@ -3463,6 +3463,116 @@ describe('attribute fallthrough', () => {
       false,
     ])
   })
+
+  describe('transition fallthrough stops at its child', () => {
+    const run = (srcs: Record<string, string>) =>
+      layerParity(
+        el => stripAnchors(el.outerHTML),
+        {
+          Foo: `<template><p class="foo">foo</p></template>`,
+          App: `<template>
+            <components.Child :class="data.cls" />
+          </template>`,
+          ...srcs,
+        },
+        () => ref({ cls: 'w', ok: true, n: 1 }),
+        [
+          data => (data.value = { cls: 'x', ok: false, n: 2 }),
+          data => (data.value.ok = true),
+        ],
+      )
+
+    test('a component nested in the child gets no attrs', async () => {
+      const seen = await run({
+        Child: `<template>
+          <transition>
+            <div><components.Foo /></div>
+          </transition>
+        </template>`,
+      })
+      expect(seen).toEqual([
+        '<div class="w"><p class="foo">foo</p></div>',
+        '<div class="x"><p class="foo">foo</p></div>',
+        '<div class="x"><p class="foo">foo</p></div>',
+      ])
+    })
+
+    test('a component under a v-if or v-for nested in the child gets no attrs', async () => {
+      const seen = await run({
+        Child: `<template>
+          <transition>
+            <div>
+              <components.Foo v-if="data.ok" />
+              <components.Foo v-for="i in data.n" :key="i" />
+            </div>
+          </transition>
+        </template>`,
+      })
+      expect(seen).toEqual([
+        '<div class="w"><p class="foo">foo</p><p class="foo">foo</p></div>',
+        '<div class="x"><p class="foo">foo</p><p class="foo">foo</p></div>',
+        '<div class="x"><p class="foo">foo</p><p class="foo">foo</p><p class="foo">foo</p></div>',
+      ])
+    })
+
+    test('a component nested in slotted content gets no attrs', async () => {
+      const seen = await run({
+        Child: `<template>
+          <transition>
+            <slot />
+          </transition>
+        </template>`,
+        App: `<template>
+          <components.Child :class="data.cls">
+            <div><components.Foo /></div>
+          </components.Child>
+        </template>`,
+      })
+      expect(seen).toEqual([
+        '<div class="w"><p class="foo">foo</p></div>',
+        '<div class="x"><p class="foo">foo</p></div>',
+        '<div class="x"><p class="foo">foo</p></div>',
+      ])
+    })
+
+    test('a slotted component gets no attrs through an outlet nested in the child', async () => {
+      const seen = await run({
+        Child: `<template>
+          <transition>
+            <div><slot /></div>
+          </transition>
+        </template>`,
+        App: `<template>
+          <components.Child :class="data.cls">
+            <components.Foo />
+          </components.Child>
+        </template>`,
+      })
+      expect(seen).toEqual([
+        '<div class="w"><p class="foo">foo</p></div>',
+        '<div class="x"><p class="foo">foo</p></div>',
+        '<div class="x"><p class="foo">foo</p></div>',
+      ])
+    })
+
+    test('a component in a teleport standing as the child gets no attrs', async () => {
+      const seen = await run({
+        Child: `<template>
+          <transition>
+            <teleport to="body" disabled>
+              <components.Foo />
+            </teleport>
+          </transition>
+        </template>`,
+      })
+      expect(seen).toEqual([
+        '<p class="foo">foo</p>',
+        '<p class="foo">foo</p>',
+        '<p class="foo">foo</p>',
+      ])
+      expect('Extraneous non-props attributes (class)').toHaveBeenWarned()
+    })
+  })
 })
 
 describe('checkbox model value bindings', () => {

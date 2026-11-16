@@ -61,6 +61,7 @@ import {
   ForFragment,
   type VaporFragment,
   finishBlockCreation,
+  nestedContentContext,
   resolveFragmentAnchor,
 } from './fragment'
 import {
@@ -134,7 +135,10 @@ export const createFor = (
   const isFragment = !!(flags & VaporVForFlags.IS_FRAGMENT)
   const wrappedRows = !!(flags & VaporVForFlags.WRAPPED_ROWS)
 
-  const ctx = currentRenderContext
+  const ctx =
+    isTransitionEnabled && _insertionParent
+      ? nestedContentContext()
+      : currentRenderContext
 
   if (__DEV__ && !instance) {
     warn('createFor() can only be used inside setup()')
@@ -645,12 +649,9 @@ export const createFor = (
   }
 
   if (flags & VaporVForFlags.ONCE) {
-    renderList()
+    withRenderContext(ctx, renderList)
   } else {
-    renderEffect(() => {
-      if (!isMounted) return renderList()
-      withRenderContext(ctx, renderList)
-    })
+    renderEffect(() => withRenderContext(ctx, renderList))
   }
 
   if (isHydrating && currentHydrationNode === parentAnchor!) {

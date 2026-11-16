@@ -30,7 +30,11 @@ import type { LooseRawProps, VaporComponentInstance } from '../component'
 import { rawPropsProxyHandlers } from '../componentProps'
 import { renderEffect } from '../renderEffect'
 import { extend } from '@vue/shared'
-import { RenderContextFragment, resolveFragmentAnchor } from '../fragment'
+import {
+  RenderContextFragment,
+  nestedContentContext,
+  resolveFragmentAnchor,
+} from '../fragment'
 import {
   advanceHydrationNode,
   claimAnchor,
@@ -111,8 +115,10 @@ export class TeleportFragment extends RenderContextFragment {
   ) {
     super([], TELEPORT)
     this.rawSlots = slots
-    // as vdom: teleported children are no KeepAlive cache position
+    // as vdom: teleported children are no KeepAlive cache position, nor the
+    // child of a Transition
     if (isKeepAliveEnabled && this.keepAliveCtx) this.uncached = true
+    if (isTransitionEnabled) this.ctx = nestedContentContext()
     // the main-view end anchor can adopt the template `<!>` placeholder the
     // teleport was anchored to, saving a runtime node
     this.anchor = isHydrating
