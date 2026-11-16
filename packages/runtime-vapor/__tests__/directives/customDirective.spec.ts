@@ -1025,6 +1025,67 @@ describe('custom directive', () => {
       app.unmount()
     })
 
+    test.each([
+      [
+        'a dynamic slot name',
+        `<slot :name="data.slot" />`,
+        `<template #one><div /></template>
+              <template #two><span /></template>`,
+        (data: any) => (data.slot = 'two'),
+      ],
+      [
+        'its fallback',
+        `<slot><span>fallback</span></slot>`,
+        `<div v-if="data.has" />`,
+        (data: any) => (data.has = false),
+      ],
+    ])(
+      'keeps the current root when a cached slot switches to %s',
+      async (_, outlet, content, change) => {
+        const data = ref({ current: 'CompA', slot: 'one', has: true })
+        const log: string[] = []
+        const dir: VaporDirective = el => {
+          log.push(el.tagName)
+          return () => log.push('-' + el.tagName)
+        }
+        const CompA = compile(
+          `<template>
+            <Transition :css="false">${outlet}</Transition>
+          </template>`,
+          data,
+        )
+        const CompB = compile(`<template><p /></template>`, data)
+        const App = compile(
+          `<template>
+            <KeepAlive>
+              <component :is="data.current" v-custom>
+                ${content}
+              </component>
+            </KeepAlive>
+          </template>`,
+          data,
+        )
+        App.components = { CompA, CompB }
+        App.directives = { custom: dir }
+
+        const { app } = define(App).render()
+        data.value.current = 'CompB'
+        await nextTick()
+        expect(log).toEqual(['DIV', '-DIV', 'P'])
+
+        // the deactivated CompA switches its slot while CompB owns the directive
+        change(data.value)
+        await nextTick()
+        expect(log).toEqual(['DIV', '-DIV', 'P'])
+
+        data.value.current = 'CompA'
+        await nextTick()
+        expect(log).toEqual(['DIV', '-DIV', 'P', '-P', 'SPAN'])
+
+        app.unmount()
+      },
+    )
+
     test('still warns on the slot outlet root of a component in the slot like vdom', async () => {
       const log = await directiveLog({
         Fade,

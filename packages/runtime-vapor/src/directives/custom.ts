@@ -26,6 +26,7 @@ import {
   isDynamicFragment,
   isFragment,
   isSlotOutletFragment,
+  isSlotResolver,
 } from '../fragment'
 import { inOnce, withOnce } from '../once'
 import { isInteropEnabled } from '../vdomInteropState'
@@ -89,6 +90,8 @@ export function withVaporDirectives(
   // on, except on Transition's own root chain, where vdom flattens the slot
   // fragment into Transition's child. Any other component ends that chain.
   let inTransition = false
+  // The block an outlet hands over, until the descent meets that outlet.
+  let exposing: Block | undefined
 
   const visitor: RootChainVisitor = {
     onDynamicFragment(frag) {
@@ -98,6 +101,18 @@ export function withVaporDirectives(
         // its own update: it hands over each block it is about to expose.
         registerRootHook((frag.bm ||= []), applyExposed)
         registerRootHook((frag.bu ||= []), release)
+        // Handed over as it renders (`nodes`), or as its resolution exposes
+        // it, ahead of `nodes` (the fallback, the content).
+        if (
+          exposing &&
+          (frag.nodes === exposing ||
+            (isSlotResolver(frag) &&
+              (frag.activeFallback === exposing ||
+                frag.getContent() === exposing)))
+        ) {
+          exposing = undefined
+          return true
+        }
       } else {
         track(frag)
       }
@@ -166,7 +181,14 @@ export function withVaporDirectives(
   }
 
   function applyExposed(nodes: Block) {
-    apply(nodes, true)
+    if (disposed) return
+    // An outlet off the root chain (a deactivated KeepAlive branch) goes on
+    // exposing out of the DOM: only one on the chain hands its branch over.
+    exposing = nodes
+    inTransition = false
+    getRootElement(node, visitor)
+    if (exposing) exposing = undefined
+    else apply(nodes, true)
   }
 
   function apply(block: Block, exposed?: boolean) {
