@@ -16,6 +16,7 @@ import {
   isValidSlot,
   registerNestedVDOMCleanup,
   remove,
+  stopScopeForRemoval,
 } from './block'
 import {
   type GenericComponentInstance,
@@ -516,7 +517,7 @@ export class DynamicFragment extends RenderContextFragment {
               prevKey,
             )
           } else {
-            scope.stop()
+            stopScopeForRemoval(scope)
           }
         }
         if (

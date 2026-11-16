@@ -1,4 +1,4 @@
-import { effectScope, ref } from '@vue/reactivity'
+import { effectScope, onScopeDispose, ref } from '@vue/reactivity'
 import { BindingTypes } from '@vue/compiler-dom'
 import { nextTick } from '@vue/runtime-dom'
 import {
@@ -203,13 +203,14 @@ describe('dom event', () => {
         return el
       },
     })
-    const { host, app } = define(Comp).render()
+    const { host, app, instance } = define(Comp).render()
     const el = host.children[0] as HTMLElement
     el.click()
     expect(handler).toHaveBeenCalledTimes(1)
-    app.unmount()
+    instance!.scope.stop()
     el.click()
     expect(handler).toHaveBeenCalledTimes(1)
+    app.unmount()
   })
 
   test('setDynamicEvents with multiple handlers', () => {
@@ -263,13 +264,14 @@ describe('dom event', () => {
         return el
       },
     })
-    const { host, app } = define(Comp).render()
+    const { host, app, instance } = define(Comp).render()
     const el = host.children[0] as HTMLElement
     el.click()
     expect(handler).toHaveBeenCalledTimes(1)
-    app.unmount()
+    instance!.scope.stop()
     el.click()
     expect(handler).toHaveBeenCalledTimes(1)
+    app.unmount()
   })
 
   test('on with array handler cleans up every wrapped invoker', () => {
@@ -284,15 +286,16 @@ describe('dom event', () => {
         return el
       },
     })
-    const { host, app } = define(Comp).render()
+    const { host, app, instance } = define(Comp).render()
     const el = host.children[0] as HTMLElement
     el.click()
     expect(handler1).toHaveBeenCalledTimes(1)
     expect(handler2).toHaveBeenCalledTimes(1)
-    app.unmount()
+    instance!.scope.stop()
     el.click()
     expect(handler1).toHaveBeenCalledTimes(1)
     expect(handler2).toHaveBeenCalledTimes(1)
+    app.unmount()
   })
 
   test('setDynamicEvents replaces old wrapped invokers on update', async () => {
@@ -311,7 +314,7 @@ describe('dom event', () => {
         return el
       },
     })
-    const { host, app } = define(Comp).render()
+    const { host, app, instance } = define(Comp).render()
     const el = host.children[0] as HTMLElement
 
     el.click()
@@ -330,9 +333,10 @@ describe('dom event', () => {
     el.dispatchEvent(new MouseEvent('mouseup'))
     expect(handler2).toHaveBeenCalledTimes(2)
 
-    app.unmount()
+    instance!.scope.stop()
     el.dispatchEvent(new MouseEvent('mouseup'))
     expect(handler2).toHaveBeenCalledTimes(2)
+    app.unmount()
   })
 
   test('compiled direct key and non-key modifiers', () => {
@@ -794,5 +798,131 @@ describe('dom event', () => {
         },
       )
     })
+  })
+
+  test.each(['onBinding', 'setDynamicEvents'])(
+    'cleans an independent scope stopped during unmount with %s',
+    binding => {
+      const el = document.createElement('button')
+      const handler = vi.fn()
+      const scope = effectScope(true)
+      scope.run(() => {
+        renderEffect(() => {
+          if (binding === 'onBinding') {
+            onBinding(el, 'click', handler)
+          } else {
+            setDynamicEvents(el, { click: handler })
+          }
+        })
+      })
+      const Comp = defineVaporComponent({
+        setup() {
+          onScopeDispose(() => scope.stop())
+        },
+        render: compileToVaporRender('<div />'),
+      })
+      const { app } = define(Comp).render()
+      el.click()
+      expect(handler).toHaveBeenCalledTimes(1)
+      app.unmount()
+      el.click()
+      expect(handler).toHaveBeenCalledTimes(1)
+    },
+  )
+
+  test.each([
+    '',
+    'v-bind="{ onKeydown: handler, onFocusout: handler }"',
+    '@[event]="handler" @focusout="handler"',
+  ])('keeps the event in flight when unmounting with %s', binding => {
+    const log: string[] = []
+    const handler = (e: Event) => log.push(e.type)
+    const Comp = defineVaporComponent({
+      setup: () => ({ handler, event: 'keydown' }),
+      render: compileToVaporRender(`<div ${binding}><button /></div>`),
+    })
+    const { host, app } = define(Comp).render(
+      binding
+        ? undefined
+        : { onKeydown: () => handler, onFocusout: () => handler },
+    )
+    const button = host.querySelector('button')!
+    button.focus()
+    const removeChild = host.removeChild
+    const remove = vi.spyOn(host, 'removeChild').mockImplementation(node => {
+      // jsdom does not emit focusout on removal.
+      button.dispatchEvent(new FocusEvent('focusout', { bubbles: true }))
+      return removeChild.call(host, node)
+    })
+    const close = () => app.unmount()
+    document.addEventListener('keydown', close, true)
+    try {
+      button.dispatchEvent(
+        new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }),
+      )
+      expect(host.querySelector('button')).toBeNull()
+      expect(log).toEqual(['focusout', 'keydown'])
+    } finally {
+      document.removeEventListener('keydown', close, true)
+      remove.mockRestore()
+    }
+  })
+
+  // #16286
+  test.each([
+    '',
+    'v-bind="$attrs"',
+    'v-bind="{ onKeydown: data.handler, onFocusout: data.handler }"',
+    ':onKeydown="data.handler" :onFocusout="data.handler"',
+    '@[data.event]="data.handler" @focusout="data.handler"',
+    'v-on="{ keydown: data.handler, focusout: data.handler }"',
+  ])('keeps closing-event listeners for %s', async binding => {
+    const logs: Record<string, string[]> = {}
+    await renderParity(
+      {
+        Child: `<template><div v-if="data.open" ${binding}><button /></div></template>`,
+        App: `<template><components.Child ${!binding || binding === 'v-bind="$attrs"' ? '@keydown="data.handler" @focusout="data.handler"' : ''} /></template>`,
+      },
+      () => {
+        const log: string[] = []
+        return ref({
+          open: true,
+          event: 'keydown',
+          handler: (e: Event) => log.push(e.type),
+          log,
+        })
+      },
+      async (data, root, mode) => {
+        const button = root.querySelector('button')!
+        const div = button.parentNode!
+        const removeChild = root.removeChild
+        // jsdom does not emit focusout when removing the focused element.
+        const remove = vi
+          .spyOn(root, 'removeChild')
+          .mockImplementation(node => {
+            if (node === div) {
+              button.dispatchEvent(
+                new FocusEvent('focusout', { bubbles: true }),
+              )
+            }
+            return removeChild.call(root, node)
+          })
+        try {
+          // Model the browser's microtask checkpoint between capture and
+          // bubbling: the branch is removed before keydown reaches the div.
+          data.value.open = false
+          await nextTick()
+          expect(root.querySelector('button')).toBeNull()
+          button.dispatchEvent(
+            new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }),
+          )
+          logs[mode] = data.value.log
+        } finally {
+          remove.mockRestore()
+        }
+      },
+    )
+    expect(logs.vdom).toEqual(['focusout', 'keydown'])
+    expect(logs.vapor).toEqual(logs.vdom)
   })
 })

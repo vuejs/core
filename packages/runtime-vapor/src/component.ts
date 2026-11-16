@@ -59,6 +59,7 @@ import {
   isBlock,
   registerNestedVDOMCleanup,
   remove,
+  stopScopeForRemoval,
   unmountVDOM,
 } from './block'
 import {
@@ -1871,7 +1872,7 @@ export function unmountComponent(
       const inputScope = instance.inputScope
       if (inputScope) inputScope.stop()
     }
-    instance.scope.stop()
+    stopScopeForRemoval(instance.scope)
     // vdom components in the block unmount with the vapor ones the scope
     // just unmounted: block removal only removes their DOM
     if (isInteropEnabled) unmountVDOM(instance.block)

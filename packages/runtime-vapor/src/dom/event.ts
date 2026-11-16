@@ -1,4 +1,4 @@
-import { onEffectCleanup } from '@vue/reactivity'
+import { getCurrentScope, onEffectCleanup } from '@vue/reactivity'
 import { isArray } from '@vue/shared'
 import {
   ErrorCodes,
@@ -9,6 +9,7 @@ import {
   withModifiers as withDomModifiers,
 } from '@vue/runtime-dom'
 import { isApplyingFallthroughProps } from '../component'
+import { isScopeBeingRemoved } from '../block'
 
 type EventHandler = (...args: any[]) => any
 export type EventHandlerValue = EventHandler | EventHandler[]
@@ -61,7 +62,10 @@ export function onBinding(
     }
   }
   const cleanup = addEventListener(el, event, createInvoker(handler), options)
-  onEffectCleanup(cleanup)
+  const scope = getCurrentScope()
+  onEffectCleanup(() => {
+    if (!isScopeBeingRemoved(scope)) cleanup()
+  })
 }
 
 interface Invoker {
@@ -102,9 +106,12 @@ export function setListener(
     invoker.remove = undefined
   }
   // a re-run sets the layer again right away, so the native listener stays
+  const scope = getCurrentScope()
   onEffectCleanup(() => {
-    invoker[layer] = null
-    invoker.handlers = null
+    if (!isScopeBeingRemoved(scope)) {
+      invoker[layer] = null
+      invoker.handlers = null
+    }
   })
 }
 

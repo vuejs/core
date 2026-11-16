@@ -32,6 +32,7 @@ import {
   remove,
   removeFragment,
   removeNode,
+  stopScopeForRemoval,
   unmountVDOM,
 } from './block'
 import { MoveType, queuePostFlushCb, warn } from '@vue/runtime-dom'
@@ -633,7 +634,7 @@ export const createFor = (
 
   const unmount = (block: ForBlock, doRemove = true) => {
     if (!isComponent) {
-      block.scope!.stop()
+      stopScopeForRemoval(block.scope!)
     }
     if (doRemove) {
       removeForBlock(block)
@@ -644,7 +645,7 @@ export const createFor = (
     if (isComponent) {
       // Component item cleanups such as template refs must observe the
       // component after structural removal.
-      block.scope!.stop()
+      stopScopeForRemoval(block.scope!)
     }
   }
 

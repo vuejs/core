@@ -1,5 +1,5 @@
 import { EMPTY_ARR, isArray } from '@vue/shared'
-import { onScopeDispose } from '@vue/reactivity'
+import { type EffectScope, onScopeDispose } from '@vue/reactivity'
 import {
   type VaporComponentInstance,
   isVaporComponent,
@@ -426,6 +426,30 @@ export function move(
   }
 }
 
+let removingScope: EffectScope | undefined
+
+export function isScopeBeingRemoved(scope: EffectScope | undefined): boolean {
+  if (!removingScope) return false
+  // Scope links stay intact until their cleanups finish.
+  while (scope) {
+    if (scope === removingScope) return true
+    scope = scope.subs && (scope.subs.sub as EffectScope)
+  }
+  return false
+}
+
+// DOM teardown must retain listeners for removal events and events already
+// propagating through the old tree. Explicit scope.stop() still cleans them up.
+export function stopScopeForRemoval(scope: EffectScope): void {
+  const prev = removingScope
+  removingScope = scope
+  try {
+    scope.stop()
+  } finally {
+    removingScope = prev
+  }
+}
+
 export function remove(block: Block, parent?: ParentNode): void {
   if (block instanceof Node) {
     removeNode(block, parent)
@@ -514,7 +538,7 @@ export function removeFragment(
     remove(block.nodes, parent)
   }
   if (block.anchor) removeNode(block.anchor, parent)
-  if (block.scope) block.scope.stop()
+  if (block.scope) stopScopeForRemoval(block.scope)
 }
 
 /**
