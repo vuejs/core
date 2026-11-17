@@ -1,6 +1,12 @@
 import { createVaporApp, createVaporSSRApp } from '../../src'
 import { defineComponent, h, nextTick, reactive, ref } from '@vue/runtime-dom'
-import { VueServerRenderer, compile, runtimeDom, runtimeVapor } from '../_utils'
+import {
+  VueServerRenderer,
+  compile,
+  runtimeDom,
+  runtimeVapor,
+  stripAnchors,
+} from '../_utils'
 import { setIsHydratingEnabled } from '../../src/dom/hydration'
 import {
   compileVaporComponent,
@@ -2012,4 +2018,44 @@ describe('VDOM interop', () => {
       expect(container.innerHTML).toBe('')
     },
   )
+
+  test('hydrate keyed multi-root Vapor components, then add and reverse rows', async () => {
+    const data = ref({ list: ['b', 'c'] })
+    const { container, app } = await testWithVDOMApp(
+      `<script setup>
+        const data = _data
+        const components = _components
+      </script>
+      <template><div>
+        <components.Item v-for="label in data.list" :key="label" :label="label" />
+      </div></template>`,
+      {
+        Item: `<script setup>defineProps({ label: String })</script>
+          <template><b>{{ label }}</b><i>.</i></template>`,
+      },
+      data,
+    )
+    try {
+      expect(stripAnchors(container.innerHTML)).toBe(
+        '<div><b>b</b><i>.</i><b>c</b><i>.</i></div>',
+      )
+      expect('Hydration node mismatch').not.toHaveBeenWarned()
+      expect('Hydration children mismatch').not.toHaveBeenWarned()
+
+      data.value.list.unshift('a')
+      await nextTick()
+      expect(stripAnchors(container.innerHTML)).toBe(
+        '<div><b>a</b><i>.</i><b>b</b><i>.</i><b>c</b><i>.</i></div>',
+      )
+
+      data.value.list.reverse()
+      await nextTick()
+      expect(stripAnchors(container.innerHTML)).toBe(
+        '<div><b>c</b><i>.</i><b>b</b><i>.</i><b>a</b><i>.</i></div>',
+      )
+    } finally {
+      app.unmount()
+    }
+    expect(container.childNodes).toHaveLength(0)
+  })
 })

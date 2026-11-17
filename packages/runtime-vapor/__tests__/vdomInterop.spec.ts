@@ -18903,3 +18903,304 @@ describe('vdom slot content asks the vapor outlet to refresh', () => {
     expect(asking()).toBe(3)
   })
 })
+
+// vdom places a sibling entering before the next vnode's `el`, and a keyed
+// row moving before it: a vapor component vnode whose root is not a single
+// element starts on a node of its own, like a vdom Fragment.
+describe('a vapor component in vdom starts on a node of its own', () => {
+  const withLabel = (content: string) => `
+    <script setup>
+      const data = _data
+      const components = _components
+      defineProps({ label: String })
+    </script>
+    <template>${content}</template>`
+  const Item = withLabel(`<b>{{ label }}</b><i>.</i>`)
+  const rows = (attrs = '') =>
+    `<components.Item v-for="label in data.list" :key="label" :label="label" ${attrs} />`
+  const list = (content: string) => `<template><div>${content}</div></template>`
+  // the `el` of each row mounted
+  const tracked = (list: string[]) => {
+    const els: Node[] = []
+    return { list, els, mounted: (vnode: VNode) => els.push(vnode.el as Node) }
+  }
+  const html = (labels: string[], row = (l: string) => `<b>${l}</b><i>.</i>`) =>
+    `<div>${labels.map(row).join('')}</div>`
+
+  test.each([
+    ['added before the others', ['b', 'c'], ['a', 'b', 'c']],
+    ['reversed', ['a', 'b', 'c'], ['c', 'b', 'a']],
+    ['removed from the middle', ['a', 'b', 'c'], ['a', 'c']],
+    ['shuffled', ['a', 'b', 'c', 'd', 'e'], ['d', 'b', 'e', 'a', 'c']],
+  ])('rows %s', async (_, initial, updated) => {
+    const seen = await parity(
+      { Item, App: list(rows('@vue:mounted="data.mounted"')) },
+      ['Item'],
+      () => tracked(initial),
+      [
+        data => (data.value.list = updated),
+        data => (data.value.list = []),
+        // removed with its row
+        data =>
+          data.value.els.forEach((el: Node) =>
+            expect(el.parentNode).toBeNull(),
+          ),
+      ],
+    )
+    expect(seen[1]).toBe(html(updated))
+    expect(seen[2]).toBe('<div></div>')
+  })
+
+  // its root changes between one element, another element and more nodes
+  const Inner = withLabel(`
+    <template v-if="data.multi"><b>{{ label }}</b><i>.</i></template>
+    <p v-else-if="data.p">{{ label }}</p>
+    <b v-else>{{ label }}</b>`)
+  const child = withLabel(`<components.Inner :label="label" />`)
+  test.each([
+    ['its own root', { Item: Inner }, ['Item'], ''],
+    [
+      'the root of a vapor child',
+      { Inner, Item: child },
+      ['Inner', 'Item'],
+      '',
+    ],
+    [
+      'the first root of a vapor child',
+      { Inner, Item: withLabel(`<components.Inner :label="label" /><u>!</u>`) },
+      ['Inner', 'Item'],
+      '<u>!</u>',
+    ],
+    [
+      'its root, as the root of a vdom component',
+      { Inner, Item: child },
+      ['Inner'],
+      '',
+    ],
+  ])('rows whose root changes: %s', async (_, srcs, vaporOnes, tail) => {
+    const seen = await parity(
+      { ...srcs, App: list(rows()) },
+      vaporOnes,
+      () => ({ list: ['c'], multi: false, p: false }),
+      [
+        // before a root element, then the root grows more nodes
+        data => data.value.list.unshift('b'),
+        data => (data.value.multi = true),
+        data => data.value.list.unshift('a'),
+        data => data.value.list.reverse(),
+        data => (data.value.multi = false),
+        data => data.value.list.unshift('d'),
+        // another element
+        data => (data.value.p = true),
+        data => data.value.list.unshift('e'),
+        data => (data.value.multi = true),
+        data => data.value.list.reverse(),
+      ],
+    )
+    const row = (l: string) => `<b>${l}</b><i>.</i>${tail}`
+    expect(seen[4]).toBe(html(['c', 'b', 'a'], row))
+    expect(seen[10]).toBe(html(['a', 'b', 'c', 'd', 'e'], row))
+  })
+
+  test('rows deactivated and activated by KeepAlive', async () => {
+    // stored and restored with its row
+    const startsRow = (data: any) =>
+      data.value.els.forEach((el: Node) =>
+        expect(el.nextSibling!.nodeName).toBe('B'),
+      )
+    const seen = await parity(
+      {
+        Item,
+        App: list(`
+          <KeepAlive v-for="label in data.list" :key="label">
+            <components.Item v-if="data.show" :label="label" @vue:mounted="data.mounted" />
+          </KeepAlive>`),
+      },
+      ['Item'],
+      () => ({ ...tracked(['b', 'c']), show: true }),
+      [
+        data => (data.value.show = false),
+        startsRow,
+        data => (data.value.show = true),
+        startsRow,
+        data => data.value.list.unshift('a'),
+        data => data.value.list.reverse(),
+        data => (data.value.list = []),
+      ],
+    )
+    expect(seen[1]).toBe('<div></div>')
+    expect(seen[6]).toBe(html(['c', 'b', 'a']))
+  })
+
+  test.each([
+    [
+      'leaving and entering before keyed rows',
+      `<Transition :css="false">
+        <components.Item v-if="data.show" label="t" />
+      </Transition>
+      ${rows()}`,
+    ],
+    [
+      'out-in, in keyed rows',
+      `<template v-for="label in data.list" :key="label">
+        <Transition mode="out-in" :css="false">
+          <components.Item :key="data.show + label" :label="label" />
+        </Transition>
+      </template>`,
+    ],
+  ])('rows with a Transition: %s', async (_, content) => {
+    await parity(
+      { Item, App: list(content) },
+      ['Item'],
+      () => ({ list: ['b'], show: true }),
+      [
+        data => (data.value.show = false),
+        data => data.value.list.unshift('a'),
+        data => (data.value.show = true),
+        data => data.value.list.reverse(),
+      ],
+    )
+    expect(
+      'Component inside <Transition> renders non-element root node that cannot be animated',
+    ).toHaveBeenWarned()
+    expect(
+      '<transition> can only be used on a single element or component',
+    ).toHaveBeenWarned()
+  })
+
+  test('rows removed with a vdom fragment around them', async () => {
+    const seen = await parity(
+      {
+        Item,
+        App: list(`
+          <template v-if="data.show">${rows('@vue:mounted="data.mounted"')}</template>
+          <u>end</u>`),
+      },
+      ['Item'],
+      () => ({ ...tracked(['a', 'b']), show: true }),
+      [
+        data => (data.value.show = false),
+        data =>
+          data.value.els.forEach((el: Node) =>
+            expect(el.parentNode).toBeNull(),
+          ),
+        data => (data.value.show = true),
+        data => data.value.list.reverse(),
+      ],
+    )
+    expect(seen[4]).toBe(
+      '<div><b>b</b><i>.</i><b>a</b><i>.</i><u>end</u></div>',
+    )
+  })
+
+  test.each([
+    ['as a row', (row: string) => `<b>${row}</b><i>.</i>`, false],
+    // its root element replaces the start node once setup resolves
+    [
+      'as the root of a vdom row, with one root element',
+      (row: string) => `<b>${row}</b>`,
+      true,
+    ],
+  ])('rows with an async setup under Suspense, %s', async (_, row, wrapped) => {
+    const data = ref({ list: ['b', 'c'] })
+    const components: Record<string, any> = {}
+    components.Item = compile(
+      `<script setup vapor>
+        defineProps({ label: String })
+        await Promise.resolve()
+      </script>
+      <template>${row('{{ label }}')}</template>`,
+      data,
+      components,
+    )
+    if (wrapped) {
+      components.Row = compile(
+        withLabel(`<components.Item :label="label" />`),
+        data,
+        components,
+        { vapor: false },
+      )
+    }
+    const App = compile(
+      `${vdomScript}<template><Suspense><div>
+        <components.${wrapped ? 'Row' : 'Item'} v-for="label in data.list" :key="label" :label="label" />
+      </div></Suspense></template>`,
+      data,
+      components,
+      { vapor: false },
+    )
+    const root = document.createElement('div')
+    createApp(App).use(vaporInteropPlugin).mount(root)
+    const settled = async () => {
+      await new Promise(r => setTimeout(r))
+      return stripAnchors(root.innerHTML)
+    }
+    expect(await settled()).toBe(html(['b', 'c'], row))
+    data.value.list.unshift('a')
+    expect(await settled()).toBe(html(['a', 'b', 'c'], row))
+    data.value.list.reverse()
+    expect(await settled()).toBe(html(['c', 'b', 'a'], row))
+  })
+
+  describe('vdom rows of a vapor list', () => {
+    const Row = withLabel(
+      `<components.Item :label="label" @vue:mounted="data.mounted" />`,
+    )
+
+    test('in a vapor slot', async () => {
+      const seen = await parity(
+        {
+          Item,
+          Row,
+          List: list(
+            `<slot v-for="label in data.list" :key="label" :label="label" />`,
+          ),
+          App: `<template>
+            <components.List v-slot="{ label }"><components.Row :label="label" /></components.List>
+          </template>`,
+        },
+        ['Item', 'List'],
+        () => tracked(['a', 'b', 'c']),
+        [
+          data => data.value.list.reverse(),
+          // moved with its row
+          data =>
+            data.value.els.forEach((el: Node) =>
+              expect(el.nextSibling!.nodeName).toBe('B'),
+            ),
+          data => (data.value.list = []),
+          data =>
+            data.value.els.forEach((el: Node) =>
+              expect(el.parentNode).toBeNull(),
+            ),
+        ],
+      )
+      expect(seen[1]).toBe(html(['c', 'b', 'a']))
+      expect(seen[3]).toBe('<div></div>')
+    })
+
+    // the vapor list keeps the nodes of a vdom row from when it rendered
+    test('in a vapor v-for, with a root that changes', async () => {
+      await parity(
+        {
+          Item: Inner,
+          Row,
+          List: list(
+            `<components.Row v-for="label in data.list" :key="label" :label="label" />`,
+          ),
+          App: `<template><components.List /></template>`,
+        },
+        ['Item', 'List'],
+        () => ({ ...tracked(['a', 'b', 'c']), multi: false, p: false }),
+        [
+          data => (data.value.multi = true),
+          data => data.value.list.reverse(),
+          data => data.value.list.splice(1, 1),
+          data => (data.value.multi = false),
+          data => data.value.list.reverse(),
+          data => (data.value.list = []),
+        ],
+      )
+    })
+  })
+})

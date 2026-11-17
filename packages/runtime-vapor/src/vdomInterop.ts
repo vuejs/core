@@ -77,6 +77,7 @@ import {
   shallowRef,
   shouldUpdateComponent,
   simpleSetCurrentInstance,
+  updateHOCHostEl,
   vShowHidden,
   activate as vdomActivate,
   deactivate as vdomDeactivate,
@@ -123,6 +124,7 @@ import {
   EMPTY_BLOCK,
   type TransitionBlock,
   type VaporTransitionHooks,
+  getBlockFirstNode,
   insert,
   isValidBlock,
   isValidSlot,
@@ -567,10 +569,7 @@ const vaporInteropImpl = {
     registerAfterInteropSetup(instance, pendingSetup, () => {
       if (!instance.exposed) instance.exposed = {}
     })
-    const rootEl = !pendingSetup && resolveInteropRootEl(instance)
-    if (rootEl) {
-      vnode.el = rootEl
-    }
+    setVNodeEl(vnode, instance, !pendingSetup && resolveInteropRootEl(instance))
     const asyncWrapper = isAsyncWrapper(vnode)
     const vnodeHooks = asyncWrapper ? null : vnode.props
     if (
@@ -585,10 +584,7 @@ const vaporInteropImpl = {
           // the input the component mounts with
           const mountVNode = vnodeHookState.vnode
           const hooks = asyncWrapper ? null : mountVNode.props
-          if (pendingSetup) {
-            const rootEl = resolveInteropRootEl(instance)
-            if (rootEl) mountVNode.el = rootEl
-          }
+          if (pendingSetup) syncVNodeEl(mountVNode, instance)
           // align with VDOM: vnode beforeMount runs before directive created/beforeMount.
           invokeInteropVNodeHook(
             instance,
@@ -677,8 +673,9 @@ const vaporInteropImpl = {
     // removed after this, by removeUnmountedVNode
     const deferred =
       !doRemove && !!deferredRoots && deferredRoots.includes(vnode)
-    let slotStartAnchor: Node | null = null
+    let startAnchor: Node | undefined
     if (instance) {
+      startAnchor = componentStartAnchors.get(instance)
       unmountComponent(instance, container, parentSuspense)
       if (!doRemove && !instance.block && !deferred) {
         // VDOM retains the enclosing range through vnode.el and vnode.anchor.
@@ -703,7 +700,7 @@ const vaporInteropImpl = {
       // records for VDOM SSR slot fragments, while vnode.anchor points at the
       // closing one.
       if (vnode.el && vnode.el !== anchor) {
-        slotStartAnchor = vnode.el as Node
+        startAnchor = vnode.el as Node
       }
       // Fragment child unmounts invoke VaporSlot with doRemove = false, so the
       // renderer does not pass us a container. Most slot blocks can still
@@ -759,10 +756,10 @@ const vaporInteropImpl = {
       }
     }
     if (doRemove) {
-      if (slotStartAnchor) {
-        const parent = slotStartAnchor.parentNode
+      if (startAnchor) {
+        const parent = startAnchor.parentNode
         if (parent) {
-          remove(slotStartAnchor, parent)
+          remove(startAnchor, parent)
         }
       }
       const anchor = vnode.anchor as Node
@@ -875,20 +872,12 @@ const vaporInteropImpl = {
     parentSuspense,
   ) {
     const block = vnode.vb || (vnode.component as any)
-    // Resolved Vapor blocks exclude the VDOM-owned opening marker, but a
-    // pending hydration range includes it. Avoid moving `vnode.el` twice.
-    const pendingRangeOwnsFragmentStart =
-      isVaporComponent(block) && !!block.pendingBlock
-    // A slot's own start node, or the opening marker of a hydrated range. A
-    // component's `el` is its first root, which its block moves.
-    if (
-      vnode.el &&
-      vnode.el !== vnode.anchor &&
-      (vnode.vb ||
-        (isRangeStart(vnode.el as Node) && !pendingRangeOwnsFragmentStart))
-    ) {
+    // A slot's own start node or the opening marker of its hydrated range, or
+    // the start node of a component without a single root element
+    const startAnchor = vnode.vb ? vnode.el : componentStartAnchors.get(block)
+    if (startAnchor && startAnchor !== vnode.anchor) {
       move(
-        vnode.el as any,
+        startAnchor as any,
         container,
         anchor,
         moveType,
@@ -924,23 +913,11 @@ const vaporInteropImpl = {
     if (!isHydrating && !isVdomHydrating && !isVdomHydratingEnabled) {
       return node
     }
-    let instance: VaporComponentInstance | undefined
     vaporHydrateNode(node, () => {
-      instance = this.mount(
-        vnode,
-        container,
-        anchor,
-        parentComponent,
-        parentSuspense,
-      ) as VaporComponentInstance
+      this.mount(vnode, container, anchor, parentComponent, parentSuspense)
     })
     // bounds the component's own hydration, then holds no SSR position
     claimUntrackedAnchor(vnode.anchor as Node)
-    if (instance && instance.asyncDep && !instance.asyncResolved) {
-      // `block` stays null until async setup resolves. VDOM still needs
-      // `vnode.el` as the host start node; `pendingBlock` owns the full range.
-      vnode.el = node
-    }
     return anchor
   },
 
@@ -1172,6 +1149,8 @@ const vaporInteropImpl = {
     if (shouldUpdate) {
       updateInteropVNode(instance, vnodeHookState, vnode, cached)
     }
+    const startAnchor = componentStartAnchors.get(instance)
+    if (startAnchor) insert(startAnchor, container, anchor)
     activate(instance, container, anchor, parentSuspense)
     insert(vnode.anchor as any, container, anchor)
   },
@@ -1179,6 +1158,8 @@ const vaporInteropImpl = {
   deactivate(vnode, container: ParentNode, parentSuspense) {
     if (!isVdomKeepAliveEnabled) return
     const instance = getVaporInstance(vnode)
+    const startAnchor = componentStartAnchors.get(instance)
+    if (startAnchor) insert(startAnchor, container)
     deactivate(instance, container, parentSuspense)
     insert(vnode.anchor as any, container)
   },
@@ -4383,7 +4364,52 @@ function resolveInteropRootEl(
 }
 
 function syncVNodeEl(vnode: VNode, instance: VaporComponentInstance): void {
-  vnode.el = resolveInteropRootEl(instance) || vnode.anchor
+  setVNodeEl(vnode, instance, resolveInteropRootEl(instance))
+  // as vdom does after a root update: the vdom components this one is the
+  // root of share its `el`
+  updateHOCHostEl(
+    { vnode, parent: instance.parent, suspense: instance.suspense } as any,
+    vnode.el,
+  )
+}
+
+// A component vnode whose root is not a single element starts on a node of its
+// own, like a vdom Fragment: vdom places a sibling entering ahead of the vnode
+// before `el`.
+const componentStartAnchors = new WeakMap<VaporComponentInstance, Node>()
+
+function setVNodeEl(
+  vnode: VNode,
+  instance: VaporComponentInstance,
+  rootEl: Element | false | undefined,
+): void {
+  let startAnchor = componentStartAnchors.get(instance)
+  if (rootEl) {
+    if (startAnchor) {
+      componentStartAnchors.delete(instance)
+      const parent = startAnchor.parentNode
+      if (parent) remove(startAnchor, parent)
+    }
+    vnode.el = rootEl
+    return
+  }
+  if (!startAnchor) {
+    componentStartAnchors.set(instance, (startAnchor = createTextNode()))
+  }
+  if (vnode.el !== startAnchor) {
+    // right before the block: vdom may have placed siblings before the root
+    // element this replaces
+    const anchor = vnode.anchor as Node
+    const parent = anchor.parentNode
+    const first = getBlockFirstNode(instance)
+    if (parent) {
+      parent.insertBefore(
+        startAnchor,
+        first && first.parentNode === parent ? first : anchor,
+      )
+    }
+    vnode.el = startAnchor
+  }
 }
 
 function syncInteropRoot(instance: VaporComponentInstance): void {

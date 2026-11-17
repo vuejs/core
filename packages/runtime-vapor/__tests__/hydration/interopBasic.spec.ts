@@ -995,6 +995,7 @@ describe('VDOM interop', () => {
     expect(formatNodeList(container.childNodes)).toEqual([
       '<!--{-->',
       '<!--{-->',
+      'text("")',
       '<div>first</div>',
       '<div>second</div>',
       '<!--}-->',
