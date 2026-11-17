@@ -1114,7 +1114,7 @@ function resolveWithTS(
         // ts 5.5+ supports ${configDir} in paths
         const supportsConfigDir = major > 5 || (major === 5 && minor >= 5)
         return p.startsWith('${configDir}') && supportsConfigDir
-          ? normalizePath(p.replace('${configDir}', dirname(configPath!)))
+          ? normalizePath(p.replace('${configDir}', base))
           : joinPaths(base, p)
       }
       // resolve which config matches the current file
