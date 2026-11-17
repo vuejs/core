@@ -83,6 +83,34 @@ describe('api: createVaporApp', () => {
     }
   })
 
+  test('mounts a root without a parent after an unhandled setup error', () => {
+    const Failed = defineVaporComponent({
+      setup() {
+        provide('key', 'failed app')
+        throw new Error('setup error')
+      },
+    })
+    expect(() =>
+      createVaporApp(Failed).mount(document.createElement('div')),
+    ).toThrow('setup error')
+    expect('Unhandled error during execution of setup').toHaveBeenWarned()
+
+    let instance: GenericComponentInstance
+    const Comp = defineVaporComponent({
+      setup() {
+        instance = currentInstance!
+        return createTextNode(String(inject('key')))
+      },
+    })
+    const app = createVaporApp(Comp)
+    app.provide('key', 'second app')
+    const root = document.createElement('div')
+    app.mount(root)
+    expect(root.textContent).toBe('second app')
+    expect(instance!.parent).toBeNull()
+    expect(instance!.appContext).toBe(app._context)
+  })
+
   test('mount should no-op when selector returns null', () => {
     const Comp = defineVaporComponent({
       setup() {
