@@ -18835,3 +18835,71 @@ describe('vdom directives through a Transition wrapping a slot', () => {
     ).toEqual(['<div mark="">a</div>', '<p mark="">b</p>'])
   })
 })
+
+describe('vdom slot content asks the vapor outlet to refresh', () => {
+  function mount(content: string) {
+    const data = ref<any>({ list: ['a', 'b', 'c'] })
+    const Item = compile(
+      `<script setup>
+        defineProps({ label: String })
+      </script>
+      <template>
+        <li>{{ label }}</li>
+      </template>`,
+      data,
+      {},
+      { vapor: false },
+    )
+    const List = compile(
+      `<template>
+        <ul>
+          <slot />
+        </ul>
+      </template>`,
+      data,
+    )
+    const App = compile(
+      `<script setup>
+        const data = _data
+        const components = _components
+      </script>
+      <template>
+        <components.List>
+          ${content}
+        </components.List>
+      </template>`,
+      data,
+      { List, Item },
+      { vapor: false },
+    )
+    const root = document.createElement('div')
+    createApp(App).use(vaporInteropPlugin).mount(root)
+    // the hooks a patch of the node invokes
+    const asking = () =>
+      [...root.querySelectorAll('li')].filter(
+        (li: any) => li.__vnode.iu || li.__vueParentComponent.vnode?.iu,
+      ).length
+    return { data, root, asking }
+  }
+
+  // The outlet refreshes after each patch of the content, which is the only
+  // thing that patches an element.
+  test('not for its elements', async () => {
+    const { data, root, asking } = mount(
+      `<li v-for="label in data.list" :key="label">{{ label }}</li>`,
+    )
+    expect(asking()).toBe(0)
+    data.value.list = ['a', 'b', 'c', 'd']
+    await nextTick()
+    expect(root.querySelectorAll('li').length).toBe(4)
+    expect(asking()).toBe(0)
+  })
+
+  // guard
+  test('for its components, which update on their own', async () => {
+    const { asking } = mount(
+      `<components.Item v-for="label in data.list" :key="label" :label="label" />`,
+    )
+    expect(asking()).toBe(3)
+  })
+})
