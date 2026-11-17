@@ -96,6 +96,7 @@ import {
 import {
   type DynamicPropsSource,
   INITIAL_RAW_VALUES,
+  type PropsProxyHandlers,
   type RawProps,
   fallthroughOnlyKey,
   getPropsProxyHandlers,
@@ -293,11 +294,7 @@ interface SharedInternalOptions {
    * Cached normalized props proxy handlers, and the reader of the attrs as a
    * plain object.
    */
-  __propsHandlers?: [
-    ProxyHandler<any> | null,
-    ProxyHandler<any>,
-    (instance: VaporComponentInstance) => Record<string, any>,
-  ]
+  __propsHandlers?: PropsProxyHandlers
   /**
    * Cached normalized emits options.
    */
@@ -1230,10 +1227,11 @@ export class VaporComponentInstance<
     // attrs key set is never static
     this.hasFallthrough = !!ce || hasFallthroughAttrs(comp, this.rawProps)
     const [propsHandlers, attrsHandlers] = getPropsProxyHandlers(comp)
-    this.attrs = new Proxy(this, attrsHandlers)
+    const target = { i: this }
+    this.attrs = new Proxy(target, attrsHandlers)
     this.props = (
       comp.props
-        ? new Proxy(this, propsHandlers!)
+        ? new Proxy(target, propsHandlers!)
         : isFunction(comp)
           ? this.attrs
           : EMPTY_OBJ
