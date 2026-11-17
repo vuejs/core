@@ -17,6 +17,7 @@ import {
   defineVaporComponent,
   renderEffect,
   setInsertionState,
+  setStaticTemplateRef,
   setText,
   template,
   useVaporCssVars,
@@ -1703,6 +1704,78 @@ function runSharedTests(deferMode: boolean): void {
     const child = target.children[0]
     expect(child.outerHTML).toBe(`<div>teleported</div>`)
     expect(tRefInMounted).toBe(child)
+  })
+
+  test('template ref on teleport points to its start placeholder', async () => {
+    const target = document.createElement('div')
+    const root = document.createElement('div')
+    const tRef = ref()
+    const fnRefValues: any[] = []
+    let tRefInMounted
+
+    const { app, mount } = define({
+      setup() {
+        onMounted(() => {
+          tRefInMounted = tRef.value
+        })
+        const setTemplateRef = createTemplateRefSetter()
+        const n0 = createComponent(
+          VaporTeleport,
+          { to: () => target },
+          { default: () => template('<div>one</div>')() },
+        )
+        setTemplateRef(n0, tRef)
+        const n1 = createComponent(
+          VaporTeleport,
+          { to: () => target },
+          { default: () => template('<div>two</div>')() },
+        )
+        setStaticTemplateRef(n1, el => {
+          fnRefValues.push(el)
+        })
+        return [n0, n1]
+      },
+    }).create()
+    mount(root)
+    await nextTick()
+
+    expect(root.innerHTML).toBe(
+      `<!--teleport start--><!--teleport end-->` +
+        `<!--teleport start--><!--teleport end-->`,
+    )
+    expect(target.innerHTML).toBe(`<div>one</div><div>two</div>`)
+
+    // as vdom, the ref holds the teleport's start node in the main view
+    expect(tRef.value).toBe(root.childNodes[0])
+    expect(tRefInMounted).toBe(root.childNodes[0])
+    expect(fnRefValues).toEqual([root.childNodes[2]])
+
+    app.unmount()
+    expect(tRef.value).toBe(null)
+  })
+
+  test('template ref on disabled teleport points to its start placeholder', async () => {
+    const target = document.createElement('div')
+    const root = document.createElement('div')
+    const tRef = ref()
+
+    const { mount } = define({
+      setup() {
+        const setTemplateRef = createTemplateRefSetter()
+        const n0 = createComponent(
+          VaporTeleport,
+          { to: () => target, disabled: () => true },
+          { default: () => template('<div>teleported</div>')() },
+        )
+        setTemplateRef(n0, tRef)
+        return n0
+      },
+    }).create()
+    mount(root)
+    await nextTick()
+
+    expect(tRef.value).toBe(root.childNodes[0])
+    expect(tRef.value.data).toBe('teleport start')
   })
 
   test('with insertion state', async () => {

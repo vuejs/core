@@ -110,6 +110,29 @@ describe('Vapor Mode hydration', () => {
       )
     })
 
+    test('template ref', async () => {
+      const data = ref({ fn: vi.fn() })
+
+      const teleportContainer = document.createElement('div')
+      teleportContainer.id = 'teleport-ref'
+      teleportContainer.innerHTML =
+        `<!--teleport start anchor-->` +
+        `<span>foo</span>` +
+        `<!--teleport anchor-->`
+      document.body.appendChild(teleportContainer)
+
+      const { container } = await mountWithHydration(
+        '<!--teleport start--><!--teleport end-->',
+        `<teleport to="#teleport-ref" :ref="data.fn"><span>foo</span></teleport>`,
+        data,
+      )
+
+      const fn = data.value.fn
+      expect(fn).toHaveBeenCalledTimes(1)
+      expect(fn.mock.calls[0][0]).toBe(container.firstChild)
+      expect((container.firstChild as Comment).data).toBe('teleport start')
+    })
+
     test('multiple + integration', async () => {
       const data = ref({
         msg: ref('foo'),
