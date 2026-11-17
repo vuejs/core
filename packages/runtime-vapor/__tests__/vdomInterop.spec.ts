@@ -19754,3 +19754,43 @@ describe('vdom child root replaced without a parent update', () => {
     expect(host.innerHTML).toBe('<p>a</p><p>x</p><p>b</p><!--for-->')
   })
 })
+
+describe('vdom slot of a vnode made outside a render function', () => {
+  test.each([
+    ['<slot />', true],
+    ['<slot />', false],
+    ['<div><slot /></div>', true],
+    ['<div><slot /></div>', false],
+  ])('sets a ref in the content of %s (__DEV__: %s)', (template, dev) => {
+    const Comp = compile(`<template>${template}</template>`, ref())
+    const el = ref<HTMLElement | null>(null)
+    const vnode = h(Comp, null, {
+      default: () => h('span', { ref: el }, 'slot'),
+    })
+    __DEV__ = dev
+    try {
+      const { host } = define({ render: () => vnode }).render()
+      expect(el.value).toBeInstanceOf(HTMLSpanElement)
+      expect(el.value).toBe(host.querySelector('span'))
+    } finally {
+      __DEV__ = true
+    }
+  })
+
+  test('gives the content to the component that renders the outlet', () => {
+    const Child = defineComponent({
+      setup(_, { slots }) {
+        return () => h('section', slots.default!())
+      },
+    })
+    const Comp = compile(
+      `<template><components.Child><slot /></components.Child></template>`,
+      ref(),
+      { Child },
+    )
+    const vnode = h(Comp, null, { default: () => h('span', { ref: 'el' }) })
+    const { host } = define({ render: () => vnode }).render()
+    expect(vnode.component!.refs.el).toBeInstanceOf(HTMLSpanElement)
+    expect(vnode.component!.refs.el).toBe(host.querySelector('span'))
+  })
+})

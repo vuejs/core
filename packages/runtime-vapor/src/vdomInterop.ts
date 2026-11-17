@@ -73,6 +73,7 @@ import {
   resolveTransitionHooks as resolveVNodeTransitionHooks,
   restoreCurrentInstance,
   setCurrentInstance,
+  setCurrentRenderingInstance,
   setTransitionHooks as setVNodeTransitionHooks,
   setVaporInteropEnabled,
   shallowReactive,
@@ -167,6 +168,7 @@ import {
 import type { RawSlots, SlotSourceCell, VaporSlot } from './componentSlots'
 import {
   dynamicSlotsProxyHandlers,
+  getScopeOwner,
   getSlot,
   getSlotPropsProto,
   isolateSlotSources,
@@ -5495,9 +5497,24 @@ function createNormalizedInteropSlot(
   rawSlot: Function,
   ctx: ComponentInternalInstance | null | undefined,
 ): Slot {
-  const normalized = withCtx(
-    (...args: any[]) => normalizeInteropSlotValue(rawSlot(...args)),
-    ctx,
+  const normalized = (
+    ctx
+      ? withCtx(
+          (...args: any[]) => normalizeInteropSlotValue(rawSlot(...args)),
+          ctx,
+        )
+      : (...args: any[]) => {
+          // no render function owns this slot: as in vdom, the component
+          // that renders the outlet owns its content
+          const prev = setCurrentRenderingInstance(
+            getScopeOwner() as ComponentInternalInstance | null,
+          )
+          try {
+            return normalizeInteropSlotValue(rawSlot(...args))
+          } finally {
+            setCurrentRenderingInstance(prev)
+          }
+        }
   ) as Slot
   ;(normalized as any)._c = false
   return normalized
