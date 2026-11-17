@@ -16,6 +16,7 @@ import { BindingTypes } from '@vue/compiler-dom'
 import {
   VueServerRenderer,
   compile,
+  compileScoped,
   compileToVaporRender,
   runtimeDom,
   runtimeVapor,
@@ -499,4 +500,65 @@ describe('scopeId hydration writes', () => {
     expect(span.textContent).toBe('s')
     expect(span.hasAttribute('data-v-x-s')).toBe(false)
   })
+
+  // a `vdomParent` keeps Mid and App vdom
+  test.each([
+    [
+      'slot content',
+      {
+        Fade: `
+          <Transition :css="false">
+            <slot />
+          </Transition>`,
+        Mid: `
+          <components.Fade>
+            <div v-if="!data.alt">a</div>
+            <p v-else>b</p>
+          </components.Fade>`,
+        App: `<components.Mid />`,
+      },
+      false,
+      `<p data-v-mid="" data-v-fade="" data-v-app="">b</p>`,
+    ],
+    [
+      'the fallback under a vdom parent',
+      {
+        Fade: `
+          <Transition :css="false">
+            <slot>
+              <div v-if="!data.alt">a</div>
+              <p v-else>b</p>
+            </slot>
+          </Transition>`,
+        Mid: `<components.Fade />`,
+        App: `<components.Mid />`,
+      },
+      true,
+      `<p data-v-fade="" data-v-mid="" data-v-app="">b</p>`,
+    ],
+  ])(
+    'a root switched after hydration inherits the root ids through a Transition wrapping a slot, %s',
+    async (_, srcs: Record<string, string>, vdomParent, expected) => {
+      const data = ref<any>({})
+      const build = (ssr: boolean) =>
+        compileScoped(srcs, data, {
+          ssr,
+          vdomOnly: vdomParent ? ['Mid', 'App'] : [],
+        })
+      const container = document.createElement('div')
+      container.innerHTML = await VueServerRenderer.renderToString(
+        createSSRApp(build(true)),
+      )
+      document.body.appendChild(container)
+      const app = vdomParent
+        ? createSSRApp(build(false)).use(runtimeVapor.vaporInteropPlugin)
+        : createVaporSSRApp(build(false))
+      app.mount(container)
+
+      data.value = { alt: true }
+      await nextTick()
+      expect(container.querySelector('p')!.outerHTML).toBe(expected)
+      app.unmount()
+    },
+  )
 })

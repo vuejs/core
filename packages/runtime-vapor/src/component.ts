@@ -178,11 +178,14 @@ import {
   type InteropFragment,
   type SlotFragment,
   type VaporFragment,
+  endsRootChain,
   finishBlockCreation,
   isDynamicFragment,
   isFragment,
   isInteropFragment,
   isSlotOutletFragment,
+  isTransitionChildRoot,
+  nestedContentContext,
 } from './fragment'
 import { NATIVE_CHILDREN, SLOT } from './fragmentFlags'
 import type { VaporElement } from './apiDefineCustomElement'
@@ -344,10 +347,7 @@ export function resolveFallthroughOwner(
   if (
     isVaporComponent(instance) &&
     (isSingleRoot === true ||
-      (isTransitionEnabled &&
-        !insertionParent &&
-        isVaporTransition(instance.type) &&
-        currentRenderContext.nested !== instance) ||
+      (isTransitionEnabled && isTransitionChildRoot(insertionParent)) ||
       // the single root of the KeepAlive's own body (a dynamic reference
       // compiles it as SLOT, a literal one as `true`), not content an outlet
       // in that body renders: vdom stops at the slot fragment
@@ -1468,9 +1468,13 @@ export function createPlainElement(
 
 function renderPlainElementChildren(el: HTMLElement, rawSlots: RawSlots): void {
   // No outlet renders an element's children: nothing inside reports to,
-  // or is held by, the enclosing outlet.
+  // or is held by, the enclosing outlet. Nor is it a root position of the
+  // Transition rendering the element.
   const outerCtx = setRenderContext(
-    deriveSlotBoundary(currentRenderContext, null),
+    deriveSlotBoundary(
+      isTransitionEnabled ? nestedContentContext() : currentRenderContext,
+      null,
+    ),
   )
   let nextNode: Node | null = null
   if (isHydrating) {
@@ -1973,7 +1977,7 @@ export interface RootChainVisitor {
   // Fired at an interop fragment; a vnode-backed one carries the chain across
   // into vdom. Returning true ends the descent there.
   onInteropFragment?: (frag: InteropFragment) => boolean | void
-  // Slot outlets break the effective-root chain for scope id inheritance.
+  // Slot outlets break the effective-root chain (see endsRootChain).
   excludeSlotOutlets?: boolean
 }
 
@@ -1995,7 +1999,7 @@ export function getRootElement(
 
   if (isFragment(block) && !(isTeleportEnabled && isTeleportFragment(block))) {
     if (visitor) {
-      if (visitor.excludeSlotOutlets && isSlotOutletFragment(block)) {
+      if (visitor.excludeSlotOutlets && endsRootChain(block)) {
         return
       }
       if (
@@ -2075,7 +2079,7 @@ export function getRootChainComponent(
       isFragment(block) &&
       !(isTeleportEnabled && isTeleportFragment(block))
     ) {
-      if (isSlotOutletFragment(block)) return
+      if (endsRootChain(block)) return
       block = block.nodes
       continue
     }
@@ -2186,7 +2190,7 @@ export function applyFallthroughAttrs(
   scope?: EffectScope,
 ): void {
   const flattenSlots = isTransitionEnabled && isVaporTransition(instance.type)
-  const state = new FallthroughResolveState(scope, flattenSlots)
+  const state = new FallthroughResolveState(scope)
   const root = resolveFallthroughRoot(block, state)
   const { fragments, innermost, hasSlotOutlet } = state
 
@@ -2254,11 +2258,9 @@ class FallthroughResolveState implements RootChainVisitor {
   hasNonSingleRoot?: boolean
   // attrs fold at a component's own creation boundary
   readonly stopAtComponent = true
-  readonly flattenSlots: boolean
 
-  constructor(parentScope: EffectScope | undefined, flattenSlots: boolean) {
+  constructor(parentScope?: EffectScope) {
     this.parentScope = parentScope
-    this.flattenSlots = flattenSlots
   }
 
   onDynamicFragment(frag: DynamicFragment): boolean | void {
@@ -2266,9 +2268,7 @@ class FallthroughResolveState implements RootChainVisitor {
     // there: slot content is rendered by the parent, so fragments inside it
     // must not register a fallthrough hook — a later branch switch would
     // re-apply from the branch alone, with the slot boundary out of view.
-    // Transition sees through them: it renders its slot content flattened,
-    // as in vdom.
-    if (frag.__vf & SLOT && !(isTransitionEnabled && this.flattenSlots)) {
+    if (endsRootChain(frag)) {
       this.hasSlotOutlet = true
       return true
     }

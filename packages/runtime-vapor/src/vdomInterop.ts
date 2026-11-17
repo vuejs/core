@@ -196,11 +196,15 @@ import {
   RenderContextFragment,
   type VaporFragment,
   createSlotBoundary,
+  endsRootChain,
   isFragment,
   isInteropFragment,
+  isSlotOutletFragment,
+  isTransitionChildRoot,
   resolveFragmentAnchor,
 } from './fragment'
-import { SLOT_OUTLET, VDOM } from './fragmentFlags'
+import { SLOT_FLATTENED, SLOT_OUTLET, VDOM } from './fragmentFlags'
+import { setElementScopeIds } from './dom/scopeIdStamp'
 import { type SlotBoundaryContext, withSlotBoundary } from './slotBoundary'
 import {
   type SlotResolutionState,
@@ -2637,10 +2641,13 @@ function renderVDOMSlot(
   // frag.slotScopeIds is the outlet's id cell (the ambient createSlot
   // establishes around this call) — the base patch context for content
   // patches.
+  // as createSlot decides for a vapor outlet
+  const flattened =
+    isTransitionEnabled && isTransitionChildRoot(insertionParent)
   const frag = createInteropFragment(
     EMPTY_BLOCK,
     null,
-    SLOT_OUTLET,
+    flattened ? SLOT_OUTLET | SLOT_FLATTENED : SLOT_OUTLET,
     insertionParent,
   )
   const slotBoundary = frag.slotBoundary
@@ -2747,10 +2754,15 @@ function renderVDOMSlot(
   installInteropTransitionAccessor(slotResolutionState, frag)
   frag.slotState = slotResolutionState
   slotResolutionState.keepAliveCtx = frag.keepAliveCtx
-  localFallback = fallback
+  const renderFallback =
+    fallback &&
+    (flattened
+      ? withRootScopeIds(frag, () => fallback(internals, parentComponent))
+      : () => fallback(internals, parentComponent))
+  localFallback = renderFallback
     ? once
-      ? () => withOnce(() => fallback(internals, parentComponent))
-      : () => fallback(internals, parentComponent)
+      ? () => withOnce(renderFallback)
+      : renderFallback
     : undefined
 
   const place = (
@@ -2968,6 +2980,7 @@ function renderVDOMSlot(
       }
     }
     trackSlotVNodeUpdatesWithRefresh(next, refreshSlotVNode, notifyBeforeUpdate)
+    if (frag.rootScopeIds) setVNodeVaporScopeIds(next, frag.rootScopeIds)
     const prev = currentInstance
     simpleSetCurrentInstance(null)
     internals.p(
@@ -3498,6 +3511,27 @@ function renderVDOMSlot(
       setRendered(null)
     }
     finishContentUpdate()
+  }
+}
+
+// The vapor fallback of a flattened vdom-fed outlet: its root inherits the
+// root-only scope ids published to the outlet, like the vnode content it
+// stands in for, and so does every root the fallback switches to on its own.
+function withRootScopeIds(frag: VaporFragment, render: BlockFn): BlockFn {
+  const apply = (nodes: Block): void => {
+    const root = getRootElement(nodes, visitor)
+    const scopeIds = frag.rootScopeIds
+    // a hydrated root keeps the ids the server rendered
+    if (root && scopeIds && !isHydrating) setElementScopeIds(root, scopeIds)
+  }
+  const visitor: RootChainVisitor = {
+    excludeSlotOutlets: true,
+    onDynamicFragment: root => registerRootHook((root.bm ||= []), apply),
+  }
+  return () => {
+    const block = render()
+    apply(block)
+    return block
   }
 }
 
@@ -5449,13 +5483,18 @@ function publishVaporScopeIds(block: Block, scopeIds: string[]): void {
     onComponent: instance => {
       currentScopeIds = collectRootScopeIds(instance) || []
     },
+    onDynamicFragment: endsRootChain,
     onInteropFragment: frag => {
+      if (isSlotOutletFragment(frag)) {
+        // vdom slot content is patched in later, one vnode per render
+        if (frag.__vf & SLOT_FLATTENED) frag.rootScopeIds = currentScopeIds
+        return true
+      }
       if (frag.vnode) {
         setVNodeVaporScopeIds(frag.vnode, currentScopeIds)
         return true
       }
     },
-    excludeSlotOutlets: true,
   })
 }
 

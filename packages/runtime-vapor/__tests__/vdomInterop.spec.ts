@@ -15688,56 +15688,56 @@ test.each([true, false])(
 // vdom places a sibling entering before the next vnode's `el`, and a keyed
 // row moving before it: a vapor slot vnode in a vdom outlet starts on a node
 // of its own, like a vdom Fragment, instead of ending on its anchor.
-describe('a vapor slot in a vdom outlet starts on a node of its own', () => {
-  const vdomScript = `
-    <script setup>
-      const data = _data
-      const components = _components
-    </script>`
-  const strip = stripAnchors
+const vdomScript = `
+  <script setup>
+    const data = _data
+    const components = _components
+  </script>`
 
-  // the app all-vdom against the app with the components in `vaporOnes`
-  // compiled vapor, the DOM compared after every step
-  async function parity(
-    srcs: Record<string, string>,
-    vaporOnes: string[],
-    init: () => Record<string, any>,
-    steps: ((data: any) => void)[],
-  ) {
-    const run = async (vapor: boolean) => {
-      const data: any = ref(init())
-      const components: Record<string, any> = {}
-      const compileOne = (name: string) =>
-        compile(
-          `${vapor && vaporOnes.includes(name) ? '' : vdomScript}${srcs[name]}`,
-          data,
-          components,
-          { vapor: vapor && vaporOnes.includes(name) },
-        )
-      for (const name in srcs) {
-        if (name !== 'App') components[name] = compileOne(name)
-      }
-      const App = compileOne('App')
-      const root = document.createElement('div')
-      const app = (
-        vapor && vaporOnes.includes('App')
-          ? createVaporApp(App)
-          : createApp(App)
-      ).use(vaporInteropPlugin)
-      app.mount(root)
-      const seen = [strip(root.innerHTML)]
-      for (const step of steps) {
-        step(data)
-        await nextTick()
-        seen.push(strip(root.innerHTML))
-      }
-      app.unmount()
-      return seen
+// the app all-vdom against the app with the components in `vaporOnes`
+// compiled vapor, the DOM compared after every step
+async function parity(
+  srcs: Record<string, string>,
+  vaporOnes: string[],
+  init: () => Record<string, any>,
+  steps: ((data: any) => void)[],
+) {
+  const run = async (vapor: boolean) => {
+    const data: any = ref(init())
+    const components: Record<string, any> = {}
+    const compileOne = (name: string) => {
+      const asVapor = vapor && vaporOnes.includes(name)
+      // a source may bring its own script
+      const script = asVapor || srcs[name].includes('<script') ? '' : vdomScript
+      return compile(`${script}${srcs[name]}`, data, components, {
+        vapor: asVapor,
+      })
     }
-    const vdom = await run(false)
-    expect(await run(true)).toEqual(vdom)
-    return vdom
+    for (const name in srcs) {
+      if (name !== 'App') components[name] = compileOne(name)
+    }
+    const App = compileOne('App')
+    const root = document.createElement('div')
+    const app = (
+      vapor && vaporOnes.includes('App') ? createVaporApp(App) : createApp(App)
+    ).use(vaporInteropPlugin)
+    app.mount(root)
+    const seen = [stripAnchors(root.innerHTML)]
+    for (const step of steps) {
+      step(data)
+      await nextTick()
+      seen.push(stripAnchors(root.innerHTML))
+    }
+    app.unmount()
+    return seen
   }
+  const vdom = await run(false)
+  expect(await run(true)).toEqual(vdom)
+  return vdom
+}
+
+describe('a vapor slot in a vdom outlet starts on a node of its own', () => {
+  const strip = stripAnchors
 
   test.each([
     [
@@ -18694,5 +18694,60 @@ describe('vdom directives on a vapor slot vnode', () => {
       'mounted button 1',
     ])
     expect(logs.vapor).toEqual(logs.vdom)
+  })
+})
+
+// The vdom parent puts the directive on Wrapper, whose root is Fade, itself
+// rooted in a Transition wrapping its slot: vdom flattens the slot fragment,
+// so the directive lands on the content root. Wrapper and Fade render as
+// vdom, then as vapor.
+describe('vdom directives through a Transition wrapping a slot', () => {
+  const run = (parent: string, content = `<div>x</div>`) =>
+    parity(
+      {
+        Fade: `
+          <template>
+            <Transition :css="false">
+              <slot />
+            </Transition>
+          </template>`,
+        Wrapper: `
+          <template>
+            <components.Fade>${content}</components.Fade>
+          </template>`,
+        App: `
+          <script setup>
+            const data = _data; const components = _components
+            const vMark = { mounted: el => el.setAttribute('mark', '') }
+          </script>
+          <template>${parent}</template>`,
+      },
+      ['Fade', 'Wrapper'],
+      () => ({}),
+      [data => (data.value = { alt: true })],
+    )
+
+  test('v-show lands on the content root', async () => {
+    expect(await run(`<components.Wrapper v-show="!data.alt" />`)).toEqual([
+      '<div>x</div>',
+      '<div style="display: none;">x</div>',
+    ])
+  })
+
+  test('a custom directive lands on the content root', async () => {
+    expect(await run(`<components.Wrapper v-mark />`)).toEqual([
+      '<div mark="">x</div>',
+      '<div mark="">x</div>',
+    ])
+  })
+
+  test('a custom directive follows the content root switched by v-if', async () => {
+    expect(
+      await run(
+        `<components.Wrapper v-mark />`,
+        `<div v-if="!data.alt">a</div>
+        <p v-else>b</p>`,
+      ),
+    ).toEqual(['<div mark="">a</div>', '<p mark="">b</p>'])
   })
 })

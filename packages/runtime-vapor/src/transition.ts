@@ -117,3 +117,9 @@ export const displayName = 'VaporTransition'
 export function isVaporTransition(component: VaporComponent): boolean {
   return (component as FunctionalVaporComponent).displayName === displayName
 }
+
+export const groupName = 'VaporTransitionGroup'
+
+export function isVaporTransitionGroup(component: VaporComponent): boolean {
+  return component.name === groupName
+}

@@ -15,7 +15,7 @@ import {
   isHydrating,
   isHydratingSlotFallback,
 } from './dom/hydration'
-import { renderWithSlotScopeIds } from './scopeId'
+import { applyScopeIdOwners, renderWithSlotScopeIds } from './scopeId'
 import {
   type SlotBoundaryContext,
   hasSlotFallback,
@@ -31,7 +31,11 @@ import {
   resolveOutletLeave,
 } from './transition'
 import type { VaporComponentInstance } from './component'
-import { type VaporFragment, isInteropFragment } from './fragment'
+import {
+  type DynamicFragment,
+  type VaporFragment,
+  isInteropFragment,
+} from './fragment'
 import { isInteropEnabled } from './vdomInteropState'
 import { type VaporKeepAliveContext, isKeepAliveEnabled } from './keepAlive'
 
@@ -232,6 +236,10 @@ export function placeSlotContent(
 }
 
 function beforeExpose(state: SlotResolutionState, block: Block): void {
+  // As in a branch render, a vapor outlet's nodes lead the placement: what
+  // resolves a root through them meanwhile finds the block being exposed.
+  const outlet = ownerFragment(state) as DynamicFragment | undefined
+  if (outlet) outlet.nodes = block
   // a Transition's attrs move to the exposed branch, a fallback's effects
   // living in its own scope
   const fallthrough = isTransitionEnabled && state.fallthrough
@@ -240,6 +248,8 @@ function beforeExpose(state: SlotResolutionState, block: Block): void {
       block === state.activeFallback ? state.fallbackScope : undefined
     state.boundary.run(() => fallthrough(block, scope))
   }
+  // ...and so do the root scope ids it passes down
+  if (outlet && outlet.scopeIdOwners) applyScopeIdOwners(outlet.scopeIdOwners)
   const bm = state.bm
   if (bm) {
     for (let i = 0; i < bm.length; i++) bm[i](block)
