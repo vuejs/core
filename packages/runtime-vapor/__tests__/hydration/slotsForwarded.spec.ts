@@ -1479,5 +1479,47 @@ describe('Vapor Mode hydration', () => {
         }
       })
     })
+
+    test('<slot v-if> false on the server and true on the client, forwarding an empty slot', async () => {
+      const { container } = await testWithVaporApp(
+        `<template><components.List><template #default><slot /></template></components.List></template>`,
+        {
+          List: `<template><div class="list"><slot v-if="data"><b>fallback</b></slot></div></template>`,
+        },
+        ref(true),
+        ref(false),
+      )
+      expect(`Hydration node mismatch`).toHaveBeenWarned()
+      expect(container.querySelector('.list')!.innerHTML).toContain(
+        '<b>fallback</b>',
+      )
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
+        "
+        <!--{--><div class="list"><!----><b>fallback</b><!--slot--><!--if--></div><!--}-->
+        "
+      `)
+    })
+
+    test('<slot v-if> forwarding an empty slot keeps a sibling empty branch', async () => {
+      const { container } = await testWithVaporApp(
+        `<template><components.List><template #default><slot /></template></components.List></template>`,
+        {
+          List: `<template><div class="list"><slot v-if="data"><b>fallback</b></slot></div><span v-if="false" /></template>`,
+        },
+        ref(true),
+        ref(false),
+      )
+      expect(`Hydration node mismatch`).toHaveBeenWarned()
+      expect(container.querySelector('.list')!.innerHTML).toContain(
+        '<b>fallback</b>',
+      )
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
+        "
+        <!--{-->
+        <!--{--><div class="list"><!----><b>fallback</b><!--slot--><!--if--></div><!----><!--}-->
+        <!--}-->
+        "
+      `)
+    })
   })
 })

@@ -637,5 +637,25 @@ describe('Vapor Mode hydration', () => {
         [...container.querySelectorAll('li')].map(li => li.textContent),
       ).toEqual(['3'])
     })
+
+    test('dynamic component that renders nothing, at the end of a row element', async () => {
+      const { container, data } = await testHydration(
+        `<template>
+          <div v-for="i in 2" :key="i" class="card"><component :is="components[data]" /></div>
+        </template>`,
+        {
+          empty: `<template><b v-if="false">empty</b></template>`,
+          full: `<template><b>full</b></template>`,
+        },
+        ref('empty'),
+      )
+      data.value = 'full'
+      await nextTick()
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
+        "
+        <!--[--><div class="card"><b>full</b><!--dynamic-component--></div><div class="card"><b>full</b><!--dynamic-component--></div><!--]-->
+        "
+      `)
+    })
   })
 })
