@@ -1,4 +1,4 @@
-import { nextTick, reactive } from '@vue/runtime-dom'
+import { markRaw, nextTick, reactive } from '@vue/runtime-dom'
 import { setIsHydratingEnabled } from '../../src/dom/hydration'
 import {
   setupHydrationTest,
@@ -239,5 +239,171 @@ describe('fallthrough attrs on a vapor component wrapping its slot in a Transiti
     data.y = 2
     await nextTick()
     expect(div.outerHTML).toBe(`<div data-y="2" class="w2" data-x="1">a</div>`)
+  })
+})
+
+describe('vdom directives on a vapor component wrapping its slot in a Transition', () => {
+  // what `v-log` saw
+  let log: string[]
+  const hydrate = (
+    content: string,
+    data: any,
+    dirs = `v-show="data.show"`,
+    slot = `<slot />`,
+  ) => {
+    log = []
+    const vLog: Record<string, any> = {}
+    for (const name of [
+      'created',
+      'beforeMount',
+      'mounted',
+      'beforeUpdate',
+      'updated',
+      'beforeUnmount',
+      'unmounted',
+    ]) {
+      vLog[name] = (el: Element, { value, oldValue }: any) =>
+        log.push(`${name} ${el.tagName} ${oldValue}>${value}`)
+    }
+    data.vLog = markRaw(vLog)
+    return testWithVDOMApp(
+      `<script setup>
+        const data = _data; const components = _components
+        const vLog = data.vLog
+      </script>
+      <template>
+        <components.Fade ${dirs}>
+          ${content}
+        </components.Fade>
+      </template>`,
+      {
+        Fade: `<template>
+          <Transition :css="false">
+            ${slot}
+          </Transition>
+        </template>`,
+      },
+      data,
+    )
+  }
+
+  // the content hydrates ahead of the hand-over of the parent's directives
+  test.each([
+    ['the hydrated content root', `<div>x</div>`, `<slot />`],
+    ['the fallback root the server rendered', ``, `<slot><div>fb</div></slot>`],
+  ])('land on %s', async (_, content, slot) => {
+    const data = reactive({ show: true })
+    const { container } = await hydrate(content, data, undefined, slot)
+    const div = container.querySelector('div')!
+    data.show = false
+    await nextTick()
+    expect(div.style.display).toBe('none')
+
+    data.show = true
+    await nextTick()
+    expect(div.style.display).toBe('')
+  })
+
+  // neither renderer has the server hide it
+  test('hide a hydrated content root the server rendered shown', async () => {
+    const data = reactive({ show: false })
+    const { container } = await hydrate(`<div>x</div>`, data)
+    const div = container.querySelector('div')!
+    expect(div.style.display).toBe('none')
+
+    data.show = true
+    await nextTick()
+    expect(div.style.display).toBe('')
+  })
+
+  test('run their hooks on the hydrated content root as on the root of a vdom component', async () => {
+    const data = reactive({ n: 1 })
+    const { app } = await hydrate(`<div>x</div>`, data, `v-log="data.n"`)
+    data.n = 2
+    await nextTick()
+    app.unmount()
+    expect(log).toEqual([
+      'created DIV undefined>1',
+      'beforeMount DIV undefined>1',
+      'mounted DIV undefined>1',
+      'beforeUpdate DIV 1>2',
+      'updated DIV 1>2',
+      'beforeUnmount DIV 1>2',
+      'unmounted DIV 1>2',
+    ])
+  })
+
+  test('leave a hydrated content root its own', async () => {
+    const data = reactive({ show: true, visible: true })
+    const { container } = await hydrate(
+      `<div v-show="data.visible">x</div>`,
+      data,
+    )
+    const div = container.querySelector('div')!
+    data.visible = false
+    await nextTick()
+    expect(div.style.display).toBe('none')
+
+    data.visible = true
+    await nextTick()
+    expect(div.style.display).toBe('')
+  })
+
+  test('land on the root replacing a hydrated one', async () => {
+    const data = reactive({ show: true, a: true })
+    const { container } = await hydrate(
+      `<div v-if="data.a">x</div>
+      <p v-else>y</p>`,
+      data,
+    )
+    data.a = false
+    await nextTick()
+    const p = container.querySelector('p')!
+    expect(p.style.display).toBe('')
+
+    data.show = false
+    await nextTick()
+    expect(p.style.display).toBe('none')
+  })
+
+  test.each([
+    [
+      'a hydrated content root replaced by another',
+      `<div v-if="data.a">x</div>
+      <p v-else>y</p>`,
+      `<slot />`,
+    ],
+    [
+      'a hydrated content root replaced by the fallback',
+      `<div v-if="data.a">x</div>`,
+      `<slot><p>fb</p></slot>`,
+    ],
+    [
+      'the fallback root the server rendered replaced by content',
+      `<p v-if="!data.a">y</p>`,
+      `<slot><div>fb</div></slot>`,
+    ],
+  ])('leave %s', async (_, content, slot) => {
+    const data = reactive({ n: 1, a: true })
+    await hydrate(content, data, `v-log="data.n"`, slot)
+    await nextTick()
+    log.length = 0
+    data.a = false
+    await nextTick()
+    expect(log).toEqual([
+      // a vapor root is patched by the re-render that goes on to replace it,
+      // which a vdom one is not; the rest is the vdom order
+      'beforeUpdate DIV 1>1',
+      'beforeUnmount DIV 1>1',
+      'created P 1>1',
+      'beforeMount P 1>1',
+      'unmounted DIV 1>1',
+      'mounted P undefined>1',
+    ])
+
+    log.length = 0
+    data.n = 2
+    await nextTick()
+    expect(log).toEqual(['beforeUpdate P 1>2', 'updated P 1>2'])
   })
 })

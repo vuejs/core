@@ -1584,3 +1584,291 @@ describe('fallthrough attrs through a Transition wrapping a vdom-fed slot', () =
     expect('Extraneous non-props attributes (class)').toHaveBeenWarnedTimes(2)
   })
 })
+
+// The vdom App puts `dirs` on Fade itself and feeds its slot: vdom hands the
+// directives down to the Transition's child, the root of the slot content.
+// Fade renders as vdom, then as vapor.
+describe('vdom directives through a Transition wrapping a vdom-fed slot', () => {
+  const hookNames = [
+    'created',
+    'beforeMount',
+    'mounted',
+    'beforeUpdate',
+    'updated',
+    'beforeUnmount',
+    'unmounted',
+  ]
+  // what `v-log` saw in each run
+  let logs: string[][]
+  const parity = (
+    transition: string,
+    dirs: string,
+    content: string,
+    act: (r: Run) => Promise<void>,
+    init: Record<string, any> = {},
+  ) => {
+    logs = []
+    return compareRuns((vapor, data) => {
+      const log: string[] = []
+      logs.push(log)
+      const vLog: Record<string, any> = {}
+      for (const name of hookNames) {
+        vLog[name] = (el: Element, { value, oldValue }: any) =>
+          log.push(`${name} ${el.tagName} ${oldValue}>${value}`)
+      }
+      Object.assign(data.value, { n: 0 }, init)
+      const App = sfc(
+        false,
+        data,
+        `<components.Fade ${dirs}>${content}</components.Fade>`,
+        {
+          Fade: sfc(vapor, data, transition, {
+            Inner: sfc(vapor, data, `<span>inner</span>`),
+          }),
+          Child: sfc(false, data, `<span>child</span>`),
+        },
+      )
+      App.directives = {
+        mark: (el: Element, { value }: any) => el.setAttribute('mark', value),
+        log: vLog,
+      }
+      return App
+    }, act)
+  }
+
+  test('v-show toggles the content root under the Transition hooks', async () => {
+    const steps = await parity(
+      wrap(hooks),
+      `v-show="data.show"`,
+      `<div>x</div>`,
+      async r => {
+        await r.step('hide', () => (r.data.value.show = false))
+        await r.step('leave done', () => r.done.leave())
+        await r.step('show', () => (r.data.value.show = true))
+        await r.step('enter done', () => r.done.enter())
+      },
+    )
+    expect(steps).toEqual([
+      'mount: <div>x</div> | ',
+      'hide: <div>x</div> | beforeLeave:x leave:x',
+      'leave done: <div style="display: none;">x</div> | afterLeave:x',
+      'show: <div style="">x</div> | beforeEnter:x enter:x',
+      'enter done: <div style="">x</div> | afterEnter:x',
+    ])
+  })
+
+  test('v-show keeps a content root hidden from the mount on', async () => {
+    const steps = await parity(
+      wrap(`:css="false"`),
+      `v-show="data.show"`,
+      `<div>x</div>`,
+      async r => {
+        await r.step('show', () => (r.data.value.show = true))
+      },
+      { show: false },
+    )
+    expect(steps).toEqual([
+      'mount: <div style="display: none;">x</div> | ',
+      'show: <div style="">x</div> | ',
+    ])
+  })
+
+  test('a custom directive lands on the content root and follows its binding', async () => {
+    const steps = await parity(
+      wrap(`:css="false"`),
+      `class="w" v-mark="data.n"`,
+      `<div>x</div>`,
+      async r => {
+        await r.step('update', () => (r.data.value.n = 1))
+      },
+    )
+    expect(steps).toEqual([
+      'mount: <div class="w" mark="0">x</div> | ',
+      'update: <div class="w" mark="1">x</div> | ',
+    ])
+    expect(
+      'Runtime directive used on component with non-element root node',
+    ).not.toHaveBeenWarned()
+  })
+
+  test('a content root switched by v-if is mounted with the directive', async () => {
+    const steps = await parity(
+      wrap(`:css="false"`),
+      `v-mark="data.n"`,
+      `<div v-if="!data.alt">a</div>
+      <p v-else>b</p>`,
+      async r => {
+        await r.step('switch', () => (r.data.value.alt = true))
+        await r.step('update', () => (r.data.value.n = 1))
+      },
+    )
+    expect(steps).toEqual([
+      'mount: <div mark="0">a</div> | ',
+      'switch: <p mark="0">b</p> | ',
+      'update: <p mark="1">b</p> | ',
+    ])
+  })
+
+  test('a component content root passes the directive on to its own root', async () => {
+    const steps = await parity(
+      wrap(`:css="false"`),
+      `v-mark="data.n"`,
+      `<components.Child />`,
+      async r => {
+        await r.step('update', () => (r.data.value.n = 1))
+      },
+    )
+    expect(steps).toEqual([
+      'mount: <span mark="0">child</span> | ',
+      'update: <span mark="1">child</span> | ',
+    ])
+  })
+
+  test('the hooks run as on the root of a vdom component', async () => {
+    await parity(
+      wrap(`:css="false"`),
+      `v-log="data.n"`,
+      `<div v-if="!data.alt">a</div>
+      <p v-else>b</p>`,
+      async r => {
+        await r.step('update', () => (r.data.value.n = 1))
+        await r.step('switch', () => (r.data.value.alt = true))
+      },
+    )
+    expect(logs[0]).toEqual([
+      'created DIV undefined>0',
+      'beforeMount DIV undefined>0',
+      'mounted DIV undefined>0',
+      'beforeUpdate DIV 0>1',
+      'updated DIV 0>1',
+      'beforeUnmount DIV 0>1',
+      // the switch re-renders the slot alone: the bindings are the same
+      'created P 0>1',
+      'beforeMount P 0>1',
+      'unmounted DIV 0>1',
+      'mounted P undefined>1',
+      'beforeUnmount P 0>1',
+      'unmounted P 0>1',
+    ])
+    expect(logs[1]).toEqual(logs[0])
+  })
+
+  test('a text content root takes none and warns', async () => {
+    await parity(
+      wrap(`:css="false"`),
+      `v-mark="data.n"`,
+      `text`,
+      async () => {},
+    )
+    // once in each run
+    expect(
+      'Runtime directive used on component with non-element root node',
+    ).toHaveBeenWarnedTimes(2)
+  })
+
+  test('the fallback root takes them, then the content replacing it', async () => {
+    const steps = await parity(
+      wrap(`:css="false"`, `<slot><i>fb</i></slot>`),
+      `v-mark="data.n" v-show="data.vis"`,
+      `<b v-if="data.has">b</b>`,
+      async r => {
+        await r.step('update', () => (r.data.value.n = 1))
+        await r.step('hide', () => (r.data.value.vis = false))
+        await r.step('show', () => (r.data.value.vis = true))
+        await r.step('content', () => (r.data.value.has = true))
+        await r.step('update', () => (r.data.value.n = 2))
+        await r.step('fallback', () => (r.data.value.has = false))
+      },
+      { has: false, vis: true },
+    )
+    expect(steps).toEqual([
+      'mount: <i mark="0">fb</i> | ',
+      'update: <i mark="1">fb</i> | ',
+      'hide: <i mark="1" style="display: none;">fb</i> | ',
+      'show: <i mark="1" style="">fb</i> | ',
+      'content: <b mark="1">b</b> | ',
+      'update: <b mark="2">b</b> | ',
+      'fallback: <i mark="2">fb</i> | ',
+    ])
+  })
+
+  test('a fallback root switching on its own keeps them', async () => {
+    const steps = await parity(
+      wrap(
+        `:css="false"`,
+        `<slot>
+          <i v-if="!data.alt">f1</i>
+          <u v-else>f2</u>
+        </slot>`,
+      ),
+      `v-mark="data.n"`,
+      ``,
+      async r => {
+        await r.step('switch', () => (r.data.value.alt = true))
+        await r.step('update', () => (r.data.value.n = 1))
+      },
+    )
+    expect(steps).toEqual([
+      'mount: <i mark="0">f1</i> | ',
+      'switch: <u mark="0">f2</u> | ',
+      'update: <u mark="1">f2</u> | ',
+    ])
+  })
+
+  test('a component fallback root passes them on to its own root', async () => {
+    const steps = await parity(
+      wrap(`:css="false"`, `<slot><components.Inner /></slot>`),
+      `v-mark="data.n"`,
+      ``,
+      async r => {
+        await r.step('update', () => (r.data.value.n = 1))
+      },
+    )
+    expect(steps).toEqual([
+      'mount: <span mark="0">inner</span> | ',
+      'update: <span mark="1">inner</span> | ',
+    ])
+  })
+
+  test('the hooks run on a fallback root as on a vapor root', async () => {
+    await parity(
+      wrap(`:css="false"`, `<slot><i>fb</i></slot>`),
+      `v-log="data.n"`,
+      `<b v-if="data.has">b</b>`,
+      async r => {
+        await r.step('update', () => (r.data.value.n = 1))
+        await r.step('content', () => (r.data.value.has = true))
+        await r.step('fallback', () => (r.data.value.has = false))
+      },
+      { has: false },
+    )
+    expect(logs[1]).toEqual([
+      'created I undefined>0',
+      'beforeMount I undefined>0',
+      'mounted I undefined>0',
+      'beforeUpdate I 0>1',
+      'updated I 0>1',
+      // a vapor root is patched by the re-render that goes on to replace it,
+      // which a vdom one is not
+      'beforeUpdate I 1>1',
+      'beforeUnmount I 1>1',
+      'created B 1>1',
+      'beforeMount B 1>1',
+      'unmounted I 1>1',
+      'mounted B undefined>1',
+      'beforeUnmount B 1>1',
+      'created I 1>1',
+      'beforeMount I 1>1',
+      'unmounted B 1>1',
+      'mounted I undefined>1',
+      'beforeUnmount I 1>1',
+      'unmounted I 1>1',
+    ])
+    // the vdom run differs by that patch, and the old value it leaves behind
+    const names = (log: string[]) =>
+      log.map(entry => entry.split(' ', 2).join(' '))
+    expect(
+      names(logs[1].filter(entry => entry !== 'beforeUpdate I 1>1')),
+    ).toEqual(names(logs[0]))
+  })
+})
