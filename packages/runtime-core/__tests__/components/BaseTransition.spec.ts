@@ -2,6 +2,7 @@ import {
   BaseTransition,
   type BaseTransitionProps,
   type ComponentOptions,
+  Fragment,
   KeepAlive,
   Teleport,
   type TestElement,
@@ -395,6 +396,16 @@ describe('BaseTransition', () => {
         },
         'in-out',
       )
+    })
+
+    // #16302
+    test.each([null, undefined])('w/ %s in a fragment', async empty => {
+      await testToggleOnOff({
+        trueBranch: () => h(Fragment, null, [empty, h('div')]),
+        trueSerialized: `<div></div>`,
+        falseBranch: () => h(Fragment, null, [empty]),
+        falseSerialized: `<!---->`,
+      })
     })
   })
 

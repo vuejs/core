@@ -599,6 +599,7 @@ export function getTransitionRawChildren(
   let keyedFragmentCount = 0
   for (let i = 0; i < children.length; i++) {
     let child = children[i]
+    if (child == null) continue
     // #5360 inherit parent key in case of <template v-for>
     const key =
       parentKey == null
