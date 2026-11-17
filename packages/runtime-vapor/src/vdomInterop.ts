@@ -596,7 +596,7 @@ const vaporInteropImpl = {
             mountVNode,
           )
           if (!mountVNode.dirs) return
-          const [owner, el] = resolveInteropDirsRoot(
+          const [owner, el, handed] = resolveInteropDirsRoot(
             instance,
             vnodeHookState,
             instance,
@@ -605,7 +605,11 @@ const vaporInteropImpl = {
           if (el) {
             mountInteropDirsRoot(instance, owner, el)
             mountVNode.el = el
-          } else if (__DEV__ && !isPendingInteropDirsRoot(owner.comp)) {
+          } else if (
+            __DEV__ &&
+            !handed &&
+            !isPendingInteropDirsRoot(owner.comp)
+          ) {
             warnNonElementRootDirs()
           }
         })
@@ -3101,15 +3105,28 @@ function renderVDOMSlot(
   }
 
   // What the Transition's child inherits as the root of a vdom component
-  // does (renderComponentRoot).
+  // does (renderComponentRoot): the fallthrough attrs, and the directives of
+  // a vdom parent (see VaporFragment.rootDirs).
   function inheritRoot(child: VNode): VNode {
-    if (rootAttrs !== EMPTY_OBJ) {
-      if (child.shapeFlag & (ShapeFlags.ELEMENT | ShapeFlags.COMPONENT)) {
-        return cloneVNode(child, rootAttrs)
-      }
-      if (__DEV__ && child.type !== VNodeComment) {
-        warnExtraneousAttributes(rootAttrs)
-      }
+    const attrs = rootAttrs === EMPTY_OBJ ? null : rootAttrs
+    const owner = frag.rootDirs
+    let dirs = owner && owner.vnode.dirs
+    const prev = rendered
+    // a root hydrated ahead of the hand-over takes the directives as a vapor
+    // root does (registerInteropDirsOutlet): patched in place it keeps to
+    // that, replaced it is released ahead of the patch
+    if (owner && owner.el && isVNode(prev) && prev.el === owner.el) {
+      if (prev.type === child.type && prev.key === child.key) dirs = null
+      else unmountInteropDirsRoot(parentComponent, owner)
+    }
+    if (!attrs && !dirs) return child
+    if (child.shapeFlag & (ShapeFlags.ELEMENT | ShapeFlags.COMPONENT)) {
+      // a clone: the content may be a hoisted vnode
+      child = cloneVNode(child, attrs)
+      if (dirs) child.dirs = child.dirs ? child.dirs.concat(dirs) : dirs
+    } else if (__DEV__ && child.type !== VNodeComment) {
+      if (attrs) warnExtraneousAttributes(attrs)
+      if (dirs) warnNonElementRootDirs()
     }
     return child
   }
@@ -4378,7 +4395,7 @@ function syncInteropRoot(instance: VaporComponentInstance): void {
 // received, and the one rendering the root element mounts, patches and
 // unmounts them with it. A vapor child renders past the renderer, so interop
 // keeps that record per root-chain component (the instance included).
-interface InteropDirsOwner {
+export interface InteropDirsOwner {
   comp: VaporComponentInstance
   // bindings last received down the chain (vdom: `instance.vnode`)
   vnode: VNode
@@ -4465,20 +4482,32 @@ function resolveInteropDirsRoot(
   state: VNodeHookState,
   block: Block,
   inherit: InteropDirsOwner,
-): [InteropDirsOwner, Element | undefined] {
+): [InteropDirsOwner, Element | undefined, boolean] {
   let owner = inherit
+  let handed = false
   const el = getRootElement(block, {
     // a slot outlet is a fragment root in vdom: nothing for directives to
     // land on
-    excludeSlotOutlets: true,
-    onDynamicFragment: frag =>
-      registerInteropDirsFragment(instance, state, frag, owner),
+    onDynamicFragment: frag => {
+      if (endsRootChain(frag)) return true
+      registerInteropDirsFragment(instance, state, frag, owner)
+    },
+    onInteropFragment: frag => {
+      // ...unless flattened into a Transition's child: the vnode content it
+      // patches in takes them on its root, its vapor fallback as a vapor root
+      if (isTransitionEnabled && frag.__vf & SLOT_FLATTENED) {
+        frag.rootDirs = owner
+        handed = true
+        registerInteropDirsOutlet(instance, state, frag, owner)
+      }
+      return endsInteropDirsChain(frag)
+    },
     onComponent: comp => {
       registerInteropDirsComponent(instance, state, comp)
       owner = getInteropDirsOwner(state, comp, inherit.vnode)
     },
   })
-  return [owner, el]
+  return [owner, el, handed]
 }
 
 function isPendingInteropSetup(comp: VaporComponentInstance): boolean {
@@ -4530,7 +4559,8 @@ function innerInteropDirsOwner(
   let owner: InteropDirsOwner | undefined
   if (!owners) return
   getRootElement(comp, {
-    excludeSlotOutlets: true,
+    onDynamicFragment: endsRootChain,
+    onInteropFragment: endsInteropDirsChain,
     onComponent: comp => {
       const next = owners.get(comp)
       if (next) {
@@ -5348,8 +5378,51 @@ function registerInteropRootRerenderSync(
 // Registered on demand: only instances whose vnode carries directives
 // resolve through `resolveInteropDirsRoot`.
 const interopDirsProducers = new WeakSet<
-  DynamicFragment | VaporComponentInstance
+  VaporFragment | VaporComponentInstance
 >()
+
+// A vdom-fed outlet ends the chain interop directives resolve their root on,
+// unless it was handed them and shows its vapor fallback.
+function endsInteropDirsChain(frag: VaporFragment): boolean {
+  return (
+    isSlotOutletFragment(frag) &&
+    !(isTransitionEnabled && frag.rootDirs && frag.slotState!.activeFallback)
+  )
+}
+
+// A flattened vdom-fed outlet hands the directives to its vnode content
+// (VaporFragment.rootDirs). What cannot take them on a vnode takes them as a
+// vapor root does: its vapor fallback, mounted as it is exposed and released
+// with its scope, and a content root hydrated ahead of the hand-over, which
+// `inheritRoot` releases once it is replaced.
+function registerInteropDirsOutlet(
+  instance: VaporComponentInstance,
+  state: VNodeHookState,
+  frag: VaporFragment,
+  owner: InteropDirsOwner,
+): void {
+  if (interopDirsProducers.has(frag)) return
+  interopDirsProducers.add(frag)
+  const slotState = frag.slotState!
+  const releaseWithFallback = () =>
+    slotState.fallbackScope!.run(() =>
+      onScopeDispose(() => {
+        if (owner.el) unmountInteropDirsRoot(instance, owner)
+      }),
+    )
+  ;(slotState.bm ||= []).push(nodes => {
+    if (nodes !== slotState.activeFallback || !owner.vnode.dirs) return
+    releaseWithFallback()
+    const [inner, el] = resolveInteropDirsRoot(instance, state, nodes, owner)
+    if (el) mountInteropDirsRoot(instance, inner, el)
+  })
+  if (slotState.activeFallback) {
+    releaseWithFallback()
+  } else if (isHydratingEnabled || isVdomHydratingEnabled) {
+    const el = getInteropTransitionElement(frag.vnode || undefined)
+    if (el) mountInteropDirsRoot(instance, owner, el)
+  }
+}
 
 // A branch switch is the vdom unmount + mount of the inherited root vnode: a
 // root directly in the old branch is released while still in the DOM (`bu`),
@@ -5482,9 +5555,10 @@ function isOnInteropRootChain(
 ): boolean {
   let found = false
   getRootElement(from, {
-    excludeSlotOutlets: true,
     // mid-render `frag.nodes` is still the previous branch: stop at the match
-    onDynamicFragment: frag => frag === producer && (found = true),
+    onDynamicFragment: frag =>
+      endsRootChain(frag) || (frag === producer && (found = true)),
+    onInteropFragment: endsInteropDirsChain,
     onComponent: comp => comp === producer && (found = true),
   })
   return found

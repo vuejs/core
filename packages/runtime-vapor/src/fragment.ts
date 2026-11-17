@@ -47,6 +47,7 @@ import {
 } from './renderContext'
 import { applyScopeIdOwners } from './scopeId'
 import type { SlotBoundaryContext } from './slotBoundary'
+import type { InteropDirsOwner } from './vdomInterop'
 import {
   hydrateDynamicFragmentAnchor,
   hydrateSlotFragmentContent,
@@ -114,6 +115,9 @@ export class VaporFragment<
   // ...and, flattened into a Transition's child, the root-only scope ids the
   // vnode content it patches mounts with
   rootScopeIds?: string[]
+  // ...and the directives of a vdom parent: the record of the component
+  // handing them down
+  rootDirs?: InteropDirsOwner
   // a slot host patching vnode content: `cb` follows the leave its content
   // root is running on its own, if any
   awaitLeavingRoot?(cb: () => void): boolean
