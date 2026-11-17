@@ -2455,7 +2455,15 @@ function createVDOMComponent(
       instance as any,
     )
     // as in VDOM: `um` unsets it, async wrappers forward it to the inner comp
-    vnode.ref = rawRef
+    const refs = vnode.ref
+    if (isArray(refs)) {
+      // next to the probe of a slot ref (see `setVaporSlotRef`), which stays
+      const i = oldRawRef ? refs.indexOf(oldRawRef as any) : -1
+      if (i > -1) refs.splice(i, 1)
+      if (rawRef) refs.unshift(rawRef as any)
+    } else {
+      vnode.ref = rawRef
+    }
 
     if (isMounted) {
       // The first synchronous mount may have already created a loading
@@ -2470,7 +2478,7 @@ function createVDOMComponent(
         vnode.component!.subTree.component
       ) {
         target = vnode.component!.subTree
-        target.ref = rawRef
+        target.ref = vnode.ref
       }
       if (rawRef) {
         vdomSetRef(rawRef, oldRawRef || null, suspense, target)
@@ -4013,14 +4021,15 @@ function setVaporSlotRef(
     }
     refs.push(probe)
     unprobe = () => removeItem(refs, probe)
-    // What the wrapper rendered before the probe was there, re-pointed to the
-    // array so that vdom diffs it against itself on the next patch.
+    // What the wrapper rendered before the probe was there and forwarded its
+    // ref to (an error component got none), re-pointed to the array so that
+    // vdom diffs it against itself on the next patch.
     let inner = wrapper.component && wrapper.component.subTree
-    while (inner && isAsyncWrapper(inner)) {
+    while (inner && inner.ref === ref && isAsyncWrapper(inner)) {
       inner.ref = refs
       inner = inner.component && inner.component.subTree
     }
-    if (inner && inner.component) {
+    if (inner && inner.ref === ref && inner.component) {
       inner.ref = refs
       forwarded =
         inner.shapeFlag & ShapeFlags.STATEFUL_COMPONENT
