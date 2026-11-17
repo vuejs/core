@@ -442,12 +442,17 @@ export function hasFallthroughAttrs(
     if (rawProps.$ || (isInteropEnabled && rawProps[interopKey])) {
       return true
     }
-    // otherwise fallthrough potential requires an undeclared static key —
-    // static keys are fixed at creation, so an empty rawProps can never
-    // produce attrs later
+    // otherwise fallthrough potential requires a static key the attrs proxy
+    // exposes — static keys are fixed at creation, so an empty rawProps can
+    // never produce attrs later
     const propsOptions = comp.props ? normalizePropsOptions(comp)[0]! : null
+    const emitsOptions = normalizeEmitsOptions(comp)
     for (const key in rawProps) {
-      if (!propsOptions || !hasOwn(propsOptions, camelize(key))) {
+      if (
+        !(propsOptions && hasOwn(propsOptions, camelize(key))) &&
+        !isReservedProp(key) &&
+        !isEmitListener(emitsOptions, key)
+      ) {
         return true
       }
     }
