@@ -2531,14 +2531,16 @@ function trackSlotVNodeUpdatesWithRefresh(
   refresh: () => void,
   beforeUpdate?: () => void,
 ): void {
-  // Fragment patches fire no notifications, so subscribe every top-level
-  // range participant (element/component children); a component child's
-  // self-update must still refresh the snapshot. cloneVNode carries the
-  // fields so renderer-internal clones of mounted children keep notifying.
+  // The host refreshes the snapshot after each patch of its own, the only
+  // one an element or a fragment gets. A component child also updates by
+  // itself, which must still refresh the snapshot: subscribe the top-level
+  // ones. cloneVNode carries the fields so renderer-internal clones of
+  // mounted children keep notifying.
   const track = (node: VNode) => {
-    if (beforeUpdate) node.ibu = beforeUpdate
-    node.iu = refresh
-    if (node.type === Fragment && isArray(node.children)) {
+    if (node.shapeFlag & ShapeFlags.COMPONENT) {
+      if (beforeUpdate) node.ibu = beforeUpdate
+      node.iu = refresh
+    } else if (node.type === Fragment && isArray(node.children)) {
       node.children.forEach(child => {
         if (isVNode(child)) track(child)
       })
