@@ -501,6 +501,8 @@ export function hydrateSlotFragmentContent(
     )
     advanceHydrationNode(close)
   } else {
+    // read before the content hydrates: a mismatch there can remove `open`
+    const parent = open && open.parentElement
     withHydratingSlotBoundary(() => {
       frag.updateContent(render, key)
       if (isValidSlot(frag.getContent())) {
@@ -508,7 +510,7 @@ export function hydrateSlotFragmentContent(
         hydrateDynamicFragmentAnchor(frag, !isValidBlock(frag.nodes))
       } else {
         // content the client finds empty: there is no fallback to adopt
-        if (open) warnHydrationNodeMismatch(open, `slot fallback`)
+        if (open) warnHydrationNodeMismatch(open, `slot fallback`, parent)
         frag.syncNodes()
         hydrateDynamicFragmentAnchor(frag, true)
         runWithoutHydration(() => recheckSlotResolution(frag))
