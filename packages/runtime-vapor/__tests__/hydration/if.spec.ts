@@ -1184,5 +1184,33 @@ describe('Vapor Mode hydration', () => {
         "
       `)
     })
+
+    test('v-if on a component with an empty template', async () => {
+      const { container, data, html } = await testHydration(
+        `<template><div><components.Empty v-if="data" /></div></template>`,
+        { Empty: `<template></template>` },
+        ref(true),
+      )
+      expect(html).toBe(`<div></div>`)
+      expect(container.innerHTML).toBe(`<div><!----></div>`)
+
+      data.value = false
+      await nextTick()
+      expect(container.innerHTML).toBe(`<div><!----></div>`)
+    })
+
+    test('v-if on a component with an empty template, before a sibling', async () => {
+      const { container, data, html } = await testHydration(
+        `<template><div><components.Empty v-if="data" /><span>after</span></div></template>`,
+        { Empty: `<template></template>` },
+        ref(true),
+      )
+      expect(html).toBe(`<div><span>after</span></div>`)
+      expect(container.innerHTML).toBe(`<div><!--if--><span>after</span></div>`)
+
+      data.value = false
+      await nextTick()
+      expect(container.innerHTML).toBe(`<div><!--if--><span>after</span></div>`)
+    })
   })
 })

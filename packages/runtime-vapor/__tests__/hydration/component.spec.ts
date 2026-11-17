@@ -1787,5 +1787,44 @@ describe('Vapor Mode hydration', () => {
         )
       },
     )
+
+    test('dynamic component with an empty template, before a sibling', async () => {
+      const { container, data, html } = await testHydration(
+        `<template><div><component :is="components[data]" /><span>after</span></div></template>`,
+        {
+          empty: `<template></template>`,
+          full: `<template><b>full</b></template>`,
+        },
+        ref('empty'),
+      )
+      expect(html).toBe(`<div><span>after</span></div>`)
+      expect(container.innerHTML).toBe(
+        `<div><!--dynamic-component--><span>after</span></div>`,
+      )
+
+      data.value = 'full'
+      await nextTick()
+      expect(container.innerHTML).toBe(
+        `<div><b>full</b><!--dynamic-component--><span>after</span></div>`,
+      )
+    })
+
+    test('keyed component with an empty template, before a sibling', async () => {
+      const { container, data, html } = await testHydration(
+        `<template><div><components.Empty :key="data" /><span>after</span></div></template>`,
+        { Empty: `<template></template>` },
+        ref(1),
+      )
+      expect(html).toBe(`<div><span>after</span></div>`)
+      expect(container.innerHTML).toBe(
+        `<div><!--keyed--><span>after</span></div>`,
+      )
+
+      data.value++
+      await nextTick()
+      expect(container.innerHTML).toBe(
+        `<div><!--keyed--><span>after</span></div>`,
+      )
+    })
   })
 })

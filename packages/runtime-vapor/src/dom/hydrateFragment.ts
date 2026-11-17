@@ -177,7 +177,8 @@ export type AnchorPlan =
       resetNodes?: boolean
     }
   // Trim unclaimed SSR content first, then insert a fresh runtime anchor.
-  // Only arises for empty fragments, so the stale block reference is cleared.
+  // `resetNodes` clears a stale block reference. A slot keeps its content,
+  // which decides whether the slot is valid.
   | {
       kind: 'create-cleanup'
       parent: Node
@@ -185,6 +186,7 @@ export type AnchorPlan =
       cleanupStart: Node
       cleanupUntil: Node | null
       cleanupContainer?: ParentNode
+      resetNodes?: boolean
     }
 
 /*
@@ -214,7 +216,9 @@ export type AnchorPlan =
  *    range it does not own goes in front of that close; otherwise derive
  *    parent/next from the hydrated block itself (dynamic component, async
  *    component, keyed fragment with single-root content, anything whose
- *    range was stripped).
+ *    range was stripped). A block with no node (a component with an empty
+ *    template) owns no SSR node either: it claims a reusable SSR comment at
+ *    the cursor or goes in front of the cursor.
  *
  * Content that ends an element moves the cursor past that element (see
  * `advanceHydrationNode`), onto a node that is not this block's. Rules 1, 3
@@ -300,6 +304,7 @@ function planEmptyBranch(frag: DynamicFragment): AnchorPlan | undefined {
         cleanupStart: currentHydrationNode,
         cleanupUntil: null,
         cleanupContainer: parentNode,
+        resetNodes: true,
       }
     }
 
@@ -308,19 +313,24 @@ function planEmptyBranch(frag: DynamicFragment): AnchorPlan | undefined {
       if (isReusableAnchorCandidate(anchor, frag) && getParentNode(anchor)) {
         return reuseOrCreateAfterAnchor(anchor, true)
       }
-      return planTrimFromCursor(parentNode, anchor)
+      return planTrimFromCursor(parentNode, anchor, true)
     }
   }
 }
 
 /** Trim the unclaimed SSR range at the cursor, then create a fresh anchor. */
-function planTrimFromCursor(parent: Node, next: Node | null): AnchorPlan {
+function planTrimFromCursor(
+  parent: Node,
+  next: Node | null,
+  resetNodes?: boolean,
+): AnchorPlan {
   return {
     kind: 'create-cleanup',
     parent,
     next,
     cleanupStart: currentHydrationNode!,
     cleanupUntil: next,
+    resetNodes,
   }
 }
 
@@ -354,6 +364,7 @@ function planRestartFromRuntimeComment(
       return planTrimFromCursor(
         parentNode,
         nextLogicalSibling(currentHydrationNode),
+        true,
       )
     }
   }
@@ -373,6 +384,21 @@ function planFromBlockBoundary(
     // `<template v-else />` as the whole slot content the server dropped:
     // the close stays that range's anchor, the branch goes before it.
     return { kind: 'create', parent: close.parentNode!, next: close }
+  }
+  if (!parentNode) {
+    // The server rendered nothing for a block with no node, so the cursor
+    // is on what follows it: a seeded `<!---->`, or a sibling to keep.
+    const node = currentHydrationNode!
+    if (isReusableAnchorCandidate(node, frag)) {
+      return reuseOrCreateAfterAnchor(node)
+    }
+    const parent = getParentNode(node)!
+    // A slot outlet without its range: the server rendered other content in
+    // its place, which goes.
+    if (frag.__vf & SLOT) {
+      return planTrimFromCursor(parent, nextLogicalSibling(node))
+    }
+    return { kind: 'create', parent, next: node }
   }
   // a block rendering a component's roots ends at that component's `}`: the
   // marker is the anchor, instead of one created behind it
@@ -439,7 +465,7 @@ export function executeAnchorPlan(
         break
       }
       case 'create-cleanup': {
-        frag.nodes = EMPTY_BLOCK
+        if (plan.resetNodes) frag.nodes = EMPTY_BLOCK
         // Advance the cache to the surviving next sibling, or clear it when
         // cleanup reaches the tail.
         const cleanupParent = getParentNode(plan.cleanupStart)

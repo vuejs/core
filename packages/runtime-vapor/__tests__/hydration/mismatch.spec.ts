@@ -1395,6 +1395,78 @@ describe('mismatch handling', () => {
     )
     expect(`Hydration attribute mismatch`).toHaveBeenWarnedTimes(1)
   })
+
+  test.each([
+    ['as the last child', ``],
+    ['before a sibling', `<span>after</span>`],
+  ])(
+    'slot outlet with empty content where the server rendered another component, %s',
+    async (_, sibling) => {
+      const { container, data } = await testWithVaporApp(
+        `<template><components.Forward /></template>`,
+        {
+          Outlet: `<template><slot name="item"><i>fallback</i></slot></template>`,
+          Plain: `<template><b>plain</b></template>`,
+          Forward: `<template><div><component :is="data ? components.Outlet : components.Plain"><template #item><slot name="item" /></template></component>${sibling}</div></template>`,
+        },
+        ref(true),
+        ref(false),
+      )
+      expect(`Hydration node mismatch`).toHaveBeenWarned()
+      expect(`Hydration children mismatch`).toHaveBeenWarned()
+      expect(container.innerHTML).toBe(
+        `<!--{--><div><!--slot--><i>fallback</i><!--slot--><!--dynamic-component-->${sibling}</div><!--}-->`,
+      )
+
+      data.value = false
+      await nextTick()
+      expect(container.innerHTML).toBe(
+        `<!--{--><div><b>plain</b><!--dynamic-component-->${sibling}</div><!--}-->`,
+      )
+
+      data.value = true
+      await nextTick()
+      expect(container.innerHTML).toBe(
+        `<!--{--><div><!--slot--><i>fallback</i><!--slot--><!--dynamic-component-->${sibling}</div><!--}-->`,
+      )
+    },
+  )
+
+  test('slot outlet with a component that renders no node where the server rendered another component', async () => {
+    const { container } = await testWithVaporApp(
+      `<template><div><component :is="data ? components.Outlet : components.Plain"><components.Empty /></component></div></template>`,
+      {
+        Outlet: `<template><slot><i>fallback</i></slot></template>`,
+        Plain: `<template><b>plain</b></template>`,
+        Empty: `<template></template>`,
+      },
+      ref(true),
+      ref(false),
+    )
+    expect(`Hydration children mismatch`).toHaveBeenWarned()
+    expect(container.innerHTML).toBe(
+      `<div><!--slot--><!--dynamic-component--></div>`,
+    )
+  })
+
+  test('forwarded slot with a component that renders no node where the server rendered another component', async () => {
+    const { container } = await testWithVaporApp(
+      `<template><components.Forward><components.Empty /></components.Forward></template>`,
+      {
+        Outlet: `<template><slot><i>fallback</i></slot></template>`,
+        Plain: `<template><b>plain</b></template>`,
+        Empty: `<template></template>`,
+        Forward: `<template><div><component :is="data ? components.Outlet : components.Plain"><slot /></component></div></template>`,
+      },
+      ref(true),
+      ref(false),
+    )
+    expect(`Hydration children mismatch`).toHaveBeenWarned()
+    // the content is valid: the fallback does not render
+    expect(container.innerHTML).toBe(
+      `<!--{--><div><!--slot--><!--slot--><!--dynamic-component--></div><!--}-->`,
+    )
+  })
 })
 
 describe('data-allow-mismatch', () => {
