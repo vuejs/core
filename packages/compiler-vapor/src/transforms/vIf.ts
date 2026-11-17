@@ -54,7 +54,6 @@ export function processIf(
   }
 
   context.dynamic.flags |= DynamicFlag.NON_TEMPLATE
-  const forceMultiRoot = shouldForceMultiRoot(context)
   // Nested dynamic units are owned by an enclosing branch scope, so only mark
   // root-block branches with the compiler-proven no-scope flag.
   const allowNoScope = context.block === context.root.block
@@ -69,12 +68,7 @@ export function processIf(
         type: IRNodeTypes.IF,
         id,
         ...context.effectBoundary(),
-        blockShape: encodeIfBlockShape(
-          branch,
-          forceMultiRoot,
-          undefined,
-          allowNoScope,
-        ),
+        blockShape: encodeIfBlockShape(branch, undefined, allowNoScope),
         condition: dir.exp!,
         positive: branch,
         index: context.root.nextIfIndex(),
@@ -172,14 +166,12 @@ export function processIf(
       if (negative.type === IRNodeTypes.IF) {
         negative.blockShape = encodeIfBlockShape(
           negative.positive,
-          forceMultiRoot,
           undefined,
           allowNoScope,
         )
       }
       lastIfNode.blockShape = encodeIfBlockShape(
         lastIfNode.positive,
-        forceMultiRoot,
         negative,
         allowNoScope,
       )
@@ -201,22 +193,11 @@ export function createIfBranch(
 
 function encodeIfBlockShape(
   positive: BlockIRNode,
-  forceMultiRoot: boolean = false,
   negative?: BlockIRNode | IfIRNode,
   allowNoScope: boolean = true,
 ): number {
   // Pack the true/false branch shapes into one integer so runtime `createIf()`
   // can decode the selected branch with a single bit-mask operation.
-  if (forceMultiRoot) {
-    return (
-      VaporBlockShape.MULTI_ROOT |
-      ((negative && negative.type === IRNodeTypes.IF
-        ? VaporBlockShape.ELSE_IF
-        : VaporBlockShape.MULTI_ROOT) <<
-        2)
-    )
-  }
-
   const positiveNoScope = allowNoScope && canSkipIfBranchScope(positive)
   const negativeNoScope =
     allowNoScope &&
@@ -302,20 +283,6 @@ function isStaticTemplateNode(node: TemplateChildNode): boolean {
     }
   }
   return node.children.every(child => isStaticTemplateNode(child))
-}
-
-// SSR renders `v-if` inside `<template v-for>` always output <!--[-->...<!--]-->.
-// should mark the block as multi-root
-function shouldForceMultiRoot(context: TransformContext<ElementNode>): boolean {
-  const parent = context.parent && context.parent.node
-  return (
-    !!parent &&
-    parent.type === NodeTypes.ELEMENT &&
-    parent.tagType === ElementTypes.TEMPLATE &&
-    parent.props.some(
-      prop => prop.type === NodeTypes.DIRECTIVE && prop.name === 'for',
-    )
-  )
 }
 
 function checkSameKey(

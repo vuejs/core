@@ -589,5 +589,53 @@ describe('Vapor Mode hydration', () => {
         "
       `)
     })
+
+    test('nested v-for in a conditional template row', async () => {
+      const data = reactive({
+        rows: [
+          { id: 1, show: true, items: [1, 2] },
+          { id: 2, show: true, items: [3] },
+        ],
+      })
+      const { container } = await testHydration(
+        `<template>
+          <ul>
+            <template v-for="r in data.rows" :key="r.id">
+              <template v-if="r.show">
+                <li v-for="j in r.items" :key="j">{{ j }}</li>
+              </template>
+            </template>
+          </ul>
+        </template>`,
+        {},
+        data,
+      )
+
+      expect(`Hydration children mismatch`).not.toHaveBeenWarned()
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
+        "<ul>
+        <!--[-->
+        <!--[-->
+        <!--[--><li>1</li><li>2</li><!--]-->
+        <!--if--><!--]-->
+        <!--[-->
+        <!--[--><li>3</li><!--]-->
+        <!--if--><!--]-->
+        <!--]-->
+        </ul>"
+      `)
+
+      data.rows[0].items.push(4)
+      await nextTick()
+      expect(
+        [...container.querySelectorAll('li')].map(li => li.textContent),
+      ).toEqual(['1', '2', '4', '3'])
+
+      data.rows[0].show = false
+      await nextTick()
+      expect(
+        [...container.querySelectorAll('li')].map(li => li.textContent),
+      ).toEqual(['3'])
+    })
   })
 })
