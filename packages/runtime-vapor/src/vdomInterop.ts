@@ -274,6 +274,7 @@ import {
   takeDeferredEnters,
 } from './suspense'
 import { isAsyncComponentEnabled } from './asyncComponentState'
+import { AsyncBranch, getAsyncWrapperInner } from './apiDefineAsyncComponent'
 import {
   currentRenderContext,
   deriveSlotBoundary,
@@ -4103,8 +4104,14 @@ function setVaporSlotRef(
       if (isAsyncComponentEnabled && isAsyncWrapper(comp)) {
         asyncRoot = true
         const block = comp.block
-        // until it renders, a deferred hydration holds the server's nodes
-        if (isDynamicFragment(block) && block.current === undefined) {
+        // As in vdom, the ref goes to the component it loads or to the
+        // loading one, not to the error component. Until it renders, a
+        // deferred hydration holds the server's nodes.
+        if (
+          isDynamicFragment(block) &&
+          getAsyncWrapperInner(comp) === undefined &&
+          block.current !== AsyncBranch.LOADING
+        ) {
           track((block.u ||= []))
           return true
         }

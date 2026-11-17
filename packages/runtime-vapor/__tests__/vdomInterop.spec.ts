@@ -19329,14 +19329,30 @@ describe('template ref on vapor slot content', () => {
     )
   })
 
-  test('leaves the error component of an async component root without the ref', async () => {
-    const { seen, makeData } = track(v => v && v.name)
-    await renderParity(
-      {
-        App: `<script setup>
-          import { defineAsyncComponent, onErrorCaptured } from 'vue'
+  test.each([
+    ['of its own mode', true],
+    ['in vdom', false],
+  ])(
+    'leaves the error component of an async component root %s without the ref',
+    async (_, own) => {
+      const named = (name: string) => `<script setup>
+          defineExpose({ name: '${name}' })
+        </script>
+        <template><button>${name}</button></template>`
+      const srcs: Record<string, string> = own
+        ? { Loading: named('loading'), Failed: named('failed') }
+        : {}
+      srcs.App = `<script setup>
+          import {
+            defineAsyncComponent,
+            defineVaporAsyncComponent,
+            onErrorCaptured,
+          } from 'vue'
           const data = _data; const components = _components
-          const Async = defineAsyncComponent({
+          const define = data.value.vapor
+            ? defineVaporAsyncComponent
+            : defineAsyncComponent
+          const Async = define({
             loader: () => Promise.reject(new Error('failed')),
             loadingComponent: components.Loading,
             errorComponent: components.Failed,
@@ -19348,19 +19364,27 @@ describe('template ref on vapor slot content', () => {
           <components.Presence :on-ref="data.onRef">
             <Async />
           </components.Presence>
-        </template>`,
-      },
-      makeData,
-      async (data, root, mode) => {
-        const log = seen[mode === 'vdom' ? 0 : 1]
-        expect(log).toEqual(['loading'])
-        await new Promise(r => setTimeout(r))
-        expect(root.textContent).toBe('failed')
-        expect(log).toEqual(['loading', null])
-      },
-      { Presence, Loading: exposing('loading'), Failed: exposing('failed') },
-    )
-  })
+        </template>`
+      const { seen, makeData } = track(v => v && v.name)
+      await renderParity(
+        srcs,
+        () => {
+          const data = makeData()
+          // the vdom run comes first
+          ;(data.value as any).vapor = own && seen.length === 2
+          return data
+        },
+        async (data, root, mode) => {
+          const log = seen[mode === 'vdom' ? 0 : 1]
+          expect(log).toEqual(['loading'])
+          await new Promise(r => setTimeout(r))
+          expect(root.textContent).toBe('failed')
+          expect(log).toEqual(['loading', null])
+        },
+        { Presence, Loading: exposing('loading'), Failed: exposing('failed') },
+      )
+    },
+  )
 
   test('sets an inline function ref again on each owner render', async () => {
     const logs: any[][] = []
