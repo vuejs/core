@@ -3744,3 +3744,108 @@ test('attrs with an undefined value shadow Object.prototype until removed', asyn
   expect(vdom.text).toBe('false-true')
   expect(vapor.after).toBe(vdom.after)
 })
+
+describe('fallthrough is set up only when a passed key can be an attr', () => {
+  const WithEmits = `
+    <script setup vapor>
+      defineProps({ msg: String })
+      defineEmits(['pick'])
+    </script>
+    <template>
+      <div>{{ msg }}</div>
+    </template>
+  `
+  const WithModel = `
+    <script setup vapor>
+      const model = defineModel()
+    </script>
+    <template>
+      <div>{{ model }}</div>
+    </template>
+  `
+  const WithModelProp = `
+    <script setup vapor>
+      defineProps({ modelValue: String })
+    </script>
+    <template>
+      <div>{{ modelValue }}</div>
+    </template>
+  `
+
+  function mountChild(child: string, usage: string, components = {}) {
+    const Child = compile(child, ref(null), components)
+    const App = compile(
+      `<script setup vapor>
+        import { ref } from 'vue'
+        const Child = _components.Child
+        const msg = ref('a')
+        const onPick = () => {}
+      </script>
+      <template>
+        ${usage}
+      </template>`,
+      ref(null),
+      { Child },
+    )
+    return define(App).render().instance!.block as any
+  }
+
+  test.each([
+    [
+      'a listener for a declared event',
+      WithEmits,
+      `<Child :msg="msg" @pick="onPick" />`,
+    ],
+    [
+      'a once listener for a declared event',
+      WithEmits,
+      `<Child :msg="msg" @pick.once="onPick" />`,
+    ],
+    ['v-model on a defineModel prop', WithModel, `<Child v-model="msg" />`],
+    ['a static key', WithEmits, `<Child :msg="msg" key="a" />`],
+  ])('not for %s', (_, child, usage) => {
+    expect(mountChild(child, usage).hasFallthrough).toBe(false)
+  })
+
+  test('not for the component root of a component passed no attr', () => {
+    const Inner = compile(
+      `<script setup vapor>
+        defineProps({ msg: String })
+      </script>
+      <template>
+        <div>{{ msg }}</div>
+      </template>`,
+      ref(null),
+    )
+    const child = mountChild(
+      `<script setup vapor>
+        const Inner = _components.Inner
+        defineProps({ msg: String })
+        defineEmits(['pick'])
+      </script>
+      <template>
+        <Inner :msg="msg" />
+      </template>`,
+      `<Child :msg="msg" @pick="onPick" />`,
+      { Inner },
+    )
+    expect(child.block.hasFallthrough).toBe(false)
+  })
+
+  // guards
+  test.each([
+    [
+      'a listener for an undeclared event',
+      WithEmits,
+      `<Child :msg="msg" @other="onPick" />`,
+    ],
+    ['a plain attr', WithEmits, `<Child :msg="msg" class="x" />`],
+    [
+      'v-model whose update event is not declared',
+      WithModelProp,
+      `<Child v-model="msg" />`,
+    ],
+  ])('for %s', (_, child, usage) => {
+    expect(mountChild(child, usage).hasFallthrough).toBe(true)
+  })
+})
