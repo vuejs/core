@@ -36,6 +36,7 @@ import {
   stringifyStyle,
 } from '@vue/shared'
 import { setElementText } from '../src/dom/prop'
+import { getPropsProxyHandlers } from '../src/componentProps'
 
 const define = makeRender<any>()
 delegateEvents('click')
@@ -3847,5 +3848,85 @@ describe('fallthrough is set up only when a passed key can be an attr', () => {
     ],
   ])('for %s', (_, child, usage) => {
     expect(mountChild(child, usage).hasFallthrough).toBe(true)
+  })
+})
+
+describe('fallthrough reads attrs without going through their proxy', () => {
+  test('applying them to the root does not enumerate the proxy', async () => {
+    const data = ref({ title: 'a' })
+    const Child = compile(
+      `<script setup vapor>
+        defineProps({ msg: String })
+      </script>
+      <template>
+        <div>{{ msg }}</div>
+      </template>`,
+      data,
+    )
+    const ownKeys = vi.spyOn(getPropsProxyHandlers(Child)[1], 'ownKeys')
+    const App = compile(
+      `<template>
+        <components.Child msg="m" class="x" :title="data.title" />
+      </template>`,
+      data,
+      { Child },
+    )
+    const { host } = define(App).render()
+    expect(host.innerHTML).toBe('<div class="x" title="a">m</div>')
+    data.value.title = 'b'
+    await nextTick()
+    expect(host.innerHTML).toBe('<div class="x" title="b">m</div>')
+    expect(ownKeys).not.toHaveBeenCalled()
+  })
+
+  // Applying them to an element root is not the component reading them.
+  test('a root switched from an element to text warns like vdom', async () => {
+    const { vdom, vapor } = await renderParity(
+      {
+        Comp: `
+          <template>
+            <p v-if="data.show">hello</p>
+            <template v-else>bye</template>
+          </template>
+        `,
+        App: `
+          <template>
+            <components.Comp title="t" />
+          </template>
+        `,
+      },
+      () => ref({ show: true }),
+      async (data, root) => {
+        expect(root.innerHTML).toContain('<p title="t">hello</p>')
+        data.value.show = false
+      },
+    )
+    expect(vdom.text).toBe('bye')
+    expect(vapor.text).toBe(vdom.text)
+    expect('Extraneous non-props attributes (title)').toHaveBeenWarnedTimes(2)
+  })
+
+  // guard
+  test('a text root does not warn once the component read its attrs', async () => {
+    const { vdom, vapor } = await renderParity(
+      {
+        Comp: `
+          <template>
+            {{ $attrs.title }}
+          </template>
+        `,
+        App: `
+          <template>
+            <components.Comp :title="data.title" />
+          </template>
+        `,
+      },
+      () => ref({ title: 'a' }),
+      async data => {
+        data.value.title = 'b'
+      },
+    )
+    expect(vdom.text.trim()).toBe('b')
+    expect(vapor.text).toBe(vdom.text)
   })
 })
