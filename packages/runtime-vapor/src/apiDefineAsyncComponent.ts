@@ -192,31 +192,28 @@ export function defineVaporAsyncComponent<T extends VaporComponent>(
       }
 
       if (__FEATURE_SUSPENSE__ && suspensible && instance.suspense) {
-        // The loader settles outside any render context: render the branch
-        // under the wrapper's scope so it owns it, and not at all once the
-        // wrapper was unmounted while loading (Suspense discards the result).
-        const renderBranch = (render: () => VaporComponentInstance) => {
-          if (!instance.isUnmounted) {
-            instance.scope.run(() => frag.update(render))
-          }
-        }
-        return load()
-          .then(() => {
+        // Like vdom, return a render function that Suspense calls when it
+        // resumes: an error of the rendered component is not a loader error.
+        return load().then(
+          () => () => {
             resolvedComp = getResolvedComp()
             if (resolvedComp) {
-              renderBranch(() => createInnerComp(resolvedComp!, instance))
+              frag.update(() => createInnerComp(resolvedComp!, instance))
             }
             return frag
-          })
-          .catch(err => {
+          },
+          err => {
             onError(err)
-            if (errorComponent) {
-              renderBranch(() =>
-                createErrorComp(errorComponent, instance, () => err),
-              )
+            return () => {
+              if (errorComponent) {
+                frag.update(() =>
+                  createErrorComp(errorComponent, instance, () => err),
+                )
+              }
+              return frag
             }
-            return frag
-          })
+          },
+        )
       }
 
       const { loaded, error, delayed } = useAsyncComponentState(
@@ -226,8 +223,8 @@ export function defineVaporAsyncComponent<T extends VaporComponent>(
         instance,
       )
 
-      load()
-        .then(() => {
+      load().then(
+        () => {
           if (instance.isUnmounted) return
           // A KeepAlive entry is re-validated under the resolved name: one
           // deactivated while pending is pruned (unmounted) if excluded now.
@@ -235,15 +232,16 @@ export function defineVaporAsyncComponent<T extends VaporComponent>(
             frag.keepAliveCtx.cacheBlock(instance)
           }
           if (!instance.isUnmounted) loaded.value = true
-        })
-        .catch(err => {
+        },
+        err => {
           if (instance.isUnmounted) {
             setPendingRequest(null)
             return
           }
           onError(err)
           error.value = err
-        })
+        },
+      )
 
       renderEffect(() => {
         resolvedComp = getResolvedComp()

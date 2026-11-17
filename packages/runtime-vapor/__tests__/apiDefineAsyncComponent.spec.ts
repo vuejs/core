@@ -1071,8 +1071,6 @@ describe('api: defineAsyncComponent', () => {
 
   test.todo('suspensible: false', async () => {})
 
-  test.todo('suspense with error handling', async () => {})
-
   test('resolved async component is created as its resolved component', async () => {
     let parent: VaporComponentInstance
     let appInstance: VaporComponentInstance
@@ -1681,6 +1679,173 @@ describe('api: defineAsyncComponent', () => {
     app.unmount()
   })
 
+  test.each([
+    ['vapor', false],
+    ['vapor', true],
+    ['vdom', false],
+    ['vdom', true],
+  ] as const)(
+    'setup error of the loaded component under Suspense is not a loader error (%s root, error component: %s)',
+    async (mode, withErrorComponent) => {
+      const err = new Error('setup failed')
+      const onError = vi.fn()
+      const data = ref({ err, onError })
+      let resolve!: (comp: VaporComponent) => void
+      const Inner = compile(
+        `<script setup>throw _data.value.err</script><template>inner</template>`,
+        data,
+      )
+      const Async = defineVaporAsyncComponent({
+        loader: () => new Promise<VaporComponent>(r => (resolve = r)),
+        errorComponent: withErrorComponent
+          ? compile(
+              `<script setup>defineProps(['error'])</script>
+              <template><div>{{ error.message }}</div></template>`,
+              data,
+            )
+          : undefined,
+      })
+      const App = compile(
+        `<script setup>
+          import { onErrorCaptured } from 'vue'
+          const components = _components
+          onErrorCaptured(_data.value.onError)
+        </script>
+        <template><Suspense>
+          <components.Async />
+          <template #fallback>loading</template>
+        </Suspense></template>`,
+        data,
+        { Async },
+        { vapor: mode === 'vapor' },
+      )
+      const root = document.createElement('div')
+      const app = mode === 'vapor' ? createVaporApp(App) : createApp(App)
+      app.use(vaporInteropPlugin).mount(root)
+
+      const unhandled = await collectUnhandledRejections(async () => {
+        resolve(Inner)
+        await timeout()
+      })
+
+      // #16309: the wrapper handles the error again as a render error
+      expect(onError.mock.calls.map(([, , info]) => info)).toEqual([
+        'setup function',
+        'render function',
+      ])
+      expect(
+        'Unhandled error during execution of setup function',
+      ).toHaveBeenWarnedTimes(1)
+      expect(
+        'Unhandled error during execution of render function',
+      ).toHaveBeenWarnedTimes(1)
+      expect(
+        'Unhandled error during execution of async component loader',
+      ).not.toHaveBeenWarned()
+      expect(root.innerHTML).toBe('loading')
+      expect(unhandled).toEqual([err])
+      app.unmount()
+    },
+  )
+
+  test('suspense with error handling', async () => {
+    const err = new Error('loader failed')
+    const data = ref({})
+    let reject!: (err: Error) => void
+    const Async = defineVaporAsyncComponent({
+      loader: () => new Promise<VaporComponent>((_, r) => (reject = r)),
+      errorComponent: compile(
+        `<script setup>defineProps(['error'])</script>
+        <template><div>{{ error.message }}</div></template>`,
+        data,
+      ),
+    })
+    const App = compile(
+      `<template><Suspense>
+        <components.Async />
+        <template #fallback>loading</template>
+      </Suspense></template>`,
+      data,
+      { Async },
+    )
+    const root = document.createElement('div')
+    const app = createVaporApp(App)
+    const onError = (app.config.errorHandler = vi.fn())
+    app.use(vaporInteropPlugin).mount(root)
+    expect(root.innerHTML).toBe('loading')
+
+    reject(err)
+    await timeout()
+    expect(onError).toHaveBeenCalledExactlyOnceWith(
+      err,
+      expect.any(Object),
+      'async component loader',
+    )
+    expect(root.innerHTML).toBe(
+      '<div>loader failed</div><!--async component-->',
+    )
+    app.unmount()
+  })
+
+  test('hook error of a KeepAlive prune after the load is not a loader error', async () => {
+    const err = new Error('beforeUnmount failed')
+    const onError = vi.fn()
+    const data = ref({ show: true, err, onError })
+    let resolve!: (comp: VaporComponent) => void
+    const Inner = compile(
+      `<script setup>defineOptions({ name: 'Inner' })</script>
+      <template>inner</template>`,
+      data,
+    )
+    const Async = defineVaporAsyncComponent({
+      loader: () => new Promise<VaporComponent>(r => (resolve = r)),
+      loadingComponent: compile(
+        `<script setup>
+          import { onBeforeUnmount } from 'vue'
+          onBeforeUnmount(() => { throw _data.value.err })
+        </script><template>loading</template>`,
+        data,
+      ),
+      delay: 0,
+    })
+    const App = compile(
+      `<script setup>
+        import { onErrorCaptured } from 'vue'
+        const data = _data
+        const components = _components
+        onErrorCaptured(data.value.onError)
+      </script>
+      <template><KeepAlive exclude="Inner">
+        <components.Async v-if="data.show" />
+      </KeepAlive></template>`,
+      data,
+      { Async },
+    )
+    const root = document.createElement('div')
+    createVaporApp(App).mount(root)
+    expect(root.innerHTML).toBe('loading<!--async component--><!--if-->')
+    data.value.show = false
+    await nextTick()
+    expect(root.innerHTML).toBe('<!--if-->')
+    expect(onError).not.toHaveBeenCalled()
+
+    const unhandled = await collectUnhandledRejections(async () => {
+      resolve(Inner)
+      await timeout()
+    })
+
+    expect(onError.mock.calls.map(([, , info]) => info)).toEqual([
+      'beforeUnmount hook',
+    ])
+    expect(
+      'Unhandled error during execution of beforeUnmount hook',
+    ).toHaveBeenWarnedTimes(1)
+    expect(
+      'Unhandled error during execution of async component loader',
+    ).not.toHaveBeenWarned()
+    expect(unhandled).toEqual([err])
+  })
+
   test('with loading component + default delay', async () => {
     vi.useFakeTimers()
     try {
@@ -1738,4 +1903,21 @@ function mountAsyncError(
   app.config.errorHandler = () => {}
   app.use(vaporInteropPlugin).mount(root)
   return { root, data, reject: (err: Error) => reject(err) }
+}
+
+// In dev, an error that is handled and thrown again in a promise callback
+// ends as an unhandled rejection, as in vdom. Vitest does not report an
+// unhandled rejection while the test has its own listener.
+async function collectUnhandledRejections(run: () => Promise<void>) {
+  const errors: unknown[] = []
+  const onUnhandledRejection = (err: unknown) => {
+    errors.push(err)
+  }
+  process.on('unhandledRejection', onUnhandledRejection)
+  try {
+    await run()
+  } finally {
+    process.off('unhandledRejection', onUnhandledRejection)
+  }
+  return errors
 }
