@@ -245,8 +245,15 @@ export function processChildrenAsStatement(
   asFragment = false,
   withSlotScopeId: boolean = parentContext.withSlotScopeId,
   disableNestedFragments = false,
+  disableComment = false,
 ): BlockStatement {
   const childContext = createChildContext(parentContext, withSlotScopeId)
-  processChildren(parent, childContext, asFragment, disableNestedFragments)
+  processChildren(
+    parent,
+    childContext,
+    asFragment,
+    disableNestedFragments,
+    disableComment,
+  )
   return createBlockStatement(childContext.body)
 }

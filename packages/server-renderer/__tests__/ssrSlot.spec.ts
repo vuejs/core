@@ -268,6 +268,27 @@ describe('ssr: slot', () => {
     ).toBe(`<div>hi</div>`)
   })
 
+  test('transition-group slot fallback with a falsy v-if', async () => {
+    // transition-group filters comment children out at runtime, so a fallback
+    // whose only child is a falsy `v-if` must not leave a placeholder comment
+    // in the server output - the client renders none
+    const ReusableList = {
+      setup: () => ({ shown: false }),
+      template: `<TransitionGroup tag="ul"><slot><li v-if="shown">a</li></slot></TransitionGroup>`,
+    }
+
+    expect(await renderToString(createApp(ReusableList))).toBe(`<ul></ul>`)
+
+    expect(
+      await renderToString(
+        createApp({
+          components: { one: ReusableList },
+          template: `<one><li>a</li></one>`,
+        }),
+      ),
+    ).toBe(`<ul><li>a</li></ul>`)
+  })
+
   // #9933
   test('transition-group slot', async () => {
     expect(

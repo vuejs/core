@@ -200,6 +200,28 @@ describe('ssr: <slot>', () => {
     `)
   })
 
+  test('fallback inside transition-group: no comment for a falsy v-if', () => {
+    // transition-group filters comment children out at runtime (#6715), so the
+    // fallback must not leave the placeholder comment of a falsy v-if behind
+    expect(
+      compile(
+        `<TransitionGroup tag="ul"><slot><li v-if="ok">{{ ok }}</li></slot></TransitionGroup>`,
+      ).code,
+    ).toMatchInlineSnapshot(`
+      "const { ssrRenderSlotInner: _ssrRenderSlotInner, ssrRenderAttrs: _ssrRenderAttrs, ssrInterpolate: _ssrInterpolate } = require("vue/server-renderer")
+
+      return function ssrRender(_ctx, _push, _parent, _attrs) {
+        _push(\`<ul\${_ssrRenderAttrs(_attrs)}>\`)
+        _ssrRenderSlotInner(_ctx.$slots, "default", {}, () => {
+          if (_ctx.ok) {
+            _push(\`<li>\${_ssrInterpolate(_ctx.ok)}</li>\`)
+          }
+        }, _push, _parent, null, true)
+        _push(\`</ul>\`)
+      }"
+    `)
+  })
+
   test('fallback outside a transition keeps fragment markers', () => {
     // control: a plain slot outlet still renders its fallback as a fragment,
     // matching the fragment the client renders for the slot content
