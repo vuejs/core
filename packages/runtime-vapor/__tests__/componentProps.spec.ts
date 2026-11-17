@@ -2831,3 +2831,29 @@ test('a component v-model listener is the same function on every delivery', asyn
   expect(vdom.text).toBe('b|m|0')
   expect(vapor.text).toBe(vdom.text)
 })
+
+// The props proxy does not wrap the instance.
+test('props have the prototype of a plain object, like vdom', async () => {
+  const { vdom, vapor } = await renderParity(
+    {
+      Comp: `
+        <script setup>
+          const props = defineProps({ msg: String })
+          const plain = Object.getPrototypeOf(props) === Object.prototype
+        </script>
+        <template>
+          <p>{{ msg }} {{ plain }}</p>
+        </template>
+      `,
+      App: `
+        <template>
+          <components.Comp msg="m" />
+        </template>
+      `,
+    },
+    () => ref(null),
+    () => {},
+  )
+  expect(vdom.text).toBe('m true')
+  expect(vapor.text).toBe(vdom.text)
+})
