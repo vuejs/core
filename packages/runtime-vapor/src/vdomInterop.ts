@@ -201,6 +201,7 @@ import {
   type VaporFragment,
   createSlotBoundary,
   endsRootChain,
+  isDynamicFragment,
   isFragment,
   isInteropFragment,
   isSlotOutletFragment,
@@ -3986,6 +3987,47 @@ function setVaporSlotRef(
   // the chain goes through an async component: while it renders nothing the
   // ref stays unset, as in VDOM
   let asyncRoot = false
+  // A vdom async wrapper forwards its ref to the component it loads, not to
+  // an error component: a probe ref on the wrapper reports what vdom sets it
+  // to and when, a first mount under Suspense or a deferred hydration too.
+  let probed: VNode | undefined
+  let unprobe = NOOP
+  let forwarded: object | null | undefined
+  const probeAsyncWrapper = (wrapper: VNode) => {
+    if (probed === wrapper) return forwarded
+    unprobe()
+    probed = wrapper
+    forwarded = undefined
+    const ref = wrapper.ref
+    // next to a ref of its own
+    const refs = isArray(ref) ? ref : (wrapper.ref = ref ? [ref] : [])
+    const probe = {
+      i: isArray(rawRef) ? rawRef[0].i : rawRef.i,
+      r: (value: any) => {
+        if (value !== forwarded) {
+          forwarded = value
+          queueUpdate()
+        }
+      },
+    }
+    refs.push(probe)
+    unprobe = () => removeItem(refs, probe)
+    // What the wrapper rendered before the probe was there, re-pointed to the
+    // array so that vdom diffs it against itself on the next patch.
+    let inner = wrapper.component && wrapper.component.subTree
+    while (inner && isAsyncWrapper(inner)) {
+      inner.ref = refs
+      inner = inner.component && inner.component.subTree
+    }
+    if (inner && inner.component) {
+      inner.ref = refs
+      forwarded =
+        inner.shapeFlag & ShapeFlags.STATEFUL_COMPONENT
+          ? getComponentPublicInstance(inner.component)
+          : inner.el
+    }
+    return forwarded
+  }
   // VDOM sets the ref again on every patch of the vnode
   let patched = true
   const hooks: Function[][] = []
@@ -4011,6 +4053,11 @@ function setVaporSlotRef(
         getRootElement(block.nodes, visitor)) ||
       exposed ||
       (asyncRoot ? null : vnode.el)
+    if (!asyncRoot && probed) {
+      // the root moved off the wrapper
+      unprobe()
+      probed = undefined
+    }
     if (el !== target.el) {
       // a replaced root is the old one's unmount
       unset()
@@ -4037,17 +4084,14 @@ function setVaporSlotRef(
     onDynamicFragment: frag => track((frag.u ||= [])),
     onInteropFragment: frag => {
       track((frag.u ||= []))
-      let content = frag.vnode
-      // vdom forwards an async wrapper's ref to the component it renders
-      while (content && isAsyncWrapper(content)) {
-        asyncRoot = true
-        const instance = content.component
-        // one it loaded renders from an update of its own
-        if (instance) track((instance.u ||= []))
-        content = instance && instance.subTree
-      }
+      const content = frag.vnode
       if (content && content.shapeFlag & ShapeFlags.STATEFUL_COMPONENT) {
-        exposed = getComponentPublicInstance(content.component!)
+        if (isAsyncWrapper(content)) {
+          asyncRoot = true
+          exposed = probeAsyncWrapper(content)
+        } else {
+          exposed = getComponentPublicInstance(content.component!)
+        }
         return true
       }
     },
@@ -4058,6 +4102,12 @@ function setVaporSlotRef(
       // the component it renders
       if (isAsyncComponentEnabled && isAsyncWrapper(comp)) {
         asyncRoot = true
+        const block = comp.block
+        // until it renders, a deferred hydration holds the server's nodes
+        if (isDynamicFragment(block) && block.current === undefined) {
+          track((block.u ||= []))
+          return true
+        }
       } else if (!isFunction(comp.type)) {
         exposed = getExposed(comp)
         return true
@@ -4074,6 +4124,7 @@ function setVaporSlotRef(
     stop() {
       update.flags! |= SchedulerJobFlags.DISPOSED
       clearHooks()
+      unprobe()
       state.ref = undefined
       unset()
     },

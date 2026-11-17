@@ -4,6 +4,7 @@ import { setIsHydratingEnabled } from '../../src/dom/hydration'
 import {
   formatHtml,
   setupHydrationTest,
+  testHydration,
   testWithVDOMApp,
   testWithVaporApp,
 } from './_helpers'
@@ -3102,4 +3103,82 @@ describe('VDOM interop', () => {
     expect('Hydration node mismatch').not.toHaveBeenWarned()
     expect('Hydration children mismatch').not.toHaveBeenWarned()
   })
+
+  test.each([
+    // the control
+    ['in a vdom app', false, false],
+    ['a vdom one', true, false],
+    ['a vapor one', true, true],
+  ])(
+    'sets a ref on an async component root once it has hydrated: %s',
+    async (_, isVaporApp, vaporAsync) => {
+      const log: any[] = []
+      let load!: () => void
+      const data = ref({
+        vaporAsync,
+        loading: new Promise<void>(r => (load = r)),
+        onRef: (v: any) => log.push(v && v.name),
+      })
+      const { container } = await testHydration(
+        `<script setup>
+          import { defineAsyncComponent, defineVaporAsyncComponent } from 'vue'
+          const data = _data; const components = _components
+          const define = data.value.vaporAsync
+            ? defineVaporAsyncComponent
+            : defineAsyncComponent
+          const Async = define(
+            () => data.value.loading.then(() => components.Child),
+          )
+        </script>
+        <template>
+          <components.Presence :on-ref="data.onRef">
+            <Async />
+          </components.Presence>
+        </template>`,
+        {
+          Presence: {
+            code: `<script>
+              import { h } from 'vue'
+              export default {
+                props: ['onRef'],
+                setup(props, { slots }) {
+                  return () => h(slots.default()[0], { ref: props.onRef })
+                },
+              }
+            </script>`,
+            vapor: false,
+          },
+          Child: {
+            code: `<script setup>
+              defineExpose({ name: 'child' })
+            </script>
+            <template>
+              <button>ready</button>
+            </template>`,
+            vapor: vaporAsync,
+          },
+        },
+        data,
+        {
+          isVaporApp,
+          interop: true,
+          // as the `vue` server entry: `defineAsyncComponent` either way
+          serverData: ref({
+            vaporAsync: false,
+            loading: Promise.resolve(),
+            onRef: () => {},
+          }),
+        },
+      )
+      const button = container.querySelector('button')!
+      // the server's button is not what the ref resolves to
+      expect(log).toEqual([])
+      load()
+      await new Promise(r => setTimeout(r))
+      expect(container.querySelector('button')).toBe(button)
+      expect(log).toEqual(['child'])
+      expect('Hydration node mismatch').not.toHaveBeenWarned()
+      expect('Hydration children mismatch').not.toHaveBeenWarned()
+    },
+  )
 })

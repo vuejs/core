@@ -18927,6 +18927,13 @@ describe('template ref on vapor slot content', () => {
     }
     return { seen, makeData }
   }
+  const exposing = (name: string) =>
+    defineComponent({
+      setup(_, { expose }) {
+        expose({ name })
+        return () => h('button', name)
+      },
+    })
 
   test('resolves to the element the content renders', async () => {
     const { seen, makeData } = track(v =>
@@ -19241,12 +19248,6 @@ describe('template ref on vapor slot content', () => {
   ])(
     'resolves an async component root %s to the component it loads',
     async (_, own, nested) => {
-      const VdomChild = defineComponent({
-        setup(_, { expose }) {
-          expose({ name: 'child' })
-          return () => h('button', 'a')
-        },
-      })
       const srcs: Record<string, string> = own
         ? {
             Child: `<script setup>
@@ -19287,13 +19288,79 @@ describe('template ref on vapor slot content', () => {
           await new Promise(r => setTimeout(r))
           expect(log).toEqual(['child'])
         },
-        { Presence, Child: VdomChild },
+        { Presence, Child: exposing('child') },
       )
       for (const log of seen) {
         expect(log[log.length - 1]).toBe(null)
       }
     },
   )
+
+  test('resolves an async component root a Suspense waits for', async () => {
+    const { seen, makeData } = track(v => v && v.name)
+    await renderParity(
+      {
+        App: `<script setup>
+          import { defineAsyncComponent } from 'vue'
+          const data = _data; const components = _components
+          const Async = defineAsyncComponent(
+            () => Promise.resolve(components.Child),
+          )
+        </script>
+        <template>
+          <Suspense>
+            <div>
+              <components.Presence :on-ref="data.onRef">
+                <Async />
+              </components.Presence>
+            </div>
+          </Suspense>
+        </template>`,
+      },
+      makeData,
+      async (data, root, mode) => {
+        const log = seen[mode === 'vdom' ? 0 : 1]
+        expect(log).toEqual([])
+        await new Promise(r => setTimeout(r))
+        expect(root.textContent).toBe('child')
+        expect(log).toEqual(['child'])
+      },
+      { Presence, Child: exposing('child') },
+    )
+  })
+
+  test('leaves the error component of an async component root without the ref', async () => {
+    const { seen, makeData } = track(v => v && v.name)
+    await renderParity(
+      {
+        App: `<script setup>
+          import { defineAsyncComponent, onErrorCaptured } from 'vue'
+          const data = _data; const components = _components
+          const Async = defineAsyncComponent({
+            loader: () => Promise.reject(new Error('failed')),
+            loadingComponent: components.Loading,
+            errorComponent: components.Failed,
+            delay: 0,
+          })
+          onErrorCaptured(() => false)
+        </script>
+        <template>
+          <components.Presence :on-ref="data.onRef">
+            <Async />
+          </components.Presence>
+        </template>`,
+      },
+      makeData,
+      async (data, root, mode) => {
+        const log = seen[mode === 'vdom' ? 0 : 1]
+        expect(log).toEqual(['loading'])
+        await new Promise(r => setTimeout(r))
+        expect(root.textContent).toBe('failed')
+        expect(log).toEqual(['loading', null])
+      },
+      { Presence, Loading: exposing('loading'), Failed: exposing('failed') },
+    )
+  })
 
   test('sets an inline function ref again on each owner render', async () => {
     const logs: any[][] = []
