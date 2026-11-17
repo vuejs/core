@@ -45,11 +45,13 @@ import {
   type HydrationCursor,
   advanceHydrationNode,
   claimAnchor,
+  claimFragmentStart,
   createFragmentClaim,
   currentHydrationNode,
   enterHydrationBoundary,
   enterHydrationCursor,
   hydrateBlock,
+  insertMissingRange,
   isComment,
   isHydrating,
   locateClaimedEnd,
@@ -551,6 +553,10 @@ export const createFor = (
     let row = 0
     const mountRow = () => mount(source, row, parentAnchor).nodes
     try {
+      if (!claim.start && !isComment(currentHydrationNode!, ']')) {
+        insertMissingRange('[', ']', `v-for fragment`)
+        claimFragmentStart(claim)
+      }
       for (let i = 0; i < newLength; i++) {
         const node = currentHydrationNode!
         // an unwrapped row is a single node: its own hydration moves on
@@ -599,15 +605,9 @@ export const createFor = (
           }
         }
       } else {
-        // a marked list always finds its own range: only malformed server
-        // output gets here. Adopt the cursor so prod keeps going.
-        const close = currentHydrationNode!
-        if (__DEV__ && !isComment(close, ']')) {
-          throw new Error(
-            `v-for fragment anchor node was not found. this is likely a Vue internal bug.`,
-          )
-        }
-        reuseBoundaryClose(close)
+        // an empty list the server rendered without a range of its own, in
+        // the range around it: that range's close is the anchor
+        reuseBoundaryClose(currentHydrationNode!)
       }
     } finally {
       exitHydrationBoundary && exitHydrationBoundary()

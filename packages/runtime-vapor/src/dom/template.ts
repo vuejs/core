@@ -9,6 +9,7 @@ import {
   isBoundaryMarker,
   isClaimedAnchor,
   isHydrating,
+  locateComponentRoot,
   parseAdoptTarget,
 } from './hydration'
 import { insertionParent, resetInsertionState } from '../insertionState'
@@ -83,6 +84,7 @@ export function template(html: string, flags: number = 0, ns?: Namespace) {
       } else resetInsertionState()
     }
     if (isHydrating) {
+      if (!hydrationCursor) locateComponentRoot()
       let adopted: Node
       // A static template stripped of its content at build time has nothing
       // to compare against: the node is adopted as it stands, as vdom adopts

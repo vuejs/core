@@ -18,6 +18,7 @@ import {
   locateHydrationNode,
   nextLogicalSibling,
   removeFragmentNodes,
+  replaceComponentUnit,
   runWithoutHydration,
   setCurrentHydrationNode,
   trimHydrationBoundary,
@@ -458,6 +459,8 @@ export function executeAnchorPlan(
           setCurrentHydrationNode(null)
         }
         insertUntrackedAnchor(plan.parent, plan.next, createRuntimeAnchor())
+        // the anchor stands where the trimmed server unit of a component was
+        replaceComponentUnit(plan.cleanupStart, frag.anchor!)
         break
       }
     }
