@@ -27,7 +27,7 @@ import type {
 } from './renderer'
 import type { InjectionKey } from './apiInject'
 import { warn } from './warning'
-import type { VNode, VNodeArrayChildren } from './vnode'
+import type { VNode, VNodeArrayChildren, VNodeNormalizedRef } from './vnode'
 import { devtoolsInitApp, devtoolsUnmountApp } from './devtools'
 import {
   NO,
@@ -258,6 +258,15 @@ export interface VaporInVdomInterface {
    */
   hasTransitionChild(vnode: VNode): boolean
   getTransitionElement(vnode: VNode): RendererElement | undefined
+  /**
+   * Binds a template ref to a vapor slot's content and follows root changes.
+   */
+  setSlotRef(
+    vnode: VNode,
+    ref: VNodeNormalizedRef,
+    parentSuspense: SuspenseBoundary | null,
+    isUnmount: boolean,
+  ): void
   /**
    * Enters what vapor mounted under `suspense` while it was pending, right
    * before the boundary reveals its branch: the boundary's own walk stops

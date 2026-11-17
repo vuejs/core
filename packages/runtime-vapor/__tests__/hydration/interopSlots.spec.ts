@@ -3061,4 +3061,45 @@ describe('VDOM interop', () => {
     expect(container.querySelector('#a')!.textContent).toBe('1')
     expect(container.querySelector('div > b')!.textContent).toBe('1')
   })
+
+  test('keeps a ref on hydrated vapor slot content in sync with its root', async () => {
+    const data = ref({ show: true, onRef: vi.fn() })
+    const Presence = {
+      props: ['onRef'],
+      setup(props: any, { slots }: any) {
+        return () => h(slots.default()[0], { ref: props.onRef })
+      },
+    }
+    const code = `<script setup>
+        const data = _data; const components = _components
+      </script>
+      <template>
+        <components.Presence :on-ref="data.onRef">
+          <button v-if="data.show">a</button><a v-else>b</a>
+        </components.Presence>
+      </template>`
+    const server = compile(code, data, { Presence }, { vapor: true, ssr: true })
+    const client = compile(code, data, { Presence }, { vapor: true })
+    const root = document.createElement('div')
+    root.innerHTML = await VueServerRenderer.renderToString(
+      runtimeDom.createSSRApp(server),
+    )
+    const button = root.querySelector('button')!
+    const app = runtimeVapor.createVaporSSRApp(client)
+    app.use(runtimeVapor.vaporInteropPlugin).mount(root)
+    expect(root.querySelector('button')).toBe(button)
+    expect(data.value.onRef.mock.calls.map(([el]) => el)).toEqual([button])
+    data.value.show = false
+    await nextTick()
+    const link = root.querySelector('a')!
+    expect(data.value.onRef.mock.calls.map(([el]) => el)).toEqual([
+      button,
+      null,
+      link,
+    ])
+    app.unmount()
+    expect(data.value.onRef).toHaveBeenLastCalledWith(null, {})
+    expect('Hydration node mismatch').not.toHaveBeenWarned()
+    expect('Hydration children mismatch').not.toHaveBeenWarned()
+  })
 })

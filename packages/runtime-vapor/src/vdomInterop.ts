@@ -42,6 +42,7 @@ import {
   ensureRenderer,
   ensureValidVNode,
   filterSingleRoot,
+  getComponentPublicInstance,
   getContainerType,
   getInheritedScopeIds,
   getTransitionRawChildren,
@@ -100,6 +101,7 @@ import {
   VaporComponentInstance,
   applyFallthroughAttrs,
   createComponent,
+  getExposed,
   getRootElement,
   isVaporComponent,
   mountComponent,
@@ -149,6 +151,7 @@ import {
   isObject,
   isReservedProp,
   isString,
+  remove as removeItem,
 } from '@vue/shared'
 import {
   type RawProps,
@@ -1081,6 +1084,8 @@ const vaporInteropImpl = {
   },
 
   getTransitionElement: getInteropTransitionElement,
+
+  setSlotRef: setVaporSlotRef,
 
   // only vdom's TransitionGroup calls it: dead under the flag its export sets
   forEachGroupChild(vnode, cb) {
@@ -3925,6 +3930,10 @@ interface InteropVaporSlotState {
   // the content vnode's clone attrs (see VNode.vs.attrs)
   fallthrough?: SlotFallthroughOwner
   dirs?: VaporSlotDirs
+  ref?: {
+    update(vnode: VNode, ref: VNodeNormalizedRef): void
+    stop(): void
+  }
 }
 
 function resolveInteropVaporSlotState(vnode: VNode): InteropVaporSlotState {
@@ -3950,6 +3959,126 @@ function syncInteropVaporSlotState(n1: VNode, n2: VNode): void {
     fallthrough.attrsRef.value = n2.vs!.attrs || EMPTY_OBJ
     applySlotFallthrough(fallthrough)
   }
+}
+
+function setVaporSlotRef(
+  vnode: VNode,
+  rawRef: VNodeNormalizedRef,
+  suspense: SuspenseBoundary | null,
+  isUnmount: boolean,
+): void {
+  const state = resolveInteropVaporSlotState(vnode)
+  if (isUnmount) {
+    if (state.ref) state.ref.stop()
+    return
+  }
+  if (state.ref) {
+    state.ref.update(vnode, rawRef)
+    return
+  }
+
+  // Keep the last assigned target separate from the slot's range anchors.
+  // The ordinary VDOM setter owns ref arrays, setup refs and pending jobs.
+  const target = createVNode(Fragment)
+  let assigned: VNodeNormalizedRef | undefined
+  // what the component the root chain ends at exposes: its ref, as in VDOM
+  let exposed: object | null | undefined
+  // the chain goes through an async component: while it renders nothing the
+  // ref stays unset, as in VDOM
+  let asyncRoot = false
+  // VDOM sets the ref again on every patch of the vnode
+  let patched = true
+  const hooks: Function[][] = []
+  const clearHooks = () => {
+    for (const list of hooks) removeItem(list, queueUpdate)
+    hooks.length = 0
+  }
+  const unset = () => {
+    if (assigned) {
+      const ref = assigned
+      assigned = undefined
+      vdomSetRef(ref, null, suspense, target, true)
+    }
+  }
+  const update: SchedulerJob = () => {
+    clearHooks()
+    const block = vnode.vb
+    exposed = undefined
+    asyncRoot = false
+    const el =
+      (vnode.vs!.attrs &&
+        isFragment(block) &&
+        getRootElement(block.nodes, visitor)) ||
+      exposed ||
+      (asyncRoot ? null : vnode.el)
+    if (el !== target.el) {
+      // a replaced root is the old one's unmount
+      unset()
+      if (update.flags! & SchedulerJobFlags.DISPOSED) return
+    } else if (!patched) {
+      return
+    }
+    patched = false
+    target.el = el
+    if (!el) return
+    const oldRef = assigned
+    assigned = rawRef
+    vdomSetRef(rawRef, oldRef || null, suspense, target)
+  }
+  // The VDOM owner patches before the slot's effects. Resolve after those
+  // effects, including for function refs, and before mounted/updated hooks.
+  const queueUpdate = () => queuePostFlushCb(update, -1)
+  const track = (list: Function[]) => {
+    registerRootHook(list, queueUpdate)
+    hooks.push(list)
+  }
+  const visitor: RootChainVisitor = {
+    excludeSlotOutlets: true,
+    onDynamicFragment: frag => track((frag.u ||= [])),
+    onInteropFragment: frag => {
+      track((frag.u ||= []))
+      let content = frag.vnode
+      // vdom forwards an async wrapper's ref to the component it renders
+      while (content && isAsyncWrapper(content)) {
+        asyncRoot = true
+        const instance = content.component
+        // one it loaded renders from an update of its own
+        if (instance) track((instance.u ||= []))
+        content = instance && instance.subTree
+      }
+      if (content && content.shapeFlag & ShapeFlags.STATEFUL_COMPONENT) {
+        exposed = getComponentPublicInstance(content.component!)
+        return true
+      }
+    },
+    onComponent: comp => {
+      if (__DEV__) track((comp.hmrRootHooks ||= []))
+      if (isPendingInteropSetup(comp)) track((comp.bm ||= []))
+      // a functional component's ref is its root element, an async wrapper's
+      // the component it renders
+      if (isAsyncComponentEnabled && isAsyncWrapper(comp)) {
+        asyncRoot = true
+      } else if (!isFunction(comp.type)) {
+        exposed = getExposed(comp)
+        return true
+      }
+    },
+  }
+  state.ref = {
+    update(next, ref) {
+      vnode = next
+      rawRef = ref
+      patched = true
+      queueUpdate()
+    },
+    stop() {
+      update.flags! |= SchedulerJobFlags.DISPOSED
+      clearHooks()
+      state.ref = undefined
+      unset()
+    },
+  }
+  update()
 }
 
 // The vdom directives of the slot's vnode (`withDirectives` on a clone of the
@@ -4336,6 +4465,9 @@ function renderVaporSlot(
 }
 
 function stopVaporSlotScope(vnode: VNode): void {
+  const state =
+    vnode.vs && (vnode.vs.state as InteropVaporSlotState | undefined)
+  if (state && state.ref) state.ref.stop()
   if (vnode.vs && vnode.vs.scope) {
     vnode.vs.scope.stop()
     vnode.vs.scope = undefined
