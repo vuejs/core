@@ -4953,4 +4953,33 @@ describe('SSR hydration', () => {
     expect(errorHandler).toHaveBeenCalledTimes(1)
     expect(container.innerHTML).toBe('<div><!----></div>')
   })
+
+  test.each([
+    ['an element', '<div><Empty /><b>after</b></div>'],
+    ['a fragment', '<Empty /><b>after</b>'],
+  ])('empty template component before a sibling in %s', async (_, template) => {
+    const App = {
+      components: { Empty: { template: '' } },
+      template,
+    }
+    const html = await renderToString(h(App))
+    const ClientApp = {
+      ...App,
+      components: { Empty: { render: compileToFunction('') } },
+    }
+    const container = document.createElement('div')
+    container.innerHTML = html
+    const b = container.querySelector('b')!
+    createSSRApp(ClientApp).mount(container)
+
+    const clientContainer = document.createElement('div')
+    runtimeDom.createApp(ClientApp).mount(clientContainer)
+    expect(container.innerHTML).toBe(html)
+    expect(container.innerHTML.replace(/<!--\[-->|<!--\]-->/g, '')).toBe(
+      clientContainer.innerHTML,
+    )
+    expect(container.querySelector('b')).toBe(b)
+    expect('Hydration node mismatch').not.toHaveBeenWarned()
+    expect('Hydration children mismatch').not.toHaveBeenWarned()
+  })
 })

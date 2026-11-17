@@ -1211,6 +1211,31 @@ describe('VDOM interop', () => {
       app.unmount()
     }
   })
+
+  test.each([
+    ['Vapor -> VDOM', testWithVaporApp, false],
+    ['VDOM -> Vapor', testWithVDOMApp, true],
+  ] as const)(
+    'empty component before a sibling (%s)',
+    async (_, testApp, vapor) => {
+      const { container, html, data } = await testApp(
+        `<script setup>const data = _data; const components = _components;</script>
+      <template><div><components.Empty /><b>{{ data }}</b></div></template>`,
+        { Empty: { code: `<template></template>`, vapor } },
+        ref('x'),
+      )
+      const b = container.querySelector('b')!
+      expect(html).toBe('<div><!----><b>x</b></div>')
+      expect(container.innerHTML).toBe(html)
+      expect('Hydration node mismatch').not.toHaveBeenWarned()
+      expect('Hydration children mismatch').not.toHaveBeenWarned()
+
+      data.value = 'y'
+      await nextTick()
+      expect(container.querySelector('b')).toBe(b)
+      expect(container.innerHTML).toBe('<div><!----><b>y</b></div>')
+    },
+  )
 })
 
 // a vapor v-if chain renders its branch in a `<!--[i-->` range: a vdom parent

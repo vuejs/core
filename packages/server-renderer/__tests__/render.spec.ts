@@ -410,6 +410,36 @@ function testRender(type: string, render: typeof renderToString) {
           ),
         ).toBe(`<div>parent<div>opt!</div><div>vnode!</div></div>`)
       })
+
+      test('optimized component with no output', async () => {
+        expect(await render(createApp({ ssrRender() {} }))).toBe('<!---->')
+        // an empty text is output: the client renders a text node for it
+        expect(
+          await render(
+            createApp({
+              ssrRender(_, push) {
+                push('')
+              },
+            }),
+          ),
+        ).toBe('')
+      })
+
+      test.each(['', ' \n ', '<!-- comment -->'])(
+        'empty template component (%j)',
+        async template => {
+          const Empty = { template, compilerOptions: { comments: false } }
+          expect(await render(createApp(Empty))).toBe('<!---->')
+          expect(
+            await render(
+              createApp({
+                components: { Empty },
+                template: '<div><Empty /><b>after</b></div>',
+              }),
+            ),
+          ).toBe('<div><!----><b>after</b></div>')
+        },
+      )
     })
 
     describe('slots', () => {

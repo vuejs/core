@@ -144,6 +144,7 @@ import {
   hydrateBlock,
   hydrateBlockWithErrorHandling,
   hydrateNode,
+  isClaimedAnchor,
   isComment,
   isHydrating,
   isRecreatedNode,
@@ -715,6 +716,22 @@ export function createComponent(
 
     if (!managedMount && (_insertionParent || isHydrating)) {
       mountComponent(instance, _insertionParent!, _insertionAnchor)
+    }
+
+    if (hydration && !pendingAsyncHydration && !_insertionParent) {
+      const node = currentHydrationNode
+      if (
+        node &&
+        node === hydration.cursor.start &&
+        isComment(node, '') &&
+        !isClaimedAnchor(node) &&
+        !getBlockFirstNode(instance.block)
+      ) {
+        // the server's `<!---->` is the node of a component with no nodes, as
+        // in vdom. In an element, the parent template holds it instead.
+        instance.block = node
+        advanceHydrationNode(node)
+      }
     }
 
     return instance

@@ -370,6 +370,8 @@ function renderComponentSubTree(
       } finally {
         setCurrentRenderingInstance(prev)
       }
+      // no output renders a comment, as a null root does: hydration counts it
+      if (!getBuffer().length) push(`<!---->`)
     } else if (instance.render && instance.render !== NOOP) {
       renderVNode(
         push,

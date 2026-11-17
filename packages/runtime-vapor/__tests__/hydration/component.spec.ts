@@ -994,6 +994,102 @@ describe('Vapor Mode hydration', () => {
         expect(main!.textContent).toBe('y')
       })
     })
+
+    test('empty component before text in an element', async () => {
+      const { container, html, data } = await testHydration(
+        `<template><div><components.Empty />count: {{ data }}</div></template>`,
+        { Empty: `<template></template>` },
+        ref('x'),
+      )
+      const div = container.firstElementChild!
+      const text = div.lastChild!
+      expect(html).toBe('<div><!---->count: x</div>')
+      expect(container.innerHTML).toBe(html)
+      expect(div.childNodes).toHaveLength(2)
+      expect(text.nodeType).toBe(3)
+      expect('Hydration node mismatch').not.toHaveBeenWarned()
+      expect('Hydration children mismatch').not.toHaveBeenWarned()
+
+      data.value = 'y'
+      await nextTick()
+      expect(div.lastChild).toBe(text)
+      expect(div.childNodes).toHaveLength(2)
+      expect(container.innerHTML).toBe('<div><!---->count: y</div>')
+    })
+
+    test('empty component before an element with dynamic content', async () => {
+      const { container, html, data } = await testHydration(
+        `<template><div><components.Empty /><b>{{ data }}</b></div></template>`,
+        { Empty: `<template></template>` },
+        ref('x'),
+      )
+      const b = container.querySelector('b')!
+      expect(html).toBe('<div><!----><b>x</b></div>')
+      expect(container.innerHTML).toBe(html)
+      expect('Hydration node mismatch').not.toHaveBeenWarned()
+      expect('Hydration children mismatch').not.toHaveBeenWarned()
+
+      data.value = 'y'
+      await nextTick()
+      expect(container.querySelector('b')).toBe(b)
+      expect(container.innerHTML).toBe('<div><!----><b>y</b></div>')
+    })
+
+    test('empty component before a v-if sibling in an element', async () => {
+      const { container, html, data } = await testHydration(
+        `<template><div><components.Empty /><span v-if="data.show">s</span><b>b</b></div></template>`,
+        { Empty: `<template></template>` },
+        ref({ show: false }),
+      )
+      const b = container.querySelector('b')!
+      expect(html).toBe('<div><!----><!----><b>b</b></div>')
+      expect(container.innerHTML).toBe(html)
+      expect('Hydration node mismatch').not.toHaveBeenWarned()
+      expect('Hydration children mismatch').not.toHaveBeenWarned()
+
+      data.value.show = true
+      await nextTick()
+      expect(container.querySelector('b')).toBe(b)
+      expect(b.previousElementSibling!.outerHTML).toBe('<span>s</span>')
+    })
+
+    test('empty text component following an empty component', async () => {
+      const { container, html, data } = await testHydration(
+        `<template><components.Empty /><components.Text /><span v-if="data.show">s</span><b>b</b></template>`,
+        {
+          Empty: `<template></template>`,
+          Text: `<template>{{ '' }}</template>`,
+        },
+        ref({ show: false }),
+      )
+      const b = container.querySelector('b')!
+      expect(html).toBe('<!--{--><!----><!----><b>b</b><!--}-->')
+      expect(container.innerHTML).toBe(html)
+      expect('Hydration node mismatch').not.toHaveBeenWarned()
+      expect('Hydration children mismatch').not.toHaveBeenWarned()
+
+      data.value.show = true
+      await nextTick()
+      expect(container.querySelector('b')).toBe(b)
+      expect(b.previousElementSibling!.outerHTML).toBe('<span>s</span>')
+    })
+
+    test('empty component in a v-if branch', async () => {
+      const { container, html, data } = await testHydration(
+        `<template><template v-if="data"><components.Empty /><b>b</b></template><i>i</i></template>`,
+        { Empty: `<template></template>` },
+        ref(true),
+      )
+      expect(container.innerHTML).toBe(html)
+      expect('Hydration node mismatch').not.toHaveBeenWarned()
+      expect('Hydration children mismatch').not.toHaveBeenWarned()
+
+      data.value = false
+      await nextTick()
+      expect(container.innerHTML).toBe(
+        '<!--{--><!--[--><!--]--><i>i</i><!--}-->',
+      )
+    })
   })
 
   describe('dynamic component', () => {
