@@ -217,6 +217,7 @@ export function getPropsProxyHandlers(
 ): [
   ProxyHandler<VaporComponentInstance> | null,
   ProxyHandler<VaporComponentInstance>,
+  (instance: VaporComponentInstance) => Record<string, any>,
 ] {
   if (comp.__propsHandlers) {
     return comp.__propsHandlers
@@ -314,7 +315,24 @@ export function getPropsProxyHandlers(
     })
   }
 
-  return (comp.__propsHandlers = [propsHandlers, attrsHandlers])
+  // The attrs as a plain object, for the fallthrough to enumerate: the proxy
+  // checks every enumeration against all the fields of its target, the
+  // instance.
+  const readAttrs = (instance: VaporComponentInstance) => {
+    trackPropsValue(instance, ATTR_KEYS)
+    const values = instance.propsValues
+    let attrs: Record<string, any> | undefined
+    for (const key in values) {
+      if (isAttr(key)) {
+        trackPropsValue(instance, key)
+        ;(attrs || (attrs = Object.create(null) as Record<string, any>))[key] =
+          values[key]
+      }
+    }
+    return attrs || EMPTY_OBJ
+  }
+
+  return (comp.__propsHandlers = [propsHandlers, attrsHandlers, readAttrs])
 }
 
 export function getAttrFromRawProps(rawProps: RawProps, key: string): unknown {

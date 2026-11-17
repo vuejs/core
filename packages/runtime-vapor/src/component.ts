@@ -290,9 +290,14 @@ interface SharedInternalOptions {
    */
   __propsOptions?: NormalizedPropsOptions
   /**
-   * Cached normalized props proxy handlers.
+   * Cached normalized props proxy handlers, and the reader of the attrs as a
+   * plain object.
    */
-  __propsHandlers?: [ProxyHandler<any> | null, ProxyHandler<any>]
+  __propsHandlers?: [
+    ProxyHandler<any> | null,
+    ProxyHandler<any>,
+    (instance: VaporComponentInstance) => Record<string, any>,
+  ]
   /**
    * Cached normalized emits options.
    */
@@ -868,9 +873,13 @@ export function resolveFallthroughAttrs(
   instance: FallthroughOwner,
   forProps = false,
 ): Record<string, any> {
-  const attrs = shouldUseFunctionalFallthrough(instance.type)
-    ? getFunctionalFallthrough(instance.attrs) || EMPTY_OBJ
+  // not through the proxy: this is not the component reading its attrs
+  const all = isVaporComponent(instance)
+    ? getPropsProxyHandlers(instance.type)[2](instance)
     : instance.attrs
+  const attrs = shouldUseFunctionalFallthrough(instance.type)
+    ? getFunctionalFallthrough(all) || EMPTY_OBJ
+    : all
   // VDOM decides whether to merge props before filtering model listeners.
   // EMPTY_OBJ skips merging; an empty filtered object still requires it.
   if (forProps && !Object.keys(attrs).length) return EMPTY_OBJ
@@ -2228,14 +2237,12 @@ export function applyFallthroughAttrs(
     // ensure the render effect is cleaned up when the branch scope is stopped
     ownerScope ? ownerScope.run(applyEffect) : applyEffect()
   } else if (__DEV__) {
-    const accessedAttrs = instance.accessedAttrs
-    const fallthroughAttrs = resolveFallthroughAttrs(instance)
     if (
-      Object.keys(fallthroughAttrs).length &&
+      Object.keys(resolveFallthroughAttrs(instance)).length &&
       (hasSlotOutlet ||
         (fragments && state.hasNonSingleRoot) ||
         (isTeleportEnabled && containsTeleportFragment(block)) ||
-        (!accessedAttrs &&
+        (!instance.accessedAttrs &&
           (block instanceof Text || (isArray(block) && block.length))))
     ) {
       warnExtraneousAttributes(instance.attrs)
