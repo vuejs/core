@@ -357,14 +357,18 @@ function setRef(
       ])
     }
   } else if (oldRef != null && isDynamicFragment(el)) {
-    if (isFunction(oldRef)) {
-      callWithErrorHandling(oldRef, instance, ErrorCodes.FUNCTION_REF, [
-        null,
-        refs,
-      ])
-    } else if (refFor) {
-      // For dynamic ref-for branches, remove only this branch's previous value.
-      unsetRef(el)
+    // clear the old value only when the fragment resolves to a new one
+    const cleanup = refCleanups.get(el)
+    if (!cleanup || cleanup.value !== refValue) {
+      if (isFunction(oldRef)) {
+        callWithErrorHandling(oldRef, instance, ErrorCodes.FUNCTION_REF, [
+          null,
+          refs,
+        ])
+      } else if (refFor) {
+        // For dynamic ref-for branches, remove only this branch's previous value.
+        unsetRef(el)
+      }
     }
   }
 
@@ -380,7 +384,9 @@ function setRef(
     }
 
     invokeRefSetter(refValue)
-    ensureCleanup(el).fn = () => invokeRefSetter(null)
+    const cleanup = ensureCleanup(el)
+    cleanup.fn = () => invokeRefSetter(null)
+    cleanup.value = refValue
   } else {
     const _isString = isString(ref)
     const _isRef = isRef(ref)
@@ -448,6 +454,7 @@ function setRef(
           if (refKey) refs[refKey] = null
         }
       }
+      cleanup.value = refValue
 
       invalidatePendingRef(el)
       if (refValue != null) {

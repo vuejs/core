@@ -5,6 +5,8 @@ import { NOOP } from '@vue/shared'
 export interface RefCleanupState {
   fn: () => void
   job?: SchedulerJob
+  // the value the ref was last set to
+  value?: unknown
 }
 
 /**
