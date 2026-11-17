@@ -2,7 +2,7 @@ import {
   type ErrorCodes,
   type GenericComponentInstance,
   MismatchTypes,
-  callWithErrorHandling,
+  callWithErrorHandlingOnce,
   isMismatchAllowed,
   isHydrating as isVdomHydrating,
   isHydratingEnabled as isVdomHydratingEnabled,
@@ -964,7 +964,7 @@ export function hydrateBlockWithErrorHandling(
 ): any {
   try {
     return finishMismatchRecovery(
-      callWithErrorHandling(fn, instance, type, args),
+      callWithErrorHandlingOnce(fn, instance, type, args),
     )
   } finally {
     currentMismatch = null

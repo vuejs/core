@@ -590,6 +590,10 @@ export { pushWarningContext, popWarningContext } from './warning'
 /**
  * @internal
  */
+export { callWithErrorHandlingOnce } from './errorHandling'
+/**
+ * @internal
+ */
 export {
   createAppAPI,
   type AppMountFn,

@@ -377,7 +377,7 @@ describe('hot module replacement', () => {
     ).toHaveBeenWarned()
     expect(
       '[Vue warn]: Unhandled error during execution of render function',
-    ).toHaveBeenWarned()
+    ).not.toHaveBeenWarned()
     expect(
       '[HMR] Something went wrong during Vue component hot-reload.',
     ).toHaveBeenWarned()
@@ -646,7 +646,7 @@ describe('hot module replacement', () => {
     ).toHaveBeenWarned()
     expect(
       'Unhandled error during execution of render function',
-    ).toHaveBeenWarned()
+    ).not.toHaveBeenWarned()
     expect(
       'Unhandled error during execution of scheduler flush',
     ).toHaveBeenWarned()

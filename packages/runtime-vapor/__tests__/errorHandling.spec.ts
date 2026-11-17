@@ -3,6 +3,7 @@ import {
   onErrorCaptured,
   onMounted,
   ref,
+  setCurrentInstance,
   watch,
   watchEffect,
   withModifiers,
@@ -13,6 +14,7 @@ import {
   createInvoker,
   createSlot,
   createTemplateRefSetter,
+  defineVaporAsyncComponent,
   defineVaporComponent,
   delegate,
   delegateEvents,
@@ -23,7 +25,7 @@ import {
   withVaporKeys,
   withVaporModifiers,
 } from '../src'
-import { makeRender } from './_utils'
+import { type RenderContext, compile, makeRender } from './_utils'
 import type { VaporComponent } from '../src/component'
 import type { RefEl } from '../src/apiTemplateRef'
 
@@ -979,6 +981,202 @@ describe('error handling', () => {
     } finally {
       __DEV__ = true
     }
+  })
+
+  describe('error already handled by a nested call', () => {
+    afterEach(() => {
+      // a failed setup leaves its instance current
+      setCurrentInstance(null, undefined)
+    })
+
+    function mountTree(
+      child: any,
+      configure: (app: RenderContext['app']) => void = () => {},
+    ) {
+      const fn = vi.fn()
+      const Parent = { __vapor: true, render: () => createComponent(child) }
+      const Root = {
+        setup() {
+          onErrorCaptured((err, instance, info) => {
+            fn(err, info)
+          })
+          return {}
+        },
+        render: () => createComponent(Parent),
+      }
+      const ctx = define(Root).create()
+      configure(ctx.app)
+      let caught
+      try {
+        ctx.mount()
+      } catch (err) {
+        caught = err
+      }
+      return { fn, caught }
+    }
+
+    // #16309
+    test.each([true, false])(
+      'child setup error (inlineTemplate: %s)',
+      inlineTemplate => {
+        const err = new Error('foo')
+        const fn = vi.fn()
+        const data = ref({ err, fn })
+        const components: Record<string, any> = {}
+        const options = { inlineTemplate }
+        components.Child = compile(
+          `<script setup vapor>throw _data.value.err</script>
+          <template><span /></template>`,
+          data,
+          components,
+          options,
+        )
+        components.Parent = compile(
+          `<script setup vapor>const components = _components</script>
+          <template><div><components.Child /></div></template>`,
+          data,
+          components,
+          options,
+        )
+        const Root = compile(
+          `<script setup vapor>
+          import { onErrorCaptured } from 'vue'
+          const components = _components
+          onErrorCaptured((err, instance, info) => _data.value.fn(err, info))
+          </script>
+          <template><components.Parent /></template>`,
+          data,
+          components,
+          options,
+        )
+
+        expect(() => define(Root).render()).toThrow(err)
+        expect(fn).toHaveBeenCalledExactlyOnceWith(err, 'setup function')
+        expect(
+          'Unhandled error during execution of setup function',
+        ).toHaveBeenWarnedTimes(1)
+      },
+    )
+
+    test.each([
+      [
+        'slot content',
+        (err: Error) => ({
+          render: () =>
+            createComponent({ setup: () => createSlot('default') }, null, {
+              default: () =>
+                createComponent({
+                  setup() {
+                    throw err
+                  },
+                }),
+            }),
+        }),
+        'setup function',
+      ],
+      [
+        'watcher',
+        (err: Error) => ({
+          setup() {
+            watch(
+              ref(0),
+              () => {
+                throw err
+              },
+              { immediate: true },
+            )
+            return []
+          },
+        }),
+        'watcher callback',
+      ],
+    ] as const)('%s', (_, createChild, info) => {
+      const err = new Error('foo')
+      const { fn, caught } = mountTree(createChild(err))
+      expect(caught).toBe(err)
+      expect(fn).toHaveBeenCalledExactlyOnceWith(err, info)
+      expect(
+        `Unhandled error during execution of ${info}`,
+      ).toHaveBeenWarnedTimes(1)
+    })
+
+    test('resolved async component', async () => {
+      const err = new Error('foo')
+      const Async = defineVaporAsyncComponent(async () => ({
+        setup() {
+          throw err
+        },
+      }))
+      await (Async as any).__asyncLoader()
+      const { fn, caught } = mountTree(Async)
+      expect(caught).toBe(err)
+      expect(fn).toHaveBeenCalledExactlyOnceWith(err, 'setup function')
+      expect(
+        'Unhandled error during execution of setup function',
+      ).toHaveBeenWarnedTimes(1)
+    })
+
+    test.each([new Error('foo'), 'foo', undefined])(
+      'same value thrown again is a new error (%s)',
+      err => {
+        const Child = {
+          setup() {
+            throw err
+          },
+        }
+        const first = mountTree(Child)
+        setCurrentInstance(null, undefined)
+        const second = mountTree(Child)
+        expect(first.caught).toBe(err)
+        expect(second.caught).toBe(err)
+        expect(first.fn).toHaveBeenCalledExactlyOnceWith(err, 'setup function')
+        expect(second.fn).toHaveBeenCalledExactlyOnceWith(err, 'setup function')
+        expect(
+          'Unhandled error during execution of setup function',
+        ).toHaveBeenWarnedTimes(2)
+      },
+    )
+
+    test('errorHandler that throws', () => {
+      const err = new Error('foo')
+      const handlerErr = new Error('bar')
+      const errorHandler = vi.fn(() => {
+        throw handlerErr
+      })
+      const { fn, caught } = mountTree(
+        {
+          setup() {
+            throw err
+          },
+        },
+        app => (app.config.errorHandler = errorHandler),
+      )
+      expect(caught).toBe(handlerErr)
+      expect(fn).toHaveBeenCalledExactlyOnceWith(err, 'setup function')
+      expect(errorHandler).toHaveBeenCalledOnce()
+      expect(
+        'Unhandled error during execution of app errorHandler',
+      ).toHaveBeenWarnedTimes(1)
+    })
+
+    test('in production with throwUnhandledErrorInProduction', () => {
+      __DEV__ = false
+      try {
+        const err = new Error('foo')
+        const { fn, caught } = mountTree(
+          {
+            setup() {
+              throw err
+            },
+          },
+          app => (app.config.throwUnhandledErrorInProduction = true),
+        )
+        expect(caught).toBe(err)
+        expect(fn).toHaveBeenCalledOnce()
+      } finally {
+        __DEV__ = true
+      }
+    })
   })
 
   // native event handler handling should be tested in respective renderers
