@@ -65,7 +65,7 @@ describe('ssr: element', () => {
             _push(\`<textarea\${
               _ssrRenderAttrs(_temp0 = _mergeProps(_ctx.obj, _attrs), "textarea")
             }>\${
-              _ssrInterpolate(("value" in _temp0) ? _temp0.value : "fallback")
+              _ssrInterpolate((_temp0 && "value" in _temp0) ? _temp0.value : "fallback")
             }</textarea>\`)
           }"
         `)
@@ -87,7 +87,7 @@ describe('ssr: element', () => {
           }<textarea\${
             _ssrRenderAttrs(_temp0 = _ctx.a, "textarea")
           }>\${
-            _ssrInterpolate(("value" in _temp0) ? _temp0.value : "")
+            _ssrInterpolate((_temp0 && "value" in _temp0) ? _temp0.value : "")
           }</textarea></div>\`)
         }"
       `)

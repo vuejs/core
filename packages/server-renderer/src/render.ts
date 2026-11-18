@@ -16,6 +16,7 @@ import {
   type VNodeTypes,
   type VaporInVdomInterface,
   type VdomSlotOutlet,
+  cloneVNode,
   createVNode,
   handleError,
   mergeProps,
@@ -26,6 +27,7 @@ import {
   warn,
 } from '@vue/runtime-dom'
 import {
+  EMPTY_OBJ,
   NOOP,
   PatchFlags,
   ShapeFlags,
@@ -39,7 +41,7 @@ import {
   isVoidTag,
 } from '@vue/shared'
 import { ssrRenderAttrs } from './helpers/ssrRenderAttrs'
-import { type SSRSlot, ssrRenderSlot } from './helpers/ssrRenderSlot'
+import { type SSRSlot, ssrRenderSlotInner } from './helpers/ssrRenderSlot'
 import { ssrCompile } from './helpers/ssrCompile'
 import { ssrRenderTeleport } from './helpers/ssrRenderTeleport'
 
@@ -55,6 +57,7 @@ const {
   VaporSlot,
   rawVaporSlotKey,
   invokeSlotFallback,
+  filterSingleRoot,
   setDeferElementSlots,
 } = ssrUtils
 
@@ -224,7 +227,15 @@ export function renderComponentVNode(
           if (push) return slot(props, push, parent, scopeId)
           const vnode = renderSlot({ [name]: slot }, name, props)
           // called from a slot called by hand: the content, out of its fragment
-          return vnode.type === Fragment ? vnode.children : [vnode]
+          if (vnode.type === Fragment) return vnode.children
+          // content rather than an outlet, as the client's slots proxy hands
+          // it out: what `cloneVNode` adds to it is for the content root, and
+          // the slot props stay as given
+          const vs = vnode.vs!
+          vs.props = vnode.props!
+          vnode.props = vnode.key != null ? { key: vnode.key } : null
+          vs.attrs = EMPTY_OBJ
+          return [vnode]
         }
         slot[rawVaporSlotKey] = wrapped[rawVaporSlotKey] = slot
         // already normalized, so slot normalization keeps it as is
@@ -455,7 +466,7 @@ export function renderVNode(
         slotScopeId =
           (slotScopeId ? slotScopeId + ' ' : '') + vnode.slotScopeIds.join(' ')
       }
-      const { slot, outlets, props } = vnode.vs!
+      const { slot, outlets, props, attrs } = vnode.vs!
       renderVaporOutlet(
         push,
         slot,
@@ -463,6 +474,10 @@ export function renderVNode(
         outlets && outlets[0],
         parentComponent,
         slotScopeId,
+        // most content is never cloned: its root then renders as it is
+        attrs && attrs !== EMPTY_OBJ && Object.keys(attrs).length
+          ? attrs
+          : undefined,
       )
       break
     }
@@ -494,25 +509,36 @@ function renderVaporOutlet(
   outlet: VdomSlotOutlet | undefined,
   parentComponent: ComponentInternalInstance,
   slotScopeId?: string,
+  // what `cloneVNode` added to the slot's content, for the root it renders
+  attrs?: Props,
 ): void {
   // the outlet is written in the component whose tree this is
   const prev = setCurrentRenderingInstance(parentComponent)
-  ssrRenderSlot(
+  ssrRenderSlotInner(
     { default: slot },
     'default',
     props,
     outlet
-      ? () =>
-          renderVNodeChildren(
-            push,
-            invokeSlotFallback(outlet.fallback, outlet.owner),
-            parentComponent,
-            slotScopeId,
-          )
+      ? () => {
+          let children = invokeSlotFallback(outlet.fallback, outlet.owner)
+          // the fallback showing in place of the content inherits them, as
+          // the root of a vdom component does
+          const root = attrs && filterSingleRoot(children, false)
+          if (
+            root &&
+            root.shapeFlag & (ShapeFlags.ELEMENT | ShapeFlags.COMPONENT)
+          ) {
+            children = children.slice()
+            children[children.indexOf(root)] = cloneVNode(root, attrs)
+          }
+          renderVNodeChildren(push, children, parentComponent, slotScopeId)
+        }
       : null,
     push,
     parentComponent,
     slotScopeId,
+    false,
+    attrs,
   )
   setCurrentRenderingInstance(prev)
 }

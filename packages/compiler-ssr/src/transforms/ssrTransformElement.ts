@@ -37,6 +37,7 @@ import {
 import {
   NO,
   escapeHtml,
+  extend,
   isBooleanAttr,
   isBuiltInDirective,
   isSSRSafeAttrName,
@@ -56,6 +57,7 @@ import {
   SSR_RENDER_DYNAMIC_ATTR,
   SSR_RENDER_STYLE,
 } from '../runtimeHelpers'
+import { slotAttrsBinds } from './ssrInjectFallthroughAttrs'
 import {
   type SSRTransformContext,
   processChildren,
@@ -101,7 +103,6 @@ export const ssrTransformElement: NodeTransform = (node, context) => {
     const hasCustomDir = node.props.some(
       p => p.type === NodeTypes.DIRECTIVE && !isBuiltInDirective(p.name),
     )
-
     // v-show has a higher priority in ssr
     const vShowPropIndex = node.props.findIndex(
       i => i.type === NodeTypes.DIRECTIVE && i.name === 'show',
@@ -112,8 +113,24 @@ export const ssrTransformElement: NodeTransform = (node, context) => {
       node.props.push(vShowProp)
     }
 
-    const needMergeProps = hasDynamicVBind || hasCustomDir
-    if (needMergeProps) {
+    // The root of a vapor slot body binds what a clone of the slot's content
+    // adds (see ssrInjectFallthroughAttrs). Most content is never cloned: a
+    // tag merging no props otherwise renders as it does without the binding
+    // then, and merges only when there are attrs. Not a textarea or a v-model
+    // select, whose content depends on how the props are rendered.
+    const slotAttrs = slotAttrsBinds.get(node)
+    // a copy: `transformStyle` rewrites a static style in place
+    const ownProps = slotAttrs && node.props.filter(p => p !== slotAttrs)
+    const guardSlotAttrs =
+      !!ownProps &&
+      !hasCustomDir &&
+      !hasDynamicKeyVBind(extend({}, node, { props: ownProps })) &&
+      node.tag !== 'textarea' &&
+      !(node.tag === 'select' && findVModel(node))
+    let slotAttrsExp: CallExpression | undefined
+
+    const needMergeProps = (hasDynamicVBind || hasCustomDir) && !guardSlotAttrs
+    if (needMergeProps || guardSlotAttrs) {
       transformStyle(node, context)
       const { props, directives } = buildProps(
         node,
@@ -158,7 +175,11 @@ export const ssrTransformElement: NodeTransform = (node, context) => {
               node,
               createCallExpression(context.helper(SSR_INTERPOLATE), [
                 createConditionalExpression(
-                  createSimpleExpression(`"value" in ${tempId}`, false),
+                  // the props may be attrs alone, and those not passed
+                  createSimpleExpression(
+                    `${tempId} && "value" in ${tempId}`,
+                    false,
+                  ),
                   createSimpleExpression(`${tempId}.value`, false),
                   createSimpleExpression(
                     existingText ? existingText.content : ``,
@@ -222,8 +243,13 @@ export const ssrTransformElement: NodeTransform = (node, context) => {
           propsExp.arguments.push(`"${node.tag}"`)
         }
 
-        openTag.push(propsExp)
+        if (guardSlotAttrs) {
+          slotAttrsExp = propsExp
+        } else {
+          openTag.push(propsExp)
+        }
       }
+      if (guardSlotAttrs) node.props = ownProps
     }
 
     // book keeping static/dynamic class merging.
@@ -399,6 +425,18 @@ export const ssrTransformElement: NodeTransform = (node, context) => {
     if (dynamicClassBinding && staticClassBinding) {
       mergeCall(dynamicClassBinding, staticClassBinding)
       removeStaticBinding(openTag, 'class')
+    }
+
+    if (slotAttrsExp) {
+      openTag.push(
+        createConditionalExpression(
+          slotAttrs!.exp!,
+          slotAttrsExp,
+          // nested in the tag's own literal
+          createTemplateLiteral(openTag.splice(1)) as any,
+          false,
+        ),
+      )
     }
 
     if (context.scopeId) {

@@ -74,14 +74,18 @@ describe('ssr: components', () => {
       compile(`<component :is="foo"><div/></component>`, { vapor: true }).code,
     ).toMatchInlineSnapshot(`
       "const { resolveDynamicComponent: _resolveDynamicComponent, withCtx: _withCtx, createVNode: _createVNode } = require("vue")
-      const { ssrRenderDynamicComponent: _ssrRenderDynamicComponent } = require("vue/server-renderer")
+      const { ssrRenderAttrs: _ssrRenderAttrs, ssrRenderDynamicComponent: _ssrRenderDynamicComponent } = require("vue/server-renderer")
 
       return function ssrRender(_ctx, _push, _parent, _attrs) {
         _push(\`<!--{-->\`)
         _ssrRenderDynamicComponent(_push, _resolveDynamicComponent(_ctx.foo), _attrs, {
-          default: _withCtx((_, _push, _parent, _scopeId) => {
+          default: _withCtx((_, _push, _parent, _scopeId, _slotAttrs) => {
             if (_push) {
-              _push(\`<div\${_scopeId}></div>\`)
+              _push(\`<div\${
+                _slotAttrs ? _ssrRenderAttrs(_slotAttrs) : \`\`
+              }\${
+                _scopeId
+              }></div>\`)
             } else {
               return [
                 _createVNode("div")
