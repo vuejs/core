@@ -390,9 +390,16 @@ function setRef(
   } else {
     const _isString = isString(ref)
     const _isRef = isRef(ref)
-    let existing: unknown
 
     if (_isString || _isRef) {
+      const getExisting = (): unknown =>
+        _isString
+          ? __DEV__ && canSetSetupRef(ref)
+            ? setupState[ref]
+            : refs[ref]
+          : canSetRef(ref) || !refKey
+            ? ref.value
+            : refs[refKey]
       const doSet: SchedulerJob = () => {
         if (refFor) {
           // for unresolved async components, refValue is null.
@@ -400,13 +407,7 @@ function setRef(
           // when the async component resolves via DynamicFragment's updated hook.
           if (refValue == null) return
 
-          existing = _isString
-            ? __DEV__ && canSetSetupRef(ref)
-              ? setupState[ref]
-              : refs[ref]
-            : canSetRef(ref) || !refKey
-              ? ref.value
-              : refs[refKey]
+          let existing = getExisting()
 
           if (!isArray(existing)) {
             existing = [refValue]
@@ -441,6 +442,9 @@ function setRef(
       const cleanup = ensureCleanup(el)
       cleanup.fn = () => {
         if (refFor) {
+          // read the array now: this cleanup can run before its own pending
+          // set, while the array still holds the value from an earlier set
+          const existing = getExisting()
           if (isArray(existing)) {
             remove(existing, refValue)
           }
