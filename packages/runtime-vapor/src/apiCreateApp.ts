@@ -16,6 +16,8 @@ import {
   getNextUid,
   initFeatureFlags,
   normalizeContainer,
+  restoreCurrentInstance,
+  setCurrentInstance,
   setDevtoolsHook,
   warn,
 } from '@vue/runtime-dom'
@@ -26,6 +28,25 @@ import { setIsHydratingEnabled, withHydration } from './dom/hydration'
 
 let _createApp: CreateAppFunction<ParentNode, VaporComponent>
 const rootInstances = new WeakMap<App, VaporComponentInstance>()
+
+// a root never inherits an instance left current by another app, e.g. one
+// whose setup threw without an errorHandler
+const createRootComponent = (app: App): VaporComponentInstance => {
+  const prev = setCurrentInstance(null)
+  try {
+    return createComponent(
+      app._component,
+      app._props as RawProps,
+      null,
+      false,
+      false,
+      app._context,
+      true,
+    )
+  } finally {
+    restoreCurrentInstance(prev)
+  }
+}
 
 const mountApp: AppMountFn<ParentNode> = (app, container) => {
   optimizePropertyLookup()
@@ -41,16 +62,7 @@ const mountApp: AppMountFn<ParentNode> = (app, container) => {
   let instance: VaporComponentInstance
   const mount = () => {
     instance =
-      (app._ceComponent as VaporComponentInstance) ||
-      createComponent(
-        app._component,
-        app._props as RawProps,
-        null,
-        false,
-        false,
-        app._context,
-        true,
-      )
+      (app._ceComponent as VaporComponentInstance) || createRootComponent(app)
     mountComponent(instance, container)
   }
   // a custom element flushes the creation and mount of its component itself
@@ -78,16 +90,7 @@ const hydrateApp: AppMountFn<ParentNode> = (app, container) => {
   const hydrate = () => {
     withHydration(container, () => {
       instance =
-        (app._ceComponent as VaporComponentInstance) ||
-        createComponent(
-          app._component,
-          app._props as RawProps,
-          null,
-          false,
-          false,
-          app._context,
-          true,
-        )
+        (app._ceComponent as VaporComponentInstance) || createRootComponent(app)
       mountComponent(instance, container)
     })
   }
