@@ -1,5 +1,11 @@
 import { h, nextTick, reactive, ref, renderSlot } from '@vue/runtime-dom'
-import { VueServerRenderer, compile, runtimeDom, runtimeVapor } from '../_utils'
+import {
+  VueServerRenderer,
+  compile,
+  runtimeDom,
+  runtimeVapor,
+  stripAnchors,
+} from '../_utils'
 import { setIsHydratingEnabled } from '../../src/dom/hydration'
 import {
   formatHtml,
@@ -3181,4 +3187,773 @@ describe('VDOM interop', () => {
       expect('Hydration children mismatch').not.toHaveBeenWarned()
     },
   )
+
+  // a vdom component cloning the content of a vapor slot it called by hand
+  // (Reka UI `asChild`): what the clone adds is on the content root in the
+  // server's html, as the client applies it
+  describe('cloneVNode attrs on vapor slot content', () => {
+    const AsChild = {
+      code: `<script>
+        import { cloneVNode } from 'vue'
+        const data = _data
+        export default {
+          setup(_, { slots }) {
+            return () => cloneVNode(slots.default()[0], data.value.attrs)
+          },
+        }
+      </script>`,
+      vapor: false,
+    }
+    const mount = (
+      slot: string,
+      init: Record<string, any> = {},
+      components: Record<string, any> = {},
+    ) => {
+      const data = ref<Record<string, any>>({
+        attrs: {
+          class: 'trigger',
+          style: { color: 'red' },
+          'aria-expanded': 'false',
+        },
+        ...init,
+      })
+      return testWithVaporApp(
+        `${setup}
+        <template>
+          <components.AsChild>
+            ${slot}
+          </components.AsChild>
+        </template>`,
+        { ...components, AsChild },
+        data,
+      )
+    }
+
+    test('on an element root', async () => {
+      const { container, html, data } = await mount(
+        `<button class="base">open</button>`,
+      )
+      expect(stripAnchors(html)).toBe(
+        `<button class="base trigger" style="color:red;" aria-expanded="false">open</button>`,
+      )
+      const button = container.querySelector('button')!
+
+      data.value.attrs = { class: 'other', 'aria-expanded': 'true' }
+      await nextTick()
+      expect(container.querySelector('button')).toBe(button)
+      expect(button.outerHTML).toBe(
+        `<button class="base other" style="" aria-expanded="true">open</button>`,
+      )
+
+      data.value.attrs = {}
+      await nextTick()
+      expect(button.outerHTML).toBe(
+        `<button class="base" style="">open</button>`,
+      )
+    })
+
+    // however the clone writes them: they reach the content normalized
+    test('with a class array and a style string', async () => {
+      const { container, html, data } = await mount(
+        `<button class="base" style="font-size: 12px">open</button>`,
+        {
+          attrs: {
+            class: ['trigger', { on: true }],
+            style: 'color: red; --gap: 1px',
+          },
+        },
+      )
+      expect(stripAnchors(html)).toBe(
+        `<button class="base trigger on" style="font-size:12px;color:red;--gap:1px;">open</button>`,
+      )
+      const button = container.querySelector('button')!
+
+      data.value.attrs = {}
+      await nextTick()
+      expect(button.className).toBe('base')
+      expect(button.style.cssText).toBe('font-size: 12px;')
+    })
+
+    test('on an element root with bindings of its own', async () => {
+      const { container, html, data } = await mount(
+        `<button
+          :class="data.cls"
+          :style="data.sty"
+          :title="data.title"
+        >
+          open
+        </button>`,
+        {
+          cls: 'own',
+          sty: { fontSize: '12px' },
+          title: 't',
+          attrs: { 'aria-expanded': 'false' },
+        },
+      )
+      expect(stripAnchors(html)).toBe(
+        `<button class="own" style="font-size:12px;" title="t" aria-expanded="false"> open </button>`,
+      )
+      const button = container.querySelector('button')!
+
+      data.value.cls = 'changed'
+      data.value.attrs = { class: 'trigger', 'aria-expanded': 'true' }
+      await nextTick()
+      expect(button.outerHTML).toBe(
+        `<button class="changed trigger" style="font-size:12px;" title="t" aria-expanded="true"> open </button>`,
+      )
+
+      data.value.attrs = {}
+      await nextTick()
+      expect(button.outerHTML).toBe(
+        `<button class="changed" style="font-size:12px;" title="t"> open </button>`,
+      )
+    })
+
+    // the server merged the clone's class and style into the root's own: no
+    // mismatch, though the root's bindings render before it is known as one
+    test('merged with the class and style an element root binds', async () => {
+      const { container, html, data } = await mount(
+        `<button
+          :class="data.cls"
+          :style="data.sty"
+        >
+          open
+        </button>`,
+        { cls: 'own', sty: { fontSize: '12px' } },
+      )
+      expect(stripAnchors(html)).toBe(
+        `<button class="own trigger" style="font-size:12px;color:red;" aria-expanded="false"> open </button>`,
+      )
+      const button = container.querySelector('button')!
+      await nextTick()
+      expect(`Hydration class mismatch`).not.toHaveBeenWarned()
+      expect(`Hydration style mismatch`).not.toHaveBeenWarned()
+
+      data.value.cls = 'changed'
+      data.value.attrs = { class: 'other' }
+      await nextTick()
+      expect(button.className).toBe('changed other')
+      expect(button.style.cssText).toBe('font-size: 12px;')
+
+      data.value.attrs = {}
+      await nextTick()
+      expect(button.className).toBe('changed')
+    })
+
+    // what the template gives the root stays its own once the clone drops
+    // the same class or style property
+    test.each([
+      [
+        'class',
+        `<button class="base">x</button>`,
+        { class: 'base trigger' },
+        `<button class="base">x</button>`,
+      ],
+      [
+        'style property',
+        `<button style="color: red; font-size: 12px">x</button>`,
+        { style: { color: 'blue' } },
+        `<button style="color: red; font-size: 12px;">x</button>`,
+      ],
+    ])('overlapping a static %s of the root', async (_, slot, attrs, after) => {
+      const { container, data } = await mount(slot, { attrs })
+      const button = container.querySelector('button')!
+
+      data.value.attrs = {}
+      await nextTick()
+      expect(button.outerHTML).toBe(after)
+    })
+
+    test('overlapping the static display of a v-show root', async () => {
+      const { container, data } = await mount(
+        `<button
+          v-show="data.show"
+          style="display: inline-flex; color: red"
+        >
+          x
+        </button>`,
+        { show: true, attrs: { style: { display: 'flex', color: 'blue' } } },
+      )
+      const button = container.querySelector('button')!
+      expect(button.style.cssText).toBe('display: flex; color: blue;')
+
+      data.value.attrs = {}
+      await nextTick()
+      expect(button.style.cssText).toBe('display: inline-flex; color: red;')
+
+      data.value.show = false
+      await nextTick()
+      expect(button.style.display).toBe('none')
+      data.value.show = true
+      await nextTick()
+      expect(button.style.display).toBe('inline-flex')
+    })
+
+    // the clone's style wins over the same property of the root's own, on
+    // the server as on the client
+    test('overriding a style the element root binds', async () => {
+      const { container, html, data } = await mount(
+        `<button :style="data.sty">open</button>`,
+        { sty: { color: 'red' }, attrs: { style: { color: 'blue' } } },
+      )
+      expect(stripAnchors(html)).toBe(
+        `<button style="color:blue;">open</button>`,
+      )
+      const button = container.querySelector('button')!
+      await nextTick()
+      expect(`Hydration style mismatch`).not.toHaveBeenWarned()
+
+      data.value.attrs = {}
+      await nextTick()
+      expect(button.style.cssText).toBe('color: red;')
+    })
+
+    test.each([
+      ['class', 'the root', `<button :class="data.cls">open</button>`],
+      [
+        'class',
+        'an element below the root',
+        `<div>
+          <button :class="data.cls">open</button>
+        </div>`,
+      ],
+      ['style', 'the root', `<button :style="data.sty">open</button>`],
+    ])('still warns of a %s mismatch on %s', async (kind, _, slot) => {
+      const attrs = { class: 'trigger', style: { color: 'red' } }
+      await testWithVaporApp(
+        `${setup}
+        <template>
+          <components.AsChild>
+            ${slot}
+          </components.AsChild>
+        </template>`,
+        { AsChild },
+        ref({ attrs, cls: 'client', sty: { fontSize: '12px' } }),
+        ref({ attrs, cls: 'server', sty: { fontSize: '14px' } }),
+      )
+      await nextTick()
+      expect(`Hydration ${kind} mismatch`).toHaveBeenWarned()
+    })
+
+    test.each([
+      [
+        'a v-if chain',
+        `<button v-if="data.ok">a</button>
+        <span v-else class="base">b</span>`,
+      ],
+      [
+        'a v-if chain in a template v-if',
+        `<template v-if="data.a">
+          <button v-if="data.ok">a</button>
+          <span v-else class="base">b</span>
+        </template>`,
+      ],
+      [
+        'a template v-if with a comment',
+        `<template v-if="data.a">
+          <!-- lead -->
+          <button v-if="data.ok">a</button>
+          <span v-else class="base">b</span>
+        </template>`,
+      ],
+    ])('on the branch of %s', async (_, slot) => {
+      const { container, html, data } = await mount(slot, {
+        a: true,
+        ok: true,
+        attrs: { class: 'trigger', id: 'x' },
+      })
+      expect(stripAnchors(html)).toBe(
+        `<button class="trigger" id="x">a</button>`,
+      )
+      const button = container.querySelector('button')!
+
+      data.value.attrs = { class: 'other' }
+      await nextTick()
+      expect(container.querySelector('button')).toBe(button)
+      expect(button.outerHTML).toBe(`<button class="other">a</button>`)
+
+      data.value.ok = false
+      await nextTick()
+      expect(container.querySelector('span')!.outerHTML).toBe(
+        `<span class="base other">b</span>`,
+      )
+    })
+
+    test('on the only element of a template v-if, past a comment', async () => {
+      const { container, html, data } = await mount(
+        `<template v-if="data.a">
+          <!-- lead -->
+          <button class="base">a</button>
+        </template>`,
+        { a: true, attrs: { class: 'trigger', id: 'x' } },
+      )
+      expect(stripAnchors(html)).toBe(
+        `<button class="base trigger" id="x">a</button>`,
+      )
+      const button = container.querySelector('button')!
+
+      data.value.attrs = {}
+      await nextTick()
+      expect(button.outerHTML).toBe(`<button class="base">a</button>`)
+    })
+
+    test('on the else branch of a v-if chain', async () => {
+      const { html } = await mount(
+        `<button v-if="data.ok">a</button>
+        <span v-else class="base">b</span>`,
+        { ok: false, attrs: { class: 'trigger', id: 'x' } },
+      )
+      expect(stripAnchors(html)).toBe(
+        `<span class="base trigger" id="x">b</span>`,
+      )
+    })
+
+    test.each([
+      ['vapor', true],
+      ['vdom', false],
+    ])('on a %s component root, before it renders', async (_, vapor) => {
+      const { container, html, data } = await mount(
+        `<components.Btn class="base" />`,
+        { attrs: { class: 'trigger', label: 'open', id: 'x' } },
+        {
+          Btn: {
+            code: `<script setup>
+              defineProps(['label'])
+              defineOptions({ inheritAttrs: false })
+            </script>
+            <template>
+              <div>
+                <button v-bind="$attrs">{{ label }}</button>
+              </div>
+            </template>`,
+            vapor,
+          },
+        },
+      )
+      expect(stripAnchors(html)).toBe(
+        `<div><button class="base trigger" id="x">open</button></div>`,
+      )
+      const button = container.querySelector('button')!
+
+      data.value.attrs = { label: 'close' }
+      await nextTick()
+      expect(container.querySelector('button')).toBe(button)
+      expect(visible(container)).toBe(
+        `<div><button class="base">close</button></div>`,
+      )
+    })
+
+    test('along with the fallthrough attrs of the cloning component', async () => {
+      const data = ref<Record<string, any>>({
+        attrs: { class: 'trigger' },
+        cls: 'own',
+      })
+      const { container, html } = await testWithVaporApp(
+        `${setup}
+        <template>
+          <components.AsChild :class="data.cls" id="x">
+            <button class="base">open</button>
+          </components.AsChild>
+        </template>`,
+        { AsChild },
+        data,
+      )
+      expect(stripAnchors(html)).toBe(
+        `<button class="base trigger own" id="x">open</button>`,
+      )
+      const button = container.querySelector('button')!
+
+      data.value.cls = 'changed'
+      data.value.attrs = {}
+      await nextTick()
+      expect(button.outerHTML).toBe(
+        `<button class="base changed" id="x">open</button>`,
+      )
+    })
+
+    // the content keeps the server render of a vapor template: a `<select>`
+    // its selected option, a Transition no range of its own
+    test('with a v-model select and a Transition below the root', async () => {
+      const { container, html, data } = await mount(
+        `<div>
+          <select v-model="data.selected">
+            <option value="a">A</option>
+            <option value="b">B</option>
+          </select>
+          <Transition :css="false">
+            <span v-if="data.show">{{ data.selected }}</span>
+          </Transition>
+        </div>`,
+        { selected: 'b', show: true, attrs: { class: 'trigger' } },
+      )
+      expect(html.replace(/<!--[[\]{}]-->/g, '')).toBe(
+        `<div class="trigger">` +
+          `<select><option value="a">A</option><option value="b" selected>B</option></select>` +
+          `<span>b</span>` +
+          `</div>`,
+      )
+      const span = container.querySelector('span')!
+      expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+
+      data.value.selected = 'a'
+      await nextTick()
+      expect(container.querySelector('span')).toBe(span)
+      expect(span.textContent).toBe('a')
+      expect(container.querySelector('select')!.value).toBe('a')
+    })
+
+    test.each([
+      [
+        'select',
+        `<select v-model="data.model" class="base">
+          <option value="a">A</option>
+          <option value="b">B</option>
+        </select>`,
+        `<select class="base trigger"><option value="a">A</option><option value="b" selected>B</option></select>`,
+      ],
+      [
+        'input',
+        `<input v-model="data.model" class="base">`,
+        `<input class="base trigger" value="b">`,
+      ],
+    ])('on a v-model %s root', async (tag, slot, expected) => {
+      const { container, html, data } = await mount(slot, {
+        model: 'b',
+        attrs: { class: 'trigger' },
+      })
+      expect(stripAnchors(html)).toBe(expected)
+      const el = container.querySelector(tag) as HTMLInputElement
+      expect(el.value).toBe('b')
+
+      data.value.model = 'a'
+      data.value.attrs = {}
+      await nextTick()
+      expect(el.value).toBe('a')
+      expect(el.className).toBe('base')
+    })
+
+    // its content comes off the attrs, or off its own when there are none
+    test.each([
+      ['with content', `<textarea>hello</textarea>`, 'hello'],
+      ['without content', `<textarea />`, ''],
+      [
+        'with a listener',
+        `<textarea @input="() => {}">hello</textarea>`,
+        'hello',
+      ],
+    ])('a textarea root %s, not cloned', async (_, slot, value) => {
+      const { container, html } = await testWithVaporApp(
+        `${setup}
+        <template>
+          <components.Outlet>
+            ${slot}
+          </components.Outlet>
+        </template>`,
+        {
+          Outlet: {
+            code: `<script setup>const one = 1</script>
+              <template>
+                <slot />
+              </template>`,
+            vapor: false,
+          },
+        },
+        ref({}),
+      )
+      expect(stripAnchors(html)).toBe(`<textarea>${value}</textarea>`)
+      expect(container.querySelector('textarea')!.value).toBe(value)
+    })
+
+    test('on a textarea root', async () => {
+      const { container, html, data } = await mount(
+        `<textarea>hello</textarea>`,
+        { attrs: { class: 'trigger' } },
+      )
+      expect(stripAnchors(html)).toBe(
+        `<textarea class="trigger">hello</textarea>`,
+      )
+      const textarea = container.querySelector('textarea')!
+
+      data.value.attrs = {}
+      await nextTick()
+      expect(textarea.className).toBe('')
+      expect(textarea.value).toBe('hello')
+    })
+
+    test('on the branches of a Transition root', async () => {
+      const { container, html, data } = await mount(
+        `<Transition :css="false">
+          <button v-if="data.ok">a</button>
+          <span v-else>b</span>
+        </Transition>`,
+        { ok: true, attrs: { id: 'x' } },
+      )
+      expect(stripAnchors(html)).toBe(`<button id="x">a</button>`)
+      const button = container.querySelector('button')!
+      expect(button.id).toBe('x')
+
+      data.value.ok = false
+      await nextTick()
+      expect(container.querySelector('span')!.outerHTML).toBe(
+        `<span id="x">b</span>`,
+      )
+    })
+
+    test('on the child of a Transition root', async () => {
+      const { container, html, data } = await mount(
+        `<Transition :css="false">
+          <button v-if="data.show" class="base">open</button>
+        </Transition>`,
+        { show: true, attrs: { class: 'trigger', id: 'x' } },
+      )
+      expect(stripAnchors(html)).toBe(
+        `<button class="base trigger" id="x">open</button>`,
+      )
+      const button = container.querySelector('button')!
+
+      data.value.attrs = { id: 'y' }
+      await nextTick()
+      expect(container.querySelector('button')).toBe(button)
+      expect(button.outerHTML).toBe(`<button class="base" id="y">open</button>`)
+    })
+
+    test('on the root of a named scoped slot', async () => {
+      const data = ref<Record<string, any>>({
+        attrs: { class: 'trigger' },
+        label: 'open',
+      })
+      const { container, html } = await testWithVaporApp(
+        `${setup}
+        <template>
+          <components.Menu>
+            <template #trigger="{ id }">
+              <button :id="id">{{ data.label }}</button>
+            </template>
+          </components.Menu>
+        </template>`,
+        {
+          Menu: {
+            code: `<script>
+              import { cloneVNode } from 'vue'
+              const data = _data
+              export default {
+                setup(_, { slots }) {
+                  return () =>
+                    cloneVNode(slots.trigger({ id: 'x' })[0], data.value.attrs)
+                },
+              }
+            </script>`,
+            vapor: false,
+          },
+        },
+        data,
+      )
+      expect(stripAnchors(html)).toBe(
+        `<button id="x" class="trigger">open</button>`,
+      )
+      const button = container.querySelector('button')!
+
+      data.value.label = 'close'
+      data.value.attrs = {}
+      await nextTick()
+      expect(button.outerHTML).toBe(`<button id="x" class="">close</button>`)
+    })
+
+    // Reka UI in a component library: a vdom component forwards the slot to
+    // the one flattening the outlet's fragment and cloning its first child
+    const Slot = {
+      code: `<script>
+        import { Fragment, cloneVNode } from 'vue'
+        const data = _data
+        const flatten = children =>
+          children.flatMap(child =>
+            child.type === Fragment ? flatten(child.children) : [child],
+          )
+        export default {
+          setup(_, { slots }) {
+            return () =>
+              cloneVNode(flatten(slots.default())[0], data.value.attrs)
+          },
+        }
+      </script>`,
+      vapor: false,
+    }
+    const Menu = (fallback = '') => ({
+      code: `<script setup>const components = _components</script>
+        <template>
+          <components.Slot>
+            <slot>${fallback}</slot>
+          </components.Slot>
+        </template>`,
+      vapor: false,
+    })
+
+    test('through a vdom component forwarding the slot', async () => {
+      const data = ref<Record<string, any>>({
+        attrs: { class: 'trigger', 'aria-expanded': 'false' },
+        label: 'open',
+      })
+      const { container, html } = await testWithVaporApp(
+        `${setup}
+        <template>
+          <components.Menu>
+            <button class="base">{{ data.label }}</button>
+          </components.Menu>
+        </template>`,
+        { Slot, Menu: Menu() },
+        data,
+      )
+      expect(stripAnchors(html)).toBe(
+        `<button class="base trigger" aria-expanded="false">open</button>`,
+      )
+      const button = container.querySelector('button')!
+
+      data.value.label = 'close'
+      data.value.attrs = { 'aria-expanded': 'true' }
+      await nextTick()
+      expect(container.querySelector('button')).toBe(button)
+      expect(button.outerHTML).toBe(
+        `<button class="base" aria-expanded="true">close</button>`,
+      )
+    })
+
+    test('on the fallback a forwarding vdom outlet shows', async () => {
+      const data = ref<Record<string, any>>({
+        attrs: { class: 'trigger', 'aria-expanded': 'false' },
+        show: false,
+      })
+      const { container, html } = await testWithVaporApp(
+        `${setup}
+        <template>
+          <components.Menu>
+            <button v-if="data.show" class="custom">custom</button>
+          </components.Menu>
+        </template>`,
+        { Slot, Menu: Menu(`<button class="base">fallback</button>`) },
+        data,
+      )
+      expect(stripAnchors(html)).toBe(
+        `<button class="base trigger" aria-expanded="false">fallback</button>`,
+      )
+      const button = container.querySelector('button')!
+
+      data.value.attrs = { 'aria-expanded': 'true' }
+      await nextTick()
+      expect(container.querySelector('button')).toBe(button)
+      expect(button.outerHTML).toBe(
+        `<button class="base" aria-expanded="true">fallback</button>`,
+      )
+
+      data.value.show = true
+      await nextTick()
+      expect(container.querySelector('button')!.outerHTML).toBe(
+        `<button class="custom" aria-expanded="true">custom</button>`,
+      )
+    })
+
+    test('not on a fallback of several roots', async () => {
+      const data = ref<Record<string, any>>({ attrs: { id: 'x' } })
+      const { html } = await testWithVaporApp(
+        `${setup}
+        <template>
+          <components.Menu>
+            <button v-if="data.show">custom</button>
+          </components.Menu>
+        </template>`,
+        { Slot, Menu: Menu(`<i>a</i><b>b</b>`) },
+        data,
+      )
+      expect(stripAnchors(html)).toBe(`<i>a</i><b>b</b>`)
+    })
+
+    // whichever node of the slot body renders as its only root, as the vnode
+    // a vdom parent hands the same component
+    describe.each([
+      ['vdom', false],
+      ['vapor', true],
+    ])('root positions of a %s parent', (_, isVaporApp) => {
+      // as Reka UI: the first child that is not a comment
+      const FirstChild = {
+        code: `<script>
+          import { Comment, cloneVNode } from 'vue'
+          const data = _data
+          export default {
+            setup(_, { slots }) {
+              return () =>
+                cloneVNode(
+                  (slots.a || slots.default)().find(c => c.type !== Comment),
+                  data.value.attrs,
+                )
+            },
+          }
+        </script>`,
+        vapor: false,
+      }
+
+      test.each([
+        [
+          'the else branch in a slot template',
+          `<template #a>
+            <button v-if="data.ok">a</button>
+            <span v-else>b</span>
+          </template>`,
+          `<span class="trigger" id="x">b</span>`,
+        ],
+        [
+          'an element past a comment in a slot template',
+          `<template #a>
+            <!-- lead -->
+            <button>a</button>
+          </template>`,
+          `<button class="trigger" id="x">a</button>`,
+        ],
+        // a fragment to vdom, which a clone adds nothing to
+        [
+          'a template v-if in a template v-if',
+          `<template v-if="data.show">
+            <template v-if="!data.ok">
+              <button>a</button>
+            </template>
+          </template>`,
+          isVaporApp
+            ? `<button class="trigger" id="x">a</button>`
+            : `<button>a</button>`,
+        ],
+      ])('%s', async (_, slot, expected) => {
+        const { container, html } = await testHydration(
+          `${setup}
+          <template>
+            <components.FirstChild>
+              ${slot}
+            </components.FirstChild>
+          </template>`,
+          { FirstChild },
+          ref({ attrs: { class: 'trigger', id: 'x' }, ok: false, show: true }),
+          { isVaporApp, interop: true },
+        )
+        expect(stripAnchors(html)).toBe(expected)
+        expect(visible(container)).toBe(expected)
+      })
+    })
+
+    // nothing to inherit them: as on the client
+    test.each([
+      ['several roots', `<i>a</i><b>b</b>`, `<i>a</i><b>b</b>`, true],
+      [
+        'the rows of a v-for',
+        `<i v-for="n in 2" :key="n">{{ n }}</i>`,
+        `<i>1</i><i>2</i>`,
+        false,
+      ],
+    ])('not on %s', async (_, slot, expected, warns) => {
+      const { container, html } = await mount(slot, {
+        attrs: { id: 'x' },
+      })
+      expect(stripAnchors(html)).toBe(expected)
+      expect(visible(container)).toBe(expected)
+      if (warns) {
+        expect(`Extraneous non-props attributes`).toHaveBeenWarned()
+      }
+    })
+  })
 })

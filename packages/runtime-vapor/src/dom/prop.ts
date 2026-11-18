@@ -8,6 +8,7 @@ import {
   getEscapedCssVarName,
   hasChanged,
   hasOwn,
+  hyphenate,
   includeBooleanAttr,
   isArray,
   isNativeOn,
@@ -73,6 +74,7 @@ import type { VaporElement } from '../apiDefineCustomElement'
 import type { RootMeta } from './template'
 import { isTransitionEnabled } from '../transition'
 import { isInteropEnabled } from '../vdomInteropState'
+import { currentRenderContext } from '../renderContext'
 import { inOnce } from '../once'
 import { queueSelectUpdates, registerSelectUpdate } from '../renderEffect'
 
@@ -255,8 +257,13 @@ export function setClass(
   } else {
     if (!isNormalized) value = normalizeClass(value)
     if (isHydrating && !isRecreatedNode(el)) {
-      ;(__DEV__ || __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__) &&
-        classHasMismatch(el, value, false)
+      if (__DEV__ || __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__) {
+        if (isClonedSlotContent()) {
+          queuePostFlushCb(() => classHasMismatch(el, value, !!el.$root))
+        } else {
+          classHasMismatch(el, value, false)
+        }
+      }
       el.$cls = value
       return
     }
@@ -389,6 +396,16 @@ function hasCssVars(style: CSSStyleDeclaration): boolean {
   return false
 }
 
+// The content of a slot whose vnode a vdom component cloned: its root becomes
+// one once the slot has rendered (see `adoptRoot`), with the attrs the server
+// merged into it. What it binds itself is compared knowing that.
+function isClonedSlotContent(): boolean {
+  if (!isInteropEnabled) return false
+  const boundary = currentRenderContext.slotBoundary
+  const owner = boundary && boundary.fallthroughOwner
+  return !!owner && owner.instance === currentInstance
+}
+
 function checkHydrationStyleMismatch(
   el: TargetElement,
   value: any,
@@ -416,7 +433,23 @@ export function setStyle(el: TargetElement, value: any): void {
     const normalizedValue = normalizeStyle(value)
     if (isHydrating && !isRecreatedNode(el)) {
       if (__DEV__ || __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__) {
-        checkHydrationStyleMismatch(el, value, normalizedValue, false)
+        if (isClonedSlotContent()) {
+          const instance = currentInstance
+          queuePostFlushCb(
+            () =>
+              // the attrs' own style was checked merged over this one
+              '$styi$' in el ||
+              styleHasMismatch(
+                el,
+                value,
+                normalizedValue,
+                !!el.$root,
+                instance,
+              ),
+          )
+        } else {
+          checkHydrationStyleMismatch(el, value, normalizedValue, false)
+        }
       }
       el.$sty = normalizedValue
       hydrateVShowDisplay(el, normalizedValue)
@@ -830,21 +863,41 @@ export function setDynamicProp(
 // What it holds becomes the base layer: its template class and style, or the
 // value its own binding last set. Vdom interop and Transition, for a slot
 // content root.
-export function adoptRoot(el: any): void {
+export function adoptRoot(el: any, attrs?: Record<string, any>): void {
   if (el.$root) return
+  const isHydrated = isHydrating && !isRecreatedNode(el)
+  // A hydrated element already holds the attrs about to hydrate over it: the
+  // server merged them in. Its base layer is what its template gives it (see
+  // `template`); without one, what is left once the attrs (as `mergeProps`
+  // normalized them) are taken off.
+  const tpl: RootMeta | undefined = isHydrated ? el.$tpl : undefined
+  const hydrated = attrs && isHydrated && !tpl ? attrs : undefined
   const meta: { cls?: string[]; sty?: NormalizedStyle } = {}
   // the caches default to '' on the prototype (optimizePropertyLookup)
   if (hasOwn(el, '$cls')) {
     el.$clsi = el.$cls
+  } else if (tpl) {
+    meta.cls = tpl.cls
   } else if (el.classList.length) {
     meta.cls = Array.from(el.classList)
+    if (hydrated && hydrated.class) {
+      const merged = hydrated.class.split(/\s+/)
+      meta.cls = meta.cls.filter(cls => !merged.includes(cls))
+    }
   }
   if (hasOwn(el, '$sty')) {
     el.$styi = isString(el.$sty) ? parseStringStyle(el.$sty) : el.$sty
+  } else if (tpl) {
+    meta.sty = tpl.sty
   } else {
     const style = el.getAttribute('style')
     if (style !== null) {
       const sty = (meta.sty = parseStringStyle(style))
+      if (hydrated && hydrated.style) {
+        for (const key in hydrated.style) {
+          delete sty[key.startsWith('--') ? key : hyphenate(key)]
+        }
+      }
       // v-show owns `display`: what it restores is the template value
       if (vShowOriginalDisplay in el) {
         const display = el[vShowOriginalDisplay]
@@ -930,8 +983,8 @@ function styleHasMismatch(
   }
 
   // handle css vars
-  if (instance) {
-    resolveCssVars(instance as VaporComponentInstance, el, expectedStyleMap)
+  if (isVaporComponent(instance)) {
+    resolveCssVars(instance, el, expectedStyleMap)
   }
 
   let hasMismatch: boolean = false

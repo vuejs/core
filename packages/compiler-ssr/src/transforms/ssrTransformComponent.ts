@@ -10,6 +10,7 @@ import {
   type ExpressionNode,
   type FunctionExpression,
   type JSChildNode,
+  MERGE_PROPS,
   type NodeTransform,
   NodeTypes,
   RESOLVE_DYNAMIC_COMPONENT,
@@ -27,6 +28,7 @@ import {
   buildProps,
   buildSlots,
   createCallExpression,
+  createConditionalExpression,
   createFunctionExpression,
   createIfStatement,
   createReturnStatement,
@@ -65,9 +67,11 @@ import {
   isArray,
   isObject,
   isPlainObject,
+  isString,
   isSymbol,
 } from '@vue/shared'
 import { buildSSRProps } from './ssrTransformElement'
+import { slotAttrsBinds } from './ssrInjectFallthroughAttrs'
 import {
   ssrProcessTransition,
   ssrTransformTransition,
@@ -88,10 +92,10 @@ interface WIPSlotEntry {
   vnodeBranch: ReturnStatement
 }
 
-const componentTypeMap = new WeakMap<
+export const componentTypeMap: WeakMap<
   ComponentNode,
   string | symbol | CallExpression
->()
+> = new WeakMap()
 
 // ssr component transform is done in two phases:
 // In phase 1. we use `buildSlot` to analyze the children of the component into
@@ -145,19 +149,45 @@ export const ssrTransformComponent: NodeTransform = (node, context) => {
       })
     }
 
+    // The root of a vapor slot body binds what a clone of the slot's content
+    // adds (see ssrInjectFallthroughAttrs). Most content is never cloned:
+    // props that are not merged otherwise are merged only when there are attrs.
+    const slotAttrs = slotAttrsBinds.get(node)
+    const ownProps = slotAttrs
+      ? node.props.filter(p => p !== slotAttrs)
+      : node.props
+
     let propsExp: string | JSChildNode = `null`
-    if (node.props.length) {
+    if (ownProps.length) {
       // note we are not passing ssr: true here because for components, v-on
       // handlers should still be passed
       const { props, directives } = buildProps(
         node,
         context,
-        undefined,
+        ownProps,
         true,
         isDynamicComponent,
       )
       if (props || directives.length) {
         propsExp = buildSSRProps(props, directives, context)
+      }
+    }
+    if (slotAttrs) {
+      const attrs = slotAttrs.exp!
+      if (isString(propsExp)) {
+        propsExp = attrs
+      } else if (
+        propsExp.type === NodeTypes.JS_CALL_EXPRESSION &&
+        propsExp.callee === MERGE_PROPS
+      ) {
+        propsExp.arguments.push(attrs)
+      } else {
+        propsExp = createConditionalExpression(
+          attrs,
+          createCallExpression(context.helper(MERGE_PROPS), [propsExp, attrs]),
+          propsExp,
+          false,
+        )
       }
     }
 
@@ -166,8 +196,11 @@ export const ssrTransformComponent: NodeTransform = (node, context) => {
 
     const buildSSRSlotFn: SlotFnBuilder = (props, _vForExp, children, loc) => {
       const param0 = (props && stringifyExpression(props)) || `_`
+      const params = [param0, `_push`, `_parent`, `_scopeId`]
+      // what a vdom `cloneVNode` adds to the slot's content, for its root
+      if (rawOptionsMap.get(context.root)!.vapor) params.push(`_slotAttrs`)
       const fn = createFunctionExpression(
-        [param0, `_push`, `_parent`, `_scopeId`],
+        params,
         undefined, // no return, assign body later
         true, // newline
         true, // isSlot

@@ -26,6 +26,8 @@ export type SSRSlot = (
   push: PushFn,
   parentComponent: ComponentInternalInstance | null,
   scopeId: string | null,
+  // a slot of a vapor component: see `ssrRenderSlotInner`
+  slotAttrs?: Props,
 ) => void
 
 export function ssrRenderSlot(
@@ -61,6 +63,9 @@ export function ssrRenderSlotInner(
   // around the fallback, which a vapor client has to know before it renders
   // anything
   transition?: boolean,
+  // what a vdom `cloneVNode` added to the content of a vapor slot, for the
+  // slot to render on its root
+  slotAttrs?: Props,
 ): void {
   const slotFn = slots[slotName]
   let fallback = false
@@ -78,6 +83,7 @@ export function ssrRenderSlotInner(
       bufferedPush,
       parentComponent,
       slotScopeId ? ' ' + slotScopeId : '',
+      slotAttrs,
     )
     // undefined for an ssr slot; otherwise the vnodes, null for none valid
     let vnodes: VNodeArrayChildren | null | undefined

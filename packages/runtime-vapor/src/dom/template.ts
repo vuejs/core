@@ -21,6 +21,7 @@ import {
 import { createTextNode, parseTemplate } from './node'
 import { currentRenderContext } from '../renderContext'
 import { cloneStampedTemplate } from './scopeIdStamp'
+import { isInteropEnabled } from '../vdomInteropState'
 
 // the class and style a root's template contributes, shared by all its
 // instances (see the incremental setters in prop.ts)
@@ -107,6 +108,15 @@ export function template(html: string, flags: number = 0, ns?: Namespace) {
         )!
       }
       if (root) (adopted as any).$root = rootMeta ||= createRootMeta()
+      else if (isInteropEnabled && html) {
+        // content a vdom component cloned: should this be its root, what its
+        // template gives it comes from here, not from the node the server
+        // merged the clone's attrs into (see `adoptRoot`)
+        const boundary = currentRenderContext.slotBoundary
+        if (boundary && boundary.fallthroughOwner) {
+          ;(adopted as any).$tpl = rootMeta ||= createRootMeta()
+        }
+      }
       exitHydrationCursor(hydrationCursor)
       return adopted
     }

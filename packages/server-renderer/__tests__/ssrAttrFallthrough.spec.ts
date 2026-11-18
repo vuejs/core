@@ -110,4 +110,12 @@ describe('ssr: attr fallthrough', () => {
     )
     expect(await render({ title: 'c' })).toBe(`<x-panel title="c"></x-panel>`)
   })
+
+  test('textarea root without attrs to inherit', async () => {
+    const app = createApp({
+      inheritAttrs: false,
+      template: `<textarea>hello</textarea>`,
+    })
+    expect(await renderToString(app)).toBe(`<textarea>hello</textarea>`)
+  })
 })

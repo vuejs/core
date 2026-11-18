@@ -67,4 +67,76 @@ describe('ssr: vapor slots across runtime copies', () => {
       `<!--{--><!--[--><p>hello</p><!--]--><!--}-->`,
     )
   })
+
+  // content that is not cloned, or cloned without attrs, renders the slot as
+  // an ssr outlet does: no props to merge
+  test.each([
+    ['as is', (vue: any, slots: any) => slots.default()[0]],
+    [
+      'cloned without attrs',
+      (vue: any, slots: any) => vue.cloneVNode(slots.default()[0]),
+    ],
+  ])('a vdom child renders the slot %s without merging', async (_, render) => {
+    const { ssr, vue } = await loadRuntimes()
+    const mergeProps = vi.spyOn(vue, 'mergeProps')
+    const Wrapper = {
+      setup(_: any, { slots }: any) {
+        return () => render(vue, slots)
+      },
+    }
+    const App = compileVaporSSR(
+      `<script setup vapor>
+      const Wrapper = _components.Wrapper
+      </script>
+      <template>
+        <Wrapper>
+          <button class="a" style="color: red" disabled>open</button>
+        </Wrapper>
+      </template>`,
+      { ...vue, mergeProps },
+      ssr,
+      { Wrapper },
+    )
+    expect(await ssr.renderToString(vue.createSSRApp(App))).toBe(
+      `<!--{--><!--[-->` +
+        `<button class="a" style="color:red;" disabled>open</button>` +
+        `<!--]--><!--}-->`,
+    )
+    expect(mergeProps).not.toHaveBeenCalled()
+  })
+
+  // #16269
+  test('a vdom child renders what it clones onto the slot content', async () => {
+    const { ssr, vue } = await loadRuntimes()
+    const AsChild = {
+      setup(_: any, { slots }: any) {
+        return () =>
+          vue.cloneVNode(slots.default()[0], {
+            class: 'trigger',
+            style: { color: 'red' },
+            'aria-expanded': 'false',
+            onClick: () => {},
+          })
+      },
+    }
+    const App = compileVaporSSR(
+      `<script setup vapor>
+      const AsChild = _components.AsChild
+      const cls = 'own'
+      </script>
+      <template>
+        <AsChild>
+          <button :class="cls" style="font-size: 12px">open</button>
+        </AsChild>
+      </template>`,
+      vue,
+      ssr,
+      { AsChild },
+    )
+    expect(await ssr.renderToString(vue.createSSRApp(App))).toBe(
+      `<!--{--><!--[-->` +
+        `<button class="own trigger" style="font-size:12px;color:red;" aria-expanded="false">open</button>` +
+        `<!--]--><!--}-->`,
+    )
+  })
 })

@@ -433,7 +433,7 @@ import {
   getComponentPublicInstance,
   setupComponent,
 } from './component'
-import { renderComponentRoot } from './componentRenderUtils'
+import { filterSingleRoot, renderComponentRoot } from './componentRenderUtils'
 import { setCurrentRenderingInstance } from './componentRenderContext'
 import {
   VaporSlot,
@@ -463,6 +463,7 @@ const _ssrUtils: {
   VaporSlot: typeof VaporSlot
   rawVaporSlotKey: typeof rawVaporSlotKey
   invokeSlotFallback: typeof invokeSlotFallback
+  filterSingleRoot: typeof filterSingleRoot
   setDeferElementSlots: typeof setDeferElementSlots
 } = {
   createComponentInstance,
@@ -478,6 +479,7 @@ const _ssrUtils: {
   VaporSlot,
   rawVaporSlotKey,
   invokeSlotFallback,
+  filterSingleRoot,
   setDeferElementSlots,
 }
 

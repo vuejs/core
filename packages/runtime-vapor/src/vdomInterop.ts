@@ -4290,7 +4290,7 @@ function createSlotFallthroughOwner(
     },
     attrsRef,
     instance,
-    adoptRoot,
+    adoptRoot: el => adoptRoot(el, attrsRef.value),
   }
 }
 
