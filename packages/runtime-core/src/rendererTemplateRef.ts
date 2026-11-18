@@ -1,9 +1,10 @@
 import type { SuspenseBoundary } from './components/Suspense'
-import type {
-  VNode,
-  VNodeNormalizedRef,
-  VNodeNormalizedRefAtom,
-  VNodeRef,
+import {
+  type VNode,
+  type VNodeNormalizedRef,
+  type VNodeNormalizedRefAtom,
+  type VNodeRef,
+  VaporSlot,
 } from './vnode'
 import {
   EMPTY_OBJ,
@@ -20,7 +21,8 @@ import { warn } from './warning'
 import { isRef, toRaw } from '@vue/reactivity'
 import { ErrorCodes, callWithErrorHandling } from './errorHandling'
 import { type SchedulerJob, SchedulerJobFlags } from './scheduler'
-import { queuePostRenderEffect } from './renderer'
+import { getVaporInterface, queuePostRenderEffect } from './renderer'
+import { isVaporInteropEnabled } from './vaporInteropState'
 import {
   type ComponentOptions,
   type Data,
@@ -39,6 +41,19 @@ export function setRef(
   vnode: VNode,
   isUnmount = false,
 ): void {
+  if (isVaporInteropEnabled && vnode.type === VaporSlot) {
+    const owner = isArray(rawRef) ? rawRef[0].i : rawRef.i
+    if (owner) {
+      getVaporInterface(owner, vnode).setSlotRef(
+        vnode,
+        rawRef,
+        parentSuspense,
+        isUnmount,
+      )
+      return
+    }
+  }
+
   if (isArray(rawRef)) {
     rawRef.forEach((r, i) =>
       setRef(

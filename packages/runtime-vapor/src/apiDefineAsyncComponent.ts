@@ -37,7 +37,7 @@ import { _next } from './dom/node'
 import { isKeepAliveEnabled } from './keepAlive'
 import { isInteropEnabled } from './vdomInteropState'
 
-const enum AsyncBranch {
+export const enum AsyncBranch {
   RESOLVED = 1,
   ERROR,
   LOADING,
