@@ -48,12 +48,9 @@ import {
   claimFragmentStart,
   createFragmentClaim,
   currentHydrationNode,
-  enterHydrationBoundary,
   enterHydrationCursor,
   hydrateBlock,
   insertMissingRange,
-  isClaimedAnchor,
-  isComment,
   isHydrating,
   locateClaimedEnd,
   setCurrentHydrationNode,
@@ -542,79 +539,65 @@ export const createFor = (
 
   function hydrateList(source: ResolvedSource, newLength: number): void {
     const claim = hydrationClaim!
-    let exitHydrationBoundary: (() => void) | undefined
-
-    // claiming a close marker as the anchor also bounds the cleanup to it
-    const reuseBoundaryClose = (close: Node): void => {
-      parentAnchor = claimAnchor(close)
-      exitHydrationBoundary = enterHydrationBoundary(parentAnchor)
-    }
 
     // one owner callback for the list: a closure per row would allocate
     let row = 0
     const mountRow = () => mount(source, row, parentAnchor).nodes
-    try {
-      // a close that already has an owner is not the list's to share
-      const start = currentHydrationNode!
-      if (!claim.start && (!isComment(start, ']') || isClaimedAnchor(start))) {
-        insertMissingRange('[', ']', `v-for fragment`)
-        claimFragmentStart(claim)
-      }
-      for (let i = 0; i < newLength; i++) {
-        const node = currentHydrationNode!
-        // an unwrapped row is a single node: its own hydration moves on
-        let nextNode: Node | null = null
-        let rowStart: CommentAnchor | null = null
-        if (node.nodeType === 8) {
-          const data = (node as Comment).data
-          if (data === ']') {
-            // fewer server rows: the rest mount before the close marker
-            nextNode = claimAnchor(node)
-          } else if (wrappedRows && data === '[') {
-            rowStart = node as CommentAnchor
-            setCurrentHydrationNode(node.nextSibling)
-          }
-        }
-        row = i
-        hydrateBlock(mountRow)
-        if (rowStart) {
-          // the row's blocks consumed its range, so the cursor rests on its
-          // close marker; only a mismatch pays for the walk from the start
-          // and for dropping what the row no longer adopts
-          const close = locateClaimedEnd(rowStart)!
-          trimHydrationBoundary(close)
-          nextNode = close.nextSibling
-        }
-        if (nextNode) setCurrentHydrationNode(nextNode)
-      }
 
-      if (claim.start) {
-        // the list owns its SSR range: its close marker is the anchor
-        reuseBoundaryClose(locateClaimedEnd(claim.start)!)
-
-        // optimization: cache the fragment end anchor as $llc (last logical child)
-        // so that locateChildByLogicalIndex can skip the entire fragment.
-        // For anchored inserts the unit index is known only while the anchor
-        // is the cached child; otherwise skipping the install just costs a
-        // restart walk.
-        if (_insertionParent) {
-          const idx = _insertionAnchor
-            ? _insertionParent.$llc === _insertionAnchor
-              ? _insertionParent.$lli
-              : undefined
-            : _insertionIndex || 0
-          if (idx !== undefined) {
-            setLastLocatedLogicalChild(_insertionParent, parentAnchor, idx)
-          }
-        }
-      } else {
-        // an empty list the server rendered without a range of its own, in
-        // the range around it: that range's close is the anchor
-        reuseBoundaryClose(currentHydrationNode!)
-      }
-    } finally {
-      exitHydrationBoundary && exitHydrationBoundary()
+    // a list always has a range of its own: the server rendered none here
+    if (!claim.start) {
+      insertMissingRange('[', ']', `v-for fragment`)
+      claimFragmentStart(claim)
     }
+    for (let i = 0; i < newLength; i++) {
+      const node = currentHydrationNode!
+      // an unwrapped row is a single node: its own hydration moves on
+      let nextNode: Node | null = null
+      let rowStart: CommentAnchor | null = null
+      if (node.nodeType === 8) {
+        const data = (node as Comment).data
+        if (data === ']') {
+          // fewer server rows: the rest mount before the close marker
+          nextNode = claimAnchor(node)
+        } else if (wrappedRows && data === '[') {
+          rowStart = node as CommentAnchor
+          setCurrentHydrationNode(node.nextSibling)
+        }
+      }
+      row = i
+      hydrateBlock(mountRow)
+      if (rowStart) {
+        // the row's blocks consumed its range, so the cursor rests on its
+        // close marker; only a mismatch pays for the walk from the start
+        // and for dropping what the row no longer adopts
+        const close = locateClaimedEnd(rowStart)!
+        trimHydrationBoundary(close)
+        nextNode = close.nextSibling
+      }
+      if (nextNode) setCurrentHydrationNode(nextNode)
+    }
+
+    // the close marker of the list's range is the anchor
+    parentAnchor = claimAnchor(locateClaimedEnd(claim.start!)!)
+
+    // optimization: cache the fragment end anchor as $llc (last logical child)
+    // so that locateChildByLogicalIndex can skip the entire fragment.
+    // For anchored inserts the unit index is known only while the anchor
+    // is the cached child; otherwise skipping the install just costs a
+    // restart walk.
+    if (_insertionParent) {
+      const idx = _insertionAnchor
+        ? _insertionParent.$llc === _insertionAnchor
+          ? _insertionParent.$lli
+          : undefined
+        : _insertionIndex || 0
+      if (idx !== undefined) {
+        setLastLocatedLogicalChild(_insertionParent, parentAnchor, idx)
+      }
+    }
+
+    // drop what the server rendered past the client's rows
+    trimHydrationBoundary(parentAnchor)
   }
 
   const update = (

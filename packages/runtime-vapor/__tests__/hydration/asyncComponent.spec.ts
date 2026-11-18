@@ -853,7 +853,7 @@ describe('Vapor Mode hydration', () => {
         "
         <!--{--><div>
         <!--[--><span>bar</span><!--if--><!--]-->
-        <!--slot--></div><!--async component--><!--}-->
+        </div><!--async component--><!--}-->
         "
       `)
     })

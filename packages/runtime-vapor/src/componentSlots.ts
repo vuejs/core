@@ -72,7 +72,7 @@ import { isTransitionEnabled, isVaporTransition } from './transition'
 import { isAsyncComponentEnabled } from './asyncComponentState'
 import { renderWithSlotScopeIds } from './scopeId'
 import { setElementScopeIds } from './dom/scopeIdStamp'
-import { withHydratingSlotBoundary } from './dom/hydrateFragment'
+import { hydrateSlotContent } from './dom/hydrateFragment'
 import { withOnce } from './once'
 
 export type RawSlots = Record<string, VaporSlot> & {
@@ -565,9 +565,7 @@ export function createSlot(
         // DynamicFragment; during hydration it owns the slot SSR range, so
         // empty dynamic roots get its close marker.
         if (isHydrating) {
-          withHydratingSlotBoundary(() =>
-            outlet.update(render || fallback, key),
-          )
+          hydrateSlotContent(outlet, render || fallback, key)
         } else {
           outlet.update(render || fallback, key)
         }
