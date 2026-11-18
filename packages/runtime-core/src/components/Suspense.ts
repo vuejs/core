@@ -628,6 +628,11 @@ function createSuspenseBoundary(
         isInFallback,
       } = suspense
 
+      let pendingAncestor = suspense.parent
+      while (pendingAncestor && !pendingAncestor.pendingBranch) {
+        pendingAncestor = pendingAncestor.parent
+      }
+
       // if there's a transition happening we need to wait it to finish.
       let delayEnter: boolean | null = false
       if (suspense.isHydrating) {
@@ -652,7 +657,10 @@ function createSuspenseBoundary(
                   : anchor,
                 MoveType.ENTER,
               )
-              queuePostFlushCb(effects)
+              // a pending ancestor owns these effects and flushes them later
+              if (!pendingAncestor) {
+                queuePostFlushCb(effects)
+              }
               // clear el reference from fallback vnode to allow GC after transition
               if (isInFallback && vnode.ssFallback) {
                 vnode.ssFallback.el = null

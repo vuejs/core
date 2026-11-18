@@ -5633,6 +5633,58 @@ describe('Suspense', () => {
     expect(mounted).not.toHaveBeenCalled()
   })
 
+  // #16344
+  test('does not flush delayed enter effects before a pending ancestor resolves', async () => {
+    const mounted = vi.fn()
+    let resolveGate!: () => void
+    let resolvePage!: () => void
+    const Gate = {
+      setup() {
+        return new Promise<void>(resolve => {
+          resolveGate = resolve
+        }).then(() => () => h('i', 'gate'))
+      },
+    }
+    const Page = {
+      setup() {
+        onMounted(mounted)
+        return new Promise<void>(resolve => {
+          resolvePage = resolve
+        }).then(() => () => h('span', 'page'))
+      },
+    }
+    const App = {
+      render: () =>
+        h(Suspense, null, {
+          default: () =>
+            h('div', [
+              h(Gate),
+              h(BaseTransition, { mode: 'out-in' }, () =>
+                h(
+                  Suspense,
+                  { suspensible: true },
+                  {
+                    default: () => h(Page),
+                    fallback: h('b', 'inner loading'),
+                  },
+                ),
+              ),
+            ]),
+          fallback: h('p', 'outer loading'),
+        }),
+    }
+    const root = nodeOps.createElement('div')
+    render(h(App), root)
+
+    resolvePage()
+    await new Promise(resolve => setTimeout(resolve))
+    expect(mounted).not.toHaveBeenCalled()
+
+    resolveGate()
+    await new Promise(resolve => setTimeout(resolve))
+    expect(mounted).toHaveBeenCalledTimes(1)
+  })
+
   test('KeepAlive caches a resolved Suspense child before a synchronous toggle away', async () => {
     const setup = vi.fn()
     const unmounted = vi.fn()
