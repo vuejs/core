@@ -133,19 +133,24 @@ import {
 import { inOnce, withOnce } from './once'
 import { hmrReload, hmrRerender } from './hmr'
 import {
+  type ComponentRange,
   type HydrationCursor,
   adoptTemplate,
   advanceHydrationNode,
   claimAnchor,
   cleanupHydrationTail,
   currentHydrationNode,
+  enterComponentRange,
   enterHydrationCursor,
+  exitComponentRange,
   exitHydrationCursor,
   hydrateBlock,
   hydrateBlockWithErrorHandling,
   hydrateNode,
+  isClaimedAnchor,
   isComment,
   isHydrating,
+  isRangeEnd,
   isRecreatedNode,
   locateEndAnchor,
   locateHydrationNode,
@@ -726,28 +731,40 @@ export function createComponent(
   }
 }
 
-interface ComponentHydration {
+interface ComponentHydration extends ComponentRange {
   cursor: HydrationCursor
-  /** the claimed close of the component's own range */
-  close: Node | null
 }
 
 /**
  * Open a component's SSR range: claim the `{` under the cursor, if `claims`,
  * and its close. A vapor component's server render begins with a node of
  * its own or with a range of its own, so a range at the cursor is the
- * component's. Shared by creation and by the deferred render of an async
- * setup, which re-enters the range once setup has settled.
+ * component's, and any other node starts the one unit of a render without
+ * a range. Shared by creation and by the deferred render of an async setup,
+ * which re-enters the range once setup has settled.
  */
 function enterComponentHydration(claims: boolean): ComponentHydration {
   const cursor = enterHydrationCursor()
   const start = cursor.start
   let close: Node | null = null
-  if (claims && start && isComment(start, '{')) {
-    setCurrentHydrationNode(start.nextSibling)
-    if ((close = locateEndAnchor(start))) claimAnchor(close)
+  let unit: Node | null = null
+  if (claims && start) {
+    if (isComment(start, '{')) {
+      setCurrentHydrationNode(start.nextSibling)
+      if ((close = locateEndAnchor(start))) claimAnchor(close)
+    } else if (!isClaimedAnchor(start) && !isRangeEnd(start)) {
+      unit = start
+    }
   }
-  return { cursor, close }
+  const hydration: ComponentHydration = {
+    cursor,
+    close,
+    unit,
+    depth: 0,
+    prev: null,
+  }
+  enterComponentRange(hydration)
+  return hydration
 }
 
 /**
@@ -767,14 +784,16 @@ function wrapsComponent(component: VaporComponent): boolean {
  * range is trimmed first and the cursor moves past the close marker.
  */
 function exitComponentHydration(
-  { close, cursor }: ComponentHydration,
+  hydration: ComponentHydration,
   finalizeBoundary: boolean,
 ): void {
+  exitComponentRange(hydration)
+  const close = hydration.close
   if (finalizeBoundary) {
     trimHydrationBoundary(close)
     if (close && currentHydrationNode === close) advanceHydrationNode(close)
   }
-  exitHydrationCursor(cursor)
+  exitHydrationCursor(hydration.cursor)
 }
 
 export function setupComponent(

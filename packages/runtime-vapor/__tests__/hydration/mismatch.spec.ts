@@ -520,11 +520,13 @@ describe('mismatch handling', () => {
 
     // multiple root mismatch
     const { container } = await mountWithHydration(
-      `<div class="foo bar"></div><span/>`,
+      `<!--{--><div class="foo bar"></div><span></span><!--}-->`,
       `<div :class="data"></div><span/>`,
       ref('foo'),
     )
-    expect(container.innerHTML).toBe('<div class="foo bar"></div><span></span>')
+    expect(container.innerHTML).toBe(
+      '<!--{--><div class="foo bar"></div><span></span><!--}-->',
+    )
     expect(`Hydration class mismatch`).toHaveBeenWarned()
   })
 
@@ -561,12 +563,12 @@ describe('mismatch handling', () => {
 
     // multiple root mismatch
     const { container } = await mountWithHydration(
-      `<div style="color:red;"></div><span/>`,
+      `<!--{--><div style="color:red;"></div><span></span><!--}-->`,
       `<div :style="data"></div><span/>`,
       ref({ color: 'green' }),
     )
     expect(container.innerHTML).toBe(
-      '<div style="color:red;"></div><span></span>',
+      '<!--{--><div style="color:red;"></div><span></span><!--}-->',
     )
     expect(`Hydration style mismatch`).toHaveBeenWarned()
   })
@@ -602,12 +604,12 @@ describe('mismatch handling', () => {
 
     // mismatch with multiple root
     const { container } = await mountWithHydration(
-      `<div style="color:red;"></div><span/>`,
+      `<!--{--><div style="color:red;"></div><span></span><!--}-->`,
       `<div v-show="data.show" :style="data.style"></div><span/>`,
       ref({ show: false, style: 'color: red' }),
     )
     expect(container.innerHTML).toBe(
-      '<div style="color: red; display: none;"></div><span></span>',
+      '<!--{--><div style="color: red; display: none;"></div><span></span><!--}-->',
     )
     expect(`Hydration style mismatch`).toHaveBeenWarned()
   })
@@ -2160,7 +2162,7 @@ describe('mismatch recovery drops the server tail of the block', () => {
     target.innerHTML = `<!--teleport start anchor--><p>P</p><i>I</i><!--teleport anchor-->`
     document.body.appendChild(target)
     const { container } = await mountWithHydration(
-      '<!--teleport start--><!--teleport end--><u>after</u>',
+      '<!--{--><!--teleport start--><!--teleport end--><u>after</u><!--}-->',
       `<teleport to="#tail-target">${client}</teleport><u>after</u>`,
       ref({ x: 'x' }),
     )
@@ -2168,7 +2170,7 @@ describe('mismatch recovery drops the server tail of the block', () => {
       '<!--teleport start anchor--><span title="x">A</span><b title="x">B</b><!--teleport anchor-->',
     )
     expect(container.innerHTML).toBe(
-      '<!--teleport start--><!--teleport end--><u>after</u>',
+      '<!--{--><!--teleport start--><!--teleport end--><u>after</u><!--}-->',
     )
     expect('Hydration node mismatch').toHaveBeenWarned()
     expect('Hydration children mismatch').toHaveBeenWarned()
@@ -3110,5 +3112,356 @@ describe('v-if chain branch the server rendered', () => {
     await nextTick()
     expect(container.querySelector('u')).toBe(u)
     expect(u.textContent).toBe('U')
+  })
+})
+
+describe('a server render with fewer roots', () => {
+  const card = (inner = '') =>
+    `<template><div class="card"><component :is="data.client ? components.Client : components.Server" />${inner}</div><p>sibling</p></template>`
+
+  async function hydrateRoots(
+    code: string,
+    client: string,
+    data: Record<string, any> = {},
+    components: Record<string, string> = {},
+    server = '<i>x</i>',
+  ) {
+    const state = ref<Record<string, any>>({ client: true, ...data })
+    const { container } = await testHydration(
+      code,
+      {
+        Server: `<template>${server}</template>`,
+        Client: `<template>${client}</template>`,
+        ...components,
+      },
+      state,
+      { serverData: ref({ ...state.value, client: false }) },
+    )
+    expect('Hydration node mismatch').toHaveBeenWarnedTimes(1)
+    return { container, data: state }
+  }
+
+  test.each([
+    [
+      'a sibling of the parent element',
+      card(),
+      '<!--{--><div class="card"><!--{--><i>x</i><span>y</span><!--}--></div><p>sibling</p><!--}-->',
+    ],
+    [
+      'no node after the parent element',
+      `<template><div class="card"><component :is="data.client ? components.Client : components.Server" /></div></template>`,
+      '<div class="card"><!--{--><i>x</i><span>y</span><!--}--></div>',
+    ],
+    [
+      'a sibling in the parent element',
+      card('<b>after</b>'),
+      '<!--{--><div class="card"><!--{--><i>x</i><span>y</span><!--}--><b>after</b></div><p>sibling</p><!--}-->',
+    ],
+    [
+      'a nested parent element',
+      `<template><section><div class="card"><component :is="data.client ? components.Client : components.Server" /></div></section><p>sibling</p></template>`,
+      '<!--{--><section><div class="card"><!--{--><i>x</i><span>y</span><!--}--></div></section><p>sibling</p><!--}-->',
+    ],
+  ])('extra roots stay in the parent with %s', async (_, code, html) => {
+    const { container } = await hydrateRoots(code, '<i>x</i><span>y</span>')
+    expect(container.innerHTML).toBe(html)
+  })
+
+  test.each([
+    [
+      'three roots',
+      '<i>x</i><span>y</span><em>z</em>',
+      '<i>x</i><span>y</span><em>z</em>',
+    ],
+    [
+      'a slot outlet',
+      '<i>x</i><slot><span>y</span></slot>',
+      '<i>x</i><span>y</span><!--slot-->',
+    ],
+    [
+      'a nested first root',
+      '<components.Inner /><span>y</span>',
+      '<i>x</i><span>y</span>',
+    ],
+    [
+      'a nested extra root',
+      '<i>x</i><components.Extra />',
+      '<i>x</i><span>y</span>',
+    ],
+    [
+      'a nested first root with more roots',
+      '<components.More /><span>y</span>',
+      '<!--{--><i>x</i><em>z</em><!--}--><span>y</span>',
+    ],
+    [
+      'a kept-alive first root with more roots',
+      '<KeepAlive><components.More /></KeepAlive><span>y</span>',
+      '<!--{--><i>x</i><em>z</em><!--}--><span>y</span>',
+    ],
+    [
+      'a kept-alive first root of another tag',
+      '<KeepAlive><components.Other /></KeepAlive><span>y</span>',
+      '<b>x</b><span>y</span>',
+    ],
+  ])('an extra root with %s', async (_, client, html) => {
+    const { container } = await hydrateRoots(
+      card(),
+      client,
+      {},
+      {
+        Inner: '<template><i>x</i></template>',
+        Extra: '<template><span>y</span></template>',
+        More: '<template><i>x</i><em>z</em></template>',
+        Other: '<template><b>x</b></template>',
+      },
+    )
+    expect(container.innerHTML).toBe(
+      `<!--{--><div class="card"><!--{-->${html}<!--}--></div><p>sibling</p><!--}-->`,
+    )
+  })
+
+  test.each([false, true])('an extra v-if root, shown: %s', async show => {
+    const { container, data } = await hydrateRoots(
+      card(),
+      '<i>x</i><span v-if="data.show">y</span>',
+      { show },
+    )
+    const html = (shown: boolean) =>
+      `<!--{--><div class="card"><!--{--><i>x</i>${shown ? '<span>y</span>' : ''}<!--if--><!--}--></div><p>sibling</p><!--}-->`
+    expect(container.innerHTML).toBe(html(show))
+    data.value.show = !show
+    await nextTick()
+    expect(container.innerHTML).toBe(html(!show))
+  })
+
+  test('an extra v-for root', async () => {
+    const { container, data } = await hydrateRoots(
+      card(),
+      '<i>x</i><span v-for="i in data.list">{{ i }}</span>',
+      { list: [1] },
+    )
+    expect(container.innerHTML).toBe(
+      '<!--{--><div class="card"><!--{--><i>x</i><!--[--><span>1</span><!--]--><!--}--></div><p>sibling</p><!--}-->',
+    )
+    data.value.list = [2, 3]
+    await nextTick()
+    expect(container.innerHTML).toBe(
+      '<!--{--><div class="card"><!--{--><i>x</i><!--[--><span>2</span><span>3</span><!--]--><!--}--></div><p>sibling</p><!--}-->',
+    )
+  })
+
+  test('an extra disabled teleport root', async () => {
+    const { container } = await hydrateRoots(
+      card(),
+      '<i>x</i><Teleport to="body" disabled><span>t</span></Teleport>',
+    )
+    expect(container.innerHTML).toBe(
+      '<!--{--><div class="card"><!--{--><i>x</i><!--teleport start--><span>t</span><!--teleport end--><!--}--></div><p>sibling</p><!--}-->',
+    )
+  })
+
+  test.each([
+    [
+      'a v-for',
+      '<span v-for="i in data.list">{{ i }}</span>',
+      (list: number[]) =>
+        `<!--[-->${list.map(i => `<span>${i}</span>`).join('')}<!--]-->`,
+    ],
+    [
+      'a teleport',
+      '<Teleport to="body" disabled><span>{{ data.list.join() }}</span></Teleport>',
+      (list: number[]) =>
+        `<!--teleport start--><span>${list.join()}</span><!--teleport end-->`,
+    ],
+  ])(
+    'an empty first root over the server unit, then %s',
+    async (_, root, html) => {
+      const data = ref({ client: true, list: [1] })
+      const { container } = await testHydration(
+        `<template><div><component :is="data.client ? components.Client : components.Server" /></div></template>`,
+        {
+          Server: '<template><b>x</b></template>',
+          Client: `<template><component :is="null" />${root}</template>`,
+        },
+        data,
+        { serverData: ref({ client: false, list: [1] }) },
+      )
+      const expected = (list: number[]) =>
+        `<div><!--{--><!--dynamic-component-->${html(list)}<!--}--></div>`
+      expect(container.innerHTML).toBe(expected([1]))
+      expect('Hydration children mismatch').toHaveBeenWarnedTimes(1)
+      expect('Hydration node mismatch').toHaveBeenWarnedTimes(1)
+      data.value.list = [1, 2]
+      await nextTick()
+      expect(container.innerHTML).toBe(expected([1, 2]))
+    },
+  )
+
+  test('a later dynamic sibling in the parent element', async () => {
+    const { container, data } = await hydrateRoots(
+      card('<b v-if="data.show">{{ data.text }}</b>'),
+      '<i>x</i><span>y</span>',
+      { show: true, text: 'after' },
+    )
+    expect(container.innerHTML).toBe(
+      '<!--{--><div class="card"><!--{--><i>x</i><span>y</span><!--}--><b>after</b><!--if--></div><p>sibling</p><!--}-->',
+    )
+    const b = container.querySelector('b')!
+    data.value.text = 'updated'
+    await nextTick()
+    expect(container.querySelector('b')).toBe(b)
+    expect(b.textContent).toBe('updated')
+    data.value.show = false
+    await nextTick()
+    expect(container.innerHTML).toBe(
+      '<!--{--><div class="card"><!--{--><i>x</i><span>y</span><!--}--><!--if--></div><p>sibling</p><!--}-->',
+    )
+  })
+})
+
+describe('a v-for root the server rendered no list for', () => {
+  const list = '<span v-for="i in data.list">{{ i }}</span>'
+  const rows = (items: number[]) => items.map(i => `<span>${i}</span>`).join('')
+
+  async function hydrateList(
+    items: number[],
+    after = '',
+    server = '<b>plain</b>',
+  ) {
+    const data = ref({ client: true, list: items })
+    const { container } = await testHydration(
+      `<template><div><component :is="data.client ? components.List : components.Server" />${after}</div><button>add</button></template>`,
+      {
+        Server: `<template>${server}</template>`,
+        List: `<template>${list}</template>`,
+      },
+      data,
+      { serverData: ref({ client: false, list: items }) },
+    )
+    return { container, data }
+  }
+
+  test.each([[[]], [[1]], [[1, 2]]])('rows: %j', async items => {
+    const { container, data } = await hydrateList(items)
+    expect(container.innerHTML).toBe(
+      `<!--{--><div><!--[-->${rows(items)}<!--]--><!--dynamic-component--></div><button>add</button><!--}-->`,
+    )
+    expect('Hydration node mismatch').toHaveBeenWarnedTimes(1)
+    data.value.list = [...items, 3]
+    await nextTick()
+    expect(container.innerHTML).toBe(
+      `<!--{--><div><!--[-->${rows([...items, 3])}<!--]--><!--dynamic-component--></div><button>add</button><!--}-->`,
+    )
+  })
+
+  test.each([
+    ['a sibling after it', '<p>sibling</p>', '<b>plain</b>'],
+    ['a server component that renders no node', '', ''],
+  ])('with %s', async (_, after, server) => {
+    const { container, data } = await hydrateList([1], after, server)
+    expect(container.innerHTML).toBe(
+      `<!--{--><div><!--[--><span>1</span><!--]--><!--dynamic-component-->${after}</div><button>add</button><!--}-->`,
+    )
+    expect('Hydration node mismatch').toHaveBeenWarnedTimes(1)
+    data.value.list = [1, 2]
+    await nextTick()
+    expect(container.innerHTML).toBe(
+      `<!--{--><div><!--[--><span>1</span><span>2</span><!--]--><!--dynamic-component-->${after}</div><button>add</button><!--}-->`,
+    )
+  })
+
+  test('in prod', async () => {
+    __DEV__ = false
+    try {
+      const { container, data } = await hydrateList([])
+      expect(container.innerHTML).toBe(
+        '<!--{--><div><!--[--><!--]--></div><button>add</button><!--}-->',
+      )
+      data.value.list = [1, 2]
+      await nextTick()
+      expect(container.innerHTML).toBe(
+        '<!--{--><div><!--[--><span>1</span><span>2</span><!--]--></div><button>add</button><!--}-->',
+      )
+    } finally {
+      __DEV__ = true
+    }
+  })
+})
+
+describe('a teleport the server rendered no teleport for', () => {
+  test('as the root on another server node', async () => {
+    const target = document.createElement('div')
+    target.id = 'mismatch-target'
+    document.body.appendChild(target)
+    const data = ref({ client: true, text: 't' })
+    const { container } = await testHydration(
+      `<template><div><component :is="data.client ? components.Client : components.Server" /></div><p>sibling</p></template>`,
+      {
+        Server: '<template><b>plain</b></template>',
+        Client:
+          '<template><Teleport to="#mismatch-target"><span>{{ data.text }}</span></Teleport></template>',
+      },
+      data,
+      { serverData: ref({ client: false, text: 't' }) },
+    )
+    expect(container.innerHTML).toBe(
+      '<!--{--><div><!--teleport start--><!--teleport end--><!--dynamic-component--></div><p>sibling</p><!--}-->',
+    )
+    expect(target.textContent).toBe('t')
+    expect('Hydration node mismatch').toHaveBeenWarnedTimes(1)
+    data.value.text = 'u'
+    await nextTick()
+    expect(target.textContent).toBe('u')
+    target.remove()
+  })
+})
+
+describe('a list in a row the server rendered no row for', () => {
+  const row = `<span v-for="j in data.inner">{{ j }}</span><em>end</em>`
+
+  describe.each([
+    [
+      'a template row',
+      `<template v-for="i in data.items" :key="i">${row}</template>`,
+    ],
+    ['a component row', `<components.Row v-for="i in data.items" :key="i" />`],
+  ])('%s', (_, list) => {
+    test.each([[[]], [[1]]])('inner rows: %j', async inner => {
+      const data = ref({ items: [1], inner })
+      const { container } = await testHydration(
+        `<template>
+          <div>
+            ${list}
+            <u>tail</u>
+          </div>
+          <p>outer</p>
+        </template>`,
+        { Row: `<template>${row}</template>` },
+        data,
+        { serverData: ref({ items: [], inner }) },
+      )
+      const div = container.querySelector('div')!
+      const tail = div.querySelector('u')!
+      expect(div.innerHTML).toBe(
+        `<!--[--><!--[-->${inner.map(i => `<span>${i}</span>`).join('')}<!--]--><em>end</em><!--]--><u>tail</u>`,
+      )
+      expect(container.textContent).toBe(`${inner.join('')}endtailouter`)
+      expect('Hydration node mismatch').toHaveBeenWarned()
+
+      data.value.inner = [2, 3]
+      await nextTick()
+      expect(div.innerHTML).toBe(
+        `<!--[--><!--[--><span>2</span><span>3</span><!--]--><em>end</em><!--]--><u>tail</u>`,
+      )
+
+      data.value.items = []
+      await nextTick()
+      expect(div.textContent).toBe('tail')
+
+      data.value.items = [1, 2]
+      await nextTick()
+      expect(div.textContent).toBe('23end23endtail')
+      expect(div.querySelector('u')).toBe(tail)
+    })
   })
 })

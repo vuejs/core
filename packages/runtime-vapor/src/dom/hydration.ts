@@ -310,11 +310,95 @@ export function createFragmentClaim(): FragmentClaim {
  * the range of its branch (`<!--[1-->`) itself: an owner the server gave no
  * range of its own would take the range of the chain it renders.
  */
-function claimFragmentStart(claim: FragmentClaim): void {
+export function claimFragmentStart(claim: FragmentClaim): void {
   const node = currentHydrationNode
   if (node && (isComment(node, '[') || isComment(node, '('))) {
     claim.start = node
     setCurrentHydrationNode(node.nextSibling)
+  }
+}
+
+/**
+ * The server range of the component being hydrated, as its roots read it.
+ */
+export interface ComponentRange {
+  /**
+   * The one server unit of a component the server rendered no `<!--{-->`
+   * range for, as long as no root has read the cursor past it.
+   */
+  unit: Node | null
+  /** the claimed close of the component's range */
+  close: Node | null
+  /** the `blockDepth` of the component's own block fn */
+  depth: number
+  prev: ComponentRange | null
+}
+
+let currentComponentRange: ComponentRange | null = null
+// Blocks nested in a component's own block fn read the cursor inside a unit
+// they own, not as roots: the block fns of branches, rows and slot content,
+// and the blocks in its elements.
+let blockDepth = 0
+
+export function enterComponentRange(range: ComponentRange): void {
+  range.depth = blockDepth
+  range.prev = currentComponentRange
+  currentComponentRange = range
+}
+
+export function exitComponentRange(range: ComponentRange): void {
+  currentComponentRange = range.prev
+}
+
+/**
+ * A root of the component being hydrated reads the cursor. Past the one unit
+ * the server rendered for the component, the client renders more roots than
+ * the server did, and the cursor is on a node that is not the component's,
+ * or outside its parent. Give the unit the range the server renders for
+ * several roots: the roots from here on go in front of its close.
+ */
+export function locateComponentRoot(): void {
+  const range = currentComponentRange
+  if (
+    range &&
+    range.unit &&
+    range.depth === blockDepth &&
+    currentHydrationNode !== range.unit
+  ) {
+    const unit = range.unit
+    const parent = unit.parentNode!
+    if (!isRecreatedNode(unit)) {
+      warnHydrationNodeMismatch(unit, `more root nodes`)
+    }
+    const open = createComment('{') as CommentAnchor
+    const close = claimAnchor(createComment('}'))
+    // the roots in front of the close, and the components around the range,
+    // report no mismatch of their own
+    markRecreatedNode(open)
+    markRecreatedNode(close)
+    parent.insertBefore(close, nextLogicalSibling(unit))
+    parent.insertBefore(open, unit)
+    open.$fe = close
+    updateLastLocatedLogicalChild(parent, unit, open)
+    replaceComponentUnit(unit, open, range.prev)
+    range.unit = null
+    range.close = close
+    setCurrentHydrationNode(close)
+  }
+}
+
+/**
+ * The components that share the server unit `from` now have `to` for it. A
+ * component between them that claims no range holds no unit, so the whole
+ * chain is read.
+ */
+export function replaceComponentUnit(
+  from: Node,
+  to: Node,
+  range: ComponentRange | null = currentComponentRange,
+): void {
+  for (; range; range = range.prev) {
+    if (range.unit === from) range.unit = to
   }
 }
 
@@ -393,6 +477,7 @@ export function captureHydrationCursor(): HydrationCursor {
     start: null,
     resume: insertionParent ? currentHydrationNode : undefined,
   }
+  if (insertionParent) blockDepth++
   return cursor
 }
 
@@ -414,6 +499,7 @@ export function exitHydrationCursor(cursor: HydrationCursor | null): void {
     liveCursors--
   }
   if (cursor.resume !== undefined) {
+    blockDepth--
     setCurrentHydrationNode(cursor.resume)
   }
 }
@@ -495,6 +581,7 @@ function locateHydrationNodeImpl(claim?: FragmentClaim, isBlankText?: boolean) {
       setLastLocatedLogicalChild(insertionParent, node, insertionIndex || 0)
     }
   } else {
+    locateComponentRoot()
     node = currentHydrationNode
   }
 
@@ -575,6 +662,38 @@ export function locateClaimedEnd(start: CommentAnchor): Node | null {
 }
 
 /**
+ * A block that renders a range of its own finds none under the cursor: the
+ * server rendered other content there. Put the empty range `open`…`close` in
+ * place of that server unit, or in front of a structural close, and move the
+ * cursor onto it. The block's content then goes in front of the close, as
+ * where the server rendered less content in the range.
+ */
+export function insertMissingRange(
+  open: string,
+  close: string,
+  expected: string,
+): void {
+  const node = currentHydrationNode!
+  const parent = node.parentNode!
+  if (!isRecreatedNode(node)) warnHydrationNodeMismatch(node, expected)
+  const isBoundary = isClaimedAnchor(node) || isRangeEnd(node)
+  const next = isBoundary ? node : removeHydrationNode(node)
+  const start = createComment(open) as CommentAnchor
+  const end = createComment(close)
+  // the content in front of the close reports no mismatch of its own
+  markRecreatedNode(start)
+  markRecreatedNode(end)
+  parent.insertBefore(start, next)
+  parent.insertBefore(end, next)
+  start.$fe = end
+  if (!isBoundary) {
+    updateLastLocatedLogicalChild(parent, node, start)
+    replaceComponentUnit(node, start)
+  }
+  setCurrentHydrationNode(start)
+}
+
+/**
  * Check the branch of a v-if chain the server rendered against the branch
  * `index` the client renders: the `<!--[i-->` under the cursor opens its
  * range, claimed for `claim` when they match. When they differ, the server
@@ -633,9 +752,9 @@ function handleMismatch(
   nested: boolean,
 ): Node {
   const container = parentNode(node)!
-  // everything under a recreated node is missing by construction; the
-  // mismatch was reported once for that node
-  if (!isRecreatedNode(container)) {
+  // everything under a recreated node, or in front of a recreated close, is
+  // missing by construction; the mismatch was reported once for that node
+  if (!isRecreatedNode(container) && !isRecreatedNode(node)) {
     warnHydrationNodeMismatch(node, template)
   }
 
@@ -685,6 +804,7 @@ function handleMismatch(
   container.insertBefore(newNode, next)
   if (!shouldPreserveAnchor) {
     updateLastLocatedLogicalChild(container, node, newNode)
+    replaceComponentUnit(node, newNode)
   }
   // A block root turned into client content turns the rest of its block fn
   // into a client render; see hydrateBlock. A nested child is the whole
@@ -947,9 +1067,11 @@ let currentMismatch: Node | null = null
  * passes the range's `close` to have it done here.
  */
 export function hydrateBlock<T extends Block>(fn: () => T, close?: Node): T {
+  blockDepth++
   try {
     return finishMismatchRecovery(fn(), close)
   } finally {
+    blockDepth--
     // every owner runs with hydration on; a mismatch inside turned it off
     currentMismatch = null
     setIsHydrating(true)

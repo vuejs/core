@@ -40,6 +40,7 @@ import {
   claimAnchor,
   currentHydrationNode,
   hydrateBlock,
+  insertMissingRange,
   isComment,
   isHydrating,
   runWithoutHydration,
@@ -576,6 +577,15 @@ export class TeleportFragment extends RenderContextFragment {
 
   hydrate = (): void => {
     if (!isHydrating) return
+    if (!isComment(currentHydrationNode!, 'teleport start')) {
+      // the server rendered no teleport here: mount it on the client
+      insertMissingRange('teleport start', 'teleport end', 'teleport')
+      this.placeholder = currentHydrationNode!
+      this.anchor = claimAnchor(this.placeholder.nextSibling!)
+      advanceHydrationNode(this.anchor)
+      runWithoutHydration(() => this.handlePropsUpdate())
+      return
+    }
     const target = (this.target = resolveTeleportTarget(
       this.resolvedProps!,
       querySelector,
