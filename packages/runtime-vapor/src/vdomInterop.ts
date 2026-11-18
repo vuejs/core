@@ -63,6 +63,7 @@ import {
   onScopeDispose,
   prepareTransitionLeave,
   prepareTransitionSwitch,
+  queueJob,
   queuePostFlushCb,
   queuePostRenderEffect,
   rawVaporSlotKey,
@@ -3054,7 +3055,7 @@ function renderVDOMSlot(
   }
 
   function resumeOutIn(): void {
-    const resume = () => {
+    const resume: SchedulerJob = () => {
       const pending = pendingOutIn
       pendingOutIn = undefined
       if (!pending || disposed || !currentParentNode) {
@@ -3092,11 +3093,13 @@ function renderVDOMSlot(
       }
     }
     // A user leave hook may finish synchronously while the renderer is still
-    // patching the placeholder: resume after that patch. Otherwise resume at
-    // once, as vdom does: the next branch enters before the afterLeave hook
+    // patching the placeholder: resume after that patch, in a job ahead of
+    // the post-flush hooks of the branch that left. Otherwise resume at once.
+    // Both as vdom does: the next branch enters before the afterLeave hook
     // of the one that left.
     if (isPatching) {
-      queuePostFlushCb(resume)
+      resume.i = parentComponent
+      queueJob(resume)
     } else {
       resume()
     }
