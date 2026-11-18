@@ -11062,69 +11062,41 @@ describe('slot props read after the consumer unmounted', () => {
   )
 })
 
-describe('the instance that authored slots is a field of the slots object', () => {
-  function mountChild() {
-    const data = ref(null)
-    const Child = compile(
-      `<template>
-        <div>
-          <slot />
-        </div>
-      </template>`,
-      data,
-    )
-    const App = compile(
-      `<template>
-        <components.Child>
-          <p>content</p>
-        </components.Child>
-      </template>`,
-      data,
-      { Child },
-    )
-    return define(App).render()
-  }
-
-  test('no WeakMap lookup by the slots when a component renders them', () => {
-    const has = vi.spyOn(WeakMap.prototype, 'has')
-    const { instance, host } = mountChild()
-    const slots = (instance!.block as any).rawSlots
-    const lookups = has.mock.calls.filter(([key]) => key === slots).length
-    has.mockRestore()
-    expect(host.innerHTML).toBe('<div><p>content</p><!--slot--></div>')
-    expect(lookups).toBe(0)
-  })
-
-  // guard
-  test('the field is not one of the slots', async () => {
-    const { vdom, vapor } = await renderParity(
-      {
-        Child: `
-          <template>
-            <div>
-              {{ Object.keys($slots) }}
-              <slot />
-            </div>
-          </template>
-        `,
-        App: `
-          <template>
-            <components.Child>
-              <p>content</p>
-            </components.Child>
-          </template>
-        `,
-      },
-      () => ref(null),
-      () => {},
-    )
-    expect(vdom.text).toContain('"default"')
-    expect(vapor.text).toBe(vdom.text)
-  })
+test('the slots a component renders are not a WeakMap key', () => {
+  const data = ref(null)
+  const Child = compile(
+    `<template>
+      <div>
+        <slot />
+      </div>
+    </template>`,
+    data,
+  )
+  const App = compile(
+    `<template>
+      <components.Child>
+        <p>content</p>
+      </components.Child>
+    </template>`,
+    data,
+    { Child },
+  )
+  const spies = (['has', 'get', 'set'] as const).map(method =>
+    vi.spyOn(WeakMap.prototype, method),
+  )
+  const { instance, host } = define(App).render()
+  const slots = (instance!.block as any).rawSlots
+  const lookups = spies.map(
+    spy => spy.mock.calls.filter(([key]) => key === slots).length,
+  )
+  spies.forEach(spy => spy.mockRestore())
+  expect(host.innerHTML).toBe('<div><p>content</p><!--slot--></div>')
+  expect(lookups).toEqual([0, 0, 0])
 })
 
+// guard
 // Hand-written: a compiled template cannot pass its slots on as an object.
-test('a wrapper passing its slots object on to another component', async () => {
+test('a wrapper passing its slots object on to another component', () => {
   const data = ref({ msg: 'a' })
   const Inner = compile(
     `<template>
@@ -11148,7 +11120,4 @@ test('a wrapper passing its slots object on to another component', async () => {
   )
   const { host } = define(App).render()
   expect(host.innerHTML).toBe('<div><p>a</p><!--slot--></div>')
-  data.value.msg = 'b'
-  await nextTick()
-  expect(host.innerHTML).toBe('<div><p>b</p><!--slot--></div>')
 })

@@ -94,28 +94,13 @@ export type DynamicSlot = { name: string; fn: VaporSlot; key?: unknown }
 export type DynamicSlotFn = () => DynamicSlot | DynamicSlot[]
 export type DynamicSlotSource = StaticSlots | DynamicSlotFn
 
-// The instance whose template authored the slots (see withSlotOwner), kept on
-// the slots object itself: a symbol key is not one of its slot names.
+// Kept on the slots object itself: a symbol key is never a slot name.
 const slotOwnerKey: unique symbol = Symbol(__DEV__ ? 'Slot owner' : '')
+const slotWrappersKey: unique symbol = Symbol(__DEV__ ? 'Slot wrappers' : '')
 type OwnedRawSlots = RawSlots & {
   [slotOwnerKey]?: VaporComponentInstance | null
+  [slotWrappersKey]?: Map<string, { slot: VaporSlot; wrapped: VaporSlot }>
 }
-// A component's slots proxy handed on as the slots of another component (a
-// hand-written wrapper passing `slots` through) is no object to keep it on.
-const forwardedSlotsOwners = new WeakMap<
-  object,
-  VaporComponentInstance | null
->()
-const rawSlotWrappersCache = new WeakMap<
-  RawSlots,
-  Map<
-    string,
-    {
-      slot: VaporSlot
-      wrapped: VaporSlot
-    }
-  >
->()
 
 export function normalizeRawSlots(
   rawSlots?: LooseRawSlots | null,
@@ -125,11 +110,11 @@ export function normalizeRawSlots(
   // on (an async wrapper to its inner component). It is no one's slots: an
   // owner registered for it would never be released.
   if (rawSlots === EMPTY_OBJ) return
-  const normalized = isFunction(rawSlots)
-    ? ({ default: rawSlots } as RawSlots)
-    : (rawSlots as RawSlots)
-  if ((normalized as OwnedRawSlots)[slotOwnerKey] === undefined) {
-    ;(normalized as OwnedRawSlots)[slotOwnerKey] = getScopeOwner()
+  const normalized = (
+    isFunction(rawSlots) ? { default: rawSlots } : rawSlots
+  ) as OwnedRawSlots
+  if (normalized[slotOwnerKey] === undefined) {
+    normalized[slotOwnerKey] = getScopeOwner()
   }
   return normalized
 }
@@ -175,10 +160,8 @@ export function isolateSlotSources(
       isolatedSources[i] = isolateSlotSource(cell)
     }
   }
-  const isolated = extend({}, rawSlots, {
-    $: isolatedSources,
-  }) as OwnedRawSlots
-  isolated[slotOwnerKey] = (rawSlots as OwnedRawSlots)[slotOwnerKey] || null
+  // the copy carries the owner along
+  const isolated = extend({}, rawSlots, { $: isolatedSources }) as RawSlots
   return [isolated, cells]
 }
 
@@ -206,8 +189,8 @@ export function getRawSlotsOwner(
   return slots ? (slots as OwnedRawSlots)[slotOwnerKey] : undefined
 }
 
-function withSlotOwner<T>(slots: RawSlots, fn: () => T): T {
-  const owner = (slots as OwnedRawSlots)[slotOwnerKey]
+function withSlotOwner<T>(slots: OwnedRawSlots, fn: () => T): T {
+  const owner = slots[slotOwnerKey]
   if (owner === undefined) {
     return fn()
   }
@@ -215,16 +198,16 @@ function withSlotOwner<T>(slots: RawSlots, fn: () => T): T {
 }
 
 function getOwnedSlot(
-  slots: RawSlots,
+  slots: OwnedRawSlots,
   key: string,
   slot: VaporSlot,
 ): VaporSlot {
-  if ((slots as OwnedRawSlots)[slotOwnerKey] === undefined) {
+  if (slots[slotOwnerKey] === undefined) {
     return slot
   }
-  let wrappers = rawSlotWrappersCache.get(slots)
+  let wrappers = slots[slotWrappersKey]
   if (!wrappers) {
-    rawSlotWrappersCache.set(slots, (wrappers = new Map()))
+    slots[slotWrappersKey] = wrappers = new Map()
   }
   const cached = wrappers.get(key)
   if (cached && cached.slot === slot) {
@@ -239,9 +222,11 @@ function getOwnedSlot(
 
 export const dynamicSlotsProxyHandlers: ProxyHandler<RawSlots> = {
   // fall back to Object.prototype so `slots.hasOwnProperty()` works like vdom
-  get: (target, key: string | symbol, receiver) =>
+  // A wrapper can hand this proxy on as another component's slots. It takes
+  // no owner: the slots it resolves already run under the target's.
+  get: (target, key: string | symbol) =>
     key === slotOwnerKey
-      ? forwardedSlotsOwners.get(receiver)
+      ? undefined
       : getSlot(target, key as string) || (Object.prototype as any)[key],
   has: (target, key: string) => !!getSlot(target, key),
   getOwnPropertyDescriptor(target, key: string) {
@@ -275,8 +260,7 @@ export const dynamicSlotsProxyHandlers: ProxyHandler<RawSlots> = {
     }
     return [...keys]
   },
-  set: (_, key, value, receiver) =>
-    key === slotOwnerKey && !!forwardedSlotsOwners.set(receiver, value),
+  set: (_, key) => key === slotOwnerKey,
   deleteProperty: NO,
 }
 
