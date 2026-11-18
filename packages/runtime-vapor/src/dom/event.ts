@@ -1,4 +1,8 @@
-import { onEffectCleanup } from '@vue/reactivity'
+import {
+  type ReactiveEffect,
+  activeSub,
+  onEffectCleanup,
+} from '@vue/reactivity'
 import { isArray } from '@vue/shared'
 import {
   ErrorCodes,
@@ -61,7 +65,12 @@ export function onBinding(
     }
   }
   const cleanup = addEventListener(el, event, createInvoker(handler), options)
-  onEffectCleanup(cleanup)
+  // a re-run replaces the listener; a stopped effect leaves it to live and
+  // die with the element, like a static one
+  const effect = activeSub as ReactiveEffect
+  onEffectCleanup(() => {
+    if (effect.active) cleanup()
+  })
 }
 
 interface Invoker {
@@ -93,19 +102,13 @@ export function setListener(
       remove: undefined,
       fired: false,
     })
-  const layer = isApplyingFallthroughProps ? 'attrs' : 'own'
-  invoker[layer] = value
+  invoker[isApplyingFallthroughProps ? 'attrs' : 'own'] = value
   if (composeHandlers(invoker).length) {
     if (!invoker.remove && !invoker.fired) attachInvoker(el, key, invoker)
   } else if (invoker.remove) {
     invoker.remove()
     invoker.remove = undefined
   }
-  // a re-run sets the layer again right away, so the native listener stays
-  onEffectCleanup(() => {
-    invoker[layer] = null
-    invoker.handlers = null
-  })
 }
 
 function composeHandlers(invoker: Invoker): EventHandler[] {
