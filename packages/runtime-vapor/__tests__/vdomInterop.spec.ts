@@ -18914,18 +18914,24 @@ describe('template ref on vapor slot content', () => {
     },
   })
   // what each mode's ref received, the vdom run first
-  const track = (record: (v: any) => any, init?: object) => {
+  const track = (
+    record: (v: any) => any,
+    // what else the data holds, which may depend on the mode it is made for
+    init?: object | ((vapor: boolean) => object),
+  ) => {
     const seen: any[][] = []
     const makeData = () => {
       const log: any[] = []
       seen.push(log)
       return ref({
         show: true,
-        ...init,
+        ...(typeof init === 'function' ? init(seen.length === 2) : init),
         onRef: (v: any) => log.push(record(v)),
       })
     }
-    return { seen, makeData }
+    // the log of the run under way
+    const current = () => seen[seen.length - 1]
+    return { seen, makeData, current }
   }
   const exposing = (name: string) =>
     defineComponent({
@@ -18934,6 +18940,13 @@ describe('template ref on vapor slot content', () => {
         return () => h('button', name)
       },
     })
+  // the same as an SFC, compiled in the mode of the run
+  const named = (name: string) => `<script setup>
+      defineExpose({ name: '${name}' })
+    </script>
+    <template>
+      <button>${name}</button>
+    </template>`
 
   test('resolves to the element the content renders', async () => {
     const { seen, makeData } = track(v =>
@@ -19004,7 +19017,7 @@ describe('template ref on vapor slot content', () => {
     '<button :key="data.show">a</button>',
     '<template v-if="data.show" #default><button>a</button></template><template v-else #default><a>b</a></template>',
   ])('updates a function ref when the root changes: %s', async content => {
-    const { seen, makeData } = track(v => v)
+    const { seen, makeData, current } = track(v => v)
     await renderParity(
       {
         App: `<template>
@@ -19014,8 +19027,8 @@ describe('template ref on vapor slot content', () => {
         </template>`,
       },
       makeData,
-      async (data, root, mode) => {
-        const log = seen[mode === 'vdom' ? 0 : 1]
+      async (data, root) => {
+        const log = current()
         const initial = root.firstElementChild
         expect(log).toEqual([initial])
         data.value.show = false
@@ -19076,7 +19089,7 @@ describe('template ref on vapor slot content', () => {
   test.each([false, true])(
     'follows an empty root and back (initially visible: %s)',
     async show => {
-      const { seen, makeData } = track(v => v, { show })
+      const { seen, makeData, current } = track(v => v, { show })
       await renderParity(
         {
           App: `<template>
@@ -19086,16 +19099,16 @@ describe('template ref on vapor slot content', () => {
           </template>`,
         },
         makeData,
-        async (data, root, mode) => {
-          const log = seen[mode === 'vdom' ? 0 : 1]
+        async (data, root) => {
+          const log = current()
           // empty: the v-if comment in vdom, the slot's anchor in vapor
-          const current = () => root.firstElementChild || root.firstChild
-          expect(log).toEqual([current()])
+          const shown = () => root.firstElementChild || root.firstChild
+          expect(log).toEqual([shown()])
           for (let i = 0; i < 2; i++) {
             log.length = 0
             data.value.show = !data.value.show
             await nextTick()
-            expect(log).toEqual([null, current()])
+            expect(log).toEqual([null, shown()])
           }
         },
         { Presence },
@@ -19107,7 +19120,7 @@ describe('template ref on vapor slot content', () => {
   )
 
   test('replaces and removes refs while the content keeps updating', async () => {
-    const { seen, makeData } = track(v => v, { n: 0 })
+    const { makeData, current } = track(v => v, { n: 0 })
     await renderParity(
       {
         App: `<template>
@@ -19117,8 +19130,8 @@ describe('template ref on vapor slot content', () => {
         </template>`,
       },
       makeData,
-      async (data, root, mode) => {
-        const log = seen[mode === 'vdom' ? 0 : 1]
+      async (data, root) => {
+        const log = current()
         const initial = root.firstElementChild
         data.value.n++
         await nextTick()
@@ -19179,7 +19192,7 @@ describe('template ref on vapor slot content', () => {
   })
 
   test('resolves a component root to what it exposes', async () => {
-    const { seen, makeData } = track(v =>
+    const { seen, makeData, current } = track(v =>
       v == null ? v : v instanceof Element ? v.tagName : v.name,
     )
     await renderParity(
@@ -19198,12 +19211,12 @@ describe('template ref on vapor slot content', () => {
         </template>`,
       },
       makeData,
-      async (data, root, mode) => {
+      async (data, root) => {
         // the component's own root is not the ref's
         data.value.inner = true
         await nextTick()
         expect(root.querySelector('button')).not.toBe(null)
-        expect(seen[mode === 'vdom' ? 0 : 1]).toEqual(['child'])
+        expect(current()).toEqual(['child'])
         data.value.show = false
         await nextTick()
       },
@@ -19248,18 +19261,11 @@ describe('template ref on vapor slot content', () => {
   ])(
     'resolves an async component root %s to the component it loads',
     async (_, own, nested) => {
-      const srcs: Record<string, string> = own
-        ? {
-            Child: `<script setup>
-              defineExpose({ name: 'child' })
-            </script>
-            <template><button>a</button></template>`,
-          }
-        : {}
+      const srcs: Record<string, string> = own ? { Child: named('child') } : {}
       srcs.App = `<script setup>
           import { defineAsyncComponent, defineVaporAsyncComponent } from 'vue'
           const data = _data; const components = _components
-          const define = data.value.vapor
+          const define = data.value.vaporAsync
             ? defineVaporAsyncComponent
             : defineAsyncComponent
           const load = () => Promise.resolve(components.Child)
@@ -19272,17 +19278,15 @@ describe('template ref on vapor slot content', () => {
             <Async />
           </components.Presence>
         </template>`
-      const { seen, makeData } = track(v => v && v.name, { nested })
+      const { seen, makeData, current } = track(
+        v => v && v.name,
+        vapor => ({ nested, vaporAsync: own && vapor }),
+      )
       await renderParity(
         srcs,
-        () => {
-          const data = makeData()
-          // the vdom run comes first
-          ;(data.value as any).vapor = own && seen.length === 2
-          return data
-        },
-        async (data, root, mode) => {
-          const log = seen[mode === 'vdom' ? 0 : 1]
+        makeData,
+        async data => {
+          const log = current()
           // nothing to resolve to while it loads
           expect(log).toEqual([])
           await new Promise(r => setTimeout(r))
@@ -19297,7 +19301,7 @@ describe('template ref on vapor slot content', () => {
   )
 
   test('resolves an async component root a Suspense waits for', async () => {
-    const { seen, makeData } = track(v => v && v.name)
+    const { makeData, current } = track(v => v && v.name)
     await renderParity(
       {
         App: `<script setup>
@@ -19318,8 +19322,8 @@ describe('template ref on vapor slot content', () => {
         </template>`,
       },
       makeData,
-      async (data, root, mode) => {
-        const log = seen[mode === 'vdom' ? 0 : 1]
+      async (data, root) => {
+        const log = current()
         expect(log).toEqual([])
         await new Promise(r => setTimeout(r))
         expect(root.textContent).toBe('child')
@@ -19335,10 +19339,6 @@ describe('template ref on vapor slot content', () => {
   ])(
     'leaves the error component of an async component root %s without the ref',
     async (_, own) => {
-      const named = (name: string) => `<script setup>
-          defineExpose({ name: '${name}' })
-        </script>
-        <template><button>${name}</button></template>`
       const srcs: Record<string, string> = own
         ? { Loading: named('loading'), Failed: named('failed') }
         : {}
@@ -19349,7 +19349,7 @@ describe('template ref on vapor slot content', () => {
             onErrorCaptured,
           } from 'vue'
           const data = _data; const components = _components
-          const define = data.value.vapor
+          const define = data.value.vaporAsync
             ? defineVaporAsyncComponent
             : defineAsyncComponent
           const Async = define({
@@ -19365,17 +19365,15 @@ describe('template ref on vapor slot content', () => {
             <Async />
           </components.Presence>
         </template>`
-      const { seen, makeData } = track(v => v && v.name)
+      const { makeData, current } = track(
+        v => v && v.name,
+        vapor => ({ vaporAsync: own && vapor }),
+      )
       await renderParity(
         srcs,
-        () => {
-          const data = makeData()
-          // the vdom run comes first
-          ;(data.value as any).vapor = own && seen.length === 2
-          return data
-        },
-        async (data, root, mode) => {
-          const log = seen[mode === 'vdom' ? 0 : 1]
+        makeData,
+        async (data, root) => {
+          const log = current()
           expect(log).toEqual(['loading'])
           await new Promise(r => setTimeout(r))
           expect(root.textContent).toBe('failed')
@@ -19387,7 +19385,7 @@ describe('template ref on vapor slot content', () => {
   )
 
   test('keeps following an async component root whose own ref changes while it loads', async () => {
-    const { seen, makeData } = track(v => v && v.name, { own: () => {} })
+    const { makeData, current } = track(v => v && v.name, { own: () => {} })
     await renderParity(
       {
         App: `<script setup>
@@ -19409,8 +19407,8 @@ describe('template ref on vapor slot content', () => {
         ;(data.value as any).loaded = loaded
         return data
       },
-      async (data, root, mode) => {
-        const log = seen[mode === 'vdom' ? 0 : 1]
+      async data => {
+        const log = current()
         const own = vi.fn()
         data.value.own = own
         await nextTick()
@@ -19429,7 +19427,7 @@ describe('template ref on vapor slot content', () => {
   ])(
     'leaves an error component showing without the ref when it is %s',
     async (_, initially) => {
-      const { seen, makeData } = track(v => v && v.name)
+      const { makeData, current } = track(v => v && v.name)
       await renderParity(
         {
           App: `<script setup>
@@ -19459,8 +19457,8 @@ describe('template ref on vapor slot content', () => {
           if (!initially) data.value.onRef = null
           return data
         },
-        async (data, root, mode) => {
-          const log = seen[mode === 'vdom' ? 0 : 1]
+        async (data, root) => {
+          const log = current()
           expect(log).toEqual(initially ? ['loading'] : [])
           data.value.onRef = null
           await nextTick()
@@ -19555,7 +19553,10 @@ describe('template ref on vapor slot content', () => {
         Pending: `<script setup>
           const data = _data
           await data.value.pending()
-        </script><template><i>ready</i></template>`,
+        </script>
+        <template>
+          <i>ready</i>
+        </template>`,
         App: `<template>
           <Suspense>
             <div>

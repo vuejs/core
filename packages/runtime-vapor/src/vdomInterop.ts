@@ -2153,8 +2153,10 @@ function createVDOMComponent(
     vnode = createVNode(comp, rawValues)
     // a `ref` in a `v-bind` object is not a template ref in Vapor, and has no
     // rendering instance to own it here; only `frag.setRef` sets one. An async
-    // wrapper gets the array from the start: what it forwards its ref to
-    // carries it, an error component does not (see `setVaporSlotRef`).
+    // wrapper's is an array from the start: what it forwards the ref to
+    // carries that array, an error component does not. `frag.setRef` replaces
+    // it, so what was rendered keeps the ref it got; the probe of a slot ref
+    // goes in and out in place (see `setVaporSlotRef`).
     vnode.ref = isAsyncWrapper(vnode) ? [] : null
   } catch (error) {
     if (inputScope) inputScope.stop()
@@ -2457,9 +2459,8 @@ function createVDOMComponent(
       instance as any,
     )
     // as in VDOM: `um` unsets it, async wrappers forward it to the inner comp
+    // (in a new array, see where the vnode is created)
     const refs = vnode.ref
-    // Next to the probe of a slot ref (see `setVaporSlotRef`), which stays. In
-    // an array of its own: what the wrapper rendered keeps the ref it got.
     vnode.ref = isArray(refs)
       ? (rawRef ? [rawRef] : []).concat(refs.filter(r => r !== oldRawRef))
       : rawRef
@@ -3995,49 +3996,55 @@ function setVaporSlotRef(
   // the chain goes through an async component: while it renders nothing the
   // ref stays unset, as in VDOM
   let asyncRoot = false
-  // A vdom async wrapper forwards its ref to the component it loads, not to
-  // an error component: a probe ref on the wrapper reports what vdom sets it
-  // to and when, a first mount under Suspense or a deferred hydration too.
+  // A probe ref in a vdom async wrapper's array (see `createVDOMComponent`)
+  // reports what vdom sets it to and when, a first mount under Suspense or a
+  // deferred hydration too.
   let probed: VNode | undefined
-  let unprobe = NOOP
+  let probe!: { i: ComponentInternalInstance; r: (value: any) => void }
+  let probing = false
   let forwarded: object | null | undefined
+  const unprobe = () => {
+    if (probed) {
+      // what the wrapper rendered may keep a copy
+      probe.r = NOOP
+      removeItem(probed.ref as (typeof probe)[], probe)
+      probed = undefined
+    }
+  }
   const probeAsyncWrapper = (wrapper: VNode) => {
+    probing = true
     if (probed === wrapper) return forwarded
     unprobe()
     probed = wrapper
     forwarded = undefined
     const ref = wrapper.ref
-    // next to a ref of its own
+    // a `<component :is="vnode">` one comes with a ref of its own
     const refs = isArray(ref) ? ref : (wrapper.ref = ref ? [ref] : [])
-    const probe = {
-      i: isArray(rawRef) ? rawRef[0].i : rawRef.i,
-      r: (value: any) => {
-        if (value !== forwarded) {
-          forwarded = value
-          queueUpdate()
-        }
-      },
-    }
-    refs.push(probe)
-    // from the array the wrapper has by then (see `frag.setRef`)
-    unprobe = () => {
-      const refs = wrapper.ref
-      if (isArray(refs)) removeItem(refs, probe)
-    }
-    // What the wrapper rendered before the probe was there and forwarded its
-    // ref to (an error component got none), re-pointed to the array so that
-    // vdom diffs it against itself on the next patch.
+    refs.push(
+      (probe = {
+        i: isArray(rawRef) ? rawRef[0].i : rawRef.i,
+        r: (value: any) => {
+          if (value !== forwarded) {
+            forwarded = value
+            queueUpdate()
+          }
+        },
+      }),
+    )
+    // What the wrapper rendered before, if it forwarded this ref to it,
+    // re-pointed to the array so that vdom diffs it against itself on the
+    // next patch.
     let inner = wrapper.component && wrapper.component.subTree
-    while (inner && inner.ref === ref && isAsyncWrapper(inner)) {
+    while (inner && inner.ref === ref && inner.component) {
       inner.ref = refs
-      inner = inner.component && inner.component.subTree
-    }
-    if (inner && inner.ref === ref && inner.component) {
-      inner.ref = refs
-      forwarded =
-        inner.shapeFlag & ShapeFlags.STATEFUL_COMPONENT
-          ? getComponentPublicInstance(inner.component)
-          : inner.el
+      if (!isAsyncWrapper(inner)) {
+        forwarded =
+          inner.shapeFlag & ShapeFlags.STATEFUL_COMPONENT
+            ? getComponentPublicInstance(inner.component)
+            : inner.el
+        break
+      }
+      inner = inner.component.subTree
     }
     return forwarded
   }
@@ -4059,19 +4066,15 @@ function setVaporSlotRef(
     clearHooks()
     const block = vnode.vb
     exposed = undefined
-    asyncRoot = false
+    asyncRoot = probing = false
     const el =
       (vnode.vs!.attrs &&
         isFragment(block) &&
         getRootElement(block.nodes, visitor)) ||
       exposed ||
       (asyncRoot ? null : vnode.el)
-    if (!asyncRoot && probed) {
-      // the root moved off the wrapper
-      unprobe()
-      unprobe = NOOP
-      probed = undefined
-    }
+    // the root moved off the wrapper
+    if (!probing) unprobe()
     if (el !== target.el) {
       // a replaced root is the old one's unmount
       unset()
@@ -4112,8 +4115,7 @@ function setVaporSlotRef(
     onComponent: comp => {
       if (__DEV__) track((comp.hmrRootHooks ||= []))
       if (isPendingInteropSetup(comp)) track((comp.bm ||= []))
-      // a functional component's ref is its root element, an async wrapper's
-      // the component it renders
+      // a functional component's ref is its root element
       if (isAsyncComponentEnabled && isAsyncWrapper(comp)) {
         asyncRoot = true
         const block = comp.block
