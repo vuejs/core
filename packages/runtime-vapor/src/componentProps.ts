@@ -212,12 +212,24 @@ export function stabilizeDynamicSourceValue<T>(
   return oldValue
 }
 
+/**
+ * What the props and attrs proxies of an instance wrap. Not the instance
+ * itself: a proxy checks every enumeration against all the own keys of its
+ * target.
+ */
+export interface PropsProxyTarget {
+  i: VaporComponentInstance
+}
+
+export type PropsProxyHandlers = [
+  props: ProxyHandler<PropsProxyTarget> | null,
+  attrs: ProxyHandler<PropsProxyTarget>,
+  readAttrs: (instance: VaporComponentInstance) => Record<string, any>,
+]
+
 export function getPropsProxyHandlers(
   comp: VaporComponent,
-): [
-  ProxyHandler<VaporComponentInstance> | null,
-  ProxyHandler<VaporComponentInstance>,
-] {
+): PropsProxyHandlers {
   if (comp.__propsHandlers) {
     return comp.__propsHandlers
   }
@@ -240,11 +252,12 @@ export function getPropsProxyHandlers(
       : (key: string | symbol) => isString(key) && !isReservedProp(key)
   ) as (key: string | symbol) => key is string
 
-  const getProp = (instance: VaporComponentInstance, key: string | symbol) => {
+  const getProp = (target: PropsProxyTarget, key: string | symbol) => {
     // Keep direct props watchers shallow, as in VDOM.
     if (key === ReactiveFlags.IS_REACTIVE || key === ReactiveFlags.IS_SHALLOW)
       return true
     if (isProp(key)) {
+      const instance = target.i
       trackPropsValue(instance, key)
       return instance.propsValues[key]
     }
@@ -266,7 +279,7 @@ export function getPropsProxyHandlers(
             }
           }
         },
-      } satisfies ProxyHandler<VaporComponentInstance>)
+      } satisfies ProxyHandler<PropsProxyTarget>)
     : null
 
   if (__DEV__ && propsOptions) {
@@ -276,16 +289,18 @@ export function getPropsProxyHandlers(
     })
   }
 
-  const getAttr = (instance: VaporComponentInstance, key: string | symbol) => {
+  const getAttr = (target: PropsProxyTarget, key: string | symbol) => {
     if (isAttr(key)) {
+      const instance = target.i
       trackPropsValue(instance, key)
       if (hasOwn(instance.propsValues, key)) return instance.propsValues[key]
     }
     // fall back to Object.prototype so `attrs.hasOwnProperty()` works like vdom
     return (Object.prototype as any)[key]
   }
-  const hasAttr = (instance: VaporComponentInstance, key: string | symbol) => {
+  const hasAttr = (target: PropsProxyTarget, key: string | symbol) => {
     if (!isAttr(key)) return false
+    const instance = target.i
     trackPropsValue(instance, key)
     return hasOwn(instance.propsValues, key)
   }
@@ -293,8 +308,9 @@ export function getPropsProxyHandlers(
     get: getAttr,
     has: hasAttr,
     ownKeys(target) {
-      trackPropsValue(target, ATTR_KEYS)
-      return Object.keys(target.propsValues).filter(isAttr)
+      const instance = target.i
+      trackPropsValue(instance, ATTR_KEYS)
+      return Object.keys(instance.propsValues).filter(isAttr)
     },
     getOwnPropertyDescriptor(target, key: string | symbol) {
       if (hasAttr(target, key)) {
@@ -305,7 +321,7 @@ export function getPropsProxyHandlers(
         }
       }
     },
-  } satisfies ProxyHandler<VaporComponentInstance>
+  } satisfies ProxyHandler<PropsProxyTarget>
 
   if (__DEV__) {
     Object.assign(attrsHandlers, {
@@ -314,7 +330,23 @@ export function getPropsProxyHandlers(
     })
   }
 
-  return (comp.__propsHandlers = [propsHandlers, attrsHandlers])
+  // The attrs as a plain object, for the fallthrough to enumerate: through
+  // the proxy every key costs a trap or two.
+  const readAttrs = (instance: VaporComponentInstance) => {
+    trackPropsValue(instance, ATTR_KEYS)
+    const values = instance.propsValues
+    let attrs: Record<string, any> | undefined
+    for (const key in values) {
+      if (isAttr(key)) {
+        trackPropsValue(instance, key)
+        ;(attrs || (attrs = Object.create(null) as Record<string, any>))[key] =
+          values[key]
+      }
+    }
+    return attrs || EMPTY_OBJ
+  }
+
+  return (comp.__propsHandlers = [propsHandlers, attrsHandlers, readAttrs])
 }
 
 export function getAttrFromRawProps(rawProps: RawProps, key: string): unknown {
