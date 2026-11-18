@@ -2324,7 +2324,7 @@ describe('Vapor Mode hydration', () => {
       )
       expect(container.innerHTML).toBe(
         `<div><!--[--><!--[--><!--[--><b>a</b><!--]--><!--]-->` +
-          `<!--[--><!--]--><!--slot--><!--]--><p>after</p></div>`,
+          `<!--[--><!--for--><!--]--><!--]--><p>after</p></div>`,
       )
 
       data.value.list[1].tags.push('b')
@@ -2368,6 +2368,78 @@ describe('Vapor Mode hydration', () => {
       data.items[0] = 1
       await nextTick()
       expect(texts()).toEqual([row(1), row(2), row(3)])
+    })
+
+    test.each([
+      [
+        'a list and a v-if',
+        `<li v-for="i in data.list">{{ i }}</li>
+        <li v-if="data.more">more</li>`,
+        '1more',
+      ],
+      [
+        'a v-if and a list',
+        `<li v-if="data.more">more</li>
+        <li v-for="i in data.list">{{ i }}</li>`,
+        'more1',
+      ],
+      [
+        'two lists',
+        `<li v-for="i in data.list">{{ i }}</li>
+        <li v-for="i in data.list">{{ i }}</li>`,
+        '11',
+      ],
+    ])('slot content of empty blocks: %s', async (_, content, text) => {
+      const data = ref({ list: [] as number[], more: false })
+      const { container } = await testHydration(
+        `<template>
+          <components.List>
+            ${content}
+          </components.List>
+          <p>after</p>
+        </template>`,
+        { List: `<template><ul><slot/></ul></template>` },
+        data,
+      )
+      const ul = container.querySelector('ul')!
+      const p = container.querySelector('p')!
+      expect(ul.textContent).toBe('')
+      expect(p.parentNode).toBe(container)
+
+      data.value.list = [1]
+      data.value.more = true
+      await nextTick()
+      expect(ul.textContent).toBe(text)
+      expect(container.querySelector('p')).toBe(p)
+
+      data.value.list = []
+      data.value.more = false
+      await nextTick()
+      expect(ul.textContent).toBe('')
+      expect(container.textContent).toBe('after')
+    })
+
+    test('slot content of empty blocks a space apart', async () => {
+      const data = ref({ list: [] as number[] })
+      const { container } = await testHydration(
+        `<template>
+          <components.Child>
+            <i v-for="i in data.list">{{ i }}</i> <b v-for="i in data.list">{{ i }}</b>
+          </components.Child>
+          <p>after</p>
+        </template>`,
+        { Child: `<template><div><slot/></div></template>` },
+        data,
+      )
+      const div = container.querySelector('div')!
+      const p = container.querySelector('p')!
+      expect(div.innerHTML).toBe(`<!--[--><!--for--> <!--for--><!--]-->`)
+      expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+
+      data.value.list = [1]
+      await nextTick()
+      expect(div.textContent).toBe('1 1')
+      expect(container.querySelector('p')).toBe(p)
     })
   })
 })

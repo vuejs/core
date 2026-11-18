@@ -60,9 +60,12 @@ export function locateSlotEndAnchor(): Node | null {
 }
 
 /** Locates the boundary's SSR range and consumes its opening marker. */
-export function withHydratingSlotBoundary<R>(fn: () => R): R {
-  const claim = createFragmentClaim()
-  locateHydrationNode(claim)
+export function withHydratingSlotBoundary<R>(
+  fn: () => R,
+  // of a caller that located the range itself
+  claim?: FragmentClaim,
+): R {
+  if (!claim) locateHydrationNode((claim = createFragmentClaim()))
   // An empty range: content adopting its close as an anchor moves the cursor
   // past it, so the close cannot be read off the cursor afterwards.
   const node = currentHydrationNode
@@ -477,6 +480,46 @@ export function hydrateDynamicFragmentAnchor(
   isEmpty = false,
 ): void {
   executeAnchorPlan(frag, resolveDynamicAnchor(frag, isEmpty))
+}
+
+/**
+ * The hydrating half of an outlet that renders through a plain
+ * DynamicFragment. `<!--[--><!--]-->` is the server rendering nothing, also
+ * for content of several empty blocks: hydrated against the close, the first
+ * to take it for an anchor would leave the rest outside the range.
+ */
+export function hydrateSlotContent(
+  frag: DynamicFragment,
+  render: BlockFn | undefined,
+  key: any,
+): void {
+  const claim = createFragmentClaim()
+  locateHydrationNode(claim)
+  const open = claim.start
+  const close = currentHydrationNode
+  const update = () => frag.update(render, key)
+  if (open && open.data === '[' && close && isComment(close, ']')) {
+    // as on the client, inside the range
+    frag.anchor = claimAnchor(close)
+    runWithoutHydration(update)
+    for (
+      let node = open.nextSibling!;
+      node !== close;
+      node = node.nextSibling!
+    ) {
+      // more than the anchors and blank text the server leaves out
+      if (
+        node.nodeType === 1 ||
+        (node.nodeType === 3 && (node as Text).data.trim())
+      ) {
+        warnHydrationNodeMismatch(open, `slot content`)
+        break
+      }
+    }
+    advanceHydrationNode(close)
+  } else {
+    withHydratingSlotBoundary(update, claim)
+  }
 }
 
 /**

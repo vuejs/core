@@ -1328,10 +1328,10 @@ describe('Vapor Mode hydration', () => {
         data,
       )
       const ul = container.querySelector('ul')!
-      expect(ul.innerHTML).toBe(`<!--[--><!--]--><!--slot-->`)
+      expect(ul.innerHTML).toBe(`<!--[--><!--for--><!--]-->`)
       data.value.items.push(3)
       await nextTick()
-      expect(ul.innerHTML).toBe(`<!--[--><li>3</li><!--]--><!--slot-->`)
+      expect(ul.innerHTML).toBe(`<!--[--><li>3</li><!--for--><!--]-->`)
       expect(`Hydration children mismatch`).not.toHaveBeenWarned()
       expect(
         `Hydration completed but contains mismatches.`,
