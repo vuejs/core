@@ -668,7 +668,7 @@ export {
 /**
  * @internal
  */
-export { getComponentName } from './component'
+export { getComponentName, getComponentPublicInstance } from './component'
 /**
  * @internal
  */

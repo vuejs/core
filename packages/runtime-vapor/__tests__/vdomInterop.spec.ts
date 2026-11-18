@@ -18904,6 +18904,897 @@ describe('vdom slot content asks the vapor outlet to refresh', () => {
   })
 })
 
+describe('template ref on vapor slot content', () => {
+  // Reka UI `Presence`: renders the first slot vnode with a ref, the element
+  // it reads the animation state from
+  const Presence = defineComponent({
+    props: ['onRef'],
+    setup(props, { slots }) {
+      return () => h(slots.default!()[0], { ref: props.onRef })
+    },
+  })
+  // what each mode's ref received, the vdom run first
+  const track = (
+    record: (v: any) => any,
+    // what else the data holds, which may depend on the mode it is made for
+    init?: object | ((vapor: boolean) => object),
+  ) => {
+    const seen: any[][] = []
+    const makeData = () => {
+      const log: any[] = []
+      seen.push(log)
+      return ref({
+        show: true,
+        ...(typeof init === 'function' ? init(seen.length === 2) : init),
+        onRef: (v: any) => log.push(record(v)),
+      })
+    }
+    // the log of the run under way
+    const current = () => seen[seen.length - 1]
+    return { seen, makeData, current }
+  }
+  const exposing = (name: string) =>
+    defineComponent({
+      setup(_, { expose }) {
+        expose({ name })
+        return () => h('button', name)
+      },
+    })
+  // the same as an SFC, compiled in the mode of the run
+  const named = (name: string) => `<script setup>
+      defineExpose({ name: '${name}' })
+    </script>
+    <template>
+      <button>${name}</button>
+    </template>`
+
+  test('resolves to the element the content renders', async () => {
+    const { seen, makeData } = track(v =>
+      v == null ? v : v instanceof Element ? v.tagName : typeof v,
+    )
+    await renderParity(
+      {
+        App: `<template>
+          <components.Presence v-if="data.show" :on-ref="data.onRef">
+            <button>x</button>
+          </components.Presence>
+        </template>`,
+      },
+      makeData,
+      async data => {
+        data.value.show = false
+        await nextTick()
+      },
+      { Presence },
+    )
+    expect(seen[0]).toEqual(['BUTTON', null])
+    expect(seen[1]).toEqual(seen[0])
+  })
+
+  test.each([
+    // a vapor Mid forwards its slot into the content
+    `<components.Mid :on-ref="data.onRef">
+      <button>x</button>
+    </components.Mid>`,
+    `<components.Outlet :on-ref="data.onRef">
+      <button>x</button>
+    </components.Outlet>`,
+  ])(
+    'stays on the fragment of a forwarded slot or a slot outlet: %s',
+    async app => {
+      const Outlet = defineComponent({
+        props: ['onRef'],
+        setup(props, { slots }) {
+          return () => h(renderSlot(slots, 'default'), { ref: props.onRef })
+        },
+      })
+      const { seen, makeData } = track(v => v && v.nodeName)
+      await renderParity(
+        {
+          Mid: `<script setup>
+          const components = _components
+          defineProps(['onRef'])
+        </script>
+        <template>
+          <components.Presence :on-ref="onRef">
+            <slot />
+          </components.Presence>
+        </template>`,
+          App: `<template>${app}</template>`,
+        },
+        makeData,
+        () => {},
+        { Presence, Outlet },
+      )
+      expect(seen[0]).toEqual(['#text', null])
+      expect(seen[1]).toEqual(seen[0])
+    },
+  )
+
+  test.each([
+    '<button v-if="data.show">a</button><a v-else>b</a>',
+    "<component :is=\"data.show ? 'button' : 'a'\">a</component>",
+    '<button :key="data.show">a</button>',
+    '<template v-if="data.show" #default><button>a</button></template><template v-else #default><a>b</a></template>',
+  ])('updates a function ref when the root changes: %s', async content => {
+    const { seen, makeData, current } = track(v => v)
+    await renderParity(
+      {
+        App: `<template>
+          <components.Presence :on-ref="data.onRef">
+            ${content}
+          </components.Presence>
+        </template>`,
+      },
+      makeData,
+      async (data, root) => {
+        const log = current()
+        const initial = root.firstElementChild
+        expect(log).toEqual([initial])
+        data.value.show = false
+        await nextTick()
+        const updated = root.firstElementChild
+        expect(updated).not.toBe(initial)
+        expect(log[log.length - 1]).toBe(updated)
+        expect(log).toEqual([initial, null, updated])
+      },
+      { Presence },
+    )
+    for (const log of seen) {
+      expect(log[log.length - 1]).toBe(null)
+    }
+  })
+
+  test.each(['object', 'string', 'ref_for'])(
+    'updates and clears a %s ref when the root changes',
+    async kind => {
+      let read!: () => any
+      const wrap = (v: any) => (kind === 'ref_for' ? [v] : v)
+      const Consumer = defineComponent({
+        setup(_, { slots }) {
+          const target = shallowRef()
+          const instance = getCurrentInstance()!
+          read = () => (kind === 'string' ? instance.refs.target : target.value)
+          return () =>
+            h(slots.default!()[0], {
+              ref: kind === 'string' ? 'target' : target,
+              ref_for: kind === 'ref_for',
+            })
+        },
+      })
+      await renderParity(
+        {
+          App: `<template>
+            <components.Consumer v-if="data.mounted">
+              <button v-if="data.show">a</button><a v-else>b</a>
+            </components.Consumer>
+          </template>`,
+        },
+        () => ref({ show: true, mounted: true }),
+        async (data, root) => {
+          await nextTick()
+          expect(read()).toEqual(wrap(root.firstElementChild))
+          data.value.show = false
+          await nextTick()
+          expect(read()).toEqual(wrap(root.firstElementChild))
+          data.value.mounted = false
+          await nextTick()
+          expect(read()).toEqual(kind === 'ref_for' ? [] : null)
+        },
+        { Consumer },
+      )
+    },
+  )
+
+  test.each([false, true])(
+    'follows an empty root and back (initially visible: %s)',
+    async show => {
+      const { seen, makeData, current } = track(v => v, { show })
+      await renderParity(
+        {
+          App: `<template>
+            <components.Presence :on-ref="data.onRef">
+              <button v-if="data.show">a</button>
+            </components.Presence>
+          </template>`,
+        },
+        makeData,
+        async (data, root) => {
+          const log = current()
+          // empty: the v-if comment in vdom, the slot's anchor in vapor
+          const shown = () => root.firstElementChild || root.firstChild
+          expect(log).toEqual([shown()])
+          for (let i = 0; i < 2; i++) {
+            log.length = 0
+            data.value.show = !data.value.show
+            await nextTick()
+            expect(log).toEqual([null, shown()])
+          }
+        },
+        { Presence },
+      )
+      for (const log of seen) {
+        expect(log[log.length - 1]).toBe(null)
+      }
+    },
+  )
+
+  test('replaces and removes refs while the content keeps updating', async () => {
+    const { makeData, current } = track(v => v, { n: 0 })
+    await renderParity(
+      {
+        App: `<template>
+          <components.Presence :on-ref="data.onRef">
+            <button v-if="data.show">{{ data.n }}</button><a v-else>b</a>
+          </components.Presence>
+        </template>`,
+      },
+      makeData,
+      async (data, root) => {
+        const log = current()
+        const initial = root.firstElementChild
+        data.value.n++
+        await nextTick()
+        expect(log).toEqual([initial, initial])
+
+        const replacement = vi.fn()
+        data.value.onRef = replacement
+        data.value.show = false
+        await nextTick()
+        expect(log[log.length - 1]).toBe(null)
+        expect(replacement).toHaveBeenLastCalledWith(root.firstElementChild, {})
+
+        data.value.onRef = null
+        data.value.show = true
+        await nextTick()
+        expect(replacement).toHaveBeenLastCalledWith(null, {})
+        const calls = replacement.mock.calls.length
+        data.value.show = false
+        await nextTick()
+        expect(replacement).toHaveBeenCalledTimes(calls)
+
+        data.value.onRef = replacement
+        await nextTick()
+        expect(replacement).toHaveBeenLastCalledWith(root.firstElementChild, {})
+      },
+      { Presence },
+    )
+  })
+
+  test('removes only the replaced target from a shared ref_for array', async () => {
+    const targets = shallowRef<Element[]>([])
+    const Consumer = defineComponent({
+      setup(_, { slots }) {
+        return () => h(slots.default!()[0], { ref: targets, ref_for: true })
+      },
+    })
+    await renderParity(
+      {
+        App: `<template>
+          <components.Consumer>
+            <button v-if="data.show">a</button><a v-else>b</a>
+          </components.Consumer>
+          <components.Consumer><i>c</i></components.Consumer>
+        </template>`,
+      },
+      () => ref({ show: true }),
+      async (data, root) => {
+        await nextTick()
+        const sibling = root.querySelector('i')!
+        expect(targets.value).toEqual([root.querySelector('button'), sibling])
+        data.value.show = false
+        await nextTick()
+        expect(targets.value).toEqual([sibling, root.querySelector('a')])
+      },
+      { Consumer },
+    )
+    expect(targets.value).toEqual([])
+  })
+
+  test('resolves a component root to what it exposes', async () => {
+    const { seen, makeData, current } = track(v =>
+      v == null ? v : v instanceof Element ? v.tagName : v.name,
+    )
+    await renderParity(
+      {
+        Child: `<script setup>
+          const data = _data
+          defineExpose({ name: 'child' })
+        </script>
+        <template>
+          <button v-if="data.inner">a</button><a v-else>b</a>
+        </template>`,
+        App: `<template>
+          <components.Presence :on-ref="data.onRef">
+            <components.Child v-if="data.show" /><i v-else>c</i>
+          </components.Presence>
+        </template>`,
+      },
+      makeData,
+      async (data, root) => {
+        // the component's own root is not the ref's
+        data.value.inner = true
+        await nextTick()
+        expect(root.querySelector('button')).not.toBe(null)
+        expect(current()).toEqual(['child'])
+        data.value.show = false
+        await nextTick()
+      },
+      { Presence },
+    )
+    expect(seen[0]).toEqual(['child', null, 'I', null])
+    expect(seen[1]).toEqual(seen[0])
+  })
+
+  test('resolves a vdom component root to its instance', async () => {
+    const Inner = defineComponent({
+      props: ['n'],
+      setup(props) {
+        return () => h('button', props.n)
+      },
+    })
+    const { seen, makeData } = track(v => v && v.$el && v.$el.tagName)
+    await renderParity(
+      {
+        App: `<template>
+          <components.Presence :on-ref="data.onRef">
+            <components.Inner :n="data.n" />
+          </components.Presence>
+        </template>`,
+      },
+      makeData,
+      async data => {
+        data.value.n = 1
+        await nextTick()
+      },
+      { Presence, Inner },
+    )
+    expect(seen[0]).toEqual(['BUTTON', 'BUTTON', null])
+    expect(seen[1]).toEqual(seen[0])
+  })
+
+  test.each([
+    ['of its own mode', true, false],
+    // `defineAsyncComponent` in a vapor App as well
+    ['in vdom', false, false],
+    ['in vdom that loads another one', false, true],
+  ])(
+    'resolves an async component root %s to the component it loads',
+    async (_, own, nested) => {
+      const srcs: Record<string, string> = own ? { Child: named('child') } : {}
+      srcs.App = `<script setup>
+          import { defineAsyncComponent, defineVaporAsyncComponent } from 'vue'
+          const data = _data; const components = _components
+          const define = data.value.vaporAsync
+            ? defineVaporAsyncComponent
+            : defineAsyncComponent
+          const load = () => Promise.resolve(components.Child)
+          const Async = define(
+            data.value.nested ? () => Promise.resolve(define(load)) : load,
+          )
+        </script>
+        <template>
+          <components.Presence :on-ref="data.onRef">
+            <Async />
+          </components.Presence>
+        </template>`
+      const { seen, makeData, current } = track(
+        v => v && v.name,
+        vapor => ({ nested, vaporAsync: own && vapor }),
+      )
+      await renderParity(
+        srcs,
+        makeData,
+        async data => {
+          const log = current()
+          // nothing to resolve to while it loads
+          expect(log).toEqual([])
+          await new Promise(r => setTimeout(r))
+          expect(log).toEqual(['child'])
+        },
+        { Presence, Child: exposing('child') },
+      )
+      for (const log of seen) {
+        expect(log[log.length - 1]).toBe(null)
+      }
+    },
+  )
+
+  test('resolves an async component root a Suspense waits for', async () => {
+    const { makeData, current } = track(v => v && v.name)
+    await renderParity(
+      {
+        App: `<script setup>
+          import { defineAsyncComponent } from 'vue'
+          const data = _data; const components = _components
+          const Async = defineAsyncComponent(
+            () => Promise.resolve(components.Child),
+          )
+        </script>
+        <template>
+          <Suspense>
+            <div>
+              <components.Presence :on-ref="data.onRef">
+                <Async />
+              </components.Presence>
+            </div>
+          </Suspense>
+        </template>`,
+      },
+      makeData,
+      async (data, root) => {
+        const log = current()
+        expect(log).toEqual([])
+        await new Promise(r => setTimeout(r))
+        expect(root.textContent).toBe('child')
+        expect(log).toEqual(['child'])
+      },
+      { Presence, Child: exposing('child') },
+    )
+  })
+
+  test.each([
+    ['of its own mode', true],
+    ['in vdom', false],
+  ])(
+    'leaves the error component of an async component root %s without the ref',
+    async (_, own) => {
+      const srcs: Record<string, string> = own
+        ? { Loading: named('loading'), Failed: named('failed') }
+        : {}
+      srcs.App = `<script setup>
+          import {
+            defineAsyncComponent,
+            defineVaporAsyncComponent,
+            onErrorCaptured,
+          } from 'vue'
+          const data = _data; const components = _components
+          const define = data.value.vaporAsync
+            ? defineVaporAsyncComponent
+            : defineAsyncComponent
+          const Async = define({
+            loader: () => Promise.reject(new Error('failed')),
+            loadingComponent: components.Loading,
+            errorComponent: components.Failed,
+            delay: 0,
+          })
+          onErrorCaptured(() => false)
+        </script>
+        <template>
+          <components.Presence :on-ref="data.onRef">
+            <Async />
+          </components.Presence>
+        </template>`
+      const { makeData, current } = track(
+        v => v && v.name,
+        vapor => ({ vaporAsync: own && vapor }),
+      )
+      await renderParity(
+        srcs,
+        makeData,
+        async (data, root) => {
+          const log = current()
+          expect(log).toEqual(['loading'])
+          await new Promise(r => setTimeout(r))
+          expect(root.textContent).toBe('failed')
+          expect(log).toEqual(['loading', null])
+        },
+        { Presence, Loading: exposing('loading'), Failed: exposing('failed') },
+      )
+    },
+  )
+
+  test('keeps following an async component root whose own ref changes while it loads', async () => {
+    const { makeData, current } = track(v => v && v.name, { own: () => {} })
+    await renderParity(
+      {
+        App: `<script setup>
+          import { defineAsyncComponent } from 'vue'
+          const data = _data; const components = _components
+          const Async = defineAsyncComponent(() => data.value.load())
+        </script>
+        <template>
+          <components.Presence :on-ref="data.onRef">
+            <Async :ref="data.own" />
+          </components.Presence>
+        </template>`,
+      },
+      () => {
+        const data = makeData()
+        let loaded!: (comp: any) => void
+        const loading = new Promise(r => (loaded = r))
+        ;(data.value as any).load = () => loading
+        ;(data.value as any).loaded = loaded
+        return data
+      },
+      async data => {
+        const log = current()
+        const own = vi.fn()
+        data.value.own = own
+        await nextTick()
+        data.value.loaded(exposing('child'))
+        await new Promise(r => setTimeout(r))
+        expect(own.mock.lastCall![0].name).toBe('child')
+        expect(log).toEqual(['child'])
+      },
+      { Presence },
+    )
+  })
+
+  test.each([
+    ['added back', true],
+    ['first added', false],
+  ])(
+    'leaves an error component showing without the ref when it is %s',
+    async (_, initially) => {
+      const { makeData, current } = track(v => v && v.name)
+      await renderParity(
+        {
+          App: `<script setup>
+            import { defineAsyncComponent, onErrorCaptured } from 'vue'
+            const data = _data; const components = _components
+            const Async = defineAsyncComponent({
+              loader: () => data.value.load(),
+              loadingComponent: components.Loading,
+              errorComponent: components.Failed,
+              delay: 0,
+            })
+            onErrorCaptured(() => false)
+          </script>
+          <template>
+            <components.Presence :on-ref="data.onRef">
+              <Async />
+            </components.Presence>
+          </template>`,
+        },
+        () => {
+          const data = makeData() as any
+          let fail!: (err: Error) => void
+          const loading = new Promise((_, reject) => (fail = reject))
+          data.value.load = () => loading
+          data.value.fail = fail
+          data.value.ref = data.value.onRef
+          if (!initially) data.value.onRef = null
+          return data
+        },
+        async (data, root) => {
+          const log = current()
+          expect(log).toEqual(initially ? ['loading'] : [])
+          data.value.onRef = null
+          await nextTick()
+          data.value.fail(new Error('failed'))
+          await new Promise(r => setTimeout(r))
+          expect(root.textContent).toBe('failed')
+          const calls = log.length
+          data.value.onRef = data.value.ref
+          await nextTick()
+          expect(log.length).toBe(calls)
+        },
+        { Presence, Loading: exposing('loading'), Failed: exposing('failed') },
+      )
+    },
+  )
+
+  test('sets an inline function ref again on each owner render', async () => {
+    const logs: any[][] = []
+    let rerender!: () => void
+    const Consumer = defineComponent({
+      setup(_, { slots }) {
+        const n = ref(0)
+        rerender = () => n.value++
+        const log: any[] = []
+        logs.push(log)
+        return () => {
+          n.value
+          return h(slots.default!()[0], {
+            ref: (v: any) => log.push(v && v.tagName),
+          })
+        }
+      },
+    })
+    await renderParity(
+      {
+        App: `<template>
+          <components.Consumer>
+            <button>a</button>
+          </components.Consumer>
+        </template>`,
+      },
+      () => ref({}),
+      async () => {
+        rerender()
+        await nextTick()
+      },
+      { Consumer },
+    )
+    expect(logs[0]).toEqual(['BUTTON', 'BUTTON', null])
+    expect(logs[1]).toEqual(logs[0])
+  })
+
+  test('updates merged refs and clears them on unmount', async () => {
+    const targets = shallowRef<Element[]>([])
+    const onRef = vi.fn()
+    const Consumer = defineComponent({
+      setup(_, { slots }) {
+        return () =>
+          cloneVNode(
+            h(slots.default!()[0], { ref: targets, ref_for: true }),
+            { ref: onRef },
+            true,
+          )
+      },
+    })
+    await renderParity(
+      {
+        App: `<template>
+          <components.Consumer>
+            <button v-if="data.show">a</button><a v-else>b</a>
+          </components.Consumer>
+        </template>`,
+      },
+      () => ref({ show: true }),
+      async (data, root) => {
+        await nextTick()
+        expect(targets.value).toEqual([root.firstElementChild])
+        data.value.show = false
+        await nextTick()
+        expect(targets.value).toEqual([root.firstElementChild])
+        expect(onRef).toHaveBeenLastCalledWith(root.firstElementChild, {})
+      },
+      { Consumer },
+    )
+    expect(targets.value).toEqual([])
+    expect(onRef).toHaveBeenLastCalledWith(null, {})
+  })
+
+  test('updates function refs while a suspense branch is pending', async () => {
+    await renderParity(
+      {
+        Pending: `<script setup>
+          const data = _data
+          await data.value.pending()
+        </script>
+        <template>
+          <i>ready</i>
+        </template>`,
+        App: `<template>
+          <Suspense>
+            <div>
+              <components.Presence :on-ref="data.onRef">
+                <button v-if="data.show">a</button><a v-else>b</a>
+              </components.Presence>
+              <components.Pending />
+            </div>
+          </Suspense>
+        </template>`,
+      },
+      () => {
+        let resolve!: () => void
+        const pending = new Promise<void>(r => (resolve = r))
+        return ref({
+          show: true,
+          pending: () => pending,
+          resolve,
+          onRef: vi.fn(),
+        })
+      },
+      async data => {
+        expect(data.value.onRef.mock.lastCall[0].tagName).toBe('BUTTON')
+        data.value.show = false
+        await nextTick()
+        expect(data.value.onRef.mock.lastCall[0].tagName).toBe('A')
+        data.value.resolve()
+        await new Promise(r => setTimeout(r))
+      },
+      { Presence },
+    )
+  })
+})
+
+describe('vdom child root replaced without a parent update', () => {
+  test('re-resolve vapor custom directive', async () => {
+    const teardown = vi.fn()
+    const dir: VaporDirective = vi.fn(() => teardown)
+    const ok = ref(true)
+    const Inner = defineComponent({
+      setup() {
+        return () => (ok.value ? h('div') : h('span'))
+      },
+    })
+    const VDomChild = defineComponent({
+      setup() {
+        return () => h(Inner)
+      },
+    })
+    const App = compile(
+      `<template><components.VDomChild v-custom /></template>`,
+      ref(null),
+      { VDomChild },
+    )
+    App.directives = { custom: dir }
+
+    const { host } = define(App as any).render()
+    expect(dir).toHaveBeenCalledOnce()
+
+    ok.value = false
+    await nextTick()
+    expect(host.innerHTML).toBe('<span></span>')
+    expect(teardown).toHaveBeenCalledOnce()
+    expect(dir).toHaveBeenCalledTimes(2)
+    expect(dir).toHaveBeenLastCalledWith(
+      host.firstElementChild,
+      undefined,
+      undefined,
+      undefined,
+    )
+  })
+
+  test('v-for inserts before a resolved async root', async () => {
+    let resolve!: (comp: any) => void
+    const AsyncChild = defineAsyncComponent(
+      () => new Promise<any>(r => (resolve = r)),
+    )
+    const VDomChild = defineComponent({
+      props: ['id'],
+      setup(props) {
+        return () => h(AsyncChild, { id: props.id })
+      },
+    })
+    const data = ref({ list: ['b', 'a'] })
+    const App = compile(
+      `<template>
+        <components.VDomChild v-for="id in data.list" :key="id" :id="id" />
+      </template>`,
+      data,
+      { VDomChild },
+    )
+
+    const { host } = define(App as any).render()
+    resolve(
+      defineComponent({
+        props: ['id'],
+        setup(props) {
+          return () => h('div', props.id)
+        },
+      }),
+    )
+    await new Promise(r => setTimeout(r))
+    expect(host.innerHTML).toBe('<div>b</div><div>a</div><!--for-->')
+
+    data.value.list = ['c', 'b', 'a']
+    await nextTick()
+    expect(host.innerHTML).toBe(
+      '<div>c</div><div>b</div><div>a</div><!--for-->',
+    )
+  })
+
+  test('v-for moves and inserts around a resolved Suspense root', async () => {
+    const resolvers: (() => void)[] = []
+    const AsyncChild = defineComponent({
+      props: ['id'],
+      async setup(props) {
+        await new Promise<void>(r => resolvers.push(r))
+        return () => h('div', props.id)
+      },
+    })
+    const VDomChild = defineComponent({
+      props: ['id'],
+      setup(props) {
+        return () =>
+          h(Suspense, null, {
+            default: () => h(AsyncChild, { id: props.id }),
+            fallback: () => h('span', props.id),
+          })
+      },
+    })
+    const data = ref({ list: ['a', 'b'] })
+    const App = compile(
+      `<template>
+        <components.VDomChild v-for="id in data.list" :key="id" :id="id" />
+      </template>`,
+      data,
+      { VDomChild },
+    )
+
+    const { host } = define(App as any).render()
+    resolvers.forEach(r => r())
+    await new Promise(r => setTimeout(r))
+    expect(host.innerHTML).toBe('<div>a</div><div>b</div><!--for-->')
+
+    data.value.list = ['b', 'x', 'a']
+    await nextTick()
+    expect(host.innerHTML).toBe(
+      '<div>b</div><span>x</span><div>a</div><!--for-->',
+    )
+  })
+
+  test('v-for inserts while a Suspense root is pending again', async () => {
+    const ok = ref(true)
+    const pending = reactive(new Set<string>())
+    const Never = defineComponent({
+      async setup() {
+        await new Promise(() => {})
+        return () => h('i')
+      },
+    })
+    const Inner = defineComponent({
+      props: ['id'],
+      setup(props) {
+        return () => (ok.value ? h('div', props.id) : h('p', props.id))
+      },
+    })
+    const VDomChild = defineComponent({
+      props: ['id'],
+      setup(props) {
+        return () =>
+          h(Suspense, null, {
+            default: () =>
+              pending.has(props.id) ? h(Never) : h(Inner, { id: props.id }),
+          })
+      },
+    })
+    const data = ref({ list: ['a', 'b'] })
+    const App = compile(
+      `<template>
+        <components.VDomChild v-for="id in data.list" :key="id" :id="id" />
+      </template>`,
+      data,
+      { VDomChild },
+    )
+    const { host } = define(App as any).render()
+    expect(host.innerHTML).toBe('<div>a</div><div>b</div><!--for-->')
+    pending.add('b')
+    await nextTick()
+    expect(host.innerHTML).toBe('<div>a</div><div>b</div><!--for-->')
+    ok.value = false
+    await nextTick()
+    expect(host.innerHTML).toBe('<p>a</p><p>b</p><!--for-->')
+    data.value.list = ['a', 'x', 'b']
+    await nextTick()
+    expect(host.innerHTML).toBe('<p>a</p><p>x</p><p>b</p><!--for-->')
+  })
+})
+
+describe('vdom slot of a vnode made outside a render function', () => {
+  test.each([
+    ['<slot />', true],
+    ['<slot />', false],
+    ['<div><slot /></div>', true],
+    ['<div><slot /></div>', false],
+  ])('sets a ref in the content of %s (__DEV__: %s)', (template, dev) => {
+    const Comp = compile(`<template>${template}</template>`, ref())
+    const el = ref<HTMLElement | null>(null)
+    const vnode = h(Comp, null, {
+      default: () => h('span', { ref: el }, 'slot'),
+    })
+    __DEV__ = dev
+    try {
+      const { host } = define({ render: () => vnode }).render()
+      expect(el.value).toBeInstanceOf(HTMLSpanElement)
+      expect(el.value).toBe(host.querySelector('span'))
+    } finally {
+      __DEV__ = true
+    }
+  })
+
+  test('gives the content to the component that renders the outlet', () => {
+    const Child = defineComponent({
+      setup(_, { slots }) {
+        return () => h('section', slots.default!())
+      },
+    })
+    const Comp = compile(
+      `<template><components.Child><slot /></components.Child></template>`,
+      ref(),
+      { Child },
+    )
+    const vnode = h(Comp, null, { default: () => h('span', { ref: 'el' }) })
+    const { host } = define({ render: () => vnode }).render()
+    expect(vnode.component!.refs.el).toBeInstanceOf(HTMLSpanElement)
+    expect(vnode.component!.refs.el).toBe(host.querySelector('span'))
+  })
+})
+
 // vdom places a sibling entering before the next vnode's `el`, and a keyed
 // row moving before it: a vapor component vnode whose root is not a single
 // element starts on a node of its own, like a vdom Fragment.

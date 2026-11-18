@@ -124,6 +124,15 @@ export class TeleportFragment extends RenderContextFragment {
     this.anchor = isHydrating
       ? undefined
       : resolveFragmentAnchor(adoptAnchor, 'teleport end')
+    // created here rather than in insert(): a template ref on a teleport is
+    // read right after createComponent returns, which is before insert() runs
+    // for a teleport at the root of a template. When hydrating, hydrate()
+    // adopts the server-rendered placeholder instead.
+    if (!isHydrating) {
+      this.placeholder = __DEV__
+        ? createComment('teleport start')
+        : createTextNode()
+    }
 
     const propsProxy = new Proxy(
       props,

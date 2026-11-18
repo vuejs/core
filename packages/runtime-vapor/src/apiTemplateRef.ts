@@ -476,7 +476,9 @@ const getRefValue = (el: RefEl) => {
     }
     return getExposed(el)
   } else if (isTeleportEnabled && isTeleportFragment(el)) {
-    return null
+    // as vdom: the start placeholder in the main view, i.e. the teleport
+    // vnode's `el` - not the fragment, which is an implementation detail
+    return el.placeholder || null
   } else if (isDynamicFragment(el)) {
     if (isArray(el.nodes)) return null
     return getRefValue(el.nodes as RefEl)

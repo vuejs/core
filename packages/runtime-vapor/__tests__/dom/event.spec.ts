@@ -49,9 +49,6 @@ describe('dom event', () => {
     })
     el.click()
     expect(handler).toHaveBeenCalledTimes(1)
-    scope.stop()
-    el.click()
-    expect(handler).toHaveBeenCalledTimes(1)
   })
 
   test('onBinding cleans previous listener on update', async () => {
@@ -80,10 +77,6 @@ describe('dom event', () => {
     el.click()
     expect(clickHandler).toHaveBeenCalledTimes(1)
 
-    el.dispatchEvent(new MouseEvent('mouseup'))
-    expect(mouseupHandler).toHaveBeenCalledTimes(1)
-
-    scope.stop()
     el.dispatchEvent(new MouseEvent('mouseup'))
     expect(mouseupHandler).toHaveBeenCalledTimes(1)
   })
@@ -203,11 +196,8 @@ describe('dom event', () => {
         return el
       },
     })
-    const { host, app } = define(Comp).render()
+    const { host } = define(Comp).render()
     const el = host.children[0] as HTMLElement
-    el.click()
-    expect(handler).toHaveBeenCalledTimes(1)
-    app.unmount()
     el.click()
     expect(handler).toHaveBeenCalledTimes(1)
   })
@@ -225,11 +215,6 @@ describe('dom event', () => {
       })
     })
 
-    el.click()
-    expect(handler1).toHaveBeenCalledTimes(1)
-    expect(handler2).toHaveBeenCalledTimes(1)
-
-    scope.stop()
     el.click()
     expect(handler1).toHaveBeenCalledTimes(1)
     expect(handler2).toHaveBeenCalledTimes(1)
@@ -252,27 +237,7 @@ describe('dom event', () => {
     scope.stop()
   })
 
-  test('on with effect cleanup removes wrapped invoker', () => {
-    const handler = vi.fn()
-    const Comp = defineVaporComponent({
-      setup() {
-        const el = template('<div></div>', 1)() as HTMLElement
-        renderEffect(() => {
-          onBinding(el, 'click', handler)
-        })
-        return el
-      },
-    })
-    const { host, app } = define(Comp).render()
-    const el = host.children[0] as HTMLElement
-    el.click()
-    expect(handler).toHaveBeenCalledTimes(1)
-    app.unmount()
-    el.click()
-    expect(handler).toHaveBeenCalledTimes(1)
-  })
-
-  test('on with array handler cleans up every wrapped invoker', () => {
+  test('onBinding with array handler', () => {
     const handler1 = vi.fn()
     const handler2 = vi.fn()
     const Comp = defineVaporComponent({
@@ -284,12 +249,8 @@ describe('dom event', () => {
         return el
       },
     })
-    const { host, app } = define(Comp).render()
+    const { host } = define(Comp).render()
     const el = host.children[0] as HTMLElement
-    el.click()
-    expect(handler1).toHaveBeenCalledTimes(1)
-    expect(handler2).toHaveBeenCalledTimes(1)
-    app.unmount()
     el.click()
     expect(handler1).toHaveBeenCalledTimes(1)
     expect(handler2).toHaveBeenCalledTimes(1)
@@ -311,7 +272,7 @@ describe('dom event', () => {
         return el
       },
     })
-    const { host, app } = define(Comp).render()
+    const { host } = define(Comp).render()
     const el = host.children[0] as HTMLElement
 
     el.click()
@@ -327,10 +288,6 @@ describe('dom event', () => {
     await nextTick()
     el.click()
     expect(handler2).toHaveBeenCalledTimes(1)
-    el.dispatchEvent(new MouseEvent('mouseup'))
-    expect(handler2).toHaveBeenCalledTimes(2)
-
-    app.unmount()
     el.dispatchEvent(new MouseEvent('mouseup'))
     expect(handler2).toHaveBeenCalledTimes(2)
   })
@@ -793,6 +750,144 @@ describe('dom event', () => {
           )
         },
       )
+    })
+  })
+
+  // #16286
+  describe('keeps dynamic listeners on removed elements like vdom', () => {
+    test.each<{
+      name: string
+      srcs: Record<string, string>
+      act: (data: any) => void
+    }>([
+      {
+        name: 'fallthrough listeners on a v-if root',
+        srcs: {
+          Child: `
+            <template>
+              <div v-if="data.open">
+                <button />
+              </div>
+            </template>
+          `,
+          App: `
+            <template>
+              <components.Child
+                @keydown="data.handler"
+                @focusout="data.handler"
+              />
+            </template>
+          `,
+        },
+        act: data => (data.open = false),
+      },
+      {
+        name: 'v-bind object listeners',
+        srcs: {
+          App: `
+            <template>
+              <div
+                v-if="data.open"
+                v-bind="{ onKeydown: data.handler, onFocusout: data.handler }"
+              >
+                <button />
+              </div>
+            </template>
+          `,
+        },
+        act: data => (data.open = false),
+      },
+      {
+        name: 'a dynamic event name',
+        srcs: {
+          App: `
+            <template>
+              <div
+                v-if="data.open"
+                @[data.event]="data.handler"
+                @focusout="data.handler"
+              >
+                <button />
+              </div>
+            </template>
+          `,
+        },
+        act: data => (data.open = false),
+      },
+      {
+        name: 'a v-for removed with its parent branch',
+        srcs: {
+          App: `
+            <template>
+              <section v-if="data.open">
+                <div
+                  v-for="id in data.ids"
+                  :key="id"
+                  v-bind="{ onKeydown: data.handler, onFocusout: data.handler }"
+                >
+                  <button />
+                </div>
+              </section>
+            </template>
+          `,
+        },
+        act: data => (data.open = false),
+      },
+      {
+        name: 'a replaced slot fallback',
+        srcs: {
+          Child: `
+            <template>
+              <section>
+                <slot>
+                  <div
+                    v-bind="{ onKeydown: data.handler, onFocusout: data.handler }"
+                  >
+                    <button />
+                  </div>
+                </slot>
+              </section>
+            </template>
+          `,
+          App: `
+            <template>
+              <components.Child>
+                <p v-if="data.filled" />
+              </components.Child>
+            </template>
+          `,
+        },
+        act: data => (data.filled = true),
+      },
+    ])('$name', async ({ srcs, act }) => {
+      const logs: Record<string, string[]> = {}
+      await renderParity(
+        srcs,
+        () => {
+          const log: string[] = []
+          return ref({
+            open: true,
+            filled: false,
+            event: 'keydown',
+            ids: [1, 2],
+            handler: (e: Event) => log.push(e.type),
+            log,
+          })
+        },
+        async (data, root, mode) => {
+          const button = root.querySelector('button')!
+          act(data.value)
+          await nextTick()
+          expect(root.querySelector('button')).toBeNull()
+          // the removal's focusout, then the event that was already
+          // propagating when a capturing listener removed the element
+          button.dispatchEvent(new FocusEvent('focusout', { bubbles: true }))
+          button.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true }))
+          logs[mode] = data.value.log
+        },
+      )
+      expect(logs.vdom).toEqual(['focusout', 'keydown'])
+      expect(logs.vapor).toEqual(logs.vdom)
     })
   })
 })

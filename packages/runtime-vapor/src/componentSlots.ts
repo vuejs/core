@@ -94,17 +94,13 @@ export type DynamicSlot = { name: string; fn: VaporSlot; key?: unknown }
 export type DynamicSlotFn = () => DynamicSlot | DynamicSlot[]
 export type DynamicSlotSource = StaticSlots | DynamicSlotFn
 
-const rawSlotsOwnerMap = new WeakMap<RawSlots, VaporComponentInstance | null>()
-const rawSlotWrappersCache = new WeakMap<
-  RawSlots,
-  Map<
-    string,
-    {
-      slot: VaporSlot
-      wrapped: VaporSlot
-    }
-  >
->()
+// Kept on the slots object itself: a symbol key is never a slot name.
+const slotOwnerKey: unique symbol = Symbol(__DEV__ ? 'Slot owner' : '')
+const slotWrappersKey: unique symbol = Symbol(__DEV__ ? 'Slot wrappers' : '')
+type OwnedRawSlots = RawSlots & {
+  [slotOwnerKey]?: VaporComponentInstance | null
+  [slotWrappersKey]?: Map<string, { slot: VaporSlot; wrapped: VaporSlot }>
+}
 
 export function normalizeRawSlots(
   rawSlots?: LooseRawSlots | null,
@@ -114,11 +110,11 @@ export function normalizeRawSlots(
   // on (an async wrapper to its inner component). It is no one's slots: an
   // owner registered for it would never be released.
   if (rawSlots === EMPTY_OBJ) return
-  const normalized = isFunction(rawSlots)
-    ? ({ default: rawSlots } as RawSlots)
-    : (rawSlots as RawSlots)
-  if (!rawSlotsOwnerMap.has(normalized)) {
-    rawSlotsOwnerMap.set(normalized, getScopeOwner())
+  const normalized = (
+    isFunction(rawSlots) ? { default: rawSlots } : rawSlots
+  ) as OwnedRawSlots
+  if (normalized[slotOwnerKey] === undefined) {
+    normalized[slotOwnerKey] = getScopeOwner()
   }
   return normalized
 }
@@ -164,8 +160,8 @@ export function isolateSlotSources(
       isolatedSources[i] = isolateSlotSource(cell)
     }
   }
+  // the copy carries the owner along
   const isolated = extend({}, rawSlots, { $: isolatedSources }) as RawSlots
-  rawSlotsOwnerMap.set(isolated, rawSlotsOwnerMap.get(rawSlots) || null)
   return [isolated, cells]
 }
 
@@ -190,11 +186,11 @@ export function initSlots(instance: VaporComponentInstance): void {
 export function getRawSlotsOwner(
   slots: RawSlots | null | undefined,
 ): VaporComponentInstance | null | undefined {
-  return slots ? rawSlotsOwnerMap.get(slots) : undefined
+  return slots ? (slots as OwnedRawSlots)[slotOwnerKey] : undefined
 }
 
-function withSlotOwner<T>(slots: RawSlots, fn: () => T): T {
-  const owner = rawSlotsOwnerMap.get(slots)
+function withSlotOwner<T>(slots: OwnedRawSlots, fn: () => T): T {
+  const owner = slots[slotOwnerKey]
   if (owner === undefined) {
     return fn()
   }
@@ -202,16 +198,16 @@ function withSlotOwner<T>(slots: RawSlots, fn: () => T): T {
 }
 
 function getOwnedSlot(
-  slots: RawSlots,
+  slots: OwnedRawSlots,
   key: string,
   slot: VaporSlot,
 ): VaporSlot {
-  if (!rawSlotsOwnerMap.has(slots)) {
+  if (slots[slotOwnerKey] === undefined) {
     return slot
   }
-  let wrappers = rawSlotWrappersCache.get(slots)
+  let wrappers = slots[slotWrappersKey]
   if (!wrappers) {
-    rawSlotWrappersCache.set(slots, (wrappers = new Map()))
+    slots[slotWrappersKey] = wrappers = new Map()
   }
   const cached = wrappers.get(key)
   if (cached && cached.slot === slot) {
@@ -226,8 +222,12 @@ function getOwnedSlot(
 
 export const dynamicSlotsProxyHandlers: ProxyHandler<RawSlots> = {
   // fall back to Object.prototype so `slots.hasOwnProperty()` works like vdom
-  get: (target, key: string) =>
-    getSlot(target, key) || (Object.prototype as any)[key],
+  // A wrapper can hand this proxy on as another component's slots. It takes
+  // no owner: the slots it resolves already run under the target's.
+  get: (target, key: string | symbol) =>
+    key === slotOwnerKey
+      ? undefined
+      : getSlot(target, key as string) || (Object.prototype as any)[key],
   has: (target, key: string) => !!getSlot(target, key),
   getOwnPropertyDescriptor(target, key: string) {
     const slot = getSlot(target, key)
@@ -260,7 +260,7 @@ export const dynamicSlotsProxyHandlers: ProxyHandler<RawSlots> = {
     }
     return [...keys]
   },
-  set: NO,
+  set: (_, key) => key === slotOwnerKey,
   deleteProperty: NO,
 }
 

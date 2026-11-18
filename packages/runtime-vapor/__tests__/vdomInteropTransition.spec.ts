@@ -1871,4 +1871,205 @@ describe('vdom directives through a Transition wrapping a vdom-fed slot', () => 
       names(logs[1].filter(entry => entry !== 'beforeUpdate I 1>1')),
     ).toEqual(names(logs[0]))
   })
+
+  test('out-in: the content is created before a fallback leaving at once is unmounted', async () => {
+    await parity(
+      wrap(`mode="out-in" :css="false"`, `<slot><i>fb</i></slot>`),
+      `v-log="data.n"`,
+      `<b v-if="data.has">b</b>`,
+      async r => {
+        await r.step('content', () => (r.data.value.has = true))
+      },
+      { has: false },
+    )
+    expect(logs[1]).toEqual([
+      'created I undefined>0',
+      'beforeMount I undefined>0',
+      'mounted I undefined>0',
+      'beforeUpdate I 0>0',
+      'beforeUnmount I 0>0',
+      'created B 0>0',
+      'beforeMount B 0>0',
+      'unmounted I 0>0',
+      'mounted B undefined>0',
+      'beforeUnmount B 0>0',
+      'unmounted B 0>0',
+    ])
+    const names = (log: string[]) =>
+      log.map(entry => entry.split(' ', 2).join(' '))
+    expect(
+      names(logs[1].filter(entry => entry !== 'beforeUpdate I 0>0')),
+    ).toEqual(names(logs[0]))
+  })
+})
+
+describe('vdom slot content inside a vapor Transition', () => {
+  // A vdom App passes `content` to a vapor Wrapper whose template is
+  // `transition` (a `<Transition>` around a `<slot/>`)
+  const parity = (
+    transition: string,
+    content: string,
+    act: (r: Run) => Promise<void>,
+  ) =>
+    compareRuns(
+      (vapor, data) =>
+        sfc(
+          false,
+          data,
+          `<components.Wrapper>${content}</components.Wrapper>`,
+          {
+            Wrapper: sfc(vapor, data, transition),
+          },
+        ),
+      act,
+    )
+
+  test('out-in enters the next branch before the left one runs afterLeave', async () => {
+    const steps = await parity(
+      wrap(`mode="out-in" ${hooks}`),
+      `<div v-if="data.show">a</div><p v-else>b</p>`,
+      async r => {
+        await r.step('swap', () => (r.data.value.show = false))
+        await r.step('leave done', () => r.done.leave())
+        await r.step('enter done', () => r.done.enter())
+      },
+    )
+    expect(steps).toEqual([
+      'mount: <div>a</div> | ',
+      'swap: <div>a</div> | beforeLeave:a leave:a',
+      'leave done: <p>b</p> | beforeEnter:b afterLeave:a enter:b',
+      'enter done: <p>b</p> | afterEnter:b',
+    ])
+  })
+
+  test('out-in enters the content before the left fallback runs afterLeave', async () => {
+    const steps = await parity(
+      wrap(`mode="out-in" ${hooks}`, '<slot><p>b</p></slot>'),
+      `<div v-if="data.show">a</div>`,
+      async r => {
+        await r.step('hide', () => (r.data.value.show = false))
+        await r.step('leave done', () => r.done.leave())
+        await r.step('enter done', () => r.done.enter())
+        await r.step('show', () => (r.data.value.show = true))
+        await r.step('leave done', () => r.done.leave())
+        await r.step('enter done', () => r.done.enter())
+      },
+    )
+    expect(steps).toEqual([
+      'mount: <div>a</div> | ',
+      'hide: <div>a</div> | beforeLeave:a leave:a',
+      'leave done: <p>b</p> | beforeEnter:b afterLeave:a enter:b',
+      'enter done: <p>b</p> | afterEnter:b',
+      'show: <p>b</p> | beforeLeave:b leave:b',
+      'leave done: <div>a</div> | beforeEnter:a afterLeave:b enter:a',
+      'enter done: <div>a</div> | afterEnter:a',
+    ])
+  })
+
+  test('out-in enters the latest branch or fallback when retargeted mid-leave', async () => {
+    const steps = await parity(
+      wrap(`mode="out-in" ${hooks}`, '<slot><i>fb</i></slot>'),
+      `<div v-if="data.show">a</div><p v-else-if="data.alt">b</p>`,
+      async r => {
+        // a -> fb (held entering) -> b -> leave done
+        await r.step('to fb', () => (r.data.value.show = false))
+        await r.step('to b mid-leave', () => (r.data.value.alt = true))
+        await r.step('leave done', () => r.done.leave())
+        await r.step('enter done', () => r.done.enter())
+        // b -> a (pendingOutIn) -> fb -> leave done
+        await r.step('to a', () => {
+          r.data.value.show = true
+          r.data.value.alt = false
+        })
+        await r.step('to fb mid-leave', () => (r.data.value.show = false))
+        await r.step('leave done', () => r.done.leave())
+        await r.step('enter done', () => r.done.enter())
+        // fb -> a -> fb mid-leave -> leave done
+        await r.step('to a from fb', () => (r.data.value.show = true))
+        await r.step('back to fb mid-leave', () => (r.data.value.show = false))
+        await r.step('leave done', () => r.done.leave())
+        await r.step('enter done', () => r.done.enter())
+      },
+    )
+    expect(steps).toEqual([
+      'mount: <div>a</div> | ',
+      'to fb: <div>a</div> | beforeLeave:a leave:a',
+      'to b mid-leave: <div>a</div> | ',
+      'leave done: <p>b</p> | beforeEnter:b afterLeave:a enter:b',
+      'enter done: <p>b</p> | afterEnter:b',
+      'to a: <p>b</p> | beforeLeave:b leave:b',
+      'to fb mid-leave: <p>b</p> | ',
+      'leave done: <i>fb</i> | beforeEnter:fb afterLeave:b enter:fb',
+      'enter done: <i>fb</i> | afterEnter:fb',
+      'to a from fb: <i>fb</i> | beforeLeave:fb leave:fb',
+      'back to fb mid-leave: <i>fb</i> | ',
+      'leave done: <i>fb</i> | beforeEnter:fb afterLeave:fb enter:fb',
+      'enter done: <i>fb</i> | afterEnter:fb',
+    ])
+  })
+
+  test('out-in state mutation inside afterLeave triggers next swap cleanly', async () => {
+    const steps = await parity(
+      wrap(`mode="out-in" ${hooks}`),
+      `<div v-if="data.show">a</div><p v-else-if="!data.alt">b</p><span v-else>c</span>`,
+      async r => {
+        const origAfterLeave = r.data.value.onAfterLeave
+        r.data.value.onAfterLeave = (el: Element) => {
+          origAfterLeave(el)
+          if (el.textContent === 'a') {
+            r.data.value.alt = true
+          }
+        }
+        await r.step('to b', () => (r.data.value.show = false))
+        await r.step('leave a done (flips to c in afterLeave)', () =>
+          r.done.leave(),
+        )
+        await r.step('leave b done', () => r.done.leave())
+        await r.step('enter c done', () => r.done.enter())
+      },
+    )
+    expect(steps).toEqual([
+      'mount: <div>a</div> | ',
+      'to b: <div>a</div> | beforeLeave:a leave:a',
+      'leave a done (flips to c in afterLeave): <p>b</p> | beforeEnter:b afterLeave:a beforeLeave:b leave:b',
+      'leave b done: <span>c</span> | beforeEnter:c afterLeave:b enter:c',
+      'enter c done: <span>c</span> | afterEnter:c',
+    ])
+  })
+
+  test('out-in KeepAlive vdom slot content enters cached branch before afterLeave', async () => {
+    const steps = await compareRuns(
+      (vapor, data) => {
+        const One = sfc(false, data, `<div>one</div>`)
+        const Two = sfc(false, data, `<p>two</p>`)
+        return sfc(
+          false,
+          data,
+          `<components.Wrapper><KeepAlive><components.One v-if="data.show"/><components.Two v-else/></KeepAlive></components.Wrapper>`,
+          {
+            Wrapper: sfc(vapor, data, wrap(`mode="out-in" ${hooks}`)),
+            One,
+            Two,
+          },
+        )
+      },
+      async r => {
+        await r.step('to two', () => (r.data.value.show = false))
+        await r.step('leave one done', () => r.done.leave())
+        await r.step('enter two done', () => r.done.enter())
+        await r.step('back to one', () => (r.data.value.show = true))
+        await r.step('leave two done', () => r.done.leave())
+        await r.step('enter one done', () => r.done.enter())
+      },
+    )
+    expect(steps).toEqual([
+      'mount: <div>one</div> | ',
+      'to two: <div>one</div> | beforeLeave:one leave:one',
+      'leave one done: <p>two</p> | beforeEnter:two afterLeave:one enter:two',
+      'enter two done: <p>two</p> | afterEnter:two',
+      'back to one: <p>two</p> | beforeLeave:two leave:two',
+      'leave two done: <div>one</div> | beforeEnter:one afterLeave:two enter:one',
+      'enter one done: <div>one</div> | afterEnter:one',
+    ])
+  })
 })

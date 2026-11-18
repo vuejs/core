@@ -42,6 +42,7 @@ import {
   ensureRenderer,
   ensureValidVNode,
   filterSingleRoot,
+  getComponentPublicInstance,
   getContainerType,
   getInheritedScopeIds,
   getTransitionRawChildren,
@@ -63,6 +64,7 @@ import {
   onScopeDispose,
   prepareTransitionLeave,
   prepareTransitionSwitch,
+  queueJob,
   queuePostFlushCb,
   queuePostRenderEffect,
   rawVaporSlotKey,
@@ -71,6 +73,7 @@ import {
   resolveTransitionHooks as resolveVNodeTransitionHooks,
   restoreCurrentInstance,
   setCurrentInstance,
+  setCurrentRenderingInstance,
   setTransitionHooks as setVNodeTransitionHooks,
   setVaporInteropEnabled,
   shallowReactive,
@@ -101,6 +104,7 @@ import {
   VaporComponentInstance,
   applyFallthroughAttrs,
   createComponent,
+  getExposed,
   getRootElement,
   isVaporComponent,
   mountComponent,
@@ -151,6 +155,7 @@ import {
   isObject,
   isReservedProp,
   isString,
+  remove as removeItem,
 } from '@vue/shared'
 import {
   type RawProps,
@@ -165,6 +170,7 @@ import {
 import type { RawSlots, SlotSourceCell, VaporSlot } from './componentSlots'
 import {
   dynamicSlotsProxyHandlers,
+  getScopeOwner,
   getSlot,
   getSlotPropsProto,
   isolateSlotSources,
@@ -200,6 +206,7 @@ import {
   type VaporFragment,
   createSlotBoundary,
   endsRootChain,
+  isDynamicFragment,
   isFragment,
   isInteropFragment,
   isSlotOutletFragment,
@@ -272,6 +279,7 @@ import {
   takeDeferredEnters,
 } from './suspense'
 import { isAsyncComponentEnabled } from './asyncComponentState'
+import { AsyncBranch, getAsyncWrapperInner } from './apiDefineAsyncComponent'
 import {
   currentRenderContext,
   deriveSlotBoundary,
@@ -1058,6 +1066,8 @@ const vaporInteropImpl = {
   },
 
   getTransitionElement: getInteropTransitionElement,
+
+  setSlotRef: setVaporSlotRef,
 
   // only vdom's TransitionGroup calls it: dead under the flag its export sets
   forEachGroupChild(vnode, cb) {
@@ -2126,8 +2136,12 @@ function createVDOMComponent(
     }
     vnode = createVNode(comp, rawValues)
     // a `ref` in a `v-bind` object is not a template ref in Vapor, and has no
-    // rendering instance to own it here; only `frag.setRef` sets one
-    vnode.ref = null
+    // rendering instance to own it here; only `frag.setRef` sets one. An async
+    // wrapper's is an array from the start: what it forwards the ref to
+    // carries that array, an error component does not. `frag.setRef` replaces
+    // it, so what was rendered keeps the ref it got; the probe of a slot ref
+    // goes in and out in place (see `setVaporSlotRef`).
+    vnode.ref = isAsyncWrapper(vnode) ? [] : null
   } catch (error) {
     if (inputScope) inputScope.stop()
     throw error
@@ -2429,7 +2443,11 @@ function createVDOMComponent(
       instance as any,
     )
     // as in VDOM: `um` unsets it, async wrappers forward it to the inner comp
-    vnode.ref = rawRef
+    // (in a new array, see where the vnode is created)
+    const refs = vnode.ref
+    vnode.ref = isArray(refs)
+      ? (rawRef ? [rawRef] : []).concat(refs.filter(r => r !== oldRawRef))
+      : rawRef
 
     if (isMounted) {
       // The first synchronous mount may have already created a loading
@@ -2444,7 +2462,7 @@ function createVDOMComponent(
         vnode.component!.subTree.component
       ) {
         target = vnode.component!.subTree
-        target.ref = rawRef
+        target.ref = vnode.ref
       }
       if (rawRef) {
         vdomSetRef(rawRef, oldRawRef || null, suspense, target)
@@ -2659,6 +2677,9 @@ function renderVDOMSlot(
   let disposed = false
   // disposed with its DOM left for the block's removal
   let isDomPending = false
+  // the content is being patched: an out-in leave ending meanwhile resumes
+  // after the patch
+  let isPatching = false
   // in-out: receives the leave of the content going invalid, which waits on
   // the Transition for the fallback to enter
   let inOutLeave: TransitionHooks | undefined
@@ -3032,9 +3053,7 @@ function renderVDOMSlot(
   }
 
   function resumeOutIn(): void {
-    // A user leave hook may finish synchronously while the renderer is still
-    // patching the placeholder. Resume after that patch.
-    queuePostFlushCb(() => {
+    const resume: SchedulerJob = () => {
       const pending = pendingOutIn
       pendingOutIn = undefined
       if (!pending || disposed || !currentParentNode) {
@@ -3070,7 +3089,18 @@ function renderVDOMSlot(
         setRendered(pendingContent || null, pending.contentValid)
         finishContentUpdate()
       }
-    })
+    }
+    // A user leave hook may finish synchronously while the renderer is still
+    // patching the placeholder: resume after that patch, in a job ahead of
+    // the post-flush hooks of the branch that left. Otherwise resume at once.
+    // Both as vdom does: the next branch enters before the afterLeave hook
+    // of the one that left.
+    if (isPatching) {
+      resume.i = parentComponent
+      queueJob(resume)
+    } else {
+      resume()
+    }
   }
 
   function render(): void {
@@ -3084,7 +3114,12 @@ function renderVDOMSlot(
   }
 
   function inContentContext(fn: () => void): void {
-    withRenderContext(contentCtx, fn)
+    isPatching = true
+    try {
+      withRenderContext(contentCtx, fn)
+    } finally {
+      isPatching = false
+    }
   }
 
   // What the Transition's child inherits as the root of a vdom component
@@ -3906,6 +3941,10 @@ interface InteropVaporSlotState {
   // the content vnode's clone attrs (see VNode.vs.attrs)
   fallthrough?: SlotFallthroughOwner
   dirs?: VaporSlotDirs
+  ref?: {
+    update(vnode: VNode, ref: VNodeNormalizedRef): void
+    stop(): void
+  }
 }
 
 function resolveInteropVaporSlotState(vnode: VNode): InteropVaporSlotState {
@@ -3931,6 +3970,189 @@ function syncInteropVaporSlotState(n1: VNode, n2: VNode): void {
     fallthrough.attrsRef.value = n2.vs!.attrs || EMPTY_OBJ
     applySlotFallthrough(fallthrough)
   }
+}
+
+function setVaporSlotRef(
+  vnode: VNode,
+  rawRef: VNodeNormalizedRef,
+  suspense: SuspenseBoundary | null,
+  isUnmount: boolean,
+): void {
+  const state = resolveInteropVaporSlotState(vnode)
+  if (isUnmount) {
+    if (state.ref) state.ref.stop()
+    return
+  }
+  if (state.ref) {
+    state.ref.update(vnode, rawRef)
+    return
+  }
+
+  // Keep the last assigned target separate from the slot's range anchors.
+  // The ordinary VDOM setter owns ref arrays, setup refs and pending jobs.
+  const target = createVNode(Fragment)
+  let assigned: VNodeNormalizedRef | undefined
+  // what the component the root chain ends at exposes: its ref, as in VDOM
+  let exposed: object | null | undefined
+  // the chain goes through an async component: while it renders nothing the
+  // ref stays unset, as in VDOM
+  let asyncRoot = false
+  // A probe ref in a vdom async wrapper's array (see `createVDOMComponent`)
+  // reports what vdom sets it to and when, a first mount under Suspense or a
+  // deferred hydration too.
+  let probed: VNode | undefined
+  let probe!: { i: ComponentInternalInstance; r: (value: any) => void }
+  let probing = false
+  let forwarded: object | null | undefined
+  const unprobe = () => {
+    if (probed) {
+      // what the wrapper rendered may keep a copy
+      probe.r = NOOP
+      removeItem(probed.ref as (typeof probe)[], probe)
+      probed = undefined
+    }
+  }
+  const probeAsyncWrapper = (wrapper: VNode) => {
+    probing = true
+    if (probed === wrapper) return forwarded
+    unprobe()
+    probed = wrapper
+    forwarded = undefined
+    const ref = wrapper.ref
+    // a `<component :is="vnode">` one comes with a ref of its own
+    const refs = isArray(ref) ? ref : (wrapper.ref = ref ? [ref] : [])
+    refs.push(
+      (probe = {
+        i: isArray(rawRef) ? rawRef[0].i : rawRef.i,
+        r: (value: any) => {
+          if (value !== forwarded) {
+            forwarded = value
+            queueUpdate()
+          }
+        },
+      }),
+    )
+    // What the wrapper rendered before, if it forwarded this ref to it,
+    // re-pointed to the array so that vdom diffs it against itself on the
+    // next patch.
+    let inner = wrapper.component && wrapper.component.subTree
+    while (inner && inner.ref === ref && inner.component) {
+      inner.ref = refs
+      if (!isAsyncWrapper(inner)) {
+        forwarded =
+          inner.shapeFlag & ShapeFlags.STATEFUL_COMPONENT
+            ? getComponentPublicInstance(inner.component)
+            : inner.el
+        break
+      }
+      inner = inner.component.subTree
+    }
+    return forwarded
+  }
+  // VDOM sets the ref again on every patch of the vnode
+  let patched = true
+  const hooks: Function[][] = []
+  const clearHooks = () => {
+    for (const list of hooks) removeItem(list, queueUpdate)
+    hooks.length = 0
+  }
+  const unset = () => {
+    if (assigned) {
+      const ref = assigned
+      assigned = undefined
+      vdomSetRef(ref, null, suspense, target, true)
+    }
+  }
+  const update: SchedulerJob = () => {
+    clearHooks()
+    const block = vnode.vb
+    exposed = undefined
+    asyncRoot = probing = false
+    const el =
+      (vnode.vs!.attrs &&
+        isFragment(block) &&
+        getRootElement(block.nodes, visitor)) ||
+      exposed ||
+      (asyncRoot ? null : vnode.el)
+    // the root moved off the wrapper
+    if (!probing) unprobe()
+    if (el !== target.el) {
+      // a replaced root is the old one's unmount
+      unset()
+      if (update.flags! & SchedulerJobFlags.DISPOSED) return
+    } else if (!patched) {
+      return
+    }
+    patched = false
+    target.el = el
+    if (!el) return
+    const oldRef = assigned
+    assigned = rawRef
+    vdomSetRef(rawRef, oldRef || null, suspense, target)
+  }
+  // The VDOM owner patches before the slot's effects. Resolve after those
+  // effects, including for function refs, and before mounted/updated hooks.
+  const queueUpdate = () => queuePostFlushCb(update, -1)
+  const track = (list: Function[]) => {
+    registerRootHook(list, queueUpdate)
+    hooks.push(list)
+  }
+  const visitor: RootChainVisitor = {
+    excludeSlotOutlets: true,
+    onDynamicFragment: frag => track((frag.u ||= [])),
+    onInteropFragment: frag => {
+      track((frag.u ||= []))
+      const content = frag.vnode
+      if (content && content.shapeFlag & ShapeFlags.STATEFUL_COMPONENT) {
+        if (isAsyncWrapper(content)) {
+          asyncRoot = true
+          exposed = probeAsyncWrapper(content)
+        } else {
+          exposed = getComponentPublicInstance(content.component!)
+        }
+        return true
+      }
+    },
+    onComponent: comp => {
+      if (__DEV__) track((comp.hmrRootHooks ||= []))
+      if (isPendingInteropSetup(comp)) track((comp.bm ||= []))
+      // a functional component's ref is its root element
+      if (isAsyncComponentEnabled && isAsyncWrapper(comp)) {
+        asyncRoot = true
+        const block = comp.block
+        // As in vdom, the ref goes to the component it loads or to the
+        // loading one, not to the error component. Until it renders, a
+        // deferred hydration holds the server's nodes.
+        if (
+          isDynamicFragment(block) &&
+          getAsyncWrapperInner(comp) === undefined &&
+          block.current !== AsyncBranch.LOADING
+        ) {
+          track((block.u ||= []))
+          return true
+        }
+      } else if (!isFunction(comp.type)) {
+        exposed = getExposed(comp)
+        return true
+      }
+    },
+  }
+  state.ref = {
+    update(next, ref) {
+      vnode = next
+      rawRef = ref
+      patched = true
+      queueUpdate()
+    },
+    stop() {
+      update.flags! |= SchedulerJobFlags.DISPOSED
+      clearHooks()
+      unprobe()
+      state.ref = undefined
+      unset()
+    },
+  }
+  update()
 }
 
 // The vdom directives of the slot's vnode (`withDirectives` on a clone of the
@@ -4317,6 +4539,9 @@ function renderVaporSlot(
 }
 
 function stopVaporSlotScope(vnode: VNode): void {
+  const state =
+    vnode.vs && (vnode.vs.state as InteropVaporSlotState | undefined)
+  if (state && state.ref) state.ref.stop()
   if (vnode.vs && vnode.vs.scope) {
     vnode.vs.scope.stop()
     vnode.vs.scope = undefined
@@ -4368,7 +4593,7 @@ function syncVNodeEl(vnode: VNode, instance: VaporComponentInstance): void {
   // as vdom does after a root update: the vdom components this one is the
   // root of share its `el`
   updateHOCHostEl(
-    { vnode, parent: instance.parent, suspense: instance.suspense } as any,
+    { vnode, parent: instance.parent, suspense: instance.suspense },
     vnode.el,
   )
 }
@@ -5298,9 +5523,24 @@ function createNormalizedInteropSlot(
   rawSlot: Function,
   ctx: ComponentInternalInstance | null | undefined,
 ): Slot {
-  const normalized = withCtx(
-    (...args: any[]) => normalizeInteropSlotValue(rawSlot(...args)),
-    ctx,
+  const normalized = (
+    ctx
+      ? withCtx(
+          (...args: any[]) => normalizeInteropSlotValue(rawSlot(...args)),
+          ctx,
+        )
+      : (...args: any[]) => {
+          // no render function owns this slot: as in vdom, the component
+          // that renders the outlet owns its content
+          const prev = setCurrentRenderingInstance(
+            getScopeOwner() as ComponentInternalInstance | null,
+          )
+          try {
+            return normalizeInteropSlotValue(rawSlot(...args))
+          } finally {
+            setCurrentRenderingInstance(prev)
+          }
+        }
   ) as Slot
   ;(normalized as any)._c = false
   return normalized

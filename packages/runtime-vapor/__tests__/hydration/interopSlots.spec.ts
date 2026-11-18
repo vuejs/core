@@ -4,6 +4,7 @@ import { setIsHydratingEnabled } from '../../src/dom/hydration'
 import {
   formatHtml,
   setupHydrationTest,
+  testHydration,
   testWithVDOMApp,
   testWithVaporApp,
 } from './_helpers'
@@ -3061,4 +3062,123 @@ describe('VDOM interop', () => {
     expect(container.querySelector('#a')!.textContent).toBe('1')
     expect(container.querySelector('div > b')!.textContent).toBe('1')
   })
+
+  test('keeps a ref on hydrated vapor slot content in sync with its root', async () => {
+    const data = ref({ show: true, onRef: vi.fn() })
+    const Presence = {
+      props: ['onRef'],
+      setup(props: any, { slots }: any) {
+        return () => h(slots.default()[0], { ref: props.onRef })
+      },
+    }
+    const code = `<script setup>
+        const data = _data; const components = _components
+      </script>
+      <template>
+        <components.Presence :on-ref="data.onRef">
+          <button v-if="data.show">a</button><a v-else>b</a>
+        </components.Presence>
+      </template>`
+    const server = compile(code, data, { Presence }, { vapor: true, ssr: true })
+    const client = compile(code, data, { Presence }, { vapor: true })
+    const root = document.createElement('div')
+    root.innerHTML = await VueServerRenderer.renderToString(
+      runtimeDom.createSSRApp(server),
+    )
+    const button = root.querySelector('button')!
+    const app = runtimeVapor.createVaporSSRApp(client)
+    app.use(runtimeVapor.vaporInteropPlugin).mount(root)
+    expect(root.querySelector('button')).toBe(button)
+    expect(data.value.onRef.mock.calls.map(([el]) => el)).toEqual([button])
+    data.value.show = false
+    await nextTick()
+    const link = root.querySelector('a')!
+    expect(data.value.onRef.mock.calls.map(([el]) => el)).toEqual([
+      button,
+      null,
+      link,
+    ])
+    app.unmount()
+    expect(data.value.onRef).toHaveBeenLastCalledWith(null, {})
+    expect('Hydration node mismatch').not.toHaveBeenWarned()
+    expect('Hydration children mismatch').not.toHaveBeenWarned()
+  })
+
+  test.each([
+    // the control
+    ['in a vdom app', false, false],
+    ['a vdom one', true, false],
+    ['a vapor one', true, true],
+  ])(
+    'sets a ref on an async component root once it has hydrated: %s',
+    async (_, isVaporApp, vaporAsync) => {
+      const log: any[] = []
+      let load!: () => void
+      const data = ref({
+        vaporAsync,
+        loading: new Promise<void>(r => (load = r)),
+        onRef: (v: any) => log.push(v && v.name),
+      })
+      const { container } = await testHydration(
+        `<script setup>
+          import { defineAsyncComponent, defineVaporAsyncComponent } from 'vue'
+          const data = _data; const components = _components
+          const define = data.value.vaporAsync
+            ? defineVaporAsyncComponent
+            : defineAsyncComponent
+          const Async = define(
+            () => data.value.loading.then(() => components.Child),
+          )
+        </script>
+        <template>
+          <components.Presence :on-ref="data.onRef">
+            <Async />
+          </components.Presence>
+        </template>`,
+        {
+          Presence: {
+            code: `<script>
+              import { h } from 'vue'
+              export default {
+                props: ['onRef'],
+                setup(props, { slots }) {
+                  return () => h(slots.default()[0], { ref: props.onRef })
+                },
+              }
+            </script>`,
+            vapor: false,
+          },
+          Child: {
+            code: `<script setup>
+              defineExpose({ name: 'child' })
+            </script>
+            <template>
+              <button>ready</button>
+            </template>`,
+            vapor: vaporAsync,
+          },
+        },
+        data,
+        {
+          isVaporApp,
+          interop: true,
+          // as the `vue` server entry: `defineAsyncComponent` either way
+          serverData: ref({
+            vaporAsync: false,
+            loading: Promise.resolve(),
+            onRef: () => {},
+          }),
+        },
+      )
+      const button = container.querySelector('button')!
+      // the server's button is not what the ref resolves to
+      expect(log).toEqual([])
+      load()
+      await new Promise(r => setTimeout(r))
+      expect(container.querySelector('button')).toBe(button)
+      expect(log).toEqual(['child'])
+      expect('Hydration node mismatch').not.toHaveBeenWarned()
+      expect('Hydration children mismatch').not.toHaveBeenWarned()
+    },
+  )
 })
