@@ -1728,17 +1728,15 @@ describe('api: defineAsyncComponent', () => {
         await timeout()
       })
 
-      // #16309: the wrapper handles the error again as a render error
       expect(onError.mock.calls.map(([, , info]) => info)).toEqual([
         'setup function',
-        'render function',
       ])
       expect(
         'Unhandled error during execution of setup function',
       ).toHaveBeenWarnedTimes(1)
       expect(
         'Unhandled error during execution of render function',
-      ).toHaveBeenWarnedTimes(1)
+      ).not.toHaveBeenWarned()
       expect(
         'Unhandled error during execution of async component loader',
       ).not.toHaveBeenWarned()
