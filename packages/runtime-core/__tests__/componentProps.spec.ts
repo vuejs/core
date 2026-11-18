@@ -7,12 +7,14 @@ import {
   type FunctionalComponent,
   type SetupContext,
   createApp,
+  createBlock,
   defineComponent,
   getCurrentInstance,
   h,
   inject,
   nextTick,
   nodeOps,
+  openBlock,
   provide,
   ref,
   render,
@@ -21,6 +23,13 @@ import {
   watch,
 } from '@vue/runtime-test'
 import { render as domRender } from 'vue'
+import { CompilerDeprecationTypes } from '@vue/compiler-core'
+import { PatchFlags } from '@vue/shared'
+import {
+  DeprecationTypes,
+  configureCompat,
+  deprecationData,
+} from '../src/compat/compatConfig'
 
 describe('component props', () => {
   test('stateful', () => {
@@ -907,5 +916,184 @@ describe('component props', () => {
     foo.value++
     await nextTick()
     expect(props).not.toHaveProperty('onEvent')
+  })
+
+  test('compat on* listeners should not leak into $props on PROPS fast path update (#16202)', async () => {
+    // tests run in MODE 3 by default; the leak only happens in compat MODE 2
+    // where INSTANCE_LISTENERS keeps on* keys out of attrs on mount
+    configureCompat({ MODE: 2 })
+    try {
+      let childProps: any
+      let childInstance: any
+      const calls: any[][] = []
+      const handler1 = (...args: any[]) => {
+        calls.push(['first', ...args])
+      }
+      const handler2 = (...args: any[]) => {
+        calls.push(['second', ...args])
+      }
+      const onChange = ref(handler1)
+      const options = ref([1])
+
+      const Child = defineComponent({
+        props: { options: Array },
+        mounted(this: any) {
+          childProps = this.$props
+          childInstance = this
+        },
+        template: `<div>{{ options }}</div>`,
+      })
+
+      const Comp = defineComponent({
+        setup() {
+          return { options, onChange }
+        },
+        components: { Child },
+        template: `<Child :options="options" @change="onChange" />`,
+      })
+
+      const root = document.createElement('div')
+      domRender(h(Comp), root)
+      expect(childProps.onChange).toBeUndefined()
+      expect(childInstance.$listeners.change).toBe(handler1)
+      expect(
+        deprecationData[DeprecationTypes.INSTANCE_LISTENERS].message,
+      ).toHaveBeenWarned()
+
+      onChange.value = handler2
+      options.value = [2]
+      await nextTick()
+      expect(childProps.onChange).toBeUndefined()
+      // $listeners is a getter that builds a new object from the current
+      // vnode props on every access, so re-read it after the update instead
+      // of relying on an object captured in mounted()
+      expect(childInstance.$listeners.change).toBe(handler2)
+      childInstance.$emit('change', 'payload')
+      expect(calls).toEqual([['second', 'payload']])
+    } finally {
+      configureCompat({ MODE: 3 })
+    }
+  })
+
+  test('compat Native listeners should not leak into $props on PROPS fast path update (#16202)', async () => {
+    // .native compiles to onChangeNative in compat MODE 2 (the runtime
+    // compat config is passed into the compiler), and setFullProps strips
+    // the Native postfix into $attrs on mount. The PROPS fast path must
+    // do the same on update instead of leaking it into $props.
+    configureCompat({ MODE: 2 })
+    try {
+      let childProps: any
+      let childAttrs: any
+      const calls: string[] = []
+      const handler1 = () => {
+        calls.push('first')
+      }
+      const handler2 = () => {
+        calls.push('second')
+      }
+      const onChange = ref(handler1)
+      const options = ref([1])
+
+      const Child = defineComponent({
+        props: { options: Array },
+        mounted(this: any) {
+          childProps = this.$props
+          childAttrs = this.$attrs
+        },
+        template: `<div>{{ options }}</div>`,
+      })
+
+      const Comp = defineComponent({
+        setup() {
+          return { options, onChange }
+        },
+        components: { Child },
+        template: `<Child :options="options" @change.native="onChange" />`,
+      })
+
+      const root = document.createElement('div')
+      domRender(h(Comp), root)
+      expect(CompilerDeprecationTypes.COMPILER_V_ON_NATIVE).toHaveBeenWarned()
+      expect(childProps.onChange).toBeUndefined()
+      expect(childProps.onChangeNative).toBeUndefined()
+      expect(childAttrs.onChange).toBe(handler1)
+
+      onChange.value = handler2
+      options.value = [2]
+      await nextTick()
+      expect(childProps.onChange).toBeUndefined()
+      expect(childProps.onChangeNative).toBeUndefined()
+      expect(childAttrs.onChange).toBe(handler2)
+      expect(childAttrs).not.toHaveProperty('onChangeNative')
+      // the normalized listener falls through to the child root element,
+      // so the corresponding DOM event must invoke the replacement handler
+      const childRoot = root.firstChild as Element
+      childRoot.dispatchEvent(new Event('change'))
+      expect(calls).toEqual(['second'])
+    } finally {
+      configureCompat({ MODE: 3 })
+    }
+  })
+
+  test('compat Native listeners with undefined value should still enter $attrs on PROPS fast path update (#16202)', async () => {
+    // Follow-up to #16202: the PROPS fast path Native branch checked only
+    // `value !== attrs[key]`, so a Native listener that was absent at mount
+    // and arrives with an `undefined` value on update was never written to
+    // $attrs — unlike setFullProps on mount, which writes it whenever the
+    // key is absent (`!(key in attrs) || value !== attrs[key]`). A legacy
+    // render function can omit an undefined native listener at mount (e.g.
+    // a conditional nativeOn object) and introduce it on update.
+    configureCompat({ MODE: 2 })
+    try {
+      let childProps: any
+      let childAttrs: any
+      const options = ref([1])
+      const hasNative = ref(false)
+
+      const Child = defineComponent({
+        props: { options: Array },
+        setup(props, { attrs }) {
+          childProps = props
+          childAttrs = attrs
+          return () => h('div')
+        },
+      })
+
+      const Comp = defineComponent({
+        setup() {
+          return () => (
+            openBlock(),
+            createBlock(
+              Child,
+              {
+                options: options.value,
+                ...(hasNative.value ? { onChangeNative: undefined } : {}),
+              },
+              null,
+              PatchFlags.PROPS,
+              ['options', 'onChangeNative'],
+            )
+          )
+        },
+      })
+
+      const root = nodeOps.createElement('div')
+      render(h(Comp), root)
+      expect(childProps.onChange).toBeUndefined()
+      expect(childProps.onChangeNative).toBeUndefined()
+      expect('onChange' in childAttrs).toBe(false)
+
+      options.value = [2]
+      hasNative.value = true
+      await nextTick()
+      expect(childProps.onChange).toBeUndefined()
+      expect(childProps.onChangeNative).toBeUndefined()
+      // mount semantics (setFullProps) record the key in $attrs even when
+      // the value is undefined; the fast path must do the same
+      expect('onChange' in childAttrs).toBe(true)
+      expect(childAttrs.onChange).toBeUndefined()
+    } finally {
+      configureCompat({ MODE: 3 })
+    }
   })
 })
