@@ -79,6 +79,33 @@ export function callWithErrorHandling(
   }
 }
 
+const NO_ERROR = {}
+// the value that `logError` threw again after the error was handled
+let rethrownError: unknown = NO_ERROR
+
+/**
+ * Wraps the setup and render of a vapor component. These also create child
+ * components and run other wrapped calls (hooks, watchers). An error that one
+ * of those handled and threw again passes on as is, so it is handled once, as
+ * in vdom, where a child mounts outside of the render of its parent.
+ * @internal
+ */
+export function callWithErrorHandlingOnce(
+  fn: Function,
+  instance: GenericComponentInstance,
+  type: ErrorTypes,
+  args?: unknown[],
+): any {
+  // a later throw of the same value is a new error
+  rethrownError = NO_ERROR
+  try {
+    return args ? fn(...args) : fn()
+  } catch (err) {
+    if (err === rethrownError) throw err
+    handleError(err, instance, type)
+  }
+}
+
 export function callWithAsyncErrorHandling(
   fn: Function | Function[],
   instance: GenericComponentInstance | null,
@@ -177,12 +204,12 @@ function logError(
     }
     // crash in dev by default so it's more noticeable
     if (throwInDev) {
-      throw err
+      throw (rethrownError = err)
     } else if (!__TEST__) {
       console.error(err)
     }
   } else if (throwInProd) {
-    throw err
+    throw (rethrownError = err)
   } else {
     // recover in prod to reduce the impact on end-user
     console.error(err)

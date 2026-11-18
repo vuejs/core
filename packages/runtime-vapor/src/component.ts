@@ -25,6 +25,7 @@ import {
   type VNode,
   callWithAsyncErrorHandling,
   callWithErrorHandling,
+  callWithErrorHandlingOnce,
   currentInstance,
   devtoolsComponentAdded,
   devtoolsComponentRemoved,
@@ -796,10 +797,12 @@ export function setupComponent(
             ErrorCodes.SETUP_FUNCTION,
             [instance.props, instance],
           )
-        : callWithErrorHandling(setupFn, instance, ErrorCodes.SETUP_FUNCTION, [
-            instance.props,
+        : callWithErrorHandlingOnce(
+            setupFn,
             instance,
-          ])) || EMPTY_OBJ
+            ErrorCodes.SETUP_FUNCTION,
+            [instance.props, instance],
+          )) || EMPTY_OBJ
     : // a template-only component reads `<style module>` names off its
       // render context, like the vdom render proxy does
       (component as VaporComponentOptions).__cssModules || EMPTY_OBJ
@@ -953,7 +956,12 @@ function callRender(
         ErrorCodes.RENDER_FUNCTION,
         args,
       )
-    : callWithErrorHandling(render, instance, ErrorCodes.RENDER_FUNCTION, args)
+    : callWithErrorHandlingOnce(
+        render,
+        instance,
+        ErrorCodes.RENDER_FUNCTION,
+        args,
+      )
 }
 
 /**
@@ -982,7 +990,7 @@ function devRender(instance: VaporComponentInstance): void {
     instance.block =
       (instance.type.render
         ? callRender(instance.type.render, instance, instance.setupState!)
-        : callWithErrorHandling(
+        : callWithErrorHandlingOnce(
             isFunction(instance.type) ? instance.type : instance.type.setup!,
             instance,
             ErrorCodes.SETUP_FUNCTION,
@@ -2122,7 +2130,7 @@ function handleSetupResult(
             instance,
             ErrorCodes.RENDER_FUNCTION,
           )
-        : callWithErrorHandling(
+        : callWithErrorHandlingOnce(
             setupResult,
             instance,
             ErrorCodes.RENDER_FUNCTION,
