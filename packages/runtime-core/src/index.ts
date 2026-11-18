@@ -756,6 +756,7 @@ export {
   filterSingleRoot,
   filterModelListeners,
   shouldUpdateComponent,
+  updateHOCHostEl,
 } from './componentRenderUtils'
 
 /**

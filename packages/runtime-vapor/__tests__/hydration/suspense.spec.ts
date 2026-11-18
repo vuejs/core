@@ -713,15 +713,16 @@ describe('Vapor Mode hydration', () => {
         })
 
         test.each([
-          ['single root', '<span>async</span>', ['<span>async</span>']],
+          ['single root', '<span>async</span>', ['<span>async</span>'], false],
           [
             'multi-root range',
             '<span>async</span><b>range</b>',
             ['<!--{-->', '<span>async</span>', '<b>range</b>', '<!--}-->'],
+            true,
           ],
         ] as const)(
           'moves pending hydrated async setup before resolving (%s)',
-          async (_, childTemplate, expectedPendingNodes) => {
+          async (_, childTemplate, expectedPendingNodes, keepsStart) => {
             let resolveClient!: () => void
             const childData = ref({ wait: Promise.resolve() })
             const items = ref(['sync', 'async'])
@@ -789,11 +790,14 @@ describe('Vapor Mode hydration', () => {
             const childNodes = container.querySelector('div')!.childNodes
             const pendingNodes = normalizeBlock(instance.pendingBlock!)
             const syncNode = childNodes[0]
+            // the root is unknown until setup resolves
+            const startAnchor = childNodes[1]
             const selfAnchor =
               pendingNodes[pendingNodes.length - 1].nextSibling!
             expect(formatNodeList(pendingNodes)).toEqual(expectedPendingNodes)
             expect(formatNodeList(childNodes)).toEqual([
               '<i>sync</i>',
+              'text("")',
               ...expectedPendingNodes,
               'text("")',
             ])
@@ -810,6 +814,7 @@ describe('Vapor Mode hydration', () => {
                 pendingNodes,
               )
               expect(Array.from(childNodes)).toEqual([
+                startAnchor,
                 ...pendingNodes,
                 selfAnchor,
                 syncNode,
@@ -819,7 +824,9 @@ describe('Vapor Mode hydration', () => {
               await new Promise(resolve => setTimeout(resolve))
               expect(instance.pendingBlock).toBeUndefined()
               expect(instance.block).not.toBeNull()
+              // a single root element replaces the start node
               expect(Array.from(childNodes)).toEqual([
+                ...(keepsStart ? [startAnchor] : []),
                 ...pendingNodes,
                 selfAnchor,
                 syncNode,

@@ -502,7 +502,11 @@ function hasPropValueChanged(
 }
 
 export function updateHOCHostEl(
-  { vnode, parent, suspense }: ComponentInternalInstance,
+  {
+    vnode,
+    parent,
+    suspense,
+  }: Pick<ComponentInternalInstance, 'vnode' | 'parent' | 'suspense'>,
   el: typeof vnode.el, // HostNode
 ): void {
   while (parent && !parent.vapor) {
