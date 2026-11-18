@@ -1490,7 +1490,7 @@ export interface Events {
 type EventHandlers<E> = {
   [K in keyof E]?: E[K] extends (...args: any) => any
     ? E[K]
-    : (payload: E[K]) => void
+    : (payload: E[K]) => void | Promise<unknown>
 }
 
 import type { VNodeRef } from '@vue/runtime-core'
