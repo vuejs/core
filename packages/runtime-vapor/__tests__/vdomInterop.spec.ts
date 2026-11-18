@@ -19423,52 +19423,59 @@ describe('template ref on vapor slot content', () => {
     )
   })
 
-  test('leaves an error component showing when the ref is added back without it', async () => {
-    const { seen, makeData } = track(v => v && v.name)
-    await renderParity(
-      {
-        App: `<script setup>
-          import { defineAsyncComponent, onErrorCaptured } from 'vue'
-          const data = _data; const components = _components
-          const Async = defineAsyncComponent({
-            loader: () => data.value.load(),
-            loadingComponent: components.Loading,
-            errorComponent: components.Failed,
-            delay: 0,
-          })
-          onErrorCaptured(() => false)
-        </script>
-        <template>
-          <components.Presence :on-ref="data.onRef">
-            <Async />
-          </components.Presence>
-        </template>`,
-      },
-      () => {
-        const data = makeData()
-        let fail!: (err: Error) => void
-        const loading = new Promise((_, reject) => (fail = reject))
-        ;(data.value as any).load = () => loading
-        ;(data.value as any).fail = fail
-        return data
-      },
-      async (data, root, mode) => {
-        const log = seen[mode === 'vdom' ? 0 : 1]
-        expect(log).toEqual(['loading'])
-        const onRef = data.value.onRef
-        data.value.onRef = null
-        await nextTick()
-        data.value.fail(new Error('failed'))
-        await new Promise(r => setTimeout(r))
-        expect(root.textContent).toBe('failed')
-        const calls = log.length
-        data.value.onRef = onRef
-        await nextTick()
-        expect(log.length).toBe(calls)
-      },
-      { Presence, Loading: exposing('loading'), Failed: exposing('failed') },
-    )
-  })
+  test.each([
+    ['added back', true],
+    ['first added', false],
+  ])(
+    'leaves an error component showing without the ref when it is %s',
+    async (_, initially) => {
+      const { seen, makeData } = track(v => v && v.name)
+      await renderParity(
+        {
+          App: `<script setup>
+            import { defineAsyncComponent, onErrorCaptured } from 'vue'
+            const data = _data; const components = _components
+            const Async = defineAsyncComponent({
+              loader: () => data.value.load(),
+              loadingComponent: components.Loading,
+              errorComponent: components.Failed,
+              delay: 0,
+            })
+            onErrorCaptured(() => false)
+          </script>
+          <template>
+            <components.Presence :on-ref="data.onRef">
+              <Async />
+            </components.Presence>
+          </template>`,
+        },
+        () => {
+          const data = makeData() as any
+          let fail!: (err: Error) => void
+          const loading = new Promise((_, reject) => (fail = reject))
+          data.value.load = () => loading
+          data.value.fail = fail
+          data.value.ref = data.value.onRef
+          if (!initially) data.value.onRef = null
+          return data
+        },
+        async (data, root, mode) => {
+          const log = seen[mode === 'vdom' ? 0 : 1]
+          expect(log).toEqual(initially ? ['loading'] : [])
+          data.value.onRef = null
+          await nextTick()
+          data.value.fail(new Error('failed'))
+          await new Promise(r => setTimeout(r))
+          expect(root.textContent).toBe('failed')
+          const calls = log.length
+          data.value.onRef = data.value.ref
+          await nextTick()
+          expect(log.length).toBe(calls)
+        },
+        { Presence, Loading: exposing('loading'), Failed: exposing('failed') },
+      )
+    },
+  )
 
   test('sets an inline function ref again on each owner render', async () => {
     const logs: any[][] = []

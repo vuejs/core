@@ -2152,8 +2152,10 @@ function createVDOMComponent(
     }
     vnode = createVNode(comp, rawValues)
     // a `ref` in a `v-bind` object is not a template ref in Vapor, and has no
-    // rendering instance to own it here; only `frag.setRef` sets one
-    vnode.ref = null
+    // rendering instance to own it here; only `frag.setRef` sets one. An async
+    // wrapper gets the array from the start: what it forwards its ref to
+    // carries it, an error component does not (see `setVaporSlotRef`).
+    vnode.ref = isAsyncWrapper(vnode) ? [] : null
   } catch (error) {
     if (inputScope) inputScope.stop()
     throw error
@@ -2456,14 +2458,11 @@ function createVDOMComponent(
     )
     // as in VDOM: `um` unsets it, async wrappers forward it to the inner comp
     const refs = vnode.ref
-    if (isArray(refs)) {
-      // next to the probe of a slot ref (see `setVaporSlotRef`), which stays
-      const i = oldRawRef ? refs.indexOf(oldRawRef as any) : -1
-      if (i > -1) refs.splice(i, 1)
-      if (rawRef) refs.unshift(rawRef as any)
-    } else {
-      vnode.ref = rawRef
-    }
+    // Next to the probe of a slot ref (see `setVaporSlotRef`), which stays. In
+    // an array of its own: what the wrapper rendered keeps the ref it got.
+    vnode.ref = isArray(refs)
+      ? (rawRef ? [rawRef] : []).concat(refs.filter(r => r !== oldRawRef))
+      : rawRef
 
     if (isMounted) {
       // The first synchronous mount may have already created a loading
@@ -4020,7 +4019,11 @@ function setVaporSlotRef(
       },
     }
     refs.push(probe)
-    unprobe = () => removeItem(refs, probe)
+    // from the array the wrapper has by then (see `frag.setRef`)
+    unprobe = () => {
+      const refs = wrapper.ref
+      if (isArray(refs)) removeItem(refs, probe)
+    }
     // What the wrapper rendered before the probe was there and forwarded its
     // ref to (an error component got none), re-pointed to the array so that
     // vdom diffs it against itself on the next patch.
@@ -4066,6 +4069,7 @@ function setVaporSlotRef(
     if (!asyncRoot && probed) {
       // the root moved off the wrapper
       unprobe()
+      unprobe = NOOP
       probed = undefined
     }
     if (el !== target.el) {
