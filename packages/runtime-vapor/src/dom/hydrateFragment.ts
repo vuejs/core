@@ -216,6 +216,11 @@ export type AnchorPlan =
  *    component, keyed fragment with single-root content, anything whose
  *    range was stripped).
  *
+ * Content that ends an element moves the cursor past that element (see
+ * `advanceHydrationNode`), onto a node that is not this block's. Rules 1, 3
+ * and the range close of rule 5 read the cursor only while it is in the
+ * parent of the block's nodes, or while the block has no node.
+ *
  * Marker discipline: a plan that adopts an SSR node claims it with
  * `claimAnchor` (it keeps its logical position); a plan that creates a
  * runtime anchor claims it with `claimUntrackedAnchor` (it holds no
@@ -355,17 +360,20 @@ function planRestartFromRuntimeComment(
 }
 
 /** Rule 5: derive the anchor position from the hydrated block itself. */
-function planFromBlockBoundary(frag: DynamicFragment): AnchorPlan {
+function planFromBlockBoundary(
+  frag: DynamicFragment,
+  parentNode: Node | null,
+  nextNode: Node | null,
+  close: Node | null,
+): AnchorPlan {
   // Covers: dynamic component, async component, keyed fragment, and any
   // fragment whose SSR range was stripped.
-  const close = currentHydrationNode
   if (!isValidBlock(frag.nodes) && close && isRangeEnd(close)) {
     // A branch rendering nothing at the close of the range around it, e.g.
     // `<template v-else />` as the whole slot content the server dropped:
     // the close stays that range's anchor, the branch goes before it.
     return { kind: 'create', parent: close.parentNode!, next: close }
   }
-  const { parentNode, nextNode } = findBlockBoundary(frag.nodes)
   // a block rendering a component's roots ends at that component's `}`: the
   // marker is the anchor, instead of one created behind it
   if (nextNode && isComment(nextNode, '}') && isFragmentBlock(frag.nodes)) {
@@ -378,12 +386,22 @@ export function resolveDynamicAnchor(
   frag: DynamicFragment,
   isEmpty: boolean,
 ): AnchorPlan {
+  const { parentNode, nextNode } = findBlockBoundary(frag.nodes)
+  // the cursor may have left the block's parent (see the protocol above)
+  const canUseCursor =
+    !parentNode ||
+    (currentHydrationNode && getParentNode(currentHydrationNode) === parentNode)
   return (
-    planReuseInjectedAnchor(frag) ||
+    (canUseCursor ? planReuseInjectedAnchor(frag) : undefined) ||
     planReuseOwnClose(frag) ||
-    (isEmpty ? planEmptyBranch(frag) : undefined) ||
+    (isEmpty && canUseCursor ? planEmptyBranch(frag) : undefined) ||
     planRestartFromRuntimeComment(frag) ||
-    planFromBlockBoundary(frag)
+    planFromBlockBoundary(
+      frag,
+      parentNode,
+      nextNode,
+      canUseCursor ? currentHydrationNode : null,
+    )
   )
 }
 

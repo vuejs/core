@@ -1389,7 +1389,7 @@ describe('Vapor Mode hydration', () => {
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
         `
         "
-        <!--{--><div><span>foo</span></div><!--dynamic-component--><!--}-->
+        <!--{--><div><span>foo</span><!----></div><!--dynamic-component--><!--}-->
         "
       `,
       )
@@ -1399,7 +1399,7 @@ describe('Vapor Mode hydration', () => {
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
         `
         "
-        <!--{--><div><span>bar</span></div><!--dynamic-component--><!--}-->
+        <!--{--><div><span>bar</span><!----></div><!--dynamic-component--><!--}-->
         "
       `,
       )
@@ -1742,5 +1742,50 @@ describe('Vapor Mode hydration', () => {
         `"<div><section></section><!----><i>tail</i></div>"`,
       )
     })
+
+    test('dynamic component that renders nothing, in a component root element', async () => {
+      const { container, data } = await testHydration(
+        `<template><components.Card /></template>`,
+        {
+          empty: `<template><b v-if="false">empty</b></template>`,
+          full: `<template><b>full</b></template>`,
+          Card: `<template><div class="card"><component :is="components[data]" /></div></template>`,
+        },
+        ref('empty'),
+      )
+      data.value = 'full'
+      await nextTick()
+      expect(container.querySelector('.card')!.innerHTML).toContain(
+        '<b>full</b>',
+      )
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
+        "
+        <!--{--><div class="card"><b>full</b><!--dynamic-component--></div><!--}-->
+        "
+      `)
+    })
+
+    test.each([false, true])(
+      'dynamic component with a dynamic slot name keeps its children in the element (show: %s)',
+      async show => {
+        const { container, data } = await testHydration(
+          `<template>
+            <component :is="'div'">
+              <template #[data.name]><b v-if="data.show">full</b></template>
+            </component>
+          </template>`,
+          {},
+          ref({ name: 'default', show }),
+        )
+        data.value.name = 'other'
+        await nextTick()
+        data.value.show = true
+        data.value.name = 'default'
+        await nextTick()
+        expect(container.innerHTML).toBe(
+          '<!--{--><div><b>full</b><!--if--><!----></div><!--dynamic-component--><!--}-->',
+        )
+      },
+    )
   })
 })

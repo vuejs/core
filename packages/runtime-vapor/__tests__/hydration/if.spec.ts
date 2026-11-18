@@ -1161,5 +1161,28 @@ describe('Vapor Mode hydration', () => {
       app.unmount()
       expect(container.innerHTML).toBe('')
     })
+
+    test('v-if around a component that renders nothing, in a component root element', async () => {
+      const { container, data } = await testHydration(
+        `<template><components.Card /></template>`,
+        {
+          Inner: `<template><b v-if="data === 'show'">inner</b></template>`,
+          Card: `<template><div class="card"><components.Inner v-if="data !== 'off'" /></div></template>`,
+        },
+        ref('on'),
+      )
+      data.value = 'off'
+      await nextTick()
+      data.value = 'show'
+      await nextTick()
+      expect(container.querySelector('.card')!.innerHTML).toContain(
+        '<b>inner</b>',
+      )
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
+        "
+        <!--{--><div class="card"><b>inner</b><!--if--><!--if--></div><!--}-->
+        "
+      `)
+    })
   })
 })
