@@ -52,6 +52,7 @@ import {
   enterHydrationCursor,
   hydrateBlock,
   insertMissingRange,
+  isClaimedAnchor,
   isComment,
   isHydrating,
   locateClaimedEnd,
@@ -553,7 +554,9 @@ export const createFor = (
     let row = 0
     const mountRow = () => mount(source, row, parentAnchor).nodes
     try {
-      if (!claim.start && !isComment(currentHydrationNode!, ']')) {
+      // a close that already has an owner is not the list's to share
+      const start = currentHydrationNode!
+      if (!claim.start && (!isComment(start, ']') || isClaimedAnchor(start))) {
         insertMissingRange('[', ']', `v-for fragment`)
         claimFragmentStart(claim)
       }

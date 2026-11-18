@@ -3193,6 +3193,16 @@ describe('a server render with fewer roots', () => {
       '<components.More /><span>y</span>',
       '<!--{--><i>x</i><em>z</em><!--}--><span>y</span>',
     ],
+    [
+      'a kept-alive first root with more roots',
+      '<KeepAlive><components.More /></KeepAlive><span>y</span>',
+      '<!--{--><i>x</i><em>z</em><!--}--><span>y</span>',
+    ],
+    [
+      'a kept-alive first root of another tag',
+      '<KeepAlive><components.Other /></KeepAlive><span>y</span>',
+      '<b>x</b><span>y</span>',
+    ],
   ])('an extra root with %s', async (_, client, html) => {
     const { container } = await hydrateRoots(
       card(),
@@ -3202,6 +3212,7 @@ describe('a server render with fewer roots', () => {
         Inner: '<template><i>x</i></template>',
         Extra: '<template><span>y</span></template>',
         More: '<template><i>x</i><em>z</em></template>',
+        Other: '<template><b>x</b></template>',
       },
     )
     expect(container.innerHTML).toBe(
@@ -3402,5 +3413,55 @@ describe('a teleport the server rendered no teleport for', () => {
     await nextTick()
     expect(target.textContent).toBe('u')
     target.remove()
+  })
+})
+
+describe('a list in a row the server rendered no row for', () => {
+  const row = `<span v-for="j in data.inner">{{ j }}</span><em>end</em>`
+
+  describe.each([
+    [
+      'a template row',
+      `<template v-for="i in data.items" :key="i">${row}</template>`,
+    ],
+    ['a component row', `<components.Row v-for="i in data.items" :key="i" />`],
+  ])('%s', (_, list) => {
+    test.each([[[]], [[1]]])('inner rows: %j', async inner => {
+      const data = ref({ items: [1], inner })
+      const { container } = await testHydration(
+        `<template>
+          <div>
+            ${list}
+            <u>tail</u>
+          </div>
+          <p>outer</p>
+        </template>`,
+        { Row: `<template>${row}</template>` },
+        data,
+        { serverData: ref({ items: [], inner }) },
+      )
+      const div = container.querySelector('div')!
+      const tail = div.querySelector('u')!
+      expect(div.innerHTML).toBe(
+        `<!--[--><!--[-->${inner.map(i => `<span>${i}</span>`).join('')}<!--]--><em>end</em><!--]--><u>tail</u>`,
+      )
+      expect(container.textContent).toBe(`${inner.join('')}endtailouter`)
+      expect('Hydration node mismatch').toHaveBeenWarned()
+
+      data.value.inner = [2, 3]
+      await nextTick()
+      expect(div.innerHTML).toBe(
+        `<!--[--><!--[--><span>2</span><span>3</span><!--]--><em>end</em><!--]--><u>tail</u>`,
+      )
+
+      data.value.items = []
+      await nextTick()
+      expect(div.textContent).toBe('tail')
+
+      data.value.items = [1, 2]
+      await nextTick()
+      expect(div.textContent).toBe('23end23endtail')
+      expect(div.querySelector('u')).toBe(tail)
+    })
   })
 })

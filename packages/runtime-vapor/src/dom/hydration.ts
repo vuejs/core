@@ -387,13 +387,19 @@ export function locateComponentRoot(): void {
   }
 }
 
-/** The components that share the server unit `from` now have `to` for it. */
+/**
+ * The components that share the server unit `from` now have `to` for it. A
+ * component between them that claims no range holds no unit, so the whole
+ * chain is read.
+ */
 export function replaceComponentUnit(
   from: Node,
   to: Node,
   range: ComponentRange | null = currentComponentRange,
 ): void {
-  for (; range && range.unit === from; range = range.prev) range.unit = to
+  for (; range; range = range.prev) {
+    if (range.unit === from) range.unit = to
+  }
 }
 
 export function setCurrentHydrationNode(node: Node | null): void {
