@@ -338,6 +338,46 @@ describe('ssr: element', () => {
           }></div>\`"
       `)
     })
+
+    test.each([
+      ['<div className="card"/>', '<div class="card"></div>'],
+      ['<label htmlFor="field"/>', '<label for="field"></label>'],
+      ['<output htmlFor="field"/>', '<output for="field"></output>'],
+      ['<form acceptCharset="utf-8"/>', '<form accept-charset="utf-8"></form>'],
+      ['<meta httpEquiv="refresh"/>', '<meta http-equiv="refresh">'],
+      ['<div htmlFor="field"/>', '<div htmlFor="field"></div>'],
+      ['<svg className="icon"/>', '<svg className="icon"></svg>'],
+    ])('static DOM prop names in %s', (template, expected) => {
+      expect(getCompiledString(template)).toContain(expected)
+    })
+
+    test('static DOM prop names alongside bound attributes', () => {
+      expect(
+        getCompiledString(
+          `<span className="old" :class="cls"/><label htmlFor="old" :for="id"/>`,
+        ),
+      ).toMatchInlineSnapshot(`
+        "\`<span className="old" class="\${
+            _ssrRenderClass(_ctx.cls)
+          }"></span><label htmlFor="old"\${
+            _ssrRenderAttr("for", _ctx.id)
+          }></label>\`"
+      `)
+    })
+
+    test('static DOM prop names alongside bare attributes', () => {
+      expect(
+        getCompiledString(`<label for htmlFor="old"/>`),
+      ).toMatchInlineSnapshot(`"\`<label for htmlFor="old"></label>\`"`)
+    })
+
+    test('static DOM prop names on custom elements', () => {
+      expect(
+        compile(`<div><x-field className="card" htmlFor="target"/></div>`, {
+          isCustomElement: tag => tag === 'x-field',
+        }).code,
+      ).toContain('<x-field className="card" htmlFor="target"></x-field>')
+    })
   })
 
   describe('custom directives', () => {
