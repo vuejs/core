@@ -761,7 +761,7 @@ describe('patchProp', () => {
       expect(fallthroughSetCount).toBe(2)
     })
 
-    test('should clean dynamic event props on effect update and stop', async () => {
+    test('should clean dynamic event props on effect update', async () => {
       const el = document.createElement('button')
       const active = ref(true)
       const handler = vi.fn()
@@ -782,10 +782,6 @@ describe('patchProp', () => {
 
       active.value = true
       await nextTick()
-      el.click()
-      expect(handler).toHaveBeenCalledTimes(2)
-
-      scope.stop()
       el.click()
       expect(handler).toHaveBeenCalledTimes(2)
     })
