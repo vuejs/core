@@ -495,8 +495,10 @@ function hydrateTeleport(
       (target as TeleportTargetElement)._lpa || target.firstChild
     if (vnode.shapeFlag & ShapeFlags.ARRAY_CHILDREN) {
       if (disabled) {
-        hydrateDisabledTeleport(node, vnode)
+        // claim this teleport's target anchors before hydrating children, as
+        // SSR renders them before any nested teleport's block in the target
         hydrateAnchor(target as TeleportTargetElement, targetNode)
+        hydrateDisabledTeleport(node, vnode)
         if (!vnode.targetAnchor) {
           prepareAnchor(
             target,

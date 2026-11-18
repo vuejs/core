@@ -622,6 +622,66 @@ describe('SSR hydration', () => {
     )
   })
 
+  describe('Teleport (disabled + nested teleport to the same target)', () => {
+    async function testNested(id: string, nestedContent: () => VNode) {
+      const msg1 = ref('foo')
+      const msg2 = ref('bar')
+      const render = () =>
+        h('div', [
+          h(Teleport, { to: `#${id}`, disabled: true }, [
+            h('i', 'outer'),
+            h(Teleport, { to: `#${id}` }, [nestedContent()]),
+          ]),
+          h(Teleport, { to: `#${id}` }, [h('b', { class: 'b1' }, msg1.value)]),
+          h(Teleport, { to: `#${id}` }, [h('b', { class: 'b2' }, msg2.value)]),
+        ])
+
+      const ctx: SSRContext = {}
+      const mainHtml = await renderToString(h({ render }), ctx)
+      const teleportContainer = document.createElement('div')
+      teleportContainer.id = id
+      teleportContainer.innerHTML = ctx.teleports![`#${id}`]
+      document.body.appendChild(teleportContainer)
+      const b1 = teleportContainer.querySelector('.b1')
+      const b2 = teleportContainer.querySelector('.b2')
+
+      const { vnode } = mountWithHydration(mainHtml, render)
+      expect(`Hydration`).not.toHaveBeenWarned()
+
+      // each later teleport must bind to its own server-rendered block
+      const children = vnode.children as VNode[]
+      expect((children[1].children as VNode[])[0].el).toBe(b1)
+      expect((children[2].children as VNode[])[0].el).toBe(b2)
+
+      msg1.value = 'foo2'
+      msg2.value = 'bar2'
+      await nextTick()
+      expect(b1!.textContent).toBe('foo2')
+      expect(b2!.textContent).toBe('bar2')
+      expect(teleportContainer.querySelectorAll('b').length).toBe(2)
+      return teleportContainer
+    }
+
+    test('nested content is a comment (v-if)', async () => {
+      const teleportContainer = await testNested('teleport-nested-dis1', () =>
+        createCommentVNode('v-if', true),
+      )
+      expect(teleportContainer.innerHTML).toBe(
+        `<!--teleport start anchor--><!--teleport anchor-->` +
+          `<!--teleport start anchor--><!--v-if--><!--teleport anchor-->` +
+          `<!--teleport start anchor--><b class="b1">foo2</b><!--teleport anchor-->` +
+          `<!--teleport start anchor--><b class="b2">bar2</b><!--teleport anchor-->`,
+      )
+    })
+
+    test('nested content is an element', async () => {
+      const teleportContainer = await testNested('teleport-nested-dis2', () =>
+        h('span', 'inner'),
+      )
+      expect(teleportContainer.querySelectorAll('span').length).toBe(1)
+    })
+  })
+
   test('with data-allow-mismatch component when using onServerPrefetch', async () => {
     const Comp = {
       template: `
