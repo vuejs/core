@@ -378,6 +378,38 @@ describe('ssr: element', () => {
         }).code,
       ).toContain('<x-field className="card" htmlFor="target"></x-field>')
     })
+
+    test.each([
+      ['<div :className="cls"/>', 'class'],
+      ['<label :htmlFor="id"/>', 'for'],
+      ['<output :htmlFor="id"/>', 'for'],
+      ['<form :acceptCharset="cs"/>', 'accept-charset'],
+      ['<meta :httpEquiv="he"/>', 'http-equiv'],
+      // props that do not reflect an attribute on the element keep their name
+      ['<div :htmlFor="id"/>', 'htmlFor'],
+      ['<svg><circle :className="cls"/></svg>', 'className'],
+    ])('dynamic DOM prop alias in %s', (template, attr) => {
+      expect(getCompiledString(template)).toContain(
+        `_ssrRenderAttr("${attr}", `,
+      )
+    })
+
+    test('dynamic DOM prop names alongside bare attributes', () => {
+      expect(getCompiledString(`<label for="old" :htmlFor="id"/>`))
+        .toMatchInlineSnapshot(`
+        "\`<label for="old"\${
+            _ssrRenderAttr("htmlFor", _ctx.id)
+          }></label>\`"
+      `)
+    })
+
+    test('dynamic DOM prop names on custom elements', () => {
+      expect(
+        compile(`<div><x-field :className="cls" :htmlFor="target"/></div>`, {
+          isCustomElement: tag => tag === 'x-field',
+        }).code,
+      ).toContain('_ssrRenderAttr("className", _ctx.cls)')
+    })
   })
 
   describe('custom directives', () => {
