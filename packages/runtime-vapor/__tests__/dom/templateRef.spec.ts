@@ -1680,6 +1680,128 @@ describe('api: template ref', () => {
       __DEV__ = true
     }
   })
+
+  test('dynamic component function ref should not be called with null when its value is unchanged', async () => {
+    const data = ref({ tag: 'input', count: 0 })
+    const calls: (string | null)[] = []
+    const record = (el: Element | null) => calls.push(el && el.tagName)
+    const App = compile(
+      `<script setup vapor>
+        const data = _data
+        function setRef(el) {
+          _components.record(el)
+          data.value.count
+        }
+      </script>
+      <template><component :is="data.tag" :ref="setRef" /></template>`,
+      data,
+      { record },
+    )
+    const { app } = define(App).render()
+    expect(calls).toEqual(['INPUT'])
+
+    data.value.count++
+    await nextTick()
+    expect(calls).toEqual(['INPUT', 'INPUT'])
+
+    data.value.tag = 'textarea'
+    await nextTick()
+    expect(calls).toEqual(['INPUT', 'INPUT', null, 'TEXTAREA'])
+
+    app.unmount()
+    expect(calls).toEqual(['INPUT', 'INPUT', null, 'TEXTAREA', null])
+  })
+
+  test('dynamic component ref_for should keep an unchanged item in place', async () => {
+    const data = ref({
+      groups: { text: 'inputs', email: 'inputs' } as Record<string, string>,
+      list: [
+        { id: '1', type: 'text' },
+        { id: '2', type: 'text' },
+      ],
+    })
+    const App = compile(
+      `<template><div>
+        <component v-for="item in data.list" :key="item.id" :is="'input'" :id="item.id" :ref="data.groups[item.type]" />
+      </div></template>`,
+      data,
+    )
+    const { instance } = define(App).render()
+    const ids = () => (instance as any).refs.inputs.map((el: Element) => el.id)
+    await nextTick()
+    expect(ids()).toEqual(['1', '2'])
+
+    data.value.list[0].type = 'email'
+    await nextTick()
+    expect(ids()).toEqual(['1', '2'])
+  })
+
+  test.each([
+    ['element', `input`],
+    ['dynamic component', `component :is="'input'"`],
+  ])(
+    '%s ref_for should drop an item removed before its pending set',
+    async (_, tag) => {
+      const data = ref({
+        groups: { text: 'inputs', email: 'inputs' } as Record<string, string>,
+        list: [
+          { id: '1', type: 'text' },
+          { id: '2', type: 'text' },
+        ],
+      })
+      // removes the first item from a watcher, after the item's ref was applied
+      // again in the same flush but before the post-render set
+      const Observer = compile(
+        `<script setup vapor>
+        import { watch } from 'vue'
+        const props = defineProps(['type'])
+        const emit = defineEmits(['remove'])
+        watch(
+          () => props.type,
+          type => {
+            if (type === 'email') emit('remove')
+          },
+        )
+      </script>
+      <template><span>observer</span></template>`,
+        data,
+      )
+      const App = compile(
+        `<script setup vapor>
+        const data = _data
+        const Observer = _components.Observer
+      </script>
+      <template>
+        <div>
+          <${tag}
+            v-for="item in data.list"
+            :key="item.id"
+            :id="item.id"
+            :ref="data.groups[item.type]"
+          />
+          <Observer
+            :type="data.list[0]?.type"
+            @remove="data.list.shift()"
+          />
+        </div>
+      </template>`,
+        data,
+        { Observer },
+      )
+      const { instance, host } = define(App).render()
+      const ids = () =>
+        (instance as any).refs.inputs.map((el: Element) => el.id)
+      await nextTick()
+      expect(ids()).toEqual(['1', '2'])
+
+      data.value.list[0].type = 'email'
+      await nextTick()
+      expect(Array.from(host.querySelectorAll('input'), el => el.id)).toEqual([
+        '2',
+      ])
+      expect(ids()).toEqual(['2'])
+    },
+  )
 })
 
 describe('interop: template ref', () => {

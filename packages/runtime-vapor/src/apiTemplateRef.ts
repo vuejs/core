@@ -357,14 +357,18 @@ function setRef(
       ])
     }
   } else if (oldRef != null && isDynamicFragment(el)) {
-    if (isFunction(oldRef)) {
-      callWithErrorHandling(oldRef, instance, ErrorCodes.FUNCTION_REF, [
-        null,
-        refs,
-      ])
-    } else if (refFor) {
-      // For dynamic ref-for branches, remove only this branch's previous value.
-      unsetRef(el)
+    // clear the old value only when the fragment resolves to a new one
+    const cleanup = refCleanups.get(el)
+    if (!cleanup || cleanup.value !== refValue) {
+      if (isFunction(oldRef)) {
+        callWithErrorHandling(oldRef, instance, ErrorCodes.FUNCTION_REF, [
+          null,
+          refs,
+        ])
+      } else if (refFor) {
+        // For dynamic ref-for branches, remove only this branch's previous value.
+        unsetRef(el)
+      }
     }
   }
 
@@ -380,13 +384,22 @@ function setRef(
     }
 
     invokeRefSetter(refValue)
-    ensureCleanup(el).fn = () => invokeRefSetter(null)
+    const cleanup = ensureCleanup(el)
+    cleanup.fn = () => invokeRefSetter(null)
+    cleanup.value = refValue
   } else {
     const _isString = isString(ref)
     const _isRef = isRef(ref)
-    let existing: unknown
 
     if (_isString || _isRef) {
+      const getExisting = (): unknown =>
+        _isString
+          ? __DEV__ && canSetSetupRef(ref)
+            ? setupState[ref]
+            : refs[ref]
+          : canSetRef(ref) || !refKey
+            ? ref.value
+            : refs[refKey]
       const doSet: SchedulerJob = () => {
         if (refFor) {
           // for unresolved async components, refValue is null.
@@ -394,13 +407,7 @@ function setRef(
           // when the async component resolves via DynamicFragment's updated hook.
           if (refValue == null) return
 
-          existing = _isString
-            ? __DEV__ && canSetSetupRef(ref)
-              ? setupState[ref]
-              : refs[ref]
-            : canSetRef(ref) || !refKey
-              ? ref.value
-              : refs[refKey]
+          let existing = getExisting()
 
           if (!isArray(existing)) {
             existing = [refValue]
@@ -435,6 +442,9 @@ function setRef(
       const cleanup = ensureCleanup(el)
       cleanup.fn = () => {
         if (refFor) {
+          // read the array now: this cleanup can run before its own pending
+          // set, while the array still holds the value from an earlier set
+          const existing = getExisting()
           if (isArray(existing)) {
             remove(existing, refValue)
           }
@@ -448,6 +458,7 @@ function setRef(
           if (refKey) refs[refKey] = null
         }
       }
+      cleanup.value = refValue
 
       invalidatePendingRef(el)
       if (refValue != null) {
