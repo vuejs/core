@@ -2331,5 +2331,43 @@ describe('Vapor Mode hydration', () => {
       await nextTick()
       expect(container.querySelector('div')!.textContent).toBe('abafter')
     })
+
+    test.each([
+      ['content', `<template #item="{ item }"><b>{{ item }}</b></template>`],
+      ['no slot', ``],
+    ])('slot v-if in template v-for with %s', async (_, slot) => {
+      const data = reactive({ items: [1, 2] })
+      const { container } = await testHydration(
+        `<template><components.List>${slot}</components.List></template>`,
+        {
+          List: `<template>
+            <ul>
+              <template v-for="(item, index) in data.items" :key="index">
+                <slot v-if="item > 0" name="item" :item="item">
+                  <li>fallback {{ item }}</li>
+                </slot>
+              </template>
+            </ul>
+          </template>`,
+        },
+        data,
+      )
+      const texts = () =>
+        [...container.querySelectorAll('ul > *')].map(el => el.textContent)
+      const row = (n: number) => (slot ? `${n}` : `fallback ${n}`)
+      expect(texts()).toEqual([row(1), row(2)])
+
+      data.items.push(3)
+      await nextTick()
+      expect(texts()).toEqual([row(1), row(2), row(3)])
+
+      data.items[0] = -1
+      await nextTick()
+      expect(texts()).toEqual([row(2), row(3)])
+
+      data.items[0] = 1
+      await nextTick()
+      expect(texts()).toEqual([row(1), row(2), row(3)])
+    })
   })
 })

@@ -446,7 +446,7 @@ export function render(_ctx) {
     }, () => {
       const n6 = _createComponentWithFallback(_component_Comp)
       return n6
-    }, 266 /* TRUE_MULTI_ROOT, FALSE_MULTI_ROOT, KEYED_INDEX_0 */)
+    }, 261 /* TRUE_SINGLE_ROOT, FALSE_SINGLE_ROOT, KEYED_INDEX_0 */)
     return n2
   }, undefined, 80 /* IS_FRAGMENT, WRAPPED_ROWS */)
   return n0

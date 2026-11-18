@@ -1,10 +1,12 @@
 import { makeCompile } from './_utils'
 import {
+  type ForIRNode,
   IRNodeTypes,
   type IfIRNode,
   transformChildren,
   transformComment,
   transformElement,
+  transformSlotOutlet,
   transformTemplateRef,
   transformText,
   transformVFor,
@@ -28,6 +30,7 @@ const compileWithVIf = makeCompile({
     transformVOnce,
     transformVIf,
     transformVFor,
+    transformSlotOutlet,
     transformText,
     transformTemplateRef,
     transformElement,
@@ -281,7 +284,7 @@ describe('compiler: v-if', () => {
     })
   })
 
-  test('v-if in template v-for forces MULTI_ROOT shape', () => {
+  test('v-if in template v-for keeps its branch shape', () => {
     const { ir, helpers } = compileWithVIf(
       `<template v-for="item in list">
         <span v-if="item.ok">
@@ -299,9 +302,7 @@ describe('compiler: v-if', () => {
     })
 
     const ifOp = (forOp as any).render.dynamic.children[0].operation as IfIRNode
-    expect(ifOp.blockShape).toBe(
-      VaporBlockShape.MULTI_ROOT | (VaporBlockShape.MULTI_ROOT << 2),
-    )
+    expect(ifOp.blockShape).toBe(VaporBlockShape.SINGLE_ROOT)
   })
 
   test('template v-if + normal v-else', () => {
@@ -797,6 +798,21 @@ describe('compiler: v-if', () => {
       '<div>',
     ])
   })
+
+  test('slot v-if in template v-for keeps its single-root shape', () => {
+    const { ir, helpers } = compileWithVIf(
+      `<template v-for="item in list">
+        <slot v-if="item > 0" name="item"><li>fallback {{ item }}</li></slot>
+      </template>`,
+    )
+
+    expect(helpers).toContain('createSlot')
+    const forOp = ir.block.dynamic.children[0].operation as ForIRNode
+    expect(forOp.render.dynamic.children[0].operation).toMatchObject({
+      type: IRNodeTypes.IF,
+      blockShape: VaporBlockShape.SINGLE_ROOT,
+    })
+  })
 })
 
 describe('compiler: long v-else-if chain', () => {
@@ -881,12 +897,16 @@ describe('compiler: long v-else-if chain', () => {
     expect(noElse).contains('}], null, ')
   })
 
-  test('forces multi-root on every state inside template v-for', () => {
+  test('keeps each branch shape inside template v-for', () => {
     const { code } = compileWithVIf(
-      `<template v-for="i in list">${chain(11, { withElse: false })}</template>`,
+      `<template v-for="i in list">${chain(11, {
+        withElse: false,
+        branch: (i, dir) =>
+          i === 11 ? `<template ${dir}><p/><p/></template>` : `<div ${dir}/>`,
+      })}</template>`,
     )
     expect(code).contains(
-      '2 /* MULTI_ROOT */, 2 /* MULTI_ROOT */, 2 /* MULTI_ROOT */, 2 /* MULTI_ROOT */, 2 /* MULTI_ROOT */, 2 /* MULTI_ROOT */, 2 /* MULTI_ROOT */, 2 /* MULTI_ROOT */, 2 /* MULTI_ROOT */, 2 /* MULTI_ROOT */, 2 /* MULTI_ROOT */, 2 /* MULTI_ROOT */, 2 /* MULTI_ROOT */]',
+      '1 /* SINGLE_ROOT */, 1 /* SINGLE_ROOT */, 1 /* SINGLE_ROOT */, 1 /* SINGLE_ROOT */, 1 /* SINGLE_ROOT */, 1 /* SINGLE_ROOT */, 1 /* SINGLE_ROOT */, 1 /* SINGLE_ROOT */, 1 /* SINGLE_ROOT */, 1 /* SINGLE_ROOT */, 1 /* SINGLE_ROOT */, 2 /* MULTI_ROOT */, 0 /* EMPTY */]',
     )
   })
 

@@ -773,8 +773,12 @@ export function warnHydrationTextMismatch(node: Text, expected: string): void {
   )
 }
 
-export function warnHydrationNodeMismatch(node: Node, expected: unknown): void {
-  if (!isMismatchAllowed(node.parentElement!, MismatchTypes.CHILDREN)) {
+export function warnHydrationNodeMismatch(
+  node: Node,
+  expected: unknown,
+  parent: Element | null = node.parentElement,
+): void {
+  if (!isMismatchAllowed(parent, MismatchTypes.CHILDREN)) {
     ;(__DEV__ || __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__) &&
       warn(
         `Hydration node mismatch:\n- rendered on server:`,

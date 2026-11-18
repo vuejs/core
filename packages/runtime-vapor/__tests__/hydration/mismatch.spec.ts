@@ -1618,6 +1618,39 @@ describe('data-allow-mismatch', () => {
 
     expect(`Hydration attribute mismatch`).not.toHaveBeenWarned()
   })
+
+  test.each([true, false])(
+    'slot content removes the server node (allow mismatch: %s)',
+    async allowMismatch => {
+      const attr = allowMismatch ? ' data-allow-mismatch=""' : ''
+      const { container } = await testWithVaporApp(
+        `<template><components.Forward /></template>`,
+        {
+          Outlet: `<template><slot><i>fallback</i></slot></template>`,
+          Plain: `<template><b>plain</b></template>`,
+          Forward: `<template>
+            <div${attr}>
+              <component :is="data.client ? components.Outlet : components.Plain">
+                <template #default><span v-if="data.show">x</span></template>
+              </component>
+            </div>
+          </template>`,
+        },
+        { client: true, show: false },
+        { client: false, show: false },
+      )
+
+      expect(container.innerHTML).toBe(
+        `<!--{--><div${attr}><!--if--><i>fallback</i><!--slot--><!--dynamic-component--></div><!--}-->`,
+      )
+      if (allowMismatch) {
+        expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+      } else {
+        expect(`Hydration children mismatch`).toHaveBeenWarned()
+        expect(`Hydration node mismatch`).toHaveBeenWarned()
+      }
+    },
+  )
 })
 
 // An empty client branch replacing server content never takes the close

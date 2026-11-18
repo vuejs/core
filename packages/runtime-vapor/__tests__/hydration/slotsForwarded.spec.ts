@@ -4,6 +4,7 @@ import {
   setupHydrationTest,
   testHydration,
   testWithVDOMApp,
+  testWithVaporApp,
 } from './_helpers'
 
 setupHydrationTest()
@@ -1356,6 +1357,127 @@ describe('Vapor Mode hydration', () => {
       data.value = 'bar'
       await nextTick()
       expect(container.textContent).toBe('abar')
+    })
+
+    describe('conditional forwarded slots in template v-for', () => {
+      const List = `<script setup>defineProps(['items'])</script>
+        <template>
+          <ul>
+            <template v-for="(item, index) in items" :key="index">
+              <slot v-if="item > 0" name="item">
+                <li>fallback {{ item }}</li>
+              </slot>
+            </template>
+          </ul>
+        </template>`
+      const Forward = `<script setup>
+          const components = _components
+          const data = _data
+        </script>
+        <template>
+          <components.List :items="data.items">
+            <template #item><slot name="item" /></template>
+          </components.List>
+        </template>`
+
+      test('hydrates fallback and updates rows in a vapor app', async () => {
+        const data = reactive({ items: [1, 2] })
+        const { container } = await testWithVaporApp(Forward, { List }, data)
+
+        expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+        expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
+          "
+          <!--{--><ul>
+          <!--[-->
+          <!--[-->
+          <!--(--><!--slot--><li>fallback 1</li><!--)-->
+          <!--if--><!--]-->
+          <!--[-->
+          <!--(--><!--slot--><li>fallback 2</li><!--)-->
+          <!--if--><!--]-->
+          <!--]-->
+          </ul><!--}-->
+          "
+        `)
+
+        data.items.push(3)
+        await nextTick()
+        expect(
+          [...container.querySelectorAll('li')].map(li => li.textContent),
+        ).toEqual(['fallback 1', 'fallback 2', 'fallback 3'])
+
+        data.items[0] = 0
+        await nextTick()
+        expect(
+          [...container.querySelectorAll('li')].map(li => li.textContent),
+        ).toEqual(['fallback 2', 'fallback 3'])
+
+        data.items[0] = 1
+        await nextTick()
+        expect(
+          [...container.querySelectorAll('li')].map(li => li.textContent),
+        ).toEqual(['fallback 1', 'fallback 2', 'fallback 3'])
+      })
+
+      test('hydrates fallback through a vapor forwarder in a vdom app', async () => {
+        const { container } = await testWithVDOMApp(
+          `<script setup>const components = _components</script>
+          <template><components.Forward /></template>`,
+          { List, Forward },
+          reactive({ items: [1, 2] }),
+        )
+
+        expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+        expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
+          "
+          <!--{--><ul>
+          <!--[-->
+          <!--[-->
+          <!--(--><li>fallback 1</li><!--)-->
+          <!--if--><!--]-->
+          <!--[-->
+          <!--(--><li>fallback 2</li><!--)-->
+          <!--if--><!--]-->
+          <!--]-->
+          </ul><!--}-->
+          "
+        `)
+      })
+
+      test('hydrates fallback in a production vapor app', async () => {
+        // production reports the mismatch and the thrown error as errors
+        const error = vi.spyOn(console, 'error').mockImplementation(() => {})
+        __DEV__ = false
+        try {
+          const data = reactive({ items: [1, 2] })
+          const { container } = await testWithVaporApp(Forward, { List }, data)
+
+          expect(error).not.toHaveBeenCalled()
+          expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
+            "
+            <!--{--><ul>
+            <!--[-->
+            <!--[-->
+            <!--(--><li>fallback 1</li><!--)-->
+            <!--]-->
+            <!--[-->
+            <!--(--><li>fallback 2</li><!--)-->
+            <!--]-->
+            <!--]-->
+            </ul><!--}-->
+            "
+          `)
+
+          data.items.push(3)
+          await nextTick()
+          expect(
+            [...container.querySelectorAll('li')].map(li => li.textContent),
+          ).toEqual(['fallback 1', 'fallback 2', 'fallback 3'])
+        } finally {
+          __DEV__ = true
+          error.mockRestore()
+        }
+      })
     })
   })
 })
