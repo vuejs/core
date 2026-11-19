@@ -237,7 +237,7 @@ describe('renderer: optimized mode', () => {
       root,
     )
 
-    expect(inner(root)).toBe('<p>foo</p><p>bar</p>')
+    expect(inner(root)).toBe('<!----><p>foo</p><p>bar</p><!---->')
     expect(block.dynamicChildren!.length).toBe(2)
     expect(serialize(block.dynamicChildren![0].el as TestElement)).toBe(
       '<p>foo</p>',
@@ -260,7 +260,7 @@ describe('renderer: optimized mode', () => {
       root,
     )
 
-    expect(inner(root)).toBe('<p>foofoo</p><p>barbar</p>')
+    expect(inner(root)).toBe('<!----><p>foofoo</p><p>barbar</p><!---->')
     expect(block.dynamicChildren!.length).toBe(2)
     expect(serialize(block.dynamicChildren![0].el as TestElement)).toBe(
       '<p>foofoo</p>',
@@ -287,7 +287,7 @@ describe('renderer: optimized mode', () => {
       root,
     )
 
-    expect(inner(root)).toBe('<p>foo</p>')
+    expect(inner(root)).toBe('<!----><p>foo</p><!---->')
     expect(block.dynamicChildren!.length).toBe(0)
 
     list.unshift({ tag: 'i', text: 'bar' })
@@ -304,7 +304,7 @@ describe('renderer: optimized mode', () => {
       root,
     )
 
-    expect(inner(root)).toBe('<i>bar</i><p>foo</p>')
+    expect(inner(root)).toBe('<!----><i>bar</i><p>foo</p><!---->')
     expect(block.dynamicChildren!.length).toBe(0)
   })
 
@@ -325,7 +325,7 @@ describe('renderer: optimized mode', () => {
       root,
     )
 
-    expect(inner(root)).toBe('<p>foo</p>')
+    expect(inner(root)).toBe('<!----><p>foo</p><!---->')
     expect(block.dynamicChildren!.length).toBe(0)
 
     list.unshift({ tag: 'i', text: 'bar' })
@@ -342,7 +342,7 @@ describe('renderer: optimized mode', () => {
       root,
     )
 
-    expect(inner(root)).toBe('<i>bar</i><p>foo</p>')
+    expect(inner(root)).toBe('<!----><i>bar</i><p>foo</p><!---->')
     expect(block.dynamicChildren!.length).toBe(0)
   })
 
@@ -450,7 +450,7 @@ describe('renderer: optimized mode', () => {
     }
 
     render(h(App), root)
-    expect(inner(root)).toBe('<div><p>0</p></div>')
+    expect(inner(root)).toBe('<div><!----><p>0</p><!----></div>')
     expect(block!.dynamicChildren!.length).toBe(1)
     expect(block!.dynamicChildren![0].type).toBe(Fragment)
     expect(block!.dynamicChildren![0].dynamicChildren!.length).toBe(1)
@@ -463,7 +463,7 @@ describe('renderer: optimized mode', () => {
     foo.value++
     await nextTick()
 
-    expect(inner(root)).toBe('<div><p>1</p></div>')
+    expect(inner(root)).toBe('<div><!----><p>1</p><!----></div>')
   })
 
   // #2169
@@ -611,11 +611,11 @@ describe('renderer: optimized mode', () => {
     })
 
     app.mount(root)
-    expect(inner(root)).toBe('<div>Hello</div>')
+    expect(inner(root)).toBe('<div><!---->Hello<!----></div>')
 
     state.value = 1
     await nextTick()
-    expect(inner(root)).toBe('<div>World</div>')
+    expect(inner(root)).toBe('<div><!---->World<!----></div>')
   })
 
   //#3623
@@ -717,7 +717,9 @@ describe('renderer: optimized mode', () => {
     })
 
     app.mount(root)
-    expect(inner(root)).toBe('<section><div class="foo"></div></section>')
+    expect(inner(root)).toBe(
+      '<section><!----><div class="foo"></div><!----></section>',
+    )
     /**
      * Block Tree:
      *  - block(div)
@@ -818,11 +820,15 @@ describe('renderer: optimized mode', () => {
     })
 
     app.mount(root)
-    expect(inner(root)).toBe('<div><div><span>loaded</span></div></div>')
+    expect(inner(root)).toBe(
+      '<div><!----><div><!----><span>loaded</span><!----></div><!----></div>',
+    )
 
     loading.value = true
     await nextTick()
-    expect(inner(root)).toBe('<div><div><span>loading</span></div></div>')
+    expect(inner(root)).toBe(
+      '<div><!----><div><!----><span>loading</span><!----></div><!----></div>',
+    )
   })
 
   // #6385
@@ -877,11 +883,11 @@ describe('renderer: optimized mode', () => {
     })
 
     app.mount(root)
-    expect(inner(root)).toBe('<div><div>false</div></div>')
+    expect(inner(root)).toBe('<!----><div><div>false</div></div><!---->')
 
     show.value = true
     await nextTick()
-    expect(inner(root)).toBe('<div><div>true</div></div>')
+    expect(inner(root)).toBe('<!----><div><div>true</div></div><!---->')
   })
 
   // #13305
@@ -967,28 +973,30 @@ describe('renderer: optimized mode', () => {
 
     const app = createApp(App)
     app.mount(root)
-    expect(inner(root)).toBe(`<p>[1,2,3]</p>` + `<ol><li>Loading…</li></ol>`)
+    expect(inner(root)).toBe(
+      `<!----><p>[1,2,3]</p>` + `<ol><li>Loading…</li></ol><!---->`,
+    )
 
     await Promise.all(deps)
     await nextTick()
     expect(inner(root)).toBe(
-      `<p>[1,2,3]</p>` +
-        `<ol>` +
+      `<!----><p>[1,2,3]</p>` +
+        `<ol><!---->` +
         `<li><p>1</p></li>` +
         `<li><p>2</p></li>` +
         `<li><p>3</p></li>` +
-        `</ol>`,
+        `<!----></ol><!---->`,
     )
 
     list.value = [3, 1, 2]
     await nextTick()
     expect(inner(root)).toBe(
-      `<p>[3,1,2]</p>` +
-        `<ol>` +
+      `<!----><p>[3,1,2]</p>` +
+        `<ol><!---->` +
         `<li><p>3</p></li>` +
         `<li><p>1</p></li>` +
         `<li><p>2</p></li>` +
-        `</ol>`,
+        `<!----></ol><!---->`,
     )
   })
 
@@ -1033,7 +1041,7 @@ describe('renderer: optimized mode', () => {
     })
 
     app.mount(root)
-    expect(inner(root)).toBe('<div>true</div>')
+    expect(inner(root)).toBe('<!----><div>true</div><!---->')
 
     show.value = false
     await nextTick()
@@ -1090,7 +1098,9 @@ describe('renderer: optimized mode', () => {
     // force a patch
     force.value++
     await nextTick()
-    expect(inner(root)).toBe(`<ul><li>dummy</li></ul>`)
+    expect(inner(root)).toBe(
+      `<!----><ul><!----><li>dummy</li><!----></ul><!---->`,
+    )
 
     // unmount
     toggle.value = false
@@ -1301,16 +1311,20 @@ describe('renderer: optimized mode', () => {
     })
 
     app.mount(root)
-    expect(inner(root)).toBe('<div><!--comment--><div>bar</div></div>')
+    expect(inner(root)).toBe(
+      '<div><!----><!----><!--comment--><div>bar</div><!----><!----></div>',
+    )
     expect(block).toBe(null)
 
     show.value = false
     await nextTick()
-    expect(inner(root)).toBe('<div>foo</div>')
+    expect(inner(root)).toBe('<div><!----><!---->foo<!----><!----></div>')
 
     show.value = true
     await nextTick()
-    expect(inner(root)).toBe('<div><!--comment--><div>bar</div></div>')
+    expect(inner(root)).toBe(
+      '<div><!----><!----><!--comment--><div>bar</div><!----><!----></div>',
+    )
   })
 
   test.each(['block', 'full diff', 'disabled tracking'])(
@@ -1433,7 +1447,7 @@ describe('renderer: optimized mode', () => {
     show.value = true
     await nextTick()
     expect(inner(root)).toMatchInlineSnapshot(
-      `"<section><div>foochild</div></section>"`,
+      `"<section><div>foo<!---->child<!----></div></section>"`,
     )
     expect(beforeMountSpy).toHaveBeenCalledTimes(1)
 
@@ -1492,12 +1506,12 @@ describe('renderer: optimized mode', () => {
     }
 
     render(h(Comp), root)
-    expect(inner(root)).toBe('<div>0</div>')
+    expect(inner(root)).toBe('<!----><div>0</div><!----><!----><!---->')
     updateFoo()
     count.value++
     await nextTick()
     expect(inner(root)).toBe(
-      '<div>1</div><div>1_foo</div><div>2_foo</div><div>3_foo</div>',
+      '<!----><div>1</div><!----><div>1_foo</div><div>2_foo</div><div>3_foo</div><!----><!---->',
     )
   })
 })
