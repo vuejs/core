@@ -38,6 +38,14 @@ describe('compiler: expression', () => {
     expect(code).contains(`$props['bar']`)
   })
 
+  test('setup computed (inline mode)', () => {
+    const { code } = compileWithExpression(`{{ foo }}`, {
+      inline: true,
+      bindingMetadata: { foo: BindingTypes.SETUP_COMPUTED },
+    })
+    expect(code).contains(`_toDisplayString(foo.value)`)
+  })
+
   test('empty interpolation', () => {
     const { code } = compileWithExpression(`{{}}`)
     const { code: code2 } = compileWithExpression(`{{ }}`)

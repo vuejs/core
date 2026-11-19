@@ -921,12 +921,22 @@ function genObjectExpression(node: ObjectExpression, context: CodegenContext) {
   push(multilines ? `{` : `{ `)
   multilines && indent()
   for (let i = 0; i < properties.length; i++) {
-    const { key, value } = properties[i]
-    // key
-    genExpressionAsPropertyKey(key, context)
-    push(`: `)
-    // value
-    genNode(value, context)
+    const { key, value, isGetter } = properties[i]
+    if (isGetter) {
+      // Lazy slot prop: emit `get key() { return value }` so the ref is only
+      // evaluated when the slot content actually reads the prop.
+      push(`get `)
+      genExpressionAsPropertyKey(key, context)
+      push(`() { return `)
+      genNode(value, context)
+      push(` }`)
+    } else {
+      // key
+      genExpressionAsPropertyKey(key, context)
+      push(`: `)
+      // value
+      genNode(value, context)
+    }
     if (i < properties.length - 1) {
       // will only reach this if it's multilines
       push(`,`)
