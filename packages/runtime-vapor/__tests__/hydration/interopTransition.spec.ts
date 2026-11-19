@@ -426,11 +426,35 @@ describe('vdom directives on a vapor component wrapping its slot in a Transition
 // the content hydrates ahead of the Transition's hooks reaching the outlet;
 // a vdom component is the control
 test.each([
-  ['a vdom component', false],
-  ['a vapor component', true],
+  ['a vdom component', 'child', false, `<components.Child />`],
+  ['a vapor component', 'child', true, `<components.Child />`],
+  [
+    'a vdom component',
+    'child in a Suspense',
+    false,
+    `<Suspense><components.Child /></Suspense>`,
+  ],
+  [
+    'a vapor component',
+    'child in a Suspense',
+    true,
+    `<Suspense><components.Child /></Suspense>`,
+  ],
+  [
+    'a vdom component',
+    'async child in a Suspense',
+    false,
+    `<Suspense><Lazy /></Suspense>`,
+  ],
+  [
+    'a vapor component',
+    'async child in a Suspense',
+    true,
+    `<Suspense><Lazy /></Suspense>`,
+  ],
 ])(
-  '%s wrapping its slot in a Transition runs the hooks on a hydrated vdom child switching its own root',
-  async (_, vapor) => {
+  '%s wrapping its slot in a Transition runs the hooks on a hydrated vdom %s switching its own root',
+  async (_, __, vapor, content) => {
     const log: string[] = []
     const hook = (name: string) => (el: Element, done: () => void) => {
       log.push(`${name}:${el.tagName}`)
@@ -442,10 +466,16 @@ test.each([
       onLeave: hook('leave'),
     })
     await testWithVDOMApp(
-      `<script setup>const components = _components</script>
+      `<script setup>
+        import { defineAsyncComponent } from 'vue'
+        const components = _components
+        const Lazy = defineAsyncComponent(() =>
+          Promise.resolve(components.Child),
+        )
+      </script>
       <template>
         <components.Fade>
-          <components.Child />
+          ${content}
         </components.Fade>
       </template>`,
       {
@@ -473,6 +503,7 @@ test.each([
       },
       data,
     )
+    await new Promise(r => setTimeout(r))
     // only Child reads `data.a`: the slot is not patched again
     data.a = false
     await nextTick()
@@ -542,6 +573,30 @@ test.each([
   ['a vapor component', 'as its content', true, `<Lazy />`],
   ['a vdom component', 'in a Suspense', false, `<Suspense><Lazy /></Suspense>`],
   ['a vapor component', 'in a Suspense', true, `<Suspense><Lazy /></Suspense>`],
+  [
+    'a vdom component',
+    'in a nested Suspense',
+    false,
+    `<Suspense><Suspense><Lazy /></Suspense></Suspense>`,
+  ],
+  [
+    'a vapor component',
+    'in a nested Suspense',
+    true,
+    `<Suspense><Suspense><Lazy /></Suspense></Suspense>`,
+  ],
+  [
+    'a vdom component',
+    'in a nested suspensible Suspense',
+    false,
+    `<Suspense><Suspense suspensible><Lazy /></Suspense></Suspense>`,
+  ],
+  [
+    'a vapor component',
+    'in a nested suspensible Suspense',
+    true,
+    `<Suspense><Suspense suspensible><Lazy /></Suspense></Suspense>`,
+  ],
 ])(
   '%s wrapping its slot in a Transition leaves a vdom async child %s to hydrate',
   async (_, __, vapor, content) => {

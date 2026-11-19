@@ -3000,6 +3000,13 @@ function renderVDOMSlot(
     // `next` copies the hydrated `previous`
     hydrated?: boolean,
   ): void {
+    // a Suspense copy carries copies of its branches: patched in, they would
+    // replace the mounted ones and the hooks just set on those
+    if (hydrated && next.suspense) {
+      const vnode = next.suspense.vnode
+      next.ssContent = vnode.ssContent
+      next.ssFallback = vnode.ssFallback
+    }
     setVNode(next)
     const refreshSlotVNode = () => {
       const prevValid = content.valid
@@ -3271,11 +3278,7 @@ function renderVDOMSlot(
           currentParentNode!.removeChild(node)
           node = next
         }
-        // a Suspense still hydrating holds its content as the pending branch
-        const boundary = branch.suspense
-        node = internals.n(
-          boundary && boundary.isHydrating ? boundary.pendingBranch! : branch,
-        ) as Node
+        node = internals.n(branch) as Node
         const end = (wrapper.anchor as Node).nextSibling
         while (node !== end) {
           const next = node.nextSibling!
