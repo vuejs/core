@@ -525,6 +525,46 @@ describe('compiler + runtime integration', () => {
     expect(container.innerHTML).toBe(`<div>foo</div>`)
   })
 
+  // #15975
+  test('dynamic directive arg w/ low-precedence operators', async () => {
+    const Child = defineComponent({
+      props: ['foo', 'fooModifiers'],
+      emits: ['update:foo'],
+      template: `<div :data-trim="!!fooModifiers?.trim" @click="$emit('update:foo', 'bar')">{{ foo }}</div>`,
+    })
+
+    const key = ref<string | null>(null)
+    const cond = ref(false)
+    const model = ref('init')
+    const container = document.createElement('div')
+    createApp({
+      components: { Child },
+      setup() {
+        return { key, cond, model }
+      },
+      // `??` would be a SyntaxError next to the compiler-inserted `|| ""`,
+      // and `+`/`||` would otherwise swallow the ternary
+      template:
+        `<div :[key??'id']="'x'"></div>` +
+        `<Child v-model:[cond?'nope':'foo'].trim="model"/>`,
+    }).mount(container)
+
+    const [plain, child] = Array.from(container.children)
+    expect(plain.getAttribute('id')).toBe('x')
+    expect(child.textContent).toBe('init')
+    // the `...Modifiers` prop must land on `fooModifiers`, not on a key
+    // mangled by operator precedence
+    expect(child.getAttribute('data-trim')).toBe('true')
+    ;(child as HTMLElement).click()
+    await nextTick()
+    expect(model.value).toBe('bar')
+    expect(child.textContent).toBe('bar')
+
+    key.value = 'title'
+    await nextTick()
+    expect(plain.getAttribute('title')).toBe('x')
+  })
+
   // #2413
   it('EMPTY_ARR should not change', () => {
     const App = {

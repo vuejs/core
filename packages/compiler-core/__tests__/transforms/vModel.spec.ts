@@ -314,11 +314,12 @@ describe('compiler: transform v-model', () => {
             {
               key: {
                 children: [
-                  '"onUpdate:" + ',
+                  '"onUpdate:" + (',
                   {
                     content: 'value',
                     isStatic: false,
                   },
+                  ')',
                 ],
               },
               value: {
@@ -368,11 +369,12 @@ describe('compiler: transform v-model', () => {
             {
               key: {
                 children: [
-                  '"onUpdate:" + ',
+                  '"onUpdate:" + (',
                   {
                     content: '_ctx.value',
                     isStatic: false,
                   },
+                  ')',
                 ],
               },
               value: {
@@ -392,6 +394,28 @@ describe('compiler: transform v-model', () => {
     })
 
     expect(generate(root, { mode: 'module' }).code).toMatchSnapshot()
+  })
+
+  // #15975
+  test('with dynamic argument w/ low-precedence operators', () => {
+    const getCode = (template: string) =>
+      generate(parseWithVModel(template)).code
+
+    // `+` binds tighter than `?:` / `||` / `??`, so without parens the string
+    // concatenation would swallow the whole argument expression
+    const code = getCode(`<Comp v-model:[cond?"foo":"bar"].trim="x" />`)
+    expect(code).toContain(`"onUpdate:" + (cond?"foo":"bar")`)
+    expect(code).toContain(`(cond?"foo":"bar") + "Modifiers"`)
+
+    expect(getCode(`<Comp v-model:[a||b].trim="x" />`)).toContain(
+      `"onUpdate:" + (a||b)`,
+    )
+    expect(getCode(`<Comp v-model:[foo??"bar"].trim="x" />`)).toContain(
+      `"onUpdate:" + (foo??"bar")`,
+    )
+    expect(getCode(`<Comp v-model:[a+b].trim="x" />`)).toContain(
+      `"onUpdate:" + (a+b)`,
+    )
   })
 
   test('should cache update handler w/ cacheHandlers: true', () => {
