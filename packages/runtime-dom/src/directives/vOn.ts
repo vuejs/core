@@ -73,7 +73,15 @@ export const withModifiers = <
 // Kept for 2.x compat.
 // Note: IE11 compat for `spacebar` and `del` is removed for now.
 const keyNames: Record<
-  'esc' | 'space' | 'up' | 'left' | 'right' | 'down' | 'delete',
+  | 'esc'
+  | 'space'
+  | 'up'
+  | 'left'
+  | 'right'
+  | 'down'
+  | 'delete'
+  | 'enter'
+  | 'tab',
   string
 > = {
   esc: 'escape',
@@ -83,6 +91,8 @@ const keyNames: Record<
   right: 'arrow-right',
   down: 'arrow-down',
   delete: 'backspace',
+  enter: 'enter',
+  tab: 'tab',
 }
 
 /**
