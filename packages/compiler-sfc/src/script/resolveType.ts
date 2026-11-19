@@ -90,7 +90,10 @@ export type SimpleTypeResolveContext = Pick<
   | 'isCE'
 > &
   Partial<
-    Pick<ScriptCompileContext, 'scope' | 'globalScopes' | 'deps' | 'fs'>
+    Pick<
+      ScriptCompileContext,
+      'scope' | 'globalScopes' | 'deps' | 'fs' | 'propsRuntimeExtra'
+    >
   > & {
     ast: Statement[]
     options: SimpleTypeResolveOptions

@@ -268,6 +268,81 @@ describe('withDefaults w/ defineProp discriminate union type', () => {
   }
 })
 
+describe('withDefaults w/ extra (values / validator)', <T extends string>() => {
+  const props = withDefaults(
+    defineProps<{
+      status?: 'active' | 'paused'
+      count?: number
+      generic?: T
+    }>(),
+    {
+      status: 'active',
+      count: 1,
+    },
+    {
+      status: {
+        values: ['active', 'paused'],
+        validator: v => v !== 'paused',
+      },
+      count: {
+        validator(v, all) {
+          expectType<number | undefined>(v)
+          expectType<number | undefined>(all.count)
+          return v === undefined || v > 0
+        },
+      },
+      generic: {
+        values: ['a' as T],
+      },
+    },
+  )
+
+  // extra options are runtime-only and do not affect the visible prop types
+  expectType<'active' | 'paused'>(props.status)
+  expectType<number>(props.count)
+  expectType<T | undefined>(props.generic)
+
+  // two-argument calls remain supported
+  const props2 = withDefaults(defineProps<{ foo?: string }>(), { foo: 'a' })
+  expectType<string>(props2.foo)
+
+  withDefaults(
+    defineProps<{ status?: 'a' | 'b' }>(),
+    {},
+    {
+      // @ts-expect-error values element type mismatch
+      status: { values: ['c'] },
+    },
+  )
+
+  withDefaults(
+    defineProps<{ status?: string }>(),
+    {},
+    {
+      // @ts-expect-error values must be an array
+      status: { values: 'a' },
+    },
+  )
+
+  withDefaults(
+    defineProps<{ count?: number }>(),
+    {},
+    {
+      // @ts-expect-error validator param type mismatch
+      count: { validator: (v: string) => true },
+    },
+  )
+
+  withDefaults(
+    defineProps<{ status?: 'a' | 'b' }>(),
+    {},
+    {
+      // @ts-expect-error key w/o prop declaration
+      other: { values: ['a'] },
+    },
+  )
+})
+
 describe('defineProps w/ runtime declaration', () => {
   // runtime declaration
   const props = defineProps({

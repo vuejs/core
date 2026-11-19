@@ -343,6 +343,13 @@ type InferDefaults<T> = {
   [K in keyof T]?: InferDefault<T, T[K]>
 }
 
+type InferExtra<T> = {
+  [K in keyof T]?: {
+    values?: readonly T[K][]
+    validator?: (value: T[K], props: T) => boolean
+  }
+}
+
 type NativeType =
   null | undefined | number | string | boolean | symbol | Function
 
@@ -386,6 +393,26 @@ type PropsWithDefaults<
  * })
  * ```
  *
+ * An optional 3rd argument can be used to attach runtime validation to
+ * individual props while keeping full type inference. Each entry accepts
+ * `values` (an allow-list compiled into a `validator` using `includes`) and/or
+ * an inline `validator` function. Both are only emitted in dev builds.
+ *
+ * ```ts
+ * withDefaults(
+ *   defineProps<{
+ *     status?: 'active' | 'paused'
+ *   }>(),
+ *   { status: 'active' },
+ *   {
+ *     status: {
+ *       values: ['active', 'paused'],
+ *       validator: v => v !== 'paused',
+ *     },
+ *   },
+ * )
+ * ```
+ *
  * This is only usable inside `<script setup>`, is compiled away in the output
  * and should **not** be actually called at runtime.
  *
@@ -398,6 +425,7 @@ export function withDefaults<
 >(
   props: DefineProps<T, BKeys>,
   defaults: Defaults,
+  extra?: InferExtra<T>,
 ): PropsWithDefaults<T, Defaults, BKeys> {
   if (__DEV__) {
     warnRuntimeUsage(`withDefaults`)
