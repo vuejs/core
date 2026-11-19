@@ -1,6 +1,12 @@
 import type { Mock } from 'vitest'
 import Vue from '@vue/compat'
-import { nextTick, watchPostEffect } from '@vue/runtime-core'
+import {
+  createBlock,
+  h,
+  nextTick,
+  openBlock,
+  watchPostEffect,
+} from '@vue/runtime-core'
 import type { Slots } from '../../runtime-core/src/componentSlots'
 import { Text } from '../../runtime-core/src/vnode'
 import { ref } from '@vue/reactivity'
@@ -342,6 +348,140 @@ test('INSTANCE_LISTENERS', () => {
   expect(
     deprecationData[DeprecationTypes.INSTANCE_LISTENERS].message,
   ).toHaveBeenWarned()
+})
+
+test('INSTANCE_LISTENERS: PROPS fast path should not leak on* listeners into $props (fix #16202)', async () => {
+  const onChange = () => {}
+  const options = ref([1])
+  let child: any
+
+  const Child = {
+    props: { options: Array },
+    compatConfig: { RENDER_FUNCTION: false },
+    created(this: any) {
+      child = this
+    },
+    render: () => h('div'),
+  }
+
+  // exactly what the compiler emits for `:options="..."` + `@change="..."`
+  // in a production build: patchFlag 8 (PROPS) with the dynamic prop keys
+  // listed, so the update takes the fast path in `updateProps` instead of
+  // the full `setFullProps` diff.
+  new Vue({
+    compatConfig: { RENDER_FUNCTION: false },
+    render() {
+      return (
+        openBlock(),
+        createBlock(
+          Child,
+          { options: options.value, onChange },
+          null,
+          8 /* PROPS */,
+          ['options', 'onChange'],
+        )
+      )
+    },
+  }).$mount()
+
+  // on mount `setFullProps` keeps the listener out of both $props and $attrs
+  expect(child.$props.onChange).toBeUndefined()
+  expect(child.$attrs.onChange).toBeUndefined()
+  // the listener stays reachable via $listeners
+  expect(child.$listeners.change).toBe(onChange)
+
+  options.value = [1, 2]
+  await nextTick()
+
+  expect(child.$props.options).toEqual([1, 2])
+  // the update must not write the listener into $props
+  expect(child.$props.onChange).toBeUndefined()
+  expect(child.$attrs.onChange).toBeUndefined()
+  expect(child.$listeners.change).toBe(onChange)
+
+  expect(
+    deprecationData[DeprecationTypes.INSTANCE_LISTENERS].message,
+  ).toHaveBeenWarned()
+})
+
+test('INSTANCE_LISTENERS: PROPS fast path should not leak .native listeners into $props (fix #16202)', async () => {
+  const onChangeNative = () => {}
+  const options = ref([1])
+  let child: any
+
+  const Child = {
+    props: { options: Array },
+    compatConfig: { RENDER_FUNCTION: false },
+    created(this: any) {
+      child = this
+    },
+    render: () => h('div'),
+  }
+
+  // `.native` (`onChangeNative`) is routed to $attrs as `onChange` on mount
+  new Vue({
+    compatConfig: { RENDER_FUNCTION: false },
+    render() {
+      return (
+        openBlock(),
+        createBlock(
+          Child,
+          { options: options.value, onChangeNative },
+          null,
+          8 /* PROPS */,
+          ['options', 'onChangeNative'],
+        )
+      )
+    },
+  }).$mount()
+
+  expect(child.$props.onChangeNative).toBeUndefined()
+  expect(child.$attrs.onChange).toBe(onChangeNative)
+
+  options.value = [1, 2]
+  await nextTick()
+
+  expect(child.$props.options).toEqual([1, 2])
+  // the update must not write the listener into $props under its full
+  // `onChangeNative` key, and must keep it routed to $attrs as `onChange`
+  expect(child.$props.onChangeNative).toBeUndefined()
+  expect(child.$attrs.onChange).toBe(onChangeNative)
+})
+
+test('INSTANCE_LISTENERS: PROPS fast path still updates a declared on* prop (fix #16202)', async () => {
+  const onChange1 = () => 1
+  const onChange2 = () => 2
+  const onChange = ref(onChange1)
+  let child: any
+
+  // a prop literally declared as `onChange` is a real prop, not a
+  // listener: `setFullProps` puts it in $props on mount, so the fast
+  // path must keep updating it.
+  const Child = {
+    props: { onChange: Function },
+    compatConfig: { RENDER_FUNCTION: false },
+    created(this: any) {
+      child = this
+    },
+    render: () => h('div'),
+  }
+
+  new Vue({
+    compatConfig: { RENDER_FUNCTION: false },
+    render() {
+      return (
+        openBlock(),
+        createBlock(Child, { onChange: onChange.value }, null, 8, ['onChange'])
+      )
+    },
+  }).$mount()
+
+  expect(child.$props.onChange).toBe(onChange1)
+
+  onChange.value = onChange2
+  await nextTick()
+
+  expect(child.$props.onChange).toBe(onChange2)
 })
 
 describe('INSTANCE_SCOPED_SLOTS', () => {

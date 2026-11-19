@@ -279,6 +279,18 @@ export function updateProps(
         // PROPS flag guarantees rawProps to be non-null
         const value = rawProps![key]
         if (options) {
+          if (__COMPAT__ && !hasOwn(options, camelize(key))) {
+            // mirror `setFullProps`: in compat mode, keys that are neither
+            // declared props nor attrs are skipped on init (e.g. `on*`
+            // listeners when INSTANCE_LISTENERS is enabled, or `xxxNative`
+            // listeners routed to `attrs` without the postfix), so they
+            // must not be written into `props` here either (#16202)
+            if (isOn(key) && key.endsWith('Native')) {
+              key = key.slice(0, -6) // remove Native postfix
+            } else if (shouldSkipAttr(key, instance)) {
+              continue
+            }
+          }
           // attr / props separation was done on init and will be consistent
           // in this code path, so just check if attrs have it.
           if (hasOwn(attrs, key)) {
