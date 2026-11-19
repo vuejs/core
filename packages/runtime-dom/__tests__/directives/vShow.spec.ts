@@ -394,4 +394,49 @@ describe('runtime-dom: v-show directive', () => {
     await nextTick()
     expect($div.style.display).toEqual('')
   })
+
+  test('should not leave enter-to class when hidden before the enter frame (with Transition)', async () => {
+    const visible = ref(false)
+    const { code } = compile(
+      '<Transition name="test" :duration="10"><div v-show="visible" /></Transition>',
+      { prefixIdentifiers: true },
+    )
+    const Component = {
+      setup: () => ({ visible }),
+      render: new Function('Vue', code)(runtimeDom),
+    }
+    render(h(Component), root)
+    const el = root.children[0]
+
+    visible.value = true
+    await nextTick()
+    visible.value = false
+    await nextTick()
+    await new Promise(r => setTimeout(r, 100))
+    expect(el.style.display).toBe('none')
+    expect(el.className).toBe('')
+  })
+
+  test('should not add enter-to class after enter hook calls done (with Transition)', async () => {
+    const visible = ref(false)
+    const { code } = compile(
+      '<Transition name="test" @enter="onEnter"><div v-show="visible" /></Transition>',
+      { prefixIdentifiers: true },
+    )
+    const Component = {
+      setup: () => ({
+        visible,
+        onEnter: (_el: Element, done: () => void) => done(),
+      }),
+      render: new Function('Vue', code)(runtimeDom),
+    }
+    render(h(Component), root)
+    const el = root.children[0]
+
+    visible.value = true
+    await nextTick()
+    await new Promise(r => setTimeout(r, 100))
+    expect(el.style.display).toBe('')
+    expect(el.className).toBe('')
+  })
 })
