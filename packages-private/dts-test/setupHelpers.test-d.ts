@@ -16,7 +16,7 @@ import {
   useSlots,
   withDefaults,
 } from 'vue'
-import { describe, expectType } from './utils'
+import { type IsAny, describe, expectType } from './utils'
 
 describe('defineProps w/ type declaration', () => {
   // type declaration
@@ -68,6 +68,59 @@ describe('defineProps preserves generic array element types in toRefs', <T exten
     options.value.find(item => item.value === props.value)?.value,
   )
   expectType<Ref<number>>(existingRef)
+})
+
+describe('toRefs preserves unconstrained generic props', <T>() => {
+  const props = defineProps<{
+    options: readonly { value: T }[]
+    value: T
+  }>()
+  const options = toRefs(props).options
+  expectType<false>(null! as IsAny<(typeof options.value)[number]>)
+  expectType<T | undefined>(
+    options.value.find(item => item.value === props.value)?.value,
+  )
+
+  const defaulted = withDefaults(
+    defineProps<{
+      label?: string
+      options?: readonly { value: T }[]
+      value: T
+    }>(),
+    { label: 'Choose', options: () => [] },
+  )
+  const defaultedOptions = toRefs(defaulted).options
+  expectType<false>(null! as IsAny<(typeof defaultedOptions.value)[number]>)
+  expectType<T | undefined>(
+    defaultedOptions.value.find(item => item.value === defaulted.value)?.value,
+  )
+})
+
+describe('toRefs preserves generic props that can be Boolean', <T extends
+  string | boolean>() => {
+  const props = defineProps<{
+    options: readonly { value: T }[]
+    value: T
+  }>()
+  const options = toRefs(props).options
+  expectType<false>(null! as IsAny<(typeof options.value)[number]>)
+  expectType<T | undefined>(
+    options.value.find(item => item.value === props.value)?.value,
+  )
+
+  const defaulted = withDefaults(
+    defineProps<{
+      label?: string
+      options?: readonly { value: T }[]
+      value: T
+    }>(),
+    { label: 'Choose', options: () => [] },
+  )
+  const defaultedOptions = toRefs(defaulted).options
+  expectType<false>(null! as IsAny<(typeof defaultedOptions.value)[number]>)
+  expectType<T | undefined>(
+    defaultedOptions.value.find(item => item.value === defaulted.value)?.value,
+  )
 })
 
 describe('defineProps preserves inference of Boolean keys from its return type', () => {
@@ -125,6 +178,49 @@ describe('DefineProps preserves explicit Boolean keys', () => {
   expectType<boolean>(withOneBooleanKey.active)
   // @ts-expect-error only the explicitly selected key is refined
   expectType<boolean>(withOneBooleanKey.visible)
+})
+
+describe('DefineProps preserves generic structural assignability', <T, K extends
+  keyof T>() => {
+  type StructuralProps = Readonly<T> & { readonly [P in K]-?: boolean }
+
+  expectType<StructuralProps>(null! as DefineProps<T, K>)
+  expectType<DefineProps<T, K>>(null! as StructuralProps)
+})
+
+describe('defineProps preserves Boolean casting and disjoint field types', () => {
+  const props = defineProps<{
+    optionalBoolean?: boolean
+    optionalFalse?: false
+    optionalTrue?: true
+    optionalUndefined?: undefined
+    optionalNever?: never
+    optionalUnknown?: unknown
+    optionalMixed?: string | boolean
+    optionalAny?: any
+  }>()
+
+  expectType<boolean>(props.optionalBoolean)
+  expectType<false>(props.optionalFalse)
+  expectType<true>(props.optionalTrue)
+  expectType<undefined>(props.optionalUndefined)
+  expectType<undefined>(props.optionalNever)
+  expectType<unknown>(props.optionalUnknown)
+  expectType<string | boolean | undefined>(props.optionalMixed)
+  // @ts-expect-error a union with a non-Boolean member remains optional
+  expectType<string | boolean>(props.optionalMixed)
+
+  // Any-valued props retain the previous Boolean-key treatment.
+  type ExtractBooleanKeys<T> =
+    T extends DefineProps<T, infer BKeys extends keyof T> ? BKeys : never
+  type BooleanKeys = ExtractBooleanKeys<typeof props>
+  expectType<BooleanKeys>('optionalAny')
+  expectType<BooleanKeys>('optionalBoolean')
+  expectType<BooleanKeys>('optionalFalse')
+  expectType<BooleanKeys>('optionalTrue')
+  expectType<
+    'optionalAny' | 'optionalBoolean' | 'optionalFalse' | 'optionalTrue'
+  >(null! as BooleanKeys)
 })
 
 describe('withDefaults preserves generic props and their refs', <T extends

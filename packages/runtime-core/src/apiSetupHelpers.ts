@@ -84,11 +84,8 @@ export function defineProps<
   PP extends ComponentObjectPropsOptions = ComponentObjectPropsOptions,
 >(props: PP): Prettify<Readonly<ExtractPropTypes<PP>>>
 // overload 3: typed-based declaration
-// Keep the raw-props marker inline for tools that copy declaration aliases.
 export function defineProps<TypeProps>(): DefineProps<
-  LooseRequired<TypeProps> & {
-    readonly [TypePropsSource]: LooseRequired<TypeProps>
-  },
+  LooseRequired<TypeProps>,
   BooleanKey<TypeProps>
 >
 // implementation
@@ -99,17 +96,10 @@ export function defineProps() {
   return null as any
 }
 
-declare const TypePropsSource: unique symbol
+export type DefineProps<T, BKeys extends keyof T> = Readonly<T> & {
+  readonly [K in BKeys]-?: boolean
+}
 
-export type DefineProps<T, BKeys extends keyof T> = Readonly<{
-  [K in keyof T as K extends typeof TypePropsSource ? never : K]: T[K]
-}> &
-  (T extends { readonly [TypePropsSource]: infer P }
-    ? { readonly [K in keyof P]: SetupProp<P[K]> }
-    : { readonly [K in BKeys]-?: boolean })
-
-// Keep the key list available to consumers of DefineProps without using it to
-// select the fields of the type-based macro result.
 type BooleanKey<T, K extends keyof T = keyof T> = K extends any
   ? T[K] extends boolean | undefined
     ? T[K] extends never | undefined
@@ -117,14 +107,6 @@ type BooleanKey<T, K extends keyof T = keyof T> = K extends any
       : K
     : never
   : never
-
-// Keep Boolean casting local to a prop so generic values do not affect other keys.
-type SetupProp<T> = T &
-  ([T] extends [boolean | undefined]
-    ? [T] extends [never | undefined]
-      ? unknown
-      : boolean
-    : unknown)
 
 /**
  * Vue `<script setup>` compiler macro for declaring a component's emitted
@@ -367,17 +349,7 @@ type NativeType =
 type InferDefault<P, T> =
   ((props: P) => T & {}) | (T extends NativeType ? T : never)
 
-type DefaultedProp<T, D> = [D] extends [undefined]
-  ? IfAny<D, NotUndefined<T>, T>
-  : NotUndefined<T>
-
-type PropsWithDefaults<T, Defaults extends InferDefaults<T>> = {
-  readonly [K in keyof T]: K extends keyof Defaults
-    ? DefaultedProp<T[K], Defaults[K]>
-    : SetupProp<T[K]>
-}
-
-type LegacyPropsWithDefaults<
+type PropsWithDefaults<
   T,
   Defaults extends InferDefaults<T>,
   BKeys extends keyof T,
@@ -385,7 +357,11 @@ type LegacyPropsWithDefaults<
   ? Readonly<MappedOmit<T, keyof Defaults>> & {
       readonly [
         K in keyof Defaults as K extends keyof T ? K : never
-      ]-?: K extends keyof T ? DefaultedProp<T[K], Defaults[K]> : never
+      ]-?: K extends keyof T
+        ? Defaults[K] extends undefined
+          ? IfAny<Defaults[K], NotUndefined<T[K]>, T[K]>
+          : NotUndefined<T[K]>
+        : never
     } & {
       readonly [K in BKeys]-?: K extends keyof Defaults
         ? Defaults[K] extends undefined
@@ -415,11 +391,6 @@ type LegacyPropsWithDefaults<
  *
  * @see {@link https://vuejs.org/guide/typescript/composition-api.html#typing-component-props}
  */
-export function withDefaults<T, Defaults extends InferDefaults<T>>(
-  props: DefineProps<T & { readonly [TypePropsSource]: T }, BooleanKey<T>>,
-  defaults: Defaults,
-): PropsWithDefaults<T, Defaults>
-// Preserve the overload for callers supplying the Boolean keys explicitly.
 export function withDefaults<
   T,
   BKeys extends keyof T,
@@ -427,8 +398,7 @@ export function withDefaults<
 >(
   props: DefineProps<T, BKeys>,
   defaults: Defaults,
-): LegacyPropsWithDefaults<T, Defaults, BKeys>
-export function withDefaults(props: unknown, defaults: unknown) {
+): PropsWithDefaults<T, Defaults, BKeys> {
   if (__DEV__) {
     warnRuntimeUsage(`withDefaults`)
   }
