@@ -3220,6 +3220,49 @@ describe('compiler: parse', () => {
             },
           ],
         },
+        {
+          code: "<template><div \"bc=''></div></template>",
+          errors: [
+            {
+              type: ErrorCodes.UNEXPECTED_CHARACTER_IN_ATTRIBUTE_NAME,
+              loc: { offset: 15, line: 1, column: 16 },
+            },
+          ],
+        },
+        {
+          code: "<template><div 'bc=''></div></template>",
+          errors: [
+            {
+              type: ErrorCodes.UNEXPECTED_CHARACTER_IN_ATTRIBUTE_NAME,
+              loc: { offset: 15, line: 1, column: 16 },
+            },
+          ],
+        },
+        {
+          code: "<template><div <bc=''></div></template>",
+          errors: [
+            {
+              type: ErrorCodes.UNEXPECTED_CHARACTER_IN_ATTRIBUTE_NAME,
+              loc: { offset: 15, line: 1, column: 16 },
+            },
+          ],
+        },
+        {
+          // #13319 a new tag opened before the current one is closed used to
+          // be silently swallowed as an attribute, leaving only a misleading
+          // "Invalid end tag." pointing at the closing tag
+          code: '<template><div\n  <span>hi</span>\n</div></template>',
+          errors: [
+            {
+              type: ErrorCodes.UNEXPECTED_CHARACTER_IN_ATTRIBUTE_NAME,
+              loc: { offset: 17, line: 2, column: 3 },
+            },
+            {
+              type: ErrorCodes.X_INVALID_END_TAG,
+              loc: { offset: 25, line: 2, column: 11 },
+            },
+          ],
+        },
       ],
       UNEXPECTED_CHARACTER_IN_UNQUOTED_ATTRIBUTE_VALUE: [
         {
