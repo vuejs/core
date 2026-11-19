@@ -4645,23 +4645,17 @@ describe('Suspense', () => {
     expect(serializeInner(root)).toBe('<div><span>dep</span><!--v-if--></div>')
   })
 
-  test.each([
-    { unmount: 'none', captureOuter: true },
-    { unmount: 'boundary', captureOuter: true },
-    { unmount: 'boundary', captureOuter: false },
-    { unmount: 'app', captureOuter: true },
-    { unmount: 'branch', captureOuter: true },
-    { unmount: 'branch', captureOuter: false },
-  ])(
-    'async setup rejection (unmount: $unmount, capture outer: $captureOuter)',
-    async ({ unmount, captureOuter }) => {
+  // #16349
+  test.each(['none', 'boundary', 'app', 'branch'])(
+    'async setup rejection (unmount: %s)',
+    async unmount => {
       const error = new Error('request failed')
       let reject!: (error: Error) => void
       const pending = new Promise<void>((_, rejectPending) => {
         reject = rejectPending
       })
       const innerHandler = vi.fn(() => false)
-      const outerHandler = vi.fn(() => (captureOuter ? false : undefined))
+      const outerHandler = vi.fn(() => false)
       const appHandler = vi.fn()
       const renderAsync = vi.fn(() => h('div', 'ready'))
       const show = ref(true)
@@ -4719,33 +4713,14 @@ describe('Suspense', () => {
           expect.any(Object),
           'setup function',
         )
-        expect(outerHandler).not.toHaveBeenCalled()
-        expect(appHandler).not.toHaveBeenCalled()
       } else {
+        // the component is gone, and the outcome of its setup with it
         expect(innerHandler).not.toHaveBeenCalled()
-        if (unmount === 'boundary' || unmount === 'branch') {
-          expect(outerHandler).toHaveBeenCalledTimes(1)
-          expect(outerHandler).toHaveBeenCalledWith(
-            error,
-            expect.any(Object),
-            'setup function',
-          )
-        } else {
-          expect(outerHandler).not.toHaveBeenCalled()
-        }
-        if (unmount === 'app' || !captureOuter) {
-          expect(appHandler).toHaveBeenCalledTimes(1)
-          expect(appHandler).toHaveBeenCalledWith(
-            error,
-            expect.any(Object),
-            'setup function',
-          )
-        } else {
-          expect(appHandler).not.toHaveBeenCalled()
-        }
         expect(renderAsync).not.toHaveBeenCalled()
         expect(root.innerHTML).toBe(unmount === 'app' ? '' : '<p>left</p>')
       }
+      expect(outerHandler).not.toHaveBeenCalled()
+      expect(appHandler).not.toHaveBeenCalled()
       if (unmount !== 'app') app.unmount()
     },
   )
@@ -4835,18 +4810,20 @@ describe('Suspense', () => {
       await new Promise(r => setTimeout(r))
 
       expect(innerHandler).not.toHaveBeenCalled()
-      expect(outerHandler).toHaveBeenCalledTimes(1)
-      expect(outerHandler).toHaveBeenCalledWith(
-        error,
-        expect.any(Object),
-        source === 'loader'
-          ? 'async component loader'
-          : source === 'watcher'
-            ? 'watcher callback'
-            : source === 'teardown'
-              ? 'beforeUnmount hook'
-              : 'setup function',
-      )
+      if (source === 'setup') {
+        expect(outerHandler).not.toHaveBeenCalled()
+      } else {
+        expect(outerHandler).toHaveBeenCalledTimes(1)
+        expect(outerHandler).toHaveBeenCalledWith(
+          error,
+          expect.any(Object),
+          source === 'loader'
+            ? 'async component loader'
+            : source === 'watcher'
+              ? 'watcher callback'
+              : 'beforeUnmount hook',
+        )
+      }
       expect(appHandler).not.toHaveBeenCalled()
       if (source === 'setup' || source === 'loader') {
         expect(renderChild).not.toHaveBeenCalled()
