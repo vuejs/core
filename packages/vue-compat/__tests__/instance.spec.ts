@@ -1,5 +1,6 @@
 import type { Mock } from 'vitest'
 import Vue from '@vue/compat'
+import { CompilerDeprecationTypes } from '@vue/compiler-dom'
 import {
   createBlock,
   h,
@@ -10,6 +11,7 @@ import {
 import type { Slots } from '../../runtime-core/src/componentSlots'
 import { Text } from '../../runtime-core/src/vnode'
 import { ref } from '@vue/reactivity'
+import { PatchFlags } from '@vue/shared'
 import {
   DeprecationTypes,
   deprecationData,
@@ -405,7 +407,9 @@ test('INSTANCE_LISTENERS: PROPS fast path should not leak on* listeners into $pr
 })
 
 test('INSTANCE_LISTENERS: PROPS fast path should not leak .native listeners into $props (fix #16202)', async () => {
-  const onChangeNative = () => {}
+  const onChangeNative1 = () => {}
+  const onChangeNative2 = () => {}
+  const onChangeNative = ref(onChangeNative1)
   const options = ref([1])
   let child: any
 
@@ -426,7 +430,7 @@ test('INSTANCE_LISTENERS: PROPS fast path should not leak .native listeners into
         openBlock(),
         createBlock(
           Child,
-          { options: options.value, onChangeNative },
+          { options: options.value, onChangeNative: onChangeNative.value },
           null,
           8 /* PROPS */,
           ['options', 'onChangeNative'],
@@ -436,16 +440,17 @@ test('INSTANCE_LISTENERS: PROPS fast path should not leak .native listeners into
   }).$mount()
 
   expect(child.$props.onChangeNative).toBeUndefined()
-  expect(child.$attrs.onChange).toBe(onChangeNative)
+  expect(child.$attrs.onChange).toBe(onChangeNative1)
 
   options.value = [1, 2]
+  onChangeNative.value = onChangeNative2
   await nextTick()
 
   expect(child.$props.options).toEqual([1, 2])
   // the update must not write the listener into $props under its full
   // `onChangeNative` key, and must keep it routed to $attrs as `onChange`
   expect(child.$props.onChangeNative).toBeUndefined()
-  expect(child.$attrs.onChange).toBe(onChangeNative)
+  expect(child.$attrs.onChange).toBe(onChangeNative2)
 })
 
 test('INSTANCE_LISTENERS: PROPS fast path still updates a declared on* prop (fix #16202)', async () => {
@@ -483,6 +488,69 @@ test('INSTANCE_LISTENERS: PROPS fast path still updates a declared on* prop (fix
 
   expect(child.$props.onChange).toBe(onChange2)
 })
+
+test.each([
+  [
+    '@click.native="dynamicHandler" @click="staticHandler()"',
+    'onClickNative',
+    ['static', 'static'],
+  ],
+  [
+    '@click="staticHandler()" @click.native="dynamicHandler"',
+    'onClickNative',
+    ['dynamic', 'updated'],
+  ],
+  [
+    '@click="dynamicHandler" @click.native="staticHandler()"',
+    'onClick',
+    ['static', 'static'],
+  ],
+  [
+    '@click.native="staticHandler()" @click="dynamicHandler"',
+    'onClick',
+    ['dynamic', 'updated'],
+  ],
+])(
+  'uses the last fallthrough listener before and after a PROPS update (%s)',
+  async (listeners, dynamicProp, [initial, updated]) => {
+    const calls: string[] = []
+    const staticHandler = () => calls.push('static')
+    const dynamicHandler = ref(() => calls.push('dynamic'))
+    const compilerOptions = {
+      comments: false,
+      prefixIdentifiers: true,
+      cacheHandlers: true,
+    }
+    const container = document.createElement('div')
+    const vm = new Vue({
+      components: {
+        Child: {
+          props: ['label'],
+          compatConfig: { RENDER_FUNCTION: false, INSTANCE_LISTENERS: false },
+          render: () => h('button'),
+        },
+      },
+      setup: () => ({ staticHandler, dynamicHandler }),
+      compilerOptions,
+      template: `<Child ${listeners} />`,
+    }).$mount(container)
+    if (__DEV__) {
+      expect(CompilerDeprecationTypes.COMPILER_V_ON_NATIVE).toHaveBeenWarned()
+    }
+
+    const { patchFlag, dynamicProps } = vm.$.subTree
+    expect(patchFlag).toBe(PatchFlags.PROPS)
+    expect(dynamicProps).toEqual([dynamicProp])
+    const button = container.querySelector('button')!
+    button.click()
+    expect(calls).toEqual([initial])
+
+    dynamicHandler.value = () => calls.push('updated')
+    await nextTick()
+    button.click()
+    expect(calls).toEqual([initial, updated])
+  },
+)
 
 describe('INSTANCE_SCOPED_SLOTS', () => {
   test('explicit usage', () => {

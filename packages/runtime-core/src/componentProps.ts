@@ -264,7 +264,19 @@ export function updateProps(
     // - vite#872 non-sfc component used by sfc component
     !(__DEV__ && isInHmrContext(instance)) &&
     (optimized || patchFlag > 0) &&
-    !(patchFlag & PatchFlags.FULL_PROPS)
+    !(patchFlag & PatchFlags.FULL_PROPS) &&
+    // In compat mode, native and ordinary listeners can share an attr key.
+    // Use raw prop order when either listener is dynamic.
+    !(
+      __COMPAT__ &&
+      patchFlag & PatchFlags.PROPS &&
+      instance.vnode.dynamicProps!.some(
+        key =>
+          isOn(key) &&
+          ((key.endsWith('Native') && hasOwn(rawProps!, key.slice(0, -6))) ||
+            hasOwn(rawProps!, key + 'Native')),
+      )
+    )
   ) {
     if (patchFlag & PatchFlags.PROPS) {
       // Compiler-generated props & no keys change, just set the updated
