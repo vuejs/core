@@ -5,6 +5,7 @@ import { patchDOMProp } from './modules/props'
 import { patchEvent } from './modules/events'
 import {
   camelize,
+  includeBooleanAttr,
   isFunction,
   isModelListener,
   isOn,
@@ -31,6 +32,15 @@ export const patchProp: DOMRendererOptions['patchProp'] = (
   parentComponent,
 ) => {
   const isSVG = namespace === 'svg'
+  if (
+    // checked is also patched when unchanged (#10929), so leave the element
+    // alone if user input hasn't put it out of sync
+    key === 'checked' &&
+    prevValue === nextValue &&
+    (el as HTMLInputElement).checked === includeBooleanAttr(nextValue)
+  ) {
+    return
+  }
   if (key === 'class') {
     patchClass(el, nextValue, isSVG)
   } else if (key === 'style') {
