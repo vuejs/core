@@ -29,7 +29,7 @@ import {
 import type { LooseRawProps, VaporComponentInstance } from '../component'
 import { rawPropsProxyHandlers } from '../componentProps'
 import { renderEffect } from '../renderEffect'
-import { extend } from '@vue/shared'
+import { extend, isString } from '@vue/shared'
 import {
   RenderContextFragment,
   nestedContentContext,
@@ -154,6 +154,42 @@ export class TeleportFragment extends RenderContextFragment {
         this.handlePropsUpdate()
       }
     })
+
+    if (!isHydrating) this.claimTargetOrder()
+  }
+
+  /**
+   * vdom mounts a teleport into its target when the teleport is created, or
+   * queues that mount then (`defer`, a pending suspense), so teleports to the
+   * same target follow creation order. Here the mount comes later: on block
+   * insertion for a teleport at a template root, after render for one inside
+   * an element. Claim the place in creation order now: the queued mount, or
+   * the target anchors the content is later mounted before.
+   */
+  private claimTargetOrder(): void {
+    const props = this.resolvedProps!
+    if (
+      isTeleportDeferred(props) ||
+      (__FEATURE_SUSPENSE__ &&
+        isSuspenseEnabled &&
+        this.ctx.suspense &&
+        this.ctx.suspense.pendingBranch)
+    ) {
+      // queued again on insertion, the same job keeps its place
+      this.queueTargetUpdate()
+      return
+    }
+    // a target not found yet (rendered by the same template) is resolved,
+    // with its warning, at mount time
+    const to = props.to
+    const target = isString(to) ? querySelector(to) : to
+    if (target) {
+      this.prepareTargetAnchors(target as ParentNode)
+      // vdom creates the children with the teleport too: a teleport nested
+      // in them claims its place right after this one, not after teleports
+      // created later
+      this.ensureChildrenInitialized()
+    }
   }
 
   get parent(): ParentNode | null {
@@ -295,8 +331,10 @@ export class TeleportFragment extends RenderContextFragment {
     ) {
       this.mountToTargetJob = () => {
         this.mountToTargetJob = undefined
-        // State may have changed before the post-flush job runs.
-        if (!this.anchor) return
+        // State may have changed before the post-flush job runs. A job
+        // queued on creation may run before the teleport is inserted:
+        // insertion queues it again.
+        if (!this.anchor || !this.parent) return
         if (this.isDisabled) {
           // a mount a pending boundary held back
           if (
