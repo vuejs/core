@@ -2997,6 +2997,8 @@ function renderVDOMSlot(
     next: VNode,
     slotScopeIds: string[] | null,
     valid: boolean,
+    // `next` copies the hydrated `previous`
+    hydrated?: boolean,
   ): void {
     setVNode(next)
     const refreshSlotVNode = () => {
@@ -3013,19 +3015,40 @@ function renderVDOMSlot(
     }
     trackSlotVNodeUpdatesWithRefresh(next, refreshSlotVNode, notifyBeforeUpdate)
     if (frag.rootScopeIds) setVNodeVaporScopeIds(next, frag.rootScopeIds)
-    const prev = currentInstance
-    simpleSetCurrentInstance(null)
-    internals.p(
-      previous,
-      next,
-      currentParentNode!,
-      currentAnchor,
-      mountParent as any,
-      suspense,
-      slotNamespace,
-      concatInteropScopeIds(frag.slotScopeIds, slotScopeIds),
-    )
-    simpleSetCurrentInstance(prev)
+    const scopeIds = concatInteropScopeIds(frag.slotScopeIds, slotScopeIds)
+    const instance = next.component
+    if (
+      hydrated &&
+      previous &&
+      next.el === previous.el &&
+      rootAttrs === EMPTY_OBJ &&
+      next.dirs === previous.dirs &&
+      (next.shapeFlag & ShapeFlags.ELEMENT ||
+        (instance && !isVaporComponent(instance)))
+    ) {
+      // nothing to patch, which would update the content: a component reads
+      // the hooks and the ids off the vnode it is handed
+      if (instance) {
+        next.slotScopeIds = scopeIds
+        instance.vnode = next
+      }
+    } else {
+      const prev = currentInstance
+      simpleSetCurrentInstance(null)
+      internals.p(
+        previous,
+        next,
+        currentParentNode!,
+        currentAnchor,
+        mountParent as any,
+        suspense,
+        slotNamespace,
+        scopeIds,
+        // the children the two share need no diff
+        hydrated,
+      )
+      simpleSetCurrentInstance(prev)
+    }
     const leaving = inOutLeave
     inOutLeave = undefined
     if (isTransitionEnabled && leaving && leaving.delayedLeave) {
@@ -3220,6 +3243,7 @@ function renderVDOMSlot(
   function applyVNodeContent(
     slotContent: VNode,
     slotContentValid: boolean,
+    hydrated?: boolean,
   ): void {
     const transition = isTransitionEnabled
       ? slotResolutionState.$transition
@@ -3247,7 +3271,11 @@ function renderVDOMSlot(
           currentParentNode!.removeChild(node)
           node = next
         }
-        node = internals.n(branch) as Node
+        // a Suspense still hydrating holds its content as the pending branch
+        const boundary = branch.suspense
+        node = internals.n(
+          boundary && boundary.isHydrating ? boundary.pendingBranch! : branch,
+        ) as Node
         const end = (wrapper.anchor as Node).nextSibling
         while (node !== end) {
           const next = node.nextSibling!
@@ -3423,6 +3451,7 @@ function renderVDOMSlot(
       nextVNode,
       slotContent.slotScopeIds,
       slotContentValid,
+      hydrated,
     )
   }
 
@@ -3585,14 +3614,14 @@ function renderVDOMSlot(
       currentParentNode = hydrationParent
       currentAnchor = internals.n(hydrationVNode) as Node | null
       setRendered(hydrationVNode, slotContentValid)
-      // the content hydrates ahead of the Transition's hooks reaching the
-      // outlet, which `inheritRoot` runs under: its root takes the attrs in a
-      // patch of its own
-      if (rootAttrs !== EMPTY_OBJ) {
+      // the content hydrates ahead of the Transition's hooks and the root
+      // scope ids reaching the outlet: a pass of its own makes its root the
+      // Transition's child, which takes them and the attrs (`inheritRoot`)
+      if (flattened) {
         queuePostFlushCb(() => {
           if (!disposed && rendered === hydrationVNode) {
             inContentContext(() =>
-              applyVNodeContent(hydratedContent, slotContentValid),
+              applyVNodeContent(hydratedContent, slotContentValid, true),
             )
           }
         })
