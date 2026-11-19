@@ -10,6 +10,7 @@ import {
   Suspense,
   type SuspenseProps,
   Teleport,
+  type VNode,
   createBlock,
   createCommentVNode,
   createElementBlock,
@@ -6388,5 +6389,216 @@ describe('Suspense', () => {
     await new Promise(r => setTimeout(r))
     expect(serializeInner(root)).toBe('<div>ParentAsync<i>Child b</i></div>')
     expect(setups).toEqual(['ParentSync', 'Child', 'ParentAsync', 'Child'])
+  })
+
+  // #16344
+  test('out-in: mounted hooks run once when the boundary resolves inside a pending ancestor', async () => {
+    const root = nodeOps.createElement('div')
+    const log: string[] = []
+    const leaves: (() => void)[] = []
+    let settle: () => void
+    const Page = {
+      async setup() {
+        onMounted(() => log.push(`mounted in ${serializeInner(root)}`))
+        await new Promise<void>(r => (settle = r))
+        return () => h('p', 'page')
+      },
+    }
+    const boundary = (content: VNode) =>
+      h(
+        BaseTransition,
+        {
+          mode: 'out-in',
+          onLeave: (_: any, done: () => void) => {
+            leaves.push(done)
+          },
+        },
+        () => h(Suspense, { suspensible: true }, { default: content }),
+      )
+    const LayoutA = { render: () => h('div', 'a') }
+    const LayoutB = { render: () => h('div', [boundary(h(Page))]) }
+    const layout = shallowRef<ComponentOptions>(LayoutA)
+    render(h({ render: () => boundary(h(layout.value)) }), root)
+
+    layout.value = LayoutB
+    await nextTick()
+    settle!()
+    await new Promise(r => setTimeout(r))
+    // both boundaries have resolved: layout A is leaving, layout B waits
+    expect(serializeInner(root)).toBe('<div>a</div>')
+    expect(leaves.length).toBe(1)
+    expect(log).toEqual([])
+
+    leaves[0]()
+    await nextTick()
+    expect(serializeInner(root)).toBe('<div><p>page</p></div>')
+    expect(log).toEqual(['mounted in <div><p>page</p></div>'])
+  })
+
+  test('out-in: mounted hooks wait for the pending ancestor after the fallback has left', async () => {
+    const root = nodeOps.createElement('div')
+    const log: string[] = []
+    const leaves: (() => void)[] = []
+    let settle: () => void
+    let settleSlow: () => void
+    const Page = {
+      async setup() {
+        onMounted(() => log.push(`mounted in ${serializeInner(root)}`))
+        await new Promise<void>(r => (settle = r))
+        return () => h('p', 'page')
+      },
+    }
+    const Slow = {
+      async setup() {
+        await new Promise<void>(r => (settleSlow = r))
+        return () => h('s')
+      },
+    }
+    const Layout = {
+      render: () =>
+        h('div', [
+          h(
+            BaseTransition,
+            {
+              mode: 'out-in',
+              onLeave: (_: any, done: () => void) => {
+                leaves.push(done)
+              },
+            },
+            () =>
+              h(Suspense, null, {
+                default: h(Page),
+                fallback: h('i', 'loading'),
+              }),
+          ),
+          h(Slow),
+        ]),
+    }
+    const Home = { render: () => h('div', 'home') }
+    const view = shallowRef<ComponentOptions>(Home)
+    render(
+      h({ render: () => h(Suspense, null, { default: h(view.value) }) }),
+      root,
+    )
+
+    view.value = Layout
+    await nextTick()
+    settle!()
+    await new Promise(r => setTimeout(r))
+    expect(leaves.length).toBe(1)
+    leaves[0]()
+    await nextTick()
+    // the page has replaced its fallback, behind the ancestor's old content
+    expect(serializeInner(root)).toBe('<div>home</div>')
+    expect(log).toEqual([])
+
+    settleSlow!()
+    await new Promise(r => setTimeout(r))
+    expect(serializeInner(root)).toBe('<div><p>page</p><s></s></div>')
+    expect(log).toEqual(['mounted in <div><p>page</p><s></s></div>'])
+  })
+
+  test('out-in: mounted hooks wait for a pending ancestor above a resolved one', async () => {
+    const root = nodeOps.createElement('div')
+    const log: string[] = []
+    let settle: () => void
+    let settleSlow: () => void
+    const Page = {
+      async setup() {
+        onMounted(() => log.push(`mounted in ${serializeInner(root)}`))
+        await new Promise<void>(r => (settle = r))
+        return () => h('p', 'page')
+      },
+    }
+    const Slow = {
+      async setup() {
+        await new Promise<void>(r => (settleSlow = r))
+        return () => h('s')
+      },
+    }
+    const Section = {
+      render: () =>
+        h('section', [
+          h(BaseTransition, { mode: 'out-in' }, () =>
+            h(Suspense, null, { default: h(Page) }),
+          ),
+        ]),
+    }
+    const Layout = {
+      render: () =>
+        h('div', [h(Suspense, null, { default: h(Section) }), h(Slow)]),
+    }
+    const Home = { render: () => h('div', 'home') }
+    const view = shallowRef<ComponentOptions>(Home)
+    render(
+      h({ render: () => h(Suspense, null, { default: h(view.value) }) }),
+      root,
+    )
+
+    view.value = Layout
+    await nextTick()
+    settle!()
+    await new Promise(r => setTimeout(r))
+    expect(serializeInner(root)).toBe('<div>home</div>')
+    expect(log).toEqual([])
+
+    settleSlow!()
+    await new Promise(r => setTimeout(r))
+    const html = '<div><section><p>page</p></section><s></s></div>'
+    expect(serializeInner(root)).toBe(html)
+    expect(log).toEqual([`mounted in ${html}`])
+  })
+
+  test('out-in: mounted hooks run once the page is in when the ancestor is revealed during the leave', async () => {
+    const root = nodeOps.createElement('div')
+    const log: string[] = []
+    const leaves: (() => void)[] = []
+    let settle: () => void
+    const Page = {
+      async setup() {
+        onMounted(() => log.push(`mounted in ${serializeInner(root)}`))
+        await new Promise<void>(r => (settle = r))
+        return () => h('p', 'page')
+      },
+    }
+    const LayoutA = { render: () => h('div', 'a') }
+    const LayoutB = {
+      render: () =>
+        h('div', [
+          h(
+            BaseTransition,
+            {
+              mode: 'out-in',
+              onLeave: (_: any, done: () => void) => {
+                leaves.push(done)
+              },
+            },
+            () =>
+              h(
+                Suspense,
+                { suspensible: true },
+                { default: h(Page), fallback: h('i', 'loading') },
+              ),
+          ),
+        ]),
+    }
+    const layout = shallowRef<ComponentOptions>(LayoutA)
+    render(
+      h({ render: () => h(Suspense, null, { default: h(layout.value) }) }),
+      root,
+    )
+
+    layout.value = LayoutB
+    await nextTick()
+    settle!()
+    await new Promise(r => setTimeout(r))
+    // layout B is revealed while the fallback of the page is still leaving
+    expect(serializeInner(root)).toBe('<div><i>loading</i></div>')
+    expect(leaves.length).toBe(1)
+
+    leaves[0]()
+    await nextTick()
+    expect(serializeInner(root)).toBe('<div><p>page</p></div>')
+    expect(log[log.length - 1]).toBe('mounted in <div><p>page</p></div>')
   })
 })
