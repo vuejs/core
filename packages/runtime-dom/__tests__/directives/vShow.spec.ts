@@ -439,4 +439,40 @@ describe('runtime-dom: v-show directive', () => {
     expect(el.style.display).toBe('')
     expect(el.className).toBe('')
   })
+
+  test('should not let the timeout of a cancelled enter finish the next enter (with Transition)', async () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'requestAnimationFrame'] })
+    try {
+      const visible = ref(false)
+      const afterEnter = vi.fn()
+      const { code } = compile(
+        '<Transition name="test" :duration="100" @after-enter="afterEnter"><div v-show="visible" /></Transition>',
+        { prefixIdentifiers: true },
+      )
+      const Component = {
+        setup: () => ({ visible, afterEnter }),
+        render: new Function('Vue', code)(runtimeDom),
+      }
+      render(h(Component), root)
+      const el = root.children[0]
+
+      visible.value = true
+      await nextTick()
+      // the enter frame has run, its 100ms timeout is still pending
+      vi.advanceTimersByTime(120)
+      visible.value = false
+      await nextTick()
+      visible.value = true
+      await nextTick()
+      // the earlier timeout fires before the frame of the new enter
+      vi.advanceTimersByTime(20)
+      expect(el.classList.contains('test-enter-active')).toBe(true)
+
+      vi.advanceTimersByTime(500)
+      expect(afterEnter).toHaveBeenCalledTimes(1)
+      expect(el.className).toBe('')
+    } finally {
+      vi.useRealTimers()
+    }
+  })
 })

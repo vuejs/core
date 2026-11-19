@@ -206,8 +206,13 @@ export function resolveTransitionProps(
   }
 
   const makeEnterHook = (isAppear: boolean) => {
-    return (el: Element & { _isEntering?: boolean }, done: () => void) => {
+    return (
+      el: Element & { _isEntering?: boolean; _endId?: number },
+      done: () => void,
+    ) => {
       el._isEntering = true
+      // a pending end of an earlier transition must not finish this enter
+      el._endId = undefined
       const hook = isAppear ? onAppear : onEnter
       const resolve = () => finishEnter(el, isAppear, done)
       callHook(hook, [el, resolve])
