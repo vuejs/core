@@ -28,7 +28,7 @@ export interface ComponentInstanceInfo {
   /**
    * Whether `<KeepAlive>` holds this component or one above it.
    */
-  readonly isDeactivated: boolean
+  readonly isInactive: boolean
   /**
    * Keys of the props, attrs and listeners the parent passed, as written.
    */
@@ -61,7 +61,7 @@ const infoProto: ComponentInstanceInfo = /*@__PURE__*/ Object.freeze({
   get isHydrating() {
     return isHydrating(instances.get(this)!)
   },
-  get isDeactivated() {
+  get isInactive() {
     let current: GenericComponentInstance | null = instances.get(this)!
     while (current) {
       if (current.isDeactivated) return true

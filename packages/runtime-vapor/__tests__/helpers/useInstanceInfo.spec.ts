@@ -174,7 +174,7 @@ describe('useInstanceInfo', () => {
     }
   })
 
-  describe('isDeactivated', () => {
+  describe('isInactive', () => {
     for (const [appVapor, branchVapor, partVapor] of [
       [true, true, true],
       [false, false, false],
@@ -189,7 +189,7 @@ describe('useInstanceInfo', () => {
         const data = ref({
           record: (i: any) => {
             info = i
-            atSetup.push(i.isDeactivated)
+            atSetup.push(i.isInactive)
           },
           view: 'a',
           show: false,
@@ -262,11 +262,11 @@ describe('useInstanceInfo', () => {
         data.value.show = true
         await nextTick()
         expect(atSetup).toEqual([false, true])
-        expect(info.isDeactivated).toBe(true)
+        expect(info.isInactive).toBe(true)
 
         data.value.view = 'a'
         await nextTick()
-        expect(info.isDeactivated).toBe(false)
+        expect(info.isInactive).toBe(false)
       })
     }
   })

@@ -66,7 +66,7 @@ describe('useInstanceInfo', () => {
       'el',
       'isVapor',
       'isHydrating',
-      'isDeactivated',
+      'isInactive',
       'rawPropKeys',
     ]) {
       expect(key in info).toBe(true)
@@ -145,7 +145,7 @@ describe('useInstanceInfo', () => {
     expect(info.rawPropKeys).toEqual([])
   })
 
-  test('isDeactivated covers a kept-alive ancestor', async () => {
+  test('isInactive covers a kept-alive ancestor', async () => {
     const view = ref('a')
     const show = ref(false)
     const atSetup: boolean[] = []
@@ -153,7 +153,7 @@ describe('useInstanceInfo', () => {
     const Part = {
       setup() {
         info = useInstanceInfo()
-        atSetup.push(info.isDeactivated)
+        atSetup.push(info.isInactive)
         return () => h('div')
       },
     }
@@ -181,11 +181,11 @@ describe('useInstanceInfo', () => {
     show.value = true
     await nextTick()
     expect(atSetup).toEqual([false, true])
-    expect(info.isDeactivated).toBe(true)
+    expect(info.isInactive).toBe(true)
 
     view.value = 'a'
     await nextTick()
-    expect(info.isDeactivated).toBe(false)
+    expect(info.isInactive).toBe(false)
   })
 
   test('el is null until mounted', () => {
