@@ -887,8 +887,12 @@ function createSuspenseBoundary(
       }
       instance
         .asyncDep!.catch(err => {
-          // don't rethrow in dev: the dep must still be released below
-          handleError(err, instance, ErrorCodes.SETUP_FUNCTION, false, true)
+          // an unmounted component has no setup outcome to report. check the
+          // scope: `isUnmounted` is deferred while the boundary is pending.
+          if (instance.scope.active) {
+            // don't rethrow in dev: the dep must still be released below
+            handleError(err, instance, ErrorCodes.SETUP_FUNCTION, false, true)
+          }
           // a failed setup renders nothing instead of its template
           return () => null
         })
