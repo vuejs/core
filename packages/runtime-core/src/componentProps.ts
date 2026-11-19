@@ -370,7 +370,12 @@ export function updateProps(
               true /* isAbsent */,
             )
           }
-        } else {
+        } else if (
+          !__COMPAT__ ||
+          !isOn(key) ||
+          !rawProps ||
+          !hasOwn(rawProps, key + 'Native')
+        ) {
           delete props[key]
         }
       }

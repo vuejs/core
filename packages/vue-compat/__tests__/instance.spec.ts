@@ -489,6 +489,39 @@ test('INSTANCE_LISTENERS: PROPS fast path still updates a declared on* prop (fix
   expect(child.$props.onChange).toBe(onChange2)
 })
 
+test('keeps unrelated native listeners on functional component updates', async () => {
+  const click = ref(vi.fn())
+  const input = vi.fn()
+  const Child = () => h('input')
+  Child.compatConfig = { INSTANCE_LISTENERS: false }
+  const vm = new Vue({
+    compatConfig: { RENDER_FUNCTION: false, COMPONENT_ASYNC: false },
+    render() {
+      return (
+        openBlock(),
+        createBlock(
+          Child,
+          {
+            onClick: () => {},
+            onClickNative: click.value,
+            onInputNative: input,
+          },
+          null,
+          PatchFlags.PROPS,
+          ['onClickNative'],
+        )
+      )
+    },
+  }).$mount()
+  vm.$el.dispatchEvent(new Event('input'))
+  click.value = vi.fn()
+  await nextTick()
+  vm.$el.dispatchEvent(new Event('click'))
+  vm.$el.dispatchEvent(new Event('input'))
+  expect(click.value).toHaveBeenCalledTimes(1)
+  expect(input).toHaveBeenCalledTimes(2)
+})
+
 test.each([
   [
     '@click.native="dynamicHandler" @click="staticHandler()"',
