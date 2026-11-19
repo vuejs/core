@@ -6,7 +6,12 @@ import {
   baseParse as parse,
   transform,
 } from '../../src'
-import { RENDER_SLOT, SET_BLOCK_TRACKING } from '../../src/runtimeHelpers'
+import {
+  FRAGMENT,
+  RENDER_SLOT,
+  SET_BLOCK_TRACKING,
+  WITH_MEMO,
+} from '../../src/runtimeHelpers'
 
 function transformWithOnce(template: string, options: CompilerOptions = {}) {
   const ast = parse(template)
@@ -126,6 +131,101 @@ describe('compiler: v-once transform', () => {
             tag: `"p"`,
           },
         },
+      },
+    })
+  })
+
+  test('with v-else', () => {
+    const root = transformWithOnce(`<div v-if="BOOLEAN" /><p v-else v-once/>`)
+    expect(root.cached.length).toBe(1)
+    expect(root.helpers).toContain(WITH_MEMO)
+    expect(root.children[0]).toMatchObject({
+      type: NodeTypes.IF,
+      // only the v-else branch is rendered once, the condition stays reactive
+      codegenNode: {
+        type: NodeTypes.JS_CONDITIONAL_EXPRESSION,
+        consequent: {
+          type: NodeTypes.VNODE_CALL,
+          tag: `"div"`,
+        },
+        alternate: {
+          type: NodeTypes.JS_CALL_EXPRESSION,
+          callee: WITH_MEMO,
+          arguments: [
+            `[]`,
+            { returns: { type: NodeTypes.VNODE_CALL, tag: `"p"` } },
+            `_cache`,
+            `0`,
+          ],
+        },
+      },
+    })
+    expect(generate(root).code).toMatchSnapshot()
+  })
+
+  test('with v-else-if', () => {
+    const root = transformWithOnce(
+      `<div v-if="BOOLEAN" /><template v-else-if="FOO" v-once><p/><p/></template><span v-else/>`,
+    )
+    expect(root.cached.length).toBe(1)
+    expect(root.children[0]).toMatchObject({
+      type: NodeTypes.IF,
+      codegenNode: {
+        type: NodeTypes.JS_CONDITIONAL_EXPRESSION,
+        alternate: {
+          type: NodeTypes.JS_CONDITIONAL_EXPRESSION,
+          consequent: {
+            type: NodeTypes.JS_CALL_EXPRESSION,
+            callee: WITH_MEMO,
+            arguments: [
+              `[]`,
+              { returns: { type: NodeTypes.VNODE_CALL, tag: FRAGMENT } },
+              `_cache`,
+              `0`,
+            ],
+          },
+          alternate: {
+            type: NodeTypes.VNODE_CALL,
+            tag: `"span"`,
+          },
+        },
+      },
+    })
+    expect(generate(root).code).toMatchSnapshot()
+  })
+
+  test('with v-if/else both v-once', () => {
+    const root = transformWithOnce(
+      `<div v-if="BOOLEAN" v-once /><p v-else v-once/>`,
+    )
+    expect(root.cached.length).toBe(1)
+    expect(root.children[0]).toMatchObject({
+      type: NodeTypes.IF,
+      // the v-if already caches the whole chain
+      codegenNode: {
+        type: NodeTypes.JS_CACHE_EXPRESSION,
+        value: {
+          type: NodeTypes.JS_CONDITIONAL_EXPRESSION,
+          alternate: {
+            type: NodeTypes.VNODE_CALL,
+            tag: `"p"`,
+          },
+        },
+      },
+    })
+  })
+
+  test('after v-else', () => {
+    const root = transformWithOnce(
+      `<div><div v-if="BOOLEAN" /><p v-else v-once/><span v-once/></div>`,
+    )
+    expect(root.cached.length).toBe(2)
+    expect((root.children[0] as any).children[1].codegenNode).toMatchObject({
+      type: NodeTypes.JS_CACHE_EXPRESSION,
+      index: 1,
+      value: {
+        type: NodeTypes.VNODE_CALL,
+        tag: `"span"`,
       },
     })
   })
