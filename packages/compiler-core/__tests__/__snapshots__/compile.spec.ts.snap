@@ -11,7 +11,7 @@ return function render(_ctx, _cache) {
       id: "foo",
       class: _normalizeClass(bar.baz)
     }, [
-      _createTextVNode(_toDisplayString(world.burn()) + " ", 1 /* TEXT */),
+      _createTextVNode(" " + _toDisplayString(world.burn()) + " ", 1 /* TEXT */),
       ok
         ? (_openBlock(), _createElementBlock("div", { key: 0 }, "yes"))
         : (_openBlock(), _createElementBlock(_Fragment, { key: 1 }, [
@@ -35,7 +35,7 @@ return function render(_ctx, _cache) {
     id: "foo",
     class: _normalizeClass(_ctx.bar.baz)
   }, [
-    _createTextVNode(_toDisplayString(_ctx.world.burn()) + " ", 1 /* TEXT */),
+    _createTextVNode(" " + _toDisplayString(_ctx.world.burn()) + " ", 1 /* TEXT */),
     (_ctx.ok)
       ? (_openBlock(), _createElementBlock("div", { key: 0 }, "yes"))
       : (_openBlock(), _createElementBlock(_Fragment, { key: 1 }, [
@@ -58,7 +58,7 @@ export function render(_ctx, _cache) {
     id: "foo",
     class: _normalizeClass(_ctx.bar.baz)
   }, [
-    _createTextVNode(_toDisplayString(_ctx.world.burn()) + " ", 1 /* TEXT */),
+    _createTextVNode(" " + _toDisplayString(_ctx.world.burn()) + " ", 1 /* TEXT */),
     (_ctx.ok)
       ? (_openBlock(), _createElementBlock("div", { key: 0 }, "yes"))
       : (_openBlock(), _createElementBlock(_Fragment, { key: 1 }, [
