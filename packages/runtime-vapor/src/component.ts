@@ -147,6 +147,7 @@ import {
   hydrateBlock,
   hydrateBlockWithErrorHandling,
   hydrateNode,
+  hydratingRootOf,
   isClaimedAnchor,
   isComment,
   isHydrating,
@@ -406,7 +407,7 @@ export function createComponent(
 
   const _insertionParent = insertionParent
   const _insertionAnchor = insertionAnchor
-  let hydration: ComponentHydration | null = null
+  let hydration: ComponentRange | null = null
   let pendingAsyncHydration = false
   if (isHydrating) {
     hydration = enterComponentHydration(
@@ -605,6 +606,7 @@ export function createComponent(
       appContext,
       ce,
     )
+    if (hydration) hydration.instance = instance
     if (key !== undefined) instance.$key = key
     if (inputScope) {
       instance.inputScope = inputScope
@@ -731,10 +733,6 @@ export function createComponent(
   }
 }
 
-interface ComponentHydration extends ComponentRange {
-  cursor: HydrationCursor
-}
-
 /**
  * Open a component's SSR range: claim the `{` under the cursor, if `claims`,
  * and its close. A vapor component's server render begins with a node of
@@ -743,7 +741,7 @@ interface ComponentHydration extends ComponentRange {
  * a range. Shared by creation and by the deferred render of an async setup,
  * which re-enters the range once setup has settled.
  */
-function enterComponentHydration(claims: boolean): ComponentHydration {
+function enterComponentHydration(claims: boolean): ComponentRange {
   const cursor = enterHydrationCursor()
   const start = cursor.start
   let close: Node | null = null
@@ -756,12 +754,13 @@ function enterComponentHydration(claims: boolean): ComponentHydration {
       unit = start
     }
   }
-  const hydration: ComponentHydration = {
+  const hydration: ComponentRange = {
     cursor,
     close,
     unit,
     depth: 0,
     prev: null,
+    instance: null,
   }
   enterComponentRange(hydration)
   return hydration
@@ -784,7 +783,7 @@ function wrapsComponent(component: VaporComponent): boolean {
  * range is trimmed first and the cursor moves past the close marker.
  */
 function exitComponentHydration(
-  hydration: ComponentHydration,
+  hydration: ComponentRange,
   finalizeBoundary: boolean,
 ): void {
   exitComponentRange(hydration)
@@ -1303,6 +1302,16 @@ export class VaporComponentInstance<
     const vnode = isInteropEnabled && this.interopVNode
     return Object.keys(vnode ? vnode.props || EMPTY_OBJ : this.rawValues)
   }
+
+  // Read by useInstanceInfo. `block` is not set while the block fn runs.
+  rootEl(): Element | null | undefined {
+    if (this.block) return getRootElement(this.block, { first: true })
+    if (isHydrating) return hydratingRootOf(this)
+  }
+
+  hydrating(): boolean {
+    return isHydrating && !this.isMounted
+  }
 }
 
 export function isVaporComponent(
@@ -1646,6 +1655,7 @@ export function mountComponent(
             getBlockFirstNode(pendingBlock)!,
             () => {
               const hydration = enterComponentHydration(true)
+              hydration.instance = instance
               try {
                 withDeferredHydrationBoundary(renderAndMount)
               } finally {
@@ -2013,6 +2023,8 @@ export interface RootChainVisitor {
   onInteropFragment?: (frag: InteropFragment) => boolean | void
   // Slot outlets break the effective-root chain (see endsRootChain).
   excludeSlotOutlets?: boolean
+  // Several roots resolve to the first that has an element.
+  first?: boolean
 }
 
 export function getRootElement(
@@ -2056,6 +2068,13 @@ export function getRootElement(
   }
 
   if (isArray(block)) {
+    if (visitor && visitor.first) {
+      for (let i = 0; i < block.length; i++) {
+        const el = getRootElement(block[i], visitor)
+        if (el) return el
+      }
+      return
+    }
     // Structure first, visit after: a multi-root array has no effective
     // root, and firing the visitor on a branch before that verdict would
     // leak side effects (owner registration, carrier publication) that

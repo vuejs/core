@@ -17,6 +17,7 @@ import {
   ref,
   toDisplayString,
   useHost,
+  useInstanceInfo,
   useShadowRoot,
 } from '@vue/runtime-dom'
 import {
@@ -2592,6 +2593,19 @@ describe('defineVaporCustomElement', () => {
       const el = container.childNodes[0] as VaporElement
       const style = el.shadowRoot?.querySelector('style')!
       expect(style.textContent).toBe(`div { color: red; }`)
+    })
+
+    test('useInstanceInfo().ce', () => {
+      let ce: any
+      const Foo = defineVaporCustomElement({
+        setup() {
+          ce = useInstanceInfo()!.ce
+          return template('<div>hello</div>')()
+        },
+      })
+      customElements.define('my-el-use-instance-ce', Foo)
+      container.innerHTML = `<my-el-use-instance-ce>`
+      expect(ce).toBe(container.childNodes[0])
     })
   })
 

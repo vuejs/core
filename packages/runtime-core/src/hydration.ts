@@ -68,6 +68,12 @@ export function setIsHydratingEnabled(value: boolean): void {
  */
 export let isHydrating = false
 
+/**
+ * Whether a renderer that can hydrate was created: only such a renderer
+ * hydrates a component whose vnode already has an el, instead of mounting it.
+ */
+export let hasHydrationRenderer = false
+
 export type RootHydrateFunction = (
   vnode: VNode<Node, Element>,
   container: (Element | ShadowRoot) & { _vnode?: VNode },
@@ -124,6 +130,28 @@ export const isComment = (node: Node): node is Comment =>
 export const isRangeStart = (data: string): boolean =>
   data === '[' || data === '(' || isVaporRangeStart(data)
 
+/**
+ * The first element a component rendered on the server, given the node its
+ * hydration starts at: that node, or the first element in the range it opens.
+ */
+export function firstHydrationElement(node: Node | null): Element | null {
+  let depth = 0
+  while (node) {
+    if (node.nodeType === DOMNodeTypes.ELEMENT) return node as Element
+    if (isComment(node)) {
+      const data = node.data
+      if (isRangeStart(data)) {
+        depth++
+      } else if (data === ']' || data === ')' || data === '}') {
+        depth--
+      }
+    }
+    if (depth < 1) break
+    node = node.nextSibling
+  }
+  return null
+}
+
 // Note: hydration is DOM-specific
 // But we have to place it in core due to tight coupling with core - splitting
 // it out creates a ton of unnecessary complexity.
@@ -142,6 +170,7 @@ export function createHydrationFunctions(
     optimized?: boolean,
   ) => Node | null,
 ] {
+  hasHydrationRenderer = true
   const {
     mt: mountComponent,
     p: patch,

@@ -8,6 +8,7 @@ import {
 } from '@vue/runtime-dom'
 import {
   VueServerRenderer,
+  compile,
   compileToVaporRender,
   runtimeDom,
   runtimeVapor,
@@ -180,5 +181,39 @@ describe('Vapor Mode hydration: async setup', () => {
     wait.reject()
     await settle()
     expect(container.innerHTML).toBe('<div><div>x</div></div>')
+  })
+
+  // the render of a settled setup runs in a pass of its own
+  test('useInstanceInfo().el while the deferred render hydrates', async () => {
+    const wait = deferred()
+    const seen: Record<string, any> = {}
+    const code = `<script setup vapor>
+      import { useInstanceInfo } from 'vue'
+      const data = _data
+      const info = useInstanceInfo()
+      data.value.record('setup', info)
+      await data.value.wait
+      const read = () => data.value.record('render', info)
+    </script>
+    <template>
+      <div class="part" :data-read="read()">part</div>
+    </template>`
+    const clientData = ref({
+      wait: wait.promise,
+      record(phase: string, info: any) {
+        seen[phase] = { isHydrating: info.isHydrating, el: info.el }
+      },
+    })
+    const { container, settle } = await hydrateAsync(
+      ssr(code, ref({ wait: Promise.resolve(), record() {} })),
+      // script bindings and a separate render, as a dev build compiles it
+      compile(code, clientData, {}, { inlineTemplate: false }),
+    )
+    const el = container.querySelector('.part')
+    expect(el).not.toBe(null)
+    expect(seen.setup).toEqual({ isHydrating: true, el })
+    wait.resolve()
+    await settle()
+    expect(seen.render).toEqual({ isHydrating: true, el })
   })
 })

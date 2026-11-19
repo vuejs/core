@@ -420,6 +420,17 @@ export interface GenericComponentInstance {
    * @internal
    */
   rawKeys?: () => string[]
+  /**
+   * the first element of the component, or the one the server rendered for a
+   * component that is being hydrated, vapor only
+   * @internal
+   */
+  rootEl?: () => RendererElement | null | undefined
+  /**
+   * whether the component is being hydrated, vapor only
+   * @internal
+   */
+  hydrating?: () => boolean
 
   // exposed properties via expose()
   exposed: Record<string, any> | null

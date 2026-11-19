@@ -3,6 +3,7 @@ import {
   type GenericComponentInstance,
   MismatchTypes,
   callWithErrorHandlingOnce,
+  firstHydrationElement,
   isMismatchAllowed,
   isHydrating as isVdomHydrating,
   isHydratingEnabled as isVdomHydratingEnabled,
@@ -332,6 +333,9 @@ export interface ComponentRange {
   /** the `blockDepth` of the component's own block fn */
   depth: number
   prev: ComponentRange | null
+  /** where the component's hydration starts, and what its end restores */
+  cursor: HydrationCursor
+  instance: GenericComponentInstance | null
 }
 
 let currentComponentRange: ComponentRange | null = null
@@ -348,6 +352,23 @@ export function enterComponentRange(range: ComponentRange): void {
 
 export function exitComponentRange(range: ComponentRange): void {
   currentComponentRange = range.prev
+}
+
+/**
+ * The first element the server rendered for a component whose block fn is
+ * running.
+ */
+export function hydratingRootOf(
+  instance: GenericComponentInstance,
+): Element | null {
+  let range = currentComponentRange
+  while (range) {
+    if (range.instance === instance) {
+      return firstHydrationElement(range.cursor.start)
+    }
+    range = range.prev
+  }
+  return null
 }
 
 /**
