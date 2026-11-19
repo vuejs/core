@@ -1381,3 +1381,498 @@ describe('vapor v-if chain under a vdom parent', () => {
     expect(input.id).toBe('b')
   })
 })
+
+describe('interop root el', () => {
+  const part = {
+    code: `<template>
+      <slot v-if="$slots.icon" name="icon" />
+      <div v-else>Vapor part</div>
+    </template>`,
+    vapor: true,
+  }
+  const wrapper = {
+    code: `<script setup>const components = _components</script>
+      <template><components.Part /></template>`,
+    vapor: false,
+  }
+  const appCode = `<script setup>
+    const data = _data
+    const components = _components
+  </script><template><components.Wrapper :ref="data.capture" /></template>`
+
+  for (const [mode, hydrate] of [
+    ['VDOM', testWithVDOMApp],
+    ['Vapor', testWithVaporApp],
+  ] as const) {
+    test.each([
+      ['a vapor component', '<components.Part />'],
+      ['Transition', '<Transition><components.Part /></Transition>'],
+      ['KeepAlive', '<KeepAlive><components.Part /></KeepAlive>'],
+      ['Suspense', '<Suspense><components.Part /></Suspense>'],
+    ])(`wrapper whose root is %s (${mode} app)`, async (_, root) => {
+      const capture = vi.fn()
+      const { app, container, html } = await hydrate(
+        appCode,
+        {
+          Part: part,
+          Wrapper: {
+            code: `<script setup>const components = _components</script>
+              <template>${root}</template>`,
+            vapor: false,
+          },
+        },
+        ref({ capture }),
+      )
+      try {
+        expect(html).toContain('<!--[1-->')
+        expect(capture.mock.calls[0][0].$el).toBe(
+          container.querySelector('div'),
+        )
+      } finally {
+        app.unmount()
+      }
+    })
+
+    test(`functional wrapper ref (${mode} app)`, async () => {
+      const capture = vi.fn()
+      const { app, container } = await hydrate(
+        `<script setup>
+          import { h } from 'vue'
+          const data = _data
+          const components = _components
+          const Wrapper = (props, { slots }) => h(components.Part, props, slots)
+        </script><template><Wrapper :ref="data.capture" /></template>`,
+        { Part: part },
+        ref({ capture }),
+      )
+      try {
+        expect(capture).toHaveBeenCalledTimes(1)
+        expect(capture.mock.calls[0][0]).toBe(container.querySelector('div'))
+      } finally {
+        app.unmount()
+      }
+    })
+
+    test(`component root marker (${mode} app)`, async () => {
+      const capture = vi.fn()
+      const { app, container, html } = await hydrate(
+        appCode,
+        {
+          Leaf: `<template><div>Vapor part</div></template>`,
+          Part: `<template><components.Leaf /></template>`,
+          Wrapper: wrapper,
+        },
+        ref({ capture }),
+      )
+      try {
+        expect(html).toContain('<!--{-->')
+        expect(capture.mock.calls[0][0].$el).toBe(
+          container.querySelector('div'),
+        )
+      } finally {
+        app.unmount()
+      }
+    })
+
+    // the start node of the vapor component, as on mount
+    test(`multi-root vapor root (${mode} app)`, async () => {
+      const capture = vi.fn()
+      const { app, container, html } = await hydrate(
+        appCode,
+        {
+          Part: `<template><div>a</div><div>b</div></template>`,
+          Wrapper: wrapper,
+        },
+        ref({ capture }),
+      )
+      try {
+        expect(html).toContain('<!--{-->')
+        const vm = capture.mock.calls[0][0]
+        expect(vm.$el).toBe(vm.$.subTree.el)
+        expect(vm.$el).not.toBe(vm.$.subTree.anchor)
+        expect(vm.$el.nextSibling).toBe(container.querySelector('div'))
+      } finally {
+        app.unmount()
+      }
+    })
+
+    test.each([false, true])(
+      `keyed v-for of wrapper with multi-root vapor root (${mode} app, update before prepend: %s)`,
+      async updateFirst => {
+        const data = ref({ rows: ['b'] })
+        const { app, container } = await hydrate(
+          `<script setup>const data = _data; const components = _components</script>
+          <template><main><components.Wrapper v-for="id in data.rows" :key="id" :id="id" /></main></template>`,
+          {
+            Part: {
+              code: `<script setup>
+                import { ref } from 'vue'
+                defineProps({ id: String })
+                const n = ref(0)
+              </script><template>
+                <span @click="n++" :data-n="n">{{ id }}1</span>
+                <span>{{ id }}2</span>
+              </template>`,
+              vapor: true,
+            },
+            Wrapper: {
+              code: `<script setup>
+                defineProps({ id: String })
+                const components = _components
+              </script><template><components.Part :id="id" /></template>`,
+              vapor: false,
+            },
+          },
+          data,
+        )
+        try {
+          const main = container.querySelector('main')!
+          expect(main.textContent).toBe('b1b2')
+          if (updateFirst) {
+            main.querySelector<HTMLElement>('span')!.click()
+            await nextTick()
+            expect(main.querySelector('span')!.getAttribute('data-n')).toBe('1')
+          }
+          data.value.rows = ['a', 'b']
+          await nextTick()
+          expect(main.textContent).toBe('a1a2b1b2')
+
+          data.value.rows = ['b', 'a']
+          await nextTick()
+          expect(main.textContent).toBe('b1b2a1a2')
+
+          data.value.rows = ['a']
+          await nextTick()
+          expect(main.textContent).toBe('a1a2')
+        } finally {
+          app.unmount()
+        }
+      },
+    )
+
+    test(`HOC chain (${mode} app)`, async () => {
+      const capture = vi.fn()
+      const middle = vi.fn()
+      const inner = vi.fn()
+      const { app, container } = await hydrate(
+        appCode,
+        {
+          Part: part,
+          Inner: wrapper,
+          Middle: {
+            code: `<script setup>const data = _data; const components = _components</script>
+              <template><components.Inner :ref="data.inner" /></template>`,
+            vapor: false,
+          },
+          Wrapper: {
+            code: `<script setup>const data = _data; const components = _components</script>
+              <template><components.Middle :ref="data.middle" /></template>`,
+            vapor: false,
+          },
+        },
+        ref({ capture, middle, inner }),
+      )
+      try {
+        for (const spy of [capture, middle, inner]) {
+          expect
+            .soft(spy.mock.calls[0][0].$el)
+            .toBe(container.querySelector('div'))
+        }
+      } finally {
+        app.unmount()
+      }
+    })
+
+    test(`lazy hydration updates ancestors (${mode} app)`, async () => {
+      const capture = vi.fn()
+      const inner = vi.fn()
+      const strategy = vi.fn()
+      const { app, container } = await hydrate(
+        appCode,
+        {
+          Part: part,
+          Inner: {
+            code: `<script setup>
+              import { defineAsyncComponent } from 'vue'
+              const data = _data
+              const components = _components
+              const Lazy = defineAsyncComponent({
+                loader: () => Promise.resolve(components.Part),
+                hydrate: data.value.strategy,
+              })
+            </script><template><Lazy /></template>`,
+            vapor: false,
+          },
+          Wrapper: {
+            code: `<script setup>const data = _data; const components = _components</script>
+              <template><components.Inner :ref="data.inner" /></template>`,
+            vapor: false,
+          },
+        },
+        ref({ capture, inner, strategy }),
+      )
+      try {
+        await new Promise(r => setTimeout(r))
+        const el = container.querySelector('div')!
+        expect(strategy).toHaveBeenCalledTimes(1)
+        expect(capture.mock.calls[0][0].$el.nodeType).toBe(8)
+        strategy.mock.calls[0][0]()
+        await nextTick()
+        expect(container.querySelector('div')).toBe(el)
+        expect.soft(capture.mock.calls[0][0].$el).toBe(el)
+        expect.soft(inner.mock.calls[0][0].$el).toBe(el)
+        expect(inner.mock.calls[0][0].$.subTree.el).toBe(el)
+      } finally {
+        app.unmount()
+      }
+    })
+
+    test.each([false, true])(
+      `async setup in Suspense updates ancestors (${mode} app, HOC: %s)`,
+      async hoc => {
+        const capture = vi.fn()
+        const inner = vi.fn()
+        let resolve!: () => void
+        const data = ref({
+          capture,
+          inner,
+          wait: new Promise<void>(r => {
+            resolve = r
+          }),
+        })
+        const { app, container } = await testHydration(
+          appCode,
+          {
+            Part: {
+              code: `<script setup>await _data.value.wait</script>${part.code}`,
+              vapor: true,
+            },
+            Inner: {
+              code: `<script setup>const components = _components</script>
+              <template>${hoc ? '<components.Part />' : '<Suspense><components.Part /></Suspense>'}</template>`,
+              vapor: false,
+            },
+            Wrapper: {
+              code: `<script setup>const data = _data; const components = _components</script>
+              <template>${hoc ? '<Suspense><components.Inner :ref="data.inner" /></Suspense>' : '<components.Inner :ref="data.inner" />'}</template>`,
+              vapor: false,
+            },
+          },
+          data,
+          {
+            isVaporApp: mode === 'Vapor',
+            interop: true,
+            serverData: ref({ ...data.value, wait: Promise.resolve() }),
+          },
+        )
+        try {
+          const el = container.querySelector('div')!
+          expect(capture.mock.calls[0][0].$el.nodeType).toBe(8)
+          resolve()
+          await new Promise(r => setTimeout(r))
+          await nextTick()
+          const vm = inner.mock.calls[0][0]
+          expect(container.querySelector('div')).toBe(el)
+          expect.soft(capture.mock.calls[0][0].$el).toBe(el)
+          expect.soft(vm.$el).toBe(el)
+          const boundary = (hoc ? capture.mock.calls[0][0] : vm).$.subTree
+          expect.soft(boundary.el).toBe(el)
+          expect(boundary.suspense.activeBranch.el).toBe(el)
+        } finally {
+          app.unmount()
+        }
+      },
+    )
+
+    test.each([false, true])(
+      `self update follows the root (${mode} app, Suspense: %s)`,
+      async suspense => {
+        const capture = vi.fn()
+        const inner = vi.fn()
+        const updated = vi.fn()
+        const { app, container } = await hydrate(
+          `<script setup>const data = _data; const components = _components</script>
+          <template><main><components.Wrapper :ref="data.capture" /><i>tail</i></main></template>`,
+          {
+            Part: {
+              code: `<script setup>
+              import { ref } from 'vue'
+              const show = ref(true)
+            </script><template>
+              <div v-if="show" @click="show = false">one</div>
+              <span v-else @click="show = true">two</span>
+            </template>`,
+              vapor: true,
+            },
+            Inner: {
+              code: `<script setup>
+              import { onUpdated } from 'vue'
+              const components = _components
+              onUpdated(_data.value.updated)
+            </script><template>${suspense ? '<Suspense><components.Part /></Suspense>' : '<components.Part />'}</template>`,
+              vapor: false,
+            },
+            Wrapper: {
+              code: `<script setup>
+              import { onUpdated } from 'vue'
+              const data = _data
+              const components = _components
+              onUpdated(data.value.updated)
+            </script><template><components.Inner :ref="data.inner" /></template>`,
+              vapor: false,
+            },
+          },
+          ref({ capture, inner, updated }),
+        )
+        try {
+          const main = container.querySelector('main')!
+          const tail = container.querySelector('i')!
+          const vm = inner.mock.calls[0][0]
+          for (const [from, to] of [
+            ['div', 'span'],
+            ['span', 'div'],
+          ]) {
+            container.querySelector<HTMLElement>(from)!.click()
+            await nextTick()
+            const el = container.querySelector(to)!
+            expect(el).not.toBeNull()
+            expect.soft(capture.mock.calls[0][0].$el).toBe(el)
+            expect.soft(vm.$el).toBe(el)
+            expect.soft(vm.$.subTree.el).toBe(el)
+            if (suspense)
+              expect.soft(vm.$.subTree.suspense.activeBranch.el).toBe(el)
+            expect(container.querySelector('main')).toBe(main)
+            expect(container.querySelector('i')).toBe(tail)
+          }
+          expect(updated).not.toHaveBeenCalled()
+        } finally {
+          app.unmount()
+        }
+      },
+    )
+
+    test(`VDOM root guard (${mode} app)`, async () => {
+      const capture = vi.fn()
+      const { app, container } = await hydrate(
+        appCode,
+        {
+          Part: {
+            code: `<script setup>const data = _data</script>${part.code}`,
+            vapor: false,
+          },
+          Wrapper: wrapper,
+        },
+        ref({ capture }),
+      )
+      try {
+        expect(capture.mock.calls[0][0].$el).toBe(
+          container.querySelector('div'),
+        )
+      } finally {
+        app.unmount()
+      }
+    })
+
+    test(`sync vapor root forwarding to async vapor child updates ancestors (${mode} app)`, async () => {
+      const capture = vi.fn()
+      let resolve!: () => void
+      const data = ref({
+        capture,
+        wait: new Promise<void>(r => {
+          resolve = r
+        }),
+      })
+      const { app, container } = await testHydration(
+        `<script setup>
+          const data = _data
+          const components = _components
+        </script><template>
+          <Suspense>
+            <section>
+              <components.Wrapper :ref="data.capture" />
+            </section>
+          </Suspense>
+        </template>`,
+        {
+          Leaf: {
+            code: `<script setup>await _data.value.wait</script>${part.code}`,
+            vapor: true,
+          },
+          Part: {
+            code: `<template><components.Leaf /></template>`,
+            vapor: true,
+          },
+          Wrapper: wrapper,
+        },
+        data,
+        {
+          isVaporApp: mode === 'Vapor',
+          interop: true,
+          serverData: ref({ ...data.value, wait: Promise.resolve() }),
+        },
+      )
+      try {
+        const div = container.querySelector('section > div')!
+        resolve()
+        await new Promise(r => setTimeout(r))
+        await nextTick()
+        expect(capture.mock.calls[0][0].$el).toBe(div)
+      } finally {
+        app.unmount()
+      }
+    })
+
+    test(`lazy hydration after a parent re-render (${mode} app)`, async () => {
+      const capture = vi.fn()
+      const inner = vi.fn()
+      const strategy = vi.fn()
+      const data = ref({ capture, inner, strategy, tick: 0 })
+      const { app, container } = await hydrate(
+        appCode,
+        {
+          Part: part,
+          Inner: {
+            code: `<script setup>
+              import { defineAsyncComponent } from 'vue'
+              const data = _data
+              const components = _components
+              const Lazy = defineAsyncComponent({
+                loader: () => Promise.resolve(components.Part),
+                hydrate: data.value.strategy,
+              })
+            </script><template><Lazy v-if="data.tick >= 0" /></template>`,
+            vapor: false,
+          },
+          Wrapper: {
+            code: `<script setup>const data = _data; const components = _components</script>
+              <template><components.Inner :ref="data.inner" /></template>`,
+            vapor: false,
+          },
+        },
+        data,
+      )
+      try {
+        await new Promise(r => setTimeout(r))
+        const el = container.querySelector('div')!
+        const vm = inner.mock.calls[0][0]
+        expect(strategy).toHaveBeenCalledTimes(1)
+
+        // Inner re-renders, Lazy gets a new vnode without updating
+        data.value.tick++
+        await nextTick()
+        strategy.mock.calls[0][0]()
+        await nextTick()
+        expect.soft(vm.$el).toBe(el)
+        expect.soft(vm.$.subTree.el).toBe(el)
+
+        data.value.tick++
+        await nextTick()
+        expect(container.querySelector('div')).toBe(el)
+        expect.soft(vm.$el).toBe(el)
+        expect.soft(capture.mock.calls[0][0].$el).toBe(el)
+      } finally {
+        app.unmount()
+      }
+    })
+  }
+})

@@ -20095,3 +20095,196 @@ describe('a vapor component in vdom starts on a node of its own', () => {
     })
   })
 })
+
+describe('interop root el', () => {
+  test.each([
+    ['VDOM', false],
+    ['VDOM', true],
+    ['Vapor', false],
+    ['Vapor', true],
+  ] as const)(
+    'self update follows the root (%s app, Suspense: %s)',
+    async (mode, suspense) => {
+      const capture = vi.fn()
+      const inner = vi.fn()
+      const updated = vi.fn()
+      const data = ref({ capture, inner, updated })
+      const Part = compile(
+        `<script setup>
+        import { ref } from 'vue'
+        const show = ref(true)
+      </script><template>
+        <div v-if="show" @click="show = false">one</div>
+        <span v-else @click="show = true">two</span>
+      </template>`,
+        data,
+      )
+      const Inner = compile(
+        `<script setup>
+        import { onUpdated } from 'vue'
+        const components = _components
+        onUpdated(_data.value.updated)
+      </script><template>${suspense ? '<Suspense><components.Part /></Suspense>' : '<components.Part />'}</template>`,
+        data,
+        { Part },
+        { vapor: false },
+      )
+      const Wrapper = compile(
+        `<script setup>
+        import { onUpdated } from 'vue'
+        const data = _data
+        const components = _components
+        onUpdated(data.value.updated)
+      </script><template><components.Inner :ref="data.inner" /></template>`,
+        data,
+        { Inner },
+        { vapor: false },
+      )
+      const App = compile(
+        `<script setup>const data = _data; const components = _components</script>
+        <template><main><components.Wrapper :ref="data.capture" /><i>tail</i></main></template>`,
+        data,
+        { Wrapper },
+        { vapor: mode === 'Vapor' },
+      )
+      const container = document.createElement('div')
+      const app = (mode === 'Vapor' ? createVaporApp : createApp)(App)
+      app.use(vaporInteropPlugin).mount(container)
+      try {
+        const main = container.querySelector('main')!
+        const tail = container.querySelector('i')!
+        const vm = inner.mock.calls[0][0]
+        expect(capture.mock.calls[0][0].$el).toBe(
+          container.querySelector('div'),
+        )
+        expect(vm.$el).toBe(container.querySelector('div'))
+        for (const [from, to] of [
+          ['div', 'span'],
+          ['span', 'div'],
+        ]) {
+          container.querySelector<HTMLElement>(from)!.click()
+          await nextTick()
+          const el = container.querySelector(to)!
+          expect(el).not.toBeNull()
+          expect.soft(capture.mock.calls[0][0].$el).toBe(el)
+          expect.soft(vm.$el).toBe(el)
+          expect.soft(vm.$.subTree.el).toBe(el)
+          if (suspense)
+            expect.soft(vm.$.subTree.suspense.activeBranch.el).toBe(el)
+          expect(container.querySelector('main')).toBe(main)
+          expect(container.querySelector('i')).toBe(tail)
+        }
+        expect(updated).not.toHaveBeenCalled()
+      } finally {
+        app.unmount()
+      }
+    },
+  )
+
+  // the outlet's `bm` hook sets the vnode's el to the fallback before the
+  // update ends: the vdom components above must still follow it
+  test('a vdom Transition over a forwarding vapor component follows its fallback root', async () => {
+    const capture = vi.fn()
+    const data = ref({ capture, show: false })
+    const Outer = compile(
+      `<template><slot><div class="fallback">fb</div></slot></template>`,
+      data,
+    )
+    const Mid = compile(
+      `<template><components.Outer><slot /></components.Outer></template>`,
+      data,
+      { Outer },
+    )
+    const Wrapper = compile(
+      `<script setup>const data = _data; const components = _components</script>
+      <template>
+        <Transition :css="false">
+          <components.Mid><span v-if="data.show">c</span></components.Mid>
+        </Transition>
+      </template>`,
+      data,
+      { Mid },
+      { vapor: false },
+    )
+    const App = compile(
+      `<script setup>const data = _data; const components = _components</script>
+      <template><main><components.Wrapper :ref="data.capture" /></main></template>`,
+      data,
+      { Wrapper },
+      { vapor: false },
+    )
+    const container = document.createElement('div')
+    const app = createApp(App).use(vaporInteropPlugin)
+    app.mount(container)
+    const vm = capture.mock.calls[0][0]
+    const fallback = container.querySelector('.fallback')
+    expect(vm.$el).toBe(fallback)
+
+    data.value.show = true
+    await nextTick()
+    expect(container.querySelector('.fallback')).toBeNull()
+    expect(vm.$el).toBe(vm.$.subTree.component.subTree.el)
+
+    data.value.show = false
+    await nextTick()
+    expect(container.querySelector('.fallback')).not.toBeNull()
+    expect(vm.$el).toBe(container.querySelector('.fallback'))
+    expect(vm.$.subTree.el).toBe(vm.$el)
+    app.unmount()
+  })
+
+  test.each(['VDOM', 'Vapor'] as const)(
+    'sync vapor root forwarding to async vapor child updates ancestors (%s app)',
+    async mode => {
+      const capture = vi.fn()
+      let resolve!: () => void
+      const data = ref({
+        capture,
+        wait: new Promise<void>(r => {
+          resolve = r
+        }),
+      })
+      const Leaf = compile(
+        `<script setup>await _data.value.wait</script>
+        <template><div>leaf</div></template>`,
+        data,
+      )
+      const Part = compile(`<template><components.Leaf /></template>`, data, {
+        Leaf,
+      })
+      const Wrapper = compile(
+        `<script setup>const components = _components</script>
+        <template><components.Part /></template>`,
+        data,
+        { Part },
+        { vapor: false },
+      )
+      const App = compile(
+        `<script setup>const data = _data; const components = _components</script>
+        <template>
+          <Suspense>
+            <section>
+              <components.Wrapper :ref="data.capture" />
+            </section>
+          </Suspense>
+        </template>`,
+        data,
+        { Wrapper },
+        { vapor: mode === 'Vapor' },
+      )
+      const container = document.createElement('div')
+      const app = (mode === 'Vapor' ? createVaporApp : createApp)(App)
+      app.use(vaporInteropPlugin).mount(container)
+      try {
+        resolve()
+        await new Promise(r => setTimeout(r))
+        await nextTick()
+        const div = container.querySelector('section > div')
+        expect(div).not.toBeNull()
+        expect(capture.mock.calls[0][0].$el).toBe(div)
+      } finally {
+        app.unmount()
+      }
+    },
+  )
+})

@@ -926,6 +926,12 @@ const vaporInteropImpl = {
     })
     // bounds the component's own hydration, then holds no SSR position
     claimUntrackedAnchor(vnode.anchor as Node)
+    // the vdom components this one is the root of adopted the node the server
+    // rendered first, which can be a marker before the root
+    updateHOCHostEl(
+      { vnode, parent: parentComponent, suspense: parentSuspense },
+      vnode.el,
+    )
     return anchor
   },
 
@@ -4577,15 +4583,10 @@ function invokeVaporSlot(vnode: VNode): Block {
 function resolveInteropRootEl(
   instance: VaporComponentInstance,
 ): Element | undefined {
-  return getRootElement(
-    instance,
-    __DEV__
-      ? {
-          onDynamicFragment: frag => registerInteropRootSync(instance, frag),
-          onComponent: comp => registerInteropRootRerenderSync(instance, comp),
-        }
-      : { onDynamicFragment: frag => registerInteropRootSync(instance, frag) },
-  )
+  return getRootElement(instance, {
+    onDynamicFragment: frag => registerInteropRootSync(instance, frag),
+    onComponent: comp => registerInteropComponentRootSync(instance, comp),
+  })
 }
 
 function syncVNodeEl(vnode: VNode, instance: VaporComponentInstance): void {
@@ -5633,14 +5634,19 @@ function registerInteropRootSync(
   }
 }
 
-// dev only: and across the HMR rerender of a component on its root chain
-function registerInteropRootRerenderSync(
+// across a pending async setup or (dev only) HMR rerender on the root chain
+function registerInteropComponentRootSync(
   instance: VaporComponentInstance,
   comp: VaporComponentInstance,
 ): void {
   if (interopRootSyncProducers.get(comp) === instance) return
   interopRootSyncProducers.set(comp, instance)
-  ;(comp.hmrRootHooks ||= []).push(() => syncInteropRoot(instance))
+  if (__DEV__) {
+    ;(comp.hmrRootHooks ||= []).push(() => syncInteropRoot(instance))
+  }
+  if (isPendingInteropSetup(comp)) {
+    ;(comp.bm ||= []).push(() => syncInteropRoot(instance))
+  }
 }
 
 // Registered on demand: only instances whose vnode carries directives
