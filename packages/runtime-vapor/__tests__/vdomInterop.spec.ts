@@ -20232,4 +20232,59 @@ describe('interop root el', () => {
     expect(vm.$.subTree.el).toBe(vm.$el)
     app.unmount()
   })
+
+  test.each(['VDOM', 'Vapor'] as const)(
+    'sync vapor root forwarding to async vapor child updates ancestors (%s app)',
+    async mode => {
+      const capture = vi.fn()
+      let resolve!: () => void
+      const data = ref({
+        capture,
+        wait: new Promise<void>(r => {
+          resolve = r
+        }),
+      })
+      const Leaf = compile(
+        `<script setup>await _data.value.wait</script>
+        <template><div>leaf</div></template>`,
+        data,
+      )
+      const Part = compile(`<template><components.Leaf /></template>`, data, {
+        Leaf,
+      })
+      const Wrapper = compile(
+        `<script setup>const components = _components</script>
+        <template><components.Part /></template>`,
+        data,
+        { Part },
+        { vapor: false },
+      )
+      const App = compile(
+        `<script setup>const data = _data; const components = _components</script>
+        <template>
+          <Suspense>
+            <section>
+              <components.Wrapper :ref="data.capture" />
+            </section>
+          </Suspense>
+        </template>`,
+        data,
+        { Wrapper },
+        { vapor: mode === 'Vapor' },
+      )
+      const container = document.createElement('div')
+      const app = (mode === 'Vapor' ? createVaporApp : createApp)(App)
+      app.use(vaporInteropPlugin).mount(container)
+      try {
+        resolve()
+        await new Promise(r => setTimeout(r))
+        await nextTick()
+        const div = container.querySelector('section > div')
+        expect(div).not.toBeNull()
+        expect(capture.mock.calls[0][0].$el).toBe(div)
+      } finally {
+        app.unmount()
+      }
+    },
+  )
 })

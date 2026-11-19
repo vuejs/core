@@ -1543,14 +1543,6 @@ function baseCreateRenderer(
               parentSuspense,
               null,
             )
-            // As on mount, take the root's el: a vapor root skips the marker
-            // that the server rendered before it. A deferred hydration also
-            // updates the parents.
-            const rootEl = instance.subTree.el
-            if (rootEl !== el) {
-              initialVNode.el = rootEl
-              updateHOCHostEl(instance, rootEl)
-            }
             if (__DEV__) {
               endMeasure(instance, `hydrate`)
             }

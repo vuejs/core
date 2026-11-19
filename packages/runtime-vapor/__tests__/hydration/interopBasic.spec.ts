@@ -1474,10 +1474,10 @@ describe('interop root el', () => {
       }
     })
 
-    // the anchor of the vapor component, as on mount
+    // the start node of the vapor component, as on mount
     test(`multi-root vapor root (${mode} app)`, async () => {
       const capture = vi.fn()
-      const { app, html } = await hydrate(
+      const { app, container, html } = await hydrate(
         appCode,
         {
           Part: `<template><div>a</div><div>b</div></template>`,
@@ -1489,10 +1489,66 @@ describe('interop root el', () => {
         expect(html).toContain('<!--{-->')
         const vm = capture.mock.calls[0][0]
         expect(vm.$el).toBe(vm.$.subTree.el)
+        expect(vm.$el).not.toBe(vm.$.subTree.anchor)
+        expect(vm.$el.nextSibling).toBe(container.querySelector('div'))
       } finally {
         app.unmount()
       }
     })
+
+    test.each([false, true])(
+      `keyed v-for of wrapper with multi-root vapor root (${mode} app, update before prepend: %s)`,
+      async updateFirst => {
+        const data = ref({ rows: ['b'] })
+        const { app, container } = await hydrate(
+          `<script setup>const data = _data; const components = _components</script>
+          <template><main><components.Wrapper v-for="id in data.rows" :key="id" :id="id" /></main></template>`,
+          {
+            Part: {
+              code: `<script setup>
+                import { ref } from 'vue'
+                defineProps({ id: String })
+                const n = ref(0)
+              </script><template>
+                <span @click="n++" :data-n="n">{{ id }}1</span>
+                <span>{{ id }}2</span>
+              </template>`,
+              vapor: true,
+            },
+            Wrapper: {
+              code: `<script setup>
+                defineProps({ id: String })
+                const components = _components
+              </script><template><components.Part :id="id" /></template>`,
+              vapor: false,
+            },
+          },
+          data,
+        )
+        try {
+          const main = container.querySelector('main')!
+          expect(main.textContent).toBe('b1b2')
+          if (updateFirst) {
+            main.querySelector<HTMLElement>('span')!.click()
+            await nextTick()
+            expect(main.querySelector('span')!.getAttribute('data-n')).toBe('1')
+          }
+          data.value.rows = ['a', 'b']
+          await nextTick()
+          expect(main.textContent).toBe('a1a2b1b2')
+
+          data.value.rows = ['b', 'a']
+          await nextTick()
+          expect(main.textContent).toBe('b1b2a1a2')
+
+          data.value.rows = ['a']
+          await nextTick()
+          expect(main.textContent).toBe('a1a2')
+        } finally {
+          app.unmount()
+        }
+      },
+    )
 
     test(`HOC chain (${mode} app)`, async () => {
       const capture = vi.fn()
@@ -1712,6 +1768,108 @@ describe('interop root el', () => {
         expect(capture.mock.calls[0][0].$el).toBe(
           container.querySelector('div'),
         )
+      } finally {
+        app.unmount()
+      }
+    })
+
+    test(`sync vapor root forwarding to async vapor child updates ancestors (${mode} app)`, async () => {
+      const capture = vi.fn()
+      let resolve!: () => void
+      const data = ref({
+        capture,
+        wait: new Promise<void>(r => {
+          resolve = r
+        }),
+      })
+      const { app, container } = await testHydration(
+        `<script setup>
+          const data = _data
+          const components = _components
+        </script><template>
+          <Suspense>
+            <section>
+              <components.Wrapper :ref="data.capture" />
+            </section>
+          </Suspense>
+        </template>`,
+        {
+          Leaf: {
+            code: `<script setup>await _data.value.wait</script>${part.code}`,
+            vapor: true,
+          },
+          Part: {
+            code: `<template><components.Leaf /></template>`,
+            vapor: true,
+          },
+          Wrapper: wrapper,
+        },
+        data,
+        {
+          isVaporApp: mode === 'Vapor',
+          interop: true,
+          serverData: ref({ ...data.value, wait: Promise.resolve() }),
+        },
+      )
+      try {
+        const div = container.querySelector('section > div')!
+        resolve()
+        await new Promise(r => setTimeout(r))
+        await nextTick()
+        expect(capture.mock.calls[0][0].$el).toBe(div)
+      } finally {
+        app.unmount()
+      }
+    })
+
+    test(`lazy hydration after a parent re-render (${mode} app)`, async () => {
+      const capture = vi.fn()
+      const inner = vi.fn()
+      const strategy = vi.fn()
+      const data = ref({ capture, inner, strategy, tick: 0 })
+      const { app, container } = await hydrate(
+        appCode,
+        {
+          Part: part,
+          Inner: {
+            code: `<script setup>
+              import { defineAsyncComponent } from 'vue'
+              const data = _data
+              const components = _components
+              const Lazy = defineAsyncComponent({
+                loader: () => Promise.resolve(components.Part),
+                hydrate: data.value.strategy,
+              })
+            </script><template><Lazy v-if="data.tick >= 0" /></template>`,
+            vapor: false,
+          },
+          Wrapper: {
+            code: `<script setup>const data = _data; const components = _components</script>
+              <template><components.Inner :ref="data.inner" /></template>`,
+            vapor: false,
+          },
+        },
+        data,
+      )
+      try {
+        await new Promise(r => setTimeout(r))
+        const el = container.querySelector('div')!
+        const vm = inner.mock.calls[0][0]
+        expect(strategy).toHaveBeenCalledTimes(1)
+
+        // Inner re-renders, Lazy gets a new vnode without updating
+        data.value.tick++
+        await nextTick()
+        strategy.mock.calls[0][0]()
+        await nextTick()
+        expect.soft(vm.$el).toBe(el)
+        expect.soft(vm.$.subTree.el).toBe(el)
+
+        data.value.tick++
+        await nextTick()
+        expect(container.querySelector('div')).toBe(el)
+        expect.soft(vm.$el).toBe(el)
+        expect.soft(capture.mock.calls[0][0].$el).toBe(el)
       } finally {
         app.unmount()
       }
