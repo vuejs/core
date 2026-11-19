@@ -1815,6 +1815,82 @@ function runSharedTests(deferMode: boolean): void {
     app.unmount()
   })
 
+  describe('keeps creation order of teleports to the same target', () => {
+    const tp = (text: string) =>
+      createComponent(
+        VaporTeleport,
+        { to: () => '#tp-order' },
+        { default: () => template(`<p>${text}</p>`)() },
+      )
+    // a teleport inside an element that is not in the document yet
+    const inElement = (text: string) => {
+      const el = template('<div></div>')() as any
+      setInsertionState(el)
+      tp(text)
+      return el
+    }
+    // a component whose root is a teleport
+    const Child = defineVaporComponent({
+      props: { text: String },
+      setup(props: any) {
+        return tp(props.text)
+      },
+    })
+
+    async function expectOrder(
+      setup: () => any,
+      expected = '<p>A</p><p>B</p><p>C</p>',
+    ) {
+      const root = document.createElement('div')
+      document.body.appendChild(root)
+      const target = document.createElement('div')
+      target.id = 'tp-order'
+      document.body.appendChild(target)
+      const { app, mount } = define({ setup }).create()
+      try {
+        mount(root)
+        await nextTick()
+        expect(target.innerHTML).toBe(expected)
+      } finally {
+        app.unmount()
+        target.remove()
+        root.remove()
+      }
+    }
+
+    test('in an element, then at a root', () =>
+      expectOrder(() => [inElement('A'), tp('B'), inElement('C')]))
+
+    test('at a root, then in an element', () =>
+      expectOrder(() => [tp('A'), inElement('B'), tp('C')]))
+
+    test('at the root of a child component', () =>
+      expectOrder(() => [
+        createComponent(Child, { text: () => 'A' }),
+        inElement('B'),
+        createComponent(Child, { text: () => 'C' }),
+      ]))
+
+    test('nested in a teleport', () =>
+      expectOrder(
+        () => {
+          const el = template('<div></div>')() as any
+          setInsertionState(el)
+          createComponent(
+            VaporTeleport,
+            { to: () => '#tp-order' },
+            { default: () => [tp('B'), template('<p>A</p>')()] },
+          )
+          return [el, tp('C')]
+        },
+        // the inner teleport's main-view markers are the outer's content.
+        // As vdom, a deferred nested teleport is queued when the deferred
+        // mount of its parent runs.
+        '<!--teleport start--><!--teleport end-->' +
+          (deferMode ? '<p>A</p><p>C</p><p>B</p>' : '<p>A</p><p>B</p><p>C</p>'),
+      ))
+  })
+
   test('avoid unnecessary update and transition', async () => {
     const target1 = document.createElement('div')
     const target2 = document.createElement('div')
