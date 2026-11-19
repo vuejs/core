@@ -216,11 +216,18 @@ function createIfBranch(node: ElementNode, dir: DirectiveNode): IfBranchNode {
   }
 }
 
+type BranchCodegenNode =
+  BlockCodegenNode | MemoExpression | IfConditionalExpression | CacheExpression
+
+// the key expression injected into each branch's root, so that the branches of
+// a v-if chain inlined into an outer branch can be namespaced afterwards
+const branchKeys = new WeakMap<IfBranchNode, SimpleExpressionNode>()
+
 function createCodegenNodeForBranch(
   branch: IfBranchNode,
   keyIndex: number,
   context: TransformContext,
-): IfConditionalExpression | BlockCodegenNode | MemoExpression {
+): BranchCodegenNode {
   if (branch.condition) {
     return createConditionalExpression(
       branch.condition,
@@ -241,19 +248,25 @@ function createChildrenCodegenNode(
   branch: IfBranchNode,
   keyIndex: number,
   context: TransformContext,
-): BlockCodegenNode | MemoExpression {
+): BranchCodegenNode {
   const { helper } = context
-  const keyProperty = createObjectProperty(
-    `key`,
-    createSimpleExpression(
-      `${keyIndex}`,
-      false,
-      locStub,
-      ConstantTypes.CAN_CACHE,
-    ),
-  )
   const { children } = branch
   const firstChild = children[0]
+  if (children.length === 1 && firstChild.type === NodeTypes.IF) {
+    // a <template v-if> wrapping only a nested v-if chain: use the nested
+    // chain directly so the branch renders a single root instead of a
+    // fragment, with its keys namespaced by this branch's key (#5933)
+    prefixBranchKeys(firstChild, keyIndex)
+    return firstChild.codegenNode!
+  }
+  const keyExp = createSimpleExpression(
+    `${keyIndex}`,
+    false,
+    locStub,
+    ConstantTypes.CAN_CACHE,
+  )
+  branchKeys.set(branch, keyExp)
+  const keyProperty = createObjectProperty(`key`, keyExp)
   const needFragmentWrapper =
     children.length !== 1 || firstChild.type !== NodeTypes.ELEMENT
   if (needFragmentWrapper) {
@@ -265,11 +278,16 @@ function createChildrenCodegenNode(
     } else {
       let patchFlag = PatchFlags.STABLE_FRAGMENT
       // check if the fragment actually contains a single valid child with
-      // the rest being comments
+      // the rest being comments. Once comments are stripped, a <template v-if>
+      // only renders that child as the root if it is an element or a nested
+      // v-if chain.
+      const validChildren = children.filter(c => c.type !== NodeTypes.COMMENT)
       if (
         __DEV__ &&
-        !branch.isTemplateIf &&
-        children.filter(c => c.type !== NodeTypes.COMMENT).length === 1
+        validChildren.length === 1 &&
+        (!branch.isTemplateIf ||
+          validChildren[0].type === NodeTypes.ELEMENT ||
+          validChildren[0].type === NodeTypes.IF)
       ) {
         patchFlag |= PatchFlags.DEV_ROOT_FRAGMENT
       }
@@ -299,6 +317,19 @@ function createChildrenCodegenNode(
     // inject branch key
     injectProp(vnodeCall, keyProperty, context)
     return ret
+  }
+}
+
+function prefixBranchKeys(node: IfNode, prefix: number): void {
+  for (const branch of node.branches) {
+    const keyExp = branchKeys.get(branch)
+    if (keyExp) {
+      keyExp.content = `${prefix}-${keyExp.content}`
+      keyExp.isStatic = true
+    } else {
+      // the branch inlined a nested v-if chain of its own
+      prefixBranchKeys(branch.children[0] as IfNode, prefix)
+    }
   }
 }
 
