@@ -258,10 +258,16 @@ export function resolveTransitionProps(
     onEnter: makeEnterHook(false),
     onAppear: makeEnterHook(true),
     onLeave(
-      el: Element & { _isLeaving?: boolean; _enterCancelled?: boolean },
+      el: Element & {
+        _isLeaving?: boolean
+        _enterCancelled?: boolean
+        _endId?: number
+      },
       done,
     ) {
       el._isLeaving = true
+      // a pending end of a cancelled enter must not interfere with this leave
+      el._endId = undefined
       const resolve = () => finishLeave(el, done)
       addTransitionClass(el, leaveFromClass)
       if (__COMPAT__ && legacyClassEnabled && legacyLeaveFromClass) {

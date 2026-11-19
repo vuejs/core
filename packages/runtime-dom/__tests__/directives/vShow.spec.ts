@@ -475,4 +475,39 @@ describe('runtime-dom: v-show directive', () => {
       vi.useRealTimers()
     }
   })
+
+  test('should not let the end of a cancelled enter remove shared leave classes (with Transition)', async () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'requestAnimationFrame'] })
+    try {
+      const visible = ref(false)
+      const afterLeave = vi.fn()
+      const { code } = compile(
+        '<Transition :duration="100" enter-active-class="fade" leave-active-class="fade" @after-leave="afterLeave"><div v-show="visible" /></Transition>',
+        { prefixIdentifiers: true },
+      )
+      const Component = {
+        setup: () => ({ visible, afterLeave }),
+        render: new Function('Vue', code)(runtimeDom),
+      }
+      render(h(Component), root)
+      const el = root.children[0]
+
+      visible.value = true
+      await nextTick()
+      // the enter frame has run, its 100ms timeout is still pending
+      vi.advanceTimersByTime(120)
+      visible.value = false
+      await nextTick()
+      // the timeout of the cancelled enter fires before the frame of the leave
+      vi.advanceTimersByTime(20)
+      expect(el.classList.contains('fade')).toBe(true)
+
+      vi.advanceTimersByTime(500)
+      expect(afterLeave).toHaveBeenCalledTimes(1)
+      expect(el.style.display).toBe('none')
+      expect(el.className).toBe('')
+    } finally {
+      vi.useRealTimers()
+    }
+  })
 })
