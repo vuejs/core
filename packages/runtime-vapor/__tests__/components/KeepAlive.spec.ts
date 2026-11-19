@@ -5758,6 +5758,107 @@ describe('VaporKeepAlive', () => {
       expect(calls).toEqual(['ref2:null'])
     },
   )
+
+  // the branch an out-in Transition renders once the leave ends is cached by
+  // the fragment rendering it: the rest of a v-else-if chain, slot content
+  describe('behind an out-in Transition', () => {
+    const tab = (id: string) => `<script setup>
+      import { onActivated, onDeactivated, onMounted, onUnmounted } from 'vue'
+      const log = _data.value.log
+      onMounted(() => log('mounted:${id}'))
+      onActivated(() => log('activated:${id}'))
+      onDeactivated(() => log('deactivated:${id}'))
+      onUnmounted(() => log('unmounted:${id}'))
+    </script>
+    <template><p>${id}</p></template>`
+    const makeData = () => {
+      const calls: string[] = []
+      const dones: (() => void)[] = []
+      return ref<any>({
+        v: 'a',
+        calls,
+        dones,
+        log: (s: string) => calls.push(s),
+        leave: (_el: Element, done: () => void) => dones.push(done),
+      })
+    }
+    const switchTo = async (data: any, v: string) => {
+      data.value.v = v
+      await nextTick()
+      data.value.dones.shift()()
+      await nextTick()
+    }
+
+    test('caches each branch of a v-else-if chain', async () => {
+      const logs = {} as Record<'vdom' | 'vapor', string[]>
+      await renderParity(
+        {
+          A: tab('a'),
+          B: tab('b'),
+          C: tab('c'),
+          App: `<template>
+            <Transition mode="out-in" :css="false" @leave="data.leave">
+              <KeepAlive>
+                <components.A v-if="data.v === 'a'" />
+                <components.B v-else-if="data.v === 'b'" />
+                <components.C v-else />
+              </KeepAlive>
+            </Transition>
+          </template>`,
+        },
+        makeData,
+        async (data, _root, mode) => {
+          logs[mode] = data.value.calls
+          for (const v of ['b', 'c', 'a', 'b', 'c']) await switchTo(data, v)
+        },
+      )
+      expect(logs.vdom.filter(s => s.startsWith('mounted'))).toEqual([
+        'mounted:a',
+        'mounted:b',
+        'mounted:c',
+      ])
+      expect(logs.vapor).toEqual(logs.vdom)
+    })
+
+    test('caches each branch of the content of a slot', async () => {
+      const data = makeData()
+      const Wrapper = compile(
+        `<template>
+          <Transition mode="out-in" :css="false" @leave="data.leave">
+            <KeepAlive><slot /></KeepAlive>
+          </Transition>
+        </template>`,
+        data,
+      )
+      const App = compile(
+        `<script setup vapor>
+          const data = _data
+          const { Wrapper, A, B } = _components
+        </script>
+        <template><Wrapper><component :is="data.v === 'a' ? A : B" /></Wrapper></template>`,
+        data,
+        { Wrapper, A: compile(tab('a'), data), B: compile(tab('b'), data) },
+      )
+      const { html, app } = define(App).render()
+      for (const v of ['b', 'a', 'b']) await switchTo(data, v)
+      expect(stripAnchors(html())).toBe('<p>b</p>')
+      app.unmount()
+      expect(data.value.calls).toEqual([
+        'mounted:a',
+        'activated:a',
+        'deactivated:a',
+        'mounted:b',
+        'activated:b',
+        'deactivated:b',
+        'activated:a',
+        'deactivated:a',
+        'activated:b',
+        'unmounted:a',
+        'deactivated:b',
+        'unmounted:b',
+      ])
+    })
+  })
 })
 
 describe('Transition inside a kept-alive component', () => {
