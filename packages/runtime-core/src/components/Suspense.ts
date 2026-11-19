@@ -846,7 +846,11 @@ function createSuspenseBoundary(
     },
 
     next() {
-      return suspense.activeBranch && next(suspense.activeBranch)
+      // while hydrating, the pending branch is the one in the container
+      const branch = suspense.isHydrating
+        ? suspense.pendingBranch
+        : suspense.activeBranch
+      return branch && next(branch)
     },
 
     registerDep(instance, onResolve) {

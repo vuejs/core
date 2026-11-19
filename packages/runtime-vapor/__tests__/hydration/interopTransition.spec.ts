@@ -406,4 +406,236 @@ describe('vdom directives on a vapor component wrapping its slot in a Transition
     await nextTick()
     expect(log).toEqual(['beforeUpdate P 1>2', 'updated P 1>2'])
   })
+
+  // handing the hydrated root over to the Transition is no update of it
+  test.each([
+    ['on the hydrated content root', `<div v-log="data.n">x</div>`, 'DIV'],
+    ['inside the hydrated content', `<div><p v-log="data.n">x</p></div>`, 'P'],
+  ])('are not updated %s', async (_, content, tag) => {
+    const data = reactive({ n: 1 })
+    await hydrate(content, data, '')
+    await nextTick()
+    expect(log).toEqual([
+      `created ${tag} undefined>1`,
+      `beforeMount ${tag} undefined>1`,
+      `mounted ${tag} undefined>1`,
+    ])
+  })
 })
+
+// the content hydrates ahead of the Transition's hooks reaching the outlet;
+// a vdom component is the control
+test.each([
+  ['a vdom component', 'child', false, `<components.Child />`],
+  ['a vapor component', 'child', true, `<components.Child />`],
+  [
+    'a vdom component',
+    'child in a Suspense',
+    false,
+    `<Suspense><components.Child /></Suspense>`,
+  ],
+  [
+    'a vapor component',
+    'child in a Suspense',
+    true,
+    `<Suspense><components.Child /></Suspense>`,
+  ],
+  [
+    'a vdom component',
+    'async child in a Suspense',
+    false,
+    `<Suspense><Lazy /></Suspense>`,
+  ],
+  [
+    'a vapor component',
+    'async child in a Suspense',
+    true,
+    `<Suspense><Lazy /></Suspense>`,
+  ],
+])(
+  '%s wrapping its slot in a Transition runs the hooks on a hydrated vdom %s switching its own root',
+  async (_, __, vapor, content) => {
+    const log: string[] = []
+    const hook = (name: string) => (el: Element, done: () => void) => {
+      log.push(`${name}:${el.tagName}`)
+      done()
+    }
+    const data = reactive({
+      a: true,
+      onEnter: hook('enter'),
+      onLeave: hook('leave'),
+    })
+    await testWithVDOMApp(
+      `<script setup>
+        import { defineAsyncComponent } from 'vue'
+        const components = _components
+        const Lazy = defineAsyncComponent(() =>
+          Promise.resolve(components.Child),
+        )
+      </script>
+      <template>
+        <components.Fade>
+          ${content}
+        </components.Fade>
+      </template>`,
+      {
+        Child: {
+          code: `<script setup>const data = _data</script>
+            <template>
+              <div v-if="data.a">x</div>
+              <p v-else>y</p>
+            </template>`,
+          vapor: false,
+        },
+        Fade: {
+          code: `<script setup>const data = _data</script>
+            <template>
+              <Transition
+                :css="false"
+                @enter="data.onEnter"
+                @leave="data.onLeave"
+              >
+                <slot />
+              </Transition>
+            </template>`,
+          vapor,
+        },
+      },
+      data,
+    )
+    await new Promise(r => setTimeout(r))
+    // only Child reads `data.a`: the slot is not patched again
+    data.a = false
+    await nextTick()
+    expect(log).toEqual(['leave:DIV', 'enter:P'])
+  },
+)
+
+// handing the hydrated child over to the Transition is no update of it; a
+// vdom component is the control
+test.each([
+  ['a vdom component', false],
+  ['a vapor component', true],
+])(
+  '%s wrapping its slot in a Transition does not update a hydrated vdom child',
+  async (_, vapor) => {
+    const log: string[] = []
+    const data = reactive({
+      log: (hook: string) => log.push(hook),
+      vLog: markRaw({ updated: () => log.push('directive updated') }),
+    })
+    await testWithVDOMApp(
+      `<script setup>const components = _components</script>
+      <template>
+        <components.Fade>
+          <components.Child />
+        </components.Fade>
+      </template>`,
+      {
+        Child: {
+          code: `<script setup>
+              import { onBeforeUpdate, onMounted, onUpdated } from 'vue'
+              const data = _data
+              const vLog = data.vLog
+              onMounted(() => data.log('mounted'))
+              onBeforeUpdate(() => data.log('beforeUpdate'))
+              onUpdated(() => data.log('updated'))
+            </script>
+            <template>
+              <div>
+                <p v-log>x</p>
+              </div>
+            </template>`,
+          vapor: false,
+        },
+        Fade: {
+          code: `<script setup>const data = _data</script>
+            <template>
+              <Transition :css="false">
+                <slot />
+              </Transition>
+            </template>`,
+          vapor,
+        },
+      },
+      data,
+    )
+    await nextTick()
+    expect(log).toEqual(['mounted'])
+  },
+)
+
+// an update ahead of its hydration has an async child skip it, and a Suspense
+// still hydrating has no active branch to tell its end by; a vdom component
+// is the control
+test.each([
+  ['a vdom component', 'as its content', false, `<Lazy />`],
+  ['a vapor component', 'as its content', true, `<Lazy />`],
+  ['a vdom component', 'in a Suspense', false, `<Suspense><Lazy /></Suspense>`],
+  ['a vapor component', 'in a Suspense', true, `<Suspense><Lazy /></Suspense>`],
+  [
+    'a vdom component',
+    'in a nested Suspense',
+    false,
+    `<Suspense><Suspense><Lazy /></Suspense></Suspense>`,
+  ],
+  [
+    'a vapor component',
+    'in a nested Suspense',
+    true,
+    `<Suspense><Suspense><Lazy /></Suspense></Suspense>`,
+  ],
+  [
+    'a vdom component',
+    'in a nested suspensible Suspense',
+    false,
+    `<Suspense><Suspense suspensible><Lazy /></Suspense></Suspense>`,
+  ],
+  [
+    'a vapor component',
+    'in a nested suspensible Suspense',
+    true,
+    `<Suspense><Suspense suspensible><Lazy /></Suspense></Suspense>`,
+  ],
+])(
+  '%s wrapping its slot in a Transition leaves a vdom async child %s to hydrate',
+  async (_, __, vapor, content) => {
+    const { container } = await testWithVDOMApp(
+      `<script setup>
+        import { defineAsyncComponent } from 'vue'
+        const components = _components
+        const Lazy = defineAsyncComponent(() =>
+          Promise.resolve(components.Part),
+        )
+      </script>
+      <template>
+        <components.Fade>
+          ${content}
+        </components.Fade>
+      </template>`,
+      {
+        Part: {
+          code: `<script setup>const data = _data</script>
+            <template>
+              <div>x</div>
+            </template>`,
+          vapor: false,
+        },
+        Fade: {
+          code: `<script setup>const data = _data</script>
+            <template>
+              <Transition :css="false">
+                <slot />
+              </Transition>
+            </template>`,
+          vapor,
+        },
+      },
+      reactive({}),
+    )
+    const div = container.querySelector('div')
+    expect(div).not.toBeNull()
+    await new Promise(r => setTimeout(r))
+    expect(container.querySelector('div')).toBe(div)
+  },
+)
