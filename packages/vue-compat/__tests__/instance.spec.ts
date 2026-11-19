@@ -522,6 +522,37 @@ test('keeps unrelated native listeners on functional component updates', async (
   expect(input).toHaveBeenCalledTimes(2)
 })
 
+test.each([false, true])(
+  'removes stale fallthrough listeners when the native key is a declared event (props: %s)',
+  async withProps => {
+    const onClick = vi.fn()
+    const useComponentListener = ref(false)
+    const Child = () => h('button')
+    Child.props = withProps ? ['label'] : undefined
+    Child.emits = ['click-native']
+    Child.compatConfig = { INSTANCE_LISTENERS: false }
+
+    const vm = new Vue({
+      compatConfig: { RENDER_FUNCTION: false, COMPONENT_ASYNC: false },
+      render() {
+        return h(
+          Child,
+          useComponentListener.value
+            ? { onClickNative: () => {} }
+            : { onClick },
+        )
+      },
+    }).$mount()
+
+    vm.$el.click()
+    expect(onClick).toHaveBeenCalledTimes(1)
+    useComponentListener.value = true
+    await nextTick()
+    vm.$el.click()
+    expect(onClick).toHaveBeenCalledTimes(1)
+  },
+)
+
 test.each([
   [
     '@click.native="dynamicHandler" @click="staticHandler()"',

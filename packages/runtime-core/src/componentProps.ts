@@ -372,9 +372,7 @@ export function updateProps(
           }
         } else if (
           !__COMPAT__ ||
-          !isOn(key) ||
-          !rawProps ||
-          !hasOwn(rawProps, key + 'Native')
+          !hasCompatNativeAttr(instance, rawProps, key)
         ) {
           delete props[key]
         }
@@ -387,7 +385,7 @@ export function updateProps(
         if (
           !rawProps ||
           (!hasOwn(rawProps, key) &&
-            (!__COMPAT__ || !hasOwn(rawProps, key + 'Native')))
+            (!__COMPAT__ || !hasCompatNativeAttr(instance, rawProps, key)))
         ) {
           delete attrs[key]
           hasAttrsChanged = true
@@ -404,6 +402,23 @@ export function updateProps(
   if (__DEV__) {
     validateProps(rawProps || {}, props, instance)
   }
+}
+
+function hasCompatNativeAttr(
+  { emitsOptions, propsOptions: [options] }: ComponentInternalInstance,
+  rawProps: Data | null,
+  key: string,
+): boolean {
+  if (!rawProps || !isOn(key)) {
+    return false
+  }
+  const nativeKey = key + 'Native'
+  // Match setFullProps: declared props and events do not fall through.
+  return (
+    hasOwn(rawProps, nativeKey) &&
+    !(options && hasOwn(options, camelize(nativeKey))) &&
+    !isEmitListener(emitsOptions, nativeKey)
+  )
 }
 
 function setFullProps(
