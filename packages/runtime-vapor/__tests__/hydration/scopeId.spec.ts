@@ -501,7 +501,7 @@ describe('scopeId hydration writes', () => {
     expect(span.hasAttribute('data-v-x-s')).toBe(false)
   })
 
-  // a `vdomParent` keeps Mid and App vdom
+  // a `vdomParent` keeps Child, Mid and App vdom
   test.each([
     [
       'slot content',
@@ -536,6 +536,49 @@ describe('scopeId hydration writes', () => {
       true,
       `<p data-v-fade="" data-v-mid="" data-v-app="">b</p>`,
     ],
+    [
+      // only Child reads `data.alt`: the slot is not patched again
+      "a vdom child's own root",
+      {
+        Child: `
+          <div v-if="!data.alt">a</div>
+          <p v-else>b</p>`,
+        Fade: `
+          <Transition :css="false">
+            <slot />
+          </Transition>`,
+        Mid: `
+          <components.Fade>
+            <components.Child />
+          </components.Fade>`,
+        App: `<components.Mid />`,
+      },
+      true,
+      `<p data-v-child="" data-v-mid="" data-v-fade="" data-v-app="">b</p>`,
+    ],
+    [
+      // the forwarded slot's slotted id is dropped with its fragment
+      "a vdom child's own root in a forwarded slot",
+      {
+        Child: `
+          <div v-if="!data.alt">a</div>
+          <p v-else>b</p>`,
+        Fade: `
+          <Transition :css="false">
+            <slot />
+          </Transition>`,
+        Mid: `
+          <components.Fade>
+            <slot />
+          </components.Fade>`,
+        App: `
+          <components.Mid>
+            <components.Child />
+          </components.Mid>`,
+      },
+      true,
+      `<p data-v-child="" data-v-app="" data-v-fade="" data-v-mid="">b</p>`,
+    ],
   ])(
     'a root switched after hydration inherits the root ids through a Transition wrapping a slot, %s',
     async (_, srcs: Record<string, string>, vdomParent, expected) => {
@@ -543,7 +586,7 @@ describe('scopeId hydration writes', () => {
       const build = (ssr: boolean) =>
         compileScoped(srcs, data, {
           ssr,
-          vdomOnly: vdomParent ? ['Mid', 'App'] : [],
+          vdomOnly: vdomParent ? ['Child', 'Mid', 'App'] : [],
         })
       const container = document.createElement('div')
       container.innerHTML = await VueServerRenderer.renderToString(
