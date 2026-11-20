@@ -278,7 +278,7 @@ export interface VaporInVdomInterface {
    * TransitionGroup (`vnode.vs.group`) and hands over their elements.
    */
   forEachGroupChild(vnode: VNode, cb: (el: RendererElement) => void): void
-  applyCssVars(vnode: VNode, vars: Record<string, string>): void
+  applyCssVars(vnode: VNode, vars: Record<string, unknown>): void
   /**
    * Hands the fallback of a vdom outlet over to the vapor slot its content
    * consists of, if it is that one slot.

@@ -502,8 +502,10 @@ function hydrateTeleport(
       (target as TeleportTargetElement)._lpa || target.firstChild
     if (vnode.shapeFlag & ShapeFlags.ARRAY_CHILDREN) {
       if (disabled) {
-        hydrateDisabledTeleport(node, vnode)
+        // claim this teleport's target anchors before hydrating children, as
+        // SSR renders them before any nested teleport's block in the target
         hydrateAnchor(target as TeleportTargetElement, targetNode)
+        hydrateDisabledTeleport(node, vnode)
         if (!vnode.targetAnchor) {
           prepareAnchor(
             target,
@@ -561,22 +563,13 @@ export const Teleport = TeleportImpl as unknown as {
 
 function updateCssVars(vnode: VNode, isDisabled: boolean) {
   // presence of .ut method indicates owner component uses css vars.
-  // code path here can assume browser environment.
   const ctx = vnode.ctx
   if (ctx && ctx.ut) {
-    let node, anchor
     if (isDisabled) {
-      node = vnode.el
-      anchor = vnode.anchor
+      ctx.ut(vnode.el, vnode.anchor)
     } else {
-      node = vnode.targetStart
-      anchor = vnode.targetAnchor
+      ctx.ut(vnode.targetStart, vnode.targetAnchor)
     }
-    while (node && node !== anchor) {
-      if (node.nodeType === 1) node.setAttribute('data-v-owner', ctx.uid)
-      node = node.nextSibling
-    }
-    ctx.ut()
   }
 }
 

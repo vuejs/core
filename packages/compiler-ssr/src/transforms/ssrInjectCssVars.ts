@@ -5,7 +5,6 @@ import {
   type RootNode,
   type TemplateChildNode,
   createSimpleExpression,
-  findDir,
   locStub,
 } from '@vue/compiler-dom'
 
@@ -26,7 +25,7 @@ export const ssrInjectCssVars: NodeTransform = (node, context) => {
     return
   }
 
-  if (node.type === NodeTypes.IF_BRANCH) {
+  if (node.type === NodeTypes.IF_BRANCH || node.type === NodeTypes.FOR) {
     for (const child of node.children) {
       injectCssVars(child)
     }
@@ -35,20 +34,38 @@ export const ssrInjectCssVars: NodeTransform = (node, context) => {
   }
 }
 
+// Builtins that render their children without an element of their own, so
+// props bound to them never reach the output and css vars have to be injected
+// into the children instead.
+const isTransparentBuiltin = (tag: string): boolean =>
+  tag === 'suspense' ||
+  tag === 'Suspense' ||
+  tag === 'keep-alive' ||
+  tag === 'KeepAlive' ||
+  tag === 'teleport' ||
+  tag === 'Teleport'
+
 function injectCssVars(node: RootNode | TemplateChildNode) {
   if (
     node.type === NodeTypes.ELEMENT &&
-    (node.tagType === ElementTypes.ELEMENT ||
-      node.tagType === ElementTypes.COMPONENT) &&
-    !findDir(node, 'for')
+    node.tagType === ElementTypes.TEMPLATE
   ) {
-    if (node.tag === 'suspense' || node.tag === 'Suspense') {
+    node.children.forEach(injectCssVars)
+    return
+  }
+
+  if (
+    node.type === NodeTypes.ELEMENT &&
+    (node.tagType === ElementTypes.ELEMENT ||
+      node.tagType === ElementTypes.COMPONENT)
+  ) {
+    if (isTransparentBuiltin(node.tag)) {
       for (const child of node.children) {
         if (
           child.type === NodeTypes.ELEMENT &&
           child.tagType === ElementTypes.TEMPLATE
         ) {
-          // suspense slot
+          // slot content
           child.children.forEach(injectCssVars)
         } else {
           injectCssVars(child)

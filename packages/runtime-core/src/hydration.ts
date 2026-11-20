@@ -1152,13 +1152,7 @@ export function resolveCssVars(
   expectedMap: Map<string, string>,
 ): void {
   const root = instance.subTree
-  if (
-    instance.getCssVars &&
-    (vnode === root ||
-      (root &&
-        root.type === Fragment &&
-        (root.children as VNode[]).includes(vnode)))
-  ) {
+  if (instance.getCssVars && isCssVarsRoot(root, vnode)) {
     const cssVars = instance.getCssVars()
     for (const key in cssVars) {
       const value = normalizeCssVarValue(cssVars[key])
@@ -1172,6 +1166,17 @@ export function resolveCssVars(
       expectedMap,
     )
   }
+}
+
+function isCssVarsRoot(root: VNode | undefined, vnode: VNode): boolean {
+  return (
+    root === vnode ||
+    !!(
+      root &&
+      (root.type === Fragment || root.shapeFlag & ShapeFlags.TELEPORT) &&
+      (root.children as VNode[]).some(child => isCssVarsRoot(child, vnode))
+    )
+  )
 }
 
 const allowMismatchAttr = 'data-allow-mismatch'

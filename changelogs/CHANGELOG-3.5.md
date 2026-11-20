@@ -1,3 +1,24 @@
+## [3.5.46](https://github.com/vuejs/core/compare/v3.5.45...v3.5.46) (2026-11-20)
+
+### Bug Fixes
+
+* **compiler-sfc:** honour user `onWarn` + surface inline template tips ([#16152](https://github.com/vuejs/core/issues/16152)) ([21738b5](https://github.com/vuejs/core/commit/21738b527bac4a91eef9cbdfc2cc5ac1f3dbdec9))
+* **compiler-sfc:** match tsconfig include/exclude relative to the config file ([f897fa3](https://github.com/vuejs/core/commit/f897fa3478ad3e1ba2060933d09af2ba854faebb))
+* **compiler-sfc:** preserve generic type argument scopes ([#16253](https://github.com/vuejs/core/issues/16253)) ([cbd9595](https://github.com/vuejs/core/commit/cbd95955a5362b44060908f6e28ad447c3031b8a)), closes [#16248](https://github.com/vuejs/core/issues/16248)
+* **compiler-sfc:** resolve configDir relative to referenced configs ([2e2f7c6](https://github.com/vuejs/core/commit/2e2f7c6bef54a85a3ce8db768b11c5562385b65d))
+* **compiler-ssr:** inject css vars into the content of keep-alive and teleport ([#16245](https://github.com/vuejs/core/issues/16245)) ([aec1e05](https://github.com/vuejs/core/commit/aec1e052e65b36abea659d553042511917dde211))
+* **compiler-ssr:** map static DOM prop aliases to HTML attribute names ([#16334](https://github.com/vuejs/core/issues/16334)) ([0f4002c](https://github.com/vuejs/core/commit/0f4002c6882ccfb1b2621b6acf266bd7ff84fb96))
+* **hydration:** claim disabled teleport target anchors before nested teleports ([#16333](https://github.com/vuejs/core/issues/16333)) ([148fdac](https://github.com/vuejs/core/commit/148fdacdc3a67aaa2b8d1b615da227c3fcc2df53)), closes [#16332](https://github.com/vuejs/core/issues/16332)
+* **runtime-dom:** apply css vars to teleported content replaced without patching the teleport ([#16239](https://github.com/vuejs/core/issues/16239)) ([b5b2310](https://github.com/vuejs/core/commit/b5b2310d88002424af5f404e75e0ca8fc59047bc)), closes [#7312](https://github.com/vuejs/core/issues/7312) [#7344](https://github.com/vuejs/core/issues/7344) [#16237](https://github.com/vuejs/core/issues/16237) [#16238](https://github.com/vuejs/core/issues/16238)
+* **shared:** handle objects without a prototype in looseEqual (fix [#16250](https://github.com/vuejs/core/issues/16250)) ([#16251](https://github.com/vuejs/core/issues/16251)) ([6782586](https://github.com/vuejs/core/commit/6782586546cfe580ef7b5c18d692199d52f13e77))
+* **ssr:** avoid inherited property-to-attribute mappings ([#16225](https://github.com/vuejs/core/issues/16225)) ([7ef6817](https://github.com/vuejs/core/commit/7ef6817112bb420ef47a7252821b37caae016ac9))
+* **ssr:** inject css vars through root loops and fragments ([#16244](https://github.com/vuejs/core/issues/16244)) ([7c8a0f7](https://github.com/vuejs/core/commit/7c8a0f704f6eb762e86bbbcc4af5548e6c7532d2)), closes [#16242](https://github.com/vuejs/core/issues/16242) [#16243](https://github.com/vuejs/core/issues/16243)
+* **suspense:** drop async setup errors from unmounted components ([#16350](https://github.com/vuejs/core/issues/16350)) ([da101a4](https://github.com/vuejs/core/commit/da101a4caf8476a1c863d2471079dc03023d4684)), closes [#16349](https://github.com/vuejs/core/issues/16349)
+* **suspense:** run mounted hooks once when an out-in boundary resolves inside a pending ancestor ([#16345](https://github.com/vuejs/core/issues/16345)) ([096dc12](https://github.com/vuejs/core/commit/096dc120aeccc4fed4056b32413c1868c7f70857)), closes [#16344](https://github.com/vuejs/core/issues/16344)
+* **transition:** ignore stale enter callbacks on a reused element ([09a73ad](https://github.com/vuejs/core/commit/09a73ad997d7ef8beb87ab5884265e0c599b2bef)), closes [#16355](https://github.com/vuejs/core/issues/16355)
+* **transition:** ignore stale leave callbacks on a reused element ([#16358](https://github.com/vuejs/core/issues/16358)) ([942d307](https://github.com/vuejs/core/commit/942d307f64660bc3438dfede3c17ae0fb31c3655))
+* **transition:** only skip enter for the element that is leaving (fix [#16359](https://github.com/vuejs/core/issues/16359)) ([#16362](https://github.com/vuejs/core/issues/16362)) ([6e0078a](https://github.com/vuejs/core/commit/6e0078a6d5880c27bd239a7c1d4c559388c4c48b))
+
 ## [3.5.45](https://github.com/vuejs/core/compare/v3.5.44...v3.5.45) (2026-11-05)
 
 ### Bug Fixes
