@@ -2503,3 +2503,428 @@ test('places an initially disabled teleport after the teleports nested in it', a
     root.remove()
   }
 })
+
+describe('teleports to a target rendered by the same template', () => {
+  async function withApp(
+    App: any,
+    assert: (root: Element) => void | Promise<void>,
+  ) {
+    const root = document.createElement('div')
+    document.body.appendChild(root)
+    const app = createVaporApp(App)
+    try {
+      app.mount(root)
+      await nextTick()
+      await assert(root)
+    } finally {
+      app.unmount()
+      root.remove()
+    }
+  }
+
+  const text = (root: Element, id = 'tp-same-template') =>
+    root.querySelector(`#${id}`)!.textContent
+
+  test('in an element, then at the root', () =>
+    withApp(
+      compile(
+        `<template>
+          <div id="tp-same-template" />
+          <header>
+            <Teleport to="#tp-same-template">
+              <p>A</p>
+            </Teleport>
+          </header>
+          <Teleport to="#tp-same-template">
+            <p>B</p>
+          </Teleport>
+        </template>`,
+        ref(),
+      ),
+      root => expect(text(root)).toBe('AB'),
+    ))
+
+  test('at the root, then in an element', () =>
+    withApp(
+      compile(
+        `<template>
+          <div id="tp-same-template" />
+          <Teleport to="#tp-same-template">
+            <p>A</p>
+          </Teleport>
+          <header>
+            <Teleport to="#tp-same-template">
+              <p>B</p>
+            </Teleport>
+          </header>
+        </template>`,
+        ref(),
+      ),
+      root => expect(text(root)).toBe('AB'),
+    ))
+
+  test('initially disabled, in an element, then at the root', () => {
+    const data = ref({ disabled: true })
+    return withApp(
+      compile(
+        `<template>
+          <div id="tp-same-template" />
+          <header>
+            <Teleport to="#tp-same-template" :disabled="data.disabled">
+              <p>A</p>
+            </Teleport>
+          </header>
+          <Teleport to="#tp-same-template" :disabled="data.disabled">
+            <p>B</p>
+          </Teleport>
+        </template>`,
+        data,
+      ),
+      async root => {
+        expect(text(root)).toBe('')
+        data.value.disabled = false
+        await nextTick()
+        expect(text(root)).toBe('AB')
+      },
+    )
+  })
+
+  test('initially disabled, with a nested teleport', () => {
+    const data = ref({ disabled: true })
+    return withApp(
+      compile(
+        `<template>
+          <div id="tp-same-template" />
+          <header>
+            <Teleport to="#tp-same-template" :disabled="data.disabled">
+              <p>B</p>
+              <Teleport to="#tp-same-template">
+                <p>A</p>
+              </Teleport>
+            </Teleport>
+          </header>
+          <Teleport to="#tp-same-template">
+            <p>C</p>
+          </Teleport>
+        </template>`,
+        data,
+      ),
+      async root => {
+        expect(text(root)).toBe('AC')
+        data.value.disabled = false
+        await nextTick()
+        expect(text(root)).toBe('ABC')
+      },
+    )
+  })
+
+  test('deferred and disabled, with a nested teleport', () =>
+    withApp(
+      compile(
+        `<template>
+          <div id="tp-same-template" />
+          <header>
+            <Teleport defer to="#tp-same-template" disabled>
+              <p>C</p>
+              <Teleport to="#tp-same-template">
+                <p>B</p>
+              </Teleport>
+            </Teleport>
+          </header>
+          <Teleport to="#tp-same-template">
+            <p>A</p>
+          </Teleport>
+        </template>`,
+        ref(),
+      ),
+      root => expect(text(root)).toBe('AB'),
+    ))
+
+  test('in an element with a nested teleport, then at the root', () => {
+    const data = ref<boolean[]>([])
+    const Child = compile(
+      `<script setup vapor>
+        import { onMounted, useTemplateRef } from 'vue'
+        const data = _data
+        const el = useTemplateRef('el')
+        onMounted(() => data.value.push(el.value.isConnected))
+      </script>
+      <template>
+        <p ref="el">A</p>
+      </template>`,
+      data,
+    )
+    return withApp(
+      compile(
+        `<template>
+          <div id="tp-same-template" />
+          <header>
+            <Teleport to="#tp-same-template">
+              <section>
+                <components.Child />
+              </section>
+              <Teleport to="#tp-same-template">
+                <p>B</p>
+              </Teleport>
+            </Teleport>
+          </header>
+          <Teleport to="#tp-same-template">
+            <p>C</p>
+          </Teleport>
+        </template>`,
+        data,
+        { Child },
+      ),
+      root => {
+        expect(text(root)).toBe('ABC')
+        expect(data.value).toEqual([true])
+      },
+    )
+  })
+
+  test('with a teleport nested in a teleport to another target', async () => {
+    for (const outer of [
+      `<Teleport to="#tp-same-template-y">
+        <Teleport to="#tp-same-template">
+          <p>B</p>
+        </Teleport>
+      </Teleport>`,
+      `<header>
+        <Teleport to="#tp-same-template-y">
+          <Teleport to="#tp-same-template">
+            <p>B</p>
+          </Teleport>
+        </Teleport>
+      </header>
+      <Teleport to="#tp-same-template-y">
+        <p>C</p>
+      </Teleport>`,
+    ]) {
+      await withApp(
+        compile(
+          `<template>
+            <div id="tp-same-template" />
+            <div id="tp-same-template-y" />
+            <header>
+              <Teleport to="#tp-same-template">
+                <p>A</p>
+              </Teleport>
+            </header>
+            ${outer}
+          </template>`,
+          ref(),
+        ),
+        root => expect(text(root)).toBe('AB'),
+      )
+    }
+  })
+
+  test('in a teleport mounted into an outside target', async () => {
+    const outside = document.createElement('div')
+    outside.id = 'tp-same-template-outside'
+    document.body.appendChild(outside)
+    try {
+      await withApp(
+        compile(
+          `<template>
+            <div id="tp-same-template" />
+            <section>
+              <Teleport to="#tp-same-template-outside">
+                <header>
+                  <Teleport to="#tp-same-template">
+                    <p>A</p>
+                  </Teleport>
+                </header>
+              </Teleport>
+            </section>
+            <header>
+              <Teleport to="#tp-same-template">
+                <p>B</p>
+              </Teleport>
+            </header>
+          </template>`,
+          ref(),
+        ),
+        root => expect(text(root)).toBe('AB'),
+      )
+    } finally {
+      outside.remove()
+    }
+  })
+
+  test('in a teleport at the root of content mounted into an outside target', async () => {
+    const outside = document.createElement('div')
+    outside.id = 'tp-same-template-outside'
+    document.body.appendChild(outside)
+    try {
+      await withApp(
+        compile(
+          `<template>
+            <div id="tp-same-template" />
+            <section>
+              <Teleport to="#tp-same-template-outside">
+                <Teleport to="#tp-same-template">
+                  <p>A</p>
+                </Teleport>
+              </Teleport>
+            </section>
+            <header>
+              <Teleport to="#tp-same-template">
+                <p>B</p>
+              </Teleport>
+            </header>
+          </template>`,
+          ref(),
+        ),
+        root => expect(text(root)).toBe('AB'),
+      )
+    } finally {
+      outside.remove()
+    }
+  })
+
+  test('in a teleport, to a target rendered with its source', () =>
+    withApp(
+      compile(
+        `<template>
+          <div id="tp-same-template" />
+          <header>
+            <div id="tp-same-template-y" />
+            <Teleport to="#tp-same-template">
+              <Teleport to="#tp-same-template-y">
+                <p>A</p>
+              </Teleport>
+            </Teleport>
+          </header>
+        </template>`,
+        ref(),
+      ),
+      root => expect(text(root, 'tp-same-template-y')).toBe('A'),
+    ))
+
+  test('with targets rendered in teleported content', () =>
+    withApp(
+      compile(
+        `<template>
+          <div id="tp-same-template-carrier" />
+          <Teleport to="#tp-same-template-carrier">
+            <div id="tp-same-template-x" />
+            <Teleport to="#tp-same-template-x">
+              <div id="tp-same-template" />
+              <header>
+                <Teleport to="#tp-same-template">
+                  <i />
+                </Teleport>
+              </header>
+            </Teleport>
+            <Teleport to="#tp-same-template">
+              <p>A</p>
+            </Teleport>
+            <section>
+              <Teleport to="#tp-same-template-carrier">
+                <header>
+                  <Teleport to="#tp-same-template">
+                    <p>B</p>
+                  </Teleport>
+                </header>
+              </Teleport>
+            </section>
+          </Teleport>
+        </template>`,
+        ref(),
+      ),
+      root => expect(text(root)).toBe('AB'),
+    ))
+
+  test('in a branch rendered after mount', () => {
+    const data = ref({ show: false })
+    return withApp(
+      compile(
+        `<template>
+          <template v-if="data.show">
+            <div id="tp-same-template" />
+            <header>
+              <Teleport to="#tp-same-template">
+                <p>A</p>
+              </Teleport>
+            </header>
+            <Teleport to="#tp-same-template">
+              <p>B</p>
+            </Teleport>
+          </template>
+        </template>`,
+        data,
+      ),
+      async root => {
+        data.value.show = true
+        await nextTick()
+        expect(text(root)).toBe('AB')
+      },
+    )
+  })
+
+  test('mounts the content before the mounted hook of its parent', async () => {
+    for (const teleport of [
+      `<Teleport to="#tp-same-template">
+        <components.Child />
+      </Teleport>`,
+      `<header>
+        <Teleport to="#tp-same-template">
+          <components.Child />
+        </Teleport>
+      </header>`,
+    ]) {
+      const data = ref<string[]>([])
+      const Child = compile(
+        `<script setup vapor>
+          import { onMounted } from 'vue'
+          const data = _data
+          onMounted(() => data.value.push('child'))
+        </script>
+        <template>
+          <p>A</p>
+        </template>`,
+        data,
+      )
+      await withApp(
+        compile(
+          `<script setup vapor>
+            import { onMounted } from 'vue'
+            const data = _data
+            const components = _components
+            onMounted(() => data.value.push('parent'))
+          </script>
+          <template>
+            <div id="tp-same-template" />
+            ${teleport}
+          </template>`,
+          data,
+          { Child },
+        ),
+        () => expect(data.value).toEqual(['child', 'parent']),
+      )
+    }
+  })
+
+  test('releases a teleport that never enters the document', async () => {
+    const container = document.createElement('div')
+    const App = compile(
+      `<template>
+        <div>
+          <Teleport to="#tp-same-template" disabled>
+            <p>A</p>
+          </Teleport>
+        </div>
+      </template>`,
+      ref(),
+    )
+    let app = createVaporApp(App)
+    app.mount(container)
+    app.unmount()
+    app = createVaporApp(App)
+    app.mount(container)
+    await nextTick()
+    app.unmount()
+    expect((container as any).$tp).toBeUndefined()
+  })
+})

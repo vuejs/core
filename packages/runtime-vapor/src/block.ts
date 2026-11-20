@@ -26,7 +26,13 @@ import {
   isFragment,
   isInteropFragment,
 } from './fragment'
-import { isTeleportEnabled, isTeleportFragment } from './teleport'
+import {
+  type TeleportHost,
+  connectTeleports,
+  isTeleportEnabled,
+  isTeleportFragment,
+  waitingTeleports,
+} from './teleport'
 import { isTransitionEnabled } from './transition'
 import { isInteropEnabled } from './vdomInteropState'
 import {
@@ -250,6 +256,9 @@ export function insertNode(
       // adopted template placeholder is passed back as the insertion target —
       // all established idempotent no-ops. Skip the wasted insertBefore.
       parent.insertBefore(block, anchor)
+    }
+    if (isTeleportEnabled && waitingTeleports && (block as TeleportHost).$tp) {
+      connectTeleports(block, parent)
     }
   }
 }
