@@ -2928,3 +2928,40 @@ describe('teleports to a target rendered by the same template', () => {
     expect((container as any).$tp).toBeUndefined()
   })
 })
+
+test('moves the target anchors of a disabled teleport to the target resolved when its source enters the document', async () => {
+  const data = ref({ disabled: true })
+  const outside = document.createElement('div')
+  outside.className = 'tp-reresolved'
+  const root = document.createElement('div')
+  document.body.append(root, outside)
+  const app = createVaporApp(
+    compile(
+      `<template>
+        <div class="tp-reresolved" />
+        <section>
+          <Teleport to=".tp-reresolved" :disabled="data.disabled">
+            <p>A</p>
+          </Teleport>
+          <i />
+        </section>
+        <Teleport defer to=".tp-reresolved">
+          <p>B</p>
+        </Teleport>
+      </template>`,
+      data,
+    ),
+  )
+  try {
+    app.mount(root)
+    await nextTick()
+    data.value.disabled = false
+    await nextTick()
+    expect(root.querySelector('.tp-reresolved')!.textContent).toBe('AB')
+    expect(outside.textContent).toBe('')
+  } finally {
+    app.unmount()
+    root.remove()
+    outside.remove()
+  }
+})
