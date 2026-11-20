@@ -721,7 +721,7 @@ export {
   getAttributeMismatch,
   isHydrating,
   isHydratingEnabled,
-  firstHydrationElement,
+  collectHydrationElements,
   logMismatchError,
   resolveCssVars,
 } from './hydration'

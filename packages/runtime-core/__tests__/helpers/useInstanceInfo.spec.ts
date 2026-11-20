@@ -177,7 +177,7 @@ describe('useInstanceInfo', () => {
     expect(inSetup).toEqual([null, false, null, false])
   })
 
-  test('el is the first element the component renders', () => {
+  test('el is the root element, or the root elements in order', () => {
     let info: any
     const Inner = { render: () => h('p') }
     const mount = (renderFn: () => any) => {
@@ -191,9 +191,9 @@ describe('useInstanceInfo', () => {
       render(h(Comp), root)
       return root
     }
-    // several roots: past the anchor the fragment starts with
+    // several roots: past the anchors of the fragment
     let root = mount(() => [h('div'), h('span')])
-    expect(info.el).toBe(root.children.find((c: any) => c.tag === 'div'))
+    expect(info.el).toEqual(root.children.filter((c: any) => c.tag))
     // a component as the root
     root = mount(() => h(Inner))
     expect(info.el).toBe(root.children[0])

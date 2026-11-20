@@ -139,6 +139,7 @@ import {
   advanceHydrationNode,
   claimAnchor,
   cleanupHydrationTail,
+  collectHydratingRoots,
   currentHydrationNode,
   enterComponentRange,
   enterHydrationCursor,
@@ -147,7 +148,6 @@ import {
   hydrateBlock,
   hydrateBlockWithErrorHandling,
   hydrateNode,
-  hydratingRootOf,
   isClaimedAnchor,
   isComment,
   isHydrating,
@@ -1304,9 +1304,9 @@ export class VaporComponentInstance<
   }
 
   // Read by useInstanceInfo. `block` is not set while the block fn runs.
-  rootEl(): Element | null | undefined {
-    if (this.block) return getRootElement(this.block, { first: true })
-    if (isHydrating) return hydratingRootOf(this)
+  rootEls(roots: Element[]): void {
+    if (this.block) collectRootElements(this.block, roots)
+    else if (isHydrating) collectHydratingRoots(this, roots)
   }
 
   hydrating(): boolean {
@@ -1318,6 +1318,21 @@ export function isVaporComponent(
   value: unknown,
 ): value is VaporComponentInstance {
   return value instanceof VaporComponentInstance
+}
+
+function collectRootElements(block: Block, roots: Element[]): void {
+  if (block instanceof Element) {
+    roots.push(block)
+  } else if (isVaporComponent(block)) {
+    collectRootElements(block.block, roots)
+  } else if (isArray(block)) {
+    for (let i = 0; i < block.length; i++) collectRootElements(block[i], roots)
+  } else if (
+    isFragment(block) &&
+    !(isTeleportEnabled && isTeleportFragment(block))
+  ) {
+    collectRootElements(block.nodes, roots)
+  }
 }
 
 /**
@@ -2023,8 +2038,6 @@ export interface RootChainVisitor {
   onInteropFragment?: (frag: InteropFragment) => boolean | void
   // Slot outlets break the effective-root chain (see endsRootChain).
   excludeSlotOutlets?: boolean
-  // Several roots resolve to the first that has an element.
-  first?: boolean
 }
 
 export function getRootElement(
@@ -2068,13 +2081,6 @@ export function getRootElement(
   }
 
   if (isArray(block)) {
-    if (visitor && visitor.first) {
-      for (let i = 0; i < block.length; i++) {
-        const el = getRootElement(block[i], visitor)
-        if (el) return el
-      }
-      return
-    }
     // Structure first, visit after: a multi-root array has no effective
     // root, and firing the visitor on a branch before that verdict would
     // leak side effects (owner registration, carrier publication) that

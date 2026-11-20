@@ -8,7 +8,13 @@ setupHydrationTest()
 const script = (vapor: boolean) => `<script setup${vapor ? ' vapor' : ''}>`
 const mode = (vapor: boolean) => (vapor ? 'vapor' : 'vdom')
 
-type Seen = { isHydrating: boolean; el: Node | null }
+type Seen = { isHydrating: boolean; el: Node | Node[] | null }
+
+// one element, the elements in order for several, or null
+const rootsOf = (root: ParentNode, selector: string | null) => {
+  const els = selector ? Array.from(root.querySelectorAll(selector)) : []
+  return els.length > 1 ? els : els[0] || null
+}
 
 const snap = (info: any): Seen => ({
   isHydrating: info.isHydrating,
@@ -117,15 +123,15 @@ describe('useInstanceInfo during hydration', () => {
         })
       })
 
-      // the same element while hydrating and once mounted: the first one the
-      // component renders, past every marker comment
+      // the same elements while hydrating and once mounted: the root
+      // elements the component renders, past every marker comment
       const shapes: [string, string, string | null, string?][] = [
         ['one root', `<div class="part">part</div>`, '.part'],
         [
           'several roots',
           `<div class="a">a</div>
           <div class="b">b</div>`,
-          '.a',
+          '.a, .b',
         ],
         ['a component as the root', `<components.Inner />`, '.inner'],
         [
@@ -133,6 +139,13 @@ describe('useInstanceInfo during hydration', () => {
           `<slot />`,
           '.slotted',
           `<div class="slotted">s</div>`,
+        ],
+        [
+          'a slot with several elements as the root',
+          `<slot />`,
+          '.slotted',
+          `<div class="slotted">a</div>
+          <div class="slotted">b</div>`,
         ],
         [
           'a first root that renders nothing',
@@ -151,7 +164,7 @@ describe('useInstanceInfo during hydration', () => {
             slotContent,
           )
           const { container } = await hydrate()
-          const el = selector && container.querySelector(selector)
+          const el = rootsOf(container, selector)
           if (selector) expect(el).not.toBe(null)
           expect(seen.setup).toEqual({ isHydrating: true, el })
           expect(seen.mounted).toEqual({ isHydrating: false, el })

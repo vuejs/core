@@ -131,14 +131,19 @@ export const isRangeStart = (data: string): boolean =>
   data === '[' || data === '(' || isVaporRangeStart(data)
 
 /**
- * The first element a component rendered on the server, given the node its
- * hydration starts at: that node, or the first element in the range it opens.
+ * Collects the root elements a component rendered on the server, given the
+ * node its hydration starts at: that node, or the elements in the range it
+ * opens.
  */
-export function firstHydrationElement(node: Node | null): Element | null {
+export function collectHydrationElements(
+  node: Node | null,
+  roots: Element[],
+): void {
   let depth = 0
   while (node) {
-    if (node.nodeType === DOMNodeTypes.ELEMENT) return node as Element
-    if (isComment(node)) {
+    if (node.nodeType === DOMNodeTypes.ELEMENT) {
+      roots.push(node as Element)
+    } else if (isComment(node)) {
       const data = node.data
       if (isRangeStart(data)) {
         depth++
@@ -149,7 +154,6 @@ export function firstHydrationElement(node: Node | null): Element | null {
     if (depth < 1) break
     node = node.nextSibling
   }
-  return null
 }
 
 // Note: hydration is DOM-specific

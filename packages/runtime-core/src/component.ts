@@ -421,11 +421,11 @@ export interface GenericComponentInstance {
    */
   rawKeys?: () => string[]
   /**
-   * the first element of the component, or the one the server rendered for a
-   * component that is being hydrated, vapor only
+   * collects the root elements of the component, or the ones the server
+   * rendered for a component that is being hydrated, vapor only
    * @internal
    */
-  rootEl?: () => RendererElement | null | undefined
+  rootEls?(roots: RendererElement[]): void
   /**
    * whether the component is being hydrated, vapor only
    * @internal

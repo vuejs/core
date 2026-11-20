@@ -5,7 +5,7 @@ import {
   type GenericComponentInstance,
   getCurrentGenericInstance,
 } from '../component'
-import { firstHydrationElement, hasHydrationRenderer } from '../hydration'
+import { collectHydrationElements, hasHydrationRenderer } from '../hydration'
 import type { RendererElement } from '../renderer'
 import { isVaporInteropEnabled } from '../vaporInteropState'
 import { Fragment, Static, type VNode, VaporSlot } from '../vnode'
@@ -18,11 +18,12 @@ export interface ComponentInstanceInfo {
    */
   readonly ce: HTMLElement | null
   /**
-   * The first element the component renders, or `null` when it renders none.
-   * `null` until the component is mounted, unless it is being hydrated: then
-   * it is the element the server rendered.
+   * The root element, or the root elements in order when there are several.
+   * Marker comments, anchors and text are skipped; `null` when there is no
+   * element. `null` until the component is mounted, unless it is being
+   * hydrated: then it is what the server rendered.
    */
-  readonly el: RendererElement | null
+  readonly el: RendererElement | RendererElement[] | null
   readonly isVapor: boolean
   readonly isHydrating: boolean
   /**
@@ -47,7 +48,9 @@ const infoProto: ComponentInstanceInfo = /*@__PURE__*/ Object.freeze({
     return (instances.get(this)!.ce as HTMLElement | undefined) || null
   },
   get el() {
-    return elementOf(instances.get(this)!) || null
+    const els: RendererElement[] = []
+    collectRoots(instances.get(this)!, els)
+    return els.length > 1 ? els : els[0] || null
   },
   get isVapor() {
     const i = instances.get(this)!
@@ -74,51 +77,51 @@ function isHydrating(i: GenericComponentInstance): boolean {
         !!(i as ComponentInternalInstance).vnode.el
 }
 
-function elementOf(
+function collectRoots(
   i: GenericComponentInstance,
-): RendererElement | null | undefined {
+  roots: RendererElement[],
+): void {
   // a vnode that was mounted before still carries its previous el
   if (!i.isMounted && !isHydrating(i)) return
-  if (i.rootEl) return i.rootEl()
-  const { subTree, vnode } = i as ComponentInternalInstance
-  if (i.isMounted) return firstElement(subTree)
-  // Only a DOM renderer hydrates. The flag is true here already: naming it
-  // lets a build that cannot hydrate drop the walk.
-  if (hasHydrationRenderer)
-    return firstHydrationElement(vnode.el as Node | null)
+  if (i.rootEls) return i.rootEls(roots)
+  if (i.isMounted) {
+    collectElements((i as ComponentInternalInstance).subTree, roots)
+  } else if (hasHydrationRenderer) {
+    // Only a DOM renderer hydrates. The flag is true here already: naming it
+    // lets a build that cannot hydrate drop the walk.
+    collectHydrationElements(
+      (i as ComponentInternalInstance).vnode.el as Node | null,
+      roots as Element[],
+    )
+  }
 }
 
-function firstElement(vnode: VNode): RendererElement | null | undefined {
+function collectElements(vnode: VNode, roots: RendererElement[]): void {
   const { shapeFlag, type, children } = vnode
   if (shapeFlag & ShapeFlags.COMPONENT) {
-    return vnode.component && elementOf(vnode.component)
-  }
-  if (__FEATURE_SUSPENSE__ && shapeFlag & ShapeFlags.SUSPENSE) {
+    if (vnode.component) collectRoots(vnode.component, roots)
+  } else if (__FEATURE_SUSPENSE__ && shapeFlag & ShapeFlags.SUSPENSE) {
     const suspense = vnode.suspense!
     // a hydrating boundary keeps its pending branch in place
     const branch =
       suspense.activeBranch ||
       (suspense.isHydrating ? suspense.pendingBranch : null)
-    return branch && firstElement(branch)
-  }
-  if (type === Fragment) {
+    if (branch) collectElements(branch, roots)
+  } else if (type === Fragment) {
     if (isArray(children)) {
-      for (const child of children as VNode[]) {
-        const el = firstElement(child)
-        if (el) return el
-      }
+      for (const child of children as VNode[]) collectElements(child, roots)
     }
   } else if (type === Static || (isVaporInteropEnabled && type === VaporSlot)) {
     // a range of nodes: static content from el to anchor, the content vapor
     // renders for a slot between them
     let node = vnode.el as Node | null
     while (node) {
-      if (node.nodeType === 1) return node as Element
+      if (node.nodeType === 1) roots.push(node)
       if (node === vnode.anchor) break
       node = node.nextSibling
     }
   } else if (shapeFlag & ShapeFlags.ELEMENT) {
-    return vnode.el
+    roots.push(vnode.el!)
   }
 }
 

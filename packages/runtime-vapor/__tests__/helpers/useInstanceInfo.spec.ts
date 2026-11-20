@@ -2,6 +2,12 @@ import { createApp, nextTick, ref } from '@vue/runtime-dom'
 import { createVaporApp, vaporInteropPlugin } from '../../src'
 import { VueServerRenderer, compile, runtimeDom } from '../_utils'
 
+// one element, the elements in order for several, or null
+const rootsOf = (root: ParentNode, selector: string | null) => {
+  const els = selector ? Array.from(root.querySelectorAll(selector)) : []
+  return els.length > 1 ? els : els[0] || null
+}
+
 const script = (vapor: boolean) => `<script setup${vapor ? ' vapor' : ''}>`
 const mode = (vapor: boolean) => (vapor ? 'vapor' : 'vdom')
 
@@ -181,7 +187,7 @@ describe('useInstanceInfo', () => {
         'several roots',
         `<div class="a">a</div>
         <div class="b">b</div>`,
-        '.a',
+        '.a, .b',
       ],
       ['a component as the root', `<components.Inner />`, '.inner'],
       [
@@ -252,7 +258,7 @@ describe('useInstanceInfo', () => {
           expect(seen.setup).toEqual({ isHydrating: false, el: null })
           expect(seen.mounted).toEqual({
             isHydrating: false,
-            el: selector && host.querySelector(selector),
+            el: rootsOf(host, selector),
           })
         })
       }

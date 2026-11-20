@@ -3,7 +3,7 @@ import {
   type GenericComponentInstance,
   MismatchTypes,
   callWithErrorHandlingOnce,
-  firstHydrationElement,
+  collectHydrationElements,
   isMismatchAllowed,
   isHydrating as isVdomHydrating,
   isHydratingEnabled as isVdomHydratingEnabled,
@@ -355,20 +355,20 @@ export function exitComponentRange(range: ComponentRange): void {
 }
 
 /**
- * The first element the server rendered for a component whose block fn is
- * running.
+ * Collects the root elements the server rendered for a component whose block
+ * fn is running.
  */
-export function hydratingRootOf(
+export function collectHydratingRoots(
   instance: GenericComponentInstance,
-): Element | null {
+  roots: Element[],
+): void {
   let range = currentComponentRange
   while (range) {
     if (range.instance === instance) {
-      return firstHydrationElement(range.cursor.start)
+      return collectHydrationElements(range.cursor.start, roots)
     }
     range = range.prev
   }
-  return null
 }
 
 /**
