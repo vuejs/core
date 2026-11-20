@@ -407,9 +407,9 @@ test('INSTANCE_LISTENERS: PROPS fast path should not leak on* listeners into $pr
 })
 
 test('INSTANCE_LISTENERS: PROPS fast path should not leak .native listeners into $props (fix #16202)', async () => {
-  const onChangeNative1 = () => {}
-  const onChangeNative2 = () => {}
-  const onChangeNative = ref(onChangeNative1)
+  const onClickNative1 = vi.fn()
+  const onClickNative2 = vi.fn()
+  const onClickNative = ref<typeof onClickNative1 | undefined>(onClickNative1)
   const options = ref([1])
   let child: any
 
@@ -419,38 +419,50 @@ test('INSTANCE_LISTENERS: PROPS fast path should not leak .native listeners into
     created(this: any) {
       child = this
     },
-    render: () => h('div'),
+    render: () => h('button'),
   }
 
-  // `.native` (`onChangeNative`) is routed to $attrs as `onChange` on mount
-  new Vue({
+  // `.native` (`onClickNative`) is routed to $attrs as `onClick` on mount
+  const vm = new Vue({
     compatConfig: { RENDER_FUNCTION: false },
     render() {
       return (
         openBlock(),
         createBlock(
           Child,
-          { options: options.value, onChangeNative: onChangeNative.value },
+          { options: options.value, onClickNative: onClickNative.value },
           null,
           8 /* PROPS */,
-          ['options', 'onChangeNative'],
+          ['options', 'onClickNative'],
         )
       )
     },
   }).$mount()
 
-  expect(child.$props.onChangeNative).toBeUndefined()
-  expect(child.$attrs.onChange).toBe(onChangeNative1)
+  const button = vm.$el as HTMLButtonElement
+  expect(child.$props.onClickNative).toBeUndefined()
+  expect(child.$attrs.onClick).toBe(onClickNative1)
+  button.click()
+  expect(onClickNative1).toHaveBeenCalledTimes(1)
 
   options.value = [1, 2]
-  onChangeNative.value = onChangeNative2
+  onClickNative.value = onClickNative2
   await nextTick()
 
   expect(child.$props.options).toEqual([1, 2])
   // the update must not write the listener into $props under its full
-  // `onChangeNative` key, and must keep it routed to $attrs as `onChange`
-  expect(child.$props.onChangeNative).toBeUndefined()
-  expect(child.$attrs.onChange).toBe(onChangeNative2)
+  // `onClickNative` key, and must keep it routed to $attrs as `onClick`
+  expect(child.$props.onClickNative).toBeUndefined()
+  expect(child.$attrs.onClick).toBe(onClickNative2)
+  button.click()
+  expect(onClickNative1).toHaveBeenCalledTimes(1)
+  expect(onClickNative2).toHaveBeenCalledTimes(1)
+
+  onClickNative.value = undefined
+  await nextTick()
+  expect(child.$attrs.onClick).toBeUndefined()
+  button.click()
+  expect(onClickNative2).toHaveBeenCalledTimes(1)
 })
 
 test('INSTANCE_LISTENERS: PROPS fast path still updates a declared on* prop (fix #16202)', async () => {
@@ -578,6 +590,7 @@ test.each([
   'uses the last fallthrough listener before and after a PROPS update (%s)',
   async (listeners, dynamicProp, [initial, updated]) => {
     const calls: string[] = []
+    const count = ref(0)
     const staticHandler = () => calls.push('static')
     const dynamicHandler = ref(() => calls.push('dynamic'))
     const compilerOptions = {
@@ -589,14 +602,14 @@ test.each([
     const vm = new Vue({
       components: {
         Child: {
-          props: ['label'],
+          props: { count: Number },
           compatConfig: { RENDER_FUNCTION: false, INSTANCE_LISTENERS: false },
-          render: () => h('button'),
+          render: ({ count }: { count: number }) => h('button', count),
         },
       },
-      setup: () => ({ staticHandler, dynamicHandler }),
+      setup: () => ({ count, staticHandler, dynamicHandler }),
       compilerOptions,
-      template: `<Child ${listeners} />`,
+      template: `<Child :count="count" ${listeners} />`,
     }).$mount(container)
     if (__DEV__) {
       expect(CompilerDeprecationTypes.COMPILER_V_ON_NATIVE).toHaveBeenWarned()
@@ -604,15 +617,21 @@ test.each([
 
     const { patchFlag, dynamicProps } = vm.$.subTree
     expect(patchFlag).toBe(PatchFlags.PROPS)
-    expect(dynamicProps).toEqual([dynamicProp])
+    expect(dynamicProps).toEqual(['count', dynamicProp])
     const button = container.querySelector('button')!
     button.click()
     expect(calls).toEqual([initial])
 
+    count.value++
+    await nextTick()
+    expect(button.textContent).toBe('1')
+    button.click()
+    expect(calls).toEqual([initial, initial])
+
     dynamicHandler.value = () => calls.push('updated')
     await nextTick()
     button.click()
-    expect(calls).toEqual([initial, updated])
+    expect(calls).toEqual([initial, initial, updated])
   },
 )
 
