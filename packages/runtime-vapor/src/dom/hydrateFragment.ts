@@ -11,6 +11,7 @@ import {
   hydrateNode,
   isClaimedAnchor,
   isComment,
+  isCurrentComponentClose,
   isInDeferredHydrationBoundary,
   isRangeEnd,
   locateClaimedEnd,
@@ -379,8 +380,16 @@ function planFromBlockBoundary(
     return { kind: 'create', parent: close.parentNode!, next: close }
   }
   // a block rendering a component's roots ends at that component's `}`: the
-  // marker is the anchor, instead of one created behind it
-  if (nextNode && isComment(nextNode, '}') && isFragmentBlock(frag.nodes)) {
+  // marker is the anchor, instead of one created behind it. Not the close of
+  // the component being hydrated: it ends that component, not this block.
+  // Taken as the anchor, it goes when an outer block removes this one, and
+  // a root after this block that rendered no node goes behind it.
+  if (
+    nextNode &&
+    isComment(nextNode, '}') &&
+    isFragmentBlock(frag.nodes) &&
+    !isCurrentComponentClose(nextNode)
+  ) {
     return { kind: 'reuse', node: nextNode }
   }
   return { kind: 'create', parent: parentNode!, next: nextNode }

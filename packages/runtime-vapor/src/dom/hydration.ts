@@ -350,6 +350,11 @@ export function exitComponentRange(range: ComponentRange): void {
   currentComponentRange = range.prev
 }
 
+/** Whether `node` is the claimed close of the component being hydrated. */
+export function isCurrentComponentClose(node: Node): boolean {
+  return !!currentComponentRange && currentComponentRange.close === node
+}
+
 /**
  * A root of the component being hydrated reads the cursor. Past the one unit
  * the server rendered for the component, the client renders more roots than

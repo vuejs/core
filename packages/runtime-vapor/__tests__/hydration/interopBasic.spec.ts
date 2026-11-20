@@ -340,7 +340,13 @@ describe('VDOM interop', () => {
       data,
     )
     const b = container.querySelector('b')
-    expect(container.innerHTML).toBe(html)
+    // the dynamic component's anchor goes before the root's `}`, not on it
+    expect(container.innerHTML).toBe(
+      html.replace(
+        /<!--\}--><!--\}-->$/,
+        '<!--}--><!--dynamic-component--><!--}-->',
+      ),
+    )
     expect(`Hydration node mismatch`).not.toHaveBeenWarned()
     expect(`Hydration children mismatch`).not.toHaveBeenWarned()
 
