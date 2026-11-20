@@ -1707,4 +1707,36 @@ describe('BaseTransition', () => {
       await runTestWithKeepAlive(testOutIn)
     })
   })
+
+  // #16359
+  test('component root shown again while its previous root is leaving', async () => {
+    const open = ref(true)
+    const { props, cbs } = mockProps()
+    // only Panel reads `open`, so BaseTransition never re-renders and the new
+    // root inherits the hooks resolved for the leaving one
+    const Panel = {
+      render: () => (open.value ? h('div', 'Panel') : null),
+    }
+    const { root } = mount(props, () => h(Panel))
+    expect(serializeInner(root)).toBe(`<div>Panel</div>`)
+
+    open.value = false
+    await nextTick()
+    expect(props.onLeave).toHaveBeenCalledTimes(1)
+    // leave is still in progress
+    expect(serializeInner(root)).toBe(`<div>Panel</div><!---->`)
+
+    open.value = true
+    await nextTick()
+    expect(props.onBeforeEnter).toHaveBeenCalledTimes(1)
+    expect(props.onEnter).toHaveBeenCalledTimes(1)
+    expect(serializeInner(root)).toBe(`<div>Panel</div><div>Panel</div>`)
+
+    cbs.doneEnter[`<div>Panel</div>`]()
+    expect(props.onAfterEnter).toHaveBeenCalledTimes(1)
+
+    cbs.doneLeave[`<div>Panel</div>`]()
+    expect(props.onAfterLeave).toHaveBeenCalledTimes(1)
+    expect(serializeInner(root)).toBe(`<div>Panel</div>`)
+  })
 })

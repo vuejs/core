@@ -420,8 +420,11 @@ export function resolveTransitionHooks(
     },
 
     enter(el) {
-      // prevent enter if leave is in progress
-      if (!isHmrUpdating && leavingVNodesCache[key] === vnode) return
+      // prevent enter if leave is in progress on this very element. For a
+      // component root the cached vnode is the long-lived component vnode, so
+      // it does not tell the leaving element apart from a newly created one.
+      if (!isHmrUpdating && leavingVNodesCache[key] === vnode && el[leaveCbKey])
+        return
       let hook = onEnter
       let afterHook = onAfterEnter
       let cancelHook = onEnterCancelled
