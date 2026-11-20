@@ -592,5 +592,66 @@ describe('runtime-dom: v-show directive', () => {
       expect(el.style.display).toBe('')
       expect(el.className).toBe('')
     })
+
+    test('should not let the frame of a cancelled leave run for the next leave', async () => {
+      const afterLeave = vi.fn()
+      const { visible, el } = mount(
+        `<Transition name="test" @after-leave="afterLeave">
+          <div v-show="visible" />
+        </Transition>`,
+        { afterLeave },
+      )
+
+      visible.value = true
+      await nextTick()
+      vi.advanceTimersByTime(500)
+      visible.value = false
+      await nextTick()
+      // the first of the two leave frames has run
+      vi.advanceTimersToNextFrame()
+      visible.value = true
+      await nextTick()
+      visible.value = false
+      await nextTick()
+      vi.advanceTimersToNextFrame()
+      expect(el.classList.contains('test-leave-from')).toBe(true)
+      expect(el.classList.contains('test-leave-to')).toBe(false)
+
+      vi.advanceTimersByTime(500)
+      expect(el.style.display).toBe('none')
+      expect(el.className).toBe('')
+      expect(afterLeave).toHaveBeenCalledTimes(1)
+    })
+
+    test('should not leave classes of a cancelled leave behind after the name changes', async () => {
+      const name = ref('a')
+      const { visible, el } = mount(
+        `<Transition :name="name">
+          <div v-show="visible" />
+        </Transition>`,
+        { name },
+      )
+
+      visible.value = true
+      await nextTick()
+      vi.advanceTimersByTime(500)
+      visible.value = false
+      await nextTick()
+      vi.advanceTimersToNextFrame()
+      visible.value = true
+      await nextTick()
+      name.value = 'b'
+      visible.value = false
+      await nextTick()
+      vi.advanceTimersByTime(500)
+      expect(el.style.display).toBe('none')
+      expect(el.className).toBe('')
+
+      visible.value = true
+      await nextTick()
+      vi.advanceTimersByTime(500)
+      expect(el.style.display).toBe('')
+      expect(el.className).toBe('')
+    })
   })
 })

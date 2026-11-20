@@ -291,8 +291,8 @@ export function resolveTransitionProps(
         forceReflow(el)
       }
       nextFrame(() => {
-        if (!el._isLeaving) {
-          // cancelled
+        if (el._leaveResolve !== resolve) {
+          // cancelled, finished, or superseded
           return
         }
         removeTransitionClass(el, leaveFromClass)
