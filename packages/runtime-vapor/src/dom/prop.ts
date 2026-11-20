@@ -73,6 +73,8 @@ import { type Block, normalizeBlock } from '../block'
 import type { VaporElement } from '../apiDefineCustomElement'
 import type { RootMeta } from './template'
 import { isTransitionEnabled } from '../transition'
+import { isTeleportEnabled, isTeleportFragment } from '../teleport'
+import { isFragment } from '../fragment'
 import { isInteropEnabled } from '../vdomInteropState'
 import { currentRenderContext } from '../renderContext'
 import { inOnce } from '../once'
@@ -982,8 +984,8 @@ function styleHasMismatch(
     expectedStyleMap.set('display', 'none')
   }
 
-  // handle css vars
-  if (isVaporComponent(instance)) {
+  // handle css vars, which only dev builds expose
+  if (__DEV__ && isVaporComponent(instance)) {
     resolveCssVars(instance, el, expectedStyleMap)
   }
 
@@ -1019,9 +1021,11 @@ function resolveCssVars(
 ): void {
   if (!instance.isMounted) return
   const rootBlocks = normalizeBlock(instance)
+  const nodes = normalizeBlock(block)
+  const isRoot = nodes.every(b => rootBlocks.includes(b))
   if (
     (instance as GenericComponentInstance).getCssVars &&
-    normalizeBlock(block).every(b => rootBlocks.includes(b))
+    (isRoot || isTeleportRoot(instance.block, nodes))
   ) {
     const cssVars = (instance as GenericComponentInstance).getCssVars!()
     for (const key in cssVars) {
@@ -1030,10 +1034,7 @@ function resolveCssVars(
     }
   }
 
-  if (
-    normalizeBlock(block).every(b => rootBlocks.includes(b)) &&
-    instance.parent
-  ) {
+  if (isRoot && instance.parent) {
     if (isVaporComponent(instance.parent)) {
       resolveCssVars(instance.parent, instance.block, expectedMap)
     } else if (isInteropEnabled && instance.interopVNode) {
@@ -1045,6 +1046,23 @@ function resolveCssVars(
       )
     }
   }
+}
+
+/**
+ * dev only. The roots of a teleport on the root chain carry the owner's css
+ * vars too.
+ */
+function isTeleportRoot(block: Block, nodes: Node[]): boolean {
+  if (isArray(block)) {
+    return block.some(b => isTeleportRoot(b, nodes))
+  }
+  if (isTeleportEnabled && isTeleportFragment(block)) {
+    const roots = normalizeBlock(block.nodes)
+    return (
+      nodes.every(n => roots.includes(n)) || isTeleportRoot(block.nodes, nodes)
+    )
+  }
+  return isFragment(block) && isTeleportRoot(block.nodes, nodes)
 }
 
 function attributeHasMismatch(el: any, key: string, value: any): boolean {

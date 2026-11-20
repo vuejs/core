@@ -1032,5 +1032,54 @@ describe('Vapor Mode hydration', () => {
       await nextTick()
       expect(span.style.getPropertyValue('--color')).toBe('green')
     })
+
+    test.each([
+      { disabled: false, clientOpacity: 0.5, mismatches: 0 },
+      { disabled: true, clientOpacity: 0.5, mismatches: 0 },
+      { disabled: false, clientOpacity: 0.75, mismatches: 1 },
+      { disabled: true, clientOpacity: 0.75, mismatches: 1 },
+    ])(
+      'hydrates css vars on teleport roots (disabled: $disabled, mismatches: $mismatches)',
+      async ({ disabled, clientOpacity, mismatches }) => {
+        const data = ref({ disabled, opacity: 0.5, color: 'red' })
+        const code = `<script vapor>const data = _data</script>
+          <template>
+            <Teleport to="#teleport-css-vars-root" :disabled="data.disabled">
+              <div :style="{ opacity: data.opacity }">
+                <i :style="{ opacity: 0.5 }" />
+              </div>
+            </Teleport>
+          </template>
+          <style>div { color: v-bind('data.color') }</style>`
+        const ctx = {} as any
+        const mainHtml = await VueServerRenderer.renderToString(
+          runtimeDom.createSSRApp(
+            compileVaporComponent(code, data, undefined, true),
+          ),
+          ctx,
+        )
+        const target = document.createElement('div')
+        target.id = 'teleport-css-vars-root'
+        target.innerHTML = ctx.teleports!['#teleport-css-vars-root']
+        document.body.appendChild(target)
+
+        data.value.opacity = clientOpacity
+        const { container } = await mountWithHydration(mainHtml, code, data)
+        await nextTick()
+        expect(`Hydration style mismatch`).toHaveBeenWarnedTimes(mismatches)
+        const root = (disabled ? container : target).querySelector('div')!
+        const child = root.firstElementChild as HTMLElement
+        const cssVar = Array.from(root.style).find(name =>
+          name.startsWith('--'),
+        )!
+        expect(root.style.getPropertyValue(cssVar)).toBe('red')
+        expect(child.style.getPropertyValue(cssVar)).toBe('')
+
+        data.value.color = 'blue'
+        await nextTick()
+        expect(root.style.getPropertyValue(cssVar)).toBe('blue')
+        expect(child.style.getPropertyValue(cssVar)).toBe('')
+      },
+    )
   })
 })
