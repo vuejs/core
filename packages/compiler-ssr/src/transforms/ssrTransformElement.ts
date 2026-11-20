@@ -79,6 +79,32 @@ const tagSpecificDOMProps: Record<string, string | undefined> = {
   meta: 'httpEquiv',
 }
 
+/**
+ * Resolve the attribute name a DOM prop alias should be rendered as, e.g.
+ * `htmlFor` -> `for`. Only props that actually reflect an attribute on the
+ * element are mapped: `htmlFor` is an alias of `for` on `<label>`, but not on
+ * `<div>`, and SVG keeps the raw name since its attributes are case sensitive.
+ */
+function resolveDOMPropAlias(
+  node: PlainElementNode,
+  name: string,
+  context: TransformContext,
+): string | undefined {
+  const alias = propsToAttrMap[name]
+  if (
+    alias &&
+    !context.isCustomElement(node.tag) &&
+    (name === 'className'
+      ? node.ns !== Namespaces.SVG
+      : node.ns === Namespaces.HTML &&
+        tagSpecificDOMProps[node.tag] === name) &&
+    // HTML parsers keep the first occurrence of a repeated attribute.
+    !findProp(node, alias, false, true)
+  ) {
+    return alias
+  }
+}
+
 // static styles on plain elements are rendered by ssrTransformElement
 export const ssrTransformStyle: NodeTransform = (node, context) => {
   if (
@@ -339,9 +365,15 @@ export const ssrTransformElement: NodeTransform = (node, context) => {
                       ),
                     )
                   } else if (isSSRSafeAttrName(attrName)) {
+                    // alias of a DOM prop, e.g. `:htmlFor` on `<label>`
+                    const alias = resolveDOMPropAlias(
+                      node,
+                      key.content,
+                      context,
+                    )
                     openTag.push(
                       createCallExpression(context.helper(SSR_RENDER_ATTR), [
-                        key,
+                        alias ? JSON.stringify(alias) : key,
                         value,
                       ]),
                     )
@@ -374,7 +406,7 @@ export const ssrTransformElement: NodeTransform = (node, context) => {
         }
       } else {
         // special case: value on <textarea>
-        let name = prop.name
+        const name = prop.name
         if (node.tag === 'textarea' && name === 'value' && prop.value) {
           rawChildrenMap.set(node, escapeHtml(prop.value.content))
         } else if (!needMergeProps) {
@@ -396,21 +428,8 @@ export const ssrTransformElement: NodeTransform = (node, context) => {
             }
             continue
           }
-          const mappedName = propsToAttrMap[name]
-          if (
-            mappedName &&
-            (name === 'className'
-              ? node.ns !== Namespaces.SVG
-              : node.ns === Namespaces.HTML &&
-                tagSpecificDOMProps[node.tag] === name) &&
-            !context.isCustomElement(node.tag) &&
-            // HTML parsers keep the first occurrence of a repeated attribute.
-            !findProp(node, mappedName, false, true)
-          ) {
-            name = mappedName
-          }
           openTag.push(
-            ` ${name}` +
+            ` ${resolveDOMPropAlias(node, name, context) ?? name}` +
               (prop.value ? `="${escapeHtml(prop.value.content)}"` : ``),
           )
         }
