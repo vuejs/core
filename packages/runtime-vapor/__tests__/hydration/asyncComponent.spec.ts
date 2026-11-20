@@ -104,12 +104,11 @@ describe('Vapor Mode hydration', () => {
         hostCode: string,
         appCode: string,
         makeAsyncComp: (Comp: any) => any,
+        inner = innerCode,
       ) {
-        const data = ref({ msg: 'hello', show: true })
+        const data = ref({ msg: 'hello', show: true, list: ['a', 'b'] })
         const SSRAsync = defineAsyncComponent(() =>
-          Promise.resolve(
-            compileVaporComponent(innerCode, data, undefined, true),
-          ),
+          Promise.resolve(compileVaporComponent(inner, data, undefined, true)),
         )
         const SSRHost = compileVaporComponent(
           hostCode,
@@ -123,7 +122,7 @@ describe('Vapor Mode hydration', () => {
           ),
         )
         const AsyncComp = await makeAsyncComp(
-          compileVaporComponent(innerCode, data),
+          compileVaporComponent(inner, data),
         )
         const Host = compileVaporComponent(hostCode, data, { AsyncComp })
         const { container } = await mountWithHydration(html, appCode, data, {
@@ -175,12 +174,15 @@ describe('Vapor Mode hydration', () => {
       })
 
       test('toggles under a v-if that is the sole root', async () => {
-        const { data, container, html } = await render(
+        const { data, container } = await render(
           `<components.AsyncComp v-if="data.show" />`,
           `<components.Host />`,
           Comp => defineVaporAsyncComponent(() => Promise.resolve(Comp)),
         )
-        expect(container.innerHTML).toBe(html)
+        // the v-if anchor goes before Host's `}`, not on it
+        expect(container.innerHTML).toBe(
+          '<!--{--><!--{--><!--{--><span>one</span><b>hello</b><!--}--><!--if--><!--}--><!--}-->',
+        )
         const span = container.querySelector('span')
         await new Promise(r => setTimeout(r))
         await nextTick()
@@ -197,6 +199,30 @@ describe('Vapor Mode hydration', () => {
         await nextTick()
         expect(container.querySelector('span')!.textContent).toBe('one')
         expect(container.querySelector('b')!.textContent).toBe('hello')
+      })
+
+      test('toggles under a v-if that is the sole root, with a v-for root', async () => {
+        const { data, container } = await render(
+          `<components.AsyncComp v-if="data.show" />`,
+          `<components.Host />`,
+          Comp => defineVaporAsyncComponent(() => Promise.resolve(Comp)),
+          `<p v-for="item in data.list" :key="item">{{ item }}</p>`,
+        )
+        await new Promise(r => setTimeout(r))
+        await nextTick()
+        expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+        expect(`Hydration children mismatch`).not.toHaveBeenWarned()
+
+        data.value.show = false
+        await nextTick()
+        expect(container.querySelector('p')).toBeNull()
+
+        // the v-if anchor must not be removed with the content
+        data.value.show = true
+        await nextTick()
+        expect(
+          Array.from(container.querySelectorAll('p'), p => p.textContent),
+        ).toEqual(['a', 'b'])
       })
     })
 
