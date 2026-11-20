@@ -697,8 +697,7 @@ export abstract class VueElementBase<
       })
       sheetsCache.set(comp, (cached = { styles, sheets }))
     }
-    // copy so callers can't mutate the shared cache
-    return cached.sheets.slice()
+    return cached.sheets
   }
 
   private _getStyleAnchor(
