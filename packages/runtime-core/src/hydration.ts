@@ -57,7 +57,8 @@ export enum DOMNodeTypes {
 
 let hasLoggedMismatchError = false
 const logMismatchError = () => {
-  if (__TEST__ || hasLoggedMismatchError) {
+  // log every mismatch in tests, so that each test can check the error
+  if (!__TEST__ && hasLoggedMismatchError) {
     return
   }
   // this error should show up in production
@@ -695,9 +696,11 @@ export function createHydrationFunctions(
     if (next && isComment(next) && next.data === ']') {
       return nextSibling((vnode.anchor = next))
     } else {
-      // fragment didn't hydrate successfully, since we didn't get a end anchor
-      // back. This should have led to node/children mismatch warnings.
-      logMismatchError()
+      if (!isMismatchAllowed(container, MismatchTypes.CHILDREN)) {
+        // fragment didn't hydrate successfully, since we didn't get a end anchor
+        // back. This should have led to node/children mismatch warnings.
+        logMismatchError()
+      }
 
       // since the anchor is missing, we need to create one and insert it
       insert((vnode.anchor = createComment(`]`)), container, next)
@@ -1051,6 +1054,10 @@ function isMismatchAllowed(
   el: Element | null,
   allowedType: MismatchTypes,
 ): boolean {
+  // a container can be a ShadowRoot, which has no attributes
+  if (el && el.nodeType !== DOMNodeTypes.ELEMENT) {
+    return false
+  }
   if (
     allowedType === MismatchTypes.TEXT ||
     allowedType === MismatchTypes.CHILDREN

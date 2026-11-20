@@ -831,6 +831,7 @@ describe('SSR hydration', () => {
     )
     expect(teleportContainer.innerHTML).toBe('<span>Teleported Comp1</span>')
     expect(`Hydration children mismatch`).toHaveBeenWarned()
+    expect(`Hydration completed but contains mismatches.`).toHaveBeenErrored()
 
     toggle.value = false
     await nextTick()
@@ -957,6 +958,7 @@ describe('SSR hydration', () => {
     expect(teleportContainer1.innerHTML).toBe('<span>Teleported</span>')
     expect(teleportContainer2.innerHTML).toBe('')
     expect(`Hydration children mismatch`).toHaveBeenWarned()
+    expect(`Hydration completed but contains mismatches.`).toHaveBeenErrored()
 
     target.value = '#target2'
     await nextTick()
@@ -3531,6 +3533,7 @@ describe('SSR hydration', () => {
       const { container } = mountWithHydration(`foo`, () => 'bar')
       expect(container.textContent).toBe('bar')
       expect(`Hydration text mismatch`).toHaveBeenWarned()
+      expect(`Hydration completed but contains mismatches.`).toHaveBeenErrored()
     })
 
     test('element text content', () => {
@@ -3539,6 +3542,7 @@ describe('SSR hydration', () => {
       )
       expect(container.innerHTML).toBe('<div>bar</div>')
       expect(`Hydration text content mismatch`).toHaveBeenWarned()
+      expect(`Hydration completed but contains mismatches.`).toHaveBeenErrored()
     })
 
     test('not enough children', () => {
@@ -3549,6 +3553,7 @@ describe('SSR hydration', () => {
         '<div><span>foo</span><span>bar</span></div>',
       )
       expect(`Hydration children mismatch`).toHaveBeenWarned()
+      expect(`Hydration completed but contains mismatches.`).toHaveBeenErrored()
     })
 
     test('too many children', () => {
@@ -3558,6 +3563,7 @@ describe('SSR hydration', () => {
       )
       expect(container.innerHTML).toBe('<div><span>foo</span></div>')
       expect(`Hydration children mismatch`).toHaveBeenWarned()
+      expect(`Hydration completed but contains mismatches.`).toHaveBeenErrored()
     })
 
     test('children mismatch is checked once when removing excess nodes', () => {
@@ -3577,6 +3583,9 @@ describe('SSR hydration', () => {
 
         expect(container.innerHTML).toBe('<div><span>foo</span></div>')
         expect(`Hydration children mismatch`).toHaveBeenWarnedTimes(1)
+        expect(
+          `Hydration completed but contains mismatches.`,
+        ).toHaveBeenErrored()
         expect(allowMismatchCheckCount).toBe(1)
       } finally {
         hasAttribute.mockRestore()
@@ -3601,6 +3610,9 @@ describe('SSR hydration', () => {
           '<div><span>foo</span><span>bar</span><span>baz</span></div>',
         )
         expect(`Hydration children mismatch`).toHaveBeenWarnedTimes(1)
+        expect(
+          `Hydration completed but contains mismatches.`,
+        ).toHaveBeenErrored()
         expect(allowMismatchCheckCount).toBe(1)
       } finally {
         hasAttribute.mockRestore()
@@ -3614,6 +3626,7 @@ describe('SSR hydration', () => {
       )
       expect(container.innerHTML).toBe('<div><div>foo</div><p>bar</p></div>')
       expect(`Hydration node mismatch`).toHaveBeenWarnedTimes(2)
+      expect(`Hydration completed but contains mismatches.`).toHaveBeenErrored()
     })
 
     test('fragment mismatch removal', () => {
@@ -3623,6 +3636,7 @@ describe('SSR hydration', () => {
       )
       expect(container.innerHTML).toBe('<div><span>replaced</span></div>')
       expect(`Hydration node mismatch`).toHaveBeenWarned()
+      expect(`Hydration completed but contains mismatches.`).toHaveBeenErrored()
     })
 
     test('fragment not enough children', () => {
@@ -3634,6 +3648,7 @@ describe('SSR hydration', () => {
         '<div><!--[--><div>foo</div><div>bar</div><!--]--><div>baz</div></div>',
       )
       expect(`Hydration node mismatch`).toHaveBeenWarned()
+      expect(`Hydration completed but contains mismatches.`).toHaveBeenErrored()
     })
 
     test('fragment too many children', () => {
@@ -3649,6 +3664,22 @@ describe('SSR hydration', () => {
       expect(`Hydration text content mismatch`).toHaveBeenWarned()
       // excessive children removal
       expect(`Hydration children mismatch`).toHaveBeenWarned()
+      expect(`Hydration completed but contains mismatches.`).toHaveBeenErrored()
+    })
+
+    // a hydratable custom element mounts into its ShadowRoot
+    test('fragment not enough children in ShadowRoot', () => {
+      const root = document.createElement('div').attachShadow({ mode: 'open' })
+      root.innerHTML = `<!--[--><div>foo</div><!--]-->`
+      createSSRApp({
+        render: () => [h('div', 'foo'), h('div', 'bar'), h('div', 'baz')],
+      }).mount(root as any)
+      expect(root.innerHTML).toBe(
+        '<!--[--><div>foo</div><div>bar</div><div>baz</div><!--]-->',
+      )
+      expect(`Hydration node mismatch`).toHaveBeenWarned()
+      expect(`Hydration children mismatch`).toHaveBeenWarned()
+      expect(`Hydration completed but contains mismatches.`).toHaveBeenErrored()
     })
 
     test('Teleport target has empty children', () => {
@@ -3661,6 +3692,7 @@ describe('SSR hydration', () => {
       )
       expect(teleportContainer.innerHTML).toBe(`<span>value</span>`)
       expect(`Hydration children mismatch`).toHaveBeenWarned()
+      expect(`Hydration completed but contains mismatches.`).toHaveBeenErrored()
     })
 
     test('comment mismatch (element)', () => {
@@ -3669,6 +3701,7 @@ describe('SSR hydration', () => {
       )
       expect(container.innerHTML).toBe('<div><!--hi--></div>')
       expect(`Hydration node mismatch`).toHaveBeenWarned()
+      expect(`Hydration completed but contains mismatches.`).toHaveBeenErrored()
     })
 
     test('comment mismatch (text)', () => {
@@ -3677,6 +3710,7 @@ describe('SSR hydration', () => {
       )
       expect(container.innerHTML).toBe('<div><!--hi--></div>')
       expect(`Hydration node mismatch`).toHaveBeenWarned()
+      expect(`Hydration completed but contains mismatches.`).toHaveBeenErrored()
     })
 
     test('class mismatch', () => {
@@ -3702,6 +3736,7 @@ describe('SSR hydration', () => {
         h('div', { class: 'foo' }),
       )
       expect(`Hydration class mismatch`).toHaveBeenWarned()
+      expect(`Hydration completed but contains mismatches.`).toHaveBeenErrored()
     })
 
     test('style mismatch', () => {
@@ -3725,6 +3760,7 @@ describe('SSR hydration', () => {
         h('div', { style: { color: 'green' } }),
       )
       expect(`Hydration style mismatch`).toHaveBeenWarnedTimes(1)
+      expect(`Hydration completed but contains mismatches.`).toHaveBeenErrored()
     })
 
     test('style mismatch when no style attribute is present', () => {
@@ -3732,6 +3768,7 @@ describe('SSR hydration', () => {
         h('div', { style: { color: 'red' } }),
       )
       expect(`Hydration style mismatch`).toHaveBeenWarnedTimes(1)
+      expect(`Hydration completed but contains mismatches.`).toHaveBeenErrored()
     })
 
     test('style mismatch w/ v-show', () => {
@@ -3747,6 +3784,7 @@ describe('SSR hydration', () => {
         ]),
       )
       expect(`Hydration style mismatch`).toHaveBeenWarnedTimes(1)
+      expect(`Hydration completed but contains mismatches.`).toHaveBeenErrored()
     })
 
     test('attr mismatch', () => {
@@ -3769,6 +3807,7 @@ describe('SSR hydration', () => {
 
       mountWithHydration(`<div id="bar"></div>`, () => h('div', { id: 'foo' }))
       expect(`Hydration attribute mismatch`).toHaveBeenWarnedTimes(2)
+      expect(`Hydration completed but contains mismatches.`).toHaveBeenErrored()
     })
 
     test('attr special case: textarea value', () => {
@@ -3784,6 +3823,7 @@ describe('SSR hydration', () => {
         h('textarea', { value: 'bar' }),
       )
       expect(`Hydration attribute mismatch`).toHaveBeenWarned()
+      expect(`Hydration completed but contains mismatches.`).toHaveBeenErrored()
     })
 
     // #11873
@@ -3868,6 +3908,7 @@ describe('SSR hydration', () => {
 
       mountWithHydration(`<div hidden></div>`, () => h('div', { hidden: 0 }))
       expect(`Hydration attribute mismatch`).toHaveBeenWarnedTimes(2)
+      expect(`Hydration completed but contains mismatches.`).toHaveBeenErrored()
     })
 
     test('client value is null or undefined', () => {
@@ -4037,6 +4078,7 @@ describe('SSR hydration', () => {
       container.innerHTML = await renderToString(h(App))
       createSSRApp(App).mount(container)
       expect(`Hydration node mismatch`).toHaveBeenWarned()
+      expect(`Hydration completed but contains mismatches.`).toHaveBeenErrored()
       expect(container.innerHTML).toBe(
         '<div><main><p><button>btn</button></p>A</main><footer>footer</footer></div>',
       )
@@ -4073,6 +4115,7 @@ describe('SSR hydration', () => {
       createSSRApp(App).mount(container)
       await nextTick()
       expect(`Hydration node mismatch`).toHaveBeenWarned()
+      expect(`Hydration completed but contains mismatches.`).toHaveBeenErrored()
       expect(container.innerHTML).toBe(
         '<div><main><p><button>btn</button></p>A</main><footer>footer</footer></div>',
       )
@@ -4124,6 +4167,7 @@ describe('SSR hydration', () => {
 
     expect(ssrHtml).toBe('<div><section><span>async</span></section></div>')
     expect(`Hydration node mismatch`).toHaveBeenWarned()
+    expect(`Hydration completed but contains mismatches.`).toHaveBeenErrored()
     expect(onResolve).not.toHaveBeenCalled()
     expect(container.innerHTML).toBe('<div><main><!----></main></div>')
     expect.soft(pageRef.value!.$el).toBe(container.querySelector('main'))
@@ -4202,6 +4246,9 @@ describe('SSR hydration', () => {
         '<div data-allow-mismatch="children"><!--[--><div>foo</div><div>bar</div><!--]--><div>baz</div></div>',
       )
       expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+      expect(
+        `Hydration completed but contains mismatches.`,
+      ).not.toHaveBeenErrored()
     })
 
     test('fragment too many children', () => {
@@ -4217,6 +4264,9 @@ describe('SSR hydration', () => {
       expect(`Hydration text content mismatch`).not.toHaveBeenWarned()
       // excessive children removal
       expect(`Hydration children mismatch`).not.toHaveBeenWarned()
+      expect(
+        `Hydration completed but contains mismatches.`,
+      ).not.toHaveBeenErrored()
     })
 
     test('comment mismatch (element)', () => {
@@ -4268,6 +4318,7 @@ describe('SSR hydration', () => {
         '<div data-allow-mismatch="class"><span>value</span></div>',
       )
       expect(`Hydration node mismatch`).toHaveBeenWarned()
+      expect(`Hydration completed but contains mismatches.`).toHaveBeenErrored()
     })
 
     test('comment mismatch (text)', () => {
@@ -4702,6 +4753,7 @@ describe('SSR hydration', () => {
     })
     app.mount(container)
     expect(`Hydration style mismatch`).toHaveBeenWarnedTimes(1)
+    expect(`Hydration completed but contains mismatches.`).toHaveBeenErrored()
     app.unmount()
   })
 
@@ -4749,6 +4801,11 @@ describe('SSR hydration', () => {
       const app = createSSRApp(App)
       app.mount(container)
       expect(`Hydration style mismatch`).toHaveBeenWarnedTimes(mismatches)
+      if (mismatches) {
+        expect(
+          `Hydration completed but contains mismatches.`,
+        ).toHaveBeenErrored()
+      }
       expect(content.firstElementChild).toBe(root)
       expect(root.style.getPropertyValue('--color')).toBe('red')
 
