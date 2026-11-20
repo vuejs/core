@@ -195,9 +195,10 @@ export function resolveTransitionProps(
   }
 
   const finishLeave = (
-    el: Element & { _isLeaving?: boolean },
+    el: Element & { _isLeaving?: boolean; _leaveResolve?: () => void },
     done?: () => void,
   ) => {
+    el._leaveResolve = undefined
     el._isLeaving = false
     removeTransitionClass(el, leaveFromClass)
     removeTransitionClass(el, leaveToClass)
@@ -259,11 +260,22 @@ export function resolveTransitionProps(
     onEnter: makeEnterHook(false),
     onAppear: makeEnterHook(true),
     onLeave(
-      el: Element & { _isLeaving?: boolean; _enterCancelled?: boolean },
+      el: Element & {
+        _isLeaving?: boolean
+        _leaveResolve?: () => void
+        _enterCancelled?: boolean
+      },
       done,
     ) {
       el._isLeaving = true
-      const resolve = () => finishLeave(el, done)
+      // identifies this leave on the element, like `_enterResolve`: cleared once
+      // it finishes or is cancelled, replaced when a later leave starts
+      const resolve = () => {
+        if (el._leaveResolve === resolve) {
+          finishLeave(el, done)
+        }
+      }
+      el._leaveResolve = resolve
       addTransitionClass(el, leaveFromClass)
       if (__COMPAT__ && legacyClassEnabled && legacyLeaveFromClass) {
         addTransitionClass(el, legacyLeaveFromClass)

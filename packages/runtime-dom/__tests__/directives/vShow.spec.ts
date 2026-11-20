@@ -395,7 +395,7 @@ describe('runtime-dom: v-show directive', () => {
     expect($div.style.display).toEqual('')
   })
 
-  describe('stale enter callbacks (with Transition)', () => {
+  describe('stale callbacks (with Transition)', () => {
     beforeEach(() => {
       vi.useFakeTimers({ toFake: ['setTimeout', 'requestAnimationFrame'] })
     })
@@ -525,6 +525,70 @@ describe('runtime-dom: v-show directive', () => {
       await nextTick()
       vi.advanceTimersByTime(500)
       expect(afterEnter).toHaveBeenCalledTimes(1)
+      expect(el.style.display).toBe('')
+      expect(el.className).toBe('')
+    })
+
+    test('should not let the timeout of a cancelled leave remove shared enter classes', async () => {
+      const { visible, el } = mount(
+        `<Transition
+          :duration="100"
+          enter-active-class="fade"
+          leave-active-class="fade"
+        >
+          <div v-show="visible" />
+        </Transition>`,
+      )
+
+      visible.value = true
+      await nextTick()
+      vi.advanceTimersByTime(120)
+      visible.value = false
+      await nextTick()
+      // the leave frame has run, its timeout is still pending
+      vi.advanceTimersByTime(120)
+      visible.value = true
+      await nextTick()
+      // the earlier timeout fires before the frame of the new enter
+      vi.advanceTimersByTime(20)
+      expect(el.classList.contains('fade')).toBe(true)
+
+      vi.advanceTimersByTime(500)
+      expect(el.style.display).toBe('')
+      expect(el.className).toBe('')
+    })
+
+    test('should ignore a leave done that is called after the leave was cancelled', async () => {
+      const { visible, el } = mount(
+        `<Transition
+          :duration="{ enter: 300, leave: 300 }"
+          enter-active-class="fade"
+          leave-active-class="fade"
+          @leave="onLeave"
+        >
+          <div v-show="visible" />
+        </Transition>`,
+        { onLeave: (_el: Element, done: () => void) => setTimeout(done, 100) },
+      )
+
+      visible.value = true
+      await nextTick()
+      vi.advanceTimersByTime(40)
+      expect(el.classList.contains('fade')).toBe(true)
+
+      visible.value = false
+      await nextTick()
+      // cancelled before the leave is done
+      visible.value = true
+      await nextTick()
+      vi.advanceTimersByTime(40)
+      expect(el.classList.contains('fade')).toBe(true)
+
+      // the done of the cancelled leave fires during the new enter
+      vi.advanceTimersByTime(80)
+      expect(el.classList.contains('fade')).toBe(true)
+
+      vi.advanceTimersByTime(500)
       expect(el.style.display).toBe('')
       expect(el.className).toBe('')
     })
