@@ -822,6 +822,9 @@ describe('scheduler', () => {
 
     expect(() => flushOnAppMount(() => queueJob(job), 0)).toThrow(err)
     expect(job).toHaveBeenCalledTimes(1)
+    expect(
+      'Unhandled error during execution of scheduler flush',
+    ).toHaveBeenWarned()
 
     // the next root render must still flush synchronously
     flushOnAppMount(() => queueJob(job), 0)
