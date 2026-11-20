@@ -182,11 +182,12 @@ export function resolveTransitionProps(
   } = baseProps
 
   const finishEnter = (
-    el: Element & { _enterCancelled?: boolean },
+    el: Element & { _enterResolve?: () => void; _enterCancelled?: boolean },
     isAppear: boolean,
     done?: () => void,
     isCancelled?: boolean,
   ) => {
+    el._enterResolve = undefined
     el._enterCancelled = isCancelled
     removeTransitionClass(el, isAppear ? appearToClass : enterToClass)
     removeTransitionClass(el, isAppear ? appearActiveClass : enterActiveClass)
@@ -205,9 +206,16 @@ export function resolveTransitionProps(
   }
 
   const makeEnterHook = (isAppear: boolean) => {
-    return (el: Element, done: () => void) => {
+    return (el: Element & { _enterResolve?: () => void }, done: () => void) => {
       const hook = isAppear ? onAppear : onEnter
-      const resolve = () => finishEnter(el, isAppear, done)
+      // identifies this enter on the element: cleared once it finishes or is
+      // cancelled, replaced when a later enter starts
+      const resolve = () => {
+        if (el._enterResolve === resolve) {
+          finishEnter(el, isAppear, done)
+        }
+      }
+      el._enterResolve = resolve
       callHook(hook, [el, resolve])
       nextFrame(() => {
         removeTransitionClass(el, isAppear ? appearFromClass : enterFromClass)
@@ -218,6 +226,10 @@ export function resolveTransitionProps(
           if (legacyClass) {
             removeTransitionClass(el, legacyClass)
           }
+        }
+        if (el._enterResolve !== resolve) {
+          // cancelled, finished, or superseded
+          return
         }
         addTransitionClass(el, isAppear ? appearToClass : enterToClass)
         if (!hasExplicitCallback(hook)) {
