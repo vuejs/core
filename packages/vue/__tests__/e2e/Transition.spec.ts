@@ -4062,6 +4062,67 @@ describe('e2e: Transition', () => {
     E2E_TIMEOUT,
   )
 
+  // #12091
+  test(
+    'prevent enter when leaving after an update',
+    async () => {
+      const hooks: string[] = []
+      await page().exposeFunction('pushHook', (hook: string) =>
+        hooks.push(hook),
+      )
+      await page().evaluate(() => {
+        const { pushHook } = window as any
+        const { createApp, ref, watch } = (window as any).Vue
+        const visible = ref(false)
+        const text = ref('a')
+        createApp({
+          components: {
+            // its watchers run after each render of <transition>
+            Comp: {
+              setup() {
+                watch(visible, (value: boolean) => value && (text.value = 'b'))
+                watch(text, () => (visible.value = false))
+                return () => null
+              },
+            },
+          },
+          template: `
+            <div id="container">
+              <transition
+                @before-enter="pushHook('beforeEnter')"
+                @enter="pushHook('enter')"
+                @enter-cancelled="pushHook('enterCancelled')"
+                @after-enter="pushHook('afterEnter')"
+                @before-leave="pushHook('beforeLeave')"
+                @leave="pushHook('leave')"
+                @after-leave="pushHook('afterLeave')"
+              >
+                <div v-if="visible" class="test">{{ text }}</div>
+              </transition>
+            </div>
+            <Comp />
+            <button id="toggleBtn" @click="visible = true">button</button>
+          `,
+          setup: () => ({ visible, text, pushHook }),
+        }).mount('#app')
+      })
+
+      await click('#toggleBtn')
+      await nextTick()
+      await nextFrame()
+      await transitionFinish()
+
+      expect(hooks).toStrictEqual([
+        'beforeEnter',
+        'beforeLeave',
+        'leave',
+        'afterLeave',
+      ])
+      expect(await html('#container')).toBe('<!--v-if-->')
+    },
+    E2E_TIMEOUT,
+  )
+
   // https://github.com/vuejs/core/issues/12181#issuecomment-2414380955
   describe('not leaking', async () => {
     test('switching VNodes', async () => {

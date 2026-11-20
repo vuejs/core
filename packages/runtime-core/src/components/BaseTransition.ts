@@ -420,8 +420,12 @@ export function resolveTransitionHooks(
     },
 
     enter(el) {
-      // prevent enter if the leave of this element is in progress
-      if (!isHmrUpdating && el[leaveCbKey]) return
+      // an element that is leaving does not enter. In in-out mode, the
+      // element that waits for this enter leaves now.
+      if (!isHmrUpdating && el[leaveCbKey]) {
+        if (hooks.delayedLeave) hooks.delayedLeave()
+        return
+      }
       let hook = onEnter
       let afterHook = onAfterEnter
       let cancelHook = onEnterCancelled
