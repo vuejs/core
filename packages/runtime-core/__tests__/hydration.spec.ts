@@ -3704,6 +3704,7 @@ describe('SSR hydration', () => {
         '<div><!--[--><div>foo</div><div>bar</div><!--]--><div>baz</div></div>',
       )
       expect(`Hydration node mismatch`).toHaveBeenWarned()
+      expect(`Hydration completed but contains mismatches.`).toHaveBeenErrored()
     })
 
     test('fragment too many children', () => {
@@ -3719,6 +3720,7 @@ describe('SSR hydration', () => {
       expect(`Hydration text content mismatch`).toHaveBeenWarned()
       // excessive children removal
       expect(`Hydration children mismatch`).toHaveBeenWarned()
+      expect(`Hydration completed but contains mismatches.`).toHaveBeenErrored()
     })
 
     test('Teleport target has empty children', () => {
@@ -4272,6 +4274,9 @@ describe('SSR hydration', () => {
         '<div data-allow-mismatch="children"><!--[--><div>foo</div><div>bar</div><!--]--><div>baz</div></div>',
       )
       expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+      expect(
+        `Hydration completed but contains mismatches.`,
+      ).not.toHaveBeenErrored()
     })
 
     test('fragment too many children', () => {
@@ -4287,6 +4292,9 @@ describe('SSR hydration', () => {
       expect(`Hydration text content mismatch`).not.toHaveBeenWarned()
       // excessive children removal
       expect(`Hydration children mismatch`).not.toHaveBeenWarned()
+      expect(
+        `Hydration completed but contains mismatches.`,
+      ).not.toHaveBeenErrored()
     })
 
     test('comment mismatch (element)', () => {
