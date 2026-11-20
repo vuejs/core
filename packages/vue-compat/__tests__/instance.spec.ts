@@ -1,9 +1,17 @@
 import type { Mock } from 'vitest'
 import Vue from '@vue/compat'
-import { nextTick, watchPostEffect } from '@vue/runtime-core'
+import { CompilerDeprecationTypes } from '@vue/compiler-dom'
+import {
+  createBlock,
+  h,
+  nextTick,
+  openBlock,
+  watchPostEffect,
+} from '@vue/runtime-core'
 import type { Slots } from '../../runtime-core/src/componentSlots'
 import { Text } from '../../runtime-core/src/vnode'
 import { ref } from '@vue/reactivity'
+import { PatchFlags } from '@vue/shared'
 import {
   DeprecationTypes,
   deprecationData,
@@ -343,6 +351,289 @@ test('INSTANCE_LISTENERS', () => {
     deprecationData[DeprecationTypes.INSTANCE_LISTENERS].message,
   ).toHaveBeenWarned()
 })
+
+test('INSTANCE_LISTENERS: PROPS fast path should not leak on* listeners into $props (fix #16202)', async () => {
+  const onChange = () => {}
+  const options = ref([1])
+  let child: any
+
+  const Child = {
+    props: { options: Array },
+    compatConfig: { RENDER_FUNCTION: false },
+    created(this: any) {
+      child = this
+    },
+    render: () => h('div'),
+  }
+
+  // exactly what the compiler emits for `:options="..."` + `@change="..."`
+  // in a production build: patchFlag 8 (PROPS) with the dynamic prop keys
+  // listed, so the update takes the fast path in `updateProps` instead of
+  // the full `setFullProps` diff.
+  new Vue({
+    compatConfig: { RENDER_FUNCTION: false },
+    render() {
+      return (
+        openBlock(),
+        createBlock(
+          Child,
+          { options: options.value, onChange },
+          null,
+          8 /* PROPS */,
+          ['options', 'onChange'],
+        )
+      )
+    },
+  }).$mount()
+
+  // on mount `setFullProps` keeps the listener out of both $props and $attrs
+  expect(child.$props.onChange).toBeUndefined()
+  expect(child.$attrs.onChange).toBeUndefined()
+  // the listener stays reachable via $listeners
+  expect(child.$listeners.change).toBe(onChange)
+
+  options.value = [1, 2]
+  await nextTick()
+
+  expect(child.$props.options).toEqual([1, 2])
+  // the update must not write the listener into $props
+  expect(child.$props.onChange).toBeUndefined()
+  expect(child.$attrs.onChange).toBeUndefined()
+  expect(child.$listeners.change).toBe(onChange)
+
+  expect(
+    deprecationData[DeprecationTypes.INSTANCE_LISTENERS].message,
+  ).toHaveBeenWarned()
+})
+
+test('INSTANCE_LISTENERS: PROPS fast path should not leak .native listeners into $props (fix #16202)', async () => {
+  const onClickNative1 = vi.fn()
+  const onClickNative2 = vi.fn()
+  const onClickNative = ref<typeof onClickNative1 | undefined>(onClickNative1)
+  const options = ref([1])
+  let child: any
+
+  const Child = {
+    props: { options: Array },
+    compatConfig: { RENDER_FUNCTION: false },
+    created(this: any) {
+      child = this
+    },
+    render: () => h('button'),
+  }
+
+  // `.native` (`onClickNative`) is routed to $attrs as `onClick` on mount
+  const vm = new Vue({
+    compatConfig: { RENDER_FUNCTION: false },
+    render() {
+      return (
+        openBlock(),
+        createBlock(
+          Child,
+          { options: options.value, onClickNative: onClickNative.value },
+          null,
+          8 /* PROPS */,
+          ['options', 'onClickNative'],
+        )
+      )
+    },
+  }).$mount()
+
+  const button = vm.$el as HTMLButtonElement
+  expect(child.$props.onClickNative).toBeUndefined()
+  expect(child.$attrs.onClick).toBe(onClickNative1)
+  button.click()
+  expect(onClickNative1).toHaveBeenCalledTimes(1)
+
+  options.value = [1, 2]
+  onClickNative.value = onClickNative2
+  await nextTick()
+
+  expect(child.$props.options).toEqual([1, 2])
+  // the update must not write the listener into $props under its full
+  // `onClickNative` key, and must keep it routed to $attrs as `onClick`
+  expect(child.$props.onClickNative).toBeUndefined()
+  expect(child.$attrs.onClick).toBe(onClickNative2)
+  button.click()
+  expect(onClickNative1).toHaveBeenCalledTimes(1)
+  expect(onClickNative2).toHaveBeenCalledTimes(1)
+
+  onClickNative.value = undefined
+  await nextTick()
+  expect(child.$attrs.onClick).toBeUndefined()
+  button.click()
+  expect(onClickNative2).toHaveBeenCalledTimes(1)
+})
+
+test('INSTANCE_LISTENERS: PROPS fast path still updates a declared on* prop (fix #16202)', async () => {
+  const onChange1 = () => 1
+  const onChange2 = () => 2
+  const onChange = ref(onChange1)
+  let child: any
+
+  // a prop literally declared as `onChange` is a real prop, not a
+  // listener: `setFullProps` puts it in $props on mount, so the fast
+  // path must keep updating it.
+  const Child = {
+    props: { onChange: Function },
+    compatConfig: { RENDER_FUNCTION: false },
+    created(this: any) {
+      child = this
+    },
+    render: () => h('div'),
+  }
+
+  new Vue({
+    compatConfig: { RENDER_FUNCTION: false },
+    render() {
+      return (
+        openBlock(),
+        createBlock(Child, { onChange: onChange.value }, null, 8, ['onChange'])
+      )
+    },
+  }).$mount()
+
+  expect(child.$props.onChange).toBe(onChange1)
+
+  onChange.value = onChange2
+  await nextTick()
+
+  expect(child.$props.onChange).toBe(onChange2)
+})
+
+test('keeps unrelated native listeners on functional component updates', async () => {
+  const click = ref(vi.fn())
+  const input = vi.fn()
+  const Child = () => h('input')
+  Child.compatConfig = { INSTANCE_LISTENERS: false }
+  const vm = new Vue({
+    compatConfig: { RENDER_FUNCTION: false, COMPONENT_ASYNC: false },
+    render() {
+      return (
+        openBlock(),
+        createBlock(
+          Child,
+          {
+            onClick: () => {},
+            onClickNative: click.value,
+            onInputNative: input,
+          },
+          null,
+          PatchFlags.PROPS,
+          ['onClickNative'],
+        )
+      )
+    },
+  }).$mount()
+  vm.$el.dispatchEvent(new Event('input'))
+  click.value = vi.fn()
+  await nextTick()
+  vm.$el.dispatchEvent(new Event('click'))
+  vm.$el.dispatchEvent(new Event('input'))
+  expect(click.value).toHaveBeenCalledTimes(1)
+  expect(input).toHaveBeenCalledTimes(2)
+})
+
+test.each([false, true])(
+  'removes stale fallthrough listeners when the native key is a declared event (props: %s)',
+  async withProps => {
+    const onClick = vi.fn()
+    const useComponentListener = ref(false)
+    const Child = () => h('button')
+    Child.props = withProps ? ['label'] : undefined
+    Child.emits = ['click-native']
+    Child.compatConfig = { INSTANCE_LISTENERS: false }
+
+    const vm = new Vue({
+      compatConfig: { RENDER_FUNCTION: false, COMPONENT_ASYNC: false },
+      render() {
+        return h(
+          Child,
+          useComponentListener.value
+            ? { onClickNative: () => {} }
+            : { onClick },
+        )
+      },
+    }).$mount()
+
+    vm.$el.click()
+    expect(onClick).toHaveBeenCalledTimes(1)
+    useComponentListener.value = true
+    await nextTick()
+    vm.$el.click()
+    expect(onClick).toHaveBeenCalledTimes(1)
+  },
+)
+
+test.each([
+  [
+    '@click.native="dynamicHandler" @click="staticHandler()"',
+    'onClickNative',
+    ['static', 'static'],
+  ],
+  [
+    '@click="staticHandler()" @click.native="dynamicHandler"',
+    'onClickNative',
+    ['dynamic', 'updated'],
+  ],
+  [
+    '@click="dynamicHandler" @click.native="staticHandler()"',
+    'onClick',
+    ['static', 'static'],
+  ],
+  [
+    '@click.native="staticHandler()" @click="dynamicHandler"',
+    'onClick',
+    ['dynamic', 'updated'],
+  ],
+])(
+  'uses the last fallthrough listener before and after a PROPS update (%s)',
+  async (listeners, dynamicProp, [initial, updated]) => {
+    const calls: string[] = []
+    const count = ref(0)
+    const staticHandler = () => calls.push('static')
+    const dynamicHandler = ref(() => calls.push('dynamic'))
+    const compilerOptions = {
+      comments: false,
+      prefixIdentifiers: true,
+      cacheHandlers: true,
+    }
+    const container = document.createElement('div')
+    const vm = new Vue({
+      components: {
+        Child: {
+          props: { count: Number },
+          compatConfig: { RENDER_FUNCTION: false, INSTANCE_LISTENERS: false },
+          render: ({ count }: { count: number }) => h('button', count),
+        },
+      },
+      setup: () => ({ count, staticHandler, dynamicHandler }),
+      compilerOptions,
+      template: `<Child :count="count" ${listeners} />`,
+    }).$mount(container)
+    if (__DEV__) {
+      expect(CompilerDeprecationTypes.COMPILER_V_ON_NATIVE).toHaveBeenWarned()
+    }
+
+    const { patchFlag, dynamicProps } = vm.$.subTree
+    expect(patchFlag).toBe(PatchFlags.PROPS)
+    expect(dynamicProps).toEqual(['count', dynamicProp])
+    const button = container.querySelector('button')!
+    button.click()
+    expect(calls).toEqual([initial])
+
+    count.value++
+    await nextTick()
+    expect(button.textContent).toBe('1')
+    button.click()
+    expect(calls).toEqual([initial, initial])
+
+    dynamicHandler.value = () => calls.push('updated')
+    await nextTick()
+    button.click()
+    expect(calls).toEqual([initial, initial, updated])
+  },
+)
 
 describe('INSTANCE_SCOPED_SLOTS', () => {
   test('explicit usage', () => {
