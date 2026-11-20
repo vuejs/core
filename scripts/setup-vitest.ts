@@ -82,6 +82,9 @@ expect.extend({
     const passed = error.mock.calls.some(args =>
       String(args[0]).includes(received),
     )
+    if (passed) {
+      assertedErrors.add(received)
+    }
     return {
       pass: passed,
       message: () =>
@@ -95,9 +98,11 @@ expect.extend({
 let warn: MockInstance
 let error: MockInstance
 const asserted: Set<string> = new Set()
+const assertedErrors: Set<string> = new Set()
 
 beforeEach(() => {
   asserted.clear()
+  assertedErrors.clear()
   warn = vi.spyOn(console, 'warn')
   warn.mockImplementation(() => {})
   error = vi.spyOn(console, 'error')
@@ -113,8 +118,16 @@ afterEach(() => {
         return received.includes(assertedMsg)
       })
     })
+  const nonAssertedErrors = error.mock.calls.filter(
+    args =>
+      !Array.from(assertedErrors).some(assertedMsg =>
+        String(args[0]).includes(assertedMsg),
+      ),
+  )
   warn.mockRestore()
   error.mockRestore()
+  // keep the errors that the test did not check in the output
+  nonAssertedErrors.forEach(args => console.error(...args))
   if (nonAssertedWarnings.length) {
     throw new Error(
       `test case threw unexpected warnings:\n - ${nonAssertedWarnings.join(

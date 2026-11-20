@@ -1054,6 +1054,10 @@ function isMismatchAllowed(
   el: Element | null,
   allowedType: MismatchTypes,
 ): boolean {
+  // a container can be a ShadowRoot, which has no attributes
+  if (el && el.nodeType !== DOMNodeTypes.ELEMENT) {
+    return false
+  }
   if (
     allowedType === MismatchTypes.TEXT ||
     allowedType === MismatchTypes.CHILDREN
