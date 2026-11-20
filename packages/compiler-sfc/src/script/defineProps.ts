@@ -355,18 +355,24 @@ function genDestructuredDefaultValue(
       }
     }
 
+    const isFunctionOnly =
+      !!inferredType &&
+      inferredType.length === 1 &&
+      inferredType[0] === 'Function'
+
     // If the default value is a function or is an identifier referencing
     // external value, skip factory wrap. This is needed when using
     // destructure w/ runtime declaration since we cannot safely infer
-    // whether the expected runtime prop type is `Function`.
+    // whether the expected runtime prop type is `Function`, and when the
+    // inferred type includes `Function` alongside other types, since the
+    // runtime only uses function defaults as-is for a sole `Function` type.
     const needSkipFactory =
-      !inferredType &&
+      (!inferredType ||
+        (!isFunctionOnly && inferredType.includes('Function'))) &&
       (isFunctionType(unwrapped) || unwrapped.type === 'Identifier')
 
     const needFactoryWrap =
-      !needSkipFactory &&
-      !isLiteralNode(unwrapped) &&
-      !inferredType?.includes('Function')
+      !needSkipFactory && !isLiteralNode(unwrapped) && !isFunctionOnly
 
     return {
       valueString: needFactoryWrap ? `() => (${value})` : value,

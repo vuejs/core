@@ -289,6 +289,27 @@ init();
     assertCode(content)
   })
 
+  test('default values w/ type declaration including Function in a union', () => {
+    const { content } = compile(`
+      <script setup lang="ts">
+      import { fallback } from './utils'
+      const { foo = () => 1, bar = fallback, baz = {}, qux = 'qux' } = defineProps<{
+        foo?: (() => number) | string
+        bar?: (() => string) | null
+        baz?: Function | Record<string, number>
+        qux?: (() => string) | string
+      }>()
+      </script>
+    `)
+    expect(content).toMatch(`props: {
+    foo: { type: [Function, String], required: false, default: () => 1, skipFactory: true },
+    bar: { type: [Function, null], required: false, default: fallback, skipFactory: true },
+    baz: { type: [Function, Object], required: false, default: () => ({}) },
+    qux: { type: [Function, String], required: false, default: 'qux' }
+  }`)
+    assertCode(content)
+  })
+
   test('default values w/ type declaration, prod mode', () => {
     const { content } = compile(
       `
