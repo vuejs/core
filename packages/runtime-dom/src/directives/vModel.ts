@@ -39,13 +39,17 @@ function onCompositionEnd(e: Event) {
 
 const assignKey: unique symbol = Symbol('_assign')
 const initialValueKey: unique symbol = Symbol('_initialValue')
+const hydratingKey: unique symbol = Symbol('_hydrating')
+
+type ModelProps = {
+  [assignKey]: AssignerFn
+  [initialValueKey]?: string
+  [hydratingKey]?: boolean
+  _pendingValue?: [multiple: boolean, value: any]
+}
 
 type ModelDirective<T, Modifiers extends string = string> = ObjectDirective<
-  T & {
-    [assignKey]: AssignerFn
-    [initialValueKey]?: string
-    _pendingValue?: [multiple: boolean, value: any]
-  },
+  T & ModelProps,
   any,
   Modifiers
 >
@@ -151,41 +155,59 @@ export const vModelCheckbox: ModelDirective<HTMLInputElement> = {
   // #4096 array checkboxes need to be deep traversed
   deep: true,
   created(el, _, vnode) {
+    // During hydration, created runs on an element already in the DOM.
+    if (el.parentNode) {
+      el[hydratingKey] = true
+    }
     el[assignKey] = getModelAssigner(vnode)
-    addEventListener(el, 'change', () => {
-      const modelValue = (el as any)._modelValue
-      const elementValue = getValue(el)
-      const checked = el.checked
-      const assign = el[assignKey]
-      if (isArray(modelValue)) {
-        const index = looseIndexOf(modelValue, elementValue)
-        const found = index !== -1
-        if (checked && !found) {
-          assign(modelValue.concat(elementValue))
-        } else if (!checked && found) {
-          const filtered = [...modelValue]
-          filtered.splice(index, 1)
-          assign(filtered)
-        }
-      } else if (isSet(modelValue)) {
-        const cloned = new Set(modelValue)
-        if (checked) {
-          cloned.add(elementValue)
-        } else {
-          cloned.delete(elementValue)
-        }
-        assign(cloned)
-      } else {
-        assign(getCheckboxValue(el, checked))
-      }
-    })
+    addEventListener(el, 'change', () => assignChecked(el))
   },
   // set initial checked on mount to wait for true-value/false-value
-  mounted: setChecked,
+  mounted(el, binding, vnode) {
+    if (el[hydratingKey]) {
+      delete el[hydratingKey]
+      // the box was toggled before hydration: keep what the user did and push
+      // it into the model instead of overwriting it with the server value.
+      if (el.checked !== el.defaultChecked) {
+        ;(el as any)._modelValue = binding.value
+        assignChecked(el)
+        return
+      }
+    }
+    setChecked(el, binding, vnode)
+  },
   beforeUpdate(el, binding, vnode) {
     el[assignKey] = getModelAssigner(vnode)
     setChecked(el, binding, vnode)
   },
+}
+
+function assignChecked(el: HTMLInputElement & ModelProps) {
+  const modelValue = (el as any)._modelValue
+  const elementValue = getValue(el)
+  const checked = el.checked
+  const assign = el[assignKey]
+  if (isArray(modelValue)) {
+    const index = looseIndexOf(modelValue, elementValue)
+    const found = index !== -1
+    if (checked && !found) {
+      assign(modelValue.concat(elementValue))
+    } else if (!checked && found) {
+      const filtered = [...modelValue]
+      filtered.splice(index, 1)
+      assign(filtered)
+    }
+  } else if (isSet(modelValue)) {
+    const cloned = new Set(modelValue)
+    if (checked) {
+      cloned.add(elementValue)
+    } else {
+      cloned.delete(elementValue)
+    }
+    assign(cloned)
+  } else {
+    assign(getCheckboxValue(el, checked))
+  }
 }
 
 function setChecked(
@@ -215,11 +237,31 @@ function setChecked(
 
 export const vModelRadio: ModelDirective<HTMLInputElement> = {
   created(el, { value }, vnode) {
-    el.checked = looseEqual(value, vnode.props!.value)
+    // During hydration, created runs on an element already in the DOM, so
+    // writing `checked` here would discard a pick made before hydration.
+    // Defer it to mounted instead.
+    if (el.parentNode) {
+      el[hydratingKey] = true
+    } else {
+      el.checked = looseEqual(value, vnode.props!.value)
+    }
     el[assignKey] = getModelAssigner(vnode)
     addEventListener(el, 'change', () => {
       el[assignKey](getValue(el))
     })
+  },
+  mounted(el, { value }, vnode) {
+    if (!el[hydratingKey]) return
+    delete el[hydratingKey]
+    if (el.checked !== el.defaultChecked) {
+      // only the radio that gained the selection assigns: the one that lost it
+      // would otherwise write its own stale value back over the new pick.
+      if (el.checked) {
+        el[assignKey](getValue(el))
+      }
+    } else {
+      el.checked = looseEqual(value, vnode.props!.value)
+    }
   },
   beforeUpdate(el, { value, oldValue }, vnode) {
     el[assignKey] = getModelAssigner(vnode)
@@ -234,43 +276,25 @@ export const vModelSelect: ModelDirective<HTMLSelectElement, 'number'> = {
   deep: true,
   created(el, { value, modifiers: { number } }, vnode) {
     ;(el as any)._modelValue = value
-    addEventListener(el, 'change', () => {
-      const selectedVal = Array.prototype.filter
-        .call(el.options, (o: HTMLOptionElement) => o.selected)
-        .map((o: HTMLOptionElement) =>
-          number ? looseToNumber(getValue(o)) : getValue(o),
-        )
-      const multiple = el.multiple
-      const assignedValue = multiple
-        ? isSet((el as any)._modelValue)
-          ? new Set(selectedVal)
-          : selectedVal
-        : selectedVal[0]
-      // Array models receive selectedVal directly, so snapshot it before user
-      // code can mutate it. Set models already receive a fresh Set.
-      const pending = (el._pendingValue = [
-        multiple,
-        multiple
-          ? isArray(assignedValue)
-            ? selectedVal.slice()
-            : selectedVal
-          : assignedValue,
-      ])
-      try {
-        el[assignKey](assignedValue)
-      } finally {
-        nextTick(() => {
-          if (el._pendingValue === pending) {
-            el._pendingValue = undefined
-          }
-        })
-      }
-    })
+    // During hydration, created runs on an element already in the DOM.
+    if (el.parentNode) {
+      el[hydratingKey] = true
+    }
+    addEventListener(el, 'change', () => assignSelected(el, number))
     el[assignKey] = getModelAssigner(vnode)
   },
   // set value in mounted & updated because <select> relies on its children
   // <option>s.
   mounted(el, { value, modifiers: { number } }) {
+    if (el[hydratingKey]) {
+      delete el[hydratingKey]
+      // the selection was changed before hydration: keep it and push it into
+      // the model instead of overwriting it with the server value.
+      if (isSelectionChanged(el)) {
+        assignSelected(el, number)
+        return
+      }
+    }
     setSelected(el, value, number)
   },
   beforeUpdate(el, { value }, vnode) {
@@ -288,6 +312,64 @@ export const vModelSelect: ModelDirective<HTMLSelectElement, 'number'> = {
       setSelected(el, value, number)
     }
   },
+}
+
+function assignSelected(el: HTMLSelectElement & ModelProps, number?: boolean) {
+  const selectedVal = Array.prototype.filter
+    .call(el.options, (o: HTMLOptionElement) => o.selected)
+    .map((o: HTMLOptionElement) =>
+      number ? looseToNumber(getValue(o)) : getValue(o),
+    )
+  const multiple = el.multiple
+  const assignedValue = multiple
+    ? isSet((el as any)._modelValue)
+      ? new Set(selectedVal)
+      : selectedVal
+    : selectedVal[0]
+  // Array models receive selectedVal directly, so snapshot it before user
+  // code can mutate it. Set models already receive a fresh Set.
+  const pending = (el._pendingValue = [
+    multiple,
+    multiple
+      ? isArray(assignedValue)
+        ? selectedVal.slice()
+        : selectedVal
+      : assignedValue,
+  ])
+  try {
+    el[assignKey](assignedValue)
+  } finally {
+    nextTick(() => {
+      if (el._pendingValue === pending) {
+        el._pendingValue = undefined
+      }
+    })
+  }
+}
+
+// compare the current selection against the one the server rendered, i.e. the
+// state a form reset would restore the element to.
+function isSelectionChanged(el: HTMLSelectElement): boolean {
+  const options = el.options
+  if (el.multiple) {
+    return Array.prototype.some.call(
+      options,
+      (o: HTMLOptionElement) => o.selected !== o.defaultSelected,
+    )
+  }
+  // a single select with no `selected` option is reset to the first enabled
+  // option, but only when its display size is 1 - as a list box it stays
+  // unselected. So `defaultSelected` alone is not enough to tell them apart.
+  let lastDefault = -1
+  let firstEnabled = -1
+  for (let i = 0; i < options.length; i++) {
+    const option = options[i]
+    if (option.defaultSelected) lastDefault = i
+    if (firstEnabled === -1 && !option.disabled) firstEnabled = i
+  }
+  // `size` reflects as 0 when the attribute is absent, i.e. display size 1
+  const fallback = el.size > 1 ? -1 : firstEnabled
+  return el.selectedIndex !== (lastDefault !== -1 ? lastDefault : fallback)
 }
 
 function isSameSelectValue(
