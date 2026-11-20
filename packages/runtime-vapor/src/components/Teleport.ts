@@ -50,7 +50,14 @@ import {
 import type { DefineVaporSetupFnComponent } from '../apiDefineComponent'
 import type { RawSlots } from '../componentSlots'
 import { applyTransitionHooks, isTransitionEnabled } from '../transition'
-import { enableTeleport } from '../teleport'
+import {
+  type TeleportHost,
+  earlyHost,
+  enableTeleport,
+  setEarlyHost,
+  stopWaiting,
+  waitForConnect,
+} from '../teleport'
 import { registerCssVarOutlet } from '../helpers/useCssVars'
 import { TELEPORT } from '../fragmentFlags'
 import { isSuspenseEnabled } from '../suspense'
@@ -86,6 +93,11 @@ type TeleportMountState =
       anchor: Node | null
     }
 
+// set while a deferred disabled teleport mounts its main-view content: vdom
+// creates that content in the deferred mount, so teleports in it keep their
+// queued mount
+let deferredContent = 0
+
 export class TeleportFragment extends RenderContextFragment {
   anchor?: Node
   private resolvedProps?: TeleportProps
@@ -107,6 +119,7 @@ export class TeleportFragment extends RenderContextFragment {
   }
 
   private mountToTargetJob?: SchedulerJob
+  connectHost?: TeleportHost
   private parentSuspense?: SuspenseBoundary | null
 
   constructor(
@@ -312,11 +325,13 @@ export class TeleportFragment extends RenderContextFragment {
     }
   }
 
-  private prepareTarget(): ParentNode | null {
-    const target = (this.target = resolveTeleportTarget(
+  private prepareTarget(
+    target: ParentNode | null = resolveTeleportTarget(
       this.resolvedProps!,
       querySelector,
-    ))
+    ),
+  ): ParentNode | null {
+    this.target = target
     if (target) {
       this.prepareTargetAnchors(target)
     }
@@ -333,6 +348,7 @@ export class TeleportFragment extends RenderContextFragment {
     ) {
       this.mountToTargetJob = () => {
         this.mountToTargetJob = undefined
+        stopWaiting(this)
         // State may have changed before the post-flush job runs. A job
         // queued on creation may run before the teleport is inserted:
         // insertion queues it again.
@@ -365,11 +381,21 @@ export class TeleportFragment extends RenderContextFragment {
     )
   }
 
-  private mountToTarget(): void {
-    const target = this.prepareTarget()
+  private mountToTarget(resolved?: ParentNode): void {
+    const target = this.prepareTarget(resolved)
     if (target) {
       this.ensureChildrenInitialized()
-      this.mount(target, this.targetAnchor!, TeleportMountLocation.Target)
+      // the source is not in the document yet (the target was found on
+      // creation): teleports waiting in the content wait for the source
+      const early = !this.parent!.isConnected
+      const prev = early
+        ? setEarlyHost(earlyHost || this.parent!.getRootNode())
+        : undefined
+      try {
+        this.mount(target, this.targetAnchor!, TeleportMountLocation.Target)
+      } finally {
+        if (early) setEarlyHost(prev)
+      }
       this.cancelMountToTarget()
     } else {
       if (__DEV__) {
@@ -405,14 +431,19 @@ export class TeleportFragment extends RenderContextFragment {
 
     // mount into main container
     if (this.isDisabled) {
-      this.ensureChildrenInitialized()
-      this.mount(this.parent, this.anchor!, TeleportMountLocation.Main)
+      const deferred = isTeleportDeferred(this.resolvedProps!)
+      if (deferred) deferredContent++
+      try {
+        this.ensureChildrenInitialized()
+        this.mount(this.parent, this.anchor!, TeleportMountLocation.Main)
+      } finally {
+        if (deferred) deferredContent--
+      }
       if (!this.targetAnchor) {
-        if (
-          isTeleportDeferred(this.resolvedProps!) ||
-          !this.parent!.isConnected
-        ) {
+        if (deferred) {
           this.queueTargetUpdate()
+        } else if (this.isDetached()) {
+          this.waitForSource()
         } else {
           this.prepareTarget()
         }
@@ -420,17 +451,46 @@ export class TeleportFragment extends RenderContextFragment {
     }
     // mount into target container
     else {
-      if (
-        isTeleportDeferred(this.resolvedProps!) ||
-        // force defer when the parent is not connected to the DOM,
-        // typically due to an early insertion caused by setInsertionState.
+      if (isTeleportDeferred(this.resolvedProps!)) {
+        this.queueTargetUpdate()
+      } else if (!this.targetAnchor && this.isDetached()) {
+        // the source is not in the document yet, typically due to an early
+        // insertion caused by setInsertionState: mount when it enters it.
         // Not once the target is claimed: the children are created by then,
         // and their mounted hooks must find the content mounted.
-        (!this.parent!.isConnected && !this.targetAnchor)
-      ) {
-        this.queueTargetUpdate()
+        this.waitForSource()
       } else {
         this.mountToTarget()
+      }
+    }
+  }
+
+  private isDetached(): boolean {
+    return !!earlyHost || !this.parent!.isConnected
+  }
+
+  // the queued mount stays as the fallback for a source that enters the
+  // document by other means, or whose target is not found then
+  private waitForSource(): void {
+    this.queueTargetUpdate()
+    if (!deferredContent && !this.connectHost) {
+      waitForConnect(this, earlyHost || this.parent!.getRootNode())
+    }
+  }
+
+  // the source entered the document
+  connect(): void {
+    // released while earlier teleports in the same list mounted
+    if (!this.connectHost) return
+    stopWaiting(this)
+    const to = this.resolvedProps!.to
+    const target = (isString(to) ? querySelector(to) : to) as ParentNode | null
+    if (target) {
+      if (this.isDisabled) {
+        this.prepareTarget(target)
+        this.cancelMountToTarget()
+      } else {
+        this.mountToTarget(target)
       }
     }
   }
@@ -478,6 +538,7 @@ export class TeleportFragment extends RenderContextFragment {
   }
 
   private cancelMountToTarget(): void {
+    stopWaiting(this)
     if (this.mountToTargetJob) {
       this.mountToTargetJob.flags! |= SchedulerJobFlags.DISPOSED
       this.mountToTargetJob = undefined
