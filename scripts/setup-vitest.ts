@@ -9,6 +9,7 @@ interface CustomMatchers<R = unknown> {
   toHaveBeenWarned(): R
   toHaveBeenWarnedLast(): R
   toHaveBeenWarnedTimes(n: number): R
+  toHaveBeenErrored(): R
 }
 
 vi.stubGlobal('MathMLElement', class MathMLElement {})
@@ -76,15 +77,31 @@ expect.extend({
       }
     }
   },
+
+  toHaveBeenErrored(received: string) {
+    const passed = error.mock.calls.some(args =>
+      String(args[0]).includes(received),
+    )
+    return {
+      pass: passed,
+      message: () =>
+        passed
+          ? `expected "${received}" not to have been errored.`
+          : `expected "${received}" to have been errored.`,
+    }
+  },
 })
 
 let warn: MockInstance
+let error: MockInstance
 const asserted: Set<string> = new Set()
 
 beforeEach(() => {
   asserted.clear()
   warn = vi.spyOn(console, 'warn')
   warn.mockImplementation(() => {})
+  error = vi.spyOn(console, 'error')
+  error.mockImplementation(() => {})
 })
 
 afterEach(() => {
@@ -97,6 +114,7 @@ afterEach(() => {
       })
     })
   warn.mockRestore()
+  error.mockRestore()
   if (nonAssertedWarnings.length) {
     throw new Error(
       `test case threw unexpected warnings:\n - ${nonAssertedWarnings.join(
