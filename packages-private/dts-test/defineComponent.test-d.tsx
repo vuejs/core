@@ -1,7 +1,10 @@
 import {
   type Component,
+  type ComponentComputedGetter,
+  type ComponentComputedOptions,
   type ComponentOptions,
   type ComponentPublicInstance,
+  type ComputedOptions,
   type PropType,
   type SetupContext,
   type Slots,
@@ -507,6 +510,33 @@ describe('type inference w/ options API', () => {
       expectType<() => number | undefined>(this.returnSomething)
     },
   })
+})
+
+// #13103
+describe('type inference for computed previous value w/ options API', () => {
+  const doubled: ComponentComputedGetter<number> = (vm, previous) => {
+    expectType<ComponentPublicInstance>(vm)
+    expectType<false>({} as IsAny<typeof vm>)
+    expectType<number | undefined>(previous)
+    expectType<false>({} as IsAny<typeof previous>)
+    return 2
+  }
+
+  const writable: ComponentComputedOptions<number> = {
+    get(vm, previous) {
+      expectType<ComponentPublicInstance>(vm)
+      expectType<false>({} as IsAny<typeof vm>)
+      expectType<number | undefined>(previous)
+      expectType<false>({} as IsAny<typeof previous>)
+      return 1
+    },
+    set(value) {
+      expectType<number>(value)
+      expectType<false>({} as IsAny<typeof value>)
+    },
+  }
+
+  expectType<ComputedOptions>({ doubled, writable })
 })
 
 // #4051
