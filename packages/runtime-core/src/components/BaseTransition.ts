@@ -420,8 +420,8 @@ export function resolveTransitionHooks(
     },
 
     enter(el) {
-      // prevent enter if leave is in progress
-      if (!isHmrUpdating && leavingVNodesCache[key] === vnode) return
+      // prevent enter if the leave of this element is in progress
+      if (!isHmrUpdating && el[leaveCbKey]) return
       let hook = onEnter
       let afterHook = onAfterEnter
       let cancelHook = onEnterCancelled

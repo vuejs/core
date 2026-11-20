@@ -4295,4 +4295,47 @@ describe('e2e: Transition', () => {
     },
     E2E_TIMEOUT,
   )
+
+  // #16359
+  test(
+    'should finish enter classes when a component root re-enters during its leave',
+    async () => {
+      expect(
+        await page().evaluate(async () => {
+          const { createApp, ref, nextTick } = (window as any).Vue
+          const show = ref(true)
+          createApp({
+            components: {
+              Foo: {
+                template: '<div v-if="show" class="test">A</div>',
+                setup: () => ({ show }),
+              },
+            },
+            template: `
+              <div id="container">
+                <Transition><Foo /></Transition>
+              </div>
+            `,
+          }).mount('#app')
+
+          show.value = false
+          await nextTick()
+          show.value = true
+          await nextTick()
+          return document.querySelector('#container')!.innerHTML
+        }),
+      ).toBe(
+        '<div class="test v-leave-from v-leave-active">A</div>' +
+          '<div class="test v-enter-from v-enter-active">A</div>',
+      )
+      await nextFrame()
+      expect(await html('#container')).toBe(
+        '<div class="test v-leave-active v-leave-to">A</div>' +
+          '<div class="test v-enter-active v-enter-to">A</div>',
+      )
+      await transitionFinish()
+      expect(await html('#container')).toBe('<div class="test">A</div>')
+    },
+    E2E_TIMEOUT,
+  )
 })

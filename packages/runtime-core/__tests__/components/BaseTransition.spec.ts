@@ -1611,6 +1611,41 @@ describe('BaseTransition', () => {
     },
   )
 
+  // #16359
+  test('should enter when a component root re-enters during its leave', async () => {
+    const open = ref(true)
+    // only the component reads `open`, so BaseTransition does not re-render
+    const Comp = { render: () => (open.value ? h('div') : null) }
+    const { props, cbs } = mockProps()
+    const { root } = mount(props, () => h(Comp))
+
+    open.value = false
+    await nextTick()
+    expect(props.onLeave).toHaveBeenCalledTimes(1)
+
+    open.value = true
+    await nextTick()
+    expect(serializeInner(root)).toBe('<div></div><div></div>')
+    const newEl = root.children[1]
+    expect(props.onBeforeEnter).toHaveBeenCalledWith(newEl)
+    expect(props.onEnter).toHaveBeenCalledWith(newEl, expect.any(Function))
+    cbs.doneEnter['<div></div>']()
+    expect(props.onAfterEnter).toHaveBeenCalledWith(newEl)
+
+    cbs.doneLeave['<div></div>']()
+    expect(serializeInner(root)).toBe('<div></div>')
+    assertCalls(props, {
+      onBeforeEnter: 1,
+      onEnter: 1,
+      onAfterEnter: 1,
+      onEnterCancelled: 0,
+      onBeforeLeave: 1,
+      onLeave: 1,
+      onAfterLeave: 1,
+      onLeaveCancelled: 0,
+    })
+  })
+
   // #11061
   test('in-out with fallthrough attrs on the component roots', async () => {
     const One = { render: () => h('div', 'one') }
