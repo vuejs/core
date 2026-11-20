@@ -46,6 +46,12 @@ import { createApp, createSSRApp, render } from '.'
 // marker for attr removal
 const REMOVAL = {}
 
+// constructed sheets shared by all instances of a component
+const sheetsCache = new WeakMap<
+  ConcreteComponent,
+  { styles: string[]; sheets: CSSStyleSheet[] }
+>()
+
 export type VueElementConstructor<P = {}> = {
   new (initialProps?: Record<string, any>): VueElement & P
 }
@@ -55,6 +61,7 @@ export interface CustomElementOptions {
   shadowRoot?: boolean
   shadowRootOptions?: Omit<ShadowRootInit, 'mode'>
   nonce?: string
+  styleMode?: 'style' | 'adopted'
   configureApp?: (app: App) => void
 }
 
@@ -234,12 +241,15 @@ export abstract class VueElementBase<
   protected _resolved = false
   protected _numberProps: Record<string, true> | null = null
   protected _styleChildren: WeakSet<object> = new WeakSet()
-  protected _styleAnchors: WeakMap<ConcreteComponent, HTMLStyleElement> =
-    new WeakMap()
+  protected _styleAnchors: WeakMap<
+    ConcreteComponent,
+    HTMLStyleElement | CSSStyleSheet
+  > = new WeakMap()
   protected _pendingResolve: Promise<void> | undefined
   protected _parent: VueElementBase | undefined
   protected _patching = false
   protected _dirty = false
+  protected _adoptStyles: boolean
 
   protected _def: Def
   protected _props: Record<string, any>
@@ -248,11 +258,11 @@ export abstract class VueElementBase<
   /**
    * dev only
    */
-  protected _styles?: HTMLStyleElement[]
+  protected _styles?: (HTMLStyleElement | CSSStyleSheet)[]
   /**
    * dev only
    */
-  protected _childStyles?: Map<string, HTMLStyleElement[]>
+  protected _childStyles?: Map<string, (HTMLStyleElement | CSSStyleSheet)[]>
   protected _ob?: MutationObserver | null = null
   protected _slots?: Record<string, Node[]>
 
@@ -280,6 +290,9 @@ export abstract class VueElementBase<
     this._props = props
     this._createApp = createAppFn
     this._nonce = def.nonce
+    this._adoptStyles =
+      def.styleMode === 'adopted' &&
+      'adoptedStyleSheets' in ShadowRoot.prototype
 
     if (this._needsHydration()) {
       this._root = this.shadowRoot!
@@ -489,8 +502,7 @@ export abstract class VueElementBase<
     if (__DEV__) {
       this._instance!.ceReload = newStyles => {
         if (this._styles) {
-          this._styles.forEach(s => this._root.removeChild(s))
-          this._styles.length = 0
+          removeStyles(this.shadowRoot!, this._adoptStyles, this._styles)
         }
         this._styleAnchors.delete(this._def)
         this._applyStyles(newStyles)
@@ -623,48 +635,85 @@ export abstract class VueElementBase<
       this._styleChildren.add(owner)
     }
 
-    const nonce = this._nonce
     const root = this.shadowRoot!
-    const insertionAnchor = parentComp
+    const anchor = parentComp
       ? this._getStyleAnchor(parentComp) || this._getStyleAnchor(this._def)
-      : this._getRootStyleInsertionAnchor(root)
-    let last: HTMLStyleElement | null = null
-    for (let i = styles.length - 1; i >= 0; i--) {
-      const s = document.createElement('style')
-      if (nonce) s.setAttribute('nonce', nonce)
-      s.textContent = styles[i]
+      : null
+    let added: (HTMLStyleElement | CSSStyleSheet)[]
+    if (this._adoptStyles) {
+      const newSheets = (added = this._getSheets(owner || this._def, styles))
+      const sheets = root.adoptedStyleSheets
+      const i = anchor ? sheets.indexOf(anchor as CSSStyleSheet) : -1
+      root.adoptedStyleSheets =
+        i < 0
+          ? [...sheets, ...newSheets]
+          : [...sheets.slice(0, i), ...newSheets, ...sheets.slice(i)]
+    } else {
+      const nonce = this._nonce
+      const insertionAnchor = parentComp
+        ? (anchor as HTMLStyleElement | null)
+        : this._getRootStyleInsertionAnchor(root)
+      added = styles.map(css => {
+        const s = document.createElement('style')
+        if (nonce) s.setAttribute('nonce', nonce)
+        s.textContent = css
+        root.insertBefore(s, insertionAnchor)
+        return s
+      })
+    }
 
-      root.insertBefore(s, last || insertionAnchor)
-      last = s
-      if (i === 0) {
-        if (!parentComp) this._styleAnchors.set(this._def, s)
-        if (owner) this._styleAnchors.set(owner, s)
-      }
+    if (added.length) {
+      if (!parentComp) this._styleAnchors.set(this._def, added[0])
+      if (owner) this._styleAnchors.set(owner, added[0])
+    }
 
-      // record for HMR
-      if (__DEV__) {
-        if (owner) {
-          if (owner.__hmrId) {
-            if (!this._childStyles) this._childStyles = new Map()
-            let entry = this._childStyles.get(owner.__hmrId)
-            if (!entry) {
-              this._childStyles.set(owner.__hmrId, (entry = []))
-            }
-            entry.push(s)
+    // record for HMR
+    if (__DEV__) {
+      if (owner) {
+        if (owner.__hmrId) {
+          if (!this._childStyles) this._childStyles = new Map()
+          let entry = this._childStyles.get(owner.__hmrId)
+          if (!entry) {
+            this._childStyles.set(owner.__hmrId, (entry = []))
           }
-        } else {
-          ;(this._styles || (this._styles = [])).push(s)
+          entry.push(...added)
         }
+      } else {
+        ;(this._styles || (this._styles = [])).push(...added)
       }
     }
   }
 
-  private _getStyleAnchor(comp?: ConcreteComponent): HTMLStyleElement | null {
+  private _getSheets(
+    comp: ConcreteComponent,
+    styles: string[],
+  ): CSSStyleSheet[] {
+    let cached = sheetsCache.get(comp)
+    if (!cached || cached.styles !== styles) {
+      const sheets = styles.map(css => {
+        const sheet = new CSSStyleSheet()
+        sheet.replaceSync(css)
+        return sheet
+      })
+      sheetsCache.set(comp, (cached = { styles, sheets }))
+    }
+    return cached.sheets
+  }
+
+  private _getStyleAnchor(
+    comp?: ConcreteComponent,
+  ): HTMLStyleElement | CSSStyleSheet | null {
     if (!comp) {
       return null
     }
+    const root = this.shadowRoot!
     const anchor = this._styleAnchors.get(comp)
-    if (anchor && anchor.parentNode === this.shadowRoot) {
+    if (
+      anchor &&
+      (this._adoptStyles
+        ? root.adoptedStyleSheets.includes(anchor as CSSStyleSheet)
+        : (anchor as HTMLStyleElement).parentNode === root)
+    ) {
       return anchor
     }
     if (anchor) {
@@ -798,8 +847,7 @@ export abstract class VueElementBase<
         // clear old styles
         const oldStyles = this._childStyles.get(comp.__hmrId)
         if (oldStyles) {
-          oldStyles.forEach(s => this._root.removeChild(s))
-          oldStyles.length = 0
+          removeStyles(this.shadowRoot!, this._adoptStyles, oldStyles)
         }
       }
     }
@@ -879,6 +927,24 @@ export class VueElement extends VueElementBase<
     }
     return vnode
   }
+}
+
+/**
+ * dev only
+ */
+function removeStyles(
+  root: ShadowRoot,
+  adopted: boolean,
+  styles: (HTMLStyleElement | CSSStyleSheet)[],
+) {
+  if (adopted) {
+    root.adoptedStyleSheets = root.adoptedStyleSheets.filter(
+      s => !styles.includes(s),
+    )
+  } else {
+    styles.forEach(s => root.removeChild(s as HTMLStyleElement))
+  }
+  styles.length = 0
 }
 
 export function useHost(caller?: string): VueElementBase | null {
