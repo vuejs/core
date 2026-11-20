@@ -16,6 +16,15 @@ expectType<JSX.Element>(<div>hello</div>)
 expectType<JSX.Element>(<input value="foo" />)
 expectType<JSX.Element>(<textarea value={null} />)
 
+// checkbox v-model true-value / false-value (#16246)
+// object literal, so the test fails if the declarations are removed
+// (JSX permits unknown hyphenated attributes, an object literal does not)
+expectType<JSX.IntrinsicElements['input']>({
+  type: 'checkbox',
+  'true-value': 'yes',
+  'false-value': 'no',
+})
+
 // @ts-expect-error style css property validation
 ;<div style={{ unknown: 123 }} />
 
