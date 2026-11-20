@@ -69,6 +69,27 @@ describe('VDOM interop', () => {
     )
   })
 
+  test('hydrate VDOM slot content with a vapor component in a vapor <slot /> root', async () => {
+    const { container, html } = await testWithVDOMApp(
+      `<script setup>const components = _components;</script>
+      <template>
+        <components.VaporProvider><components.VaporChild /></components.VaporProvider>
+      </template>`,
+      {
+        VaporProvider: { code: `<template><slot /></template>`, vapor: true },
+        VaporChild: {
+          code: `<template><span>child</span></template>`,
+          vapor: true,
+        },
+      },
+      ref({}),
+    )
+
+    expect(container.innerHTML).toBe(html)
+    expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+    expect(`Hydration children mismatch`).not.toHaveBeenWarned()
+  })
+
   test('hydrate VDOM slot content should unmount hydrated slot child before first insert', async () => {
     const data = ref({
       unmounted: vi.fn(),
