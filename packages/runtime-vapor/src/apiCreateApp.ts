@@ -15,6 +15,7 @@ import {
   flushOnAppMount,
   getNextUid,
   initFeatureFlags,
+  isEmitListener,
   normalizeContainer,
   restoreCurrentInstance,
   setCurrentInstance,
@@ -22,7 +23,9 @@ import {
   warn,
 } from '@vue/runtime-dom'
 import type { RawProps } from './componentProps'
-import { getGlobalThis } from '@vue/shared'
+import { camelize, getGlobalThis, isArray, isFunction } from '@vue/shared'
+import { normalizePropsOptions } from './componentProps'
+import { normalizeEmitsOptions } from './componentEmits'
 import { optimizePropertyLookup } from './dom/prop'
 import { setIsHydratingEnabled, withHydration } from './dom/hydration'
 
@@ -140,13 +143,47 @@ function postPrepareApp(app: App) {
   }
 }
 
+function normalizeRootProps(comp: VaporComponent, props: RawProps | null) {
+  if (!props) return props
+
+  let propsOptions
+  let emitsOptions: ReturnType<typeof normalizeEmitsOptions> = null
+  let normalized = false
+  let normalizedProps: RawProps | undefined
+  for (const key in props) {
+    const value = props[key]
+    if (!isFunction(value)) continue
+
+    if (!normalized) {
+      propsOptions = normalizePropsOptions(comp)[0]
+      emitsOptions = normalizeEmitsOptions(comp)
+      normalized = true
+    }
+
+    const prop = propsOptions && propsOptions[camelize(key)]
+    const type = prop && prop.type
+    if (
+      type === Function ||
+      (isArray(type) && type.includes(Function)) ||
+      isEmitListener(emitsOptions, key)
+    ) {
+      if (!normalizedProps) normalizedProps = { ...props }
+      normalizedProps[key] = () => value
+    }
+  }
+  return normalizedProps || props
+}
+
 export const createVaporApp: CreateAppFunction<ParentNode, VaporComponent> = (
   comp,
   props,
 ) => {
   prepareApp()
   if (!_createApp) _createApp = createAppAPI(mountApp, unmountApp, getExposed)
-  const app = _createApp(comp, props)
+  const app = _createApp(
+    comp,
+    normalizeRootProps(comp, props as RawProps | null),
+  )
   postPrepareApp(app)
   return app
 }
@@ -159,7 +196,10 @@ export const createVaporSSRApp: CreateAppFunction<
   prepareApp()
   if (!_hydrateApp)
     _hydrateApp = createAppAPI(hydrateApp, unmountApp, getExposed)
-  const app = _hydrateApp(comp, props)
+  const app = _hydrateApp(
+    comp,
+    normalizeRootProps(comp, props as RawProps | null),
+  )
   postPrepareApp(app)
   return app
 }

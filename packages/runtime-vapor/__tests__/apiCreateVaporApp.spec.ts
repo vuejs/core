@@ -111,6 +111,33 @@ describe('api: createVaporApp', () => {
     expect(instance!.appContext).toBe(app._context)
   })
 
+  test('passes function-valued root props and emit listeners through', () => {
+    const Comp = compile(
+      `<script setup vapor>
+        defineProps({ cb: Function })
+        defineEmits(['save'])
+      </script>
+      <template><button @click="$emit('save', 42)">{{ typeof cb }}</button></template>`,
+      ref(null),
+    )
+    const cb = vi.fn(() => 'x')
+    const onSave = vi.fn()
+    const root = document.createElement('div')
+    const app = createVaporApp(Comp, { cb, onSave })
+
+    try {
+      app.mount(root)
+      expect.soft(root.textContent).toBe('function')
+      expect.soft(cb).not.toHaveBeenCalled()
+      expect.soft(onSave).not.toHaveBeenCalled()
+
+      root.querySelector('button')!.click()
+      expect.soft(onSave).toHaveBeenCalledExactlyOnceWith(42)
+    } finally {
+      app.unmount()
+    }
+  })
+
   test('mount should no-op when selector returns null', () => {
     const Comp = defineVaporComponent({
       setup() {
