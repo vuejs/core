@@ -30,6 +30,7 @@ import { isInteropVShowPending, setInteropVShow } from '../vdomInterop'
 import { isTransitionEnabled } from '../transition'
 import { isSuspenseEnabled } from '../suspense'
 import { isKeepAliveEnabled } from '../keepAlive'
+import { isElementNode } from '../dom/node'
 
 /**
  * v-show is root-inherited state: it lands on the effective root element of
@@ -109,7 +110,7 @@ export function applyVShow(target: Block, source: () => any): void {
   }
 
   ;(target as TransitionBlock).$vshow! |= VShowFlags.TARGET
-  if (isKeepAliveEnabled && !(target instanceof Element)) {
+  if (isKeepAliveEnabled && !isElementNode(target)) {
     // A kept-alive root chain outlives the branch render that bound it: the
     // hooks left there neither apply nor hold a frozen value.
     onScopeDispose(() => {

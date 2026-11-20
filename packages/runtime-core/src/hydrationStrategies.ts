@@ -83,7 +83,7 @@ export const hydrateOnVisible: HydrationStrategyFactory<
     ob.observe(el)
   }
   forEach(el => {
-    if (!(el instanceof Element)) return
+    if (el.nodeType !== DOMNodeTypes.ELEMENT) return
     return observe(el)
   })
   return () => ob.disconnect()

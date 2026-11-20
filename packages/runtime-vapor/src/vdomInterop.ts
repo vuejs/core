@@ -178,7 +178,7 @@ import {
 import { inOnce, withOnce } from './once'
 import { RenderEffect, renderEffect } from './renderEffect'
 import { initVdomOwner, patchVdomSlot } from './vdomSlotOwner'
-import { createTextNode, parentNode } from './dom/node'
+import { createTextNode, isElementNode, isNode, parentNode } from './dom/node'
 import { adoptRoot, optimizePropertyLookup } from './dom/prop'
 import {
   advanceHydrationNode,
@@ -459,7 +459,7 @@ function getInteropTransitionElement(
   }
   // a component vnode keeps its old root in `el` while it is patched to a new
   // one, which a Transition's early leave removal relies on (as in vdom)
-  if (vnode.el instanceof Element) {
+  if (isElementNode(vnode.el)) {
     return vnode.el
   }
   if (component) {
@@ -728,7 +728,7 @@ const vaporInteropImpl = {
         forwardLeaveHandoff(
           hooks,
           transition,
-          child instanceof Element
+          isElementNode(child)
             ? () => markLeavingBlock(child, hooks.state)
             : undefined,
         )
@@ -747,7 +747,7 @@ const vaporInteropImpl = {
         )
         for (let i = 0; i < rows.length; i++) {
           const row = rows[i]
-          if (row instanceof Element && row.parentNode === parent) {
+          if (isElementNode(row) && row.parentNode === parent) {
             row.$transition = undefined
           }
         }
@@ -1118,7 +1118,7 @@ const vaporInteropImpl = {
     // enters itself (vdom's isRoot)
     const container = suspense.hiddenContainer as ParentNode
     for (const target of targets) {
-      if (target instanceof Element) {
+      if (isElementNode(target)) {
         const transition = (target as TransitionBlock).$transition
         if (
           transition &&
@@ -1348,7 +1348,7 @@ function resolveVNodeNodes(vnode: VNode, liveSlot?: boolean): Block {
 // own owners (the VDOM renderer / block removal). This detaches only loose
 // top-level DOM nodes, recursing through arrays — never into block structures.
 function removeAttachedNodes(block: Block, parent: ParentNode): void {
-  if (block instanceof Node) {
+  if (isNode(block)) {
     if (block.parentNode === parent) {
       remove(block, parent)
     }

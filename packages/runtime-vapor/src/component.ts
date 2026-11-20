@@ -161,7 +161,14 @@ import {
   trimHydrationBoundary,
   withDeferredHydrationBoundary,
 } from './dom/hydration'
-import { createComment, createElement, createTextNode } from './dom/node'
+import {
+  createComment,
+  createElement,
+  createTextNode,
+  isCommentNode,
+  isElementNode,
+  isNode,
+} from './dom/node'
 import {
   isTeleportEnabled,
   isTeleportFragment,
@@ -1944,7 +1951,7 @@ export function unmountComponent(
         }
         instance.pendingBlock = undefined
       }
-    } else if (instance.block instanceof Comment) {
+    } else if (isCommentNode(instance.block)) {
       // CSR placeholders are component-owned, so always detach them from their
       // live parent even when VDOM owns an enclosing removal.
       const blockParent = instance.block.parentNode
@@ -2019,7 +2026,7 @@ export function getRootElement(
   block: Block,
   visitor?: RootChainVisitor,
 ): Element | undefined {
-  if (block instanceof Element) {
+  if (isElementNode(block)) {
     return block
   }
 
@@ -2088,7 +2095,7 @@ function singleRootOf(nodes: Block[]): Block | undefined {
   let single: Block | undefined
   let hasComment = false
   for (const b of nodes) {
-    if (b instanceof Comment) {
+    if (isCommentNode(b)) {
       hasComment = true
       continue
     }
@@ -2268,7 +2275,8 @@ export function applyFallthroughAttrs(
         (fragments && state.hasNonSingleRoot) ||
         (isTeleportEnabled && containsTeleportFragment(block)) ||
         (!instance.accessedAttrs &&
-          (block instanceof Text || (isArray(block) && block.length))))
+          ((isNode(block) && block.nodeType === 3) ||
+            (isArray(block) && block.length))))
     ) {
       warnExtraneousAttributes(instance.attrs)
     }
@@ -2341,7 +2349,7 @@ function resolveFallthroughRoot(
   if (__DEV__ && !root && innermost) {
     const { nodes } = innermost
     state.hasNonSingleRoot =
-      isArray(nodes) && nodes.some(child => !(child instanceof Comment))
+      isArray(nodes) && nodes.some(child => !isCommentNode(child))
   }
   return root
 }
@@ -2350,7 +2358,7 @@ function containsTeleportFragment(block: Block): boolean {
   if (isTeleportFragment(block)) return true
   if (isArray(block)) {
     return block.some(
-      child => !(child instanceof Comment) && containsTeleportFragment(child),
+      child => !isCommentNode(child) && containsTeleportFragment(child),
     )
   }
   return isFragment(block) && containsTeleportFragment(block.nodes)

@@ -994,6 +994,112 @@ describe('Vapor Mode hydration', () => {
         expect(main!.textContent).toBe('y')
       })
     })
+
+    describe('in the document of an iframe', () => {
+      const apps = [
+        ['a vapor app', true],
+        ['a vdom app', false],
+      ] as const
+
+      const hydrateInIframe = (
+        code: string,
+        components: Record<string, string>,
+        data: any,
+        isVaporApp: boolean,
+      ) =>
+        testHydration(
+          `<script setup>const data = _data; const components = _components</script>
+          <template>${code}</template>`,
+          components,
+          data,
+          { isVaporApp, interop: !isVaporApp, inIframe: true },
+        )
+
+      test.each(apps)('v-if root, in %s', async (_, isVaporApp) => {
+        const data = ref(true)
+        const { container } = await hydrateInIframe(
+          `<components.Child />`,
+          {
+            Child: `<template><p v-if="data">a</p><input v-else /></template>`,
+          },
+          data,
+          isVaporApp,
+        )
+        expect(container.querySelector('p')).not.toBe(null)
+
+        data.value = false
+        await nextTick()
+        expect(container.querySelector('p')).toBe(null)
+        expect(container.querySelector('input')).not.toBe(null)
+      })
+
+      test.each(apps)('element root, in %s', async (_, isVaporApp) => {
+        const data = ref('x')
+        const { container } = await hydrateInIframe(
+          `<components.Child />`,
+          { Child: `<template><span>{{ data }}</span></template>` },
+          data,
+          isVaporApp,
+        )
+        const span = container.querySelector('span')
+        expect('returned non-block value').not.toHaveBeenWarned()
+
+        data.value = 'y'
+        await nextTick()
+        expect(container.querySelector('span')).toBe(span)
+        expect(span!.textContent).toBe('y')
+      })
+
+      test('slot content behind v-if, in a vapor app', async () => {
+        const data = ref(true)
+        const { container } = await hydrateInIframe(
+          `<div><components.Child><p v-if="data">a</p></components.Child></div>`,
+          { Child: `<template><slot><i>fallback</i></slot></template>` },
+          data,
+          true,
+        )
+        expect(container.querySelector('p')).not.toBe(null)
+        expect(container.querySelector('i')).toBe(null)
+
+        data.value = false
+        await nextTick()
+        expect(container.querySelector('p')).toBe(null)
+        expect(container.querySelector('i')).not.toBe(null)
+      })
+
+      test.each(apps)('component in v-if, in %s', async (_, isVaporApp) => {
+        const data = ref(true)
+        const { container } = await hydrateInIframe(
+          `<div><components.Child v-if="data" /><b v-else>b</b></div>`,
+          { Child: `<template><span>c</span></template>` },
+          data,
+          isVaporApp,
+        )
+        expect(container.querySelector('span')).not.toBe(null)
+
+        data.value = false
+        await nextTick()
+        expect(container.querySelector('span')).toBe(null)
+        expect(container.querySelector('b')).not.toBe(null)
+      })
+
+      test.each(apps)('v-for update, in %s', async (_, isVaporApp) => {
+        const data = ref([1, 2, 3])
+        const { container } = await hydrateInIframe(
+          `<components.Child />`,
+          {
+            Child: `<template><p v-for="i in data" :key="i">{{ i }}</p></template>`,
+          },
+          data,
+          isVaporApp,
+        )
+        expect(container.textContent).toBe('123')
+
+        data.value = [3, 2, 1]
+        await nextTick()
+        expect(container.textContent).toBe('321')
+      })
+    })
   })
 
   describe('dynamic component', () => {
