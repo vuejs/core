@@ -1,4 +1,4 @@
-import { defineComponent } from 'vue'
+import { defineComponent, defineProps } from 'vue'
 
 const _CustomPropsNotErased = defineComponent({
   props: {},
@@ -10,3 +10,11 @@ export const CustomPropsNotErased =
   _CustomPropsNotErased as typeof _CustomPropsNotErased & {
     foo: string
   }
+
+export function genericProps<T>() {
+  return defineProps<{
+    active?: boolean
+    options: readonly { value: T }[]
+    value: T
+  }>()
+}
