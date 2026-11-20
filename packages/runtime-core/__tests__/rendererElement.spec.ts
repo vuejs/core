@@ -23,6 +23,14 @@ describe('renderer: element', () => {
     expect(inner(root)).toBe('<div id="foo" class="bar"></div>')
   })
 
+  it('should not render a literal "false" / "0" class', () => {
+    // must agree with SSR & hydration, which normalize falsy class values to ''
+    render(h('div', { class: false }, 'foo'), root)
+    expect((root.children[0] as TestElement).props.class).toBe('')
+    render(h('div', { class: 0 }, 'foo'), root)
+    expect((root.children[0] as TestElement).props.class).toBe('')
+  })
+
   it('should create an element with direct text children', () => {
     render(h('div', ['foo', ' ', 'bar']), root)
     expect(inner(root)).toBe('<div>foo bar</div>')
