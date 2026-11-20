@@ -518,6 +518,28 @@ describe('compiler: expression transform', () => {
     expect(code).toMatchSnapshot()
   })
 
+  test('should allow leak of var declarations in nested blocks', () => {
+    const { code } = compile(
+      `<div @click="() => {
+        if (ok) {
+          var x = 1
+        }
+        try {
+          var y = 2
+        } finally {}
+        log(x, y)
+        ;(() => {
+          var z = 3
+        })()
+        error(z)
+      }"/>`,
+    )
+    expect(code).not.toMatch(`_ctx.x`)
+    expect(code).not.toMatch(`_ctx.y`)
+    expect(code).toMatch(`error(_ctx.z)`)
+    expect(code).toMatchSnapshot()
+  })
+
   test('should not prefix catch block param', () => {
     const { code } = compile(
       `<div @click="() => {
