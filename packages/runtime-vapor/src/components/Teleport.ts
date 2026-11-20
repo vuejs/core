@@ -352,23 +352,7 @@ export class TeleportFragment extends RenderContextFragment {
         // State may have changed before the post-flush job runs. A job
         // queued on creation may run before the teleport is inserted:
         // insertion queues it again.
-        if (!this.anchor || !this.parent) return
-        if (this.isDisabled) {
-          // a mount a pending boundary held back
-          if (
-            __FEATURE_SUSPENSE__ &&
-            isSuspenseEnabled &&
-            this.mountState.location === TeleportMountLocation.None
-          ) {
-            this.ensureChildrenInitialized()
-            this.mount(this.parent!, this.anchor, TeleportMountLocation.Main)
-          }
-          if (!this.targetAnchor) {
-            this.prepareTarget()
-          }
-        } else {
-          this.mountToTarget()
-        }
+        if (this.anchor && this.parent) this.mountQueued()
       }
     }
     queuePostRenderEffect(
@@ -379,6 +363,25 @@ export class TeleportFragment extends RenderContextFragment {
         : (__FEATURE_SUSPENSE__ && isSuspenseEnabled && this.ctx.suspense) ||
             null,
     )
+  }
+
+  // the queued mount, into `target` when it is already resolved
+  private mountQueued(target?: ParentNode): void {
+    if (this.isDisabled) {
+      // a mount a pending boundary held back
+      if (
+        __FEATURE_SUSPENSE__ &&
+        isSuspenseEnabled &&
+        this.mountState.location === TeleportMountLocation.None
+      ) {
+        this.ensureChildrenInitialized()
+        this.mount(this.parent!, this.anchor!, TeleportMountLocation.Main)
+      }
+      if (target || !this.targetAnchor) this.prepareTarget(target)
+      this.cancelMountToTarget()
+    } else {
+      this.mountToTarget(target)
+    }
   }
 
   private mountToTarget(resolved?: ParentNode): void {
@@ -485,14 +488,7 @@ export class TeleportFragment extends RenderContextFragment {
     stopWaiting(this)
     const to = this.resolvedProps!.to
     const target = (isString(to) ? querySelector(to) : to) as ParentNode | null
-    if (target) {
-      if (this.isDisabled) {
-        this.prepareTarget(target)
-        this.cancelMountToTarget()
-      } else {
-        this.mountToTarget(target)
-      }
-    }
+    if (target) this.mountQueued(target)
   }
 
   insert(
@@ -507,18 +503,10 @@ export class TeleportFragment extends RenderContextFragment {
     const wasMountedInTarget =
       this.mountState.location === TeleportMountLocation.Target
 
-    // Re-inserting an already-mounted teleport should move existing anchors
-    // instead of creating a second placeholder in the main view.
-    if (!this.placeholder) {
-      this.placeholder = __DEV__
-        ? createComment('teleport start')
-        : createTextNode()
-    }
-
     // Reorder still needs to move the main-view anchors. When enabled
     // content is already in target, skip the props update so target children
     // are not re-inserted.
-    insert(this.placeholder, container, anchor)
+    insert(this.placeholder!, container, anchor)
     // insertFragment/move may have already placed this.anchor and passed it
     // back as the insertion anchor; insertNode skips the self-insert then.
     insert(this.anchor!, container, anchor)
@@ -579,7 +567,7 @@ export class TeleportFragment extends RenderContextFragment {
     queuePostFlushCb(() => this.disposeTarget())
   }
 
-  dispose = (): void => {
+  remove(): void {
     // Block removal may run without the owning scope stopping; the run scope
     // must not outlive the children it rendered.
     const scope = this.scope
@@ -594,10 +582,6 @@ export class TeleportFragment extends RenderContextFragment {
     }
     this.disposeTarget()
     this.mountState = { location: TeleportMountLocation.None }
-  }
-
-  remove(): void {
-    this.dispose()
 
     if (this.anchor) {
       remove(this.anchor, parentNode(this.anchor)!)
