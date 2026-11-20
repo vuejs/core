@@ -245,6 +245,50 @@ describe('ssr: slot', () => {
     ).toBe(`<div>foo</div>`)
   })
 
+  test('transition slot fallback', async () => {
+    // the client unwraps the transition child, so a fallback that renders a
+    // fragment (v-for) must not be wrapped in fragment markers here
+    const ReusableTransition = {
+      template: `<transition><slot><div v-for="i in 3">{{ i }}</div></slot></transition>`,
+    }
+
+    expect(await renderToString(createApp(ReusableTransition))).toBe(
+      `<div>1</div><div>2</div><div>3</div>`,
+    )
+
+    expect(
+      await renderToString(
+        createApp({
+          components: {
+            one: ReusableTransition,
+          },
+          template: `<one><div>hi</div></one>`,
+        }),
+      ),
+    ).toBe(`<div>hi</div>`)
+  })
+
+  test('transition-group slot fallback with a falsy v-if', async () => {
+    // transition-group filters comment children out at runtime, so a fallback
+    // whose only child is a falsy `v-if` must not leave a placeholder comment
+    // in the server output - the client renders none
+    const ReusableList = {
+      setup: () => ({ shown: false }),
+      template: `<TransitionGroup tag="ul"><slot><li v-if="shown">a</li></slot></TransitionGroup>`,
+    }
+
+    expect(await renderToString(createApp(ReusableList))).toBe(`<ul></ul>`)
+
+    expect(
+      await renderToString(
+        createApp({
+          components: { one: ReusableList },
+          template: `<one><li>a</li></one>`,
+        }),
+      ),
+    ).toBe(`<ul><li>a</li></ul>`)
+  })
+
   // #9933
   test('transition-group slot', async () => {
     expect(

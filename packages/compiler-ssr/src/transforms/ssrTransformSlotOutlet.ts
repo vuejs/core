@@ -17,6 +17,18 @@ import {
   processChildrenAsStatement,
 } from '../ssrCodegenTransform'
 
+// Slot outlets that are rendered as the content of a transition builtin. Such
+// an outlet is rendered through `ssrRenderSlotInner`, which does not wrap it in
+// a fragment, and the builtin unwraps / flattens its children on the client - so
+// its fallback has to be processed with the same flags as the builtin's own
+// children, or hydration finds nodes the client does not expect.
+//   - fragments: `<Transition>` expects a single vnode, `<TransitionGroup>`
+//     concatenates its children - neither keeps fragment markers.
+//   - comments: `<TransitionGroup>` filters comment children out at runtime, so
+//     a falsy `v-if` in the fallback must not leave an empty comment behind.
+const transitionSlotOutlets = new WeakSet<SlotOutletNode>()
+const transitionGroupSlotOutlets = new WeakSet<SlotOutletNode>()
+
 export const ssrTransformSlotOutlet: NodeTransform = (node, context) => {
   if (isSlotOutlet(node)) {
     const { slotName, slotProps } = processSlotOutlet(node, context)
@@ -63,6 +75,10 @@ export const ssrTransformSlotOutlet: NodeTransform = (node, context) => {
           args.push('null')
         }
         args.push('true')
+        transitionSlotOutlets.add(node)
+        if (componentType === TRANSITION_GROUP) {
+          transitionGroupSlotOutlets.add(node)
+        }
       }
     }
 
@@ -79,7 +95,14 @@ export function ssrProcessSlotOutlet(
   // has fallback content
   if (node.children.length) {
     const fallbackRenderFn = createFunctionExpression([])
-    fallbackRenderFn.body = processChildrenAsStatement(node, context)
+    fallbackRenderFn.body = processChildrenAsStatement(
+      node,
+      context,
+      false,
+      context.withSlotScopeId,
+      transitionSlotOutlets.has(node),
+      transitionGroupSlotOutlets.has(node),
+    )
     // _renderSlot(slots, name, props, fallback, ...)
     renderCall.arguments[3] = fallbackRenderFn
   }
