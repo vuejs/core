@@ -1,4 +1,5 @@
 import { createApp, defineAsyncComponent, h } from 'vue'
+import type { SSRContext } from '../src/render'
 import { renderToString } from '../src/renderToString'
 
 const components = {
@@ -245,6 +246,29 @@ describe('ssr: slot', () => {
     ).toBe(`<div>foo</div>`)
   })
 
+  test('transition slot with fallback', async () => {
+    const ReusableTransition = {
+      template: `<transition><slot><div class="empty">empty</div></slot></transition>`,
+    }
+    const render = (template: string) =>
+      renderToString(
+        createApp({ components: { one: ReusableTransition }, template }),
+      )
+
+    // no content passed at all
+    expect(await render(`<one/>`)).toBe(`<div class="empty">empty</div>`)
+    // content that renders nothing
+    expect(await render(`<one><div v-if="false">foo</div></one>`)).toBe(
+      `<div class="empty">empty</div>`,
+    )
+    // content that is only comments
+    expect(await render(`<one><!--c--></one>`)).toBe(
+      `<div class="empty">empty</div>`,
+    )
+    // real content still wins over the fallback
+    expect(await render(`<one><span>foo</span></one>`)).toBe(`<span>foo</span>`)
+  })
+
   // #9933
   test('transition-group slot', async () => {
     expect(
@@ -259,6 +283,43 @@ describe('ssr: slot', () => {
         }),
       ),
     ).toBe(`<div><p>1</p><p>2</p></div>`)
+  })
+
+  test('transition-group slot with fallback', async () => {
+    expect(
+      await renderToString(
+        createApp({
+          components: {
+            one: {
+              template: `<TransitionGroup tag="div"><slot><p>empty</p></slot></TransitionGroup>`,
+            },
+          },
+          template: `<one><p v-if="false">foo</p></one>`,
+        }),
+      ),
+    ).toBe(`<div><p>empty</p></div>`)
+  })
+
+  test('transition slot with fallback and a teleport', async () => {
+    const ctx: SSRContext = {}
+    expect(
+      await renderToString(
+        createApp({
+          components: {
+            one: {
+              template: `<transition><slot><div class="empty">empty</div></slot></transition>`,
+            },
+          },
+          template: `<one><Teleport to="#modal"><div>foo</div></Teleport></one>`,
+        }),
+        ctx,
+      ),
+      // the teleport anchors stay at the original position, so the slot is not
+      // empty even though the content itself is rendered into the target
+    ).toBe(`<!--teleport start--><!--teleport end-->`)
+    expect(ctx.teleports!['#modal']).toBe(
+      `<!--teleport start anchor--><div>foo</div><!--teleport anchor-->`,
+    )
   })
 
   // #12438
