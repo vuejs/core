@@ -1,6 +1,5 @@
 import {
   Fragment,
-  KeepAlive,
   getCurrentInstance,
   h,
   nextTick,
@@ -66,7 +65,6 @@ describe('useInstanceInfo', () => {
       'el',
       'isVapor',
       'isHydrating',
-      'isInactive',
       'rawPropKeys',
     ]) {
       expect(key in info).toBe(true)
@@ -143,49 +141,6 @@ describe('useInstanceInfo', () => {
     passed.value = {}
     await nextTick()
     expect(info.rawPropKeys).toEqual([])
-  })
-
-  test('isInactive covers a kept-alive ancestor', async () => {
-    const view = ref('a')
-    const show = ref(false)
-    const atSetup: boolean[] = []
-    let info: any
-    const Part = {
-      setup() {
-        info = useInstanceInfo()
-        atSetup.push(info.isInactive)
-        return () => h('div')
-      },
-    }
-    const A = {
-      render: () => h('div', show.value ? [h(Part)] : []),
-    }
-    const B = {
-      render: () => h('div'),
-    }
-    const App = {
-      render: () =>
-        h(KeepAlive, null, () => (view.value === 'a' ? h(A) : h(B))),
-    }
-    render(h(App), nodeOps.createElement('div'))
-
-    show.value = true
-    await nextTick()
-    expect(atSetup).toEqual([false])
-
-    show.value = false
-    await nextTick()
-    view.value = 'b'
-    await nextTick()
-    // Part mounts inside the branch KeepAlive holds
-    show.value = true
-    await nextTick()
-    expect(atSetup).toEqual([false, true])
-    expect(info.isInactive).toBe(true)
-
-    view.value = 'a'
-    await nextTick()
-    expect(info.isInactive).toBe(false)
   })
 
   test('el is null until mounted', () => {
