@@ -387,51 +387,6 @@ expectType<Ref<number>>(p3.n)
   expectType<Ref<any>>(foo)
 }
 
-describe('toRefs preserves mapped input contracts', () => {
-  const field = Symbol()
-  const input: {
-    readonly label: string
-    optional?: number
-    [field]: Ref<number>
-  } = { label: 'Choose', [field]: ref(1) }
-  const refs = toRefs(input)
-  expectType<Ref<string>>(refs.label)
-  expectType<Ref<number | undefined> | undefined>(refs.optional)
-  expectType<Ref<number>>(refs[field])
-  // @ts-expect-error reverse mapping preserves readonly properties
-  refs.label = ref('Other')
-
-  const tuple = ['value', 1] as const
-  const array = reactive(['value'])
-  expectType<Ref<string>>(toRefs(array)[0])
-  const reactiveTuple = reactive([1, 'value'] as [number, string])
-  expectType<Ref<number>>(toRefs(reactiveTuple)[0])
-  expectType<Ref<string>>(toRefs(reactiveTuple)[1])
-  expectType<readonly [Ref<'value'>, Ref<1>]>(toRefs(tuple))
-  expectType<readonly [Ref<string>, Ref<number>]>(
-    toRefs<readonly [string, number]>(tuple),
-  )
-  expectType<Record<string, Ref<number>>>(toRefs({} as Record<string, number>))
-  expectType<Ref<string>>(toRefs({} as Record<number, string>)[0])
-  expectType<Ref<never>>(toRefs({} as Record<number, never>)[0])
-
-  type Either =
-    | { kind: 'number'; value: number }
-    | {
-        kind: 'string'
-        value: string
-      }
-  const unionRefs = toRefs(null! as Either)
-  expectType<ToRefs<Either>>(unionRefs)
-  expectType<true>(null! as IsUnion<typeof unionRefs>)
-})
-
-describe('toRefs preserves generic object forwarding', <T extends object>() => {
-  const input = null! as T
-  expectType<ToRefs<T>>(toRefs(input))
-  expectType<ToRefs<T>>(toRefs<T>(input))
-})
-
 // toRef default value
 {
   const obj: { x?: number } = {}

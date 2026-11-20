@@ -357,18 +357,6 @@ type ToRefValue<T extends object, K extends ToRefKey<T>> = K extends keyof T
  * @param object - Reactive object to be made into an object of linked refs.
  * @see {@link https://vuejs.org/api/reactivity-utilities.html#torefs}
  */
-// Preserve numeric index signatures, including those on branded reactive arrays.
-// The tuple keeps this overload out of contextual inference for named objects.
-export function toRefs<T extends object>(
-  object: T,
-  ..._numericIndex: number extends keyof T ? [] : [never]
-): ToRefs<T>
-// Infer each property before ToRef evaluates conditional or indexed types.
-export function toRefs<T extends object>(object: {
-  [K in keyof T]: T[K]
-}): ToRefs<T>
-// Private brands may not be assignable to their reverse-mapped public shape.
-export function toRefs<T extends object>(object: T): ToRefs<T>
 /*@__NO_SIDE_EFFECTS__*/
 export function toRefs<T extends object>(object: T): ToRefs<T> {
   if (__DEV__ && !isProxy(object)) {

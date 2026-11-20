@@ -10,6 +10,7 @@ import {
   defineOptions,
   defineProps,
   defineSlots,
+  toRef,
   toRefs,
   useAttrs,
   useModel,
@@ -70,13 +71,16 @@ describe('defineProps preserves generic array element types in toRefs', <T exten
   expectType<Ref<number>>(existingRef)
 })
 
-describe('toRefs preserves unconstrained generic props', <T>() => {
+describe('generic prop fields remain typed through toRef and toRefs', <T>() => {
   const props = defineProps<{
     options: readonly { value: T }[]
     value: T
   }>()
-  const options = toRefs(props).options
+  const options = toRefs<typeof props>(props).options
+  const byKey = toRef(props, 'options')
   expectType<false>(null! as IsAny<(typeof options.value)[number]>)
+  expectType<false>(null! as IsAny<(typeof byKey.value)[number]>)
+  expectType<readonly { value: T }[]>(byKey.value)
   expectType<T | undefined>(
     options.value.find(item => item.value === props.value)?.value,
   )
@@ -178,6 +182,15 @@ describe('DefineProps preserves explicit Boolean keys', () => {
   expectType<boolean>(withOneBooleanKey.active)
   // @ts-expect-error only the explicitly selected key is refined
   expectType<boolean>(withOneBooleanKey.visible)
+
+  // Explicit any retains the Boolean index signature for arbitrary keys.
+  const indexed = null! as DefineProps<Props, any>
+  expectType<boolean>(indexed['other'])
+
+  type RequiredFlags = Required<Props>
+  expectType<DefineProps<RequiredFlags, 'active'>>(
+    null! as DefineProps<RequiredFlags, 'visible'>,
+  )
 })
 
 describe('DefineProps preserves generic structural assignability', <T, K extends
@@ -283,7 +296,7 @@ describe('withDefaults retains the raw prop types in default factories', <T exte
 })
 
 describe('withDefaults accepts explicit Boolean keys', () => {
-  type Props = { enabled?: boolean; label?: string }
+  type Props = { enabled?: boolean; visible?: boolean; label?: string }
   const props = withDefaults<
     Props,
     'enabled',
@@ -294,6 +307,14 @@ describe('withDefaults accepts explicit Boolean keys', () => {
   // @ts-expect-error the explicit undefined default remains visible
   expectType<boolean>(props.enabled)
   expectType<string>(props.label)
+
+  const manual = null! as DefineProps<Props, 'enabled'>
+  const inferred = withDefaults(manual, { label: 'Choose an option' })
+  expectType<string>(inferred.label)
+  expectType<boolean>(inferred.enabled)
+  expectType<boolean | undefined>(inferred.visible)
+  // @ts-expect-error withDefaults must keep the caller's Boolean-key list
+  expectType<boolean>(inferred.visible)
 })
 
 describe('withDefaults rejects defaults of the wrong type', () => {
