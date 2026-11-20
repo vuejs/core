@@ -118,6 +118,8 @@ const hasExplicitCallback = (
     : false
 }
 
+let leaveId = 0
+
 export function resolveTransitionProps(
   rawProps: TransitionProps,
 ): BaseTransitionProps<Element> {
@@ -259,10 +261,15 @@ export function resolveTransitionProps(
     onEnter: makeEnterHook(false),
     onAppear: makeEnterHook(true),
     onLeave(
-      el: Element & { _isLeaving?: boolean; _enterCancelled?: boolean },
+      el: Element & {
+        _isLeaving?: boolean
+        _enterCancelled?: boolean
+        _leaveId?: number
+      },
       done,
     ) {
       el._isLeaving = true
+      const id = (el._leaveId = ++leaveId)
       const resolve = () => finishLeave(el, done)
       addTransitionClass(el, leaveFromClass)
       if (__COMPAT__ && legacyClassEnabled && legacyLeaveFromClass) {
@@ -279,8 +286,8 @@ export function resolveTransitionProps(
         forceReflow(el)
       }
       nextFrame(() => {
-        if (!el._isLeaving) {
-          // cancelled
+        // cancelled, or superseded by a newer leave on the same element
+        if (!el._isLeaving || el._leaveId !== id) {
           return
         }
         removeTransitionClass(el, leaveFromClass)

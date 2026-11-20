@@ -3535,6 +3535,55 @@ describe('e2e: Transition', () => {
       },
       E2E_TIMEOUT,
     )
+
+    // #16133
+    test(
+      'v-show without css transition should hide after rapid toggles',
+      async () => {
+        const afterLeaveSpy = vi.fn()
+        await page().exposeFunction('afterLeaveSpy', afterLeaveSpy)
+
+        await page().evaluate(() => {
+          const { afterLeaveSpy } = window as any
+          const { createApp, ref } = (window as any).Vue
+          createApp({
+            template: `
+            <div id="container">
+              <transition name="noop" @after-leave="afterLeaveSpy()">
+                <div v-show="toggle" class="noop">content</div>
+              </transition>
+            </div>
+            <button id="toggleBtn" @click="click">button</button>
+          `,
+            setup: () => {
+              const toggle = ref(true)
+              const click = () => (toggle.value = !toggle.value)
+              return { toggle, click, afterLeaveSpy }
+            },
+          }).mount('#app')
+        })
+        expect(await isVisible('.noop')).toBe(true)
+
+        // leave -> enter -> leave, all before the first leave's next frame
+        await page().evaluate(async () => {
+          const { nextTick } = (window as any).Vue
+          const btn = document.querySelector('#toggleBtn') as HTMLElement
+          btn.click()
+          await nextTick()
+          btn.click()
+          await nextTick()
+          btn.click()
+          await nextTick()
+        })
+        await nextFrame()
+        await nextFrame()
+
+        expect(await isVisible('.noop')).toBe(false)
+        expect(await classList('.noop')).toStrictEqual(['noop'])
+        expect(afterLeaveSpy).toBeCalledTimes(1)
+      },
+      E2E_TIMEOUT,
+    )
   })
 
   describe('explicit durations', () => {
