@@ -79,6 +79,10 @@ export type StructuralDirectiveTransform = (
 export interface ImportItem {
   exp: SimpleExpressionNode
   path: string
+  /**
+   * Name of the export bound to `exp`. Omitted for default imports.
+   */
+  imported?: string
 }
 
 type IdentifierScopeType = 'local' | 'slot'
@@ -147,6 +151,7 @@ export function createTransformContext(
     transformHoist = null,
     isBuiltInComponent = NOOP,
     isCustomElement = NOOP,
+    resolveComponent = NOOP,
     expressionPlugins = [],
     scopeId = null,
     slotted = true,
@@ -174,6 +179,7 @@ export function createTransformContext(
     transformHoist,
     isBuiltInComponent,
     isCustomElement,
+    resolveComponent,
     expressionPlugins,
     scopeId,
     slotted,

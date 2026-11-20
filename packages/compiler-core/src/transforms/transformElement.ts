@@ -53,6 +53,7 @@ import {
   isCoreComponent,
   isStaticArgOf,
   isStaticExp,
+  resolveComponentImport,
   toValidAssetId,
 } from '../utils'
 import { buildSlots } from './vSlot'
@@ -325,7 +326,21 @@ export function resolveComponentType(
     }
   }
 
-  // 5. Self referencing component (inferred from filename)
+  // 5. user component (from resolveComponent option)
+  if (!__BROWSER__) {
+    const fromImport = resolveComponentImport(
+      tag,
+      node,
+      context.imports,
+      context.selfName,
+      context,
+    )
+    if (fromImport) {
+      return fromImport
+    }
+  }
+
+  // 6. Self referencing component (inferred from filename)
   if (
     !__BROWSER__ &&
     context.selfName &&
@@ -339,7 +354,7 @@ export function resolveComponentType(
     return toValidAssetId(tag, `component`)
   }
 
-  // 6. user component (resolve)
+  // 7. user component (resolve)
   context.helper(RESOLVE_COMPONENT)
   context.components.add(tag)
   return toValidAssetId(tag, `component`)

@@ -874,6 +874,148 @@ describe('compiler: element transform', () => {
       expect(code).toMatchSnapshot()
       expect(code).contains(`style: {"width":"200px","color":"red"}`)
     })
+
+    describe('resolveComponent option', () => {
+      test('single-use component', () => {
+        const { code, ir, helpers } = compileWithElementTransform(`<Foo/>`, {
+          resolveComponent: () => ({ from: './Foo.vue' }),
+        })
+        expect(code).toMatchSnapshot()
+        expect(code).toContain(
+          `import _resolved_component_Foo from './Foo.vue';`,
+        )
+        expect(code).toContain(
+          'const n0 = _createComponent(_resolved_component_Foo, null, null, true)',
+        )
+        expect(helpers).not.toContain('createAssetComponent')
+        expect(helpers).not.toContain('resolveComponent')
+        expect(ir.block.dynamic.children[0].operation).toMatchObject({
+          type: IRNodeTypes.CREATE_COMPONENT_NODE,
+          tag: '_resolved_component_Foo',
+          asset: false,
+          imported: true,
+        })
+      })
+
+      test('multi-use component', () => {
+        const resolveComponent = vi.fn((tag: string) =>
+          tag === 'Foo' ? { from: './Foo.vue' } : undefined,
+        )
+        const { code, ir, helpers } = compileWithElementTransform(
+          `<Foo/><div><Foo/><Foo v-if="ok"/></div><Bar/><Bar/>`,
+          { resolveComponent },
+        )
+        expect(code).toMatchSnapshot()
+        expect(resolveComponent).toHaveBeenCalledWith('Foo', {
+          node: expect.objectContaining({ tag: 'Foo' }),
+          ssr: false,
+          selfName: null,
+          filename: '',
+        })
+        expect(ir.node.imports).toHaveLength(1)
+        expect(
+          code.match(/_createComponent\(_resolved_component_Foo\)/g),
+        ).toHaveLength(3)
+        expect(code).not.toContain('_resolveComponent("Foo")')
+        expect(code).toContain(
+          'const _component_Bar = _resolveComponent("Bar")',
+        )
+        expect(helpers).not.toContain('createAssetComponent')
+      })
+
+      test('named import with per-element id', () => {
+        const { code } = compileWithElementTransform(
+          `<Foo/><Foo lazy/><Foo lazy/>`,
+          {
+            resolveComponent: (tag, { node }) =>
+              node.props.some(p => p.name === 'lazy')
+                ? { from: 'lazy-wrapper', import: 'lazy', id: `_Lazy${tag}` }
+                : { from: `./${tag}.vue`, id: `_${tag}` },
+          },
+        )
+        expect(code).toContain(`import _Foo from './Foo.vue';`)
+        expect(code).toContain(
+          `import { lazy as _LazyFoo } from 'lazy-wrapper';`,
+        )
+        expect(code.match(/import \{ lazy as _LazyFoo \}/g)).toHaveLength(1)
+        expect(code).toContain('_createComponent(_Foo)')
+        expect(code).toContain('_createComponent(_LazyFoo, { lazy: "" })')
+      })
+
+      test('setup bindings take precedence', () => {
+        const resolveComponent = vi.fn(() => ({ from: './Foo.vue' }))
+        const { code } = compileWithElementTransform(`<Foo/>`, {
+          inline: true,
+          bindingMetadata: { Foo: BindingTypes.SETUP_CONST },
+          resolveComponent,
+        })
+        expect(resolveComponent).not.toHaveBeenCalled()
+        expect(code).toContain('_createComponent(Foo, null, null, true)')
+        expect(code).not.toContain('./Foo.vue')
+      })
+
+      test('self reference', () => {
+        const { code } = compileWithElementTransform(`<Example/><Foo/>`, {
+          filename: `/foo/bar/Example.vue?vue&type=template`,
+          resolveComponent: (tag, { selfName }) =>
+            tag === selfName ? undefined : { from: `./${tag}.vue` },
+        })
+        expect(code).toContain(
+          '_createAssetComponent("Example", null, null, null, null, true)',
+        )
+        expect(code).toContain('_createComponent(_resolved_component_Foo)')
+      })
+
+      test('inline mode', () => {
+        const { code } = compileWithElementTransform(`<Foo/>`, {
+          inline: true,
+          resolveComponent: () => ({ from: './Foo.vue', id: 'Foo' }),
+        })
+        expect(code).toContain('_createComponent(Foo, null, null, true)')
+      })
+
+      test('static attribute containing the import id', () => {
+        const { code } = compileWithElementTransform(
+          `<div title="Foo"><Foo/></div>`,
+          {
+            resolveComponent: () => ({ from: './Foo.vue', id: 'Foo' }),
+          },
+        )
+        expect(code).toContain('_template("<div title=Foo>", 1)')
+      })
+
+      test('dynamic attribute containing the import id', () => {
+        const { code } = compileWithElementTransform(
+          `<Foo/><div :title="myFoo"/>`,
+          {
+            resolveComponent: () => ({ from: './Foo.vue', id: 'Foo' }),
+          },
+        )
+        expect(code).toContain('_template("<div>")')
+        expect(code).toContain('_setProp(n1, "title", _ctx.myFoo)')
+      })
+
+      test('different resolutions with the default id', () => {
+        const { code } = compileWithElementTransform(
+          `<Foo/><Foo lazy/><Foo lazy/><Foo/>`,
+          {
+            resolveComponent: (tag, { node }) => ({
+              from: node.props.length ? `./Lazy${tag}.vue` : `./${tag}.vue`,
+            }),
+          },
+        )
+        expect(code).toContain(
+          `import _resolved_component_Foo from './Foo.vue';\nimport _resolved_component_Foo_1 from './LazyFoo.vue';`,
+        )
+        expect(code.match(/^import _resolved/gm)).toHaveLength(2)
+        expect(
+          code.match(/_createComponent\(_resolved_component_Foo\)/g),
+        ).toHaveLength(2)
+        expect(
+          code.match(/_createComponent\(_resolved_component_Foo_1, /g),
+        ).toHaveLength(2)
+      })
+    })
   })
 
   describe('dynamic component', () => {

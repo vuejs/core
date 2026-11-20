@@ -342,7 +342,9 @@ function genAssetImports({ ir }: CodegenContext) {
   let imports = ''
   for (const assetImport of assetImports) {
     const exp = assetImport.exp
-    const name = exp.content
+    const name = assetImport.imported
+      ? `{ ${assetImport.imported} as ${exp.content} }`
+      : exp.content
     imports += `import ${name} from '${assetImport.path}';\n`
   }
   return imports

@@ -172,6 +172,8 @@ export function genCreateComponent(
       return JSON.stringify(name)
     } else if (operation.asset) {
       return toValidAssetId(operation.tag, 'component')
+    } else if (operation.imported) {
+      return operation.tag
     } else {
       const { tag } = operation
       const builtInTag = isBuiltInComponent(tag)
