@@ -15,7 +15,7 @@ import {
   vaporMode,
 } from './options'
 import { toRaw, watchEffect } from '@vue/runtime-dom'
-import { SourceMapConsumer } from 'source-map-js'
+import { type SourceMapSegment, decodeMappings } from 'muggle-string'
 import theme from './theme'
 
 declare global {
@@ -75,7 +75,8 @@ window.init = () => {
   }
 
   let lastSuccessfulCode: string
-  let lastSuccessfulMap: SourceMapConsumer | undefined = undefined
+  let lastSuccessfulMap: SourceMapSegment[][] | undefined = undefined
+  let templateSource = -1
   function compileCode(source: string): string {
     console.clear()
     try {
@@ -105,8 +106,8 @@ window.init = () => {
       console.log(`AST: `, ast)
       console.log(`Options: `, toRaw(compilerOptions))
       lastSuccessfulCode = code + `\n\n// Check the console for the AST`
-      lastSuccessfulMap = new SourceMapConsumer(map!)
-      lastSuccessfulMap!.computeColumnSpans()
+      lastSuccessfulMap = decodeMappings(map!.mappings)
+      templateSource = map!.sources.indexOf('ExampleTemplate.vue')
     } catch (e: any) {
       lastSuccessfulCode = `/* ERROR: ${e.message} (see console for more info) */`
       console.error(e)
@@ -194,19 +195,20 @@ window.init = () => {
     debounce(e => {
       clearEditorDecos()
       if (lastSuccessfulMap) {
-        const pos = lastSuccessfulMap.generatedPositionFor({
-          source: 'ExampleTemplate.vue',
-          line: e.position.lineNumber,
-          column: e.position.column - 1,
-        })
-        if (pos.line != null && pos.column != null) {
+        const pos = generatedSpanFor(
+          lastSuccessfulMap,
+          templateSource,
+          e.position.lineNumber,
+          e.position.column - 1,
+        )
+        if (pos) {
           prevOutputDecos = output.deltaDecorations(prevOutputDecos, [
             {
               range: new monaco.Range(
                 pos.line,
                 pos.column + 1,
                 pos.line,
-                pos.lastColumn ? pos.lastColumn + 2 : pos.column + 2,
+                pos.end + 1,
               ),
               options: {
                 inlineClassName: `highlight`,
@@ -233,13 +235,13 @@ window.init = () => {
     debounce(e => {
       clearOutputDecos()
       if (lastSuccessfulMap) {
-        const pos = lastSuccessfulMap.originalPositionFor({
-          line: e.position.lineNumber,
-          column: e.position.column - 1,
-        })
+        const pos = originalPositionFor(
+          lastSuccessfulMap,
+          e.position.lineNumber,
+          e.position.column - 1,
+        )
         if (
-          pos.line != null &&
-          pos.column != null &&
+          pos &&
           !(
             // ignore mock location
             pos.line === 1 && pos.column === 0
@@ -289,4 +291,56 @@ function debounce<T extends (...args: any[]) => any>(
       prevTimer = null
     }, delay)
   }) as T
+}
+
+// the output of the mapping of `source` on `line` (from 1) that starts last at
+// or before `column`, the earliest in the output if several; it spans up to
+// the next mapping on its line
+function generatedSpanFor(
+  mappings: SourceMapSegment[][],
+  source: number,
+  line: number,
+  column: number,
+): { line: number; column: number; end: number } | undefined {
+  let span: { line: number; column: number; end: number } | undefined
+  let spanColumn = -1
+  mappings.forEach((segments, generatedLine) => {
+    segments.forEach(([start, segmentSource, sourceLine, sourceColumn], i) => {
+      if (
+        sourceColumn !== undefined &&
+        segmentSource === source &&
+        sourceLine === line - 1 &&
+        sourceColumn <= column &&
+        sourceColumn > spanColumn
+      ) {
+        spanColumn = sourceColumn
+        const next = segments[i + 1]
+        span = {
+          line: generatedLine + 1,
+          column: start,
+          end: next ? next[0] : Infinity,
+        }
+      }
+    })
+  })
+  return span
+}
+
+// the source position of the mapping on `line` (from 1) of the output that
+// starts last at or before `column`
+function originalPositionFor(
+  mappings: SourceMapSegment[][],
+  line: number,
+  column: number,
+): { line: number; column: number } | undefined {
+  let found: SourceMapSegment | undefined
+  for (const segment of mappings[line - 1] || []) {
+    if (segment[0] > column) break
+    if (!found || segment[0] > found[0]) found = segment
+  }
+  if (!found) return
+  const [, , sourceLine, sourceColumn] = found
+  return sourceLine === undefined || sourceColumn === undefined
+    ? undefined
+    : { line: sourceLine + 1, column: sourceColumn }
 }

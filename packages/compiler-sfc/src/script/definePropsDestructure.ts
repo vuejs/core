@@ -277,14 +277,14 @@ export function transformDestructuredProps(
         isInDestructureAssignment(parent, parentStack)
       ) {
         // { prop } -> { prop: __props.prop }
-        ctx.s.appendLeft(
+        ctx.s.insertAfter(
           id.end! + ctx.startOffset!,
           `: ${genPropsAccessExp(propsLocalToPublicMap[id.name])}`,
         )
       }
     } else {
       // x --> __props.x
-      ctx.s.overwrite(
+      ctx.replace(
         id.start! + ctx.startOffset!,
         id.end! + ctx.startOffset!,
         genPropsAccessExp(propsLocalToPublicMap[id.name]),

@@ -272,7 +272,7 @@ export function createConfigsForPackage({
 
     function resolveExternal() {
       const treeShakenDeps = [
-        'source-map-js',
+        'muggle-string',
         '@babel/parser',
         'estree-walker',
         'entities/lib/decode.js',

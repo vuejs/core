@@ -271,6 +271,41 @@ describe('defineModel()', () => {
     )
   })
 
+  test('options that are not an object of static keys are evaluated once', () => {
+    for (const options of [
+      `makeOptions(1)`,
+      `{ ...shared, get: v => v + 1 }`,
+      `{ [key]: 5 }`,
+    ]) {
+      const { content } = compile(
+        `
+      <script setup>
+      import { makeOptions, shared, key } from './m'
+      const n = defineModel('n', ${options})
+      </script>
+      `,
+      )
+      assertCode(content)
+      expect(content).toMatch(`const __modelOptions0 = ${options}\n`)
+      expect(content).toMatch(`"n": __modelOptions0,`)
+      expect(content).toMatch(`_useModel(__props, 'n', __modelOptions0)`)
+      expect(content.split(options).length).toBe(2)
+    }
+  })
+
+  test('options that are not an object of static keys referencing a local', () => {
+    expect(() =>
+      compile(
+        `
+      <script setup>
+      const o = { default: 1 }
+      const n = defineModel('n', { ...o })
+      </script>
+      `,
+      ),
+    ).toThrow(`cannot reference locally declared variables`)
+  })
+
   test('usage w/ props destructure', () => {
     const { content } = compile(
       `

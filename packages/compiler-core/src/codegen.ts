@@ -14,28 +14,23 @@ import {
   type JSChildNode,
   NodeTypes,
   type ObjectExpression,
-  type Position,
   type ReturnStatement,
   type RootNode,
   type SSRCodegenNode,
   type SequenceExpression,
   type SimpleExpressionNode,
+  type SourceLocation,
   type TemplateChildNode,
   type TemplateLiteral,
   type TextNode,
   type VNodeCall,
   getVNodeBlockHelper,
   getVNodeHelper,
-  locStub,
 } from './ast'
-import { SourceMapGenerator } from 'source-map-js'
+import { type Piece, type Source, renderWithSourceMap } from 'muggle-string'
+import { assert, isSimpleIdentifier, toValidAssetId } from './utils'
 import {
-  advancePositionWithMutation,
-  assert,
-  isSimpleIdentifier,
-  toValidAssetId,
-} from './utils'
-import {
+  NOOP,
   PatchFlagNames,
   type PatchFlags,
   isArray,
@@ -60,43 +55,14 @@ import {
 } from './runtimeHelpers'
 import type { ImportItem } from './transform'
 
-/**
- * The `SourceMapGenerator` type from `source-map-js` is a bit incomplete as it
- * misses `toJSON()`. We also need to add types for internal properties which we
- * need to access for better performance.
- *
- * Since TS 5.3, dts generation starts to strangely include broken triple slash
- * references for source-map-js, so we are inlining all source map related types
- * here to workaround that.
- */
-export interface CodegenSourceMapGenerator {
-  setSourceContent(sourceFile: string, sourceContent: string): void
-  // SourceMapGenerator has this method but the types do not include it
-  toJSON(): RawSourceMap
-  _sources: Set<string>
-  _names: Set<string>
-  _mappings: {
-    add(mapping: MappingItem): void
-  }
-}
-
 export interface RawSourceMap {
   file?: string
   sourceRoot?: string
-  version: string
+  version: number
   sources: string[]
   names: string[]
   sourcesContent?: string[]
   mappings: string
-}
-
-interface MappingItem {
-  source: string
-  generatedLine: number
-  generatedColumn: number
-  originalLine: number
-  originalColumn: number
-  name: string | null
 }
 
 const PURE_ANNOTATION = `/*@__PURE__*/`
@@ -110,6 +76,8 @@ export interface BaseCodegenResult {
   preamble: string
   ast: unknown
   map?: RawSourceMap
+  /** @internal The pieces the map is rendered from */
+  pieces?: CodegenPiece[]
   helpers?: Set<string> | Set<symbol>
 }
 
@@ -117,6 +85,11 @@ export interface CodegenResult extends BaseCodegenResult {
   ast: RootNode
 }
 
+/**
+ * @deprecated The code pushed to a `CodegenContext` is no longer tracked by
+ * position, so its newlines need not be described. To be removed in a later
+ * minor.
+ */
 export enum NewlineType {
   /** Start with `\n` */
   Start = 0,
@@ -130,18 +103,30 @@ export enum NewlineType {
 
 export interface CodegenContext extends Omit<
   Required<CodegenOptions>,
-  'bindingMetadata' | 'inline' | 'vaporRuntimeModuleName' | 'expressionPlugins'
+  | 'bindingMetadata'
+  | 'inline'
+  | 'vaporRuntimeModuleName'
+  | 'expressionPlugins'
+  | 'pieceSource'
+  | 'pieceOffset'
 > {
   source: string
   code: string
-  line: number
-  column: number
-  offset: number
   indentLevel: number
   pure: boolean
-  map?: CodegenSourceMapGenerator
+  /** @internal Writes the pieces of the code, when a source map is generated */
+  writer?: PieceWriter
   helper(key: symbol): string
-  push(code: string, newlineIndex?: number, node?: CodegenNode): void
+  /**
+   * @param newlineIndex - Deprecated and ignored; to be removed in a later
+   * minor.
+   */
+  push(
+    code: string,
+    /** @deprecated ignored */
+    newlineIndex?: number,
+    node?: CodegenNode,
+  ): void
   indent(): void
   deindent(withoutNewLine?: boolean): void
   newline(): void
@@ -153,6 +138,8 @@ function createCodegenContext(
     mode = 'function',
     prefixIdentifiers = mode === 'module',
     sourceMap = false,
+    pieceSource,
+    pieceOffset = 0,
     filename = `template.vue.html`,
     scopeId = null,
     optimizeImports = false,
@@ -179,68 +166,21 @@ function createCodegenContext(
     inSSR,
     source: ast.source,
     code: ``,
-    column: 1,
-    line: 1,
-    offset: 0,
     indentLevel: 0,
     pure: false,
-    map: undefined,
     helper(key) {
       return `_${helperNameMap[key]}`
     },
-    push(code, newlineIndex = NewlineType.None, node) {
+    push(code, _newlineIndex, node) {
       context.code += code
-      if (!__BROWSER__ && context.map) {
-        if (node) {
-          let name
-          if (node.type === NodeTypes.SIMPLE_EXPRESSION && !node.isStatic) {
-            const content = node.content.replace(/^_ctx\./, '')
-            if (content !== node.content && isSimpleIdentifier(content)) {
-              name = content
-            }
-          }
-          if (node.loc.source) {
-            addMapping(node.loc.start, name)
-          }
-        }
-        if (newlineIndex === NewlineType.Unknown) {
-          // multiple newlines, full iteration
-          advancePositionWithMutation(context, code)
-        } else {
-          // fast paths
-          context.offset += code.length
-          if (newlineIndex === NewlineType.None) {
-            // no newlines; fast path to avoid newline detection
-            if (__TEST__ && code.includes('\n')) {
-              throw new Error(
-                `CodegenContext.push() called newlineIndex: none, but contains` +
-                  `newlines: ${code.replace(/\n/g, '\\n')}`,
-              )
-            }
-            context.column += code.length
-          } else {
-            // single newline at known index
-            if (newlineIndex === NewlineType.End) {
-              newlineIndex = code.length - 1
-            }
-            if (
-              __TEST__ &&
-              (code.charAt(newlineIndex) !== '\n' ||
-                code.slice(0, newlineIndex).includes('\n') ||
-                code.slice(newlineIndex + 1).includes('\n'))
-            ) {
-              throw new Error(
-                `CodegenContext.push() called with newlineIndex: ${newlineIndex} ` +
-                  `but does not conform: ${code.replace(/\n/g, '\\n')}`,
-              )
-            }
-            context.line++
-            context.column = code.length - newlineIndex
-          }
-        }
-        if (node && node.loc !== locStub && node.loc.source) {
-          addMapping(node.loc.end)
-        }
+      if (!__BROWSER__ && context.writer) {
+        context.writer.write(
+          code,
+          node && node.loc,
+          node && node.type === NodeTypes.SIMPLE_EXPRESSION && !node.isStatic
+            ? renamedIdentifier(node, code)
+            : undefined,
+        )
       }
     },
     indent() {
@@ -259,35 +199,141 @@ function createCodegenContext(
   }
 
   function newline(n: number) {
-    context.push('\n' + `  `.repeat(n), NewlineType.Start)
-  }
-
-  function addMapping(loc: Position, name: string | null = null) {
-    // we use the private property to directly add the mapping
-    // because the addMapping() implementation in source-map-js has a bunch of
-    // unnecessary arg and validation checks that are pure overhead in our case.
-    const { _names, _mappings } = context.map!
-    if (name !== null && !_names.has(name)) _names.add(name)
-    _mappings.add({
-      originalLine: loc.line,
-      originalColumn: loc.column - 1, // source-map column is 0 based
-      generatedLine: context.line,
-      generatedColumn: context.column - 1,
-      source: filename,
-      name,
-    })
+    const code = '\n' + `  `.repeat(n)
+    context.code += code
+    if (!__BROWSER__ && context.writer) context.writer.newline(code)
   }
 
   if (!__BROWSER__ && sourceMap) {
-    // lazy require source-map implementation, only in non-browser builds
-    context.map =
-      new SourceMapGenerator() as unknown as CodegenSourceMapGenerator
-    context.map.setSourceContent(filename, context.source)
-    context.map._sources.add(filename)
+    context.writer = createPieceWriter(
+      pieceSource || { content: ast.source },
+      pieceOffset,
+    )
   }
 
   return context
 }
+
+/**
+ * @internal A `name` is the identifier of the source that the text of the
+ * piece renames
+ */
+export type CodegenPiece = Piece<{ source: Source; name?: string }>
+
+function renamedIdentifier(
+  { content, loc }: SimpleExpressionNode,
+  code: string,
+): string | undefined {
+  const accessed = content.startsWith('_ctx.') && content.slice(5)
+  // a same-name shorthand, e.g. `:foo-bar`, accesses its camelized name
+  const id = accessed && isSimpleIdentifier(accessed) ? accessed : loc.source
+  return code !== id && isSimpleIdentifier(id) ? id : undefined
+}
+
+/**
+ * @internal Writes generated code as pieces of `source`, whose offsets are
+ * those of the AST shifted by `offset`
+ */
+export interface PieceWriter {
+  /** starts with an empty piece of the source, so that the map names it even if no code maps to it */
+  readonly pieces: CodegenPiece[]
+  /**
+   * The innermost node with a source being generated: text without one on a
+   * line with none maps to its end
+   */
+  enclosing: SourceLocation | undefined
+  /**
+   * Writes `code` as the text of `loc` if it has a source, named `name`;
+   * otherwise as the end of the last such text on its line, or of `enclosing`
+   */
+  write(code: string, loc?: SourceLocation, name?: string): void
+  /** Writes a newline, which ends the line before it, so it maps nowhere */
+  newline(code: string): void
+}
+
+/** @internal */
+export function createPieceWriter(source: Source, offset: number): PieceWriter {
+  const pieces: CodegenPiece[] = [{ source, start: 0, end: 0, text: '' }]
+  let mappedEnd = -1
+  const writer: PieceWriter = {
+    pieces,
+    enclosing: undefined,
+    write(code, loc, name) {
+      if (loc && loc.source) {
+        mappedEnd = loc.end.offset + offset
+        addPiece(
+          pieces,
+          code,
+          source,
+          loc.start.offset + offset,
+          mappedEnd,
+          name,
+        )
+        return
+      }
+      const { enclosing } = writer
+      if (mappedEnd === -1 && enclosing && enclosing.source) {
+        mappedEnd = enclosing.end.offset + offset
+      }
+      addPiece(pieces, code, mappedEnd === -1 ? undefined : source, mappedEnd)
+    },
+    newline(code) {
+      mappedEnd = -1
+      addPiece(pieces, code)
+    },
+  }
+  return writer
+}
+
+// adds `code` to `pieces`, as the text of `start`..`end` of `source` if given,
+// named `name`, joined to the last piece when that maps the same way
+function addPiece(
+  pieces: CodegenPiece[],
+  code: string,
+  source?: Source,
+  start: number = 0,
+  end: number = start,
+  name?: string,
+): void {
+  const last = pieces[pieces.length - 1]
+  if (!source) {
+    if (typeof last === 'string') pieces[pieces.length - 1] = last + code
+    else pieces.push(code)
+  } else if (
+    typeof last === 'object' &&
+    last.source === source &&
+    last.start === start &&
+    last.end === end &&
+    !name
+  ) {
+    last.text += code
+  } else {
+    // a range takes the indentation before it, so its line starts with one segment, not two
+    if (typeof last === 'string') {
+      let indent = last.length
+      while (last.charCodeAt(indent - 1) === 32) indent--
+      if (indent < last.length && last.charCodeAt(indent - 1) === 10) {
+        pieces[pieces.length - 1] = last.slice(0, indent)
+        code = last.slice(indent) + code
+      }
+    }
+    pieces.push({ source, start, end, text: code, name })
+  }
+}
+
+/** @internal */
+export const createSourceMap: (
+  filename: string,
+  pieces: CodegenPiece[],
+) => RawSourceMap = __BROWSER__
+  ? (NOOP as any)
+  : (filename, pieces) =>
+      renderWithSourceMap(
+        sink => {
+          for (const piece of pieces) sink(piece)
+        },
+        () => filename,
+      ).map
 
 export function generate(
   ast: RootNode,
@@ -318,7 +364,7 @@ export function generate(
   // in setup() inline mode, the preamble is generated in a sub context
   // and returned separately.
   const preambleContext = isSetupInlined
-    ? createCodegenContext(ast, options)
+    ? createCodegenContext(ast, { ...options, sourceMap: false })
     : context
   if (!__BROWSER__ && mode === 'module') {
     genModulePreamble(ast, preambleContext, genScopeId, isSetupInlined)
@@ -384,7 +430,7 @@ export function generate(
     }
   }
   if (ast.components.length || ast.directives.length || ast.temps) {
-    push(`\n`, NewlineType.Start)
+    push(`\n`)
     newline()
   }
 
@@ -410,7 +456,11 @@ export function generate(
     ast,
     code: context.code,
     preamble: isSetupInlined ? preambleContext.code : ``,
-    map: context.map ? context.map.toJSON() : undefined,
+    map:
+      !__BROWSER__ && context.writer && !options.pieceSource
+        ? createSourceMap(context.filename, context.writer.pieces)
+        : undefined,
+    pieces: !__BROWSER__ && context.writer ? context.writer.pieces : undefined,
     helpers: ast.helpers,
   }
 }
@@ -666,6 +716,9 @@ function genNode(node: CodegenNode | symbol | string, context: CodegenContext) {
     context.push(context.helper(node))
     return
   }
+  const writer = !__BROWSER__ && context.writer
+  const enclosing = writer ? writer.enclosing : undefined
+  if (writer && node.loc.source) writer.enclosing = node.loc
   switch (node.type) {
     case NodeTypes.ELEMENT:
     case NodeTypes.IF:
@@ -752,6 +805,7 @@ function genNode(node: CodegenNode | symbol | string, context: CodegenContext) {
       }
     /* v8 ignore stop */
   }
+  if (writer) writer.enclosing = enclosing
 }
 
 function genText(
@@ -772,8 +826,8 @@ function genExpression(node: SimpleExpressionNode, context: CodegenContext) {
 
 function genInterpolation(node: InterpolationNode, context: CodegenContext) {
   const { push, helper, pure } = context
-  if (pure) push(PURE_ANNOTATION)
-  push(`${helper(TO_DISPLAY_STRING)}(`)
+  if (pure) push(PURE_ANNOTATION, NewlineType.None, node)
+  push(`${helper(TO_DISPLAY_STRING)}(`, NewlineType.None, node)
   genNode(node.content, context)
   push(`)`)
 }
@@ -860,13 +914,17 @@ function genVNodeCall(node: VNodeCall, context: CodegenContext) {
   }
 
   if (directives) {
-    push(helper(WITH_DIRECTIVES) + `(`)
+    push(helper(WITH_DIRECTIVES) + `(`, NewlineType.None, node)
   }
   if (isBlock) {
-    push(`(${helper(OPEN_BLOCK)}(${disableTracking ? `true` : ``}), `)
+    push(
+      `(${helper(OPEN_BLOCK)}(${disableTracking ? `true` : ``}), `,
+      NewlineType.None,
+      node,
+    )
   }
   if (pure) {
-    push(PURE_ANNOTATION)
+    push(PURE_ANNOTATION, NewlineType.None, node)
   }
   const callHelper: symbol = isBlock
     ? getVNodeBlockHelper(context.inSSR, isComponent)
@@ -900,7 +958,7 @@ function genCallExpression(node: CallExpression, context: CodegenContext) {
   const { push, helper, pure } = context
   const callee = isString(node.callee) ? node.callee : helper(node.callee)
   if (pure) {
-    push(PURE_ANNOTATION)
+    push(PURE_ANNOTATION, NewlineType.None, node)
   }
   push(callee + `(`, NewlineType.None, node)
   genNodeList(node.arguments, context)
@@ -949,7 +1007,7 @@ function genFunctionExpression(
   const { params, returns, body, newline, isSlot } = node
   if (isSlot) {
     // wrap slot functions with owner context
-    push(`_${helperNameMap[WITH_CTX]}(`)
+    push(`_${helperNameMap[WITH_CTX]}(`, NewlineType.None, node)
   }
   push(`(`, NewlineType.None, node)
   if (isArray(params)) {
@@ -1008,6 +1066,9 @@ function genConditionalExpression(
   push(`? `)
   genNode(consequent, context)
   context.indentLevel--
+  // the alternate starts its line, so the comment the compiler adds for a
+  // v-if without v-else maps nowhere
+  if (!__BROWSER__ && context.writer) context.writer.enclosing = alternate.loc
   needNewline && newline()
   needNewline || push(` `)
   push(`: `)

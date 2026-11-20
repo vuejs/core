@@ -1,7 +1,7 @@
 import type { LVal, Node, TSType } from '@babel/types'
 import type { ScriptCompileContext } from './context'
 import { inferRuntimeType } from './resolveType'
-import { UNKNOWN_TYPE, isCallOf, toRuntimeTypeString } from './utils'
+import { type Code, UNKNOWN_TYPE, isCallOf, toRuntimeTypeString } from './utils'
 import { BindingTypes, unwrapTSNode } from '@vue/compiler-dom'
 import { getModifierPropName } from '@vue/shared'
 
@@ -9,9 +9,14 @@ export const DEFINE_MODEL = 'defineModel'
 
 export interface ModelDecl {
   type: TSType | undefined
-  options: string | undefined
+  options: Code | undefined
   identifier: string | undefined
   runtimeOptionNodes: Node[]
+  /**
+   * the module-level declaration of options that are both prop options and
+   * runtime options
+   */
+  hoisted: Code | undefined
 }
 
 export function processDefineModel(
@@ -47,7 +52,8 @@ export function processDefineModel(
     ctx.error(`duplicate model name ${JSON.stringify(modelName)}`, node)
   }
 
-  let optionsString = options && ctx.getString(options)
+  let propOptions: Code | undefined
+  let hoisted: Code | undefined
   let optionsRemoved = !options
   const runtimeOptionNodes: Node[] = []
 
@@ -57,6 +63,7 @@ export function processDefineModel(
     !options.properties.some(p => p.type === 'SpreadElement' || p.computed)
   ) {
     let removed = 0
+    const runtimeOnly: [start: number, end: number][] = []
     for (let i = options.properties.length - 1; i >= 0; i--) {
       const p = options.properties[i]
       const next = options.properties[i + 1]
@@ -70,30 +77,52 @@ export function processDefineModel(
             (p.key.value === 'get' || p.key.value === 'set')))
       ) {
         // remove runtime-only options from prop options to avoid duplicates
-        optionsString =
-          optionsString.slice(0, start - options.start!) +
-          optionsString.slice(end - options.start!)
+        runtimeOnly.unshift([start, end])
       } else {
         // remove prop options from runtime options
         removed++
-        ctx.s.remove(ctx.startOffset! + start, ctx.startOffset! + end)
+        ctx.s.replace(ctx.startOffset! + start, ctx.startOffset! + end, '')
         // record prop options for invalid scope var reference check
         runtimeOptionNodes.push(p)
       }
     }
+    const kept: Code[] = []
+    let keptStart = options.start!
+    for (const [start, end] of runtimeOnly) {
+      if (keptStart < start) kept.push(ctx.copy(keptStart, start))
+      keptStart = end
+    }
+    kept.push(ctx.copy(keptStart, options.end!))
+    propOptions = kept
     if (removed === options.properties.length) {
       optionsRemoved = true
-      ctx.s.remove(
+      ctx.s.replace(
         ctx.startOffset! + (hasName ? arg0.end! : options.start!),
         ctx.startOffset! + options.end!,
+        '',
       )
     }
+  } else if (options) {
+    // the prop options can't be told apart from the runtime options, so the
+    // options are evaluated once, outside of setup(), for both
+    const id = `__modelOptions${Object.keys(ctx.modelDecls).length}`
+    const start = ctx.startOffset! + options.start!
+    const end = ctx.startOffset! + options.end!
+    propOptions = id
+    hoisted = [
+      `\nconst ${id} = `,
+      ctx.s.cut(start, end, {
+        placeholder: { source: ctx.s.source, start, end, text: id },
+      }),
+    ]
+    runtimeOptionNodes.push(options)
   }
 
   ctx.modelDecls[modelName] = {
     type,
-    options: optionsString,
+    options: propOptions,
     runtimeOptionNodes,
+    hoisted,
     identifier:
       declId && declId.type === 'Identifier' ? declId.name : undefined,
   }
@@ -101,13 +130,13 @@ export function processDefineModel(
   ctx.bindingMetadata[modelName] = BindingTypes.PROPS
 
   // defineModel -> useModel
-  ctx.s.overwrite(
+  ctx.replace(
     ctx.startOffset! + node.callee.start!,
     ctx.startOffset! + node.callee.end!,
     ctx.helper('useModel'),
   )
   // inject arguments
-  ctx.s.appendLeft(
+  ctx.s.insertAfter(
     ctx.startOffset! +
       (node.arguments.length ? node.arguments[0].start! : node.end! - 1),
     `__props, ` +
@@ -119,11 +148,11 @@ export function processDefineModel(
   return true
 }
 
-export function genModelProps(ctx: ScriptCompileContext): string | undefined {
+export function genModelProps(ctx: ScriptCompileContext): Code | undefined {
   if (!ctx.hasDefineModelCall) return
 
   const isProd = !!ctx.options.isProd
-  let modelPropsDecl = ''
+  const modelPropsDecl: Code[] = []
   for (const [name, { type, options: runtimeOptions }] of Object.entries(
     ctx.modelDecls,
   )) {
@@ -157,11 +186,11 @@ export function genModelProps(ctx: ScriptCompileContext): string | undefined {
       }
     }
 
-    let decl: string
+    let decl: Code
     if (codegenOptions && runtimeOptions) {
       decl = ctx.isTS
-        ? `{ ${codegenOptions}, ...${runtimeOptions} }`
-        : `Object.assign({ ${codegenOptions} }, ${runtimeOptions})`
+        ? [`{ ${codegenOptions}, ...`, runtimeOptions, ` }`]
+        : [`Object.assign({ ${codegenOptions} }, `, runtimeOptions, `)`]
     } else if (codegenOptions) {
       decl = `{ ${codegenOptions} }`
     } else if (runtimeOptions) {
@@ -169,11 +198,11 @@ export function genModelProps(ctx: ScriptCompileContext): string | undefined {
     } else {
       decl = `{}`
     }
-    modelPropsDecl += `\n    ${JSON.stringify(name)}: ${decl},`
+    modelPropsDecl.push(`\n    ${JSON.stringify(name)}: `, decl, `,`)
 
     // also generate modifiers prop
     const modifierPropName = JSON.stringify(getModifierPropName(name))
-    modelPropsDecl += `\n    ${modifierPropName}: {},`
+    modelPropsDecl.push(`\n    ${modifierPropName}: {},`)
   }
-  return `{${modelPropsDecl}\n  }`
+  return [`{`, modelPropsDecl, `\n  }`]
 }

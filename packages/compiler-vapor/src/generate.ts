@@ -1,7 +1,9 @@
-import type {
-  CodegenOptions as BaseCodegenOptions,
-  BaseCodegenResult,
-  SimpleExpressionNode,
+import {
+  type CodegenOptions as BaseCodegenOptions,
+  type BaseCodegenResult,
+  type CodegenPiece,
+  type SimpleExpressionNode,
+  createSourceMap,
 } from '@vue/compiler-dom'
 import type {
   BlockIRNode,
@@ -15,10 +17,8 @@ import { extend, remove } from '@vue/shared'
 import { genBlockContent } from './generators/block'
 import { genTemplates } from './generators/template'
 import {
-  type CodeFragment,
   INDENT_END,
   INDENT_START,
-  LF,
   NEWLINE,
   buildCodeFragment,
   codeFragmentToString,
@@ -35,6 +35,9 @@ const helperNameAliases: Record<string, string> = {
 
 export class CodegenContext {
   options: Required<CodegenOptions>
+
+  /** @internal */
+  pieces?: CodegenPiece[]
 
   bindingNames: Set<string>
 
@@ -208,6 +211,8 @@ export class CodegenContext {
       mode: 'module',
       prefixIdentifiers: true,
       sourceMap: false,
+      pieceSource: null,
+      pieceOffset: 0,
       filename: `template.vue.html`,
       scopeId: null,
       runtimeGlobalName: `Vue`,
@@ -284,29 +289,18 @@ export function generate(
     imports + templates + genDynamicPropNames(context) + delegates
 
   if (!inline) {
-    let newlineCount = 0
-    for (
-      let i = preamble.indexOf('\n');
-      i !== -1;
-      i = preamble.indexOf('\n', i + 1)
-    ) {
-      newlineCount++
-    }
-    if (newlineCount) {
-      frag.unshift(...new Array<CodeFragment>(newlineCount).fill(LF))
-    }
-  }
-
-  let [code, map] = codeFragmentToString(frag, context)
-  if (!inline) {
-    code = preamble + code
+    frag.unshift(preamble)
   }
 
   return {
-    code,
+    code: codeFragmentToString(frag, context),
     ast: ir,
     preamble,
-    map: map && map.toJSON(),
+    map:
+      context.pieces && !context.options.pieceSource
+        ? createSourceMap(context.options.filename, context.pieces)
+        : undefined,
+    pieces: context.pieces,
     helpers: new Set<string>(Array.from(context.helpers.keys())),
   }
 }

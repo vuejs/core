@@ -8,6 +8,7 @@ import {
   NodeTypes,
   type RootNode,
   type SimpleExpressionNode,
+  type SourceLocation,
   type TemplateChildNode,
   defaultOnError,
   defaultOnWarn,
@@ -63,7 +64,8 @@ export type DirectiveTransform = (
 export interface DirectiveTransformResult {
   key: SimpleExpressionNode
   value: SimpleExpressionNode
-  toDisplayString?: boolean
+  // the loc of the v-text that displays the value
+  toDisplayString?: SourceLocation
   modifier?: '.' | '^'
   runtimeCamelize?: boolean
   handler?: boolean

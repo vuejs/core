@@ -187,7 +187,7 @@ export function doCompileStyle(
       return result
         .then(result => ({
           code: result.css || '',
-          map: result.map && result.map.toJSON(),
+          map: result.map && toRawSourceMap(result.map),
           errors,
           modules: cssModules,
           rawResult: result,
@@ -212,11 +212,17 @@ export function doCompileStyle(
 
   return {
     code: code || ``,
-    map: outMap && outMap.toJSON(),
+    map: outMap && toRawSourceMap(outMap),
     errors,
     rawResult: result,
     dependencies,
   }
+}
+
+// postcss's map is typed by source-map-js, which declares `version` a string
+// though it writes 3
+function toRawSourceMap(map: SourceMap): RawSourceMap {
+  return { ...map.toJSON(), version: 3 }
 }
 
 function preprocess(

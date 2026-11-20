@@ -28,9 +28,15 @@ export {
   NewlineType,
   type CodegenContext,
   type CodegenResult,
-  type CodegenSourceMapGenerator,
   type RawSourceMap,
   type BaseCodegenResult,
+} from './codegen'
+/** @internal for the codegen of compiler-vapor and compiler-sfc */
+export {
+  createPieceWriter,
+  createSourceMap,
+  type CodegenPiece,
+  type PieceWriter,
 } from './codegen'
 export {
   ErrorCodes,

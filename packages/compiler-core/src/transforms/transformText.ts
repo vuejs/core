@@ -110,6 +110,7 @@ export const transformText: NodeTransform = (node, context) => {
             codegenNode: createCallExpression(
               context.helper(CREATE_TEXT),
               callArgs,
+              child.loc,
             ),
           }
         }

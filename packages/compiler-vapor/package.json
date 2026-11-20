@@ -45,7 +45,6 @@
     "@babel/parser": "catalog:",
     "@vue/compiler-dom": "workspace:*",
     "@vue/shared": "workspace:*",
-    "estree-walker": "catalog:",
-    "source-map-js": "catalog:"
+    "estree-walker": "catalog:"
   }
 }

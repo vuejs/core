@@ -1,6 +1,5 @@
 import {
   type BindingMetadata,
-  type CodegenSourceMapGenerator,
   type CompilerError,
   type ElementNode,
   NodeTypes,
@@ -11,7 +10,7 @@ import {
   createRoot,
 } from '@vue/compiler-core'
 import * as CompilerDOM from '@vue/compiler-dom'
-import { SourceMapGenerator } from 'source-map-js'
+import { type SourceMapSegment, encodeMappings } from 'muggle-string'
 import type { TemplateCompiler } from './compileTemplate'
 import { parseCssVars } from './style/cssVars'
 import { createCache } from './cache'
@@ -186,6 +185,7 @@ export function parse(
 
           if (!templateBlock.attrs.src) {
             templateBlock.ast = createRoot(node.children, source)
+            templateBlock.ast.loc = templateBlock.loc
           }
 
           // warn against 2.x <template functional>
@@ -390,31 +390,27 @@ function generateSourceMap(
   lineOffset: number,
   columnOffset: number,
 ): RawSourceMap {
-  const map = new SourceMapGenerator({
-    file: filename.replace(/\\/g, '/'),
-    sourceRoot: sourceRoot.replace(/\\/g, '/'),
-  }) as unknown as CodegenSourceMapGenerator
-  map.setSourceContent(filename, source)
-  map._sources.add(filename)
-  generated.split(splitRE).forEach((line, index) => {
+  const mappings = generated.split(splitRE).map((line, index) => {
+    const segments: SourceMapSegment[] = []
     if (!emptyRE.test(line)) {
-      const originalLine = index + 1 + lineOffset
-      const generatedLine = index + 1
+      const originalLine = index + lineOffset
       for (let i = 0; i < line.length; i++) {
         if (!/\s/.test(line[i])) {
-          map._mappings.add({
-            originalLine,
-            originalColumn: i + columnOffset,
-            generatedLine,
-            generatedColumn: i,
-            source: filename,
-            name: null,
-          })
+          segments.push([i, 0, originalLine, i + columnOffset])
         }
       }
     }
+    return segments
   })
-  return map.toJSON()
+  return {
+    version: 3,
+    sources: [filename],
+    names: [],
+    mappings: encodeMappings(mappings),
+    file: filename.replace(/\\/g, '/'),
+    sourceRoot: sourceRoot.replace(/\\/g, '/'),
+    sourcesContent: [source],
+  }
 }
 
 function padContent(

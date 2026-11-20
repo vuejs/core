@@ -196,6 +196,21 @@ return () => {}
 }"
 `;
 
+exports[`sfc reactive props destructure > errors > should error on await in a default value wrapped in a factory 1`] = `
+"import { mergeDefaults as _mergeDefaults } from 'vue'
+
+export default {
+  props: /*@__PURE__*/_mergeDefaults(['foo'], {
+  foo: async () => await bar(), __skip_foo: true
+}),
+  setup(__props) {
+
+return () => {}
+}
+
+}"
+`;
+
 exports[`sfc reactive props destructure > for-of loop variable shadowing 1`] = `
 "import { defineComponent as _defineComponent } from 'vue'
 interface Props {

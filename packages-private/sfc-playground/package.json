@@ -13,7 +13,7 @@
     "vite": "catalog:"
   },
   "dependencies": {
-    "@vue/repl": "^4.7.2",
+    "@vue/repl": "https://pkg.pr.new/vuejs/repl/@vue/repl@59212b9",
     "file-saver": "^2.0.5",
     "jszip": "^3.10.2",
     "vue": "workspace:*"

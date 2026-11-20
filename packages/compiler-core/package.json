@@ -50,7 +50,7 @@
     "@vue/shared": "workspace:*",
     "entities": "catalog:",
     "estree-walker": "catalog:",
-    "source-map-js": "catalog:"
+    "muggle-string": "catalog:"
   },
   "devDependencies": {
     "@babel/types": "catalog:"

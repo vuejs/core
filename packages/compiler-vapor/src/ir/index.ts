@@ -3,6 +3,7 @@ import type {
   DirectiveNode,
   RootNode,
   SimpleExpressionNode,
+  SourceLocation,
   TemplateChildNode,
 } from '@vue/compiler-dom'
 import type { Namespace, Prettify, VaporSingleRoot } from '@vue/shared'
@@ -215,6 +216,8 @@ export interface SetTextIRNode extends BaseIRNode {
   type: IRNodeTypes.SET_TEXT
   element: number
   values: SimpleExpressionNode[]
+  // the text, interpolation or v-text that displays each value
+  locs: SourceLocation[]
   generated?: boolean // whether this is a generated empty text node by `processTextLikeContainer`
 }
 

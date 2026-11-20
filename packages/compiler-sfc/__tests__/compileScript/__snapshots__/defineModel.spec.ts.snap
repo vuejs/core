@@ -77,6 +77,72 @@ return { modelValue }
 })"
 `;
 
+exports[`defineModel() > options that are not an object of static keys are evaluated once 1`] = `
+"import { useModel as _useModel } from 'vue'
+import { makeOptions, shared, key } from './m'
+      
+const __modelOptions0 = makeOptions(1)
+export default {
+  props: {
+    "n": __modelOptions0,
+    "nModifiers": {},
+  },
+  emits: ["update:n"],
+  setup(__props, { expose: __expose }) {
+  __expose();
+
+      const n = _useModel(__props, 'n', __modelOptions0)
+      
+return { n, get makeOptions() { return makeOptions }, get shared() { return shared }, get key() { return key } }
+}
+
+}"
+`;
+
+exports[`defineModel() > options that are not an object of static keys are evaluated once 2`] = `
+"import { useModel as _useModel } from 'vue'
+import { makeOptions, shared, key } from './m'
+      
+const __modelOptions0 = { ...shared, get: v => v + 1 }
+export default {
+  props: {
+    "n": __modelOptions0,
+    "nModifiers": {},
+  },
+  emits: ["update:n"],
+  setup(__props, { expose: __expose }) {
+  __expose();
+
+      const n = _useModel(__props, 'n', __modelOptions0)
+      
+return { n, get makeOptions() { return makeOptions }, get shared() { return shared }, get key() { return key } }
+}
+
+}"
+`;
+
+exports[`defineModel() > options that are not an object of static keys are evaluated once 3`] = `
+"import { useModel as _useModel } from 'vue'
+import { makeOptions, shared, key } from './m'
+      
+const __modelOptions0 = { [key]: 5 }
+export default {
+  props: {
+    "n": __modelOptions0,
+    "nModifiers": {},
+  },
+  emits: ["update:n"],
+  setup(__props, { expose: __expose }) {
+  __expose();
+
+      const n = _useModel(__props, 'n', __modelOptions0)
+      
+return { n, get makeOptions() { return makeOptions }, get shared() { return shared }, get key() { return key } }
+}
+
+}"
+`;
+
 exports[`defineModel() > usage w/ props destructure 1`] = `
 "import { useModel as _useModel, mergeModels as _mergeModels, defineComponent as _defineComponent } from 'vue'
 
@@ -273,16 +339,17 @@ exports[`defineModel() > w/ template literal name with expressions falls back to
 "import { useModel as _useModel } from 'vue'
 const name = 'x'
       
+const __modelOptions0 = \`\${name}\`
 export default {
   props: {
-    "modelValue": \`\${name}\`,
+    "modelValue": __modelOptions0,
     "modelModifiers": {},
   },
   emits: ["update:modelValue"],
   setup(__props, { expose: __expose }) {
   __expose();
 
-      const m = _useModel(__props, "modelValue", \`\${name}\`)
+      const m = _useModel(__props, "modelValue", __modelOptions0)
       
 return { name, m }
 }

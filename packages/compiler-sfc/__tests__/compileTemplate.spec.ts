@@ -1,4 +1,7 @@
-import { type RawSourceMap, SourceMapConsumer } from 'source-map-js'
+import {
+  decodeSourceMap,
+  originalPositionFor,
+} from '../../compiler-core/__tests__/testUtils'
 import { parse as babelParse } from '@babel/parser'
 import {
   type SFCTemplateCompileOptions,
@@ -6,6 +9,7 @@ import {
 } from '../src/compileTemplate'
 import { type SFCTemplateBlock, parse } from '../src/parse'
 import { compileScript } from '../src'
+import * as CompilerDOM from '@vue/compiler-dom'
 import { getPositionInCode } from './utils'
 
 function compile(opts: Omit<SFCTemplateCompileOptions, 'id'>) {
@@ -62,6 +66,44 @@ body
   })
 
   expect(result.errors.length).toBe(0)
+})
+
+test('preprocessed template has no source map', () => {
+  const template = parse(`<template lang="pug">\np {{ foobar }}\n</template>`, {
+    filename: 'example.vue',
+    sourceMap: true,
+  }).descriptor.template as SFCTemplateBlock
+
+  for (const ast of [template.ast, undefined]) {
+    const result = compile({
+      filename: 'example.vue',
+      source: template.content,
+      ast,
+      preprocessLang: template.lang,
+    })
+    expect(result.code).toMatch(`foobar`)
+    expect(result.map).toBeUndefined()
+  }
+})
+
+// expected to fail: the preprocessor gives no positions of its output in the
+// template
+test.fails('source map of a preprocessed template', () => {
+  const template = parse(`<template lang="pug">\np {{ foobar }}\n</template>`, {
+    filename: 'example.vue',
+    sourceMap: true,
+  }).descriptor.template as SFCTemplateBlock
+
+  const result = compile({
+    filename: 'example.vue',
+    source: template.content,
+    preprocessLang: template.lang,
+  })
+  expect(result.map).toBeDefined()
+  const mappings = decodeSourceMap(result.map as any)
+  expect(
+    originalPositionFor(mappings, getPositionInCode(result.code, 'foobar')),
+  ).toMatchObject(getPositionInCode(template.content, 'foobar'))
 })
 
 test('preprocess pug with indents and blank lines', () => {
@@ -152,10 +194,124 @@ test('source map', () => {
   expect(map!.sources).toEqual([`example.vue`])
   expect(map!.sourcesContent).toEqual([template.content])
 
-  const consumer = new SourceMapConsumer(map as RawSourceMap)
+  const mappings = decodeSourceMap(map as any)
   expect(
-    consumer.originalPositionFor(getPositionInCode(code, 'foobar')),
+    originalPositionFor(mappings, getPositionInCode(code, 'foobar')),
   ).toMatchObject(getPositionInCode(template.content, `foobar`))
+})
+
+const customCompiler = {
+  parse: CompilerDOM.parse,
+  compile: CompilerDOM.compile,
+}
+
+test('source map: custom compiler with the AST of the descriptor', () => {
+  const source = `<script setup>
+const foobar = 1
+</script>
+
+<template>
+  <div><p>{{ foobar }}</p></div>
+</template>
+`
+  const template = parse(source, {
+    filename: 'example.vue',
+    sourceRoot: 'src',
+    sourceMap: true,
+  }).descriptor.template!
+
+  const { code, map } = compile({
+    filename: 'example.vue',
+    source: template.content,
+    ast: template.ast,
+    compiler: customCompiler,
+  })
+
+  expect(map!.sources).toEqual([`example.vue`])
+  expect(map!.sourcesContent).toEqual([source])
+
+  const mappings = decodeSourceMap(map as any)
+  expect(
+    originalPositionFor(mappings, getPositionInCode(code, 'foobar')),
+  ).toMatchObject({ source: `example.vue`, line: 6, column: 13 })
+})
+
+test('source map: inMap without AST is of the source', () => {
+  const template = parse(
+    `<script setup>
+</script>
+<template><p>{{ foobar }}</p></template>`,
+    {
+      filename: 'example.vue',
+      sourceMap: true,
+    },
+  ).descriptor.template!
+
+  const { code, map } = compile({
+    filename: 'example.vue',
+    source: template.content,
+    inMap: template.map,
+  })
+
+  expect(map!.sourcesContent).toEqual([template.content])
+  const mappings = decodeSourceMap(map as any)
+  expect(
+    originalPositionFor(mappings, getPositionInCode(code, 'foobar')),
+  ).toMatchObject(getPositionInCode(template.content, 'foobar'))
+})
+
+test('custom compiler errors are positioned in the SFC', () => {
+  for (const [source, line, column] of [
+    [
+      `<script setup>\nconst html = \`\n  <p v-if="a +"></p>\n\`\n</script>\n<template>\n  <p v-if="a +"></p>\n</template>\n`,
+      7,
+      12,
+    ],
+    [
+      `<script setup>\n</script>\n<template><p v-if="a +"></p></template>\n`,
+      3,
+      20,
+    ],
+  ] as const) {
+    const template = parse(source, { filename: 'example.vue' }).descriptor
+      .template!
+
+    const { errors } = compile({
+      filename: 'example.vue',
+      source: template.content,
+      ast: template.ast,
+      compiler: customCompiler,
+    })
+
+    const offset = source.indexOf('a +', source.indexOf('<template>'))
+    expect(errors[0]).toMatchObject({
+      loc: { start: { offset, line, column } },
+    })
+  }
+})
+
+test('source map: custom compiler, on the line of the tag', () => {
+  const source = `<script setup>
+const foobar = 1
+</script>
+<template><p>{{ foobar }}</p></template>
+`
+  const template = parse(source, {
+    filename: 'example.vue',
+    sourceMap: true,
+  }).descriptor.template!
+
+  const { code, map } = compile({
+    filename: 'example.vue',
+    source: template.content,
+    ast: template.ast,
+    compiler: customCompiler,
+  })
+
+  const mappings = decodeSourceMap(map as any)
+  expect(
+    originalPositionFor(mappings, getPositionInCode(code, 'foobar')),
+  ).toMatchObject({ line: 4, column: 16 })
 })
 
 test('source map: v-if generated comment should not have original position', () => {
@@ -176,11 +332,11 @@ test('source map: v-if generated comment should not have original position', () 
   expect(map!.sources).toEqual([`example.vue`])
   expect(map!.sourcesContent).toEqual([template.content])
 
-  const consumer = new SourceMapConsumer(map as RawSourceMap)
+  const mappings = decodeSourceMap(map as any)
   const commentNode = code.match(/_createCommentVNode\("v-if", true\)/)
   expect(commentNode).not.toBeNull()
   const commentPosition = getPositionInCode(code, commentNode![0])
-  const originalPosition = consumer.originalPositionFor(commentPosition)
+  const originalPosition = originalPositionFor(mappings, commentPosition)
   // the comment node should not be mapped to the original source
   expect(originalPosition.column).toBeNull()
   expect(originalPosition.line).toBeNull()
@@ -211,9 +367,9 @@ test('should work w/ AST from descriptor', () => {
   // the source corresponds to the entire SFC
   expect(map!.sourcesContent).toEqual([source])
 
-  const consumer = new SourceMapConsumer(map as RawSourceMap)
+  const mappings = decodeSourceMap(map as any)
   expect(
-    consumer.originalPositionFor(getPositionInCode(code, 'foobar')),
+    originalPositionFor(mappings, getPositionInCode(code, 'foobar')),
   ).toMatchObject(getPositionInCode(source, `foobar`))
 
   expect(code).toBe(
@@ -249,9 +405,9 @@ test('should work w/ AST from descriptor in SSR mode', () => {
   // the source corresponds to the entire SFC
   expect(map!.sourcesContent).toEqual([source])
 
-  const consumer = new SourceMapConsumer(map as RawSourceMap)
+  const mappings = decodeSourceMap(map as any)
   expect(
-    consumer.originalPositionFor(getPositionInCode(code, 'foobar')),
+    originalPositionFor(mappings, getPositionInCode(code, 'foobar')),
   ).toMatchObject(getPositionInCode(source, `foobar`))
 
   expect(code).toBe(

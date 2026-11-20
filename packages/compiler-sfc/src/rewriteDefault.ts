@@ -1,5 +1,10 @@
 import { parse } from '@babel/parser'
-import MagicString from 'magic-string'
+import {
+  type Source,
+  type SourceRewrite,
+  createSourceRewrite,
+  rewritePieceText,
+} from 'muggle-string'
 import type { ParserPlugin } from '@babel/parser'
 import type { Identifier, Statement } from '@babel/types'
 import { resolveParserPlugins } from './script/context'
@@ -13,11 +18,15 @@ export function rewriteDefault(
     sourceType: 'module',
     plugins: resolveParserPlugins('js', parserPlugins),
   }).program.body
-  const s = new MagicString(input)
+  const s = createSourceRewrite({ content: input })
 
   rewriteDefaultAST(ast, s, as)
 
-  return s.toString()
+  let code = ''
+  s.render(0, input.length, piece => {
+    code += rewritePieceText(piece)
+  })
+  return code
 }
 
 /**
@@ -26,11 +35,13 @@ export function rewriteDefault(
  */
 export function rewriteDefaultAST(
   ast: Statement[],
-  s: MagicString,
+  s: SourceRewrite<Source>,
   as: string,
 ): void {
+  const input = s.source.content
+  const append = (code: string) => s.insertBefore(input.length, code)
   if (!hasDefaultExport(ast)) {
-    s.append(`\nconst ${as} = {}`)
+    append(`\nconst ${as} = {}`)
     return
   }
 
@@ -45,10 +56,10 @@ export function rewriteDefaultAST(
                 node.declaration.decorators.length - 1
               ].end!
             : node.start!
-        s.overwrite(start, node.declaration.id.start!, ` class `)
-        s.append(`\nconst ${as} = ${node.declaration.id.name}`)
+        s.replace(start, node.declaration.id.start!, ` class `)
+        append(`\nconst ${as} = ${node.declaration.id.name}`)
       } else {
-        s.overwrite(node.start!, node.declaration.start!, `const ${as} = `)
+        s.replace(node.start!, node.declaration.start!, `const ${as} = `)
       }
     } else if (node.type === 'ExportNamedDeclaration') {
       for (const specifier of node.specifiers) {
@@ -59,30 +70,36 @@ export function rewriteDefaultAST(
         ) {
           if (node.source) {
             if (specifier.local.name === 'default') {
-              s.prepend(
+              s.insertAfter(
+                0,
                 `import { default as __VUE_DEFAULT__ } from '${node.source.value}'\n`,
               )
-              const end = specifierEnd(s, specifier.local.end!, node.end!)
-              s.remove(specifier.start!, end)
-              s.append(`\nconst ${as} = __VUE_DEFAULT__`)
+              const end = specifierEnd(input, specifier.local.end!, node.end!)
+              s.replace(specifier.start!, end, '')
+              append(`\nconst ${as} = __VUE_DEFAULT__`)
               continue
             } else {
-              s.prepend(
-                `import { ${s.slice(
+              s.insertAfter(
+                0,
+                `import { ${input.slice(
                   specifier.local.start!,
                   specifier.local.end!,
                 )} as __VUE_DEFAULT__ } from '${node.source.value}'\n`,
               )
-              const end = specifierEnd(s, specifier.exported.end!, node.end!)
-              s.remove(specifier.start!, end)
-              s.append(`\nconst ${as} = __VUE_DEFAULT__`)
+              const end = specifierEnd(
+                input,
+                specifier.exported.end!,
+                node.end!,
+              )
+              s.replace(specifier.start!, end, '')
+              append(`\nconst ${as} = __VUE_DEFAULT__`)
               continue
             }
           }
 
-          const end = specifierEnd(s, specifier.end!, node.end!)
-          s.remove(specifier.start!, end)
-          s.append(`\nconst ${as} = ${specifier.local.name}`)
+          const end = specifierEnd(input, specifier.end!, node.end!)
+          s.replace(specifier.start!, end, '')
+          append(`\nconst ${as} = ${specifier.local.name}`)
         }
       }
     }
@@ -105,18 +122,18 @@ export function hasDefaultExport(ast: Statement[]): boolean {
   return false
 }
 
-function specifierEnd(s: MagicString, end: number, nodeEnd: number | null) {
+function specifierEnd(input: string, end: number, nodeEnd: number | null) {
   // export { default   , foo } ...
   let hasCommas = false
   let oldEnd = end
   while (end < nodeEnd!) {
-    if (/\s/.test(s.slice(end, end + 1))) {
+    if (/\s/.test(input[end])) {
       end++
-    } else if (s.slice(end, end + 1) === ',') {
+    } else if (input[end] === ',') {
       end++
       hasCommas = true
       break
-    } else if (s.slice(end, end + 1) === '}') {
+    } else if (input[end] === '}') {
       break
     }
   }
