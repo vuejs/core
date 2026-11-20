@@ -184,10 +184,12 @@ export class TeleportFragment extends RenderContextFragment {
     const to = props.to
     const target = isString(to) ? querySelector(to) : to
     if (target) {
-      this.prepareTargetAnchors(target as ParentNode)
       // vdom creates the children with the teleport too: a teleport nested
       // in them claims its place right after this one, not after teleports
-      // created later
+      // created later. A disabled teleport mounts them before it takes its
+      // own place.
+      if (this.isDisabled) this.ensureChildrenInitialized()
+      this.prepareTargetAnchors(target as ParentNode)
       this.ensureChildrenInitialized()
     }
   }
@@ -422,7 +424,9 @@ export class TeleportFragment extends RenderContextFragment {
         isTeleportDeferred(this.resolvedProps!) ||
         // force defer when the parent is not connected to the DOM,
         // typically due to an early insertion caused by setInsertionState.
-        !this.parent!.isConnected
+        // Not once the target is claimed: the children are created by then,
+        // and their mounted hooks must find the content mounted.
+        (!this.parent!.isConnected && !this.targetAnchor)
       ) {
         this.queueTargetUpdate()
       } else {
