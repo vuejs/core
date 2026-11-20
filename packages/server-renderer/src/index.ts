@@ -14,6 +14,7 @@ export {
   // deprecated
   renderToStream,
 } from './renderToStream'
+export { ssrClearCompileCache } from './helpers/ssrCompile'
 
 // internal runtime helpers
 export * from './internal'
