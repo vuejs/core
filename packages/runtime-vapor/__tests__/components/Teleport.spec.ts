@@ -2403,3 +2403,103 @@ test('should reapply css vars when invalid target keeps children in main view', 
 
   expect(teleported.style.getPropertyValue('--color')).toBe('blue')
 })
+
+describe('mounts the content before the mounted hooks of its children', () => {
+  const Child = compile(
+    `<script setup vapor>
+      import { onMounted, useTemplateRef } from 'vue'
+      const input = useTemplateRef('input')
+      onMounted(() => input.value.focus())
+    </script>
+    <template>
+      <input ref="input">
+    </template>`,
+    ref(),
+  )
+  const Wrapper = compile(
+    `<template>
+      <Teleport to="#tp-mounted">
+        <section>
+          <components.Child />
+        </section>
+      </Teleport>
+    </template>`,
+    ref(),
+    { Child },
+  )
+
+  async function expectFocused(template: string) {
+    const root = document.createElement('div')
+    const target = document.createElement('div')
+    target.id = 'tp-mounted'
+    document.body.append(root, target)
+    const app = createVaporApp(compile(template, ref(), { Child, Wrapper }))
+    try {
+      app.mount(root)
+      await nextTick()
+      const input = target.querySelector('input')
+      expect(input).not.toBeNull()
+      expect(document.activeElement).toBe(input)
+    } finally {
+      app.unmount()
+      target.remove()
+      root.remove()
+    }
+  }
+
+  test('teleport inside an element', () =>
+    expectFocused(
+      `<template>
+        <div>
+          <Teleport to="#tp-mounted">
+            <section>
+              <components.Child />
+            </section>
+          </Teleport>
+        </div>
+      </template>`,
+    ))
+
+  test('teleport at the root of a component inside an element', () =>
+    expectFocused(
+      `<template>
+        <div>
+          <components.Wrapper />
+        </div>
+      </template>`,
+    ))
+})
+
+test('places an initially disabled teleport after the teleports nested in it', async () => {
+  const data = ref({ disabled: true })
+  const root = document.createElement('div')
+  const target = document.createElement('div')
+  target.id = 'tp-nested-disabled'
+  document.body.append(root, target)
+  const app = createVaporApp(
+    compile(
+      `<template>
+        <Teleport to="#tp-nested-disabled" :disabled="data.disabled">
+          <p>A</p>
+          <Teleport to="#tp-nested-disabled">
+            <p>B</p>
+          </Teleport>
+        </Teleport>
+      </template>`,
+      data,
+    ),
+  )
+  try {
+    app.mount(root)
+    await nextTick()
+    expect(target.textContent).toBe('B')
+
+    data.value.disabled = false
+    await nextTick()
+    expect(target.textContent).toBe('BA')
+  } finally {
+    app.unmount()
+    target.remove()
+    root.remove()
+  }
+})
