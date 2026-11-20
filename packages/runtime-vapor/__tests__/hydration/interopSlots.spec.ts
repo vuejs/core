@@ -3069,6 +3069,33 @@ describe('VDOM interop', () => {
     expect(container.querySelector('div > b')!.textContent).toBe('1')
   })
 
+  // on the server, `Part` renders in the slot call of `Wrapper`
+  test('hydrate vapor slot content of a vdom <component :is> tag in a vdom slot', async () => {
+    const { container, html } = await testWithVaporApp(
+      `<script setup>const components = _components</script>
+      <template>
+        <components.Wrapper>
+          <components.Part as="span">text <b>bold</b></components.Part>
+        </components.Wrapper>
+      </template>`,
+      {
+        Part: {
+          code: `<script setup>defineProps(['as'])</script>
+            <template><component :is="as"><slot /></component></template>`,
+          vapor: false,
+        },
+        Wrapper: {
+          code: `<script setup>const data = _data</script>
+            <template><div><slot /></div></template>`,
+          vapor: false,
+        },
+      },
+      ref({}),
+    )
+    expect(container.innerHTML).toBe(html)
+    expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+  })
+
   test('keeps a ref on hydrated vapor slot content in sync with its root', async () => {
     const data = ref({ show: true, onRef: vi.fn() })
     const Presence = {
