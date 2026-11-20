@@ -28,6 +28,51 @@ describe('toDisplayString', () => {
     expect(toDisplayString(ref('hello'))).toBe('hello')
   })
 
+  test.each([
+    ['array', (value: bigint) => [value], '[\n  "9007199254740993"\n]'],
+    [
+      'object',
+      (value: bigint) => ({ value }),
+      '{\n  "value": "9007199254740993"\n}',
+    ],
+    [
+      'nested ref',
+      (value: bigint) => ({ value: ref(value) }),
+      '{\n  "value": "9007199254740993"\n}',
+    ],
+    [
+      'map',
+      (value: bigint) => new Map([['value', value]]),
+      '{\n  "Map(1)": {\n    "value =>": "9007199254740993"\n  }\n}',
+    ],
+    [
+      'set',
+      (value: bigint) => new Set([value]),
+      '{\n  "Set(1)": [\n    "9007199254740993"\n  ]\n}',
+    ],
+  ])('bigint values nested in %s', (_, wrap, expected) => {
+    const value = BigInt('9007199254740993')
+    expect(toDisplayString(value)).toBe('9007199254740993')
+    expect(toDisplayString(ref(value))).toBe('9007199254740993')
+    expect(toDisplayString(wrap(value))).toBe(expected)
+  })
+
+  test('bigint display preserves precision and existing serialization hooks', () => {
+    const positive = BigInt('123456789012345678901234567890')
+    const negative = -positive
+    expect(toDisplayString([BigInt(0), negative])).toBe(
+      '[\n  "0",\n  "-123456789012345678901234567890"\n]',
+    )
+    expect(toDisplayString({ toJSON: () => positive })).toBe(
+      '"123456789012345678901234567890"',
+    )
+    expect(toDisplayString({ value: positive, toString: () => 'custom' })).toBe(
+      'custom',
+    )
+    // Do not change the native BigInt serialization contract globally.
+    expect(() => JSON.stringify({ value: positive })).toThrow(TypeError)
+  })
+
   test('symbol values', () => {
     expect(toDisplayString(Symbol('hello'))).toBe('Symbol(hello)')
     expect(toDisplayString(ref(Symbol('hello')))).toBe('Symbol(hello)')
