@@ -30,8 +30,8 @@ describe('defineProps w/ type declaration', () => {
   // @ts-expect-error
   props.bar
 
-  expectType<boolean>(props.bool)
-  expectType<boolean>(props.boolAndUndefined)
+  expectType<boolean | undefined>(props.bool)
+  expectType<boolean | undefined>(props.boolAndUndefined)
 })
 
 describe('defineProps w/ never prop', () => {
@@ -49,7 +49,7 @@ describe('defineProps w/ generics', () => {
     const props = defineProps<{ foo: T; bar: string; x?: boolean }>()
     expectType<T>(props.foo)
     expectType<string>(props.bar)
-    expectType<boolean>(props.x)
+    expectType<boolean | undefined>(props.x)
   }
   test()
 })
@@ -97,8 +97,8 @@ describe('defineProps w/ type declaration + withDefaults', <T extends
   expectType<string>(res.z)
   expectType<T>(res.foo)
 
-  expectType<boolean>(res.bool)
-  expectType<boolean>(res.boolAndUndefined)
+  expectType<boolean | undefined>(res.bool)
+  expectType<boolean | undefined>(res.boolAndUndefined)
 })
 
 describe('defineProps w/ union type declaration + withDefaults', () => {
@@ -215,7 +215,7 @@ describe('defineProps w/ generic type declaration + withDefaults', <T extends
   expectType<TString>(res.generic3)
   expectType<TA>(res.generic4)
 
-  expectType<boolean>(res.bool)
+  expectType<boolean | undefined>(res.bool)
 })
 
 describe('withDefaults w/ boolean type', () => {
