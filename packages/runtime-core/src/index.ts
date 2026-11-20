@@ -67,6 +67,10 @@ export { useModel } from './helpers/useModel'
 export { useTemplateRef, type TemplateRef } from './helpers/useTemplateRef'
 export { useId } from './helpers/useId'
 export {
+  useInstanceInfo,
+  type ComponentInstanceInfo,
+} from './helpers/useInstanceInfo'
+export {
   hydrateOnIdle,
   hydrateOnVisible,
   hydrateOnMediaQuery,
@@ -104,11 +108,6 @@ export {
 // For getting a hold of the internal instance in setup() - useful for advanced
 // plugins
 export { getCurrentInstance } from './component'
-
-/**
- * @internal
- */
-export { useInstanceOption } from './component'
 
 // For raw render function users
 export { h } from './h'
@@ -722,6 +721,7 @@ export {
   getAttributeMismatch,
   isHydrating,
   isHydratingEnabled,
+  collectHydrationElements,
   logMismatchError,
   resolveCssVars,
 } from './hydration'

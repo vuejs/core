@@ -139,6 +139,7 @@ import {
   advanceHydrationNode,
   claimAnchor,
   cleanupHydrationTail,
+  collectHydratingRoots,
   currentHydrationNode,
   enterComponentRange,
   enterHydrationCursor,
@@ -406,7 +407,7 @@ export function createComponent(
 
   const _insertionParent = insertionParent
   const _insertionAnchor = insertionAnchor
-  let hydration: ComponentHydration | null = null
+  let hydration: ComponentRange | null = null
   let pendingAsyncHydration = false
   if (isHydrating) {
     hydration = enterComponentHydration(
@@ -605,6 +606,7 @@ export function createComponent(
       appContext,
       ce,
     )
+    if (hydration) hydration.instance = instance
     if (key !== undefined) instance.$key = key
     if (inputScope) {
       instance.inputScope = inputScope
@@ -731,10 +733,6 @@ export function createComponent(
   }
 }
 
-interface ComponentHydration extends ComponentRange {
-  cursor: HydrationCursor
-}
-
 /**
  * Open a component's SSR range: claim the `{` under the cursor, if `claims`,
  * and its close. A vapor component's server render begins with a node of
@@ -743,7 +741,7 @@ interface ComponentHydration extends ComponentRange {
  * a range. Shared by creation and by the deferred render of an async setup,
  * which re-enters the range once setup has settled.
  */
-function enterComponentHydration(claims: boolean): ComponentHydration {
+function enterComponentHydration(claims: boolean): ComponentRange {
   const cursor = enterHydrationCursor()
   const start = cursor.start
   let close: Node | null = null
@@ -756,12 +754,13 @@ function enterComponentHydration(claims: boolean): ComponentHydration {
       unit = start
     }
   }
-  const hydration: ComponentHydration = {
+  const hydration: ComponentRange = {
     cursor,
     close,
     unit,
     depth: 0,
     prev: null,
+    instance: null,
   }
   enterComponentRange(hydration)
   return hydration
@@ -784,7 +783,7 @@ function wrapsComponent(component: VaporComponent): boolean {
  * range is trimmed first and the cursor moves past the close marker.
  */
 function exitComponentHydration(
-  hydration: ComponentHydration,
+  hydration: ComponentRange,
   finalizeBoundary: boolean,
 ): void {
   exitComponentRange(hydration)
@@ -1303,12 +1302,37 @@ export class VaporComponentInstance<
     const vnode = isInteropEnabled && this.interopVNode
     return Object.keys(vnode ? vnode.props || EMPTY_OBJ : this.rawValues)
   }
+
+  // Read by useInstanceInfo. `block` is not set while the block fn runs.
+  rootEls(roots: Element[]): void {
+    if (this.block) collectRootElements(this.block, roots)
+    else if (isHydrating) collectHydratingRoots(this, roots)
+  }
+
+  hydrating(): boolean {
+    return isHydrating && !this.isMounted
+  }
 }
 
 export function isVaporComponent(
   value: unknown,
 ): value is VaporComponentInstance {
   return value instanceof VaporComponentInstance
+}
+
+function collectRootElements(block: Block, roots: Element[]): void {
+  if (block instanceof Element) {
+    roots.push(block)
+  } else if (isVaporComponent(block)) {
+    collectRootElements(block.block, roots)
+  } else if (isArray(block)) {
+    for (let i = 0; i < block.length; i++) collectRootElements(block[i], roots)
+  } else if (
+    isFragment(block) &&
+    !(isTeleportEnabled && isTeleportFragment(block))
+  ) {
+    collectRootElements(block.nodes, roots)
+  }
 }
 
 /**
@@ -1646,6 +1670,7 @@ export function mountComponent(
             getBlockFirstNode(pendingBlock)!,
             () => {
               const hydration = enterComponentHydration(true)
+              hydration.instance = instance
               try {
                 withDeferredHydrationBoundary(renderAndMount)
               } finally {

@@ -17,6 +17,7 @@ import {
   render,
   renderSlot,
   useHost,
+  useInstanceInfo,
   useShadowRoot,
 } from '../src'
 
@@ -2036,6 +2037,19 @@ describe('defineCustomElement', () => {
       const el = container.childNodes[0] as VueElement
       const style = el.shadowRoot?.querySelector('style')!
       expect(style.textContent).toBe(`div { color: red; }`)
+    })
+
+    test('useInstanceInfo().ce', () => {
+      let ce: any
+      const Foo = defineCustomElement({
+        setup() {
+          ce = useInstanceInfo()!.ce
+          return () => h('div', 'hello')
+        },
+      })
+      customElements.define('my-el-use-instance-ce', Foo)
+      container.innerHTML = `<my-el-use-instance-ce>`
+      expect(ce).toBe(container.childNodes[0])
     })
   })
 
