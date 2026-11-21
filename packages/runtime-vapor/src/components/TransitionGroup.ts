@@ -49,8 +49,10 @@ import {
   enterRowKeyContext,
   getTransitionElement,
   isValidTransitionBlock,
+  removeLeavingNodesImpl,
   resolveTransitionHooks,
   rootKeyContext,
+  trackLeavingNodes,
   transitionTypeOf,
   withDefaultKey,
 } from './Transition'
@@ -134,6 +136,7 @@ const VaporTransitionGroupImpl = /*@__PURE__*/ defineVaporComponent({
         NO,
         NO,
         NO,
+        removeLeavingNodesImpl,
       )
     }
 
@@ -268,6 +271,7 @@ const VaporTransitionGroupImpl = /*@__PURE__*/ defineVaporComponent({
     // `tag` is read once. (vdom only remounts the children on a tag change
     // because the parent re-render patches the root vnode type.)
     const tag = props.tag
+    trackLeavingNodes(instance, state, !tag)
     // without a tag the server wraps the group in a range of its own
     let close: Node | null = null
     if (isHydrating) {

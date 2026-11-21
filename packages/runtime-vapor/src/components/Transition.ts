@@ -110,8 +110,43 @@ export const ensureTransitionHooksRegistered = (): void => {
       awaitLeavingRootImpl,
       resolveOutletLeaveImpl,
       deferSlotRootFlipImpl,
+      removeLeavingNodesImpl,
     )
   }
+}
+
+// The Transitions and TransitionGroups whose leaving elements a removal takes
+const leavingOwners = new WeakMap<
+  VaporComponentInstance,
+  { state: TransitionState; isRange: boolean }
+>()
+
+// `isRange`: the owner is a vdom Fragment itself (a TransitionGroup without a
+// tag), so its own removal takes its leaving elements.
+export function trackLeavingNodes(
+  instance: VaporComponentInstance,
+  state: TransitionState,
+  isRange = false,
+): void {
+  leavingOwners.set(instance, { state, isRange })
+}
+
+// The leaves run to their end, as after vdom's removal of the range.
+export function removeLeavingNodesImpl(
+  instance: VaporComponentInstance,
+  parent: ParentNode,
+  inRange: boolean,
+): void {
+  const owner = leavingOwners.get(instance)
+  if (!owner || !(inRange || owner.isRange)) return
+  owner.state.leavingNodes.forEach(nodes => {
+    for (const key in nodes) {
+      const node = nodes[key]
+      if (node instanceof Node && node.parentNode === parent) {
+        parent.removeChild(node)
+      }
+    }
+  })
 }
 
 // Adopts the <template> the server wraps an appearing Transition's content in;
@@ -195,6 +230,7 @@ export const VaporTransition: FunctionalVaporComponent<TransitionProps> =
       : undefined
     if (!props.appear) performAppear = undefined
     const state: VaporTransitionState = useTransitionState()
+    trackLeavingNodes(instance, state)
     const { mode } = props
     __DEV__ && checkTransitionMode(mode)
 
