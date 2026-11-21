@@ -221,4 +221,54 @@ describe('ssr: inject <style vars>', () => {
       }"
     `)
   })
+
+  test('w/ transition', () => {
+    expect(
+      compile(`<Transition><div /></Transition>`, {
+        ssrCssVars: `{ color }`,
+      }).code,
+    ).toMatchInlineSnapshot(`
+      "const { mergeProps: _mergeProps } = require("vue")
+      const { ssrRenderAttrs: _ssrRenderAttrs } = require("vue/server-renderer")
+
+      return function ssrRender(_ctx, _push, _parent, _attrs) {
+        const _cssVars = { style: { color: _ctx.color }}
+        _push(\`<div\${_ssrRenderAttrs(_mergeProps(_attrs, _cssVars))}></div>\`)
+      }"
+    `)
+  })
+
+  test('w/ transition and v-if branches', () => {
+    expect(
+      compile(`<Transition><div v-if="ok" /><span v-else /></Transition>`, {
+        ssrCssVars: `{ color }`,
+      }).code,
+    ).toMatchInlineSnapshot(`
+      "const { ssrRenderAttrs: _ssrRenderAttrs } = require("vue/server-renderer")
+
+      return function ssrRender(_ctx, _push, _parent, _attrs) {
+        const _cssVars = { style: { color: _ctx.color }}
+        if (_ctx.ok) {
+          _push(\`<div\${_ssrRenderAttrs(_cssVars)}></div>\`)
+        } else {
+          _push(\`<span\${_ssrRenderAttrs(_cssVars)}></span>\`)
+        }
+      }"
+    `)
+  })
+
+  test('w/ transition inside keep-alive', () => {
+    expect(
+      compile(`<KeepAlive><Transition><div /></Transition></KeepAlive>`, {
+        ssrCssVars: `{ color }`,
+      }).code,
+    ).toMatchInlineSnapshot(`
+      "const { ssrRenderAttrs: _ssrRenderAttrs } = require("vue/server-renderer")
+
+      return function ssrRender(_ctx, _push, _parent, _attrs) {
+        const _cssVars = { style: { color: _ctx.color }}
+        _push(\`<div\${_ssrRenderAttrs(_cssVars)}></div>\`)
+      }"
+    `)
+  })
 })
