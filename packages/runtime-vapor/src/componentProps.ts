@@ -51,6 +51,7 @@ import { RenderEffect } from './renderEffect'
 import { interopKey, isInteropEnabled } from './vdomInteropState'
 import { isKeepAliveEnabled } from './keepAlive'
 import { isAsyncComponentEnabled } from './asyncComponentState'
+import { isSuspenseEnabled, isVaporSuspense } from './suspense'
 
 export const fallthroughOnlyKey: unique symbol = Symbol(
   __DEV__ ? 'fallthrough only' : '',
@@ -615,7 +616,16 @@ export function initInputs(
   instance: VaporComponentInstance,
   once = false,
 ): void {
-  const scope = (isKeepAliveEnabled && instance.inputScope) || instance.scope
+  const scope =
+    (isKeepAliveEnabled && instance.inputScope) ||
+    // the content of a Suspense delivers inputs from the branch scope: a
+    // branch switch that waits pauses them with the branch, as vdom does not
+    // patch the branch on screen while the next one is pending
+    (__FEATURE_SUSPENSE__ &&
+      isSuspenseEnabled &&
+      isVaporSuspense(instance.parent) &&
+      getCurrentScope()) ||
+    instance.scope
   const prevEffect = isKeepAliveEnabled && instance.inputEffect
   if (prevEffect) prevEffect.stop()
   const parent = instance.parent || instance

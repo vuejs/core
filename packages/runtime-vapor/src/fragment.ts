@@ -28,6 +28,7 @@ import {
   setCurrentInstance,
 } from '@vue/runtime-dom'
 import type { VaporComponent, VaporComponentInstance } from './component'
+import type { VaporSuspenseBoundary } from './components/Suspense'
 import type { NodeRef } from './apiTemplateRef'
 import type { KeyContext } from './components/Transition'
 import {
@@ -436,6 +437,9 @@ export class DynamicFragment extends RenderContextFragment {
   scopeIdOwners?: VaporComponentInstance[]
   // slot root: validity before the update in flight
   wasValid?: boolean
+  // the root of a VaporSuspense's content: the boundary takes over each
+  // branch switch, and shows the next branch once its async deps settle
+  suspenseRoot?: VaporSuspenseBoundary
   // Whether update() ran before. The very first update renders as part of
   // the mount and must not fire updated hooks; with an adopted template
   // anchor `parent` is non-null even then, so mount status can no longer be
@@ -495,6 +499,10 @@ export class DynamicFragment extends RenderContextFragment {
     const prevSub = setActiveSub()
     let reusingDeferredAnchor = false
     try {
+      if (__FEATURE_SUSPENSE__ && this.suspenseRoot && !isHydrating) {
+        this.suspenseRoot.switchBranch(render, key, noScope, branchKey)
+        return
+      }
       const liveParent = isHydrating ? null : this.anchor.parentNode
       // a held slot root renders detached; its outlet places the branch
       const parent =
@@ -693,6 +701,61 @@ export class DynamicFragment extends RenderContextFragment {
       for (let i = 0; i < bm.length; i++) bm[i](this.nodes)
     }
   }
+
+  /**
+   * @internal Suspense: renders a branch off the DOM. The branch on screen
+   * stays until `swapBranch` puts this one in its place.
+   */
+  renderDetached(render: BlockFn | undefined, noScope = false): DetachedBranch {
+    if (!render) return { nodes: EMPTY_BLOCK, scope: undefined }
+    const scope = !noScope || this.fallthrough ? new EffectScope() : undefined
+    const nodes = this.runWithRenderCtx(
+      () => (scope ? scope.run(render) : render()) || EMPTY_BLOCK,
+    )
+    const bm = this.bm
+    if (bm) {
+      for (let i = 0; i < bm.length; i++) bm[i](nodes)
+    }
+    return { nodes, scope }
+  }
+
+  /**
+   * @internal Suspense: removes the branch on screen and puts `branch` in its
+   * place. A fragment that is not in the DOM yet only takes the branch.
+   */
+  swapBranch(branch: DetachedBranch, key: any, branchKey?: any): void {
+    const parent = this.anchor.parentNode
+    const mounted = this.everUpdated
+    this.everUpdated = true
+    if (mounted) {
+      const bu = this.bu
+      if (bu) {
+        for (let i = 0; i < bu.length; i++) bu[i](this.nodes)
+      }
+    }
+    if (this.scope) this.scope.stop()
+    remove(this.nodes, parent || undefined)
+    this.scope = branch.scope
+    this.nodes = branch.nodes
+    this.branchKey = this.keyed ? key : branchKey
+    if (parent && this.fallthrough) {
+      this.runWithRenderCtx(() => this.fallthrough!(this.nodes))
+    }
+    if (this.scopeIdOwners) applyScopeIdOwners(this.scopeIdOwners)
+    if (parent) insert(this.nodes, parent, this.anchor)
+    if (mounted) {
+      const u = this.u
+      if (u) {
+        for (let i = 0; i < u.length; i++) u[i](this.nodes)
+      }
+    }
+  }
+}
+
+/** A branch that `DynamicFragment.renderDetached` rendered off the DOM. */
+export interface DetachedBranch {
+  nodes: Block
+  scope: EffectScope | undefined
 }
 
 // SlotFragment must live in the same module as DynamicFragment: `extends`

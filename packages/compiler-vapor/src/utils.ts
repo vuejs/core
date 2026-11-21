@@ -184,6 +184,11 @@ export function isTeleportTag(tag: string): boolean {
   return tag === 'teleport' || tag === 'vaporteleport'
 }
 
+export function isSuspenseTag(tag: string): boolean {
+  tag = tag.toLowerCase()
+  return tag === 'suspense' || tag === 'vaporsuspense'
+}
+
 export function isComponentTag(tag: string): boolean {
   return tag === 'component' || tag === 'Component'
 }
@@ -191,9 +196,8 @@ export function isComponentTag(tag: string): boolean {
 export function isBuiltInComponent(tag: string): string | undefined {
   if (isTeleportTag(tag)) {
     return 'VaporTeleport'
-  } else if (tag === 'Suspense' || tag === 'suspense') {
-    // TODO: replace with VaporSuspense once it's implemented
-    return 'Suspense'
+  } else if (isSuspenseTag(tag)) {
+    return 'VaporSuspense'
   } else if (isKeepAliveTag(tag)) {
     return 'VaporKeepAlive'
   } else if (isTransitionTag(tag)) {

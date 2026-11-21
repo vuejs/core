@@ -1334,7 +1334,7 @@ describe('api: defineAsyncComponent', () => {
       html[mode] = root.innerHTML
     }
     expect(html.vdom).toBe('<div>b c</div>')
-    expect(html.vapor).toBe(`${html.vdom}<!--async component-->`)
+    expect(html.vapor).toBe(`${html.vdom}<!--async component--><!--suspense-->`)
   })
 
   test('template ref on a dynamic component rendering a pending async component', async () => {
@@ -1740,7 +1740,9 @@ describe('api: defineAsyncComponent', () => {
       expect(
         'Unhandled error during execution of async component loader',
       ).not.toHaveBeenWarned()
-      expect(root.innerHTML).toBe('loading')
+      expect(root.innerHTML).toBe(
+        mode === 'vapor' ? 'loading<!--suspense-->' : 'loading',
+      )
       expect(unhandled).toEqual([err])
       app.unmount()
     },
@@ -1770,7 +1772,7 @@ describe('api: defineAsyncComponent', () => {
     const app = createVaporApp(App)
     const onError = (app.config.errorHandler = vi.fn())
     app.use(vaporInteropPlugin).mount(root)
-    expect(root.innerHTML).toBe('loading')
+    expect(root.innerHTML).toBe('loading<!--suspense-->')
 
     reject(err)
     await timeout()
@@ -1780,7 +1782,7 @@ describe('api: defineAsyncComponent', () => {
       'async component loader',
     )
     expect(root.innerHTML).toBe(
-      '<div>loader failed</div><!--async component-->',
+      '<div>loader failed</div><!--async component--><!--suspense-->',
     )
     app.unmount()
   })

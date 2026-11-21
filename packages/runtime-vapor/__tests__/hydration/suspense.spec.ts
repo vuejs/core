@@ -1438,11 +1438,291 @@ describe('Vapor Mode hydration', () => {
         })
       })
 
-      // required vapor Suspense
-      describe.todo('vapor suspense', () => {
-        test.todo('hydrate safely when property used by async setup changed before render', async () => {})
-        test.todo('hydrate safely when property used by deep nested async setup changed before render', async () => {})
-        test.todo('hydrate vapor async setup can unmount before resolve', async () => {})
+      describe('vapor suspense', () => {
+        // Server renders with `serverData`, then the client hydrates in a
+        // Vapor app with no interop plugin. Every component is Vapor.
+        async function hydrateVapor(
+          appCode: string,
+          componentCodes: Record<string, string>,
+          serverData: any,
+          clientData: any,
+          beforeMount?: () => void,
+        ) {
+          const serverComponents: any = {}
+          const clientComponents: any = {}
+          for (const key in componentCodes) {
+            serverComponents[key] = compile(
+              componentCodes[key],
+              serverData,
+              serverComponents,
+              { vapor: true, ssr: true },
+            )
+            clientComponents[key] = compile(
+              componentCodes[key],
+              clientData,
+              clientComponents,
+              { vapor: true, ssr: false },
+            )
+          }
+          const html = await VueServerRenderer.renderToString(
+            runtimeDom.createSSRApp(
+              compile(appCode, serverData, serverComponents, {
+                vapor: true,
+                ssr: true,
+              }),
+            ),
+          )
+          const container = document.createElement('div')
+          container.innerHTML = html
+          document.body.appendChild(container)
+          if (beforeMount) beforeMount()
+          const app = createVaporSSRApp(
+            compile(appCode, clientData, clientComponents, {
+              vapor: true,
+              ssr: false,
+            }),
+          )
+          const errorHandler = vi.fn()
+          app.config.errorHandler = errorHandler
+          app.mount(container)
+          return { html, container, app, errorHandler }
+        }
+
+        const expectNoMismatch = () => {
+          expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+          expect(`Hydration children mismatch`).not.toHaveBeenWarned()
+          expect(`Hydration text mismatch`).not.toHaveBeenWarned()
+        }
+
+        test('hydrates the content in place and waits for its async setup', async () => {
+          let resolveClient!: () => void
+          const serverData = ref({ wait: Promise.resolve(), mounted: 0 })
+          const clientData = ref({
+            wait: new Promise<void>(r => (resolveClient = r)),
+            mounted: 0,
+          })
+          const { container, html, errorHandler } = await hydrateVapor(
+            `<script setup>
+              const components = _components
+            </script>
+            <template>
+              <Suspense>
+                <components.AsyncChild />
+                <template #fallback><span>fallback</span></template>
+              </Suspense>
+            </template>`,
+            {
+              AsyncChild: `<script setup>
+                import { onMounted } from 'vue'
+                const data = _data
+                onMounted(() => data.value.mounted++)
+                await data.value.wait
+              </script>
+              <template><div>one</div><div>two</div></template>`,
+            },
+            serverData,
+            clientData,
+          )
+          const first = container.querySelector('div')
+          expect(container.innerHTML).toBe(html)
+          expect(clientData.value.mounted).toBe(0)
+
+          resolveClient()
+          await new Promise(r => setTimeout(r))
+          await nextTick()
+          expect(errorHandler).not.toHaveBeenCalled()
+          expectNoMismatch()
+          expect(container.querySelector('div')).toBe(first)
+          expect(container.textContent).toBe('onetwo')
+          expect(clientData.value.mounted).toBe(1)
+          expect(`no <Suspense> boundary`).not.toHaveBeenWarned()
+        })
+
+        test('keeps the close of its range at a root of a component with several roots', async () => {
+          let resolveClient!: () => void
+          // the server renders the vdom async wrapper, as the SSR entry of
+          // `vue` names it `defineVaporAsyncComponent`
+          const serverData = ref({
+            wait: Promise.resolve(),
+            define: runtimeDom.defineAsyncComponent,
+          })
+          const clientData = ref({
+            wait: new Promise<void>(r => (resolveClient = r)),
+            define: defineVaporAsyncComponent,
+          })
+          const { container, html } = await hydrateVapor(
+            `<script setup>
+              const data = _data
+              const components = _components
+              const Late = data.value.define(async () => {
+                await data.value.wait
+                return components.Button
+              })
+            </script>
+            <template>
+              <b>head</b>
+              <Suspense><Late>press</Late></Suspense>
+            </template>`,
+            {
+              Button: `<script setup>const data = _data</script>
+                <template><slot v-if="$slots.element" name="element" /><button v-else><slot /></button></template>`,
+            },
+            serverData,
+            clientData,
+          )
+          expect(container.innerHTML).toBe(html)
+          expectNoMismatch()
+          const button = container.querySelector('button')
+          resolveClient()
+          await new Promise(r => setTimeout(r))
+          await nextTick()
+          expectNoMismatch()
+          expect(container.querySelector('button')).toBe(button)
+        })
+
+        test('hydrate safely when property used by async setup changed before render', async () => {
+          const data = ref({ toggle: true })
+          const { container, html } = await hydrateVapor(
+            `<script setup>
+              const data = _data
+              const components = _components
+            </script>
+            <template>
+              <Suspense>
+                <main>
+                  <components.AsyncWrapper :prop="data.toggle ? 'hello' : 'world'" />
+                  <components.SiblingComp />
+                </main>
+              </Suspense>
+            </template>`,
+            {
+              VaporChild: `<script setup>
+                defineProps(['prop'])
+                await new Promise(r => setTimeout(r, 10))
+              </script>
+              <template><h1>{{ prop }}</h1></template>`,
+              AsyncWrapper: `<script setup>
+                const props = defineProps(['prop'])
+                const components = _components
+              </script>
+              <template><components.VaporChild :prop="props.prop" /></template>`,
+              SiblingComp: `<script setup>
+                const data = _data
+                data.value.toggle = false
+              </script>
+              <template><span/></template>`,
+            },
+            data,
+            data,
+            () => {
+              expect(data.value.toggle).toBe(false)
+              data.value.toggle = true
+            },
+          )
+          expect(container.querySelector('h1')!.textContent).toBe('hello')
+          expect(container.innerHTML).toBe(html)
+
+          await new Promise(r => setTimeout(r, 10))
+          await nextTick()
+          expect(data.value.toggle).toBe(false)
+          expectNoMismatch()
+          expect(container.querySelector('main')!.textContent).toBe('world')
+        })
+
+        test('hydrate safely when property used by deep nested async setup changed before render', async () => {
+          const data = ref({ toggle: true })
+          const { container } = await hydrateVapor(
+            `<script setup>
+              const data = _data
+              const components = _components
+            </script>
+            <template>
+              <Suspense>
+                <main>
+                  <components.AsyncWrapperWrapper :prop="data.toggle ? 'hello' : 'world'" />
+                  <components.SiblingComp />
+                </main>
+              </Suspense>
+            </template>`,
+            {
+              VaporChild: `<script setup>
+                defineProps(['prop'])
+                await new Promise(r => setTimeout(r, 10))
+              </script>
+              <template><h1>{{ prop }}</h1></template>`,
+              AsyncWrapper: `<script setup>
+                const components = _components
+              </script>
+              <template><components.VaporChild v-bind="$attrs" /></template>`,
+              AsyncWrapperWrapper: `<script setup>
+                const components = _components
+              </script>
+              <template><components.AsyncWrapper v-bind="$attrs" /></template>`,
+              SiblingComp: `<script setup>
+                const data = _data
+                data.value.toggle = false
+              </script>
+              <template><span/></template>`,
+            },
+            data,
+            data,
+            () => (data.value.toggle = true),
+          )
+          expect(container.querySelector('h1')!.textContent).toBe('hello')
+
+          await new Promise(r => setTimeout(r, 10))
+          await nextTick()
+          expect(data.value.toggle).toBe(false)
+          expectNoMismatch()
+          expect(container.querySelector('main')!.textContent).toBe('world')
+        })
+
+        test('hydrate vapor async setup can unmount before resolve', async () => {
+          let resolveClient!: () => void
+          const serverData = ref({ show: true, wait: Promise.resolve() })
+          const clientData = ref({
+            show: true,
+            wait: new Promise<void>(r => (resolveClient = r)),
+            mounted: 0,
+          })
+          const { container, errorHandler } = await hydrateVapor(
+            `<script setup>
+              const data = _data
+              const components = _components
+            </script>
+            <template>
+              <Suspense v-if="data.show">
+                <section><components.AsyncChild /></section>
+              </Suspense>
+              <p v-else>gone</p>
+              <span>tail</span>
+            </template>`,
+            {
+              AsyncChild: `<script setup>
+                import { onMounted } from 'vue'
+                const data = _data
+                onMounted(() => data.value.mounted++)
+                await data.value.wait
+              </script>
+              <template><div>async resolved</div></template>`,
+            },
+            serverData,
+            clientData,
+          )
+          expect(container.textContent).toBe('async resolvedtail')
+
+          clientData.value.show = false
+          await nextTick()
+          expect(container.querySelector('section')).toBeNull()
+          expect(container.textContent).toBe('gonetail')
+
+          resolveClient()
+          await new Promise(r => setTimeout(r))
+          await nextTick()
+          expect(errorHandler).not.toHaveBeenCalled()
+          expect(container.textContent).toBe('gonetail')
+          expect(clientData.value.mounted).toBe(0)
+        })
       })
     })
 

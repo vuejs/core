@@ -1,4 +1,7 @@
-import type { SuspenseBoundary } from '@vue/runtime-dom'
+import type {
+  GenericComponentInstance,
+  SuspenseBoundary,
+} from '@vue/runtime-dom'
 import type { VaporFragment } from './fragment'
 
 export let isSuspenseEnabled = false
@@ -16,6 +19,16 @@ export function enableSuspense(): void {
 export function withSuspenseEnabled<T>(value: T): T {
   enableSuspense()
   return value
+}
+
+export function isVaporSuspense(
+  instance: GenericComponentInstance | null,
+): boolean {
+  return !!(
+    instance &&
+    instance.vapor &&
+    (instance.type as { __isSuspense?: boolean }).__isSuspense
+  )
 }
 
 function setCurrentUnmountSuspense(

@@ -33,7 +33,288 @@ import {
 } from '../../src'
 import { VueServerRenderer, compile, runtimeDom, runtimeVapor } from '../_utils'
 
-describe.todo('VaporSuspense', () => {})
+describe('VaporSuspense', () => {
+  beforeEach(() => {
+    document.body.innerHTML = ''
+  })
+
+  const deferred = () => {
+    let resolve!: () => void
+    const promise = new Promise<void>(r => (resolve = r))
+    return { promise, resolve }
+  }
+
+  const settle = async () => {
+    await new Promise(r => setTimeout(r))
+    await nextTick()
+  }
+
+  // a Vapor app with no interop plugin
+  function mountVapor(code: string, data: any, components: any) {
+    const container = document.createElement('div')
+    document.body.appendChild(container)
+    const app = runtimeVapor.createVaporApp(compile(code, data, components))
+    app.mount(container)
+    return { container, app }
+  }
+
+  const asyncChild = (data: any, template: string) =>
+    compile(
+      `<script vapor>
+        const data = _data
+        await data.wait
+      </script>
+      <template>${template}</template>`,
+      data,
+    )
+
+  // A page that logs its hooks; with `gate`, a child of it waits for the gate.
+  const page = (data: any) => {
+    const Wait = compile(
+      `<script vapor>
+        const props = defineProps(['gate'])
+        await props.gate
+      </script>
+      <template><i /></template>`,
+      data,
+    )
+    return compile(
+      `<script vapor>
+        import { onMounted, onScopeDispose, onUnmounted, watchPostEffect } from 'vue'
+        const components = _components
+        const props = defineProps(['name', 'log', 'gate'])
+        props.log.push(\`setup \${props.name}\`)
+        watchPostEffect(onCleanup => {
+          props.log.push(\`effect \${props.name}\`)
+          onCleanup(() => props.log.push(\`effect end \${props.name}\`))
+        })
+        onScopeDispose(() => props.log.push(\`scope end \${props.name}\`))
+        onMounted(() => props.log.push(\`mounted \${props.name}\`))
+        onUnmounted(() => props.log.push(\`unmounted \${props.name}\`))
+      </script>
+      <template>
+        <p>{{ name }}</p>
+        <components.Wait v-if="gate" :gate />
+      </template>`,
+      data,
+      { Wait },
+    )
+  }
+
+  test('renders the fallback while an async setup in the content waits, then the content', async () => {
+    const wait = deferred()
+    const data = reactive({ wait: wait.promise, events: [] as string[] })
+    const { container } = mountVapor(
+      `<template>
+        <Suspense
+          @pending="data.events.push('pending')"
+          @fallback="data.events.push('fallback')"
+          @resolve="data.events.push('resolve')"
+        >
+          <components.Child />
+          <template #fallback><span>fallback</span></template>
+        </Suspense>
+      </template>`,
+      data,
+      { Child: asyncChild(data, `<div>content</div>`) },
+    )
+    expect(container.textContent).toBe('fallback')
+    expect(data.events).toEqual(['pending', 'fallback'])
+
+    wait.resolve()
+    await settle()
+    expect(container.textContent).toBe('content')
+    expect(container.querySelector('span')).toBeNull()
+    expect(data.events).toEqual(['pending', 'fallback', 'resolve'])
+    expect(`no <Suspense> boundary`).not.toHaveBeenWarned()
+  })
+
+  test('renders the content at once when nothing in it waits', () => {
+    const data = reactive({ events: [] as string[] })
+    const { container } = mountVapor(
+      `<template>
+        <Suspense @fallback="data.events.push('fallback')" @resolve="data.events.push('resolve')">
+          <div>content</div>
+          <template #fallback><span>fallback</span></template>
+        </Suspense>
+      </template>`,
+      data,
+      {},
+    )
+    expect(container.textContent).toBe('content')
+    expect(data.events).toEqual(['resolve'])
+  })
+
+  test('a root switch mounts the next branch off the DOM, then removes the old one', async () => {
+    const data = reactive({ page: 'A', log: [] as string[] })
+    const { container } = mountVapor(
+      `<template>
+        <Suspense>
+          <components.Page :key="data.page" :name="data.page" :log="data.log" />
+        </Suspense>
+      </template>`,
+      data,
+      { Page: page(data) },
+    )
+    await settle()
+    data.log.length = 0
+    data.page = 'B'
+    await settle()
+    expect(data.log).toEqual([
+      'setup B',
+      'effect end A',
+      'scope end A',
+      'effect B',
+      'mounted B',
+      'unmounted A',
+    ])
+    expect(container.textContent).toBe('B')
+  })
+
+  test('a root switch keeps the branch on screen, with its props, until the async setup of the next one resolves', async () => {
+    const gateB = deferred()
+    const data = reactive({
+      page: 'A',
+      log: [] as string[],
+      gates: { B: gateB.promise, C: new Promise(() => {}) } as Record<
+        string,
+        Promise<void>
+      >,
+      events: [] as string[],
+    })
+    const { container } = mountVapor(
+      `<template>
+        <Suspense @pending="data.events.push('pending')" @resolve="data.events.push('resolve')">
+          <components.Page :key="data.page" :name="data.page" :log="data.log" :gate="data.gates[data.page]" />
+          <template #fallback><span>fallback</span></template>
+        </Suspense>
+      </template>`,
+      data,
+      { Page: page(data) },
+    )
+    await settle()
+    data.log.length = 0
+    data.events.length = 0
+
+    data.page = 'B'
+    await settle()
+    expect(data.log).toEqual(['setup B'])
+    expect(container.textContent).toBe('A')
+    expect(data.events).toEqual(['pending'])
+
+    gateB.resolve()
+    await settle()
+    expect(data.log).toEqual([
+      'setup B',
+      'effect end A',
+      'scope end A',
+      'effect B',
+      'mounted B',
+      'unmounted A',
+    ])
+    expect(container.textContent).toBe('B')
+    expect(data.events).toEqual(['pending', 'resolve'])
+
+    // a toggle back to the branch on screen throws the pending one away
+    data.log.length = 0
+    data.page = 'C'
+    await settle()
+    data.page = 'B'
+    await settle()
+    expect(data.log).toEqual(['setup C', 'scope end C'])
+    expect(container.textContent).toBe('B')
+    expect(container.querySelector('span')).toBeNull()
+  })
+
+  test('a timeout shows the fallback in place of the branch on screen while the next one waits', async () => {
+    const gateB = deferred()
+    const data = reactive({
+      page: 'A',
+      log: [] as string[],
+      gates: { B: gateB.promise } as Record<string, Promise<void>>,
+    })
+    const { container } = mountVapor(
+      `<template>
+        <Suspense :timeout="0">
+          <components.Page :key="data.page" :name="data.page" :log="data.log" :gate="data.gates[data.page]" />
+          <template #fallback><span>fallback</span></template>
+        </Suspense>
+      </template>`,
+      data,
+      { Page: page(data) },
+    )
+    await settle()
+    data.page = 'B'
+    await settle()
+    expect(container.textContent).toBe('fallback')
+
+    gateB.resolve()
+    await settle()
+    expect(container.textContent).toBe('B')
+    expect(container.querySelector('span')).toBeNull()
+  })
+
+  test('an appear transition inside the content enters when the content is revealed', async () => {
+    const wait = deferred()
+    const calls: string[] = []
+    const data = reactive({
+      wait: wait.promise,
+      onBeforeAppear: () => calls.push('before appear'),
+      onAppear: () => calls.push('appear'),
+    })
+    const Child = compile(
+      `<template>
+        <Transition appear :css="false" @before-appear="data.onBeforeAppear" @appear="data.onAppear">
+          <p>vapor</p>
+        </Transition>
+      </template>`,
+      data as any,
+    )
+    const { container } = mountVapor(
+      `<template>
+        <Suspense>
+          <div><components.Child /><components.Async /></div>
+          <template #fallback><span>fallback</span></template>
+        </Suspense>
+      </template>`,
+      data,
+      { Child, Async: asyncChild(data, `<i>async</i>`) },
+    )
+    await nextTick()
+    expect(calls).toEqual([])
+
+    wait.resolve()
+    await settle()
+    expect(container.textContent).toBe('vaporasync')
+    expect(calls).toEqual(['before appear', 'appear'])
+  })
+
+  test('unmounted while its content waits, it runs none of the effects the content buffered', async () => {
+    const wait = deferred()
+    const data = reactive({
+      show: true,
+      wait: wait.promise,
+      log: [] as string[],
+    })
+    const { container } = mountVapor(
+      `<template>
+        <Suspense v-if="data.show">
+          <components.Page name="A" :log="data.log" :gate="data.wait" />
+          <template #fallback><span>fallback</span></template>
+        </Suspense>
+      </template>`,
+      data,
+      { Page: page(data) },
+    )
+    expect(container.textContent).toBe('fallback')
+    data.show = false
+    await settle()
+    wait.resolve()
+    await settle()
+    expect(data.log).toEqual(['setup A', 'scope end A'])
+    expect(container.textContent).toBe('')
+  })
+})
 
 describe('vdom interop', () => {
   beforeEach(() => {

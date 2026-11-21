@@ -12,6 +12,7 @@ export { vaporInteropPlugin } from './vdomInterop'
 export type { VaporDirective } from './directives/custom'
 export { VaporTeleport } from './components/Teleport'
 export { VaporKeepAlive } from './components/KeepAlive'
+export { VaporSuspense } from './components/Suspense'
 export {
   defineVaporCustomElement,
   defineVaporSSRCustomElement,

@@ -51,6 +51,7 @@ import { EffectScope } from '@vue/reactivity'
 import { isInteropEnabled } from '../vdomInteropState'
 import { isHydrating } from '../dom/hydrationState'
 import { isTeleportEnabled, isTeleportFragment } from '../teleport'
+import { isSuspenseEnabled, isVaporSuspense } from '../suspense'
 import {
   type VaporKeepAliveContext,
   currentCacheKey,
@@ -641,7 +642,11 @@ function getInnerBlock(
   branchKey: any = currentCacheKey,
 ): InnerBlockResult {
   if (isVaporComponent(block)) {
-    return [block, false, branchKey]
+    // vdom caches what a Suspense renders, never the boundary: a
+    // VaporSuspense is no cache root
+    return __FEATURE_SUSPENSE__ && isSuspenseEnabled && isVaporSuspense(block)
+      ? [undefined, false, branchKey]
+      : [block, false, branchKey]
   } else if (isFragment(block)) {
     const next = rootChainChild(block)
     if (next) return getInnerBlock(next, getFragmentKey(block) ?? branchKey)

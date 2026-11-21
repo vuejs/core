@@ -2149,6 +2149,19 @@ describe('compiler: element transform', () => {
     },
   )
 
+  test.each(['Suspense', 'suspense'])(
+    '<%s> resolves to the built-in VaporSuspense',
+    tag => {
+      const { code, helpers } = compileWithElementAndSlotTransform(
+        `<${tag}><Foo /></${tag}>`,
+      )
+      expect(code).toContain('_createComponent(_VaporSuspense,')
+      expect(code).not.toContain(`_createAssetComponent("${tag}"`)
+      expect(helpers).toContain('VaporSuspense')
+      expect(helpers).not.toContain('Suspense')
+    },
+  )
+
   describe('slot-scope component tags', () => {
     test.each([
       ['{ Foo }', 'Foo', '_slotProps0.Foo'],
