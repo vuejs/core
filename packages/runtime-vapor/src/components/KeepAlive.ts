@@ -35,7 +35,7 @@ import {
   defineVaporComponent,
 } from '../apiDefineComponent'
 import { ShapeFlags, invokeArrayFns, isArray } from '@vue/shared'
-import { createElement } from '../dom/node'
+import { createElement, isCommentNode } from '../dom/node'
 import { unsetRef } from '../refCleanup'
 import {
   type DynamicFragment,
@@ -502,7 +502,7 @@ const VaporKeepAliveImpl = defineVaporComponent({
     rootFragment = registerDynamicFragmentHooks(children, keepAliveCtx)
 
     if (isArray(children)) {
-      children = children.filter(child => !(child instanceof Comment))
+      children = children.filter(child => !isCommentNode(child))
       if (children.length === 1) {
         rootFragment = registerDynamicFragmentHooks(children[0], keepAliveCtx)
       }

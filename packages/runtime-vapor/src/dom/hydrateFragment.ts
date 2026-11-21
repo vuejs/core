@@ -29,6 +29,7 @@ import {
   createComment,
   createTextNode,
   parentNode as getParentNode,
+  isCommentNode,
   updateLastLocatedLogicalChild,
 } from './node'
 import {
@@ -332,7 +333,7 @@ function planTrimFromCursor(parent: Node, next: Node | null): AnchorPlan {
 function planRestartFromRuntimeComment(
   frag: DynamicFragment,
 ): AnchorPlan | undefined {
-  if (isValidBlock(frag.nodes) || !(frag.nodes instanceof Comment)) {
+  if (isValidBlock(frag.nodes) || !isCommentNode(frag.nodes)) {
     return
   }
 
