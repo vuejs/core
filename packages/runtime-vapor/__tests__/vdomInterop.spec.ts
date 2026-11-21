@@ -11919,7 +11919,6 @@ describe('vdomInterop', () => {
       expect(root.innerHTML).toBe('<div>ok</div>')
 
       expect(() => app.unmount()).not.toThrow()
-      expect(`returned non-block value`).toHaveBeenWarned()
     })
   })
 

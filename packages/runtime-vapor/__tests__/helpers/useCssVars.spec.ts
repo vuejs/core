@@ -689,7 +689,6 @@ describe('useVaporCssVars', () => {
     mount()
     await nextTick()
     expect(errors).toEqual(['Error: boom'])
-    expect('setup() returned non-block value').toHaveBeenWarned()
   })
 
   test('HOC child switching its own root: new root carries vars before its mounted hooks', async () => {

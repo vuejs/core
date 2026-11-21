@@ -809,19 +809,19 @@ export function setupComponent(
   // an inline-compiled setup renders the block itself: a root mismatch inside
   // turns the rest of it into a client render (hydrateBlockWithErrorHandling)
   const setupResult = setupFn
-    ? (isHydrating
-        ? hydrateBlockWithErrorHandling(
-            setupFn,
-            instance,
-            ErrorCodes.SETUP_FUNCTION,
-            [instance.props, instance],
-          )
-        : callWithErrorHandlingOnce(
-            setupFn,
-            instance,
-            ErrorCodes.SETUP_FUNCTION,
-            [instance.props, instance],
-          )) || EMPTY_OBJ
+    ? isHydrating
+      ? hydrateBlockWithErrorHandling(
+          callSetup,
+          instance,
+          ErrorCodes.SETUP_FUNCTION,
+          [setupFn, instance.props, instance],
+        )
+      : callWithErrorHandlingOnce(
+          callSetup,
+          instance,
+          ErrorCodes.SETUP_FUNCTION,
+          [setupFn, instance.props, instance],
+        )
     : // a template-only component reads `<style module>` names off its
       // render context, like the vdom render proxy does
       (component as VaporComponentOptions).__cssModules || EMPTY_OBJ
@@ -856,13 +856,25 @@ export function setupComponent(
           `does not support it yet.`,
       )
     }
-  } else {
+  } else if (setupResult) {
     handleSetupResult(setupResult, component, instance)
+  } else {
+    // setup threw and its error is handled: there is no state to render
+    instance.block = []
   }
 
   if (__DEV__) setCurrentRenderingInstance(prevRendering)
   setActiveSub(prevSub)
   restoreCurrentInstance(prevInstance)
+}
+
+// the error-handling call around it returns undefined only when setup throws
+function callSetup(
+  setup: Function,
+  props: Record<string, any>,
+  instance: VaporComponentInstance,
+): any {
+  return setup(props, instance) || EMPTY_OBJ
 }
 
 export let isApplyingFallthroughProps = false
@@ -2166,9 +2178,7 @@ function handleSetupResult(
           `Vapor component setup() returned non-block value, and has no render function.`,
         )
       }
-      // setup either threw or returned a non-block value: fall back to an
-      // empty block so mount / unmount can proceed and the error can
-      // propagate to parent error boundaries
+      // fall back to an empty block so mount / unmount can proceed
       instance.block = []
     } else {
       if (__DEV__ || __FEATURE_PROD_DEVTOOLS__) {
