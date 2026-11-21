@@ -38,6 +38,33 @@ setupHydrationTest()
 
 describe('Vapor Mode hydration', () => {
   describe('component', () => {
+    // a component with `onServerPrefetch` is the `useId` boundary of the
+    // components that it renders; its own ids come before the boundary
+    test('ids below a component with onServerPrefetch match the server', async () => {
+      const { container, html } = await testHydration(
+        `<template><components.Group><components.Item/><components.Item/></components.Group><components.Item/></template>`,
+        {
+          Group: `<script setup>
+            import { onServerPrefetch, useId } from 'vue'
+            onServerPrefetch(() => {})
+            const id = useId()
+          </script>
+          <template><div :id="id"><slot/></div></template>`,
+          Item: `<script setup>
+            import { useId } from 'vue'
+            const id = useId()
+          </script>
+          <template><p :id="id"/></template>`,
+        },
+      )
+      const ids = (root: ParentNode) =>
+        [...root.querySelectorAll('[id]')].map(el => el.id)
+      const server = document.createElement('div')
+      server.innerHTML = html
+      expect(ids(server)).toEqual(['v-0', 'v-0-0', 'v-0-1', 'v-1'])
+      expect(ids(container)).toEqual(['v-0', 'v-0-0', 'v-0-1', 'v-1'])
+      expect(`Hydration attribute mismatch`).not.toHaveBeenWarned()
+    })
     test('root component should not enter beforeMount twice during hydration', async () => {
       const beforeMount = vi.fn()
       await testHydration(
