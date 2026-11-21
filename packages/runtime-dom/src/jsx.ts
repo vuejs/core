@@ -258,6 +258,8 @@ export type ClassValue =
 
 export interface HTMLAttributes extends AriaAttributes, EventHandlers<Events> {
   innerHTML?: string | undefined
+  innerText?: string | undefined
+  textContent?: string | undefined
 
   class?: ClassValue | undefined
   style?: StyleValue | undefined
@@ -893,6 +895,7 @@ export interface WebViewHTMLAttributes extends HTMLAttributes {
 
 export interface SVGAttributes extends AriaAttributes, EventHandlers<Events> {
   innerHTML?: string | undefined
+  textContent?: string | undefined
 
   /**
    * SVG Styling Attributes
