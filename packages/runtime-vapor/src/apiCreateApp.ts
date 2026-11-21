@@ -25,6 +25,7 @@ import type { RawProps } from './componentProps'
 import { getGlobalThis } from '@vue/shared'
 import { optimizePropertyLookup } from './dom/prop'
 import { setIsHydratingEnabled, withHydration } from './dom/hydration'
+import { isElementNode } from './dom/node'
 
 let _createApp: CreateAppFunction<ParentNode, VaporComponent>
 const rootInstances = new WeakMap<App, VaporComponentInstance>()
@@ -132,7 +133,7 @@ function postPrepareApp(app: App) {
     if (!container) return
 
     const proxy = mount(container, ...args)
-    if (container instanceof Element) {
+    if (isElementNode(container)) {
       container.removeAttribute('v-cloak')
       container.setAttribute('data-v-app', '')
     }

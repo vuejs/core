@@ -30,6 +30,7 @@ import {
   createComment,
   createElement,
   createTextNode,
+  isElementNode,
   locateChildByLogicalIndex,
   parentNode,
   parseTemplate,
@@ -990,7 +991,7 @@ export function cleanupHydrationTail(
   }
 
   const mismatchContainer = container || node.parentElement
-  if (mismatchContainer instanceof Element) {
+  if (isElementNode(mismatchContainer)) {
     warnHydrationChildrenMismatch(mismatchContainer)
   }
 

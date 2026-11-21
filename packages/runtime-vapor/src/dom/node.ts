@@ -10,6 +10,18 @@ import { isHydrating } from './hydrationState'
 const SVG_NS = 'http://www.w3.org/2000/svg'
 const MATHML_NS = 'http://www.w3.org/1998/Math/MathML'
 
+// `instanceof Node`, `Element` or `Comment` is false for a node of another
+// window, such as a server node that hydration adopts in the document of an
+// iframe.
+export const isNode = (val: unknown): val is Node =>
+  !!(val && (val as Node).nodeType)
+
+export const isElementNode = (val: unknown): val is Element =>
+  !!val && (val as Node).nodeType === 1
+
+export const isCommentNode = (val: unknown): val is Comment =>
+  !!val && (val as Node).nodeType === 8
+
 /*@__NO_SIDE_EFFECTS__*/
 export function createElement(tagName: string, ns?: Namespace): HTMLElement {
   return ns

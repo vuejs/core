@@ -13,6 +13,7 @@ import {
   withModifiers as withDomModifiers,
 } from '@vue/runtime-dom'
 import { isApplyingFallthroughProps } from '../component'
+import { isNode } from './node'
 
 type EventHandler = (...args: any[]) => any
 export type EventHandlerValue = EventHandler | EventHandler[]
@@ -232,7 +233,7 @@ const delegatedEventHandler = (e: Event) => {
       }
     }
     node =
-      node.host && node.host !== node && node.host instanceof Node
+      node.host && node.host !== node && isNode(node.host)
         ? node.host
         : node.parentNode
   }

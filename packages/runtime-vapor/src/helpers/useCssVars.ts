@@ -20,6 +20,7 @@ import {
 import { isTeleportEnabled, isTeleportFragment } from '../teleport'
 import { isInteropEnabled } from '../vdomInteropState'
 import { isHydrating } from '../dom/hydration'
+import { isNode } from '../dom/node'
 
 /**
  * Css vars are root-inherited state: the owner writes its root chain before
@@ -86,7 +87,7 @@ export function setVarsOnBlock(
   block: Block,
   vars: Record<string, unknown>,
 ): void {
-  if (block instanceof Node) {
+  if (isNode(block)) {
     setVarsOnNode(block, vars)
   } else if (isArray(block)) {
     for (let i = 0; i < block.length; i++) setVarsOnBlock(block[i], vars)
