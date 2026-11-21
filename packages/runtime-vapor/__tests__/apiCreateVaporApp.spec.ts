@@ -5,6 +5,8 @@ import {
   createVaporApp,
   createVaporSSRApp,
   defineVaporComponent,
+  renderEffect,
+  setText,
   template,
   vaporInteropPlugin,
   withVaporDirectives,
@@ -13,19 +15,26 @@ import {
   type GenericComponentInstance,
   type Plugin,
   createApp,
+  createSSRApp,
   currentInstance,
   inject,
   nextTick,
   onMounted,
   onUnmounted,
   provide,
+  reactive,
   ref,
   resolveComponent,
   resolveDirective,
   warn,
   watch,
 } from '@vue/runtime-dom'
-import { compile, compileToVaporRender, makeRender } from './_utils'
+import {
+  VueServerRenderer,
+  compile,
+  compileToVaporRender,
+  makeRender,
+} from './_utils'
 import type { VaporComponent } from '../src/component'
 
 const define = makeRender()
@@ -54,7 +63,7 @@ describe('api: createVaporApp', () => {
 
     // mount with props
     const root2 = document.createElement('div')
-    const app2 = createVaporApp(Comp, { count: () => 1 })
+    const app2 = createVaporApp(Comp, { count: 1 })
     app2.mount(root2)
     expect(root2.innerHTML).toBe(`1`)
 
@@ -65,22 +74,67 @@ describe('api: createVaporApp', () => {
     expect(`already been mounted`).toHaveBeenWarned()
   })
 
-  test('preserves root context while evaluating root props', () => {
+  // #16369
+  test('passes function root props as values', () => {
+    const cb = vi.fn()
+    const onSave = vi.fn()
+    let props: any
+    let emit: any
     const Comp = defineVaporComponent({
-      props: ['value'],
-      setup(props) {
-        return createTextNode(String(props.value))
+      props: { cb: Function },
+      emits: ['save'],
+      setup(_props, ctx) {
+        props = _props
+        emit = ctx.emit
+        return []
       },
     })
-    const app = createVaporApp(Comp, { value: () => inject('token') })
-    app.provide('token', 'provided value')
+    const app = createVaporApp(Comp, { cb, onSave })
+    app.mount(document.createElement('div'))
+    expect(props.cb).toBe(cb)
+    expect(cb).not.toHaveBeenCalled()
+    emit('save', 42)
+    expect(onSave).toHaveBeenCalledTimes(1)
+    expect(onSave).toHaveBeenCalledWith(42)
+    app.unmount()
+  })
+
+  test('root props of a reactive object are reactive', async () => {
+    const Comp = defineVaporComponent({
+      props: ['count'],
+      setup(props) {
+        const n = createTextNode()
+        renderEffect(() => setText(n, String(props.count)))
+        return n
+      },
+    })
+    const props = reactive({ count: 1 })
     const root = document.createElement('div')
-    try {
-      app.mount(root)
-      expect(root.textContent).toBe('provided value')
-    } finally {
-      app.unmount()
-    }
+    const app = createVaporApp(Comp, props)
+    app.mount(root)
+    expect(root.textContent).toBe('1')
+    props.count++
+    await nextTick()
+    expect(root.textContent).toBe('2')
+    app.unmount()
+  })
+
+  test('ssr: hydrates function root props as values', async () => {
+    const code = `<script setup vapor>
+      const props = defineProps({ format: Function })
+    </script>
+    <template><span>{{ props.format(1) }}</span></template>`
+    const props = { format: (n: number) => `#${n}` }
+    const html = await VueServerRenderer.renderToString(
+      createSSRApp(compile(code, ref(), {}, { ssr: true }), props),
+    )
+    expect(html).toBe('<span>#1</span>')
+    const root = document.createElement('div')
+    root.innerHTML = html
+    const app = createVaporSSRApp(compile(code, ref()), props)
+    app.mount(root)
+    expect(root.innerHTML).toBe(html)
+    app.unmount()
   })
 
   test('mounts a root without a parent after an unhandled setup error', () => {

@@ -1121,7 +1121,7 @@ describe('hot module replacement', () => {
     Child.components = { Wrapper }
     createRecord(id, Child)
 
-    createVaporApp(Child, { nested: () => false }).mount(root)
+    createVaporApp(Child, { nested: false }).mount(root)
     expect(root.textContent).toBe(`old rootold nested`)
 
     const NewChild: any = {

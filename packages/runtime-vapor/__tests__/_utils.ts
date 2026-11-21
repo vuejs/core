@@ -5,7 +5,7 @@ import type {
   VaporComponentInstance,
   VaporComponentOptions,
 } from '../src/component'
-import type { RawProps } from '../src/componentProps'
+import { type RawProps, resolveSource } from '../src/componentProps'
 import {
   type SFCTemplateCompileOptions,
   compileScript,
@@ -69,7 +69,7 @@ export function makeRender<C = VaporComponent>(
 
     function create(props: RawProps | undefined = undefined) {
       app?.unmount()
-      app = createVaporApp(component, props)
+      app = createVaporApp(component, props && toRootProps(props))
       return res()
     }
 
@@ -99,6 +99,19 @@ export function makeRender<C = VaporComponent>(
   }
 
   return define
+}
+
+// Specs pass raw props as compiled code does, but root props are values: each
+// root prop reads the value of its raw prop, so a getter stays reactive.
+function toRootProps(rawProps: RawProps): Record<string, unknown> {
+  const props = {}
+  for (const key in rawProps) {
+    Object.defineProperty(props, key, {
+      enumerable: true,
+      get: () => resolveSource(rawProps[key]),
+    })
+  }
+  return props
 }
 
 export interface InteropRenderContext {
