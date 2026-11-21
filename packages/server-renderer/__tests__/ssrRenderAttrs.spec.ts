@@ -149,6 +149,19 @@ describe('ssr: renderAttrs', () => {
     expect(`unsafe attribute name`).toHaveBeenWarned()
     expect(`Skipped rendering unsafe attribute name`).toHaveBeenWarned()
   })
+
+  test.each([
+    'hasOwnProperty',
+    'toString',
+    'valueOf',
+    'constructor',
+    '__proto__',
+  ])('attribute named %s', key => {
+    expect(ssrRenderAttrs({ [key]: 'foo' })).toBe(` ${key.toLowerCase()}="foo"`)
+    expect(ssrRenderAttrs({ [`^${key}`]: 'foo' })).toBe(
+      ` ${key.toLowerCase()}="foo"`,
+    )
+  })
 })
 
 describe('ssr: renderAttr', () => {

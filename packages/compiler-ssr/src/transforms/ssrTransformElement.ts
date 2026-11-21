@@ -9,6 +9,7 @@ import {
   type InterpolationNode,
   type JSChildNode,
   MERGE_PROPS,
+  Namespaces,
   type NodeTransform,
   NodeTypes,
   type PlainElementNode,
@@ -29,6 +30,7 @@ import {
   createSimpleExpression,
   createTemplateLiteral,
   findDir,
+  findProp,
   hasDynamicKeyVBind,
   isStaticArgOf,
   isStaticExp,
@@ -67,6 +69,15 @@ const rawChildrenMap = new WeakMap<
   PlainElementNode,
   TemplateLiteral['elements'][0]
 >()
+
+// These DOM properties reflect attributes only on specific HTML elements.
+const tagSpecificDOMProps: Record<string, string | undefined> = {
+  form: 'acceptCharset',
+  label: 'htmlFor',
+  output: 'htmlFor',
+  script: 'htmlFor',
+  meta: 'httpEquiv',
+}
 
 // static styles on plain elements are rendered by ssrTransformElement
 export const ssrTransformStyle: NodeTransform = (node, context) => {
@@ -363,7 +374,7 @@ export const ssrTransformElement: NodeTransform = (node, context) => {
         }
       } else {
         // special case: value on <textarea>
-        const name = prop.name
+        let name = prop.name
         if (node.tag === 'textarea' && name === 'value' && prop.value) {
           rawChildrenMap.set(node, escapeHtml(prop.value.content))
         } else if (!needMergeProps) {
@@ -385,8 +396,21 @@ export const ssrTransformElement: NodeTransform = (node, context) => {
             }
             continue
           }
+          const mappedName = propsToAttrMap[name]
+          if (
+            mappedName &&
+            (name === 'className'
+              ? node.ns !== Namespaces.SVG
+              : node.ns === Namespaces.HTML &&
+                tagSpecificDOMProps[node.tag] === name) &&
+            !context.isCustomElement(node.tag) &&
+            // HTML parsers keep the first occurrence of a repeated attribute.
+            !findProp(node, mappedName, false, true)
+          ) {
+            name = mappedName
+          }
           openTag.push(
-            ` ${prop.name}` +
+            ` ${name}` +
               (prop.value ? `="${escapeHtml(prop.value.content)}"` : ``),
           )
         }

@@ -1611,6 +1611,130 @@ describe('BaseTransition', () => {
     },
   )
 
+  // #16359
+  test('should enter when a component root re-enters during its leave', async () => {
+    const open = ref(true)
+    // only the component reads `open`, so BaseTransition does not re-render
+    const Comp = { render: () => (open.value ? h('div') : null) }
+    const { props, cbs } = mockProps()
+    const { root } = mount(props, () => h(Comp))
+
+    open.value = false
+    await nextTick()
+    expect(props.onLeave).toHaveBeenCalledTimes(1)
+
+    open.value = true
+    await nextTick()
+    expect(serializeInner(root)).toBe('<div></div><div></div>')
+    const newEl = root.children[1]
+    expect(props.onBeforeEnter).toHaveBeenCalledWith(newEl)
+    expect(props.onEnter).toHaveBeenCalledWith(newEl, expect.any(Function))
+    cbs.doneEnter['<div></div>']()
+    expect(props.onAfterEnter).toHaveBeenCalledWith(newEl)
+
+    cbs.doneLeave['<div></div>']()
+    expect(serializeInner(root)).toBe('<div></div>')
+    assertCalls(props, {
+      onBeforeEnter: 1,
+      onEnter: 1,
+      onAfterEnter: 1,
+      onEnterCancelled: 0,
+      onBeforeLeave: 1,
+      onLeave: 1,
+      onAfterLeave: 1,
+      onLeaveCancelled: 0,
+    })
+  })
+
+  // a child of the entering element that changes state in its setup, so that
+  // BaseTransition renders again before the post-flush enter
+  const runInSetup = (effect: () => void) => ({
+    setup() {
+      effect()
+      return () => null
+    },
+  })
+
+  // #12091
+  test('should not enter an element that updates and leaves in the flush that mounts it', async () => {
+    const show = ref(false)
+    const text = ref('a')
+    const Update = runInSetup(() => (text.value = 'b'))
+    const Hide = runInSetup(() => (show.value = false))
+    const { props, cbs } = mockProps()
+    const { root } = mount(props, () =>
+      show.value
+        ? h('div', [text.value, h(text.value === 'a' ? Update : Hide)])
+        : null,
+    )
+
+    show.value = true
+    await nextTick()
+    cbs.doneLeave['<div>b<!----></div>']()
+    expect(serializeInner(root)).toBe('<!---->')
+    assertCalls(props, {
+      onBeforeEnter: 1,
+      onEnter: 0,
+      onAfterEnter: 0,
+      onEnterCancelled: 0,
+      onBeforeLeave: 1,
+      onLeave: 1,
+      onAfterLeave: 1,
+      onLeaveCancelled: 0,
+    })
+  })
+
+  describe('mode: "in-out" replace the entering element in the flush that mounts it', () => {
+    async function testInOutReplaceOnMount(withUpdate: boolean) {
+      const view = ref('a')
+      const text = ref('b')
+      const Update = runInSetup(() => (text.value = 'b2'))
+      const ToC = runInSetup(() => (view.value = 'c'))
+      const { props, cbs } = mockProps({ mode: 'in-out' })
+      const { root } = mount(props, () =>
+        view.value === 'a'
+          ? h('div', { key: 'a' }, 'a')
+          : view.value === 'b'
+            ? h('div', { key: 'b' }, [
+                text.value,
+                h(withUpdate && text.value === 'b' ? Update : ToC),
+              ])
+            : h('div', { key: 'c' }, 'c'),
+      )
+
+      view.value = 'b'
+      await nextTick()
+      // b leaves without an enter, so a does not wait for it
+      expect(props.onEnter).toHaveBeenCalledTimes(1)
+      assertCalledWithEl(props.onEnter, '<div>c</div>')
+      expect(props.onLeave).toHaveBeenCalledTimes(1)
+      assertCalledWithEl(props.onLeave, '<div>a</div>')
+
+      cbs.doneLeave['<div>a</div>']()
+      cbs.doneEnter['<div>c</div>']()
+      cbs.doneLeave[`<div>${withUpdate ? 'b2' : 'b'}<!----></div>`]()
+      expect(serializeInner(root)).toBe('<div>c</div>')
+      assertCalls(props, {
+        onBeforeEnter: 2,
+        onEnter: 1,
+        onAfterEnter: 1,
+        onEnterCancelled: 0,
+        onBeforeLeave: 2,
+        onLeave: 2,
+        onAfterLeave: 2,
+        onLeaveCancelled: 0,
+      })
+    }
+
+    test('w/o update', async () => {
+      await testInOutReplaceOnMount(false)
+    })
+
+    test('w/ update', async () => {
+      await testInOutReplaceOnMount(true)
+    })
+  })
+
   // #11061
   test('in-out with fallthrough attrs on the component roots', async () => {
     const One = { render: () => h('div', 'one') }

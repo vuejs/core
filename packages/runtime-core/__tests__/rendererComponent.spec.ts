@@ -527,6 +527,43 @@ describe('renderer: component', () => {
     expect(spy).toHaveBeenCalledTimes(1)
   })
 
+  test('should not crash when updating a style prop with objects without a prototype', async () => {
+    const color = ref('red')
+    const count = ref(0)
+    const childRender = vi.fn(() => h('div', 'child'))
+
+    const Comp = {
+      render: childRender,
+    }
+
+    const App = {
+      render() {
+        count.value
+        // e.g. style objects produced by a library that uses Object.create(null)
+        return h(Comp, {
+          style: Object.assign(Object.create(null), { color: color.value }),
+        })
+      },
+    }
+
+    const root = nodeOps.createElement('div')
+    render(h(App), root)
+    expect(serializeInner(root)).toBe(`<div style={"color":"red"}>child</div>`)
+    expect(childRender).toHaveBeenCalledTimes(1)
+
+    count.value++
+    await nextTick()
+    expect(serializeInner(root)).toBe(`<div style={"color":"red"}>child</div>`)
+    expect(childRender).toHaveBeenCalledTimes(1)
+
+    color.value = 'green'
+    await nextTick()
+    expect(serializeInner(root)).toBe(
+      `<div style={"color":"green"}>child</div>`,
+    )
+    expect(childRender).toHaveBeenCalledTimes(2)
+  })
+
   test('should update child component when a prop is replaced by a new undefined prop', async () => {
     const props = ref<Record<string, any>>({ foo: 'foo' })
 

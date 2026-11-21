@@ -1,6 +1,11 @@
 import { type RawSourceMap, SourceMapConsumer } from 'source-map-js'
 import { parse as babelParse } from '@babel/parser'
 import {
+  type CompilerError,
+  NodeTypes,
+  createCompilerError,
+} from '@vue/compiler-core'
+import {
   type SFCTemplateCompileOptions,
   compileTemplate,
 } from '../src/compileTemplate'
@@ -530,4 +535,63 @@ test('prefixing props edge case in inline mode', () => {
 
   expect(content).toMatchSnapshot()
   expect(content).toMatch(`__props["Foo"]).Bar`)
+})
+
+test('calls user onWarn for warnings emitted by nodeTransforms', () => {
+  const warnings: CompilerError[] = []
+  const result = compile({
+    filename: 'example.vue',
+    source: `<div></div>`,
+    compilerOptions: {
+      onWarn: w => warnings.push(w),
+      nodeTransforms: [
+        (node, ctx) => {
+          if (node.type === NodeTypes.ROOT) {
+            ctx.onWarn(
+              createCompilerError(-1, node.loc, { [-1]: 'custom warning' }),
+            )
+          }
+        },
+      ],
+    },
+  })
+
+  expect(warnings).toHaveLength(1)
+  expect(warnings[0].message).toContain('custom warning')
+  expect(result.tips).toHaveLength(1)
+  expect(result.tips[0]).toContain('custom warning')
+})
+
+test('calls user onError for compiler errors', () => {
+  const errors: CompilerError[] = []
+  const result = compile({
+    filename: 'example.vue',
+    source: `<div v-if></div>`,
+    compilerOptions: {
+      onError: e => errors.push(e),
+    },
+  })
+
+  expect(errors).toHaveLength(1)
+  expect(result.errors).toEqual(errors)
+})
+
+test('calls user onError for errors when re-parsing a transformed AST', () => {
+  const template = parse(`<template><div id="a" id="b" /></template>`, {
+    filename: 'example.vue',
+  }).descriptor.template!
+  template.ast!.transformed = true
+
+  const errors: CompilerError[] = []
+  const result = compile({
+    filename: 'example.vue',
+    source: template.content,
+    ast: template.ast,
+    compilerOptions: {
+      onError: e => errors.push(e),
+    },
+  })
+
+  expect(errors).toHaveLength(1)
+  expect(result.errors).toEqual(errors)
 })

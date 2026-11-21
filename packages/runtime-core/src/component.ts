@@ -94,7 +94,7 @@ import type { BaseTransitionProps } from './components/BaseTransition'
 import type { DefineComponent } from './apiDefineComponent'
 import { markAsyncBoundary } from './helpers/useId'
 import { isAsyncWrapper } from './apiAsyncComponent'
-import type { RendererElement } from './renderer'
+import type { RendererElement, RendererNode } from './renderer'
 
 export type Data = Record<string, unknown>
 
@@ -592,7 +592,7 @@ export interface ComponentInternalInstance {
    * For updating css vars on contained teleports
    * @internal
    */
-  ut?: (vars?: Record<string, unknown>) => void
+  ut?: (start: RendererNode | null, end: RendererNode | null) => void
 
   /**
    * dev only. For style v-bind hydration mismatch checks

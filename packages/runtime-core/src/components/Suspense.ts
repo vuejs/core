@@ -628,6 +628,13 @@ function createSuspenseBoundary(
         isInFallback,
       } = suspense
 
+      // a pending ancestor takes the buffered effects and flushes them when it
+      // reveals its branch
+      let pendingAncestor = suspense.parent
+      while (pendingAncestor && !pendingAncestor.pendingBranch) {
+        pendingAncestor = pendingAncestor.parent
+      }
+
       // if there's a transition happening we need to wait it to finish.
       let delayEnter: boolean | null = false
       if (suspense.isHydrating) {
@@ -652,7 +659,18 @@ function createSuspenseBoundary(
                   : anchor,
                 MoveType.ENTER,
               )
-              queuePostFlushCb(effects)
+              // still behind the ancestor that took the effects: they run
+              // when it reveals the branch, not here
+              let hidden = false
+              if (pendingAncestor) {
+                let top = container
+                let parent
+                while ((parent = parentNode(top))) top = parent
+                hidden = top === pendingAncestor.hiddenContainer
+              }
+              if (!hidden) {
+                queuePostFlushCb(effects)
+              }
               // clear el reference from fallback vnode to allow GC after transition
               if (isInFallback && vnode.ssFallback) {
                 vnode.ssFallback.el = null
@@ -718,23 +736,13 @@ function createSuspenseBoundary(
       effects.length = kept
 
       // flush buffered effects
-      // check if there is a pending parent suspense
-      let parent = suspense.parent
-      let hasUnresolvedAncestor = false
-      while (parent) {
-        if (parent.pendingBranch) {
-          // found a pending parent suspense, merge buffered post jobs
-          // into that parent
-          for (let i = 0; i < effects.length; i++) {
-            parent.effects.push(effects[i])
-          }
-          hasUnresolvedAncestor = true
-          break
+      if (pendingAncestor) {
+        // merge buffered post jobs into the pending ancestor
+        for (let i = 0; i < effects.length; i++) {
+          pendingAncestor.effects.push(effects[i])
         }
-        parent = parent.parent
-      }
-      // no pending parent suspense nor transition, flush all jobs
-      if (!hasUnresolvedAncestor && !delayEnter) {
+      } else if (!delayEnter) {
+        // no pending parent suspense nor transition, flush all jobs
         queuePostFlushCb(effects)
       }
       suspense.effects = []
@@ -879,8 +887,12 @@ function createSuspenseBoundary(
       }
       instance
         .asyncDep!.catch(err => {
-          // don't rethrow in dev: the dep must still be released below
-          handleError(err, instance, ErrorCodes.SETUP_FUNCTION, false, true)
+          // an unmounted component has no setup outcome to report. check the
+          // scope: `isUnmounted` is deferred while the boundary is pending.
+          if (instance.scope.active) {
+            // don't rethrow in dev: the dep must still be released below
+            handleError(err, instance, ErrorCodes.SETUP_FUNCTION, false, true)
+          }
           // a failed setup renders nothing instead of its template
           return () => null
         })
