@@ -2159,7 +2159,7 @@ function handleSetupResult(
       if (__DEV__) {
         warn(`Functional vapor component must return a block directly.`)
       }
-      instance.block = []
+      instance.block = createEmptyFallback()
     } else if (!component.render) {
       if (__DEV__) {
         warn(
@@ -2169,7 +2169,7 @@ function handleSetupResult(
       // setup either threw or returned a non-block value: fall back to an
       // empty block so mount / unmount can proceed and the error can
       // propagate to parent error boundaries
-      instance.block = []
+      instance.block = createEmptyFallback()
     } else {
       if (__DEV__ || __FEATURE_PROD_DEVTOOLS__) {
         instance.devtoolsRawSetupState = setupResult
@@ -2194,6 +2194,18 @@ function handleSetupResult(
   if (__DEV__) {
     popWarningContext()
   }
+}
+
+/**
+ * The block of a component that cannot render. In hydration the server unit
+ * of the component becomes an empty comment (a mismatch, unless the server
+ * rendered one): the block keeps a node, so the fragment that renders the
+ * component finds its position, and no server node stays behind.
+ */
+function createEmptyFallback(): Block {
+  return isHydrating
+    ? hydrateBlock(() => adoptTemplate(currentHydrationNode!, '<!---->')!)
+    : []
 }
 
 // single root, inherit attrs. Gate on fallthrough *potential* only:
