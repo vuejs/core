@@ -389,7 +389,7 @@ function patchSuspense(
       }
       // reset suspense state
       suspense.deps = 0
-      discardEffects(suspense)
+      discardSuspenseEffects(suspense)
       // discard previous container
       suspense.hiddenContainer = createElement('div')
 
@@ -636,12 +636,7 @@ function createSuspenseBoundary(
         isInFallback,
       } = suspense
 
-      // a pending ancestor takes the buffered effects and flushes them when it
-      // reveals its branch
-      let pendingAncestor = suspense.parent
-      while (pendingAncestor && !pendingAncestor.pendingBranch) {
-        pendingAncestor = pendingAncestor.parent
-      }
+      const pendingAncestor = findPendingAncestor(suspense)
 
       // if there's a transition happening we need to wait it to finish.
       let delayEnter: boolean | null = false
@@ -741,29 +736,8 @@ function createSuspenseBoundary(
       suspense.pendingBranch = null
       suspense.isInFallback = false
 
-      // a retained async dep only waits for this boundary to resolve: its
-      // recovery must not ride on a pending ancestor or on the transition
-      let kept = 0
-      for (let i = 0; i < effects.length; i++) {
-        const effect = effects[i] as SchedulerJob
-        if (effect.flags! & SchedulerJobFlags.FLUSH_ON_SUSPENSE_RESOLVE) {
-          queuePostFlushCb(effect)
-        } else {
-          effects[kept++] = effect
-        }
-      }
-      effects.length = kept
-
-      // flush buffered effects
-      if (pendingAncestor) {
-        // merge buffered post jobs into the pending ancestor
-        for (let i = 0; i < effects.length; i++) {
-          pendingAncestor.effects.push(effects[i])
-        }
-      } else if (!delayEnter) {
-        // no pending parent suspense nor transition, flush all jobs
-        queuePostFlushCb(effects)
-      }
+      // with a transition, its afterLeave flushes them
+      releaseSuspenseEffects(effects, pendingAncestor, !!delayEnter)
       suspense.effects = []
 
       // resolve parent suspense if all async deps are resolved
@@ -862,80 +836,7 @@ function createSuspenseBoundary(
     },
 
     registerDep(instance, onResolve) {
-      const isInPendingSuspense = !!suspense.pendingBranch
-      if (isInPendingSuspense) {
-        suspense.deps++
-      }
-      const render = (setupResult: unknown) => {
-        instance.asyncResolved = true
-        onResolve(setupResult)
-      }
-      instance
-        .asyncDep!.catch(err => {
-          // an unmounted component has no setup outcome to report. check the
-          // scope: `isUnmounted` is deferred while the boundary is pending.
-          if (instance.scope.active) {
-            // don't rethrow in dev: the dep must still be released below
-            handleError(err, instance, ErrorCodes.SETUP_FUNCTION, false, true)
-          }
-          // a failed setup renders nothing instead of its template
-          return () => null
-        })
-        .then(asyncSetupResult => {
-          // component may have been unmounted before resolve.
-          if (instance.isUnmounted || suspense.isUnmounted) {
-            return
-          }
-          // the dep is only counted while the pending cycle it registered
-          // under is still current. a toggle discards that cycle, but the
-          // instance can outlive it: kept alive, or in the branch that stayed
-          // active. it still needs its render, or it would stay unresolved.
-          const isPendingDep =
-            isInPendingSuspense && suspense.pendingId === instance.suspenseId
-          // withAsyncContext defers cleanup to a later microtask, so currentInstance may
-          // still be set when Suspense re-enters another component's render path.
-          // Clear it first.
-          setCurrentInstance(null, undefined)
-          // The scope is stopped synchronously on unmount, while `isUnmounted`
-          // is deferred until the boundary resolves. Skip rendering but still
-          // release the dep so the boundary can resolve.
-          if (!instance.scope.active) {
-            if (isPendingDep && --suspense.deps === 0) {
-              suspense.resolve()
-            }
-            return
-          }
-          if (!isPendingDep && suspense.pendingBranch) {
-            // the boundary is pending on another cycle. async children this
-            // render mounts would register as deps of that cycle and could
-            // hold it back, so hold the render until the boundary has resolved.
-            // the job survives a discard of that cycle and re-parks itself
-            // while a newer one is pending.
-            const job: SchedulerJob = () => {
-              if (
-                instance.isUnmounted ||
-                suspense.isUnmounted ||
-                !instance.scope.active
-              ) {
-                return
-              }
-              if (suspense.pendingBranch) {
-                queueEffectWithSuspense(job, undefined, suspense)
-              } else {
-                render(asyncSetupResult)
-              }
-            }
-            job.flags =
-              SchedulerJobFlags.REQUEUE_ON_SUSPENSE_DISCARD |
-              SchedulerJobFlags.FLUSH_ON_SUSPENSE_RESOLVE
-            queueEffectWithSuspense(job, undefined, suspense)
-            return
-          }
-          render(asyncSetupResult)
-          if (isPendingDep && --suspense.deps === 0) {
-            suspense.resolve()
-          }
-        })
+      registerSuspenseDep(suspense, instance, onResolve)
     },
 
     unmount(parentSuspense, doRemove) {
@@ -970,12 +871,98 @@ function createSuspenseBoundary(
         // the branch was never revealed: its unmount post jobs are discarded
         // with the buffered mount ones, as on a discard before resolve
         unmount(suspense.pendingBranch, parentComponent, suspense, doRemove)
-        discardEffects(suspense)
+        discardSuspenseEffects(suspense)
       }
     },
   }
 
   return suspense
+}
+
+/**
+ * Counts an async setup as a dep of the boundary while it is pending, and
+ * renders the instance once the setup settles. Shared by the vdom boundary and
+ * Vapor's (runtime-vapor `VaporSuspense`).
+ */
+export function registerSuspenseDep(
+  suspense: SuspenseBoundary,
+  instance: GenericComponentInstance,
+  onResolve: (setupResult: unknown) => void,
+): void {
+  const isInPendingSuspense = !!suspense.pendingBranch
+  if (isInPendingSuspense) {
+    suspense.deps++
+  }
+  const render = (setupResult: unknown) => {
+    instance.asyncResolved = true
+    onResolve(setupResult)
+  }
+  instance
+    .asyncDep!.catch(err => {
+      // an unmounted component has no setup outcome to report. check the
+      // scope: `isUnmounted` is deferred while the boundary is pending.
+      if (instance.scope.active) {
+        // don't rethrow in dev: the dep must still be released below
+        handleError(err, instance, ErrorCodes.SETUP_FUNCTION, false, true)
+      }
+      // a failed setup renders nothing instead of its template
+      return () => null
+    })
+    .then(asyncSetupResult => {
+      // component may have been unmounted before resolve.
+      if (instance.isUnmounted || suspense.isUnmounted) {
+        return
+      }
+      // the dep is only counted while the pending cycle it registered
+      // under is still current. a toggle discards that cycle, but the
+      // instance can outlive it: kept alive, or in the branch that stayed
+      // active. it still needs its render, or it would stay unresolved.
+      const isPendingDep =
+        isInPendingSuspense && suspense.pendingId === instance.suspenseId
+      // withAsyncContext defers cleanup to a later microtask, so currentInstance may
+      // still be set when Suspense re-enters another component's render path.
+      // Clear it first.
+      setCurrentInstance(null, undefined)
+      // The scope is stopped synchronously on unmount, while `isUnmounted`
+      // is deferred until the boundary resolves. Skip rendering but still
+      // release the dep so the boundary can resolve.
+      if (!instance.scope.active) {
+        if (isPendingDep && --suspense.deps === 0) {
+          suspense.resolve()
+        }
+        return
+      }
+      if (!isPendingDep && suspense.pendingBranch) {
+        // the boundary is pending on another cycle. async children this
+        // render mounts would register as deps of that cycle and could
+        // hold it back, so hold the render until the boundary has resolved.
+        // the job survives a discard of that cycle and re-parks itself
+        // while a newer one is pending.
+        const job: SchedulerJob = () => {
+          if (
+            instance.isUnmounted ||
+            suspense.isUnmounted ||
+            !instance.scope.active
+          ) {
+            return
+          }
+          if (suspense.pendingBranch) {
+            queueEffectWithSuspense(job, undefined, suspense)
+          } else {
+            render(asyncSetupResult)
+          }
+        }
+        job.flags =
+          SchedulerJobFlags.REQUEUE_ON_SUSPENSE_DISCARD |
+          SchedulerJobFlags.FLUSH_ON_SUSPENSE_RESOLVE
+        queueEffectWithSuspense(job, undefined, suspense)
+        return
+      }
+      render(asyncSetupResult)
+      if (isPendingDep && --suspense.deps === 0) {
+        suspense.resolve()
+      }
+    })
 }
 
 function hydrateSuspense(
@@ -1077,7 +1064,11 @@ function normalizeSuspenseSlot(s: any) {
   return s
 }
 
-function discardEffects(suspense: SuspenseBoundary) {
+/**
+ * Drops the effects buffered for a pending branch that is thrown away. A job
+ * that must outlive that branch goes to the post-flush queue.
+ */
+export function discardSuspenseEffects(suspense: SuspenseBoundary): void {
   const { effects } = suspense
   for (let i = 0; i < effects.length; i++) {
     const effect = effects[i] as SchedulerJob
@@ -1086,6 +1077,49 @@ function discardEffects(suspense: SuspenseBoundary) {
     }
   }
   effects.length = 0
+}
+
+/**
+ * The nearest pending boundary above `suspense`: it takes the effects that
+ * `suspense` buffered and flushes them when it reveals its own branch.
+ */
+export function findPendingAncestor(
+  suspense: SuspenseBoundary,
+): SuspenseBoundary | null {
+  let ancestor = suspense.parent
+  while (ancestor && !ancestor.pendingBranch) ancestor = ancestor.parent
+  return ancestor
+}
+
+/**
+ * Releases the effects that a boundary buffered while its branch was pending.
+ * A retained async dep only waits for this boundary: it flushes now, and never
+ * rides on a pending ancestor or on a transition. The rest go to the pending
+ * ancestor, or to the post-flush queue unless `hold` (the caller flushes them
+ * later).
+ */
+export function releaseSuspenseEffects(
+  effects: Function[],
+  pendingAncestor: SuspenseBoundary | null,
+  hold: boolean,
+): void {
+  let kept = 0
+  for (let i = 0; i < effects.length; i++) {
+    const effect = effects[i] as SchedulerJob
+    if (effect.flags! & SchedulerJobFlags.FLUSH_ON_SUSPENSE_RESOLVE) {
+      queuePostFlushCb(effect)
+    } else {
+      effects[kept++] = effect
+    }
+  }
+  effects.length = kept
+  if (pendingAncestor) {
+    for (let i = 0; i < effects.length; i++) {
+      pendingAncestor.effects.push(effects[i])
+    }
+  } else if (!hold) {
+    queuePostFlushCb(effects)
+  }
 }
 
 export function queueEffectWithSuspense(

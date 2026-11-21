@@ -701,7 +701,13 @@ export {
 /**
  * @internal
  */
-export { collectDeferredEnters } from './components/Suspense'
+export {
+  collectDeferredEnters,
+  discardSuspenseEffects,
+  findPendingAncestor,
+  registerSuspenseDep,
+  releaseSuspenseEffects,
+} from './components/Suspense'
 /**
  * @internal
  */
