@@ -681,6 +681,11 @@ function renderElementSlot(
   parentComponent: ComponentInternalInstance,
   slotScopeId?: string,
 ) {
+  // A compiled slot turns block tracking off unless its caller flips `_d`.
+  // On the client, the element calls this slot in `normalizeChildren`, which
+  // flips it. Keep tracking on here too: `renderSlot` in the slot reads it.
+  const compiled = (slot as any)._c
+  if (compiled) (slot as any)._d = false
   let ret
   try {
     ret = (slot as any)(
@@ -691,6 +696,8 @@ function renderElementSlot(
     )
   } catch (err) {
     handleError(err, parentComponent, ErrorCodes.RENDER_FUNCTION)
+  } finally {
+    if (compiled) (slot as any)._d = true
   }
   if (isArray(ret)) {
     renderVNodeChildren(push, ret, parentComponent, slotScopeId)

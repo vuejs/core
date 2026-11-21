@@ -76,15 +76,26 @@ export function ssrRenderSlotInner(
     const bufferedPush = (item: SSRBufferItem) => {
       slotBuffer.push(item)
     }
-    const ret = slotFn(
-      // keep the slot function's contract in sync with `renderSlot`, which also
-      // normalizes nullish props before invoking the slot
-      slotProps || {},
-      bufferedPush,
-      parentComponent,
-      slotScopeId ? ' ' + slotScopeId : '',
-      slotAttrs,
-    )
+    // A compiled slot turns block tracking off, except when `renderSlot` calls
+    // it. This outlet is also in a template, and the components of the slot
+    // render in this call. Keep tracking on for them, as on the client:
+    // `renderSlot` reads it.
+    const compiledSlot = (slotFn as any)[rawVaporSlotKey] || slotFn
+    if (compiledSlot._c) compiledSlot._d = false
+    let ret
+    try {
+      ret = slotFn(
+        // keep the slot function's contract in sync with `renderSlot`, which
+        // also normalizes nullish props before invoking the slot
+        slotProps || {},
+        bufferedPush,
+        parentComponent,
+        slotScopeId ? ' ' + slotScopeId : '',
+        slotAttrs,
+      )
+    } finally {
+      if (compiledSlot._c) compiledSlot._d = true
+    }
     // undefined for an ssr slot; otherwise the vnodes, null for none valid
     let vnodes: VNodeArrayChildren | null | undefined
     if (isArray(ret)) {

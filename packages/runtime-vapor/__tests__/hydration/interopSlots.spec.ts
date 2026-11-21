@@ -69,6 +69,57 @@ describe('VDOM interop', () => {
     )
   })
 
+  // a library ships its vdom components compiled for the client only: on the
+  // server, an element with a compiled slot as its children renders that slot
+  // in push mode
+  test('hydrate vapor slot content of a client-compiled vdom <component :is> tag', async () => {
+    const data = ref({})
+    const components = {
+      // `<component :is>` with a tag compiles to an element block whose
+      // children are a compiled slot
+      Heading: compile(
+        `<script setup>const data = _data</script>
+        <template><component :is="'h2'"><slot /></component></template>`,
+        data,
+        {},
+        { vapor: false, ssr: false },
+      ),
+      Button: compile(
+        `<script setup>const data = _data</script>
+        <template><button><slot /></button></template>`,
+        data,
+        {},
+        { vapor: false, ssr: false },
+      ),
+    }
+    const code = `<script setup>const components = _components;</script>
+      <template>
+        <components.Heading><components.Button>Open</components.Button></components.Heading>
+      </template>`
+    const html = await VueServerRenderer.renderToString(
+      runtimeDom.createSSRApp(
+        compile(code, data, components, { vapor: true, ssr: true }),
+      ),
+    )
+    expect(html).toBe(
+      '<!--{--><h2><!--[--><button><!--[-->Open<!--]--></button><!--]--></h2><!--}-->',
+    )
+
+    const container = document.createElement('div')
+    document.body.appendChild(container)
+    container.innerHTML = html
+    const button = container.querySelector('button')
+    runtimeVapor
+      .createVaporSSRApp(compile(code, data, components, { vapor: true }))
+      .use(runtimeVapor.vaporInteropPlugin)
+      .mount(container)
+
+    expect(container.innerHTML).toBe(html)
+    expect(container.querySelector('button')).toBe(button)
+    expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+    expect(`Hydration children mismatch`).not.toHaveBeenWarned()
+  })
+
   test('hydrate VDOM slot content should unmount hydrated slot child before first insert', async () => {
     const data = ref({
       unmounted: vi.fn(),
@@ -3067,6 +3118,33 @@ describe('VDOM interop', () => {
     await nextTick()
     expect(container.querySelector('#a')!.textContent).toBe('1')
     expect(container.querySelector('div > b')!.textContent).toBe('1')
+  })
+
+  // on the server, `Part` renders in the slot call of `Wrapper`
+  test('hydrate vapor slot content of a vdom <component :is> tag in a vdom slot', async () => {
+    const { container, html } = await testWithVaporApp(
+      `<script setup>const components = _components</script>
+      <template>
+        <components.Wrapper>
+          <components.Part as="span">text <b>bold</b></components.Part>
+        </components.Wrapper>
+      </template>`,
+      {
+        Part: {
+          code: `<script setup>defineProps(['as'])</script>
+            <template><component :is="as"><slot /></component></template>`,
+          vapor: false,
+        },
+        Wrapper: {
+          code: `<script setup>const data = _data</script>
+            <template><div><slot /></div></template>`,
+          vapor: false,
+        },
+      },
+      ref({}),
+    )
+    expect(container.innerHTML).toBe(html)
+    expect(`Hydration node mismatch`).not.toHaveBeenWarned()
   })
 
   test('keeps a ref on hydrated vapor slot content in sync with its root', async () => {
