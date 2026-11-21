@@ -279,6 +279,12 @@ import {
   takeDeferredEnters,
 } from './suspense'
 import { isAsyncComponentEnabled } from './asyncComponentState'
+import {
+  addPendingVdomMount,
+  finishVdomMount,
+  isTeleportEnabled,
+  settlePendingVdomMount,
+} from './teleport'
 import { AsyncBranch, getAsyncWrapperInner } from './apiDefineAsyncComponent'
 import {
   currentRenderContext,
@@ -2160,6 +2166,8 @@ function createVDOMComponent(
   onScopeDispose(() => {
     if (!isMounted && inputScope) inputScope.stop()
   }, true)
+  // created on a client render, mounted on insertion (see `pendingVdomMounts`)
+  if (isTeleportEnabled && !isHydrating) addPendingVdomMount(frag)
   const keepAliveCtx = isKeepAliveEnabled
     ? (getKeepAliveContext(parentComponent) as KeepAliveInstance['ctx'] | null)
     : null
@@ -2382,6 +2390,7 @@ function createVDOMComponent(
           }
           setVNodeTransitionHooks(vnode, transition)
         }
+        settlePendingVdomMount(frag)
         withSlotBoundary(null, () =>
           internals.mt(
             vnode,
@@ -2393,6 +2402,7 @@ function createVDOMComponent(
             false,
           ),
         )
+        if (isTeleportEnabled) finishVdomMount()
         // set ref
         if (rawRef) vdomSetRef(rawRef, null, operationSuspense, vnode)
         isMounted = true
