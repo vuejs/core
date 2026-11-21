@@ -15,6 +15,7 @@ import {
   formatHtml,
   mountWithHydration,
   setupHydrationTest,
+  testHydration,
   triggerEvent,
 } from './_helpers'
 
@@ -838,6 +839,41 @@ describe('Vapor Mode hydration', () => {
       await nextTick()
       expect(container.innerHTML).toBe(
         '<div><!--teleport start--><span>teleported</span><!--teleport end--><p>updated</p></div>',
+      )
+    })
+
+    test('v-if disabled teleport with several children in a slot keeps the slot range', async () => {
+      const data = ref({ show: true })
+      const { container } = await testHydration(
+        `<template><components.Child><components.Portal /></components.Child></template>`,
+        {
+          Child: `<template><slot /></template>`,
+          Portal: `<template>
+            <teleport v-if="data.show" to="body" disabled><p>a</p><p>b</p></teleport>
+          </template>`,
+        },
+        data,
+      )
+
+      expect(`mismatch`).not.toHaveBeenWarned()
+      expect(container.innerHTML).toBe(
+        `<!--{--><!--[-->` +
+          `<!--teleport start--><p>a</p><p>b</p><!--teleport end-->` +
+          `<!--if--><!--]--><!--}-->`,
+      )
+
+      data.value.show = false
+      await nextTick()
+      expect(container.innerHTML).toBe(
+        `<!--{--><!--[--><!--if--><!--]--><!--}-->`,
+      )
+
+      data.value.show = true
+      await nextTick()
+      expect(container.innerHTML).toBe(
+        `<!--{--><!--[-->` +
+          `<!--teleport start--><p>a</p><p>b</p><!--teleport end-->` +
+          `<!--if--><!--]--><!--}-->`,
       )
     })
 
