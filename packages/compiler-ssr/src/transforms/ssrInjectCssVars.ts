@@ -43,7 +43,9 @@ const isTransparentBuiltin = (tag: string): boolean =>
   tag === 'keep-alive' ||
   tag === 'KeepAlive' ||
   tag === 'teleport' ||
-  tag === 'Teleport'
+  tag === 'Teleport' ||
+  tag === 'transition' ||
+  tag === 'Transition'
 
 function injectCssVars(node: RootNode | TemplateChildNode) {
   if (
