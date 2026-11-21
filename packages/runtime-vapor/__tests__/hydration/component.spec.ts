@@ -5,7 +5,7 @@ import {
   defineVaporComponent,
   template,
 } from '../../src'
-import { nextTick, reactive, ref } from '@vue/runtime-dom'
+import { h, nextTick, reactive, ref } from '@vue/runtime-dom'
 import { vi } from 'vite-plus/test'
 import { BindingTypes } from '@vue/compiler-dom'
 import {
@@ -886,6 +886,76 @@ describe('Vapor Mode hydration', () => {
       await nextTick()
       expect(container.querySelector('span')).toBe(span)
       expect(container.innerHTML).toBe(html.replace('foo', 'bar'))
+    })
+
+    // the server rendered it; on the client its server unit becomes an empty
+    // comment, and the rest hydrates
+    describe('a component that cannot render', () => {
+      const html = '<div><h2><strong>Bold</strong></h2><p>Saved</p></div>'
+      const code = (child: string) => `<script setup vapor>
+          import { onErrorCaptured } from 'vue'
+          const data = _data
+          const components = _components
+          onErrorCaptured(() => false)
+        </script>
+        <template><div>${child}<p>{{ data.msg }}</p></div></template>`
+
+      test.each([
+        [
+          'a function that returns a vnode',
+          () => h('strong', 'Bold'),
+          'Functional vapor component must return a block directly',
+        ],
+        [
+          'a component whose setup throws',
+          {
+            setup() {
+              throw new Error('setup')
+            },
+          },
+          'returned non-block value',
+        ],
+      ])('%s, in a v-if', async (_, Child, warning) => {
+        const data = ref({ ok: true, msg: 'Saved' })
+        const { container } = await mountWithHydration(
+          html,
+          code(`<h2 v-if="data.ok"><component :is="components.Child" /></h2>`),
+          data,
+          { Child },
+        )
+        expect(container.innerHTML).toBe(
+          '<div><h2><!----><!--dynamic-component--></h2><!--if--><p>Saved</p></div>',
+        )
+        expect(warning).toHaveBeenWarnedTimes(1)
+        expect(`Hydration node mismatch`).toHaveBeenWarnedTimes(1)
+
+        data.value.msg = 'Done'
+        await nextTick()
+        expect(container.innerHTML).toBe(
+          '<div><h2><!----><!--dynamic-component--></h2><!--if--><p>Done</p></div>',
+        )
+
+        data.value.ok = false
+        await nextTick()
+        expect(container.innerHTML).toBe('<div><!--if--><p>Done</p></div>')
+      })
+
+      test('a function that returns a vnode, in place', async () => {
+        const data = ref({ msg: 'Saved' })
+        const { container } = await mountWithHydration(
+          html,
+          code(`<h2><components.Child /></h2>`),
+          data,
+          { Child: () => h('strong', 'Bold') },
+        )
+        expect(container.innerHTML).toBe(
+          '<div><h2><!----></h2><p>Saved</p></div>',
+        )
+        expect(
+          'Functional vapor component must return a block directly',
+        ).toHaveBeenWarnedTimes(1)
+        expect(`Hydration node mismatch`).toHaveBeenWarnedTimes(1)
+      })
     })
 
     // the ranges of nested components open back to back: each component
