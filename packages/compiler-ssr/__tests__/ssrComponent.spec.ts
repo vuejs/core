@@ -564,6 +564,11 @@ describe('ssr: components', () => {
       false,
     ],
     [
+      'a Transition with a bound appear',
+      `<Transition :appear="a"><foo/></Transition>`,
+      true,
+    ],
+    [
       'a v-if on a template of several nodes',
       `<template v-if="a"><!--c--><foo/></template>`,
       false,

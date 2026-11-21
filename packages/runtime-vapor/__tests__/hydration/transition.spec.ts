@@ -372,6 +372,85 @@ describe('Vapor Mode hydration', () => {
       )
     })
 
+    // the server wraps the content in a <template> only while a bound
+    // `appear` is truthy
+    describe('bound appear', () => {
+      const sfc = (template: string, vapor: boolean) =>
+        `<script setup${vapor ? ' vapor' : ''}>
+          const data = _data; const components = _components
+        </script>
+        <template>${template}</template>`
+
+      test.each([
+        { app: 'vapor', isVaporApp: true, appear: false },
+        { app: 'vapor', isVaporApp: true, appear: true },
+        { app: 'vdom', isVaporApp: false, appear: false },
+        { app: 'vdom', isVaporApp: false, appear: true },
+      ])(
+        'in a $app app, appear: $appear, hydrates content in a slot',
+        async ({ isVaporApp, appear }) => {
+          const data = reactive({ appear, msg: 'a' })
+          const { container, html } = await testHydration(
+            sfc(
+              `<components.Wrap>
+                <Transition :appear="data.appear"><p>{{ data.msg }}</p></Transition>
+              </components.Wrap>`,
+              isVaporApp,
+            ),
+            {
+              Wrap: {
+                code: sfc(`<section><slot /></section>`, isVaporApp),
+                vapor: isVaporApp,
+              },
+            },
+            data,
+            { isVaporApp },
+          )
+          expect(html.includes('<template>')).toBe(appear)
+          const p = container.querySelector('p')!
+          expect(p.className).toBe(appear ? 'v-enter-from v-enter-active' : '')
+          expect(`mismatch`).not.toHaveBeenWarned()
+
+          data.msg = 'b'
+          await nextTick()
+          expect(container.querySelector('p')).toBe(p)
+          expect(p.textContent).toBe('b')
+        },
+      )
+
+      // the sole root takes a range of its own, as the child's range may
+      // come first
+      test.each([false, true])(
+        'appear: %s, hydrates a sole root around a child that renders a range',
+        async appear => {
+          const data = reactive({ appear, msg: 'a' })
+          const { container, html } = await testHydration(
+            `<template>
+              <Transition :appear="data.appear"><components.Child /></Transition>
+            </template>`,
+            {
+              Child: `<template><components.Leaf /></template>`,
+              Leaf: `<template><p>{{ data.msg }}</p></template>`,
+            },
+            data,
+          )
+          expect(html).toBe(
+            appear
+              ? '<!--{--><template><!--{--><p>a</p><!--}--></template><!--}-->'
+              : '<!--{--><!--{--><p>a</p><!--}--><!--}-->',
+          )
+          const p = container.querySelector('p')!
+          expect(p.className).toBe(appear ? 'v-enter-from v-enter-active' : '')
+          expect(`mismatch`).not.toHaveBeenWarned()
+
+          data.msg = 'b'
+          await nextTick()
+          expect(container.querySelector('p')).toBe(p)
+          expect(p.textContent).toBe('b')
+        },
+      )
+    })
+
     test.each([
       [
         'inside a dynamic native element',
@@ -624,7 +703,7 @@ describe('Vapor Mode hydration', () => {
         undefined,
         data,
       )
-      expect(container.innerHTML).toBe(`<div>foo</div>`)
+      expect(container.innerHTML).toBe(`<!--{--><div>foo</div><!--}-->`)
       expect(`mismatch`).not.toHaveBeenWarned()
     })
 

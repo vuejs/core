@@ -257,8 +257,9 @@ export const ssrTransformComponent: NodeTransform = (node, context) => {
 /**
  * Whether the server render of `node` begins with markup of its own: a
  * Teleport opens with its markers, a TransitionGroup with its tag or range,
- * a Suspense in a vapor component with its slot's range, an appearing
- * Transition with its `<template>`.
+ * a Suspense in a vapor component with its slot's range, a Transition with a
+ * static `appear` with its `<template>`. A bound `appear` adds the
+ * `<template>` only while it is truthy.
  */
 export function beginsWithOwnMarkup(node: ComponentNode): boolean {
   const component = componentTypeMap.get(node)
@@ -266,7 +267,8 @@ export function beginsWithOwnMarkup(node: ComponentNode): boolean {
     component === TELEPORT ||
     component === TRANSITION_GROUP ||
     component === SUSPENSE ||
-    (component === TRANSITION && !!findProp(node, 'appear', false, true))
+    (component === TRANSITION &&
+      findProp(node, 'appear', false, true)?.type === NodeTypes.ATTRIBUTE)
   )
 }
 
