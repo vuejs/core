@@ -122,11 +122,15 @@ export async function testHydration(
     interop = false,
     serverData = data,
     compilerOptions,
+    inIframe = false,
   }: {
     isVaporApp?: boolean
     interop?: boolean
     serverData?: any
     compilerOptions?: SFCTemplateCompileOptions['compilerOptions']
+    // jsdom gives an iframe a window of its own: its nodes fail `instanceof`
+    // checks against the classes of this window
+    inIframe?: boolean
   } = {},
 ): Promise<HydrationTestContext> {
   const ssrComponents: any = {}
@@ -153,8 +157,12 @@ export async function testHydration(
   const html = await VueServerRenderer.renderToString(
     runtimeDom.createSSRApp(serverComp),
   )
-  const container = document.createElement('div')
-  document.body.appendChild(container)
+  const doc = inIframe
+    ? document.body.appendChild(document.createElement('iframe'))
+        .contentDocument!
+    : document
+  const container = doc.createElement('div')
+  doc.body.appendChild(container)
   container.innerHTML = html
 
   const clientComp = compile(code, data, clientComponents, {

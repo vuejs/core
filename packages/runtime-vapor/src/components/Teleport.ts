@@ -19,7 +19,14 @@ import {
   setCurrentInstance,
   warn,
 } from '@vue/runtime-dom'
-import { type Block, type BlockFn, insert, move, remove } from '../block'
+import {
+  type Block,
+  type BlockFn,
+  insert,
+  move,
+  remove,
+  removeTeleportChildren,
+} from '../block'
 import {
   createComment,
   createTextNode,
@@ -277,7 +284,11 @@ export class TeleportFragment extends RenderContextFragment {
     }
 
     // teardown previous nodes
-    remove(this.nodes, mountState.container)
+    removeTeleportChildren(
+      this.nodes,
+      mountState.container,
+      mountState.location === TeleportMountLocation.Target,
+    )
     // mount new nodes
     this.nodes = children
     this.bindChildren(children)
@@ -542,7 +553,7 @@ export class TeleportFragment extends RenderContextFragment {
         (this.targetStart && parentNode(this.targetStart)) ||
         (this.targetAnchor && parentNode(this.targetAnchor)) ||
         undefined
-      remove(this.nodes, targetParent)
+      removeTeleportChildren(this.nodes, targetParent, true)
       this.nodes = []
       this.mountState = { location: TeleportMountLocation.None }
     }
@@ -577,7 +588,7 @@ export class TeleportFragment extends RenderContextFragment {
     }
     const mountState = this.mountState
     if (this.nodes && mountState.location === TeleportMountLocation.Main) {
-      remove(this.nodes, mountState.container)
+      removeTeleportChildren(this.nodes, mountState.container, false)
       this.nodes = []
     }
     this.disposeTarget()

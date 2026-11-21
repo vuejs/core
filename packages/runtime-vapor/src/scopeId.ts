@@ -21,6 +21,7 @@ import {
 } from './renderContext'
 import { isHydrating, isRecreatedNode } from './dom/hydration'
 import { setElementScopeIds } from './dom/scopeIdStamp'
+import { isElementNode } from './dom/node'
 
 /**
  * Catch-up for slot content DOM created outside the ambient window (eager
@@ -30,7 +31,7 @@ import { setElementScopeIds } from './dom/scopeIdStamp'
  * patch context and are skipped.
  */
 function stampSlotContent(block: Block, scopeIds: string[]): void {
-  if (block instanceof Element) {
+  if (isElementNode(block)) {
     for (let i = 0; i < scopeIds.length; i++) {
       if (!block.hasAttribute(scopeIds[i])) {
         block.setAttribute(scopeIds[i], '')

@@ -7,6 +7,7 @@ import {
   unmountComponent,
 } from './component'
 import { isClaimedAnchor, isHydrating, isRangeEnd } from './dom/hydration'
+import { isCommentNode, isElementNode, isNode } from './dom/node'
 import {
   MoveType,
   type SchedulerJob,
@@ -23,8 +24,10 @@ import {
 import {
   type DynamicFragment,
   type VaporFragment,
+  isForFragment,
   isFragment,
   isInteropFragment,
+  isSlotOutletFragment,
 } from './fragment'
 import {
   type TeleportHost,
@@ -33,7 +36,7 @@ import {
   isTeleportFragment,
   waitingTeleports,
 } from './teleport'
-import { isTransitionEnabled } from './transition'
+import { isTransitionEnabled, removeLeavingNodes } from './transition'
 import { isInteropEnabled } from './vdomInteropState'
 import {
   deferEnter,
@@ -136,12 +139,7 @@ export type BlockFn = (...args: any[]) => Block
 export const EMPTY_BLOCK: Block[] = EMPTY_ARR as unknown as Block[]
 
 export function isBlock(val: NonNullable<unknown>): val is Block {
-  return (
-    val instanceof Node ||
-    isArray(val) ||
-    isVaporComponent(val) ||
-    isFragment(val)
-  )
+  return isNode(val) || isArray(val) || isVaporComponent(val) || isFragment(val)
 }
 
 export function isValidBlock(
@@ -150,10 +148,10 @@ export function isValidBlock(
 ): boolean {
   if (!block) {
     return false
-  } else if (block instanceof Node) {
+  } else if (isNode(block)) {
     // Claimed structural anchors are text nodes in prod; excluding them by
     // marker keeps validity identical across dev (comment) and prod shapes.
-    return !(block instanceof Comment) && !isClaimedAnchor(block)
+    return !isCommentNode(block) && !isClaimedAnchor(block)
   } else if (isVaporComponent(block)) {
     return componentAsValid || isValidBlock(block.block, componentAsValid)
   } else if (isArray(block)) {
@@ -187,7 +185,7 @@ export function insert(
   anchor: Node | null = null,
   parentSuspense?: any, // TODO Suspense
 ): void {
-  if (block instanceof Node) {
+  if (isNode(block)) {
     insertNode(block, parent, anchor, parentSuspense)
     return
   }
@@ -216,7 +214,7 @@ export function insertNode(
   if (!isHydrating) {
     // only apply transition on Element nodes
     const transition =
-      isTransitionEnabled && block instanceof Element
+      isTransitionEnabled && isElementNode(block)
         ? (block as TransitionBlock).$transition
         : undefined
     if (transition) {
@@ -335,13 +333,13 @@ export function move(
   parentComponent?: VaporComponentInstance,
   parentSuspense?: any, // TODO Suspense
 ): void {
-  if (block instanceof Node) {
+  if (isNode(block)) {
     // a held slot root's branch is not in the DOM: its outlet places it
     if (isTransitionEnabled && !block.parentNode) return
     // only apply transition on Element nodes
     if (
       isTransitionEnabled &&
-      block instanceof Element &&
+      isElementNode(block) &&
       (block as TransitionBlock).$transition &&
       moveType !== MoveType.REORDER
     ) {
@@ -435,8 +433,22 @@ export function move(
   }
 }
 
+// vdom removes a Fragment (a slot outlet, a v-for list, several roots) as the
+// DOM range between its anchors, which takes the elements still leaving in it.
+// Set while the removal of such a block runs: a Transition in it removes its
+// leaving elements too (removeLeavingNodes).
+let inRemovedRange = false
+
+// Whether this removal starts a range; the caller ends it.
+function enterRemovedRange(isRange: boolean, parent?: ParentNode): boolean {
+  if (!isTransitionEnabled || !isRange || !parent || inRemovedRange) {
+    return false
+  }
+  return (inRemovedRange = true)
+}
+
 export function remove(block: Block, parent?: ParentNode): void {
-  if (block instanceof Node) {
+  if (isNode(block)) {
     removeNode(block, parent)
   } else if (isVaporComponent(block)) {
     unmountComponent(
@@ -446,12 +458,45 @@ export function remove(block: Block, parent?: ParentNode): void {
         ? resolveUnmountSuspense(block.suspense)
         : block.suspense,
     )
+    // not when a KeepAlive only deactivated it
+    if (isTransitionEnabled && parent && block.isUnmounted) {
+      removeLeavingNodes(block, parent, inRemovedRange)
+    }
   } else if (isArray(block)) {
-    for (let i = 0; i < block.length; i++) {
-      remove(block[i], parent)
+    const range = enterRemovedRange(block.length > 1, parent)
+    try {
+      for (let i = 0; i < block.length; i++) {
+        remove(block[i], parent)
+      }
+    } finally {
+      if (range) inRemovedRange = false
     }
   } else {
     removeFragment(block, parent)
+  }
+}
+
+/**
+ * vdom removes the children of a Teleport one by one, not as a range. In the
+ * target, they are also outside of any range around the Teleport.
+ */
+export function removeTeleportChildren(
+  nodes: Block,
+  parent: ParentNode | undefined,
+  inTarget: boolean,
+): void {
+  const prev = inRemovedRange
+  if (inTarget) inRemovedRange = false
+  try {
+    if (isArray(nodes)) {
+      for (let i = 0; i < nodes.length; i++) {
+        remove(nodes[i], parent)
+      }
+    } else {
+      remove(nodes, parent)
+    }
+  } finally {
+    inRemovedRange = prev
   }
 }
 
@@ -472,7 +517,7 @@ export function removeNode(block: Node, parent?: ParentNode): void {
   if (
     isTransitionEnabled &&
     (block as TransitionBlock).$transition &&
-    block instanceof Element &&
+    isElementNode(block) &&
     // a held slot root never entered the DOM: nothing to animate
     block.parentNode
   ) {
@@ -517,10 +562,18 @@ export function removeFragment(
       bum[i]()
     }
   }
-  if (block.remove) {
-    block.remove(parent, leaveHooks(block as TransitionBlock))
-  } else {
-    remove(block.nodes, parent)
+  const range = enterRemovedRange(
+    isSlotOutletFragment(block) || isForFragment(block),
+    parent,
+  )
+  try {
+    if (block.remove) {
+      block.remove(parent, leaveHooks(block as TransitionBlock))
+    } else {
+      remove(block.nodes, parent)
+    }
+  } finally {
+    if (range) inRemovedRange = false
   }
   if (block.anchor) removeNode(block.anchor, parent)
   if (block.scope) block.scope.stop()
@@ -534,7 +587,7 @@ export function removeFragment(
 export function registerNestedVDOMCleanup(block: Block): void {
   if (
     isInteropEnabled &&
-    !(block instanceof Node) &&
+    !isNode(block) &&
     // unmounts the ones in its block itself
     !isVaporComponent(block)
   ) {
@@ -548,7 +601,7 @@ export function registerNestedVDOMCleanup(block: Block): void {
  */
 export function unmountVDOM(block: Block | undefined): void {
   // a vapor component unmounts the ones in its own block
-  if (!block || block instanceof Node || isVaporComponent(block)) return
+  if (!block || isNode(block) || isVaporComponent(block)) return
   if (isArray(block)) {
     for (let i = 0; i < block.length; i++) unmountVDOM(block[i])
   } else if (isInteropFragment(block)) {
@@ -568,7 +621,7 @@ export function normalizeBlock(block: Block): Node[] {
     )
   }
   const nodes: Node[] = []
-  if (block instanceof Node) {
+  if (isNode(block)) {
     nodes.push(block)
   } else if (isArray(block)) {
     block.forEach(child => nodes.push(...normalizeBlock(child)))
@@ -592,7 +645,7 @@ export function normalizeBlock(block: Block): Node[] {
  * teleport target) and has no marker left.
  */
 export function getBlockFirstNode(block: Block): Node | undefined {
-  if (block instanceof Node) {
+  if (isNode(block)) {
     return block
   } else if (isArray(block)) {
     for (let i = 0; i < block.length; i++) {
@@ -678,7 +731,7 @@ export function findBlockBoundary(block: Block): {
 }
 
 function findLastChild(node: Block): Node | undefined | null {
-  if (node && node instanceof Node) {
+  if (isNode(node)) {
     return node
   } else if (isArray(node)) {
     for (let i = node.length - 1; i >= 0; i--) {

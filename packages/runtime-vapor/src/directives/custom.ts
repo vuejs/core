@@ -33,6 +33,7 @@ import { isInteropEnabled } from '../vdomInteropState'
 import { isSuspenseEnabled } from '../suspense'
 import { isKeepAliveEnabled } from '../keepAlive'
 import { isFunction, isObject } from '@vue/shared'
+import { isElementNode } from '../dom/node'
 
 // !! vapor directive is different from vdom directives
 export type VaporDirective<
@@ -70,7 +71,7 @@ export function withVaporDirectives(
   dirs: VaporDirectiveArguments,
 ): void {
   // Element targets are stable, so apply synchronously in the current scope
-  if (node instanceof Element) {
+  if (isElementNode(node)) {
     applyDirectivesToElement(node, dirs, currentInstance)
     return
   }

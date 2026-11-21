@@ -18,7 +18,7 @@ import {
   setIsHydratingEnabled,
   warn,
 } from '@vue/runtime-core'
-import { nodeOps } from './nodeOps'
+import { mathmlNS, nodeOps, svgNS } from './nodeOps'
 import { patchProp } from './patchProp'
 export { nodeOps, patchProp }
 // Importing from the compiler, will be tree-shaken in prod
@@ -144,9 +144,9 @@ export const createApp = ((...args) => {
       container.textContent = ''
     }
     const proxy = mount(container, false, resolveRootNamespace(container))
-    if (container instanceof Element) {
-      container.removeAttribute('v-cloak')
-      container.setAttribute('data-v-app', '')
+    if (container.nodeType === 1) {
+      ;(container as Element).removeAttribute('v-cloak')
+      ;(container as Element).setAttribute('data-v-app', '')
     }
     return proxy
   }
@@ -177,13 +177,11 @@ export const createSSRApp = ((...args) => {
 function resolveRootNamespace(
   container: Element | ShadowRoot,
 ): ElementNamespace {
-  if (container instanceof SVGElement) {
+  const ns = (container as Element).namespaceURI
+  if (ns === svgNS) {
     return 'svg'
   }
-  if (
-    typeof MathMLElement === 'function' &&
-    container instanceof MathMLElement
-  ) {
+  if (ns === mathmlNS) {
     return 'mathml'
   }
 }

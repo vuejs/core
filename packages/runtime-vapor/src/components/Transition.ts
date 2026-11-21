@@ -83,7 +83,12 @@ import {
   locateHydrationNode,
   setCurrentHydrationNode,
 } from '../dom/hydration'
-import { updateLastLocatedLogicalChild } from '../dom/node'
+import {
+  isCommentNode,
+  isElementNode,
+  isNode,
+  updateLastLocatedLogicalChild,
+} from '../dom/node'
 import { isInteropEnabled } from '../vdomInteropState'
 
 export type ResolvedTransitionBlock = (
@@ -110,8 +115,43 @@ export const ensureTransitionHooksRegistered = (): void => {
       awaitLeavingRootImpl,
       resolveOutletLeaveImpl,
       deferSlotRootFlipImpl,
+      removeLeavingNodesImpl,
     )
   }
+}
+
+// The Transitions and TransitionGroups whose leaving elements a removal takes
+const leavingOwners = new WeakMap<
+  VaporComponentInstance,
+  { state: TransitionState; isRange: boolean }
+>()
+
+// `isRange`: the owner is a vdom Fragment itself (a TransitionGroup without a
+// tag), so its own removal takes its leaving elements.
+export function trackLeavingNodes(
+  instance: VaporComponentInstance,
+  state: TransitionState,
+  isRange = false,
+): void {
+  leavingOwners.set(instance, { state, isRange })
+}
+
+// The leaves run to their end, as after vdom's removal of the range.
+export function removeLeavingNodesImpl(
+  instance: VaporComponentInstance,
+  parent: ParentNode,
+  inRange: boolean,
+): void {
+  const owner = leavingOwners.get(instance)
+  if (!owner || !(inRange || owner.isRange)) return
+  owner.state.leavingNodes.forEach(nodes => {
+    for (const key in nodes) {
+      const node = nodes[key]
+      if (isNode(node) && node.parentNode === parent) {
+        parent.removeChild(node)
+      }
+    }
+  })
 }
 
 // Adopts the <template> the server wraps an appearing Transition's content in;
@@ -126,7 +166,7 @@ export const hydrateTransitionImpl = (
   const { content, parentNode } = templateNode
   const { firstChild } = content
   if (firstChild) {
-    let transitionEl: Element | undefined
+    let transitionEl: HTMLElement | SVGElement | undefined
     // firstChild may be a fragment anchor comment (e.g. <!--[--> from slotted
     // content), but appear hooks still need to target the actual element.
     for (
@@ -134,8 +174,9 @@ export const hydrateTransitionImpl = (
       node;
       node = node.nextSibling
     ) {
-      if (node instanceof Element) {
-        transitionEl = node
+      if (isElementNode(node)) {
+        // the appear hides it through its style
+        if ('style' in node) transitionEl = node as HTMLElement | SVGElement
         break
       }
     }
@@ -145,10 +186,7 @@ export const hydrateTransitionImpl = (
     updateLastLocatedLogicalChild(parentNode!, templateNode, firstChild)
     setCurrentHydrationNode(firstChild)
 
-    if (
-      transitionEl instanceof HTMLElement ||
-      transitionEl instanceof SVGElement
-    ) {
+    if (transitionEl) {
       return (block: Block, hooks: TransitionHooks) => {
         // A child rendering its root later (an async setup, an async wrapper
         // loading) hydrates it on screen already: it does not appear, as
@@ -195,6 +233,7 @@ export const VaporTransition: FunctionalVaporComponent<TransitionProps> =
       : undefined
     if (!props.appear) performAppear = undefined
     const state: VaporTransitionState = useTransitionState()
+    trackLeavingNodes(instance, state)
     const { mode } = props
     __DEV__ && checkTransitionMode(mode)
 
@@ -295,7 +334,7 @@ export const VaporTransition: FunctionalVaporComponent<TransitionProps> =
 function getTransitionType(block: ResolvedTransitionBlock): any {
   const type = block.$ttype
   if (type !== undefined) return type
-  if (block instanceof Element) return block.localName
+  if (isElementNode(block)) return block.localName
   if (isInteropEnabled && isFragment(block) && block.getTransitionType) {
     const type = block.getTransitionType()
     if (type !== undefined) return type
@@ -403,7 +442,7 @@ export function applyTransitionHooksImpl(
   // positions keying the children
   let single = block
   if (isArray(block)) {
-    const children = block.filter(b => !(b instanceof Comment))
+    const children = block.filter(b => !isCommentNode(b))
     if (children.length === 1) {
       single = children[0]
     } else if (children.length === 0) {
@@ -481,7 +520,7 @@ export function applyTransitionHooksImpl(
   // an element entering now (a slot fallback) claims the leave waiting on the
   // Transition; one already in the DOM does not enter
   const pendingLeave =
-    !refresh && child instanceof Element && !child.parentNode
+    !refresh && isElementNode(child) && !child.parentNode
       ? claimPendingLeave(state)
       : undefined
   resolvedHooks.delayedLeave = pendingLeave || delayedLeave
@@ -530,7 +569,7 @@ function isPersistedRoot(
           ? getAsyncWrapperInner(block)
           : block.block
     } else if (isArray(block)) {
-      block = block.find(b => !(b instanceof Comment))
+      block = block.find(b => !isCommentNode(b))
     } else if (
       isFragment(block) &&
       (isVaporSlotOutlet(block)
@@ -966,7 +1005,7 @@ function awaitLeavingRoot(block: Block, cb: () => void): boolean {
   // the hooks running the root's leave: an element's removal leave, or the
   // ones a component or interop root was handed to leave under
   const running =
-    root && (root instanceof Element ? root.$removing : root.$transition)
+    root && (isElementNode(root) ? root.$removing : root.$transition)
   if (!running) return false
   // paired after all: the Transition's other branches wait on the leave as
   // well, as under vdom's out-in, until it ends. A vdom Transition (hooks
@@ -1225,7 +1264,7 @@ export function enterRootsKeyContext(
 ): KeyContext {
   let n = 0
   for (let i = 0; i < block.length; i++) {
-    if (!(block[i] instanceof Comment)) n++
+    if (!isCommentNode(block[i])) n++
   }
   return {
     key: ownKey(ctx, undefined),
@@ -1334,9 +1373,9 @@ function collectTransitionBlocks(
   children: ResolvedTransitionBlock[],
   ctx: KeyContext | undefined,
 ): void {
-  if (block instanceof Node) {
+  if (isNode(block)) {
     // transition can only be applied on Element child
-    if (block instanceof Element) {
+    if (isElementNode(block)) {
       children.push(block)
       if (ctx) resolveChildIdentity(block, ctx)
     }
@@ -1437,7 +1476,7 @@ function collectArrayTransitionBlocks(
   const roots = ctx && ctx.slot ? enterRootsKeyContext(ctx, block) : undefined
   for (let i = 0; i < block.length; i++) {
     const c = block[i]
-    if (c instanceof Comment) continue
+    if (isCommentNode(c)) continue
     const nested: ResolvedTransitionBlock[] = []
     collectTransitionBlocks(
       c,
@@ -1498,7 +1537,7 @@ export function isValidTransitionBlock(
   block: Block,
 ): block is ResolvedTransitionBlock {
   return (
-    block instanceof Element ||
+    isElementNode(block) ||
     !!(
       isInteropEnabled &&
       isFragment(block) &&
@@ -1511,7 +1550,7 @@ export function isValidTransitionBlock(
 export function getTransitionElement(
   block: ResolvedTransitionBlock,
 ): Element | undefined {
-  if (block instanceof Element) return block
+  if (isElementNode(block)) return block
 
   // vdom interop
   if (isInteropEnabled && isFragment(block) && block.getTransitionElement) {
