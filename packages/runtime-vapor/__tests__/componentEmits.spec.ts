@@ -440,7 +440,7 @@ describe('component: emit', () => {
   })
 
   test('should not execute handler during lookup', () => {
-    const { render } = define({
+    const { component: Child } = define({
       setup(_, { emit }) {
         emit('click')
         return []
@@ -448,14 +448,16 @@ describe('component: emit', () => {
     })
 
     const handler = vi.fn()
-    const props = {
-      $: [
-        () => ({
-          onClick: handler,
+    define({
+      setup: () =>
+        createComponent(Child, {
+          $: [
+            () => ({
+              onClick: handler,
+            }),
+          ],
         }),
-      ],
-    }
-    render(props as any)
+    }).render()
 
     expect(handler).toHaveBeenCalledTimes(1)
   })
@@ -496,7 +498,7 @@ describe('component: emit', () => {
   })
 
   test('should trigger once handler from dynamic source', () => {
-    const { render } = define({
+    const { component: Child } = define({
       setup(_, { emit }) {
         emit('foo')
         emit('foo')
@@ -505,19 +507,22 @@ describe('component: emit', () => {
     })
 
     const handler = vi.fn()
-    render({
-      $: [
-        () => ({
-          onFooOnce: handler,
+    define({
+      setup: () =>
+        createComponent(Child, {
+          $: [
+            () => ({
+              onFooOnce: handler,
+            }),
+          ],
         }),
-      ],
-    } as any)
+    }).render()
 
     expect(handler).toHaveBeenCalledTimes(1)
   })
 
   test('v-model modifiers should work from dynamic source', () => {
-    const { render } = define({
+    const { component: Child } = define({
       setup(_, { emit }) {
         emit('update:modelValue', '1')
         emit('update:foo', '  two  ')
@@ -527,18 +532,21 @@ describe('component: emit', () => {
 
     const fn1 = vi.fn()
     const fn2 = vi.fn()
-    render({
-      $: [
-        () => ({
-          modelValue: null,
-          modelModifiers: { number: true },
-          ['onUpdate:modelValue']: fn1,
-          foo: null,
-          fooModifiers: { trim: true },
-          ['onUpdate:foo']: fn2,
+    define({
+      setup: () =>
+        createComponent(Child, {
+          $: [
+            () => ({
+              modelValue: null,
+              modelModifiers: { number: true },
+              ['onUpdate:modelValue']: fn1,
+              foo: null,
+              fooModifiers: { trim: true },
+              ['onUpdate:foo']: fn2,
+            }),
+          ],
         }),
-      ],
-    } as any)
+    }).render()
 
     expect(fn1).toHaveBeenCalledTimes(1)
     expect(fn1).toHaveBeenCalledWith(1)
@@ -547,7 +555,7 @@ describe('component: emit', () => {
   })
 
   test('v-model modifiers should work from static object source', () => {
-    const { render } = define({
+    const { component: Child } = define({
       setup(_, { emit }) {
         emit('update:modelValue', '1')
         emit('update:foo', '  two  ')
@@ -557,18 +565,21 @@ describe('component: emit', () => {
 
     const fn1 = vi.fn()
     const fn2 = vi.fn()
-    render({
-      $: [
-        {
-          modelValue: null,
-          modelModifiers: { number: true },
-          ['onUpdate:modelValue']: () => fn1,
-          foo: null,
-          fooModifiers: { trim: true },
-          ['onUpdate:foo']: () => fn2,
-        },
-      ],
-    } as any)
+    define({
+      setup: () =>
+        createComponent(Child, {
+          $: [
+            {
+              modelValue: null,
+              modelModifiers: { number: true },
+              ['onUpdate:modelValue']: () => fn1,
+              foo: null,
+              fooModifiers: { trim: true },
+              ['onUpdate:foo']: () => fn2,
+            },
+          ],
+        }),
+    }).render()
 
     expect(fn1).toHaveBeenCalledTimes(1)
     expect(fn1).toHaveBeenCalledWith(1)

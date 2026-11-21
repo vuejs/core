@@ -29,6 +29,14 @@ import { setIsHydratingEnabled, withHydration } from './dom/hydration'
 let _createApp: CreateAppFunction<ParentNode, VaporComponent>
 const rootInstances = new WeakMap<App, VaporComponentInstance>()
 
+// Root props are values, as in createApp: a function is not a prop getter.
+// Each getter reads its key, so a reactive object keeps the props reactive.
+const createRootProps = (props: Record<string, unknown>): RawProps => {
+  const rawProps: RawProps = {}
+  for (const key in props) rawProps[key] = () => props[key]
+  return rawProps
+}
+
 // a root never inherits an instance left current by another app, e.g. one
 // whose setup threw without an errorHandler
 const createRootComponent = (app: App): VaporComponentInstance => {
@@ -36,7 +44,7 @@ const createRootComponent = (app: App): VaporComponentInstance => {
   try {
     return createComponent(
       app._component,
-      app._props as RawProps,
+      app._props && createRootProps(app._props),
       null,
       false,
       false,
