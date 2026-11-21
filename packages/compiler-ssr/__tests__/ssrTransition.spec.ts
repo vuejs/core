@@ -22,4 +22,21 @@ describe('transition', () => {
         }"
       `)
   })
+
+  test('with bound appear', () => {
+    expect(compile(`<transition :appear="ok"><div>foo</div></transition>`).code)
+      .toMatchInlineSnapshot(`
+        "const { ssrRenderAttrs: _ssrRenderAttrs } = require("vue/server-renderer")
+
+        return function ssrRender(_ctx, _push, _parent, _attrs) {
+          _push(\`\${
+            (_ctx.ok) ? "<template>" : ""
+          }<div\${
+            _ssrRenderAttrs(_attrs)
+          }>foo</div>\${
+            (_ctx.ok) ? "</template>" : ""
+          }\`)
+        }"
+      `)
+  })
 })
