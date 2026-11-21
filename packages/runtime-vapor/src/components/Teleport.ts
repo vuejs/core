@@ -52,8 +52,11 @@ import type { RawSlots } from '../componentSlots'
 import { applyTransitionHooks, isTransitionEnabled } from '../transition'
 import {
   type TeleportHost,
+  afterVdomMount,
   earlyHost,
   enableTeleport,
+  isVdomMountPending,
+  lastPendingVdomMount,
   setEarlyHost,
   stopWaiting,
   waitForConnect,
@@ -119,6 +122,7 @@ export class TeleportFragment extends RenderContextFragment {
   }
 
   private mountToTargetJob?: SchedulerJob
+  private vdomMountWait?: object
   connectHost?: TeleportHost
   private parentSuspense?: SuspenseBoundary | null
 
@@ -180,6 +184,9 @@ export class TeleportFragment extends RenderContextFragment {
    * the target anchors the content is later mounted before.
    */
   private claimTargetOrder(): void {
+    // a vdom component created before this one that has not mounted yet: its
+    // teleports come on its insertion, so this one waits for it
+    this.vdomMountWait = lastPendingVdomMount()
     const props = this.resolvedProps!
     if (
       isTeleportDeferred(props) ||
@@ -192,6 +199,8 @@ export class TeleportFragment extends RenderContextFragment {
       this.queueTargetUpdate()
       return
     }
+    // mounts on insertion, after that vdom component
+    if (this.vdomMountWait) return
     // a target not found yet (rendered by the same template) is resolved,
     // with its warning, at mount time
     const to = props.to
@@ -339,6 +348,13 @@ export class TeleportFragment extends RenderContextFragment {
   }
 
   private queueTargetUpdate(): void {
+    // queued after the vdom component created before this one, which queues
+    // the mount of its own deferred teleports when it mounts
+    const wait = this.vdomMountWait
+    if (wait && isVdomMountPending(wait)) {
+      afterVdomMount(wait, () => this.queueTargetUpdate())
+      return
+    }
     // Reuse one queued mount job per Teleport instance so repeated
     // updates in the same flush don't enqueue duplicate target mounts.
     // If the previous job was disposed during unmount, recreate it.

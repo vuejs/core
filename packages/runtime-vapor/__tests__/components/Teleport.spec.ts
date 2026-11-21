@@ -26,6 +26,7 @@ import {
 } from '@vue/runtime-vapor'
 import { compile, makeRender } from '../_utils'
 import {
+  Teleport,
   defineComponent,
   effectScope,
   h,
@@ -1837,6 +1838,37 @@ function runSharedTests(deferMode: boolean): void {
       },
     })
 
+    // a vdom component whose root is a teleport: it mounts on insertion
+    const VDOMChild = {
+      props: { text: String },
+      setup(props: any) {
+        return () =>
+          h(Teleport, { to: '#tp-order', defer: deferMode }, [
+            h('p', props.text),
+          ])
+      },
+    }
+    const vdom = (text: string) =>
+      createComponent(VDOMChild as any, { text: () => text })
+    // a vdom component with a teleport inside an element
+    const VDOMChildInElement = {
+      props: { text: String },
+      setup(props: any) {
+        return () =>
+          h('div', [
+            h(Teleport, { to: '#tp-order', defer: deferMode }, [
+              h('p', props.text),
+            ]),
+          ])
+      },
+    }
+    // a vdom component that renders the vapor slot it is given
+    const VDOMWrapper = {
+      setup(_: any, { slots }: any) {
+        return () => renderSlot(slots, 'default')
+      },
+    }
+
     async function expectOrder(
       setup: () => any,
       expected = '<p>A</p><p>B</p><p>C</p>',
@@ -1863,6 +1895,110 @@ function runSharedTests(deferMode: boolean): void {
 
     test('at a root, then in an element', () =>
       expectOrder(() => [tp('A'), inElement('B'), tp('C')]))
+
+    describe('with vdom components', () => {
+      async function expectInteropOrder(
+        setup: () => any,
+        {
+          update,
+          expected = '<p>A</p><p>B</p><p>C</p>',
+        }: { update?: () => void; expected?: string } = {},
+      ) {
+        const root = document.createElement('div')
+        document.body.appendChild(root)
+        const target = document.createElement('div')
+        target.id = 'tp-order'
+        document.body.appendChild(target)
+        const { app, mount } = define({ setup }).create()
+        app.use(vaporInteropPlugin)
+        try {
+          mount(root)
+          await nextTick()
+          if (update) {
+            update()
+            await nextTick()
+          }
+          expect(target.innerHTML).toBe(expected)
+        } finally {
+          app.unmount()
+          target.remove()
+          root.remove()
+        }
+      }
+
+      test('a vdom component, then teleports', () =>
+        expectInteropOrder(() => [vdom('A'), inElement('B'), tp('C')]))
+
+      test('a vdom component, then a teleport at a root', () =>
+        expectInteropOrder(() => [vdom('A'), tp('B'), inElement('C')]))
+
+      test('teleports around a vdom component', () =>
+        expectInteropOrder(() => [inElement('A'), vdom('B'), tp('C')]))
+
+      test('a teleport in an element of a vdom component', () =>
+        expectInteropOrder(() => [
+          createComponent(VDOMChildInElement as any, { text: () => 'A' }),
+          tp('B'),
+          inElement('C'),
+        ]))
+
+      test('a teleport in the vapor slot of a vdom component', () =>
+        expectInteropOrder(() => [
+          createComponent(VDOMWrapper as any, null, {
+            default: () => tp('A'),
+          }),
+          tp('B'),
+          inElement('C'),
+        ]))
+
+      test('two vdom components, then a teleport', () =>
+        expectInteropOrder(() => [vdom('A'), vdom('B'), tp('C')]))
+
+      test('vdom components and teleports in turn', () =>
+        expectInteropOrder(() => [vdom('A'), tp('B'), vdom('C'), tp('D')], {
+          expected: '<p>A</p><p>B</p><p>C</p><p>D</p>',
+        }))
+
+      // a teleport waits only for the vdom components created before it
+      test('a vdom component in a KeepAlive after a teleport', () =>
+        expectInteropOrder(() => [
+          vdom('A'),
+          tp('B'),
+          createComponent(VaporKeepAlive, null, {
+            default: () => vdom('C'),
+          }),
+        ]))
+
+      // the vdom component has mounted: teleports created later claim their
+      // place on creation again
+      test('teleports rendered after a vdom component mounted', () => {
+        const show = ref(false)
+        return expectInteropOrder(
+          () => [
+            vdom('A'),
+            createIf(
+              () => show.value,
+              () => [inElement('B'), tp('C')],
+            ),
+          ],
+          { update: () => (show.value = true) },
+        )
+      })
+
+      test('a vdom component rendered by an update', () => {
+        const show = ref(false)
+        return expectInteropOrder(
+          () => [
+            tp('A'),
+            createIf(
+              () => show.value,
+              () => [vdom('B'), inElement('C')],
+            ),
+          ],
+          { update: () => (show.value = true) },
+        )
+      })
+    })
 
     test('at the root of a child component', () =>
       expectOrder(() => [
