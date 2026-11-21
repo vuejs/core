@@ -830,10 +830,11 @@ export function setupComponent(
 
   if (
     (isAsyncSetup || instance.sp) &&
+    !instance.hasSetupIdBoundary &&
     !(isAsyncComponentEnabled && isAsyncWrapper(instance))
   ) {
     // async setup / serverPrefetch, mark as async boundary for useId()
-    markAsyncBoundary(instance)
+    markSetupIdBoundary(instance)
   }
 
   if (isAsyncSetup) {
@@ -863,6 +864,31 @@ export function setupComponent(
   if (__DEV__) setCurrentRenderingInstance(prevRendering)
   setActiveSub(prevSub)
   restoreCurrentInstance(prevInstance)
+}
+
+function markSetupIdBoundary(instance: VaporComponentInstance): void {
+  markAsyncBoundary(instance)
+  instance.hasSetupIdBoundary = true
+}
+
+/**
+ * The `useId` state that a new child shares with its parent. On the server, a
+ * component with `onServerPrefetch` is the boundary of its children after its
+ * setup. An inline template creates the children inside setup, so the first
+ * child marks that boundary.
+ */
+function idsOfChild(
+  parent: GenericComponentInstance,
+): [string, number, number] {
+  if (
+    isVaporComponent(parent) &&
+    parent.sp &&
+    !parent.hasSetupIdBoundary &&
+    !(isAsyncComponentEnabled && isAsyncWrapper(parent))
+  ) {
+    markSetupIdBoundary(parent)
+  }
+  return parent.ids
 }
 
 export let isApplyingFallthroughProps = false
@@ -1114,6 +1140,8 @@ export class VaporComponentInstance<
   provides: Record<string, any>
   // for useId
   ids: [string, number, number]
+  // async setup or serverPrefetch made this the useId boundary of its children
+  hasSetupIdBoundary?: boolean
   // for suspense
   suspense: SuspenseBoundary | null
   suspenseId: number
@@ -1210,7 +1238,7 @@ export class VaporComponentInstance<
       this.root = currentInstance.root
       this.appContext = currentInstance.appContext
       this.provides = currentInstance.provides
-      this.ids = currentInstance.ids
+      this.ids = idsOfChild(currentInstance)
     } else {
       this.root = this
       this.appContext = appContext || emptyContext

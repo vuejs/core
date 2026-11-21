@@ -4,7 +4,7 @@ import {
   createVaporApp,
   defineVaporComponent,
 } from '../../src'
-import { useId } from '@vue/runtime-dom'
+import { onServerPrefetch, useId } from '@vue/runtime-dom'
 
 function renderToHtml(component: any, configure?: (app: any) => void): string {
   const root = document.createElement('div')
@@ -60,6 +60,38 @@ describe('useId', () => {
     })
 
     expect(renderToHtml(Parent)).toBe('v-0 v-1 v-2 v-3 v-4 v-5')
+  })
+
+  test('a component with serverPrefetch is the boundary of its children', () => {
+    const SPOne = defineVaporComponent({
+      setup() {
+        onServerPrefetch(() => {})
+        return createComponent(BasicComponentWithUseId)
+      },
+    })
+    const SPTwo = defineVaporComponent({
+      setup() {
+        return createComponent(BasicComponentWithUseId)
+      },
+    })
+    const Parent = defineVaporComponent({
+      setup() {
+        const id1 = useId()
+        const id2 = useId()
+        return [
+          createTextNode(`${id1} ${id2} `),
+          createComponent(SPOne),
+          createTextNode(' '),
+          createComponent(SPTwo),
+        ]
+      },
+    })
+
+    expect(renderToHtml(Parent)).toBe(
+      'v-0 v-1 ' + // root
+        'v-0-0 v-0-1 ' + // below the serverPrefetch boundary
+        'v-2 v-3',
+    )
   })
 })
 
@@ -170,40 +202,6 @@ describe('useId', () => {
 //   // assert different async resolution order does not affect id stable-ness
 //   expect(await getOutput(() => factory(0, 16))).toBe(expected)
 //   expect(await getOutput(() => factory(16, 0))).toBe(expected)
-// })
-//
-// test('components with serverPrefetch', async () => {
-//   const factory = (): ReturnType<TestCaseFactory> => {
-//     const SPOne = defineComponent({
-//       setup() {
-//         onServerPrefetch(() => {})
-//         return () => h(BasicComponentWithUseId)
-//       },
-//     })
-//
-//     const SPTwo = defineComponent({
-//       render() {
-//         return h(BasicComponentWithUseId)
-//       },
-//     })
-//
-//     const app = createApp({
-//       setup() {
-//         const id1 = useId()
-//         const id2 = useId()
-//         return () => [id1, ' ', id2, ' ', h(SPOne), ' ', h(SPTwo)]
-//       },
-//     })
-//     return [app, []]
-//   }
-//
-//   const expected =
-//     'v-0 v-1 ' + // root
-//     'v-0-0 v-0-1 ' + // inside first async subtree
-//     'v-2 v-3' // inside second async subtree
-//   // assert different async resolution order does not affect id stable-ness
-//   expect(await getOutput(() => factory())).toBe(expected)
-//   expect(await getOutput(() => factory())).toBe(expected)
 // })
 //
 // test('async setup()', async () => {
