@@ -1586,6 +1586,120 @@ describe('Vapor Mode hydration', () => {
       expect(container.textContent).toBe('falsestatic')
     })
 
+    // createVaporSSRApp hydrates these after its root pass. The server renders
+    // in another process, so no VDOM SSR app exists on the client.
+    describe('VDOM async component resolved after vapor app hydration (interop)', () => {
+      afterEach(() => {
+        runtimeDom.setIsHydratingEnabled(true)
+      })
+
+      async function hydrateLate(
+        compCode: string,
+        appCode: string,
+        data: runtimeDom.Ref<any>,
+        [serverComponents, clientComponents] = [{}, {}],
+      ) {
+        const SSRComp = compile(compCode, data, serverComponents, {
+          vapor: false,
+          ssr: true,
+        })
+        const SSRAsyncComp = defineAsyncComponent(() =>
+          Promise.resolve(SSRComp),
+        )
+        const html = await VueServerRenderer.renderToString(
+          runtimeDom.createSSRApp(
+            compileVaporComponent(
+              appCode,
+              data,
+              { AsyncComp: SSRAsyncComp },
+              true,
+            ),
+          ),
+        )
+        const container = document.createElement('div')
+        container.innerHTML = html
+        document.body.appendChild(container)
+        let resolve: (comp: any) => void
+        const AsyncComp = defineAsyncComponent(
+          () => new Promise(r => (resolve = r)),
+        )
+        const app = createVaporSSRApp(
+          compileVaporComponent(appCode, data, { AsyncComp }),
+        )
+        app.use(runtimeVapor.vaporInteropPlugin)
+        runtimeDom.setIsHydratingEnabled(false)
+        app.mount(container)
+        const load = async () => {
+          resolve(compile(compCode, data, clientComponents, { vapor: false }))
+          await new Promise(r => setTimeout(r))
+        }
+        return { container, load }
+      }
+
+      test.each([false, true])(
+        'hydrate vapor slot content, in Suspense: %s',
+        async inSuspense => {
+          const data = ref({ expanded: false })
+          const compCode = `<script setup>defineProps(['expanded'])</script><template><button :aria-expanded="String(expanded)"><slot /></button></template>`
+          const content = `<components.AsyncComp :expanded="data.expanded">Trigger</components.AsyncComp>`
+          const { container, load } = await hydrateLate(
+            compCode,
+            inSuspense ? `<Suspense>${content}</Suspense>` : content,
+            data,
+          )
+          const button = container.querySelector('button')!
+          await load()
+          expect(container.querySelector('button')).toBe(button)
+          expect(button.outerHTML).toBe(
+            `<button aria-expanded="false"><!--[-->Trigger<!--]--></button>`,
+          )
+
+          data.value.expanded = true
+          await nextTick()
+          expect(button.getAttribute('aria-expanded')).toBe('true')
+        },
+      )
+
+      test('hydrate vapor child component', async () => {
+        const data = ref({ n: 1 })
+        const childCode = `<i>{{ data.n }}</i>`
+        const { container, load } = await hydrateLate(
+          `<script setup>const components = _components</script><template><b><components.Child /></b></template>`,
+          `<components.AsyncComp />`,
+          data,
+          [
+            { Child: compileVaporComponent(childCode, data, undefined, true) },
+            { Child: compileVaporComponent(childCode, data) },
+          ],
+        )
+        const i = container.querySelector('i')!
+        await load()
+        expect(container.querySelector('i')).toBe(i)
+
+        data.value.n = 2
+        await nextTick()
+        expect(i.textContent).toBe('2')
+      })
+
+      test('hydrate the fallback of a vapor slot outlet', async () => {
+        const data = ref({ show: false })
+        const { container, load } = await hydrateLate(
+          `<template><div><slot><p>fallback</p></slot></div></template>`,
+          `<components.AsyncComp><b v-if="data.show">b</b></components.AsyncComp>`,
+          data,
+        )
+        const p = container.querySelector('p')!
+        await load()
+        expect(container.querySelector('p')).toBe(p)
+
+        data.value.show = true
+        await nextTick()
+        expect(container.querySelector('div')!.innerHTML).toBe(
+          `<!--(--><b>b</b><!--if--><!--)-->`,
+        )
+      })
+    })
+
     // KeepAlive parks a hidden branch in its storage container: the
     // server-rendered DOM is disconnected but kept for reactivation
     describe('under KeepAlive', () => {
