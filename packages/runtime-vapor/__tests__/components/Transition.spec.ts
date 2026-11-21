@@ -4747,6 +4747,127 @@ describe('a Transition unmounted while its child leaves', () => {
   }
 })
 
+describe('a Transition in a fragment removed while its child leaves', () => {
+  // vdom removes a fragment (a slot outlet, a v-for list, several roots) as
+  // the DOM range between its anchors, with a child still leaving in it. A
+  // Teleport's children are not such a range.
+  const trees: Record<string, string> = {
+    'a slot outlet': `
+      <components.Wrap v-if="data.alive"><components.Holder /></components.Wrap>`,
+    'a slot outlet in a Teleport': `
+      <components.Portal v-if="data.alive"><components.Holder /></components.Portal>`,
+    'a v-for list': `
+      <template v-if="data.alive">
+        <components.Holder v-for="i in 1" :key="i" />
+      </template>`,
+    'several roots': `
+      <template v-if="data.alive"><components.Holder /><i>i</i></template>`,
+    'a Teleport with several children': `
+      <Teleport v-if="data.alive" :to="data.target">
+        <components.Holder /><i>i</i>
+      </Teleport>`,
+    'a slot outlet around a Teleport': `
+      <components.Wrap v-if="data.alive">
+        <Teleport :to="data.target"><components.Holder /></Teleport>
+      </components.Wrap>`,
+  }
+  // a TransitionGroup without a tag is a Fragment in vdom
+  const groupTrees: Record<string, string> = {
+    'a TransitionGroup without a tag': `
+      <components.Group v-if="data.alive" />`,
+    'a TransitionGroup in a slot outlet': `
+      <components.Wrap v-if="data.alive"><components.Group /></components.Wrap>`,
+  }
+
+  async function parity(
+    tree: string,
+    mode: string,
+    unmount: 'v-if' | 'app.unmount()',
+  ) {
+    const logs: Record<string, string[]> = {}
+    for (const vapor of [false, true]) {
+      const log: string[] = (logs[vapor ? 'vapor' : 'vdom'] = [])
+      const target = document.createElement('div')
+      const data = ref<any>({
+        show: true,
+        alive: true,
+        target,
+        dones: [] as (() => void)[],
+        l: (el: Element, done: () => void) => {
+          log.push('l:' + el.className)
+          data.value.dones.push(done)
+        },
+        al: (el: Element) => log.push('al:' + el.className),
+      })
+      const script = `<script setup>const data = _data; const components = _components;</script>`
+      const components: Record<string, any> = {}
+      const component = (name: string, template: string) =>
+        (components[name] = compile(
+          script + `<template>${template}</template>`,
+          data,
+          components,
+          { vapor },
+        ))
+      component(
+        'Holder',
+        `<Transition
+          ${mode ? `mode="${mode}"` : ''}
+          :css="false"
+          @leave="data.l"
+          @after-leave="data.al"
+        >
+          <span v-if="data.show" class="a">a</span>
+        </Transition>`,
+      )
+      component(
+        'Group',
+        `<TransitionGroup
+          :css="false"
+          @leave="data.l"
+          @after-leave="data.al"
+        >
+          <span v-for="i in data.show ? [1] : []" :key="i" class="a">a</span>
+        </TransitionGroup>`,
+      )
+      component('Wrap', `<slot />`)
+      component('Portal', `<Teleport :to="data.target"><slot /></Teleport>`)
+      const App = component('App', trees[tree] || groupTrees[tree])
+      const root = document.createElement('div')
+      const html = () =>
+        stripAnchors(root.innerHTML) + ' | ' + stripAnchors(target.innerHTML)
+      const instance = vapor ? createVaporApp(App) : createApp(App)
+      instance.mount(root)
+      data.value.show = false
+      await nextTick()
+      log.push('off ' + html())
+      if (unmount === 'app.unmount()') {
+        instance.unmount()
+      } else {
+        data.value.alive = false
+        await nextTick()
+      }
+      log.push('unmount ' + html())
+      for (const done of data.value.dones.splice(0)) done()
+      await nextTick()
+      log.push('done ' + html())
+      if (unmount === 'v-if') instance.unmount()
+    }
+    expect(logs.vapor).toEqual(logs.vdom)
+  }
+
+  for (const unmount of ['v-if', 'app.unmount()'] as const) {
+    for (const tree in trees) {
+      test.each(['out-in', 'in-out', ''])(
+        `${tree}, unmounted by ${unmount} (mode %j)`,
+        mode => parity(tree, mode, unmount),
+      )
+    }
+    for (const tree in groupTrees) {
+      test(`${tree}, unmounted by ${unmount}`, () => parity(tree, '', unmount))
+    }
+  }
+})
+
 // Mounts `srcs` as a vdom and as a vapor app with an error handler, runs the
 // steps (objects assigned to the data), releases the leaves and returns the
 // errors each app reported.

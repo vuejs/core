@@ -24,8 +24,10 @@ import {
 import {
   type DynamicFragment,
   type VaporFragment,
+  isForFragment,
   isFragment,
   isInteropFragment,
+  isSlotOutletFragment,
 } from './fragment'
 import {
   type TeleportHost,
@@ -34,7 +36,7 @@ import {
   isTeleportFragment,
   waitingTeleports,
 } from './teleport'
-import { isTransitionEnabled } from './transition'
+import { isTransitionEnabled, removeLeavingNodes } from './transition'
 import { isInteropEnabled } from './vdomInteropState'
 import {
   deferEnter,
@@ -431,6 +433,20 @@ export function move(
   }
 }
 
+// vdom removes a Fragment (a slot outlet, a v-for list, several roots) as the
+// DOM range between its anchors, which takes the elements still leaving in it.
+// Set while the removal of such a block runs: a Transition in it removes its
+// leaving elements too (removeLeavingNodes).
+let inRemovedRange = false
+
+// Whether this removal starts a range; the caller ends it.
+function enterRemovedRange(isRange: boolean, parent?: ParentNode): boolean {
+  if (!isTransitionEnabled || !isRange || !parent || inRemovedRange) {
+    return false
+  }
+  return (inRemovedRange = true)
+}
+
 export function remove(block: Block, parent?: ParentNode): void {
   if (isNode(block)) {
     removeNode(block, parent)
@@ -442,12 +458,45 @@ export function remove(block: Block, parent?: ParentNode): void {
         ? resolveUnmountSuspense(block.suspense)
         : block.suspense,
     )
+    // not when a KeepAlive only deactivated it
+    if (isTransitionEnabled && parent && block.isUnmounted) {
+      removeLeavingNodes(block, parent, inRemovedRange)
+    }
   } else if (isArray(block)) {
-    for (let i = 0; i < block.length; i++) {
-      remove(block[i], parent)
+    const range = enterRemovedRange(block.length > 1, parent)
+    try {
+      for (let i = 0; i < block.length; i++) {
+        remove(block[i], parent)
+      }
+    } finally {
+      if (range) inRemovedRange = false
     }
   } else {
     removeFragment(block, parent)
+  }
+}
+
+/**
+ * vdom removes the children of a Teleport one by one, not as a range. In the
+ * target, they are also outside of any range around the Teleport.
+ */
+export function removeTeleportChildren(
+  nodes: Block,
+  parent: ParentNode | undefined,
+  inTarget: boolean,
+): void {
+  const prev = inRemovedRange
+  if (inTarget) inRemovedRange = false
+  try {
+    if (isArray(nodes)) {
+      for (let i = 0; i < nodes.length; i++) {
+        remove(nodes[i], parent)
+      }
+    } else {
+      remove(nodes, parent)
+    }
+  } finally {
+    inRemovedRange = prev
   }
 }
 
@@ -513,10 +562,18 @@ export function removeFragment(
       bum[i]()
     }
   }
-  if (block.remove) {
-    block.remove(parent, leaveHooks(block as TransitionBlock))
-  } else {
-    remove(block.nodes, parent)
+  const range = enterRemovedRange(
+    isSlotOutletFragment(block) || isForFragment(block),
+    parent,
+  )
+  try {
+    if (block.remove) {
+      block.remove(parent, leaveHooks(block as TransitionBlock))
+    } else {
+      remove(block.nodes, parent)
+    }
+  } finally {
+    if (range) inRemovedRange = false
   }
   if (block.anchor) removeNode(block.anchor, parent)
   if (block.scope) block.scope.stop()

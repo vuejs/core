@@ -1,7 +1,11 @@
 import type { TransitionHooks } from '@vue/runtime-dom'
 import type { Block, BlockFn } from './block'
 import type { VaporTransitionHooks } from './block'
-import type { FunctionalVaporComponent, VaporComponent } from './component'
+import type {
+  FunctionalVaporComponent,
+  VaporComponent,
+  VaporComponentInstance,
+} from './component'
 import type { DynamicFragment, VaporFragment } from './fragment'
 import type { SlotResolutionState } from './slotFragment'
 
@@ -72,6 +76,13 @@ export let resolveOutletLeave: ResolveOutletLeaveFn
 // a slot root flipping invalid beside sibling roots: reported once they
 // settled (one of them may render in this flush); false to report it now
 export let deferSlotRootFlip: (frag: DynamicFragment) => boolean
+// A Transition or TransitionGroup removed from `parent`: its elements still
+// leaving there go too when vdom removes them as one range (`inRange`)
+export let removeLeavingNodes: (
+  instance: VaporComponentInstance,
+  parent: ParentNode,
+  inRange: boolean,
+) => void
 
 export let isTransitionEnabled = false
 
@@ -91,8 +102,10 @@ export function registerTransitionHooks(
   awaitLeaving: AwaitLeavingRootFn,
   resolveLeave: ResolveOutletLeaveFn,
   deferFlip: (frag: DynamicFragment) => boolean,
+  removeLeaving: typeof removeLeavingNodes,
 ): void {
   deferSlotRootFlip = deferFlip
+  removeLeavingNodes = removeLeaving
   isTransitionEnabled = true
   ownsTransitionMode = ownsMode
   applyTransitionHooks = applyHooks
