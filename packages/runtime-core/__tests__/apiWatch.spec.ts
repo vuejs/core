@@ -1239,6 +1239,21 @@ describe('api: watch', () => {
     expect(sideEffect).toBe(2)
   })
 
+  test('should force trigger on triggerRef when watching a shallow ref getter', async () => {
+    const v = shallowRef(1)
+    const spy = vi.fn()
+    watch(() => v.value, spy)
+
+    triggerRef(v)
+    await nextTick()
+    expect(spy).toHaveBeenCalledExactlyOnceWith(1, 1, expect.any(Function))
+
+    v.value = 2
+    v.value = 1
+    await nextTick()
+    expect(spy).toHaveBeenCalledTimes(1)
+  })
+
   test('should force trigger on triggerRef when watching multiple sources: shallow ref array', async () => {
     const v = shallowRef([] as any)
     const spy = vi.fn()

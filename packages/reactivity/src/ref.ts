@@ -7,7 +7,7 @@ import {
   isObject,
   isSymbol,
 } from '@vue/shared'
-import { Dep, getDepFromReactive } from './dep'
+import { Dep, type Link, getDepFromReactive } from './dep'
 import {
   type Builtin,
   type ShallowReactiveBrand,
@@ -108,6 +108,24 @@ function createRef(rawValue: unknown, shallow: boolean) {
   return new RefImpl(rawValue, shallow)
 }
 
+let shallowRefTriggerVersions: WeakMap<Dep, number> | undefined
+
+/** @internal */
+export function hasTriggeredShallowRef(deps: Link | undefined): boolean {
+  if (shallowRefTriggerVersions) {
+    for (let link = deps; link; link = link.nextDep) {
+      const { dep, version } = link
+      if (dep.version !== version) {
+        const triggerVersion = shallowRefTriggerVersions.get(dep)
+        if (triggerVersion !== undefined && triggerVersion > version) {
+          return true
+        }
+      }
+    }
+  }
+  return false
+}
+
 /**
  * @internal
  */
@@ -191,16 +209,20 @@ class RefImpl<T = any> {
  */
 export function triggerRef(ref: Ref): void {
   // ref may be an instance of ObjectRefImpl
-  if ((ref as unknown as RefImpl).dep) {
+  const dep = (ref as unknown as RefImpl).dep
+  if (dep) {
+    if (isShallow(ref)) {
+      ;(shallowRefTriggerVersions ??= new WeakMap()).set(dep, dep.version + 1)
+    }
     if (__DEV__) {
-      ;(ref as unknown as RefImpl).dep.trigger({
+      dep.trigger({
         target: ref,
         type: TriggerOpTypes.SET,
         key: 'value',
         newValue: (ref as unknown as RefImpl)._value,
       })
     } else {
-      ;(ref as unknown as RefImpl).dep.trigger()
+      dep.trigger()
     }
   }
 }

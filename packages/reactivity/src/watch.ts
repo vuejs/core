@@ -22,7 +22,7 @@ import {
   resetTracking,
 } from './effect'
 import { isReactive, isShallow } from './reactive'
-import { type Ref, isRef } from './ref'
+import { type Ref, hasTriggeredShallowRef, isRef } from './ref'
 import { getCurrentScope } from './effectScope'
 
 // These errors were transferred from `packages/runtime-core/src/errorHandling.ts`
@@ -210,6 +210,9 @@ export function watch(
     getter = () => traverse(baseGetter(), depth)
   }
 
+  const checkShallowRefTrigger =
+    !deep && !forceTrigger && (isFunction(source) || isMultiSource)
+
   const scope = getCurrentScope()
   const watchHandle: WatchHandle = () => {
     effect.stop()
@@ -242,11 +245,14 @@ export function watch(
     }
     if (cb) {
       // watch(source, cb)
+      const shallowRefTriggered =
+        checkShallowRefTrigger && hasTriggeredShallowRef(effect.deps)
       const newValue = effect.run()
       if (
         immediateFirstRun ||
         deep ||
         forceTrigger ||
+        shallowRefTriggered ||
         (isMultiSource
           ? (newValue as any[]).some((v, i) => hasChanged(v, oldValue[i]))
           : hasChanged(newValue, oldValue))
