@@ -1033,9 +1033,6 @@ describe('component', () => {
     const handler = (app.config.errorHandler = vi.fn())
     mount()
     expect(handler).toHaveBeenCalledTimes(1)
-    expect(
-      `Vapor component setup() returned non-block value`,
-    ).toHaveBeenWarned()
     expect(dispose).not.toHaveBeenCalled()
 
     app.unmount()

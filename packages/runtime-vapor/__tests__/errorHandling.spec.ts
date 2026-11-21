@@ -200,8 +200,36 @@ describe('error handling', () => {
 
     define(Comp).render()
     expect(fn).toHaveBeenCalledWith(err, 'setup function')
-    expect(`returned non-block value`).toHaveBeenWarned()
   })
+
+  test.each([true, false])(
+    'setup function error renders nothing (inlineTemplate: %s)',
+    inlineTemplate => {
+      const err = new Error('foo')
+      const Comp = compile(
+        `<script setup vapor>
+        import { ref } from 'vue'
+        throw _data.value
+        const label = ref('x')
+        </script>
+        <template><button :aria-label="label">{{ label }}</button></template>`,
+        ref(err),
+        {},
+        { inlineTemplate },
+      )
+      const { app, mount, host } = define(Comp).create()
+      const handler = (app.config.errorHandler = vi.fn())
+      mount()
+      expect(handler).toHaveBeenCalledExactlyOnceWith(
+        err,
+        expect.anything(),
+        'setup function',
+      )
+      expect(host.innerHTML).toBe('')
+      expect(`was accessed during render`).not.toHaveBeenWarned()
+      expect(`returned non-block value`).not.toHaveBeenWarned()
+    },
+  )
 
   test('in render function', () => {
     const err = new Error('foo')
@@ -251,7 +279,6 @@ describe('error handling', () => {
 
     define(Comp).render()
     expect(fn).toHaveBeenCalledWith(err, 'setup function')
-    expect(`returned non-block value`).toHaveBeenWarned()
   })
 
   test('in function ref', () => {
