@@ -254,6 +254,8 @@ export default class Tokenizer {
   public inVPre = false
   /** Record newline positions for fast line / column calculation */
   private newlines: number[] = []
+  /** Nested square brackets inside a dynamic directive argument. */
+  private dynamicDirArgBracketDepth = 0
 
   private readonly entityDecoder?: EntityDecoder
 
@@ -740,6 +742,7 @@ export default class Tokenizer {
       this.cbs.ondirarg(this.sectionStart, this.index)
       this.handleAttrNameEnd(c)
     } else if (c === CharCodes.LeftSquare) {
+      this.dynamicDirArgBracketDepth = 0
       this.state = State.InDirDynamicArg
     } else if (c === CharCodes.Dot) {
       this.cbs.ondirarg(this.sectionStart, this.index)
@@ -748,8 +751,14 @@ export default class Tokenizer {
     }
   }
   private stateInDynamicDirArg(c: number): void {
-    if (c === CharCodes.RightSquare) {
-      this.state = State.InDirArg
+    if (c === CharCodes.LeftSquare) {
+      this.dynamicDirArgBracketDepth++
+    } else if (c === CharCodes.RightSquare) {
+      if (this.dynamicDirArgBracketDepth > 0) {
+        this.dynamicDirArgBracketDepth--
+      } else {
+        this.state = State.InDirArg
+      }
     } else if (c === CharCodes.Eq || isEndOfTagSection(c)) {
       this.cbs.ondirarg(this.sectionStart, this.index + 1)
       this.handleAttrNameEnd(c)
