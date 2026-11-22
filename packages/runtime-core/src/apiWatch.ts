@@ -8,6 +8,7 @@ import {
   type WatchHandle,
   type WatchSource,
   WatcherEffect,
+  getCurrentScope,
 } from '@vue/reactivity'
 import { type SchedulerJob, SchedulerJobFlags, queueJob } from './scheduler'
 import { EMPTY_OBJ, NOOP, extend, isFunction, isString } from '@vue/shared'
@@ -237,9 +238,12 @@ function doWatch(
     }
   }
 
-  const instance = currentInstance
+  const instance =
+    currentInstance && getCurrentScope() === currentInstance.scope
+      ? currentInstance
+      : null
   baseWatchOptions.call = (fn, type, args) =>
-    callWithAsyncErrorHandling(fn, instance, type, args)
+    callWithAsyncErrorHandling(fn, instance || currentInstance, type, args)
 
   const effect = new RenderWatcherEffect(
     instance,

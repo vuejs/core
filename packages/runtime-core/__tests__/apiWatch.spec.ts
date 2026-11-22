@@ -1623,6 +1623,44 @@ describe('api: watch', () => {
     expect(countW).toBe(2)
   })
 
+  test.skipIf(!global.gc)(
+    'should not retain component instance in detached scope',
+    async () => {
+      const gc = () =>
+        new Promise<void>(resolve => {
+          setTimeout(() => {
+            global.gc!()
+            resolve()
+          })
+        })
+
+      const state: { instance?: ComponentInternalInstance } = {}
+      const scope = effectScope(true)
+      const Comp = defineComponent({
+        setup() {
+          state.instance = getCurrentInstance()!
+          scope.run(() => {
+            watch(ref(0), () => {})
+          })
+          return () => null
+        },
+      })
+      const root = nodeOps.createElement('div')
+      render(h(Comp), root)
+      // @ts-expect-error ES2021 API
+      const weakRef = new WeakRef(state.instance!)
+
+      render(null, root)
+      await nextTick()
+      state.instance = undefined
+      for (let i = 0; i < 5; i++) {
+        await gc()
+      }
+
+      expect(weakRef.deref() === undefined).toBe(true)
+    },
+  )
+
   const options = [
     { name: 'only trigger once watch' },
     {
