@@ -242,6 +242,7 @@ export default class Tokenizer {
   public sectionStart = 0
   /** The index within the buffer that we are currently looking at. */
   private index = 0
+  private dynamicArgBracketDepth = 0
   /** The start of the last entity. */
   private entityStart = 0
   /** Some behavior, eg. when decoding entities, is done while we are in another state. This keeps track of the other state type. */
@@ -279,6 +280,7 @@ export default class Tokenizer {
     this.buffer = ''
     this.sectionStart = 0
     this.index = 0
+    this.dynamicArgBracketDepth = 0
     this.baseState = State.Text
     this.inRCDATA = false
     this.currentSequence = undefined!
@@ -740,6 +742,7 @@ export default class Tokenizer {
       this.cbs.ondirarg(this.sectionStart, this.index)
       this.handleAttrNameEnd(c)
     } else if (c === CharCodes.LeftSquare) {
+      this.dynamicArgBracketDepth = 1
       this.state = State.InDirDynamicArg
     } else if (c === CharCodes.Dot) {
       this.cbs.ondirarg(this.sectionStart, this.index)
@@ -748,8 +751,13 @@ export default class Tokenizer {
     }
   }
   private stateInDynamicDirArg(c: number): void {
-    if (c === CharCodes.RightSquare) {
-      this.state = State.InDirArg
+    if (c === CharCodes.LeftSquare) {
+      this.dynamicArgBracketDepth++
+    } else if (c === CharCodes.RightSquare) {
+      this.dynamicArgBracketDepth--
+      if (this.dynamicArgBracketDepth === 0) {
+        this.state = State.InDirArg
+      }
     } else if (c === CharCodes.Eq || isEndOfTagSection(c)) {
       this.cbs.ondirarg(this.sectionStart, this.index + 1)
       this.handleAttrNameEnd(c)
@@ -761,6 +769,7 @@ export default class Tokenizer {
       }
     }
   }
+
   private stateInDirModifier(c: number): void {
     if (c === CharCodes.Eq || isEndOfTagSection(c)) {
       this.cbs.ondirmodifier(this.sectionStart, this.index)
