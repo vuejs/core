@@ -2,6 +2,7 @@ import {
   type Component,
   type ComponentOptions,
   type ComponentPublicInstance,
+  type FunctionalComponent,
   type PropType,
   type SetupContext,
   type Slots,
@@ -927,6 +928,33 @@ describe('defineComponent', () => {
     defineComponent({
       components: { comp },
     })
+  })
+
+  describe('should accept generic components with required slots', () => {
+    // #10647: the signature generated for a generic SFC with defineSlots.
+    const Comp = <T,>(
+      props: { msg: T },
+      ctx?: {
+        attrs: any
+        emit: {}
+        slots: { default: (props: { msg: T }) => any }
+      },
+    ): VNode => null!
+
+    const Parent = defineComponent({ components: { Comp } })
+    const RegisteredComp = Parent.components!.Comp
+    expectType<typeof Comp>(RegisteredComp)
+    createApp({}).component('Comp', Comp)
+
+    type RegisteredSlots = NonNullable<
+      Parameters<typeof RegisteredComp<string>>[1]
+    >['slots']
+    expectType<IsAny<RegisteredSlots>>(false)
+    expectType<RegisteredSlots>({ default: (props: { msg: string }) => [] })
+    // @ts-expect-error registration preserves the component's slot props
+    expectType<RegisteredSlots>({ default: (props: { msg: number }) => [] })
+
+    expectType<IsAny<Parameters<FunctionalComponent>[1]['slots']>>(false)
   })
 
   describe('should accept class components with receiving constructor arguments', () => {
