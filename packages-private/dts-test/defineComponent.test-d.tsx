@@ -1467,6 +1467,17 @@ describe('function syntax w/ a generic Boolean prop', () => {
   expectType<JSX.Element>(<Comp />)
 })
 
+describe('function syntax w/ a conditional runtime prop', () => {
+  const Comp = defineComponent(() => () => {}, {
+    props: {
+      label: Math.random() > 0.5 ? String : null,
+    },
+  })
+
+  expectType<JSX.Element>(<Comp />)
+  expectType<JSX.Element>(<Comp label="label" />)
+})
+
 describe('function syntax w/ runtime props', () => {
   // with runtime props, the runtime props must match
   // manual type declaration

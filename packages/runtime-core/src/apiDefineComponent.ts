@@ -160,6 +160,14 @@ type LiteralProps<Options> = Omit<Options, PreTypedPropKeys<Options>>
 type ResolvedRuntimeProps<Options> = ExtractPropTypes<LiteralProps<Options>> &
   PreTypedProps<Options>
 
+type PublicRuntimeProps<
+  Options,
+  Props = ExtractPublicPropTypes<Options>,
+  TypedProps = PreTypedProps<Options>,
+> = {
+  [K in keyof Props]: K extends keyof TypedProps ? TypedProps[K] : Props[K]
+}
+
 type SetupFn<Props, E extends EmitsOptions, S extends SlotsType> = (
   props: Props,
   ctx: SetupContext<E, S>,
@@ -180,10 +188,7 @@ type DefineInferredSetupFnComponent<
   Options extends ComponentObjectPropsOptions,
   E extends EmitsOptions,
   S extends SlotsType,
-  Props = ExtractPublicPropTypes<LiteralProps<Options>> &
-    PreTypedProps<Options> &
-    EmitsToProps<E> &
-    PublicProps,
+  Props = PublicRuntimeProps<Options> & EmitsToProps<E> & PublicProps,
 > = new (
   props: Props,
 ) => Omit<
