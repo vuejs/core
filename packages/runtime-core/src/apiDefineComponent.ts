@@ -21,13 +21,19 @@ import type {
   ComponentPropsOptions,
   ExtractDefaultPropTypes,
   ExtractPropTypes,
+  ExtractPublicPropTypes,
 } from './componentProps'
 import type {
   EmitsOptions,
   EmitsToProps,
   TypeEmitsToOptions,
 } from './componentEmits'
-import { type IsKeyValues, extend, isFunction } from '@vue/shared'
+import {
+  type IsKeyValues,
+  type LooseRequired,
+  extend,
+  isFunction,
+} from '@vue/shared'
 import type { VNodeProps } from './vnode'
 import type {
   ComponentPublicInstanceConstructor,
@@ -136,6 +142,55 @@ export type DefineSetupFnComponent<
   S
 >
 
+type PreTypedPropKeys<Options> = {
+  [K in keyof Options]-?: null extends Options[K]
+    ? [Options[K]] extends [null | undefined]
+      ? never
+      : K
+    : never
+}[keyof Options]
+
+type PreTypedProps<
+  Options,
+  Props = Options extends ComponentObjectPropsOptions<infer P> ? P : never,
+> = Pick<Props, PreTypedPropKeys<Options> & keyof Props>
+
+type LiteralProps<Options> = Omit<Options, PreTypedPropKeys<Options>>
+
+type ResolvedRuntimeProps<Options> = ExtractPropTypes<LiteralProps<Options>> &
+  PreTypedProps<Options>
+
+type SetupFn<Props, E extends EmitsOptions, S extends SlotsType> = (
+  props: Props,
+  ctx: SetupContext<E, S>,
+) => RenderFunction | Promise<RenderFunction>
+
+type RuntimeSetup<
+  Options,
+  E extends EmitsOptions,
+  S extends SlotsType,
+> = SetupFn<LooseRequired<Readonly<ResolvedRuntimeProps<Options>>>, E, S>
+
+type DeclaredSetupProps<Setup extends (...args: any) => any> =
+  Parameters<Setup>[0] extends Record<string, any>
+    ? Parameters<Setup>[0]
+    : never
+
+type DefineInferredSetupFnComponent<
+  Options extends ComponentObjectPropsOptions,
+  E extends EmitsOptions,
+  S extends SlotsType,
+  Props = ExtractPublicPropTypes<LiteralProps<Options>> &
+    PreTypedProps<Options> &
+    EmitsToProps<E> &
+    PublicProps,
+> = new (
+  props: Props,
+) => Omit<
+  InstanceType<DefineSetupFnComponent<ResolvedRuntimeProps<Options>, E, S>>,
+  '$props'
+> & { $props: Props }
+
 type ToResolvedProps<Props, Emits extends EmitsOptions> = Readonly<Props> &
   Readonly<EmitsToProps<Emits>>
 
@@ -163,15 +218,49 @@ export function defineComponent<
   },
 ): DefineSetupFnComponent<Props, E, S>
 export function defineComponent<
+  Props extends Record<string, any> = never,
+  E extends EmitsOptions = {},
+  EE extends string = string,
+  S extends SlotsType = {},
+  Setup extends SetupFn<Props, E, S> = SetupFn<Props, E, S>,
+>(
+  setup: Setup,
+  options?: Pick<ComponentOptions, 'name' | 'inheritAttrs'> & {
+    props?: ComponentObjectPropsOptions<DeclaredSetupProps<Setup>>
+    emits?: E | EE[]
+    slots?: S
+  } & ([DeclaredSetupProps<Setup>] extends [never] ? never : unknown),
+): DefineSetupFnComponent<DeclaredSetupProps<Setup>, E, S>
+export function defineComponent<
+  RuntimeProps extends ComponentObjectPropsOptions,
+  E extends EmitsOptions = {},
+  EE extends string = string,
+  S extends SlotsType = {},
+  Setup extends RuntimeSetup<RuntimeProps, E, S> = RuntimeSetup<
+    RuntimeProps,
+    E,
+    S
+  >,
+>(
+  setup: Setup,
+  options: Pick<ComponentOptions, 'name' | 'inheritAttrs'> & {
+    props: RuntimeProps &
+      (Parameters<Setup> extends []
+        ? unknown
+        : keyof RuntimeProps extends keyof Parameters<Setup>[0]
+          ? unknown
+          : never)
+    emits?: E | EE[]
+    slots?: S
+  },
+): DefineInferredSetupFnComponent<RuntimeProps, E, S>
+export function defineComponent<
   Props extends Record<string, any>,
   E extends EmitsOptions = {},
   EE extends string = string,
   S extends SlotsType = {},
 >(
-  setup: (
-    props: Props,
-    ctx: SetupContext<E, S>,
-  ) => RenderFunction | Promise<RenderFunction>,
+  setup: SetupFn<Props, E, S>,
   options?: Pick<ComponentOptions, 'name' | 'inheritAttrs'> & {
     props?: ComponentObjectPropsOptions<Props>
     emits?: E | EE[]
