@@ -1684,6 +1684,37 @@ describe('BaseTransition', () => {
     })
   })
 
+  // #12091 the same shape, but the leave finishes synchronously, as it does
+  // with `:css="false"` and a `done()` that is not deferred
+  test('should not enter an element that leaves in the flush that mounts it, when that leave finishes synchronously', async () => {
+    const show = ref(false)
+    const text = ref('a')
+    const Update = runInSetup(() => (text.value = 'b'))
+    const Hide = runInSetup(() => (show.value = false))
+    const { props } = mockProps({
+      onLeave: vi.fn((_el: any, done: () => void) => done()),
+    })
+    const { root } = mount(props, () =>
+      show.value
+        ? h('div', [text.value, h(text.value === 'a' ? Update : Hide)])
+        : null,
+    )
+
+    show.value = true
+    await nextTick()
+    expect(serializeInner(root)).toBe('<!---->')
+    assertCalls(props, {
+      onBeforeEnter: 1,
+      onEnter: 0,
+      onAfterEnter: 0,
+      onEnterCancelled: 0,
+      onBeforeLeave: 1,
+      onLeave: 1,
+      onAfterLeave: 1,
+      onLeaveCancelled: 0,
+    })
+  })
+
   describe('mode: "in-out" replace the entering element in the flush that mounts it', () => {
     async function testInOutReplaceOnMount(withUpdate: boolean) {
       const view = ref('a')

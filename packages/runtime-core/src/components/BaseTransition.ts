@@ -29,6 +29,10 @@ type Hook<T = () => void> = T | T[]
 
 export const leaveCbKey: unique symbol = Symbol('_leaveCb')
 const enterCbKey: unique symbol = Symbol('_enterCb')
+// `beforeEnter` announces an enter that the renderer runs in a post-flush
+// effect, so a leave can start and even finish before it runs. Once it has, the
+// element is out of the tree and the announced enter must be dropped.
+const leftKey: unique symbol = Symbol('_left')
 
 export interface BaseTransitionProps<HostElement = RendererElement> {
   mode?: 'in-out' | 'out-in' | 'default'
@@ -99,6 +103,7 @@ export interface TransitionElement {
   // before it finishes.
   [enterCbKey]?: PendingCallback
   [leaveCbKey]?: PendingCallback
+  [leftKey]?: boolean
 }
 
 export function useTransitionState(): TransitionState {
@@ -389,6 +394,8 @@ export function resolveTransitionHooks(
     mode,
     persisted,
     beforeEnter(el) {
+      // this enter supersedes a leave that has already started on the element
+      el[leftKey] = undefined
       let hook = onBeforeEnter
       if (!state.isMounted) {
         if (appear) {
@@ -420,9 +427,10 @@ export function resolveTransitionHooks(
     },
 
     enter(el) {
-      // an element that is leaving does not enter. In in-out mode, the
-      // element that waits for this enter leaves now.
-      if (!isHmrUpdating && el[leaveCbKey]) {
+      // an element that is leaving, or that left since this enter was
+      // announced, does not enter. In in-out mode, the element that waits for
+      // this enter leaves now.
+      if (!isHmrUpdating && (el[leaveCbKey] || el[leftKey])) {
         if (hooks.delayedLeave) hooks.delayedLeave()
         return
       }
@@ -465,6 +473,8 @@ export function resolveTransitionHooks(
       if (el[enterCbKey]) {
         el[enterCbKey](true /* cancelled */)
       }
+      // drop the enter that `beforeEnter` announced, if it has not run yet
+      el[leftKey] = true
       if (state.isUnmounting) {
         return remove()
       }
