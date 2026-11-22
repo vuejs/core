@@ -7,6 +7,7 @@ import {
   computed,
   effect,
   onWatcherCleanup,
+  reactive,
   ref,
   watch,
 } from '../src'
@@ -393,5 +394,32 @@ describe('watch', () => {
 
     dep.value++
     expect(dummy).toBe(1)
+  })
+
+  // #16398
+  test('deep watch should traverse Map keys', () => {
+    const key = reactive({ nested: { value: 0 } })
+    const map = reactive(new Map([[key, 'value']]))
+    const cb = vi.fn()
+
+    watch(map, cb)
+
+    key.nested.value++
+    expect(cb).toHaveBeenCalledTimes(1)
+  })
+
+  test('deep watch should respect depth for Map keys', () => {
+    const key = reactive({ nested: { value: 0 } })
+    const map = reactive(new Map([[key, 'value']]))
+    const cb = vi.fn()
+
+    // depth 2: the Map and its keys/values, but not deeper
+    watch(map, cb, { deep: 2 })
+
+    key.nested.value++
+    expect(cb).toHaveBeenCalledTimes(0)
+
+    key.nested = { value: 1 }
+    expect(cb).toHaveBeenCalledTimes(1)
   })
 })
