@@ -12,7 +12,8 @@ import {
 } from '@vue/shared'
 import { warn } from './warning'
 import type { ComputedRef } from './computed'
-import { ReactiveFlags } from './constants'
+import { ReactiveFlags, TrackOpTypes } from './constants'
+import { ARRAY_ITERATE_KEY, track } from './dep'
 import {
   type DebuggerOptions,
   EffectFlags,
@@ -21,7 +22,13 @@ import {
   pauseTracking,
   resetTracking,
 } from './effect'
-import { isReactive, isShallow } from './reactive'
+import {
+  isReactive,
+  isReadonly,
+  isShallow,
+  toRaw,
+  toReactive,
+} from './reactive'
 import { type Ref, isRef } from './ref'
 import { getCurrentScope } from './effectScope'
 
@@ -352,8 +359,19 @@ export function traverse(
   if (isRef(value)) {
     traverse(value.value, depth, seen)
   } else if (isArray(value)) {
-    for (let i = 0; i < value.length; i++) {
-      traverse(value[i], depth, seen)
+    if (isReactive(value) && !isReadonly(value) && !isShallow(value)) {
+      // any index or length change triggers ARRAY_ITERATE_KEY, so track it
+      // once and read the raw items instead of every index through the proxy
+      const raw = toRaw(value)
+      track(raw, TrackOpTypes.ITERATE, ARRAY_ITERATE_KEY)
+      for (let i = 0; i < raw.length; i++) {
+        const item = raw[i]
+        traverse(isRef(item) ? item : toReactive(item), depth, seen)
+      }
+    } else {
+      for (let i = 0; i < value.length; i++) {
+        traverse(value[i], depth, seen)
+      }
     }
   } else if (isSet(value) || isMap(value)) {
     value.forEach((v: any) => {
@@ -363,8 +381,9 @@ export function traverse(
     for (const key in value) {
       traverse(value[key], depth, seen)
     }
-    for (const key of Object.getOwnPropertySymbols(value)) {
-      if (Object.prototype.propertyIsEnumerable.call(value, key)) {
+    const raw = toRaw(value)
+    for (const key of Object.getOwnPropertySymbols(raw)) {
+      if (Object.prototype.propertyIsEnumerable.call(raw, key)) {
         traverse(value[key as any], depth, seen)
       }
     }
