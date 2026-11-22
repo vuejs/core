@@ -573,6 +573,31 @@ describe('readonly(reactive(array)) element access', () => {
     ['toReversed', state => state.toReversed()[1]],
     ['toSorted', state => state.toSorted()[0]],
     ['toSpliced', state => state.toSpliced(0, 0)[0]],
+    ['map', state => state.map((item: any) => item)[0]],
+    ['find', state => state.find(() => true)],
+    ['findLast', state => state.findLast((item: any) => item.a === 1)],
+    [
+      'forEach',
+      state => {
+        let first
+        state.forEach((item: any, i: number) => i === 0 && (first = item))
+        return first
+      },
+    ],
+    [
+      'some',
+      state => {
+        let first
+        state.some((item: any) => (first = item))
+        return first
+      },
+    ],
+    ['reduce', state => state.reduce((acc: any, item: any) => acc || item, 0)],
+    ['reduce without initial value', state => state.reduce((acc: any) => acc)],
+    ['reduceRight', state => state.reduceRight((_: any, item: any) => item, 0)],
+    ['iterator', state => [...state][0]],
+    ['values', state => state.values().next().value],
+    ['entries', state => state.entries().next().value[1]],
   ]
 
   test.each(paths)('%s preserves readonly and reactivity', (_name, get) => {
@@ -620,5 +645,43 @@ describe('readonly(reactive(array)) element access', () => {
     expect(isReadonly(merged[0])).toBe(true)
     expect(isReactive(merged[0])).toBe(false)
     expect(merged[0]).toBe(input[0])
+  })
+  test.each(['reduce', 'reduceRight'] as const)(
+    '%s of one item without initial value preserves readonly and reactivity',
+    method => {
+      const state = readonly(reactive([{ a: 1 }]))
+      const item = state[method]((acc: any) => acc)
+
+      expect(isReadonly(item)).toBe(true)
+      expect(isReactive(item)).toBe(true)
+      expect(item).toBe(state[0])
+    },
+  )
+})
+
+describe('readonly(array) element access', () => {
+  const paths: [string, (state: any) => any][] = [
+    ['map', state => state.map((item: any) => item)[0]],
+    ['filter', state => state.filter(() => true)[0]],
+    ['find', state => state.find(() => true)],
+    [
+      'forEach',
+      state => {
+        let first
+        state.forEach((item: any, i: number) => i === 0 && (first = item))
+        return first
+      },
+    ],
+    ['reduce', state => state.reduce((acc: any, item: any) => acc || item, 0)],
+    ['iterator', state => [...state][0]],
+  ]
+
+  test.each(paths)('%s preserves readonly', (_name, get) => {
+    const state = readonly([{ a: 1 }, { a: 2 }])
+    const item = get(state)
+
+    expect(isReadonly(item)).toBe(true)
+    expect(isReactive(item)).toBe(false)
+    expect(item).toBe(state[0])
   })
 })
