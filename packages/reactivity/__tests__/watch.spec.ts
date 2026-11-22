@@ -7,6 +7,7 @@ import {
   effect,
   onEffectCleanup,
   onWatcherCleanup,
+  reactive,
   ref,
   watch,
 } from '../src'
@@ -444,5 +445,16 @@ describe('watch', () => {
     s.value = 2
     s.value = 3
     expect(calls).toEqual([2, 3])
+  })
+
+  test('should traverse Map keys in deep watchers', () => {
+    const key = reactive({ nested: { value: 0 } })
+    const map = reactive(new Map([[key, 'value']]))
+    const callback = vi.fn()
+
+    watch(map, callback)
+
+    key.nested.value++
+    expect(callback).toHaveBeenCalledTimes(1)
   })
 })
