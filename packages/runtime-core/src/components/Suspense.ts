@@ -429,6 +429,13 @@ function patchSuspense(
         )
         // force resolve
         suspense.resolve(true)
+        // the patch above may have mounted async deps, which registered under
+        // the pending cycle the forced resolve just discarded. invalidate that
+        // cycle so they take the plain render path instead of resolving a
+        // boundary that has no pending branch, and so a leftover dep can't
+        // hold back the next root switch
+        suspense.pendingId = suspenseId++
+        suspense.deps = 0
       } else {
         // switched to a 3rd branch
         patch(

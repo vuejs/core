@@ -2979,6 +2979,85 @@ describe('Suspense', () => {
     expect(serializeInner(root)).toBe('<div><span>child</span></div>')
   })
 
+  // mounts an async child during the "toggled back to current active branch"
+  // patch: the dep registers under the pending cycle that the forced resolve
+  // then discards
+  async function mountAsyncChildWhileTogglingBack() {
+    let releaseChild!: () => void
+    const AsyncChild = {
+      async setup() {
+        await new Promise<void>(r => (releaseChild = r))
+        return () => h('i', 'child')
+      },
+    }
+    // a branch the user leaves before it is ready
+    const PendingPage = {
+      async setup() {
+        await new Promise(() => {})
+        return () => h('b', 'B')
+      },
+    }
+    const PageA = {
+      props: ['extra'],
+      setup: (props: any) => () =>
+        h('span', ['A', props.extra ? h(AsyncChild) : null]),
+    }
+    const extra = ref(false)
+    const view = shallowRef<ComponentOptions>(PageA)
+    const root = nodeOps.createElement('div')
+    const App = {
+      render: () =>
+        h(Suspense, null, {
+          default: h(view.value, { extra: extra.value }),
+        }),
+    }
+    render(h(App), root)
+    await nextTick()
+    expect(serializeInner(root)).toBe('<span>A<!----></span>')
+
+    // PageA stays active while PendingPage is pending
+    view.value = PendingPage
+    await nextTick()
+    expect(serializeInner(root)).toBe('<span>A<!----></span>')
+
+    // toggled back to the active branch, and that same update mounts a new
+    // async child
+    view.value = PageA
+    extra.value = true
+    await nextTick()
+    expect(serializeInner(root)).toBe('<span>A<!----></span>')
+
+    return { root, view, releaseChild }
+  }
+
+  test('async child mounted while toggling back resolves without resolving the boundary again', async () => {
+    const { root, releaseChild } = await mountAsyncChildWhileTogglingBack()
+    const rejections: unknown[] = []
+    const onRejection = (reason: unknown) => rejections.push(reason)
+    process.on('unhandledRejection', onRejection)
+    try {
+      releaseChild()
+      await new Promise(r => setTimeout(r))
+      expect(serializeInner(root)).toBe('<span>A<i>child</i></span>')
+      expect(rejections).toEqual([])
+    } finally {
+      process.off('unhandledRejection', onRejection)
+    }
+  })
+
+  test('async child mounted while toggling back does not hold back a later root switch', async () => {
+    const { root, view } = await mountAsyncChildWhileTogglingBack()
+    const PageC = {
+      props: ['extra'],
+      render: () => h('div', 'C'),
+    }
+    // the child is still pending: switching the root must not be blocked by
+    // a dep left over from the discarded cycle
+    view.value = PageC
+    await nextTick()
+    expect(serializeInner(root)).toBe('<div>C</div>')
+  })
+
   test.each([
     ['while the branch is inactive', true],
     ['after the branch is re-entered', false],
