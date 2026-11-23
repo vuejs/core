@@ -350,9 +350,12 @@ export function exitComponentRange(range: ComponentRange): void {
   currentComponentRange = range.prev
 }
 
-/** Whether `node` is the claimed close of the component being hydrated. */
+/** Wrappers such as KeepAlive have no close of their own. */
 export function isCurrentComponentClose(node: Node): boolean {
-  return !!currentComponentRange && currentComponentRange.close === node
+  for (let range = currentComponentRange; range; range = range.prev) {
+    if (range.close) return range.close === node
+  }
+  return false
 }
 
 /**

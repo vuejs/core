@@ -224,6 +224,28 @@ describe('Vapor Mode hydration', () => {
           Array.from(container.querySelectorAll('p'), p => p.textContent),
         ).toEqual(['a', 'b'])
       })
+
+      test('reactivates an async v-for root under KeepAlive', async () => {
+        const { data, container } = await render(
+          `<KeepAlive><components.AsyncComp v-if="data.show" /></KeepAlive>`,
+          `<components.Host />`,
+          Comp => defineVaporAsyncComponent(() => Promise.resolve(Comp)),
+          `<p v-for="item in data.list" :key="item">{{ item }}</p>`,
+        )
+        const [a, b] = container.querySelectorAll('p')
+        await new Promise(r => setTimeout(r))
+
+        data.value.show = false
+        await nextTick()
+        expect(container.querySelector('p')).toBeNull()
+
+        data.value.show = true
+        await nextTick()
+        const items = container.querySelectorAll('p')
+        expect(items).toHaveLength(2)
+        expect(items[0]).toBe(a)
+        expect(items[1]).toBe(b)
+      })
     })
 
     // a single-root parent: its range and the inner component's open back to
