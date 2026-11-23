@@ -90,7 +90,7 @@ import {
   withCtx,
 } from '@vue/runtime-dom'
 import {
-  type EffectScope,
+  EffectScope,
   effectScope,
   endBatch,
   setActiveSub,
@@ -2025,7 +2025,10 @@ function mountVNode(
     // happens before the mount and only establishes the dependency.
     // A KeepAlive hit reuses this fragment without rebinding, so the effect
     // is detached from the branch render; unmount() stops it once mounted.
-    const inputScope = (frag.inputScope = effectScope(true))
+    const inputScope = (frag.inputScope = new EffectScope(
+      true,
+      parentComponent ? parentComponent.scope : undefined,
+    ))
     inputScope.run(() => renderEffect(update))
     onScopeDispose(() => {
       if (!isMounted) inputScope.stop()
@@ -2103,7 +2106,12 @@ function createVDOMComponent(
   let hasDynamicProps =
     !once &&
     (!!cells || hasDynamicPropsSource((rawProps || EMPTY_OBJ) as RawProps))
-  if (hasDynamicProps) inputScope ||= effectScope(true)
+  if (hasDynamicProps) {
+    inputScope ||= new EffectScope(
+      true,
+      parentComponent ? parentComponent.scope : undefined,
+    )
+  }
   const prevInstance = setCurrentInstance(parentComponent, inputScope)
   let vnode: VNode
   try {
@@ -4518,7 +4526,9 @@ function renderVaporSlot(
       const renderContent = (): void => {
         content.nodes =
           withRenderContext(frag.ctx, () =>
-            withSlotBoundary(rootBoundary, () => invokeVaporSlot(vnode)),
+            withSlotBoundary(rootBoundary, () =>
+              invokeVaporSlot(vnode, parentComponent),
+            ),
           ) || EMPTY_BLOCK
         if (fallthrough) {
           const scope = vnode.vs!.scope
@@ -4606,11 +4616,18 @@ function stopVaporSlotScope(vnode: VNode): void {
  * Slot functions can create renderEffects while evaluating their block.
  * Those effects live in this detached scope, which only the vnode's re-mount
  * and unmount stop: after the vapor component passing the slot unmounted, not
- * with the scope that happens to render the vdom outlet.
+ * with the scope that happens to render the vdom outlet, though it pauses with
+ * the outlet's instance.
  */
-function invokeVaporSlot(vnode: VNode): Block {
+function invokeVaporSlot(
+  vnode: VNode,
+  parentComponent: ComponentInternalInstance | null,
+): Block {
   const propsRef = (vnode.vs!.ref = shallowRef(vnode.vs!.props || vnode.props))
-  const scope = effectScope(true)
+  const scope = new EffectScope(
+    true,
+    parentComponent ? parentComponent.scope : undefined,
+  )
   vnode.vs!.scope = scope
   try {
     const invoke = () =>

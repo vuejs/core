@@ -1337,6 +1337,51 @@ describe('component scope pause', () => {
     await nextTick()
     expect(host.innerHTML).toContain('display: none')
   })
+
+  test('pausing a component scope pauses the inputs of a KeepAlive child', async () => {
+    const data = ref<any>({ count: 0 })
+    const log: number[] = []
+    const components: any = { read: (n: number) => (log.push(n), n) }
+    let scope: any
+    components.capture = (s: any) => (scope = s)
+    components.Child = compile(
+      `<script setup vapor>
+        defineProps(['n'])
+      </script>
+      <template>
+        <i>{{ n }}</i>
+      </template>`,
+      data,
+      components,
+    )
+    const Parent = compile(
+      `<script setup vapor>
+        import { getCurrentScope } from 'vue'
+        const data = _data
+        const components = _components
+        components.capture(getCurrentScope())
+      </script>
+      <template>
+        <KeepAlive>
+          <components.Child :n="components.read(data.count)" />
+        </KeepAlive>
+      </template>`,
+      data,
+      components,
+    )
+    const { host } = define(Parent).render()
+    log.length = 0
+
+    scope.pause()
+    data.value.count++
+    await nextTick()
+    expect(log).toEqual([])
+
+    scope.resume()
+    await nextTick()
+    expect(log).toEqual([1])
+    expect(host.textContent).toBe('1')
+  })
 })
 
 function getEffectsCount(scope: EffectScope): number {

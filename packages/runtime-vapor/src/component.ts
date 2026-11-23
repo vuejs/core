@@ -564,7 +564,7 @@ export function createComponent(
 
     let inputScope: EffectScope | undefined
     if (keepAliveCtx && !once && !managedMount) {
-      inputScope = new EffectScope(true)
+      inputScope = new EffectScope(true, currentInstance!.scope)
     }
 
     // The VDOM bridge delivers inputs through the same cache-owned scope.

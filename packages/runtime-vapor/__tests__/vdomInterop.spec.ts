@@ -20327,4 +20327,127 @@ describe('component scope pause across the interop boundary', () => {
     expect(log).toEqual(['fallback'])
     expect(host.innerHTML).toContain('<u>1')
   })
+
+  test('pausing a vapor parent holds a slot update queued before the pause', async () => {
+    const data = ref<any>({ count: 0 })
+    const log: string[] = []
+    const components: any = { log: (s: string) => void log.push(s) }
+    let scope: any
+    components.capture = (s: any) => (scope = s)
+    components.VdomChild = compile(
+      `<script setup>
+        import { onBeforeUpdate } from 'vue'
+        const components = _components
+        onBeforeUpdate(() => components.log('child update'))
+      </script>
+      <template>
+        <div><slot /></div>
+      </template>`,
+      data,
+      components,
+      { vapor: false },
+    )
+    const Parent = compile(
+      `<script setup vapor>
+        import { getCurrentScope } from 'vue'
+        const data = _data
+        const components = _components
+        components.capture(getCurrentScope())
+      </script>
+      <template>
+        <components.VdomChild>
+          <span>{{ data.count }}</span>
+        </components.VdomChild>
+      </template>`,
+      data,
+      components,
+    )
+    const { html } = define(Parent).render()
+
+    data.value.count++
+    scope.pause()
+    await nextTick()
+    expect(log).toEqual([])
+    expect(html()).toBe('<div><span>0</span></div>')
+
+    scope.resume()
+    await nextTick()
+    expect(html()).toBe('<div><span>1</span></div>')
+    expect(log).toEqual(['child update'])
+  })
+
+  test('pausing a vapor parent pauses the props of a resolved async vdom child', async () => {
+    const data = ref<any>({ count: 0 })
+    const components: any = {}
+    let scope: any
+    components.capture = (s: any) => (scope = s)
+    const VdomChild = compile(
+      `<script setup>
+        defineProps(['n'])
+      </script>
+      <template>
+        <span>{{ n }}</span>
+      </template>`,
+      data,
+      {},
+      { vapor: false },
+    )
+    components.Child = defineAsyncComponent(() => Promise.resolve(VdomChild))
+    const Parent = compile(
+      `<script setup vapor>
+        import { getCurrentScope } from 'vue'
+        const data = _data
+        const components = _components
+        components.capture(getCurrentScope())
+      </script>
+      <template>
+        <components.Child :n="data.count" />
+      </template>`,
+      data,
+      components,
+    )
+    const { html } = define(Parent).render()
+    await new Promise(r => setTimeout(r))
+    await nextTick()
+    expect(html()).toContain('<span>0</span>')
+
+    scope.pause()
+    data.value.count++
+    await nextTick()
+    expect(html()).toContain('<span>0</span>')
+
+    scope.resume()
+    await nextTick()
+    expect(html()).toContain('<span>1</span>')
+  })
+
+  test('pausing a vapor parent pauses the props it adds to a vnode it renders', async () => {
+    const data = ref<any>({ count: 0 })
+    const components: any = { vnode: h('b', 'x') }
+    let scope: any
+    components.capture = (s: any) => (scope = s)
+    const Parent = compile(
+      `<script setup vapor>
+        import { getCurrentScope } from 'vue'
+        const data = _data
+        const components = _components
+        components.capture(getCurrentScope())
+      </script>
+      <template>
+        <div><component :is="components.vnode" :title="data.count" /></div>
+      </template>`,
+      data,
+      components,
+    )
+    const { html } = define(Parent).render()
+
+    scope.pause()
+    data.value.count++
+    await nextTick()
+    expect(html()).toContain('title="0"')
+
+    scope.resume()
+    await nextTick()
+    expect(html()).toContain('title="1"')
+  })
 })
