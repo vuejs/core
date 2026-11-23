@@ -913,12 +913,18 @@ const vaporInteropImpl = {
     parentSuspense,
   ) {
     // Check vapor's isHydrating (for createVaporSSRApp) and VDOM's
-    // isVdomHydrating (for createSSRApp). isVdomHydratingEnabled covers
-    // deferred hydration (async chunks, lazy hydration strategies), which
-    // runs after the root hydration pass has reset isVdomHydrating.
+    // isVdomHydrating (for createSSRApp). isHydratingEnabled and
+    // isVdomHydratingEnabled cover deferred hydration (async chunks, lazy
+    // hydration strategies, Suspense) in each kind of app, which runs after
+    // the root hydration pass has reset isHydrating and isVdomHydrating.
     // In CSR (createApp/createVaporApp + vaporInteropPlugin), all are false,
     // so this logic is tree-shaken.
-    if (!isHydrating && !isVdomHydrating && !isVdomHydratingEnabled) {
+    if (
+      !isHydrating &&
+      !isHydratingEnabled &&
+      !isVdomHydrating &&
+      !isVdomHydratingEnabled
+    ) {
       return node
     }
     vaporHydrateNode(node, () => {
@@ -942,7 +948,12 @@ const vaporInteropImpl = {
     parentSuspense,
     slotScopeIds,
   ) {
-    if (!isHydrating && !isVdomHydrating && !isVdomHydratingEnabled) {
+    if (
+      !isHydrating &&
+      !isHydratingEnabled &&
+      !isVdomHydrating &&
+      !isVdomHydratingEnabled
+    ) {
       return node
     }
     // `<!--(-->`: the server rendered the fallback of the slot's own outlet in
@@ -1044,7 +1055,12 @@ const vaporInteropImpl = {
     parentSuspense,
     slotScopeIds,
   ) {
-    if (!isHydrating && !isVdomHydrating && !isVdomHydratingEnabled) {
+    if (
+      !isHydrating &&
+      !isHydratingEnabled &&
+      !isVdomHydrating &&
+      !isVdomHydratingEnabled
+    ) {
       return open.nextSibling
     }
     return hydrateOutletFallback(

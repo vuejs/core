@@ -189,11 +189,13 @@ export function hydrateNode<T>(
 ): T {
   const boundaryFlags = boundary ? (boundary as Anchor).$vha : undefined
   const setup = () => {
+    blockDepth++
     // Deferred interop hydration must see its own boundary while recovering.
     if (boundary) claimAnchor(boundary)
     setCurrentHydrationNode(node)
   }
   const cleanup = () => {
+    blockDepth--
     if (boundary) (boundary as Anchor).$vha = boundaryFlags
   }
   return performHydration(fn, setup, cleanup)
@@ -337,7 +339,8 @@ export interface ComponentRange {
 let currentComponentRange: ComponentRange | null = null
 // Blocks nested in a component's own block fn read the cursor inside a unit
 // they own, not as roots: the block fns of branches, rows and slot content,
-// and the blocks in its elements.
+// the blocks in its elements, and the passes of `hydrateNode` (vdom content,
+// such as the vdom slot content of a `<slot />` root).
 let blockDepth = 0
 
 export function enterComponentRange(range: ComponentRange): void {
@@ -348,6 +351,14 @@ export function enterComponentRange(range: ComponentRange): void {
 
 export function exitComponentRange(range: ComponentRange): void {
   currentComponentRange = range.prev
+}
+
+/** Wrappers such as KeepAlive have no close of their own. */
+export function isCurrentComponentClose(node: Node): boolean {
+  for (let range = currentComponentRange; range; range = range.prev) {
+    if (range.close) return range.close === node
+  }
+  return false
 }
 
 /**

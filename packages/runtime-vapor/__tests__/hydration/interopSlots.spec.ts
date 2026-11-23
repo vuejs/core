@@ -118,6 +118,27 @@ describe('VDOM interop', () => {
     )
   })
 
+  test('hydrate VDOM slot content with a vapor component in a vapor <slot /> root', async () => {
+    const { container, html } = await testWithVDOMApp(
+      `<script setup>const components = _components;</script>
+      <template>
+        <components.VaporProvider><components.VaporChild /></components.VaporProvider>
+      </template>`,
+      {
+        VaporProvider: { code: `<template><slot /></template>`, vapor: true },
+        VaporChild: {
+          code: `<template><span>child</span></template>`,
+          vapor: true,
+        },
+      },
+      ref({}),
+    )
+
+    expect(container.innerHTML).toBe(html)
+    expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+    expect(`Hydration children mismatch`).not.toHaveBeenWarned()
+  })
+
   test('hydrate VDOM slot content should unmount hydrated slot child before first insert', async () => {
     const data = ref({
       unmounted: vi.fn(),
@@ -4004,5 +4025,75 @@ describe('VDOM interop', () => {
         expect(`Extraneous non-props attributes`).toHaveBeenWarned()
       }
     })
+  })
+
+  describe('Vapor slot in a dynamic VDOM element', () => {
+    const part = `<components.Part as="span"><input value="server" /></components.Part>`
+
+    test.each([
+      {
+        name: 'a VDOM slot',
+        template: `<components.Wrapper>${part}</components.Wrapper>`,
+      },
+      {
+        name: 'a conditional VDOM slot',
+        template: `<components.Wrapper>
+          <template v-if="data.show" #default>${part}</template>
+        </components.Wrapper>`,
+      },
+      {
+        name: 'a dynamic Vapor element',
+        template: `<component :is="data.tag">${part}</component>`,
+      },
+      {
+        name: 'a VDOM component compiled only for the client',
+        template: part,
+        clientOnly: true,
+      },
+    ])(
+      'preserves the input during hydration with $name',
+      async ({ template, clientOnly }) => {
+        const data = ref({ show: true, tag: 'section' })
+        const App = (ssr: boolean) =>
+          compile(
+            `${setup}<template>${template}</template>`,
+            data,
+            {
+              Wrapper: compile(
+                `${setup}<template><div><slot /></div></template>`,
+                data,
+                {},
+                { vapor: false, ssr },
+              ),
+              Part: compile(
+                `<script setup>defineProps(['as'])</script>
+              <template><component :is="as"><slot /></component></template>`,
+                data,
+                {},
+                { vapor: false, ssr: ssr && !clientOnly },
+              ),
+            },
+            { vapor: true, ssr },
+          )
+
+        const container = document.createElement('div')
+        container.innerHTML = await VueServerRenderer.renderToString(
+          runtimeDom.createSSRApp(App(true)),
+        )
+        expect(container.querySelector('span')!.innerHTML).toBe(
+          '<!--[--><input value="server"><!--]-->',
+        )
+        const input = container.querySelector('input')!
+        input.value = 'typed before hydration'
+
+        runtimeVapor
+          .createVaporSSRApp(App(false))
+          .use(runtimeVapor.vaporInteropPlugin)
+          .mount(container)
+        expect(container.querySelector('input')).toBe(input)
+        expect(input.value).toBe('typed before hydration')
+        expect('Hydration node mismatch').not.toHaveBeenWarned()
+      },
+    )
   })
 })

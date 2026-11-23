@@ -381,6 +381,12 @@ export function closeBlock(): void {
 // incremented/decremented by nested usage of v-once (see below)
 export let isBlockTreeEnabled = 1
 
+export function setBlockTrackingState(value: number): number {
+  const prev = isBlockTreeEnabled
+  isBlockTreeEnabled = value
+  return prev
+}
+
 /**
  * Block tracking sometimes needs to be disabled, for example during the
  * creation of a tree that needs to be cached by v-once. The compiler generates

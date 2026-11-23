@@ -33,6 +33,7 @@ import { type SSRSlot, ssrRenderSlot } from '../src/helpers/ssrRenderSlot'
 import { ssrRenderComponent } from '../src/helpers/ssrRenderComponent'
 import { type Readable, Transform } from 'node:stream'
 import { ssrRenderVNode } from '../src'
+import { execFileSync } from 'node:child_process'
 
 const promisifyStream = (stream: Readable) => {
   return new Promise<string>((resolve, reject) => {
@@ -1726,3 +1727,61 @@ function testRender(type: string, render: typeof renderToString) {
     })
   })
 }
+
+test.each(['esm-browser', 'esm-browser-runtime', 'esm-browser-vapor'])(
+  '%s builds share the SSR setup instance (#16371)',
+  format => {
+    execFileSync(
+      process.execPath,
+      [
+        '--input-type=module',
+        '-e',
+        `
+          import assert from 'node:assert/strict'
+          import { rolldown } from 'rolldown'
+          import { createConfigsForPackage } from './scripts/create-rolldown-config.js'
+
+          async function build(target, format, production) {
+            const config = createConfigsForPackage({
+              target,
+              formats: [format],
+              commit: 'test',
+              localDev: true,
+            })[Number(production)]
+            const bundle = await rolldown(config)
+            const { output } = await bundle.generate(config.output)
+            await bundle.close()
+            return import('data:text/javascript;base64,' + Buffer.from(output[0].code).toString('base64'))
+          }
+
+          for (const production of [false, true]) {
+            const { createSSRApp, h, inject, provide, useId } = await build('vue', process.argv[1], production)
+            const { renderToString } = await build('server-renderer', 'esm-browser', production)
+            const Child = {
+              setup() {
+                const msg = inject('msg')
+                return () => h('p', 'inject: ' + (msg ?? ''))
+              },
+            }
+            const App = {
+              setup() {
+                provide('msg', 'hello')
+                const id = useId()
+                return () => [h('p', 'id: ' + id), h(Child)]
+              },
+            }
+            for (let i = 0; i < 2; i++) {
+              assert.equal(
+                await renderToString(createSSRApp(App)),
+                '<!--[--><p>id: v-0</p><p>inject: hello</p><!--]-->',
+              )
+            }
+          }
+        `,
+        format,
+      ],
+      { cwd: new URL('../../../', import.meta.url) },
+    )
+  },
+  30000,
+)

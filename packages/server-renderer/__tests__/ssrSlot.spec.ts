@@ -1,9 +1,11 @@
 import {
   cloneVNode,
   createApp,
+  createBlock,
   createCommentVNode,
   defineAsyncComponent,
   h,
+  openBlock,
   renderSlot,
   withCtx,
 } from 'vue'
@@ -774,14 +776,14 @@ describe('ssr: slot', () => {
       const err = new Error('slot')
       const app = createApp({
         components: { Primitive },
-        template: `<Primitive><i>{{ fail() }}</i></Primitive><b>after</b>`,
+        template: `<Primitive><i v-if="true">{{ fail() }}</i></Primitive><b>after</b>`,
         setup: () => ({
-          fail: () => {
+          fail: vi.fn().mockImplementationOnce(() => {
             throw err
-          },
+          }),
         }),
       })
-      const handler = vi.fn()
+      const handler = vi.fn((_, instance) => instance.$slots.default()[0])
       app.config.errorHandler = handler
       expect(await renderToString(app)).toBe(
         `<!--[--><div></div><b>after</b><!--]-->`,
@@ -791,6 +793,34 @@ describe('ssr: slot', () => {
         expect.objectContaining({ as: 'div' }),
         'render function',
       )
+      // Calling the same slot by hand in the handler disables block tracking.
+      expect(handler.mock.results[0].value.dynamicChildren).toBeNull()
     })
+  })
+
+  test('restores parent slot block tracking after a child render throws', async () => {
+    const tracking: boolean[] = []
+    const recordTracking = () => {
+      openBlock()
+      tracking.push(createBlock('i').dynamicChildren !== null)
+    }
+    const error = new Error('child render failed')
+    const Child = {
+      ssrRender() {
+        recordTracking()
+        throw error
+      },
+    }
+    const app = createApp({
+      components: { ...components, Child },
+      setup: () => ({ recordTracking }),
+      template: `<one><Child />{{ recordTracking() }}</one>`,
+    })
+
+    await expect(renderToString(app)).rejects.toBe(error)
+    expect(
+      'Unhandled error during execution of render function',
+    ).toHaveBeenWarned()
+    expect(tracking).toEqual([true, false])
   })
 })
