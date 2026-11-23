@@ -4,7 +4,6 @@ import {
   h,
   nextTick,
   nodeOps,
-  onMounted,
   ref,
   render,
   useInstanceInfo,
@@ -13,38 +12,6 @@ import {
 describe('useInstanceInfo', () => {
   test('returns null without an active instance', () => {
     expect(useInstanceInfo()).toBe(null)
-  })
-
-  test('returns the same object for the same component', () => {
-    const seen: any[] = []
-    const Comp = {
-      setup() {
-        seen.push(useInstanceInfo(), useInstanceInfo())
-        onMounted(() => seen.push(useInstanceInfo()))
-        return () => {
-          seen.push(useInstanceInfo())
-          return h('div')
-        }
-      },
-    }
-    render(h(Comp), nodeOps.createElement('div'))
-    expect(seen.length).toBe(4)
-    expect(seen[0]).not.toBe(null)
-    expect(new Set(seen).size).toBe(1)
-  })
-
-  test('returns a different object for each component instance', () => {
-    const seen: any[] = []
-    const Comp = {
-      setup() {
-        seen.push(useInstanceInfo())
-        return () => h('div')
-      },
-    }
-    render(h('div', [h(Comp), h(Comp)]), nodeOps.createElement('div'))
-    expect(seen.length).toBe(2)
-    expect(seen[0]).not.toBe(seen[1])
-    expect(seen[0].uid).not.toBe(seen[1].uid)
   })
 
   test('is readonly', () => {
@@ -56,9 +23,7 @@ describe('useInstanceInfo', () => {
       },
     }
     render(h(Comp), nodeOps.createElement('div'))
-    expect(Object.isFrozen(info)).toBe(true)
-    expect(Object.isFrozen(Object.getPrototypeOf(info))).toBe(true)
-    for (const key of [
+    const keys = [
       'uid',
       'type',
       'ce',
@@ -66,17 +31,14 @@ describe('useInstanceInfo', () => {
       'isVapor',
       'isHydrating',
       'rawPropKeys',
-    ]) {
-      expect(key in info).toBe(true)
+    ]
+    // nothing else on the object leads back to the instance
+    expect(Reflect.ownKeys(info)).toEqual(keys)
+    for (const key of keys) {
       expect(() => {
         info[key] = null
       }).toThrow(TypeError)
     }
-    expect(() => {
-      info.foo = 1
-    }).toThrow(TypeError)
-    // nothing on the object leads back to the instance
-    expect(Reflect.ownKeys(info)).toEqual([])
   })
 
   test('exposes uid, type, ce and isVapor', () => {

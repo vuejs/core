@@ -32,43 +32,6 @@ export interface ComponentInstanceInfo {
   readonly rawPropKeys: string[]
 }
 
-const infos = new WeakMap<GenericComponentInstance, ComponentInstanceInfo>()
-const instances = new WeakMap<ComponentInstanceInfo, GenericComponentInstance>()
-
-// The getters are shared: an info object holds nothing itself, so the instance
-// stays unreachable from it.
-const infoProto: ComponentInstanceInfo = /*@__PURE__*/ Object.freeze({
-  get uid() {
-    return instances.get(this)!.uid
-  },
-  get type() {
-    return instances.get(this)!.type as ConcreteComponent
-  },
-  get ce() {
-    return (instances.get(this)!.ce as HTMLElement | undefined) || null
-  },
-  get el() {
-    const els: RendererElement[] = []
-    collectRoots(instances.get(this)!, els)
-    return els.length > 1 ? els : els[0] || null
-  },
-  get isVapor() {
-    const i = instances.get(this)!
-    // on the server a vapor component runs on a vdom instance
-    return !!(i.vapor || i.type.__vapor)
-  },
-  get isHydrating() {
-    return isHydrating(instances.get(this)!)
-  },
-  get rawPropKeys() {
-    const i = instances.get(this)!
-    const keys = i.rawKeys
-      ? i.rawKeys()
-      : Object.keys((i as ComponentInternalInstance).vnode.props || EMPTY_OBJ)
-    return keys.filter(key => !isReservedProp(key))
-  },
-})
-
 function isHydrating(i: GenericComponentInstance): boolean {
   return i.hydrating
     ? i.hydrating()
@@ -132,10 +95,33 @@ function collectElements(vnode: VNode, roots: RendererElement[]): void {
 export function useInstanceInfo(): ComponentInstanceInfo | null {
   const i = getCurrentGenericInstance()
   if (!i) return null
-  const cached = infos.get(i)
-  if (cached) return cached
-  const info: ComponentInstanceInfo = Object.freeze(Object.create(infoProto))
-  infos.set(i, info)
-  instances.set(info, i)
-  return info
+  return {
+    get uid() {
+      return i.uid
+    },
+    get type() {
+      return i.type as ConcreteComponent
+    },
+    get ce() {
+      return (i.ce as HTMLElement | undefined) || null
+    },
+    get el() {
+      const els: RendererElement[] = []
+      collectRoots(i, els)
+      return els.length > 1 ? els : els[0] || null
+    },
+    get isVapor() {
+      // on the server a vapor component runs on a vdom instance
+      return !!(i.vapor || i.type.__vapor)
+    },
+    get isHydrating() {
+      return isHydrating(i)
+    },
+    get rawPropKeys() {
+      const keys = i.rawKeys
+        ? i.rawKeys()
+        : Object.keys((i as ComponentInternalInstance).vnode.props || EMPTY_OBJ)
+      return keys.filter(key => !isReservedProp(key))
+    },
+  }
 }

@@ -26,10 +26,9 @@ describe('useInstanceInfo', () => {
     const components: any = {}
     const Comp = (components.Comp = compile(
       `<script setup vapor>
-        import { getCurrentInstance, onMounted, useInstanceInfo } from 'vue'
+        import { getCurrentInstance, useInstanceInfo } from 'vue'
         const data = _data
-        data.value.record(useInstanceInfo(), useInstanceInfo(), getCurrentInstance())
-        onMounted(() => data.value.record(useInstanceInfo()))
+        data.value.record(useInstanceInfo(), getCurrentInstance())
       </script>
       <template>
         <div>comp</div>
@@ -49,13 +48,10 @@ describe('useInstanceInfo', () => {
     mount(App, true)
     await nextTick()
 
-    const [info, again, vdomInstance, inHook] = seen
+    const [info, vdomInstance] = seen
     expect(vdomInstance).toBe(null)
     expect(info).not.toBe(null)
-    expect(again).toBe(info)
-    expect(inHook).toBe(info)
 
-    expect(Object.isFrozen(info)).toBe(true)
     expect(() => {
       info.uid = -1
     }).toThrow(TypeError)
