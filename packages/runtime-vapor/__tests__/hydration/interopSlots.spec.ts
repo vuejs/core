@@ -69,6 +69,55 @@ describe('VDOM interop', () => {
     )
   })
 
+  test('hydrate a v-if VDOM component rendering a disabled teleport in VDOM slot content', async () => {
+    const data = ref({ show: true })
+    const { container } = await testWithVaporApp(
+      `<template>
+        <components.VdomWrapper>
+          <button>a</button>
+          <components.VdomPortal v-if="data.show" disabled><p>b</p></components.VdomPortal>
+        </components.VdomWrapper>
+      </template>`,
+      {
+        VdomWrapper: {
+          code: `<script setup>const data = _data;</script>
+            <template><div :class="{ open: data.show }"><slot /><input /></div></template>`,
+          vapor: false,
+        },
+        VdomPortal: {
+          code: `<script setup>defineProps({ disabled: Boolean })</script>
+            <template>
+              <teleport to="body" :disabled="disabled"><slot /></teleport>
+            </template>`,
+          vapor: false,
+        },
+      },
+      data,
+    )
+
+    expect(`mismatch`).not.toHaveBeenWarned()
+    expect(container.innerHTML).toBe(
+      `<!--{--><div class="open"><!--[--><button>a</button>` +
+        `<!--teleport start--><!--[--><p>b</p><!--]--><!--teleport end-->` +
+        `<!--if--><!--]--><input></div><!--}-->`,
+    )
+
+    data.value.show = false
+    await nextTick()
+    expect(container.innerHTML).toBe(
+      `<!--{--><div class=""><!--[--><button>a</button>` +
+        `<!--if--><!--]--><input></div><!--}-->`,
+    )
+
+    data.value.show = true
+    await nextTick()
+    expect(container.innerHTML).toBe(
+      `<!--{--><div class="open"><!--[--><button>a</button>` +
+        `<!--teleport start--><p>b</p><!--teleport end-->` +
+        `<!--if--><!--]--><input></div><!--}-->`,
+    )
+  })
+
   test('hydrate VDOM slot content with a vapor component in a vapor <slot /> root', async () => {
     const { container, html } = await testWithVDOMApp(
       `<script setup>const components = _components;</script>

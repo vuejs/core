@@ -6,7 +6,12 @@ import {
   mountComponent,
   unmountComponent,
 } from './component'
-import { isClaimedAnchor, isHydrating, isRangeEnd } from './dom/hydration'
+import {
+  isClaimedAnchor,
+  isComment,
+  isHydrating,
+  isRangeEnd,
+} from './dom/hydration'
 import {
   MoveType,
   type SchedulerJob,
@@ -666,6 +671,9 @@ export function findBlockBoundary(block: Block): {
     (nextNode as Comment).data !== '}' &&
     isFragmentBlock(boundaryBlock) &&
     !isRangeEnd(lastChild) &&
+    // a teleport closes with its own marker: a close after it is the one of
+    // the range around the teleport, e.g. a slot
+    !isComment(lastChild, 'teleport end') &&
     !(lastChild.nodeType === 3 && !(lastChild as Text).data)
   ) {
     nextNode = nextNode.nextSibling
