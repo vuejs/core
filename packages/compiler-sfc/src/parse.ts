@@ -158,6 +158,15 @@ export function parse(
     if (
       ignoreEmpty &&
       node.tag !== 'template' &&
+      // #6704 an empty <script setup> block is still meaningful: the SFC
+      // compiler infers the component name from the filename for it, which is
+      // required by KeepAlive's include/exclude and by devtools.
+      !(
+        node.tag === 'script' &&
+        node.props.some(
+          p => p.type === NodeTypes.ATTRIBUTE && p.name === 'setup',
+        )
+      ) &&
       isEmpty(node) &&
       !hasSrc(node)
     ) {

@@ -46,6 +46,33 @@ return { a }
 })"
 `;
 
+exports[`SFC analyze <script> bindings > auto name inference > empty <script setup> block 1`] = `
+"
+export default {
+  __name: 'FooBar',
+  setup(__props, { expose: __expose }) {
+  __expose();
+
+        
+return {  }
+}
+
+}"
+`;
+
+exports[`SFC analyze <script> bindings > auto name inference > empty <script setup> block alongside an empty <script> block 1`] = `
+"
+export default {
+  __name: 'FooBar',
+  setup(__props, { expose: __expose }) {
+  __expose();
+
+return {  }
+}
+
+}"
+`;
+
 exports[`SFC compile <script setup> > <script> and <script setup> co-usage > export call expression as default 1`] = `
 "
       function fn() {
