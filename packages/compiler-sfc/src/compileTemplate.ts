@@ -181,6 +181,10 @@ function doCompileTemplate({
 }: SFCTemplateCompileOptions): SFCTemplateCompileResults {
   const errors: CompilerError[] = []
   const warnings: CompilerError[] = []
+  const onError = (e: CompilerError) => {
+    errors.push(e)
+    compilerOptions.onError?.(e)
+  }
 
   let nodeTransforms: NodeTransform[] = []
   if (isObject(transformAssetUrls)) {
@@ -224,7 +228,7 @@ function doCompileTemplate({
     compiler,
     compilerOptions,
     ssr,
-    onError: e => errors.push(e),
+    onError,
   })
 
   let { code, ast, preamble, map, helpers } = compiler.compile(
@@ -254,8 +258,11 @@ function doCompileTemplate({
         compilerOptions.nodeTransforms || [],
       ),
       filename,
-      onError: e => errors.push(e),
-      onWarn: w => warnings.push(w),
+      onError,
+      onWarn: w => {
+        warnings.push(w)
+        compilerOptions.onWarn?.(w)
+      },
     },
   )
 

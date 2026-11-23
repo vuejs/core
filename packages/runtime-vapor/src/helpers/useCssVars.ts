@@ -28,7 +28,7 @@ import { isHydrating } from '../dom/hydration'
  * directly as outlets since their content leaves the chain.
  */
 export function useVaporCssVars(
-  getter: (ctx: any) => Record<string, string>,
+  getter: (ctx: any) => Record<string, unknown>,
 ): void {
   if (!__BROWSER__ && !__TEST__) return
   const instance = currentInstance as VaporComponentInstance
@@ -43,7 +43,7 @@ export function useVaporCssVars(
   const getVars = () => getter(ctx)
   if (__DEV__) (instance as GenericComponentInstance).getCssVars = getVars
 
-  let vars: Record<string, string> = EMPTY_OBJ
+  let vars: Record<string, unknown> = EMPTY_OBJ
   const apply = (instance.applyCssVars = (nodes: Block) => {
     // hydrated content already carries the SSR values
     if (!isHydrating) setVarsOnBlock(nodes, vars)
@@ -84,7 +84,7 @@ export function useVaporCssVars(
 
 export function setVarsOnBlock(
   block: Block,
-  vars: Record<string, string>,
+  vars: Record<string, unknown>,
 ): void {
   if (block instanceof Node) {
     setVarsOnNode(block, vars)

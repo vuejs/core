@@ -636,8 +636,9 @@ export class DynamicFragment extends RenderContextFragment {
       if (parent) {
         // a branch rendered under a pending boundary enters on its reveal
         insert(this.nodes, parent, this.anchor, this.ctx.suspense)
-        if (removePrevious && keepAliveCtx) {
-          // Publish the new cache entry only after it has been mounted.
+        if (keepAliveCtx && (removePrevious || transition)) {
+          // Publish the new cache entry only after it has been mounted (out-in
+          // mounts it after the KeepAlive updated).
           keepAliveCtx.cacheBlock(this)
         }
       }

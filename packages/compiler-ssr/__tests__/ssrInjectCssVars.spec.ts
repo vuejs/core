@@ -133,4 +133,92 @@ describe('ssr: inject <style vars>', () => {
       }
     `)
   })
+
+  test('v-for', () => {
+    expect(
+      compile(`<div v-for="i in list" :key="i">{{ i }}</div>`, {
+        ssrCssVars: `{ color }`,
+      }).code,
+    ).toMatchInlineSnapshot(`
+      "const { mergeProps: _mergeProps } = require("vue")
+      const { ssrRenderAttrs: _ssrRenderAttrs, ssrInterpolate: _ssrInterpolate, ssrRenderList: _ssrRenderList } = require("vue/server-renderer")
+
+      return function ssrRender(_ctx, _push, _parent, _attrs) {
+        const _cssVars = { style: { color: _ctx.color }}
+        _push(\`<!--[-->\`)
+        _ssrRenderList(_ctx.list, (i) => {
+          _push(\`<div\${
+            _ssrRenderAttrs(_mergeProps({ key: i }, { ref_for: true }, _cssVars))
+          }>\${
+            _ssrInterpolate(i)
+          }</div>\`)
+        })
+        _push(\`<!--]-->\`)
+      }"
+    `)
+  })
+
+  test('template v-for', () => {
+    expect(
+      compile(`<template v-for="i in list"><div/><div/></template>`, {
+        ssrCssVars: `{ color }`,
+      }).code,
+    ).toMatchInlineSnapshot(`
+      "const { mergeProps: _mergeProps } = require("vue")
+      const { ssrRenderAttrs: _ssrRenderAttrs, ssrRenderList: _ssrRenderList } = require("vue/server-renderer")
+
+      return function ssrRender(_ctx, _push, _parent, _attrs) {
+        const _cssVars = { style: { color: _ctx.color }}
+        _push(\`<!--[-->\`)
+        _ssrRenderList(_ctx.list, (i) => {
+          _push(\`<!--[--><div\${
+            _ssrRenderAttrs(_mergeProps({ ref_for: true }, _cssVars))
+          }></div><div\${
+            _ssrRenderAttrs(_mergeProps({ ref_for: true }, _cssVars))
+          }></div><!--]-->\`)
+        })
+        _push(\`<!--]-->\`)
+      }"
+    `)
+  })
+
+  test('w/ keep-alive', () => {
+    expect(
+      compile(`<KeepAlive><component :is="view" /></KeepAlive>`, {
+        ssrCssVars: `{ color }`,
+      }).code,
+    ).toMatchInlineSnapshot(`
+      "const { resolveDynamicComponent: _resolveDynamicComponent, mergeProps: _mergeProps, createVNode: _createVNode } = require("vue")
+      const { ssrRenderVNode: _ssrRenderVNode } = require("vue/server-renderer")
+
+      return function ssrRender(_ctx, _push, _parent, _attrs) {
+        const _cssVars = { style: { color: _ctx.color }}
+        _ssrRenderVNode(_push, _createVNode(_resolveDynamicComponent(_ctx.view), _mergeProps(_attrs, _cssVars), null), _parent)
+      }"
+    `)
+  })
+
+  test('w/ teleport', () => {
+    expect(
+      compile(
+        `<Teleport to="#target"><div v-if="ok" /><span v-else /></Teleport>`,
+        {
+          ssrCssVars: `{ color }`,
+        },
+      ).code,
+    ).toMatchInlineSnapshot(`
+      "const { ssrRenderAttrs: _ssrRenderAttrs, ssrRenderTeleport: _ssrRenderTeleport } = require("vue/server-renderer")
+
+      return function ssrRender(_ctx, _push, _parent, _attrs) {
+        const _cssVars = { style: { color: _ctx.color }}
+        _ssrRenderTeleport(_push, (_push) => {
+          if (_ctx.ok) {
+            _push(\`<div\${_ssrRenderAttrs(_cssVars)}></div>\`)
+          } else {
+            _push(\`<span\${_ssrRenderAttrs(_cssVars)}></span>\`)
+          }
+        }, "#target", false, _parent)
+      }"
+    `)
+  })
 })

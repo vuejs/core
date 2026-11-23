@@ -338,7 +338,6 @@ function hooksContext(
 ): TransitionHooksContext {
   const key = String(rawKey)
   return {
-    isLeaving: el => leavingNodes[key] === el,
     setLeavingNodeCache: el => markLeaving(leavingNodes, el, rawKey),
     unsetLeavingNodeCache: el => {
       if (leavingNodes[key] === el) {

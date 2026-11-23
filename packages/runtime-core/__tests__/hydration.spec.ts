@@ -48,7 +48,9 @@ import type { HMRRuntime } from '../src/hmr'
 import type { InternalRenderFunction } from '../src/component'
 import { forEachElement } from '../src/hydrationStrategies'
 import { type SSRContext, renderToString } from '@vue/server-renderer'
+import * as serverRenderer from '@vue/server-renderer'
 import { type CompilerOptions, compile } from '@vue/compiler-dom'
+import { compile as compileSSR } from '@vue/compiler-ssr'
 import { PatchFlags, normalizeStyle } from '@vue/shared'
 import { vShowOriginalDisplay } from '../../runtime-dom/src/directives/vShow'
 
@@ -621,6 +623,66 @@ describe('SSR hydration', () => {
     expect(childTeleportVNode.children[0].el).toBe(
       teleportContainer.lastChild?.previousSibling,
     )
+  })
+
+  describe('Teleport (disabled + nested teleport to the same target)', () => {
+    async function testNested(id: string, nestedContent: () => VNode) {
+      const msg1 = ref('foo')
+      const msg2 = ref('bar')
+      const render = () =>
+        h('div', [
+          h(Teleport, { to: `#${id}`, disabled: true }, [
+            h('i', 'outer'),
+            h(Teleport, { to: `#${id}` }, [nestedContent()]),
+          ]),
+          h(Teleport, { to: `#${id}` }, [h('b', { class: 'b1' }, msg1.value)]),
+          h(Teleport, { to: `#${id}` }, [h('b', { class: 'b2' }, msg2.value)]),
+        ])
+
+      const ctx: SSRContext = {}
+      const mainHtml = await renderToString(h({ render }), ctx)
+      const teleportContainer = document.createElement('div')
+      teleportContainer.id = id
+      teleportContainer.innerHTML = ctx.teleports![`#${id}`]
+      document.body.appendChild(teleportContainer)
+      const b1 = teleportContainer.querySelector('.b1')
+      const b2 = teleportContainer.querySelector('.b2')
+
+      const { vnode } = mountWithHydration(mainHtml, render)
+      expect(`Hydration`).not.toHaveBeenWarned()
+
+      // each later teleport must bind to its own server-rendered block
+      const children = vnode.children as VNode[]
+      expect((children[1].children as VNode[])[0].el).toBe(b1)
+      expect((children[2].children as VNode[])[0].el).toBe(b2)
+
+      msg1.value = 'foo2'
+      msg2.value = 'bar2'
+      await nextTick()
+      expect(b1!.textContent).toBe('foo2')
+      expect(b2!.textContent).toBe('bar2')
+      expect(teleportContainer.querySelectorAll('b').length).toBe(2)
+      return teleportContainer
+    }
+
+    test('nested content is a comment (v-if)', async () => {
+      const teleportContainer = await testNested('teleport-nested-dis1', () =>
+        createCommentVNode('v-if', true),
+      )
+      expect(teleportContainer.innerHTML).toBe(
+        `<!--teleport start anchor--><!--teleport anchor-->` +
+          `<!--teleport start anchor--><!--v-if--><!--teleport anchor-->` +
+          `<!--teleport start anchor--><b class="b1">foo2</b><!--teleport anchor-->` +
+          `<!--teleport start anchor--><b class="b2">bar2</b><!--teleport anchor-->`,
+      )
+    })
+
+    test('nested content is an element', async () => {
+      const teleportContainer = await testNested('teleport-nested-dis2', () =>
+        h('span', 'inner'),
+      )
+      expect(teleportContainer.querySelectorAll('span').length).toBe(1)
+    })
   })
 
   test('with data-allow-mismatch component when using onServerPrefetch', async () => {
@@ -4953,4 +5015,164 @@ describe('SSR hydration', () => {
     expect(errorHandler).toHaveBeenCalledTimes(1)
     expect(container.innerHTML).toBe('<div><!----></div>')
   })
+
+  test.each([
+    {
+      name: 'root v-for',
+      template: `<div v-for="i in 2" :key="i" :style="{ opacity }">
+        <i :style="{ opacity }">{{ i }}</i>
+      </div>`,
+    },
+    {
+      name: 'root template v-for with multiple children',
+      template: `<template v-for="i in 2" :key="i">
+        <div :style="{ opacity }"><i :style="{ opacity }">{{ i }}</i></div>
+        <span :style="{ opacity }">{{ i }}</span>
+      </template>`,
+    },
+    {
+      name: 'template v-if nested in v-for',
+      template: `<template v-for="i in 2" :key="i">
+        <template v-if="i === 1">
+          <div :style="{ opacity }">{{ i }}</div>
+        </template>
+        <template v-else>
+          <span :style="{ opacity }">{{ i }}</span>
+        </template>
+      </template>`,
+    },
+    {
+      name: 'template v-for nested in v-for',
+      template: `<template v-for="i in 2" :key="i">
+        <template v-for="j in 2" :key="j">
+          <div :style="{ opacity }">{{ i }}-{{ j }}</div>
+        </template>
+      </template>`,
+    },
+    {
+      name: 'v-for nested in template v-if',
+      template: `<template v-if="color">
+        <div v-for="i in 2" :key="i" :style="{ opacity }">{{ i }}</div>
+      </template>`,
+    },
+    {
+      name: 'component roots nested in fragments',
+      template: `<template v-for="i in 2" :key="i">
+        <Child :style="{ opacity }" />
+        <span :style="{ opacity }">{{ i }}</span>
+      </template>`,
+    },
+  ])('hydrates css vars on $name', async ({ template }) => {
+    const { code } = compileSSR(template, {
+      ssrCssVars: `{ "--color": color }`,
+    })
+    const App = {
+      components: { Child: { template: '<div />' } },
+      setup() {
+        useCssVars(() => ({ color: 'red' }))
+        return { color: 'red', opacity: 0.5 }
+      },
+      render: compileToFunction(template),
+      ssrRender: new Function('require', code)((id: string) =>
+        id === 'vue' ? runtimeDom : serverRenderer,
+      ),
+    }
+    const container = document.createElement('div')
+    container.innerHTML = await renderToString(h(App))
+    const roots = Array.from(container.children) as HTMLElement[]
+    expect(roots.length).toBeGreaterThan(0)
+    for (const root of roots) {
+      expect(root.style.getPropertyValue('--color')).toBe('red')
+    }
+    for (const child of container.querySelectorAll('i')) {
+      expect(child.style.getPropertyValue('--color')).toBe('')
+    }
+
+    const app = createSSRApp(App)
+    app.mount(container)
+    expect(`Hydration style mismatch`).not.toHaveBeenWarned()
+    expect(container.children).toHaveLength(roots.length)
+    for (const [i, root] of roots.entries()) {
+      expect(container.children[i]).toBe(root)
+      expect(root.style.getPropertyValue('--color')).toBe('red')
+    }
+    app.unmount()
+  })
+
+  test('css vars on nested fragment roots do not suppress style mismatches', () => {
+    const container = document.createElement('div')
+    container.innerHTML =
+      '<!--[--><!--[--><div style="opacity:0.5;--color:red;"></div>' +
+      '<span style="--color:red;"></span><!--]--><!--]-->'
+    const app = createSSRApp({
+      setup() {
+        useCssVars(() => ({ color: 'red' }))
+        return { opacity: 0.75 }
+      },
+      render: compileToFunction(`<template v-for="i in 1" :key="i">
+        <div :style="{ opacity }" /><span />
+      </template>`),
+    })
+    app.mount(container)
+    expect(`Hydration style mismatch`).toHaveBeenWarnedTimes(1)
+    app.unmount()
+  })
+
+  test.each([
+    { disabled: false, clientOpacity: 0.5, mismatches: 0 },
+    { disabled: true, clientOpacity: 0.5, mismatches: 0 },
+    { disabled: false, clientOpacity: 0.75, mismatches: 1 },
+    { disabled: true, clientOpacity: 0.75, mismatches: 1 },
+  ])(
+    'hydrates css vars on Teleport roots (disabled: $disabled, mismatches: $mismatches)',
+    async ({ disabled, clientOpacity, mismatches }) => {
+      const template = `<Teleport to="#css-vars-target" :disabled="disabled">
+        <div :style="{ opacity }"><i :style="{ opacity: 0.5 }" /></div>
+      </Teleport>`
+      const { code } = compileSSR(template, {
+        ssrCssVars: `{ "--color": color }`,
+      })
+      const color = ref('red')
+      const opacity = ref(0.5)
+      const App = {
+        setup() {
+          useCssVars(() => ({ color: color.value }))
+          return { color, opacity, disabled }
+        },
+        render: compileToFunction(template),
+        ssrRender: new Function('require', code)((id: string) =>
+          id === 'vue' ? runtimeDom : serverRenderer,
+        ),
+      }
+      const container = document.createElement('div')
+      const target = document.createElement('div')
+      target.id = 'css-vars-target'
+      const ctx: SSRContext = {}
+      container.innerHTML = await renderToString(h(App), ctx)
+      target.innerHTML = ctx.teleports!['#css-vars-target']
+      document.body.append(container, target)
+
+      const content = disabled ? container : target
+      const root = content.firstElementChild as HTMLElement
+      const child = root.firstElementChild as HTMLElement
+      expect(root.style.getPropertyValue('--color')).toBe('red')
+      expect(child.style.getPropertyValue('--color')).toBe('')
+
+      opacity.value = clientOpacity
+      const app = createSSRApp(App)
+      app.mount(container)
+      expect(`Hydration style mismatch`).toHaveBeenWarnedTimes(mismatches)
+      expect(content.firstElementChild).toBe(root)
+      expect(root.style.getPropertyValue('--color')).toBe('red')
+
+      color.value = 'blue'
+      await nextTick()
+      expect(content.firstElementChild).toBe(root)
+      expect(root.style.getPropertyValue('--color')).toBe('blue')
+      expect(child.style.getPropertyValue('--color')).toBe('')
+      app.unmount()
+      container.remove()
+      target.remove()
+    },
+  )
 })

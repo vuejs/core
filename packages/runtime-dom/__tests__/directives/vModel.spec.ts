@@ -6,6 +6,7 @@ import {
   nextTick,
   ref,
   render,
+  shallowRef,
   vModelCheckbox,
   vModelDynamic,
   withDirectives,
@@ -2160,4 +2161,68 @@ describe('vModel', () => {
     expect(root.querySelector('input')).toBe(null)
     expect(root.querySelector('span').textContent).toBe('b')
   })
+
+  it.each([
+    {
+      name: 'toString',
+      makeValue: (value: string) => ({ toString: () => value }),
+    },
+    {
+      name: 'Symbol.toPrimitive',
+      makeValue: (value: string) => ({ [Symbol.toPrimitive]: () => value }),
+    },
+    {
+      name: 'class toString',
+      makeValue: (value: string) => {
+        class Value {
+          #value: string
+          constructor(value: string) {
+            this.#value = value
+          }
+          toString() {
+            return this.#value
+          }
+        }
+        return new Value(value)
+      },
+    },
+  ])(
+    'matches select options using custom $name conversion',
+    async ({ makeValue }) => {
+      const a = makeValue('a')
+      const b = makeValue('b')
+      const selected = shallowRef(b)
+      const { code } = compile(
+        `<select v-model="selected">
+        <option :value="a">A</option>
+        <option :value="b">B</option>
+      </select>`,
+        { prefixIdentifiers: true },
+      )
+      render(
+        h({
+          setup: () => ({ a, b, selected }),
+          render: new Function('Vue', code)(runtimeDom),
+        }),
+        root,
+      )
+      const select = root.querySelector('select')
+
+      expect(selected.value).toBe(b)
+      expect(select.selectedIndex).toBe(1)
+
+      selected.value = a
+      await nextTick()
+      expect(select.selectedIndex).toBe(0)
+
+      selected.value = b
+      await nextTick()
+      expect(select.selectedIndex).toBe(1)
+
+      select.selectedIndex = 0
+      triggerEvent('change', select)
+      await nextTick()
+      expect(selected.value).toBe(a)
+    },
+  )
 })
