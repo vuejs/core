@@ -4649,6 +4649,18 @@ describe('SSR hydration', () => {
         <span :style="{ opacity }">{{ i }}</span>
       </template>`,
     },
+    {
+      name: 'root transition',
+      template: `<Transition><div :style="{ opacity }">
+        <i :style="{ opacity }">{{ 1 }}</i>
+      </div></Transition>`,
+    },
+    {
+      name: 'root transition with v-if',
+      template: `<Transition><div v-if="color" :style="{ opacity }">
+        <i :style="{ opacity }">{{ 1 }}</i>
+      </div></Transition>`,
+    },
   ])('hydrates css vars on $name', async ({ template }) => {
     const { code } = compileSSR(template, {
       ssrCssVars: `{ "--color": color }`,
