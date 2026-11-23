@@ -471,7 +471,7 @@ export const createFor = (
     const indexRef = needIndex ? shallowRef(keys ? idx : undefined) : undefined
 
     let nodes: Block
-    const scope = new EffectScope(true)
+    const scope = new EffectScope(true, instance.scope)
     const prevScope = setCurrentScope(scope)
     let ok = false
     try {

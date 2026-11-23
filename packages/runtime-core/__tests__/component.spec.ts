@@ -1,9 +1,15 @@
 import {
   type ComponentInternalInstance,
+  type EffectScope,
   getCurrentInstance,
+  getCurrentScope,
   h,
+  nextTick,
   nodeOps,
+  ref,
   render,
+  serializeInner,
+  watch,
 } from '@vue/runtime-test'
 import { type GenericComponent, formatComponentName } from '../src/component'
 
@@ -159,5 +165,62 @@ describe('formatComponentName', () => {
 
     Comp.name = 'CompF'
     expect(formatComponentName(instance, Comp)).toBe('CompF')
+  })
+})
+
+describe('component scope pause', () => {
+  test('pausing a component scope pauses its descendants until it resumes', async () => {
+    const count = ref(0)
+    const log: string[] = []
+    let scope!: EffectScope
+    const Leaf = {
+      setup: () => () => (log.push('leaf'), h('i', count.value)),
+    }
+    const Parent = {
+      setup() {
+        scope = getCurrentScope()!
+        return () => h('div', [h(Leaf)])
+      },
+    }
+    const root = nodeOps.createElement('div')
+    render(h(Parent), root)
+    log.length = 0
+
+    scope.pause()
+    count.value++
+    await nextTick()
+    expect(log).toEqual([])
+    expect(serializeInner(root)).toBe('<div><i>0</i></div>')
+
+    scope.resume()
+    await nextTick()
+    expect(log).toEqual(['leaf'])
+    expect(serializeInner(root)).toBe('<div><i>1</i></div>')
+  })
+
+  test('a render queued before its scope pauses waits for the resume', async () => {
+    const count = ref(0)
+    const log: string[] = []
+    let scope!: EffectScope
+    const Comp = {
+      setup() {
+        scope = getCurrentScope()!
+        watch(count, () => log.push('watcher'))
+        return () => (log.push('render'), h('div', count.value))
+      },
+    }
+    const root = nodeOps.createElement('div')
+    render(h(Comp), root)
+    log.length = 0
+
+    count.value++
+    scope.pause()
+    await nextTick()
+    expect(log).toEqual([])
+
+    scope.resume()
+    await nextTick()
+    expect(log).toEqual(['watcher', 'render'])
+    expect(serializeInner(root)).toBe('<div>1</div>')
   })
 })

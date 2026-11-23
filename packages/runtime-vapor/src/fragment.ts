@@ -333,6 +333,7 @@ export function createSlotBoundary(
     getParent,
     getFallback,
     run: (fn, scope) => runWithRenderCtx(fragment, fn, scope),
+    hostInstance: fragment.renderInstance,
     getScopeIds,
     markDirty,
     isHolding:

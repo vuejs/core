@@ -20288,3 +20288,43 @@ describe('interop root el', () => {
     },
   )
 })
+
+describe('component scope pause across the interop boundary', () => {
+  test('pausing a vapor child pauses the fallback of a slot a vdom parent passes', async () => {
+    const data = ref<any>({ count: 0 })
+    const log: string[] = []
+    const components: any = { log: (s: string) => void log.push(s) }
+    let scope: any
+    components.capture = (s: any) => (scope = s)
+    const VaporChild = compile(
+      `<script setup vapor>
+        import { getCurrentScope } from 'vue'
+        const data = _data
+        const components = _components
+        components.capture(getCurrentScope())
+      </script>
+      <template>
+        <u><slot>{{ components.log('fallback') || data.count }}</slot></u>
+      </template>`,
+      data,
+      components,
+    )
+    const Parent = defineComponent({
+      setup: () => () => h(VaporChild as any, null, { default: () => [] }),
+    })
+    const { host } = define(Parent).render()
+    expect(host.innerHTML).toContain('<u>0')
+    log.length = 0
+
+    scope.pause()
+    data.value.count++
+    await nextTick()
+    expect(log).toEqual([])
+    expect(host.innerHTML).toContain('<u>0')
+
+    scope.resume()
+    await nextTick()
+    expect(log).toEqual(['fallback'])
+    expect(host.innerHTML).toContain('<u>1')
+  })
+})

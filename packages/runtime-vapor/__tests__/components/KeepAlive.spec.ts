@@ -14,6 +14,7 @@ import {
   ref,
   shallowRef,
   vModelText,
+  watchEffect,
   withDirectives,
 } from 'vue'
 import {
@@ -6206,5 +6207,59 @@ describe('KeepAlive caching a component that ends without a node', () => {
         ]),
       ).toEqual([`${e} []`, 'a []', `b [${unmountedE}]`, `${e} [A]`])
     })
+  })
+})
+
+describe('KeepAlive with a directive on the cached root', () => {
+  test('pauses the directive with the deactivated branch', async () => {
+    const data = ref<any>({ count: 0, ok: true })
+    const log: string[] = []
+    const components: any = {
+      dir: (_el: Element, value: () => number) =>
+        void watchEffect(() => log.push(`dir ${value()}`)),
+    }
+    components.A = compile(
+      `<template>
+        <div>a</div>
+      </template>`,
+      data,
+      components,
+    )
+    components.B = compile(
+      `<template>
+        <div>b</div>
+      </template>`,
+      data,
+      components,
+    )
+    const App = compile(
+      `<script setup vapor>
+        const data = _data
+        const components = _components
+        const vDir = components.dir
+      </script>
+      <template>
+        <KeepAlive>
+          <components.A v-if="data.ok" v-dir="data.count" />
+          <components.B v-else />
+        </KeepAlive>
+      </template>`,
+      data,
+      components,
+    )
+    const { host } = define(App).render()
+    expect(log).toEqual(['dir 0'])
+
+    data.value.ok = false
+    await nextTick()
+    data.value.count++
+    await nextTick()
+    expect(host.textContent).toBe('b')
+    expect(log).toEqual(['dir 0'])
+
+    data.value.ok = true
+    await nextTick()
+    expect(host.textContent).toBe('a')
+    expect(log).toEqual(['dir 0', 'dir 1'])
   })
 })

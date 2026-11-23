@@ -159,7 +159,8 @@ class RenderWatcherEffect extends WatcherEffect {
     super(source, cb, options)
 
     const job: SchedulerJob = () => {
-      if (this.dirty) {
+      // the job may already be queued when its scope is paused
+      if (!(this.flags & EffectFlags.PAUSED) && this.dirty) {
         this.run()
       }
     }

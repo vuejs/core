@@ -801,6 +801,138 @@ describe('reactivity/effect/scope', () => {
       scope.resume()
       expect(log).toEqual(['last 0', 'queued', 'last 1'])
     })
+
+    it('a scope linked to a parent for pausing follows it but is not stopped with it', () => {
+      const count = ref(0)
+      const log: number[] = []
+      const parent = effectScope()
+      const child = new EffectScope(true, parent)
+      child.run(() => effect(() => log.push(count.value)))
+      parent.pause()
+      count.value++
+      expect(log).toEqual([0])
+
+      parent.resume()
+      expect(log).toEqual([0, 1])
+
+      parent.stop()
+      expect(child.prevDetached).toBeUndefined()
+      parent.pause()
+      count.value++
+      expect(log).toEqual([0, 1, 2])
+    })
+
+    it('a scope linked to a paused parent starts paused', () => {
+      const count = ref(0)
+      const log: number[] = []
+      const parent = effectScope()
+      parent.pause()
+      const child = new EffectScope(true, parent)
+      child.run(() => effect(() => log.push(count.value)))
+      count.value++
+      expect(log).toEqual([0])
+
+      parent.resume()
+      expect(log).toEqual([0, 1])
+    })
+
+    it('a scope linked for pausing leaves its parent when it stops', () => {
+      const count = ref(0)
+      const log: string[] = []
+      const parent = effectScope()
+      const children = ['a', 'b', 'c', 'd'].map(name => {
+        const child = new EffectScope(true, parent)
+        child.run(() => effect(() => log.push(name + count.value)))
+        return child
+      })
+      children[0].stop()
+      children[2].stop()
+      children[3].stop()
+      parent.pause()
+      count.value++
+      expect(log).toEqual(['a0', 'b0', 'c0', 'd0'])
+
+      parent.resume()
+      expect(log).toEqual(['a0', 'b0', 'c0', 'd0', 'b1'])
+      expect(parent.detachedScopes).toBe(children[1])
+      expect(children[1].prevDetached).toBe(parent)
+      expect(children[1].nextDetached).toBeUndefined()
+
+      children[1].stop()
+      expect(parent.detachedScopes).toBeUndefined()
+      expect(children[1].prevDetached).toBeUndefined()
+    })
+
+    it('resumes the effects of scopes linked for pausing in creation order', () => {
+      const count = ref(0)
+      const log: string[] = []
+      const parent = effectScope()
+      for (const name of ['a', 'b', 'c']) {
+        new EffectScope(true, parent).run(() =>
+          effect(() => log.push(name + count.value)),
+        )
+      }
+      parent.pause()
+      count.value++
+      log.length = 0
+
+      parent.resume()
+      expect(log).toEqual(['a1', 'b1', 'c1'])
+    })
+
+    it('a scope linked to a parent that stops while paused stays paused', () => {
+      const count = ref(0)
+      const log: number[] = []
+      const parent = effectScope()
+      const child = new EffectScope(true, parent)
+      child.run(() => effect(() => log.push(count.value)))
+      parent.pause()
+      count.value++
+      parent.stop()
+      expect(log).toEqual([0])
+      expect(child.active).toBe(true)
+    })
+
+    it('resumes the scopes linked after one that stops itself and the next', () => {
+      const count = ref(0)
+      const log: number[] = []
+      const parent = effectScope()
+      const first = new EffectScope(true, parent)
+      const second = new EffectScope(true, parent)
+      first.run(() =>
+        watch(
+          count,
+          () => {
+            first.stop()
+            second.stop()
+          },
+          { flush: 'sync' },
+        ),
+      )
+      new EffectScope(true, parent).run(() =>
+        effect(() => log.push(count.value)),
+      )
+      parent.pause()
+      count.value++
+      parent.resume()
+      expect(log).toEqual([0, 1])
+    })
+
+    it('stops resuming the scopes linked to a parent stopped on the way', () => {
+      const count = ref(0)
+      const log: number[] = []
+      const parent = effectScope()
+      new EffectScope(true, parent).run(() =>
+        watch(count, () => parent.stop(), { flush: 'sync' }),
+      )
+      new EffectScope(true, parent).run(() =>
+        effect(() => log.push(count.value)),
+      )
+      parent.pause()
+      count.value++
+      parent.resume()
+      expect(log).toEqual([0])
+    })
   })
 })
 

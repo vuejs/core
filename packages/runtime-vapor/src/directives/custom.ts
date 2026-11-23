@@ -1,4 +1,4 @@
-import { EffectScope } from '@vue/reactivity'
+import { EffectScope, getCurrentScope } from '@vue/reactivity'
 import {
   type DirectiveModifiers,
   ErrorCodes,
@@ -76,6 +76,8 @@ export function withVaporDirectives(
   }
 
   const instance = currentInstance
+  // the scope the directives are bound to, and paused with
+  const parentScope = getCurrentScope()
   // Deferred (re)application keeps the once ambient it was created under.
   const once = inOnce
   let currentElement: Element | null | undefined = null
@@ -217,7 +219,7 @@ export function withVaporDirectives(
 
     // The fragment makes the root element mutable without disposing the owner scope
     // So directive effects and cleanup need a replaceable detached scope
-    directiveScope = new EffectScope(true)
+    directiveScope = new EffectScope(true, parentScope)
     // Re-apply in the original directive owner's component context
     const prev = setCurrentInstance(instance, directiveScope)
     try {

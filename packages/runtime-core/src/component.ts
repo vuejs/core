@@ -768,7 +768,7 @@ export function createComponentInstance(
     effect: null!,
     update: null!, // will be set synchronously right after creation
     job: null!,
-    scope: new EffectScope(true /* detached */),
+    scope: new EffectScope(true, parent ? parent.scope : undefined),
     render: null,
     proxy: null,
     exposed: null,

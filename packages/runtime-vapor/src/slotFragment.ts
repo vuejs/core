@@ -464,7 +464,8 @@ function renderAndCommitSlotFallback(state: SlotResolutionState): void {
   // A dedicated detached scope: the fallbacks must not die with whatever
   // branch scope happens to be active when a recheck fires. The host stops
   // it on replacement or disposal; a failed render is stopped here.
-  const scope = new EffectScope(true)
+  const host = state.boundary.hostInstance
+  const scope = new EffectScope(true, host ? host.scope : undefined)
   let rendered: RenderedSlotFallback[]
   try {
     rendered = renderSlotFallbacks(state.boundary, scope)
