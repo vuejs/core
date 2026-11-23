@@ -225,4 +225,70 @@ describe('SVG support', () => {
       },
     )
   })
+
+  // #16422
+  test.each([
+    ['root', `<template><svg v-bind="data.attrs" /></template>`],
+    ['nested', `<template><div><svg v-bind="data.attrs" /></div></template>`],
+  ])(
+    'should distinguish omitted and empty class with object v-bind on %s svg',
+    async (_, App) => {
+      const states: Record<string, (string | null)[]> = {}
+      await renderParity(
+        { App },
+        () => ref<{ attrs: Record<string, any> }>({ attrs: {} }),
+        async (data, root, mode) => {
+          const svg = root.querySelector('svg')!
+          const record: (string | null)[] = []
+          const snap = () => record.push(svg.getAttribute('class'))
+
+          snap() // initially omitted -> null
+
+          data.value.attrs = { class: '' }
+          await nextTick()
+          snap() // explicit empty -> ''
+
+          data.value.attrs = { class: 'active' }
+          await nextTick()
+          snap() // non-empty -> 'active'
+
+          data.value.attrs = {}
+          await nextTick()
+          snap() // omitted again -> null
+
+          data.value.attrs = { class: '' }
+          await nextTick()
+          snap() // explicit empty again -> ''
+
+          data.value.attrs = {}
+          await nextTick()
+          snap() // explicit empty -> omitted -> null
+
+          data.value.attrs = { class: 'active' }
+          await nextTick()
+          data.value.attrs = { class: '' }
+          await nextTick()
+          snap() // active -> explicit empty -> ''
+
+          data.value.attrs = { class: null }
+          await nextTick()
+          snap() // explicit null -> null
+
+          states[mode] = record
+        },
+      )
+
+      expect(states.vdom).toEqual([
+        null,
+        '',
+        'active',
+        null,
+        '',
+        null,
+        '',
+        null,
+      ])
+      expect(states.vapor).toEqual(states.vdom)
+    },
+  )
 })

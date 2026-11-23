@@ -83,12 +83,12 @@ import { queueSelectUpdates, registerSelectUpdate } from '../renderEffect'
 type TargetElement = Element & {
   $root?: boolean | RootMeta
   $html?: string
-  $cls?: string
+  $cls?: string | null
   $clsFlags?: number
   // a root's own class / style and the fallthrough one are two layers on
   // one element; `$sty` is the style merge last written
-  $clsi?: string
-  $clsi$?: string
+  $clsi?: string | null
+  $clsi$?: string | null
   $styi?: NormalizedStyle
   $styi$?: NormalizedStyle
   $sty?: NormalizedStyle | string | undefined
@@ -257,13 +257,13 @@ export function setClass(
   if (el.$root) {
     setClassIncremental(el, value, isNormalized)
   } else {
-    if (!isNormalized) value = normalizeClass(value)
+    if (!isNormalized) value = value == null ? null : normalizeClass(value)
     if (isHydrating && !isRecreatedNode(el)) {
       if (__DEV__ || __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__) {
         if (isClonedSlotContent()) {
-          queuePostFlushCb(() => classHasMismatch(el, value, !!el.$root))
+          queuePostFlushCb(() => classHasMismatch(el, value || '', !!el.$root))
         } else {
-          classHasMismatch(el, value, false)
+          classHasMismatch(el, value || '', false)
         }
       }
       el.$cls = value
@@ -274,6 +274,8 @@ export function setClass(
       el.$cls = value
       if (isTransitionEnabled) {
         patchClass(el, value, isSVG)
+      } else if (value == null) {
+        el.removeAttribute('class')
       } else if (isSVG) {
         el.setAttribute('class', value)
       } else {
@@ -332,18 +334,19 @@ function setClassIncremental(
   isNormalized: boolean = false,
 ): void {
   const cacheKey = isApplyingFallthroughProps ? '$clsi$' : '$clsi'
-  const normalizedValue = isNormalized ? value : normalizeClass(value)
+  const normalizedValue =
+    value == null ? null : isNormalized ? value : normalizeClass(value)
 
   if (isHydrating && !isRecreatedNode(el)) {
     ;(__DEV__ || __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__) &&
-      classHasMismatch(el, normalizedValue, true)
+      classHasMismatch(el, normalizedValue || '', true)
     el[cacheKey] = normalizedValue
     return
   }
 
   const prev = el[cacheKey]
   if ((value = el[cacheKey] = normalizedValue) !== prev) {
-    const nextList = value.split(/\s+/)
+    const nextList = value ? value.split(/\s+/) : EMPTY_ARR
     if (value) {
       el.classList.add(...nextList)
     }
@@ -358,6 +361,19 @@ function setClassIncremental(
         }
       }
     }
+    if (!value && !el.classList.length) {
+      const other = isApplyingFallthroughProps ? el.$clsi : el.$clsi$
+      if (value === '') {
+        if (!el.hasAttribute('class')) {
+          el.setAttribute('class', '')
+        }
+      } else if (
+        other !== '' &&
+        !(isApplyingFallthroughProps && other == null && el.$root.cls)
+      ) {
+        el.removeAttribute('class')
+      }
+    }
   }
 }
 
@@ -365,7 +381,7 @@ function setClassIncremental(
 // template class
 function keptClasses(el: any): string[] {
   const other = isApplyingFallthroughProps ? el.$clsi : el.$clsi$
-  return other !== undefined ? other.split(/\s+/) : el.$root.cls || EMPTY_ARR
+  return other != null ? other.split(/\s+/) : el.$root.cls || EMPTY_ARR
 }
 
 // Defer css-var style mismatch checks until instance.block is set, so root
@@ -926,7 +942,8 @@ export function optimizePropertyLookup(): void {
   proto.$vei = undefined
   proto.$root = false
   proto.$clsFlags = undefined
-  proto.$cls = proto.$sty = ''
+  proto.$cls = undefined
+  proto.$sty = ''
   // same reason as $txt below: an empty string would make the first
   // setHtml(el, '') a no-op and leave the original children in place
   proto.$html = undefined

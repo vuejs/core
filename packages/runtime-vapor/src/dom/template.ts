@@ -56,7 +56,7 @@ export function template(html: string, flags: number = 0, ns?: Namespace) {
       if (html.includes(' class=') || html.includes(' style=')) {
         const el = (node ||= parseTemplate(html, ns)) as Element
         // the DOM tokenizes on ASCII whitespace only, unlike `\s`
-        if (el.classList.length) cls = Array.from(el.classList)
+        if (el.hasAttribute('class')) cls = Array.from(el.classList)
         const style = el.getAttribute('style')
         if (style) sty = parseStringStyle(style)
       }

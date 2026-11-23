@@ -3826,7 +3826,7 @@ describe('VDOM interop', () => {
       data.value.label = 'close'
       data.value.attrs = {}
       await nextTick()
-      expect(button.outerHTML).toBe(`<button id="x" class="">close</button>`)
+      expect(button.outerHTML).toBe(`<button id="x">close</button>`)
     })
 
     // Reka UI in a component library: a vdom component forwards the slot to
