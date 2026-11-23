@@ -2806,6 +2806,116 @@ describe('attribute fallthrough', () => {
     ])
   })
 
+  // #16420: every other attribute is two layers too; the fallthrough wins
+  // while it holds the key and gives it back to the root when it drops it
+  const attrParity = layerParity.bind(null, (el: Element) =>
+    Array.from(el.attributes)
+      .map(({ name, value }) => `${name}="${value}"`)
+      .sort()
+      .join(' '),
+  )
+
+  test('sets svg fallthrough attrs as attributes', async () => {
+    const seen = await attrParity(
+      {
+        Child: `<template><svg viewBox="0 0 100 60"></svg></template>`,
+        App: `<template><components.Child :viewBox="data.box" /></template>`,
+      },
+      () => ref({ box: '0 0 40 24' }),
+      [data => (data.value.box = '0 0 20 12')],
+    )
+    expect(seen).toEqual(['viewBox="0 0 40 24"', 'viewBox="0 0 20 12"'])
+  })
+
+  test("restores an svg root's template attrs when the fallthrough drops them", async () => {
+    const seen = await attrParity(
+      {
+        Child: `<template><svg width="100" height="60" fill="red"></svg></template>`,
+        App: `<template><components.Child v-bind="data.attrs" /></template>`,
+      },
+      () => ref<any>({ attrs: { width: 40, height: 24, fill: 'green' } }),
+      [
+        data => (data.value.attrs = {}),
+        data => (data.value.attrs = { width: 40, height: 24, fill: 'green' }),
+      ],
+    )
+    expect(seen).toEqual([
+      'fill="green" height="24" width="40"',
+      'fill="red" height="60" width="100"',
+      'fill="green" height="24" width="40"',
+    ])
+  })
+
+  test("restores an html root's template attrs when the fallthrough drops them", async () => {
+    const seen = await attrParity(
+      {
+        Child: `<template><div id="a" title="t1" data-x="1">x</div></template>`,
+        App: `<template><components.Child v-bind="data.attrs" /></template>`,
+      },
+      () => ref<any>({ attrs: { id: 'b', title: 't2', 'data-x': '2' } }),
+      [
+        data => (data.value.attrs = { title: 't2' }),
+        data => (data.value.attrs = {}),
+      ],
+    )
+    expect(seen).toEqual([
+      'data-x="2" id="b" title="t2"',
+      'data-x="1" id="a" title="t2"',
+      'data-x="1" id="a" title="t1"',
+    ])
+  })
+
+  test("restores a root's own attr binding when the fallthrough drops it", async () => {
+    const seen = await attrParity(
+      {
+        Child: `<template><div :id="data.cid" :title="'t' + data.cid">x</div></template>`,
+        App: `<template><components.Child v-bind="data.attrs" /></template>`,
+      },
+      () => ref<any>({ attrs: {}, cid: 'a' }),
+      [
+        data => (data.value.attrs = { id: 'b', title: 't2' }),
+        data => (data.value.attrs = {}),
+        data => (data.value.cid = 'c'),
+        data => (data.value.attrs = { id: 'b', title: 't2' }),
+        data => {
+          data.value.attrs = {}
+          data.value.cid = 'd'
+        },
+      ],
+    )
+    expect(seen).toEqual([
+      'id="a" title="ta"',
+      'id="b" title="t2"',
+      'id="a" title="ta"',
+      'id="c" title="tc"',
+      'id="b" title="t2"',
+      'id="d" title="td"',
+    ])
+  })
+
+  test('restores the template attrs of a root inside a branch', async () => {
+    const seen = await attrParity(
+      {
+        Child: `<template><svg v-if="data.ok" fill="red"></svg><svg v-else fill="blue"></svg></template>`,
+        App: `<template><components.Child v-bind="data.attrs" /></template>`,
+      },
+      () => ref<any>({ ok: true, attrs: { fill: 'green' } }),
+      [
+        data => (data.value.attrs = {}),
+        data => (data.value.ok = false),
+        data => (data.value.attrs = { fill: 'green' }),
+        data => (data.value.attrs = {}),
+      ],
+    )
+    expect(seen).toEqual([
+      'fill="green"',
+      'fill="red"',
+      'fill="blue"',
+      'fill="green"',
+      'fill="blue"',
+    ])
+  })
+
   // #15635: a root's own listeners and the fallthrough ones are two layers
   // too; vdom composes them into one handler list, own first, instead of
   // letting either replace the other

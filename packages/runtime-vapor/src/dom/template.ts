@@ -24,11 +24,12 @@ import { currentRenderContext } from '../renderContext'
 import { cloneStampedTemplate } from './scopeIdStamp'
 import { isInteropEnabled } from '../vdomInteropState'
 
-// the class and style a root's template contributes, shared by all its
-// instances (see the incremental setters in prop.ts)
+// the class, style and attributes a root's template contributes, shared by
+// all its instances (see the incremental setters in prop.ts)
 export type RootMeta = {
   readonly cls?: string[]
   readonly sty?: NormalizedStyle
+  readonly attrs?: Record<string, string>
 }
 
 function cloneTemplate(n: Node): Node {
@@ -61,6 +62,8 @@ export function template(html: string, flags: number = 0, ns?: Namespace) {
         if (style) sty = parseStringStyle(style)
       }
     }
+    let attrs: Record<string, string> | undefined
+    let attrsResolved = false
     return {
       get cls() {
         resolved || resolve()
@@ -69,6 +72,23 @@ export function template(html: string, flags: number = 0, ns?: Namespace) {
       get sty() {
         resolved || resolve()
         return sty
+      },
+      // class and style are layered on their own, so they stay out of here
+      get attrs() {
+        if (!attrsResolved) {
+          attrsResolved = true
+          const el = html
+            ? ((node ||= parseTemplate(html, ns)) as Element)
+            : null
+          if (el && el.nodeType === 1) {
+            for (const { name, value } of el.attributes) {
+              if (name !== 'class' && name !== 'style') {
+                ;(attrs ||= {})[name] = value
+              }
+            }
+          }
+        }
+        return attrs
       },
     }
   }

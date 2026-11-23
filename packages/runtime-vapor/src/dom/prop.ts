@@ -102,6 +102,30 @@ type TargetElement = Element & {
   _valueDep?: Dep
 }
 
+// A root's own writes are the base layer the fallthrough merges over, like
+// its class and style: keep what it last set even while the fallthrough owns
+// the key, so dropping that key hands it back (see `ownValue`). Prefixed so
+// an attribute cannot take an internal slot, e.g. `$transition`.
+const rememberOwnValue = (el: TargetElement, key: string, value: any) => {
+  if (el.$root && !isApplyingFallthroughProps) {
+    ;(el as any)[`$o$${key}`] = value
+  }
+}
+
+// What a key the fallthrough drops falls back to: the value the root's own
+// binding last set, else what its template gives it (see `RootMeta`); `null`
+// removes it. Class, style and listeners merge their layers instead and
+// never reach here.
+const ownValue = (el: TargetElement, key: string): any => {
+  if (el.$root) {
+    const cacheKey = `$o$${key}`
+    if (cacheKey in el) return (el as any)[cacheKey]
+    const attrs = (el.$root as RootMeta).attrs
+    if (attrs && key in attrs) return attrs[key]
+  }
+  return null
+}
+
 const shouldSkipFallthroughKey = (el: TargetElement, key: string) => {
   const instance = currentInstance! as VaporComponentInstance
   return (
@@ -130,6 +154,7 @@ export function setAttr(
   isSVG: boolean = false,
   forceHydrate: boolean = true,
 ): void {
+  rememberOwnValue(el, key, value)
   if (shouldSkipFallthroughKey(el, key)) {
     return
   }
@@ -185,6 +210,7 @@ export function setDOMProp(
   forceHydrate: boolean = true,
   attrName?: string,
 ): void {
+  rememberOwnValue(el, key, value)
   if (shouldSkipFallthroughKey(el, key)) {
     return
   }
@@ -751,7 +777,12 @@ function doPatchDynamicProps(
   if (prevProps) {
     for (const key in prevProps) {
       if (!(key in props)) {
-        setDynamicProp(el, key, null, isSVG)
+        setDynamicProp(
+          el,
+          key,
+          isApplyingFallthroughProps ? ownValue(el, key) : null,
+          isSVG,
+        )
         if (
           (key === 'value' || key === '.value') &&
           el.tagName === 'SELECT' &&

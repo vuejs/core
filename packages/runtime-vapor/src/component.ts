@@ -48,6 +48,7 @@ import {
   setCurrentInstance,
   setCurrentRenderingInstance,
   startMeasure,
+  svgNS,
   unregisterHMR,
   warn,
   warnExtraneousAttributes,
@@ -919,7 +920,9 @@ export function applyFallthroughProps(
 ): void {
   isApplyingFallthroughProps = true
   try {
-    patchDynamicProps(el, attrs)
+    // the compiler passes the namespace for a root's own bindings; an svg
+    // element needs most keys set as attributes, not as dom properties
+    patchDynamicProps(el, attrs, el.namespaceURI === svgNS)
   } finally {
     isApplyingFallthroughProps = false
   }
