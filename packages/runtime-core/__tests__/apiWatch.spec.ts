@@ -19,6 +19,7 @@ import {
   nodeOps,
   onMounted,
   render,
+  resetOps,
   serializeInner,
   watchPostEffect,
   watchSyncEffect,
@@ -2109,4 +2110,81 @@ describe('api: watch', () => {
     createApp(App).mount(root)
     expect(onCleanup).toBeCalledTimes(0)
   })
+
+  // #16393
+  test.skipIf(!global.gc)(
+    'watcher in a long-lived detached effect scope should not retain unmounted component instance',
+    async () => {
+      const gc = () =>
+        new Promise<void>(resolve => {
+          setTimeout(() => {
+            global.gc!()
+            resolve()
+          })
+        })
+
+      const source = ref(0)
+      const calls: string[] = []
+      const longLived = effectScope(true)
+
+      async function mountAndUnmount() {
+        let childWeakRef!: { deref(): unknown | undefined }
+        const Child = defineComponent({
+          setup() {
+            // @ts-expect-error ES2021 API
+            childWeakRef = new WeakRef(getCurrentInstance()!)
+            // Direct detached scope (pre / post / sync)
+            longLived.run(() => {
+              watch(source, () => calls.push('pre'))
+              watch(source, () => calls.push('post'), { flush: 'post' })
+              watch(source, () => calls.push('sync'), { flush: 'sync' })
+              // Nested child scope inside detached scope (e.g. Pinia setup store)
+              effectScope().run(() => {
+                watch(source, () => calls.push('nested'))
+              })
+            })
+            return () => h('div')
+          },
+        })
+
+        const show = ref(true)
+        const Parent = defineComponent({
+          setup() {
+            return () => (show.value ? h(Child) : null)
+          },
+        })
+
+        const root = nodeOps.createElement('div')
+        const app = createApp(Parent)
+        app.mount(root)
+
+        // Trigger once while mounted so post-flush scheduler also runs with instance
+        source.value++
+        await nextTick()
+        show.value = false
+        await nextTick()
+        app.unmount()
+        await nextTick()
+        resetOps()
+
+        return childWeakRef
+      }
+
+      const childWeakRef = await mountAndUnmount()
+
+      for (let i = 0; i < 5; i++) {
+        await gc()
+      }
+
+      expect(Boolean(childWeakRef.deref())).toBe(false)
+
+      // Watchers in the detached scope should still keep running after unmount
+      calls.length = 0
+      source.value++
+      await nextTick()
+      expect(calls).toEqual(['sync', 'pre', 'nested', 'post'])
+
+      longLived.stop()
+    },
+  )
 })

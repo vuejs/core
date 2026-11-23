@@ -7,6 +7,7 @@ import {
   type WatchHandle,
   type WatchSource,
   watch as baseWatch,
+  getCurrentScope,
 } from '@vue/reactivity'
 import { type SchedulerJob, SchedulerJobFlags, queueJob } from './scheduler'
 import { EMPTY_OBJ, NOOP, extend, isFunction, isString } from '@vue/shared'
@@ -191,7 +192,21 @@ function doWatch(
     }
   }
 
-  const instance = currentInstance
+  let instance = currentInstance
+  const activeScope = getCurrentScope()
+  let isOutsideInstanceScope = false
+  if (instance) {
+    let cur = activeScope
+    while (cur && cur !== instance.scope) {
+      cur = cur.parent
+    }
+    if (!cur) {
+      isOutsideInstanceScope = true
+      if (!instance.scope.active) {
+        instance = null
+      }
+    }
+  }
   baseWatchOptions.call = (fn, type, args) =>
     callWithAsyncErrorHandling(fn, instance, type, args)
 
@@ -216,7 +231,9 @@ function doWatch(
     }
   }
 
+  let boundJob: SchedulerJob | undefined
   baseWatchOptions.augmentJob = (job: SchedulerJob) => {
+    boundJob = job
     // important: mark the job as a watcher callback so that scheduler knows
     // it is allowed to self-trigger (#1727)
     if (cb) {
@@ -229,6 +246,16 @@ function doWatch(
         job.i = instance
       }
     }
+  }
+
+  if (isOutsideInstanceScope && instance) {
+    instance.scope.cleanups.push(() => {
+      instance = null
+      if (boundJob) {
+        boundJob.i = null
+        boundJob.id = undefined
+      }
+    })
   }
 
   const watchHandle = baseWatch(source, cb, baseWatchOptions)
