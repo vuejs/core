@@ -5054,4 +5054,47 @@ describe('VDOM interop', () => {
     app.unmount()
     expect(document.querySelector('input')).toBeNull()
   })
+
+  test('hydrate vapor slot forwarded by a client-compiled VDOM component', async () => {
+    const data = ref({})
+    const App = (ssr: boolean) => {
+      const Wrapper = compile(
+        `${setup}<template><div><slot /></div></template>`,
+        data,
+        {},
+        { vapor: false, ssr },
+      )
+      // a library ships its components compiled only for the client
+      const Forwarder = compile(
+        `${setup}<template><components.Wrapper><slot /></components.Wrapper></template>`,
+        data,
+        { Wrapper },
+        { vapor: false },
+      )
+      return compile(
+        `${setup}<template><components.Forwarder>text <b>bold</b></components.Forwarder></template>`,
+        data,
+        { Forwarder },
+        { vapor: true, ssr },
+      )
+    }
+
+    const html = await VueServerRenderer.renderToString(
+      runtimeDom.createSSRApp(App(true)),
+    )
+    expect(html).toBe(
+      '<div><!--[--><!--[-->text <b>bold</b><!--]--><!--]--></div>',
+    )
+    const container = document.createElement('div')
+    container.innerHTML = html
+    const bold = container.querySelector('b')
+
+    runtimeVapor
+      .createVaporSSRApp(App(false))
+      .use(runtimeVapor.vaporInteropPlugin)
+      .mount(container)
+    expect(container.innerHTML).toBe(html)
+    expect(container.querySelector('b')).toBe(bold)
+    expect('Hydration node mismatch').not.toHaveBeenWarned()
+  })
 })

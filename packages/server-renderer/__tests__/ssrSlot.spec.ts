@@ -831,10 +831,16 @@ describe('ssr: slot', () => {
         throw error
       },
     }
+    // calls its compiled slot by hand, so block tracking is off in the slot
+    const Parent = {
+      ssrRender(ctx: any, push: any, parent: any) {
+        ctx.$slots.default({}, push, parent)
+      },
+    }
     const app = createApp({
-      components: { ...components, Child },
+      components: { Parent, Child },
       setup: () => ({ recordTracking }),
-      template: `<one><Child />{{ recordTracking() }}</one>`,
+      template: `<Parent><Child />{{ recordTracking() }}</Parent>`,
     })
 
     await expect(renderToString(app)).rejects.toBe(error)

@@ -101,15 +101,26 @@ export function ssrRenderSlotInner(
           fallback: !!fallbackRenderFn,
         }
       : null)
-    const ret = slotFn(
-      // keep the slot function's contract in sync with `renderSlot`, which also
-      // normalizes nullish props before invoking the slot
-      slotProps || {},
-      bufferedPush,
-      parentComponent,
-      slotScopeId ? ' ' + slotScopeId : '',
-      slotAttrs,
-    )
+    // A compiled slot disables block tracking unless the outlet that calls it
+    // clears `_d`, as `renderSlot` does on the client. A `renderSlot` call in
+    // the slot reads the tracking state.
+    const compiledSlot = slotFn as { _c?: boolean; _d?: boolean }
+    const prev = compiledSlot._d
+    if (compiledSlot._c) compiledSlot._d = false
+    let ret
+    try {
+      ret = slotFn(
+        // keep the slot function's contract in sync with `renderSlot`, which
+        // also normalizes nullish props before invoking the slot
+        slotProps || {},
+        bufferedPush,
+        parentComponent,
+        slotScopeId ? ' ' + slotScopeId : '',
+        slotAttrs,
+      )
+    } finally {
+      if (compiledSlot._c) compiledSlot._d = prev
+    }
     // undefined for an ssr slot; otherwise the vnodes, null for none valid
     let vnodes: VNodeArrayChildren | null | undefined
     if (isArray(ret)) {
