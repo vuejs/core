@@ -64,9 +64,10 @@ export class ReactiveEffect<T = any>
   flags: number = ReactiveFlags.Watching | ReactiveFlags.Dirty
 
   /**
+   * Allocated by the first cleanup registered.
    * @internal
    */
-  cleanups: (() => void)[] = []
+  cleanups: (() => void)[] | undefined = undefined
   /**
    * @internal
    */
@@ -277,12 +278,16 @@ export function resetTracking(): void {
 }
 
 export function cleanup(
-  sub: ReactiveNode & { cleanups: (() => void)[]; cleanupsLength: number },
+  sub: ReactiveNode & {
+    cleanups: (() => void)[] | undefined
+    cleanupsLength: number
+  },
 ): void {
   const l = sub.cleanupsLength
   if (l) {
+    const cleanups = sub.cleanups!
     for (let i = 0; i < l; i++) {
-      sub.cleanups[i]()
+      cleanups[i]()
     }
     sub.cleanupsLength = 0
   }
@@ -302,7 +307,9 @@ export function cleanup(
  */
 export function onEffectCleanup(fn: () => void, failSilently = false): void {
   if (activeSub instanceof ReactiveEffect) {
-    activeSub.cleanups[activeSub.cleanupsLength++] = () => cleanupEffect(fn)
+    ;(activeSub.cleanups || (activeSub.cleanups = []))[
+      activeSub.cleanupsLength++
+    ] = () => cleanupEffect(fn)
   } else if (__DEV__ && !failSilently) {
     warn(
       `onEffectCleanup() was called when there was no active effect` +

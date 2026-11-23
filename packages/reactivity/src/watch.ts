@@ -97,7 +97,8 @@ export function onWatcherCleanup(
     if (owner.cb) {
       ;(owner.cbCleanups || (owner.cbCleanups = [])).push(cleanup)
     } else {
-      owner.cleanups[owner.cleanupsLength++] = cleanup
+      ;(owner.cleanups || (owner.cleanups = []))[owner.cleanupsLength++] =
+        cleanup
     }
   } else if (__DEV__ && !failSilently) {
     warn(

@@ -12,9 +12,10 @@ export class EffectScope implements ReactiveNode {
   flags: number = 0
 
   /**
+   * Allocated by the first cleanup registered.
    * @internal
    */
-  cleanups: (() => void)[] = []
+  cleanups: (() => void)[] | undefined = undefined
   /**
    * @internal
    */
@@ -148,7 +149,9 @@ export function setCurrentScope(scope?: EffectScope): EffectScope | undefined {
 export function onScopeDispose(fn: () => void, failSilently = false): void {
   if (activeEffectScope !== undefined) {
     if (activeEffectScope.active) {
-      activeEffectScope.cleanups[activeEffectScope.cleanupsLength++] = fn
+      ;(activeEffectScope.cleanups || (activeEffectScope.cleanups = []))[
+        activeEffectScope.cleanupsLength++
+      ] = fn
     } else {
       // The scope has already been stopped and will not run its cleanups
       // again, e.g. a component's async setup resumed after it was unmounted.
