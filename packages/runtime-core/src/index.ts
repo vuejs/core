@@ -439,6 +439,7 @@ import {
   VaporSlot,
   isVNode,
   normalizeVNode,
+  setBlockTrackingState,
   setDeferElementSlots,
 } from './vnode'
 import {
@@ -464,6 +465,7 @@ const _ssrUtils: {
   rawVaporSlotKey: typeof rawVaporSlotKey
   invokeSlotFallback: typeof invokeSlotFallback
   filterSingleRoot: typeof filterSingleRoot
+  setBlockTrackingState: typeof setBlockTrackingState
   setDeferElementSlots: typeof setDeferElementSlots
 } = {
   createComponentInstance,
@@ -480,6 +482,7 @@ const _ssrUtils: {
   rawVaporSlotKey,
   invokeSlotFallback,
   filterSingleRoot,
+  setBlockTrackingState,
   setDeferElementSlots,
 }
 
