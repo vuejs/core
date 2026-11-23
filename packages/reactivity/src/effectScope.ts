@@ -1,5 +1,11 @@
-import { EffectFlags, cleanup } from './effect'
-import { type Link, type ReactiveNode, link, unlink } from './system'
+import { EffectFlags, type ReactiveEffect, cleanup } from './effect'
+import {
+  type Link,
+  ReactiveFlags,
+  type ReactiveNode,
+  link,
+  unlink,
+} from './system'
 import { warn } from './warning'
 
 export let activeEffectScope: EffectScope | undefined
@@ -24,6 +30,9 @@ export class EffectScope implements ReactiveNode {
   constructor(detached = false) {
     if (!detached && activeEffectScope) {
       link(this, activeEffectScope)
+      if (activeEffectScope.flags & EffectFlags.PAUSED) {
+        this.flags = EffectFlags.INHERITED_PAUSED
+      }
     }
   }
 
@@ -32,35 +41,16 @@ export class EffectScope implements ReactiveNode {
   }
 
   pause(): void {
-    if (!(this.flags & EffectFlags.PAUSED)) {
-      this.flags |= EffectFlags.PAUSED
-      for (let link = this.deps; link !== undefined; link = link.nextDep) {
-        const dep = link.dep
-        if ('pause' in dep) {
-          dep.pause()
-        }
-      }
-    }
+    pauseScope(this, EffectFlags.SELF_PAUSED)
   }
 
   /**
-   * Resumes the effect scope, including all child scopes and effects.
+   * Resumes the effect scope, including all child scopes and effects, unless
+   * an ancestor scope keeps it paused.
    */
   resume(): void {
-    const flags = this.flags
-    if (flags & EffectFlags.PAUSED) {
-      this.flags = flags & ~EffectFlags.PAUSED
-      // from a snapshot: a resumed effect may run and unlink any dep
-      const deps: Link['dep'][] = []
-      for (let link = this.deps; link !== undefined; link = link.nextDep) {
-        deps.push(link.dep)
-      }
-      for (let i = 0; i < deps.length; i++) {
-        const dep = deps[i]
-        if ('resume' in dep) {
-          dep.resume()
-        }
-      }
+    if (this.flags & EffectFlags.SELF_PAUSED) {
+      resumeScope(this, EffectFlags.SELF_PAUSED)
     }
   }
 
@@ -106,6 +96,56 @@ export class EffectScope implements ReactiveNode {
       }
     }
     cleanup(this)
+  }
+}
+
+function pauseScope(scope: EffectScope, by: EffectFlags): void {
+  const wasPaused = scope.flags & EffectFlags.PAUSED
+  scope.flags |= by
+  if (wasPaused) return
+  for (let link = scope.deps; link !== undefined; link = link.nextDep) {
+    const node = link.dep
+    const flags = node.flags
+    if (flags & ReactiveFlags.Watching) {
+      // an effect
+      node.flags = flags | EffectFlags.INHERITED_PAUSED
+    } else if (!(flags & (ReactiveFlags.Mutable | EffectFlags.STOP))) {
+      // neither a computed, which has no pause state, nor stopped: a scope
+      pauseScope(node as EffectScope, EffectFlags.INHERITED_PAUSED)
+    }
+  }
+}
+
+// Lifts one of the two pauses; the subtree resumes once neither is left. An
+// effect run on the way may pause or stop any part of the subtree again.
+function resumeScope(scope: EffectScope, by: EffectFlags): void {
+  if ((scope.flags &= ~by) & EffectFlags.PAUSED) return
+  let link = scope.deps
+  while (link !== undefined) {
+    const node = link.dep
+    let flags = node.flags
+    // only the nodes this resume has yet to reach carry the inherited pause
+    if (flags & EffectFlags.INHERITED_PAUSED) {
+      if (flags & ReactiveFlags.Watching) {
+        node.flags = flags &= ~EffectFlags.INHERITED_PAUSED
+        if (
+          !(flags & EffectFlags.PAUSED) &&
+          flags & (ReactiveFlags.Dirty | ReactiveFlags.Pending)
+        ) {
+          ;(node as ReactiveEffect).notify()
+        }
+      } else {
+        resumeScope(node as EffectScope, EffectFlags.INHERITED_PAUSED)
+      }
+      if (scope.flags & EffectFlags.PAUSED) return
+      // a node stopped on the way has left the list, and may have taken its
+      // neighbours with it: start over
+      if (node.flags & EffectFlags.STOP) {
+        link = scope.deps
+        continue
+      }
+    }
+    link = link.nextDep
   }
 }
 

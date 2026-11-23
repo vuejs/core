@@ -625,6 +625,183 @@ describe('reactivity/effect/scope', () => {
     expect(scope.run(() => c.value)).toBe(value)
     expect(getter).toHaveBeenCalledTimes(1)
   })
+
+  describe('pause inheritance', () => {
+    it('starts an effect created in a paused scope paused', () => {
+      const count = ref(0)
+      const log: number[] = []
+      const scope = effectScope()
+      scope.pause()
+      scope.run(() => effect(() => log.push(count.value)))
+      expect(log).toEqual([0])
+
+      count.value++
+      expect(log).toEqual([0])
+
+      scope.resume()
+      expect(log).toEqual([0, 1])
+    })
+
+    it('starts a scope created in a paused scope paused', () => {
+      const count = ref(0)
+      const log: number[] = []
+      const scope = effectScope()
+      scope.pause()
+      scope.run(() => {
+        effectScope().run(() => effect(() => log.push(count.value)))
+      })
+      count.value++
+      expect(log).toEqual([0])
+
+      scope.resume()
+      expect(log).toEqual([0, 1])
+    })
+
+    it('keeps a child paused by its parent paused when the child resumes', () => {
+      const count = ref(0)
+      const log: number[] = []
+      const parent = effectScope()
+      const child = parent.run(() => effectScope())!
+      child.run(() => effect(() => log.push(count.value)))
+      parent.pause()
+      child.resume()
+      count.value++
+      expect(log).toEqual([0])
+
+      parent.resume()
+      expect(log).toEqual([0, 1])
+    })
+
+    it('keeps a child paused on its own paused when the parent resumes', () => {
+      const count = ref(0)
+      const log: number[] = []
+      const parent = effectScope()
+      const child = parent.run(() => effectScope())!
+      child.run(() => effect(() => log.push(count.value)))
+      child.pause()
+      parent.pause()
+      parent.resume()
+      count.value++
+      expect(log).toEqual([0])
+
+      child.resume()
+      expect(log).toEqual([0, 1])
+    })
+
+    it('keeps a watcher paused through its handle paused when the scope resumes', () => {
+      const count = ref(0)
+      const log: number[] = []
+      const scope = effectScope()
+      const handle = scope.run(() =>
+        watch(count, v => log.push(v), { flush: 'sync' }),
+      )!
+      handle.pause()
+      scope.pause()
+      scope.resume()
+      count.value++
+      expect(log).toEqual([])
+
+      handle.resume()
+      expect(log).toEqual([1])
+    })
+
+    it('honours a pause made by an effect that resume runs', () => {
+      const count = ref(0)
+      const log: string[] = []
+      const parent = effectScope()
+      parent.run(() => {
+        effectScope().run(() =>
+          effect(() => {
+            if (count.value === 1) parent.pause()
+          }),
+        )
+        effectScope().run(() => effect(() => log.push('second ' + count.value)))
+      })
+      parent.pause()
+      count.value++
+      parent.resume()
+      expect(log).toEqual(['second 0'])
+
+      parent.resume()
+      expect(log).toEqual(['second 0', 'second 1'])
+    })
+
+    it('does not notify an effect that an earlier one already ran on resume', () => {
+      const value = ref(0)
+      const log: string[] = []
+      const scope = effectScope()
+      let second: any
+      scope.run(() => {
+        watch(
+          value,
+          v => {
+            log.push(`first:${v}`)
+            second()
+          },
+          { flush: 'sync' },
+        )
+        second = effect(() => log.push(`second:${value.value}`), {
+          scheduler: () => {
+            log.push('schedule second')
+            second()
+          },
+        })
+      })
+      log.length = 0
+      scope.pause()
+      value.value = 1
+      scope.resume()
+      expect(log).toEqual(['first:1', 'second:1'])
+    })
+
+    it('keeps an effect paused until the resume reaches it', () => {
+      const x = ref(0)
+      const y = ref(0)
+      const log: string[] = []
+      const scope = effectScope()
+      scope.run(() => {
+        watch(
+          x,
+          () => {
+            log.push('a:start')
+            y.value = 1
+            y.value = 2
+            log.push('a:end')
+          },
+          { flush: 'sync' },
+        )
+        watch(y, v => log.push(`b:${v}`), { flush: 'sync' })
+      })
+      scope.pause()
+      x.value = 1
+      scope.resume()
+      expect(log).toEqual(['a:start', 'a:end', 'b:2'])
+    })
+
+    it('resumes each effect once when one stops itself and the next', () => {
+      const count = ref(0)
+      const log: string[] = []
+      const scope = effectScope()
+      let stopNext: () => void
+      scope.run(() => {
+        effect(() => count.value, { scheduler: () => log.push('queued') })
+        const stop = watch(
+          count,
+          () => {
+            stop()
+            stopNext()
+          },
+          { flush: 'sync' },
+        )
+        stopNext = watch(count, () => log.push('next'), { flush: 'sync' })
+        effect(() => log.push(`last ${count.value}`))
+      })
+      scope.pause()
+      count.value++
+      scope.resume()
+      expect(log).toEqual(['last 0', 'queued', 'last 1'])
+    })
+  })
 })
 
 function getEffectsCount(scope: EffectScope): number {
