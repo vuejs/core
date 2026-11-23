@@ -34,7 +34,6 @@ import {
 } from '@vue/runtime-dom'
 import {
   Dep,
-  EffectFlags,
   ReactiveFlags,
   activeSub,
   computed,
@@ -684,7 +683,6 @@ export function initInputs(
         instance.hasDynamicProps = false
       }
     } else {
-      if (scope.flags & EffectFlags.PAUSED) effect.pause()
       effect.notify()
     }
   } finally {

@@ -50,8 +50,18 @@ export enum EffectFlags {
    * ReactiveEffect only
    */
   ALLOW_RECURSE = 1 << 7,
-  PAUSED = 1 << 8,
+  /**
+   * paused by `pause()`
+   * @internal
+   */
+  SELF_PAUSED = 1 << 8,
   STOP = 1 << 10,
+  /**
+   * paused by an ancestor scope
+   * @internal
+   */
+  INHERITED_PAUSED = 1 << 11,
+  PAUSED = EffectFlags.SELF_PAUSED | EffectFlags.INHERITED_PAUSED,
 }
 
 export class ReactiveEffect<T = any>
@@ -87,6 +97,9 @@ export class ReactiveEffect<T = any>
     }
     if (activeEffectScope) {
       link(this, activeEffectScope)
+      if (activeEffectScope.flags & EffectFlags.PAUSED) {
+        this.flags |= EffectFlags.INHERITED_PAUSED
+      }
     }
   }
 
@@ -100,12 +113,15 @@ export class ReactiveEffect<T = any>
   }
 
   pause(): void {
-    this.flags |= EffectFlags.PAUSED
+    this.flags |= EffectFlags.SELF_PAUSED
   }
 
   resume(): void {
-    const flags = (this.flags &= ~EffectFlags.PAUSED)
-    if (flags & (ReactiveFlags.Dirty | ReactiveFlags.Pending)) {
+    const flags = (this.flags &= ~EffectFlags.SELF_PAUSED)
+    if (
+      !(flags & EffectFlags.PAUSED) &&
+      flags & (ReactiveFlags.Dirty | ReactiveFlags.Pending)
+    ) {
       this.notify()
     }
   }
