@@ -58,6 +58,7 @@ const {
   rawVaporSlotKey,
   invokeSlotFallback,
   filterSingleRoot,
+  setBlockTrackingState,
   setDeferElementSlots,
 } = ssrUtils
 
@@ -301,10 +302,27 @@ export function renderComponentVNode(
 function renderComponentSubTree(
   instance: ComponentInternalInstance,
   slotScopeId?: string,
-): SSRBuffer | Promise<SSRBuffer> {
+): SSRBuffer {
   if (__DEV__) pushWarningContext(instance.vnode)
-  const comp = instance.type as Component
   const { getBuffer, push } = createBuffer()
+  // SSR can render a child synchronously inside a parent slot that disabled
+  // block tracking. Each component's own render starts with tracking enabled.
+  const prev = setBlockTrackingState(1)
+  try {
+    renderComponentContent(instance, push, slotScopeId)
+  } finally {
+    setBlockTrackingState(prev)
+    if (__DEV__) popWarningContext()
+  }
+  return getBuffer()
+}
+
+function renderComponentContent(
+  instance: ComponentInternalInstance,
+  push: PushFn,
+  slotScopeId?: string,
+): void {
+  const comp = instance.type as Component
   if (isFunction(comp)) {
     let root = renderRoot(instance)
     // #5817 scope ID attrs not falling through if functional component doesn't
@@ -394,8 +412,6 @@ function renderComponentSubTree(
       push(`<!---->`)
     }
   }
-  if (__DEV__) popWarningContext()
-  return getBuffer()
 }
 
 export function renderVNode(
@@ -677,10 +693,14 @@ function renderElementVNode(
 // the client returns vnodes instead
 function renderElementSlot(
   push: PushFn,
-  slot: Slot,
+  slot: Slot & { _d?: boolean },
   parentComponent: ComponentInternalInstance,
   slotScopeId?: string,
 ) {
+  // normalizeChildren deferred this compiled slot. Keep the caller's block
+  // tracking as it would when invoking the slot directly on the client.
+  const prev = slot._d
+  slot._d = false
   let ret
   try {
     ret = (slot as any)(
@@ -690,8 +710,12 @@ function renderElementSlot(
       slotScopeId ? ' ' + slotScopeId.trim() : '',
     )
   } catch (err) {
+    // An error handler can call the same slot again.
+    slot._d = prev
     handleError(err, parentComponent, ErrorCodes.RENDER_FUNCTION)
+    return
   }
+  slot._d = prev
   if (isArray(ret)) {
     renderVNodeChildren(push, ret, parentComponent, slotScopeId)
   } else if (ret != null) {
