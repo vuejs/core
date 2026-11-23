@@ -21,6 +21,16 @@ describe('ssr: element', () => {
     expect(getCompiledString(`<input>`)).toMatchInlineSnapshot(`"\`<input>\`"`)
   })
 
+  test('textarea in foreignObject escapes its content as RCDATA', () => {
+    expect(
+      getCompiledString(
+        `<svg><foreignObject><textarea><b>x</b></textarea></foreignObject></svg>`,
+      ),
+    ).toMatchInlineSnapshot(
+      `"\`<svg><foreignObject><textarea>&lt;b&gt;x&lt;/b&gt;</textarea></foreignObject></svg>\`"`,
+    )
+  })
+
   describe('children override', () => {
     test('v-html', () => {
       expect(getCompiledString(`<div v-html="foo"/>`)).toMatchInlineSnapshot(`

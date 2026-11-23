@@ -584,11 +584,21 @@ function endOpenTag(end: number) {
     onCloseTag(currentOpenTag!, end)
   } else {
     stack.unshift(currentOpenTag!)
-    if (ns === Namespaces.SVG || ns === Namespaces.MATH_ML) {
-      tokenizer.inXML = true
-    }
+    tokenizer.inXML = getContentNamespace(stack[0]) !== Namespaces.HTML
   }
   currentOpenTag = null
+}
+
+// the content namespace of an element, used to switch the tokenizer between
+// HTML and XML modes when entering/leaving foreign content integration points.
+function getContentNamespace(el: ElementNode | undefined) {
+  return currentOptions.getNamespace(
+    // probing with the element's own tag lets getNamespace() resolve the
+    // namespace its children would get (e.g. HTML inside <foreignObject>)
+    el ? el.tag : '',
+    el,
+    currentOptions.ns,
+  )
 }
 
 function onText(content: string, start: number, end: number) {
@@ -668,12 +678,7 @@ function onCloseTag(el: ElementNode, end: number, isImplied = false) {
     inVPre = tokenizer.inVPre = false
     currentVPreBoundary = null
   }
-  if (
-    tokenizer.inXML &&
-    (stack[0] ? stack[0].ns : currentOptions.ns) === Namespaces.HTML
-  ) {
-    tokenizer.inXML = false
-  }
+  tokenizer.inXML = getContentNamespace(stack[0]) !== Namespaces.HTML
 
   // 2.x compat / deprecation checks
   if (__COMPAT__) {
