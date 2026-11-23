@@ -350,6 +350,14 @@ export function exitComponentRange(range: ComponentRange): void {
   currentComponentRange = range.prev
 }
 
+/** Wrappers such as KeepAlive have no close of their own. */
+export function isCurrentComponentClose(node: Node): boolean {
+  for (let range = currentComponentRange; range; range = range.prev) {
+    if (range.close) return range.close === node
+  }
+  return false
+}
+
 /**
  * A root of the component being hydrated reads the cursor. Past the one unit
  * the server rendered for the component, the client renders more roots than
