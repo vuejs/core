@@ -27,10 +27,45 @@ export class EffectScope implements ReactiveNode {
    */
   cleanupsLength = 0
 
-  constructor(detached = false) {
-    if (!detached && activeEffectScope) {
-      link(this, activeEffectScope)
-      if (activeEffectScope.flags & EffectFlags.PAUSED) {
+  /**
+   * The detached scopes given this one as their parent, which follow its
+   * pause until they stop. An attached scope is linked through `deps` instead.
+   * @internal
+   */
+  detachedScopes: EffectScope | undefined = undefined
+  /**
+   * The previous scope in its parent's `detachedScopes`; for the first one,
+   * the parent itself.
+   * @internal
+   */
+  prevDetached: EffectScope | undefined = undefined
+  /**
+   * @internal
+   */
+  nextDetached: EffectScope | undefined = undefined
+
+  constructor(detached?: boolean)
+  /**
+   * @param parent - a detached scope given a parent still follows its pause,
+   * but is not stopped with it
+   * @internal
+   */
+  constructor(detached: true, parent?: EffectScope)
+  constructor(detached = false, parent?: EffectScope) {
+    const scope = detached ? parent : activeEffectScope
+    if (scope) {
+      if (detached) {
+        const head = scope.detachedScopes
+        if (head !== undefined) {
+          head.prevDetached = this
+          this.nextDetached = head
+        }
+        this.prevDetached = scope
+        scope.detachedScopes = this
+      } else {
+        link(this, scope)
+      }
+      if (scope.flags & EffectFlags.PAUSED) {
         this.flags = EffectFlags.INHERITED_PAUSED
       }
     }
@@ -74,6 +109,28 @@ export class EffectScope implements ReactiveNode {
     if (sub !== undefined) {
       unlink(sub)
     }
+    const prev = this.prevDetached
+    if (prev !== undefined) {
+      const next = this.nextDetached
+      if (next !== undefined) {
+        next.prevDetached = prev
+      }
+      if (prev.detachedScopes === this) {
+        prev.detachedScopes = next
+      } else {
+        prev.nextDetached = next
+      }
+      this.prevDetached = this.nextDetached = undefined
+    }
+    // the scopes linked to this one keep their pause: they are expected to
+    // stop right after it
+    let child = this.detachedScopes
+    this.detachedScopes = undefined
+    while (child !== undefined) {
+      const next: EffectScope | undefined = child.nextDetached
+      child.prevDetached = child.nextDetached = undefined
+      child = next
+    }
   }
 
   /**
@@ -114,6 +171,13 @@ function pauseScope(scope: EffectScope, by: EffectFlags): void {
       pauseScope(node as EffectScope, EffectFlags.INHERITED_PAUSED)
     }
   }
+  for (
+    let child = scope.detachedScopes;
+    child !== undefined;
+    child = child.nextDetached
+  ) {
+    pauseScope(child, EffectFlags.INHERITED_PAUSED)
+  }
 }
 
 // Lifts one of the two pauses; the subtree resumes once neither is left. An
@@ -147,6 +211,30 @@ function resumeScope(scope: EffectScope, by: EffectFlags): void {
     }
     link = link.nextDep
   }
+  // The list starts with the newest: walk back from the oldest, to resume them
+  // in creation order.
+  let child = oldestDetached(scope)
+  while (child !== scope) {
+    if (child.flags & EffectFlags.INHERITED_PAUSED) {
+      resumeScope(child, EffectFlags.INHERITED_PAUSED)
+      // a stopped parent leaves the rest of its scopes paused
+      if (scope.flags & (EffectFlags.PAUSED | EffectFlags.STOP)) return
+      if (child.flags & EffectFlags.STOP) {
+        child = oldestDetached(scope)
+        continue
+      }
+    }
+    child = child.prevDetached!
+  }
+}
+
+function oldestDetached(scope: EffectScope): EffectScope {
+  let child = scope.detachedScopes
+  if (child === undefined) return scope
+  while (child.nextDetached !== undefined) {
+    child = child.nextDetached
+  }
+  return child
 }
 
 /**

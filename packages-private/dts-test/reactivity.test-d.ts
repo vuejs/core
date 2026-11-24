@@ -1,4 +1,5 @@
 import {
+  EffectScope,
   type Ref,
   markRaw,
   reactive,
@@ -145,4 +146,11 @@ describe('shallowReactive type should accept plain object assignment', () => {
   const shallow = shallowReactive({ a: 1, b: 2 })
   let values: typeof shallow
   values = { a: 1, b: 2 }
+})
+
+describe('EffectScope can be constructed', () => {
+  new EffectScope()
+  new EffectScope(true)
+  // @ts-expect-error the parent is internal
+  new EffectScope(true, new EffectScope())
 })

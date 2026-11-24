@@ -564,7 +564,7 @@ export function createComponent(
 
     let inputScope: EffectScope | undefined
     if (keepAliveCtx && !once && !managedMount) {
-      inputScope = new EffectScope(true)
+      inputScope = new EffectScope(true, currentInstance!.scope)
     }
 
     // The VDOM bridge delivers inputs through the same cache-owned scope.
@@ -1219,7 +1219,10 @@ export class VaporComponentInstance<
     }
 
     this.block = null! // to be set
-    this.scope = new EffectScope(true)
+    this.scope = new EffectScope(
+      true,
+      currentInstance ? currentInstance.scope : undefined,
+    )
 
     this.emit = emit.bind(null, this) as EmitFn<Emits>
     this.expose = exposeVapor.bind(null, this) as any

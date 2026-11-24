@@ -1166,6 +1166,224 @@ describe('component', () => {
   })
 })
 
+describe('component scope pause', () => {
+  test('pausing a component scope pauses its descendants until it resumes', async () => {
+    const data = ref<any>({ count: 0, list: [1, 2] })
+    const log: string[] = []
+    const components: any = { log: (s: string) => void log.push(s) }
+    let scope: any
+    components.capture = (s: any) => (scope = s)
+    components.Leaf = compile(
+      `<template>
+        <i>{{ components.log('leaf') || data.count }}</i>
+      </template>`,
+      data,
+      components,
+    )
+    const Parent = compile(
+      `<script setup vapor>
+        import { getCurrentScope } from 'vue'
+        const data = _data
+        const components = _components
+        components.capture(getCurrentScope())
+      </script>
+      <template>
+        <div>
+          <span v-for="i in data.list" :key="i">
+            {{ components.log('row') || i * 10 + data.count }}
+          </span>
+          <components.Leaf />
+        </div>
+      </template>`,
+      data,
+      components,
+    )
+    const { host } = define(Parent).render()
+    log.length = 0
+
+    scope.pause()
+    data.value.count++
+    await nextTick()
+    expect(log).toEqual([])
+    expect(host.textContent).toBe('10200')
+
+    scope.resume()
+    await nextTick()
+    expect(log).toEqual(expect.arrayContaining(['row', 'leaf']))
+    expect(host.textContent).toBe('11211')
+  })
+
+  test('pausing a component scope pauses the slot fallback of a child', async () => {
+    const data = ref<any>({ count: 0, show: false })
+    const log: string[] = []
+    const components: any = { log: (s: string) => void log.push(s) }
+    let scope: any
+    components.capture = (s: any) => (scope = s)
+    components.Child = compile(
+      `<template>
+        <u><slot>{{ components.log('fallback') || data.count }}</slot></u>
+      </template>`,
+      data,
+      components,
+    )
+    const Parent = compile(
+      `<script setup vapor>
+        import { getCurrentScope } from 'vue'
+        const data = _data
+        const components = _components
+        components.capture(getCurrentScope())
+      </script>
+      <template>
+        <components.Child>
+          <b v-if="data.show">content</b>
+        </components.Child>
+      </template>`,
+      data,
+      components,
+    )
+    const { host } = define(Parent).render()
+    log.length = 0
+
+    scope.pause()
+    data.value.count++
+    await nextTick()
+    expect(log).toEqual([])
+    expect(host.textContent).toBe('0')
+
+    scope.resume()
+    await nextTick()
+    expect(log).toEqual(['fallback'])
+    expect(host.textContent).toBe('1')
+  })
+
+  test('pausing a component scope pauses the directives on a child', async () => {
+    const data = ref<any>({ count: 0 })
+    const log: string[] = []
+    const components: any = {
+      dir: (_el: Element, value: () => number) =>
+        void watchEffect(() => log.push('dir ' + value())),
+    }
+    let scope: any
+    components.capture = (s: any) => (scope = s)
+    components.Child = compile(
+      `<template>
+        <div>child</div>
+      </template>`,
+      data,
+      components,
+    )
+    const Parent = compile(
+      `<script setup vapor>
+        import { getCurrentScope } from 'vue'
+        const data = _data
+        const components = _components
+        const vDir = components.dir
+        components.capture(getCurrentScope())
+      </script>
+      <template>
+        <components.Child v-dir="data.count" />
+      </template>`,
+      data,
+      components,
+    )
+    define(Parent).render()
+    log.length = 0
+
+    scope.pause()
+    data.value.count++
+    await nextTick()
+    expect(log).toEqual([])
+
+    scope.resume()
+    await nextTick()
+    expect(log).toEqual(['dir 1'])
+  })
+
+  test('pausing a component scope pauses the effects on a component row', async () => {
+    const data = ref<any>({ show: true, list: [1] })
+    const components: any = {}
+    let scope: any
+    components.capture = (s: any) => (scope = s)
+    components.Child = compile(
+      `<template>
+        <b>child</b>
+      </template>`,
+      data,
+      components,
+    )
+    const Parent = compile(
+      `<script setup vapor>
+        import { getCurrentScope } from 'vue'
+        const data = _data
+        const components = _components
+        components.capture(getCurrentScope())
+      </script>
+      <template>
+        <div>
+          <components.Child v-for="i in data.list" :key="i" v-show="data.show" />
+        </div>
+      </template>`,
+      data,
+      components,
+    )
+    const { host } = define(Parent).render()
+
+    scope.pause()
+    data.value.show = false
+    await nextTick()
+    expect(host.innerHTML).not.toContain('display: none')
+
+    scope.resume()
+    await nextTick()
+    expect(host.innerHTML).toContain('display: none')
+  })
+
+  test('pausing a component scope pauses the inputs of a KeepAlive child', async () => {
+    const data = ref<any>({ count: 0 })
+    const log: number[] = []
+    const components: any = { read: (n: number) => (log.push(n), n) }
+    let scope: any
+    components.capture = (s: any) => (scope = s)
+    components.Child = compile(
+      `<script setup vapor>
+        defineProps(['n'])
+      </script>
+      <template>
+        <i>{{ n }}</i>
+      </template>`,
+      data,
+      components,
+    )
+    const Parent = compile(
+      `<script setup vapor>
+        import { getCurrentScope } from 'vue'
+        const data = _data
+        const components = _components
+        components.capture(getCurrentScope())
+      </script>
+      <template>
+        <KeepAlive>
+          <components.Child :n="components.read(data.count)" />
+        </KeepAlive>
+      </template>`,
+      data,
+      components,
+    )
+    const { host } = define(Parent).render()
+    log.length = 0
+
+    scope.pause()
+    data.value.count++
+    await nextTick()
+    expect(log).toEqual([])
+
+    scope.resume()
+    await nextTick()
+    expect(log).toEqual([1])
+    expect(host.textContent).toBe('1')
+  })
+})
+
 function getEffectsCount(scope: EffectScope): number {
   let n = 0
   for (let dep = scope.deps; dep !== undefined; dep = dep.nextDep) {

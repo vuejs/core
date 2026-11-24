@@ -38,8 +38,14 @@ export function initVdomOwner(owner: ComponentInternalInstance): void {
     updating: false,
     update: () => {
       // the owner may have been removed in this flush: its effect stops at
-      // once, while `isUnmounted` waits for the post flush
-      if (state.stale && owner.effect.active) owner.update()
+      // once, while `isUnmounted` waits for the post flush. A paused owner
+      // is queued again by the content's effects when it resumes
+      if (
+        state.stale &&
+        !(owner.effect.flags & (EffectFlags.STOP | EffectFlags.PAUSED))
+      ) {
+        owner.update()
+      }
     },
   }
   state.update.i = owner

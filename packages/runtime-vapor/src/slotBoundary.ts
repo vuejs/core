@@ -1,4 +1,5 @@
 import type { EffectScope } from '@vue/reactivity'
+import type { GenericComponentInstance } from '@vue/runtime-dom'
 import type { Block, BlockFn } from './block'
 import type { FallthroughOwner } from './component'
 import {
@@ -23,6 +24,8 @@ export interface SlotBoundaryContext {
   // late renders such as fallback bodies, and runs them in the provided effect
   // scope when one is provided.
   run<R>(fn: () => R, scope?: EffectScope): R
+  // The slot host's instance: the fallbacks pause with it.
+  hostInstance?: GenericComponentInstance | null
   // The slot scope ids this provider's fallback renders under: the providing
   // outlet's cell (see renderSlotFallbacks).
   getScopeIds?: () => string[] | null
