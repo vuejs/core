@@ -68,6 +68,7 @@ export type VaporHelper = keyof typeof import('packages/runtime-vapor/src')
 export interface BlockIRNode extends BaseIRNode {
   type: IRNodeTypes.BLOCK
   node: RootNode | TemplateChildNode
+  keyed?: boolean
   dynamic: IRDynamicInfo
   tempId: number
   effect: IREffect[]

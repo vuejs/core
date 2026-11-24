@@ -96,6 +96,22 @@ describe('compiler: key', () => {
       expect(code).contains('_createKeyedFragment(() => (_ctx.id)')
     })
 
+    test('native element key from object v-bind', () => {
+      const { code } = compileWithKey(
+        `<div v-bind="{ key: id, title: title }" />`,
+      )
+      expect(code).contains('_createKeyedFragment(() => (_ctx.id)')
+    })
+
+    test('dynamic component key from object v-bind', () => {
+      const { code } = compileWithKey(
+        `<component :is="view" v-bind="{ key: id }" />`,
+      )
+      expect(code).contains('_createDynamicComponent(')
+      expect(code).contains('() => (_ctx.id)')
+      expect(code).not.contains('_createKeyedFragment(')
+    })
+
     test('nested elements + key', () => {
       const { code } = compileWithKey(`<div><Foo :key="id" /></div>`)
       expect(code).toMatchSnapshot()
