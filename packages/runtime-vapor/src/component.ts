@@ -45,6 +45,7 @@ import {
   registerHMR,
   resolveComponent,
   restoreCurrentInstance,
+  resumeKeepAliveEntry,
   setCurrentInstance,
   setCurrentRenderingInstance,
   startMeasure,
@@ -1599,6 +1600,7 @@ export function mountComponent(
         // resolves. Restore only its active state; KeepAlive activation requires
         // a mounted block.
         instance.isDeactivated = false
+        resumeKeepAliveEntry(instance)
       }
       return
     }

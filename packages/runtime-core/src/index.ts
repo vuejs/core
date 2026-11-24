@@ -587,6 +587,16 @@ export { queueJob, flushOnAppMount, SchedulerJobFlags } from './scheduler'
 /**
  * @internal
  */
+export {
+  isPausedKeepAliveEntry,
+  isResumingKeepAliveEntry,
+  pauseKeepAliveEntry,
+  requestPauseKeepAliveEntry,
+  resumeKeepAliveEntry,
+} from './keepAlivePause'
+/**
+ * @internal
+ */
 export { expose, getNextUid, nextUid, validateComponentName } from './component'
 /**
  * @internal

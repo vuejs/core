@@ -58,6 +58,10 @@ export {
   onEffectCleanup,
   ReactiveEffect,
   EffectFlags,
+  /**
+   * @internal
+   */
+  markEffectDirty,
   type ReactiveEffectRunner,
   type ReactiveEffectOptions,
   type EffectScheduler,
@@ -85,6 +89,14 @@ export {
    */
   setCurrentScope,
   onScopeDispose,
+  /**
+   * @internal
+   */
+  pauseScope,
+  /**
+   * @internal
+   */
+  resumeScope,
 } from './effectScope'
 export { reactiveReadArray, shallowReadArray } from './arrayInstrumentations'
 export { TrackOpTypes, TriggerOpTypes, ReactiveFlags } from './constants'

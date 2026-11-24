@@ -52,6 +52,11 @@ import { type SuspenseBoundary, isSuspense } from './Suspense'
 import { LifecycleHooks } from '../enums'
 import { type SchedulerJob, SchedulerJobFlags } from '../scheduler'
 import { isVaporInteropEnabled } from '../vaporInteropState'
+import {
+  pauseKeepAliveEntry,
+  requestPauseKeepAliveEntry,
+  resumeKeepAliveEntry,
+} from '../keepAlivePause'
 
 type MatchPattern = string | RegExp | (string | RegExp)[]
 
@@ -59,6 +64,11 @@ export interface KeepAliveProps {
   include?: MatchPattern
   exclude?: MatchPattern
   max?: number | string
+  /**
+   * Pause a deactivated component, with everything it renders, until it is
+   * activated again: its renders, watchers and effects then catch up once.
+   */
+  pause?: boolean
 }
 
 type CacheKey = PropertyKey | ConcreteComponent
@@ -103,6 +113,7 @@ const KeepAliveImpl: ComponentOptions = {
     include: [String, RegExp, Array],
     exclude: [String, RegExp, Array],
     max: [String, Number],
+    pause: Boolean,
   },
 
   setup(props: KeepAliveProps, { slots }: SetupContext) {
@@ -516,7 +527,8 @@ export function activate(
     parentComponent,
     parentSuspense,
   )
-  // in case props have changed
+  // in case props have changed: a paused entry takes them without rendering,
+  // and renders what it missed with them as it resumes
   patch(
     instance.vnode,
     vnode,
@@ -528,6 +540,7 @@ export function activate(
     vnode.slotScopeIds,
     optimized,
   )
+  resumeKeepAliveEntry(instance)
   queuePostRenderEffect(
     () => {
       instance.isDeactivated = false
@@ -564,6 +577,7 @@ export function deactivate(
   invalidateMount(instance.a)
 
   move(vnode, container, null, MoveType.LEAVE, parentComponent, parentSuspense)
+  requestPauseKeepAliveEntry(instance)
   queuePostRenderEffect(
     () => {
       if (instance.da) {
@@ -574,6 +588,7 @@ export function deactivate(
         invokeVNodeHook(vnodeHook, instance.parent, vnode)
       }
       instance.isDeactivated = true
+      pauseKeepAliveEntry(instance)
     },
     undefined,
     parentSuspense,

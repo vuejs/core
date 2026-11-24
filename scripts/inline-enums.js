@@ -160,16 +160,18 @@ export function scanEnums() {
                     )
                   }
                   return defines[exp]
+                } else if (node.type === 'BinaryExpression') {
+                  // e.g. A.x | A.y | A.z
+                  return evaluate(
+                    `${resolveValue(node.left)}${node.operator}${resolveValue(node.right)}`,
+                  )
                 } else {
                   throw new Error(
                     `unhandled BinaryExpression operand type ${node.type} in ${file}`,
                   )
                 }
               }
-              const exp = `${resolveValue(init.left)}${
-                init.operator
-              }${resolveValue(init.right)}`
-              value = evaluate(exp)
+              value = resolveValue(init)
             } else if (init.type === 'UnaryExpression') {
               if (isStringOrNumberLiteral(init.argument)) {
                 const exp = `${init.operator}${init.argument.value}`

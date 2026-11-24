@@ -20451,3 +20451,394 @@ describe('component scope pause across the interop boundary', () => {
     expect(html()).toContain('title="1"')
   })
 })
+
+describe('KeepAlive pause across the interop boundary', () => {
+  const cases: [string, boolean, boolean, boolean][] = [
+    ['vdom KeepAlive, vapor page', false, true, true],
+    ['vapor KeepAlive, vdom page', true, false, false],
+    ['vdom page, vapor child', false, false, true],
+    ['vapor page, vdom child', true, true, false],
+  ]
+  test.each(cases)('%s', async (_, appVapor, pageVapor, leafVapor) => {
+    const data = ref<any>({ show: true, count: 0 })
+    const log: string[] = []
+    const components: any = { log: (s: string) => void log.push(s) }
+    const script = (vapor: boolean, body = '') =>
+      `<script setup${vapor ? ' vapor' : ''}>
+        import { watch, onActivated } from 'vue'
+        const data = _data
+        const components = _components
+        ${body}
+      </script>`
+    components.Leaf = compile(
+      script(leafVapor) +
+        `<template>
+          <i>{{ components.log('leaf') || data.count }}</i>
+        </template>`,
+      data,
+      components,
+      { vapor: leafVapor },
+    )
+    components.Page = compile(
+      script(
+        pageVapor,
+        `watch(() => data.value.count, () => components.log('pre watcher'))
+        onActivated(() => components.log('activated'))`,
+      ) +
+        `<template>
+          <div>
+            {{ components.log('page') || data.count }}
+            <components.Leaf />
+          </div>
+        </template>`,
+      data,
+      components,
+      { vapor: pageVapor },
+    )
+    const App = compile(
+      script(appVapor) +
+        `<template>
+          <KeepAlive pause>
+            <components.Page v-if="data.show" />
+          </KeepAlive>
+        </template>`,
+      data,
+      components,
+      { vapor: appVapor },
+    )
+    const container = document.createElement('div')
+    const app = (appVapor ? createVaporApp : createApp)(App)
+    app.use(vaporInteropPlugin).mount(container)
+    try {
+      data.value.show = false
+      await nextTick()
+      log.length = 0
+
+      data.value.count++
+      await nextTick()
+      expect(log).toEqual([])
+
+      data.value.show = true
+      await nextTick()
+      expect(container.textContent!.replace(/\s/g, '')).toBe('11')
+      expect(log).toEqual(
+        expect.arrayContaining(['pre watcher', 'page', 'leaf']),
+      )
+      expect(log[log.length - 1]).toBe('activated')
+
+      data.value.count++
+      await nextTick()
+      expect(container.textContent!.replace(/\s/g, '')).toBe('22')
+    } finally {
+      app.unmount()
+    }
+  })
+
+  test('a vdom page handed a new vnode while paused catches up with it', async () => {
+    const data = ref<any>({ count: 0 })
+    const log: string[] = []
+    const components: any = { log: (s: string) => void log.push(s) }
+    const Page = compile(
+      `<script setup>
+        import { watch } from 'vue'
+        const props = defineProps(['msg'])
+        const data = _data
+        const components = _components
+        watch(() => data.value.count, () => components.log('pre watcher'))
+      </script>
+      <template>
+        <div>{{ components.log('render ' + props.msg) || props.msg + data.count }}</div>
+      </template>`,
+      data,
+      components,
+      { vapor: false },
+    )
+    const Other = compile(
+      `<script setup>
+        const data = _data
+      </script>
+      <template>
+        <p>other</p>
+      </template>`,
+      data,
+      components,
+      { vapor: false },
+    )
+    data.value.view = h(Page, { msg: 'a' })
+    const App = compile(
+      `<template>
+        <KeepAlive pause>
+          <component :is="data.view" />
+        </KeepAlive>
+      </template>`,
+      data,
+      components,
+    )
+    const container = document.createElement('div')
+    const app = createVaporApp(App)
+    app.use(vaporInteropPlugin).mount(container)
+    try {
+      data.value.view = h(Other)
+      await nextTick()
+      log.length = 0
+
+      data.value.count++
+      await nextTick()
+      expect(log).toEqual([])
+
+      data.value.view = h(Page, { msg: 'b' })
+      await nextTick()
+      expect(container.textContent).toBe('b1')
+      expect(log[0]).toBe('pre watcher')
+    } finally {
+      app.unmount()
+    }
+  })
+
+  test('a row inserted before a vapor page whose root emptied while it was paused', async () => {
+    const data = ref<any>({ ids: ['a'], show: true, ready: true })
+    const components: any = {}
+    components.Page = compile(
+      `<template>
+        <article v-if="data.ready">x</article>
+      </template>`,
+      data,
+      components,
+    )
+    const App = compile(
+      vdomScript +
+        `<template>
+        <KeepAlive pause v-for="id in data.ids" :key="id">
+          <components.Page v-if="data.show" />
+        </KeepAlive>
+      </template>`,
+      data,
+      components,
+      { vapor: false },
+    )
+    const container = document.createElement('div')
+    const app = createApp(App)
+    app.use(vaporInteropPlugin).mount(container)
+    try {
+      data.value.show = false
+      await nextTick()
+      data.value.ready = false
+      await nextTick()
+      data.value.show = true
+      await nextTick()
+
+      data.value.ids = ['b', 'a']
+      data.value.ready = true
+      await nextTick()
+      expect(stripAnchors(container.innerHTML)).toBe(
+        '<article>x</article><article>x</article>',
+      )
+    } finally {
+      app.unmount()
+    }
+  })
+
+  test('a functional child of a vdom page injects from the page on return', async () => {
+    const data = ref<any>({ show: true, count: 0 })
+    const components: any = {}
+    components.Theme = () =>
+      h('i', `${inject('theme', 'none')} ${data.value.count}`)
+    components.Page = compile(
+      `<script setup>
+        import { provide } from 'vue'
+        const components = _components
+        provide('theme', 'page')
+      </script>
+      <template>
+        <components.Theme />
+      </template>`,
+      data,
+      components,
+      { vapor: false },
+    )
+    const App = compile(
+      `<template>
+        <KeepAlive pause>
+          <components.Page v-if="data.show" />
+        </KeepAlive>
+      </template>`,
+      data,
+      components,
+    )
+    const container = document.createElement('div')
+    const app = createVaporApp(App)
+    app.use(vaporInteropPlugin).mount(container)
+    try {
+      data.value.show = false
+      await nextTick()
+      data.value.count++
+      await nextTick()
+
+      data.value.show = true
+      await nextTick()
+      expect(stripAnchors(container.innerHTML)).toBe('<i>page 1</i>')
+    } finally {
+      app.unmount()
+    }
+  })
+
+  test.each(['pre', 'sync'] as const)(
+    'a vapor page handed a new vnode while paused catches up with its props (%s watcher)',
+    async flush => {
+      const data = ref<any>({ view: null, revision: 0 })
+      const log: string[] = []
+      const components: any = { log: (s: string) => void log.push(s) }
+      const Page = compile(
+        `<script setup vapor>
+          import { watch } from 'vue'
+          const data = _data
+          const components = _components
+          const props = defineProps(['id'])
+          watch(
+            () => data.value.revision,
+            () => components.log(props.id),
+            { flush: '${flush}' },
+          )
+        </script>
+        <template>
+          <div>{{ props.id }}</div>
+        </template>`,
+        data,
+        components,
+      )
+      const Other = compile(
+        `<template>
+          <p>other</p>
+        </template>`,
+        data,
+        components,
+      )
+      data.value.view = h(Page, { id: 'old' })
+      const App = compile(
+        `<template>
+          <KeepAlive pause>
+            <component :is="data.view" />
+          </KeepAlive>
+        </template>`,
+        data,
+        components,
+      )
+      const container = document.createElement('div')
+      const app = createVaporApp(App)
+      app.use(vaporInteropPlugin).mount(container)
+      try {
+        data.value.view = h(Other)
+        await nextTick()
+
+        data.value.view = h(Page, { id: 'new' })
+        data.value.revision++
+        await nextTick()
+        expect(stripAnchors(container.innerHTML)).toBe('<div>new</div>')
+        expect(log).toEqual(['new'])
+      } finally {
+        app.unmount()
+      }
+    },
+  )
+
+  test.each(['pre', 'sync'] as const)(
+    'a vdom page delivers the props it returns with before catching up (%s watcher)',
+    async flush => {
+      const data = ref<any>({ show: true, id: 'old', revision: 0 })
+      const log: string[] = []
+      const components: any = { log: (s: string) => void log.push(s) }
+      components.Page = compile(
+        `<script setup>
+          import { watch } from 'vue'
+          const data = _data
+          const components = _components
+          const props = defineProps(['id'])
+          watch(
+            () => data.value.revision,
+            () => components.log(props.id),
+            { flush: '${flush}' },
+          )
+        </script>
+        <template>
+          <div>{{ props.id }}</div>
+        </template>`,
+        data,
+        components,
+        { vapor: false },
+      )
+      const App = compile(
+        `<template>
+          <KeepAlive pause>
+            <components.Page v-if="data.show" :id="data.id" />
+          </KeepAlive>
+        </template>`,
+        data,
+        components,
+      )
+      const container = document.createElement('div')
+      const app = createVaporApp(App)
+      app.use(vaporInteropPlugin).mount(container)
+      try {
+        data.value.show = false
+        await nextTick()
+
+        data.value.show = true
+        data.value.id = 'new'
+        data.value.revision++
+        await nextTick()
+        expect(stripAnchors(container.innerHTML)).toBe('<div>new</div>')
+        expect(log).toEqual(['new'])
+      } finally {
+        app.unmount()
+      }
+    },
+  )
+
+  test('an async vdom page renders the props it missed in place', async () => {
+    const data = ref<any>({ show: true, msg: 'a' })
+    const connected: boolean[] = []
+    const components: any = {
+      track: (el: any) => el && connected.push(el.isConnected),
+    }
+    const Inner = compile(
+      vdomScript +
+        `<template>
+          <div :ref="components.track">{{ $attrs.msg }}</div>
+        </template>`,
+      data,
+      components,
+      { vapor: false },
+    )
+    components.Async = defineAsyncComponent(() => Promise.resolve(Inner))
+    const App = compile(
+      `<template>
+        <KeepAlive pause>
+          <components.Async v-if="data.show" :msg="data.msg" />
+        </KeepAlive>
+      </template>`,
+      data,
+      components,
+    )
+    const container = document.createElement('div')
+    document.body.appendChild(container)
+    const app = createVaporApp(App)
+    app.use(vaporInteropPlugin).mount(container)
+    try {
+      await new Promise(r => setTimeout(r))
+      await nextTick()
+      expect(container.textContent).toBe('a')
+      data.value.show = false
+      await nextTick()
+      connected.length = 0
+
+      data.value.msg = 'b'
+      data.value.show = true
+      await nextTick()
+      expect(container.textContent).toBe('b')
+      expect(connected).toEqual([true])
+    } finally {
+      app.unmount()
+      container.remove()
+    }
+  })
+})
