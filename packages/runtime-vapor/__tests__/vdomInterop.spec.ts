@@ -20450,6 +20450,42 @@ describe('component scope pause across the interop boundary', () => {
     await nextTick()
     expect(html()).toContain('title="1"')
   })
+
+  test('a vdom child with constant inputs links no scope of them to the parent', () => {
+    const mount = (binding: string) => {
+      let scope: any
+      const components: any = { capture: (s: any) => (scope = s) }
+      components.Child = compile(
+        `<script setup>
+          defineEmits(['ping'])
+        </script>
+        <template>
+          <b>child</b>
+        </template>`,
+        ref(),
+        components,
+        { vapor: false },
+      )
+      const Parent = compile(
+        `<script setup vapor>
+          import { getCurrentScope } from 'vue'
+          const components = _components
+          const handler = () => {}
+          components.capture(getCurrentScope())
+        </script>
+        <template>
+          <div><components.Child ${binding} /></div>
+        </template>`,
+        ref(),
+        components,
+      )
+      define(Parent).render({}, document.createElement('div'))
+      let linked = 0
+      for (let s = scope.detachedScopes; s; s = s.nextDetached) linked++
+      return linked
+    }
+    expect(mount('@ping="handler"')).toBe(mount(''))
+  })
 })
 
 describe('KeepAlive pause across the interop boundary', () => {

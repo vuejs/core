@@ -2112,6 +2112,8 @@ function createVDOMComponent(
   let hasDynamicProps =
     !once &&
     (!!cells || hasDynamicPropsSource((rawProps || EMPTY_OBJ) as RawProps))
+  // one passed in belongs to the caller
+  const ownsInputScope = !inputScope
   if (hasDynamicProps) {
     inputScope ||= new EffectScope(
       true,
@@ -2174,6 +2176,11 @@ function createVDOMComponent(
       if (!effect.deps) {
         effect.stop()
         hasDynamicProps = false
+        // nothing left in it to pause with the parent
+        if (ownsInputScope) {
+          inputScope!.stop()
+          inputScope = undefined
+        }
       } else {
         inputEffect = effect
       }
