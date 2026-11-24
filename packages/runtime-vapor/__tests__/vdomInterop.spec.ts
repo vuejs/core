@@ -20288,3 +20288,104 @@ describe('interop root el', () => {
     },
   )
 })
+
+describe('cached async setup child re-entering a KeepAlive while pending', () => {
+  // the entry is forwarded through a slot: a direct `<component :is>` child
+  // of KeepAlive defers the switch until setup resolves, so it never leaves
+  test.each(['vdom', 'vapor'] as const)(
+    'receives prop updates once setup resolves (%s KeepAlive)',
+    async mode => {
+      const vapor = mode === 'vapor'
+      let resolve!: () => void
+      const data = ref<any>({
+        msg: 'a',
+        gate: new Promise<void>(r => (resolve = r)),
+      })
+      const script = `<script setup>const data = _data; const components = _components;</script>`
+      const components: any = {}
+      components.Child = markRaw(
+        compile(
+          `<script setup>
+            const props = defineProps(['msg'])
+            await _data.value.gate
+          </script>
+          <template>
+            <p>{{ props.msg }}</p>
+          </template>`,
+          data,
+          components,
+          { vapor },
+        ),
+      )
+      components.Other = markRaw(
+        compile(
+          `${script}
+          <template>
+            <span>other</span>
+          </template>`,
+          data,
+          components,
+          { vapor },
+        ),
+      )
+      components.Outlet = compile(
+        `${script}
+        <template>
+          <KeepAlive>
+            <slot />
+          </KeepAlive>
+        </template>`,
+        data,
+        components,
+        { vapor },
+      )
+      components.Tree = compile(
+        `${script}
+        <template>
+          <components.Outlet>
+            <component :is="data.comp" :msg="data.msg" />
+          </components.Outlet>
+        </template>`,
+        data,
+        components,
+        { vapor },
+      )
+      const Root = compile(
+        `${script}
+        <template>
+          <Suspense>
+            <components.Tree />
+            <template #fallback>
+              <span>loading</span>
+            </template>
+          </Suspense>
+        </template>`,
+        data,
+        components,
+        { vapor: false },
+      )
+      data.value.comp = components.Other
+      const host = document.createElement('div')
+      const app = createApp(Root)
+      app.use(vaporInteropPlugin).mount(host)
+      try {
+        data.value.comp = components.Child
+        await nextTick()
+        data.value.comp = components.Other
+        await nextTick()
+        data.value.comp = components.Child
+        await nextTick()
+        resolve()
+        await new Promise(r => setTimeout(r))
+        await nextTick()
+        expect(host.innerHTML).toContain('<p>a</p>')
+
+        data.value.msg = 'b'
+        await nextTick()
+        expect(host.innerHTML).toContain('<p>b</p>')
+      } finally {
+        app.unmount()
+      }
+    },
+  )
+})
