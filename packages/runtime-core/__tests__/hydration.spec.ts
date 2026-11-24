@@ -3325,6 +3325,35 @@ describe('SSR hydration', () => {
     expect(`mismatch`).not.toHaveBeenWarned()
   })
 
+  // #16427
+  test('transition appear with cached static child in prod', () => {
+    __DEV__ = false
+    try {
+      const { vnode, container } = mountWithHydration(
+        `<template><div>foo</div></template>`,
+        () =>
+          h(
+            Transition,
+            { appear: true },
+            {
+              default: () =>
+                createElementVNode('div', null, 'foo', PatchFlags.CACHED),
+            },
+          ),
+      )
+      expect(container.firstChild).toMatchInlineSnapshot(`
+        <div
+          class="v-enter-from v-enter-active"
+        >
+          foo
+        </div>
+      `)
+      expect(vnode.el).toBe(container.firstChild)
+    } finally {
+      __DEV__ = true
+    }
+  })
+
   test('transition appear w/ event listener', async () => {
     const container = document.createElement('div')
     container.innerHTML = `<template><button>0</button></template>`
