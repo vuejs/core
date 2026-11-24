@@ -56,6 +56,9 @@ function castValue(value: string, trim?: boolean, number?: boolean | null) {
   return value
 }
 
+const trimASCIIWhitespace = (value: string) =>
+  value.replace(/^[\t\n\f\r ]+|[\t\n\f\r ]+$/g, '')
+
 // We are exporting the v-model runtime directly as vnode hooks so that it can
 // be tree-shaken in case v-model is never used.
 export const vModelText: ModelDirective<
@@ -65,12 +68,28 @@ export const vModelText: ModelDirective<
   created(el, { modifiers: { lazy, trim, number } }, vnode) {
     // During hydration, created runs on an element already in the DOM.
     if (el.parentNode) {
-      if (el.type === 'text') {
+      const type = el.type
+      if (
+        type === 'text' ||
+        type === 'search' ||
+        type === 'tel' ||
+        type === 'password'
+      ) {
         // Text inputs strip CR/LF from value, while defaultValue retains them.
         el[initialValueKey] = el.defaultValue.replace(/[\r\n]/g, '')
-      } else if (el.type === 'textarea') {
+      } else if (type === 'textarea') {
         // Textareas normalize CRLF/CR to LF in value.
         el[initialValueKey] = el.defaultValue.replace(/\r\n?/g, '\n')
+      } else if (type === 'url') {
+        el[initialValueKey] = trimASCIIWhitespace(
+          el.defaultValue.replace(/[\r\n]/g, ''),
+        )
+      } else if (type === 'email' && !/[\u0080-\uffff]/.test(el.defaultValue)) {
+        // Email inputs trim each address. Non-ASCII values are skipped because
+        // Chromium reads international domains back as punycode.
+        el[initialValueKey] = (el as HTMLInputElement).multiple
+          ? el.defaultValue.split(',').map(trimASCIIWhitespace).join(',')
+          : trimASCIIWhitespace(el.defaultValue.replace(/[\r\n]/g, ''))
       }
     }
     el[assignKey] = getModelAssigner(vnode)
@@ -100,11 +119,7 @@ export const vModelText: ModelDirective<
     const newValue = value == null ? '' : value
     const initialValue = el[initialValueKey]
     delete el[initialValueKey]
-    if (
-      initialValue !== undefined &&
-      (el.type === 'text' || el.type === 'textarea') &&
-      el.value !== initialValue
-    ) {
+    if (initialValue !== undefined && el.value !== initialValue) {
       el[assignKey](castValue(el.value, trim, number))
     } else {
       el.value = newValue

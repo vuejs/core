@@ -3039,6 +3039,46 @@ describe('SSR hydration', () => {
     expect(state.text).toBe('user value')
   })
 
+  test.each(['search', 'tel', 'password', 'email', 'url'])(
+    'preserves %s input entered before v-model hydration',
+    async type => {
+      const state = reactive({ text: 'server value' })
+      const App = {
+        setup: () => state,
+        template: `<input type="${type}" v-model="text">`,
+      }
+      const container = document.createElement('div')
+      container.innerHTML = await renderToString(h(App))
+      const input = container.firstChild as HTMLInputElement
+      input.value = 'user value'
+
+      createSSRApp(App).mount(container)
+      await nextTick()
+
+      expect(input.value).toBe('user value')
+      expect(state.text).toBe('user value')
+    },
+  )
+
+  test('keeps whitespace in unedited url and email v-model values', async () => {
+    const state = reactive({
+      url: ' https://vuejs.org ',
+      emails: ' a@example.com , b@example.com ',
+    })
+    const App = {
+      setup: () => state,
+      template: `<div><input type="url" v-model="url"><input type="email" multiple v-model="emails"></div>`,
+    }
+    const container = document.createElement('div')
+    container.innerHTML = await renderToString(h(App))
+
+    createSSRApp(App).mount(container)
+    await nextTick()
+
+    expect(state.url).toBe(' https://vuejs.org ')
+    expect(state.emails).toBe(' a@example.com , b@example.com ')
+  })
+
   test('force hydrate checkbox with indeterminate', () => {
     const { container } = mountWithHydration(
       '<input type="checkbox" indeterminate>',
