@@ -406,14 +406,14 @@ export function createHydrationFunctions(
     const hasDynamicProps = !!dynamicProps
     // skip props & children if this is hoisted static nodes
     // #5405 in dev, always hydrate children for HMR
-    // #16427 a cached child of <Transition appear> still needs to be
-    // unwrapped from the SSR <template>
+    // #16427 the SSR <template> wrapper of a cached <Transition appear>
+    // child still needs to be unwrapped (a native <template> is kept)
     if (
       __DEV__ ||
       forcePatch ||
       hasDynamicProps ||
       patchFlag !== PatchFlags.CACHED ||
-      (transition && isTemplateNode(el))
+      (transition && type !== 'template' && isTemplateNode(el))
     ) {
       if (dirs) {
         invokeDirectiveHook(vnode, null, parentComponent, 'created')
