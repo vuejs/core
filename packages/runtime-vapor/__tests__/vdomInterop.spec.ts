@@ -20841,4 +20841,79 @@ describe('KeepAlive pause across the interop boundary', () => {
       container.remove()
     }
   })
+
+  test.each([
+    ['a vdom page, the slot it passes to a vapor child', false],
+    ['a vapor page, the fallback of the slot it passes to a vdom child', true],
+  ])('pauses %s', async (_, pageVapor) => {
+    const data = ref<any>({ show: true, count: 0 })
+    const log: string[] = []
+    const components: any = { log: (s: string) => void log.push(s) }
+    const script = (vapor: boolean) =>
+      `<script setup${vapor ? ' vapor' : ''}>
+        const data = _data
+        const components = _components
+      </script>`
+    components.Child = compile(
+      script(!pageVapor) +
+        (pageVapor
+          ? `<template>
+              <u><slot>{{ components.log('slot') || data.count }}</slot></u>
+            </template>`
+          : `<template>
+              <u><slot /></u>
+            </template>`),
+      data,
+      components,
+      { vapor: !pageVapor },
+    )
+    components.Page = compile(
+      script(pageVapor) +
+        (pageVapor
+          ? `<template>
+              <components.Child>
+                <b v-if="data.show && false">content</b>
+              </components.Child>
+            </template>`
+          : `<template>
+              <components.Child>
+                {{ components.log('slot') || data.count }}
+              </components.Child>
+            </template>`),
+      data,
+      components,
+      { vapor: pageVapor },
+    )
+    const App = compile(
+      script(pageVapor) +
+        `<template>
+          <KeepAlive pause>
+            <components.Page v-if="data.show" />
+          </KeepAlive>
+        </template>`,
+      data,
+      components,
+      { vapor: pageVapor },
+    )
+    const container = document.createElement('div')
+    const app = (pageVapor ? createVaporApp : createApp)(App)
+    app.use(vaporInteropPlugin).mount(container)
+    try {
+      expect(container.textContent!.trim()).toBe('0')
+      data.value.show = false
+      await nextTick()
+      log.length = 0
+
+      data.value.count++
+      await nextTick()
+      expect(log).toEqual([])
+
+      data.value.show = true
+      await nextTick()
+      expect(log).toEqual(['slot'])
+      expect(container.textContent!.trim()).toBe('1')
+    } finally {
+      app.unmount()
+    }
+  })
 })
