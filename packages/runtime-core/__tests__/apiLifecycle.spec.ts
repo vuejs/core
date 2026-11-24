@@ -485,4 +485,26 @@ describe('api: lifecycle hooks', () => {
     render(null, root)
     expect(double.deps).toBeUndefined()
   })
+
+  it('does not keep a computed read in an event handler subscribed after unmount', () => {
+    const store = reactive({ n: 0 })
+    let double!: ComputedRefImpl
+    let onClick!: () => number
+
+    const Comp = {
+      setup() {
+        double = computed(() => store.n * 2) as unknown as ComputedRefImpl
+        onClick = () => double.value
+        return () => h('div')
+      },
+    }
+
+    const root = nodeOps.createElement('div')
+    render(h(Comp), root)
+    expect(onClick()).toBe(0)
+    expect(double.deps).toBeDefined()
+
+    render(null, root)
+    expect(double.deps).toBeUndefined()
+  })
 })

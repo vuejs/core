@@ -2,7 +2,7 @@ import { hasChanged, isFunction } from '@vue/shared'
 import { ReactiveFlags, TrackOpTypes } from './constants'
 import { onTrack, setupOnTrigger } from './debug'
 import type { DebuggerEvent, DebuggerOptions } from './effect'
-import { activeEffectScope } from './effectScope'
+import { type EffectScope, activeEffectScope } from './effectScope'
 import type { Ref } from './ref'
 import {
   type Link,
@@ -65,6 +65,11 @@ export class ComputedRefImpl<T = any> implements ReactiveNode {
   depsTail: Link | undefined = undefined
   flags: SystemReactiveFlags =
     SystemReactiveFlags.Mutable | SystemReactiveFlags.Dirty
+  /**
+   * @internal
+   * the scope it was created in
+   */
+  scope: EffectScope | undefined = activeEffectScope
 
   /**
    * @internal
@@ -169,9 +174,15 @@ export class ComputedRefImpl<T = any> implements ReactiveNode {
         })
       }
       link(this, activeSub)
-    } else if (activeEffectScope !== undefined) {
-      if (activeEffectScope.active) {
-        link(this, activeEffectScope)
+    } else if (
+      activeEffectScope !== undefined ||
+      (this.subs === undefined && this.scope !== undefined)
+    ) {
+      // a read outside of any scope, e.g. in an event handler, counts as one
+      // in the scope it was created in unless something already keeps it
+      const scope = activeEffectScope || this.scope!
+      if (scope.active) {
+        link(this, scope)
       } else if (this.subs === undefined) {
         // a stopped scope never unlinks it, so nothing would release the deps
         // this read tracked and they would keep the computed alive
@@ -281,10 +292,6 @@ export function computed<T>(
   if (__DEV__ && debugOptions && !isSSR) {
     cRef.onTrack = debugOptions.onTrack
     cRef.onTrigger = debugOptions.onTrigger
-  }
-
-  if (isSSR && activeEffectScope !== undefined) {
-    link(cRef, activeEffectScope)
   }
 
   return cRef as any
