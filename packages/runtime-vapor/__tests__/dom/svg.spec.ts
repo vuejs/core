@@ -225,4 +225,129 @@ describe('SVG support', () => {
       },
     )
   })
+
+  test('should preserve omitted vs empty class on svg root with object v-bind', async () => {
+    const seen: Record<string, (string | null)[]> = { vdom: [], vapor: [] }
+    await renderParity(
+      {
+        App: `<template><svg v-bind="data.attrs" /></template>`,
+      },
+      () => ref<{ attrs: Record<string, any> }>({ attrs: {} }),
+      async (data, root, mode) => {
+        const svg = root.querySelector('svg')!
+        seen[mode].push(svg.getAttribute('class'))
+
+        data.value.attrs = { class: '' }
+        await nextTick()
+        seen[mode].push(svg.getAttribute('class'))
+
+        data.value.attrs = { class: 'active' }
+        await nextTick()
+        seen[mode].push(svg.getAttribute('class'))
+
+        data.value.attrs = {}
+        await nextTick()
+        seen[mode].push(svg.getAttribute('class'))
+
+        data.value.attrs = { class: { active: false } }
+        await nextTick()
+        seen[mode].push(svg.getAttribute('class'))
+
+        data.value.attrs = { class: null }
+        await nextTick()
+        seen[mode].push(svg.getAttribute('class'))
+      },
+    )
+    expect(seen.vdom).toEqual([null, '', 'active', null, '', null])
+    expect(seen.vapor).toEqual(seen.vdom)
+  })
+
+  test('should preserve omitted vs empty class on non-root svg with object v-bind', async () => {
+    const seen: Record<string, (string | null)[]> = { vdom: [], vapor: [] }
+    await renderParity(
+      {
+        App: `<template><div><svg v-bind="data.attrs" /></div></template>`,
+      },
+      () => ref<{ attrs: Record<string, any> }>({ attrs: {} }),
+      async (data, root, mode) => {
+        const svg = root.querySelector('svg')!
+        seen[mode].push(svg.getAttribute('class'))
+
+        data.value.attrs = { class: '' }
+        await nextTick()
+        seen[mode].push(svg.getAttribute('class'))
+
+        data.value.attrs = { class: 'active' }
+        await nextTick()
+        seen[mode].push(svg.getAttribute('class'))
+
+        data.value.attrs = {}
+        await nextTick()
+        seen[mode].push(svg.getAttribute('class'))
+      },
+    )
+    expect(seen.vdom).toEqual([null, '', 'active', null])
+    expect(seen.vapor).toEqual(seen.vdom)
+  })
+
+  test('should preserve authored empty class and fallthrough class on svg root', async () => {
+    const authored: Record<string, (string | null)[]> = { vdom: [], vapor: [] }
+    await renderParity(
+      {
+        App: `<template><svg class="" v-bind="data.attrs" /></template>`,
+      },
+      () => ref<{ attrs: Record<string, any> }>({ attrs: {} }),
+      async (data, root, mode) => {
+        const svg = root.querySelector('svg')!
+        authored[mode].push(svg.getAttribute('class'))
+
+        data.value.attrs = { class: 'active' }
+        await nextTick()
+        authored[mode].push(svg.getAttribute('class'))
+
+        data.value.attrs = {}
+        await nextTick()
+        authored[mode].push(svg.getAttribute('class'))
+      },
+    )
+    expect(authored.vdom).toEqual(['', 'active', ''])
+    expect(authored.vapor).toEqual(authored.vdom)
+
+    const fallthrough: Record<string, (string | null)[]> = {
+      vdom: [],
+      vapor: [],
+    }
+    await renderParity(
+      {
+        Child: `<template><svg v-bind="data.child" /></template>`,
+        App: `<template><components.Child v-bind="data.parent" /></template>`,
+      },
+      () =>
+        ref<{ parent: Record<string, any>; child: Record<string, any> }>({
+          parent: { class: 'fall' },
+          child: { class: 'active' },
+        }),
+      async (data, root, mode) => {
+        const svg = root.querySelector('svg')!
+        fallthrough[mode].push(svg.getAttribute('class'))
+
+        data.value.child = {}
+        await nextTick()
+        fallthrough[mode].push(svg.getAttribute('class'))
+
+        data.value.parent = {}
+        await nextTick()
+        fallthrough[mode].push(svg.getAttribute('class'))
+
+        data.value.parent = { class: '' }
+        await nextTick()
+        fallthrough[mode].push(svg.getAttribute('class'))
+
+        data.value.parent = {}
+        await nextTick()
+        fallthrough[mode].push(svg.getAttribute('class'))
+      },
+    )
+    expect(fallthrough.vapor).toEqual(fallthrough.vdom)
+  })
 })

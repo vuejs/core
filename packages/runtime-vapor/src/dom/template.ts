@@ -14,6 +14,7 @@ import {
 } from './hydration'
 import { insertionParent, resetInsertionState } from '../insertionState'
 import {
+  EMPTY_ARR,
   type Namespace,
   type NormalizedStyle,
   TemplateFlags,
@@ -27,7 +28,7 @@ import { isInteropEnabled } from '../vdomInteropState'
 // the class and style a root's template contributes, shared by all its
 // instances (see the incremental setters in prop.ts)
 export type RootMeta = {
-  readonly cls?: string[]
+  readonly cls?: readonly string[]
   readonly sty?: NormalizedStyle
 }
 
@@ -48,7 +49,7 @@ export function template(html: string, flags: number = 0, ns?: Namespace) {
   // already carries the SSR fallthrough values); most roots never need it
   let rootMeta: RootMeta | undefined
   const createRootMeta = (): RootMeta => {
-    let cls: string[] | undefined
+    let cls: readonly string[] | undefined
     let sty: NormalizedStyle | undefined
     let resolved = false
     const resolve = () => {
@@ -56,7 +57,9 @@ export function template(html: string, flags: number = 0, ns?: Namespace) {
       if (html.includes(' class=') || html.includes(' style=')) {
         const el = (node ||= parseTemplate(html, ns)) as Element
         // the DOM tokenizes on ASCII whitespace only, unlike `\s`
-        if (el.classList.length) cls = Array.from(el.classList)
+        if (el.hasAttribute('class')) {
+          cls = el.classList.length ? Array.from(el.classList) : EMPTY_ARR
+        }
         const style = el.getAttribute('style')
         if (style) sty = parseStringStyle(style)
       }

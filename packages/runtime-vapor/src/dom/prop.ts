@@ -83,12 +83,12 @@ import { queueSelectUpdates, registerSelectUpdate } from '../renderEffect'
 type TargetElement = Element & {
   $root?: boolean | RootMeta
   $html?: string
-  $cls?: string
+  $cls?: string | null
   $clsFlags?: number
   // a root's own class / style and the fallthrough one are two layers on
   // one element; `$sty` is the style merge last written
-  $clsi?: string
-  $clsi$?: string
+  $clsi?: string | null
+  $clsi$?: string | null
   $styi?: NormalizedStyle
   $styi$?: NormalizedStyle
   $sty?: NormalizedStyle | string | undefined
@@ -257,27 +257,32 @@ export function setClass(
   if (el.$root) {
     setClassIncremental(el, value, isNormalized)
   } else {
-    if (!isNormalized) value = normalizeClass(value)
+    const normalizedValue =
+      value == null ? null : isNormalized ? value : normalizeClass(value)
     if (isHydrating && !isRecreatedNode(el)) {
       if (__DEV__ || __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__) {
         if (isClonedSlotContent()) {
-          queuePostFlushCb(() => classHasMismatch(el, value, !!el.$root))
+          queuePostFlushCb(() =>
+            classHasMismatch(el, normalizedValue || '', !!el.$root),
+          )
         } else {
-          classHasMismatch(el, value, false)
+          classHasMismatch(el, normalizedValue || '', false)
         }
       }
-      el.$cls = value
+      el.$cls = normalizedValue
       return
     }
 
-    if (value !== el.$cls) {
-      el.$cls = value
+    if (normalizedValue !== el.$cls) {
+      el.$cls = normalizedValue
       if (isTransitionEnabled) {
-        patchClass(el, value, isSVG)
+        patchClass(el, normalizedValue, isSVG)
+      } else if (normalizedValue == null) {
+        el.removeAttribute('class')
       } else if (isSVG) {
-        el.setAttribute('class', value)
+        el.setAttribute('class', normalizedValue)
       } else {
-        el.className = value
+        el.className = normalizedValue
       }
     }
   }
@@ -332,23 +337,24 @@ function setClassIncremental(
   isNormalized: boolean = false,
 ): void {
   const cacheKey = isApplyingFallthroughProps ? '$clsi$' : '$clsi'
-  const normalizedValue = isNormalized ? value : normalizeClass(value)
+  const normalizedValue =
+    value == null ? null : isNormalized ? value : normalizeClass(value)
 
   if (isHydrating && !isRecreatedNode(el)) {
     ;(__DEV__ || __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__) &&
-      classHasMismatch(el, normalizedValue, true)
+      classHasMismatch(el, normalizedValue || '', true)
     el[cacheKey] = normalizedValue
     return
   }
 
   const prev = el[cacheKey]
   if ((value = el[cacheKey] = normalizedValue) !== prev) {
-    const nextList = value.split(/\s+/)
+    const nextList = value ? value.split(/\s+/) : EMPTY_ARR
     if (value) {
       el.classList.add(...nextList)
     }
     if (prev) {
-      let kept: string[] | undefined
+      let kept: readonly string[] | undefined
       for (const cls of prev.split(/\s+/)) {
         if (
           !nextList.includes(cls) &&
@@ -358,14 +364,28 @@ function setClassIncremental(
         }
       }
     }
+    if (value === '') {
+      if (!el.hasAttribute('class')) {
+        el.setAttribute('class', '')
+      }
+    } else if (value === null && !el.classList.length) {
+      const other = isApplyingFallthroughProps ? el.$clsi : el.$clsi$
+      if (other == null && el.$root.cls === undefined) {
+        el.removeAttribute('class')
+      }
+    }
   }
 }
 
 // tokens the other layer still holds; a root's own binding replaces its
 // template class
-function keptClasses(el: any): string[] {
+function keptClasses(el: any): readonly string[] {
   const other = isApplyingFallthroughProps ? el.$clsi : el.$clsi$
-  return other !== undefined ? other.split(/\s+/) : el.$root.cls || EMPTY_ARR
+  return other != null
+    ? other
+      ? other.split(/\s+/)
+      : EMPTY_ARR
+    : el.$root.cls || EMPTY_ARR
 }
 
 // Defer css-var style mismatch checks until instance.block is set, so root
@@ -874,17 +894,24 @@ export function adoptRoot(el: any, attrs?: Record<string, any>): void {
   // normalized them) are taken off.
   const tpl: RootMeta | undefined = isHydrated ? el.$tpl : undefined
   const hydrated = attrs && isHydrated && !tpl ? attrs : undefined
-  const meta: { cls?: string[]; sty?: NormalizedStyle } = {}
+  const meta: { cls?: readonly string[]; sty?: NormalizedStyle } = {}
   // the caches default to '' on the prototype (optimizePropertyLookup)
   if (hasOwn(el, '$cls')) {
     el.$clsi = el.$cls
   } else if (tpl) {
     meta.cls = tpl.cls
-  } else if (el.classList.length) {
-    meta.cls = Array.from(el.classList)
-    if (hydrated && hydrated.class) {
-      const merged = hydrated.class.split(/\s+/)
-      meta.cls = meta.cls.filter(cls => !merged.includes(cls))
+  } else if (el.hasAttribute('class')) {
+    if (el.classList.length) {
+      let cls = Array.from<string>(el.classList)
+      if (hydrated && hydrated.class) {
+        const merged = hydrated.class.split(/\s+/)
+        cls = cls.filter(c => !merged.includes(c))
+        if (cls.length) meta.cls = cls
+      } else {
+        meta.cls = cls
+      }
+    } else if (!(hydrated && 'class' in hydrated)) {
+      meta.cls = EMPTY_ARR
     }
   }
   if (hasOwn(el, '$sty')) {
@@ -926,7 +953,8 @@ export function optimizePropertyLookup(): void {
   proto.$vei = undefined
   proto.$root = false
   proto.$clsFlags = undefined
-  proto.$cls = proto.$sty = ''
+  proto.$cls = undefined
+  proto.$sty = ''
   // same reason as $txt below: an empty string would make the first
   // setHtml(el, '') a no-op and leave the original children in place
   proto.$html = undefined
