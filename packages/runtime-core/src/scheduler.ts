@@ -245,6 +245,70 @@ export function flushPreFlushCbs(
   }
 }
 
+/**
+ * Runs the queued jobs of `root` and its descendants, in queue order, ahead of
+ * the rest of the queue.
+ */
+export function flushOwnedJobs(root: GenericComponentInstance): void {
+  if (flushIndex === jobsLength) return
+  const seen: CountMap | undefined = __DEV__ ? new Map() : undefined
+  const start = flushIndex
+  // the jobs of other owners, set aside and put back once the queue is drained
+  const rest: SchedulerJob[] = []
+  let lastOwner: GenericComponentInstance | null | undefined
+  let owned = false
+  try {
+    while (flushIndex < jobsLength) {
+      const job = jobs[flushIndex++]
+      // consecutive jobs mostly share their owner
+      if (job.i !== lastOwner) {
+        let owner = (lastOwner = job.i)
+        // a descendant is created after its ancestors
+        while (owner && owner.uid > root.uid) owner = owner.parent
+        owned = owner === root
+      }
+      if (!owned) {
+        rest.push(job)
+      } else if (!(job.flags! & SchedulerJobFlags.DISPOSED)) {
+        if (__DEV__ && checkRecursiveUpdates(seen!, job)) {
+          continue
+        }
+        if (job.flags! & SchedulerJobFlags.ALLOW_RECURSE) {
+          job.flags! &= ~SchedulerJobFlags.QUEUED
+        }
+        try {
+          job()
+        } catch (err) {
+          handleError(err, job.i, ErrorCodes.COMPONENT_UPDATE)
+        } finally {
+          if (!(job.flags! & SchedulerJobFlags.ALLOW_RECURSE)) {
+            job.flags! &= ~SchedulerJobFlags.QUEUED
+          }
+        }
+      }
+    }
+  } finally {
+    // an error leaves jobs unvisited, and a job queued meanwhile can sort
+    // before the ones already set aside
+    while (flushIndex < jobsLength) rest.push(jobs[flushIndex++])
+    rest.sort((a, b) => a.order! - b.order!)
+    for (let i = 0; i < rest.length; i++) jobs[start + i] = rest[i]
+    flushIndex = start
+    jobs.length = jobsLength = start + rest.length
+  }
+}
+
+/**
+ * Whether a job or a post-flush callback is still waiting to run.
+ */
+export function hasQueuedJobs(): boolean {
+  return (
+    flushIndex < jobsLength ||
+    postJobs.length > 0 ||
+    (activePostJobs !== null && postFlushIndex < activePostJobs.length)
+  )
+}
+
 export function flushPostFlushCbs(
   seen?: CountMap,
   // root mount: cbs queued before it, left in the queue

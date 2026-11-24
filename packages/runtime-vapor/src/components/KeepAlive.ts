@@ -11,13 +11,17 @@ import {
   getComponentName,
   invalidateMount,
   isAsyncWrapper,
+  isPausedKeepAliveEntry,
   isVNode,
   matches,
   onBeforeUnmount,
   onMounted,
   onUpdated,
+  pauseKeepAliveEntry,
   queuePostRenderEffect,
+  requestPauseKeepAliveEntry,
   resetShapeFlag,
+  resumeKeepAliveEntry,
   warn,
   watch,
 } from '@vue/runtime-dom'
@@ -89,6 +93,7 @@ const VaporKeepAliveImpl = defineVaporComponent({
     include: [String, RegExp, Array],
     exclude: [String, RegExp, Array],
     max: [String, Number],
+    pause: Boolean,
   },
   setup(props: KeepAliveProps, { slots, expose }) {
     // for e2e test
@@ -699,6 +704,12 @@ export function activate(
   const inputScope = instance.inputScope
   if (inputScope) inputScope.resume()
   move(instance, parentNode, anchor, MoveType.ENTER, instance, parentSuspense)
+  if (isPausedKeepAliveEntry(instance)) {
+    // its parent's update would deliver the inputs after its own catch-up
+    const inputEffect = instance.inputEffect
+    if (inputEffect && inputEffect.job) inputEffect.job()
+    resumeKeepAliveEntry(instance)
+  }
 
   queuePostRenderEffect(
     () => {
@@ -731,12 +742,14 @@ export function deactivate(
   invalidateMount(instance.a)
 
   move(instance, container, null, MoveType.LEAVE, instance, parentSuspense)
+  requestPauseKeepAliveEntry(instance)
 
   queuePostRenderEffect(
     () => {
       if (instance.da) invokeArrayFns(instance.da)
       invokeComponentVNodeHook(instance, 'onVnodeUnmounted')
       instance.isDeactivated = true
+      pauseKeepAliveEntry(instance)
     },
     undefined,
     parentSuspense,

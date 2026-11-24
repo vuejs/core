@@ -156,7 +156,7 @@ export class EffectScope implements ReactiveNode {
   }
 }
 
-function pauseScope(scope: EffectScope, by: EffectFlags): void {
+export function pauseScope(scope: EffectScope, by: EffectFlags): void {
   const wasPaused = scope.flags & EffectFlags.PAUSED
   scope.flags |= by
   if (wasPaused) return
@@ -180,9 +180,9 @@ function pauseScope(scope: EffectScope, by: EffectFlags): void {
   }
 }
 
-// Lifts one of the two pauses; the subtree resumes once neither is left. An
-// effect run on the way may pause or stop any part of the subtree again.
-function resumeScope(scope: EffectScope, by: EffectFlags): void {
+// Lifts one of its pauses; the subtree resumes once none is left. An effect run
+// on the way may pause or stop any part of the subtree again.
+export function resumeScope(scope: EffectScope, by: EffectFlags): void {
   if ((scope.flags &= ~by) & EffectFlags.PAUSED) return
   let link = scope.deps
   while (link !== undefined) {

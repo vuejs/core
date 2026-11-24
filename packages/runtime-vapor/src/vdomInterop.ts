@@ -52,6 +52,7 @@ import {
   isAsyncWrapper,
   isEmitListener,
   isKeepAlive,
+  isPausedKeepAliveEntry,
   isTeleportDisabled,
   isVNode,
   isHydrating as isVdomHydrating,
@@ -90,9 +91,11 @@ import {
   withCtx,
 } from '@vue/runtime-dom'
 import {
+  EffectFlags,
   EffectScope,
   effectScope,
   endBatch,
+  markEffectDirty,
   setActiveSub,
   startBatch,
 } from '@vue/reactivity'
@@ -1183,8 +1186,10 @@ const vaporInteropImpl = {
     }
     const startAnchor = componentStartAnchors.get(instance)
     if (startAnchor) insert(startAnchor, container, anchor)
-    activate(instance, container, anchor, parentSuspense)
+    // in place before the catch-up, which can empty the root and start it on
+    // a new anchor
     insert(vnode.anchor as any, container, anchor)
+    activate(instance, container, vnode.anchor as any, parentSuspense)
   },
 
   deactivate(vnode, container: ParentNode, parentSuspense) {
@@ -2087,6 +2092,7 @@ function createVDOMComponent(
   const useBridge = shouldUseRendererBridge(component)
   const comp = useBridge ? ensureRendererBridge(component) : component
   let propsInstance: VaporComponentInstance | undefined
+  let inputEffect: RenderEffect | undefined
   let rawValues: Record<string, any> = EMPTY_OBJ
   let rawRef: VNodeNormalizedRef | null | undefined
   let shouldRefreshRef = false
@@ -2106,6 +2112,8 @@ function createVDOMComponent(
   let hasDynamicProps =
     !once &&
     (!!cells || hasDynamicPropsSource((rawProps || EMPTY_OBJ) as RawProps))
+  // one passed in belongs to the caller
+  const ownsInputScope = !inputScope
   if (hasDynamicProps) {
     inputScope ||= new EffectScope(
       true,
@@ -2153,7 +2161,13 @@ function createVDOMComponent(
             (component as any).__asyncLoader &&
             vnode.component!.isMounted
           ) {
-            vnode.component!.update()
+            const instance = vnode.component!
+            // a paused one renders them once it resumes
+            if (instance.scope.flags & EffectFlags.RUNTIME_PAUSED) {
+              markEffectDirty(instance.effect)
+            } else {
+              instance.update()
+            }
           }
         }
       }, true)
@@ -2162,6 +2176,13 @@ function createVDOMComponent(
       if (!effect.deps) {
         effect.stop()
         hasDynamicProps = false
+        // nothing left in it to pause with the parent
+        if (ownsInputScope) {
+          inputScope!.stop()
+          inputScope = undefined
+        }
+      } else {
+        inputEffect = effect
       }
     }
     vnode = createVNode(comp, rawValues)
@@ -2375,6 +2396,14 @@ function createVDOMComponent(
       // An activated child re-enters with the inputs its parent holds now, so
       // catch the commit up with the sources before activating.
       if (frag.inputScope) frag.inputScope.resume()
+      // a paused one gets them before its own catch-up renders
+      if (
+        inputEffect &&
+        inputEffect.job &&
+        isPausedKeepAliveEntry(vnode.component!)
+      ) {
+        inputEffect.job()
+      }
       // entering under the hooks resolved for this switch, as vdom sets them
       // on every render: an in-out leave handed to them runs after the enter
       if (isTransitionEnabled && transition) {

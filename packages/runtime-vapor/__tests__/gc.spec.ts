@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 
 import {
+  ReactiveEffect,
   createApp,
   currentInstance,
   nextTick,
@@ -470,5 +471,63 @@ describe.skipIf(!global.gc)('async component gc', () => {
         defineVaporAsyncComponent(() => Promise.resolve(comp)),
       ),
     ).toBeUndefined()
+  })
+})
+
+describe.skipIf(!global.gc)('interop gc', () => {
+  const gc = () =>
+    new Promise<void>(resolve => {
+      setTimeout(() => {
+        global.gc!()
+        resolve()
+      })
+    })
+
+  test('releases the input effect of a vdom child whose inputs are constant', async () => {
+    const Child = compile(
+      `<script setup>
+        defineEmits(['ping'])
+      </script>
+      <template>
+        <button>child</button>
+      </template>`,
+      ref(),
+      {},
+      { vapor: false },
+    )
+    const App = compile(
+      `<script setup vapor>
+        const components = _components
+        const handler = () => {}
+      </script>
+      <template>
+        <components.Child @ping="handler" />
+      </template>`,
+      ref(),
+      { Child },
+    )
+    // @ts-expect-error ES2021 API
+    const stopped: WeakRef<ReactiveEffect>[] = []
+    const stop = ReactiveEffect.prototype.stop
+    const spy = vi
+      .spyOn(ReactiveEffect.prototype, 'stop')
+      .mockImplementation(function (this: ReactiveEffect) {
+        // @ts-expect-error ES2021 API
+        stopped.push(new WeakRef(this))
+        stop.call(this)
+      })
+    const root = document.createElement('div')
+    const app = createVaporApp(App).use(vaporInteropPlugin)
+    try {
+      app.mount(root)
+      spy.mockRestore()
+      expect(root.textContent).toBe('child')
+      expect(stopped.length).toBeGreaterThan(0)
+      await gc()
+      expect(stopped.filter(ref => ref.deref())).toEqual([])
+    } finally {
+      spy.mockRestore()
+      app.unmount()
+    }
   })
 })

@@ -1,4 +1,4 @@
-import { EMPTY_ARR, isArray } from '@vue/shared'
+import { EMPTY_ARR, ShapeFlags, isArray } from '@vue/shared'
 import { onScopeDispose } from '@vue/reactivity'
 import {
   type VaporComponentInstance,
@@ -19,6 +19,7 @@ import {
   type TransitionProps,
   type TransitionState,
   type VShowElement,
+  isPausedKeepAliveEntry,
   performTransitionEnter,
   performTransitionLeave,
   queuePostFlushCb,
@@ -40,6 +41,7 @@ import {
 } from './teleport'
 import { isTransitionEnabled } from './transition'
 import { isInteropEnabled } from './vdomInteropState'
+import { isKeepAliveEnabled } from './keepAlive'
 import {
   deferEnter,
   isSuspenseEnabled,
@@ -198,7 +200,15 @@ export function insert(
   }
 
   if (isVaporComponent(block)) {
-    if (block.isMounted && !block.isDeactivated) {
+    if (
+      block.isMounted &&
+      !block.isDeactivated &&
+      !(
+        isKeepAliveEnabled &&
+        block.shapeFlag! & ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE &&
+        isPausedKeepAliveEntry(block)
+      )
+    ) {
       insert(block.block!, parent, anchor, parentSuspense)
     } else {
       mountComponent(block, parent, anchor)

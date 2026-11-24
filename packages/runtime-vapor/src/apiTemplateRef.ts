@@ -13,6 +13,7 @@ import {
   callWithErrorHandling,
   createCanSetSetupRefChecker,
   isAsyncWrapper,
+  isResumingKeepAliveEntry,
   isTemplateRefKey,
   knownTemplateRefs,
   queuePostRenderEffect,
@@ -28,6 +29,7 @@ import {
   remove,
 } from '@vue/shared'
 import { isTeleportEnabled, isTeleportFragment } from './teleport'
+import { isKeepAliveEnabled } from './keepAlive'
 import {
   type DynamicFragment,
   type VaporFragment,
@@ -102,7 +104,7 @@ function registerFragmentRefUpdate(
         if (
           isVaporComponent(inner) &&
           inner.block === nestedFrag &&
-          !inner.isDeactivated &&
+          !isAway(inner) &&
           !inner.isUnmounted
         ) {
           reapply()
@@ -136,7 +138,7 @@ function registerFragmentRefUpdate(
         // KeepAlive clears refs on deactivation but keeps this fragment update
         // callback alive. Skip re-applying refs for async/offscreen updates
         // until the component is activated again.
-        if (isVaporComponent(el) && el.isDeactivated) return
+        if (isVaporComponent(el) && isAway(el)) return
         reapply()
       }
       ;(frag.u ||= []).push(onUpdate)
@@ -495,4 +497,13 @@ const getRefValue = (el: RefEl) => {
     return getRefValue(el.nodes as RefEl)
   }
   return el
+}
+
+// A deactivated component is away until it is activated again; a paused one's
+// activation starts with rendering what it missed.
+function isAway(instance: VaporComponentInstance): boolean {
+  return (
+    instance.isDeactivated &&
+    !(isKeepAliveEnabled && isResumingKeepAliveEntry(instance))
+  )
 }

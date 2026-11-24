@@ -1436,8 +1436,11 @@ function baseCreateRenderer(
       } else {
         // normal update
         instance.next = n2
-        // instance.update is the reactive effect.
-        instance.effect.run()
+        // paused by KeepAlive, it renders as it resumes
+        if (!(instance.scope.flags & EffectFlags.RUNTIME_PAUSED)) {
+          // instance.update is the reactive effect.
+          instance.effect.run()
+        }
       }
     } else {
       // no update needed. just copy over properties

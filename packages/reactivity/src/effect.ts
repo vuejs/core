@@ -61,7 +61,15 @@ export enum EffectFlags {
    * @internal
    */
   INHERITED_PAUSED = 1 << 11,
-  PAUSED = EffectFlags.SELF_PAUSED | EffectFlags.INHERITED_PAUSED,
+  /**
+   * paused by the runtime apart from `pause()`, e.g. KeepAlive deactivating a
+   * component
+   * @internal
+   */
+  RUNTIME_PAUSED = 1 << 12,
+  PAUSED = EffectFlags.SELF_PAUSED |
+    EffectFlags.INHERITED_PAUSED |
+    EffectFlags.RUNTIME_PAUSED,
 }
 
 export class ReactiveEffect<T = any>
@@ -192,6 +200,12 @@ export class ReactiveEffect<T = any>
 
 if (__DEV__) {
   setupOnTrigger(ReactiveEffect)
+}
+
+// Makes the next notification of an effect run it, for an update its
+// dependencies do not track.
+export function markEffectDirty(effect: ReactiveEffect): void {
+  effect.flags |= ReactiveFlags.Dirty
 }
 
 export function effect<T = any>(

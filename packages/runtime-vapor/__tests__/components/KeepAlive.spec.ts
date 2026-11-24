@@ -1,4 +1,5 @@
 import {
+  type EffectScope,
   createApp,
   defineAsyncComponent,
   h,
@@ -6261,5 +6262,668 @@ describe('KeepAlive with a directive on the cached root', () => {
     await nextTick()
     expect(host.textContent).toBe('a')
     expect(log).toEqual(['dir 0', 'dir 1'])
+  })
+})
+
+describe('KeepAlive pause while deactivated', () => {
+  const script = (body: string) =>
+    `<script setup vapor>
+      import { watch, watchEffect, onActivated, onDeactivated, onMounted } from 'vue'
+      const data = _data
+      const components = _components
+      ${body}
+    </script>`
+
+  test('leaves a deactivated entry running without the pause prop', async () => {
+    const data = ref<any>({ show: true, count: 0 })
+    const log: string[] = []
+    const components: any = { log: (s: string) => void log.push(s) }
+    components.Page = compile(
+      script(`
+        watch(() => data.value.count, () => components.log('watcher'))
+      `) +
+        `<template>
+          <div>{{ components.log('render') || data.count }}</div>
+        </template>`,
+      data,
+      components,
+    )
+    const App = compile(
+      `<template>
+        <KeepAlive>
+          <components.Page v-if="data.show" />
+        </KeepAlive>
+      </template>`,
+      data,
+      components,
+    )
+    define(App).render()
+    data.value.show = false
+    await nextTick()
+    log.length = 0
+
+    data.value.count++
+    await nextTick()
+    expect(log).toEqual(['watcher', 'render'])
+  })
+
+  test('holds the effects of a deactivated entry until it is activated', async () => {
+    const data = ref<any>({ show: true, count: 0 })
+    const log: string[] = []
+    const components: any = { log: (s: string) => void log.push(s) }
+    components.Leaf = compile(
+      script('') +
+        `<template>
+          <i>{{ components.log('leaf') || data.count }}</i>
+        </template>`,
+      data,
+      components,
+    )
+    components.Page = compile(
+      script(`
+        watch(() => data.value.count, () => components.log('pre watcher'))
+        watch(() => data.value.count, () => components.log('post watcher'), { flush: 'post' })
+        watch(() => data.value.count, () => components.log('sync watcher'), { flush: 'sync' })
+        watchEffect(() => components.log('watchEffect ' + data.value.count))
+        onActivated(() => components.log('activated'))
+      `) +
+        `<template>
+          <div>
+            <p>{{ components.log('text') || data.count }}</p>
+            <s v-if="data.count > 1">many</s>
+            <components.Leaf />
+          </div>
+        </template>`,
+      data,
+      components,
+    )
+    const App = compile(
+      `<template>
+        <KeepAlive pause>
+          <components.Page v-if="data.show" />
+        </KeepAlive>
+      </template>`,
+      data,
+      components,
+    )
+    const { host } = define(App).render()
+    data.value.show = false
+    await nextTick()
+    log.length = 0
+
+    data.value.count++
+    await nextTick()
+    data.value.count++
+    await nextTick()
+    expect(log).toEqual([])
+    expect(host.textContent).toBe('')
+
+    data.value.show = true
+    await nextTick()
+    expect(host.textContent).toBe('2many2')
+    expect(log).toEqual(
+      expect.arrayContaining([
+        'sync watcher',
+        'pre watcher',
+        'watchEffect 2',
+        'post watcher',
+        'text',
+        'leaf',
+      ]),
+    )
+    expect(log[log.length - 1]).toBe('activated')
+
+    log.length = 0
+    data.value.count++
+    await nextTick()
+    expect(host.textContent).toBe('3many3')
+  })
+
+  test('finishes the updates of the tick that deactivates the entry', async () => {
+    const data = ref<any>({ show: true, count: 0 })
+    const log: string[] = []
+    const components: any = { log: (s: string) => void log.push(s) }
+    components.Page = compile(
+      script(`
+        watch(() => data.value.count, () => components.log('pre watcher'))
+        watch(() => data.value.count, () => components.log('sync watcher'), { flush: 'sync' })
+        onActivated(() => components.log('activated'))
+        onDeactivated(() => components.log('deactivated'))
+      `) +
+        `<template>
+          <div>{{ components.log('text') || data.count }}</div>
+        </template>`,
+      data,
+      components,
+    )
+    const App = compile(
+      `<template>
+        <KeepAlive pause>
+          <components.Page v-if="data.show" />
+        </KeepAlive>
+      </template>`,
+      data,
+      components,
+    )
+    const { host } = define(App).render()
+    log.length = 0
+
+    data.value.count++
+    data.value.show = false
+    await nextTick()
+    expect(log).toEqual(['sync watcher', 'pre watcher', 'text', 'deactivated'])
+
+    log.length = 0
+    data.value.show = true
+    await nextTick()
+    expect(host.textContent).toBe('1')
+    expect(log).toEqual(['activated'])
+  })
+
+  test('pauses the cached entries of a nested KeepAlive with the outer entry', async () => {
+    const data = ref<any>({ outer: true, inner: 'X', count: 0 })
+    const log: string[] = []
+    const components: any = { log: (s: string) => void log.push(s) }
+    components.X = compile(
+      `<template>
+        <p>{{ components.log('X') || data.count }}</p>
+      </template>`,
+      data,
+      components,
+    )
+    components.Y = compile(
+      `<template>
+        <b>{{ components.log('Y') || data.count }}</b>
+      </template>`,
+      data,
+      components,
+    )
+    components.Page = compile(
+      `<template>
+        <KeepAlive pause>
+          <components.X v-if="data.inner === 'X'" />
+          <components.Y v-else />
+        </KeepAlive>
+      </template>`,
+      data,
+      components,
+    )
+    const App = compile(
+      `<template>
+        <KeepAlive pause>
+          <components.Page v-if="data.outer" />
+        </KeepAlive>
+      </template>`,
+      data,
+      components,
+    )
+    const { host } = define(App).render()
+    data.value.inner = 'Y'
+    await nextTick()
+    data.value.outer = false
+    await nextTick()
+    log.length = 0
+
+    data.value.count++
+    await nextTick()
+    expect(log).toEqual([])
+
+    data.value.outer = true
+    await nextTick()
+    expect(host.textContent).toBe('1')
+    // X was deactivated by the inner KeepAlive, which still holds it
+    expect(log).toEqual(['Y'])
+
+    data.value.inner = 'X'
+    await nextTick()
+    expect(host.textContent).toBe('1')
+    expect(log).toEqual(['Y', 'X'])
+  })
+
+  test.each([false, true])(
+    'mounts children of the catch-up render before activated (same turn: %s)',
+    async sameTurn => {
+      const data = ref<any>({ show: true, flag: false })
+      const log: string[] = []
+      const components: any = { log: (s: string) => void log.push(s) }
+      components.Leaf = compile(
+        script(`
+          onMounted(() => components.log('leaf mounted'))
+          onActivated(() => components.log('leaf activated'))
+        `) +
+          `<template>
+            <i></i>
+          </template>`,
+        data,
+        components,
+      )
+      components.Body = compile(
+        `<template>
+          <div>
+            <components.Leaf v-if="data.flag" />
+          </div>
+        </template>`,
+        data,
+        components,
+      )
+      components.Page = compile(
+        script(`onActivated(() => components.log('page activated'))`) +
+          `<template>
+            <components.Body />
+          </template>`,
+        data,
+        components,
+      )
+      const App = compile(
+        `<template>
+          <KeepAlive pause>
+            <components.Page v-if="data.show" />
+          </KeepAlive>
+        </template>`,
+        data,
+        components,
+      )
+      define(App).render()
+      data.value.show = false
+      await nextTick()
+      log.length = 0
+
+      data.value.flag = true
+      if (!sameTurn) await nextTick()
+      expect(log).toEqual([])
+      data.value.show = true
+      await nextTick()
+      expect(log).toEqual(['leaf mounted', 'leaf activated', 'page activated'])
+    },
+  )
+
+  describe('a root replaced while the entry is paused enters as one replaced on return', () => {
+    const ownRoot = `<template>
+        <article v-if="data.loaded">content</article>
+        <p v-else>loading</p>
+      </template>`
+    const leafRoot = `<template>
+        <components.Leaf />
+      </template>`
+    const propsRoot = `<script setup vapor>
+        defineProps(['loaded'])
+      </script>
+      <template>
+        <article v-if="loaded">content</article>
+        <p v-else>loading</p>
+      </template>`
+    const cases: [string, string, string | undefined, boolean, string?][] = [
+      ['by its own state', ownRoot, undefined, false],
+      ['by its own state in the return turn', ownRoot, undefined, true],
+      ['by a child in the return turn', leafRoot, ownRoot, true],
+      ['by props', propsRoot, undefined, false, ' :loaded="data.loaded"'],
+    ]
+    const mount = (
+      data: any,
+      log: string[],
+      page: string,
+      pause: boolean,
+      bind = '',
+      leaf?: string,
+    ) => {
+      const components: any = {}
+      if (leaf) components.Leaf = compile(leaf, data, components)
+      components.Page = compile(page, data, components)
+      components.B = compile(
+        `<template>
+          <b>B</b>
+        </template>`,
+        data,
+        components,
+      )
+      data.value.onBeforeEnter = (el: any) =>
+        log.push('beforeEnter ' + el.tagName)
+      data.value.onEnter = (el: any, done: () => void) => {
+        log.push('enter ' + el.tagName)
+        done()
+      }
+      data.value.onLeave = (el: any, done: () => void) => {
+        log.push('leave ' + el.tagName)
+        done()
+      }
+      const App = compile(
+        `<template>
+          <Transition
+            :css="false"
+            @before-enter="data.onBeforeEnter"
+            @enter="data.onEnter"
+            @leave="data.onLeave"
+          >
+            <KeepAlive${pause ? ' pause' : ''}>
+              <components.Page v-if="data.show"${bind} />
+              <components.B v-else />
+            </KeepAlive>
+          </Transition>
+        </template>`,
+        data,
+        components,
+      )
+      return define(App).render()
+    }
+
+    // without `pause` the root is replaced on return, which is what a paused
+    // entry catches up to
+    const run = async (
+      page: string,
+      leaf: string | undefined,
+      bind: string | undefined,
+      pause: boolean,
+      sameTurn: boolean,
+    ) => {
+      const data = ref<any>({ show: true, loaded: false })
+      const log: string[] = []
+      const { host, app } = mount(data, log, page, pause, bind, leaf)
+      data.value.show = false
+      await nextTick()
+      log.length = 0
+
+      data.value.loaded = true
+      if (!sameTurn) await nextTick()
+      expect(log).toEqual([])
+      data.value.show = true
+      await nextTick()
+      await nextTick()
+      const result = [stripAnchors(host.innerHTML), ...log]
+      app.unmount()
+      return result
+    }
+
+    test.each(cases)('%s', async (_, page, leaf, sameTurn, bind) => {
+      const paused = await run(page, leaf, bind, true, sameTurn)
+      expect(paused[0]).toBe('<article>content</article>')
+      expect(paused).toEqual(await run(page, leaf, bind, false, true))
+    })
+  })
+
+  test('an entry left and re-entered in one flush is active and updates', async () => {
+    const data = ref<any>({ cur: 'A', msg: 'first' })
+    const log: string[] = []
+    const components: any = { log: (s: string) => void log.push(s) }
+    components.A = compile(
+      script(`
+        defineProps(['msg'])
+        onActivated(() => components.log('A activated'))
+        onDeactivated(() => components.log('A deactivated'))
+      `) +
+        `<template>
+          <div>A {{ msg }}</div>
+        </template>`,
+      data,
+      components,
+    )
+    components.B = compile(
+      `<script setup vapor>
+        import { onBeforeMount } from 'vue'
+        onBeforeMount(() => {
+          _data.value.cur = 'A'
+        })
+      </script>
+      <template>
+        <div>B</div>
+      </template>`,
+      data,
+      components,
+    )
+    const App = compile(
+      `<template>
+        <KeepAlive pause>
+          <component
+            :is="data.cur === 'A' ? components.A : components.B"
+            :msg="data.msg"
+          />
+        </KeepAlive>
+      </template>`,
+      data,
+      components,
+    )
+    const { host } = define(App).render()
+    await nextTick()
+    log.length = 0
+
+    data.value.cur = 'B'
+    await nextTick()
+    await nextTick()
+    expect(stripAnchors(host.innerHTML)).toBe('<div>A first</div>')
+    expect(log).toEqual(['A deactivated', 'A activated'])
+
+    data.value.msg = 'second'
+    await nextTick()
+    expect(stripAnchors(host.innerHTML)).toBe('<div>A second</div>')
+  })
+
+  test('lets the deactivated hooks close a teleported modal', async () => {
+    const target = document.createElement('div')
+    document.body.appendChild(target)
+    const data = ref<any>({ show: true, target })
+    const components: any = {}
+    components.Page = compile(
+      script(`
+        import { ref } from 'vue'
+        const open = ref(true)
+        onDeactivated(() => {
+          open.value = false
+        })
+      `) +
+        `<template>
+          <div>page</div>
+          <Teleport :to="data.target">
+            <p v-if="open">modal</p>
+          </Teleport>
+        </template>`,
+      data,
+      components,
+    )
+    const App = compile(
+      `<template>
+        <KeepAlive pause>
+          <components.Page v-if="data.show" />
+        </KeepAlive>
+      </template>`,
+      data,
+      components,
+    )
+    define(App).render()
+    expect(stripAnchors(target.innerHTML)).toBe('<p>modal</p>')
+
+    data.value.show = false
+    await nextTick()
+    expect(stripAnchors(target.innerHTML)).toBe('')
+    target.remove()
+  })
+
+  test.each([
+    ['of the page', false],
+    ['of a child the page passes it to', true],
+  ])(
+    'lets the deactivated hooks close a teleported modal through a post watcher %s',
+    async (_, viaChild) => {
+      const target = document.createElement('div')
+      const data = ref<any>({ show: true, target, count: 0 })
+      const log: string[] = []
+      const components: any = { log: (s: string) => void log.push(s) }
+      components.Modal = compile(
+        script(`
+          import { ref } from 'vue'
+          const props = defineProps(['open'])
+          const visible = ref(props.open)
+          watch(
+            () => props.open,
+            value => {
+              visible.value = value
+            },
+            { flush: 'post' },
+          )
+        `) +
+          `<template>
+            <Teleport :to="data.target">
+              <p v-if="visible">modal</p>
+            </Teleport>
+          </template>`,
+        data,
+        components,
+      )
+      components.Page = compile(
+        script(`
+          import { ref } from 'vue'
+          const open = ref(true)
+          const visible = ref(true)
+          watch(
+            open,
+            value => {
+              visible.value = value
+            },
+            { flush: 'post' },
+          )
+          onDeactivated(() => {
+            open.value = false
+          })
+        `) +
+          (viaChild
+            ? `<template>
+                <div>{{ components.log('render') || data.count }}<components.Modal :open="open" /></div>
+              </template>`
+            : `<template>
+                <div>{{ components.log('render') || data.count }}</div>
+                <Teleport :to="data.target">
+                  <p v-if="visible">modal</p>
+                </Teleport>
+              </template>`),
+        data,
+        components,
+      )
+      const App = compile(
+        `<template>
+          <KeepAlive pause>
+            <components.Page v-if="data.show" />
+          </KeepAlive>
+        </template>`,
+        data,
+        components,
+      )
+      define(App).render()
+      expect(stripAnchors(target.innerHTML)).toBe('<p>modal</p>')
+
+      data.value.show = false
+      await nextTick()
+      expect(stripAnchors(target.innerHTML)).toBe('')
+      // and then pauses
+      log.length = 0
+      data.value.count++
+      await nextTick()
+      expect(log).toEqual([])
+    },
+  )
+
+  test.each(['pre', 'sync'])(
+    'delivers the props it returns with before catching up (%s watcher)',
+    async flush => {
+      const data = ref<any>({ show: true, id: 'old', revision: 0 })
+      const loads: string[] = []
+      const components: any = { load: (id: string) => void loads.push(id) }
+      components.Page = compile(
+        script(`
+        const props = defineProps(['id'])
+        watch(
+          () => data.value.revision,
+          () => components.load(props.id),
+          { flush: '${flush}' },
+        )
+      `) +
+          `<template>
+          <div>{{ props.id }}</div>
+        </template>`,
+        data,
+        components,
+      )
+      const App = compile(
+        `<template>
+        <KeepAlive pause>
+          <components.Page v-if="data.show" :id="data.id" />
+        </KeepAlive>
+      </template>`,
+        data,
+        components,
+      )
+      const { host } = define(App).render()
+      data.value.show = false
+      await nextTick()
+
+      data.value.show = true
+      data.value.id = 'new'
+      data.value.revision++
+      await nextTick()
+      expect(stripAnchors(host.innerHTML)).toBe('<div>new</div>')
+      expect(loads).toEqual(['new'])
+    },
+  )
+
+  describe('keeps a pause of its own scope apart', () => {
+    const mount = () => {
+      const data = ref<any>({ show: true, count: 0 })
+      const log: string[] = []
+      const state = {} as { scope: EffectScope }
+      const components: any = {
+        log: (s: string) => void log.push(s),
+        capture: (scope: EffectScope) => (state.scope = scope),
+      }
+      components.Page = compile(
+        script(`
+          import { getCurrentScope } from 'vue'
+          components.capture(getCurrentScope())
+          watch(() => data.value.count, value => components.log('watch ' + value))
+        `) +
+          `<template>
+            <div>{{ data.count }}</div>
+          </template>`,
+        data,
+        components,
+      )
+      const App = compile(
+        `<template>
+          <KeepAlive pause>
+            <components.Page v-if="data.show" />
+          </KeepAlive>
+        </template>`,
+        data,
+        components,
+      )
+      const { host } = define(App).render()
+      return { data, log, host, scope: state.scope }
+    }
+
+    test('a pause of its own outlives the deactivation', async () => {
+      const { data, log, host, scope } = mount()
+      scope.pause()
+      data.value.show = false
+      await nextTick()
+      data.value.show = true
+      await nextTick()
+
+      data.value.count++
+      await nextTick()
+      expect(log).toEqual([])
+      expect(stripAnchors(host.innerHTML)).toBe('<div>0</div>')
+    })
+
+    test('ending its own pause leaves the deactivated entry paused', async () => {
+      const { data, log, host, scope } = mount()
+      scope.pause()
+      data.value.show = false
+      await nextTick()
+      scope.resume()
+
+      data.value.count++
+      await nextTick()
+      expect(log).toEqual([])
+      data.value.show = true
+      await nextTick()
+      expect(log).toEqual(['watch 1'])
+      expect(stripAnchors(host.innerHTML)).toBe('<div>1</div>')
+    })
   })
 })
