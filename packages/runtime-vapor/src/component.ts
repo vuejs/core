@@ -1596,6 +1596,7 @@ export function mountComponent(
         // resolves. Restore only its active state; KeepAlive activation requires
         // a mounted block.
         instance.isDeactivated = false
+        if (instance.inputScope) instance.inputScope.resume()
       }
       return
     }
