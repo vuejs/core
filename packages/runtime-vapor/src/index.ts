@@ -34,7 +34,7 @@ export {
 } from './component'
 export { renderEffect } from './renderEffect'
 export { createSlot } from './componentSlots'
-export { enableDynamicSlots } from './dynamicSlotsState'
+export { enableDynamicSlotProps, enableDynamicSlots } from './dynamicSlotsState'
 export { withOnce } from './once'
 export { template } from './dom/template'
 export { createTextNode, child, nthChild, next, txt } from './dom/node'

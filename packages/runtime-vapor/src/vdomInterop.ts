@@ -122,7 +122,7 @@ import {
   setPublishInteropScopeIds,
 } from './scopeId'
 import { setVarsOnBlock } from './helpers/useCssVars'
-import { enableDynamicSlots } from './dynamicSlotsState'
+import { enableDynamicSlotProps, enableDynamicSlots } from './dynamicSlotsState'
 import type { LooseRawSlots } from './componentSlots'
 import {
   type Block,
@@ -3714,6 +3714,7 @@ export const vaporInteropPlugin: Plugin = app => {
   }
   setInteropEnabled()
   enableDynamicSlots()
+  enableDynamicSlotProps()
   setVaporInteropEnabled()
   setPublishInteropScopeIds(publishVaporScopeIds)
   app._context.vapor = vaporInteropImpl
