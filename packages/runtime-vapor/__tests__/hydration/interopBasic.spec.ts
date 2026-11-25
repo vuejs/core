@@ -370,9 +370,7 @@ describe('VDOM interop', () => {
     expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
       `
       "
-      <!--[$-->
       <!--[--><div>1</div><div>2</div><!--]-->
-      <!--]-->
       "
     `,
     )
@@ -495,9 +493,7 @@ describe('VDOM interop', () => {
     expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
       `
       "
-      <!--[$-->
       <!--[--><span>true vapor fallback</span><!--]-->
-      <!--]-->
       "
     `,
     )
@@ -507,9 +503,7 @@ describe('VDOM interop', () => {
     expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
       `
       "
-      <!--[$-->
       <!--[--><span>false vapor fallback</span><!--]-->
-      <!--]-->
       "
     `,
     )

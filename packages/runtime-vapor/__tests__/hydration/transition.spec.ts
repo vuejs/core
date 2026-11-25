@@ -73,7 +73,7 @@ describe('Vapor Mode hydration', () => {
 
       expect(`Hydration node mismatch`).not.toHaveBeenWarned()
       expect(container.innerHTML).toBe(
-        `<!--[$--><!--[!--><!--if--><div>fallback</div><!--]--><!--]-->`,
+        `<!--[!--><!--if--><div>fallback</div><!--]-->`,
       )
 
       data.show = true
@@ -243,9 +243,7 @@ describe('Vapor Mode hydration', () => {
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
         `
         "
-        <!--[$-->
         <!--[--><div style="display:none;" class="v-enter-from v-enter-active">foo</div><!--]-->
-        <!--]-->
         "
       `,
       )
@@ -271,10 +269,8 @@ describe('Vapor Mode hydration', () => {
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
         `
         "
-        <!--[$-->
         <!--[-->
         <!--[--><div style="display:none;" class="v-enter-from v-enter-active">foo</div><!--]-->
-        <!--]-->
         <!--]-->
         "
       `,
@@ -1659,10 +1655,8 @@ describe('Vapor Mode hydration', () => {
       const { container } = await mountWithHydration(html, code, data)
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
         "
-        <!--[$-->
         <!--[-->
         <!--[--><li>1</li><!--]-->
-        <!--]-->
         <!--]-->
         "
       `)
@@ -1670,10 +1664,8 @@ describe('Vapor Mode hydration', () => {
       await nextTick()
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
         "
-        <!--[$-->
         <!--[-->
         <!--[--><li>1</li><li class="list-enter-from list-enter-active">2</li><!--]-->
-        <!--]-->
         <!--]-->
         "
       `)
@@ -1700,7 +1692,7 @@ describe('Vapor Mode hydration', () => {
         data,
       )
       expect(html).toBe(
-        `<!--[$--><!--[--><!--[--><!--[--><li>1</li><li>2</li><!--]--><!--]--><!--]--><!--]-->`,
+        `<!--[--><!--[--><!--[--><li>1</li><li>2</li><!--]--><!--]--><!--]-->`,
       )
       expect(container.innerHTML).toBe(html)
       expect(`Hydration node mismatch`).not.toHaveBeenWarned()
@@ -1711,7 +1703,7 @@ describe('Vapor Mode hydration', () => {
       await nextTick()
       expect(container.querySelector('li')).toBe(li)
       expect(container.innerHTML).toBe(
-        `<!--[$--><!--[--><!--[--><!--[--><li>1</li><li>2</li><li>3</li><!--]--><!--]--><!--]--><!--]-->`,
+        `<!--[--><!--[--><!--[--><li>1</li><li>2</li><li>3</li><!--]--><!--]--><!--]-->`,
       )
     })
 
@@ -1724,7 +1716,7 @@ describe('Vapor Mode hydration', () => {
       [
         'without tag',
         `<TransitionGroup><slot /></TransitionGroup>`,
-        (s: string) => `<!--[$--><!--[-->${s}<!--]--><!--]-->`,
+        (s: string) => `<!--[-->${s}<!--]-->`,
       ],
     ])(
       '%s should hydrate vdom slot content under a vdom parent',

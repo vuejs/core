@@ -85,6 +85,24 @@ describe('ssr: slot', () => {
     ).toBe(`<div><!--[--><!--]--></div>`)
   })
 
+  // what a teleport renders is in its target: it is content all the same
+  test('teleport slot', async () => {
+    expect(
+      await renderToString(
+        createApp({
+          components: {
+            one: {
+              template: `<div><slot>fallback</slot></div>`,
+            },
+          },
+          template: `<one><teleport to="#target"><p/></teleport></one>`,
+        }),
+      ),
+    ).toBe(
+      `<div><!--[--><!--teleport start--><!--teleport end--><!--]--></div>`,
+    )
+  })
+
   test('multiple elements', async () => {
     expect(
       await renderToString(

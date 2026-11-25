@@ -109,8 +109,6 @@ const ORDER_STRIDE = 1 << 20
 interface ChildContextInfo {
   node: AllNode
   hasSingleRootChild: boolean
-  // comments stay next to the single root of the template, as nodes it renders
-  hasCommentRootChild: boolean
   // a component's default slot body: its children minus the slot templates
   hasSingleSlotRootChild: boolean
   isLastEffectiveChild: boolean[]
@@ -242,9 +240,13 @@ export class TransformContext<T extends AllNode = AllNode> {
       this.isLastEffectiveChild = isLastEffectiveChild
       this.isOnRightmostPath = parent.isOnRightmostPath && isLastEffectiveChild
       this.isSingleRoot = parent.isSingleRootChild(childInfo)
+      // comments stay next to the single root of the template, as nodes it
+      // renders
       this.hasCommentSibling =
         this.isSingleRoot &&
-        (childInfo.hasCommentRootChild || parent.hasCommentSibling)
+        (parent.hasCommentSibling ||
+          (parent.node.type === NodeTypes.ROOT &&
+            hasCommentRootChild(parent.node.children)))
       this.isSlotRoot = parent.isSlotRootChild(childInfo)
     } else {
       this.root = this as TransformContext<RootNode>
@@ -562,7 +564,6 @@ export class TransformContext<T extends AllNode = AllNode> {
       return {
         node,
         hasSingleRootChild: true,
-        hasCommentRootChild: false,
         hasSingleSlotRootChild: false,
         isLastEffectiveChild: [],
       }
@@ -587,10 +588,6 @@ export class TransformContext<T extends AllNode = AllNode> {
     const childInfo = {
       node,
       hasSingleRootChild: hasSingleRoot,
-      hasCommentRootChild:
-        hasSingleRoot &&
-        node.type === NodeTypes.ROOT &&
-        hasCommentRootChild(children),
       hasSingleSlotRootChild:
         node.type === NodeTypes.ELEMENT &&
         node.tagType === ElementTypes.COMPONENT &&

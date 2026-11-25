@@ -29,7 +29,7 @@ import {
   defineComponent,
   nextTick,
   unref,
-  useInstanceOption,
+  useInstanceInfo,
   warn,
 } from '@vue/runtime-core'
 import {
@@ -882,12 +882,12 @@ export class VueElement extends VueElementBase<
 }
 
 export function useHost(caller?: string): VueElementBase | null {
-  const { hasInstance, value } = useInstanceOption('ce', true)
-  const el = value as VueElementBase
+  const instance = useInstanceInfo()
+  const el = instance && (instance.ce as VueElementBase)
   if (el) {
     return el
   } else if (__DEV__) {
-    if (!hasInstance) {
+    if (!instance) {
       warn(
         `${caller || 'useHost'} called without an active component instance.`,
       )

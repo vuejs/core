@@ -395,6 +395,10 @@ export function move(
         parentComponent,
         parentSuspense,
       )
+    } else if (block.asyncDepRegistered && moveType !== MoveType.ENTER) {
+      // leaving or reordering a pending async component moves its placeholder
+      // only; re-entering through `mountComponent` would resume its inputs
+      insert(block.pendingBlock || block.block, parent, anchor)
     } else if (!isTransitionEnabled || block.asyncDepRegistered) {
       // an unmounted component is either held slot content, which its outlet
       // places, or a pending async one, which moves its placeholder

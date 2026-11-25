@@ -930,19 +930,15 @@ describe('Vapor Mode hydration', () => {
             const firstRange = normalizeBlock(instances[0].pendingBlock!)
             const secondRange = normalizeBlock(instances[1].pendingBlock!)
             expect(formatNodeList(firstRange)).toEqual([
-              '<!--[$-->',
               '<!--[-->',
               '<span>1-one</span>',
               '<span>1-two</span>',
               '<!--]-->',
-              '<!--]-->',
             ])
             expect(formatNodeList(secondRange)).toEqual([
-              '<!--[$-->',
               '<!--[-->',
               '<span>2-one</span>',
               '<span>2-two</span>',
-              '<!--]-->',
               '<!--]-->',
             ])
 
@@ -1617,7 +1613,7 @@ describe('Vapor Mode hydration', () => {
         runtimeDom.createSSRApp(SSRApp),
       )
       expect(root.innerHTML).toMatchInlineSnapshot(
-        `"<div style="display:none;"><!--[--><!--[$--><!--[--><!--[$--><!--[--><div>0</div><!--]--><!--]--><!--]--><!--]--><!--]--></div>"`,
+        `"<div style="display:none;"><!--[--><!--[--><!--[--><div>0</div><!--]--><!--]--><!--]--></div>"`,
       )
 
       const Toggle = compileVaporComponent(toggleCode)
@@ -1635,7 +1631,7 @@ describe('Vapor Mode hydration', () => {
       await nextTick()
       await nextTick()
       expect(root.innerHTML).toMatchInlineSnapshot(
-        `"<div style=""><!--[--><!--[$--><!--[--><!--[$--><!--[--><div>1</div><!--]--><!--]--><!--]--><!--]--><!--]--></div>"`,
+        `"<div style=""><!--[--><!--[--><!--[--><div>1</div><!--]--><!--]--><!--]--></div>"`,
       )
       expect(data.value.fn).toBeCalledTimes(1)
     })
@@ -1794,8 +1790,8 @@ describe('hydrating a component whose root is a pending async setup child', () =
   }
 })
 
-// the host's range and the async setup's open back to back: the pending
-// range is the setup's whole range
+// the host shares the range of its async setup root: the pending range is
+// that whole range
 describe('async setup as the lone root of a vapor host under vdom Suspense', () => {
   async function run(
     childTemplate: string,

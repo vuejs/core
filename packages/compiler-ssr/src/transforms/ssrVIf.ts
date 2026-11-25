@@ -92,7 +92,7 @@ function processIfBranch(
 }
 
 /** Whether a branch renders as it is: its sole element or v-for, unwrapped. */
-export function isBareBranch({ children }: IfBranchNode): boolean {
+function isBareBranch({ children }: IfBranchNode): boolean {
   return (
     children.length === 1 &&
     (children[0].type === NodeTypes.ELEMENT ||
@@ -106,7 +106,7 @@ export function isBareBranch({ children }: IfBranchNode): boolean {
  * that each render one plain element, all of different tags, are told apart
  * by the tag.
  */
-export function hasLookalikeBranches(branches: IfBranchNode[]): boolean {
+function hasLookalikeBranches(branches: IfBranchNode[]): boolean {
   if (branches.length < 2) return false
   const tags = new Set<string>()
   for (const { children } of branches) {

@@ -534,8 +534,9 @@ describe('ssr: components', () => {
     expect(compile(`<div/><slot/>`).code).toContain('<!--[-->')
   })
 
-  // a sole root that is one node, or a component rendering in the range the
-  // component around it has, opens no range of the component's own
+  // a sole root opens no range of the component's own: one node, or the
+  // range it opens, is its unit, and a component renders in the range the
+  // component around it has
   test.each([
     ['an element', `<div/>`],
     ['a component', `<foo/>`],
@@ -547,16 +548,11 @@ describe('ssr: components', () => {
     ['a v-if chain', `<foo v-if="a"/><div v-else/>`],
     ['a Teleport', `<Teleport to="body"><foo/></Teleport>`],
     ['a TransitionGroup with a tag', `<TransitionGroup tag="ul"/>`],
-  ])('vapor sole root without a range: %s', (_, src) => {
-    expect(compile(src, { vapor: true }).code).not.toContain('<!--[\\$')
-  })
-
-  // a sole root that opens a range itself renders in the component's own:
-  // what a component renders never begins with a range a slot around it
-  // could take for its own
-  test.each([
     ['a v-for', `<div v-for="i in list"/>`],
     ['a slot outlet', `<slot/>`],
+    ['a v-if rendering a slot outlet', `<slot v-if="a"/>`],
+    ['a KeepAlive rendering a slot outlet', `<KeepAlive><slot/></KeepAlive>`],
+    ['a Suspense', `<Suspense><foo/></Suspense>`],
     [
       'a v-if rendering several nodes',
       `<template v-if="a"><i/><b/></template>`,
@@ -565,20 +561,16 @@ describe('ssr: components', () => {
       'a v-if rendering a v-for',
       `<template v-if="a"><i v-for="i in list"/></template>`,
     ],
-    ['a v-if rendering a slot outlet', `<slot v-if="a"/>`],
     [
       'a Transition rendering a slot outlet',
       `<Transition><slot/></Transition>`,
     ],
-    ['a KeepAlive rendering a slot outlet', `<KeepAlive><slot/></KeepAlive>`],
     [
       'a TransitionGroup without a tag',
       `<TransitionGroup><foo/></TransitionGroup>`,
     ],
-    ['a Suspense', `<Suspense><foo/></Suspense>`],
-  ])('vapor sole root in a range: %s', (_, src) => {
-    expect(compile(src, { vapor: true }).code).toContain('<!--[\\$-->')
-    expect(compile(src).code).not.toContain('<!--[\\$')
+  ])('vapor sole root without a range: %s', (_, src) => {
+    expect(compile(src, { vapor: true }).code).not.toContain('<!--[\\$')
   })
 
   // comments are roots like any other for the range: the client compiler

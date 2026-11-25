@@ -188,7 +188,6 @@ import {
   advanceHydrationNode,
   claimAnchor,
   claimUntrackedAnchor,
-  createFragmentClaim,
   currentHydrationNode,
   hydrateBlock,
   isComment,
@@ -969,9 +968,7 @@ const vaporInteropImpl = {
     // the vdom fragment it ends. Either way the slot itself has nothing to
     // adopt, and an empty branch inside must not take that marker for its own
     // anchor: mount in place.
-    // Only an outlet with a fallback renders that range: under any other (a
-    // slot rendered bare) it is the one of a vdom component in the content.
-    const isFallbackRange = isComment(node, '[!') && !!vnode.vs!.outlets
+    const isFallbackRange = isComment(node, '[!')
     const close = isFallbackRange
       ? locateEndAnchor(node)!
       : isRangeEnd(node)
@@ -997,6 +994,11 @@ const vaporInteropImpl = {
     const container = parentNode(node)!
     let createdAnchor = false
     let resumeNode: Node | null = null
+    // content rendered bare starts on a node of its own, as a mounted slot's
+    const start = isRangeStart(node)
+      ? null
+      : claimUntrackedAnchor(createTextNode())
+    if (start) container.insertBefore(start, node)
     vaporHydrateNode(node, () => {
       if (isVdomTransitionEnabled && vnode.transition) {
         ensureTransitionHooksRegistered()
@@ -1029,17 +1031,13 @@ const vaporInteropImpl = {
       if (!fragmentAnchor && !wrapped) {
         createdAnchor = true
         resumeNode = anchor && parentNode(anchor) === container ? anchor : null
-        anchor = createTextNode()
+        anchor = claimUntrackedAnchor(createTextNode())
         container.insertBefore(anchor, resumeNode)
       }
       // VDOM SSR wraps slot output in fragment anchors. Keep that range on the
       // VaporSlot vnode so enabled Teleport removal can dispose both anchors.
-      if (wrapped) {
-        vnode.el = node
-        vnode.anchor = anchor
-      } else {
-        vnode.anchor = vnode.el = anchor
-      }
+      vnode.el = wrapped ? node : start || anchor
+      vnode.anchor = anchor
       if (__DEV__ && !vnode.anchor) {
         throw new Error(
           `Failed to locate slot anchor. this is likely a Vue internal bug.`,
@@ -4546,14 +4544,7 @@ function renderVaporSlot(
           fallbackRange.getContent = frag.getContent
         }
         if (isHydrating) {
-          // a fallback range under the cursor is the content's own: the
-          // slot's is adopted without hydration (see `hydrateSlot`)
-          withHydratingSlotBoundary(
-            renderContent,
-            isComment(currentHydrationNode!, '[!')
-              ? createFragmentClaim()
-              : undefined,
-          )
+          withHydratingSlotBoundary(renderContent)
         } else {
           renderContent()
         }

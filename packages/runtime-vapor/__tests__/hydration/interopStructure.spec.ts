@@ -403,11 +403,9 @@ describe('VDOM interop', () => {
     expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
       `
       "
-      <!--[$-->
       <!--[-->
       <!--[-->2<!--]-->
       <span>1</span><!--]-->
-      <!--]-->
       "
     `,
     )
@@ -419,11 +417,9 @@ describe('VDOM interop', () => {
     expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
       `
       "
-      <!--[$-->
       <!--[-->
       <!--[-->3<!--]-->
       <span>4</span><!--]-->
-      <!--]-->
       "
     `,
     )

@@ -20288,3 +20288,130 @@ describe('interop root el', () => {
     },
   )
 })
+
+describe('cached async setup child re-entering a KeepAlive while pending', () => {
+  // the entry is forwarded through a slot: a direct `<component :is>` child
+  // of KeepAlive defers the switch until setup resolves, so it never leaves
+  function mountTree() {
+    let resolve!: () => void
+    const data = ref<any>({
+      msg: 'a',
+      onSetup: vi.fn(),
+      onMsg: vi.fn(),
+      gate: new Promise<void>(r => (resolve = r)),
+    })
+    const components: any = {}
+    components.Child = markRaw(
+      compile(
+        `<script setup>
+          import { watch } from 'vue'
+          const props = defineProps(['msg'])
+          _data.value.onSetup()
+          watch(() => props.msg, v => _data.value.onMsg(v), { flush: 'sync' })
+          await _data.value.gate
+        </script>
+        <template>
+          <p>{{ props.msg }}</p>
+        </template>`,
+        data,
+        components,
+      ),
+    )
+    components.Other = markRaw(
+      compile(
+        `<template>
+          <span>other</span>
+        </template>`,
+        data,
+        components,
+      ),
+    )
+    components.Outlet = compile(
+      `<template>
+        <KeepAlive>
+          <slot />
+        </KeepAlive>
+      </template>`,
+      data,
+      components,
+    )
+    components.Tree = compile(
+      `<template>
+        <components.Outlet>
+          <component :is="data.comp" :msg="data.msg" />
+        </components.Outlet>
+      </template>`,
+      data,
+      components,
+    )
+    const Root = compile(
+      `<script setup>const components = _components</script>
+      <template>
+        <Suspense>
+          <components.Tree />
+          <template #fallback>
+            <span>loading</span>
+          </template>
+        </Suspense>
+      </template>`,
+      data,
+      components,
+      { vapor: false },
+    )
+    data.value.comp = components.Other
+    const host = document.createElement('div')
+    const app = createApp(Root)
+    app.use(vaporInteropPlugin).mount(host)
+    const show = (name: 'Child' | 'Other') => {
+      data.value.comp = components[name]
+      return nextTick()
+    }
+    const settle = async () => {
+      resolve()
+      await new Promise(r => setTimeout(r))
+      await nextTick()
+    }
+    return { data, host, app, show, settle }
+  }
+
+  test('receives prop updates once setup resolves', async () => {
+    const { data, host, app, show, settle } = mountTree()
+    try {
+      await show('Child')
+      await show('Other')
+      await show('Child')
+      await settle()
+      expect(host.innerHTML).toContain('<p>a</p>')
+
+      data.value.msg = 'b'
+      await nextTick()
+      expect(host.innerHTML).toContain('<p>b</p>')
+      expect(data.value.onSetup).toHaveBeenCalledTimes(1)
+    } finally {
+      app.unmount()
+    }
+  })
+
+  test('receives no prop updates after leaving again', async () => {
+    const { data, host, app, show, settle } = mountTree()
+    try {
+      await show('Child')
+      await show('Other')
+      await show('Child')
+      await show('Other')
+      data.value.msg = 'b'
+      await nextTick()
+      await settle()
+      data.value.msg = 'c'
+      await nextTick()
+      expect(data.value.onMsg).not.toHaveBeenCalled()
+
+      await show('Child')
+      expect(host.innerHTML).toContain('<p>c</p>')
+      expect(data.value.onMsg.mock.calls).toEqual([['c']])
+      expect(data.value.onSetup).toHaveBeenCalledTimes(1)
+    } finally {
+      app.unmount()
+    }
+  })
+})

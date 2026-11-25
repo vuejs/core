@@ -20,6 +20,11 @@ const { ensureValidVNode, rawVaporSlotKey } = ssrUtils
 // learn whether one rendered inside
 let vaporSlots = 0
 
+// the slot a transition renders bare, while it renders: a vapor slot that
+// opens its range first in it keeps that range
+let bare: { push: PushFn; buffer: SSRBufferItem[]; vapor: boolean } | null =
+  null
+
 export type SSRSlots = Record<string, SSRSlot>
 export type SSRSlot = (
   props: Props,
@@ -69,12 +74,24 @@ export function ssrRenderSlotInner(
 ): void {
   const slotFn = slots[slotName]
   if (slotFn) {
-    if ((slotFn as any)[rawVaporSlotKey]) vaporSlots++
+    // where a transition renders the slot bare: under it, or first in its slot
+    let bareSlot = false
+    let firstIn: typeof bare = null
+    if ((slotFn as any)[rawVaporSlotKey]) {
+      vaporSlots++
+      if (bare && bare.push === push && !bare.buffer.length) firstIn = bare
+      bareSlot = !!transition || !!firstIn
+      transition = false
+    }
     const before = vaporSlots
     const slotBuffer: SSRBufferItem[] = []
     const bufferedPush = (item: SSRBufferItem) => {
       slotBuffer.push(item)
     }
+    const prevBare = bare
+    const outlet = (bare = transition
+      ? { push: bufferedPush, buffer: slotBuffer, vapor: false }
+      : null)
     const ret = slotFn(
       // keep the slot function's contract in sync with `renderSlot`, which also
       // normalizes nullish props before invoking the slot
@@ -95,6 +112,7 @@ export function ssrRenderSlotInner(
         vnodes = undefined
       }
     }
+    bare = prevBare
     if (vnodes !== undefined) {
       if (!transition) {
         push(!vnodes && fallbackRenderFn ? `<!--[!-->` : `<!--[-->`)
@@ -130,6 +148,18 @@ export function ssrRenderSlotInner(
           }
         }
       }
+      // A vapor slot renders bare where a transition renders its slot bare,
+      // unless it renders nothing where a fallback can show, or its content
+      // begins with a range: its client takes a range there for the slot's own.
+      if (
+        bareSlot &&
+        (!isEmptySlot || (!fallbackRenderFn && !firstIn)) &&
+        !opensRange(slotBuffer)
+      ) {
+        for (let i = 0; i < slotBuffer.length; i++) push(slotBuffer[i])
+        return
+      }
+      if (firstIn) firstIn.vapor = true
       if (!transition) {
         push(isEmptySlot && fallbackRenderFn ? `<!--[!-->` : `<!--[-->`)
       }
@@ -145,7 +175,8 @@ export function ssrRenderSlotInner(
         // Therefore, here we need to avoid rendering it as a fragment again.
         let start = 0
         let end = slotBuffer.length
-        if (transition) {
+        // nor is the range of a vapor slot rendered first in it
+        if (transition && !outlet!.vapor) {
           const first = slotBuffer[0]
           if (
             (first === '<!--[-->' || first === '<!--[!-->') &&
@@ -179,12 +210,32 @@ export function ssrRenderSlotInner(
   if (!transition) push(`<!--]-->`)
 }
 
+// Whether the first node a buffer renders opens a range: an async component
+// there may.
+function opensRange(buffer: SSRBufferItem[]): boolean | undefined {
+  for (let i = 0; i < buffer.length; i++) {
+    const item = buffer[i]
+    if (isArray(item)) {
+      const opens = opensRange(item)
+      if (opens !== undefined) return opens
+    } else if (typeof item !== 'string') {
+      return true
+    } else if (item) {
+      const match = leadingCommentRE.exec(item)
+      return !!match && isHydrationRangeStart(match[1])
+    }
+  }
+}
+
+const leadingCommentRE = /^<!--([^]*?)-->/
 const commentTestRE = /^<!--[\s\S]*-->$/
 const commentRE = /<!--[^]*?-->/gm
 function isComment(item: SSRBufferItem) {
   if (typeof item !== 'string' || !commentTestRE.test(item)) return false
   // if item is '<!---->' or '<!--[-->' or '<!--]-->', return true directly
   if (item.length <= 8) return true
+  // a teleport is content, rendered in its target
+  if (item.includes('<!--teleport start')) return false
   return !item.replace(commentRE, '').trim()
 }
 

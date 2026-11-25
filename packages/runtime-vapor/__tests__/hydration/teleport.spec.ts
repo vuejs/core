@@ -857,23 +857,21 @@ describe('Vapor Mode hydration', () => {
 
       expect(`mismatch`).not.toHaveBeenWarned()
       expect(container.innerHTML).toBe(
-        `<!--[$--><!--[-->` +
+        `<!--[-->` +
           `<!--teleport start--><p>a</p><p>b</p><!--teleport end-->` +
-          `<!--if--><!--]--><!--]-->`,
+          `<!--if--><!--]-->`,
       )
 
       data.value.show = false
       await nextTick()
-      expect(container.innerHTML).toBe(
-        `<!--[$--><!--[--><!--if--><!--]--><!--]-->`,
-      )
+      expect(container.innerHTML).toBe(`<!--[--><!--if--><!--]-->`)
 
       data.value.show = true
       await nextTick()
       expect(container.innerHTML).toBe(
-        `<!--[$--><!--[-->` +
+        `<!--[-->` +
           `<!--teleport start--><p>a</p><p>b</p><!--teleport end-->` +
-          `<!--if--><!--]--><!--]-->`,
+          `<!--if--><!--]-->`,
       )
     })
 

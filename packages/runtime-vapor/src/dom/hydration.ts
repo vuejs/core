@@ -3,6 +3,7 @@ import {
   type GenericComponentInstance,
   MismatchTypes,
   callWithErrorHandlingOnce,
+  collectHydrationElements,
   isMismatchAllowed,
   isHydrating as isVdomHydrating,
   isHydratingEnabled as isVdomHydratingEnabled,
@@ -348,6 +349,11 @@ export interface ComponentRange {
   /** the `blockDepth` of the component's own block fn */
   depth: number
   prev: ComponentRange | null
+  /** where the component's hydration starts, and what its end restores */
+  cursor: HydrationCursor
+  /** renders in the range the component around it claimed, from its open */
+  shared: boolean
+  instance: GenericComponentInstance | null
 }
 
 let currentComponentRange: ComponentRange | null = null
@@ -385,8 +391,9 @@ export function isSingleRootHere(single: boolean): boolean {
  */
 export function releaseSharedRange(): void {
   const range = locateSharedRange()
-  if (range) {
-    const open = currentHydrationNode!.previousSibling!
+  const node = currentHydrationNode
+  const open = range && node && node.previousSibling
+  if (open && isComment(open, '[$') && open.$fe === range.close) {
     range.close = null
     range.unit = open
     setCurrentHydrationNode(open)
@@ -395,21 +402,13 @@ export function releaseSharedRange(): void {
 
 /**
  * The range a single root renders in: the one the component around it
- * claimed. The server opens a range for the roots at the end of a chain of
- * single roots, and the component that entered at it holds it for the chain.
- * A root of the chain renders from the open of that range: further in, it is
- * in a range the roots of that component render (a list, a branch), and has
- * none to share. Null when that component has none either.
+ * claimed. The server opens a range for several roots only, so a chain of
+ * single roots has the one of the roots at its end, and the component that
+ * entered at it holds it for the chain. Null when that component has none.
  */
 export function locateSharedRange(): ComponentRange | null {
   for (let range = currentComponentRange; range; range = range.prev) {
-    if (range.close) {
-      const node = currentHydrationNode
-      const open = node && node.previousSibling
-      return open && isComment(open, '[$') && open.$fe === range.close
-        ? range
-        : null
-    }
+    if (range.close) return range
     if (range.unit) break
   }
   return null
@@ -421,6 +420,23 @@ export function isCurrentComponentClose(node: Node): boolean {
     if (range.close) return range.close === node
   }
   return false
+}
+
+/**
+ * Collects the root elements the server rendered for a component whose block
+ * fn is running.
+ */
+export function collectHydratingRoots(
+  instance: GenericComponentInstance,
+  roots: Element[],
+): void {
+  let range = currentComponentRange
+  while (range) {
+    if (range.instance === instance) {
+      return collectHydrationElements(range.cursor.start, roots)
+    }
+    range = range.prev
+  }
 }
 
 /**
