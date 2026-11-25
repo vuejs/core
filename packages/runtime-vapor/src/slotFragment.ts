@@ -16,6 +16,7 @@ import {
   isHydratingSlotFallback,
 } from './dom/hydration'
 import { applyScopeIdOwners, renderWithSlotScopeIds } from './scopeId'
+import { isScopeIdEnabled } from './scopeIdState'
 import {
   type SlotBoundaryContext,
   hasSlotFallback,
@@ -99,9 +100,10 @@ function renderSlotFallbacks(
       // outlet's fallback replaces the forwarded content and the slotted ids
       // around it
       const getScopeIds = boundary.getScopeIds
-      const renderBody = getScopeIds
-        ? () => renderWithSlotScopeIds(getScopeIds(), render)
-        : render
+      const renderBody =
+        isScopeIdEnabled && getScopeIds
+          ? () => renderWithSlotScopeIds(getScopeIds(), render)
+          : render
       const adopt = isHydratingSlotFallback && boundary.adoptFallback
       if (adopt) boundary.adoptFallback = undefined
       // The body sees no provider of its own: an outlet inside it exposes its
@@ -249,7 +251,9 @@ function beforeExpose(state: SlotResolutionState, block: Block): void {
     state.boundary.run(() => fallthrough(block, scope))
   }
   // ...and so do the root scope ids it passes down
-  if (outlet && outlet.scopeIdOwners) applyScopeIdOwners(outlet.scopeIdOwners)
+  if (isScopeIdEnabled && outlet && outlet.scopeIdOwners) {
+    applyScopeIdOwners(outlet.scopeIdOwners)
+  }
   const bm = state.bm
   if (bm) {
     for (let i = 0; i < bm.length; i++) bm[i](block)

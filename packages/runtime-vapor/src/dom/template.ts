@@ -22,6 +22,7 @@ import {
 import { createTextNode, parseTemplate } from './node'
 import { currentRenderContext } from '../renderContext'
 import { cloneStampedTemplate } from './scopeIdStamp'
+import { isScopeIdEnabled } from '../scopeIdState'
 import { isInteropEnabled } from '../vdomInteropState'
 
 // the class and style a root's template contributes, shared by all its
@@ -32,7 +33,7 @@ export type RootMeta = {
 }
 
 function cloneTemplate(n: Node): Node {
-  const scopeIds = currentRenderContext.slotScopeIds
+  const scopeIds = isScopeIdEnabled && currentRenderContext.slotScopeIds
   return scopeIds ? cloneStampedTemplate(n, scopeIds) : n.cloneNode(true)
 }
 

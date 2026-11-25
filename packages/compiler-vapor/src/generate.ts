@@ -278,10 +278,14 @@ export function generate(
   }
 
   const delegates = genDelegates(context)
+  // enables the runtime scope id code, tree-shaken without scoped styles
+  const scopeId = options.scopeId
+    ? `${context.helper('enableScopeId')}()\n`
+    : ''
   const templates = genTemplates(ir.template.entries, context)
   const imports = genHelperImports(context) + genAssetImports(context)
   const preamble =
-    imports + templates + genDynamicPropNames(context) + delegates
+    imports + templates + genDynamicPropNames(context) + delegates + scopeId
 
   if (!inline) {
     let newlineCount = 0

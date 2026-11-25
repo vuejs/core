@@ -62,6 +62,7 @@ export {
   withVaporModifiers,
   withVaporKeys,
 } from './dom/event'
+export { enableScopeId } from './scopeIdState'
 export { createIf } from './apiCreateIf'
 export { createIfChain } from './apiCreateIfChain'
 export { createKeyedFragment } from './apiCreateFragment'

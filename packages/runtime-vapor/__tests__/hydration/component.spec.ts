@@ -1,3 +1,4 @@
+import { enableScopeId } from '../../src/scopeIdState'
 import {
   createComponent,
   createSlot,
@@ -23,6 +24,9 @@ import {
 } from './_helpers'
 
 setupHydrationTest()
+
+// the compiler emits this for an SFC with scoped styles
+enableScopeId()
 
 describe('Vapor Mode hydration', () => {
   describe('component', () => {

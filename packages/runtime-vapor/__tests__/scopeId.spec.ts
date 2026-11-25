@@ -1,3 +1,4 @@
+import { enableScopeId } from '../src/scopeIdState'
 import {
   Fragment,
   Suspense,
@@ -37,6 +38,9 @@ import {
 } from './_utils'
 
 const define = makeRender()
+
+// the compiler emits this for an SFC with scoped styles
+enableScopeId()
 
 describe('scopeId', () => {
   test('should attach scopeId to child component', () => {

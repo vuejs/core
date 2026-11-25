@@ -775,4 +775,11 @@ describe('compile', () => {
       )
     })
   })
+
+  test('enables the runtime scope id code with a scope id only', () => {
+    expect(compile(`<div/>`, { scopeId: 'data-v-test' })).contains(
+      `_enableScopeId()\n`,
+    )
+    expect(compile(`<div/>`)).not.contains('enableScopeId')
+  })
 })

@@ -120,6 +120,7 @@ import {
   getCurrentScopeId,
   setPublishInteropScopeIds,
 } from './scopeId'
+import { enableScopeId } from './scopeIdState'
 import { setVarsOnBlock } from './helpers/useCssVars'
 import type { LooseRawSlots } from './componentSlots'
 import {
@@ -3701,6 +3702,7 @@ export const vaporInteropPlugin: Plugin = app => {
     enableSuspense()
   }
   setInteropEnabled()
+  enableScopeId()
   setVaporInteropEnabled()
   setPublishInteropScopeIds(publishVaporScopeIds)
   app._context.vapor = vaporInteropImpl
