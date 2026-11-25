@@ -91,7 +91,7 @@ export function inject(
  * user. One example is `useRoute()` in `vue-router`.
  */
 export function hasInjectionContext(): boolean {
-  return !!getCurrentApp()
+  return !!(currentApp || getCurrentGenericInstance())
 }
 
 /**
