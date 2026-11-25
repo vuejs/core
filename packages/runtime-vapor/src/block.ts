@@ -9,6 +9,7 @@ import {
 import {
   isClaimedAnchor,
   isComment,
+  isComponentClose,
   isHydrating,
   isRangeEnd,
 } from './dom/hydration'
@@ -666,9 +667,9 @@ export function findBlockBoundary(block: Block): {
   if (
     nextNode &&
     isRangeEnd(nextNode) &&
-    // a component's `}` is no fragment's end: inert after hydration, or the
-    // anchor of the fragment rendering the component
-    (nextNode as Comment).data !== '}' &&
+    // a component's close is no fragment's end: inert after hydration, or
+    // the anchor of the fragment rendering the component
+    !isComponentClose(nextNode) &&
     isFragmentBlock(boundaryBlock) &&
     !isRangeEnd(lastChild) &&
     // a teleport closes with its own marker: a close after it is the one of

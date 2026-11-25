@@ -77,7 +77,6 @@ describe('ssr: components', () => {
       const { ssrRenderAttrs: _ssrRenderAttrs, ssrRenderDynamicComponent: _ssrRenderDynamicComponent } = require("vue/server-renderer")
 
       return function ssrRender(_ctx, _push, _parent, _attrs) {
-        _push(\`<!--{-->\`)
         _ssrRenderDynamicComponent(_push, _resolveDynamicComponent(_ctx.foo), _attrs, {
           default: _withCtx((_, _push, _parent, _scopeId, _slotAttrs) => {
             if (_push) {
@@ -94,7 +93,6 @@ describe('ssr: components', () => {
           }),
           _: 1 /* STABLE */
         }, _parent)
-        _push(\`<!--}-->\`)
       }"
     `)
   })
@@ -529,47 +527,66 @@ describe('ssr: components', () => {
   test('vapor multi-root component', () => {
     const vapor = (src: string) => compile(src, { vapor: true }).code
     const multi = vapor(`<div/><slot/>`)
-    expect(multi).toContain('<!--{-->')
-    expect(multi).toContain('<!--}-->')
+    expect(multi).toContain('<!--[\\$-->')
+    expect(multi).toContain('<!--]-->')
     expect(multi).not.toContain('<!--[-->')
-    expect(vapor(`<div/>`)).not.toContain('<!--{-->')
+    expect(vapor(`<div/>`)).not.toContain('<!--[\\$-->')
     expect(compile(`<div/><slot/>`).code).toContain('<!--[-->')
   })
 
-  // a sole root whose render may begin with the range of a component inside
-  // gets one of the component's own; one that begins with markup of its own
-  // does not
+  // a sole root that is one node, or a component rendering in the range the
+  // component around it has, opens no range of the component's own
   test.each([
-    ['a component', `<foo/>`, true],
-    ['a dynamic component', `<component :is="foo"/>`, true],
-    ['a Transition', `<Transition><foo/></Transition>`, true],
-    ['a KeepAlive', `<KeepAlive><foo/></KeepAlive>`, true],
-    ['a v-if rendering a component', `<foo v-if="a"/>`, true],
+    ['an element', `<div/>`],
+    ['a component', `<foo/>`],
+    ['a dynamic component', `<component :is="foo"/>`],
+    ['a Transition', `<Transition><foo/></Transition>`],
+    ['an appearing Transition', `<Transition appear><slot/></Transition>`],
+    ['a KeepAlive', `<KeepAlive><foo/></KeepAlive>`],
+    ['a v-if rendering a component', `<foo v-if="a"/>`],
+    ['a v-if chain', `<foo v-if="a"/><div v-else/>`],
+    ['a Teleport', `<Teleport to="body"><foo/></Teleport>`],
+    ['a TransitionGroup with a tag', `<TransitionGroup tag="ul"/>`],
+  ])('vapor sole root without a range: %s', (_, src) => {
+    expect(compile(src, { vapor: true }).code).not.toContain('<!--[\\$')
+  })
+
+  // a sole root that opens a range itself renders in the component's own:
+  // what a component renders never begins with a range a slot around it
+  // could take for its own
+  test.each([
+    ['a v-for', `<div v-for="i in list"/>`],
+    ['a slot outlet', `<slot/>`],
     [
-      'a v-if chain ranging its branches',
-      `<foo v-if="a"/><div v-else/>`,
-      false,
-    ],
-    ['a Teleport', `<Teleport to="body"><foo/></Teleport>`, false],
-    [
-      'a TransitionGroup with a tag',
-      `<TransitionGroup tag="ul"><foo/></TransitionGroup>`,
-      false,
-    ],
-    ['a TransitionGroup', `<TransitionGroup><foo/></TransitionGroup>`, false],
-    ['a Suspense', `<Suspense><foo/></Suspense>`, false],
-    [
-      'an appearing Transition',
-      `<Transition appear><foo/></Transition>`,
-      false,
+      'a v-if rendering several nodes',
+      `<template v-if="a"><i/><b/></template>`,
     ],
     [
-      'a v-if on a template of several nodes',
-      `<template v-if="a"><!--c--><foo/></template>`,
-      false,
+      'a v-if rendering a v-for',
+      `<template v-if="a"><i v-for="i in list"/></template>`,
     ],
-  ])('vapor sole root: %s', (_, src, ranged) => {
-    const code = compile(src, { vapor: true }).code
-    expect(code.includes('<!--{-->')).toBe(ranged)
+    ['a v-if rendering a slot outlet', `<slot v-if="a"/>`],
+    [
+      'a Transition rendering a slot outlet',
+      `<Transition><slot/></Transition>`,
+    ],
+    ['a KeepAlive rendering a slot outlet', `<KeepAlive><slot/></KeepAlive>`],
+    [
+      'a TransitionGroup without a tag',
+      `<TransitionGroup><foo/></TransitionGroup>`,
+    ],
+    ['a Suspense', `<Suspense><foo/></Suspense>`],
+  ])('vapor sole root in a range: %s', (_, src) => {
+    expect(compile(src, { vapor: true }).code).toContain('<!--[\\$-->')
+    expect(compile(src).code).not.toContain('<!--[\\$')
+  })
+
+  // comments are roots like any other for the range: the client compiler
+  // tells the single root next to them from a sole root
+  test('vapor component roots with comments', () => {
+    const vapor = (src: string) =>
+      compile(src, { vapor: true, comments: true }).code
+    expect(vapor(`<!--c--><foo/>`)).toContain('<!--[\\$-->')
+    expect(vapor(`<foo/><!--c-->`)).toContain('<!--[\\$-->')
   })
 })

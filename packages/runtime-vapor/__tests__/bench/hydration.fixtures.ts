@@ -172,7 +172,7 @@ export const fixtures: HydrationFixture[] = [
       Card,
     }),
     html: `<ul><!--[-->${range(
-      () => `<li class="row"><!--(--><span>s</span><!--)--></li>`,
+      () => `<li class="row"><!--[!--><span>s</span><!--]--></li>`,
     )}<!--]--></ul>`,
   },
 ]

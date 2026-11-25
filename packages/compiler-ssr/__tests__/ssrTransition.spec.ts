@@ -22,4 +22,18 @@ describe('transition', () => {
         }"
       `)
   })
+
+  // vdom renders the nodes of a branch bare; a vapor branch keeps the range
+  // it has anywhere else
+  test('branch with several nodes', () => {
+    const template = `<transition>
+        <template v-if="ok"><!--c--><div/></template>
+      </transition>`
+    expect(compile(template, { comments: true }).code).toContain(
+      '`<!--c--><div></div>`',
+    )
+    expect(compile(template, { comments: true, vapor: true }).code).toContain(
+      '`<!--[--><!--c--><div></div><!--]-->`',
+    )
+  })
 })

@@ -106,7 +106,7 @@ export function isBareBranch({ children }: IfBranchNode): boolean {
  * that each render one plain element, all of different tags, are told apart
  * by the tag.
  */
-function hasLookalikeBranches(branches: IfBranchNode[]): boolean {
+export function hasLookalikeBranches(branches: IfBranchNode[]): boolean {
   if (branches.length < 2) return false
   const tags = new Set<string>()
   for (const { children } of branches) {

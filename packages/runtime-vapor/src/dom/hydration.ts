@@ -13,9 +13,8 @@ import {
   type Namespace,
   Namespaces,
   isArray,
+  isHydrationRangeStart,
   isVaporBranchStart,
-  isVaporRangeStart,
-  rangeCloseOf,
 } from '@vue/shared'
 import {
   insertionAnchor,
@@ -85,7 +84,7 @@ export function runWithoutHydration(fn: () => any): any {
   }
 }
 
-// The server rendered a slot's fallback (`<!--(-->`): the nodes under the
+// The server rendered a slot's fallback (`<!--[!-->`): the nodes under the
 // cursor are the fallback's, so the slot content runs without hydration and
 // the fallback is adopted from within it. Set for that window: the slot that
 // shows the fallback finds it in the DOM already and leaves it in place.
@@ -133,6 +132,7 @@ function performHydration<T>(
     parseAdoptTarget = parseAdoptTargetImpl
     // optimize anchor cache lookup
     ;(Comment.prototype as any).$fe = undefined
+    ;(Comment.prototype as any).$cc = undefined
     ;(Node.prototype as any).$llc = undefined
     ;(Node.prototype as any).$lli = undefined
     ;(Node.prototype as any).$vha = 0
@@ -261,6 +261,10 @@ type Anchor = Node & {
   // cached matching fragment end to avoid repeated traversal on nested
   // comment fragments.
   $fe?: Anchor
+
+  // Set on the close of a vapor component's `<!--[$-->` range when the two
+  // are paired: every range closes with `<!--]-->`, whatever opens it.
+  $cc?: 1
 }
 
 type RecreatedNode = Node & {
@@ -272,20 +276,23 @@ type RecreatedNode = Node & {
 
 export type CommentAnchor = Comment & Anchor
 
-// `<!--(-->`…`<!--)-->` wraps a slot fallback the server rendered,
-// `<!--[1-->`…`<!--]-->` the branch of a v-if chain (isVaporBranchStart) and
-// `<!--{-->`…`<!--}-->` the render of a vapor component: ranges like a
-// fragment's for whatever steps over, claims or removes one.
-export const isRangeStart = (node: Node): node is CommentAnchor => {
-  if (node.nodeType !== 8) return false
-  const data = (node as Comment).data
-  return data === '[' || data === '(' || isVaporRangeStart(data)
-}
+// A range opens with `[` and what it is, and closes with `<!--]-->`:
+// `<!--[!-->` a slot fallback the server rendered, `<!--[1-->` the branch of
+// a v-if chain (isVaporBranchStart) and `<!--[$-->` the render of a vapor
+// component. Ranges like a fragment's for whatever steps over, claims or
+// removes one.
+export const isRangeStart = (node: Node): node is CommentAnchor =>
+  node.nodeType === 8 && isHydrationRangeStart((node as Comment).data)
 
-export const isRangeEnd = (node: Node): node is CommentAnchor => {
-  if (node.nodeType !== 8) return false
-  const data = (node as Comment).data
-  return data === ']' || data === ')' || data === '}'
+export const isRangeEnd = (node: Node): node is CommentAnchor =>
+  isComment(node, ']')
+
+/** The close of a vapor component's range, once paired with its open. */
+export const isComponentClose = (node: Node): boolean => !!(node as Anchor).$cc
+
+function pairRange(open: CommentAnchor, close: Anchor): void {
+  open.$fe = close
+  if (open.data === '[$') close.$cc = 1
 }
 
 export const isComment = (node: Node, data: string): node is CommentAnchor =>
@@ -314,7 +321,7 @@ export function createFragmentClaim(): FragmentClaim {
  */
 export function claimFragmentStart(claim: FragmentClaim): void {
   const node = currentHydrationNode
-  if (node && (isComment(node, '[') || isComment(node, '('))) {
+  if (node && (isComment(node, '[') || isComment(node, '[!'))) {
     claim.start = node
     setCurrentHydrationNode(node.nextSibling)
   }
@@ -325,12 +332,19 @@ export function claimFragmentStart(claim: FragmentClaim): void {
  */
 export interface ComponentRange {
   /**
-   * The one server unit of a component the server rendered no `<!--{-->`
+   * The one server unit of a component the server rendered no `<!--[$-->`
    * range for, as long as no root has read the cursor past it.
    */
   unit: Node | null
   /** the claimed close of the component's range */
   close: Node | null
+  /**
+   * Of a wrapper that claims nothing (KeepAlive, Transition, the async
+   * wrapper): whether the component it renders is the single root of the
+   * component around the wrapper, as the wrapper is. The compiler marks the
+   * child of a KeepAlive or a Transition as one wherever they sit.
+   */
+  single: boolean | undefined
   /** the `blockDepth` of the component's own block fn */
   depth: number
   prev: ComponentRange | null
@@ -351,6 +365,54 @@ export function enterComponentRange(range: ComponentRange): void {
 
 export function exitComponentRange(range: ComponentRange): void {
   currentComponentRange = range.prev
+}
+
+/**
+ * Whether a component created now is the single root of the component
+ * around it: what the compiler says, or under a wrapper what the wrapper is.
+ */
+export function isSingleRootHere(single: boolean): boolean {
+  const range = currentComponentRange
+  return range && range.single !== undefined ? range.single : single
+}
+
+/**
+ * A vdom component or vnode renders in place of a single root: vdom reads a
+ * range itself, from its open. The component that claimed the range is left
+ * with it as its one unit, and a vapor component at the root of the vdom
+ * content claims it as any other does. So does a deferred render, which
+ * goes back into the range after the pass that claimed it.
+ */
+export function releaseSharedRange(): void {
+  const range = locateSharedRange()
+  if (range) {
+    const open = currentHydrationNode!.previousSibling!
+    range.close = null
+    range.unit = open
+    setCurrentHydrationNode(open)
+  }
+}
+
+/**
+ * The range a single root renders in: the one the component around it
+ * claimed. The server opens a range for the roots at the end of a chain of
+ * single roots, and the component that entered at it holds it for the chain.
+ * A root of the chain renders from the open of that range: further in, it is
+ * in a range the roots of that component render (a list, a branch), and has
+ * none to share. Null when that component has none either.
+ */
+export function locateSharedRange(): ComponentRange | null {
+  for (let range = currentComponentRange; range; range = range.prev) {
+    if (range.close) {
+      const node = currentHydrationNode
+      const open = node && node.previousSibling
+      return open && isComment(open, '[$') && open.$fe === range.close
+        ? range
+        : null
+    }
+    if (range.unit) break
+  }
+  return null
 }
 
 /** Wrappers such as KeepAlive have no close of their own. */
@@ -381,15 +443,15 @@ export function locateComponentRoot(): void {
     if (!isRecreatedNode(unit)) {
       warnHydrationNodeMismatch(unit, `more root nodes`)
     }
-    const open = createComment('{') as CommentAnchor
-    const close = claimAnchor(createComment('}'))
+    const open = createComment('[$') as CommentAnchor
+    const close = claimAnchor(createComment(']'))
     // the roots in front of the close, and the components around the range,
     // report no mismatch of their own
     markRecreatedNode(open)
     markRecreatedNode(close)
     parent.insertBefore(close, nextLogicalSibling(unit))
     parent.insertBefore(open, unit)
-    open.$fe = close
+    pairRange(open, close)
     updateLastLocatedLogicalChild(parent, unit, open)
     replaceComponentUnit(unit, open, range.prev)
     range.unit = null
@@ -546,16 +608,24 @@ function adoptTemplateImpl(
   return node
 }
 
-export function nextLogicalSibling(node: Node): Node | null {
+/**
+ * The last node of the server unit `node` opens: a range, a teleport or the
+ * node by itself.
+ */
+export function locateUnitEnd(node: Node): Node {
   if (node.nodeType === 8) {
     const data = (node as Comment).data
-    if (data === '[' || data === '(' || isVaporRangeStart(data)) {
-      node = locateEndAnchor(node as CommentAnchor, data)!
+    if (isHydrationRangeStart(data)) {
+      return locateEndAnchor(node as CommentAnchor)!
     } else if (data === 'teleport start') {
-      node = locateEndAnchor(node as CommentAnchor, data, 'teleport end')!
+      return locateEndAnchor(node as CommentAnchor, data, 'teleport end')!
     }
   }
-  return skipUntrackedAnchors(node.nextSibling)
+  return node
+}
+
+export function nextLogicalSibling(node: Node): Node | null {
+  return skipUntrackedAnchors(locateUnitEnd(node).nextSibling)
 }
 
 /** Advance past anchors that occupy no SSR logical position. */
@@ -618,9 +688,10 @@ export function locateFragmentEnd(node: Node | null): Node | null {
 
 export function locateEndAnchor(
   node: CommentAnchor,
-  // the pair of the range `node` opens
-  open: string = node.data,
-  close: string = rangeCloseOf(open),
+  // a teleport's pair. Without one, the close of the range `node` opens:
+  // every range closes with `]`, whatever opens it
+  open?: string,
+  close: string = ']',
 ): Node | null {
   // already cached matching end
   if (node.$fe) {
@@ -631,11 +702,7 @@ export function locateEndAnchor(
   while ((node = _next(node) as CommentAnchor) && stack.length > 0) {
     if (node.nodeType === 8) {
       const data = node.data
-      if (
-        data === open ||
-        // `]` closes a fragment and a v-if branch alike
-        (close === ']' && (data === '[' || isVaporBranchStart(data)))
-      ) {
+      if (open ? data === open : isHydrationRangeStart(data)) {
         // a nested range walked before is skipped through its cached end
         if (node.$fe) {
           node = node.$fe as CommentAnchor
@@ -644,7 +711,7 @@ export function locateEndAnchor(
         }
       } else if (data === close) {
         const matchingOpen = stack.pop()!
-        matchingOpen.$fe = node
+        pairRange(matchingOpen, node)
         if (stack.length === 0) return node
       }
     }
@@ -659,14 +726,10 @@ export function locateEndAnchor(
  */
 export function locateClaimedEnd(start: CommentAnchor): Node | null {
   // A close located once is never read off the cursor again: by a later call
-  // the cursor may rest on an enclosing close of the same kind.
+  // the cursor may rest on an enclosing close.
   if (start.$fe) return start.$fe
   const node = currentHydrationNode
-  if (
-    node &&
-    isComment(node, rangeCloseOf(start.data)) &&
-    !isClaimedAnchor(node)
-  ) {
+  if (node && isRangeEnd(node) && !isClaimedAnchor(node)) {
     return (start.$fe = node)
   }
   return locateEndAnchor(start)
@@ -953,11 +1016,8 @@ function removeHydrationNode(
   if (!parent) {
     return null
   }
-  const end = isRangeStart(node)
-    ? locateEndAnchor(node)
-    : isComment(node, 'teleport start')
-      ? locateEndAnchor(node, 'teleport start', 'teleport end')
-      : null
+  const last = locateUnitEnd(node)
+  const end = last !== node ? last : null
   const next = _next(end || node)
   if (end) {
     removeFragmentNodes(node, end)

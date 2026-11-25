@@ -73,7 +73,7 @@ describe('Vapor Mode hydration', () => {
 
       expect(`Hydration node mismatch`).not.toHaveBeenWarned()
       expect(container.innerHTML).toBe(
-        `<!--{--><!--{--><!--(--><!--if--><div>fallback</div><!--)--><!--}--><!--}-->`,
+        `<!--[$--><!--[!--><!--if--><div>fallback</div><!--]--><!--]-->`,
       )
 
       data.show = true
@@ -243,7 +243,9 @@ describe('Vapor Mode hydration', () => {
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
         `
         "
+        <!--[$-->
         <!--[--><div style="display:none;" class="v-enter-from v-enter-active">foo</div><!--]-->
+        <!--]-->
         "
       `,
       )
@@ -269,11 +271,11 @@ describe('Vapor Mode hydration', () => {
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
         `
         "
-        <!--{-->
+        <!--[$-->
         <!--[-->
         <!--[--><div style="display:none;" class="v-enter-from v-enter-active">foo</div><!--]-->
         <!--]-->
-        <!--}-->
+        <!--]-->
         "
       `,
       )
@@ -315,30 +317,18 @@ describe('Vapor Mode hydration', () => {
         data,
       )
 
-      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
-        "
-        <!--{--><!----><!--}-->
-        "
-      `)
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`"<!---->"`)
       expect(`mismatch`).not.toHaveBeenWarned()
 
       data.value = true
       await nextTick()
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
-        `
-        "
-        <!--{--><div>foo</div><!----><!--}-->
-        "
-      `,
+        `"<div>foo</div><!---->"`,
       )
 
       data.value = false
       await nextTick()
-      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
-        "
-        <!--{--><!----><!--}-->
-        "
-      `)
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`"<!---->"`)
     })
 
     test('transition appear should not break following component hydration', async () => {
@@ -1669,8 +1659,10 @@ describe('Vapor Mode hydration', () => {
       const { container } = await mountWithHydration(html, code, data)
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
         "
+        <!--[$-->
         <!--[-->
         <!--[--><li>1</li><!--]-->
+        <!--]-->
         <!--]-->
         "
       `)
@@ -1678,8 +1670,10 @@ describe('Vapor Mode hydration', () => {
       await nextTick()
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
         "
+        <!--[$-->
         <!--[-->
         <!--[--><li>1</li><li class="list-enter-from list-enter-active">2</li><!--]-->
+        <!--]-->
         <!--]-->
         "
       `)
@@ -1706,7 +1700,7 @@ describe('Vapor Mode hydration', () => {
         data,
       )
       expect(html).toBe(
-        `<!--{--><!--[--><!--[--><!--[--><li>1</li><li>2</li><!--]--><!--]--><!--]--><!--}-->`,
+        `<!--[$--><!--[--><!--[--><!--[--><li>1</li><li>2</li><!--]--><!--]--><!--]--><!--]-->`,
       )
       expect(container.innerHTML).toBe(html)
       expect(`Hydration node mismatch`).not.toHaveBeenWarned()
@@ -1717,7 +1711,7 @@ describe('Vapor Mode hydration', () => {
       await nextTick()
       expect(container.querySelector('li')).toBe(li)
       expect(container.innerHTML).toBe(
-        `<!--{--><!--[--><!--[--><!--[--><li>1</li><li>2</li><li>3</li><!--]--><!--]--><!--]--><!--}-->`,
+        `<!--[$--><!--[--><!--[--><!--[--><li>1</li><li>2</li><li>3</li><!--]--><!--]--><!--]--><!--]-->`,
       )
     })
 
@@ -1730,7 +1724,7 @@ describe('Vapor Mode hydration', () => {
       [
         'without tag',
         `<TransitionGroup><slot /></TransitionGroup>`,
-        (s: string) => `<!--[-->${s}<!--]-->`,
+        (s: string) => `<!--[$--><!--[-->${s}<!--]--><!--]-->`,
       ],
     ])(
       '%s should hydrate vdom slot content under a vdom parent',
@@ -1759,5 +1753,55 @@ describe('Vapor Mode hydration', () => {
         )
       },
     )
+  })
+
+  // a kept comment makes the branch of a Transition more than one node: the
+  // server renders it in the range a branch has anywhere else
+  describe('branch with a comment', () => {
+    const branch = `<template v-if="data"><!--note--><b>before</b></template>`
+
+    test.each([
+      ['in a Transition', `<Transition :css="false">${branch}</Transition>`],
+      [
+        'in a Transition under v-if',
+        `<Transition v-if="data" :css="false">${branch}</Transition>`,
+      ],
+      [
+        'in an appearing Transition',
+        `<Transition appear :css="false">${branch}</Transition>`,
+      ],
+      [
+        'next to a component with a comment at its root',
+        `<Transition :css="false">
+          <template v-if="data"><!--note--><components.Inner /></template>
+        </Transition>`,
+      ],
+    ])('%s', async (_, host) => {
+      const data = ref(true)
+      const { container } = await testHydration(
+        `<template>
+          <main>
+            <components.Host />
+            <components.After />
+          </main>
+        </template>`,
+        {
+          Host: `<template>${host}</template>`,
+          Inner: `<template><!--x--><b>before</b></template>`,
+          After: `<template><i>after</i></template>`,
+        },
+        data,
+      )
+      const b = container.querySelector('b')
+      expect(container.textContent).toBe('beforeafter')
+
+      data.value = false
+      await nextTick()
+      expect(container.textContent).toBe('after')
+      data.value = true
+      await nextTick()
+      expect(container.textContent).toBe('beforeafter')
+      expect(container.querySelector('b')).not.toBe(b)
+    })
   })
 })

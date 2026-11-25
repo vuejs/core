@@ -4718,13 +4718,13 @@ describe('SSR hydration', () => {
       expect(el.getAttribute('value')).toBe('server')
     })
   })
-  // `<!--(-->`…`<!--)-->`: a slot fallback the server rendered for vapor. vdom
+  // `<!--[!-->`…`<!--]-->`: a slot fallback the server rendered for vapor. vdom
   // never needs to tell it from a fragment, only to take it for one.
   describe('slot fallback range', () => {
     const fallback = () => [h('p', 'fallback')]
 
     test('hydrates a fragment the server wrapped as a slot fallback', () => {
-      const html = `<div><!--(--><p>fallback</p><!--)--><span>after</span></div>`
+      const html = `<div><!--[!--><p>fallback</p><!--]--><span>after</span></div>`
       const { vnode, container } = mountWithHydration(html, () =>
         h('div', [renderSlot({}, 'default', {}, fallback), h('span', 'after')]),
       )
@@ -4748,7 +4748,7 @@ describe('SSR hydration', () => {
           ])
         },
       }
-      const html = `<div><!--(--><!--[--><p>a</p><p>b</p><!--]--><!--)--><span>after</span></div>`
+      const html = `<div><!--[!--><!--[--><p>a</p><p>b</p><!--]--><!--]--><span>after</span></div>`
       const { vnode, container } = mountWithHydration(html, () =>
         h('div', [h(Comp), h('span', 'after')]),
       )
@@ -4762,7 +4762,7 @@ describe('SSR hydration', () => {
 
     test('lazy hydration finds the elements inside such a range', () => {
       const container = document.createElement('div')
-      container.innerHTML = `<!--(--><p>a</p><!--[--><b>b</b><!--]--><!--)--><i>outside</i>`
+      container.innerHTML = `<!--[!--><p>a</p><!--[--><b>b</b><!--]--><!--]--><i>outside</i>`
       const found: string[] = []
       forEachElement(container.firstChild!, el => {
         found.push(el.tagName)
@@ -4832,12 +4832,12 @@ describe('SSR hydration', () => {
       expect(container.innerHTML).not.toContain(`<!--]-->`)
     })
 
-    // vapor wraps a multi-root component in `<!--{-->`…`<!--}-->`, a range
+    // vapor wraps a multi-root component in `<!--[$-->`…`<!--]-->`, a range
     // of its own: the component tells it from the `[` of a child's range
     test('hands the vapor interface the node after a vapor component range', () => {
       setVaporInteropEnabled()
       const container = document.createElement('div')
-      const html = `<div><!--{--><p>a</p><!--[--><b>b</b><!--]--><!--}--><span>after</span></div>`
+      const html = `<div><!--[$--><p>a</p><!--[--><b>b</b><!--]--><!--]--><span>after</span></div>`
       container.innerHTML = html
       const hydrate = vi.fn()
       const VaporComp = { __vapor: true }
@@ -4857,7 +4857,7 @@ describe('SSR hydration', () => {
 
     test('lazy hydration finds the elements inside a vapor component range', () => {
       const container = document.createElement('div')
-      container.innerHTML = `<!--{--><p>a</p><!--[--><b>b</b><!--]--><!--}--><i>outside</i>`
+      container.innerHTML = `<!--[$--><p>a</p><!--[--><b>b</b><!--]--><!--]--><i>outside</i>`
       const found: string[] = []
       forEachElement(container.firstChild!, el => {
         found.push(el.tagName)
@@ -4868,7 +4868,7 @@ describe('SSR hydration', () => {
     test('removes the whole vapor component range that mismatches', () => {
       setVaporInteropEnabled()
       const container = document.createElement('div')
-      container.innerHTML = `<div><!--{--><!--x--><!--[--><!--]--><!--}--><span>after</span></div>`
+      container.innerHTML = `<div><!--[$--><!--x--><!--[--><!--]--><!--]--><span>after</span></div>`
       const span = container.querySelector('span')
       const vnode = createSSRApp({
         render: () => h('div', [h('b', 'x'), h('span', 'after')]),

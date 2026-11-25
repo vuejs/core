@@ -178,7 +178,11 @@ import {
 import { inOnce, withOnce } from './once'
 import { RenderEffect, renderEffect } from './renderEffect'
 import { initVdomOwner, patchVdomSlot } from './vdomSlotOwner'
-import { createTextNode, parentNode } from './dom/node'
+import {
+  createTextNode,
+  parentNode,
+  updateLastLocatedLogicalChild,
+} from './dom/node'
 import { adoptRoot, optimizePropertyLookup } from './dom/prop'
 import {
   advanceHydrationNode,
@@ -193,9 +197,12 @@ import {
   isHydratingSlotFallback,
   isRangeEnd,
   isRangeStart,
+  isSingleRootHere,
   locateEndAnchor,
   locateFragmentEnd,
   locateHydrationNode,
+  releaseSharedRange,
+  replaceComponentUnit,
   runWithoutHydration,
   setCurrentHydrationNode,
   hydrateNode as vaporHydrateNode,
@@ -956,13 +963,15 @@ const vaporInteropImpl = {
     ) {
       return node
     }
-    // `<!--(-->`: the server rendered the fallback of the slot's own outlet in
+    // `<!--[!-->`: the server rendered the fallback of the slot's own outlet in
     // its place. Otherwise it may have rendered nothing for the slot: the
     // cursor rests on the close marker of the slot's own empty range, or of
     // the vdom fragment it ends. Either way the slot itself has nothing to
     // adopt, and an empty branch inside must not take that marker for its own
     // anchor: mount in place.
-    const isFallbackRange = isComment(node, '(')
+    // Only an outlet with a fallback renders that range: under any other (a
+    // slot rendered bare) it is the one of a vdom component in the content.
+    const isFallbackRange = isComment(node, '[!') && !!vnode.vs!.outlets
     const close = isFallbackRange
       ? locateEndAnchor(node)!
       : isRangeEnd(node)
@@ -1726,25 +1735,12 @@ function mountDynamicVNode(
     once && !owner,
   )
   if (isHydrating) {
-    locateHydrationNode(
-      shouldConsumeFragmentStart(vnode) ? createFragmentClaim() : undefined,
-    )
+    if (isSingleRootHere(isSingleRoot === true)) releaseSharedRange()
+    // a range under the cursor is the content's to read
+    locateHydrationNode()
     frag.hydrate!()
   }
   return frag
-}
-
-function shouldConsumeFragmentStart(vnode: VNode): boolean {
-  if (vnode.type === Fragment) {
-    return false
-  }
-
-  // a vapor component (`h(VaporComp)`) claims its own `{` range at entry
-  if (vnode.shapeFlag & ShapeFlags.COMPONENT) {
-    return !!(vnode.type as { __vapor?: boolean }).__vapor
-  }
-
-  return true
 }
 
 /**
@@ -2942,7 +2938,7 @@ function renderVDOMSlot(
       runWithoutHydration(() => place(open.parentNode!, open, undefined))
       return
     }
-    if (open && isComment(open, '(')) {
+    if (open && isComment(open, '[!')) {
       // the server rendered the local fallback: mount as on the client
       const close = (frag.anchor = claimAnchor(locateEndAnchor(open)!))
       hydrateSlotFallbackRange(
@@ -3738,6 +3734,17 @@ function hydrateVNode(
     false,
   )
   simpleSetCurrentInstance(prev)
+  // replaced: what holds `node` as a unit takes the new one, and what
+  // located it goes on from the last node standing in for it
+  const el = vnode.el as Node | null
+  if (el && el !== node && parentNode(node) !== parent) {
+    updateLastLocatedLogicalChild(
+      parent as ParentNode,
+      node,
+      nextNode ? nextNode.previousSibling : parent.lastChild,
+    )
+    replaceComponentUnit(node, el)
+  }
   // no next node: the vnode ends its parent, move on from there
   if (nextNode) setCurrentHydrationNode(nextNode)
   else advanceHydrationNode(parent)
@@ -4539,7 +4546,14 @@ function renderVaporSlot(
           fallbackRange.getContent = frag.getContent
         }
         if (isHydrating) {
-          withHydratingSlotBoundary(renderContent)
+          // a fallback range under the cursor is the content's own: the
+          // slot's is adopted without hydration (see `hydrateSlot`)
+          withHydratingSlotBoundary(
+            renderContent,
+            isComment(currentHydrationNode!, '[!')
+              ? createFragmentClaim()
+              : undefined,
+          )
         } else {
           renderContent()
         }

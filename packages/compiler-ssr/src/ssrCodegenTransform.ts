@@ -6,8 +6,12 @@ import {
   ElementTypes,
   type IfStatement,
   type JSChildNode,
+  KEEP_ALIVE,
   NodeTypes,
   type RootNode,
+  SUSPENSE,
+  TRANSITION,
+  TRANSITION_GROUP,
   type TemplateChildNode,
   type TemplateLiteral,
   createBlockStatement,
@@ -17,20 +21,63 @@ import {
   createSimpleExpression,
   createTemplateLiteral,
   createTransformContext,
+  findProp,
   isText,
   processExpression,
 } from '@vue/compiler-dom'
 import { escapeHtml, isString } from '@vue/shared'
 import { SSR_INTERPOLATE, ssrHelpers } from './runtimeHelpers'
-import { isBareBranch, ssrProcessIf } from './transforms/ssrVIf'
+import {
+  hasLookalikeBranches,
+  isBareBranch,
+  ssrProcessIf,
+} from './transforms/ssrVIf'
 import { ssrProcessFor } from './transforms/ssrVFor'
 import { ssrProcessSlotOutlet } from './transforms/ssrTransformSlotOutlet'
 import {
-  beginsWithOwnMarkup,
+  componentTypeMap,
   ssrProcessComponent,
 } from './transforms/ssrTransformComponent'
 import { ssrProcessElement } from './transforms/ssrTransformElement'
 import { SSRErrorCodes, createSSRCompilerError } from './errors'
+
+/**
+ * Whether what a vapor root renders begins with a range, `<!--[-->` or
+ * `<!--[!-->`: a list, a slot outlet, a branch of several nodes, or a
+ * built-in rendering one of these as it is.
+ */
+function opensRange(node: TemplateChildNode): boolean {
+  if (node.type === NodeTypes.FOR) {
+    return true
+  } else if (node.type === NodeTypes.IF) {
+    return (
+      !hasLookalikeBranches(node.branches) &&
+      node.branches.some(
+        branch => !isBareBranch(branch) || opensRange(branch.children[0]),
+      )
+    )
+  } else if (node.type === NodeTypes.ELEMENT) {
+    if (node.tagType === ElementTypes.SLOT) {
+      return true
+    } else if (node.tagType === ElementTypes.COMPONENT) {
+      const type = componentTypeMap.get(node)
+      if (type === TRANSITION) {
+        // appearing, it renders in a `<template>`
+        return (
+          !findProp(node, 'appear', false, true) &&
+          node.children.some(opensRange)
+        )
+      } else if (type === KEEP_ALIVE) {
+        return node.children.some(opensRange)
+      }
+      return (
+        type === SUSPENSE ||
+        (type === TRANSITION_GROUP && !findProp(node, 'tag'))
+      )
+    }
+  }
+  return false
+}
 
 // Because SSR codegen output is completely different from client-side output
 // (e.g. multiple elements can be concatenated into a single template literal
@@ -63,16 +110,19 @@ export function ssrCodegenTransform(
 
   const isFragment =
     ast.children.length > 1 && ast.children.some(c => !isText(c))
-  // A vapor component's render begins with a node of its own, or else with a
-  // range of its own: several roots, or a sole root whose render may itself
-  // begin with a range (a component, or a v-if branch rendering one).
-  // Hydration then takes a range at a component's entry for that component's,
-  // never for the one of a component inside.
+  // A vapor component renders several roots in a range of its own, and so a
+  // sole root that opens a range itself: what a component renders never
+  // begins with a range that could be taken for the one of a slot around it.
+  // Any other sole root needs none: one node is its own unit, and a component
+  // there renders in whatever range the component around it has, which the
+  // client hands on to the single root it creates (compiler-vapor:
+  // `isSingleRoot`).
   const vaporRange =
-    !!options.vapor && (isFragment || opensRange(ast.children[0]))
-  if (vaporRange) context.pushStringPart(`<!--{-->`)
+    !!options.vapor &&
+    (isFragment || (ast.children.length === 1 && opensRange(ast.children[0])))
+  if (vaporRange) context.pushStringPart(`<!--[$-->`)
   processChildren(ast, context, isFragment && !options.vapor)
-  if (vaporRange) context.pushStringPart(`<!--}-->`)
+  if (vaporRange) context.pushStringPart(`<!--]-->`)
   ast.codegenNode = createBlockStatement(context.body)
 
   // Finalize helpers.
@@ -144,25 +194,6 @@ function createSSRTransformContext(
       body.push(statement)
     },
   }
-}
-
-/** Whether the server render of `node` may begin with a component's range. */
-function opensRange(node: TemplateChildNode | undefined): boolean {
-  if (!node) return false
-  if (node.type === NodeTypes.ELEMENT) {
-    return node.tagType === ElementTypes.COMPONENT && !beginsWithOwnMarkup(node)
-  }
-  if (node.type === NodeTypes.IF) {
-    // a chain ranges its branches or renders elements of its own, and a
-    // branch of several nodes begins with its fragment's `[`
-    const [branch] = node.branches
-    return (
-      node.branches.length === 1 &&
-      isBareBranch(branch) &&
-      opensRange(branch.children[0])
-    )
-  }
-  return false
 }
 
 export function createChildContext(

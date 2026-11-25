@@ -113,7 +113,6 @@ describe('ssr: attrs fallthrough', () => {
         return function ssrRender(_ctx, _push, _parent, _attrs) {
           const _component_Comp = _resolveComponent("Comp")
 
-          _push(\`<!--{-->\`)
           _push(_ssrRenderComponent(_component_Comp, _attrs, {
             default: _withCtx((_, _push, _parent, _scopeId, _slotAttrs) => {
               if (_push) {
@@ -130,7 +129,6 @@ describe('ssr: attrs fallthrough', () => {
             }),
             _: 1 /* STABLE */
           }, _parent))
-          _push(\`<!--}-->\`)
         }"
       `)
     })

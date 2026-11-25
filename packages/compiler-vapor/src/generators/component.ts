@@ -2,7 +2,7 @@ import {
   type Namespace,
   Namespaces,
   VaporDynamicComponentFlags,
-  type VaporSingleRoot,
+  VaporSingleRoot,
   VaporSlotStability,
   camelize,
   extend,
@@ -140,7 +140,12 @@ export function genCreateComponent(
       rawSlots,
       isRuntimeDynamicComponent
         ? dynamicComponentFlags
-        : root && (root === true ? 'true' : genFlags(root, ['SLOT'])),
+        : root &&
+            (root === true
+              ? 'true'
+              : genFlags(root, [
+                  root === VaporSingleRoot.SLOT ? 'SLOT' : 'WITH_COMMENTS',
+                ])),
       isRuntimeDynamicComponent
         ? operation.key && [
             '() => (',
@@ -200,6 +205,9 @@ function genDynamicComponentFlags(
   if (root === true) {
     flags |= VaporDynamicComponentFlags.SINGLE_ROOT
     names.push('SINGLE_ROOT')
+  } else if (root === VaporSingleRoot.WITH_COMMENTS) {
+    flags |= VaporDynamicComponentFlags.SINGLE_ROOT_WITH_COMMENTS
+    names.push('SINGLE_ROOT_WITH_COMMENTS')
   } else if (root) {
     flags |= VaporDynamicComponentFlags.SLOT_SINGLE_ROOT
     names.push('SLOT_SINGLE_ROOT')

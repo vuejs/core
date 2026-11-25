@@ -12,7 +12,7 @@ import {
   isVaporSlotContent,
   renderVNodeChildren,
 } from '../render'
-import { isArray } from '@vue/shared'
+import { isArray, isHydrationRangeStart } from '@vue/shared'
 
 const { ensureValidVNode, rawVaporSlotKey } = ssrUtils
 
@@ -59,8 +59,8 @@ export function ssrRenderSlotInner(
   push: PushFn,
   parentComponent: ComponentInternalInstance,
   slotScopeId?: string,
-  // a transition renders the slot bare: otherwise it is a range, `<!--(-->`
-  // around the fallback, which a vapor client has to know before it renders
+  // a transition renders the slot bare: otherwise it is a range, opened by
+  // `<!--[!-->` for the fallback, which a vapor client has to know before it renders
   // anything
   transition?: boolean,
   // what a vdom `cloneVNode` added to the content of a vapor slot, for the
@@ -68,7 +68,6 @@ export function ssrRenderSlotInner(
   slotAttrs?: Props,
 ): void {
   const slotFn = slots[slotName]
-  let fallback = false
   if (slotFn) {
     if ((slotFn as any)[rawVaporSlotKey]) vaporSlots++
     const before = vaporSlots
@@ -98,8 +97,7 @@ export function ssrRenderSlotInner(
     }
     if (vnodes !== undefined) {
       if (!transition) {
-        fallback = !vnodes && !!fallbackRenderFn
-        push(fallback ? `<!--(-->` : `<!--[-->`)
+        push(!vnodes && fallbackRenderFn ? `<!--[!-->` : `<!--[-->`)
       }
       if (vnodes) {
         // normal slot
@@ -133,8 +131,7 @@ export function ssrRenderSlotInner(
         }
       }
       if (!transition) {
-        fallback = isEmptySlot && !!fallbackRenderFn
-        push(fallback ? `<!--(-->` : `<!--[-->`)
+        push(isEmptySlot && fallbackRenderFn ? `<!--[!-->` : `<!--[-->`)
       }
       if (isEmptySlot) {
         if (fallbackRenderFn) {
@@ -151,9 +148,9 @@ export function ssrRenderSlotInner(
         if (transition) {
           const first = slotBuffer[0]
           if (
-            (first === '<!--[-->' || first === '<!--(-->') &&
-            slotBuffer[end - 1] ===
-              (first === '<!--(-->' ? '<!--)-->' : '<!--]-->')
+            (first === '<!--[-->' || first === '<!--[!-->') &&
+            slotBuffer[end - 1] === '<!--]-->' &&
+            spansBuffer(slotBuffer)
           ) {
             start++
             end--
@@ -171,8 +168,7 @@ export function ssrRenderSlotInner(
     }
   } else {
     if (!transition) {
-      fallback = !!fallbackRenderFn
-      push(fallback ? `<!--(-->` : `<!--[-->`)
+      push(fallbackRenderFn ? `<!--[!-->` : `<!--[-->`)
     }
     if (fallbackRenderFn) {
       fallbackRenderFn()
@@ -180,7 +176,7 @@ export function ssrRenderSlotInner(
       push(`<!---->`)
     }
   }
-  if (!transition) push(fallback ? `<!--)-->` : `<!--]-->`)
+  if (!transition) push(`<!--]-->`)
 }
 
 const commentTestRE = /^<!--[\s\S]*-->$/
@@ -190,4 +186,25 @@ function isComment(item: SSRBufferItem) {
   // if item is '<!---->' or '<!--[-->' or '<!--]-->', return true directly
   if (item.length <= 8) return true
   return !item.replace(commentRE, '').trim()
+}
+
+// Whether the range a buffer opens with closes at its end: ranges side by
+// side open and close one as well, and every range closes alike. The buffer
+// of a component in it holds whole ranges.
+function spansBuffer(buffer: SSRBufferItem[]): boolean {
+  let depth = 0
+  const last = buffer.length - 1
+  for (let i = 0; i < last; i++) {
+    const item = buffer[i]
+    if (typeof item === 'string') {
+      let match
+      commentRE.lastIndex = 0
+      while ((match = commentRE.exec(item))) {
+        const data = match[0].slice(4, -3)
+        if (isHydrationRangeStart(data)) depth++
+        else if (data === ']' && !--depth) return false
+      }
+    }
+  }
+  return true
 }

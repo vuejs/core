@@ -290,7 +290,7 @@ export interface VaporInVdomInterface {
   ): boolean
   /**
    * Hydrates an outlet marked `vo` whose fallback the server rendered in place
-   * of the whole content (`<!--(-->`).
+   * of the whole content (`<!--[!-->`).
    */
   hydrateSlotOutlet(
     outlet: VNode,

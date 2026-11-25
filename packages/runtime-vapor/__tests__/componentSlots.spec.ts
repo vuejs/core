@@ -4408,23 +4408,30 @@ describe('component: slots', () => {
           })
           const Parent = defineVaporComponent({
             setup() {
-              return createComponent(Child, null, {
-                footer: () => createSlot('footer'),
-              })
+              return createComponent(
+                Child,
+                null,
+                {
+                  footer: () => createSlot('footer'),
+                },
+                true,
+              )
             },
           })
           const container = document.createElement('div')
           container.innerHTML =
-            '<!--{--><!--{--><!--{--><main>content</main><!--[--><!--]--><p>after</p><!--}--><!--}--><!--}-->'
+            '<!--[$--><main>content</main><!--[--><!--]--><p>after</p><!--]-->'
 
           createVaporSSRApp(
-            defineVaporComponent(() => createComponent(Parent)),
+            defineVaporComponent(() =>
+              createComponent(Parent, null, null, true),
+            ),
           ).mount(container)
 
           expect(slotBlock).toBeInstanceOf(DynamicFragment)
           expect(slotBlock).not.toBeInstanceOf(SlotFragment)
           expect(container.innerHTML).toBe(
-            '<!--{--><!--{--><!--{--><main>content</main><!--[--><!--slot--><!--]--><p>after</p><!--}--><!--}--><!--}-->',
+            '<!--[$--><main>content</main><!--[--><!--slot--><!--]--><p>after</p><!--]-->',
           )
           expect(`Hydration node mismatch`).not.toHaveBeenWarned()
           expect(`Hydration children mismatch`).not.toHaveBeenWarned()

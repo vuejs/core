@@ -147,15 +147,20 @@ export function isVaporBranchStart(data: string): boolean {
 
 /**
  * The data of a comment opening a range only a vapor server render emits:
- * `<!--{-->` around the render of a component, or a v-if branch's.
+ * `<!--[$-->` around the roots of a component, or a v-if branch's. Like
+ * every range, `<!--]-->` closes it.
  */
 export function isVaporRangeStart(data: string): boolean {
-  return data === '{' || isVaporBranchStart(data)
+  return data === '[$' || isVaporBranchStart(data)
 }
 
-/** The data of the comment closing the range `open` opens. */
-export function rangeCloseOf(open: string): string {
-  return open === '(' ? ')' : open === '{' ? '}' : ']'
+/**
+ * The data of a comment opening a range a hydration steps over as one, up to
+ * its `<!--]-->`: a fragment, a slot fallback (`[!`) or what only a vapor
+ * server render opens.
+ */
+export function isHydrationRangeStart(data: string): boolean {
+  return data === '[' || data === '[!' || isVaporRangeStart(data)
 }
 
 // vapor v-once content never changes validity, so it has nothing to notify.
@@ -181,6 +186,8 @@ export enum VaporDynamicComponentFlags {
   NS_MATHML = 1 << 4,
   // the single root of a slot body (VaporSingleRoot.SLOT)
   SLOT_SINGLE_ROOT = 1 << 5,
+  // the single root next to comments (VaporSingleRoot.WITH_COMMENTS)
+  SINGLE_ROOT_WITH_COMMENTS = 1 << 6,
 }
 
 /**
@@ -190,4 +197,8 @@ export enum VaporDynamicComponentFlags {
  */
 export enum VaporSingleRoot {
   SLOT = 2,
+  // The single root of a component template that has comments next to it:
+  // the root for fallthrough attrs as `true` is, but not the only node the
+  // template renders, so it does not share the component's hydration range.
+  WITH_COMMENTS = 3,
 }

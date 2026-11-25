@@ -35,7 +35,6 @@ import {
   createRoot,
   createSimpleExpression,
   createTransformContext,
-  findProp,
   getBaseTransformPreset,
   locStub,
   resolveComponentType,
@@ -252,22 +251,6 @@ export const ssrTransformComponent: NodeTransform = (node, context) => {
       )
     }
   }
-}
-
-/**
- * Whether the server render of `node` begins with markup of its own: a
- * Teleport opens with its markers, a TransitionGroup with its tag or range,
- * a Suspense in a vapor component with its slot's range, an appearing
- * Transition with its `<template>`.
- */
-export function beginsWithOwnMarkup(node: ComponentNode): boolean {
-  const component = componentTypeMap.get(node)
-  return (
-    component === TELEPORT ||
-    component === TRANSITION_GROUP ||
-    component === SUSPENSE ||
-    (component === TRANSITION && !!findProp(node, 'appear', false, true))
-  )
 }
 
 export function ssrProcessComponent(
