@@ -77,6 +77,7 @@ export enum CharCodes {
   Colon = 0x3a, // ":"
   At = 0x40, // "@"
   LeftSquare = 91, // "["
+  Backslash = 92, // "\"
   RightSquare = 93, // "]"
 }
 
@@ -106,6 +107,8 @@ export enum State {
   InDirName,
   InDirArg,
   InDirDynamicArg,
+  InDirDynamicArgString,
+  InDirDynamicArgStringEscape,
   InDirModifier,
   AfterAttrName,
   BeforeAttrValue,
@@ -242,6 +245,8 @@ export default class Tokenizer {
   public sectionStart = 0
   /** The index within the buffer that we are currently looking at. */
   private index = 0
+  private dynamicArgQuote = 0
+  private dynamicArgBracketDepth = 0
   /** The start of the last entity. */
   private entityStart = 0
   /** Some behavior, eg. when decoding entities, is done while we are in another state. This keeps track of the other state type. */
@@ -741,6 +746,7 @@ export default class Tokenizer {
       this.handleAttrNameEnd(c)
     } else if (c === CharCodes.LeftSquare) {
       this.state = State.InDirDynamicArg
+      this.dynamicArgBracketDepth = 0
     } else if (c === CharCodes.Dot) {
       this.cbs.ondirarg(this.sectionStart, this.index)
       this.state = State.InDirModifier
@@ -748,8 +754,21 @@ export default class Tokenizer {
     }
   }
   private stateInDynamicDirArg(c: number): void {
-    if (c === CharCodes.RightSquare) {
-      this.state = State.InDirArg
+    if (
+      c === CharCodes.SingleQuote ||
+      c === CharCodes.DoubleQuote ||
+      c === CharCodes.GraveAccent
+    ) {
+      this.dynamicArgQuote = c
+      this.state = State.InDirDynamicArgString
+    } else if (c === CharCodes.LeftSquare) {
+      this.dynamicArgBracketDepth++
+    } else if (c === CharCodes.RightSquare) {
+      if (this.dynamicArgBracketDepth > 0) {
+        this.dynamicArgBracketDepth--
+      } else {
+        this.state = State.InDirArg
+      }
     } else if (c === CharCodes.Eq || isEndOfTagSection(c)) {
       this.cbs.ondirarg(this.sectionStart, this.index + 1)
       this.handleAttrNameEnd(c)
@@ -760,6 +779,18 @@ export default class Tokenizer {
         )
       }
     }
+  }
+
+  private stateInDynamicDirArgString(c: number): void {
+    if (c === CharCodes.Backslash) {
+      this.state = State.InDirDynamicArgStringEscape
+    } else if (c === this.dynamicArgQuote) {
+      this.state = State.InDirDynamicArg
+    }
+  }
+
+  private stateInDynamicDirArgStringEscape(): void {
+    this.state = State.InDirDynamicArgString
   }
   private stateInDirModifier(c: number): void {
     if (c === CharCodes.Eq || isEndOfTagSection(c)) {
@@ -995,6 +1026,14 @@ export default class Tokenizer {
         }
         case State.InDirDynamicArg: {
           this.stateInDynamicDirArg(c)
+          break
+        }
+        case State.InDirDynamicArgString: {
+          this.stateInDynamicDirArgString(c)
+          break
+        }
+        case State.InDirDynamicArgStringEscape: {
+          this.stateInDynamicDirArgStringEscape()
           break
         }
         case State.InDirModifier: {
