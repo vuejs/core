@@ -70,6 +70,7 @@ import { setDynamicProps } from './dom/prop'
 import { interopSlotsKey, isInteropEnabled } from './vdomInteropState'
 import { isTransitionEnabled, isVaporTransition } from './transition'
 import { isAsyncComponentEnabled } from './asyncComponentState'
+import { isCustomElementEnabled } from './customElementState'
 import { renderWithSlotScopeIds } from './scopeId'
 import { setElementScopeIds } from './dom/scopeIdStamp'
 import { hydrateSlotContent } from './dom/hydrateFragment'
@@ -457,11 +458,12 @@ export function createSlot(
     // A definition that resolves to another async wrapper mounts that wrapper
     // with the custom element callback, so its inner reads `ce` from it.
     const ce =
-      (instance as GenericComponentInstance).ce ||
-      (isAsyncComponentEnabled &&
-        instance.parent &&
-        isAsyncWrapper(instance.parent) &&
-        instance.parent.ce)
+      isCustomElementEnabled &&
+      ((instance as GenericComponentInstance).ce ||
+        (isAsyncComponentEnabled &&
+          instance.parent &&
+          isAsyncWrapper(instance.parent) &&
+          instance.parent.ce))
     // Only shadow DOM needs a native <slot> for projection. Without a shadow
     // root the host hands its light DOM children over as static slots, so the
     // outlet resolves them like any other slot.
@@ -508,7 +510,7 @@ export function createSlot(
       // created once: a dynamic name is read inside the prop effect rather
       // than re-running this function, which would pile up orphan outlets
       // and fallbacks.
-      if (isCustomElementSlot) {
+      if (isCustomElementEnabled && isCustomElementSlot) {
         const el = createElement('slot')
         // the outlet is an element of the owner's own template, so it carries
         // the owner's own scope id plus the ids of the enclosing slot context
