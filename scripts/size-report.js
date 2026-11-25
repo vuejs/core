@@ -32,8 +32,7 @@ run()
  */
 async function run() {
   await renderFiles()
-  await renderUsages('_usages.json', 'Usages')
-  await renderUsages('_apps.json', 'Apps')
+  await renderUsages()
 
   process.stdout.write(output)
 }
@@ -77,16 +76,12 @@ async function renderFiles() {
 
 /**
  * Renders usage data comparing current and previous usage results
- *
- * @param {string} file - JSON file written by usage-size.js
- * @param {string} title - Section title
  */
-async function renderUsages(file, title) {
-  const curr = await importJSON(path.resolve(currDir, file))
-  if (!curr) return
-  const prev = await importJSON(path.resolve(prevDir, file))
+async function renderUsages() {
+  const curr = await importJSON(path.resolve(currDir, '_usages.json'))
+  const prev = await importJSON(path.resolve(prevDir, '_usages.json'))
 
-  output += `\n### ${title}\n\n`
+  output += '\n### Usages\n\n'
 
   const data = Object.values(curr)
     .map(usage => {
