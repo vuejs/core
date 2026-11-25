@@ -2,12 +2,15 @@ import {
   type WatchOptions as BaseWatchOptions,
   type DebuggerOptions,
   EffectFlags,
+  EffectScope,
   type ReactiveMarker,
   type WatchCallback,
   type WatchEffect,
   type WatchHandle,
   type WatchSource,
   WatcherEffect,
+  getCurrentScope,
+  onScopeDispose,
 } from '@vue/reactivity'
 import { type SchedulerJob, SchedulerJobFlags, queueJob } from './scheduler'
 import { EMPTY_OBJ, NOOP, extend, isFunction, isString } from '@vue/shared'
@@ -148,6 +151,8 @@ export function watch<T = any, Immediate extends Readonly<boolean> = false>(
 
 class RenderWatcherEffect extends WatcherEffect {
   job: SchedulerJob
+  // a child of the owner's scope, when the watcher is created in another one
+  ownerScope: EffectScope | undefined
 
   constructor(
     instance: GenericComponentInstance | null,
@@ -171,6 +176,23 @@ class RenderWatcherEffect extends WatcherEffect {
     }
     job.i = instance
     this.job = job
+
+    if (instance && getCurrentScope() !== instance.scope) {
+      // the watcher may outlive its owner: release the owner once it unmounts
+      instance.scope.run(() => {
+        ;(this.ownerScope = new EffectScope()).run(() =>
+          onScopeDispose(() =>
+            // deferred: the watchers this unmount stops still report to the owner
+            Promise.resolve().then(() => (job.i = null)),
+          ),
+        )
+      })
+    }
+  }
+
+  stop(): void {
+    super.stop()
+    if (this.ownerScope) this.ownerScope.stop()
   }
 
   notify(): void {
@@ -239,7 +261,12 @@ function doWatch(
 
   const instance = currentInstance
   baseWatchOptions.call = (fn, type, args) =>
-    callWithAsyncErrorHandling(fn, instance, type, args)
+    callWithAsyncErrorHandling(
+      fn,
+      effect.job.i as GenericComponentInstance | null,
+      type,
+      args,
+    )
 
   const effect = new RenderWatcherEffect(
     instance,

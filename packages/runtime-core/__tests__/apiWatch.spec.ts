@@ -18,6 +18,7 @@ import {
   h,
   nodeOps,
   onMounted,
+  onUnmounted,
   render,
   serializeInner,
   watchPostEffect,
@@ -2240,6 +2241,77 @@ describe('api: watch', () => {
     expect.soft(cleaned).toEqual([0, 2, 1])
     expect.soft([...live]).toEqual([])
   })
+
+  test('a watcher that outlives its owner no longer reports errors to it', async () => {
+    const source = ref(0)
+    const show = ref(true)
+    const scope = effectScope(true)
+    const errors: string[] = []
+    const Child = defineComponent({
+      setup() {
+        scope.run(() => {
+          watch(
+            source,
+            value => {
+              throw new Error(`error ${value}`)
+            },
+            { flush: 'sync' },
+          )
+        })
+        return () => null
+      },
+    })
+    const app = createApp({
+      render: () => (show.value ? h(Child) : null),
+    })
+    app.config.errorHandler = e => errors.push((e as Error).message)
+    app.mount(nodeOps.createElement('div'))
+
+    source.value = 1
+    expect(errors).toEqual(['error 1'])
+
+    show.value = false
+    await nextTick()
+    expect(() => source.value++).toThrow('error 2')
+    expect(errors).toEqual(['error 1'])
+    expect(
+      'Unhandled error during execution of watcher callback',
+    ).toHaveBeenWarned()
+    scope.stop()
+  })
+
+  test.each<[string, (stop: () => void) => void]>([
+    ['onScopeDispose', onScopeDispose],
+    ['onUnmounted', onUnmounted],
+  ])(
+    'reports the cleanup error of a watcher in a detached scope stopped in %s to its unmounting owner',
+    (_, onDispose) => {
+      const source = ref(0)
+      const errors: string[] = []
+      const app = createApp({
+        setup() {
+          const scope = effectScope(true)
+          scope.run(() => {
+            watch(
+              source,
+              (_, __, onCleanup) => {
+                onCleanup(() => {
+                  throw new Error('cleanup')
+                })
+              },
+              { immediate: true },
+            )
+          })
+          onDispose(() => scope.stop())
+          return () => null
+        },
+      })
+      app.config.errorHandler = e => errors.push((e as Error).message)
+      app.mount(nodeOps.createElement('div'))
+      app.unmount()
+      expect(errors).toEqual(['cleanup'])
+    },
+  )
 })
 
 function getEffectsCount(scope: EffectScope): number {
