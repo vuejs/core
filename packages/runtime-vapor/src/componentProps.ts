@@ -18,6 +18,7 @@ import {
 } from '@vue/shared'
 import type { VaporComponent, VaporComponentInstance } from './component'
 import type { SlotSourceCell } from './componentSlots'
+import { isDynamicSlotsEnabled } from './dynamicSlotsState'
 import {
   type NormalizedPropsOptions,
   baseNormalizePropsOptions,
@@ -664,7 +665,7 @@ export function initInputs(
             }
           }
         }
-        if (cells) collectSlotSources(cells)
+        if (isDynamicSlotsEnabled && cells) collectSlotSources(cells)
       } finally {
         restoreCurrentInstance(prevInner)
       }
@@ -700,7 +701,7 @@ export function collectInputs(
   const prevSub = setActiveSub()
   try {
     const rawValues = collectProps(rawProps)
-    if (cells) collectSlotSources(cells)
+    if (isDynamicSlotsEnabled && cells) collectSlotSources(cells)
     return rawValues
   } finally {
     setActiveSub(prevSub)
@@ -728,7 +729,8 @@ export function deliverInputs(
         propsToUpdate,
       )
     }
-    if (cells) changed = commitSlotSources(cells) || changed
+    if (isDynamicSlotsEnabled && cells)
+      changed = commitSlotSources(cells) || changed
   } finally {
     try {
       endBatch()

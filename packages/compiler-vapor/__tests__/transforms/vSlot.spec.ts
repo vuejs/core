@@ -1376,4 +1376,22 @@ describe('compiler: transform slot', () => {
       )
     }
   })
+
+  test('enables dynamic slots only when passing them', () => {
+    const enable = '\n_enableDynamicSlots()\n'
+    const code = (src: string) => compileWithSlots(src).code
+    expect(code(`<Comp><template v-if="ok" #a>a</template></Comp>`)).toContain(
+      enable,
+    )
+    expect(code(`<Comp><template #[name]>a</template></Comp>`)).toContain(
+      enable,
+    )
+    expect(
+      code(`<Comp><template v-for="n in list" #[n]>a</template></Comp>`),
+    ).toContain(enable)
+    expect(code(`<Comp><template #a>a</template>b</Comp>`)).not.toContain(
+      'enableDynamicSlots',
+    )
+    expect(code(`<Comp v-if="ok">a</Comp>`)).not.toContain('enableDynamicSlots')
+  })
 })
