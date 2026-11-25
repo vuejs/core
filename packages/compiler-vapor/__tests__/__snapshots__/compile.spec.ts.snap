@@ -344,14 +344,14 @@ export function render(_ctx) {
 `;
 
 exports[`compile > execution order > with insertionState 1`] = `
-"import { child as _child, setInsertionState as _setInsertionState, createSlot as _createSlot, createAssetComponent as _createAssetComponent, template as _template } from 'vue';
+"import { child as _child, setInsertionState as _setInsertionState, createPlainSlot as _createPlainSlot, createAssetComponent as _createAssetComponent, template as _template } from 'vue';
 const t0 = _template("<div><div>", 1)
 
 export function render(_ctx) {
   const n3 = t0()
   const n1 = _child(n3)
   _setInsertionState(n1)
-  const n0 = _createSlot()
+  const n0 = _createPlainSlot()
   _setInsertionState(n3, 1)
   const n2 = _createAssetComponent("Comp")
   return n3

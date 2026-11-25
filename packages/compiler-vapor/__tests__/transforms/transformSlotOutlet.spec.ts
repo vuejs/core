@@ -35,9 +35,9 @@ const compileWithSlotsOutlet = makeCompile({
 describe('compiler: transform <slot> outlets', () => {
   test('default slot outlet', () => {
     const { ir, code, helpers } = compileWithSlotsOutlet(`<slot />`)
-    expect(code).toContain(`const n0 = _createSlot()`)
+    expect(code).toContain(`const n0 = _createPlainSlot()`)
     expect(code).toMatchSnapshot()
-    expect(helpers).toContain('createSlot')
+    expect(helpers).toContain('createPlainSlot')
     expect(ir.block.effect).toEqual([])
     expect(ir.block.dynamic.children[0].operation).toMatchObject({
       type: IRNodeTypes.SLOT_OUTLET_NODE,
@@ -181,6 +181,9 @@ describe('compiler: transform <slot> outlets', () => {
   test('default slot outlet with fallback', () => {
     const { ir, code } = compileWithSlotsOutlet(`<slot><div/></slot>`)
     expect(code).toMatchSnapshot()
+    // only an outlet with fallback content uses the full helper
+    expect(code).toContain(`_createSlot("default", null, () => {`)
+    expect(code).not.toContain(`createPlainSlot`)
     expect([...ir.template.keys()][0]).toBe('<div>')
     expect(ir.block.dynamic.children[0].operation).toMatchObject({
       type: IRNodeTypes.SLOT_OUTLET_NODE,

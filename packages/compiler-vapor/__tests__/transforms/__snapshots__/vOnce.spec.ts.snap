@@ -74,13 +74,13 @@ export function render(_ctx) {
 `;
 
 exports[`compiler: v-once > on slot outlet 1`] = `
-"import { setInsertionState as _setInsertionState, createSlot as _createSlot, template as _template } from 'vue';
+"import { setInsertionState as _setInsertionState, createPlainSlot as _createPlainSlot, template as _template } from 'vue';
 const t0 = _template("<div>", 1)
 
 export function render(_ctx) {
   const n1 = t0()
   _setInsertionState(n1)
-  const n0 = _createSlot("default", null, null, 2 /* ONCE */)
+  const n0 = _createPlainSlot("default", null, 2 /* ONCE */)
   return n1
 }"
 `;

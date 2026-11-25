@@ -29,7 +29,6 @@ export function genSlotOutlet(
     }
     fallbackArg = genBlock(fallback, context)
   }
-  const createSlot = helper('createSlot')
   const rawPropsArg = genSlotProps(oper.props, context)
   const omitDefaultName =
     name.isStatic &&
@@ -46,7 +45,22 @@ export function genSlotOutlet(
   push(
     NEWLINE,
     `const n${id} = `,
-    genCall(createSlot, nameArg, rawPropsArg, fallbackArg, genSlotFlags(flags)),
+    // an outlet without fallback content keeps the fallback resolution
+    // tree-shakeable
+    fallbackArg
+      ? genCall(
+          helper('createSlot'),
+          nameArg,
+          rawPropsArg,
+          fallbackArg,
+          genSlotFlags(flags),
+        )
+      : genCall(
+          helper('createPlainSlot'),
+          nameArg,
+          rawPropsArg,
+          genSlotFlags(flags),
+        ),
   )
 
   return frag
