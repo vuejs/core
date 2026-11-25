@@ -529,6 +529,78 @@ describe('runtime-dom: v-show directive', () => {
       expect(el.className).toBe('')
     })
 
+    test('should not strip the from class of a re-enter with the frame of a cancelled enter', async () => {
+      const afterEnter = vi.fn()
+      const { visible, el } = mount(
+        `<Transition name="test" :duration="100" @after-enter="afterEnter">
+          <div v-show="visible" />
+        </Transition>`,
+        { afterEnter },
+      )
+
+      visible.value = true
+      await nextTick()
+      // enter #1 is announced, its frame is still pending
+      vi.advanceTimersToNextFrame()
+      visible.value = false
+      await nextTick()
+      visible.value = true
+      await nextTick()
+      expect(el.className).toBe('test-enter-from test-enter-active')
+
+      // the frame of the cancelled enter #1 runs before the frame of enter #2
+      vi.advanceTimersToNextFrame()
+      expect(el.className).toBe('test-enter-from test-enter-active')
+
+      // the frame of enter #2 swaps its from class for the to class
+      vi.advanceTimersToNextFrame()
+      expect(el.className).toBe('test-enter-active test-enter-to')
+
+      vi.advanceTimersByTime(500)
+      expect(afterEnter).toHaveBeenCalledTimes(1)
+      expect(el.style.display).toBe('')
+      expect(el.className).toBe('')
+    })
+
+    test('should not strip a leave from class shared with enter-from-class', async () => {
+      const afterLeave = vi.fn()
+      const { visible, el } = mount(
+        `<Transition
+          :duration="100"
+          enter-from-class="fade"
+          enter-active-class="fade-in"
+          enter-to-class="fade-done"
+          leave-from-class="fade"
+          leave-active-class="fade-out"
+          leave-to-class="fade-gone"
+          @after-leave="afterLeave"
+        >
+          <div v-show="visible" />
+        </Transition>`,
+        { afterLeave },
+      )
+
+      visible.value = true
+      await nextTick()
+      // enter #1 is announced, its frame is still pending
+      vi.advanceTimersToNextFrame()
+      visible.value = false
+      await nextTick()
+      expect(el.className).toBe('fade fade-out')
+
+      // the cancelled enter's frame runs while the leave is still pending
+      vi.advanceTimersToNextFrame()
+      expect(el.className).toBe('fade fade-out')
+      // the leave frame swaps the from class for the to class
+      vi.advanceTimersToNextFrame()
+      expect(el.className).toBe('fade-out fade-gone')
+
+      vi.advanceTimersByTime(500)
+      expect(afterLeave).toHaveBeenCalledTimes(1)
+      expect(el.style.display).toBe('none')
+      expect(el.className).toBe('')
+    })
+
     test('should not let the timeout of a cancelled leave remove shared enter classes', async () => {
       const { visible, el } = mount(
         `<Transition

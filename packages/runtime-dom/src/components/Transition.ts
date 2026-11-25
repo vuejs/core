@@ -189,6 +189,18 @@ export function resolveTransitionProps(
   ) => {
     el._enterResolve = undefined
     el._enterCancelled = isCancelled
+    // like `finishLeave`, the from class belongs to the finished or cancelled
+    // enter itself: remove it here so that the frame, which may never run or
+    // may already belong to a later enter, does not have to
+    removeTransitionClass(el, isAppear ? appearFromClass : enterFromClass)
+    if (__COMPAT__ && legacyClassEnabled) {
+      const legacyClass = isAppear
+        ? legacyAppearFromClass
+        : legacyEnterFromClass
+      if (legacyClass) {
+        removeTransitionClass(el, legacyClass)
+      }
+    }
     removeTransitionClass(el, isAppear ? appearToClass : enterToClass)
     removeTransitionClass(el, isAppear ? appearActiveClass : enterActiveClass)
     done && done()
@@ -219,6 +231,11 @@ export function resolveTransitionProps(
       el._enterResolve = resolve
       callHook(hook, [el, resolve])
       nextFrame(() => {
+        if (el._enterResolve !== resolve) {
+          // cancelled, finished, or superseded: the classes on the element now
+          // belong to a later enter, so they are not ours to remove
+          return
+        }
         removeTransitionClass(el, isAppear ? appearFromClass : enterFromClass)
         if (__COMPAT__ && legacyClassEnabled) {
           const legacyClass = isAppear
@@ -227,10 +244,6 @@ export function resolveTransitionProps(
           if (legacyClass) {
             removeTransitionClass(el, legacyClass)
           }
-        }
-        if (el._enterResolve !== resolve) {
-          // cancelled, finished, or superseded
-          return
         }
         addTransitionClass(el, isAppear ? appearToClass : enterToClass)
         if (!hasExplicitCallback(hook)) {
