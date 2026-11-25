@@ -1,6 +1,6 @@
 import { isFunction } from '@vue/shared'
 import { currentInstance, getCurrentGenericInstance } from './component'
-import { currentApp } from './apiCreateApp'
+import { type App, currentApp } from './apiCreateApp'
 import { warn } from './warning'
 import { isHmrUpdating } from './hmr'
 
@@ -91,5 +91,18 @@ export function inject(
  * user. One example is `useRoute()` in `vue-router`.
  */
 export function hasInjectionContext(): boolean {
-  return !!(getCurrentGenericInstance() || currentApp)
+  return !!getCurrentApp()
+}
+
+/**
+ * Returns the current app within a context, scope or `app.runWithContext()`.
+ * Returns null or undefined if called anywhere else.
+ */
+export function getCurrentApp<HostElement = any>():
+  | App<HostElement>
+  | null
+  | undefined {
+  // same priority as inject(): a runWithContext() app wins over the component
+  // oxlint-disable-next-line oxc/no-optional-chaining
+  return currentApp ?? getCurrentGenericInstance()?.appContext.app
 }

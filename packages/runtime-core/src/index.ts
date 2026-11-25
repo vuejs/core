@@ -58,7 +58,12 @@ export {
   onErrorCaptured,
   onServerPrefetch,
 } from './apiLifecycle'
-export { provide, inject, hasInjectionContext } from './apiInject'
+export {
+  provide,
+  inject,
+  hasInjectionContext,
+  getCurrentApp,
+} from './apiInject'
 export { nextTick } from './scheduler'
 export { defineComponent } from './apiDefineComponent'
 export { defineAsyncComponent } from './apiAsyncComponent'
