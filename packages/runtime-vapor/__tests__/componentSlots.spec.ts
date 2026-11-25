@@ -10,6 +10,7 @@ import {
   createVaporSSRApp,
   defineVaporAsyncComponent,
   defineVaporComponent,
+  enableDynamicSlots,
   insert,
   next,
   remove,
@@ -86,6 +87,9 @@ import {
   hydrateDynamicFragmentAnchor,
   withHydratingSlotBoundary,
 } from '../src/dom/hydrateFragment'
+
+// hand-written `$` slots, as the compiler would enable them
+enableDynamicSlots()
 
 const define = makeRender<any>()
 const keyedIfShape =

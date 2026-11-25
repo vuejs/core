@@ -686,6 +686,7 @@ function genStaticSlots(
     genSlotBlockWithProps(slots[name], context),
   ])
   if (dynamicSlots) {
+    context.hasDynamicSlots = true
     args.push([`$: `, genDynamicSlots(dynamicSlots, context, slotDeclarations)])
   }
   return genMulti(DELIMITERS_OBJECT_NEWLINE, ...args)

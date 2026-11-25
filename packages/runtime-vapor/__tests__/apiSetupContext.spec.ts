@@ -5,6 +5,7 @@ import {
   defineVaporComponent,
   delegate,
   delegateEvents,
+  enableDynamicSlots,
   insert,
   renderEffect,
   setDynamicProps,
@@ -13,6 +14,9 @@ import {
 } from '../src'
 import { nextTick, reactive, ref, watchEffect } from '@vue/runtime-dom'
 import { makeRender } from './_utils'
+
+// hand-written `$` slots, as the compiler would enable them
+enableDynamicSlots()
 
 const define = makeRender()
 
