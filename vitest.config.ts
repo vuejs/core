@@ -57,6 +57,7 @@ export default defineConfig({
             ...configDefaults.exclude,
             '**/e2e/**',
             '**/{vue,vue-compat,runtime-dom}/**',
+            'packages/runtime-core/__tests__/apiWatch.spec.ts',
             'packages/server-renderer/__tests__/ssrWatch.spec.ts',
             'packages/server-renderer/__tests__/ssrRender.spec.ts',
           ],
@@ -68,6 +69,7 @@ export default defineConfig({
           name: 'unit-gc',
           pool: 'forks',
           include: [
+            'packages/runtime-core/__tests__/apiWatch.spec.ts',
             'packages/server-renderer/__tests__/ssrWatch.spec.ts',
             'packages/server-renderer/__tests__/ssrRender.spec.ts',
           ],

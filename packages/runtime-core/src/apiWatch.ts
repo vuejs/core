@@ -1,12 +1,15 @@
 import {
   type WatchOptions as BaseWatchOptions,
   type DebuggerOptions,
+  EffectScope,
   type ReactiveMarker,
   type WatchCallback,
   type WatchEffect,
   type WatchHandle,
   type WatchSource,
   watch as baseWatch,
+  getCurrentScope,
+  onScopeDispose,
 } from '@vue/reactivity'
 import { type SchedulerJob, SchedulerJobFlags, queueJob } from './scheduler'
 import { EMPTY_OBJ, NOOP, extend, isFunction, isString } from '@vue/shared'
@@ -191,7 +194,26 @@ function doWatch(
     }
   }
 
-  const instance = currentInstance
+  let instance = currentInstance
+  let watcherJob: SchedulerJob | undefined
+  if (instance && getCurrentScope() !== instance.scope) {
+    // the watcher may outlive its owner: release the owner once it unmounts
+    if (instance.scope.active) {
+      const ownerScope = instance.scope.run(() => new EffectScope())!
+      ownerScope.run(() =>
+        onScopeDispose(() =>
+          // deferred: the watchers this unmount stops still report to the owner
+          Promise.resolve().then(() => {
+            instance = null
+            if (watcherJob) watcherJob.i = null
+          }),
+        ),
+      )
+      baseWatchOptions.onStop = () => ownerScope.stop()
+    } else {
+      instance = null
+    }
+  }
   baseWatchOptions.call = (fn, type, args) =>
     callWithAsyncErrorHandling(fn, instance, type, args)
 
@@ -217,6 +239,7 @@ function doWatch(
   }
 
   baseWatchOptions.augmentJob = (job: SchedulerJob) => {
+    watcherJob = job
     // important: mark the job as a watcher callback so that scheduler knows
     // it is allowed to self-trigger (#1727)
     if (cb) {
