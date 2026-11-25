@@ -28,7 +28,8 @@ describe('useInstanceInfo', () => {
       `<script setup vapor>
         import { getCurrentInstance, useInstanceInfo } from 'vue'
         const data = _data
-        data.value.record(useInstanceInfo(), getCurrentInstance())
+        const info = useInstanceInfo()
+        data.value.record(info, getCurrentInstance(), info.isMounted)
       </script>
       <template>
         <div>comp</div>
@@ -48,7 +49,7 @@ describe('useInstanceInfo', () => {
     mount(App, true)
     await nextTick()
 
-    const [info, vdomInstance] = seen
+    const [info, vdomInstance, mountedInSetup] = seen
     expect(vdomInstance).toBe(null)
     expect(info).not.toBe(null)
 
@@ -60,6 +61,8 @@ describe('useInstanceInfo', () => {
     expect(info.type).toBe(Comp)
     expect(info.ce).toBe(null)
     expect(typeof info.uid).toBe('number')
+    expect(mountedInSetup).toBe(false)
+    expect(info.isMounted).toBe(true)
   })
 
   test('isVapor on the server', async () => {

@@ -30,6 +30,7 @@ describe('useInstanceInfo', () => {
       'el',
       'isVapor',
       'isHydrating',
+      'isMounted',
       'rawPropKeys',
     ]
     // nothing else on the object leads back to the instance
@@ -170,5 +171,20 @@ describe('useInstanceInfo', () => {
     expect(info.el).toBe(null)
     root = mount(() => [h(Fragment), h('span')])
     expect(info.el).toBe(root.children.find((c: any) => c.tag === 'span'))
+  })
+
+  test('isMounted is false until mounted', () => {
+    let info: any
+    const inSetup: boolean[] = []
+    const Comp = {
+      setup() {
+        info = useInstanceInfo()
+        inSetup.push(info.isMounted)
+        return () => null
+      },
+    }
+    render(h(Comp), nodeOps.createElement('div'))
+    expect(inSetup).toEqual([false])
+    expect(info.isMounted).toBe(true)
   })
 })

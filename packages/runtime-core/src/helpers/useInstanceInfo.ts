@@ -26,6 +26,7 @@ export interface ComponentInstanceInfo {
   readonly el: RendererElement | RendererElement[] | null
   readonly isVapor: boolean
   readonly isHydrating: boolean
+  readonly isMounted: boolean
   /**
    * Keys of the props, attrs and listeners the parent passed, as written.
    */
@@ -116,6 +117,9 @@ export function useInstanceInfo(): ComponentInstanceInfo | null {
     },
     get isHydrating() {
       return isHydrating(i)
+    },
+    get isMounted() {
+      return i.isMounted
     },
     get rawPropKeys() {
       const keys = i.rawKeys
