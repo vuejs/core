@@ -153,13 +153,14 @@ export function parse(
     if (node.type !== NodeTypes.ELEMENT) {
       return
     }
-    // we only want to keep the nodes that are not empty
-    // (when the tag is not a template)
+    // Ignore empty blocks, except for templates and script setup.
+    // The latter is needed for filename-based name inference.
     if (
       ignoreEmpty &&
       node.tag !== 'template' &&
+      !(node.tag === 'script' && hasAttr(node, 'setup')) &&
       isEmpty(node) &&
-      !hasSrc(node)
+      !hasAttr(node, 'src')
     ) {
       return
     }
@@ -404,12 +405,12 @@ function padContent(
   }
 }
 
-function hasSrc(node: ElementNode) {
+function hasAttr(node: ElementNode, name: string) {
   return node.props.some(p => {
     if (p.type !== NodeTypes.ATTRIBUTE) {
       return false
     }
-    return p.name === 'src'
+    return p.name === name
   })
 }
 

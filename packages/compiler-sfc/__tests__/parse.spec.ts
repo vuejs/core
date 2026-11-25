@@ -228,6 +228,18 @@ h1 { color: red }
     ).toBe(0)
   })
 
+  test.each(['', ' \n\t '])('keep empty script setup (%j)', content => {
+    const { descriptor, errors } = parse(
+      `<script></script><script setup>${content}</script>`,
+    )
+    expect(errors).toEqual([])
+    expect(descriptor.script).toBeNull()
+    expect(descriptor.scriptSetup!.content).toBe(content)
+    expect(descriptor.scriptSetup!.setup).toBe(true)
+    expect(descriptor.scriptSetup!.loc.start.offset).toBe(31)
+    expect(descriptor.scriptSetup!.loc.end.offset).toBe(31 + content.length)
+  })
+
   test('handle empty nodes with src attribute', () => {
     const { descriptor } = parse(`<script src="com"/>`)
     expect(descriptor.script).toBeTruthy()
