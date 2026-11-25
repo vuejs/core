@@ -1206,6 +1206,34 @@ describe('resolveType', () => {
       expect(deps && [...deps]).toStrictEqual(Object.keys(files))
     })
 
+    describe.each([true, false])(
+      'relative vue (setup first: %s)',
+      setupFirst => {
+        test.each(['', ' \n\t ', '/* comment */'])(
+          'setup content: %j',
+          content => {
+            const script =
+              '<script lang="ts">export type P = { foo: number }</script>'
+            const setup = `<script setup lang="ts">${content}</script>`
+            const source = setupFirst ? setup + script : script + setup
+            const files = { '/foo.vue': source }
+            const { props, deps, raw } = resolve(
+              `
+              import type { P } from './foo.vue'
+              defineProps<P>()
+              `,
+              files,
+            )
+            expect(props).toStrictEqual({ foo: ['Number'] })
+            expect(deps && [...deps]).toStrictEqual(['/foo.vue'])
+            expect(source.slice(raw.props.foo.start!, raw.props.foo.end!)).toBe(
+              'foo: number',
+            )
+          },
+        )
+      },
+    )
+
     test('relative (chained)', () => {
       const files = {
         '/foo.ts': `import type { P as PP } from './nested/bar.vue'
