@@ -420,6 +420,17 @@ export interface GenericComponentInstance {
    * @internal
    */
   rawKeys?: () => string[]
+  /**
+   * collects the root elements of the component, or the ones the server
+   * rendered for a component that is being hydrated, vapor only
+   * @internal
+   */
+  rootEls?(roots: RendererElement[]): void
+  /**
+   * whether the component is being hydrated, vapor only
+   * @internal
+   */
+  hydrating?: () => boolean
 
   // exposed properties via expose()
   exposed: Record<string, any> | null

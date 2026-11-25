@@ -1,14 +1,14 @@
-import { useInstanceOption, warn } from '@vue/runtime-core'
+import { useInstanceInfo, warn } from '@vue/runtime-core'
 import { EMPTY_OBJ } from '@vue/shared'
 
 export function useCssModule(name = '$style'): Record<string, string> {
   if (!__GLOBAL__) {
-    const { hasInstance, value: type } = useInstanceOption('type', true)
-    if (!hasInstance) {
+    const instance = useInstanceInfo()
+    if (!instance) {
       __DEV__ && warn(`useCssModule must be called inside setup()`)
       return EMPTY_OBJ
     }
-    const modules = type!.__cssModules
+    const modules = instance.type.__cssModules
     if (!modules) {
       __DEV__ && warn(`Current instance does not have CSS modules injected.`)
       return EMPTY_OBJ

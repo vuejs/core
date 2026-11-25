@@ -3,6 +3,7 @@ import {
   type GenericComponentInstance,
   MismatchTypes,
   callWithErrorHandlingOnce,
+  collectHydrationElements,
   isMismatchAllowed,
   isHydrating as isVdomHydrating,
   isHydratingEnabled as isVdomHydratingEnabled,
@@ -334,6 +335,9 @@ export interface ComponentRange {
   /** the `blockDepth` of the component's own block fn */
   depth: number
   prev: ComponentRange | null
+  /** where the component's hydration starts, and what its end restores */
+  cursor: HydrationCursor
+  instance: GenericComponentInstance | null
 }
 
 let currentComponentRange: ComponentRange | null = null
@@ -359,6 +363,23 @@ export function isCurrentComponentClose(node: Node): boolean {
     if (range.close) return range.close === node
   }
   return false
+}
+
+/**
+ * Collects the root elements the server rendered for a component whose block
+ * fn is running.
+ */
+export function collectHydratingRoots(
+  instance: GenericComponentInstance,
+  roots: Element[],
+): void {
+  let range = currentComponentRange
+  while (range) {
+    if (range.instance === instance) {
+      return collectHydrationElements(range.cursor.start, roots)
+    }
+    range = range.prev
+  }
 }
 
 /**
