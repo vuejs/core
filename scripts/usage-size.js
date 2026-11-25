@@ -29,7 +29,8 @@ const appDir = path.resolve('scripts/size-app')
  * @typedef {Object} Preset
  * @property {string} name - The name of the preset
  * @property {'*' | string[]} [imports] - The imports that are part of this preset
- * @property {'vdom' | 'vapor'} [app] - Bundle the SFC app in scripts/size-app instead
+ * @property {string} [app] - Bundle the SFC app in scripts/size-app/<app> instead
+ * @property {boolean} [vapor] - Compile the app SFCs in vapor mode
  * @property {Record<string, string>} [replace]
  */
 
@@ -61,16 +62,19 @@ const presets = [
       'Suspense',
     ],
   },
-  {
-    name: 'app (CAPI only)',
-    app: 'vdom',
-    replace: { __VUE_OPTIONS_API__: 'false' },
-  },
-  {
-    name: 'vapor app (CAPI only)',
-    app: 'vapor',
-    replace: { __VUE_OPTIONS_API__: 'false' },
-  },
+  ...['counter', 'todo'].flatMap(app => [
+    {
+      name: `${app} app (CAPI only)`,
+      app,
+      replace: { __VUE_OPTIONS_API__: 'false' },
+    },
+    {
+      name: `${app} vapor app (CAPI only)`,
+      app,
+      vapor: true,
+      replace: { __VUE_OPTIONS_API__: 'false' },
+    },
+  ]),
 ]
 
 main()
@@ -97,10 +101,22 @@ async function main() {
   }
 
   await mkdir(sizeDir, { recursive: true })
-  await writeFile(
-    path.resolve(sizeDir, '_usages.json'),
-    JSON.stringify(Object.fromEntries(results.map(r => [r.name, r])), null, 2),
-    'utf-8',
+  const writeJSON = async (
+    /** @type {string} */ file,
+    /** @type {typeof results} */ list,
+  ) =>
+    writeFile(
+      path.resolve(sizeDir, file),
+      JSON.stringify(Object.fromEntries(list.map(r => [r.name, r])), null, 2),
+      'utf-8',
+    )
+  await writeJSON(
+    '_usages.json',
+    results.filter((_, i) => !presets[i].app),
+  )
+  await writeJSON(
+    '_apps.json',
+    results.filter((_, i) => presets[i].app),
   )
 }
 
@@ -114,10 +130,10 @@ async function generateBundle(preset) {
   const id = 'virtual:entry'
   let content
   if (preset.app) {
-    const create = preset.app === 'vapor' ? 'createVaporApp' : 'createApp'
+    const create = preset.vapor ? 'createVaporApp' : 'createApp'
     content =
       `import { ${create} } from 'vue'\n` +
-      `import App from '${appDir}/App.vue'\n` +
+      `import App from '${appDir}/${preset.app}/App.vue'\n` +
       `${create}(App).mount('#app')`
   } else {
     const imports = preset.imports || []
@@ -139,7 +155,7 @@ async function generateBundle(preset) {
         async load(_id) {
           if (_id === id) return content
           if (_id.endsWith('.vue')) {
-            return compileSFC(_id, preset.app === 'vapor')
+            return compileSFC(_id, !!preset.vapor)
           }
         },
       },
