@@ -12,6 +12,7 @@
     "size-global": "node scripts/build.js vue runtime-dom compiler-dom -f global -p --size",
     "size-esm-runtime": "node scripts/build.js vue -f esm-bundler-runtime",
     "size-esm": "node scripts/build.js runtime-shared runtime-dom runtime-core reactivity shared runtime-vapor -f esm-bundler",
+    "size-prepare-app": "node scripts/build.js shared compiler-core compiler-dom compiler-ssr compiler-vapor compiler-sfc -f cjs -d",
     "check": "tsc --incremental --noEmit",
     "lint": "vp lint",
     "format": "vp fmt",
