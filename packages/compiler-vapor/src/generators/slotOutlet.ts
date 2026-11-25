@@ -91,6 +91,7 @@ function genSlotProps(
       genCall(helper('guardReactiveProps'), value),
     )
   }
+  context.hasDynamicSlotProps = true
   return ['{ $: [() => (', value, ')] }']
 }
 

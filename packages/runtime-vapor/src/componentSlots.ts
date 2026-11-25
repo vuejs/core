@@ -75,7 +75,10 @@ import { renderWithSlotScopeIds } from './scopeId'
 import { setElementScopeIds } from './dom/scopeIdStamp'
 import { hydrateSlotContent } from './dom/hydrateFragment'
 import { withOnce } from './once'
-import { isDynamicSlotsEnabled } from './dynamicSlotsState'
+import {
+  isDynamicSlotPropsEnabled,
+  isDynamicSlotsEnabled,
+} from './dynamicSlotsState'
 
 export type RawSlots = Record<string, VaporSlot> & {
   $?: DynamicSlotSource[]
@@ -376,6 +379,26 @@ const slotPropsProxyHandlers: ProxyHandler<RawProps> = {
   },
 }
 
+const getStaticSlotProp = (target: RawProps, key: string): unknown =>
+  hasOwn(target, key)
+    ? resolveSource(target[key])
+    : (Object.prototype as any)[key]
+
+const staticSlotPropsProxyHandlers: ProxyHandler<RawProps> = {
+  get: getStaticSlotProp,
+  has: hasOwn,
+  getPrototypeOf: getSlotPropsProto,
+  getOwnPropertyDescriptor(target, key: string) {
+    if (hasOwn(target, key)) {
+      return {
+        configurable: true,
+        enumerable: true,
+        get: () => getStaticSlotProp(target, key),
+      }
+    }
+  },
+}
+
 export function createSlot(
   name: string | (() => string) = 'default',
   rawProps?: LooseRawProps | null,
@@ -412,10 +435,18 @@ export function createSlot(
       : [`${scopeId}-s`]
     : outerSlotScopeIds
   const once = !!(flags & VaporSlotFlags.ONCE)
+  if (__DEV__ && !isDynamicSlotPropsEnabled && rawProps && rawProps.$) {
+    warn(
+      `Dynamic slot props ($) are ignored: call enableDynamicSlotProps() ` +
+        `once before passing them. Compiled templates do this automatically.`,
+    )
+  }
   const slotProps = rawProps
     ? new Proxy(
         once ? snapshotRawProps(rawProps as RawProps) : rawProps,
-        slotPropsProxyHandlers,
+        isDynamicSlotPropsEnabled
+          ? slotPropsProxyHandlers
+          : staticSlotPropsProxyHandlers,
       )
     : EMPTY_OBJ
   let fragment: VaporFragment

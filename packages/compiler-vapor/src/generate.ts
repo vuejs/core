@@ -45,6 +45,7 @@ export class CodegenContext {
 
   needsTemplateRefSetter: boolean = false
   hasDynamicSlots: boolean = false
+  hasDynamicSlotProps: boolean = false
   inSlotBlock: boolean = false
 
   helper = (name: CoreHelper | VaporHelper): string => {
@@ -283,6 +284,9 @@ export function generate(
   const dynamicSlots = context.hasDynamicSlots
     ? `${context.helper('enableDynamicSlots')}()\n`
     : ''
+  const dynamicSlotProps = context.hasDynamicSlotProps
+    ? `${context.helper('enableDynamicSlotProps')}()\n`
+    : ''
   const templates = genTemplates(ir.template.entries, context)
   const imports = genHelperImports(context) + genAssetImports(context)
   const preamble =
@@ -290,7 +294,8 @@ export function generate(
     templates +
     genDynamicPropNames(context) +
     delegates +
-    dynamicSlots
+    dynamicSlots +
+    dynamicSlotProps
 
   if (!inline) {
     let newlineCount = 0
