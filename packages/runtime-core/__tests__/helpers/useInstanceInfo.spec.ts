@@ -83,7 +83,6 @@ describe('useInstanceInfo', () => {
     ])
     // reserved props are not part of what the component receives
     expect(mount({ key: 'k', ref: ref(), open: false })).toEqual(['open'])
-    expect(info.rawPropKeys).not.toBe(info.rawPropKeys)
   })
 
   test('rawPropKeys follows the parent', async () => {
@@ -106,21 +105,22 @@ describe('useInstanceInfo', () => {
     expect(info.rawPropKeys).toEqual([])
   })
 
-  test('el is null until mounted', () => {
+  test('el is null and isMounted false until mounted', () => {
     let info: any
     const inSetup: any[] = []
     const Comp = {
       setup() {
         info = useInstanceInfo()
-        inSetup.push(info.el, info.isHydrating)
+        inSetup.push(info.el, info.isHydrating, info.isMounted)
         return () => h('div')
       },
     }
     const root = nodeOps.createElement('div')
     render(h(Comp), root)
-    expect(inSetup).toEqual([null, false])
+    expect(inSetup).toEqual([null, false, false])
     expect(info.el).toBe(root.children[0])
     expect(info.isHydrating).toBe(false)
+    expect(info.isMounted).toBe(true)
   })
 
   test('el is null in setup when a mounted vnode is mounted again', () => {
@@ -171,20 +171,5 @@ describe('useInstanceInfo', () => {
     expect(info.el).toBe(null)
     root = mount(() => [h(Fragment), h('span')])
     expect(info.el).toBe(root.children.find((c: any) => c.tag === 'span'))
-  })
-
-  test('isMounted is false until mounted', () => {
-    let info: any
-    const inSetup: boolean[] = []
-    const Comp = {
-      setup() {
-        info = useInstanceInfo()
-        inSetup.push(info.isMounted)
-        return () => null
-      },
-    }
-    render(h(Comp), nodeOps.createElement('div'))
-    expect(inSetup).toEqual([false])
-    expect(info.isMounted).toBe(true)
   })
 })

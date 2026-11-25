@@ -154,6 +154,12 @@ describe('useInstanceInfo during hydration', () => {
           '.b',
         ],
         ['no content', `<div v-if="false" class="part">part</div>`, null],
+        // enough static nodes to compile into one static vnode in vdom
+        [
+          'text before static elements',
+          `lead${'<span class="s">x</span>'.repeat(20)}`,
+          '.s',
+        ],
       ]
       for (const [name, template, selector, slotContent] of shapes) {
         test(name, async () => {

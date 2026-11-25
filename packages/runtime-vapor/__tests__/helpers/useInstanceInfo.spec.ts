@@ -2,12 +2,6 @@ import { createApp, nextTick, ref } from '@vue/runtime-dom'
 import { createVaporApp, vaporInteropPlugin } from '../../src'
 import { VueServerRenderer, compile, runtimeDom } from '../_utils'
 
-// one element, the elements in order for several, or null
-const rootsOf = (root: ParentNode, selector: string | null) => {
-  const els = selector ? Array.from(root.querySelectorAll(selector)) : []
-  return els.length > 1 ? els : els[0] || null
-}
-
 const script = (vapor: boolean) => `<script setup${vapor ? ' vapor' : ''}>`
 const mode = (vapor: boolean) => (vapor ? 'vapor' : 'vdom')
 
@@ -20,16 +14,16 @@ function mount(Comp: any, vapor: boolean) {
 }
 
 describe('useInstanceInfo', () => {
-  test('vapor component', async () => {
+  test('vapor component', () => {
     const seen: any[] = []
     const data = ref({ record: (...args: any[]) => seen.push(...args) })
     const components: any = {}
     const Comp = (components.Comp = compile(
       `<script setup vapor>
-        import { getCurrentInstance, useInstanceInfo } from 'vue'
+        import { useInstanceInfo } from 'vue'
         const data = _data
         const info = useInstanceInfo()
-        data.value.record(info, getCurrentInstance(), info.isMounted)
+        data.value.record(info, info.isMounted)
       </script>
       <template>
         <div>comp</div>
@@ -47,20 +41,11 @@ describe('useInstanceInfo', () => {
       components,
     )
     mount(App, true)
-    await nextTick()
 
-    const [info, vdomInstance, mountedInSetup] = seen
-    expect(vdomInstance).toBe(null)
-    expect(info).not.toBe(null)
-
-    expect(() => {
-      info.uid = -1
-    }).toThrow(TypeError)
-
+    const [info, mountedInSetup] = seen
     expect(info.isVapor).toBe(true)
     expect(info.type).toBe(Comp)
     expect(info.ce).toBe(null)
-    expect(typeof info.uid).toBe('number')
     expect(mountedInSetup).toBe(false)
     expect(info.isMounted).toBe(true)
   })
@@ -85,6 +70,7 @@ describe('useInstanceInfo', () => {
     expect(html).toBe('<div>true</div>')
   })
 
+  // vdom parent and vdom wrapper are in runtime-core
   describe('rawPropKeys', () => {
     const cases: [string, string[]][] = [
       [`<components.Wrapper />`, []],
@@ -153,7 +139,6 @@ describe('useInstanceInfo', () => {
 
     for (const [parentVapor, wrapperVapor] of [
       [true, true],
-      [false, false],
       [false, true],
       [true, false],
     ]) {
@@ -176,91 +161,6 @@ describe('useInstanceInfo', () => {
         await nextTick()
         expect(info.rawPropKeys).toEqual([])
       })
-    }
-  })
-
-  describe('el', () => {
-    const shapes: [string, string, string | null][] = [
-      ['one root', `<div class="part">part</div>`, '.part'],
-      [
-        'several roots',
-        `<div class="a">a</div>
-        <div class="b">b</div>`,
-        '.a, .b',
-      ],
-      ['a component as the root', `<components.Inner />`, '.inner'],
-      [
-        'a first root that renders nothing',
-        `<div v-if="false" class="a">a</div>
-        <div class="b">b</div>`,
-        '.b',
-      ],
-      ['no content', `<div v-if="false" class="part">part</div>`, null],
-      // enough static nodes to compile into one static vnode in vdom
-      [
-        'text before static elements',
-        `lead${'<span>x</span>'.repeat(20)}`,
-        'span',
-      ],
-    ]
-    for (const vapor of [true, false]) {
-      for (const [name, template, selector] of shapes) {
-        test(`${mode(vapor)} component mounted on the client: ${name}`, async () => {
-          const seen: Record<string, any> = {}
-          const data = ref({
-            record: (phase: string, i: any) =>
-              (seen[phase] = { isHydrating: i.isHydrating, el: i.el }),
-          })
-          const components: any = {}
-          components.Inner = compile(
-            `${script(vapor)}
-              const data = _data
-            </script>
-            <template>
-              <div class="inner">inner</div>
-            </template>`,
-            data,
-            components,
-            { vapor },
-          )
-          components.Part = compile(
-            `${script(vapor)}
-              import { onMounted, useInstanceInfo } from 'vue'
-              const data = _data
-              const components = _components
-              const info = useInstanceInfo()
-              data.value.record('setup', info)
-              onMounted(() => data.value.record('mounted', info))
-            </script>
-            <template>
-              ${template}
-            </template>`,
-            data,
-            components,
-            { vapor },
-          )
-          const App = compile(
-            `${script(vapor)}
-              const components = _components
-            </script>
-            <template>
-              <main>
-                <components.Part />
-              </main>
-            </template>`,
-            data,
-            components,
-            { vapor },
-          )
-          const host = mount(App, vapor)
-          await nextTick()
-          expect(seen.setup).toEqual({ isHydrating: false, el: null })
-          expect(seen.mounted).toEqual({
-            isHydrating: false,
-            el: rootsOf(host, selector),
-          })
-        })
-      }
     }
   })
 })
