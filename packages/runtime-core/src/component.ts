@@ -459,6 +459,13 @@ export interface GenericComponentInstance {
    * @internal
    */
   ids: [string, number, number]
+  /**
+   * the owner of the slot this instance is rendering in vapor, where the
+   * slot renders with this instance as the current one; set while the slot
+   * function runs
+   * @internal
+   */
+  slotOwner?: GenericComponentInstance | null
 
   // for vapor the following two are dev only
   /**
