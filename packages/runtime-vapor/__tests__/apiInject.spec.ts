@@ -1,6 +1,7 @@
 import {
   type InjectionKey,
   type Ref,
+  getCurrentApp,
   h,
   hasInjectionContext,
   inject,
@@ -554,6 +555,28 @@ describe('vdom interop', () => {
     value.value = 'bar'
     await nextTick()
     expect(root.innerHTML).toBe('bar')
+    app.unmount()
+  })
+})
+
+describe('getCurrentApp', () => {
+  it('returns the app within a nested vapor component setup', () => {
+    let current: unknown
+    const Child = defineVaporComponent({
+      setup() {
+        current = getCurrentApp()
+        return template('<span></span>')()
+      },
+    })
+    const Comp = defineVaporComponent({
+      setup() {
+        return createComponent(Child)
+      },
+    })
+
+    const app = createVaporApp(Comp)
+    app.mount(document.createElement('div'))
+    expect(current).toBe(app)
     app.unmount()
   })
 })

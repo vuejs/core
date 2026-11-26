@@ -2,6 +2,7 @@ import {
   type InjectionKey,
   type Ref,
   defineComponent,
+  getCurrentApp,
   h,
   hasInjectionContext,
   inject,
@@ -371,6 +372,37 @@ describe('api: provide/inject', () => {
       createApp({}).runWithContext(() => {
         expect(hasInjectionContext()).toBe(true)
       })
+    })
+  })
+
+  describe('getCurrentApp', () => {
+    it('should return the app within a nested component setup', () => {
+      let current: unknown
+      const app = createApp({
+        render: () =>
+          h({ setup: () => ((current = getCurrentApp()), () => null) }),
+      })
+      app.mount(nodeOps.createElement('div'))
+      expect(current).toBe(app)
+    })
+
+    it('should return the app only within app.runWithContext()', () => {
+      const app = createApp({})
+      expect(app.runWithContext(() => getCurrentApp())).toBe(app)
+      expect(getCurrentApp()).toBeFalsy()
+    })
+
+    it('should prefer the runWithContext() app in a nested createApp', () => {
+      let current: unknown
+      const inner = createApp({})
+      const outer = createApp({
+        setup() {
+          current = inner.runWithContext(() => getCurrentApp())
+          return () => null
+        },
+      })
+      outer.mount(nodeOps.createElement('div'))
+      expect(current).toBe(inner)
     })
   })
 
