@@ -147,9 +147,10 @@ export function genModelProps(ctx: ScriptCompileContext): string | undefined {
         codegenOptions =
           `type: ${toRuntimeTypeString(runtimeTypes)}` +
           (skipCheck ? ', skipCheck: true' : '')
-      } else if (hasBoolean || (runtimeOptions && hasFunction)) {
+      } else if (hasBoolean || (runtimeOptions && hasFunction) || ctx.isCE) {
         // preserve types if contains boolean, or
-        // function w/ runtime options that may contain default
+        // function w/ runtime options that may contain default, or
+        // custom element which casts number attributes (#8989)
         codegenOptions = `type: ${toRuntimeTypeString(runtimeTypes)}`
       } else {
         // able to drop types in production
