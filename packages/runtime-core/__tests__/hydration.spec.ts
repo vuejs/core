@@ -3325,6 +3325,76 @@ describe('SSR hydration', () => {
     expect(`mismatch`).not.toHaveBeenWarned()
   })
 
+  // #16427
+  test('transition appear with cached static child in prod', () => {
+    __DEV__ = false
+    try {
+      const { vnode, container } = mountWithHydration(
+        `<template><div>foo</div></template>`,
+        () =>
+          h(
+            Transition,
+            { appear: true },
+            {
+              default: () =>
+                createElementVNode('div', null, 'foo', PatchFlags.CACHED),
+            },
+          ),
+      )
+      expect(container.firstChild).toMatchInlineSnapshot(`
+        <div
+          class="v-enter-from v-enter-active"
+        >
+          foo
+        </div>
+      `)
+      expect(vnode.el).toBe(container.firstChild)
+    } finally {
+      __DEV__ = true
+    }
+  })
+
+  // #16427
+  test.each([
+    {
+      name: 'appear',
+      template: `<Transition appear><div>foo</div></Transition>`,
+      html: `<div class="v-enter-from v-enter-active">foo</div>`,
+    },
+    {
+      name: ':appear="false"',
+      template: `<Transition :appear="false"><div>foo</div></Transition>`,
+      html: `<div>foo</div>`,
+    },
+    // a native <template> is not the SSR wrapper of an appear transition
+    {
+      name: 'native template',
+      template: `<Transition><template><div>foo</div></template></Transition>`,
+      html: `<template><div>foo</div></template>`,
+    },
+    {
+      name: 'empty native template',
+      template: `<Transition><template></template></Transition>`,
+      html: `<template></template>`,
+    },
+  ])('cached transition child in prod: $name', async ({ template, html }) => {
+    const App = {
+      render: compileToFunction(template),
+      ssrRender: new Function('require', compileSSR(template).code)(
+        (id: string) => (id === 'vue' ? runtimeDom : serverRenderer),
+      ),
+    }
+    const container = document.createElement('div')
+    container.innerHTML = await renderToString(h(App))
+    __DEV__ = false
+    try {
+      createSSRApp(App).mount(container)
+    } finally {
+      __DEV__ = true
+    }
+    expect(container.innerHTML).toBe(html)
+  })
+
   test('transition appear w/ event listener', async () => {
     const container = document.createElement('div')
     container.innerHTML = `<template><button>0</button></template>`
