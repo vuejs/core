@@ -252,6 +252,8 @@ export default class Tokenizer {
   public inXML = false
   /** For disabling interpolation parsing in v-pre */
   public inVPre = false
+  /** Track nested square brackets in dynamic directive arguments */
+  private dynamicDirArgDepth = 0
   /** Record newline positions for fast line / column calculation */
   private newlines: number[] = []
 
@@ -283,6 +285,7 @@ export default class Tokenizer {
     this.inRCDATA = false
     this.currentSequence = undefined!
     this.newlines.length = 0
+    this.dynamicDirArgDepth = 0
     this.delimiterOpen = defaultDelimitersOpen
     this.delimiterClose = defaultDelimitersClose
   }
@@ -741,6 +744,7 @@ export default class Tokenizer {
       this.handleAttrNameEnd(c)
     } else if (c === CharCodes.LeftSquare) {
       this.state = State.InDirDynamicArg
+      this.dynamicDirArgDepth = 1
     } else if (c === CharCodes.Dot) {
       this.cbs.ondirarg(this.sectionStart, this.index)
       this.state = State.InDirModifier
@@ -748,9 +752,14 @@ export default class Tokenizer {
     }
   }
   private stateInDynamicDirArg(c: number): void {
-    if (c === CharCodes.RightSquare) {
-      this.state = State.InDirArg
+    if (c === CharCodes.LeftSquare) {
+      this.dynamicDirArgDepth++
+    } else if (c === CharCodes.RightSquare) {
+      if (--this.dynamicDirArgDepth === 0) {
+        this.state = State.InDirArg
+      }
     } else if (c === CharCodes.Eq || isEndOfTagSection(c)) {
+      this.dynamicDirArgDepth = 0
       this.cbs.ondirarg(this.sectionStart, this.index + 1)
       this.handleAttrNameEnd(c)
       if (__DEV__ || !__BROWSER__) {
