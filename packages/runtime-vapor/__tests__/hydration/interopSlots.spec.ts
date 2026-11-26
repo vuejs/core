@@ -4706,6 +4706,55 @@ describe('VDOM interop', () => {
           expect(input).not.toBeNull()
           expect(container.querySelector('input')).toBe(input)
         })
+
+        // a placeholder renders bare too, unless a fallback on the way can
+        // show in its place
+        test.each(
+          forwarders.flatMap(([kind, Middle]) =>
+            (['', '<i>fallback</i>'] as const).map(
+              fallback =>
+                [kind, fallback ? 'a' : 'no', fallback, Middle] as const,
+            ),
+          ),
+        )(
+          'a false v-if forwarded by a %s, under a Transition with %s fallback',
+          async (_, __, fallback, Middle) => {
+            let input: Element | null = null
+            const data = ref({
+              show: false,
+              capture: () => (input = document.querySelector('input')),
+            })
+            const { html, container } = await hydrate(
+              app,
+              {
+                Middle,
+                Outer: {
+                  code: `<script setup>_data.value.capture()</script>
+                    <template>
+                      <main>
+                        <Transition :css="false">
+                          <slot>${fallback}</slot>
+                        </Transition>
+                        <input />
+                      </main>
+                    </template>`,
+                  vapor: false,
+                },
+                View: `<template>
+                  <components.Middle>
+                    <input v-if="data.show" id="slotted" />
+                  </components.Middle>
+                </template>`,
+              },
+              data,
+            )
+            expect(html).toBe(
+              `<main>${fallback ? '<!--[--><!--]-->' : '<!---->'}<input></main>`,
+            )
+            expect(container.querySelectorAll('input')).toHaveLength(1)
+            expect(container.querySelector('input')).toBe(input)
+          },
+        )
       })
 
       test.each([
@@ -4876,6 +4925,61 @@ describe('VDOM interop', () => {
           )
         },
       )
+
+      // a slot rendering no node at all keeps its range: the node after the
+      // Transition stays the one of the element after it
+      test('an empty slot before an input, under a Transition', async () => {
+        let input: HTMLInputElement | null = null
+        let clicks = 0
+        const data = ref({
+          show: true,
+          value: 'a',
+          click: () => clicks++,
+          capture: () => (input = document.querySelector('input')),
+        })
+        const { container } = await hydrate(
+          app,
+          {
+            Frame: {
+              code: `<script setup>
+                  const data = _data
+                  data.value.capture()
+                </script>
+                <template>
+                  <main>
+                    <Transition :css="false">
+                      <slot v-if="data.show" />
+                      <b v-else>after</b>
+                    </Transition>
+                    <input :value="data.value" @click="data.click" />
+                  </main>
+                </template>`,
+              vapor: false,
+            },
+            View: `<template>
+              <components.Frame>
+                <template #default></template>
+              </components.Frame>
+            </template>`,
+          },
+          data,
+        )
+        expect(container.querySelectorAll('input')).toHaveLength(1)
+        expect(container.querySelector('input')).toBe(input)
+        input!.click()
+        expect(clicks).toBe(1)
+        data.value.value = 'b'
+        await nextTick()
+        expect(input!.value).toBe('b')
+
+        data.value.show = false
+        await nextTick()
+        expect(
+          [...container.querySelector('main')!.childNodes].map(
+            node => node.nodeName,
+          ),
+        ).toEqual(['B', 'INPUT'])
+      })
     },
   )
 

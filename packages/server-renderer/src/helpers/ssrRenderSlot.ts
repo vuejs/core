@@ -22,8 +22,12 @@ let vaporSlots = 0
 
 // the slot a transition renders bare, while it renders: a vapor slot that
 // opens its range first in it keeps that range
-let bare: { push: PushFn; buffer: SSRBufferItem[]; vapor: boolean } | null =
-  null
+let bare: {
+  push: PushFn
+  buffer: SSRBufferItem[]
+  vapor: boolean
+  fallback: boolean
+} | null = null
 
 export type SSRSlots = Record<string, SSRSlot>
 export type SSRSlot = (
@@ -90,7 +94,12 @@ export function ssrRenderSlotInner(
     }
     const prevBare = bare
     const outlet = (bare = transition
-      ? { push: bufferedPush, buffer: slotBuffer, vapor: false }
+      ? {
+          push: bufferedPush,
+          buffer: slotBuffer,
+          vapor: false,
+          fallback: !!fallbackRenderFn,
+        }
       : null)
     const ret = slotFn(
       // keep the slot function's contract in sync with `renderSlot`, which also
@@ -149,12 +158,13 @@ export function ssrRenderSlotInner(
         }
       }
       // A vapor slot renders bare where a transition renders its slot bare,
-      // unless it renders nothing where a fallback can show, or its content
-      // begins with a range: its client takes a range there for the slot's own.
+      // when its first node is not a range: its client takes a range there for
+      // the slot's own. Empty, it renders a range where a fallback can show.
       if (
         bareSlot &&
-        (!isEmptySlot || (!fallbackRenderFn && !firstIn)) &&
-        !opensRange(slotBuffer)
+        (!isEmptySlot ||
+          (!fallbackRenderFn && !(firstIn && firstIn.fallback))) &&
+        opensRange(slotBuffer) === false
       ) {
         for (let i = 0; i < slotBuffer.length; i++) push(slotBuffer[i])
         return
@@ -210,8 +220,8 @@ export function ssrRenderSlotInner(
   if (!transition) push(`<!--]-->`)
 }
 
-// Whether the first node a buffer renders opens a range: an async component
-// there may.
+// Whether the first node a buffer renders opens a range, undefined when it
+// renders none: an async component there may.
 function opensRange(buffer: SSRBufferItem[]): boolean | undefined {
   for (let i = 0; i < buffer.length; i++) {
     const item = buffer[i]
