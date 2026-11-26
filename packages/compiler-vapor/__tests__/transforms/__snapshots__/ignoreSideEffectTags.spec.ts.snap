@@ -1,0 +1,72 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`compiler: ignore side effect tags > should drop an ignored tag between text 1`] = `
+"import { txt as _txt, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, template as _template } from 'vue';
+const t0 = _template("<div> ", 1)
+
+export function render(_ctx) {
+  const n0 = t0()
+  const x0 = _txt(n0)
+  _renderEffect(() => _setText(x0, _toDisplayString(a) + _toDisplayString(b)))
+  return n0
+}"
+`;
+
+exports[`compiler: ignore side effect tags > should drop an ignored tag between v-if branches 1`] = `
+"import { createIf as _createIf, template as _template } from 'vue';
+const t0 = _template("<div>a", 3)
+const t1 = _template("<div>b", 3)
+
+export function render(_ctx) {
+  const n0 = _createIf(() => (ok), () => {
+    const n2 = t0()
+    return n2
+  }, () => {
+    const n4 = t1()
+    return n4
+  }, 357 /* TRUE_SINGLE_ROOT, FALSE_SINGLE_ROOT, TRUE_NO_SCOPE, FALSE_NO_SCOPE, KEYED_INDEX_0 */)
+  return n0
+}"
+`;
+
+exports[`compiler: ignore side effect tags > should keep the v-for of an ignored tag 1`] = `
+"import { createFor as _createFor, txt as _txt, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, template as _template } from 'vue';
+const t0 = _template("<p> ")
+
+export function render(_ctx) {
+  const n0 = _createFor(() => (list), (_for_item0) => {
+    return []
+  })
+  const n2 = t0()
+  const x2 = _txt(n2)
+  _renderEffect(() => _setText(x2, _toDisplayString(msg)))
+  return [n0, n2]
+}"
+`;
+
+exports[`compiler: ignore side effect tags > should keep the v-if chain of an ignored tag 1`] = `
+"import { createIf as _createIf, template as _template } from 'vue';
+const t0 = _template("<div>x", 3)
+
+export function render(_ctx) {
+  const n0 = _createIf(() => (ok), () => {
+    return []
+  }, () => {
+    const n3 = t0()
+    return n3
+  }, 326 /* TRUE_MULTI_ROOT, FALSE_SINGLE_ROOT, FALSE_NO_SCOPE, KEYED_INDEX_0 */)
+  return n0
+}"
+`;
+
+exports[`compiler: ignore side effect tags > should merge static text around an ignored tag 1`] = `
+"import { child as _child, next as _next, setProp as _setProp, renderEffect as _renderEffect, template as _template } from 'vue';
+const t0 = _template("<div>ab<span>", 1)
+
+export function render(_ctx) {
+  const n1 = t0()
+  const n0 = _next(_child(n1))
+  _renderEffect(() => _setProp(n0, "id", id))
+  return n1
+}"
+`;

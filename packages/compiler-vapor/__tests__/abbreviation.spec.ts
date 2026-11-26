@@ -222,16 +222,16 @@ test('always close tags', () => {
   //   '<div><template></template><span>sibling</span></div>',
   // )
 
-  // script always needs closing tag unless rightmost
+  // title always needs closing tag unless rightmost
   checkAbbr(
-    '<div><script></script></div>',
-    '<div><script>',
-    '<div><script></script></div>',
+    '<div><title></title></div>',
+    '<div><title>',
+    '<div><title></title></div>',
   )
   checkAbbr(
-    '<div><script></script><span>sibling</span></div>',
-    '<div><script></script><span>sibling',
-    '<div><script></script><span>sibling</span></div>',
+    '<div><title></title><span>sibling</span></div>',
+    '<div><title></title><span>sibling',
+    '<div><title></title><span>sibling</span></div>',
   )
 
   // without always-close elements, normal abbreviation should work
