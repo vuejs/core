@@ -48,7 +48,14 @@ export function rewriteDefaultAST(
         s.overwrite(start, node.declaration.id.start!, ` class `)
         s.append(`\nconst ${as} = ${node.declaration.id.name}`)
       } else {
-        s.overwrite(node.start!, node.declaration.start!, `const ${as} = `)
+        // for `export default (expr)`, the start of the expression is inside
+        // the parens, so use the paren start to keep the parens balanced
+        const { extra } = node.declaration
+        const declStart: number =
+          extra && extra.parenthesized
+            ? (extra.parenStart as number)
+            : node.declaration.start!
+        s.overwrite(node.start!, declStart, `const ${as} = `)
       }
     } else if (node.type === 'ExportNamedDeclaration') {
       for (const specifier of node.specifiers) {

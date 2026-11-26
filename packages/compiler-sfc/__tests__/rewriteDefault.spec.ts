@@ -15,6 +15,28 @@ describe('compiler sfc: rewriteDefault', () => {
     ).toMatchInlineSnapshot(`"const script = {}"`)
   })
 
+  test('rewrite export default with parenthesized expression', () => {
+    expect(
+      rewriteDefault(`export default ({ a: 1 })`, 'script'),
+    ).toMatchInlineSnapshot(`"const script = ({ a: 1 })"`)
+
+    expect(
+      rewriteDefault(`export default ((a))`, 'script'),
+    ).toMatchInlineSnapshot(`"const script = ((a))"`)
+
+    expect(
+      rewriteDefault(`export default (\n  defineComponent({})\n)`, 'script'),
+    ).toMatchInlineSnapshot(`
+      "const script = (
+        defineComponent({})
+      )"
+    `)
+
+    expect(
+      rewriteDefault(`export default (class Foo {})`, 'script'),
+    ).toMatchInlineSnapshot(`"const script = (class Foo {})"`)
+  })
+
   test('rewrite variable value default', () => {
     expect(rewriteDefault(`export const foo = 'default'`, 'script'))
       .toMatchInlineSnapshot(`

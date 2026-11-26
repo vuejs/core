@@ -65,6 +65,22 @@ return { fn }
 })"
 `;
 
+exports[`SFC compile <script setup> > <script> and <script setup> co-usage > export parenthesized expression as default 1`] = `
+"
+      const __default__ = (defineComponent({ name: 'Foo' }))
+      
+export default /*@__PURE__*/Object.assign(__default__, {
+  setup(__props, { expose: __expose }) {
+  __expose();
+
+      console.log('foo')
+      
+return {  }
+}
+
+})"
+`;
+
 exports[`SFC compile <script setup> > <script> and <script setup> co-usage > keep original semi style 1`] = `
 "
 export default {

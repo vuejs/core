@@ -442,8 +442,14 @@ export function compileScript(
         }
 
         // export default { ... } --> const __default__ = { ... }
+        // for `export default (expr)`, the start of the expression is inside
+        // the parens, so use the paren start to keep the parens balanced
+        const { extra } = node.declaration
         const start = node.start! + scriptStartOffset!
-        const end = node.declaration.start! + scriptStartOffset!
+        const end =
+          (extra && extra.parenthesized
+            ? (extra.parenStart as number)
+            : node.declaration.start!) + scriptStartOffset!
         ctx.s.overwrite(start, end, `const ${normalScriptDefaultVar} = `)
       } else if (node.type === 'ExportNamedDeclaration') {
         const defaultSpecifier = node.specifiers.find(

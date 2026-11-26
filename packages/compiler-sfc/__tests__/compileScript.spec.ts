@@ -295,6 +295,22 @@ describe('SFC compile <script setup>', () => {
       `)
       assertCode(content)
     })
+
+    test('export parenthesized expression as default', () => {
+      const { content } = compile(`
+      <script>
+      export default (defineComponent({ name: 'Foo' }))
+      </script>
+
+      <script setup>
+      console.log('foo')
+      </script>
+      `)
+      expect(content).toMatch(
+        `const __default__ = (defineComponent({ name: 'Foo' }))`,
+      )
+      assertCode(content)
+    })
   })
 
   describe('imports', () => {
