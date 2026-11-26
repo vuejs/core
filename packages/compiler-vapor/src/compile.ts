@@ -30,6 +30,7 @@ import { transformTransition } from './transforms/transformTransition'
 import type { HackOptions } from './ir'
 import { transformKey } from './transforms/transformKey'
 import { transformVMemo } from './transforms/vMemo'
+import { ignoreSideEffectTags } from './transforms/ignoreSideEffectTags'
 
 export { wrapTemplate } from './transforms/utils'
 
@@ -83,6 +84,7 @@ export function getBaseTransformPreset(): TransformPreset {
       transformVOnce,
       transformVIf,
       transformVFor,
+      ignoreSideEffectTags,
       transformKey,
       transformVMemo,
       transformSlotOutlet,
