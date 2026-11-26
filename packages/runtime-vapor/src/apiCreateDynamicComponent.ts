@@ -1,5 +1,4 @@
 import {
-  type ComponentInternalInstance,
   type GenericAppContext,
   NULL_DYNAMIC_COMPONENT,
   type VNode,
@@ -7,7 +6,6 @@ import {
   currentInstance,
   isVNode,
   resolveDynamicComponent,
-  setCurrentRenderingInstance,
   warn,
 } from '@vue/runtime-dom'
 import {
@@ -238,9 +236,7 @@ function resolveValue(
   ) {
     return value
   }
-  const resolved = withScopeOwner(scopeOwner, () =>
-    resolveDynamicComponent(value),
-  )
+  const resolved = resolveDynamicComponent(value, scopeOwner)
   // non-empty strings are tags, objects and functions are components, symbols
   // are vdom types the interop mounts; anything else is an empty branch
   const type = typeof resolved
@@ -257,15 +253,4 @@ function resolveValue(
     return NULL_DYNAMIC_COMPONENT
   }
   return resolved
-}
-
-function withScopeOwner(owner: VaporComponentInstance | null, fn: () => any) {
-  const prev = setCurrentRenderingInstance(
-    owner as ComponentInternalInstance | null,
-  )
-  try {
-    return fn()
-  } finally {
-    setCurrentRenderingInstance(prev)
-  }
 }

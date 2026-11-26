@@ -3243,21 +3243,7 @@ function renderVDOMSlot(
       const renderContent = () => {
         const slotName = isFunction(name) ? name() : name
         frag.slotName = slotName
-        // as in vdom, no setup instance is active while a slot renders: what
-        // it reads off the instance (`useId`) is its author's, which `withCtx`
-        // restores, not this outlet's. A compiled slot (`_`) has an author
-        // even where `createSlots` wraps it (`v-if`), as a normalized one has
-        const slots = slotsRef.value
-        const slot = slots[slotName]
-        const prev = currentInstance
-        if (slot && ((slots as any)._ || (slot as any)._n)) {
-          simpleSetCurrentInstance(null)
-        }
-        try {
-          return renderSlot(slots, slotName, props)
-        } finally {
-          simpleSetCurrentInstance(prev)
-        }
+        return renderSlot(slotsRef.value, slotName, props)
       }
       slotContent = once ? withOnce(renderContent) : renderContent()
 

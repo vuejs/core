@@ -2110,6 +2110,18 @@ describe('useId below a vapor component with onServerPrefetch', () => {
     )
     expect(ids(container)).toEqual(['v-0', 'v-1'])
   })
+
+  // the outlet is in a slot of the group itself, which another vapor
+  // component renders: the author is still the one `withCtx` restores
+  test('useId called by vdom slot content forwarded through a vapor slot', async () => {
+    const { container } = await testWithVDOMApp(author(`<b :id="useId()" />`), {
+      Wrapper: `<template>
+          <section><slot /></section>
+        </template>`,
+      Group: group(`<components.Wrapper><slot /></components.Wrapper>`),
+    })
+    expect(ids(container)).toEqual(['v-0', 'v-1'])
+  })
 })
 
 // the owner of a vapor slot is its author in a vdom component too

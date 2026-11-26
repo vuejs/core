@@ -2,6 +2,7 @@ import {
   type ComponentInternalInstance,
   type ComponentOptions,
   type ConcreteComponent,
+  type GenericComponentInstance,
   currentInstance,
   getComponentName,
 } from '../component'
@@ -32,9 +33,15 @@ export const NULL_DYNAMIC_COMPONENT: unique symbol = Symbol.for('v-ndc')
 /**
  * @private
  */
-export function resolveDynamicComponent(component: unknown): VNodeTypes {
+export function resolveDynamicComponent(
+  component: unknown,
+  // vapor sets no rendering instance: the owner of the template
+  instance?: GenericComponentInstance | null,
+): VNodeTypes {
   if (isString(component)) {
-    return resolveAsset(COMPONENTS, component, false) || component
+    return (
+      resolveAsset(COMPONENTS, component, false, false, instance) || component
+    )
   } else {
     // invalid types will fallthrough to createVNode and raise warning
     return (component || NULL_DYNAMIC_COMPONENT) as any
@@ -65,6 +72,7 @@ function resolveAsset(
   name: string,
   warnMissing?: boolean,
   maybeSelfReference?: boolean,
+  instance?: GenericComponentInstance | null,
 ): ConcreteComponent | undefined
 // overload 2: directives
 function resolveAsset(
@@ -80,8 +88,9 @@ function resolveAsset(
   name: string,
   warnMissing = true,
   maybeSelfReference = false,
+  instance: GenericComponentInstance | null = currentRenderingInstance ||
+    currentInstance,
 ) {
-  const instance = currentRenderingInstance || currentInstance
   if (instance) {
     const Component = instance.type
 
