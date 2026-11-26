@@ -422,11 +422,11 @@ export function render(_ctx) {
 `;
 
 exports[`compiler: v-for > v-for on static dynamic component keeps component block 1`] = `
-"import { resolveDynamicComponent as _resolveDynamicComponent, createComponentWithFallback as _createComponentWithFallback, createFor as _createFor } from 'vue';
+"import { resolveOwnerComponent as _resolveOwnerComponent, createComponentWithFallback as _createComponentWithFallback, createFor as _createFor } from 'vue';
 
 export function render(_ctx) {
   const n0 = _createFor(() => (_ctx.list), (_for_item0) => {
-    const n2 = _createComponentWithFallback(_resolveDynamicComponent("view"))
+    const n2 = _createComponentWithFallback(_resolveOwnerComponent("view"))
     return n2
   }, (item) => (item.id), 2 /* IS_COMPONENT */)
   return n0

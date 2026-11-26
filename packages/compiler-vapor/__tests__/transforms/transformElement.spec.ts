@@ -908,7 +908,7 @@ describe('compiler: element transform', () => {
         `<component is="foo" />`,
       )
       expect(code).toMatchSnapshot()
-      expect(helpers).toContain('resolveDynamicComponent')
+      expect(helpers).toContain('resolveOwnerComponent')
       expect(ir.block.dynamic.children[0].operation).toMatchObject({
         type: IRNodeTypes.CREATE_COMPONENT_NODE,
         tag: 'component',
@@ -928,7 +928,7 @@ describe('compiler: element transform', () => {
         `<Component is="foo" />`,
       )
       expect(code).toMatchSnapshot()
-      expect(helpers).toContain('resolveDynamicComponent')
+      expect(helpers).toContain('resolveOwnerComponent')
       expect(ir.block.dynamic.children[0].operation).toMatchObject({
         type: IRNodeTypes.CREATE_COMPONENT_NODE,
         tag: 'Component',
@@ -991,7 +991,7 @@ describe('compiler: element transform', () => {
       expect(code).contains('8 /* NS_SVG */')
       expect(code).contains('16 /* NS_MATHML */')
       expect(code).contains(
-        '_createComponentWithFallback(_resolveDynamicComponent("circle"), null, null, null, null, 1)',
+        '_createComponentWithFallback(_resolveOwnerComponent("circle"), null, null, null, null, 1)',
       )
       const ops: any[] = []
       const collect = (dynamic: any) => {
@@ -1012,7 +1012,7 @@ describe('compiler: element transform', () => {
       )
       expect(code).toMatchSnapshot()
       expect(helpers).toContain('createAssetComponent')
-      expect(helpers).not.toContain('resolveDynamicComponent')
+      expect(helpers).not.toContain('resolveOwnerComponent')
       expect(ir.block.dynamic.children[0].operation).toMatchObject({
         type: IRNodeTypes.CREATE_COMPONENT_NODE,
         tag: 'custom-input',
@@ -1046,7 +1046,7 @@ describe('compiler: element transform', () => {
       )
       expect(code).toMatchSnapshot()
       expect(helpers).toContain('createAssetComponent')
-      expect(helpers).not.toContain('resolveDynamicComponent')
+      expect(helpers).not.toContain('resolveOwnerComponent')
       expect(code).toContain(
         '_createAssetComponent("custom-input", { is: "foo" }, null, true)',
       )

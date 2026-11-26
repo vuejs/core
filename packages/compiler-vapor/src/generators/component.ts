@@ -164,7 +164,7 @@ export function genCreateComponent(
     } else if (operation.dynamic) {
       if (operation.dynamic.isStatic) {
         return genCall(
-          helper('resolveDynamicComponent'),
+          helper('resolveOwnerComponent'),
           genExpression(operation.dynamic, context),
         )
       } else {
