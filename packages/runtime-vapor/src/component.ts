@@ -48,6 +48,7 @@ import {
   setCurrentInstance,
   setCurrentRenderingInstance,
   startMeasure,
+  svgNS,
   unregisterHMR,
   warn,
   warnExtraneousAttributes,
@@ -918,7 +919,7 @@ export function applyFallthroughProps(
 ): void {
   isApplyingFallthroughProps = true
   try {
-    patchDynamicProps(el, attrs)
+    patchDynamicProps(el, attrs, el.namespaceURI === svgNS)
   } finally {
     isApplyingFallthroughProps = false
   }
