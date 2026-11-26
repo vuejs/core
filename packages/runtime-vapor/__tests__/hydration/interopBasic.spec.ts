@@ -1940,3 +1940,174 @@ describe('vdom root replaced while hydrating', () => {
     expect(`Hydration node mismatch`).toHaveBeenWarned()
   })
 })
+
+// the boundary also holds for what the vdom renderer creates below it
+describe('useId below a vapor component with onServerPrefetch', () => {
+  const VaporItem = `<script setup vapor>
+      import { useId } from 'vue'
+      const id = useId()
+    </script>
+    <template>
+      <p :id="id" />
+    </template>`
+  const VdomItem = {
+    code: `<script setup>
+        import { useId } from 'vue'
+        const id = useId()
+      </script>
+      <template>
+        <b :id="id" />
+      </template>`,
+    vapor: false,
+  }
+  const group = (content: string, setup = '') => `<script setup vapor>
+      import { h, onServerPrefetch, useId } from 'vue'
+      const components = _components
+      onServerPrefetch(() => {})
+      const id = useId()
+      ${setup}
+    </script>
+    <template>
+      <div :id="id">${content}</div>
+    </template>`
+
+  const ids = (root: ParentNode) =>
+    [...root.querySelectorAll('[id]')].map(el => el.id)
+  // the ids of the server: a different one warns of a mismatch
+  const expected = ['v-0', 'v-0-0', 'v-0-1', 'v-1']
+
+  test('vdom child', async () => {
+    const { container } = await testWithVaporApp(
+      `<template>
+        <components.Group />
+        <components.VaporItem />
+      </template>`,
+      {
+        VaporItem,
+        VdomItem,
+        Group: group(`<components.VdomItem /><components.VaporItem />`),
+      },
+    )
+    expect(ids(container)).toEqual(expected)
+  })
+
+  test('vdom slot content', async () => {
+    const { container } = await testWithVDOMApp(
+      `<script setup>const components = _components</script>
+      <template>
+        <components.Group>
+          <components.VdomItem />
+          <components.VdomItem />
+        </components.Group>
+        <components.VdomItem />
+      </template>`,
+      { VdomItem, Group: group(`<slot />`) },
+    )
+    expect(ids(container)).toEqual(expected)
+  })
+
+  test('vnode through a dynamic component', async () => {
+    const { container } = await testWithVaporApp(
+      `<template>
+        <components.Group />
+        <components.VaporItem />
+      </template>`,
+      {
+        VaporItem,
+        VdomItem,
+        Group: group(
+          `<component :is="vnode" /><components.VaporItem />`,
+          `const vnode = h(components.VdomItem)`,
+        ),
+      },
+    )
+    expect(ids(container)).toEqual(expected)
+  })
+
+  // the branch the server did not render is mounted, not hydrated
+  const recovered = (content: string) =>
+    `<main data-allow-mismatch="children">
+      <section v-if="client">${content}</section>
+      <article v-else>${content}</article>
+    </main>`
+
+  test('vdom slot content mounted on a mismatch', async () => {
+    const { container } = await testHydration(
+      `<script setup>const components = _components</script>
+      <template>
+        <components.Group>
+          <components.VdomItem />
+          <components.VdomItem />
+        </components.Group>
+        <components.VdomItem />
+      </template>`,
+      {
+        VdomItem,
+        Group: group(recovered(`<slot />`), `const client = _data`),
+      },
+      true,
+      { isVaporApp: false, interop: true, serverData: false },
+    )
+    expect(ids(container)).toEqual(expected)
+  })
+
+  test('vnode mounted on a mismatch', async () => {
+    const { container } = await testHydration(
+      `<template>
+        <components.Group />
+        <components.VaporItem />
+      </template>`,
+      {
+        VaporItem,
+        VdomItem,
+        Group: group(
+          recovered(`<component :is="vnode" /><components.VaporItem />`),
+          `const client = _data
+          const vnode = h(components.VdomItem)`,
+        ),
+      },
+      true,
+      { isVaporApp: true, interop: true, serverData: false },
+    )
+    expect(ids(container)).toEqual(expected)
+  })
+
+  // what a vdom slot calls counts with the component that passed it
+  const outlets = group(`<slot name="first" /><slot name="second" />`)
+  const author = (slots: string) => `<script setup>
+      import { useId } from 'vue'
+      const components = _components
+      const data = _data
+    </script>
+    <template>
+      <components.Group>${slots}</components.Group>
+    </template>`
+
+  test('useId called by the content of two vdom slots', async () => {
+    const { container } = await testWithVDOMApp(
+      author(
+        `<template #first><b :id="useId()" /></template>
+        <template #second><i :id="useId()" /></template>`,
+      ),
+      { Group: outlets },
+    )
+    expect(ids(container)).toEqual(['v-0', 'v-1', 'v-2'])
+  })
+
+  test('useId called by vdom slot content after an empty outlet', async () => {
+    const { container } = await testWithVDOMApp(
+      author(`<template #second><i :id="useId()" /></template>`),
+      { Group: outlets },
+    )
+    expect(ids(container)).toEqual(['v-0', 'v-1'])
+  })
+
+  test('useId called by the content of a conditional vdom slot', async () => {
+    const { container } = await testWithVDOMApp(
+      author(`<template v-if="data" #first><b :id="useId()" /></template>`),
+      { Group: outlets },
+      ref(true),
+    )
+    expect(ids(container)).toEqual(['v-0', 'v-1'])
+  })
+})
