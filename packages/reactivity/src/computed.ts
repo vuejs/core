@@ -149,8 +149,8 @@ export class ComputedRefImpl<T = any> implements ReactiveNode {
       } else if (flags & SystemReactiveFlags.Pending) {
         this.flags = flags & ~SystemReactiveFlags.Pending
       }
-    } catch (err) {
-      // still link, so the reader hears about the next change
+    } finally {
+      // also after a throw, so the reader hears about the next change
       if (activeSub !== undefined) {
         if (__DEV__) {
           onTrack(activeSub!, {
@@ -160,38 +160,25 @@ export class ComputedRefImpl<T = any> implements ReactiveNode {
           })
         }
         link(this, activeSub)
-      } else if (activeEffectScope !== undefined) {
-        link(this, activeEffectScope)
-      }
-      throw err
-    }
-    if (activeSub !== undefined) {
-      if (__DEV__) {
-        onTrack(activeSub!, {
-          target: this,
-          type: TrackOpTypes.GET,
-          key: 'value',
-        })
-      }
-      link(this, activeSub)
-    } else if (
-      activeEffectScope !== undefined ||
-      (this.subs === undefined && this.scope !== undefined)
-    ) {
-      // a read outside of any scope, e.g. in an event handler, counts as one
-      // in the scope it was created in unless something already keeps it
-      const scope = activeEffectScope || this.scope!
-      if (scope.active) {
-        link(this, scope)
-      } else if (this.subs === undefined) {
-        // a stopped scope never unlinks it, so nothing would release the deps
-        // this read tracked and they would keep the computed alive
-        let dep = this.deps
-        if (dep !== undefined) {
-          do {
-            dep = unlink(dep, this)
-          } while (dep !== undefined)
-          this.flags |= SystemReactiveFlags.Dirty
+      } else if (
+        activeEffectScope !== undefined ||
+        (this.subs === undefined && this.scope !== undefined)
+      ) {
+        // a read outside of any scope, e.g. in an event handler, counts as one
+        // in the scope it was created in unless something already keeps it
+        const scope = activeEffectScope || this.scope!
+        if (scope.active) {
+          link(this, scope)
+        } else if (this.subs === undefined) {
+          // a stopped scope never unlinks it, so nothing would release the
+          // deps this read tracked and they would keep the computed alive
+          let dep = this.deps
+          if (dep !== undefined) {
+            do {
+              dep = unlink(dep, this)
+            } while (dep !== undefined)
+            this.flags |= SystemReactiveFlags.Dirty
+          }
         }
       }
     }

@@ -646,6 +646,44 @@ describe('reactivity/effect/scope', () => {
     expect(getDepFromReactive(toRaw(src), 'foo')).toBeUndefined()
     expect((c as unknown as ComputedRefImpl).subs).toBeUndefined()
   })
+
+  it('should release a computed that throws when read outside of the scope it was created in', () => {
+    const src = reactive({ foo: 1 })
+    const scope = effectScope()
+    const c = scope.run(() =>
+      computed(() => {
+        if (src.foo) throw new Error('foo')
+        return src.foo
+      }),
+    )!
+
+    expect(() => c.value).toThrow('foo')
+    expect(getDepFromReactive(toRaw(src), 'foo')).toBeDefined()
+
+    scope.stop()
+    expect(getDepFromReactive(toRaw(src), 'foo')).toBeUndefined()
+
+    expect(() => c.value).toThrow('foo')
+    expect(getDepFromReactive(toRaw(src), 'foo')).toBeUndefined()
+    expect((c as unknown as ComputedRefImpl).subs).toBeUndefined()
+  })
+
+  it('should not keep a computed that throws when read in a stopped scope subscribed', () => {
+    const src = reactive({ foo: 1 })
+    const scope = effectScope()
+    const c = scope.run(() =>
+      computed(() => {
+        if (src.foo) throw new Error('foo')
+        return src.foo
+      }),
+    )!
+
+    scope.stop()
+    expect(() => scope.run(() => c.value)).toThrow('foo')
+    expect(getDepFromReactive(toRaw(src), 'foo')).toBeUndefined()
+    expect((c as unknown as ComputedRefImpl).subs).toBeUndefined()
+    expect(scope.deps).toBeUndefined()
+  })
 })
 
 function getEffectsCount(scope: EffectScope): number {
