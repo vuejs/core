@@ -1,11 +1,15 @@
 // @vitest-environment jsdom
 
 import {
+  type Ref,
   createApp,
   currentInstance,
+  effectScope,
   nextTick,
   ref,
   shallowRef,
+  watch,
+  watchEffect,
 } from '@vue/runtime-dom'
 import {
   createVaporApp,
@@ -470,5 +474,230 @@ describe.skipIf(!global.gc)('async component gc', () => {
         defineVaporAsyncComponent(() => Promise.resolve(comp)),
       ),
     ).toBeUndefined()
+  })
+})
+
+describe.skipIf(!global.gc)('watcher owner gc', () => {
+  const gc = () => {
+    return new Promise<void>(resolve => {
+      setTimeout(() => {
+        global.gc!()
+        resolve()
+      })
+    })
+  }
+
+  type CreateWatcher = (source: Ref<number>, cb: () => void) => void
+
+  // removes the child whose setup created a watcher, then changes the source
+  async function removedOwner(
+    vapor: boolean,
+    createWatcher: CreateWatcher,
+    inOwnScope = false,
+  ) {
+    let child: { deref(): unknown }
+    let calls = 0
+    const source = ref(0)
+    const scope = effectScope(true)
+    const data = shallowRef({
+      show: true,
+      setup: () => {
+        // @ts-expect-error ES2021 API
+        child = new WeakRef(currentInstance!)
+        const create = () => createWatcher(source, () => calls++)
+        if (inOwnScope) create()
+        else scope.run(create)
+      },
+    })
+    const mode = vapor ? ' vapor' : ''
+    const components = {
+      Child: compile(
+        `<script setup${mode}>
+          _data.value.setup()
+        </script>
+        <template><p>child</p></template>`,
+        data,
+        {},
+        { vapor },
+      ),
+    }
+    const App = compile(
+      `<script setup${mode}>
+        const data = _data; const components = _components
+      </script>
+      <template><components.Child v-if="data.show" /></template>`,
+      data,
+      components,
+      { vapor },
+    )
+    const root = document.createElement('div')
+    const app = (vapor ? createVaporApp : createApp)(App)
+    app.mount(root)
+    try {
+      await nextTick()
+      expect(root.textContent).toBe('child')
+      data.value = { ...data.value, show: false }
+      await nextTick()
+      expect(root.textContent).toBe('')
+      await gc()
+      const released = child!.deref() === undefined
+      const before = calls
+      source.value++
+      await nextTick()
+      return { released, fired: calls > before }
+    } finally {
+      app.unmount()
+      scope.stop()
+    }
+  }
+
+  describe.each([
+    ['vdom', false],
+    ['vapor', true],
+  ] as const)('%s', (_, vapor) => {
+    const flushes = ['pre', 'post', 'sync'] as const
+
+    test.each(flushes)(
+      'releases the removed owner of a watch in a longer-lived scope (flush: %s)',
+      async flush => {
+        expect(
+          await removedOwner(vapor, (source, cb) => {
+            watch(source, cb, { flush })
+          }),
+        ).toEqual({ released: true, fired: true })
+      },
+    )
+
+    test.each(flushes)(
+      'releases the removed owner of a watchEffect in a longer-lived scope (flush: %s)',
+      async flush => {
+        expect(
+          await removedOwner(vapor, (source, cb) => {
+            watchEffect(
+              () => {
+                void source.value
+                cb()
+              },
+              { flush },
+            )
+          }),
+        ).toEqual({ released: true, fired: true })
+      },
+    )
+
+    // guard: passes before and after the fix
+    test('releases the removed owner of a watch in its own scope', async () => {
+      expect(
+        await removedOwner(vapor, (source, cb) => void watch(source, cb), true),
+      ).toEqual({ released: true, fired: false })
+    })
+
+    // guard: passes before the fix, which must not make the owner hold on to
+    // the watchers it is released from
+    test.each(['scope', 'handle'] as const)(
+      'releases a watcher stopped by its %s while the owner stays mounted',
+      async by => {
+        let captured: { deref(): unknown }
+        let stop: (() => void) | undefined
+        const source = ref(0)
+        const longLived = effectScope(true)
+        const data = shallowRef({
+          setup: () => {
+            const scope = by === 'scope' ? effectScope(true) : longLived
+            scope.run(() => {
+              const value = {}
+              // @ts-expect-error ES2021 API
+              captured = new WeakRef(value)
+              const handle = watch(source, () => void value)
+              stop = by === 'scope' ? () => scope.stop() : handle
+            })
+          },
+        })
+        const App = compile(
+          `<script setup${vapor ? ' vapor' : ''}>
+            _data.value.setup()
+          </script>
+          <template><p>app</p></template>`,
+          data,
+          {},
+          { vapor },
+        )
+        const root = document.createElement('div')
+        const app = (vapor ? createVaporApp : createApp)(App)
+        app.mount(root)
+        try {
+          await nextTick()
+          stop!()
+          stop = undefined
+          await gc()
+          expect(captured!.deref()).toBeUndefined()
+          expect(root.textContent).toBe('app')
+        } finally {
+          app.unmount()
+          longLived.stop()
+        }
+      },
+    )
+  })
+
+  test('releases an owner that unmounted before its async setup resumed', async () => {
+    let child: { deref(): unknown }
+    let resolve!: () => void
+    let calls = 0
+    const source = ref(0)
+    const scope = effectScope(true)
+    const data = shallowRef({
+      show: true,
+      capture: () => {
+        // @ts-expect-error ES2021 API
+        child = new WeakRef(currentInstance!)
+      },
+      wait: () => new Promise<void>(r => (resolve = r)),
+      create: () => scope.run(() => watch(source, () => calls++)),
+    })
+    const components = {
+      Child: compile(
+        `<script setup>
+          _data.value.capture()
+          await _data.value.wait()
+          _data.value.create()
+        </script>
+        <template><p>child</p></template>`,
+        data,
+        {},
+        { vapor: false },
+      ),
+    }
+    const App = compile(
+      `<script setup>
+        const data = _data; const components = _components
+      </script>
+      <template>
+        <Suspense>
+          <components.Child v-if="data.show" />
+        </Suspense>
+      </template>`,
+      data,
+      components,
+      { vapor: false },
+    )
+    const root = document.createElement('div')
+    const app = createApp(App)
+    app.mount(root)
+    try {
+      await nextTick()
+      data.value = { ...data.value, show: false }
+      await nextTick()
+      resolve()
+      await new Promise(r => setTimeout(r))
+      await gc()
+      const released = child!.deref() === undefined
+      source.value++
+      await nextTick()
+      expect({ released, calls }).toEqual({ released: true, calls: 1 })
+    } finally {
+      app.unmount()
+      scope.stop()
+    }
   })
 })

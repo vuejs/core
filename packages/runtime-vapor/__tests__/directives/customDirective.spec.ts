@@ -12,6 +12,7 @@ import {
   nextTick,
   onMounted,
   onUpdated,
+  watch,
   watchEffect,
   watchPostEffect,
 } from '@vue/runtime-dom'
@@ -633,6 +634,44 @@ describe('custom directive', () => {
 
     app.unmount()
   })
+
+  it.each([
+    ['in a v-for', `<p v-for="i in data.list" :key="i" v-custom />`],
+    ['on a component root', `<components.Child v-custom />`],
+  ])(
+    'should report the cleanup error of a watcher created %s when the owner unmounts',
+    (_, template) => {
+      const data = ref({ list: [1] })
+      const error = new Error('cleanup')
+      const dir: VaporDirective = () => {
+        watch(
+          data,
+          (_, __, onCleanup) => {
+            onCleanup(() => {
+              throw error
+            })
+          },
+          { immediate: true },
+        )
+      }
+      const Child = compile(`<template><div /></template>`, data)
+      const App = compile(
+        `<template>
+          ${template}
+        </template>`,
+        data,
+        { Child },
+      )
+      App.directives = { custom: dir }
+
+      const { app, mount } = define(App).create()
+      const errorHandler = (app.config.errorHandler = vi.fn())
+      mount()
+      app.unmount()
+      expect(errorHandler).toHaveBeenCalledOnce()
+      expect(errorHandler.mock.calls[0][0]).toBe(error)
+    },
+  )
   it('should take over the hooks of the binding it replaces on a kept-alive root chain', async () => {
     const data = ref({ root: true, inner: true })
     const teardown = vi.fn()
