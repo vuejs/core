@@ -1,5 +1,6 @@
 // @ts-check
-import { mkdir, writeFile } from 'node:fs/promises'
+import { mkdir, readFile, writeFile } from 'node:fs/promises'
+import { createRequire } from 'node:module'
 import path from 'node:path'
 import { rolldown } from 'rolldown'
 import { minify } from 'oxc-minify'
@@ -22,11 +23,14 @@ const {
 
 const sizeDir = path.resolve('temp/size')
 const vuePath = path.resolve('./packages/vue/dist/vue.runtime.esm-bundler.js')
+const appDir = path.resolve('scripts/size-app')
 
 /**
  * @typedef {Object} Preset
  * @property {string} name - The name of the preset
- * @property {'*' | string[]} imports - The imports that are part of this preset
+ * @property {'*' | string[]} [imports] - The imports that are part of this preset
+ * @property {string} [app] - Bundle the SFC app in scripts/size-app/<app> instead
+ * @property {boolean} [vapor] - Compile the app SFCs in vapor mode
  * @property {Record<string, string>} [replace]
  */
 
@@ -58,6 +62,19 @@ const presets = [
       'Suspense',
     ],
   },
+  ...['counter', 'todo'].flatMap(app => [
+    {
+      name: `${app} app (CAPI only)`,
+      app,
+      replace: { __VUE_OPTIONS_API__: 'false' },
+    },
+    {
+      name: `${app} vapor app (CAPI only)`,
+      app,
+      vapor: true,
+      replace: { __VUE_OPTIONS_API__: 'false' },
+    },
+  ]),
 ]
 
 main()
@@ -84,10 +101,22 @@ async function main() {
   }
 
   await mkdir(sizeDir, { recursive: true })
-  await writeFile(
-    path.resolve(sizeDir, '_usages.json'),
-    JSON.stringify(Object.fromEntries(results.map(r => [r.name, r])), null, 2),
-    'utf-8',
+  const writeJSON = async (
+    /** @type {string} */ file,
+    /** @type {typeof results} */ list,
+  ) =>
+    writeFile(
+      path.resolve(sizeDir, file),
+      JSON.stringify(Object.fromEntries(list.map(r => [r.name, r])), null, 2),
+      'utf-8',
+    )
+  await writeJSON(
+    '_usages.json',
+    results.filter((_, i) => !presets[i].app),
+  )
+  await writeJSON(
+    '_apps.json',
+    results.filter((_, i) => presets[i].app),
   )
 }
 
@@ -99,11 +128,19 @@ async function main() {
  */
 async function generateBundle(preset) {
   const id = 'virtual:entry'
-  const exportSpecifiers =
-    preset.imports === '*'
-      ? `* as ${preset.name}`
-      : `{ ${preset.imports.join(', ')} }`
-  const content = `export ${exportSpecifiers} from '${vuePath}'`
+  let content
+  if (preset.app) {
+    const create = preset.vapor ? 'createVaporApp' : 'createApp'
+    content =
+      `import { ${create} } from 'vue'\n` +
+      `import App from '${appDir}/${preset.app}/App.vue'\n` +
+      `${create}(App).mount('#app')`
+  } else {
+    const imports = preset.imports || []
+    const exportSpecifiers =
+      imports === '*' ? `* as ${preset.name}` : `{ ${imports.join(', ')} }`
+    content = `export ${exportSpecifiers} from '${vuePath}'`
+  }
 
   const result = await rolldown({
     input: id,
@@ -112,10 +149,14 @@ async function generateBundle(preset) {
         name: 'usage-size-plugin',
         resolveId(_id) {
           if (_id === id) return id
+          if (_id === 'vue') return vuePath
           return null
         },
-        load(_id) {
+        async load(_id) {
           if (_id === id) return content
+          if (_id.endsWith('.vue')) {
+            return compileSFC(_id, !!preset.vapor)
+          }
         },
       },
       replacePlugin(
@@ -162,4 +203,29 @@ async function generateBundle(preset) {
     gzip,
     brotli,
   }
+}
+
+/**
+ * Compiles an SFC the same way @vitejs/plugin-vue does for production
+ *
+ * @param {string} filename
+ * @param {boolean} vapor
+ * @returns {Promise<{ code: string, moduleType: 'ts' }>}
+ */
+async function compileSFC(filename, vapor) {
+  // only used to precompile the app SFCs, built by the `size-prepare-app` script
+  const { parse, compileScript } = createRequire(import.meta.url)(
+    '../packages/compiler-sfc',
+  )
+  const { descriptor, errors } = parse(await readFile(filename, 'utf-8'), {
+    filename,
+  })
+  if (errors.length) throw errors[0]
+  const { content } = compileScript(descriptor, {
+    id: path.relative(appDir, filename),
+    isProd: true,
+    inlineTemplate: true,
+    vapor,
+  })
+  return { code: content, moduleType: 'ts' }
 }
