@@ -285,7 +285,7 @@ function flushJobs(seen?: CountMap) {
     seen = seen || new Map()
   }
 
-  // conditional usage of checkRecursiveUpdate must be determined out of
+  // conditional usage of checkRecursiveUpdates must be determined out of
   // try ... catch block since Rollup by default de-optimizes treeshaking
   // inside try-catch. This can leave all warning code unshaked. Although
   // they would get eventually shaken by a minifier like terser, some minifiers

@@ -83,8 +83,8 @@ const componentTypeMap = new WeakMap<
 >()
 
 // ssr component transform is done in two phases:
-// In phase 1. we use `buildSlot` to analyze the children of the component into
-// WIP slot functions (it must be done in phase 1 because `buildSlot` relies on
+// In phase 1. we use `buildSlots` to analyze the children of the component into
+// WIP slot functions (it must be done in phase 1 because `buildSlots` relies on
 // the core transform context).
 // In phase 2. we convert the WIP slots from phase 1 into ssr-specific codegen
 // nodes.

@@ -9,7 +9,7 @@ import { resolveObjectKey } from './utils'
 
 /**
  * Analyze bindings in normal `<script>`
- * Note that `compileScriptSetup` already analyzes bindings as part of its
+ * Note that `compileScript` already analyzes bindings as part of its
  * compilation process so this should only be used on single `<script>` SFCs.
  */
 export function analyzeScriptBindings(ast: Statement[]): BindingMetadata {
