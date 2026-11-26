@@ -1,5 +1,6 @@
 import { ref, shallowRef } from '@vue/reactivity'
 import {
+  createApp,
   currentInstance,
   nextTick,
   onActivated,
@@ -21,6 +22,7 @@ import {
   setHtml,
   setInsertionState,
   template,
+  vaporInteropPlugin,
 } from '../src'
 import { compile, makeRender } from './_utils'
 
@@ -660,5 +662,168 @@ describe('api: createDynamicComponent', () => {
     expect(host.querySelector('math')!.namespaceURI).toBe(
       'http://www.w3.org/1998/Math/MathML',
     )
+  })
+
+  describe('a static name resolves in the component that wrote it', () => {
+    const mount = (template: string, vapor = true, vdomOutlet = !vapor) => {
+      const data = ref({ show: false, list: [] as number[] })
+      const components: any = {}
+      const script = (vapor: boolean) => `<script setup${vapor ? ' vapor' : ''}>
+        const data = _data; const components = _components
+      </script>`
+      const setup = script(vapor)
+      const options = { vapor }
+      components.Local = compile(
+        `${setup}
+        <template><span>foo</span></template>`,
+        data,
+        components,
+        options,
+      )
+      components.Other = compile(
+        `${setup}
+        <template><i>other</i></template>`,
+        data,
+        components,
+        options,
+      )
+      components.Outlet = compile(
+        `${script(!vdomOutlet)}
+        <template>
+          <section><slot /><slot name="named" /></section>
+        </template>`,
+        data,
+        components,
+        { vapor: !vdomOutlet },
+      )
+      components.Forward = compile(
+        `${setup}
+        <template>
+          <components.Outlet><slot /></components.Outlet>
+        </template>`,
+        data,
+        components,
+        options,
+      )
+      components.Inner = compile(
+        `<script>
+          export default { components: { Foo: _components.Other } }
+        </script>
+        ${setup}
+        <template><component is="Foo" /></template>`,
+        data,
+        components,
+        options,
+      )
+      const App = compile(
+        `<script>
+          export default { components: { Foo: _components.Local } }
+        </script>
+        ${setup}
+        <template>${template}</template>`,
+        data,
+        components,
+        options,
+      )
+      const root = document.createElement('div')
+      const app = vapor ? createVaporApp(App) : createApp(App)
+      if (vapor && vdomOutlet) app.use(vaporInteropPlugin)
+      app.mount(root)
+      return async () => {
+        data.value = { show: true, list: [1, 2] }
+        await nextTick()
+        return root.innerHTML
+          .replace(/<!--[^>]*-->/g, '')
+          .replace(/>\s+</g, '><')
+      }
+    }
+
+    test.each([
+      [
+        'slot content',
+        `<components.Outlet>
+          <component is="Foo" />
+        </components.Outlet>`,
+        '<section><span>foo</span></section>',
+      ],
+      [
+        'v-if in slot content',
+        `<components.Outlet>
+          <component is="Foo" v-if="data.show" />
+        </components.Outlet>`,
+        '<section><span>foo</span></section>',
+      ],
+      [
+        'v-for in slot content',
+        `<components.Outlet>
+          <component is="Foo" v-for="i in data.list" :key="i" />
+        </components.Outlet>`,
+        '<section><span>foo</span><span>foo</span></section>',
+      ],
+      [
+        'named slot content',
+        `<components.Outlet>
+          <template #named>
+            <component is="Foo" />
+          </template>
+        </components.Outlet>`,
+        '<section><span>foo</span></section>',
+      ],
+      [
+        'forwarded slot content',
+        `<components.Forward>
+          <component is="Foo" />
+        </components.Forward>`,
+        '<section><span>foo</span></section>',
+      ],
+      [
+        'nested slot content',
+        `<components.Outlet>
+          <components.Outlet>
+            <component is="Foo" />
+          </components.Outlet>
+        </components.Outlet>`,
+        '<section><section><span>foo</span></section></section>',
+      ],
+      [
+        'fallback of a forwarded slot',
+        `<components.Outlet>
+          <slot>
+            <component is="Foo" />
+          </slot>
+        </components.Outlet>`,
+        '<section><span>foo</span></section>',
+      ],
+      // coverage guards: these resolved in the right component already
+      [
+        'outside a slot',
+        `<section>
+          <component is="Foo" />
+        </section>`,
+        '<section><span>foo</span></section>',
+      ],
+      [
+        'the root of a component in slot content',
+        `<components.Outlet>
+          <components.Inner />
+        </components.Outlet>`,
+        '<section><i>other</i></section>',
+      ],
+    ])('%s', async (_, template, expected) => {
+      expect(await mount(template, false)()).toBe(expected)
+      expect(await mount(template)()).toBe(expected)
+    })
+
+    test('slot content of a vdom component', async () => {
+      expect(
+        await mount(
+          `<components.Outlet>
+            <component is="Foo" />
+          </components.Outlet>`,
+          true,
+          true,
+        )(),
+      ).toBe('<section><span>foo</span></section>')
+    })
   })
 })

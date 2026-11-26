@@ -15,6 +15,7 @@ import {
 } from '@vue/shared'
 import { type Block, isBlock } from './block'
 import {
+  type VaporComponent,
   type VaporComponentInstance,
   createComponentWithFallback,
   emptyContext,
@@ -253,4 +254,14 @@ function resolveValue(
     return NULL_DYNAMIC_COMPONENT
   }
   return resolved
+}
+
+/**
+ * Resolve the name of a static `<component is="name">`. Slot content runs in
+ * the component that renders it, so the name is resolved in the slot owner.
+ */
+export function resolveOwnerComponent(name: string): VaporComponent | string {
+  return resolveDynamicComponent(name, getScopeOwner()) as
+    | VaporComponent
+    | string
 }
