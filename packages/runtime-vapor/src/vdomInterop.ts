@@ -104,6 +104,7 @@ import {
   VaporComponentInstance,
   applyFallthroughAttrs,
   createComponent,
+  ensureSetupBoundary,
   getExposed,
   getRootElement,
   isVaporComponent,
@@ -1685,6 +1686,7 @@ function mountDynamicVNode(
   rawProps?: RawProps | null,
   once?: boolean,
 ): VaporFragment {
+  if (parentComponent) ensureSetupBoundary(parentComponent)
   const keepAliveCtx =
     isKeepAliveEnabled && parentComponent && isKeepAlive(parentComponent)
       ? (parentComponent as KeepAliveInstance).ctx
@@ -2662,6 +2664,7 @@ function renderVDOMSlot(
   let suspense = currentRenderContext.suspense || parentComponent.suspense
   // content mounts under the component rendering the outlet, like renderSlot
   const mountParent = currentInstance || parentComponent
+  ensureSetupBoundary(mountParent)
   // frag.slotScopeIds is the outlet's id cell (the ambient createSlot
   // establishes around this call) — the base patch context for content
   // patches.
@@ -3240,7 +3243,21 @@ function renderVDOMSlot(
       const renderContent = () => {
         const slotName = isFunction(name) ? name() : name
         frag.slotName = slotName
-        return renderSlot(slotsRef.value, slotName, props)
+        // as in vdom, no setup instance is active while a slot renders: what
+        // it reads off the instance (`useId`) is its author's, which `withCtx`
+        // restores, not this outlet's. A compiled slot (`_`) has an author
+        // even where `createSlots` wraps it (`v-if`), as a normalized one has
+        const slots = slotsRef.value
+        const slot = slots[slotName]
+        const prev = currentInstance
+        if (slot && ((slots as any)._ || (slot as any)._n)) {
+          simpleSetCurrentInstance(null)
+        }
+        try {
+          return renderSlot(slots, slotName, props)
+        } finally {
+          simpleSetCurrentInstance(prev)
+        }
       }
       slotContent = once ? withOnce(renderContent) : renderContent()
 

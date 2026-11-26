@@ -577,6 +577,8 @@ export function createComponent(
       inputScope = new EffectScope(true)
     }
 
+    if (currentInstance) ensureSetupBoundary(currentInstance)
+
     // The VDOM bridge delivers inputs through the same cache-owned scope.
     if (isInteropEnabled && useVdomInterop(component, appContext)) {
       const frag = appContext.vdom!.mount(
@@ -856,13 +858,9 @@ export function setupComponent(
 
   const isAsyncSetup = isPromise(setupResult)
 
-  if (
-    (isAsyncSetup || instance.sp) &&
-    !instance.hasSetupIdBoundary &&
-    !(isAsyncComponentEnabled && isAsyncWrapper(instance))
-  ) {
+  if (isAsyncSetup || instance.sp) {
     // async setup / serverPrefetch, mark as async boundary for useId()
-    markSetupIdBoundary(instance)
+    markSetupBoundary(instance)
   }
 
   if (isAsyncSetup) {
@@ -894,29 +892,24 @@ export function setupComponent(
   restoreCurrentInstance(prevInstance)
 }
 
-function markSetupIdBoundary(instance: VaporComponentInstance): void {
-  markAsyncBoundary(instance)
-  instance.hasSetupIdBoundary = true
+function markSetupBoundary(instance: VaporComponentInstance): void {
+  if (
+    !instance.setupBoundaryMarked &&
+    !(isAsyncComponentEnabled && isAsyncWrapper(instance))
+  ) {
+    markAsyncBoundary(instance)
+    instance.setupBoundaryMarked = true
+  }
 }
 
 /**
- * The `useId` state that a new child shares with its parent. On the server, a
- * component with `onServerPrefetch` is the boundary of its children after its
- * setup. An inline template creates the children inside setup, so the first
- * child marks that boundary.
+ * On the server, a component with `onServerPrefetch` is the `useId` boundary
+ * of its children after its setup. An inline template creates the children
+ * inside setup, so the boundary is marked before the first of them, vapor or
+ * vdom, takes the `useId` state of its parent.
  */
-function idsOfChild(
-  parent: GenericComponentInstance,
-): [string, number, number] {
-  if (
-    isVaporComponent(parent) &&
-    parent.sp &&
-    !parent.hasSetupIdBoundary &&
-    !(isAsyncComponentEnabled && isAsyncWrapper(parent))
-  ) {
-    markSetupIdBoundary(parent)
-  }
-  return parent.ids
+export function ensureSetupBoundary(parent: GenericComponentInstance): void {
+  if (parent.sp && isVaporComponent(parent)) markSetupBoundary(parent)
 }
 
 export let isApplyingFallthroughProps = false
@@ -1169,7 +1162,7 @@ export class VaporComponentInstance<
   // for useId
   ids: [string, number, number]
   // async setup or serverPrefetch made this the useId boundary of its children
-  hasSetupIdBoundary?: boolean
+  setupBoundaryMarked?: boolean
   // for suspense
   suspense: SuspenseBoundary | null
   suspenseId: number
@@ -1266,7 +1259,7 @@ export class VaporComponentInstance<
       this.root = currentInstance.root
       this.appContext = currentInstance.appContext
       this.provides = currentInstance.provides
-      this.ids = idsOfChild(currentInstance)
+      this.ids = currentInstance.ids
     } else {
       this.root = this
       this.appContext = appContext || emptyContext
