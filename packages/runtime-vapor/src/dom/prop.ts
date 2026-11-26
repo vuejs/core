@@ -274,6 +274,8 @@ export function setClass(
       el.$cls = value
       if (isTransitionEnabled) {
         patchClass(el, value, isSVG)
+      } else if (value === undefined) {
+        el.removeAttribute('class')
       } else if (isSVG) {
         el.setAttribute('class', value)
       } else {
@@ -343,7 +345,7 @@ function setClassIncremental(
 
   const prev = el[cacheKey]
   if ((value = el[cacheKey] = normalizedValue) !== prev) {
-    const nextList = value.split(/\s+/)
+    const nextList = value ? value.split(/\s+/) : EMPTY_ARR
     if (value) {
       el.classList.add(...nextList)
     }
@@ -357,6 +359,13 @@ function setClassIncremental(
           el.classList.remove(cls)
         }
       }
+    }
+    if (
+      value === undefined &&
+      !el.classList.length &&
+      el.$clsi$ === undefined
+    ) {
+      el.removeAttribute('class')
     }
   }
 }
@@ -751,7 +760,12 @@ function doPatchDynamicProps(
   if (prevProps) {
     for (const key in prevProps) {
       if (!(key in props)) {
-        setDynamicProp(el, key, null, isSVG)
+        // like vdom, an omitted class renders no attribute
+        if (key === 'class' && !isApplyingFallthroughProps) {
+          setClass(el, undefined, isSVG, true)
+        } else {
+          setDynamicProp(el, key, null, isSVG)
+        }
         if (
           (key === 'value' || key === '.value') &&
           el.tagName === 'SELECT' &&
@@ -815,7 +829,21 @@ export function setDynamicProp(
 ): void {
   const rawKey = key
   if (key === 'class') {
-    setClass(el, value, isSVG)
+    // whether this own binding has set a class before (an omitted one too)
+    const isSet = hasOwn(el, el.$root ? '$clsi' : '$cls')
+    const cls = normalizeClass(value)
+    setClass(el, cls, isSVG, true)
+    // like vdom, an empty class renders an empty attribute; a nullish one does
+    // not on its first write, as before
+    if (
+      !cls &&
+      !isApplyingFallthroughProps &&
+      (value === '' || isSet) &&
+      (!isHydrating || isRecreatedNode(el)) &&
+      !el.hasAttribute('class')
+    ) {
+      el.setAttribute('class', '')
+    }
   } else if (key === 'style') {
     setStyle(el, value)
   } else if (isOn(key)) {

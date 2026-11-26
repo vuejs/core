@@ -225,4 +225,76 @@ describe('SVG support', () => {
       },
     )
   })
+
+  test.each([
+    ['an svg root', `<svg v-bind="data.attrs" />`],
+    ['a nested svg', `<div><svg v-bind="data.attrs" /></div>`],
+  ])(
+    'object v-bind on %s keeps an omitted and an empty class apart',
+    async (_, template) => {
+      const seen = await classAfterEachStep(
+        {
+          App: `<template>
+            ${template}
+          </template>`,
+        },
+        [
+          { attrs: {} },
+          { attrs: { class: '' } },
+          { attrs: { class: 'a' } },
+          { attrs: {} },
+          { attrs: { class: { a: false } } },
+        ],
+      )
+      expect(seen.vdom).toEqual([null, '', 'a', null, ''])
+      expect(seen.vapor).toEqual(seen.vdom)
+    },
+  )
+
+  test("removing an svg root's own class keeps the fallthrough one", async () => {
+    const seen = await classAfterEachStep(
+      {
+        Child: `<template>
+          <svg v-bind="data.own" />
+        </template>`,
+        App: `<template>
+          <components.Child v-bind="data.fall" />
+        </template>`,
+      },
+      [
+        { own: { class: 'a' }, fall: { class: 'b' } },
+        { own: {} },
+        { fall: { class: '' } },
+        { own: { class: 'c' } },
+        { own: {} },
+      ],
+    )
+    expect(seen.vdom).toEqual(['a b', 'b', '', 'c', ''])
+    expect(seen.vapor).toEqual(seen.vdom)
+  })
 })
+
+// the class attribute of the first svg after each step, per mode
+async function classAfterEachStep(
+  srcs: Record<string, string>,
+  steps: Record<string, any>[],
+) {
+  const seen: Record<'vdom' | 'vapor', (string | null)[]> = {
+    vdom: [],
+    vapor: [],
+  }
+  await renderParity(
+    srcs,
+    () => ref<Record<string, any>>({ ...steps[0] }),
+    async (data, root, mode) => {
+      const el = root.querySelector('svg')!
+      seen[mode].push(el.getAttribute('class'))
+      for (const step of steps.slice(1)) {
+        Object.assign(data.value, step)
+        await nextTick()
+        seen[mode].push(el.getAttribute('class'))
+      }
+    },
+  )
+  return seen
+}
