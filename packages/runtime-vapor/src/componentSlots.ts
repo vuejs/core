@@ -194,7 +194,15 @@ function withSlotOwner<T>(slots: OwnedRawSlots, fn: () => T): T {
   if (owner === undefined) {
     return fn()
   }
-  return withRenderContext(deriveSlotOwner(currentRenderContext, owner), fn)
+  // read by `useId`: a component created in the slot is current itself
+  const outlet = currentInstance
+  const prev = outlet && outlet.slotOwner
+  if (outlet) outlet.slotOwner = owner
+  try {
+    return withRenderContext(deriveSlotOwner(currentRenderContext, owner), fn)
+  } finally {
+    if (outlet) outlet.slotOwner = prev
+  }
 }
 
 function getOwnedSlot(

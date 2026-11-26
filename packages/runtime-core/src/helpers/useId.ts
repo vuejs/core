@@ -1,11 +1,16 @@
 import {
   type GenericComponentInstance,
+  currentInstance,
   getCurrentGenericInstance,
 } from '../component'
 import { warn } from '../warning'
 
 export function useId(): string {
-  const i = getCurrentGenericInstance()
+  // the content of a slot counts with its owner, as with the rendering
+  // instance in vdom
+  const i =
+    (currentInstance && currentInstance.slotOwner) ||
+    getCurrentGenericInstance()
   if (i) {
     return (i.appContext.config.idPrefix || 'v') + '-' + i.ids[0] + i.ids[1]++
   } else if (__DEV__) {

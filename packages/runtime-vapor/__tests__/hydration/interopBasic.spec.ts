@@ -2111,3 +2111,50 @@ describe('useId below a vapor component with onServerPrefetch', () => {
     expect(ids(container)).toEqual(['v-0', 'v-1'])
   })
 })
+
+// the owner of a vapor slot is its author in a vdom component too
+test('useId called by vapor slot content in a vdom component with onServerPrefetch', async () => {
+  const { container } = await testWithVaporApp(
+    `<script setup vapor>
+      import { useId } from 'vue'
+      const components = _components
+    </script>
+    <template>
+      <components.Group>
+        <template #first><b :id="useId()" /></template>
+        <template #second><i :id="useId()" /></template>
+      </components.Group>
+    </template>`,
+    {
+      Item: `<script setup vapor>
+        import { useId } from 'vue'
+        const id = useId()
+      </script>
+      <template>
+        <p :id="id" />
+      </template>`,
+      Group: {
+        code: `<script setup>
+          import { onServerPrefetch, useId } from 'vue'
+          const components = _components
+          onServerPrefetch(() => {})
+          const id = useId()
+        </script>
+        <template>
+          <div :id="id">
+            <slot name="first" />
+            <components.Item />
+            <slot name="second" />
+          </div>
+        </template>`,
+        vapor: false,
+      },
+    },
+  )
+  expect([...container.querySelectorAll('[id]')].map(el => el.id)).toEqual([
+    'v-0',
+    'v-1',
+    'v-0-0',
+    'v-2',
+  ])
+})

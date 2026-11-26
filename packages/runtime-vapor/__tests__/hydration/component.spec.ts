@@ -65,6 +65,52 @@ describe('Vapor Mode hydration', () => {
       expect(ids(container)).toEqual(['v-0', 'v-0-0', 'v-0-1', 'v-1'])
       expect(`Hydration attribute mismatch`).not.toHaveBeenWarned()
     })
+
+    // as in vdom, where the slot restores its author as the rendering
+    // instance: the ids are the author's, not those of the component
+    // rendering the slot
+    test('useId called by slot content counts with the component that passed the slot', async () => {
+      const { container } = await testHydration(
+        `<script setup>
+          import { useId } from 'vue'
+          const components = _components
+        </script>
+        <template>
+          <components.Group>
+            <template #first><b :id="useId()" /></template>
+            <template #second><i :id="useId()" /></template>
+          </components.Group>
+        </template>`,
+        {
+          Item: `<script setup>
+            import { useId } from 'vue'
+            const id = useId()
+          </script>
+          <template>
+            <p :id="id" />
+          </template>`,
+          Group: `<script setup>
+            import { onServerPrefetch, useId } from 'vue'
+            const components = _components
+            onServerPrefetch(() => {})
+            const id = useId()
+          </script>
+          <template>
+            <div :id="id">
+              <slot name="first" />
+              <components.Item />
+              <slot name="second" />
+            </div>
+          </template>`,
+        },
+      )
+      expect([...container.querySelectorAll('[id]')].map(el => el.id)).toEqual([
+        'v-0',
+        'v-1',
+        'v-0-0',
+        'v-2',
+      ])
+    })
     test('root component should not enter beforeMount twice during hydration', async () => {
       const beforeMount = vi.fn()
       await testHydration(
