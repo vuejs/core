@@ -625,6 +625,65 @@ describe('reactivity/effect/scope', () => {
     expect(scope.run(() => c.value)).toBe(value)
     expect(getter).toHaveBeenCalledTimes(1)
   })
+
+  it('should release a computed read outside of the scope it was created in', () => {
+    const src = reactive({ foo: 1 })
+    const scope = effectScope()
+    const c = scope.run(() => computed(() => src.foo))!
+
+    // e.g. in an event handler
+    expect(c.value).toBe(1)
+    src.foo = 2
+    expect(c.value).toBe(2)
+    expect(getDepFromReactive(toRaw(src), 'foo')).toBeDefined()
+
+    scope.stop()
+    expect(getDepFromReactive(toRaw(src), 'foo')).toBeUndefined()
+
+    // e.g. in a timer that fires after the scope stopped
+    src.foo = 3
+    expect(c.value).toBe(3)
+    expect(getDepFromReactive(toRaw(src), 'foo')).toBeUndefined()
+    expect((c as unknown as ComputedRefImpl).subs).toBeUndefined()
+  })
+
+  it('should release a computed that throws when read outside of the scope it was created in', () => {
+    const src = reactive({ foo: 1 })
+    const scope = effectScope()
+    const c = scope.run(() =>
+      computed(() => {
+        if (src.foo) throw new Error('foo')
+        return src.foo
+      }),
+    )!
+
+    expect(() => c.value).toThrow('foo')
+    expect(getDepFromReactive(toRaw(src), 'foo')).toBeDefined()
+
+    scope.stop()
+    expect(getDepFromReactive(toRaw(src), 'foo')).toBeUndefined()
+
+    expect(() => c.value).toThrow('foo')
+    expect(getDepFromReactive(toRaw(src), 'foo')).toBeUndefined()
+    expect((c as unknown as ComputedRefImpl).subs).toBeUndefined()
+  })
+
+  it('should not keep a computed that throws when read in a stopped scope subscribed', () => {
+    const src = reactive({ foo: 1 })
+    const scope = effectScope()
+    const c = scope.run(() =>
+      computed(() => {
+        if (src.foo) throw new Error('foo')
+        return src.foo
+      }),
+    )!
+
+    scope.stop()
+    expect(() => scope.run(() => c.value)).toThrow('foo')
+    expect(getDepFromReactive(toRaw(src), 'foo')).toBeUndefined()
+    expect((c as unknown as ComputedRefImpl).subs).toBeUndefined()
+    expect(scope.deps).toBeUndefined()
+  })
 })
 
 function getEffectsCount(scope: EffectScope): number {

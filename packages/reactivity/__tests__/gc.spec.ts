@@ -4,6 +4,7 @@ import {
   computed,
   effect,
   effectScope,
+  onScopeDispose,
   reactive,
   shallowRef as ref,
   toRaw,
@@ -112,6 +113,46 @@ describe.skipIf(!global.gc)('reactivity/gc', () => {
     scope.stop()
     await gc()
     expect(c.deref()).toBeUndefined()
+  })
+
+  it('should release computed read outside of the effectScope it was created in', async () => {
+    const src = reactive({ foo: 1 })
+    const scope = effectScope()
+    // @ts-expect-error ES2021 API
+    const c = new WeakRef(scope.run(() => computed(() => src.foo))!)
+
+    c.deref().value
+
+    expect(c.deref()).toBeDefined()
+    scope.stop()
+    await gc()
+    expect(c.deref()).toBeUndefined()
+  })
+
+  it('should not keep the cleanups of a stopped effectScope alive through its computed', async () => {
+    const src = reactive({ foo: 1 })
+    // e.g. a composable that cleans up when its component unmounts
+    const useDisposable = () => {
+      const state = { disposed: false }
+      onScopeDispose(() => (state.disposed = true))
+      // @ts-expect-error ES2021 API
+      return new WeakRef(state)
+    }
+    // e.g. a component that hands a computed to a long-lived owner
+    const mount = () => {
+      const scope = effectScope()
+      const result = scope.run(() => ({
+        state: useDisposable(),
+        c: computed(() => src.foo),
+      }))!
+      scope.stop()
+      return result
+    }
+
+    const { state, c } = mount()
+    await gc()
+    expect(c.value).toBe(1)
+    expect(state.deref()).toBeUndefined()
   })
 
   // bytes that reach old space per step with only scavenges running: a major

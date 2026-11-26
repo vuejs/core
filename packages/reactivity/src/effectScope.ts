@@ -80,6 +80,9 @@ export class EffectScope implements ReactiveNode {
     }
     this.flags = EffectFlags.STOP
     this.reset()
+    // drop the cleanups: they never run again, and a computed created in the
+    // scope may still reference it
+    this.cleanups = undefined
     const sub = this.subs
     if (sub !== undefined) {
       unlink(sub)
