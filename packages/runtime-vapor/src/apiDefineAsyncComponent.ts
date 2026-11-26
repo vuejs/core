@@ -25,15 +25,12 @@ import { DynamicFragment, isDynamicFragment } from './fragment'
 import {
   hydrateNode,
   isHydrating,
-  isRangeStart,
-  locateEndAnchor,
   locateHydrationNode,
-  nextLogicalSibling,
+  locateUnitEnd,
   setCurrentHydrationNode,
   withDeferredHydrationBoundary,
 } from './dom/hydration'
 import { type Block, EMPTY_BLOCK, type TransitionOptions } from './block'
-import { _next } from './dom/node'
 import { isKeepAliveEnabled } from './keepAlive'
 import { isInteropEnabled } from './vdomInteropState'
 
@@ -81,22 +78,15 @@ export function defineVaporAsyncComponent<T extends VaporComponent>(
       // holding the adopted DOM. The wrapper can be moved or unmounted before
       // setup runs, and template refs / transitions register on the fragment
       // that setup will settle rather than on a stand-in.
-      const endAnchor = isRangeStart(el) ? locateEndAnchor(el)! : null
-      let nodes: Block
-      if (endAnchor) {
-        const end = _next(endAnchor)
+      // the wrapper's whole unit: the markers of a range move with the DOM
+      // they bound
+      const last = locateUnitEnd(el)
+      let nodes: Block = el
+      if (el !== last) {
         const range = (nodes = [el as Node])
-        let cur = el as Node
-        while (true) {
-          let n = _next(cur)
-          if (n && n !== end) {
-            range.push((cur = n))
-          } else {
-            break
-          }
+        for (let node: Node = el; node !== last;) {
+          range.push((node = node.nextSibling!))
         }
-      } else {
-        nodes = el
       }
       const prev = setCurrentInstance(instance)
       let frag: DynamicFragment
@@ -113,7 +103,7 @@ export function defineVaporAsyncComponent<T extends VaporComponent>(
       instance.isMounted = true
 
       // Advance current hydration node past the adopted nodes
-      setCurrentHydrationNode(nextLogicalSibling(el))
+      setCurrentHydrationNode(last.nextSibling)
 
       const keepAliveCtx = isKeepAliveEnabled && frag.keepAliveCtx
       performAsyncHydrate(
@@ -137,7 +127,20 @@ export function defineVaporAsyncComponent<T extends VaporComponent>(
                 return comp
               })
           : load,
-        hydrateStrategy,
+        // a teleport opens with no range marker to walk from
+        hydrateStrategy &&
+          (hydrate =>
+            hydrateStrategy(hydrate, cb => {
+              for (
+                let node: Node | null = el;
+                node;
+                node = node === last ? null : node.nextSibling
+              ) {
+                if (node.nodeType === 1 && cb(node as Element) === false) {
+                  break
+                }
+              }
+            })),
         false,
       )
     },

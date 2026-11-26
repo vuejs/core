@@ -85,6 +85,24 @@ describe('ssr: slot', () => {
     ).toBe(`<div><!--[--><!--]--></div>`)
   })
 
+  // what a teleport renders is in its target: it is content all the same
+  test('teleport slot', async () => {
+    expect(
+      await renderToString(
+        createApp({
+          components: {
+            one: {
+              template: `<div><slot>fallback</slot></div>`,
+            },
+          },
+          template: `<one><teleport to="#target"><p/></teleport></one>`,
+        }),
+      ),
+    ).toBe(
+      `<div><!--[--><!--teleport start--><!--teleport end--><!--]--></div>`,
+    )
+  })
+
   test('multiple elements', async () => {
     expect(
       await renderToString(
@@ -135,7 +153,7 @@ describe('ssr: slot', () => {
           template: `<one :value="null"/>`,
         }),
       ),
-    ).toBe(`<div><!--(-->fallback<!--)--></div>`)
+    ).toBe(`<div><!--[!-->fallback<!--]--></div>`)
 
     expect(
       await renderToString(
@@ -353,7 +371,7 @@ describe('ssr: slot', () => {
     ).toBe(`<button><!--[--><!--]--></button>`)
   })
   // what the outlet rendered is read back from the markup, before anything is
-  // created on the client: `<!--(-->` is a fallback, none of the content's
+  // created on the client: `<!--[!-->` is a fallback, none of the content's
   // output with it
   describe('slot fallback marker', () => {
     const render = (template: string, components: Record<string, any>) =>
@@ -363,14 +381,14 @@ describe('ssr: slot', () => {
     test('an outlet marks its fallback', async () => {
       const components = { Child }
       expect(await render(`<Child/>`, components)).toBe(
-        `<div><!--(-->fallback<!--)--></div>`,
+        `<div><!--[!-->fallback<!--]--></div>`,
       )
       expect(await render(`<Child><!--c--></Child>`, components)).toBe(
-        `<div><!--(-->fallback<!--)--></div>`,
+        `<div><!--[!-->fallback<!--]--></div>`,
       )
       expect(
         await render(`<Child><span v-if="false"/></Child>`, components),
-      ).toBe(`<div><!--(-->fallback<!--)--></div>`)
+      ).toBe(`<div><!--[!-->fallback<!--]--></div>`)
       expect(await render(`<Child>content</Child>`, components)).toBe(
         `<div><!--[-->content<!--]--></div>`,
       )
@@ -387,7 +405,7 @@ describe('ssr: slot', () => {
             template: `<div><slot><template v-if="false">x</template></slot></div>`,
           },
         }),
-      ).toBe(`<div><!--(--><!----><!--)--></div>`)
+      ).toBe(`<div><!--[!--><!----><!--]--></div>`)
     })
 
     test('forwarded outlets keep their own ranges', async () => {
@@ -396,7 +414,7 @@ describe('ssr: slot', () => {
         template: `<Child><slot>wrapper fallback</slot></Child>`,
       }
       expect(await render(`<Wrapper/>`, { Wrapper })).toBe(
-        `<div><!--[--><!--(-->wrapper fallback<!--)--><!--]--></div>`,
+        `<div><!--[--><!--[!-->wrapper fallback<!--]--><!--]--></div>`,
       )
       const Forward = {
         components: { Child },
@@ -404,7 +422,7 @@ describe('ssr: slot', () => {
       }
       expect(
         await render(`<Forward><span v-if="false"/></Forward>`, { Forward }),
-      ).toBe(`<div><!--(-->fallback<!--)--></div>`)
+      ).toBe(`<div><!--[!-->fallback<!--]--></div>`)
       expect(await render(`<Forward>content</Forward>`, { Forward })).toBe(
         `<div><!--[--><!--[-->content<!--]--><!--]--></div>`,
       )
@@ -434,7 +452,7 @@ describe('ssr: slot', () => {
       const components = { Child: RenderChild }
       expect(
         await render(`<Child><span v-if="false"/></Child>`, components),
-      ).toBe(`<div><!--(-->fallback<!--)--></div>`)
+      ).toBe(`<div><!--[!-->fallback<!--]--></div>`)
       expect(await render(`<Child>content</Child>`, components)).toBe(
         `<div><!--[-->content<!--]--></div>`,
       )
@@ -443,7 +461,7 @@ describe('ssr: slot', () => {
         await renderToString(
           createApp({ render: () => h(Child, null, { default: () => [] }) }),
         ),
-      ).toBe(`<div><!--(-->fallback<!--)--></div>`)
+      ).toBe(`<div><!--[!-->fallback<!--]--></div>`)
       // the fallback is told apart from a slot whose name ends like its key
       const Named = {
         render(this: any) {
@@ -499,7 +517,7 @@ describe('ssr: slot', () => {
       }
       expect(
         await app({ Beside }, `<Beside><span v-if="false"/></Beside>`),
-      ).toBe(`<div><!--(-->fallback<!--)--></div>`)
+      ).toBe(`<div><!--[!-->fallback<!--]--></div>`)
     })
 
     // a component with a client render only (a library component) forwards
@@ -519,7 +537,7 @@ describe('ssr: slot', () => {
           createApp({ components: { Forward }, template, ...vapor }),
         )
       expect(await app(`<Forward><span v-if="false"/></Forward>`)).toBe(
-        `<div><!--(--><p>fallback</p><!--)--></div>`,
+        `<div><!--[!--><p>fallback</p><!--]--></div>`,
       )
       // the outlet called by hand renders in its own fragment, as in vdom
       expect(await app(`<Forward>content</Forward>`)).toBe(
@@ -549,11 +567,13 @@ describe('ssr: slot', () => {
           createApp({ components: { Forward }, template, ...vapor }),
         )
       expect(await app(`<Forward><span v-if="false"/></Forward>`)).toBe(
-        `<div><!--(--><p>outer fallback</p><!--)--></div>`,
+        `<div><!--[!--><p>outer fallback</p><!--]--></div>`,
       )
       expect(
         await app(`<Forward :local="true"><span v-if="false"/></Forward>`),
-      ).toBe(`<div><!--[--><!--(--><i>local fallback</i><!--)--><!--]--></div>`)
+      ).toBe(
+        `<div><!--[--><!--[!--><i>local fallback</i><!--]--><!--]--></div>`,
+      )
     })
 
     test.each([
@@ -822,5 +842,38 @@ describe('ssr: slot', () => {
       'Unhandled error during execution of render function',
     ).toHaveBeenWarned()
     expect(tracking).toEqual([true, false])
+  })
+
+  // two outlets side by side open and close the content of the group's slot
+  // as one range around it does: theirs stay
+  test.each([
+    [
+      'a fallback and content',
+      `<slot name="a"><li key="a">a</li></slot><slot name="b" />`,
+      `<!--[!--><li>a</li><!--]--><!--[--><li>b</li><!--]-->`,
+    ],
+    [
+      'content twice',
+      `<slot name="b" /><slot name="b" />`,
+      `<!--[--><li>b</li><!--]--><!--[--><li>b</li><!--]-->`,
+    ],
+  ])('transition-group around two slot ranges: %s', async (_, slots, html) => {
+    const Group = {
+      template: `<TransitionGroup tag="ul"><slot /></TransitionGroup>`,
+    }
+    const Forward = {
+      components: { Group },
+      template: `<Group>${slots}</Group>`,
+    }
+    expect(
+      await renderToString(
+        createApp({
+          components: { Forward },
+          template: `<Forward>
+            <template #b><li key="b">b</li></template>
+          </Forward>`,
+        }),
+      ),
+    ).toBe(`<ul>${html}</ul>`)
   })
 })

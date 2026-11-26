@@ -64,7 +64,7 @@ describe('ssr: vapor slots across runtime copies', () => {
       { Wrapper },
     )
     expect(await ssr.renderToString(vue.createSSRApp(App))).toBe(
-      `<!--{--><!--[--><p>hello</p><!--]--><!--}-->`,
+      `<!--[--><p>hello</p><!--]-->`,
     )
   })
 
@@ -98,9 +98,9 @@ describe('ssr: vapor slots across runtime copies', () => {
       { Wrapper },
     )
     expect(await ssr.renderToString(vue.createSSRApp(App))).toBe(
-      `<!--{--><!--[-->` +
+      `<!--[-->` +
         `<button class="a" style="color:red;" disabled>open</button>` +
-        `<!--]--><!--}-->`,
+        `<!--]-->`,
     )
     expect(mergeProps).not.toHaveBeenCalled()
   })
@@ -134,9 +134,9 @@ describe('ssr: vapor slots across runtime copies', () => {
       { AsChild },
     )
     expect(await ssr.renderToString(vue.createSSRApp(App))).toBe(
-      `<!--{--><!--[-->` +
+      `<!--[-->` +
         `<button class="own trigger" style="font-size:12px;color:red;" aria-expanded="false">open</button>` +
-        `<!--]--><!--}-->`,
+        `<!--]-->`,
     )
   })
 })

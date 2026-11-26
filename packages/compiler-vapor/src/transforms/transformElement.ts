@@ -249,8 +249,10 @@ export const transformElement: NodeTransform = (node, context) => {
         node as ComponentNode,
         propsResult,
         staticKey,
-        singleRoot ||
-          (context.isSlotRoot && !useCreateElement && VaporSingleRoot.SLOT),
+        context.hasCommentSibling
+          ? VaporSingleRoot.WITH_COMMENTS
+          : singleRoot ||
+              (context.isSlotRoot && !useCreateElement && VaporSingleRoot.SLOT),
         context,
         isDynamicComponent,
         useCreateElement,

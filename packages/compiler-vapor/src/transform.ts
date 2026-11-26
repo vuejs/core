@@ -154,6 +154,9 @@ export class TransformContext<T extends AllNode = AllNode> {
   isOnRightmostPath: boolean
   // whether this node is the component/template root
   isSingleRoot: boolean
+  // whether the single root has comments next to it: more than one node for
+  // the server, which renders the component in a range of its own
+  hasCommentSibling: boolean
   // whether this node is the single root of a slot body
   isSlotRoot: boolean
   // If an ancestor in the same template must close explicitly, descendants
@@ -237,6 +240,13 @@ export class TransformContext<T extends AllNode = AllNode> {
       this.isLastEffectiveChild = isLastEffectiveChild
       this.isOnRightmostPath = parent.isOnRightmostPath && isLastEffectiveChild
       this.isSingleRoot = parent.isSingleRootChild(childInfo)
+      // comments stay next to the single root of the template, as nodes it
+      // renders
+      this.hasCommentSibling =
+        this.isSingleRoot &&
+        (parent.hasCommentSibling ||
+          (parent.node.type === NodeTypes.ROOT &&
+            hasCommentRootChild(parent.node.children)))
       this.isSlotRoot = parent.isSlotRootChild(childInfo)
     } else {
       this.root = this as TransformContext<RootNode>
@@ -257,6 +267,7 @@ export class TransformContext<T extends AllNode = AllNode> {
       this.isLastEffectiveChild = true
       this.isOnRightmostPath = true
       this.isSingleRoot = false
+      this.hasCommentSibling = false
       this.isSlotRoot = false
     }
     this.template = ''
@@ -653,6 +664,16 @@ function hasSingleRootChild(children: TemplateChildNode[]): boolean {
   }
 
   return nonCommentChildren === 1 || isSingleIfBlock
+}
+
+// Of children with a single root: a comment before or after it. The parser
+// drops whitespace at either end, and a comment between the branches of a
+// chain goes into the branch after it (compiler-core's v-if).
+function hasCommentRootChild(children: TemplateChildNode[]): boolean {
+  return (
+    children[0].type === NodeTypes.COMMENT ||
+    children[children.length - 1].type === NodeTypes.COMMENT
+  )
 }
 
 function isComponentChild(child: TemplateChildNode): boolean {

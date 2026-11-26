@@ -54,9 +54,12 @@ export function createDynamicComponent(
   const isSingleRoot =
     flags & VaporDynamicComponentFlags.SINGLE_ROOT
       ? true
-      : isInteropEnabled && flags & VaporDynamicComponentFlags.SLOT_SINGLE_ROOT
-        ? VaporSingleRoot.SLOT
-        : false
+      : flags & VaporDynamicComponentFlags.SINGLE_ROOT_WITH_COMMENTS
+        ? VaporSingleRoot.WITH_COMMENTS
+        : isInteropEnabled &&
+            flags & VaporDynamicComponentFlags.SLOT_SINGLE_ROOT
+          ? VaporSingleRoot.SLOT
+          : false
   const once = !!(flags & VaporDynamicComponentFlags.ONCE)
   const slotRoot = !!(flags & VaporDynamicComponentFlags.SLOT_ROOT)
   const ns =

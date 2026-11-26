@@ -464,15 +464,14 @@ export function renderVNode(
         break
       }
       // a slot fallback (`renderSlot`) is marked like `ssrRenderSlot` does
-      const isFallback = shapeFlag & ShapeFlags.SLOT_FALLBACK
-      push(isFallback ? `<!--(-->` : `<!--[-->`) // open
+      push(shapeFlag & ShapeFlags.SLOT_FALLBACK ? `<!--[!-->` : `<!--[-->`) // open
       renderVNodeChildren(
         push,
         children as VNodeArrayChildren,
         parentComponent,
         slotScopeId,
       )
-      push(isFallback ? `<!--)-->` : `<!--]-->`) // close
+      push(`<!--]-->`) // close
       break
     }
     case VaporSlot: {

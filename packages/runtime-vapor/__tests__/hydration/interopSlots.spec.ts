@@ -47,9 +47,7 @@ describe('VDOM interop', () => {
     expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
       `
       "
-      <!--{-->
       <!--[--><div>foo</div><!--]-->
-      <!--}-->
       "
     `,
     )
@@ -61,9 +59,7 @@ describe('VDOM interop', () => {
     expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
       `
       "
-      <!--{-->
       <!--[--><div>bar</div><!--]-->
-      <!--}-->
       "
     `,
     )
@@ -97,24 +93,24 @@ describe('VDOM interop', () => {
 
     expect(`mismatch`).not.toHaveBeenWarned()
     expect(container.innerHTML).toBe(
-      `<!--{--><div class="open"><!--[--><button>a</button>` +
+      `<div class="open"><!--[--><button>a</button>` +
         `<!--teleport start--><!--[--><p>b</p><!--]--><!--teleport end-->` +
-        `<!--if--><!--]--><input></div><!--}-->`,
+        `<!--if--><!--]--><input></div>`,
     )
 
     data.value.show = false
     await nextTick()
     expect(container.innerHTML).toBe(
-      `<!--{--><div class=""><!--[--><button>a</button>` +
-        `<!--if--><!--]--><input></div><!--}-->`,
+      `<div class=""><!--[--><button>a</button>` +
+        `<!--if--><!--]--><input></div>`,
     )
 
     data.value.show = true
     await nextTick()
     expect(container.innerHTML).toBe(
-      `<!--{--><div class="open"><!--[--><button>a</button>` +
+      `<div class="open"><!--[--><button>a</button>` +
         `<!--teleport start--><p>b</p><!--teleport end-->` +
-        `<!--if--><!--]--><input></div><!--}-->`,
+        `<!--if--><!--]--><input></div>`,
     )
   })
 
@@ -255,9 +251,7 @@ describe('VDOM interop', () => {
     expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
       `
       "
-      <!--{-->
-      <!--(--><div>foo</div><!--)-->
-      <!--}-->
+      <!--[!--><div>foo</div><!--]-->
       "
     `,
     )
@@ -269,9 +263,7 @@ describe('VDOM interop', () => {
     expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
       `
       "
-      <!--{-->
-      <!--(--><div>bar</div><!--)-->
-      <!--}-->
+      <!--[!--><div>bar</div><!--]-->
       "
     `,
     )
@@ -576,10 +568,10 @@ describe('VDOM interop', () => {
     await nextTick()
     expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
       `
-        "
-        <!--[--><span>foo</span><span>foo</span><!--]-->
-        "
-      `,
+      "
+      <!--[--><span>foo</span><span>foo</span><!--]-->
+      "
+    `,
     )
   })
 
@@ -611,9 +603,7 @@ describe('VDOM interop', () => {
     expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
       `
       "
-      <!--{-->
-      <!--(--><span>foo</span><!--)-->
-      <!--}-->
+      <!--[!--><span>foo</span><!--]-->
       "
     `,
     )
@@ -625,9 +615,7 @@ describe('VDOM interop', () => {
     expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
       `
       "
-      <!--{-->
-      <!--(--><span>bar</span><!--)-->
-      <!--}-->
+      <!--[!--><span>bar</span><!--]-->
       "
     `,
     )
@@ -675,9 +663,7 @@ describe('VDOM interop', () => {
     expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
       `
       "
-      <!--{-->
-      <!--(--><!--if--><div>foo</div><!--)-->
-      <!--}-->
+      <!--[!--><!--if--><div>foo</div><!--]-->
       "
     `,
     )
@@ -689,9 +675,7 @@ describe('VDOM interop', () => {
     expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
       `
       "
-      <!--{-->
-      <!--(--><!--if--><div>baz</div><!--)-->
-      <!--}-->
+      <!--[!--><!--if--><div>baz</div><!--]-->
       "
     `,
     )
@@ -701,9 +685,7 @@ describe('VDOM interop', () => {
     expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
       `
       "
-      <!--{-->
-      <!--(--><span>bar</span><!--if--><!--)-->
-      <!--}-->
+      <!--[!--><span>bar</span><!--if--><!--]-->
       "
     `,
     )
@@ -713,9 +695,7 @@ describe('VDOM interop', () => {
     expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
       `
       "
-      <!--{-->
-      <!--(--><span>qux</span><!--if--><!--)-->
-      <!--}-->
+      <!--[!--><span>qux</span><!--if--><!--]-->
       "
     `,
     )
@@ -769,9 +749,7 @@ describe('VDOM interop', () => {
     expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
       `
       "
-      <!--{-->
-      <!--(--><!--if--><!----><div>foo</div><!--)-->
-      <!--}-->
+      <!--[!--><!--if--><!----><div>foo</div><!--]-->
       "
     `,
     )
@@ -784,9 +762,7 @@ describe('VDOM interop', () => {
     expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
       `
       "
-      <!--{-->
-      <!--(--><!--if--><i>prefix</i><div>foo</div><!--)-->
-      <!--}-->
+      <!--[!--><!--if--><i>prefix</i><div>foo</div><!--]-->
       "
     `,
     )
@@ -845,11 +821,9 @@ describe('VDOM interop', () => {
     expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
       `
       "
-      <!--{-->
       <!--[-->
-      <!--(--><div>local fallback</div><!--)-->
+      <!--[!--><div>local fallback</div><!--]-->
       <!--]-->
-      <!--}-->
       "
     `,
     )
@@ -861,11 +835,9 @@ describe('VDOM interop', () => {
     expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
       `
       "
-      <!--{-->
       <!--[-->
-      <!--(--><section>outlet fallback</section><!--)-->
+      <!--[!--><section>outlet fallback</section><!--]-->
       <!--]-->
-      <!--}-->
       "
     `,
     )
@@ -875,11 +847,9 @@ describe('VDOM interop', () => {
     expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
       `
       "
-      <!--{-->
       <!--[-->
-      <!--(--><section>updated outlet fallback</section><!--)-->
+      <!--[!--><section>updated outlet fallback</section><!--]-->
       <!--]-->
-      <!--}-->
       "
     `,
     )
@@ -890,11 +860,9 @@ describe('VDOM interop', () => {
     expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
       `
       "
-      <!--{-->
       <!--[-->
-      <!--(--><div>updated local fallback</div><!--)-->
+      <!--[!--><div>updated local fallback</div><!--]-->
       <!--]-->
-      <!--}-->
       "
     `,
     )
@@ -942,9 +910,7 @@ describe('VDOM interop', () => {
     expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
       `
       "
-      <!--{-->
       <!--[--><div><!----><span>bar</span></div><!--]-->
-      <!--}-->
       "
     `,
     )
@@ -956,9 +922,7 @@ describe('VDOM interop', () => {
     expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
       `
       "
-      <!--{-->
       <!--[--><div><!----><span>baz</span></div><!--]-->
-      <!--}-->
       "
     `,
     )
@@ -1012,9 +976,7 @@ describe('VDOM interop', () => {
     expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
       `
       "
-      <!--{-->
-      <!--(--><!--if--><div>foo</div><p>bar</p><!--)-->
-      <!--}-->
+      <!--[!--><!--if--><div>foo</div><p>bar</p><!--]-->
       "
     `,
     )
@@ -1027,9 +989,7 @@ describe('VDOM interop', () => {
     expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
       `
       "
-      <!--{-->
-      <!--(--><!--if--><div>qux</div><p>quux</p><!--)-->
-      <!--}-->
+      <!--[!--><!--if--><div>qux</div><p>quux</p><!--]-->
       "
     `,
     )
@@ -1039,9 +999,7 @@ describe('VDOM interop', () => {
     expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
       `
       "
-      <!--{-->
-      <!--(--><span>baz</span><!--if--><!--)-->
-      <!--}-->
+      <!--[!--><span>baz</span><!--if--><!--]-->
       "
     `,
     )
@@ -1097,11 +1055,9 @@ describe('VDOM interop', () => {
     expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
       `
       "
-      <!--{-->
       <!--[-->
-      <!--(--><!--if--><div>foo</div><!----><!--)-->
+      <!--[!--><!--if--><div>foo</div><!----><!--]-->
       <i>tail</i><!--]-->
-      <!--}-->
       "
     `,
     )
@@ -1111,11 +1067,9 @@ describe('VDOM interop', () => {
     expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
       `
       "
-      <!--{-->
       <!--[-->
-      <!--(--><!--if--><div>foo</div><p>bar</p><!--)-->
+      <!--[!--><!--if--><div>foo</div><p>bar</p><!--]-->
       <i>tail</i><!--]-->
-      <!--}-->
       "
     `,
     )
@@ -1157,13 +1111,9 @@ describe('VDOM interop', () => {
     expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
       `
       "
-      <!--{-->
-      <!--(-->
-      <!--{--><div>
-      <!--(--><!--slot-->foo<!--)-->
-      </div><!--}-->
-      <!--)-->
-      <!--}-->
+      <!--[!--><div>
+      <!--[!--><!--slot-->foo<!--]-->
+      </div><!--]-->
       "
     `,
     )
@@ -1175,13 +1125,9 @@ describe('VDOM interop', () => {
     expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
       `
       "
-      <!--{-->
-      <!--(-->
-      <!--{--><div>
-      <!--(--><!--slot-->bar<!--)-->
-      </div><!--}-->
-      <!--)-->
-      <!--}-->
+      <!--[!--><div>
+      <!--[!--><!--slot-->bar<!--]-->
+      </div><!--]-->
       "
     `,
     )
@@ -1294,13 +1240,13 @@ describe('VDOM interop', () => {
         data,
       )
 
-      expect(html).toBe(`<!--{--><!--(--><p>fallback</p><!--)--><!--}-->`)
+      expect(html).toBe(`<!--[!--><p>fallback</p><!--]-->`)
       expect(`Hydration node mismatch`).not.toHaveBeenWarned()
       expect(`Hydration children mismatch`).not.toHaveBeenWarned()
       // the server's markers are adopted: none recreated
-      expect(count(container, '<!--(-->')).toBe(1)
-      expect(count(container, '<!--)-->')).toBe(1)
-      expect(count(container, '<!--]-->')).toBe(0)
+      expect(count(container, '<!--[!-->')).toBe(1)
+      expect(count(container, '<!--[-->')).toBe(0)
+      expect(count(container, '<!--]-->')).toBe(1)
       expect(visible(container)).toBe(`<p>fallback</p>`)
 
       data.show = true
@@ -1354,9 +1300,7 @@ describe('VDOM interop', () => {
         },
         data,
       )
-      expect(html).toBe(
-        `<!--{--><div><!--(--><p>fallback</p><!--)--></div><!--}-->`,
-      )
+      expect(html).toBe(`<div><!--[!--><p>fallback</p><!--]--></div>`)
       expect(`Hydration node mismatch`).not.toHaveBeenWarned()
       expect(`Hydration children mismatch`).not.toHaveBeenWarned()
 
@@ -1404,7 +1348,7 @@ describe('VDOM interop', () => {
       expect(visible(container)).toBe(shown)
 
       app.unmount()
-      expect(container.innerHTML).toBe('<!--{--><!--}-->')
+      expect(container.innerHTML).toBe('')
     },
   )
 
@@ -1432,11 +1376,9 @@ describe('VDOM interop', () => {
     )
     expect(`Hydration node mismatch`).not.toHaveBeenWarned()
     expect(`Hydration children mismatch`).not.toHaveBeenWarned()
-    expect(html).toBe(
-      `<!--{--><!--[--><!--(--><u>mid</u><!--)--><!--]--><!--}-->`,
-    )
-    expect(count(container, '<!--]-->')).toBe(1)
-    expect(count(container, '<!--)-->')).toBe(1)
+    expect(html).toBe(`<!--[--><!--[!--><u>mid</u><!--]--><!--]-->`)
+    expect(count(container, '<!--[!-->')).toBe(1)
+    expect(count(container, '<!--]-->')).toBe(2)
     expect(visible(container)).toBe(`<u>mid</u>`)
 
     data.show = true
@@ -1482,7 +1424,7 @@ describe('VDOM interop', () => {
 
       expect(`Hydration node mismatch`).not.toHaveBeenWarned()
       expect(`Hydration children mismatch`).not.toHaveBeenWarned()
-      for (const marker of ['<!--(-->', '<!--)-->', '<!--[-->', '<!--]-->']) {
+      for (const marker of ['<!--[!-->', '<!--]-->', '<!--[-->', '<!--]-->']) {
         expect(count(container, marker)).toBe(html.split(marker).length - 1)
       }
       expect(visible(container)).toBe(fallback)
@@ -1542,13 +1484,11 @@ describe('VDOM interop', () => {
 
     expect(`Hydration node mismatch`).not.toHaveBeenWarned()
     expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
-      "
-      <!--{--><div>
-      <!--(--><!--slot-->
+      "<div>
+      <!--[!--><!--slot-->
       <!--[--><span>foo</span><!--if--><!--]-->
-      <!--if--><!--)-->
-      </div><!--}-->
-      "
+      <!--if--><!--]-->
+      </div>"
     `)
   })
 
@@ -1584,37 +1524,31 @@ describe('VDOM interop', () => {
     expect(`Hydration node mismatch`).not.toHaveBeenWarned()
     expect(`Hydration children mismatch`).not.toHaveBeenWarned()
     expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
-      "
-      <!--{--><div>
-      <!--(--><!--slot-->
+      "<div>
+      <!--[!--><!--slot-->
       <!--[--><!--]-->
-      <!--)-->
-      </div><!--}-->
-      "
+      <!--]-->
+      </div>"
     `)
 
     items.value = ['foo']
     await nextTick()
     expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
-      "
-      <!--{--><div>
-      <!--(--><!--slot-->
+      "<div>
+      <!--[!--><!--slot-->
       <!--[--><span>foo</span><!--]-->
-      <!--)-->
-      </div><!--}-->
-      "
+      <!--]-->
+      </div>"
     `)
 
     items.value = ['bar']
     await nextTick()
     expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
-      "
-      <!--{--><div>
-      <!--(--><!--slot-->
+      "<div>
+      <!--[!--><!--slot-->
       <!--[--><span>bar</span><!--]-->
-      <!--)-->
-      </div><!--}-->
-      "
+      <!--]-->
+      </div>"
     `)
   })
 
@@ -1664,31 +1598,23 @@ describe('VDOM interop', () => {
     expect(`Hydration node mismatch`).not.toHaveBeenWarned()
     expect(`Hydration children mismatch`).not.toHaveBeenWarned()
     expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
-      "
-      <!--{-->
-      <!--{--><div>
+      "<div>
       <!--[-->
       <!--[--><!--]-->
       <!--[--><!--]-->
       <b>tail</b><!--]-->
-      </div><!--}-->
-      <!--}-->
-      "
+      </div>"
     `)
 
     data.items = ['foo']
     await nextTick()
     expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
-      "
-      <!--{-->
-      <!--{--><div>
+      "<div>
       <!--[-->
       <!--[--><span>foo</span><!--]-->
       <!--[--><!--]-->
       <b>tail</b><!--]-->
-      </div><!--}-->
-      <!--}-->
-      "
+      </div>"
     `)
   })
 
@@ -1801,7 +1727,7 @@ describe('VDOM interop', () => {
     }
   })
 
-  // `<!--(-->`…`<!--)-->` wraps a slot fallback the server rendered: the
+  // `<!--[!-->`…`<!--]-->` wraps a slot fallback the server rendered: the
   // markup is written by hand.
   test.each([
     ['a vdom outlet that renders a vapor slot', false, true],
@@ -1813,7 +1739,7 @@ describe('VDOM interop', () => {
       const setup = `<script setup>const data = _data; const components = _components</script>`
       const container = document.createElement('div')
       document.body.appendChild(container)
-      container.innerHTML = `<div><!--(--><p>fallback</p><!--)--></div>`
+      container.innerHTML = `<div><!--[!--><p>fallback</p><!--]--></div>`
       const p = container.querySelector('p')!
 
       const Child = compile(
@@ -1935,7 +1861,7 @@ describe('VDOM interop', () => {
         },
         data,
       )
-      expect(html).toBe(`<!--{--><div><!--[--><!--]--></div><!--}-->`)
+      expect(html).toBe(`<div><!--[--><!--]--></div>`)
       expect(`Hydration node mismatch`).not.toHaveBeenWarned()
       expect(`Hydration children mismatch`).not.toHaveBeenWarned()
       expect(visible(container)).toBe(`<div></div>`)
@@ -1972,9 +1898,7 @@ describe('VDOM interop', () => {
       },
       data,
     )
-    expect(html).toBe(
-      `<!--{--><!--[--><!--(--><u>mid</u><!--)--><!--]--><!--}-->`,
-    )
+    expect(html).toBe(`<!--[--><!--[!--><u>mid</u><!--]--><!--]-->`)
     expect(`Hydration node mismatch`).not.toHaveBeenWarned()
     expect(`Hydration children mismatch`).not.toHaveBeenWarned()
     expect(visible(container)).toBe(`<u>mid</u>`)
@@ -2016,9 +1940,7 @@ describe('VDOM interop', () => {
     const html = await VueServerRenderer.renderToString(
       runtimeDom.createSSRApp(App(true)),
     )
-    expect(html).toBe(
-      `<!--{--><div><!--(--><p>fallback</p><!--)--></div><!--}-->`,
-    )
+    expect(html).toBe(`<div><!--[!--><p>fallback</p><!--]--></div>`)
 
     const container = document.createElement('div')
     document.body.appendChild(container)
@@ -2040,7 +1962,7 @@ describe('VDOM interop', () => {
     expect(visible(container)).toBe(`<div><p>fallback</p></div>`)
 
     app.unmount()
-    expect(container.innerHTML).toBe('<!--{--><!--}-->')
+    expect(container.innerHTML).toBe('')
   })
 
   // the slot renders the first fallback on its chain that renders something:
@@ -2075,9 +1997,7 @@ describe('VDOM interop', () => {
     const html = await VueServerRenderer.renderToString(
       runtimeDom.createSSRApp(App(true)),
     )
-    expect(html).toBe(
-      `<!--{--><div><!--(--><p>outer fallback</p><!--)--></div><!--}-->`,
-    )
+    expect(html).toBe(`<div><!--[!--><p>outer fallback</p><!--]--></div>`)
 
     const container = document.createElement('div')
     document.body.appendChild(container)
@@ -2103,7 +2023,7 @@ describe('VDOM interop', () => {
     expect(visible(container)).toBe(`<div><p>outer fallback</p></div>`)
 
     app.unmount()
-    expect(container.innerHTML).toBe('<!--{--><!--}-->')
+    expect(container.innerHTML).toBe('')
   })
 
   // without `ssrRender` (a render function, or a client-compiled library
@@ -2164,9 +2084,7 @@ describe('VDOM interop', () => {
       const html = await VueServerRenderer.renderToString(
         runtimeDom.createSSRApp(App(true)),
       )
-      expect(html).toBe(
-        `<!--{--><div><!--(--><p>fallback</p><!--)--></div><!--}-->`,
-      )
+      expect(html).toBe(`<div><!--[!--><p>fallback</p><!--]--></div>`)
 
       const container = document.createElement('div')
       document.body.appendChild(container)
@@ -2188,7 +2106,7 @@ describe('VDOM interop', () => {
       expect(visible(container)).toBe(`<div><p>fallback</p></div>`)
 
       app.unmount()
-      expect(container.innerHTML).toBe('<!--{--><!--}-->')
+      expect(container.innerHTML).toBe('')
     },
   )
 
@@ -2274,7 +2192,7 @@ describe('VDOM interop', () => {
       expect(visible(container)).toBe(`<div></div>`)
 
       app.unmount()
-      expect(container.innerHTML).toBe('<!--{--><!--}-->')
+      expect(container.innerHTML).toBe('')
     },
   )
 
@@ -2789,8 +2707,7 @@ describe('VDOM interop', () => {
     expect(main.querySelector('button')).not.toBe(first)
     data.mounted = false
     await nextTick()
-    // the hydrated child's range markers stay behind
-    expect(main.childNodes.length).toBe(4)
+    expect(main.childNodes.length).toBe(2)
     expect(main.querySelector('i')).toBe(after)
     app.unmount()
     expect(container.innerHTML).toBe('')
@@ -2892,7 +2809,7 @@ describe('VDOM interop', () => {
     expect(`Hydration node mismatch`).not.toHaveBeenWarned()
 
     app.unmount()
-    expect(container.innerHTML).toBe('<!--{--><!--}-->')
+    expect(container.innerHTML).toBe('')
   })
 
   test('preserves array slot props of a keyed vdom outlet in ssr and hydration', async () => {
@@ -2938,7 +2855,7 @@ describe('VDOM interop', () => {
       '<div><i>1:baz</i></div>',
     )
     app.unmount()
-    expect(container.innerHTML).toBe('<!--{--><!--}-->')
+    expect(container.innerHTML).toBe('')
   })
 
   // Rendered bare by the server inside a vdom Transition, the slot has no range
@@ -3005,9 +2922,9 @@ describe('VDOM interop', () => {
     expect(data.hooks).toEqual(['beforeEnter', 'enter'])
   })
 
-  // a bare slot (under a vdom Transition) has no range of its own: a range its
-  // content opens, and the close the cursor rests on after the content, are
-  // not the slot's
+  // the slot of a vdom Transition has a range of its own only around content
+  // opening one: a range its content opens, and the close the cursor rests on
+  // after the content, are not the slot's
   test.each([
     [
       'a v-if chain ranging its branch',
@@ -3047,7 +2964,7 @@ describe('VDOM interop', () => {
       },
     ],
   ])(
-    'a bare vapor slot whose content opens with %s keeps its fallback in its host',
+    'a vapor slot in a vdom Transition, its content opening with %s, keeps its fallback in its host',
     async (_, app, components) => {
       const data = reactive({ show: true, alt: false })
       const { container } = await testWithVaporApp(
@@ -3656,7 +3573,7 @@ describe('VDOM interop', () => {
         </div>`,
         { selected: 'b', show: true, attrs: { class: 'trigger' } },
       )
-      expect(html.replace(/<!--[[\]{}]-->/g, '')).toBe(
+      expect(html.replace(/<!--(\[\$?|\])-->/g, '')).toBe(
         `<div class="trigger">` +
           `<select><option value="a">A</option><option value="b" selected>B</option></select>` +
           `<span>b</span>` +
@@ -4095,5 +4012,1046 @@ describe('VDOM interop', () => {
         expect('Hydration node mismatch').not.toHaveBeenWarned()
       },
     )
+  })
+
+  // content opening with a fallback range has a range of the slot around it:
+  // the fallback range is the content's
+  test.each([
+    ['Vapor', testWithVaporApp],
+    ['VDOM', testWithVDOMApp],
+  ] as const)(
+    'slot fallback of a component in the slot of a vdom Transition (%s app)',
+    async (_, hydrate) => {
+      let fallback: Element | null = null
+      const data = ref({
+        show: true,
+        capture: () => (fallback = document.querySelector('b')),
+      })
+      const { container } = await hydrate(
+        `<script setup>const components = _components</script>
+        <template><components.View /></template>`,
+        {
+          Leaf: `<template><slot><b>inner</b></slot></template>`,
+          Wrapper: `<template><components.Leaf /></template>`,
+          Frame: {
+            code: `<script setup>_data.value.capture()</script>
+              <template>
+                <div>
+                  <Transition :css="false"><slot /></Transition>
+                </div>
+              </template>`,
+            vapor: false,
+          },
+          View: `<template>
+            <components.Frame>
+              <components.Wrapper v-if="data.show" />
+            </components.Frame>
+          </template>`,
+        },
+        data,
+      )
+      expect(container.querySelector('b')).toBe(fallback)
+      expect(container.textContent).toBe('inner')
+
+      data.value.show = false
+      await nextTick()
+      expect(container.textContent).toBe('')
+    },
+  )
+
+  test.each([
+    ['Vapor', testWithVaporApp],
+    ['VDOM', testWithVDOMApp],
+  ] as const)(
+    'slot fallback of a component in the slot of a vdom TransitionGroup (%s app)',
+    async (_, hydrate) => {
+      let fallback: Element | null = null
+      const data = ref({
+        show: true,
+        capture: () => (fallback = document.querySelector('li')),
+      })
+      const { container } = await hydrate(
+        `<script setup>const components = _components</script>
+        <template><components.View /></template>`,
+        {
+          Leaf: `<template><slot><li>inner</li></slot></template>`,
+          Wrapper: `<template><components.Leaf /></template>`,
+          Group: {
+            code: `<script setup>_data.value.capture()</script>
+              <template>
+                <TransitionGroup tag="ul" :css="false">
+                  <slot />
+                </TransitionGroup>
+              </template>`,
+            vapor: false,
+          },
+          View: `<template>
+            <components.Group>
+              <components.Wrapper v-if="data.show" key="row" />
+            </components.Group>
+          </template>`,
+        },
+        data,
+      )
+      expect(fallback).not.toBeNull()
+      expect(container.querySelector('li')).toBe(fallback)
+
+      data.value.show = false
+      await nextTick()
+      expect(container.querySelector('li')).toBeNull()
+    },
+  )
+
+  // the content of the slot is itself a slot showing its fallback: that range
+  // is the inner slot's to claim, in the range of the outer one
+  test('fallback of a conditional slot in the slot of a vdom Transition', async () => {
+    let input: Element | null = null
+    const data = ref({
+      show: false,
+      capture: () => (input = document.querySelector('input')),
+    })
+    const { container } = await testWithVaporApp(
+      `<template>
+        <components.Frame><components.Wrapper /></components.Frame>
+      </template>`,
+      {
+        Frame: {
+          code: `<script setup>_data.value.capture()</script>
+            <template>
+              <Transition :css="false"><slot /></Transition>
+            </template>`,
+          vapor: false,
+        },
+        Leaf: `<template><slot><input /></slot></template>`,
+        Wrapper: `<template>
+          <components.Leaf>
+            <em v-if="data.show">shown</em>
+          </components.Leaf>
+        </template>`,
+      },
+      data,
+    )
+    expect(input).not.toBeNull()
+    expect(container.querySelector('input')).toBe(input)
+
+    data.value.show = true
+    await nextTick()
+    expect(container.querySelector('input')).toBeNull()
+    expect(container.textContent).toBe('shown')
+  })
+
+  // next to another child of the group, or under a Transition resolved at
+  // runtime, the server renders the slot in its range
+  describe.each([
+    ['Vapor', testWithVaporApp],
+    ['VDOM', testWithVDOMApp],
+  ] as const)(
+    'ranged slot of a vdom Transition or TransitionGroup (%s app)',
+    (_, hydrate) => {
+      const app = `<script setup>const components = _components</script>
+        <template><components.View /></template>`
+
+      test.each([true, false])(
+        'next to a row of the group, content supplied: %s',
+        async show => {
+          let input: Element | null = null
+          const data = ref({
+            show,
+            capture: () => (input = document.querySelector('input')),
+          })
+          const { container } = await hydrate(
+            app,
+            {
+              Group: {
+                code: `<script setup>_data.value.capture()</script>
+                  <template>
+                    <TransitionGroup tag="ul" :css="false">
+                      <slot><li key="empty"><input />empty</li></slot>
+                      <li key="tail">tail</li>
+                    </TransitionGroup>
+                  </template>`,
+                vapor: false,
+              },
+              View: `<template>
+                <components.Group>
+                  <li v-if="data.show" key="row"><input />row</li>
+                </components.Group>
+              </template>`,
+            },
+            data,
+          )
+          expect(input).not.toBeNull()
+          expect(container.textContent).toBe(show ? 'rowtail' : 'emptytail')
+          expect(container.querySelector('input')).toBe(input)
+
+          data.value.show = !show
+          await nextTick()
+          expect(container.textContent).toBe(show ? 'emptytail' : 'rowtail')
+        },
+      )
+
+      test('under a Transition resolved at runtime', async () => {
+        let input: Element | null = null
+        const data = ref({
+          show: true,
+          capture: () => (input = document.querySelector('input')),
+        })
+        const { container } = await hydrate(
+          app,
+          {
+            Frame: {
+              code: `<script setup>
+                  import { Transition } from 'vue'
+                  _data.value.capture()
+                </script>
+                <template>
+                  <component :is="Transition" :css="false"><slot /></component>
+                </template>`,
+              vapor: false,
+            },
+            View: `<template>
+              <components.Frame><input v-if="data.show" /></components.Frame>
+            </template>`,
+          },
+          data,
+        )
+        expect(input).not.toBeNull()
+        expect(container.querySelector('input')).toBe(input)
+
+        data.value.show = false
+        await nextTick()
+        expect(container.querySelector('input')).toBeNull()
+      })
+    },
+  )
+
+  // The slot of a static Transition or TransitionGroup renders its content
+  // bare, but vapor content beginning with a range, or the fallback for it, in
+  // a range of its own: a range the content begins with is never taken for the
+  // slot's.
+  describe.each([
+    ['Vapor', testWithVaporApp],
+    ['VDOM', testWithVDOMApp],
+  ] as const)(
+    'content in the slot of a vdom Transition or TransitionGroup (%s app)',
+    (_, hydrate) => {
+      const app = `<script setup>const components = _components</script>
+        <template><components.View /></template>`
+
+      test.each([
+        ['Transition', 'Field'],
+        ['Transition', 'Wrapper'],
+        ['Transition', 'VdomField'],
+        ['TransitionGroup', 'Field'],
+        ['TransitionGroup', 'Wrapper'],
+        ['TransitionGroup', 'VdomField'],
+      ])(
+        'its slot fallback, under a %s slot with a fallback of its own (%s)',
+        async (type, content) => {
+          let input: Element | null = null
+          const data = ref({
+            show: true,
+            capture: () => (input = document.querySelector('input')),
+          })
+          const { container } = await hydrate(
+            app,
+            {
+              Field: `<template>
+                <slot><li><input />inner</li></slot>
+              </template>`,
+              Wrapper: `<template><components.Field /></template>`,
+              VdomField: {
+                code: `<script setup>const data = _data</script>
+                  <template>
+                    <slot><li><input />inner</li></slot>
+                  </template>`,
+                vapor: false,
+              },
+              Frame: {
+                code: `<script setup>_data.value.capture()</script>
+                  <template>
+                    <ul>
+                      <${type} :css="false">
+                        <slot><li key="outer">outer</li></slot>
+                      </${type}>
+                    </ul>
+                  </template>`,
+                vapor: false,
+              },
+              View: `<template>
+                <components.Frame>
+                  <components.${content} v-if="data.show" key="row" />
+                </components.Frame>
+              </template>`,
+            },
+            data,
+          )
+          expect(input).not.toBeNull()
+          expect(container.textContent).toBe('inner')
+          expect(container.querySelector('input')).toBe(input)
+
+          data.value.show = false
+          await nextTick()
+          expect(container.textContent).toBe('outer')
+        },
+      )
+
+      test.each(['List', 'Rows'])(
+        'its keyed v-for, under a TransitionGroup (%s)',
+        async content => {
+          let rows: Element[] = []
+          const data = ref({
+            items: [1, 2],
+            capture: () => (rows = [...document.querySelectorAll('li')]),
+          })
+          const { container } = await hydrate(
+            app,
+            {
+              List: `<template>
+              <li v-for="item in data.items" :key="item">{{ item }}</li>
+            </template>`,
+              Rows: `<template><components.List /></template>`,
+              Group: {
+                code: `<script setup>_data.value.capture()</script>
+                <template>
+                  <TransitionGroup tag="ul" :css="false">
+                    <slot />
+                  </TransitionGroup>
+                </template>`,
+                vapor: false,
+              },
+              View: `<template>
+              <components.Group>
+                <components.${content} key="rows" />
+              </components.Group>
+            </template>`,
+            },
+            data,
+          )
+          expect(rows).toHaveLength(2)
+          expect(container.textContent).toBe('12')
+          expect(container.querySelector('li')).toBe(rows[0])
+
+          data.value.items.reverse()
+          await nextTick()
+          expect(container.textContent).toBe('21')
+          expect(container.querySelector('li')).toBe(rows[1])
+        },
+      )
+
+      // only an outlet with a fallback renders a fallback range: under one
+      // without, the range is the one of the vdom component in the slot
+      test.each(['Transition', 'TransitionGroup'])(
+        'slot fallback of a vdom component, under a %s slot without one',
+        async type => {
+          let input: Element | null = null
+          const data = ref({
+            show: true,
+            capture: () => (input = document.querySelector('input')),
+          })
+          const { container } = await hydrate(
+            app,
+            {
+              Field: {
+                code: `<script setup>const data = _data</script>
+                  <template>
+                    <slot><li><input />inner</li></slot>
+                  </template>`,
+                vapor: false,
+              },
+              Frame: {
+                code: `<script setup>_data.value.capture()</script>
+                  <template>
+                    <ul>
+                      <${type} :css="false"><slot /></${type}>
+                    </ul>
+                  </template>`,
+                vapor: false,
+              },
+              View: `<template>
+                <components.Frame>
+                  <components.Field v-if="data.show" key="row" />
+                </components.Frame>
+              </template>`,
+            },
+            data,
+          )
+          expect(input).not.toBeNull()
+          expect(container.textContent).toBe('inner')
+          expect(container.querySelector('input')).toBe(input)
+
+          data.value.show = false
+          await nextTick()
+          expect(container.textContent).toBe('')
+        },
+      )
+
+      test.each([
+        [
+          'a keyed v-for',
+          `<li v-for="item in data.items" :key="item"><input />{{ item }}</li>`,
+        ],
+        [
+          'two roots',
+          `<li key="a"><input />{{ data.items[0] }}</li>
+          <li key="b">{{ data.items[1] }}</li>`,
+        ],
+      ])(
+        'vdom component rendering %s, under a TransitionGroup',
+        async (_, rows) => {
+          let lis: Element[] = []
+          const data = ref({
+            items: [1, 2],
+            capture: () => (lis = [...document.querySelectorAll('li')]),
+          })
+          const { container } = await hydrate(
+            app,
+            {
+              List: {
+                code: `<script setup>const data = _data</script>
+                <template>${rows}</template>`,
+                vapor: false,
+              },
+              Group: {
+                code: `<script setup>_data.value.capture()</script>
+                <template>
+                  <TransitionGroup tag="ul" :css="false">
+                    <slot />
+                  </TransitionGroup>
+                </template>`,
+                vapor: false,
+              },
+              View: `<template>
+              <components.Group>
+                <components.List key="rows" />
+              </components.Group>
+            </template>`,
+            },
+            data,
+          )
+          expect(lis).toHaveLength(2)
+          expect(container.textContent).toBe('12')
+          expect(container.querySelector('li')).toBe(lis[0])
+
+          data.value.items = [2, 1]
+          await nextTick()
+          expect(container.textContent).toBe('21')
+        },
+      )
+
+      // content rendering nothing shows the fallback of the slot, in a range
+      // of the slot's own
+      test.each([
+        [
+          'Transition',
+          `<div>
+            <Transition :css="false"><slot><p>fallback</p></slot></Transition>
+          </div>`,
+        ],
+        [
+          'TransitionGroup',
+          `<TransitionGroup tag="div" :css="false">
+            <slot><p key="fallback">fallback</p></slot>
+          </TransitionGroup>`,
+        ],
+      ])(
+        'fallback for content rendering nothing, under a %s',
+        async (_, frame) => {
+          let fallback: Element | null = null
+          const data = ref({
+            show: false,
+            capture: () => (fallback = document.querySelector('p')),
+          })
+          const { container } = await hydrate(
+            app,
+            {
+              Frame: {
+                code: `<script setup>_data.value.capture()</script>
+                <template>${frame}</template>`,
+                vapor: false,
+              },
+              View: `<template>
+              <components.Frame>
+                <input v-if="data.show" key="input" />
+              </components.Frame>
+            </template>`,
+            },
+            data,
+          )
+          expect(fallback).not.toBeNull()
+          expect(container.querySelector('p')).toBe(fallback)
+
+          data.value.show = true
+          await nextTick()
+          expect(container.querySelector('input')).not.toBeNull()
+          expect(container.querySelector('p')).toBeNull()
+        },
+      )
+
+      // forwarded by a vdom component, the slot keeps the range of the vapor
+      // slot rendered in it, but not the range of a vdom slot around that
+      describe('forwarded by a vdom component', () => {
+        const Middle = {
+          code: `<script setup>const components = _components</script>
+            <template>
+              <components.Outer><slot /></components.Outer>
+            </template>`,
+          vapor: false,
+        }
+        const Outer = {
+          code: `<script setup>_data.value.capture()</script>
+            <template>
+              <div><Transition :css="false"><slot /></Transition></div>
+            </template>`,
+          vapor: false,
+        }
+        const forwarders: [string, typeof Middle][] = [
+          ['template', Middle],
+          [
+            'render function',
+            {
+              code: `<script>
+                import { h } from 'vue'
+                export default {
+                  setup: (_, { slots }) => () =>
+                    h(_components.Outer, null, {
+                      default: () => slots.default(),
+                    }),
+                }
+              </script>`,
+              vapor: false,
+            },
+          ],
+        ]
+
+        test.each(forwarders)(
+          'a keyed v-for, under a TransitionGroup (%s)',
+          async (_, Middle) => {
+            let rows: Element[] = []
+            const data = ref({
+              items: [1, 2],
+              capture: () => (rows = [...document.querySelectorAll('li')]),
+            })
+            const { container } = await hydrate(
+              app,
+              {
+                Middle,
+                Outer: {
+                  code: `<script setup>_data.value.capture()</script>
+                  <template>
+                    <TransitionGroup tag="ul" :css="false">
+                      <slot />
+                    </TransitionGroup>
+                  </template>`,
+                  vapor: false,
+                },
+                View: `<template>
+                <components.Middle>
+                  <li v-for="item in data.items" :key="item">
+                    <input />{{ item }}
+                  </li>
+                </components.Middle>
+              </template>`,
+              },
+              data,
+            )
+            expect(rows).toHaveLength(2)
+            expect(container.querySelector('li')).toBe(rows[0])
+
+            data.value.items = [2, 1]
+            await nextTick()
+            expect(container.textContent).toBe('21')
+            expect(container.querySelector('li')).toBe(rows[1])
+          },
+        )
+
+        // in a range of the forwarder's own, the vapor slot is not the first
+        // in the slot of the group: that range goes as any other
+        test('a keyed v-for in a v-for of the forwarder, under a TransitionGroup', async () => {
+          let rows: Element[] = []
+          const data = ref({
+            items: [1, 2],
+            capture: () => (rows = [...document.querySelectorAll('li')]),
+          })
+          const { container } = await hydrate(
+            app,
+            {
+              Middle: {
+                code: `<script setup>const components = _components</script>
+                  <template>
+                    <components.Outer>
+                      <template v-for="n in 1" :key="n"><slot /></template>
+                    </components.Outer>
+                  </template>`,
+                vapor: false,
+              },
+              Outer: {
+                code: `<script setup>_data.value.capture()</script>
+                  <template>
+                    <TransitionGroup tag="ul" :css="false">
+                      <slot />
+                    </TransitionGroup>
+                  </template>`,
+                vapor: false,
+              },
+              View: `<template>
+                <components.Middle>
+                  <li v-for="item in data.items" :key="item">
+                    <input />{{ item }}
+                  </li>
+                </components.Middle>
+              </template>`,
+            },
+            data,
+          )
+          expect(rows).toHaveLength(2)
+          expect(container.querySelector('li')).toBe(rows[0])
+
+          data.value.items = [2, 1]
+          await nextTick()
+          expect(container.textContent).toBe('21')
+          expect(container.querySelector('li')).toBe(rows[1])
+        })
+
+        test.each(forwarders)(
+          'slot fallback of a vapor component, under a Transition (%s)',
+          async (_, Middle) => {
+            let input: Element | null = null
+            const data = ref({
+              show: true,
+              capture: () => (input = document.querySelector('input')),
+            })
+            const { container } = await hydrate(
+              app,
+              {
+                Middle,
+                Outer,
+                Field: `<template><slot><p><input />inner</p></slot></template>`,
+                View: `<template>
+                <components.Middle>
+                  <components.Field v-if="data.show" />
+                </components.Middle>
+              </template>`,
+              },
+              data,
+            )
+            expect(input).not.toBeNull()
+            expect(container.querySelector('input')).toBe(input)
+
+            data.value.show = false
+            await nextTick()
+            expect(container.querySelector('input')).toBeNull()
+          },
+        )
+
+        test.each([
+          ['as is', '<slot />'],
+          ['in an element', '<section><slot /></section>'],
+        ])(
+          'through another vdom component, %s, under a Transition',
+          async (_, body) => {
+            let input: Element | null = null
+            const data = ref({
+              show: true,
+              capture: () => (input = document.querySelector('input')),
+            })
+            const { container } = await hydrate(
+              app,
+              {
+                Middle,
+                Outer,
+                Wrap: {
+                  code: `<script setup>const components = _components</script>
+                    <template>
+                      <components.Middle>${body}</components.Middle>
+                    </template>`,
+                  vapor: false,
+                },
+                View: `<template>
+                  <components.Wrap>
+                    <input v-if="data.show" />
+                  </components.Wrap>
+                </template>`,
+              },
+              data,
+            )
+            expect(input).not.toBeNull()
+            expect(container.querySelector('input')).toBe(input)
+
+            data.value.show = false
+            await nextTick()
+            expect(container.querySelector('input')).toBeNull()
+          },
+        )
+
+        test('an element renders bare, under a Transition', async () => {
+          let input: Element | null = null
+          const data = ref({
+            capture: () => (input = document.querySelector('input')),
+          })
+          const { html, container } = await hydrate(
+            app,
+            {
+              Middle,
+              Outer,
+              View: `<template>
+                <components.Middle>
+                  <input />
+                </components.Middle>
+              </template>`,
+            },
+            data,
+          )
+          expect(html).toBe(`<div><input></div>`)
+          expect(input).not.toBeNull()
+          expect(container.querySelector('input')).toBe(input)
+        })
+
+        // a placeholder renders bare too, unless a fallback on the way can
+        // show in its place
+        test.each(
+          forwarders.flatMap(([kind, Middle]) =>
+            (['', '<i>fallback</i>'] as const).map(
+              fallback =>
+                [kind, fallback ? 'a' : 'no', fallback, Middle] as const,
+            ),
+          ),
+        )(
+          'a false v-if forwarded by a %s, under a Transition with %s fallback',
+          async (_, __, fallback, Middle) => {
+            let input: Element | null = null
+            const data = ref({
+              show: false,
+              capture: () => (input = document.querySelector('input')),
+            })
+            const { html, container } = await hydrate(
+              app,
+              {
+                Middle,
+                Outer: {
+                  code: `<script setup>_data.value.capture()</script>
+                    <template>
+                      <main>
+                        <Transition :css="false">
+                          <slot>${fallback}</slot>
+                        </Transition>
+                        <input />
+                      </main>
+                    </template>`,
+                  vapor: false,
+                },
+                View: `<template>
+                  <components.Middle>
+                    <input v-if="data.show" id="slotted" />
+                  </components.Middle>
+                </template>`,
+              },
+              data,
+            )
+            expect(html).toBe(
+              `<main>${fallback ? '<!--[--><!--]-->' : '<!---->'}<input></main>`,
+            )
+            expect(container.querySelectorAll('input')).toHaveLength(1)
+            expect(container.querySelector('input')).toBe(input)
+          },
+        )
+      })
+
+      test.each([
+        ['an element', 'Transition', `<input />`, `<input>`],
+        [
+          'a v-if element',
+          'Transition',
+          `<input v-if="data.show" />`,
+          `<input>`,
+        ],
+        [
+          'a vapor component',
+          'Transition',
+          `<components.Field />`,
+          `<p><input>field</p>`,
+        ],
+        [
+          'rows',
+          'TransitionGroup',
+          `<li key="a"><input /></li>
+          <li key="b">b</li>`,
+          `<li><input></li><li>b</li>`,
+        ],
+      ])('%s renders bare, under a %s', async (_, type, content, bare) => {
+        let input: Element | null = null
+        const data = ref({
+          show: true,
+          capture: () => (input = document.querySelector('input')),
+        })
+        const frame =
+          type === 'Transition'
+            ? `<div><Transition :css="false"><slot /></Transition></div>`
+            : `<TransitionGroup tag="div"><slot /></TransitionGroup>`
+        const { html, container } = await hydrate(
+          app,
+          {
+            Field: `<template><p><input />field</p></template>`,
+            Frame: {
+              code: `<script setup>_data.value.capture()</script>
+                <template>${frame}</template>`,
+              vapor: false,
+            },
+            View: `<template>
+              <components.Frame>
+                ${content}
+              </components.Frame>
+            </template>`,
+          },
+          data,
+        )
+        expect(html).toBe(`<div>${bare}</div>`)
+        expect(input).not.toBeNull()
+        expect(container.querySelector('input')).toBe(input)
+      })
+
+      test('a keyed Transition entering ahead of content rendered bare', async () => {
+        const data = ref({ items: [2] })
+        const { container } = await hydrate(
+          app,
+          {
+            Frame: {
+              code: `<script setup>const data = _data</script>
+                <template>
+                  <div>
+                    <Transition v-for="n in data.items" :key="n" :css="false">
+                      <slot :n="n" />
+                    </Transition>
+                  </div>
+                </template>`,
+              vapor: false,
+            },
+            View: `<template>
+              <components.Frame v-slot="{ n }">
+                <input :id="'row' + n" />
+              </components.Frame>
+            </template>`,
+          },
+          data,
+        )
+        const row = container.querySelector('#row2')
+        expect(row).not.toBeNull()
+
+        data.value.items = [1, 2]
+        await nextTick()
+        expect(
+          [...container.querySelectorAll('input')].map(input => input.id),
+        ).toEqual(['row1', 'row2'])
+        expect(container.querySelector('#row2')).toBe(row)
+      })
+
+      // the nodes the client adds around content rendered bare are not the
+      // server's: the component after it hydrates the node after that content
+      test.each([
+        ['directly', `<components.Frame><input /></components.Frame>`],
+        ['through a vapor component', `<components.Wrap />`],
+      ])('a component after content rendered bare, %s', async (_, first) => {
+        let input: Element | null = null
+        let footer: Element | null = null
+        const data = ref({
+          capture() {
+            input = document.querySelector('input')
+            footer = document.querySelector('footer')
+          },
+        })
+        const { container } = await hydrate(
+          app,
+          {
+            Frame: {
+              code: `<script setup>_data.value.capture()</script>
+                <template>
+                  <Transition :css="false"><slot /></Transition>
+                </template>`,
+              vapor: false,
+            },
+            Wrap: `<template>
+              <components.Frame><input /></components.Frame>
+            </template>`,
+            After: `<template><footer>after</footer></template>`,
+            View: `<template>
+              <main>
+                ${first}
+                <components.After />
+              </main>
+            </template>`,
+          },
+          data,
+        )
+        expect(container.querySelectorAll('footer')).toHaveLength(1)
+        expect(container.querySelector('input')).toBe(input)
+        expect(container.querySelector('footer')).toBe(footer)
+      })
+
+      // content rendering a comment and no fallback renders it bare: under an
+      // appearing Transition too, what replaces it leaves nothing behind
+      test.each([
+        ['a false v-if', `<input v-if="!data.show" />`],
+        ['a comment', `<!--only-->`],
+      ])(
+        'an appearing Transition switching away from %s',
+        async (_, content) => {
+          const data = ref({ show: true, inner: true })
+          const { container } = await hydrate(
+            app,
+            {
+              Frame: {
+                code: `<script setup>const data = _data</script>
+                  <template>
+                    <main>
+                      <Transition appear :css="false">
+                        <slot v-if="data.inner" />
+                        <b v-else>after</b>
+                      </Transition>
+                      <footer>end</footer>
+                    </main>
+                  </template>`,
+                vapor: false,
+              },
+              View: `<template>
+                <components.Frame>${content}</components.Frame>
+              </template>`,
+            },
+            data,
+          )
+          data.value.inner = false
+          await nextTick()
+          expect(container.querySelector('main')!.innerHTML).toBe(
+            `<b>after</b><footer>end</footer>`,
+          )
+        },
+      )
+
+      // a slot rendering no node at all keeps its range: the node after the
+      // Transition stays the one of the element after it
+      test('an empty slot before an input, under a Transition', async () => {
+        let input: HTMLInputElement | null = null
+        let clicks = 0
+        const data = ref({
+          show: true,
+          value: 'a',
+          click: () => clicks++,
+          capture: () => (input = document.querySelector('input')),
+        })
+        const { container } = await hydrate(
+          app,
+          {
+            Frame: {
+              code: `<script setup>
+                  const data = _data
+                  data.value.capture()
+                </script>
+                <template>
+                  <main>
+                    <Transition :css="false">
+                      <slot v-if="data.show" />
+                      <b v-else>after</b>
+                    </Transition>
+                    <input :value="data.value" @click="data.click" />
+                  </main>
+                </template>`,
+              vapor: false,
+            },
+            View: `<template>
+              <components.Frame>
+                <template #default></template>
+              </components.Frame>
+            </template>`,
+          },
+          data,
+        )
+        expect(container.querySelectorAll('input')).toHaveLength(1)
+        expect(container.querySelector('input')).toBe(input)
+        input!.click()
+        expect(clicks).toBe(1)
+        data.value.value = 'b'
+        await nextTick()
+        expect(input!.value).toBe('b')
+
+        data.value.show = false
+        await nextTick()
+        expect(
+          [...container.querySelector('main')!.childNodes].map(
+            node => node.nodeName,
+          ),
+        ).toEqual(['B', 'INPUT'])
+      })
+    },
+  )
+
+  // an enabled Teleport is content: what it renders is in its target
+  test.each([
+    ['an outlet', `<div><slot /></div>`],
+    ['an outlet with a fallback', `<div><slot><b>fallback</b></slot></div>`],
+    [
+      'a Transition',
+      `<div><Transition :css="false"><slot /></Transition></div>`,
+    ],
+    [
+      'a Transition with a fallback',
+      `<div>
+        <Transition :css="false"><slot><b>fallback</b></slot></Transition>
+      </div>`,
+    ],
+  ])('an enabled Teleport alone in a vapor slot, in %s', async (_, frame) => {
+    const data = ref({ disabled: false })
+    const App = (ssr: boolean) => {
+      const Frame = compile(
+        `<script setup>const data = _data</script>
+        <template>${frame}</template>`,
+        data,
+        {},
+        { vapor: false, ssr },
+      )
+      return compile(
+        `<script setup vapor>
+          const data = _data
+          const components = _components
+        </script>
+        <template>
+          <components.Frame>
+            <Teleport to="#target" :disabled="data.disabled">
+              <input />
+            </Teleport>
+          </components.Frame>
+        </template>`,
+        data,
+        { Frame },
+        { vapor: true, ssr },
+      )
+    }
+    const ssrContext: Record<string, any> = {}
+    const html = await VueServerRenderer.renderToString(
+      runtimeDom.createSSRApp(App(true)),
+      ssrContext,
+    )
+    const target = document.createElement('div')
+    target.id = 'target'
+    target.innerHTML = ssrContext.teleports['#target']
+    document.body.appendChild(target)
+    const container = document.createElement('div')
+    container.innerHTML = html
+    document.body.appendChild(container)
+    const input = target.querySelector('input')
+    expect(input).not.toBeNull()
+
+    const app = runtimeVapor
+      .createVaporSSRApp(App(false))
+      .use(runtimeVapor.vaporInteropPlugin)
+    app.mount(container)
+    expect(target.querySelectorAll('input')).toHaveLength(1)
+    expect(target.querySelector('input')).toBe(input)
+    expect(container.querySelector('b')).toBeNull()
+
+    data.value.disabled = true
+    await nextTick()
+    expect(container.querySelector('input')).toBe(input)
+
+    app.unmount()
+    expect(document.querySelector('input')).toBeNull()
   })
 })

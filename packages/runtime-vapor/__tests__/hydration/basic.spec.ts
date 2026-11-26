@@ -42,7 +42,7 @@ describe('Vapor Mode hydration', () => {
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
         `
         "
-        <!--{--><span></span>foofoo<span></span><!--}-->
+        <!--[$--><span></span>foofoo<span></span><!--]-->
         "
       `,
       )
@@ -52,7 +52,7 @@ describe('Vapor Mode hydration', () => {
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
         `
         "
-        <!--{--><span></span>barbar<span></span><!--}-->
+        <!--[$--><span></span>barbar<span></span><!--]-->
         "
       `,
       )
@@ -80,7 +80,7 @@ describe('Vapor Mode hydration', () => {
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
         `
         "
-        <!--{--><span></span>fooAfooBfoo<span></span><!--}-->
+        <!--[$--><span></span>fooAfooBfoo<span></span><!--]-->
         "
       `,
       )
@@ -90,7 +90,7 @@ describe('Vapor Mode hydration', () => {
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
         `
         "
-        <!--{--><span></span>barAbarBbar<span></span><!--}-->
+        <!--[$--><span></span>barAbarBbar<span></span><!--]-->
         "
       `,
       )
@@ -126,9 +126,7 @@ describe('Vapor Mode hydration', () => {
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
         `
         "
-        <!--{-->
         <!--[--><!--]-->
-        <!--}-->
         "
       `,
       )
@@ -138,9 +136,7 @@ describe('Vapor Mode hydration', () => {
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
         `
         "
-        <!--{-->
         <!--[-->foo<!--]-->
-        <!--}-->
         "
       `,
       )
@@ -156,7 +152,7 @@ describe('Vapor Mode hydration', () => {
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
         `
         "
-        <!--{--><span>s</span><!--}-->
+        <!--[$--><span>s</span><!--]-->
         "
       `,
       )
@@ -167,7 +163,7 @@ describe('Vapor Mode hydration', () => {
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
         `
         "
-        <!--{-->foo<span>s</span><!--}-->
+        <!--[$-->foo<span>s</span><!--]-->
         "
       `,
       )
@@ -206,7 +202,7 @@ describe('Vapor Mode hydration', () => {
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
         `
         "
-        <!--{--> A<span>foo</span>foo<!--}-->
+        <!--[$--> A<span>foo</span>foo<!--]-->
         "
       `,
       )
@@ -216,7 +212,7 @@ describe('Vapor Mode hydration', () => {
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
         `
         "
-        <!--{--> A<span>bar</span>bar<!--}-->
+        <!--[$--> A<span>bar</span>bar<!--]-->
         "
       `,
       )
@@ -243,14 +239,14 @@ describe('Vapor Mode hydration', () => {
       expect(formatHtml(html)).toMatchInlineSnapshot(
         `
         "
-        <!--{--><center><span>foo</span></center><span>after</span><!--}-->
+        <!--[$--><center><span>foo</span></center><span>after</span><!--]-->
         "
       `,
       )
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
         `
         "
-        <!--{--><center><span>foo</span></center><span>after</span><!--}-->
+        <!--[$--><center><span>foo</span></center><span>after</span><!--]-->
         "
       `,
       )
@@ -259,7 +255,7 @@ describe('Vapor Mode hydration', () => {
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
         `
         "
-        <!--{--><center><span>bar</span></center><span>after</span><!--}-->
+        <!--[$--><center><span>bar</span></center><span>after</span><!--]-->
         "
       `,
       )
@@ -447,7 +443,7 @@ describe('Vapor Mode hydration', () => {
       )
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
         "
-        <!--{--><my-el><span>foo</span></my-el><div>foo</div><!--}-->
+        <!--[$--><my-el><span>foo</span></my-el><div>foo</div><!--]-->
         "
       `)
       expect(`Hydration node mismatch`).not.toHaveBeenWarned()
@@ -456,7 +452,7 @@ describe('Vapor Mode hydration', () => {
       await nextTick()
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
         "
-        <!--{--><my-el><span>bar</span></my-el><div>bar</div><!--}-->
+        <!--[$--><my-el><span>bar</span></my-el><div>bar</div><!--]-->
         "
       `)
     })
@@ -698,7 +694,7 @@ describe('Vapor Mode hydration', () => {
     data.txt = 'prefix'
     await nextTick()
     expect(container.innerHTML).toBe(
-      '<!--{-->prefix<!--{-->child<span>suffix</span><!--}--><!--}-->',
+      '<!--[$-->prefix<!--[$-->child<span>suffix</span><!--]--><!--]-->',
     )
     expect(container.childNodes[1]).toBe(text)
     expect(container.childNodes[3]).toBe(childText)
@@ -1382,7 +1378,7 @@ describe('Vapor Mode hydration', () => {
   test('syncs an adopted radio to the client model when a later root mismatches', async () => {
     const container = document.createElement('div')
     container.innerHTML =
-      '<!--{--><input type="radio" checked value="a"><div></div><!--}-->'
+      '<!--[$--><input type="radio" checked value="a"><div></div><!--]-->'
     document.body.appendChild(container)
     const input = container.querySelector('input')!
     const comp = compile(

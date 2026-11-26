@@ -258,4 +258,56 @@ describe('useInstanceInfo during hydration', () => {
     await nextTick()
     expect(container.querySelector('.async')).toBe(el)
   })
+
+  // the single root of a component renders in the range that component
+  // holds: its elements are read from the open of that range
+  test.each([
+    [
+      'several roots',
+      `<script setup vapor>
+        import { useInstanceInfo } from 'vue'
+        _data.value.read(useInstanceInfo())
+      </script>
+      <template>
+        <div class="a">a</div>
+        <div class="b">b</div>
+      </template>`,
+    ],
+    [
+      'several roots, the first an appearing Transition',
+      `<script setup vapor>
+        import { useInstanceInfo } from 'vue'
+        const info = useInstanceInfo()
+        const data = _data
+      </script>
+      <template>
+        <Transition appear :css="false"><i class="a">a</i></Transition>
+        <b class="b">{{ data.read(info) }}</b>
+      </template>`,
+    ],
+  ])('%s, as the single root of a vapor component', async (_, part) => {
+    let seen: Seen | undefined
+    const data = ref({
+      read(info: any) {
+        if (info.isHydrating) seen = snap(info)
+        return 'b'
+      },
+    })
+    const { container } = await testHydration(
+      `<template>
+        <main>
+          <components.Wrapper />
+        </main>
+      </template>`,
+      {
+        Wrapper: `<template><components.Part /></template>`,
+        Part: part,
+      },
+      data,
+    )
+    expect(seen).toEqual({
+      isHydrating: true,
+      el: Array.from(container.querySelectorAll('.a, .b')),
+    })
+  })
 })

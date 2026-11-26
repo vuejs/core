@@ -488,7 +488,7 @@ describe('Vapor Mode hydration', () => {
 
           const container = document.createElement('div')
           container.innerHTML = html
-          const serverRoot = container.firstChild
+          const serverRoot = container.querySelector('span')
           document.body.appendChild(container)
           const app = runtimeDom.createSSRApp(App)
           app.use(runtimeVapor.vaporInteropPlugin)
@@ -503,7 +503,7 @@ describe('Vapor Mode hydration', () => {
 
             expect(asyncSetup).toHaveBeenCalledOnce()
             expect(syncSetup).not.toHaveBeenCalled()
-            expect(container.firstChild).toBe(serverRoot)
+            expect(container.querySelector('span')).toBe(serverRoot)
             expect(container.textContent).toBe('async')
 
             resolveClient()
@@ -511,7 +511,7 @@ describe('Vapor Mode hydration', () => {
 
             expect(asyncSetup).toHaveBeenCalledOnce()
             expect(syncSetup).not.toHaveBeenCalled()
-            expect(container.firstChild).toBe(serverRoot)
+            expect(container.querySelector('span')).toBe(serverRoot)
             expect(container.textContent).toBe('async')
           } finally {
             resolveClient()
@@ -705,11 +705,11 @@ describe('Vapor Mode hydration', () => {
 
           expect(instance.pendingBlock).toBeUndefined()
           expect(pendingNodes.every(node => !node.isConnected)).toBe(true)
-          expect(container.innerHTML).toBe('<!--{--><!--}--><p>fallback</p>')
+          expect(container.innerHTML).toBe('<p>fallback</p>')
 
           resolveClient()
           await new Promise(resolve => setTimeout(resolve))
-          expect(container.innerHTML).toBe('<!--{--><!--}--><p>fallback</p>')
+          expect(container.innerHTML).toBe('<p>fallback</p>')
         })
 
         test.each([
@@ -717,7 +717,7 @@ describe('Vapor Mode hydration', () => {
           [
             'multi-root range',
             '<span>async</span><b>range</b>',
-            ['<!--{-->', '<span>async</span>', '<b>range</b>', '<!--}-->'],
+            ['<!--[$-->', '<span>async</span>', '<b>range</b>', '<!--]-->'],
             true,
           ],
         ] as const)(
@@ -1078,7 +1078,7 @@ describe('Vapor Mode hydration', () => {
           expect(`Hydration children mismatch`).not.toHaveBeenWarned()
           expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
             "<div>
-            <!--{--><span>one</span><span>two</span><!--}-->
+            <!--[$--><span>one</span><span>two</span><!--]-->
             <i>after</i></div>"
           `)
         })
@@ -1613,7 +1613,7 @@ describe('Vapor Mode hydration', () => {
         runtimeDom.createSSRApp(SSRApp),
       )
       expect(root.innerHTML).toMatchInlineSnapshot(
-        `"<!--{--><div style="display:none;"><!--[--><!--[--><!--[--><div>0</div><!--]--><!--]--><!--]--></div><!--}-->"`,
+        `"<div style="display:none;"><!--[--><!--[--><!--[--><div>0</div><!--]--><!--]--><!--]--></div>"`,
       )
 
       const Toggle = compileVaporComponent(toggleCode)
@@ -1631,7 +1631,7 @@ describe('Vapor Mode hydration', () => {
       await nextTick()
       await nextTick()
       expect(root.innerHTML).toMatchInlineSnapshot(
-        `"<!--{--><div style=""><!--[--><!--[--><!--[--><div>1</div><!--]--><!--]--><!--]--></div><!--}-->"`,
+        `"<div style=""><!--[--><!--[--><!--[--><div>1</div><!--]--><!--]--><!--]--></div>"`,
       )
       expect(data.value.fn).toBeCalledTimes(1)
     })
@@ -1790,8 +1790,8 @@ describe('hydrating a component whose root is a pending async setup child', () =
   }
 })
 
-// the host's range and the async setup's open back to back: the pending
-// range is the setup's whole range
+// the host shares the range of its async setup root: the pending range is
+// that whole range
 describe('async setup as the lone root of a vapor host under vdom Suspense', () => {
   async function run(
     childTemplate: string,

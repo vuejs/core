@@ -11,6 +11,7 @@ import {
   hydrateNode,
   isClaimedAnchor,
   isComment,
+  isComponentClose,
   isCurrentComponentClose,
   isInDeferredHydrationBoundary,
   isRangeEnd,
@@ -379,14 +380,14 @@ function planFromBlockBoundary(
     // the close stays that range's anchor, the branch goes before it.
     return { kind: 'create', parent: close.parentNode!, next: close }
   }
-  // a block rendering a component's roots ends at that component's `}`: the
+  // a block rendering a component's roots ends at that component's close: the
   // marker is the anchor, instead of one created behind it. Not the close of
   // the component being hydrated: it ends that component, not this block.
   // Taken as the anchor, it goes when an outer block removes this one, and
   // a root after this block that rendered no node goes behind it.
   if (
     nextNode &&
-    isComment(nextNode, '}') &&
+    isComponentClose(nextNode) &&
     isFragmentBlock(frag.nodes) &&
     !isCurrentComponentClose(nextNode)
   ) {
@@ -534,7 +535,7 @@ export function hydrateSlotContent(
 /**
  * The hydrating half of `SlotFragment.updateSlot`. The range the server left
  * says what it rendered, so nothing is tried and taken back:
- * - `<!--(-->`: the fallback, with none of the content's output;
+ * - `<!--[!-->`: the fallback, with none of the content's output;
  * - `<!--[--><!--]-->`: nothing;
  * - anything else: the content.
  */
@@ -558,7 +559,7 @@ export function hydrateSlotFragmentContent(
       recheckSlotResolution(frag)
     })
     advanceHydrationNode(close)
-  } else if (open && isComment(open, '(')) {
+  } else if (open && isComment(open, '[!')) {
     const close = (frag.anchor = claimAnchor(locateEndAnchor(open)!))
     hydrateSlotFallbackRange(
       {
@@ -592,7 +593,7 @@ export function hydrateSlotFragmentContent(
   }
 }
 
-// `<!--(-->`: the server rendered an outlet's fallback, from `first` up to
+// `<!--[!-->`: the server rendered an outlet's fallback, from `first` up to
 // `close`, in place of its content.
 export interface SlotFallbackRange {
   first: Node

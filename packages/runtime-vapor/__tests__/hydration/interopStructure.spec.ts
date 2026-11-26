@@ -47,9 +47,7 @@ describe('VDOM interop', () => {
     expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
       `
       "
-      <!--{-->
       <!--[--><div>first foo</div><div>second foo</div><!--]-->
-      <!--}-->
       "
     `,
     )
@@ -61,9 +59,7 @@ describe('VDOM interop', () => {
     expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
       `
       "
-      <!--{-->
       <!--[--><div>first bar</div><div>second bar</div><!--]-->
-      <!--}-->
       "
     `,
     )
@@ -100,9 +96,9 @@ describe('VDOM interop', () => {
     expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
       `
       "
-      <!--{--><div>Before</div>
+      <!--[$--><div>Before</div>
       <!--[--><span>Hello</span><span>World</span><!--]-->
-      <div>After</div><!--}-->
+      <div>After</div><!--]-->
       "
     `,
     )
@@ -115,9 +111,9 @@ describe('VDOM interop', () => {
     expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
       `
       "
-      <!--{--><div>Before</div>
+      <!--[$--><div>Before</div>
       <!--[--><span>Updated</span><span>Again</span><!--]-->
-      <div>After</div><!--}-->
+      <div>After</div><!--]-->
       "
     `,
     )
@@ -147,9 +143,9 @@ describe('VDOM interop', () => {
     expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
       `
       "
-      <!--{-->
+      <!--[$-->
       <!--[--><span>Hello</span><span>World</span><!--]-->
-      <div>After</div><!--}-->
+      <div>After</div><!--]-->
       "
     `,
     )
@@ -178,9 +174,9 @@ describe('VDOM interop', () => {
     expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
       `
       "
-      <!--{--><div>Before</div>
+      <!--[$--><div>Before</div>
       <!--[--><div>first foo</div><div>second foo</div><!--]-->
-      <div>After</div><!--}-->
+      <div>After</div><!--]-->
       "
     `,
     )
@@ -191,9 +187,9 @@ describe('VDOM interop', () => {
     expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
       `
       "
-      <!--{--><div>Before</div>
+      <!--[$--><div>Before</div>
       <!--[--><div>first bar</div><div>second bar</div><!--]-->
-      <div>After</div><!--}-->
+      <div>After</div><!--]-->
       "
     `,
     )
@@ -227,9 +223,9 @@ describe('VDOM interop', () => {
     expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
       `
       "
-      <!--{-->
+      <!--[$-->
       <!--[--><span>Hello</span><span>World</span><!--]-->
-      <!--dynamic-component--><div>After</div><!--}-->
+      <!--dynamic-component--><div>After</div><!--]-->
       "
     `,
     )
@@ -280,9 +276,9 @@ describe('VDOM interop', () => {
       `
       "
       <!--[--><p>before</p>
-      <!--{-->
+      <!--[$-->
       <!--[--><span>Hello</span><span>World</span><!--]-->
-      <!--dynamic-component--><div>After</div><!--}-->
+      <!--dynamic-component--><div>After</div><!--]-->
       <!--]-->
       "
     `,
@@ -297,9 +293,9 @@ describe('VDOM interop', () => {
       `
       "
       <!--[--><p>before</p>
-      <!--{-->
+      <!--[$-->
       <!--[--><span>Updated</span><span>Again</span><!--]-->
-      <!--dynamic-component--><div>After updated</div><!--}-->
+      <!--dynamic-component--><div>After updated</div><!--]-->
       <!--]-->
       "
     `,
@@ -344,11 +340,11 @@ describe('VDOM interop', () => {
       `
       "
       <!--[--><p>before</p>
-      <!--{-->
+      <!--[$-->
       <!--[-->
       <!--[--><span>Hello</span><span>Hello</span><!--]-->
       <!--]-->
-      <div>After</div><!--}-->
+      <div>After</div><!--]-->
       <!--]-->
       "
     `,
@@ -363,11 +359,11 @@ describe('VDOM interop', () => {
       `
       "
       <!--[--><p>before</p>
-      <!--{-->
+      <!--[$-->
       <!--[-->
       <!--[--><span>Updated</span><span>Updated</span><!--]-->
       <!--]-->
-      <div>After updated</div><!--}-->
+      <div>After updated</div><!--]-->
       <!--]-->
       "
     `,
@@ -471,13 +467,11 @@ describe('VDOM interop', () => {
     expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
       `
       "
-      <!--{-->
-      <!--{--><div>Before</div>
+      <!--[$--><div>Before</div>
       <!--[-->
       <!--[--><span>Hello</span><span>Hello</span><!--]-->
       <span>Tail</span><!--]-->
-      <!--}-->
-      <!--}-->
+      <!--]-->
       "
     `,
     )
@@ -489,13 +483,11 @@ describe('VDOM interop', () => {
     expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
       `
       "
-      <!--{-->
-      <!--{--><div>Before</div>
+      <!--[$--><div>Before</div>
       <!--[-->
       <!--[--><span>Updated</span><span>Updated</span><!--]-->
       <span>Tail updated</span><!--]-->
-      <!--}-->
-      <!--}-->
+      <!--]-->
       "
     `,
     )
@@ -536,13 +528,11 @@ describe('VDOM interop', () => {
     expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
       `
       "
-      <!--{-->
-      <!--{--><div>Before</div>
+      <!--[$--><div>Before</div>
       <!--[-->
       <!--[--><!--]-->
       <span>Tail</span><!--]-->
-      <!--}-->
-      <!--}-->
+      <!--]-->
       "
     `,
     )
@@ -553,13 +543,11 @@ describe('VDOM interop', () => {
     expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
       `
       "
-      <!--{-->
-      <!--{--><div>Before</div>
+      <!--[$--><div>Before</div>
       <!--[-->
       <!--[--><!--]-->
       <span>Tail updated</span><!--]-->
-      <!--}-->
-      <!--}-->
+      <!--]-->
       "
     `,
     )
@@ -592,7 +580,7 @@ describe('VDOM interop', () => {
     expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
       `
       "
-      <!--{--><div>Before</div><!----><span>Tail</span><!--}-->
+      <!--[$--><div>Before</div><!----><span>Tail</span><!--]-->
       "
     `,
     )
@@ -605,7 +593,7 @@ describe('VDOM interop', () => {
     expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
       `
       "
-      <!--{--><div>Before</div><span>Updated</span><span>Updated</span><!----><span>Tail updated</span><!--}-->
+      <!--[$--><div>Before</div><span>Updated</span><span>Updated</span><!----><span>Tail updated</span><!--]-->
       "
     `,
     )
@@ -616,7 +604,7 @@ describe('VDOM interop', () => {
     expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
       `
       "
-      <!--{--><div>Before</div><!----><span>Tail updated</span><!--}-->
+      <!--[$--><div>Before</div><!----><span>Tail updated</span><!--]-->
       "
     `,
     )
@@ -654,11 +642,11 @@ describe('VDOM interop', () => {
     expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
       `
       "
-      <!--{--><div>Before</div>
+      <!--[$--><div>Before</div>
       <!--[-->
       <!--[--><span>Hello</span><span>World</span><!--]-->
       <!--]-->
-      <div>After</div><!--}-->
+      <div>After</div><!--]-->
       "
     `,
     )
@@ -670,11 +658,11 @@ describe('VDOM interop', () => {
     expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
       `
       "
-      <!--{--><div>Before</div>
+      <!--[$--><div>Before</div>
       <!--[-->
       <!--[--><span>Updated</span><span>Again</span><!--]-->
       <!--]-->
-      <div>After</div><!--}-->
+      <div>After</div><!--]-->
       "
     `,
     )
@@ -730,9 +718,9 @@ describe('VDOM interop', () => {
     expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
       `
       "
-      <!--{--><div>Before</div>
-      <!--{--><span>Hello</span>Tail<!--}-->
-      <div>After</div><!--}-->
+      <!--[$--><div>Before</div>
+      <!--[$--><span>Hello</span>Tail<!--]-->
+      <div>After</div><!--]-->
       "
     `,
     )
@@ -743,9 +731,9 @@ describe('VDOM interop', () => {
     expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
       `
       "
-      <!--{--><div>Before</div>
-      <!--{--><span>Hello</span>Tail updated<!--}-->
-      <div>After</div><!--}-->
+      <!--[$--><div>Before</div>
+      <!--[$--><span>Hello</span>Tail updated<!--]-->
+      <div>After</div><!--]-->
       "
     `,
     )
@@ -801,7 +789,7 @@ describe('VDOM interop', () => {
 
     expect(`Hydration text mismatch`).toHaveBeenWarned()
     expect(container.innerHTML).toBe(
-      '<div data-test="wrapper"><!--{--><span>Hello</span><!--}--><span>After</span></div>',
+      '<div data-test="wrapper"><!--[$--><span>Hello</span><!--]--><span>After</span></div>',
     )
 
     data.value.extra = 'Updated'
@@ -809,7 +797,7 @@ describe('VDOM interop', () => {
     await nextTick()
 
     expect(container.innerHTML).toBe(
-      '<div data-test="wrapper"><!--{--><span>Hello</span>Updated<!--}--><span>After updated</span></div>',
+      '<div data-test="wrapper"><!--[$--><span>Hello</span>Updated<!--]--><span>After updated</span></div>',
     )
   })
 
@@ -863,7 +851,7 @@ describe('VDOM interop', () => {
 
     expect(`Hydration text mismatch`).not.toHaveBeenWarned()
     expect(container.innerHTML).toBe(
-      '<div data-allow-mismatch="text"><!--{--><span>Hello</span><!--}--><span>After</span></div>',
+      '<div data-allow-mismatch="text"><!--[$--><span>Hello</span><!--]--><span>After</span></div>',
     )
 
     data.value.extra = 'Updated'
@@ -871,7 +859,7 @@ describe('VDOM interop', () => {
     await nextTick()
 
     expect(container.innerHTML).toBe(
-      '<div data-allow-mismatch="text"><!--{--><span>Hello</span>Updated<!--}--><span>After updated</span></div>',
+      '<div data-allow-mismatch="text"><!--[$--><span>Hello</span>Updated<!--]--><span>After updated</span></div>',
     )
   })
 
@@ -904,9 +892,9 @@ describe('VDOM interop', () => {
     expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
       `
       "
-      <!--{--><div>Before</div>
+      <!--[$--><div>Before</div>
       <!--[--><span>Hello</span><span>World</span><!--]-->
-      <!--dynamic-component--><div>After</div><!--}-->
+      <!--dynamic-component--><div>After</div><!--]-->
       "
     `,
     )
@@ -931,9 +919,9 @@ describe('VDOM interop', () => {
     expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
       `
       "
-      <!--{-->
+      <!--[$-->
       <!--[--><div>first fragment</div><div>second fragment</div><!--]-->
-      <!--dynamic-component--><div>After</div><!--}-->
+      <!--dynamic-component--><div>After</div><!--]-->
       "
     `,
     )
@@ -955,7 +943,7 @@ describe('VDOM interop', () => {
     expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
       `
       "
-      <!--{--><span>hello</span><!--dynamic-component--><div>After</div><!--}-->
+      <!--[$--><span>hello</span><!--dynamic-component--><div>After</div><!--]-->
       "
     `,
     )
@@ -1008,9 +996,7 @@ describe('VDOM interop', () => {
     expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
       `
       "
-      <!--{-->
-      <!--(--><!--if--><div>foo</div><!--)-->
-      <!--}-->
+      <!--[!--><!--if--><div>foo</div><!--]-->
       "
     `,
     )
@@ -1022,9 +1008,7 @@ describe('VDOM interop', () => {
     expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
       `
       "
-      <!--{-->
-      <!--(--><!--if--><div>baz</div><!--)-->
-      <!--}-->
+      <!--[!--><!--if--><div>baz</div><!--]-->
       "
     `,
     )
@@ -1034,9 +1018,7 @@ describe('VDOM interop', () => {
     expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
       `
       "
-      <!--{-->
-      <!--(--><span>bar</span><!--if--><!--)-->
-      <!--}-->
+      <!--[!--><span>bar</span><!--if--><!--]-->
       "
     `,
     )
@@ -1046,9 +1028,7 @@ describe('VDOM interop', () => {
     expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
       `
       "
-      <!--{-->
-      <!--(--><span>qux</span><!--if--><!--)-->
-      <!--}-->
+      <!--[!--><span>qux</span><!--if--><!--]-->
       "
     `,
     )
@@ -1140,7 +1120,7 @@ describe('VDOM interop', () => {
       '<!--[--><div>banner</div><!--]-->',
     )
     expect(formatHtml(container.innerHTML)).toContain(
-      '<!--(--><!--slot--><!--slot--><svg><path></path></svg><span>Vue.js</span><!--)-->',
+      '<!--[!--><!--slot--><!--slot--><svg><path></path></svg><span>Vue.js</span><!--]-->',
     )
 
     expect(`Hydration node mismatch`).not.toHaveBeenWarned()
@@ -1148,7 +1128,7 @@ describe('VDOM interop', () => {
     data.title = 'Vapor'
     await nextTick()
     expect(formatHtml(container.innerHTML)).toContain(
-      '<!--(--><!--slot--><!--slot--><svg><path></path></svg><span>Vapor</span><!--)-->',
+      '<!--[!--><!--slot--><!--slot--><svg><path></path></svg><span>Vapor</span><!--]-->',
     )
   })
 
@@ -1210,13 +1190,11 @@ describe('VDOM interop', () => {
     )
 
     expect(formatHtml(html)).toMatchInlineSnapshot(`
-      "
-      <!--{--><div>
+      "<div>
       <!--[--><div>banner</div><!--]-->
       <div><main><span>content</span></main>
       <!--[--><!--]-->
-      <p>footer</p></div></div><!--}-->
-      "
+      <p>footer</p></div></div>"
     `)
   })
 
@@ -1246,9 +1224,9 @@ describe('VDOM interop', () => {
     expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
       `
       "
-      <!--{--><div>
-      <!--{--><span>child</span><!----><!--}-->
-      <span>inside</span></div><p>after</p><!--}-->
+      <!--[$--><div>
+      <!--[$--><span>child</span><!----><!--]-->
+      <span>inside</span></div><p>after</p><!--]-->
       "
     `,
     )
@@ -1278,7 +1256,7 @@ describe('VDOM interop', () => {
 
     expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
       "
-      <!--{--><div>parent: v-0</div><div>child: v-1</div><!--}-->
+      <!--[$--><div>parent: v-0</div><div>child: v-1</div><!--]-->
       "
     `)
     expect(`Hydration text mismatch`).not.toHaveBeenWarned()
@@ -1331,13 +1309,11 @@ describe('VDOM interop', () => {
 
     expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
       `
-      "
-      <!--{--><div>
+      "<div>
       <!--[--><div>banner</div><!--]-->
       <div><main><span>content</span></main>
       <!--[--><!--slot--><!--]-->
-      <p>footer</p></div></div><!--}-->
-      "
+      <p>footer</p></div></div>"
     `,
     )
     expect(`Hydration node mismatch`).not.toHaveBeenWarned()
@@ -1399,32 +1375,28 @@ describe('VDOM interop', () => {
     )
 
     expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
-      "
-      <!--{--><div>
+      "<div>
       <!--[--><!--]-->
       <!--[-->
       <!--[-->
-      <!--{--><span>late</span><!----><!--}-->
+      <!--[$--><span>late</span><!----><!--]-->
       <!--]-->
       <!--]-->
-      <p>after</p></div><!--}-->
-      "
+      <p>after</p></div>"
     `)
     expect(`Hydration children mismatch`).not.toHaveBeenWarned()
 
     data.msg = 'updated'
     await nextTick()
     expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
-      "
-      <!--{--><div>
+      "<div>
       <!--[--><!--]-->
       <!--[-->
       <!--[-->
-      <!--{--><span>updated</span><!----><!--}-->
+      <!--[$--><span>updated</span><!----><!--]-->
       <!--]-->
       <!--]-->
-      <p>after</p></div><!--}-->
-      "
+      <p>after</p></div>"
     `)
   })
 
@@ -2005,11 +1977,8 @@ describe('VDOM interop', () => {
 
       data.value.keep = false
       await nextTick()
-      // the wrappers' ranges stay as empty markers
-      const depth =
-        wrapper === 'direct' ? 0 : wrapper === 'nested wrappers' ? 2 : 1
       expect(container.innerHTML).toBe(
-        `<div><!--[-->${'<!--{-->'.repeat(depth)}${'<!--}-->'.repeat(depth)}<p>replacement</p><!--]--><aside>after</aside></div>`,
+        `<div><!--[--><p>replacement</p><!--]--><aside>after</aside></div>`,
       )
       expect(aside.previousSibling).toBe(listEnd)
       expect(container.querySelector('aside')).toBe(aside)

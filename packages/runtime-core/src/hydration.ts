@@ -23,18 +23,17 @@ import {
   getEscapedCssVarName,
   includeBooleanAttr,
   isBooleanAttr,
+  isHydrationRangeStart,
   isKnownHtmlAttr,
   isKnownSvgAttr,
   isOn,
   isRenderableAttrValue,
   isReservedProp,
   isString,
-  isVaporBranchStart,
   isVaporRangeStart,
   normalizeClass,
   normalizeCssVarValue,
   normalizeStyle,
-  rangeCloseOf,
   stringifyStyle,
 } from '@vue/shared'
 import {
@@ -126,9 +125,12 @@ export const getContainerType = (
 export const isComment = (node: Node): node is Comment =>
   node.nodeType === DOMNodeTypes.COMMENT
 
-/** The data of a comment opening a range a hydration steps over as one. */
-export const isRangeStart = (data: string): boolean =>
-  data === '[' || data === '(' || isVaporRangeStart(data)
+// `[!` opens a slot fallback, `[1` the branch of a vapor v-if chain and `[$`
+// the roots of a vapor component: ranges like a fragment's
+const isFragmentOpen = (data: string): boolean =>
+  data === '[' ||
+  data === '[!' ||
+  (isVaporInteropEnabled && isVaporRangeStart(data))
 
 /**
  * Collects the root elements a component rendered on the server, given the
@@ -145,9 +147,9 @@ export function collectHydrationElements(
       roots.push(node as Element)
     } else if (isComment(node)) {
       const data = node.data
-      if (isRangeStart(data)) {
+      if (isHydrationRangeStart(data)) {
         depth++
-      } else if (data === ']' || data === ')' || data === '}') {
+      } else if (data === ']') {
         depth--
       }
     }
@@ -219,13 +221,7 @@ export function createHydrationFunctions(
     optimized = false,
   ): Node | null => {
     optimized = optimized || !!vnode.dynamicChildren
-    // `(` opens a slot fallback, `[1` the branch of a vapor v-if chain and
-    // `{` the roots of a vapor component: ranges like a fragment's
-    const isFragmentStart =
-      isComment(node) &&
-      (node.data === '[' ||
-        node.data === '(' ||
-        (isVaporInteropEnabled && isVaporRangeStart(node.data)))
+    const isFragmentStart = isComment(node) && isFragmentOpen(node.data)
     const onMismatch = () =>
       handleMismatch(
         node,
@@ -798,7 +794,7 @@ export function createHydrationFunctions(
     // the client kept the forwarded vapor slot and what is around it, the
     // server rendered the outlet's fallback in their place
     const next =
-      isVaporInteropEnabled && vnode.vo && (node as Comment).data === '('
+      isVaporInteropEnabled && vnode.vo && (node as Comment).data === '[!'
         ? getVaporInterface(parentComponent, vnode).hydrateSlotOutlet(
             vnode,
             node,
@@ -815,13 +811,7 @@ export function createHydrationFunctions(
             slotScopeIds,
             optimized,
           )
-    // the server may have rendered a vapor component in its `{` range
-    const close = isVaporInteropEnabled
-      ? rangeCloseOf((node as Comment).data)
-      : (node as Comment).data === '('
-        ? ')'
-        : ']'
-    if (next && isComment(next) && next.data === close) {
+    if (next && isComment(next) && next.data === ']') {
       return nextSibling((vnode.anchor = next))
     } else {
       // fragment didn't hydrate successfully, since we didn't get a end anchor
@@ -829,7 +819,7 @@ export function createHydrationFunctions(
       logMismatchError()
 
       // since the anchor is missing, we need to create one and insert it
-      insert((vnode.anchor = createComment(close)), container, next)
+      insert((vnode.anchor = createComment(']')), container, next)
       return next
     }
   }
@@ -849,7 +839,7 @@ export function createHydrationFunctions(
           node,
           node.nodeType === DOMNodeTypes.TEXT
             ? `(text)`
-            : isComment(node) && isRangeStart(node.data)
+            : isComment(node) && isHydrationRangeStart(node.data)
               ? `(start of fragment)`
               : ``,
           `\n- expected on client:`,
@@ -903,32 +893,20 @@ export function createHydrationFunctions(
   // looks ahead for a start and closing comment node
   const locateClosingAnchor = (
     node: Node | null,
-    // the pair of the range `node` opens: a mismatch hands in a node inside a
-    // `[` range as well
-    open: string = node &&
-    isComment(node) &&
-    (node.data === '(' || (isVaporInteropEnabled && node.data === '{'))
-      ? node.data
-      : '[',
-    close: string = isVaporInteropEnabled
-      ? rangeCloseOf(open)
-      : open === '('
-        ? ')'
-        : ']',
+    // a teleport's pair. Without one, the close of the range `node` opens or
+    // is in: every range closes with `]`, whatever opens it
+    open?: string,
+    close: string = ']',
   ): Node | null => {
     let match = 0
     while (node) {
       node = nextSibling(node)
       if (node && isComment(node)) {
-        if (
-          node.data === open ||
-          (isVaporInteropEnabled &&
-            open === '[' &&
-            isVaporBranchStart(node.data))
-        ) {
+        const data = node.data
+        if (open ? data === open : isFragmentOpen(data)) {
           match++
         }
-        if (node.data === close) {
+        if (data === close) {
           if (match === 0) {
             return nextSibling(node)
           } else {

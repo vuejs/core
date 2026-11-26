@@ -16,7 +16,7 @@ export interface SlotBoundaryContext {
   getParent: () => SlotBoundaryContext | null
   getFallback: () => BlockFn | undefined
   // hydration: the server rendered this provider's fallback in place of the
-  // content (`<!--(-->`). The host renders it through this, once, to adopt
+  // content (`<!--[!-->`). The host renders it through this, once, to adopt
   // it where it is. A hook so that client-only bundles carry no hydration.
   adoptFallback?: (render: BlockFn) => Block
   // Re-establishes the owning slot's ambient slot / fragment context around

@@ -154,10 +154,13 @@ import {
   isHydrating,
   isRangeEnd,
   isRecreatedNode,
+  isSingleRootHere,
   locateEndAnchor,
   locateHydrationNode,
+  locateSharedRange,
   nextLogicalSibling,
   queueAfterHydration,
+  releaseSharedRange,
   runWithoutHydration,
   setCurrentHydrationNode,
   trimHydrationBoundary,
@@ -357,6 +360,7 @@ export function resolveFallthroughOwner(
   if (
     isVaporComponent(instance) &&
     (isSingleRoot === true ||
+      isSingleRoot === VaporSingleRoot.WITH_COMMENTS ||
       (isTransitionEnabled && isTransitionChildRoot(insertionParent)) ||
       // the single root of the KeepAlive's own body (a dynamic reference
       // compiles it as SLOT, a literal one as `true`), not content an outlet
@@ -411,12 +415,16 @@ export function createComponent(
   let hydration: ComponentRange | null = null
   let pendingAsyncHydration = false
   if (isHydrating) {
+    // a vdom component, or a runtime wrapper of a user component: a range
+    // at the cursor is the component's inside, for that one to claim
+    const wraps = wrapsComponent(component)
+    const vdom = isInteropEnabled && useVdomInterop(component, appContext)
     hydration = enterComponentHydration(
-      // a vdom component, or a runtime wrapper of a user component: a range
-      // at the cursor is the component's inside, for that one to claim
-      !(isInteropEnabled && useVdomInterop(component, appContext)) &&
-        !wrapsComponent(component),
+      !wraps && !vdom,
+      isSingleRoot === true,
+      wraps,
     )
+    if (vdom && hydration.shared) releaseSharedRange()
   } else {
     resetInsertionState()
   }
@@ -667,6 +675,9 @@ export function createComponent(
         isAsyncWrapper(instance) &&
         component.__asyncHydrate
       ) {
+        // the range the wrapper shares goes back to the component holding
+        // it, as its unit: the deferred render claims it like any other
+        if (hydration!.shared) releaseSharedRange()
         const setup = () => setupComponent(instance, component)
         component.__asyncHydrate(
           currentHydrationNode as Element,
@@ -693,6 +704,12 @@ export function createComponent(
           // range for pending move/removal before hydration advances past it.
           const pendingBlock: Node[] = []
           let node: Node = hydration!.cursor.start!
+          // a shared range is this component's while it is pending: whole,
+          // to be claimed when its render goes back in
+          if (hydration!.shared) {
+            releaseSharedRange()
+            node = currentHydrationNode!
+          }
           const hydrationNext = nextLogicalSibling(node)
           do {
             pendingBlock.push(node)
@@ -735,20 +752,29 @@ export function createComponent(
 }
 
 /**
- * Open a component's SSR range: claim the `{` under the cursor, if `claims`,
- * and its close. A vapor component's server render begins with a node of
- * its own or with a range of its own, so a range at the cursor is the
- * component's, and any other node starts the one unit of a render without
- * a range. Shared by creation and by the deferred render of an async setup,
- * which re-enters the range once setup has settled.
+ * Open a component's SSR range. The server renders several roots in a range,
+ * `<!--[$-->`, and a sole root as it is, so the single root of a component
+ * (`single`: the only node its template renders) renders where that
+ * component does: in the range it claimed, or as the same unit. Any other
+ * component, if it `claims`, takes a range under the cursor with its close,
+ * or else the node there as the one unit of its render.
  */
-function enterComponentHydration(claims: boolean): ComponentRange {
+function enterComponentHydration(
+  claims: boolean,
+  single: boolean,
+  wraps: boolean,
+): ComponentRange {
   const cursor = enterHydrationCursor()
   const start = cursor.start
   let close: Node | null = null
   let unit: Node | null = null
-  if (claims && start) {
-    if (isComment(start, '{')) {
+  single = isSingleRootHere(single)
+  const shared = single && !!locateSharedRange()
+  // its roots are read from the open of the range: the first one can replace
+  // the node after it
+  if (shared) cursor.start = start!.previousSibling
+  if (claims && !shared && start) {
+    if (isComment(start, '[$')) {
       setCurrentHydrationNode(start.nextSibling)
       if ((close = locateEndAnchor(start))) claimAnchor(close)
     } else if (!isClaimedAnchor(start) && !isRangeEnd(start)) {
@@ -759,8 +785,10 @@ function enterComponentHydration(claims: boolean): ComponentRange {
     cursor,
     close,
     unit,
+    single: wraps ? single : undefined,
     depth: 0,
     prev: null,
+    shared,
     instance: null,
   }
   enterComponentRange(hydration)
@@ -1463,7 +1491,8 @@ export function createPlainElement(
   }
 
   // mark single root
-  ;(el as any).$root = isSingleRoot === true
+  ;(el as any).$root =
+    isSingleRoot === true || isSingleRoot === VaporSingleRoot.WITH_COMMENTS
   if ((isKeepAliveEnabled || isTransitionEnabled) && rawProps) {
     const key = resolveSource(rawProps.key)
     if (key !== undefined) (el as any).$key = key
@@ -1671,7 +1700,7 @@ export function mountComponent(
           hydrateNode(
             getBlockFirstNode(pendingBlock)!,
             () => {
-              const hydration = enterComponentHydration(true)
+              const hydration = enterComponentHydration(true, false, false)
               hydration.instance = instance
               try {
                 withDeferredHydrationBoundary(renderAndMount)

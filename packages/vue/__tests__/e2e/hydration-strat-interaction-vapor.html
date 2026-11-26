@@ -1,5 +1,5 @@
 <div>click to hydrate</div>
-<div id="app"><!--{--><button>0</button><!--}--></div>
+<div id="app"><button>0</button></div>
 <style>
   body {
     margin: 0;
@@ -27,7 +27,7 @@
   const isFragment = location.search.includes('?fragment')
   if (isFragment) {
     document.getElementById('app').innerHTML =
-      `<!--{--><!--{--><span>one</span><button>0</button><span>two</span><!--}--><!--}-->`
+      `<!--[$--><span>one</span><button>0</button><span>two</span><!--]-->`
   }
 
   window.isHydrated = false
@@ -68,7 +68,7 @@
       onMounted(() => {
         window.isRootMounted = true
       })
-      return createComponent(AsyncComp)
+      return createComponent(AsyncComp, null, null, true)
     },
   }).mount('#app')
 </script>

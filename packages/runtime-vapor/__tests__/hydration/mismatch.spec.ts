@@ -520,12 +520,12 @@ describe('mismatch handling', () => {
 
     // multiple root mismatch
     const { container } = await mountWithHydration(
-      `<!--{--><div class="foo bar"></div><span></span><!--}-->`,
+      `<!--[$--><div class="foo bar"></div><span></span><!--]-->`,
       `<div :class="data"></div><span/>`,
       ref('foo'),
     )
     expect(container.innerHTML).toBe(
-      '<!--{--><div class="foo bar"></div><span></span><!--}-->',
+      '<!--[$--><div class="foo bar"></div><span></span><!--]-->',
     )
     expect(`Hydration class mismatch`).toHaveBeenWarned()
   })
@@ -563,12 +563,12 @@ describe('mismatch handling', () => {
 
     // multiple root mismatch
     const { container } = await mountWithHydration(
-      `<!--{--><div style="color:red;"></div><span></span><!--}-->`,
+      `<!--[$--><div style="color:red;"></div><span></span><!--]-->`,
       `<div :style="data"></div><span/>`,
       ref({ color: 'green' }),
     )
     expect(container.innerHTML).toBe(
-      '<!--{--><div style="color:red;"></div><span></span><!--}-->',
+      '<!--[$--><div style="color:red;"></div><span></span><!--]-->',
     )
     expect(`Hydration style mismatch`).toHaveBeenWarned()
   })
@@ -604,12 +604,12 @@ describe('mismatch handling', () => {
 
     // mismatch with multiple root
     const { container } = await mountWithHydration(
-      `<!--{--><div style="color:red;"></div><span></span><!--}-->`,
+      `<!--[$--><div style="color:red;"></div><span></span><!--]-->`,
       `<div v-show="data.show" :style="data.style"></div><span/>`,
       ref({ show: false, style: 'color: red' }),
     )
     expect(container.innerHTML).toBe(
-      '<!--{--><div style="color: red; display: none;"></div><span></span><!--}-->',
+      '<!--[$--><div style="color: red; display: none;"></div><span></span><!--]-->',
     )
     expect(`Hydration style mismatch`).toHaveBeenWarned()
   })
@@ -1172,13 +1172,13 @@ describe('mismatch handling', () => {
         data,
       )
       expect(container.innerHTML).toBe(
-        `<!--{--><!--{--><div>one</div><p>two</p><!--}--><span>after</span><!--}-->`,
+        `<!--[$--><!--[$--><div>one</div><p>two</p><!--]--><span>after</span><!--]-->`,
       )
       expect('Hydration').not.toHaveBeenWarned()
       data.value = 'updated'
       await nextTick()
       expect(container.innerHTML).toBe(
-        `<!--{--><!--{--><div>one</div><p>two</p><!--}--><span>updated</span><!--}-->`,
+        `<!--[$--><!--[$--><div>one</div><p>two</p><!--]--><span>updated</span><!--]-->`,
       )
     })
 
@@ -1238,13 +1238,13 @@ describe('mismatch handling', () => {
     )
 
     expect(container.innerHTML).toBe(
-      `<!--{--><section><div><a>child</a></div><span>static</span></section><section>foo</section><!--}-->`,
+      `<!--[$--><section><div><a>child</a></div><span>static</span></section><section>foo</section><!--]-->`,
     )
 
     data.value = 'bar'
     await nextTick()
     expect(container.innerHTML).toBe(
-      `<!--{--><section><div><a>child</a></div><span>static</span></section><section>bar</section><!--}-->`,
+      `<!--[$--><section><div><a>child</a></div><span>static</span></section><section>bar</section><!--]-->`,
     )
   })
 
@@ -1257,13 +1257,13 @@ describe('mismatch handling', () => {
     `)
 
     expect(container.innerHTML).toBe(
-      `<!--{--><section><div><span>child</span></div><span>static</span></section><section>foo</section><!--}-->`,
+      `<!--[$--><section><div><span>child</span></div><span>static</span></section><section>foo</section><!--]-->`,
     )
 
     data.value = 'bar'
     await nextTick()
     expect(container.innerHTML).toBe(
-      `<!--{--><section><div><span>child</span></div><span>static</span></section><section>bar</section><!--}-->`,
+      `<!--[$--><section><div><span>child</span></div><span>static</span></section><section>bar</section><!--]-->`,
     )
   })
 
@@ -1276,13 +1276,13 @@ describe('mismatch handling', () => {
     `)
 
     expect(container.innerHTML).toBe(
-      `<!--{--><section><div><span>child</span></div><span>foo</span></section><section>foo</section><!--}-->`,
+      `<!--[$--><section><div><span>child</span></div><span>foo</span></section><section>foo</section><!--]-->`,
     )
 
     data.value = 'bar'
     await nextTick()
     expect(container.innerHTML).toBe(
-      `<!--{--><section><div><span>child</span></div><span>bar</span></section><section>bar</section><!--}-->`,
+      `<!--[$--><section><div><span>child</span></div><span>bar</span></section><section>bar</section><!--]-->`,
     )
   })
 
@@ -1344,13 +1344,13 @@ describe('mismatch handling', () => {
     `)
 
     expect(container.innerHTML).toBe(
-      `<!--{--><section><div><!--[--><span>child</span><!--]--></div><span>static</span></section><section>foo</section><!--}-->`,
+      `<!--[$--><section><div><!--[--><span>child</span><!--]--></div><span>static</span></section><section>foo</section><!--]-->`,
     )
 
     data.value = 'bar'
     await nextTick()
     expect(container.innerHTML).toBe(
-      `<!--{--><section><div><!--[--><span>child</span><!--]--></div><span>static</span></section><section>bar</section><!--}-->`,
+      `<!--[$--><section><div><!--[--><span>child</span><!--]--></div><span>static</span></section><section>bar</section><!--]-->`,
     )
   })
 
@@ -1372,13 +1372,13 @@ describe('mismatch handling', () => {
     )
 
     expect(container.innerHTML).toBe(
-      `<!--{--><!--{--><section><div><!--[--><a>child</a><!--]--></div><span>static</span></section><section>foo</section><!--}--><!--}-->`,
+      `<!--[$--><section><div><!--[--><a>child</a><!--]--></div><span>static</span></section><section>foo</section><!--]-->`,
     )
 
     data.value = 'bar'
     await nextTick()
     expect(container.innerHTML).toBe(
-      `<!--{--><!--{--><section><div><!--[--><a>child</a><!--]--></div><span>static</span></section><section>bar</section><!--}--><!--}-->`,
+      `<!--[$--><section><div><!--[--><a>child</a><!--]--></div><span>static</span></section><section>bar</section><!--]-->`,
     )
   })
 
@@ -1643,7 +1643,7 @@ describe('data-allow-mismatch', () => {
       )
 
       expect(container.innerHTML).toBe(
-        `<!--{--><div${attr}><!--if--><i>fallback</i><!--slot--><!--dynamic-component--></div><!--}-->`,
+        `<div${attr}><!--if--><i>fallback</i><!--slot--><!--dynamic-component--></div>`,
       )
       if (allowMismatch) {
         expect(`Hydration node mismatch`).not.toHaveBeenWarned()
@@ -2015,7 +2015,7 @@ describe('mismatch recovery renders the rest of the block on the client', () => 
       },
     )
     expect(container.innerHTML).toBe(
-      '<!--{--><!--[1--><my-el><p>in</p></my-el><p>tail</p><!--]--><i>after</i><!--}-->',
+      '<!--[$--><!--[1--><my-el><p>in</p></my-el><p>tail</p><!--]--><i>after</i><!--]-->',
     )
     expect('Hydration node mismatch').toHaveBeenWarnedTimes(1)
   })
@@ -2066,7 +2066,7 @@ describe('mismatch recovery renders the rest of the block on the client', () => 
       { serverData: ref(true) },
     )
     expect(container.innerHTML).toBe(
-      '<!--{--><span data-a="false" class="red">B</span><!--if--><!--}-->',
+      '<span data-a="false" class="red">B</span><!--if-->',
     )
     expect('Hydration node mismatch').toHaveBeenWarnedTimes(1)
   })
@@ -2162,7 +2162,7 @@ describe('mismatch recovery drops the server tail of the block', () => {
     target.innerHTML = `<!--teleport start anchor--><p>P</p><i>I</i><!--teleport anchor-->`
     document.body.appendChild(target)
     const { container } = await mountWithHydration(
-      '<!--{--><!--teleport start--><!--teleport end--><u>after</u><!--}-->',
+      '<!--[$--><!--teleport start--><!--teleport end--><u>after</u><!--]-->',
       `<teleport to="#tail-target">${client}</teleport><u>after</u>`,
       ref({ x: 'x' }),
     )
@@ -2170,7 +2170,7 @@ describe('mismatch recovery drops the server tail of the block', () => {
       '<!--teleport start anchor--><span title="x">A</span><b title="x">B</b><!--teleport anchor-->',
     )
     expect(container.innerHTML).toBe(
-      '<!--{--><!--teleport start--><!--teleport end--><u>after</u><!--}-->',
+      '<!--[$--><!--teleport start--><!--teleport end--><u>after</u><!--]-->',
     )
     expect('Hydration node mismatch').toHaveBeenWarned()
     expect('Hydration children mismatch').toHaveBeenWarned()
@@ -2295,7 +2295,7 @@ describe('static branch root mismatch', () => {
         { serverData: ref({ a: serverA, x: 'after' }) },
       )
       expect(container.innerHTML).toBe(
-        `<!--{--><!--[${open}--><!--C--><!--]--><i>after</i><!--}-->`,
+        `<!--[$--><!--[${open}--><!--C--><!--]--><i>after</i><!--]-->`,
       )
       if (serverA) {
         expect('Hydration').not.toHaveBeenWarned()
@@ -2453,7 +2453,7 @@ describe('a server range is one unit', () => {
       { serverData: ref({ a: false }) },
     )
     expect(container.innerHTML).toBe(
-      '<!--{--><!--{--><div>x</div><!--dynamic-component--><!--}--><!--}-->',
+      '<!--[$--><div>x</div><!--dynamic-component--><!--]-->',
     )
     expect('Hydration node mismatch').toHaveBeenWarnedTimes(1)
     expect('Hydration children mismatch').toHaveBeenWarnedTimes(1)
@@ -2474,7 +2474,7 @@ describe('a server range is one unit', () => {
       { serverData: ref({ a: false, x: 'x' }) },
     )
     expect(container.innerHTML).toBe(
-      '<div><i>before</i><!--{--><div>x</div><!--dynamic-component--><!--}--><i>x</i></div>',
+      '<div><i>before</i><!--[$--><div>x</div><!--dynamic-component--><!--]--><i>x</i></div>',
     )
     expect('Hydration node mismatch').toHaveBeenWarnedTimes(1)
     expect('Hydration children mismatch').toHaveBeenWarnedTimes(1)
@@ -3145,22 +3145,22 @@ describe('a server render with fewer roots', () => {
     [
       'a sibling of the parent element',
       card(),
-      '<!--{--><div class="card"><!--{--><i>x</i><span>y</span><!--}--></div><p>sibling</p><!--}-->',
+      '<!--[$--><div class="card"><!--[$--><i>x</i><span>y</span><!--]--></div><p>sibling</p><!--]-->',
     ],
     [
       'no node after the parent element',
       `<template><div class="card"><component :is="data.client ? components.Client : components.Server" /></div></template>`,
-      '<div class="card"><!--{--><i>x</i><span>y</span><!--}--></div>',
+      '<div class="card"><!--[$--><i>x</i><span>y</span><!--]--></div>',
     ],
     [
       'a sibling in the parent element',
       card('<b>after</b>'),
-      '<!--{--><div class="card"><!--{--><i>x</i><span>y</span><!--}--><b>after</b></div><p>sibling</p><!--}-->',
+      '<!--[$--><div class="card"><!--[$--><i>x</i><span>y</span><!--]--><b>after</b></div><p>sibling</p><!--]-->',
     ],
     [
       'a nested parent element',
       `<template><section><div class="card"><component :is="data.client ? components.Client : components.Server" /></div></section><p>sibling</p></template>`,
-      '<!--{--><section><div class="card"><!--{--><i>x</i><span>y</span><!--}--></div></section><p>sibling</p><!--}-->',
+      '<!--[$--><section><div class="card"><!--[$--><i>x</i><span>y</span><!--]--></div></section><p>sibling</p><!--]-->',
     ],
   ])('extra roots stay in the parent with %s', async (_, code, html) => {
     const { container } = await hydrateRoots(code, '<i>x</i><span>y</span>')
@@ -3191,12 +3191,12 @@ describe('a server render with fewer roots', () => {
     [
       'a nested first root with more roots',
       '<components.More /><span>y</span>',
-      '<!--{--><i>x</i><em>z</em><!--}--><span>y</span>',
+      '<!--[$--><i>x</i><em>z</em><!--]--><span>y</span>',
     ],
     [
       'a kept-alive first root with more roots',
       '<KeepAlive><components.More /></KeepAlive><span>y</span>',
-      '<!--{--><i>x</i><em>z</em><!--}--><span>y</span>',
+      '<!--[$--><i>x</i><em>z</em><!--]--><span>y</span>',
     ],
     [
       'a kept-alive first root of another tag',
@@ -3216,7 +3216,7 @@ describe('a server render with fewer roots', () => {
       },
     )
     expect(container.innerHTML).toBe(
-      `<!--{--><div class="card"><!--{-->${html}<!--}--></div><p>sibling</p><!--}-->`,
+      `<!--[$--><div class="card"><!--[$-->${html}<!--]--></div><p>sibling</p><!--]-->`,
     )
   })
 
@@ -3227,7 +3227,7 @@ describe('a server render with fewer roots', () => {
       { show },
     )
     const html = (shown: boolean) =>
-      `<!--{--><div class="card"><!--{--><i>x</i>${shown ? '<span>y</span>' : ''}<!--if--><!--}--></div><p>sibling</p><!--}-->`
+      `<!--[$--><div class="card"><!--[$--><i>x</i>${shown ? '<span>y</span>' : ''}<!--if--><!--]--></div><p>sibling</p><!--]-->`
     expect(container.innerHTML).toBe(html(show))
     data.value.show = !show
     await nextTick()
@@ -3241,12 +3241,12 @@ describe('a server render with fewer roots', () => {
       { list: [1] },
     )
     expect(container.innerHTML).toBe(
-      '<!--{--><div class="card"><!--{--><i>x</i><!--[--><span>1</span><!--]--><!--}--></div><p>sibling</p><!--}-->',
+      '<!--[$--><div class="card"><!--[$--><i>x</i><!--[--><span>1</span><!--]--><!--]--></div><p>sibling</p><!--]-->',
     )
     data.value.list = [2, 3]
     await nextTick()
     expect(container.innerHTML).toBe(
-      '<!--{--><div class="card"><!--{--><i>x</i><!--[--><span>2</span><span>3</span><!--]--><!--}--></div><p>sibling</p><!--}-->',
+      '<!--[$--><div class="card"><!--[$--><i>x</i><!--[--><span>2</span><span>3</span><!--]--><!--]--></div><p>sibling</p><!--]-->',
     )
   })
 
@@ -3256,7 +3256,7 @@ describe('a server render with fewer roots', () => {
       '<i>x</i><Teleport to="body" disabled><span>t</span></Teleport>',
     )
     expect(container.innerHTML).toBe(
-      '<!--{--><div class="card"><!--{--><i>x</i><!--teleport start--><span>t</span><!--teleport end--><!--}--></div><p>sibling</p><!--}-->',
+      '<!--[$--><div class="card"><!--[$--><i>x</i><!--teleport start--><span>t</span><!--teleport end--><!--]--></div><p>sibling</p><!--]-->',
     )
   })
 
@@ -3287,7 +3287,7 @@ describe('a server render with fewer roots', () => {
         { serverData: ref({ client: false, list: [1] }) },
       )
       const expected = (list: number[]) =>
-        `<div><!--{--><!--dynamic-component-->${html(list)}<!--}--></div>`
+        `<div><!--[$--><!--dynamic-component-->${html(list)}<!--]--></div>`
       expect(container.innerHTML).toBe(expected([1]))
       expect('Hydration children mismatch').toHaveBeenWarnedTimes(1)
       expect('Hydration node mismatch').toHaveBeenWarnedTimes(1)
@@ -3304,7 +3304,7 @@ describe('a server render with fewer roots', () => {
       { show: true, text: 'after' },
     )
     expect(container.innerHTML).toBe(
-      '<!--{--><div class="card"><!--{--><i>x</i><span>y</span><!--}--><b>after</b><!--if--></div><p>sibling</p><!--}-->',
+      '<!--[$--><div class="card"><!--[$--><i>x</i><span>y</span><!--]--><b>after</b><!--if--></div><p>sibling</p><!--]-->',
     )
     const b = container.querySelector('b')!
     data.value.text = 'updated'
@@ -3314,7 +3314,7 @@ describe('a server render with fewer roots', () => {
     data.value.show = false
     await nextTick()
     expect(container.innerHTML).toBe(
-      '<!--{--><div class="card"><!--{--><i>x</i><span>y</span><!--}--><!--if--></div><p>sibling</p><!--}-->',
+      '<!--[$--><div class="card"><!--[$--><i>x</i><span>y</span><!--]--><!--if--></div><p>sibling</p><!--]-->',
     )
   })
 })
@@ -3344,13 +3344,13 @@ describe('a v-for root the server rendered no list for', () => {
   test.each([[[]], [[1]], [[1, 2]]])('rows: %j', async items => {
     const { container, data } = await hydrateList(items)
     expect(container.innerHTML).toBe(
-      `<!--{--><div><!--[-->${rows(items)}<!--]--><!--dynamic-component--></div><button>add</button><!--}-->`,
+      `<!--[$--><div><!--[-->${rows(items)}<!--]--><!--dynamic-component--></div><button>add</button><!--]-->`,
     )
     expect('Hydration node mismatch').toHaveBeenWarnedTimes(1)
     data.value.list = [...items, 3]
     await nextTick()
     expect(container.innerHTML).toBe(
-      `<!--{--><div><!--[-->${rows([...items, 3])}<!--]--><!--dynamic-component--></div><button>add</button><!--}-->`,
+      `<!--[$--><div><!--[-->${rows([...items, 3])}<!--]--><!--dynamic-component--></div><button>add</button><!--]-->`,
     )
   })
 
@@ -3360,13 +3360,13 @@ describe('a v-for root the server rendered no list for', () => {
   ])('with %s', async (_, after, server) => {
     const { container, data } = await hydrateList([1], after, server)
     expect(container.innerHTML).toBe(
-      `<!--{--><div><!--[--><span>1</span><!--]--><!--dynamic-component-->${after}</div><button>add</button><!--}-->`,
+      `<!--[$--><div><!--[--><span>1</span><!--]--><!--dynamic-component-->${after}</div><button>add</button><!--]-->`,
     )
     expect('Hydration node mismatch').toHaveBeenWarnedTimes(1)
     data.value.list = [1, 2]
     await nextTick()
     expect(container.innerHTML).toBe(
-      `<!--{--><div><!--[--><span>1</span><span>2</span><!--]--><!--dynamic-component-->${after}</div><button>add</button><!--}-->`,
+      `<!--[$--><div><!--[--><span>1</span><span>2</span><!--]--><!--dynamic-component-->${after}</div><button>add</button><!--]-->`,
     )
   })
 
@@ -3375,12 +3375,12 @@ describe('a v-for root the server rendered no list for', () => {
     try {
       const { container, data } = await hydrateList([])
       expect(container.innerHTML).toBe(
-        '<!--{--><div><!--[--><!--]--></div><button>add</button><!--}-->',
+        '<!--[$--><div><!--[--><!--]--></div><button>add</button><!--]-->',
       )
       data.value.list = [1, 2]
       await nextTick()
       expect(container.innerHTML).toBe(
-        '<!--{--><div><!--[--><span>1</span><span>2</span><!--]--></div><button>add</button><!--}-->',
+        '<!--[$--><div><!--[--><span>1</span><span>2</span><!--]--></div><button>add</button><!--]-->',
       )
     } finally {
       __DEV__ = true
@@ -3405,7 +3405,7 @@ describe('a teleport the server rendered no teleport for', () => {
       { serverData: ref({ client: false, text: 't' }) },
     )
     expect(container.innerHTML).toBe(
-      '<!--{--><div><!--teleport start--><!--teleport end--><!--dynamic-component--></div><p>sibling</p><!--}-->',
+      '<!--[$--><div><!--teleport start--><!--teleport end--><!--dynamic-component--></div><p>sibling</p><!--]-->',
     )
     expect(target.textContent).toBe('t')
     expect('Hydration node mismatch').toHaveBeenWarnedTimes(1)

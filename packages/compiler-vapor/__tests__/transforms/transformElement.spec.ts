@@ -277,6 +277,32 @@ describe('compiler: element transform', () => {
       expect(code).contains('_createComponent(_ctx.Comp)')
     })
 
+    // a comment is a node the template renders: the component next to it is
+    // the root for fallthrough attrs, not the template's only node
+    test.each([
+      [`<!-- c --><Comp/>`, `(_ctx.Comp, null, null, 3 /* WITH_COMMENTS */)`],
+      [`<Comp/><!-- c -->`, `(_ctx.Comp, null, null, 3 /* WITH_COMMENTS */)`],
+      [
+        `<!-- c --><component :is="foo"/>`,
+        `null, null, 64 /* SINGLE_ROOT_WITH_COMMENTS */)`,
+      ],
+      [
+        `<Comp v-if="ok"/><Comp v-else/><!-- c -->`,
+        `(_ctx.Comp, null, null, 3 /* WITH_COMMENTS */)`,
+      ],
+      // between the branches of a chain it goes into the branch after it
+      [
+        `<Comp v-if="ok"/><!-- c --><Comp v-else/>`,
+        `(_ctx.Comp, null, null, true)`,
+      ],
+    ])('single root component next to a comment: %s', (template, call) => {
+      const { code } = compileWithElementTransform(template, {
+        comments: true,
+        bindingMetadata: { Comp: BindingTypes.SETUP_CONST },
+      })
+      expect(code).contains(call)
+    })
+
     test('static props', () => {
       const { code, ir } = compileWithElementTransform(
         `<Foo id="foo" class="bar" />`,

@@ -92,7 +92,7 @@ function processIfBranch(
 }
 
 /** Whether a branch renders as it is: its sole element or v-for, unwrapped. */
-export function isBareBranch({ children }: IfBranchNode): boolean {
+function isBareBranch({ children }: IfBranchNode): boolean {
   return (
     children.length === 1 &&
     (children[0].type === NodeTypes.ELEMENT ||

@@ -28,12 +28,15 @@ export function ssrProcessTransition(
   // #5351: filter out comment children inside transition
   node.children = node.children.filter(c => c.type !== NodeTypes.COMMENT)
 
+  // a vapor branch of several nodes keeps its range: the client reads it as
+  // the one unit a branch is anywhere else
+  const disableNestedFragments = !context.options.vapor
   const appear = wipMap.get(node)
   if (appear) {
     context.pushStringPart(`<template>`)
-    processChildren(node, context, false, true)
+    processChildren(node, context, false, disableNestedFragments)
     context.pushStringPart(`</template>`)
   } else {
-    processChildren(node, context, false, true)
+    processChildren(node, context, false, disableNestedFragments)
   }
 }
