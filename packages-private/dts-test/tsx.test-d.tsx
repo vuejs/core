@@ -148,3 +148,14 @@ expectType<JSX.Element>(<dialog closedby={undefined} />)
 ;<dialog closedby="invalid" />
 // @ts-expect-error closedby is an enumerated attribute, not a boolean attribute
 ;<dialog closedby />
+
+// async native event handlers
+expectType<JSX.Element>(<button onClick={async () => {}} />)
+expectType<JSX.Element>(<button onClick={async () => 123} />)
+expectType<JSX.Element>(
+  <button
+    onClick={async e => {
+      expectType<MouseEvent>(e)
+    }}
+  />,
+)
