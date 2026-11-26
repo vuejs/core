@@ -2,7 +2,6 @@ import {
   type AppConfig,
   type AsyncComponentInternalOptions,
   type ComponentCustomElementInterface,
-  type ComponentInternalInstance,
   type ComponentInternalOptions,
   type ComponentObjectPropsOptions,
   type ComponentPropsOptions,
@@ -46,7 +45,6 @@ import {
   resolveComponent,
   restoreCurrentInstance,
   setCurrentInstance,
-  setCurrentRenderingInstance,
   startMeasure,
   svgNS,
   unregisterHMR,
@@ -832,8 +830,6 @@ export function setupComponent(
 ): void {
   const prevInstance = setCurrentInstance(instance)
   const prevSub = setActiveSub()
-  // a parent's dev render must not leak into this setup as its instance
-  const prevRendering = __DEV__ ? setCurrentRenderingInstance(null) : null
 
   const setupFn = isFunction(component) ? component : component.setup
   // an inline-compiled setup renders the block itself: a root mismatch inside
@@ -887,7 +883,6 @@ export function setupComponent(
     handleSetupResult(setupResult, component, instance)
   }
 
-  if (__DEV__) setCurrentRenderingInstance(prevRendering)
   setActiveSub(prevSub)
   restoreCurrentInstance(prevInstance)
 }
@@ -1049,30 +1044,23 @@ export function runDevRender(instance: VaporComponentInstance): void {
  * dev only
  */
 function devRender(instance: VaporComponentInstance): void {
-  const prev = setCurrentRenderingInstance(
-    instance as unknown as ComponentInternalInstance,
-  )
-  try {
-    instance.block =
-      (instance.type.render
-        ? callRender(instance.type.render, instance, instance.setupState!)
-        : callWithErrorHandlingOnce(
-            isFunction(instance.type) ? instance.type : instance.type.setup!,
-            instance,
-            ErrorCodes.SETUP_FUNCTION,
-            [
-              instance.props,
-              {
-                slots: instance.slots,
-                attrs: instance.attrs,
-                emit: instance.emit,
-                expose: instance.expose,
-              },
-            ],
-          )) || []
-  } finally {
-    setCurrentRenderingInstance(prev)
-  }
+  instance.block =
+    (instance.type.render
+      ? callRender(instance.type.render, instance, instance.setupState!)
+      : callWithErrorHandlingOnce(
+          isFunction(instance.type) ? instance.type : instance.type.setup!,
+          instance,
+          ErrorCodes.SETUP_FUNCTION,
+          [
+            instance.props,
+            {
+              slots: instance.slots,
+              attrs: instance.attrs,
+              emit: instance.emit,
+              expose: instance.expose,
+            },
+          ],
+        )) || []
 }
 
 export const emptyContext: GenericAppContext = {
