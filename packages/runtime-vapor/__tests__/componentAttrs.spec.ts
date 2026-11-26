@@ -3591,6 +3591,56 @@ describe('attribute fallthrough', () => {
       expect('Extraneous non-props attributes (class)').toHaveBeenWarned()
     })
   })
+
+  // #16420
+  const attrParity = layerParity.bind(null, (el: Element) =>
+    Array.from(el.attributes, a => `${a.name}="${a.value}"`)
+      .sort()
+      .join(' '),
+  )
+
+  test('sets fallthrough attrs on an svg root as attributes', async () => {
+    const seen = await attrParity(
+      {
+        Child: `<template>
+          <svg width="100" height="60" fill="red"></svg>
+        </template>`,
+        App: `<template>
+          <components.Child
+            :width="data.w"
+            :height="data.h"
+            :viewBox="data.box"
+            fill="green"
+          />
+        </template>`,
+      },
+      () => ref({ w: 40, h: 24, box: '0 0 40 24' }),
+      [data => (data.value = { w: 20, h: 12, box: '0 0 20 12' })],
+    )
+    expect(seen).toEqual([
+      'fill="green" height="24" viewBox="0 0 40 24" width="40"',
+      'fill="green" height="12" viewBox="0 0 20 12" width="20"',
+    ])
+  })
+
+  test('removes a fallthrough attr an svg root no longer gets', async () => {
+    const seen = await attrParity(
+      {
+        Child: `<template>
+          <svg></svg>
+        </template>`,
+        App: `<template>
+          <components.Child v-bind="data.attrs" />
+        </template>`,
+      },
+      () => ref<any>({ attrs: { width: 40, viewBox: '0 0 40 24' } }),
+      [
+        data => (data.value.attrs = {}),
+        data => (data.value.attrs = { width: 20 }),
+      ],
+    )
+    expect(seen).toEqual(['viewBox="0 0 40 24" width="40"', '', 'width="20"'])
+  })
 })
 
 describe('checkbox model value bindings', () => {
