@@ -21,6 +21,7 @@ import {
   convertToBlock,
   createCallExpression,
   createConditionalExpression,
+  createFunctionExpression,
   createObjectExpression,
   createObjectProperty,
   createSimpleExpression,
@@ -31,7 +32,7 @@ import { ErrorCodes, createCompilerError } from '../errors'
 import { processExpression } from './transformExpression'
 import { validateBrowserExpression } from '../validateExpression'
 import { cloneLoc } from '../parser'
-import { CREATE_COMMENT, FRAGMENT } from '../runtimeHelpers'
+import { CREATE_COMMENT, FRAGMENT, WITH_MEMO } from '../runtimeHelpers'
 import {
   findDir,
   findProp,
@@ -58,6 +59,15 @@ export const transformIf: NodeTransform = createStructuralDirectiveTransform(
         }
       }
 
+      // v-once on a v-else(-if) renders only that branch once, its condition
+      // stays reactive. The branch is traversed as v-once content either way,
+      // but not memoized when v-once on the v-if already caches the chain.
+      const isOnce =
+        onceBranches.has(branch) && !context.inVOnce && !context.inSSR
+      if (isOnce) {
+        context.inVOnce = true
+      }
+
       // Exit callback. Complete the codegenNode when all children have been
       // transformed.
       return () => {
@@ -74,7 +84,12 @@ export const transformIf: NodeTransform = createStructuralDirectiveTransform(
             branch,
             key + ifNode.branches.length - 1,
             context,
+            isOnce &&
+              ifNode.codegenNode!.type !== NodeTypes.JS_CACHE_EXPRESSION,
           )
+        }
+        if (isOnce) {
+          context.inVOnce = false
         }
       }
     })
@@ -204,9 +219,13 @@ export function processIf(
   }
 }
 
+// v-else(-if) branches whose element has v-once. transformOnce leaves these
+// elements to v-if, which moves them into a branch and renders it once.
+const onceBranches = new WeakSet<IfBranchNode>()
+
 function createIfBranch(node: ElementNode, dir: DirectiveNode): IfBranchNode {
   const isTemplateIf = node.tagType === ElementTypes.TEMPLATE
-  return {
+  const branch: IfBranchNode = {
     type: NodeTypes.IF_BRANCH,
     loc: node.loc,
     condition: dir.name === 'else' ? undefined : dir.exp,
@@ -214,17 +233,36 @@ function createIfBranch(node: ElementNode, dir: DirectiveNode): IfBranchNode {
     userKey: findProp(node, `key`),
     isTemplateIf,
   }
+  if (dir.name !== 'if' && findDir(node, 'once', true)) {
+    onceBranches.add(branch)
+  }
+  return branch
 }
 
 function createCodegenNodeForBranch(
   branch: IfBranchNode,
   keyIndex: number,
   context: TransformContext,
+  isOnce = false,
 ): IfConditionalExpression | BlockCodegenNode | MemoExpression {
+  let childrenCodegenNode = createChildrenCodegenNode(branch, keyIndex, context)
+  if (isOnce) {
+    // render the branch once like v-memo="[]" does: unlike a v-once cache,
+    // the memoized vnode stays tracked by the parent block, which would
+    // otherwise miss a switch between two cached branches
+    childrenCodegenNode = createCallExpression(context.helper(WITH_MEMO), [
+      `[]`,
+      createFunctionExpression(undefined, childrenCodegenNode),
+      `_cache`,
+      String(context.cached.length),
+    ]) as MemoExpression
+    // increment cache count
+    context.cached.push(null)
+  }
   if (branch.condition) {
     return createConditionalExpression(
       branch.condition,
-      createChildrenCodegenNode(branch, keyIndex, context),
+      childrenCodegenNode,
       // make sure to pass in asBlock: true so that the comment node call
       // closes the current block.
       createCallExpression(context.helper(CREATE_COMMENT), [
@@ -233,7 +271,7 @@ function createCodegenNodeForBranch(
       ]),
     ) as IfConditionalExpression
   } else {
-    return createChildrenCodegenNode(branch, keyIndex, context)
+    return childrenCodegenNode
   }
 }
 
