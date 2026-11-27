@@ -1,8 +1,10 @@
 import {
   createApp,
   h,
+  nextTick,
   nodeOps,
   onUnmounted,
+  ref,
   serializeInner,
 } from '@vue/runtime-test'
 
@@ -33,6 +35,41 @@ describe('app unmount errors', () => {
     expect(first).toHaveBeenCalledOnce()
     expect(failing).toHaveBeenCalledTimes(2)
     expect(last).toHaveBeenCalledOnce()
+  })
+
+  test('resumes cleanup after another app takes over the container', async () => {
+    const root = nodeOps.createElement('div')
+    const app = createApp(() => 'A')
+    const label = ref('B')
+    const replacement = createApp(() => label.value)
+    const mountReplacement = vi.fn(() => replacement.mount(root))
+    const error = new Error('cleanup failed')
+    const failing = vi.fn().mockImplementationOnce(() => {
+      throw error
+    })
+    const last = vi.fn()
+    app.onUnmount(mountReplacement)
+    app.onUnmount(failing)
+    app.onUnmount(last)
+    app.mount(root)
+
+    expect(() => app.unmount()).toThrow(error)
+    expect('already an app instance mounted').toHaveBeenWarned()
+    expect(
+      'Unhandled error during execution of app unmount cleanup',
+    ).toHaveBeenWarned()
+    expect(serializeInner(root)).toBe('B')
+    expect(last).not.toHaveBeenCalled()
+
+    app.unmount()
+    expect(mountReplacement).toHaveBeenCalledOnce()
+    expect(failing).toHaveBeenCalledTimes(2)
+    expect(last).toHaveBeenCalledOnce()
+    label.value = 'updated'
+    await nextTick()
+    expect(serializeInner(root)).toBe('updated')
+    replacement.unmount()
+    expect(serializeInner(root)).toBe('')
   })
 
   test('keeps cleanup consumed when the renderer retries teardown', () => {

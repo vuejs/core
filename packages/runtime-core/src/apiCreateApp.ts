@@ -462,6 +462,7 @@ export function createAppAPI<HostElement>(
           mountState = AppMountState.UNMOUNTED
           context.isUnmounting = true
           let completed = 0
+          let cleanupFinished = false
           try {
             while (completed < pluginCleanupFns.length) {
               callWithAsyncErrorHandling(
@@ -471,6 +472,7 @@ export function createAppAPI<HostElement>(
               )
               completed++
             }
+            cleanupFinished = true
             // A cleanup can mount another app into the same container.
             const root = container._vnode
             if (root && root.appContext === context) {
@@ -482,7 +484,7 @@ export function createAppAPI<HostElement>(
             pluginCleanupFns.splice(0, completed)
             // An unmounted hook can throw after the renderer clears the root.
             const root = container._vnode
-            if (root && root.appContext === context) {
+            if (!cleanupFinished || (root && root.appContext === context)) {
               mountState = AppMountState.MOUNTED
             } else {
               if (__DEV__ || __FEATURE_PROD_DEVTOOLS__) {
