@@ -1,6 +1,7 @@
 import {
   type CallExpression,
   type CompilerOptions,
+  type DirectiveNode,
   type ElementNode,
   ErrorCodes,
   NodeTypes,
@@ -157,6 +158,18 @@ describe('compiler: transform v-bind', () => {
         },
       ],
     })
+  })
+
+  test('dynamic arg with nested brackets', () => {
+    const onError = vi.fn()
+    const node = parse(`<div :[items[index].prop]="value"/>`, {
+      prefixIdentifiers: true,
+      onError,
+    }).children[0] as ElementNode
+    const directive = node.props[0] as DirectiveNode
+
+    expect(onError).not.toHaveBeenCalled()
+    expect(directive.arg).toMatchObject({ content: 'items[index].prop' })
   })
 
   test('should error if empty expression', () => {
