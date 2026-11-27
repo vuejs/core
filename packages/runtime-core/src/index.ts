@@ -224,9 +224,9 @@ export type {
   DebuggerEventExtraInfo,
   Raw,
   Reactive,
+  MultiWatchSources,
 } from '@vue/reactivity'
 export type {
-  MultiWatchSources,
   WatchEffect,
   WatchOptions,
   WatchEffectOptions as WatchOptionsBase,
