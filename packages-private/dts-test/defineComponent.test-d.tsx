@@ -910,6 +910,8 @@ describe('compatibility w/ createApp', () => {
     props: { foo: String },
   })
   createApp(comp2).mount('#hello')
+  // @ts-expect-error `bar` does not exist in type `Props`
+  createApp(comp2, { bar: 'a' }).mount('#hello')
 
   const comp3 = defineComponent({
     setup() {
