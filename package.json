@@ -1,7 +1,7 @@
 {
   "private": true,
   "version": "3.5.46",
-  "packageManager": "pnpm@12.21.0",
+  "packageManager": "pnpm@12.23.0",
   "type": "module",
   "scripts": {
     "dev": "node scripts/dev.js",
@@ -71,7 +71,7 @@
     "@rollup/plugin-replace": "5.0.4",
     "@swc/core": "^1.16.22",
     "@types/hash-sum": "^1.0.2",
-    "@types/node": "^26.6.6",
+    "@types/node": "^26.6.11",
     "@types/serve-handler": "^6.1.4",
     "@vitest/browser-playwright": "4.1.11",
     "@vitest/coverage-v8": "^4.1.11",
@@ -91,7 +91,7 @@
     "magic-string": "^0.30.21",
     "markdown-table": "^3.1.0",
     "marked": "13.0.3",
-    "npm-run-all2": "^9.0.4",
+    "npm-run-all2": "^9.1.0",
     "picocolors": "^1.1.1",
     "playwright": "^1.65.1",
     "prettier": "^3.10.1",
