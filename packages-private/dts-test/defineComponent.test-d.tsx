@@ -420,6 +420,53 @@ describe('type inference w/ array props declaration', () => {
   ;<MyComponent other="other" />
 })
 
+describe('Options API computed previous values (#13103)', () => {
+  const Comp = defineComponent({
+    data() {
+      return { count: 1 }
+    },
+    computed: {
+      readonly(_vm: { count: number }, previous: number | undefined): number {
+        expectType<number>(this.count)
+        expectType<IsAny<typeof this.count>>(false)
+        return this.count <= 3 ? this.count : (previous ?? 0)
+      },
+      writable: {
+        get(_vm: { count: number }, previous: number | undefined): number {
+          expectType<number>(this.count)
+          expectType<IsAny<typeof this.count>>(false)
+          expectType<number>(this.readonly)
+          expectType<IsAny<typeof this.readonly>>(false)
+          return this.count <= 3 ? this.count : (previous ?? 0)
+        },
+        set(value: number) {
+          expectType<number>(this.count)
+          this.count = value
+        },
+      },
+      arrow: (vm: { count: number }, previous: number | undefined): number =>
+        vm.count <= 3 ? vm.count : (previous ?? 0),
+    },
+    created() {
+      expectType<number>(this.readonly)
+      expectType<IsAny<typeof this.readonly>>(false)
+      expectType<number>(this.writable)
+      expectType<IsAny<typeof this.writable>>(false)
+      expectType<number>(this.arrow)
+      expectType<IsAny<typeof this.arrow>>(false)
+      this.writable = 2
+    },
+  })
+
+  const instance = new Comp()
+  expectType<number>(instance.readonly)
+  expectType<IsAny<typeof instance.readonly>>(false)
+  expectType<number>(instance.writable)
+  expectType<IsAny<typeof instance.writable>>(false)
+  expectType<number>(instance.arrow)
+  expectType<IsAny<typeof instance.arrow>>(false)
+})
+
 describe('type inference w/ options API', () => {
   defineComponent({
     props: { a: Number },
