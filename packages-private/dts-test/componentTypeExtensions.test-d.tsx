@@ -20,6 +20,8 @@ declare module 'vue' {
 
   interface ComponentCustomProps {
     custom?: number
+    baz?: string
+    onClick?: (payload: MouseEvent) => void
   }
 }
 
@@ -29,6 +31,12 @@ export const Custom = defineComponent({
     baz: {
       type: Number,
       required: true,
+    },
+  },
+
+  emits: {
+    click(payload: number) {
+      return typeof payload === 'number'
     },
   },
 
@@ -54,12 +62,18 @@ export const Custom = defineComponent({
   },
 })
 
+const Empty = defineComponent({})
+
 expectType<Directive>(Custom.directives!.test)
 expectType<DefineComponent<{}>>(Custom.components!.RouterView)
 expectType<JSX.Element>(<Custom baz={1} />)
 expectType<JSX.Element>(<Custom custom={1} baz={1} />)
 expectType<JSX.Element>(<Custom bar="bar" baz={1} />)
 expectType<JSX.Element>(<Custom ref={''} bar="bar" baz={1} />)
+expectType<JSX.Element>(<Custom baz={1} onClick={(e: number) => {}} />)
+expectType<JSX.Element>(<Empty />)
+expectType<JSX.Element>(<Empty custom={1} baz={''} />)
+expectType<JSX.Element>(<Empty onClick={(e: MouseEvent) => {}} />)
 
 // @ts-expect-error
 expectType<JSX.Element>(<Custom />)
@@ -71,3 +85,9 @@ expectType<JSX.Element>(<Custom />)
 ;<Custom baz={1} notExist={1} />
 // @ts-expect-error
 ;<Custom baz={1} custom="custom" />
+// @ts-expect-error
+;<Custom baz={1} onClick={(e: MouseEvent) => {}} />
+// @ts-expect-error
+;<Empty baz={1} />
+// @ts-expect-error
+;<Empty onClick={(e: number) => {}} />
