@@ -750,7 +750,7 @@ describe('compiler: transform slot', () => {
       const { code } = compileWithSlots(`<Comp><slot/></Comp>`)
       expect(code).toContain(slotNonStableFlag)
       expect(code).toContain(
-        `_createSlot("default", null, null, ${forwardedFlag})`,
+        `_createPlainSlot("default", null, ${forwardedFlag})`,
       )
       expect(code).toMatchSnapshot()
     })
@@ -817,7 +817,7 @@ describe('compiler: transform slot', () => {
         `<Comp><slot><slot/><span/></slot></Comp>`,
       )
 
-      expect(code).toMatch(/const n\d+ = _createSlot\(\)/)
+      expect(code).toMatch(/const n\d+ = _createPlainSlot\(\)/)
     })
 
     test('root slot outlet with dynamic key tracks the keyed fragment and outlet', () => {
@@ -827,7 +827,7 @@ describe('compiler: transform slot', () => {
 
       // the key is also a slot prop, like vdom
       expect(code).toContain(
-        `_createSlot("default", { key: () => (_ctx.key) }, null, ${forwardedFlag})`,
+        `_createPlainSlot("default", { key: () => (_ctx.key) }, ${forwardedFlag})`,
       )
       expect(code).toMatch(keyedSlotRootCallRE)
     })
@@ -838,7 +838,7 @@ describe('compiler: transform slot', () => {
       })
       expect(code).toContain('_createKeyedFragment(() => (_ctx.id)')
       expect(code).toMatch(
-        /_createSlot\("default", \{\s+key: \(\) => \(_ctx\.id\),\s+x: 1\s+\}\)/,
+        /_createPlainSlot\("default", \{\s+key: \(\) => \(_ctx\.id\),\s+x: 1\s+\}\)/,
       )
 
       // keyed by v-for: no keyed fragment of its own
@@ -848,7 +848,7 @@ describe('compiler: transform slot', () => {
       )
       expect(forCode).not.toContain('_createKeyedFragment(')
       expect(forCode).toContain(
-        '_createSlot("default", { key: () => (_for_item0.value) })',
+        '_createPlainSlot("default", { key: () => (_for_item0.value) })',
       )
     })
 

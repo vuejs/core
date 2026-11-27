@@ -222,7 +222,11 @@ import {
 } from './fragment'
 import { SLOT_FLATTENED, SLOT_OUTLET, VDOM } from './fragmentFlags'
 import { setElementScopeIds } from './dom/scopeIdStamp'
-import { type SlotBoundaryContext, withSlotBoundary } from './slotBoundary'
+import {
+  type SlotBoundaryContext,
+  enableSlotFallback,
+  withSlotBoundary,
+} from './slotBoundary'
 import {
   type SlotResolutionState,
   clearSlotFallback,
@@ -3698,6 +3702,7 @@ export const vaporInteropPlugin: Plugin = app => {
     enableSuspense()
   }
   setInteropEnabled()
+  enableSlotFallback()
   setVaporInteropEnabled()
   setPublishInteropScopeIds(publishVaporScopeIds)
   app._context.vapor = vaporInteropImpl

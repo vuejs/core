@@ -410,11 +410,11 @@ export function render(_ctx) {
 `;
 
 exports[`compiler: v-for > v-for on slot outlet marks fragment block 1`] = `
-"import { createSlot as _createSlot, createFor as _createFor } from 'vue';
+"import { createPlainSlot as _createPlainSlot, createFor as _createFor } from 'vue';
 
 export function render(_ctx) {
   const n0 = _createFor(() => (_ctx.list), (_for_item0) => {
-    const n2 = _createSlot(() => (_for_item0.value.name), { key: () => (_for_item0.value.id) })
+    const n2 = _createPlainSlot(() => (_for_item0.value.name), { key: () => (_for_item0.value.id) })
     return n2
   }, (item) => (item.id), 16 /* IS_FRAGMENT */)
   return n0

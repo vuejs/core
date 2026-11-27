@@ -41,6 +41,15 @@ export interface SlotBoundaryContext {
   fallthroughOwner?: FallthroughOwner
 }
 
+// Set by createSlot and the vdom interop plugin. The compiler emits
+// createPlainSlot for an outlet without fallback content, so an application
+// without one leaves it false and the fallback resolution tree-shakes out.
+export let isSlotFallbackEnabled = false
+
+export function enableSlotFallback(): void {
+  isSlotFallbackEnabled = true
+}
+
 export function withSlotBoundary<R>(
   boundary: SlotBoundaryContext | null,
   fn: () => R,

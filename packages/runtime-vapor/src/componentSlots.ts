@@ -71,6 +71,7 @@ import { interopSlotsKey, isInteropEnabled } from './vdomInteropState'
 import { isTransitionEnabled, isVaporTransition } from './transition'
 import { isAsyncComponentEnabled } from './asyncComponentState'
 import { renderWithSlotScopeIds } from './scopeId'
+import { enableSlotFallback, isSlotFallbackEnabled } from './slotBoundary'
 import { setElementScopeIds } from './dom/scopeIdStamp'
 import { hydrateSlotContent } from './dom/hydrateFragment'
 import { withOnce } from './once'
@@ -376,6 +377,28 @@ const slotPropsProxyHandlers: ProxyHandler<RawProps> = {
 }
 
 export function createSlot(
+  name?: string | (() => string),
+  rawProps?: LooseRawProps | null,
+  fallback?: VaporSlot,
+  flags?: number,
+): Block {
+  enableSlotFallback()
+  return baseCreateSlot(name, rawProps, fallback, flags)
+}
+
+/**
+ * A slot outlet without fallback content. It needs a SlotFragment only as
+ * the forwarded root of an outlet that has one.
+ */
+export function createPlainSlot(
+  name?: string | (() => string),
+  rawProps?: LooseRawProps | null,
+  flags?: number,
+): Block {
+  return baseCreateSlot(name, rawProps, undefined, flags)
+}
+
+function baseCreateSlot(
   name: string | (() => string) = 'default',
   rawProps?: LooseRawProps | null,
   fallback?: VaporSlot,
@@ -480,6 +503,7 @@ export function createSlot(
     // enclosing outlet through its SlotFragment; the rest is static analysis
     // of local fallback reachability, boundary or not.
     const needsSlotFragment =
+      isSlotFallbackEnabled &&
       !isCustomElementSlot &&
       (!!boundary || shouldUseSlotFragment(rawSlots, name, fallback))
     // Fast path: DynamicFragment is enough, but hydration still enters the

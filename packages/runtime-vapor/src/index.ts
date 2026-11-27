@@ -33,7 +33,7 @@ export {
   type VaporComponentInstance,
 } from './component'
 export { renderEffect } from './renderEffect'
-export { createSlot } from './componentSlots'
+export { createPlainSlot, createSlot } from './componentSlots'
 export { withOnce } from './once'
 export { template } from './dom/template'
 export { createTextNode, child, nthChild, next, txt } from './dom/node'
