@@ -54,6 +54,28 @@ return function render(_ctx, _cache) {
 }"
 `;
 
+exports[`compiler: v-if > codegen > template v-else(-if) w/ nested template v-if chains 1`] = `
+"const _Vue = Vue
+
+return function render(_ctx, _cache) {
+  with (_ctx) {
+    const { openBlock: _openBlock, createElementBlock: _createElementBlock, createCommentVNode: _createCommentVNode } = _Vue
+
+    return a
+      ? (_openBlock(), _createElementBlock("div", { key: 0 }))
+      : b
+        ? c
+            ? d
+                ? (_openBlock(), _createElementBlock("i", { key: "1-0-0" }))
+                : (_openBlock(), _createElementBlock("b", { key: "1-0-1" }))
+            : (_openBlock(), _createElementBlock("u", { key: "1-1" }))
+        : e
+          ? (_openBlock(), _createElementBlock("p", { key: "2-0" }))
+          : _createCommentVNode("v-if", true)
+  }
+}"
+`;
+
 exports[`compiler: v-if > codegen > template v-if 1`] = `
 "const _Vue = Vue
 
@@ -82,6 +104,22 @@ return function render(_ctx, _cache) {
     return ok
       ? _renderSlot($slots, "default", {}, undefined, undefined, 0)
       : _createCommentVNode("v-if", true)
+  }
+}"
+`;
+
+exports[`compiler: v-if > codegen > template v-if w/ single nested v-if chain 1`] = `
+"const _Vue = Vue
+
+return function render(_ctx, _cache) {
+  with (_ctx) {
+    const { openBlock: _openBlock, createElementBlock: _createElementBlock, createCommentVNode: _createCommentVNode } = _Vue
+
+    return ok
+      ? orNot
+          ? (_openBlock(), _createElementBlock("div", { key: "0-0" }))
+          : (_openBlock(), _createElementBlock("p", { key: "0-1" }))
+      : (_openBlock(), _createElementBlock("span", { key: 1 }))
   }
 }"
 `;
