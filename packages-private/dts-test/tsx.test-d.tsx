@@ -7,7 +7,7 @@ import {
   type VNode,
   useAttrs,
 } from 'vue'
-import { expectType } from './utils'
+import { expectAssignable, expectType, type IsUnion } from './utils'
 
 expectType<VNode>(<div />)
 expectType<JSX.Element>(<div />)
@@ -101,6 +101,31 @@ expectType<JSX.Element>(
     }}
   />,
 )
+
+// allow promise and sync expression return types for native event listeners (#16337)
+expectType<true>(
+  {} as IsUnion<NonNullable<JSX.IntrinsicElements['button']['onClick']>>,
+)
+expectAssignable<
+  Extract<
+    NonNullable<JSX.IntrinsicElements['button']['onClick']>,
+    (payload: MouseEvent) => Promise<unknown>
+  >
+>(async (_e: MouseEvent) => {})
+expectType<JSX.Element>(
+  <button
+    onClick={async e => {
+      expectType<MouseEvent>(e)
+    }}
+  />,
+)
+expectType<JSX.Element>(<button onClick={async () => 1} />)
+expectType<JSX.Element>(<button onClick={() => 1} />)
+const asyncClickHandler: (payload: MouseEvent) => Promise<void> =
+  async () => {}
+expectType<JSX.Element>(<button onClick={asyncClickHandler} />)
+// @ts-expect-error wrong event payload type
+;<button onClick={async (_e: KeyboardEvent) => {}} />
 
 // built-in types
 expectType<JSX.Element>(<Fragment />)
