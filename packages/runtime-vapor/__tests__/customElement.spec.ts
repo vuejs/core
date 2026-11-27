@@ -1,3 +1,4 @@
+import { enableScopeId } from '../src/scopeIdState'
 import type { MockedFunction } from 'vite-plus/test'
 import type { VaporElement } from '../src/apiDefineCustomElement'
 import { compile, compileToVaporRender } from './_utils'
@@ -44,6 +45,9 @@ import {
 } from '../src'
 
 declare var __VUE_HMR_RUNTIME__: HMRRuntime
+
+// the compiler emits this for an SFC with scoped styles
+enableScopeId()
 
 describe('defineVaporCustomElement', () => {
   const container = document.createElement('div')

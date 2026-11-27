@@ -46,6 +46,7 @@ import {
   withRenderContext,
 } from './renderContext'
 import { applyScopeIdOwners } from './scopeId'
+import { isScopeIdEnabled } from './scopeIdState'
 import type { SlotBoundaryContext } from './slotBoundary'
 import type { InteropDirsOwner } from './vdomInterop'
 import {
@@ -631,7 +632,9 @@ export class DynamicFragment extends RenderContextFragment {
 
       // Root-only inherited ids must land on the new branch's effective root
       // before insertion so custom element callbacks observe them.
-      if (this.scopeIdOwners) applyScopeIdOwners(this.scopeIdOwners)
+      if (isScopeIdEnabled && this.scopeIdOwners) {
+        applyScopeIdOwners(this.scopeIdOwners)
+      }
 
       if (parent) {
         // a branch rendered under a pending boundary enters on its reveal

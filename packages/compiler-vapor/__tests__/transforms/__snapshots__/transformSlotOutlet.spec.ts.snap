@@ -195,7 +195,8 @@ export function render(_ctx) {
 `;
 
 exports[`compiler: transform <slot> outlets > slot outlet with scopeId and slotted=false should generate noSlotted 1`] = `
-"import { createSlot as _createSlot } from 'vue';
+"import { createSlot as _createSlot, enableScopeId as _enableScopeId } from 'vue';
+_enableScopeId()
 
 export function render(_ctx) {
   const n0 = _createSlot("default", null, null, 1 /* NO_SLOTTED */)
@@ -204,7 +205,8 @@ export function render(_ctx) {
 `;
 
 exports[`compiler: transform <slot> outlets > slot outlet with scopeId and slotted=true should not generate noSlotted 1`] = `
-"import { createSlot as _createSlot } from 'vue';
+"import { createSlot as _createSlot, enableScopeId as _enableScopeId } from 'vue';
+_enableScopeId()
 
 export function render(_ctx) {
   const n0 = _createSlot()

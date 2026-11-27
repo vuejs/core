@@ -71,6 +71,7 @@ import { interopSlotsKey, isInteropEnabled } from './vdomInteropState'
 import { isTransitionEnabled, isVaporTransition } from './transition'
 import { isAsyncComponentEnabled } from './asyncComponentState'
 import { renderWithSlotScopeIds } from './scopeId'
+import { isScopeIdEnabled } from './scopeIdState'
 import { setElementScopeIds } from './dom/scopeIdStamp'
 import { hydrateSlotContent } from './dom/hydrateFragment'
 import { withOnce } from './once'
@@ -398,6 +399,7 @@ export function createSlot(
       ? SLOT_FLATTENED
       : 0
   const scopeId =
+    isScopeIdEnabled &&
     !(flags & VaporSlotFlags.NO_SLOTTED) &&
     !contentRoot &&
     instance.type.__scopeId
@@ -587,10 +589,11 @@ export function createSlot(
         cachedSlot = slot
         // Re-establishes the outlet cell (interop may invoke the slot outside
         // the fragment's render seam) and catches up out-of-window content.
-        cachedBoundSlot = () =>
-          renderWithSlotScopeIds(slotScopeIds, () =>
-            once ? withOnce(() => slot(slotProps)) : slot(slotProps),
-          )
+        const render = () =>
+          once ? withOnce(() => slot(slotProps)) : slot(slotProps)
+        cachedBoundSlot = isScopeIdEnabled
+          ? () => renderWithSlotScopeIds(slotScopeIds, render)
+          : render
       }
       return cachedBoundSlot!
     }

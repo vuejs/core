@@ -1,3 +1,4 @@
+import { enableScopeId } from '../../src/scopeIdState'
 import { createVaporSSRApp } from '../../src'
 import { nextTick, reactive, ref } from '@vue/runtime-dom'
 import { VueServerRenderer, compile, runtimeDom, runtimeVapor } from '../_utils'
@@ -10,6 +11,9 @@ import {
 } from './_helpers'
 
 setupHydrationTest()
+
+// the compiler emits this for an SFC with scoped styles
+enableScopeId()
 
 describe('Vapor Mode hydration', () => {
   describe('slots', () => {

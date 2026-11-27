@@ -174,6 +174,7 @@ import type { KeepAliveInstance } from './components/KeepAlive'
 import type { TeleportFragment } from './components/Teleport'
 import { getKeepAliveContext, isKeepAliveEnabled } from './keepAlive'
 import { isAsyncComponentEnabled } from './asyncComponentState'
+import { isScopeIdEnabled } from './scopeIdState'
 import {
   insertionAnchor,
   insertionParent,
@@ -1310,8 +1311,10 @@ export class VaporComponentInstance<
         : EMPTY_OBJ
     ) as Slots
 
-    this.scopeId = getCurrentScopeId()
-    this.slotScopeIds = currentRenderContext.slotScopeIds
+    if (isScopeIdEnabled) {
+      this.scopeId = getCurrentScopeId()
+      this.slotScopeIds = currentRenderContext.slotScopeIds
+    }
 
     // apply custom element special handling
     if (ce) {
@@ -1509,7 +1512,7 @@ export function createPlainElement(
 
   // Adopted elements already carry SSR scope attrs; mismatch-recreated ones
   // were client-built and stamp like a client render.
-  if (!isHydrating || isRecreatedNode(el)) {
+  if (isScopeIdEnabled && (!isHydrating || isRecreatedNode(el))) {
     const scopeId = getCurrentScopeId()
     if (scopeId) el.setAttribute(scopeId, '')
     const slotScopeIds = currentRenderContext.slotScopeIds
@@ -1806,12 +1809,12 @@ export function mountComponent(
   if (!isHydrating) {
     // Root-only ids (stamp + interop carriers) land before insertion; see
     // applyRootScopeIds for the delegation rule.
-    applyComponentScopeIds(instance)
+    if (isScopeIdEnabled) applyComponentScopeIds(instance)
     // pass the owning suspense so enter transitions are skipped while
     // mounting into a pending suspense's hidden container (vdom parity);
     // the enter runs when the resolved branch is moved into the real tree.
     insert(instance.block, parent, anchor, instance.suspense)
-  } else {
+  } else if (isScopeIdEnabled) {
     hydrateComponentScopeIds(instance)
   }
   if (instance.m) {

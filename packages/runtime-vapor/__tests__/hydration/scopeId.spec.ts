@@ -1,3 +1,4 @@
+import { enableScopeId } from '../../src/scopeIdState'
 import {
   createComponent,
   createPlainElement,
@@ -28,6 +29,9 @@ import {
 } from './_helpers'
 
 setupHydrationTest()
+
+// the compiler emits this for an SFC with scoped styles
+enableScopeId()
 
 describe('scopeId hydration writes', () => {
   test('writes inherited scopeId to a recreated hydration root', () => {
