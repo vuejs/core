@@ -193,4 +193,21 @@ describe(`runtime-dom: style patching`, () => {
     patchProp(el, 'style', 'color:red', { fontSize: '12px' })
     expect(el.style.cssText.replace(/\s/g, '')).toBe('font-size:12px;')
   })
+
+  it('should clear only the declarations from the previous css string', () => {
+    const el = document.createElement('div')
+    const prev = '/* palette */ color: red; --Theme: "text; margin: 2px;";'
+    patchProp(el, 'style', null, prev)
+    expect(el.style.color).toBe('red')
+    expect(el.style.getPropertyValue('--Theme')).toBe('"text; margin: 2px;"')
+    el.style.margin = '1px'
+    el.style.setProperty('--theme', 'blue')
+
+    patchProp(el, 'style', prev, { fontWeight: '700' })
+    expect(el.style.color).toBe('')
+    expect(el.style.getPropertyValue('--Theme')).toBe('')
+    expect(el.style.fontWeight).toBe('700')
+    expect(el.style.margin).toBe('1px')
+    expect(el.style.getPropertyValue('--theme')).toBe('blue')
+  })
 })
