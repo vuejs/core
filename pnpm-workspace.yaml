@@ -8,7 +8,7 @@ catalog:
   'entities': '^7.0.1'
   'estree-walker': ^2.0.2
   'magic-string': ^0.30.21
-  'source-map-js': ^1.2.3
+  'source-map-js': ^1.2.4
   'vite': ^8.3.8
   '@vitejs/plugin-vue': ^6.0.11
 
