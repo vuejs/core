@@ -167,6 +167,17 @@ describe('vnode', () => {
       const vnode = createVNode('p', { class: { foo: 'foo', baz: 'baz' } })
       expect(vnode.props).toMatchObject({ class: 'foo baz' })
     })
+
+    test('falsy non-string values are normalized to no class', () => {
+      // `false` / `0` should not end up as the literal "false" / "0" class:
+      // SSR (`ssrRenderClass`) and the hydration mismatch check
+      // (`propHasMismatch`) both pass the value through `normalizeClass`,
+      // which yields '' for falsy input - e.g. `h('div', { class: cond && 'active' })`.
+      const vnode = createVNode('p', { class: false })
+      expect(vnode.props).toMatchObject({ class: '' })
+      const vnode2 = createVNode('p', { class: 0 })
+      expect(vnode2.props).toMatchObject({ class: '' })
+    })
   })
 
   describe('style normalization', () => {
