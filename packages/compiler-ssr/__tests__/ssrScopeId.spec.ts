@@ -140,7 +140,7 @@ describe('ssr: scopeId', () => {
       import { ssrRenderAttrs as _ssrRenderAttrs } from "vue/server-renderer"
 
       export function ssrRender(_ctx, _push, _parent, _attrs) {
-        _push(\`<div\${_ssrRenderAttrs(_mergeProps({ class: "red" }, _attrs))} data-v-xxxxxxx><span data-v-xxxxxxx>hello</span></div>\`)
+        _push(\`<div\${_ssrRenderAttrs(_mergeProps({ class: "red" }, _attrs), "div", true)} data-v-xxxxxxx><span data-v-xxxxxxx>hello</span></div>\`)
       }"
     `)
 
@@ -161,7 +161,7 @@ describe('ssr: scopeId', () => {
         _push(\`<\${
           _ctx.someTag
         }\${
-          _ssrRenderAttrs(_mergeProps({ class: "red" }, _attrs))
+          _ssrRenderAttrs(_mergeProps({ class: "red" }, _attrs), _ctx.someTag, true)
         } data-v-xxxxxxx><span data-v-xxxxxxx>hello</span></\${
           _ctx.someTag
         }>\`)
