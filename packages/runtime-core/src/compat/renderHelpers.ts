@@ -3,6 +3,7 @@ import {
   extend,
   hyphenate,
   isArray,
+  isFunction,
   isObject,
   isReservedProp,
   normalizeClass,
@@ -69,14 +70,19 @@ export function legacyBindObjectListeners(props: any, listeners: any): Data {
 export function legacyRenderSlot(
   instance: ComponentInternalInstance,
   name: string,
-  fallback?: VNode[],
+  fallback?: VNode[] | (() => VNode[]),
   props?: any,
   bindObject?: any,
 ): VNode {
   if (bindObject) {
     props = mergeProps(props, bindObject)
   }
-  return renderSlot(instance.slots, name, props, fallback && (() => fallback))
+  return renderSlot(
+    instance.slots,
+    name,
+    props,
+    fallback && (isFunction(fallback) ? fallback : () => fallback),
+  )
 }
 
 type LegacyScopedSlotsData = Array<

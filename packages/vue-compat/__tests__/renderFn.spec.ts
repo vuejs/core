@@ -215,6 +215,18 @@ describe('compat: render function', () => {
     expect(slots.bar()).toMatchObject([{ children: 'two' }])
   })
 
+  // #9712
+  test('slot fallback as a function', () => {
+    const vm = new Vue({
+      render(this: any) {
+        return this._c('div', [
+          this._t('default', () => [this._c('span', 'fallback')]),
+        ])
+      },
+    }).$mount()
+    expect(vm.$el.outerHTML).toBe(`<div><span>fallback</span></div>`)
+  })
+
   test('in component usage', () => {
     toggleDeprecationWarning(true)
 
