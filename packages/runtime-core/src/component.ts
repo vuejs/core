@@ -246,6 +246,14 @@ export interface ClassComponent {
   __vccOpts: ComponentOptions
 }
 
+// A general component type has no slot contract, so it must also accept
+// components whose context requires specific slots.
+type ComponentFunction<T extends (...args: any[]) => any> = Omit<T, never> &
+  ((
+    props: Parameters<T>[0],
+    ctx: Omit<Parameters<T>[1], 'slots'> & { slots: any },
+  ) => ReturnType<T>)
+
 /**
  * Concrete component type matches its actual value: it's either an options
  * object, or a function. Use this where the code expects to work with actual
@@ -262,7 +270,11 @@ export type ConcreteComponent<
   S extends Record<string, any> = any,
 > =
   | ComponentOptions<Props, RawBindings, D, C, M>
-  | FunctionalComponent<Props, E, S>
+  | IfAny<
+      S,
+      ComponentFunction<FunctionalComponent<Props, E, S>>,
+      FunctionalComponent<Props, E, S>
+    >
 
 /**
  * A type used in public APIs where a component type is expected.
