@@ -957,6 +957,55 @@ describe('vModel', () => {
     expect(bar.checked).toEqual(true)
   })
 
+  it('v-model.number should work with radio', async () => {
+    const component = defineComponent({
+      data() {
+        return { value: null as number | null }
+      },
+      render() {
+        return [
+          withVModel(
+            h('input', {
+              type: 'radio',
+              class: 'one',
+              value: '1',
+              'onUpdate:modelValue': setValue.bind(this),
+            }),
+            this.value,
+            { number: true },
+          ),
+          withVModel(
+            h('input', {
+              type: 'radio',
+              class: 'two',
+              value: '2',
+              'onUpdate:modelValue': setValue.bind(this),
+            }),
+            this.value,
+            { number: true },
+          ),
+        ]
+      },
+    })
+    render(h(component), root)
+
+    const one = root.querySelector('.one')
+    const two = root.querySelector('.two')
+    const data = root._vnode.component.data
+
+    one.checked = true
+    triggerEvent('change', one)
+    await nextTick()
+    expect(data.value).toEqual(1)
+    expect(typeof data.value).toEqual('number')
+
+    two.checked = true
+    triggerEvent('change', two)
+    await nextTick()
+    expect(data.value).toEqual(2)
+    expect(typeof data.value).toEqual('number')
+  })
+
   it('should work with single select', async () => {
     const component = defineComponent({
       data() {
