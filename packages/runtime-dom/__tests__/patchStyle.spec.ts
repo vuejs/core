@@ -85,6 +85,24 @@ describe(`runtime-dom: style patching`, () => {
     )
   })
 
+  // vendor prefixed names are resolved to IDL names (e.g. `WebkitLineClamp`),
+  // which `hyphenate` cannot turn back into the CSS property name: it produces
+  // `webkit-line-clamp` instead of `-webkit-line-clamp`. `setProperty` silently
+  // ignores an unknown property name, so the whole declaration is dropped.
+  it('vendor prefixed property with !important', () => {
+    const el = document.createElement('div')
+    patchProp(el, 'style', {}, { '-webkit-line-clamp': '3 !important' })
+    expect(el.style.getPropertyValue('-webkit-line-clamp')).toBe('3')
+    expect(el.style.getPropertyPriority('-webkit-line-clamp')).toBe('important')
+  })
+
+  it('IDL-cased vendor prefixed property with !important', () => {
+    const el = document.createElement('div')
+    patchProp(el, 'style', {}, { WebkitLineClamp: '3 !important' } as any)
+    expect(el.style.getPropertyValue('-webkit-line-clamp')).toBe('3')
+    expect(el.style.getPropertyPriority('-webkit-line-clamp')).toBe('important')
+  })
+
   it('object with multiple entries', () => {
     const el = document.createElement('div')
     patchProp(el, 'style', {}, { color: 'red', marginRight: '10px' })

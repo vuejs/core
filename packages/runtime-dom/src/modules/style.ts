@@ -112,7 +112,7 @@ function setStyle(
       if (importantRE.test(val)) {
         // !important
         style.setProperty(
-          hyphenate(prefixed),
+          toCssPropertyName(prefixed),
           val.replace(importantRE, ''),
           'important',
         )
@@ -121,6 +121,16 @@ function setStyle(
       }
     }
   }
+}
+
+// `autoPrefix` resolves to IDL names, which are not always the CSS property
+// name: hyphenating a vendor prefixed IDL name drops the leading dash
+// (`WebkitLineClamp` -> `webkit-line-clamp`). `setProperty` ignores unknown
+// property names, which would silently drop the whole declaration.
+const vendorPrefixRE = /^(?:webkit|moz|ms)-/
+function toCssPropertyName(name: string): string {
+  const hyphenated = hyphenate(name)
+  return vendorPrefixRE.test(hyphenated) ? `-${hyphenated}` : hyphenated
 }
 
 const prefixes = ['Webkit', 'Moz', 'ms']
