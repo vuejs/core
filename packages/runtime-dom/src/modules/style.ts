@@ -24,10 +24,16 @@ export function patchStyle(el: Element, prev: Style, next: Style): void {
           }
         }
       } else {
-        for (const prevStyle of prev.split(';')) {
-          const key = prevStyle.slice(0, prevStyle.indexOf(':')).trim()
+        // Use the declarations parsed by the browser when cssText was set.
+        const prevStyle = el.ownerDocument.createElementNS(
+          'http://www.w3.org/1999/xhtml',
+          'div',
+        ).style
+        prevStyle.cssText = prev
+        for (let i = 0; i < prevStyle.length; i++) {
+          const key = prevStyle[i]
           if (next[key] == null) {
-            setStyle(style, key, '')
+            style.removeProperty(key)
           }
         }
       }
