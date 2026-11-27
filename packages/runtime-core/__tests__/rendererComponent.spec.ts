@@ -2,6 +2,7 @@ import {
   type Ref,
   type SetupContext,
   type VNode,
+  createTextVNode,
   h,
   inject,
   nextTick,
@@ -13,6 +14,7 @@ import {
   serializeInner,
   watch,
 } from '@vue/runtime-test'
+import { toDisplayString } from '@vue/shared'
 
 describe('renderer: component', () => {
   test('should update parent(hoc) component host el when child component self update', async () => {
@@ -562,6 +564,23 @@ describe('renderer: component', () => {
       `<div style={"color":"green"}>child</div>`,
     )
     expect(childRender).toHaveBeenCalledTimes(2)
+  })
+
+  test('should not crash when interpolating a Map with keys that are objects without a prototype', () => {
+    const map = new Map([[Object.create(null), 'value']])
+
+    const App = {
+      render() {
+        // equivalent of a compiled `{{ map }}` interpolation
+        return h('div', createTextVNode(toDisplayString(map)))
+      },
+    }
+
+    const root = nodeOps.createElement('div')
+    render(h(App), root)
+    expect(serializeInner(root)).toBe(
+      `<div>{\n  "Map(1)": {\n    "[object Object] =>": "value"\n  }\n}</div>`,
+    )
   })
 
   test('should update child component when a prop is replaced by a new undefined prop', async () => {
