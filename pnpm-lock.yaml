@@ -175,11 +175,11 @@ settings:
 catalogs:
   default:
     '@babel/parser':
-      specifier: ^7.29.12
-      version: 7.29.12
+      specifier: ^8.1.3
+      version: 8.1.3
     '@babel/types':
-      specifier: ^7.29.11
-      version: 7.29.11
+      specifier: ^8.1.3
+      version: 8.1.3
     '@vitejs/plugin-vue':
       specifier: ^6.0.11
       version: 6.0.11
@@ -190,8 +190,8 @@ catalogs:
       specifier: ^2.0.2
       version: 2.0.2
     magic-string:
-      specifier: ^0.30.21
-      version: 0.30.21
+      specifier: ^1.4.5
+      version: 1.4.5
     source-map-js:
       specifier: ^1.2.3
       version: 1.2.3
@@ -205,10 +205,10 @@ importers:
     devDependencies:
       '@babel/parser':
         specifier: 'catalog:'
-        version: 7.29.12
+        version: 8.1.3
       '@babel/types':
         specifier: 'catalog:'
-        version: 7.29.11
+        version: 8.1.3
       '@rollup/plugin-alias':
         specifier: ^6.0.1
         version: 6.0.1(rollup@4.68.7)
@@ -282,8 +282,8 @@ importers:
         specifier: ^4.18.1
         version: 4.18.1
       magic-string:
-        specifier: ^0.30.21
-        version: 0.30.21
+        specifier: ^1.4.5
+        version: 1.4.5
       markdown-table:
         specifier: ^3.1.0
         version: 3.1.0
@@ -425,7 +425,7 @@ importers:
     dependencies:
       '@babel/parser':
         specifier: 'catalog:'
-        version: 7.29.12
+        version: 8.1.3
       '@vue/shared':
         specifier: workspace:*
         version: link:../shared
@@ -441,7 +441,7 @@ importers:
     devDependencies:
       '@babel/types':
         specifier: 'catalog:'
-        version: 7.29.11
+        version: 8.1.3
 
   packages/compiler-dom:
     dependencies:
@@ -456,7 +456,7 @@ importers:
     dependencies:
       '@babel/parser':
         specifier: 'catalog:'
-        version: 7.29.12
+        version: 8.1.3
       '@vue/compiler-core':
         specifier: workspace:*
         version: link:../compiler-core
@@ -474,7 +474,7 @@ importers:
         version: 2.0.2
       magic-string:
         specifier: 'catalog:'
-        version: 0.30.21
+        version: 1.4.5
       postcss:
         specifier: ^8.5.32
         version: 8.5.32
@@ -484,7 +484,7 @@ importers:
     devDependencies:
       '@babel/types':
         specifier: 'catalog:'
-        version: 7.29.11
+        version: 8.1.3
       '@vue/consolidate':
         specifier: ^1.0.0
         version: 1.0.0
@@ -501,8 +501,8 @@ importers:
         specifier: ~11.0.9
         version: 11.0.9
       postcss-modules:
-        specifier: ^6.0.1
-        version: 6.0.1(postcss@8.5.32)
+        specifier: ^9.1.4
+        version: 9.1.4(postcss@8.5.32)
       postcss-selector-parser:
         specifier: ^7.1.7
         version: 7.1.7
@@ -604,7 +604,7 @@ importers:
     dependencies:
       '@babel/parser':
         specifier: 'catalog:'
-        version: 7.29.12
+        version: 8.1.3
       entities:
         specifier: 'catalog:'
         version: 7.0.1
@@ -636,6 +636,10 @@ packages:
     resolution: {integrity: sha512-snZbO7MEDOof+hvNa97EjEY7qD7h2kwvQr5AJC3ZhQudKW5dnej6k3kP9NQV88hJwaS8vDqRLFo9rivLEhle2g==}
     engines: {node: '>=6.9.0'}
 
+  '@babel/helper-string-parser@8.1.3':
+    resolution: {integrity: sha512-5HTuREtgj0xIc345zU4gtD2+3vIPkZpJw7wUYytt/mzBTQN2mWpGr1nxYiocYa2E8sWggRkrSg/k7BK51pAxIg==}
+    engines: {node: ^22.18.0 || >=24.11.0}
+
   '@babel/helper-validator-identifier@7.29.7':
     resolution: {integrity: sha512-qehxGkRj55h/ff8EMaJ+cYhyaKlHIxqYDn682wQD7RNp9UujOQsHog2uS0r2vzr4pW+sXf90NeeayjcNaX3fFg==}
     engines: {node: '>=6.9.0'}
@@ -644,14 +648,27 @@ packages:
     resolution: {integrity: sha512-4wFaiLd0bVo4cIoTXI3zKI038NIWE/cr3jvBjejOVYVxV/m8Ltav1USiGzG1fmS5J2RhgEOgXNNK46cRPnRsrg==}
     engines: {node: ^22.18.0 || >=24.11.0}
 
+  '@babel/helper-validator-identifier@8.0.6':
+    resolution: {integrity: sha512-HYx0YmuchRxRSpnjvcNffnPS8DCauKNmnumIuHG3jnQAVewRA7kfJGwF13ayEpSZs7s4R/oBH4eppuXcAQd5JQ==}
+    engines: {node: ^22.18.0 || >=24.11.0}
+
   '@babel/parser@7.29.12':
     resolution: {integrity: sha512-WJ7JBp/Q4+z/ImydtI7jS6NVco5++632ExBemSX+Ysb+G1lCwQ5BVo3SY+jGGOcZXI4ZccbZSUSJLNBW6eEpJg==}
     engines: {node: '>=6.0.0'}
     hasBin: true
 
+  '@babel/parser@8.1.3':
+    resolution: {integrity: sha512-v3ck2WN7jn8gEJlEfIDEwTM8dCBjOac1CZjolvB6/r0O1ome6E7xS2cDQEOQqESRQZWWrLrhnjxD0qjmZ8QBgg==}
+    engines: {node: ^22.18.0 || >=24.11.0}
+    hasBin: true
+
   '@babel/types@7.29.11':
     resolution: {integrity: sha512-WCsemW40Cpc6gouC1SrY6PBaZ+oLRlEVY9XBvZBI7il/HyUrb2nJ505wE1MHEFyDZNnrWDEuy4jL50WVHfTTSQ==}
     engines: {node: '>=6.9.0'}
+
+  '@babel/types@8.1.3':
+    resolution: {integrity: sha512-eBREGwDHRPHtdsg44t071GE2KRDEuJrf0J2uT5/qvJPB2+pfPZOKlx93dMZOFkE7QW5G0JWoczySD7a01Jf0iw==}
+    engines: {node: ^22.18.0 || >=24.11.0}
 
   '@bcoe/v8-coverage@1.0.2':
     resolution: {integrity: sha512-6zABk/ECA/QYSCQ1NGiVwwbQerUCZ+TQbp64Q3AgmfNvurHH0j8TtXa1qbShXA6qqkpAj4V5W8pP6mLe1mcMqA==}
@@ -979,6 +996,9 @@ packages:
 
   '@jridgewell/sourcemap-codec@1.5.5':
     resolution: {integrity: sha512-cYQ9310grqxueWbl+WuIUIaiUaDcj7WOq5fVhEljNVgRfOUhY9fy2zTvfoqWsnebh8Sl70VScFbICvJnLKB0Og==}
+
+  '@jridgewell/sourcemap-codec@1.6.0':
+    resolution: {integrity: sha512-T7jf+5zgsZHwNJ4lvQ7/aezbyk0nNX+zJVWpmHA7VYsEx7a7qr5Rg5IbtJFqkgze5Y2sruq1RUY8Q837Od7iFw==}
 
   '@jridgewell/trace-mapping@0.3.31':
     resolution: {integrity: sha512-zzNR+SdQSDJzc8joaeP8QQoCQr8NuYx2dIIytl1QeBEZHJ9uW6hebsrYgbz8hJwUQao3TWCMtmfV8Nu1twOLAw==}
@@ -2681,6 +2701,9 @@ packages:
   magic-string@0.30.21:
     resolution: {integrity: sha512-vd2F4YUyEXKGcLHoq+TEyCjxueSeHnFxyyjNp80yg0XV4vUhnDer/lvvlqM/arB5bXQN5K2/3oinyCRyx8T2CQ==}
 
+  magic-string@1.4.5:
+    resolution: {integrity: sha512-oLLC2+YvQUfAa+vxoufE/yc1icb87M9iXIRqAoR/2EhE/8cb3SF/+Gi0c2By1B+5Vz2e2vQtUvHiu1+63Znh+w==}
+
   magicast@0.5.2:
     resolution: {integrity: sha512-E3ZJh4J3S9KfwdjZhe2afj6R9lGIN5Pher1pF39UGrXRqq/VDaGVIGN13BjHd2u8B61hArAGOnso7nBOouW3TQ==}
 
@@ -2894,14 +2917,14 @@ packages:
     peerDependencies:
       postcss: ^8.1.0
 
-  postcss-modules-local-by-default@4.0.5:
-    resolution: {integrity: sha512-6MieY7sIfTK0hYfafw1OMEG+2bg8Q1ocHCpoWLqOKj3JXlKu4G7btkmM/B7lFubYkYWmRSPLZi5chid63ZaZYw==}
+  postcss-modules-local-by-default@4.2.0:
+    resolution: {integrity: sha512-5kcJm/zk+GJDSfw+V/42fJ5fhjL5YbFDl8nVdXkJPLLW+Vf9mTD5Xe0wqIaDnLuL2U6cDNpTr+UQ+v2HWIBhzw==}
     engines: {node: ^10 || ^12 || >= 14}
     peerDependencies:
       postcss: ^8.1.0
 
-  postcss-modules-scope@3.2.0:
-    resolution: {integrity: sha512-oq+g1ssrsZOsx9M96c5w8laRmvEu9C3adDSjI8oTcbfkrTE8hx/zfyobUoWIxaKPO8bt6S62kxpw5GqypEw1QQ==}
+  postcss-modules-scope@3.2.1:
+    resolution: {integrity: sha512-m9jZstCVaqGjTAuny8MdgE88scJnCiQSlSrOWcTQgM2t32UBe+MUmFSO5t7VMSfAf/FJKImAxBav8ooCHJXCJA==}
     engines: {node: ^10 || ^12 || >= 14}
     peerDependencies:
       postcss: ^8.1.0
@@ -2912,14 +2935,11 @@ packages:
     peerDependencies:
       postcss: ^8.1.0
 
-  postcss-modules@6.0.1:
-    resolution: {integrity: sha512-zyo2sAkVvuZFFy0gc2+4O+xar5dYlaVy/ebO24KT0ftk/iJevSNyPyQellsBLlnccwh7f6V6Y4GvuKRYToNgpQ==}
+  postcss-modules@9.1.4:
+    resolution: {integrity: sha512-4zGagIiZalRxlwObUbUIaOH/8Uwx9/q59BPonpI1of0vyBGXS70ODpg6xuoG+rB+AoLZPWE8EE5zuBnFu0KgYw==}
+    engines: {node: '>=20.6'}
     peerDependencies:
       postcss: ^8.0.0
-
-  postcss-selector-parser@6.1.2:
-    resolution: {integrity: sha512-Q8qQfPiZ+THO/3ZrOrO0cJJKfpYCagtMUkXbnEfmgUjwXg6z/WBeOyS9APBBPCTSiDV+s4SwQGu8yFsiMRIudg==}
-    engines: {node: '>=4'}
 
   postcss-selector-parser@7.1.7:
     resolution: {integrity: sha512-wWBro/7hJ40ye6TPiXkUQoXKCw23xSsjriUvqd7Uls9Sso3oLiON1flc18cCdnjgCRXw4fBVqUJJeOdDTh3P3g==}
@@ -3549,19 +3569,32 @@ snapshots:
 
   '@babel/helper-string-parser@7.29.11': {}
 
+  '@babel/helper-string-parser@8.1.3': {}
+
   '@babel/helper-validator-identifier@7.29.7': {}
 
   '@babel/helper-validator-identifier@8.0.4':
     optional: true
 
+  '@babel/helper-validator-identifier@8.0.6': {}
+
   '@babel/parser@7.29.12':
     dependencies:
       '@babel/types': 7.29.11
+
+  '@babel/parser@8.1.3':
+    dependencies:
+      '@babel/types': 8.1.3
 
   '@babel/types@7.29.11':
     dependencies:
       '@babel/helper-string-parser': 7.29.11
       '@babel/helper-validator-identifier': 7.29.7
+
+  '@babel/types@8.1.3':
+    dependencies:
+      '@babel/helper-string-parser': 8.1.3
+      '@babel/helper-validator-identifier': 8.0.6
 
   '@bcoe/v8-coverage@1.0.2': {}
 
@@ -3793,6 +3826,8 @@ snapshots:
   '@jridgewell/resolve-uri@3.1.2': {}
 
   '@jridgewell/sourcemap-codec@1.5.5': {}
+
+  '@jridgewell/sourcemap-codec@1.6.0': {}
 
   '@jridgewell/trace-mapping@0.3.31':
     dependencies:
@@ -5312,6 +5347,10 @@ snapshots:
     dependencies:
       '@jridgewell/sourcemap-codec': 1.5.5
 
+  magic-string@1.4.5:
+    dependencies:
+      '@jridgewell/sourcemap-codec': 1.6.0
+
   magicast@0.5.2:
     dependencies:
       '@babel/parser': 7.29.12
@@ -5478,39 +5517,34 @@ snapshots:
     dependencies:
       postcss: 8.5.32
 
-  postcss-modules-local-by-default@4.0.5(postcss@8.5.32):
+  postcss-modules-local-by-default@4.2.0(postcss@8.5.32):
     dependencies:
       icss-utils: 5.1.0(postcss@8.5.32)
       postcss: 8.5.32
-      postcss-selector-parser: 6.1.2
+      postcss-selector-parser: 7.1.7
       postcss-value-parser: 4.2.0
 
-  postcss-modules-scope@3.2.0(postcss@8.5.32):
+  postcss-modules-scope@3.2.1(postcss@8.5.32):
     dependencies:
       postcss: 8.5.32
-      postcss-selector-parser: 6.1.2
+      postcss-selector-parser: 7.1.7
 
   postcss-modules-values@4.0.0(postcss@8.5.32):
     dependencies:
       icss-utils: 5.1.0(postcss@8.5.32)
       postcss: 8.5.32
 
-  postcss-modules@6.0.1(postcss@8.5.32):
+  postcss-modules@9.1.4(postcss@8.5.32):
     dependencies:
       generic-names: 4.0.0
       icss-utils: 5.1.0(postcss@8.5.32)
       lodash.camelcase: 4.3.0
       postcss: 8.5.32
       postcss-modules-extract-imports: 3.1.0(postcss@8.5.32)
-      postcss-modules-local-by-default: 4.0.5(postcss@8.5.32)
-      postcss-modules-scope: 3.2.0(postcss@8.5.32)
+      postcss-modules-local-by-default: 4.2.0(postcss@8.5.32)
+      postcss-modules-scope: 3.2.1(postcss@8.5.32)
       postcss-modules-values: 4.0.0(postcss@8.5.32)
       string-hash: 1.1.3
-
-  postcss-selector-parser@6.1.2:
-    dependencies:
-      cssesc: 3.0.0
-      util-deprecate: 1.0.2
 
   postcss-selector-parser@7.1.7:
     dependencies:
