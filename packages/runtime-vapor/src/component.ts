@@ -1197,9 +1197,6 @@ export class VaporComponentInstance<
   ec?: LifecycleHook // LifecycleHooks.ERROR_CAPTURED
   sp?: LifecycleHook<() => Promise<unknown>> // LifecycleHooks.SERVER_PREFETCH
 
-  // renderEffect creation counter for scheduler ordering.
-  effectCount = 0
-
   // dev only
   setupState?: Exposed extends VaporRenderResult
     ? Record<string, any>
@@ -1239,6 +1236,9 @@ export class VaporComponentInstance<
     ce?: (instance: VaporComponentInstance) => void,
   ) {
     this.vapor = true
+    // the id right before an instance orders its inputs: after what was
+    // created before it, ahead of its own jobs
+    nextUid()
     this.uid = nextUid()
     this.type = comp
     this.parent = currentInstance

@@ -9,6 +9,7 @@ import {
 } from '@vue/runtime-dom'
 import { onScopeDispose, setActiveSub } from '@vue/reactivity'
 import { renderEffect } from '../renderEffect'
+import { inOnce } from '../once'
 import {
   type RootChainVisitor,
   type VaporComponentInstance,
@@ -55,6 +56,8 @@ export function applyVShow(target: Block, source: () => any): void {
   // pending async setups this binding already waits on
   let pendingSetups: WeakSet<VaporComponentInstance> | undefined
   let disposed = false
+  // v-once freezes the value for every root
+  const frozen = inOnce
 
   const visitor: RootChainVisitor = {
     onComponent(instance) {
@@ -94,6 +97,17 @@ export function applyVShow(target: Block, source: () => any): void {
 
   const apply = (nodes: Block, update?: boolean) => {
     if (disposed) return
+    // a producer re-entering with a new root (it passes no `update`) can run
+    // before this binding's own update in the same flush: the new root takes
+    // the current value, so the binding's run finds nothing to change
+    if (update === undefined && !frozen) {
+      const prevSub = setActiveSub()
+      try {
+        value = source()
+      } finally {
+        setActiveSub(prevSub)
+      }
+    }
     transition = undefined
     unresolved = slotRoot = false
     updating = update

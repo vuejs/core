@@ -2965,3 +2965,40 @@ test('moves the target anchors of a disabled teleport to the target resolved whe
     outside.remove()
   }
 })
+
+test('teleports shown by one update follow the template across components', async () => {
+  const data = ref({ show: false })
+  const target = document.createElement('div')
+  target.id = 'tp-update-order'
+  document.body.append(target)
+  const Notice = compile(
+    `<script setup vapor>
+      defineProps(['show'])
+    </script>
+    <template>
+      <Teleport v-if="show" to="#tp-update-order">
+        <p>notice</p>
+      </Teleport>
+    </template>`,
+    data,
+  )
+  const App = compile(
+    `<template>
+      <components.Notice :show="data.show" />
+      <Teleport v-if="data.show" to="#tp-update-order">
+        <p>dialog</p>
+      </Teleport>
+    </template>`,
+    data,
+    { Notice },
+  )
+  const { app } = define(App).render()
+  try {
+    data.value.show = true
+    await nextTick()
+    expect(target.textContent).toBe('noticedialog')
+  } finally {
+    app.unmount()
+    target.remove()
+  }
+})

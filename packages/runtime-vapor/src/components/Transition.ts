@@ -18,6 +18,7 @@ import {
   isKeepAlive,
   isTemplateNode,
   leaveCbKey,
+  nextUid,
   queueJob,
   queuePostFlushCb,
   queuePostRenderEffect,
@@ -902,7 +903,7 @@ function queueSiblingSettle(hooks: VaporTransitionHooks): void {
     job = state.siblingJob = () => settleSiblingRoots(state, instance)
     job.i = instance
   }
-  queueJob(job, instance.uid, false, instance.effectCount)
+  queueJob(job, nextUid())
 }
 
 function settleSiblingRoots(

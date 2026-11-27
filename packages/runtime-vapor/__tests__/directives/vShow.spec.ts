@@ -1314,4 +1314,64 @@ await data.value.ready
 
     app.unmount()
   })
+
+  // a root swapped in by the same update as the value takes the current
+  // value, like a vdom root mounting with it
+  test.each([
+    [true, false, []],
+    [false, true, ['before-enter:SPAN:', 'enter:SPAN:']],
+  ])(
+    'a component root swapped in the same update under a Transition (%s to %s)',
+    async (from, to, expected) => {
+      const log: string[] = []
+      const data = ref({
+        a: true,
+        visible: from,
+        beforeEnter: (el: HTMLElement) =>
+          log.push(`before-enter:${el.tagName}:${el.style.display}`),
+        enter: (el: HTMLElement, done: () => void) => {
+          log.push(`enter:${el.tagName}:${el.style.display}`)
+          done()
+        },
+        leave: (el: HTMLElement, done: () => void) => {
+          log.push(`leave:${el.tagName}:${el.style.display}`)
+          done()
+        },
+      })
+      const Child = compile(
+        `<template>
+          <div v-if="data.a">A</div>
+          <span v-else>B</span>
+        </template>`,
+        data,
+      )
+      const App = compile(
+        `<template>
+          <Transition
+            :css="false"
+            @before-enter="data.beforeEnter"
+            @enter="data.enter"
+            @leave="data.leave"
+          >
+            <components.Child v-show="data.visible" />
+          </Transition>
+        </template>`,
+        data,
+        { Child },
+      )
+      const { app, host } = define(App).render()
+      try {
+        await nextTick()
+        log.length = 0
+        data.value.a = false
+        data.value.visible = to
+        await nextTick()
+        await nextTick()
+        expect(log).toEqual(expected)
+        expect(host.querySelector('span')!.style.display).toBe(to ? '' : 'none')
+      } finally {
+        app.unmount()
+      }
+    },
+  )
 })

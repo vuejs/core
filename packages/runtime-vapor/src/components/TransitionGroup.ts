@@ -691,13 +691,18 @@ function trackTransitionGroupUpdate(
   // using component updated hooks, because child-local state updates should
   // not trigger TransitionGroup move bookkeeping. This matches VDOM behavior.
   // The effect belongs to the group instance, so its runs report through the
-  // group's own beforeUpdate/updated hooks and the scheduler orders it ahead
-  // of the child's effects; it lives in the child's scope to die with the row.
+  // group's own beforeUpdate/updated hooks; the id reserved before the row
+  // orders it ahead of the row's effects, and it lives in the child's scope
+  // to die with the row.
   const prevGroup = setCurrentInstance(instance, owner.scope)
   try {
-    renderEffect(() => {
-      trackRawValues(owner)
-    })
+    renderEffect(
+      () => {
+        trackRawValues(owner)
+      },
+      false,
+      owner.uid - 1,
+    )
   } finally {
     restoreCurrentInstance(prevGroup)
   }
