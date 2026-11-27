@@ -23,6 +23,7 @@ import {
   unmountComponent,
 } from './component'
 import { withHydration } from './dom/hydration'
+import { enableCustomElement } from './customElementState'
 import type {
   DefineVaporComponent,
   DefineVaporSetupFnComponent,
@@ -203,6 +204,7 @@ export class VaporElement extends VueElementBase<
     props: Record<string, any> | undefined = {},
     createAppFn: CreateAppFunction<ParentNode, VaporComponent> = createVaporApp,
   ) {
+    enableCustomElement()
     super(def, shallowReactive(props), createAppFn)
   }
 

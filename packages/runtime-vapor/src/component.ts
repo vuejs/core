@@ -174,6 +174,7 @@ import type { KeepAliveInstance } from './components/KeepAlive'
 import type { TeleportFragment } from './components/Teleport'
 import { getKeepAliveContext, isKeepAliveEnabled } from './keepAlive'
 import { isAsyncComponentEnabled } from './asyncComponentState'
+import { isCustomElementEnabled } from './customElementState'
 import {
   insertionAnchor,
   insertionParent,
@@ -1790,7 +1791,12 @@ export function mountComponent(
 
   // custom element style injection
   const { root, type } = instance as GenericComponentInstance
-  if (root && root.ce && (root.ce as VaporElement)._hasShadowRoot()) {
+  if (
+    (isCustomElementEnabled || isInteropEnabled) &&
+    root &&
+    root.ce &&
+    (root.ce as VaporElement)._hasShadowRoot()
+  ) {
     root.ce!._injectChildStyle(
       type,
       instance.parent ? instance.parent.type : undefined,
