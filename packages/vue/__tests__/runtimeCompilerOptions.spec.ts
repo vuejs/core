@@ -20,7 +20,9 @@ describe('config.compilerOptions', () => {
     __DEV__ = false
     const root = document.createElement('div')
     app.mount(root)
-    expect(root.innerHTML).toBe('<div></div><!--test--><div></div>')
+    expect(root.innerHTML).toBe(
+      '<!----><div></div><!--test--><div></div><!---->',
+    )
     __DEV__ = true
   })
 
@@ -72,7 +74,9 @@ describe('per-component compilerOptions', () => {
     __DEV__ = false
     const root = document.createElement('div')
     app.mount(root)
-    expect(root.innerHTML).toBe('<div></div><!--test--><div></div>')
+    expect(root.innerHTML).toBe(
+      '<!----><div></div><!--test--><div></div><!---->',
+    )
     __DEV__ = true
   })
 

@@ -121,12 +121,12 @@ describe('scopeId runtime support', () => {
     // - slotted scopeId (with `-s` postfix) from child (the tree owner)
     expect(serializeInner(root)).toBe(
       `<div child parent>` +
-        `<div parent child-s></div>` +
+        `<!----><div parent child-s></div>` +
         // component inside slot should have:
         // - scopeId from template context
         // - slotted scopeId from slot owner
         // - its own scopeId
-        `<span child2 parent child-s></span>` +
+        `<span child2 parent child-s></span><!---->` +
         `</div>`,
     )
   })
@@ -180,8 +180,8 @@ describe('scopeId runtime support', () => {
     render(h(Root), root)
     expect(serializeInner(root)).toBe(
       `<div wrapper slotted root class="wrapper">` +
-        `<div root slotted-s>hoisted</div>` +
-        `<div root slotted-s>dynamic</div>` +
+        `<!----><!----><div root slotted-s>hoisted</div>` +
+        `<div root slotted-s>dynamic</div><!----><!---->` +
         `</div>`,
     )
 
@@ -206,10 +206,10 @@ describe('scopeId runtime support', () => {
     render(h(Root2), root2)
     expect(serializeInner(root2)).toBe(
       `<div wrapper slotted root class="wrapper">` +
-        `<div wrapper root slotted-s class="wrapper">` +
-        `<div root>hoisted</div>` +
-        `<div root>dynamic</div>` +
-        `</div>` +
+        `<!----><!----><div wrapper root slotted-s class="wrapper">` +
+        `<!----><div root>hoisted</div>` +
+        `<div root>dynamic</div><!---->` +
+        `</div><!----><!---->` +
         `</div>`,
     )
   })
@@ -278,12 +278,14 @@ describe('scopeId runtime support', () => {
 
     const root = nodeOps.createElement('div')
     render(h(Parent), root)
-    expect(serializeInner(root)).toBe(`<!--comment1--><div parent>div1</div>`)
+    expect(serializeInner(root)).toBe(
+      `<!----><!--comment1--><div parent>div1</div><!---->`,
+    )
 
     ok.value = false
     await nextTick()
     expect(serializeInner(root)).toBe(
-      `<!--comment1--><!--comment2--><div parent>div2</div>`,
+      `<!----><!--comment1--><!----><!--comment2--><div parent>div2</div><!----><!---->`,
     )
   })
 })
@@ -355,12 +357,12 @@ describe('backwards compat with <=3.0.7', () => {
     // - slotted scopeId (with `-s` postfix) from child (the tree owner)
     expect(serializeInner(root)).toBe(
       `<div child parent>` +
-        `<div parent child-s></div>` +
+        `<!----><div parent child-s></div>` +
         // component inside slot should have:
         // - scopeId from template context
         // - slotted scopeId from slot owner
         // - its own scopeId
-        `<span child2 parent child-s></span>` +
+        `<span child2 parent child-s></span><!---->` +
         `</div>`,
     )
   })
