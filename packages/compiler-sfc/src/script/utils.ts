@@ -134,8 +134,16 @@ export const joinPaths: (...paths: string[]) => string = (path.posix || path)
 export const propNameEscapeSymbolsRE: RegExp =
   /[ !"#$%&'()*+,./:;<=>?@[\\\]^`{|}~\-]/
 
+/**
+ * key may start with a digit, which is not a valid identifier start
+ * e.g. 2xl -> "2xl"
+ */
+const propNameLeadingDigitRE = /^\d/
+
 export function getEscapedPropName(key: string): string {
-  return propNameEscapeSymbolsRE.test(key) ? JSON.stringify(key) : key
+  return propNameEscapeSymbolsRE.test(key) || propNameLeadingDigitRE.test(key)
+    ? JSON.stringify(key)
+    : key
 }
 
 export const isJS = (...langs: (string | null | undefined)[]): boolean =>
