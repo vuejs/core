@@ -436,6 +436,7 @@ export function createAppAPI<HostElement>(
 
       unmount() {
         if (mountState === AppMountState.MOUNTED) {
+          const container = app._container
           // A cleanup callback can call unmount() again.
           mountState = AppMountState.UNMOUNTED
           try {
@@ -444,16 +445,22 @@ export function createAppAPI<HostElement>(
               app._instance,
               ErrorCodes.APP_UNMOUNT_CLEANUP,
             )
-            render(null, app._container)
-          } catch (err) {
-            mountState = AppMountState.MOUNTED
-            throw err
+            render(null, container)
+          } finally {
+            // An unmounted hook can throw after the renderer clears the root.
+            const root = container._vnode
+            if (root && root.appContext === context) {
+              mountState = AppMountState.MOUNTED
+            } else {
+              if (__DEV__ || __FEATURE_PROD_DEVTOOLS__) {
+                app._instance = null
+                devtoolsUnmountApp(app)
+              }
+              if (container.__vue_app__ === app) {
+                delete container.__vue_app__
+              }
+            }
           }
-          if (__DEV__ || __FEATURE_PROD_DEVTOOLS__) {
-            app._instance = null
-            devtoolsUnmountApp(app)
-          }
-          delete app._container.__vue_app__
         } else if (__DEV__) {
           warn(`Cannot unmount an app that is not mounted.`)
         }
