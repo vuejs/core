@@ -37,6 +37,21 @@ describe('compiler: style transform', () => {
     })
   })
 
+  test('keeps semicolons and parentheses in quoted style values', () => {
+    const { node } = transformWithStyleTransform(
+      `<div style="--sep: ';'; color: red; content: ':)'"/>`,
+    )
+    expect(node.props[0]).toMatchObject({
+      exp: {
+        content: JSON.stringify({
+          '--sep': "';'",
+          color: 'red',
+          content: "':)'",
+        }),
+      },
+    })
+  })
+
   test('should transform into directive node', () => {
     const { node } = transformWithStyleTransform(`<div style="color: red"/>`)
     expect(node.props[0]).toMatchObject({
