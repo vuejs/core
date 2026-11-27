@@ -264,7 +264,19 @@ export function updateProps(
     // - vite#872 non-sfc component used by sfc component
     !(__DEV__ && isInHmrContext(instance)) &&
     (optimized || patchFlag > 0) &&
-    !(patchFlag & PatchFlags.FULL_PROPS)
+    !(patchFlag & PatchFlags.FULL_PROPS) &&
+    // In compat mode, native and ordinary listeners can share an attr key.
+    // Use raw prop order when either listener is dynamic.
+    !(
+      __COMPAT__ &&
+      patchFlag & PatchFlags.PROPS &&
+      instance.vnode.dynamicProps!.some(
+        key =>
+          isOn(key) &&
+          ((key.endsWith('Native') && hasOwn(rawProps!, key.slice(0, -6))) ||
+            hasOwn(rawProps!, key + 'Native')),
+      )
+    )
   ) {
     if (patchFlag & PatchFlags.PROPS) {
       // Compiler-generated props & no keys change, just set the updated
@@ -279,6 +291,18 @@ export function updateProps(
         // PROPS flag guarantees rawProps to be non-null
         const value = rawProps![key]
         if (options) {
+          if (__COMPAT__ && !hasOwn(options, camelize(key))) {
+            // mirror `setFullProps`: in compat mode, keys that are neither
+            // declared props nor attrs are skipped on init (e.g. `on*`
+            // listeners when INSTANCE_LISTENERS is enabled, or `xxxNative`
+            // listeners routed to `attrs` without the postfix), so they
+            // must not be written into `props` here either (#16202)
+            if (isOn(key) && key.endsWith('Native')) {
+              key = key.slice(0, -6) // remove Native postfix
+            } else if (shouldSkipAttr(key, instance)) {
+              continue
+            }
+          }
           // attr / props separation was done on init and will be consistent
           // in this code path, so just check if attrs have it.
           if (hasOwn(attrs, key)) {
@@ -346,7 +370,10 @@ export function updateProps(
               true /* isAbsent */,
             )
           }
-        } else {
+        } else if (
+          !__COMPAT__ ||
+          !hasCompatNativeAttr(instance, rawProps, key)
+        ) {
           delete props[key]
         }
       }
@@ -358,7 +385,7 @@ export function updateProps(
         if (
           !rawProps ||
           (!hasOwn(rawProps, key) &&
-            (!__COMPAT__ || !hasOwn(rawProps, key + 'Native')))
+            (!__COMPAT__ || !hasCompatNativeAttr(instance, rawProps, key)))
         ) {
           delete attrs[key]
           hasAttrsChanged = true
@@ -375,6 +402,23 @@ export function updateProps(
   if (__DEV__) {
     validateProps(rawProps || {}, props, instance)
   }
+}
+
+function hasCompatNativeAttr(
+  { emitsOptions, propsOptions: [options] }: ComponentInternalInstance,
+  rawProps: Data | null,
+  key: string,
+): boolean {
+  if (!rawProps || !isOn(key)) {
+    return false
+  }
+  const nativeKey = key + 'Native'
+  // Match setFullProps: declared props and events do not fall through.
+  return (
+    hasOwn(rawProps, nativeKey) &&
+    !(options && hasOwn(options, camelize(nativeKey))) &&
+    !isEmitListener(emitsOptions, nativeKey)
+  )
 }
 
 function setFullProps(
