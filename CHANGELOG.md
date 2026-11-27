@@ -1,3 +1,36 @@
+# [3.6.0-rc.17](https://github.com/vuejs/core/compare/v3.6.0-rc.16...v3.6.0-rc.17) (2026-11-27)
+
+### Bug Fixes
+
+* **build:** retain SSR branches in esm-browser builds ([#16373](https://github.com/vuejs/core/issues/16373)) ([2656925](https://github.com/vuejs/core/commit/2656925687c9309cd1109d99d368d51c15211a2d)), closes [#16371](https://github.com/vuejs/core/issues/16371)
+* **compiler-vapor:** ignore side effect tags in templates like vdom ([6c96dd7](https://github.com/vuejs/core/commit/6c96dd7ded46b9e694acb584812cf33cd318492c))
+* **reactivity:** release computeds read outside of their scope on stop ([#16429](https://github.com/vuejs/core/issues/16429)) ([8717fb0](https://github.com/vuejs/core/commit/8717fb0b5ce0fc08aadbe3f6284d6a5be7a28fce)), closes [#16390](https://github.com/vuejs/core/issues/16390)
+* **runtime-core:** release the unmounted owner of a watcher in a longer-lived scope ([#16437](https://github.com/vuejs/core/issues/16437)) ([716c737](https://github.com/vuejs/core/commit/716c73755d096d130de64be77a0212b2a8b51bb9)), closes [#16436](https://github.com/vuejs/core/issues/16436)
+* **runtime-vapor:** count useId called by slot content with the slot owner ([#16456](https://github.com/vuejs/core/issues/16456)) ([c5007e0](https://github.com/vuejs/core/commit/c5007e015b1121ea82632b62835edeebfc2218ef))
+* **runtime-vapor:** don't reuse the hydrating component's close as a block anchor ([#16370](https://github.com/vuejs/core/issues/16370)) ([73d3ea5](https://github.com/vuejs/core/commit/73d3ea50f3323cb3622a175d79648cd92fcfa709)), closes [#16368](https://github.com/vuejs/core/issues/16368)
+* **runtime-vapor:** hydrate deferred interop content in a vapor SSR app ([#16379](https://github.com/vuejs/core/issues/16379)) ([e3a8119](https://github.com/vuejs/core/commit/e3a8119bfa7cff50a4d86408de98fb65750ba42e))
+* **runtime-vapor:** hydrate vdom slot content of a vapor `<slot />` root ([#16375](https://github.com/vuejs/core/issues/16375)) ([836f13b](https://github.com/vuejs/core/commit/836f13b9110d56071d6b4dceb239c0725653967c))
+* **runtime-vapor:** keep a pending cached child paused when it leaves again ([233c4af](https://github.com/vuejs/core/commit/233c4aff83891843af2087b439e836f3b99e1193))
+* **runtime-vapor:** keep an omitted and an empty class apart in object bindings ([#16451](https://github.com/vuejs/core/issues/16451)) ([51efba9](https://github.com/vuejs/core/commit/51efba9e6485d63954f2f2b6cbd87a623247d769)), closes [#16422](https://github.com/vuejs/core/issues/16422)
+* **runtime-vapor:** keep the slot close after a v-if teleport in hydration ([#16381](https://github.com/vuejs/core/issues/16381)) ([d5eb003](https://github.com/vuejs/core/commit/d5eb003e637da705b1395cf1234a56aa096036f6))
+* **runtime-vapor:** mark the useId boundary before vdom children and slot content ([14306fe](https://github.com/vuejs/core/commit/14306fe354bf3e659b21ac39946ffbbeced72873))
+* **runtime-vapor:** match useId below a component with onServerPrefetch ([4b75624](https://github.com/vuejs/core/commit/4b756245bc1cd8537b33069c6d7f8117d9045cec))
+* **runtime-vapor:** resolve a static is name in the slot owner ([#16461](https://github.com/vuejs/core/issues/16461)) ([30d3cdd](https://github.com/vuejs/core/commit/30d3cdd49877cad959ee848c1e9f848b41579cd6))
+* **runtime-vapor:** resume the input scope of a cached pending child on re-entry ([eb51e7f](https://github.com/vuejs/core/commit/eb51e7ff6e87733bbf2b42370dbe7fa54587b0eb))
+* **runtime-vapor:** set fallthrough attrs on an svg root as attributes ([#16450](https://github.com/vuejs/core/issues/16450)) ([f5e9e04](https://github.com/vuejs/core/commit/f5e9e0485dc3e6b388121e4726d463cd4fc9ee12)), closes [#16420](https://github.com/vuejs/core/issues/16420) [#16423](https://github.com/vuejs/core/issues/16423)
+* **scheduler:** keep vapor effect order exact in long-running apps ([#16465](https://github.com/vuejs/core/issues/16465)) ([9d61481](https://github.com/vuejs/core/commit/9d614818352d42f050be02d088424ebfd368183f))
+* **server-renderer:** isolate block tracking during component rendering ([#16409](https://github.com/vuejs/core/issues/16409)) ([ee62d49](https://github.com/vuejs/core/commit/ee62d49809d4c9b4e9efd68d95ed6aa443cbb6f1)), closes [#16256](https://github.com/vuejs/core/issues/16256)
+* **server-renderer:** keep block tracking in a slot that an SSR outlet renders ([#16412](https://github.com/vuejs/core/issues/16412)) ([1f0c614](https://github.com/vuejs/core/commit/1f0c6141ed1d65326ddbd9c512e31294ff1a9535)), closes [#16411](https://github.com/vuejs/core/issues/16411)
+
+### Features
+
+* getCurrentApp ([#16446](https://github.com/vuejs/core/issues/16446)) ([ea64f9c](https://github.com/vuejs/core/commit/ea64f9cd6eda65ac4119dec96fe731c12f6613c9))
+* **runtime-core:** add useInstanceInfo and remove useInstanceOption ([6e33846](https://github.com/vuejs/core/commit/6e338464236c6040b86939a227bef98635251255)), closes [#16305](https://github.com/vuejs/core/issues/16305) [#2016](https://github.com/vuejs/core/issues/2016)
+
+### Performance Improvements
+
+* **reactivity:** allocate effect and scope cleanups lazily ([#16413](https://github.com/vuejs/core/issues/16413)) ([329d788](https://github.com/vuejs/core/commit/329d78883f3f1fd11941d7929f53e6883b6bc733))
+
 # [3.6.0-rc.16](https://github.com/vuejs/core/compare/v3.6.0-rc.15...v3.6.0-rc.16) (2026-11-20)
 
 ### Bug Fixes
