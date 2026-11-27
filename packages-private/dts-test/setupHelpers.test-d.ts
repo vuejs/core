@@ -1,4 +1,5 @@
 import {
+  type DefineProps,
   type PropType,
   type Ref,
   type Slots,
@@ -9,13 +10,14 @@ import {
   defineOptions,
   defineProps,
   defineSlots,
+  toRef,
   toRefs,
   useAttrs,
   useModel,
   useSlots,
   withDefaults,
 } from 'vue'
-import { describe, expectType } from './utils'
+import { type IsAny, describe, expectType } from './utils'
 
 describe('defineProps w/ type declaration', () => {
   // type declaration
@@ -52,6 +54,272 @@ describe('defineProps w/ generics', () => {
     expectType<boolean>(props.x)
   }
   test()
+})
+
+describe('defineProps preserves generic array element types in toRefs', <T extends
+  string | number>() => {
+  const props = defineProps<{
+    existingRef: Ref<number>
+    options: readonly { value: T }[]
+    value: T
+  }>()
+  const { existingRef, options } = toRefs(props)
+
+  expectType<T | undefined>(
+    options.value.find(item => item.value === props.value)?.value,
+  )
+  expectType<Ref<number>>(existingRef)
+})
+
+describe('generic prop fields remain typed through toRef and toRefs', <T>() => {
+  const props = defineProps<{
+    options: readonly { value: T }[]
+    value: T
+  }>()
+  const options = toRefs<typeof props>(props).options
+  const byKey = toRef(props, 'options')
+  expectType<false>(null! as IsAny<(typeof options.value)[number]>)
+  expectType<false>(null! as IsAny<(typeof byKey.value)[number]>)
+  expectType<readonly { value: T }[]>(byKey.value)
+  expectType<T | undefined>(
+    options.value.find(item => item.value === props.value)?.value,
+  )
+
+  const defaulted = withDefaults(
+    defineProps<{
+      label?: string
+      options?: readonly { value: T }[]
+      value: T
+    }>(),
+    { label: 'Choose', options: () => [] },
+  )
+  const defaultedOptions = toRefs(defaulted).options
+  expectType<false>(null! as IsAny<(typeof defaultedOptions.value)[number]>)
+  expectType<T | undefined>(
+    defaultedOptions.value.find(item => item.value === defaulted.value)?.value,
+  )
+})
+
+describe('toRefs preserves generic props that can be Boolean', <T extends
+  string | boolean>() => {
+  const props = defineProps<{
+    options: readonly { value: T }[]
+    value: T
+  }>()
+  const options = toRefs(props).options
+  expectType<false>(null! as IsAny<(typeof options.value)[number]>)
+  expectType<T | undefined>(
+    options.value.find(item => item.value === props.value)?.value,
+  )
+
+  const defaulted = withDefaults(
+    defineProps<{
+      label?: string
+      options?: readonly { value: T }[]
+      value: T
+    }>(),
+    { label: 'Choose', options: () => [] },
+  )
+  const defaultedOptions = toRefs(defaulted).options
+  expectType<false>(null! as IsAny<(typeof defaultedOptions.value)[number]>)
+  expectType<T | undefined>(
+    defaultedOptions.value.find(item => item.value === defaulted.value)?.value,
+  )
+})
+
+describe('defineProps preserves inference of Boolean keys from its return type', () => {
+  // Downstream utilities such as @verter/types match the public alias.
+  type ExtractBooleanKeys<T> =
+    T extends DefineProps<T, infer BKeys extends keyof T> ? BKeys : never
+  type MakeBooleanOptional<T> =
+    T extends DefineProps<T, infer BKeys extends keyof T>
+      ? Omit<T, BKeys> & {
+          [K in keyof T as K extends BKeys ? K : never]?: T[K] | undefined
+        }
+      : T
+
+  function setup<T extends string | number>() {
+    const props = defineProps<{
+      active?: boolean
+      options: readonly { value: T }[]
+      title?: string
+      value: T
+    }>()
+    const { options } = toRefs(props)
+
+    expectType<T | undefined>(
+      options.value.find(item => item.value === props.value)?.value,
+    )
+    return props
+  }
+
+  const props = setup<string>()
+  type BooleanKeys = ExtractBooleanKeys<typeof props>
+  expectType<BooleanKeys>('active')
+  expectType<'active'>(null! as BooleanKeys)
+  // @ts-expect-error non-Boolean fields are not included
+  expectType<BooleanKeys>('title')
+  expectType<MakeBooleanOptional<typeof props>>({
+    options: [],
+    title: undefined,
+    value: 'example',
+  })
+  // @ts-expect-error the array prop is still required for callers
+  expectType<MakeBooleanOptional<typeof props>>({
+    title: undefined,
+    value: 'example',
+  })
+  expectType<'active' | 'options' | 'title' | 'value'>(
+    null! as keyof typeof props,
+  )
+})
+
+describe('DefineProps preserves explicit Boolean keys', () => {
+  type Props = { active?: boolean; visible?: boolean }
+  const withoutBooleanKeys: DefineProps<Props, never> = {}
+  const withOneBooleanKey: DefineProps<Props, 'active'> = { active: true }
+  expectType<boolean | undefined>(withoutBooleanKeys.active)
+  expectType<boolean>(withOneBooleanKey.active)
+  // @ts-expect-error only the explicitly selected key is refined
+  expectType<boolean>(withOneBooleanKey.visible)
+
+  // Explicit any retains the Boolean index signature for arbitrary keys.
+  const indexed = null! as DefineProps<Props, any>
+  expectType<boolean>(indexed['other'])
+
+  type RequiredFlags = Required<Props>
+  expectType<DefineProps<RequiredFlags, 'active'>>(
+    null! as DefineProps<RequiredFlags, 'visible'>,
+  )
+})
+
+describe('DefineProps preserves generic structural assignability', <T, K extends
+  keyof T>() => {
+  type StructuralProps = Readonly<T> & { readonly [P in K]-?: boolean }
+
+  expectType<StructuralProps>(null! as DefineProps<T, K>)
+  expectType<DefineProps<T, K>>(null! as StructuralProps)
+})
+
+describe('defineProps preserves Boolean casting and disjoint field types', () => {
+  const props = defineProps<{
+    optionalBoolean?: boolean
+    optionalFalse?: false
+    optionalTrue?: true
+    optionalUndefined?: undefined
+    optionalNever?: never
+    optionalUnknown?: unknown
+    optionalMixed?: string | boolean
+    optionalAny?: any
+  }>()
+
+  expectType<boolean>(props.optionalBoolean)
+  expectType<false>(props.optionalFalse)
+  expectType<true>(props.optionalTrue)
+  expectType<undefined>(props.optionalUndefined)
+  expectType<undefined>(props.optionalNever)
+  expectType<unknown>(props.optionalUnknown)
+  expectType<string | boolean | undefined>(props.optionalMixed)
+  // @ts-expect-error a union with a non-Boolean member remains optional
+  expectType<string | boolean>(props.optionalMixed)
+
+  // Any-valued props retain the previous Boolean-key treatment.
+  type ExtractBooleanKeys<T> =
+    T extends DefineProps<T, infer BKeys extends keyof T> ? BKeys : never
+  type BooleanKeys = ExtractBooleanKeys<typeof props>
+  expectType<BooleanKeys>('optionalAny')
+  expectType<BooleanKeys>('optionalBoolean')
+  expectType<BooleanKeys>('optionalFalse')
+  expectType<BooleanKeys>('optionalTrue')
+  expectType<
+    'optionalAny' | 'optionalBoolean' | 'optionalFalse' | 'optionalTrue'
+  >(null! as BooleanKeys)
+})
+
+describe('withDefaults preserves generic props and their refs', <T extends
+  string | number>() => {
+  const props = withDefaults(
+    defineProps<{
+      options?: readonly { value: T }[]
+      value: T
+      label?: string
+      description?: string
+      enabled?: boolean
+      disabled?: boolean
+      literal?: true
+      existingRef?: Ref<number>
+    }>(),
+    {
+      options: () => [],
+      label: 'Choose an option',
+      disabled: undefined,
+    },
+  )
+  const { options } = toRefs(props)
+
+  expectType<T | undefined>(
+    options.value.find(item => item.value === props.value)?.value,
+  )
+  expectType<string>(props.label)
+  expectType<string | undefined>(props.description)
+  expectType<boolean>(props.enabled)
+  expectType<true>(props.literal)
+  // @ts-expect-error an explicit undefined default disables Boolean casting
+  expectType<boolean>(props.disabled)
+  expectType<boolean | undefined>(props.disabled)
+  expectType<number | undefined>(props.existingRef?.value)
+})
+
+describe('withDefaults retains the raw prop types in default factories', <T extends
+  string | number>() => {
+  const props = withDefaults(
+    defineProps<{
+      value: T
+      enabled?: boolean
+      label?: string
+      options?: readonly T[]
+    }>(),
+    {
+      options: raw => {
+        expectType<T>(raw.value)
+        expectType<boolean | undefined>(raw.enabled)
+        // @ts-expect-error defaults receive raw props before Boolean casting
+        expectType<boolean>(raw.enabled)
+        return [raw.value]
+      },
+    },
+  )
+
+  expectType<readonly T[]>(props.options)
+  expectType<boolean>(props.enabled)
+  expectType<string | undefined>(props.label)
+})
+
+describe('withDefaults accepts explicit Boolean keys', () => {
+  type Props = { enabled?: boolean; visible?: boolean; label?: string }
+  const props = withDefaults<
+    Props,
+    'enabled',
+    { enabled: undefined; label: string }
+  >(defineProps<Props>(), { enabled: undefined, label: 'Choose an option' })
+
+  expectType<boolean | undefined>(props.enabled)
+  // @ts-expect-error the explicit undefined default remains visible
+  expectType<boolean>(props.enabled)
+  expectType<string>(props.label)
+
+  const manual = null! as DefineProps<Props, 'enabled'>
+  const inferred = withDefaults(manual, { label: 'Choose an option' })
+  expectType<string>(inferred.label)
+  expectType<boolean>(inferred.enabled)
+  expectType<boolean | undefined>(inferred.visible)
+  // @ts-expect-error withDefaults must keep the caller's Boolean-key list
+  expectType<boolean>(inferred.visible)
+})
+
+describe('withDefaults rejects defaults of the wrong type', () => {
+  // @ts-expect-error the default must match the declared prop type
+  withDefaults(defineProps<{ label?: string }>(), { label: 42 })
 })
 
 describe('defineProps w/ type declaration + withDefaults', <T extends
