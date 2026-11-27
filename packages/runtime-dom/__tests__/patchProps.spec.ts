@@ -394,4 +394,12 @@ describe('runtime-dom: props patching', () => {
 
     expect(fn).toBeCalledTimes(0)
   })
+
+  // #12211
+  test('should not override content when `text` attribute is set', () => {
+    const root = document.createElement('div')
+    render(h('a', { text: '' }, ['foo']), root)
+    const a = root.children[0]
+    expect(a.textContent).toBe('foo')
+  })
 })
