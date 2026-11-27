@@ -103,19 +103,20 @@ export const transformElement: NodeTransform = (node, context) => {
     let dynamicPropNames: string[] | undefined
     let vnodeDirectives: VNodeCall['directives']
     let needsPatch = false
-    let isBlockRequired = false
+    // <svg> and <foreignObject> must be forced into blocks so that block
+    // updates inside get proper isSVG flag at runtime. (#639, #643)
+    // This is technically web-specific, but splitting the logic out of core
+    // leads to too much unnecessary complexity.
+    let isBlockRequired =
+      !isComponent &&
+      (tag === 'svg' || tag === 'foreignObject' || tag === 'math')
 
     let shouldUseBlock =
       // dynamic component may resolve to plain elements
       isDynamicComponent ||
       vnodeTag === TELEPORT ||
       vnodeTag === SUSPENSE ||
-      (!isComponent &&
-        // <svg> and <foreignObject> must be forced into blocks so that block
-        // updates inside get proper isSVG flag at runtime. (#639, #643)
-        // This is technically web-specific, but splitting the logic out of core
-        // leads to too much unnecessary complexity.
-        (tag === 'svg' || tag === 'foreignObject' || tag === 'math'))
+      isBlockRequired
 
     // props
     if (props.length > 0) {
@@ -130,7 +131,9 @@ export const transformElement: NodeTransform = (node, context) => {
       patchFlag = propsBuildResult.patchFlag
       dynamicPropNames = propsBuildResult.dynamicPropNames
       needsPatch = propsBuildResult.needsPatch
-      isBlockRequired = propsBuildResult.isBlockRequired
+      if (propsBuildResult.isBlockRequired) {
+        isBlockRequired = true
+      }
       const directives = propsBuildResult.directives
       vnodeDirectives =
         directives && directives.length
