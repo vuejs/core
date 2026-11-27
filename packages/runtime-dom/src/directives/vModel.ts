@@ -221,9 +221,21 @@ export const vModelRadio: ModelDirective<HTMLInputElement> = {
       el[assignKey](getValue(el))
     })
   },
-  beforeUpdate(el, { value, oldValue }, vnode) {
+  beforeUpdate(el, { value, oldValue }, vnode, prevVNode) {
     el[assignKey] = getModelAssigner(vnode)
-    if (value !== oldValue) {
+    // Clear checkedness before a group change can uncheck the new group's
+    // selected radio.
+    if (
+      el.checked &&
+      (value !== oldValue || vnode.props!.value !== prevVNode.props!.value) &&
+      !looseEqual(value, vnode.props!.value)
+    ) {
+      el.checked = false
+    }
+  },
+  updated(el, { value, oldValue }, vnode, prevVNode) {
+    // Select only after name/form props have established the new group.
+    if (value !== oldValue || vnode.props!.value !== prevVNode.props!.value) {
       el.checked = looseEqual(value, vnode.props!.value)
     }
   },
