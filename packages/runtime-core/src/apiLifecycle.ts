@@ -63,7 +63,7 @@ export function injectHook(
   }
 }
 
-const createHook =
+export const createHook =
   <T extends Function = () => any>(lifecycle: LifecycleHooks) =>
   (
     hook: T,
