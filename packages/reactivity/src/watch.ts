@@ -218,9 +218,11 @@ export function watch(
     }
   }
 
+  let onceCallbackInvoked = false
   if (once && cb) {
     const _cb = cb
     cb = (...args) => {
+      onceCallbackInvoked = true
       try {
         return _cb(...args)
       } finally {
@@ -235,6 +237,7 @@ export function watch(
 
   const job = (immediateFirstRun?: boolean) => {
     if (
+      onceCallbackInvoked ||
       !(effect.flags & EffectFlags.ACTIVE) ||
       (!effect.dirty && !immediateFirstRun)
     ) {
