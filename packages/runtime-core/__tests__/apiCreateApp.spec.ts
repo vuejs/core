@@ -85,6 +85,42 @@ describe('api: createApp', () => {
     expect(serializeInner(root)).toBe(``)
   })
 
+  // #16467
+  test('unmounting an app twice leaves its replacement mounted', () => {
+    const root = nodeOps.createElement('div')
+    const app = createApp(() => 'A')
+    const replacement = createApp(() => 'B')
+    const cleanup = vi.fn()
+    app.onUnmount(cleanup)
+
+    app.mount(root)
+    app.unmount()
+    replacement.mount(root)
+    app.unmount()
+
+    expect(serializeInner(root)).toBe('B')
+    expect(cleanup).toHaveBeenCalledOnce()
+    expect('Cannot unmount an app that is not mounted').toHaveBeenWarned()
+
+    const otherRoot = nodeOps.createElement('div')
+    app.mount(otherRoot)
+    expect(serializeInner(otherRoot)).toBe('')
+    expect('App has already been mounted').toHaveBeenWarned()
+  })
+
+  test('ignores a nested unmount from app cleanup', () => {
+    const root = nodeOps.createElement('div')
+    const app = createApp(() => 'A')
+    const cleanup = vi.fn().mockImplementationOnce(() => app.unmount())
+    app.onUnmount(cleanup)
+    app.mount(root)
+    app.unmount()
+
+    expect(cleanup).toHaveBeenCalledOnce()
+    expect(serializeInner(root)).toBe('')
+    expect('Cannot unmount an app that is not mounted').toHaveBeenWarned()
+  })
+
   test('provide', () => {
     const Root = {
       setup() {

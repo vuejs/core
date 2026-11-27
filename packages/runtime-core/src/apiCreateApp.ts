@@ -250,6 +250,12 @@ export type CreateAppFunction<HostElement> = (
 
 let uid = 0
 
+enum AppMountState {
+  CREATED,
+  MOUNTED,
+  UNMOUNTED,
+}
+
 export function createAppAPI<HostElement>(
   render: RootRenderFunction<HostElement>,
   hydrate?: RootHydrateFunction,
@@ -268,7 +274,7 @@ export function createAppAPI<HostElement>(
     const installedPlugins = new WeakSet()
     const pluginCleanupFns: Array<() => any> = []
 
-    let isMounted = false
+    let mountState = AppMountState.CREATED
 
     const app: App = (context.app = {
       _uid: uid++,
@@ -360,7 +366,7 @@ export function createAppAPI<HostElement>(
         isHydrate?: boolean,
         namespace?: boolean | ElementNamespace,
       ): any {
-        if (!isMounted) {
+        if (mountState === AppMountState.CREATED) {
           // #5571
           if (__DEV__ && (rootContainer as any).__vue_app__) {
             warn(
@@ -397,7 +403,7 @@ export function createAppAPI<HostElement>(
           } else {
             render(vnode, rootContainer, namespace)
           }
-          isMounted = true
+          mountState = AppMountState.MOUNTED
           app._container = rootContainer
           // for devtools and telemetry
           ;(rootContainer as any).__vue_app__ = app
@@ -429,13 +435,20 @@ export function createAppAPI<HostElement>(
       },
 
       unmount() {
-        if (isMounted) {
-          callWithAsyncErrorHandling(
-            pluginCleanupFns,
-            app._instance,
-            ErrorCodes.APP_UNMOUNT_CLEANUP,
-          )
-          render(null, app._container)
+        if (mountState === AppMountState.MOUNTED) {
+          // A cleanup callback can call unmount() again.
+          mountState = AppMountState.UNMOUNTED
+          try {
+            callWithAsyncErrorHandling(
+              pluginCleanupFns,
+              app._instance,
+              ErrorCodes.APP_UNMOUNT_CLEANUP,
+            )
+            render(null, app._container)
+          } catch (err) {
+            mountState = AppMountState.MOUNTED
+            throw err
+          }
           if (__DEV__ || __FEATURE_PROD_DEVTOOLS__) {
             app._instance = null
             devtoolsUnmountApp(app)
