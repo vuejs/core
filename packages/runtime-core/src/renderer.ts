@@ -11,6 +11,7 @@ import {
   createVNode,
   invokeVNodeHook,
   isSameVNodeType,
+  isVNode,
   normalizeVNode,
 } from './vnode'
 import {
@@ -2481,23 +2482,30 @@ function baseCreateRenderer(
   }
 
   const render: RootRenderFunction = (vnode, container, namespace) => {
+    const root = isVNode(container._vnode) ? container._vnode : null
     // a mount or unmount is only responsible for the components it creates
     // (a compat root is created before its $mount); a root update is for the
     // whole pending queue
     const minUid =
-      vnode && container._vnode
+      vnode && root && !root.isUnmountingRoot
         ? undefined
         : vnode && vnode.component
           ? vnode.component.uid
           : getNextUid()
     flushOnAppMount(() => {
       if (vnode == null) {
-        if (container._vnode) {
-          unmount(container._vnode, null, null, true)
+        if (root && !root.isUnmountingRoot) {
+          root.isUnmountingRoot = true
+          try {
+            unmount(root, null, null, true)
+          } finally {
+            root.isUnmountingRoot = false
+          }
+          if (container._vnode === root) container._vnode = null
         }
       } else {
         patch(
-          container._vnode || null,
+          root && root.isUnmountingRoot ? null : root,
           vnode,
           container,
           null,
@@ -2505,8 +2513,8 @@ function baseCreateRenderer(
           null,
           namespace,
         )
+        container._vnode = vnode
       }
-      container._vnode = vnode
     }, minUid)
   }
 

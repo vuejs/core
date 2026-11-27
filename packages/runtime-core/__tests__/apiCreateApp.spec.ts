@@ -15,6 +15,7 @@ import {
   onUpdated,
   provide,
   queuePostFlushCb,
+  reactive,
   ref,
   render,
   resolveComponent,
@@ -119,6 +120,41 @@ describe('api: createApp', () => {
     expect(cleanup).toHaveBeenCalledOnce()
     expect(serializeInner(root)).toBe('')
     expect('Cannot unmount an app that is not mounted').toHaveBeenWarned()
+  })
+
+  test('clears the app marker on a reactive host after unmount', () => {
+    // Test nodes are marked raw, so copy the host before making it reactive.
+    const root = reactive({ ...nodeOps.createElement('div') })
+    const app = createApp(() => 'A')
+    app.mount(root)
+    app.unmount()
+
+    expect(root).not.toHaveProperty('__vue_app__')
+    const replacement = createApp(() => 'B')
+    replacement.mount(root)
+    expect(serializeInner(root)).toBe('B')
+    replacement.unmount()
+  })
+
+  test('preserves the app mounted by a cleanup with the same functional root', async () => {
+    const root = nodeOps.createElement('div')
+    const label = ref('B')
+    const Root = () => inject<typeof label>('label')!.value
+    const app = createApp(Root).provide('label', ref('A'))
+    const replacement = createApp(Root).provide('label', label)
+    app.onUnmount(() => replacement.mount(root))
+
+    app.mount(root)
+    expect(serializeInner(root)).toBe('A')
+    app.unmount()
+    expect('already an app instance mounted').toHaveBeenWarned()
+    expect(serializeInner(root)).toBe('B')
+
+    label.value = 'updated'
+    await nextTick()
+    expect(serializeInner(root)).toBe('updated')
+    replacement.unmount()
+    expect(serializeInner(root)).toBe('')
   })
 
   test('provide', () => {

@@ -170,6 +170,8 @@ export interface AppConfig {
 
 export interface AppContext {
   app: App // for devtools
+  /** @internal */
+  isUnmounting?: boolean
   config: AppConfig
   mixins: ComponentOptions[]
   components: Record<string, Component>
@@ -398,6 +400,25 @@ export function createAppAPI<HostElement>(
             }
           }
 
+          const host = rootContainer as { _vnode?: VNode | null }
+          let previous = host._vnode
+          if (
+            previous &&
+            previous.appContext &&
+            previous.appContext.isUnmounting
+          ) {
+            // A cleanup can mount another app with the same root component.
+            // Finish the old tree first unless its unmount hooks are on stack.
+            isHydrate = false
+            while (
+              previous &&
+              previous.appContext &&
+              !previous.isUnmountingRoot
+            ) {
+              render(null, rootContainer)
+              previous = host._vnode
+            }
+          }
           if (isHydrate && hydrate) {
             hydrate(vnode as VNode<Node, Element>, rootContainer as any)
           } else {
@@ -439,14 +460,26 @@ export function createAppAPI<HostElement>(
           const container = app._container
           // A cleanup callback can call unmount() again.
           mountState = AppMountState.UNMOUNTED
+          context.isUnmounting = true
+          let completed = 0
           try {
-            callWithAsyncErrorHandling(
-              pluginCleanupFns,
-              app._instance,
-              ErrorCodes.APP_UNMOUNT_CLEANUP,
-            )
-            render(null, container)
+            while (completed < pluginCleanupFns.length) {
+              callWithAsyncErrorHandling(
+                pluginCleanupFns[completed],
+                app._instance,
+                ErrorCodes.APP_UNMOUNT_CLEANUP,
+              )
+              completed++
+            }
+            // A cleanup can mount another app into the same container.
+            const root = container._vnode
+            if (root && root.appContext === context) {
+              render(null, container)
+            }
           } finally {
+            context.isUnmounting = false
+            // A retry must resume at the first unfinished cleanup.
+            pluginCleanupFns.splice(0, completed)
             // An unmounted hook can throw after the renderer clears the root.
             const root = container._vnode
             if (root && root.appContext === context) {
@@ -456,7 +489,7 @@ export function createAppAPI<HostElement>(
                 app._instance = null
                 devtoolsUnmountApp(app)
               }
-              if (container.__vue_app__ === app) {
+              if (!root || !root.appContext) {
                 delete container.__vue_app__
               }
             }

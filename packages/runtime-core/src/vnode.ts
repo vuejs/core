@@ -239,6 +239,8 @@ export interface VNode<
    * @internal __COMPAT__ only
    */
   isCompatRoot?: true
+  /** @internal A host can receive a new app from a root's unmount hooks. */
+  isUnmountingRoot?: boolean
   /**
    * @internal custom element interception hook
    */

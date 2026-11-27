@@ -136,9 +136,13 @@ export const createApp = ((...args) => {
       }
     }
 
-    // clear content before mounting
+    // Unmount hooks can mount another app while the renderer still needs
+    // the departing root's DOM nodes and fragment anchors.
     if (container.nodeType === 1) {
-      container.textContent = ''
+      const root = (container as any)._vnode
+      if (!(root && root.appContext && root.appContext.isUnmounting)) {
+        container.textContent = ''
+      }
     }
     const proxy = mount(container, false, resolveRootNamespace(container))
     if (container instanceof Element) {
