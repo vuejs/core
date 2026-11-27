@@ -7,7 +7,10 @@ import {
   computed,
   effect,
   onWatcherCleanup,
+  reactive,
+  readonly,
   ref,
+  shallowReactive,
   watch,
 } from '../src'
 
@@ -393,5 +396,126 @@ describe('watch', () => {
 
     dep.value++
     expect(dummy).toBe(1)
+  })
+
+  describe('deep watch on arrays', () => {
+    test('reactive array of primitives', () => {
+      const arr = reactive([1, 2, 3])
+      const cb = vi.fn()
+      watch(arr, cb, { deep: true })
+
+      arr[0] = 10
+      expect(cb).toHaveBeenCalledTimes(1)
+      arr.push(4)
+      expect(cb).toHaveBeenCalledTimes(2)
+      arr.length = 1
+      expect(cb).toHaveBeenCalledTimes(3)
+      arr.length = 3
+      expect(cb).toHaveBeenCalledTimes(4)
+      // same value: no trigger
+      arr[0] = arr[0]
+      expect(cb).toHaveBeenCalledTimes(4)
+      // non-index key is not traversed
+      ;(arr as any).foo = 1
+      expect(cb).toHaveBeenCalledTimes(4)
+    })
+
+    test('sparse reactive array', () => {
+      const arr = reactive([1, , 3] as number[])
+      const cb = vi.fn()
+      watch(arr, cb, { deep: true })
+
+      arr[1] = 2
+      expect(cb).toHaveBeenCalledTimes(1)
+      delete arr[0]
+      expect(cb).toHaveBeenCalledTimes(2)
+      arr[5] = 6
+      expect(cb).toHaveBeenCalledTimes(3)
+    })
+
+    test('reactive array of objects', () => {
+      const raw = { inner: reactive({ n: 0 }) }
+      const arr = reactive<any[]>([{ n: 0 }, raw])
+      const cb = vi.fn()
+      watch(arr, cb, { deep: true })
+
+      arr[0].n++
+      expect(cb).toHaveBeenCalledTimes(1)
+      // reactive object nested in a raw object in the array
+      raw.inner.n++
+      expect(cb).toHaveBeenCalledTimes(2)
+      arr.splice(0, 1)
+      expect(cb).toHaveBeenCalledTimes(3)
+    })
+
+    test('reactive array of refs', () => {
+      const r = ref(0)
+      const arr = reactive([r])
+      const cb = vi.fn()
+      watch(arr, cb, { deep: true })
+
+      r.value++
+      expect(cb).toHaveBeenCalledTimes(1)
+      arr[0] = ref(5)
+      expect(cb).toHaveBeenCalledTimes(2)
+      // the old ref is no longer tracked
+      r.value++
+      expect(cb).toHaveBeenCalledTimes(2)
+    })
+
+    test('readonly(reactive) array', () => {
+      const source = reactive([{ n: 0 }])
+      const cb = vi.fn()
+      watch(readonly(source), cb, { deep: true })
+
+      source[0].n++
+      expect(cb).toHaveBeenCalledTimes(1)
+      source.push({ n: 1 })
+      expect(cb).toHaveBeenCalledTimes(2)
+    })
+
+    test('shallowReactive array', () => {
+      const arr = shallowReactive([{ n: 0 }])
+      const cb = vi.fn()
+      watch(arr, cb, { deep: true })
+
+      // items of a shallow array are raw
+      arr[0].n++
+      expect(cb).toHaveBeenCalledTimes(0)
+      arr[0] = { n: 1 }
+      expect(cb).toHaveBeenCalledTimes(1)
+    })
+
+    test('raw array with reactive items', () => {
+      const item = reactive({ n: 0 })
+      const cb = vi.fn()
+      watch(() => [item], cb, { deep: true })
+
+      item.n++
+      expect(cb).toHaveBeenCalledTimes(1)
+    })
+
+    test('depth limit', () => {
+      const arr = reactive([{ n: { m: 0 } }])
+      const cb = vi.fn()
+      watch(arr, cb, { deep: 2 })
+
+      arr[0].n = { m: 1 }
+      expect(cb).toHaveBeenCalledTimes(1)
+      arr[0].n.m++
+      expect(cb).toHaveBeenCalledTimes(1)
+    })
+
+    test('symbol keys of objects', () => {
+      const key = Symbol('key')
+      const obj = reactive({ [key]: { n: 0 } } as Record<symbol, any>)
+      const cb = vi.fn()
+      watch(obj, cb, { deep: true })
+
+      obj[key].n++
+      expect(cb).toHaveBeenCalledTimes(1)
+      obj[Symbol('other')] = 1
+      expect(cb).toHaveBeenCalledTimes(2)
+    })
   })
 })

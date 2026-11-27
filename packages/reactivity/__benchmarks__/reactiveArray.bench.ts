@@ -3,6 +3,7 @@ import {
   effect,
   reactive,
   shallowReadArray,
+  watch,
 } from '../dist/reactivity.esm-browser.prod'
 
 for (let amount = 1e1; amount < 1e4; amount *= 10) {
@@ -153,6 +154,32 @@ for (let amount = 1e1; amount < 1e4; amount *= 10) {
 
     bench(`push() trigger, tracked via forEach, ${amount} elements`, () => {
       arr.push(1)
+    })
+  }
+
+  {
+    const rawArray: number[] = []
+    for (let i = 0, n = amount; i < n; i++) {
+      rawArray.push(i)
+    }
+    const arr = reactive(rawArray)
+    watch(arr, () => {}, { deep: true })
+
+    bench(`deep watch trigger, ${amount} elements`, () => {
+      arr[0]++
+    })
+  }
+
+  {
+    const rawArray: { id: number }[] = []
+    for (let i = 0, n = amount; i < n; i++) {
+      rawArray.push({ id: i })
+    }
+    const arr = reactive(rawArray)
+    watch(arr, () => {}, { deep: true })
+
+    bench(`deep watch trigger, ${amount} objects`, () => {
+      arr[0].id++
     })
   }
 }
