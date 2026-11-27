@@ -159,4 +159,85 @@ describe('ssr: <slot>', () => {
       }"
     `)
   })
+
+  test('fallback inside transition: no fragment markers', () => {
+    // the transition unwraps its children on the client, so the fallback must
+    // not be wrapped in fragment markers either - see ssrProcessTransition
+    expect(
+      compile(
+        `<transition><slot><div v-for="i in 3">{{ i }}</div></slot></transition>`,
+      ).code,
+    ).toMatchInlineSnapshot(`
+      "const { ssrRenderSlotInner: _ssrRenderSlotInner, ssrInterpolate: _ssrInterpolate, ssrRenderList: _ssrRenderList } = require("vue/server-renderer")
+
+      return function ssrRender(_ctx, _push, _parent, _attrs) {
+        _ssrRenderSlotInner(_ctx.$slots, "default", {}, () => {
+          _ssrRenderList(3, (i) => {
+            _push(\`<div>\${_ssrInterpolate(i)}</div>\`)
+          })
+        }, _push, _parent, null, true)
+      }"
+    `)
+  })
+
+  test('fallback inside transition-group: no fragment markers', () => {
+    expect(
+      compile(
+        `<TransitionGroup tag="ul"><slot><li v-for="i in 3">{{ i }}</li></slot></TransitionGroup>`,
+      ).code,
+    ).toMatchInlineSnapshot(`
+      "const { ssrRenderSlotInner: _ssrRenderSlotInner, ssrRenderAttrs: _ssrRenderAttrs, ssrInterpolate: _ssrInterpolate, ssrRenderList: _ssrRenderList } = require("vue/server-renderer")
+
+      return function ssrRender(_ctx, _push, _parent, _attrs) {
+        _push(\`<ul\${_ssrRenderAttrs(_attrs)}>\`)
+        _ssrRenderSlotInner(_ctx.$slots, "default", {}, () => {
+          _ssrRenderList(3, (i) => {
+            _push(\`<li>\${_ssrInterpolate(i)}</li>\`)
+          })
+        }, _push, _parent, null, true)
+        _push(\`</ul>\`)
+      }"
+    `)
+  })
+
+  test('fallback inside transition-group: no comment for a falsy v-if', () => {
+    // transition-group filters comment children out at runtime (#6715), so the
+    // fallback must not leave the placeholder comment of a falsy v-if behind
+    expect(
+      compile(
+        `<TransitionGroup tag="ul"><slot><li v-if="ok">{{ ok }}</li></slot></TransitionGroup>`,
+      ).code,
+    ).toMatchInlineSnapshot(`
+      "const { ssrRenderSlotInner: _ssrRenderSlotInner, ssrRenderAttrs: _ssrRenderAttrs, ssrInterpolate: _ssrInterpolate } = require("vue/server-renderer")
+
+      return function ssrRender(_ctx, _push, _parent, _attrs) {
+        _push(\`<ul\${_ssrRenderAttrs(_attrs)}>\`)
+        _ssrRenderSlotInner(_ctx.$slots, "default", {}, () => {
+          if (_ctx.ok) {
+            _push(\`<li>\${_ssrInterpolate(_ctx.ok)}</li>\`)
+          }
+        }, _push, _parent, null, true)
+        _push(\`</ul>\`)
+      }"
+    `)
+  })
+
+  test('fallback outside a transition keeps fragment markers', () => {
+    // control: a plain slot outlet still renders its fallback as a fragment,
+    // matching the fragment the client renders for the slot content
+    expect(compile(`<slot><div v-for="i in 3">{{ i }}</div></slot>`).code)
+      .toMatchInlineSnapshot(`
+        "const { ssrRenderSlot: _ssrRenderSlot, ssrInterpolate: _ssrInterpolate, ssrRenderList: _ssrRenderList } = require("vue/server-renderer")
+
+        return function ssrRender(_ctx, _push, _parent, _attrs) {
+          _ssrRenderSlot(_ctx.$slots, "default", {}, () => {
+            _push(\`<!--[-->\`)
+            _ssrRenderList(3, (i) => {
+              _push(\`<div>\${_ssrInterpolate(i)}</div>\`)
+            })
+            _push(\`<!--]-->\`)
+          }, _push, _parent)
+        }"
+      `)
+  })
 })
