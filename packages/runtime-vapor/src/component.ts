@@ -2481,7 +2481,9 @@ export function settleDeferredRootUpdates(
     effects.push(currentJob)
   }
   if (effects.length > 1) {
-    effects.sort((a, b) => a.order! - b.order!)
+    effects.sort(
+      (a, b) => a.order! - b.order! || (a.subOrder || 0) - (b.subOrder || 0),
+    )
   }
   for (let i = 0; i < effects.length; i++) {
     const job = effects[i]
