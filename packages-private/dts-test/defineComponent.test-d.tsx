@@ -1422,6 +1422,62 @@ describe('function syntax w/ emits', () => {
   )
 })
 
+describe('function syntax w/ inferred optional runtime props', () => {
+  const Comp = defineComponent(
+    props => {
+      expectType<string | undefined>(props.label)
+      expectType<number | undefined>(props.count)
+      expectType<typeof props.label>(undefined)
+      expectType<typeof props.count>(undefined)
+      expectType<boolean>(props.enabled)
+      expectType<string>(props.theme)
+      expectType<string>(props.id)
+      return () => {}
+    },
+    {
+      props: {
+        label: String,
+        count: { type: Number },
+        enabled: { type: Boolean, required: false },
+        theme: { type: String, default: 'light' },
+        id: { type: String, required: true },
+      },
+    },
+  )
+
+  expectType<JSX.Element>(<Comp id="id" />)
+  // @ts-expect-error id is required
+  expectType<JSX.Element>(<Comp />)
+
+  const instance = {} as InstanceType<typeof Comp>
+  expectType<typeof instance.$props>({ id: 'id' })
+  expectType<boolean>(instance.enabled)
+  expectType<string>(instance.theme)
+})
+
+describe('function syntax w/ a generic Boolean prop', () => {
+  const Comp = defineComponent(
+    <T extends boolean>(_props: { enabled: T }) =>
+      () => {},
+    { props: { enabled: Boolean } },
+  )
+
+  expectType<JSX.Element>(<Comp enabled />)
+  // @ts-expect-error the generic setup annotation requires enabled
+  expectType<JSX.Element>(<Comp />)
+})
+
+describe('function syntax w/ a conditional runtime prop', () => {
+  const Comp = defineComponent(() => () => {}, {
+    props: {
+      label: Math.random() > 0.5 ? String : null,
+    },
+  })
+
+  expectType<JSX.Element>(<Comp />)
+  expectType<JSX.Element>(<Comp label="label" />)
+})
+
 describe('function syntax w/ runtime props', () => {
   // with runtime props, the runtime props must match
   // manual type declaration
@@ -1434,12 +1490,12 @@ describe('function syntax w/ runtime props', () => {
     },
   )
 
-  // @ts-expect-error bar isn't specified in props definition
   defineComponent(
     (_props: { msg: string }) => {
       return () => {}
     },
     {
+      // @ts-expect-error bar isn't specified in props definition
       props: ['msg', 'bar'],
     },
   )
@@ -1470,8 +1526,8 @@ describe('function syntax w/ runtime props', () => {
     },
   )
 
-  // @ts-expect-error bar isn't specified in props definition
   defineComponent(
+    // @ts-expect-error bar isn't specified in props definition
     <T extends string>(_props: { msg: T }) => {
       return () => {}
     },
@@ -1544,12 +1600,12 @@ describe('function syntax w/ runtime props', () => {
   // @ts-expect-error bar doesn't exist
   expectType<JSX.Element>(<Comp3 msg="1" bar="2" />)
 
-  // @ts-expect-error string prop names don't match
   defineComponent(
     (_props: { msg: string }) => {
       return () => {}
     },
     {
+      // @ts-expect-error string prop names don't match
       props: ['bar'],
     },
   )
