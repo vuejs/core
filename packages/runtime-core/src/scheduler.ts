@@ -36,8 +36,8 @@ export enum SchedulerJobFlags {
 export interface SchedulerJob extends Function {
   order?: number
   /**
-   * Sorts jobs of the same `order`: the creation order of a Vapor effect
-   * within its component. Absent (0) on other jobs.
+   * Sorts jobs of the same `order`, e.g. Vapor effects by their creation order
+   * within a component. Never decreases for a job; absent (0) on other jobs.
    */
   subOrder?: number
   /**
@@ -114,9 +114,9 @@ function sortsAtOrAfter(
   subOrder: number,
   job: SchedulerJob,
 ): boolean {
+  const jobOrder = job.order!
   return (
-    order > job.order! ||
-    (order === job.order && subOrder >= (job.subOrder || 0))
+    order > jobOrder || (order === jobOrder && subOrder >= (job.subOrder || 0))
   )
 }
 
@@ -156,7 +156,7 @@ function queueJobWorker(
   if (!(flags & SchedulerJobFlags.QUEUED)) {
     job.flags! = flags | SchedulerJobFlags.QUEUED
     job.order = order
-    if (subOrder || job.subOrder) job.subOrder = subOrder
+    if (subOrder) job.subOrder = subOrder
     if (
       flushIndex === length ||
       // fast path when the job sorts after the tail
