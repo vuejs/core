@@ -149,6 +149,31 @@ describe('scheduler', () => {
 
       expect(splicedQueueLengths).toEqual([1, 1, 1])
     })
+
+    it('keeps the order of jobs of one component at large ids and orders', async () => {
+      const calls: number[] = []
+      const queue = (id: number, order: number) =>
+        queueJob(() => calls.push(order), id, false, order)
+      // a component that has created many effects
+      queue(1, 1e8 + 1)
+      queue(1, 1e8)
+      // a component created late in a long-running app
+      queue(2 ** 30, 4001)
+      queue(2 ** 30, 4000)
+      await nextTick()
+      expect(calls).toEqual([1e8, 1e8 + 1, 4000, 4001])
+    })
+
+    // the field costs memory on every job that carries it
+    it('leaves jobs queued without a sub-order untagged', async () => {
+      const job = () => {}
+      const cb = () => {}
+      queueJob(job, 1)
+      queuePostFlushCb(cb)
+      await nextTick()
+      expect('subOrder' in job).toBe(false)
+      expect('subOrder' in cb).toBe(false)
+    })
   })
 
   describe('pre flush jobs', () => {

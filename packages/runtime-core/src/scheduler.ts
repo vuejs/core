@@ -36,6 +36,11 @@ export enum SchedulerJobFlags {
 export interface SchedulerJob extends Function {
   order?: number
   /**
+   * Sorts jobs of the same `order`: the creation order of a Vapor effect
+   * within its component. Absent (0) on other jobs.
+   */
+  subOrder?: number
+  /**
    * flags can technically be undefined, but it can still be used in bitwise
    * operations just like 0.
    */
@@ -88,19 +93,31 @@ export function nextTick<T, R>(
 // watchers to be skipped if the component is unmounted by the parent update.
 function findInsertionIndex(
   order: number,
+  subOrder: number,
   queue: SchedulerJob[],
   start: number,
   end: number,
 ) {
   while (start < end) {
     const middle = (start + end) >>> 1
-    if (queue[middle].order! <= order) {
+    if (sortsAtOrAfter(order, subOrder, queue[middle])) {
       start = middle + 1
     } else {
       end = middle
     }
   }
   return start
+}
+
+function sortsAtOrAfter(
+  order: number,
+  subOrder: number,
+  job: SchedulerJob,
+): boolean {
+  return (
+    order > job.order! ||
+    (order === job.order && subOrder >= (job.subOrder || 0))
+  )
 }
 
 /**
@@ -110,25 +127,16 @@ export function queueJob(
   job: SchedulerJob,
   id?: number,
   isPre = false,
-  order = 0,
+  subOrder = 0,
 ): void {
   if (
     queueJobWorker(
       job,
-      id === undefined
-        ? isPre
-          ? -2
-          : Infinity
-        : isPre
-          ? id * 2
-          : order
-            ? // `order / (order + 1)` is monotonic and always < 1, so it sorts
-              // same-component Vapor effects without changing component order.
-              id * 2 + 1 + order / (order + 1)
-            : id * 2 + 1,
+      id === undefined ? (isPre ? -2 : Infinity) : isPre ? id * 2 : id * 2 + 1,
       jobs,
       jobsLength,
       flushIndex,
+      subOrder,
     )
   ) {
     jobsLength++
@@ -142,19 +150,25 @@ function queueJobWorker(
   queue: SchedulerJob[],
   length: number,
   flushIndex: number,
+  subOrder = 0,
 ) {
   const flags = job.flags!
   if (!(flags & SchedulerJobFlags.QUEUED)) {
     job.flags! = flags | SchedulerJobFlags.QUEUED
     job.order = order
+    if (subOrder || job.subOrder) job.subOrder = subOrder
     if (
       flushIndex === length ||
-      // fast path when the job id is larger than the tail
-      order >= queue[length - 1].order!
+      // fast path when the job sorts after the tail
+      sortsAtOrAfter(order, subOrder, queue[length - 1])
     ) {
       queue[length] = job
     } else {
-      queue.splice(findInsertionIndex(order, queue, flushIndex, length), 0, job)
+      queue.splice(
+        findInsertionIndex(order, subOrder, queue, flushIndex, length),
+        0,
+        job,
+      )
     }
     return true
   }
