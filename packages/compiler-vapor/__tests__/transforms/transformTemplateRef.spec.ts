@@ -62,6 +62,15 @@ describe('compiler: template ref transform', () => {
     expect(code).not.contains('_createTemplateRefSetter')
   })
 
+  test('static ref (inline mode, setup computed)', () => {
+    const { code } = compileWithTransformRef(`<div ref="foo" />`, {
+      inline: true,
+      bindingMetadata: { foo: BindingTypes.SETUP_COMPUTED },
+    })
+    // pass the actual ref and ref key, same as SETUP_REF
+    expect(code).contains('_setStaticTemplateRef(n0, foo, null, "foo")')
+  })
+
   test('multiple static refs', () => {
     const { code } = compileWithTransformRef(
       `<div ref="foo" /><div ref="bar" />`,
