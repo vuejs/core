@@ -26,6 +26,30 @@ return { modelValue, c, toString }
 }"
 `;
 
+exports[`defineModel() > custom element retains the model type in production mode 1`] = `
+"import { useModel as _useModel, defineComponent as _defineComponent } from 'vue'
+
+export default /*@__PURE__*/_defineComponent({
+  __name: 'app.ce',
+  props: {
+    "modelValue": { type: Number },
+    "modelModifiers": {},
+    "step": { type: Number, ...{ default: 1 } },
+    "stepModifiers": {},
+  },
+  emits: ["update:modelValue", "update:step"],
+  setup(__props, { expose: __expose }) {
+  __expose();
+
+      const count = _useModel<number>(__props, "modelValue")
+      const step = _useModel<number>(__props, 'step')
+      
+return { count, step }
+}
+
+})"
+`;
+
 exports[`defineModel() > get / set transformers 1`] = `
 "import { useModel as _useModel, defineComponent as _defineComponent } from 'vue'
 

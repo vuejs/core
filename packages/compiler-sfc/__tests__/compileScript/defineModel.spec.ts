@@ -407,4 +407,20 @@ const checked = defineModel<Model['value']>('checked')
       ),
     ).toThrow('assign the returned ref to a variable')
   })
+
+  test('custom element retains the model type in production mode', () => {
+    const { content } = compile(
+      `
+      <script setup lang="ts">
+      const count = defineModel<number>()
+      const step = defineModel<number>('step', { default: 1 })
+      </script>
+      `,
+      { isProd: true, customElement: filename => /\.ce\.vue$/.test(filename) },
+      { filename: 'app.ce.vue' },
+    )
+    assertCode(content)
+    expect(content).toMatch('"modelValue": { type: Number }')
+    expect(content).toMatch('"step": { type: Number, ...{ default: 1 } }')
+  })
 })
