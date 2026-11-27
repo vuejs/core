@@ -1,4 +1,3 @@
-import path from 'path'
 import {
   ConstantTypes,
   type ExpressionNode,
@@ -13,6 +12,7 @@ import {
   isDataUrl,
   isExternalUrl,
   isRelativeUrl,
+  joinUrl,
   normalizeDecodedImportPath,
   parseUrl,
 } from './templateUtils'
@@ -139,17 +139,8 @@ export const transformAssetUrl: NodeTransform = (
       if (options.base && urlValue[0] === '.') {
         // explicit base - directly rewrite relative urls into absolute url
         // to avoid generating extra imports
-        // Allow for full hostnames provided in options.base
         const base = parseUrl(options.base)
-        const protocol = base.protocol || ''
-        const host = base.host ? protocol + '//' + base.host : ''
-        const basePath = base.path || '/'
-
-        // when packaged in the browser, path will be using the posix-
-        // only version provided by rollup-plugin-node-builtins.
-        attr.value.content =
-          host +
-          (path.posix || path).join(basePath, url.path + (url.hash || ''))
+        attr.value.content = joinUrl(base, url.path + (url.hash || ''))
         return
       }
 
