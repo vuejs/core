@@ -17,6 +17,7 @@ import {
   toRawType,
 } from '@vue/shared'
 import { warn } from './warning'
+import { getRawValue } from './baseHandlers'
 
 type CollectionTypes = IterableCollections | WeakCollections
 
@@ -282,7 +283,7 @@ function createInstrumentationGetter(isReadonly: boolean, shallow: boolean) {
     } else if (key === ReactiveFlags.IS_SHALLOW) {
       return shallow
     } else if (key === ReactiveFlags.RAW) {
-      return target
+      return getRawValue(receiver, isReadonly, shallow, target)
     }
 
     return Reflect.get(
