@@ -833,4 +833,44 @@ describe('TransitionGroup', () => {
     await nextTick()
     expect(log).toEqual(['leave:a', 'leave:more', 'enter:more', 'enter:a'])
   })
+
+  // vdom snapshots the rows in the group's beforeUpdate, before it patches them
+  test('measures a component row before its prop update', async () => {
+    const data = ref({ items: [{ id: 1, opened: false }] })
+    const Item = compile(
+      `<script vapor>
+        const props = defineProps({ opened: Boolean })
+      </script>
+      <template>
+        <div :class="{ opened: props.opened }">item</div>
+      </template>`,
+      data,
+    )
+    const App = compile(
+      `<template>
+        <TransitionGroup tag="div">
+          <components.Item v-for="i in data.items" :key="i.id" :opened="i.opened" />
+        </TransitionGroup>
+      </template>`,
+      data,
+      { Item },
+    )
+    define(App as any).render()
+    await nextTick()
+    const measured: string[] = []
+    const getRect = Element.prototype.getBoundingClientRect
+    const measure = vi
+      .spyOn(Element.prototype, 'getBoundingClientRect')
+      .mockImplementation(function (this: Element) {
+        measured.push(this.className)
+        return getRect.call(this)
+      })
+    try {
+      data.value.items[0].opened = true
+      await nextTick()
+      expect(measured[0]).toBe('')
+    } finally {
+      measure.mockRestore()
+    }
+  })
 })

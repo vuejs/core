@@ -630,7 +630,7 @@ describe('custom directive', () => {
     data.value.show = false
     data.value.extra = true
     await nextTick()
-    expect(states).toEqual(['DIV:true', 'P:true', 'SPAN:true'])
+    expect(states).toEqual(['DIV:true', 'SPAN:true', 'P:true'])
 
     app.unmount()
   })

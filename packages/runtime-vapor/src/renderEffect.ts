@@ -9,6 +9,7 @@ import {
   SchedulerJobFlags,
   currentInstance,
   endMeasure,
+  nextUid,
   popWarningContext,
   pushWarningContext,
   queueJob,
@@ -45,18 +46,14 @@ export class RenderEffect extends ReactiveEffect {
   job?: SchedulerJob
   updateJob?: SchedulerJob
   render: () => void
-  // Creation order within the owning component.
+  // Creation order, shared with component uids: the scheduler id.
   order: number
 
   constructor(render: () => void, noLifecycle = false) {
     super(noLifecycle ? render : undefined)
     this.render = render
     const instance = currentInstance as VaporComponentInstance | null
-    // a vdom instance rendering vapor content owns the update job at order 0
-    const vdomOwner =
-      isInteropEnabled && instance && !instance.vapor ? instance : null
-    if (vdomOwner && !vdomOwner.effectCount) vdomOwner.effectCount = 1
-    this.order = instance ? instance.effectCount++ : 0
+    this.order = nextUid()
     if (__DEV__ && !__TEST__ && !this.subs && !isVaporComponent(instance)) {
       warn('renderEffect called without active EffectScope or Vapor instance.')
     }
@@ -79,7 +76,9 @@ export class RenderEffect extends ReactiveEffect {
     this.flags |= EffectFlags.ALLOW_RECURSE
 
     // last, so the fields a vdom owner adds extend the shared shape
-    if (vdomOwner) adoptVdomOwnedEffect(this, vdomOwner)
+    if (isInteropEnabled && instance && !instance.vapor) {
+      adoptVdomOwnedEffect(this, instance)
+    }
   }
 
   createJob(): SchedulerJob {
@@ -175,20 +174,20 @@ export class RenderEffect extends ReactiveEffect {
   notify(): void {
     const flags = this.flags
     if (!(flags & EffectFlags.PAUSED)) {
-      queueJob(
-        this.job || this.createJob(),
-        this.i ? this.i.uid : undefined,
-        false,
-        this.order,
-      )
+      queueJob(this.job || this.createJob(), this.i ? this.order : undefined)
     }
   }
 }
 
-export function renderEffect(fn: () => void, noLifecycle = false): void {
+export function renderEffect(
+  fn: () => void,
+  noLifecycle = false,
+  order?: number,
+): void {
   if (inOnce) return fn()
 
   const effect = new RenderEffect(fn, noLifecycle)
+  if (order !== undefined) effect.order = order
   effect.run()
 }
 

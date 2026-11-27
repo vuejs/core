@@ -675,6 +675,8 @@ export function initInputs(
         hasDelivered = true
       }
     }, true)
+    // the id reserved right before the instance
+    effect.order = instance.uid - 1
     if (canRebind) instance.inputEffect = effect
     if (!prevEffect) {
       effect.run()

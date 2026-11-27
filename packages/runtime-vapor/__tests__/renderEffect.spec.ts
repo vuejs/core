@@ -439,4 +439,36 @@ describe('renderEffect', () => {
       app.unmount()
     }
   })
+
+  test('updates a child between the parent bindings around it', async () => {
+    const log: string[] = []
+    const data = ref({
+      x: 0,
+      note: (name: string, value: number) => (log.push(name), value),
+    })
+    const Child = compile(
+      `<template>
+        <i>{{ data.note('child', data.x) }}</i>
+      </template>`,
+      data,
+    )
+    const App = compile(
+      `<template>
+        <b>{{ data.note('before', data.x) }}</b>
+        <components.Child />
+        <b>{{ data.note('after', data.x) }}</b>
+      </template>`,
+      data,
+      { Child },
+    )
+    const { app } = define(App).render()
+    try {
+      log.length = 0
+      data.value.x++
+      await nextTick()
+      expect(log).toEqual(['before', 'child', 'after'])
+    } finally {
+      app.unmount()
+    }
+  })
 })

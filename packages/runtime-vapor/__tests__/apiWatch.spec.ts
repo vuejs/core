@@ -18,7 +18,7 @@ import {
   renderEffect,
   template,
 } from '../src'
-import { makeRender } from './_utils'
+import { compile, makeRender } from './_utils'
 import type { VaporComponentInstance } from '../src/component'
 import type { RefEl } from '../src/apiTemplateRef'
 
@@ -338,6 +338,84 @@ describe('apiWatch', () => {
     // both watchers run again event though component has been unmounted
     expect(countWE).toBe(3)
     expect(countW).toBe(2)
+  })
+  test('runs a pre watcher of a child before the parent bindings after it', async () => {
+    const seen: string[] = []
+    const data = ref({ x: 1, report: () => {} })
+    const Child = compile(
+      `<script setup vapor>
+        import { watch } from 'vue'
+        const data = _data
+        const props = defineProps(['x'])
+        watch(
+          () => props.x,
+          () => data.value.report(),
+        )
+      </script>
+      <template>
+        <i>{{ x }}</i>
+      </template>`,
+      data,
+    )
+    const App = compile(
+      `<template>
+        <components.Child :x="data.x" />
+        <b id="after">{{ data.x }}</b>
+      </template>`,
+      data,
+      { Child },
+    )
+    const { app, host } = define(App).render()
+    try {
+      data.value.report = () => {
+        seen.push(host.querySelector('#after')!.textContent!)
+      }
+      data.value.x = 2
+      await nextTick()
+      expect(seen).toEqual(['1'])
+    } finally {
+      app.unmount()
+    }
+  })
+
+  test('a pre watcher of a child sees the props of the same update', async () => {
+    const seen: number[] = []
+    const data = ref({
+      n: 1,
+      report: (v: number) => {
+        seen.push(v)
+      },
+    })
+    const Child = compile(
+      `<script setup vapor>
+        import { watch } from 'vue'
+        const data = _data
+        const props = defineProps(['x'])
+        watch(
+          () => data.value.n,
+          () => data.value.report(props.x),
+        )
+      </script>
+      <template>
+        <i>{{ x }}</i>
+      </template>`,
+      data,
+    )
+    const App = compile(
+      `<template>
+        <components.Child :x="data.n" />
+      </template>`,
+      data,
+      { Child },
+    )
+    const { app } = define(App).render()
+    try {
+      data.value.n = 2
+      await nextTick()
+      expect(seen).toEqual([2])
+    } finally {
+      app.unmount()
+    }
   })
 })
 

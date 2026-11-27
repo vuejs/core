@@ -5457,6 +5457,51 @@ describe('VaporKeepAlive', () => {
         app.unmount()
       },
     )
+
+    test('delivers the props of a reused child before it updates', async () => {
+      const log: string[] = []
+      const data = ref({
+        on: true,
+        x: 'a',
+        y: 1,
+        note: (text: string) => (log.push(text), text),
+      })
+      const Child = compile(
+        `<script setup vapor>
+          const data = _data
+          const props = defineProps(['x'])
+        </script>
+        <template>
+          <i>{{ data.note(props.x + data.y) }}</i>
+        </template>`,
+        data,
+      )
+      const App = compile(
+        `<template>
+          <KeepAlive>
+            <components.Child v-if="data.on" :x="data.x" />
+            <p v-else>off</p>
+          </KeepAlive>
+        </template>`,
+        data,
+        { Child },
+      )
+      const { app, host } = define(App).render()
+      try {
+        data.value.on = false
+        await nextTick()
+        data.value.on = true
+        await nextTick()
+        log.length = 0
+        data.value.x = 'b'
+        data.value.y = 2
+        await nextTick()
+        expect(log).toEqual(['b2'])
+        expect(host.textContent).toBe('b2')
+      } finally {
+        app.unmount()
+      }
+    })
   })
 
   test('unmounts with a cached vdom slot branch behind a vapor KeepAlive', async () => {
