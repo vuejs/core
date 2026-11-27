@@ -46,6 +46,47 @@ return { a }
 })"
 `;
 
+exports[`SFC analyze <script> bindings > auto name inference > empty script setup (JS) 1`] = `
+"
+export default {
+  __name: 'FooBar',
+  setup(__props, { expose: __expose }) {
+  __expose();
+
+return {  }
+}
+
+}"
+`;
+
+exports[`SFC analyze <script> bindings > auto name inference > empty script setup (TS) 1`] = `
+"import { defineComponent as _defineComponent } from 'vue'
+
+export default /*@__PURE__*/_defineComponent({
+  __name: 'FooBar',
+  setup(__props, { expose: __expose }) {
+  __expose();
+
+
+return {  }
+}
+
+})"
+`;
+
+exports[`SFC analyze <script> bindings > auto name inference > empty script setup (with empty script) 1`] = `
+"
+export default {
+  __name: 'FooBar',
+  setup(__props, { expose: __expose }) {
+  __expose();
+
+return {  }
+}
+
+}"
+`;
+
 exports[`SFC compile <script setup> > <script> and <script setup> co-usage > export call expression as default 1`] = `
 "
       function fn() {

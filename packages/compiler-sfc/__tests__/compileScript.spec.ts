@@ -1486,6 +1486,20 @@ describe('SFC analyze <script> bindings', () => {
       assertCode(content)
     })
 
+    test.each([
+      ['JS', '<script setup></script>'],
+      ['TS', '<script setup lang="ts">\n</script>'],
+      ['with empty script', '<script></script><script setup></script>'],
+    ])('empty script setup (%s)', (_, script) => {
+      const { content } = compile(
+        `${script}<template><input /></template>`,
+        undefined,
+        { filename: 'FooBar.vue' },
+      )
+      expect(content).toMatch(`__name: 'FooBar'`)
+      assertCode(content)
+    })
+
     test('do not overwrite manual name (object)', () => {
       const { content } = compile(
         `<script>
