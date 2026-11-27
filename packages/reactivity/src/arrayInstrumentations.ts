@@ -42,18 +42,21 @@ export function shallowReadArray<T>(arr: T[]): T[] {
   return arr
 }
 
-function toWrapped(target: unknown, item: unknown) {
+const toReadonlyReactive = (item: unknown) => toReadonly(toReactive(item))
+
+// Read the array's flags once per method call, not once per element.
+function getWrapper(target: unknown): (item: unknown) => unknown {
   if (isReadonly(target)) {
-    return isReactive(target) ? toReadonly(toReactive(item)) : toReadonly(item)
+    return isReactive(target) ? toReadonlyReactive : toReadonly
   }
-  return toReactive(item)
+  return toReactive
 }
 
 export const arrayInstrumentations: Record<string | symbol, Function> = <any>{
   __proto__: null,
 
   [Symbol.iterator]() {
-    return iterator(this, Symbol.iterator, item => toWrapped(this, item))
+    return iterator(this, Symbol.iterator, getWrapper(this))
   },
 
   concat(...args: unknown[]) {
@@ -63,8 +66,9 @@ export const arrayInstrumentations: Record<string | symbol, Function> = <any>{
   },
 
   entries() {
+    const wrap = getWrapper(this)
     return iterator(this, 'entries', (value: [number, unknown]) => {
-      value[1] = toWrapped(this, value[1])
+      value[1] = wrap(value[1])
       return value
     })
   },
@@ -85,7 +89,7 @@ export const arrayInstrumentations: Record<string | symbol, Function> = <any>{
       'filter',
       fn,
       thisArg,
-      v => v.map((item: unknown) => toWrapped(this, item)),
+      v => v.map(getWrapper(this)),
       arguments,
     )
   },
@@ -99,7 +103,8 @@ export const arrayInstrumentations: Record<string | symbol, Function> = <any>{
       'find',
       fn,
       thisArg,
-      item => toWrapped(this, item),
+      // only the found item is wrapped, so read the flags only then
+      item => getWrapper(this)(item),
       arguments,
     )
   },
@@ -120,7 +125,8 @@ export const arrayInstrumentations: Record<string | symbol, Function> = <any>{
       'findLast',
       fn,
       thisArg,
-      item => toWrapped(this, item),
+      // only the found item is wrapped, so read the flags only then
+      item => getWrapper(this)(item),
       arguments,
     )
   },
@@ -235,7 +241,7 @@ export const arrayInstrumentations: Record<string | symbol, Function> = <any>{
   },
 
   values() {
-    return iterator(this, 'values', item => toWrapped(this, item))
+    return iterator(this, 'values', getWrapper(this))
   },
 }
 
@@ -332,8 +338,9 @@ function apply(
   let wrappedFn = fn
   if (arr !== self) {
     if (needsWrap) {
+      const wrap = getWrapper(self)
       wrappedFn = function (this: unknown, item, index) {
-        return fn.call(this, toWrapped(self, item), index, self)
+        return fn.call(this, wrap(item), index, self)
       }
     } else if (fn.length > 2) {
       wrappedFn = function (this: unknown, item, index) {
@@ -358,13 +365,14 @@ function reduce(
   let wrapInitialAccumulator = false
   if (arr !== self) {
     if (needsWrap) {
+      const wrap = getWrapper(self)
       wrapInitialAccumulator = args.length === 0
       wrappedFn = function (this: unknown, acc, item, index) {
         if (wrapInitialAccumulator) {
           wrapInitialAccumulator = false
-          acc = toWrapped(self, acc)
+          acc = wrap(acc)
         }
-        return fn.call(this, acc, toWrapped(self, item), index, self)
+        return fn.call(this, acc, wrap(item), index, self)
       }
     } else if (fn.length > 3) {
       wrappedFn = function (this: unknown, acc, item, index) {
@@ -373,7 +381,8 @@ function reduce(
     }
   }
   const result = (arr[method] as any)(wrappedFn, ...args)
-  return wrapInitialAccumulator ? toWrapped(self, result) : result
+  // the callback did not run (one item, no initial value): wrap the result
+  return wrapInitialAccumulator ? getWrapper(self)(result) : result
 }
 
 // instrument identity-sensitive methods to account for reactive proxies

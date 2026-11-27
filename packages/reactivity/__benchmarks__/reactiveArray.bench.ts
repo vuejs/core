@@ -1,7 +1,10 @@
 import { bench } from 'vitest'
 import {
+  computed,
   effect,
   reactive,
+  readonly,
+  ref,
   shallowReadArray,
 } from '../dist/reactivity.esm-browser.prod'
 
@@ -153,6 +156,36 @@ for (let amount = 1e1; amount < 1e4; amount *= 10) {
 
     bench(`push() trigger, tracked via forEach, ${amount} elements`, () => {
       arr.push(1)
+    })
+  }
+
+  {
+    const rawArray: { done: boolean }[] = []
+    for (let i = 0, n = amount; i < n; i++) {
+      rawArray.push({ done: i % 2 === 0 })
+    }
+    const arr = reactive(rawArray)
+    const tick = ref(0)
+    const c = computed(() => (tick.value, arr.filter(x => x.done).length))
+
+    bench(`computed filter, ${amount} objects`, () => {
+      tick.value++
+      c.value
+    })
+  }
+
+  {
+    const rawArray: { id: number }[] = []
+    for (let i = 0, n = amount; i < n; i++) {
+      rawArray.push({ id: i })
+    }
+    const arr = readonly(reactive(rawArray))
+    const tick = ref(0)
+    const c = computed(() => (tick.value, arr.map(x => x.id)))
+
+    bench(`computed map on readonly(reactive), ${amount} objects`, () => {
+      tick.value++
+      c.value
     })
   }
 }
