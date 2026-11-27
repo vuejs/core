@@ -13,6 +13,7 @@ import {
   onUnmounted,
   ref,
   render,
+  serializeInner,
   watch,
   watchEffect,
 } from '@vue/runtime-test'
@@ -708,6 +709,92 @@ describe('error handling', () => {
       err,
       ErrorTypeStrings[ErrorCodes.COMPONENT_UPDATE],
     )
+  })
+
+  test('in computed that is used as key for post watcher', async () => {
+    const err = new Error('foo')
+    const fn = vi.fn()
+    const trigger = ref(false)
+    const count = ref(0)
+
+    const Comp = {
+      setup() {
+        onErrorCaptured((err, instance, info) => {
+          fn(err, info)
+          return false
+        })
+        return () => h(Child)
+      },
+    }
+
+    const Child = {
+      setup() {
+        const foo = computed(() => {
+          if (trigger.value) throw err
+          return 1
+        })
+        watch(foo, () => {}, { flush: 'post' })
+        return () => count.value
+      },
+    }
+
+    const root = nodeOps.createElement('div')
+    render(h(Comp), root)
+
+    trigger.value = true
+    await nextTick()
+    expect(fn).toHaveBeenCalledWith(
+      err,
+      ErrorTypeStrings[ErrorCodes.COMPONENT_UPDATE],
+    )
+
+    count.value++
+    await nextTick()
+    expect(serializeInner(root)).toBe('1')
+  })
+
+  test('in computed watched by a child pre watcher during parent update', async () => {
+    const err = new Error('foo')
+    const fn = vi.fn()
+    const user = ref<{ name: string } | null>({ name: 'a' })
+    const label = ref('one')
+
+    const Child = defineComponent({
+      props: ['user', 'label'],
+      setup(props) {
+        const name = computed(() => {
+          if (!props.user) throw err
+          return props.user.name
+        })
+        watch(name, () => {})
+        return () => h('span', props.label)
+      },
+    })
+
+    const Comp = {
+      setup() {
+        return () =>
+          h('div', [
+            h(Child, { user: user.value, label: label.value }),
+            h('i', label.value),
+          ])
+      },
+    }
+
+    const root = nodeOps.createElement('div')
+    const app = createApp(Comp)
+    app.config.errorHandler = (err, instance, info) => fn(err, info)
+    app.mount(root)
+    expect(serializeInner(root)).toBe(`<div><span>one</span><i>one</i></div>`)
+
+    user.value = null
+    label.value = 'two'
+    await nextTick()
+    expect(fn).toHaveBeenCalledWith(
+      err,
+      ErrorTypeStrings[ErrorCodes.COMPONENT_UPDATE],
+    )
+    expect(serializeInner(root)).toBe(`<div><span>two</span><i>two</i></div>`)
   })
 
   test.each([onBeforeUnmount, onUnmounted])(
