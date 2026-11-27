@@ -140,7 +140,7 @@ export const transformOn: DirectiveTransform = (
         `${
           isInlineStatement
             ? !__BROWSER__ && context.isTS
-              ? `($event: any)`
+              ? `($event: any): any`
               : `$event`
             : `${
                 !__BROWSER__ && context.isTS ? `\n//@ts-ignore\n` : ``
