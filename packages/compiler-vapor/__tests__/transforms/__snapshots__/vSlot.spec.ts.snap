@@ -1,8 +1,9 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
 exports[`compiler: transform slot > default slot with v-for directive 1`] = `
-"import { toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, createForSlots as _createForSlots, createAssetComponent as _createAssetComponent, template as _template } from 'vue';
+"import { toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, createForSlots as _createForSlots, createAssetComponent as _createAssetComponent, enableDynamicSlots as _enableDynamicSlots, template as _template } from 'vue';
 const t0 = _template(" ")
+_enableDynamicSlots()
 
 export function render(_ctx) {
   const n2 = _createAssetComponent("Comp", null, {
@@ -19,7 +20,8 @@ export function render(_ctx) {
 `;
 
 exports[`compiler: transform slot > default slot with v-if directive 1`] = `
-"import { createAssetComponent as _createAssetComponent } from 'vue';
+"import { createAssetComponent as _createAssetComponent, enableDynamicSlots as _enableDynamicSlots } from 'vue';
+_enableDynamicSlots()
 
 export function render(_ctx) {
   let s
@@ -75,8 +77,9 @@ exports[`compiler: transform slot > dynamic slot functions do not shadow setup b
 `;
 
 exports[`compiler: transform slot > dynamic slots name 1`] = `
-"import { createAssetComponent as _createAssetComponent, template as _template } from 'vue';
+"import { createAssetComponent as _createAssetComponent, enableDynamicSlots as _enableDynamicSlots, template as _template } from 'vue';
 const t0 = _template("foo", 2)
+_enableDynamicSlots()
 
 export function render(_ctx) {
   let s
@@ -96,8 +99,9 @@ export function render(_ctx) {
 `;
 
 exports[`compiler: transform slot > dynamic slots name w/ keyed v-for 1`] = `
-"import { toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, createForSlots as _createForSlots, createAssetComponent as _createAssetComponent, template as _template } from 'vue';
+"import { toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, createForSlots as _createForSlots, createAssetComponent as _createAssetComponent, enableDynamicSlots as _enableDynamicSlots, template as _template } from 'vue';
 const t0 = _template(" ")
+_enableDynamicSlots()
 
 export function render(_ctx) {
   const n2 = _createAssetComponent("Comp", null, {
@@ -114,8 +118,9 @@ export function render(_ctx) {
 `;
 
 exports[`compiler: transform slot > dynamic slots name w/ v-for 1`] = `
-"import { toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, createForSlots as _createForSlots, createAssetComponent as _createAssetComponent, template as _template } from 'vue';
+"import { toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, createForSlots as _createForSlots, createAssetComponent as _createAssetComponent, enableDynamicSlots as _enableDynamicSlots, template as _template } from 'vue';
 const t0 = _template(" ")
+_enableDynamicSlots()
 
 export function render(_ctx) {
   const n2 = _createAssetComponent("Comp", null, {
@@ -132,8 +137,9 @@ export function render(_ctx) {
 `;
 
 exports[`compiler: transform slot > dynamic slots name w/ v-for and provide absent key 1`] = `
-"import { createForSlots as _createForSlots, createAssetComponent as _createAssetComponent, template as _template } from 'vue';
+"import { createForSlots as _createForSlots, createAssetComponent as _createAssetComponent, enableDynamicSlots as _enableDynamicSlots, template as _template } from 'vue';
 const t0 = _template("foo", 2)
+_enableDynamicSlots()
 
 export function render(_ctx) {
   const n2 = _createAssetComponent("Comp", null, {
@@ -149,10 +155,11 @@ export function render(_ctx) {
 `;
 
 exports[`compiler: transform slot > dynamic slots name w/ v-if / v-else[-if] 1`] = `
-"import { createAssetComponent as _createAssetComponent, template as _template } from 'vue';
+"import { createAssetComponent as _createAssetComponent, enableDynamicSlots as _enableDynamicSlots, template as _template } from 'vue';
 const t0 = _template("condition slot", 2)
 const t1 = _template("another condition", 2)
 const t2 = _template("else condition", 2)
+_enableDynamicSlots()
 
 export function render(_ctx) {
   let s, s1, s2
@@ -331,8 +338,9 @@ export function render(_ctx) {
 `;
 
 exports[`compiler: transform slot > on component dynamically named slot 1`] = `
-"import { toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, createAssetComponent as _createAssetComponent, template as _template } from 'vue';
+"import { toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, createAssetComponent as _createAssetComponent, enableDynamicSlots as _enableDynamicSlots, template as _template } from 'vue';
 const t0 = _template(" ")
+_enableDynamicSlots()
 
 export function render(_ctx) {
   let s
@@ -513,8 +521,9 @@ export function render(_ctx) {
 `;
 
 exports[`compiler: transform slot > slot owner context > dynamic slot name with annotated v-for aliases 1`] = `
-"import { toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, createForSlots as _createForSlots, createAssetComponent as _createAssetComponent, template as _template } from 'vue';
+"import { toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, createForSlots as _createForSlots, createAssetComponent as _createAssetComponent, enableDynamicSlots as _enableDynamicSlots, template as _template } from 'vue';
 const t0 = _template(" ")
+_enableDynamicSlots()
 
 export function render(_ctx) {
   const n2 = _createAssetComponent("Comp", null, {
@@ -531,7 +540,8 @@ export function render(_ctx) {
 `;
 
 exports[`compiler: transform slot > slot owner context > dynamic slot source with slot outlet keeps dynamic slot function 1`] = `
-"import { createSlot as _createSlot, createForSlots as _createForSlots, createAssetComponent as _createAssetComponent } from 'vue';
+"import { createSlot as _createSlot, createForSlots as _createForSlots, createAssetComponent as _createAssetComponent, enableDynamicSlots as _enableDynamicSlots } from 'vue';
+_enableDynamicSlots()
 
 export function render(_ctx) {
   const n2 = _createAssetComponent("Comp", null, {

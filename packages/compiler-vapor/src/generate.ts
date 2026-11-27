@@ -44,6 +44,8 @@ export class CodegenContext {
   hoistedHandlers: Map<IRProp | SetEventIRNode, string> = new Map()
 
   needsTemplateRefSetter: boolean = false
+  hasDynamicSlots: boolean = false
+  hasDynamicSlotProps: boolean = false
   inSlotBlock: boolean = false
 
   helper = (name: CoreHelper | VaporHelper): string => {
@@ -278,10 +280,22 @@ export function generate(
   }
 
   const delegates = genDelegates(context)
+  // enables the runtime dynamic slot code, tree-shaken without `$` slots
+  const dynamicSlots = context.hasDynamicSlots
+    ? `${context.helper('enableDynamicSlots')}()\n`
+    : ''
+  const dynamicSlotProps = context.hasDynamicSlotProps
+    ? `${context.helper('enableDynamicSlotProps')}()\n`
+    : ''
   const templates = genTemplates(ir.template.entries, context)
   const imports = genHelperImports(context) + genAssetImports(context)
   const preamble =
-    imports + templates + genDynamicPropNames(context) + delegates
+    imports +
+    templates +
+    genDynamicPropNames(context) +
+    delegates +
+    dynamicSlots +
+    dynamicSlotProps
 
   if (!inline) {
     let newlineCount = 0

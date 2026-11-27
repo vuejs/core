@@ -456,4 +456,17 @@ describe('compiler: transform <slot> outlets', () => {
     const { code } = compileWithSlotsOutlet(`<slot ${attrs} />`)
     expect(code).toContain(`{ $: [() => (${expression})] }`)
   })
+
+  test('enables dynamic slot props only when passing them', () => {
+    const code = (src: string) => compileWithSlotsOutlet(src).code
+    for (const attrs of [`v-bind="obj"`, `:[key]="v"`, `v-on="handlers"`]) {
+      expect(code(`<slot ${attrs} />`)).toContain(
+        '\n_enableDynamicSlotProps()\n',
+      )
+    }
+    expect(code(`<slot :title="t" foo="bar" />`)).not.toContain(
+      'enableDynamicSlotProps',
+    )
+    expect(code(`<slot />`)).not.toContain('enableDynamicSlotProps')
+  })
 })

@@ -16,6 +16,7 @@ import {
   createSlot,
   createVaporApp,
   defineVaporComponent,
+  enableDynamicSlots,
   insert,
   renderEffect,
   setBlockKey,
@@ -25,6 +26,9 @@ import {
   vaporInteropPlugin,
 } from '../src'
 import { compile, makeRender } from './_utils'
+
+// hand-written `$` slots, as the compiler would enable them
+enableDynamicSlots()
 
 const define = makeRender()
 
