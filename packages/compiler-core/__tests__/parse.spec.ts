@@ -2,10 +2,12 @@ import type { ParserOptions } from '../src/options'
 import { ErrorCodes } from '../src/errors'
 import {
   type CommentNode,
+  CommentTypes,
   ConstantTypes,
   type DirectiveNode,
   type ElementNode,
   ElementTypes,
+  type InTagCommentNode,
   type InterpolationNode,
   NodeTypes,
   type Position,
@@ -1169,6 +1171,70 @@ describe('compiler: parse', () => {
           source: '<div id=a class="c" inert style=\'\'></div>',
         },
       })
+    })
+
+    test('in-tag line comments', () => {
+      const ast = baseParse(`<Comp
+        // @vue-expect-error
+        :selected-id="selectedId"
+        // note
+        disabled
+        @click="onClick"
+        // tail
+      />`)
+
+      expect(ast.comments.map(comment => comment.content)).toStrictEqual([
+        ' @vue-expect-error',
+        ' note',
+        ' tail',
+      ])
+
+      const comment = ast.comments[0] as InTagCommentNode
+      expect(comment).toMatchObject({
+        type: NodeTypes.COMMENT,
+        kind: CommentTypes.IN_TAG_LINE,
+        content: ' @vue-expect-error',
+        contentLoc: {
+          source: ' @vue-expect-error',
+        },
+        loc: {
+          source: '// @vue-expect-error',
+        },
+      })
+    })
+
+    test('in-tag line comment can directly follow tag name', () => {
+      const onError = vi.fn()
+      const ast = baseParse(`<div// note>`, { onError })
+
+      const comment = ast.comments[0] as InTagCommentNode
+      expect(comment).toMatchObject({
+        type: NodeTypes.COMMENT,
+        kind: CommentTypes.IN_TAG_LINE,
+        content: ' note>',
+        loc: {
+          source: '// note>',
+        },
+      })
+      expect(onError).toHaveBeenCalledWith(
+        expect.objectContaining({
+          code: ErrorCodes.EOF_IN_TAG,
+        }),
+      )
+    })
+
+    test('in-tag line comments are preserved regardless of comments option', () => {
+      const astOptionNoComment = baseParse(`<div\n  // note\n/>`, {
+        comments: false,
+      })
+      const astOptionWithComments = baseParse(`<div\n  // note\n/>`, {
+        comments: true,
+      })
+
+      expect(astOptionNoComment.children).toHaveLength(1)
+      expect(astOptionWithComments.children).toHaveLength(1)
+      expect(astOptionNoComment.comments).toHaveLength(1)
+      expect(astOptionWithComments.comments).toHaveLength(1)
     })
 
     // https://github.com/vuejs/core/issues/4251
