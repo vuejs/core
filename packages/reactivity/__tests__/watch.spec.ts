@@ -332,6 +332,27 @@ describe('watch', () => {
     expect(value.value).toBe(false)
   })
 
+  test('once watcher should run only once when its callback mutates its source', () => {
+    const source = ref(0)
+    const calls: string[] = []
+    watch(
+      source,
+      (value, _, onCleanup) => {
+        calls.push(`callback ${value}`)
+        onCleanup(() => calls.push('cleanup'))
+        if (value === 1) {
+          source.value = 2
+          calls.push('source updated')
+        }
+      },
+      { once: true },
+    )
+
+    source.value = 1
+    source.value = 3
+    expect(calls).toEqual(['callback 1', 'source updated', 'cleanup'])
+  })
+
   test('once watcher should stop when its callback throws', () => {
     const source = ref(0)
     const callback = vi.fn(() => {
