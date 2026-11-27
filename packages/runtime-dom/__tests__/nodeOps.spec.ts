@@ -18,6 +18,33 @@ describe('runtime-dom: node-ops', () => {
     expect(option2.selected).toBe(true)
   })
 
+  // #6272
+  test('children of a <template> element are inserted into its content', () => {
+    const el = nodeOps.createElement('template') as HTMLTemplateElement
+    const child = nodeOps.createElement('span')
+    nodeOps.insert(child, el)
+
+    expect(el.childNodes.length).toBe(0)
+    expect(el.content.childNodes.length).toBe(1)
+    expect(el.content.firstChild).toBe(child)
+
+    const anchor = child
+    const before = nodeOps.createElement('div')
+    nodeOps.insert(before, el, anchor)
+    expect(el.content.firstChild).toBe(before)
+    expect(el.content.childNodes.length).toBe(2)
+  })
+
+  // #6272
+  test('rendered <template> element retains its content', () => {
+    const root = document.createElement('div')
+    render(h('template', null, [h('span', 'hi')]), root)
+    const template = root.firstChild as HTMLTemplateElement
+    expect(template.tagName).toBe('TEMPLATE')
+    expect(template.content.childNodes.length).toBe(1)
+    expect(template.innerHTML).toBe('<span>hi</span>')
+  })
+
   test('create custom elements', () => {
     const spyCreateElement = vi.spyOn(document, 'createElement')
 
@@ -120,6 +147,46 @@ describe('runtime-dom: node-ops', () => {
       expect(parent.innerHTML).toBe(content + existing)
       expect(nodes[0]).toBe(parent.firstChild)
       expect(nodes[1]).toBe(parent.childNodes[parent.childNodes.length - 2])
+    })
+
+    // #6272 static content under a <template> must land in its content fragment
+    test('fresh insertion into a <template> parent uses its content', () => {
+      const content = `<div>one</div><div>two</div>three`
+      const parent = document.createElement('template') as HTMLTemplateElement
+      const [first, last] = nodeOps.insertStaticContent!(
+        content,
+        parent,
+        null,
+        undefined,
+      )
+      // nothing should be appended to the template element itself
+      expect(parent.childNodes.length).toBe(0)
+      expect(parent.content.childNodes.length).toBe(3)
+      expect(parent.innerHTML).toBe(content)
+      expect(first).toBe(parent.content.firstChild)
+      expect(last).toBe(parent.content.lastChild)
+    })
+
+    test('cached insertion into a <template> parent uses its content', () => {
+      const content = `<div>one</div><div>two</div>three`
+      const parent = document.createElement('template') as HTMLTemplateElement
+
+      const cached = document.createElement('div')
+      cached.innerHTML = content
+
+      const [first, last] = nodeOps.insertStaticContent!(
+        content,
+        parent,
+        null,
+        undefined,
+        cached.firstChild,
+        cached.lastChild,
+      )
+      expect(parent.childNodes.length).toBe(0)
+      expect(parent.content.childNodes.length).toBe(3)
+      expect(parent.innerHTML).toBe(content)
+      expect(first).toBe(parent.content.firstChild)
+      expect(last).toBe(parent.content.lastChild)
     })
 
     test('The math elements should keep their MathML namespace', async () => {
