@@ -39,7 +39,8 @@ function genVarName(
   isProd: boolean,
   isSSR = false,
 ): string {
-  if (isProd) {
+  // Multiline expressions cannot be used verbatim in generated property names.
+  if (isProd || /[\r\n]/.test(raw)) {
     // hash must not start with a digit to comply with CSS custom property naming rules
     return hash(id + raw).replace(/^\d/, r => `v${r}`)
   } else {
