@@ -526,5 +526,83 @@ describe('DOM parser', () => {
         { type: NodeTypes.ELEMENT, tag: 'g' },
       ])
     })
+
+    describe('HTML integration points', () => {
+      test('textarea in foreignObject is RCDATA', () => {
+        const ast = parse(
+          '<svg><foreignObject><textarea><b>x</b></textarea></foreignObject></svg>',
+          parserOptions,
+        )
+        const foreignObject = (ast.children[0] as ElementNode)
+          .children[0] as ElementNode
+        const textarea = foreignObject.children[0] as ElementNode
+        expect(foreignObject.ns).toBe(Namespaces.SVG)
+        expect(textarea.ns).toBe(Namespaces.HTML)
+        expect(textarea.children).toMatchObject([
+          { type: NodeTypes.TEXT, content: '<b>x</b>' },
+        ])
+      })
+
+      test('title in foreignObject is RCDATA', () => {
+        const ast = parse(
+          '<svg><foreignObject><title><b>x</b></title></foreignObject></svg>',
+          parserOptions,
+        )
+        const foreignObject = (ast.children[0] as ElementNode)
+          .children[0] as ElementNode
+        const title = foreignObject.children[0] as ElementNode
+        expect(title.children).toMatchObject([
+          { type: NodeTypes.TEXT, content: '<b>x</b>' },
+        ])
+      })
+
+      test('textarea in mtext is RCDATA', () => {
+        const ast = parse(
+          '<math><mtext><textarea><b>x</b></textarea></mtext></math>',
+          parserOptions,
+        )
+        const mtext = (ast.children[0] as ElementNode)
+          .children[0] as ElementNode
+        const textarea = mtext.children[0] as ElementNode
+        expect(textarea.children).toMatchObject([
+          { type: NodeTypes.TEXT, content: '<b>x</b>' },
+        ])
+      })
+
+      test('textarea in annotation-xml text/html is RCDATA', () => {
+        const ast = parse(
+          '<math><annotation-xml encoding="text/html"><textarea><b>x</b></textarea></annotation-xml></math>',
+          parserOptions,
+        )
+        const annotation = (ast.children[0] as ElementNode)
+          .children[0] as ElementNode
+        const textarea = annotation.children[0] as ElementNode
+        expect(textarea.children).toMatchObject([
+          { type: NodeTypes.TEXT, content: '<b>x</b>' },
+        ])
+      })
+    })
+
+    test('plain HTML textarea and root ns script are unchanged', () => {
+      const ast = parse(
+        '<div><textarea><b>x</b></textarea></div>',
+        parserOptions,
+      )
+      expect((ast.children[0] as ElementNode).children).toMatchObject([
+        {
+          type: NodeTypes.ELEMENT,
+          children: [{ type: NodeTypes.TEXT, content: '<b>x</b>' }],
+        },
+      ])
+
+      const svgAst = parse('<script><g/><g/></script>', {
+        ...parserOptions,
+        ns: Namespaces.SVG,
+      })
+      expect((svgAst.children[0] as ElementNode).children).toMatchObject([
+        { type: NodeTypes.ELEMENT, tag: 'g' },
+        { type: NodeTypes.ELEMENT, tag: 'g' },
+      ])
+    })
   })
 })
