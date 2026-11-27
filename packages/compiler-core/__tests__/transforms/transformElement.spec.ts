@@ -127,6 +127,131 @@ describe('compiler: element transform', () => {
     expect(node.tag).toBe(`Example`)
   })
 
+  test('error on ambiguous setup binding component reference during hmr', () => {
+    const onError = vi.fn()
+    const onWarn = vi.fn()
+    const { root, node } = parseWithElementTransform(`<popup-status/>`, {
+      bindingMetadata: {
+        popupStatus: BindingTypes.SETUP_CONST,
+        PopupStatus: BindingTypes.SETUP_MAYBE_REF,
+      },
+      isNativeTag: tag => tag === 'div',
+      hmr: true,
+      onError,
+      onWarn,
+    })
+
+    expect(root.helpers).not.toContain(RESOLVE_COMPONENT)
+    expect(node.tag).toBe(`$setup["popupStatus"]`)
+    expect(onError).toHaveBeenCalledTimes(1)
+    expect(onError.mock.calls[0][0]).toMatchObject({
+      code: ErrorCodes.X_SETUP_TEMPLATE_REFERENCE_CONFLICT,
+    })
+    expect(onError.mock.calls[0][0].message).toContain(
+      `Component tag <popup-status> matches multiple script setup bindings: "popupStatus", "PopupStatus".`,
+    )
+    expect(onWarn).not.toHaveBeenCalled()
+  })
+
+  test('warn on ambiguous setup binding component reference during build', () => {
+    const onError = vi.fn()
+    const onWarn = vi.fn()
+    const { root, node } = parseWithElementTransform(`<popup-status/>`, {
+      bindingMetadata: {
+        popupStatus: BindingTypes.SETUP_CONST,
+        PopupStatus: BindingTypes.SETUP_MAYBE_REF,
+      },
+      isNativeTag: tag => tag === 'div',
+      onError,
+      onWarn,
+    })
+
+    expect(root.helpers).not.toContain(RESOLVE_COMPONENT)
+    expect(node.tag).toBe(`$setup["popupStatus"]`)
+    expect(onError).not.toHaveBeenCalled()
+    expect(onWarn).toHaveBeenCalledTimes(1)
+    expect(onWarn.mock.calls[0][0]).toMatchObject({
+      code: ErrorCodes.X_SETUP_TEMPLATE_REFERENCE_CONFLICT,
+    })
+    expect(onWarn.mock.calls[0][0].message).toContain(
+      `Component tag <popup-status> matches multiple script setup bindings: "popupStatus", "PopupStatus".`,
+    )
+  })
+
+  test('includes kebab-case setup binding names in component ambiguity check', () => {
+    const onError = vi.fn()
+    const onWarn = vi.fn()
+    const { root, node } = parseWithElementTransform(`<popup-status/>`, {
+      bindingMetadata: {
+        'popup-status': BindingTypes.PROPS,
+        popupStatus: BindingTypes.SETUP_CONST,
+        PopupStatus: BindingTypes.SETUP_MAYBE_REF,
+      },
+      isNativeTag: tag => tag === 'div',
+      onError,
+      onWarn,
+    })
+
+    expect(root.helpers).not.toContain(RESOLVE_COMPONENT)
+    expect(node.tag).toBe(`$setup["popupStatus"]`)
+    expect(onError).not.toHaveBeenCalled()
+    expect(onWarn).toHaveBeenCalledTimes(1)
+    expect(onWarn.mock.calls[0][0]).toMatchObject({
+      code: ErrorCodes.X_SETUP_TEMPLATE_REFERENCE_CONFLICT,
+    })
+    expect(onWarn.mock.calls[0][0].message).toContain(
+      `Component tag <popup-status> matches multiple script setup bindings: "popup-status", "popupStatus", "PopupStatus".`,
+    )
+  })
+
+  test('do not warn on PascalCase setup binding component reference', () => {
+    const onError = vi.fn()
+    const onWarn = vi.fn()
+    const { root, node } = parseWithElementTransform(`<PopupStatus/>`, {
+      bindingMetadata: {
+        popupStatus: BindingTypes.SETUP_CONST,
+        PopupStatus: BindingTypes.SETUP_MAYBE_REF,
+      },
+      isNativeTag: tag => tag === 'div',
+      hmr: true,
+      onError,
+      onWarn,
+    })
+
+    expect(root.helpers).not.toContain(RESOLVE_COMPONENT)
+    expect(node.tag).toBe(`$setup["PopupStatus"]`)
+    expect(onError).not.toHaveBeenCalled()
+    expect(onWarn).not.toHaveBeenCalled()
+  })
+
+  test('error on ambiguous setup binding directive reference during hmr', () => {
+    const onError = vi.fn()
+    const onWarn = vi.fn()
+    const { root, node } = parseWithElementTransform(`<div v-popup-status/>`, {
+      bindingMetadata: {
+        vPopupStatus: BindingTypes.SETUP_CONST,
+        VPopupStatus: BindingTypes.SETUP_MAYBE_REF,
+      },
+      hmr: true,
+      onError,
+      onWarn,
+    })
+
+    expect(root.helpers).not.toContain(RESOLVE_DIRECTIVE)
+    expect(root.directives.length).toBe(0)
+    expect(node.directives!.elements[0].elements[0]).toBe(
+      `$setup["vPopupStatus"]`,
+    )
+    expect(onError).toHaveBeenCalledTimes(1)
+    expect(onError.mock.calls[0][0]).toMatchObject({
+      code: ErrorCodes.X_SETUP_TEMPLATE_REFERENCE_CONFLICT,
+    })
+    expect(onError.mock.calls[0][0].message).toContain(
+      `Custom directive v-popup-status matches multiple script setup bindings: "vPopupStatus", "VPopupStatus".`,
+    )
+    expect(onWarn).not.toHaveBeenCalled()
+  })
+
   test('resolve namespaced component from setup bindings', () => {
     const { root, node } = parseWithElementTransform(`<Foo.Example/>`, {
       bindingMetadata: {
