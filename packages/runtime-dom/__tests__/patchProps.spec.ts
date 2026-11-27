@@ -394,4 +394,34 @@ describe('runtime-dom: props patching', () => {
 
     expect(fn).toBeCalledTimes(0)
   })
+
+  // #10929
+  test('should re-sync checked changed by user input', () => {
+    const root = document.createElement('div')
+    render(h('input', { type: 'checkbox', checked: false, id: 'a' }), root)
+    const el = root.children[0] as HTMLInputElement
+
+    el.click()
+    expect(el.checked).toBe(true)
+
+    // re-render without changing the bound value
+    render(h('input', { type: 'checkbox', checked: false, id: 'b' }), root)
+    expect(el.checked).toBe(false)
+    expect(el.hasAttribute('checked')).toBe(false)
+  })
+
+  test('should not touch checked that is still in sync', async () => {
+    const fn = vi.fn()
+    const root = document.createElement('div')
+    render(h('input', { type: 'checkbox', checked: true, id: 'a' }), root)
+    const el = root.children[0] as HTMLInputElement
+    const observer = new MutationObserver(fn)
+    observer.observe(el, { attributeFilter: ['checked'] })
+
+    render(h('input', { type: 'checkbox', checked: true, id: 'b' }), root)
+    await nextTick()
+
+    expect(el.checked).toBe(true)
+    expect(fn).not.toHaveBeenCalled()
+  })
 })
