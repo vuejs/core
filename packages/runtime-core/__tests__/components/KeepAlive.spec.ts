@@ -1250,4 +1250,39 @@ describe('KeepAlive', () => {
     await nextTick()
     expect(serializeInner(root)).toBe('<p>1</p>')
   })
+
+  test('calls a function ref once per reactivation', async () => {
+    const calls: string[] = []
+    const refFn = (id: string) => (el: any) =>
+      calls.push(`${id}:${el ? 'set' : 'null'}`)
+    const setRef = shallowRef(refFn('ref1'))
+    const toggle = ref(true)
+    const Child = defineComponent({ render: () => h('span', 'child') })
+    const App = defineComponent({
+      render: () =>
+        h(KeepAlive, null, [
+          toggle.value
+            ? h(Child, { key: 'shared', ref: setRef.value })
+            : h('div', { key: 'other' }, 'plain'),
+        ]),
+    })
+    render(h(App), root)
+    expect(calls.splice(0)).toEqual(['ref1:set'])
+
+    // same ref kept across the hide, then one swapped while hidden
+    for (const [prev, next] of [
+      ['ref1', 'ref1'],
+      ['ref1', 'ref2'],
+    ]) {
+      toggle.value = false
+      await nextTick()
+      expect(calls.splice(0)).toEqual([`${prev}:null`])
+
+      setRef.value = refFn(next)
+      toggle.value = true
+      await nextTick()
+      expect(serializeInner(root)).toBe('<span>child</span>')
+      expect(calls.splice(0)).toEqual([`${next}:set`])
+    }
+  })
 })
