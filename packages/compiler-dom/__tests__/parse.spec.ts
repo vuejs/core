@@ -426,6 +426,34 @@ describe('DOM parser', () => {
       expect(element.ns).toBe(Namespaces.HTML)
     })
 
+    test('uppercase text/html encoding in MATH_ML namespace', () => {
+      const ast = parse(
+        '<math><annotation-xml encoding="TEXT/HTML"><textarea/></annotation-xml></math>',
+        parserOptions,
+      )
+
+      const elementMath = ast.children[0] as ElementNode
+      const elementAnnotation = elementMath.children[0] as ElementNode
+      const element = elementAnnotation.children[0] as ElementNode
+
+      expect(elementMath.ns).toBe(Namespaces.MATH_ML)
+      expect(element.ns).toBe(Namespaces.HTML)
+    })
+
+    test('mixed case application/xhtml+xml encoding in MATH_ML namespace', () => {
+      const ast = parse(
+        '<math><annotation-xml encoding="Application/XHTML+XML"><textarea/></annotation-xml></math>',
+        parserOptions,
+      )
+
+      const elementMath = ast.children[0] as ElementNode
+      const elementAnnotation = elementMath.children[0] as ElementNode
+      const element = elementAnnotation.children[0] as ElementNode
+
+      expect(elementMath.ns).toBe(Namespaces.MATH_ML)
+      expect(element.ns).toBe(Namespaces.HTML)
+    })
+
     test('mtext malignmark in MATH_ML namespace', () => {
       const ast = parse(
         '<math><mtext><malignmark/></mtext></math>',

@@ -6,7 +6,7 @@
 // - compiler-core/src/transforms/transformElement.ts
 
 import { vtcKey } from '../../runtime-dom/src/components/Transition'
-import { h, nextTick, ref, render } from '../src'
+import { compile, h, nextTick, ref, render } from '../src'
 
 describe('MathML support', () => {
   afterEach(() => {
@@ -45,6 +45,51 @@ describe('MathML support', () => {
     expect(e0.querySelector('#e3')!.namespaceURI).toMatch('Math')
     expect(e0.querySelector('#e4')!.namespaceURI).toMatch('xhtml')
     expect(e0.querySelector('#e5')!.namespaceURI).toMatch('svg')
+  })
+
+  test('should match annotation-xml encoding case-insensitively', () => {
+    const root = document.createElement('div')
+    document.body.appendChild(root)
+    const App = {
+      // disable hoisting so children are mounted through the runtime
+      // namespace resolution instead of being stringified via innerHTML
+      render: compile(
+        `
+      <math>
+        <annotation-xml encoding="TEXT/HTML">
+          <div id="g1" />
+        </annotation-xml>
+        <annotation-xml encoding="Application/XHTML+XML">
+          <div id="g2" />
+        </annotation-xml>
+        <annotation-xml encoding="text/xml">
+          <div id="g3" />
+        </annotation-xml>
+        <annotation-xml encoding="text/html;charset=utf-8">
+          <div id="g4" />
+        </annotation-xml>
+      </math>
+      `,
+        { hoistStatic: false },
+      ),
+    }
+    render(h(App), root)
+    expect(document.querySelector('#g1')!.namespaceURI).toMatch('xhtml')
+    expect(document.querySelector('#g2')!.namespaceURI).toMatch('xhtml')
+    expect(document.querySelector('#g3')!.namespaceURI).toMatch('Math')
+    expect(document.querySelector('#g4')!.namespaceURI).toMatch('Math')
+  })
+
+  test('should not throw when annotation-xml encoding is not a string', () => {
+    const root = document.createElement('div')
+    document.body.appendChild(root)
+    render(
+      h('math', null, [
+        h('annotation-xml', { encoding: 123 }, [h('div', { id: 'h1' })]),
+      ]),
+      root,
+    )
+    expect(document.querySelector('#h1')!.namespaceURI).toMatch('Math')
   })
 
   test('should patch elements with correct namespaces', async () => {

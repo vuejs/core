@@ -2542,12 +2542,14 @@ function resolveChildrenNamespace(
   { type, props }: VNode,
   currentNamespace: ElementNamespace,
 ): ElementNamespace {
+  const encoding =
+    props && typeof props.encoding === 'string'
+      ? props.encoding.toLowerCase()
+      : ''
   return (currentNamespace === 'svg' && type === 'foreignObject') ||
     (currentNamespace === 'mathml' &&
       type === 'annotation-xml' &&
-      props &&
-      props.encoding &&
-      props.encoding.includes('html'))
+      (encoding === 'text/html' || encoding === 'application/xhtml+xml'))
     ? undefined
     : currentNamespace
 }

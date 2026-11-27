@@ -28,14 +28,19 @@ export const parserOptions: ParserOptions = {
           return Namespaces.SVG
         }
         if (
-          parent.props.some(
-            a =>
-              a.type === NodeTypes.ATTRIBUTE &&
-              a.name === 'encoding' &&
-              a.value != null &&
-              (a.value.content === 'text/html' ||
-                a.value.content === 'application/xhtml+xml'),
-          )
+          parent.props.some(a => {
+            if (
+              a.type !== NodeTypes.ATTRIBUTE ||
+              a.name !== 'encoding' ||
+              a.value == null
+            ) {
+              return false
+            }
+            const encoding = a.value.content.toLowerCase()
+            return (
+              encoding === 'text/html' || encoding === 'application/xhtml+xml'
+            )
+          })
         ) {
           ns = Namespaces.HTML
         }
