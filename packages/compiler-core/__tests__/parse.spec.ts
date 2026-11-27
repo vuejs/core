@@ -2262,6 +2262,25 @@ describe('compiler: parse', () => {
       expect(() => baseParse(`{ foo }`)).not.toThrow()
     })
 
+    test('should reset v-pre state', () => {
+      expect(() => baseParse(`<div v-pre><a x x></a></div>`)).toThrow()
+      const ast = baseParse(`<p v-if="ok">{{ x }}</p>`)
+      const p = ast.children[0] as ElementNode
+      expect(p.props[0].type).toBe(NodeTypes.DIRECTIVE)
+      expect(p.children[0].type).toBe(NodeTypes.INTERPOLATION)
+    })
+
+    test('should reset pre state', () => {
+      expect(() =>
+        baseParse(`<pre><a x x></a></pre>`, {
+          isPreTag: tag => tag === 'pre',
+        }),
+      ).toThrow()
+      const ast = baseParse(`<div>  a   b  </div>`)
+      const div = ast.children[0] as ElementNode
+      expect((div.children[0] as TextNode).content).toBe(' a b ')
+    })
+
     test('correct loc when the closing > is foarmatted', () => {
       const [span] = baseParse(`<span></span
       
