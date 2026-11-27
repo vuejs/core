@@ -326,12 +326,26 @@ export function transformDestructuredProps(
         currentModelOption = node
       }
 
+      // Class decorators use the outer scope, unlike the superclass and body.
+      if (
+        parent &&
+        parent.type === 'ClassExpression' &&
+        parent.id &&
+        (node === parent.superClass || node === parent.body)
+      ) {
+        pushScope()
+        registerLocalBinding(parent.id)
+      }
+
       checkUsage(node, 'watch', vueImportAliases.watch)
       checkUsage(node, 'toRef', vueImportAliases.toRef)
 
       // function scopes
       if (isFunctionType(node)) {
         pushScope(true)
+        if (node.type === 'FunctionExpression' && node.id) {
+          registerLocalBinding(node.id)
+        }
         walkFunctionParams(node, registerLocalBinding)
         if (node.body.type === 'BlockStatement') {
           walkFunctionScopeVarDeclarations(node.body)
@@ -409,6 +423,14 @@ export function transformDestructuredProps(
         node.type === 'ForOfStatement' ||
         node.type === 'ForInStatement' ||
         node.type === 'ForStatement'
+      ) {
+        popScope()
+      }
+      if (
+        parent &&
+        parent.type === 'ClassExpression' &&
+        parent.id &&
+        (node === parent.superClass || node === parent.body)
       ) {
         popScope()
       }

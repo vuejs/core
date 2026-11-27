@@ -1,4 +1,5 @@
 import { BindingTypes } from '@vue/compiler-core'
+import { transformSync } from 'esbuild'
 import type { SFCScriptCompileOptions } from '../../src'
 import { assertCode, compileSFCScript } from '../utils'
 
@@ -920,5 +921,97 @@ init();
       { expose: () => {} },
     )
     expect(bindings.inspect()).toEqual(expected)
+  })
+
+  test('named function expressions keep their name local to parameters and body', () => {
+    const { content } = compile(
+      `<script setup>
+      const { items } = defineProps(['items'])
+      const count = function items(n = items(0)) {
+        return n <= 0 ? 0 : 1 + items(n - 1)
+      }
+      const outer = () => items
+      </script>`,
+      { inlineTemplate: false, genDefaultAs: '_sfc_' },
+    )
+    const component = new Function(`${content}; return _sfc_`)()
+    const props = { items: [] }
+    const bindings = component.setup(props, { expose: () => {} })
+    expect(bindings.count(3)).toBe(3)
+    expect(bindings.count()).toBe(0)
+    expect(bindings.outer()).toBe(props.items)
+  })
+
+  test('named class expressions scope their name to the superclass and body', () => {
+    const { content } = compile(
+      `<script setup>
+      const { items, fallback } = defineProps(['items', 'fallback'])
+      const C = class items extends function (fallback = items) {
+        this.value = fallback
+      } {
+        static self() { return items }
+        static prop = fallback
+      }
+      const outer = () => [items, fallback]
+      </script>`,
+      { inlineTemplate: false, genDefaultAs: '_sfc_' },
+    )
+    const component = new Function(`${content}; return _sfc_`)()
+    const props = { items: [], fallback: 'prop' }
+    const bindings = component.setup(props, { expose: () => {} })
+    expect(new bindings.C().value).toBe(bindings.C)
+    expect(new bindings.C('local').value).toBe('local')
+    expect(bindings.C.self()).toBe(bindings.C)
+    expect(bindings.C.prop).toBe('prop')
+    expect(bindings.outer()).toEqual([props.items, props.fallback])
+  })
+
+  test('named class expressions preserve the class name TDZ', () => {
+    const { content } = compile(
+      `<script setup>
+      const { items } = defineProps(['items'])
+      const heritage = () => class items extends items.Base {}
+      const computedKey = () => class items { [items.name]() {} }
+      </script>`,
+      { inlineTemplate: false, genDefaultAs: '_sfc_' },
+    )
+    const component = new Function(`${content}; return _sfc_`)()
+    const bindings = component.setup(
+      { items: { Base: class {}, name: 'prop' } },
+      { expose: () => {} },
+    )
+    expect(bindings.heritage).toThrow(ReferenceError)
+    expect(bindings.computedKey).toThrow(ReferenceError)
+  })
+
+  test('named class expression decorators use the outer scope', () => {
+    const { content } = compile(
+      `<script setup>
+      const { items } = defineProps(['items'])
+      const C = @items class items {
+        static self() { return items }
+      }
+      const outer = () => items
+      </script>`,
+      {
+        babelParserPlugins: ['decorators'],
+        inlineTemplate: false,
+        genDefaultAs: '_sfc_',
+      },
+    )
+    expect(content).toMatch(`const C = @__props.items class items`)
+    expect(content).toMatch(`static self() { return items }`)
+    expect(content).toMatch(`() => __props.items`)
+
+    const { code } = transformSync(content, { target: 'es2022' })
+    const component = new Function(`${code}; return _sfc_`)()
+    const decorator = vi.fn()
+    const bindings = component.setup({ items: decorator }, { expose: () => {} })
+    expect(decorator).toHaveBeenCalledWith(
+      bindings.C,
+      expect.objectContaining({ kind: 'class' }),
+    )
+    expect(bindings.C.self()).toBe(bindings.C)
+    expect(bindings.outer()).toBe(decorator)
   })
 })
