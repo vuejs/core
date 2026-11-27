@@ -1444,6 +1444,190 @@ describe('defineCustomElement', () => {
       const style = el.shadowRoot?.querySelector('style')!
       expect(style.getAttribute('nonce')).toBe('xxx')
     })
+
+    // jsdom does not implement adoptedStyleSheets
+    test('styleMode adopted should fall back to style tags if unsupported', () => {
+      const Foo = defineCustomElement(
+        {
+          styles: [`div { color: red; }`],
+          render() {
+            return h('div', 'hello')
+          },
+        },
+        { styleMode: 'adopted' },
+      )
+      customElements.define('my-el-with-adopted-styles-fallback', Foo)
+      container.innerHTML = `<my-el-with-adopted-styles-fallback></my-el-with-adopted-styles-fallback>`
+      const el = container.childNodes[0] as VueElement
+      assertStyles(el, [`div { color: red; }`])
+    })
+
+    describe('styleMode adopted', () => {
+      function assertSheets(el: VueElement, css: string[]) {
+        expect(el.shadowRoot!.querySelector('style')).toBeNull()
+        const sheets = el.shadowRoot!.adoptedStyleSheets
+        expect(sheets.length).toBe(css.length)
+        for (let i = 0; i < css.length; i++) {
+          expect(sheets[i].cssRules[0].cssText).toBe(css[i])
+        }
+      }
+
+      beforeAll(() => {
+        const sheets = new WeakMap<ShadowRoot, CSSStyleSheet[]>()
+        Object.defineProperty(ShadowRoot.prototype, 'adoptedStyleSheets', {
+          configurable: true,
+          get() {
+            return sheets.get(this) || []
+          },
+          set(value) {
+            sheets.set(this, value)
+          },
+        })
+      })
+
+      afterAll(() => {
+        delete (ShadowRoot.prototype as any).adoptedStyleSheets
+      })
+
+      test('should adopt styles to shadow dom', async () => {
+        const def = defineComponent({
+          __hmrId: 'adopted-foo',
+          styles: [`div { color: red; }`],
+          render() {
+            return h('div', 'hello')
+          },
+        })
+        const Foo = defineCustomElement(def, { styleMode: 'adopted' })
+        customElements.define('my-el-with-adopted-styles', Foo)
+        container.innerHTML = `<my-el-with-adopted-styles></my-el-with-adopted-styles>`
+        const el = container.childNodes[0] as VueElement
+        assertSheets(el, [`div { color: red; }`])
+
+        // hmr
+        __VUE_HMR_RUNTIME__.reload('adopted-foo', {
+          ...def,
+          styles: [`div { color: blue; }`],
+        } as any)
+
+        await nextTick()
+        assertSheets(el, [`div { color: blue; }`])
+      })
+
+      test("child components should adopt styles to root element's shadow root", async () => {
+        const Bar = defineComponent({
+          __hmrId: 'adopted-bar',
+          styles: [`div { color: green; }`, `div { color: blue; }`],
+          render() {
+            return 'bar'
+          },
+        })
+        const Foo = defineCustomElement(
+          {
+            styles: [`div { color: red; }`],
+            render() {
+              return [h(Bar), h(Bar)]
+            },
+          },
+          { styleMode: 'adopted' },
+        )
+        customElements.define('my-el-with-adopted-child-styles', Foo)
+        container.innerHTML = `<my-el-with-adopted-child-styles></my-el-with-adopted-child-styles>`
+        const el = container.childNodes[0] as VueElement
+
+        // inject order should be child -> parent
+        assertSheets(el, [
+          `div { color: green; }`,
+          `div { color: blue; }`,
+          `div { color: red; }`,
+        ])
+
+        // hmr
+        __VUE_HMR_RUNTIME__.reload(Bar.__hmrId!, {
+          ...Bar,
+          styles: [`div { color: yellow; }`],
+        } as any)
+
+        await nextTick()
+        assertSheets(el, [`div { color: yellow; }`, `div { color: red; }`])
+      })
+
+      test('should share sheets across instances', () => {
+        const Bar = defineComponent({
+          styles: [`div { color: green; }`],
+          render() {
+            return 'bar'
+          },
+        })
+        const Foo = defineCustomElement(
+          {
+            styles: [`div { color: red; }`],
+            render() {
+              return h(Bar)
+            },
+          },
+          { styleMode: 'adopted' },
+        )
+        customElements.define('my-el-with-shared-adopted-styles', Foo)
+        container.innerHTML = `<my-el-with-shared-adopted-styles></my-el-with-shared-adopted-styles><my-el-with-shared-adopted-styles></my-el-with-shared-adopted-styles>`
+        const el1 = container.childNodes[0] as VueElement
+        const el2 = container.childNodes[1] as VueElement
+        assertSheets(el1, [`div { color: green; }`, `div { color: red; }`])
+        assertSheets(el2, [`div { color: green; }`, `div { color: red; }`])
+
+        const sheets1 = el1.shadowRoot!.adoptedStyleSheets
+        const sheets2 = el2.shadowRoot!.adoptedStyleSheets
+        for (let i = 0; i < sheets1.length; i++) {
+          expect(sheets2[i]).toBe(sheets1[i])
+        }
+      })
+
+      test('should not share sheets between components with the same styles array', async () => {
+        const styles = [`div { color: green; }`]
+        const Bar = defineComponent({
+          __hmrId: 'adopted-shared-styles-bar',
+          styles,
+          render() {
+            return 'bar'
+          },
+        })
+        const Baz = defineComponent({
+          styles,
+          render() {
+            return 'baz'
+          },
+        })
+        const Foo = defineCustomElement(
+          {
+            styles: [`div { color: red; }`],
+            render() {
+              return [h(Bar), h(Baz)]
+            },
+          },
+          { styleMode: 'adopted' },
+        )
+        customElements.define('my-el-with-same-adopted-styles-array', Foo)
+        container.innerHTML = `<my-el-with-same-adopted-styles-array></my-el-with-same-adopted-styles-array>`
+        const el = container.childNodes[0] as VueElement
+        assertSheets(el, [
+          `div { color: green; }`,
+          `div { color: green; }`,
+          `div { color: red; }`,
+        ])
+
+        // reloading Bar should not remove Baz's sheet
+        __VUE_HMR_RUNTIME__.reload(Bar.__hmrId!, {
+          ...Bar,
+          styles: [`div { color: blue; }`],
+        } as any)
+
+        await nextTick()
+        assertSheets(el, [
+          `div { color: green; }`,
+          `div { color: blue; }`,
+          `div { color: red; }`,
+        ])
+      })
+    })
   })
 
   describe('async', () => {
