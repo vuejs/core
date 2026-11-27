@@ -110,7 +110,14 @@ export { h } from './h'
 // Advanced render function utilities
 export { createVNode, cloneVNode, mergeProps, isVNode } from './vnode'
 // VNode types
-export { Fragment, Text, Comment, Static, type VNodeRef } from './vnode'
+export {
+  Fragment,
+  Text,
+  Comment,
+  Static,
+  type VNodeElementRef,
+  type VNodeRef,
+} from './vnode'
 // Built-in components
 export { Teleport, type TeleportProps } from './components/Teleport'
 export { Suspense, type SuspenseProps } from './components/Suspense'
