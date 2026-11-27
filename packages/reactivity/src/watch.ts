@@ -64,6 +64,10 @@ export interface WatchOptions<Immediate = boolean> extends DebuggerOptions {
     type: WatchErrorCodes,
     args?: unknown[],
   ) => void
+  /**
+   * @internal
+   */
+  onStop?: () => void
 }
 
 export type WatchStopHandle = () => void
@@ -122,7 +126,7 @@ export function watch(
   cb?: WatchCallback | null,
   options: WatchOptions = EMPTY_OBJ,
 ): WatchHandle {
-  const { immediate, deep, once, scheduler, augmentJob, call } = options
+  const { immediate, deep, once, scheduler, augmentJob, call, onStop } = options
 
   const warnInvalidSource = (s: unknown) => {
     ;(options.onWarn || warn)(
@@ -306,6 +310,12 @@ export function watch(
         for (const cleanup of cleanups) cleanup()
       }
       cleanupMap.delete(effect)
+    }
+  }
+  if (onStop) {
+    effect.onStop = () => {
+      cleanup()
+      onStop()
     }
   }
 

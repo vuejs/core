@@ -11,13 +11,16 @@ import {
   ref,
   watch,
   watchEffect,
+  withAsyncContext,
 } from '../src/index'
 import {
+  Suspense,
   type TestElement,
   createApp,
   h,
   nodeOps,
   onMounted,
+  onUnmounted,
   render,
   serializeInner,
   watchPostEffect,
@@ -2109,4 +2112,251 @@ describe('api: watch', () => {
     createApp(App).mount(root)
     expect(onCleanup).toBeCalledTimes(0)
   })
+
+  test('a watcher that outlives its owner no longer reports errors to it', async () => {
+    const source = ref(0)
+    const show = ref(true)
+    const scope = effectScope(true)
+    const errors: string[] = []
+    const Child = defineComponent({
+      setup() {
+        scope.run(() => {
+          watch(
+            source,
+            value => {
+              throw new Error(`error ${value}`)
+            },
+            { flush: 'sync' },
+          )
+        })
+        return () => null
+      },
+    })
+    const app = createApp({
+      render: () => (show.value ? h(Child) : null),
+    })
+    app.config.errorHandler = e => errors.push((e as Error).message)
+    app.mount(nodeOps.createElement('div'))
+
+    source.value = 1
+    expect(errors).toEqual(['error 1'])
+
+    show.value = false
+    await nextTick()
+    expect(() => source.value++).toThrow('error 2')
+    expect(errors).toEqual(['error 1'])
+    expect(
+      'Unhandled error during execution of watcher callback',
+    ).toHaveBeenWarned()
+    scope.stop()
+  })
+
+  describe.skipIf(!global.gc)('owner of a watcher in another scope', () => {
+    const gc = () => {
+      return new Promise<void>(resolve => {
+        setTimeout(() => {
+          global.gc!()
+          resolve()
+        })
+      })
+    }
+
+    type CreateWatcher = (source: Ref<number>, cb: () => void) => void
+
+    // removes the child whose setup created a watcher, then changes the source
+    async function removedOwner(
+      createWatcher: CreateWatcher,
+      inOwnScope = false,
+    ) {
+      let child: { deref(): unknown }
+      let calls = 0
+      const source = ref(0)
+      const show = ref(true)
+      const scope = effectScope(true)
+      const Child = defineComponent({
+        setup() {
+          // @ts-expect-error ES2021 API
+          child = new WeakRef(getCurrentInstance()!)
+          const create = () => createWatcher(source, () => calls++)
+          if (inOwnScope) create()
+          else scope.run(create)
+          // an element would keep its parent component reachable in dev
+          return () => null
+        },
+      })
+      const root = nodeOps.createElement('div')
+      render(
+        h(() => (show.value ? h(Child) : null)),
+        root,
+      )
+      await nextTick()
+      show.value = false
+      await nextTick()
+      await gc()
+      const released = child!.deref() === undefined
+      const before = calls
+      source.value++
+      await nextTick()
+      render(null, root)
+      scope.stop()
+      return { released, fired: calls > before }
+    }
+
+    const flushes = ['pre', 'post', 'sync'] as const
+
+    test.each(flushes)(
+      'releases the removed owner of a watch in a longer-lived scope (flush: %s)',
+      async flush => {
+        expect(
+          await removedOwner((source, cb) => {
+            watch(source, cb, { flush })
+          }),
+        ).toEqual({ released: true, fired: true })
+      },
+    )
+
+    test.each(flushes)(
+      'releases the removed owner of a watchEffect in a longer-lived scope (flush: %s)',
+      async flush => {
+        expect(
+          await removedOwner((source, cb) => {
+            watchEffect(
+              () => {
+                void source.value
+                cb()
+              },
+              { flush },
+            )
+          }),
+        ).toEqual({ released: true, fired: true })
+      },
+    )
+
+    // guard: passes before and after the fix
+    test('releases the removed owner of a watch in its own scope', async () => {
+      expect(
+        await removedOwner((source, cb) => void watch(source, cb), true),
+      ).toEqual({ released: true, fired: false })
+    })
+
+    // guard: passes before the fix, which must not make the owner hold on to
+    // the watchers it is released from
+    test.each(['scope', 'handle'] as const)(
+      'releases a watcher stopped by its %s while the owner stays mounted',
+      async by => {
+        let captured: { deref(): unknown }
+        let stop: (() => void) | undefined
+        const source = ref(0)
+        const longLived = effectScope(true)
+        const Comp = defineComponent({
+          setup() {
+            const scope = by === 'scope' ? effectScope(true) : longLived
+            scope.run(() => {
+              const value = {}
+              // @ts-expect-error ES2021 API
+              captured = new WeakRef(value)
+              const handle = watch(source, () => void value)
+              stop = by === 'scope' ? () => scope.stop() : handle
+            })
+            return () => h('p', 'comp')
+          },
+        })
+        const root = nodeOps.createElement('div')
+        render(h(Comp), root)
+        await nextTick()
+        stop!()
+        stop = undefined
+        await gc()
+        expect(captured!.deref()).toBeUndefined()
+        expect(serializeInner(root)).toBe('<p>comp</p>')
+        render(null, root)
+        longLived.stop()
+      },
+    )
+
+    test('releases an owner that unmounted before its async setup resumed', async () => {
+      let child: { deref(): unknown }
+      let resolve!: () => void
+      let calls = 0
+      const source = ref(0)
+      const show = ref(true)
+      const scope = effectScope(true)
+      const Child = defineComponent({
+        async setup() {
+          // @ts-expect-error ES2021 API
+          child = new WeakRef(getCurrentInstance()!)
+          let __temp: any, __restore: any
+          ;[__temp, __restore] = withAsyncContext(
+            () => new Promise<void>(r => (resolve = r)),
+          )
+          await __temp
+          __restore()
+          scope.run(() => watch(source, () => calls++))
+          return () => null
+        },
+      })
+      const root = nodeOps.createElement('div')
+      render(
+        h(() => h(Suspense, () => (show.value ? h(Child) : null))),
+        root,
+      )
+      await nextTick()
+      show.value = false
+      await nextTick()
+      resolve()
+      await new Promise(r => setTimeout(r))
+      await gc()
+      const released = child!.deref() === undefined
+      source.value++
+      await nextTick()
+      expect({ released, calls }).toEqual({ released: true, calls: 1 })
+      render(null, root)
+      scope.stop()
+    })
+  })
+
+  test.each<[string, (createWatcher: () => void) => void]>([
+    [
+      'a child scope, after the watcher of an earlier one stopped',
+      createWatcher => {
+        const stop = effectScope().run(() => watch(ref(0), () => {}))!
+        effectScope().run(createWatcher)
+        stop()
+      },
+    ],
+    [
+      'a detached scope stopped in onUnmounted',
+      createWatcher => {
+        const scope = effectScope(true)
+        scope.run(createWatcher)
+        onUnmounted(() => scope.stop())
+      },
+    ],
+  ])(
+    'reports the cleanup error of a watcher in %s to its unmounting owner',
+    (_, setup) => {
+      const source = ref(0)
+      const errors: string[] = []
+      const app = createApp({
+        setup() {
+          setup(() => {
+            watch(
+              source,
+              (_, __, onCleanup) => {
+                onCleanup(() => {
+                  throw new Error('cleanup')
+                })
+              },
+              { immediate: true },
+            )
+          })
+          return () => null
+        },
+      })
+      app.config.errorHandler = e => errors.push((e as Error).message)
+      app.mount(nodeOps.createElement('div'))
+      app.unmount()
+      expect(errors).toEqual(['cleanup'])
+    },
+  )
 })
