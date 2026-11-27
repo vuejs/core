@@ -206,6 +206,7 @@ import {
   runWithUnmountSuspense,
 } from './suspense'
 import { interopKey, isInteropEnabled } from './vdomInteropState'
+import { isDynamicSlotsEnabled } from './dynamicSlotsState'
 import {
   applyComponentScopeIds,
   getCurrentScopeId,
@@ -1577,7 +1578,7 @@ function renderPlainElementChildren(el: HTMLElement, rawSlots: RawSlots): void {
   if (isHydrating) {
     nextNode = nextLogicalSibling(el)
     let child = el.firstChild
-    if (rawSlots.$ && !child) {
+    if (isDynamicSlotsEnabled && rawSlots.$ && !child) {
       // SSR may omit default-slot nodes for dynamic native children.
       // Seed a local anchor so the inner fragment can locate and reuse it.
       child = el.appendChild(
@@ -1586,7 +1587,7 @@ function renderPlainElementChildren(el: HTMLElement, rawSlots: RawSlots): void {
     }
     setCurrentHydrationNode(child)
   }
-  if (rawSlots.$) {
+  if (isDynamicSlotsEnabled && rawSlots.$) {
     // Dynamic element children don't own an SSR slot-range anchor, so flag
     // this as a native-children fragment. Hydration keys off `nativeChildren`
     // to inject/reuse its own anchor instead of trying to reuse

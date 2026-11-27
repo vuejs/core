@@ -29,6 +29,7 @@ import {
   createInternalObject,
   currentInstance,
   isAsyncWrapper,
+  warn,
 } from '@vue/runtime-dom'
 import { Dep, trackDep } from '@vue/reactivity'
 import type {
@@ -74,6 +75,7 @@ import { renderWithSlotScopeIds } from './scopeId'
 import { setElementScopeIds } from './dom/scopeIdStamp'
 import { hydrateSlotContent } from './dom/hydrateFragment'
 import { withOnce } from './once'
+import { isDynamicSlotsEnabled } from './dynamicSlotsState'
 
 export type RawSlots = Record<string, VaporSlot> & {
   $?: DynamicSlotSource[]
@@ -113,6 +115,12 @@ export function normalizeRawSlots(
   const normalized = (
     isFunction(rawSlots) ? { default: rawSlots } : rawSlots
   ) as OwnedRawSlots
+  if (__DEV__ && !isDynamicSlotsEnabled && normalized.$) {
+    warn(
+      `Dynamic slots ($) are ignored: call enableDynamicSlots() once before ` +
+        `passing them. Compiled templates do this automatically.`,
+    )
+  }
   if (normalized[slotOwnerKey] === undefined) {
     normalized[slotOwnerKey] = getScopeOwner()
   }
@@ -174,7 +182,8 @@ function isolateSlotSource(cell: SlotSourceCell): DynamicSlotFn {
 }
 
 export function initSlots(instance: VaporComponentInstance): void {
-  const isolated = isolateSlotSources(instance.rawSlots)
+  const isolated =
+    isDynamicSlotsEnabled && isolateSlotSources(instance.rawSlots)
   if (isolated) {
     instance.rawSlots = isolated[0]
     instance.slotSources = isolated[1]
@@ -249,7 +258,7 @@ export const dynamicSlotsProxyHandlers: ProxyHandler<RawSlots> = {
   },
   ownKeys(target) {
     const keys = new Set(Object.keys(target).filter(k => k !== '$'))
-    const dynamicSources = target.$
+    const dynamicSources = isDynamicSlotsEnabled && target.$
     if (dynamicSources) {
       for (const source of dynamicSources) {
         if (isFunction(source)) {
@@ -291,7 +300,7 @@ function resolveSlot(
   resolveDynamicSource?: (source: DynamicSlotFn) => ReturnType<DynamicSlotFn>,
 ): VaporSlot | DynamicSlot | undefined {
   if (key === '$') return
-  const dynamicSources = target.$
+  const dynamicSources = isDynamicSlotsEnabled && target.$
   if (dynamicSources) {
     let i = dynamicSources.length
     let source: DynamicSlotSource
@@ -596,7 +605,11 @@ export function createSlot(
     }
 
     // dynamic slot name or has dynamicSlots
-    if (!once && !isCustomElementSlot && (isDynamicName || rawSlots.$)) {
+    if (
+      !once &&
+      !isCustomElementSlot &&
+      (isDynamicName || (isDynamicSlotsEnabled && rawSlots.$))
+    ) {
       renderEffect(renderSlot)
     } else {
       renderSlot()
@@ -634,7 +647,7 @@ function shouldUseSlotFragment(
   if (rawSlots === EMPTY_OBJ) return false
 
   // Dynamic names and dynamic slot sources still need runtime resolution.
-  if (isFunction(name) || rawSlots.$) return true
+  if (isFunction(name) || (isDynamicSlotsEnabled && rawSlots.$)) return true
 
   // Raw resolution only: the stability marker lives on the raw function, so
   // the owner wrapper is left for renderSlot's single synchronous first run.
