@@ -2225,4 +2225,30 @@ describe('vModel', () => {
       expect(selected.value).toBe(a)
     },
   )
+
+  it('updates checkbox checked state when true-value changes', async () => {
+    const model = ref('yes')
+    const trueValue = ref('yes')
+    render(
+      h({
+        render() {
+          return withDirectives(
+            h('input', {
+              type: 'checkbox',
+              'true-value': trueValue.value,
+            }),
+            [[vModelCheckbox, model.value]],
+          )
+        },
+      }),
+      root,
+    )
+
+    const input = root.querySelector('input')!
+    expect(input.checked).toBe(true)
+
+    trueValue.value = 'no'
+    await nextTick()
+    expect(input.checked).toBe(false)
+  })
 })
