@@ -204,6 +204,17 @@ export const vModelCheckbox: ModelDirective<HTMLInputElement> = {
       vnode.props!.value,
     )
   },
+  updated(el, binding, vnode, prevVNode) {
+    if (vnode.props!['true-value'] !== prevVNode.props!['true-value']) {
+      vModelCheckboxUpdate(
+        el,
+        binding.oldValue,
+        binding.value,
+        vnode.props!.value,
+        true,
+      )
+    }
+  },
 }
 
 /**
@@ -250,6 +261,7 @@ export const vModelCheckboxUpdate = (
   oldValue: any,
   value: any,
   rawValue: any = getValue(el),
+  forceUpdate = false,
 ): void => {
   // store the v-model value on the element so it can be accessed by the
   // change listener.
@@ -261,7 +273,7 @@ export const vModelCheckboxUpdate = (
   } else if (isSet(value)) {
     checked = value.has(rawValue)
   } else {
-    if (value === oldValue) return
+    if (value === oldValue && !forceUpdate) return
     checked = looseEqual(value, getCheckboxValue(el, true))
   }
 
