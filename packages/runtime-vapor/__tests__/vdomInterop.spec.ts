@@ -9699,7 +9699,7 @@ describe('vdomInterop', () => {
           branch.value = VaporParent
           await nextTick()
 
-          // the outer v-if removal detects the stale state; it must run
+          // the outer v-if removal is buffered too; on replay it must run
           // before the buffered inner update so the removed branch never
           // mounts a transient component
           data.value.show = false
@@ -17889,6 +17889,451 @@ describe('updates of a component whose root is a pending async setup child', () 
       parity(host, ...sequences[name]),
     )
   }
+
+  const macrotask = () => new Promise(r => setTimeout(r))
+  const divs = (root: Element) =>
+    Array.from(root.querySelectorAll('div'))
+      .map(el => el.className)
+      .join(',')
+  const gated = (name: string) =>
+    `<script setup>
+      const data = _data
+      await data.value.gate('${name}')
+    </script>
+    <template>
+      <p>${name}</p>
+    </template>`
+  // the state of one run: components compiled in its mode, and named gates
+  // their async setups wait on
+  function createRun(vapor: boolean, init: Record<string, any>) {
+    const gates: Record<string, (() => void)[]> = {}
+    const data = ref<any>({
+      ...init,
+      gate: (name: string) =>
+        new Promise<void>(r => (gates[name] || (gates[name] = [])).push(r)),
+    })
+    const components: Record<string, any> = {}
+    return {
+      data,
+      components,
+      define: (name: string, src: string, v = vapor) =>
+        (components[name] = compile(src, data, components, { vapor: v })),
+      // every gate when no name is given
+      open(name?: string) {
+        for (const key in gates) {
+          if (!name || key === name) for (const fn of gates[key].splice(0)) fn()
+        }
+      },
+    }
+  }
+
+  test('a dynamic component root, switched while pending after the boundary toggled away and back', async () => {
+    const logs: Record<string, string[]> = {}
+    for (const vapor of [false, true]) {
+      const log: string[] = (logs[vapor ? 'vapor' : 'vdom'] = [])
+      const { data, components, define, open } = createRun(vapor, {
+        branch: 'host',
+        current: 'Fallback',
+        setup: (name: string) => log.push('setup:' + name),
+      })
+      define(
+        'Fallback',
+        script +
+          `<template>
+            <div class="fallback">fb</div>
+          </template>`,
+      )
+      define(
+        'AsyncItem',
+        `<script setup>
+          const data = _data
+          data.value.setup('async')
+          await data.value.gate('item')
+        </script>
+        <template>
+          <div class="item">item</div>
+        </template>`,
+      )
+      define(
+        'Sync',
+        `<script setup>
+          const data = _data
+          data.value.setup('sync')
+        </script>
+        <template>
+          <div class="sync">sync</div>
+        </template>`,
+      )
+      define(
+        'Host',
+        script +
+          `<template>
+            <component :is="components[data.current]" />
+          </template>`,
+      )
+      // stays pending, so toggling to it and back supersedes the boundary's
+      // cycle without ever replacing the host
+      define(
+        'Other',
+        `<script setup>
+          const data = _data
+          await data.value.gate('other')
+        </script>
+        <template>
+          <div class="other">other</div>
+        </template>`,
+        false,
+      )
+      const App = compile(
+        script +
+          `<template>
+            <Suspense>
+              <components.Host v-if="data.branch === 'host'" />
+              <components.Other v-else />
+            </Suspense>
+          </template>`,
+        data,
+        components,
+        { vapor: false },
+      )
+      const root = document.createElement('div')
+      const app = createApp(App).use(vaporInteropPlugin)
+      app.mount(root)
+      const step = async (name: string, fn: () => void) => {
+        fn()
+        await flush()
+        log.push(name + ' ' + divs(root))
+      }
+      await step('init', () => {})
+      await step('async', () => (data.value.current = 'AsyncItem'))
+      await step('away', () => (data.value.branch = 'other'))
+      await step('back', () => (data.value.branch = 'host'))
+      await step('sync', () => (data.value.current = 'Sync'))
+      await step('async again', () => (data.value.current = 'AsyncItem'))
+      await step('open', () => open('item'))
+      open()
+      await flush()
+      app.unmount()
+    }
+    // neither the transient Sync nor a second AsyncItem is ever set up
+    expect(logs.vdom.filter(l => l.startsWith('setup:'))).toEqual([
+      'setup:async',
+    ])
+    expect(logs.vapor).toEqual(logs.vdom)
+  })
+
+  // the host stays the active branch while the boundary is pending on another
+  // root, so its held back update must not mount an async child into that cycle
+  test.each([
+    [
+      'replaced by another pending root',
+      ['Async1', 'Async2', 'route:b', 'open:Async1', 'route:c', 'open:PageC'],
+    ],
+    ['resolved', ['Async1', 'Async2', 'route:b', 'open:Async1', 'open:PageB']],
+  ])(
+    'a dynamic component root, settled while the boundary is pending on another root that is then %s',
+    async (_, steps) => {
+      const logs: Record<string, string[]> = {}
+      for (const vapor of [false, true]) {
+        const log: string[] = (logs[vapor ? 'vapor' : 'vdom'] = [])
+        const { data, components, define, open } = createRun(vapor, {
+          route: 'a',
+          current: 'Fallback',
+          setup: (name: string) => log.push('setup:' + name),
+        })
+        define(
+          'Fallback',
+          script +
+            `<template>
+              <div class="fallback">fb</div>
+            </template>`,
+        )
+        for (const name of ['Async1', 'Async2']) {
+          define(
+            name,
+            `<script setup>
+              const data = _data
+              data.value.setup('${name}')
+              await data.value.gate('${name}')
+            </script>
+            <template>
+              <div class="${name}">item</div>
+            </template>`,
+          )
+        }
+        define(
+          'Host',
+          script +
+            `<template>
+              <component :is="components[data.current]" />
+            </template>`,
+        )
+        for (const name of ['PageB', 'PageC']) {
+          define(
+            name,
+            `<script setup>
+              const data = _data
+              await data.value.gate('${name}')
+            </script>
+            <template>
+              <div class="${name}">page</div>
+            </template>`,
+            false,
+          )
+        }
+        const App = compile(
+          script +
+            `<template>
+              <Suspense>
+                <components.Host v-if="data.route === 'a'" />
+                <components.PageB v-else-if="data.route === 'b'" />
+                <components.PageC v-else />
+              </Suspense>
+            </template>`,
+          data,
+          components,
+          { vapor: false },
+        )
+        const root = document.createElement('div')
+        const app = createApp(App).use(vaporInteropPlugin)
+        app.mount(root)
+        await flush()
+        log.push('init ' + divs(root))
+        for (const step of steps) {
+          if (step.startsWith('open:')) open(step.slice(5))
+          else if (step.startsWith('route:')) data.value.route = step.slice(6)
+          else data.value.current = step
+          await flush()
+          log.push(step + ' ' + divs(root))
+        }
+        open()
+        await flush()
+        app.unmount()
+      }
+      // the new root is revealed as soon as its own setup resolves
+      expect(logs.vdom[logs.vdom.length - 1]).toMatch(/ Page[BC]$/)
+      expect(logs.vapor).toEqual(logs.vdom)
+    },
+  )
+
+  // with nothing held back, the host answers again once its root has rendered
+  test.each(['another root', 'the same root'])(
+    'a v-if root, switched away after it rendered while the boundary is pending on %s',
+    async pending => {
+      const result: string[] = []
+      for (const vapor of [false, true]) {
+        const { data, components, define, open } = createRun(vapor, {
+          page: 0,
+          show: false,
+        })
+        define('Item', gated('item'))
+        define(
+          'Host',
+          script +
+            `<template>
+              <components.Item v-if="data.show" />
+              <p v-else>ready</p>
+            </template>`,
+        )
+        define('Page', gated('page'), false)
+        const App = compile(
+          script +
+            `<template>
+              <Suspense>
+                <components.Page v-if="data.page" :key="data.page" />
+                <components.Host v-else />
+              </Suspense>
+            </template>`,
+          data,
+          components,
+          { vapor: false },
+        )
+        const root = document.createElement('div')
+        const app = createApp(App).use(vaporInteropPlugin)
+        app.mount(root)
+        try {
+          data.value.page = 1
+          await nextTick()
+          data.value.show = true
+          await nextTick()
+          open('item')
+          await macrotask()
+          expect(root.textContent).toBe('item')
+          if (pending === 'another root') {
+            data.value.page = 2
+            await nextTick()
+          }
+          data.value.show = false
+          await nextTick()
+          result.push(root.textContent!)
+        } finally {
+          open()
+          await macrotask()
+          app.unmount()
+        }
+      }
+      expect(result).toEqual(['ready', 'ready'])
+    },
+  )
+
+  test('a KeepAlive root, mounted by a parked render before the held back switch deactivates it', async () => {
+    const result: string[][] = []
+    for (const vapor of [false, true]) {
+      const log: string[] = []
+      const { data, components, define, open } = createRun(vapor, {
+        page: false,
+        show: false,
+        mounted: () => log.push('mounted'),
+      })
+      define(
+        'Item',
+        `<script setup>
+          import { onMounted } from 'vue'
+          const data = _data
+          await data.value.gate('item')
+          onMounted(data.value.mounted)
+        </script>
+        <template>
+          <p>item</p>
+        </template>`,
+      )
+      define(
+        'Ready',
+        script +
+          `<template>
+            <p>ready</p>
+          </template>`,
+      )
+      define(
+        'Host',
+        script +
+          `<template>
+            <KeepAlive>
+              <component :is="data.show ? components.Item : components.Ready" />
+            </KeepAlive>
+          </template>`,
+      )
+      define('Page', gated('page'), false)
+      const App = compile(
+        script +
+          `<template>
+            <Suspense>
+              <components.Page v-if="data.page" />
+              <components.Host v-else />
+            </Suspense>
+          </template>`,
+        data,
+        components,
+        { vapor: false },
+      )
+      const root = document.createElement('div')
+      const app = createApp(App).use(vaporInteropPlugin)
+      app.mount(root)
+      try {
+        data.value.show = true
+        await nextTick()
+        data.value.page = true
+        await nextTick()
+        // held back: the item is still pending
+        data.value.show = false
+        await nextTick()
+        // the boundary is pending on the page, so it parks the item's render
+        open('item')
+        await macrotask()
+        data.value.page = false
+        await macrotask()
+        expect(root.textContent).toBe('ready')
+        data.value.show = true
+        await nextTick()
+        await macrotask()
+        expect(root.textContent).toBe('item')
+        result.push(log)
+      } finally {
+        open()
+        app.unmount()
+      }
+    }
+    expect(result).toEqual([['mounted'], ['mounted']])
+  })
+
+  test('a v-if root of a host kept alive across its boundary, updated after the boundary unmounted while pending', async () => {
+    const result: string[] = []
+    for (const vapor of [false, true]) {
+      let hosts = 0
+      const { data, components, define, open } = createRun(vapor, {
+        inside: true,
+        page: false,
+        show: false,
+        keep: true,
+        setup: () => hosts++,
+      })
+      define('Item', gated('item'))
+      define(
+        'Inner',
+        script +
+          `<template>
+            <components.Item v-if="data.show" />
+            <p v-else>idle</p>
+          </template>`,
+      )
+      define(
+        'Host',
+        `<script setup>
+          const data = _data
+          const components = _components
+          data.value.setup()
+        </script>
+        <template>
+          <components.Inner v-if="data.keep" />
+          <p v-else>ready</p>
+        </template>`,
+      )
+      define('Page', gated('page'), false)
+      // the outer KeepAlive caches the host by key, with or without the
+      // boundary around it
+      const App = compile(
+        script +
+          `<template>
+            <KeepAlive>
+              <Suspense v-if="data.inside">
+                <components.Page v-if="data.page" />
+                <components.Host v-else key="host" />
+              </Suspense>
+              <components.Host v-else key="host" />
+            </KeepAlive>
+          </template>`,
+        data,
+        components,
+        { vapor: false },
+      )
+      const root = document.createElement('div')
+      const app = createApp(App).use(vaporInteropPlugin)
+      app.mount(root)
+      try {
+        data.value.page = true
+        await nextTick()
+        data.value.show = true
+        await nextTick()
+        // held back: the item is still pending
+        data.value.show = false
+        await nextTick()
+        open('item')
+        await macrotask()
+        expect(root.textContent).toBe('item')
+        data.value.inside = false
+        await nextTick()
+        open('page')
+        await macrotask()
+        expect(hosts).toBe(1)
+        data.value.keep = false
+        await nextTick()
+        result.push(root.textContent!)
+      } finally {
+        app.unmount()
+      }
+    }
+    expect(result).toEqual(['ready', 'ready'])
+  })
 })
 
 describe('vdom conditional slot branches in a vapor outlet', () => {

@@ -1665,7 +1665,6 @@ export function mountComponent(
     }
 
     const suspense = instance.suspense
-    let deferred: DeferredRootUpdates | undefined
     const hydrating = isHydrating
     if (!hydrating) {
       // Keep a placeholder in the DOM while async setup is pending so
@@ -1676,10 +1675,7 @@ export function mountComponent(
 
     instance.asyncDepRegistered = true
     const component = instance.type
-    let asyncSetupFinished = false
     const finishAsyncSetup = (setupResult: any): void => {
-      if (asyncSetupFinished) return
-      asyncSetupFinished = true
       instance.asyncResolved = true
       // handleSetupResult may invoke the render function, which creates
       // render effects that must be owned by this instance and its scope.
@@ -1730,46 +1726,42 @@ export function mountComponent(
       }
     }
 
-    suspense.registerDep(instance, setupResult => {
-      if (deferred) {
-        if (deferred.pendingRoot === instance) {
-          deferred.pendingRoot = undefined
-        }
-        // Reserve one flush for the whole async root chain, gated on the
-        // nearest boundary like VDOM's deferred retry. If the boundary
-        // discards that generation, the marked flush moves to the ordinary
-        // post queue so the surviving Vapor owners cannot stay dirty forever.
-        if (!deferred.flushQueued) {
-          deferred.flushQueued = true
-          queuePostRenderEffect(deferred.flushJob, undefined, deferred.suspense)
-        }
+    let state: DeferredRootUpdates | undefined
+    // Owners with nothing held back are released when the root resolves.
+    // Held back updates wait for one flush of the whole async root chain,
+    // gated on the nearest boundary like VDOM's deferred retry.
+    const release = () => {
+      if (!state || state.pendingRoot !== instance) return
+      state.pendingRoot = undefined
+      if (!state.effects.length) {
+        settleDeferredRootUpdates(state)
+      } else {
+        queuePostRenderEffect(state.flushJob, undefined, suspense)
       }
-      finishAsyncSetup(setupResult)
+    }
+    let parked = false
+    suspense.registerDep(instance, setupResult => {
+      // VDOM's retry lands ahead of the effects the root's render queues,
+      // unless the boundary parked that render: then it lands behind them.
+      if (parked) {
+        finishAsyncSetup(setupResult)
+        release()
+      } else {
+        release()
+        finishAsyncSetup(setupResult)
+      }
     })
 
     // a hydrating root chain is complete once its pass has committed it
     queueAfterHydration(() => {
-      const state = (deferred = deferRootChainRenderEffects(instance))
-      if (!state) return
-      // Suspense skips the callback above for unmounted roots or stale
-      // generations. If the replacement generation is already gone, complete
-      // a surviving instance before replaying deferred owner updates. The
-      // normal callback runs first and makes this a no-op.
-      instance.asyncDep!.catch(NOOP).then(setupResult => {
-        if (asyncSetupFinished) return
-        // A foreign pending generation cannot own this surviving instance's
-        // mount hooks because discarding it would discard those hooks too.
-        if (
-          !instance.isUnmounted &&
-          !suspense.isUnmounted &&
-          !suspense.pendingBranch
-        ) {
-          finishAsyncSetup(setupResult)
-        }
-        if (!state.flushQueued && state.pendingRoot === instance) {
-          settleDeferredRootUpdates(state)
-        }
-      })
+      if ((state = deferRootChainRenderEffects(instance))) {
+        instance.asyncDep!.catch(NOOP).then(() => {
+          // past the callback above, unless the boundary parked it
+          parked = true
+          // a root that will never render still releases its owners
+          if (!instance.scope.active || suspense.isUnmounted) release()
+        })
+      }
     })
     return
   }
@@ -2436,50 +2428,21 @@ function registerDynamicFragmentFallthroughAttrs(
 export interface DeferredRootUpdates {
   effects: SchedulerJob[]
   owners: VaporComponentInstance[]
-  suspense: SuspenseBoundary
-  pendingId: number
   pendingRoot?: VaporComponentInstance
-  flushQueued: boolean
   flushJob: SchedulerJob
 }
 
-/**
- * A deferred state stays live while its async root is pending or its flush is
- * queued for the same Suspense generation. The flush is requeued if that
- * generation is discarded, so `flushQueued` cannot strand buffered updates.
- */
-export function isDeferredRootUpdatesLive(state: DeferredRootUpdates): boolean {
-  const suspense = state.suspense
-  if (suspense.isUnmounted || state.pendingId !== suspense.pendingId) {
-    return false
-  }
-  if (state.flushQueued) return true
-  const root = state.pendingRoot
-  return !!root && !root.isUnmounted
-}
-
-export function settleDeferredRootUpdates(
-  state: DeferredRootUpdates,
-  currentJob?: SchedulerJob,
-): void {
+function settleDeferredRootUpdates(state: DeferredRootUpdates): void {
   const { effects, owners } = state
-  // Idempotent: a settle hook and a stale-detecting render effect may both
-  // settle the same state.
   state.effects = []
   state.owners = []
-  state.pendingRoot = undefined
   for (let i = 0; i < owners.length; i++) {
     if (owners[i].deferredRootUpdates === state) {
       owners[i].deferredRootUpdates = undefined
     }
   }
-  // Replay buffered updates so owner effects captured before the state went
-  // stale are not lost. The detecting job joins the batch so the whole set
-  // runs in scheduler order - an outer removal must still precede a buffered
-  // inner update; stopped jobs no-op on their dirty check.
-  if (currentJob && !effects.includes(currentJob)) {
-    effects.push(currentJob)
-  }
+  // Replay in scheduler order - an outer removal must still precede a
+  // buffered inner update; stopped jobs no-op on their dirty check.
   if (effects.length > 1) {
     effects.sort(
       (a, b) => a.order! - b.order! || (a.subOrder || 0) - (b.subOrder || 0),
@@ -2521,15 +2484,15 @@ function deferRootChainRenderEffects(
   // the outermost owner holds the state, so nested async roots share it
   const holder = owners[owners.length - 1]
   let deferred = holder.deferredRootUpdates
-  if (
-    !deferred ||
-    deferred.suspense !== suspense ||
-    deferred.pendingId !== instance.suspenseId
-  ) {
+  if (!deferred) {
     // Runs when the boundary resolves (or on the resolving tick when it
     // has no pending branch), ahead of setup-created Suspense effects.
     const flushJob: SchedulerJob = () => {
-      state.flushQueued = false
+      // requeued by a discarded cycle while another one is pending
+      if (suspense.pendingBranch && !suspense.isUnmounted) {
+        queuePostRenderEffect(flushJob, undefined, suspense)
+        return
+      }
       // A resolved root may synchronously mount another pending async root.
       if (holder.deferredRootUpdates !== state || state.pendingRoot) {
         return
@@ -2542,18 +2505,11 @@ function deferRootChainRenderEffects(
     const state: DeferredRootUpdates = {
       effects: [],
       owners: [],
-      suspense,
-      pendingId: instance.suspenseId,
-      pendingRoot: instance,
-      flushQueued: false,
       flushJob,
     }
-    // Owner effects settle a stale state before mounting a new root. Nested
-    // roots from an accepted continuation share this generation and reuse it.
     deferred = state
-  } else {
-    deferred.pendingRoot = instance
   }
+  deferred.pendingRoot = instance
 
   for (let i = 0; i < owners.length; i++) {
     const owner = owners[i]

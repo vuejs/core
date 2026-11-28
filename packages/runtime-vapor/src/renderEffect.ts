@@ -21,9 +21,7 @@ import {
 import {
   type VaporComponentInstance,
   invokeComponentVNodeHook,
-  isDeferredRootUpdatesLive,
   isVaporComponent,
-  settleDeferredRootUpdates,
 } from './component'
 import { inOnce } from './once'
 import { invokeArrayFns, remove } from '@vue/shared'
@@ -93,15 +91,7 @@ export class RenderEffect extends ReactiveEffect {
           this.i &&
           this.i.deferredRootUpdates
         if (deferred) {
-          if (isDeferredRootUpdatesLive(deferred)) {
-            deferred.effects.push(job)
-            return
-          }
-          // The pending root can no longer resolve through this state
-          // (unmounted early or superseded suspense cycle) - drop the stale
-          // state and replay its buffered updates together with this job in
-          // scheduler order (this job re-enters with the state cleared).
-          settleDeferredRootUpdates(deferred, job)
+          deferred.effects.push(job)
           return
         }
         // Input effects also update the owner's options through child props,
