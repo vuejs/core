@@ -556,9 +556,12 @@ export function compileScript(
         ctx.s.overwrite(start, end, `const ${normalScriptDefaultVar} = `)
       } else if (node.type === 'ExportNamedDeclaration') {
         const defaultSpecifier = node.specifiers.find(
-          s =>
-            s.exported.type === 'Identifier' && s.exported.name === 'default',
-        ) as ExportSpecifier
+          (s): s is ExportSpecifier =>
+            s.type === 'ExportSpecifier' &&
+            (s.exported.type === 'Identifier'
+              ? s.exported.name === 'default'
+              : s.exported.value === 'default'),
+        )
         if (defaultSpecifier) {
           defaultExport = node
           // 1. remove specifier
@@ -578,7 +581,10 @@ export function compileScript(
             // rewrite to `import { x as __default__ } from './x'` and
             // add to top
             ctx.s.prepend(
-              `import { ${defaultSpecifier.local.name} as ${normalScriptDefaultVar} } from '${node.source.value}'\n`,
+              `import { ${script.content.slice(
+                defaultSpecifier.local.start!,
+                defaultSpecifier.local.end!,
+              )} as ${normalScriptDefaultVar} } from '${node.source.value}'\n`,
             )
           } else {
             // export { x as default }

@@ -1,7 +1,7 @@
 import { parse } from '@babel/parser'
 import MagicString from 'magic-string'
 import type { ParserPlugin } from '@babel/parser'
-import type { Identifier, Statement } from '@babel/types'
+import type { ExportSpecifier, Statement } from '@babel/types'
 import { resolveParserPlugins } from './script/context'
 
 export function rewriteDefault(
@@ -54,11 +54,13 @@ export function rewriteDefaultAST(
       for (const specifier of node.specifiers) {
         if (
           specifier.type === 'ExportSpecifier' &&
-          specifier.exported.type === 'Identifier' &&
-          specifier.exported.name === 'default'
+          isDefaultExportSpecifier(specifier)
         ) {
           if (node.source) {
-            if (specifier.local.name === 'default') {
+            if (
+              specifier.local.type === 'Identifier' &&
+              specifier.local.name === 'default'
+            ) {
               s.prepend(
                 `import { default as __VUE_DEFAULT__ } from '${node.source.value}'\n`,
               )
@@ -96,13 +98,21 @@ export function hasDefaultExport(ast: Statement[]): boolean {
     } else if (
       stmt.type === 'ExportNamedDeclaration' &&
       stmt.specifiers.some(
-        spec => (spec.exported as Identifier).name === 'default',
+        spec =>
+          spec.type === 'ExportSpecifier' && isDefaultExportSpecifier(spec),
       )
     ) {
       return true
     }
   }
   return false
+}
+
+function isDefaultExportSpecifier(specifier: ExportSpecifier): boolean {
+  const exported = specifier.exported
+  return exported.type === 'Identifier'
+    ? exported.name === 'default'
+    : exported.value === 'default'
 }
 
 function specifierEnd(s: MagicString, end: number, nodeEnd: number | null) {

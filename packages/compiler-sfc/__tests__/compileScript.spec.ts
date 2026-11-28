@@ -1946,6 +1946,28 @@ describe('SFC genDefaultAs', () => {
     assertCode(content)
   })
 
+  test('string-literal default export names', () => {
+    const { content } = compile(
+      `<script>const App = {}; export { App as "default" }</script>`,
+      { genDefaultAs: '_sfc_' },
+    )
+
+    expect(content).toContain('const _sfc_ = App')
+    expect(() => babelParse(content, { sourceType: 'module' })).not.toThrow()
+
+    const withSetup = compile(
+      `<script>export { "component" as "default" } from './component.js'</script>
+` + `<script setup>const local = true</script>`,
+      { genDefaultAs: '_sfc_' },
+    ).content
+
+    expect(withSetup).toContain(
+      `import { "component" as __default__ } from './component.js'`,
+    )
+    expect(withSetup).toContain(`Object.assign(__default__,`)
+    expect(() => babelParse(withSetup, { sourceType: 'module' })).not.toThrow()
+  })
+
   test('<script> + <script setup>', () => {
     const { content } = compile(
       `<script>
